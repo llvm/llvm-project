@@ -1612,6 +1612,18 @@ class FeatureNumRecordsBufferResource<int width> : SubtargetFeature<
 def Feature32BitNumRecordsBufferResource : FeatureNumRecordsBufferResource<32>;
 def Feature45BitNumRecordsBufferResource : FeatureNumRecordsBufferResource<45>;
 
+// The out-of-bounds range-check model.
+class FeatureBufferOOBModel<string model, int value> : SubtargetFeature<
+  model#"-buffer-oob-model",
+  "BufferOOBModel",
+  !cast<string>(value),
+  "This target's hardware OOB range check follows the "#model#" model"
+>;
+
+def FeatureGfx9BufferOOBModel : FeatureBufferOOBModel<"Gfx9", 1>;
+def FeatureGfx10BufferOOBModel : FeatureBufferOOBModel<"Gfx10", 2>;
+def FeatureGfx1250BufferOOBModel : FeatureBufferOOBModel<"Gfx1250", 3>;
+
 defm Clusters : AMDGPUSubtargetFeature<"clusters",
   "Has clusters of workgroups support",
   /*GenPredicate=*/0
@@ -1758,7 +1770,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode,
    FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature32BitNumRecordsBufferResource
+   Feature32BitNumRecordsBufferResource, FeatureGfx9BufferOOBModel
   ]
 >;
 
@@ -1793,7 +1805,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode, FeatureFlatOffsetBits12,
    FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature32BitNumRecordsBufferResource
+   Feature32BitNumRecordsBufferResource, FeatureGfx10BufferOOBModel
   ]
 >;
 
@@ -1827,7 +1839,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureMqsadInsts, FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts, FeatureCvtPkNormVOP3Insts,
    FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature32BitNumRecordsBufferResource,
+   Feature32BitNumRecordsBufferResource, FeatureGfx10BufferOOBModel,
    FeatureMaxWavesPerEU16
   ]
 >;
@@ -1888,7 +1900,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
    FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature45BitNumRecordsBufferResource,
+   Feature45BitNumRecordsBufferResource, FeatureGfx1250BufferOOBModel,
    FeatureMaxWavesPerEU16
   ]
 >;
@@ -2371,7 +2383,7 @@ def FeatureISAVersion11_7_Generic: FeatureSet<
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
-   Feature32BitNumRecordsBufferResource,
+   Feature32BitNumRecordsBufferResource, FeatureGfx10BufferOOBModel,
    FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureBackOffBarrier,
    FeatureAddressableLocalMemorySize65536,
@@ -2520,6 +2532,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureSetPrioIncWgInst,
    FeatureSWakeupBarrier,
    Feature45BitNumRecordsBufferResource,
+   FeatureGfx1250BufferOOBModel,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
    FeatureMcastLoadInsts,
