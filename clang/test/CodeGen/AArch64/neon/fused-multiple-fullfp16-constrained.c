@@ -1,11 +1,11 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1_cg_arm64_neon -target-feature +fullfp16 -ffp-exception-behavior=maytrap -DEXCEPT=1 -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefix=LLVM --implicit-check-not=fpexcept.maytrap --implicit-check-not=' @llvm.fma.'
-// RUN: %clang_cc1_cg_arm64_neon -target-feature +fullfp16 -ffp-exception-behavior=strict -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefix=LLVM --implicit-check-not=' @llvm.fma.'
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fexperimental-strict-floating-point -ffp-exception-behavior=maytrap -DEXCEPT=1 -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefix=LLVM --implicit-check-not=fpexcept.maytrap --implicit-check-not=' @llvm.fma.' %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fexperimental-strict-floating-point -ffp-exception-behavior=maytrap -DEXCEPT=1 -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefix=CIR --implicit-check-not='except_mode = maytrap' --implicit-check-not='cir.call_llvm_intrinsic "fma"' %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fexperimental-strict-floating-point -ffp-exception-behavior=strict             -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefix=LLVM --implicit-check-not=' @llvm.fma.' %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fexperimental-strict-floating-point -ffp-exception-behavior=strict             -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefix=CIR --implicit-check-not='cir.call_llvm_intrinsic "fma"' %}
+// RUN: %clang_cc1_cg_arm64_neon -target-feature +fullfp16 -ffp-exception-behavior=maytrap -DEXCEPT=1 -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM --implicit-check-not=fpexcept.maytrap --implicit-check-not=' @llvm.fma.'
+// RUN: %clang_cc1_cg_arm64_neon -target-feature +fullfp16 -ffp-exception-behavior=strict -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM --implicit-check-not=' @llvm.fma.'
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fexperimental-strict-floating-point -ffp-exception-behavior=maytrap -DEXCEPT=1 -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM --implicit-check-not=fpexcept.maytrap --implicit-check-not=' @llvm.fma.' %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fexperimental-strict-floating-point -ffp-exception-behavior=maytrap -DEXCEPT=1 -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefixes=ALL,CIR --implicit-check-not='except_mode = maytrap' --implicit-check-not='cir.call_llvm_intrinsic "fma"' %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fexperimental-strict-floating-point -ffp-exception-behavior=strict             -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM --implicit-check-not=' @llvm.fma.' %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +fullfp16 -fexperimental-strict-floating-point -ffp-exception-behavior=strict             -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefixes=ALL,CIR --implicit-check-not='cir.call_llvm_intrinsic "fma"' %}
 
 #if EXCEPT
 #pragma float_control(except, on)
@@ -53,8 +53,7 @@ float16x8_t test_vfmaq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
   return vfmaq_f16(a, b, c);
 }
 
-// LLVM-LABEL: @test_vfma_lane_f16(
-// CIR-LABEL: @test_vfma_lane_f16(
+// ALL-LABEL: @test_vfma_lane_f16(
 float16x4_t test_vfma_lane_f16(float16x4_t a, float16x4_t b,
                                 float16x4_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.f16>
@@ -76,8 +75,7 @@ float16x4_t test_vfma_lane_f16(float16x4_t a, float16x4_t b,
   return vfma_lane_f16(a, b, c, 3);
 }
 
-// LLVM-LABEL: @test_vfmaq_lane_f16(
-// CIR-LABEL: @test_vfmaq_lane_f16(
+// ALL-LABEL: @test_vfmaq_lane_f16(
 float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b,
                                  float16x4_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<8 x !cir.f16>
@@ -99,8 +97,7 @@ float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b,
   return vfmaq_lane_f16(a, b, c, 3);
 }
 
-// LLVM-LABEL: @test_vfma_laneq_f16(
-// CIR-LABEL: @test_vfma_laneq_f16(
+// ALL-LABEL: @test_vfma_laneq_f16(
 float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b,
                                  float16x8_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>) [#cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.f16>
@@ -122,8 +119,7 @@ float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b,
   return vfma_laneq_f16(a, b, c, 7);
 }
 
-// LLVM-LABEL: @test_vfmaq_laneq_f16(
-// CIR-LABEL: @test_vfmaq_laneq_f16(
+// ALL-LABEL: @test_vfmaq_laneq_f16(
 float16x8_t test_vfmaq_laneq_f16(float16x8_t a, float16x8_t b,
                                   float16x8_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>) [#cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.f16>
@@ -145,8 +141,7 @@ float16x8_t test_vfmaq_laneq_f16(float16x8_t a, float16x8_t b,
   return vfmaq_laneq_f16(a, b, c, 7);
 }
 
-// LLVM-LABEL: @test_vfmah_lane_f16(
-// CIR-LABEL: @test_vfmah_lane_f16(
+// ALL-LABEL: @test_vfmah_lane_f16(
 float16_t test_vfmah_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 // CIR: [[INDEX:%.*]] = cir.const #cir.int<3> : !u64i
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}{{\[}}[[INDEX]] : !u64i] : !cir.vector<4 x !cir.f16>

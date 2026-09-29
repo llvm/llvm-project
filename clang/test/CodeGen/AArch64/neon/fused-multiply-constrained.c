@@ -1,8 +1,8 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN:                   %clang_cc1_cg_arm64_neon -ffp-exception-behavior=strict -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefix=LLVM
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fexperimental-strict-floating-point -ffp-exception-behavior=strict -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefix=LLVM --implicit-check-not=' @llvm.fma.' %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fexperimental-strict-floating-point -ffp-exception-behavior=strict -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefix=CIR --implicit-check-not='cir.call_llvm_intrinsic "fma"' %}
+// RUN:                   %clang_cc1_cg_arm64_neon -ffp-exception-behavior=strict -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fexperimental-strict-floating-point -ffp-exception-behavior=strict -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM --implicit-check-not=' @llvm.fma.' %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fexperimental-strict-floating-point -ffp-exception-behavior=strict -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefixes=ALL,CIR --implicit-check-not='cir.call_llvm_intrinsic "fma"' %}
 
 #include <arm_neon.h>
 
@@ -29,8 +29,7 @@ float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
   return vfma_f64(a, b, c);
 }
 
-// LLVM-LABEL: @test_vfma_laneq_f64(
-// CIR-LABEL: @test_vfma_laneq_f64(
+// ALL-LABEL: @test_vfma_laneq_f64(
 float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b,
                                  float64x2_t v) {
 // CIR: [[INDEX:%.*]] = cir.const #cir.int<0> : !u64i
@@ -56,8 +55,7 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b,
   return vfma_laneq_f64(a, b, v, 0);
 }
 
-// LLVM-LABEL: @test_vfmaq_laneq_f64(
-// CIR-LABEL: @test_vfmaq_laneq_f64(
+// ALL-LABEL: @test_vfmaq_laneq_f64(
 float64x2_t test_vfmaq_laneq_f64(float64x2_t a, float64x2_t b,
                                   float64x2_t v) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<2 x !cir.double>) [#cir.int<1> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !cir.double>
@@ -79,8 +77,7 @@ float64x2_t test_vfmaq_laneq_f64(float64x2_t a, float64x2_t b,
   return vfmaq_laneq_f64(a, b, v, 1);
 }
 
-// LLVM-LABEL: @test_vfmas_lane_f32(
-// CIR-LABEL: @test_vfmas_lane_f32(
+// ALL-LABEL: @test_vfmas_lane_f32(
 float32_t test_vfmas_lane_f32(float32_t a, float32_t b, float32x2_t c) {
 // CIR: [[INDEX:%.*]] = cir.const #cir.int<1> : !u64i
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}{{\[}}[[INDEX]] : !u64i] : !cir.vector<2 x !cir.float>
