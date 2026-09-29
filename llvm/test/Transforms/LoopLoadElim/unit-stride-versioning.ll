@@ -10,12 +10,9 @@ define void @guarded_nonunit_stride(ptr %a, i32 %stride) {
 ; CHECK-NEXT:    br i1 [[ENTER]], label %[[PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[PREHEADER]]:
 ; CHECK-NEXT:    [[STRIDE_EXT:%.*]] = sext i32 [[STRIDE]] to i64
-; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STRIDE]], 1
-; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[LOOP_PH_LVER_ORIG:.*]], label %[[LOOP_PH:.*]]
-; CHECK:       [[LOOP_PH_LVER_ORIG]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP_PH_LVER_ORIG]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[PREHEADER]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = mul i64 [[IV]], [[STRIDE_EXT]]
 ; CHECK-NEXT:    [[LOAD_PTR:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[LOAD_PTR]], align 4
@@ -25,26 +22,7 @@ define void @guarded_nonunit_stride(ptr %a, i32 %stride) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
-; CHECK:       [[LOOP_PH]]:
-; CHECK-NEXT:    [[LOAD_INITIAL:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    br label %[[LOOP1:.*]]
-; CHECK:       [[LOOP1]]:
-; CHECK-NEXT:    [[STORE_FORWARDED:%.*]] = phi i32 [ [[LOAD_INITIAL]], %[[LOOP_PH]] ], [ [[VALUE1:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[LOOP_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[INDEX1:%.*]] = mul i64 [[IV1]], [[STRIDE_EXT]]
-; CHECK-NEXT:    [[LOAD_PTR1:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX1]]
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[LOAD_PTR1]], align 4
-; CHECK-NEXT:    [[VALUE1]] = add i32 [[STORE_FORWARDED]], 1
-; CHECK-NEXT:    [[STORE_PTR1:%.*]] = getelementptr i32, ptr [[LOAD_PTR1]], i64 1
-; CHECK-NEXT:    store i32 [[VALUE1]], ptr [[STORE_PTR1]], align 4
-; CHECK-NEXT:    [[IV_NEXT1]] = add nuw i64 [[IV1]], 1
-; CHECK-NEXT:    [[DONE1:%.*]] = icmp eq i64 [[IV_NEXT1]], 16
-; CHECK-NEXT:    br i1 [[DONE1]], label %[[EXIT_LOOPEXIT_LOOPEXIT1:.*]], label %[[LOOP1]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT1:.*]]
-; CHECK:       [[EXIT_LOOPEXIT_LOOPEXIT1]]:
-; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT1]]
-; CHECK:       [[EXIT_LOOPEXIT1]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -77,15 +55,13 @@ exit:
 define void @known_nonunit_stride(ptr %a, i32 range(i32 8, 17) %stride) {
 ; CHECK-LABEL: define void @known_nonunit_stride(
 ; CHECK-SAME: ptr [[A:%.*]], i32 range(i32 8, 17) [[STRIDE:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[END:%.*]] = shl nuw nsw i32 [[STRIDE]], 3
 ; CHECK-NEXT:    [[STRIDE_EXT:%.*]] = zext i32 [[STRIDE]] to i64
 ; CHECK-NEXT:    [[END_EXT:%.*]] = zext i32 [[END]] to i64
-; CHECK-NEXT:    br i1 true, label %[[LOOP_PH_LVER_ORIG:.*]], label %[[LOOP_PH:.*]]
-; CHECK:       [[LOOP_PH_LVER_ORIG]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP_PH_LVER_ORIG]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[LOAD_PTR:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[LOAD_PTR]], align 4
 ; CHECK-NEXT:    [[VALUE:%.*]] = add i32 [[LOAD]], 1
@@ -94,25 +70,7 @@ define void @known_nonunit_stride(ptr %a, i32 range(i32 8, 17) %stride) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], [[STRIDE_EXT]]
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i64 [[IV_NEXT]], [[END_EXT]]
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label %[[LOOP]], label %[[EXIT:.*]]
-; CHECK:       [[LOOP_PH]]:
-; CHECK-NEXT:    [[LOAD_INITIAL:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    br label %[[LOOP1:.*]]
-; CHECK:       [[LOOP1]]:
-; CHECK-NEXT:    [[STORE_FORWARDED:%.*]] = phi i32 [ [[LOAD_INITIAL]], %[[LOOP_PH]] ], [ [[VALUE1:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[LOOP_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[LOAD_PTR1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV1]]
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[LOAD_PTR1]], align 4
-; CHECK-NEXT:    [[VALUE1]] = add i32 [[STORE_FORWARDED]], 1
-; CHECK-NEXT:    [[STORE_PTR1:%.*]] = getelementptr inbounds i32, ptr [[LOAD_PTR1]], i64 1
-; CHECK-NEXT:    store i32 [[VALUE1]], ptr [[STORE_PTR1]], align 4
-; CHECK-NEXT:    [[IV_NEXT1]] = add nuw nsw i64 [[IV1]], [[STRIDE_EXT]]
-; CHECK-NEXT:    [[CONTINUE1:%.*]] = icmp ult i64 [[IV_NEXT1]], [[END_EXT]]
-; CHECK-NEXT:    br i1 [[CONTINUE1]], label %[[LOOP1]], label %[[EXIT_LOOPEXIT1:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    br label %[[EXIT1:.*]]
-; CHECK:       [[EXIT_LOOPEXIT1]]:
-; CHECK-NEXT:    br label %[[EXIT1]]
-; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -146,12 +104,10 @@ define void @phi_nonunit_stride(ptr %a, i1 %large) {
 ; CHECK-NEXT:    br label %[[PREHEADER]]
 ; CHECK:       [[PREHEADER]]:
 ; CHECK-NEXT:    [[STRIDE:%.*]] = phi i64 [ 3, %[[ENTRY]] ], [ 4, %[[LARGER_STRIDE]] ]
-; CHECK-NEXT:    br i1 true, label %[[LOOP_PH_LVER_ORIG:.*]], label %[[LOOP_PH:.*]]
-; CHECK:       [[LOOP_PH_LVER_ORIG]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP_PH_LVER_ORIG]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[LOAD_PTR:%.*]] = phi ptr [ [[A]], %[[LOOP_PH_LVER_ORIG]] ], [ [[PTR_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[PREHEADER]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[LOAD_PTR:%.*]] = phi ptr [ [[A]], %[[PREHEADER]] ], [ [[PTR_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[LOAD_PTR]], align 1
 ; CHECK-NEXT:    [[VALUE:%.*]] = add i8 [[LOAD]], 1
 ; CHECK-NEXT:    [[STORE_PTR:%.*]] = getelementptr inbounds i8, ptr [[LOAD_PTR]], i64 1
@@ -160,26 +116,7 @@ define void @phi_nonunit_stride(ptr %a, i1 %large) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
-; CHECK:       [[LOOP_PH]]:
-; CHECK-NEXT:    [[LOAD_INITIAL:%.*]] = load i8, ptr [[A]], align 1
-; CHECK-NEXT:    br label %[[LOOP1:.*]]
-; CHECK:       [[LOOP1]]:
-; CHECK-NEXT:    [[STORE_FORWARDED:%.*]] = phi i8 [ [[LOAD_INITIAL]], %[[LOOP_PH]] ], [ [[VALUE1:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[LOOP_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[LOAD_PTR1:%.*]] = phi ptr [ [[A]], %[[LOOP_PH]] ], [ [[PTR_NEXT1:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[LOAD_PTR1]], align 1
-; CHECK-NEXT:    [[VALUE1]] = add i8 [[STORE_FORWARDED]], 1
-; CHECK-NEXT:    [[STORE_PTR1:%.*]] = getelementptr inbounds i8, ptr [[LOAD_PTR1]], i64 1
-; CHECK-NEXT:    store i8 [[VALUE1]], ptr [[STORE_PTR1]], align 1
-; CHECK-NEXT:    [[PTR_NEXT1]] = getelementptr inbounds i8, ptr [[LOAD_PTR1]], i64 [[STRIDE]]
-; CHECK-NEXT:    [[IV_NEXT1]] = add nuw i64 [[IV1]], 1
-; CHECK-NEXT:    [[DONE1:%.*]] = icmp eq i64 [[IV_NEXT1]], 16
-; CHECK-NEXT:    br i1 [[DONE1]], label %[[EXIT_LOOPEXIT1:.*]], label %[[LOOP1]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    br label %[[EXIT1:.*]]
-; CHECK:       [[EXIT_LOOPEXIT1]]:
-; CHECK-NEXT:    br label %[[EXIT1]]
-; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -213,7 +150,15 @@ define void @mixed_strides(ptr %dst, ptr %src, i64 %dst.stride, i64 range(i64 3,
 ; CHECK-LABEL: define void @mixed_strides(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[DST_STRIDE:%.*]], i64 range(i64 3, 5) [[SRC_STRIDE:%.*]]) {
 ; CHECK-NEXT:  [[LOOP_LVER_CHECK:.*:]]
-; CHECK-NEXT:    br i1 true, label %[[LOOP_PH_LVER_ORIG:.*]], label %[[LOOP_PH:.*]]
+; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[DST_STRIDE]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[SRC_STRIDE]], i64 15)
+; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
+; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[SRC]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[MUL_OVERFLOW]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[IDENT_CHECK]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[LOOP_PH_LVER_ORIG:.*]], label %[[LOOP_PH:.*]]
 ; CHECK:       [[LOOP_PH_LVER_ORIG]]:
 ; CHECK-NEXT:    br label %[[LOOP_LVER_ORIG:.*]]
 ; CHECK:       [[LOOP_LVER_ORIG]]:
