@@ -39,6 +39,7 @@
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPUUnifyDivergentExitNodes.h"
+#include "AMDGPUVGPRMSBAffinity.h"
 #include "AMDGPUWaitSGPRHazards.h"
 #include "GCNDPPCombine.h"
 #include "GCNIterativeScheduler.h"
@@ -740,6 +741,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIAnnotateControlFlowLegacyPass(*PR);
   initializeAMDGPUInsertDelayAluLegacyPass(*PR);
   initializeAMDGPULowerVGPREncodingLegacyPass(*PR);
+  initializeAMDGPUVGPRMSBAffinityLegacyPass(*PR);
   initializeSIInsertHardClausesLegacyPass(*PR);
   initializeSIInsertWaitcntsLegacyPass(*PR);
   initializeSIModeRegisterLegacyPass(*PR);
@@ -1956,6 +1958,10 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
 
   addPass(&GCNPreRALongBranchRegID);
 
+  // Bias VGPR allocation into MSB groups (after the scheduler fixes the order,
+  // before RA).
+  addPass(createAMDGPUVGPRMSBAffinityLegacyPass());
+
   addPass(createSGPRAllocPass(false));
 
   // Equivalent of PEI for SGPRs.
@@ -1981,6 +1987,10 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
     reportFatalUsageError(RegAllocOptNotSupportedMessage);
 
   addPass(&GCNPreRALongBranchRegID);
+
+  // Bias VGPR allocation into MSB groups (after the scheduler fixes the order,
+  // before RA).
+  addPass(createAMDGPUVGPRMSBAffinityLegacyPass());
 
   addPass(createSGPRAllocPass(true));
 
@@ -2626,6 +2636,10 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteFast(
 
   addMachineFunctionPass(GCNPreRALongBranchRegPass(), PMW);
 
+  // Bias VGPR allocation into MSB groups (after the scheduler fixes the order,
+  // before RA).
+  addMachineFunctionPass(AMDGPUVGPRMSBAffinityPass(), PMW);
+
   // SGPR allocation - default to fast at -O0.
   if (SGPRRegAllocNPM == RegAllocType::Greedy)
     addMachineFunctionPass(RAGreedyPass({onlyAllocateSGPRs, "sgpr"}), PMW);
@@ -2709,6 +2723,10 @@ Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
     return Err;
 
   addMachineFunctionPass(GCNPreRALongBranchRegPass(), PMW);
+
+  // Bias VGPR allocation into MSB groups (after the scheduler fixes the order,
+  // before RA).
+  addMachineFunctionPass(AMDGPUVGPRMSBAffinityPass(), PMW);
 
   // SGPR allocation - default to greedy at -O1 and above.
   if (SGPRRegAllocNPM == RegAllocType::Fast)
