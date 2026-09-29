@@ -23110,8 +23110,8 @@ Expr::getIntegerConstantExpr(const ASTContext &Ctx,
   EvalResult ExprResult;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects,
-                                  ExprResult, /*SProxy=*/nullptr);
+    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, ExprResult,
+                                  /*SProxy=*/nullptr);
     Settings.InConstantContext = true;
     if (!Ctx.getInterpContext().evaluateAsRValue(Settings, this,
                                                  ExprResult.Val))
@@ -23284,7 +23284,7 @@ bool Expr::isPotentialConstantExpr(const FunctionDecl *FD,
   // The constexpr VM attempts to compile all methods to bytecode here.
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Status,
-                                 /*SProxy=*/nullptr);
+                                  /*SProxy=*/nullptr);
     Settings.InConstantContext = true;
     Settings.CheckingPotentialConstantExpression = true;
     Ctx.getInterpContext().isPotentialConstantExpr(Settings, FD);
