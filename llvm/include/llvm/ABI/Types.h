@@ -527,8 +527,12 @@ public:
   }
 
   /// Creates a scalable predicate or count vector.
+  /// Note: The AArch64 __SVCount_t type is opaque, so it is modeled with the
+  /// shape of svbool_t: a scalable vector of 16 one-bit elements.
   const VectorType *getScalablePredicateOrCountVectorType(Align ABIAlign,
                                                           VectorKind Kind) {
+    assert((Kind == VectorKind::SVEPredicate || Kind == VectorKind::SVECount) &&
+           "expected predicate or count vector kind");
     const Type *PredicateBit =
         getIntegerType(1, Align(1), /*Signed=*/false, /*IsBitInt=*/false);
     return getVectorType(PredicateBit, ElementCount::getScalable(16), ABIAlign,
