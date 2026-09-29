@@ -10,9 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
@@ -21,17 +24,33 @@
 using namespace llvm;
 
 namespace {
-struct FEntryInserter : public MachineFunctionPass {
+struct FEntryInserter {
+  bool run(MachineFunction &MF);
+};
+
+struct FEntryInserterLegacy : public MachineFunctionPass {
   static char ID; // Pass identification, replacement for typeid
-  FEntryInserter() : MachineFunctionPass(ID) {
-    initializeFEntryInserterPass(*PassRegistry::getPassRegistry());
+  FEntryInserterLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &F) override {
+    return FEntryInserter().run(F);
   }
 
-  bool runOnMachineFunction(MachineFunction &F) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
 }
 
-bool FEntryInserter::runOnMachineFunction(MachineFunction &MF) {
+PreservedAnalyses FEntryInserterPass::run(MachineFunction &MF,
+                                          MachineFunctionAnalysisManager &AM) {
+  if (!FEntryInserter().run(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses();
+}
+
+bool FEntryInserter::run(MachineFunction &MF) {
   const std::string FEntryName = std::string(
       MF.getFunction().getFnAttribute("fentry-call").getValueAsString());
   if (FEntryName != "true")
@@ -44,7 +63,7 @@ bool FEntryInserter::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-char FEntryInserter::ID = 0;
-char &llvm::FEntryInserterID = FEntryInserter::ID;
-INITIALIZE_PASS(FEntryInserter, "fentry-insert", "Insert fentry calls", false,
-                false)
+char FEntryInserterLegacy::ID = 0;
+char &llvm::FEntryInserterID = FEntryInserterLegacy::ID;
+INITIALIZE_PASS(FEntryInserterLegacy, "fentry-insert", "Insert fentry calls",
+                false, false)

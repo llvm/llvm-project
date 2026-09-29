@@ -8,7 +8,10 @@
 // RUN: grep -F '@"OBJC_IVAR_$_I0._b4" = global i64 7, section "__DATA, __objc_ivar", align 8' %t
 // RUN: not grep -F '@"OBJC_IVAR_$_I0." = global' %t
 
-@interface I0 {
+@interface SuperClass
+@end
+
+@interface I0 : SuperClass {
   unsigned _b0:4;
   unsigned _b1:5;
   unsigned _b2:5;

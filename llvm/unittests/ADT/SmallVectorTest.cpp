@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Compiler.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <list>
 #include <stdarg.h>
@@ -127,24 +128,24 @@ public:
     return c0.getValue() == c1.getValue();
   }
 
-  friend bool LLVM_ATTRIBUTE_UNUSED operator!=(const Constructable &c0,
-                                               const Constructable &c1) {
+  [[maybe_unused]] friend bool operator!=(const Constructable &c0,
+                                          const Constructable &c1) {
     return c0.getValue() != c1.getValue();
   }
 
   friend bool operator<(const Constructable &c0, const Constructable &c1) {
     return c0.getValue() < c1.getValue();
   }
-  friend bool LLVM_ATTRIBUTE_UNUSED operator<=(const Constructable &c0,
-                                               const Constructable &c1) {
+  [[maybe_unused]] friend bool operator<=(const Constructable &c0,
+                                          const Constructable &c1) {
     return c0.getValue() <= c1.getValue();
   }
-  friend bool LLVM_ATTRIBUTE_UNUSED operator>(const Constructable &c0,
-                                              const Constructable &c1) {
+  [[maybe_unused]] friend bool operator>(const Constructable &c0,
+                                         const Constructable &c1) {
     return c0.getValue() > c1.getValue();
   }
-  friend bool LLVM_ATTRIBUTE_UNUSED operator>=(const Constructable &c0,
-                                               const Constructable &c1) {
+  [[maybe_unused]] friend bool operator>=(const Constructable &c0,
+                                          const Constructable &c1) {
     return c0.getValue() >= c1.getValue();
   }
 };
@@ -158,13 +159,29 @@ int Constructable::numCopyAssignmentCalls;
 int Constructable::numMoveAssignmentCalls;
 
 struct NonCopyable {
-  NonCopyable() {}
+  NonCopyable() = default;
   NonCopyable(NonCopyable &&) {}
   NonCopyable &operator=(NonCopyable &&) { return *this; }
 private:
   NonCopyable(const NonCopyable &) = delete;
   NonCopyable &operator=(const NonCopyable &) = delete;
 };
+
+struct MoveConstructOnly {
+  explicit MoveConstructOnly(int Value) : Value(Value) {}
+  MoveConstructOnly(MoveConstructOnly &&RHS) : Value(RHS.Value) {
+    RHS.Value = -1;
+  }
+
+  MoveConstructOnly(const MoveConstructOnly &) = delete;
+  MoveConstructOnly &operator=(const MoveConstructOnly &) = delete;
+  MoveConstructOnly &operator=(MoveConstructOnly &&) = delete;
+
+  int Value;
+};
+
+static_assert(std::is_move_constructible_v<MoveConstructOnly>);
+static_assert(!std::is_move_assignable_v<MoveConstructOnly>);
 
 LLVM_ATTRIBUTE_USED void CompileTest() {
   SmallVector<NonCopyable, 0> V;
@@ -174,6 +191,67 @@ LLVM_ATTRIBUTE_USED void CompileTest() {
 TEST(SmallVectorTest, ConstructNonCopyableTest) {
   SmallVector<NonCopyable, 0> V(42);
   EXPECT_EQ(V.size(), (size_t)42);
+}
+
+TEST(SmallVectorTest, MoveConstructNonMoveAssignableInlineElements) {
+  SmallVector<MoveConstructOnly, 2> From;
+  From.emplace_back(1);
+  From.emplace_back(2);
+  const MoveConstructOnly *FromData = From.data();
+
+  SmallVector<MoveConstructOnly, 2> To(std::move(From));
+
+  EXPECT_TRUE(From.empty());
+  ASSERT_EQ(2u, To.size());
+  EXPECT_NE(FromData, To.data());
+  EXPECT_EQ(1, To[0].Value);
+  EXPECT_EQ(2, To[1].Value);
+}
+
+TEST(SmallVectorTest, MoveConstructNonMoveAssignableAllocatedElements) {
+  SmallVector<MoveConstructOnly, 1> From;
+  From.emplace_back(1);
+  From.emplace_back(2);
+  const MoveConstructOnly *FromData = From.data();
+
+  SmallVector<MoveConstructOnly, 1> To(std::move(From));
+
+  EXPECT_TRUE(From.empty());
+  ASSERT_EQ(2u, To.size());
+  EXPECT_EQ(FromData, To.data());
+  EXPECT_EQ(1, To[0].Value);
+  EXPECT_EQ(2, To[1].Value);
+}
+
+TEST(SmallVectorTest, MoveConstructNonMoveAssignableFromSmallVectorImpl) {
+  SmallVector<MoveConstructOnly, 2> From;
+  From.emplace_back(1);
+  From.emplace_back(2);
+
+  SmallVector<MoveConstructOnly, 0> To(
+      std::move(static_cast<SmallVectorImpl<MoveConstructOnly> &>(From)));
+
+  EXPECT_TRUE(From.empty());
+  ASSERT_EQ(2u, To.size());
+  EXPECT_EQ(1, To[0].Value);
+  EXPECT_EQ(2, To[1].Value);
+}
+
+TEST(SmallVectorTest, MoveConstructNestedNonMoveAssignableElements) {
+  SmallVector<MoveConstructOnly, 2> Inner;
+  Inner.emplace_back(1);
+  Inner.emplace_back(2);
+
+  SmallVector<SmallVector<MoveConstructOnly, 2>, 1> From;
+  From.push_back(std::move(Inner));
+
+  SmallVector<SmallVector<MoveConstructOnly, 2>, 1> To(std::move(From));
+
+  EXPECT_TRUE(From.empty());
+  ASSERT_EQ(1u, To.size());
+  ASSERT_EQ(2u, To[0].size());
+  EXPECT_EQ(1, To[0][0].Value);
+  EXPECT_EQ(2, To[0][1].Value);
 }
 
 // Assert that v contains the specified values, in order.
@@ -225,13 +303,10 @@ protected:
   VectorT otherVector;
 };
 
-
-typedef ::testing::Types<SmallVector<Constructable, 0>,
-                         SmallVector<Constructable, 1>,
-                         SmallVector<Constructable, 2>,
-                         SmallVector<Constructable, 4>,
-                         SmallVector<Constructable, 5>
-                         > SmallVectorTestTypes;
+using SmallVectorTestTypes = ::testing::Types<
+    SmallVector<Constructable, 0>, SmallVector<Constructable, 1>,
+    SmallVector<Constructable, 2>, SmallVector<Constructable, 4>,
+    SmallVector<Constructable, 5>>;
 TYPED_TEST_SUITE(SmallVectorTest, SmallVectorTestTypes, );
 
 // Constructor test.
@@ -535,12 +610,59 @@ TYPED_TEST(SmallVectorTest, AppendNonIterTest) {
   assertValuesInOrder(V, 3u, 1, 7, 7);
 }
 
+struct input_iterator {
+  using iterator_category = std::input_iterator_tag;
+  using value_type = int;
+  using difference_type = int;
+  using pointer = value_type *;
+  using reference = value_type &;
+
+  const int **State;
+  int operator*() const { return **State; }
+  input_iterator &operator++() {
+    (*State)++;
+    return *this;
+  }
+  bool operator==(const input_iterator &Other) const {
+    return *State == *Other.State;
+  }
+  bool operator!=(const input_iterator &Other) const {
+    return !(*this == Other);
+  }
+};
+
+TYPED_TEST(SmallVectorTest, AppendInputIterator) {
+  auto &V = this->theVector;
+  V.push_back(1);
+  static constexpr int Src[] = {5, 6, 7, 8};
+  // Construct an input iterator that actually returns different results on the
+  // second iteration.
+  const int *BeginState = &Src[0];
+  const int *EndState = &Src[2];
+  V.append(input_iterator{&BeginState}, input_iterator{&EndState});
+  assertValuesInOrder(V, 3u, 1, 5, 6);
+}
+
+TYPED_TEST(SmallVectorTest, InsertInputIterator) {
+  auto &V = this->theVector;
+  V.push_back(1);
+  V.push_back(2);
+  static constexpr int Src[] = {5, 6, 7, 8};
+  // Construct an input iterator that actually returns different results on the
+  // second iteration.
+  const int *BeginState = &Src[0];
+  const int *EndState = &Src[2];
+  V.insert(V.begin() + 1, input_iterator{&BeginState},
+           input_iterator{&EndState});
+  assertValuesInOrder(V, 4u, 1, 5, 6, 2);
+}
+
 struct output_iterator {
-  typedef std::output_iterator_tag iterator_category;
-  typedef int value_type;
-  typedef int difference_type;
-  typedef value_type *pointer;
-  typedef value_type &reference;
+  using iterator_category = std::output_iterator_tag;
+  using value_type = int;
+  using difference_type = int;
+  using pointer = value_type *;
+  using reference = value_type &;
   operator int() { return 2; }
   operator Constructable() { return 7; }
 };
@@ -597,6 +719,15 @@ TYPED_TEST(SmallVectorTest, AssignSmallVector) {
   V.push_back(Constructable(1));
   V.assign(otherVector);
   assertValuesInOrder(V, 2u, 7, 7);
+}
+
+TYPED_TEST(SmallVectorTest, AssignArrayRef) {
+  SCOPED_TRACE("AssignArrayRef");
+  auto &V = this->theVector;
+  Constructable Other[] = {7, 8, 9};
+  V.push_back(Constructable(1));
+  V.assign(ArrayRef(Other));
+  assertValuesInOrder(V, 3u, 7, 8, 9);
 }
 
 // Move-assign test
@@ -886,7 +1017,7 @@ protected:
   VectorT2 otherVector;
 };
 
-typedef ::testing::Types<
+using DualSmallVectorTestTypes = ::testing::Types<
     // Small mode -> Small mode.
     std::pair<SmallVector<Constructable, 4>, SmallVector<Constructable, 4>>,
     // Small mode -> Big mode.
@@ -894,8 +1025,7 @@ typedef ::testing::Types<
     // Big mode -> Small mode.
     std::pair<SmallVector<Constructable, 2>, SmallVector<Constructable, 4>>,
     // Big mode -> Big mode.
-    std::pair<SmallVector<Constructable, 2>, SmallVector<Constructable, 2>>
-  > DualSmallVectorTestTypes;
+    std::pair<SmallVector<Constructable, 2>, SmallVector<Constructable, 2>>>;
 
 TYPED_TEST_SUITE(DualSmallVectorsTest, DualSmallVectorTestTypes, );
 
@@ -1009,11 +1139,6 @@ struct Emplaceable {
   Emplaceable(A0Ty &&A0, A1Ty &&A1)
       : A0(std::forward<A0Ty>(A0)), A1(std::forward<A1Ty>(A1)),
         State(ES_Emplaced) {}
-
-  template <class A0Ty, class A1Ty, class A2Ty>
-  Emplaceable(A0Ty &&A0, A1Ty &&A1, A2Ty &&A2)
-      : A0(std::forward<A0Ty>(A0)), A1(std::forward<A1Ty>(A1)),
-        A2(std::forward<A2Ty>(A2)), State(ES_Emplaced) {}
 
   template <class A0Ty, class A1Ty, class A2Ty, class A3Ty>
   Emplaceable(A0Ty &&A0, A1Ty &&A1, A2Ty &&A2, A3Ty &&A3)
@@ -1147,6 +1272,17 @@ TEST(SmallVectorTest, InitializerList) {
   EXPECT_TRUE(ArrayRef(V2).equals({4, 5, 3, 2}));
 }
 
+namespace namespace_with_adl {
+struct MyVector {
+  std::vector<int> data;
+};
+
+std::vector<int>::const_iterator begin(const MyVector &V) {
+  return V.data.begin();
+}
+std::vector<int>::const_iterator end(const MyVector &V) { return V.data.end(); }
+} // namespace namespace_with_adl
+
 TEST(SmallVectorTest, ToVector) {
   {
     std::vector<char> v = {'a', 'b', 'c'};
@@ -1163,6 +1299,21 @@ TEST(SmallVectorTest, ToVector) {
     ASSERT_EQ(3u, Vector.size());
     for (size_t I = 0; I < v.size(); ++I)
       EXPECT_EQ(v[I], Vector[I]);
+  }
+  {
+    // Check that to_vector and to_vector_of work with types that require ADL
+    // for being/end iterators.
+    namespace_with_adl::MyVector V = {{1, 2, 3}};
+    auto IntVector = to_vector(V);
+    EXPECT_THAT(IntVector, testing::ElementsAre(1, 2, 3));
+    IntVector = to_vector<3>(V);
+    EXPECT_THAT(IntVector, testing::ElementsAre(1, 2, 3));
+  }
+  {
+    SmallVector<bool> V = {true, false, true};
+    ArrayRef<bool> ref = V;
+    auto copy = to_vector(ref);
+    EXPECT_THAT(copy, testing::ElementsAre(true, false, true));
   }
 }
 
@@ -1221,6 +1372,15 @@ TEST(SmallVectorTest, ToVectorOf) {
     static_assert(NumBuiltinElts(Vector) == 4u);
     for (size_t I = 0; I < StdVector.size(); ++I)
       EXPECT_EQ(StdVector[I], Vector[I]);
+  }
+  {
+    // Check that to_vector works with types that require ADL for being/end
+    // iterators.
+    namespace_with_adl::MyVector V = {{1, 2, 3}};
+    auto UnsignedVector = to_vector_of<unsigned>(V);
+    EXPECT_THAT(UnsignedVector, testing::ElementsAre(1u, 2u, 3u));
+    UnsignedVector = to_vector_of<unsigned, 3>(V);
+    EXPECT_THAT(UnsignedVector, testing::ElementsAre(1u, 2u, 3u));
   }
 }
 

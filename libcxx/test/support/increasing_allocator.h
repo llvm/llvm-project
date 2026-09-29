@@ -10,6 +10,7 @@
 #define TEST_SUPPORT_INCREASING_ALLOCATOR_H
 
 #include <cstddef>
+#include <limits>
 #include <memory>
 
 #include "test_macros.h"
@@ -47,6 +48,77 @@ struct increasing_allocator {
 template <typename T, typename U>
 TEST_CONSTEXPR_CXX20 bool operator==(increasing_allocator<T>, increasing_allocator<U>) TEST_NOEXCEPT {
   return true;
+}
+
+template <std::size_t MinAllocSize, typename T>
+class min_size_allocator {
+public:
+  using value_type     = T;
+  min_size_allocator() = default;
+
+  template <typename U>
+  TEST_CONSTEXPR_CXX20 min_size_allocator(const min_size_allocator<MinAllocSize, U>&) TEST_NOEXCEPT {}
+
+  TEST_NODISCARD TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) {
+    if (n < MinAllocSize)
+      n = MinAllocSize;
+    return static_cast<T*>(::operator new(n * sizeof(T)));
+  }
+
+  TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t) TEST_NOEXCEPT { ::operator delete(static_cast<void*>(p)); }
+
+  template <typename U>
+  struct rebind {
+    using other = min_size_allocator<MinAllocSize, U>;
+  };
+};
+
+template <std::size_t MinAllocSize, typename T, typename U>
+TEST_CONSTEXPR_CXX20 bool
+operator==(const min_size_allocator<MinAllocSize, T>&, const min_size_allocator<MinAllocSize, U>&) {
+  return true;
+}
+
+template <std::size_t MinAllocSize, typename T, typename U>
+TEST_CONSTEXPR_CXX20 bool
+operator!=(const min_size_allocator<MinAllocSize, T>&, const min_size_allocator<MinAllocSize, U>&) {
+  return false;
+}
+
+template <typename T>
+class pow2_allocator {
+public:
+  using value_type = T;
+  pow2_allocator() = default;
+
+  template <typename U>
+  TEST_CONSTEXPR_CXX20 pow2_allocator(const pow2_allocator<U>&) TEST_NOEXCEPT {}
+
+  TEST_NODISCARD TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) {
+    return static_cast<T*>(::operator new(next_power_of_two(n) * sizeof(T)));
+  }
+
+  TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t) TEST_NOEXCEPT { ::operator delete(static_cast<void*>(p)); }
+
+private:
+  TEST_CONSTEXPR_CXX20 std::size_t next_power_of_two(std::size_t n) const {
+    if ((n & (n - 1)) == 0)
+      return n;
+    for (std::size_t shift = 1; shift < std::numeric_limits<std::size_t>::digits; shift <<= 1) {
+      n |= n >> shift;
+    }
+    return n + 1;
+  }
+};
+
+template <typename T, typename U>
+TEST_CONSTEXPR_CXX20 bool operator==(const pow2_allocator<T>&, const pow2_allocator<U>&) {
+  return true;
+}
+
+template <typename T, typename U>
+TEST_CONSTEXPR_CXX20 bool operator!=(const pow2_allocator<T>&, const pow2_allocator<U>&) {
+  return false;
 }
 
 #endif // TEST_SUPPORT_INCREASING_ALLOCATOR_H

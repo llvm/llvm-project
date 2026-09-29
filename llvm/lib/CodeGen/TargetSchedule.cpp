@@ -25,15 +25,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <numeric>
 
 using namespace llvm;
-
-static cl::opt<bool> EnableSchedModel("schedmodel", cl::Hidden, cl::init(true),
-  cl::desc("Use TargetSchedModel for latency lookup"));
-
-static cl::opt<bool> EnableSchedItins("scheditins", cl::Hidden, cl::init(true),
-  cl::desc("Use InstrItineraryData for latency lookup"));
 
 static cl::opt<bool> ForceEnableIntervals(
     "sched-model-force-enable-intervals", cl::Hidden, cl::init(false),
@@ -47,11 +40,15 @@ bool TargetSchedModel::hasInstrItineraries() const {
   return EnableSchedItins && !InstrItins.isEmpty();
 }
 
-void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo) {
+void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo,
+                            bool EnableSModel, bool EnableSItins) {
   STI = TSInfo;
   SchedModel = TSInfo->getSchedModel();
   TII = TSInfo->getInstrInfo();
   STI->initInstrItins(InstrItins);
+
+  EnableSchedModel = EnableSModel;
+  EnableSchedItins = EnableSItins;
 
   unsigned NumRes = SchedModel.getNumProcResourceKinds();
   ResourceFactors.resize(NumRes);
@@ -174,7 +171,8 @@ unsigned TargetSchedModel::computeOperandLatency(
   const MachineInstr *UseMI, unsigned UseOperIdx) const {
 
   const unsigned InstrLatency = computeInstrLatency(DefMI);
-  const unsigned DefaultDefLatency = TII->defaultDefLatency(SchedModel, *DefMI);
+  const unsigned DefaultDefLatency =
+      TII->defaultDefLatency(*STI, SchedModel, *DefMI);
 
   if (!hasInstrSchedModel() && !hasInstrItineraries())
     return DefaultDefLatency;
@@ -266,7 +264,7 @@ TargetSchedModel::computeInstrLatency(const MachineInstr *MI,
     if (SCDesc->isValid())
       return computeInstrLatency(*SCDesc);
   }
-  return TII->defaultDefLatency(SchedModel, *MI);
+  return TII->defaultDefLatency(*STI, SchedModel, *MI);
 }
 
 unsigned TargetSchedModel::
@@ -296,7 +294,7 @@ computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
     if (SCDesc->isValid()) {
       for (const MCWriteProcResEntry *PRI = STI->getWriteProcResBegin(SCDesc),
              *PRE = STI->getWriteProcResEnd(SCDesc); PRI != PRE; ++PRI) {
-        if (!SchedModel.getProcResource(PRI->ProcResourceIdx)->BufferSize)
+        if (!SchedModel.getResourceBufferSize(PRI->ProcResourceIdx))
           return 1;
       }
     }

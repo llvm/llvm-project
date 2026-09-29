@@ -1,5 +1,6 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll-jam="unroll-jam-factor=2" | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll-jam="unroll-jam-factor=4" | FileCheck --check-prefix=UJAM-FOUR %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll-jam{unroll-jam-factor=2}))" | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll-jam{unroll-jam-factor=4}))" | FileCheck --check-prefix=UJAM-FOUR %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(gpu.module(gpu.func(affine-loop-unroll-jam{unroll-jam-factor=2})))" | FileCheck --check-prefix=GPU-HJAM %s
 
 // CHECK-DAG: [[$MAP_PLUS_1:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
 // CHECK-DAG: [[$MAP_DIV_OFFSET:#map[0-9]*]] = affine_map<()[s0] -> (((s0 - 1) floordiv 2) * 2 + 1)>
@@ -9,6 +10,8 @@
 // UJAM-FOUR-DAG: [[$MAP_PLUS_1:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
 // UJAM-FOUR-DAG: [[$MAP_PLUS_2:#map[0-9]*]] = affine_map<(d0) -> (d0 + 2)>
 // UJAM-FOUR-DAG: [[$MAP_PLUS_3:#map[0-9]*]] = affine_map<(d0) -> (d0 + 3)>
+
+// GPU-HJAM-DAG: [[$MAP_PLUS_1:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
 
 // CHECK-LABEL: func @unroll_jam_imperfect_nest() {
 func.func @unroll_jam_imperfect_nest() {
@@ -45,6 +48,44 @@ func.func @unroll_jam_imperfect_nest() {
 // CHECK-NEXT: }
 // CHECK-NEXT: "foo"(%c100, %{{.*}})
 // CHECK-NEXT: return
+
+gpu.module @unroll_jam {
+  // GPU-HJAM-LABEL: func @unroll_jam_imperfect_nest() {
+  gpu.func @unroll_jam_imperfect_nest() {
+    affine.for %i = 0 to 101 {
+      %x = "addi32"(%i, %i) : (index, index) -> i32
+      affine.for %j = 0 to 17 {
+        %y = "addi32"(%i, %i) : (index, index) -> i32
+        %z = "addi32"(%y, %y) : (i32, i32) -> i32
+      }
+      %w = "foo"(%i, %x) : (index, i32) -> i32
+    }
+    gpu.return
+  }
+  // GPU-HJAM:      affine.for [[IV0:%arg[0-9]+]] = 0 to 100 step 2 {
+  // GPU-HJAM-NEXT:   [[RES1:%[0-9]+]] = "addi32"([[IV0]], [[IV0]])
+  // GPU-HJAM-NEXT:   [[INC:%[0-9]+]] = affine.apply [[$MAP_PLUS_1]]([[IV0]])
+  // GPU-HJAM-NEXT:   [[RES2:%[0-9]+]] = "addi32"([[INC]], [[INC]])
+  // GPU-HJAM-NEXT:   affine.for %{{.*}} = 0 to 17 {
+  // GPU-HJAM-NEXT:     [[RES3:%[0-9]+]] = "addi32"([[IV0]], [[IV0]])
+  // GPU-HJAM-NEXT:     "addi32"([[RES3]], [[RES3]]) : (i32, i32) -> i32
+  // GPU-HJAM-NEXT:     [[INC1:%[0-9]+]] = affine.apply [[$MAP_PLUS_1]]([[IV0]])
+  // GPU-HJAM-NEXT:     [[RES4:%[0-9]+]] = "addi32"([[INC1]], [[INC1]])
+  // GPU-HJAM-NEXT:     "addi32"([[RES4]], [[RES4]]) : (i32, i32) -> i32
+  // GPU-HJAM-NEXT:   }
+  // GPU-HJAM:        "foo"([[IV0]], [[RES1]])
+  // GPU-HJAM-NEXT:   affine.apply [[$MAP_PLUS_1]]([[IV0]])
+  // GPU-HJAM-NEXT:   "foo"({{.*}}, [[RES2]])
+  // GPU-HJAM:      }
+  // Cleanup loop (single iteration).
+  // GPU-HJAM:      "addi32"(%c100, %c100)
+  // GPU-HJAM-NEXT: affine.for [[IV0]] = 0 to 17 {
+  // GPU-HJAM-NEXT:   [[RESC:%[0-9]+]] = "addi32"(%c100, %c100)
+  // GPU-HJAM-NEXT:   "addi32"([[RESC]], [[RESC]]) : (i32, i32) -> i32
+  // GPU-HJAM-NEXT: }
+  // GPU-HJAM-NEXT: "foo"(%c100, %{{.*}})
+  // GPU-HJAM-NEXT: return
+}
 
 // CHECK-LABEL: func @loop_nest_unknown_count_1
 // CHECK-SAME: [[N:arg[0-9]+]]: index
@@ -135,16 +176,16 @@ func.func @no_unroll_jam_dependent_ubound(%in0: memref<?xf32, 1>) {
 // CHECK-NEXT: }
 // CHECK-NEXT: return
 
-// Inner loop with one iter_arg.
-// CHECK-LABEL: func @unroll_jam_one_iter_arg
-func.func @unroll_jam_one_iter_arg() {
+// Inner loop attrs survive append-only iter_arg extension.
+// CHECK-LABEL: func @unroll_jam_one_iter_arg_preserves_attrs
+func.func @unroll_jam_one_iter_arg_preserves_attrs() {
   affine.for %i = 0 to 101 {
     %cst = arith.constant 1 : i32
     %x = "addi32"(%i, %i) : (index, index) -> i32
     %red = affine.for %j = 0 to 17 iter_args(%acc = %cst) -> (i32) {
       %y = "bar"(%i, %j, %acc) : (index, index, i32) -> i32
       affine.yield %y : i32
-    }
+    } {test.keep = "inner"}
     %w = "foo"(%i, %x, %red) : (index, i32, i32) -> i32
   }
   return
@@ -160,7 +201,7 @@ func.func @unroll_jam_one_iter_arg() {
 // CHECK-NEXT:     [[INC1:%[0-9]+]] = affine.apply [[$MAP_PLUS_1]]([[IV0]])
 // CHECK-NEXT:     [[RES5:%[0-9]+]] = "bar"([[INC1]], [[IV1]], [[ACC2]])
 // CHECK-NEXT:     affine.yield [[RES4]], [[RES5]]
-// CHECK-NEXT:   }
+// CHECK-NEXT:   } {test.keep = "inner"}
 // CHECK:        "foo"([[IV0]], [[RES1]], [[RES3]]#0)
 // CHECK-NEXT:   affine.apply [[$MAP_PLUS_1]]([[IV0]])
 // CHECK-NEXT:   "foo"({{.*}}, [[RES2]], [[RES3]]#1)

@@ -1,9 +1,9 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.5-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV15
-; RUN: llc -verify-machineinstrs -spirv-ext=+SPV_EXT_demote_to_helper_invocation -O0 -mtriple=spirv1.5-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV16,WITH-EXTENSION,WITH-CAPABILITY
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.6-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV16,WITH-CAPABILITY
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.5-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; RUN: %if spirv-tools %{ llc -O0 -spirv-ext=+SPV_EXT_demote_to_helper_invocation -mtriple=spirv1.5-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.5-unknown-vulkan %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV15
+; RUN: llc -verify-machineinstrs -spirv-ext=+SPV_EXT_demote_to_helper_invocation -O0 -mtriple=spirv1.5-unknown-vulkan %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV16,WITH-EXTENSION,WITH-CAPABILITY
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.6-unknown-vulkan %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV16,WITH-CAPABILITY
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.5-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -spirv-ext=+SPV_EXT_demote_to_helper_invocation -mtriple=spirv1.5-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
 
 
 ; Make sure lowering is correctly generating spirv code.
@@ -17,7 +17,7 @@
 ; CHECK-DAG:   %[[#v4bool:]]  = OpTypeVector %[[#bool]] 4
 ; CHECK-DAG:   %[[#v4float:]] = OpTypeVector %[[#float]] 4
 ; CHECK-DAG:   %[[#fzero:]] = OpConstant %[[#float]] 0
-; CHECK-DAG:   %[[#v4fzero:]] = OpConstantNull %[[#v4float]]
+; CHECK-DAG:   %[[#v4fzero:]] = OpConstantComposite %[[#v4float]] %[[#fzero]] %[[#fzero]] %[[#fzero]] %[[#fzero]]
 
 define void @test_scalar(float noundef %Buf) {
 entry:
@@ -46,6 +46,32 @@ end:                                              ; preds = %lt0, %entry
   ret void
 }
 declare void @llvm.spv.discard()
+
+define void @test_scalar_multi_instr_after_discard(float noundef %Buf, ptr %Out) {
+entry:
+; CHECK-LABEL: ; -- Begin function test_scalar_multi_instr_after_discard
+; CHECK:       OpBranchConditional %[[#]] %[[#truel:]] %[[#endl:]]
+; CHECK:       %[[#truel]] = OpLabel
+; SPIRV15:     OpKill
+; SPIRV15-NOT: OpStore
+; SPIRV16:     OpDemoteToHelperInvocation
+; SPIRV16:     OpBranch %[[#endl]]
+; CHECK:       %[[#endl]] = OpLabel
+  %Buf.addr = alloca float, align 4
+  store float %Buf, ptr %Buf.addr, align 4
+  %1 = load float, ptr %Buf.addr, align 4
+  %2 = fcmp olt float %1, 0.000000e+00
+  br i1 %2, label %lt0, label %end
+
+lt0:                                              ; preds = %entry
+  call void @llvm.spv.discard()
+  store volatile float 1.0, ptr %Out, align 4
+  store volatile float 2.0, ptr %Out, align 4
+  br label %end
+
+end:                                              ; preds = %lt0, %entry
+  ret void
+}
 
 define void @test_vector(<4 x float> noundef %Buf) {
 entry:

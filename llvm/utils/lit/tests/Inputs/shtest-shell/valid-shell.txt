@@ -18,15 +18,15 @@
 # Check force remove commands success whether the directory does or doesn't exist.
 #
 # Check the mkdir command with -p option.
-# RUN: rm -f -r %T/test
-# RUN: %{python} %S/../check_path.py dir %T/test > %t.out
+# RUN: rm -f -r %t.test
+# RUN: %{python} %S/../check_path.py dir %t.test > %t.out
 # RUN: FileCheck --check-prefix=REMOVE-PARENT-DIR < %t.out %s
-# RUN: mkdir -p %T/test
-# RUN: %{python} %S/../check_path.py dir %T/test > %t.out
+# RUN: mkdir -p %t.test
+# RUN: %{python} %S/../check_path.py dir %t.test > %t.out
 # RUN: FileCheck --check-prefix=MAKE-PARENT-DIR < %t.out %s
-# RUN: rm -f %T/test || true
-# RUN: rm -f -r %T/test
-# RUN: %{python} %S/../check_path.py dir %T/test > %t.out
+# RUN: rm -f %t.test || true
+# RUN: rm -f -r %t.test
+# RUN: %{python} %S/../check_path.py dir %t.test > %t.out
 # RUN: FileCheck --check-prefix=REMOVE-PARENT-DIR < %t.out %s
 #
 # MAKE-PARENT-DIR: True
@@ -34,15 +34,15 @@
 #
 # Check the mkdir command without -p option.
 #
-# RUN: rm -rf %T/test1
-# RUN: mkdir %T/test1
-# RUN: %{python} %S/../check_path.py dir %T/test1 > %t.out
+# RUN: rm -rf %t.test1
+# RUN: mkdir %t.test1
+# RUN: %{python} %S/../check_path.py dir %t.test1 > %t.out
 # RUN: FileCheck --check-prefix=MAKE-DIR < %t.out %s
-# RUN: cd %T/test1 && mkdir foo
-# RUN: %{python} %S/../check_path.py dir %T/test1 > %t.out
+# RUN: cd %t.test1 && mkdir foo
+# RUN: %{python} %S/../check_path.py dir %t.test1 > %t.out
 # RUN: FileCheck --check-prefix=MAKE-DIR < %t.out %s
-# RUN: cd %T && rm -rf %T/test1
-# RUN: %{python} %S/../check_path.py dir %T/test1 > %t.out
+# RUN: cd .. && rm -rf %t.test1
+# RUN: %{python} %S/../check_path.py dir %t.test1 > %t.out
 # RUN: FileCheck --check-prefix=REMOVE-DIR < %t.out %s
 #
 # MAKE-DIR: True
@@ -50,18 +50,18 @@
 #
 # Check creating and removing multiple folders and rm * operation.
 #
-# RUN: rm -rf %T/test
-# RUN: mkdir -p %T/test/test1 %T/test/test2
-# RUN: %{python} %S/../check_path.py dir %T/test %T/test/test1 %T/test/test2 > %t.out
+# RUN: rm -rf %t.test
+# RUN: mkdir -p %t.test/test1 %t.test/test2
+# RUN: %{python} %S/../check_path.py dir %t.test %t.test/test1 %t.test/test2 > %t.out
 # RUN: FileCheck --check-prefix=DIRS-EXIST < %t.out %s
-# RUN: mkdir %T/test || true
-# RUN: echo "create a temp file" > %T/test/temp.write
-# RUN: echo "create a temp1 file" > %T/test/test1/temp1.write
-# RUN: echo "create a temp2 file" > %T/test/test2/temp2.write
-# RUN: %{python} %S/../check_path.py file %T/test/temp.write %T/test/test1/temp1.write %T/test/test2/temp2.write> %t.out
+# RUN: mkdir %t.test || true
+# RUN: echo "create a temp file" > %t.test/temp.write
+# RUN: echo "create a temp1 file" > %t.test/test1/temp1.write
+# RUN: echo "create a temp2 file" > %t.test/test2/temp2.write
+# RUN: %{python} %S/../check_path.py file %t.test/temp.write %t.test/test1/temp1.write %t.test/test2/temp2.write> %t.out
 # RUN: FileCheck --check-prefix=FILES-EXIST < %t.out %s
-# RUN: rm -r -f %T/*
-# RUN: %{python} %S/../check_path.py dir %T/test > %t.out
+# RUN: rm -r -f %t*
+# RUN: %{python} %S/../check_path.py dir %t.test > %t.out
 # RUN: FileCheck --check-prefix=REMOVE-ALL < %t.out %s
 #
 # DIRS-EXIST: True
@@ -81,7 +81,7 @@
 # RUN: echo "hello-2" > %t1.stdout
 # RUN: diff %t.stdout %t1.stdout || true
 #
-# RUN: mkdir -p %T/dir1 %T/dir2
-# RUN: cd %T/dir1 && echo "hello" > temp1.txt
-# RUN: cd %T/dir2 && echo "hello" > temp2.txt
-# RUN: diff temp2.txt ../dir1/temp1.txt
+# RUN: mkdir -p %t.dir1 %t.dir2
+# RUN: cd %t.dir1 && echo "hello" > temp1.txt
+# RUN: cd %t.dir2 && echo "hello" > temp2.txt
+# RUN: diff temp2.txt ../%{t:stem}.tmp.dir1/temp1.txt

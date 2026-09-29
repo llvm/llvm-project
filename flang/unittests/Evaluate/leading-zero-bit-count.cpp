@@ -1,5 +1,5 @@
 #include "flang/Common/leading-zero-bit-count.h"
-#include "testing.h"
+#include "flang/Testing/testing.h"
 
 using Fortran::common::LeadingZeroBitCount;
 

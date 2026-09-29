@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_BURYPOINTER_H
 #define LLVM_SUPPORT_BURYPOINTER_H
 
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -19,7 +20,7 @@ namespace llvm {
 // the memory is not misdiagnosed as an unintentional leak by leak detection
 // tools (this is achieved by preserving pointers to the object in a globally
 // visible array).
-void BuryPointer(const void *Ptr);
+LLVM_ABI void BuryPointer(const void *Ptr);
 template <typename T> void BuryPointer(std::unique_ptr<T> Ptr) {
   BuryPointer(Ptr.release());
 }

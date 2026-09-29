@@ -9,7 +9,7 @@ void f0(id a) {
 -(void) m: (int) arg0, ...;
 @end
 
-int f1(A *a) {
+void f1(A *a) {
   // This should also get an implicit cast (for the vararg)
   [a m: 1, "test"];
 }

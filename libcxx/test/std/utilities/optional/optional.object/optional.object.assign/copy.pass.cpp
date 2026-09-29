@@ -49,6 +49,55 @@ constexpr bool assign_value(optional<Tp>&& lhs) {
     return lhs.has_value() && rhs.has_value() && *lhs == *rhs;
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test_ref() {
+  struct TraceCopyAssign {
+    int copyAssign              = 0;
+    mutable int constCopyAssign = 0;
+
+    constexpr TraceCopyAssign() = default;
+    constexpr TraceCopyAssign(TraceCopyAssign& r) : copyAssign(r.copyAssign + 1), constCopyAssign(r.constCopyAssign) {}
+    constexpr TraceCopyAssign(const TraceCopyAssign& r)
+        : copyAssign(r.copyAssign), constCopyAssign(r.constCopyAssign + 1) {}
+    constexpr TraceCopyAssign& operator=(const TraceCopyAssign&) {
+      copyAssign++;
+      return *this;
+    }
+    constexpr const TraceCopyAssign& operator=(const TraceCopyAssign&) const {
+      constCopyAssign++;
+      return *this;
+    }
+  };
+  using T = TraceCopyAssign;
+  {
+    T t{};
+    std::optional<T&> o1{t};
+    std::optional<T&> o2 = o1;
+
+    assert(&(*o2) == &t);
+    assert(&(*o2) == &(*o1));
+    assert(t.constCopyAssign == 0);
+    assert(t.copyAssign == 0);
+    assert(o1.has_value());
+    assert(o2.has_value());
+  }
+  {
+    T t{};
+    std::optional<T&> o1{t};
+    std::optional<T> o2 = o1;
+
+    assert(&(*o2) != &t);
+    assert(&(*o2) != &(*o1));
+    assert(o2->constCopyAssign == 0);
+    assert(o2->copyAssign == 1);
+    assert(o1.has_value());
+    assert(o2.has_value());
+  }
+
+  return true;
+}
+#endif
+
 int main(int, char**)
 {
     {
@@ -100,5 +149,10 @@ int main(int, char**)
     }
 #endif
 
-  return 0;
+#if TEST_STD_VER >= 26
+    assert(test_ref());
+    static_assert(test_ref());
+#endif
+
+    return 0;
 }

@@ -104,7 +104,7 @@ public:
                           SynTensorBoundSetter synSetter = nullptr);
 
   /// Generates code to compute an affine expression whose variables are
-  /// `LoopId`s (i.e., `a.cast<AffineDimExpr>().getPosition()` is a valid
+  /// `LoopId`s (i.e., `cast<AffineDimExpr>(a).getPosition()` is a valid
   /// `LoopId`).
   Value genAffine(OpBuilder &builder, Location loc, AffineExpr a);
 
@@ -257,7 +257,8 @@ private:
         : tidLvls(tidLvls), loop(loop), userCodeBlock(userBlock), iv(iv) {
       // Attached a special tag to loop emitter generated loop.
       if (loopTag)
-        loop->setAttr(LoopEmitter::getLoopEmitterLoopAttrName(), loopTag);
+        loop->setDiscardableAttr(LoopEmitter::getLoopEmitterLoopAttrName(),
+                                 loopTag);
     }
     // The set of <tensor, lvl>, with *only* trivial index expressions, that are
     // used as the condition for the generated loop. Extra information is

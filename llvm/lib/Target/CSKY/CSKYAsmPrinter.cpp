@@ -15,7 +15,7 @@
 #include "CSKYConstantPoolValue.h"
 #include "CSKYTargetMachine.h"
 #include "MCTargetDesc/CSKYInstPrinter.h"
-#include "MCTargetDesc/CSKYMCExpr.h"
+#include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "MCTargetDesc/CSKYTargetStreamer.h"
 #include "TargetInfo/CSKYTargetInfo.h"
 #include "llvm/ADT/Statistic.h"
@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -47,7 +48,7 @@ bool CSKYAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Set the current MCSubtargetInfo to a copy which has the correct
   // feature bits for the current MachineFunction
   MCSubtargetInfo &NewSTI =
-      OutStreamer->getContext().getSubtargetCopy(*TM.getMCSubtargetInfo());
+      OutStreamer->getContext().getSubtargetCopy(TM.getMCSubtargetInfo());
   NewSTI.setFeatureBits(MF.getSubtarget().getFeatureBits());
   Subtarget = &NewSTI;
 
@@ -72,7 +73,7 @@ void CSKYAsmPrinter::expandTLSLA(const MachineInstr *MI) {
   DebugLoc DL = MI->getDebugLoc();
 
   MCSymbol *PCLabel = OutContext.getOrCreateSymbol(
-      Twine(MAI->getPrivateGlobalPrefix()) + "PC" + Twine(getFunctionNumber()) +
+      Twine(MAI.getInternalSymbolPrefix()) + "PC" + Twine(getFunctionNumber()) +
       "_" + Twine(MI->getOperand(3).getImm()));
 
   OutStreamer->emitLabel(PCLabel);
@@ -129,7 +130,7 @@ void CSKYAsmPrinter::emitFunctionBodyEnd() {
 
 void CSKYAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (TM.getTargetTriple().isOSBinFormatELF())
-    emitAttributes();
+    emitAttributes(M);
 }
 
 void CSKYAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -168,25 +169,24 @@ void CSKYAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 // Convert a CSKY-specific constant pool modifier into the associated
 // MCSymbolRefExpr variant kind.
-static CSKYMCExpr::VariantKind
-getModifierVariantKind(CSKYCP::CSKYCPModifier Modifier) {
+static CSKY::Specifier getModifierVariantKind(CSKYCP::CSKYCPModifier Modifier) {
   switch (Modifier) {
   case CSKYCP::NO_MOD:
-    return CSKYMCExpr::VK_CSKY_None;
+    return CSKY::S_None;
   case CSKYCP::ADDR:
-    return CSKYMCExpr::VK_CSKY_ADDR;
+    return CSKY::S_ADDR;
   case CSKYCP::GOT:
-    return CSKYMCExpr::VK_CSKY_GOT;
+    return CSKY::S_GOT;
   case CSKYCP::GOTOFF:
-    return CSKYMCExpr::VK_CSKY_GOTOFF;
+    return CSKY::S_GOTOFF;
   case CSKYCP::PLT:
-    return CSKYMCExpr::VK_CSKY_PLT;
+    return CSKY::S_PLT;
   case CSKYCP::TLSGD:
-    return CSKYMCExpr::VK_CSKY_TLSGD;
+    return CSKY::S_TLSGD;
   case CSKYCP::TLSLE:
-    return CSKYMCExpr::VK_CSKY_TLSLE;
+    return CSKY::S_TLSLE;
   case CSKYCP::TLSIE:
-    return CSKYMCExpr::VK_CSKY_TLSIE;
+    return CSKY::S_TLSIE;
   }
   llvm_unreachable("Invalid CSKYCPModifier!");
 }
@@ -219,13 +219,12 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
     MCSym = GetExternalSymbolSymbol(Sym);
   }
   // Create an MCSymbol for the reference.
-  const MCExpr *Expr =
-      MCSymbolRefExpr::create(MCSym, MCSymbolRefExpr::VK_None, OutContext);
+  const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, OutContext);
 
   if (CCPV->getPCAdjustment()) {
 
     MCSymbol *PCLabel = OutContext.getOrCreateSymbol(
-        Twine(MAI->getPrivateGlobalPrefix()) + "PC" +
+        Twine(MAI.getInternalSymbolPrefix()) + "PC" +
         Twine(getFunctionNumber()) + "_" + Twine(CCPV->getLabelID()));
 
     const MCExpr *PCRelExpr = MCSymbolRefExpr::create(PCLabel, OutContext);
@@ -241,25 +240,18 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
   }
 
   // Create an MCSymbol for the reference.
-  Expr = CSKYMCExpr::create(Expr, getModifierVariantKind(CCPV->getModifier()),
-                            OutContext);
+  Expr = MCSpecifierExpr::create(
+      Expr, getModifierVariantKind(CCPV->getModifier()), OutContext);
 
   OutStreamer->emitValue(Expr, Size);
 }
 
-void CSKYAsmPrinter::emitAttributes() {
+void CSKYAsmPrinter::emitAttributes(Module &M) {
   CSKYTargetStreamer &CTS =
       static_cast<CSKYTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
-  const Triple &TT = TM.getTargetTriple();
-  StringRef CPU = TM.getTargetCPU();
-  StringRef FS = TM.getTargetFeatureString();
-  const CSKYTargetMachine &CTM = static_cast<const CSKYTargetMachine &>(TM);
-  /* TuneCPU doesn't impact emission of ELF attributes, ELF attributes only
-     care about arch related features, so we can set TuneCPU as CPU.  */
-  const CSKYSubtarget STI(TT, CPU, /*TuneCPU=*/CPU, FS, CTM);
-
-  CTS.emitTargetAttributes(STI);
+  CTS.emitTargetAttributes(TM.getMCSubtargetInfo(),
+                           M.getFloatABI() == FloatABI::Hard);
 }
 
 bool CSKYAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

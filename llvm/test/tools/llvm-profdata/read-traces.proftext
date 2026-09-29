@@ -3,19 +3,16 @@
 # RUN: llvm-profdata merge -text %t.2.profdata -o %t.3.proftext
 # RUN: diff %t.1.proftext %t.3.proftext
 
-# RUN: llvm-profdata show --temporal-profile-traces %t.1.proftext | FileCheck %s
+# RUN: llvm-profdata merge -text %s | FileCheck %s
 
-# CHECK: Temporal Profile Traces (samples=3 seen=3):
-# CHECK: Temporal Profile Trace 0 (weight=1 count=3):
-# CHECK:   foo
-# CHECK:   bar
-# CHECK:   goo
-# CHECK: Temporal Profile Trace 1 (weight=3 count=3):
-# CHECK:   foo
-# CHECK:   goo
-# CHECK:   bar
-# CHECK: Temporal Profile Trace 2 (weight=1 count=1):
-# CHECK:   goo
+# CHECK:      :temporal_prof_traces
+# CHECK:      # Num Temporal Profile Traces:
+# CHECK-NEXT: 3
+# CHECK:      # Temporal Profile Trace Stream Size:
+# CHECK-NEXT: 3
+# CHECK-DAG:  foo,bar,goo,
+# CHECK-DAG:  foo,goo,bar,
+# CHECK-DAG:  goo,
 
 # Header
 :ir

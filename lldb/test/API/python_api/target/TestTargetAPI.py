@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class TargetAPITestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -69,20 +71,6 @@ class TargetAPITestCase(TestBase):
         platform = target.platform
         self.assertTrue(platform, VALID_PLATFORM)
 
-    def test_get_data_byte_size(self):
-        d = {"EXE": "b.out"}
-        self.build(dictionary=d)
-        self.setTearDownCleanup(dictionary=d)
-        target = self.create_simple_target("b.out")
-        self.assertEqual(target.data_byte_size, 1)
-
-    def test_get_code_byte_size(self):
-        d = {"EXE": "b.out"}
-        self.build(dictionary=d)
-        self.setTearDownCleanup(dictionary=d)
-        target = self.create_simple_target("b.out")
-        self.assertEqual(target.code_byte_size, 1)
-
     def test_resolve_file_address(self):
         d = {"EXE": "b.out"}
         self.build(dictionary=d)
@@ -105,6 +93,25 @@ class TargetAPITestCase(TestBase):
         self.assertIsNotNone(data_section2)
         self.assertEqual(data_section.name, data_section2.name)
 
+    def test_get_arch_name(self):
+        d = {"EXE": "b.out"}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        target = self.create_simple_target("b.out")
+
+        arch_name = target.arch_name
+        self.assertTrue(len(arch_name) > 0, "Got an arch name")
+
+        # Test consistency with triple.
+        triple = target.triple
+        self.assertTrue(len(triple) > 0, "Got a triple")
+        self.assertEqual(
+            triple.split("-")[0],
+            arch_name,
+            "Arch name is equal to the first item of the triple",
+        )
+
+    @skipIfWasm  # there is no ABI plugin for Wasm to name
     def test_get_ABIName(self):
         d = {"EXE": "b.out"}
         self.build(dictionary=d)
@@ -128,6 +135,7 @@ class TargetAPITestCase(TestBase):
             abi_pre_launch, abi_after_launch, "ABI's match before and during run"
         )
 
+    @skipIfWasm  # zero is a valid address in a Wasm linear memory, so a read of it succeeds
     def test_read_memory(self):
         d = {"EXE": "b.out"}
         self.build(dictionary=d)
@@ -160,7 +168,7 @@ class TargetAPITestCase(TestBase):
 
     @skipIfWindows  # stdio manipulation unsupported on Windows
     @skipIfRemote  # stdio manipulation unsupported on remote iOS devices<rdar://problem/54581135>
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     @no_debug_info_test
     def test_launch_simple(self):
         d = {"EXE": "b.out"}
@@ -233,28 +241,14 @@ class TargetAPITestCase(TestBase):
 
     def find_global_variables(self, exe_name):
         """Exercise SBTarget.FindGlobalVariables() API."""
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
         # rdar://problem/9700873
         # Find global variable value fails for dwarf if inferior not started
         # (Was CrashTracer: [USER] 1 crash in Python at _lldb.so: lldb_private::MemoryCache::Read + 94)
-        #
         # Remove the lines to create a breakpoint and to start the inferior
         # which are workarounds for the dwarf case.
-
-        breakpoint = target.BreakpointCreateByLocation("main.c", self.line1)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-        # Make sure we hit our breakpoint:
-        thread_list = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(len(thread_list), 1)
+        target, _, _, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.c"), self.line1, exe_name=exe_name
+        )
 
         value_list = target.FindGlobalVariables("my_global_var_of_char_type", 3)
         self.assertEqual(value_list.GetSize(), 1)
@@ -492,6 +486,7 @@ class TargetAPITestCase(TestBase):
         )
 
     @skipIfRemote
+    @skipIfWasm  # the default architecture is the host's, which no Wasm module matches
     def test_default_arch(self):
         """Test the other two target create methods using LLDB_ARCH_DEFAULT."""
         self.build()
@@ -537,3 +532,27 @@ class TargetAPITestCase(TestBase):
         """Make sure we don't crash when trying to select invalid target."""
         target = lldb.SBTarget()
         self.dbg.SetSelectedTarget(target)
+
+    @no_debug_info_test
+    def test_get_api_mutex(self):
+        """Make sure we can lock and unlock the API mutex from Python."""
+        target = self.dbg.GetDummyTarget()
+
+        mutex = target.GetAPIMutex()
+        self.assertTrue(mutex.IsValid())
+        mutex.lock()
+        # The API call below doesn't actually matter, it's just there to
+        # confirm we don't block on the API lock.
+        target.BreakpointCreateByName("foo", "bar")
+        mutex.unlock()
+
+    @no_debug_info_test
+    def test_get_api_mutex_with_statement(self):
+        """Make sure we can lock and unlock the API mutex using a with-statement from Python."""
+        target = self.dbg.GetDummyTarget()
+
+        with target.GetAPIMutex() as mutex:
+            self.assertTrue(mutex.IsValid())
+            # The API call below doesn't actually matter, it's just there to
+            # confirm we don't block on the API lock.
+            target.BreakpointCreateByName("foo", "bar")

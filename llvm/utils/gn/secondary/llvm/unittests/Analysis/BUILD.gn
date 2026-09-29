@@ -6,6 +6,7 @@ unittest("AnalysisTests") {
     "//llvm/lib/AsmParser",
     "//llvm/lib/IR",
     "//llvm/lib/Passes",
+    "//llvm/lib/Plugins",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
@@ -27,10 +28,11 @@ unittest("AnalysisTests") {
     "DDGTest.cpp",
     "DXILResourceTest.cpp",
     "DomTreeUpdaterTest.cpp",
+    "EphemeralValuesCacheTest.cpp",
     "FunctionPropertiesAnalysisTest.cpp",
     "GlobalsModRefTest.cpp",
     "GraphWriterTest.cpp",
-    "IRSimilarityIdentifierTest.cpp",
+    "IR2VecTest.cpp",
     "IVDescriptorsTest.cpp",
     "InlineCostTest.cpp",
     "LastRunTrackingAnalysisTest.cpp",
@@ -38,6 +40,7 @@ unittest("AnalysisTests") {
     "LoadsTest.cpp",
     "LoopInfoTest.cpp",
     "LoopNestTest.cpp",
+    "MLGOUtilsTest.cpp",
     "MLModelRunnerTest.cpp",
     "MemoryBuiltinsTest.cpp",
     "MemoryProfileInfoTest.cpp",
@@ -74,4 +77,5 @@ unittest("AnalysisTests") {
     # Corresponds to export_executable_symbols() in cmake.
     ldflags = [ "-rdynamic" ]
   }
+  configs -= [ "//llvm/utils/gn/build:no_exported_symbols" ]
 }

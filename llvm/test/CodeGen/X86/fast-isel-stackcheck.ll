@@ -19,16 +19,16 @@ entry:
 ; CHECK-DAG: movq ___stack_chk_guard@GOTPCREL(%rip), %[[GUARD:r.x]]
 ; CHECK-DAG: movq {{[0-9]+}}(%rsp), %[[CANARY:r.x]]
 ; CHECK: subq %[[CANARY]], %[[GUARD]]
-define void @bar() #1 {
+define void @bar(i1 %arg) #1 {
 entry:
   %vt = alloca [2 x double], align 16
-  br i1 undef, label %cleanup.4091, label %for.cond.3850
+  br i1 %arg, label %cleanup.4091, label %for.cond.3850
 
 unreachable:
   unreachable
 
 for.cond.3850:
-  br i1 undef, label %land.rhs.3853, label %land.end.3857
+  br i1 %arg, label %land.rhs.3853, label %land.end.3857
 
 land.rhs.3853:
   br label %land.end.3857

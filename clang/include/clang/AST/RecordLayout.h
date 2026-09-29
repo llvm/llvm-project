@@ -75,8 +75,9 @@ private:
   // performance or backwards compatibility preserving (e.g. AIX-ABI).
   CharUnits PreferredAlignment;
 
-  // UnadjustedAlignment - Maximum of the alignments of the record members in
-  // characters.
+  // UnadjustedAlignment - Alignment of record in characters before alignment
+  // adjustments. Maximum of the alignments of the record members and base
+  // classes in characters.
   CharUnits UnadjustedAlignment;
 
   /// RequiredAlignment - The required alignment of the object.  In the MS-ABI
@@ -95,6 +96,12 @@ private:
     /// NonVirtualAlignment - The non-virtual alignment (in chars) of an object,
     /// which is the alignment of the object without virtual bases.
     CharUnits NonVirtualAlignment;
+
+    /// NonRequiredNVAlignment - The non-virtual alignment (in chars) of an
+    /// object ignoring any over-alignment imposed via `alignas` /
+    /// `__declspec(align)` (i.e. the record's required alignment) on the record
+    /// or its bases.
+    CharUnits NonRequiredNVAlignment;
 
     /// PreferredNVAlignment - The preferred non-virtual alignment (in chars) of
     /// an object, which is the preferred alignment of the object without
@@ -163,6 +170,7 @@ private:
                   CharUnits datasize, ArrayRef<uint64_t> fieldoffsets,
                   CharUnits nonvirtualsize, CharUnits nonvirtualalignment,
                   CharUnits preferrednvalignment,
+                  CharUnits nonrequirednvalignment,
                   CharUnits SizeOfLargestEmptySubobject,
                   const CXXRecordDecl *PrimaryBase, bool IsPrimaryBaseVirtual,
                   const CXXRecordDecl *BaseSharingVBPtr,
@@ -186,7 +194,7 @@ public:
   CharUnits getPreferredAlignment() const { return PreferredAlignment; }
 
   /// getUnadjustedAlignment - Get the record alignment in characters, before
-  /// alignment adjustement.
+  /// alignment adjustment.
   CharUnits getUnadjustedAlignment() const { return UnadjustedAlignment; }
 
   /// getSize - Get the record size in characters.
@@ -219,6 +227,15 @@ public:
     assert(CXXInfo && "Record layout does not have C++ specific info!");
 
     return CXXInfo->NonVirtualAlignment;
+  }
+
+  /// getNonRequiredNVAlignment - Get the non-virtual alignment (in chars) of an
+  /// object ignoring over-alignment imposed via `alignas` / `__declspec(align)`
+  /// on the object or its bases. Only meaningful for the Microsoft ABI.
+  CharUnits getNonRequiredNVAlignment() const {
+    assert(CXXInfo && "Record layout does not have C++ specific info!");
+
+    return CXXInfo->NonRequiredNVAlignment;
   }
 
   /// getPreferredNVAlignment - Get the preferred non-virtual alignment (in

@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -329,7 +332,7 @@ TEST_F(ValueHandle, CallbackVH_DeletionCanRAUW) {
     }
     void allUsesReplacedWith(Value *new_value) override {
       ASSERT_TRUE(nullptr != getValPtr());
-      EXPECT_EQ(1U, getValPtr()->getNumUses());
+      EXPECT_TRUE(getValPtr()->hasOneUse());
       EXPECT_EQ(nullptr, AURWArgument);
       AURWArgument = new_value;
     }
@@ -491,6 +494,23 @@ TEST_F(ValueHandle, PoisoningVH_DoesNotFollowRAUW) {
   EXPECT_TRUE(DenseMapInfo<PoisoningVH<Value>>::isEqual(VH, BitcastV.get()));
 }
 
+TEST_F(ValueHandle, AssertingVH_MoveConstructor) {
+  AssertingVH<Value> AVH(BitcastV.get());
+  AssertingVH<Value> Moved(std::move(AVH));
+  EXPECT_EQ(BitcastV.get(), Moved);
+  // After move, AVH should be null.
+  EXPECT_EQ(nullptr, (Value *)AVH);
+}
+
+TEST_F(ValueHandle, AssertingVH_MoveAssignment) {
+  AssertingVH<Value> AVH(BitcastV.get());
+  AssertingVH<Value> Other;
+  Other = std::move(AVH);
+  EXPECT_EQ(BitcastV.get(), Other);
+  // After move, AVH should be null.
+  EXPECT_EQ(nullptr, (Value *)AVH);
+}
+
 TEST_F(ValueHandle, AssertingVH_DenseMap) {
   DenseMap<AssertingVH<Value>, int> Map;
   Map.insert({BitcastV.get(), 1});
@@ -513,6 +533,37 @@ TEST_F(ValueHandle, PoisoningVH_DenseMap) {
   // These will not create a temporary PoisoningVH.
   EXPECT_TRUE(Map.find_as(BitcastV.get()) != Map.end());
   EXPECT_TRUE(Map.find_as(ConstantV) != Map.end());
+}
+
+// A poisoned PoisoningVH is detached from its use list but keeps its raw
+// pointer, so its use-list pointers are stale; relocating it must not relink
+// through them. Reproduce the way ScalarEvolution does: a callback mutates a
+// map embedding such handles while RAUW is still walking the use list. Here the
+// callback grows the map, relocating the just-poisoned handles mid-walk.
+TEST_F(ValueHandle, PoisoningVH_RelocatePoisoned) {
+  using MapTy = DenseMap<int, SmallVector<PoisoningVH<Value>, 1>>;
+
+  struct GrowCB final : CallbackVH {
+    MapTy *Map;
+    GrowCB(Value *V, MapTy *Map) : CallbackVH(V), Map(Map) {}
+    void allUsesReplacedWith(Value *) override {
+      for (unsigned I = 0; I != 256; ++I)
+        (void)(*Map)[1000 + I];
+    }
+  };
+
+  BasicBlock *BB = BasicBlock::Create(Context);
+  BasicBlock *BB2 = BasicBlock::Create(Context);
+  MapTy Map;
+  // Registered first => processed last, after the handles below are poisoned.
+  GrowCB CB(BB, &Map);
+  for (unsigned I = 0; I != 8; ++I)
+    Map[I].emplace_back(BB);
+  BB->replaceAllUsesWith(BB2);
+  EXPECT_EQ(Map.size(), 8u + 256u);
+
+  BB->deleteValue();
+  BB2->deleteValue();
 }
 
 #ifdef NDEBUG

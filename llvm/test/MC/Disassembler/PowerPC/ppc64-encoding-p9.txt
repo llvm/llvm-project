@@ -1,0 +1,10 @@
+# RUN: llvm-mc --disassemble %s -triple powerpc64le-unknown-unknown -mcpu=pwr9 | FileCheck %s
+
+# CHECK: mtvsrdd 6, 0, 3
+0x66 0x1b 0xc0 0x7c
+
+# CHECK: tlbie 8, 10
+0x64, 0x42, 0x40, 0x7d
+
+# CHECK: tlbie 8, 10, 2, 1, 0
+0x64, 0x42, 0x4a, 0x7d

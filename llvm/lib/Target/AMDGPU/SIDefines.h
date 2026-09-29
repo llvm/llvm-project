@@ -10,7 +10,10 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 #define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 namespace llvm {
 
@@ -44,11 +47,19 @@ enum {
   GFX90A = 8,
   GFX940 = 9,
   GFX11 = 10,
-  GFX12 = 11,
+  GFX1170 = 11,
+  GFX12 = 12,
+  GFX1250 = 13,
+  GFX13 = 14,
 };
 }
 
 namespace SIInstrFlags {
+
+// Raw TSFlags bit constants — use the predicate functions below instead of
+// testing these directly. This namespace makes accidental direct use a
+// compile error outside of SIDefines.h itself.
+namespace DontUseRawTSFlags {
 // This needs to be kept in sync with the field bits in InstSI.
 enum : uint64_t {
   // Low bits - basic encoding information.
@@ -97,6 +108,8 @@ enum : uint64_t {
   // VINTERP instruction format.
   VINTERP = 1 << 29,
 
+  VOPD3 = 1 << 30,
+
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
   EXP_CNT = UINT64_C(1) << 33,
@@ -106,18 +119,15 @@ enum : uint64_t {
   DisableWQM = UINT64_C(1) << 36,
   Gather4 = UINT64_C(1) << 37,
 
-  // Reserved, must be 0.
-  Reserved0 = UINT64_C(1) << 38,
+  TENSOR_CNT = UINT64_C(1) << 38,
 
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
 
-  // Reserved, must be 0.
-  Reserved1 = UINT64_C(1) << 41,
+  ASYNC_CNT = UINT64_C(1) << 41,
 
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,
-  renamedInGFX9 = UINT64_C(1) << 44,
 
   // Is a clamp on FP type.
   FPClamp = UINT64_C(1) << 45,
@@ -134,9 +144,6 @@ enum : uint64_t {
 
   // Is a packed VOP3P instruction.
   IsPacked = UINT64_C(1) << 49,
-
-  // Is a D16 buffer instruction.
-  D16Buf = UINT64_C(1) << 50,
 
   // FLAT instruction accesses FLAT_GLBL segment.
   FlatGlobal = UINT64_C(1) << 51,
@@ -177,6 +184,223 @@ enum : uint64_t {
   // Is a SWMMAC instruction.
   IsSWMMAC = UINT64_C(1) << 63,
 };
+} // namespace DontUseRawTSFlags
+
+// Predicate functions over TSFlags — the single place where raw TSFlags bit
+// tests are written. All callers (SIInstrInfo methods, MC-layer code) go
+// through these so that bit-layout changes require updating only this file.
+//
+// getTSFlags is overloaded for MCInstrDesc, (MCInstrInfo, Opcode), and
+// (MCInstrInfo, MCInst) here; SIInstrInfo.h adds a MachineInstr overload in
+// namespace llvm so ADL finds it when predicates are instantiated with
+// MachineInstr.
+
+constexpr uint64_t getTSFlags(const MCInstrDesc &Desc) { return Desc.TSFlags; }
+inline uint64_t getTSFlags(const MCInstrInfo &MII, unsigned Opcode) {
+  return MII.get(Opcode).TSFlags;
+}
+inline uint64_t getTSFlags(const MCInstrInfo &MII, const MCInst &Inst) {
+  return MII.get(Inst.getOpcode()).TSFlags;
+}
+
+template <typename... T> constexpr bool isSALU(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::SALU;
+}
+template <typename... T> constexpr bool isVALU(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VALU;
+}
+template <typename... T> constexpr bool isSOP1(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::SOP1;
+}
+template <typename... T> constexpr bool isSOP2(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::SOP2;
+}
+template <typename... T> constexpr bool isSOPC(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::SOPC;
+}
+template <typename... T> constexpr bool isSOPK(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::SOPK;
+}
+template <typename... T> constexpr bool isSOPP(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::SOPP;
+}
+template <typename... T> constexpr bool isVOP1(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VOP1;
+}
+template <typename... T> constexpr bool isVOP2(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VOP2;
+}
+template <typename... T> constexpr bool isVOPC(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VOPC;
+}
+template <typename... T> constexpr bool isVOP3(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VOP3;
+}
+template <typename... T> constexpr bool isVOP3P(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VOP3P;
+}
+template <typename... T> constexpr bool isVOP3Like(const T &...O) {
+  return getTSFlags(O...) &
+         (DontUseRawTSFlags::VOP3 | DontUseRawTSFlags::VOP3P);
+}
+template <typename... T> constexpr bool isVINTRP(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VINTRP;
+}
+template <typename... T> constexpr bool isSDWA(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::SDWA;
+}
+template <typename... T> constexpr bool isDPP(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::DPP;
+}
+template <typename... T> constexpr bool isTRANS(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::TRANS;
+}
+template <typename... T> constexpr bool isMUBUF(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::MUBUF;
+}
+template <typename... T> constexpr bool isMTBUF(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::MTBUF;
+}
+template <typename... T> constexpr bool isBuffer(const T &...O) {
+  return getTSFlags(O...) &
+         (DontUseRawTSFlags::MUBUF | DontUseRawTSFlags::MTBUF);
+}
+template <typename... T> constexpr bool isSMRD(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::SMRD;
+}
+template <typename... T> constexpr bool isMIMG(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::MIMG;
+}
+template <typename... T> constexpr bool isVIMAGE(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VIMAGE;
+}
+template <typename... T> constexpr bool isVSAMPLE(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VSAMPLE;
+}
+template <typename... T> constexpr bool isEXP(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::EXP;
+}
+template <typename... T> constexpr bool isFLAT(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::FLAT;
+}
+template <typename... T> constexpr bool isDS(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::DS;
+}
+template <typename... T> constexpr bool isSpill(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::Spill;
+}
+template <typename... T> constexpr bool isLDSDIR(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::LDSDIR;
+}
+template <typename... T> constexpr bool isVINTERP(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VINTERP;
+}
+template <typename... T> constexpr bool isWQM(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::WQM;
+}
+template <typename... T> constexpr bool isDisableWQM(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::DisableWQM;
+}
+template <typename... T> constexpr bool isGather4(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::Gather4;
+}
+template <typename... T> constexpr bool usesTENSOR_CNT(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::TENSOR_CNT;
+}
+template <typename... T> constexpr bool isScalarStore(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::SCALAR_STORE;
+}
+template <typename... T> constexpr bool isFixedSize(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::FIXED_SIZE;
+}
+template <typename... T> constexpr bool usesASYNC_CNT(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::ASYNC_CNT;
+}
+template <typename... T> constexpr bool hasVOP3OpSel(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VOP3_OPSEL;
+}
+template <typename... T> constexpr bool isMaybeAtomic(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::maybeAtomic;
+}
+template <typename... T> constexpr bool hasFPClamp(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::FPClamp;
+}
+template <typename... T> constexpr bool hasIntClamp(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::IntClamp;
+}
+template <typename... T> constexpr bool hasClampLo(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::ClampLo;
+}
+template <typename... T> constexpr bool hasClampHi(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::ClampHi;
+}
+template <typename... T> constexpr bool isPacked(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::IsPacked;
+}
+template <typename... T> constexpr bool isFlatGlobal(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::FlatGlobal;
+}
+template <typename... T> constexpr bool usesFPDPRounding(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::FPDPRounding;
+}
+template <typename... T> constexpr bool isFPAtomic(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::FPAtomic;
+}
+template <typename... T> constexpr bool isMAI(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::IsMAI;
+}
+template <typename... T> constexpr bool isDOT(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::IsDOT;
+}
+template <typename... T> constexpr bool isFlatScratch(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::FlatScratch;
+}
+template <typename... T> constexpr bool isAtomicNoRet(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::IsAtomicNoRet;
+}
+template <typename... T> constexpr bool isAtomicRet(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::IsAtomicRet;
+}
+template <typename... T> constexpr bool isWMMA(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::IsWMMA;
+}
+template <typename... T> constexpr bool isTiedSourceNotRead(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::TiedSourceNotRead;
+}
+template <typename... T> constexpr bool isNeverUniform(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::IsNeverUniform;
+}
+template <typename... T> constexpr bool isGWS(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::GWS;
+}
+template <typename... T> constexpr bool isSWMMAC(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::IsSWMMAC;
+}
+template <typename... T> constexpr bool isVOPD3(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VOPD3;
+}
+template <typename... T> constexpr bool usesVM_CNT(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VM_CNT;
+}
+template <typename... T> constexpr bool usesLGKM_CNT(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::LGKM_CNT;
+}
+
+// Compound predicates.
+template <typename... T> constexpr bool isAtomic(const T &...O) {
+  return isAtomicNoRet(O...) || isAtomicRet(O...);
+}
+template <typename... T> constexpr bool isSegmentSpecificFLAT(const T &...O) {
+  return isFlatGlobal(O...) || isFlatScratch(O...);
+}
+// Any image-family instruction: pre-gfx11 MIMG, gfx11+ VIMAGE or VSAMPLE.
+template <typename... T> constexpr bool isImage(const T &...O) {
+  return isMIMG(O...) || isVIMAGE(O...) || isVSAMPLE(O...);
+}
+// Vector memory: buffer + image + flat.
+template <typename... T> constexpr bool isVMEM(const T &...O) {
+  return isMUBUF(O...) || isMTBUF(O...) || isImage(O...) || isFLAT(O...);
+}
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
 // The result is true if any of these tests are true.
@@ -195,8 +419,9 @@ enum ClassFlags : unsigned {
 }
 
 namespace AMDGPU {
+
 enum OperandType : unsigned {
-  /// Operands with register or 32-bit immediate
+  /// Operands with register, 32-bit, or 64-bit immediate
   OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,
   OPERAND_REG_IMM_INT64,
   OPERAND_REG_IMM_INT16,
@@ -204,14 +429,16 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_FP64,
   OPERAND_REG_IMM_BF16,
   OPERAND_REG_IMM_FP16,
-  OPERAND_REG_IMM_BF16_DEFERRED,
-  OPERAND_REG_IMM_FP16_DEFERRED,
-  OPERAND_REG_IMM_FP32_DEFERRED,
+  OPERAND_REG_IMM_NOINLINE_FP16,
   OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
+  OPERAND_REG_IMM_V2FP16_SPLAT,
   OPERAND_REG_IMM_V2INT16,
+  OPERAND_REG_IMM_V2INT64,
+  OPERAND_REG_IMM_NOINLINE_V2FP16,
   OPERAND_REG_IMM_V2INT32,
   OPERAND_REG_IMM_V2FP32,
+  OPERAND_REG_IMM_V2FP64,
 
   /// Operands with register or inline constant
   OPERAND_REG_INLINE_C_INT16,
@@ -224,8 +451,6 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_C_V2INT16,
   OPERAND_REG_INLINE_C_V2BF16,
   OPERAND_REG_INLINE_C_V2FP16,
-  OPERAND_REG_INLINE_C_V2INT32,
-  OPERAND_REG_INLINE_C_V2FP32,
 
   // Operand for split barrier inline constant
   OPERAND_INLINE_SPLIT_BARRIER_INT32,
@@ -233,19 +458,16 @@ enum OperandType : unsigned {
   /// Operand with 32-bit immediate that uses the constant bus.
   OPERAND_KIMM32,
   OPERAND_KIMM16,
+  OPERAND_KIMM64,
 
   /// Operands with an AccVGPR register or inline constant
-  OPERAND_REG_INLINE_AC_INT16,
   OPERAND_REG_INLINE_AC_INT32,
-  OPERAND_REG_INLINE_AC_BF16,
-  OPERAND_REG_INLINE_AC_FP16,
   OPERAND_REG_INLINE_AC_FP32,
   OPERAND_REG_INLINE_AC_FP64,
-  OPERAND_REG_INLINE_AC_V2INT16,
-  OPERAND_REG_INLINE_AC_V2BF16,
-  OPERAND_REG_INLINE_AC_V2FP16,
-  OPERAND_REG_INLINE_AC_V2INT32,
-  OPERAND_REG_INLINE_AC_V2FP32,
+
+  // Operand for AV_MOV_B64_IMM_PSEUDO, which is a pair of 32-bit inline
+  // constants. Does not accept registers.
+  OPERAND_INLINE_C_AV64_PSEUDO,
 
   // Operand for source modifiers for VOP instructions
   OPERAND_INPUT_MODS,
@@ -254,45 +476,36 @@ enum OperandType : unsigned {
   OPERAND_SDWA_VOPC_DST,
 
   OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
-  OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
+  OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP64,
 
   OPERAND_REG_INLINE_C_FIRST = OPERAND_REG_INLINE_C_INT16,
-  OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_V2FP32,
+  OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_FP64,
 
-  OPERAND_REG_INLINE_AC_FIRST = OPERAND_REG_INLINE_AC_INT16,
-  OPERAND_REG_INLINE_AC_LAST = OPERAND_REG_INLINE_AC_V2FP32,
+  OPERAND_REG_INLINE_AC_FIRST = OPERAND_REG_INLINE_AC_INT32,
+  OPERAND_REG_INLINE_AC_LAST = OPERAND_INLINE_C_AV64_PSEUDO,
 
   OPERAND_SRC_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
 
   OPERAND_KIMM_FIRST = OPERAND_KIMM32,
-  OPERAND_KIMM_LAST = OPERAND_KIMM16
+  OPERAND_KIMM_LAST = OPERAND_KIMM64
 
-};
-
-// Should be in sync with the OperandSemantics defined in SIRegisterInfo.td
-enum OperandSemantics : unsigned {
-  INT = 0,
-  FP16 = 1,
-  BF16 = 2,
-  FP32 = 3,
-  FP64 = 4,
 };
 }
 
 // Input operand modifiers bit-masks
 // NEG and SEXT share same bit-mask because they can't be set simultaneously.
 namespace SISrcMods {
-  enum : unsigned {
-   NONE = 0,
-   NEG = 1 << 0,   // Floating-point negate modifier
-   ABS = 1 << 1,   // Floating-point absolute modifier
-   SEXT = 1 << 0,  // Integer sign-extend modifier
-   NEG_HI = ABS,   // Floating-point negate high packed component modifier.
-   OP_SEL_0 = 1 << 2,
-   OP_SEL_1 = 1 << 3,
-   DST_OP_SEL = 1 << 3 // VOP3 dst op_sel (share mask with OP_SEL_1)
-  };
+enum : unsigned {
+  NONE = 0,
+  NEG = 1 << 0,  // Floating-point negate modifier
+  ABS = 1 << 1,  // Floating-point absolute modifier
+  SEXT = 1 << 4, // Integer sign-extend modifier
+  NEG_HI = ABS,  // Floating-point negate high packed component modifier.
+  OP_SEL_0 = 1 << 2,
+  OP_SEL_1 = 1 << 3,
+  DST_OP_SEL = 1 << 3 // VOP3 dst op_sel (share mask with OP_SEL_1)
+};
 }
 
 namespace SIOutMods {
@@ -357,6 +570,7 @@ enum : unsigned {
   INLINE_INTEGER_C_MAX = 208,
   INLINE_FLOATING_C_MIN = 240,
   INLINE_FLOATING_C_MAX = 248,
+  LITERAL64_CONST = 254,
   LITERAL_CONST = 255,
   VGPR_MIN = 256,
   VGPR_MAX = 511,
@@ -368,10 +582,11 @@ enum : unsigned {
 // Register codes as defined in the TableGen's HWEncoding field.
 namespace HWEncoding {
 enum : unsigned {
-  REG_IDX_MASK = 0xff,
-  IS_VGPR = 1 << 8,
-  IS_AGPR = 1 << 9,
-  IS_HI16 = 1 << 10,
+  REG_IDX_MASK = 0x3ff,
+  LO256_REG_IDX_MASK = 0xff,
+  IS_VGPR = 1 << 10,
+  IS_AGPR = 1 << 11,
+  IS_HI16 = 1 << 12,
 };
 } // namespace HWEncoding
 
@@ -396,7 +611,7 @@ enum CPol {
   TH_NT = 1,     // non-temporal
   TH_HT = 2,     // high-temporal
   TH_LU = 3,     // last use
-  TH_RT_WB = 3,  // regular (CU, SE), high-temporal with write-back (MALL)
+  TH_WB = 3,     // regular (CU, SE), high-temporal with write-back (MALL)
   TH_NT_RT = 4,  // non-temporal (CU, SE), regular (MALL)
   TH_RT_NT = 5,  // regular (CU, SE), non-temporal (MALL)
   TH_NT_HT = 6,  // non-temporal (CU, SE), high-temporal (MALL)
@@ -411,15 +626,21 @@ enum CPol {
   TH_ATOMIC_CASCADE = 4,  // Cascading vs regular
 
   // Scope
-  SCOPE = 0x3 << 3, // All Scope bits
-  SCOPE_CU = 0 << 3,
-  SCOPE_SE = 1 << 3,
-  SCOPE_DEV = 2 << 3,
-  SCOPE_SYS = 3 << 3,
+  SCOPE_SHIFT = 3,
+  SCOPE_MASK = 0x3,
+  SCOPE = SCOPE_MASK << SCOPE_SHIFT, // All Scope bits
+  SCOPE_CU = 0 << SCOPE_SHIFT,
+  SCOPE_SE = 1 << SCOPE_SHIFT,
+  SCOPE_DEV = 2 << SCOPE_SHIFT,
+  SCOPE_SYS = 3 << SCOPE_SHIFT,
+
+  NV = 1 << 5, // Non-volatile bit
 
   SWZ = 1 << 6, // Swizzle bit
 
-  ALL = TH | SCOPE,
+  SCAL = 1 << 11, // Scale offset bit
+
+  ALL = TH | SCOPE | NV,
 
   // Helper bits
   TH_TYPE_LOAD = 1 << 7,    // TH_LOAD policy
@@ -430,6 +651,9 @@ enum CPol {
   // Volatile (used to preserve/signal operation volatility for buffer
   // operations not a real instruction bit)
   VOLATILE = 1 << 31,
+  // The set of "cache policy" bits used for compiler features that
+  // do not correspond to handware features.
+  VIRTUAL_BITS = VOLATILE,
 };
 
 } // namespace CPol
@@ -463,6 +687,9 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_TBA = 133,
   ID_RTN_GET_TBA_TO_PC = 134,
   ID_RTN_GET_SE_AID_ID = 135,
+
+  ID_RTN_GET_CLUSTER_BARRIER_STATE = 136, // added in GFX1250
+  ID_RTN_SAVE_WAVE_HAS_TDM = 152,         // added in GFX1250
 
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
@@ -500,6 +727,14 @@ enum StreamId : unsigned { // Stream ID, (2) [9:8].
 
 } // namespace SendMsg
 
+namespace WaitEvent { // Encoding of SIMM16 used in s_wait_event
+enum Id {
+  DONT_WAIT_EXPORT_READY = 1 << 0, // Only used in gfx11
+  EXPORT_READY = 1 << 1,           // gfx12+
+};
+
+} // namespace WaitEvent
+
 namespace Hwreg { // Encoding of SIMM16 used in s_setreg/getreg* insns.
 
 enum Id { // HwRegCode, (6) [5:0]
@@ -524,7 +759,9 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
+  ID_SCHED_MODE = 26,
   ID_PERF_SNAPSHOT_DATA_gfx11 = 27,
+  ID_IB_STS2 = 28,
   ID_SHADER_CYCLES = 29,
   ID_SHADER_CYCLES_HI = 30,
   ID_DVGPR_ALLOC_LO = 31,
@@ -542,16 +779,21 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_EXCP_FLAG_USER = 18,
   ID_TRAP_CTRL = 19,
 
-  // GFX940 specific registers
+  // GFX94* specific registers
   ID_XCC_ID = 20,
   ID_SQ_PERF_SNAPSHOT_DATA = 21,
   ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
   ID_SQ_PERF_SNAPSHOT_PC_LO = 23,
   ID_SQ_PERF_SNAPSHOT_PC_HI = 24,
+
+  // GFX1250
+  ID_XNACK_STATE_PRIV = 33,
+  ID_XNACK_MASK_gfx1250 = 34,
 };
 
 enum Offset : unsigned { // Offset, (5) [10:6]
   OFFSET_MEM_VIOL = 8,
+  OFFSET_ME_ID = 8, // in HW_ID2
 };
 
 enum ModeRegisterMasks : uint32_t {
@@ -573,7 +815,17 @@ enum ModeRegisterMasks : uint32_t {
 
   GPR_IDX_EN_MASK = 1 << 27,
   VSKIP_MASK = 1 << 28,
-  CSP_MASK = 0x7u << 29 // Bits 29..31
+  CSP_MASK = 0x7u << 29, // Bits 29..31
+
+  // GFX1250
+  DST_VGPR_MSB = 0x3 << 12,
+  SRC0_VGPR_MSB = 0x3 << 14,
+  SRC1_VGPR_MSB = 0x3 << 16,
+  SRC2_VGPR_MSB = 0x3 << 18,
+  VGPR_MSB_MASK = 0xff << 12, // Bits 12..19
+
+  REPLAY_MODE = 1 << 25,
+  FLAT_SCRATCH_IS_NV = 1 << 26,
 };
 
 } // namespace Hwreg
@@ -1021,6 +1273,27 @@ enum Target : unsigned {
 
 } // namespace Exp
 
+namespace WMMA {
+enum MatrixFMT : unsigned {
+  MATRIX_FMT_FP8 = 0,
+  MATRIX_FMT_BF8 = 1,
+  MATRIX_FMT_FP6 = 2,
+  MATRIX_FMT_BF6 = 3,
+  MATRIX_FMT_FP4 = 4
+};
+
+enum MatrixScale : unsigned {
+  MATRIX_SCALE_ROW0 = 0,
+  MATRIX_SCALE_ROW1 = 1,
+};
+
+enum MatrixScaleFmt : unsigned {
+  MATRIX_SCALE_FMT_E8 = 0,
+  MATRIX_SCALE_FMT_E5M3 = 1,
+  MATRIX_SCALE_FMT_E4M3 = 2
+};
+} // namespace WMMA
+
 namespace VOP3PEncoding {
 
 enum OpSel : uint64_t {
@@ -1075,13 +1348,29 @@ enum Register_Flag : uint8_t {
 namespace AMDGPU {
 namespace Barrier {
 
-enum Type { TRAP = -2, WORKGROUP = -1 };
-
-enum {
-  BARRIER_SCOPE_WORKGROUP = 0,
+enum Type {
+  CLUSTER_TRAP = -4,
+  CLUSTER = -3,
+  TRAP = -2,
+  WORKGROUP = -1,
+  NAMED_BARRIER_FIRST = 1,
+  NAMED_BARRIER_LAST = 16,
 };
 
 } // namespace Barrier
+
+namespace SyntheticAperture {
+/// Synthetic aperture numbers. This is OR'd with the high
+/// bits of the LDS aperture pointer.
+///
+/// NOTE: This is also documented in AMDGPUUsage.
+enum SyntheticAperture {
+  None = 0x00000000,
+
+  BARRIER = 0x00000001,
+};
+} // namespace SyntheticAperture
+
 } // namespace AMDGPU
 
 // clang-format off
@@ -1155,6 +1444,10 @@ enum {
 #define   S_00B84C_EXCP_EN(x)                                         (((x) & 0x7F) << 24)
 #define   G_00B84C_EXCP_EN(x)                                         (((x) >> 24) & 0x7F)
 #define   C_00B84C_EXCP_EN                                            0x80FFFFFF
+
+#define   S_00B84C_USER_SGPR_GFX1250(x)                               (((x) & 0x3F) << 1)
+#define   G_00B84C_USER_SGPR_GFX1250(x)                               (((x) >> 1) & 0x3F)
+#define   C_00B84C_USER_SGPR_GFX1250                                  0xFFFFFF81
 
 #define R_0286CC_SPI_PS_INPUT_ENA                                       0x0286CC
 #define R_0286D0_SPI_PS_INPUT_ADDR                                      0x0286D0

@@ -1,5 +1,4 @@
 // Test X86-64 ABI rewrite of struct returned by value (BIND(C), VALUE derived types).
-// REQUIRES: x86-registered-target
 // RUN: fir-opt --target-rewrite %s | FileCheck %s
 
 !fits_in_reg = !fir.type<t1{i:f32,j:i32,k:f32}>
@@ -17,6 +16,10 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data
     %0 = fir.address_of(@test_inreg) : () -> !fits_in_reg
     %1 = fir.convert %0 : (() -> !fits_in_reg) -> (() -> ())
     return %1 : () -> ()
+  }
+  func.func @test_addr_of_inreg_2() -> (() -> !fits_in_reg) {
+    %0 = fir.address_of(@test_inreg) : () -> !fits_in_reg
+    return %0 : () -> !fits_in_reg
   }
   func.func @test_dispatch_inreg(%arg0: !fir.ref<!fits_in_reg>, %arg1: !fir.class<!fir.type<somet>>) {
     %0 = fir.dispatch "bar"(%arg1 : !fir.class<!fir.type<somet>>) (%arg1 : !fir.class<!fir.type<somet>>) -> !fits_in_reg {pass_arg_pos = 0 : i32}
@@ -63,8 +66,15 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data
 
 // CHECK-LABEL:   func.func @test_addr_of_inreg() -> (() -> ()) {
 // CHECK:           %[[VAL_0:.*]] = fir.address_of(@test_inreg) : () -> tuple<i64, f32>
-// CHECK:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (() -> tuple<i64, f32>) -> (() -> ())
-// CHECK:           return %[[VAL_1]] : () -> ()
+// CHECK:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (() -> tuple<i64, f32>) -> (() -> !fir.type<t1{i:f32,j:i32,k:f32}>)
+// CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (() -> !fir.type<t1{i:f32,j:i32,k:f32}>) -> (() -> ())
+// CHECK:           return %[[VAL_2]] : () -> ()
+// CHECK:         }
+
+// CHECK-LABEL:   func.func @test_addr_of_inreg_2() -> (() -> !fir.type<t1{i:f32,j:i32,k:f32}>) {
+// CHECK:           %[[VAL_0:.*]] = fir.address_of(@test_inreg) : () -> tuple<i64, f32>
+// CHECK:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (() -> tuple<i64, f32>) -> (() -> !fir.type<t1{i:f32,j:i32,k:f32}>)
+// CHECK:           return %[[VAL_1]] : () -> !fir.type<t1{i:f32,j:i32,k:f32}>
 // CHECK:         }
 
 // CHECK-LABEL:   func.func @test_dispatch_inreg(
@@ -86,7 +96,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data
 // CHECK-SAME:                              %[[VAL_0:.*]]: !fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>) {
 // CHECK:           %[[VAL_1:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.type<t2{i:!fir.array<5xf32>}>
-// CHECK:           fir.call @test_sret(%[[VAL_2]]) : (!fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>) -> ()
+// CHECK:           fir.call @test_sret(%[[VAL_2]]) : (!fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>> {llvm.align = 8 : i32, llvm.sret = !fir.type<t2{i:!fir.array<5xf32>}>}) -> ()
 // CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>) -> !fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>
 // CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>
 // CHECK:           llvm.intr.stackrestore %[[VAL_1]] : !llvm.ptr
@@ -96,8 +106,9 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data
 
 // CHECK-LABEL:   func.func @test_addr_of_sret() -> (() -> ()) {
 // CHECK:           %[[VAL_0:.*]] = fir.address_of(@test_sret) : (!fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>) -> ()
-// CHECK:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : ((!fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>) -> ()) -> (() -> ())
-// CHECK:           return %[[VAL_1]] : () -> ()
+// CHECK:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : ((!fir.ref<!fir.type<t2{i:!fir.array<5xf32>}>>) -> ()) -> (() -> !fir.type<t2{i:!fir.array<5xf32>}>)
+// CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (() -> !fir.type<t2{i:!fir.array<5xf32>}>) -> (() -> ())
+// CHECK:           return %[[VAL_2]] : () -> ()
 // CHECK:         }
 
 // CHECK-LABEL:   func.func @test_dispatch_sret(

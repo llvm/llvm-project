@@ -2,18 +2,21 @@ add_mlir_library(MLIRTransformUtils
   CFGToSCF.cpp
   CommutativityUtils.cpp
   ControlFlowSinkUtils.cpp
+  CSE.cpp
   DialectConversion.cpp
   FoldUtils.cpp
   GreedyPatternRewriteDriver.cpp
   Inliner.cpp
   InliningUtils.cpp
   LoopInvariantCodeMotionUtils.cpp
-  OneToNTypeConversion.cpp
   RegionUtils.cpp
   WalkPatternRewriteDriver.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
+
+  DEPENDS
+  MLIRTransformsDialectInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
@@ -24,4 +27,5 @@ add_mlir_library(MLIRTransformUtils
   MLIRSideEffectInterfaces
   MLIRSubsetOpInterface
   MLIRRewrite
+  MLIRPass
   )

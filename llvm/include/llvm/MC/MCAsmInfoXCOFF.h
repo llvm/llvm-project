@@ -13,16 +13,12 @@
 
 namespace llvm {
 
-class MCAsmInfoXCOFF : public MCAsmInfo {
-  virtual void anchor();
-
+class LLVM_ABI MCAsmInfoXCOFF : public MCAsmInfo {
 protected:
-  MCAsmInfoXCOFF();
-
-public:
-  // Return true only when C is an acceptable character inside a
-  // MCSymbolXCOFF.
-  bool isAcceptableChar(char C) const override;
+  MCAsmInfoXCOFF(const MCTargetOptions &Options);
+  void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
+                            raw_ostream &) const final;
+  bool useCodeAlign(const MCSection &Sec) const final;
 };
 
 } // end namespace llvm

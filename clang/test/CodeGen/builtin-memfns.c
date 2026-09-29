@@ -56,7 +56,7 @@ int test6(char *X) {
 
 // CHECK: @test7
 // PR12094
-int test7(int *p) {
+void test7(int *p) {
   struct snd_pcm_hw_params_t* hwparams;  // incomplete type.
   
   // CHECK: call void @llvm.memset{{.*}} align 4 {{.*}}256, i1 false)

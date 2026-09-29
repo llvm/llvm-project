@@ -21,6 +21,10 @@
 # RUN:   | FileCheck %s -DINPUT=%t --check-prefix=NO-SUCH-SECTION
 # NO-SUCH-SECTION: error: '[[INPUT]]': section '__TEXT,__foo' not found
 
+# RUN: not llvm-objcopy --dump-section __TEXT,__text=not_exists/text-section %t 2>&1 \
+# RUN:   | FileCheck -DMSG=%errc_ENOENT %s -DINPUT=%t --check-prefix=NO-SUCH-PATH
+# NO-SUCH-PATH: error: 'not_exists/text-section': [[MSG]]
+
 --- !mach-o
 FileHeader:
   magic:           0xFEEDFACF

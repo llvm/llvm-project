@@ -2,6 +2,7 @@ static_library("DWARF") {
   output_name = "LLVMDebugInfoDWARF"
   deps = [
     "//llvm/lib/BinaryFormat",
+    "//llvm/lib/DebugInfo/DWARF/LowLevel",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
@@ -11,9 +12,9 @@ static_library("DWARF") {
     "DWARFAbbreviationDeclaration.cpp",
     "DWARFAcceleratorTable.cpp",
     "DWARFAddressRange.cpp",
+    "DWARFCFIPrinter.cpp",
     "DWARFCompileUnit.cpp",
     "DWARFContext.cpp",
-    "DWARFDataExtractor.cpp",
     "DWARFDebugAbbrev.cpp",
     "DWARFDebugAddr.cpp",
     "DWARFDebugArangeSet.cpp",
@@ -27,7 +28,7 @@ static_library("DWARF") {
     "DWARFDebugRangeList.cpp",
     "DWARFDebugRnglists.cpp",
     "DWARFDie.cpp",
-    "DWARFExpression.cpp",
+    "DWARFExpressionPrinter.cpp",
     "DWARFFormValue.cpp",
     "DWARFGdbIndex.cpp",
     "DWARFListTable.cpp",
@@ -35,6 +36,7 @@ static_library("DWARF") {
     "DWARFTypeUnit.cpp",
     "DWARFUnit.cpp",
     "DWARFUnitIndex.cpp",
+    "DWARFUnwindTablePrinter.cpp",
     "DWARFVerifier.cpp",
   ]
 }

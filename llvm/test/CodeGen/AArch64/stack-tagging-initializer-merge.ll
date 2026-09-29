@@ -5,8 +5,8 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
 
 declare void @use(ptr)
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
 define void @OneVarNoInit() sanitize_memtag {
@@ -16,18 +16,18 @@ define void @OneVarNoInit() sanitize_memtag {
 ; CHECK-NEXT:    [[BASETAG:%.*]] = call ptr @llvm.aarch64.irg.sp(i64 0)
 ; CHECK-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; CHECK-NEXT:    [[TX:%.*]] = call ptr @llvm.aarch64.tagp.p0(ptr [[X]], ptr [[BASETAG]], i64 0)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[TX]], i64 16)
 ; CHECK-NEXT:    call void @use(ptr nonnull [[TX]])
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[X]], i64 16)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %x)
+  call void @llvm.lifetime.start.p0(ptr nonnull %x)
   call void @use(ptr nonnull %x)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(ptr nonnull %x)
   ret void
 }
 
@@ -39,19 +39,19 @@ define void @OneVarInitConst() sanitize_memtag {
 ; CHECK-NEXT:    [[BASETAG:%.*]] = call ptr @llvm.aarch64.irg.sp(i64 0)
 ; CHECK-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; CHECK-NEXT:    [[TX:%.*]] = call ptr @llvm.aarch64.tagp.p0(ptr [[X]], ptr [[BASETAG]], i64 0)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    call void @llvm.aarch64.stgp(ptr [[TX]], i64 42, i64 0)
 ; CHECK-NEXT:    call void @use(ptr nonnull [[TX]])
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[X]], i64 16)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %x)
+  call void @llvm.lifetime.start.p0(ptr nonnull %x)
   store i32 42, ptr %x, align 4
   call void @use(ptr nonnull %x)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(ptr nonnull %x)
   ret void
 }
 
@@ -64,21 +64,21 @@ define void @ArrayInitConst() sanitize_memtag {
 ; CHECK-NEXT:    [[BASETAG:%.*]] = call ptr @llvm.aarch64.irg.sp(i64 0)
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, i32 16, align 16
 ; CHECK-NEXT:    [[TX:%.*]] = call ptr @llvm.aarch64.tagp.p0(ptr [[X]], ptr [[BASETAG]], i64 0)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 64, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    call void @llvm.aarch64.stgp(ptr [[TX]], i64 42, i64 0)
 ; CHECK-NEXT:    [[TX8_16:%.*]] = getelementptr i8, ptr [[TX]], i32 16
 ; CHECK-NEXT:    call void @llvm.aarch64.settag.zero(ptr [[TX8_16]], i64 48)
 ; CHECK-NEXT:    call void @use(ptr nonnull [[TX]])
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[X]], i64 64)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 64, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x = alloca i32, i32 16, align 4
-  call void @llvm.lifetime.start.p0(i64 64, ptr nonnull %x)
+  call void @llvm.lifetime.start.p0(ptr nonnull %x)
   store i32 42, ptr %x, align 4
   call void @use(ptr nonnull %x)
-  call void @llvm.lifetime.end.p0(i64 64, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(ptr nonnull %x)
   ret void
 }
 
@@ -90,7 +90,7 @@ define void @ArrayInitConst2() sanitize_memtag {
 ; CHECK-NEXT:    [[BASETAG:%.*]] = call ptr @llvm.aarch64.irg.sp(i64 0)
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, i32 16, align 16
 ; CHECK-NEXT:    [[TX:%.*]] = call ptr @llvm.aarch64.tagp.p0(ptr [[X]], ptr [[BASETAG]], i64 0)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 64, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[TX]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TX]], i32 2
 ; CHECK-NEXT:    call void @llvm.aarch64.stgp(ptr [[TX]], i64 184683593770, i64 -1)
@@ -98,19 +98,19 @@ define void @ArrayInitConst2() sanitize_memtag {
 ; CHECK-NEXT:    call void @llvm.aarch64.settag.zero(ptr [[TX8_16]], i64 48)
 ; CHECK-NEXT:    call void @use(ptr nonnull [[TX]])
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[X]], i64 64)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 64, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x = alloca i32, i32 16, align 4
-  call void @llvm.lifetime.start.p0(i64 64, ptr nonnull %x)
+  call void @llvm.lifetime.start.p0(ptr nonnull %x)
   store i32 42, ptr %x, align 4
   %0 = getelementptr i32, ptr %x, i32 1
   store i32 43, ptr %0, align 4
   %1 = getelementptr i32, ptr %x, i32 2
   store i64 -1, ptr %1, align 4
   call void @use(ptr nonnull %x)
-  call void @llvm.lifetime.end.p0(i64 64, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(ptr nonnull %x)
   ret void
 }
 
@@ -122,23 +122,23 @@ define void @ArrayInitConstSplit() sanitize_memtag {
 ; CHECK-NEXT:    [[BASETAG:%.*]] = call ptr @llvm.aarch64.irg.sp(i64 0)
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, i32 16, align 16
 ; CHECK-NEXT:    [[TX:%.*]] = call ptr @llvm.aarch64.tagp.p0(ptr [[X]], ptr [[BASETAG]], i64 0)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 64, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[TX]], i32 1
 ; CHECK-NEXT:    call void @llvm.aarch64.stgp(ptr [[TX]], i64 -4294967296, i64 4294967295)
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TX]], i32 16
 ; CHECK-NEXT:    call void @llvm.aarch64.settag.zero(ptr [[TMP1]], i64 48)
 ; CHECK-NEXT:    call void @use(ptr nonnull [[TX]])
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[X]], i64 64)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 64, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x = alloca i32, i32 16, align 4
-  call void @llvm.lifetime.start.p0(i64 64, ptr nonnull %x)
+  call void @llvm.lifetime.start.p0(ptr nonnull %x)
   %0 = getelementptr i32, ptr %x, i32 1
   store i64 -1, ptr %0, align 4
   call void @use(ptr nonnull %x)
-  call void @llvm.lifetime.end.p0(i64 64, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(ptr nonnull %x)
   ret void
 }
 
@@ -150,7 +150,7 @@ define void @ArrayInitConstWithHoles() sanitize_memtag {
 ; CHECK-NEXT:    [[BASETAG:%.*]] = call ptr @llvm.aarch64.irg.sp(i64 0)
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, i32 32, align 16
 ; CHECK-NEXT:    [[TX:%.*]] = call ptr @llvm.aarch64.tagp.p0(ptr [[X]], ptr [[BASETAG]], i64 0)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 128, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[TX]], i32 5
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TX]], i32 14
 ; CHECK-NEXT:    call void @llvm.aarch64.settag.zero(ptr [[TX]], i64 16)
@@ -164,18 +164,18 @@ define void @ArrayInitConstWithHoles() sanitize_memtag {
 ; CHECK-NEXT:    call void @llvm.aarch64.settag.zero(ptr [[TX8_64]], i64 64)
 ; CHECK-NEXT:    call void @use(ptr nonnull [[TX]])
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[X]], i64 128)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 128, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x = alloca i32, i32 32, align 4
-  call void @llvm.lifetime.start.p0(i64 128, ptr nonnull %x)
+  call void @llvm.lifetime.start.p0(ptr nonnull %x)
   %0 = getelementptr i32, ptr %x, i32 5
   store i32 42, ptr %0, align 4
   %1 = getelementptr i32, ptr %x, i32 14
   store i32 43, ptr %1, align 4
   call void @use(ptr nonnull %x)
-  call void @llvm.lifetime.end.p0(i64 128, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(ptr nonnull %x)
   ret void
 }
 
@@ -187,20 +187,20 @@ define void @InitNonConst(i32 %v) sanitize_memtag {
 ; CHECK-NEXT:    [[BASETAG:%.*]] = call ptr @llvm.aarch64.irg.sp(i64 0)
 ; CHECK-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; CHECK-NEXT:    [[X_TAG:%.*]] = call ptr @llvm.aarch64.tagp.p0(ptr [[X]], ptr [[BASETAG]], i64 0)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[V]] to i64
 ; CHECK-NEXT:    call void @llvm.aarch64.stgp(ptr [[X_TAG]], i64 [[TMP0]], i64 0)
 ; CHECK-NEXT:    call void @use(ptr nonnull [[X_TAG]])
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[X]], i64 16)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %x)
+  call void @llvm.lifetime.start.p0(ptr nonnull %x)
   store i32 %v, ptr %x, align 4
   call void @use(ptr nonnull %x)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(ptr nonnull %x)
   ret void
 }
 
@@ -212,7 +212,7 @@ define void @InitNonConst2(i32 %v, i32 %w) sanitize_memtag {
 ; CHECK-NEXT:    [[BASETAG:%.*]] = call ptr @llvm.aarch64.irg.sp(i64 0)
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, i32 4, align 16
 ; CHECK-NEXT:    [[TX:%.*]] = call ptr @llvm.aarch64.tagp.p0(ptr [[X]], ptr [[BASETAG]], i64 0)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[V]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TX]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[W]] to i64
@@ -221,17 +221,17 @@ define void @InitNonConst2(i32 %v, i32 %w) sanitize_memtag {
 ; CHECK-NEXT:    call void @llvm.aarch64.stgp(ptr [[TX]], i64 [[VW]], i64 0)
 ; CHECK-NEXT:    call void @use(ptr nonnull [[TX]])
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[X]], i64 16)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x = alloca i32, i32 4, align 4
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %x)
+  call void @llvm.lifetime.start.p0(ptr nonnull %x)
   store i32 %v, ptr %x, align 4
   %0 = getelementptr i32, ptr %x, i32 1
   store i32 %w, ptr %0, align 4
   call void @use(ptr nonnull %x)
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(ptr nonnull %x)
   ret void
 }
 
@@ -243,19 +243,19 @@ define void @InitVector() sanitize_memtag {
 ; CHECK-NEXT:    [[BASETAG:%.*]] = call ptr @llvm.aarch64.irg.sp(i64 0)
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, i32 4, align 16
 ; CHECK-NEXT:    [[TX:%.*]] = call ptr @llvm.aarch64.tagp.p0(ptr [[X]], ptr [[BASETAG]], i64 0)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    call void @llvm.aarch64.stgp(ptr [[TX]], i64 bitcast (<2 x i32> <i32 1, i32 2> to i64), i64 0)
 ; CHECK-NEXT:    call void @use(ptr nonnull [[TX]])
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[X]], i64 16)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x = alloca i32, i32 4, align 4
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %x)
+  call void @llvm.lifetime.start.p0(ptr nonnull %x)
   store <2 x i32> <i32 1, i32 2>, ptr %x, align 4
   call void @use(ptr nonnull %x)
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(ptr nonnull %x)
   ret void
 }
 
@@ -302,23 +302,23 @@ define void @InitVectorSplit() sanitize_memtag {
 ; CHECK-NEXT:    [[BASETAG:%.*]] = call ptr @llvm.aarch64.irg.sp(i64 0)
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, i32 4, align 16
 ; CHECK-NEXT:    [[TX:%.*]] = call ptr @llvm.aarch64.tagp.p0(ptr [[X]], ptr [[BASETAG]], i64 0)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[TX]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 bitcast (<2 x i32> <i32 1, i32 2> to i64), 32
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 bitcast (<2 x i32> <i32 1, i32 2> to i64), 32
 ; CHECK-NEXT:    call void @llvm.aarch64.stgp(ptr [[TX]], i64 [[TMP1]], i64 [[LSHR]])
 ; CHECK-NEXT:    call void @use(ptr nonnull [[TX]])
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[X]], i64 16)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[X]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %x = alloca i32, i32 4, align 4
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %x)
+  call void @llvm.lifetime.start.p0(ptr nonnull %x)
   %0 = getelementptr i32, ptr %x, i32 1
   store <2 x i32> <i32 1, i32 2>, ptr %0, align 4
   call void @use(ptr nonnull %x)
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %x)
+  call void @llvm.lifetime.end.p0(ptr nonnull %x)
   ret void
 }
 

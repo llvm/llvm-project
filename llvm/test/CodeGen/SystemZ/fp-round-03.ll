@@ -1,6 +1,19 @@
 ; Test rounding functions for z14 and above.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 -verify-machineinstrs \
+; RUN:   | FileCheck %s
+
+; Test that an f16 intrinsic can be lowered with promotion to float.
+declare half @llvm.rint.f16(half %f)
+define half @f0(half %f) {
+; CHECK-LABEL: f0:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: fiebra %f0, 0, %f0, 0
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.rint.f16(half %f)
+  ret half %res
+}
 
 ; Test rint for f32.
 declare float @llvm.rint.f32(float %f)
@@ -202,6 +215,40 @@ define void @f18(ptr %ptr) {
 ; CHECK: br %r14
   %src = load fp128, ptr %ptr
   %res = call fp128 @llvm.round.f128(fp128 %src)
+  store fp128 %res, ptr %ptr
+  ret void
+}
+
+; Test roundeven for f32.
+declare float @llvm.roundeven.f32(float %f)
+define float @f19(float %f) {
+; CHECK-LABEL: f19:
+; CHECK: fiebra %f0, 4, %f0, 4
+; CHECK: br %r14
+  %res = call float @llvm.roundeven.f32(float %f)
+  ret float %res
+}
+
+; Test roundeven for f64.
+declare double @llvm.roundeven.f64(double %f)
+define double @f20(double %f) {
+; CHECK-LABEL: f20:
+; CHECK: fidbra %f0, 4, %f0, 4
+; CHECK: br %r14
+  %res = call double @llvm.roundeven.f64(double %f)
+  ret double %res
+}
+
+; Test roundeven for f128.
+declare fp128 @llvm.roundeven.f128(fp128 %f)
+define void @f21(ptr %ptr) {
+; CHECK-LABEL: f21:
+; CHECK: vl [[REG:%v[0-9]+]], 0(%r2)
+; CHECK: wfixb [[RES:%v[0-9]+]], [[REG]], 4, 4
+; CHECK: vst [[RES]], 0(%r2)
+; CHECK: br %r14
+  %src = load fp128, ptr %ptr
+  %res = call fp128 @llvm.roundeven.f128(fp128 %src)
   store fp128 %res, ptr %ptr
   ret void
 }

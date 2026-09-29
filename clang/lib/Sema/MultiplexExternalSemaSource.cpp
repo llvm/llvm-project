@@ -16,30 +16,26 @@ using namespace clang;
 
 char MultiplexExternalSemaSource::ID;
 
+/// Constructs an empty multiplexing external sema source.
+MultiplexExternalSemaSource::MultiplexExternalSemaSource() {}
+
 /// Constructs a new multiplexing external sema source and appends the
 /// given element to it.
 ///
 MultiplexExternalSemaSource::MultiplexExternalSemaSource(
-    ExternalSemaSource *S1, ExternalSemaSource *S2) {
-  S1->Retain();
-  S2->Retain();
-  Sources.push_back(S1);
-  Sources.push_back(S2);
-}
-
-// pin the vtable here.
-MultiplexExternalSemaSource::~MultiplexExternalSemaSource() {
-  for (auto *S : Sources)
-    S->Release();
+    llvm::IntrusiveRefCntPtr<ExternalSemaSource> S1,
+    llvm::IntrusiveRefCntPtr<ExternalSemaSource> S2) {
+  Sources.push_back(std::move(S1));
+  Sources.push_back(std::move(S2));
 }
 
 /// Appends new source to the source list.
 ///
 ///\param[in] source - An ExternalSemaSource.
 ///
-void MultiplexExternalSemaSource::AddSource(ExternalSemaSource *Source) {
-  Source->Retain();
-  Sources.push_back(Source);
+void MultiplexExternalSemaSource::AddSource(
+    llvm::IntrusiveRefCntPtr<ExternalSemaSource> Source) {
+  Sources.push_back(std::move(Source));
 }
 
 //===----------------------------------------------------------------------===//
@@ -92,7 +88,7 @@ CXXBaseSpecifier *MultiplexExternalSemaSource::GetExternalCXXBaseSpecifiers(
 
 CXXCtorInitializer **
 MultiplexExternalSemaSource::GetExternalCXXCtorInitializers(uint64_t Offset) {
-  for (auto *S : Sources)
+  for (auto &S : Sources)
     if (auto *R = S->GetExternalCXXCtorInitializers(Offset))
       return R;
   return nullptr;
@@ -107,11 +103,21 @@ MultiplexExternalSemaSource::hasExternalDefinitions(const Decl *D) {
   return EK_ReplyHazy;
 }
 
-bool MultiplexExternalSemaSource::
-FindExternalVisibleDeclsByName(const DeclContext *DC, DeclarationName Name) {
+bool MultiplexExternalSemaSource::wasThisDeclarationADefinition(
+    const FunctionDecl *FD) {
+  for (const auto &S : Sources)
+    if (S->wasThisDeclarationADefinition(FD))
+      return true;
+  return false;
+}
+
+bool MultiplexExternalSemaSource::FindExternalVisibleDeclsByName(
+    const DeclContext *DC, DeclarationName Name,
+    const DeclContext *OriginalDC) {
   bool AnyDeclsFound = false;
   for (size_t i = 0; i < Sources.size(); ++i)
-    AnyDeclsFound |= Sources[i]->FindExternalVisibleDeclsByName(DC, Name);
+    AnyDeclsFound |=
+        Sources[i]->FindExternalVisibleDeclsByName(DC, Name, OriginalDC);
   return AnyDeclsFound;
 }
 
@@ -297,7 +303,7 @@ void MultiplexExternalSemaSource::ReadDeclsToCheckForDeferredDiags(
 }
 
 void MultiplexExternalSemaSource::ReadUnusedLocalTypedefNameCandidates(
-    llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) {
+    llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) {
   for(size_t i = 0; i < Sources.size(); ++i)
     Sources[i]->ReadUnusedLocalTypedefNameCandidates(Decls);
 }
@@ -312,6 +318,12 @@ void MultiplexExternalSemaSource::ReadWeakUndeclaredIdentifiers(
                    SmallVectorImpl<std::pair<IdentifierInfo*, WeakInfo> > &WI) {
   for(size_t i = 0; i < Sources.size(); ++i)
     Sources[i]->ReadWeakUndeclaredIdentifiers(WI);
+}
+
+void MultiplexExternalSemaSource::ReadExtnameUndeclaredIdentifiers(
+    SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &EI) {
+  for (size_t i = 0; i < Sources.size(); ++i)
+    Sources[i]->ReadExtnameUndeclaredIdentifiers(EI);
 }
 
 void MultiplexExternalSemaSource::ReadUsedVTables(
@@ -357,10 +369,4 @@ bool MultiplexExternalSemaSource::MaybeDiagnoseMissingCompleteType(
       return true;
   }
   return false;
-}
-
-void MultiplexExternalSemaSource::AssignedLambdaNumbering(
-    CXXRecordDecl *Lambda) {
-  for (auto *Source : Sources)
-    Source->AssignedLambdaNumbering(Lambda);
 }

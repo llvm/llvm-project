@@ -15,9 +15,9 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_ALIASINGTRACKER_H
 
 #include <memory>
-#include <unordered_map>
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PackedVector.h"
 #include "llvm/MC/MCRegisterInfo.h"
 
@@ -44,9 +44,9 @@ struct RegisterAliasingTracker {
                           const BitVector &ReservedReg,
                           const MCRegisterClass &RegClass);
 
-  // Construct a tracker from an MCPhysReg.
+  // Construct a tracker from an MCRegister.
   RegisterAliasingTracker(const MCRegisterInfo &RegInfo,
-                          const MCPhysReg Register);
+                          const MCRegister Register);
 
   const BitVector &sourceBits() const { return SourceBits; }
 
@@ -88,7 +88,7 @@ struct RegisterAliasingTrackerCache {
   const MCRegisterInfo &regInfo() const { return RegInfo; }
 
   // Retrieves the RegisterAliasingTracker for this particular register.
-  const RegisterAliasingTracker &getRegister(MCPhysReg Reg) const;
+  const RegisterAliasingTracker &getRegister(MCRegister Reg) const;
 
   // Retrieves the RegisterAliasingTracker for this particular register class.
   const RegisterAliasingTracker &getRegisterClass(unsigned RegClassIndex) const;
@@ -97,9 +97,9 @@ private:
   const MCRegisterInfo &RegInfo;
   const BitVector ReservedReg;
   const BitVector EmptyRegisters;
-  mutable std::unordered_map<unsigned, std::unique_ptr<RegisterAliasingTracker>>
+  mutable DenseMap<unsigned, std::unique_ptr<RegisterAliasingTracker>>
       Registers;
-  mutable std::unordered_map<unsigned, std::unique_ptr<RegisterAliasingTracker>>
+  mutable DenseMap<unsigned, std::unique_ptr<RegisterAliasingTracker>>
       RegisterClasses;
 };
 

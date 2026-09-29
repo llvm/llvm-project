@@ -16,7 +16,6 @@
 #define LLVM_PROFILEDATA_HASHKEYMAP_H
 
 #include "llvm/ADT/Hashing.h"
-#include <iterator>
 #include <utility>
 
 namespace llvm {
@@ -119,6 +118,21 @@ public:
 
   iterator erase(const_iterator It) {
     return base_type::erase(It);
+  }
+
+  /// Remove entries that match the given predicate. \p Pred is invoked with a
+  /// reference to each entry. Returns whether anything was removed.
+  template <typename Predicate> bool remove_if(Predicate Pred) {
+    bool Removed = false;
+    for (auto It = base_type::begin(), E = base_type::end(); It != E;) {
+      if (Pred(*It)) {
+        It = base_type::erase(It);
+        Removed = true;
+      } else {
+        ++It;
+      }
+    }
+    return Removed;
   }
 };
 

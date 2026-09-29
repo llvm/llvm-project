@@ -1,19 +1,15 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-omp.private {type = private} @simple_var.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x i32 {bindc_name = "simple_var", pinned} : (i64) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
+omp.private {type = private} @simple_var.privatizer : i32
+
 llvm.func @target_map_single_private() attributes {fir.internal_name = "_QPtarget_map_single_private"} {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x i32 {bindc_name = "simple_var"} : (i64) -> !llvm.ptr
   %3 = llvm.alloca %0 x i32 {bindc_name = "a"} : (i64) -> !llvm.ptr
   %4 = llvm.mlir.constant(2 : i32) : i32
   llvm.store %4, %3 : i32, !llvm.ptr
-  %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = "a"}
-  omp.target map_entries(%5 -> %arg0 : !llvm.ptr) private(@simple_var.privatizer %1 -> %arg1 : !llvm.ptr) {
+  %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("a") -> !llvm.ptr
+  omp.target kernel_type(generic) map_entries(%5 -> %arg0 : !llvm.ptr) private(@simple_var.privatizer %1 -> %arg1 : !llvm.ptr) {
     %6 = llvm.mlir.constant(10 : i32) : i32
     %7 = llvm.load %arg0 : !llvm.ptr -> i32
     %8 = llvm.add %7, %6 : i32
@@ -22,18 +18,9 @@ llvm.func @target_map_single_private() attributes {fir.internal_name = "_QPtarge
   }
   llvm.return
 }
-// CHECK: define internal void @__omp_offloading_
-// CHECK-NOT: define {{.*}}
-// CHECK: %[[PRIV_ALLOC:.*]] = alloca i32, i64 1, align 4
-// CHECK: %[[ADD:.*]] = add i32 {{.*}}, 10
-// CHECK: store i32 %[[ADD]], ptr %[[PRIV_ALLOC]], align 4
 
-omp.private {type = private} @n.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x f32 {bindc_name = "n", pinned} : (i64) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
+omp.private {type = private} @n.privatizer : f32
+
 llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_map_2_privates"} {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x i32 {bindc_name = "simple_var"} : (i64) -> !llvm.ptr
@@ -41,8 +28,8 @@ llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_ma
   %5 = llvm.alloca %0 x i32 {bindc_name = "a"} : (i64) -> !llvm.ptr
   %6 = llvm.mlir.constant(2 : i32) : i32
   llvm.store %6, %5 : i32, !llvm.ptr
-  %7 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = "a"}
-  omp.target map_entries(%7 -> %arg0 : !llvm.ptr) private(@simple_var.privatizer %1 -> %arg1, @n.privatizer %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
+  %7 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("a") -> !llvm.ptr
+  omp.target kernel_type(generic) map_entries(%7 -> %arg0 : !llvm.ptr) private(@simple_var.privatizer %1 -> %arg1, @n.privatizer %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
     %8 = llvm.mlir.constant(1.100000e+01 : f32) : f32
     %9 = llvm.mlir.constant(10 : i32) : i32
     %10 = llvm.load %arg0 : !llvm.ptr -> i32
@@ -50,7 +37,7 @@ llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_ma
     llvm.store %11, %arg1 : i32, !llvm.ptr
     %12 = llvm.load %arg1 : !llvm.ptr -> i32
     %13 = llvm.sitofp %12 : i32 to f32
-    %14 = llvm.fadd %13, %8  {fastmathFlags = #llvm.fastmath<contract>} : f32
+    %14 = llvm.fadd %13, %8 fastmath<contract> : f32
     llvm.store %14, %arg2 : f32, !llvm.ptr
     omp.terminator
   }
@@ -58,42 +45,25 @@ llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_ma
 }
 
 
-// CHECK: define internal void @__omp_offloading_
-// CHECK: %[[PRIV_I32_ALLOC:.*]] = alloca i32, i64 1, align 4
-// CHECK: %[[PRIV_FLOAT_ALLOC:.*]] = alloca float, i64 1, align 4
-// CHECK: %[[ADD_I32:.*]] = add i32 {{.*}}, 10
-// CHECK: store i32 %[[ADD_I32]], ptr %[[PRIV_I32_ALLOC]], align 4
-// CHECK: %[[LOAD_I32_AGAIN:.*]] = load i32, ptr %[[PRIV_I32_ALLOC]], align 4
-// CHECK: %[[CAST_TO_FLOAT:.*]] = sitofp i32 %[[LOAD_I32_AGAIN]] to float
-// CHECK: %[[ADD_FLOAT:.*]] = fadd contract float %[[CAST_TO_FLOAT]], 1.100000e+01
-// CHECK: store float %[[ADD_FLOAT]], ptr %[[PRIV_FLOAT_ALLOC]], align 4
-
 // An entirely artifical privatizer that is meant to check multi-block
 // privatizers. The idea here is to prove that we set the correct
 // insertion points for the builder when generating, first, LLVM IR for the
 // privatizer and then for the actual target region.
-omp.private {type = private} @multi_block.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %c1 = llvm.mlir.constant(1 : i32) : i32
-  llvm.br ^bb1(%c1 : i32)
+omp.private {type = private} @multi_block.privatizer : f32 init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  llvm.br ^bb1
 
-^bb1(%arg1: i32):
-  %0 = llvm.alloca %arg1 x f32 : (i32) -> !llvm.ptr
-  omp.yield(%0 : !llvm.ptr)
+^bb1:
+  omp.yield(%arg1 : !llvm.ptr)
 }
 
 llvm.func @target_op_private_multi_block(%arg0: !llvm.ptr) {
-  omp.target private(@multi_block.privatizer %arg0 -> %arg2 : !llvm.ptr) {
+  omp.target kernel_type(generic) private(@multi_block.privatizer %arg0 -> %arg2 : !llvm.ptr) {
     %0 = llvm.load %arg2 : !llvm.ptr -> f32
     omp.terminator
   }
   llvm.return
 }
-// CHECK: define internal void @__omp_offloading_
-// CHECK: %[[ONE:.*]] = phi i32 [ 1, {{.*}} ]
-// CHECK: %[[PRIV_ALLOC:.*]] = alloca float, i32 %[[ONE]], align 4
-// CHECK: %[[PHI_ALLOCA:.*]]  = phi ptr [ %[[PRIV_ALLOC]], {{.*}} ]
-// CHECK: %[[RESULT:.*]] = load float, ptr %[[PHI_ALLOCA]], align 4
 
 // Descriptors are needed for CHARACTER arrays and their type is
 // !fir.boxchar<KIND>. When such arrays are used in the private construct, the
@@ -105,8 +75,8 @@ llvm.func @target_op_private_multi_block(%arg0: !llvm.ptr) {
 // mapped by its pointer whereas the privatizer function expects the descriptor
 // by value. So, we have this test to ensure that the compiler correctly loads
 // from the mapped pointer before passing that to the privatizer function.
-omp.private {type = private} @_QFtarget_boxcharEchar_var_private_boxchar_c8xU : !llvm.struct<(ptr, i64)> alloc {
-^bb0(%arg0: !llvm.struct<(ptr, i64)>):
+omp.private {type = private} @_QFtarget_boxcharEchar_var_private_boxchar_c8xU : !llvm.struct<(ptr, i64)> init {
+^bb0(%arg0: !llvm.struct<(ptr, i64)>, %arg1: !llvm.struct<(ptr, i64)>):
   %0 = llvm.extractvalue %arg0[0] : !llvm.struct<(ptr, i64)>
   %1 = llvm.extractvalue %arg0[1] : !llvm.struct<(ptr, i64)>
   %2 = llvm.mlir.constant(1 : i64) : i64
@@ -128,15 +98,15 @@ llvm.func @target_boxchar_(%arg0: !llvm.ptr {fir.bindc_name = "l"}) attributes {
   %10 = llvm.mlir.undef : !llvm.struct<(ptr, i64)>
   %11 = llvm.insertvalue %9, %10[0] : !llvm.struct<(ptr, i64)>
   %12 = llvm.insertvalue %7, %11[1] : !llvm.struct<(ptr, i64)>
-  %13 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "mapped_var"}
+  %13 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("mapped_var") -> !llvm.ptr
   llvm.store %12, %3 : !llvm.struct<(ptr, i64)>, !llvm.ptr
   %14 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(to) capture(ByRef) -> !llvm.ptr
-  omp.target map_entries(%13 -> %arg1, %14 -> %arg2 : !llvm.ptr, !llvm.ptr) private(@_QFtarget_boxcharEchar_var_private_boxchar_c8xU %12 -> %arg3 [map_idx=1] : !llvm.struct<(ptr, i64)>) {
-    %15 = llvm.mlir.constant(0 : index) : i64
+  omp.target kernel_type(generic) map_entries(%13 -> %arg1, %14 -> %arg2 : !llvm.ptr, !llvm.ptr) private(@_QFtarget_boxcharEchar_var_private_boxchar_c8xU %12 -> %arg3 [map_idx=1] : !llvm.struct<(ptr, i64)>) {
+    %15 = llvm.mlir.constant(0 : i64) : i64
     %16 = llvm.mlir.constant(32 : i8) : i8
-    %17 = llvm.mlir.constant(1 : index) : i64
+    %17 = llvm.mlir.constant(1 : i64) : i64
     %18 = llvm.mlir.constant(false) : i1
-    %19 = llvm.mlir.constant(5 : index) : i64
+    %19 = llvm.mlir.constant(5 : i64) : i64
     %20 = llvm.mlir.constant(5 : i32) : i32
     %21 = llvm.extractvalue %arg3[0] : !llvm.struct<(ptr, i64)>
     %22 = llvm.extractvalue %arg3[1] : !llvm.struct<(ptr, i64)>
@@ -176,10 +146,99 @@ llvm.func @llvm.memmove.p0.p0.i64(!llvm.ptr, !llvm.ptr, i64, i1) attributes {sym
 
 
 
-// CHECK: define internal void @__omp_offloading_{{.*}}(ptr %{{[^,]+}}, ptr %[[MAPPED_ARG:.*]]) {
+omp.private {type = firstprivate} @sf.firstprivate : f32 copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> f32
+  llvm.store %0, %arg1 : f32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+}
+omp.private {type = firstprivate} @sv.firstprivate : i32 copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> i32
+  llvm.store %0, %arg1 : i32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+}
+llvm.func @target_firstprivate_() attributes {fir.internal_name = "_QPtarget_firstprivate"} {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %sv = llvm.alloca %0 x i32 {bindc_name = "sv"} : (i64) -> !llvm.ptr
+  %sf = llvm.alloca %0 x f32 {bindc_name = "sf"} : (i64) -> !llvm.ptr
+  %6 = omp.map.info var_ptr(%sv : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr
+  %7 = omp.map.info var_ptr(%sf : !llvm.ptr, f32) map_clauses(to) capture(ByRef) -> !llvm.ptr
+  omp.target kernel_type(generic) map_entries(%6 -> %arg0, %7 -> %arg1 : !llvm.ptr, !llvm.ptr) private(@sv.firstprivate %sv -> %arg2 [map_idx=0], @sf.firstprivate %sf -> %arg3 [map_idx=1] : !llvm.ptr, !llvm.ptr) {
+    %8 = llvm.mlir.constant(2.000000e+00 : f64) : f64
+    %9 = llvm.mlir.constant(10 : i32) : i32
+    %10 = llvm.load %arg2 : !llvm.ptr -> i32
+    %11 = llvm.add %10, %9 : i32
+    llvm.store %11, %arg2 : i32, !llvm.ptr
+    %12 = llvm.load %arg3 : !llvm.ptr -> f32
+    %13 = llvm.fpext %12 : f32 to f64
+    %14 = llvm.fadd %13, %8 fastmath<contract> : f64
+    %15 = llvm.fptrunc %14 : f64 to f32
+    llvm.store %15, %arg3 : f32, !llvm.ptr
+    omp.terminator
+  }
+  llvm.return
+}
+// CHECK: define void @target_map_single_private() {
+// CHECK: call void @__omp_offloading_[[MAP_SINGLE_PRIVATE_OFFLOADED_FUNCTION:.*]](ptr {{.*}}, ptr null)
+// CHECK: define void @target_map_2_privates() {
+// CHECK: call void @__omp_offloading_[[MAP_2_PRIVATES_OFFLOADED_FUNCTION:.*]](ptr {{.*}}, ptr null)
+// CHECK: define void @target_op_private_multi_block
+// CHECK: call void @__omp_offloading_[[PRIVATE_MULTI_BLOCK_OFFLOADED_FUNCTION:.*]](ptr null)
+// CHECK: define void @target_boxchar_
+// CHECK: call void @__omp_offloading_[[BOXCHAR_OFFLOADED_FUNCTION:.*]](ptr {{.*}}, ptr {{.*}}, ptr null)
+// CHECK: define void @target_firstprivate_()
+// CHECK: call void @__omp_offloading_[[SIMPLE_OFFLOADED_FUNCTION:.*]](ptr {{.*}}, ptr {{.*}}, ptr null)
+
+// CHECK: define internal void @__omp_offloading_[[MAP_SINGLE_PRIVATE_OFFLOADED_FUNCTION]]
+// CHECK: %[[PRIV_ALLOC:.*]] = alloca i32, align 4
+// CHECK: %[[ADD:.*]] = add i32 {{.*}}, 10
+// CHECK: store i32 %[[ADD]], ptr %[[PRIV_ALLOC]], align 4
+
+
+
+
+// CHECK: define internal void @__omp_offloading_[[MAP_2_PRIVATES_OFFLOADED_FUNCTION]]
+// CHECK: %[[PRIV_I32_ALLOC:.*]] = alloca i32, align 4
+// CHECK: %[[PRIV_FLOAT_ALLOC:.*]] = alloca float, align 4
+// CHECK: %[[ADD_I32:.*]] = add i32 {{.*}}, 10
+// CHECK: store i32 %[[ADD_I32]], ptr %[[PRIV_I32_ALLOC]], align 4
+// CHECK: %[[LOAD_I32_AGAIN:.*]] = load i32, ptr %[[PRIV_I32_ALLOC]], align 4
+// CHECK: %[[CAST_TO_FLOAT:.*]] = sitofp i32 %[[LOAD_I32_AGAIN]] to float
+// CHECK: %[[ADD_FLOAT:.*]] = fadd contract float %[[CAST_TO_FLOAT]], 1.100000e+01
+// CHECK: store float %[[ADD_FLOAT]], ptr %[[PRIV_FLOAT_ALLOC]], align 4
+
+// CHECK: define internal void @__omp_offloading_[[PRIVATE_MULTI_BLOCK_OFFLOADED_FUNCTION]](ptr %{{.*}})
+// CHECK: %[[PRIV_ALLOC:.*]] = alloca float, align 4
+// CHECK: %[[PHI_ALLOCA:.*]]  = phi ptr [ %[[PRIV_ALLOC]], {{.*}} ]
+// CHECK: %[[RESULT:.*]] = load float, ptr %[[PHI_ALLOCA]], align 4
+
+
+// CHECK: define internal void @__omp_offloading_[[BOXCHAR_OFFLOADED_FUNCTION]](ptr %{{[^,]+}}, ptr %[[MAPPED_ARG:[^,]+]], ptr %{{.*}}) {
 // CHECK: %[[BOXCHAR:.*]] = load { ptr, i64 }, ptr %[[MAPPED_ARG]]
 // CHECK: %[[BOXCHAR_PTR:.*]] = extractvalue { ptr, i64 } %[[BOXCHAR]], 0
 // CHECK: %[[BOXCHAR_i64:.*]] = extractvalue { ptr, i64 } %[[BOXCHAR]], 1
 // CHECK: %[[MEM_ALLOC:.*]] = alloca i8, i64 %[[BOXCHAR_i64]]
 // CHECK: %[[PRIV_BOXCHAR0:.*]] = insertvalue { ptr, i64 } undef, ptr %[[MEM_ALLOC]], 0
 // CHECK: %[[PRIV_BOXCHAR1:.*]] = insertvalue { ptr, i64 } %[[PRIV_BOXCHAR0]], i64 %[[BOXCHAR_i64]], 1
+
+
+// CHECK: define internal void @__omp_offloading_[[SIMPLE_OFFLOADED_FUNCTION]](ptr %[[SV:.*]], ptr %[[SF:[^,]+]], ptr %{{.*}})
+// CHECK: entry:
+// CHECK-NEXT: %[[SV_PRIV_ALLOCA:.*]] = alloca i32, align 4
+// CHECK-NEXT: %[[SF_PRIV_ALLOCA:.*]] = alloca float, align 4
+// CHECK: omp.private.copy:
+// CHECK-NEXT: %[[INIT_SV:.*]] = load i32, ptr %[[SV]], align 4
+// CHECK-NEXT: store i32 %[[INIT_SV]], ptr %[[SV_PRIV_ALLOCA]], align 4
+// CHECK:  %[[INIT_SF:.*]] = load float, ptr %[[SF]], align 4
+// CHECK-NEXT  store float %[[INIT_SF]], ptr %[[SF_PRIV_ALLOCA]], align 4
+// CHECK: omp.target
+// CHECK: %[[LOAD_SV:.*]] = load i32, ptr %[[SV_PRIV_ALLOCA]], align 4
+// CHECK-NEXT: %[[ADD_SV:.*]] = add i32 %[[LOAD_SV]], 10
+// CHECK-NEXT: store i32 %[[ADD_SV]], ptr %[[SV_PRIV_ALLOCA]], align 4
+// CHECK: %[[LOAD_SF:.*]] = load float, ptr %[[SF_PRIV_ALLOCA]], align 4
+// CHECK-NEXT: %[[SF_EXT:.*]] = fpext float %[[LOAD_SF]] to double
+// CHECK-NEXT: %[[ADD_SF:.*]] = fadd contract double %[[SF_EXT]], 2.000000e+00
+// CHECK-NEXT: %[[TRUNC_SF:.*]] = fptrunc double %[[ADD_SF]] to float
+// CHECK-NEXT:  store float %[[TRUNC_SF]], ptr %[[SF_PRIV_ALLOCA]], align 4
+

@@ -365,6 +365,9 @@ frameInfo:
   stackProtector:  '%stack.0.StackGuardSlot'
   maxCallFrameSize: 0
   localFrameSize:  144
+machineFunctionInfo:
+  stackSizeZPR:    0
+  stackSizePPR:    0
 stack:
   - { id: 0, name: StackGuardSlot, offset: -40, size: 8, alignment: 8,
       stack-id: default, local-offset: -8 }

@@ -8,6 +8,8 @@
 
 #include "lldb/Core/RichManglingContext.h"
 
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Utility/ConstString.h"
 
 #include "gtest/gtest.h"
@@ -27,6 +29,9 @@ TEST(RichManglingContextTest, Basic) {
 }
 
 TEST(RichManglingContextTest, FromCxxMethodName) {
+
+  SubsystemRAII<CPlusPlusLanguage> lang;
+
   RichManglingContext ItaniumRMC;
   ConstString mangled("_ZN3foo3barEv");
   EXPECT_TRUE(ItaniumRMC.FromItaniumName(mangled));
@@ -66,6 +71,8 @@ TEST(RichManglingContextTest, SwitchProvider) {
 
   EXPECT_TRUE(RMC.FromItaniumName(ConstString(mangled)));
   EXPECT_EQ("foo::bar()", RMC.ParseFullName());
+
+  SubsystemRAII<CPlusPlusLanguage> lang;
 
   EXPECT_TRUE(RMC.FromCxxMethodName(ConstString(demangled)));
   EXPECT_EQ("foo::bar()", RMC.ParseFullName());

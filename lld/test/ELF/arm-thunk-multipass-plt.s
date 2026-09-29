@@ -11,6 +11,8 @@
 // RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --start-address=0x80000c --stop-address=0x800010 -d %t2 | FileCheck %s --check-prefix=CHECK-CALL
 // RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --start-address=0xd00020 --stop-address=0xd00060 --triple=armv5eb-none-linux-gnueabi -d %t2 | FileCheck %s --check-prefix=CHECK-PLT
 
+// RUN: rm %t %t2
+
 /// When we create a thunk to a PLT entry the relocation is redirected to the
 /// Thunk, changing its expression to a non-PLT equivalent. If the thunk
 /// becomes unusable we need to restore the relocation expression to the PLT
@@ -86,10 +88,14 @@ preemptible2:
 // CHECK-PLT-NEXT:   d00034: d4 d4 d4 d4      .word   0xd4d4d4d4
 // CHECK-PLT-NEXT:   d00038: d4 d4 d4 d4      .word   0xd4d4d4d4
 // CHECK-PLT-NEXT:   d0003c: d4 d4 d4 d4      .word   0xd4d4d4d4
+// CHECK-PLT-EMPTY:
+// CHECK-PLT-NEXT: <preemptible@plt>:
 // CHECK-PLT-NEXT:   d00040: add     r12, pc, #0, #12
 // CHECK-PLT-NEXT:   d00044: add     r12, r12, #32, #20
 // CHECK-PLT-NEXT:   d00048: ldr     pc, [r12, #124]!
 // CHECK-PLT-NEXT:   d0004c: d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-PLT-EMPTY:
+// CHECK-PLT-NEXT: <preemptible2@plt>:
 // CHECK-PLT-NEXT:   d00050: add     r12, pc, #0, #12
 // CHECK-PLT-NEXT:   d00054: add     r12, r12, #32, #20
 // CHECK-PLT-NEXT:   d00058: ldr     pc, [r12, #112]!

@@ -85,19 +85,19 @@ program test
 !CHECK-DAG:   fir.has_value [[E1]] : !fir.box<!fir.heap<f32>>
 !CHECK-DAG: }
 !CHECK-DAG: fir.global internal @_QFEw : complex<f32> {
-!CHECK-DAG:   [[Z2:%.*]] = fir.undefined complex<f32>
+!CHECK-DAG:   [[Z2:%.*]] = fir.zero_bits complex<f32>
 !CHECK-DAG:   fir.has_value [[Z2]] : complex<f32>
 !CHECK-DAG: }
 !CHECK-DAG: fir.global internal @_QFEx : i32 {
-!CHECK-DAG:   [[Z3:%.*]] = fir.undefined i32
+!CHECK-DAG:   [[Z3:%.*]] = fir.zero_bits i32
 !CHECK-DAG:   fir.has_value [[Z3]] : i32
 !CHECK-DAG: }
 !CHECK-DAG: fir.global internal @_QFEy : f32 {
-!CHECK-DAG:   [[Z4:%.*]] = fir.undefined f32
+!CHECK-DAG:   [[Z4:%.*]] = fir.zero_bits f32
 !CHECK-DAG:   fir.has_value [[Z4]] : f32
 !CHECK-DAG: }
 !CHECK-DAG: fir.global internal @_QFEz : !fir.logical<4> {
-!CHECK-DAG:   [[Z5:%.*]] = fir.undefined !fir.logical<4>
+!CHECK-DAG:   [[Z5:%.*]] = fir.zero_bits !fir.logical<4>
 !CHECK-DAG:   fir.has_value [[Z5]] : !fir.logical<4>
 !CHECK-DAG: }
 end

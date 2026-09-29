@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
@@ -402,11 +403,8 @@ class StackColoring {
   using LivenessMap = DenseMap<const MachineBasicBlock *, BlockLifetimeInfo>;
   LivenessMap BlockLiveness;
 
-  /// Maps serial numbers to basic blocks.
-  DenseMap<const MachineBasicBlock *, int> BasicBlocks;
-
-  /// Maps basic blocks to a serial number.
-  SmallVector<const MachineBasicBlock *, 8> BasicBlockNumbering;
+  /// Depth-first ordering of the basic blocks.
+  SmallVector<const MachineBasicBlock *, 8> BasicBlockOrdering;
 
   /// Maps slots to their use interval. Outside of this interval, slots
   /// values are either dead or `undef` and they will not be written to.
@@ -438,7 +436,7 @@ class StackColoring {
 
 public:
   StackColoring(SlotIndexes *Indexes) : Indexes(Indexes) {}
-  bool run(MachineFunction &Func);
+  bool run(MachineFunction &Func, bool OnlyRemoveMarkers = false);
 
 private:
   /// Used in collectMarkers
@@ -528,6 +526,7 @@ INITIALIZE_PASS_END(StackColoringLegacy, DEBUG_TYPE,
 
 void StackColoringLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<SlotIndexesWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -640,6 +639,8 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   // Step 1: collect markers and populate the "InterestingSlots"
   // and "ConservativeSlots" sets.
   for (MachineBasicBlock *MBB : depth_first(MF)) {
+    BasicBlockOrdering.push_back(MBB);
+
     // Compute the set of slots for which we've seen a START marker but have
     // not yet seen an END marker at this point in the walk (e.g. on entry
     // to this bb).
@@ -719,17 +720,15 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
             H.CatchObj.FrameIndex >= 0)
           ConservativeSlots.set(H.CatchObj.FrameIndex);
 
+  // Treat all stack slots as conservative if we happen to have calls to
+  // setjmp/sigsetjmp, as longjmp may re-enter the function on a different path.
+  if (MF->exposesReturnsTwice())
+    ConservativeSlots.set();
+
   LLVM_DEBUG(dumpBV("Conservative slots", ConservativeSlots));
 
   // Step 2: compute begin/end sets for each block
-
-  // NOTE: We use a depth-first iteration to ensure that we obtain a
-  // deterministic numbering.
-  for (MachineBasicBlock *MBB : depth_first(MF)) {
-    // Assign a serial number to this basic block.
-    BasicBlocks[MBB] = BasicBlockNumbering.size();
-    BasicBlockNumbering.push_back(MBB);
-
+  for (const MachineBasicBlock *MBB : BasicBlockOrdering) {
     // Keep a reference to avoid repeated lookups.
     BlockLifetimeInfo &BlockInfo = BlockLiveness[MBB];
 
@@ -737,7 +736,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
     BlockInfo.End.resize(NumSlot);
 
     SmallVector<int, 4> slots;
-    for (MachineInstr &MI : *MBB) {
+    for (const MachineInstr &MI : *MBB) {
       bool isStart = false;
       slots.clear();
       if (isLifetimeStartOrEnd(MI, slots, isStart)) {
@@ -786,7 +785,7 @@ void StackColoring::calculateLocalLiveness() {
     changed = false;
     ++NumIters;
 
-    for (const MachineBasicBlock *BB : BasicBlockNumbering) {
+    for (const MachineBasicBlock *BB : BasicBlockOrdering) {
       // Use an iterator to avoid repeated lookups.
       LivenessMap::iterator BI = BlockLiveness.find(BB);
       assert(BI != BlockLiveness.end() && "Block not found");
@@ -815,13 +814,13 @@ void StackColoring::calculateLocalLiveness() {
       LocalLiveOut |= BlockInfo.Begin;
 
       // Update block LiveIn set, noting whether it has changed.
-      if (LocalLiveIn.test(BlockInfo.LiveIn)) {
+      if (!LocalLiveIn.subsetOf(BlockInfo.LiveIn)) {
         changed = true;
         BlockInfo.LiveIn |= LocalLiveIn;
       }
 
       // Update block LiveOut set, noting whether it has changed.
-      if (LocalLiveOut.test(BlockInfo.LiveOut)) {
+      if (!LocalLiveOut.subsetOf(BlockInfo.LiveOut)) {
         changed = true;
         BlockInfo.LiveOut |= LocalLiveOut;
       }
@@ -914,10 +913,10 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     if (!VI.Var || !VI.inStackSlot())
       continue;
     int Slot = VI.getStackSlot();
-    if (SlotRemap.count(Slot)) {
+    if (auto It = SlotRemap.find(Slot); It != SlotRemap.end()) {
       LLVM_DEBUG(dbgs() << "Remapping debug info for ["
                         << cast<DILocalVariable>(VI.Var)->getName() << "].\n");
-      VI.updateStackSlot(SlotRemap[Slot]);
+      VI.updateStackSlot(It->second);
       FixedDbg++;
     }
   }
@@ -928,7 +927,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   // Keep a list of allocas which has been affected by the remap.
   SmallPtrSet<const AllocaInst*, 32> MergedAllocas;
 
-  for (const std::pair<int, int> &SI : SlotRemap) {
+  for (const auto &SI : SlotRemap) {
     const AllocaInst *From = MFI->getObjectAllocation(SI.first);
     const AllocaInst *To = MFI->getObjectAllocation(SI.second);
     assert(To && From && "Invalid allocation object");
@@ -937,7 +936,8 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     // If From is before wo, its possible that there is a use of From between
     // them.
     if (From->comesBefore(To))
-      const_cast<AllocaInst*>(To)->moveBefore(const_cast<AllocaInst*>(From));
+      const_cast<AllocaInst *>(To)->moveBefore(
+          const_cast<AllocaInst *>(From)->getIterator());
 
     // AA might be used later for instruction scheduling, and we need it to be
     // able to deduce the correct aliasing releationships between pointers
@@ -948,7 +948,7 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     Instruction *Inst = const_cast<AllocaInst *>(To);
     if (From->getType() != To->getType()) {
       BitCastInst *Cast = new BitCastInst(Inst, From->getType());
-      Cast->insertAfter(Inst);
+      Cast->insertAfter(Inst->getIterator());
       Inst = Cast;
     }
 
@@ -1003,10 +1003,11 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         if (!AI)
           continue;
 
-        if (!Allocas.count(AI))
+        auto It = Allocas.find(AI);
+        if (It == Allocas.end())
           continue;
 
-        MMO->setValue(Allocas[AI]);
+        MMO->setValue(It->second);
         FixedMemOp++;
       }
 
@@ -1069,9 +1070,8 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         if (MMO->getAAInfo()) {
           if (const Value *MMOV = MMO->getValue()) {
             SmallVector<Value *, 4> Objs;
-            getUnderlyingObjectsForCodeGen(MMOV, Objs);
 
-            if (Objs.empty())
+            if (!getUnderlyingObjectsForCodeGen(MMOV, Objs) || Objs.empty())
               MayHaveConflictingAAMD = true;
             else
               for (Value *V : Objs) {
@@ -1113,9 +1113,10 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   if (WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo())
     for (WinEHTryBlockMapEntry &TBME : EHInfo->TryBlockMap)
       for (WinEHHandlerType &H : TBME.HandlerArray)
-        if (H.CatchObj.FrameIndex != std::numeric_limits<int>::max() &&
-            SlotRemap.count(H.CatchObj.FrameIndex))
-          H.CatchObj.FrameIndex = SlotRemap[H.CatchObj.FrameIndex];
+        if (H.CatchObj.FrameIndex != std::numeric_limits<int>::max())
+          if (auto It = SlotRemap.find(H.CatchObj.FrameIndex);
+              It != SlotRemap.end())
+            H.CatchObj.FrameIndex = It->second;
 
   LLVM_DEBUG(dbgs() << "Fixed " << FixedMemOp << " machine memory operands.\n");
   LLVM_DEBUG(dbgs() << "Fixed " << FixedDbg << " debug locations.\n");
@@ -1172,11 +1173,14 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
   // Expunge slot remap map.
   for (unsigned i=0; i < NumSlots; ++i) {
     // If we are remapping i
-    if (SlotRemap.count(i)) {
-      int Target = SlotRemap[i];
+    if (auto It = SlotRemap.find(i); It != SlotRemap.end()) {
+      int Target = It->second;
       // As long as our target is mapped to something else, follow it.
-      while (SlotRemap.count(Target)) {
-        Target = SlotRemap[Target];
+      while (true) {
+        auto It = SlotRemap.find(Target);
+        if (It == SlotRemap.end())
+          break;
+        Target = It->second;
         SlotRemap[i] = Target;
       }
     }
@@ -1184,29 +1188,30 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
 }
 
 bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
   StackColoring SC(&getAnalysis<SlotIndexesWrapperPass>().getSI());
-  return SC.run(MF);
+  return SC.run(MF, skipFunction(MF.getFunction()));
 }
 
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
   StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
-  if (SC.run(MF))
-    return PreservedAnalyses::none();
+  bool OnlyRemoveMarkers = MF.getFunction().hasOptNone() ||
+                           shouldSkipOptimizationForOptBisect(MF.getFunction());
+  if (SC.run(MF, OnlyRemoveMarkers)) {
+    auto PA = getMachineFunctionPassPreservedAnalyses();
+    PA.preserve<MachineRegisterClassAnalysis>();
+    return PA;
+  }
   return PreservedAnalyses::all();
 }
 
-bool StackColoring::run(MachineFunction &Func) {
+bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   LLVM_DEBUG(dbgs() << "********** Stack Coloring **********\n"
                     << "********** Function: " << Func.getName() << '\n');
   MF = &Func;
   MFI = &MF->getFrameInfo();
   BlockLiveness.clear();
-  BasicBlocks.clear();
-  BasicBlockNumbering.clear();
+  BasicBlockOrdering.clear();
   Markers.clear();
   Intervals.clear();
   LiveStarts.clear();
@@ -1225,7 +1230,7 @@ bool StackColoring::run(MachineFunction &Func) {
 
   unsigned NumMarkers = collectMarkers(NumSlots);
 
-  unsigned TotalSize = 0;
+  int64_t TotalSize = 0;
   LLVM_DEBUG(dbgs() << "Found " << NumMarkers << " markers and " << NumSlots
                     << " slots\n");
   LLVM_DEBUG(dbgs() << "Slot structure:\n");
@@ -1239,8 +1244,10 @@ bool StackColoring::run(MachineFunction &Func) {
   LLVM_DEBUG(dbgs() << "Total Stack size: " << TotalSize << " bytes\n\n");
 
   // Don't continue because there are not enough lifetime markers, or the
-  // stack is too small, or we are told not to optimize the slots.
-  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring) {
+  // stack is too small, or we are told not to optimize the slots, or
+  // opt-bisect-limit is skipping this pass.
+  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring ||
+      OnlyRemoveMarkers) {
     LLVM_DEBUG(dbgs() << "Will not try to merge slots.\n");
     return removeAllMarkers();
   }
@@ -1269,7 +1276,7 @@ bool StackColoring::run(MachineFunction &Func) {
   // Maps old slots to new slots.
   DenseMap<int, int> SlotRemap;
   unsigned RemovedSlots = 0;
-  unsigned ReducedSize = 0;
+  int64_t ReducedSize = 0;
 
   // Do not bother looking at empty intervals.
   for (unsigned I = 0; I < NumSlots; ++I) {

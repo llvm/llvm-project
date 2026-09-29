@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64 -run-pass=patchable-function %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -passes=patchable-function %s -o - | FileCheck %s
 
 ## The initial .loc covers PATCHABLE_FUNCTION_ENTER.
 ## Emitting a new .loc may create a prologue_end prematurely.

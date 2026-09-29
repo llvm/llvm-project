@@ -49,7 +49,8 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DstAS) const override;
+  bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DstAS) const override;
 
   yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;
   yaml::MachineFunctionInfo *
@@ -59,6 +60,15 @@ public:
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 };
 
 std::unique_ptr<ScheduleDAGMutation>

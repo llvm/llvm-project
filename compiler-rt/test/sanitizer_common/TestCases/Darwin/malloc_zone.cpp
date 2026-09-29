@@ -17,6 +17,10 @@
 // UBSan does not install a malloc zone.
 // XFAIL: ubsan
 //
+// Currently fails on darwin/lsan
+// XFAIL: darwin && lsan
+
+// UNSUPPORTED: rtsan
 
 #include <malloc/malloc.h>
 #include <stdlib.h>

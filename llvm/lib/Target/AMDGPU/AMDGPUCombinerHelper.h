@@ -28,12 +28,15 @@ protected:
 public:
   using CombinerHelper::CombinerHelper;
   AMDGPUCombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
-                       bool IsPreLegalize, GISelKnownBits *KB,
+                       bool IsPreLegalize, GISelValueTracking *VT,
                        MachineDominatorTree *MDT, const LegalizerInfo *LI,
                        const GCNSubtarget &STI);
 
   bool matchFoldableFneg(MachineInstr &MI, MachineInstr *&MatchInfo) const;
   void applyFoldableFneg(MachineInstr &MI, MachineInstr *&MatchInfo) const;
+
+  bool matchFoldFAbsFptrunc(MachineInstr &Fabs, MachineInstr &Fptrunc) const;
+  void applyFoldFAbsFptrunc(MachineInstr &Fabs, MachineInstr &Fptrunc) const;
 
   bool matchExpandPromotedF16FMed3(MachineInstr &MI, Register Src0,
                                    Register Src1, Register Src2) const;
@@ -43,6 +46,14 @@ public:
   bool matchCombineFmulWithSelectToFldexp(
       MachineInstr &MI, MachineInstr &Sel,
       std::function<void(MachineIRBuilder &)> &MatchInfo) const;
+
+  bool matchConstantIs32BitMask(Register Reg) const;
+
+  /// fmin_legacy/fmax_legacy select s1 on NaN, and on a +0.0/-0.0 tie (s1 for
+  /// min, s0 for max). Returns true if that tie cannot be observed: nsz on
+  /// \p MI, or a known non-logical-zero \p LHS or \p RHS.
+  bool canIgnoreLegacyMinMaxTies(const MachineInstr &MI, Register LHS,
+                                 Register RHS) const;
 };
 
 } // namespace llvm

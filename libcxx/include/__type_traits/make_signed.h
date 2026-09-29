@@ -13,7 +13,6 @@
 #include <__type_traits/copy_cv.h>
 #include <__type_traits/is_enum.h>
 #include <__type_traits/is_integral.h>
-#include <__type_traits/nat.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/type_list.h>
 
@@ -71,7 +70,7 @@ using __make_signed_t = __copy_cv_t<_Tp, typename __make_signed<__remove_cv_t<_T
 #endif // __has_builtin(__make_signed)
 
 template <class _Tp>
-struct make_signed {
+struct _LIBCPP_NO_SPECIALIZATIONS make_signed {
   using type _LIBCPP_NODEBUG = __make_signed_t<_Tp>;
 };
 

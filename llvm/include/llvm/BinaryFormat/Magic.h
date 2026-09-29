@@ -9,6 +9,7 @@
 #ifndef LLVM_BINARYFORMAT_MAGIC_H
 #define LLVM_BINARYFORMAT_MAGIC_H
 
+#include "llvm/Support/Compiler.h"
 #include <system_error>
 
 namespace llvm {
@@ -72,7 +73,7 @@ private:
 };
 
 /// Identify the type of a binary file based on how magical it is.
-file_magic identify_magic(StringRef magic);
+LLVM_ABI file_magic identify_magic(StringRef magic);
 
 /// Get and identify \a path's type based on its content.
 ///
@@ -80,7 +81,7 @@ file_magic identify_magic(StringRef magic);
 /// @param result Set to the type of file, or file_magic::unknown.
 /// @returns errc::success if result has been successfully set, otherwise a
 ///          platform-specific error_code.
-std::error_code identify_magic(const Twine &path, file_magic &result);
+LLVM_ABI std::error_code identify_magic(const Twine &path, file_magic &result);
 } // namespace llvm
 
 #endif

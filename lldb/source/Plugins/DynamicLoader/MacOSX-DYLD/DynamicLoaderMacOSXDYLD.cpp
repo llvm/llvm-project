@@ -75,8 +75,9 @@ DynamicLoader *DynamicLoaderMacOSXDYLD::CreateInstance(Process *process,
       case llvm::Triple::IOS:
       case llvm::Triple::TvOS:
       case llvm::Triple::WatchOS:
-      case llvm::Triple::XROS:
       case llvm::Triple::BridgeOS:
+      case llvm::Triple::DriverKit:
+      case llvm::Triple::XROS:
         create = triple_ref.getVendor() == llvm::Triple::Apple;
         break;
       default:
@@ -282,9 +283,9 @@ bool DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(
       }
 
       if (m_dyld_all_image_infos_addr == LLDB_INVALID_ADDRESS) {
-        ConstString g_sect_name("__all_image_info");
         SectionSP dyld_aii_section_sp =
-            dyld_module_sp->GetSectionList()->FindSectionByName(g_sect_name);
+            dyld_module_sp->GetSectionList()->FindSectionByName(
+                "__all_image_info");
         if (dyld_aii_section_sp) {
           Address dyld_aii_addr(dyld_aii_section_sp, 0);
           m_dyld_all_image_infos_addr = dyld_aii_addr.GetLoadAddress(&target);
@@ -866,8 +867,9 @@ uint32_t DynamicLoaderMacOSXDYLD::ParseLoadCommands(const DataExtractor &data,
       load_cmd.cmdsize = data.GetU32(&offset);
       switch (load_cmd.cmd) {
       case llvm::MachO::LC_SEGMENT: {
-        segment.name.SetTrimmedCStringWithLength(
-            (const char *)data.GetData(&offset, 16), 16);
+        data.CopyData(offset, 16, segment.name);
+        segment.name[16] = '\0';
+        offset += 16;
         // We are putting 4 uint32_t values 4 uint64_t values so we have to use
         // multiple 32 bit gets below.
         segment.vmaddr = data.GetU32(&offset);
@@ -880,8 +882,9 @@ uint32_t DynamicLoaderMacOSXDYLD::ParseLoadCommands(const DataExtractor &data,
       } break;
 
       case llvm::MachO::LC_SEGMENT_64: {
-        segment.name.SetTrimmedCStringWithLength(
-            (const char *)data.GetData(&offset, 16), 16);
+        data.CopyData(offset, 16, segment.name);
+        segment.name[16] = '\0';
+        offset += 16;
         // Extract vmaddr, vmsize, fileoff, and filesize all at once
         data.GetU64(&offset, &segment.vmaddr, 4);
         // Extract maxprot, initprot, nsects and flags all at once
@@ -893,8 +896,8 @@ uint32_t DynamicLoaderMacOSXDYLD::ParseLoadCommands(const DataExtractor &data,
         if (lc_id_dylinker) {
           const lldb::offset_t name_offset =
               load_cmd_offset + data.GetU32(&offset);
-          const char *path = data.PeekCStr(name_offset);
-          lc_id_dylinker->SetFile(path, FileSpec::Style::native);
+          if (std::optional<llvm::StringRef> path = data.PeekCStr(name_offset))
+            lc_id_dylinker->SetFile(*path, FileSpec::Style::native);
           FileSystem::Instance().Resolve(*lc_id_dylinker);
         }
         break;
@@ -923,7 +926,7 @@ uint32_t DynamicLoaderMacOSXDYLD::ParseLoadCommands(const DataExtractor &data,
     // starts of file offset zero and that has bytes in the file...
     if ((dylib_info.segments[i].fileoff == 0 &&
          dylib_info.segments[i].filesize > 0) ||
-        (dylib_info.segments[i].name == "__TEXT")) {
+        (llvm::StringRef(dylib_info.segments[i].name) == "__TEXT")) {
       dylib_info.slide = dylib_info.address - dylib_info.segments[i].vmaddr;
       // We have found the slide amount, so we can exit this for loop.
       break;
@@ -1070,11 +1073,13 @@ Status DynamicLoaderMacOSXDYLD::CanLoadImage() {
 
 bool DynamicLoaderMacOSXDYLD::GetSharedCacheInformation(
     lldb::addr_t &base_address, UUID &uuid, LazyBool &using_shared_cache,
-    LazyBool &private_shared_cache) {
+    LazyBool &private_shared_cache, FileSpec &shared_cache_filepath,
+    std::optional<uint64_t> &size) {
   base_address = LLDB_INVALID_ADDRESS;
   uuid.Clear();
   using_shared_cache = eLazyBoolCalculate;
   private_shared_cache = eLazyBoolCalculate;
+  size.reset();
 
   if (m_process) {
     addr_t all_image_infos = m_process->GetImageInfoAddress();
@@ -1148,19 +1153,13 @@ bool DynamicLoaderMacOSXDYLD::IsFullyInitialized() {
 
 void DynamicLoaderMacOSXDYLD::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                GetPluginDescriptionStatic(), CreateInstance,
-                                DebuggerInitialize);
+                                GetPluginDescriptionStatic(), CreateInstance);
   DynamicLoaderMacOS::Initialize();
 }
 
 void DynamicLoaderMacOSXDYLD::Terminate() {
   DynamicLoaderMacOS::Terminate();
   PluginManager::UnregisterPlugin(CreateInstance);
-}
-
-void DynamicLoaderMacOSXDYLD::DebuggerInitialize(
-    lldb_private::Debugger &debugger) {
-  CreateSettings(debugger);
 }
 
 llvm::StringRef DynamicLoaderMacOSXDYLD::GetPluginDescriptionStatic() {

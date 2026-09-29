@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ffreestanding %s -Wno-implicit-function-declaration -triple=i386-- -target-feature +movrs -target-feature +avx10.2-512 -verify
+// RUN: %clang_cc1 -ffreestanding %s -Wno-implicit-function-declaration -triple=i386-- -target-feature +movrs -target-feature +avx10.2 -verify
 
 #include <immintrin.h>
 __m512i test_mm512_loadrs_epi8(const __m512i * __A) {

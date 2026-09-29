@@ -1,0 +1,758 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TEST_BENCHMARKS_CONTAINERS_ASSOCIATIVE_CONTAINER_BENCHMARKS_H
+#define TEST_BENCHMARKS_CONTAINERS_ASSOCIATIVE_CONTAINER_BENCHMARKS_H
+
+#include <algorithm>
+#include <iterator>
+#include <memory>
+#include <memory_resource>
+#include <random>
+#include <string>
+#include <ranges>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
+#include "benchmark/benchmark.h"
+#include "../../GenerateInput.h"
+#include "test_macros.h"
+
+namespace support {
+
+template <class Container>
+struct adapt_operations {
+  // using ValueType = ...;
+  // using KeyType   = ...;
+  // static ValueType make_value_from_key(KeyType const& k);
+  // static KeyType const& key_from_value(ValueType const& value);
+
+  // using InsertionResult = ...;
+  // static Container::iterator get_iterator(InsertionResult const&);
+
+  // template <class Allocator>
+  // using rebind_alloc = ...;
+};
+
+// Uninitialized storage for N objects of type T, whose lifetime is managed manually.
+template <class T, std::size_t N>
+union ScratchSpace {
+  ScratchSpace() {}
+  ~ScratchSpace() {}
+  T elems[N];
+};
+
+template <class Container>
+void associative_container_benchmarks(std::string container) {
+  using Key   = typename Container::key_type;
+  using Value = typename Container::value_type;
+
+  auto generate_unique_keys = [=](std::size_t n) {
+    std::set<Key> keys;
+    while (keys.size() < n) {
+      Key k = Generate<Key>::random();
+      keys.insert(k);
+    }
+    return std::vector<Key>(keys.begin(), keys.end());
+  };
+
+  auto make_value_types = [](std::vector<Key> const& keys) {
+    std::vector<Value> kv;
+    for (Key const& k : keys)
+      kv.push_back(adapt_operations<Container>::make_value_from_key(k));
+    return kv;
+  };
+
+  auto get_key = [](Value const& v) -> Key const& { return adapt_operations<Container>::key_from_value(v); };
+
+  auto bench = [&](std::string operation, auto f) {
+    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(0)->Arg(32)->Arg(8192);
+  };
+  auto bench_non_empty = [&](std::string operation, auto f) {
+    benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(32)->Arg(8192);
+  };
+
+  static constexpr bool is_multi_key_container =
+      !std::is_same_v<typename adapt_operations<Container>::InsertionResult,
+                      std::pair<typename Container::iterator, bool>>;
+
+  static constexpr bool is_ordered_container = requires(Container c, Key k) { c.lower_bound(k); };
+
+  static constexpr bool is_map_like = requires { typename Container::mapped_type; };
+
+  // These benchmarks are structured to perform the operation being benchmarked
+  // a small number of times at each iteration, in order to offset the cost of
+  // PauseTiming() and ResumeTiming().
+  static constexpr std::size_t BatchSize = 32;
+
+  /////////////////////////
+  // Constructors
+  /////////////////////////
+  bench("ctor(const Self&)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Container src(in.begin(), in.end());
+    ScratchSpace<Container, BatchSize> c;
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        std::construct_at(c.elems + i, src);
+        benchmark::DoNotOptimize(c.elems + i);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        std::destroy_at(c.elems + i);
+      }
+      st.ResumeTiming();
+    }
+  });
+
+  bench("ctor(const Self&, const allocator_type&)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Container src(in.begin(), in.end());
+    ScratchSpace<Container, BatchSize> c;
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        std::construct_at(c.elems + i, src, std::allocator<typename Container::value_type>());
+        benchmark::DoNotOptimize(c.elems + i);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        std::destroy_at(c.elems + i);
+      }
+      st.ResumeTiming();
+    }
+  });
+
+  bench_non_empty("ctor(Self&&, const allocator_type&) (different allocs)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    using PMRContainer = adapt_operations<Container>::template rebind_alloc<
+        std::pmr::polymorphic_allocator<typename Container::value_type>>;
+
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    std::pmr::monotonic_buffer_resource rs(size * 64 * BatchSize); // 64 bytes should be enough per node
+    std::vector<PMRContainer> srcs;
+    srcs.reserve(BatchSize);
+    for (size_t i = 0; i != BatchSize; ++i)
+      srcs.emplace_back(&rs).insert(in.begin(), in.end());
+    ScratchSpace<PMRContainer, BatchSize> c;
+
+    std::pmr::monotonic_buffer_resource rs2(size * 64 * BatchSize); // 64 bytes should be enough per node
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        std::construct_at(c.elems + i, std::move(srcs[i]), &rs2);
+        benchmark::DoNotOptimize(c.elems + i);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        std::destroy_at(c.elems + i);
+      }
+      rs2.release();
+      srcs.clear();
+      rs.release();
+      for (size_t i = 0; i != BatchSize; ++i)
+        srcs.emplace_back(&rs).insert(in.begin(), in.end());
+
+      st.ResumeTiming();
+    }
+  });
+
+  bench("ctor(iterator, iterator) (unsorted sequence)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    const std::size_t size = st.range(0);
+    std::mt19937 randomness;
+    std::vector<Key> keys = generate_unique_keys(size);
+    std::shuffle(keys.begin(), keys.end(), randomness);
+    std::vector<Value> in = make_value_types(keys);
+    ScratchSpace<Container, BatchSize> c;
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        std::construct_at(c.elems + i, in.begin(), in.end());
+        benchmark::DoNotOptimize(c.elems + i);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        std::destroy_at(c.elems + i);
+      }
+      st.ResumeTiming();
+    }
+  });
+
+  bench("ctor(iterator, iterator) (sorted sequence)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    const std::size_t size = st.range(0);
+    std::vector<Key> keys  = generate_unique_keys(size);
+    std::sort(keys.begin(), keys.end());
+    std::vector<Value> in = make_value_types(keys);
+    ScratchSpace<Container, BatchSize> c;
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        std::construct_at(c.elems + i, in.begin(), in.end());
+        benchmark::DoNotOptimize(c.elems + i);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        std::destroy_at(c.elems + i);
+      }
+      st.ResumeTiming();
+    }
+  });
+
+  /////////////////////////
+  // Assignment
+  /////////////////////////
+  bench("operator=(const Self&) (into cleared Container)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Container src(in.begin(), in.end());
+    Container c[BatchSize];
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        c[i] = src;
+        benchmark::DoNotOptimize(c[i]);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        c[i].clear();
+      }
+      st.ResumeTiming();
+    }
+  });
+
+  bench("operator=(const Self&) (into partially populated Container)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Container src(in.begin(), in.end());
+    Container half(std::next(in.begin(), in.size() / 2), in.end());
+
+    Container c[BatchSize];
+    for (std::size_t i = 0; i != BatchSize; ++i) {
+      c[i] = half;
+    }
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        c[i] = src;
+        benchmark::DoNotOptimize(c[i]);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        c[i] = half;
+      }
+      st.ResumeTiming();
+    }
+  });
+
+  bench("operator=(const Self&) (into populated Container)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Container src(in.begin(), in.end());
+    Container c[BatchSize];
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        c[i] = src;
+        benchmark::DoNotOptimize(c[i]);
+        benchmark::ClobberMemory();
+      }
+    }
+  });
+
+  /////////////////////////
+  // Insertion
+  /////////////////////////
+  bench_non_empty("insert(const value_type&) (already present)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Value to_insert        = in[in.size() / 2]; // pick any existing value
+    std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+    typename Container::iterator inserted[BatchSize];
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        inserted[i] = adapt_operations<Container>::get_iterator(c[i].insert(to_insert));
+        benchmark::DoNotOptimize(inserted[i]);
+        benchmark::DoNotOptimize(c[i]);
+        benchmark::ClobberMemory();
+      }
+
+      if constexpr (is_multi_key_container) {
+        st.PauseTiming();
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          c[i].erase(inserted[i]);
+        }
+        st.ResumeTiming();
+      }
+    }
+  });
+
+  auto insert_new_value_bench = [=](bool bench_end_iter, auto& st) {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
+    auto skipped_val       = bench_end_iter ? in.size() - 1 : in.size() / 2;
+    Value to_insert        = in[skipped_val];
+    { // Remove the element
+      std::vector<Value> tmp;
+      tmp.reserve(in.size() - 1);
+      for (size_t i = 0; i != in.size(); ++i)
+        if (i != skipped_val)
+          tmp.emplace_back(in[i]);
+      in = std::move(tmp);
+    }
+
+    std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        auto result = c[i].insert(to_insert);
+        benchmark::DoNotOptimize(result);
+        benchmark::DoNotOptimize(c[i]);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        c[i].erase(get_key(to_insert));
+      }
+      st.ResumeTiming();
+    }
+  };
+  bench("insert(value) (new value, end)",
+        [=](auto& state) TEST_ALIGN_BENCHMARK { insert_new_value_bench(true, state); });
+  bench("insert(value) (new value, middle)",
+        [=](auto& state) TEST_ALIGN_BENCHMARK { insert_new_value_bench(false, state); });
+
+  if constexpr (is_map_like && !is_multi_key_container) {
+    bench_non_empty("insert_or_assign(key, value) (already present)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+      const std::size_t size = st.range(0);
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+      Value to_insert        = in[in.size() / 2]; // pick any existing value
+      std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+      typename Container::iterator inserted[BatchSize];
+
+      while (st.KeepRunningBatch(BatchSize)) {
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          inserted[i] =
+              adapt_operations<Container>::get_iterator(c[i].insert_or_assign(to_insert.first, to_insert.second));
+          benchmark::DoNotOptimize(inserted[i]);
+          benchmark::DoNotOptimize(c[i]);
+          benchmark::ClobberMemory();
+        }
+      }
+    });
+
+    auto insert_or_assign_bench = [=](bool bench_end_iter, auto& st) {
+      const std::size_t size = st.range(0);
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
+      auto skipped_val       = bench_end_iter ? in.size() - 1 : in.size() / 2;
+      Value to_insert        = in[skipped_val];
+      { // Remove the element
+        std::vector<Value> tmp;
+        tmp.reserve(in.size() - 1);
+        for (size_t i = 0; i != in.size(); ++i)
+          if (i != skipped_val)
+            tmp.emplace_back(in[i]);
+        in = std::move(tmp);
+      }
+
+      std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+
+      while (st.KeepRunningBatch(BatchSize)) {
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          auto result = c[i].insert_or_assign(to_insert.first, to_insert.second);
+          benchmark::DoNotOptimize(result);
+          benchmark::DoNotOptimize(c[i]);
+          benchmark::ClobberMemory();
+        }
+
+        st.PauseTiming();
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          c[i].erase(get_key(to_insert));
+        }
+        st.ResumeTiming();
+      }
+    };
+    bench("insert_or_assign(key, value) (new value, end)",
+          [=](auto& state) TEST_ALIGN_BENCHMARK { insert_or_assign_bench(true, state); });
+    bench("insert_or_assign(key, value) (new value, middle)",
+          [=](auto& state) TEST_ALIGN_BENCHMARK { insert_or_assign_bench(false, state); });
+  }
+
+  // The insert(hint, ...) methods are only relevant for ordered containers, and we lack
+  // a good way to compute a hint for unordered ones.
+  if constexpr (is_ordered_container) {
+    auto insert_good_hint_bench = [=](bool bench_end_iter, auto& st) {
+      const std::size_t size = st.range(0);
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
+      auto skipped_val       = bench_end_iter ? in.size() - 1 : in.size() / 2;
+      Value to_insert        = in[skipped_val];
+      { // Remove the element
+        std::vector<Value> tmp;
+        tmp.reserve(in.size() - 1);
+        for (size_t i = 0; i != in.size(); ++i)
+          if (i != skipped_val)
+            tmp.emplace_back(in[i]);
+        in = std::move(tmp);
+      }
+
+      std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+      typename Container::iterator hints[BatchSize];
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        hints[i] = c[i].lower_bound(get_key(to_insert));
+      }
+
+      while (st.KeepRunningBatch(BatchSize)) {
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          auto result = c[i].insert(hints[i], to_insert);
+          benchmark::DoNotOptimize(result);
+          benchmark::DoNotOptimize(c[i]);
+          benchmark::ClobberMemory();
+        }
+
+        st.PauseTiming();
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          c[i].erase(get_key(to_insert));
+          hints[i] = c[i].lower_bound(get_key(to_insert)); // refresh hints in case of invalidation
+        }
+        st.ResumeTiming();
+      }
+    };
+    bench("insert(hint, value) (good hint, end)",
+          [=](auto& state) TEST_ALIGN_BENCHMARK { insert_good_hint_bench(true, state); });
+    bench("insert(hint, value) (good hint, middle)",
+          [=](auto& state) TEST_ALIGN_BENCHMARK { insert_good_hint_bench(false, state); });
+
+    auto insert_bad_hint_bench = [=](bool bench_end_iter, auto& st) {
+      const std::size_t size = st.range(0);
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
+      auto skipped_val       = bench_end_iter ? in.size() - 1 : in.size() / 2;
+      Value to_insert        = in[skipped_val];
+      { // Remove the element
+        std::vector<Value> tmp;
+        tmp.reserve(in.size() - 1);
+        for (size_t i = 0; i != in.size(); ++i)
+          if (i != skipped_val)
+            tmp.emplace_back(in[i]);
+        in = std::move(tmp);
+      }
+      std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+
+      while (st.KeepRunningBatch(BatchSize)) {
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          auto result = c[i].insert(c[i].begin(), to_insert);
+          benchmark::DoNotOptimize(result);
+          benchmark::DoNotOptimize(c[i]);
+          benchmark::ClobberMemory();
+        }
+
+        st.PauseTiming();
+        for (std::size_t i = 0; i != BatchSize; ++i) {
+          c[i].erase(get_key(to_insert));
+        }
+        st.ResumeTiming();
+      }
+    };
+
+    bench("insert(hint, value) (bad hint, end)",
+          [=](auto& state) TEST_ALIGN_BENCHMARK { insert_bad_hint_bench(true, state); });
+    bench("insert(hint, value) (bad hint, middle)",
+          [=](auto& state) TEST_ALIGN_BENCHMARK { insert_bad_hint_bench(false, state); });
+  }
+
+  auto insert_iter_iter_bench = [=](bool bench_end_iter, auto& st) {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size + (size / 10)));
+    auto skip_start        = bench_end_iter ? size : size / 2;
+
+    std::vector<Value> small;
+    small.reserve(size / 10);
+    { // Split the range
+      std::vector<Value> tmp;
+      tmp.reserve(size);
+      std::copy_n(in.begin(), skip_start, std::back_inserter(tmp));
+      std::copy_n(in.begin() + skip_start, size / 10, std::back_inserter(small));
+      std::copy(in.begin() + skip_start + size / 10, in.end(), std::back_inserter(tmp));
+
+      in = std::move(tmp);
+    }
+
+    Container c(small.begin(), small.end());
+
+    for ([[maybe_unused]] auto _ : st) {
+      c.insert(in.begin(), in.end());
+      benchmark::DoNotOptimize(c);
+      benchmark::ClobberMemory();
+
+      st.PauseTiming();
+      c = Container(small.begin(), small.end());
+      st.ResumeTiming();
+    }
+  };
+  bench_non_empty("insert(iterator, iterator) (all new keys, end)", [=](auto& state) TEST_ALIGN_BENCHMARK {
+    insert_iter_iter_bench(true, state);
+  });
+  bench_non_empty("insert(iterator, iterator) (all new keys, middle)", [=](auto& state) TEST_ALIGN_BENCHMARK {
+    insert_iter_iter_bench(false, state);
+  });
+
+  bench_non_empty("insert(iterator, iterator) (half new keys)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+
+    // Populate a container that already contains half the elements we'll try inserting,
+    // that's what our container will start with.
+    std::vector<Value> small;
+    for (std::size_t i = 0; i != size / 2; ++i) {
+      small.push_back(in.at(i * 2));
+    }
+    Container c(small.begin(), small.end());
+
+    for ([[maybe_unused]] auto _ : st) {
+      c.insert(in.begin(), in.end());
+      benchmark::DoNotOptimize(c);
+      benchmark::ClobberMemory();
+
+      st.PauseTiming();
+      c = Container(small.begin(), small.end());
+      st.ResumeTiming();
+    }
+  });
+
+  if constexpr (is_map_like) {
+    bench_non_empty("insert(iterator, iterator) (product_iterator from same type)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+      const std::size_t size = st.range(0);
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size + (size / 10)));
+      Container source(in.begin(), in.end());
+
+      Container c;
+
+      for ([[maybe_unused]] auto _ : st) {
+        c.insert(source.begin(), source.end());
+        benchmark::DoNotOptimize(c);
+        benchmark::ClobberMemory();
+
+        st.PauseTiming();
+        c = Container();
+        st.ResumeTiming();
+      }
+    });
+
+#if defined(__cpp_lib_ranges_zip) && __cpp_lib_ranges_zip >= 202110L
+    bench_non_empty("insert(iterator, iterator) (product_iterator from zip_view)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+      const std::size_t size = st.range(0);
+      std::vector<Key> keys  = generate_unique_keys(size + (size / 10));
+      std::sort(keys.begin(), keys.end());
+      std::vector<typename Container::mapped_type> mapped(keys.size());
+
+      auto source = std::views::zip(keys, mapped);
+
+      Container c;
+
+      for ([[maybe_unused]] auto _ : st) {
+        c.insert(source.begin(), source.end());
+        benchmark::DoNotOptimize(c);
+        benchmark::ClobberMemory();
+
+        st.PauseTiming();
+        c = Container();
+        st.ResumeTiming();
+      }
+    });
+#endif
+  }
+  /////////////////////////
+  // Erasure
+  /////////////////////////
+  bench_non_empty("erase(key) (existent)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Value element          = in[in.size() / 2]; // pick any element
+    std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        auto result = c[i].erase(get_key(element));
+        benchmark::DoNotOptimize(result);
+        benchmark::DoNotOptimize(c[i]);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        c[i].insert(element);
+      }
+      st.ResumeTiming();
+    }
+  });
+
+  auto erase_key_non_existent_bench = [=](bool bench_end_iter, auto& st) {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size + BatchSize));
+    std::vector<Key> keys;
+
+    auto skip_start = bench_end_iter ? size : size / 2;
+    { // Extract the keys
+      std::vector<Value> tmp;
+      tmp.reserve(size);
+      std::copy_n(in.begin(), skip_start, std::back_inserter(tmp));
+      std::transform(in.begin() + skip_start, in.begin() + skip_start + BatchSize, std::back_inserter(keys), get_key);
+      std::copy(in.begin() + skip_start + BatchSize, in.end(), std::back_inserter(tmp));
+
+      in = std::move(tmp);
+    }
+
+    Container c(in.begin(), in.end());
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        auto result = c.erase(keys[i]);
+        benchmark::DoNotOptimize(result);
+        benchmark::DoNotOptimize(c);
+        benchmark::ClobberMemory();
+      }
+
+      // no cleanup required because we erased a non-existent element
+    }
+  };
+  bench("erase(key) (non-existent, end)",
+        [=](auto& state) TEST_ALIGN_BENCHMARK { erase_key_non_existent_bench(true, state); });
+  bench("erase(key) (non-existent, middle)",
+        [=](auto& state) TEST_ALIGN_BENCHMARK { erase_key_non_existent_bench(false, state); });
+
+  bench_non_empty("erase(iterator)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Value element          = in[in.size() / 2]; // pick any element
+
+    std::vector<Container> c;
+    std::vector<typename Container::iterator> iterators;
+    for (std::size_t i = 0; i != BatchSize; ++i) {
+      c.push_back(Container(in.begin(), in.end()));
+      iterators.push_back(c[i].find(get_key(element)));
+    }
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        auto result = c[i].erase(iterators[i]);
+        benchmark::DoNotOptimize(result);
+        benchmark::DoNotOptimize(c[i]);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        iterators[i] = adapt_operations<Container>::get_iterator(c[i].insert(element));
+      }
+      st.ResumeTiming();
+    }
+  });
+
+  bench_non_empty("erase(iterator, iterator) (erase half the container)", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Container c(in.begin(), in.end());
+
+    auto first = std::next(c.begin(), c.size() / 4);
+    auto last  = std::next(c.begin(), 3 * (c.size() / 4));
+    for ([[maybe_unused]] auto _ : st) {
+      auto result = c.erase(first, last);
+      benchmark::DoNotOptimize(result);
+      benchmark::DoNotOptimize(c);
+      benchmark::ClobberMemory();
+
+      st.PauseTiming();
+      c     = Container(in.begin(), in.end());
+      first = std::next(c.begin(), c.size() / 4);
+      last  = std::next(c.begin(), 3 * (c.size() / 4));
+      st.ResumeTiming();
+    }
+  });
+
+  bench("clear()", [=](auto& st) TEST_ALIGN_BENCHMARK {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Container c(in.begin(), in.end());
+
+    for ([[maybe_unused]] auto _ : st) {
+      c.clear();
+      benchmark::DoNotOptimize(c);
+      benchmark::ClobberMemory();
+
+      st.PauseTiming();
+      c = Container(in.begin(), in.end());
+      st.ResumeTiming();
+    }
+  });
+
+  /////////////////////////
+  // Query
+  /////////////////////////
+  auto query_bench = [=](auto func) {
+    return [=](auto& st) TEST_ALIGN_BENCHMARK {
+      const std::size_t size    = st.range(0);
+      std::vector<Key> keys     = generate_unique_keys(size);
+      std::vector<Value> values = make_value_types(keys);
+      Container c(values.begin(), values.end());
+
+      // Create a pool of key indices to draw in the benchmark below. Make the
+      // pool large enough to defeat a branch predictor even when benchmarking
+      // small sizes.
+      const std::size_t N_DRAWS = std::max<std::size_t>(4096, keys.size());
+      std::vector<std::size_t> draws;
+      draws.reserve(N_DRAWS);
+      for (std::size_t i = 0; i != N_DRAWS; ++i) {
+        draws.push_back(getRandomEngine()() % keys.size());
+      }
+
+      std::size_t i = 0;
+      for (auto _ : st) {
+        Key const& key = keys[draws[i]];
+        auto result    = func(c, key);
+        i              = (i + 1 == N_DRAWS ? 0 : i + 1);
+        benchmark::DoNotOptimize(c);
+        benchmark::DoNotOptimize(result);
+        benchmark::ClobberMemory();
+      }
+    };
+  };
+
+  bench_non_empty("find(key)", query_bench([](Container const& c, Key const& key) { return c.find(key); }));
+  bench_non_empty("count(key)", query_bench([](Container const& c, Key const& key) { return c.count(key); }));
+  bench_non_empty("contains(key)", query_bench([](Container const& c, Key const& key) { return c.contains(key); }));
+
+  if constexpr (is_ordered_container) {
+    bench_non_empty(
+        "lower_bound(key)", query_bench([](Container const& c, Key const& key) { return c.lower_bound(key); }));
+    bench_non_empty(
+        "upper_bound(key)", query_bench([](Container const& c, Key const& key) { return c.upper_bound(key); }));
+    bench_non_empty(
+        "equal_range(key)", query_bench([](Container const& c, Key const& key) { return c.equal_range(key); }));
+  }
+}
+
+} // namespace support
+
+#endif // TEST_BENCHMARKS_CONTAINERS_ASSOCIATIVE_CONTAINER_BENCHMARKS_H

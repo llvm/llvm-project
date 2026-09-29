@@ -306,8 +306,7 @@ private:
 
   bool tryInsertVectorElt(SDNode *N);
 
-  // Select special operations if node forms integer ABS pattern
-  bool tryABSOp(SDNode *N);
+  bool tryShiftAmountMod(SDNode *N);
 
   bool tryReadRegister(SDNode *N);
   bool tryWriteRegister(SDNode *N);
@@ -2918,7 +2917,7 @@ void ARMDAGToDAGISel::SelectCDE_CXxD(SDNode *N, uint16_t Opcode,
     Ops.push_back(PredReg);
   }
 
-  // Create the CDE intruction
+  // Create the CDE instruction
   SDNode *InstrNode = CurDAG->getMachineNode(Opcode, Loc, MVT::Untyped, Ops);
   SDValue ResultPair = SDValue(InstrNode, 0);
 
@@ -3156,6 +3155,100 @@ bool ARMDAGToDAGISel::tryInsertVectorElt(SDNode *N) {
   }
 
   return false;
+}
+
+/// tryShiftAmountMod - Take advantage of built-in mod of shift amount in
+/// variable shift/rotate instructions.
+bool ARMDAGToDAGISel::tryShiftAmountMod(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32)
+    return false;
+  // On ARM we intentionally do this only for ROTR. Unlike AArch64, variable
+  // SHL/SRL/SRA do not all have the same modulo-shift semantics we can exploit.
+  // Select ROR by register; in ARM state this is modeled as MOVsr with a ROR
+  // shifter operand, while in Thumb we use tROR/t2RORrr directly.
+
+  SDValue ShiftAmt = N->getOperand(1);
+  SDLoc DL(N);
+  SDValue NewShiftAmt;
+  auto emitUnary = [&](unsigned Opc, SDValue Src, bool IsRSB) {
+    if (Subtarget->isThumb2() || !Subtarget->isThumb()) {
+      SDValue Ops[] = {Src};
+      if (IsRSB) {
+        SDValue ZeroImm = CurDAG->getTargetConstant(0, DL, MVT::i32);
+        SDValue FullOps[] = {Src, ZeroImm, getAL(CurDAG, DL),
+                             CurDAG->getRegister(0, MVT::i32),
+                             CurDAG->getRegister(0, MVT::i32)};
+        MachineSDNode *Unary =
+            CurDAG->getMachineNode(Opc, DL, MVT::i32, FullOps);
+        return SDValue(Unary, 0);
+      }
+      SDValue FullOps[] = {Ops[0], getAL(CurDAG, DL),
+                           CurDAG->getRegister(0, MVT::i32),
+                           CurDAG->getRegister(0, MVT::i32)};
+      MachineSDNode *Unary = CurDAG->getMachineNode(Opc, DL, MVT::i32, FullOps);
+      return SDValue(Unary, 0);
+    }
+    SDValue Thumb1Ops[] = {CurDAG->getRegister(ARM::CPSR, MVT::i32), Src,
+                           getAL(CurDAG, DL), CurDAG->getRegister(0, MVT::i32)};
+    MachineSDNode *Unary = CurDAG->getMachineNode(Opc, DL, MVT::i32, Thumb1Ops);
+    return SDValue(Unary, 0);
+  };
+
+  if (ShiftAmt->getOpcode() == ISD::ADD || ShiftAmt->getOpcode() == ISD::SUB) {
+    SDValue Add0 = ShiftAmt->getOperand(0);
+    SDValue Add1 = ShiftAmt->getOperand(1);
+    unsigned Add0Imm;
+    unsigned Add1Imm;
+    if (isInt32Immediate(Add1, Add1Imm) && ((Add1Imm & 31) == 0)) {
+      NewShiftAmt = Add0;
+    } else if (ShiftAmt->getOpcode() == ISD::SUB &&
+               isInt32Immediate(Add0, Add0Imm) && Add0Imm != 0 &&
+               ((Add0Imm & 31) == 0)) {
+      unsigned NegOpc =
+          Subtarget->isThumb()
+              ? (Subtarget->hasThumb2() ? ARM::t2RSBri : ARM::tRSB)
+              : ARM::RSBri;
+      NewShiftAmt = emitUnary(NegOpc, Add1, /*IsRSB=*/true);
+    } else if (ShiftAmt->getOpcode() == ISD::SUB &&
+               isInt32Immediate(Add0, Add0Imm) && ((Add0Imm & 31) == 31)) {
+      unsigned NotOpc = Subtarget->isThumb()
+                            ? (Subtarget->isThumb2() ? ARM::t2MVNr : ARM::tMVN)
+                            : ARM::MVNr;
+      NewShiftAmt = emitUnary(NotOpc, Add1, /*IsRSB=*/false);
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
+
+  if (Subtarget->isThumb()) {
+    if (Subtarget->isThumb1Only()) {
+      SDValue Ops[] = {CurDAG->getRegister(ARM::CPSR, MVT::i32),
+                       N->getOperand(0), NewShiftAmt, getAL(CurDAG, DL),
+                       CurDAG->getRegister(0, MVT::i32)};
+      CurDAG->SelectNodeTo(N, ARM::tROR, VT, Ops);
+    } else {
+      SDValue Ops[] = {N->getOperand(0), NewShiftAmt, getAL(CurDAG, DL),
+                       CurDAG->getRegister(0, MVT::i32),
+                       CurDAG->getRegister(0, MVT::i32)};
+      CurDAG->SelectNodeTo(N, ARM::t2RORrr, VT, Ops);
+    }
+  } else {
+    SDValue BaseReg = N->getOperand(0);
+    SDValue ShReg = NewShiftAmt;
+    SDValue OpcEnc = CurDAG->getTargetConstant(
+        ARM_AM::getSORegOpc(ARM_AM::ror, 0), DL, MVT::i32);
+    SDValue Ops[] = {BaseReg,
+                     ShReg,
+                     OpcEnc,
+                     getAL(CurDAG, DL),
+                     CurDAG->getRegister(0, MVT::i32),
+                     CurDAG->getRegister(0, MVT::i32)};
+    CurDAG->SelectNodeTo(N, ARM::MOVsr, VT, Ops);
+  }
+  return true;
 }
 
 bool ARMDAGToDAGISel::transformFixedFloatingPointConversion(SDNode *N,
@@ -3459,45 +3552,6 @@ bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
   return false;
 }
 
-/// Target-specific DAG combining for ISD::SUB.
-/// Target-independent combining lowers SELECT_CC nodes of the form
-/// select_cc setg[ge] X,  0,  X, -X
-/// select_cc setgt    X, -1,  X, -X
-/// select_cc setl[te] X,  0, -X,  X
-/// select_cc setlt    X,  1, -X,  X
-/// which represent Integer ABS into:
-/// Y = sra (X, size(X)-1); sub (xor (X, Y), Y)
-/// ARM instruction selection detects the latter and matches it to
-/// ARM::ABS or ARM::t2ABS machine node.
-bool ARMDAGToDAGISel::tryABSOp(SDNode *N){
-  SDValue SUBSrc0 = N->getOperand(0);
-  SDValue SUBSrc1 = N->getOperand(1);
-  EVT VT = N->getValueType(0);
-
-  if (Subtarget->isThumb1Only())
-    return false;
-
-  if (SUBSrc0.getOpcode() != ISD::XOR || SUBSrc1.getOpcode() != ISD::SRA)
-    return false;
-
-  SDValue XORSrc0 = SUBSrc0.getOperand(0);
-  SDValue XORSrc1 = SUBSrc0.getOperand(1);
-  SDValue SRASrc0 = SUBSrc1.getOperand(0);
-  SDValue SRASrc1 = SUBSrc1.getOperand(1);
-  ConstantSDNode *SRAConstant =  dyn_cast<ConstantSDNode>(SRASrc1);
-  EVT XType = SRASrc0.getValueType();
-  unsigned Size = XType.getSizeInBits() - 1;
-
-  if (XORSrc1 == SUBSrc1 && XORSrc0 == SRASrc0 && XType.isInteger() &&
-      SRAConstant != nullptr && Size == SRAConstant->getZExtValue()) {
-    unsigned Opcode = Subtarget->isThumb2() ? ARM::t2ABS : ARM::ABS;
-    CurDAG->SelectNodeTo(N, Opcode, VT, XORSrc0);
-    return true;
-  }
-
-  return false;
-}
-
 /// We've got special pseudo-instructions for these
 void ARMDAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   unsigned Opcode;
@@ -3685,12 +3739,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     if (tryInlineAsm(N))
       return;
     break;
-  case ISD::SUB:
-    // Select special operations if SUB node forms integer ABS pattern
-    if (tryABSOp(N))
-      return;
-    // Other cases are autogenerated.
-    break;
   case ISD::Constant: {
     unsigned Val = N->getAsZExtVal();
     // If we can't materialize the constant we need to use a literal pool
@@ -3774,6 +3822,10 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
   case ISD::SIGN_EXTEND_INREG:
   case ISD::SRA:
     if (tryV6T2BitfieldExtractOp(N, true))
+      return;
+    break;
+  case ISD::ROTR:
+    if (tryShiftAmountMod(N))
       return;
     break;
   case ISD::FP_TO_UINT:
@@ -4013,31 +4065,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       return;
     // Other cases are autogenerated.
     break;
-  case ARMISD::WLSSETUP: {
-    SDNode *New = CurDAG->getMachineNode(ARM::t2WhileLoopSetup, dl, MVT::i32,
-                                         N->getOperand(0));
-    ReplaceUses(N, New);
-    CurDAG->RemoveDeadNode(N);
-    return;
-  }
-  case ARMISD::WLS: {
-    SDNode *New = CurDAG->getMachineNode(ARM::t2WhileLoopStart, dl, MVT::Other,
-                                         N->getOperand(1), N->getOperand(2),
-                                         N->getOperand(0));
-    ReplaceUses(N, New);
-    CurDAG->RemoveDeadNode(N);
-    return;
-  }
-  case ARMISD::LE: {
-    SDValue Ops[] = { N->getOperand(1),
-                      N->getOperand(2),
-                      N->getOperand(0) };
-    unsigned Opc = ARM::t2LoopEnd;
-    SDNode *New = CurDAG->getMachineNode(Opc, dl, MVT::Other, Ops);
-    ReplaceUses(N, New);
-    CurDAG->RemoveDeadNode(N);
-    return;
-  }
   case ARMISD::LDRD: {
     if (Subtarget->isThumb2())
       break; // TableGen handles isel in this case.
@@ -4088,17 +4115,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     SDNode *New = CurDAG->getMachineNode(ARM::STOREDUAL, dl, MVT::Other, Ops);
     transferMemOperands(N, New);
     ReplaceUses(SDValue(N, 0), SDValue(New, 0));
-    CurDAG->RemoveDeadNode(N);
-    return;
-  }
-  case ARMISD::LOOP_DEC: {
-    SDValue Ops[] = { N->getOperand(1),
-                      N->getOperand(2),
-                      N->getOperand(0) };
-    SDNode *Dec =
-      CurDAG->getMachineNode(ARM::t2LoopDec, dl,
-                             CurDAG->getVTList(MVT::i32, MVT::Other), Ops);
-    ReplaceUses(N, Dec);
     CurDAG->RemoveDeadNode(N);
     return;
   }

@@ -21,6 +21,8 @@
 // time_t, timespec, etc.
 #include <ctime>
 
+#include <sys/types.h>
+
 #ifndef PATH_MAX
 #define PATH_MAX 32768
 #endif
@@ -56,13 +58,6 @@
 #define S_IRWXO 0
 #endif
 
-// pyconfig.h typedefs this.  We require python headers to be included before
-// any LLDB headers, but there's no way to prevent python's pid_t definition
-// from leaking, so this is the best option.
-#ifndef NO_PID_T
-#include <sys/types.h>
-#endif
-
 #ifdef _MSC_VER
 
 // PRIxxx format macros for printf()
@@ -73,12 +68,10 @@
 
 typedef unsigned short mode_t;
 
-// pyconfig.h typedefs this.  We require python headers to be included before
-// any LLDB headers, but there's no way to prevent python's pid_t definition
-// from leaking, so this is the best option.
-#ifndef NO_PID_T
-typedef uint32_t pid_t;
-#endif
+// Match the `typedef int pid_t;` in Python's pyconfig.h on Windows. Using an
+// identical underlying type lets this header coexist with Python headers in
+// any include order.
+typedef int pid_t;
 
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1

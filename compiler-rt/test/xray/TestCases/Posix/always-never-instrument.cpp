@@ -12,6 +12,8 @@
 
 // REQUIRES: built-in-llvm-tree
 
+// UNSUPPORTED: armhf-linux
+
 // NOINSTR-NOT: {{.*__xray_NeverInstrumented.*}}
 int __xray_NeverInstrumented() {
   return 0;

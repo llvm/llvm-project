@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    void foo(long n, float A[][n][n]) {
 ;      for (long i = 0; i < 200; i++)
@@ -19,11 +19,9 @@
 ; CHECK-NEXT:             [n] -> { Stmt_for_body_8[i0, i1, i2] -> MemRef_A[1, i1, i2] : (1 + i0) mod 2 = 0; Stmt_for_body_8[i0, i1, i2] -> MemRef_A[0, i1, i2] : (i0) mod 2 = 0 };
 ; CHECK-NEXT: }
 
-
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-
-define void @foo(i64 %n, ptr %A) #0 {
+define void @foo(i64 %n, ptr %A) {
 entry:
   br label %entry.split
 
@@ -83,13 +81,10 @@ for.end.16:                                       ; preds = %for.inc.14
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start(i64, ptr nocapture)
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end(i64, ptr nocapture) #1
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind }
+declare void @llvm.lifetime.end(i64, ptr nocapture)
 
 !llvm.ident = !{!0}
 

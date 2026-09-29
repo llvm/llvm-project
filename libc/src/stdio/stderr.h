@@ -1,4 +1,4 @@
-//===------------------------------------------------------------*- C++ -*-===//
+//===--- Implementation header for stderr -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,4 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#error "Do not include this file. Instead include __support/File/file.h."
+#ifndef LLVM_LIBC_SRC_STDIO_STDERR_H
+#define LLVM_LIBC_SRC_STDIO_STDERR_H
+
+#include "hdr/types/FILE.h"
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
+
+extern FILE *stderr;
+
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_STDIO_STDERR_H

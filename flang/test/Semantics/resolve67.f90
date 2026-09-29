@@ -41,7 +41,7 @@ module m3
     end
   end interface
   interface operator(<)
-    !WARNING: In OPERATOR(<) function 'lt1', dummy argument 'x' should have INTENT(IN) or VALUE attribute
+    !WARNING: In OPERATOR(<) function 'lt1', dummy argument 'x' should have INTENT(IN) or VALUE attribute [-Wdefined-operator-args]
     !ERROR: In OPERATOR(<) function 'lt1', dummy argument 'y' may not be OPTIONAL
     logical function lt1(x, y)
       logical :: x
@@ -90,7 +90,7 @@ module m4
     end
   end interface
   interface operator(.not.)
-    !WARNING: The external interface 'not1' is not compatible with an earlier definition (distinct numbers of dummy arguments)
+    !WARNING: The external interface 'not1' is not compatible with an earlier definition (distinct numbers of dummy arguments) [-Wexternal-interface-mismatch]
     real function not1(x)
       real, value :: x
     end

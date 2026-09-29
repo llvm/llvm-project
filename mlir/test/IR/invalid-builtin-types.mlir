@@ -34,10 +34,6 @@ func.func @memrefs(memref<2x4xi8, >) // expected-error {{expected list element}}
 func.func @memrefs(memref<2x4xi8, #map7>) // expected-error {{undefined symbol alias id 'map7'}}
 
 // -----
-// Test unsupported memory space.
-func.func @memrefs(memref<2x4xi8, i8>) // expected-error {{unsupported memory space Attribute}}
-
-// -----
 // Test non-existent map in map composition of memref type.
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 
@@ -115,7 +111,7 @@ func.func @illegaltype(i21312312323120) // expected-error {{invalid integer widt
 // -----
 
 // Test no nested vector.
-// expected-error@+1 {{failed to verify 'elementType': integer or index or floating-point}}
+// expected-error@+1 {{failed to verify 'elementType': VectorElementTypeInterface instance}}
 func.func @vectors(vector<1 x vector<1xi32>>, vector<2x4xf32>)
 
 // -----

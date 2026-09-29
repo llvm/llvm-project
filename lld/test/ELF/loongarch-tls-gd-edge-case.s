@@ -3,7 +3,7 @@
 ## Edge case: when a TLS symbol is being accessed in both GD and IE manners,
 ## correct reloc behavior should be preserved for both kinds of accesses.
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 %s -o %t.la32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 --mattr=-32s %s -o %t.la32.o
 # RUN: ld.lld %t.la32.o -shared -o %t.la32
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %s -o %t.la64.o
 # RUN: ld.lld %t.la64.o -shared -o %t.la64
@@ -24,10 +24,10 @@
 # LA64-REL-NEXT: 00000000000203a8  0000000200000009 R_LARCH_TLS_DTPREL64   0000000000000000 y + 0
 # LA64-REL-NEXT: 00000000000203b0  000000020000000b R_LARCH_TLS_TPREL64    0000000000000000 y + 0
 
-# LA32:      101d4: pcalau12i $a0, 16
-# LA32-NEXT:        ld.w $a0, $a0, 580
-# LA32-NEXT:        pcalau12i $a1, 16
-# LA32-NEXT:        addi.w $a1, $a1, 572
+# LA32:      101d4: pcaddu12i $a0, 16
+# LA32-NEXT:        ld.w $a0, $a0, 112
+# LA32:      101dc: pcaddu12i $a1, 16
+# LA32-NEXT:        addi.w $a1, $a1, 96
 
 # LA64:      102e0: pcalau12i $a0, 16
 # LA64-NEXT:        ld.d $a0, $a0, 944

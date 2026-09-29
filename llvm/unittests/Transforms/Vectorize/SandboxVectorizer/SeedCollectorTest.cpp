@@ -60,8 +60,9 @@ struct SeedBundleTest : public testing::Test {
 class SeedBundleForTest : public sandboxir::SeedBundle {
 public:
   using sandboxir::SeedBundle::SeedBundle;
-  void insert(sandboxir::Instruction *I, ScalarEvolution &SE) override {
+  bool tryInsert(sandboxir::Instruction *I, ScalarEvolution &SE) override {
     insertAt(Seeds.end(), I);
+    return true;
   }
 };
 
@@ -185,7 +186,7 @@ bb:
   Function &LLVMF = *M->getFunction("foo");
 
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -203,9 +204,9 @@ bb:
 
   // Single instruction constructor; test insert out of memory order
   sandboxir::StoreSeedBundle SB(S3);
-  SB.insert(S1, SE);
-  SB.insert(S2, SE);
-  SB.insert(S0, SE);
+  EXPECT_TRUE(SB.tryInsert(S1, SE));
+  EXPECT_TRUE(SB.tryInsert(S2, SE));
+  EXPECT_TRUE(SB.tryInsert(S0, SE));
   EXPECT_THAT(SB, testing::ElementsAre(S0, S1, S2, S3));
 
   // Instruction list constructor; test list out of order
@@ -220,6 +221,65 @@ bb:
   Loads.push_back(L0);
   sandboxir::LoadSeedBundle LB(std::move(Loads), SE);
   EXPECT_THAT(LB, testing::ElementsAre(L0, L1, L2, L3));
+}
+
+TEST_F(SeedBundleTest, TryInsert) {
+  parseIR(C, R"IR(
+define void @foo(float %val, ptr %ptr, i32 %arg, ptr %ptrY) {
+bb:
+  %gep0 = getelementptr float, ptr %ptr, i32 0
+  %gep1 = getelementptr float, ptr %ptr, i32 1
+  %gep2 = getelementptr float, ptr %ptr, i32 2
+  %gepX = getelementptr float, ptr %ptr, i32 %arg
+
+  store float %val, ptr %gep0
+  store float %val, ptr %gep1
+  store float %val, ptr %gepX
+  store float %val, ptr %ptrY
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  DominatorTree DT(LLVMF);
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfo TLI(TLII);
+  DataLayout DL(M->getDataLayout());
+  LoopInfo LI(DT);
+  AssumptionCache AC(LLVMF);
+  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = std::next(BB->begin(), 4);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *SX = cast<sandboxir::StoreInst>(&*It++);
+  auto *SY = cast<sandboxir::StoreInst>(&*It++);
+
+  {
+    sandboxir::StoreSeedBundle Seeds(S0);
+    EXPECT_TRUE(Seeds.tryInsert(S1, SE));
+    EXPECT_FALSE(Seeds.tryInsert(SX, SE));
+    ExpectThatElementsAre(Seeds, {S0, S1});
+    EXPECT_FALSE(Seeds.tryInsert(SY, SE));
+    ExpectThatElementsAre(Seeds, {S0, S1});
+  }
+  {
+    sandboxir::StoreSeedBundle Seeds(SX);
+    EXPECT_FALSE(Seeds.tryInsert(S1, SE));
+    EXPECT_FALSE(Seeds.tryInsert(S0, SE));
+    EXPECT_FALSE(Seeds.tryInsert(SY, SE));
+    ExpectThatElementsAre(Seeds, {SX});
+  }
+  {
+    sandboxir::StoreSeedBundle Seeds(SY);
+    EXPECT_FALSE(Seeds.tryInsert(S1, SE));
+    EXPECT_FALSE(Seeds.tryInsert(S0, SE));
+    EXPECT_FALSE(Seeds.tryInsert(SX, SE));
+    ExpectThatElementsAre(Seeds, {SY});
+  }
 }
 
 TEST_F(SeedBundleTest, Container) {
@@ -240,7 +300,7 @@ bb:
   Function &LLVMF = *M->getFunction("foo");
 
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -259,10 +319,10 @@ bb:
   // Check begin() end() when empty.
   EXPECT_EQ(SC.begin(), SC.end());
 
-  SC.insert(S0);
-  SC.insert(S1);
-  SC.insert(S2);
-  SC.insert(S3);
+  SC.insert(S0, /*AllowDiffTypes=*/false);
+  SC.insert(S1, /*AllowDiffTypes=*/false);
+  SC.insert(S2, /*AllowDiffTypes=*/false);
+  SC.insert(S3, /*AllowDiffTypes=*/false);
   unsigned Cnt = 0;
   SmallVector<sandboxir::SeedBundle *> Bndls;
   for (auto &SeedBndl : SC) {
@@ -305,7 +365,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -315,7 +375,8 @@ bb:
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
   auto BB = F.begin();
-  sandboxir::SeedCollector SC(&*BB, SE);
+  sandboxir::SeedCollector SC(&*BB, SE, /*CollectStores=*/true,
+                              /*CollectLoads=*/false);
 
   // Find the stores
   auto It = std::next(BB->begin(), 4);
@@ -349,7 +410,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -359,7 +420,8 @@ bb:
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
   auto BB = F.begin();
-  sandboxir::SeedCollector SC(&*BB, SE);
+  sandboxir::SeedCollector SC(&*BB, SE, /*CollectStores=*/true,
+                              /*CollectLoads=*/false);
 
   // Find the stores
   auto It = std::next(BB->begin(), 4);
@@ -409,7 +471,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -419,7 +481,8 @@ bb:
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
   auto BB = F.begin();
-  sandboxir::SeedCollector SC(&*BB, SE);
+  sandboxir::SeedCollector SC(&*BB, SE, /*CollectStores=*/true,
+                              /*CollectLoads=*/false);
 
   // Find the stores
   auto It = std::next(BB->begin(), 3);
@@ -450,7 +513,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -460,7 +523,8 @@ bb:
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
   auto BB = F.begin();
-  sandboxir::SeedCollector SC(&*BB, SE);
+  sandboxir::SeedCollector SC(&*BB, SE, /*CollectStores=*/true,
+                              /*CollectLoads=*/false);
 
   // Find the stores
   auto It = std::next(BB->begin(), 3);
@@ -473,6 +537,45 @@ bb:
   EXPECT_EQ(range_size(StoreSeedsRange), 1u);
   auto &SB = *StoreSeedsRange.begin();
   // isValidMemSeedCheck here: all of the three stores should be included.
+  ExpectThatElementsAre(SB, {St0, St1, St3});
+}
+
+TEST_F(SeedBundleTest, DiffTypes) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr, i8 %v, i16 %v16) {
+bb:
+  %ptr0 = getelementptr i8, ptr %ptr, i32 0
+  %ptr1 = getelementptr i8, ptr %ptr, i32 1
+  %ptr3 = getelementptr i8, ptr %ptr, i32 3
+  store i8 %v, ptr %ptr0
+  store i8 %v, ptr %ptr3
+  store i16 %v16, ptr %ptr1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  DominatorTree DT(LLVMF);
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfo TLI(TLII);
+  DataLayout DL(M->getDataLayout());
+  LoopInfo LI(DT);
+  AssumptionCache AC(LLVMF);
+  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto BB = F.begin();
+  auto It = std::next(BB->begin(), 3);
+  auto *St0 = &*It++;
+  auto *St3 = &*It++;
+  auto *St1 = &*It++;
+
+  sandboxir::SeedCollector SC(&*BB, SE, /*CollectStores=*/true,
+                              /*CollectLoads=*/false, /*AllowDiffTypes=*/true);
+
+  auto StoreSeedsRange = SC.getStoreSeeds();
+  EXPECT_EQ(range_size(StoreSeedsRange), 1u);
+  auto &SB = *StoreSeedsRange.begin();
   ExpectThatElementsAre(SB, {St0, St1, St3});
 }
 
@@ -493,7 +596,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -503,7 +606,8 @@ bb:
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
   auto BB = F.begin();
-  sandboxir::SeedCollector SC(&*BB, SE);
+  sandboxir::SeedCollector SC(&*BB, SE, /*CollectStores=*/false,
+                              /*CollectLoads=*/true);
 
   // Find the loads
   auto It = std::next(BB->begin(), 2);

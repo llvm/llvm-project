@@ -21,7 +21,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
@@ -51,40 +51,29 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTION
-};
 
-class CGDataOptTable : public opt::GenericOptTable {
+class CGDataOptTable : public opt::OptTable {
 public:
-  CGDataOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  CGDataOptTable() : OptTable(optionTables()) {}
 };
 } // end anonymous namespace
 
 // Options
 static StringRef ToolName;
-static StringRef OutputFilename = "-";
-static StringRef Filename;
+static std::string OutputFilename = "-";
+static std::string Filename;
 static bool ShowCGDataVersion;
 static bool SkipTrim;
+static bool LazyLoading;
 static CGDataAction Action;
 static std::optional<CGDataFormat> OutputFormat;
 static std::vector<std::string> InputFilenames;
 
-static void exitWithError(Twine Message, std::string Whence = "",
-                          std::string Hint = "") {
+static void exitWithError(Twine Message, StringRef Whence = "",
+                          StringRef Hint = "") {
   WithColor::error();
   if (!Whence.empty())
     errs() << Whence << ": ";
@@ -97,16 +86,16 @@ static void exitWithError(Twine Message, std::string Whence = "",
 static void exitWithError(Error E, StringRef Whence = "") {
   if (E.isA<CGDataError>()) {
     handleAllErrors(std::move(E), [&](const CGDataError &IPE) {
-      exitWithError(IPE.message(), std::string(Whence));
+      exitWithError(IPE.message(), Whence);
     });
     return;
   }
 
-  exitWithError(toString(std::move(E)), std::string(Whence));
+  exitWithError(toString(std::move(E)), Whence);
 }
 
 static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
-  exitWithError(EC.message(), std::string(Whence));
+  exitWithError(EC.message(), Whence);
 }
 
 static int convert_main(int argc, const char *argv[]) {
@@ -119,7 +108,7 @@ static int convert_main(int argc, const char *argv[]) {
     exitWithErrorCode(EC, OutputFilename);
 
   auto FS = vfs::getRealFileSystem();
-  auto ReaderOrErr = CodeGenDataReader::create(Filename, *FS);
+  auto ReaderOrErr = CodeGenDataReader::create(Filename, *FS, LazyLoading);
   if (Error E = ReaderOrErr.takeError())
     exitWithError(std::move(E), Filename);
 
@@ -251,7 +240,7 @@ static int show_main(int argc, const char *argv[]) {
     exitWithErrorCode(EC, OutputFilename);
 
   auto FS = vfs::getRealFileSystem();
-  auto ReaderOrErr = CodeGenDataReader::create(Filename, *FS);
+  auto ReaderOrErr = CodeGenDataReader::create(Filename, *FS, LazyLoading);
   if (Error E = ReaderOrErr.takeError())
     exitWithError(std::move(E), Filename);
 
@@ -361,6 +350,8 @@ static void parseArgs(int argc, char **argv) {
   default:
     llvm_unreachable("unrecognized action");
   }
+
+  LazyLoading = Args.hasArg(OPT_indexed_codegen_data_lazy_loading);
 }
 
 int llvm_cgdata_main(int argc, char **argvNonConst, const llvm::ToolContext &) {

@@ -35,17 +35,23 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/IPO.h"
@@ -82,7 +88,7 @@ namespace llvm {
   void initializeARMExecutionDomainFixPass(PassRegistry&);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   // Register the target.
   RegisterTargetMachine<ARMLETargetMachine> X(getTheARMLETarget());
   RegisterTargetMachine<ARMLETargetMachine> A(getTheThumbLETarget());
@@ -91,8 +97,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
 
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
-  initializeARMLoadStoreOptPass(Registry);
-  initializeARMPreAllocLoadStoreOptPass(Registry);
+  initializeARMAsmPrinterPass(Registry);
+  initializeARMLoadStoreOptLegacyPass(Registry);
+  initializeARMPreAllocLoadStoreOptLegacyPass(Registry);
   initializeARMParallelDSPPass(Registry);
   initializeARMBranchTargetsPass(Registry);
   initializeARMConstantIslandsPass(Registry);
@@ -109,6 +116,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeMVELaneInterleavingPass(Registry);
   initializeARMFixCortexA57AES1742098Pass(Registry);
   initializeARMDAGToDAGISelLegacyPass(Registry);
+  initializeMachineKCFILegacyPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -117,82 +125,6 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSWindows())
     return std::make_unique<TargetLoweringObjectFileCOFF>();
   return std::make_unique<ARMElfTargetObjectFile>();
-}
-
-static ARMBaseTargetMachine::ARMABI
-computeTargetABI(const Triple &TT, StringRef CPU,
-                 const TargetOptions &Options) {
-  StringRef ABIName = Options.MCOptions.getABIName();
-
-  if (ABIName.empty())
-    ABIName = ARM::computeDefaultTargetABI(TT, CPU);
-
-  if (ABIName == "aapcs16")
-    return ARMBaseTargetMachine::ARM_ABI_AAPCS16;
-  else if (ABIName.starts_with("aapcs"))
-    return ARMBaseTargetMachine::ARM_ABI_AAPCS;
-  else if (ABIName.starts_with("apcs"))
-    return ARMBaseTargetMachine::ARM_ABI_APCS;
-
-  llvm_unreachable("Unhandled/unknown ABI Name!");
-  return ARMBaseTargetMachine::ARM_ABI_UNKNOWN;
-}
-
-static std::string computeDataLayout(const Triple &TT, StringRef CPU,
-                                     const TargetOptions &Options,
-                                     bool isLittle) {
-  auto ABI = computeTargetABI(TT, CPU, Options);
-  std::string Ret;
-
-  if (isLittle)
-    // Little endian.
-    Ret += "e";
-  else
-    // Big endian.
-    Ret += "E";
-
-  Ret += DataLayout::getManglingComponent(TT);
-
-  // Pointers are 32 bits and aligned to 32 bits.
-  Ret += "-p:32:32";
-
-  // Function pointers are aligned to 8 bits (because the LSB stores the
-  // ARM/Thumb state).
-  Ret += "-Fi8";
-
-  // ABIs other than APCS have 64 bit integers with natural alignment.
-  if (ABI != ARMBaseTargetMachine::ARM_ABI_APCS)
-    Ret += "-i64:64";
-
-  // We have 64 bits floats. The APCS ABI requires them to be aligned to 32
-  // bits, others to 64 bits. We always try to align to 64 bits.
-  if (ABI == ARMBaseTargetMachine::ARM_ABI_APCS)
-    Ret += "-f64:32:64";
-
-  // We have 128 and 64 bit vectors. The APCS ABI aligns them to 32 bits, others
-  // to 64. We always ty to give them natural alignment.
-  if (ABI == ARMBaseTargetMachine::ARM_ABI_APCS)
-    Ret += "-v64:32:64-v128:32:128";
-  else if (ABI != ARMBaseTargetMachine::ARM_ABI_AAPCS16)
-    Ret += "-v128:64:128";
-
-  // Try to align aggregates to 32 bits (the default is 64 bits, which has no
-  // particular hardware support on 32-bit ARM).
-  Ret += "-a:0:32";
-
-  // Integer registers are 32 bits.
-  Ret += "-n32";
-
-  // The stack is 128 bit aligned on NaCl, 64 bit aligned on AAPCS and 32 bit
-  // aligned everywhere else.
-  if (TT.isOSNaCl() || ABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16)
-    Ret += "-S128";
-  else if (ABI == ARMBaseTargetMachine::ARM_ABI_AAPCS)
-    Ret += "-S64";
-  else
-    Ret += "-S32";
-
-  return Ret;
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
@@ -219,38 +151,11 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            const TargetOptions &Options,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
-                                           CodeGenOptLevel OL, bool isLittle)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options, isLittle),
-                               TT, CPU, FS, Options,
+                                           CodeGenOptLevel OL)
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TargetABI(computeTargetABI(TT, CPU, Options)),
-      TLOF(createTLOF(getTargetTriple())), isLittle(isLittle) {
-
-  // Default to triple-appropriate float ABI
-  if (Options.FloatABIType == FloatABI::Default) {
-    if (isTargetHardFloat())
-      this->Options.FloatABIType = FloatABI::Hard;
-    else
-      this->Options.FloatABIType = FloatABI::Soft;
-  }
-
-  // Default to triple-appropriate EABI
-  if (Options.EABIVersion == EABI::Default ||
-      Options.EABIVersion == EABI::Unknown) {
-    // musl is compatible with glibc with regard to EABI version
-    if ((TargetTriple.getEnvironment() == Triple::GNUEABI ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
-         TargetTriple.getEnvironment() == Triple::MuslEABI ||
-         TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-         TargetTriple.getEnvironment() == Triple::OpenHOS) &&
-        !(TargetTriple.isOSWindows() || TargetTriple.isOSDarwin()))
-      this->Options.EABIVersion = EABI::GNU;
-    else
-      this->Options.EABIVersion = EABI::EABI5;
-  }
+      TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
 
   if (TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
@@ -272,8 +177,63 @@ ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;
 MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
-  return ARMFunctionInfo::create<ARMFunctionInfo>(
-      Allocator, F, static_cast<const ARMSubtarget *>(STI));
+  const auto *ARMSTI = static_cast<const ARMSubtarget *>(STI);
+  if (!ARMSTI->hasFPRegs() || ARMSTI->isThumb1Only() ||
+      ARMSTI->useSoftFloat()) {
+    const StringRef FPRegsUnavailableMsg =
+        ", but floating-point registers are unavailable";
+    const ARMTargetLowering *TLI = ARMSTI->getTargetLowering();
+
+    if (TLI->getEffectiveCallingConv(F.getCallingConv(), F.isVarArg()) ==
+        CallingConv::ARM_AAPCS_VFP) {
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F, Twine("calling convention is hard-float") + FPRegsUnavailableMsg,
+          DiagnosticLocation(F.getSubprogram())));
+    } else {
+      for (const Instruction &I : instructions(F)) {
+        const auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB || CB->isInlineAsm() ||
+            (CB->getCalledFunction() && CB->getCalledFunction()->isIntrinsic()))
+          continue;
+        if (TLI->getEffectiveCallingConv(CB->getCallingConv(),
+                                         CB->getFunctionType()->isVarArg()) ==
+            CallingConv::ARM_AAPCS_VFP) {
+          const Function *Callee = CB->getCalledFunction();
+          F.getContext().diagnose(DiagnosticInfoUnsupported(
+              F,
+              (Callee ? Twine("'") + F.getName() + "' calls '" +
+                            Callee->getName() + "', which"
+                      : Twine("'") + F.getName() +
+                            "' makes an indirect call that") +
+                  " expects a hard-float calling convention" +
+                  FPRegsUnavailableMsg,
+              CB->getDebugLoc()));
+        }
+      }
+    }
+  }
+  return ARMFunctionInfo::create<ARMFunctionInfo>(Allocator, F, ARMSTI);
+}
+
+FloatABI::ABIType ARMBaseTargetMachine::getFloatABI(const Module &M) const {
+  // An explicit "float-abi" module flag always wins, even for AAPCS16.
+  if (auto *Val = dyn_cast_or_null<MDString>(M.getModuleFlag("float-abi")))
+    return *FloatABI::parseABIType(Val->getString());
+
+  // With no explicit ABI, an explicit -target-abi=aapcs16 forces hard float
+  // even on triples whose default float ABI is soft (the triple default only
+  // detects AAPCS16 when it is the triple's own default ABI).
+  if (getEffectiveABI(M) == ARM::ARM_ABI_AAPCS16)
+    return FloatABI::Hard;
+  // Otherwise fall back to the ABI implied by the target triple.
+  return M.getTargetTriple().getDefaultFloatABI();
+}
+
+ARM::ARMABI ARMBaseTargetMachine::getEffectiveABI(const Module &M) const {
+  // Consistency of "target-abi" and -target-abi is validated elsewhere.
+  if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
+    return ARM::computeTargetABI(TargetTriple, MD->getString());
+  return ARM::computeTargetABI(TargetTriple, Options.MCOptions.getABIName());
 }
 
 const ARMSubtarget *
@@ -303,14 +263,22 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   if (F.hasMinSize())
     Key += "+minsize";
 
+  DenormalMode DM = F.getDenormalFPEnv().DefaultMode;
+  if (DM != DenormalMode::getIEEE())
+    Key += "denormal-fp-math=" + DM.str();
+
+  FloatABI::ABIType FloatABI = getFloatABI(*F.getParent());
+  // It is legal to have FloatABI::Hard for targets with SIMD registers
+  // but no floating-point hardware (mve+nofp).
+  Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
+
+  ARM::ARMABI ABI = getEffectiveABI(*F.getParent());
+  Key += "+abi=" + std::to_string((int)ABI);
+
   auto &I = SubtargetMap[Key];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                        F.hasMinSize());
+                                       FloatABI, ABI, F.hasMinSize(), DM);
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
@@ -322,7 +290,29 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 ARMBaseTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(ARMTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<ARMTTIImpl>(this, F));
+}
+
+ScheduleDAGInstrs *
+ARMBaseTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMILive *DAG = createSchedLive(C);
+  // add DAG Mutations here.
+  const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
+  if (ST.hasFusion())
+    DAG->addMutation(createARMMacroFusionDAGMutation());
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+ARMBaseTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
+  // add DAG Mutations here.
+  const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
+  if (ST.hasFusion())
+    DAG->addMutation(createARMMacroFusionDAGMutation());
+  if (auto Mutation = createARMLatencyMutations(ST, C->AA))
+    DAG->addMutation(std::move(Mutation));
+  return DAG;
 }
 
 ARMLETargetMachine::ARMLETargetMachine(const Target &T, const Triple &TT,
@@ -331,7 +321,7 @@ ARMLETargetMachine::ARMLETargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
+    : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
 ARMBETargetMachine::ARMBETargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
@@ -339,7 +329,7 @@ ARMBETargetMachine::ARMBETargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
+    : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
 namespace {
 
@@ -351,28 +341,6 @@ public:
 
   ARMBaseTargetMachine &getARMTargetMachine() const {
     return getTM<ARMBaseTargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-    // add DAG Mutations here.
-    const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
-    if (ST.hasFusion())
-      DAG->addMutation(createARMMacroFusionDAGMutation());
-    return DAG;
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
-    // add DAG Mutations here.
-    const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
-    if (ST.hasFusion())
-      DAG->addMutation(createARMMacroFusionDAGMutation());
-    if (auto Mutation = createARMLatencyMutations(ST, C->AA))
-      DAG->addMutation(std::move(Mutation));
-    return DAG;
   }
 
   void addIRPasses() override;
@@ -404,10 +372,15 @@ char ARMExecutionDomainFix::ID;
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefAnalysis)
+                      "ARM Execution Domain Fix", false, false)
+INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
+                    "ARM Execution Domain Fix", false, false)
+
+void ARMBaseTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "ARMPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+}
 
 TargetPassConfig *ARMBaseTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new ARMPassConfig(*this, PM);
@@ -418,10 +391,7 @@ std::unique_ptr<CSEConfigBase> ARMPassConfig::getCSEConfig() const {
 }
 
 void ARMPassConfig::addIRPasses() {
-  if (TM->Options.ThreadModel == ThreadModel::Single)
-    addPass(createLowerAtomicPass());
-  else
-    addPass(createAtomicExpandLegacyPass());
+  addPass(createAtomicExpandLegacyPass());
 
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
@@ -453,7 +423,7 @@ void ARMPassConfig::addIRPasses() {
 
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows())
-    addPass(createCFGuardCheckPass());
+    addPass(createCFGuardPass());
 
   if (TM->Options.JMCInstrument)
     addPass(createJMCInstrumenterPass());
@@ -467,8 +437,8 @@ void ARMPassConfig::addCodeGenPrepare() {
 
 bool ARMPassConfig::addPreISel() {
   if ((TM->getOptLevel() != CodeGenOptLevel::None &&
-       EnableGlobalMerge == cl::BOU_UNSET) ||
-      EnableGlobalMerge == cl::BOU_TRUE) {
+       EnableGlobalMerge == cl::boolOrDefault::BOU_UNSET) ||
+      EnableGlobalMerge == cl::boolOrDefault::BOU_TRUE) {
     // FIXME: This is using the thumb1 only constant value for
     // maximal global offset for merging globals. We may want
     // to look into using the old value for non-thumb1 code of
@@ -476,7 +446,7 @@ bool ARMPassConfig::addPreISel() {
     // tricky when doing code gen per function.
     bool OnlyOptimizeForSize =
         (TM->getOptLevel() < CodeGenOptLevel::Aggressive) &&
-        (EnableGlobalMerge == cl::BOU_UNSET);
+        (EnableGlobalMerge == cl::boolOrDefault::BOU_UNSET);
     // Merging of extern globals is enabled by default on non-Mach-O as we
     // expect it to be generally either beneficial or harmless. On Mach-O it
     // is disabled as we emit the .subsections_via_symbols directive which
@@ -508,22 +478,22 @@ bool ARMPassConfig::addInstSelector() {
 }
 
 bool ARMPassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 
 bool ARMPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 bool ARMPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool ARMPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }
 
@@ -537,7 +507,7 @@ void ARMPassConfig::addPreRegAlloc() {
     addPass(createMLxExpansionPass());
 
     if (EnableARMLoadStoreOpt)
-      addPass(createARMLoadStoreOptimizationPass(/* pre-register alloc */ true));
+      addPass(createARMLoadStoreOptLegacyPass(/* pre-register alloc */ true));
 
     if (!DisableA15SDOptimization)
       addPass(createA15SDOptimizerPass());
@@ -547,15 +517,18 @@ void ARMPassConfig::addPreRegAlloc() {
 void ARMPassConfig::addPreSched2() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableARMLoadStoreOpt)
-      addPass(createARMLoadStoreOptimizationPass());
+      addPass(createARMLoadStoreOptLegacyPass());
 
     addPass(new ARMExecutionDomainFix());
-    addPass(createBreakFalseDeps());
+    addPass(createBreakFalseDepsLegacyPass());
   }
 
   // Expand some pseudo instructions into multiple instructions to allow
   // proper scheduling.
   addPass(createARMExpandPseudoPass());
+
+  // Emit KCFI checks for indirect calls.
+  addPass(createKCFIPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     // When optimising for size, always run the Thumb2SizeReduction pass before
@@ -587,9 +560,12 @@ void ARMPassConfig::addPreSched2() {
 void ARMPassConfig::addPreEmitPass() {
   addPass(createThumb2SizeReductionPass());
 
-  // Constant island pass work on unbundled instructions.
-  addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
-    return MF.getSubtarget<ARMSubtarget>().isThumb2();
+  // Unpack bundles for:
+  // - Thumb2: Constant island pass requires unbundled instructions
+  // - KCFI: KCFI_CHECK pseudo instructions need to be unbundled for AsmPrinter
+  addPass(createUnpackMachineBundlesLegacy([](const MachineFunction &MF) {
+    return MF.getSubtarget<ARMSubtarget>().isThumb2() ||
+           MF.getFunction().getParent()->getModuleFlag("kcfi");
   }));
 
   // Don't optimize barriers or block placement at -O0.
@@ -600,6 +576,7 @@ void ARMPassConfig::addPreEmitPass() {
 }
 
 void ARMPassConfig::addPreEmitPass2() {
+
   // Inserts fixup instructions before unsafe AES operations. Instructions may
   // be inserted at the start of blocks and at within blocks so this pass has to
   // come before those below.
@@ -620,7 +597,7 @@ void ARMPassConfig::addPreEmitPass2() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardCatchretPass());
+    addPass(createEHContGuardTargetsLegacy());
   }
 }
 

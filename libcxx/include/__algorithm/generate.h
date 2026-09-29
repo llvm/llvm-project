@@ -9,7 +9,9 @@
 #ifndef _LIBCPP___ALGORITHM_GENERATE_H
 #define _LIBCPP___ALGORITHM_GENERATE_H
 
+#include <__algorithm/for_each.h>
 #include <__config>
+#include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -20,8 +22,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _ForwardIterator, class _Generator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 generate(_ForwardIterator __first, _ForwardIterator __last, _Generator __gen) {
-  for (; __first != __last; ++__first)
-    *__first = __gen();
+  using __iter_ref = decltype(*__first);
+  std::for_each(__first, __last, [&](__iter_ref __element) { std::forward<__iter_ref>(__element) = __gen(); });
 }
 
 _LIBCPP_END_NAMESPACE_STD

@@ -51,104 +51,108 @@ class seq_cst_load<PatFrags base>
 let Predicates = [HasRCPC] in {
   // v8.3 Release Consistent Processor Consistent support, optional in v8.2.
   // 8-bit loads
-  def : Pat<(acquiring_load<atomic_load_8> GPR64sp:$ptr), (LDAPRB GPR64sp:$ptr)>;
+  def : Pat<(acquiring_load<atomic_load_azext_8> GPR64sp:$ptr), (LDAPRB GPR64sp:$ptr)>;
   // 16-bit loads
-  def : Pat<(acquiring_load<atomic_load_16> GPR64sp:$ptr), (LDAPRH GPR64sp:$ptr)>;
+  def : Pat<(acquiring_load<atomic_load_azext_16> GPR64sp:$ptr), (LDAPRH GPR64sp:$ptr)>;
   // 32-bit loads
-  def : Pat<(acquiring_load<atomic_load_32> GPR64sp:$ptr), (LDAPRW GPR64sp:$ptr)>;
+  def : Pat<(acquiring_load<atomic_load_nonext_32> GPR64sp:$ptr), (LDAPRW GPR64sp:$ptr)>;
   // 64-bit loads
-  def : Pat<(acquiring_load<atomic_load_64> GPR64sp:$ptr), (LDAPRX GPR64sp:$ptr)>;
+  def : Pat<(acquiring_load<atomic_load_nonext_64> GPR64sp:$ptr), (LDAPRX GPR64sp:$ptr)>;
 }
 
 // 8-bit loads
-def : Pat<(seq_cst_load<atomic_load_az_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
-def : Pat<(acquiring_load<atomic_load_az_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
-def : Pat<(relaxed_load<atomic_load_az_8> (ro_Windexed8 GPR64sp:$Rn, GPR32:$Rm,
-                                                     ro_Wextend8:$offset)),
+def : Pat<(seq_cst_load<atomic_load_azext_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
+def : Pat<(acquiring_load<atomic_load_azext_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
+def : Pat<(relaxed_load<atomic_load_azext_8> (ro_Windexed8 GPR64sp:$Rn, GPR32:$Rm,
+                                                        ro_Wextend8:$offset)),
           (LDRBBroW GPR64sp:$Rn, GPR32:$Rm, ro_Wextend8:$offset)>;
-def : Pat<(relaxed_load<atomic_load_az_8> (ro_Xindexed8 GPR64sp:$Rn, GPR64:$Rm,
-                                                        ro_Xextend8:$offset)),
+def : Pat<(relaxed_load<atomic_load_azext_8> (ro_Xindexed8 GPR64sp:$Rn, GPR64:$Rm,
+                                                           ro_Xextend8:$offset)),
           (LDRBBroX GPR64sp:$Rn, GPR64:$Rm, ro_Xextend8:$offset)>;
-def : Pat<(relaxed_load<atomic_load_az_8> (am_indexed8 GPR64sp:$Rn,
-                                           uimm12s1:$offset)),
+def : Pat<(relaxed_load<atomic_load_azext_8> (am_indexed8 GPR64sp:$Rn,
+                                              uimm12s1:$offset)),
           (LDRBBui GPR64sp:$Rn, uimm12s1:$offset)>;
-def : Pat<(relaxed_load<atomic_load_az_8>
+def : Pat<(relaxed_load<atomic_load_azext_8>
                (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
           (LDURBBi GPR64sp:$Rn, simm9:$offset)>;
 
 // 16-bit loads
-def : Pat<(seq_cst_load<atomic_load_az_16> GPR64sp:$ptr), (LDARH GPR64sp:$ptr)>;
-def : Pat<(acquiring_load<atomic_load_az_16> GPR64sp:$ptr), (LDARH GPR64sp:$ptr)>;
-def : Pat<(relaxed_load<atomic_load_az_16> (ro_Windexed16 GPR64sp:$Rn, GPR32:$Rm,
-                                                       ro_Wextend16:$extend)),
+def : Pat<(seq_cst_load<atomic_load_azext_16> GPR64sp:$ptr), (LDARH GPR64sp:$ptr)>;
+def : Pat<(acquiring_load<atomic_load_azext_16> GPR64sp:$ptr), (LDARH GPR64sp:$ptr)>;
+def : Pat<(relaxed_load<atomic_load_azext_16> (ro_Windexed16 GPR64sp:$Rn, GPR32:$Rm,
+                                                          ro_Wextend16:$extend)),
           (LDRHHroW GPR64sp:$Rn, GPR32:$Rm, ro_Wextend16:$extend)>;
-def : Pat<(relaxed_load<atomic_load_az_16> (ro_Xindexed16 GPR64sp:$Rn, GPR64:$Rm,
-                                                          ro_Xextend16:$extend)),
+def : Pat<(relaxed_load<atomic_load_azext_16> (ro_Xindexed16 GPR64sp:$Rn, GPR64:$Rm,
+                                                             ro_Xextend16:$extend)),
           (LDRHHroX GPR64sp:$Rn, GPR64:$Rm, ro_Xextend16:$extend)>;
-def : Pat<(relaxed_load<atomic_load_az_16> (am_indexed16 GPR64sp:$Rn,
-                                                         uimm12s2:$offset)),
+def : Pat<(relaxed_load<atomic_load_azext_16> (am_indexed16 GPR64sp:$Rn,
+                                                            uimm12s2:$offset)),
           (LDRHHui GPR64sp:$Rn, uimm12s2:$offset)>;
-def : Pat<(relaxed_load<atomic_load_az_16>
+def : Pat<(relaxed_load<atomic_load_azext_16>
                (am_unscaled16 GPR64sp:$Rn, simm9:$offset)),
           (LDURHHi GPR64sp:$Rn, simm9:$offset)>;
 
 // 32-bit loads
-def : Pat<(seq_cst_load<atomic_load_32> GPR64sp:$ptr), (LDARW GPR64sp:$ptr)>;
-def : Pat<(acquiring_load<atomic_load_32> GPR64sp:$ptr), (LDARW GPR64sp:$ptr)>;
-def : Pat<(relaxed_load<atomic_load_32> (ro_Windexed32 GPR64sp:$Rn, GPR32:$Rm,
-                                                       ro_Wextend32:$extend)),
+def : Pat<(seq_cst_load<atomic_load_nonext_32> GPR64sp:$ptr),
+          (LDARW GPR64sp:$ptr)>;
+def : Pat<(acquiring_load<atomic_load_nonext_32> GPR64sp:$ptr),
+          (LDARW GPR64sp:$ptr)>;
+def : Pat<(relaxed_load<atomic_load_nonext_32>
+               (ro_Windexed32 GPR64sp:$Rn, GPR32:$Rm, ro_Wextend32:$extend)),
           (LDRWroW GPR64sp:$Rn, GPR32:$Rm, ro_Wextend32:$extend)>;
-def : Pat<(relaxed_load<atomic_load_32> (ro_Xindexed32 GPR64sp:$Rn, GPR64:$Rm,
-                                                       ro_Xextend32:$extend)),
+def : Pat<(relaxed_load<atomic_load_nonext_32>
+               (ro_Xindexed32 GPR64sp:$Rn, GPR64:$Rm, ro_Xextend32:$extend)),
           (LDRWroX GPR64sp:$Rn, GPR64:$Rm, ro_Xextend32:$extend)>;
-def : Pat<(relaxed_load<atomic_load_32> (am_indexed32 GPR64sp:$Rn,
-                                                      uimm12s4:$offset)),
+def : Pat<(relaxed_load<atomic_load_nonext_32>
+               (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)),
           (LDRWui GPR64sp:$Rn, uimm12s4:$offset)>;
-def : Pat<(relaxed_load<atomic_load_32>
+def : Pat<(relaxed_load<atomic_load_nonext_32>
                (am_unscaled32 GPR64sp:$Rn, simm9:$offset)),
           (LDURWi GPR64sp:$Rn, simm9:$offset)>;
 
 // 64-bit loads
-def : Pat<(seq_cst_load<atomic_load_64> GPR64sp:$ptr), (LDARX GPR64sp:$ptr)>;
-def : Pat<(acquiring_load<atomic_load_64> GPR64sp:$ptr), (LDARX GPR64sp:$ptr)>;
-def : Pat<(relaxed_load<atomic_load_64> (ro_Windexed64 GPR64sp:$Rn, GPR32:$Rm,
-                                                       ro_Wextend64:$extend)),
+def : Pat<(seq_cst_load<atomic_load_nonext_64> GPR64sp:$ptr),
+          (LDARX GPR64sp:$ptr)>;
+def : Pat<(acquiring_load<atomic_load_nonext_64> GPR64sp:$ptr),
+          (LDARX GPR64sp:$ptr)>;
+def : Pat<(relaxed_load<atomic_load_nonext_64>
+               (ro_Windexed64 GPR64sp:$Rn, GPR32:$Rm, ro_Wextend64:$extend)),
           (LDRXroW GPR64sp:$Rn, GPR32:$Rm, ro_Wextend64:$extend)>;
-def : Pat<(relaxed_load<atomic_load_64> (ro_Xindexed64 GPR64sp:$Rn, GPR64:$Rm,
-                                                       ro_Xextend64:$extend)),
+def : Pat<(relaxed_load<atomic_load_nonext_64>
+               (ro_Xindexed64 GPR64sp:$Rn, GPR64:$Rm, ro_Xextend64:$extend)),
           (LDRXroX GPR64sp:$Rn, GPR64:$Rm, ro_Xextend64:$extend)>;
-def : Pat<(relaxed_load<atomic_load_64> (am_indexed64 GPR64sp:$Rn,
-                                                      uimm12s8:$offset)),
+def : Pat<(relaxed_load<atomic_load_nonext_64>
+               (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset)),
           (LDRXui GPR64sp:$Rn, uimm12s8:$offset)>;
-def : Pat<(relaxed_load<atomic_load_64>
+def : Pat<(relaxed_load<atomic_load_nonext_64>
                (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
           (LDURXi GPR64sp:$Rn, simm9:$offset)>;
 
 // FP 32-bit loads
-def : Pat<(f32 (bitconvert (i32 (relaxed_load<atomic_load_32> (ro_Windexed32 GPR64sp:$Rn, GPR32:$Rm,
-                                                       ro_Wextend32:$extend))))),
+def : Pat<(f32 (bitconvert (i32 (relaxed_load<atomic_load_nonext_32>
+               (ro_Windexed32 GPR64sp:$Rn, GPR32:$Rm, ro_Wextend32:$extend))))),
           (LDRSroW GPR64sp:$Rn, GPR32:$Rm, ro_Wextend32:$extend)>;
-def : Pat<(f32 (bitconvert (i32 (relaxed_load<atomic_load_32> (ro_Xindexed32 GPR64sp:$Rn, GPR64:$Rm,
-                                                       ro_Xextend32:$extend))))),
+def : Pat<(f32 (bitconvert (i32 (relaxed_load<atomic_load_nonext_32>
+               (ro_Xindexed32 GPR64sp:$Rn, GPR64:$Rm, ro_Xextend32:$extend))))),
           (LDRSroX GPR64sp:$Rn, GPR64:$Rm, ro_Xextend32:$extend)>;
-def : Pat<(f32 (bitconvert (i32 (relaxed_load<atomic_load_32> (am_indexed32 GPR64sp:$Rn,
-                                                      uimm12s8:$offset))))),
-          (LDRSui GPR64sp:$Rn, uimm12s8:$offset)>;
-def : Pat<(f32 (bitconvert (i32 (relaxed_load<atomic_load_32>
+def : Pat<(f32 (bitconvert (i32 (relaxed_load<atomic_load_nonext_32>
+               (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))))),
+          (LDRSui GPR64sp:$Rn, uimm12s4:$offset)>;
+def : Pat<(f32 (bitconvert (i32 (relaxed_load<atomic_load_nonext_32>
                (am_unscaled32 GPR64sp:$Rn, simm9:$offset))))),
           (LDURSi GPR64sp:$Rn, simm9:$offset)>;
 
 // FP 64-bit loads
-def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_64> (ro_Windexed64 GPR64sp:$Rn, GPR32:$Rm,
-                                                       ro_Wextend64:$extend))))),
+def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_nonext_64>
+               (ro_Windexed64 GPR64sp:$Rn, GPR32:$Rm, ro_Wextend64:$extend))))),
           (LDRDroW GPR64sp:$Rn, GPR32:$Rm, ro_Wextend64:$extend)>;
-def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_64> (ro_Xindexed64 GPR64sp:$Rn, GPR64:$Rm,
-                                                       ro_Xextend64:$extend))))),
+def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_nonext_64>
+               (ro_Xindexed64 GPR64sp:$Rn, GPR64:$Rm, ro_Xextend64:$extend))))),
           (LDRDroX GPR64sp:$Rn, GPR64:$Rm, ro_Xextend64:$extend)>;
-def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_64> (am_indexed64 GPR64sp:$Rn,
-                                                      uimm12s8:$offset))))),
+def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_nonext_64>
+               (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))))),
           (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
-def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_64>
+def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_nonext_64>
                (am_unscaled64 GPR64sp:$Rn, simm9:$offset))))),
           (LDURDi GPR64sp:$Rn, simm9:$offset)>;
 
@@ -232,11 +236,11 @@ def : Pat<(relaxed_store<atomic_store_32>
 def : Pat<(releasing_store<atomic_store_64> GPR64sp:$ptr, GPR64:$val),
           (STLRX GPR64:$val, GPR64sp:$ptr)>;
 def : Pat<(relaxed_store<atomic_store_64> (ro_Windexed64 GPR64sp:$Rn, GPR32:$Rm,
-                                                         ro_Wextend16:$extend),
+                                                         ro_Wextend64:$extend),
                                           GPR64:$val),
           (STRXroW GPR64:$val, GPR64sp:$Rn, GPR32:$Rm, ro_Wextend64:$extend)>;
 def : Pat<(relaxed_store<atomic_store_64> (ro_Xindexed64 GPR64sp:$Rn, GPR64:$Rm,
-                                                         ro_Xextend16:$extend),
+                                                         ro_Xextend64:$extend),
                                           GPR64:$val),
           (STRXroX GPR64:$val, GPR64sp:$Rn, GPR64:$Rm, ro_Xextend64:$extend)>;
 def : Pat<(relaxed_store<atomic_store_64>
@@ -272,11 +276,161 @@ def : Pat<(relaxed_store<atomic_store_64> (ro_Xindexed64 GPR64sp:$Rn, GPR64:$Rm,
                                           (i64 (bitconvert (f64 FPR64Op:$val)))),
           (STRDroX FPR64Op:$val, GPR64sp:$Rn, GPR64:$Rm, ro_Xextend64:$extend)>;
 def : Pat<(relaxed_store<atomic_store_64>
-              (am_indexed64 GPR64sp:$Rn, uimm12s4:$offset), (i64 (bitconvert (f64 FPR64Op:$val)))),
-          (STRDui FPR64Op:$val, GPR64sp:$Rn, uimm12s4:$offset)>;
+              (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset), (i64 (bitconvert (f64 FPR64Op:$val)))),
+          (STRDui FPR64Op:$val, GPR64sp:$Rn, uimm12s8:$offset)>;
 def : Pat<(relaxed_store<atomic_store_64>
                (am_unscaled64 GPR64sp:$Rn, simm9:$offset), (i64 (bitconvert (f64 FPR64Op:$val)))),
           (STURDi FPR64Op:$val, GPR64sp:$Rn, simm9:$offset)>;
+
+//===----------------------------------
+// Atomic store with hint pseudos
+//===----------------------------------
+
+let Size = 8, isCodeGenOnly = 1, hasSideEffects = 1, mayStore = 1 in {
+  class BaseStoreHintPseudo<RegisterClass regtype>
+        : Pseudo<(outs), (ins regtype:$data, GPR64sp:$addr,
+                          i32imm:$relaxed, i32imm:$hint), []>, Sched<[WriteAtomic]>;
+
+  class BaseStoreHintPseudoROW<RegisterClass regtype, Operand WExt>
+        : Pseudo<(outs), (ins regtype:$data, GPR64sp:$Rn, GPR32:$Rm, WExt:$extend,
+                          i32imm:$relaxed, i32imm:$hint), []>, Sched<[WriteAtomic]>;
+
+  class BaseStoreHintPseudoROX<RegisterClass regtype, Operand XExt>
+        : Pseudo<(outs), (ins regtype:$data, GPR64sp:$Rn, GPR64:$Rm, XExt:$extend,
+                          i32imm:$relaxed, i32imm:$hint), []>, Sched<[WriteAtomic]>;
+
+  class BaseStoreHintPseudoUImm<RegisterClass regtype, Operand UImmOp>
+        : Pseudo<(outs), (ins regtype:$data, GPR64sp:$Rn, UImmOp:$offset,
+                          i32imm:$relaxed, i32imm:$hint), []>, Sched<[WriteAtomic]>;
+
+  class BaseStoreHintPseudoImm<RegisterClass regtype>
+        : Pseudo<(outs), (ins regtype:$data, GPR64sp:$Rn, simm9:$offset,
+                          i32imm:$relaxed, i32imm:$hint), []>, Sched<[WriteAtomic]>;
+}
+
+multiclass AtomicStoreHintPseudos<RegisterClass regtype, Operand WExt, Operand XExt, Operand UImmOp> {
+  def NAME : BaseStoreHintPseudo<regtype>;
+  def NAME # roW : BaseStoreHintPseudoROW<regtype, WExt>;
+  def NAME # roX : BaseStoreHintPseudoROX<regtype, XExt>;
+  def NAME # ui  : BaseStoreHintPseudoUImm<regtype, UImmOp>;
+  def NAME # i   : BaseStoreHintPseudoImm<regtype>;
+}
+
+defm ATOMIC_STORE_HINT_B : AtomicStoreHintPseudos<GPR32, ro_Wextend8,  ro_Xextend8,  uimm12s1>;
+defm ATOMIC_STORE_HINT_H : AtomicStoreHintPseudos<GPR32, ro_Wextend16, ro_Xextend16, uimm12s2>;
+defm ATOMIC_STORE_HINT_W : AtomicStoreHintPseudos<GPR32, ro_Wextend32, ro_Xextend32, uimm12s4>;
+defm ATOMIC_STORE_HINT_X : AtomicStoreHintPseudos<GPR64, ro_Wextend64, ro_Xextend64, uimm12s8>;
+defm ATOMIC_STORE_HINT_S : AtomicStoreHintPseudos<FPR32, ro_Wextend32, ro_Xextend32, uimm12s4>;
+defm ATOMIC_STORE_HINT_D : AtomicStoreHintPseudos<FPR64, ro_Wextend64, ro_Xextend64, uimm12s8>;
+
+class atomic_hint_store<PatFrag Base, int Relaxed, code Pred>
+  : PatFrag<(ops node:$val, node:$ptr),
+            (Base node:$val, node:$ptr), Pred> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingReleaseOrStronger = !eq(Relaxed, 0);
+
+  // TODO: Change once mem.cache_hint supported in GISel
+  let GISelPredicateCode = [{ return false; }];
+}
+
+multiclass AtomicHintPatternsAddrMode<int Hint, code Pred> {
+  def : Pat<(atomic_hint_store<atomic_store_8, 1, Pred>
+             GPR32:$data, (ro_Windexed8 GPR64sp:$addr, GPR32:$Rm, ro_Wextend8:$extend)),
+            (ATOMIC_STORE_HINT_BroW GPR32:$data, GPR64sp:$addr, GPR32:$Rm, ro_Wextend8:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_16, 1, Pred>
+             GPR32:$data, (ro_Windexed16 GPR64sp:$addr, GPR32:$Rm, ro_Wextend16:$extend)),
+            (ATOMIC_STORE_HINT_HroW GPR32:$data, GPR64sp:$addr, GPR32:$Rm, ro_Wextend16:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_32, 1, Pred>
+             GPR32:$data, (ro_Windexed32 GPR64sp:$addr, GPR32:$Rm, ro_Wextend32:$extend)),
+            (ATOMIC_STORE_HINT_WroW GPR32:$data, GPR64sp:$addr, GPR32:$Rm, ro_Wextend32:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_64, 1, Pred>
+             GPR64:$data, (ro_Windexed64 GPR64sp:$addr, GPR32:$Rm, ro_Wextend64:$extend)),
+            (ATOMIC_STORE_HINT_XroW GPR64:$data, GPR64sp:$addr, GPR32:$Rm, ro_Wextend64:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_32, 1, Pred>
+             (i32 (bitconvert (f32 FPR32Op:$data))), (ro_Windexed32 GPR64sp:$addr, GPR32:$Rm, ro_Wextend32:$extend)),
+            (ATOMIC_STORE_HINT_SroW FPR32:$data, GPR64sp:$addr, GPR32:$Rm, ro_Wextend32:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_64, 1, Pred>
+             (i64 (bitconvert (f64 FPR64Op:$data))), (ro_Windexed64 GPR64sp:$addr, GPR32:$Rm, ro_Wextend64:$extend)),
+            (ATOMIC_STORE_HINT_DroW FPR64:$data, GPR64sp:$addr, GPR32:$Rm, ro_Wextend64:$extend, (i32 1), (i32 Hint))>;
+
+  def : Pat<(atomic_hint_store<atomic_store_8, 1, Pred>
+             GPR32:$data, (ro_Xindexed8 GPR64sp:$addr, GPR64:$Rm, ro_Xextend8:$extend)),
+            (ATOMIC_STORE_HINT_BroX GPR32:$data, GPR64sp:$addr, GPR64:$Rm, ro_Xextend8:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_16, 1, Pred>
+             GPR32:$data, (ro_Xindexed16 GPR64sp:$addr, GPR64:$Rm, ro_Xextend16:$extend)),
+            (ATOMIC_STORE_HINT_HroX GPR32:$data, GPR64sp:$addr, GPR64:$Rm, ro_Xextend16:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_32, 1, Pred>
+             GPR32:$data, (ro_Xindexed32 GPR64sp:$addr, GPR64:$Rm, ro_Xextend32:$extend)),
+            (ATOMIC_STORE_HINT_WroX GPR32:$data, GPR64sp:$addr, GPR64:$Rm, ro_Xextend32:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_64, 1, Pred>
+             GPR64:$data, (ro_Xindexed64 GPR64sp:$addr, GPR64:$Rm, ro_Xextend64:$extend)),
+            (ATOMIC_STORE_HINT_XroX GPR64:$data, GPR64sp:$addr, GPR64:$Rm, ro_Xextend64:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_32, 1, Pred>
+             (i32 (bitconvert (f32 FPR32Op:$data))), (ro_Xindexed32 GPR64sp:$addr, GPR64:$Rm, ro_Xextend32:$extend)),
+            (ATOMIC_STORE_HINT_SroX FPR32:$data, GPR64sp:$addr, GPR64:$Rm, ro_Xextend32:$extend, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_64, 1, Pred>
+             (i64 (bitconvert (f64 FPR64Op:$data))), (ro_Xindexed64 GPR64sp:$addr, GPR64:$Rm, ro_Xextend64:$extend)),
+            (ATOMIC_STORE_HINT_DroX FPR64:$data, GPR64sp:$addr, GPR64:$Rm, ro_Xextend64:$extend, (i32 1), (i32 Hint))>;
+
+  def : Pat<(atomic_hint_store<atomic_store_8, 1, Pred>
+             GPR32:$data, (am_indexed8 GPR64sp:$addr, uimm12s1:$offset)),
+            (ATOMIC_STORE_HINT_Bui GPR32:$data, GPR64sp:$addr, uimm12s1:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_16, 1, Pred>
+             GPR32:$data, (am_indexed16 GPR64sp:$addr, uimm12s2:$offset)),
+            (ATOMIC_STORE_HINT_Hui GPR32:$data, GPR64sp:$addr, uimm12s2:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_32, 1, Pred>
+             GPR32:$data, (am_indexed32 GPR64sp:$addr, uimm12s4:$offset)),
+            (ATOMIC_STORE_HINT_Wui GPR32:$data, GPR64sp:$addr, uimm12s4:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_64, 1, Pred>
+             GPR64:$data, (am_indexed64 GPR64sp:$addr, uimm12s8:$offset)),
+            (ATOMIC_STORE_HINT_Xui GPR64:$data, GPR64sp:$addr, uimm12s8:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_32, 1, Pred>
+             (i32 (bitconvert (f32 FPR32Op:$data))), (am_indexed32 GPR64sp:$addr, uimm12s4:$offset)),
+            (ATOMIC_STORE_HINT_Sui FPR32:$data, GPR64sp:$addr, uimm12s4:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_64, 1, Pred>
+             (i64 (bitconvert (f64 FPR64Op:$data))), (am_indexed64 GPR64sp:$addr, uimm12s8:$offset)),
+            (ATOMIC_STORE_HINT_Dui FPR64:$data, GPR64sp:$addr, uimm12s8:$offset, (i32 1), (i32 Hint))>;
+
+  def : Pat<(atomic_hint_store<atomic_store_8, 1, Pred>
+             GPR32:$data, (am_unscaled8 GPR64sp:$addr, simm9:$offset)),
+            (ATOMIC_STORE_HINT_Bi GPR32:$data, GPR64sp:$addr, simm9:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_16, 1, Pred>
+             GPR32:$data, (am_unscaled16 GPR64sp:$addr, simm9:$offset)),
+            (ATOMIC_STORE_HINT_Hi GPR32:$data, GPR64sp:$addr, simm9:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_32, 1, Pred>
+             GPR32:$data, (am_unscaled32 GPR64sp:$addr, simm9:$offset)),
+            (ATOMIC_STORE_HINT_Wi GPR32:$data, GPR64sp:$addr, simm9:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_64, 1, Pred>
+             GPR64:$data, (am_unscaled64 GPR64sp:$addr, simm9:$offset)),
+            (ATOMIC_STORE_HINT_Xi GPR64:$data, GPR64sp:$addr, simm9:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_32, 1, Pred>
+             (i32 (bitconvert (f32 FPR32Op:$data))), (am_unscaled32 GPR64sp:$addr, simm9:$offset)),
+            (ATOMIC_STORE_HINT_Si FPR32:$data, GPR64sp:$addr, simm9:$offset, (i32 1), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_64, 1, Pred>
+             (i64 (bitconvert (f64 FPR64Op:$data))), (am_unscaled64 GPR64sp:$addr, simm9:$offset)),
+            (ATOMIC_STORE_HINT_Di FPR64:$data, GPR64sp:$addr, simm9:$offset, (i32 1), (i32 Hint))>;
+}
+
+multiclass AtomicHintPatterns<int Relaxed, int Hint, code Pred> {
+  def : Pat<(atomic_hint_store<atomic_store_8,  Relaxed, Pred> GPR32:$data, GPR64sp:$addr),
+            (ATOMIC_STORE_HINT_B GPR32:$data, GPR64sp:$addr, (i32 Relaxed), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_16, Relaxed, Pred> GPR32:$data, GPR64sp:$addr),
+            (ATOMIC_STORE_HINT_H GPR32:$data, GPR64sp:$addr, (i32 Relaxed), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_32, Relaxed, Pred> GPR32:$data, GPR64sp:$addr),
+            (ATOMIC_STORE_HINT_W GPR32:$data, GPR64sp:$addr, (i32 Relaxed), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_64, Relaxed, Pred> GPR64:$data, GPR64sp:$addr),
+            (ATOMIC_STORE_HINT_X GPR64:$data, GPR64sp:$addr, (i32 Relaxed), (i32 Hint))>;
+}
+
+let AddedComplexity = 15 in {
+  defm : AtomicHintPatternsAddrMode<48, [{ return isAtomicSTSHH_KEEP(N); }]>;
+  defm : AtomicHintPatternsAddrMode<49, [{ return isAtomicSTSHH_STRM(N); }]>;
+
+  defm : AtomicHintPatterns<1, 48, [{ return isAtomicSTSHH_KEEP(N); }]>;
+  defm : AtomicHintPatterns<0, 48, [{ return isAtomicSTSHH_KEEP(N); }]>;
+  defm : AtomicHintPatterns<1, 49, [{ return isAtomicSTSHH_STRM(N); }]>;
+  defm : AtomicHintPatterns<0, 49, [{ return isAtomicSTSHH_STRM(N); }]>;
+}
 
 //===----------------------------------
 // Low-level exclusive operations
@@ -309,19 +463,19 @@ def ldxr_8 : PatFrag<(ops node:$ptr), (int_aarch64_ldxr node:$ptr), [{
 }
 
 def : Pat<(ldxr_1 GPR64sp:$addr),
-          (SUBREG_TO_REG (i64 0), (LDXRB GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDXRB GPR64sp:$addr), sub_32)>;
 def : Pat<(ldxr_2 GPR64sp:$addr),
-          (SUBREG_TO_REG (i64 0), (LDXRH GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDXRH GPR64sp:$addr), sub_32)>;
 def : Pat<(ldxr_4 GPR64sp:$addr),
-          (SUBREG_TO_REG (i64 0), (LDXRW GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDXRW GPR64sp:$addr), sub_32)>;
 def : Pat<(ldxr_8 GPR64sp:$addr), (LDXRX GPR64sp:$addr)>;
 
 def : Pat<(and (ldxr_1 GPR64sp:$addr), 0xff),
-          (SUBREG_TO_REG (i64 0), (LDXRB GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDXRB GPR64sp:$addr), sub_32)>;
 def : Pat<(and (ldxr_2 GPR64sp:$addr), 0xffff),
-          (SUBREG_TO_REG (i64 0), (LDXRH GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDXRH GPR64sp:$addr), sub_32)>;
 def : Pat<(and (ldxr_4 GPR64sp:$addr), 0xffffffff),
-          (SUBREG_TO_REG (i64 0), (LDXRW GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDXRW GPR64sp:$addr), sub_32)>;
 
 // Load-exclusives.
 
@@ -350,19 +504,19 @@ def ldaxr_8 : PatFrag<(ops node:$ptr), (int_aarch64_ldaxr node:$ptr), [{
 }
 
 def : Pat<(ldaxr_1 GPR64sp:$addr),
-          (SUBREG_TO_REG (i64 0), (LDAXRB GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDAXRB GPR64sp:$addr), sub_32)>;
 def : Pat<(ldaxr_2 GPR64sp:$addr),
-          (SUBREG_TO_REG (i64 0), (LDAXRH GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDAXRH GPR64sp:$addr), sub_32)>;
 def : Pat<(ldaxr_4 GPR64sp:$addr),
-          (SUBREG_TO_REG (i64 0), (LDAXRW GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDAXRW GPR64sp:$addr), sub_32)>;
 def : Pat<(ldaxr_8 GPR64sp:$addr), (LDAXRX GPR64sp:$addr)>;
 
 def : Pat<(and (ldaxr_1 GPR64sp:$addr), 0xff),
-          (SUBREG_TO_REG (i64 0), (LDAXRB GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDAXRB GPR64sp:$addr), sub_32)>;
 def : Pat<(and (ldaxr_2 GPR64sp:$addr), 0xffff),
-          (SUBREG_TO_REG (i64 0), (LDAXRH GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDAXRH GPR64sp:$addr), sub_32)>;
 def : Pat<(and (ldaxr_4 GPR64sp:$addr), 0xffffffff),
-          (SUBREG_TO_REG (i64 0), (LDAXRW GPR64sp:$addr), sub_32)>;
+          (SUBREG_TO_REG (LDAXRW GPR64sp:$addr), sub_32)>;
 
 // Store-exclusives.
 
@@ -543,20 +697,41 @@ let Predicates = [HasLSE] in {
   defm : LDOPregister_patterns_mod<"LDCLR", "atomic_load_and", "ORN">;
 }
 
+defm atomic_load_fadd  : binary_atomic_op_fp<atomic_load_fadd>;
+defm atomic_load_fmin  : binary_atomic_op_fp<atomic_load_fmin>;
+defm atomic_load_fmax  : binary_atomic_op_fp<atomic_load_fmax>;
+
+defm atomic_load_fminimum  : binary_atomic_op_fp<atomic_load_fminimum>;
+defm atomic_load_fmaximum  : binary_atomic_op_fp<atomic_load_fmaximum>;
+
+let Predicates = [HasLSFE] in {
+  defm : LDFPOPregister_patterns<"LDFADD",   "atomic_load_fadd">;
+  defm : LDFPOPregister_patterns<"LDFMAXNM", "atomic_load_fmax">;
+  defm : LDFPOPregister_patterns<"LDFMINNM", "atomic_load_fmin">;
+  defm : LDFPOPregister_patterns<"LDFMAX",   "atomic_load_fmaximum">;
+  defm : LDFPOPregister_patterns<"LDFMIN",   "atomic_load_fminimum">;
+
+  defm : LDBFPOPregister_patterns<"LDBFADD",   "atomic_load_fadd">;
+  defm : LDBFPOPregister_patterns<"LDBFMAXNM", "atomic_load_fmax">;
+  defm : LDBFPOPregister_patterns<"LDBFMINNM", "atomic_load_fmin">;
+  defm : LDBFPOPregister_patterns<"LDBFMAX",   "atomic_load_fmaximum">;
+  defm : LDBFPOPregister_patterns<"LDBFMIN",   "atomic_load_fminimum">;
+}
+
 // v8.9a/v9.4a FEAT_LRCPC patterns
 let Predicates = [HasRCPC3, HasNEON] in {
   // LDAP1 loads
   def : Pat<(vector_insert (v2i64 VecListOne128:$Rd),
-                (i64 (acquiring_load<atomic_load_64> GPR64sp:$Rn)), (i64 VectorIndexD:$idx)),
+                (i64 (acquiring_load<atomic_load_nonext_64> GPR64sp:$Rn)), (i64 VectorIndexD:$idx)),
             (LDAP1 VecListOne128:$Rd, VectorIndexD:$idx, GPR64sp:$Rn)>;
   def : Pat<(vector_insert (v2f64 VecListOne128:$Rd),
-                (f64 (bitconvert (i64 (acquiring_load<atomic_load_64> GPR64sp:$Rn)))), (i64 VectorIndexD:$idx)),
+                (f64 (bitconvert (i64 (acquiring_load<atomic_load_nonext_64> GPR64sp:$Rn)))), (i64 VectorIndexD:$idx)),
             (LDAP1 VecListOne128:$Rd, VectorIndexD:$idx, GPR64sp:$Rn)>;
-  def : Pat<(v1i64 (scalar_to_vector
-                (i64 (acquiring_load<atomic_load_64> GPR64sp:$Rn)))),
+  def : Pat<(v1i64 (scalar_to_vector_v1f64
+                (i64 (acquiring_load<atomic_load_nonext_64> GPR64sp:$Rn)))),
             (EXTRACT_SUBREG (LDAP1 (v2i64 (IMPLICIT_DEF)), (i64 0), GPR64sp:$Rn), dsub)>;
-  def : Pat<(v1f64 (scalar_to_vector
-                (f64 (bitconvert (i64 (acquiring_load<atomic_load_64> GPR64sp:$Rn)))))),
+  def : Pat<(v1f64 (scalar_to_vector_v1f64
+                (f64 (bitconvert (i64 (acquiring_load<atomic_load_nonext_64> GPR64sp:$Rn)))))),
             (EXTRACT_SUBREG (LDAP1 (v2f64 (IMPLICIT_DEF)), (i64 0), GPR64sp:$Rn), dsub)>;
 
   // STL1 stores
@@ -571,25 +746,27 @@ let Predicates = [HasRCPC3, HasNEON] in {
   // by the patterns above. We only need to cover the v1f64 case manually.
   def : Pat<(releasing_store<atomic_store_64> GPR64sp:$Rn,
                 (i64 (bitconvert (v1f64 VecListOne64:$Vt)))),
-            (STL1 (SUBREG_TO_REG (i64 0), VecListOne64:$Vt, dsub), (i64 0), GPR64sp:$Rn)>;
+            (STL1 (SUBREG_TO_REG VecListOne64:$Vt, dsub), (i64 0), GPR64sp:$Rn)>;
 }
 
 // v8.4a FEAT_LRCPC2 patterns
-let Predicates = [HasRCPC_IMMO] in {
+let Predicates = [HasRCPC_IMMO, UseLDAPUR] in {
   // Load-Acquire RCpc Register unscaled loads
-  def : Pat<(acquiring_load<atomic_load_az_8>
+  def : Pat<(acquiring_load<atomic_load_azext_8>
                (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
           (LDAPURBi GPR64sp:$Rn, simm9:$offset)>;
-  def : Pat<(acquiring_load<atomic_load_az_16>
+  def : Pat<(acquiring_load<atomic_load_azext_16>
                (am_unscaled16 GPR64sp:$Rn, simm9:$offset)),
           (LDAPURHi GPR64sp:$Rn, simm9:$offset)>;
-  def : Pat<(acquiring_load<atomic_load_32>
+  def : Pat<(acquiring_load<atomic_load_nonext_32>
                (am_unscaled32 GPR64sp:$Rn, simm9:$offset)),
           (LDAPURi GPR64sp:$Rn, simm9:$offset)>;
-  def : Pat<(acquiring_load<atomic_load_64>
+  def : Pat<(acquiring_load<atomic_load_nonext_64>
                (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
           (LDAPURXi GPR64sp:$Rn, simm9:$offset)>;
+}
 
+let Predicates = [HasRCPC_IMMO] in {
   // Store-Release Register unscaled stores
   def : Pat<(releasing_store<atomic_store_8>
                (am_unscaled8 GPR64sp:$Rn, simm9:$offset), GPR32:$val),

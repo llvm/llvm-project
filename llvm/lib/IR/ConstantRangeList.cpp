@@ -139,7 +139,7 @@ void ConstantRangeList::subtract(const ConstantRange &SubRange) {
     }
   }
 
-  Ranges = Result;
+  Ranges = std::move(Result);
 }
 
 ConstantRangeList

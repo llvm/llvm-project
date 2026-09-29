@@ -20,7 +20,7 @@ sm4e z0.s, z0.s, z0.s
 rax1 z0.d, z0.d, z0.d
 // CHECK: rax1 z0.d, z0.d, z0.d
 
-.arch_extension sve2-bitperm
+.arch_extension ssve-bitperm
 bgrp z21.s, z10.s, z21.s
 // CHECK: bgrp z21.s, z10.s, z21.s
 

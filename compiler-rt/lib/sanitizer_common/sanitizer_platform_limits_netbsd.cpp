@@ -498,7 +498,6 @@ struct urio_command {
 #include <md5.h>
 #include <rmd160.h>
 #include <soundcard.h>
-#include <term.h>
 #include <termios.h>
 #include <time.h>
 #include <ttyent.h>
@@ -515,7 +514,7 @@ struct urio_command {
 #include <stringlist.h>
 
 #if defined(__x86_64__)
-#include <nvmm.h>
+#include <dev/nvmm/nvmm_ioctl.h>
 #endif
 // clang-format on
 
@@ -547,6 +546,7 @@ unsigned pid_t_sz = sizeof(pid_t);
 unsigned timeval_sz = sizeof(timeval);
 unsigned uid_t_sz = sizeof(uid_t);
 unsigned gid_t_sz = sizeof(gid_t);
+unsigned fpos_t_sz = sizeof(fpos_t);
 unsigned mbstate_t_sz = sizeof(mbstate_t);
 unsigned sigset_t_sz = sizeof(sigset_t);
 unsigned struct_timezone_sz = sizeof(struct timezone);
@@ -2486,8 +2486,6 @@ const unsigned RMD160_return_length = RMD160_DIGEST_STRING_LENGTH;
 
 const unsigned MD5_CTX_sz = sizeof(MD5_CTX);
 const unsigned MD5_return_length = MD5_DIGEST_STRING_LENGTH;
-
-const unsigned fpos_t_sz = sizeof(fpos_t);
 
 const unsigned MD2_CTX_sz = sizeof(MD2_CTX);
 const unsigned MD2_return_length = MD2_DIGEST_STRING_LENGTH;

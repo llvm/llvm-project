@@ -10,9 +10,8 @@ from lldbsuite.test import lldbutil
 class TestEarlyProcessLaunch(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfAsan  # rdar://103359354
-    @skipIfOutOfTreeDebugserver  # 2022-12-13 FIXME: skipping system debugserver
     # until this feature is included in the system
     # debugserver.
     @add_test_categories(["pyapi"])

@@ -7,7 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-tidy/ClangTidyCheck.h"
-#include "clang-tidy/ClangTidyModuleRegistry.h"
+// TODO(LLVM 25): Remove this compatibility check when LLVM 25 branches.
+#if CLANG_VERSION_MAJOR > 23
+#  include "clang-tidy/ClangTidyModule.h"
+#else
+#  include "clang-tidy/ClangTidyModuleRegistry.h"
+#endif
 
 #include "robust_against_adl.hpp"
 
@@ -36,7 +41,6 @@ void robust_against_adl_check::registerMatchers(clang::ast_matchers::MatchFinder
   using namespace clang::ast_matchers;
   finder->addMatcher(
       callExpr(unless(isOperator()),
-               unless(argumentCountIs(0)),
                has(unresolvedLookupExpr(requiresADL(), unless(isCustomizationPoint()))),
                unless(callee(cxxMethodDecl(isStatic()))))
           .bind("ADLcall"),

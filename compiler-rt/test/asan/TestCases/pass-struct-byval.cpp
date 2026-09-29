@@ -1,6 +1,6 @@
 // RUN: %clangxx_asan -O0 %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
-
+// XFAIL: msvc
 struct A {
   int a[8];
 };

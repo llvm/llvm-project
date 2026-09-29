@@ -1,5 +1,7 @@
 ; RUN: sed -e s/.Cxx:// %s | opt -mtriple=i386-pc-windows-msvc -S -x86-winehstate | FileCheck %s
+; RUN: sed -e s/.Cxx:// %s | opt -mtriple=i386-pc-windows-msvc -S -passes=x86-winehstate | FileCheck %s
 ; RUN: sed -e s/.SEH:// %s | opt -mtriple=i386-pc-windows-msvc -S -x86-winehstate | FileCheck %s
+; RUN: sed -e s/.SEH:// %s | opt -mtriple=i386-pc-windows-msvc -S -passes=x86-winehstate | FileCheck %s
 
 declare i32 @__CxxFrameHandler3(...)
 declare i32 @_except_handler3(...)

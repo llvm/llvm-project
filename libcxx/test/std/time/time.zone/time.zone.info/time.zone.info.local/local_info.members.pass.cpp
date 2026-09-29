@@ -31,7 +31,7 @@
 #include <string>
 #include <type_traits>
 
-int main(int, const char**) {
+int main(int, char**) {
   {
     constexpr const int& result = std::chrono::local_info::unique;
     static_assert(result == 0);

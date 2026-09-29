@@ -14,7 +14,7 @@ subroutine test()
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest() {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> {bindc_name = "x", uniq_name = "_QFtestEx"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> <{bindc_name = "x", uniq_name = "_QFtestEx"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFtestEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 ! CHECK:           %[[VAL_4:.*]] = fir.address_of(@_QQro.3xi8.0) : !fir.ref<!fir.array<3xi64>>
@@ -46,7 +46,7 @@ end subroutine
 
 ! CHECK-LABEL:   func.func @_QPtest_value() {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> {bindc_name = "x", uniq_name = "_QFtest_valueEx"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.array<10xf32> <{bindc_name = "x", uniq_name = "_QFtest_valueEx"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFtest_valueEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 ! CHECK:           %[[VAL_4:.*]] = fir.address_of(@_QQro.3xi8.0) : !fir.ref<!fir.array<3xi64>>
@@ -88,6 +88,6 @@ end subroutine
 ! CHECK:           fir.do_loop %[[VAL_21:.*]] = {{.*}}
 ! CHECK:             %[[VAL_22:.*]] = hlfir.apply %[[VAL_16]], %[[VAL_21]] : (!hlfir.expr<?xi64>, index) -> i64
 ! CHECK:             %[[VAL_23:.*]]:3 = hlfir.associate %[[VAL_22]] {adapt.valuebyref} : (i64) -> (!fir.ref<i64>, !fir.ref<i64>, i1)
-! CHECK:             fir.call @_QPfoo2(%[[VAL_23]]#1){{.*}}: (!fir.ref<i64>) -> ()
+! CHECK:             fir.call @_QPfoo2(%[[VAL_23]]#0){{.*}}: (!fir.ref<i64>) -> ()
 ! CHECK:             hlfir.end_associate %[[VAL_23]]#1, %[[VAL_23]]#2 : !fir.ref<i64>, i1
 ! CHECK:           }

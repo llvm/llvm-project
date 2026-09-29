@@ -15,7 +15,7 @@ entry:
 @foo_ifunc = ifunc i32 (i32), ptr @foo_resolver
 ; ELF:             .globl foo_ifunc
 ; ELF-NEXT:        .type foo_ifunc,@gnu_indirect_function
-; ELF-NEXT:        .set foo_ifunc, foo_resolver
+; ELF-NEXT:        foo_ifunc = foo_resolver
 
 ; MACHO:           .section __DATA,__data
 ; MACHO-NEXT:      .p2align 3, 0x0

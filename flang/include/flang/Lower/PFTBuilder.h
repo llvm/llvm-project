@@ -28,6 +28,7 @@
 #include "flang/Semantics/symbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 
 namespace Fortran::lower::pft {
 
@@ -141,7 +142,7 @@ using Directives =
     std::tuple<parser::CompilerDirective, parser::OpenACCConstruct,
                parser::OpenACCRoutineConstruct,
                parser::OpenACCDeclarativeConstruct, parser::OpenMPConstruct,
-               parser::OpenMPDeclarativeConstruct, parser::OmpEndLoopDirective,
+               parser::OpenMPDeclarativeConstruct,
                parser::CUFKernelDoConstruct>;
 
 using DeclConstructs = std::tuple<parser::OpenMPDeclarativeConstruct,
@@ -183,6 +184,11 @@ template <typename A>
 static constexpr bool isExecutableDirective{common::HasMember<
     A, std::tuple<parser::CompilerDirective, parser::OpenACCConstruct,
                   parser::OpenMPConstruct, parser::CUFKernelDoConstruct>>};
+
+template <typename A>
+static constexpr bool isOpenMPDirective{
+    common::HasMember<A, std::tuple<parser::OpenMPConstruct,
+                                    parser::OpenMPDeclarativeConstruct>>};
 
 template <typename A>
 static constexpr bool isFunctionLike{common::HasMember<
@@ -267,6 +273,11 @@ struct Evaluation : EvaluationVariant {
       return pft::isExecutableDirective<std::decay_t<decltype(r)>>;
     }});
   }
+  constexpr bool isOpenMPDirective() const {
+    return visit(common::visitors{[](auto &r) {
+      return pft::isOpenMPDirective<std::decay_t<decltype(r)>>;
+    }});
+  }
 
   /// Return the predicate:  "This is a non-initial, non-terminal construct
   /// statement."  For an IfConstruct, this is ElseIfStmt and ElseStmt.
@@ -312,6 +323,54 @@ struct Evaluation : EvaluationVariant {
   /// Return the FunctionLikeUnit containing this evaluation (or nullptr).
   FunctionLikeUnit *getOwningProcedure() const;
 
+  /// How this evaluation's control flow is lowered. Ordered by how much it
+  /// constrains lowering so that classification can only strengthen; see
+  /// markControlFlow.
+  enum class ControlFlow {
+    /// Lowered structurally
+    Structured,
+    /// Lowered structurally, but the body holds unstructured control flow
+    /// confined to it. Lowering folds that body -- not the construct, and not
+    /// the loop control -- into a parent region, so the structured op's
+    /// single-block region stays well formed.
+    ///
+    /// For now, this only applies to DO constructs.
+    StructuredWithUnstructuredInternals,
+    /// Lowered as unstructured blocks.
+    Unstructured,
+  };
+
+  /// Strengthen the classification to \p kind; it never weakens. This is what
+  /// makes the analysis order-independent: a construct marked Unstructured by
+  /// any one child stays Unstructured whatever its siblings contribute.
+  void markControlFlow(ControlFlow kind) {
+    controlFlow = std::max(controlFlow, kind);
+  }
+
+  void markUnstructured() { markControlFlow(ControlFlow::Unstructured); }
+
+  /// Lower the classification to \p kind. Only for an analysis that has proven
+  /// a stronger classification unnecessary; every other caller wants
+  /// markControlFlow, which never weakens.
+  void weakenControlFlow(ControlFlow kind) {
+    controlFlow = std::min(controlFlow, kind);
+  }
+
+  /// True only for fully unstructured control flow, which is lowered as raw
+  /// CFG blocks.
+  bool isUnstructured() const {
+    return controlFlow == ControlFlow::Unstructured;
+  }
+
+  bool hasUnstructuredInternals() const {
+    return controlFlow == ControlFlow::StructuredWithUnstructuredInternals;
+  }
+
+  /// True when this construct is lowered structurally, yet its body holds
+  /// unstructured control flow that has to be folded into an
+  /// scf.execute_region.
+  bool lowerBodyAsWrappedRegion() const;
+
   bool lowerAsStructured() const;
   bool lowerAsUnstructured() const;
   bool forceAsUnstructured() const;
@@ -320,17 +379,20 @@ struct Evaluation : EvaluationVariant {
   // nodes. Members such as lexicalSuccessor and block are applicable only
   // to these nodes, plus some directives. The controlSuccessor member is
   // used for nonlexical successors, such as linking to a GOTO target. For
-  // multiway branches, it is set to the first target. Successor and exit
-  // links always target statements or directives. An internal Construct
-  // node has a constructExit link that applies to exits from anywhere within
-  // the construct.
+  // multiway branches (computed GO TO, arithmetic IF), it is set to the
+  // first target and any additional targets are recorded in
+  // extraControlSuccessors so analyses that need to see every branch target
+  // (e.g. wrappability of an unstructured construct) can enumerate them all.
+  // Successor and exit links always target statements or directives. An
+  // internal Construct node has a constructExit link that applies to exits
+  // from anywhere within the construct.
   //
   // An unstructured construct is one that contains some form of goto. This
-  // is indicated by the isUnstructured member flag, which may be set on a
-  // statement and propagated to enclosing constructs. This distinction allows
-  // a structured IF or DO statement to be materialized with custom structured
-  // FIR operations. An unstructured statement is materialized as mlir
-  // operation sequences that include explicit branches.
+  // is indicated by the controlFlow member, which may be set on a statement and
+  // propagated to enclosing constructs. This distinction allows a structured IF
+  // or DO statement to be materialized with custom structured FIR operations.
+  // An unstructured statement is materialized as mlir operation sequences that
+  // include explicit branches.
   //
   // The block member is set for statements that begin a new block. This
   // block is the target of any branch to the statement. Statements may have
@@ -355,11 +417,18 @@ struct Evaluation : EvaluationVariant {
   Evaluation *parentConstruct{nullptr};  // set for nodes below the top level
   Evaluation *lexicalSuccessor{nullptr}; // set for leaf nodes, some directives
   Evaluation *controlSuccessor{nullptr}; // set for some leaf nodes
+  // Additional branch targets for multiway branches (computed GO TO,
+  // arithmetic IF). Empty for single-target branches; the first target is in
+  // controlSuccessor and the remaining ones are stored here in source order.
+  llvm::SmallVector<Evaluation *, 0> extraControlSuccessors;
   Evaluation *constructExit{nullptr};    // set for constructs
   bool isNewBlock{false};                // evaluation begins a new basic block
-  bool isUnstructured{false};  // evaluation has unstructured control flow
+  ControlFlow controlFlow{ControlFlow::Structured};
   bool negateCondition{false}; // If[Then]Stmt condition must be negated
   bool activeConstruct{false}; // temporarily set for some constructs
+  // The enclosing evaluation-list traversal should skip this evaluation once
+  // because directive lowering already consumed it.
+  bool skipNextLowering{false};
   mlir::Block *block{nullptr}; // isNewBlock block (ActionStmt, ConstructStmt)
   int printIndex{0}; // (ActionStmt, ConstructStmt) evaluation index for dumps
 };
@@ -598,6 +667,13 @@ VariableList getScopeVariableList(const Fortran::semantics::Scope &scope);
 /// depends on. \p symbol itself will be the last variable in the list.
 VariableList getDependentVariableList(const Fortran::semantics::Symbol &);
 
+struct FunctionLikeUnit;
+/// Create an ordered list of equivalence sets and variables from host
+/// [sub]module scopes of \p funit that are referenced in \p funit. This is
+/// used by lowering of module procedures (and their internal subprograms) to
+/// only instantiate referenced host module variables rather than all of them.
+VariableList getHostModuleVariableList(const FunctionLikeUnit &funit);
+
 void dump(VariableList &, std::string s = {}); // `s` is an optional dump label
 
 /// Function-like units may contain evaluations (executable statements),
@@ -706,6 +782,11 @@ struct FunctionLikeUnit : public ProgramUnit {
   const semantics::Scope *scope;
   LabelEvalMap labelEvaluationMap;
   SymbolLabelMap assignSymbolLabelMap;
+  /// Evaluations that branch to a given evaluation. A construct transferring
+  /// control between its own statements is not a branch (F2023 11.2.1 p1), so
+  /// the control successors analyzeBranches sets for CASE, ELSE IF, ELSE,
+  /// SELECT RANK and a DO statement and its EndDoStmt are not recorded here.
+  IncomingBranchMap incomingBranches;
   ContainedUnitList containedUnitList;
   EvaluationList evaluationList;
   /// <Symbol, Evaluation> pairs for each entry point. The pair at index 0
@@ -727,6 +808,8 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
   HostAssociations hostAssociations;
+  /// Preserved USE statements for debug info generation
+  std::list<Fortran::semantics::PreservedUseStmt> preservedUseStmts;
 };
 
 /// Module-like units contain a list of function-like units.
@@ -756,6 +839,8 @@ struct ModuleLikeUnit : public ProgramUnit {
   ModuleStatement endStmt;
   ContainedUnitList containedUnitList;
   EvaluationList evaluationList;
+  /// Preserved USE statements for debug info generation
+  std::list<Fortran::semantics::PreservedUseStmt> preservedUseStmts;
 };
 
 /// Block data units contain the variables and data initializers for common
@@ -853,9 +938,17 @@ void visitAllSymbols(const FunctionLikeUnit &funit,
 void visitAllSymbols(const Evaluation &eval,
                      std::function<void(const semantics::Symbol &)> callBack);
 
+/// Return true when \p eval is an unstructured DO or IF construct that can
+/// folded into a self-contained scf.execute_region. \p semaCtx is needed to
+/// determine how many loops a directive applies to.
+bool isWrappableConstruct(const Evaluation &eval,
+                          const semantics::SemanticsContext &semaCtx);
+
 } // namespace Fortran::lower::pft
 
 namespace Fortran::lower {
+class LoweringOptions;
+
 /// Create a PFT (Pre-FIR Tree) from the parse tree.
 ///
 /// A PFT is a light weight tree over the parse tree that is used to create FIR.
@@ -866,7 +959,8 @@ namespace Fortran::lower {
 /// either a statement, or a construct with a nested list of evaluations.
 std::unique_ptr<pft::Program>
 createPFT(const parser::Program &root,
-          const Fortran::semantics::SemanticsContext &semanticsContext);
+          const Fortran::semantics::SemanticsContext &semanticsContext,
+          const LoweringOptions &loweringOptions);
 
 /// Dumper for displaying a PFT.
 void dumpPFT(llvm::raw_ostream &outputStream, const pft::Program &pft);

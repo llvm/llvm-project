@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Wasm.h"
-#include "IncrementalExecutor.h"
 
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Target/TargetMachine.h>
+#include <llvm/TargetParser/Triple.h>
 
 #include <clang/Interpreter/Interpreter.h>
 
@@ -47,6 +49,7 @@ struct Result {
 
 Result lldMain(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                llvm::raw_ostream &stderrOS, llvm::ArrayRef<DriverDef> drivers);
+[[noreturn]] void exitLld(int val);
 
 namespace wasm {
 bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
@@ -58,9 +61,21 @@ bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
 namespace clang {
 
-WasmIncrementalExecutor::WasmIncrementalExecutor(
-    llvm::orc::ThreadSafeContext &TSC)
-    : IncrementalExecutor(TSC) {}
+WasmIncrementalExecutor::WasmIncrementalExecutor(llvm::Error &Err) {
+  llvm::ErrorAsOutParameter EAO(&Err);
+
+  if (Err)
+    return;
+
+  if (auto EC =
+          llvm::sys::fs::createUniqueDirectory("clang-wasm-exec-", TempDir))
+    Err = llvm::make_error<llvm::StringError>(
+        "Failed to create temporary directory for Wasm executor: " +
+            EC.message(),
+        llvm::inconvertibleErrorCode());
+}
+
+WasmIncrementalExecutor::~WasmIncrementalExecutor() = default;
 
 llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   std::string ErrorString;
@@ -75,12 +90,18 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   llvm::TargetOptions TO = llvm::TargetOptions();
   llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
       PTU.TheModule->getTargetTriple(), "", "", TO, llvm::Reloc::Model::PIC_);
-  PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
-  std::string ObjectFileName = PTU.TheModule->getName().str() + ".o";
-  std::string BinaryFileName = PTU.TheModule->getName().str() + ".wasm";
 
-  std::error_code Error;
-  llvm::raw_fd_ostream ObjectFileOutput(llvm::StringRef(ObjectFileName), Error);
+  llvm::SmallString<256> ObjectFileName(TempDir);
+  llvm::sys::path::append(ObjectFileName, PTU.TheModule->getName() + ".o");
+
+  llvm::SmallString<256> BinaryFileName(TempDir);
+  llvm::sys::path::append(BinaryFileName, PTU.TheModule->getName() + ".wasm");
+
+  std::error_code EC;
+  llvm::raw_fd_ostream ObjectFileOutput(ObjectFileName, EC);
+
+  if (EC)
+    return llvm::errorCodeToError(EC);
 
   llvm::legacy::PassManager PM;
   if (TargetMachine->addPassesToEmitFile(PM, ObjectFileOutput, nullptr,
@@ -97,10 +118,13 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
 
   ObjectFileOutput.close();
 
+  std::string Emulation = "-m";
+  Emulation +=
+      llvm::Triple(PTU.TheModule->getTargetTriple()).getArchName().str();
   std::vector<const char *> LinkerArgs = {"wasm-ld",
+                                          Emulation.c_str(),
                                           "-shared",
                                           "--import-memory",
-                                          "--experimental-pic",
                                           "--stack-first",
                                           "--allow-undefined",
                                           ObjectFileName.c_str(),
@@ -112,6 +136,11 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   WasmDriverArgs.push_back(WasmDriver);
   lld::Result Result =
       lld::lldMain(LinkerArgs, llvm::outs(), llvm::errs(), WasmDriverArgs);
+
+  // A fatal error may have recovered control flow without restoring LLD's
+  // process state. Do not allow another incremental link in that case.
+  if (!Result.canRunAgain)
+    lld::exitLld(Result.retCode);
 
   if (Result.retCode)
     return llvm::make_error<llvm::StringError>(
@@ -144,6 +173,26 @@ llvm::Error WasmIncrementalExecutor::cleanUp() {
   return llvm::Error::success();
 }
 
-WasmIncrementalExecutor::~WasmIncrementalExecutor() = default;
+llvm::Expected<llvm::orc::ExecutorAddr>
+WasmIncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
+                                          SymbolNameKind NameKind) const {
+  void *Sym = dlsym(RTLD_DEFAULT, Name.str().c_str());
+  if (!Sym) {
+    return llvm::make_error<llvm::StringError>("dlsym failed for symbol: " +
+                                                   Name.str(),
+                                               llvm::inconvertibleErrorCode());
+  }
 
+  return llvm::orc::ExecutorAddr::fromPtr(Sym);
+}
+
+llvm::Error WasmIncrementalExecutor::LoadDynamicLibrary(const char *name) {
+  void *handle = dlopen(name, RTLD_NOW | RTLD_GLOBAL);
+  if (!handle) {
+    llvm::errs() << dlerror() << '\n';
+    return llvm::make_error<llvm::StringError>("Failed to load dynamic library",
+                                               llvm::inconvertibleErrorCode());
+  }
+  return llvm::Error::success();
+}
 } // namespace clang

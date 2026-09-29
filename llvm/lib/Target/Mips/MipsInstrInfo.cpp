@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
@@ -38,9 +39,16 @@ using namespace llvm;
 // Pin the vtable to this file.
 void MipsInstrInfo::anchor() {}
 
-MipsInstrInfo::MipsInstrInfo(const MipsSubtarget &STI, unsigned UncondBr)
-    : MipsGenInstrInfo(Mips::ADJCALLSTACKDOWN, Mips::ADJCALLSTACKUP),
+MipsInstrInfo::MipsInstrInfo(const MipsSubtarget &STI,
+                             const MipsRegisterInfo &RI, unsigned UncondBr)
+    : MipsGenInstrInfo(STI, RI, Mips::ADJCALLSTACKDOWN, Mips::ADJCALLSTACKUP),
       Subtarget(STI), UncondBrOpc(UncondBr) {}
+
+const TargetRegisterClass *MipsInstrInfo::getInlineAsmMemoryOperandRegClass(
+    InlineAsm::ConstraintCode C) const {
+  return Subtarget.getABI().ArePtrs64bit() ? &Mips::GPR64RegClass
+                                           : &Mips::GPR32RegClass;
+}
 
 const MipsInstrInfo *MipsInstrInfo::create(MipsSubtarget &STI) {
   if (STI.inMips16Mode())
@@ -51,6 +59,13 @@ const MipsInstrInfo *MipsInstrInfo::create(MipsSubtarget &STI) {
 
 bool MipsInstrInfo::isZeroImm(const MachineOperand &op) const {
   return op.isImm() && op.getImm() == 0;
+}
+
+MCInst MipsInstrInfo::getNop() const {
+  return MCInstBuilder(Mips::SLL)
+      .addReg(Mips::ZERO)
+      .addReg(Mips::ZERO)
+      .addImm(0);
 }
 
 /// insertNoop - If data hazard condition is found insert the target nop
@@ -627,7 +642,8 @@ bool MipsInstrInfo::SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
     return false;
 
   return !llvm::any_of(LoadMI.defs(), [&](const MachineOperand &Op) {
-    return Op.isReg() && MIInSlot.readsRegister(Op.getReg(), /*TRI=*/nullptr);
+    return Op.isReg() && MIInSlot.readsRegister(Op.getReg(), /*TRI=*/nullptr) &&
+           !MIInSlot.hasRegisterImplicitUseOperand(Op.getReg());
   });
 }
 
@@ -672,23 +688,61 @@ bool MipsInstrInfo::HasLoadDelaySlot(const MachineInstr &MI) const {
   case Mips::LW:
   case Mips::LWR:
   case Mips::LWL:
+  // On MIPS-I, the only float load there is; the rest came with later ISAs.
+  case Mips::LWC1:
     return true;
   default:
     return false;
   }
 }
 
+bool MipsInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
+  const unsigned Opcode = MI.getOpcode();
+  switch (Opcode) {
+  default:
+    break;
+  case Mips::ADDiu:
+  case Mips::ADDiu_MM:
+  case Mips::DADDiu:
+    return ((MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) ||
+            (MI.getOperand(1).isReg() &&
+             (MI.getOperand(1).getReg() == Mips::ZERO ||
+              MI.getOperand(1).getReg() == Mips::ZERO_64)));
+  }
+  return MI.isAsCheapAsAMove();
+}
+
 /// Return the number of bytes of code the specified instruction may be.
 unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
+    // Handle non-finalized bundle.
+    if (MI.isBundledWithSucc())
+      return MI.getDesc().getSize() + getInstBundleSize(MI);
+    if (MI.hasDelaySlot()) {
+      // instr + 1 nop
+      return MI.getDesc().getSize() + 4;
+    }
     return MI.getDesc().getSize();
   case  TargetOpcode::INLINEASM:
   case  TargetOpcode::INLINEASM_BR: {       // Inline Asm: Variable size.
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
   }
+  case TargetOpcode::BUNDLE:
+    return getInstBundleSize(MI);
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
+    // Size of xray sled
+    if (Subtarget.isGP64bit()) {
+      // beq + 15 nops
+      return 16 * 4;
+    } else {
+      // beq + 11 nops + addiu
+      return 13 * 4;
+    }
   case Mips::CONSTPOOL_ENTRY:
     // If this machine instr is a constant pool entry, its size is recorded as
     // operand #2.

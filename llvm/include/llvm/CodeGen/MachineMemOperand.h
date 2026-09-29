@@ -25,6 +25,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h" // PointerLikeTypeTraits<Value*>
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
@@ -89,34 +90,45 @@ struct MachinePointerInfo {
 
   /// Return true if memory region [V, V+Offset+Size) is known to be
   /// dereferenceable.
-  bool isDereferenceable(unsigned Size, LLVMContext &C,
-                         const DataLayout &DL) const;
+  LLVM_ABI bool isDereferenceable(unsigned Size, LLVMContext &C,
+                                  const DataLayout &DL) const;
 
   /// Return the LLVM IR address space number that this pointer points into.
-  unsigned getAddrSpace() const;
+  LLVM_ABI unsigned getAddrSpace() const;
 
   /// Return a MachinePointerInfo record that refers to the constant pool.
-  static MachinePointerInfo getConstantPool(MachineFunction &MF);
+  LLVM_ABI static MachinePointerInfo getConstantPool(MachineFunction &MF);
 
   /// Return a MachinePointerInfo record that refers to the specified
   /// FrameIndex.
-  static MachinePointerInfo getFixedStack(MachineFunction &MF, int FI,
-                                          int64_t Offset = 0);
+  LLVM_ABI static MachinePointerInfo getFixedStack(MachineFunction &MF, int FI,
+                                                   int64_t Offset = 0);
 
   /// Return a MachinePointerInfo record that refers to a jump table entry.
-  static MachinePointerInfo getJumpTable(MachineFunction &MF);
+  LLVM_ABI static MachinePointerInfo getJumpTable(MachineFunction &MF);
 
   /// Return a MachinePointerInfo record that refers to a GOT entry.
-  static MachinePointerInfo getGOT(MachineFunction &MF);
+  LLVM_ABI static MachinePointerInfo getGOT(MachineFunction &MF);
 
   /// Stack pointer relative access.
-  static MachinePointerInfo getStack(MachineFunction &MF, int64_t Offset,
-                                     uint8_t ID = 0);
+  LLVM_ABI static MachinePointerInfo getStack(MachineFunction &MF,
+                                              int64_t Offset, uint8_t ID = 0);
 
   /// Stack memory without other information.
-  static MachinePointerInfo getUnknownStack(MachineFunction &MF);
+  LLVM_ABI static MachinePointerInfo getUnknownStack(MachineFunction &MF);
 };
 
+/// LLVM IR metadata carried by a MachineMemOperand.
+struct MMOMetadata {
+  AAMDNodes AAInfo;
+  const MDNode *Ranges = nullptr;
+  const MDNode *MemCacheHint = nullptr;
+
+  MMOMetadata() = default;
+  MMOMetadata(const AAMDNodes &AAInfo, const MDNode *Ranges = nullptr,
+              const MDNode *MemCacheHint = nullptr)
+      : AAInfo(AAInfo), Ranges(Ranges), MemCacheHint(MemCacheHint) {}
+};
 
 //===----------------------------------------------------------------------===//
 /// A description of a memory reference used in the backend.
@@ -181,22 +193,23 @@ private:
   MachineAtomicInfo AtomicInfo;
   AAMDNodes AAInfo;
   const MDNode *Ranges;
+  const MDNode *MemCacheHint;
 
 public:
   /// Construct a MachineMemOperand object with the specified PtrInfo, flags,
-  /// size, and base alignment. For atomic operations the synchronization scope
-  /// and atomic ordering requirements must also be specified. For cmpxchg
-  /// atomic operations the atomic ordering requirements when store does not
-  /// occur must also be specified.
-  MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LocationSize TS,
-                    Align a, const AAMDNodes &AAInfo = AAMDNodes(),
-                    const MDNode *Ranges = nullptr,
+  /// size, base alignment, and metadata. For atomic operations the
+  /// synchronization scope and atomic ordering requirements must also be
+  /// specified. For cmpxchg atomic operations the atomic ordering requirements
+  /// when store does not occur must also be specified.
+  LLVM_ABI
+  MachineMemOperand(MachinePointerInfo PtrInfo, Flags Flags, LocationSize TS,
+                    Align A, const MMOMetadata &Metadata = MMOMetadata(),
                     SyncScope::ID SSID = SyncScope::System,
                     AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
                     AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
-  MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LLT type, Align a,
-                    const AAMDNodes &AAInfo = AAMDNodes(),
-                    const MDNode *Ranges = nullptr,
+  LLVM_ABI
+  MachineMemOperand(MachinePointerInfo PtrInfo, Flags Flags, LLT Type, Align A,
+                    const MMOMetadata &Metadata = MMOMetadata(),
                     SyncScope::ID SSID = SyncScope::System,
                     AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
                     AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
@@ -256,7 +269,7 @@ public:
 
   /// Return the minimum known alignment in bytes of the actual memory
   /// reference.
-  Align getAlign() const;
+  LLVM_ABI Align getAlign() const;
 
   /// Return the minimum known alignment in bytes of the base address, without
   /// the offset.
@@ -267,6 +280,9 @@ public:
 
   /// Return the range tag for the memory reference.
   const MDNode *getRanges() const { return Ranges; }
+
+  /// Return the cache hint metadata for the memory reference.
+  const MDNode *getMemCacheHint() const { return MemCacheHint; }
 
   /// Returns the synchronization scope ID for this memory operation.
   SyncScope::ID getSyncScopeID() const {
@@ -318,7 +334,7 @@ public:
   /// Update this MachineMemOperand to reflect the alignment of MMO, if it has a
   /// greater alignment. This must only be used when the new alignment applies
   /// to all users of this MachineMemOperand.
-  void refineAlignment(const MachineMemOperand *MMO);
+  LLVM_ABI void refineAlignment(const MachineMemOperand *MMO);
 
   /// Change the SourceValue for this MachineMemOperand. This should only be
   /// used when an object is being relocated and all references to it are being
@@ -335,11 +351,15 @@ public:
   /// Unset the tracked range metadata.
   void clearRanges() { Ranges = nullptr; }
 
+  /// Unset the cache hint metadata.
+  void clearMemCacheHint() { MemCacheHint = nullptr; }
+
   /// Support for operator<<.
   /// @{
-  void print(raw_ostream &OS, ModuleSlotTracker &MST,
-             SmallVectorImpl<StringRef> &SSNs, const LLVMContext &Context,
-             const MachineFrameInfo *MFI, const TargetInstrInfo *TII) const;
+  LLVM_ABI void print(raw_ostream &OS, ModuleSlotTracker &MST,
+                      SmallVectorImpl<StringRef> &SSNs,
+                      const LLVMContext &Context, const MachineFrameInfo *MFI,
+                      const TargetInstrInfo *TII) const;
   /// @}
 
   friend bool operator==(const MachineMemOperand &LHS,
@@ -351,8 +371,12 @@ public:
            LHS.getFlags() == RHS.getFlags() &&
            LHS.getAAInfo() == RHS.getAAInfo() &&
            LHS.getRanges() == RHS.getRanges() &&
+           LHS.getMemCacheHint() == RHS.getMemCacheHint() &&
            LHS.getAlign() == RHS.getAlign() &&
-           LHS.getAddrSpace() == RHS.getAddrSpace();
+           LHS.getAddrSpace() == RHS.getAddrSpace() &&
+           LHS.getSuccessOrdering() == RHS.getSuccessOrdering() &&
+           LHS.getFailureOrdering() == RHS.getFailureOrdering() &&
+           LHS.getSyncScopeID() == RHS.getSyncScopeID();
   }
 
   friend bool operator!=(const MachineMemOperand &LHS,

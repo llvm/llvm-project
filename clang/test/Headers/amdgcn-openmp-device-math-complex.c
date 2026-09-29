@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -internal-isystem %S/Inputs/include -x c -fopenmp -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
-// RUN: %clang_cc1 -internal-isystem %S/../../lib/Headers/openmp_wrappers -include __clang_openmp_device_functions.h -internal-isystem %S/../../lib/Headers/openmp_wrappers -internal-isystem %S/Inputs/include -x c -fopenmp -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -internal-isystem %S/Inputs/include -x c -fopenmp -triple x86_64-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
+// RUN: %clang_cc1 -internal-isystem %S/../../lib/Headers/openmp_wrappers -include __clang_openmp_device_functions.h -internal-isystem %S/../../lib/Headers/openmp_wrappers -internal-isystem %S/Inputs/include -x c -fopenmp -triple amdgpu-amd-amdhsa -aux-triple x86_64-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s --check-prefixes=CHECK
 
 #include <complex.h>
 
@@ -14,17 +14,17 @@ void test_complex_f64(double _Complex a) {
 }
 
 // CHECK: define weak {{.*}} @__divdc3
-// CHECK-DAG: call double @__ocml_fabs_f64(
-// CHECK-DAG: call i32 @__ocml_isnan_f64(
-// CHECK-DAG: call i32 @__ocml_isfinite_f64(
-// CHECK-DAG: call double @__ocml_copysign_f64(
-// CHECK-DAG: call double @__ocml_scalbn_f64(
-// CHECK-DAG: call double @__ocml_logb_f64(
+// CHECK-DAG: call double @llvm.fabs.f64(
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, /* (nan) */ i32 3)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, /* (zero sub norm) */ i32 504)
+// CHECK-DAG: call double @llvm.copysign.f64(
+// CHECK-DAG: call double @llvm.ldexp.f64.i32(
+// CHECK-DAG: call { double, i32 } @llvm.frexp.f64.i32
 
 // CHECK: define weak {{.*}} @__muldc3
-// CHECK-DAG: call i32 @__ocml_isnan_f64(
-// CHECK-DAG: call i32 @__ocml_isinf_f64(
-// CHECK-DAG: call double @__ocml_copysign_f64(
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, /* (nan) */ i32 3)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f64(double %{{.+}}, /* (inf) */ i32 516)
+// CHECK-DAG: call double @llvm.copysign.f64(
 
 void test_complex_f32(float _Complex a) {
 // CHECK-LABEL: define {{.*}}test_complex_f32
@@ -37,14 +37,14 @@ void test_complex_f32(float _Complex a) {
 }
 
 // CHECK: define weak {{.*}} @__divsc3
-// CHECK-DAG: call float @__ocml_fabs_f32(
-// CHECK-DAG: call i32 @__ocml_isnan_f32(
-// CHECK-DAG: call i32 @__ocml_isfinite_f32(
-// CHECK-DAG: call float @__ocml_copysign_f32(
-// CHECK-DAG: call float @__ocml_scalbn_f32(
-// CHECK-DAG: call float @__ocml_logb_f32(
+// CHECK-DAG: call float @llvm.fabs.f32(
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, /* (nan) */ i32 3)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, /* (inf) */ i32 516)
+// CHECK-DAG: call float @llvm.copysign.f32(
+// CHECK-DAG: call float @llvm.ldexp.f32.i32(
+// CHECK-DAG: call { float, i32 } @llvm.frexp.f32.i32
 
 // CHECK: define weak {{.*}} @__mulsc3
-// CHECK-DAG: call i32 @__ocml_isnan_f32(
-// CHECK-DAG: call i32 @__ocml_isinf_f32(
-// CHECK-DAG: call float @__ocml_copysign_f32(
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, /* (nan) */ i32 3)
+// CHECK-DAG: call i1 @llvm.is.fpclass.f32(float %{{.+}}, /* (inf) */ i32 516)
+// CHECK-DAG: call float @llvm.copysign.f32(

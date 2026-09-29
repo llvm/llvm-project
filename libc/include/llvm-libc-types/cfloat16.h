@@ -9,13 +9,10 @@
 #ifndef LLVM_LIBC_TYPES_CFLOAT16_H
 #define LLVM_LIBC_TYPES_CFLOAT16_H
 
-#if defined(__FLT16_MANT_DIG__) &&                                             \
-    (!defined(__GNUC__) || __GNUC__ >= 13 ||                                   \
-     (defined(__clang__) && __clang_major__ >= 14)) &&                         \
-    !defined(__arm__) && !defined(_M_ARM) && !defined(__riscv) &&              \
-    !defined(_WIN32)
-#define LIBC_TYPES_HAS_CFLOAT16
+#include "../llvm-libc-macros/cfloat16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_CFLOAT16
 typedef _Complex _Float16 cfloat16;
-#endif
+#endif // LIBC_TYPES_HAS_CFLOAT16
 
 #endif // LLVM_LIBC_TYPES_CFLOAT16_H

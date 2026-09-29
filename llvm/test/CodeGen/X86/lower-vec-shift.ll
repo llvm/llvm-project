@@ -265,9 +265,9 @@ define <16 x i16> @test11(<16 x i16> %a) {
 ; AVX1-LABEL: test11:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpsllw $3, %xmm1, %xmm2
-; AVX1-NEXT:    vpaddw %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2],xmm1[3,4,5],xmm2[6],xmm1[7]
+; AVX1-NEXT:    vpaddw %xmm1, %xmm1, %xmm2
+; AVX1-NEXT:    vpsllw $3, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[3,4,5],xmm1[6],xmm2[7]
 ; AVX1-NEXT:    vpsllw $3, %xmm0, %xmm2
 ; AVX1-NEXT:    vpaddw %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3,4],xmm2[5,6,7]

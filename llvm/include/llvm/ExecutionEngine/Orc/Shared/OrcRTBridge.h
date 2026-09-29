@@ -15,78 +15,35 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
 namespace rt {
 
-extern const char *SimpleExecutorDylibManagerInstanceName;
-extern const char *SimpleExecutorDylibManagerOpenWrapperName;
-extern const char *SimpleExecutorDylibManagerLookupWrapperName;
+LLVM_ABI extern const SymbolNameSpec RegisterEHFrameSectionAllocActionName;
+LLVM_ABI extern const SymbolNameSpec DeregisterEHFrameSectionAllocActionName;
 
-extern const char *SimpleExecutorMemoryManagerInstanceName;
-extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
-extern const char *SimpleExecutorMemoryManagerFinalizeWrapperName;
-extern const char *SimpleExecutorMemoryManagerDeallocateWrapperName;
+LLVM_ABI extern const SymbolNameSpec RegisterJITLoaderGDBAllocActionName;
+LLVM_ABI extern const SymbolNameSpec DeregisterJITLoaderGDBAllocActionName;
 
-extern const char *ExecutorSharedMemoryMapperServiceInstanceName;
-extern const char *ExecutorSharedMemoryMapperServiceReserveWrapperName;
-extern const char *ExecutorSharedMemoryMapperServiceInitializeWrapperName;
-extern const char *ExecutorSharedMemoryMapperServiceDeinitializeWrapperName;
-extern const char *ExecutorSharedMemoryMapperServiceReleaseWrapperName;
+LLVM_ABI extern const SymbolNameSpec DispatchName;
+LLVM_ABI extern const SymbolNameSpec DispatchCtxName;
 
-extern const char *MemoryWriteUInt8sWrapperName;
-extern const char *MemoryWriteUInt16sWrapperName;
-extern const char *MemoryWriteUInt32sWrapperName;
-extern const char *MemoryWriteUInt64sWrapperName;
-extern const char *MemoryWriteBuffersWrapperName;
-extern const char *MemoryWritePointersWrapperName;
+/// Symbol names for the ORC runtime's StandaloneMachOUnwindInfoRegistrar
+/// SPS interface.
+struct MachOUnwindInfoRegistrarSymbolNames {
+  SymbolNameSpec RegisterSectionsName;
+  SymbolNameSpec DeregisterSectionsName;
+};
 
-extern const char *RegisterEHFrameSectionWrapperName;
-extern const char *DeregisterEHFrameSectionWrapperName;
+/// Default symbol names for the ORC runtime's
+/// StandaloneMachOUnwindInfoRegistrar SPS interface.
+extern const LLVM_ABI MachOUnwindInfoRegistrarSymbolNames
+    orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
 
-extern const char *RunAsMainWrapperName;
-extern const char *RunAsVoidFunctionWrapperName;
-extern const char *RunAsIntFunctionWrapperName;
-
-using SPSSimpleExecutorDylibManagerOpenSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
-                                                 shared::SPSString, uint64_t);
-
-using SPSSimpleExecutorDylibManagerLookupSignature =
-    shared::SPSExpected<shared::SPSSequence<shared::SPSExecutorSymbolDef>>(
-        shared::SPSExecutorAddr, shared::SPSExecutorAddr,
-        shared::SPSRemoteSymbolLookupSet);
-
-using SPSSimpleExecutorMemoryManagerReserveSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
-                                                 uint64_t);
-using SPSSimpleExecutorMemoryManagerFinalizeSignature =
-    shared::SPSError(shared::SPSExecutorAddr, shared::SPSFinalizeRequest);
-using SPSSimpleExecutorMemoryManagerDeallocateSignature = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
-
-// ExecutorSharedMemoryMapperService
-using SPSExecutorSharedMemoryMapperServiceReserveSignature =
-    shared::SPSExpected<
-        shared::SPSTuple<shared::SPSExecutorAddr, shared::SPSString>>(
-        shared::SPSExecutorAddr, uint64_t);
-using SPSExecutorSharedMemoryMapperServiceInitializeSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(
-        shared::SPSExecutorAddr, shared::SPSExecutorAddr,
-        shared::SPSSharedMemoryFinalizeRequest);
-using SPSExecutorSharedMemoryMapperServiceDeinitializeSignature =
-    shared::SPSError(shared::SPSExecutorAddr,
-                     shared::SPSSequence<shared::SPSExecutorAddr>);
-using SPSExecutorSharedMemoryMapperServiceReleaseSignature = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
-
-using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddr,
-                                      shared::SPSSequence<shared::SPSString>);
-using SPSRunAsVoidFunctionSignature = int32_t(shared::SPSExecutorAddr);
-using SPSRunAsIntFunctionSignature = int32_t(shared::SPSExecutorAddr, int32_t);
 } // end namespace rt
 } // end namespace orc
 } // end namespace llvm

@@ -6,8 +6,8 @@
 define i1 @olt_ole_and_f32(float %w, float %x, float %y, float %z) {
 ; SSE2-LABEL: olt_ole_and_f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    cmpleps %xmm3, %xmm2
-; SSE2-NEXT:    cmpltps %xmm1, %xmm0
+; SSE2-NEXT:    cmpless %xmm3, %xmm2
+; SSE2-NEXT:    cmpltss %xmm1, %xmm0
 ; SSE2-NEXT:    andps %xmm2, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
@@ -15,8 +15,8 @@ define i1 @olt_ole_and_f32(float %w, float %x, float %y, float %z) {
 ;
 ; AVX1-LABEL: olt_ole_and_f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vcmpleps %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vcmpltps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcmpless %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcmpltss %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
@@ -24,15 +24,11 @@ define i1 @olt_ole_and_f32(float %w, float %x, float %y, float %z) {
 ;
 ; AVX512-LABEL: olt_ole_and_f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm3 killed $xmm3 def $zmm3
-; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512-NEXT:    vcmpltps %zmm1, %zmm0, %k1
-; AVX512-NEXT:    vcmpleps %zmm3, %zmm2, %k0 {%k1}
+; AVX512-NEXT:    vcmpless %xmm3, %xmm2, %k0
+; AVX512-NEXT:    vcmpltss %xmm1, %xmm0, %k1
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %f1 = fcmp olt float %w, %x
   %f2 = fcmp ole float %y, %z
@@ -43,8 +39,8 @@ define i1 @olt_ole_and_f32(float %w, float %x, float %y, float %z) {
 define i1 @oge_oeq_or_f32(float %w, float %x, float %y, float %z) {
 ; SSE2-LABEL: oge_oeq_or_f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    cmpeqps %xmm3, %xmm2
-; SSE2-NEXT:    cmpleps %xmm0, %xmm1
+; SSE2-NEXT:    cmpeqss %xmm3, %xmm2
+; SSE2-NEXT:    cmpless %xmm0, %xmm1
 ; SSE2-NEXT:    orps %xmm2, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
@@ -52,8 +48,8 @@ define i1 @oge_oeq_or_f32(float %w, float %x, float %y, float %z) {
 ;
 ; AVX1-LABEL: oge_oeq_or_f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vcmpeqps %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vcmpleps %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vcmpeqss %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcmpless %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vorps %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
@@ -61,16 +57,11 @@ define i1 @oge_oeq_or_f32(float %w, float %x, float %y, float %z) {
 ;
 ; AVX512-LABEL: oge_oeq_or_f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm3 killed $xmm3 def $zmm3
-; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512-NEXT:    vcmpeqps %zmm3, %zmm2, %k0
-; AVX512-NEXT:    vcmpleps %zmm0, %zmm1, %k1
+; AVX512-NEXT:    vcmpeqss %xmm3, %xmm2, %k0
+; AVX512-NEXT:    vcmpless %xmm0, %xmm1, %k1
 ; AVX512-NEXT:    korw %k0, %k1, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %f1 = fcmp oge float %w, %x
   %f2 = fcmp oeq float %y, %z
@@ -90,8 +81,8 @@ define i1 @ord_one_xor_f32(float %w, float %x, float %y, float %z) {
 ;
 ; AVX1-LABEL: ord_one_xor_f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vcmpneq_oqps %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vcmpordps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcmpneq_oqss %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcmpordss %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vxorps %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
@@ -99,16 +90,11 @@ define i1 @ord_one_xor_f32(float %w, float %x, float %y, float %z) {
 ;
 ; AVX512-LABEL: ord_one_xor_f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm3 killed $xmm3 def $zmm3
-; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512-NEXT:    vcmpneq_oqps %zmm3, %zmm2, %k0
-; AVX512-NEXT:    vcmpordps %zmm1, %zmm0, %k1
+; AVX512-NEXT:    vcmpneq_oqss %xmm3, %xmm2, %k0
+; AVX512-NEXT:    vcmpordss %xmm1, %xmm0, %k1
 ; AVX512-NEXT:    kxorw %k0, %k1, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %f1 = fcmp ord float %w, %x
   %f2 = fcmp one float %y, %z
@@ -120,8 +106,8 @@ define i1 @ord_one_xor_f32(float %w, float %x, float %y, float %z) {
 define i1 @une_oeq_xor_f32(float %w, float %x, float %y, float %z) {
 ; SSE2-LABEL: une_oeq_xor_f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    cmpeqps %xmm3, %xmm2
-; SSE2-NEXT:    cmpneqps %xmm1, %xmm0
+; SSE2-NEXT:    cmpeqss %xmm3, %xmm2
+; SSE2-NEXT:    cmpneqss %xmm1, %xmm0
 ; SSE2-NEXT:    xorps %xmm2, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
@@ -129,8 +115,8 @@ define i1 @une_oeq_xor_f32(float %w, float %x, float %y, float %z) {
 ;
 ; AVX1-LABEL: une_oeq_xor_f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vcmpeqps %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vcmpneqps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcmpeqss %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcmpneqss %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vxorps %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
@@ -138,16 +124,11 @@ define i1 @une_oeq_xor_f32(float %w, float %x, float %y, float %z) {
 ;
 ; AVX512-LABEL: une_oeq_xor_f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm3 killed $xmm3 def $zmm3
-; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512-NEXT:    vcmpeqps %zmm3, %zmm2, %k0
-; AVX512-NEXT:    vcmpneqps %zmm1, %zmm0, %k1
+; AVX512-NEXT:    vcmpeqss %xmm3, %xmm2, %k0
+; AVX512-NEXT:    vcmpneqss %xmm1, %xmm0, %k1
 ; AVX512-NEXT:    kxorw %k0, %k1, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %f1 = fcmp une float %w, %x
   %f2 = fcmp oeq float %y, %z
@@ -158,8 +139,8 @@ define i1 @une_oeq_xor_f32(float %w, float %x, float %y, float %z) {
 define i1 @une_ugt_and_f64(double %w, double %x, double %y, double %z) {
 ; SSE2-LABEL: une_ugt_and_f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    cmpnlepd %xmm3, %xmm2
-; SSE2-NEXT:    cmpneqpd %xmm1, %xmm0
+; SSE2-NEXT:    cmpnlesd %xmm3, %xmm2
+; SSE2-NEXT:    cmpneqsd %xmm1, %xmm0
 ; SSE2-NEXT:    andpd %xmm2, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
@@ -167,8 +148,8 @@ define i1 @une_ugt_and_f64(double %w, double %x, double %y, double %z) {
 ;
 ; AVX1-LABEL: une_ugt_and_f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vcmpnlepd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vcmpneqpd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcmpnlesd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcmpneqsd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vandpd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
@@ -176,15 +157,11 @@ define i1 @une_ugt_and_f64(double %w, double %x, double %y, double %z) {
 ;
 ; AVX512-LABEL: une_ugt_and_f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm3 killed $xmm3 def $zmm3
-; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512-NEXT:    vcmpneqpd %zmm1, %zmm0, %k1
-; AVX512-NEXT:    vcmpnlepd %zmm3, %zmm2, %k0 {%k1}
+; AVX512-NEXT:    vcmpnlesd %xmm3, %xmm2, %k0
+; AVX512-NEXT:    vcmpneqsd %xmm1, %xmm0, %k1
+; AVX512-NEXT:    kandw %k0, %k1, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %f1 = fcmp une double %w, %x
   %f2 = fcmp ugt double %y, %z
@@ -195,8 +172,8 @@ define i1 @une_ugt_and_f64(double %w, double %x, double %y, double %z) {
 define i1 @ult_uge_or_f64(double %w, double %x, double %y, double %z) {
 ; SSE2-LABEL: ult_uge_or_f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    cmpnltpd %xmm3, %xmm2
-; SSE2-NEXT:    cmpnlepd %xmm0, %xmm1
+; SSE2-NEXT:    cmpnltsd %xmm3, %xmm2
+; SSE2-NEXT:    cmpnlesd %xmm0, %xmm1
 ; SSE2-NEXT:    orpd %xmm2, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
@@ -204,8 +181,8 @@ define i1 @ult_uge_or_f64(double %w, double %x, double %y, double %z) {
 ;
 ; AVX1-LABEL: ult_uge_or_f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vcmpnltpd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vcmpnlepd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vcmpnltsd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcmpnlesd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vorpd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
@@ -213,16 +190,11 @@ define i1 @ult_uge_or_f64(double %w, double %x, double %y, double %z) {
 ;
 ; AVX512-LABEL: ult_uge_or_f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm3 killed $xmm3 def $zmm3
-; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512-NEXT:    vcmpnltpd %zmm3, %zmm2, %k0
-; AVX512-NEXT:    vcmpnlepd %zmm0, %zmm1, %k1
+; AVX512-NEXT:    vcmpnltsd %xmm3, %xmm2, %k0
+; AVX512-NEXT:    vcmpnlesd %xmm0, %xmm1, %k1
 ; AVX512-NEXT:    korw %k0, %k1, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %f1 = fcmp ult double %w, %x
   %f2 = fcmp uge double %y, %z
@@ -233,8 +205,8 @@ define i1 @ult_uge_or_f64(double %w, double %x, double %y, double %z) {
 define i1 @une_uno_xor_f64(double %w, double %x, double %y, double %z) {
 ; SSE2-LABEL: une_uno_xor_f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    cmpunordpd %xmm3, %xmm2
-; SSE2-NEXT:    cmpneqpd %xmm1, %xmm0
+; SSE2-NEXT:    cmpunordsd %xmm3, %xmm2
+; SSE2-NEXT:    cmpneqsd %xmm1, %xmm0
 ; SSE2-NEXT:    xorpd %xmm2, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    # kill: def $al killed $al killed $eax
@@ -242,8 +214,8 @@ define i1 @une_uno_xor_f64(double %w, double %x, double %y, double %z) {
 ;
 ; AVX1-LABEL: une_uno_xor_f64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vcmpunordpd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vcmpneqpd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcmpunordsd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vcmpneqsd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vxorpd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    # kill: def $al killed $al killed $eax
@@ -251,16 +223,11 @@ define i1 @une_uno_xor_f64(double %w, double %x, double %y, double %z) {
 ;
 ; AVX512-LABEL: une_uno_xor_f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm3 killed $xmm3 def $zmm3
-; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512-NEXT:    vcmpunordpd %zmm3, %zmm2, %k0
-; AVX512-NEXT:    vcmpneqpd %zmm1, %zmm0, %k1
+; AVX512-NEXT:    vcmpunordsd %xmm3, %xmm2, %k0
+; AVX512-NEXT:    vcmpneqsd %xmm1, %xmm0, %k1
 ; AVX512-NEXT:    kxorw %k0, %k1, %k0
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %f1 = fcmp une double %w, %x
   %f2 = fcmp uno double %y, %z
@@ -371,8 +338,8 @@ define i1 @f32cmp3(float %x, float %y, float %z, float %w) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm4, %xmm4
 ; SSE2-NEXT:    xorps %xmm5, %xmm5
-; SSE2-NEXT:    cmpltps %xmm1, %xmm5
-; SSE2-NEXT:    cmpltps %xmm0, %xmm4
+; SSE2-NEXT:    cmpltss %xmm1, %xmm5
+; SSE2-NEXT:    cmpltss %xmm0, %xmm4
 ; SSE2-NEXT:    orps %xmm5, %xmm4
 ; SSE2-NEXT:    movd %xmm4, %ecx
 ; SSE2-NEXT:    ucomiss %xmm2, %xmm3
@@ -383,8 +350,8 @@ define i1 @f32cmp3(float %x, float %y, float %z, float %w) {
 ; AVX1-LABEL: f32cmp3:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vcmpltps %xmm1, %xmm4, %xmm1
-; AVX1-NEXT:    vcmpltps %xmm0, %xmm4, %xmm0
+; AVX1-NEXT:    vcmpltss %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vcmpltss %xmm0, %xmm4, %xmm0
 ; AVX1-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %ecx
 ; AVX1-NEXT:    vucomiss %xmm2, %xmm3
@@ -394,17 +361,14 @@ define i1 @f32cmp3(float %x, float %y, float %z, float %w) {
 ;
 ; AVX512-LABEL: f32cmp3:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; AVX512-NEXT:    vcmpltps %zmm1, %zmm4, %k0
-; AVX512-NEXT:    vcmpltps %zmm0, %zmm4, %k1
+; AVX512-NEXT:    vcmpltss %xmm1, %xmm4, %k0
+; AVX512-NEXT:    vcmpltss %xmm0, %xmm4, %k1
 ; AVX512-NEXT:    korw %k0, %k1, %k0
 ; AVX512-NEXT:    kmovw %k0, %ecx
 ; AVX512-NEXT:    vucomiss %xmm2, %xmm3
 ; AVX512-NEXT:    seta %al
 ; AVX512-NEXT:    xorb %cl, %al
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %cmpx = fcmp ogt float %x, 0.0
   %cmpy = fcmp ogt float %y, 0.0
@@ -412,4 +376,60 @@ define i1 @f32cmp3(float %x, float %y, float %z, float %w) {
   %cmpzw = fcmp olt float %z, %w
   %r = xor i1 %or, %cmpzw
   ret i1 %r
+}
+
+define i1 @PR140534(i32 %a0, i32 %a1, i32 %a2) {
+; SSE2-LABEL: PR140534:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movl %edi, %eax
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm0
+; SSE2-NEXT:    movl %esi, %eax
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm1
+; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    cvtsi2sd %rax, %xmm2
+; SSE2-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    movapd %xmm1, %xmm3
+; SSE2-NEXT:    cmpltsd %xmm2, %xmm3
+; SSE2-NEXT:    cmpltsd %xmm0, %xmm1
+; SSE2-NEXT:    orpd %xmm3, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: PR140534:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movl %edi, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
+; AVX1-NEXT:    movl %esi, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm1
+; AVX1-NEXT:    movl %edx, %eax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm2
+; AVX1-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vcmpltsd %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vcmpltsd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vorpd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    # kill: def $al killed $al killed $eax
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: PR140534:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtusi2sd %edi, %xmm15, %xmm0
+; AVX512-NEXT:    vcvtusi2sd %esi, %xmm15, %xmm1
+; AVX512-NEXT:    vcvtusi2sd %edx, %xmm15, %xmm2
+; AVX512-NEXT:    vmulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX512-NEXT:    vcmpltsd %xmm2, %xmm1, %k0
+; AVX512-NEXT:    vcmpltsd %xmm0, %xmm1, %k1
+; AVX512-NEXT:    korw %k0, %k1, %k0
+; AVX512-NEXT:    kmovw %k0, %eax
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    retq
+  %conv0 = uitofp i32 %a0 to double
+  %conv1 = uitofp i32 %a1 to double
+  %conv2 = uitofp i32 %a2 to double
+  %mul = fmul double %conv1, 0x3FF6A09E667F3BCD
+  %cmp0 = fcmp olt double %mul, %conv0
+  %cmp2 = fcmp olt double %mul, %conv2
+  %or = or i1 %cmp0, %cmp2
+  ret i1 %or
 }

@@ -50,14 +50,22 @@ protected:
 
   bool IsFPR(unsigned reg);
 
+  bool IsLSX(unsigned reg);
+
+  bool IsLASX(unsigned reg);
+
   size_t GetFPRSize() { return sizeof(RegisterInfoPOSIX_loongarch64::FPR); }
 
   uint32_t GetRegNumFCSR() const { return fpr_fcsr_loongarch; }
 
   virtual bool ReadGPR() = 0;
   virtual bool ReadFPR() = 0;
+  virtual bool ReadLSX() { return false; }
+  virtual bool ReadLASX() { return false; }
   virtual bool WriteGPR() = 0;
   virtual bool WriteFPR() = 0;
+  virtual bool WriteLSX() { return false; }
+  virtual bool WriteLASX() { return false; }
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_LOONGARCH64_H

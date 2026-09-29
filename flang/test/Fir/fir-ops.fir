@@ -467,41 +467,48 @@ fir.type_info @cpinfo : !fir.type<cpinfo{comp_i:!fir.array<10x20xi32>}> componen
   fir.dt_component "component_info" lbs [2, 3]
 }
 
+// CHECK-LABEL: fir.type_info @abstract_dispatch_tbl abstract : !fir.type<abstract_dispatch_tbl{i:i32}> dispatch_table {
+// CHECK: fir.dt_entry "deferred_method", @deferred_impl deferred
+// CHECK: }
+fir.type_info @abstract_dispatch_tbl abstract : !fir.type<abstract_dispatch_tbl{i:i32}> dispatch_table {
+  fir.dt_entry "deferred_method", @deferred_impl deferred
+}
+
 // CHECK-LABEL: func @compare_complex(
 // CHECK-SAME: [[VAL_151:%.*]]: complex<f128>, [[VAL_152:%.*]]: complex<f128>) {
 func.func @compare_complex(%a : complex<f128>, %b : complex<f128>) {
 
-// CHECK: [[VAL_153:%.*]] = fir.cmpc "false", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_154:%.*]] = fir.cmpc "oeq", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_155:%.*]] = fir.cmpc "ogt", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_156:%.*]] = fir.cmpc "oge", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
+// CHECK: [[VAL_153:%.*]] = fir.cmpc "false", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_154:%.*]] = fir.cmpc "oeq", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_155:%.*]] = fir.cmpc "ogt", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_156:%.*]] = fir.cmpc "oge", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
   %d0 = fir.cmpc "false", %a, %b : complex<f128>
   %d1 = fir.cmpc "oeq", %a, %b : complex<f128>
   %d2 = fir.cmpc "ogt", %a, %b : complex<f128>
   %d3 = fir.cmpc "oge", %a, %b : complex<f128>
 
-// CHECK: [[VAL_157:%.*]] = fir.cmpc "olt", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_158:%.*]] = fir.cmpc "ole", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_159:%.*]] = fir.cmpc "one", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_160:%.*]] = fir.cmpc "ord", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
+// CHECK: [[VAL_157:%.*]] = fir.cmpc "olt", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_158:%.*]] = fir.cmpc "ole", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_159:%.*]] = fir.cmpc "one", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_160:%.*]] = fir.cmpc "ord", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
   %a0 = fir.cmpc "olt", %a, %b : complex<f128>
   %a1 = fir.cmpc "ole", %a, %b : complex<f128>
   %a2 = fir.cmpc "one", %a, %b : complex<f128>
   %a3 = fir.cmpc "ord", %a, %b : complex<f128>
 
-// CHECK: [[VAL_161:%.*]] = fir.cmpc "ueq", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_162:%.*]] = fir.cmpc "ugt", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_163:%.*]] = fir.cmpc "uge", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_164:%.*]] = fir.cmpc "ult", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
+// CHECK: [[VAL_161:%.*]] = fir.cmpc "ueq", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_162:%.*]] = fir.cmpc "ugt", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_163:%.*]] = fir.cmpc "uge", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_164:%.*]] = fir.cmpc "ult", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
   %b0 = fir.cmpc "ueq", %a, %b : complex<f128>
   %b1 = fir.cmpc "ugt", %a, %b : complex<f128>
   %b2 = fir.cmpc "uge", %a, %b : complex<f128>
   %b3 = fir.cmpc "ult", %a, %b : complex<f128>
 
-// CHECK: [[VAL_165:%.*]] = fir.cmpc "ule", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_166:%.*]] = fir.cmpc "une", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_167:%.*]] = fir.cmpc "uno", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
-// CHECK: [[VAL_168:%.*]] = fir.cmpc "true", [[VAL_151]], [[VAL_152]] {fastmath = {{.*}}} : complex<f128>
+// CHECK: [[VAL_165:%.*]] = fir.cmpc "ule", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_166:%.*]] = fir.cmpc "une", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_167:%.*]] = fir.cmpc "uno", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
+// CHECK: [[VAL_168:%.*]] = fir.cmpc "true", [[VAL_151]], [[VAL_152]] <{fastmath = {{.*}>}} : complex<f128>
   %c0 = fir.cmpc "ule", %a, %b : complex<f128>
   %c1 = fir.cmpc "une", %a, %b : complex<f128>
   %c2 = fir.cmpc "uno", %a, %b : complex<f128>
@@ -651,27 +658,8 @@ func.func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n :
   %arr3 = fir.insert_on_range %arr2, %c1_i32 from (2) to (9) : (!fir.array<10xi32>, i32) -> !fir.array<10xi32>
   fir.call @noret1(%arr3) : (!fir.array<10xi32>) -> ()
 
-  // CHECK: [[SHAPE:%.*]] = fir.shape_shift [[INDXM:%.*]], [[INDXN:%.*]], [[INDXO:%.*]], [[INDXP:%.*]] : (index, index, index, index) -> !fir.shapeshift<2>
-  // CHECK: [[AV1:%.*]] = fir.array_load [[ARR1]]([[SHAPE]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  // CHECK: [[FVAL:%.*]] = fir.array_fetch [[AV1]], [[I10]], [[J20]] : (!fir.array<?x?xf32>, index, index) -> f32
-  // CHECK: [[AV2:%.*]] = fir.array_update [[AV1]], [[FVAL]], [[I10]], [[J20]] : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
-  // CHECK: fir.array_merge_store [[AV1]], [[AV2]] to [[ARR1]] : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
+  // CHECK: fir.shape_shift [[INDXM]], [[INDXN]], [[INDXO]], [[INDXP]] : (index, index, index, index) -> !fir.shapeshift<2>
   %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
-  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  %f = fir.array_fetch %av1, %i10, %j20 : (!fir.array<?x?xf32>, index, index) -> f32
-  %av2 = fir.array_update %av1, %f, %i10, %j20 : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
-  fir.array_merge_store %av1, %av2 to %arr1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
-
-  // CHECK: [[AV3:%.*]] = fir.array_load [[ARR1]]([[SHAPE]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  // CHECK: [[FVAL2:%.*]] = fir.array_fetch [[AV3]], [[I10]], [[J20]] : (!fir.array<?x?xf32>, index, index) -> f32
-  // CHECK: [[AV4:%.*]]:2 = fir.array_modify [[AV3]], [[I10]], [[J20]] : (!fir.array<?x?xf32>, index, index) -> (!fir.ref<f32>, !fir.array<?x?xf32>)
-  // CHECK: fir.store [[FVAL2]] to [[AV4]]#0 : !fir.ref<f32>
-  // CHECK: fir.array_merge_store [[AV3]], [[AV4]]#1 to [[ARR1]] : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
-  %av3 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
-  %f2 = fir.array_fetch %av3, %i10, %j20 : (!fir.array<?x?xf32>, index, index) -> f32
-  %addr, %av4 = fir.array_modify %av3, %i10, %j20 : (!fir.array<?x?xf32>, index, index) -> (!fir.ref<f32>, !fir.array<?x?xf32>)
-  fir.store %f2 to %addr : !fir.ref<f32>
-  fir.array_merge_store %av3, %av4 to %arr1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
   return
 }
 
@@ -729,6 +717,28 @@ func.func @test_rebox_char(%arg0: !fir.box<!fir.array<?x!fir.char<1,20>>>) {
   return
 }
 
+// CHECK-LABEL: @test_rebox_optional(
+func.func @test_rebox_optional(%arg0: !fir.box<!fir.array<?xf32>>) {
+  %c0 = arith.constant 0 : index
+  %0 = fir.shift %c0 : (index) -> !fir.shift<1>
+  // CHECK: fir.rebox %{{.*}}(%{{.*}}) optional : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xf32>>
+  %1 = fir.rebox %arg0(%0) optional : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xf32>>
+  // CHECK: fir.rebox %{{.*}} optional : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+  %2 = fir.rebox %arg0 optional : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+  return
+}
+
+// CHECK-LABEL: @test_embox_optional(
+func.func @test_embox_optional(%arg0: !fir.ref<!fir.array<?xi32>>, %arg1: !fir.ref<i32>) {
+  %c10 = arith.constant 10 : index
+  %0 = fir.shape %c10 : (index) -> !fir.shape<1>
+  // CHECK: fir.embox %{{.*}}(%{{.*}}) optional : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  %1 = fir.embox %arg0(%0) optional : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  // CHECK: fir.embox %{{.*}} optional : (!fir.ref<i32>) -> !fir.box<i32>
+  %2 = fir.embox %arg1 optional : (!fir.ref<i32>) -> !fir.box<i32>
+  return
+}
+
 
 func.func private @array_func() -> !fir.array<?x!fir.char<1,?>>
 // CHECK-LABEL: @test_save_result(
@@ -776,27 +786,12 @@ func.func @llvm_ptr_load_store_coordinate(%arg0: !fir.ref<tuple<!fir.ref<!fir.bo
   return %1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
 }
 
-func.func @array_access_ops(%a : !fir.ref<!fir.array<?x?xf32>>) {
-  %c1 = arith.constant 1 : index
-  %n = arith.constant 0 : index
-  %m = arith.constant 50 : index
-  %s = fir.shape %n, %m : (index, index) -> !fir.shape<2>
-  %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
-  %p = fir.array_access %v, %c1, %c1 : (!fir.array<?x?xf32>, index, index) -> !fir.ref<f32>
-  // CHECK: %{{.*}} = fir.array_access %{{.*}}, %{{.*}}, %{{.*}} : (!fir.array<?x?xf32>, index, index) -> !fir.ref<f32>
-  return
-}
-
-func.func @array_amend_ops(%a : !fir.ref<!fir.array<?x?xf32>>) {
-  %c1 = arith.constant 1 : index
-  %n = arith.constant 0 : index
-  %m = arith.constant 50 : index
-  %s = fir.shape %n, %m : (index, index) -> !fir.shape<2>
-  %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
-  %p = fir.array_access %v, %c1, %c1 : (!fir.array<?x?xf32>, index, index) -> !fir.ref<f32>
-  %res = fir.array_amend %v, %p : (!fir.array<?x?xf32>, !fir.ref<f32>) -> !fir.array<?x?xf32>
-  // CHECK: %{{.*}} = fir.array_amend %{{.*}}, %{{.*}} : (!fir.array<?x?xf32>, !fir.ref<f32>) -> !fir.array<?x?xf32>
-  return
+// CHECK-LABEL: func @load_invariant(
+// CHECK-SAME:  %[[ARG0:.*]]: !fir.ref<i32>)
+func.func @load_invariant(%arg0: !fir.ref<i32>) -> i32 {
+  // CHECK-NEXT: %[[VAL:.*]] = fir.load %[[ARG0]] <{invariant}> : !fir.ref<i32>
+  %0 = fir.load %arg0 {invariant} : !fir.ref<i32>
+  return %0 : i32
 }
 
 func.func private @dispatch(%arg0: !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>, %arg1: i32) -> () {
@@ -841,6 +836,16 @@ func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived_poly{a:
   }
   fir.store %4#1 to %0 : !fir.ref<i32>
   return
+}
+
+// CHECK-LABEL:   func.func @embox_with_source_box(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.heap<!fir.array<?xnone>>,
+// CHECK-SAME:      %[[ARG1:.*]]: !fir.shape<1>,
+// CHECK-SAME:      %[[ARG2:.*]]: !fir.box<!fir.array<?xnone>>) -> !fir.class<!fir.heap<!fir.array<?xnone>>> {
+func.func @embox_with_source_box(%arg0: !fir.heap<!fir.array<?xnone>>, %arg1: !fir.shape<1>, %arg2: !fir.box<!fir.array<?xnone>>) -> !fir.class<!fir.heap<!fir.array<?xnone>>> {
+// CHECK:           %[[VAL_0:.*]] = fir.embox %[[ARG0]](%[[ARG1]]) source_box %[[ARG2]] : (!fir.heap<!fir.array<?xnone>>, !fir.shape<1>, !fir.box<!fir.array<?xnone>>) -> !fir.class<!fir.heap<!fir.array<?xnone>>>
+  %0 = fir.embox %arg0(%arg1) source_box %arg2 : (!fir.heap<!fir.array<?xnone>>, !fir.shape<1>, !fir.box<!fir.array<?xnone>>) -> !fir.class<!fir.heap<!fir.array<?xnone>>>
+  return %0 : !fir.class<!fir.heap<!fir.array<?xnone>>>
 }
 
 func.func @test_fortran_var_attrs() {
@@ -895,6 +900,7 @@ func.func @test_rebox_assumed_rank(%arg0: !fir.box<!fir.array<*:f32>> ) {
   %1 = fir.rebox_assumed_rank %arg0 lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
   %2 = fir.rebox_assumed_rank %arg0 lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
   %3 = fir.rebox_assumed_rank %arg0 lbs preserve : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  %4 = fir.rebox_assumed_rank %arg0 lbs ones optional : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
   return
 }
 // CHECK-LABEL: func.func @test_rebox_assumed_rank(
@@ -902,6 +908,7 @@ func.func @test_rebox_assumed_rank(%arg0: !fir.box<!fir.array<*:f32>> ) {
   // CHECK: fir.rebox_assumed_rank %[[A]] lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
   // CHECK: fir.rebox_assumed_rank %[[A]] lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
   // CHECK: fir.rebox_assumed_rank %[[A]] lbs preserve : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+  // CHECK: fir.rebox_assumed_rank %[[A]] lbs ones optional : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
 
 func.func @test_is_assumed_size(%arg0: !fir.class<!fir.array<*:none>>, %arg1 : !fir.box<!fir.array<?xf32>>) {
   %1 = fir.is_assumed_size %arg0 : (!fir.class<!fir.array<*:none>>) -> i1
@@ -913,3 +920,218 @@ func.func @test_is_assumed_size(%arg0: !fir.class<!fir.array<*:none>>, %arg1 : !
 // CHECK-SAME: %[[B:.*]]: !fir.box<!fir.array<?xf32>>)
   // CHECK: fir.is_assumed_size %[[A]] : (!fir.class<!fir.array<*:none>>) -> i1
   // CHECK: fir.is_assumed_size %[[B]] : (!fir.box<!fir.array<?xf32>>) -> i1
+
+func.func private @somefunc(i32, !fir.ref<i64>)
+
+// CHECK-LABEL: @test_call_arg_attrs_direct
+// CHECK-SAME:    %[[VAL_0:.*]]: i32,
+// CHECK-SAME:    %[[VAL_1:.*]]: !fir.ref<i64>) {
+func.func @test_call_arg_attrs_direct(%arg0: i32, %arg1: !fir.ref<i64>) {
+  // CHECK:  fir.call @somefunc(%[[VAL_0]], %[[VAL_1]]) : (i32, !fir.ref<i64> {llvm.byval = i64}) -> ()
+  fir.call @somefunc(%arg0, %arg1) : (i32, !fir.ref<i64> {llvm.byval = i64}) -> ()
+  return
+}
+
+// CHECK-LABEL: @test_call_arg_attrs_indirect
+// CHECK-SAME:    %[[VAL_0:.*]]: i16,
+// CHECK-SAME:    %[[VAL_1:.*]]: (i16) -> i16) -> i16 {
+func.func @test_call_arg_attrs_indirect(%arg0: i16, %arg1: (i16)-> i16) -> i16 {
+  // CHECK:  fir.call %[[VAL_1]](%[[VAL_0]]) : (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+  %0 = fir.call %arg1(%arg0) : (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
+  return %0 : i16
+}
+
+// CHECK-LABEL: @test_copy(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.type<sometype{i:i32}>>,
+// CHECK-SAME:    %[[VAL_1:.*]]: !fir.ptr<!fir.type<sometype{i:i32}>>
+func.func @test_copy(%arg0: !fir.ref<!fir.type<sometype{i:i32}>>, %arg1: !fir.ptr<!fir.type<sometype{i:i32}>>) {
+  // CHECK: fir.copy %[[VAL_0]] to %[[VAL_1]] no_overlap : !fir.ref<!fir.type<sometype{i:i32}>>, !fir.ptr<!fir.type<sometype{i:i32}>>
+  fir.copy %arg0 to %arg1 no_overlap : !fir.ref<!fir.type<sometype{i:i32}>>, !fir.ptr<!fir.type<sometype{i:i32}>>
+  return
+}
+
+// CHECK-LABEL:   func.func @test_pack_unpack_array(
+// CHECK-SAME:                                      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.box<none>>,
+// CHECK-SAME:                                      %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xi32>>) {
+func.func @test_pack_unpack_array(%arg0: !fir.ref<!fir.box<none>>, %arg1: !fir.box<!fir.array<?xi32>>) {
+// CHECK:           %[[VAL_2:.*]] = fir.pack_array %[[VAL_1]] heap whole : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %0 = fir.pack_array %arg1 heap whole : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %1 = fir.convert %0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+  fir.store %1 to %arg0 : !fir.ref<!fir.box<none>>
+// CHECK:           %[[VAL_4:.*]] = fir.pack_array %[[VAL_1]] stack whole : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %2 = fir.pack_array %arg1 stack whole : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %3 = fir.convert %2 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+  fir.store %3 to %arg0 : !fir.ref<!fir.box<none>>
+// CHECK:           %[[VAL_6:.*]] = fir.pack_array %[[VAL_1]] heap whole no_copy : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %4 = fir.pack_array %arg1 heap whole no_copy constraints {} heuristics <none> : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %5 = fir.convert %4 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+  fir.store %5 to %arg0 : !fir.ref<!fir.box<none>>
+// CHECK:           %[[VAL_8:.*]] = fir.pack_array %[[VAL_1]] stack whole constraints  {max_size = 100 : ui64, max_element_size = 1 : ui64, min_stride = 10 : ui64} heuristics <loop_only> : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %6 = fir.pack_array %arg1 stack whole constraints {max_size = 100 : ui64, max_element_size = 1 : ui64, min_stride = 10 : ui64} heuristics <loop_only> : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %7 = fir.convert %6 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+  fir.store %7 to %arg0 : !fir.ref<!fir.box<none>>
+// CHECK:           fir.unpack_array %[[VAL_8]] to %[[VAL_1]] stack no_copy : !fir.box<!fir.array<?xi32>>
+  fir.unpack_array %6 to %arg1 stack no_copy : !fir.box<!fir.array<?xi32>>
+  return
+}
+
+// Test assumed-length character array packing.
+// CHECK-LABEL:   func.func @test_pack_array_character(
+// CHECK-SAME:                                         %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
+func.func @test_pack_array_character(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
+// CHECK:           %[[VAL_1:.*]] = fir.pack_array %[[VAL_0]] heap whole : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+  %0 = fir.pack_array %arg0 heap whole : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+// CHECK:           fir.unpack_array %[[VAL_1]] to %[[VAL_0]] heap no_copy : !fir.box<!fir.array<?x!fir.char<1,?>>>
+  fir.unpack_array %0 to %arg0 heap no_copy : !fir.box<!fir.array<?x!fir.char<1,?>>>
+  return
+}
+
+// CHECK-LABEL:   func.func @test_is_contiguous_box(
+func.func @test_is_contiguous_box(%arg0: !fir.class<!fir.type<sometype{i:i32}>>, %arg1: !fir.box<!fir.array<?x?xf32>>, %arg2: !fir.box<i32>) -> i1 {
+// CHECK:           fir.is_contiguous_box %{{.*}} innermost : (!fir.class<!fir.type<sometype{i:i32}>>) -> i1
+  %0 = fir.is_contiguous_box %arg0 innermost : (!fir.class<!fir.type<sometype{i:i32}>>) -> i1
+// CHECK:           fir.is_contiguous_box %{{.*}} whole : (!fir.class<!fir.type<sometype{i:i32}>>) -> i1
+  %1 = fir.is_contiguous_box %arg0 whole : (!fir.class<!fir.type<sometype{i:i32}>>) -> i1
+// CHECK:           fir.is_contiguous_box %{{.*}} innermost : (!fir.box<!fir.array<?x?xf32>>) -> i1
+  %2 = fir.is_contiguous_box %arg1 innermost : (!fir.box<!fir.array<?x?xf32>>) -> i1
+// CHECK:           fir.is_contiguous_box %{{.*}} whole : (!fir.box<!fir.array<?x?xf32>>) -> i1
+  %3 = fir.is_contiguous_box %arg1 whole : (!fir.box<!fir.array<?x?xf32>>) -> i1
+// CHECK:           fir.is_contiguous_box %{{.*}} innermost : (!fir.box<i32>) -> i1
+  %4 = fir.is_contiguous_box %arg2 innermost : (!fir.box<i32>) -> i1
+// CHECK:           fir.is_contiguous_box %{{.*}} whole : (!fir.box<i32>) -> i1
+  %5 = fir.is_contiguous_box %arg2 whole : (!fir.box<i32>) -> i1
+  %6 = arith.andi %0, %1 : i1
+  %7 = arith.andi %2, %3 : i1
+  %8 = arith.andi %4, %5 : i1
+  %9 = arith.andi %6, %7 : i1
+  %10 = arith.andi %8, %9 : i1
+  return %10 : i1
+}
+
+// CHECK-LABEL:   func.func @test_box_total_elements(
+func.func @test_box_total_elements(%arg0: !fir.class<!fir.type<sometype{i:i32}>>, %arg1: !fir.box<!fir.array<?x?xf32>>, %arg2: !fir.box<i32>) -> index {
+// CHECK:           fir.box_total_elements %{{.*}} : (!fir.class<!fir.type<sometype{i:i32}>>) -> i16
+  %0 = fir.box_total_elements %arg0 : (!fir.class<!fir.type<sometype{i:i32}>>) -> i16
+// CHECK:           fir.box_total_elements %{{.*}} : (!fir.box<!fir.array<?x?xf32>>) -> i32
+  %1 = fir.box_total_elements %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> i32
+// CHECK:           fir.box_total_elements %{{.*}} : (!fir.box<i32>) -> index
+  %2 = fir.box_total_elements %arg2 : (!fir.box<i32>) -> index
+  %3 = fir.convert %0 : (i16) -> index
+  %4 = fir.convert %1 : (i32) -> index
+  %5 = arith.addi %3, %4 : index
+  %6 = arith.addi %2, %5 : index
+  return %6 : index
+}
+
+// CHECK-LABEL:   func.func @test_if_weights(
+// CHECK-SAME:      %[[ARG0:.*]]: i1) {
+func.func @test_if_weights(%cond: i1) {
+// CHECK:           fir.if %[[ARG0]] weights([99, 1]) {
+// CHECK:           }
+  fir.if %cond weights([99, 1]) {
+  }
+// CHECK:           fir.if %[[ARG0]] weights([99, 1]) {
+// CHECK:           } else {
+// CHECK:           }
+  fir.if %cond weights ([99,1]) {
+  } else {
+  }
+  return
+}
+
+// CHECK-LABEL: func @test_declare_value(
+// CHECK-SAME: %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: !fir.dscope) {
+func.func @test_declare_value(%arg0: i32, %scope: !fir.dscope) {
+// CHECK: fir.declare_value %[[VAL_0]] {uniq_name = "test"} : i32
+  fir.declare_value %arg0 {uniq_name = "test"} : i32
+// CHECK: fir.declare_value %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "test"} : i32
+  fir.declare_value %arg0 dummy_scope %scope {uniq_name = "test"} : i32
+// CHECK: fir.declare_value %[[VAL_0]] dummy_scope %[[VAL_1]] arg 1 {uniq_name = "test"} : i32
+  fir.declare_value %arg0 dummy_scope %scope arg 1 {uniq_name = "test"} : i32
+  return
+}
+
+// CHECK-LABEL: func @test_bitcast(
+// CHECK-SAME: %[[I32:.*]]: i32, %[[F32:.*]]: f32, %[[LOG:.*]]: !fir.logical<4>, %[[CH1:.*]]: !fir.char<1>, %[[CH2:.*]]: !fir.char<2>) {
+func.func @test_bitcast(%arg0: i32, %arg1: f32, %arg2: !fir.logical<4>, %arg3: !fir.char<1>, %arg4: !fir.char<2>) {
+// CHECK: %{{.*}} = fir.bitcast %[[I32]] : (i32) -> f32
+  %0 = fir.bitcast %arg0 : (i32) -> f32
+// CHECK: %{{.*}} = fir.bitcast %[[F32]] : (f32) -> i32
+  %1 = fir.bitcast %arg1 : (f32) -> i32
+// CHECK: %{{.*}} = fir.bitcast %[[I32]] : (i32) -> !fir.logical<4>
+  %2 = fir.bitcast %arg0 : (i32) -> !fir.logical<4>
+// CHECK: %{{.*}} = fir.bitcast %[[LOG]] : (!fir.logical<4>) -> i32
+  %3 = fir.bitcast %arg2 : (!fir.logical<4>) -> i32
+// CHECK: %{{.*}} = fir.bitcast %[[LOG]] : (!fir.logical<4>) -> f32
+  %4 = fir.bitcast %arg2 : (!fir.logical<4>) -> f32
+// CHECK: %{{.*}} = fir.bitcast %[[F32]] : (f32) -> !fir.logical<4>
+  %5 = fir.bitcast %arg1 : (f32) -> !fir.logical<4>
+// CHECK: %{{.*}} = fir.bitcast %[[CH1]] : (!fir.char<1>) -> i8
+  %6 = fir.bitcast %arg3 : (!fir.char<1>) -> i8
+// CHECK: %{{.*}} = fir.bitcast %[[CH2]] : (!fir.char<2>) -> i16
+  %7 = fir.bitcast %arg4 : (!fir.char<2>) -> i16
+// CHECK: %{{.*}} = fir.bitcast %[[I32]] : (i32) -> !fir.logical<4>
+  %8 = fir.bitcast %arg0 : (i32) -> !fir.logical<4>
+  return
+}
+
+// CHECK-LABEL: func @test_logical_ops(
+// CHECK-SAME: %[[L1:.*]]: !fir.logical<4>, %[[L2:.*]]: !fir.logical<4>, %[[I1:.*]]: i32, %[[I2:.*]]: i32)
+func.func @test_logical_ops(%l1: !fir.logical<4>, %l2: !fir.logical<4>, %i1: i32, %i2: i32) {
+// CHECK: %{{.*}} = fir.logical_and %[[L1]], %[[L2]] : !fir.logical<4>
+  %0 = fir.logical_and %l1, %l2 : !fir.logical<4>
+// CHECK: %{{.*}} = fir.logical_or %[[L1]], %[[L2]] : !fir.logical<4>
+  %1 = fir.logical_or %l1, %l2 : !fir.logical<4>
+// CHECK: %{{.*}} = fir.eqv %[[L1]], %[[L2]] : !fir.logical<4>
+  %2 = fir.eqv %l1, %l2 : !fir.logical<4>
+// CHECK: %{{.*}} = fir.neqv %[[L1]], %[[L2]] : !fir.logical<4>
+  %3 = fir.neqv %l1, %l2 : !fir.logical<4>
+// CHECK: %{{.*}} = fir.logical_and %[[I1]], %[[I2]] : i32
+  %4 = fir.logical_and %i1, %i2 : i32
+// CHECK: %{{.*}} = fir.logical_or %[[I1]], %[[I2]] : i32
+  %5 = fir.logical_or %i1, %i2 : i32
+// CHECK: %{{.*}} = fir.eqv %[[I1]], %[[I2]] : i32
+  %6 = fir.eqv %i1, %i2 : i32
+// CHECK: %{{.*}} = fir.neqv %[[I1]], %[[I2]] : i32
+  %7 = fir.neqv %i1, %i2 : i32
+  return
+}
+
+// CHECK-LABEL: @test_create_box(
+func.func @test_create_box(%arg0: !fir.heap<!fir.array<?xcomplex<f32>>>, %lb: index, %ext: index, %sm: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}) extents(%{{.*}}) strides(%{{.*}}) : (!fir.heap<!fir.array<?xcomplex<f32>>>, index, index, index) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.heap<!fir.array<?xcomplex<f32>>>, index, index, index) -> !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>
+  return
+}
+
+// CHECK-LABEL: @test_create_box_pointer(
+func.func @test_create_box_pointer(%arg0: !fir.ptr<!fir.array<?xf32>>, %lb: index, %ext: index, %sm: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}) extents(%{{.*}}) strides(%{{.*}}) : (!fir.ptr<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ptr<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  return
+}
+
+// CHECK-LABEL: @test_create_box_2d(
+func.func @test_create_box_2d(%arg0: !fir.ref<!fir.array<?x?xf32>>, %lb0: index, %ext0: index, %sm0: index, %lb1: index, %ext1: index, %sm1: index) {
+  // CHECK: fir.create_box %{{.*}} lbs(%{{.*}}, %{{.*}}) extents(%{{.*}}, %{{.*}}) strides(%{{.*}}, %{{.*}}) : (!fir.ref<!fir.array<?x?xf32>>, index, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
+  %0 = fir.create_box %arg0 lbs(%lb0, %lb1) extents(%ext0, %ext1) strides(%sm0, %sm1) : (!fir.ref<!fir.array<?x?xf32>>, index, index, index, index, index, index) -> !fir.box<!fir.array<?x?xf32>>
+  return
+}
+
+// CHECK-LABEL: fir.module_debug_imports "debug_mod"
+// CHECK-NEXT: fir.use_stmt "used_mod"
+// CHECK-NEXT: }
+fir.module_debug_imports "debug_mod" {
+  fir.use_stmt "used_mod"
+}
+
+// A submodule records the module at the root of its ancestry and its parent.
+// CHECK-LABEL: fir.module_debug_imports "debug_sub" in "debug_mod" parent "debug_mod"
+// CHECK-NEXT: }
+fir.module_debug_imports "debug_sub" in "debug_mod" parent "debug_mod" {
+}
+
+// CHECK-LABEL: fir.module_debug_imports "debug_deep" in "debug_mod" parent "debug_sub"
+// CHECK-NEXT: }
+fir.module_debug_imports "debug_deep" in "debug_mod" parent "debug_sub" {
+}

@@ -7,15 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
-#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
+
+#include "llvm/ExecutionEngine/Orc/COFF.h"
+#include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
-
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Object/COFF.h"
-
-#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 
@@ -42,6 +44,29 @@ using SPSCOFFDeregisterObjectSectionsArgs =
 } // namespace shared
 } // namespace orc
 } // namespace llvm
+// Controller-interface descriptors for the COFF platform runtime's
+// bootstrap-time SPS wrapper calls. Kept in the .cpp (the COFF platform's
+// private contract with its runtime; the SPS arg types live here too), and in
+// a named namespace so the constexpr Name members -- read only as constants by
+// ProxySpec -- don't trip -Wunused-const-variable.
+namespace llvm::orc::coff_sps_ci {
+struct PlatformBootstrap {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_coff_platform_bootstrap");
+  using SPSSig = void();
+};
+struct RegisterJITDylib {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_coff_register_jitdylib");
+  using SPSSig = void(SPSString, SPSExecutorAddr);
+};
+struct RegisterObjectSections {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_coff_register_object_sections");
+  using SPSSig = void(SPSExecutorAddr, SPSCOFFObjectSectionsMap, bool);
+};
+} // namespace llvm::orc::coff_sps_ci
+
 namespace {
 
 class COFFHeaderMaterializationUnit : public MaterializationUnit {
@@ -54,22 +79,10 @@ public:
   StringRef getName() const override { return "COFFHeaderMU"; }
 
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
-    unsigned PointerSize;
-    llvm::endianness Endianness;
-    const auto &TT = CP.getExecutionSession().getTargetTriple();
-
-    switch (TT.getArch()) {
-    case Triple::x86_64:
-      PointerSize = 8;
-      Endianness = llvm::endianness::little;
-      break;
-    default:
-      llvm_unreachable("Unrecognized architecture");
-    }
-
     auto G = std::make_unique<jitlink::LinkGraph>(
-        "<COFFHeaderMU>", CP.getExecutionSession().getSymbolStringPool(), TT,
-        PointerSize, Endianness, jitlink::getGenericEdgeKindName);
+        "<COFFHeaderMU>", CP.getExecutionSession().getSymbolStringPool(),
+        CP.getExecutionSession().getTargetTriple(), SubtargetFeatures(),
+        jitlink::getGenericEdgeKindName);
     auto &HeaderSection = G->createSection("__header", MemProt::Read);
     auto &HeaderBlock = createHeaderBlock(*G, HeaderSection);
 
@@ -175,15 +188,15 @@ COFFPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                                        ES.getTargetTriple().str(),
                                    inconvertibleErrorCode());
 
-  auto &EPC = ES.getExecutorProcessControl();
-
   auto GeneratorArchive =
       object::Archive::create(OrcRuntimeArchiveBuffer->getMemBufferRef());
   if (!GeneratorArchive)
     return GeneratorArchive.takeError();
 
+  std::set<std::string> DylibsToPreload;
   auto OrcRuntimeArchiveGenerator = StaticLibraryDefinitionGenerator::Create(
-      ObjLinkingLayer, nullptr, std::move(*GeneratorArchive));
+      ObjLinkingLayer, nullptr, std::move(*GeneratorArchive),
+      COFFImportFileScanner(DylibsToPreload));
   if (!OrcRuntimeArchiveGenerator)
     return OrcRuntimeArchiveGenerator.takeError();
 
@@ -201,26 +214,26 @@ COFFPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
   if (auto Err = PlatformJD.define(symbolAliases(std::move(*RuntimeAliases))))
     return std::move(Err);
 
-  auto &HostFuncJD = ES.createBareJITDylib("$<PlatformRuntimeHostFuncJD>");
-
-  // Add JIT-dispatch function support symbols.
-  if (auto Err = HostFuncJD.define(
-          absoluteSymbols({{ES.intern("__orc_rt_jit_dispatch"),
-                            {EPC.getJITDispatchInfo().JITDispatchFunction,
-                             JITSymbolFlags::Exported}},
-                           {ES.intern("__orc_rt_jit_dispatch_ctx"),
-                            {EPC.getJITDispatchInfo().JITDispatchContext,
-                             JITSymbolFlags::Exported}}})))
-    return std::move(Err);
-
-  PlatformJD.addToLinkOrder(HostFuncJD);
+  {
+    // Add JIT dispatch reexports from bootstrap JITDylib.
+    MangleAndInterner Mangle(ES);
+    auto Exports = buildSimpleReexportsAliasMap(
+        ES.getBootstrapJITDylib(),
+        {{Mangle(rt::DispatchName), Mangle(rt::DispatchCtxName)}});
+    if (!Exports)
+      return Exports.takeError();
+    if (auto Err =
+            PlatformJD.define(reexports(ES.getBootstrapJITDylib(), *Exports)))
+      return Err;
+  }
 
   // Create the instance.
   Error Err = Error::success();
   auto P = std::unique_ptr<COFFPlatform>(new COFFPlatform(
       ObjLinkingLayer, PlatformJD, std::move(*OrcRuntimeArchiveGenerator),
-      std::move(OrcRuntimeArchiveBuffer), std::move(RuntimeArchive),
-      std::move(LoadDynLibrary), StaticVCRuntime, VCRuntimePath, Err));
+      std::move(DylibsToPreload), std::move(OrcRuntimeArchiveBuffer),
+      std::move(RuntimeArchive), std::move(LoadDynLibrary), StaticVCRuntime,
+      VCRuntimePath, Err));
   if (Err)
     return std::move(Err);
   return std::move(P);
@@ -368,6 +381,7 @@ COFFPlatform::standardRuntimeUtilityAliases() {
           {"__orc_rt_run_program", "__orc_rt_coff_run_program"},
           {"__orc_rt_jit_dlerror", "__orc_rt_coff_jit_dlerror"},
           {"__orc_rt_jit_dlopen", "__orc_rt_coff_jit_dlopen"},
+          {"__orc_rt_jit_dlupdate", "__orc_rt_coff_jit_dlupdate"},
           {"__orc_rt_jit_dlclose", "__orc_rt_coff_jit_dlclose"},
           {"__orc_rt_jit_dlsym", "__orc_rt_coff_jit_dlsym"},
           {"__orc_rt_log_error", "__orc_rt_log_error_to_stderr"}};
@@ -388,6 +402,7 @@ bool COFFPlatform::supportedTarget(const Triple &TT) {
 COFFPlatform::COFFPlatform(
     ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
     std::unique_ptr<StaticLibraryDefinitionGenerator> OrcRuntimeGenerator,
+    std::set<std::string> DylibsToPreload,
     std::unique_ptr<MemoryBuffer> OrcRuntimeArchiveBuffer,
     std::unique_ptr<object::Archive> OrcRuntimeArchive,
     LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime,
@@ -412,9 +427,6 @@ COFFPlatform::COFFPlatform(
     return;
   }
   VCRuntimeBootstrap = std::move(*VCRT);
-
-  for (auto &Lib : OrcRuntimeGenerator->getImportedDynamicLibraries())
-    DylibsToPreload.insert(Lib);
 
   auto ImportedLibs =
       StaticVCRuntime ? VCRuntimeBootstrap->loadStaticVCRuntime(PlatformJD)
@@ -496,10 +508,8 @@ COFFPlatform::buildJDDepMap(JITDylib &JD) {
           }
           DM.push_back(KV.first);
           // Push unvisited entry.
-          if (!JDDepMap.count(KV.first)) {
+          if (JDDepMap.try_emplace(KV.first).second)
             Worklist.push_back(KV.first);
-            JDDepMap[KV.first] = {};
-          }
         }
       });
     }
@@ -676,11 +686,15 @@ Error COFFPlatform::runBootstrapInitializers(JDBootstrapState &BState) {
 Error COFFPlatform::runBootstrapSubsectionInitializers(JDBootstrapState &BState,
                                                        StringRef Start,
                                                        StringRef End) {
+  CallInt32VoidProxy CallInitializer;
+  if (auto Err = lookupAndApply(
+          ES.getBootstrapJITDylib(),
+          {recordProxy<sps::CallInt32VoidProxySpec>(&CallInitializer)}))
+    return Err;
   for (auto &Initializer : BState.Initializers)
     if (Initializer.first >= Start && Initializer.first <= End &&
         Initializer.second) {
-      auto Res =
-          ES.getExecutorProcessControl().runAsVoidFunction(Initializer.second);
+      auto Res = CallInitializer(ES, Initializer.second);
       if (!Res)
         return Res.takeError();
     }
@@ -690,42 +704,61 @@ Error COFFPlatform::runBootstrapSubsectionInitializers(JDBootstrapState &BState,
 Error COFFPlatform::bootstrapCOFFRuntime(JITDylib &PlatformJD) {
   // Lookup of runtime symbols causes the collection of initializers if
   // it's static linking setting.
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
-          {
-              {ES.intern("__orc_rt_coff_platform_bootstrap"),
-               &orc_rt_coff_platform_bootstrap},
-              {ES.intern("__orc_rt_coff_platform_shutdown"),
-               &orc_rt_coff_platform_shutdown},
-              {ES.intern("__orc_rt_coff_register_jitdylib"),
-               &orc_rt_coff_register_jitdylib},
-              {ES.intern("__orc_rt_coff_deregister_jitdylib"),
-               &orc_rt_coff_deregister_jitdylib},
-              {ES.intern("__orc_rt_coff_register_object_sections"),
-               &orc_rt_coff_register_object_sections},
-              {ES.intern("__orc_rt_coff_deregister_object_sections"),
-               &orc_rt_coff_deregister_object_sections},
-          }))
+  if (auto Err = lookupAndApply(
+          PlatformJD,
+          {recordAddr(SymbolNameSpec::c("__orc_rt_coff_platform_bootstrap"),
+                      &orc_rt_coff_platform_bootstrap),
+           recordAddr(SymbolNameSpec::c("__orc_rt_coff_platform_shutdown"),
+                      &orc_rt_coff_platform_shutdown),
+           recordAddr(SymbolNameSpec::c("__orc_rt_coff_register_jitdylib"),
+                      &orc_rt_coff_register_jitdylib),
+           recordAddr(SymbolNameSpec::c("__orc_rt_coff_deregister_jitdylib"),
+                      &orc_rt_coff_deregister_jitdylib),
+           recordAddr(
+               SymbolNameSpec::c("__orc_rt_coff_register_object_sections"),
+               &orc_rt_coff_register_object_sections),
+           recordAddr(
+               SymbolNameSpec::c("__orc_rt_coff_deregister_object_sections"),
+               &orc_rt_coff_deregister_object_sections)}))
     return Err;
 
+  // These runtime entry points are held as addresses because their primary use
+  // is as alloc-action tags (see the register/deregister sites below). The
+  // direct dispatches here are a bootstrap-time artifact, so rather than
+  // holding proxies as members we build them over the resolved addresses.
+  // TODO: drop these dispatches once bootstrap no longer needs them.
+  using PlatformBootstrapProxy = Proxy<void()>;
+  using RegisterJITDylibProxy = Proxy<void(std::string, ExecutorAddr)>;
+  using RegisterObjectSectionsProxy =
+      Proxy<void(ExecutorAddr, COFFObjectSectionsMap, bool)>;
+  using sps::ProxySpec;
+
+  PlatformBootstrapProxy PlatformBootstrap(
+      ProxySpec<PlatformBootstrapProxy,
+                coff_sps_ci::PlatformBootstrap>::dispatch,
+      orc_rt_coff_platform_bootstrap);
+  RegisterJITDylibProxy RegisterJITDylib(
+      ProxySpec<RegisterJITDylibProxy, coff_sps_ci::RegisterJITDylib>::dispatch,
+      orc_rt_coff_register_jitdylib);
+  RegisterObjectSectionsProxy RegisterObjectSections(
+      ProxySpec<RegisterObjectSectionsProxy,
+                coff_sps_ci::RegisterObjectSections>::dispatch,
+      orc_rt_coff_register_object_sections);
+
   // Call bootstrap functions
-  if (auto Err = ES.callSPSWrapper<void()>(orc_rt_coff_platform_bootstrap))
+  if (auto Err = PlatformBootstrap(ES))
     return Err;
 
   // Do the pending jitdylib registration actions that we couldn't do
   // because orc runtime was not linked fully.
   for (auto KV : JDBootstrapStates) {
     auto &JDBState = KV.second;
-    if (auto Err = ES.callSPSWrapper<void(SPSString, SPSExecutorAddr)>(
-            orc_rt_coff_register_jitdylib, JDBState.JDName,
-            JDBState.HeaderAddr))
+    if (auto Err = RegisterJITDylib(ES, JDBState.JDName, JDBState.HeaderAddr))
       return Err;
 
     for (auto &ObjSectionMap : JDBState.ObjectSectionsMaps)
-      if (auto Err = ES.callSPSWrapper<void(SPSExecutorAddr,
-                                            SPSCOFFObjectSectionsMap, bool)>(
-              orc_rt_coff_register_object_sections, JDBState.HeaderAddr,
-              ObjSectionMap, false))
+      if (auto Err = RegisterObjectSections(ES, JDBState.HeaderAddr,
+                                            ObjSectionMap, false))
         return Err;
   }
 
@@ -741,20 +774,21 @@ Error COFFPlatform::bootstrapCOFFRuntime(JITDylib &PlatformJD) {
 
 Error COFFPlatform::runSymbolIfExists(JITDylib &PlatformJD,
                                       StringRef SymbolName) {
-  ExecutorAddr jit_function;
-  auto AfterCLookupErr = lookupAndRecordAddrs(
-      ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
-      {{ES.intern(SymbolName), &jit_function}});
-  if (!AfterCLookupErr) {
-    auto Res = ES.getExecutorProcessControl().runAsVoidFunction(jit_function);
-    if (!Res)
-      return Res.takeError();
-    return Error::success();
-  }
-  if (!AfterCLookupErr.isA<SymbolsNotFound>())
-    return AfterCLookupErr;
-  consumeError(std::move(AfterCLookupErr));
-  return Error::success();
+  ExecutorAddr TargetFn;
+  if (auto Err = lookupAndApply(
+          PlatformJD, {recordAddr(SymbolNameSpec::c(SymbolName), &TargetFn,
+                                  SymbolLookupFlags::WeaklyReferencedSymbol)}))
+    return Err;
+  if (!TargetFn)
+    return Error::success(); // No target function.
+
+  CallInt32VoidProxy CallFn;
+  if (auto Err =
+          lookupAndApply(ES.getBootstrapJITDylib(),
+                         {recordProxy<sps::CallInt32VoidProxySpec>(&CallFn)}))
+    return Err;
+
+  return CallFn(ES, TargetFn).takeError();
 }
 
 void COFFPlatform::COFFPlatformPlugin::modifyPassConfig(

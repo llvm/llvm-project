@@ -13,16 +13,12 @@
 
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/PassManager.h"
 
-namespace llvm {
-
-template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Module *>;
-template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Function *>;
-template struct LLVM_EXPORT_TEMPLATE Any::TypeId<const Loop *>;
+using namespace llvm;
 
 void PassInstrumentationCallbacks::addClassToPassName(StringRef ClassName,
                                                       StringRef PassName) {
+  assert(!PassName.empty() && "PassName can't be empty!");
   ClassToPassName.try_emplace(ClassName, PassName.str());
 }
 
@@ -33,12 +29,16 @@ PassInstrumentationCallbacks::getPassNameForClassName(StringRef ClassName) {
       Fn();
     ClassToPassNameCallbacks.clear();
   }
-  return ClassToPassName[ClassName];
+  auto PassNameIter = ClassToPassName.find(ClassName);
+  if (PassNameIter != ClassToPassName.end())
+    return PassNameIter->second;
+  return {};
 }
 
 AnalysisKey PassInstrumentationAnalysis::Key;
 
-bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials) {
+bool llvm::isSpecialPass(StringRef PassID,
+                         const std::vector<StringRef> &Specials) {
   size_t Pos = PassID.find('<');
   StringRef Prefix = PassID;
   if (Pos != StringRef::npos)
@@ -46,5 +46,3 @@ bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials) {
   return any_of(Specials,
                 [Prefix](StringRef S) { return Prefix.ends_with(S); });
 }
-
-} // namespace llvm

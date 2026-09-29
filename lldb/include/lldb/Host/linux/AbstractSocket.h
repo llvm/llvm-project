@@ -9,12 +9,13 @@
 #ifndef liblldb_AbstractSocket_h_
 #define liblldb_AbstractSocket_h_
 
-#include "lldb/Host/posix/DomainSocket.h"
+#include "lldb/Host/common/DomainSocket.h"
 
 namespace lldb_private {
 class AbstractSocket : public DomainSocket {
 public:
   AbstractSocket();
+  AbstractSocket(NativeSocket socket, bool should_close);
 
 protected:
   size_t GetNameOffset() const override;

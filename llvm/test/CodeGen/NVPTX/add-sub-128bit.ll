@@ -9,7 +9,7 @@ define i128 @test_add(i128 %a, i128 %b) {
 ; NOCARRY:        add.s64
 ; NOCARRY-NEXT:   add.s64
 ; NOCARRY-NEXT:   setp.lt.u64
-; NOCARRY-NEXT:   selp.u64
+; NOCARRY-NEXT:   selp.b64
 ; NOCARRY-NEXT:   add.s64
 
 ; CARRY:          add.cc.s64
@@ -23,7 +23,7 @@ define i128 @test_add(i128 %a, i128 %b) {
 define i128 @test_sub(i128 %a, i128 %b) {
 ; NOCARRY:        sub.s64
 ; NOCARRY-NEXT:   setp.lt.u64
-; NOCARRY-NEXT:   selp.s64
+; NOCARRY-NEXT:   selp.b64
 ; NOCARRY-NEXT:   add.s64
 ; NOCARRY-NEXT:   sub.s64
 

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
+
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 using namespace mlir;
@@ -62,6 +63,23 @@ mlir::LLVM::detail::verifyAliasAnalysisOpInterface(Operation *op) {
   return isArrayOf<TBAATagAttr>(op, tags);
 }
 
+//===----------------------------------------------------------------------===//
+// DereferenceableOpInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+mlir::LLVM::detail::verifyDereferenceableOpInterface(Operation *op) {
+  auto iface = cast<DereferenceableOpInterface>(op);
+
+  if (auto derefAttr = iface.getDereferenceableOrNull())
+    if (op->getNumResults() != 1 ||
+        !mlir::isa<LLVMPointerType>(op->getResult(0).getType()))
+      return op->emitOpError(
+          "expected op to return a single LLVM pointer type");
+
+  return success();
+}
+
 SmallVector<Value> mlir::LLVM::AtomicCmpXchgOp::getAccessedOperands() {
   return {getPtr()};
 }
@@ -98,10 +116,32 @@ SmallVector<Value> mlir::LLVM::MemsetInlineOp::getAccessedOperands() {
   return {getDst()};
 }
 
+SmallVector<Value> mlir::LLVM::MaskedLoadOp::getAccessedOperands() {
+  return {getData()};
+}
+
+SmallVector<Value> mlir::LLVM::MaskedStoreOp::getAccessedOperands() {
+  return {getData()};
+}
+
+SmallVector<Value> mlir::LLVM::masked_gather::getAccessedOperands() {
+  return {getPtrs()};
+}
+
+SmallVector<Value> mlir::LLVM::masked_scatter::getAccessedOperands() {
+  return {getPtrs()};
+}
+
 SmallVector<Value> mlir::LLVM::CallOp::getAccessedOperands() {
-  return llvm::filter_to_vector(getArgOperands(), [](Value arg) {
-    return isa<LLVMPointerType>(arg.getType());
-  });
+  // Note: This must not use `getArgOperands`, which excludes the variadic
+  // arguments of a call to a variadic callee. Those are passed to the callee
+  // and may well be accessed by it.
+  Operation::operand_range operands = getCalleeOperands();
+  // In an indirect call, the first callee operand is the callee itself.
+  if (!getCallee().has_value() && !operands.empty())
+    operands = operands.drop_front();
+  return llvm::filter_to_vector(
+      operands, [](Value arg) { return isa<LLVMPointerType>(arg.getType()); });
 }
 
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.cpp.inc"

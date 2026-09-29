@@ -22,12 +22,15 @@ endif()
 add_clang_library(clangInterpreter
   DeviceOffload.cpp
   CodeCompletion.cpp
+  IncrementalAction.cpp
   IncrementalExecutor.cpp
+  OrcIncrementalExecutor.cpp
   IncrementalParser.cpp
   Interpreter.cpp
   InterpreterValuePrinter.cpp
   InterpreterUtils.cpp
   Value.cpp
+  InterpreterValuePrinter.cpp
   ${WASM_SRC}
   PARTIAL_SOURCES_INTENDED
 
@@ -44,6 +47,7 @@ add_clang_library(clangInterpreter
   clangFrontend
   clangFrontendTool
   clangLex
+  clangOptions
   clangParse
   clangSema
   clangSerialization

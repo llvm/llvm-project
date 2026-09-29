@@ -28,7 +28,7 @@ entry:
 
 ; BOTH: vector.memcheck:
 ; BOTH: vector.body:
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %ind = phi i64 [ 0, %entry ], [ %inc, %for.body ]
 
   %arrayidxA = getelementptr inbounds i32, ptr %a, i64 %ind
@@ -64,7 +64,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; BOTH-NOT: !alias.scope
 ; BOTH-NOT: !noalias
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 

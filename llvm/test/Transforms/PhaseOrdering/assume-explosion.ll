@@ -130,8 +130,8 @@ for.end34:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 attributes #0 = { nounwind ssp uwtable "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "tune-cpu"="generic" }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }

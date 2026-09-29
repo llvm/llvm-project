@@ -18,7 +18,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct remove_cv {
+struct _LIBCPP_NO_SPECIALIZATIONS remove_cv {
   using type _LIBCPP_NODEBUG = __remove_cv(_Tp);
 };
 

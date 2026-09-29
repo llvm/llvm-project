@@ -15,13 +15,12 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/Pass/Pass.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
@@ -132,15 +131,15 @@ bool constantUnaryOpShouldBeFolded(TosaOp unaryOp, DenseElementsAttr values) {
 }
 
 template <typename RangeType>
-DenseElementsAttr transposeType(const RangeType &data, ShapedType inputType,
-                                ShapedType outputType,
-                                llvm::ArrayRef<int64_t> permValues) {
+auto transposeValues(const RangeType &data, ShapedType inputType,
+                     ShapedType outputType,
+                     llvm::ArrayRef<int64_t> permValues) {
   using ElementType = std::decay_t<decltype(*std::begin(data))>;
 
   assert(inputType.getElementType() == outputType.getElementType());
 
   if (inputType.getNumElements() == 0)
-    return DenseElementsAttr::get(outputType, llvm::ArrayRef<ElementType>{});
+    return SmallVector<ElementType>{};
 
   auto inputShape = inputType.getShape();
 
@@ -172,8 +171,31 @@ DenseElementsAttr transposeType(const RangeType &data, ShapedType inputType,
     outputValues[dstLinearIndex] = it.value();
   }
 
+  return outputValues;
+}
+
+template <typename RangeType>
+DenseElementsAttr transposeType(const RangeType &data, ShapedType inputType,
+                                ShapedType outputType,
+                                llvm::ArrayRef<int64_t> permValues) {
+  using ElementType = std::decay_t<decltype(*std::begin(data))>;
+  SmallVector<ElementType> outputValues =
+      transposeValues(data, inputType, outputType, permValues);
   return DenseElementsAttr::get(outputType,
                                 llvm::ArrayRef<ElementType>(outputValues));
+}
+
+template <typename RangeType>
+DenseElementsAttr transposeRawType(const RangeType &data, ShapedType inputType,
+                                   ShapedType outputType,
+                                   llvm::ArrayRef<int64_t> permValues) {
+  using StorageType = std::decay_t<decltype(*std::begin(data))>;
+  SmallVector<StorageType> outputValues =
+      transposeValues(data, inputType, outputType, permValues);
+  llvm::ArrayRef<char> rawData(
+      reinterpret_cast<const char *>(outputValues.data()),
+      outputValues.size() * sizeof(StorageType));
+  return DenseElementsAttr::getFromRawBuffer(outputType, rawData);
 }
 
 // A type specialized transposition of an ElementsAttr.
@@ -183,6 +205,7 @@ DenseElementsAttr transposeType(const RangeType &data, ShapedType inputType,
 DenseElementsAttr transpose(ElementsAttr attr, ShapedType inputType,
                             ShapedType outputType,
                             llvm::ArrayRef<int64_t> permValues) {
+  // Handle generic ElementsAttr
   if (auto data = attr.tryGetValues<bool>())
     return transposeType(*data, inputType, outputType, permValues);
 
@@ -204,6 +227,48 @@ DenseElementsAttr transpose(ElementsAttr attr, ShapedType inputType,
   if (auto data = attr.tryGetValues<APFloat>())
     return transposeType(*data, inputType, outputType, permValues);
 
+  // Handle DenseResourceElementsAttr
+  if (isa<DenseResourceElementsAttr>(attr)) {
+    auto elementTy = attr.getElementType();
+
+    if (auto data = tryGetDenseResourceValues<bool>(attr);
+        data && elementTy.isInteger(1))
+      return transposeType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<int8_t>(attr);
+        data && elementTy.isInteger(8))
+      return transposeType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<int16_t>(attr);
+        data && elementTy.isInteger(16))
+      return transposeType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<int32_t>(attr);
+        data && elementTy.isInteger(32))
+      return transposeType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<int64_t>(attr);
+        data && elementTy.isInteger(64))
+      return transposeType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<float>(attr);
+        data && elementTy.isF32())
+      return transposeType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<uint8_t>(attr);
+        data && isa<Float4E2M1FNType, Float8E4M3FNType, Float8E5M2Type,
+                    Float8E8M0FNUType>(elementTy))
+      return transposeRawType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<uint16_t>(attr);
+        data && isa<Float16Type, BFloat16Type>(elementTy))
+      return transposeRawType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<double>(attr);
+        data && elementTy.isF64())
+      return transposeType(*data, inputType, outputType, permValues);
+  }
+
   return nullptr;
 }
 
@@ -213,6 +278,8 @@ struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
     auto outputType = cast<ShapedType>(op.getType());
+    if (!outputType.hasRank() || !outputType.hasStaticShape())
+      return failure();
     // TOSA supports quantized types.
     if (!outputType.getElementType().isIntOrIndexOrFloat())
       return failure();
@@ -224,13 +291,8 @@ struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
     if (!llvm::hasSingleElement(op.getInput1().getDefiningOp()->getUsers()))
       return failure();
 
-    DenseIntElementsAttr permAttr;
-    if (!matchPattern(op.getPerms(), m_Constant(&permAttr)))
-      return failure();
     auto permValues = llvm::map_to_vector(
-        // TOSA allows both 32- and 64-bit integer tensors here.
-        permAttr.getValues<APInt>(),
-        [](const APInt &val) { return val.getSExtValue(); });
+        op.getPerms(), [](const int32_t v) { return static_cast<int64_t>(v); });
 
     auto inputType = cast<ShapedType>(op.getInput1().getType());
 
@@ -270,6 +332,10 @@ struct TosaFoldConstantReciprocal : public OpRewritePattern<ReciprocalOp> {
           recip, "Currently, reciprocals will only be folded if the input "
                  "tensor has a single user");
     }
+
+    if (inputTensor.getType() != recip.getType())
+      return rewriter.notifyMatchFailure(
+          recip, "input tensor and reciprocal output have different type");
 
     // Create a new tensor with the updated values
     auto newTensor = applyElementWise<APFloat, APFloat, FloatType>(
@@ -330,8 +396,7 @@ llvm::APInt calculateReducedValue(const mlir::ElementsAttr &oldTensorAttr,
   for (int64_t reductionAxisVal = 1; reductionAxisVal < oldShape[reductionAxis];
        ++reductionAxisVal) {
 
-    int64_t stride = std::accumulate(oldShape.begin() + reductionAxis + 1,
-                                     oldShape.end(), 1, std::multiplies<int>());
+    int64_t stride = llvm::product_of(oldShape.drop_front(reductionAxis + 1));
     int64_t index = indexAtOldTensor + stride * reductionAxisVal;
     reducedValue =
         OperationType::calcOneElement(reducedValue, oldTensor[index]);
@@ -368,7 +433,7 @@ struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
       return rewriter.notifyMatchFailure(op, "result type shape is not static");
 
     auto reductionAxis = op.getAxis();
-    const auto denseElementsAttr = constOp.getValue();
+    const auto denseElementsAttr = constOp.getValues();
     const auto shapedOldElementsValues =
         cast<ShapedType>(denseElementsAttr.getType());
 
@@ -379,8 +444,7 @@ struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
     auto oldShape = shapedOldElementsValues.getShape();
     auto newShape = resultType.getShape();
 
-    auto newNumOfElements = std::accumulate(newShape.begin(), newShape.end(), 1,
-                                            std::multiplies<int>());
+    int64_t newNumOfElements = llvm::product_of(newShape);
     llvm::SmallVector<APInt> newReducedTensor(newNumOfElements);
 
     for (int64_t reductionIndex = 0; reductionIndex < newNumOfElements;
@@ -413,7 +477,7 @@ void mlir::tosa::populateTosaConstantReduction(MLIRContext *ctx,
       ctx, aggressiveReduceConstant);
   patterns.add<ReduceConstantOptimization<ReduceMinOp>>(
       ctx, aggressiveReduceConstant);
-  patterns.add<ReduceConstantOptimization<ReduceProdOp>>(
+  patterns.add<ReduceConstantOptimization<ReduceProductOp>>(
       ctx, aggressiveReduceConstant);
   patterns.add<ReduceConstantOptimization<ReduceSumOp>>(
       ctx, aggressiveReduceConstant);

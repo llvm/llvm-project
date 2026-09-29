@@ -7,7 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-tidy/ClangTidyCheck.h"
-#include "clang-tidy/ClangTidyModuleRegistry.h"
+// TODO(LLVM 25): Remove this compatibility check when LLVM 25 branches.
+#if CLANG_VERSION_MAJOR > 23
+#  include "clang-tidy/ClangTidyModule.h"
+#else
+#  include "clang-tidy/ClangTidyModuleRegistry.h"
+#endif
 
 #include "llvm/ADT/ArrayRef.h"
 
@@ -101,8 +106,10 @@ void header_exportable_declarations::registerMatchers(clang::ast_matchers::Match
             // Looks at the common locations where headers store their data
             // * header
             // * __header/*.h
+            // * __header_dir/*.h // Used for transitioning from __header
             // * __fwd/header.h
             anyOf(isExpansionInFileMatching(("v1/__" + filename_ + "/").str()),
+                  isExpansionInFileMatching(("v1/__" + filename_ + "_dir/").str()),
                   isExpansionInFileMatching(extra_header_),
                   isExpansionInFileMatching(("v1/__fwd/" + filename_ + "\\.h$").str()),
                   isExpansionInFileMatching(("v1/" + filename_ + "$").str())),

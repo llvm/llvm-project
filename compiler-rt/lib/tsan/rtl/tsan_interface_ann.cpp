@@ -9,17 +9,19 @@
 // This file is a part of ThreadSanitizer (TSan), a race detector.
 //
 //===----------------------------------------------------------------------===//
-#include "sanitizer_common/sanitizer_libc.h"
+#include "tsan_interface_ann.h"
+
 #include "sanitizer_common/sanitizer_internal_defs.h"
+#include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_vector.h"
-#include "tsan_interface_ann.h"
+#include "tsan_adaptive_delay.h"
+#include "tsan_flags.h"
+#include "tsan_mman.h"
+#include "tsan_platform.h"
 #include "tsan_report.h"
 #include "tsan_rtl.h"
-#include "tsan_mman.h"
-#include "tsan_flags.h"
-#include "tsan_platform.h"
 
 #define CALLERPC ((uptr)__builtin_return_address(0))
 
@@ -370,6 +372,7 @@ void __tsan_mutex_pre_lock(void *m, unsigned flagz) {
   }
   ThreadIgnoreBegin(thr, 0);
   ThreadIgnoreSyncBegin(thr, 0);
+  AdaptiveDelay::SyncOp();
 }
 
 INTERFACE_ATTRIBUTE
@@ -402,6 +405,7 @@ int __tsan_mutex_pre_unlock(void *m, unsigned flagz) {
 
 INTERFACE_ATTRIBUTE
 void __tsan_mutex_post_unlock(void *m, unsigned flagz) {
+  AdaptiveDelay::SyncOp();
   SCOPED_ANNOTATION(__tsan_mutex_post_unlock);
   ThreadIgnoreSyncEnd(thr);
   ThreadIgnoreEnd(thr);
@@ -437,16 +441,30 @@ void __tsan_mutex_post_divert(void *addr, unsigned flagz) {
 }
 
 static void ReportMutexHeldWrongContext(ThreadState *thr, uptr pc) {
-  ThreadRegistryLock l(&ctx->thread_registry);
-  ScopedReport rep(ReportTypeMutexHeldWrongContext);
-  for (uptr i = 0; i < thr->mset.Size(); ++i) {
-    MutexSet::Desc desc = thr->mset.Get(i);
-    rep.AddMutex(desc.addr, desc.stack_id);
+  // Use alloca, because malloc during signal handling deadlocks
+  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
+  // Take a new scope as Apple platforms require the below locks released
+  // before symbolizing in order to avoid a deadlock
+  {
+    ThreadRegistryLock l(&ctx->thread_registry);
+    new (rep) ScopedReport(ReportTypeMutexHeldWrongContext);
+    for (uptr i = 0; i < thr->mset.Size(); ++i) {
+      MutexSet::Desc desc = thr->mset.Get(i);
+      rep->AddMutex(desc.addr, desc.stack_id);
+    }
+    VarSizeStackTrace trace;
+    ObtainCurrentStack(thr, pc, &trace);
+    rep->AddStack(trace, true);
+#if SANITIZER_APPLE
+  }  // Close this scope to release the locks
+#endif
+    OutputReport(thr, *rep);
+
+    // Need to manually destroy this because we used placement new to allocate
+    rep->~ScopedReport();
+#if !SANITIZER_APPLE
   }
-  VarSizeStackTrace trace;
-  ObtainCurrentStack(thr, pc, &trace);
-  rep.AddStack(trace, true);
-  OutputReport(thr, rep);
+#endif
 }
 
 INTERFACE_ATTRIBUTE

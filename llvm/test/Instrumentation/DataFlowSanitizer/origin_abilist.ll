@@ -25,7 +25,7 @@ define i32 @functional(i32 %a, i32 %b) {
 
 define i32 @call_functional(i32 %a, i32 %b) {
   ; CHECK-LABEL: @call_functional.dfsan
-  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls
   ; CHECK: [[RO:%.*]] = select i1 {{.*}}, i32 [[BO]], i32 [[AO]]
   ; CHECK: store i32 [[RO]], ptr @__dfsan_retval_origin_tls, align 4
@@ -112,9 +112,9 @@ define ptr @ret_custom() {
 
 define void @call_custom_without_ret(i32 %a, i32 %b) {
   ; CHECK: @call_custom_without_ret.dfsan
-  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-  ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; CHECK: [[BS:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
   ; CHECK: [[AS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; CHECK: call void @__dfso_custom_without_ret(i32 %a, i32 %b, i8 zeroext [[AS]], i8 zeroext [[BS]], i32 zeroext [[AO]], i32 zeroext [[BO]])
   ; CHECK-NEXT: ret void
@@ -126,10 +126,10 @@ define void @call_custom_without_ret(i32 %a, i32 %b) {
 define i32 @call_custom_with_ret(i32 %a, i32 %b) {
   ; CHECK: @call_custom_with_ret.dfsan
   ; CHECK: %originreturn = alloca i32, align 4
-  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
   ; CHECK: %labelreturn = alloca i8, align 1
-  ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; CHECK: [[BS:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
   ; CHECK: [[AS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; CHECK: {{.*}} = call i32 @__dfso_custom_with_ret(i32 %a, i32 %b, i8 zeroext [[AS]], i8 zeroext [[BS]], ptr %labelreturn, i32 zeroext [[AO]], i32 zeroext [[BO]], ptr %originreturn)
   ; CHECK: [[RS:%.*]] = load i8, ptr %labelreturn, align 1
@@ -144,10 +144,10 @@ define i32 @call_custom_with_ret(i32 %a, i32 %b) {
 define void @call_custom_varg_without_ret(i32 %a, i32 %b) {
   ; CHECK: @call_custom_varg_without_ret.dfsan
   ; CHECK: %originva = alloca [1 x i32], align 4
-  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
   ; CHECK: %labelva = alloca [1 x i8], align 1
-  ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; CHECK: [[BS:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
   ; CHECK: [[AS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; CHECK: [[VS0:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
   ; CHECK: store i8 [[AS]], ptr [[VS0]], align 1
@@ -166,11 +166,11 @@ define i32 @call_custom_varg_with_ret(i32 %a, i32 %b) {
   ; CHECK: @call_custom_varg_with_ret.dfsan
   ; CHECK: %originreturn = alloca i32, align 4
   ; CHECK: %originva = alloca [1 x i32], align 4
-  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls
   ; CHECK: %labelreturn = alloca i8, align 1
   ; CHECK: %labelva = alloca [1 x i8], align 1
-  ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; CHECK: [[BS:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
   ; CHECK: [[AS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; CHECK: [[VS0:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
   ; CHECK: store i8 [[BS]], ptr [[VS0]], align 1
@@ -191,10 +191,10 @@ define i32 @call_custom_varg_with_ret(i32 %a, i32 %b) {
 define i32 @call_custom_cb_with_ret(i32 %a, i32 %b) {
   ; CHECK: @call_custom_cb_with_ret.dfsan
   ; CHECK: %originreturn = alloca i32, align 4
-  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
   ; CHECK: %labelreturn = alloca i8, align 1
-  ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; CHECK: [[BS:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
   ; CHECK: [[AS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; CHECK: {{.*}} = call i32 @__dfso_custom_cb_with_ret(ptr @cb_with_ret.dfsan, i32 %a, i32 %b, i8 zeroext 0, i8 zeroext [[AS]], i8 zeroext [[BS]], ptr %labelreturn, i32 zeroext 0, i32 zeroext [[AO]], i32 zeroext [[BO]], ptr %originreturn)
   ; CHECK: [[RS:%.*]] = load i8, ptr %labelreturn, align 1
@@ -208,9 +208,9 @@ define i32 @call_custom_cb_with_ret(i32 %a, i32 %b) {
 
 define void @call_custom_cb_without_ret(i32 %a, i32 %b) {
   ; CHECK-LABEL: @call_custom_cb_without_ret.dfsan
-  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+  ; CHECK: [[BO:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
   ; CHECK: [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-  ; CHECK: [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+  ; CHECK: [[BS:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
   ; CHECK: [[AS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
   ; CHECK: call void @__dfso_custom_cb_without_ret(ptr @cb_without_ret.dfsan, i32 %a, i32 %b, i8 zeroext 0, i8 zeroext [[AS]], i8 zeroext [[BS]], i32 zeroext 0, i32 zeroext [[AO]], i32 zeroext [[BO]])
   ; CHECK-NEXT: ret void
@@ -226,19 +226,19 @@ define void @call_custom_cb_without_ret(i32 %a, i32 %b) {
 ; CHECK-NEXT: ret i32 [[R]]
 
 ; CHECK: define linkonce_odr void @"dfso$custom_without_ret"(i32 %0, i32 %1)
-; CHECK:  [[BO:%.*]]  = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; CHECK:  [[BO:%.*]]  = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; CHECK-NEXT:  [[AO:%.*]]  = load i32, ptr @__dfsan_arg_origin_tls, align 4
-; CHECK-NEXT:  [[BS:%.*]]  = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:  [[BS:%.*]]  = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:  [[AS:%.*]]  = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:  call void @__dfso_custom_without_ret(i32 %0, i32 %1, i8 zeroext [[AS]], i8 zeroext [[BS]], i32 zeroext [[AO]], i32 zeroext [[BO]])
 ; CHECK-NEXT:  ret void
 
 ; CHECK: define linkonce_odr i32 @"dfso$custom_with_ret"(i32 %0, i32 %1)
 ; CHECK:  %originreturn = alloca i32, align 4
-; CHECK-NEXT:  [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; CHECK-NEXT:  [[BO:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; CHECK-NEXT:  [[AO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
 ; CHECK-NEXT:  %labelreturn = alloca i8, align 1
-; CHECK-NEXT:  [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:  [[BS:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:  [[AS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:  [[R:%.*]] = call i32 @__dfso_custom_with_ret(i32 %0, i32 %1, i8 zeroext [[AS]], i8 zeroext [[BS]], ptr %labelreturn, i32 zeroext [[AO]], i32 zeroext [[BO]], ptr %originreturn)
 ; CHECK-NEXT:  [[RS:%.*]] = load i8, ptr %labelreturn, align 1
@@ -257,12 +257,12 @@ define void @call_custom_cb_without_ret(i32 %a, i32 %b) {
 
 ; CHECK: define linkonce_odr i32 @"dfso$custom_cb_with_ret"(ptr %0, i32 %1, i32 %2)
 ; CHECK:  %originreturn = alloca i32, align 4
-; CHECK-NEXT:  [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
-; CHECK-NEXT:  [[AO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; CHECK-NEXT:  [[BO:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 8), align 4
+; CHECK-NEXT:  [[AO:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; CHECK-NEXT:  [[CO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
 ; CHECK-NEXT:  %labelreturn = alloca i8, align 1
-; CHECK-NEXT:  [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
-; CHECK-NEXT:  [[AS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:  [[BS:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
+; CHECK-NEXT:  [[AS:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:  [[CS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:  [[R:%.*]] = call i32 @__dfso_custom_cb_with_ret(ptr %0, i32 %1, i32 %2, i8 zeroext [[CS]], i8 zeroext [[AS]], i8 zeroext [[BS]], ptr %labelreturn, i32 zeroext [[CO]], i32 zeroext [[AO]], i32 zeroext [[BO]], ptr %originreturn)
 ; CHECK-NEXT:  [[RS:%.*]] = load i8, ptr %labelreturn, align 1
@@ -272,11 +272,11 @@ define void @call_custom_cb_without_ret(i32 %a, i32 %b) {
 ; CHECK-NEXT:  ret i32 [[R]]
 
 ; CHECK: define linkonce_odr void @"dfso$custom_cb_without_ret"(ptr %0, i32 %1, i32 %2)
-; CHECK:   [[BO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 2), align 4
-; CHECK-NEXT:  [[AO:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; CHECK:   [[BO:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 8), align 4
+; CHECK-NEXT:  [[AO:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; CHECK-NEXT:  [[CO:%.*]] = load i32, ptr @__dfsan_arg_origin_tls, align 4
-; CHECK-NEXT:  [[BS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align 2
-; CHECK-NEXT:  [[AS:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align 2
+; CHECK-NEXT:  [[BS:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align 2
+; CHECK-NEXT:  [[AS:%.*]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:  [[CS:%.*]] = load i8, ptr @__dfsan_arg_tls, align 2
 ; CHECK-NEXT:  call void @__dfso_custom_cb_without_ret(ptr %0, i32 %1, i32 %2, i8 zeroext [[CS]], i8 zeroext [[AS]], i8 zeroext [[BS]], i32 zeroext [[CO]], i32 zeroext [[AO]], i32 zeroext [[BO]])
 ; CHECK-NEXT:  ret void

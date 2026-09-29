@@ -12,8 +12,12 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-/// Swaps tensor.extract_slice(linalg.fill(%cst, %init)) into linalg.fill(%cst,
-/// tensor.extract_slice(%init)) when the linalg.fill op have no other users.
+/// swaps:
+///      `tensor.extract_slice(linalg.fill(%cst, %init))`
+/// with:
+///      `linalg.fill(%cst, tensor.extract_slice(%init))`
+///
+/// when the linalg.fill op have no other users.
 /// This helps to reduce the fill footprint.
 struct SwapExtractSliceOfFill final
     : public OpRewritePattern<tensor::ExtractSliceOp> {
@@ -25,10 +29,10 @@ struct SwapExtractSliceOfFill final
     if (!fillOp || !fillOp->hasOneUse())
       return failure();
 
-    auto newExtractOp = rewriter.create<tensor::ExtractSliceOp>(
-        extractOp.getLoc(), extractOp.getType(), fillOp.getOutputs()[0],
-        extractOp.getMixedOffsets(), extractOp.getMixedSizes(),
-        extractOp.getMixedStrides());
+    auto newExtractOp = tensor::ExtractSliceOp::create(
+        rewriter, extractOp.getLoc(), extractOp.getType(),
+        fillOp.getOutputs()[0], extractOp.getMixedOffsets(),
+        extractOp.getMixedSizes(), extractOp.getMixedStrides());
     rewriter.replaceOpWithNewOp<FillOp>(extractOp, fillOp.getInputs(),
                                         ValueRange{newExtractOp.getResult()});
     return success();

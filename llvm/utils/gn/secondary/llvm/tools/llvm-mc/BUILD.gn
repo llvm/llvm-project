@@ -1,5 +1,6 @@
 executable("llvm-mc") {
   deps = [
+    "//llvm/lib/DWARFCFIChecker",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/Support",

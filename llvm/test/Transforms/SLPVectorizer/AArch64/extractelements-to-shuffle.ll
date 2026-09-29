@@ -75,21 +75,19 @@ define void @dist_vec(ptr nocapture noundef readonly %pA, ptr nocapture noundef 
 ; CHECK-NEXT:    [[TMP4TT_0_LCSSA:%.*]] = phi <2 x i64> [ zeroinitializer, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[PB_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PB]], [[ENTRY]] ], [ [[SCEVGEP311]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[PA_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PA]], [[ENTRY]] ], [ [[SCEVGEP]], [[WHILE_END_LOOPEXIT]] ]
-; CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <2 x i64> [[TMP4TT_0_LCSSA]], i64 0
-; CHECK-NEXT:    [[VGETQ_LANE45:%.*]] = extractelement <2 x i64> [[TMP4TT_0_LCSSA]], i64 1
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[VGETQ_LANE]], [[VGETQ_LANE45]]
+; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <2 x i64> [[TMP4TT_0_LCSSA]], <2 x i64> [[TMP4FF_0_LCSSA]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <2 x i64> [[TMP4TT_0_LCSSA]], <2 x i64> [[TMP4FF_0_LCSSA]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP24:%.*]] = add <2 x i64> [[TMP22]], [[TMP23]]
+; CHECK-NEXT:    [[ADD:%.*]] = extractelement <2 x i64> [[TMP24]], i64 0
 ; CHECK-NEXT:    [[CONV48:%.*]] = trunc i64 [[ADD]] to i32
-; CHECK-NEXT:    [[VGETQ_LANE51:%.*]] = extractelement <2 x i64> [[TMP4FF_0_LCSSA]], i64 0
-; CHECK-NEXT:    [[VGETQ_LANE55:%.*]] = extractelement <2 x i64> [[TMP4FF_0_LCSSA]], i64 1
-; CHECK-NEXT:    [[ADD57:%.*]] = add i64 [[VGETQ_LANE51]], [[VGETQ_LANE55]]
+; CHECK-NEXT:    [[ADD57:%.*]] = extractelement <2 x i64> [[TMP24]], i64 1
 ; CHECK-NEXT:    [[CONV60:%.*]] = trunc i64 [[ADD57]] to i32
-; CHECK-NEXT:    [[VGETQ_LANE63:%.*]] = extractelement <2 x i64> [[TMP4TF_0_LCSSA]], i64 0
-; CHECK-NEXT:    [[VGETQ_LANE67:%.*]] = extractelement <2 x i64> [[TMP4TF_0_LCSSA]], i64 1
-; CHECK-NEXT:    [[ADD69:%.*]] = add i64 [[VGETQ_LANE63]], [[VGETQ_LANE67]]
+; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x i64> [[TMP4TF_0_LCSSA]], <2 x i64> [[TMP4FT_0_LCSSA]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <2 x i64> [[TMP4TF_0_LCSSA]], <2 x i64> [[TMP4FT_0_LCSSA]], <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP27:%.*]] = add <2 x i64> [[TMP25]], [[TMP26]]
+; CHECK-NEXT:    [[ADD69:%.*]] = extractelement <2 x i64> [[TMP27]], i64 0
 ; CHECK-NEXT:    [[CONV72:%.*]] = trunc i64 [[ADD69]] to i32
-; CHECK-NEXT:    [[VGETQ_LANE75:%.*]] = extractelement <2 x i64> [[TMP4FT_0_LCSSA]], i64 0
-; CHECK-NEXT:    [[VGETQ_LANE79:%.*]] = extractelement <2 x i64> [[TMP4FT_0_LCSSA]], i64 1
-; CHECK-NEXT:    [[ADD81:%.*]] = add i64 [[VGETQ_LANE75]], [[VGETQ_LANE79]]
+; CHECK-NEXT:    [[ADD81:%.*]] = extractelement <2 x i64> [[TMP27]], i64 1
 ; CHECK-NEXT:    [[CONV84:%.*]] = trunc i64 [[ADD81]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NUMBEROFBOOLS]], 127
 ; CHECK-NEXT:    [[CMP86284:%.*]] = icmp ugt i32 [[AND]], 31
@@ -634,6 +632,56 @@ while.end71:                                      ; preds = %while.body38, %whil
   store i32 %_cft.2.lcssa, ptr %cFT, align 4
   ret void
 }
+
+; FIXME: This should not be vectorizing (further) with expensive shuffles.
+; The old cost of the or+extract should be 2*1 (or) + 4*2 (extract). The new
+; cost should be 1*1 (or) + 2*2 (extract) + at least 4 (shuffles).
+define i1 @tryMapToRange(ptr %values, ptr %result, <2 x i64> %hi, <2 x i64> %lo) {
+; CHECK-LABEL: @tryMapToRange(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i64>, ptr [[VALUES:%.*]], align 8
+; CHECK-NEXT:    [[C1:%.*]] = icmp sgt <2 x i64> [[L]], [[HI:%.*]]
+; CHECK-NEXT:    [[S1:%.*]] = sext <2 x i1> [[C1]] to <2 x i64>
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x i64> [[S1]] to <16 x i8>
+; CHECK-NEXT:    [[A1:%.*]] = and <16 x i8> [[BC1]], <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt <2 x i64> [[L]], [[LO:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = sext <2 x i1> [[C2]] to <2 x i64>
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i64> [[S2]] to <16 x i8>
+; CHECK-NEXT:    [[A2:%.*]] = and <16 x i8> [[BC2]], <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub <2 x i64> [[L]], [[LO]]
+; CHECK-NEXT:    [[ADD_I_I_I_I_I_I:%.*]] = add <2 x i64> [[REASS_SUB]], splat (i64 1)
+; CHECK-NEXT:    store <2 x i64> [[ADD_I_I_I_I_I_I]], ptr [[RESULT:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A1]], <16 x i8> [[A2]], <2 x i32> <i32 8, i32 24>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[A1]], <16 x i8> [[A2]], <2 x i32> <i32 0, i32 16>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i8> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[O3:%.*]] = extractelement <2 x i8> [[TMP3]], i64 0
+; CHECK-NEXT:    [[O2:%.*]] = extractelement <2 x i8> [[TMP3]], i64 1
+; CHECK-NEXT:    [[O4:%.*]] = or i8 [[O3]], [[O2]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[O4]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %l = load <2 x i64>, ptr %values, align 8
+  %c1 = icmp sgt <2 x i64> %l, %hi
+  %s1 = sext <2 x i1> %c1 to <2 x i64>
+  %bc1 = bitcast <2 x i64> %s1 to <16 x i8>
+  %a1 = and <16 x i8> %bc1, <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+  %e1 = extractelement <16 x i8> %a1, i64 0
+  %e2 = extractelement <16 x i8> %a1, i64 8
+  %c2 = icmp slt <2 x i64> %l, %lo
+  %s2 = sext <2 x i1> %c2 to <2 x i64>
+  %bc2 = bitcast <2 x i64> %s2 to <16 x i8>
+  %a2 = and <16 x i8> %bc2, <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+  %e3 = extractelement <16 x i8> %a2, i64 0
+  %e4 = extractelement <16 x i8> %a2, i64 8
+  %reass.sub = sub <2 x i64> %l, %lo
+  %add.i.i.i.i.i.i = add <2 x i64> %reass.sub, splat (i64 1)
+  store <2 x i64> %add.i.i.i.i.i.i, ptr %result, align 8
+  %o1 = or i8 %e2, %e1
+  %o2 = or i8 %e4, %e3
+  %o3 = or i8 %o1, %o2
+  %c = icmp eq i8 %o3, 0
+  ret i1 %c
+}
+
 
 declare <16 x i8> @llvm.ctpop.v16i8(<16 x i8>) #1
 declare <8 x i16> @llvm.aarch64.neon.uaddlp.v8i16.v16i8(<16 x i8>) #2

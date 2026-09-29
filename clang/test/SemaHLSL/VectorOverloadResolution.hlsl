@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-unknown-shadermodel6.6-library -S -fnative-half-type -finclude-default-header -o - -ast-dump %s | FileCheck %s
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECKIR
+// RUN: %clang_cc1 -triple dxil-unknown-shadermodel6.6-library -S -fnative-half-type -fnative-int16-type -finclude-default-header -o - -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECKIR
 void Fn(double2 D);
 void Fn(half2 H);
 
@@ -68,7 +68,7 @@ void Fn4( float2 p0);
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int64_t2':'vector<int64_t, 2>' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int64_t2':'vector<int64_t, 2>' lvalue ParmVar {{.*}} 'p0' 'int64_t2':'vector<int64_t, 2>'
 // CHECKIR-LABEL: Call5
-// CHECKIR: {{.*}} = sitofp <2 x i64> {{.*}} to <2 x float>
+// CHECKIR: {{.*}} = sitofp reassoc nnan ninf nsz arcp afn <2 x i64> {{.*}} to <2 x float>
 void Call5(int64_t2 p0) {
   Fn4(p0);
 }

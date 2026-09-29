@@ -10,7 +10,7 @@
 #define MLIR_DIALECT_COMPLEX_IR_COMPLEX_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithOpInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
@@ -21,6 +21,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Complex/IR/ComplexOpsDialect.h.inc"
+
+//===----------------------------------------------------------------------===//
+// Complex Dialect Enums
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/Complex/IR/ComplexEnums.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Complex Dialect Operations

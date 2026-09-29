@@ -1,7 +1,7 @@
 // REQUIRES: system-windows
 //
 // RUN: %clang_cl /Z7 /Zi %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w --binary %t --debugger 'dbgeng' -- %s
+// RUN: %dexter --use-heuristic --fail-lt 1.0 -w --binary %t --debugger 'dbgeng' -- %s
 
 // From https://llvm.org/pr38857, where we had issues with stack realignment.
 

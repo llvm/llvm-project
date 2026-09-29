@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -verify
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -fnative-int16-type -verify
 
 
 void test_arg_missing() {
@@ -16,12 +16,17 @@ void test_first_arg_type_mismatch(bool p) {
  // expected-error@-1 {{invalid operand of type 'bool' where 'float' or a vector of such type is required}} 
 }
 
-void test_first_arg_type_mismatch_3(half3 p) {
+void test_first_arg_type_mismatch_2(half3 p) {
   __builtin_hlsl_elementwise_clip(p);
  // expected-error@-1 {{invalid operand of type 'half3' (aka 'vector<half, 3>') where 'float' or a vector of such type is required}} 
 }
 
-void test_first_arg_type_mismatch_3(double p) {
+void test_first_arg_type_mismatch_3(half p) {
+  __builtin_hlsl_elementwise_clip(p);
+ // expected-error@-1 {{invalid operand of type 'half' where 'float' or a vector of such type is required}} 
+}
+
+void test_first_arg_type_mismatch_4(double p) {
   __builtin_hlsl_elementwise_clip(p);
  // expected-error@-1 {{invalid operand of type 'double' where 'float' or a vector of such type is required}} 
 }

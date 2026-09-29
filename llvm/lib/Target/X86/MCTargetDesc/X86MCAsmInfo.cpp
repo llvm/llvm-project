@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86MCAsmInfo.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
@@ -34,10 +35,44 @@ MarkedJTDataRegions("mark-data-regions", cl::init(true),
   cl::desc("Mark code section jump table data regions."),
   cl::Hidden);
 
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
+    {{"ABS8"}, X86::S_ABS8},
+    {{"DTPOFF"}, X86::S_DTPOFF},
+    {{"DTPREL"}, X86::S_DTPREL},
+    {{"GOT"}, X86::S_GOT},
+    {{"GOTENT"}, X86::S_GOTENT},
+    {{"GOTNTPOFF"}, X86::S_GOTNTPOFF},
+    {{"GOTOFF"}, X86::S_GOTOFF},
+    {{"GOTPCREL"}, X86::S_GOTPCREL},
+    {{"GOTPCREL_NORELAX"}, X86::S_GOTPCREL_NORELAX},
+    {{"GOTREL"}, X86::S_GOTREL},
+    {{"GOTTPOFF"}, X86::S_GOTTPOFF},
+    {{"INDNTPOFF"}, X86::S_INDNTPOFF},
+    {{"IMGREL"}, MCSymbolRefExpr::VK_COFF_IMGREL32},
+    {{"NTPOFF"}, X86::S_NTPOFF},
+    {{"PCREL"}, X86::S_PCREL},
+    {{"PLT"}, X86::S_PLT},
+    {{"PLTOFF"}, X86::S_PLTOFF},
+    {{"SECREL32"}, X86::S_COFF_SECREL},
+    {{"SIZE"}, X86::S_SIZE},
+    {{"tlscall"}, X86::S_TLSCALL},
+    {{"tlsdesc"}, X86::S_TLSDESC},
+    {{"TLSGD"}, X86::S_TLSGD},
+    {{"TLSLD"}, X86::S_TLSLD},
+    {{"TLSLDM"}, X86::S_TLSLDM},
+    {{"TLVP"}, X86::S_TLVP},
+    {{"TLVPPAGE"}, X86::S_TLVPPAGE},
+    {{"TLVPPAGEOFF"}, X86::S_TLVPPAGEOFF},
+    {{"TPOFF"}, X86::S_TPOFF},
+};
+constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
+
 void X86MCAsmInfoDarwin::anchor() { }
 
-X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
-  bool is64Bit = T.getArch() == Triple::x86_64;
+X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T,
+                                       const MCTargetOptions &Options)
+    : MCAsmInfoDarwin(Options) {
+  bool is64Bit = T.isX86_64();
   if (is64Bit)
     CodePointerSize = CalleeSaveStackSlotSize = 8;
 
@@ -69,16 +104,20 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
   // (actually, must, since otherwise the non-extern relocations we produce
   // overwhelm ld64's tiny little mind and it fails).
   DwarfFDESymbolsUseAbsDiff = true;
+
+  initializeAtSpecifiers(atSpecifiers);
 }
 
-X86_64MCAsmInfoDarwin::X86_64MCAsmInfoDarwin(const Triple &Triple)
-  : X86MCAsmInfoDarwin(Triple) {
-}
+X86_64MCAsmInfoDarwin::X86_64MCAsmInfoDarwin(const Triple &Triple,
+                                             const MCTargetOptions &Options)
+    : X86MCAsmInfoDarwin(Triple, Options) {}
 
 void X86ELFMCAsmInfo::anchor() { }
 
-X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
-  bool is64Bit = T.getArch() == Triple::x86_64;
+X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T,
+                                 const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
+  bool is64Bit = T.isX86_64();
   bool isX32 = T.isX32();
 
   // For ELF, x86-64 pointer size depends on the ABI.
@@ -96,6 +135,8 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
 
   // Exceptions handling
   ExceptionsType = ExceptionHandling::DwarfCFI;
+
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 const MCExpr *
@@ -103,18 +144,18 @@ X86_64MCAsmInfoDarwin::getExprForPersonalitySymbol(const MCSymbol *Sym,
                                                    unsigned Encoding,
                                                    MCStreamer &Streamer) const {
   MCContext &Context = Streamer.getContext();
-  const MCExpr *Res =
-    MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOTPCREL, Context);
+  const MCExpr *Res = MCSymbolRefExpr::create(Sym, X86::S_GOTPCREL, Context);
   const MCExpr *Four = MCConstantExpr::create(4, Context);
   return MCBinaryExpr::createAdd(Res, Four, Context);
 }
 
 void X86MCAsmInfoMicrosoft::anchor() { }
 
-X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
-  if (Triple.getArch() == Triple::x86_64) {
-    PrivateGlobalPrefix = ".L";
-    PrivateLabelPrefix = ".L";
+X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple,
+                                             const MCTargetOptions &Options)
+    : MCAsmInfoMicrosoft(Options) {
+  if (Triple.isX86_64()) {
+    InternalSymbolPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
   } else {
@@ -129,12 +170,15 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
   AssemblerDialect = X86AsmSyntax;
 
   AllowAtInName = true;
+
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void X86MCAsmInfoMicrosoftMASM::anchor() { }
 
-X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(const Triple &Triple)
-    : X86MCAsmInfoMicrosoft(Triple) {
+X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(
+    const Triple &Triple, const MCTargetOptions &Options)
+    : X86MCAsmInfoMicrosoft(Triple, Options) {
   DollarIsPC = true;
   SeparatorString = "\n";
   CommentString = ";";
@@ -146,12 +190,13 @@ X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(const Triple &Triple)
 
 void X86MCAsmInfoGNUCOFF::anchor() { }
 
-X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
-  assert((Triple.isOSWindows() || Triple.isUEFI()) &&
+X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple,
+                                         const MCTargetOptions &Options)
+    : MCAsmInfoGNUCOFF(Options) {
+  assert(Triple.isOSWindowsOrUEFI() &&
          "Windows and UEFI are the only supported COFF targets");
-  if (Triple.getArch() == Triple::x86_64) {
-    PrivateGlobalPrefix = ".L";
-    PrivateLabelPrefix = ".L";
+  if (Triple.isX86_64()) {
+    InternalSymbolPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
     ExceptionsType = ExceptionHandling::WinEH;
@@ -162,4 +207,6 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
   AssemblerDialect = X86AsmSyntax;
 
   AllowAtInName = true;
+
+  initializeAtSpecifiers(atSpecifiers);
 }

@@ -7,7 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VersionTuple.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -135,6 +140,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::Android, T.getEnvironment());
+
+  T = Triple("aarch64-unknown-hurd-gnu");
+  EXPECT_EQ(Triple::aarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Hurd, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
 
   // PS4 has two spellings for the vendor.
   T = Triple("x86_64-scei-ps4");
@@ -544,12 +555,35 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(VersionTuple(1, 8), T.getDXILVersion());
   EXPECT_EQ(Triple::Amplification, T.getEnvironment());
 
+  T = Triple("dxilv1.0-unknown-shadermodel1.0-rootsignature");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_0, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(VersionTuple(1, 0), T.getDXILVersion());
+  EXPECT_EQ(Triple::RootSignature, T.getEnvironment());
+
+  T = Triple("dxilv1.1-unknown-shadermodel1.1-rootsignature");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_1, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(VersionTuple(1, 1), T.getDXILVersion());
+  EXPECT_EQ(Triple::RootSignature, T.getEnvironment());
+
   T = Triple("dxilv1.8-unknown-shadermodel6.15-library");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::DXILSubArch_v1_8, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(VersionTuple(1, 8), T.getDXILVersion());
+
+  T = Triple("dxilv1.9-unknown-shadermodel6.15-library");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_9, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(VersionTuple(1, 9), T.getDXILVersion());
 
   T = Triple("x86_64-unknown-fuchsia");
   EXPECT_EQ(Triple::x86_64, T.getArch());
@@ -582,6 +616,24 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::WASI, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("wasm32-unknown-wasip1");
+  EXPECT_EQ(Triple::wasm32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp1, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm32-unknown-wasip2");
+  EXPECT_EQ(Triple::wasm32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp2, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm32-unknown-wasip3");
+  EXPECT_EQ(Triple::wasm32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp3, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
   T = Triple("wasm64-unknown-unknown");
   EXPECT_EQ(Triple::wasm64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -592,6 +644,24 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::wasm64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::WASI, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm64-unknown-wasip1");
+  EXPECT_EQ(Triple::wasm64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp1, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm64-unknown-wasip2");
+  EXPECT_EQ(Triple::wasm64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp2, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm64-unknown-wasip3");
+  EXPECT_EQ(Triple::wasm64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp3, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
   T = Triple("avr-unknown-unknown");
@@ -619,19 +689,25 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
   T = Triple("amdgcn-mesa-mesa3d");
-  EXPECT_EQ(Triple::amdgcn, T.getArch());
+  EXPECT_EQ(Triple::amdgpu, T.getArch());
+  EXPECT_EQ(Triple::Mesa, T.getVendor());
+  EXPECT_EQ(Triple::Mesa3D, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("amdgpu-mesa-mesa3d");
+  EXPECT_EQ(Triple::amdgpu, T.getArch());
   EXPECT_EQ(Triple::Mesa, T.getVendor());
   EXPECT_EQ(Triple::Mesa3D, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
   T = Triple("amdgcn-amd-amdhsa");
-  EXPECT_EQ(Triple::amdgcn, T.getArch());
+  EXPECT_EQ(Triple::amdgpu, T.getArch());
   EXPECT_EQ(Triple::AMD, T.getVendor());
   EXPECT_EQ(Triple::AMDHSA, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
   T = Triple("amdgcn-amd-amdpal");
-  EXPECT_EQ(Triple::amdgcn, T.getArch());
+  EXPECT_EQ(Triple::amdgpu, T.getArch());
   EXPECT_EQ(Triple::AMD, T.getVendor());
   EXPECT_EQ(Triple::AMDPAL, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
@@ -756,6 +832,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("riscv64-meta-unknown-mtia");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::Meta, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::MTIA, T.getEnvironment());
+
   T = Triple("riscv64-unknown-linux");
   EXPECT_EQ(Triple::riscv64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -773,6 +855,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::SUSE, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("riscv64-unknown-hurd-gnu");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Hurd, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
 
   T = Triple("armv7hl-suse-linux-gnueabi");
   EXPECT_EQ(Triple::arm, T.getArch());
@@ -1262,6 +1350,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
 
+  T = Triple("dxilv1.9-unknown-unknown");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::DXILSubArch_v1_9, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
   // Check specification of unknown SubArch results in
   // unknown architecture.
   T = Triple("dxilv1.999-unknown-unknown");
@@ -1300,15 +1394,21 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::LiteOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
-  T = Triple("x86_64-pc-serenity");
+  T = Triple("x86_64-unknown-serenity");
   EXPECT_EQ(Triple::x86_64, T.getArch());
-  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Serenity, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
-  T = Triple("aarch64-pc-serenity");
+  T = Triple("aarch64-unknown-serenity");
   EXPECT_EQ(Triple::aarch64, T.getArch());
-  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Serenity, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("riscv64-unknown-serenity");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Serenity, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
@@ -1353,8 +1453,144 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("aarch64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::aarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
+  T = Triple("x86_64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
+  T = Triple("riscv64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
+
+  T = Triple("riscv32-unknown-cheriotrtos");
+  EXPECT_EQ(Triple::riscv32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::CheriotRTOS, T.getOS());
+
+  T = Triple("spirv64-unknown-chipstar");
+  EXPECT_EQ(Triple::spirv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ChipStar, T.getOS());
+}
+
+TEST(TripleTest, EnumConstructor) {
+  {
+    Triple T(Triple::amdgpu, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA);
+    EXPECT_EQ(T.getArch(), Triple::amdgpu);
+    EXPECT_EQ(T.getVendor(), Triple::AMD);
+    EXPECT_EQ(T.getOS(), Triple::AMDHSA);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "amdgpu-amd-amdhsa");
+  }
+
+  {
+    Triple T(Triple::amdgpu, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA,
+             Triple::LLVM, Triple::ELF);
+    EXPECT_EQ(T.getArch(), Triple::amdgpu);
+    EXPECT_EQ(T.getVendor(), Triple::AMD);
+    EXPECT_EQ(T.getOS(), Triple::AMDHSA);
+    EXPECT_EQ(T.getEnvironment(), Triple::LLVM);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "amdgpu-amd-amdhsa-llvm-elf");
+  }
+
+  {
+    Triple T(Triple::amdgpu, Triple::NoSubArch, Triple::AMD, Triple::AMDHSA,
+             Triple::LLVM);
+    EXPECT_EQ(T.getArch(), Triple::amdgpu);
+    EXPECT_EQ(T.getVendor(), Triple::AMD);
+    EXPECT_EQ(T.getOS(), Triple::AMDHSA);
+    EXPECT_EQ(T.getEnvironment(), Triple::LLVM);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "amdgpu-amd-amdhsa-llvm");
+  }
+
+  {
+    Triple T(Triple::arm, Triple::ARMSubArch_v9_7a, Triple::PC, Triple::Linux,
+             Triple::GNU, Triple::COFF);
+    EXPECT_EQ(T.getArch(), Triple::arm);
+    EXPECT_EQ(T.getVendor(), Triple::PC);
+    EXPECT_EQ(T.getOS(), Triple::Linux);
+    EXPECT_EQ(T.getEnvironment(), Triple::GNU);
+    EXPECT_EQ(T.getObjectFormat(), Triple::COFF);
+    EXPECT_EQ(T.str(), "arm-pc-linux-gnu-coff");
+  }
+
+  {
+    Triple T(Triple::arm, Triple::ARMSubArch_v9_7a);
+    EXPECT_EQ(T.getArch(), Triple::arm);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::UnknownOS);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "arm-unknown-unknown");
+  }
+
+  {
+    Triple T(Triple::x86_64);
+    EXPECT_EQ(T.getArch(), Triple::x86_64);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::UnknownOS);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "x86_64-unknown-unknown");
+  }
+
+  {
+    Triple T(Triple::dxil);
+    EXPECT_EQ(T.getArch(), Triple::dxil);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::UnknownOS);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::DXContainer);
+    EXPECT_EQ(T.str(), "dxilv1.0-unknown-unknown");
+  }
+
+  {
+    Triple T(Triple::x86_64, Triple::NoSubArch, Triple::UnknownVendor,
+             Triple::UnknownOS, Triple::MSVC);
+    EXPECT_EQ(T.getArch(), Triple::x86_64);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::UnknownOS);
+    EXPECT_EQ(T.getEnvironment(), Triple::MSVC);
+    EXPECT_EQ(T.getObjectFormat(), Triple::ELF);
+    EXPECT_EQ(T.str(), "x86_64-unknown-unknown-msvc");
+  }
+
+  {
+    Triple T(Triple::x86, Triple::NoSubArch, Triple::UnknownVendor,
+             Triple::Win32);
+    EXPECT_EQ(T.getArch(), Triple::x86);
+    EXPECT_EQ(T.getVendor(), Triple::UnknownVendor);
+    EXPECT_EQ(T.getOS(), Triple::Win32);
+    EXPECT_EQ(T.getEnvironment(), Triple::UnknownEnvironment);
+    EXPECT_EQ(T.getObjectFormat(), Triple::COFF);
+    EXPECT_EQ(T.str(), "i386-unknown-windows");
+  }
+
+  {
+    Triple T(Triple::x86, Triple::NoSubArch, Triple::PC, Triple::Win32,
+             Triple::MSVC);
+    EXPECT_EQ(T.getArch(), Triple::x86);
+    EXPECT_EQ(T.getVendor(), Triple::PC);
+    EXPECT_EQ(T.getOS(), Triple::Win32);
+    EXPECT_EQ(T.getEnvironment(), Triple::MSVC);
+    EXPECT_EQ(T.getObjectFormat(), Triple::COFF);
+    EXPECT_EQ(T.str(), "i386-pc-windows-msvc");
+  }
 }
 
 static std::string Join(StringRef A, StringRef B, StringRef C) {
@@ -1375,6 +1611,250 @@ static std::string Join(StringRef A, StringRef B, StringRef C, StringRef D) {
   Str += '-';
   Str += D;
   return Str;
+}
+
+TEST(TripleTest, DefaultFloatABI) {
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("arm-none-none-eabihf").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("arm-none-linux-gnueabihf").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("arm-none-linux-gnueabihft64").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("arm-none-linux-musleabihf").getDefaultFloatABI());
+
+  // Non-hard EABI environments are soft, regardless of OS.
+  EXPECT_EQ(FloatABI::Soft, Triple("arm-none-none-eabi").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("arm-none-linux-gnueabi").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("arm-none-linux-musleabi").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("arm-none-linux-android").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft, Triple("armv7-apple-ios").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft, Triple("armv7-apple-macosx").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("armv7-unknown-fuchsia").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft, Triple("arm-unknown-openbsd").getDefaultFloatABI());
+
+  // MachO M-profile v7em is hard.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("thumbv7em-apple-darwin").getDefaultFloatABI());
+
+  // Windows is hard.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("thumbv7-unknown-windows-msvc").getDefaultFloatABI());
+
+  // The AAPCS16 (watchOS) ABI is hard.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("thumbv7k-apple-watchos").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard, Triple("thumbv7k-apple-ios").getDefaultFloatABI());
+
+  // The Thumb arch goes through the same ARM logic.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("thumbv7-none-linux-gnueabihf").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("thumbv7-none-linux-gnueabi").getDefaultFloatABI());
+
+  // PowerPC, SystemZ and SPARC default to hard float.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("powerpc64le-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("s390x-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("sparc-unknown-linux-gnu").getDefaultFloatABI());
+
+  // MIPS defaults to hard float, except on FreeBSD which uses soft float.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("mips-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("mips-unknown-freebsd").getDefaultFloatABI());
+
+  // Defaults to soft float.
+  EXPECT_EQ(FloatABI::Soft, Triple("avr-unknown-unknown").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("csky-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Soft,
+            Triple("msp430-unknown-unknown").getDefaultFloatABI());
+
+  // Targets without a special case default to hard float.
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("x86_64-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("aarch64-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard,
+            Triple("riscv64-unknown-linux-gnu").getDefaultFloatABI());
+  EXPECT_EQ(FloatABI::Hard, Triple("amdgpu-amd-amdhsa").getDefaultFloatABI());
+}
+
+TEST(TripleTest, DefaultLongDoubleFormat) {
+  // PowerPC defaults to IBM double-double, independent of the environment.
+  EXPECT_EQ(
+      LongDoubleFormat::PPCDoubleDouble,
+      Triple("powerpc64le-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc64le-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc64-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpcle-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpcle-unknown-linux").getDefaultLongDoubleFormat());
+  // ... except on AIX, FreeBSD, OpenBSD, and Musl, which use IEEE double.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc-ibm-aix").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc64-ibm-aix").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc64-unknown-freebsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc64-unknown-openbsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEdouble,
+      Triple("powerpc64-unknown-linux-musl").getDefaultLongDoubleFormat());
+  // NetBSD only switches to IEEE double on 32-bit PowerPC.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("powerpc-unknown-netbsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
+            Triple("powerpc64-unknown-netbsd").getDefaultLongDoubleFormat());
+
+  // X86 defaults to x87 80-bit extended precision, independent of environment.
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("i686-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("i686-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-apple-macosx").getDefaultLongDoubleFormat());
+  // MinGW and Cygwin keep x87 extended precision.
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-pc-windows-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::X87DoubleExtended,
+            Triple("x86_64-pc-cygwin").getDefaultLongDoubleFormat());
+  // Windows-MSVC and UEFI use IEEE double.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("x86_64-pc-windows-msvc").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("i686-pc-windows-msvc").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("x86_64-unknown-uefi").getDefaultLongDoubleFormat());
+  // Android and OHOS use IEEE double on 32-bit and IEEE quad on 64-bit.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("i686-unknown-linux-android").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("x86_64-unknown-linux-android").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("i686-unknown-linux-ohos").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("x86_64-unknown-linux-ohos").getDefaultLongDoubleFormat());
+
+  // AArch64 defaults to IEEE quad, for all AArch64 arch variants, independent
+  // of the environment.
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("aarch64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("aarch64-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("aarch64_be-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("aarch64_32-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  // ... except on Windows and Darwin, which use IEEE double.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("aarch64-pc-windows-msvc").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("arm64-apple-macosx").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("aarch64-unknown-linux-android").getDefaultLongDoubleFormat());
+
+  // ARM/Thumb use IEEE double.
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEdouble,
+      Triple("armv7-unknown-linux-gnueabihf").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEdouble,
+      Triple("thumbv7-unknown-linux-gnueabi").getDefaultLongDoubleFormat());
+
+  // SPARC V8 uses IEEE double for bare-metal and RTEMS targets. Linux,
+  // Solaris, and other targets use IEEE quad. SPARC V9 always uses IEEE quad.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("sparc-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("sparc-unknown-rtems").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparc-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparcel-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparc-unknown-solaris").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("sparcv9-unknown-linux-gnu").getDefaultLongDoubleFormat());
+
+  // Targets that use IEEE quad, independent of the environment.
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("s390x-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("s390x-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("riscv32-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("riscv64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("riscv32be-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("riscv64be-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
+      Triple("loongarch64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("ve-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("wasm32-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("wasm64-unknown-unknown").getDefaultLongDoubleFormat());
+
+  // 64-bit MIPS uses IEEE quad; 32-bit MIPS uses IEEE double. Both are
+  // independent of the environment.
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("mips64-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("mips64-unknown-linux").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("mips64el-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mips-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mips-unknown-linux").getDefaultLongDoubleFormat());
+
+  // AVR and 32-bit OpenASIP use IEEE single; the 64-bit tcele64 uses double.
+  EXPECT_EQ(LongDoubleFormat::IEEEsingle,
+            Triple("avr-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEsingle,
+            Triple("tce-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEsingle,
+            Triple("tcele-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("tcele64-unknown-unknown").getDefaultLongDoubleFormat());
+
+  // Targets without a special case fall back to IEEE double.
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("msp430-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("amdgpu-unknown-unknown").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("nvptx64-unknown-unknown").getDefaultLongDoubleFormat());
 }
 
 TEST(TripleTest, Normalization) {
@@ -1415,6 +1895,132 @@ TEST(TripleTest, Normalization) {
   EXPECT_EQ("unknown-unknown-linux", Triple::normalize("linux"));
 
   EXPECT_EQ("x86_64-unknown-linux-gnu", Triple::normalize("x86_64-gnu-linux"));
+
+  EXPECT_EQ("a-unknown-unknown",
+            Triple::normalize("a", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-unknown",
+            Triple::normalize("a-b", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-c",
+            Triple::normalize("a-b-c", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-c",
+            Triple::normalize("a-b-c-d", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-c",
+            Triple::normalize("a-b-c-d-e", Triple::CanonicalForm::THREE_IDENT));
+
+  EXPECT_EQ("a-unknown-unknown-unknown",
+            Triple::normalize("a", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-unknown-unknown",
+            Triple::normalize("a-b", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-c-unknown",
+            Triple::normalize("a-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-c-d",
+            Triple::normalize("a-b-c-d", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-c-d",
+            Triple::normalize("a-b-c-d-e", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("a-unknown-unknown-unknown-unknown",
+            Triple::normalize("a", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-unknown-unknown-unknown",
+            Triple::normalize("a-b", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-c-unknown-unknown",
+            Triple::normalize("a-b-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-c-d-unknown",
+            Triple::normalize("a-b-c-d", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-c-d-e",
+            Triple::normalize("a-b-c-d-e", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-b-c-unknown",
+            Triple::normalize("i386-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-b-c-unknown-unknown",
+            Triple::normalize("i386-b-c", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-a-c-unknown",
+            Triple::normalize("a-i386-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-a-c-unknown-unknown",
+            Triple::normalize("a-i386-c", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-a-b-unknown",
+            Triple::normalize("a-b-i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-a-b-c",
+            Triple::normalize("a-b-c-i386", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("a-pc-c-unknown",
+            Triple::normalize("a-pc-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-b-c",
+            Triple::normalize("pc-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-pc-b-unknown",
+            Triple::normalize("a-b-pc", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-pc-b-c",
+            Triple::normalize("a-b-c-pc", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("a-b-linux-unknown",
+            Triple::normalize("a-b-linux", Triple::CanonicalForm::FOUR_IDENT));
+  // We lose `-c` here as expected.
+  EXPECT_EQ("unknown-unknown-linux-b",
+            Triple::normalize("linux-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-unknown-linux-c",
+            Triple::normalize("a-linux-c", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("i386-pc-a-unknown",
+            Triple::normalize("a-pc-i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-pc-unknown-unknown",
+            Triple::normalize("-pc-i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-linux-c",
+            Triple::normalize("linux-pc-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-linux-unknown",
+            Triple::normalize("linux-pc-", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("i386-unknown-unknown-unknown",
+            Triple::normalize("i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-unknown-unknown",
+            Triple::normalize("pc", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-unknown-linux-unknown",
+            Triple::normalize("linux", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ(
+      "x86_64-unknown-linux-gnu",
+      Triple::normalize("x86_64-gnu-linux", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("i386-a-b-unknown-unknown",
+            Triple::normalize("a-b-i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("i386-a-b-c-unknown",
+            Triple::normalize("a-b-c-i386", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("a-pc-c-unknown-unknown",
+            Triple::normalize("a-pc-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-b-c-unknown",
+            Triple::normalize("pc-b-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-pc-b-unknown-unknown",
+            Triple::normalize("a-b-pc", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-pc-b-c-unknown",
+            Triple::normalize("a-b-c-pc", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("a-b-linux-unknown-unknown",
+            Triple::normalize("a-b-linux", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-unknown-linux-b-c",
+            Triple::normalize("linux-b-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-unknown-linux-c-unknown",
+            Triple::normalize("a-linux-c", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-pc-a-unknown-unknown",
+            Triple::normalize("a-pc-i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("i386-pc-unknown-unknown-unknown",
+            Triple::normalize("-pc-i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-linux-c-unknown",
+            Triple::normalize("linux-pc-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-linux-unknown-unknown",
+            Triple::normalize("linux-pc-", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-unknown-unknown-unknown-unknown",
+            Triple::normalize("i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-unknown-unknown-unknown",
+            Triple::normalize("pc", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-unknown-linux-unknown-unknown",
+            Triple::normalize("linux", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ(
+      "x86_64-unknown-linux-gnu-unknown",
+      Triple::normalize("x86_64-gnu-linux", Triple::CanonicalForm::FIVE_IDENT));
 
   // Check that normalizing a permutated set of valid components returns a
   // triple with the unpermuted components.
@@ -1508,6 +2114,26 @@ TEST(TripleTest, Normalization) {
             Triple::normalize("wasm32-wasi")); // wasm32-unknown-wasi
   EXPECT_EQ("wasm64-unknown-wasi",
             Triple::normalize("wasm64-wasi")); // wasm64-unknown-wasi
+
+  // Firmware should only be allowed for the Apple vendor
+  EXPECT_DEATH(Triple::normalize("arm-none-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-unknown-firmware"), "");
+  EXPECT_EQ("arm-apple-firmware", Triple::normalize("arm-apple-firmware"));
+  EXPECT_DEATH(Triple::normalize("arm-pc-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-scei-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-sie-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-fsl-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-ibm-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-img-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-mti-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-nvidia-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-csr-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-amd-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-mesa-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-suse-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-oe-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-intel-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-meta-firmware"), "");
 }
 
 TEST(TripleTest, MutateName) {
@@ -1619,6 +2245,18 @@ TEST(TripleTest, BitWidthChecks) {
   EXPECT_EQ(T.getArchPointerBitWidth(), 32U);
 
   T.setArch(Triple::amdil64);
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 64U);
+
+  T.setArch(Triple::amdgpu);
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(T.getArchPointerBitWidth(), 64U);
+
+  T.setArch(Triple::amdgpu);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
@@ -2136,6 +2774,44 @@ TEST(TripleTest, XROS) {
   EXPECT_EQ(VersionTuple(17), Version);
 }
 
+TEST(TripleTest, BridgeOS) {
+  Triple T;
+  VersionTuple Version;
+
+  T = Triple("arm64-apple-bridgeos");
+  EXPECT_TRUE(T.isBridgeOS());
+  EXPECT_FALSE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+  EXPECT_EQ(T.getOSName(), "bridgeos");
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(0), Version);
+
+  T = Triple("arm64-apple-bridgeos1.0");
+  EXPECT_TRUE(T.isBridgeOS());
+  EXPECT_FALSE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+  EXPECT_EQ(T.getOSName(), "bridgeos1.0");
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(1), Version);
+
+  T = Triple("arm64-apple-bridgeos9.0");
+  EXPECT_TRUE(T.isBridgeOS());
+  EXPECT_FALSE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+  EXPECT_EQ(T.getOSName(), "bridgeos9.0");
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(9), Version);
+}
+
 TEST(TripleTest, getOSVersion) {
   Triple T;
   VersionTuple Version;
@@ -2209,6 +2885,98 @@ TEST(TripleTest, getOSVersion) {
   T.getMacOSXVersion(Version);
   EXPECT_EQ(VersionTuple(10, 16), Version);
 
+  // 16 forms a valid triple, even though it's not
+  // a version of a macOS.
+  T = Triple("x86_64-apple-macos16.0");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(16, 0), Version);
+
+  T = Triple("arm64-apple-macosx26.1");
+  EXPECT_TRUE(T.isMacOSX());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(26, 1), Version);
+
+  // 19.0 forms a valid triple, even though it's not
+  // a version of a iOS.
+  T = Triple("arm64-apple-ios19.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  T.getiOSVersion();
+  EXPECT_EQ(VersionTuple(19, 0), T.getOSVersion());
+
+  T = Triple("arm64-apple-ios27.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(27, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-watchos12.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isWatchOS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(26, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-visionos3.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(26, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-darwin25");
+  EXPECT_TRUE(T.isMacOSX());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(26), Version);
+
+  T = Triple("x86_64-apple-darwin26");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(27), Version);
+
+  T = Triple("x86_64-apple-darwin27");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(27), Version);
+
+  T = Triple("x86_64-apple-darwin30");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Version);
+  EXPECT_EQ(VersionTuple(30), Version);
+
+  // Check invalid ranges are remapped.
+  T = Triple("arm64-apple-visionos6.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isXROS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(29, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-watchos14.0");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isWatchOS());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(28, 0), T.getiOSVersion());
+
+  T = Triple("arm64-apple-ios21.1");
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_TRUE(T.isiOS());
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_EQ(VersionTuple(28, 1), T.getiOSVersion());
+
   T = Triple("x86_64-apple-darwin20");
   EXPECT_TRUE(T.isMacOSX());
   T.getMacOSXVersion(Version);
@@ -2275,6 +3043,10 @@ TEST(TripleTest, getOSVersion) {
   Version = T.getDriverKitVersion();
   EXPECT_EQ(VersionTuple(19, 0), Version);
 
+  T = Triple("arm64-apple-driverkit27");
+  Version = T.getDriverKitVersion();
+  EXPECT_EQ(VersionTuple(27), Version);
+
   T = Triple("dxil-unknown-shadermodel6.6-pixel");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -2320,14 +3092,90 @@ TEST(TripleTest, isMacOSVersionLT) {
   EXPECT_FALSE(T.isMacOSXVersionLT(10, 15, 0));
 }
 
+TEST(TripleTest, isMacOSVersionGE) {
+  Triple T = Triple("x86_64-apple-macos11");
+  EXPECT_FALSE(T.isMacOSXVersionGE(11, 1, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(10, 15, 0));
+
+  T = Triple("x86_64-apple-darwin20");
+  EXPECT_FALSE(T.isMacOSXVersionGE(11, 1, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(11, 0, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(10, 15, 0));
+}
+
 TEST(TripleTest, CanonicalizeOSVersion) {
   EXPECT_EQ(VersionTuple(10, 15, 4),
             Triple::getCanonicalVersionForOS(Triple::MacOSX,
-                                             VersionTuple(10, 15, 4)));
-  EXPECT_EQ(VersionTuple(11, 0), Triple::getCanonicalVersionForOS(
-                                     Triple::MacOSX, VersionTuple(10, 16)));
+                                             VersionTuple(10, 15, 4),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(11, 0),
+            Triple::getCanonicalVersionForOS(
+                Triple::MacOSX, VersionTuple(10, 16), /*IsInValidRange=*/true));
   EXPECT_EQ(VersionTuple(20),
-            Triple::getCanonicalVersionForOS(Triple::Darwin, VersionTuple(20)));
+            Triple::getCanonicalVersionForOS(Triple::Darwin, VersionTuple(20),
+                                             /*IsInValidRange=*/true));
+
+  // Validate mappings for all expected OS versions remapping to 26.
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::MacOSX, VersionTuple(16),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::IOS, VersionTuple(19),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::TvOS, VersionTuple(19),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::WatchOS, VersionTuple(12),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::XROS, VersionTuple(3),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::Darwin, VersionTuple(26),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::BridgeOS, VersionTuple(26),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(26),
+            Triple::getCanonicalVersionForOS(Triple::BridgeOS, VersionTuple(26),
+                                             /*IsInValidRange=*/true));
+  EXPECT_EQ(VersionTuple(10),
+            Triple::getCanonicalVersionForOS(Triple::BridgeOS, VersionTuple(10),
+                                             /*IsInValidRange=*/true));
+
+  // Verify invalid ranges can be remapped.
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::MacOSX, VersionTuple(18),
+                                             /*IsInValidRange=*/false));
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::IOS, VersionTuple(21),
+                                             /*IsInValidRange=*/false));
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::WatchOS, VersionTuple(14),
+                                             /*IsInValidRange=*/false));
+  EXPECT_EQ(VersionTuple(28),
+            Triple::getCanonicalVersionForOS(Triple::TvOS, VersionTuple(21),
+                                             /*IsInValidRange=*/false));
+}
+
+TEST(TripleTest, CheckValidOSVersion) {
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::MacOSX, VersionTuple(16)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::IOS, VersionTuple(19)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::TvOS, VersionTuple(19)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::TvOS, VersionTuple(18, 2)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::WatchOS, VersionTuple(12)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::XROS, VersionTuple(3)));
+  EXPECT_TRUE(Triple::isValidVersionForOS(Triple::Darwin, VersionTuple(26)));
+  EXPECT_TRUE(
+      Triple::isValidVersionForOS(Triple::BridgeOS, VersionTuple(26, 1, 1)));
+
+  EXPECT_FALSE(
+      Triple::isValidVersionForOS(Triple::MacOSX, VersionTuple(16, 1)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::MacOSX, VersionTuple(18)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::IOS, VersionTuple(21)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::WatchOS, VersionTuple(14)));
+  EXPECT_FALSE(Triple::isValidVersionForOS(Triple::TvOS, VersionTuple(21)));
 }
 
 TEST(TripleTest, FileFormat) {
@@ -2388,6 +3236,10 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::SPIRV, Triple("spirv32-unknown-unknown").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv64-unknown-unknown").getObjectFormat());
 
+  EXPECT_EQ(Triple::ELF, Triple("amdgcn-unknown-unknown").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("amdgpu-unknown-unknown").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("amdgpu-amd-amdhsa").getObjectFormat());
+
   EXPECT_EQ(Triple::ELF,
             Triple("loongarch32-unknown-unknown").getObjectFormat());
   EXPECT_EQ(Triple::ELF, Triple("loongarch64-unknown-linux").getObjectFormat());
@@ -2429,11 +3281,195 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ("spirv", Triple::getObjectFormatTypeName(T.getObjectFormat()));
 
   EXPECT_EQ(Triple::ELF, Triple("amdgcn-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("amdgpu-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::ELF, Triple("r600-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv32-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv64-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::DXContainer, Triple("dxil-apple-macosx").getObjectFormat());
+}
+
+TEST(TripleTest, SupportsDebugEntryValues) {
+  EXPECT_TRUE(Triple("i686-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("x86_64-apple-macosx").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("arm64-apple-macosx").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("arm64e-apple-ios").supportsDebugEntryValues());
+  EXPECT_TRUE(
+      Triple("armv7-unknown-linux-gnueabihf").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("armeb-unknown-linux-gnueabi").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mips-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mipsel-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mips64-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("mips64el-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("riscv32-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_TRUE(Triple("riscv64-unknown-linux-gnu").supportsDebugEntryValues());
+
+  EXPECT_FALSE(Triple("arm64_32-apple-watchos").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("thumbv7-apple-ios").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("wasm32-unknown-wasip1").supportsDebugEntryValues());
+  EXPECT_FALSE(
+      Triple("powerpc64le-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("s390x-unknown-linux-gnu").supportsDebugEntryValues());
+  EXPECT_FALSE(Triple("").supportsDebugEntryValues());
+}
+
+TEST(TripleTest, DefaultExceptionHandling) {
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-unknown-linux-gnu").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-unknown-freebsd").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("wasm32-unknown-wasi-wasm").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("wasm64-unknown-wasi-wasm").getDefaultExceptionHandling());
+
+  EXPECT_EQ(
+      ExceptionHandling::ARM,
+      Triple("arm-unknown-linux-android16").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("armv6-unknown-netbsd-eabi").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::ARM,
+            Triple("armv7-suse-linux-gnueabihf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::ARM,
+            Triple("thumbv7-linux-gnueabihf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("thumbv7-none-netbsd").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::ZOS,
+            Triple("s390x-ibm-zos").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("systemz-ibm-linux").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("sparcel-unknown-unknown").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("amdgcn--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("amdgpu--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("nvptx64--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("spirv32--").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("spirv64--").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-pc-windows-msvc-elf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("i686-pc-windows-msvc").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i386-apple-darwin9").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("x86_64-unknown-uefi").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI, // ???
+            Triple("x86_64-unknown-msvc").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("riscv32-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("riscv64-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("xcore-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("xtensa-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("lanai-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("arc-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(
+      ExceptionHandling::DwarfCFI,
+      Triple("loongarch32-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(
+      ExceptionHandling::DwarfCFI,
+      Triple("loongarch64-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("msp430-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("m68k-unknown-unknown").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("csky-unknown-unknown").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::AIX,
+            Triple("powerpc-ibm-aix").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::AIX,
+            Triple("powerpc---xcoff").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("powerpc-apple-macosx").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-pc-cygwin-elf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-pc-cygwin-elf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("x86_64-pc-win32").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("x86_64-pc-windows-coreclr").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("ve-unknown-linux").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::None,
+            Triple("ve-unknown-unknown").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("armv7k-apple-watchos").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::SjLj,
+            Triple("armv7-apple-ios").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("mips64-mti-linux-gnu").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("mips").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("mips-pc-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("mips-pc-windows-msvc-coff").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("mipsel-windows--coff").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("mipsel-windows-msvc").getDefaultExceptionHandling());
+
+  EXPECT_EQ(
+      ExceptionHandling::WinEH,
+      Triple("aarch64-unknown-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("aarch64-unknown-unknown").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("arm64_32-apple-ios").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("arm64-apple-macosx").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("xcore-xmos-elf").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("i386-pc-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i386-mingw32").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("i386-pc-win32").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i386-pc-mingw32").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("i686-pc-cygwin").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-pc-mingw64").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-win32-gnu").getDefaultExceptionHandling());
+
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("x86_64-scei-ps4").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::WinEH,
+            Triple("aarch64-pc-windows-msvc").getDefaultExceptionHandling());
+  EXPECT_EQ(ExceptionHandling::DwarfCFI,
+            Triple("aarch64-pc-windows-elf").getDefaultExceptionHandling());
 }
 
 TEST(TripleTest, NormalizeWindows) {
@@ -2445,6 +3481,8 @@ TEST(TripleTest, NormalizeWindows) {
   EXPECT_EQ("i686-unknown-windows-gnu", Triple::normalize("i686-mingw32-w64"));
   EXPECT_EQ("i686-pc-windows-cygnus", Triple::normalize("i686-pc-cygwin"));
   EXPECT_EQ("i686-unknown-windows-cygnus", Triple::normalize("i686-cygwin"));
+  EXPECT_EQ("i686-pc-windows-cygnus", Triple::normalize("i686-pc-msys"));
+  EXPECT_EQ("i686-unknown-windows-cygnus", Triple::normalize("i686-msys"));
 
   EXPECT_EQ("x86_64-pc-windows-msvc", Triple::normalize("x86_64-pc-win32"));
   EXPECT_EQ("x86_64-unknown-windows-msvc", Triple::normalize("x86_64-win32"));
@@ -2454,6 +3492,11 @@ TEST(TripleTest, NormalizeWindows) {
             Triple::normalize("x86_64-pc-mingw32-w64"));
   EXPECT_EQ("x86_64-unknown-windows-gnu",
             Triple::normalize("x86_64-mingw32-w64"));
+  EXPECT_EQ("x86_64-pc-windows-cygnus", Triple::normalize("x86_64-pc-cygwin"));
+  EXPECT_EQ("x86_64-unknown-windows-cygnus",
+            Triple::normalize("x86_64-cygwin"));
+  EXPECT_EQ("x86_64-pc-windows-cygnus", Triple::normalize("x86_64-pc-msys"));
+  EXPECT_EQ("x86_64-unknown-windows-cygnus", Triple::normalize("x86_64-msys"));
 
   EXPECT_EQ("i686-pc-windows-elf", Triple::normalize("i686-pc-win32-elf"));
   EXPECT_EQ("i686-unknown-windows-elf", Triple::normalize("i686-win32-elf"));
@@ -2729,12 +3772,299 @@ TEST(TripleTest, DXILNormaizeWithVersion) {
             Triple::normalize("dxil--shadermodel6.0"));
   EXPECT_EQ("dxilv1.1-unknown-shadermodel6.1-library",
             Triple::normalize("dxil-shadermodel6.1-unknown-library"));
-  EXPECT_EQ("dxilv1.8-unknown-shadermodel6.x-unknown",
+  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
             Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
-  EXPECT_EQ("dxilv1.8-unknown-shadermodel6.x-unknown",
+  EXPECT_EQ("dxilv1.9-unknown-shadermodel6.x-unknown",
             Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
   EXPECT_EQ("dxil-unknown-unknown-unknown", Triple::normalize("dxil---"));
   EXPECT_EQ("dxilv1.0-pc-shadermodel5.0-compute",
             Triple::normalize("dxil-shadermodel5.0-pc-compute"));
 }
+
+TEST(TripleTest, isCompatibleWith) {
+  struct {
+    const char *A;
+    const char *B;
+    bool Result;
+  } Cases[] = {
+      {"armv7-linux-gnueabihf", "thumbv7-linux-gnueabihf", true},
+      {"armv4-none-unknown-eabi", "thumbv6-unknown-linux-gnueabihf", false},
+      {"x86_64-apple-macosx10.9.0", "x86_64-apple-macosx10.10.0", true},
+      {"x86_64-apple-macosx10.9.0", "i386-apple-macosx10.9.0", false},
+      {"x86_64-apple-macosx10.9.0", "x86_64h-apple-macosx10.9.0", true},
+      {"x86_64-unknown-linux-gnu", "x86_64-unknown-linux-gnu", true},
+      {"x86_64-unknown-linux-gnu", "i386-unknown-linux-gnu", false},
+      {"x86_64-unknown-linux-gnu", "x86_64h-unknown-linux-gnu", true},
+      {"x86_64-pc-windows-gnu", "x86_64-pc-windows-msvc", false},
+      {"x86_64-pc-windows-msvc", "x86_64-pc-windows-msvc-elf", false},
+      {"i686-w64-windows-gnu", "i386-w64-windows-gnu", true},
+      {"x86_64-w64-windows-gnu", "x86_64-pc-windows-gnu", true},
+      {"armv7-w64-windows-gnu", "thumbv7-pc-windows-gnu", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa-llvm", "amdgpu-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa-llvm", "amdgpu9-amd-amdhsa", false},
+      {"amdgpu9-amd-amdhsa-coff", "amdgpu9-amd-amdhsa", false},
+      {"amdgpu-unknown-amdhsa-coff", "amdgpu-amd-amdhsa", false},
+      {"amdgpu9-amd-amdhsa-llvm", "amdgpu9-amd-amdhsa", false},
+
+      {"amdgpu6-amd-amdhsa", "amdgpu6.00-amd-amdhsa", true},
+      {"amdgpu6-amd-amdhsa", "amdgpu6.01-amd-amdhsa", true},
+      {"amdgpu6-amd-amdhsa", "amdgpu6.02-amd-amdhsa", true},
+      {"amdgpu6-amd-amdhsa", "amdgpu7-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa", "amdgpu8-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa", "amdgpu9-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa", "amdgpu9.4-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa", "amdgpu10.1-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa", "amdgpu7.00-amd-amdhsa", false},
+      {"amdgpu6-amd-amdhsa", "amdgpu700-amd-amdhsa", false},
+
+      {"amdgpu7-amd-amdhsa", "amdgpu7.00-amd-amdhsa", true},
+      {"amdgpu7-amd-amdhsa", "amdgpu7.01-amd-amdhsa", true},
+      {"amdgpu7-amd-amdhsa", "amdgpu7.02-amd-amdhsa", true},
+      {"amdgpu7-amd-amdhsa", "amdgpu7.03-amd-amdhsa", true},
+      {"amdgpu7-amd-amdhsa", "amdgpu7.04-amd-amdhsa", true},
+      {"amdgpu7-amd-amdhsa", "amdgpu7.05-amd-amdhsa", true},
+      {"amdgpu7-amd-amdhsa", "amdgpu8-amd-amdhsa", false},
+
+      {"amdgpu8-amd-amdhsa", "amdgpu8.01-amd-amdhsa", true},
+      {"amdgpu8-amd-amdhsa", "amdgpu8.02-amd-amdhsa", true},
+      {"amdgpu8-amd-amdhsa", "amdgpu8.03-amd-amdhsa", true},
+      {"amdgpu8-amd-amdhsa", "amdgpu8.10-amd-amdhsa", false},
+
+      {"amdgpu9-amd-amdhsa", "amdgpu9.00-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.02-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.04-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.06-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.08-amd-amdhsa", false},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.09-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.0a-amd-amdhsa", false},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.0c-amd-amdhsa", true},
+      {"amdgpu9.08-amd-amdhsa", "amdgpu9.08-amd-amdhsa", true},
+      {"amdgpu9.0a-amd-amdhsa", "amdgpu9.0a-amd-amdhsa", true},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.4-amd-amdhsa", false},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.42-amd-amdhsa", false},
+      {"amdgpu9-amd-amdhsa", "amdgpu9.50-amd-amdhsa", false},
+      {"amdgpu9.00-amd-amdhsa", "amdgpu9.50-amd-amdhsa", false},
+      {"amdgpu9.50-amd-amdhsa", "amdgpu9.00-amd-amdhsa", false},
+      {"amdgpu9.00-amd-amdhsa", "amdgpu9.08-amd-amdhsa", false},
+      {"amdgpu9.08-amd-amdhsa", "amdgpu9.00-amd-amdhsa", false},
+      {"amdgpu9.00-amd-amdhsa", "amdgpu9.06-amd-amdhsa", false},
+      {"amdgpu9.06-amd-amdhsa", "amdgpu9.00-amd-amdhsa", false},
+      {"amdgpu10.1-amd-amdhsa", "amdgpu10.10-amd-amdhsa", true},
+      {"amdgpu10.1-amd-amdhsa", "amdgpu10.11-amd-amdhsa", true},
+      {"amdgpu10.1-amd-amdhsa", "amdgpu10.12-amd-amdhsa", true},
+      {"amdgpu10.1-amd-amdhsa", "amdgpu10.13-amd-amdhsa", true},
+
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.1-amd-amdhsa", false},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.10-amd-amdhsa", false},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.30-amd-amdhsa", true},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.31-amd-amdhsa", true},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.32-amd-amdhsa", true},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.33-amd-amdhsa", true},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.34-amd-amdhsa", true},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.35-amd-amdhsa", true},
+      {"amdgpu10.3-amd-amdhsa", "amdgpu10.36-amd-amdhsa", true},
+
+      {"amdgpu11-amd-amdhsa", "amdgpu10.1-amd-amdhsa", false},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.00-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.01-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.02-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.03-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.50-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.51-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.52-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.53-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.54-amd-amdhsa", true},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.7-amd-amdhsa", false},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.70-amd-amdhsa", false},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.71-amd-amdhsa", false},
+      {"amdgpu11-amd-amdhsa", "amdgpu11.72-amd-amdhsa", false},
+
+      {"amdgpu11.7-amd-amdhsa", "amdgpu11-amd-amdhsa", false},
+      {"amdgpu11.7-amd-amdhsa", "amdgpu11.70-amd-amdhsa", true},
+      {"amdgpu11.7-amd-amdhsa", "amdgpu11.71-amd-amdhsa", true},
+      {"amdgpu11.7-amd-amdhsa", "amdgpu11.72-amd-amdhsa", true},
+
+      {"amdgpu12-amd-amdhsa", "amdgpu12.00-amd-amdhsa", true},
+      {"amdgpu12-amd-amdhsa", "amdgpu12.01-amd-amdhsa", true},
+      {"amdgpu12-amd-amdhsa", "amdgpu12.5-amd-amdhsa", false},
+      {"amdgpu12-amd-amdhsa", "amdgpu12.50-amd-amdhsa", false},
+      {"amdgpu12-amd-amdhsa", "amdgpu12.51-amd-amdhsa", false},
+
+      {"amdgpu12.5-amd-amdhsa", "amdgpu12.50-amd-amdhsa", true},
+      {"amdgpu12.5-amd-amdhsa", "amdgpu12.51-amd-amdhsa", true},
+
+      // amdgpu12.50s is its own major subarch: compatible only with itself.
+      {"amdgpu12.50s-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", true},
+      {"amdgpu12.5-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12.50-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12.51-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+
+      {"amdgpu13-amd-amdhsa", "amdgpu13.10-amd-amdhsa", true},
+
+      // A vendor mismatch is incompatible even when the subarch is otherwise
+      // compatible.
+      {"amdgpu9-amd-amdhsa", "amdgpu9.00-unknown-amdhsa", false},
+      {"amdgpu9.00-amd-amdhsa", "amdgpu9.00-unknown-amdhsa", false},
+      {"amdgpu12.5-amd-amdhsa", "amdgpu12.50-unknown-amdhsa", false},
+  };
+
+  auto DoTest = [](const char *A, const char *B,
+                   bool Result) -> testing::AssertionResult {
+    if (Triple(A).isCompatibleWith(Triple(B)) != Result) {
+      return testing::AssertionFailure()
+             << llvm::formatv("Triple {0} and {1} were expected to be {2}", A,
+                              B, Result ? "compatible" : "incompatible");
+    }
+    return testing::AssertionSuccess();
+  };
+  for (const auto &C : Cases) {
+    EXPECT_TRUE(DoTest(C.A, C.B, C.Result));
+    // Test that the comparison is commutative.
+    EXPECT_TRUE(DoTest(C.B, C.A, C.Result));
+  }
+}
+
+TEST(TripleTest, Merge) {
+  // Baseline: merging identical triples returns that triple.
+  EXPECT_EQ("x86_64-unknown-linux-gnu",
+            Triple(Triple::normalize("x86_64-unknown-linux-gnu"))
+                .merge(Triple(Triple::normalize("x86_64-unknown-linux-gnu"))));
+
+  // General rule (no Apple/AMDGPU special case): the merge takes the other
+  // triple.
+  EXPECT_EQ("i386-unknown-linux-gnu",
+            Triple(Triple::normalize("x86_64-unknown-linux-gnu"))
+                .merge(Triple(Triple::normalize("i386-unknown-linux-gnu"))));
+  EXPECT_EQ("x86_64-unknown-linux-gnu",
+            Triple(Triple::normalize("i386-unknown-linux-gnu"))
+                .merge(Triple(Triple::normalize("x86_64-unknown-linux-gnu"))));
+
+  // AMDGPU with a matching OS/vendor merges the subarchitectures: merging a
+  // major-family subarch with a specific one in that family yields the
+  // specific subarch, regardless of order.
+  EXPECT_EQ("amdgpu9.00-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu9-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("amdgpu9.00-amd-amdhsa"))));
+  EXPECT_EQ("amdgpu9.00-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu9.00-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("amdgpu9-amd-amdhsa"))));
+
+  // An AMDGPU triple without a subarch merges to the other AMDGPU triple's
+  // subarch.
+  EXPECT_EQ("amdgpu9-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("amdgpu9-amd-amdhsa"))));
+  EXPECT_EQ("amdgpu9-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu9-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("amdgpu-amd-amdhsa"))));
+
+  // Identical AMDGPU triples merge to themselves.
+  EXPECT_EQ("amdgpu9.00-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu9.00-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("amdgpu9.00-amd-amdhsa"))));
+
+  // The AMDGPU subarch merge only kicks in when the receiver is AMDGPU and the
+  // OS and vendor match; otherwise the general rule applies and the other
+  // triple wins.
+  EXPECT_EQ("x86_64-unknown-linux-gnu",
+            Triple(Triple::normalize("amdgpu9-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("x86_64-unknown-linux-gnu"))));
+  EXPECT_EQ("amdgpu9-amd-amdhsa",
+            Triple(Triple::normalize("x86_64-unknown-linux-gnu"))
+                .merge(Triple(Triple::normalize("amdgpu9-amd-amdhsa"))));
+
+  // The subarch merge does not fire when only the receiver is amdgcn but the
+  // other triple is a different.
+  EXPECT_EQ("r600-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu9-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("r600-amd-amdhsa"))));
+  EXPECT_EQ("x86_64-amd-amdhsa",
+            Triple(Triple::normalize("amdgpu9-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("x86_64-amd-amdhsa"))));
+  EXPECT_EQ("amdgpu9-amd-amdhsa",
+            Triple(Triple::normalize("x86_64-amd-amdhsa"))
+                .merge(Triple(Triple::normalize("amdgpu9-amd-amdhsa"))));
+}
+
+TEST(DataLayoutTest, UEFI) {
+  Triple TT = Triple("x86_64-unknown-uefi");
+
+  // Test UEFI X86_64 Mangling Component.
+  EXPECT_THAT(TT.computeDataLayout(), testing::HasSubstr("-m:w-"));
+}
+
+TEST(TripleTest, WindowsOrUEFI) {
+  EXPECT_TRUE(Triple("x86_64-pc-windows-msvc").isOSWindowsOrUEFI());
+  EXPECT_TRUE(Triple("x86_64-w64-windows-gnu").isOSWindowsOrUEFI());
+  EXPECT_TRUE(Triple("x86_64-unknown-uefi").isOSWindowsOrUEFI());
+  EXPECT_FALSE(Triple("x86_64-unknown-linux-gnu").isOSWindowsOrUEFI());
+}
+
+TEST(TripleTest, DefaultWCharSize) {
+  EXPECT_EQ(4u, Triple("x86_64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("aarch64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("riscv64-unknown-linux-gnu").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("amdgcn-amd-amdhsa").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("nvptx64-nvidia-cuda").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("armv7-unknown-linux-gnueabi").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("s390x-none-zos").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("powerpc64-ibm-aix").getDefaultWCharSize());
+  EXPECT_EQ(4u, Triple("").getDefaultWCharSize());
+
+  EXPECT_EQ(2u, Triple("x86_64-pc-windows-msvc").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("aarch64-pc-windows-msvc").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-w64-windows-gnu").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-unknown-uefi").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-scei-ps4").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("x86_64-scei-ps5").getDefaultWCharSize());
+  EXPECT_EQ(2u, Triple("powerpc-ibm-aix").getDefaultWCharSize());
+
+  EXPECT_EQ(1u, Triple("xcore-unknown-unknown").getDefaultWCharSize());
+}
+
+TEST(DataLayoutTest, NVPTX) {
+  Triple TT32 = Triple("nvptx-nvidia-cuda");
+  Triple TT64 = Triple("nvptx64-nvidia-cuda");
+
+  auto PointerLayoutSpecs = [](StringRef DataLayout) {
+    SmallVector<std::string, 8> Specs;
+    for (StringRef Spec : split(DataLayout, '-'))
+      if (Spec.starts_with("p"))
+        Specs.emplace_back(Spec);
+    return Specs;
+  };
+
+  // The 32-bit target uses a single 32-bit pointer specification and is
+  // unaffected by the ABI name.
+  EXPECT_THAT(PointerLayoutSpecs(TT32.computeDataLayout("")),
+              testing::ElementsAre("p:32:32"));
+  EXPECT_THAT(PointerLayoutSpecs(TT32.computeDataLayout("shortptr")),
+              testing::ElementsAre("p:32:32"));
+
+  // The default 64-bit target only shrinks Tensor Memory (addrspace:6).
+  EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("")),
+              testing::ElementsAre("p6:32:32"));
+
+  // In shortptr mode the extra address spaces become 32-bit. The pointer
+  // specifications must remain sorted by address space.
+  EXPECT_THAT(PointerLayoutSpecs(TT64.computeDataLayout("shortptr")),
+              testing::ElementsAre("p3:32:32", "p4:32:32", "p5:32:32",
+                                   "p6:32:32", "p7:32:32", "p101:32:32"));
+}
+
+TEST(DataLayoutTest, CheriRISCV32) {
+  Triple TT = Triple("riscv32-unknown-unknown");
+
+  EXPECT_THAT(TT.computeDataLayout(""),
+              testing::Not(testing::HasSubstr("pe200")));
+  EXPECT_THAT(TT.computeDataLayout(""),
+              testing::Not(testing::HasSubstr("A200-P200-G200")));
+  EXPECT_THAT(TT.computeDataLayout("cheriot"),
+              testing::HasSubstr("pe200:64:64:64:32"));
+  EXPECT_THAT(TT.computeDataLayout("cheriot"),
+              testing::HasSubstr("A200-P200-G200"));
+}
+
 } // end anonymous namespace

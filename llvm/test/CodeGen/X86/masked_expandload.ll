@@ -1097,7 +1097,7 @@ define <2 x float> @expandload_v2f32_v2i1(ptr %base, <2 x float> %src0, <2 x i32
 ; SSE42-NEXT:    retq
 ; SSE42-NEXT:  LBB4_1: ## %cond.load
 ; SSE42-NEXT:    movss (%rdi), %xmm1 ## xmm1 = mem[0],zero,zero,zero
-; SSE42-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE42-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE42-NEXT:    addq $4, %rdi
 ; SSE42-NEXT:    testb $2, %al
 ; SSE42-NEXT:    je LBB4_4
@@ -1120,7 +1120,7 @@ define <2 x float> @expandload_v2f32_v2i1(ptr %base, <2 x float> %src0, <2 x i32
 ; AVX1OR2-NEXT:    retq
 ; AVX1OR2-NEXT:  LBB4_1: ## %cond.load
 ; AVX1OR2-NEXT:    vmovss (%rdi), %xmm1 ## xmm1 = mem[0],zero,zero,zero
-; AVX1OR2-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX1OR2-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX1OR2-NEXT:    addq $4, %rdi
 ; AVX1OR2-NEXT:    testb $2, %al
 ; AVX1OR2-NEXT:    je LBB4_4
@@ -2620,8 +2620,10 @@ define <32 x float> @expandload_v32f32_v32i32(ptr %base, <32 x float> %src0, <32
 ; AVX512-NEXT:    shrl $4, %ecx
 ; AVX512-NEXT:    addl %eax, %ecx
 ; AVX512-NEXT:    andl $252645135, %ecx ## imm = 0xF0F0F0F
-; AVX512-NEXT:    imull $16843009, %ecx, %eax ## imm = 0x1010101
-; AVX512-NEXT:    shrl $24, %eax
+; AVX512-NEXT:    movl %ecx, %eax
+; AVX512-NEXT:    shrl $8, %eax
+; AVX512-NEXT:    addl %ecx, %eax
+; AVX512-NEXT:    movzbl %al, %eax
 ; AVX512-NEXT:    vexpandps (%rdi,%rax,4), %zmm1 {%k2}
 ; AVX512-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
 ; AVX512-NEXT:    retq
@@ -3047,8 +3049,7 @@ define <8 x i16> @expandload_v8i16_v8i16(ptr %base, <8 x i16> %src0, <8 x i16> %
 ; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512VLDQ-NEXT:    vpcmpeqw %xmm2, %xmm1, %xmm1
 ; AVX512VLDQ-NEXT:    vpmovsxwd %xmm1, %ymm1
-; AVX512VLDQ-NEXT:    vpmovd2m %ymm1, %k0
-; AVX512VLDQ-NEXT:    kmovw %k0, %eax
+; AVX512VLDQ-NEXT:    vmovmskps %ymm1, %eax
 ; AVX512VLDQ-NEXT:    testb $1, %al
 ; AVX512VLDQ-NEXT:    jne LBB11_1
 ; AVX512VLDQ-NEXT:  ## %bb.2: ## %else

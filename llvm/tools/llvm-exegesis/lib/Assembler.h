@@ -29,6 +29,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -61,7 +62,7 @@ public:
 // Helper to fill in a function.
 class FunctionFiller {
 public:
-  FunctionFiller(MachineFunction &MF, std::vector<unsigned> RegistersSetUp);
+  FunctionFiller(MachineFunction &MF, std::vector<MCRegister> RegistersSetUp);
 
   // Adds a basic block to the function.
   BasicBlockFiller addBasicBlock();
@@ -73,12 +74,12 @@ public:
   const MCInstrInfo *const MCII;
 
   // Returns the set of registers in the snippet setup code.
-  ArrayRef<unsigned> getRegistersSetUp() const;
+  ArrayRef<MCRegister> getRegistersSetUp() const;
 
 private:
   BasicBlockFiller Entry;
   // The set of registers that are set up in the basic block.
-  std::vector<unsigned> RegistersSetUp;
+  std::vector<MCRegister> RegistersSetUp;
 };
 
 // A callback that fills a function.
@@ -90,7 +91,7 @@ using FillFunction = std::function<void(FunctionFiller &)>;
 // AsmStream, the temporary function is eventually discarded.
 Error assembleToStream(const ExegesisTarget &ET,
                        std::unique_ptr<TargetMachine> TM,
-                       ArrayRef<unsigned> LiveIns, const FillFunction &Fill,
+                       ArrayRef<MCRegister> LiveIns, const FillFunction &Fill,
                        raw_pwrite_stream &AsmStreamm, const BenchmarkKey &Key,
                        bool GenerateMemoryInstructions);
 
@@ -114,7 +115,8 @@ public:
   StringRef getFunctionBytes() const { return FunctionBytes; }
 
   // Executes the function.
-  void operator()(char *Memory) const {
+  void operator()(char *Memory) const
+      LLVM_NO_SANITIZE("cfi-icall") /* Incompatible with JIT */ {
     ((void (*)(char *))(uintptr_t)FunctionBytes.data())(Memory);
   }
 

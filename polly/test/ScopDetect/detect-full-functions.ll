@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -polly-process-unprofitable=false -disable-output -polly-detect-full-functions  < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<detect>' -polly-print-detect -polly-process-unprofitable=false -disable-output -polly-detect-full-functions < %s 2>&1 | FileCheck %s
 
 ; Verify if a simple function with basic block not part of loop doesn't crash with polly-process-unprofitable=false and polly-detect-full-functions flags.
 

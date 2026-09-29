@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRTosaTestPasses
+add_mlir_library(MLIRTosaTestPasses
   TosaTestPasses.cpp
 
   EXCLUDE_FROM_LIBMLIR
@@ -7,9 +7,10 @@ add_mlir_dialect_library(MLIRTosaTestPasses
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tosa/Transforms
 
   DEPENDS
+  mlir-headers
   MLIRTosaPassIncGen
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRTosaTestPasses PUBLIC
   MLIRFuncDialect
   MLIRPass
   MLIRTosaDialect

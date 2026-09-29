@@ -379,6 +379,14 @@ static std::string formatJumpTableEntrySize(JumpTableEntrySize EntrySize) {
   return formatUnknownEnum(EntrySize);
 }
 
+static std::string formatAssociationKind(AssociationKind Kind) {
+  switch (Kind) {
+    RETURN_CASE(AssociationKind, None, "none");
+    RETURN_CASE(AssociationKind, Coroutine, "coroutine");
+  }
+  return formatUnknownEnum(Kind);
+}
+
 Error MinimalSymbolDumper::visitSymbolBegin(codeview::CVSymbol &Record) {
   return visitSymbolBegin(Record, 0);
 }
@@ -396,12 +404,21 @@ Error MinimalSymbolDumper::visitSymbolBegin(codeview::CVSymbol &Record,
 }
 
 Error MinimalSymbolDumper::visitSymbolEnd(CVSymbol &Record) {
-  if (RecordBytes) {
-    AutoIndent Indent(P, 7);
-    P.formatBinary("bytes", Record.content(), 0);
-  }
+  if (RecordBytes)
+    printSymbolBytes(Record);
   P.Unindent();
   return Error::success();
+}
+
+Error MinimalSymbolDumper::visitUnknownSymbol(CVSymbol &Record) {
+  if (!RecordBytes)
+    printSymbolBytes(Record);
+  return Error::success();
+}
+
+void MinimalSymbolDumper::printSymbolBytes(CVSymbol &Record) const {
+  AutoIndent Indent(P, 7);
+  P.formatBinary("bytes", Record.content(), 0);
 }
 
 std::string MinimalSymbolDumper::typeOrIdIndex(codeview::TypeIndex TI,
@@ -629,6 +646,20 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   return Error::success();
 }
 
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            DefRangeRegisterRelIndirSym &Def) {
+  AutoIndent Indent(P, 7);
+  P.formatLine("register = {0}, offset = {1}, offset in udt = {2}, offset in "
+               "parent = {3}, has "
+               "spilled udt = {4}",
+               formatRegisterId(Def.Hdr.Register, CompilationCPU),
+               int32_t(Def.Hdr.BasePointerOffset), int32_t(Def.Hdr.OffsetInUdt),
+               Def.offsetInParent(), Def.hasSpilledUDTMember());
+  P.formatLine("range = {0}, gaps = [{1}]", formatRange(Def.Range),
+               formatGaps(P.getIndentLevel() + 9, Def.Gaps));
+  return Error::success();
+}
+
 Error MinimalSymbolDumper::visitKnownRecord(
     CVSymbol &CVR, DefRangeRegisterSym &DefRangeRegister) {
   AutoIndent Indent(P, 7);
@@ -773,7 +804,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, InlineSiteSym &IS) {
         else
           return MaybeFile.takeError();
       }
-      P.format(" setfile {0} 0x{1}", utohexstr(FileOffset));
+      P.format(" setfile {0} 0x{1}", Filename, utohexstr(FileOffset));
       break;
     }
 
@@ -912,6 +943,17 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            RegRelativeIndirSym &RegRelIndir) {
+  P.format(" `{0}`", RegRelIndir.Name);
+  AutoIndent Indent(P, 7);
+  P.formatLine("type = {0}, register = {1}, offset = {2}, offset-in-udt = {3}",
+               typeIndex(RegRelIndir.Type),
+               formatRegisterId(RegRelIndir.Register, CompilationCPU),
+               RegRelIndir.Offset, RegRelIndir.OffsetInUdt);
+  return Error::success();
+}
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             ThreadLocalDataSym &Data) {
   P.format(" `{0}`", Data.Name);
   AutoIndent Indent(P, 7);
@@ -953,5 +995,21 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
       formatSegmentOffset(JumpTable.BranchSegment, JumpTable.BranchOffset),
       formatSegmentOffset(JumpTable.TableSegment, JumpTable.TableOffset),
       JumpTable.EntriesCount);
+  return Error::success();
+}
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            HotPatchFuncSym &JumpTable) {
+  AutoIndent Indent(P, 7);
+  P.formatLine("function = {0}, name = {1}", typeIndex(JumpTable.Function),
+               JumpTable.Name);
+  return Error::success();
+}
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            AssociationSym &Assoc) {
+  AutoIndent Indent(P, 7);
+  P.formatLine("kind = {0}, addr = {1}", formatAssociationKind(Assoc.AssocKind),
+               formatSegmentOffset(Assoc.Segment, Assoc.CodeOffset));
   return Error::success();
 }

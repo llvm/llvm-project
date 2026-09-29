@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++14,c++17 -check-suffix=CXX-14-17 %s modernize-make-unique %t -- -- -I %S/Inputs/smart-ptr -D CXX_14_17=1
-// RUN: %check_clang_tidy -std=c++20 -check-suffix=CXX-20 %s modernize-make-unique %t -- -- -I %S/Inputs/smart-ptr -D CXX_20=1
+// RUN: %check_clang_tidy -std=c++20-or-later -check-suffix=CXX-20 %s modernize-make-unique %t -- -- -I %S/Inputs/smart-ptr -D CXX_20=1
 
 #include "unique_ptr.h"
 // CHECK-FIXES: #include <memory>

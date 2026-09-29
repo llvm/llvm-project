@@ -13,11 +13,18 @@
 #include "llvm/CGData/CodeGenDataReader.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define DEBUG_TYPE "cg-data-reader"
 
 using namespace llvm;
+
+static cl::opt<bool> IndexedCodeGenDataReadFunctionMapNames(
+    "indexed-codegen-data-read-function-map-names", cl::init(true), cl::Hidden,
+    cl::desc("Read function map names in indexed CodeGenData. Can be "
+             "disabled to save memory and time for final consumption of the "
+             "indexed CodeGenData in production."));
 
 namespace llvm {
 
@@ -102,34 +109,46 @@ Error IndexedCodeGenDataReader::read() {
       return error(cgdata_error::eof);
     HashTreeRecord.deserialize(Ptr);
   }
+
+  // TODO: lazy loading support for outlined hash tree.
+  std::shared_ptr<MemoryBuffer> SharedDataBuffer = std::move(DataBuffer);
   if (hasStableFunctionMap()) {
     const unsigned char *Ptr = Start + Header.StableFunctionMapOffset;
     if (Ptr >= End)
       return error(cgdata_error::eof);
-    FunctionMapRecord.deserialize(Ptr);
+    FunctionMapRecord.setReadStableFunctionMapNames(
+        IndexedCodeGenDataReadFunctionMapNames);
+    if (LazyLoading)
+      FunctionMapRecord.lazyDeserialize(std::move(SharedDataBuffer),
+                                        Header.StableFunctionMapOffset);
+    else
+      FunctionMapRecord.deserialize(Ptr);
   }
 
   return success();
 }
 
 Expected<std::unique_ptr<CodeGenDataReader>>
-CodeGenDataReader::create(const Twine &Path, vfs::FileSystem &FS) {
+CodeGenDataReader::create(const Twine &Path, vfs::FileSystem &FS,
+                          bool LazyLoading) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
-  return CodeGenDataReader::create(std::move(BufferOrError.get()));
+  return CodeGenDataReader::create(std::move(BufferOrError.get()), LazyLoading);
 }
 
 Expected<std::unique_ptr<CodeGenDataReader>>
-CodeGenDataReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
+CodeGenDataReader::create(std::unique_ptr<MemoryBuffer> Buffer,
+                          bool LazyLoading) {
   if (Buffer->getBufferSize() == 0)
     return make_error<CGDataError>(cgdata_error::empty_cgdata);
 
   std::unique_ptr<CodeGenDataReader> Reader;
   // Create the reader.
   if (IndexedCodeGenDataReader::hasFormat(*Buffer))
-    Reader = std::make_unique<IndexedCodeGenDataReader>(std::move(Buffer));
+    Reader = std::make_unique<IndexedCodeGenDataReader>(std::move(Buffer),
+                                                        LazyLoading);
   else if (TextCodeGenDataReader::hasFormat(*Buffer))
     Reader = std::make_unique<TextCodeGenDataReader>(std::move(Buffer));
   else
@@ -147,8 +166,8 @@ bool IndexedCodeGenDataReader::hasFormat(const MemoryBuffer &DataBuffer) {
   if (DataBuffer.getBufferSize() < sizeof(IndexedCGData::Magic))
     return false;
 
-  uint64_t Magic = endian::read<uint64_t, llvm::endianness::little, aligned>(
-      DataBuffer.getBufferStart());
+  uint64_t Magic = endian::read<uint64_t, aligned>(DataBuffer.getBufferStart(),
+                                                   llvm::endianness::little);
   // Verify that it's magical.
   return Magic == IndexedCGData::Magic;
 }

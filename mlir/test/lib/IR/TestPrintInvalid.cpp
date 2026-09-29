@@ -34,13 +34,14 @@ struct TestPrintInvalidPass
   void runOnOperation() override {
     Location loc = getOperation().getLoc();
     OpBuilder builder(getOperation().getBodyRegion());
-    auto funcOp = builder.create<func::FuncOp>(
-        loc, "test", FunctionType::get(getOperation().getContext(), {}, {}));
+    auto funcOp = func::FuncOp::create(
+        builder, loc, "test",
+        FunctionType::get(getOperation().getContext(), {}, {}));
     funcOp.addEntryBlock();
     // The created function is invalid because there is no return op.
     llvm::outs() << "Invalid operation:\n" << funcOp << "\n";
     builder.setInsertionPointToEnd(&funcOp.getBody().front());
-    builder.create<func::ReturnOp>(loc);
+    func::ReturnOp::create(builder, loc);
     // Now this function is valid.
     llvm::outs() << "Valid operation:\n" << funcOp << "\n";
     funcOp.erase();

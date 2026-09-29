@@ -142,7 +142,7 @@ define <8 x i16> @select_cast_cond_multiuse_v8i16(<8 x i16> %x, <8 x i16> %y, i8
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %edi, %xmm2
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128]
 ; SSE2-NEXT:    pand %xmm3, %xmm2
 ; SSE2-NEXT:    pcmpeqw %xmm3, %xmm2
@@ -157,7 +157,7 @@ define <8 x i16> @select_cast_cond_multiuse_v8i16(<8 x i16> %x, <8 x i16> %y, i8
 ; SSE42-NEXT:    movdqa %xmm0, %xmm2
 ; SSE42-NEXT:    movd %edi, %xmm0
 ; SSE42-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; SSE42-NEXT:    pmovzxbw {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128]
 ; SSE42-NEXT:    pand %xmm3, %xmm0
 ; SSE42-NEXT:    pcmpeqw %xmm3, %xmm0
@@ -275,7 +275,7 @@ define <8 x float> @select_cast_cond_multiuse_v8i16_v8f32(<8 x float> %x, <8 x f
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %edi, %xmm4
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm5 = xmm4[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,1,0,1]
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [1,2,4,8,16,32,64,128]
 ; SSE2-NEXT:    pand %xmm6, %xmm5
 ; SSE2-NEXT:    pcmpeqw %xmm6, %xmm5
@@ -301,7 +301,7 @@ define <8 x float> @select_cast_cond_multiuse_v8i16_v8f32(<8 x float> %x, <8 x f
 ; SSE42-NEXT:    movaps %xmm0, %xmm4
 ; SSE42-NEXT:    movd %edi, %xmm0
 ; SSE42-NEXT:    pshuflw {{.*#+}} xmm5 = xmm0[0,0,0,0,4,5,6,7]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,0,0]
+; SSE42-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,1,0,1]
 ; SSE42-NEXT:    pmovzxbw {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128]
 ; SSE42-NEXT:    pand %xmm5, %xmm6
 ; SSE42-NEXT:    pcmpeqw %xmm5, %xmm6

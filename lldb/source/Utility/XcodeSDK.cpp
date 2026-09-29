@@ -38,8 +38,8 @@ static llvm::StringRef GetName(XcodeSDK::Type type) {
     return "XRSimulator";
   case XcodeSDK::XROS:
     return "XROS";
-  case XcodeSDK::bridgeOS:
-    return "bridgeOS";
+  case XcodeSDK::BridgeOS:
+    return "BridgeOS";
   case XcodeSDK::Linux:
     return "Linux";
   case XcodeSDK::unknown:
@@ -83,8 +83,8 @@ static XcodeSDK::Type ParseSDKName(llvm::StringRef &name) {
     return XcodeSDK::XRSimulator;
   if (name.consume_front("XROS"))
     return XcodeSDK::XROS;
-  if (name.consume_front("bridgeOS"))
-    return XcodeSDK::bridgeOS;
+  if (name.consume_front("BridgeOS"))
+    return XcodeSDK::BridgeOS;
   if (name.consume_front("Linux"))
     return XcodeSDK::Linux;
   static_assert(XcodeSDK::Linux == XcodeSDK::numSDKTypes - 1,
@@ -153,6 +153,10 @@ bool XcodeSDK::Info::operator==(const Info &other) const {
 }
 
 void XcodeSDK::Merge(const XcodeSDK &other) {
+  auto add_internal_sdk_suffix = [](llvm::StringRef sdk) {
+    return (sdk.substr(0, sdk.size() - 3) + "Internal.sdk").str();
+  };
+
   // The "bigger" SDK always wins.
   auto l = Parse();
   auto r = other.Parse();
@@ -160,10 +164,10 @@ void XcodeSDK::Merge(const XcodeSDK &other) {
     *this = other;
   else {
     // The Internal flag always wins.
-    if (llvm::StringRef(m_name).ends_with(".sdk"))
-      if (!l.internal && r.internal)
-        m_name =
-            m_name.substr(0, m_name.size() - 3) + std::string("Internal.sdk");
+    if (!l.internal && r.internal) {
+      if (llvm::StringRef(m_name).ends_with(".sdk"))
+        m_name = add_internal_sdk_suffix(m_name);
+    }
   }
 }
 
@@ -197,7 +201,7 @@ std::string XcodeSDK::GetCanonicalName(XcodeSDK::Info info) {
   case XROS:
     name = "xros";
     break;
-  case bridgeOS:
+  case BridgeOS:
     name = "bridgeos";
     break;
   case Linux:
@@ -236,58 +240,14 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type sdk_type,
   return false;
 }
 
-bool XcodeSDK::SupportsSwift() const {
-  XcodeSDK::Info info = Parse();
-  switch (info.type) {
-  case Type::MacOSX:
-    return info.version.empty() || info.version >= llvm::VersionTuple(10, 10);
-  case Type::iPhoneOS:
-  case Type::iPhoneSimulator:
-    return info.version.empty() || info.version >= llvm::VersionTuple(8);
-  case Type::AppleTVSimulator:
-  case Type::AppleTVOS:
-    return info.version.empty() || info.version >= llvm::VersionTuple(9);
-  case Type::WatchSimulator:
-  case Type::watchOS:
-    return info.version.empty() || info.version >= llvm::VersionTuple(2);
-  case Type::XROS:
-  case Type::XRSimulator:
-  case Type::Linux:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool XcodeSDK::SDKSupportsBuiltinModules(const llvm::Triple &target_triple,
-                                         llvm::VersionTuple sdk_version) {
-  using namespace llvm;
-
-  switch (target_triple.getOS()) {
-  case Triple::OSType::MacOSX:
-    return sdk_version >= VersionTuple(15U);
-  case Triple::OSType::IOS:
-    return sdk_version >= VersionTuple(18U);
-  case Triple::OSType::TvOS:
-    return sdk_version >= VersionTuple(18U);
-  case Triple::OSType::WatchOS:
-    return sdk_version >= VersionTuple(11U);
-  case Triple::OSType::XROS:
-    return sdk_version >= VersionTuple(2U);
-  default:
-    // New SDKs support builtin modules from the start.
-    return true;
-  }
-}
-
 bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,
                                   const FileSpec &sdk_path) {
-  ConstString last_path_component = sdk_path.GetFilename();
+  llvm::StringRef last_path_component = sdk_path.GetFilename();
 
-  if (!last_path_component)
+  if (last_path_component.empty())
     return false;
 
-  XcodeSDK sdk(last_path_component.GetStringRef().str());
+  XcodeSDK sdk(last_path_component.str());
   if (sdk.GetType() != desired_type)
     return false;
   return SDKSupportsModules(sdk.GetType(), sdk.GetVersion());
@@ -347,4 +307,32 @@ std::string XcodeSDK::FindXcodeContentsDirectoryInPath(llvm::StringRef path) {
   }
 
   return {};
+}
+
+void XcodeSDKAndSysroot::Merge(const XcodeSDKAndSysroot &other) {
+  std::string old_name = m_sdk.GetString().str();
+  m_sdk.Merge(other.m_sdk);
+  llvm::StringRef new_name = m_sdk.GetString();
+  if (old_name == new_name)
+    return;
+
+  // The other SDK won outright, so its sysroot comes along with it.
+  if (new_name == other.m_sdk.GetString()) {
+    m_sysroot = other.m_sysroot;
+    return;
+  }
+
+  // Otherwise merging only added the Internal suffix to our own SDK name. The
+  // internal SDK is a sibling of the public one, so the sysroot can be renamed
+  // along with it.
+  if (m_sysroot.GetFileNameExtension() == ".sdk")
+    m_sysroot.SetFilename(new_name);
+}
+
+bool XcodeSDKAndSysroot::operator==(const XcodeSDKAndSysroot &other) const {
+  return m_sdk == other.m_sdk && m_sysroot == other.m_sysroot;
+}
+
+bool XcodeSDKAndSysroot::operator!=(const XcodeSDKAndSysroot &other) const {
+  return !(*this == other);
 }

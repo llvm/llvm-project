@@ -19,7 +19,7 @@
 // This class does not depend on the instruction size.
 //
 class MicroMipsInstBase<dag outs, dag ins, string asmstr, list<dag> pattern,
-                        InstrItinClass itin, Format f> : Instruction,
+                        Format f> : Instruction,
                         PredicateControl {
   let Namespace = "Mips";
   let DecoderNamespace = "MicroMips";
@@ -29,8 +29,6 @@ class MicroMipsInstBase<dag outs, dag ins, string asmstr, list<dag> pattern,
 
   let AsmString   = asmstr;
   let Pattern     = pattern;
-  let Itinerary   = itin;
-
   let EncodingPredicates = [InMicroMips];
 
   Format Form = f;
@@ -40,12 +38,11 @@ class MicroMipsInstBase<dag outs, dag ins, string asmstr, list<dag> pattern,
 // Base class for MicroMIPS 16-bit instructions.
 //
 class MicroMipsInst16<dag outs, dag ins, string asmstr, list<dag> pattern,
-               InstrItinClass itin, Format f> :
-  MicroMipsInstBase<outs, ins, asmstr, pattern, itin, f>
+               Format f> :
+  MicroMipsInstBase<outs, ins, asmstr, pattern, f>
 {
   let Size = 2;
   field bits<16> Inst;
-  field bits<16> SoftFail = 0;
   bits<6> Opcode = 0x0;
 }
 

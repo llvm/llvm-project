@@ -86,7 +86,7 @@ end subroutine
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<2xi32>, !fir.ref<!fir.array<2xi32>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]] : !hlfir.expr<2xi32>
 ! CHECK-NEXT:    return
-! CHECK-nEXT:  }
+! CHECK-NEXT:  }
 
 ! back argument as .true.
 subroutine maxloc_back(a, s)
@@ -253,14 +253,14 @@ end subroutine
 ! CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK-DAG:     %[[MASK:.*]]:2 = hlfir.declare %[[ARG1]]
 ! CHECK-DAG:     %[[RES:.*]]:2 = hlfir.declare %[[ARG2]]
-! CHECK-NEXT:    %[[MASK_LOAD:.*]] = fir.load %[[MASK]]#1
+! CHECK-NEXT:    %[[MASK_LOAD:.*]] = fir.load %[[MASK]]#0
 ! CHECK-NEXT:    %[[MASK_ADDR:.*]] = fir.box_addr %[[MASK_LOAD]]
 ! CHECK-NEXT:    %[[MASK_ADDR_INT:.*]] = fir.convert %[[MASK_ADDR]]
 ! CHECK-NEXT:    %[[C0:.*]] = arith.constant 0 : i64
 ! CHECK-NEXT:    %[[CMP:.*]] = arith.cmpi ne, %[[MASK_ADDR_INT]], %[[C0]] : i64
 ! it is a shame there is a second load here. The first is generated for
 ! PreparedActualArgument::isPresent, the second is for optional handling
-! CHECK-NEXT:    %[[MASK_LOAD2:.*]] = fir.load %[[MASK]]#1
+! CHECK-NEXT:    %[[MASK_LOAD2:.*]] = fir.load %[[MASK]]#0
 ! CHECK-NEXT:    %[[ABSENT:.*]] = fir.absent !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>
 ! CHECK-NEXT:    %[[SELECT:.*]] = arith.select %[[CMP]], %[[MASK_LOAD2]], %[[ABSENT]]
 ! CHECK-NEXT:    %[[MAXLOC:.*]] = hlfir.maxloc %[[ARRAY]]#0 mask %[[SELECT]]
@@ -300,16 +300,16 @@ end function
 ! CHECK-SAME:                                     %[[MASK_ARG:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "mask", fir.optional}) -> !fir.array<1xi32>
 ! CHECK:           %[[ARRAY_VAR:.*]]:2 = hlfir.declare %[[ARRAY_ARG]]
 ! CHECK:           %[[MASK_VAR:.*]]:2 = hlfir.declare %[[MASK_ARG]]
-! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca !fir.array<1xi32> {bindc_name = "testoptionalscalar", uniq_name = "_QFtestoptionalscalarEtestoptionalscalar"}
+! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca !fir.array<1xi32> <{bindc_name = "testoptionalscalar", uniq_name = "_QFtestoptionalscalarEtestoptionalscalar"}> {fir.must_be_stack = true}
 ! CHECK:           %[[RET_VAR:.*]]:2 = hlfir.declare %[[RET_ALLOC]]
 ! CHECK:           %[[MASK_IS_PRESENT:.*]] = fir.is_present %[[MASK_VAR]]#0 : (!fir.ref<!fir.logical<4>>) -> i1
-! CHECK:           %[[MASK_BOX:.*]] = fir.embox %[[MASK_VAR]]#1
+! CHECK:           %[[MASK_BOX:.*]] = fir.embox %[[MASK_VAR]]#0
 ! CHECK:           %[[ABSENT:.*]] = fir.absent !fir.box<!fir.logical<4>>
 ! CHECK:           %[[MASK_SELECT:.*]] = arith.select %[[MASK_IS_PRESENT]], %[[MASK_BOX]], %[[ABSENT]]
 ! CHECK:           %[[RES:.*]] = hlfir.maxloc %[[ARRAY_VAR]]#0 mask %[[MASK_SELECT]] {{.*}}: (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.logical<4>>) -> !hlfir.expr<1xi32>
 ! CHECK:           hlfir.assign %[[RES]] to %[[RET_VAR]]#0
 ! CHECK:           hlfir.destroy %[[RES]]
-! CHECK:           %[[RET:.*]] = fir.load %[[RET_VAR]]#1 : !fir.ref<!fir.array<1xi32>>
+! CHECK:           %[[RET:.*]] = fir.load %[[RET_VAR]]#0 : !fir.ref<!fir.array<1xi32>>
 ! CHECK:           return %[[RET]] : !fir.array<1xi32>
 ! CHECK:         }
 

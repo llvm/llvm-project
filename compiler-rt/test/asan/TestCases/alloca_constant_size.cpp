@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef _MSC_VER
+#  include <malloc.h>
+#endif
 
 // MSVC provides _alloca instead of alloca.
 #if defined(_MSC_VER) && !defined(alloca)

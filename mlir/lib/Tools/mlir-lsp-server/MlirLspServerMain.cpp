@@ -9,17 +9,20 @@
 #include "mlir/Tools/mlir-lsp-server/MlirLspServerMain.h"
 #include "LSPServer.h"
 #include "MLIRServer.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
-#include "mlir/Tools/lsp-server-support/Transport.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/LSP/Logging.h"
+#include "llvm/Support/LSP/Transport.h"
 #include "llvm/Support/Program.h"
 
 using namespace mlir;
 using namespace mlir::lsp;
 
+using llvm::lsp::JSONStreamStyle;
+using llvm::lsp::JSONTransport;
+using llvm::lsp::Logger;
+
 LogicalResult mlir::MlirLspServerMain(int argc, char **argv,
-                                      DialectRegistry &registry) {
+                                      DialectRegistryFn registry_fn) {
   llvm::cl::opt<JSONStreamStyle> inputStyle{
       "input-style",
       llvm::cl::desc("Input JSON stream encoding"),
@@ -72,6 +75,15 @@ LogicalResult mlir::MlirLspServerMain(int argc, char **argv,
   URIForFile::registerSupportedScheme("mlir.bytecode-mlir");
 
   // Configure the servers and start the main language server.
-  MLIRServer server(registry);
+  MLIRServer server(registry_fn);
   return runMlirLSPServer(server, transport);
+}
+
+llvm::LogicalResult mlir::MlirLspServerMain(int argc, char **argv,
+                                            DialectRegistry &registry) {
+  auto registry_fn =
+      [&registry](const lsp::URIForFile &uri) -> DialectRegistry & {
+    return registry;
+  };
+  return MlirLspServerMain(argc, argv, registry_fn);
 }

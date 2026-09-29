@@ -37,43 +37,26 @@
 
 /* Define to 1 to prefer forward slashes on Windows, and to 0 prefer
    backslashes. */
-#define LLVM_WINDOWS_PREFER_FORWARD_SLASH 0
+/* LLVM_WINDOWS_PREFER_FORWARD_SLASH defined in Bazel */
 
 /* Define to 1 if you have the `backtrace' function. */
 /* HAVE_BACKTRACE defined in Bazel */
 
 /* BACKTRACE_HEADER defined in Bazel */
 
-/* Define to 1 if you have the <CrashReporterClient.h> header file. */
-/* HAVE_CRASHREPORTERCLIENT_H defined in Bazel */
-
 /* can use __crashreporter_info__ */
 /* HAVE_CRASHREPORTER_INFO  defined in Bazel */
 
 /* Define to 1 if you have the declaration of `arc4random', and to 0 if you
    don't. */
-#define HAVE_DECL_ARC4RANDOM 0
-
-/* Define to 1 if you have the declaration of `FE_ALL_EXCEPT', and to 0 if you
-   don't. */
-#define HAVE_DECL_FE_ALL_EXCEPT 1
-
-/* Define to 1 if you have the declaration of `FE_INEXACT', and to 0 if you
-   don't. */
-#define HAVE_DECL_FE_INEXACT 1
+/* HAVE_DECL_ARC4RANDOM defined in Bazel */
 
 /* Define to 1 if you have the declaration of `strerror_s', and to 0 if you
    don't. */
 #define HAVE_DECL_STRERROR_S 0
 
-/* Define to 1 if you have the <dlfcn.h> header file. */
-#define HAVE_DLFCN_H 1
-
 /* Define if dlopen() is available on this platform. */
 #define HAVE_DLOPEN 1
-
-/* Define if dladdr() is available on this platform. */
-#define HAVE_DLADDR 1
 
 /* Define to 1 if we can register EH frames on this platform. */
 /* HAVE_REGISTER_FRAME defined in Bazel*/
@@ -83,15 +66,6 @@
 
 /* Define if __unw_add_dynamic_fde() is available on this platform. */
 /* HAVE_UNW_ADD_DYNAMIC_FDE defined in Bazel */
-
-/* Define to 1 if you have the <errno.h> header file. */
-#define HAVE_ERRNO_H 1
-
-/* Define to 1 if you have the <fcntl.h> header file. */
-#define HAVE_FCNTL_H 1
-
-/* Define to 1 if you have the <fenv.h> header file. */
-#define HAVE_FENV_H 1
 
 /* Define if libffi is available on this platform. */
 /* #undef HAVE_FFI_CALL */
@@ -110,9 +84,6 @@
 
 /* Define to 1 if you have the `getpagesize' function. */
 #define HAVE_GETPAGESIZE 1
-
-/* Define to 1 if you have the `getrlimit' function. */
-#define HAVE_GETRLIMIT 1
 
 /* Define to 1 if you have the `getrusage' function. */
 #define HAVE_GETRUSAGE 1
@@ -165,9 +136,6 @@
 /* Define to 1 if you have the <pthread.h> header file. */
 /* HAVE_PTHREAD_H defined in Bazel */
 
-/* Have pthread_mutex_lock */
-#define HAVE_PTHREAD_MUTEX_LOCK 1
-
 /* Have pthread_rwlock_init */
 #define HAVE_PTHREAD_RWLOCK_INIT 1
 
@@ -177,14 +145,8 @@
 /* Define to 1 if you have the `setenv' function. */
 /* HAVE_SETENV defined in Bazel */
 
-/* Define to 1 if you have the `setrlimit' function. */
-#define HAVE_SETRLIMIT 1
-
 /* Define to 1 if you have the `sigaltstack' function. */
 #define HAVE_SIGALTSTACK 1
-
-/* Define to 1 if you have the <signal.h> header file. */
-#define HAVE_SIGNAL_H 1
 
 /* Define to 1 if you have the `strerror_r' function. */
 /* HAVE_STRERROR_R defined in Bazel */
@@ -192,35 +154,20 @@
 /* Define to 1 if you have the `sysconf' function. */
 #define HAVE_SYSCONF 1
 
-/* Define to 1 if you have the <sys/ioctl.h> header file. */
-#define HAVE_SYS_IOCTL_H 1
-
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #define HAVE_SYS_MMAN_H 1
 
-/* Define to 1 if you have the <sys/resource.h> header file. */
-#define HAVE_SYS_RESOURCE_H 1
-
-/* Define to 1 if you have the <sys/stat.h> header file. */
-#define HAVE_SYS_STAT_H 1
-
-/* Define to 1 if you have the <sys/time.h> header file. */
-#define HAVE_SYS_TIME_H 1
+/* Define to 1 if you have the <sys/ioctl.h> header file. */
+/* HAVE_SYS_IOCTL_H defined in Bazel */
 
 /* Define to 1 if stat struct has st_mtimespec member .*/
-/* #undef HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC */
+/* HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC defined in Bazel */
 
 /* Define to 1 if stat struct has st_mtim member. */
 /* HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC defined in Bazel */
 
-/* Define to 1 if you have the <termios.h> header file. */
-#define HAVE_TERMIOS_H 1
-
 /* Define to 1 if you have the <unistd.h> header file. */
 /* HAVE_UNISTD_H defined in Bazel */
-
-/* Define to 1 if you have the <valgrind/valgrind.h> header file. */
-/* #undef HAVE_VALGRIND_VALGRIND_H */
 
 /* Have host's _alloca */
 /* #undef HAVE__ALLOCA */
@@ -334,6 +281,8 @@
 #define LLVM_SUPPORT_XCODE_SIGNPOSTS 0
 
 /* HAVE_PROC_PID_RUSAGE defined in Bazel */
+
+/* HAVE_GETAUXVAL defined in Bazel */
 
 /* Directly provide definitions here behind platform preprocessor definitions.
  * The preprocessor conditions are sufficient to handle all of the configuration

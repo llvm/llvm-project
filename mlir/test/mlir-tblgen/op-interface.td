@@ -31,11 +31,6 @@ def ExtraShardDeclsInterface : OpInterface<"ExtraShardDeclsInterface"> {
 // DECL-NEXT:   return (*this).someOtherMethod();
 // DECL-NEXT: }
 
-// DECL: struct ExtraShardDeclsInterfaceTrait
-// DECL:      bool sharedMethodDeclaration() {
-// DECL-NEXT:   return (*static_cast<ConcreteOp *>(this)).someOtherMethod();
-// DECL-NEXT: }
-
 def TestInheritanceMultiBaseInterface : OpInterface<"TestInheritanceMultiBaseInterface"> {
   let methods = [
     InterfaceMethod<
@@ -71,7 +66,7 @@ def TestInheritanceMiddleBaseInterface
 def TestInheritanceZDerivedInterface
   : OpInterface<"TestInheritanceZDerivedInterface", [TestInheritanceMiddleBaseInterface]>;
 
-// DECL: class TestInheritanceZDerivedInterface
+// DECL: struct TestInheritanceZDerivedInterfaceInterfaceTraits
 // DECL: struct Concept {
 // DECL:     const TestInheritanceMultiBaseInterface::Concept *implTestInheritanceMultiBaseInterface = nullptr;
 // DECL-NOT: const TestInheritanceMultiBaseInterface::Concept
@@ -127,6 +122,25 @@ def TestOpInterface : OpInterface<"TestOpInterface"> {
       /*body=*/[{ return 0; }]
     >,
     InterfaceMethod<
+      /*desc=*/[{shared operation body}],
+      /*retTy=*/"int",
+      /*methodName=*/"shared_body_foo",
+      /*args=*/(ins "int":$input),
+      /*body=*/[{
+        return $_raw_op->getNumOperands() + input;
+      }],
+      /*defaultImplementation=*/[{ return input; }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{raw and concrete operation body}],
+      /*retTy=*/"int",
+      /*methodName=*/"mixed_body_foo",
+      /*args=*/(ins "int":$input),
+      /*body=*/[{
+        return ::llvm::cast<ConcreteOp>($_raw_op).getNumOperands() + input;
+      }]
+    >,
+    InterfaceMethod<
       /*desc=*/[{some function comment}],
       /*retTy=*/"int",
       /*methodName=*/"default_foo",
@@ -168,20 +182,42 @@ def DeclareMethodsWithDefaultOp : Op<TestDialect, "declare_methods_op",
       [DeclareOpInterfaceMethods<TestOpInterface, ["default_foo"]>]>;
 
 // DECL-LABEL: TestOpInterfaceInterfaceTraits
+// DECL: static int shared_shared_body_foo(const Concept *impl, ::mlir::Operation *tablegen_opaque_val, int input);
+// DECL: class Model : public Concept
+// DECL: using GeneratedModel = Model;
+// DECL: constexpr Model() : Concept{foo, body_foo, Concept::shared_shared_body_foo, mixed_body_foo, default_foo}
+// DECL: static inline int foo(
+// DECL: class FallbackModel : public Concept
+// DECL-NOT: using GeneratedModel = Model;
+// DECL: FallbackModel() : Concept{foo, body_foo, shared_body_foo, mixed_body_foo, default_foo}
+// DECL: static inline int foo(
 // DECL: class TestOpInterface : public ::mlir::OpInterface<TestOpInterface, detail::TestOpInterfaceInterfaceTraits>
 
 // DECL: /// some function comment
 // DECL: int foo(int input);
 
-// DECL-LABEL: struct TestOpInterfaceVerifyTrait
+// Trait declarations / definitions come after interface definitions.
+// DECL: struct ExtraShardDeclsInterfaceTrait : public
+// DECL:      bool sharedMethodDeclaration() {
+// DECL-NEXT:   return (*static_cast<ConcreteOp *>(this)).someOtherMethod();
+// DECL-NEXT: }
+
+// DECL-LABEL: struct TestOpInterfaceVerifyTrait : public
 // DECL: verifyTrait
 
-// DECL-LABEL: struct TestOpInterfaceVerifyRegionTrait
+// DECL-LABEL: struct TestOpInterfaceVerifyRegionTrait : public
 // DECL: verifyRegionTrait
 
 // Method implementations come last, after all class definitions.
 // DECL: template<typename ConcreteOp>
 // DECL: int detail::TestOpInterfaceInterfaceTraits::Model<ConcreteOp>::foo
+// DECL: inline int detail::TestOpInterfaceInterfaceTraits::Concept::shared_shared_body_foo
+// DECL-NEXT:   return tablegen_opaque_val->getNumOperands() + input;
+// DECL: int detail::TestOpInterfaceInterfaceTraits::Model<ConcreteOp>::mixed_body_foo
+// DECL: return ::llvm::cast<ConcreteOp>(tablegen_opaque_val).getNumOperands() + input;
+// DECL: int detail::TestOpInterfaceInterfaceTraits::FallbackModel<ConcreteOp>::shared_body_foo
+// DECL: int detail::TestOpInterfaceInterfaceTraits::ExternalModel<ConcreteModel, ConcreteOp>::shared_body_foo
+// DECL: return input;
 
 // OP_DECL-LABEL: class DeclareMethodsOp : public
 // OP_DECL: int foo(int input);

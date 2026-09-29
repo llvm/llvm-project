@@ -17,3 +17,15 @@ TEST(LlvmLibcMallocTest, Allocate) {
   EXPECT_EQ(*ptr, 1);
   LIBC_NAMESPACE::free(ptr);
 }
+
+TEST(LlvmLibcMallocTest, Nullptr) {
+  int *ptr = reinterpret_cast<int *>(LIBC_NAMESPACE::malloc(0));
+  EXPECT_EQ(reinterpret_cast<void *>(ptr), static_cast<void *>(nullptr));
+  LIBC_NAMESPACE::free(ptr);
+}
+
+TEST(LlvmLibcMallocTest, LargeAllocation) {
+  int *ptr = reinterpret_cast<int *>(LIBC_NAMESPACE::malloc(2ul * 1024 * 1024));
+  EXPECT_NE(reinterpret_cast<void *>(ptr), static_cast<void *>(nullptr));
+  LIBC_NAMESPACE::free(ptr);
+}

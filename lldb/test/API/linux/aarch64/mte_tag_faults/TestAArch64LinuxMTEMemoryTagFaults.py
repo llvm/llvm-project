@@ -38,7 +38,7 @@ class AArch64LinuxMTEMemoryTagFaultsTestCase(TestBase):
         )
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     @skipUnlessAArch64MTELinuxCompiler
     def test_mte_tag_fault_sync(self):
         self.setup_mte_test("sync")
@@ -50,14 +50,14 @@ class AArch64LinuxMTEMemoryTagFaultsTestCase(TestBase):
         self.expect(
             "continue",
             patterns=[
-                "\* thread #1, name = 'a.out', stop reason = signal SIGSEGV: "
-                "sync tag check fault \(fault address: 0x9[0-9A-Fa-f]+11\ "
-                "logical tag: 0x9 allocation tag: 0xa\)"
+                r"\* thread #1, name = 'a.out', stop reason = signal SIGSEGV: "
+                r"sync tag check fault \(fault address=0x9[0-9A-Fa-f]+11\ "
+                r"logical tag=0x9 allocation tag=0xa\)"
             ],
         )
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     @skipUnlessAArch64MTELinuxCompiler
     def test_mte_tag_fault_async(self):
         self.setup_mte_test("async")

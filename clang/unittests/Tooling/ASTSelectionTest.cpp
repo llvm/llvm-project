@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestVisitor.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Refactoring/ASTSelection.h"
+
+#include "TestVisitor.h"
+#include "clang/AST/ExprObjC.h"
+#include "clang/Basic/SourceManager.h"
 #include <optional>
 
 using namespace clang;
@@ -384,7 +386,7 @@ TEST(ASTSelectionFinder, SelectionInFunctionInObjCImplementation) {
 @end
 @implementation I
 
-int notSelected() { }
+int notSelected() { return 0; }
 
 int selected(int x) {
   return x;

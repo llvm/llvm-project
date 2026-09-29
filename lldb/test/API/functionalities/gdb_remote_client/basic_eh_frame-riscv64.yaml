@@ -1,0 +1,20 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_RISCV
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000000570
+    AddressAlign:    0x0000000000000004
+    Content:         DEADBEEF
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000000688
+    AddressAlign:    0x0000000000000008
+    Content:         000006881000000000000000037a5200017c0101000006981b0d02001000000018000000ccfeffff000006a82200000000070100200000002c000000000006b89cffffff1000000000420e1042880242000006c80c080046c80c0210420e000000000000
+...

@@ -14,14 +14,15 @@
 # RUN:   -nostartfiles \
 # RUN:   -Wl,--script=%p/Inputs/debug-fission-script.txt \
 # RUN:   %t.o -o %t.exe
+# RUN: mkdir -p %t.dwarf-output
 # RUN: llvm-bolt %t.exe \
 # RUN:   --reorder-blocks=reverse \
 # RUN:   --update-debug-sections \
-# RUN:   --dwarf-output-path=%T \
+# RUN:   --dwarf-output-path=%t.dwarf-output \
 # RUN:   --always-convert-to-ranges=true \
 # RUN:   -o %t.bolt.1.exe 2>&1 | FileCheck %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-ranges %t.bolt.1.exe &> %tAddrIndexTest
-# RUN: not llvm-dwarfdump --show-form --verbose --debug-info %T/debug-fission-simple-convert.dwo0.dwo >> %tAddrIndexTest
+# RUN: not llvm-dwarfdump --show-form --verbose --debug-info %t.dwarf-output/debug-fission-simple-convert.dwo0.dwo >> %tAddrIndexTest
 # RUN: cat %tAddrIndexTest | FileCheck %s --check-prefix=CHECK-DWO-DWO
 # RUN: llvm-dwarfdump --show-form --verbose   --debug-addr  %t.bolt.1.exe | FileCheck %s --check-prefix=CHECK-ADDR-SEC
 

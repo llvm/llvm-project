@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_ORCERROR_H
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_ORCERROR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
@@ -42,21 +43,25 @@ enum class OrcErrorCode : int {
   UnexpectedSymbolDefinitions,
 };
 
-std::error_code orcError(OrcErrorCode ErrCode);
+LLVM_ABI std::error_code orcError(OrcErrorCode ErrCode);
 
-class DuplicateDefinition : public ErrorInfo<DuplicateDefinition> {
+class LLVM_ABI DuplicateDefinition : public ErrorInfo<DuplicateDefinition> {
 public:
   static char ID;
 
-  DuplicateDefinition(std::string SymbolName);
+  DuplicateDefinition(std::string SymbolName,
+                      std::optional<std::string> Context = {});
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
   const std::string &getSymbolName() const;
+  const std::optional<std::string> &getContext() const;
+
 private:
   std::string SymbolName;
+  std::optional<std::string> Context;
 };
 
-class JITSymbolNotFound : public ErrorInfo<JITSymbolNotFound> {
+class LLVM_ABI JITSymbolNotFound : public ErrorInfo<JITSymbolNotFound> {
 public:
   static char ID;
 

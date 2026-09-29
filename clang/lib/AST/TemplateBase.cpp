@@ -37,7 +37,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <optional>
 
 using namespace clang;
 
@@ -57,8 +56,8 @@ static void printIntegral(const TemplateArgument &TemplArg, raw_ostream &Out,
   const llvm::APSInt &Val = TemplArg.getAsIntegral();
 
   if (Policy.UseEnumerators) {
-    if (const EnumType *ET = T->getAs<EnumType>()) {
-      for (const EnumConstantDecl *ECD : ET->getDecl()->enumerators()) {
+    if (const auto *ED = T->getAsEnumDecl()) {
+      for (const EnumConstantDecl *ECD : ED->enumerators()) {
         // In Sema::CheckTemplateArugment, enum template arguments value are
         // extended to the size of the integer underlying the enum type.  This
         // may create a size difference between the enum value and template
@@ -259,6 +258,32 @@ TemplateArgument::CreatePackCopy(ASTContext &Context,
   return TemplateArgument(Args.copy(Context));
 }
 
+StringRef TemplateArgument::getKindName() const {
+  switch (getKind()) {
+  case TemplateArgument::Null:
+    return "null";
+  case TemplateArgument::Type:
+    return "type";
+  case TemplateArgument::Declaration:
+    return "decl";
+  case TemplateArgument::NullPtr:
+    return "nullptr";
+  case TemplateArgument::Integral:
+    return "integral";
+  case TemplateArgument::Template:
+    return "template";
+  case TemplateArgument::TemplateExpansion:
+    return "template expansion";
+  case TemplateArgument::Expression:
+    return "expression";
+  case TemplateArgument::Pack:
+    return "pack";
+  case TemplateArgument::StructuralValue:
+    return "structural value";
+  }
+  llvm_unreachable("unhandled ArgKind");
+}
+
 TemplateArgumentDependence TemplateArgument::getDependence() const {
   auto Deps = TemplateArgumentDependence::None;
   switch (getKind()) {
@@ -340,16 +365,18 @@ bool TemplateArgument::isPackExpansion() const {
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
+bool TemplateArgument::isConceptOrConceptTemplateParameter() const {
+  return getKind() == TemplateArgument::Template &&
+         getAsTemplate().isConceptName();
+}
+
 bool TemplateArgument::containsUnexpandedParameterPack() const {
   return getDependence() & TemplateArgumentDependence::UnexpandedPack;
 }
 
-std::optional<unsigned> TemplateArgument::getNumTemplateExpansions() const {
+UnsignedOrNone TemplateArgument::getNumTemplateExpansions() const {
   assert(getKind() == TemplateExpansion);
-  if (TemplateArg.NumExpansions)
-    return TemplateArg.NumExpansions - 1;
-
-  return std::nullopt;
+  return TemplateArg.NumExpansions;
 }
 
 QualType TemplateArgument::getNonTypeTemplateArgumentType() const {
@@ -401,7 +428,7 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
     break;
 
   case TemplateExpansion:
-    ID.AddInteger(TemplateArg.NumExpansions);
+    ID.AddInteger(TemplateArg.NumExpansions.toInternalRepresentation());
     [[fallthrough]];
   case Template:
     ID.AddPointer(TemplateArg.Name);
@@ -417,9 +444,16 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
     getAsStructuralValue().Profile(ID);
     break;
 
-  case Expression:
-    getAsExpr()->Profile(ID, Context, true);
+  case Expression: {
+    const Expr *E = getAsExpr();
+    bool IsCanonical = isCanonicalExpr();
+    ID.AddBoolean(IsCanonical);
+    if (IsCanonical)
+      E->Profile(ID, Context, true);
+    else
+      ID.AddPointer(E);
     break;
+  }
 
   case Pack:
     ID.AddInteger(Args.NumArgs);
@@ -434,9 +468,11 @@ bool TemplateArgument::structurallyEquals(const TemplateArgument &Other) const {
   switch (getKind()) {
   case Null:
   case Type:
-  case Expression:
   case NullPtr:
     return TypeOrValue.V == Other.TypeOrValue.V;
+  case Expression:
+    return TypeOrValue.V == Other.TypeOrValue.V &&
+           TypeOrValue.IsCanonicalExpr == Other.TypeOrValue.IsCanonicalExpr;
 
   case Template:
   case TemplateExpansion:
@@ -481,7 +517,8 @@ TemplateArgument TemplateArgument::getPackExpansionPattern() const {
     return getAsType()->castAs<PackExpansionType>()->getPattern();
 
   case Expression:
-    return cast<PackExpansionExpr>(getAsExpr())->getPattern();
+    return TemplateArgument(cast<PackExpansionExpr>(getAsExpr())->getPattern(),
+                            isCanonicalExpr());
 
   case TemplateExpansion:
     return TemplateArgument(getAsTemplateOrTemplatePattern());
@@ -515,19 +552,17 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
   }
 
   case Declaration: {
-    NamedDecl *ND = getAsDecl();
+    ValueDecl *VD = getAsDecl();
     if (getParamTypeForDecl()->isRecordType()) {
-      if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
+      if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(VD)) {
         TPO->getType().getUnqualifiedType().print(Out, Policy);
         TPO->printAsInit(Out, Policy);
         break;
       }
     }
-    if (auto *VD = dyn_cast<ValueDecl>(ND)) {
-      if (needsAmpersandOnTemplateArg(getParamTypeForDecl(), VD->getType()))
-        Out << "&";
-    }
-    ND->printQualifiedName(Out);
+    if (needsAmpersandOnTemplateArg(getParamTypeForDecl(), VD->getType()))
+      Out << "&";
+    VD->printQualifiedName(Out);
     break;
   }
 
@@ -554,9 +589,12 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
     printIntegral(*this, Out, Policy, IncludeType);
     break;
 
-  case Expression:
-    getAsExpr()->printPretty(Out, nullptr, Policy);
+  case Expression: {
+    PrintingPolicy ExprPolicy = Policy;
+    ExprPolicy.PrintAsCanonical = isCanonicalExpr();
+    getAsExpr()->printPretty(Out, nullptr, ExprPolicy);
     break;
+  }
 
   case Pack:
     Out << "<";
@@ -578,15 +616,42 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
 // TemplateArgumentLoc Implementation
 //===----------------------------------------------------------------------===//
 
+TemplateArgumentLoc::TemplateArgumentLoc(ASTContext &Ctx,
+                                         const TemplateArgument &Argument,
+                                         SourceLocation TemplateKWLoc,
+                                         NestedNameSpecifierLoc QualifierLoc,
+                                         SourceLocation TemplateNameLoc,
+                                         SourceLocation EllipsisLoc)
+    : Argument(Argument),
+      LocInfo(Ctx, TemplateKWLoc, QualifierLoc, TemplateNameLoc, EllipsisLoc) {
+  assert(Argument.getKind() == TemplateArgument::Template ||
+         Argument.getKind() == TemplateArgument::TemplateExpansion);
+  assert(QualifierLoc.getNestedNameSpecifier() ==
+         Argument.getAsTemplateOrTemplatePattern().getQualifier());
+}
+
+NestedNameSpecifierLoc TemplateArgumentLoc::getTemplateQualifierLoc() const {
+  if (Argument.getKind() != TemplateArgument::Template &&
+      Argument.getKind() != TemplateArgument::TemplateExpansion)
+    return NestedNameSpecifierLoc();
+  return NestedNameSpecifierLoc(
+      Argument.getAsTemplateOrTemplatePattern().getQualifier(),
+      LocInfo.getTemplate()->QualifierLocData);
+}
+
 SourceRange TemplateArgumentLoc::getSourceRange() const {
   switch (Argument.getKind()) {
   case TemplateArgument::Expression:
     return getSourceExpression()->getSourceRange();
 
   case TemplateArgument::Declaration:
+    if (LocInfo.isTrivial())
+      return SourceRange(LocInfo.getTrivialLoc());
     return getSourceDeclExpression()->getSourceRange();
 
   case TemplateArgument::NullPtr:
+    if (LocInfo.isTrivial())
+      return SourceRange(LocInfo.getTrivialLoc());
     return getSourceNullPtrExpression()->getSourceRange();
 
   case TemplateArgument::Type:
@@ -608,12 +673,18 @@ SourceRange TemplateArgumentLoc::getSourceRange() const {
     return SourceRange(getTemplateNameLoc(), getTemplateEllipsisLoc());
 
   case TemplateArgument::Integral:
+    if (LocInfo.isTrivial())
+      return SourceRange(LocInfo.getTrivialLoc());
     return getSourceIntegralExpression()->getSourceRange();
 
   case TemplateArgument::StructuralValue:
+    if (LocInfo.isTrivial())
+      return SourceRange(LocInfo.getTrivialLoc());
     return getSourceStructuralValueExpression()->getSourceRange();
 
   case TemplateArgument::Pack:
+    return SourceRange(LocInfo.getTrivialLoc());
+
   case TemplateArgument::Null:
     return SourceRange();
   }
@@ -659,18 +730,9 @@ static const T &DiagTemplateArg(const T &DB, const TemplateArgument &Arg) {
   case TemplateArgument::TemplateExpansion:
     return DB << Arg.getAsTemplateOrTemplatePattern() << "...";
 
-  case TemplateArgument::Expression: {
-    // This shouldn't actually ever happen, so it's okay that we're
-    // regurgitating an expression here.
-    // FIXME: We're guessing at LangOptions!
-    SmallString<32> Str;
-    llvm::raw_svector_ostream OS(Str);
-    LangOptions LangOpts;
-    LangOpts.CPlusPlus = true;
-    PrintingPolicy Policy(LangOpts);
-    Arg.getAsExpr()->printPretty(OS, nullptr, Policy);
-    return DB << OS.str();
-  }
+  case TemplateArgument::Expression:
+    // FIXME: Support printing expressions as canonical
+    return DB << Arg.getAsExpr();
 
   case TemplateArgument::Pack: {
     // FIXME: We're guessing at LangOptions!
@@ -693,14 +755,24 @@ const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
 }
 
 clang::TemplateArgumentLocInfo::TemplateArgumentLocInfo(
-    ASTContext &Ctx, NestedNameSpecifierLoc QualifierLoc,
-    SourceLocation TemplateNameLoc, SourceLocation EllipsisLoc) {
+    ASTContext &Ctx, SourceLocation TemplateKWLoc,
+    NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateNameLoc,
+    SourceLocation EllipsisLoc) {
   TemplateTemplateArgLocInfo *Template = new (Ctx) TemplateTemplateArgLocInfo;
-  Template->Qualifier = QualifierLoc.getNestedNameSpecifier();
+  Template->TemplateKwLoc = TemplateKWLoc;
   Template->QualifierLocData = QualifierLoc.getOpaqueData();
   Template->TemplateNameLoc = TemplateNameLoc;
   Template->EllipsisLoc = EllipsisLoc;
   Pointer = Template;
+}
+
+clang::TemplateArgumentLocInfo::TemplateArgumentLocInfo(
+    ASTContext &Ctx, SourceLocation TrivialLoc) {
+  if constexpr (EmbedLocInPointer)
+    Pointer = reinterpret_cast<LocOrPointer>(static_cast<uintptr_t>(
+        (TrivialLoc.getRawEncoding() + 1u) << LowBitsRequired));
+  else
+    Pointer = new (Ctx) SourceLocation(TrivialLoc);
 }
 
 const ASTTemplateArgumentListInfo *
@@ -711,37 +783,15 @@ ASTTemplateArgumentListInfo::Create(const ASTContext &C,
   return new (Mem) ASTTemplateArgumentListInfo(List);
 }
 
-const ASTTemplateArgumentListInfo *
-ASTTemplateArgumentListInfo::Create(const ASTContext &C,
-                                    const ASTTemplateArgumentListInfo *List) {
-  if (!List)
-    return nullptr;
-  std::size_t size =
-      totalSizeToAlloc<TemplateArgumentLoc>(List->getNumTemplateArgs());
-  void *Mem = C.Allocate(size, alignof(ASTTemplateArgumentListInfo));
-  return new (Mem) ASTTemplateArgumentListInfo(List);
-}
-
 ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
     const TemplateArgumentListInfo &Info) {
   LAngleLoc = Info.getLAngleLoc();
   RAngleLoc = Info.getRAngleLoc();
   NumTemplateArgs = Info.size();
 
-  TemplateArgumentLoc *ArgBuffer = getTrailingObjects<TemplateArgumentLoc>();
+  TemplateArgumentLoc *ArgBuffer = getTrailingObjects();
   for (unsigned i = 0; i != NumTemplateArgs; ++i)
     new (&ArgBuffer[i]) TemplateArgumentLoc(Info[i]);
-}
-
-ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
-    const ASTTemplateArgumentListInfo *Info) {
-  LAngleLoc = Info->getLAngleLoc();
-  RAngleLoc = Info->getRAngleLoc();
-  NumTemplateArgs = Info->getNumTemplateArgs();
-
-  TemplateArgumentLoc *ArgBuffer = getTrailingObjects<TemplateArgumentLoc>();
-  for (unsigned i = 0; i != NumTemplateArgs; ++i)
-    new (&ArgBuffer[i]) TemplateArgumentLoc((*Info)[i]);
 }
 
 void ASTTemplateKWAndArgsInfo::initializeFrom(

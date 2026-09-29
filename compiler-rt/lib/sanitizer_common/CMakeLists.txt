@@ -11,6 +11,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_flags.cpp
   sanitizer_flag_parser.cpp
   sanitizer_fuchsia.cpp
+  sanitizer_haiku.cpp
   sanitizer_libc.cpp
   sanitizer_libignore.cpp
   sanitizer_linux.cpp
@@ -28,6 +29,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_procmaps_common.cpp
   sanitizer_procmaps_bsd.cpp
   sanitizer_procmaps_fuchsia.cpp
+  sanitizer_procmaps_haiku.cpp
   sanitizer_procmaps_linux.cpp
   sanitizer_procmaps_mac.cpp
   sanitizer_procmaps_solaris.cpp
@@ -95,6 +97,7 @@ set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_symbolizer_report_fuchsia.cpp
   sanitizer_symbolizer_win.cpp
   sanitizer_thread_history.cpp
+  sanitizer_unwind_aix.cpp
   sanitizer_unwind_linux_libcdep.cpp
   sanitizer_unwind_fuchsia.cpp
   sanitizer_unwind_win.cpp
@@ -167,6 +170,12 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_mac.h
   sanitizer_malloc_mac.inc
   sanitizer_mutex.h
+  sanitizer_new_handler.h
+  sanitizer_new_operators.inc
+  sanitizer_offload.h
+  sanitizer_offload_hsa.h
+  sanitizer_offload_opcodes.h
+  sanitizer_offload_rpc.h
   sanitizer_placement_new.h
   sanitizer_platform.h
   sanitizer_platform_interceptors.h
@@ -227,6 +236,9 @@ set(SANITIZER_COMMON_DEFINITIONS
 
 # note: L not I, this is nodefaultlibs for msvc
 append_list_if(MSVC /Zl SANITIZER_COMMON_CFLAGS)
+if(HAIKU)
+   list(APPEND SANITIZER_COMMON_CFLAGS -I/system/develop/headers/private -I/system/develop/headers/private/system/arch/x86_64 -I/system/develop/headers/private/system)
+endif()
 set(SANITIZER_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
 # Too many existing bugs, needs cleanup.
@@ -329,6 +341,28 @@ if(WIN32)
       sanitizer_coverage_win_sections.cpp
     CFLAGS ${SANITIZER_CFLAGS} ${RUNTIME_THUNK_CFLAGS}
     DEFS ${SANITIZER_COMMON_DEFINITIONS})
+endif()
+
+# Host offload helpers for device sanitizers.
+include(FindLibcCommonUtils)
+if(OS_NAME MATCHES "Linux" AND TARGET llvm-libc-common-utilities)
+  add_compiler_rt_object_libraries(RTSanitizerOffload
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    SOURCES
+      sanitizer_offload.cpp
+      sanitizer_offload_image.cpp
+      sanitizer_offload_rpc.cpp
+    ADDITIONAL_HEADERS
+      sanitizer_offload.h
+      sanitizer_offload_hsa.h
+      sanitizer_offload_opcodes.h
+      sanitizer_offload_rpc.h
+    CFLAGS ${SANITIZER_CFLAGS}
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+  foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
+    target_link_libraries(RTSanitizerOffload.${arch} PRIVATE
+                          llvm-libc-common-utilities)
+  endforeach()
 endif()
 
 # Unit tests for common sanitizer runtime.

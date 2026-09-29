@@ -8,6 +8,7 @@
 
 #include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 using namespace llvm;
 
 Target &llvm::getTheSparcTarget() {
@@ -23,7 +24,8 @@ Target &llvm::getTheSparcelTarget() {
   return TheSparcelTarget;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTargetInfo() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSparcTargetInfo() {
   RegisterTarget<Triple::sparc, /*HasJIT=*/false> X(getTheSparcTarget(),
                                                     "sparc", "Sparc", "Sparc");
   RegisterTarget<Triple::sparcv9, /*HasJIT=*/false> Y(

@@ -10,7 +10,7 @@ define <vscale x 4 x float> @intrinsic_vfslide1down_vf_nxv4f32_nxv4f32_f32(<vsca
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 4 x float> @llvm.riscv.vfslide1down.nxv4f32.f32(<vscale x 4 x float> undef, <vscale x 4 x float> %0, float %1, i64 4)
-  %b = call <vscale x 4 x float> @llvm.riscv.vmerge.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> %false, <vscale x 4 x float> %a, <vscale x 4 x i1> %mask, i64 1)
+  %a = call <vscale x 4 x float> @llvm.riscv.vfslide1down.nxv4f32.f32(<vscale x 4 x float> poison, <vscale x 4 x float> %0, float %1, i64 4)
+  %b = call <vscale x 4 x float> @llvm.riscv.vmerge.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %false, <vscale x 4 x float> %a, <vscale x 4 x i1> %mask, i64 1)
   ret <vscale x 4 x float> %b
 }

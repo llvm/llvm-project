@@ -1,0 +1,31 @@
+name: Commit Access Greeter
+
+on:
+  issues:
+    types:
+      - labeled
+
+permissions:
+  contents: read
+
+jobs:
+  commit-access-greeter:
+    permissions:
+      issues: write
+      pull-requests: read
+    container:
+      image: "ghcr.io/llvm/amd64/ci-ubuntu-26.04-github-automation:latest@sha256:a8499c90a5890da942693c3e6a28113c2b851037c5facbb102a271f690439472"
+    if: >-
+      github.repository_owner == 'llvm' &&
+      github.event.label.name == 'infra:commit-access-request'
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Add comments to issue
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          github-automation.py \
+            --token $GITHUB_TOKEN \
+             commit-request-greeter \
+             --issue-number $ISSUE_NUMBER

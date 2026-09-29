@@ -216,7 +216,7 @@ namespace DeprecatedVolatile {
 #endif
 
   template<typename T> T f(T v); // cxx20-warning 2{{deprecated}}
-  int use_f = f<volatile int>(0); // FIXME: Missing "in instantiation of" note.
+  int use_f = f<volatile int>(0); // cxx20-note {{while substituting deduced template arguments}}
 
   // OK, only the built-in operators are deprecated.
   struct UDT {
@@ -231,6 +231,13 @@ namespace DeprecatedVolatile {
     a = c = a;
     b += a;
   }
+
+  volatile struct amber jurassic();
+    // cxx20-warning@-1 {{volatile-qualified return type 'volatile struct amber' is deprecated}}
+  void trex(volatile short left_arm, volatile struct amber right_arm);
+    // cxx20-warning@-1 {{volatile-qualified parameter type 'volatile short' is deprecated}}
+    // cxx20-warning@-2 {{volatile-qualified parameter type 'volatile struct amber' is deprecated}}
+  void fly(volatile struct pterosaur* pteranodon);
 }
 
 namespace ArithConv {
@@ -247,7 +254,7 @@ namespace ArithConv {
 namespace ArrayComp {
   int arr1[3], arr2[4];
   bool b1 = arr1 == arr2; // not-cxx20-warning {{comparison between two arrays compare their addresses}} cxx20-warning {{comparison between two arrays is deprecated}}
-                          // expected-warning@-1 {{array comparison always evaluates to false}} 
+                          // expected-warning@-1 {{array comparison always evaluates to false}}
   bool b2 = arr1 < arr2; // not-cxx20-warning {{comparison between two arrays compare their addresses}} cxx20-warning {{comparison between two arrays is deprecated}}
                          // expected-warning@-1 {{array comparison always evaluates to a constant}}
   __attribute__((weak)) int arr3[3];

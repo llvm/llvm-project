@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   fir.type_info @_QTtest_type nofinal : !fir.type<_QTtest_type{a:i32,b:!fir.box<!fir.heap<!fir.array<?x?xf32>>>}> dispatch_table {
     fir.dt_entry "test_proc", @_QPtest_proc
   } loc(#loc1)

@@ -69,36 +69,44 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-LABEL:	.Lfunc_end0:
 
 ; CHECK: 	.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text._Z3bazb{{$}}
-; CHECK-NEXT:	.byte	2		# version
-; BASIC-NEXT:	.byte	0		# feature
-; PGO-ALL-NEXT:	.byte	7		# feature
-; FEC-ONLY-NEXT:.byte	1		# feature
-; BBF-ONLY-NEXT:.byte	2		# feature
-; BRP-ONLY-NEXT:.byte	4		# feature
+; CHECK-NEXT:	.byte	5		# version
+; BASIC-NEXT:	.short	32		# feature
+; PGO-ALL-NEXT:	.short	39		# feature
+; FEC-ONLY-NEXT:.short	33		# feature
+; BBF-ONLY-NEXT:.short	34		# feature
+; BRP-ONLY-NEXT:.short	36		# feature
 ; CHECK-NEXT:	.quad	.Lfunc_begin0	# function address
 ; CHECK-NEXT:	.byte	6		# number of basic blocks
 ; CHECK-NEXT:	.byte	0		# BB id
 ; CHECK-NEXT:	.uleb128 .Lfunc_begin0-.Lfunc_begin0
+; CHECK-NEXT:   .byte   0               # number of callsites
 ; CHECK-NEXT:	.uleb128 .LBB_END0_0-.Lfunc_begin0
 ; CHECK-NEXT:	.byte	8
 ; CHECK-NEXT:	.byte	1		# BB id
 ; CHECK-NEXT:	.uleb128 .LBB0_1-.LBB_END0_0
-; CHECK-NEXT:	.uleb128 .LBB_END0_1-.LBB0_1
+; CHECK-NEXT:   .byte   1               # number of callsites
+; CHECK-NEXT:	.uleb128 .LBB0_1_CS0-.LBB0_1
+; CHECK-NEXT:	.uleb128 .LBB_END0_1-.LBB0_1_CS0
 ; CHECK-NEXT:	.byte	8
 ; CHECK-NEXT:	.byte	3		# BB id
 ; CHECK-NEXT:	.uleb128 .LBB0_2-.LBB_END0_1
-; CHECK-NEXT:	.uleb128 .LBB_END0_2-.LBB0_2
+; CHECK-NEXT:   .byte   1               # number of callsites
+; CHECK-NEXT:	.uleb128 .LBB0_2_CS0-.LBB0_2
+; CHECK-NEXT:	.uleb128 .LBB_END0_2-.LBB0_2_CS0
 ; CHECK-NEXT:	.byte	8
 ; CHECK-NEXT:	.byte	5		# BB id
 ; CHECK-NEXT:	.uleb128 .LBB0_3-.LBB_END0_2
+; CHECK-NEXT:   .byte   0               # number of callsites
 ; CHECK-NEXT:	.uleb128 .LBB_END0_3-.LBB0_3
 ; CHECK-NEXT:	.byte	1
 ; CHECK-NEXT:	.byte	4		# BB id
 ; CHECK-NEXT:	.uleb128 .LBB0_4-.LBB_END0_3
+; CHECK-NEXT:   .byte   0               # number of callsites
 ; CHECK-NEXT:	.uleb128 .LBB_END0_4-.LBB0_4
 ; CHECK-NEXT:	.byte	16
 ; CHECK-NEXT:	.byte	2		# BB id
 ; CHECK-NEXT:	.uleb128 .LBB0_5-.LBB_END0_4
+; CHECK-NEXT:   .byte   0               # number of callsites
 ; CHECK-NEXT:	.uleb128 .LBB_END0_5-.LBB0_5
 ; CHECK-NEXT:	.byte	4
 
@@ -107,13 +115,13 @@ declare i32 @__gxx_personality_v0(...)
 ; PGO-NONE-NOT: .ascii	"\271\235\376\332\245\200\356\017"	# basic block frequency
 ; PGO-NONE-NOT: .byte	2		# basic block successor count
 ; PGO-FEC-NEXT:	.byte	100		# function entry count
-; PGO-BBF-NEXT:	.ascii	"\271\235\376\332\245\200\356\017"	# basic block frequency
+; PGO-BBF-NEXT:	.ascii	"\200\344\200\200\262\200\200\035"	# basic block frequency
 ; PGO-BRP-NEXT:	.byte	2		# basic block successor count
 ; PGO-BRP-NEXT:	.byte	1		# successor BB ID
 ; PGO-BRP-NEXT:	.ascii	"\346\314\231\263\006"	# successor branch probability
 ; PGO-BRP-NEXT:	.byte	3		# successor BB ID
 ; PGO-BRP-NEXT:	.ascii	"\232\263\346\314\001"	# successor branch probability
-; PGO-BBF-NEXT:	.ascii	"\202\301\341\375\205\200\200\003"	# basic block frequency
+; PGO-BBF-NEXT:	.ascii	"\200\340\200\200\260\200\200\030"	# basic block frequency
 ; PGO-BRP-NEXT:	.byte	2		# basic block successor count
 ; PGO-BRP-NEXT:	.byte	3		# successor BB ID
 ; PGO-BRP-NEXT:	.ascii	"\200\360\377\377\007"	# successor branch probability
@@ -125,20 +133,20 @@ declare i32 @__gxx_personality_v0(...)
 ; PGO-BRP-NEXT:	.ascii	"\200\200\200\200\007"	# successor branch probability
 ; PGO-BRP-NEXT:	.byte 	4		# successor BB ID
 ; PGO-BRP-NEXT:	.ascii	"\200\200\200\200\001"	# successor branch probability
-; PGO-BBF-NEXT:	.ascii	"\271\235\376\332\245\200\356\017"	# basic block frequency
+; PGO-BBF-NEXT:	.ascii	"\200\344\200\200\262\200\200\035"	# basic block frequency
 ; PGO-BRP-NEXT:	.byte	0		# basic block successor count
-; PGO-BBF-NEXT:	.ascii	"\210\214\356\257\200\200\230\002"	# basic block frequency
+; PGO-BBF-NEXT:	.ascii	"\200\220\200\200\210\200\200\004"	# basic block frequency
 ; PGO-BRP-NEXT:	.byte	2		# basic block successor count
 ; PGO-BRP-NEXT:	.byte 	1		# successor BB ID
 ; PGO-BRP-NEXT:	.ascii	"\200\200\200\200\006"	# successor branch probability
 ; PGO-BRP-NEXT:	.byte	5		# successor BB ID
 ; PGO-BRP-NEXT:	.ascii	"\200\200\200\200\002"	# successor branch probability
-; PGO-BBF-NEXT:	.ascii	"\235\323\243\200#"	# basic block frequency
+; PGO-BBF-NEXT:	.ascii	"\333\322\340\374/"	# basic block frequency
 ; PGO-BRP-NEXT:	.byte	1		# basic block successor count
 ; PGO-BRP-NEXT:	.byte	5		# successor BB ID
 ; PGO-BRP-NEXT:	.ascii	"\200\200\200\200\b"	# successor branch probability
 
-; SKIP-BB-ENTRIES:      .byte	17                              # feature
+; SKIP-BB-ENTRIES:      .short  49                              # feature
 ; SKIP-BB-ENTRIES-NEXT:	.quad	.Lfunc_begin0                   # function address
 ; SKIP-BB-ENTRIES-NEXT:	.byte	6                               # number of basic blocks
 ; SKIP-BB-ENTRIES-NEXT:	.byte	100                             # function entry count

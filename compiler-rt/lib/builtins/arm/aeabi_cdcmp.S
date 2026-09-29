@@ -22,7 +22,12 @@
         .syntax unified
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmpeq)
+        PACBTI_LANDING
+#if defined(__ARM_FEATURE_PAC_DEFAULT)
+        push {r0-r3, r12, lr}
+#else
         push {r0-r3, lr}
+#endif
         bl __aeabi_cdcmpeq_check_nan
         cmp r0, #1
 #if defined(USE_THUMB_1)
@@ -31,14 +36,19 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmpeq)
         mov r0, sp
         ldm r0, {r0-r3}
         bl __aeabi_cdcmple
-        pop {r0-r3, pc}
+        POP_PC_WITH_REGS r0-r3
 1:
         // Z = 0, C = 1
         movs r0, #0xF
         lsls r0, r0, #31
-        pop {r0-r3, pc}
+        POP_PC_WITH_REGS r0-r3
+#else
+#if defined(__ARM_FEATURE_PAC_DEFAULT)
+        pop {r0-r3, r12, lr}
+        aut r12, lr, sp
 #else
         pop {r0-r3, lr}
+#endif
 
         // NaN has been ruled out, so __aeabi_cdcmple can't trap
         // Use "it ne" + unconditional branch to guarantee a supported relocation if
@@ -47,8 +57,8 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmpeq)
         bne __aeabi_cdcmple
 
 #if defined(USE_THUMB_2)
-        mov ip, #APSR_C
-        msr APSR_nzcvq, ip
+        mov r12, #APSR_C
+        msr APSR_nzcvq, r12
 #else
         msr APSR_nzcvq, #APSR_C
 #endif
@@ -70,9 +80,14 @@ END_COMPILERRT_FUNCTION(__aeabi_cdcmpeq)
         .syntax unified
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmple)
+        PACBTI_LANDING
         // Per the RTABI, this function must preserve r0-r11.
         // Save lr in the same instruction for compactness
+#if defined(__ARM_FEATURE_PAC_DEFAULT)
+        push {r0-r3, r12, lr}
+#else
         push {r0-r3, lr}
+#endif
 
         bl __aeabi_dcmplt
         cmp r0, #1
@@ -81,7 +96,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmple)
         // Z = 0, C = 0
         movs r0, #1
         lsls r0, r0, #1
-        pop {r0-r3, pc}
+        POP_PC_WITH_REGS r0-r3
 1:
         mov r0, sp
         ldm r0, {r0-r3}
@@ -91,12 +106,12 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmple)
         // Z = 1, C = 1
         movs r0, #2
         lsls r0, r0, #31
-        pop {r0-r3, pc}
+        POP_PC_WITH_REGS r0-r3
 2:
         // Z = 0, C = 1
         movs r0, #0xF
         lsls r0, r0, #31
-        pop {r0-r3, pc}
+        POP_PC_WITH_REGS r0-r3
 #else
         ITT(eq)
         moveq ip, #0
@@ -111,8 +126,13 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmple)
 
 1:
         msr APSR_nzcvq, ip
+#if defined(__ARM_FEATURE_PAC_DEFAULT)
+        pop {r0-r3, r12, lr}
+        PAC_RETURN
+#else
         pop {r0-r3}
-        POP_PC()
+        POP_PC
+#endif
 #endif
 END_COMPILERRT_FUNCTION(__aeabi_cdcmple)
 
@@ -123,6 +143,9 @@ END_COMPILERRT_FUNCTION(__aeabi_cdcmple)
         .syntax unified
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_cdrcmple)
+#if defined(__ARM_FEATURE_BTI_DEFAULT)
+        bti
+#endif
         // Swap r0 and r2
         mov ip, r0
         mov r0, r2
@@ -133,7 +156,13 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdrcmple)
         mov r1, r3
         mov r3, ip
 
+#if defined(USE_THUMB_1)
+        push {r0, lr}
+        bl __aeabi_cdcmple
+        POP_PC_WITH_REGS r0
+#else
         b __aeabi_cdcmple
+#endif
 END_COMPILERRT_FUNCTION(__aeabi_cdrcmple)
 
 NO_EXEC_STACK_DIRECTIVE

@@ -20,6 +20,7 @@
 #include "bolt/Rewrite/JITLinkLinker.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/Support/Errc.h"
@@ -31,10 +32,8 @@
 namespace opts {
 
 using namespace llvm;
-extern cl::opt<unsigned> AlignText;
-//FIXME! Upstream change
-//extern cl::opt<bool> CheckOverlappingElements;
-extern cl::opt<bool> ForcePatch;
+// FIXME! Upstream change
+// extern cl::opt<bool> CheckOverlappingElements;
 extern cl::opt<bool> Instrument;
 extern cl::opt<bool> InstrumentCalls;
 extern cl::opt<bolt::JumpTableSupportLevel> JumpTables;
@@ -108,21 +107,21 @@ Error MachORewriteInstance::setProfile(StringRef Filename) {
 void MachORewriteInstance::preprocessProfileData() {
   if (!ProfileReader)
     return;
-  if (Error E = ProfileReader->preprocessProfile(*BC.get()))
+  if (Error E = ProfileReader->preprocessProfile(*BC))
     report_error("cannot pre-process profile", std::move(E));
 }
 
 void MachORewriteInstance::processProfileDataPreCFG() {
   if (!ProfileReader)
     return;
-  if (Error E = ProfileReader->readProfilePreCFG(*BC.get()))
+  if (Error E = ProfileReader->readProfilePreCFG(*BC))
     report_error("cannot read profile pre-CFG", std::move(E));
 }
 
 void MachORewriteInstance::processProfileData() {
   if (!ProfileReader)
     return;
-  if (Error E = ProfileReader->readProfile(*BC.get()))
+  if (Error E = ProfileReader->readProfile(*BC))
     report_error("cannot read profile", std::move(E));
 }
 
@@ -354,6 +353,7 @@ void MachORewriteInstance::runOptimizationPasses() {
       std::make_unique<ReorderBasicBlocks>(opts::PrintReordered));
   Manager.registerPass(
       std::make_unique<FixupBranches>(opts::PrintAfterBranchFixup));
+  Manager.registerPass(std::make_unique<PopulateOutputFunctions>());
   // This pass should always run last.*
   Manager.registerPass(
       std::make_unique<FinalizeFunctions>(opts::PrintFinalized));
@@ -482,7 +482,7 @@ void MachORewriteInstance::emitAndLink() {
 }
 
 void MachORewriteInstance::writeInstrumentationSection(StringRef SectionName,
-                                                       raw_pwrite_stream &OS) {
+                                                       raw_fd_ostream &OS) {
   if (!opts::Instrument)
     return;
   ErrorOr<BinarySection &> Section = BC->getUniqueSectionByName(SectionName);
@@ -496,8 +496,8 @@ void MachORewriteInstance::writeInstrumentationSection(StringRef SectionName,
          "Section input offset cannot be zero");
   assert(Section->getAllocAddress() && "Section alloc address cannot be zero");
   assert(Section->getOutputSize() && "Section output size cannot be zero");
-  OS.pwrite(reinterpret_cast<char *>(Section->getAllocAddress()),
-            Section->getOutputSize(), Section->getInputFileOffset());
+  safePWrite(OS, reinterpret_cast<char *>(Section->getAllocAddress()),
+             Section->getOutputSize(), Section->getInputFileOffset());
 }
 
 void MachORewriteInstance::rewriteFile() {
@@ -517,13 +517,13 @@ void MachORewriteInstance::rewriteFile() {
       continue;
     if (opts::Verbosity >= 2)
       outs() << "BOLT: rewriting function \"" << Function << "\"\n";
-    OS.pwrite(reinterpret_cast<char *>(Function.getImageAddress()),
-              Function.getImageSize(), Function.getFileOffset());
+    safePWrite(OS, reinterpret_cast<char *>(Function.getImageAddress()),
+               Function.getImageSize(), Function.getFileOffset());
   }
 
   for (const BinaryFunction *Function : BC->getInjectedBinaryFunctions()) {
-    OS.pwrite(reinterpret_cast<char *>(Function->getImageAddress()),
-              Function->getImageSize(), Function->getFileOffset());
+    safePWrite(OS, reinterpret_cast<char *>(Function->getImageAddress()),
+               Function->getImageSize(), Function->getFileOffset());
   }
 
   writeInstrumentationSection("__counters", OS);
@@ -556,6 +556,19 @@ void MachORewriteInstance::adjustCommandLineOptions() {
   opts::JumpTables = JTS_MOVE;
   opts::InstrumentCalls = false;
   opts::RuntimeInstrumentationLib = "libbolt_rt_instr_osx.a";
+
+  // Mirror alignment-related command line options onto BinaryContext so passes
+  // and the emitter can read them via BC instead of touching opts::*.
+  BC->AlignText = opts::AlignText;
+  BC->AlignFunctions = opts::AlignFunctions;
+  BC->AlignBlocks = opts::AlignBlocks;
+  BC->AlignBlocksMinSize = opts::AlignBlocksMinSize;
+  BC->AlignBlocksThreshold = opts::AlignBlocksThreshold;
+  BC->AlignFunctionsMaxBytes = opts::AlignFunctionsMaxBytes;
+  BC->BlockAlignment = opts::BlockAlignment;
+  BC->PreserveBlocksAlignment = opts::PreserveBlocksAlignment;
+  BC->UseCompactAligner = opts::UseCompactAligner;
+  BC->X86AlignBranchBoundaryHotOnly = opts::X86AlignBranchBoundaryHotOnly;
 }
 
 void MachORewriteInstance::run() {

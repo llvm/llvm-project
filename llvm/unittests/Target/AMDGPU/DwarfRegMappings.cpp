@@ -12,10 +12,11 @@
 
 using namespace llvm;
 
-TEST(AMDGPU, TestWave64DwarfRegMapping) {
-  for (auto Triple :
-       {"amdgcn-amd-", "amdgcn-amd-amdhsa", "amdgcn-amd-amdpal"}) {
-    auto TM = createAMDGPUTargetMachine(Triple, "gfx1010", "+wavefrontsize64");
+TEST_F(AMDGPUTestBase, TestWave64DwarfRegMapping) {
+  for (StringRef TripleStr : {"amdgpu10.10-amd-", "amdgpu10.10-amd-amdhsa",
+                              "amdgpu10.10-amd-amdpal"}) {
+    auto TM =
+        createAMDGPUTargetMachine(Triple(TripleStr), "", "+wavefrontsize64");
     if (TM) {
       GCNSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                       std::string(TM->getTargetFeatureString()), *TM);
@@ -40,19 +41,23 @@ TEST(AMDGPU, TestWave64DwarfRegMapping) {
         }
 
         // Verify that subregisters have no dwarf encoding.
-        for (MCRegister LLSubReg :
-             {AMDGPU::VGPR1_LO16, AMDGPU::AGPR1_HI16, AMDGPU::SGPR1_HI16}) {
+        for (MCRegister LLSubReg : {AMDGPU::VGPR1_LO16, AMDGPU::VGPR1_HI16,
+                                    AMDGPU::AGPR1_LO16, AMDGPU::SGPR1_LO16}) {
           EXPECT_EQ(MRI->getDwarfRegNum(LLSubReg, false), -1);
         }
+
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR511, false), 3071);
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR512, false), -1);
       }
     }
   }
 }
 
-TEST(AMDGPU, TestWave32DwarfRegMapping) {
-  for (auto Triple :
-       {"amdgcn-amd-", "amdgcn-amd-amdhsa", "amdgcn-amd-amdpal"}) {
-    auto TM = createAMDGPUTargetMachine(Triple, "gfx1010", "+wavefrontsize32");
+TEST_F(AMDGPUTestBase, TestWave32DwarfRegMapping) {
+  for (StringRef TripleStr : {"amdgpu10.10-amd-", "amdgpu10.10-amd-amdhsa",
+                              "amdgpu10.10-amd-amdpal"}) {
+    auto TM =
+        createAMDGPUTargetMachine(Triple(TripleStr), "", "+wavefrontsize32");
     if (TM) {
       GCNSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                       std::string(TM->getTargetFeatureString()), *TM);
@@ -77,10 +82,19 @@ TEST(AMDGPU, TestWave32DwarfRegMapping) {
         }
 
         // Verify that subregisters have no dwarf encoding.
-        for (MCRegister LLSubReg :
-             {AMDGPU::VGPR1_LO16, AMDGPU::AGPR1_HI16, AMDGPU::SGPR1_HI16}) {
+        for (MCRegister LLSubReg : {AMDGPU::VGPR1_LO16, AMDGPU::VGPR1_HI16,
+                                    AMDGPU::AGPR1_LO16, AMDGPU::SGPR1_LO16}) {
           EXPECT_EQ(MRI->getDwarfRegNum(LLSubReg, false), -1);
         }
+
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR511, false), 2047);
+        EXPECT_EQ(MRI->getLLVMRegNum(2047, false), AMDGPU::VGPR511);
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR512, false), 3584);
+        EXPECT_EQ(MRI->getLLVMRegNum(3584, false), AMDGPU::VGPR512);
+
+        // Verify that subregisters have no dwarf encoding.
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR511_LO16, false), -1);
+        EXPECT_EQ(MRI->getDwarfRegNum(AMDGPU::VGPR512_LO16, false), -1);
       }
     }
   }

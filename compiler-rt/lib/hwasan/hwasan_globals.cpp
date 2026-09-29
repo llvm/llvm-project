@@ -73,15 +73,20 @@ ArrayRef<const hwasan_global> HwasanGlobalsFor(ElfW(Addr) base,
         continue;
       }
 
-      // Only libraries with instrumented globals need to be checked against the
-      // code model since they use relocations that aren't checked at link time.
-      CheckCodeModel(base, phdr, phnum);
-
       auto *global_note = reinterpret_cast<const hwasan_global_note *>(desc);
       auto *globals_begin = reinterpret_cast<const hwasan_global *>(
           note + global_note->begin_relptr);
       auto *globals_end = reinterpret_cast<const hwasan_global *>(
           note + global_note->end_relptr);
+
+      // Only libraries with instrumented globals need to be checked against the
+      // code model since they use relocations that aren't checked at link time.
+      //
+      // There is always a HWASan globals note ("Create the note even if we
+      // aren't instrumenting globals." - HWAddressSanitizer.cpp), but we can
+      // elide the code model check if there are no globals.
+      if (globals_begin != globals_end)
+        CheckCodeModel(base, phdr, phnum);
 
       return {globals_begin, globals_end};
     }

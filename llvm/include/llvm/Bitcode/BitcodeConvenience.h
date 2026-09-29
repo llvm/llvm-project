@@ -163,7 +163,7 @@ namespace detail {
 /// This is the base case for \c emitOps.
 ///
 /// \sa BCRecordLayout::emitAbbrev
-template <typename FieldTy> static void emitOps(llvm::BitCodeAbbrev &abbrev) {
+template <typename FieldTy> void emitOps(llvm::BitCodeAbbrev &abbrev) {
   FieldTy::emitOp(abbrev);
 }
 
@@ -173,7 +173,7 @@ template <typename FieldTy> static void emitOps(llvm::BitCodeAbbrev &abbrev) {
 ///
 /// \sa BCRecordLayout::emitAbbrev
 template <typename FieldTy, typename Next, typename... Rest>
-static void emitOps(llvm::BitCodeAbbrev &abbrev) {
+void emitOps(llvm::BitCodeAbbrev &abbrev) {
   static_assert(!FieldTy::IsCompound,
                 "arrays and blobs may not appear in the middle of a record");
   FieldTy::emitOp(abbrev);
@@ -265,8 +265,8 @@ public:
     for (auto &element : array)
       ElementTy::assertValid(element);
 #endif
-    buffer.reserve(buffer.size() + std::distance(array.begin(), array.end()));
-    std::copy(array.begin(), array.end(), std::back_inserter(buffer));
+    buffer.reserve(buffer.size() + llvm::size(array));
+    llvm::append_range(buffer, array);
     Stream.EmitRecordWithAbbrev(code, buffer);
   }
 

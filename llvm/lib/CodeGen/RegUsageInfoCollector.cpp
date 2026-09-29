@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/Function.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -53,9 +54,7 @@ public:
 class RegUsageInfoCollectorLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  RegUsageInfoCollectorLegacy() : MachineFunctionPass(ID) {
-    initializeRegUsageInfoCollectorLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  RegUsageInfoCollectorLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Register Usage Information Collector Pass";
@@ -162,12 +161,12 @@ bool RegUsageInfoCollector::run(MachineFunction &MF) {
   computeCalleeSavedRegs(SavedRegs, MF);
 
   const BitVector &UsedPhysRegsMask = MRI->getUsedPhysRegsMask();
-  auto SetRegAsDefined = [&RegMask] (unsigned Reg) {
-    RegMask[Reg / 32] &= ~(1u << Reg % 32);
+  auto SetRegAsDefined = [&RegMask](MCRegister Reg) {
+    RegMask[Reg.id() / 32] &= ~(1u << Reg.id() % 32);
   };
 
   // Don't include $noreg in any regmasks.
-  SetRegAsDefined(MCRegister::NoRegister);
+  SetRegAsDefined(MCRegister());
 
   // Some targets can clobber registers "inside" a call, typically in
   // linker-generated code.
@@ -186,7 +185,7 @@ bool RegUsageInfoCollector::run(MachineFunction &MF) {
     // with all it's unsaved aliases.
     if (!MRI->def_empty(PReg)) {
       for (MCRegAliasIterator AI(PReg, TRI, true); AI.isValid(); ++AI)
-        if (!SavedRegs.test(*AI))
+        if (!SavedRegs.test((*AI).id()))
           SetRegAsDefined(*AI);
       continue;
     }

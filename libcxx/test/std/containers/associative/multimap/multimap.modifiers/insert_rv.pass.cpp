@@ -13,7 +13,7 @@
 // class multimap
 
 // template <class P>
-//   iterator insert(P&& p);
+//   iterator insert(P&& p); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -23,72 +23,80 @@
 #include "test_macros.h"
 
 template <class Container>
-void do_insert_rv_test()
-{
+TEST_CONSTEXPR_CXX26 void do_insert_rv_test() {
+  typedef std::multimap<int, MoveOnly> M;
+  typedef typename M::iterator R;
+  typedef typename M::value_type VT;
+  M m;
+  R r = m.insert(VT(2, 2));
+  assert(r == m.begin());
+  assert(m.size() == 1);
+  assert(r->first == 2);
+  assert(r->second == 2);
+
+  r = m.insert(VT(1, 1));
+  assert(r == m.begin());
+  assert(m.size() == 2);
+  assert(r->first == 1);
+  assert(r->second == 1);
+
+  r = m.insert(VT(3, 3));
+  assert(r == std::prev(m.end()));
+  assert(m.size() == 3);
+  assert(r->first == 3);
+  assert(r->second == 3);
+
+  r = m.insert(VT(3, 3));
+  assert(r == std::prev(m.end()));
+  assert(m.size() == 4);
+  assert(r->first == 3);
+  assert(r->second == 3);
+}
+
+TEST_CONSTEXPR_CXX26
+bool test() {
+  do_insert_rv_test<std::multimap<int, MoveOnly>>();
+  {
+    typedef std::multimap<int, MoveOnly, std::less<int>, min_allocator<std::pair<const int, MoveOnly>>> M;
+    do_insert_rv_test<M>();
+  }
+  {
     typedef std::multimap<int, MoveOnly> M;
-    typedef typename M::iterator R;
-    typedef typename M::value_type VT;
+    typedef M::iterator R;
     M m;
-    R r = m.insert(VT(2, 2));
+    R r = m.insert({2, MoveOnly(2)});
     assert(r == m.begin());
     assert(m.size() == 1);
     assert(r->first == 2);
     assert(r->second == 2);
 
-    r = m.insert(VT(1, 1));
+    r = m.insert({1, MoveOnly(1)});
     assert(r == m.begin());
     assert(m.size() == 2);
     assert(r->first == 1);
     assert(r->second == 1);
 
-    r = m.insert(VT(3, 3));
+    r = m.insert({3, MoveOnly(3)});
     assert(r == std::prev(m.end()));
     assert(m.size() == 3);
     assert(r->first == 3);
     assert(r->second == 3);
 
-    r = m.insert(VT(3, 3));
+    r = m.insert({3, MoveOnly(3)});
     assert(r == std::prev(m.end()));
     assert(m.size() == 4);
     assert(r->first == 3);
     assert(r->second == 3);
+  }
+
+  return true;
 }
 
-int main(int, char**)
-{
-    do_insert_rv_test<std::multimap<int, MoveOnly>>();
-    {
-        typedef std::multimap<int, MoveOnly, std::less<int>, min_allocator<std::pair<const int, MoveOnly>>> M;
-        do_insert_rv_test<M>();
-    }
-    {
-        typedef std::multimap<int, MoveOnly> M;
-        typedef M::iterator R;
-        M m;
-        R r = m.insert({2, MoveOnly(2)});
-        assert(r == m.begin());
-        assert(m.size() == 1);
-        assert(r->first == 2);
-        assert(r->second == 2);
+int main(int, char**) {
+  test();
 
-        r = m.insert({1, MoveOnly(1)});
-        assert(r == m.begin());
-        assert(m.size() == 2);
-        assert(r->first == 1);
-        assert(r->second == 1);
-
-        r = m.insert({3, MoveOnly(3)});
-        assert(r == std::prev(m.end()));
-        assert(m.size() == 3);
-        assert(r->first == 3);
-        assert(r->second == 3);
-
-        r = m.insert({3, MoveOnly(3)});
-        assert(r == std::prev(m.end()));
-        assert(m.size() == 4);
-        assert(r->first == 3);
-        assert(r->second == 3);
-    }
-
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

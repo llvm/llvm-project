@@ -1,0 +1,54 @@
+# RUN: llc -mtriple=aarch64-unknown-linux-gnu -o - %s -run-pass=aarch64-cond-br-tuning | FileCheck %s
+
+# This testcase was obtained by looking at FileCheck.cpp and reducing it down via llvm-reduce
+
+# Check that the ANDXri preserves the debug info by retaining the debug-instr-number 1 in _ZN4llvmlsERNS_11raw_ostreamERKNS_5ErrorE after the aarch64-cond-br-tuning pass transforms it into a ANDSXri instruction.
+
+# CHECK: %{{[0-9]+}}:gpr64common = ANDSXri %{{[0-9]+}}, {{[0-9]+}}, implicit-def $nzcv, debug-instr-number 1
+# CHECK-NEXT: DBG_INSTR_REF !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
+
+--- |
+  define ptr @_ZNK4llvm5Error6getPtrEv(ptr %this) local_unnamed_addr #0 {
+  entry:
+    %0 = ptrtoint ptr %this to i64
+    %and = and i64 %0, -2
+    %1 = inttoptr i64 %and to ptr
+    ret ptr %1
+  }
+  define noalias noundef ptr @_ZN4llvmlsERNS_11raw_ostreamERKNS_5ErrorE(ptr %E) local_unnamed_addr #1 !dbg !4 {
+  entry:
+    %0 = ptrtoint ptr %E to i64, !dbg !13
+    %and.i = and i64 %0, -2, !dbg !13
+    %tobool.not = icmp eq i64 %and.i, 0
+    br i1 %tobool.not, label %if.else, label %if.then
+  if.then:                                          ; preds = %entry
+    unreachable
+  if.else:                                          ; preds = %entry
+    ret ptr null
+  }
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !2, producer: "clang version 21.0.0git (\0A\0A\0Agit@github.com:llvm/llvm-project.git 6be6400848eeec027d0cca0662c105683bcc896b\0A\0A\0A)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !3, retainedTypes: !3, globals: !3, imports: !3, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/Library/Developer/CommandLineTools/SDKs/MacOSX15.3.sdk", sdk: "MacOSX15.3.sdk")
+  !2 = !DIFile(filename: "/Users/shubhamrastogi/Development/llvm-project-instr-ref/llvm-project/llvm/lib/FileCheck/FileCheck.cpp", directory: "/Users/shubhamrastogi/Development/llvm-project-instr-ref/llvm-project/build-instr-ref-stage2", checksumkind: CSK_MD5, checksum: "ac1d2352ab68b965fe7993c780cf92d7")
+  !3 = !{}
+  !4 = distinct !DISubprogram(name: "operator<<", linkageName: "_ZN4llvmlsERNS_11raw_ostreamERKNS_5ErrorE", scope: !6, file: !5, line: 320, type: !7, scopeLine: 320, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1, retainedNodes: !8)
+  !5 = !DIFile(filename: "llvm/include/llvm/Support/Error.h", directory: "/Users/shubhamrastogi/Development/llvm-project-instr-ref/llvm-project", checksumkind: CSK_MD5, checksum: "f166cdaeb719f8f71fbae8128cde93e4")
+  !6 = !DINamespace(name: "llvm", scope: null)
+  !7 = distinct !DISubroutineType(types: !3)
+  !8 = !{!9}
+  !9 = !DILocalVariable(name: "P", scope: !10, file: !5, line: 321, type: !11)
+  !10 = distinct !DILexicalBlock(scope: !4, file: !5, line: 321, column: 15)
+  !11 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 64)
+  !12 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "ErrorInfoBase", scope: !6, file: !5, line: 44, size: 64, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !3, vtableHolder: !12, identifier: "_ZTSN4llvm13ErrorInfoBaseE")
+  !13 = !DILocation(line: 321, column: 21, scope: !10)
+  !14 = !DILocation(line: 0, scope: !10)
+name:            _ZN4llvmlsERNS_11raw_ostreamERKNS_5ErrorE
+body:             |
+  bb.0.entry:
+    %1:gpr64 = COPY $x0
+    %2:gpr64common = ANDXri %1, 8190, debug-instr-number 1, debug-location !13
+    DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !14
+    %0:gpr64sp = COPY %2, debug-location !13
+    CBZX %2, %bb.2
+  bb.2.if.else:

@@ -134,6 +134,30 @@
 #endif
 
 /*
+ * RT_GPU_TARGET is defined when compiling natively for a GPU
+ * target (AMDGPU or NVPTX) using a GPU-hosted libc/libc++. This is
+ * distinct from RT_DEVICE_COMPILATION which covers CUDA and OpenMP
+ * offload paths that use separate host/device compilation.
+ */
+#if defined(__AMDGPU__) || defined(__NVPTX__)
+#define RT_GPU_TARGET 1
+#else
+#undef RT_GPU_TARGET
+#endif
+
+/*
+ * RT_THIN_IO leaves out the I/O paths that need descriptor-io.cpp and the
+ * external unit machinery. It is on for the native GPU builds, which don't
+ * compile those files. RT_GPU_TARGET alone would also match the device pass
+ * of a clang CUDA build, and the regular CUDA runtime library does compile
+ * them, hence the RT_DEVICE_COMPILATION check. The CUDA PTX library leaves
+ * them out and sets RT_THIN_IO itself from CMake.
+ */
+#if RT_GPU_TARGET && !defined(RT_DEVICE_COMPILATION)
+#define RT_THIN_IO 1
+#endif
+
+/*
  * Recurrence in the call graph prevents computing minimal stack size
  * required for a kernel execution. This macro can be used to disable
  * some F18 runtime functionality that is implemented using recurrent
@@ -177,5 +201,33 @@
 #define RT_DEVICE_NOINLINE
 #define RT_DEVICE_NOINLINE_HOST_INLINE inline
 #endif
+
+/* RT_OPTNONE_ATTR allows disabling optimizations per function. */
+#if __has_attribute(optimize)
+/* GCC style. */
+#define RT_OPTNONE_ATTR __attribute__((optimize("O0")))
+#elif __has_attribute(optnone)
+/* Clang style. */
+#define RT_OPTNONE_ATTR __attribute__((optnone))
+#else
+#define RT_OPTNONE_ATTR
+#endif
+
+/* Detect system endianness if it was not explicitly set. */
+#if !defined(FLANG_LITTLE_ENDIAN) && !defined(FLANG_BIG_ENDIAN)
+
+/* We always assume Windows is little endian, otherwise use the GCC compatible
+ * flags. */
+#if defined(_MSC_VER) || defined(_WIN32)
+#define FLANG_LITTLE_ENDIAN 1
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define FLANG_LITTLE_ENDIAN 1
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define FLANG_BIG_ENDIAN 1
+#else
+#error "Unknown or unsupported endianness."
+#endif
+
+#endif /* !defined(FLANG_LITTLE_ENDIAN) && !defined(FLANG_BIG_ENDIAN) */
 
 #endif /* !FORTRAN_RUNTIME_API_ATTRS_H_ */

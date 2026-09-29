@@ -5,11 +5,11 @@
 
 define i32 @test_zext(i32 %a) {
   ; CHECK-LABEL: name: test_zext
-  ; CHECK: %0:_(s32) = COPY $w0
-  ; CHECK: %1:_(s8) = G_TRUNC %0(s32)
-  ; CHECK: %2:_(s16) = G_ZEXT %1(s8)
-  ; CHECK: %3:_(s32) = G_ZEXT %2(s16)
-  ; CHECK: $w0 = COPY %3(s32)
+  ; CHECK: %0:_(i32) = COPY $w0
+  ; CHECK: %1:_(i8) = G_TRUNC %0(i32)
+  ; CHECK: %2:_(i16) = G_ZEXT %1(i8)
+  ; CHECK: %3:_(i32) = G_ZEXT %2(i16)
+  ; CHECK: $w0 = COPY %3(i32)
   %tmp0 = trunc i32 %a to i8
   %tmp1 = zext i8 %tmp0 to i16
   %tmp2 = zext i16 %tmp1 to i32
@@ -18,11 +18,11 @@ define i32 @test_zext(i32 %a) {
 
 define i32 @test_sext(i32 %a) {
   ; CHECK-LABEL: name: test_sext
-  ; CHECK: %0:_(s32) = COPY $w0
-  ; CHECK: %1:_(s8) = G_TRUNC %0(s32)
-  ; CHECK: %2:_(s16) = G_SEXT %1(s8)
-  ; CHECK: %3:_(s32) = G_SEXT %2(s16)
-  ; CHECK: $w0 = COPY %3(s32)
+  ; CHECK: %0:_(i32) = COPY $w0
+  ; CHECK: %1:_(i8) = G_TRUNC %0(i32)
+  ; CHECK: %2:_(i16) = G_SEXT %1(i8)
+  ; CHECK: %3:_(i32) = G_SEXT %2(i16)
+  ; CHECK: $w0 = COPY %3(i32)
   %tmp0 = trunc i32 %a to i8
   %tmp1 = sext i8 %tmp0 to i16
   %tmp2 = sext i16 %tmp1 to i32

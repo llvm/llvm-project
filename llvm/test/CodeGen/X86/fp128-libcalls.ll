@@ -5,6 +5,15 @@
 ; RUN:     -enable-legalize-types-checking | FileCheck %s --check-prefix=GNU
 ; RUN: llc < %s -O2 -mtriple=i686-linux-gnu -mattr=sse2 \
 ; RUN:     -enable-legalize-types-checking | FileCheck %s --check-prefix=X86
+; RUN: llc < %s -O2 -mtriple=x86_64-pc-windows-msvc \
+; RUN:     -enable-legalize-types-checking | FileCheck %s --check-prefix=WIN
+; RUN: llc < %s -O2 -mtriple=i686-pc-windows-msvc \
+; RUN:     -enable-legalize-types-checking | FileCheck %s --check-prefix=WIN-X86
+
+; NOTE: Only fp128 arithmetic (add/sub/mul/div) has a libcall on every triple
+; here. The fp128 math/rem/fma/modf cases only have a libcall where libc
+; provides the f128-suffixed functions (glibc); those are covered in
+; fp128-libcalls-gnu.ll.
 
 ; Check all soft floating point library function calls.
 
@@ -38,23 +47,98 @@ define dso_local void @Test128Add(fp128 %d1, fp128 %d2) nounwind {
 ;
 ; X86-LABEL: Test128Add:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $76, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __addtf3
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    addl $76, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
+;
+; WIN-LABEL: Test128Add:
+; WIN:       # %bb.0: # %entry
+; WIN-NEXT:    subq $88, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; WIN-NEXT:    callq __addtf3
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, vf128(%rip)
+; WIN-NEXT:    addq $88, %rsp
+; WIN-NEXT:    retq
+;
+; WIN-X86-LABEL: Test128Add:
+; WIN-X86:       # %bb.0: # %entry
+; WIN-X86-NEXT:    pushl %ebp
+; WIN-X86-NEXT:    movl %esp, %ebp
+; WIN-X86-NEXT:    pushl %ebx
+; WIN-X86-NEXT:    pushl %edi
+; WIN-X86-NEXT:    pushl %esi
+; WIN-X86-NEXT:    andl $-16, %esp
+; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    movl 16(%ebp), %edx
+; WIN-X86-NEXT:    movl 20(%ebp), %esi
+; WIN-X86-NEXT:    movl 24(%ebp), %edi
+; WIN-X86-NEXT:    movl 28(%ebp), %ebx
+; WIN-X86-NEXT:    movl 32(%ebp), %ecx
+; WIN-X86-NEXT:    movl 36(%ebp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 12(%ebp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 8(%ebp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl %eax, (%esp)
+; WIN-X86-NEXT:    calll ___addtf3
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; WIN-X86-NEXT:    movl %esi, _vf128+12
+; WIN-X86-NEXT:    movl %edx, _vf128+8
+; WIN-X86-NEXT:    movl %ecx, _vf128+4
+; WIN-X86-NEXT:    movl %eax, _vf128
+; WIN-X86-NEXT:    leal -12(%ebp), %esp
+; WIN-X86-NEXT:    popl %esi
+; WIN-X86-NEXT:    popl %edi
+; WIN-X86-NEXT:    popl %ebx
+; WIN-X86-NEXT:    popl %ebp
+; WIN-X86-NEXT:    retl
 entry:
   %add = fadd fp128 %d1, %d2
   store fp128 %add, ptr @vf128, align 16
@@ -94,23 +178,98 @@ define dso_local void @Test128_1Add(fp128 %d1) nounwind {
 ;
 ; X86-LABEL: Test128_1Add:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $76, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl vf128, %edi
+; X86-NEXT:    movl vf128+4, %ebx
+; X86-NEXT:    movl vf128+8, %ebp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __addtf3
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    addl $76, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
+;
+; WIN-LABEL: Test128_1Add:
+; WIN:       # %bb.0: # %entry
+; WIN-NEXT:    subq $88, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps vf128(%rip), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; WIN-NEXT:    callq __addtf3
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, vf128(%rip)
+; WIN-NEXT:    addq $88, %rsp
+; WIN-NEXT:    retq
+;
+; WIN-X86-LABEL: Test128_1Add:
+; WIN-X86:       # %bb.0: # %entry
+; WIN-X86-NEXT:    pushl %ebp
+; WIN-X86-NEXT:    movl %esp, %ebp
+; WIN-X86-NEXT:    pushl %ebx
+; WIN-X86-NEXT:    pushl %edi
+; WIN-X86-NEXT:    pushl %esi
+; WIN-X86-NEXT:    andl $-16, %esp
+; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    movl 16(%ebp), %esi
+; WIN-X86-NEXT:    movl 20(%ebp), %edi
+; WIN-X86-NEXT:    movl _vf128, %edx
+; WIN-X86-NEXT:    movl _vf128+4, %ebx
+; WIN-X86-NEXT:    movl _vf128+8, %ecx
+; WIN-X86-NEXT:    movl _vf128+12, %eax
+; WIN-X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 12(%ebp), %esi
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 8(%ebp), %esi
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl %eax, (%esp)
+; WIN-X86-NEXT:    calll ___addtf3
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; WIN-X86-NEXT:    movl %esi, _vf128+8
+; WIN-X86-NEXT:    movl %edx, _vf128+12
+; WIN-X86-NEXT:    movl %eax, _vf128
+; WIN-X86-NEXT:    movl %ecx, _vf128+4
+; WIN-X86-NEXT:    leal -12(%ebp), %esp
+; WIN-X86-NEXT:    popl %esi
+; WIN-X86-NEXT:    popl %edi
+; WIN-X86-NEXT:    popl %ebx
+; WIN-X86-NEXT:    popl %ebp
+; WIN-X86-NEXT:    retl
 entry:
   %0 = load fp128, ptr @vf128, align 16
   %add = fadd fp128 %0, %d1
@@ -145,23 +304,98 @@ define dso_local void @Test128Sub(fp128 %d1, fp128 %d2) nounwind {
 ;
 ; X86-LABEL: Test128Sub:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $76, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __subtf3
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    addl $76, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
+;
+; WIN-LABEL: Test128Sub:
+; WIN:       # %bb.0: # %entry
+; WIN-NEXT:    subq $88, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; WIN-NEXT:    callq __subtf3
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, vf128(%rip)
+; WIN-NEXT:    addq $88, %rsp
+; WIN-NEXT:    retq
+;
+; WIN-X86-LABEL: Test128Sub:
+; WIN-X86:       # %bb.0: # %entry
+; WIN-X86-NEXT:    pushl %ebp
+; WIN-X86-NEXT:    movl %esp, %ebp
+; WIN-X86-NEXT:    pushl %ebx
+; WIN-X86-NEXT:    pushl %edi
+; WIN-X86-NEXT:    pushl %esi
+; WIN-X86-NEXT:    andl $-16, %esp
+; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    movl 16(%ebp), %edx
+; WIN-X86-NEXT:    movl 20(%ebp), %esi
+; WIN-X86-NEXT:    movl 24(%ebp), %edi
+; WIN-X86-NEXT:    movl 28(%ebp), %ebx
+; WIN-X86-NEXT:    movl 32(%ebp), %ecx
+; WIN-X86-NEXT:    movl 36(%ebp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 12(%ebp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 8(%ebp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl %eax, (%esp)
+; WIN-X86-NEXT:    calll ___subtf3
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; WIN-X86-NEXT:    movl %esi, _vf128+12
+; WIN-X86-NEXT:    movl %edx, _vf128+8
+; WIN-X86-NEXT:    movl %ecx, _vf128+4
+; WIN-X86-NEXT:    movl %eax, _vf128
+; WIN-X86-NEXT:    leal -12(%ebp), %esp
+; WIN-X86-NEXT:    popl %esi
+; WIN-X86-NEXT:    popl %edi
+; WIN-X86-NEXT:    popl %ebx
+; WIN-X86-NEXT:    popl %ebp
+; WIN-X86-NEXT:    retl
 entry:
   %sub = fsub fp128 %d1, %d2
   store fp128 %sub, ptr @vf128, align 16
@@ -201,23 +435,98 @@ define dso_local void @Test128_1Sub(fp128 %d1) nounwind {
 ;
 ; X86-LABEL: Test128_1Sub:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $76, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl vf128, %edi
+; X86-NEXT:    movl vf128+4, %ebx
+; X86-NEXT:    movl vf128+8, %ebp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __subtf3
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    addl $76, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
+;
+; WIN-LABEL: Test128_1Sub:
+; WIN:       # %bb.0: # %entry
+; WIN-NEXT:    subq $88, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps vf128(%rip), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; WIN-NEXT:    callq __subtf3
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, vf128(%rip)
+; WIN-NEXT:    addq $88, %rsp
+; WIN-NEXT:    retq
+;
+; WIN-X86-LABEL: Test128_1Sub:
+; WIN-X86:       # %bb.0: # %entry
+; WIN-X86-NEXT:    pushl %ebp
+; WIN-X86-NEXT:    movl %esp, %ebp
+; WIN-X86-NEXT:    pushl %ebx
+; WIN-X86-NEXT:    pushl %edi
+; WIN-X86-NEXT:    pushl %esi
+; WIN-X86-NEXT:    andl $-16, %esp
+; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    movl 16(%ebp), %esi
+; WIN-X86-NEXT:    movl 20(%ebp), %edi
+; WIN-X86-NEXT:    movl _vf128, %edx
+; WIN-X86-NEXT:    movl _vf128+4, %ebx
+; WIN-X86-NEXT:    movl _vf128+8, %ecx
+; WIN-X86-NEXT:    movl _vf128+12, %eax
+; WIN-X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 12(%ebp), %esi
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 8(%ebp), %esi
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl %eax, (%esp)
+; WIN-X86-NEXT:    calll ___subtf3
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; WIN-X86-NEXT:    movl %esi, _vf128+8
+; WIN-X86-NEXT:    movl %edx, _vf128+12
+; WIN-X86-NEXT:    movl %eax, _vf128
+; WIN-X86-NEXT:    movl %ecx, _vf128+4
+; WIN-X86-NEXT:    leal -12(%ebp), %esp
+; WIN-X86-NEXT:    popl %esi
+; WIN-X86-NEXT:    popl %edi
+; WIN-X86-NEXT:    popl %ebx
+; WIN-X86-NEXT:    popl %ebp
+; WIN-X86-NEXT:    retl
 entry:
   %0 = load fp128, ptr @vf128, align 16
   %sub = fsub fp128 %0, %d1
@@ -252,23 +561,98 @@ define dso_local void @Test128Mul(fp128 %d1, fp128 %d2) nounwind {
 ;
 ; X86-LABEL: Test128Mul:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $76, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __multf3
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    addl $76, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
+;
+; WIN-LABEL: Test128Mul:
+; WIN:       # %bb.0: # %entry
+; WIN-NEXT:    subq $88, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; WIN-NEXT:    callq __multf3
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, vf128(%rip)
+; WIN-NEXT:    addq $88, %rsp
+; WIN-NEXT:    retq
+;
+; WIN-X86-LABEL: Test128Mul:
+; WIN-X86:       # %bb.0: # %entry
+; WIN-X86-NEXT:    pushl %ebp
+; WIN-X86-NEXT:    movl %esp, %ebp
+; WIN-X86-NEXT:    pushl %ebx
+; WIN-X86-NEXT:    pushl %edi
+; WIN-X86-NEXT:    pushl %esi
+; WIN-X86-NEXT:    andl $-16, %esp
+; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    movl 16(%ebp), %edx
+; WIN-X86-NEXT:    movl 20(%ebp), %esi
+; WIN-X86-NEXT:    movl 24(%ebp), %edi
+; WIN-X86-NEXT:    movl 28(%ebp), %ebx
+; WIN-X86-NEXT:    movl 32(%ebp), %ecx
+; WIN-X86-NEXT:    movl 36(%ebp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 12(%ebp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 8(%ebp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl %eax, (%esp)
+; WIN-X86-NEXT:    calll ___multf3
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; WIN-X86-NEXT:    movl %esi, _vf128+12
+; WIN-X86-NEXT:    movl %edx, _vf128+8
+; WIN-X86-NEXT:    movl %ecx, _vf128+4
+; WIN-X86-NEXT:    movl %eax, _vf128
+; WIN-X86-NEXT:    leal -12(%ebp), %esp
+; WIN-X86-NEXT:    popl %esi
+; WIN-X86-NEXT:    popl %edi
+; WIN-X86-NEXT:    popl %ebx
+; WIN-X86-NEXT:    popl %ebp
+; WIN-X86-NEXT:    retl
 entry:
   %mul = fmul fp128 %d1, %d2
   store fp128 %mul, ptr @vf128, align 16
@@ -308,23 +692,98 @@ define dso_local void @Test128_1Mul(fp128 %d1) nounwind {
 ;
 ; X86-LABEL: Test128_1Mul:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $76, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl vf128, %edi
+; X86-NEXT:    movl vf128+4, %ebx
+; X86-NEXT:    movl vf128+8, %ebp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __multf3
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    addl $76, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
+;
+; WIN-LABEL: Test128_1Mul:
+; WIN:       # %bb.0: # %entry
+; WIN-NEXT:    subq $88, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps vf128(%rip), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; WIN-NEXT:    callq __multf3
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, vf128(%rip)
+; WIN-NEXT:    addq $88, %rsp
+; WIN-NEXT:    retq
+;
+; WIN-X86-LABEL: Test128_1Mul:
+; WIN-X86:       # %bb.0: # %entry
+; WIN-X86-NEXT:    pushl %ebp
+; WIN-X86-NEXT:    movl %esp, %ebp
+; WIN-X86-NEXT:    pushl %ebx
+; WIN-X86-NEXT:    pushl %edi
+; WIN-X86-NEXT:    pushl %esi
+; WIN-X86-NEXT:    andl $-16, %esp
+; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    movl 16(%ebp), %esi
+; WIN-X86-NEXT:    movl 20(%ebp), %edi
+; WIN-X86-NEXT:    movl _vf128, %edx
+; WIN-X86-NEXT:    movl _vf128+4, %ebx
+; WIN-X86-NEXT:    movl _vf128+8, %ecx
+; WIN-X86-NEXT:    movl _vf128+12, %eax
+; WIN-X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 12(%ebp), %esi
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 8(%ebp), %esi
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl %eax, (%esp)
+; WIN-X86-NEXT:    calll ___multf3
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; WIN-X86-NEXT:    movl %esi, _vf128+8
+; WIN-X86-NEXT:    movl %edx, _vf128+12
+; WIN-X86-NEXT:    movl %eax, _vf128
+; WIN-X86-NEXT:    movl %ecx, _vf128+4
+; WIN-X86-NEXT:    leal -12(%ebp), %esp
+; WIN-X86-NEXT:    popl %esi
+; WIN-X86-NEXT:    popl %edi
+; WIN-X86-NEXT:    popl %ebx
+; WIN-X86-NEXT:    popl %ebp
+; WIN-X86-NEXT:    retl
 entry:
   %0 = load fp128, ptr @vf128, align 16
   %mul = fmul fp128 %0, %d1
@@ -359,23 +818,98 @@ define dso_local void @Test128Div(fp128 %d1, fp128 %d2) nounwind {
 ;
 ; X86-LABEL: Test128Div:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $76, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __divtf3
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    addl $76, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
+;
+; WIN-LABEL: Test128Div:
+; WIN:       # %bb.0: # %entry
+; WIN-NEXT:    subq $88, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps (%rdx), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; WIN-NEXT:    callq __divtf3
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, vf128(%rip)
+; WIN-NEXT:    addq $88, %rsp
+; WIN-NEXT:    retq
+;
+; WIN-X86-LABEL: Test128Div:
+; WIN-X86:       # %bb.0: # %entry
+; WIN-X86-NEXT:    pushl %ebp
+; WIN-X86-NEXT:    movl %esp, %ebp
+; WIN-X86-NEXT:    pushl %ebx
+; WIN-X86-NEXT:    pushl %edi
+; WIN-X86-NEXT:    pushl %esi
+; WIN-X86-NEXT:    andl $-16, %esp
+; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    movl 16(%ebp), %edx
+; WIN-X86-NEXT:    movl 20(%ebp), %esi
+; WIN-X86-NEXT:    movl 24(%ebp), %edi
+; WIN-X86-NEXT:    movl 28(%ebp), %ebx
+; WIN-X86-NEXT:    movl 32(%ebp), %ecx
+; WIN-X86-NEXT:    movl 36(%ebp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 12(%ebp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 8(%ebp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl %eax, (%esp)
+; WIN-X86-NEXT:    calll ___divtf3
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; WIN-X86-NEXT:    movl %esi, _vf128+12
+; WIN-X86-NEXT:    movl %edx, _vf128+8
+; WIN-X86-NEXT:    movl %ecx, _vf128+4
+; WIN-X86-NEXT:    movl %eax, _vf128
+; WIN-X86-NEXT:    leal -12(%ebp), %esp
+; WIN-X86-NEXT:    popl %esi
+; WIN-X86-NEXT:    popl %edi
+; WIN-X86-NEXT:    popl %ebx
+; WIN-X86-NEXT:    popl %ebp
+; WIN-X86-NEXT:    retl
 entry:
   %div = fdiv fp128 %d1, %d2
   store fp128 %div, ptr @vf128, align 16
@@ -415,509 +949,101 @@ define dso_local void @Test128_1Div(fp128 %d1) nounwind {
 ;
 ; X86-LABEL: Test128_1Div:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $76, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl vf128, %edi
+; X86-NEXT:    movl vf128+4, %ebx
+; X86-NEXT:    movl vf128+8, %ebp
+; X86-NEXT:    movl vf128+12, %eax
+; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __divtf3
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    addl $76, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
+;
+; WIN-LABEL: Test128_1Div:
+; WIN:       # %bb.0: # %entry
+; WIN-NEXT:    subq $88, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps vf128(%rip), %xmm1
+; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; WIN-NEXT:    callq __divtf3
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; WIN-NEXT:    movaps %xmm0, vf128(%rip)
+; WIN-NEXT:    addq $88, %rsp
+; WIN-NEXT:    retq
+;
+; WIN-X86-LABEL: Test128_1Div:
+; WIN-X86:       # %bb.0: # %entry
+; WIN-X86-NEXT:    pushl %ebp
+; WIN-X86-NEXT:    movl %esp, %ebp
+; WIN-X86-NEXT:    pushl %ebx
+; WIN-X86-NEXT:    pushl %edi
+; WIN-X86-NEXT:    pushl %esi
+; WIN-X86-NEXT:    andl $-16, %esp
+; WIN-X86-NEXT:    subl $80, %esp
+; WIN-X86-NEXT:    movl 16(%ebp), %esi
+; WIN-X86-NEXT:    movl 20(%ebp), %edi
+; WIN-X86-NEXT:    movl _vf128, %edx
+; WIN-X86-NEXT:    movl _vf128+4, %ebx
+; WIN-X86-NEXT:    movl _vf128+8, %ecx
+; WIN-X86-NEXT:    movl _vf128+12, %eax
+; WIN-X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 12(%ebp), %esi
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl 8(%ebp), %esi
+; WIN-X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl %eax, (%esp)
+; WIN-X86-NEXT:    calll ___divtf3
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; WIN-X86-NEXT:    movl %esi, _vf128+8
+; WIN-X86-NEXT:    movl %edx, _vf128+12
+; WIN-X86-NEXT:    movl %eax, _vf128
+; WIN-X86-NEXT:    movl %ecx, _vf128+4
+; WIN-X86-NEXT:    leal -12(%ebp), %esp
+; WIN-X86-NEXT:    popl %esi
+; WIN-X86-NEXT:    popl %edi
+; WIN-X86-NEXT:    popl %ebx
+; WIN-X86-NEXT:    popl %ebp
+; WIN-X86-NEXT:    retl
 entry:
   %0 = load fp128, ptr @vf128, align 16
   %div = fdiv fp128 %0, %d1
   store fp128 %div, ptr @vf128, align 16
   ret void
 }
-
-define dso_local void @Test128Rem(fp128 %d1, fp128 %d2) nounwind {
-; ANDROID-LABEL: Test128Rem:
-; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq fmodl@PLT
-; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
-;
-; GNU-LABEL: Test128Rem:
-; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq fmodf128@PLT
-; GNU-NEXT:    movaps %xmm0, vf128(%rip)
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
-;
-; X86-LABEL: Test128Rem:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll fmodl
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
-; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    retl
-entry:
-  %div = frem fp128 %d1, %d2
-  store fp128 %div, ptr @vf128, align 16
-  ret void
-}
-
-define dso_local void @Test128_1Rem(fp128 %d1) nounwind {
-; ANDROID-LABEL: Test128_1Rem:
-; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    movaps %xmm0, %xmm1
-; ANDROID-NEXT:    movaps vf128(%rip), %xmm0
-; ANDROID-NEXT:    callq fmodl@PLT
-; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
-;
-; GNU-LABEL: Test128_1Rem:
-; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    movaps %xmm0, %xmm1
-; GNU-NEXT:    movaps vf128(%rip), %xmm0
-; GNU-NEXT:    callq fmodf128@PLT
-; GNU-NEXT:    movaps %xmm0, vf128(%rip)
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
-;
-; X86-LABEL: Test128_1Rem:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl vf128+12
-; X86-NEXT:    pushl vf128+8
-; X86-NEXT:    pushl vf128+4
-; X86-NEXT:    pushl vf128
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll fmodl
-; X86-NEXT:    addl $44, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
-; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    retl
-entry:
-  %0 = load fp128, ptr @vf128, align 16
-  %div = frem fp128 %0, %d1
-  store fp128 %div, ptr @vf128, align 16
-  ret void
-}
-
-define dso_local void @Test128Sqrt(fp128 %d1) nounwind {
-; ANDROID-LABEL: Test128Sqrt:
-; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq sqrtl@PLT
-; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
-;
-; GNU-LABEL: Test128Sqrt:
-; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq sqrtf128@PLT
-; GNU-NEXT:    movaps %xmm0, vf128(%rip)
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
-;
-; X86-LABEL: Test128Sqrt:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll sqrtl
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
-; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    retl
-entry:
-  %sqrt = call fp128 @llvm.sqrt.f128(fp128 %d1)
-  store fp128 %sqrt, ptr @vf128, align 16
-  ret void
-}
-declare fp128 @llvm.sqrt.f128(fp128)
-
-define dso_local void @Test128Sin(fp128 %d1) nounwind {
-; ANDROID-LABEL: Test128Sin:
-; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq sinl@PLT
-; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
-;
-; GNU-LABEL: Test128Sin:
-; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq sinf128@PLT
-; GNU-NEXT:    movaps %xmm0, vf128(%rip)
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
-;
-; X86-LABEL: Test128Sin:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll sinl
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
-; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    retl
-entry:
-  %sqrt = call fp128 @llvm.sin.f128(fp128 %d1)
-  store fp128 %sqrt, ptr @vf128, align 16
-  ret void
-}
-declare fp128 @llvm.sin.f128(fp128)
-
-define dso_local void @Test128Cos(fp128 %d1) nounwind {
-; ANDROID-LABEL: Test128Cos:
-; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq cosl@PLT
-; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
-;
-; GNU-LABEL: Test128Cos:
-; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq cosf128@PLT
-; GNU-NEXT:    movaps %xmm0, vf128(%rip)
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
-;
-; X86-LABEL: Test128Cos:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll cosl
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
-; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    retl
-entry:
-  %sqrt = call fp128 @llvm.cos.f128(fp128 %d1)
-  store fp128 %sqrt, ptr @vf128, align 16
-  ret void
-}
-declare fp128 @llvm.cos.f128(fp128)
-
-define dso_local void @Test128Ceil(fp128 %d1) nounwind {
-; ANDROID-LABEL: Test128Ceil:
-; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq ceill@PLT
-; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
-;
-; GNU-LABEL: Test128Ceil:
-; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq ceilf128@PLT
-; GNU-NEXT:    movaps %xmm0, vf128(%rip)
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
-;
-; X86-LABEL: Test128Ceil:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll ceill
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
-; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    retl
-entry:
-  %sqrt = call fp128 @llvm.ceil.f128(fp128 %d1)
-  store fp128 %sqrt, ptr @vf128, align 16
-  ret void
-}
-declare fp128 @llvm.ceil.f128(fp128)
-
-define dso_local void @Test128Floor(fp128 %d1) nounwind {
-; ANDROID-LABEL: Test128Floor:
-; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq floorl@PLT
-; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
-;
-; GNU-LABEL: Test128Floor:
-; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq floorf128@PLT
-; GNU-NEXT:    movaps %xmm0, vf128(%rip)
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
-;
-; X86-LABEL: Test128Floor:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll floorl
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
-; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    retl
-entry:
-  %sqrt = call fp128 @llvm.floor.f128(fp128 %d1)
-  store fp128 %sqrt, ptr @vf128, align 16
-  ret void
-}
-declare fp128 @llvm.floor.f128(fp128)
-
-define dso_local void @Test128Trunc(fp128 %d1) nounwind {
-; ANDROID-LABEL: Test128Trunc:
-; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq truncl@PLT
-; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
-;
-; GNU-LABEL: Test128Trunc:
-; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq truncf128@PLT
-; GNU-NEXT:    movaps %xmm0, vf128(%rip)
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
-;
-; X86-LABEL: Test128Trunc:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll truncl
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
-; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    retl
-entry:
-  %sqrt = call fp128 @llvm.trunc.f128(fp128 %d1)
-  store fp128 %sqrt, ptr @vf128, align 16
-  ret void
-}
-declare fp128 @llvm.trunc.f128(fp128)
-
-define dso_local void @Test128Nearbyint(fp128 %d1) nounwind {
-; ANDROID-LABEL: Test128Nearbyint:
-; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq nearbyintl@PLT
-; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
-;
-; GNU-LABEL: Test128Nearbyint:
-; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq nearbyintf128@PLT
-; GNU-NEXT:    movaps %xmm0, vf128(%rip)
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
-;
-; X86-LABEL: Test128Nearbyint:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll nearbyintl
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
-; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    retl
-entry:
-  %sqrt = call fp128 @llvm.nearbyint.f128(fp128 %d1)
-  store fp128 %sqrt, ptr @vf128, align 16
-  ret void
-}
-declare fp128 @llvm.nearbyint.f128(fp128)
-
-define dso_local void @Test128Rint(fp128 %d1) nounwind {
-; ANDROID-LABEL: Test128Rint:
-; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq rintl@PLT
-; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
-;
-; GNU-LABEL: Test128Rint:
-; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq rintf128@PLT
-; GNU-NEXT:    movaps %xmm0, vf128(%rip)
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
-;
-; X86-LABEL: Test128Rint:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll rintl
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
-; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    retl
-entry:
-  %sqrt = call fp128 @llvm.rint.f128(fp128 %d1)
-  store fp128 %sqrt, ptr @vf128, align 16
-  ret void
-}
-declare fp128 @llvm.rint.f128(fp128)
-
-define dso_local void @Test128Round(fp128 %d1) nounwind {
-; ANDROID-LABEL: Test128Round:
-; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    pushq %rax
-; ANDROID-NEXT:    callq roundl@PLT
-; ANDROID-NEXT:    movaps %xmm0, vf128(%rip)
-; ANDROID-NEXT:    popq %rax
-; ANDROID-NEXT:    retq
-;
-; GNU-LABEL: Test128Round:
-; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    pushq %rax
-; GNU-NEXT:    callq roundf128@PLT
-; GNU-NEXT:    movaps %xmm0, vf128(%rip)
-; GNU-NEXT:    popq %rax
-; GNU-NEXT:    retq
-;
-; X86-LABEL: Test128Round:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    subl $40, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll roundl
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
-; X86-NEXT:    movaps %xmm0, vf128
-; X86-NEXT:    addl $28, %esp
-; X86-NEXT:    retl
-entry:
-  %sqrt = call fp128 @llvm.round.f128(fp128 %d1)
-  store fp128 %sqrt, ptr @vf128, align 16
-  ret void
-}
-declare fp128 @llvm.round.f128(fp128)
-
-define fp128 @Test128FMA(fp128 %a, fp128 %b, fp128 %c) nounwind {
-; ANDROID-LABEL: Test128FMA:
-; ANDROID:       # %bb.0: # %entry
-; ANDROID-NEXT:    jmp fmal@PLT # TAILCALL
-;
-; GNU-LABEL: Test128FMA:
-; GNU:       # %bb.0: # %entry
-; GNU-NEXT:    jmp fmaf128@PLT # TAILCALL
-;
-; X86-LABEL: Test128FMA:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $24, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll fmal
-; X86-NEXT:    addl $60, %esp
-; X86-NEXT:    movaps (%esp), %xmm0
-; X86-NEXT:    movaps %xmm0, (%esi)
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    addl $24, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    retl $4
-entry:
-  %call = call fp128 @llvm.fma.f128(fp128 %a, fp128 %b, fp128 %c)
-  ret fp128 %call
-}
-declare fp128 @llvm.fma.f128(fp128, fp128, fp128)

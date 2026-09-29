@@ -60,6 +60,10 @@ STATISTIC(NumSelectConvertedLoop,
           "Number of select groups converted due to loop-level analysis");
 STATISTIC(NumSelectsConverted, "Number of selects converted");
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 static cl::opt<unsigned> ColdOperandThreshold(
     "cold-operand-threshold",
     cl::desc("Maximum frequency of path for an operand to be considered cold."),
@@ -206,7 +210,7 @@ public:
           getI()->getOpcode(), I->getType(), TargetTransformInfo::TCK_Latency,
           {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
           {TTI::OK_UniformConstantValue, TTI::OP_PowerOf2});
-      auto TotalCost = Scaled64::get(*Cost.getValue());
+      auto TotalCost = Scaled64::get(Cost.getValue());
       if (auto *OpI = dyn_cast<Instruction>(I->getOperand(1 - CondIdx))) {
         auto It = InstCostMap.find(OpI);
         if (It != InstCostMap.end())
@@ -308,11 +312,12 @@ class SelectOptimize : public FunctionPass {
 public:
   static char ID;
 
-  SelectOptimize() : FunctionPass(ID) {
-    initializeSelectOptimizePass(*PassRegistry::getPassRegistry());
-  }
+  SelectOptimize() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+
     return Impl.runOnFunction(F, *this);
   }
 
@@ -368,7 +373,9 @@ PreservedAnalyses SelectOptimizeImpl::run(Function &F,
 
   PSI = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F)
             .getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  assert(PSI && "This pass requires module analysis pass `profile-summary`!");
+  if (!PSI)
+    reportFatalUsageError("this pass requires the profile-summary module "
+                          "analysis to be available");
   BFI = &FAM.getResult<BlockFrequencyAnalysis>(F);
 
   // When optimizing for size, selects are preferable over branches.
@@ -451,8 +458,7 @@ void SelectOptimizeImpl::optimizeSelectsInnerLoops(Function &F,
   SmallVector<Loop *, 4> Loops(LI->begin(), LI->end());
   // Need to check size on each iteration as we accumulate child loops.
   for (unsigned long i = 0; i < Loops.size(); ++i)
-    for (Loop *ChildL : Loops[i]->getSubLoops())
-      Loops.push_back(ChildL);
+    llvm::append_range(Loops, Loops[i]->getSubLoops());
 
   for (Loop *L : Loops) {
     if (!L->isInnermost())
@@ -483,9 +489,9 @@ static Value *getTrueOrFalseValue(
     BasicBlock *B) {
   Value *V = isTrue ? SI.getTrueValue() : SI.getFalseValue();
   if (V) {
-    auto *IV = dyn_cast<Instruction>(V);
-    if (IV && OptSelects.count(IV))
-      return isTrue ? OptSelects[IV].first : OptSelects[IV].second;
+    if (auto *IV = dyn_cast<Instruction>(V))
+      if (auto It = OptSelects.find(IV); It != OptSelects.end())
+        return isTrue ? It->second.first : It->second.second;
     return V;
   }
 
@@ -503,16 +509,15 @@ static Value *getTrueOrFalseValue(
   } else {
     assert((isa<AShrOperator>(AuxI) || isa<SExtInst>(AuxI)) &&
            "Unexpected opcode");
-    CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), -1));
+    CBO->setOperand(CondIdx, ConstantInt::getAllOnesValue(CBO->getType()));
   }
 
   unsigned OtherIdx = 1 - CondIdx;
   if (auto *IV = dyn_cast<Instruction>(CBO->getOperand(OtherIdx))) {
-    if (OptSelects.count(IV))
-      CBO->setOperand(OtherIdx,
-                      isTrue ? OptSelects[IV].first : OptSelects[IV].second);
+    if (auto It = OptSelects.find(IV); It != OptSelects.end())
+      CBO->setOperand(OtherIdx, isTrue ? It->second.first : It->second.second);
   }
-  CBO->insertBefore(B->getTerminator());
+  CBO->insertBefore(B->getTerminator()->getIterator());
   return CBO;
 }
 
@@ -559,6 +564,8 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     SmallVector<std::stack<Instruction *>, 2> TrueSlices, FalseSlices;
     typedef std::stack<Instruction *>::size_type StackSizeType;
     StackSizeType maxTrueSliceLen = 0, maxFalseSliceLen = 0;
+    Instruction *SelectWithProfile = nullptr;
+    bool SelectWithProfileIsInverted = false;
     for (SelectLike &SI : ASI.Selects) {
       if (!isa<SelectInst>(SI.getI()))
         continue;
@@ -577,6 +584,16 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
           maxFalseSliceLen = std::max(maxFalseSliceLen, FalseSlice.size());
           FalseSlices.push_back(FalseSlice);
         }
+      }
+      // Also see if the select has profile data that we can propagate later
+      // to the conditional branch.
+      Value *SelectCondition = cast<SelectInst>(SI.getI())->getCondition();
+      if (hasProfMD(*SI.getI()) && ASI.Condition == SelectCondition) {
+        SelectWithProfile = SI.getI();
+      } else if (hasProfMD(*SI.getI()) &&
+                 match(SelectCondition, m_Not(m_Value(ASI.Condition)))) {
+        SelectWithProfile = SI.getI();
+        SelectWithProfileIsInverted = true;
       }
     }
     // In the case of multiple select instructions in the same group, the order
@@ -637,7 +654,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     }
     auto InsertionPoint = EndBlock->getFirstInsertionPt();
     for (auto *DI : SinkInstrs)
-      DI->moveBeforePreserving(&*InsertionPoint);
+      DI->moveBeforePreserving(InsertionPoint);
 
     // Duplicate implementation for DbgRecords, the non-instruction debug-info
     // format. Helper lambda for moving DbgRecords to the end block.
@@ -660,7 +677,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // These are the new basic blocks for the conditional branch.
     // At least one will become an actual new basic block.
     BasicBlock *TrueBlock = nullptr, *FalseBlock = nullptr;
-    BranchInst *TrueBranch = nullptr, *FalseBranch = nullptr;
+    UncondBrInst *TrueBranch = nullptr, *FalseBranch = nullptr;
     // Checks if select-like instruction would materialise on the given branch
     auto HasSelectLike = [](SelectGroup &SG, bool IsTrue) {
       for (auto &SL : SG.Selects) {
@@ -672,19 +689,19 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     if (!TrueSlicesInterleaved.empty() || HasSelectLike(ASI, true)) {
       TrueBlock = BasicBlock::Create(EndBlock->getContext(), "select.true.sink",
                                      EndBlock->getParent(), EndBlock);
-      TrueBranch = BranchInst::Create(EndBlock, TrueBlock);
+      TrueBranch = UncondBrInst::Create(EndBlock, TrueBlock);
       TrueBranch->setDebugLoc(LastSI.getI()->getDebugLoc());
       for (Instruction *TrueInst : TrueSlicesInterleaved)
-        TrueInst->moveBefore(TrueBranch);
+        TrueInst->moveBefore(TrueBranch->getIterator());
     }
     if (!FalseSlicesInterleaved.empty() || HasSelectLike(ASI, false)) {
       FalseBlock =
           BasicBlock::Create(EndBlock->getContext(), "select.false.sink",
                              EndBlock->getParent(), EndBlock);
-      FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
+      FalseBranch = UncondBrInst::Create(EndBlock, FalseBlock);
       FalseBranch->setDebugLoc(LastSI.getI()->getDebugLoc());
       for (Instruction *FalseInst : FalseSlicesInterleaved)
-        FalseInst->moveBefore(FalseBranch);
+        FalseInst->moveBefore(FalseBranch->getIterator());
     }
     // If there was nothing to sink, then arbitrarily choose the 'false' side
     // for a new input value to the PHI.
@@ -694,7 +711,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
 
       FalseBlock = BasicBlock::Create(StartBlock->getContext(), "select.false",
                                       EndBlock->getParent(), EndBlock);
-      auto *FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
+      auto *FalseBranch = UncondBrInst::Create(EndBlock, FalseBlock);
       FalseBranch->setDebugLoc(SI.getI()->getDebugLoc());
     }
 
@@ -748,7 +765,14 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       PN->setDebugLoc(SI.getI()->getDebugLoc());
       ++NumSelectsConverted;
     }
-    IB.CreateCondBr(CondFr, TT, FT, SI.getI());
+    Instruction *CondBr = IB.CreateCondBr(CondFr, TT, FT, SI.getI());
+    if (!ProfcheckDisableMetadataFixes && SelectWithProfile) {
+      CondBr->copyMetadata(*SelectWithProfile, {llvm::LLVMContext::MD_prof});
+      if (SelectWithProfileIsInverted)
+        CondBr->swapProfMetadata();
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
+    }
 
     // Remove the old select instructions, now that they are not longer used.
     for (SelectLike &SI : ASI.Selects)
@@ -979,8 +1003,9 @@ void SelectOptimizeImpl::findProfitableSIGroupsInnerLoops(
     // cost of the most expensive instruction of the group.
     Scaled64 SelectCost = Scaled64::getZero(), BranchCost = Scaled64::getZero();
     for (SelectLike &SI : ASI.Selects) {
-      SelectCost = std::max(SelectCost, InstCostMap[SI.getI()].PredCost);
-      BranchCost = std::max(BranchCost, InstCostMap[SI.getI()].NonPredCost);
+      const auto &ICM = InstCostMap[SI.getI()];
+      SelectCost = std::max(SelectCost, ICM.PredCost);
+      BranchCost = std::max(BranchCost, ICM.NonPredCost);
     }
     if (BranchCost < SelectCost) {
       OptimizationRemark OR(DEBUG_TYPE, "SelectOpti",
@@ -1217,7 +1242,7 @@ bool SelectOptimizeImpl::checkLoopHeuristics(const Loop *L,
     return true;
 
   OptimizationRemarkMissed ORmissL(DEBUG_TYPE, "SelectOpti",
-                                   L->getHeader()->getFirstNonPHI());
+                                   &*L->getHeader()->getFirstNonPHIIt());
 
   if (LoopCost[0].NonPredCost > LoopCost[0].PredCost ||
       LoopCost[1].NonPredCost >= LoopCost[1].PredCost) {
@@ -1305,9 +1330,9 @@ bool SelectOptimizeImpl::computeLoopCosts(
           auto UI = dyn_cast<Instruction>(U.get());
           if (!UI)
             continue;
-          if (InstCostMap.count(UI)) {
-            IPredCost = std::max(IPredCost, InstCostMap[UI].PredCost);
-            INonPredCost = std::max(INonPredCost, InstCostMap[UI].NonPredCost);
+          if (auto It = InstCostMap.find(UI); It != InstCostMap.end()) {
+            IPredCost = std::max(IPredCost, It->second.PredCost);
+            INonPredCost = std::max(INonPredCost, It->second.NonPredCost);
           }
         }
         auto ILatency = computeInstCost(&I);
@@ -1328,8 +1353,8 @@ bool SelectOptimizeImpl::computeLoopCosts(
         // BranchCost = PredictedPathCost + MispredictCost
         // PredictedPathCost = TrueOpCost * TrueProb + FalseOpCost * FalseProb
         // MispredictCost = max(MispredictPenalty, CondCost) * MispredictRate
-        if (SImap.contains(&I)) {
-          auto SI = SImap.at(&I);
+        if (auto It = SImap.find(&I); It != SImap.end()) {
+          auto SI = It->second;
           const auto *SG = SGmap.at(&I);
           Scaled64 TrueOpCost = SI.getOpCostOnBranch(true, InstCostMap, TTI);
           Scaled64 FalseOpCost = SI.getOpCostOnBranch(false, InstCostMap, TTI);
@@ -1338,8 +1363,8 @@ bool SelectOptimizeImpl::computeLoopCosts(
 
           Scaled64 CondCost = Scaled64::getZero();
           if (auto *CI = dyn_cast<Instruction>(SG->Condition))
-            if (InstCostMap.count(CI))
-              CondCost = InstCostMap[CI].NonPredCost;
+            if (auto It = InstCostMap.find(CI); It != InstCostMap.end())
+              CondCost = It->second.NonPredCost;
           Scaled64 MispredictCost = getMispredictionCost(SI, CondCost);
 
           INonPredCost = PredictedPathCost + MispredictCost;
@@ -1381,15 +1406,15 @@ std::optional<uint64_t>
 SelectOptimizeImpl::computeInstCost(const Instruction *I) {
   InstructionCost ICost =
       TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency);
-  if (auto OC = ICost.getValue())
-    return std::optional<uint64_t>(*OC);
+  if (ICost.isValid())
+    return std::optional<uint64_t>(ICost.getValue());
   return std::nullopt;
 }
 
 ScaledNumber<uint64_t>
 SelectOptimizeImpl::getMispredictionCost(const SelectLike SI,
                                          const Scaled64 CondCost) {
-  uint64_t MispredictPenalty = TSchedModel.getMCSchedModel()->MispredictPenalty;
+  uint64_t MispredictPenalty = TSI->getMispredictionPenalty();
 
   // Account for the default misprediction rate when using a branch
   // (conservatively set to 25% by default).

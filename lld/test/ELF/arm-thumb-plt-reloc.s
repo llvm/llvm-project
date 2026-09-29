@@ -83,16 +83,22 @@ _start:
 // DSO-NEXT:     10248:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DSO-NEXT:     1024c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // (0x10250 + 8) + (0 RoR 12) + (32 RoR 20 = 0x20000) + 140 = 0x302e4
+// DSO-EMPTY:
+// DSO-NEXT: <func1@plt>:
 // DSO-NEXT:     10250:       e28fc600        add     r12, pc, #0, #12
 // DSO-NEXT:     10254:       e28cca20        add     r12, r12, #32, #20
 // DSO-NEXT:     10258:       e5bcf08c        ldr     pc, [r12, #140]!
 // DSO-NEXT:     1025c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // (0x10260 + 8) + (0 RoR 12) + (32 RoR 20 = 0x20000) + 128 = 0x302e8
+// DSO-EMPTY:
+// DSO-NEXT: <func2@plt>:
 // DSO-NEXT:     10260:       e28fc600        add     r12, pc, #0, #12
 // DSO-NEXT:     10264:       e28cca20        add     r12, r12, #32, #20
 // DSO-NEXT:     10268:       e5bcf080        ldr     pc, [r12, #128]!
 // DSO-NEXT:     1026c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // (0x10270 + 8) + (0 RoR 12) + (32 RoR 20 = 0x20000) + 116 = 0x302ec
+// DSO-EMPTY:
+// DSO-NEXT: <func3@plt>:
 // DSO-NEXT:     10270:       e28fc600        add     r12, pc, #0, #12
 // DSO-NEXT:     10274:       e28cca20        add     r12, r12, #32, #20
 // DSO-NEXT:     10278:       e5bcf074        ldr     pc, [r12, #116]!

@@ -23,7 +23,7 @@ declare void @thrown()
 ; RESULT-SINGLE-NEXT: br label %bb3
 
 ; RESULT-FULL: %i0 = call i32 @maybe_throwing_callee()
-; RESULT-FULL-NEXT: br label %bb4
+; RESULT-FULL-NEXT: ret void
 
 
 ; RESULT-SINGLE: bb1:  ; No predecessors!
@@ -94,7 +94,7 @@ bb:
   %i0 = invoke i32 @maybe_throwing_callee(i32 %arg)
           to label %bb3 unwind label %bb1, !some.metadata !0
 
-; RESULT: bb1:                                              ; preds = %bb4
+; RESULT: bb1:
 ; RESULT-NEXT: %landing = landingpad { ptr, i32 }
 ; RESULT-NEXT:   catch ptr null
 bb1:                                              ; preds = %bb

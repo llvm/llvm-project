@@ -1,4 +1,4 @@
-//===--- UniquePtrArrayMismatchCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ UniquePtrArrayMismatchCheck::UniquePtrArrayMismatchCheck(
 
 UniquePtrArrayMismatchCheck::SmartPtrClassMatcher
 UniquePtrArrayMismatchCheck::getSmartPointerClassMatcher() const {
-  auto DeleterDecl = classTemplateSpecializationDecl(
+  const auto DeleterDecl = classTemplateSpecializationDecl(
       hasName("::std::default_delete"), templateArgumentCountIs(1),
       hasTemplateArgument(0, templateArgument(refersToType(
                                  qualType(equalsBoundNode(PointerTypeN))))));

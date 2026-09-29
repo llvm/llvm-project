@@ -16,37 +16,37 @@
 // CHECK: encoding: [0x62,0xe3,0x7e,0x48,0x07,0xf2,0x7b]
           tcvtrowd2ps zmm22, tmm2, 123
 
-// CHECK: tcvtrowps2pbf16h zmm22, tmm5, ecx
+// CHECK: tcvtrowps2bf16h zmm22, tmm5, ecx
 // CHECK: encoding: [0x62,0xe2,0x77,0x48,0x6d,0xf5]
-          tcvtrowps2pbf16h zmm22, tmm5, ecx
+          tcvtrowps2bf16h zmm22, tmm5, ecx
 
-// CHECK: tcvtrowps2pbf16h zmm22, tmm2, ecx
+// CHECK: tcvtrowps2bf16h zmm22, tmm2, ecx
 // CHECK: encoding: [0x62,0xe2,0x77,0x48,0x6d,0xf2]
-          tcvtrowps2pbf16h zmm22, tmm2, ecx
+          tcvtrowps2bf16h zmm22, tmm2, ecx
 
-// CHECK: tcvtrowps2pbf16h zmm22, tmm5, 123
+// CHECK: tcvtrowps2bf16h zmm22, tmm5, 123
 // CHECK: encoding: [0x62,0xe3,0x7f,0x48,0x07,0xf5,0x7b]
-          tcvtrowps2pbf16h zmm22, tmm5, 123
+          tcvtrowps2bf16h zmm22, tmm5, 123
 
-// CHECK: tcvtrowps2pbf16h zmm22, tmm2, 123
+// CHECK: tcvtrowps2bf16h zmm22, tmm2, 123
 // CHECK: encoding: [0x62,0xe3,0x7f,0x48,0x07,0xf2,0x7b]
-          tcvtrowps2pbf16h zmm22, tmm2, 123
+          tcvtrowps2bf16h zmm22, tmm2, 123
 
-// CHECK: tcvtrowps2pbf16l zmm22, tmm5, ecx
+// CHECK: tcvtrowps2bf16l zmm22, tmm5, ecx
 // CHECK: encoding: [0x62,0xe2,0x76,0x48,0x6d,0xf5]
-          tcvtrowps2pbf16l zmm22, tmm5, ecx
+          tcvtrowps2bf16l zmm22, tmm5, ecx
 
-// CHECK: tcvtrowps2pbf16l zmm22, tmm2, ecx
+// CHECK: tcvtrowps2bf16l zmm22, tmm2, ecx
 // CHECK: encoding: [0x62,0xe2,0x76,0x48,0x6d,0xf2]
-          tcvtrowps2pbf16l zmm22, tmm2, ecx
+          tcvtrowps2bf16l zmm22, tmm2, ecx
 
-// CHECK: tcvtrowps2pbf16l zmm22, tmm5, 123
+// CHECK: tcvtrowps2bf16l zmm22, tmm5, 123
 // CHECK: encoding: [0x62,0xe3,0x7e,0x48,0x77,0xf5,0x7b]
-          tcvtrowps2pbf16l zmm22, tmm5, 123
+          tcvtrowps2bf16l zmm22, tmm5, 123
 
-// CHECK: tcvtrowps2pbf16l zmm22, tmm2, 123
+// CHECK: tcvtrowps2bf16l zmm22, tmm2, 123
 // CHECK: encoding: [0x62,0xe3,0x7e,0x48,0x77,0xf2,0x7b]
-          tcvtrowps2pbf16l zmm22, tmm2, 123
+          tcvtrowps2bf16l zmm22, tmm2, 123
 
 // CHECK: tcvtrowps2phh zmm22, tmm5, ecx
 // CHECK: encoding: [0x62,0xe2,0x74,0x48,0x6d,0xf5]

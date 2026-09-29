@@ -66,7 +66,7 @@ entry:
 
 ;; This is a negative test with a wrong table size and constants.
 
-@ctz3.table = internal unnamed_addr constant [128 x i8] c"\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09", align 1
+@ctz3.table = internal unnamed_addr constant [128 x i8] c"\01\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09", align 1
 
 define i32 @ctz5(i32 %x) {
 entry:
@@ -133,6 +133,23 @@ entry:
   %mul = mul i64 %and, 571347909858961602
   %shr = lshr i64 %mul, 58
   %arrayidx = getelementptr inbounds [64 x i32], ptr @ctz7.table, i64 0, i64 %shr
+  %0 = load i32, ptr %arrayidx, align 4
+  ret i32 %0
+}
+
+;; Negative: an interposable (weak) constant table may be replaced at link time
+;; with a different constant, so its observed initializer cannot be trusted.
+
+@ctz_weak.table = weak unnamed_addr constant [32 x i32] [i32 0, i32 1, i32 2, i32 24, i32 3, i32 19, i32 6, i32 25, i32 22, i32 4, i32 20, i32 10, i32 16, i32 7, i32 12, i32 26, i32 31, i32 23, i32 18, i32 5, i32 21, i32 9, i32 15, i32 11, i32 30, i32 17, i32 8, i32 14, i32 29, i32 13, i32 28, i32 27], align 4
+
+define i32 @ctz_weak(i32 %x) {
+entry:
+  %sub = sub i32 0, %x
+  %and = and i32 %sub, %x
+  %mul = mul i32 %and, 81224991
+  %shr = lshr i32 %mul, 27
+  %idxprom = zext i32 %shr to i64
+  %arrayidx = getelementptr inbounds [32 x i32], ptr @ctz_weak.table, i64 0, i64 %idxprom
   %0 = load i32, ptr %arrayidx, align 4
   ret i32 %0
 }

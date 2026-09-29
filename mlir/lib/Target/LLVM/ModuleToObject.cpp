@@ -16,8 +16,7 @@
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Remark/LLVMRemarkImport.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -28,7 +27,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -53,25 +51,25 @@ ModuleToObject::~ModuleToObject() = default;
 
 Operation &ModuleToObject::getOperation() { return module; }
 
-std::optional<llvm::TargetMachine *>
-ModuleToObject::getOrCreateTargetMachine() {
+FailureOr<llvm::TargetMachine *> ModuleToObject::getOrCreateTargetMachine() {
   if (targetMachine)
     return targetMachine.get();
   // Load the target.
   std::string error;
+  llvm::Triple parsedTriple(triple);
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple, error);
-  if (!target) {
-    getOperation().emitError()
-        << "Failed to lookup target for triple '" << triple << "' " << error;
-    return std::nullopt;
-  }
+      llvm::TargetRegistry::lookupTarget(parsedTriple, error);
+  if (!target)
+    return getOperation().emitError()
+           << "Failed to lookup target for triple '" << triple << "' " << error;
 
   // Create the target machine using the target.
   targetMachine.reset(
-      target->createTargetMachine(triple, chip, features, {}, {}));
+      target->createTargetMachine(parsedTriple, chip, features, {}, {}));
   if (!targetMachine)
-    return std::nullopt;
+    return getOperation().emitError()
+           << "Failed to create target machine for triple '" << triple << "'";
+
   return targetMachine.get();
 }
 
@@ -185,9 +183,8 @@ LogicalResult ModuleToObject::optimizeModule(llvm::Module &module,
     return getOperation().emitError()
            << "Invalid optimization level: " << optLevel << ".";
 
-  std::optional<llvm::TargetMachine *> targetMachine =
-      getOrCreateTargetMachine();
-  if (!targetMachine)
+  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+  if (failed(targetMachine))
     return getOperation().emitError()
            << "Target Machine unavailable for triple " << triple
            << ", can't optimize with LLVM\n";
@@ -207,11 +204,11 @@ LogicalResult ModuleToObject::optimizeModule(llvm::Module &module,
   return success();
 }
 
-std::optional<std::string>
-ModuleToObject::translateToISA(llvm::Module &llvmModule,
-                               llvm::TargetMachine &targetMachine) {
-  std::string targetISA;
-  llvm::raw_string_ostream stream(targetISA);
+FailureOr<SmallString<0>> ModuleToObject::translateModuleToISA(
+    llvm::Module &llvmModule, llvm::TargetMachine &targetMachine,
+    function_ref<InFlightDiagnostic()> emitError) {
+  SmallString<0> targetISA;
+  llvm::raw_svector_ostream stream(targetISA);
 
   { // Drop pstream after this to prevent the ISA from being stuck buffering
     llvm::buffer_ostream pstream(stream);
@@ -219,7 +216,7 @@ ModuleToObject::translateToISA(llvm::Module &llvmModule,
 
     if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
                                           llvm::CodeGenFileType::AssemblyFile))
-      return std::nullopt;
+      return emitError() << "Target machine cannot emit assembly";
 
     codegenPasses.run(llvmModule);
   }
@@ -228,16 +225,16 @@ ModuleToObject::translateToISA(llvm::Module &llvmModule,
 
 void ModuleToObject::setDataLayoutAndTriple(llvm::Module &module) {
   // Create the target machine.
-  std::optional<llvm::TargetMachine *> targetMachine =
-      getOrCreateTargetMachine();
-  if (targetMachine) {
-    // Set the data layout and target triple of the module.
-    module.setDataLayout((*targetMachine)->createDataLayout());
-    module.setTargetTriple((*targetMachine)->getTargetTriple().getTriple());
-  }
+  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+  if (failed(targetMachine))
+    return;
+
+  // Set the data layout and target triple of the module.
+  module.setDataLayout((*targetMachine)->getTargetTriple().computeDataLayout());
+  module.setTargetTriple((*targetMachine)->getTargetTriple());
 }
 
-std::optional<SmallVector<char, 0>>
+FailureOr<SmallVector<char, 0>>
 ModuleToObject::moduleToObject(llvm::Module &llvmModule) {
   SmallVector<char, 0> binaryData;
   // Write the LLVM module bitcode to a buffer.
@@ -246,9 +243,16 @@ ModuleToObject::moduleToObject(llvm::Module &llvmModule) {
   return binaryData;
 }
 
+void ModuleToObject::setupLLVMContext(llvm::LLVMContext &llvmContext) {
+  llvmContext.setDiagnosticHandler(
+      std::make_unique<remark::LLVMToMLIRDiagnosticHandler>(&getOperation()),
+      /*RespectFilters=*/true);
+}
+
 std::optional<SmallVector<char, 0>> ModuleToObject::run() {
   // Translate the module to LLVM IR.
   llvm::LLVMContext llvmContext;
+  setupLLVMContext(llvmContext);
   std::unique_ptr<llvm::Module> llvmModule = translateToLLVMIR(llvmContext);
   if (!llvmModule) {
     getOperation().emitError() << "Failed creating the llvm::Module.";

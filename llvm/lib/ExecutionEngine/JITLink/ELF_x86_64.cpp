@@ -88,8 +88,8 @@ const uint8_t TLSInfoTableManager_ELF_x86_64::TLSInfoEntryContent[16] = {
 Error buildTables_ELF_x86_64(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
-  x86_64::GOTTableManager GOT;
-  x86_64::PLTTableManager PLT(GOT);
+  x86_64::GOTTableManager GOT(G);
+  x86_64::PLTTableManager PLT(G, GOT);
   TLSInfoTableManager_ELF_x86_64 TLSInfo;
   visitExistingEdges(G, GOT, PLT, TLSInfo);
   return Error::success();
@@ -239,9 +239,10 @@ private:
 public:
   ELFLinkGraphBuilder_x86_64(StringRef FileName,
                              std::shared_ptr<orc::SymbolStringPool> SSP,
+                             llvm::Triple Triple,
                              const object::ELFFile<object::ELF64LE> &Obj,
                              SubtargetFeatures Features)
-      : ELFLinkGraphBuilder(Obj, std::move(SSP), Triple("x86_64-unknown-linux"),
+      : ELFLinkGraphBuilder(Obj, std::move(SSP), std::move(Triple),
                             std::move(Features), FileName,
                             x86_64::getEdgeKindName) {}
 };
@@ -350,9 +351,9 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_x86_64(
     return Features.takeError();
 
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
-  return ELFLinkGraphBuilder_x86_64((*ELFObj)->getFileName(), std::move(SSP),
-                                    ELFObjFile.getELFFile(),
-                                    std::move(*Features))
+  return ELFLinkGraphBuilder_x86_64(
+             (*ELFObj)->getFileName(), std::move(SSP), (*ELFObj)->makeTriple(),
+             ELFObjFile.getELFFile(), std::move(*Features))
       .buildGraph();
 }
 

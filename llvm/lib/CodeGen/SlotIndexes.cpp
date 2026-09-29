@@ -35,9 +35,7 @@ SlotIndexesPrinterPass::run(MachineFunction &MF,
 }
 char SlotIndexesWrapperPass::ID = 0;
 
-SlotIndexesWrapperPass::SlotIndexesWrapperPass() : MachineFunctionPass(ID) {
-  initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+SlotIndexesWrapperPass::SlotIndexesWrapperPass() : MachineFunctionPass(ID) {}
 
 SlotIndexes::~SlotIndexes() {
   // The indexList's nodes are all allocated in the BumpPtrAllocator.
@@ -87,7 +85,7 @@ void SlotIndexes::analyze(MachineFunction &fn) {
          "MachineInstr -> Index mapping non-empty at initial numbering?");
 
   unsigned index = 0;
-  MBBRanges.resize(mf->getNumBlockIDs());
+  MBBRanges.resize(mf->getMaxAnalysisBlockNumber());
   idx2MBBMap.reserve(mf->size());
 
   indexList.push_back(*createEntry(nullptr, index));
@@ -112,9 +110,9 @@ void SlotIndexes::analyze(MachineFunction &fn) {
     // We insert one blank instructions between basic blocks.
     indexList.push_back(*createEntry(nullptr, index += SlotIndex::InstrDist));
 
-    MBBRanges[MBB.getNumber()].first = blockStartIndex;
-    MBBRanges[MBB.getNumber()].second = SlotIndex(&indexList.back(),
-                                                   SlotIndex::Slot_Block);
+    MBBRanges[MBB.getAnalysisNumber()].first = blockStartIndex;
+    MBBRanges[MBB.getAnalysisNumber()].second =
+        SlotIndex(&indexList.back(), SlotIndex::Slot_Block);
     idx2MBBMap.push_back(IdxMBBPair(blockStartIndex, &MBB));
   }
 
@@ -167,6 +165,29 @@ void SlotIndexes::removeSingleMachineInstrFromMaps(MachineInstr &MI) {
   }
 }
 
+void SlotIndexes::removeMBBFromMaps(MachineBasicBlock &MBB) {
+  assert(&MBB != &MBB.getParent()->front() &&
+         "Can't remove the first block of a function.");
+
+  unsigned Num = MBB.getAnalysisNumber();
+  SlotIndex StartIdx = MBBRanges[Num].first;
+  SlotIndex EndIdx = MBBRanges[Num].second;
+
+  // Give MBB's slot range to its layout predecessor so blocks stay contiguous.
+  auto PrevMBB = std::prev(MBB.getIterator());
+  MBBRanges[PrevMBB->getAnalysisNumber()].second = EndIdx;
+
+  // Drop MBB's index -> MBB entry, which would dangle once MBB is erased.
+  auto It = getMBBLowerBound(StartIdx);
+  assert(It != MBBIndexEnd() && It->first == StartIdx && It->second == &MBB &&
+         "MBB not found in index -> MBB map");
+  idx2MBBMap.erase(It);
+
+  // Clear the block-start boundary entry. MBBRanges is never renumbered, so
+  // MBB's now-stale slot is simply left in place.
+  StartIdx.listEntry()->setInstr(nullptr);
+}
+
 // Renumber indexes locally after curItr was inserted, but failed to get a new
 // index.
 void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
@@ -176,6 +197,7 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
 
   IndexList::iterator startItr = std::prev(curItr);
   unsigned index = startItr->getIndex();
+  unsigned BeginIndex = index;
   do {
     curItr->setIndex(index += Space);
     ++curItr;
@@ -184,6 +206,14 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
 
   LLVM_DEBUG(dbgs() << "\n*** Renumbered SlotIndexes " << startItr->getIndex()
                     << '-' << index << " ***\n");
+
+  // If we repack more than 20% of a function, add spacing in between the
+  // instructions so that future renumberings are able to catch up
+  // without also renumbering so much.
+  if (index - BeginIndex >
+      (getLastIndex().getIndex() - getZeroIndex().getIndex()) / 5)
+    packIndexes();
+
   ++NumLocalRenum;
 }
 
@@ -212,6 +242,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
   IndexList::iterator ListI = endIdx.listEntry()->getIterator();
   MachineBasicBlock::iterator MBBI = End;
   bool pastStart = false;
+  bool OldIndexesRemoved = false;
   while (ListI != ListB || MBBI != Begin || (includeStart && !pastStart)) {
     assert(ListI->getIndex() >= startIdx.getIndex() &&
            (includeStart || !pastStart) &&
@@ -220,6 +251,8 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
     MachineInstr *SlotMI = ListI->getInstr();
     MachineInstr *MI = (MBBI != MBB->end() && !pastStart) ? &*MBBI : nullptr;
     bool MBBIAtBegin = MBBI == Begin && (!includeStart || pastStart);
+    bool MIIndexNotFound = MI && !mi2iMap.contains(MI);
+    bool SlotMIRemoved = false;
 
     if (SlotMI == MI && !MBBIAtBegin) {
       --ListI;
@@ -227,25 +260,31 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
         --MBBI;
       else
         pastStart = true;
-    } else if (MI && !mi2iMap.contains(MI)) {
+    } else if (MIIndexNotFound || OldIndexesRemoved) {
       if (MBBI != Begin)
         --MBBI;
       else
         pastStart = true;
     } else {
-      --ListI;
-      if (SlotMI)
+      // We ran through all the indexes on the interval
+      //   -> The only thing left is to go through all the
+      //   remaining MBB instructions and update their indexes
+      if (ListI == ListB)
+        OldIndexesRemoved = true;
+      else
+        --ListI;
+      if (SlotMI) {
         removeMachineInstrFromMaps(*SlotMI);
+        SlotMIRemoved = true;
+      }
     }
-  }
 
-  // In theory this could be combined with the previous loop, but it is tricky
-  // to update the IndexList while we are iterating it.
-  for (MachineBasicBlock::iterator I = End; I != Begin;) {
-    --I;
-    MachineInstr &MI = *I;
-    if (!MI.isDebugOrPseudoInstr() && !mi2iMap.contains(&MI))
-      insertMachineInstrInMaps(MI);
+    MachineInstr *InstrToInsert = SlotMIRemoved ? SlotMI : MI;
+
+    // Insert instruction back into the maps after passing it/removing the index
+    if ((MIIndexNotFound || SlotMIRemoved) && InstrToInsert->getParent() &&
+        !InstrToInsert->isDebugOrPseudoInstr())
+      insertMachineInstrInMaps(*InstrToInsert);
   }
 }
 
@@ -264,9 +303,9 @@ void SlotIndexes::print(raw_ostream &OS) const {
       OS << '\n';
   }
 
-  for (unsigned i = 0, e = MBBRanges.size(); i != e; ++i)
-    OS << "%bb." << i << "\t[" << MBBRanges[i].first << ';'
-       << MBBRanges[i].second << ")\n";
+  for (const MachineBasicBlock &MBB : *mf)
+    OS << printMBBReference(MBB) << "\t[" << getMBBStartIdx(&MBB) << ';'
+       << getMBBEndIdx(&MBB) << ")\n";
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

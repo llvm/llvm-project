@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/exp10f.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
-#include "src/math/generic/exp10f_impl.h"
+
+#include "src/__support/math/exp10f.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, exp10f, (float x)) { return generic::exp10f(x); }
+LLVM_LIBC_FUNCTION(float, exp10f, (float x)) { return math::exp10f(x); }
 
 } // namespace LIBC_NAMESPACE_DECL

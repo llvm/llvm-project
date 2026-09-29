@@ -39,16 +39,24 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
                  "64-i128:128-n32:64-S128-Fn32");
 
   // Check that AMDGPU targets add -G1 if it's not present.
-  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "r600"), "e-p:32:32-G1");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "r600"), "m:e-e-p:32:32-G1");
   // and that ANDGCN adds p7 and p8 as well.
-  EXPECT_EQ(
-      UpgradeDataLayoutString("e-p:64:64", "amdgcn"),
-      "e-p:64:64-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128-p9:192:256:256:32");
-  EXPECT_EQ(
-      UpgradeDataLayoutString("e-p:64:64-G1", "amdgcn"),
-      "e-p:64:64-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128-p9:192:256:256:32");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64", "amdgcn"),
+            "m:e-e-p:64:64-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:48-p9:"
+            "192:256:256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-p14:32:32-"
+            "p15:32:32");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-G1", "amdgcn"),
+            "m:e-e-p:64:64-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:48-p9:"
+            "192:256:256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-p14:32:32-"
+            "p15:32:32");
+  // Check that the old AMDGCN p8:128:128 definition is upgraded
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-p8:128:128-G1", "amdgcn"),
+            "m:e-e-p:64:64-p8:128:128:128:48-G1-ni:7:8:9-p7:160:256:256:32-p9:"
+            "192:256:256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-p14:32:32-"
+            "p15:32:32");
   // but that r600 does not.
-  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G1", "r600"), "e-p:32:32-G1");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G1", "r600"),
+            "m:e-e-p:32:32-G1");
 
   // Ensure that the non-integral direction for address space 8 doesn't get
   // added in to pointer declarations.
@@ -58,10 +66,18 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
           "64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-"
           "v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7",
           "amdgcn"),
-      "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-"
-      "v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:"
-      "1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128-"
-      "p9:192:256:256:32");
+      "m:e-e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:"
+      "64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:"
+      "1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:"
+      "128:48-p9:192:256:256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-p14:32:"
+      "32"
+      "-p15:32:32");
+
+  // Check that SystemZ adds -S64 if needed.
+  EXPECT_EQ(UpgradeDataLayoutString(
+                "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64",
+                "systemz"),
+            "E-S64-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64");
 
   // Check that RISCV64 upgrades -n64 to -n32:64.
   EXPECT_EQ(UpgradeDataLayoutString("e-m:e-p:64:64-i64:64-i128:128-n64-S128",
@@ -100,7 +116,7 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
       "E-m:e-Fn32-i64:64-i128:128-n32:64");
   EXPECT_EQ(
       UpgradeDataLayoutString("E-m:a-Fi64-i64:64-n32:64", "powerpc64-ibm-aix"),
-      "E-m:a-Fi64-i64:64-i128:128-n32:64");
+      "E-m:a-Fi64-i64:64-i128:128-n32:64-f64:32:64");
 
   // Check that WebAssembly targets add -i128:128.
   EXPECT_EQ(
@@ -121,6 +137,12 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spirv64"), "e-p:32:32-G1");
   // but that SPIRV Logical does not.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spirv"), "e-p:32:32");
+
+  // Check that ARM targets add -Fi8 if it is not present.
+  EXPECT_EQ(UpgradeDataLayoutString(
+                "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64", "arm"),
+            "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
+  EXPECT_EQ(UpgradeDataLayoutString("p:32:32", "arm"), "p:32:32-Fi8");
 }
 
 TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
@@ -142,25 +164,45 @@ TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
                  "64-S128-Fn32");
 
   // Check that AMDGPU targets don't add -G1 if there is already a -G flag.
-  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G2", "r600"), "e-p:32:32-G2");
-  EXPECT_EQ(UpgradeDataLayoutString("G2", "r600"), "G2");
-  EXPECT_EQ(
-      UpgradeDataLayoutString("e-p:64:64-G2", "amdgcn"),
-      "e-p:64:64-G2-ni:7:8:9-p7:160:256:256:32-p8:128:128-p9:192:256:256:32");
-  EXPECT_EQ(
-      UpgradeDataLayoutString("G2-e-p:64:64", "amdgcn"),
-      "G2-e-p:64:64-ni:7:8:9-p7:160:256:256:32-p8:128:128-p9:192:256:256:32");
-  EXPECT_EQ(
-      UpgradeDataLayoutString("e-p:64:64-G0", "amdgcn"),
-      "e-p:64:64-G0-ni:7:8:9-p7:160:256:256:32-p8:128:128-p9:192:256:256:32");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G2", "r600"),
+            "m:e-e-p:32:32-G2");
+  EXPECT_EQ(UpgradeDataLayoutString("G2", "r600"), "m:e-G2");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-G2", "amdgcn"),
+            "m:e-e-p:64:64-G2-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:48-p9:"
+            "192:256:256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-p14:32:32"
+            "-p15:32:32");
+  EXPECT_EQ(UpgradeDataLayoutString("G2-e-p:64:64", "amdgcn"),
+            "m:e-G2-e-p:64:64-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:48-p9:"
+            "192:256:256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-p14:32:32"
+            "-p15:32:32");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-G0", "amdgcn"),
+            "m:e-e-p:64:64-G0-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:48-p9:"
+            "192:256:256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-p14:32:32"
+            "-p15:32:32");
 
   // Check that AMDGCN targets don't add already declared address space 7.
-  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-p7:64:64", "amdgcn"),
-            "e-p:64:64-p7:64:64-G1-ni:7:8:9-p8:128:128-p9:192:256:256:32");
-  EXPECT_EQ(UpgradeDataLayoutString("p7:64:64-G2-e-p:64:64", "amdgcn"),
-            "p7:64:64-G2-e-p:64:64-ni:7:8:9-p8:128:128-p9:192:256:256:32");
-  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-p7:64:64-G1", "amdgcn"),
-            "e-p:64:64-p7:64:64-G1-ni:7:8:9-p8:128:128-p9:192:256:256:32");
+  EXPECT_EQ(
+      UpgradeDataLayoutString("e-p:64:64-p7:64:64", "amdgcn"),
+      "m:e-e-p:64:64-p7:64:64-G1-ni:7:8:9-p8:128:128:128:48-p9:192:256:"
+      "256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-p14:32:32-p15:32:32");
+  EXPECT_EQ(
+      UpgradeDataLayoutString("p7:64:64-G2-e-p:64:64", "amdgcn"),
+      "m:e-p7:64:64-G2-e-p:64:64-ni:7:8:9-p8:128:128:128:48-p9:192:256:"
+      "256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-p14:32:32-p15:32:32");
+  EXPECT_EQ(
+      UpgradeDataLayoutString("e-p:64:64-p7:64:64-G1", "amdgcn"),
+      "m:e-e-p:64:64-p7:64:64-G1-ni:7:8:9-p8:128:128:128:48-p9:192:256:"
+      "256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-p14:32:32-p15:32:32");
+
+  // Check that AMDGCN targets don't add already declared address space 15.
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-p15:32:32", "amdgcn"),
+            "m:e-e-p:64:64-p15:32:32-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:"
+            "128:48-p9:192:256:256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-"
+            "p14:32:32");
+  EXPECT_EQ(UpgradeDataLayoutString("p15:32:32-G2-e-p:64:64", "amdgcn"),
+            "m:e-p15:32:32-G2-e-p:64:64-ni:7:8:9-p7:160:256:256:32-p8:128:128:"
+            "128:48-p9:192:256:256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-"
+            "p14:32:32");
 
   // Check that SPIR & SPIRV targets don't add -G1 if there is already a -G
   // flag.
@@ -180,6 +222,32 @@ TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
             "E-m:e-Fn32-i64:64-n32");
   EXPECT_EQ(UpgradeDataLayoutString("E-m:a-Fi64-i64:64-n32", "powerpc-aix"),
             "E-m:a-Fi64-i64:64-n32");
+
+  EXPECT_EQ(UpgradeDataLayoutString("E-m:a-p:32:32-Fi32-i64:64-n32",
+                                    "powerpc-unknown-aix"),
+            "E-m:a-p:32:32-Fi32-i64:64-n32-f64:32:64");
+  EXPECT_EQ(
+      UpgradeDataLayoutString(
+          "E-m:a-Fi64-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512",
+          "powerpc64-unknown-aix"),
+      "E-m:a-Fi64-i64:64-i128:128-n32:64-f64:32:64-S128-v256:256:256-v512:512:"
+      "512");
+
+  // Check that ARM targets do not add Fi8 if there is no p32:32.
+  const char *ARM_no_f3232 = "e-m:e-i64:64-v128:64:128-a:0:32-n32-s64";
+  EXPECT_EQ(UpgradeDataLayoutString(ARM_no_f3232, "arm"), ARM_no_f3232);
+  // Or if Fi8 is already present.
+  const char *ARM_has_fi8 =
+      "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-s64";
+  EXPECT_EQ(UpgradeDataLayoutString(ARM_has_fi8, "arm"), ARM_has_fi8);
+  // Or if there is another Fi.
+  const char *ARM_has_fi4 =
+      "e-m:e-p:32:32-Fi4-i64:64-v128:64:128-a:0:32-n32-s64";
+  EXPECT_EQ(UpgradeDataLayoutString(ARM_has_fi4, "arm"), ARM_has_fi4);
+  // Or if there is a Fn.
+  const char *ARM_has_fn =
+      "e-m:e-p:32:32-Fn4-i64:64-v128:64:128-a:0:32-n32-s64";
+  EXPECT_EQ(UpgradeDataLayoutString(ARM_has_fn, "arm"), ARM_has_fn);
 }
 
 TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
@@ -190,9 +258,11 @@ TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
   EXPECT_EQ(DL2, "e-m:e-p:32:32-i64:64-f80:128-n8:16:32:64-S128");
 
   // Check that AMDGPU targets add G1 if it's not present.
-  EXPECT_EQ(UpgradeDataLayoutString("", "r600"), "G1");
-  EXPECT_EQ(UpgradeDataLayoutString("", "amdgcn"),
-            "G1-ni:7:8:9-p7:160:256:256:32-p8:128:128-p9:192:256:256:32");
+  EXPECT_EQ(UpgradeDataLayoutString("", "r600"), "m:e-G1");
+  EXPECT_EQ(
+      UpgradeDataLayoutString("", "amdgcn"),
+      "m:e-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:"
+      "256:32-p10:32:32-p11:32:32-p12:32:32-p13:32:32-p14:32:32-p15:32:32");
 
   // Check that SPIR & SPIRV targets add G1 if it's not present.
   EXPECT_EQ(UpgradeDataLayoutString("", "spir"), "G1");
@@ -201,6 +271,9 @@ TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
   EXPECT_EQ(UpgradeDataLayoutString("", "spirv64"), "G1");
   // but SPIRV Logical does not.
   EXPECT_EQ(UpgradeDataLayoutString("", "spirv"), "");
+
+  // Check that ARM targets do not add Fi8 to an empty layout.
+  EXPECT_EQ(UpgradeDataLayoutString("", "arm"), "");
 }
 
 } // end namespace

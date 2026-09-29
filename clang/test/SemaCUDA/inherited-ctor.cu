@@ -81,7 +81,7 @@ namespace DefaultCtorInvalid {
   };
 
   struct C {
-    struct B b;
+    struct B b; // expected-note{{default constructed field 'b' declared here}}
     C() {} // expected-error{{call to implicitly-deleted default constructor of 'struct B'}}
            // expected-note@-6{{default constructor of 'B' is implicitly deleted because field 's' has a deleted default constructor}}
            // expected-note@-15{{'S' has been explicitly marked deleted here}}

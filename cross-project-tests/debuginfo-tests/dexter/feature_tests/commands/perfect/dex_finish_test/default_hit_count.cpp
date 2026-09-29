@@ -4,8 +4,8 @@
 //      specific number of times.
 //      Tests using the default controller (no \DexLimitSteps).
 //
-// RUN: %dexter_regression_test_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_cxx_build %s -o %t
+// RUN: %dexter_regression_test_run --use-heuristic --binary %t -- %s | FileCheck %s
 // CHECK: default_hit_count.cpp
 
 int main() {

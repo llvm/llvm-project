@@ -10,7 +10,7 @@ subroutine cwd_only(cwd)
   ! CHECK-NEXT:        %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
   ! CHECK-NEXT:        %[[cwdUnbox:.*]]:2 = fir.unboxchar %[[cwdArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   ! CHECK-NEXT:        %[[cwdCast:.*]] = fir.convert %[[cwdUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,255>>
-  ! CHECK-NEXT:        %[[cwdDeclare:.*]] = fir.declare %[[cwdCast]] typeparams %[[c255]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFcwd_onlyEcwd"} : (!fir.ref<!fir.char<1,255>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,255>>
+  ! CHECK-NEXT:        %[[cwdDeclare:.*]] = fir.declare %[[cwdCast]] typeparams %[[c255]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFcwd_onlyEcwd"} : (!fir.ref<!fir.char<1,255>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,255>>
   ! CHECK-NEXT:        %[[cwdBox:.*]] = fir.embox %[[cwdDeclare]] : (!fir.ref<!fir.char<1,255>>) -> !fir.box<!fir.char<1,255>>
   ! CHECK:             %[[cwd:.*]] = fir.convert %[[cwdBox]] : (!fir.box<!fir.char<1,255>>) -> !fir.box<none>
   ! CHECK:             %[[statusValue:.*]] = fir.call @_FortranAGetCwd(%[[cwd]], %[[VAL_7:.*]], %[[c7]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -30,8 +30,8 @@ subroutine all_arguments(cwd, status)
   ! CHECK-NEXT:        %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
   ! CHECK-NEXT:        %[[cwdUnbox:.*]]:2 = fir.unboxchar %[[cwdArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   ! CHECK-NEXT:        %[[cwdCast:.*]] = fir.convert %[[cwdUnbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,255>>
-  ! CHECK-NEXT:        %[[cwdDeclare:.*]] = fir.declare %[[cwdCast]] typeparams %[[c255]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFall_argumentsEcwd"} : (!fir.ref<!fir.char<1,255>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,255>>
-  ! CHECK-NEXT:        %[[statusAddr:.*]] = fir.declare %[[statusArg]] dummy_scope %0 {uniq_name = "_QFall_argumentsEstatus"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  ! CHECK-NEXT:        %[[cwdDeclare:.*]] = fir.declare %[[cwdCast]] typeparams %[[c255]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFall_argumentsEcwd"} : (!fir.ref<!fir.char<1,255>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,255>>
+  ! CHECK-NEXT:        %[[statusAddr:.*]] = fir.declare %[[statusArg]] dummy_scope %0 {{.*}} {uniq_name = "_QFall_argumentsEstatus"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   ! CHECK-NEXT:       %[[cwdBox:.*]] = fir.embox %[[cwdDeclare]] : (!fir.ref<!fir.char<1,255>>) -> !fir.box<!fir.char<1,255>>
   ! CHECK:            %[[cwd:.*]] = fir.convert %[[cwdBox]] : (!fir.box<!fir.char<1,255>>) -> !fir.box<none>
   ! CHECK:            %[[statusValue:.*]] = fir.call @_FortranAGetCwd(%[[cwd]], %[[VAL_8:.*]], %[[c26]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> i32

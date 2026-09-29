@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/PPCMCExpr.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPC.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCSubtarget.h"
@@ -51,55 +51,54 @@ static MCSymbol *GetSymbolFromOperand(const MachineOperand &MO,
   return Sym;
 }
 
-static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
-                              AsmPrinter &Printer) {
+static MCOperand GetSymbolRef(unsigned MIOpcode, const MachineOperand &MO,
+                              const MCSymbol *Symbol, AsmPrinter &Printer) {
   MCContext &Ctx = Printer.OutContext;
-  MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_None;
+  PPCMCExpr::Specifier RefKind = PPC::S_None;
 
   unsigned access = MO.getTargetFlags();
 
   switch (access) {
     case PPCII::MO_TPREL_LO:
-      RefKind = MCSymbolRefExpr::VK_PPC_TPREL_LO;
+      RefKind = PPC::S_TPREL_LO;
       break;
     case PPCII::MO_TPREL_HA:
-      RefKind = MCSymbolRefExpr::VK_PPC_TPREL_HA;
+      RefKind = PPC::S_TPREL_HA;
       break;
     case PPCII::MO_DTPREL_LO:
-      RefKind = MCSymbolRefExpr::VK_PPC_DTPREL_LO;
+      RefKind = PPC::S_DTPREL_LO;
       break;
     case PPCII::MO_TLSLD_LO:
-      RefKind = MCSymbolRefExpr::VK_PPC_GOT_TLSLD_LO;
+      RefKind = PPC::S_GOT_TLSLD_LO;
       break;
     case PPCII::MO_TOC_LO:
-      RefKind = MCSymbolRefExpr::VK_PPC_TOC_LO;
+      RefKind = PPC::S_TOC_LO;
       break;
     case PPCII::MO_TLS:
-      RefKind = MCSymbolRefExpr::VK_PPC_TLS;
+      RefKind = PPC::S_TLS;
       break;
     case PPCII::MO_TLS_PCREL_FLAG:
-      RefKind = MCSymbolRefExpr::VK_PPC_TLS_PCREL;
+      RefKind = PPC::S_TLS_PCREL;
       break;
   }
 
   const TargetMachine &TM = Printer.TM;
-  const MachineInstr *MI = MO.getParent();
-  const MachineFunction *MF = MI->getMF();
+  const MachineFunction *MF = Printer.MF;
 
   if (MO.getTargetFlags() == PPCII::MO_PLT)
-    RefKind = MCSymbolRefExpr::VK_PLT;
+    RefKind = PPC::S_PLT;
   else if (MO.getTargetFlags() == PPCII::MO_PCREL_FLAG)
-    RefKind = MCSymbolRefExpr::VK_PCREL;
+    RefKind = PPC::S_PCREL;
   else if (MO.getTargetFlags() == PPCII::MO_GOT_PCREL_FLAG)
-    RefKind = MCSymbolRefExpr::VK_PPC_GOT_PCREL;
+    RefKind = PPC::S_GOT_PCREL;
   else if (MO.getTargetFlags() == PPCII::MO_TPREL_PCREL_FLAG)
-    RefKind = MCSymbolRefExpr::VK_TPREL;
+    RefKind = PPC::S_TPREL;
   else if (MO.getTargetFlags() == PPCII::MO_GOT_TLSGD_PCREL_FLAG)
-    RefKind = MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL;
+    RefKind = PPC::S_GOT_TLSGD_PCREL;
   else if (MO.getTargetFlags() == PPCII::MO_GOT_TLSLD_PCREL_FLAG)
-    RefKind = MCSymbolRefExpr::VK_PPC_GOT_TLSLD_PCREL;
+    RefKind = PPC::S_GOT_TLSLD_PCREL;
   else if (MO.getTargetFlags() == PPCII::MO_GOT_TPREL_PCREL_FLAG)
-    RefKind = MCSymbolRefExpr::VK_PPC_GOT_TPREL_PCREL;
+    RefKind = PPC::S_GOT_TPREL_PCREL;
   else if (MO.getTargetFlags() == PPCII::MO_TPREL_FLAG ||
            MO.getTargetFlags() == PPCII::MO_TLSLD_FLAG) {
     assert(MO.isGlobal() && "Only expecting a global MachineOperand here!");
@@ -110,30 +109,29 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
     // the relocation type in case the result is used for purposes other than a
     // TOC reference. In TOC reference cases, this result is discarded.
     if (Model == TLSModel::LocalExec)
-      RefKind = MCSymbolRefExpr::VK_PPC_AIX_TLSLE;
+      RefKind = PPC::S_AIX_TLSLE;
     else if (Model == TLSModel::LocalDynamic &&
              FuncInfo->isAIXFuncUseTLSIEForLD())
       // On AIX, TLS model opt may have turned local-dynamic accesses into
       // initial-exec accesses.
-      RefKind = MCSymbolRefExpr::VK_PPC_AIX_TLSIE;
+      RefKind = PPC::S_AIX_TLSIE;
     else if (Model == TLSModel::LocalDynamic)
-      RefKind = MCSymbolRefExpr::VK_PPC_AIX_TLSLD;
+      RefKind = PPC::S_AIX_TLSLD;
   }
 
   const Module *M = MF->getFunction().getParent();
   const PPCSubtarget *Subtarget = &(MF->getSubtarget<PPCSubtarget>());
 
-  unsigned MIOpcode = MI->getOpcode();
   assert((Subtarget->isUsingPCRelativeCalls() || MIOpcode != PPC::BL8_NOTOC) &&
          "BL8_NOTOC is only valid when using PC Relative Calls.");
   if (Subtarget->isUsingPCRelativeCalls()) {
     if (MIOpcode == PPC::TAILB || MIOpcode == PPC::TAILB8 ||
         MIOpcode == PPC::TCRETURNdi || MIOpcode == PPC::TCRETURNdi8 ||
         MIOpcode == PPC::BL8_NOTOC || MIOpcode == PPC::BL8_NOTOC_RM) {
-      RefKind = MCSymbolRefExpr::VK_PPC_NOTOC;
+      RefKind = PPC::S_NOTOC;
     }
     if (MO.getTargetFlags() == PPCII::MO_PCREL_OPT_FLAG)
-      RefKind = MCSymbolRefExpr::VK_PPC_PCREL_OPT;
+      RefKind = PPC::S_PCREL_OPT;
   }
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, RefKind, Ctx);
@@ -153,8 +151,6 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   if (MO.getTargetFlags() == PPCII::MO_PIC_FLAG ||
       MO.getTargetFlags() == PPCII::MO_PIC_HA_FLAG ||
       MO.getTargetFlags() == PPCII::MO_PIC_LO_FLAG) {
-    const MachineFunction *MF = MO.getParent()->getParent()->getParent();
-
     const MCExpr *PB = MCSymbolRefExpr::create(MF->getPICBaseSymbol(), Ctx);
     Expr = MCBinaryExpr::createSub(Expr, PB, Ctx);
   }
@@ -163,11 +159,11 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   switch (access) {
     case PPCII::MO_LO:
     case PPCII::MO_PIC_LO_FLAG:
-      Expr = PPCMCExpr::createLo(Expr, Ctx);
+      Expr = MCSpecifierExpr::create(Expr, PPC::S_LO, Ctx);
       break;
     case PPCII::MO_HA:
     case PPCII::MO_PIC_HA_FLAG:
-      Expr = PPCMCExpr::createHa(Expr, Ctx);
+      Expr = MCSpecifierExpr::create(Expr, PPC::S_HA, Ctx);
       break;
   }
 
@@ -180,12 +176,13 @@ void llvm::LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
 
   for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp;
-    if (LowerPPCMachineOperandToMCOperand(MO, MCOp, AP))
+    if (LowerPPCMachineOperandToMCOperand(MI->getOpcode(), MO, MCOp, AP))
       OutMI.addOperand(MCOp);
   }
 }
 
-bool llvm::LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
+bool llvm::LowerPPCMachineOperandToMCOperand(unsigned MIOpcode,
+                                             const MachineOperand &MO,
                                              MCOperand &OutMO, AsmPrinter &AP) {
   switch (MO.getType()) {
   default:
@@ -195,6 +192,12 @@ bool llvm::LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
     assert(MO.getReg() > PPC::NoRegister &&
            MO.getReg() < PPC::NUM_TARGET_REGS &&
            "Invalid register for this target!");
+    // ISA instructions refer to the containing dmr reg.
+    if (PPC::isDMRROWpRegister(MO.getReg())) {
+      OutMO =
+          MCOperand::createReg(PPC::DMR0 + (MO.getReg() - PPC::DMRROWp0) / 4);
+      return true;
+    }
     // Ignore all implicit register operands.
     if (MO.isImplicit())
       return false;
@@ -209,20 +212,20 @@ bool llvm::LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
     return true;
   case MachineOperand::MO_GlobalAddress:
   case MachineOperand::MO_ExternalSymbol:
-    OutMO = GetSymbolRef(MO, GetSymbolFromOperand(MO, AP), AP);
+    OutMO = GetSymbolRef(MIOpcode, MO, GetSymbolFromOperand(MO, AP), AP);
     return true;
   case MachineOperand::MO_JumpTableIndex:
-    OutMO = GetSymbolRef(MO, AP.GetJTISymbol(MO.getIndex()), AP);
+    OutMO = GetSymbolRef(MIOpcode, MO, AP.GetJTISymbol(MO.getIndex()), AP);
     return true;
   case MachineOperand::MO_ConstantPoolIndex:
-    OutMO = GetSymbolRef(MO, AP.GetCPISymbol(MO.getIndex()), AP);
+    OutMO = GetSymbolRef(MIOpcode, MO, AP.GetCPISymbol(MO.getIndex()), AP);
     return true;
   case MachineOperand::MO_BlockAddress:
-    OutMO =
-        GetSymbolRef(MO, AP.GetBlockAddressSymbol(MO.getBlockAddress()), AP);
+    OutMO = GetSymbolRef(MIOpcode, MO,
+                         AP.GetBlockAddressSymbol(MO.getBlockAddress()), AP);
     return true;
   case MachineOperand::MO_MCSymbol:
-    OutMO = GetSymbolRef(MO, MO.getMCSymbol(), AP);
+    OutMO = GetSymbolRef(MIOpcode, MO, MO.getMCSymbol(), AP);
     return true;
   case MachineOperand::MO_RegisterMask:
     return false;

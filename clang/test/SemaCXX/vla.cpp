@@ -41,3 +41,17 @@ void func(int expr) {
   int array[sizeof(Ty) ? sizeof(Ty{}) : sizeof(int)];
   int old_style_assert[expr ? Ty::one : Ty::Neg_one]; // We don't diagnose as a VLA until instantiation
 }
+
+namespace GH138444 {
+struct S {         // expected-note {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int' to 'const S &' for 1st argument}} \
+                      expected-note {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int' to 'S &&' for 1st argument}}
+  S(const char *); // expected-note {{candidate constructor not viable: no known conversion from 'int' to 'const char *' for 1st argument}}
+  int size() const;
+};
+
+void test() {
+  S vec1 = 2; // expected-error {{no viable conversion from 'int' to 'S'}}
+  // Previously, this call to sizeof would cause a crash.
+  sizeof(int[vec1.size()]);
+}
+}

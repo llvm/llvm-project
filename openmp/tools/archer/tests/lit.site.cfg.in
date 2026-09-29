@@ -11,11 +11,15 @@ config.libomp_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
 config.omp_library_dir = "@LIBOMP_LIBRARY_DIR@"
 config.omp_header_dir = "@LIBOMP_INCLUDE_DIR@"
 config.operating_system = "@CMAKE_SYSTEM_NAME@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.has_libatomic = @LIBARCHER_HAVE_LIBATOMIC@
 config.has_tsan = @OPENMP_TEST_ENABLE_TSAN@
 
 config.test_archer_flags = "@LIBARCHER_TEST_FLAGS@"
 config.libarcher_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

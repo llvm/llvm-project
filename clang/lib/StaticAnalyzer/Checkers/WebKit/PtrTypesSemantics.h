@@ -11,8 +11,10 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include <optional>
+#include <string>
 
 namespace clang {
 class CXXBaseSpecifier;
@@ -20,9 +22,14 @@ class CXXMethodDecl;
 class CXXRecordDecl;
 class Decl;
 class FunctionDecl;
+class NamedDecl;
 class QualType;
+class RecordType;
 class Stmt;
+class TranslationUnitDecl;
 class Type;
+class TypedefDecl;
+class VarDecl;
 
 // Ref-countability of a type is implicitly defined by Ref<T> and RefPtr<T>
 // implementation. It can be modeled as: type T having public methods ref() and
@@ -45,11 +52,50 @@ std::optional<bool> isRefCountable(const clang::CXXRecordDecl *Class);
 /// std::nullopt if inconclusive.
 std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *Class);
 
+/// \returns true if \p Class implements the CanBorrow protocol, meaning a
+/// Borrow<T> can be taken on it, false if not, std::nullopt if inconclusive.
+std::optional<bool> isBorrowable(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is a Borrow<T>, false if not.
+bool isBorrow(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p T is a Borrow<T>.
+bool isBorrowType(const clang::QualType T);
+
+/// \returns the innermost type reached by stripping every pointer/reference
+/// layer from \p T; \p T itself if it has none; a null type if \p T is null.
+clang::QualType pointeeType(clang::QualType T);
+
+/// \returns the type a Borrow<T> specialization \p T borrows, or a null type
+/// if \p T is not a template specialization whose first argument is a type.
+clang::QualType borrowedType(clang::QualType T);
+
+/// \returns true if a value of type \p T is a pointer/reference/view.
+bool isView(const clang::QualType T);
+
+/// \returns true if \p Class declares reference semantics structurally: it is
+/// annotated [[gsl::Pointer]] (explicitly, or by Sema's inference for
+/// standard types), derives from std::ranges::view_interface, is a standard
+/// iterator adaptor, or is nested inside such a class, as the iterators of
+/// standard views are.
+bool isStdView(const clang::CXXRecordDecl *Class);
+
 /// \returns true if \p Class is ref-counted, false if not.
 bool isRefCounted(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p Class is a CheckedPtr / CheckedRef, false if not.
 bool isCheckedPtr(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is a RetainPtr, false if not.
+bool isRetainPtrOrOSPtr(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is a weak smart pointer (WeakPtr, InlineWeakPtr,
+/// etc...), false if not.
+bool isWeakPtr(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is a smart pointer (RefPtr, WeakPtr, etc...),
+/// false if not.
+bool isSmartPtr(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
@@ -58,6 +104,23 @@ std::optional<bool> isUncounted(const clang::QualType T);
 /// \returns true if \p Class is CheckedPtr capable AND not checked, false if
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUnchecked(const clang::QualType T);
+
+/// An inter-procedural analysis facility that detects CF types with the
+/// underlying pointer type.
+class RetainTypeChecker {
+  llvm::DenseMap<const RecordType *, const TypedefDecl *> CFPointees;
+  llvm::DenseSet<const Type *> RecordlessTypes;
+  bool IsARCEnabled{false};
+  bool DefaultSynthProperties{true};
+
+public:
+  void visitTranslationUnitDecl(const TranslationUnitDecl *);
+  void visitTypedef(const TypedefDecl *);
+  bool isUnretained(const QualType, bool ignoreARC = false);
+  bool isARCEnabled() const { return IsARCEnabled; }
+  bool defaultSynthProperties() const { return DefaultSynthProperties; }
+  const TypedefDecl *getCanonicalDecl(QualType);
+};
 
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
@@ -75,13 +138,12 @@ std::optional<bool> isUncountedPtr(const clang::QualType T);
 /// class, false if not, std::nullopt if inconclusive.
 std::optional<bool> isUncheckedPtr(const clang::QualType T);
 
-/// \returns true if \p T is either a raw pointer or reference to an uncounted
-/// or unchecked class, false if not, std::nullopt if inconclusive.
-std::optional<bool> isUnsafePtr(const QualType T);
-
 /// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or its
 /// variant, false if not.
-bool isSafePtrType(const clang::QualType T);
+bool isRefOrCheckedPtrType(const clang::QualType T);
+
+/// \returns true if \p T is a RetainPtr, false if not.
+bool isRetainPtrOrOSPtrType(const clang::QualType T);
 
 /// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or
 /// unique_ptr, false if not.
@@ -99,29 +161,66 @@ bool isCtorOfCheckedPtr(const clang::FunctionDecl *F);
 /// uncounted parameter, false if not.
 bool isCtorOfSafePtr(const clang::FunctionDecl *F);
 
+/// \returns true if \p F is std::move or WTF::move.
+bool isStdOrWTFMove(const clang::FunctionDecl *F);
+
 /// \returns true if \p Name is RefPtr, Ref, or its variant, false if not.
 bool isRefType(const std::string &Name);
 
 /// \returns true if \p Name is CheckedRef or CheckedPtr, false if not.
 bool isCheckedPtr(const std::string &Name);
 
+/// \returns true if \p Name is Borrow, false if not.
+bool isBorrow(const std::string &Name);
+
+/// \returns true if \p Name is RetainPtr or its variant, false if not.
+bool isRetainPtrOrOSPtr(const std::string &Name);
+
+/// \returns true if \p Name is an owning smart pointer such as Ref, CheckedPtr,
+/// and unique_ptr.
+bool isOwnerPtr(const std::string &Name);
+
+/// \returns true if \p Name is unique_ptr, UniqueRef, or LazyUniqueRef.
+bool isUniquePtr(const std::string &Name);
+
+/// \returns true if \p Name is a smart pointer type name, false if not.
+bool isSmartPtrClass(const std::string &Name);
+
 /// \returns true if \p M is getter of a ref-counted class, false if not.
 std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);
+
+/// \returns true if \p M is a getter of unique_ptr, UniqueRef, or
+/// LazyUniqueRef, false if not.
+bool isGetterOfUniquePtr(const clang::CXXMethodDecl *Method);
 
 /// \returns true if \p F is a conversion between ref-countable or ref-counted
 /// pointer types.
 bool isPtrConversion(const FunctionDecl *F);
 
+/// \returns true if \p F's return type is annotated with
+/// [[clang::annotate_type("webkit.nodelete")]].
+bool isNoDeleteFunction(const FunctionDecl *F);
+
+/// \returns true if \p F is a builtin function which is considered trivial.
+bool isTrivialBuiltinFunction(const FunctionDecl *F);
+
 /// \returns true if \p F is a static singleton function.
-bool isSingleton(const FunctionDecl *F);
+bool isSingleton(const NamedDecl *F);
 
 /// An inter-procedural analysis facility that detects functions with "trivial"
 /// behavior with respect to reference counting, such as simple field getters.
 class TrivialFunctionAnalysis {
 public:
   /// \returns true if \p D is a "trivial" function.
-  bool isTrivial(const Decl *D) const { return isTrivialImpl(D, TheCache); }
-  bool isTrivial(const Stmt *S) const { return isTrivialImpl(S, TheCache); }
+  bool isTrivial(const Decl *D, const Stmt **OffendingStmt = nullptr) const {
+    return isTrivialImpl(D, TheCache, OffendingStmt);
+  }
+  bool isTrivial(const Stmt *S, const Stmt **OffendingStmt = nullptr) const {
+    return isTrivialImpl(S, TheCache, OffendingStmt);
+  }
+  bool hasTrivialDtor(const VarDecl *VD) const {
+    return hasTrivialDtorImpl(VD, TheCache);
+  }
 
 private:
   friend class TrivialFunctionAnalysisVisitor;
@@ -130,8 +229,9 @@ private:
       llvm::DenseMap<llvm::PointerUnion<const Decl *, const Stmt *>, bool>;
   mutable CacheTy TheCache{};
 
-  static bool isTrivialImpl(const Decl *D, CacheTy &Cache);
-  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache);
+  static bool isTrivialImpl(const Decl *D, CacheTy &Cache, const Stmt **);
+  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache, const Stmt **);
+  static bool hasTrivialDtorImpl(const VarDecl *VD, CacheTy &Cache);
 };
 
 } // namespace clang

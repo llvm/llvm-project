@@ -9,11 +9,23 @@ from lldbsuite.test.lldbtest import *
 
 
 class NestedTemplateTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self, debug_flags):
         self.build(dictionary=debug_flags)
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.expect(
             "image lookup -A -t 'Inner<int>'",
+            DATA_TYPES_DISPLAYED_CORRECTLY,
+            substrs=["1 match found"],
+        )
+        self.expect(
+            "image lookup -A -t 'NS::Struct<int>'",
+            DATA_TYPES_DISPLAYED_CORRECTLY,
+            substrs=["1 match found"],
+        )
+        self.expect(
+            "image lookup -A -t 'NS::Union<int>'",
             DATA_TYPES_DISPLAYED_CORRECTLY,
             substrs=["1 match found"],
         )

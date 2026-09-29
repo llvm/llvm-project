@@ -9,14 +9,23 @@
 /// \file
 /// This file defines the DenseMap class.
 ///
+/// The hash table is linear-probing open addressing with tombstone-free
+/// deletion (Knuth TAOCP 6.4 Algorithm R), power-of-two capacity, and a 0.75
+/// maximum load factor. No sentinel key. Occupancy is stored in a packed
+/// 1-bit-per-bucket "used" array.
+///
+/// `SmallDenseMap` adds an inline small buffer optimization.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_DENSEMAP_H
 #define LLVM_ADT_DENSEMAP_H
 
+#include "llvm/ADT/ADL.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/EpochTracker.h"
-#include "llvm/Support/AlignOf.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemAlloc.h"
@@ -35,20 +44,496 @@
 namespace llvm {
 
 namespace detail {
+// A bucket holds a key and a value. Don't use std::pair, which has a
+// non-trivial copy assignment, which costs is_trivially_copyable.
+template <typename KeyT, typename ValueT> struct DenseMapPair {
+  using first_type = KeyT;
+  using second_type = ValueT;
 
-// We extend a pair to allow users to override the bucket type with their own
-// implementation without requiring two members.
-template <typename KeyT, typename ValueT>
-struct DenseMapPair : public std::pair<KeyT, ValueT> {
-  using std::pair<KeyT, ValueT>::pair;
+  KeyT first;
+  ValueT second;
 
-  KeyT &getFirst() { return std::pair<KeyT, ValueT>::first; }
-  const KeyT &getFirst() const { return std::pair<KeyT, ValueT>::first; }
-  ValueT &getSecond() { return std::pair<KeyT, ValueT>::second; }
-  const ValueT &getSecond() const { return std::pair<KeyT, ValueT>::second; }
+  DenseMapPair() : first(), second() {}
+  DenseMapPair(const KeyT &Key, const ValueT &Value)
+      : first(Key), second(Value) {}
+  DenseMapPair(KeyT &&Key, ValueT &&Value)
+      : first(std::move(Key)), second(std::move(Value)) {}
+  DenseMapPair(const std::pair<KeyT, ValueT> &P)
+      : first(P.first), second(P.second) {}
+  DenseMapPair(std::pair<KeyT, ValueT> &&P)
+      : first(std::move(P.first)), second(std::move(P.second)) {}
+  template <typename U1, typename U2>
+  DenseMapPair(const DenseMapPair<U1, U2> &P)
+      : first(P.first), second(P.second) {}
+  template <typename U1, typename U2>
+  DenseMapPair(DenseMapPair<U1, U2> &&P)
+      : first(std::move(P.first)), second(std::move(P.second)) {}
+
+  operator std::pair<KeyT, ValueT>() const { return {first, second}; }
+  operator std::pair<const KeyT, ValueT>() const { return {first, second}; }
+
+  friend bool operator==(const DenseMapPair &LHS, const DenseMapPair &RHS) {
+    return LHS.first == RHS.first && LHS.second == RHS.second;
+  }
+  friend bool operator!=(const DenseMapPair &LHS, const DenseMapPair &RHS) {
+    return !(LHS == RHS);
+  }
+
+  KeyT &getFirst() { return first; }
+  const KeyT &getFirst() const { return first; }
+  ValueT &getSecond() { return second; }
+  const ValueT &getSecond() const { return second; }
 };
 
 } // end namespace detail
+
+namespace densemap::detail {
+// Relocating copy-constructs and runs no destructor, so it does not need
+// trivial assignment, which a std::pair value type lacks.
+template <typename BucketT>
+inline constexpr bool isRelocatableBucket =
+    std::is_trivially_copy_constructible_v<BucketT> &&
+    std::is_trivially_destructible_v<BucketT>;
+
+using UsedT = uint32_t;
+
+// Number of used words backing N buckets where N is zero or a power of two.
+constexpr size_t usedWords(size_t N) {
+  assert((N == 0 || isPowerOf2_64(N)) &&
+         "bucket count must be zero or a power of two");
+  return (N + 31) / 32;
+}
+
+inline bool used(const UsedT *U, size_t I) {
+  return (U[I >> 5] >> (I & 31)) & 1;
+}
+inline void setUsed(UsedT *U, size_t I) { U[I >> 5] |= UsedT(1) << (I & 31); }
+inline void unsetUsed(UsedT *U, size_t I) {
+  U[I >> 5] &= ~(UsedT(1) << (I & 31));
+}
+inline void clearUsed(UsedT *U, unsigned Num) {
+  std::memset(U, 0, usedWords(Num) * sizeof(UsedT));
+}
+
+// Invoke Func(I) for each occupied bucket index I in [0, N). Set always_inline;
+// otherwise, for a heavy caller such as moveFrom's rehash, the inliner can
+// leave it out of line and the per-element call dwarfs the work.
+template <typename Fn>
+LLVM_ATTRIBUTE_ALWAYS_INLINE void forEachUsed(const UsedT *U, unsigned N,
+                                              Fn Func) {
+  const unsigned NW = usedWords(N);
+  for (unsigned W = 0; W != NW; ++W) {
+    UsedT Bits = U[W];
+    while (Bits) {
+      Func((W << 5) + llvm::countr_zero(Bits));
+      Bits &= Bits - 1;
+    }
+  }
+}
+
+// Buckets and the used array share one allocation: the bucket array first, then
+// the used words.  NumBuckets is a power of two >= 4, so the bucket region size
+// is a multiple of sizeof(UsedT) and the trailing used words are aligned.
+template <typename BucketT> constexpr size_t allocAlign() {
+  return std::max(alignof(BucketT), alignof(UsedT));
+}
+inline size_t allocBytes(size_t BucketSize, unsigned Num) {
+  return BucketSize * static_cast<size_t>(Num) + usedWords(Num) * sizeof(UsedT);
+}
+template <typename BucketT> size_t allocBytes(unsigned Num) {
+  return allocBytes(sizeof(BucketT), Num);
+}
+inline UsedT *usedFor(void *Buckets, size_t BucketSize, unsigned Num) {
+  assert(BucketSize * static_cast<size_t>(Num) % alignof(UsedT) == 0 &&
+         "used array would be misaligned");
+  return reinterpret_cast<UsedT *>(static_cast<char *>(Buckets) +
+                                   BucketSize * static_cast<size_t>(Num));
+}
+
+/// Hashes the key, at offset 0 in a bucket. Null asks the out-of-line rehash
+/// loop in DenseMap.cpp to inline the pointer hash.
+using BucketHasher = unsigned (*)(const void *Key);
+
+// True when the map hashes a pointer key by its value: the primary
+// DenseMapInfo<T *> declares PointerValueHash naming itself, which a
+// specialization or derived info for one pointer type does not. Only the
+// primary is asked, since GCC without DR1170 errors on a lookup that reaches a
+// private base, as clang::WeakInfo's info has.
+template <typename KeyT, typename KeyInfoT, typename = void>
+inline constexpr bool hashesPointerValue = false;
+template <typename T>
+inline constexpr bool hashesPointerValue<
+    T *, DenseMapInfo<T *>,
+    std::enable_if_t<std::is_same_v<
+        typename DenseMapInfo<T *>::PointerValueHash, DenseMapInfo<T *>>>> =
+    true;
+
+// Kept out of DenseMapBase so that map types sharing a key share one thunk.
+template <typename KeyT, typename KeyInfoT> constexpr BucketHasher hasherFor() {
+  if constexpr (hashesPointerValue<KeyT, KeyInfoT>)
+    return nullptr;
+  else
+    return [](const void *Key) -> unsigned {
+      return KeyInfoT::getHashValue(*static_cast<const KeyT *>(Key));
+    };
+}
+
+/// Rehash the live buckets of \p Src into the empty \p Dst, which must have
+/// room for all of them.
+LLVM_ABI void rehashRelocatable(void *Dst, UsedT *DstUsed,
+                                unsigned DstNumBuckets, const void *Src,
+                                const UsedT *SrcUsed, unsigned SrcNumBuckets,
+                                size_t BucketSize, BucketHasher Hasher);
+
+/// Allocate a table of \p NewNumBuckets buckets and rehash the \p OldNumBuckets
+/// buckets at \p OldBuckets into it, freeing them if \p FreeOld.
+LLVM_ABI void *growRelocatable(void *OldBuckets, const UsedT *OldUsed,
+                               unsigned OldNumBuckets, unsigned NewNumBuckets,
+                               size_t BucketSize, size_t Align,
+                               BucketHasher Hasher, bool FreeOld);
+
+// A snapshot of the three fields the hot lookup paths need. Fetching them
+// together lets SmallDenseMap test its Small discriminator once rather than
+// once per accessor; for plain DenseMap it is three member loads either way.
+template <typename BucketT> struct StorageRep {
+  const BucketT *Buckets;
+  const UsedT *Used;
+  unsigned NumBuckets;
+};
+
+template <typename BucketT> class DenseMapStorage {
+  BucketT *Buckets = nullptr;
+  UsedT *Used = nullptr;
+  unsigned NumEntries = 0;
+  unsigned NumBuckets = 0;
+
+public:
+  unsigned getNumEntries() const { return NumEntries; }
+  void setNumEntries(unsigned Num) { NumEntries = Num; }
+
+  BucketT *getBuckets() const { return Buckets; }
+  UsedT *getUsed() const { return Used; }
+  unsigned getNumBuckets() const { return NumBuckets; }
+  StorageRep<BucketT> getRep() const { return {Buckets, Used, NumBuckets}; }
+
+  void swap(DenseMapStorage &RHS) {
+    std::swap(Buckets, RHS.Buckets);
+    std::swap(Used, RHS.Used);
+    std::swap(NumEntries, RHS.NumEntries);
+    std::swap(NumBuckets, RHS.NumBuckets);
+  }
+
+  void setStorage(void *Storage, unsigned Num) {
+    Buckets = static_cast<BucketT *>(Storage);
+    Used = usedFor(Storage, sizeof(BucketT), Num);
+    NumBuckets = Num;
+  }
+
+  void grow(unsigned MinNumBuckets, BucketHasher Hasher) {
+    unsigned NewNumBuckets = roundUpNumBuckets(MinNumBuckets);
+    setStorage(growRelocatable(Buckets, Used, NumBuckets, NewNumBuckets,
+                               sizeof(BucketT), allocAlign<BucketT>(), Hasher,
+                               /*FreeOld=*/true),
+               NewNumBuckets);
+  }
+
+  void deallocateBuckets() {
+    if (NumBuckets == 0)
+      return;
+    deallocate_buffer(Buckets, allocBytes<BucketT>(NumBuckets),
+                      allocAlign<BucketT>());
+    Buckets = nullptr;
+    Used = nullptr;
+    NumBuckets = 0;
+  }
+
+  bool allocateBuckets(unsigned Num) {
+    if (Num == 0) {
+      Buckets = nullptr;
+      Used = nullptr;
+      NumBuckets = 0;
+      return false;
+    }
+    setStorage(allocate_buffer(allocBytes<BucketT>(Num), allocAlign<BucketT>()),
+               Num);
+    return true;
+  }
+
+  // Put the zombie instance in a known good state after a move.
+  // deallocateBuckets() already resets to the empty state.
+  void kill() { deallocateBuckets(); }
+
+  static unsigned roundUpNumBuckets(unsigned MinNumBuckets) {
+    return std::max(64u, MinNumBuckets);
+  }
+
+  // Plan how to shrink the bucket table. Return:
+  // - {false, 0} to reuse the existing bucket table
+  // - {true, N} to reallocate a bucket table with N entries
+  std::pair<bool, unsigned> planShrinkAndClear() const {
+    unsigned NewNumBuckets = 0;
+    if (NumEntries)
+      NewNumBuckets = std::max(64u, 1u << (Log2_32_Ceil(NumEntries) + 1));
+    if (NewNumBuckets == NumBuckets)
+      return {false, 0};          // Reuse.
+    return {true, NewNumBuckets}; // Reallocate.
+  }
+
+  bool maybeMoveFast(DenseMapStorage &&Other) {
+    swap(Other);
+    return true;
+  }
+};
+
+template <typename BucketT, unsigned InlineBuckets = 4>
+class SmallDenseMapStorage {
+  static_assert(isPowerOf2_64(InlineBuckets),
+                "InlineBuckets must be a power of 2.");
+
+  // Number of used words backing the inline buckets (>= 1).
+  static constexpr unsigned InlineUsedWords = usedWords(InlineBuckets);
+
+  unsigned Small : 1;
+  unsigned NumEntries : 31;
+
+  // Inline storage: the bucket array followed by the parallel used words.
+  struct InlineRep {
+    alignas(BucketT) char Buckets[sizeof(BucketT) * InlineBuckets];
+    UsedT Used[InlineUsedWords];
+  };
+  struct LargeRep {
+    BucketT *Buckets;
+    UsedT *Used;
+    unsigned NumBuckets;
+  };
+
+  // Discriminated by the Small bit.
+  union {
+    InlineRep Inline;
+    LargeRep Large;
+  } storage;
+
+  // Move-construct *Dst from *Src, then destroy *Src. Dst is raw storage.
+  static void relocateBucket(BucketT *Dst, BucketT *Src) {
+    using KeyT = std::remove_reference_t<decltype(Dst->getFirst())>;
+    using ValueT = std::remove_reference_t<decltype(Dst->getSecond())>;
+    ::new (&Dst->getFirst()) KeyT(std::move(Src->getFirst()));
+    ::new (&Dst->getSecond()) ValueT(std::move(Src->getSecond()));
+    Src->getSecond().~ValueT();
+    Src->getFirst().~KeyT();
+  }
+
+  const BucketT *getInlineBuckets() const {
+    assert(Small);
+    // Note that this cast does not violate aliasing rules as we assert that
+    // the memory's dynamic type is the small, inline bucket buffer, and the
+    // 'storage' is a POD containing a char buffer.
+    return reinterpret_cast<const BucketT *>(storage.Inline.Buckets);
+  }
+
+  BucketT *getInlineBuckets() {
+    assert(Small);
+    return reinterpret_cast<BucketT *>(storage.Inline.Buckets);
+  }
+
+  const UsedT *getInlineUsed() const {
+    assert(Small);
+    return storage.Inline.Used;
+  }
+
+  UsedT *getInlineUsed() {
+    assert(Small);
+    return storage.Inline.Used;
+  }
+
+  void setLarge(void *Storage, unsigned NumBuckets) {
+    Small = false;
+    storage.Large = {static_cast<BucketT *>(Storage),
+                     usedFor(Storage, sizeof(BucketT), NumBuckets), NumBuckets};
+  }
+
+public:
+  unsigned getNumEntries() const { return NumEntries; }
+
+  void setNumEntries(unsigned Num) {
+    // NumEntries is hardcoded to be 31 bits wide.
+    assert(Num < (1U << 31) && "Cannot support more than 1<<31 entries");
+    NumEntries = Num;
+  }
+
+  const BucketT *getBuckets() const {
+    return Small ? getInlineBuckets() : storage.Large.Buckets;
+  }
+
+  BucketT *getBuckets() {
+    return const_cast<BucketT *>(
+        const_cast<const SmallDenseMapStorage *>(this)->getBuckets());
+  }
+
+  const UsedT *getUsed() const {
+    return Small ? getInlineUsed() : storage.Large.Used;
+  }
+
+  UsedT *getUsed() {
+    return const_cast<UsedT *>(
+        const_cast<const SmallDenseMapStorage *>(this)->getUsed());
+  }
+
+  unsigned getNumBuckets() const {
+    return Small ? InlineBuckets : storage.Large.NumBuckets;
+  }
+
+  StorageRep<BucketT> getRep() const {
+    if (Small)
+      return {getInlineBuckets(), getInlineUsed(), InlineBuckets};
+    return {storage.Large.Buckets, storage.Large.Used,
+            storage.Large.NumBuckets};
+  }
+
+  void swap(SmallDenseMapStorage &RHS) {
+    unsigned TmpNumEntries = RHS.NumEntries;
+    RHS.NumEntries = NumEntries;
+    NumEntries = TmpNumEntries;
+
+    if (Small && RHS.Small) {
+      // Both inline: swap the live bucket contents slot by slot, then the used
+      // words. Buckets are raw storage, so a value may only move in one
+      // direction when exactly one side is occupied.
+      UsedT *LU = getInlineUsed(), *RU = RHS.getInlineUsed();
+      BucketT *LB = getInlineBuckets(), *RB = RHS.getInlineBuckets();
+      for (unsigned I = 0; I != InlineBuckets; ++I) {
+        bool L = used(LU, I);
+        bool R = used(RU, I);
+        if (L && R) {
+          // Both occupied: exchange through a temporary.
+          alignas(BucketT) char Tmp[sizeof(BucketT)];
+          BucketT *T = reinterpret_cast<BucketT *>(Tmp);
+          relocateBucket(T, &LB[I]);
+          relocateBucket(&LB[I], &RB[I]);
+          relocateBucket(&RB[I], T);
+        } else if (L) {
+          relocateBucket(&RB[I], &LB[I]);
+        } else if (R) {
+          relocateBucket(&LB[I], &RB[I]);
+        }
+      }
+      for (unsigned W = 0; W != InlineUsedWords; ++W)
+        std::swap(LU[W], RU[W]);
+      return;
+    }
+    if (!Small && !RHS.Small) {
+      std::swap(storage.Large, RHS.storage.Large);
+      return;
+    }
+
+    SmallDenseMapStorage &SmallSide = Small ? *this : RHS;
+    SmallDenseMapStorage &LargeSide = Small ? RHS : *this;
+
+    // Stash the large rep, then move the small side's inline contents into the
+    // large side (which becomes inline), and finally install the rep on the
+    // small side (which becomes large).
+    LargeRep TmpRep = LargeSide.storage.Large;
+    LargeSide.Small = true;
+    {
+      UsedT *SU = SmallSide.getInlineUsed(), *LU = LargeSide.getInlineUsed();
+      BucketT *SB = SmallSide.getInlineBuckets(),
+              *LB = LargeSide.getInlineBuckets();
+      for (unsigned I = 0; I != InlineBuckets; ++I)
+        if (used(SU, I))
+          relocateBucket(&LB[I], &SB[I]);
+      for (unsigned W = 0; W != InlineUsedWords; ++W)
+        LU[W] = SU[W];
+    }
+    SmallSide.Small = false;
+    SmallSide.storage.Large = TmpRep;
+  }
+
+  void grow(unsigned MinNumBuckets, BucketHasher Hasher) {
+    unsigned NewNumBuckets = roundUpNumBuckets(MinNumBuckets);
+    // remove_if asks for the count it already has: rehash in place.
+    if (Small && NewNumBuckets <= InlineBuckets) {
+      InlineRep Old = storage.Inline;
+      clearUsed(getInlineUsed(), InlineBuckets);
+      rehashRelocatable(getInlineBuckets(), getInlineUsed(), InlineBuckets,
+                        Old.Buckets, Old.Used, InlineBuckets, sizeof(BucketT),
+                        Hasher);
+      return;
+    }
+    void *Storage = growRelocatable(
+        getBuckets(), getUsed(), getNumBuckets(), NewNumBuckets,
+        sizeof(BucketT), allocAlign<BucketT>(), Hasher, /*FreeOld=*/!Small);
+    setLarge(Storage, NewNumBuckets);
+  }
+
+  void deallocateBuckets() {
+    // Fast path in case storage.Large.NumBuckets == 0, just like destroyAll.
+    // This path is used to destruct zombie instances after moves.
+    if (Small || storage.Large.NumBuckets == 0)
+      return;
+
+    deallocate_buffer(storage.Large.Buckets,
+                      allocBytes<BucketT>(storage.Large.NumBuckets),
+                      allocAlign<BucketT>());
+    storage.Large.NumBuckets = 0;
+  }
+
+  bool allocateBuckets(unsigned Num) {
+    if (Num <= InlineBuckets) {
+      Small = true;
+      return true;
+    }
+    setLarge(allocate_buffer(allocBytes<BucketT>(Num), allocAlign<BucketT>()),
+             Num);
+    return true;
+  }
+
+  // Put the zombie instance in a known good state after a move.
+  void kill() {
+    deallocateBuckets();
+    Small = false;
+    storage.Large = LargeRep{nullptr, nullptr, 0};
+  }
+
+  static unsigned roundUpNumBuckets(unsigned MinNumBuckets) {
+    if (MinNumBuckets <= InlineBuckets)
+      return InlineBuckets;
+    return std::max(64u, MinNumBuckets);
+  }
+
+  // Plan how to shrink the bucket table. Return:
+  // - {false, 0} to reuse the existing bucket table
+  // - {true, N} to reallocate a bucket table with N entries
+  std::pair<bool, unsigned> planShrinkAndClear() const {
+    unsigned NewNumBuckets = 0;
+    if (NumEntries) {
+      NewNumBuckets = 1u << (Log2_32_Ceil(NumEntries) + 1);
+      if (NewNumBuckets > InlineBuckets)
+        NewNumBuckets = std::max(64u, NewNumBuckets);
+    }
+    bool Reuse = Small ? NewNumBuckets <= InlineBuckets
+                       : NewNumBuckets == storage.Large.NumBuckets;
+    if (Reuse)
+      return {false, 0};          // Reuse.
+    return {true, NewNumBuckets}; // Reallocate.
+  }
+
+  bool maybeMoveFast(SmallDenseMapStorage &&Other) {
+    if (Other.Small)
+      return false;
+
+    Small = false;
+    NumEntries = Other.NumEntries;
+    storage.Large = Other.storage.Large;
+    Other.storage.Large.NumBuckets = 0;
+    return true;
+  }
+};
+
+} // namespace densemap::detail
+
+// Befriended below so DenseMapBase can expose its bucket-relocation callback
+// erase to ValueHandleBase, the only caller that caches bucket pointers.
+class ValueHandleBase;
 
 template <typename KeyT, typename ValueT,
           typename KeyInfoT = DenseMapInfo<KeyT>,
@@ -56,11 +541,13 @@ template <typename KeyT, typename ValueT,
           bool IsConst = false>
 class DenseMapIterator;
 
-template <typename DerivedT, typename KeyT, typename ValueT, typename KeyInfoT,
+template <typename StorageT, typename KeyT, typename ValueT, typename KeyInfoT,
           typename BucketT>
 class DenseMapBase : public DebugEpochBase {
   template <typename T>
   using const_arg_type_t = typename const_pointer_or_const_ref<T>::type;
+
+  using UsedT = llvm::densemap::detail::UsedT;
 
 public:
   using size_type = unsigned;
@@ -72,31 +559,42 @@ public:
   using const_iterator =
       DenseMapIterator<KeyT, ValueT, KeyInfoT, BucketT, true>;
 
-  inline iterator begin() {
-    // When the map is empty, avoid the overhead of advancing/retreating past
-    // empty buckets.
-    if (empty())
-      return end();
-    if (shouldReverseIterate<KeyT>())
-      return makeIterator(getBucketsEnd() - 1, getBuckets(), *this);
-    return makeIterator(getBuckets(), getBucketsEnd(), *this);
+  [[nodiscard]] inline iterator begin() {
+    return iterator::makeBegin(getBuckets(), getUsed(), getNumBuckets(),
+                               empty(), *this);
   }
-  inline iterator end() {
-    return makeIterator(getBucketsEnd(), getBucketsEnd(), *this, true);
+  [[nodiscard]] inline iterator end() {
+    return iterator::makeEnd(getBuckets(), getUsed(), getNumBuckets(), *this);
   }
-  inline const_iterator begin() const {
-    if (empty())
-      return end();
-    if (shouldReverseIterate<KeyT>())
-      return makeConstIterator(getBucketsEnd() - 1, getBuckets(), *this);
-    return makeConstIterator(getBuckets(), getBucketsEnd(), *this);
+  [[nodiscard]] inline const_iterator begin() const {
+    return const_iterator::makeBegin(getBuckets(), getUsed(), getNumBuckets(),
+                                     empty(), *this);
   }
-  inline const_iterator end() const {
-    return makeConstIterator(getBucketsEnd(), getBucketsEnd(), *this, true);
+  [[nodiscard]] inline const_iterator end() const {
+    return const_iterator::makeEnd(getBuckets(), getUsed(), getNumBuckets(),
+                                   *this);
+  }
+
+  // Return an iterator to iterate over keys in the map.
+  [[nodiscard]] inline auto keys() {
+    return map_range(*this, [](const BucketT &P) { return P.getFirst(); });
+  }
+
+  // Return an iterator to iterate over values in the map.
+  [[nodiscard]] inline auto values() {
+    return map_range(*this, [](const BucketT &P) { return P.getSecond(); });
+  }
+
+  [[nodiscard]] inline auto keys() const {
+    return map_range(*this, [](const BucketT &P) { return P.getFirst(); });
+  }
+
+  [[nodiscard]] inline auto values() const {
+    return map_range(*this, [](const BucketT &P) { return P.getSecond(); });
   }
 
   [[nodiscard]] bool empty() const { return getNumEntries() == 0; }
-  unsigned size() const { return getNumEntries(); }
+  [[nodiscard]] unsigned size() const { return getNumEntries(); }
 
   /// Grow the densemap so that it can contain at least \p NumEntries items
   /// before resizing again.
@@ -109,7 +607,7 @@ public:
 
   void clear() {
     incrementEpoch();
-    if (getNumEntries() == 0 && getNumTombstones() == 0)
+    if (getNumEntries() == 0)
       return;
 
     // If the capacity of the array is huge, and the # elements used is small,
@@ -119,53 +617,37 @@ public:
       return;
     }
 
-    const KeyT EmptyKey = getEmptyKey();
-    if constexpr (std::is_trivially_destructible_v<ValueT>) {
-      // Use a simpler loop when values don't need destruction.
-      for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P)
-        P->getFirst() = EmptyKey;
-    } else {
-      const KeyT TombstoneKey = getTombstoneKey();
-      unsigned NumEntries = getNumEntries();
-      for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P) {
-        if (!KeyInfoT::isEqual(P->getFirst(), EmptyKey)) {
-          if (!KeyInfoT::isEqual(P->getFirst(), TombstoneKey)) {
-            P->getSecond().~ValueT();
-            --NumEntries;
-          }
-          P->getFirst() = EmptyKey;
-        }
-      }
-      assert(NumEntries == 0 && "Node count imbalance!");
-      (void)NumEntries;
-    }
+    destroyAll();
+    llvm::densemap::detail::clearUsed(getUsed(), getNumBuckets());
     setNumEntries(0);
-    setNumTombstones(0);
+  }
+
+  void shrink_and_clear() {
+    auto [Reallocate, NewNumBuckets] = Storage.planShrinkAndClear();
+    destroyAll();
+    if (!Reallocate) {
+      initEmpty();
+      return;
+    }
+    Storage.deallocateBuckets();
+    initWithExactBucketCount(NewNumBuckets);
   }
 
   /// Return true if the specified key is in the map, false otherwise.
-  bool contains(const_arg_type_t<KeyT> Val) const {
+  [[nodiscard]] bool contains(const_arg_type_t<KeyT> Val) const {
     return doFind(Val) != nullptr;
   }
 
   /// Return 1 if the specified key is in the map, 0 otherwise.
-  size_type count(const_arg_type_t<KeyT> Val) const {
+  [[nodiscard]] size_type count(const_arg_type_t<KeyT> Val) const {
     return contains(Val) ? 1 : 0;
   }
 
-  iterator find(const_arg_type_t<KeyT> Val) {
-    if (BucketT *Bucket = doFind(Val))
-      return makeIterator(
-          Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
-          *this, true);
-    return end();
+  [[nodiscard]] iterator find(const_arg_type_t<KeyT> Val) {
+    return find_as(Val);
   }
-  const_iterator find(const_arg_type_t<KeyT> Val) const {
-    if (const BucketT *Bucket = doFind(Val))
-      return makeConstIterator(
-          Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
-          *this, true);
-    return end();
+  [[nodiscard]] const_iterator find(const_arg_type_t<KeyT> Val) const {
+    return find_as(Val);
   }
 
   /// Alternate version of find() which allows a different, and possibly
@@ -173,33 +655,47 @@ public:
   /// The DenseMapInfo is responsible for supplying methods
   /// getHashValue(LookupKeyT) and isEqual(LookupKeyT, KeyT) for each key
   /// type used.
-  template <class LookupKeyT> iterator find_as(const LookupKeyT &Val) {
+  template <class LookupKeyT>
+  [[nodiscard]] iterator find_as(const LookupKeyT &Val) {
     if (BucketT *Bucket = doFind(Val))
-      return makeIterator(
-          Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
-          *this, true);
+      return makeIterator(Bucket);
     return end();
   }
   template <class LookupKeyT>
-  const_iterator find_as(const LookupKeyT &Val) const {
+  [[nodiscard]] const_iterator find_as(const LookupKeyT &Val) const {
     if (const BucketT *Bucket = doFind(Val))
-      return makeConstIterator(
-          Bucket, shouldReverseIterate<KeyT>() ? getBuckets() : getBucketsEnd(),
-          *this, true);
+      return makeConstIterator(Bucket);
     return end();
   }
 
-  /// lookup - Return the entry for the specified key, or a default
-  /// constructed value if no such entry exists.
-  ValueT lookup(const_arg_type_t<KeyT> Val) const {
+  /// Return the entry for the specified key, or a default constructed value if
+  /// no such entry exists.
+  [[nodiscard]] ValueT lookup(const_arg_type_t<KeyT> Val) const {
     if (const BucketT *Bucket = doFind(Val))
       return Bucket->getSecond();
     return ValueT();
   }
 
-  /// at - Return the entry for the specified key, or abort if no such
-  /// entry exists.
-  const ValueT &at(const_arg_type_t<KeyT> Val) const {
+  // Return the entry with the specified key, or \p Default. This variant is
+  // useful, because `lookup` cannot be used with non-default-constructible
+  // values.
+  template <typename U = std::remove_cv_t<ValueT>>
+  [[nodiscard]] ValueT lookup_or(const_arg_type_t<KeyT> Val,
+                                 U &&Default) const {
+    if (const BucketT *Bucket = doFind(Val))
+      return Bucket->getSecond();
+    return Default;
+  }
+
+  /// Return the entry for the specified key, or abort if no such entry exists.
+  [[nodiscard]] ValueT &at(const_arg_type_t<KeyT> Val) {
+    auto Iter = this->find(std::move(Val));
+    assert(Iter != this->end() && "DenseMap::at failed due to a missing key");
+    return Iter->second;
+  }
+
+  /// Return the entry for the specified key, or abort if no such entry exists.
+  [[nodiscard]] const ValueT &at(const_arg_type_t<KeyT> Val) const {
     auto Iter = this->find(std::move(Val));
     assert(Iter != this->end() && "DenseMap::at failed due to a missing key");
     return Iter->second;
@@ -209,14 +705,28 @@ public:
   // If the key is already in the map, it returns false and doesn't update the
   // value.
   std::pair<iterator, bool> insert(const std::pair<KeyT, ValueT> &KV) {
-    return try_emplace(KV.first, KV.second);
+    return try_emplace_impl(KV.first, KV.second);
   }
 
   // Inserts key,value pair into the map if the key isn't already in the map.
   // If the key is already in the map, it returns false and doesn't update the
   // value.
   std::pair<iterator, bool> insert(std::pair<KeyT, ValueT> &&KV) {
-    return try_emplace(std::move(KV.first), std::move(KV.second));
+    return try_emplace_impl(std::move(KV.first), std::move(KV.second));
+  }
+
+  template <
+      typename B = BucketT,
+      typename = std::enable_if_t<!std::is_same_v<B, std::pair<KeyT, ValueT>>>>
+  std::pair<iterator, bool> insert(const BucketT &KV) {
+    return try_emplace_impl(KV.first, KV.second);
+  }
+
+  template <
+      typename B = BucketT,
+      typename = std::enable_if_t<!std::is_same_v<B, std::pair<KeyT, ValueT>>>>
+  std::pair<iterator, bool> insert(BucketT &&KV) {
+    return try_emplace_impl(std::move(KV.first), std::move(KV.second));
   }
 
   // Inserts key,value pair into the map if the key isn't already in the map.
@@ -224,24 +734,7 @@ public:
   // it is not moved.
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(KeyT &&Key, Ts &&...Args) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Key, TheBucket))
-      return std::make_pair(makeIterator(TheBucket,
-                                         shouldReverseIterate<KeyT>()
-                                             ? getBuckets()
-                                             : getBucketsEnd(),
-                                         *this, true),
-                            false); // Already in map.
-
-    // Otherwise, insert the new element.
-    TheBucket =
-        InsertIntoBucket(TheBucket, std::move(Key), std::forward<Ts>(Args)...);
-    return std::make_pair(makeIterator(TheBucket,
-                                       shouldReverseIterate<KeyT>()
-                                           ? getBuckets()
-                                           : getBucketsEnd(),
-                                       *this, true),
-                          true);
+    return try_emplace_impl(std::move(Key), std::forward<Ts>(Args)...);
   }
 
   // Inserts key,value pair into the map if the key isn't already in the map.
@@ -249,23 +742,7 @@ public:
   // it is not moved.
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(const KeyT &Key, Ts &&...Args) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Key, TheBucket))
-      return std::make_pair(makeIterator(TheBucket,
-                                         shouldReverseIterate<KeyT>()
-                                             ? getBuckets()
-                                             : getBucketsEnd(),
-                                         *this, true),
-                            false); // Already in map.
-
-    // Otherwise, insert the new element.
-    TheBucket = InsertIntoBucket(TheBucket, Key, std::forward<Ts>(Args)...);
-    return std::make_pair(makeIterator(TheBucket,
-                                       shouldReverseIterate<KeyT>()
-                                           ? getBuckets()
-                                           : getBucketsEnd(),
-                                       *this, true),
-                          true);
+    return try_emplace_impl(Key, std::forward<Ts>(Args)...);
   }
 
   /// Alternate version of insert() which allows a different, and possibly
@@ -278,28 +755,24 @@ public:
                                       const LookupKeyT &Val) {
     BucketT *TheBucket;
     if (LookupBucketFor(Val, TheBucket))
-      return std::make_pair(makeIterator(TheBucket,
-                                         shouldReverseIterate<KeyT>()
-                                             ? getBuckets()
-                                             : getBucketsEnd(),
-                                         *this, true),
-                            false); // Already in map.
+      return {makeIterator(TheBucket), false}; // Already in map.
 
     // Otherwise, insert the new element.
-    TheBucket = InsertIntoBucketWithLookup(TheBucket, std::move(KV.first),
-                                           std::move(KV.second), Val);
-    return std::make_pair(makeIterator(TheBucket,
-                                       shouldReverseIterate<KeyT>()
-                                           ? getBuckets()
-                                           : getBucketsEnd(),
-                                       *this, true),
-                          true);
+    TheBucket = findBucketForInsertion(Val, TheBucket);
+    ::new (&TheBucket->getFirst()) KeyT(std::move(KV.first));
+    ::new (&TheBucket->getSecond()) ValueT(std::move(KV.second));
+    return {makeIterator(TheBucket), true};
   }
 
-  /// insert - Range insertion of pairs.
+  /// Range insertion of pairs.
   template <typename InputIt> void insert(InputIt I, InputIt E) {
     for (; I != E; ++I)
       insert(*I);
+  }
+
+  /// Inserts range of 'std::pair<KeyT, ValueT>' values into the map.
+  template <typename Range> void insert_range(Range &&R) {
+    insert(adl_begin(R), adl_end(R));
   }
 
   template <typename V>
@@ -318,78 +791,182 @@ public:
     return Ret;
   }
 
+  template <typename... Ts>
+  std::pair<iterator, bool> emplace_or_assign(const KeyT &Key, Ts &&...Args) {
+    auto Ret = try_emplace(Key, std::forward<Ts>(Args)...);
+    if (!Ret.second)
+      Ret.first->second = ValueT(std::forward<Ts>(Args)...);
+    return Ret;
+  }
+
+  template <typename... Ts>
+  std::pair<iterator, bool> emplace_or_assign(KeyT &&Key, Ts &&...Args) {
+    auto Ret = try_emplace(std::move(Key), std::forward<Ts>(Args)...);
+    if (!Ret.second)
+      Ret.first->second = ValueT(std::forward<Ts>(Args)...);
+    return Ret;
+  }
+
+  void eraseFromFilledBucket(BucketT *TheBucket) {
+    eraseFromFilledBucket(TheBucket, [](BucketT &) {});
+  }
+
   bool erase(const KeyT &Val) {
     BucketT *TheBucket = doFind(Val);
     if (!TheBucket)
       return false; // not in map.
 
-    TheBucket->getSecond().~ValueT();
-    TheBucket->getFirst() = getTombstoneKey();
-    decrementNumEntries();
-    incrementNumTombstones();
+    eraseFromFilledBucket(TheBucket);
     return true;
   }
-  void erase(iterator I) {
-    BucketT *TheBucket = &*I;
-    TheBucket->getSecond().~ValueT();
-    TheBucket->getFirst() = getTombstoneKey();
-    decrementNumEntries();
-    incrementNumTombstones();
+  void erase(iterator I) { eraseFromFilledBucket(&*I); }
+
+  /// Remove entries that match the given predicate. \p Pred is invoked
+  /// with a reference to each live bucket and must not access the map being
+  /// modified. This is the safe replacement for erase-while-iterating.
+  ///
+  /// Returns whether anything was removed. If so, all iterators and references
+  /// into the map are invalidated.
+  template <typename Predicate> bool remove_if(Predicate Pred) {
+    UsedT *U = getUsed();
+    unsigned NumBuckets = getNumBuckets();
+    BucketT *B = getBuckets();
+    bool Removed = false;
+    for (unsigned I = 0; I != NumBuckets; ++I) {
+      if (!llvm::densemap::detail::used(U, I))
+        continue;
+      if (Pred(B[I])) {
+        B[I].getSecond().~ValueT();
+        B[I].getFirst().~KeyT();
+        llvm::densemap::detail::unsetUsed(U, I);
+        decrementNumEntries();
+        Removed = true;
+      }
+    }
+    if (Removed) {
+      incrementEpoch();
+      this->grow(NumBuckets);
+    }
+    return Removed;
   }
 
   ValueT &operator[](const KeyT &Key) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Key, TheBucket))
-      return TheBucket->second;
-
-    return InsertIntoBucket(TheBucket, Key)->second;
+    return lookupOrInsertIntoBucket(Key).first->second;
   }
 
   ValueT &operator[](KeyT &&Key) {
-    BucketT *TheBucket;
-    if (LookupBucketFor(Key, TheBucket))
-      return TheBucket->second;
-
-    return InsertIntoBucket(TheBucket, std::move(Key))->second;
+    return lookupOrInsertIntoBucket(std::move(Key)).first->second;
   }
 
-  /// isPointerIntoBucketsArray - Return true if the specified pointer points
-  /// somewhere into the DenseMap's array of buckets (i.e. either to a key or
-  /// value in the DenseMap).
-  bool isPointerIntoBucketsArray(const void *Ptr) const {
+  /// Return true if the specified pointer points somewhere into the DenseMap's
+  /// array of buckets (i.e. either to a key or value in the DenseMap).
+  [[nodiscard]] bool isPointerIntoBucketsArray(const void *Ptr) const {
     return Ptr >= getBuckets() && Ptr < getBucketsEnd();
   }
 
   /// getPointerIntoBucketsArray() - Return an opaque pointer into the buckets
   /// array.  In conjunction with the previous method, this can be used to
   /// determine whether an insertion caused the DenseMap to reallocate.
-  const void *getPointerIntoBucketsArray() const { return getBuckets(); }
+  [[nodiscard]] const void *getPointerIntoBucketsArray() const {
+    return getBuckets();
+  }
+
+  void swap(DenseMapBase &RHS) {
+    this->incrementEpoch();
+    RHS.incrementEpoch();
+    Storage.swap(RHS.Storage);
+  }
+
+  DenseMapBase() : DenseMapBase(0) {}
+
+  /// Create a DenseMap with an optional \p NumElementsToReserve to guarantee
+  /// that this number of elements can be inserted in the map without grow().
+  explicit DenseMapBase(unsigned NumElementsToReserve) {
+    initWithExactBucketCount(
+        getMinBucketToReserveForEntries(NumElementsToReserve));
+  }
+
+  DenseMapBase(const DenseMapBase &other) : DenseMapBase() {
+    this->copyFrom(other);
+  }
+
+  DenseMapBase(DenseMapBase &&other) : DenseMapBase() { this->swap(other); }
+
+  template <typename InputIt>
+  DenseMapBase(const InputIt &I, const InputIt &E)
+      : DenseMapBase(std::distance(I, E)) {
+    this->insert(I, E);
+  }
+
+  template <typename RangeT>
+  DenseMapBase(llvm::from_range_t, const RangeT &Range)
+      : DenseMapBase(adl_begin(Range), adl_end(Range)) {}
+
+  DenseMapBase(std::initializer_list<value_type> Vals)
+      : DenseMapBase(Vals.begin(), Vals.end()) {}
+
+  ~DenseMapBase() {
+    this->destroyAll();
+    Storage.deallocateBuckets();
+  }
+
+  DenseMapBase &operator=(const DenseMapBase &other) {
+    if (&other != this)
+      this->copyFrom(other);
+    return *this;
+  }
+
+  DenseMapBase &operator=(DenseMapBase &&other) {
+    this->destroyAll();
+    Storage.deallocateBuckets();
+    this->initWithExactBucketCount(0);
+    this->swap(other);
+    return *this;
+  }
 
 protected:
-  DenseMapBase() = default;
+  StorageT Storage;
+
+  struct ExactBucketCount {};
+
+  using Rep = llvm::densemap::detail::StorageRep<BucketT>;
+
+  DenseMapBase(unsigned NumBuckets, ExactBucketCount) {
+    initWithExactBucketCount(NumBuckets);
+  }
+
+  void initWithExactBucketCount(unsigned NewNumBuckets) {
+    if (Storage.allocateBuckets(NewNumBuckets))
+      initEmpty();
+    else
+      setNumEntries(0);
+  }
 
   void destroyAll() {
+    // No need to iterate through the buckets if the bucket is trivially
+    // destructible.
+    if constexpr (std::is_trivially_destructible_v<BucketT>)
+      return;
+
     if (getNumBuckets() == 0) // Nothing to do.
       return;
 
-    const KeyT EmptyKey = getEmptyKey(), TombstoneKey = getTombstoneKey();
-    for (BucketT *P = getBuckets(), *E = getBucketsEnd(); P != E; ++P) {
-      if (!KeyInfoT::isEqual(P->getFirst(), EmptyKey) &&
-          !KeyInfoT::isEqual(P->getFirst(), TombstoneKey))
-        P->getSecond().~ValueT();
-      P->getFirst().~KeyT();
-    }
+    BucketT *B = getBuckets();
+    const UsedT *U = getUsed();
+    const unsigned E = getNumBuckets();
+    llvm::densemap::detail::forEachUsed(U, E, [&](unsigned I) {
+      B[I].getSecond().~ValueT();
+      B[I].getFirst().~KeyT();
+    });
   }
 
   void initEmpty() {
     setNumEntries(0);
-    setNumTombstones(0);
 
     assert((getNumBuckets() & (getNumBuckets() - 1)) == 0 &&
            "# initial buckets must be a power of two!");
-    const KeyT EmptyKey = getEmptyKey();
-    for (BucketT *B = getBuckets(), *E = getBucketsEnd(); B != E; ++B)
-      ::new (&B->getFirst()) KeyT(EmptyKey);
+    if (getNumBuckets())
+      llvm::densemap::detail::clearUsed(getUsed(), getNumBuckets());
   }
 
   /// Returns the number of buckets to allocate to ensure that the DenseMap can
@@ -398,134 +975,180 @@ protected:
     // Ensure that "NumEntries * 4 < NumBuckets * 3"
     if (NumEntries == 0)
       return 0;
-    // +1 is required because of the strict equality.
-    // For example if NumEntries is 48, we need to return 401.
+    // +1 is required because of the strict inequality.
+    // For example, if NumEntries is 48, we need to return 128.
     return NextPowerOf2(NumEntries * 4 / 3 + 1);
   }
 
-  void moveFromOldBuckets(BucketT *OldBucketsBegin, BucketT *OldBucketsEnd) {
-    initEmpty();
-
-    // Insert all the old elements.
-    const KeyT EmptyKey = getEmptyKey();
-    const KeyT TombstoneKey = getTombstoneKey();
-    for (BucketT *B = OldBucketsBegin, *E = OldBucketsEnd; B != E; ++B) {
-      if (!KeyInfoT::isEqual(B->getFirst(), EmptyKey) &&
-          !KeyInfoT::isEqual(B->getFirst(), TombstoneKey)) {
-        // Insert the key/value into the new table.
-        BucketT *DestBucket;
-        bool FoundVal = LookupBucketFor(B->getFirst(), DestBucket);
-        (void)FoundVal; // silence warning.
-        assert(!FoundVal && "Key already in new map?");
-        DestBucket->getFirst() = std::move(B->getFirst());
-        ::new (&DestBucket->getSecond()) ValueT(std::move(B->getSecond()));
-        incrementNumEntries();
-
-        // Free the value.
-        B->getSecond().~ValueT();
-      }
-      B->getFirst().~KeyT();
-    }
+  static constexpr llvm::densemap::detail::BucketHasher hasher() {
+    return llvm::densemap::detail::hasherFor<KeyT, KeyInfoT>();
   }
 
-  template <typename OtherBaseT>
-  void copyFrom(
-      const DenseMapBase<OtherBaseT, KeyT, ValueT, KeyInfoT, BucketT> &other) {
+  // Move key/value from Other to *this.
+  // Other is left in a valid but empty state.
+  LLVM_ATTRIBUTE_NOINLINE void moveFrom(DenseMapBase &Other) {
+    assert(getNumEntries() == 0 && "moveFrom requires an empty destination");
+    BucketT *OtherB = Other.getBuckets();
+    UsedT *OtherU = Other.getUsed();
+    const unsigned E = Other.getNumBuckets();
+    UsedT *U = getUsed();
+    BucketT *B = getBuckets();
+    const unsigned Mask = getNumBuckets() - 1;
+    llvm::densemap::detail::forEachUsed(OtherU, E, [&](unsigned I) {
+      // Find the first empty slot on this key's probe chain; there is no equal
+      // key in the destination, so nothing to compare against.
+      unsigned BucketNo = KeyInfoT::getHashValue(OtherB[I].getFirst()) & Mask;
+      while (llvm::densemap::detail::used(U, BucketNo))
+        BucketNo = (BucketNo + 1) & Mask;
+      BucketT *DestBucket = B + BucketNo;
+      ::new (&DestBucket->getFirst()) KeyT(std::move(OtherB[I].getFirst()));
+      ::new (&DestBucket->getSecond()) ValueT(std::move(OtherB[I].getSecond()));
+      llvm::densemap::detail::setUsed(U, BucketNo);
+
+      // Free the moved-out key/value.
+      OtherB[I].getSecond().~ValueT();
+      OtherB[I].getFirst().~KeyT();
+    });
+    setNumEntries(Other.getNumEntries());
+    Other.Storage.kill();
+  }
+
+  LLVM_ATTRIBUTE_NOINLINE void copyFrom(const DenseMapBase &other) {
+    this->destroyAll();
+    Storage.deallocateBuckets();
+    setNumEntries(0);
+    if (!Storage.allocateBuckets(other.getNumBuckets())) {
+      // The bucket list is empty.  No work to do.
+      return;
+    }
+
     assert(&other != this);
     assert(getNumBuckets() == other.getNumBuckets());
 
     setNumEntries(other.getNumEntries());
-    setNumTombstones(other.getNumTombstones());
 
     BucketT *Buckets = getBuckets();
     const BucketT *OtherBuckets = other.getBuckets();
-    const size_t NumBuckets = getNumBuckets();
-    if constexpr (std::is_trivially_copyable_v<KeyT> &&
-                  std::is_trivially_copyable_v<ValueT>) {
+    const unsigned NumBuckets = getNumBuckets();
+    UsedT *U = getUsed();
+    const UsedT *OtherU = other.getUsed();
+    std::memcpy(U, OtherU,
+                llvm::densemap::detail::usedWords(NumBuckets) * sizeof(UsedT));
+    if constexpr (densemap::detail::isRelocatableBucket<BucketT>) {
       memcpy(reinterpret_cast<void *>(Buckets), OtherBuckets,
              NumBuckets * sizeof(BucketT));
     } else {
-      const KeyT EmptyKey = getEmptyKey();
-      const KeyT TombstoneKey = getTombstoneKey();
-      for (size_t I = 0; I < NumBuckets; ++I) {
+      llvm::densemap::detail::forEachUsed(U, NumBuckets, [&](unsigned I) {
         ::new (&Buckets[I].getFirst()) KeyT(OtherBuckets[I].getFirst());
-        if (!KeyInfoT::isEqual(Buckets[I].getFirst(), EmptyKey) &&
-            !KeyInfoT::isEqual(Buckets[I].getFirst(), TombstoneKey))
-          ::new (&Buckets[I].getSecond()) ValueT(OtherBuckets[I].getSecond());
-      }
+        ::new (&Buckets[I].getSecond()) ValueT(OtherBuckets[I].getSecond());
+      });
     }
   }
-
-  static unsigned getHashValue(const KeyT &Val) {
-    return KeyInfoT::getHashValue(Val);
-  }
-
-  template <typename LookupKeyT>
-  static unsigned getHashValue(const LookupKeyT &Val) {
-    return KeyInfoT::getHashValue(Val);
-  }
-
-  static const KeyT getEmptyKey() {
-    static_assert(std::is_base_of_v<DenseMapBase, DerivedT>,
-                  "Must pass the derived type to this template!");
-    return KeyInfoT::getEmptyKey();
-  }
-
-  static const KeyT getTombstoneKey() { return KeyInfoT::getTombstoneKey(); }
 
 private:
-  iterator makeIterator(BucketT *P, BucketT *E, DebugEpochBase &Epoch,
-                        bool NoAdvance = false) {
-    if (shouldReverseIterate<KeyT>()) {
-      BucketT *B = P == getBucketsEnd() ? getBuckets() : P + 1;
-      return iterator(B, E, Epoch, NoAdvance);
+  // ValueHandleBase caches pointers into the bucket array, so it needs the
+  // callback erase below to fix them up as entries shift. It is the only
+  // intended caller; do not add new ones.
+  friend class ValueHandleBase;
+
+  /// Erase the entry at \p TheBucket and close the resulting hole via Knuth
+  /// TAOCP 6.4 Algorithm R. For callers that cache pointers into the bucket
+  /// array, call \p OnMoved per shifted bucket.
+  template <typename OnMovedT>
+  LLVM_ATTRIBUTE_NOINLINE void eraseFromFilledBucket(BucketT *TheBucket,
+                                                     OnMovedT &&OnMoved) {
+    incrementEpoch();
+    TheBucket->getSecond().~ValueT();
+    TheBucket->getFirst().~KeyT();
+    decrementNumEntries();
+
+    BucketT *BucketsPtr = getBuckets();
+    UsedT *U = getUsed();
+    const unsigned Mask = getNumBuckets() - 1;
+    unsigned I = TheBucket - BucketsPtr;
+    unsigned J = I;
+    while (true) {
+      J = (J + 1) & Mask;
+      BucketT &BJ = BucketsPtr[J];
+      if (!llvm::densemap::detail::used(U, J))
+        break;
+      auto Ideal = KeyInfoT::getHashValue(BJ.getFirst());
+      // If the hole (I) lies on the linear-probe chain from the home bucket
+      // (Ideal) to J, shift J into the hole and make J the new hole.
+      if (((I - Ideal) & Mask) < ((J - Ideal) & Mask)) {
+        BucketT &BI = BucketsPtr[I];
+        ::new (&BI.getFirst()) KeyT(std::move(BJ.getFirst()));
+        ::new (&BI.getSecond()) ValueT(std::move(BJ.getSecond()));
+        BJ.getSecond().~ValueT();
+        BJ.getFirst().~KeyT();
+        OnMoved(BI);
+        I = J;
+      }
     }
-    return iterator(P, E, Epoch, NoAdvance);
+    llvm::densemap::detail::unsetUsed(U, I);
   }
 
-  const_iterator makeConstIterator(const BucketT *P, const BucketT *E,
-                                   const DebugEpochBase &Epoch,
-                                   const bool NoAdvance = false) const {
-    if (shouldReverseIterate<KeyT>()) {
-      const BucketT *B = P == getBucketsEnd() ? getBuckets() : P + 1;
-      return const_iterator(B, E, Epoch, NoAdvance);
-    }
-    return const_iterator(P, E, Epoch, NoAdvance);
+  /// Erase \p Val and close the resulting hole by potentially shifting other
+  /// entries into it. For callers that cache pointers into the bucket array,
+  /// call \p OnMoved per shifted bucket.
+  template <typename OnMovedT> bool erase(const KeyT &Val, OnMovedT &&OnMoved) {
+    BucketT *TheBucket = doFind(Val);
+    if (!TheBucket)
+      return false;
+    eraseFromFilledBucket(TheBucket, std::forward<OnMovedT>(OnMoved));
+    return true;
   }
 
-  unsigned getNumEntries() const {
-    return static_cast<const DerivedT *>(this)->getNumEntries();
+  template <typename KeyArgT, typename... Ts>
+  std::pair<BucketT *, bool> lookupOrInsertIntoBucket(KeyArgT &&Key,
+                                                      Ts &&...Args) {
+    BucketT *TheBucket = nullptr;
+    if (LookupBucketFor(Key, TheBucket))
+      return {TheBucket, false}; // Already in the map.
+
+    // Otherwise, insert the new element.
+    TheBucket = findBucketForInsertion(Key, TheBucket);
+    ::new (&TheBucket->getFirst()) KeyT(std::forward<KeyArgT>(Key));
+    ::new (&TheBucket->getSecond()) ValueT(std::forward<Ts>(Args)...);
+    return {TheBucket, true};
   }
 
-  void setNumEntries(unsigned Num) {
-    static_cast<DerivedT *>(this)->setNumEntries(Num);
+  template <typename KeyArgT, typename... Ts>
+  std::pair<iterator, bool> try_emplace_impl(KeyArgT &&Key, Ts &&...Args) {
+    auto [Bucket, Inserted] = lookupOrInsertIntoBucket(
+        std::forward<KeyArgT>(Key), std::forward<Ts>(Args)...);
+    return {makeIterator(Bucket), Inserted};
   }
+
+  iterator makeIterator(BucketT *TheBucket) {
+    return iterator::makeIterator(TheBucket, getBuckets(), getUsed(),
+                                  getNumBuckets(), *this);
+  }
+
+  const_iterator makeConstIterator(const BucketT *TheBucket) const {
+    return const_iterator::makeIterator(TheBucket, getBuckets(), getUsed(),
+                                        getNumBuckets(), *this);
+  }
+
+  unsigned getNumEntries() const { return Storage.getNumEntries(); }
+
+  void setNumEntries(unsigned Num) { Storage.setNumEntries(Num); }
 
   void incrementNumEntries() { setNumEntries(getNumEntries() + 1); }
 
   void decrementNumEntries() { setNumEntries(getNumEntries() - 1); }
 
-  unsigned getNumTombstones() const {
-    return static_cast<const DerivedT *>(this)->getNumTombstones();
-  }
+  const BucketT *getBuckets() const { return Storage.getBuckets(); }
 
-  void setNumTombstones(unsigned Num) {
-    static_cast<DerivedT *>(this)->setNumTombstones(Num);
-  }
+  BucketT *getBuckets() { return Storage.getBuckets(); }
 
-  void incrementNumTombstones() { setNumTombstones(getNumTombstones() + 1); }
+  Rep getRep() const { return Storage.getRep(); }
 
-  void decrementNumTombstones() { setNumTombstones(getNumTombstones() - 1); }
+  const UsedT *getUsed() const { return Storage.getUsed(); }
 
-  const BucketT *getBuckets() const {
-    return static_cast<const DerivedT *>(this)->getBuckets();
-  }
+  UsedT *getUsed() { return Storage.getUsed(); }
 
-  BucketT *getBuckets() { return static_cast<DerivedT *>(this)->getBuckets(); }
-
-  unsigned getNumBuckets() const {
-    return static_cast<const DerivedT *>(this)->getNumBuckets();
-  }
+  unsigned getNumBuckets() const { return Storage.getNumBuckets(); }
 
   BucketT *getBucketsEnd() { return getBuckets() + getNumBuckets(); }
 
@@ -533,148 +1156,107 @@ private:
     return getBuckets() + getNumBuckets();
   }
 
-  void grow(unsigned AtLeast) { static_cast<DerivedT *>(this)->grow(AtLeast); }
-
-  void shrink_and_clear() { static_cast<DerivedT *>(this)->shrink_and_clear(); }
-
-  template <typename KeyArg, typename... ValueArgs>
-  BucketT *InsertIntoBucket(BucketT *TheBucket, KeyArg &&Key,
-                            ValueArgs &&...Values) {
-    TheBucket = InsertIntoBucketImpl(Key, TheBucket);
-
-    TheBucket->getFirst() = std::forward<KeyArg>(Key);
-    ::new (&TheBucket->getSecond()) ValueT(std::forward<ValueArgs>(Values)...);
-    return TheBucket;
+  LLVM_ATTRIBUTE_NOINLINE void grow(unsigned MinNumBuckets) {
+    assert((MinNumBuckets == 0 || isPowerOf2_32(MinNumBuckets)) &&
+           "bucket count must be zero or a power of two");
+    if constexpr (llvm::densemap::detail::isRelocatableBucket<BucketT>) {
+      Storage.grow(MinNumBuckets, hasher());
+    } else {
+      unsigned NumBuckets = StorageT::roundUpNumBuckets(MinNumBuckets);
+      DenseMapBase Tmp(NumBuckets, ExactBucketCount{});
+      Tmp.moveFrom(*this);
+      if (Storage.maybeMoveFast(std::move(Tmp.Storage)))
+        return;
+      initWithExactBucketCount(NumBuckets);
+      moveFrom(Tmp);
+    }
   }
 
   template <typename LookupKeyT>
-  BucketT *InsertIntoBucketWithLookup(BucketT *TheBucket, KeyT &&Key,
-                                      ValueT &&Value, LookupKeyT &Lookup) {
-    TheBucket = InsertIntoBucketImpl(Lookup, TheBucket);
-
-    TheBucket->getFirst() = std::move(Key);
-    ::new (&TheBucket->getSecond()) ValueT(std::move(Value));
-    return TheBucket;
-  }
-
-  template <typename LookupKeyT>
-  BucketT *InsertIntoBucketImpl(const LookupKeyT &Lookup, BucketT *TheBucket) {
+  BucketT *findBucketForInsertion(const LookupKeyT &Lookup,
+                                  BucketT *TheBucket) {
     incrementEpoch();
 
-    // If the load of the hash table is more than 3/4, or if fewer than 1/8 of
-    // the buckets are empty (meaning that many are filled with tombstones),
-    // grow the table.
-    //
-    // The later case is tricky.  For example, if we had one empty bucket with
-    // tons of tombstones, failing lookups (e.g. for insertion) would have to
-    // probe almost the entire table until it found the empty bucket.  If the
-    // table completely filled with tombstones, no lookup would ever succeed,
-    // causing infinite loops in lookup.
+    // Grow the table if the load factor would exceed 3/4 after insertion.
+    // Linear probing with gap-closing deletion (Knuth Algorithm R) keeps
+    // every chain compact and bounded by the table's empty-bucket count,
+    // so no tombstone-driven resize is needed.
     unsigned NewNumEntries = getNumEntries() + 1;
     unsigned NumBuckets = getNumBuckets();
     if (LLVM_UNLIKELY(NewNumEntries * 4 >= NumBuckets * 3)) {
       this->grow(NumBuckets * 2);
       LookupBucketFor(Lookup, TheBucket);
-      NumBuckets = getNumBuckets();
-    } else if (LLVM_UNLIKELY(NumBuckets -
-                                 (NewNumEntries + getNumTombstones()) <=
-                             NumBuckets / 8)) {
-      this->grow(NumBuckets);
-      LookupBucketFor(Lookup, TheBucket);
     }
     assert(TheBucket);
+
+    // Mark used. The caller will placement-construct the raw key/value.
+    llvm::densemap::detail::setUsed(getUsed(), TheBucket - getBuckets());
 
     // Only update the state after we've grown our bucket space appropriately
     // so that when growing buckets we have self-consistent entry count.
     incrementNumEntries();
-
-    // If we are writing over a tombstone, remember this.
-    const KeyT EmptyKey = getEmptyKey();
-    if (!KeyInfoT::isEqual(TheBucket->getFirst(), EmptyKey))
-      decrementNumTombstones();
-
     return TheBucket;
-  }
-
-  template <typename LookupKeyT> BucketT *doFind(const LookupKeyT &Val) {
-    BucketT *BucketsPtr = getBuckets();
-    const unsigned NumBuckets = getNumBuckets();
-    if (NumBuckets == 0)
-      return nullptr;
-
-    const KeyT EmptyKey = getEmptyKey();
-    unsigned BucketNo = getHashValue(Val) & (NumBuckets - 1);
-    unsigned ProbeAmt = 1;
-    while (true) {
-      BucketT *Bucket = BucketsPtr + BucketNo;
-      if (LLVM_LIKELY(KeyInfoT::isEqual(Val, Bucket->getFirst())))
-        return Bucket;
-      if (LLVM_LIKELY(KeyInfoT::isEqual(Bucket->getFirst(), EmptyKey)))
-        return nullptr;
-
-      // Otherwise, it's a hash collision or a tombstone, continue quadratic
-      // probing.
-      BucketNo += ProbeAmt++;
-      BucketNo &= NumBuckets - 1;
-    }
   }
 
   template <typename LookupKeyT>
   const BucketT *doFind(const LookupKeyT &Val) const {
-    return const_cast<DenseMapBase *>(this)->doFind(Val); // NOLINT
+    if (empty())
+      return nullptr;
+    auto [BucketsPtr, U, NumBuckets] = getRep();
+
+    const unsigned Mask = NumBuckets - 1;
+    unsigned BucketNo = KeyInfoT::getHashValue(Val) & Mask;
+    while (true) {
+      // An empty bucket terminates the probe: the key isn't in the map.
+      if (LLVM_LIKELY(!llvm::densemap::detail::used(U, BucketNo)))
+        return nullptr;
+      const BucketT *Bucket = BucketsPtr + BucketNo;
+      if (LLVM_LIKELY(KeyInfoT::isEqual(Val, Bucket->getFirst())))
+        return Bucket;
+
+      // Hash collision: continue linear probing.
+      BucketNo = (BucketNo + 1) & Mask;
+    }
   }
 
-  /// LookupBucketFor - Lookup the appropriate bucket for Val, returning it in
-  /// FoundBucket.  If the bucket contains the key and a value, this returns
-  /// true, otherwise it returns a bucket with an empty marker or tombstone and
-  /// returns false.
+  template <typename LookupKeyT> BucketT *doFind(const LookupKeyT &Val) {
+    return const_cast<BucketT *>(
+        static_cast<const DenseMapBase *>(this)->doFind(Val));
+  }
+
+  /// Lookup the appropriate bucket for Val, returning it in FoundBucket. If the
+  /// bucket contains the key and a value, this returns true, otherwise it
+  /// returns a bucket with an empty marker and returns false.
   template <typename LookupKeyT>
   bool LookupBucketFor(const LookupKeyT &Val, BucketT *&FoundBucket) {
-    BucketT *BucketsPtr = getBuckets();
-    const unsigned NumBuckets = getNumBuckets();
-
+    auto [CBuckets, U, NumBuckets] = getRep();
     if (NumBuckets == 0) {
       FoundBucket = nullptr;
       return false;
     }
+    // getRep() yields const pointers; this object is non-const, so recovering
+    // a mutable bucket pointer is safe (mirrors the non-const getBuckets()).
+    BucketT *BucketsPtr = const_cast<BucketT *>(CBuckets);
 
-    // FoundTombstone - Keep track of whether we find a tombstone while probing.
-    BucketT *FoundTombstone = nullptr;
-    const KeyT EmptyKey = getEmptyKey();
-    const KeyT TombstoneKey = getTombstoneKey();
-    assert(!KeyInfoT::isEqual(Val, EmptyKey) &&
-           !KeyInfoT::isEqual(Val, TombstoneKey) &&
-           "Empty/Tombstone value shouldn't be inserted into map!");
-
-    unsigned BucketNo = getHashValue(Val) & (NumBuckets - 1);
-    unsigned ProbeAmt = 1;
+    const unsigned Mask = NumBuckets - 1;
+    unsigned BucketNo = KeyInfoT::getHashValue(Val) & Mask;
     while (true) {
       BucketT *ThisBucket = BucketsPtr + BucketNo;
+      // If we found an empty bucket, the key doesn't exist in the set.
+      // Return it as the insertion point.
+      if (LLVM_LIKELY(!llvm::densemap::detail::used(U, BucketNo))) {
+        FoundBucket = ThisBucket;
+        return false;
+      }
+
       // Found Val's bucket?  If so, return it.
       if (LLVM_LIKELY(KeyInfoT::isEqual(Val, ThisBucket->getFirst()))) {
         FoundBucket = ThisBucket;
         return true;
       }
 
-      // If we found an empty bucket, the key doesn't exist in the set.
-      // Insert it and return the default value.
-      if (LLVM_LIKELY(KeyInfoT::isEqual(ThisBucket->getFirst(), EmptyKey))) {
-        // If we've already seen a tombstone while probing, fill it in instead
-        // of the empty bucket we eventually probed to.
-        FoundBucket = FoundTombstone ? FoundTombstone : ThisBucket;
-        return false;
-      }
-
-      // If this is a tombstone, remember it.  If Val ends up not in the map, we
-      // prefer to return it than something that would require more probing.
-      if (KeyInfoT::isEqual(ThisBucket->getFirst(), TombstoneKey) &&
-          !FoundTombstone)
-        FoundTombstone = ThisBucket; // Remember the first tombstone found.
-
-      // Otherwise, it's a hash collision or a tombstone, continue quadratic
-      // probing.
-      BucketNo += ProbeAmt++;
-      BucketNo &= (NumBuckets - 1);
+      // Hash collision: continue linear probing.
+      BucketNo = (BucketNo + 1) & Mask;
     }
   }
 
@@ -683,7 +1265,9 @@ public:
   /// This is just the raw memory used by DenseMap.
   /// If entries are pointers to objects, the size of the referenced objects
   /// are not included.
-  size_t getMemorySize() const { return getNumBuckets() * sizeof(BucketT); }
+  [[nodiscard]] size_t getMemorySize() const {
+    return llvm::densemap::detail::allocBytes<BucketT>(getNumBuckets());
+  }
 };
 
 /// Equality comparison for DenseMap.
@@ -692,11 +1276,11 @@ public:
 /// is also in RHS, and that no additional pairs are in RHS.
 /// Equivalent to N calls to RHS.find and N value comparisons. Amortized
 /// complexity is linear, worst case is O(N^2) (if every hash collides).
-template <typename DerivedT, typename KeyT, typename ValueT, typename KeyInfoT,
-          typename BucketT>
-bool operator==(
-    const DenseMapBase<DerivedT, KeyT, ValueT, KeyInfoT, BucketT> &LHS,
-    const DenseMapBase<DerivedT, KeyT, ValueT, KeyInfoT, BucketT> &RHS) {
+template <typename Storage1T, typename Storage2T, typename KeyT,
+          typename ValueT, typename KeyInfoT, typename BucketT>
+[[nodiscard]] bool operator==(
+    const DenseMapBase<Storage1T, KeyT, ValueT, KeyInfoT, BucketT> &LHS,
+    const DenseMapBase<Storage2T, KeyT, ValueT, KeyInfoT, BucketT> &RHS) {
   if (LHS.size() != RHS.size())
     return false;
 
@@ -712,166 +1296,24 @@ bool operator==(
 /// Inequality comparison for DenseMap.
 ///
 /// Equivalent to !(LHS == RHS). See operator== for performance notes.
-template <typename DerivedT, typename KeyT, typename ValueT, typename KeyInfoT,
-          typename BucketT>
-bool operator!=(
-    const DenseMapBase<DerivedT, KeyT, ValueT, KeyInfoT, BucketT> &LHS,
-    const DenseMapBase<DerivedT, KeyT, ValueT, KeyInfoT, BucketT> &RHS) {
+template <typename Storage1T, typename Storage2T, typename KeyT,
+          typename ValueT, typename KeyInfoT, typename BucketT>
+[[nodiscard]] bool operator!=(
+    const DenseMapBase<Storage1T, KeyT, ValueT, KeyInfoT, BucketT> &LHS,
+    const DenseMapBase<Storage2T, KeyT, ValueT, KeyInfoT, BucketT> &RHS) {
   return !(LHS == RHS);
 }
 
 template <typename KeyT, typename ValueT,
           typename KeyInfoT = DenseMapInfo<KeyT>,
           typename BucketT = llvm::detail::DenseMapPair<KeyT, ValueT>>
-class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
+class DenseMap : public DenseMapBase<densemap::detail::DenseMapStorage<BucketT>,
                                      KeyT, ValueT, KeyInfoT, BucketT> {
-  friend class DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
-
-  // Lift some types from the dependent base class into this class for
-  // simplicity of referring to them.
-  using BaseT = DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
-
-  BucketT *Buckets;
-  unsigned NumEntries;
-  unsigned NumTombstones;
-  unsigned NumBuckets;
+  using BaseT = DenseMapBase<densemap::detail::DenseMapStorage<BucketT>, KeyT,
+                             ValueT, KeyInfoT, BucketT>;
 
 public:
-  /// Create a DenseMap with an optional \p InitialReserve that guarantee that
-  /// this number of elements can be inserted in the map without grow()
-  explicit DenseMap(unsigned InitialReserve = 0) { init(InitialReserve); }
-
-  DenseMap(const DenseMap &other) : BaseT() {
-    init(0);
-    copyFrom(other);
-  }
-
-  DenseMap(DenseMap &&other) : BaseT() {
-    init(0);
-    swap(other);
-  }
-
-  template <typename InputIt> DenseMap(const InputIt &I, const InputIt &E) {
-    init(std::distance(I, E));
-    this->insert(I, E);
-  }
-
-  DenseMap(std::initializer_list<typename BaseT::value_type> Vals) {
-    init(Vals.size());
-    this->insert(Vals.begin(), Vals.end());
-  }
-
-  ~DenseMap() {
-    this->destroyAll();
-    deallocate_buffer(Buckets, sizeof(BucketT) * NumBuckets, alignof(BucketT));
-  }
-
-  void swap(DenseMap &RHS) {
-    this->incrementEpoch();
-    RHS.incrementEpoch();
-    std::swap(Buckets, RHS.Buckets);
-    std::swap(NumEntries, RHS.NumEntries);
-    std::swap(NumTombstones, RHS.NumTombstones);
-    std::swap(NumBuckets, RHS.NumBuckets);
-  }
-
-  DenseMap &operator=(const DenseMap &other) {
-    if (&other != this)
-      copyFrom(other);
-    return *this;
-  }
-
-  DenseMap &operator=(DenseMap &&other) {
-    this->destroyAll();
-    deallocate_buffer(Buckets, sizeof(BucketT) * NumBuckets, alignof(BucketT));
-    init(0);
-    swap(other);
-    return *this;
-  }
-
-  void copyFrom(const DenseMap &other) {
-    this->destroyAll();
-    deallocate_buffer(Buckets, sizeof(BucketT) * NumBuckets, alignof(BucketT));
-    if (allocateBuckets(other.NumBuckets)) {
-      this->BaseT::copyFrom(other);
-    } else {
-      NumEntries = 0;
-      NumTombstones = 0;
-    }
-  }
-
-  void init(unsigned InitNumEntries) {
-    auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
-    if (allocateBuckets(InitBuckets)) {
-      this->BaseT::initEmpty();
-    } else {
-      NumEntries = 0;
-      NumTombstones = 0;
-    }
-  }
-
-  void grow(unsigned AtLeast) {
-    unsigned OldNumBuckets = NumBuckets;
-    BucketT *OldBuckets = Buckets;
-
-    allocateBuckets(std::max<unsigned>(
-        64, static_cast<unsigned>(NextPowerOf2(AtLeast - 1))));
-    assert(Buckets);
-    if (!OldBuckets) {
-      this->BaseT::initEmpty();
-      return;
-    }
-
-    this->moveFromOldBuckets(OldBuckets, OldBuckets + OldNumBuckets);
-
-    // Free the old table.
-    deallocate_buffer(OldBuckets, sizeof(BucketT) * OldNumBuckets,
-                      alignof(BucketT));
-  }
-
-  void shrink_and_clear() {
-    unsigned OldNumBuckets = NumBuckets;
-    unsigned OldNumEntries = NumEntries;
-    this->destroyAll();
-
-    // Reduce the number of buckets.
-    unsigned NewNumBuckets = 0;
-    if (OldNumEntries)
-      NewNumBuckets = std::max(64, 1 << (Log2_32_Ceil(OldNumEntries) + 1));
-    if (NewNumBuckets == NumBuckets) {
-      this->BaseT::initEmpty();
-      return;
-    }
-
-    deallocate_buffer(Buckets, sizeof(BucketT) * OldNumBuckets,
-                      alignof(BucketT));
-    init(NewNumBuckets);
-  }
-
-private:
-  unsigned getNumEntries() const { return NumEntries; }
-
-  void setNumEntries(unsigned Num) { NumEntries = Num; }
-
-  unsigned getNumTombstones() const { return NumTombstones; }
-
-  void setNumTombstones(unsigned Num) { NumTombstones = Num; }
-
-  BucketT *getBuckets() const { return Buckets; }
-
-  unsigned getNumBuckets() const { return NumBuckets; }
-
-  bool allocateBuckets(unsigned Num) {
-    NumBuckets = Num;
-    if (NumBuckets == 0) {
-      Buckets = nullptr;
-      return false;
-    }
-
-    Buckets = static_cast<BucketT *>(
-        allocate_buffer(sizeof(BucketT) * NumBuckets, alignof(BucketT)));
-    return true;
-  }
+  using BaseT::BaseT;
 };
 
 template <typename KeyT, typename ValueT, unsigned InlineBuckets = 4,
@@ -879,309 +1321,14 @@ template <typename KeyT, typename ValueT, unsigned InlineBuckets = 4,
           typename BucketT = llvm::detail::DenseMapPair<KeyT, ValueT>>
 class SmallDenseMap
     : public DenseMapBase<
-          SmallDenseMap<KeyT, ValueT, InlineBuckets, KeyInfoT, BucketT>, KeyT,
+          densemap::detail::SmallDenseMapStorage<BucketT, InlineBuckets>, KeyT,
           ValueT, KeyInfoT, BucketT> {
-  friend class DenseMapBase<SmallDenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
-
-  // Lift some types from the dependent base class into this class for
-  // simplicity of referring to them.
-  using BaseT = DenseMapBase<SmallDenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
-
-  static_assert(isPowerOf2_64(InlineBuckets),
-                "InlineBuckets must be a power of 2.");
-
-  unsigned Small : 1;
-  unsigned NumEntries : 31;
-  unsigned NumTombstones;
-
-  struct LargeRep {
-    BucketT *Buckets;
-    unsigned NumBuckets;
-  };
-
-  /// A "union" of an inline bucket array and the struct representing
-  /// a large bucket. This union will be discriminated by the 'Small' bit.
-  AlignedCharArrayUnion<BucketT[InlineBuckets], LargeRep> storage;
+  using BaseT = DenseMapBase<
+      densemap::detail::SmallDenseMapStorage<BucketT, InlineBuckets>, KeyT,
+      ValueT, KeyInfoT, BucketT>;
 
 public:
-  explicit SmallDenseMap(unsigned NumInitBuckets = 0) {
-    if (NumInitBuckets > InlineBuckets)
-      NumInitBuckets = llvm::bit_ceil(NumInitBuckets);
-    init(NumInitBuckets);
-  }
-
-  SmallDenseMap(const SmallDenseMap &other) : BaseT() {
-    init(0);
-    copyFrom(other);
-  }
-
-  SmallDenseMap(SmallDenseMap &&other) : BaseT() {
-    init(0);
-    swap(other);
-  }
-
-  template <typename InputIt>
-  SmallDenseMap(const InputIt &I, const InputIt &E) {
-    init(NextPowerOf2(std::distance(I, E)));
-    this->insert(I, E);
-  }
-
-  SmallDenseMap(std::initializer_list<typename BaseT::value_type> Vals)
-      : SmallDenseMap(Vals.begin(), Vals.end()) {}
-
-  ~SmallDenseMap() {
-    this->destroyAll();
-    deallocateBuckets();
-  }
-
-  void swap(SmallDenseMap &RHS) {
-    unsigned TmpNumEntries = RHS.NumEntries;
-    RHS.NumEntries = NumEntries;
-    NumEntries = TmpNumEntries;
-    std::swap(NumTombstones, RHS.NumTombstones);
-
-    const KeyT EmptyKey = this->getEmptyKey();
-    const KeyT TombstoneKey = this->getTombstoneKey();
-    if (Small && RHS.Small) {
-      // If we're swapping inline bucket arrays, we have to cope with some of
-      // the tricky bits of DenseMap's storage system: the buckets are not
-      // fully initialized. Thus we swap every key, but we may have
-      // a one-directional move of the value.
-      for (unsigned i = 0, e = InlineBuckets; i != e; ++i) {
-        BucketT *LHSB = &getInlineBuckets()[i],
-                *RHSB = &RHS.getInlineBuckets()[i];
-        bool hasLHSValue = (!KeyInfoT::isEqual(LHSB->getFirst(), EmptyKey) &&
-                            !KeyInfoT::isEqual(LHSB->getFirst(), TombstoneKey));
-        bool hasRHSValue = (!KeyInfoT::isEqual(RHSB->getFirst(), EmptyKey) &&
-                            !KeyInfoT::isEqual(RHSB->getFirst(), TombstoneKey));
-        if (hasLHSValue && hasRHSValue) {
-          // Swap together if we can...
-          std::swap(*LHSB, *RHSB);
-          continue;
-        }
-        // Swap separately and handle any asymmetry.
-        std::swap(LHSB->getFirst(), RHSB->getFirst());
-        if (hasLHSValue) {
-          ::new (&RHSB->getSecond()) ValueT(std::move(LHSB->getSecond()));
-          LHSB->getSecond().~ValueT();
-        } else if (hasRHSValue) {
-          ::new (&LHSB->getSecond()) ValueT(std::move(RHSB->getSecond()));
-          RHSB->getSecond().~ValueT();
-        }
-      }
-      return;
-    }
-    if (!Small && !RHS.Small) {
-      std::swap(getLargeRep()->Buckets, RHS.getLargeRep()->Buckets);
-      std::swap(getLargeRep()->NumBuckets, RHS.getLargeRep()->NumBuckets);
-      return;
-    }
-
-    SmallDenseMap &SmallSide = Small ? *this : RHS;
-    SmallDenseMap &LargeSide = Small ? RHS : *this;
-
-    // First stash the large side's rep and move the small side across.
-    LargeRep TmpRep = std::move(*LargeSide.getLargeRep());
-    LargeSide.getLargeRep()->~LargeRep();
-    LargeSide.Small = true;
-    // This is similar to the standard move-from-old-buckets, but the bucket
-    // count hasn't actually rotated in this case. So we have to carefully
-    // move construct the keys and values into their new locations, but there
-    // is no need to re-hash things.
-    for (unsigned i = 0, e = InlineBuckets; i != e; ++i) {
-      BucketT *NewB = &LargeSide.getInlineBuckets()[i],
-              *OldB = &SmallSide.getInlineBuckets()[i];
-      ::new (&NewB->getFirst()) KeyT(std::move(OldB->getFirst()));
-      OldB->getFirst().~KeyT();
-      if (!KeyInfoT::isEqual(NewB->getFirst(), EmptyKey) &&
-          !KeyInfoT::isEqual(NewB->getFirst(), TombstoneKey)) {
-        ::new (&NewB->getSecond()) ValueT(std::move(OldB->getSecond()));
-        OldB->getSecond().~ValueT();
-      }
-    }
-
-    // The hard part of moving the small buckets across is done, just move
-    // the TmpRep into its new home.
-    SmallSide.Small = false;
-    new (SmallSide.getLargeRep()) LargeRep(std::move(TmpRep));
-  }
-
-  SmallDenseMap &operator=(const SmallDenseMap &other) {
-    if (&other != this)
-      copyFrom(other);
-    return *this;
-  }
-
-  SmallDenseMap &operator=(SmallDenseMap &&other) {
-    this->destroyAll();
-    deallocateBuckets();
-    init(0);
-    swap(other);
-    return *this;
-  }
-
-  void copyFrom(const SmallDenseMap &other) {
-    this->destroyAll();
-    deallocateBuckets();
-    Small = true;
-    if (other.getNumBuckets() > InlineBuckets) {
-      Small = false;
-      new (getLargeRep()) LargeRep(allocateBuckets(other.getNumBuckets()));
-    }
-    this->BaseT::copyFrom(other);
-  }
-
-  void init(unsigned InitBuckets) {
-    Small = true;
-    if (InitBuckets > InlineBuckets) {
-      Small = false;
-      new (getLargeRep()) LargeRep(allocateBuckets(InitBuckets));
-    }
-    this->BaseT::initEmpty();
-  }
-
-  void grow(unsigned AtLeast) {
-    if (AtLeast > InlineBuckets)
-      AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
-
-    if (Small) {
-      // First move the inline buckets into a temporary storage.
-      AlignedCharArrayUnion<BucketT[InlineBuckets]> TmpStorage;
-      BucketT *TmpBegin = reinterpret_cast<BucketT *>(&TmpStorage);
-      BucketT *TmpEnd = TmpBegin;
-
-      // Loop over the buckets, moving non-empty, non-tombstones into the
-      // temporary storage. Have the loop move the TmpEnd forward as it goes.
-      const KeyT EmptyKey = this->getEmptyKey();
-      const KeyT TombstoneKey = this->getTombstoneKey();
-      for (BucketT *P = getBuckets(), *E = P + InlineBuckets; P != E; ++P) {
-        if (!KeyInfoT::isEqual(P->getFirst(), EmptyKey) &&
-            !KeyInfoT::isEqual(P->getFirst(), TombstoneKey)) {
-          assert(size_t(TmpEnd - TmpBegin) < InlineBuckets &&
-                 "Too many inline buckets!");
-          ::new (&TmpEnd->getFirst()) KeyT(std::move(P->getFirst()));
-          ::new (&TmpEnd->getSecond()) ValueT(std::move(P->getSecond()));
-          ++TmpEnd;
-          P->getSecond().~ValueT();
-        }
-        P->getFirst().~KeyT();
-      }
-
-      // AtLeast == InlineBuckets can happen if there are many tombstones,
-      // and grow() is used to remove them. Usually we always switch to the
-      // large rep here.
-      if (AtLeast > InlineBuckets) {
-        Small = false;
-        new (getLargeRep()) LargeRep(allocateBuckets(AtLeast));
-      }
-      this->moveFromOldBuckets(TmpBegin, TmpEnd);
-      return;
-    }
-
-    LargeRep OldRep = std::move(*getLargeRep());
-    getLargeRep()->~LargeRep();
-    if (AtLeast <= InlineBuckets) {
-      Small = true;
-    } else {
-      new (getLargeRep()) LargeRep(allocateBuckets(AtLeast));
-    }
-
-    this->moveFromOldBuckets(OldRep.Buckets,
-                             OldRep.Buckets + OldRep.NumBuckets);
-
-    // Free the old table.
-    deallocate_buffer(OldRep.Buckets, sizeof(BucketT) * OldRep.NumBuckets,
-                      alignof(BucketT));
-  }
-
-  void shrink_and_clear() {
-    unsigned OldSize = this->size();
-    this->destroyAll();
-
-    // Reduce the number of buckets.
-    unsigned NewNumBuckets = 0;
-    if (OldSize) {
-      NewNumBuckets = 1 << (Log2_32_Ceil(OldSize) + 1);
-      if (NewNumBuckets > InlineBuckets && NewNumBuckets < 64u)
-        NewNumBuckets = 64;
-    }
-    if ((Small && NewNumBuckets <= InlineBuckets) ||
-        (!Small && NewNumBuckets == getLargeRep()->NumBuckets)) {
-      this->BaseT::initEmpty();
-      return;
-    }
-
-    deallocateBuckets();
-    init(NewNumBuckets);
-  }
-
-private:
-  unsigned getNumEntries() const { return NumEntries; }
-
-  void setNumEntries(unsigned Num) {
-    // NumEntries is hardcoded to be 31 bits wide.
-    assert(Num < (1U << 31) && "Cannot support more than 1<<31 entries");
-    NumEntries = Num;
-  }
-
-  unsigned getNumTombstones() const { return NumTombstones; }
-
-  void setNumTombstones(unsigned Num) { NumTombstones = Num; }
-
-  const BucketT *getInlineBuckets() const {
-    assert(Small);
-    // Note that this cast does not violate aliasing rules as we assert that
-    // the memory's dynamic type is the small, inline bucket buffer, and the
-    // 'storage' is a POD containing a char buffer.
-    return reinterpret_cast<const BucketT *>(&storage);
-  }
-
-  BucketT *getInlineBuckets() {
-    return const_cast<BucketT *>(
-        const_cast<const SmallDenseMap *>(this)->getInlineBuckets());
-  }
-
-  const LargeRep *getLargeRep() const {
-    assert(!Small);
-    // Note, same rule about aliasing as with getInlineBuckets.
-    return reinterpret_cast<const LargeRep *>(&storage);
-  }
-
-  LargeRep *getLargeRep() {
-    return const_cast<LargeRep *>(
-        const_cast<const SmallDenseMap *>(this)->getLargeRep());
-  }
-
-  const BucketT *getBuckets() const {
-    return Small ? getInlineBuckets() : getLargeRep()->Buckets;
-  }
-
-  BucketT *getBuckets() {
-    return const_cast<BucketT *>(
-        const_cast<const SmallDenseMap *>(this)->getBuckets());
-  }
-
-  unsigned getNumBuckets() const {
-    return Small ? InlineBuckets : getLargeRep()->NumBuckets;
-  }
-
-  void deallocateBuckets() {
-    if (Small)
-      return;
-
-    deallocate_buffer(getLargeRep()->Buckets,
-                      sizeof(BucketT) * getLargeRep()->NumBuckets,
-                      alignof(BucketT));
-    getLargeRep()->~LargeRep();
-  }
-
-  LargeRep allocateBuckets(unsigned Num) {
-    assert(Num > InlineBuckets && "Must allocate more buckets than are inline");
-    LargeRep Rep = {static_cast<BucketT *>(allocate_buffer(
-                        sizeof(BucketT) * Num, alignof(BucketT))),
-                    Num};
-    return Rep;
-  }
+  using BaseT::BaseT;
 };
 
 template <typename KeyT, typename ValueT, typename KeyInfoT, typename Bucket,
@@ -1189,6 +1336,8 @@ template <typename KeyT, typename ValueT, typename KeyInfoT, typename Bucket,
 class DenseMapIterator : DebugEpochBase::HandleBase {
   friend class DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, true>;
   friend class DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, false>;
+
+  using UsedT = llvm::densemap::detail::UsedT;
 
 public:
   using difference_type = ptrdiff_t;
@@ -1198,24 +1347,54 @@ public:
   using iterator_category = std::forward_iterator_tag;
 
 private:
-  pointer Ptr = nullptr;
-  pointer End = nullptr;
+  using BucketItTy =
+      std::conditional_t<shouldReverseIterate<KeyT>(),
+                         std::reverse_iterator<pointer>, pointer>;
+
+  BucketItTy Ptr = {};
+  BucketItTy End = {};
+  // The non-reversed bucket base and the parallel used array.  They map a
+  // bucket back to its index so AdvancePastEmptyBuckets can consult the bits.
+  pointer Buckets = {};
+  const UsedT *Used = {};
+
+  DenseMapIterator(BucketItTy Pos, BucketItTy E, pointer BucketsBase,
+                   const UsedT *U, const DebugEpochBase &Epoch)
+      : DebugEpochBase::HandleBase(&Epoch), Ptr(Pos), End(E),
+        Buckets(BucketsBase), Used(U) {
+    assert(isHandleInSync() && "invalid construction!");
+  }
 
 public:
   DenseMapIterator() = default;
 
-  DenseMapIterator(pointer Pos, pointer E, const DebugEpochBase &Epoch,
-                   bool NoAdvance = false)
-      : DebugEpochBase::HandleBase(&Epoch), Ptr(Pos), End(E) {
-    assert(isHandleInSync() && "invalid construction!");
+  static DenseMapIterator makeBegin(pointer Buckets, const UsedT *Used,
+                                    unsigned NumBuckets, bool IsEmpty,
+                                    const DebugEpochBase &Epoch) {
+    // When the map is empty, avoid the overhead of advancing/retreating past
+    // empty buckets.
+    if (IsEmpty)
+      return makeEnd(Buckets, Used, NumBuckets, Epoch);
+    auto R = maybeReverse(llvm::make_range(Buckets, Buckets + NumBuckets));
+    DenseMapIterator Iter(R.begin(), R.end(), Buckets, Used, Epoch);
+    Iter.AdvancePastEmptyBuckets();
+    return Iter;
+  }
 
-    if (NoAdvance)
-      return;
-    if (shouldReverseIterate<KeyT>()) {
-      RetreatPastEmptyBuckets();
-      return;
-    }
-    AdvancePastEmptyBuckets();
+  static DenseMapIterator makeEnd(pointer Buckets, const UsedT *Used,
+                                  unsigned NumBuckets,
+                                  const DebugEpochBase &Epoch) {
+    auto R = maybeReverse(llvm::make_range(Buckets, Buckets + NumBuckets));
+    return DenseMapIterator(R.end(), R.end(), Buckets, Used, Epoch);
+  }
+
+  static DenseMapIterator makeIterator(pointer P, pointer Buckets,
+                                       const UsedT *Used, unsigned NumBuckets,
+                                       const DebugEpochBase &Epoch) {
+    auto R = maybeReverse(llvm::make_range(Buckets, Buckets + NumBuckets));
+    constexpr int Offset = shouldReverseIterate<KeyT>() ? 1 : 0;
+    return DenseMapIterator(BucketItTy(P + Offset), R.end(), Buckets, Used,
+                            Epoch);
   }
 
   // Converting ctor from non-const iterators to const iterators. SFINAE'd out
@@ -1225,45 +1404,30 @@ public:
             typename = std::enable_if_t<!IsConstSrc && IsConst>>
   DenseMapIterator(
       const DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, IsConstSrc> &I)
-      : DebugEpochBase::HandleBase(I), Ptr(I.Ptr), End(I.End) {}
+      : DebugEpochBase::HandleBase(I), Ptr(I.Ptr), End(I.End),
+        Buckets(I.Buckets), Used(I.Used) {}
 
-  reference operator*() const {
+  [[nodiscard]] reference operator*() const {
     assert(isHandleInSync() && "invalid iterator access!");
     assert(Ptr != End && "dereferencing end() iterator");
-    if (shouldReverseIterate<KeyT>())
-      return Ptr[-1];
     return *Ptr;
   }
-  pointer operator->() const {
-    assert(isHandleInSync() && "invalid iterator access!");
-    assert(Ptr != End && "dereferencing end() iterator");
-    if (shouldReverseIterate<KeyT>())
-      return &(Ptr[-1]);
-    return Ptr;
-  }
+  [[nodiscard]] pointer operator->() const { return &operator*(); }
 
-  friend bool operator==(const DenseMapIterator &LHS,
-                         const DenseMapIterator &RHS) {
-    assert((!LHS.Ptr || LHS.isHandleInSync()) && "handle not in sync!");
-    assert((!RHS.Ptr || RHS.isHandleInSync()) && "handle not in sync!");
-    assert(LHS.getEpochAddress() == RHS.getEpochAddress() &&
-           "comparing incomparable iterators!");
+  [[nodiscard]] friend bool operator==(const DenseMapIterator &LHS,
+                                       const DenseMapIterator &RHS) {
+    assert(LHS.isComparableWith(RHS) && "incomparable iterators!");
     return LHS.Ptr == RHS.Ptr;
   }
 
-  friend bool operator!=(const DenseMapIterator &LHS,
-                         const DenseMapIterator &RHS) {
+  [[nodiscard]] friend bool operator!=(const DenseMapIterator &LHS,
+                                       const DenseMapIterator &RHS) {
     return !(LHS == RHS);
   }
 
   inline DenseMapIterator &operator++() { // Preincrement
     assert(isHandleInSync() && "invalid iterator access!");
     assert(Ptr != End && "incrementing end() iterator");
-    if (shouldReverseIterate<KeyT>()) {
-      --Ptr;
-      RetreatPastEmptyBuckets();
-      return *this;
-    }
     ++Ptr;
     AdvancePastEmptyBuckets();
     return *this;
@@ -1277,28 +1441,43 @@ public:
 
 private:
   void AdvancePastEmptyBuckets() {
-    assert(Ptr <= End);
-    const KeyT Empty = KeyInfoT::getEmptyKey();
-    const KeyT Tombstone = KeyInfoT::getTombstoneKey();
-
-    while (Ptr != End && (KeyInfoT::isEqual(Ptr->getFirst(), Empty) ||
-                          KeyInfoT::isEqual(Ptr->getFirst(), Tombstone)))
-      ++Ptr;
+    if constexpr (shouldReverseIterate<KeyT>()) {
+      while (Ptr != End && !llvm::densemap::detail::used(Used, &*Ptr - Buckets))
+        ++Ptr;
+    } else {
+      // Forward iteration skips empty buckets a used-word (32 buckets) at a
+      // time: scan from the current index for the next set occupancy bit.
+      const size_t N = End - Buckets;
+      size_t I = Ptr - Buckets;
+      if (I >= N) {
+        Ptr = End;
+        return;
+      }
+      const size_t NW = llvm::densemap::detail::usedWords(N);
+      size_t W = I >> 5;
+      UsedT Bits = Used[W] & (~UsedT(0) << (I & 31));
+      while (Bits == 0) {
+        if (++W == NW) {
+          Ptr = End;
+          return;
+        }
+        Bits = Used[W];
+      }
+      Ptr = Buckets + ((W << 5) + llvm::countr_zero(Bits));
+    }
   }
 
-  void RetreatPastEmptyBuckets() {
-    assert(Ptr >= End);
-    const KeyT Empty = KeyInfoT::getEmptyKey();
-    const KeyT Tombstone = KeyInfoT::getTombstoneKey();
-
-    while (Ptr != End && (KeyInfoT::isEqual(Ptr[-1].getFirst(), Empty) ||
-                          KeyInfoT::isEqual(Ptr[-1].getFirst(), Tombstone)))
-      --Ptr;
+  static auto maybeReverse(iterator_range<pointer> Range) {
+    if constexpr (shouldReverseIterate<KeyT>())
+      return reverse(Range);
+    else
+      return Range;
   }
 };
 
 template <typename KeyT, typename ValueT, typename KeyInfoT>
-inline size_t capacity_in_bytes(const DenseMap<KeyT, ValueT, KeyInfoT> &X) {
+[[nodiscard]] inline size_t
+capacity_in_bytes(const DenseMap<KeyT, ValueT, KeyInfoT> &X) {
   return X.getMemorySize();
 }
 

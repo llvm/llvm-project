@@ -11,7 +11,7 @@ define void @test1() !dbg !5 {
 ; CHECK:    [[IV_INT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[DOTINT:%.*]], [[BB]] ], !dbg ![[DBG1:[0-9]+]]
 ; CHECK:    [[INDVAR_CONV:%.*]] = sitofp i32 [[IV_INT]] to double, !dbg ![[DBG1]]
 ; CHECK:    [[DOTINT]] = add nuw nsw i32 [[IV_INT]], 1, !dbg ![[DBG2:[0-9]+]]
-; CHECK:    [[TMP1:%.*]] = icmp ult i32 [[DOTINT]], 10000, !dbg ![[DBG3:[0-9]+]]
+; CHECK:    [[TMP1:%.*]] = icmp samesign ult i32 [[DOTINT]], 10000, !dbg ![[DBG3:[0-9]+]]
 ; CHECK: ![[DBG1]] = !DILocation(line: 2
 ; CHECK: ![[DBG2]] = !DILocation(line: 4
 ; CHECK: ![[DBG3]] = !DILocation(line: 5

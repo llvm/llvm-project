@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -Wconversion -verify -o - %s -DERROR=1
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -verify -o - %s -DERROR=1
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -Wno-conversion -ast-dump %s | FileCheck %s
 
 // This test verifies floating point type implicit conversion ranks for overload

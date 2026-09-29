@@ -166,6 +166,16 @@ func.func @broadcast(%arg0 : !shape.shape, %arg1 : tensor<?xindex>) -> tensor<?x
 
 // -----
 
+func.func @broadcast_error_in_attr_dict(%arg0 : !shape.shape,
+                                        %arg1 : !shape.shape) {
+  // expected-error@+1 {{inherent attribute 'error' cannot be parsed from attr-dict when strict properties in assembly format is enabled}}
+  %result = shape.broadcast %arg0, %arg1 {error = "incompatible shapes"}
+      : !shape.shape, !shape.shape -> !shape.shape
+  return
+}
+
+// -----
+
 // Test using an unsupported shape.lib attribute type.
 
 // expected-error@+1 {{only SymbolRefAttr allowed in shape.lib attribute array}}
@@ -258,6 +268,14 @@ module attributes {shape.lib = @fn} { }
 
 // -----
 
+// Test that shape function library array entry is defined (regression test for
+// github.com/llvm/llvm-project/issues/159653: dyn_cast crash on missing symbol).
+
+// expected-error@+1 {{@missing does not refer to FunctionLibraryOp}}
+module attributes {shape.lib = [@missing]} { }
+
+// -----
+
 func.func @fn(%arg: !shape.shape) -> !shape.witness {
   // expected-error@+1 {{required at least 2 input shapes}}
   %0 = shape.cstr_broadcastable %arg : !shape.shape
@@ -292,4 +310,3 @@ func.func @invalid_meet(%arg0 : tensor<2xindex>, %arg1 : tensor<3xindex>) -> ten
   %result = shape.meet %arg0, %arg1 : tensor<2xindex>, tensor<3xindex> -> tensor<?xindex>
   return %result : tensor<?xindex>
 }
-

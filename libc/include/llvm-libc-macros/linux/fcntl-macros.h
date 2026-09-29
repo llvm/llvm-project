@@ -9,34 +9,35 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_FCNTL_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_FCNTL_MACROS_H
 
-// File creation flags
-#define O_CLOEXEC 02000000
-#define O_CREAT 00000100
+// File creation and file status flags.
+#define O_APPEND 000002000
+#define O_ASYNC 000020000
+#define O_CLOEXEC 002000000
+#define O_CREAT 000000100
+#define O_DSYNC 000010000
+#define O_EXCL 000000200
+#define O_NOATIME 001000000
+#define O_NOCTTY 000000400
+#define O_NONBLOCK 000004000
+#define O_NDELAY O_NONBLOCK
 #define O_PATH 010000000
+#define O_SYNC 004010000
+#define O_RSYNC O_SYNC
+#define O_TRUNC 000001000
 
 #ifdef __aarch64__
-#define O_DIRECTORY 040000
+#define O_DIRECT 000200000
+#define O_DIRECTORY 000040000
+#define O_NOFOLLOW 000100000
+#define O_LARGEFILE 000040000
+#define O_TMPFILE 020040000
 #else
-#define O_DIRECTORY 00200000
+#define O_DIRECT 000040000
+#define O_DIRECTORY 000200000
+#define O_NOFOLLOW 000400000
+#define O_LARGEFILE 000100000
+#define O_TMPFILE 020200000
 #endif
-
-#define O_EXCL 00000200
-#define O_NOCTTY 00000400
-
-#ifdef __aarch64__
-#define O_NOFOLLOW 0100000
-#else
-#define O_NOFOLLOW 00400000
-#endif
-
-#define O_TRUNC 00001000
-#define O_TMPFILE (020000000 | O_DIRECTORY)
-
-// File status flags
-#define O_APPEND 00002000
-#define O_DSYNC 00010000
-#define O_NONBLOCK 00004000
-#define O_SYNC 04000000 | O_DSYNC
 
 // File access mode mask
 #define O_ACCMODE 00000003
@@ -58,8 +59,15 @@
 // should not be followed.
 #define AT_SYMLINK_NOFOLLOW 0x100
 
+// Special flag for functions like linkat to convey that symlinks
+// should be followed.
+#define AT_SYMLINK_FOLLOW 0x400
+
 // Allow empty relative pathname.
 #define AT_EMPTY_PATH 0x1000
+
+// Perform access checks using the effective user and group IDs.
+#define AT_EACCESS 0x200
 
 // Values of SYS_fcntl commands.
 #define F_DUPFD 0
@@ -79,6 +87,7 @@
 #define F_SETLKW64 14
 #define F_SETOWN_EX 15
 #define F_GETOWN_EX 16
+#define F_DUPFD_CLOEXEC 1030
 
 // Open File Description Locks.
 #define F_OFD_GETLK 36
@@ -101,5 +110,13 @@
 #define F_SETLK F_SETLK64
 #define F_SETLKW F_SETLKW64
 #endif
+
+// Advice values for posix_fadvise.
+#define POSIX_FADV_NORMAL 0
+#define POSIX_FADV_RANDOM 1
+#define POSIX_FADV_SEQUENTIAL 2
+#define POSIX_FADV_WILLNEED 3
+#define POSIX_FADV_DONTNEED 4
+#define POSIX_FADV_NOREUSE 5
 
 #endif // LLVM_LIBC_MACROS_LINUX_FCNTL_MACROS_H

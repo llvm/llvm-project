@@ -34,7 +34,7 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
 
         self.expect(
             "thread trace dump info",
-            substrs=["error: Process is not being traced"],
+            substrs=["error: process is not being traced"],
             error=True,
         )
 
@@ -64,7 +64,7 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
       hardware disabled tracing: 4
       trace synchronization point: 1""",
             ],
-            patterns=["Decoding instructions: \d.\d\ds"],
+            patterns=[r"Decoding instructions: \d.\d\ds"],
         )
 
     def testDumpRawTraceSizeJSON(self):

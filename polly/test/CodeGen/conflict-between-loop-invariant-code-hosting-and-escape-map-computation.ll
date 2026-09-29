@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-process-unprofitable -passes=polly-codegen -disable-output < %s
+; RUN: opt %loadNPMPolly -polly-process-unprofitable '-passes=polly<no-default-opts>' -disable-output < %s
 ;
 ; CHECK: store i32 %tmp14_p_scalar_, ptr %tmp14.s2a
 ; CHECK: %tmp14.final_reload = load i32, ptr %tmp14.s2a

@@ -3,7 +3,7 @@
 // RUN: | mlir-opt -gpu-kernel-outlining \
 // RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-rocdl{chipset=%chip index-bitwidth=32}),rocdl-attach-target{chip=%chip})' \
 // RUN: | mlir-opt -gpu-to-llvm -reconcile-unrealized-casts -gpu-module-to-binary \
-// RUN: | mlir-cpu-runner \
+// RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_rocm_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
@@ -16,13 +16,13 @@ func.func @vectransferx2(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>) {
              threads(%tx, %ty, %tz) in (%block_x = %cst, %block_y = %cst, %block_z = %cst) {
     %f0 = arith.constant 0.0: f32
     %base = arith.constant 0 : i32
-    %f = amdgpu.raw_buffer_load {boundsCheck = true } %arg0[%base]
+    %f = amdgpu.raw_buffer_load boundsCheck(true) %arg0[%base]
       : memref<?xf32>, i32 -> vector<2xf32>
 
     %c = arith.addf %f, %f : vector<2xf32>
 
     %base1 = arith.constant 1 : i32
-    amdgpu.raw_buffer_store { boundsCheck = false } %c -> %arg1[%base1]
+    amdgpu.raw_buffer_store boundsCheck(false) %c -> %arg1[%base1]
       : vector<2xf32> -> memref<?xf32>, i32
 
     gpu.terminator
@@ -36,12 +36,12 @@ func.func @vectransferx4(%arg0 : memref<?xf32>, %arg1 : memref<?xf32>) {
              threads(%tx, %ty, %tz) in (%block_x = %cst, %block_y = %cst, %block_z = %cst) {
     %f0 = arith.constant 0.0: f32
     %base = arith.constant 0 : i32
-    %f = amdgpu.raw_buffer_load { boundsCheck = false } %arg0[%base]
+    %f = amdgpu.raw_buffer_load boundsCheck(false) %arg0[%base]
       : memref<?xf32>, i32 -> vector<4xf32>
 
     %c = arith.addf %f, %f : vector<4xf32>
 
-    amdgpu.raw_buffer_store { boundsCheck = false } %c -> %arg1[%base]
+    amdgpu.raw_buffer_store boundsCheck(false) %c -> %arg1[%base]
       : vector<4xf32> -> memref<?xf32>, i32
 
     gpu.terminator

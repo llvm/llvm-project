@@ -1,0 +1,37 @@
+int main() {
+  asm volatile(
+      // r0 aka zero is always tied to zero
+      "li.w $r1, 1\n\t"
+      "li.w $r2, 2\n\t"
+      "li.w $r3, 3\n\t"
+      "li.w $r4, 4\n\t"
+      "li.w $r5, 5\n\t"
+      "li.w $r6, 6\n\t"
+      "li.w $r7, 7\n\t"
+      "li.w $r8, 8\n\t"
+      "li.w $r9, 9\n\t"
+      "li.w $r10, 10\n\t"
+      "li.w $r11, 11\n\t"
+      "li.w $r12, 12\n\t"
+      "li.w $r13, 13\n\t"
+      "li.w $r14, 14\n\t"
+      "li.w $r15, 15\n\t"
+      "li.w $r16, 16\n\t"
+      "li.w $r17, 17\n\t"
+      "li.w $r18, 18\n\t"
+      "li.w $r19, 19\n\t"
+      "li.w $r20, 20\n\t"
+      "li.w $r21, 21\n\t"
+      "li.w $r22, 22\n\t"
+      "li.w $r23, 23\n\t"
+      "li.w $r24, 24\n\t"
+      "li.w $r25, 25\n\t"
+      "li.w $r26, 26\n\t"
+      "li.w $r27, 27\n\t"
+      "li.w $r28, 28\n\t"
+      "li.w $r29, 29\n\t"
+      "li.w $r30, 30\n\t"
+      "li.w $r31, 31\n\t"
+      "break 5\n\t");
+  return 0;
+}

@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -88,9 +89,7 @@ namespace {
   { ARM::t2ASRri, ARM::tASRri,  0,             5,   0,   1,   0,  0,0, 1,0,1 },
   { ARM::t2ASRrr, 0,            ARM::tASRrr,   0,   0,   0,   1,  0,0, 1,0,1 },
   { ARM::t2BICrr, 0,            ARM::tBIC,     0,   0,   0,   1,  0,0, 1,0,0 },
-  //FIXME: Disable CMN, as CCodes are backwards from compare expectations
-  //{ ARM::t2CMNrr, ARM::tCMN,  0,             0,   0,   1,   0,  2,0, 0,0,0 },
-  { ARM::t2CMNzrr, ARM::tCMNz,  0,             0,   0,   1,   0,  2,0, 0,0,0 },
+  { ARM::t2CMNrr, ARM::tCMN,    0,             0,   0,   1,   0,  2,0, 0,0,0 },
   { ARM::t2CMPri, ARM::tCMPi8,  0,             8,   0,   1,   0,  2,0, 0,0,0 },
   { ARM::t2CMPrr, ARM::tCMPhir, 0,             0,   0,   0,   0,  2,0, 0,1,0 },
   { ARM::t2EORrr, 0,            ARM::tEOR,     0,   0,   0,   1,  0,0, 1,0,0 },
@@ -167,23 +166,27 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override {
       return THUMB2_SIZE_REDUCE_NAME;
     }
 
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+      MachineFunctionPass::getAnalysisUsage(AU);
+    }
+
   private:
     /// ReduceOpcodeMap - Maps wide opcode to index of entry in ReduceTable.
     DenseMap<unsigned, unsigned> ReduceOpcodeMap;
 
-    bool canAddPseudoFlagDep(MachineInstr *Use, bool IsSelfLoop);
+    bool canAddPseudoFlagDep(const MachineInstr *Use, bool IsSelfLoop);
 
-    bool VerifyPredAndCC(MachineInstr *MI, const ReduceEntry &Entry,
-                         bool is2Addr, ARMCC::CondCodes Pred,
-                         bool LiveCPSR, bool &HasCC, bool &CCDead);
+    bool VerifyPredAndCC(const MachineInstr *MI, const ReduceEntry &Entry,
+                         bool is2Addr, ARMCC::CondCodes Pred, bool LiveCPSR,
+                         bool &HasCC, bool &CCDead);
 
     bool ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
                          const ReduceEntry &Entry);
@@ -255,8 +258,8 @@ static bool HasImplicitCPSRDef(const MCInstrDesc &MCID) {
 }
 
 // Check for a likely high-latency flag def.
-static bool isHighLatencyCPSR(MachineInstr *Def) {
-  switch(Def->getOpcode()) {
+static bool isHighLatencyCPSR(const MachineInstr *Def) {
+  switch (Def->getOpcode()) {
   case ARM::FMSTAT:
   case ARM::tMUL:
     return true;
@@ -281,8 +284,8 @@ static bool isHighLatencyCPSR(MachineInstr *Def) {
 ///    = mul.w r1
 /// In this case it would have been ok to narrow the mul.w to muls since there
 /// are indirect RAW dependency between the muls and the mul.w
-bool
-Thumb2SizeReduce::canAddPseudoFlagDep(MachineInstr *Use, bool FirstInSelfLoop) {
+bool Thumb2SizeReduce::canAddPseudoFlagDep(const MachineInstr *Use,
+                                           bool FirstInSelfLoop) {
   // Disable the check for -Oz (aka OptimizeForSizeHarder).
   if (MinimizeSize || !STI->avoidCPSRPartialUpdate())
     return false;
@@ -324,10 +327,10 @@ Thumb2SizeReduce::canAddPseudoFlagDep(MachineInstr *Use, bool FirstInSelfLoop) {
   return true;
 }
 
-bool
-Thumb2SizeReduce::VerifyPredAndCC(MachineInstr *MI, const ReduceEntry &Entry,
-                                  bool is2Addr, ARMCC::CondCodes Pred,
-                                  bool LiveCPSR, bool &HasCC, bool &CCDead) {
+bool Thumb2SizeReduce::VerifyPredAndCC(const MachineInstr *MI,
+                                       const ReduceEntry &Entry, bool is2Addr,
+                                       ARMCC::CondCodes Pred, bool LiveCPSR,
+                                       bool &HasCC, bool &CCDead) {
   if ((is2Addr  && Entry.PredCC2 == 0) ||
       (!is2Addr && Entry.PredCC1 == 0)) {
     if (Pred == ARMCC::AL) {
@@ -367,7 +370,7 @@ Thumb2SizeReduce::VerifyPredAndCC(MachineInstr *MI, const ReduceEntry &Entry,
   return true;
 }
 
-static bool VerifyLowRegs(MachineInstr *MI) {
+static bool VerifyLowRegs(const MachineInstr *MI) {
   unsigned Opc = MI->getOpcode();
   bool isPCOk = (Opc == ARM::t2LDMIA_RET || Opc == ARM::t2LDMIA_UPD);
   bool isLROk = (Opc == ARM::t2STMDB_UPD);
@@ -478,7 +481,7 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
                    .addReg(Rn)
                    .addImm(PredImm)
                    .addReg(PredReg)
-                   .addReg(Rt, IsStore ? 0 : RegState::Define);
+                   .addReg(Rt, getDefRegState(!IsStore));
 
     // Transfer memoperands.
     MIB.setMemRefs(MI->memoperands());
@@ -977,43 +980,11 @@ Thumb2SizeReduce::ReduceToNarrow(MachineBasicBlock &MBB, MachineInstr *MI,
   return true;
 }
 
-static bool UpdateCPSRDef(MachineInstr &MI, bool LiveCPSR, bool &DefCPSR) {
-  bool HasDef = false;
-  for (const MachineOperand &MO : MI.operands()) {
-    if (!MO.isReg() || MO.isUndef() || MO.isUse())
-      continue;
-    if (MO.getReg() != ARM::CPSR)
-      continue;
-
-    DefCPSR = true;
-    if (!MO.isDead())
-      HasDef = true;
-  }
-
-  return HasDef || LiveCPSR;
-}
-
-static bool UpdateCPSRUse(MachineInstr &MI, bool LiveCPSR) {
-  for (const MachineOperand &MO : MI.operands()) {
-    if (!MO.isReg() || MO.isUndef() || MO.isDef())
-      continue;
-    if (MO.getReg() != ARM::CPSR)
-      continue;
-    assert(LiveCPSR && "CPSR liveness tracking is wrong!");
-    if (MO.isKill()) {
-      LiveCPSR = false;
-      break;
-    }
-  }
-
-  return LiveCPSR;
-}
-
 bool Thumb2SizeReduce::ReduceMI(MachineBasicBlock &MBB, MachineInstr *MI,
                                 bool LiveCPSR, bool IsSelfLoop,
                                 bool SkipPrologueEpilogue) {
   unsigned Opcode = MI->getOpcode();
-  DenseMap<unsigned, unsigned>::iterator OPI = ReduceOpcodeMap.find(Opcode);
+  auto OPI = ReduceOpcodeMap.find(Opcode);
   if (OPI == ReduceOpcodeMap.end())
     return false;
   if (SkipPrologueEpilogue && (MI->getFlag(MachineInstr::FrameSetup) ||
@@ -1042,9 +1013,22 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
                                  bool SkipPrologueEpilogue) {
   bool Modified = false;
 
-  // Yes, CPSR could be livein.
-  bool LiveCPSR = MBB.isLiveIn(ARM::CPSR);
-  MachineInstr *BundleMI = nullptr;
+  // Narrowing to a flag-setting form is only legal where CPSR is dead.
+  bool LiveCPSR = any_of(MBB.successors(), [](const MachineBasicBlock *Succ) {
+    return Succ->isLiveIn(ARM::CPSR);
+  });
+
+  DenseMap<const MachineInstr *, bool> CPSRLiveAfter;
+  for (MachineInstr &MI : reverse(MBB.instrs())) {
+    if (MI.isBundle() || MI.isDebugInstr())
+      continue;
+    if (ReduceOpcodeMap.contains(MI.getOpcode()))
+      CPSRLiveAfter[&MI] = LiveCPSR;
+    if (MI.definesRegister(ARM::CPSR, /*TRI=*/nullptr))
+      LiveCPSR = false;
+    if (MI.readsRegister(ARM::CPSR, /*TRI=*/nullptr))
+      LiveCPSR = true;
+  }
 
   CPSRDef = nullptr;
   HighLatencyCPSR = false;
@@ -1056,6 +1040,7 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
       // Since blocks are visited in RPO, this must be a back-edge.
       continue;
     }
+
     if (PInfo.HighLatencyCPSR) {
       HighLatencyCPSR = true;
       break;
@@ -1071,14 +1056,10 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
     NextMII = std::next(MII);
 
     MachineInstr *MI = &*MII;
-    if (MI->isBundle()) {
-      BundleMI = MI;
-      continue;
-    }
-    if (MI->isDebugInstr())
+    if (MI->isBundle() || MI->isDebugInstr())
       continue;
 
-    LiveCPSR = UpdateCPSRUse(*MI, LiveCPSR);
+    LiveCPSR = CPSRLiveAfter.lookup(MI);
 
     // Does NextMII belong to the same bundle as MI?
     bool NextInSameBundle = NextMII != E && NextMII->isBundledWithPred();
@@ -1093,30 +1074,15 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
         NextMII->bundleWithPred();
     }
 
-    if (BundleMI && !NextInSameBundle && MI->isInsideBundle()) {
-      // FIXME: Since post-ra scheduler operates on bundles, the CPSR kill
-      // marker is only on the BUNDLE instruction. Process the BUNDLE
-      // instruction as we finish with the bundled instruction to work around
-      // the inconsistency.
-      if (BundleMI->killsRegister(ARM::CPSR, /*TRI=*/nullptr))
-        LiveCPSR = false;
-      MachineOperand *MO =
-          BundleMI->findRegisterDefOperand(ARM::CPSR, /*TRI=*/nullptr);
-      if (MO && !MO->isDead())
-        LiveCPSR = true;
-      MO = BundleMI->findRegisterUseOperand(ARM::CPSR, /*TRI=*/nullptr);
-      if (MO && !MO->isKill())
-        LiveCPSR = true;
-    }
-
-    bool DefCPSR = false;
-    LiveCPSR = UpdateCPSRDef(*MI, LiveCPSR, DefCPSR);
+    // Maintain CPSRDef as the most recent CPSR-defining instruction in program
+    // order, so canAddPseudoFlagDep can consult it. MI is inspected after
+    // reduction, so a candidate just narrowed to a flag-setting form counts.
     if (MI->isCall()) {
       // Calls don't really set CPSR.
       CPSRDef = nullptr;
       HighLatencyCPSR = false;
       IsSelfLoop = false;
-    } else if (DefCPSR) {
+    } else if (MI->definesRegister(ARM::CPSR, /*TRI=*/nullptr)) {
       // This is the last CPSR defining instruction.
       CPSRDef = MI;
       HighLatencyCPSR = isHighLatencyCPSR(CPSRDef);
@@ -1151,7 +1117,7 @@ bool Thumb2SizeReduce::runOnMachineFunction(MachineFunction &MF) {
   // predecessors.
   ReversePostOrderTraversal<MachineFunction*> RPOT(&MF);
   bool Modified = false;
-  bool NeedsWinCFI = MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+  bool NeedsWinCFI = MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
                      MF.getFunction().needsUnwindTableEntry();
   for (MachineBasicBlock *MBB : RPOT)
     Modified |= ReduceMBB(*MBB, /*SkipPrologueEpilogue=*/NeedsWinCFI);

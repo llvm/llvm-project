@@ -1,10 +1,7 @@
 ## Tests the optimization of functions that just do a tail call in the beginning.
 
-## This test has commands that rely on shell capabilities that won't execute
-## correctly on Windows e.g. unsupported parameter expansion
-REQUIRES: shell
-
-RUN: %clangxx %cxxflags -O2 %S/Inputs/jmp_opt{,2,3}.cpp -o %t
+RUN: %clangxx %cxxflags -O2 %S/Inputs/jmp_opt.cpp %S/Inputs/jmp_opt2.cpp \
+RUN:   %S/Inputs/jmp_opt3.cpp -o %t
 RUN: llvm-bolt -inline-small-functions %t -o %t.bolt
 RUN: llvm-objdump -d %t.bolt --print-imm-hex | FileCheck %s
 

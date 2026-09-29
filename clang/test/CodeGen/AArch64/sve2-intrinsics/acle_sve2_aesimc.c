@@ -4,6 +4,12 @@
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve-aes -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve-aes -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -target-feature +ssve-aes -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -target-feature +ssve-aes -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme -target-feature +ssve-aes -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme -target-feature +ssve-aes -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
+
+
 // REQUIRES: aarch64-registered-target
 
 #include <arm_sve.h>
@@ -15,6 +21,13 @@
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
+#if defined(__ARM_FEATURE_SME)
+#define STREAMING __arm_streaming
+#else
+#define STREAMING
+#endif
+
+
 // CHECK-LABEL: @test_svaesimc_u8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.aesimc(<vscale x 16 x i8> [[OP:%.*]])
@@ -25,7 +38,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.aesimc(<vscale x 16 x i8> [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-svuint8_t test_svaesimc_u8(svuint8_t op)
+svuint8_t test_svaesimc_u8(svuint8_t op) STREAMING
 {
   return SVE_ACLE_FUNC(svaesimc,_u8,,)(op);
 }

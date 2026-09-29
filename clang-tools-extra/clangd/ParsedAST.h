@@ -27,6 +27,7 @@
 #include "Preamble.h"
 #include "clang-include-cleaner/Record.h"
 #include "support/Path.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Syntax/Tokens.h"
@@ -38,9 +39,9 @@
 #include <vector>
 
 namespace clang {
+class HeuristicResolver;
 class Sema;
 namespace clangd {
-class HeuristicResolver;
 
 /// Stores and provides access to parsed AST.
 class ParsedAST {
@@ -122,6 +123,11 @@ public:
   const HeuristicResolver *getHeuristicResolver() const {
     return Resolver.get();
   }
+
+  /// Cache for constructors called through forwarding, e.g. make_unique
+  llvm::DenseMap<const FunctionDecl *,
+                 SmallVector<const CXXConstructorDecl *, 1>>
+      ForwardingToConstructorCache;
 
 private:
   ParsedAST(PathRef TUPath, llvm::StringRef Version,

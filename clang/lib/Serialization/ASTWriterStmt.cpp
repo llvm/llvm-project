@@ -18,7 +18,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Lex/Token.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTRecordWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
@@ -311,16 +311,31 @@ void ASTStmtWriter::VisitIndirectGotoStmt(IndirectGotoStmt *S) {
   Code = serialization::STMT_INDIRECT_GOTO;
 }
 
-void ASTStmtWriter::VisitContinueStmt(ContinueStmt *S) {
+void ASTStmtWriter::VisitLoopControlStmt(LoopControlStmt *S) {
   VisitStmt(S);
-  Record.AddSourceLocation(S->getContinueLoc());
+  Record.AddSourceLocation(S->getKwLoc());
+  Record.push_back(S->hasLabelTarget());
+  if (S->hasLabelTarget()) {
+    Record.AddDeclRef(S->getLabelDecl());
+    Record.AddSourceLocation(S->getLabelLoc());
+  }
+}
+
+void ASTStmtWriter::VisitContinueStmt(ContinueStmt *S) {
+  VisitLoopControlStmt(S);
   Code = serialization::STMT_CONTINUE;
 }
 
 void ASTStmtWriter::VisitBreakStmt(BreakStmt *S) {
-  VisitStmt(S);
-  Record.AddSourceLocation(S->getBreakLoc());
+  VisitLoopControlStmt(S);
   Code = serialization::STMT_BREAK;
+}
+
+void ASTStmtWriter::VisitDeferStmt(DeferStmt *S) {
+  VisitStmt(S);
+  Record.AddSourceLocation(S->getDeferLoc());
+  Record.AddStmt(S->getBody());
+  Code = serialization::STMT_DEFER;
 }
 
 void ASTStmtWriter::VisitReturnStmt(ReturnStmt *S) {
@@ -361,25 +376,25 @@ void ASTStmtWriter::VisitGCCAsmStmt(GCCAsmStmt *S) {
   VisitAsmStmt(S);
   Record.push_back(S->getNumLabels());
   Record.AddSourceLocation(S->getRParenLoc());
-  Record.AddStmt(S->getAsmString());
+  Record.AddStmt(S->getAsmStringExpr());
 
   // Outputs
   for (unsigned I = 0, N = S->getNumOutputs(); I != N; ++I) {
     Record.AddIdentifierRef(S->getOutputIdentifier(I));
-    Record.AddStmt(S->getOutputConstraintLiteral(I));
+    Record.AddStmt(S->getOutputConstraintExpr(I));
     Record.AddStmt(S->getOutputExpr(I));
   }
 
   // Inputs
   for (unsigned I = 0, N = S->getNumInputs(); I != N; ++I) {
     Record.AddIdentifierRef(S->getInputIdentifier(I));
-    Record.AddStmt(S->getInputConstraintLiteral(I));
+    Record.AddStmt(S->getInputConstraintExpr(I));
     Record.AddStmt(S->getInputExpr(I));
   }
 
   // Clobbers
   for (unsigned I = 0, N = S->getNumClobbers(); I != N; ++I)
-    Record.AddStmt(S->getClobberStringLiteral(I));
+    Record.AddStmt(S->getClobberExpr(I));
 
   // Labels
   for (unsigned I = 0, N = S->getNumLabels(); I != N; ++I) {
@@ -459,6 +474,11 @@ void ASTStmtWriter::VisitCoyieldExpr(CoyieldExpr *E) {
   Code = serialization::EXPR_COYIELD;
 }
 
+void ASTStmtWriter::VisitCXXReflectExpr(CXXReflectExpr *E) {
+  // TODO(Reflection): Implement this.
+  assert(false && "not implemented yet");
+}
+
 void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getKeywordLoc());
@@ -475,14 +495,20 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
   if (!Satisfaction.IsSatisfied) {
     Record.push_back(Satisfaction.NumRecords);
     for (const auto &DetailRecord : Satisfaction) {
-      auto *E = DetailRecord.dyn_cast<Expr *>();
-      Record.push_back(/* IsDiagnostic */ E == nullptr);
-      if (E)
-        Record.AddStmt(E);
-      else {
-        auto *Diag = cast<std::pair<SourceLocation, StringRef> *>(DetailRecord);
+      if (auto *Diag = dyn_cast<const ConstraintSubstitutionDiagnostic *>(
+              DetailRecord)) {
+        Record.push_back(/*Kind=*/0);
         Record.AddSourceLocation(Diag->first);
         Record.AddString(Diag->second);
+        continue;
+      }
+      if (auto *E = dyn_cast<const Expr *>(DetailRecord)) {
+        Record.push_back(/*Kind=*/1);
+        Record.AddStmt(const_cast<Expr *>(E));
+      } else {
+        Record.push_back(/*Kind=*/2);
+        auto *CR = cast<const ConceptReference *>(DetailRecord);
+        Record.AddConceptReference(CR);
       }
     }
   }
@@ -609,6 +635,15 @@ void ASTStmtWriter::VisitCapturedStmt(CapturedStmt *S) {
   Code = serialization::STMT_CAPTURED;
 }
 
+void ASTStmtWriter::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *S) {
+  VisitStmt(S);
+  Record.AddStmt(S->getOriginalStmt());
+  Record.AddStmt(S->getKernelLaunchStmt());
+  Record.AddDeclRef(S->getOutlinedFunctionDecl());
+
+  Code = serialization::STMT_SYCLKERNELCALL;
+}
+
 void ASTStmtWriter::VisitExpr(Expr *E) {
   VisitStmt(E);
 
@@ -660,6 +695,16 @@ void ASTStmtWriter::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
   Record.AddTypeSourceInfo(E->getTypeSourceInfo());
 
   Code = serialization::EXPR_SYCL_UNIQUE_STABLE_NAME;
+}
+
+void ASTStmtWriter::VisitUnresolvedSYCLKernelCallStmt(
+    UnresolvedSYCLKernelCallStmt *S) {
+  VisitStmt(S);
+
+  Record.AddStmt(S->getOriginalStmt());
+  Record.AddStmt(S->getKernelLaunchIdExpr());
+
+  Code = serialization::STMT_UNRESOLVED_SYCL_KERNEL_CALL;
 }
 
 void ASTStmtWriter::VisitPredefinedExpr(PredefinedExpr *E) {
@@ -723,7 +768,7 @@ void ASTStmtWriter::VisitIntegerLiteral(IntegerLiteral *E) {
   Record.AddSourceLocation(E->getLocation());
   Record.AddAPInt(E->getValue());
 
-  if (E->getValue().getBitWidth() == 32) {
+  if (E->getBitWidth() == 32) {
     AbbrevToUse = Writer.getIntegerLiteralAbbrev();
   }
 
@@ -879,6 +924,15 @@ void ASTStmtWriter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   Code = serialization::EXPR_ARRAY_SUBSCRIPT;
 }
 
+void ASTStmtWriter::VisitMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getBase());
+  Record.AddStmt(E->getRowIdx());
+  Record.AddSourceLocation(E->getRBracketLoc());
+  Code = serialization::EXPR_ARRAY_SUBSCRIPT;
+}
+
 void ASTStmtWriter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   VisitExpr(E);
   Record.AddStmt(E->getBase());
@@ -951,6 +1005,8 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   CurrentPackingBits.updateBits();
   CurrentPackingBits.addBit(static_cast<bool>(E->getADLCallKind()));
   CurrentPackingBits.addBit(E->hasStoredFPFeatures());
+  CurrentPackingBits.addBit(E->isCoroElideSafe());
+  CurrentPackingBits.addBit(E->usesMemberSyntax());
 
   Record.AddSourceLocation(E->getRParenLoc());
   Record.AddStmt(E->getCallee());
@@ -962,6 +1018,7 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
     Record.push_back(E->getFPFeatures().getAsOpaqueInt());
 
   if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()) &&
+      !E->isCoroElideSafe() && !E->usesMemberSyntax() &&
       E->getStmtClass() == Stmt::CallExprClass)
     AbbrevToUse = Writer.getCallExprAbbrev();
 
@@ -1083,6 +1140,44 @@ void ASTStmtWriter::VisitBinaryOperator(BinaryOperator *E) {
       E->getObjectKind() == OK_Ordinary)
     AbbrevToUse = Writer.getBinaryOperatorAbbrev();
 
+  // When emitting reduced BMI, some necessary operators may be removed for ADL.
+  // Here we tries to save such operators.
+  if (Writer.isGeneratingReducedBMI() &&
+      // Assign doesn't take part in ADL.
+      E->getOpcode() != BO_Assign &&
+      (E->getLHS()->isTypeDependent() || E->getRHS()->isTypeDependent())) {
+    OverloadedOperatorKind Op =
+        BinaryOperator::getOverloadedOperator(E->getOpcode());
+
+    // [module.global.frag] performs a synthetic lookup in which each
+    // type-dependent operand has no associated namespaces or entities.
+    DeclarationName Name =
+        Record.getASTContext().DeclarationNames.getCXXOperatorName(Op);
+
+    auto PreserveAssociatedCandidates = [&](Expr *Operand) {
+      const auto *RT = Operand->getType()->getAs<RecordType>();
+      if (!RT)
+        return;
+
+      // Find the associated namespace and perform a synthetic lookup in it.
+      DeclContext *DC = RT->getDecl()->getDeclContext();
+      while (DC && !DC->isFileContext())
+        DC = DC->getParent();
+      if (auto *NS = dyn_cast_or_null<NamespaceDecl>(DC))
+        for (NamedDecl *D : NS->noload_lookup(Name))
+          Writer.GetDeclRef(D);
+    };
+
+    if (!E->getLHS()->isTypeDependent())
+      PreserveAssociatedCandidates(E->getLHS());
+    if (!E->getRHS()->isTypeDependent())
+      PreserveAssociatedCandidates(E->getRHS());
+
+    for (NamedDecl *D :
+         Record.getASTContext().getTranslationUnitDecl()->noload_lookup(Name))
+      Writer.GetDeclRef(D);
+  }
+
   Code = serialization::EXPR_BINARY_OPERATOR;
 }
 
@@ -1160,6 +1255,14 @@ void ASTStmtWriter::VisitExtVectorElementExpr(ExtVectorElementExpr *E) {
   Code = serialization::EXPR_EXT_VECTOR_ELEMENT;
 }
 
+void ASTStmtWriter::VisitMatrixElementExpr(MatrixElementExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getBase());
+  Record.AddIdentifierRef(&E->getAccessor());
+  Record.AddSourceLocation(E->getAccessorLoc());
+  Code = serialization::EXPR_MATRIX_ELEMENT;
+}
+
 void ASTStmtWriter::VisitInitListExpr(InitListExpr *E) {
   VisitExpr(E);
   // NOTE: only add the (possibly null) syntactic form.
@@ -1185,6 +1288,7 @@ void ASTStmtWriter::VisitInitListExpr(InitListExpr *E) {
     for (unsigned I = 0, N = E->getNumInits(); I != N; ++I)
       Record.AddStmt(E->getInit(I));
   }
+  Record.writeBool(E->isExplicit());
   Code = serialization::EXPR_INIT_LIST;
 }
 
@@ -1258,7 +1362,7 @@ void ASTStmtWriter::VisitVAArgExpr(VAArgExpr *E) {
   Record.AddTypeSourceInfo(E->getWrittenTypeInfo());
   Record.AddSourceLocation(E->getBuiltinLoc());
   Record.AddSourceLocation(E->getRParenLoc());
-  Record.push_back(E->isMicrosoftABI());
+  Record.push_back(E->getVarargABI());
   Code = serialization::EXPR_VA_ARG;
 }
 
@@ -1274,7 +1378,6 @@ void ASTStmtWriter::VisitSourceLocExpr(SourceLocExpr *E) {
 void ASTStmtWriter::VisitEmbedExpr(EmbedExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getBeginLoc());
-  Record.AddSourceLocation(E->getEndLoc());
   Record.AddStmt(E->getDataStringLiteral());
   Record.writeUInt32(E->getStartingElementPos());
   Record.writeUInt32(E->getDataElementCount());
@@ -1327,11 +1430,15 @@ void ASTStmtWriter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
 
 void ASTStmtWriter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   VisitExpr(E);
+  bool HasFPFeatures = E->hasStoredFPFeatures();
+  CurrentPackingBits.addBit(HasFPFeatures);
   Record.AddSourceLocation(E->getBuiltinLoc());
   Record.AddSourceLocation(E->getRParenLoc());
   Record.AddTypeSourceInfo(E->getTypeSourceInfo());
   Record.AddStmt(E->getSrcExpr());
   Code = serialization::EXPR_CONVERT_VECTOR;
+  if (HasFPFeatures)
+    Record.push_back(E->getStoredFPFeatures().getAsOpaqueInt());
 }
 
 void ASTStmtWriter::VisitBlockExpr(BlockExpr *E) {
@@ -1350,15 +1457,22 @@ void ASTStmtWriter::VisitGenericSelectionExpr(GenericSelectionExpr *E) {
   Record.AddSourceLocation(E->getDefaultLoc());
   Record.AddSourceLocation(E->getRParenLoc());
 
+  // Either the trailing Stmt-s or the trailing TypeSourceInfo-s
+  // will hold one more item than the number of associations
+  // to account for the predicate (whether it is an expression
+  // or a type).
   Stmt **Stmts = E->getTrailingObjects<Stmt *>();
-  // Add 1 to account for the controlling expression which is the first
-  // expression in the trailing array of Stmt *. This is not needed for
-  // the trailing array of TypeSourceInfo *.
-  for (unsigned I = 0, N = E->getNumAssocs() + 1; I < N; ++I)
+  for (unsigned I = 0, N = E->numTrailingObjects(
+                           ASTConstraintSatisfaction::OverloadToken<Stmt *>());
+       I < N; ++I)
     Record.AddStmt(Stmts[I]);
 
   TypeSourceInfo **TSIs = E->getTrailingObjects<TypeSourceInfo *>();
-  for (unsigned I = 0, N = E->getNumAssocs(); I < N; ++I)
+  for (unsigned
+           I = 0,
+           N = E->numTrailingObjects(
+               ASTConstraintSatisfaction::OverloadToken<TypeSourceInfo *>());
+       I < N; ++I)
     Record.AddTypeSourceInfo(TSIs[I]);
 
   Code = serialization::EXPR_GENERIC_SELECTION;
@@ -1396,15 +1510,20 @@ void ASTStmtWriter::VisitAtomicExpr(AtomicExpr *E) {
 // Objective-C Expressions and Statements.
 //===----------------------------------------------------------------------===//
 
-void ASTStmtWriter::VisitObjCStringLiteral(ObjCStringLiteral *E) {
+void ASTStmtWriter::VisitObjCObjectLiteral(ObjCObjectLiteral *E) {
   VisitExpr(E);
+  Record.push_back(E->isExpressibleAsConstantInitializer());
+}
+
+void ASTStmtWriter::VisitObjCStringLiteral(ObjCStringLiteral *E) {
+  VisitObjCObjectLiteral(E);
   Record.AddStmt(E->getString());
   Record.AddSourceLocation(E->getAtLoc());
   Code = serialization::EXPR_OBJC_STRING_LITERAL;
 }
 
 void ASTStmtWriter::VisitObjCBoxedExpr(ObjCBoxedExpr *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
   Record.AddStmt(E->getSubExpr());
   Record.AddDeclRef(E->getBoxingMethod());
   Record.AddSourceRange(E->getSourceRange());
@@ -1412,7 +1531,7 @@ void ASTStmtWriter::VisitObjCBoxedExpr(ObjCBoxedExpr *E) {
 }
 
 void ASTStmtWriter::VisitObjCArrayLiteral(ObjCArrayLiteral *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
   Record.push_back(E->getNumElements());
   for (unsigned i = 0; i < E->getNumElements(); i++)
     Record.AddStmt(E->getElement(i));
@@ -1422,7 +1541,7 @@ void ASTStmtWriter::VisitObjCArrayLiteral(ObjCArrayLiteral *E) {
 }
 
 void ASTStmtWriter::VisitObjCDictionaryLiteral(ObjCDictionaryLiteral *E) {
-  VisitExpr(E);
+  VisitObjCObjectLiteral(E);
   Record.push_back(E->getNumElements());
   Record.push_back(E->HasPackExpansions);
   for (unsigned i = 0; i < E->getNumElements(); i++) {
@@ -1455,6 +1574,7 @@ void ASTStmtWriter::VisitObjCSelectorExpr(ObjCSelectorExpr *E) {
   VisitExpr(E);
   Record.AddSelectorRef(E->getSelector());
   Record.AddSourceLocation(E->getAtLoc());
+  Record.AddSourceLocation(E->getSelectorNameLoc());
   Record.AddSourceLocation(E->getRParenLoc());
   Code = serialization::EXPR_OBJC_SELECTOR_EXPR;
 }
@@ -1676,6 +1796,37 @@ void ASTStmtWriter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   Code = serialization::STMT_CXX_FOR_RANGE;
 }
 
+void ASTStmtWriter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
+  VisitStmt(S);
+  Record.push_back(static_cast<unsigned>(S->getKind()));
+  Record.AddSourceLocation(S->getLParenLoc());
+  Record.AddSourceLocation(S->getColonLoc());
+  Record.AddSourceLocation(S->getRParenLoc());
+  Record.AddDeclRef(S->getDecl());
+  for (Stmt *SubStmt : S->children())
+    Record.AddStmt(SubStmt);
+  Code = serialization::STMT_CXX_EXPANSION_PATTERN;
+}
+
+void ASTStmtWriter::VisitCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *S) {
+  VisitStmt(S);
+  Record.push_back(S->getInstantiations().size());
+  Record.push_back(S->getPreambleStmts().size());
+  Record.AddDeclRef(S->getParent());
+  for (Stmt *St : S->getAllSubStmts())
+    Record.AddStmt(St);
+  Record.push_back(S->shouldApplyLifetimeExtensionToPreamble());
+  Code = serialization::STMT_CXX_EXPANSION_INSTANTIATION;
+}
+
+void ASTStmtWriter::VisitCXXExpansionSelectExpr(CXXExpansionSelectExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getRangeExpr());
+  Record.AddStmt(E->getIndexExpr());
+  Code = serialization::EXPR_CXX_EXPANSION_SELECT;
+}
+
 void ASTStmtWriter::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
   VisitStmt(S);
   Record.AddSourceLocation(S->getKeywordLoc());
@@ -1689,9 +1840,11 @@ void ASTStmtWriter::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
 void ASTStmtWriter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   VisitCallExpr(E);
   Record.push_back(E->getOperator());
-  Record.AddSourceRange(E->Range);
+  Record.push_back(E->isReversed());
+  Record.AddSourceLocation(E->BeginLoc);
 
-  if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()))
+  if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()) &&
+      !E->isCoroElideSafe() && !E->usesMemberSyntax() && !E->isReversed())
     AbbrevToUse = Writer.getCXXOperatorCallExprAbbrev();
 
   Code = serialization::EXPR_CXX_OPERATOR_CALL;
@@ -1700,7 +1853,8 @@ void ASTStmtWriter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
 void ASTStmtWriter::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
   VisitCallExpr(E);
 
-  if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()))
+  if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()) &&
+      !E->isCoroElideSafe() && !E->usesMemberSyntax())
     AbbrevToUse = Writer.getCXXMemberCallExprAbbrev();
 
   Code = serialization::EXPR_CXX_MEMBER_CALL;
@@ -1920,13 +2074,33 @@ void ASTStmtWriter::VisitCXXNewExpr(CXXNewExpr *E) {
   Record.push_back(E->isParenTypeId());
 
   Record.push_back(E->isGlobalNew());
-  Record.push_back(E->passAlignment());
+  ImplicitAllocationParameters IAP = E->implicitAllocationParameters();
+  Record.push_back(isAlignedAllocation(IAP.PassAlignment));
+  Record.push_back(isTypeAwareAllocation(IAP.PassTypeIdentity));
   Record.push_back(E->doesUsualArrayDeleteWantSize());
   Record.push_back(E->CXXNewExprBits.HasInitializer);
   Record.push_back(E->CXXNewExprBits.StoredInitializationStyle);
 
   Record.AddDeclRef(E->getOperatorNew());
   Record.AddDeclRef(E->getOperatorDelete());
+
+  // Preserve the global candidates that the lookup at instantiation can find;
+  // otherwise a reduced BMI can elide them because the dependent CXXNewExpr has
+  // no direct reference to an allocation function.
+  if (Writer.isGeneratingReducedBMI() && !E->getOperatorNew()) {
+    auto PreserveGlobalCandidates = [&](OverloadedOperatorKind Kind) {
+      DeclarationName Name =
+          Record.getASTContext().DeclarationNames.getCXXOperatorName(Kind);
+      for (NamedDecl *Found :
+           Record.getASTContext().getTranslationUnitDecl()->noload_lookup(Name))
+        if (!Found->isImplicit())
+          Writer.GetDeclRef(Found);
+    };
+
+    PreserveGlobalCandidates(E->isArray() ? OO_Array_New : OO_New);
+    PreserveGlobalCandidates(E->isArray() ? OO_Array_Delete : OO_Delete);
+  }
+
   Record.AddTypeSourceInfo(E->getAllocatedTypeSourceInfo());
   if (E->isParenTypeId())
     Record.AddSourceRange(E->getTypeIdParens());
@@ -1978,10 +2152,10 @@ void ASTStmtWriter::VisitExprWithCleanups(ExprWithCleanups *E) {
   VisitExpr(E);
   Record.push_back(E->getNumObjects());
   for (auto &Obj : E->getObjects()) {
-    if (auto *BD = Obj.dyn_cast<BlockDecl *>()) {
+    if (auto *BD = dyn_cast<BlockDecl *>(Obj)) {
       Record.push_back(serialization::COK_Block);
       Record.AddDeclRef(BD);
-    } else if (auto *CLE = Obj.dyn_cast<CompoundLiteralExpr *>()) {
+    } else if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(Obj)) {
       Record.push_back(serialization::COK_CompoundLiteral);
       Record.AddStmt(CLE);
     }
@@ -1990,6 +2164,15 @@ void ASTStmtWriter::VisitExprWithCleanups(ExprWithCleanups *E) {
   Record.push_back(E->cleanupsHaveSideEffects());
   Record.AddStmt(E->getSubExpr());
   Code = serialization::EXPR_EXPR_WITH_CLEANUPS;
+}
+
+void ASTStmtWriter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->getNumTemplateArgs());
+  AddTemplateKWAndArgsInfo(E->KWAndArgs, E->getTrailingObjects());
+  Record.AddDeclarationNameInfo(E->getNameInfo());
+  Record.AddTemplateName(E->getTemplateName());
+  Code = serialization::EXPR_DEPENDENT_TEMPLATE_ID;
 }
 
 void ASTStmtWriter::VisitCXXDependentScopeMemberExpr(
@@ -2128,9 +2311,18 @@ void ASTStmtWriter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
 
 void ASTStmtWriter::VisitTypeTraitExpr(TypeTraitExpr *E) {
   VisitExpr(E);
+  Record.push_back(E->TypeTraitExprBits.IsBooleanTypeTrait);
+  Record.push_back(E->TypeTraitExprBits.IsComparisonResult);
   Record.push_back(E->TypeTraitExprBits.NumArgs);
   Record.push_back(E->TypeTraitExprBits.Kind); // FIXME: Stable encoding
-  Record.push_back(E->TypeTraitExprBits.Value);
+
+  if (E->TypeTraitExprBits.IsBooleanTypeTrait)
+    Record.push_back(E->TypeTraitExprBits.Value);
+  else if (E->isValueDependent())
+    Record.AddAPValue(APValue());
+  else
+    Record.AddAPValue(E->getAPValue());
+
   Record.AddSourceRange(E->getSourceRange());
   for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
     Record.AddTypeSourceInfo(E->getArg(I));
@@ -2191,8 +2383,8 @@ void ASTStmtWriter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 
 void ASTStmtWriter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   VisitExpr(E);
-  Record.push_back(E->TransformedExpressions);
-  Record.push_back(E->FullySubstituted);
+  Record.push_back(E->PackIndexingExprBits.TransformedExpressions);
+  Record.push_back(E->PackIndexingExprBits.FullySubstituted);
   Record.AddSourceLocation(E->getEllipsisLoc());
   Record.AddSourceLocation(E->getRSquareLoc());
   Record.AddStmt(E->getPackIdExpression());
@@ -2206,11 +2398,10 @@ void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
   Record.AddDeclRef(E->getAssociatedDecl());
-  CurrentPackingBits.addBit(E->isReferenceParameter());
+  CurrentPackingBits.addBit(E->getFinal());
   CurrentPackingBits.addBits(E->getIndex(), /*Width=*/12);
-  CurrentPackingBits.addBit((bool)E->getPackIndex());
-  if (auto PackIndex = E->getPackIndex())
-    Record.push_back(*PackIndex + 1);
+  Record.writeUnsignedOrNone(E->getPackIndex());
+  Record.AddTypeRef(E->getParameterType());
 
   Record.AddSourceLocation(E->getNameLoc());
   Record.AddStmt(E->getReplacement());
@@ -2221,6 +2412,7 @@ void ASTStmtWriter::VisitSubstNonTypeTemplateParmPackExpr(
                                           SubstNonTypeTemplateParmPackExpr *E) {
   VisitExpr(E);
   Record.AddDeclRef(E->getAssociatedDecl());
+  CurrentPackingBits.addBit(E->getFinal());
   Record.push_back(E->getIndex());
   Record.AddTemplateArgument(E->getArgumentPack());
   Record.AddSourceLocation(E->getParameterPackLocation());
@@ -2253,11 +2445,11 @@ void ASTStmtWriter::VisitCXXFoldExpr(CXXFoldExpr *E) {
   Record.AddSourceLocation(E->LParenLoc);
   Record.AddSourceLocation(E->EllipsisLoc);
   Record.AddSourceLocation(E->RParenLoc);
-  Record.push_back(E->NumExpansions);
+  Record.push_back(E->NumExpansions.toInternalRepresentation());
   Record.AddStmt(E->SubExprs[0]);
   Record.AddStmt(E->SubExprs[1]);
   Record.AddStmt(E->SubExprs[2]);
-  Record.push_back(E->Opcode);
+  Record.push_back(E->CXXFoldExprBits.Opcode);
   Code = serialization::EXPR_CXX_FOLD;
 }
 
@@ -2291,12 +2483,6 @@ void ASTStmtWriter::VisitOpaqueValueExpr(OpaqueValueExpr *E) {
   Record.AddSourceLocation(E->getLocation());
   Record.push_back(E->isUnique());
   Code = serialization::EXPR_OPAQUE_VALUE;
-}
-
-void ASTStmtWriter::VisitTypoExpr(TypoExpr *E) {
-  VisitExpr(E);
-  // TODO: Figure out sane writer behavior for a TypoExpr, if necessary
-  llvm_unreachable("Cannot write TypoExpr nodes");
 }
 
 //===----------------------------------------------------------------------===//
@@ -2430,30 +2616,57 @@ void ASTStmtWriter::VisitOMPSimdDirective(OMPSimdDirective *D) {
   Code = serialization::STMT_OMP_SIMD_DIRECTIVE;
 }
 
-void ASTStmtWriter::VisitOMPLoopTransformationDirective(
-    OMPLoopTransformationDirective *D) {
+void ASTStmtWriter::VisitOMPCanonicalLoopNestTransformationDirective(
+    OMPCanonicalLoopNestTransformationDirective *D) {
   VisitOMPLoopBasedDirective(D);
-  Record.writeUInt32(D->getNumGeneratedLoops());
+  Record.writeUInt32(D->getNumGeneratedTopLevelLoops());
 }
 
 void ASTStmtWriter::VisitOMPTileDirective(OMPTileDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
   Code = serialization::STMT_OMP_TILE_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPStripeDirective(OMPStripeDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+  Code = serialization::STMP_OMP_STRIPE_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPUnrollDirective(OMPUnrollDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
   Code = serialization::STMT_OMP_UNROLL_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPReverseDirective(OMPReverseDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
   Code = serialization::STMT_OMP_REVERSE_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
-  VisitOMPLoopTransformationDirective(D);
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
   Code = serialization::STMT_OMP_INTERCHANGE_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPFlattenDirective(OMPFlattenDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+  Code = serialization::STMT_OMP_FLATTEN_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPSplitDirective(OMPSplitDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+  Code = serialization::STMT_OMP_SPLIT_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPCanonicalLoopSequenceTransformationDirective(
+    OMPCanonicalLoopSequenceTransformationDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Record.writeUInt32(D->getNumGeneratedTopLevelLoops());
+}
+
+void ASTStmtWriter::VisitOMPFuseDirective(OMPFuseDirective *D) {
+  VisitOMPCanonicalLoopSequenceTransformationDirective(D);
+  Code = serialization::STMT_OMP_FUSE_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPForDirective(OMPForDirective *D) {
@@ -2653,10 +2866,18 @@ void ASTStmtWriter::VisitOMPScanDirective(OMPScanDirective *D) {
   Code = serialization::STMT_OMP_SCAN_DIRECTIVE;
 }
 
-void ASTStmtWriter::VisitOMPOrderedDirective(OMPOrderedDirective *D) {
+void ASTStmtWriter::VisitOMPOrderedStandaloneDirective(
+    OMPOrderedStandaloneDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
-  Code = serialization::STMT_OMP_ORDERED_DIRECTIVE;
+  Code = serialization::STMT_OMP_ORDERED_STANDALONE_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPOrderedBlockAssocDirective(
+    OMPOrderedBlockAssocDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPTeamsDirective(OMPTeamsDirective *D) {
@@ -2987,6 +3208,27 @@ void ASTStmtWriter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
     Record.AddStmt(E);
 
   Code = serialization::STMT_OPENACC_WAIT_CONSTRUCT;
+}
+
+void ASTStmtWriter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCConstructStmt(S);
+  Record.writeEnum(S->getAtomicKind());
+  Record.AddStmt(S->getAssociatedStmt());
+
+  Code = serialization::STMT_OPENACC_ATOMIC_CONSTRUCT;
+}
+
+void ASTStmtWriter::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
+  VisitStmt(S);
+  Record.push_back(S->getVarList().size());
+  VisitOpenACCConstructStmt(S);
+  Record.AddSourceRange(S->ParensLoc);
+  Record.AddSourceLocation(S->ReadOnlyLoc);
+
+  for (Expr *E : S->getVarList())
+    Record.AddStmt(E);
+  Code = serialization::STMT_OPENACC_CACHE_CONSTRUCT;
 }
 
 //===----------------------------------------------------------------------===//

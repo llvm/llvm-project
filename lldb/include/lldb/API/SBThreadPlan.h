@@ -105,6 +105,9 @@ public:
   SBThreadPlan QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
                                          bool first_insn, SBError &error);
 
+  SBThreadPlan QueueThreadPlanForStepSingleInstruction(bool step_over,
+                                                       SBError &error);
+
   SBThreadPlan QueueThreadPlanForRunToAddress(SBAddress address);
   SBThreadPlan QueueThreadPlanForRunToAddress(SBAddress address,
                                               SBError &error);
@@ -130,6 +133,7 @@ private:
   friend class SBValue;
   friend class lldb_private::QueueImpl;
   friend class SBQueueItem;
+  friend class lldb_private::ScriptInterpreterBridge;
 
   lldb::ThreadPlanSP GetSP() const { return m_opaque_wp.lock(); }
   lldb_private::ThreadPlan *get() const { return GetSP().get(); }

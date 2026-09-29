@@ -14,6 +14,7 @@
 #include "mlir/TableGen/GenInfo.h"
 
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -60,8 +61,13 @@ using IndicesTy = llvm::SmallBitVector;
 
 /// Return a CodeGen value type entry from a type record.
 static llvm::MVT::SimpleValueType getValueType(const Record *rec) {
-  return (llvm::MVT::SimpleValueType)rec->getValueAsDef("VT")->getValueAsInt(
-      "Value");
+  return StringSwitch<llvm::MVT::SimpleValueType>(
+             rec->getValueAsDef("VT")->getValueAsString("LLVMName"))
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)      \
+  .Case(#Ty, llvm::MVT::Ty)
+#include "llvm/CodeGen/GenVT.inc"
+#undef GET_VT_ATTR
+      .Case("INVALID_SIMPLE_VALUE_TYPE", llvm::MVT::INVALID_SIMPLE_VALUE_TYPE);
 }
 
 /// Return the indices of the definitions in a list of definitions that
@@ -155,11 +161,15 @@ public:
   }
 
   /// Return true if the intrinsic may have side effects, i.e. does not have the
-  /// `IntrNoMem` property.
+  /// `IntrNoMem` property or has the `IntrHasSideEffects` property.
   bool hasSideEffects() const {
     return llvm::none_of(
-        record.getValueAsListOfDefs(fieldTraits),
-        [](const Record *r) { return r->getName() == "IntrNoMem"; });
+               record.getValueAsListOfDefs(fieldTraits),
+               [](const Record *r) { return r->getName() == "IntrNoMem"; }) ||
+           llvm::any_of(record.getValueAsListOfDefs(fieldTraits),
+                        [](const Record *r) {
+                          return r->getName() == "IntrHasSideEffects";
+                        });
   }
 
   /// Return true if the intrinsic is commutative, i.e. has the respective
@@ -191,7 +201,7 @@ private:
 
 /// Prints the elements in "range" separated by commas and surrounded by "[]".
 template <typename Range>
-void printBracketedRange(const Range &range, llvm::raw_ostream &os) {
+static void printBracketedRange(const Range &range, llvm::raw_ostream &os) {
   os << '[';
   llvm::interleaveComma(range, os);
   os << ']';

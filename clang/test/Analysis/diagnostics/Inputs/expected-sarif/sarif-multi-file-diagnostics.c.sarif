@@ -1,0 +1,144 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "artifacts": [
+        {
+          "length": -1,
+          "location": {
+            "index": 0,
+            "uri": "file:///[...]/sarif-multi-file-diagnostics.c"
+          },
+          "mimeType": "text/plain",
+          "roles": [
+            "resultFile"
+          ]
+        }
+      ],
+      "columnKind": "unicodeCodePoints",
+      "results": [
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "important",
+                      "location": {
+                        "message": {
+                          "text": "Assuming 'p' is null"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                            "uri": "file:///[...]/sarif-multi-file-diagnostics.c"
+                          },
+                          "region": {
+                            "endColumn": 7,
+                            "startColumn": 7,
+                            "startLine": 8
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "unimportant",
+                      "location": {
+                        "message": {
+                          "text": "Taking false branch"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                            "uri": "file:///[...]/sarif-multi-file-diagnostics.c"
+                          },
+                          "region": {
+                            "endColumn": 3,
+                            "startColumn": 3,
+                            "startLine": 8
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Dereference of null pointer (loaded from variable 'p')"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                            "uri": "file:///[...]/sarif-multi-file-diagnostics.c"
+                          },
+                          "region": {
+                            "endColumn": 14,
+                            "endLine": 11,
+                            "startColumn": 12,
+                            "startLine": 11
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "hostedViewerUri": "file:///[...]/report-d03238.html",
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0,
+                  "uri": "file:///[...]/sarif-multi-file-diagnostics.c"
+                },
+                "region": {
+                  "endColumn": 14,
+                  "endLine": 11,
+                  "startColumn": 12,
+                  "startLine": 11
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Dereference of null pointer (loaded from variable 'p')"
+          },
+          "partialFingerprints": {
+            "clang/issueHash/v1": "d0323824ffaf9fee78b866e18d300fda"
+          },
+          "ruleId": "core.NullDereference",
+          "ruleIndex": 0
+        }
+      ],
+      "tool": {
+        "driver": {
+          "fullName": "clang static analyzer",
+          "informationUri": "https://clang.llvm.org/docs/UsersManual.html",
+          "language": "en-US",
+          "name": "clang",
+          "rules": [
+            {
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning",
+                "rank": -1
+              },
+              "fullDescription": {
+                "text": "Check for dereferences of null pointers"
+              },
+              "helpUri": "https://clang.llvm.org/docs/analyzer/checkers.html#core-nulldereference",
+              "id": "core.NullDereference",
+              "name": "core.NullDereference"
+            }
+          ],
+          "version": "[clang version]"
+        }
+      }
+    }
+  ],
+  "version": "[SARIF version]"
+}

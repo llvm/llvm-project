@@ -22,6 +22,22 @@ using testing::ElementsAre;
 
 namespace {
 
+namespace adl_test {
+struct WithFreeBeginEnd {
+  int data[3] = {21, 22, 23};
+};
+
+auto begin(const WithFreeBeginEnd &X) { return std::begin(X.data); }
+auto end(const WithFreeBeginEnd &X) { return std::end(X.data); }
+
+struct WithFreeRBeginREnd {
+  int data[3] = {42, 43, 44};
+};
+
+auto rbegin(const WithFreeRBeginREnd &X) { return std::rbegin(X.data); }
+auto rend(const WithFreeRBeginREnd &X) { return std::rend(X.data); }
+} // namespace adl_test
+
 template <int> struct Shadow;
 
 struct WeirdIter
@@ -32,11 +48,10 @@ struct AdaptedIter : iterator_adaptor_base<AdaptedIter, WeirdIter> {};
 
 // Test that iterator_adaptor_base forwards typedefs, if value_type is
 // unchanged.
-static_assert(std::is_same_v<typename AdaptedIter::value_type, Shadow<0>>, "");
-static_assert(std::is_same_v<typename AdaptedIter::difference_type, Shadow<1>>,
-              "");
-static_assert(std::is_same_v<typename AdaptedIter::pointer, Shadow<2>>, "");
-static_assert(std::is_same_v<typename AdaptedIter::reference, Shadow<3>>, "");
+static_assert(std::is_same_v<AdaptedIter::value_type, Shadow<0>>, "");
+static_assert(std::is_same_v<AdaptedIter::difference_type, Shadow<1>>, "");
+static_assert(std::is_same_v<AdaptedIter::pointer, Shadow<2>>, "");
+static_assert(std::is_same_v<AdaptedIter::reference, Shadow<3>>, "");
 
 // Ensure that pointe{e,r}_iterator adaptors correctly forward the category of
 // the underlying iterator.
@@ -162,8 +177,8 @@ TEST(PointeeIteratorTest, Basic) {
   V.push_back(&arr[2]);
   V.push_back(&arr[3]);
 
-  typedef pointee_iterator<SmallVectorImpl<int *>::const_iterator>
-      test_iterator;
+  using test_iterator =
+      pointee_iterator<SmallVectorImpl<int *>::const_iterator>;
 
   test_iterator Begin, End;
   Begin = V.begin();
@@ -203,9 +218,8 @@ TEST(PointeeIteratorTest, SmartPointer) {
   V.push_back(std::make_unique<int>(3));
   V.push_back(std::make_unique<int>(4));
 
-  typedef pointee_iterator<
-      SmallVectorImpl<std::unique_ptr<int>>::const_iterator>
-      test_iterator;
+  using test_iterator =
+      pointee_iterator<SmallVectorImpl<std::unique_ptr<int>>::const_iterator>;
 
   test_iterator Begin, End;
   Begin = V.begin();
@@ -364,6 +378,14 @@ TEST(FilterIteratorTest, ReverseFilterRange) {
   EXPECT_EQ((SmallVector<int, 4>{6, 4, 2, 0}), Actual4);
 }
 
+TEST(FilterIteratorTest, ADL) {
+  // Make sure that we use the `begin`/`end` functions
+  // from `adl_test`, using ADL.
+  adl_test::WithFreeBeginEnd R;
+  auto IsOdd = [](int N) { return N % 2 != 0; };
+  EXPECT_THAT(make_filter_range(R, IsOdd), ElementsAre(21, 23));
+}
+
 TEST(PointerIterator, Basic) {
   int A[] = {1, 2, 3, 4};
   pointer_iterator<int *> Begin(std::begin(A)), End(std::end(A));
@@ -395,18 +417,9 @@ TEST(PointerIterator, Range) {
     EXPECT_EQ(A + I++, P);
 }
 
-namespace rbegin_detail {
-struct WithFreeRBegin {
-  int data[3] = {42, 43, 44};
-};
-
-auto rbegin(const WithFreeRBegin &X) { return std::rbegin(X.data); }
-auto rend(const WithFreeRBegin &X) { return std::rend(X.data); }
-} // namespace rbegin_detail
-
 TEST(ReverseTest, ADL) {
   // Check that we can find the rbegin/rend functions via ADL.
-  rbegin_detail::WithFreeRBegin Foo;
+  adl_test::WithFreeRBeginREnd Foo;
   EXPECT_THAT(reverse(Foo), ElementsAre(44, 43, 42));
 }
 

@@ -9,6 +9,7 @@ loadable_module("DoublerPlugin") {
   deps = [
     # DoublerPlugin doesn't want to link in any LLVM code, it just needs its
     # headers.
+    "//llvm/include/llvm/Analysis:TargetLibraryInfo",
     "//llvm/include/llvm/IR:public_tablegen",
   ]
 

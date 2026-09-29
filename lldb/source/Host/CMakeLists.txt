@@ -7,13 +7,18 @@ if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
   endif()
 endif()
 
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  add_definitions("-D_ALL_SOURCE")
+endif()
+
 macro(add_host_subdirectory group)
   list(APPEND HOST_SOURCES ${ARGN})
   source_group(${group} FILES ${ARGN})
 endmacro()
 
 add_host_subdirectory(common
-  common/Alarm.cpp
+  common/DiagnosticsRendering.cpp
+  common/DomainSocket.cpp
   common/FileAction.cpp
   common/FileCache.cpp
   common/File.cpp
@@ -24,9 +29,10 @@ add_host_subdirectory(common
   common/HostNativeThreadBase.cpp
   common/HostProcess.cpp
   common/HostThread.cpp
+  common/JSONTransport.cpp
   common/LockFileBase.cpp
-  common/LZMA.cpp
   common/MainLoopBase.cpp
+  common/MemoryMonitor.cpp
   common/MonitoringProcessLauncher.cpp
   common/NativeProcessProtocol.cpp
   common/NativeRegisterContext.cpp
@@ -48,6 +54,16 @@ add_host_subdirectory(common
   common/ZipFileResolver.cpp
   )
 
+add_host_subdirectory(common
+  common/ScriptInterpreterRuntimeLoader.cpp
+  )
+
+if (LLDB_ENABLE_PYTHON)
+  add_host_subdirectory(common
+    common/PythonRuntimeLoader.cpp
+    )
+endif()
+
 if (LLDB_ENABLE_LIBEDIT)
   add_host_subdirectory(common
     common/Editline.cpp
@@ -60,8 +76,12 @@ add_host_subdirectory(posix
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   add_host_subdirectory(windows
+    windows/ConPTYUtils.cpp
+    windows/ConnectionConPTYWindows.cpp
     windows/ConnectionGenericFileWindows.cpp
+    windows/DomainSocketWindows.cpp
     windows/FileSystem.cpp
+    windows/FileWindows.cpp
     windows/Host.cpp
     windows/HostInfoWindows.cpp
     windows/HostProcessWindows.cpp
@@ -70,11 +90,19 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/MainLoopWindows.cpp
     windows/PipeWindows.cpp
     windows/ProcessLauncherWindows.cpp
+    windows/PseudoConsole.cpp
     windows/ProcessRunLock.cpp
+    windows/WindowsFileAction.cpp
     )
+  if (LLDB_ENABLE_PYTHON)
+    add_host_subdirectory(windows
+      windows/PythonRuntimeLoaderWindows.cpp
+      )
+  endif()
 else()
   add_host_subdirectory(posix
-    posix/DomainSocket.cpp
+    posix/DomainSocketPosix.cpp
+    posix/FilePosix.cpp
     posix/FileSystemPosix.cpp
     posix/HostInfoPosix.cpp
     posix/HostProcessPosix.cpp
@@ -82,8 +110,14 @@ else()
     posix/LockFilePosix.cpp
     posix/MainLoopPosix.cpp
     posix/PipePosix.cpp
-    posix/ProcessLauncherPosixFork.cpp
+    posix/Support.cpp
     )
+
+  if (NOT EMSCRIPTEN)
+    add_host_subdirectory(posix
+      posix/ProcessLauncherPosixFork.cpp
+      )
+  endif()
 
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     add_subdirectory(macosx/objcxx)
@@ -96,12 +130,20 @@ else()
       macosx/cfcpp/CFCMutableSet.cpp
       macosx/cfcpp/CFCString.cpp
       )
+    if (LLDB_ENABLE_PYTHON)
+      add_host_subdirectory(macosx
+        macosx/PythonRuntimeLoaderDarwin.cpp
+        )
+    endif()
     if(APPLE_EMBEDDED)
       set_property(SOURCE macosx/Host.mm APPEND PROPERTY
                COMPILE_DEFINITIONS "NO_XPC_SERVICES=1")
     endif()
-
-
+  elseif (CMAKE_SYSTEM_NAME MATCHES "Emscripten")
+    add_host_subdirectory(emscripten
+      emscripten/Host.cpp
+      emscripten/HostInfoEmscripten.cpp
+      )
   elseif (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
     add_host_subdirectory(linux
       linux/AbstractSocket.cpp
@@ -110,10 +152,14 @@ else()
       linux/LibcGlue.cpp
       linux/Support.cpp
       )
+    if (LLDB_ENABLE_PYTHON)
+      add_host_subdirectory(linux
+        linux/PythonRuntimeLoaderLinux.cpp
+        )
+    endif()
     if (CMAKE_SYSTEM_NAME MATCHES "Android")
       add_host_subdirectory(android
         android/HostInfoAndroid.cpp
-        android/LibcGlue.cpp
         )
     endif()
   elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
@@ -136,8 +182,10 @@ else()
 
   elseif (CMAKE_SYSTEM_NAME MATCHES "AIX")
     add_host_subdirectory(aix
+      aix/Host.cpp
       aix/HostInfoAIX.cpp
-      )    
+      aix/Support.cpp
+      )
   endif()
 endif()
 
@@ -154,9 +202,6 @@ endif()
 if (LLDB_ENABLE_LIBEDIT)
   list(APPEND EXTRA_LIBS LibEdit::LibEdit)
 endif()
-if (LLDB_ENABLE_LZMA)
-  list(APPEND EXTRA_LIBS ${LIBLZMA_LIBRARIES})
-endif()
 if (WIN32)
   list(APPEND LLDB_SYSTEM_LIBS psapi)
 endif()
@@ -171,14 +216,34 @@ endif()
 add_lldb_library(lldbHost NO_PLUGIN_DEPENDENCIES
   ${HOST_SOURCES}
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Host
+  LINK_COMPONENTS
+    Object
+    Support
   LINK_LIBS
     lldbUtility
     ${EXTRA_LIBS}
     ${LLDBObjCLibs}
     ${LLDB_LIBEDIT_LIBS}
-
-  LINK_COMPONENTS
-    Object
-    Support
+  ALLOWED_INTERNAL_DEPENDENCIES
+    lldbUtility
+    lldbHostMacOSXObjCXX
   )
 
+if (WIN32 AND LLDB_ENABLE_PYTHON)
+  if (DEFINED LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME)
+    target_compile_definitions(lldbHost PRIVATE
+      LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME="${LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME}")
+    message(STATUS "lldbHost: -DLLDB_PYTHON_RUNTIME_LIBRARY_FILENAME=\"${LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME}\"")
+  else()
+    message(STATUS "lldbHost: LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME is NOT defined in this scope")
+  endif()
+  if (DEFINED LLDB_PYTHON_DLL_RELATIVE_PATH)
+    target_compile_definitions(lldbHost PRIVATE
+      LLDB_PYTHON_DLL_RELATIVE_PATH="${LLDB_PYTHON_DLL_RELATIVE_PATH}")
+    message(STATUS "lldbHost: -DLLDB_PYTHON_DLL_RELATIVE_PATH=\"${LLDB_PYTHON_DLL_RELATIVE_PATH}\"")
+  else()
+    message(STATUS "lldbHost: LLDB_PYTHON_DLL_RELATIVE_PATH is NOT defined in this scope")
+  endif()
+endif()

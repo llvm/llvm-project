@@ -12,6 +12,9 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -19,6 +22,10 @@ namespace llvm {
 class WebAssemblyTargetStreamer;
 
 class LLVM_LIBRARY_VISIBILITY WebAssemblyAsmPrinter final : public AsmPrinter {
+public:
+  static char ID;
+
+private:
   const WebAssemblySubtarget *Subtarget;
   const MachineRegisterInfo *MRI;
   WebAssemblyFunctionInfo *MFI;
@@ -27,8 +34,8 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyAsmPrinter final : public AsmPrinter {
 public:
   explicit WebAssemblyAsmPrinter(TargetMachine &TM,
                                  std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), Subtarget(nullptr), MRI(nullptr),
-        MFI(nullptr) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), Subtarget(nullptr),
+        MRI(nullptr), MFI(nullptr) {}
 
   StringRef getPassName() const override {
     return "WebAssembly Assembly Printer";
@@ -69,11 +76,30 @@ public:
   MVT getRegType(unsigned RegNo) const;
   std::string regToString(const MachineOperand &MO);
   WebAssemblyTargetStreamer *getTargetStreamer();
-  MCSymbolWasm *getMCSymbolForFunction(const Function *F, bool EnableEmEH,
+  MCSymbolWasm *getMCSymbolForFunction(const Function *F,
                                        wasm::WasmSignature *Sig,
                                        bool &InvokeDetected);
   MCSymbol *getOrCreateWasmSymbol(StringRef Name);
   void emitDecls(const Module &M);
+};
+
+class WebAssemblyAsmPrinterBeginPass
+    : public RequiredPassInfoMixin<WebAssemblyAsmPrinterBeginPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class WebAssemblyAsmPrinterPass
+    : public RequiredPassInfoMixin<WebAssemblyAsmPrinterPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class WebAssemblyAsmPrinterEndPass
+    : public RequiredPassInfoMixin<WebAssemblyAsmPrinterEndPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // end namespace llvm

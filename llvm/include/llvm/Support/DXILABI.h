@@ -17,6 +17,7 @@
 #ifndef LLVM_SUPPORT_DXILABI_H
 #define LLVM_SUPPORT_DXILABI_H
 
+#include "llvm/ADT/StringRef.h"
 #include <cstdint>
 
 namespace llvm {
@@ -27,6 +28,15 @@ enum class ResourceClass : uint8_t {
   UAV,
   CBuffer,
   Sampler,
+  LastEntry = Sampler,
+};
+
+enum class ResourceDimension : uint8_t {
+  Unknown = 0,
+  Dim1D,
+  Dim2D,
+  Dim3D,
+  Cube,
 };
 
 /// The kind of resource for an SRV or UAV resource. Sometimes referred to as
@@ -75,6 +85,7 @@ enum class ElementType : uint32_t {
   UNormF64,
   PackedS8x32,
   PackedU8x32,
+  LastEntry = PackedU8x32,
 };
 
 /// Metadata tags for extra resource properties.
@@ -96,9 +107,24 @@ enum class SamplerFeedbackType : uint32_t {
   MipRegionUsed = 1,
 };
 
+/// Opcodes for the DXIL `AtomicBinOp` op (78). Values must match the DXIL
+/// specification.
+enum class AtomicBinOpCode : uint32_t {
+  Add = 0,
+  And = 1,
+  Or = 2,
+  Xor = 3,
+  IMin = 4,
+  IMax = 5,
+  UMin = 6,
+  UMax = 7,
+  Exchange = 8,
+};
+
 const unsigned MinWaveSize = 4;
 const unsigned MaxWaveSize = 128;
 
+LLVM_ABI StringRef getResourceClassName(ResourceClass RC);
 } // namespace dxil
 } // namespace llvm
 

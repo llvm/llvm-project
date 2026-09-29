@@ -1,4 +1,4 @@
-// RUN: fir-opt --function-attr %s | FileCheck %s
+// RUN: fir-opt --function-attr="set-nocapture=true" %s | FileCheck %s
 
 // If a function has a body and is not bind(c), and if the dummy argument doesn't have the target,
 // asynchronous, volatile, or pointer attribute, then add llvm.nocapture to the dummy argument.
@@ -43,3 +43,28 @@ func.func private @_QMarg_modPcheck_args(!fir.ref<i32> {fir.target}, !fir.ref<i3
 // CHECK-SAME:                                 !fir.ref<i32> {llvm.nocapture},
 // CHECK-SAME:                                 !fir.boxchar<1>,
 // CHECK-SAME:                                 !fir.ref<complex<f32>> {llvm.nocapture})
+
+// Test !fir.box arguments:
+// CHECK-LABEL:   func.func private @test_box(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.box<i32> {llvm.nocapture}) {
+func.func private @test_box(%arg0: !fir.box<i32>) {
+  return
+}
+
+// CHECK-LABEL:   func.func private @test_box_target(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.box<i32> {fir.target, llvm.nocapture}) {
+func.func private @test_box_target(%arg0: !fir.box<i32> {fir.target}) {
+  return
+}
+
+// CHECK-LABEL:   func.func private @test_box_volatile(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.box<i32> {fir.volatile, llvm.nocapture}) {
+func.func private @test_box_volatile(%arg0: !fir.box<i32> {fir.volatile}) {
+  return
+}
+
+// CHECK-LABEL:   func.func private @test_box_asynchronous(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.box<i32> {fir.asynchronous, llvm.nocapture}) {
+func.func private @test_box_asynchronous(%arg0: !fir.box<i32> {fir.asynchronous}) {
+  return
+}

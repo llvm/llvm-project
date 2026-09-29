@@ -1,0 +1,9 @@
+RUN: llvm-remarkutil filter --exclude --function=func1 %p/Inputs/filter.yaml | FileCheck %s --strict-whitespace
+
+; CHECK: --- !Missed
+; CHECK: Name:            Remark2
+; CHECK: ...
+; CHECK-NEXT: --- !Analysis
+; CHECK: Name:            Remark3
+; CHECK: ...
+; CHECK-NOT: {{.}}

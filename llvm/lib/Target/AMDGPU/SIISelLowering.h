@@ -14,9 +14,12 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIISELLOWERING_H
 #define LLVM_LIB_TARGET_AMDGPU_SIISELLOWERING_H
 
-#include "AMDGPUISelLowering.h"
 #include "AMDGPUArgumentUsageInfo.h"
+#include "AMDGPUISelLowering.h"
+#include "SIDefines.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include <bitset>
 
 namespace llvm {
 
@@ -32,6 +35,11 @@ class SITargetLowering final : public AMDGPUTargetLowering {
 private:
   const GCNSubtarget *Subtarget;
 
+  /// Result types made Custom for ISD::INTRINSIC_W_CHAIN only so that
+  /// unsupported s_buffer_load result types can be diagnosed. Any other
+  /// intrinsic returning one of these must keep using generic legalization.
+  std::bitset<MVT::VALUETYPE_SIZE> SBufferLoadDiagnosticVTs;
+
 public:
   MVT getRegisterTypeForCallingConv(LLVMContext &Context,
                                     CallingConv::ID CC,
@@ -43,6 +51,8 @@ public:
   unsigned getVectorTypeBreakdownForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const override;
+
+  MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
 
 private:
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
@@ -58,22 +68,33 @@ private:
                                      Align Alignment,
                                      ImplicitParameter Param) const;
 
+  SDValue convertABITypeToValueType(SelectionDAG &DAG, SDValue Val,
+                                    CCValAssign &VA, const SDLoc &SL) const;
+
   SDValue lowerStackParameter(SelectionDAG &DAG, CCValAssign &VA,
                               const SDLoc &SL, SDValue Chain,
                               const ISD::InputArg &Arg) const;
+  SDValue lowerWorkGroupId(
+      SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
   SDValue getPreloadedValue(SelectionDAG &DAG,
                             const SIMachineFunctionInfo &MFI,
                             EVT VT,
                             AMDGPUFunctionArgInfo::PreloadedValue) const;
 
-  SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
+  SDValue LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
+  SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,
                                  MVT VT, unsigned Offset) const;
   SDValue lowerImage(SDValue Op, const AMDGPU::ImageDimIntrinsicInfo *Intr,
                      SelectionDAG &DAG, bool WithChain) const;
-  SDValue lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc, SDValue Offset,
-                       SDValue CachePolicy, SelectionDAG &DAG) const;
+  SDValue lowerSBuffer(EVT VT, EVT MemVT, SDLoc DL, SDValue Chain, SDValue Rsrc,
+                       SDValue Offset, SDValue CachePolicy, SelectionDAG &DAG,
+                       MachineMemOperand *MMO = nullptr) const;
 
   SDValue lowerRawBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
                                      unsigned NewOpcode) const;
@@ -81,12 +102,20 @@ private:
                                         unsigned NewOpcode) const;
 
   SDValue lowerWaveID(SelectionDAG &DAG, SDValue Op) const;
+  SDValue lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
+                              AMDGPU::Hwreg::Id HwReg, unsigned LowBit,
+                              unsigned Width) const;
   SDValue lowerWorkitemID(SelectionDAG &DAG, SDValue Op, unsigned Dim,
                           const ArgDescriptor &ArgDesc) const;
 
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFromFP8(SDValue Op, bool IsBF8, SelectionDAG &DAG) const;
+  SDValue LowerCONVERT_TO_ARBITRARY_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerToFP8(SDValue Op, bool IsBF8, bool IsE5M3,
+                     SelectionDAG &DAG) const;
 
   // The raw.tbuffer and struct.tbuffer intrinsics have two offset args: offset
   // (the offset that is included in bounds checking and swizzling, to be split
@@ -116,8 +145,9 @@ private:
   SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
-  SDValue adjustLoadValueType(unsigned Opcode, MemSDNode *M,
-                              SelectionDAG &DAG, ArrayRef<SDValue> Ops,
+  SDValue LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const;
+  SDValue adjustLoadValueType(unsigned Opcode, MemSDNode *M, SelectionDAG &DAG,
+                              ArrayRef<SDValue> Ops,
                               bool IsIntrinsic = false) const;
 
   SDValue lowerIntrinsicLoad(MemSDNode *M, bool IsFormat, SelectionDAG &DAG,
@@ -145,13 +175,19 @@ private:
 
   /// Custom lowering for ISD::FP_ROUND for MVT::f16.
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue splitFP_ROUNDVectorOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINNUM_FMAXNUM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFMINIMUMNUM_FMAXIMUMNUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue promoteUniformOpToI32(SDValue Op, DAGCombinerInfo &DCI) const;
+  SDValue promoteUniformUnaryOpToI32(SDValue Op, DAGCombinerInfo &DCI) const;
+  SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMULO(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue getBaseSegmentAperture(unsigned AS, const SDLoc &DL,
+                                 SelectionDAG &DAG) const;
   SDValue getSegmentAperture(unsigned AS, const SDLoc &DL,
                              SelectionDAG &DAG) const;
 
@@ -168,6 +204,7 @@ private:
   SDValue lowerTrapHsaQueuePtr(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerTrapHsa(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
 
   SDNode *adjustWritemask(MachineSDNode *&N, SelectionDAG &DAG) const;
 
@@ -189,7 +226,7 @@ private:
   SDValue performAndCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performOrCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performXorCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performZeroExtendCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performZeroOrAnyExtendCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSignExtendInRegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performClassCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue getCanonicalConstantFP(SelectionDAG &DAG, const SDLoc &SL, EVT VT,
@@ -197,7 +234,8 @@ private:
   SDValue performFCanonicalizeCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   SDValue performFPMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
-                                  SDValue Op0, SDValue Op1) const;
+                                  SDValue Op0, SDValue Op1,
+                                  bool IsKnownNoNaNs) const;
   SDValue performIntMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Src, SDValue MinVal, SDValue MaxVal,
                                    bool Signed) const;
@@ -207,6 +245,8 @@ private:
   SDValue performExtractVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performInsertVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFPRoundCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performFrexpSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   SDValue reassociateScalarOps(SDNode *N, SelectionDAG &DAG) const;
   unsigned getFusedOpcode(const SelectionDAG &DAG,
@@ -216,7 +256,7 @@ private:
                                           DAGCombinerInfo &DCI) const;
 
   SDValue performAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performAddCarrySubCarryCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performPtrAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -257,7 +297,17 @@ public:
 
   bool shouldExpandVectorDynExt(SDNode *N) const;
 
+  bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const override;
+
+  bool canTransformPtrArithOutOfBounds(const Function &F,
+                                       EVT PtrVT) const override;
+
 private:
+  /// Returns true if the first real instruction in MBB is 8 bytes and could
+  /// be split by a 32-byte fetch window boundary. Used on GFX950 to avoid
+  /// instruction fetch delays.
+  bool needsFetchWindowAlignment(const MachineBasicBlock &MBB) const;
+
   // Analyze a combined offset from an amdgcn_s_buffer_load intrinsic and store
   // the three offsets (voffset, soffset and instoffset) into the SDValue[3]
   // array pointed to by Offsets.
@@ -302,18 +352,16 @@ public:
   bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const override;
 
   // While address space 7 should never make it to codegen, it still needs to
-  // have a MVT to prevent some analyses that query this function from breaking,
-  // so, to work around the lack of i160, map it to v5i32.
+  // have a MVT to prevent some analyses that query this function from breaking.
+  // We use the custum MVT::amdgpuBufferFatPointer and
+  // amdgpu::amdgpuBufferStridedPointer for this, though we use v8i32 for the
+  // memory type (which is probably unused).
   MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
   MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &, const CallBase &,
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
-
-  void CollectTargetIntrinsicOperands(const CallInst &I,
-                                      SmallVectorImpl<SDValue> &Ops,
-                                      SelectionDAG &DAG) const override;
 
   bool getAddrModeArguments(const IntrinsicInst *I,
                             SmallVectorImpl<Value *> &Ops,
@@ -348,14 +396,15 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *IsFast = nullptr) const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
   bool isMemOpHasNoClobberedMemOperand(const SDNode *N) const;
 
   static bool isNonGlobalAddrSpace(unsigned AS);
 
-  bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
+  bool isFreeAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DestAS) const override;
 
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
@@ -363,8 +412,9 @@ public:
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                         Type *Ty) const override;
 
-  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                               unsigned Index) const override;
+  ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const override;
+  bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
 
   bool isTypeDesirableForOp(unsigned Op, EVT VT) const override;
 
@@ -391,7 +441,7 @@ public:
   bool CanLowerReturn(CallingConv::ID CallConv,
                       MachineFunction &MF, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -433,6 +483,7 @@ public:
   SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerROTR(SDValue Op, SelectionDAG &DAG) const;
 
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
@@ -459,9 +510,20 @@ public:
                                   EVT VT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   const LLT Ty) const override;
-  bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
   bool isFMADLegal(const SelectionDAG &DAG, const SDNode *N) const override;
   bool isFMADLegal(const MachineInstr &MI, const LLT Ty) const override;
+
+  /// Variants for IR level callers, which have no MachineFunction to read the
+  /// denormal mode from and must pass \p FPEnv explicitly.
+  bool isFMAFasterThanFMulAndFAdd(EVT VT, DenormalFPEnv FPEnv) const;
+
+  /// \p VT is used as written, so a vector type reports false.
+  bool isFMADLegal(EVT VT, DenormalFPEnv FPEnv) const;
+
+  /// \p Ty is taken by its scalar type, so a vector type asks about a lane.
+  bool isFMADLegal(const Function &F, Type *Ty) const;
+
+  bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
 
   SDValue splitUnaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue splitBinaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
@@ -504,16 +566,17 @@ public:
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
-  void computeKnownBitsForFrameIndex(int FrameIdx,
-                                     KnownBits &Known,
-                                     const MachineFunction &MF) const override;
-  void computeKnownBitsForTargetInstr(GISelKnownBits &Analysis, Register R,
+  void computeKnownBitsForStackObjectPointer(KnownBits &Known,
+                                             const MachineFunction &MF,
+                                             Align Alignment) const override;
+  void computeKnownBitsForTargetInstr(GISelValueTracking &Analysis, Register R,
                                       KnownBits &Known,
                                       const APInt &DemandedElts,
                                       const MachineRegisterInfo &MRI,
                                       unsigned Depth = 0) const override;
 
-  Align computeKnownAlignForTargetInstr(GISelKnownBits &Analysis, Register R,
+  Align computeKnownAlignForTargetInstr(GISelValueTracking &Analysis,
+                                        Register R,
                                         const MachineRegisterInfo &MRI,
                                         unsigned Depth = 0) const override;
   bool isSDNodeSourceOfDivergence(const SDNode *N, FunctionLoweringInfo *FLI,
@@ -528,41 +591,46 @@ public:
                            Register N1) const override;
 
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
-                       unsigned MaxDepth = 5) const;
+                       SDNodeFlags UserFlags = {}, unsigned MaxDepth = 5) const;
+
+  /// Returns true if \p Op is provably canonical (no FCANONICALIZE needed).
+  /// \p QueryVT is the scalar FP type being checked, threaded unchanged
+  /// through recursion since canonicality is per vector element. FP operands
+  /// whose scalar type differs from \p QueryVT are treated as non-canonical,
+  /// since canonicality does not survive a change of FP format (e.g. bitcast
+  /// v2bf16 to v2f16); non-FP operands are not checked against \p QueryVT.
+  bool isCanonicalized(SelectionDAG &DAG, SDValue Op, EVT QueryVT,
+                       SDNodeFlags UserFlags, unsigned MaxDepth) const;
   bool isCanonicalized(Register Reg, const MachineFunction &MF,
                        unsigned MaxDepth = 5) const;
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
   bool denormalsEnabledForType(LLT Ty, const MachineFunction &MF) const;
 
-  bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
-                                 const TargetRegisterInfo *TRI,
-                                 const TargetInstrInfo *TII, unsigned &PhysReg,
-                                 int &Cost) const override;
-
-  bool isProfitableToHoist(Instruction *I) const override;
-
-  bool isKnownNeverNaNForTargetNode(SDValue Op,
-                                    const SelectionDAG &DAG,
-                                    bool SNaN = false,
+  bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
+                                    const SelectionDAG &DAG, bool SNaN = false,
                                     unsigned Depth = 0) const override;
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
   AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
   AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
   void emitExpandAtomicAddrSpacePredicate(Instruction *AI) const;
   void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
   void emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const override;
-
-  LoadInst *
-  lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
+  void emitExpandAtomicLoad(LoadInst *LI) const override;
+  void emitExpandAtomicStore(StoreInst *SI) const override;
 
   const TargetRegisterClass *getRegClassFor(MVT VT,
                                             bool isDivergent) const override;
   bool requiresUniformRegister(MachineFunction &MF,
                                const Value *V) const override;
-  Align getPrefLoopAlignment(MachineLoop *ML) const override;
+  Align
+  getPrefLoopAlignment(MachineLoop *ML,
+                       const MachineBasicBlock *BlockToAlign) const override;
+  unsigned
+  getMaxPermittedBytesForAlignment(MachineBasicBlock *MBB) const override;
 
   void allocateHSAUserSGPRs(CCState &CCInfo,
                             MachineFunction &MF,

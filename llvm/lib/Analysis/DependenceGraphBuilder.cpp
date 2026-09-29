@@ -131,7 +131,7 @@ template <class G> void AbstractDependenceGraphBuilder<G>::createPiBlocks() {
 
     // Build a set to speed up the lookup for edges whose targets
     // are inside the SCC.
-    SmallPtrSet<NodeType *, 4> NodesInSCC(NL.begin(), NL.end());
+    SmallPtrSet<NodeType *, 4> NodesInSCC(llvm::from_range, NL);
 
     // We have the set of nodes in the SCC. We go through the set of nodes
     // that are outside of the SCC and look for edges that cross the two sets.
@@ -240,9 +240,7 @@ template <class G> void AbstractDependenceGraphBuilder<G>::createDefUseEdges() {
         Instruction *UI = dyn_cast<Instruction>(U);
         if (!UI)
           continue;
-        NodeType *DstNode = nullptr;
-        if (IMap.find(UI) != IMap.end())
-          DstNode = IMap.find(UI)->second;
+        NodeType *DstNode = IMap.lookup(UI);
 
         // In the case of loops, the scope of the subgraph is all the
         // basic blocks (and instructions within them) belonging to the loop. We
@@ -297,7 +295,7 @@ void AbstractDependenceGraphBuilder<G>::createMemoryDependencyEdges() {
       bool BackwardEdgeCreated = false;
       for (Instruction *ISrc : SrcIList) {
         for (Instruction *IDst : DstIList) {
-          auto D = DI.depends(ISrc, IDst, true);
+          auto D = DI.depends(ISrc, IDst);
           if (!D)
             continue;
 

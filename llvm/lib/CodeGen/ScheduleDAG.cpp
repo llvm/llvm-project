@@ -260,65 +260,61 @@ void SUnit::setHeightToAtLeast(unsigned NewHeight) {
   isHeightCurrent = true;
 }
 
-/// Calculates the maximal path from the node to the exit.
+/// Calculates the maximal path from the node to the entry.
 void SUnit::ComputeDepth() {
-  SmallVector<SUnit*, 8> WorkList;
+  // Iterative post-order DFS along Preds. Pushing one pred at a time and
+  // finalizing on pop. A node on the stack cannot reappear as a pred of any
+  // descendant.
+  SmallVector<SUnit *, 8> WorkList;
   WorkList.push_back(this);
   do {
     SUnit *Cur = WorkList.back();
-
-    bool Done = true;
-    unsigned MaxPredDepth = 0;
+    bool Descended = false;
     for (const SDep &PredDep : Cur->Preds) {
       SUnit *PredSU = PredDep.getSUnit();
-      if (PredSU->isDepthCurrent)
-        MaxPredDepth = std::max(MaxPredDepth,
-                                PredSU->Depth + PredDep.getLatency());
-      else {
-        Done = false;
+      if (!PredSU->isDepthCurrent) {
         WorkList.push_back(PredSU);
+        Descended = true;
+        break;
       }
     }
-
-    if (Done) {
-      WorkList.pop_back();
-      if (MaxPredDepth != Cur->Depth) {
-        Cur->setDepthDirty();
-        Cur->Depth = MaxPredDepth;
-      }
-      Cur->isDepthCurrent = true;
-    }
+    if (Descended)
+      continue;
+    WorkList.pop_back();
+    unsigned MaxPredDepth = 0;
+    for (const SDep &PredDep : Cur->Preds)
+      MaxPredDepth = std::max(MaxPredDepth,
+                              PredDep.getSUnit()->Depth + PredDep.getLatency());
+    Cur->Depth = MaxPredDepth;
+    Cur->isDepthCurrent = true;
   } while (!WorkList.empty());
 }
 
-/// Calculates the maximal path from the node to the entry.
+/// Calculates the maximal path from the node to the exit.
 void SUnit::ComputeHeight() {
-  SmallVector<SUnit*, 8> WorkList;
+  // See ComputeDepth; this is the mirror image walking Succs.
+  SmallVector<SUnit *, 8> WorkList;
   WorkList.push_back(this);
   do {
     SUnit *Cur = WorkList.back();
-
-    bool Done = true;
-    unsigned MaxSuccHeight = 0;
+    bool Descended = false;
     for (const SDep &SuccDep : Cur->Succs) {
       SUnit *SuccSU = SuccDep.getSUnit();
-      if (SuccSU->isHeightCurrent)
-        MaxSuccHeight = std::max(MaxSuccHeight,
-                                 SuccSU->Height + SuccDep.getLatency());
-      else {
-        Done = false;
+      if (!SuccSU->isHeightCurrent) {
         WorkList.push_back(SuccSU);
+        Descended = true;
+        break;
       }
     }
-
-    if (Done) {
-      WorkList.pop_back();
-      if (MaxSuccHeight != Cur->Height) {
-        Cur->setHeightDirty();
-        Cur->Height = MaxSuccHeight;
-      }
-      Cur->isHeightCurrent = true;
-    }
+    if (Descended)
+      continue;
+    WorkList.pop_back();
+    unsigned MaxSuccHeight = 0;
+    for (const SDep &SuccDep : Cur->Succs)
+      MaxSuccHeight = std::max(MaxSuccHeight, SuccDep.getSUnit()->Height +
+                                                  SuccDep.getLatency());
+    Cur->Height = MaxSuccHeight;
+    Cur->isHeightCurrent = true;
   } while (!WorkList.empty());
 }
 
@@ -337,6 +333,12 @@ void SUnit::biasCriticalPath() {
   }
   if (BestI != Preds.begin())
     std::swap(*Preds.begin(), *BestI);
+}
+
+raw_ostream &llvm::operator<<(raw_ostream &OS, const SUnit &SU) {
+  assert(!SU.isBoundaryNode() &&
+         "use ScheduleDAG::dumpNodeName for boundary nodes");
+  return OS << "SU(" << SU.NodeNum << ")";
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -359,12 +361,15 @@ LLVM_DUMP_METHOD void ScheduleDAG::dumpNodeName(const SUnit &SU) const {
   else if (&SU == &ExitSU)
     dbgs() << "ExitSU";
   else
-    dbgs() << "SU(" << SU.NodeNum << ")";
+    dbgs() << SU;
 }
 
 LLVM_DUMP_METHOD void ScheduleDAG::dumpNodeAll(const SUnit &SU) const {
   dumpNode(SU);
   SU.dumpAttributes();
+  if (SU.isClustered())
+    dbgs() << "  Parent Cluster Index: " << SU.ParentClusterIdx << '\n';
+
   if (SU.Preds.size() > 0) {
     dbgs() << "  Predecessors:\n";
     for (const SDep &Dep : SU.Preds) {
@@ -468,6 +473,7 @@ void ScheduleDAGTopologicalSort::InitDAGTopologicalSorting() {
   // Cancel pending updates, mark as valid.
   Dirty = false;
   Updates.clear();
+  Reachable.clear();
 
   unsigned DAGSize = SUnits.size();
   std::vector<SUnit*> WorkList;
@@ -563,6 +569,7 @@ void ScheduleDAGTopologicalSort::AddPred(SUnit *Y, SUnit *X) {
   }
 
   NumNewPredsAdded++;
+  Reachable.clear();
 }
 
 void ScheduleDAGTopologicalSort::RemovePred(SUnit *M, SUnit *N) {
@@ -735,9 +742,18 @@ bool ScheduleDAGTopologicalSort::IsReachable(const SUnit *SU,
   bool HasLoop = false;
   // Is Ord(TargetSU) < Ord(SU) ?
   if (LowerBound < UpperBound) {
+    if (auto It = Reachable.find({TargetSU->NodeNum, SU->NodeNum});
+        It != Reachable.end()) {
+      return It->second;
+    }
     Visited.reset();
     // There may be a path from TargetSU to SU. Check for it.
     DFS(TargetSU, UpperBound, HasLoop);
+    // If there's no loop, cache the result. We only cache negative results,
+    // as positive results are not safe to cache; users call SU.removePred()
+    // without notifying us.
+    if (!HasLoop)
+      Reachable[{TargetSU->NodeNum, SU->NodeNum}] = false;
   }
   return HasLoop;
 }

@@ -30,7 +30,7 @@ class ThreadContextLsanBase : public ThreadContextBase {
   uptr cache_end() { return cache_end_; }
 
   // The argument is passed on to the subclass's OnStarted member function.
-  static void ThreadStart(u32 tid, tid_t os_id, ThreadType thread_type,
+  static void ThreadStart(u32 tid, ThreadID os_id, ThreadType thread_type,
                           void *onstarted_arg);
 
  protected:

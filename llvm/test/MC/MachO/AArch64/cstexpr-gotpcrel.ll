@@ -49,7 +49,7 @@
 ; supported on x86-64 but not on ARM64
 
 ; CHECK: .long   5
-; CHECK-NEXT: .long ((l_extgotequiv-_table)-44)+24
+; CHECK-NEXT: .long l_extgotequiv-_table-44+24
   %struct.data { i32 4, %struct.anon { i32 5,
     i32 add (i32 trunc (i64 sub (i64 ptrtoint (ptr @extgotequiv to i64),
                                  i64 ptrtoint (ptr getelementptr inbounds ([4 x %struct.data], ptr @table, i32 0, i64 3, i32 1, i32 1) to i64))
@@ -67,7 +67,7 @@
                            to i32)
 
 ; CHECK-LABEL: _deltaplus:
-; CHECK: .long  (l_localgotequiv-_deltaplus)+55
+; CHECK: .long  l_localgotequiv-_deltaplus+55
 @deltaplus = global i32 add (i32 trunc (i64 sub (i64 ptrtoint (ptr @localgotequiv to i64),
                                         i64 ptrtoint (ptr @deltaplus to i64))
                                         to i32), i32 55)

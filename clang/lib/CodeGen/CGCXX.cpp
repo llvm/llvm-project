@@ -23,6 +23,8 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
 using namespace clang;
 using namespace CodeGen;
 
@@ -83,8 +85,7 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
     if (I.isVirtual()) continue;
 
     // Skip base classes with trivial destructors.
-    const auto *Base =
-        cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
+    const auto *Base = I.getType()->castAsCXXRecordDecl();
     if (Base->hasTrivialDestructor()) continue;
 
     // If we've already found a base class with a non-trivial
@@ -175,7 +176,6 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   // requires explicit comdat support in the IL.
   if (llvm::GlobalValue::isWeakForLinker(TargetLinkage))
     return true;
-
   // Create the alias with no name.
   auto *Alias = llvm::GlobalAlias::create(AliasValueType, 0, Linkage, "",
                                           Aliasee, &getModule());
@@ -201,6 +201,68 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   return false;
 }
 
+/// Emit a definition as a global alias for another definition, unconditionally.
+void CodeGenModule::EmitDefinitionAsAlias(GlobalDecl AliasDecl,
+                                          GlobalDecl TargetDecl) {
+
+  llvm::Type *AliasValueType = getTypes().GetFunctionType(AliasDecl);
+
+  StringRef MangledName = getMangledName(AliasDecl);
+  llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+  if (Entry && !Entry->isDeclaration())
+    return;
+  auto *Aliasee = cast<llvm::GlobalValue>(GetAddrOfGlobal(TargetDecl));
+
+  // Determine the linkage type for the alias.
+  llvm::GlobalValue::LinkageTypes Linkage = getFunctionLinkage(AliasDecl);
+
+  // Create the alias with no name.
+  auto *Alias = llvm::GlobalAlias::create(AliasValueType, 0, Linkage, "",
+                                          Aliasee, &getModule());
+  // Destructors are always unnamed_addr.
+  Alias->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
+  if (Entry) {
+    assert(Entry->getValueType() == AliasValueType &&
+           Entry->getAddressSpace() == Alias->getAddressSpace() &&
+           "declaration exists with different type");
+    Alias->takeName(Entry);
+    Entry->replaceAllUsesWith(Alias);
+    Entry->eraseFromParent();
+  } else {
+    Alias->setName(MangledName);
+  }
+
+  // Set any additional necessary attributes for the alias.
+  SetCommonAttributes(AliasDecl, Alias);
+}
+
+// For an implicit __host__ __device__ destructor, this trap body is reachable
+// only when a host-allocated object is destroyed on the device through the
+// vtable. HIP documents that pattern as invalid: an object with virtual
+// member functions constructed on the host cannot be destroyed on the device.
+// Device-side construction either pulls the dtor in as an organic device
+// caller (errors surface in Sema) or compiles cleanly (the real body is
+// emitted, no trap).
+bool CodeGenModule::tryEmitCUDADeviceInvalidFunctionBody(GlobalDecl GD,
+                                                         llvm::Function *Fn) {
+  if (!getLangOpts().CUDAIsDevice)
+    return false;
+  const auto *FD = dyn_cast<FunctionDecl>(GD.getDecl());
+  if (!FD || !getContext().CUDADeviceInvalidFuncs.count(FD->getCanonicalDecl()))
+    return false;
+  llvm::BasicBlock *BB =
+      llvm::BasicBlock::Create(getLLVMContext(), "entry", Fn);
+  llvm::IRBuilder<> Builder(BB);
+  Builder.CreateIntrinsic(llvm::Intrinsic::trap, {});
+  llvm::Type *RetTy = Fn->getReturnType();
+  if (RetTy->isVoidTy())
+    Builder.CreateRetVoid();
+  else
+    Builder.CreateRet(llvm::PoisonValue::get(RetTy));
+  return true;
+}
+
 llvm::Function *CodeGenModule::codegenCXXStructor(GlobalDecl GD) {
   const CGFunctionInfo &FnInfo = getTypes().arrangeCXXStructorDeclaration(GD);
   auto *Fn = cast<llvm::Function>(
@@ -209,7 +271,8 @@ llvm::Function *CodeGenModule::codegenCXXStructor(GlobalDecl GD) {
 
   setFunctionLinkage(GD, Fn);
 
-  CodeGenFunction(*this).GenerateCode(GD, Fn, FnInfo);
+  if (!tryEmitCUDADeviceInvalidFunctionBody(GD, Fn))
+    CodeGenFunction(*this).GenerateCode(GD, Fn, FnInfo);
   setNonAliasAttributes(GD, Fn);
   SetLLVMFunctionAttributesForDefinition(cast<CXXMethodDecl>(GD.getDecl()), Fn);
   return Fn;
@@ -277,19 +340,11 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
 /// BuildAppleKextVirtualCall - This routine is to support gcc's kext ABI making
 /// indirect call to virtual functions. It makes the call through indexing
 /// into the vtable.
-CGCallee
-CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
-                                           NestedNameSpecifier *Qual,
-                                           llvm::Type *Ty) {
-  assert((Qual->getKind() == NestedNameSpecifier::TypeSpec) &&
-         "BuildAppleKextVirtualCall - bad Qual kind");
-
-  const Type *QTy = Qual->getAsType();
-  QualType T = QualType(QTy, 0);
-  const RecordType *RT = T->getAs<RecordType>();
-  assert(RT && "BuildAppleKextVirtualCall - Qual type must be record");
-  const auto *RD = cast<CXXRecordDecl>(RT->getDecl());
-
+CGCallee CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
+                                                    NestedNameSpecifier Qual,
+                                                    llvm::Type *Ty) {
+  const CXXRecordDecl *RD = Qual.getAsRecordDecl();
+  assert(RD && "BuildAppleKextVirtualCall - Qual must be record");
   if (const auto *DD = dyn_cast<CXXDestructorDecl>(MD))
     return BuildAppleKextVirtualDestructorCall(DD, Dtor_Complete, RD);
 

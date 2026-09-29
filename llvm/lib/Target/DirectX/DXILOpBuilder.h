@@ -50,8 +50,8 @@ public:
   /// Get a `%dx.types.ResRet` type with the given element type.
   StructType *getResRetType(Type *ElementTy);
 
-  /// Get the `%dx.types.splitdouble` type.
-  StructType *getSplitDoubleType(LLVMContext &Context);
+  /// Get a `%dx.types.CBufRet` type with the given element type.
+  StructType *getCBufRetType(Type *ElementTy);
 
   /// Get the `%dx.types.Handle` type.
   StructType *getHandleType();
@@ -66,11 +66,6 @@ public:
   static const char *getOpCodeName(dxil::OpCode DXILOp);
 
 private:
-  /// Gets a specific overload type of the function for the given DXIL op. If
-  /// the operation is not overloaded, \c OverloadType may be nullptr.
-  FunctionType *getOpFunctionType(dxil::OpCode OpCode,
-                                  Type *OverloadType = nullptr);
-
   Module &M;
   IRBuilder<> IRB;
   VersionTuple DXILVersion;

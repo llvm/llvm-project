@@ -17,8 +17,7 @@ define i1 @PR114901(<4 x i32> %a) {
 ; AVX-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[A]], <i32 poison, i32 -8, i32 poison, i32 42>
 ; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP2:%.*]] = ashr <4 x i1> [[SHIFT]], [[TMP1]]
-; AVX-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
+; AVX-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[SHIFT]], i64 1
 ; AVX-NEXT:    ret i1 [[R]]
 ;
   %e1 = extractelement <4 x i32> %a, i32 1
@@ -43,8 +42,7 @@ define i1 @PR114901_flip(<4 x i32> %a) {
 ; AVX-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0]] {
 ; AVX-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[A]], <i32 poison, i32 -8, i32 poison, i32 42>
 ; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP2:%.*]] = ashr <4 x i1> [[TMP1]], [[SHIFT]]
-; AVX-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
+; AVX-NEXT:    [[R:%.*]] = extractelement <4 x i1> [[TMP1]], i64 1
 ; AVX-NEXT:    ret i1 [[R]]
 ;
   %e1 = extractelement <4 x i32> %a, i32 1

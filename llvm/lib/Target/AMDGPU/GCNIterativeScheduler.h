@@ -77,6 +77,8 @@ protected:
   const StrategyKind Strategy;
   mutable GCNUpwardRPTracker UPTracker;
 
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
+
   class BuildDAG;
   class OverrideLegacyStrategy;
 
@@ -91,11 +93,17 @@ protected:
     return getRegionPressure(R.Begin, R.End);
   }
 
+  void swapIGLPMutations(const Region &R, bool IsReentry);
   void setBestSchedule(Region &R,
                        ScheduleRef Schedule,
                        const GCNRegPressure &MaxRP = GCNRegPressure());
 
   void scheduleBest(Region &R);
+  // Restore the instruction's dead and read-undef liveness flags.
+  void restoreLivenessFlags(MachineInstr &MI);
+  // Restore dead and read-undef liveness flags for all instructions in the
+  // region.
+  void restoreRegionLivenessFlags(const Region &R);
 
   std::vector<MachineInstr*> detachSchedule(ScheduleRef Schedule) const;
 

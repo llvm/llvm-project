@@ -30,9 +30,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 #  if _LIBCPP_STD_VER >= 23
@@ -41,7 +41,7 @@ template <move_constructible _Tp>
 template <copy_constructible _Tp>
 #  endif
   requires is_object_v<_Tp>
-class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS single_view : public view_interface<single_view<_Tp>> {
+class _LIBCPP_LLVM18_NO_UNIQUE_ADDRESS_ABI_TAG single_view : public view_interface<single_view<_Tp>> {
   _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Tp> __value_;
 
 public:
@@ -63,21 +63,21 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit single_view(in_place_t, _Args&&... __args)
       : __value_{in_place, std::forward<_Args>(__args)...} {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* begin() noexcept { return data(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* begin() noexcept { return data(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* begin() const noexcept { return data(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* begin() const noexcept { return data(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* end() noexcept { return data() + 1; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* end() noexcept { return data() + 1; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* end() const noexcept { return data() + 1; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* end() const noexcept { return data() + 1; }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool empty() noexcept { return false; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool empty() noexcept { return false; }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr size_t size() noexcept { return 1; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr size_t size() noexcept { return 1; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* data() noexcept { return __value_.operator->(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* data() noexcept { return __value_.operator->(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* data() const noexcept { return __value_.operator->(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* data() const noexcept { return __value_.operator->(); }
 };
 
 template <class _Tp>
@@ -103,9 +103,9 @@ inline constexpr auto single = __single_view::__fn{};
 } // namespace views
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

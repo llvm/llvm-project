@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=tbaa -polly-parallel -polly-parallel-force -polly-parallel-force -polly-invariant-load-hoisting=true '-passes=print<polly-ast>' -disable-output < %s | FileCheck %s -check-prefix=AST
-; RUN: opt %loadNPMPolly -aa-pipeline=tbaa -polly-parallel -polly-parallel-force -polly-parallel-force -polly-invariant-load-hoisting=true -passes=polly-codegen -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly -aa-pipeline=tbaa -polly-parallel -polly-parallel-force -polly-parallel-force -polly-invariant-load-hoisting=true '-passes=polly-custom<ast>' -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadNPMPolly -aa-pipeline=tbaa -polly-parallel -polly-parallel-force -polly-parallel-force -polly-invariant-load-hoisting=true '-passes=polly<no-default-opts>' -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 
 ; #define N 1024
 ; float A[N];
@@ -42,7 +42,9 @@ exit:
   ret void
 }
 
-!2 = !{!"float", !3, i64 0}
+!1 = !{!"float", !3, i64 0}
+!2 = !{!1, !1, i64 0}
 !3 = !{!"omnipotent char", !4, i64 0}
 !4 = !{!"Simple C/C++ TBAA"}
-!6 = !{!"float *ptr", !3, i64 0}
+!5 = !{!"float *ptr", !3, i64 0}
+!6 = !{!5, !5, i64 0}

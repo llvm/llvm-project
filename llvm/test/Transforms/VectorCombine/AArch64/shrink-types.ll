@@ -7,9 +7,8 @@ define i32 @test_and(<16 x i32> %a, ptr %b) {
 ; CHECK-LABEL: @test_and(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[B:%.*]], align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc <16 x i32> [[A:%.*]] to <16 x i8>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <16 x i8> [[WIDE_LOAD]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <16 x i8> [[TMP1]] to <16 x i32>
+; CHECK-NEXT:    [[TMP0:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <16 x i32> [[TMP0]], [[A:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -26,9 +25,8 @@ define i32 @test_mask_or(<16 x i32> %a, ptr %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[B:%.*]], align 1
 ; CHECK-NEXT:    [[A_MASKED:%.*]] = and <16 x i32> [[A:%.*]], splat (i32 16)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc <16 x i32> [[A_MASKED]] to <16 x i8>
-; CHECK-NEXT:    [[TMP1:%.*]] = or <16 x i8> [[WIDE_LOAD]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <16 x i8> [[TMP1]] to <16 x i32>
+; CHECK-NEXT:    [[TMP0:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <16 x i32> [[TMP0]], [[A_MASKED]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -47,15 +45,13 @@ define i32 @multiuse(<16 x i32> %u, <16 x i32> %v, ptr %b) {
 ; CHECK-NEXT:    [[U_MASKED:%.*]] = and <16 x i32> [[U:%.*]], splat (i32 255)
 ; CHECK-NEXT:    [[V_MASKED:%.*]] = and <16 x i32> [[V:%.*]], splat (i32 255)
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[B:%.*]], align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr <16 x i8> [[WIDE_LOAD]], splat (i8 4)
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <16 x i32> [[V_MASKED]] to <16 x i8>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <16 x i8> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[TMP2]] to <16 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = and <16 x i8> [[WIDE_LOAD]], splat (i8 15)
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <16 x i32> [[U_MASKED]] to <16 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = or <16 x i8> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr <16 x i8> [[WIDE_LOAD]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <16 x i8> [[TMP6]] to <16 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw <16 x i32> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <16 x i32> [[TMP7]], [[V_MASKED]]
+; CHECK-NEXT:    [[DOTINNER:%.*]] = and <16 x i8> [[WIDE_LOAD]], splat (i8 15)
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[DOTINNER]] to <16 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = or <16 x i32> [[TMP4]], [[U_MASKED]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw <16 x i32> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP8]])
 ; CHECK-NEXT:    ret i32 [[TMP9]]
 ;
@@ -81,9 +77,8 @@ define i32 @phi_bug(<16 x i32> %a, ptr %b) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[A_PHI:%.*]] = phi <16 x i32> [ [[A:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[WIDE_LOAD_PHI:%.*]] = phi <16 x i8> [ [[WIDE_LOAD]], [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc <16 x i32> [[A_PHI]] to <16 x i8>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <16 x i8> [[WIDE_LOAD_PHI]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <16 x i8> [[TMP1]] to <16 x i32>
+; CHECK-NEXT:    [[TMP0:%.*]] = zext <16 x i8> [[WIDE_LOAD_PHI]] to <16 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <16 x i32> [[TMP0]], [[A_PHI]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
@@ -112,5 +107,19 @@ define <2 x i32> @pr108698(<2 x i64> %x, <2 x i32> %y) {
   %lshr = lshr <2 x i32> %ext, %y
   ret <2 x i32> %lshr
 }
+
+define void @stride_load_31(ptr %src, ptr %dst) {
+; CHECK-LABEL: @stride_load_31(
+; CHECK-NEXT:    [[V:%.*]] = load <32 x i8>, ptr [[SRC:%.*]], align 1
+; CHECK-NEXT:    [[STRIDED:%.*]] = shufflevector <32 x i8> [[V]], <32 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+; CHECK-NEXT:    store <16 x i8> [[STRIDED]], ptr [[DST:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+  %v = load <32 x i8>, ptr %src, align 1
+  %strided = shufflevector <32 x i8> %v, <32 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+  store <16 x i8> %strided, ptr %dst, align 1
+  ret void
+}
+
 
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)

@@ -16,14 +16,15 @@
 #include "EvaluationResult.h"
 #include "InterpState.h"
 #include "PrimType.h"
+#include "Record.h"
 #include "Source.h"
-#include "llvm/Support/Error.h"
 
 namespace clang {
 namespace interp {
 class Context;
 class Function;
 class InterpStack;
+class FrameAllocator;
 class Program;
 enum Opcode : uint32_t;
 
@@ -33,21 +34,48 @@ public:
   using LabelTy = uint32_t;
   using AddrTy = uintptr_t;
   using Local = Scope::Local;
+  using PtrCallback =
+      llvm::function_ref<bool(InterpState &S, CodePtr OpPC, const Pointer &)>;
 
-  EvaluationResult interpretExpr(const Expr *E,
-                                 bool ConvertResultToRValue = false,
+  EvaluationResult interpretExpr(const Expr *E) {
+    return interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue(),
+                         /*DestroyToplevelScope=*/false);
+  }
+
+  EvaluationResult interpretExpr(const Expr *E, bool ConvertResultToRValue,
                                  bool DestroyToplevelScope = false);
-  EvaluationResult interpretDecl(const VarDecl *VD, bool CheckFullyInitialized);
+
+  EvaluationResult interpretDecl(const VarDecl *VD, const Expr *Init,
+                                 bool CheckFullyInitialized);
+  EvaluationResult interpretDestructor(const VarDecl *VD, const APValue &Value);
+  /// Interpret the given Expr to a Pointer.
+  EvaluationResult interpretAsPointer(const Expr *E, PtrCallback PtrCB);
+  EvaluationResult interpretAsLValuePointer(const Expr *E, PtrCallback PtrCB);
+  /// Interpret the given expression as if it was in the body of the given
+  /// function, i.e. the parameters of the function are available for use.
+  bool interpretCall(const FunctionDecl *FD, const Expr *E);
+
+  std::optional<bool> interpretWithSubstitutions(const FunctionDecl *Callee,
+                                                 ArrayRef<const Expr *> Args,
+                                                 const Expr *This,
+                                                 const Expr *Condition);
 
   /// Clean up all resources.
   void cleanup();
 
-  InterpState &getState() { return S; }
+  /// Returns the source location of the current opcode.
+  SourceInfo getSource(CodePtr PC) const override { return CurrentSource; }
+
+  bool constantFolding() const {
+    return S.EvalMode == EvaluationMode::ConstantFold;
+  }
 
 protected:
-  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
+  EvalEmitter(Context &Ctx, Program &P, const EvalSettings &Settings,
+              InterpStack &Stk, FrameAllocator &FrameAlloc);
 
-  virtual ~EvalEmitter();
+  EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
+              InterpStack &Stk, FrameAllocator &FrameAlloc);
 
   /// Define a label.
   void emitLabel(LabelTy Label);
@@ -56,35 +84,41 @@ protected:
 
   /// Methods implemented by the compiler.
   virtual bool visitExpr(const Expr *E, bool DestroyToplevelScope) = 0;
-  virtual bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) = 0;
+  virtual bool visitLValueExpr(const Expr *E, bool DestroyToplevelScope) = 0;
+  virtual bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
+                                  bool ConstantContext) = 0;
+  virtual bool visitDtorCall(const VarDecl *VD, const APValue &Value) = 0;
+  virtual bool visitWithSubstitutions(const FunctionDecl *Callee,
+                                      ArrayRef<const Expr *> Args,
+                                      const Expr *This,
+                                      const Expr *Condition) = 0;
   virtual bool visitFunc(const FunctionDecl *F) = 0;
+  virtual bool visit(const Expr *E) = 0;
+  virtual bool emitBool(bool V, const Expr *E) = 0;
 
   /// Emits jumps.
-  bool jumpTrue(const LabelTy &Label);
-  bool jumpFalse(const LabelTy &Label);
-  bool jump(const LabelTy &Label);
+  bool jumpTrue(const LabelTy &Label, SourceInfo SI);
+  bool jumpFalse(const LabelTy &Label, SourceInfo SI);
+  bool jump(const LabelTy &Label, SourceInfo SI);
   bool fallthrough(const LabelTy &Label);
+  /// Speculative execution.
+  bool speculate(const CallExpr *E, const LabelTy &EndLabel);
 
   /// Since expressions can only jump forward, predicated execution is
   /// used to deal with if-else statements.
   bool isActive() const { return CurrentLabel == ActiveLabel; }
-
-  /// Callback for registering a local.
-  Local createLocal(Descriptor *D);
-
-  /// Returns the source location of the current opcode.
-  SourceInfo getSource(const Function *F, CodePtr PC) const override {
-    return (F && F->hasBody()) ? F->getSource(PC) : CurrentSource;
+  bool checkingForUndefinedBehavior() const {
+    return S.checkingForUndefinedBehavior();
   }
 
+  /// Callback for registering a local.
+  Local createLocal(const Descriptor *D);
+
   /// Parameter indices.
-  llvm::DenseMap<const ParmVarDecl *, ParamOffset> Params;
-  /// Lambda captures.
-  llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
-  /// Offset of the This parameter in a lambda record.
-  ParamOffset LambdaThisCapture{0, false};
+  llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;
   /// Local descriptors.
-  llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
+  llvm::SmallVector<SmallVector<Local, 2>, 1> Descriptors;
+  std::optional<SourceInfo> LocOverride = std::nullopt;
 
 private:
   /// Current compilation context.
@@ -95,26 +129,25 @@ private:
   InterpState S;
   /// Location to write the result to.
   EvaluationResult EvalResult;
+  ConstantExprKind ConstexprKind = ConstantExprKind::Normal;
   /// Whether the result should be converted to an RValue.
   bool ConvertResultToRValue = false;
   /// Whether we should check if the result has been fully
   /// initialized.
   bool CheckFullyInitialized = false;
+  /// Callback to call when using interpretAsPointer.
+  std::optional<PtrCallback> PtrCB;
 
   /// Temporaries which require storage.
-  llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Locals;
+  llvm::SmallVector<char *> Locals;
 
   Block *getLocal(unsigned Index) const {
-    auto It = Locals.find(Index);
-    assert(It != Locals.end() && "Missing local variable");
-    return reinterpret_cast<Block *>(It->second.get());
+    assert(Index < Locals.size());
+    return reinterpret_cast<Block *>(Locals[Index]);
   }
 
   void updateGlobalTemporaries();
 
-  // The emitter always tracks the current instruction and sets OpPC to a token
-  // value which is mapped to the location of the opcode being evaluated.
-  CodePtr OpPC;
   /// Location of the current instruction.
   SourceInfo CurrentSource;
 

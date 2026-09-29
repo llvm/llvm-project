@@ -42,8 +42,8 @@ for.body:                                         ; preds = %for.body, %entry
 
   %arrayidxA = getelementptr inbounds i32, ptr %a, i64 %ind
 
-; CHECK: %loadA.ldist1 = {{.*}} !noalias !25
-; A noalias C: !25 -> { 17(15), 18(15), 19(15), 26(24) }
+; CHECK: %loadA.ldist1 = {{.*}} !alias.scope !24, !noalias !27
+; A noalias C: !33 -> { 19(17), 20(17), 21(17), 28(26) }
 ;                       ^^^^^^
   %loadA = load i32, ptr %arrayidxA, align 4
 
@@ -60,15 +60,15 @@ for.body:                                         ; preds = %for.body, %entry
 
   %arrayidxD = getelementptr inbounds i32, ptr %d, i64 %ind
 
-; CHECK: %loadD = {{.*}} !alias.scope !31
-; D's scope: !31 -> { 18(15), 32(33) }
+; CHECK: %loadD = {{.*}} !alias.scope !33
+; D's scope: !33 -> { 20(17), 34(35) }
 ;                             ^^^^^^
   %loadD = load i32, ptr %arrayidxD, align 4
 
   %arrayidxE = getelementptr inbounds i32, ptr %e, i64 %ind
 
-; CHECK: %loadE = {{.*}} !alias.scope !34
-; E's scope: !34 -> { 19(15), 35(33) }
+; CHECK: %loadE = {{.*}} !alias.scope !36
+; E's scope: !36 -> { 21(17), 37(33) }
 ;                             ^^^^^^
   %loadE = load i32, ptr %arrayidxE, align 4
 
@@ -76,8 +76,8 @@ for.body:                                         ; preds = %for.body, %entry
 
   %arrayidxC = getelementptr inbounds i32, ptr %c, i64 %ind
 
-; CHECK: store i32 %mulC, {{.*}} !alias.scope !36, !noalias !38
-; C's scope: !36 -> { 17(15), 37(33) }
+; CHECK: store i32 %mulC, {{.*}} !alias.scope !38, !noalias !40
+; C's scope: !38 -> { 19(17), 39(35)
 ;                     ^^^^^^
 ; C noalias D and E: !38 -> { 21(15), 32(33), 35(33) }
 ;                                     ^^^^^^  ^^^^^^
@@ -92,15 +92,19 @@ for.end:                                          ; preds = %for.body
 
 ; Domain for the second loop versioning for the top loop after
 ; distribution.
-; CHECK: !15 = distinct !{!15, !"LVerDomain"}
-; CHECK: !17 = distinct !{!17, !15}
-; CHECK: !25 = !{!17, !18, !19, !26}
-; CHECK: !31 = !{!18, !32}
-; CHECK: !32 = distinct !{!32, !33}
+; CHECK: !17 = distinct !{!17, !"LVerDomain"}
+; CHECK: !19 = distinct !{!19, !17}
+; CHECK: !20 = distinct !{!20, !17}
+; CHECK: !21 = distinct !{!21, !17}
+; CHECK: !27 = !{!19, !20, !21, !28}
+; CHECK: !28 = distinct !{!28, !26}
+; CHECK: !33 = !{!20, !34}
+; CHECK: !34 = distinct !{!34, !35}
 ; Domain for the second loop versioning for the bottom loop after
 ; distribution.
-; CHECK: !33 = distinct !{!33, !"LVerDomain"}
-; CHECK: !34 = !{!19, !35}
-; CHECK: !35 = distinct !{!35, !33}
-; CHECK: !36 = !{!17, !37}
-; CHECK: !38 = !{!21, !32, !35}
+; CHECK: !35 = distinct !{!35, !"LVerDomain"}
+; CHECK: !36 = !{!21, !37}
+; CHECK: !37 = distinct !{!37, !35}
+; CHECK: !38 = !{!19, !39}
+; CHECK: !39 = distinct !{!39, !35}
+; CHECK: !40 = !{!23, !34, !37}

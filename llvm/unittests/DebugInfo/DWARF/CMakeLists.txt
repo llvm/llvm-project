@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   BinaryFormat
   CodeGenTypes
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   MC
   Object
   ObjectYAML
@@ -28,6 +29,7 @@ add_llvm_unittest(DebugInfoDWARFTests
   DWARFFormValueTest.cpp
   DWARFListTableTest.cpp
   DWARFLocationExpressionTest.cpp
+  DWARFVerifierTest.cpp
   )
 
 target_link_libraries(DebugInfoDWARFTests PRIVATE LLVMTestingSupport)

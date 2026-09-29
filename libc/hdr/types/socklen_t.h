@@ -14,7 +14,7 @@
 
 #else
 
-#include <signal.h>
+#include <sys/socket.h>
 
 #endif // LIBC_FULL_BUILD
 

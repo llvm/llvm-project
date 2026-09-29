@@ -1,16 +1,27 @@
 // RUN: %check_clang_tidy %s bugprone-unchecked-optional-access %t -- -- -I %S/Inputs/unchecked-optional-access
 
 #include "absl/types/optional.h"
-#include "folly/types/Optional.h"
-#include "bde/types/bsl_optional.h"
 #include "bde/types/bdlb_nullablevalue.h"
+#include "bde/types/bsl_optional.h"
+#include "folly/types/Optional.h"
+#include "std/types/optional.h"
 
-void unchecked_value_access(const absl::optional<int> &opt) {
+void unchecked_value_access(std::optional<int> opt) {
   opt.value();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
 }
 
-void unchecked_deref_operator_access(const absl::optional<int> &opt) {
+void absl_unchecked_value_access(const absl::optional<int> &opt) {
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+void unchecked_deref_operator_access(std::optional<int> opt) {
+  *opt;
+  // CHECK-MESSAGES: :[[@LINE-1]]:4: warning: unchecked access to optional value
+}
+
+void absl_unchecked_deref_operator_access(const absl::optional<int> &opt) {
   *opt;
   // CHECK-MESSAGES: :[[@LINE-1]]:4: warning: unchecked access to optional value
 }
@@ -19,7 +30,12 @@ struct Foo {
   void foo() const {}
 };
 
-void unchecked_arrow_operator_access(const absl::optional<Foo> &opt) {
+void unchecked_arrow_operator_access(std::optional<Foo> opt) {
+  opt->foo();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value
+}
+
+void absl_unchecked_arrow_operator_access(const absl::optional<Foo> &opt) {
   opt->foo();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value
 }
@@ -40,7 +56,13 @@ void folly_value_after_swap(folly::Optional<int> opt1, folly::Optional<int> opt2
   }
 }
 
-void checked_access(const absl::optional<int> &opt) {
+void checked_access(std::optional<int> opt) {
+  if (opt.has_value()) {
+    opt.value();
+  }
+}
+
+void absl_checked_access(const absl::optional<int> &opt) {
   if (opt.has_value()) {
     opt.value();
   }
@@ -65,14 +87,43 @@ void bsl_optional_unchecked_value_access(const bsl::optional<int> &opt) {
 
   opt.value();
   x = *opt;
+
+  bsl::optional<int> opt1;
+  opt1.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+void bsl_optional_unchecked_value_access_for_allocator_aware_class(const bsl::optional<bsl::string> &opt) {
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  bsl::string x = *opt;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (!opt) {
+    return;
+  }
+
+  opt.value();
+  x = *opt;
+
+  bsl::optional<bsl::string> opt1;
+  opt1.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
 }
 
 void bsl_optional_checked_access(const bsl::optional<int> &opt) {
   if (opt.has_value()) {
     opt.value();
   }
+
   if (opt) {
     opt.value();
+  }
+
+  if (opt) {
+    bsl::optional<int> opt1(opt);
+    opt1.value();
   }
 }
 
@@ -102,6 +153,31 @@ void nullable_value_unchecked_value_access(const BloombergLP::bdlb::NullableValu
   // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
 
   if (!opt) {
+    return;
+  }
+
+  opt.value();
+  x = *opt;
+}
+
+void nullable_value_unchecked_value_access_for_allocator_aware_type(const BloombergLP::bdlb::NullableValue<bsl::string> &opt) {
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  bsl::string x = *opt;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (opt.isNull()) {
+    opt.value();
+  }
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (!opt) {
+    opt.value();
+  }
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (!opt.has_value()) {
     return;
   }
 
@@ -139,6 +215,31 @@ void nullable_value_after_swap(BloombergLP::bdlb::NullableValue<int> &opt1, Bloo
     opt1.value();
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: unchecked access to optional value
   }
+}
+
+void nullable_value_make_value(BloombergLP::bdlb::NullableValue<int> &opt1, BloombergLP::bdlb::NullableValue<int> &opt2) {
+  if (opt1.isNull()) {
+    opt1.makeValue(42);
+  }
+
+  opt1.value();
+
+  if (opt2.isNull()) {
+    opt2.makeValueInplace(42);
+  }
+
+  opt2.value();
+}
+
+void assertion_handler() __attribute__((analyzer_noreturn));
+
+void function_calling_analyzer_noreturn(const bsl::optional<int>& opt)
+{
+  if (!opt) {
+      assertion_handler();
+  }
+
+  *opt; // no-warning: The previous condition guards this dereference.
 }
 
 template <typename T>
@@ -272,15 +373,7 @@ void std_forward_rvalue_ref_safe(absl::optional<int>&& opt) {
   std::forward<absl::optional<int>>(opt).value();
 }
 
-namespace std {
-
-template <typename T> class vector {
-public:
-  T &operator[](unsigned long index);
-  bool empty();
-};
-
-} // namespace std
+#include <vector>
 
 struct S {
   absl::optional<float> x;

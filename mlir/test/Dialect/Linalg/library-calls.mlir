@@ -17,7 +17,8 @@ func.func @matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>) -> (memref<?x?xf32>)
   linalg.fill ins(%f0 : f32) outs(%C : memref<?x?xf32>)
 
   // CHECK:  call @linalg_matmul_viewsxsxf32_viewsxsxf32_viewsxsxf32({{.*}}) : (memref<?x?xf32, {{.*}}>, memref<?x?xf32, {{.*}}>, memref<?x?xf32, {{.*}}>) -> ()
-  linalg.matmul ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
+  linalg.matmul {metadata = #linalg.binary_fn<add>}
+                ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
                 outs(%C: memref<?x?xf32>)
   return %C : memref<?x?xf32>
 }
@@ -58,44 +59,4 @@ module {
     linalg.copy ins(%localOut : memref<32xf16, 6>) outs(%arg7 : memref<32xf16, 1>)
     return
   }
-}
-
-
-// -----
-
-// CHECK: func.func private @linalg_elemwise_unary_negf_view16x8xf32_view16x8xf32(memref<16x8xf32, strided<[?, ?], offset: ?>>, memref<16x8xf32, strided<[?, ?], offset: ?>>) attributes {llvm.emit_c_interface}
-// CHECK: func.func private @linalg_elemwise_unary_negf_view16xf32_view16xf32(memref<16xf32, strided<[?], offset: ?>>, memref<16xf32, strided<[?], offset: ?>>) attributes {llvm.emit_c_interface}
-
-func.func @test_neg(%A : memref<16x8xf32>, %B: memref<16x8xf32>, %C: memref<16xf32>, %D: memref<16xf32>) {
-  linalg.elemwise_unary {fun = #linalg.unary_fn<negf>}
-                              ins(%A: memref<16x8xf32>) outs(%B: memref<16x8xf32>)
-  linalg.elemwise_unary {fun = #linalg.unary_fn<negf>}
-                              ins(%C: memref<16xf32>) outs(%D: memref<16xf32>)
-  return
-}
-
-// -----
-
-// CHECK: func.func private @linalg_elemwise_unary_exp_view16x8xf32_view16x8xf32(memref<16x8xf32, strided<[?, ?], offset: ?>>, memref<16x8xf32, strided<[?, ?], offset: ?>>) attributes {llvm.emit_c_interface}
-// CHECK: func.func private @linalg_elemwise_unary_exp_view16xf32_view16xf32(memref<16xf32, strided<[?], offset: ?>>, memref<16xf32, strided<[?], offset: ?>>) attributes {llvm.emit_c_interface}
-
-func.func @test_exp(%A : memref<16x8xf32>, %B: memref<16x8xf32>, %C: memref<16xf32>, %D: memref<16xf32>) {
-  linalg.elemwise_unary {fun = #linalg.unary_fn<exp>}
-                              ins(%A: memref<16x8xf32>) outs(%B: memref<16x8xf32>)
-  linalg.elemwise_unary {fun = #linalg.unary_fn<exp>}
-                              ins(%C: memref<16xf32>) outs(%D: memref<16xf32>)
-  return
-}
-
-// -----
-
-// CHECK: func.func private @linalg_elemwise_binary_add_view16x8xf32_view16x8xf32_view16x8xf32(memref<16x8xf32, strided<[?, ?], offset: ?>>, memref<16x8xf32, strided<[?, ?], offset: ?>>, memref<16x8xf32, strided<[?, ?], offset: ?>>) attributes {llvm.emit_c_interface}
-// CHECK: func.func private @linalg_elemwise_binary_add_view16xf32_view16xf32_view16xf32(memref<16xf32, strided<[?], offset: ?>>, memref<16xf32, strided<[?], offset: ?>>, memref<16xf32, strided<[?], offset: ?>>) attributes {llvm.emit_c_interface}
-
-func.func @test_add(%A : memref<16x8xf32>, %B: memref<16x8xf32>, %C: memref<16x8xf32>, %D: memref<16xf32>, %E: memref<16xf32>, %F: memref<16xf32>) {
-  linalg.elemwise_binary {fun = #linalg.binary_fn<add>}
-                              ins(%A, %B: memref<16x8xf32>, memref<16x8xf32>) outs(%C: memref<16x8xf32>)
-  linalg.elemwise_binary {fun = #linalg.binary_fn<add>}
-                              ins(%D, %E: memref<16xf32>, memref<16xf32>) outs(%F: memref<16xf32>)
-  return
 }

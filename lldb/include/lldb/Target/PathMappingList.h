@@ -49,7 +49,7 @@ public:
   // By default, dump all pairs.
   void Dump(Stream *s, int pair_index = -1);
 
-  llvm::json::Value ToJSON();
+  llvm::json::Value ToJSON() const;
 
   bool IsEmpty() const {
     std::lock_guard<std::mutex> lock(m_pairs_mutex);
@@ -149,8 +149,6 @@ protected:
   void Notify(bool notify) const;
 
   iterator FindIteratorForPath(ConstString path);
-
-  const_iterator FindIteratorForPath(ConstString path) const;
 
   collection m_pairs;
   mutable std::mutex m_pairs_mutex;

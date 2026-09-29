@@ -15,19 +15,16 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <type_traits>
 
 namespace llvm {
-
-/// Reports a diagnostic message to indicate an invalid size request has been
-/// done on a scalable vector. This function may not return.
-void reportInvalidSizeRequest(const char *Msg);
 
 /// StackOffset holds a fixed and a scalable offset in bytes.
 class StackOffset {
@@ -181,7 +178,7 @@ public:
   /// This function tells the caller whether the element count is known at
   /// compile time to be a multiple of the scalar value RHS.
   constexpr bool isKnownMultipleOf(ScalarTy RHS) const {
-    return getKnownMinValue() % RHS == 0;
+    return RHS != 0 && getKnownMinValue() % RHS == 0;
   }
 
   /// Returns whether or not the callee is known to be a multiple of RHS.
@@ -193,7 +190,8 @@ public:
     // x % y == 0 !=> x % (vscale * y) == 0
     if (!isScalable() && RHS.isScalable())
       return false;
-    return getKnownMinValue() % RHS.getKnownMinValue() == 0;
+    return RHS.getKnownMinValue() != 0 &&
+           getKnownMinValue() % RHS.getKnownMinValue() == 0;
   }
 
   // Return the minimum value with the assumption that the count is exact.
@@ -255,26 +253,22 @@ public:
     return LeafTy::get(getKnownMinValue() / RHS, isScalable());
   }
 
-  constexpr LeafTy multiplyCoefficientBy(ScalarTy RHS) const {
-    return LeafTy::get(getKnownMinValue() * RHS, isScalable());
-  }
-
   constexpr LeafTy coefficientNextPowerOf2() const {
     return LeafTy::get(
         static_cast<ScalarTy>(llvm::NextPowerOf2(getKnownMinValue())),
         isScalable());
   }
 
-  /// Returns true if there exists a value X where RHS.multiplyCoefficientBy(X)
-  /// will result in a value whose quantity matches our own.
+  /// Returns true if there exists a value X where RHS*X will result in a value
+  /// whose quantity matches our own.
   constexpr bool
   hasKnownScalarFactor(const FixedOrScalableQuantity &RHS) const {
     return isScalable() == RHS.isScalable() &&
            getKnownMinValue() % RHS.getKnownMinValue() == 0;
   }
 
-  /// Returns a value X where RHS.multiplyCoefficientBy(X) will result in a
-  /// value whose quantity matches our own.
+  /// Returns a value X where RHS*X will result in a value whose quantity
+  /// matches our own.
   constexpr ScalarTy
   getKnownScalarFactor(const FixedOrScalableQuantity &RHS) const {
     assert(hasKnownScalarFactor(RHS) && "Expected RHS to be a known factor!");
@@ -374,7 +368,14 @@ public:
   //     else
   //       bail out early for scalable vectors and use getFixedValue()
   //   }
-  operator ScalarTy() const;
+  operator ScalarTy() const {
+    if (isScalable()) {
+      reportFatalInternalError(
+          "Cannot implicitly convert a scalable size to a fixed-width size in "
+          "`TypeSize::operator ScalarTy()`");
+    }
+    return getFixedValue();
+  }
 
   // Additional operators needed to avoid ambiguous parses
   // because of the implicit conversion hack.
@@ -382,6 +383,11 @@ public:
     return LHS * (ScalarTy)RHS;
   }
   friend constexpr TypeSize operator*(const TypeSize &LHS, const unsigned RHS) {
+    return LHS * (ScalarTy)RHS;
+  }
+  template <typename U = ScalarTy>
+  friend constexpr std::enable_if_t<!std::is_same_v<U, unsigned long>, TypeSize>
+  operator*(const TypeSize &LHS, const unsigned long RHS) {
     return LHS * (ScalarTy)RHS;
   }
   friend constexpr TypeSize operator*(const TypeSize &LHS, const int64_t RHS) {
@@ -394,6 +400,11 @@ public:
     return RHS * LHS;
   }
   friend constexpr TypeSize operator*(const int64_t LHS, const TypeSize &RHS) {
+    return RHS * LHS;
+  }
+  template <typename U = ScalarTy>
+  friend constexpr std::enable_if_t<!std::is_same_v<U, unsigned long>, TypeSize>
+  operator*(const unsigned long LHS, const TypeSize &RHS) {
     return RHS * LHS;
   }
   friend constexpr TypeSize operator*(const uint64_t LHS, const TypeSize &RHS) {
@@ -426,12 +437,6 @@ operator<<(raw_ostream &OS,
 }
 
 template <> struct DenseMapInfo<ElementCount, void> {
-  static inline ElementCount getEmptyKey() {
-    return ElementCount::getScalable(~0U);
-  }
-  static inline ElementCount getTombstoneKey() {
-    return ElementCount::getFixed(~0U - 1);
-  }
   static unsigned getHashValue(const ElementCount &EltCnt) {
     unsigned HashVal = EltCnt.getKnownMinValue() * 37U;
     if (EltCnt.isScalable())

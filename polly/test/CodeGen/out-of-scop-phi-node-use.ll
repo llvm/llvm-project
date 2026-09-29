@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT: %_s.sroa.343.0.ph5161118.ph.final_reload = load i32, ptr %_s.sroa.343.0.ph5161118.s2a
 
 ; Function Attrs: nounwind uwtable
-define void @lzmaDecode() #0 {
+define void @lzmaDecode() {
 entry:
   br label %for.cond.outer.outer.outer
 
@@ -53,8 +53,6 @@ saveStateAndReturn:                               ; preds = %for.cond
 cleanup.1072:                                     ; preds = %for.cond
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

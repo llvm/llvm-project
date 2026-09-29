@@ -1,8 +1,9 @@
+
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
 // DEFINE:    -one-shot-bufferize="bufferize-function-boundaries" -buffer-deallocation-pipeline -cse -canonicalize -convert-vector-to-scf -test-lower-to-llvm -o %t
 // DEFINE: %{entry_point} = mmt4d
-// DEFINE: %{run} = mlir-cpu-runner %t -e %{entry_point} -entry-point-result=void \
+// DEFINE: %{run} = mlir-runner %t -e %{entry_point} -entry-point-result=void \
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
 // RUN: %{compile}
@@ -66,7 +67,7 @@ func.func @mmt4d() {
 module @transforms attributes { transform.with_named_sequence } {
   transform.named_sequence @__transform_main(%module: !transform.any_op {transform.readonly}) {
    %mmt4d = transform.collect_matching @match_mmt4d in %module : (!transform.any_op) -> (!transform.any_op)
-   %func = transform.get_parent_op %mmt4d {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
+   %func = transform.get_parent_op %mmt4d <isolated_from_above> : (!transform.any_op) -> !transform.op<"func.func">
 
    // Step 1: Tile
    // Tile parallel dims

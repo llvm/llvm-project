@@ -14,11 +14,6 @@
 #define LLVM_CLANG_AST_INTERP_BLOCK_H
 
 #include "Descriptor.h"
-#include "clang/AST/ComparisonCategories.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/Expr.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -27,41 +22,51 @@ class Block;
 class DeadBlock;
 class InterpState;
 class Pointer;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 /// A memory block, either on the stack or in the heap.
 ///
 /// The storage described by the block is immediately followed by
 /// optional metadata, which is followed by the actual data.
 ///
-/// Block*        rawData()                  data()
-/// │               │                         │
-/// │               │                         │
-/// ▼               ▼                         ▼
-/// ┌───────────────┬─────────────────────────┬─────────────────┐
-/// │ Block         │ Metadata                │ Data            │
-/// │ sizeof(Block) │ Desc->getMetadataSize() │ Desc->getSize() │
-/// └───────────────┴─────────────────────────┴─────────────────┘
+/// Block*        rawData()           data()
+/// │               │                  │
+/// │               │                  │
+/// ▼               ▼                  ▼
+/// ┌───────────────┬──────────────────┬─────────────────┐
+/// │ Block         │ Metadata         │ Data            │
+/// │ sizeof(Block) │ MDSize           │ Desc->getSize() │
+/// └───────────────┴──────────────────┴─────────────────┘
 ///
-/// Desc->getAllocSize() describes the size after the Block, i.e.
-/// the data size and the metadata size.
+/// getSize() returns MDSize + Desc->getAllocSize().
 ///
 class Block final {
+private:
+  static constexpr uint8_t ExternFlag = 1 << 0;
+  static constexpr uint8_t DeadFlag = 1 << 1;
+  static constexpr uint8_t WeakFlag = 1 << 2;
+
 public:
+  static constexpr uint8_t InlineDescMD = sizeof(InlineDescriptor);
+  static constexpr uint8_t GlobalMD = sizeof(GlobalInlineDescriptor);
+
   /// Creates a new block.
-  Block(unsigned EvalID, const std::optional<unsigned> &DeclID,
-        const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false,
+  Block(unsigned EvalID, UnsignedOrNone DeclID, const Descriptor *Desc,
+        unsigned MDSize = 0, bool IsStatic = false, bool IsExtern = false,
         bool IsWeak = false)
-      : EvalID(EvalID), DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern),
-        IsDynamic(false), IsWeak(IsWeak), Desc(Desc) {
+      : Desc(Desc), DeclID(DeclID), EvalID(EvalID), MDSize(MDSize),
+        IsStatic(IsStatic) {
     assert(Desc);
+    AccessFlags |= (ExternFlag * IsExtern);
+    AccessFlags |= (WeakFlag * IsWeak);
   }
 
-  Block(unsigned EvalID, const Descriptor *Desc, bool IsStatic = false,
-        bool IsExtern = false, bool IsWeak = false)
-      : EvalID(EvalID), DeclID((unsigned)-1), IsStatic(IsStatic),
-        IsExtern(IsExtern), IsDynamic(false), IsWeak(IsWeak), Desc(Desc) {
+  Block(unsigned EvalID, const Descriptor *Desc, unsigned MDSize = 0,
+        bool IsStatic = false, bool IsExtern = false, bool IsWeak = false)
+      : Desc(Desc), EvalID(EvalID), MDSize(MDSize), IsStatic(IsStatic) {
     assert(Desc);
+    AccessFlags |= (ExternFlag * IsExtern);
+    AccessFlags |= (WeakFlag * IsWeak);
   }
 
   /// Returns the block's descriptor.
@@ -69,35 +74,34 @@ public:
   /// Checks if the block has any live pointers.
   bool hasPointers() const { return Pointers; }
   /// Checks if the block is extern.
-  bool isExtern() const { return IsExtern; }
+  bool isExtern() const { return AccessFlags & ExternFlag; }
   /// Checks if the block has static storage duration.
   bool isStatic() const { return IsStatic; }
   /// Checks if the block is temporary.
   bool isTemporary() const { return Desc->IsTemporary; }
-  bool isWeak() const { return IsWeak; }
-  bool isDynamic() const { return IsDynamic; }
-  /// Returns the size of the block.
-  unsigned getSize() const { return Desc->getAllocSize(); }
+  bool isWeak() const { return AccessFlags & WeakFlag; }
+  bool isDynamic() const { return (DynAllocId != std::nullopt); }
+  bool isDead() const { return AccessFlags & DeadFlag; }
+  /// Returns the size of the block, including metadata.
+  unsigned getSize() const { return Desc->getAllocSize() + MDSize; }
+  /// Returns the size of the metadata.
+  unsigned getMetadataSize() const { return MDSize; }
   /// Returns the declaration ID.
-  std::optional<unsigned> getDeclID() const { return DeclID; }
+  UnsignedOrNone getDeclID() const { return DeclID; }
   /// Returns whether the data of this block has been initialized via
   /// invoking the Ctor func.
   bool isInitialized() const { return IsInitialized; }
   /// The Evaluation ID this block was created in.
   unsigned getEvalID() const { return EvalID; }
+  /// Move all pointers from this block to \param B.
+  void movePointersTo(Block *B);
+  /// Make all pointers that currently point to this block point to nullptr.
+  void removePointers();
 
   /// Returns a pointer to the stored data.
   /// You are allowed to read Desc->getSize() bytes from this address.
-  std::byte *data() {
-    // rawData might contain metadata as well.
-    size_t DataOffset = Desc->getMetadataSize();
-    return rawData() + DataOffset;
-  }
-  const std::byte *data() const {
-    // rawData might contain metadata as well.
-    size_t DataOffset = Desc->getMetadataSize();
-    return rawData() + DataOffset;
-  }
+  std::byte *data() { return rawData() + MDSize; }
+  const std::byte *data() const { return rawData() + MDSize; }
 
   /// Returns a pointer to the raw data, including metadata.
   /// You are allowed to read Desc->getAllocSize() bytes from this address.
@@ -108,14 +112,33 @@ public:
     return reinterpret_cast<const std::byte *>(this) + sizeof(Block);
   }
 
+  template <typename T> const T &deref() const {
+    return *reinterpret_cast<const T *>(data());
+  }
+  template <typename T> T &deref() { return *reinterpret_cast<T *>(data()); }
+
+  template <typename T> T &getBlockDesc() {
+    assert(sizeof(T) == MDSize);
+    return *reinterpret_cast<T *>(rawData());
+  }
+  template <typename T> const T &getBlockDesc() const {
+    return const_cast<Block *>(this)->getBlockDesc<T>();
+  }
+
   /// Invokes the constructor.
   void invokeCtor() {
     assert(!IsInitialized);
-    std::memset(rawData(), 0, Desc->getAllocSize());
-    if (Desc->CtorFn) {
+    std::memset(rawData(), 0, getSize());
+    invokeCtorNoMemset();
+  }
+  /// The same, but won't memset() the memory first to zero.
+  void invokeCtorNoMemset() {
+    assert(!IsInitialized);
+    if (Desc->CtorFn)
       Desc->CtorFn(this, data(), Desc->IsConst, Desc->IsMutable,
+                   Desc->IsVolatile,
                    /*isActive=*/true, /*InUnion=*/false, Desc);
-    }
+
     IsInitialized = true;
   }
 
@@ -130,18 +153,26 @@ public:
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
 
+  bool isAccessible() const { return AccessFlags == 0; }
+
 private:
   friend class Pointer;
   friend class DeadBlock;
   friend class InterpState;
   friend class DynamicAllocator;
+  friend class Program;
 
-  Block(unsigned EvalID, const Descriptor *Desc, bool IsExtern, bool IsStatic,
-        bool IsWeak, bool IsDead)
-      : EvalID(EvalID), IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true),
-        IsDynamic(false), IsWeak(IsWeak), Desc(Desc) {
+  Block(unsigned EvalID, const Descriptor *Desc, unsigned MDSize, bool IsExtern,
+        bool IsStatic, bool IsWeak, bool IsDead)
+      : Desc(Desc), EvalID(EvalID), MDSize(MDSize), IsStatic(IsStatic) {
     assert(Desc);
+    AccessFlags |= (ExternFlag * IsExtern);
+    AccessFlags |= (DeadFlag * IsDead);
+    AccessFlags |= (WeakFlag * IsWeak);
   }
+
+  /// To be called by DynamicAllocator.
+  void setDynAllocId(unsigned ID) { DynAllocId = ID; }
 
   /// Deletes a dead block at the end of its lifetime.
   void cleanup();
@@ -154,27 +185,24 @@ private:
   bool hasPointer(const Pointer *P) const;
 #endif
 
-  const unsigned EvalID = ~0u;
+  /// Pointer to the stack slot descriptor.
+  const Descriptor *Desc;
   /// Start of the chain of pointers.
   Pointer *Pointers = nullptr;
   /// Unique identifier of the declaration.
-  std::optional<unsigned> DeclID;
+  UnsignedOrNone DeclID = std::nullopt;
+  const unsigned EvalID = ~0u;
+  /// Allocation ID for this dynamic allocation, if it is one.
+  UnsignedOrNone DynAllocId = std::nullopt;
+  /// AccessFlags containing IsExtern, IsDead and IsWeak bits.
+  uint8_t AccessFlags = 0;
+  /// Size of the metadata.
+  const uint8_t MDSize = 0;
   /// Flag indicating if the block has static storage duration.
   bool IsStatic = false;
-  /// Flag indicating if the block is an extern.
-  bool IsExtern = false;
-  /// Flag indicating if the pointer is dead. This is only ever
-  /// set once, when converting the Block to a DeadBlock.
-  bool IsDead = false;
   /// Flag indicating if the block contents have been initialized
   /// via invokeCtor.
   bool IsInitialized = false;
-  /// Flag indicating if this block has been allocated via dynamic
-  /// memory allocation (e.g. malloc).
-  bool IsDynamic = false;
-  bool IsWeak = false;
-  /// Pointer to the stack slot descriptor.
-  const Descriptor *Desc;
 };
 
 /// Descriptor for a dead block.

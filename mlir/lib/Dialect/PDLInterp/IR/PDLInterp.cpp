@@ -9,7 +9,6 @@
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 
 using namespace mlir;
@@ -184,7 +183,7 @@ void ForEachOp::print(OpAsmPrinter &p) {
   BlockArgument arg = getLoopVariable();
   p << ' ' << arg << " : " << arg.getType() << " in " << getValues() << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
   p << " -> ";
   p.printSuccessor(getSuccessor());
 }

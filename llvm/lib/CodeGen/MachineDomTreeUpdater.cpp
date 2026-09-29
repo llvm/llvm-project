@@ -14,21 +14,22 @@
 #include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/Analysis/GenericDomTreeUpdaterImpl.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-template class GenericDomTreeUpdater<
+template class LLVM_EXPORT_TEMPLATE GenericDomTreeUpdater<
     MachineDomTreeUpdater, MachineDominatorTree, MachinePostDominatorTree>;
 
-template void
+template LLVM_EXPORT_TEMPLATE void
 GenericDomTreeUpdater<MachineDomTreeUpdater, MachineDominatorTree,
                       MachinePostDominatorTree>::recalculate(MachineFunction
                                                                  &MF);
 
-template void GenericDomTreeUpdater<
+template LLVM_EXPORT_TEMPLATE void GenericDomTreeUpdater<
     MachineDomTreeUpdater, MachineDominatorTree,
     MachinePostDominatorTree>::applyUpdatesImpl</*IsForward=*/true>();
-template void GenericDomTreeUpdater<
+template LLVM_EXPORT_TEMPLATE void GenericDomTreeUpdater<
     MachineDomTreeUpdater, MachineDominatorTree,
     MachinePostDominatorTree>::applyUpdatesImpl</*IsForward=*/false>();
 

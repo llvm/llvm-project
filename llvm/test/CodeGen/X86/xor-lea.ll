@@ -327,7 +327,8 @@ define i32 @xor_shl_sminval_i32(i32 %x) {
 ; X86-LABEL: xor_shl_sminval_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal -2147483648(,%eax,8), %eax
+; X86-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
+; X86-NEXT:    leal (%ecx,%eax,8), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_shl_sminval_i32:

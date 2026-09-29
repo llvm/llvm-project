@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SubtargetFeatureInfo.h"
+#include "Basic/PredicateExpanderDag.h"
 #include "Types.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/TableGen/Error.h"
@@ -127,40 +128,60 @@ void SubtargetFeatureInfo::emitComputeAvailableFeatures(
   OS << "}\n\n";
 }
 
+// Emit a feature-bit test leaf: FB[<TargetName>::<feature>]. Returns true on
+// error (the leaf is not a SubtargetFeature).
+static bool emitFeatureBitLeaf(StringRef TargetName, const Init &Val,
+                               raw_ostream &OS) {
+  const auto *D = dyn_cast<DefInit>(&Val);
+  if (!D || !D->getDef()->isSubClassOf("SubtargetFeature"))
+    return true;
+  OS << "FB[" << TargetName << "::" << D->getAsString() << ']';
+  return false;
+}
+
 // If ParenIfBinOp is true, print a surrounding () if Val uses && or ||.
-static bool emitFeaturesAux(StringRef TargetName, const Init &Val,
-                            bool ParenIfBinOp, raw_ostream &OS) {
-  if (auto *D = dyn_cast<DefInit>(&Val)) {
-    if (!D->getDef()->isSubClassOf("SubtargetFeature"))
-      return true;
-    OS << "FB[" << TargetName << "::" << D->getAsString() << "]";
-    return false;
+// Structural errors in the dag are diagnosed against \p Owner by the walker;
+// a leaf that is not a SubtargetFeature is reported here via the true return.
+static bool emitFeaturesAux(const Record *Owner, StringRef TargetName,
+                            const Init &Val, bool ParenIfBinOp,
+                            raw_ostream &OS) {
+  return emitPredicateDag(Owner, Val, ParenIfBinOp, OS,
+                          [&](const Init &Leaf, raw_ostream &OS) {
+                            return emitFeatureBitLeaf(TargetName, Leaf, OS);
+                          });
+}
+
+void SubtargetFeatureInfo::emitPredicateCheck(
+    raw_ostream &OS, ArrayRef<const Record *> Predicates) {
+  ListSeparator LS(" && ");
+  for (const Record *R : Predicates) {
+    StringRef CondString = R->getValueAsString("CondString");
+    if (CondString.empty())
+      continue;
+    OS << LS << '(' << CondString << ')';
   }
-  if (auto *D = dyn_cast<DagInit>(&Val)) {
-    auto *Op = dyn_cast<DefInit>(D->getOperator());
-    if (!Op)
-      return true;
-    StringRef OpName = Op->getDef()->getName();
-    if (OpName == "not" && D->getNumArgs() == 1) {
-      OS << '!';
-      return emitFeaturesAux(TargetName, *D->getArg(0), true, OS);
-    }
-    if ((OpName == "any_of" || OpName == "all_of") && D->getNumArgs() > 0) {
-      bool Paren = D->getNumArgs() > 1 && std::exchange(ParenIfBinOp, true);
-      if (Paren)
-        OS << '(';
-      ListSeparator LS(OpName == "any_of" ? " || " : " && ");
-      for (auto *Arg : D->getArgs()) {
-        OS << LS;
-        if (emitFeaturesAux(TargetName, *Arg, ParenIfBinOp, OS))
-          return true;
-      }
-      if (Paren)
-        OS << ')';
-      return false;
-    }
+}
+
+void SubtargetFeatureInfo::emitMCPredicateCheck(
+    raw_ostream &OS, StringRef TargetName,
+    ArrayRef<const Record *> Predicates) {
+  auto MCPredicates = make_filter_range(Predicates, [](const Record *R) {
+    return R->getValueAsBit("AssemblerMatcherPredicate");
+  });
+
+  if (MCPredicates.empty()) {
+    OS << "false";
+    return;
   }
-  return true;
+
+  ListSeparator LS(" && ");
+  bool ParenIfBinOp = range_size(MCPredicates) > 1;
+  for (const Record *R : MCPredicates) {
+    OS << LS;
+    if (emitFeaturesAux(R, TargetName, *R->getValueAsDag("AssemblerCondDag"),
+                        ParenIfBinOp, OS))
+      PrintFatalError(R, "Invalid AssemblerCondDag!");
+  }
 }
 
 void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
@@ -174,12 +195,15 @@ void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
     OS << "const ";
   OS << "{\n";
   OS << "  FeatureBitset Features;\n";
-  for (const auto &SF : SubtargetFeatures) {
-    const SubtargetFeatureInfo &SFI = SF.second;
+  for (const SubtargetFeatureInfo &SFI : make_second_range(SubtargetFeatures)) {
+    const Record *Def = SFI.TheDef;
 
     OS << "  if (";
-    emitFeaturesAux(TargetName, *SFI.TheDef->getValueAsDag("AssemblerCondDag"),
-                    /*ParenIfBinOp=*/false, OS);
+    if (emitFeaturesAux(Def, TargetName,
+                        *Def->getValueAsDag("AssemblerCondDag"),
+                        /*ParenIfBinOp=*/false, OS))
+      PrintFatalError(Def, "Invalid AssemblerCondDag!");
+
     OS << ")\n";
     OS << "    Features.set(" << SFI.getEnumBitName() << ");\n";
   }

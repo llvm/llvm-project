@@ -35,6 +35,7 @@ list(APPEND BOLT_TEST_DEPS
   FileCheck
   llc
   lld
+  llvm-ar
   llvm-config
   llvm-bolt
   llvm-bolt-binary-analysis

@@ -18,7 +18,42 @@ define void @test(ptr %src, i64 %size) {
   ret void
 }
 
-; Differing sizes, so left as it is.
+define void @dynalloca_test(ptr %src, i64 %size1) {
+; CHECK-LABEL: @dynalloca_test(
+; CHECK-NEXT:    [[TMP:%.*]] = alloca i8, i64 [[SIZE1:%.*]], align 1
+; CHECK-NEXT:    [[DST:%.*]] = alloca i8, i64 [[SIZE1]], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP]], ptr align 8 [[SRC:%.*]], i64 31, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 8 [[SRC]], i64 31, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca i8, i64 %size1
+  %dst = alloca i8, i64 %size1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %tmp, ptr align 8 %src, i64 31, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %tmp, i64 32, i1 false)
+
+  ret void
+}
+
+define void @dynalloca_offset_test(ptr %src, i64 %size1) {
+; CHECK-LABEL: @dynalloca_offset_test(
+; CHECK-NEXT:    [[TMP:%.*]] = alloca i8, i64 [[SIZE1:%.*]], align 1
+; CHECK-NEXT:    [[DST:%.*]] = alloca i8, i64 [[SIZE1]], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP]], ptr align 8 [[SRC:%.*]], i64 31, i1 false)
+; CHECK-NEXT:    [[TMP_OFFSET:%.*]] = getelementptr inbounds i8, ptr [[TMP]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 1 [[TMP1]], i64 30, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca i8, i64 %size1
+  %dst = alloca i8, i64 %size1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %tmp, ptr align 8 %src, i64 31, i1 false)
+  %tmp_offset = getelementptr inbounds i8, ptr %tmp, i64 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %tmp_offset, i64 31, i1 false)
+
+  ret void
+}
+
+; Dynamic sizes, so left as it is.
 define void @negative_test(ptr %src, i64 %size1, i64 %size2) {
 ; CHECK-LABEL: @negative_test(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca i8, i64 [[SIZE1:%.*]], align 1

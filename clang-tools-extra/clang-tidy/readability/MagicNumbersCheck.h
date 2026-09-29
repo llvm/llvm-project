@@ -1,4 +1,4 @@
-//===--- MagicNumbersCheck.h - clang-tidy-----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@ namespace clang::tidy::readability {
 /// Detects magic numbers, integer and floating point literals embedded in code.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/magic-numbers.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/magic-numbers.html
 class MagicNumbersCheck : public ClangTidyCheck {
 public:
   MagicNumbersCheck(StringRef Name, ClangTidyContext *Context);
@@ -28,30 +28,29 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  bool isConstant(const clang::ast_matchers::MatchFinder::MatchResult &Result,
-                  const clang::Expr &ExprResult) const;
+  bool isConstant(const ast_matchers::MatchFinder::MatchResult &Result,
+                  const Expr &ExprResult) const;
 
   bool isIgnoredValue(const IntegerLiteral *Literal) const;
   bool isIgnoredValue(const FloatingLiteral *Literal) const;
 
-  bool isSyntheticValue(const clang::SourceManager *,
-                        const FloatingLiteral *) const {
+  bool isSyntheticValue(const SourceManager *, const FloatingLiteral *) const {
     return false;
   }
-  bool isSyntheticValue(const clang::SourceManager *SourceManager,
+  bool isSyntheticValue(const SourceManager *SourceManager,
                         const IntegerLiteral *Literal) const;
 
-  bool isBitFieldWidth(const clang::ast_matchers::MatchFinder::MatchResult &,
+  bool isBitFieldWidth(const ast_matchers::MatchFinder::MatchResult &,
                        const FloatingLiteral &) const {
-     return false;
+    return false;
   }
 
-  bool isBitFieldWidth(const clang::ast_matchers::MatchFinder::MatchResult &Result,
+  bool isBitFieldWidth(const ast_matchers::MatchFinder::MatchResult &Result,
                        const IntegerLiteral &Literal) const;
 
-  bool isUserDefinedLiteral(
-      const clang::ast_matchers::MatchFinder::MatchResult &Result,
-      const clang::Expr &Literal) const;
+  bool
+  isUserDefinedLiteral(const ast_matchers::MatchFinder::MatchResult &Result,
+                       const Expr &Literal) const;
 
   template <typename L>
   void checkBoundMatch(const ast_matchers::MatchFinder::MatchResult &Result,
@@ -102,11 +101,11 @@ private:
   constexpr static llvm::APFloat::roundingMode DefaultRoundingMode =
       llvm::APFloat::rmNearestTiesToEven;
 
-  llvm::SmallVector<int64_t, SensibleNumberOfMagicValueExceptions>
+  SmallVector<int64_t, SensibleNumberOfMagicValueExceptions>
       IgnoredIntegerValues;
-  llvm::SmallVector<float, SensibleNumberOfMagicValueExceptions>
+  SmallVector<float, SensibleNumberOfMagicValueExceptions>
       IgnoredFloatingPointValues;
-  llvm::SmallVector<double, SensibleNumberOfMagicValueExceptions>
+  SmallVector<double, SensibleNumberOfMagicValueExceptions>
       IgnoredDoublePointValues;
 };
 

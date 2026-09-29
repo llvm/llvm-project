@@ -7,7 +7,7 @@
 @g = global [21 x i32] zeroinitializer
 define i32 @test1(i32 %a) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[T:%.*]] = sub i32 [[A:%.*]], extractelement (<4 x i32> ptrtoint (<4 x ptr> getelementptr inbounds ([21 x i32], ptr @g, <4 x i32> zeroinitializer, <4 x i32> <i32 1, i32 2, i32 3, i32 17>) to <4 x i32>), i32 3)
+; CHECK-NEXT:    [[T:%.*]] = sub i32 [[A:%.*]], ptrtoint (ptr getelementptr inbounds ([21 x i32], ptr @g, i32 0, i32 17) to i32)
 ; CHECK-NEXT:    ret i32 [[T]]
 ;
   %t = sub i32 %a, extractelement (<4 x i32> ptrtoint (<4 x ptr> getelementptr inbounds ([21 x i32], ptr @g, <4 x i32> zeroinitializer, <4 x i32> <i32 1, i32 2, i32 3, i32 17>) to <4 x i32>), i32 3)

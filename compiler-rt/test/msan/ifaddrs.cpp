@@ -16,10 +16,10 @@
 
 #include <sanitizer/msan_interface.h>
 
-#define CHECK_AND_PUSH(addr, size)                                \
-  if (addr) {                                                     \
-    assert(-1 == __msan_test_shadow(addr, sizeof(size)));         \
-    ranges.push_back(std::make_pair((void *)addr, (size_t)size)); \
+#define CHECK_AND_PUSH(addr, size)                                             \
+  if (addr) {                                                                  \
+    assert(-1 == __msan_test_shadow(addr, (size_t)(size)));                    \
+    ranges.push_back(std::make_pair((void *)addr, (size_t)size));              \
   }
 
 int main(int argc, char *argv[]) {
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
   assert(res == 0);
   assert(-1 == __msan_test_shadow(&ifas, sizeof(ifaddrs *)));
 
-  std::vector<std::pair<void *, size_t> > ranges;
+  std::vector<std::pair<void *, size_t>> ranges;
   ifaddrs *p = ifas;
   while (p) {
     CHECK_AND_PUSH(p, sizeof(ifaddrs));

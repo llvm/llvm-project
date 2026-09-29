@@ -9,20 +9,20 @@ typedef int (*T)[2];
 restrict T x;
 
 typedef int *S[2];
-restrict S y; // expected-error {{restrict requires a pointer or reference ('S' (aka 'int *[2]') is invalid)}}
-
-
+restrict S y; // expected-warning {{'restrict' qualifier on an array of pointers is a C23 extension}}
 
 // int128_t is available.
-int a(void) {
+void a(void) {
   __int128_t s;
   __uint128_t t;
 }
+
 // but not a keyword
-int b(void) {
+void b(void) {
   int __int128_t;
   int __uint128_t;
 }
+
 // __int128 is a keyword
 int c(void) {
   __int128 i;
@@ -75,10 +75,22 @@ typedef int __attribute__((ext_vector_type(0x100000000))) e2;      // expected-e
 typedef int __attribute__((vector_size((__int128_t)1 << 100))) e3; // expected-error {{vector size too large}}
 typedef int __attribute__((ext_vector_type(0))) e4;                // expected-error {{zero vector size}}
 
+// GH165458: at most 2^23 elements and 2^28 bytes for both attributes.
+typedef _Bool bool512 __attribute__((ext_vector_type(187553262))); // expected-error {{vector size too large}}
+bool512 gh165458;
+typedef _Bool __attribute__((ext_vector_type(8388609))) e5; // expected-error {{vector size too large}}
+typedef int __attribute__((ext_vector_type(8388609))) e6;   // expected-error {{vector size too large}}
+typedef _Bool __attribute__((ext_vector_type(8388608))) e7;
+typedef int __attribute__((ext_vector_type(8388608))) e8;
+typedef _Bool __attribute__((ext_vector_type(4096))) e9;
+char __attribute__((vector_size(8388609))) v5;   // expected-error {{vector size too large}}
+char __attribute__((vector_size(8388608))) v6;
+int __attribute__((vector_size(0x10000001))) v7; // expected-error {{vector size too large}}
+
 // no support for vector enum type
 enum { e_2 } x3 __attribute__((vector_size(64))); // expected-error {{invalid vector element type}}
 
-int x4 __attribute__((ext_vector_type(64)));  // expected-error {{'ext_vector_type' attribute only applies to typedefs}}
+int x4 __attribute__((ext_vector_type(64)));
 
 typedef __attribute__ ((ext_vector_type(32),__aligned__(32))) unsigned char uchar32;
 

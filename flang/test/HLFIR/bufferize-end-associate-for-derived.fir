@@ -16,7 +16,7 @@ func.func @_QPtest1(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:!fir.bo
 }
 // CHECK-LABEL:   func.func @_QPtest1(
 // CHECK-NOT:       fir.call @_Fortran
-// CHECK:           fir.call @_FortranADestroyWithoutFinalization(%{{.*}}) : (!fir.box<none>) -> none
+// CHECK:           fir.call @_FortranADestroyWithoutFinalization(%{{.*}}) : (!fir.box<none>) -> ()
 // CHECK-NOT:       fir.call @_Fortran
 
 func.func @_QPtest2(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>> {fir.bindc_name = "x"}) {
@@ -33,7 +33,7 @@ func.func @_QPtest2(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.bo
 }
 // CHECK-LABEL:   func.func @_QPtest2(
 // CHECK-NOT:       fir.call @_Fortran
-// CHECK:           fir.call @_FortranADestroyWithoutFinalization(%{{.*}}) : (!fir.box<none>) -> none
+// CHECK:           fir.call @_FortranADestroyWithoutFinalization(%{{.*}}) : (!fir.box<none>) -> ()
 // CHECK-NOT:       fir.call @_Fortran
 
 func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt3{x:f32}>>> {fir.bindc_name = "x"}) {

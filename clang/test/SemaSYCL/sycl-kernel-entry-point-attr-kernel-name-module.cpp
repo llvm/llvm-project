@@ -17,6 +17,10 @@ module M2 { header "m2.h" }
 #--- common.h
 template<int> struct KN;
 
+// A generic kernel launch function.
+template<typename KN, typename... Ts>
+void sycl_kernel_launch(const char *, Ts...) {}
+
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void common_test1() {}
 
@@ -71,29 +75,29 @@ template void m2_test8<KN<8>>();
 #include "m2.h"
 
 // Expected diagnostics for m1_test3() and m2_test3():
-// expected-error@m2.h:4 {{'sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
+// expected-error@m2.h:4 {{the 'clang::sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
 // expected-note@m1.h:12 {{previous declaration is here}}
 
 // Expected diagnostics for m1_test4<KN<4>>() and m2_test4<KN<4>>():
-// expected-error@m2.h:8 {{'sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
+// expected-error@m2.h:8 {{the 'clang::sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
 // expected-note@m1.h:16 {{previous declaration is here}}
 
-// expected-error@+3 {{'sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
+// expected-error@+3 {{the 'clang::sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
 // expected-note@m1.h:4 {{previous declaration is here}}
 [[clang::sycl_kernel_entry_point(KN<5>)]]
 void test5() {}
 
-// expected-error@+3 {{'sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
+// expected-error@+3 {{the 'clang::sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
 // expected-note@m1.h:8 {{previous declaration is here}}
 [[clang::sycl_kernel_entry_point(KN<6>)]]
 void test6() {}
 
-// expected-error@+3 {{'sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
+// expected-error@+3 {{the 'clang::sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
 // expected-note@m2.h:12 {{previous declaration is here}}
 [[clang::sycl_kernel_entry_point(KN<7>)]]
 void test7() {}
 
-// expected-error@+3 {{'sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
+// expected-error@+3 {{the 'clang::sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
 // expected-note@m2.h:16 {{previous declaration is here}}
 [[clang::sycl_kernel_entry_point(KN<8>)]]
 void test8() {}

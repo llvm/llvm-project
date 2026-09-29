@@ -235,7 +235,8 @@ TEST_F(LSPTest, ClangTidyRename) {
             .takeValue()
             .getAsArray())[0];
 
-  ASSERT_EQ((*RenameCommand.getAsObject())["title"], "change 'foo' to 'Foo'");
+  ASSERT_EQ((*RenameCommand.getAsObject())["title"],
+            "Apply fix: change 'foo' to 'Foo'");
 
   Client.expectServerCall("workspace/applyEdit");
   Client.call("workspace/executeCommand", RenameCommand);
@@ -365,15 +366,6 @@ TEST_F(LSPTest, ModulesTest) {
               ElementsAre(llvm::json::Value(2), llvm::json::Value(10)));
 }
 
-// Creates a Callback that writes its received value into an
-// std::optional<Expected>.
-template <typename T>
-llvm::unique_function<void(llvm::Expected<T>)>
-capture(std::optional<llvm::Expected<T>> &Out) {
-  Out.reset();
-  return [&Out](llvm::Expected<T> V) { Out.emplace(std::move(V)); };
-}
-
 TEST_F(LSPTest, FeatureModulesThreadingTest) {
   // A feature module that does its work on a background thread, and so
   // exercises the block/shutdown protocol.
@@ -491,6 +483,42 @@ TEST_F(LSPTest, DiagModuleTest) {
   EXPECT_THAT(Client.diagnostics("foo.cpp"),
               llvm::ValueIs(testing::ElementsAre(diagMessage(DiagMsg))));
 }
+
+// Regression test for https://github.com/llvm/llvm-project/issues/196072.
+TEST_F(LSPTest, CompletionOutOfRangePosition) {
+  auto &Client = start();
+  Client.didOpen("foo.cpp", "int x;");
+  auto &Reply = Client.call(
+      "textDocument/completion",
+      llvm::json::Object{
+          {"textDocument", Client.documentID("foo.cpp")},
+          {"position", llvm::json::Object{{"line", 97}, {"character", 0}}},
+          {"context",
+           llvm::json::Object{
+               {"triggerKind", 2},
+               {"triggerCharacter", ">"},
+           }},
+      });
+  auto Result = Reply.take();
+  ASSERT_TRUE(!!Result) << "Expected a response, not a server crash";
+}
+
+// https://github.com/llvm/llvm-project/issues/196225
+TEST_F(LSPTest, ShutdownDuringRename) {
+  Annotations Code("void ^foo();");
+  auto &Client = start();
+  Client.didOpen("foo.cpp", Code.code());
+  auto &Reply = Client.call("textDocument/rename",
+                            llvm::json::Object{
+                                {"textDocument", Client.documentID("foo.cpp")},
+                                {"position", Code.point()},
+                                {"newName", "bar"},
+                            });
+  stop();
+  auto Result = Reply.take();
+  ASSERT_TRUE(!!Result) << "Expected a response, not a server crash";
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

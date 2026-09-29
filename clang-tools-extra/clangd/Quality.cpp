@@ -143,6 +143,9 @@ categorize(const index::SymbolInfo &D) {
   case index::SymbolKind::Parameter:
   case index::SymbolKind::NonTypeTemplateParm:
     return SymbolQualitySignals::Variable;
+  // FIXME: for backwards compatibility, the include directive kind is treated
+  // the same as Unknown
+  case index::SymbolKind::IncludeDirective:
   case index::SymbolKind::Using:
   case index::SymbolKind::Module:
   case index::SymbolKind::Unknown:
@@ -258,7 +261,7 @@ static SymbolRelevanceSignals::AccessibleScope
 computeScope(const NamedDecl *D) {
   // Injected "Foo" within the class "Foo" has file scope, not class scope.
   const DeclContext *DC = D->getDeclContext();
-  if (auto *R = dyn_cast_or_null<RecordDecl>(D))
+  if (auto *R = dyn_cast_or_null<CXXRecordDecl>(D))
     if (R->isInjectedClassName())
       DC = DC->getParent();
   // Class constructor should have the same scope as the class.

@@ -49,8 +49,14 @@ def CallOp : Func_Op<"call",
     ```
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands,
-                       UnitAttr:$no_inline);
+  let arguments = (ins
+    FlatSymbolRefAttr:$callee,
+    Variadic<AnyType>:$operands,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs, 
+    UnitAttr:$no_inline
+  );
+
   let results = (outs Variadic<AnyType>);
 
   let builders = [
@@ -73,6 +79,18 @@ def CallOp : Func_Op<"call",
       CArg<"ValueRange", "{}">:$operands), [{
       build($_builder, $_state, StringAttr::get($_builder.getContext(), callee),
             results, operands);
+    }]>,
+    OpBuilder<(ins "TypeRange":$results, "FlatSymbolRefAttr":$callee,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, callee, results, operands);
+    }]>,
+    OpBuilder<(ins "TypeRange":$results, "StringAttr":$callee,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, callee, results, operands);
+    }]>,
+    OpBuilder<(ins "TypeRange":$results, "StringRef":$callee,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, callee, results, operands);
     }]>];
 
   let extraClassDeclaration = [{
@@ -92,17 +110,18 @@ def CallOp : Func_Op<"call",
 
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+      return getCalleeAttr();
     }
 
     /// Set the callee for this operation.
     void setCalleeFromCallable(CallInterfaceCallable callee) {
-      (*this)->setAttr("callee", cast<SymbolRefAttr>(callee));
+      setCalleeAttr(cast<FlatSymbolRefAttr>(cast<SymbolRefAttr>(callee)));
     }
   }];
 
   let assemblyFormat = [{
-    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+    $callee `(` $operands `)` prop-dict attr-dict `:`
+    functional-type($operands, results)
   }];
 }
 
@@ -136,8 +155,13 @@ def CallIndirectOp : Func_Op<"call_indirect", [
     ```
   }];
 
-  let arguments = (ins FunctionType:$callee,
-                       Variadic<AnyType>:$callee_operands);
+  let arguments = (ins
+    FunctionType:$callee,
+    Variadic<AnyType>:$callee_operands,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
+  );
+
   let results = (outs Variadic<AnyType>:$results);
 
   let builders = [
@@ -174,7 +198,12 @@ def CallIndirectOp : Func_Op<"call_indirect", [
 
   let hasCanonicalizeMethod = 1;
   let assemblyFormat = [{
-    $callee `(` $callee_operands `)` attr-dict `:` type($callee)
+    $callee `(` $callee_operands `)`
+    oilist<`,`>(
+        `arg_attrs` `=` $arg_attrs
+      | `res_attrs` `=` $res_attrs
+    )
+    attr-dict `:` type($callee)
   }];
 }
 
@@ -226,7 +255,8 @@ def ConstantOp : Func_Op<"constant",
 
 def FuncOp : Func_Op<"func", [
   AffineScope, AutomaticAllocationScope,
-  FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface
+  SymbolName, SymbolVisibility, FunctionOpInterface, IsolatedFromAbove,
+  OpAsmOpInterface
 ]> {
   let summary = "An operation with a name containing a single `SSACFG` region";
   let description = [{
@@ -334,6 +364,7 @@ def FuncOp : Func_Op<"func", [
     bool isDeclaration() { return isExternal(); }
   }];
   let hasCustomAssemblyFormat = 1;
+  let hasRegionVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -362,11 +393,10 @@ def ReturnOp : Func_Op<"return", [Pure, HasParent<"FuncOp">,
   let arguments = (ins Variadic<AnyType>:$operands);
 
   let builders = [OpBuilder<(ins), [{
-    build($_builder, $_state, std::nullopt);
+    build($_builder, $_state, {});
   }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
-  let hasVerifier = 1;
 }
 
 #endif // MLIR_DIALECT_FUNC_IR_FUNCOPS_TD

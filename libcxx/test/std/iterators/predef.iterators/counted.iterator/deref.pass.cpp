@@ -12,6 +12,7 @@
 // constexpr decltype(auto) operator*() const
 //   requires dereferenceable<const I>;
 
+#include <cassert>
 #include <iterator>
 
 #include "test_macros.h"

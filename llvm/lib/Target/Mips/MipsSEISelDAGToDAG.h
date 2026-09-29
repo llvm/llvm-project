@@ -30,13 +30,9 @@ private:
   void addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
                              MachineFunction &MF);
 
-  unsigned getMSACtrlReg(const SDValue RegIdx) const;
+  MCRegister getMSACtrlReg(const SDValue RegIdx) const;
 
   bool replaceUsesWithZeroReg(MachineRegisterInfo *MRI, const MachineInstr&);
-
-  std::pair<SDNode *, SDNode *> selectMULT(SDNode *N, unsigned Opc,
-                                           const SDLoc &dl, EVT Ty, bool HasLo,
-                                           bool HasHi);
 
   void selectAddE(SDNode *Node, const SDLoc &DL) const;
 

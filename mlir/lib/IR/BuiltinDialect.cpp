@@ -17,9 +17,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
 
 using namespace mlir;
@@ -48,14 +46,6 @@ struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
       : OpAsmDialectInterface(dialect), blobManager(mgr) {}
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
-    if (llvm::isa<AffineMapAttr>(attr)) {
-      os << "map";
-      return AliasResult::OverridableAlias;
-    }
-    if (llvm::isa<IntegerSetAttr>(attr)) {
-      os << "set";
-      return AliasResult::OverridableAlias;
-    }
     if (llvm::isa<LocationAttr>(attr)) {
       os << "loc";
       return AliasResult::OverridableAlias;
@@ -135,21 +125,22 @@ void ModuleOp::build(OpBuilder &builder, OperationState &state,
   state.addRegion()->emplaceBlock();
   if (name) {
     state.attributes.push_back(builder.getNamedAttr(
-        mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(*name)));
+        getSymNameAttrName(state.name), builder.getStringAttr(*name)));
   }
 }
 
 /// Construct a module from the given context.
 ModuleOp ModuleOp::create(Location loc, std::optional<StringRef> name) {
   OpBuilder builder(loc->getContext());
-  return builder.create<ModuleOp>(loc, name);
+  return ModuleOp::create(builder, loc, name);
 }
 
 DataLayoutSpecInterface ModuleOp::getDataLayoutSpec() {
   // Take the first and only (if present) attribute that implements the
   // interface. This needs a linear search, but is called only once per data
   // layout object construction that is used for repeated queries.
-  for (NamedAttribute attr : getOperation()->getAttrs())
+  for (NamedAttribute attr :
+       getOperation()->getDiscardableAttrDictionary().getValue())
     if (auto spec = llvm::dyn_cast<DataLayoutSpecInterface>(attr.getValue()))
       return spec;
   return {};
@@ -159,7 +150,8 @@ TargetSystemSpecInterface ModuleOp::getTargetSystemSpec() {
   // Take the first and only (if present) attribute that implements the
   // interface. This needs a linear search, but is called only once per data
   // layout object construction that is used for repeated queries.
-  for (NamedAttribute attr : getOperation()->getAttrs())
+  for (NamedAttribute attr :
+       getOperation()->getDiscardableAttrDictionary().getValue())
     if (auto spec = llvm::dyn_cast<TargetSystemSpecInterface>(attr.getValue()))
       return spec;
   return {};
@@ -168,11 +160,12 @@ TargetSystemSpecInterface ModuleOp::getTargetSystemSpec() {
 LogicalResult ModuleOp::verify() {
   // Check that none of the attributes are non-dialect attributes, except for
   // the symbol related attributes.
-  for (auto attr : (*this)->getAttrs()) {
+  for (auto attr : (*this)->getDiscardableAttrDictionary().getValue()) {
     if (!attr.getName().strref().contains('.') &&
         !llvm::is_contained(
-            ArrayRef<StringRef>{mlir::SymbolTable::getSymbolAttrName(),
-                                mlir::SymbolTable::getVisibilityAttrName()},
+            ArrayRef<StringRef>{
+                getSymNameAttrName().getValue(),
+                mlir::SymbolOpInterface::getDefaultVisibilityAttrName()},
             attr.getName().strref()))
       return emitOpError() << "can only contain attributes with "
                               "dialect-prefixed names, found: '"
@@ -182,7 +175,8 @@ LogicalResult ModuleOp::verify() {
   // Check that there is at most one data layout spec attribute.
   StringRef layoutSpecAttrName;
   DataLayoutSpecInterface layoutSpec;
-  for (const NamedAttribute &na : (*this)->getAttrs()) {
+  for (const NamedAttribute &na :
+       (*this)->getDiscardableAttrDictionary().getValue()) {
     if (auto spec = llvm::dyn_cast<DataLayoutSpecInterface>(na.getValue())) {
       if (layoutSpec) {
         InFlightDiagnostic diag =

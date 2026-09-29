@@ -18,11 +18,13 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_HAS_MONOTONIC_CLOCK
+
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace chrono {
 
-#if _LIBCPP_HAS_MONOTONIC_CLOCK
 class _LIBCPP_EXPORTED_FROM_ABI steady_clock {
 public:
   typedef nanoseconds duration;
@@ -31,12 +33,14 @@ public:
   typedef chrono::time_point<steady_clock, duration> time_point;
   static _LIBCPP_CONSTEXPR_SINCE_CXX14 const bool is_steady = true;
 
-  static time_point now() _NOEXCEPT;
+  [[__nodiscard__]] static time_point now() _NOEXCEPT;
 };
-#endif
 
 } // namespace chrono
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
+
+#endif
 
 #endif // _LIBCPP___CHRONO_STEADY_CLOCK_H

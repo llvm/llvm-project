@@ -1,6 +1,7 @@
 include(ExternalProject)
 include(CompilerRTUtils)
 include(HandleCompilerRT)
+include(LLVMVersion)
 
 function(set_target_output_directories target output_dir)
   # For RUNTIME_OUTPUT_DIRECTORY variable, Multi-configuration generators
@@ -22,6 +23,43 @@ function(set_target_output_directories target output_dir)
         LIBRARY_OUTPUT_DIRECTORY ${output_dir}
         RUNTIME_OUTPUT_DIRECTORY ${output_dir})
   endif()
+endfunction()
+
+function(add_compiler_rt_windows_version_resource_file OUT_VAR RESOURCE_VAR name)
+  set(sources ${ARGN})
+  if(MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+    set(resource_file
+      "${COMPILER_RT_SOURCE_DIR}/resources/windows_version_resource.rc")
+    set(target_resource_file
+      "${CMAKE_CURRENT_BINARY_DIR}/${name}_windows_version_resource.rc")
+    configure_file("${resource_file}" "${target_resource_file}" COPYONLY)
+    list(APPEND sources "${target_resource_file}")
+    source_group("Resource Files" "${target_resource_file}")
+    set(${RESOURCE_VAR} "${target_resource_file}" PARENT_SCOPE)
+  endif()
+  set(${OUT_VAR} ${sources} PARENT_SCOPE)
+endfunction()
+
+function(set_compiler_rt_windows_version_resource_properties name resource_file)
+  if(DEFINED PACKAGE_VERSION AND NOT "${PACKAGE_VERSION}" STREQUAL "")
+    set(version_string "${PACKAGE_VERSION}")
+  else()
+    set(version_string
+      "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}")
+  endif()
+
+  set_property(SOURCE ${resource_file}
+               PROPERTY COMPILE_FLAGS /nologo)
+  set_property(SOURCE ${resource_file}
+               PROPERTY COMPILE_DEFINITIONS
+               "RC_VERSION_FIELD_1=${LLVM_VERSION_MAJOR}"
+               "RC_VERSION_FIELD_2=${LLVM_VERSION_MINOR}"
+               "RC_VERSION_FIELD_3=${LLVM_VERSION_PATCH}"
+               "RC_VERSION_FIELD_4=0"
+               "RC_FILE_VERSION=\"${version_string}\""
+               "RC_INTERNAL_NAME=\"${name}\""
+               "RC_PRODUCT_NAME=\"compiler-rt\""
+               "RC_PRODUCT_VERSION=\"${version_string}\"")
 endfunction()
 
 # Tries to add an "object library" target for a given list of OSs and/or
@@ -91,7 +129,7 @@ function(add_compiler_rt_object_libraries name)
       ${extra_cflags_${libname}} ${target_flags})
     set_property(TARGET ${libname} APPEND PROPERTY
       COMPILE_DEFINITIONS ${LIB_DEFS})
-    set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT/Libraries")
+    set_target_properties(${libname} PROPERTIES FOLDER "compiler-rt/Libraries")
     if(APPLE)
       set_target_properties(${libname} PROPERTIES
         OSX_ARCHITECTURES "${LIB_ARCHS_${libname}}")
@@ -110,7 +148,7 @@ endmacro()
 
 function(add_compiler_rt_component name)
   add_custom_target(${name})
-  set_target_properties(${name} PROPERTIES FOLDER "Compiler-RT/Components")
+  set_target_properties(${name} PROPERTIES FOLDER "compiler-rt/Components")
   if(COMMAND runtime_register_component)
     runtime_register_component(${name})
   endif()
@@ -123,7 +161,7 @@ macro(set_output_name output name arch)
   else()
     if(ANDROID AND ${arch} STREQUAL "i386")
       set(${output} "${name}-i686${COMPILER_RT_OS_SUFFIX}")
-    elseif("${arch}" MATCHES "^arm")
+    elseif(NOT "${arch}" MATCHES "^arm64" AND "${arch}" MATCHES "^arm")
       if(COMPILER_RT_DEFAULT_TARGET_ONLY)
         set(triple "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
       else()
@@ -162,7 +200,8 @@ endmacro()
 #                         OBJECT_LIBS <object libraries to use as sources>
 #                         PARENT_TARGET <convenience parent target>
 #                         ADDITIONAL_HEADERS <header files>
-#                         EXTENSIONS <boolean>)
+#                         C_STANDARD <version>
+#                         CXX_STANDARD <version>)
 function(add_compiler_rt_runtime name type)
   if(NOT type MATCHES "^(OBJECT|STATIC|SHARED|MODULE)$")
     message(FATAL_ERROR
@@ -171,8 +210,8 @@ function(add_compiler_rt_runtime name type)
   endif()
   cmake_parse_arguments(LIB
     ""
-    "PARENT_TARGET"
-    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS;EXTENSIONS"
+    "PARENT_TARGET;C_STANDARD;CXX_STANDARD"
+    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS"
     ${ARGN})
   set(libnames)
   # Until we support this some other way, build compiler-rt runtime without LTO
@@ -182,6 +221,12 @@ function(add_compiler_rt_runtime name type)
     set(NO_LTO_FLAGS "-fno-lto")
   else()
     set(NO_LTO_FLAGS "")
+  endif()
+
+  # The GPU build does not support shared libraries, just suppress them here as
+  # there is no global config for this.
+  if(COMPILER_RT_GPU_BUILD AND type MATCHES "SHARED")
+    return()
   endif()
 
   # By default do not instrument or use profdata for compiler-rt.
@@ -295,18 +340,14 @@ function(add_compiler_rt_runtime name type)
     if(NOT TARGET ${LIB_PARENT_TARGET})
       add_custom_target(${LIB_PARENT_TARGET})
       set_target_properties(${LIB_PARENT_TARGET} PROPERTIES
-                            FOLDER "Compiler-RT/Runtimes")
+                            FOLDER "compiler-rt/Runtimes")
     endif()
   endif()
 
   foreach(libname ${libnames})
-    # If you are using a multi-configuration generator we don't generate
-    # per-library install rules, so we fall back to the parent target COMPONENT
-    if(CMAKE_CONFIGURATION_TYPES AND LIB_PARENT_TARGET)
-      set(COMPONENT_OPTION COMPONENT ${LIB_PARENT_TARGET})
-    else()
-      set(COMPONENT_OPTION COMPONENT ${libname})
-    endif()
+    get_compiler_rt_install_component(${libname} "${LIB_PARENT_TARGET}"
+                                      component)
+    set(COMPONENT_OPTION COMPONENT ${component})
 
     if(type STREQUAL "SHARED")
       list(APPEND LIB_DEFS COMPILER_RT_SHARED_LIB)
@@ -350,16 +391,32 @@ function(add_compiler_rt_runtime name type)
           DEPENDS ${sources_${libname}}
           COMMENT "Building C object ${output_file_${libname}}")
       add_custom_target(${libname} DEPENDS ${output_dir_${libname}}/${output_file_${libname}})
-      set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT/Codegenning")
+      set_target_properties(${libname} PROPERTIES FOLDER "compiler-rt/Codegenning")
       install(FILES ${output_dir_${libname}}/${output_file_${libname}}
         DESTINATION ${install_dir_${libname}}
         ${COMPONENT_OPTION})
     else()
+      unset(windows_resource_file)
+      if(type STREQUAL "SHARED")
+        add_compiler_rt_windows_version_resource_file(
+          sources_${libname} windows_resource_file ${libname}
+          ${sources_${libname}})
+      endif()
       add_library(${libname} ${type} ${sources_${libname}})
+      if(windows_resource_file)
+        set_compiler_rt_windows_version_resource_properties(${libname}
+          ${windows_resource_file})
+      endif()
       set_target_compile_flags(${libname} ${extra_cflags_${libname}})
       set_target_link_flags(${libname} ${extra_link_flags_${libname}})
       set_property(TARGET ${libname} APPEND PROPERTY
                    COMPILE_DEFINITIONS ${LIB_DEFS})
+      if(LIB_C_STANDARD)
+        set_property(TARGET ${libname} PROPERTY C_STANDARD ${LIB_C_STANDARD})
+      endif()
+      if(LIB_CXX_STANDARD)
+        set_property(TARGET ${libname} PROPERTY CXX_STANDARD ${LIB_CXX_STANDARD})
+      endif()
       set_target_output_directories(${libname} ${output_dir_${libname}})
       install(TARGETS ${libname}
         ARCHIVE DESTINATION ${install_dir_${libname}}
@@ -374,7 +431,7 @@ function(add_compiler_rt_runtime name type)
     endif()
     set_target_properties(${libname} PROPERTIES
         OUTPUT_NAME ${output_name_${libname}}
-        FOLDER "Compiler-RT/Runtimes")
+        FOLDER "compiler-rt/Runtimes")
     if(LIB_LINK_LIBS)
       target_link_libraries(${libname} PRIVATE ${LIB_LINK_LIBS})
     endif()
@@ -388,6 +445,9 @@ function(add_compiler_rt_runtime name type)
       if(WIN32 AND NOT CYGWIN AND NOT MINGW)
         set_target_properties(${libname} PROPERTIES IMPORT_PREFIX "")
         set_target_properties(${libname} PROPERTIES IMPORT_SUFFIX ".lib")
+        if (LLVM_ENABLE_PDB)
+          install(FILES $<TARGET_PDB_FILE:${libname}> DESTINATION "${install_dir_${libname}}" COMPONENT ${COMPONENT_OPTION} OPTIONAL)
+        endif()
       endif()
       find_program(CODESIGN codesign)
       if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*" AND CODESIGN)
@@ -436,10 +496,6 @@ function(add_compiler_rt_runtime name type)
 
     if(type STREQUAL "SHARED")
       rt_externalize_debuginfo(${libname})
-    endif()
-
-    if(DEFINED LIB_EXTENSIONS)
-      set_target_properties(${libname} PROPERTIES C_EXTENSIONS ${LIB_EXTENSIONS})
     endif()
   endforeach()
   if(LIB_PARENT_TARGET)
@@ -525,7 +581,7 @@ function(add_compiler_rt_test test_suite test_name arch)
   # when linking, not the compiler. Here, we hack it to use the compiler
   # because we want to use -fsanitize flags.
 
-  # Only add CMAKE_EXE_LINKER_FLAGS when in a standalone bulid.
+  # Only add CMAKE_EXE_LINKER_FLAGS when in a standalone build.
   # Or else CMAKE_EXE_LINKER_FLAGS contains flags for build compiler of Clang/llvm.
   # This might not be the same as what the COMPILER_RT_TEST_COMPILER supports.
   # eg: the build compiler use lld linker and we build clang with default ld linker
@@ -546,30 +602,13 @@ function(add_compiler_rt_test test_suite test_name arch)
     DEPENDS ${TEST_DEPS}
     )
   add_custom_target(T${test_name} DEPENDS "${output_bin}")
-  set_target_properties(T${test_name} PROPERTIES FOLDER "Compiler-RT/Tests")
+  set_target_properties(T${test_name} PROPERTIES FOLDER "compiler-rt/Tests")
 
   # Make the test suite depend on the binary.
   add_dependencies(${test_suite} T${test_name})
 endfunction()
 
-macro(add_compiler_rt_resource_file target_name file_name component)
-  set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/${file_name}")
-  set(dst_file "${COMPILER_RT_OUTPUT_DIR}/share/${file_name}")
-  add_custom_command(OUTPUT ${dst_file}
-    DEPENDS ${src_file}
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src_file} ${dst_file}
-    COMMENT "Copying ${file_name}...")
-  add_custom_target(${target_name} DEPENDS ${dst_file})
-  # Install in Clang resource directory.
-  install(FILES ${file_name}
-    DESTINATION ${COMPILER_RT_INSTALL_DATA_DIR}
-    COMPONENT ${component})
-  add_dependencies(${component} ${target_name})
-
-  set_target_properties(${target_name} PROPERTIES FOLDER "Compiler-RT/Resources")
-endmacro()
-
-macro(add_compiler_rt_script name)
+macro(add_compiler_rt_script name component)
   set(dst ${COMPILER_RT_EXEC_OUTPUT_DIR}/${name})
   set(src ${CMAKE_CURRENT_SOURCE_DIR}/${name})
   add_custom_command(OUTPUT ${dst}
@@ -577,10 +616,30 @@ macro(add_compiler_rt_script name)
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
     COMMENT "Copying ${name}...")
   add_custom_target(${name} DEPENDS ${dst})
+  add_dependencies(${component} ${name})
   install(FILES ${dst}
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-    DESTINATION ${COMPILER_RT_INSTALL_BINARY_DIR})
+    DESTINATION ${COMPILER_RT_INSTALL_BINARY_DIR}
+    COMPONENT ${component})
 endmacro(add_compiler_rt_script src name)
+
+
+macro(add_compiler_rt_cfg target_name file_name component arch)
+  set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/AIX/${file_name}")
+  get_compiler_rt_output_dir(${arch} output_dir)
+  set(dst_file "${output_dir}/${file_name}")
+  add_custom_command(OUTPUT ${dst_file}
+    DEPENDS ${src_file}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src_file} ${dst_file}
+    COMMENT "Copying ${file_name}...")
+  add_custom_target(${target_name} DEPENDS ${dst_file})
+  install(FILES ${file_name}
+    DESTINATION ${COMPILER_RT_INSTALL_LIBRARY_DIR}
+    COMPONENT ${component})
+  add_dependencies(${component} ${target_name})
+
+  set_target_properties(${target_name} PROPERTIES FOLDER "compiler-rt Misc")
+endmacro()
 
 # Builds custom version of libc++ and installs it in <prefix>.
 # Can be used to build sanitized versions of libc++ for running unit tests.
@@ -615,7 +674,7 @@ macro(add_custom_libcxx name prefix)
     COMMENT "Clobbering ${name} build directories"
     USES_TERMINAL
     )
-  set_target_properties(${name}-clear PROPERTIES FOLDER "Compiler-RT/Metatargets")
+  set_target_properties(${name}-clear PROPERTIES FOLDER "compiler-rt/Metatargets")
 
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp
@@ -627,7 +686,7 @@ macro(add_custom_libcxx name prefix)
 
   add_custom_target(${name}-clobber
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp)
-  set_target_properties(${name}-clobber PROPERTIES FOLDER "Compiler-RT/Metatargets")
+  set_target_properties(${name}-clobber PROPERTIES FOLDER "compiler-rt/Metatargets")
 
   set(PASSTHROUGH_VARIABLES
     ANDROID
@@ -648,6 +707,7 @@ macro(add_custom_libcxx name prefix)
     CMAKE_STRIP
     CMAKE_READELF
     CMAKE_SYSROOT
+    CMAKE_INSTALL_MESSAGE
     CMAKE_TOOLCHAIN_FILE
     LIBCXX_HAS_MUSL_LIBC
     LIBCXX_HAS_GCC_S_LIB
@@ -684,14 +744,14 @@ macro(add_custom_libcxx name prefix)
     PREFIX ${prefix}
     SOURCE_DIR ${LLVM_MAIN_SRC_DIR}/../runtimes
     BINARY_DIR ${prefix}/build
-    CMAKE_ARGS ${CMAKE_PASSTHROUGH_VARIABLES}
+    CMAKE_ARGS -DCMAKE_INSTALL_MESSAGE=NEVER
+               ${CMAKE_PASSTHROUGH_VARIABLES}
                ${compiler_args}
                ${verbose}
                -DCMAKE_C_FLAGS=${LIBCXX_C_FLAGS}
                -DCMAKE_CXX_FLAGS=${LIBCXX_CXX_FLAGS}
                -DCMAKE_BUILD_TYPE=Release
                -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-               -DCMAKE_INSTALL_MESSAGE=LAZY
                -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
                -DLLVM_ENABLE_RUNTIMES=libcxx|libcxxabi
                -DLIBCXXABI_USE_LLVM_UNWINDER=OFF
@@ -781,6 +841,19 @@ function(rt_externalize_debuginfo name)
     message(FATAL_ERROR "COMPILER_RT_EXTERNALIZE_DEBUGINFO isn't implemented for non-darwin platforms!")
   endif()
 endfunction()
+
+
+# Wire a sanitizer runtime target up to the sanitizer-ignorelists target so
+# that building/installing the runtime also builds/installs the ignorelists.
+macro(add_sanitizer_ignorelists_dependency name)
+  add_dependencies(${name} sanitizer-ignorelists)
+  if(TARGET install-${name})
+    add_dependencies(install-${name} install-sanitizer-ignorelists)
+  endif()
+  if(TARGET install-${name}-stripped)
+    add_dependencies(install-${name}-stripped install-sanitizer-ignorelists)
+  endif()
+endmacro()
 
 
 # Configure lit configuration files, including compiler-rt specific variables.

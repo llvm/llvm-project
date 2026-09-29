@@ -12,21 +12,6 @@
 ; RUN:   | FileCheck %s --check-prefix=FASTISEL-INSTRREF \
 ; RUN:     --implicit-check-not=DBG_VALUE
 
-;; Repeat tests using experimental debuginfo iterators.
-; RUN: llc --try-experimental-debuginfo-iterators %s -mtriple=x86_64-unknown-unknown -o - -stop-before=finalize-isel -experimental-debug-variable-locations=false \
-; RUN:   | FileCheck %s --check-prefix=NORMAL \
-; RUN:     --implicit-check-not=debug-instr-number \
-; RUN:     --implicit-check-not=DBG_INSTR_REF
-; RUN: llc --try-experimental-debuginfo-iterators %s -mtriple=x86_64-unknown-unknown -o - -stop-before=finalize-isel \
-; RUN:     -experimental-debug-variable-locations -verify-machineinstrs \
-; RUN:   | FileCheck %s --check-prefix=INSTRREF \
-; RUN:     --implicit-check-not=DBG_VALUE
-; RUN: llc --try-experimental-debuginfo-iterators %s -mtriple=x86_64-unknown-unknown -o - -stop-before=finalize-isel \
-; RUN:     -experimental-debug-variable-locations -verify-machineinstrs \
-; RUN:     -fast-isel \
-; RUN:   | FileCheck %s --check-prefix=FASTISEL-INSTRREF \
-; RUN:     --implicit-check-not=DBG_VALUE
-
 ; NORMAL: ![[SOCKS:[0-9]+]] = !DILocalVariable(name: "socks",
 ; NORMAL: ![[KNEES:[0-9]+]] = !DILocalVariable(name: "knees",
 ; INSTRREF: ![[SOCKS:[0-9]+]] = !DILocalVariable(name: "socks",
@@ -296,15 +281,19 @@ lala:
 !11 = !{!13}
 !13 = !DILocalVariable(name: "baz", scope: !7, file: !1, line: 6, type: !10)
 !14 = !DILocation(line: 1, scope: !7)
-!20 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 5, type: !8, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
+!20 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 5, type: !8, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !23)
 !21 = !DILocalVariable(name: "xyzzy", scope: !20, file: !1, line: 6, type: !10)
 !22 = !DILocation(line: 1, scope: !20)
-!30 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 5, type: !8, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
+!23 = !{!21}
+!30 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 5, type: !8, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !33)
 !31 = !DILocalVariable(name: "xyzzy", scope: !30, file: !1, line: 6, type: !10)
 !32 = !DILocation(line: 1, scope: !30)
-!40 = distinct !DISubprogram(name: "qux", scope: !1, file: !1, line: 5, type: !8, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
+!33 = !{!31}
+!40 = distinct !DISubprogram(name: "qux", scope: !1, file: !1, line: 5, type: !8, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !46)
 !41 = !DILocalVariable(name: "socks", scope: !40, file: !1, line: 6, type: !10)
 !42 = !DILocation(line: 1, scope: !40)
-!43 = distinct !DISubprogram(name: "inlined", scope: !1, file: !1, line: 5, type: !8, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !11)
+!43 = distinct !DISubprogram(name: "inlined", scope: !1, file: !1, line: 5, type: !8, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !47)
 !44 = !DILocation(line: 0, scope: !43, inlinedAt: !42)
 !45 = !DILocalVariable(name: "knees", scope: !43, file: !1, line: 6, type: !10)
+!46 = !{!41}
+!47 = !{!45}

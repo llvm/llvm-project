@@ -15,7 +15,7 @@ module attributes {transform.with_named_sequence} {
 func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
 
-  // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
+  // CHECK: %[[A_memref:.*]] = bufferization.to_buffer %[[A]]
   // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
   // CHECK: memref.copy %[[A_memref]], %[[alloc]]
@@ -34,7 +34,7 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.bufferization.one_shot_bufferize %0 {memcpy_op = "linalg.copy"} : (!transform.any_op) -> !transform.any_op
+    %1 = transform.bufferization.one_shot_bufferize %0 <{memcpy_op = "linalg.copy"}> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -45,7 +45,7 @@ module attributes {transform.with_named_sequence} {
 func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
 
-  // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
+  // CHECK: %[[A_memref:.*]] = bufferization.to_buffer %[[A]]
   // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
   // CHECK: linalg.copy ins(%[[A_memref]] : memref<{{.*}}>) outs(%[[alloc]]
@@ -65,7 +65,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.bufferization.one_shot_bufferize %0
-        {test_analysis_only = true} : (!transform.any_op) -> !transform.any_op
+        <{test_analysis_only = true}> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -111,23 +111,21 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-module {
-  // CHECK-LABEL: func @test_function(
-  //  CHECK-SAME:     %[[A:.*]]: tensor<?xf32>
-  func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
-    %c0 = arith.constant 0 : index
+// CHECK-LABEL: func @test_function(
+//  CHECK-SAME:     %[[A:.*]]: tensor<?xf32>
+func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
 
-    // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
-    // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
-    // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
-    // CHECK: memref.copy %[[A_memref]], %[[alloc]]
-    // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
-    // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
-    %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
+  // CHECK: %[[A_memref:.*]] = bufferization.to_buffer %[[A]]
+  // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
+  // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
+  // CHECK: memref.copy %[[A_memref]], %[[alloc]]
+  // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
+  // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
+  %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
-    // CHECK: return %[[res_tensor]]
-    return %0 : tensor<?xf32>
-  }
+  // CHECK: return %[[res_tensor]]
+  return %0 : tensor<?xf32>
 }
 
 // -----
@@ -137,7 +135,7 @@ module {
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.consumed}) {
     %0 = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %arg1
-      { bufferize_function_boundaries = true } : (!transform.any_op) -> !transform.any_op
+      <bufferize_function_boundaries = true> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -222,8 +220,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %alloc_tensor = transform.structured.match ops{["bufferization.alloc_tensor"]} in %arg1
       : (!transform.any_op) -> !transform.op<"bufferization.alloc_tensor">
-    %2, %new = transform.structured.bufferize_to_allocation %alloc_tensor 
-      {alloc_op = "memref.alloca"} 
+    %2, %new = transform.structured.bufferize_to_allocation %alloc_tensor
+      <alloc_op = "memref.alloca">
         : !transform.op<"bufferization.alloc_tensor">
     transform.yield
   }

@@ -1,5 +1,5 @@
-; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-vulkan %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
 
 ; Make sure SPIRV operation function calls for normalize are lowered correctly.
 
@@ -25,6 +25,18 @@ entry:
   ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] Normalize %[[#arg0]]
   %hlsl.normalize = call <4 x float> @llvm.spv.normalize.v4f32(<4 x float> %a)
   ret <4 x float> %hlsl.normalize
+}
+
+define noundef <4 x float> @normalize_instcombine_float4(<4 x float> noundef %a) {
+entry:
+  ; CHECK: %[[#]] = OpFunction %[[#vec4_float_32]] None %[[#]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] Normalize %[[#arg0]]
+  %spv.length = call float @llvm.spv.length.f32(<4 x float> %a)
+  %splatinsert = insertelement <4 x float> poison, float %spv.length, i64 0
+  %splat = shufflevector <4 x float> %splatinsert, <4 x float> poison, <4 x i32> zeroinitializer
+  %div = fdiv <4 x float> %a, %splat
+  ret <4 x float> %div
 }
 
 declare <4 x half> @llvm.spv.normalize.v4f16(<4 x half>)

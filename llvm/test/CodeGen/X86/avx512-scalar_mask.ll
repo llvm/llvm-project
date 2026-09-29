@@ -24,7 +24,7 @@ define <4 x float>@test_var_maskz(<4 x float> %v0, <4 x float> %v1, <4 x float> 
   ret < 4 x float> %res
 }
 
-; FIXME: we should just return %xmm0 here.
+; just return %xmm0 here.
 define <4 x float>@test_const0_mask(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const0_mask:
 ; CHECK:       ## %bb.0:
@@ -33,7 +33,7 @@ define <4 x float>@test_const0_mask(<4 x float> %v0, <4 x float> %v1, <4 x float
   ret < 4 x float> %res
 }
 
-; FIXME: we should zero the lower element of xmm0 and return it.
+; zero the lower element of xmm0 and return it.
 define <4 x float>@test_const0_maskz(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const0_maskz:
 ; CHECK:       ## %bb.0:
@@ -44,7 +44,7 @@ define <4 x float>@test_const0_maskz(<4 x float> %v0, <4 x float> %v1, <4 x floa
   ret < 4 x float> %res
 }
 
-; FIXME: we should just return %xmm0 here.
+; just return %xmm0 here.
 define <4 x float>@test_const2_mask(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const2_mask:
 ; CHECK:       ## %bb.0:
@@ -53,7 +53,7 @@ define <4 x float>@test_const2_mask(<4 x float> %v0, <4 x float> %v1, <4 x float
   ret < 4 x float> %res
 }
 
-; FIXME: we should zero the lower element of xmm0 and return it.
+; zero the lower element of xmm0 and return it.
 define <4 x float>@test_const2_maskz(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2) {
 ; CHECK-LABEL: test_const2_maskz:
 ; CHECK:       ## %bb.0:

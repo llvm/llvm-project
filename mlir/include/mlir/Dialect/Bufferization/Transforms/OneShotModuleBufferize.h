@@ -14,20 +14,22 @@ struct LogicalResult;
 } // namespace llvm
 
 namespace mlir {
-class ModuleOp;
+class Operation;
 
 namespace bufferization {
 struct BufferizationStatistics;
 class OneShotAnalysisState;
 struct OneShotBufferizationOptions;
+class BufferizationState;
 
 /// Analyze `moduleOp` and its nested ops. Bufferization decisions are stored in
-/// `state`.
+/// `state`. This operates on any `SymbolTable` op.
 llvm::LogicalResult
-analyzeModuleOp(ModuleOp moduleOp, OneShotAnalysisState &state,
+analyzeModuleOp(Operation *moduleOp, OneShotAnalysisState &state,
                 BufferizationStatistics *statistics = nullptr);
 
-/// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
+/// Bufferize an `op`s nested ops that implement `BufferizableOpInterface`.
+/// This operates on any `SymbolTable` op.
 ///
 /// Note: This function does not run One-Shot Analysis. No buffer copies are
 /// inserted except two cases:
@@ -36,21 +38,22 @@ analyzeModuleOp(ModuleOp moduleOp, OneShotAnalysisState &state,
 /// - `options.copyBeforeWrite` is not set and `options.noAnalysisFuncFilter`
 ///   is not empty. The FuncOps it contains were not analyzed. Buffer copies
 ///   will be inserted only to these FuncOps.
-llvm::LogicalResult
-bufferizeModuleOp(ModuleOp moduleOp, const OneShotBufferizationOptions &options,
-                  BufferizationStatistics *statistics = nullptr);
+llvm::LogicalResult bufferizeModuleOp(
+    Operation *moduleOp, const OneShotBufferizationOptions &options,
+    BufferizationState &state, BufferizationStatistics *statistics = nullptr);
 
-/// Remove bufferization attributes on every FuncOp arguments in the ModuleOp.
-void removeBufferizationAttributesInModule(ModuleOp moduleOp);
+/// Remove bufferization attributes on every FuncOp arguments in the SymbolTable
+/// op.
+void removeBufferizationAttributesInModule(Operation *moduleOp);
 
-/// Run One-Shot Module Bufferization on the given module. Performs a simple
-/// function call analysis to determine which function arguments are
+/// Run One-Shot Module Bufferization on the given SymbolTable. Performs a
+/// simple function call analysis to determine which function arguments are
 /// inplaceable. Then analyzes and bufferizes FuncOps one-by-one with One-Shot
 /// Bufferize.
 llvm::LogicalResult runOneShotModuleBufferize(
-    ModuleOp moduleOp,
+    Operation *moduleOp,
     const bufferization::OneShotBufferizationOptions &options,
-    BufferizationStatistics *statistics = nullptr);
+    BufferizationState &state, BufferizationStatistics *statistics = nullptr);
 
 } // namespace bufferization
 } // namespace mlir

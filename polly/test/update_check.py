@@ -222,7 +222,12 @@ def classyfier2(lines):
         line = i.__next__()
 
 
-replrepl = {"{{": "{{[{][{]}}", "}}": "{{[}][}]}}", "[[": "{{\[\[}}", "]]": "{{\]\]}}"}
+replrepl = {
+    "{{": "{{[{][{]}}",
+    "}}": "{{[}][}]}}",
+    "[[": r"{{\[\[}}",
+    "]]": r"{{\]\]}}",
+}
 replre = re.compile("|".join(re.escape(k) for k in replrepl.keys()))
 
 
@@ -452,7 +457,7 @@ def main():
     checkre = re.compile(
         r"^\s*\;\s*("
         + "|".join([re.escape(s) for s in checkprefixes])
-        + ")(\-NEXT|\-DAG|\-NOT|\-LABEL|\-SAME)?\s*\:"
+        + r")(\-NEXT|\-DAG|\-NOT|\-LABEL|\-SAME)?\s*\:"
     )
     firstcheckline = None
     firstnoncommentline = None

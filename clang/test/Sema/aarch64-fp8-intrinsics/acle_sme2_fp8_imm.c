@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -target-feature +sme2 -target-feature +sme-f8f16 -target-feature +sme-f8f32 -fsyntax-only -verify  %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -target-feature +sme-f8f16 -target-feature +sme-f8f32 -fsyntax-only -verify  %s
 
 // REQUIRES: aarch64-registered-target
 

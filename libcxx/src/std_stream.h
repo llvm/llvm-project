@@ -11,7 +11,8 @@
 #define _LIBCPP_STD_STREAM_H
 
 #include <__config>
-#include <__locale>
+#include <__locale_dir/codecvt.h>
+#include <__locale_dir/locale.h>
 #include <cstdio>
 #include <istream>
 #include <ostream>
@@ -24,6 +25,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 static const int __limit = 8;
 
@@ -44,6 +46,7 @@ public:
 protected:
   virtual int_type underflow();
   virtual int_type uflow();
+  virtual streamsize xsgetn(char_type* __s, streamsize __n);
   virtual int_type pbackfail(int_type __c = traits_type::eof());
   virtual void imbue(const locale& __loc);
 
@@ -56,7 +59,7 @@ private:
   bool __last_consumed_is_next_;
   bool __always_noconv_;
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
   static constexpr bool __is_win32api_wide_char = !is_same_v<_CharT, char>;
 #else
   static constexpr bool __is_win32api_wide_char = false;
@@ -86,7 +89,7 @@ void __stdinbuf<_CharT>::imbue(const locale& __loc) {
   __encoding_      = __cv_->encoding();
   __always_noconv_ = __cv_->always_noconv();
   if (__encoding_ > __limit)
-    __throw_runtime_error("unsupported locale for standard input");
+    std::__throw_runtime_error("unsupported locale for standard input");
 }
 
 template <class _CharT>
@@ -199,6 +202,26 @@ typename __stdinbuf<_CharT>::int_type __stdinbuf<_CharT>::__getchar(bool __consu
 }
 
 template <class _CharT>
+streamsize __stdinbuf<_CharT>::xsgetn(char_type* __s, streamsize __n) {
+  if (__always_noconv_ && !__is_win32api_wide_char) {
+    streamsize __i = 0;
+    if (__n > 0 && __last_consumed_is_next_) {
+      __s[__i++]               = traits_type::to_char_type(__last_consumed_);
+      __last_consumed_         = traits_type::eof();
+      __last_consumed_is_next_ = false;
+    }
+    if (__n > __i) {
+      size_t __nread = fread(__s + __i, 1, static_cast<size_t>(__n - __i), __file_);
+      if (__nread > 0)
+        __last_consumed_ = traits_type::to_int_type(__s[__i + __nread - 1]);
+      __i += static_cast<streamsize>(__nread);
+    }
+    return __i;
+  }
+  return basic_streambuf<char_type, traits_type>::xsgetn(__s, __n);
+}
+
+template <class _CharT>
 typename __stdinbuf<_CharT>::int_type __stdinbuf<_CharT>::pbackfail(int_type __c) {
   if (traits_type::eq_int_type(__c, traits_type::eof())) {
     if (!__last_consumed_is_next_) {
@@ -261,7 +284,7 @@ private:
   state_type* __st_;
   bool __always_noconv_;
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
   static constexpr bool __is_win32api_wide_char = !is_same_v<_CharT, char>;
 #else
   static constexpr bool __is_win32api_wide_char = false;
@@ -380,6 +403,7 @@ void __stdoutbuf<_CharT>::imbue(const locale& __loc) {
   __always_noconv_ = __cv_->always_noconv();
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

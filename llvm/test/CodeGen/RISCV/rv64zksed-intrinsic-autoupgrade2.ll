@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zksed -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZKSED
 
-declare i64 @llvm.riscv.sm4ks.i64(i64, i64, i32);
-
 define i64 @sm4ks_i64(i64 %a, i64 %b) nounwind {
 ; RV64ZKSED-LABEL: sm4ks_i64:
 ; RV64ZKSED:       # %bb.0:
@@ -12,8 +10,6 @@ define i64 @sm4ks_i64(i64 %a, i64 %b) nounwind {
   %val = call i64 @llvm.riscv.sm4ks.i64(i64 %a, i64 %b, i32 0)
   ret i64 %val
 }
-
-declare i64 @llvm.riscv.sm4ed.i64(i64, i64, i32);
 
 define i64 @sm4ed_i64(i64 %a, i64 %b) nounwind {
 ; RV64ZKSED-LABEL: sm4ed_i64:

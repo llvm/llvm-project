@@ -36,6 +36,7 @@ void o(int x, ...);
 
 struct S {
   void p(this S...) {} // expected-warning {{declaration of a variadic function without a comma before '...' is deprecated}}
+  void f(int = {}...); // expected-warning {{declaration of a variadic function without a comma before '...' is deprecated}}
 };
 
 template<class ...Ts>

@@ -72,7 +72,7 @@ define amdgpu_kernel void @build_vector_v2i16_trunc (ptr addrspace(1) %out, i32 
 ; R600-NEXT:    327680(4.591775e-40), 2(2.802597e-45)
   %srl = lshr i32 %a, 16
   %trunc = trunc i32 %srl to i16
-  %ins.0 = insertelement <2 x i16> undef, i16 %trunc, i32 0
+  %ins.0 = insertelement <2 x i16> poison, i16 %trunc, i32 0
   %ins.1 = insertelement <2 x i16> %ins.0, i16 5, i32 1
   store <2 x i16> %ins.1, ptr addrspace(1) %out
   ret void

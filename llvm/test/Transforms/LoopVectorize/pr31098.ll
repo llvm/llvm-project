@@ -60,7 +60,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 %class.Complex = type { float, float }
 
-define void @Test(ptr nocapture %out, i64 %size) local_unnamed_addr {
+define void @Test(ptr nocapture %out, i64 %size) {
 entry:
   %div = lshr i64 %size, 1
   %cmp47 = icmp eq i64 %div, 0

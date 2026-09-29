@@ -55,11 +55,20 @@ class TieReg<int firstOpIdx, int secondOpIdx> : BothFusionPredicate {
   int SecondOpIdx = secondOpIdx;
 }
 
+// The operand of `FirstMI` at position `firstOpIdx` should be the same as the
+// operand at position `secondOpIdx`.
+// If the fusion has `IsCommutable` being true and the operand at `secondOpIdx`
+// has commutable operand, then the commutable operand will be checked too.
+class FirstInstHasSameReg<int firstOpIdx, int secondOpIdx> : FirstFusionPredicate {
+  int FirstOpIdx = firstOpIdx;
+  int SecondOpIdx = secondOpIdx;
+}
+
 // The operand of `SecondMI` at position `firstOpIdx` should be the same as the
 // operand at position `secondOpIdx`.
 // If the fusion has `IsCommutable` being true and the operand at `secondOpIdx`
 // has commutable operand, then the commutable operand will be checked too.
-class SameReg<int firstOpIdx, int secondOpIdx> : SecondFusionPredicate {
+class SecondInstHasSameReg<int firstOpIdx, int secondOpIdx> : SecondFusionPredicate {
   int FirstOpIdx = firstOpIdx;
   int SecondOpIdx = secondOpIdx;
 }
@@ -94,10 +103,19 @@ def OneUse : OneUsePred;
 // ```
 //
 // `IsCommutable` means whether we should handle commutable operands.
+//
+// `RunPreRA` and `RunPostRA` control in which scheduling stage the fusion
+// is allowed to fire. MacroFusion runs in both the pre-RA and post-RA machine
+// schedulers; by default a fusion participates in both. Setting one of them to
+// `false` makes the generated predicator return `false` early during that
+// stage (detected via the `NoVRegs` machine function property). At least one
+// of the two must be `true`.
 class Fusion<string name, string fieldName, string desc, list<FusionPredicate> predicates>
-  : SubtargetFeature<name, fieldName, "true", desc> {
+  : SubtargetFeature<"fusion-" # name, fieldName, "true", desc> {
   list<FusionPredicate> Predicates = predicates;
   bit IsCommutable = 0;
+  bit RunPreRA = true;
+  bit RunPostRA = true;
 }
 
 // The generated predicator will be like:
@@ -129,7 +147,7 @@ class SimpleFusion<string name, string fieldName, string desc,
                 SecondFusionPredicateWithMCInstPredicate<secondPred>,
                 WildcardTrue,
                 FirstFusionPredicateWithMCInstPredicate<firstPred>,
-                SameReg<0, 1>,
+                SecondInstHasSameReg<0, 1>,
                 OneUse,
                 TieReg<0, 1>,
               ],

@@ -57,14 +57,14 @@ module attributes {test.no_dce_non_hidden_parent} {
     func.func nested @nested_function()
   }
   // NESTED: module @nested_module
-  module @nested_module attributes { sym_visibility = "nested" } {
+  module @nested_module <sym_visibility = "nested"> {
     // NESTED: func nested @nested_function
     func.func nested @nested_function()
   }
 
   // Only private modules can be assumed to be hidden.
   // NESTED: module @private_module
-  module @private_module attributes { sym_visibility = "private" } {
+  module @private_module <sym_visibility = "private"> {
     // NESTED-NOT: func nested @nested_function
     func.func nested @nested_function()
   }
@@ -97,4 +97,39 @@ module {
 
   // CHECK: "live.user"() {uses = [@unknown_symbol]} : () -> ()
   "live.user"() {uses = [@unknown_symbol]} : () -> ()
+}
+
+// -----
+
+// Check that we don't DCE nested symbols if they are nested inside region
+// without SymbolTable.
+
+// CHECK-LABEL: module attributes {test.nested_nosymboltable_region}
+module attributes { test.nested_nosymboltable_region } {
+  "test.one_region_op"() ({
+    "test.symbol_scope"() ({
+      // CHECK: func nested @nfunction
+      func.func nested @nfunction() {
+        return
+      }
+      func.call @nfunction() : () -> ()
+      "test.finish"() : () -> ()
+    }) : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: module attributes {test.nested_nosymboltable_region_notcalled}
+// CHECK-NOT: @nested
+// CHECK: @main
+module attributes { test.nested_nosymboltable_region_notcalled } {
+  "test.one_region_op"() ({
+    module {
+      func.func nested @nested() { return }
+      func.func @main() { return }
+    }
+    "test.finish"() : () -> ()
+  }) : () -> ()
 }

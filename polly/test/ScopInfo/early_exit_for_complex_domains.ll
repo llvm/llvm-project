@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s
 ;
 ; Check we do not crash.
 ;
@@ -7,7 +7,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 %struct.regnode_charclass_class.2.42.654.690.726.870.978.1770.1806.1842.2166.2274.2382.2598.2814.3030.3064 = type { i8, i8, i16, i32, [32 x i8], [4 x i8] }
 
 ; Function Attrs: nounwind uwtable
-define void @S_cl_or(ptr %cl, ptr %or_with) #0 {
+define void @S_cl_or(ptr %cl, ptr %or_with) {
 entry:
   %0 = load i8, ptr %or_with, align 4, !tbaa !1
   %conv = zext i8 %0 to i32
@@ -36,8 +36,6 @@ for.body71:                                       ; preds = %for.body71, %for.bo
 if.end91:                                         ; preds = %for.body71, %for.body49, %land.lhs.true35
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

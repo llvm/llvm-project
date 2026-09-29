@@ -10,28 +10,28 @@
 #define LLVM_MC_MCTARGETOPTIONS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
 
-enum class ExceptionHandling {
-  None,     ///< No exception support
-  DwarfCFI, ///< DWARF-like instruction based exceptions
-  SjLj,     ///< setjmp/longjmp based exceptions
-  ARM,      ///< ARM EHABI
-  WinEH,    ///< Windows Exception Handling
-  Wasm,     ///< WebAssembly Exception Handling
-  AIX,      ///< AIX Exception Handling
-  ZOS,      ///< z/OS MVS Exception Handling. Very similar to DwarfCFI, but the PPA1
-            ///< is used instead of an .eh_frame section.
-};
-
 enum class EmitDwarfUnwindType {
   Always,          // Always emit dwarf unwind
   NoCompactUnwind, // Only emit if compact unwind isn't available
+  DwarfOnly,       // Force compact unwind to reference DWARF
   Default,         // Default behavior is based on the target
+};
+
+// For ELF targets, whether to adjust relocations referencing eligible local
+// symbols to use section symbols.
+enum class RelocSectionSymType {
+  All,      // For all eligible local symbols (default)
+  Internal, // For .L symbols
+  None,     // Never use section symbols
 };
 
 class StringRef;
@@ -72,11 +72,20 @@ public:
 
   bool X86Sse2Avx = false;
 
+  // Disable the integrated assembler.
+  bool DisableIntegratedAS = false;
+
+  // For ELF relocations, controls section symbol conversion.
+  RelocSectionSymType RelocSectionSym = RelocSectionSymType::All;
+
   std::optional<unsigned> OutputAsmVariant;
 
   EmitDwarfUnwindType EmitDwarfUnwind;
 
   int DwarfVersion = 0;
+
+  /// If greater than 0, overrides the default MCAsmInfo binutils version.
+  std::pair<int, int> BinutilsVersion = {0, 0};
 
   enum DwarfDirectory {
     // Force disable
@@ -105,24 +114,40 @@ public:
   /// integrated assembler.
   std::vector<std::string> IASSearchPaths;
 
+  // InstPrinter options.
+  std::vector<std::string> InstPrinterOptions;
+
   // Whether to emit compact-unwind for non-canonical personality
   // functions on Darwins.
   bool EmitCompactUnwindNonCanonical : 1;
 
+  // Whether to emit SFrame unwind sections.
+  bool EmitSFrameUnwind : 1;
+
   // Whether or not to use full register names on PowerPC.
   bool PPCUseFullRegisterNames : 1;
 
-  MCTargetOptions();
+  // Force 8-byte (sdata8) pointer encodings for ELF exception-handling.
+  // On x86_64 this affects the .eh_frame FDE CFI plus the personality, LSDA,
+  // and TType encodings; on AArch64/PPC64 only the FDE CFI encoding changes
+  // (personality/LSDA/TType already default to sdata8).
+  bool LargeEHEncoding = false;
+
+  LLVM_ABI MCTargetOptions();
+
+  /// Parse a binutils version string ("major[.minor]" or "none") into a
+  /// (major, minor) pair. "none" maps to {INT_MAX, INT_MAX}.
+  LLVM_ABI static std::pair<int, int> parseBinutilsVersion(StringRef Version);
 
   /// getABIName - If this returns a non-empty string this represents the
   /// textual name of the ABI that we want the backend to use, e.g. o32, or
   /// aapcs-linux.
-  StringRef getABIName() const;
+  LLVM_ABI StringRef getABIName() const;
 
   /// getAssemblyLanguage - If this returns a non-empty string this represents
   /// the textual name of the assembly language that we will use for this
   /// target, e.g. masm.
-  StringRef getAssemblyLanguage() const;
+  LLVM_ABI StringRef getAssemblyLanguage() const;
 };
 
 } // end namespace llvm

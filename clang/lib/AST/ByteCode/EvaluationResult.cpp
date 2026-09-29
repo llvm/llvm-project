@@ -7,48 +7,32 @@
 //===----------------------------------------------------------------------===//
 
 #include "EvaluationResult.h"
+#include "../ExprConstShared.h"
 #include "InterpState.h"
+#include "Pointer.h"
 #include "Record.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprObjC.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <iterator>
 
 namespace clang {
 namespace interp {
 
-APValue EvaluationResult::toAPValue() const {
-  assert(!empty());
-  switch (Kind) {
-  case LValue:
-    // Either a pointer or a function pointer.
-    if (const auto *P = std::get_if<Pointer>(&Value))
-      return P->toAPValue(Ctx->getASTContext());
-    else if (const auto *FP = std::get_if<FunctionPointer>(&Value))
-      return FP->toAPValue(Ctx->getASTContext());
-    else
-      llvm_unreachable("Unhandled LValue type");
-    break;
-  case RValue:
-    return std::get<APValue>(Value);
-  case Valid:
-    return APValue();
-  default:
-    llvm_unreachable("Unhandled result kind?");
+QualType EvaluationResult::getStorageType() const {
+  if (const auto *E = Source.asExpr()) {
+    if (E->isPRValue())
+      return E->getType();
+
+    return Ctx.getASTContext().getLValueReferenceType(E->getType());
   }
-}
 
-std::optional<APValue> EvaluationResult::toRValue() const {
-  if (Kind == RValue)
-    return toAPValue();
-
-  assert(Kind == LValue);
-
-  // We have a pointer and want an RValue.
-  if (const auto *P = std::get_if<Pointer>(&Value))
-    return P->toRValue(*Ctx, getSourceType());
-  else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
-    return FP->toAPValue(Ctx->getASTContext());
-  llvm_unreachable("Unhandled lvalue kind");
+  if (const auto *D = Source.asValueDecl())
+    return D->getType();
+  return QualType();
 }
 
 static void DiagnoseUninitializedSubobject(InterpState &S, SourceLocation Loc,
@@ -61,32 +45,38 @@ static void DiagnoseUninitializedSubobject(InterpState &S, SourceLocation Loc,
 }
 
 static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
-                                   const Pointer &BasePtr, const Record *R);
+                                   PtrView BasePtr, const Record *R,
+                                   bool IsCompleteClass = true);
 
 static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
-                                  const Pointer &BasePtr,
-                                  const ConstantArrayType *CAT) {
-  bool Result = true;
-  size_t NumElems = CAT->getZExtSize();
-  QualType ElemType = CAT->getElementType();
+                                  PtrView BasePtr) {
+  const Descriptor *BaseDesc = BasePtr.getFieldDesc();
+  assert(BaseDesc->isArray());
 
-  if (ElemType->isRecordType()) {
-    const Record *R = BasePtr.getElemRecord();
+  size_t NumElems = BaseDesc->getNumElems();
+  if (NumElems == 0)
+    return true;
+
+  bool Result = true;
+
+  if (BaseDesc->isPrimitiveArray()) {
+    if (BasePtr.allElementsInitialized())
+      return true;
+    DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
+    return false;
+  }
+  const Descriptor *ElemDesc = BaseDesc->ElemDesc;
+
+  if (ElemDesc->isRecord()) {
+    const Record *R = ElemDesc->ElemRecord;
     for (size_t I = 0; I != NumElems; ++I) {
-      Pointer ElemPtr = BasePtr.atIndex(I).narrow();
+      PtrView ElemPtr = BasePtr.atIndex(I).narrow();
       Result &= CheckFieldsInitialized(S, Loc, ElemPtr, R);
     }
-  } else if (const auto *ElemCAT = dyn_cast<ConstantArrayType>(ElemType)) {
+  } else if (ElemDesc->isArray()) {
     for (size_t I = 0; I != NumElems; ++I) {
-      Pointer ElemPtr = BasePtr.atIndex(I).narrow();
-      Result &= CheckArrayInitialized(S, Loc, ElemPtr, ElemCAT);
-    }
-  } else {
-    for (size_t I = 0; I != NumElems; ++I) {
-      if (!BasePtr.atIndex(I).isInitialized()) {
-        DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
-        Result = false;
-      }
+      PtrView ElemPtr = BasePtr.atIndex(I).narrow();
+      Result &= CheckArrayInitialized(S, Loc, ElemPtr);
     }
   }
 
@@ -94,54 +84,67 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
 }
 
 static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
-                                   const Pointer &BasePtr, const Record *R) {
+                                   PtrView BasePtr, const Record *R,
+                                   bool IsCompleteClass) {
   assert(R);
   bool Result = true;
   // Check all fields of this record are initialized.
   for (const Record::Field &F : R->fields()) {
-    Pointer FieldPtr = BasePtr.atField(F.Offset);
-    QualType FieldType = F.Decl->getType();
+    PtrView FieldPtr = BasePtr.atField(F.Offset);
 
     // Don't check inactive union members.
     if (R->isUnion() && !FieldPtr.isActive())
       continue;
 
-    if (FieldType->isRecordType()) {
+    QualType FieldType = F.Decl->getType();
+    const Descriptor *FieldDesc = FieldPtr.getFieldDesc();
+
+    if (FieldDesc->isRecord()) {
       Result &= CheckFieldsInitialized(S, Loc, FieldPtr, FieldPtr.getRecord());
     } else if (FieldType->isIncompleteArrayType()) {
       // Nothing to do here.
     } else if (F.Decl->isUnnamedBitField()) {
       // Nothing do do here.
-    } else if (FieldType->isArrayType()) {
-      const auto *CAT =
-          cast<ConstantArrayType>(FieldType->getAsArrayTypeUnsafe());
-      Result &= CheckArrayInitialized(S, Loc, FieldPtr, CAT);
+    } else if (FieldDesc->isArray()) {
+      Result &= CheckArrayInitialized(S, Loc, FieldPtr);
     } else if (!FieldPtr.isInitialized()) {
       DiagnoseUninitializedSubobject(S, Loc, F.Decl);
       Result = false;
     }
   }
 
-  // Check Fields in all bases
-  for (auto [I, B] : llvm::enumerate(R->bases())) {
-    Pointer P = BasePtr.atField(B.Offset);
-    if (!P.isInitialized()) {
-      const Descriptor *Desc = BasePtr.getDeclDesc();
-      if (const auto *CD = dyn_cast_if_present<CXXRecordDecl>(R->getDecl())) {
-        const auto &BS = *std::next(CD->bases_begin(), I);
-        SourceLocation TypeBeginLoc = BS.getBaseTypeLoc();
-        S.FFDiag(TypeBeginLoc, diag::note_constexpr_uninitialized_base)
-            << B.Desc->getType() << SourceRange(TypeBeginLoc, BS.getEndLoc());
-      } else {
-        S.FFDiag(Desc->getLocation(), diag::note_constexpr_uninitialized_base)
-            << B.Desc->getType();
-      }
-      return false;
+  auto diagnoseBase = [&](const Record::Base &B, unsigned Index) -> bool {
+    const Descriptor *Desc = BasePtr.getDeclDesc();
+    if (const auto *CD = dyn_cast_if_present<CXXRecordDecl>(R->getDecl())) {
+      const auto &BS = *std::next(CD->bases_begin(), Index);
+      SourceLocation TypeBeginLoc = BS.getBaseTypeLoc();
+      S.FFDiag(TypeBeginLoc, diag::note_constexpr_uninitialized_base)
+          << B.Desc->getType() << SourceRange(TypeBeginLoc, BS.getEndLoc());
+    } else {
+      S.FFDiag(Desc->getLocation(), diag::note_constexpr_uninitialized_base)
+          << B.Desc->getType();
     }
-    Result &= CheckFieldsInitialized(S, Loc, P, B.R);
+    return false;
+  };
+
+  // Check Fields in all bases.
+  for (auto [I, B] : llvm::enumerate(R->bases())) {
+    PtrView P = BasePtr.atField(B.Offset);
+    if (!P.isInitialized())
+      return diagnoseBase(B, I);
+    Result &= CheckFieldsInitialized(S, Loc, P, B.R, /*IsCompleteClass=*/false);
   }
 
-  // TODO: Virtual bases
+  // And virtual bases.
+  if (IsCompleteClass) {
+    for (auto [I, B] : llvm::enumerate(R->virtual_bases())) {
+      PtrView P = BasePtr.atField(B.Offset);
+      if (!P.isInitialized())
+        return diagnoseBase(B, I);
+      Result &=
+          CheckFieldsInitialized(S, Loc, P, B.R, /*IsCompleteClass=*/false);
+    }
+  }
 
   return Result;
 }
@@ -153,6 +156,8 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
 
   if (Ptr.isZero())
     return true;
+  if (!Ptr.isBlockPointer())
+    return true;
 
   // We can't inspect dead pointers at all. Return true here so we can
   // diagnose them later.
@@ -160,78 +165,122 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
     return true;
 
   SourceLocation InitLoc;
-  if (const auto *D = Source.dyn_cast<const Decl *>())
+  if (const auto *D = Source.asDecl())
     InitLoc = cast<VarDecl>(D)->getAnyInitializer()->getExprLoc();
-  else if (const auto *E = Source.dyn_cast<const Expr *>())
+  else if (const auto *E = Source.asExpr())
     InitLoc = E->getExprLoc();
 
   if (const Record *R = Ptr.getRecord())
-    return CheckFieldsInitialized(S, InitLoc, Ptr, R);
+    return CheckFieldsInitialized(S, InitLoc, Ptr.view(), R);
 
-  if (const auto *CAT = dyn_cast_if_present<ConstantArrayType>(
-          Ptr.getType()->getAsArrayTypeUnsafe()))
-    return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
+  if (isa_and_nonnull<ConstantArrayType>(Ptr.getType()->getAsArrayTypeUnsafe()))
+    return CheckArrayInitialized(S, InitLoc, Ptr.view());
 
   return true;
 }
 
-static void collectBlocks(const Pointer &Ptr,
-                          llvm::SetVector<const Block *> &Blocks) {
+static bool isOrHasPtr(const Descriptor *D) {
+  if ((D->isPrimitive() || D->isPrimitiveArray()) && D->getPrimType() == PT_Ptr)
+    return true;
+
+  if (D->ElemRecord)
+    return D->ElemRecord->hasPtrField();
+  return false;
+}
+
+static void collectBlocks(PtrView Ptr,
+                          llvm::SmallPtrSet<const Block *, 4> &Blocks,
+                          bool IsCompleteClass = true) {
   auto isUsefulPtr = [](const Pointer &P) -> bool {
-    return P.isLive() && !P.isZero() && !P.isDummy() && P.isDereferencable() &&
-           !P.isUnknownSizeArray() && !P.isOnePastEnd();
+    return P.isLive() && P.isBlockPointer() && !P.isZero() && !P.isDummy() &&
+           P.isDereferencable() && !P.isUnknownSizeArray() && !P.isOnePastEnd();
   };
 
-  if (!isUsefulPtr(Ptr))
+  if (!Ptr.isLive() || Ptr.isZero() || Ptr.isUnknownSizeArray() ||
+      Ptr.isOnePastEnd())
     return;
 
-  Blocks.insert(Ptr.block());
+  Blocks.insert(Ptr.Pointee);
 
   const Descriptor *Desc = Ptr.getFieldDesc();
   if (!Desc)
     return;
 
   if (const Record *R = Desc->ElemRecord) {
+    if (!R->hasPtrField())
+      return;
+
+    for (const Record::Base &B : R->bases()) {
+      if (!B.R->hasPtrField())
+        continue;
+      PtrView BasePtr = Ptr.atField(B.Offset);
+      collectBlocks(BasePtr, Blocks, /*IsCompleteClass=*/false);
+    }
+
     for (const Record::Field &F : R->fields()) {
-      const Pointer &FieldPtr = Ptr.atField(F.Offset);
-      assert(FieldPtr.block() == Ptr.block());
+      if (!isOrHasPtr(F.Desc))
+        continue;
+      PtrView FieldPtr = Ptr.atField(F.Offset);
       collectBlocks(FieldPtr, Blocks);
     }
-  } else if (Desc->isPrimitive() && Desc->getPrimType() == PT_Ptr) {
-    const Pointer &Pointee = Ptr.deref<Pointer>();
-    if (isUsefulPtr(Pointee) && !Blocks.contains(Pointee.block()))
-      collectBlocks(Pointee, Blocks);
 
-  } else if (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) {
-    for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
-      const Pointer &ElemPointee = Ptr.atIndex(I).deref<Pointer>();
-      if (isUsefulPtr(ElemPointee) && !Blocks.contains(ElemPointee.block()))
-        collectBlocks(ElemPointee, Blocks);
+    if (IsCompleteClass) {
+      for (const Record::Base &B : R->virtual_bases()) {
+        if (!B.R->hasPtrField())
+          continue;
+        PtrView BasePtr = Ptr.atField(B.Offset);
+        collectBlocks(BasePtr, Blocks, /*IsCompleteClass=*/false);
+      }
     }
-  } else if (Desc->isCompositeArray()) {
+
+    return;
+  }
+
+  if (Desc->isPrimitive() && Desc->getPrimType() == PT_Ptr) {
+    Pointer Pointee = Ptr.deref<Pointer>();
+    if (isUsefulPtr(Pointee) && !Blocks.contains(Pointee.block()))
+      collectBlocks(Pointee.view(), Blocks);
+
+    return;
+  }
+
+  if (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
-      const Pointer &ElemPtr = Ptr.atIndex(I).narrow();
+      Pointer ElemPointee = Ptr.elem<Pointer>(I);
+      if (isUsefulPtr(ElemPointee) && !Blocks.contains(ElemPointee.block()))
+        collectBlocks(ElemPointee.view(), Blocks);
+    }
+    return;
+  }
+
+  if (Desc->isCompositeArray() && isOrHasPtr(Desc->ElemDesc)) {
+    for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
+      PtrView ElemPtr = Ptr.atIndex(I).narrow();
       collectBlocks(ElemPtr, Blocks);
     }
   }
 }
 
-bool EvaluationResult::checkReturnValue(InterpState &S, const Context &Ctx,
-                                        const Pointer &Ptr,
-                                        const SourceInfo &Info) {
+bool EvaluationResult::checkDynamicAllocations(InterpState &S,
+                                               const Pointer &Ptr,
+                                               SourceInfo Info) const {
+  if (!Ptr.isBlockPointer())
+    return true;
+
   // Collect all blocks that this pointer (transitively) points to and
   // return false if any of them is a dynamic block.
-  llvm::SetVector<const Block *> Blocks;
+  llvm::SmallPtrSet<const Block *, 4> Blocks;
 
-  collectBlocks(Ptr, Blocks);
+  collectBlocks(Ptr.view(), Blocks);
 
   for (const Block *B : Blocks) {
     if (B->isDynamic()) {
       assert(B->getDescriptor());
       assert(B->getDescriptor()->asExpr());
 
+      bool IsSubobj = !Ptr.isRoot() || Ptr.isArrayElement();
       S.FFDiag(Info, diag::note_constexpr_dynamic_alloc)
-          << Ptr.getType()->isReferenceType() << !Ptr.isRoot();
+          << Ptr.getType()->isReferenceType() << IsSubobj;
       S.Note(B->getDescriptor()->asExpr()->getExprLoc(),
              diag::note_constexpr_dynamic_alloc_here);
       return false;
@@ -239,6 +288,367 @@ bool EvaluationResult::checkReturnValue(InterpState &S, const Context &Ctx,
   }
 
   return true;
+}
+
+static bool isGlobalLValue(const Pointer &Ptr) {
+  if (Ptr.isDynamic())
+    return true;
+  if (Ptr.isTypeidPointer())
+    return true;
+
+  return ::isGlobalLValue(Ptr.getRootValueDecl(), Ptr.getRootExpr());
+}
+
+/// Check if the given function pointer can be returned from an evaluation.
+static bool checkFunctionPtr(InterpState &S, const Pointer &Ptr,
+                             QualType PtrType, SourceInfo Info,
+                             ConstantExprKind ConstexprKind) {
+  assert(Ptr.isFunctionPointer());
+  const FunctionPointer &FuncPtr = Ptr.asFunctionPointer();
+
+  if (!FuncPtr.Func)
+    return true;
+
+  const FunctionDecl *FD = FuncPtr.Func->getDecl();
+  // E.g. ObjC block pointers.
+  if (!FD)
+    return true;
+  if (FD->isImmediateFunction()) {
+    S.FFDiag(Info, diag::note_consteval_address_accessible)
+        << !PtrType->isAnyPointerType();
+    S.Note(FD->getLocation(), diag::note_declared_at);
+    return false;
+  }
+
+  // __declspec(dllimport) must be handled very carefully:
+  // We must never initialize an expression with the thunk in C++.
+  // Doing otherwise would allow the same id-expression to yield
+  // different addresses for the same function in different translation
+  // units.  However, this means that we must dynamically initialize the
+  // expression with the contents of the import address table at runtime.
+  //
+  // The C language has no notion of ODR; furthermore, it has no notion of
+  // dynamic initialization.  This means that we are permitted to
+  // perform initialization with the address of the thunk.
+  if (S.getLangOpts().CPlusPlus && !isForManglingOnly(ConstexprKind) &&
+      FD->hasAttr<DLLImportAttr>())
+    // FIXME: Diagnostic!
+    return false;
+  return true;
+}
+
+static bool lvalFields(InterpState &S, const ASTContext &Ctx, PtrView Ptr,
+                       QualType PtrType, SourceInfo Info,
+                       ConstantExprKind ConstexprKind,
+                       llvm::SmallPtrSet<const Block *, 4> &CheckedBlocks);
+static bool lval(InterpState &S, const ASTContext &Ctx, const Pointer &Ptr,
+                 QualType PtrType, SourceInfo Info,
+                 ConstantExprKind ConstexprKind,
+                 llvm::SmallPtrSet<const Block *, 4> &CheckedBlocks) {
+  if (Ptr.isFunctionPointer())
+    return checkFunctionPtr(S, Ptr, PtrType, Info, ConstexprKind);
+
+  if (!Ptr.isBlockPointer() && !Ptr.isOpaquePointer())
+    return true;
+
+  const Expr *BaseE = Ptr.getRootExpr();
+  const ValueDecl *BaseVD = Ptr.getRootValueDecl();
+  assert(BaseE || BaseVD);
+  bool IsReferenceType = PtrType->isReferenceType();
+  bool IsSubObj = !Ptr.isRoot() || (Ptr.inArray() && !Ptr.isArrayRoot());
+
+  if (!isGlobalLValue(Ptr)) {
+    if (S.getLangOpts().CPlusPlus11) {
+      S.FFDiag(Info, diag::note_constexpr_non_global, 1)
+          << IsReferenceType << IsSubObj << !!BaseVD << BaseVD;
+      const VarDecl *VarD = dyn_cast_if_present<VarDecl>(BaseVD);
+      if (VarD && VarD->isConstexpr()) {
+        // Non-static local constexpr variables have unintuitive semantics:
+        //   constexpr int a = 1;
+        //   constexpr const int *p = &a;
+        // ... is invalid because the address of 'a' is not constant. Suggest
+        // adding a 'static' in this case.
+        S.Note(VarD->getLocation(), diag::note_constexpr_not_static)
+            << VarD
+            << FixItHint::CreateInsertion(VarD->getBeginLoc(), "static ");
+      } else {
+        if (BaseVD)
+          S.Note(BaseVD->getLocation(), diag::note_declared_at);
+        else if (BaseE)
+          S.Note(BaseE->getExprLoc(), diag::note_constexpr_temporary_here);
+      }
+    } else {
+      S.FFDiag(Info);
+    }
+    return false;
+  }
+
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(BaseVD)) {
+    // Check if this is a thread-local variable.
+    if (VD->getTLSKind()) {
+      // FIXME: Diagnostic!
+      return false;
+    }
+
+    // A dllimport variable never acts like a constant, unless we're
+    // evaluating a value for use only in name mangling, and unless it's a
+    // static local. For the latter case, we'd still need to evaluate the
+    // constant expression in case we're inside a (inlined) function.
+    if (!isForManglingOnly(ConstexprKind) && VD->hasAttr<DLLImportAttr>() &&
+        !VD->isStaticLocal())
+      return false;
+
+    // Address of a managed variable is never a constant expression.
+    if (S.getLangOpts().CUDA && VD->hasAttr<HIPManagedAttr>())
+      return false;
+
+    // In CUDA/HIP device compilation, only device side variables have
+    // constant addresses.
+    if (S.getLangOpts().CUDA && S.getLangOpts().CUDAIsDevice &&
+        Ctx.CUDAConstantEvalCtx.NoWrongSidedVars) {
+      if ((!VD->hasAttr<CUDADeviceAttr>() && !VD->hasAttr<CUDAConstantAttr>() &&
+           !VD->getType()->isCUDADeviceBuiltinSurfaceType() &&
+           !VD->getType()->isCUDADeviceBuiltinTextureType()))
+        return false;
+    }
+
+    return true;
+  }
+
+  if (const auto *MTE = dyn_cast_if_present<MaterializeTemporaryExpr>(BaseE)) {
+    QualType TempType = Ptr.getType();
+
+    if (TempType.isDestructedType()) {
+      S.FFDiag(MTE->getExprLoc(),
+               diag::note_constexpr_unsupported_temporary_nontrivial_dtor)
+          << TempType;
+      return false;
+    }
+
+    if (Ptr.getFieldDesc()->isPrimitive() &&
+        Ptr.getFieldDesc()->getPrimType() == PT_Ptr) {
+      // Recurse!
+      Pointer Pointee = Ptr.deref<Pointer>();
+      if (!Pointee.isBlockPointer() ||
+          CheckedBlocks.insert(Pointee.block()).second) {
+        if (!lval(S, Ctx, Pointee, Pointee.getType(),
+                  Ptr.getDeclDesc()->getLoc(), ConstexprKind, CheckedBlocks))
+          return false;
+      }
+    } else {
+      if (!lvalFields(S, Ctx, Ptr.view(), TempType, Info, ConstexprKind,
+                      CheckedBlocks))
+        return false;
+    }
+  }
+
+  return true;
+}
+
+static bool lvalFields(InterpState &S, const ASTContext &Ctx, PtrView Ptr,
+                       QualType PtrType, SourceInfo Info,
+                       ConstantExprKind ConstexprKind,
+                       llvm::SmallPtrSet<const Block *, 4> &CheckedBlocks) {
+  const Descriptor *FieldDesc = Ptr.getFieldDesc();
+  if (const Record *R = Ptr.getRecord()) {
+    if (!R->hasPtrField())
+      return true;
+
+    for (const Record::Base &B : R->bases()) {
+      if (!B.R->hasPtrField())
+        continue;
+
+      PtrView BasePtr = Ptr.atField(B.Offset);
+      if (!lvalFields(S, Ctx, BasePtr, B.Desc->getType(), Info, ConstexprKind,
+                      CheckedBlocks))
+        return false;
+    }
+
+    for (const Record::Field &F : R->fields()) {
+      PtrView FieldPtr = Ptr.atField(F.Offset);
+      if (!isOrHasPtr(F.Desc))
+        continue;
+
+      if (F.Desc->isPrimitive() && F.Desc->getPrimType() == PT_Ptr) {
+        if (!FieldPtr.isLive())
+          return false;
+
+        Pointer Pointee = FieldPtr.deref<Pointer>();
+        if (!Pointee.isBlockPointer() ||
+            CheckedBlocks.insert(Pointee.block()).second) {
+          QualType FieldType = F.Decl->getType();
+          if (!lval(S, Ctx, Pointee, FieldType, Info, ConstexprKind,
+                    CheckedBlocks))
+            return false;
+        }
+      } else {
+        if (!lvalFields(S, Ctx, FieldPtr, F.Decl->getType(), Info,
+                        ConstexprKind, CheckedBlocks))
+          return false;
+      }
+    }
+
+    for (const Record::Base &B : R->virtual_bases()) {
+      if (!B.R->hasPtrField())
+        continue;
+      PtrView BasePtr = Ptr.atField(B.Offset);
+      if (!lvalFields(S, Ctx, BasePtr, B.Desc->getType(), Info, ConstexprKind,
+                      CheckedBlocks))
+        return false;
+    }
+    return true;
+  }
+
+  if (FieldDesc->isPrimitiveArray() && FieldDesc->getPrimType() == PT_Ptr) {
+    for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
+      if (!Ptr.isLive())
+        return false;
+      Pointer Pointee = Ptr.elem<Pointer>(I);
+
+      if (!Pointee.isBlockPointer() ||
+          CheckedBlocks.insert(Pointee.block()).second) {
+        if (!lval(S, Ctx, Pointee, FieldDesc->getElemQualType(), Info,
+                  ConstexprKind, CheckedBlocks))
+          return false;
+      }
+    }
+    return true;
+  }
+
+  if (FieldDesc->isCompositeArray()) {
+    if (FieldDesc->ElemRecord && !FieldDesc->ElemRecord->hasPtrField())
+      return true;
+
+    for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
+      PtrView Elem = Ptr.atIndex(I).narrow();
+      if (!lvalFields(S, Ctx, Elem, FieldDesc->getElemQualType(), Info,
+                      ConstexprKind, CheckedBlocks))
+        return false;
+    }
+    return true;
+  }
+  if (FieldDesc->isPrimitive() && FieldDesc->getPrimType() == PT_MemberPtr) {
+    MemberPointer MP = Ptr.deref<MemberPointer>();
+    if (!EvaluationResult::checkMemberPointer(S, MP, Info, ConstexprKind))
+      return false;
+  }
+
+  return true;
+}
+
+/// Toplevel accessor to check all lvalue fields.
+bool EvaluationResult::checkLValueFields(InterpState &S, const Pointer &Ptr,
+                                         SourceInfo Info,
+                                         ConstantExprKind ConstexprKind) const {
+  if (!Ptr.isBlockPointer())
+    return true;
+
+  QualType SourceType = getStorageType();
+  llvm::SmallPtrSet<const Block *, 4> CheckedBlocks;
+
+  return lvalFields(S, Ctx.getASTContext(), Ptr.view(), SourceType, Info,
+                    ConstexprKind, CheckedBlocks);
+}
+
+bool EvaluationResult::checkLValue(InterpState &S, const Pointer &Ptr,
+                                   SourceInfo Info,
+                                   ConstantExprKind ConstexprKind) const {
+  QualType SourceType = getStorageType();
+  if (Ptr.isFunctionPointer())
+    return checkFunctionPtr(S, Ptr, SourceType, Info, ConstexprKind);
+
+  if (Ptr.isZero())
+    return true;
+
+  bool IsReferenceType = SourceType->isReferenceType();
+  if (Ptr.isTypeidPointer()) {
+    if (isTemplateArgument(ConstexprKind)) {
+      S.FFDiag(Info, diag::note_constexpr_invalid_template_arg)
+          << IsReferenceType << /*IsSubObj=*/false << /*InvalidBaseKind=*/0;
+      return false;
+    }
+    return true;
+  }
+
+  if (Ptr.isStringPointer()) {
+    // Additional restrictions apply in a template argument. We only enforce the
+    // C++20 restrictions here; additional syntactic and semantic restrictions
+    // are applied elsewhere.
+    if (isTemplateArgument(ConstexprKind)) {
+      bool IsSubObj = Ptr.asStringPointer().Decayed || Ptr.getIndex() != 0;
+      int InvalidBaseKind = -1;
+      StringRef Ident;
+      const Expr *BaseE = Ptr.asStringPointer().Base;
+      if (isa_and_nonnull<StringLiteral>(BaseE))
+        InvalidBaseKind = 1;
+      else if (const auto *PE = dyn_cast_if_present<PredefinedExpr>(BaseE)) {
+        InvalidBaseKind = 3;
+        Ident = PE->getIdentKindName();
+      }
+
+      if (InvalidBaseKind != -1) {
+        S.FFDiag(Info, diag::note_constexpr_invalid_template_arg)
+            << IsReferenceType << IsSubObj << InvalidBaseKind << Ident;
+        return false;
+      }
+    }
+    return true;
+  }
+
+  if (!Ptr.isBlockPointer() && !Ptr.isOpaquePointer())
+    return true;
+
+  // Additional restrictions apply in a template argument. We only enforce the
+  // C++20 restrictions here; additional syntactic and semantic restrictions
+  // are applied elsewhere.
+  if (isTemplateArgument(ConstexprKind)) {
+    const Expr *BaseE = Ptr.getRootExpr();
+    const ValueDecl *BaseVD = Ptr.getRootValueDecl();
+    assert(BaseE || BaseVD);
+    if (isa_and_nonnull<MaterializeTemporaryExpr>(BaseE) ||
+        isa_and_nonnull<LifetimeExtendedTemporaryDecl>(BaseVD)) {
+      bool IsSubObj = !Ptr.isRoot() || (Ptr.inArray() && !Ptr.isArrayRoot());
+      S.FFDiag(Info, diag::note_constexpr_invalid_template_arg)
+          << IsReferenceType << IsSubObj << 2;
+      return false;
+    }
+  }
+
+  llvm::SmallPtrSet<const Block *, 4> CheckedBlocks;
+  if (!lval(S, Ctx.getASTContext(), Ptr, SourceType, Info, ConstexprKind,
+            CheckedBlocks)) {
+    return false;
+  }
+
+  return true;
+}
+
+bool EvaluationResult::checkMemberPointer(InterpState &S,
+                                          const MemberPointer &MemberPtr,
+                                          SourceInfo Info,
+                                          ConstantExprKind ConstexprKind) {
+  const CXXMethodDecl *MD = MemberPtr.getMemberFunction();
+  if (!MD)
+    return true;
+
+  if (MD->isImmediateFunction()) {
+    S.FFDiag(Info, diag::note_consteval_address_accessible)
+        << /*pointer=*/false;
+    S.Note(MD->getLocation(), diag::note_declared_at);
+    return false;
+  }
+
+  if (isForManglingOnly(ConstexprKind) || MD->isVirtual() ||
+      !MD->hasAttr<DLLImportAttr>()) {
+    return true;
+  }
+  return false;
+}
+
+bool EvaluationResult::checkFunctionPointer(
+    InterpState &S, const Pointer &Ptr, SourceInfo Info,
+    ConstantExprKind ConstexprKind) const {
+  return checkFunctionPtr(S, Ptr, getStorageType(), Info, ConstexprKind);
 }
 
 } // namespace interp

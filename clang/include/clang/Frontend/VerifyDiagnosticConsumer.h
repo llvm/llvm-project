@@ -30,6 +30,13 @@ class LangOptions;
 class SourceManager;
 class TextDiagnosticBuffer;
 
+enum class DiagnosticMatchResult {
+  None,
+  OnlyPartial,    /// Match, but not a full match.
+  AtLeastPartial, /// Match, but we didn't check for full match.
+  Full,
+};
+
 /// VerifyDiagnosticConsumer - Create a diagnostic client which will use
 /// markers in the input source to check that all the emitted diagnostics match
 /// those expected. See clang/docs/InternalsManual.rst for details about how to
@@ -44,8 +51,9 @@ public:
   public:
     static std::unique_ptr<Directive>
     create(bool RegexKind, SourceLocation DirectiveLoc,
-           SourceLocation DiagnosticLoc, bool MatchAnyFileAndLine,
-           bool MatchAnyLine, StringRef Text, unsigned Min, unsigned Max);
+           SourceLocation DiagnosticLoc, StringRef Spelling,
+           bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
+           unsigned Min, unsigned Max, bool FullMatchRequired);
 
   public:
     /// Constant representing n or more matches.
@@ -53,10 +61,12 @@ public:
 
     SourceLocation DirectiveLoc;
     SourceLocation DiagnosticLoc;
+    const std::string Spelling;
     const std::string Text;
     unsigned Min, Max;
     bool MatchAnyLine;
     bool MatchAnyFileAndLine; // `MatchAnyFileAndLine` implies `MatchAnyLine`.
+    bool FullMatchRequired;
 
     Directive(const Directive &) = delete;
     Directive &operator=(const Directive &) = delete;
@@ -67,15 +77,18 @@ public:
     virtual bool isValid(std::string &Error) = 0;
 
     // Returns true on match.
-    virtual bool match(StringRef S) = 0;
+    virtual DiagnosticMatchResult match(StringRef S) const = 0;
 
   protected:
     Directive(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
-              bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
-              unsigned Min, unsigned Max)
-        : DirectiveLoc(DirectiveLoc), DiagnosticLoc(DiagnosticLoc), Text(Text),
-          Min(Min), Max(Max), MatchAnyLine(MatchAnyLine || MatchAnyFileAndLine),
-          MatchAnyFileAndLine(MatchAnyFileAndLine) {
+              StringRef Spelling, bool MatchAnyFileAndLine, bool MatchAnyLine,
+              StringRef Text, unsigned Min, unsigned Max,
+              bool FullMatchRequired)
+        : DirectiveLoc(DirectiveLoc), DiagnosticLoc(DiagnosticLoc),
+          Spelling(Spelling), Text(Text), Min(Min), Max(Max),
+          MatchAnyLine(MatchAnyLine || MatchAnyFileAndLine),
+          MatchAnyFileAndLine(MatchAnyFileAndLine),
+          FullMatchRequired(FullMatchRequired) {
       assert(!DirectiveLoc.isInvalid() && "DirectiveLoc is invalid!");
       assert((!DiagnosticLoc.isInvalid() || MatchAnyLine) &&
              "DiagnosticLoc is invalid!");
@@ -106,6 +119,13 @@ public:
     HasOtherExpectedDirectives
   };
 
+  struct ParsingState {
+    DirectiveStatus Status;
+    std::string FirstNoDiagnosticsDirective;
+    bool AllDirectivesMatchExactlyOneDiag = true;
+    bool WildcardsAreErroneouslyPresent = false;
+  };
+
   class MarkerTracker;
 
 private:
@@ -118,8 +138,11 @@ private:
   const LangOptions *LangOpts = nullptr;
   SourceManager *SrcManager = nullptr;
   unsigned ActiveSourceFiles = 0;
-  DirectiveStatus Status;
+  ParsingState State;
   ExpectedData ED;
+  bool CheckOrderOfDirectives;
+  bool OneDiagPerDirective;
+  bool DisableWildcardInDiagLoc;
 
   void CheckDiagnostics();
 

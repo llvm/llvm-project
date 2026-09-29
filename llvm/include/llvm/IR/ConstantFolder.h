@@ -23,12 +23,13 @@
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 /// ConstantFolder - Create constants with minimum, target independent, folding.
-class ConstantFolder final : public IRBuilderFolder {
-  virtual void anchor();
+class LLVM_ABI ConstantFolder final : public IRBuilderFolder {
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   explicit ConstantFolder() = default;
@@ -103,8 +104,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 GEPNoWrapFlags NW) const override {
+  Value *FoldGEP(const DataLayout &DL, Type *Ty, Value *Ptr,
+                 ArrayRef<Value *> IdxList, GEPNoWrapFlags NW) const override {
     if (!ConstantExpr::isSupportedGetElementPtr(Ty))
       return nullptr;
 
@@ -113,12 +114,15 @@ public:
       if (any_of(IdxList, [](Value *V) { return !isa<Constant>(V); }))
         return nullptr;
 
-      return ConstantExpr::getGetElementPtr(Ty, PC, IdxList, NW);
+      ArrayRef<Constant *> ConstIdxList =
+          ArrayRef((Constant *const *)IdxList.data(), IdxList.size());
+      return ConstantExpr::getGetElementPtr(DL, Ty, PC, ConstIdxList, NW);
     }
     return nullptr;
   }
 
-  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
+  Value *FoldSelect(Value *C, Value *True, Value *False,
+                    FastMathFlags FMF) const override {
     auto *CC = dyn_cast<Constant>(C);
     auto *TC = dyn_cast<Constant>(True);
     auto *FC = dyn_cast<Constant>(False);
@@ -170,6 +174,16 @@ public:
     return nullptr;
   }
 
+  Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
+    // TODO
+    return nullptr;
+  }
+
+  Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
+    // TODO
+    return nullptr;
+  }
+
   Value *FoldCast(Instruction::CastOps Op, Value *V,
                   Type *DestTy) const override {
     if (auto *C = dyn_cast<Constant>(V)) {
@@ -180,8 +194,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource) const override {
+  Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
+                       FastMathFlags FMF, Function *CtxF) const override {
     // Use TargetFolder or InstSimplifyFolder instead.
     return nullptr;
   }

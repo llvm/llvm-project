@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_ASMPRINTERHANDLER_H
 #define LLVM_CODEGEN_ASMPRINTERHANDLER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
@@ -25,12 +26,9 @@ class MachineInstr;
 class MCSymbol;
 class Module;
 
-typedef MCSymbol *ExceptionSymbolProvider(AsmPrinter *Asm,
-                                          const MachineBasicBlock *MBB);
-
 /// Collects and handles AsmPrinter objects required to build debug
 /// or EH information.
-class AsmPrinterHandler {
+class LLVM_ABI AsmPrinterHandler {
 public:
   virtual ~AsmPrinterHandler();
 
@@ -63,6 +61,18 @@ public:
   /// basic-block-sections are disabled, called at the end of a function,
   /// immediately prior to markFunctionEnd.
   virtual void endBasicBlockSection(const MachineBasicBlock &MBB) {}
+
+  /// For symbols that have a size designated (e.g. common symbols),
+  /// this tracks that size.
+  virtual void setSymbolSize(const MCSymbol *Sym, uint64_t Size) {}
+
+  /// Process beginning of an instruction.
+  virtual void beginInstruction(const MachineInstr *MI) {}
+
+  /// Process end of an instruction.
+  virtual void endInstruction() {}
+
+  virtual void beginCodeAlignment(const MachineBasicBlock &MBB) {}
 
   /// Emit target-specific EH funclet machinery.
   virtual void beginFunclet(const MachineBasicBlock &MBB,

@@ -116,9 +116,7 @@ static MapInfo gatherMapInfo() {
   // cstrings are not stored in sorted order in their OutputSections, so we sort
   // them here.
   for (auto &liveCStrings : info.liveCStringsForSection)
-    parallelSort(liveCStrings.second, [](const auto &p1, const auto &p2) {
-      return p1.first < p2.first;
-    });
+    parallelSort(liveCStrings.second, llvm::less_first());
   return info;
 }
 
@@ -143,8 +141,15 @@ static void printStubsEntries(
                  sym->getName().str().data());
 }
 
-static void printNonLazyPointerSection(raw_fd_ostream &os,
-                                       NonLazyPointerSectionBase *osec) {
+// For printing the contents of the __objc_stubs section.
+static void printObjCStubsEntries(raw_fd_ostream &os,
+                                  const ObjCStubsSection *osec) {
+  for (const Defined *sym : osec->getSymbols())
+    os << format("0x%08llX\t0x%08llX\t[  0] ", sym->getVA(), sym->size)
+       << sym->getName() << '\n';
+}
+
+static void printNonLazyPointerSection(raw_fd_ostream &os, GotSection *osec) {
   // ld64 considers stubs to belong to particular files, but considers GOT
   // entries to be linker-synthesized. Not sure why they made that decision, but
   // I think we can follow suit unless there's demand for better symbol-to-file
@@ -159,20 +164,6 @@ static uint64_t getSymSizeForMap(Defined *sym) {
   if (sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Body)
     return 0;
   return sym->size;
-}
-
-// Merges two vectors of input sections in order of their outSecOff values.
-// This approach creates a new (temporary) vector which is not ideal but the
-// ideal approach leads to a lot of code duplication.
-static std::vector<ConcatInputSection *>
-mergeOrderedInputs(ArrayRef<ConcatInputSection *> inputs1,
-                   ArrayRef<ConcatInputSection *> inputs2) {
-  std::vector<ConcatInputSection *> vec(inputs1.size() + inputs2.size());
-  std::merge(inputs1.begin(), inputs1.end(), inputs2.begin(), inputs2.end(),
-             vec.begin(), [](ConcatInputSection *a, ConcatInputSection *b) {
-               return a->outSecOff < b->outSecOff;
-             });
-  return vec;
 }
 
 void macho::writeMapFile() {
@@ -217,15 +208,32 @@ void macho::writeMapFile() {
                    seg->name.str().c_str(), osec->name.str().c_str());
     }
 
-  // Shared function to print an array of symbols.
-  auto printIsecArrSyms = [&](const std::vector<ConcatInputSection *> &arr) {
-    for (const ConcatInputSection *isec : arr) {
-      for (Defined *sym : isec->symbols) {
-        if (!(isPrivateLabel(sym->getName()) && getSymSizeForMap(sym) == 0))
-          os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
-                       getSymSizeForMap(sym),
-                       readerToFileOrdinal[sym->getFile()],
-                       sym->getName().str().data());
+  // Helper lambda that prints all symbols from one ConcatInputSection.
+  auto printOne = [&](const ConcatInputSection *isec) {
+    for (Defined *sym : isec->symbols) {
+      if (!(isPrivateLabel(sym->getName()) && getSymSizeForMap(sym) == 0)) {
+        os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
+                     getSymSizeForMap(sym),
+                     readerToFileOrdinal.lookup(sym->getFile()),
+                     sym->getName().str().data());
+      }
+    }
+  };
+  // Shared function to print one or two arrays of ConcatInputSection in
+  // ascending outSecOff order. The second array is optional; if provided, we
+  // interleave the printing in sorted order without allocating a merged temp
+  // array.
+  auto printIsecArrSyms = [&](ArrayRef<ConcatInputSection *> arr1,
+                              ArrayRef<ConcatInputSection *> arr2 = {}) {
+    // Print both arrays in sorted order, interleaving as necessary.
+    while (!arr1.empty() || !arr2.empty()) {
+      if (!arr1.empty() && (arr2.empty() || arr1.front()->outSecOff <=
+                                                arr2.front()->outSecOff)) {
+        printOne(arr1.front());
+        arr1 = arr1.drop_front();
+      } else if (!arr2.empty()) {
+        printOne(arr2.front());
+        arr2 = arr2.drop_front();
       }
     }
   };
@@ -235,12 +243,10 @@ void macho::writeMapFile() {
   for (const OutputSegment *seg : outputSegments) {
     for (const OutputSection *osec : seg->getSections()) {
       if (auto *textOsec = dyn_cast<TextOutputSection>(osec)) {
-        auto inputsAndThunks =
-            mergeOrderedInputs(textOsec->inputs, textOsec->getThunks());
-        printIsecArrSyms(inputsAndThunks);
+        printIsecArrSyms(textOsec->inputs, textOsec->getThunks());
       } else if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
         printIsecArrSyms(concatOsec->inputs);
-      } else if (osec == in.cStringSection || osec == in.objcMethnameSection) {
+      } else if (is_contained(in.cStringSections, osec)) {
         const auto &liveCStrings = info.liveCStringsForSection.lookup(osec);
         uint64_t lastAddr = 0; // strings will never start at address 0, so this
                                // is a sentinel value
@@ -258,6 +264,8 @@ void macho::writeMapFile() {
                      osec->addr, osec->getSize());
       } else if (osec == in.stubs) {
         printStubsEntries(os, readerToFileOrdinal, osec, target->stubSize);
+      } else if (osec == in.objcStubs) {
+        printObjCStubsEntries(os, in.objcStubs);
       } else if (osec == in.lazyPointers) {
         printStubsEntries(os, readerToFileOrdinal, osec, target->wordSize);
       } else if (osec == in.stubHelper) {
@@ -266,8 +274,6 @@ void macho::writeMapFile() {
                      osec->getSize());
       } else if (osec == in.got) {
         printNonLazyPointerSection(os, in.got);
-      } else if (osec == in.tlvPointers) {
-        printNonLazyPointerSection(os, in.tlvPointers);
       } else if (osec == in.objcMethList) {
         printIsecArrSyms(in.objcMethList->getInputs());
       }

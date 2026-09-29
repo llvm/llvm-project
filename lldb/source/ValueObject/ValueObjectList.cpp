@@ -16,12 +16,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-const ValueObjectList &ValueObjectList::operator=(const ValueObjectList &rhs) {
-  if (this != &rhs)
-    m_value_objects = rhs.m_value_objects;
-  return *this;
-}
-
 void ValueObjectList::Append(const ValueObjectSP &val_obj_sp) {
   m_value_objects.push_back(val_obj_sp);
 }

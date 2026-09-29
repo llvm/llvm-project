@@ -10,42 +10,41 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "HTMLDiagnostics.h"
+#include "PlistDiagnostics.h"
+#include "SarifDiagnostics.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/IssueHash.h"
 #include "clang/Analysis/MacroExpansionContext.h"
 #include "clang/Analysis/PathDiagnostic.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/DiagnosticRenderer.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "clang/Rewrite/Core/HTMLRewrite.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <map>
 #include <memory>
 #include <set>
-#include <sstream>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -86,7 +85,7 @@ public:
   void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
                             FilesMade *filesMade) override;
 
-  StringRef getName() const override { return "HTMLDiagnostics"; }
+  StringRef getName() const override { return HTML_DIAGNOSTICS_NAME; }
 
   bool supportsCrossFileDiagnostics() const override {
     return SupportsCrossFileDiagnostics;
@@ -175,6 +174,21 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const ArrowMap &Indices) {
 
 } // namespace
 
+/// Creates and registers an HTML diagnostic consumer, without any additional
+/// text consumer.
+static void createHTMLDiagnosticConsumerImpl(
+    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
+    const std::string &OutputDir, const Preprocessor &PP,
+    bool SupportMultipleFiles) {
+
+  // TODO: Emit an error here.
+  if (OutputDir.empty())
+    return;
+
+  C.emplace_back(std::make_unique<HTMLDiagnostics>(
+      std::move(DiagOpts), OutputDir, PP, SupportMultipleFiles));
+}
+
 void ento::createHTMLDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &OutputDir, const Preprocessor &PP,
@@ -189,11 +203,8 @@ void ento::createHTMLDiagnosticConsumer(
   createTextMinimalPathDiagnosticConsumer(DiagOpts, C, OutputDir, PP, CTU,
                                           MacroExpansions);
 
-  // TODO: Emit an error here.
-  if (OutputDir.empty())
-    return;
-
-  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, true));
+  createHTMLDiagnosticConsumerImpl(DiagOpts, C, OutputDir, PP,
+                                   /*SupportMultipleFiles=*/true);
 }
 
 void ento::createHTMLSingleFileDiagnosticConsumer(
@@ -204,11 +215,8 @@ void ento::createHTMLSingleFileDiagnosticConsumer(
   createTextMinimalPathDiagnosticConsumer(DiagOpts, C, OutputDir, PP, CTU,
                                           MacroExpansions);
 
-  // TODO: Emit an error here.
-  if (OutputDir.empty())
-    return;
-
-  C.push_back(new HTMLDiagnostics(std::move(DiagOpts), OutputDir, PP, false));
+  createHTMLDiagnosticConsumerImpl(DiagOpts, C, OutputDir, PP,
+                                   /*SupportMultipleFiles=*/false);
 }
 
 void ento::createPlistHTMLDiagnosticConsumer(
@@ -216,11 +224,10 @@ void ento::createPlistHTMLDiagnosticConsumer(
     const std::string &prefix, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU,
     const MacroExpansionContext &MacroExpansions) {
-  createHTMLDiagnosticConsumer(
-      DiagOpts, C, std::string(llvm::sys::path::parent_path(prefix)), PP, CTU,
-      MacroExpansions);
-  createPlistMultiFileDiagnosticConsumer(DiagOpts, C, prefix, PP, CTU,
-                                         MacroExpansions);
+  createHTMLDiagnosticConsumerImpl(
+      DiagOpts, C, std::string(llvm::sys::path::parent_path(prefix)), PP, true);
+  createPlistDiagnosticConsumerImpl(DiagOpts, C, prefix, PP, CTU,
+                                    MacroExpansions, true);
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, prefix, PP,
                                           CTU, MacroExpansions);
 }
@@ -230,11 +237,11 @@ void ento::createSarifHTMLDiagnosticConsumer(
     const std::string &sarif_file, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU,
     const MacroExpansionContext &MacroExpansions) {
-  createHTMLDiagnosticConsumer(
+  createHTMLDiagnosticConsumerImpl(
       DiagOpts, C, std::string(llvm::sys::path::parent_path(sarif_file)), PP,
-      CTU, MacroExpansions);
-  createSarifDiagnosticConsumer(DiagOpts, C, sarif_file, PP, CTU,
-                                MacroExpansions);
+      true);
+  createSarifDiagnosticConsumerImpl(DiagOpts, C, sarif_file, PP);
+
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, sarif_file,
                                           PP, CTU, MacroExpansions);
 }
@@ -250,20 +257,11 @@ void HTMLDiagnostics::FlushDiagnosticsImpl(
     ReportDiag(*Diag, filesMade);
 }
 
-static llvm::SmallString<32> getIssueHash(const PathDiagnostic &D,
-                                          const Preprocessor &PP) {
-  SourceManager &SMgr = PP.getSourceManager();
-  PathDiagnosticLocation UPDLoc = D.getUniqueingLoc();
-  FullSourceLoc L(SMgr.getExpansionLoc(UPDLoc.isValid()
-                                           ? UPDLoc.asLocation()
-                                           : D.getLocation().asLocation()),
-                  SMgr);
-  return getIssueHash(L, D.getCheckerName(), D.getBugType(),
-                      D.getDeclWithIssue(), PP.getLangOpts());
-}
-
 void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
                                  FilesMade *filesMade) {
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   // Create the HTML directory if it is missing.
   if (!createdDir) {
     createdDir = true;
@@ -306,7 +304,8 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
       }
   }
 
-  SmallString<32> IssueHash = getIssueHash(D, PP);
+  SmallString<32> IssueHash =
+      D.getIssueHash(PP.getSourceManager(), PP.getLangOpts());
   auto [It, IsNew] = EmittedHashes.insert(IssueHash);
   if (!IsNew) {
     // We've already emitted a duplicate issue. It'll get overwritten anyway.
@@ -365,6 +364,12 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
     if (EC != llvm::errc::file_exists) {
       llvm::errs() << "warning: could not create file in '" << Directory
                    << "': " << EC.message() << '\n';
+    } else if (filesMade) {
+      // Record that we created the file so that it gets referenced in the
+      // plist and SARIF reports for every translation unit that found the
+      // issue.
+      filesMade->addDiagnostic(D, getName(),
+                               llvm::sys::path::filename(ResultPath));
     }
     return;
   }
@@ -401,11 +406,11 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
       if (I != FileIDs.begin())
         os << "<hr class=divider>\n";
 
-      os << "<div id=File" << I->getHashValue() << ">\n";
+      os << "<div id=File" << I->getOpaqueValue() << ">\n";
 
       // Left nav arrow
       if (I != FileIDs.begin())
-        os << "<div class=FileNav><a href=\"#File" << (I - 1)->getHashValue()
+        os << "<div class=FileNav><a href=\"#File" << (I - 1)->getOpaqueValue()
            << "\">&#x2190;</a></div>";
 
       os << "<h4 class=FileName>" << SMgr.getFileEntryRefForID(*I)->getName()
@@ -413,7 +418,7 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
 
       // Right nav arrow
       if (I + 1 != E)
-        os << "<div class=FileNav><a href=\"#File" << (I + 1)->getHashValue()
+        os << "<div class=FileNav><a href=\"#File" << (I + 1)->getOpaqueValue()
            << "\">&#x2192;</a></div>";
 
       os << "</div>\n";
@@ -465,7 +470,7 @@ void HTMLDiagnostics::dumpCoverageData(
     if (I != ExecutedLines.begin())
       os << ", ";
 
-    os << "\"" << I->first.getHashValue() << "\": {";
+    os << "\"" << I->first.getOpaqueValue() << "\": {";
     for (unsigned LineNo : I->second) {
       if (LineNo != *(I->second.begin()))
         os << ", ";
@@ -675,8 +680,8 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic &D, Rewriter &R,
 
     os  << "\n<!-- FUNCTIONNAME " <<  declName << " -->\n";
 
-    os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT " << getIssueHash(D, PP)
-       << " -->\n";
+    os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT "
+       << D.getIssueHash(PP.getSourceManager(), PP.getLangOpts()) << " -->\n";
 
     os << "\n<!-- BUGLINE "
        << LineNumber
@@ -782,6 +787,10 @@ static void HandlePopUpPieceEndTag(Rewriter &R,
 
 void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
                                   FileID FID) {
+  // Add line numbers first, so that tags inserted later at end-of-line
+  // offsets (e.g. pop-up closing tags) end up inside the row.
+  html::EscapeText(R, FID);
+  html::AddLineNumbers(R, FID);
 
   // Process the path.
   // Maintain the counts of extra note pieces separately.
@@ -873,10 +882,6 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
   // Add the <table> start tag of pop-up pieces based on the stored ranges.
   HandlePopUpPieceStartTag(R, PopUpRanges);
 
-  // Add line numbers, header, footer, etc.
-  html::EscapeText(R, FID);
-  html::AddLineNumbers(R, FID);
-
   addArrowSVGs(R, FID, ArrowIndices);
 
   // If we have a preprocessor, relex the file and syntax highlight.
@@ -899,7 +904,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
 
   SourceManager &SM = R.getSourceMgr();
   assert(&Pos.getManager() == &SM && "SourceManagers are different!");
-  std::pair<FileID, unsigned> LPosInfo = SM.getDecomposedExpansionLoc(Pos);
+  FileIDAndOffset LPosInfo = SM.getDecomposedExpansionLoc(Pos);
 
   if (LPosInfo.first != BugFileID)
     return;
@@ -1038,7 +1043,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
       FullSourceLoc L = MP->getLocation().asLocation().getExpansionLoc();
       assert(L.isFileID());
       StringRef BufferInfo = L.getBufferData();
-      std::pair<FileID, unsigned> LocInfo = L.getDecomposedLoc();
+      FileIDAndOffset LocInfo = L.getDecomposedLoc();
       const char* MacroName = LocInfo.second + BufferInfo.data();
       Lexer rawLexer(SM.getLocForStartOfFile(LocInfo.first), PP.getLangOpts(),
                      BufferInfo.begin(), MacroName, BufferInfo.end());
@@ -1092,8 +1097,11 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
 
   os << "</div></td></tr>";
 
-  // Insert the new html.
+  // Insert the new html after the newline, so that the bubble's row lands
+  // between the current line's row and the next line's row.
   unsigned DisplayPos = LineEnd - FileStart;
+  if (LineEnd != FileEnd)
+    ++DisplayPos;
   SourceLocation Loc =
     SM.getLocForStartOfFile(LPosInfo.first).getLocWithOffset(DisplayPos);
 
@@ -1250,35 +1258,15 @@ void HTMLDiagnostics::HighlightRange(Rewriter& R, FileID BugFileID,
   SourceManager &SM = R.getSourceMgr();
   const LangOptions &LangOpts = R.getLangOpts();
 
-  SourceLocation InstantiationStart = SM.getExpansionLoc(Range.getBegin());
-  unsigned StartLineNo = SM.getExpansionLineNumber(InstantiationStart);
-
-  SourceLocation InstantiationEnd = SM.getExpansionLoc(Range.getEnd());
-  unsigned EndLineNo = SM.getExpansionLineNumber(InstantiationEnd);
-
-  if (EndLineNo < StartLineNo)
+  std::optional<CharSourceRange> FileRange = getExpansionRangeInFile(
+      CharSourceRange::getTokenRange(Range), BugFileID, SM);
+  if (!FileRange)
     return;
 
-  if (SM.getFileID(InstantiationStart) != BugFileID ||
-      SM.getFileID(InstantiationEnd) != BugFileID)
-    return;
-
-  // Compute the column number of the end.
-  unsigned EndColNo = SM.getExpansionColumnNumber(InstantiationEnd);
-  unsigned OldEndColNo = EndColNo;
-
-  if (EndColNo) {
-    // Add in the length of the token, so that we cover multi-char tokens.
-    EndColNo += Lexer::MeasureTokenLength(Range.getEnd(), SM, LangOpts)-1;
-  }
-
-  // Highlight the range.  Make the span tag the outermost tag for the
-  // selected range.
-
-  SourceLocation E =
-    InstantiationEnd.getLocWithOffset(EndColNo - OldEndColNo);
-
-  html::HighlightRange(R, InstantiationStart, E, HighlightStart, HighlightEnd);
+  CharSourceRange CharRange = Lexer::getAsCharRange(*FileRange, SM, LangOpts);
+  html::HighlightRange(R, CharRange.getBegin(), CharRange.getEnd(),
+                       HighlightStart, HighlightEnd,
+                       /*IsTokenRange=*/false);
 }
 
 StringRef HTMLDiagnostics::generateKeyboardNavigationJavascript() {

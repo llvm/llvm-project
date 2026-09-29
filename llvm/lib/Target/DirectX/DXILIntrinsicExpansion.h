@@ -8,14 +8,14 @@
 #ifndef LLVM_TARGET_DIRECTX_DXILINTRINSICEXPANSION_H
 #define LLVM_TARGET_DIRECTX_DXILINTRINSICEXPANSION_H
 
-#include "DXILResource.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
 
 /// A pass that transforms DXIL Intrinsics that don't have DXIL opCodes
-class DXILIntrinsicExpansion : public PassInfoMixin<DXILIntrinsicExpansion> {
+class DXILIntrinsicExpansion
+    : public OptionalPassInfoMixin<DXILIntrinsicExpansion> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };

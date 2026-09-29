@@ -206,7 +206,7 @@ module Opcode : sig
   | Invalid (** Not an instruction *)
 
   | Ret (** Terminator Instructions *)
-  | Br
+  | Invalid3
   | Switch
   | IndirectBr
   | Invoke
@@ -278,6 +278,9 @@ module Opcode : sig
   | FNeg
   | CallBr
   | Freeze
+  | PtrToAddr
+  | UncondBr
+  | CondBr
 end
 
 (** The type of a clause of a [landingpad] instruction.
@@ -337,6 +340,8 @@ module AtomicRMWBinOp : sig
   | UDec_Wrap
   | USub_Cond
   | USub_Sat
+  | FMaximum
+  | FMinimum
 end
 
 (** The kind of an [llvalue], the result of [classify_value v].
@@ -462,9 +467,6 @@ val create_context : unit -> llcontext
     [llvm::LLVMContext::~LLVMContext]. *)
 val dispose_context : llcontext -> unit
 
-(** See the function [LLVMGetGlobalContext]. *)
-val global_context : unit -> llcontext
-
 (** [mdkind_id context name] returns the MDKind ID that corresponds to the
     name [name] in the context [context].  See the function
     [llvm::LLVMContext::getMDKindID]. *)
@@ -558,7 +560,7 @@ val get_module_identifier : llmodule -> string
 
 (** [set_module_identifier m id] sets the module identifier of [m]
     to [id]. See the method [llvm::Module::setModuleIdentifier] *)
-val set_module_identifer : llmodule -> string -> unit
+val set_module_identifier : llmodule -> string -> unit
 
 (** [get_module_flag m k] Return the corresponding value if key [k] appears in
     the module flags of [m], otherwise return None
@@ -1073,18 +1075,6 @@ val aggregate_element : llvalue -> int -> llvalue option
 
 (** {7 Constant expressions} *)
 
-(** [align_of ty] returns the alignof constant for the type [ty]. This is
-    equivalent to [const_ptrtoint (const_gep (const_null (pointer_type {i8,ty}))
-    (const_int i32_type 0) (const_int i32_type 1)) i32_type], but considerably
-    more readable.  See the method [llvm::ConstantExpr::getAlignOf]. *)
-val align_of : lltype -> llvalue
-
-(** [size_of ty] returns the sizeof constant for the type [ty]. This is
-    equivalent to [const_ptrtoint (const_gep (const_null (pointer_type ty))
-    (const_int i32_type 1)) i64_type], but considerably more readable.
-    See the method [llvm::ConstantExpr::getSizeOf]. *)
-val size_of : lltype -> llvalue
-
 (** [const_neg c] returns the arithmetic negation of the constant [c].
     See the method [llvm::ConstantExpr::getNeg]. *)
 val const_neg : llvalue -> llvalue
@@ -1093,11 +1083,6 @@ val const_neg : llvalue -> llvalue
     no signed wrapping. The result is undefined if the negation overflows.
     See the method [llvm::ConstantExpr::getNSWNeg]. *)
 val const_nsw_neg : llvalue -> llvalue
-
-(** [const_nuw_neg c] returns the arithmetic negation of the constant [c] with
-    no unsigned wrapping. The result is undefined if the negation overflows.
-    See the method [llvm::ConstantExpr::getNUWNeg]. *)
-val const_nuw_neg : llvalue -> llvalue
 
 (** [const_not c] returns the bitwise inverse of the constant [c].
     See the method [llvm::ConstantExpr::getNot]. *)
@@ -1130,20 +1115,6 @@ val const_nsw_sub : llvalue -> llvalue -> llvalue
     no unsigned wrapping. The result is undefined if the sum overflows.
     See the method [llvm::ConstantExpr::getNSWSub]. *)
 val const_nuw_sub : llvalue -> llvalue -> llvalue
-
-(** [const_mul c1 c2] returns the constant product of two constants.
-    See the method [llvm::ConstantExpr::getMul]. *)
-val const_mul : llvalue -> llvalue -> llvalue
-
-(** [const_nsw_mul c1 c2] returns the constant product of two constants with
-    no signed wrapping. The result is undefined if the sum overflows.
-    See the method [llvm::ConstantExpr::getNSWMul]. *)
-val const_nsw_mul : llvalue -> llvalue -> llvalue
-
-(** [const_nuw_mul c1 c2] returns the constant product of two constants with
-    no unsigned wrapping. The result is undefined if the sum overflows.
-    See the method [llvm::ConstantExpr::getNSWMul]. *)
-val const_nuw_mul : llvalue -> llvalue -> llvalue
 
 (** [const_xor c1 c2] returns the constant bitwise [XOR] of two integer
     constants.
@@ -1372,6 +1343,12 @@ val is_global_constant : llvalue -> bool
     See the method [llvm::GlobalVariable::setConstant]. *)
 val set_global_constant : bool -> llvalue -> unit
 
+(** [global_set_metadata g k md] sets the metadata attachment of the global
+    value [g] to the metadata [md] for the given kind [k], erasing the existing
+    metadata attachment if it already exists for the given kind.
+    See the method [llvm::GlobalObject::setMetadata]. *)
+val global_set_metadata : llvalue -> llmdkind -> llmetadata -> unit
+
 (** [global_initializer gv] If global variable [gv] has an initializer it is returned,
     otherwise returns [None]. See the method [llvm::GlobalVariable::getInitializer]. *)
 val global_initializer : llvalue -> llvalue option
@@ -1484,9 +1461,42 @@ val rev_iter_functions : (llvalue -> unit) -> llmodule -> unit
     [f1,...,fN] are the functions of module [m]. Tail recursive. *)
 val fold_right_functions : (llvalue -> 'a -> 'a) -> llmodule -> 'a -> 'a
 
+(** [lookup_intrinsic_id name] obtains the intrinsic ID number for the given
+    function name. See the method [llvm::Intrinsic::lookupIntrinsicID].*)
+val lookup_intrinsic_id : string -> int
+
+(** [intrinsic_id] returns the ID of intrinsic function [f]. If [f] is not
+    an intrinsic, returns [0]. See the method
+    [llvm::Function::getIntrinsicID]. *)
+val intrinsic_id : llvalue -> int
+
 (** [is_intrinsic f] returns true if the function [f] is an intrinsic.
     See the method [llvm::Function::isIntrinsic]. *)
 val is_intrinsic : llvalue -> bool
+
+(** [intrinsic_declaration m id overload_types] gets or inserts the
+    declaration of an intrinsic. For overloaded intrinsics, types must be
+    provided to uniquely identify an overload. See the method
+    [llvm::Intrinsic::getOrInsertDeclaration]. *)
+val intrinsic_declaration : llmodule -> int -> lltype array -> llvalue
+
+(** [intrinsic_type c id overload_types] returns the type of intrinsic [id] in
+    context [c]. For overloaded intrinsics, types must be provided to uniquely
+    identify an overload. See the method [llvm::Intrinsic::getType]. *)
+val intrinsic_type : llcontext -> int -> lltype array -> lltype
+
+(** [intrinsic_name id] returns the name of intrinsic [id]. See the method
+    [llvm::Intrinsic::getName()]. *)
+val intrinsic_name : int -> string
+
+(** [intrinsic_overloaded_name m id overload_types] returns the name of an
+    overloaded intrinsic [id] identified by the overload types
+    [overload_types]. See the method [llvm::Intrinsic::getName]. *)
+val intrinsic_overloaded_name : llmodule -> int -> lltype array -> string
+
+(** [intrinsic_is_overloaded id] returns if intrinsic [id] is overloaded. See
+    the method [llvm::Intrinsic::isOverloaded]. *)
+val intrinsic_is_overloaded : int -> bool
 
 (** [function_call_conv f] returns the calling convention of the function [f].
     See the method [llvm::Function::getCallingConv]. *)
@@ -1828,16 +1838,15 @@ val fold_successors : (llbasicblock -> 'a -> 'a) -> llvalue -> 'a -> 'a
 
 (** {7 Operations on branches} *)
 
-(** [is_conditional v] returns true if the branch instruction [v] is conditional.
-    See the method [llvm::BranchInst::isConditional]. *)
+(** [is_conditional v] returns true if the branch instruction [v] is conditional. *)
 val is_conditional : llvalue -> bool
 
 (** [condition v] return the condition of the branch instruction [v].
-    See the method [llvm::BranchInst::getCondition]. *)
+    See the method [llvm::CondBrInst::getCondition]. *)
 val condition : llvalue -> llvalue
 
 (** [set_condition v c] sets the condition of the branch instruction [v] to the value [c].
-    See the method [llvm::BranchInst::setCondition]. *)
+    See the method [llvm::CondBrInst::setCondition]. *)
 val set_condition : llvalue -> llvalue -> unit
 
 (** [get_branch c] returns a description of the branch instruction [c]. *)
@@ -2217,13 +2226,6 @@ val build_neg : llvalue -> string -> llbuilder -> llvalue
     [-0.0] is used for floating point types to compute the correct sign.
     See the method [llvm::LLVMBuilder::CreateNeg]. *)
 val build_nsw_neg : llvalue -> string -> llbuilder -> llvalue
-
-(** [build_nuw_neg x name b] creates a
-    [%name = nuw sub 0, %x]
-    instruction at the position specified by the instruction builder [b].
-    [-0.0] is used for floating point types to compute the correct sign.
-    See the method [llvm::LLVMBuilder::CreateNeg]. *)
-val build_nuw_neg : llvalue -> string -> llbuilder -> llvalue
 
 (** [build_fneg x name b] creates a
     [%name = fsub 0, %x]

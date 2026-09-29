@@ -1,0 +1,49 @@
+// RUN: cir-translate -cir-to-llvmir --disable-cc-lowering -o %t.ll %s
+// RUN: FileCheck --input-file=%t.ll -check-prefix=LLVM %s
+// REQUIRES: target={{x86_64-linux}}
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+module  {
+  cir.func @blue(%arg0: !cir.bool) -> !u32i {
+    %0 = cir.ternary(%arg0, true {
+      %a = cir.const #cir.int<0> : !u32i
+      cir.yield %a : !u32i
+    }, false {
+      %b = cir.const #cir.int<1> : !u32i
+      cir.yield %b : !u32i
+    }) : (!cir.bool) -> !u32i
+    cir.return %0 : !u32i
+  }
+
+  // The stride of a cir.ptr_stride is narrower than the pointer index width, so
+  // it has to be widened to i64. The widening peephole looks through a "sub 0, x"
+  // to find a unary minus, which must not assume the subtraction's LHS has a
+  // defining operation -- here it is the phi materialized for the ternary.
+  cir.func @ternary_result_as_ptr_stride(%arg0: !cir.ptr<!s32i>, %arg1: !cir.bool,
+                                         %arg2: !s32i) -> !cir.ptr<!s32i> {
+    %0 = cir.ternary(%arg1, true {
+      %a = cir.const #cir.int<1> : !s32i
+      cir.yield %a : !s32i
+    }, false {
+      cir.yield %arg2 : !s32i
+    }) : (!cir.bool) -> !s32i
+    %1 = cir.sub %0, %arg2 : !s32i
+    %2 = cir.ptr_stride %arg0, %1 : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+    cir.return %2 : !cir.ptr<!s32i>
+  }
+}
+
+// LLVM-LABEL: define i32 {{.*}}@blue(
+// LLVM-SAME: i1 [[PRED:%[[:alnum:]]+]])
+// LLVM:   br i1 [[PRED]], label %[[B1:[[:alnum:]]+]], label %[[B2:[[:alnum:]]+]]
+// LLVM: [[B1]]:
+// LLVM:   br label %[[M:[[:alnum:]]+]]
+// LLVM: [[B2]]:
+// LLVM:   br label %[[M]]
+// LLVM: [[M]]:
+// LLVM:   [[R:%[[:alnum:]]+]] = phi i32 [ 1, %[[B2]] ], [ 0, %[[B1]] ]
+// LLVM:   br label %[[B3:[[:alnum:]]+]]
+// LLVM: [[B3]]:
+// LLVM:   ret i32 [[R]]

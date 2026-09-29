@@ -1,10 +1,9 @@
-; RUN: opt %loadNPMPolly -pass-remarks-missed="polly-detect" -polly-detect-track-failures '-passes=print<polly-detect>' -disable-output < %s 2>&1| FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -polly-detect-track-failures '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
 
 ; void f(int A[]) {
 ;   for(int i=0; i<42; ++i)
 ;     A[i*i] = 0;
 ; }
-
 
 ; CHECK: remark: ReportNonAffineAccess-01.c:2:7: The following errors keep this region from being a Scop.
 ; CHECK: remark: ReportNonAffineAccess-01.c:3:5: The array subscript of "A" is not affine
@@ -39,9 +38,6 @@ for.end:                                          ; preds = %for.body
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
-
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!10, !11}

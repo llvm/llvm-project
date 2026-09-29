@@ -8,7 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
+#include "../lib/Transforms/Vectorize/LoopVectorizationPlanner.h"
 #include "../lib/Transforms/Vectorize/VPlanCFG.h"
+#include "../lib/Transforms/Vectorize/VPlanHelpers.h"
+#include "../lib/Transforms/Vectorize/VPlanUtils.h"
 #include "VPlanTestBase.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -19,6 +22,7 @@
 #include <string>
 
 namespace llvm {
+
 namespace {
 
 #define CHECK_ITERATOR(Range1, ...)                                            \
@@ -30,12 +34,55 @@ namespace {
       EXPECT_EQ(&std::get<0>(Pair), std::get<1>(Pair));                        \
   } while (0)
 
-TEST(VPInstructionTest, insertBefore) {
-  VPInstruction *I1 = new VPInstruction(0, {});
-  VPInstruction *I2 = new VPInstruction(1, {});
-  VPInstruction *I3 = new VPInstruction(2, {});
+using VPInstructionTest = VPlanTestBase;
+using VPlanSCEVTest = VPlanTestIRBase;
 
-  VPBasicBlock VPBB1;
+TEST_F(VPlanSCEVTest, GetSCEVExprForVPValueAbs) {
+  const char *ModuleString = R"(
+define void @f(i32 %x) {
+entry:
+  br label %loop
+loop:
+  br label %loop
+}
+)";
+
+  Module &M = parseModule(ModuleString);
+  Function *F = M.getFunction("f");
+  BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
+  doAnalysis(*F);
+
+  Loop *L = LI->getLoopFor(LoopHeader);
+  PredicatedScalarEvolution PSE(*SE, *L);
+  VPlan Plan(LoopHeader, IntegerType::get(*Ctx, 32));
+  Argument *X = F->getArg(0);
+  VPValue *Op = Plan.getOrAddLiveIn(X);
+
+  // is_int_min_poison is local to the call, not a global no-wrap fact.
+  // Exercise both getAbsExpr flag paths; SCEV drops IsNSW for this input.
+  const SCEV *XSCEV = SE->getSCEV(X);
+
+  VPWidenIntrinsicRecipe Abs(Intrinsic::abs, {Op, Plan.getTrue()},
+                             X->getType());
+  EXPECT_EQ(SE->getAbsExpr(XSCEV, /*IsNSW=*/true),
+            vputils::getSCEVExprForVPValue(&Abs, PSE, L));
+
+  VPWidenIntrinsicRecipe WrappingAbs(Intrinsic::abs, {Op, Plan.getFalse()},
+                                     X->getType());
+  EXPECT_EQ(SE->getAbsExpr(XSCEV, /*IsNSW=*/false),
+            vputils::getSCEVExprForVPValue(&WrappingAbs, PSE, L));
+}
+
+TEST_F(VPInstructionTest, insertBefore) {
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPInstruction *I1 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPInstruction *I2 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPInstruction *I3 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+
+  VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
 
   I2->insertBefore(I1);
@@ -45,12 +92,16 @@ TEST(VPInstructionTest, insertBefore) {
   CHECK_ITERATOR(VPBB1, I3, I2, I1);
 }
 
-TEST(VPInstructionTest, eraseFromParent) {
-  VPInstruction *I1 = new VPInstruction(0, {});
-  VPInstruction *I2 = new VPInstruction(1, {});
-  VPInstruction *I3 = new VPInstruction(2, {});
+TEST_F(VPInstructionTest, eraseFromParent) {
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPInstruction *I1 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPInstruction *I2 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPInstruction *I3 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
 
-  VPBasicBlock VPBB1;
+  VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
   VPBB1.appendRecipe(I2);
   VPBB1.appendRecipe(I3);
@@ -65,12 +116,16 @@ TEST(VPInstructionTest, eraseFromParent) {
   EXPECT_TRUE(VPBB1.empty());
 }
 
-TEST(VPInstructionTest, moveAfter) {
-  VPInstruction *I1 = new VPInstruction(0, {});
-  VPInstruction *I2 = new VPInstruction(1, {});
-  VPInstruction *I3 = new VPInstruction(2, {});
+TEST_F(VPInstructionTest, moveAfter) {
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPInstruction *I1 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPInstruction *I2 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPInstruction *I3 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
 
-  VPBasicBlock VPBB1;
+  VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
   VPBB1.appendRecipe(I2);
   VPBB1.appendRecipe(I3);
@@ -79,9 +134,11 @@ TEST(VPInstructionTest, moveAfter) {
 
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
-  VPInstruction *I4 = new VPInstruction(4, {});
-  VPInstruction *I5 = new VPInstruction(5, {});
-  VPBasicBlock VPBB2;
+  VPInstruction *I4 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPInstruction *I5 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
   VPBB2.appendRecipe(I4);
   VPBB2.appendRecipe(I5);
 
@@ -92,12 +149,16 @@ TEST(VPInstructionTest, moveAfter) {
   EXPECT_EQ(I3->getParent(), I4->getParent());
 }
 
-TEST(VPInstructionTest, moveBefore) {
-  VPInstruction *I1 = new VPInstruction(0, {});
-  VPInstruction *I2 = new VPInstruction(1, {});
-  VPInstruction *I3 = new VPInstruction(2, {});
+TEST_F(VPInstructionTest, moveBefore) {
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPInstruction *I1 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPInstruction *I2 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPInstruction *I3 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
 
-  VPBasicBlock VPBB1;
+  VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
   VPBB1.appendRecipe(I2);
   VPBB1.appendRecipe(I3);
@@ -106,9 +167,11 @@ TEST(VPInstructionTest, moveBefore) {
 
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
-  VPInstruction *I4 = new VPInstruction(4, {});
-  VPInstruction *I5 = new VPInstruction(5, {});
-  VPBasicBlock VPBB2;
+  VPInstruction *I4 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPInstruction *I5 =
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
   VPBB2.appendRecipe(I4);
   VPBB2.appendRecipe(I5);
 
@@ -118,7 +181,7 @@ TEST(VPInstructionTest, moveBefore) {
   CHECK_ITERATOR(VPBB2, I3, I4, I5);
   EXPECT_EQ(I3->getParent(), I4->getParent());
 
-  VPBasicBlock VPBB3;
+  VPBasicBlock &VPBB3 = *getPlan().createVPBasicBlock("");
 
   I4->moveBefore(VPBB3, VPBB3.end());
 
@@ -128,74 +191,76 @@ TEST(VPInstructionTest, moveBefore) {
   EXPECT_EQ(&VPBB3, I4->getParent());
 }
 
-TEST(VPInstructionTest, setOperand) {
-  VPValue *VPV1 = new VPValue();
-  VPValue *VPV2 = new VPValue();
-  VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});
-  EXPECT_EQ(1u, VPV1->getNumUsers());
+TEST_F(VPInstructionTest, setOperand) {
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *VPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {VPV1, VPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  EXPECT_TRUE(VPV1->hasOneUse());
   EXPECT_EQ(I1, *VPV1->user_begin());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV2->hasOneUse());
   EXPECT_EQ(I1, *VPV2->user_begin());
 
   // Replace operand 0 (VPV1) with VPV3.
-  VPValue *VPV3 = new VPValue();
+  VPValue *VPV3 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
   I1->setOperand(0, VPV3);
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->hasOneUse());
   EXPECT_EQ(I1, *VPV2->user_begin());
-  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV3->hasOneUse());
   EXPECT_EQ(I1, *VPV3->user_begin());
 
   // Replace operand 1 (VPV2) with VPV3.
   I1->setOperand(1, VPV3);
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->user_empty());
   EXPECT_EQ(2u, VPV3->getNumUsers());
   EXPECT_EQ(I1, *VPV3->user_begin());
   EXPECT_EQ(I1, *std::next(VPV3->user_begin()));
 
   // Replace operand 0 (VPV3) with VPV4.
-  VPValue *VPV4 = new VPValue();
+  VPValue *VPV4 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 4));
   I1->setOperand(0, VPV4);
-  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV3->hasOneUse());
   EXPECT_EQ(I1, *VPV3->user_begin());
   EXPECT_EQ(I1, *VPV4->user_begin());
 
   // Replace operand 1 (VPV3) with VPV4.
   I1->setOperand(1, VPV4);
-  EXPECT_EQ(0u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV3->user_empty());
   EXPECT_EQ(I1, *VPV4->user_begin());
   EXPECT_EQ(I1, *std::next(VPV4->user_begin()));
 
   delete I1;
-  delete VPV1;
-  delete VPV2;
-  delete VPV3;
-  delete VPV4;
 }
 
-TEST(VPInstructionTest, replaceAllUsesWith) {
-  VPValue *VPV1 = new VPValue();
-  VPValue *VPV2 = new VPValue();
-  VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});
+TEST_F(VPInstructionTest, replaceAllUsesWith) {
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *VPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {VPV1, VPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
 
   // Replace all uses of VPV1 with VPV3.
-  VPValue *VPV3 = new VPValue();
+  VPValue *VPV3 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
   VPV1->replaceAllUsesWith(VPV3);
   EXPECT_EQ(VPV3, I1->getOperand(0));
   EXPECT_EQ(VPV2, I1->getOperand(1));
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->hasOneUse());
   EXPECT_EQ(I1, *VPV2->user_begin());
-  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV3->hasOneUse());
   EXPECT_EQ(I1, *VPV3->user_begin());
 
   // Replace all uses of VPV2 with VPV3.
   VPV2->replaceAllUsesWith(VPV3);
   EXPECT_EQ(VPV3, I1->getOperand(0));
   EXPECT_EQ(VPV3, I1->getOperand(1));
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->user_empty());
   EXPECT_EQ(2u, VPV3->getNumUsers());
   EXPECT_EQ(I1, *VPV3->user_begin());
 
@@ -205,38 +270,37 @@ TEST(VPInstructionTest, replaceAllUsesWith) {
   EXPECT_EQ(VPV1, I1->getOperand(1));
   EXPECT_EQ(2u, VPV1->getNumUsers());
   EXPECT_EQ(I1, *VPV1->user_begin());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
-  EXPECT_EQ(0u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV2->user_empty());
+  EXPECT_TRUE(VPV3->user_empty());
 
-  VPInstruction *I2 = new VPInstruction(0, {VPV1, VPV2});
+  VPInstruction *I2 =
+      new VPInstruction(Instruction::Add, {VPV1, VPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   EXPECT_EQ(3u, VPV1->getNumUsers());
   VPV1->replaceAllUsesWith(VPV3);
   EXPECT_EQ(3u, VPV3->getNumUsers());
 
   delete I1;
   delete I2;
-  delete VPV1;
-  delete VPV2;
-  delete VPV3;
 }
 
-TEST(VPInstructionTest, releaseOperandsAtDeletion) {
-  VPValue *VPV1 = new VPValue();
-  VPValue *VPV2 = new VPValue();
-  VPInstruction *I1 = new VPInstruction(0, {VPV1, VPV2});
+TEST_F(VPInstructionTest, releaseOperandsAtDeletion) {
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *VPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {VPV1, VPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
 
-  EXPECT_EQ(1u, VPV1->getNumUsers());
+  EXPECT_TRUE(VPV1->hasOneUse());
   EXPECT_EQ(I1, *VPV1->user_begin());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV2->hasOneUse());
   EXPECT_EQ(I1, *VPV2->user_begin());
 
   delete I1;
 
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
-
-  delete VPV1;
-  delete VPV2;
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->user_empty());
 }
 
 using VPBasicBlockTest = VPlanTestBase;
@@ -272,7 +336,8 @@ TEST_F(VPBasicBlockTest, getPlan) {
     // VPBasicBlock is the entry into the VPlan, followed by a region.
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = Plan.createVPRegionBlock(R1BB1, R1BB2, "R1");
+    VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R1", R1BB1, R1BB2);
     VPBlockUtils::connectBlocks(R1BB1, R1BB2);
 
     VPBlockUtils::connectBlocks(VPBB1, R1);
@@ -289,12 +354,14 @@ TEST_F(VPBasicBlockTest, getPlan) {
     VPlan &Plan = getPlan();
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = Plan.createVPRegionBlock(R1BB1, R1BB2, "R1");
+    VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R1", R1BB1, R1BB2);
     VPBlockUtils::connectBlocks(R1BB1, R1BB2);
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R2 = Plan.createVPRegionBlock(R2BB1, R2BB2, "R2");
+    VPRegionBlock *R2 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R2", R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
 
     VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -372,7 +439,8 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("");
     VPBasicBlock *R1BB4 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R1 = Plan.createVPRegionBlock(R1BB1, R1BB4, "R1");
+    VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R1", R1BB1, R1BB4);
     R1BB2->setParent(R1);
     R1BB3->setParent(R1);
     VPBlockUtils::connectBlocks(VPBB0, R1);
@@ -385,16 +453,33 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("");
-    VPRegionBlock *R2 = Plan.createVPRegionBlock(R2BB1, R2BB2, "R2");
+    VPRegionBlock *R2 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R2", R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R1, R2);
 
     // Successors of R1.
     SmallVector<const VPBlockBase *> FromIterator(
-        VPAllSuccessorsIterator<VPBlockBase *>(R1),
-        VPAllSuccessorsIterator<VPBlockBase *>::end(R1));
+        VPHierarchicalChildrenIterator<VPBlockBase *>(R1),
+        VPHierarchicalChildrenIterator<VPBlockBase *>::end(R1));
     EXPECT_EQ(1u, FromIterator.size());
     EXPECT_EQ(R1BB1, FromIterator[0]);
+
+    // Predecessors of R1.
+    FromIterator.clear();
+    copy(VPHierarchicalChildrenIterator<VPBlockBase *, false>(R1),
+         VPHierarchicalChildrenIterator<VPBlockBase *, false>::end(R1),
+         std::back_inserter(FromIterator));
+    EXPECT_EQ(1u, FromIterator.size());
+    EXPECT_EQ(R1BB4, FromIterator[0]);
+
+    // Predecessors of R1BB1.
+    FromIterator.clear();
+    copy(VPHierarchicalChildrenIterator<VPBlockBase *, false>(R1BB1),
+         VPHierarchicalChildrenIterator<VPBlockBase *, false>::end(R1BB1),
+         std::back_inserter(FromIterator));
+    EXPECT_EQ(1u, FromIterator.size());
+    EXPECT_EQ(VPBB0, FromIterator[0]);
 
     // Depth-first.
     VPBlockDeepTraversalWrapper<VPBlockBase *> Start(R1);
@@ -409,6 +494,21 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(R2BB1, FromIterator[5]);
     EXPECT_EQ(R2BB2, FromIterator[6]);
     EXPECT_EQ(R1BB3, FromIterator[7]);
+
+    // Depth-first on the inverse graph (traverse predecessors).
+    FromIterator.clear();
+    copy(depth_first<Inverse<VPBlockBase *>>(R2),
+         std::back_inserter(FromIterator));
+    EXPECT_EQ(9u, FromIterator.size());
+    EXPECT_EQ(R2, FromIterator[0]);
+    EXPECT_EQ(R2BB2, FromIterator[1]);
+    EXPECT_EQ(R2BB1, FromIterator[2]);
+    EXPECT_EQ(R1, FromIterator[3]);
+    EXPECT_EQ(R1BB4, FromIterator[4]);
+    EXPECT_EQ(R1BB2, FromIterator[5]);
+    EXPECT_EQ(R1BB1, FromIterator[6]);
+    EXPECT_EQ(VPBB0, FromIterator[7]);
+    EXPECT_EQ(R1BB3, FromIterator[8]);
 
     // const VPBasicBlocks only.
     FromIterator.clear();
@@ -470,12 +570,14 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("R1BB1");
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("R1BB2");
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("R1BB3");
-    VPRegionBlock *R1 = Plan.createVPRegionBlock(R1BB1, R1BB3, "R1");
+    VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R1", R1BB1, R1BB3);
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
     VPBasicBlock *R2BB3 = Plan.createVPBasicBlock("R2BB3");
-    VPRegionBlock *R2 = Plan.createVPRegionBlock(R2BB1, R2BB3, "R2");
+    VPRegionBlock *R2 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R2", R2BB1, R2BB3);
     R2BB2->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB2, R2BB1);
@@ -510,7 +612,7 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Post-order.
     FromIterator.clear();
-    FromIterator.append(po_begin(Start), po_end(Start));
+    copy(post_order(Start), std::back_inserter(FromIterator));
     EXPECT_EQ(10u, FromIterator.size());
     EXPECT_EQ(VPBB2, FromIterator[0]);
     EXPECT_EQ(R1BB3, FromIterator[1]);
@@ -540,10 +642,12 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     VPlan &Plan = getPlan();
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
-    VPRegionBlock *R2 = Plan.createVPRegionBlock(R2BB1, R2BB2, "R2");
+    VPRegionBlock *R2 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R2", R2BB1, R2BB2);
     VPBlockUtils::connectBlocks(R2BB1, R2BB2);
 
-    VPRegionBlock *R1 = Plan.createVPRegionBlock(R2, R2, "R1");
+    VPRegionBlock *R1 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", R2, R2);
     R2->setParent(R1);
 
     VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -561,7 +665,7 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Post-order.
     FromIterator.clear();
-    FromIterator.append(po_begin(Start), po_end(Start));
+    copy(post_order(Start), std::back_inserter(FromIterator));
     EXPECT_EQ(5u, FromIterator.size());
     EXPECT_EQ(R2BB2, FromIterator[0]);
     EXPECT_EQ(R2BB1, FromIterator[1]);
@@ -593,14 +697,17 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     //
     VPlan &Plan = getPlan();
     VPBasicBlock *R3BB1 = Plan.createVPBasicBlock("R3BB1");
-    VPRegionBlock *R3 = Plan.createVPRegionBlock(R3BB1, R3BB1, "R3");
+    VPRegionBlock *R3 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R3", R3BB1, R3BB1);
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
-    VPRegionBlock *R2 = Plan.createVPRegionBlock(R2BB1, R3, "R2");
+    VPRegionBlock *R2 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R2", R2BB1, R3);
     R3->setParent(R2);
     VPBlockUtils::connectBlocks(R2BB1, R3);
 
-    VPRegionBlock *R1 = Plan.createVPRegionBlock(R2, R2, "R1");
+    VPRegionBlock *R1 =
+        Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(), "R1", R2, R2);
     R2->setParent(R1);
 
     VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -642,8 +749,9 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Post-order, const VPRegionBlocks only.
     VPBlockDeepTraversalWrapper<const VPBlockBase *> StartConst(VPBB1);
-    SmallVector<const VPRegionBlock *> FromIteratorVPRegion(
-        VPBlockUtils::blocksOnly<const VPRegionBlock>(post_order(StartConst)));
+    SmallVector<const VPRegionBlock *> FromIteratorVPRegion;
+    copy(VPBlockUtils::blocksOnly<const VPRegionBlock>(post_order(StartConst)),
+         std::back_inserter(FromIteratorVPRegion));
     EXPECT_EQ(3u, FromIteratorVPRegion.size());
     EXPECT_EQ(R3, FromIteratorVPRegion[0]);
     EXPECT_EQ(R2, FromIteratorVPRegion[1]);
@@ -663,16 +771,77 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
   }
 }
 
+TEST_F(VPBasicBlockTest, reassociateBlocks) {
+  {
+    // Ensure that when we reassociate a basic block, we make sure to update any
+    // references to it in VPWidenPHIRecipes' incoming blocks.
+    VPlan &Plan = getPlan();
+    VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1");
+    VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
+    VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+
+    IntegerType *Int32 = IntegerType::get(C, 32);
+    VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    auto *WidenPhi = new VPWidenPHIRecipe(ArrayRef<VPValue *>{Val});
+    VPBB2->appendRecipe(WidenPhi);
+
+    VPBasicBlock *VPBBNew = Plan.createVPBasicBlock("VPBBNew");
+    VPBlockUtils::reassociateBlocks(VPBB1, VPBBNew);
+    EXPECT_EQ(VPBB2->getSinglePredecessor(), VPBBNew);
+    EXPECT_EQ(WidenPhi->getIncomingBlock(0), VPBBNew);
+  }
+
+  {
+    // Ensure that we update VPWidenPHIRecipes that are nested inside a
+    // VPRegionBlock.
+    VPlan &Plan = getPlan();
+    VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("VPBB1");
+    VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("VPBB2");
+    VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                              "R1", VPBB2, VPBB2);
+    VPBlockUtils::connectBlocks(VPBB1, R1);
+
+    IntegerType *Int32 = IntegerType::get(C, 32);
+    VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    auto *WidenPhi = new VPWidenPHIRecipe({Val, Val});
+    VPBB2->appendRecipe(WidenPhi);
+
+    VPBasicBlock *VPBBNew = Plan.createVPBasicBlock("VPBBNew");
+    VPBlockUtils::reassociateBlocks(VPBB1, VPBBNew);
+    EXPECT_EQ(R1->getSinglePredecessor(), VPBBNew);
+    EXPECT_EQ(WidenPhi->getIncomingBlock(0), VPBBNew);
+  }
+}
+
+TEST_F(VPBasicBlockTest, splitAtEnd) {
+  VPlan &Plan = getPlan();
+  VPInstruction *VPI = new VPInstruction(VPInstruction::StepVector, {}, {}, {},
+                                         {}, "", IntegerType::get(C, 32));
+  VPBasicBlock *VPBB = Plan.createVPBasicBlock("VPBB1", VPI);
+  VPBlockUtils::connectBlocks(Plan.getEntry(), VPBB);
+  VPBlockUtils::connectBlocks(VPBB, Plan.getScalarHeader());
+  VPBB->splitAt(VPBB->end());
+  EXPECT_EQ(VPBB->size(), 1u);
+  EXPECT_EQ(&VPBB->front(), VPI);
+  auto *Split = cast<VPBasicBlock>(VPBB->getSingleSuccessor());
+  EXPECT_TRUE(Split->empty());
+  EXPECT_EQ(Split->getSingleSuccessor(), Plan.getScalarHeader());
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST_F(VPBasicBlockTest, print) {
-  VPInstruction *TC = new VPInstruction(Instruction::Add, {});
-  VPlan &Plan = getPlan(TC);
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPBasicBlock *VPBB0 = Plan.getEntry();
-  VPBB0->appendRecipe(TC);
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
-  VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1});
-  VPInstruction *I3 = new VPInstruction(Instruction::Br, {I1, I2});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {Val, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *I2 =
+      new VPInstruction(Instruction::Sub, {I1, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Sub));
+  VPInstruction *I3 = new VPInstruction(Instruction::Store, {I1, I2});
 
   VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
   VPBB1->appendRecipe(I1);
@@ -680,8 +849,9 @@ TEST_F(VPBasicBlockTest, print) {
   VPBB1->appendRecipe(I3);
   VPBB1->setName("bb1");
 
-  VPInstruction *I4 = new VPInstruction(Instruction::Mul, {I2, I1});
-  VPInstruction *I5 = new VPInstruction(Instruction::Ret, {I4});
+  VPInstruction *I4 = new VPInstruction(
+      Instruction::Mul, {I2, I1}, VPIRFlags::getDefaultFlags(Instruction::Mul));
+  VPInstruction *I5 = new VPInstruction(Instruction::Freeze, {I4});
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
   VPBB2->appendRecipe(I4);
   VPBB2->appendRecipe(I5);
@@ -694,8 +864,8 @@ TEST_F(VPBasicBlockTest, print) {
     std::string I3Dump;
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker;
-    I3->print(OS, "", SlotTracker);
-    EXPECT_EQ("EMIT br <badref>, <badref>", I3Dump);
+    cast<VPRecipeBase>(I3)->print(OS, "", SlotTracker);
+    EXPECT_EQ("EMIT store <badref>, <badref>", I3Dump);
   }
 
   VPBlockUtils::connectBlocks(VPBB2, Plan.getScalarHeader());
@@ -705,28 +875,27 @@ TEST_F(VPBasicBlockTest, print) {
   Plan.printDOT(OS);
 
   const char *ExpectedStr = R"(digraph VPlan {
-graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\nvp\<%1\> = original trip-count\n"]
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\n"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
     "preheader:\l" +
-    "  EMIT vp\<%1\> = add\l" +
     "Successor(s): bb1\l"
   ]
   N0 -> N1 [ label=""]
   N1 [label =
     "bb1:\l" +
-    "  EMIT vp\<%2\> = add\l" +
-    "  EMIT vp\<%3\> = sub vp\<%2\>\l" +
-    "  EMIT br vp\<%2\>, vp\<%3\>\l" +
+    "  EMIT vp\<%1\> = add ir\<1\>, ir\<1\>\l" +
+    "  EMIT vp\<%2\> = sub vp\<%1\>, ir\<1\>\l" +
+    "  EMIT store vp\<%1\>, vp\<%2\>\l" +
     "Successor(s): bb2\l"
   ]
   N1 -> N2 [ label=""]
   N2 [label =
     "bb2:\l" +
-    "  EMIT vp\<%5\> = mul vp\<%3\>, vp\<%2\>\l" +
-    "  EMIT ret vp\<%5\>\l" +
+    "  EMIT vp\<%4\> = mul vp\<%2\>, vp\<%1\>\l" +
+    "  EMIT vp\<%5\> = freeze vp\<%4\>\l" +
     "Successor(s): ir-bb\<scalar.header\>\l"
   ]
   N2 -> N3 [ label=""]
@@ -739,9 +908,9 @@ compound=true
   EXPECT_EQ(ExpectedStr, FullDump);
 
   const char *ExpectedBlock1Str = R"(bb1:
-  EMIT vp<%2> = add
-  EMIT vp<%3> = sub vp<%2>
-  EMIT br vp<%2>, vp<%3>
+  EMIT vp<%1> = add ir<1>, ir<1>
+  EMIT vp<%2> = sub vp<%1>, ir<1>
+  EMIT store vp<%1>, vp<%2>
 Successor(s): bb2
 )";
   std::string Block1Dump;
@@ -751,8 +920,8 @@ Successor(s): bb2
 
   // Ensure that numbering is good when dumping the second block in isolation.
   const char *ExpectedBlock2Str = R"(bb2:
-  EMIT vp<%5> = mul vp<%3>, vp<%2>
-  EMIT ret vp<%5>
+  EMIT vp<%4> = mul vp<%2>, vp<%1>
+  EMIT vp<%5> = freeze vp<%4>
 Successor(s): ir-bb<scalar.header>
 )";
   std::string Block2Dump;
@@ -764,25 +933,27 @@ Successor(s): ir-bb<scalar.header>
     std::string I3Dump;
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker(&Plan);
-    I3->print(OS, "", SlotTracker);
-    EXPECT_EQ("EMIT br vp<%2>, vp<%3>", I3Dump);
+    cast<VPRecipeBase>(I3)->print(OS, "", SlotTracker);
+    EXPECT_EQ("EMIT store vp<%1>, vp<%2>", I3Dump);
   }
 
   {
     std::string I4Dump;
     raw_string_ostream OS(I4Dump);
     OS << *I4;
-    EXPECT_EQ("EMIT vp<%5> = mul vp<%3>, vp<%2>", I4Dump);
+    EXPECT_EQ("EMIT vp<%4> = mul vp<%2>, vp<%1>", I4Dump);
   }
 }
 
 TEST_F(VPBasicBlockTest, printPlanWithVFsAndUFs) {
-  VPInstruction *TC = new VPInstruction(Instruction::Sub, {});
-  VPlan &Plan = getPlan(TC);
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPBasicBlock *VPBB0 = Plan.getEntry();
-  VPBB0->appendRecipe(TC);
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {Val, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
   VPBB1->appendRecipe(I1);
   VPBB1->setName("bb1");
@@ -798,14 +969,12 @@ TEST_F(VPBasicBlockTest, printPlanWithVFsAndUFs) {
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4},UF>=1' {
-vp<%1> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add
+  EMIT vp<%1> = add ir<1>, ir<1>
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -822,14 +991,12 @@ No successors
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4,vscale x 8},UF>=1' {
-vp<%1> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add
+  EMIT vp<%1> = add ir<1>, ir<1>
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -846,14 +1013,12 @@ No successors
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4,vscale x 8},UF={4}' {
-vp<%1> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add
+  EMIT vp<%1> = add ir<1>, ir<1>
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -863,53 +1028,128 @@ No successors
     EXPECT_EQ(ExpectedStr, FullDump);
   }
 }
+
+TEST_F(VPBasicBlockTest, cloneAndPrint) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB0 = Plan.getEntry();
+
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {Val, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *I2 =
+      new VPInstruction(Instruction::Sub, {I1, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Sub));
+  VPInstruction *I3 = new VPInstruction(Instruction::Store, {I1, I2});
+
+  VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
+  VPBB1->appendRecipe(I1);
+  VPBB1->appendRecipe(I2);
+  VPBB1->appendRecipe(I3);
+  VPBB1->setName("bb1");
+  VPBlockUtils::connectBlocks(VPBB0, VPBB1);
+
+  const char *ExpectedStr = R"(digraph VPlan {
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\n"]
+node [shape=rect, fontname=Courier, fontsize=30]
+edge [fontname=Courier, fontsize=30]
+compound=true
+  N0 [label =
+    "preheader:\l" +
+    "Successor(s): bb1\l"
+  ]
+  N0 -> N1 [ label=""]
+  N1 [label =
+    "bb1:\l" +
+    "  EMIT vp\<%1\> = add ir\<1\>, ir\<1\>\l" +
+    "  EMIT vp\<%2\> = sub vp\<%1\>, ir\<1\>\l" +
+    "  EMIT store vp\<%1\>, vp\<%2\>\l" +
+    "No successors\l"
+  ]
+}
+)";
+  // Check that printing a cloned plan produces the same output.
+  std::string FullDump;
+  raw_string_ostream OS(FullDump);
+  VPlan *Clone = Plan.duplicate();
+  Clone->printDOT(OS);
+  EXPECT_EQ(ExpectedStr, FullDump);
+  delete Clone;
+}
 #endif
 
 using VPRecipeTest = VPlanTestBase;
+
+namespace {
+template <typename RecipeT, typename T, typename... Rest>
+void checkVPRecipeCastImpl(RecipeT *R) {
+  // Direct checks on recipe pointer
+  EXPECT_TRUE(isa<T>(R));
+  EXPECT_EQ(R, dyn_cast<T>(R));
+  (void)cast<T>(R); // Verify cast succeeds (asserts on failure)
+
+  // Check through base pointer
+  VPRecipeBase *BaseR = R;
+  EXPECT_TRUE(isa<T>(BaseR));
+  EXPECT_EQ(R, dyn_cast<T>(BaseR));
+  (void)cast<T>(BaseR);
+
+  // Check through const base pointer
+  const VPRecipeBase *ConstBaseR = R;
+  EXPECT_TRUE(isa<T>(ConstBaseR));
+  EXPECT_EQ(R, dyn_cast<T>(ConstBaseR));
+  (void)cast<T>(ConstBaseR);
+
+  if constexpr (sizeof...(Rest) > 0)
+    checkVPRecipeCastImpl<RecipeT, Rest...>(R);
+}
+} // namespace
+
 TEST_F(VPRecipeTest, CastVPInstructionToVPUser) {
-  VPValue Op1;
-  VPValue Op2;
-  VPInstruction Recipe(Instruction::Add, {&Op1, &Op2});
-  EXPECT_TRUE(isa<VPUser>(&Recipe));
-  VPRecipeBase *BaseR = &Recipe;
-  EXPECT_TRUE(isa<VPUser>(BaseR));
-  EXPECT_EQ(&Recipe, BaseR);
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPlan &Plan = getPlan();
+  VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPInstruction Recipe(Instruction::Add, {Op1, Op2},
+                       VPIRFlags::getDefaultFlags(Instruction::Add));
+
+  checkVPRecipeCastImpl<VPInstruction, VPUser, VPIRMetadata>(&Recipe);
 }
 
 TEST_F(VPRecipeTest, CastVPWidenRecipeToVPUser) {
+  VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
   auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
                                        PoisonValue::get(Int32));
-  VPValue Op1;
-  VPValue Op2;
+  VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   SmallVector<VPValue *, 2> Args;
-  Args.push_back(&Op1);
-  Args.push_back(&Op1);
-  VPWidenRecipe WidenR(*AI, make_range(Args.begin(), Args.end()));
-  EXPECT_TRUE(isa<VPUser>(&WidenR));
-  VPRecipeBase *WidenRBase = &WidenR;
-  EXPECT_TRUE(isa<VPUser>(WidenRBase));
-  EXPECT_EQ(&WidenR, WidenRBase);
+  Args.push_back(Op1);
+  Args.push_back(Op2);
+  VPWidenRecipe WidenR(*AI, Args, VPIRFlags::getDefaultFlags(AI->getOpcode()));
+
+  checkVPRecipeCastImpl<VPWidenRecipe, VPUser, VPIRMetadata>(&WidenR);
   delete AI;
 }
 
-TEST_F(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
+TEST_F(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPRecipeBase) {
+  VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
   FunctionType *FTy = FunctionType::get(Int32, false);
   Function *Fn = Function::Create(FTy, GlobalValue::ExternalLinkage, 0);
   auto *Call = CallInst::Create(FTy, Fn);
-  VPValue Op1;
-  VPValue Op2;
-  VPValue CalledFn(Call->getCalledFunction());
+  VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPValue *CalledFn = Plan.getOrAddLiveIn(Call->getCalledFunction());
   SmallVector<VPValue *, 2> Args;
-  Args.push_back(&Op1);
-  Args.push_back(&Op2);
-  Args.push_back(&CalledFn);
+  Args.push_back(Op1);
+  Args.push_back(Op2);
+  Args.push_back(CalledFn);
   VPWidenCallRecipe Recipe(Call, Fn, Args);
-  EXPECT_TRUE(isa<VPUser>(&Recipe));
-  VPRecipeBase *BaseR = &Recipe;
-  EXPECT_TRUE(isa<VPUser>(BaseR));
-  EXPECT_EQ(&Recipe, BaseR);
+
+  checkVPRecipeCastImpl<VPWidenCallRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   VPValue *VPV = &Recipe;
   EXPECT_TRUE(VPV->getDefiningRecipe());
@@ -919,143 +1159,207 @@ TEST_F(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
   delete Fn;
 }
 
-TEST_F(VPRecipeTest, CastVPWidenSelectRecipeToVPUserAndVPDef) {
-  IntegerType *Int1 = IntegerType::get(C, 1);
-  IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *SelectI = SelectInst::Create(
-      PoisonValue::get(Int1), PoisonValue::get(Int32), PoisonValue::get(Int32));
-  VPValue Op1;
-  VPValue Op2;
-  VPValue Op3;
-  SmallVector<VPValue *, 4> Args;
-  Args.push_back(&Op1);
-  Args.push_back(&Op2);
-  Args.push_back(&Op3);
-  VPWidenSelectRecipe WidenSelectR(*SelectI,
-                                   make_range(Args.begin(), Args.end()));
-  EXPECT_TRUE(isa<VPUser>(&WidenSelectR));
-  VPRecipeBase *BaseR = &WidenSelectR;
-  EXPECT_TRUE(isa<VPUser>(BaseR));
-  EXPECT_EQ(&WidenSelectR, BaseR);
-
-  VPValue *VPV = &WidenSelectR;
-  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
-  EXPECT_EQ(&WidenSelectR, VPV->getDefiningRecipe());
-
-  delete SelectI;
-}
-
 TEST_F(VPRecipeTest, CastVPWidenGEPRecipeToVPUserAndVPDef) {
+  VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
-  PointerType *Int32Ptr = PointerType::get(Int32, 0);
+  PointerType *Int32Ptr = PointerType::get(C, 0);
   auto *GEP = GetElementPtrInst::Create(Int32, PoisonValue::get(Int32Ptr),
                                         PoisonValue::get(Int32));
-  VPValue Op1;
-  VPValue Op2;
+  VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   SmallVector<VPValue *, 4> Args;
-  Args.push_back(&Op1);
-  Args.push_back(&Op2);
-  VPWidenGEPRecipe Recipe(GEP, make_range(Args.begin(), Args.end()));
-  EXPECT_TRUE(isa<VPUser>(&Recipe));
-  VPRecipeBase *BaseR = &Recipe;
-  EXPECT_TRUE(isa<VPUser>(BaseR));
-  EXPECT_EQ(&Recipe, BaseR);
+  Args.push_back(Op1);
+  Args.push_back(Op2);
+  VPWidenGEPRecipe Recipe(GEP->getSourceElementType(), Args, {}, {}, GEP);
+
+  checkVPRecipeCastImpl<VPWidenGEPRecipe, VPUser>(&Recipe);
 
   VPValue *VPV = &Recipe;
-  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
   EXPECT_EQ(&Recipe, VPV->getDefiningRecipe());
 
   delete GEP;
 }
 
+TEST_F(VPRecipeTest, CastVPWidenCastRecipeToVPUser) {
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  IntegerType *Int64 = IntegerType::get(C, 64);
+  auto *Cast = CastInst::CreateZExtOrBitCast(PoisonValue::get(Int32), Int64);
+  VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, Cast,
+                           VPIRFlags::getDefaultFlags(Instruction::ZExt));
+
+  checkVPRecipeCastImpl<VPWidenCastRecipe, VPUser, VPIRMetadata>(&Recipe);
+  delete Cast;
+}
+
+TEST_F(VPRecipeTest, CastVPWidenIntrinsicRecipeToVPUser) {
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPWidenIntrinsicRecipe Recipe(Intrinsic::smax, {Op1, Op2}, Int32);
+
+  checkVPRecipeCastImpl<VPWidenIntrinsicRecipe, VPUser, VPIRMetadata>(&Recipe);
+}
+
 TEST_F(VPRecipeTest, CastVPBlendRecipeToVPUser) {
+  VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
   auto *Phi = PHINode::Create(Int32, 1);
-  VPValue I1;
-  VPValue I2;
-  VPValue M2;
+
+  VPValue *I1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *I2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPValue *M2 = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
   SmallVector<VPValue *, 4> Args;
-  Args.push_back(&I1);
-  Args.push_back(&I2);
-  Args.push_back(&M2);
-  VPBlendRecipe Recipe(Phi, Args);
-  EXPECT_TRUE(isa<VPUser>(&Recipe));
-  VPRecipeBase *BaseR = &Recipe;
-  EXPECT_TRUE(isa<VPUser>(BaseR));
+  Args.push_back(I1);
+  Args.push_back(I2);
+  Args.push_back(M2);
+  VPBlendRecipe Recipe(Phi, Args, {}, {});
+
+  checkVPRecipeCastImpl<VPBlendRecipe, VPUser>(&Recipe);
+
   delete Phi;
 }
 
 TEST_F(VPRecipeTest, CastVPInterleaveRecipeToVPUser) {
-  VPValue Addr;
-  VPValue Mask;
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   InterleaveGroup<Instruction> IG(4, false, Align(4));
-  VPInterleaveRecipe Recipe(&IG, &Addr, {}, &Mask, false);
-  EXPECT_TRUE(isa<VPUser>(&Recipe));
-  VPRecipeBase *BaseR = &Recipe;
-  EXPECT_TRUE(isa<VPUser>(BaseR));
-  EXPECT_EQ(&Recipe, BaseR);
+  VPInterleaveRecipe Recipe(&IG, Addr, {}, Mask, false, {}, DebugLoc());
+
+  checkVPRecipeCastImpl<VPInterleaveRecipe, VPUser, VPIRMetadata>(&Recipe);
 }
 
 TEST_F(VPRecipeTest, CastVPReplicateRecipeToVPUser) {
-  VPValue Op1;
-  VPValue Op2;
-  SmallVector<VPValue *, 4> Args;
-  Args.push_back(&Op1);
-  Args.push_back(&Op2);
-
+  VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
   FunctionType *FTy = FunctionType::get(Int32, false);
-  auto *Call = CallInst::Create(FTy, PoisonValue::get(FTy));
+  Function *Fn = Function::Create(FTy, GlobalValue::ExternalLinkage, 0);
+  auto *Call = CallInst::Create(FTy, Fn);
+  VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPValue *CalledFn = Plan.getOrAddLiveIn(Call->getCalledFunction());
+  SmallVector<VPValue *, 4> Args;
+  Args.push_back(Op1);
+  Args.push_back(Op2);
+  Args.push_back(CalledFn);
   VPReplicateRecipe Recipe(Call, make_range(Args.begin(), Args.end()), true);
-  EXPECT_TRUE(isa<VPUser>(&Recipe));
-  VPRecipeBase *BaseR = &Recipe;
-  EXPECT_TRUE(isa<VPUser>(BaseR));
+
+  checkVPRecipeCastImpl<VPReplicateRecipe, VPUser, VPIRMetadata>(&Recipe);
+
   delete Call;
+  delete Fn;
 }
 
 TEST_F(VPRecipeTest, CastVPBranchOnMaskRecipeToVPUser) {
-  VPValue Mask;
-  VPBranchOnMaskRecipe Recipe(&Mask);
-  EXPECT_TRUE(isa<VPUser>(&Recipe));
-  VPRecipeBase *BaseR = &Recipe;
-  EXPECT_TRUE(isa<VPUser>(BaseR));
-  EXPECT_EQ(&Recipe, BaseR);
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPBranchOnMaskRecipe Recipe(Mask, {});
+
+  checkVPRecipeCastImpl<VPBranchOnMaskRecipe, VPUser>(&Recipe);
 }
 
-TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPDef) {
+TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPRecipeBase) {
+  VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
-  PointerType *Int32Ptr = PointerType::get(Int32, 0);
+  PointerType *Int32Ptr = PointerType::get(C, 0);
   auto *Load =
       new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
-  VPValue Addr;
-  VPValue Mask;
-  VPWidenLoadRecipe Recipe(*Load, &Addr, &Mask, true, false, {});
-  EXPECT_TRUE(isa<VPUser>(&Recipe));
-  VPRecipeBase *BaseR = &Recipe;
-  EXPECT_TRUE(isa<VPUser>(BaseR));
-  EXPECT_EQ(&Recipe, BaseR);
+  VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
+  VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, {}, {});
+
+  checkVPRecipeCastImpl<VPWidenLoadRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   VPValue *VPV = Recipe.getVPSingleValue();
-  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
   EXPECT_EQ(&Recipe, VPV->getDefiningRecipe());
 
   delete Load;
 }
 
-TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
-  IntegerType *Int1 = IntegerType::get(C, 1);
+TEST_F(VPRecipeTest, CastVPInterleaveEVLRecipeToVPUser) {
+  VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
-  PointerType *Int32Ptr = PointerType::get(Int32, 0);
+  VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 8));
+  InterleaveGroup<Instruction> IG(4, false, Align(4));
+  VPInterleaveRecipe BaseRecipe(&IG, Addr, {}, Mask, false, {}, DebugLoc());
+  VPInterleaveEVLRecipe Recipe(BaseRecipe, *EVL, Mask);
+
+  checkVPRecipeCastImpl<VPInterleaveEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
+}
+
+TEST_F(VPRecipeTest, CastVPWidenLoadEVLRecipeToVPUser) {
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  PointerType *Int32Ptr = PointerType::get(C, 0);
+  auto *Load =
+      new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
+  VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
+  VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 8));
+  VPWidenLoadRecipe BaseLoad(*Load, Addr, Mask, true, {}, {});
+  VPWidenLoadEVLRecipe Recipe(BaseLoad, Addr, *EVL, Mask);
+
+  checkVPRecipeCastImpl<VPWidenLoadEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
+
+  delete Load;
+}
+
+TEST_F(VPRecipeTest, CastVPWidenStoreRecipeToVPUser) {
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  PointerType *Int32Ptr = PointerType::get(C, 0);
+  auto *Store = new StoreInst(PoisonValue::get(Int32),
+                              PoisonValue::get(Int32Ptr), false, Align(1));
+  VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *StoredVal = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 42));
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
+  VPWidenStoreRecipe Recipe(*Store, Addr, StoredVal, Mask, true, {}, {});
+
+  checkVPRecipeCastImpl<VPWidenStoreRecipe, VPUser, VPIRMetadata>(&Recipe);
+
+  delete Store;
+}
+
+TEST_F(VPRecipeTest, CastVPWidenStoreEVLRecipeToVPUser) {
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  PointerType *Int32Ptr = PointerType::get(C, 0);
+  auto *Store = new StoreInst(PoisonValue::get(Int32),
+                              PoisonValue::get(Int32Ptr), false, Align(1));
+  VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *StoredVal = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 42));
+  VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 8));
+  VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
+  VPWidenStoreRecipe BaseStore(*Store, Addr, StoredVal, Mask, true, {}, {});
+  VPWidenStoreEVLRecipe Recipe(BaseStore, Addr, StoredVal, *EVL, Mask);
+
+  checkVPRecipeCastImpl<VPWidenStoreEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
+
+  delete Store;
+}
+
+TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  PointerType *Int32Ptr = PointerType::get(C, 0);
+  VPlan &Plan = getPlan();
 
   {
     auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
                                          PoisonValue::get(Int32));
-    VPValue Op1;
-    VPValue Op2;
+    VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     SmallVector<VPValue *, 2> Args;
-    Args.push_back(&Op1);
-    Args.push_back(&Op1);
-    VPWidenRecipe Recipe(*AI, make_range(Args.begin(), Args.end()));
+    Args.push_back(Op1);
+    Args.push_back(Op2);
+    VPWidenRecipe Recipe(*AI, Args,
+                         VPIRFlags::getDefaultFlags(AI->getOpcode()));
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1064,33 +1368,14 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
-    auto *SelectI =
-        SelectInst::Create(PoisonValue::get(Int1), PoisonValue::get(Int32),
-                           PoisonValue::get(Int32));
-    VPValue Op1;
-    VPValue Op2;
-    VPValue Op3;
-    SmallVector<VPValue *, 4> Args;
-    Args.push_back(&Op1);
-    Args.push_back(&Op2);
-    Args.push_back(&Op3);
-    VPWidenSelectRecipe Recipe(*SelectI, make_range(Args.begin(), Args.end()));
-    EXPECT_FALSE(Recipe.mayHaveSideEffects());
-    EXPECT_FALSE(Recipe.mayReadFromMemory());
-    EXPECT_FALSE(Recipe.mayWriteToMemory());
-    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
-    delete SelectI;
-  }
-
-  {
     auto *GEP = GetElementPtrInst::Create(Int32, PoisonValue::get(Int32Ptr),
                                           PoisonValue::get(Int32));
-    VPValue Op1;
-    VPValue Op2;
+    VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     SmallVector<VPValue *, 4> Args;
-    Args.push_back(&Op1);
-    Args.push_back(&Op2);
-    VPWidenGEPRecipe Recipe(GEP, make_range(Args.begin(), Args.end()));
+    Args.push_back(Op1);
+    Args.push_back(Op2);
+    VPWidenGEPRecipe Recipe(GEP->getSourceElementType(), Args, {}, {}, GEP);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1099,8 +1384,9 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
-    VPValue Mask;
-    VPBranchOnMaskRecipe Recipe(&Mask);
+    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+
+    VPBranchOnMaskRecipe Recipe(Mask, {});
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1108,11 +1394,11 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
-    VPValue ChainOp;
-    VPValue VecOp;
-    VPValue CondOp;
-    VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
-                             &VecOp, false);
+    VPValue *ChainOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+    VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
+    VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
+                             CondOp, RdxUnordered{});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1120,13 +1406,13 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
-    VPValue ChainOp;
-    VPValue VecOp;
-    VPValue CondOp;
-    VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
-                             &VecOp, false);
-    VPValue EVL;
-    VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
+    VPValue *ChainOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+    VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
+    VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
+                             CondOp, RdxUnordered{});
+    VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 4));
+    VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
     EXPECT_FALSE(EVLRecipe.mayHaveSideEffects());
     EXPECT_FALSE(EVLRecipe.mayReadFromMemory());
     EXPECT_FALSE(EVLRecipe.mayWriteToMemory());
@@ -1136,9 +1422,9 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     auto *Load =
         new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
-    VPValue Addr;
-    VPValue Mask;
-    VPWidenLoadRecipe Recipe(*Load, &Addr, &Mask, true, false, {});
+    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
+    VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+    VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, {}, {});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1149,10 +1435,10 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     auto *Store = new StoreInst(PoisonValue::get(Int32),
                                 PoisonValue::get(Int32Ptr), false, Align(1));
-    VPValue Addr;
-    VPValue Mask;
-    VPValue StoredV;
-    VPWidenStoreRecipe Recipe(*Store, &Addr, &StoredV, &Mask, false, false, {});
+    VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
+    VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+    VPValue *StoredV = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
+    VPWidenStoreRecipe Recipe(*Store, Addr, StoredV, Mask, false, {}, {});
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_TRUE(Recipe.mayWriteToMemory());
@@ -1164,13 +1450,13 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     FunctionType *FTy = FunctionType::get(Int32, false);
     Function *Fn = Function::Create(FTy, GlobalValue::ExternalLinkage, 0);
     auto *Call = CallInst::Create(FTy, Fn);
-    VPValue Op1;
-    VPValue Op2;
-    VPValue CalledFn(Call->getCalledFunction());
+    VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+    VPValue *CalledFn = Plan.getOrAddLiveIn(Call->getCalledFunction());
     SmallVector<VPValue *, 3> Args;
-    Args.push_back(&Op1);
-    Args.push_back(&Op2);
-    Args.push_back(&CalledFn);
+    Args.push_back(Op1);
+    Args.push_back(Op2);
+    Args.push_back(CalledFn);
     VPWidenCallRecipe Recipe(Call, Fn, Args);
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
@@ -1183,18 +1469,19 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     // Test for a call to a function without side-effects.
     Module M("", C);
+    PointerType *PtrTy = PointerType::get(C, 0);
     Function *TheFn =
-        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::thread_pointer);
+        Intrinsic::getOrInsertDeclaration(&M, Intrinsic::thread_pointer, PtrTy);
 
     auto *Call = CallInst::Create(TheFn->getFunctionType(), TheFn);
-    VPValue Op1;
-    VPValue Op2;
-    VPValue CalledFn(TheFn);
+    VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+    VPValue *CalledFn = Plan.getOrAddLiveIn(Call->getCalledFunction());
     SmallVector<VPValue *, 3> Args;
-    Args.push_back(&Op1);
-    Args.push_back(&Op2);
-    Args.push_back(&CalledFn);
-    VPWidenCallRecipe Recipe(Call, TheFn, Args);
+    Args.push_back(Op1);
+    Args.push_back(Op2);
+    Args.push_back(CalledFn);
+    VPWidenCallRecipe Recipe(Call, TheFn, Args, VPIRFlags(), VPIRMetadata());
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1203,21 +1490,20 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
-    VPValue Op1;
-    VPValue Op2;
-    InductionDescriptor IndDesc;
-    VPScalarIVStepsRecipe Recipe(IndDesc, &Op1, &Op2);
+    VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+    VPScalarIVStepsRecipe Recipe(Op1, Op2, Op2, Instruction::BinaryOpsEnd);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
   }
 
-  // The initial implementation is conservative with respect to VPInstructions.
   {
-    VPValue Op1;
-    VPValue Op2;
-    VPInstruction VPInst(Instruction::Add, {&Op1, &Op2});
+    VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
+    VPInstruction VPInst(Instruction::Add, {Op1, Op2},
+                         VPIRFlags::getDefaultFlags(Instruction::Add));
     VPRecipeBase &Recipe = VPInst;
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
@@ -1225,8 +1511,18 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
   }
   {
-    VPValue Op1;
-    VPPredInstPHIRecipe Recipe(&Op1, {});
+    VPValue *Op1 = Plan.getConstantInt(Int32, 1);
+    VPInstruction VPInst(Instruction::FNeg, {Op1},
+                         VPIRFlags::getDefaultFlags(Instruction::FNeg));
+    VPRecipeBase &Recipe = VPInst;
+    EXPECT_FALSE(Recipe.mayHaveSideEffects());
+    EXPECT_FALSE(Recipe.mayReadFromMemory());
+    EXPECT_FALSE(Recipe.mayWriteToMemory());
+    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
+  }
+  {
+    VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+    VPPredInstPHIRecipe Recipe(Op1, {});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1252,7 +1548,7 @@ TEST_F(VPRecipeTest, dumpRecipeInPlan) {
   Args.push_back(ExtVPV1);
   Args.push_back(ExtVPV2);
   VPWidenRecipe *WidenR =
-      new VPWidenRecipe(*AI, make_range(Args.begin(), Args.end()));
+      new VPWidenRecipe(*AI, Args, VPIRFlags::getDefaultFlags(AI->getOpcode()));
   VPBB1->appendRecipe(WidenR);
 
   {
@@ -1267,7 +1563,7 @@ TEST_F(VPRecipeTest, dumpRecipeInPlan) {
         },
         testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
 
-    VPDef *Def = WidenR;
+    VPRecipeBase *Def = WidenR;
     EXPECT_EXIT(
         {
           Def->dump();
@@ -1290,16 +1586,10 @@ TEST_F(VPRecipeTest, dumpRecipeInPlan) {
           exit(0);
         },
         testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
-
-    // Test VPDef::dump().
-    VPDef *D = WidenR;
-    EXPECT_EXIT(
-        {
-          D->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
   }
+
+  // Avoid use-after-free of AI when the VPlan destructor is called.
+  WidenR->eraseFromParent();
 
   delete AI;
 }
@@ -1320,8 +1610,11 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
   VPValue *ExtVPV2 = Plan.getOrAddLiveIn(AI);
   Args.push_back(ExtVPV1);
   Args.push_back(ExtVPV2);
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2});
-  VPInstruction *I2 = new VPInstruction(Instruction::Mul, {I1, I1});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *I2 = new VPInstruction(
+      Instruction::Mul, {I1, I1}, VPIRFlags::getDefaultFlags(Instruction::Mul));
   VPBB1->appendRecipe(I1);
   VPBB1->appendRecipe(I2);
 
@@ -1346,15 +1639,6 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
           exit(0);
         },
         testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
-
-    // Test VPDef::dump().
-    VPDef *D = I1;
-    EXPECT_EXIT(
-        {
-          D->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
   }
   // Check printing I2.
   {
@@ -1377,16 +1661,12 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
           exit(0);
         },
         testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
-
-    // Test VPDef::dump().
-    VPDef *D = I2;
-    EXPECT_EXIT(
-        {
-          D->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
   }
+
+  // Avoid use-after-free of AI when the VPlan destructor is called.
+  I2->eraseFromParent();
+  I1->eraseFromParent();
+
   delete AI;
 }
 
@@ -1395,11 +1675,14 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
   auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
                                        PoisonValue::get(Int32));
   AI->setName("a");
-  VPValue *ExtVPV1 = new VPValue(ConstantInt::get(Int32, 1));
-  VPValue *ExtVPV2 = new VPValue(AI);
+  VPValue *ExtVPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *ExtVPV2 = getPlan().getOrAddLiveIn(AI);
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2});
-  VPInstruction *I2 = new VPInstruction(Instruction::Mul, {I1, I1});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *I2 = new VPInstruction(
+      Instruction::Mul, {I1, I1}, VPIRFlags::getDefaultFlags(Instruction::Mul));
 
   // Check printing I1.
   {
@@ -1422,15 +1705,6 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
           exit(0);
         },
         testing::ExitedWithCode(0), "EMIT <badref> = add ir<1>, ir<%a>");
-
-    // Test VPDef::dump().
-    VPDef *D = I1;
-    EXPECT_EXIT(
-        {
-          D->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "EMIT <badref> = add ir<1>, ir<%a>");
   }
   // Check printing I2.
   {
@@ -1453,81 +1727,78 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
           exit(0);
         },
         testing::ExitedWithCode(0), "EMIT <badref> = mul <badref>, <badref>");
-
-    // Test VPDef::dump().
-    VPDef *D = I2;
-    EXPECT_EXIT(
-        {
-          D->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "EMIT <badref> = mul <badref>, <badref>");
   }
 
   delete I2;
   delete I1;
-  delete ExtVPV2;
-  delete ExtVPV1;
   delete AI;
 }
 
 #endif
 
 TEST_F(VPRecipeTest, CastVPReductionRecipeToVPUser) {
-  VPValue ChainOp;
-  VPValue VecOp;
-  VPValue CondOp;
-  VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
-                           &VecOp, false);
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::getTrue(C));
+  VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
+                           CondOp, RdxUnordered{});
+  checkVPRecipeCastImpl<VPReductionRecipe, VPUser>(&Recipe);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
 }
 
 TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
-  VPValue ChainOp;
-  VPValue VecOp;
-  VPValue CondOp;
-  VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
-                           &VecOp, false);
-  VPValue EVL;
-  VPReductionEVLRecipe EVLRecipe(Recipe, EVL, &CondOp);
-  EXPECT_TRUE(isa<VPUser>(&EVLRecipe));
-  VPRecipeBase *BaseR = &EVLRecipe;
-  EXPECT_TRUE(isa<VPUser>(BaseR));
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::getTrue(C));
+  VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
+                           CondOp, RdxUnordered{});
+  VPValue *EVL = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 0));
+  VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
+  checkVPRecipeCastImpl<VPReductionEVLRecipe, VPUser>(&EVLRecipe);
 }
+} // namespace
 
 struct VPDoubleValueDef : public VPRecipeBase {
-  VPDoubleValueDef(ArrayRef<VPValue *> Operands) : VPRecipeBase(99, Operands) {
-    new VPValue(nullptr, this);
-    new VPValue(nullptr, this);
+  VPDoubleValueDef(ArrayRef<VPValue *> Operands, Type *Ty)
+      : VPRecipeBase(VPRecipeBase::VPInterleaveSC, Operands) {
+    new VPMultiDefValue(this, /*UV=*/nullptr, Ty);
+    new VPMultiDefValue(this, /*UV=*/nullptr, Ty);
   }
 
   VPRecipeBase *clone() override { return nullptr; }
 
   void execute(struct VPTransformState &State) override {}
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override {}
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override {}
 #endif
 };
+
+namespace {
 
 TEST(VPDoubleValueDefTest, traverseUseLists) {
   // Check that the def-use chains of a multi-def can be traversed in both
   // directions.
 
-  // Create a new VPDef which defines 2 values and has 2 operands.
-  VPInstruction Op0(20, {});
-  VPInstruction Op1(30, {});
-  VPDoubleValueDef DoubleValueDef({&Op0, &Op1});
+  // Create a new VPRecipeBase which defines 2 values and has 2 operands.
+  LLVMContext C;
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPInstruction Op0(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPInstruction Op1(VPInstruction::StepVector, {}, {}, {}, {}, "", Int32);
+  VPDoubleValueDef DoubleValueDef({&Op0, &Op1}, IntegerType::get(C, 32));
 
   // Create a new users of the defined values.
-  VPInstruction I1(
-      1, {DoubleValueDef.getVPValue(0), DoubleValueDef.getVPValue(1)});
-  VPInstruction I2(2, {DoubleValueDef.getVPValue(0)});
-  VPInstruction I3(3, {DoubleValueDef.getVPValue(1)});
+  VPInstruction I1(Instruction::Add,
+                   {DoubleValueDef.getVPValue(0), DoubleValueDef.getVPValue(1)},
+                   VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction I2(Instruction::Freeze, {DoubleValueDef.getVPValue(0)});
+  VPInstruction I3(Instruction::Freeze, {DoubleValueDef.getVPValue(1)});
 
-  // Check operands of the VPDef (traversing upwards).
+  // Check operands of the VPRecipeBase (traversing upwards).
   SmallVector<VPValue *, 4> DoubleOperands(DoubleValueDef.op_begin(),
                                            DoubleValueDef.op_end());
   EXPECT_EQ(2u, DoubleOperands.size());
@@ -1549,7 +1820,7 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   EXPECT_EQ(&I1, DoubleValueDefV1Users[0]);
   EXPECT_EQ(&I3, DoubleValueDefV1Users[1]);
 
-  // Now check that we can get the right VPDef for each defined value.
+  // Now check that we can get the right VPRecipeBase for each defined value.
   EXPECT_EQ(&DoubleValueDef, I1.getOperand(0)->getDefiningRecipe());
   EXPECT_EQ(&DoubleValueDef, I1.getOperand(1)->getDefiningRecipe());
   EXPECT_EQ(&DoubleValueDef, I2.getOperand(0)->getDefiningRecipe());
@@ -1557,12 +1828,469 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
 }
 
 TEST_F(VPRecipeTest, CastToVPSingleDefRecipe) {
-  VPValue Start;
-  VPEVLBasedIVPHIRecipe R(&Start, {});
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  VPValue *Start = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 0));
+  VPCurrentIterationPHIRecipe R(Start, {});
   VPRecipeBase *B = &R;
   EXPECT_TRUE(isa<VPSingleDefRecipe>(B));
   // TODO: check other VPSingleDefRecipes.
 }
+
+TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
+  VPlan &Plan = getPlan();
+
+  // Initially, VF is not materialized.
+  EXPECT_FALSE(Plan.getVF().isMaterialized());
+
+  // Create a recipe that uses VF.
+  VPValue *VF = &Plan.getVF();
+  VPInstruction *I =
+      new VPInstruction(VPInstruction::ExplicitVectorLength, {VF});
+  VPBasicBlock &VPBB = *Plan.createVPBasicBlock("");
+  VPBB.appendRecipe(I);
+
+  // Replace VF with a constant.
+  VF->replaceAllUsesWith(Plan.getConstantInt(64, 1));
+
+  // Now VF should be materialized.
+  EXPECT_TRUE(Plan.getVF().isMaterialized());
+}
+
+using VPUtilsTest = VPlanTestBase;
+
+TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
+  VPlan &Plan = getPlan();
+  IntegerType *Int32 = IntegerType::get(C, 32);
+
+  // Recipes in the entry/preheader are treated as uniform if their operands
+  // are; use a separate block connected to the entry so the opcode-based
+  // uniformity checks are exercised.
+  VPBasicBlock *Body = Plan.createVPBasicBlock("body");
+  VPBlockUtils::connectBlocks(Plan.getEntry(), Body);
+  VPBuilder Builder(Body);
+
+  // isSingleScalar opcode without operands.
+  VPInstruction *VScale = Builder.createVScale(Int32);
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale));
+
+  // isSingleScalar opcode with a uniform operand.
+  VPInstruction *EVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength,
+                                            {&Plan.getVF()});
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(EVL));
+
+  // isVectorToScalar opcode with a uniform operand.
+  VPInstruction *FirstActiveLane = Builder.createNaryOp(
+      VPInstruction::FirstActiveLane, {&Plan.getVF()}, Int32);
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(FirstActiveLane));
+
+  // StepVector produces a distinct value per lane and is non-uniform; use it
+  // as the non-single-scalar operand in the negative cases below.
+  VPInstruction *StepVector =
+      Builder.createNaryOp(VPInstruction::StepVector, {}, Int32);
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(StepVector));
+
+  // isSingleScalar opcode with a non-single-scalar operand.
+  VPInstruction *EVLNonUniform =
+      Builder.createNaryOp(VPInstruction::ExplicitVectorLength, {StepVector});
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(EVLNonUniform));
+
+  // isVectorToScalar opcode with a non-single-scalar operand.
+  VPInstruction *FirstActiveLaneNonUniform =
+      Builder.createNaryOp(VPInstruction::FirstActiveLane, {StepVector}, Int32);
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(FirstActiveLaneNonUniform));
+}
+
+static VPValue *reconstructSSA(VPBasicBlock *VPBB,
+                               DenseMap<VPBasicBlock *, VPValue *> &&Defs) {
+  return vputils::reconstructSSA(VPBB, Defs);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSA) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //     /   \
+  // VPBB2  VPBB3
+  //    \    /
+  //    VPBB4
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+  auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB2->appendRecipe(Def2);
+
+  auto *Res =
+      cast<VPPhi>(reconstructSSA(VPBB4, {{VPBB1, Def1}, {VPBB2, Def2}}));
+  EXPECT_EQ(Res->getIncomingValueForBlock(VPBB2), Def2);
+  EXPECT_EQ(Res->getIncomingValueForBlock(VPBB3), Def1);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSAPoisonExample) {
+  // Test that the resulting phi isn't affected by the parent block of any
+  // definition. The resulting value in VPBB4 should be Def1 on any path that
+  // goes through VPPB2, and poison otherwise.
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //     /   \
+  // VPBB2  VPBB3
+  //    \    /
+  //    VPBB4
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPValue *Poison = Plan.getPoison(C->getScalarType());
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+
+  auto *Res =
+      cast<VPPhi>(reconstructSSA(VPBB4, {{VPBB1, Poison}, {VPBB2, Def1}}));
+  EXPECT_EQ(Res->getIncomingValueForBlock(VPBB2), Def1);
+  EXPECT_EQ(Res->getIncomingValueForBlock(VPBB3), Poison);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSAMultiplePhis) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB5 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB6 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //     /   \
+  // VPBB2  VPBB3
+  //    \    / \
+  //    VPBB4  VPBB5
+  //        \  /
+  //       VPBB6
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB5);
+  VPBlockUtils::connectBlocks(VPBB4, VPBB6);
+  VPBlockUtils::connectBlocks(VPBB5, VPBB6);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB2->appendRecipe(Def2);
+  auto *Def3 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB3->appendRecipe(Def3);
+
+  auto *Phi6 =
+      cast<VPPhi>(reconstructSSA(VPBB6, {{VPBB2, Def2}, {VPBB3, Def3}}));
+  EXPECT_EQ(Phi6->getIncomingValueForBlock(VPBB5), Def3);
+  EXPECT_TRUE(isa<VPPhi>(Phi6->getIncomingValueForBlock(VPBB4)));
+
+  auto *Phi4 = cast<VPPhi>(Phi6->getIncomingValueForBlock(VPBB4));
+  EXPECT_EQ(Phi4->getIncomingValueForBlock(VPBB2), Def2);
+  EXPECT_EQ(Phi4->getIncomingValueForBlock(VPBB3), Def3);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSAFold) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //     /   \
+  // VPBB2  VPBB3
+  //    \    /
+  //    VPBB4
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def);
+
+  // Check that phis with all equal incoming values are folded away.
+  EXPECT_EQ(reconstructSSA(VPBB4, {{VPBB2, Def}, {VPBB3, Def}}), Def);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSACycle) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //       |
+  //     VPBB2
+  //     / | ^
+  // VPBB3 | |
+  //    \  | /
+  //    VPBB4
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB4, VPBB2);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+  auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB3->appendRecipe(Def2);
+
+  auto *Phi1 =
+      cast<VPPhi>(reconstructSSA(VPBB4, {{VPBB1, Def1}, {VPBB3, Def2}}));
+  EXPECT_EQ(Phi1->getIncomingValueForBlock(VPBB3), Def2);
+  EXPECT_TRUE(isa<VPPhi>(Phi1->getIncomingValueForBlock(VPBB2)));
+
+  auto *Phi2 = cast<VPPhi>(Phi1->getIncomingValueForBlock(VPBB2));
+  EXPECT_EQ(Phi2->getIncomingValueForBlock(VPBB4), Phi1);
+  EXPECT_EQ(Phi2->getIncomingValueForBlock(VPBB1), Def1);
+}
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+TEST_F(VPUtilsTest, ReconstructSSAUnreachableCycle) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+
+  //     VPBB1     VPBB2 <-+
+  //                 |     |
+  //                 +-----+
+  VPBlockUtils::connectBlocks(VPBB2, VPBB2);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+
+  EXPECT_DEATH(reconstructSSA(VPBB2, {{VPBB1, Def1}}),
+               "VPBB isn't reachable from entry");
+}
+
+TEST_F(VPUtilsTest, ReconstructSSAUnreachableCyclePredecessor) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+
+  //     VPBB1     VPBB2 <-+
+  //          \   /  |     |
+  //           \ /   +-----+
+  //          VPBB3
+  VPBlockUtils::connectBlocks(VPBB2, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+
+  EXPECT_DEATH(reconstructSSA(VPBB3, {{VPBB1, Def1}}),
+               "VPBB isn't reachable from entry");
+}
+#endif
+
+TEST_F(VPUtilsTest, ReconstructSSADuplicatePredecessor) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //     / \  \
+  //     | |  VPBB2
+  //     \ /  /
+  //      VPBB3
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+  auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB2->appendRecipe(Def2);
+
+  auto *Phi =
+      cast<VPPhi>(reconstructSSA(VPBB3, {{VPBB1, Def1}, {VPBB2, Def2}}));
+  EXPECT_EQ(Phi->getIncomingValue(0), Def1);
+  EXPECT_EQ(Phi->getIncomingValue(1), Def1);
+  EXPECT_EQ(Phi->getIncomingValue(2), Def2);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSADuplicatePredecessorAllEqual) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+
+  //     VPBB1
+  //    /   \ \
+  //   /     \ \
+  //  VPBB2  VPBB3
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+
+  EXPECT_EQ(reconstructSSA(VPBB3, {{VPBB1, Def1}}), Def1);
+  EXPECT_EQ(reconstructSSA(VPBB2, {{VPBB1, Def1}}), Def1);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSAStaleDefAfterFold) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB5 = Plan.createVPBasicBlock("");
+
+  //       VPBB1
+  //         |
+  //   +-> VPBB2
+  //   |    | |
+  //   |   VPBB3 --+
+  //   |    | |    |
+  //   +-- VPBB4   |
+  //         |     |
+  //       VPBB5 <-+
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB4, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+  VPBlockUtils::connectBlocks(VPBB3, VPBB5);
+  VPBlockUtils::connectBlocks(VPBB4, VPBB5);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def);
+
+  // The phi VPBB4 is folded to the phi in VPBB3, then the phi in VPBB3 is
+  // folded to the phi in VPBB2. Make sure that we update Defs[VPBB4] from
+  // phi@VPPB3->phi@VPBB2.
+  auto *Res = cast<VPPhi>(reconstructSSA(VPBB5, {{VPBB1, Def}}));
+  EXPECT_EQ(Res->getParent(), VPBB2);
+}
+
+TEST_F(VPBasicBlockTest, VPRegionValueClonePropagatesMaterialized) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Preheader = Plan.getEntry();
+  VPBasicBlock *Header = Plan.createVPBasicBlock("header");
+  VPBasicBlock *Latch = Plan.createVPBasicBlock("latch");
+  VPRegionBlock *Region = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                                "loop", Header, Latch);
+  VPBlockUtils::connectBlocks(Header, Latch);
+  VPBlockUtils::connectBlocks(Preheader, Region);
+  VPBlockUtils::connectBlocks(Region, Plan.getScalarHeader());
+
+  VPRegionValue *CanIV = Region->getCanonicalIV();
+  EXPECT_TRUE(isa<VPSymbolicValue>(CanIV));
+  EXPECT_FALSE(CanIV->isMaterialized());
+
+  // Materialize the canonical IV by replacing all uses, then verify clone
+  // propagates the materialized state.
+  CanIV->replaceAllUsesWith(Plan.getConstantInt(32, 0));
+  EXPECT_TRUE(CanIV->isMaterialized());
+
+  std::unique_ptr<VPlan> Clone(Plan.duplicate());
+  VPRegionValue *ClonedCanIV = Clone->getVectorLoopRegion()->getCanonicalIV();
+  EXPECT_NE(CanIV, ClonedCanIV);
+  EXPECT_TRUE(ClonedCanIV->isMaterialized());
+}
+
+TEST_F(VPBasicBlockTest, VPRegionBlockCloneSyncsCanonicalIVNUW) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Preheader = Plan.getEntry();
+  VPBasicBlock *Header = Plan.createVPBasicBlock("header");
+  VPBasicBlock *Latch = Plan.createVPBasicBlock("latch");
+
+  VPBuilder Builder(Latch);
+  Builder.createNaryOp(VPInstruction::BranchOnCond, Plan.getTrue());
+
+  VPRegionBlock *Region = Plan.createLoopRegion(Type::getInt64Ty(C), DebugLoc(),
+                                                "loop", Header, Latch);
+  VPBlockUtils::connectBlocks(Header, Latch);
+  VPBlockUtils::connectBlocks(Preheader, Region);
+  VPBlockUtils::connectBlocks(Region, Plan.getScalarHeader());
+
+  // Loop regions start out with NUW set for their canonical IV.
+  EXPECT_TRUE(Region->hasCanonicalIVNUW());
+
+  // Drop NUW, e.g. as done when the increment is proven to possibly wrap.
+  VPInstruction *Increment = Region->getOrCreateCanonicalIVIncrement();
+  Region->clearCanonicalIVNUW(Increment);
+  EXPECT_FALSE(Region->hasCanonicalIVNUW());
+
+  // The clone must carry over the cleared NUW flag rather than resetting it.
+  VPRegionBlock *Clone = Region->clone();
+  EXPECT_FALSE(Clone->hasCanonicalIVNUW());
+}
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+TEST_F(VPInstructionTest, VPSymbolicValueConstructUserAfterMaterialization) {
+  VPlan &Plan = getPlan();
+
+  // Materialize VF by replacing all uses.
+  VPValue *VF = &Plan.getVF();
+  VF->replaceAllUsesWith(Plan.getConstantInt(64, 1));
+  EXPECT_TRUE(Plan.getVF().isMaterialized());
+
+  // Adding a new user to a materialized value should crash.
+  EXPECT_DEATH(new VPInstruction(VPInstruction::ExplicitVectorLength, {VF}),
+               "accessing materialized symbolic value");
+}
+
+TEST_F(VPInstructionTest, VPSymbolicValueAddOperandAfterMaterialization) {
+  VPlan &Plan = getPlan();
+
+  IntegerType *I64 = IntegerType::get(C, 64);
+  VPValue *Seed = Plan.getOrAddLiveIn(ConstantInt::get(I64, 0));
+  std::unique_ptr<VPInstruction> BV(
+      new VPInstruction(VPInstruction::BuildVector, {Seed}));
+
+  // Materialize VF by replacing all uses.
+  VPValue *VF = &Plan.getVF();
+  VF->replaceAllUsesWith(Plan.getConstantInt(64, 1));
+  EXPECT_TRUE(Plan.getVF().isMaterialized());
+
+  // Appending a new operand referencing the materialized VF should crash.
+  EXPECT_DEATH(BV->addOperand(VF), "accessing materialized symbolic value");
+}
+#endif
 
 } // namespace
 } // namespace llvm

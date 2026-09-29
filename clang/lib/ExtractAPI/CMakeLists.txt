@@ -15,7 +15,7 @@ add_clang_library(clangExtractAPI
   clangAST
   clangBasic
   clangFrontend
-  clangIndex
   clangInstallAPI
   clangLex
+  clangUnifiedSymbolResolution
   )

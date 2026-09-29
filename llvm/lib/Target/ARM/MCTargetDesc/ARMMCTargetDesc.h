@@ -71,6 +71,7 @@ MCTargetStreamer *createARMTargetAsmStreamer(MCStreamer &S,
 MCTargetStreamer *createARMObjectTargetStreamer(MCStreamer &S,
                                                 const MCSubtargetInfo &STI);
 MCTargetStreamer *createARMObjectTargetELFStreamer(MCStreamer &S);
+MCTargetStreamer *createARMObjectTargetMachOStreamer(MCStreamer &S);
 MCTargetStreamer *createARMObjectTargetWinCOFFStreamer(MCStreamer &S);
 
 MCCodeEmitter *createARMLEMCCodeEmitter(const MCInstrInfo &MCII,

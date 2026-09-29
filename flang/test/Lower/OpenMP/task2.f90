@@ -2,7 +2,7 @@
 
 
 !CHECK-LABEL: omp.private
-!CHECK-SAME:      {type = firstprivate} @[[PRIVATIZER:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> alloc {
+!CHECK-SAME:      {type = firstprivate} @[[PRIVATIZER:.*]] : !fir.box<!fir.heap<!fir.array<?xi32>>> init {
 !CHECK:         fir.if
 !CHECK:       } copy {
 !CHECK:         fir.if

@@ -1,0 +1,16 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module  {
+
+cir.global external @ci = #cir.zero : !cir.complex<!s32i>
+// CHECK: cir.global external {{.*}} = #cir.zero : !cir.complex<!s32i>
+
+cir.global external @cf = #cir.zero : !cir.complex<!cir.float>
+// CHECK: cir.global external {{.*}} = #cir.zero : !cir.complex<!cir.float>
+
+cir.global external @ci2 = #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>
+// CHECK: cir.global external {{.*}} = #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>
+
+}

@@ -50,10 +50,12 @@ void fn1(void) {
   cabs(errij);  // expected-error {{use of undeclared identifier 'errij'}}
 }
 
-extern long afunction(int);
+extern long afunction(int); // expected-note {{'afunction' declared here}} \
+                               expected-note {{passing argument to parameter here}}
 void fn2(void) {
   f(THIS_IS_AN_ERROR,       // expected-error {{use of undeclared identifier 'THIS_IS_AN_ERROR'}}
-    afunction(afunction_)); // expected-error {{use of undeclared identifier 'afunction_'}}
+    afunction(afunction_)); // expected-error {{use of undeclared identifier 'afunction_'}} \
+                               expected-error {{incompatible pointer to integer conversion passing 'long (int)' to parameter of type 'int'}}
 }
 
 int d = X ? d : L; // expected-error 2 {{use of undeclared identifier}}
@@ -94,23 +96,81 @@ struct rdar38642201 {
 
 void rdar38642201_callee(int x, int y);
 void rdar38642201_caller(void) {
-  struct rdar38642201 structVar;
+  struct rdar38642201 structVar;     // expected-note 2{{'structVar' declared here}}
   rdar38642201_callee(
-      structVar1.fieldName1.member1, //expected-error{{use of undeclared identifier 'structVar1'}}
-      structVar2.fieldName2.member2); //expected-error{{use of undeclared identifier 'structVar2'}}
+      structVar1.fieldName1.member1, //expected-error{{use of undeclared identifier 'structVar1'}} \
+                                       expected-error{{no member named 'fieldName1' in 'struct rdar38642201'}}
+      structVar2.fieldName2.member2); //expected-error{{use of undeclared identifier 'structVar2'}} \
+                                        expected-error{{no member named 'fieldName2' in 'struct rdar38642201'}}
 }
 
 void PR40286_g(int x, int y);
 void PR40286_h(int x, int y, int z);
-void PR40286_1(int the_value) {
-  PR40286_g(the_walue); // expected-error {{use of undeclared identifier 'the_walue'}}
+void PR40286_1(int the_value) { // expected-note {{'the_value' declared here}}
+  PR40286_g(the_walue, 0); // expected-error {{use of undeclared identifier 'the_walue'}}
 }
-void PR40286_2(int the_value) {
-  PR40286_h(the_value, the_walue); // expected-error {{use of undeclared identifier 'the_walue'}}
+void PR40286_2(int the_value) { // expected-note {{'the_value' declared here}}
+  PR40286_h(the_value, the_walue, 0); // expected-error {{use of undeclared identifier 'the_walue'}}
 }
-void PR40286_3(int the_value) {
-  PR40286_h(the_walue); // expected-error {{use of undeclared identifier 'the_walue'}}
+void PR40286_3(int the_value) { // expected-note {{'the_value' declared here}}
+  PR40286_h(the_walue, 0, 0); // expected-error {{use of undeclared identifier 'the_walue'}}
 }
 void PR40286_4(int the_value) { // expected-note {{'the_value' declared here}}
   PR40286_h(the_value, the_value, the_walue); // expected-error {{use of undeclared identifier 'the_walue'; did you mean 'the_value'?}}
+}
+
+#define FOO1() 10
+// expected-note@-1 4 {{'FOO1' defined here as a function-like macro}}
+
+int x = FOO1; // expected-error {{'FOO1' is defined as a function-like macro; did you mean 'FOO1(...)'?}}
+
+void test3() {
+  int iter = FOO1;
+  // expected-error@-1 {{'FOO1' is defined as a function-like macro; did you mean 'FOO1(...)'?}}
+}
+
+void bar(int);
+
+void test4() {
+    int FOO; // expected-note {{'FOO' declared here}}
+    int x = FOO1; // expected-error {{use of undeclared identifier 'FOO1'; did you mean 'FOO'?}}
+}
+
+void test5() {
+    FOO1 + 1; // expected-error {{'FOO1' is defined as a function-like macro; did you mean 'FOO1(...)'?}}
+    bar(FOO1); // expected-error {{'FOO1' is defined as a function-like macro; did you mean 'FOO1(...)'?}}
+}
+
+#undef FOO1
+
+void test6(){
+    int iter = FOO1;  //expected-error {{use of undeclared identifier 'FOO1'}}
+}
+
+
+#define FOO1() 99 // expected-note 2 {{'FOO1' defined here as a function-like macro}}
+
+void test7() {
+    int w = FOO1; // expected-error {{'FOO1' is defined as a function-like macro; did you mean 'FOO1(...)'?}}
+}
+
+#define FOO2() 42
+
+void test8() {
+    int y = FOO2 /* comment */ (); // no error expected — still a real call
+}
+
+void test9() {
+    int z = FOO2
+        (); // no error expected — paren across a line break
+}
+
+void test10() {
+    int arr[FOO1]; // expected-error {{'FOO1' is defined as a function-like macro; did you mean 'FOO1(...)'?}}
+}
+
+#define VARFOO(...) 1 // expected-note {{'VARFOO' defined here as a function-like macro}}
+
+void test11() {
+    int v = VARFOO; // expected-error {{'VARFOO' is defined as a function-like macro; did you mean 'VARFOO(...)'?}}
 }

@@ -1,17 +1,29 @@
 header: stdlib.h
-header_template: stdlib.h.def
 standards:
   - stdc
-macros: []
+merge_yaml_files:
+  - stdlib-malloc.yaml
+macros:
+  - macro_name: "NULL"
+    macro_header: null-macro.h
+  - macro_name: EXIT_SUCCESS
+    macro_header: stdlib-macros.h
+  - macro_name: EXIT_FAILURE
+    macro_header: stdlib-macros.h
 types:
   - type_name: __atexithandler_t
-  - type_name: __qsortrcompare_t
   - type_name: __qsortcompare_t
-  - type_name: __bsearchcompare_t
-  - type_name: size_t
-  - type_name: lldiv_t
-  - type_name: ldiv_t
+  - type_name: __qsortrcompare_t
+  - type_name: __search_compare_t
+  - type_name: constraint_handler_t
   - type_name: div_t
+  - type_name: ldiv_t
+  - type_name: lldiv_t
+  - type_name: locale_t
+  - type_name: rsize_t
+  - type_name: size_t
+  - type_name: wchar_t
+  - type_name: errno_t
 enums: []
 objects: []
 functions:
@@ -21,6 +33,12 @@ functions:
     return_type: _Noreturn void
     arguments:
       - type: int
+  - name: a64l
+    standards:
+      - posix
+    return_type: long
+    arguments:
+      - type: const char *
   - name: abort
     standards:
       - stdc
@@ -33,13 +51,6 @@ functions:
     return_type: int
     arguments:
       - type: int
-  - name: aligned_alloc
-    standards:
-      - stdc
-    return_type: void *
-    arguments:
-      - type: size_t
-      - type: size_t
   - name: at_quick_exit
     standards:
       - stdc
@@ -85,14 +96,7 @@ functions:
       - type: const void *
       - type: size_t
       - type: size_t
-      - type: __bsearchcompare_t
-  - name: calloc
-    standards:
-      - stdc
-    return_type: void *
-    arguments:
-      - type: size_t
-      - type: size_t
+      - type: __search_compare_t
   - name: div
     standards:
       - stdc
@@ -106,18 +110,19 @@ functions:
     return_type: _Noreturn void
     arguments:
       - type: int
-  - name: free
-    standards:
-      - stdc
-    return_type: void
-    arguments:
-      - type: void *
   - name: getenv
     standards:
       - stdc
     return_type: char *
     arguments:
       - type: const char *
+  - name: getloadavg
+    standards:
+      - bsd
+    return_type: int
+    arguments:
+      - type: double[]
+      - type: int
   - name: labs
     standards:
       - stdc
@@ -144,12 +149,68 @@ functions:
     arguments:
       - type: long long
       - type: long long
-  - name: malloc
+  - name: mbstowcs
     standards:
       - stdc
-    return_type: void *
+    return_type: size_t
     arguments:
+      - type: wchar_t *__restrict
+      - type: const char *__restrict
       - type: size_t
+  - name: mbtowc
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char *__restrict
+      - type: size_t
+  - name: mblen
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: size_t
+  - name: memalignment
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const void *
+  - name: mkdtemp
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: char *
+  - name: mkostemp
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: char *
+      - type: int
+  - name: mkstemp
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: char *
+  - name: posix_memalign
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: void **
+      - type: size_t
+      - type: size_t
+  - name: putenv
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: char *
   - name: qsort
     standards:
       - stdc
@@ -161,7 +222,7 @@ functions:
       - type: __qsortcompare_t
   - name: qsort_r
     standards:
-      - GNUExtensions
+      - posix
     return_type: void
     arguments:
       - type: void *
@@ -181,19 +242,33 @@ functions:
     return_type: int
     arguments:
       - type: void
-  - name: realloc
+  - name: realpath
     standards:
-      - stdc
-    return_type: void *
+      - posix
+    return_type: char *
     arguments:
-      - type: void *
-      - type: size_t
+      - type: const char *__restrict
+      - type: char *__restrict
   - name: srand
     standards:
       - stdc
     return_type: void
     arguments:
       - type: unsigned int
+  - name: secure_getenv
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: const char *
+  - name: setenv
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: int
   - name: strfromd
     standards:
       - stdc
@@ -340,3 +415,24 @@ functions:
     return_type: int
     arguments:
       - type: const char *
+  - name: unsetenv
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+  - name: wctomb
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: char *
+      - type: wchar_t
+  - name: wcstombs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: const wchar_t *__restrict
+      - type: size_t

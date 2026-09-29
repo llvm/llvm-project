@@ -1,15 +1,15 @@
 // RUN: %clang -### -target armv7-unknown-windows-msvc -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-WINDOWS
 // RUN: %clang -### -target armv7-unknown-windows-itanium -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-WINDOWS
 // RUN: %clang -### -target armv7-unknown-windows-gnu -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-WINDOWS
-// RUN: %clang -### -target armv7-unknown-windows-cygnus -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-WINDOWS
+// RUN: %clang -### -target armv7-unknown-windows-cygnus -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-CYGWIN
 // RUN: %clang -### -target i686-unknown-windows-msvc -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-WINDOWS
 // RUN: %clang -### -target i686-unknown-windows-itanium -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-WINDOWS
 // RUN: %clang -### -target i686-unknown-windows-gnu -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-WINDOWS
-// RUN: %clang -### -target i686-unknown-windows-cygnus -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-WINDOWS
+// RUN: %clang -### -target i686-unknown-windows-cygnus -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-CYGWIN
 // RUN: %clang -### -target x86_64-unknown-windows-msvc -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-WINDOWS
 // RUN: %clang -### -target x86_64-unknown-windows-itanium -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-WINDOWS
 // RUN: %clang -### -target x86_64-unknown-windows-gnu -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-WINDOWS
-// RUN: %clang -### -target x86_64-unknown-windows-cygnus -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-WINDOWS
+// RUN: %clang -### -target x86_64-unknown-windows-cygnus -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-CYGWIN
 // RUN: %clang -### -target hexagon-unknown-none -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-HEXAGON
 // RUN: %clang -### -target xcore-unknown-none -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-XCORE
 // RUN: %clang -### -target armv7-mti-none -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-MTI
@@ -21,6 +21,7 @@
 // RUN: %clang -### -target powerpc64-ibm-aix-xcoff -c %s -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-AIX
 
 // CHECK-WINDOWS: "-fno-use-cxa-atexit"
+// CHECK-CYGWIN-NOT: "-fno-use-cxa-atexit"
 // CHECK-SOLARIS-NOT: "-fno-use-cxa-atexit"
 // CHECK-HEXAGON-NOT: "-fno-use-cxa-atexit"
 // CHECK-XCORE: "-fno-use-cxa-atexit"

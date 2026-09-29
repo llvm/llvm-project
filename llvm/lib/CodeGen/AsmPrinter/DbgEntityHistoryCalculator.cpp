@@ -26,7 +26,6 @@
 #include <cassert>
 #include <map>
 #include <optional>
-#include <utility>
 
 using namespace llvm;
 
@@ -112,8 +111,7 @@ void DbgValueHistoryMap::Entry::endEntry(EntryIndex Index) {
 /// to the first intersecting scope range if one exists.
 static std::optional<ArrayRef<InsnRange>::iterator>
 intersects(const MachineInstr *StartMI, const MachineInstr *EndMI,
-           const ArrayRef<InsnRange> &Ranges,
-           const InstructionOrdering &Ordering) {
+           ArrayRef<InsnRange> Ranges, const InstructionOrdering &Ordering) {
   for (auto RangesI = Ranges.begin(), RangesE = Ranges.end();
        RangesI != RangesE; ++RangesI) {
     if (EndMI && Ordering.isBefore(EndMI, RangesI->first))
@@ -289,7 +287,7 @@ namespace {
 
 // Maps physreg numbers to the variables they describe.
 using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
-using RegDescribedVarsMap = std::map<unsigned, SmallVector<InlinedEntity, 1>>;
+using RegDescribedVarsMap = std::map<Register, SmallVector<InlinedEntity, 1>>;
 
 // Keeps track of the debug value entries that are currently live for each
 // inlined entity. As the history map entries are stored in a SmallVector, they
@@ -299,11 +297,11 @@ using DbgValueEntriesMap = std::map<InlinedEntity, SmallSet<EntryIndex, 1>>;
 
 } // end anonymous namespace
 
-// Claim that @Var is not described by @RegNo anymore.
-static void dropRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
+// Claim that @Var is not described by @Reg anymore.
+static void dropRegDescribedVar(RegDescribedVarsMap &RegVars, Register Reg,
                                 InlinedEntity Var) {
-  const auto &I = RegVars.find(RegNo);
-  assert(RegNo != 0U && I != RegVars.end());
+  const auto &I = RegVars.find(Reg);
+  assert(Reg && I != RegVars.end());
   auto &VarSet = I->second;
   const auto &VarPos = llvm::find(VarSet, Var);
   assert(VarPos != VarSet.end());
@@ -313,20 +311,20 @@ static void dropRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
     RegVars.erase(I);
 }
 
-// Claim that @Var is now described by @RegNo.
-static void addRegDescribedVar(RegDescribedVarsMap &RegVars, unsigned RegNo,
+// Claim that @Var is now described by @Reg.
+static void addRegDescribedVar(RegDescribedVarsMap &RegVars, Register Reg,
                                InlinedEntity Var) {
-  assert(RegNo != 0U);
-  auto &VarSet = RegVars[RegNo];
+  assert(Reg);
+  auto &VarSet = RegVars[Reg];
   assert(!is_contained(VarSet, Var));
   VarSet.push_back(Var);
 }
 
 /// Create a clobbering entry and end all open debug value entries
-/// for \p Var that are described by \p RegNo using that entry. Inserts into \p
+/// for \p Var that are described by \p Reg using that entry. Inserts into \p
 /// FellowRegisters the set of Registers that were also used to describe \p Var
-/// alongside \p RegNo.
-static void clobberRegEntries(InlinedEntity Var, unsigned RegNo,
+/// alongside \p Reg.
+static void clobberRegEntries(InlinedEntity Var, Register Reg,
                               const MachineInstr &ClobberingInstr,
                               DbgValueEntriesMap &LiveEntries,
                               DbgValueHistoryMap &HistMap,
@@ -344,11 +342,11 @@ static void clobberRegEntries(InlinedEntity Var, unsigned RegNo,
     assert(Entry.isDbgValue() && "Not a DBG_VALUE in LiveEntries");
     if (Entry.getInstr()->isDebugEntryValue())
       continue;
-    if (Entry.getInstr()->hasDebugOperandForReg(RegNo)) {
+    if (Entry.getInstr()->hasDebugOperandForReg(Reg)) {
       IndicesToErase.push_back(Index);
       Entry.endEntry(ClobberIndex);
       for (const auto &MO : Entry.getInstr()->debug_operands())
-        if (MO.isReg() && MO.getReg() && MO.getReg() != RegNo)
+        if (MO.isReg() && MO.getReg() && MO.getReg() != Reg)
           MaybeRemovedRegisters.insert(MO.getReg());
     } else {
       for (const auto &MO : Entry.getInstr()->debug_operands())
@@ -362,8 +360,9 @@ static void clobberRegEntries(InlinedEntity Var, unsigned RegNo,
       FellowRegisters.push_back(Reg);
 
   // Drop all entries that have ended.
+  auto &Entries = LiveEntries[Var];
   for (auto Index : IndicesToErase)
-    LiveEntries[Var].erase(Index);
+    Entries.erase(Index);
 }
 
 /// Add a new debug value for \p Var. Closes all overlapping debug values.
@@ -373,7 +372,19 @@ static void handleNewDebugValue(InlinedEntity Var, const MachineInstr &DV,
                                 DbgValueHistoryMap &HistMap) {
   EntryIndex NewIndex;
   if (HistMap.startDbgValue(Var, DV, NewIndex)) {
-    SmallDenseMap<unsigned, bool, 4> TrackedRegs;
+    // As we already need to iterate all LiveEntries when handling a DbgValue,
+    // we use this map to avoid a more expensive check against RegVars. There
+    // is an assert that we handle this correctly in addRegDescribedVar.
+    //
+    // In other terms, the presence in this map indicates the presence of a
+    // corresponding entry in RegVars.
+    //
+    // The bool value then tracks whether an entry is to be retained (true) or
+    // removed (false); as we end previous entries we speculatively assume they
+    // can be dropped from RegVars, but we then also visit the new entry whose
+    // set of debug register operands may overlap and "save" a reg from being
+    // dropped.
+    SmallDenseMap<Register, bool, 4> TrackedRegs;
 
     // If we have created a new debug value entry, close all preceding
     // live entries that overlap.
@@ -400,10 +411,9 @@ static void handleNewDebugValue(InlinedEntity Var, const MachineInstr &DV,
       for (const MachineOperand &Op : DV.debug_operands()) {
         if (Op.isReg() && Op.getReg()) {
           Register NewReg = Op.getReg();
-          if (!TrackedRegs.count(NewReg))
+          if (TrackedRegs.insert_or_assign(NewReg, true).second)
             addRegDescribedVar(RegVars, NewReg, Var);
           LiveEntries[Var].insert(NewIndex);
-          TrackedRegs[NewReg] = true;
         }
       }
     }
@@ -414,9 +424,10 @@ static void handleNewDebugValue(InlinedEntity Var, const MachineInstr &DV,
         dropRegDescribedVar(RegVars, I.first, Var);
 
     // Drop all entries that have ended, and mark the new entry as live.
+    auto &Entries = LiveEntries[Var];
     for (auto Index : IndicesToErase)
-      LiveEntries[Var].erase(Index);
-    LiveEntries[Var].insert(NewIndex);
+      Entries.erase(Index);
+    Entries.insert(NewIndex);
   }
 }
 
@@ -435,19 +446,19 @@ static void clobberRegisterUses(RegDescribedVarsMap &RegVars,
     SmallVector<Register, 4> FellowRegisters;
     clobberRegEntries(Var, I->first, ClobberingInstr, LiveEntries, HistMap,
                       FellowRegisters);
-    for (Register RegNo : FellowRegisters)
-      dropRegDescribedVar(RegVars, RegNo, Var);
+    for (Register Reg : FellowRegisters)
+      dropRegDescribedVar(RegVars, Reg, Var);
   }
   RegVars.erase(I);
 }
 
 // Terminate the location range for variables described by register
-// @RegNo by inserting @ClobberingInstr to their history.
-static void clobberRegisterUses(RegDescribedVarsMap &RegVars, unsigned RegNo,
+// @Reg by inserting @ClobberingInstr to their history.
+static void clobberRegisterUses(RegDescribedVarsMap &RegVars, Register Reg,
                                 DbgValueHistoryMap &HistMap,
                                 DbgValueEntriesMap &LiveEntries,
                                 const MachineInstr &ClobberingInstr) {
-  const auto &I = RegVars.find(RegNo);
+  const auto &I = RegVars.find(Reg);
   if (I == RegVars.end())
     return;
   clobberRegisterUses(RegVars, I, HistMap, LiveEntries, ClobberingInstr);
@@ -466,9 +477,6 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
     for (const auto &MI : MBB) {
       if (MI.isDebugValue()) {
         assert(MI.getNumOperands() > 1 && "Invalid DBG_VALUE instruction!");
-        // Use the base variable (without any DW_OP_piece expressions)
-        // as index into History. The full variables including the
-        // piece expressions are attached to the MI.
         const DILocalVariable *RawVar = MI.getDebugVariable();
         assert(RawVar->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
                "Expected inlined-at fields to agree");
@@ -492,8 +500,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
       if (MI.isMetaInstruction())
         continue;
 
-      // Not a DBG_VALUE instruction. It may clobber registers which describe
-      // some variables.
+      // Other instructions may clobber registers which describe some variables.
       for (const MachineOperand &MO : MI.operands()) {
         if (MO.isReg() && MO.isDef() && MO.getReg()) {
           // Ignore call instructions that claim to clobber SP. The AArch64
@@ -519,16 +526,16 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
         } else if (MO.isRegMask()) {
           // If this is a register mask operand, clobber all debug values in
           // non-CSRs.
-          SmallVector<unsigned, 32> RegsToClobber;
+          SmallVector<Register, 32> RegsToClobber;
           // Don't consider SP to be clobbered by register masks.
           for (auto It : RegVars) {
-            unsigned int Reg = It.first;
-            if (Reg != SP && Register::isPhysicalRegister(Reg) &&
+            Register Reg = It.first;
+            if (Register(Reg) != SP && Reg.isPhysical() &&
                 MO.clobbersPhysReg(Reg))
               RegsToClobber.push_back(Reg);
           }
 
-          for (unsigned Reg : RegsToClobber) {
+          for (Register Reg : RegsToClobber) {
             clobberRegisterUses(RegVars, Reg, DbgValues, LiveEntries, MI);
           }
         }

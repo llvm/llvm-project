@@ -13,8 +13,6 @@
 #include "M68k.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/TargetBuiltins.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -26,43 +24,35 @@
 namespace clang {
 namespace targets {
 
+// Linux/m68k ("old") uses the ABI from Sun Microsystems a.out
+// for m68k, and uses 16-bit alignments for int/long/pointers.
+//
+// NetBSD/m68k uses the ABI from SVR4 for m68k,
+// which uses 32-bit alignments for int/long/pointers.
+//
+// Ref. https://github.com/M680x0/issues/issues/13 and
+// https://github.com/llvm/llvm-project/issues/199826
+//
+// Arguably this ought to respect -malign-int, as suggested
+// above, this code doesn't so far.
+
 M68kTargetInfo::M68kTargetInfo(const llvm::Triple &Triple,
                                const TargetOptions &Opts)
     : TargetInfo(Triple), TargetOpts(Opts) {
-
-  std::string Layout;
-
-  // M68k is Big Endian
-  Layout += "E";
-
-  // FIXME how to wire it with the used object format?
-  Layout += "-m:e";
-
-  // M68k pointers are always 32 bit wide even for 16-bit CPUs
-  Layout += "-p:32:16:32";
-
-  // M68k integer data types
-  Layout += "-i8:8:8-i16:16:16-i32:16:32";
-
-  // FIXME no floats at the moment
-
-  // The registers can hold 8, 16, 32 bits
-  Layout += "-n8:16:32";
-
-  // 16 bit alignment for both stack and aggregate
-  // in order to conform to ABI used by GCC
-  Layout += "-a:0:16-S16";
-
-  resetDataLayout(Layout);
+  resetDataLayout();
 
   SizeType = UnsignedInt;
   PtrDiffType = SignedInt;
   IntPtrType = SignedInt;
+  if (getTriple().isOSNetBSD()) {
+    IntAlign = LongAlign = PointerAlign = 32;
+  } else {
+    IntAlign = LongAlign = PointerAlign = 16;
+  }
 }
 
-bool M68kTargetInfo::setCPU(const std::string &Name) {
-  StringRef N = Name;
-  CPU = llvm::StringSwitch<CPUKind>(N)
+bool M68kTargetInfo::setCPU(StringRef Name) {
+  CPU = llvm::StringSwitch<CPUKind>(Name)
             .Case("generic", CK_68000)
             .Case("M68000", CK_68000)
             .Case("M68010", CK_68010)
@@ -115,7 +105,8 @@ void M68kTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__HAVE_68881__");
 }
 
-ArrayRef<Builtin::Info> M68kTargetInfo::getTargetBuiltins() const {
+llvm::SmallVector<Builtin::InfosShard>
+M68kTargetInfo::getTargetBuiltins() const {
   // FIXME: Implement.
   return {};
 }

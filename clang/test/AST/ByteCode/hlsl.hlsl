@@ -29,3 +29,11 @@ export void fn() {
   // smaller vector, then truncated to a float as a constant expression.
   _Static_assert(((float2)float4(6, 5, 4, 3)).x == 6, "Woo!");
 }
+
+int4 test_D3DCOLORtoUBYTE4(float4 p1) {
+  return D3DCOLORtoUBYTE4(p1);
+}
+
+int4 test_constant_inputs() {
+  return D3DCOLORtoUBYTE4(float4(0, 11.11, -50.5, 100));
+}

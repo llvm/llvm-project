@@ -248,17 +248,36 @@ define <4 x i32> @shuf_icmp_eq_v4i64_v4i32_mismatch_type(<4 x i64> %x, <4 x i64>
   ret <4 x i32> %r
 }
 
-; negative test - uses
+; Multi-use test - folding depends on enabled extensions
 
 define <4 x i32> @shuf_icmp_ugt_v4i32_use(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w) {
-; CHECK-LABEL: define <4 x i32> @shuf_icmp_ugt_v4i32_use(
-; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]], <4 x i32> [[W:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[C0:%.*]] = icmp ugt <4 x i32> [[X]], [[Y]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ugt <4 x i32> [[Z]], [[W]]
-; CHECK-NEXT:    call void @use(<4 x i1> [[C0]])
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i1> [[C0]], <4 x i1> [[C1]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[S]] to <4 x i32>
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; SSE-LABEL: define <4 x i32> @shuf_icmp_ugt_v4i32_use(
+; SSE-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]], <4 x i32> [[W:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[C0:%.*]] = icmp ugt <4 x i32> [[X]], [[Y]]
+; SSE-NEXT:    [[C1:%.*]] = icmp ugt <4 x i32> [[Z]], [[W]]
+; SSE-NEXT:    call void @use(<4 x i1> [[C0]])
+; SSE-NEXT:    [[S:%.*]] = shufflevector <4 x i1> [[C0]], <4 x i1> [[C1]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; SSE-NEXT:    [[R:%.*]] = sext <4 x i1> [[S]] to <4 x i32>
+; SSE-NEXT:    ret <4 x i32> [[R]]
+;
+; AVX2-LABEL: define <4 x i32> @shuf_icmp_ugt_v4i32_use(
+; AVX2-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]], <4 x i32> [[W:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[C0:%.*]] = icmp ugt <4 x i32> [[X]], [[Y]]
+; AVX2-NEXT:    [[C1:%.*]] = icmp ugt <4 x i32> [[Z]], [[W]]
+; AVX2-NEXT:    call void @use(<4 x i1> [[C0]])
+; AVX2-NEXT:    [[S:%.*]] = shufflevector <4 x i1> [[C0]], <4 x i1> [[C1]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; AVX2-NEXT:    [[R:%.*]] = sext <4 x i1> [[S]] to <4 x i32>
+; AVX2-NEXT:    ret <4 x i32> [[R]]
+;
+; AVX512-LABEL: define <4 x i32> @shuf_icmp_ugt_v4i32_use(
+; AVX512-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]], <4 x i32> [[W:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[C0:%.*]] = icmp ugt <4 x i32> [[X]], [[Y]]
+; AVX512-NEXT:    call void @use(<4 x i1> [[C0]])
+; AVX512-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> [[Z]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> [[W]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; AVX512-NEXT:    [[S:%.*]] = icmp ugt <4 x i32> [[TMP1]], [[TMP2]]
+; AVX512-NEXT:    [[R:%.*]] = sext <4 x i1> [[S]] to <4 x i32>
+; AVX512-NEXT:    ret <4 x i32> [[R]]
 ;
   %c0 = icmp ugt <4 x i32> %x, %y
   %c1 = icmp ugt <4 x i32> %z, %w

@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @hello(ptr noalias nocapture %a, ptr noalias nocapture readonly %c) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@hello
-; CHECK-SAME: (ptr noalias nocapture [[A:%.*]], ptr noalias nocapture readonly [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noalias captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 5
@@ -23,13 +23,13 @@ entry:
 
 define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %c) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (ptr noalias nocapture [[A:%.*]], ptr noalias nocapture readonly [[C:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr noalias captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, ptr [[A]], i64 5
-; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX_I]], align 4, !alias.scope !0, !noalias !3
+; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX_I]], align 4, !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 7
 ; CHECK-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX]], align 4
@@ -45,7 +45,7 @@ entry:
 
 define void @hello2(ptr noalias nocapture %a, ptr noalias nocapture %b, ptr nocapture readonly %c) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@hello2
-; CHECK-SAME: (ptr noalias nocapture [[A:%.*]], ptr noalias nocapture [[B:%.*]], ptr nocapture readonly [[C:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr noalias captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]], ptr readonly captures(none) [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 6
@@ -67,25 +67,25 @@ entry:
 ; foo2(), the noalias scopes are properly concatenated.
 define void @foo2(ptr nocapture %a, ptr nocapture %b, ptr nocapture readonly %c) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@foo2
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]], ptr nocapture readonly [[C:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], ptr readonly captures(none) [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META5:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META8:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META10:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META13:![0-9]+]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4, !alias.scope !15, !noalias !16
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4, !alias.scope [[META15:![0-9]+]], !noalias [[META16:![0-9]+]]
 ; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr inbounds float, ptr [[A]], i64 5
-; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX_I_I]], align 4, !alias.scope !16, !noalias !15
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[C]], align 4, !alias.scope !8, !noalias !5
+; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX_I_I]], align 4, !alias.scope [[META16]], !noalias [[META15]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[C]], align 4, !alias.scope [[META8]], !noalias [[META5]]
 ; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, ptr [[A]], i64 7
-; CHECK-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX_I]], align 4, !alias.scope !5, !noalias !8
+; CHECK-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX_I]], align 4, !alias.scope [[META5]], !noalias [[META8]]
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META17:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META20:![0-9]+]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[C]], align 4, !noalias !22
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[C]], align 4, !noalias [[META22:![0-9]+]]
 ; CHECK-NEXT:    [[ARRAYIDX_I1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 6
-; CHECK-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX_I1]], align 4, !alias.scope !17, !noalias !20
+; CHECK-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX_I1]], align 4, !alias.scope [[META17]], !noalias [[META20]]
 ; CHECK-NEXT:    [[ARRAYIDX1_I:%.*]] = getelementptr inbounds float, ptr [[B]], i64 8
-; CHECK-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX1_I]], align 4, !alias.scope !20, !noalias !17
+; CHECK-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX1_I]], align 4, !alias.scope [[META20]], !noalias [[META17]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 7
 ; CHECK-NEXT:    store float [[TMP3]], ptr [[ARRAYIDX]], align 4

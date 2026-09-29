@@ -20,6 +20,7 @@ include "mlir/IR/OpBase.td"
 
 def CUFDialect : Dialect {
   let name = "cuf";
+  let useStrictPropertiesInAssemblyFormat = 0;
 
   let summary = "CUDA Fortran dialect";
 
@@ -29,7 +30,6 @@ def CUFDialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
-  let usePropertiesForAttributes = 1;
   let cppNamespace = "::cuf";
   let dependentDialects = ["fir::FIROpsDialect"];
 

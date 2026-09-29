@@ -14,8 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/LazyBranchProbabilityInfo.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
 
@@ -26,15 +26,13 @@ using namespace llvm;
 INITIALIZE_PASS_BEGIN(LazyBlockFrequencyInfoPass, DEBUG_TYPE,
                       "Lazy Block Frequency Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(LazyBPIPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_END(LazyBlockFrequencyInfoPass, DEBUG_TYPE,
                     "Lazy Block Frequency Analysis", true, true)
 
 char LazyBlockFrequencyInfoPass::ID = 0;
 
-LazyBlockFrequencyInfoPass::LazyBlockFrequencyInfoPass() : FunctionPass(ID) {
-  initializeLazyBlockFrequencyInfoPassPass(*PassRegistry::getPassRegistry());
-}
+LazyBlockFrequencyInfoPass::LazyBlockFrequencyInfoPass() : FunctionPass(ID) {}
 
 void LazyBlockFrequencyInfoPass::print(raw_ostream &OS, const Module *) const {
   LBFI.getCalculated().print(OS);
@@ -46,7 +44,7 @@ void LazyBlockFrequencyInfoPass::getAnalysisUsage(AnalysisUsage &AU) const {
   // asserts that DT is also present so if we don't make sure that we have DT
   // here, that assert will trigger.
   AU.addRequiredTransitive<DominatorTreeWrapperPass>();
-  AU.addRequiredTransitive<LoopInfoWrapperPass>();
+  AU.addRequiredTransitive<CycleInfoWrapperPass>();
   AU.setPreservesAll();
 }
 
@@ -54,7 +52,7 @@ void LazyBlockFrequencyInfoPass::releaseMemory() { LBFI.releaseMemory(); }
 
 bool LazyBlockFrequencyInfoPass::runOnFunction(Function &F) {
   auto &BPIPass = getAnalysis<LazyBranchProbabilityInfoPass>();
-  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  CycleInfo &LI = getAnalysis<CycleInfoWrapperPass>().getResult();
   LBFI.setAnalysis(&F, &BPIPass, &LI);
   return false;
 }
@@ -62,11 +60,11 @@ bool LazyBlockFrequencyInfoPass::runOnFunction(Function &F) {
 void LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AnalysisUsage &AU) {
   LazyBranchProbabilityInfoPass::getLazyBPIAnalysisUsage(AU);
   AU.addRequiredTransitive<LazyBlockFrequencyInfoPass>();
-  AU.addRequiredTransitive<LoopInfoWrapperPass>();
+  AU.addRequiredTransitive<CycleInfoWrapperPass>();
 }
 
 void llvm::initializeLazyBFIPassPass(PassRegistry &Registry) {
   initializeLazyBPIPassPass(Registry);
   INITIALIZE_PASS_DEPENDENCY(LazyBlockFrequencyInfoPass);
-  INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
+  INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass);
 }

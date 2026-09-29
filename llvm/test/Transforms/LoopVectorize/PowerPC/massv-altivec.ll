@@ -3,11 +3,11 @@
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 
-declare double @cbrt(double) #0
-declare float @cbrtf(float) #0
+declare double @cbrt(double)
+declare float @cbrtf(float)
 
-declare double @atanh(double) #0
-declare float @atanhf(float) #0
+declare double @atanh(double)
+declare float @atanhf(float)
 
 ; MASSV is unsupported for AltiVec.
 ; Check that massv entries are not generated.
@@ -102,5 +102,3 @@ for.body:
 for.end:
   ret void
 }
-
-attributes #0 = { nounwind }

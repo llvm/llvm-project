@@ -38,7 +38,7 @@ class SuspendedThreadsList {
   }
 
   virtual uptr ThreadCount() const { UNIMPLEMENTED(); }
-  virtual tid_t GetThreadID(uptr index) const { UNIMPLEMENTED(); }
+  virtual ThreadID GetThreadID(uptr index) const { UNIMPLEMENTED(); }
 
  protected:
   ~SuspendedThreadsList() {}

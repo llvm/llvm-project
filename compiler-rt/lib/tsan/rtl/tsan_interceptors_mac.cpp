@@ -25,7 +25,6 @@
 #  include "tsan_interceptors.h"
 #  include "tsan_interface.h"
 #  include "tsan_interface_ann.h"
-#  include "tsan_spinlock_defs_mac.h"
 
 #  if defined(__has_include) && __has_include(<xpc/xpc.h>)
 #    include <xpc/xpc.h>
@@ -96,8 +95,7 @@ static constexpr morder kMacFailureOrder = mo_relaxed;
                 m_orig(int32_t, uint32_t, a32, f##32##OrigBarrier,       \
                        __tsan_atomic32_##tsan_atomic_f, kMacOrderBarrier)
 
-#  pragma clang diagnostic push
-// OSAtomic* functions are deprecated.
+#  pragma clang diagnostic push  // OSAtomic* deprecation
 #  pragma clang diagnostic ignored "-Wdeprecated-declarations"
 OSATOMIC_INTERCEPTORS_ARITHMETIC(OSAtomicAdd, fetch_add,
                                  OSATOMIC_INTERCEPTOR_PLUS_X)
@@ -111,6 +109,7 @@ OSATOMIC_INTERCEPTORS_BITWISE(OSAtomicAnd, fetch_and,
                               OSATOMIC_INTERCEPTOR_PLUS_X, OSATOMIC_INTERCEPTOR)
 OSATOMIC_INTERCEPTORS_BITWISE(OSAtomicXor, fetch_xor,
                               OSATOMIC_INTERCEPTOR_PLUS_X, OSATOMIC_INTERCEPTOR)
+#  pragma clang diagnostic pop  // OSAtomic* deprecation
 
 #  define OSATOMIC_INTERCEPTORS_CAS(f, tsan_atomic_f, tsan_t, t)           \
     TSAN_INTERCEPTOR(bool, f, t old_value, t new_value, t volatile *ptr) { \
@@ -128,8 +127,7 @@ OSATOMIC_INTERCEPTORS_BITWISE(OSAtomicXor, fetch_xor,
           kMacOrderBarrier, kMacFailureOrder);                             \
     }
 
-#  pragma clang diagnostic push
-// OSAtomicCompareAndSwap* functions are deprecated.
+#  pragma clang diagnostic push  // OSAtomicCompareAndSwap* deprecation
 #  pragma clang diagnostic ignored "-Wdeprecated-declarations"
 OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwapInt, __tsan_atomic32, a32, int)
 OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwapLong, __tsan_atomic64, a64,
@@ -140,7 +138,7 @@ OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwap32, __tsan_atomic32, a32,
                           int32_t)
 OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwap64, __tsan_atomic64, a64,
                           int64_t)
-#  pragma clang diagnostic pop
+#  pragma clang diagnostic pop  // OSAtomicCompareAndSwap* deprecation
 
 #  define OSATOMIC_INTERCEPTOR_BITOP(f, op, clear, mo)             \
     TSAN_INTERCEPTOR(bool, f, uint32_t n, volatile void *ptr) {    \
@@ -156,9 +154,12 @@ OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwap64, __tsan_atomic64, a64,
     OSATOMIC_INTERCEPTOR_BITOP(f, op, clear, kMacOrderNonBarrier) \
     OSATOMIC_INTERCEPTOR_BITOP(f##Barrier, op, clear, kMacOrderBarrier)
 
+#  pragma clang diagnostic push  // OSAtomicTestAnd* deprecation
+#  pragma clang diagnostic ignored "-Wdeprecated-declarations"
 OSATOMIC_INTERCEPTORS_BITOP(OSAtomicTestAndSet, __tsan_atomic8_fetch_or, false)
 OSATOMIC_INTERCEPTORS_BITOP(OSAtomicTestAndClear, __tsan_atomic8_fetch_and,
                             true)
+#  pragma clang diagnostic pop  // OSAtomicTestAnd* deprecation
 
 TSAN_INTERCEPTOR(void, OSAtomicEnqueue, OSQueueHead *list, void *item,
                  size_t offset) {
@@ -196,14 +197,25 @@ TSAN_INTERCEPTOR(void *, OSAtomicFifoDequeue, OSFifoQueueHead *list,
 
 #  endif
 
+// If `OSSPINLOCK_USE_INLINED=1` is set, then SDK headers don't declare these
+// as functions, but macros that call non-deprecated APIs.  Undefine these
+// macros so they don't interfere with the interceptor machinery.
+#  undef OSSpinLockLock
+#  undef OSSpinLockTry
+#  undef OSSpinLockUnlock
+
+#  pragma clang diagnostic push  // OSSpinLock* deprecation
+#  pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 TSAN_INTERCEPTOR(void, OSSpinLockLock, volatile OSSpinLock *lock) {
   CHECK(!cur_thread()->is_dead);
   if (!cur_thread()->is_inited) {
     return REAL(OSSpinLockLock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(OSSpinLockLock, lock);
+  MutexPreLock(thr, pc, (uptr)lock);
   REAL(OSSpinLockLock)(lock);
-  Acquire(thr, pc, (uptr)lock);
+  MutexPostLock(thr, pc, (uptr)lock);
 }
 
 TSAN_INTERCEPTOR(bool, OSSpinLockTry, volatile OSSpinLock *lock) {
@@ -214,7 +226,7 @@ TSAN_INTERCEPTOR(bool, OSSpinLockTry, volatile OSSpinLock *lock) {
   SCOPED_TSAN_INTERCEPTOR(OSSpinLockTry, lock);
   bool result = REAL(OSSpinLockTry)(lock);
   if (result)
-    Acquire(thr, pc, (uptr)lock);
+    MutexPostLock(thr, pc, (uptr)lock, MutexFlagTryLock);
   return result;
 }
 
@@ -224,9 +236,10 @@ TSAN_INTERCEPTOR(void, OSSpinLockUnlock, volatile OSSpinLock *lock) {
     return REAL(OSSpinLockUnlock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(OSSpinLockUnlock, lock);
-  Release(thr, pc, (uptr)lock);
+  MutexUnlock(thr, pc, (uptr)lock);
   REAL(OSSpinLockUnlock)(lock);
 }
+#  pragma clang diagnostic pop  // OSSpinLock* deprecation
 
 TSAN_INTERCEPTOR(void, os_lock_lock, void *lock) {
   CHECK(!cur_thread()->is_dead);
@@ -234,8 +247,9 @@ TSAN_INTERCEPTOR(void, os_lock_lock, void *lock) {
     return REAL(os_lock_lock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(os_lock_lock, lock);
+  MutexPreLock(thr, pc, (uptr)lock);
   REAL(os_lock_lock)(lock);
-  Acquire(thr, pc, (uptr)lock);
+  MutexPostLock(thr, pc, (uptr)lock);
 }
 
 TSAN_INTERCEPTOR(bool, os_lock_trylock, void *lock) {
@@ -246,7 +260,7 @@ TSAN_INTERCEPTOR(bool, os_lock_trylock, void *lock) {
   SCOPED_TSAN_INTERCEPTOR(os_lock_trylock, lock);
   bool result = REAL(os_lock_trylock)(lock);
   if (result)
-    Acquire(thr, pc, (uptr)lock);
+    MutexPostLock(thr, pc, (uptr)lock, MutexFlagTryLock);
   return result;
 }
 
@@ -256,7 +270,7 @@ TSAN_INTERCEPTOR(void, os_lock_unlock, void *lock) {
     return REAL(os_lock_unlock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(os_lock_unlock, lock);
-  Release(thr, pc, (uptr)lock);
+  MutexUnlock(thr, pc, (uptr)lock);
   REAL(os_lock_unlock)(lock);
 }
 
@@ -265,9 +279,30 @@ TSAN_INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
     return REAL(os_unfair_lock_lock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_lock, lock);
+  MutexPreLock(thr, pc, (uptr)lock);
   REAL(os_unfair_lock_lock)(lock);
-  Acquire(thr, pc, (uptr)lock);
+  MutexPostLock(thr, pc, (uptr)lock);
 }
+
+// os_unfair_lock_lock_with_flags was introduced in macOS 15
+#  if defined(__MAC_15_0) || defined(__IPHONE_18_0) || defined(__TVOS_18_0) || \
+      defined(__VISIONOS_2_0) || defined(__WATCHOS_11_0)
+#    pragma clang diagnostic push
+#    pragma clang diagnostic ignored "-Wunguarded-availability-new"
+// We're just intercepting this - if it doesn't exist on the platform, then the
+// process shouldn't have called it in the first place.
+TSAN_INTERCEPTOR(void, os_unfair_lock_lock_with_flags, os_unfair_lock_t lock,
+                 os_unfair_lock_flags_t flags) {
+  if (!cur_thread()->is_inited || cur_thread()->is_dead) {
+    return REAL(os_unfair_lock_lock_with_flags)(lock, flags);
+  }
+  SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_lock_with_flags, lock, flags);
+  MutexPreLock(thr, pc, (uptr)lock);
+  REAL(os_unfair_lock_lock_with_flags)(lock, flags);
+  MutexPostLock(thr, pc, (uptr)lock);
+}
+#    pragma clang diagnostic pop
+#  endif
 
 TSAN_INTERCEPTOR(void, os_unfair_lock_lock_with_options, os_unfair_lock_t lock,
                  u32 options) {
@@ -275,8 +310,9 @@ TSAN_INTERCEPTOR(void, os_unfair_lock_lock_with_options, os_unfair_lock_t lock,
     return REAL(os_unfair_lock_lock_with_options)(lock, options);
   }
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_lock_with_options, lock, options);
+  MutexPreLock(thr, pc, (uptr)lock);
   REAL(os_unfair_lock_lock_with_options)(lock, options);
-  Acquire(thr, pc, (uptr)lock);
+  MutexPostLock(thr, pc, (uptr)lock);
 }
 
 TSAN_INTERCEPTOR(bool, os_unfair_lock_trylock, os_unfair_lock_t lock) {
@@ -286,7 +322,7 @@ TSAN_INTERCEPTOR(bool, os_unfair_lock_trylock, os_unfair_lock_t lock) {
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_trylock, lock);
   bool result = REAL(os_unfair_lock_trylock)(lock);
   if (result)
-    Acquire(thr, pc, (uptr)lock);
+    MutexPostLock(thr, pc, (uptr)lock, MutexFlagTryLock);
   return result;
 }
 
@@ -295,7 +331,7 @@ TSAN_INTERCEPTOR(void, os_unfair_lock_unlock, os_unfair_lock_t lock) {
     return REAL(os_unfair_lock_unlock)(lock);
   }
   SCOPED_TSAN_INTERCEPTOR(os_unfair_lock_unlock, lock);
-  Release(thr, pc, (uptr)lock);
+  MutexUnlock(thr, pc, (uptr)lock);
   REAL(os_unfair_lock_unlock)(lock);
 }
 

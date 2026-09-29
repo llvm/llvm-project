@@ -155,9 +155,7 @@ entry:
 define i32 @fptosi_bf(bfloat %a) nounwind ssp {
 ; CHECK-LABEL: fptosi_bf:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, s0
-; CHECK-NEXT:    // implicit-def: $d0
-; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    // kill: def $d0 killed $h0
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    fcvtzs w0, s0
@@ -171,9 +169,7 @@ entry:
 define i32 @fptoui_sbf(bfloat %a) nounwind ssp {
 ; CHECK-LABEL: fptoui_sbf:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, s0
-; CHECK-NEXT:    // implicit-def: $d0
-; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    // kill: def $d0 killed $h0
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    fcvtzu w0, s0

@@ -48,11 +48,11 @@ static llvm::cl::list<std::string>
             llvm::cl::desc("Path to a file containing declarations to import"));
 
 static llvm::cl::opt<bool>
-    Direct("direct", llvm::cl::Optional,
+    Direct("direct",
            llvm::cl::desc("Use the parsed declarations without indirection"));
 
 static llvm::cl::opt<bool> UseOrigins(
-    "use-origins", llvm::cl::Optional,
+    "use-origins",
     llvm::cl::desc(
         "Use DeclContext origin information for more accurate lookups"));
 
@@ -62,8 +62,7 @@ static llvm::cl::list<std::string>
               llvm::cl::CommaSeparated);
 
 static llvm::cl::opt<std::string>
-    Input("x", llvm::cl::Optional,
-          llvm::cl::desc("The language to parse (default: c++)"),
+    Input("x", llvm::cl::desc("The language to parse (default: c++)"),
           llvm::cl::init("c++"));
 
 static llvm::cl::opt<bool> ObjCARC("objc-arc", llvm::cl::init(false),
@@ -162,18 +161,18 @@ private:
 };
 
 std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
-  auto Ins = std::make_unique<CompilerInstance>();
+  DiagnosticOptions DiagOpts;
   auto DC = std::make_unique<TestDiagnosticConsumer>();
-  const bool ShouldOwnClient = true;
-  Ins->createDiagnostics(*llvm::vfs::getRealFileSystem(), DC.release(),
-                         ShouldOwnClient);
+  auto Diags = CompilerInstance::createDiagnostics(
+      *llvm::vfs::getRealFileSystem(), DiagOpts, DC.get(),
+      /*ShouldOwnClient=*/false);
 
   auto Inv = std::make_unique<CompilerInvocation>();
 
   std::vector<const char *> ClangArgv(ClangArgs.size());
   std::transform(ClangArgs.begin(), ClangArgs.end(), ClangArgv.begin(),
                  [](const std::string &s) -> const char * { return s.data(); });
-  CompilerInvocation::CreateFromArgs(*Inv, ClangArgv, Ins->getDiagnostics());
+  CompilerInvocation::CreateFromArgs(*Inv, ClangArgv, *Diags);
 
   {
     using namespace driver::types;
@@ -205,14 +204,18 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
   Inv->getCodeGenOpts().setDebugInfo(llvm::codegenoptions::FullDebugInfo);
   Inv->getTargetOpts().Triple = llvm::sys::getDefaultTargetTriple();
 
-  Ins->setInvocation(std::move(Inv));
+  auto Ins = std::make_unique<CompilerInstance>(std::move(Inv));
+
+  Ins->createVirtualFileSystem(llvm::vfs::getRealFileSystem(), DC.get());
+  Ins->createDiagnostics(DC.release(), /*ShouldOwnClient=*/true);
 
   TargetInfo *TI = TargetInfo::CreateTargetInfo(
-      Ins->getDiagnostics(), Ins->getInvocation().TargetOpts);
+      Ins->getDiagnostics(), Ins->getInvocation().getTargetOpts());
   Ins->setTarget(TI);
-  Ins->getTarget().adjust(Ins->getDiagnostics(), Ins->getLangOpts());
+  Ins->getTarget().adjust(Ins->getDiagnostics(), Ins->getLangOpts(),
+                          /*AuxTarget=*/nullptr);
   Ins->createFileManager();
-  Ins->createSourceManager(Ins->getFileManager());
+  Ins->createSourceManager();
   Ins->createPreprocessor(TU_Complete);
 
   return Ins;
@@ -231,10 +234,7 @@ BuildASTContext(CompilerInstance &CI, SelectorTable &ST, Builtin::Context &BC) {
 std::unique_ptr<CodeGenerator> BuildCodeGen(CompilerInstance &CI,
                                             llvm::LLVMContext &LLVMCtx) {
   StringRef ModuleName("$__module");
-  return std::unique_ptr<CodeGenerator>(CreateLLVMCodeGen(
-      CI.getDiagnostics(), ModuleName, &CI.getVirtualFileSystem(),
-      CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
-      LLVMCtx));
+  return CreateLLVMCodeGen(CI, ModuleName, LLVMCtx);
 }
 } // namespace init_convenience
 
@@ -337,8 +337,10 @@ llvm::Expected<CIAndOrigins> Parse(const std::string &Path,
   if (llvm::Error PE = ParseSource(Path, CI.getCompilerInstance(), Consumers))
     return std::move(PE);
   CI.getDiagnosticClient().EndSourceFile();
-  if (ShouldDumpIR)
+  if (ShouldDumpIR) {
+    CG.GetModule()->renumberMetadataForAssembly();
     CG.GetModule()->print(llvm::outs(), nullptr);
+  }
   if (CI.getDiagnosticClient().getNumErrors())
     return llvm::make_error<llvm::StringError>(
         "Errors occurred while parsing the expression.", std::error_code());

@@ -19,8 +19,8 @@ class ModuleDependencyCollectorAdaptor
 public:
   ModuleDependencyCollectorAdaptor(
       std::shared_ptr<llvm::FileCollectorBase> file_collector)
-      : clang::ModuleDependencyCollector(""), m_file_collector(file_collector) {
-  }
+      : clang::ModuleDependencyCollector("", llvm::vfs::getRealFileSystem()),
+        m_file_collector(file_collector) {}
 
   void addFile(llvm::StringRef Filename,
                llvm::StringRef FileDst = {}) override {

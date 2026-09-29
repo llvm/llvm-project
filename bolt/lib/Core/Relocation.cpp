@@ -16,6 +16,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Object/ObjectFile.h"
 
 using namespace llvm;
 using namespace bolt;
@@ -29,7 +30,7 @@ enum {
 
 Triple::ArchType Relocation::Arch;
 
-static bool isSupportedX86(uint64_t Type) {
+static bool isSupportedX86(uint32_t Type) {
   switch (Type) {
   default:
     return false;
@@ -52,7 +53,7 @@ static bool isSupportedX86(uint64_t Type) {
   }
 }
 
-static bool isSupportedAArch64(uint64_t Type) {
+static bool isSupportedAArch64(uint32_t Type) {
   switch (Type) {
   default:
     return false;
@@ -70,6 +71,8 @@ static bool isSupportedAArch64(uint64_t Type) {
   case ELF::R_AARCH64_LDST16_ABS_LO12_NC:
   case ELF::R_AARCH64_LDST8_ABS_LO12_NC:
   case ELF::R_AARCH64_ADR_GOT_PAGE:
+  case ELF::R_AARCH64_TLSGD_ADR_PAGE21:
+  case ELF::R_AARCH64_TLSGD_ADD_LO12_NC:
   case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
   case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
   case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
@@ -80,7 +83,6 @@ static bool isSupportedAArch64(uint64_t Type) {
   case ELF::R_AARCH64_LD64_GOT_LO12_NC:
   case ELF::R_AARCH64_TLSDESC_LD64_LO12:
   case ELF::R_AARCH64_TLSDESC_ADD_LO12:
-  case ELF::R_AARCH64_TLSDESC_CALL:
   case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
   case ELF::R_AARCH64_PREL16:
   case ELF::R_AARCH64_PREL32:
@@ -95,11 +97,12 @@ static bool isSupportedAArch64(uint64_t Type) {
   case ELF::R_AARCH64_MOVW_UABS_G2:
   case ELF::R_AARCH64_MOVW_UABS_G2_NC:
   case ELF::R_AARCH64_MOVW_UABS_G3:
+  case ELF::R_AARCH64_PLT32:
     return true;
   }
 }
 
-static bool isSupportedRISCV(uint64_t Type) {
+static bool isSupportedRISCV(uint32_t Type) {
   switch (Type) {
   default:
     return false;
@@ -119,8 +122,10 @@ static bool isSupportedRISCV(uint64_t Type) {
   case ELF::R_RISCV_HI20:
   case ELF::R_RISCV_LO12_I:
   case ELF::R_RISCV_LO12_S:
+  case ELF::R_RISCV_32:
   case ELF::R_RISCV_64:
   case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TLS_GD_HI20:
   case ELF::R_RISCV_TPREL_HI20:
   case ELF::R_RISCV_TPREL_ADD:
   case ELF::R_RISCV_TPREL_LO12_I:
@@ -131,7 +136,7 @@ static bool isSupportedRISCV(uint64_t Type) {
   }
 }
 
-static size_t getSizeForTypeX86(uint64_t Type) {
+static size_t getSizeForTypeX86(uint32_t Type) {
   switch (Type) {
   default:
     errs() << object::getELFRelocationTypeName(ELF::EM_X86_64, Type) << '\n';
@@ -158,7 +163,7 @@ static size_t getSizeForTypeX86(uint64_t Type) {
   }
 }
 
-static size_t getSizeForTypeAArch64(uint64_t Type) {
+static size_t getSizeForTypeAArch64(uint32_t Type) {
   switch (Type) {
   default:
     errs() << object::getELFRelocationTypeName(ELF::EM_AARCH64, Type) << '\n';
@@ -180,6 +185,8 @@ static size_t getSizeForTypeAArch64(uint64_t Type) {
   case ELF::R_AARCH64_LDST16_ABS_LO12_NC:
   case ELF::R_AARCH64_LDST8_ABS_LO12_NC:
   case ELF::R_AARCH64_ADR_GOT_PAGE:
+  case ELF::R_AARCH64_TLSGD_ADR_PAGE21:
+  case ELF::R_AARCH64_TLSGD_ADD_LO12_NC:
   case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
   case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
   case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
@@ -190,7 +197,6 @@ static size_t getSizeForTypeAArch64(uint64_t Type) {
   case ELF::R_AARCH64_LD64_GOT_LO12_NC:
   case ELF::R_AARCH64_TLSDESC_LD64_LO12:
   case ELF::R_AARCH64_TLSDESC_ADD_LO12:
-  case ELF::R_AARCH64_TLSDESC_CALL:
   case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
   case ELF::R_AARCH64_PREL32:
   case ELF::R_AARCH64_MOVW_UABS_G0:
@@ -201,6 +207,7 @@ static size_t getSizeForTypeAArch64(uint64_t Type) {
   case ELF::R_AARCH64_MOVW_UABS_G2_NC:
   case ELF::R_AARCH64_MOVW_UABS_G3:
   case ELF::R_AARCH64_ABS32:
+  case ELF::R_AARCH64_PLT32:
     return 4;
   case ELF::R_AARCH64_ABS64:
   case ELF::R_AARCH64_PREL64:
@@ -208,7 +215,7 @@ static size_t getSizeForTypeAArch64(uint64_t Type) {
   }
 }
 
-static size_t getSizeForTypeRISCV(uint64_t Type) {
+static size_t getSizeForTypeRISCV(uint32_t Type) {
   switch (Type) {
   default:
     errs() << object::getELFRelocationTypeName(ELF::EM_RISCV, Type) << '\n';
@@ -222,31 +229,40 @@ static size_t getSizeForTypeRISCV(uint64_t Type) {
   case ELF::R_RISCV_PCREL_LO12_I:
   case ELF::R_RISCV_PCREL_LO12_S:
   case ELF::R_RISCV_32_PCREL:
-  case ELF::R_RISCV_CALL:
-  case ELF::R_RISCV_CALL_PLT:
   case ELF::R_RISCV_ADD32:
   case ELF::R_RISCV_SUB32:
   case ELF::R_RISCV_HI20:
   case ELF::R_RISCV_LO12_I:
   case ELF::R_RISCV_LO12_S:
+  case ELF::R_RISCV_32:
     return 4;
   case ELF::R_RISCV_64:
+  case ELF::R_RISCV_CALL:
+  case ELF::R_RISCV_CALL_PLT:
   case ELF::R_RISCV_GOT_HI20:
   case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TLS_GD_HI20:
     // See extractValueRISCV for why this is necessary.
     return 8;
   }
 }
 
-static bool skipRelocationTypeX86(uint64_t Type) {
+static bool skipRelocationTypeX86(uint32_t Type) {
   return Type == ELF::R_X86_64_NONE;
 }
 
-static bool skipRelocationTypeAArch64(uint64_t Type) {
-  return Type == ELF::R_AARCH64_NONE || Type == ELF::R_AARCH64_LD_PREL_LO19;
+static bool skipRelocationTypeAArch64(uint32_t Type) {
+  switch (Type) {
+  default:
+    return false;
+  case ELF::R_AARCH64_NONE:
+  case ELF::R_AARCH64_LD_PREL_LO19:
+  case ELF::R_AARCH64_TLSDESC_CALL:
+    return true;
+  }
 }
 
-static bool skipRelocationTypeRISCV(uint64_t Type) {
+static bool skipRelocationTypeRISCV(uint32_t Type) {
   switch (Type) {
   default:
     return false;
@@ -256,102 +272,7 @@ static bool skipRelocationTypeRISCV(uint64_t Type) {
   }
 }
 
-static bool skipRelocationProcessX86(uint64_t &Type, uint64_t Contents) {
-  return false;
-}
-
-static bool skipRelocationProcessAArch64(uint64_t &Type, uint64_t Contents) {
-  auto IsMov = [](uint64_t Contents) -> bool {
-    // The bits 28-23 are 0b100101
-    return (Contents & 0x1f800000) == 0x12800000;
-  };
-
-  auto IsB = [](uint64_t Contents) -> bool {
-    // The bits 31-26 are 0b000101
-    return (Contents & 0xfc000000) == 0x14000000;
-  };
-
-  auto IsAdr = [](uint64_t Contents) -> bool {
-    // The bits 31-24 are 0b0xx10000
-    return (Contents & 0x9f000000) == 0x10000000;
-  };
-
-  auto IsAddImm = [](uint64_t Contents) -> bool {
-    // The bits 30-23 are 0b00100010
-    return (Contents & 0x7F800000) == 0x11000000;
-  };
-
-  auto IsNop = [](uint64_t Contents) -> bool { return Contents == 0xd503201f; };
-
-  // The linker might eliminate the instruction and replace it with NOP, ignore
-  if (IsNop(Contents))
-    return true;
-
-  // The linker might relax ADRP+LDR instruction sequence for loading symbol
-  // address from GOT table to ADRP+ADD sequence that would point to the
-  // binary-local symbol. Change relocation type in order to process it right.
-  if (Type == ELF::R_AARCH64_LD64_GOT_LO12_NC && IsAddImm(Contents)) {
-    Type = ELF::R_AARCH64_ADD_ABS_LO12_NC;
-    return false;
-  }
-
-  // The linker might perform TLS relocations relaxations, such as
-  // changed TLS access model (e.g. changed global dynamic model
-  // to initial exec), thus changing the instructions. The static
-  // relocations might be invalid at this point and we might no
-  // need to process these relocations anymore.
-  // More information could be found by searching
-  // elfNN_aarch64_tls_relax in bfd
-  switch (Type) {
-  default:
-    break;
-  case ELF::R_AARCH64_TLSDESC_LD64_LO12:
-  case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
-  case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
-  case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21: {
-    if (IsMov(Contents))
-      return true;
-  }
-  }
-
-  // The linker might replace load/store instruction with jump and
-  // veneer due to errata 843419
-  // https://documentation-service.arm.com/static/5fa29fddb209f547eebd361d
-  // Thus load/store relocations for these instructions must be ignored
-  // NOTE: We only process GOT and TLS relocations this way since the
-  // addend used in load/store instructions won't change after bolt
-  // (it is important since the instruction in veneer won't have relocation)
-  switch (Type) {
-  default:
-    break;
-  case ELF::R_AARCH64_LD64_GOT_LO12_NC:
-  case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
-  case ELF::R_AARCH64_TLSDESC_LD64_LO12: {
-    if (IsB(Contents))
-      return true;
-  }
-  }
-
-  // The linker might relax ADRP+ADD or ADRP+LDR sequences to the ADR+NOP
-  switch (Type) {
-  default:
-    break;
-  case ELF::R_AARCH64_ADR_PREL_PG_HI21:
-  case ELF::R_AARCH64_ADD_ABS_LO12_NC:
-  case ELF::R_AARCH64_ADR_GOT_PAGE:
-  case ELF::R_AARCH64_LD64_GOT_LO12_NC:
-    if (IsAdr(Contents))
-      return true;
-  }
-
-  return false;
-}
-
-static bool skipRelocationProcessRISCV(uint64_t &Type, uint64_t Contents) {
-  return false;
-}
-
-static uint64_t encodeValueX86(uint64_t Type, uint64_t Value, uint64_t PC) {
+static uint64_t encodeValueX86(uint32_t Type, uint64_t Value, uint64_t PC) {
   switch (Type) {
   default:
     llvm_unreachable("unsupported relocation");
@@ -365,7 +286,17 @@ static uint64_t encodeValueX86(uint64_t Type, uint64_t Value, uint64_t PC) {
   return Value;
 }
 
-static uint64_t encodeValueAArch64(uint64_t Type, uint64_t Value, uint64_t PC) {
+static bool canEncodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC) {
+  switch (Type) {
+  default:
+    llvm_unreachable("unsupported relocation");
+  case ELF::R_AARCH64_CALL26:
+  case ELF::R_AARCH64_JUMP26:
+    return isInt<28>(Value - PC);
+  }
+}
+
+static uint64_t encodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC) {
   switch (Type) {
   default:
     llvm_unreachable("unsupported relocation");
@@ -397,17 +328,29 @@ static uint64_t encodeValueAArch64(uint64_t Type, uint64_t Value, uint64_t PC) {
   return Value;
 }
 
-static uint64_t encodeValueRISCV(uint64_t Type, uint64_t Value, uint64_t PC) {
+static uint64_t canEncodeValueRISCV(uint32_t Type, uint64_t Value,
+                                    uint64_t PC) {
   switch (Type) {
   default:
     llvm_unreachable("unsupported relocation");
+  case ELF::R_RISCV_32:
+  case ELF::R_RISCV_64:
+    return true;
+  }
+}
+
+static uint64_t encodeValueRISCV(uint32_t Type, uint64_t Value, uint64_t PC) {
+  switch (Type) {
+  default:
+    llvm_unreachable("unsupported relocation");
+  case ELF::R_RISCV_32:
   case ELF::R_RISCV_64:
     break;
   }
   return Value;
 }
 
-static uint64_t extractValueX86(uint64_t Type, uint64_t Contents, uint64_t PC) {
+static uint64_t extractValueX86(uint32_t Type, uint64_t Contents, uint64_t PC) {
   if (Type == ELF::R_X86_64_32S)
     return SignExtend64<32>(Contents);
   if (Relocation::isPCRelative(Type))
@@ -415,7 +358,7 @@ static uint64_t extractValueX86(uint64_t Type, uint64_t Contents, uint64_t PC) {
   return Contents;
 }
 
-static uint64_t extractValueAArch64(uint64_t Type, uint64_t Contents,
+static uint64_t extractValueAArch64(uint32_t Type, uint64_t Contents,
                                     uint64_t PC) {
   switch (Type) {
   default:
@@ -428,10 +371,10 @@ static uint64_t extractValueAArch64(uint64_t Type, uint64_t Contents,
   case ELF::R_AARCH64_PREL16:
     return static_cast<int64_t>(PC) + SignExtend64<16>(Contents & 0xffff);
   case ELF::R_AARCH64_PREL32:
+  case ELF::R_AARCH64_PLT32:
     return static_cast<int64_t>(PC) + SignExtend64<32>(Contents & 0xffffffff);
   case ELF::R_AARCH64_PREL64:
     return static_cast<int64_t>(PC) + Contents;
-  case ELF::R_AARCH64_TLSDESC_CALL:
   case ELF::R_AARCH64_JUMP26:
   case ELF::R_AARCH64_CALL26:
     // Immediate goes in bits 25:0 of B and BL.
@@ -446,6 +389,7 @@ static uint64_t extractValueAArch64(uint64_t Type, uint64_t Contents,
     Contents &= ~0xffffffffff00001fULL;
     return static_cast<int64_t>(PC) + SignExtend64<21>(Contents >> 3);
   case ELF::R_AARCH64_ADR_GOT_PAGE:
+  case ELF::R_AARCH64_TLSGD_ADR_PAGE21:
   case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
   case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
   case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
@@ -478,6 +422,7 @@ static uint64_t extractValueAArch64(uint64_t Type, uint64_t Contents,
   }
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+  case ELF::R_AARCH64_TLSGD_ADD_LO12_NC:
   case ELF::R_AARCH64_TLSDESC_ADD_LO12:
   case ELF::R_AARCH64_ADD_ABS_LO12_NC: {
     // Immediate goes in bits 21:10 of ADD instruction
@@ -547,7 +492,7 @@ static uint64_t extractBImmRISCV(uint32_t Contents) {
       (((Contents >> 7) & 0x1) << 11) | (((Contents >> 31) & 0x1) << 12));
 }
 
-static uint64_t extractValueRISCV(uint64_t Type, uint64_t Contents,
+static uint64_t extractValueRISCV(uint32_t Type, uint64_t Contents,
                                   uint64_t PC) {
   switch (Type) {
   default:
@@ -557,11 +502,16 @@ static uint64_t extractValueRISCV(uint64_t Type, uint64_t Contents,
     return extractJImmRISCV(Contents);
   case ELF::R_RISCV_CALL:
   case ELF::R_RISCV_CALL_PLT:
-    return extractUImmRISCV(Contents);
+    // The psABI "Relocations" chapter's "Procedure Calls" section defines
+    // R_RISCV_CALL and R_RISCV_CALL_PLT over an AUIPC/JALR pair. Decode both
+    // instructions so the addend includes the low 12 bits carried by JALR.
+    return extractUImmRISCV(Contents & 0xffffffff) +
+           extractIImmRISCV(Contents >> 32);
   case ELF::R_RISCV_BRANCH:
     return extractBImmRISCV(Contents);
   case ELF::R_RISCV_GOT_HI20:
   case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TLS_GD_HI20:
     // We need to know the exact address of the GOT entry so we extract the
     // value from both the AUIPC and L[D|W]. We cannot rely on the symbol in the
     // relocation for this since it simply refers to the object that is stored
@@ -583,12 +533,13 @@ static uint64_t extractValueRISCV(uint64_t Type, uint64_t Contents,
     return SignExtend64<8>(((Contents >> 2) & 0x1f) | ((Contents >> 5) & 0xe0));
   case ELF::R_RISCV_ADD32:
   case ELF::R_RISCV_SUB32:
+  case ELF::R_RISCV_32:
   case ELF::R_RISCV_64:
     return Contents;
   }
 }
 
-static bool isGOTX86(uint64_t Type) {
+static bool isGOTX86(uint32_t Type) {
   switch (Type) {
   default:
     return false;
@@ -608,7 +559,7 @@ static bool isGOTX86(uint64_t Type) {
   }
 }
 
-static bool isGOTAArch64(uint64_t Type) {
+static bool isGOTAArch64(uint32_t Type) {
   switch (Type) {
   default:
     return false;
@@ -616,26 +567,28 @@ static bool isGOTAArch64(uint64_t Type) {
   case ELF::R_AARCH64_LD64_GOT_LO12_NC:
   case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
   case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+  case ELF::R_AARCH64_TLSGD_ADR_PAGE21:
+  case ELF::R_AARCH64_TLSGD_ADD_LO12_NC:
   case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
   case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
   case ELF::R_AARCH64_TLSDESC_LD64_LO12:
   case ELF::R_AARCH64_TLSDESC_ADD_LO12:
-  case ELF::R_AARCH64_TLSDESC_CALL:
     return true;
   }
 }
 
-static bool isGOTRISCV(uint64_t Type) {
+static bool isGOTRISCV(uint32_t Type) {
   switch (Type) {
   default:
     return false;
   case ELF::R_RISCV_GOT_HI20:
   case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TLS_GD_HI20:
     return true;
   }
 }
 
-static bool isTLSX86(uint64_t Type) {
+static bool isTLSX86(uint32_t Type) {
   switch (Type) {
   default:
     return false;
@@ -646,10 +599,12 @@ static bool isTLSX86(uint64_t Type) {
   }
 }
 
-static bool isTLSAArch64(uint64_t Type) {
+static bool isTLSAArch64(uint32_t Type) {
   switch (Type) {
   default:
     return false;
+  case ELF::R_AARCH64_TLSGD_ADR_PAGE21:
+  case ELF::R_AARCH64_TLSGD_ADD_LO12_NC:
   case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
   case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
   case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
@@ -659,17 +614,17 @@ static bool isTLSAArch64(uint64_t Type) {
   case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
   case ELF::R_AARCH64_TLSDESC_LD64_LO12:
   case ELF::R_AARCH64_TLSDESC_ADD_LO12:
-  case ELF::R_AARCH64_TLSDESC_CALL:
   case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     return true;
   }
 }
 
-static bool isTLSRISCV(uint64_t Type) {
+static bool isTLSRISCV(uint32_t Type) {
   switch (Type) {
   default:
     return false;
   case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TLS_GD_HI20:
   case ELF::R_RISCV_TPREL_HI20:
   case ELF::R_RISCV_TPREL_ADD:
   case ELF::R_RISCV_TPREL_LO12_I:
@@ -680,7 +635,7 @@ static bool isTLSRISCV(uint64_t Type) {
   }
 }
 
-static bool isPCRelativeX86(uint64_t Type) {
+static bool isPCRelativeX86(uint32_t Type) {
   switch (Type) {
   default:
     llvm_unreachable("Unknown relocation type");
@@ -706,7 +661,7 @@ static bool isPCRelativeX86(uint64_t Type) {
   }
 }
 
-static bool isPCRelativeAArch64(uint64_t Type) {
+static bool isPCRelativeAArch64(uint32_t Type) {
   switch (Type) {
   default:
     llvm_unreachable("Unknown relocation type");
@@ -720,6 +675,7 @@ static bool isPCRelativeAArch64(uint64_t Type) {
   case ELF::R_AARCH64_LDST16_ABS_LO12_NC:
   case ELF::R_AARCH64_LDST8_ABS_LO12_NC:
   case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+  case ELF::R_AARCH64_TLSGD_ADD_LO12_NC:
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
   case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0:
@@ -735,7 +691,6 @@ static bool isPCRelativeAArch64(uint64_t Type) {
   case ELF::R_AARCH64_MOVW_UABS_G2_NC:
   case ELF::R_AARCH64_MOVW_UABS_G3:
     return false;
-  case ELF::R_AARCH64_TLSDESC_CALL:
   case ELF::R_AARCH64_CALL26:
   case ELF::R_AARCH64_JUMP26:
   case ELF::R_AARCH64_TSTBR14:
@@ -745,16 +700,18 @@ static bool isPCRelativeAArch64(uint64_t Type) {
   case ELF::R_AARCH64_ADR_PREL_PG_HI21_NC:
   case ELF::R_AARCH64_ADR_GOT_PAGE:
   case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+  case ELF::R_AARCH64_TLSGD_ADR_PAGE21:
   case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
   case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
   case ELF::R_AARCH64_PREL16:
   case ELF::R_AARCH64_PREL32:
   case ELF::R_AARCH64_PREL64:
+  case ELF::R_AARCH64_PLT32:
     return true;
   }
 }
 
-static bool isPCRelativeRISCV(uint64_t Type) {
+static bool isPCRelativeRISCV(uint32_t Type) {
   switch (Type) {
   default:
     llvm_unreachable("Unknown relocation type");
@@ -763,6 +720,7 @@ static bool isPCRelativeRISCV(uint64_t Type) {
   case ELF::R_RISCV_HI20:
   case ELF::R_RISCV_LO12_I:
   case ELF::R_RISCV_LO12_S:
+  case ELF::R_RISCV_32:
   case ELF::R_RISCV_64:
     return false;
   case ELF::R_RISCV_JAL:
@@ -777,76 +735,82 @@ static bool isPCRelativeRISCV(uint64_t Type) {
   case ELF::R_RISCV_RVC_BRANCH:
   case ELF::R_RISCV_32_PCREL:
   case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TLS_GD_HI20:
     return true;
   }
 }
 
-bool Relocation::isSupported(uint64_t Type) {
+bool Relocation::isSupported(uint32_t Type) {
   switch (Arch) {
   default:
     return false;
   case Triple::aarch64:
     return isSupportedAArch64(Type);
   case Triple::riscv64:
+  case Triple::riscv32:
     return isSupportedRISCV(Type);
   case Triple::x86_64:
     return isSupportedX86(Type);
   }
 }
 
-size_t Relocation::getSizeForType(uint64_t Type) {
+size_t Relocation::getSizeForType(uint32_t Type) {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return getSizeForTypeAArch64(Type);
   case Triple::riscv64:
+  case Triple::riscv32:
     return getSizeForTypeRISCV(Type);
   case Triple::x86_64:
     return getSizeForTypeX86(Type);
   }
 }
 
-bool Relocation::skipRelocationType(uint64_t Type) {
+bool Relocation::skipRelocationType(uint32_t Type) {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return skipRelocationTypeAArch64(Type);
   case Triple::riscv64:
+  case Triple::riscv32:
     return skipRelocationTypeRISCV(Type);
   case Triple::x86_64:
     return skipRelocationTypeX86(Type);
   }
 }
 
-bool Relocation::skipRelocationProcess(uint64_t &Type, uint64_t Contents) {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return skipRelocationProcessAArch64(Type, Contents);
-  case Triple::riscv64:
-    return skipRelocationProcessRISCV(Type, Contents);
-  case Triple::x86_64:
-    return skipRelocationProcessX86(Type, Contents);
-  }
-}
-
-uint64_t Relocation::encodeValue(uint64_t Type, uint64_t Value, uint64_t PC) {
+uint64_t Relocation::encodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return encodeValueAArch64(Type, Value, PC);
   case Triple::riscv64:
+  case Triple::riscv32:
     return encodeValueRISCV(Type, Value, PC);
   case Triple::x86_64:
     return encodeValueX86(Type, Value, PC);
   }
 }
 
-uint64_t Relocation::extractValue(uint64_t Type, uint64_t Contents,
+bool Relocation::canEncodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
+  switch (Arch) {
+  default:
+    llvm_unreachable("Unsupported architecture");
+  case Triple::aarch64:
+    return canEncodeValueAArch64(Type, Value, PC);
+  case Triple::riscv64:
+  case Triple::riscv32:
+    return canEncodeValueRISCV(Type, Value, PC);
+  case Triple::x86_64:
+    return true;
+  }
+}
+
+uint64_t Relocation::extractValue(uint32_t Type, uint64_t Contents,
                                   uint64_t PC) {
   switch (Arch) {
   default:
@@ -854,80 +818,86 @@ uint64_t Relocation::extractValue(uint64_t Type, uint64_t Contents,
   case Triple::aarch64:
     return extractValueAArch64(Type, Contents, PC);
   case Triple::riscv64:
+  case Triple::riscv32:
     return extractValueRISCV(Type, Contents, PC);
   case Triple::x86_64:
     return extractValueX86(Type, Contents, PC);
   }
 }
 
-bool Relocation::isGOT(uint64_t Type) {
+bool Relocation::isGOT(uint32_t Type) {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return isGOTAArch64(Type);
   case Triple::riscv64:
+  case Triple::riscv32:
     return isGOTRISCV(Type);
   case Triple::x86_64:
     return isGOTX86(Type);
   }
 }
 
-bool Relocation::isX86GOTPCRELX(uint64_t Type) {
+bool Relocation::isX86GOTPCRELX(uint32_t Type) {
   if (Arch != Triple::x86_64)
     return false;
   return Type == ELF::R_X86_64_GOTPCRELX || Type == ELF::R_X86_64_REX_GOTPCRELX;
 }
 
-bool Relocation::isX86GOTPC64(uint64_t Type) {
+bool Relocation::isX86GOTPC64(uint32_t Type) {
   if (Arch != Triple::x86_64)
     return false;
   return Type == ELF::R_X86_64_GOTPC64;
 }
 
-bool Relocation::isNone(uint64_t Type) { return Type == getNone(); }
+bool Relocation::isNone(uint32_t Type) { return Type == getNone(); }
 
-bool Relocation::isRelative(uint64_t Type) {
+bool Relocation::isRelative(uint32_t Type) {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return Type == ELF::R_AARCH64_RELATIVE;
   case Triple::riscv64:
+  case Triple::riscv32:
     return Type == ELF::R_RISCV_RELATIVE;
   case Triple::x86_64:
     return Type == ELF::R_X86_64_RELATIVE;
   }
 }
 
-bool Relocation::isIRelative(uint64_t Type) {
+bool Relocation::isIRelative(uint32_t Type) {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return Type == ELF::R_AARCH64_IRELATIVE;
   case Triple::riscv64:
+    return Type == ELF::R_RISCV_IRELATIVE;
+  case Triple::riscv32:
     llvm_unreachable("not implemented");
   case Triple::x86_64:
     return Type == ELF::R_X86_64_IRELATIVE;
   }
 }
 
-bool Relocation::isTLS(uint64_t Type) {
+bool Relocation::isTLS(uint32_t Type) {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return isTLSAArch64(Type);
   case Triple::riscv64:
+  case Triple::riscv32:
     return isTLSRISCV(Type);
   case Triple::x86_64:
     return isTLSX86(Type);
   }
 }
 
-bool Relocation::isInstructionReference(uint64_t Type) {
-  if (Arch != Triple::riscv64)
+bool Relocation::isInstructionReference(uint32_t Type) {
+  if (Arch != Triple::riscv64 && Arch != Triple::riscv32)
     return false;
 
   switch (Type) {
@@ -939,78 +909,91 @@ bool Relocation::isInstructionReference(uint64_t Type) {
   }
 }
 
-uint64_t Relocation::getNone() {
+uint32_t Relocation::getNone() {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return ELF::R_AARCH64_NONE;
   case Triple::riscv64:
+  case Triple::riscv32:
     return ELF::R_RISCV_NONE;
   case Triple::x86_64:
     return ELF::R_X86_64_NONE;
   }
 }
 
-uint64_t Relocation::getPC32() {
+uint32_t Relocation::getPC32() {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return ELF::R_AARCH64_PREL32;
   case Triple::riscv64:
+  case Triple::riscv32:
     return ELF::R_RISCV_32_PCREL;
   case Triple::x86_64:
     return ELF::R_X86_64_PC32;
   }
 }
 
-uint64_t Relocation::getPC64() {
+uint32_t Relocation::getPC64() {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return ELF::R_AARCH64_PREL64;
   case Triple::riscv64:
+  case Triple::riscv32:
     llvm_unreachable("not implemented");
   case Triple::x86_64:
     return ELF::R_X86_64_PC64;
   }
 }
 
-bool Relocation::isPCRelative(uint64_t Type) {
+uint32_t Relocation::getType(const object::RelocationRef &Rel) {
+  uint64_t RelType = Rel.getType();
+  assert(isUInt<32>(RelType) && "BOLT relocation types are 32 bits");
+  return static_cast<uint32_t>(RelType);
+}
+
+bool Relocation::isPCRelative(uint32_t Type) {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return isPCRelativeAArch64(Type);
   case Triple::riscv64:
+  case Triple::riscv32:
     return isPCRelativeRISCV(Type);
   case Triple::x86_64:
     return isPCRelativeX86(Type);
   }
 }
 
-uint64_t Relocation::getAbs64() {
+uint32_t Relocation::getAbs64() {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return ELF::R_AARCH64_ABS64;
   case Triple::riscv64:
+  case Triple::riscv32:
     return ELF::R_RISCV_64;
   case Triple::x86_64:
     return ELF::R_X86_64_64;
   }
 }
 
-uint64_t Relocation::getRelative() {
+uint32_t Relocation::getRelative() {
   switch (Arch) {
   default:
     llvm_unreachable("Unsupported architecture");
   case Triple::aarch64:
     return ELF::R_AARCH64_RELATIVE;
   case Triple::riscv64:
+    return ELF::R_RISCV_RELATIVE;
+  case Triple::riscv32:
     llvm_unreachable("not implemented");
   case Triple::x86_64:
     return ELF::R_X86_64_RELATIVE;
@@ -1059,8 +1042,9 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer,
   return Value;
 }
 
-MCBinaryExpr::Opcode Relocation::getComposeOpcodeFor(uint64_t Type) {
-  assert(Arch == Triple::riscv64 && "only implemented for RISC-V");
+MCBinaryExpr::Opcode Relocation::getComposeOpcodeFor(uint32_t Type) {
+  assert((Arch == Triple::riscv32 || Arch == Triple::riscv64) &&
+         "only implemented for RISC-V");
 
   switch (Type) {
   default:
@@ -1077,40 +1061,15 @@ void Relocation::print(raw_ostream &OS) const {
   default:
     OS << "RType:" << Twine::utohexstr(Type);
     break;
-
   case Triple::aarch64:
-    static const char *const AArch64RelocNames[] = {
-#define ELF_RELOC(name, value) #name,
-#include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
-#undef ELF_RELOC
-    };
-    assert(Type < ArrayRef(AArch64RelocNames).size());
-    OS << AArch64RelocNames[Type];
+    OS << object::getELFRelocationTypeName(ELF::EM_AARCH64, Type);
     break;
-
   case Triple::riscv64:
-    // RISC-V relocations are not sequentially numbered so we cannot use an
-    // array
-    switch (Type) {
-    default:
-      llvm_unreachable("illegal RISC-V relocation");
-#define ELF_RELOC(name, value)                                                 \
-  case value:                                                                  \
-    OS << #name;                                                               \
+  case Triple::riscv32:
+    OS << object::getELFRelocationTypeName(ELF::EM_RISCV, Type);
     break;
-#include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
-#undef ELF_RELOC
-    }
-    break;
-
   case Triple::x86_64:
-    static const char *const X86RelocNames[] = {
-#define ELF_RELOC(name, value) #name,
-#include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
-#undef ELF_RELOC
-    };
-    assert(Type < ArrayRef(X86RelocNames).size());
-    OS << X86RelocNames[Type];
+    OS << object::getELFRelocationTypeName(ELF::EM_X86_64, Type);
     break;
   }
   OS << ", 0x" << Twine::utohexstr(Offset);

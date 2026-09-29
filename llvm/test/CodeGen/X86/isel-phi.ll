@@ -364,9 +364,9 @@ define ptr @test_ptr(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ptr %g, i1 
 ; GLOBAL-X64-LABEL: test_ptr:
 ; GLOBAL-X64:       # %bb.0: # %entry
 ; GLOBAL-X64-NEXT:    movq %rdi, %rax
-; GLOBAL-X64-NEXT:    movl {{[0-9]+}}(%rsp), %r11d
-; GLOBAL-X64-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
-; GLOBAL-X64-NEXT:    movl {{[0-9]+}}(%rsp), %edi
+; GLOBAL-X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r11d
+; GLOBAL-X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
+; GLOBAL-X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %edi
 ; GLOBAL-X64-NEXT:    testb $1, %r11b
 ; GLOBAL-X64-NEXT:    je .LBB7_4
 ; GLOBAL-X64-NEXT:  # %bb.1: # %cond.true

@@ -1,4 +1,4 @@
-//===----- detail.h - HLSL definitions for intrinsics ----------===//
+//===----- hlsl_detail.h - HLSL definitions for intrinsics ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,8 @@
 namespace hlsl {
 
 namespace __detail {
+
+constexpr double Pi = 3.14159265358979323846L;
 
 template <typename T, typename U> struct is_same {
   static const bool value = false;
@@ -30,6 +32,18 @@ template <typename T> struct enable_if<true, T> {
 template <bool B, class T = void>
 using enable_if_t = typename enable_if<B, T>::Type;
 
+template <typename T> struct type_identity {
+  using Type = T;
+};
+
+template <typename T> using type_identity_t = typename type_identity<T>::Type;
+
+template <typename U, typename T, int R, int C>
+constexpr enable_if_t<sizeof(U) == sizeof(T), matrix<U, R, C>>
+bit_cast(matrix<T, R, C> M) {
+  return __builtin_bit_cast(matrix<U, R, C>, M);
+}
+
 template <typename U, typename T, int N>
 constexpr enable_if_t<sizeof(U) == sizeof(T), vector<U, N>>
 bit_cast(vector<T, N> V) {
@@ -41,33 +55,33 @@ constexpr enable_if_t<sizeof(U) == sizeof(T), U> bit_cast(T F) {
   return __builtin_bit_cast(U, F);
 }
 
-template <typename T>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-length_impl(T X) {
-  return __builtin_elementwise_abs(X);
-}
+template <typename T> struct is_arithmetic {
+  static const bool Value = __is_arithmetic(T);
+};
 
-template <typename T, int N>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-length_vec_impl(vector<T, N> X) {
-  return __builtin_elementwise_sqrt(__builtin_hlsl_dot(X, X));
-}
+template <typename T> struct elem_type {
+  using Type = T;
+};
+template <typename T, int N> struct elem_type<vector<T, N>> {
+  using Type = T;
+};
+template <typename T, int R, int C> struct elem_type<matrix<T, R, C>> {
+  using Type = T;
+};
+template <typename T> using elem_type_t = typename elem_type<T>::Type;
 
-template <typename T>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-distance_impl(T X, T Y) {
-  return length_impl(X - Y);
-}
+struct resource_descriptor_heap_struct {
+  heap_resource_info operator[](uint32_t Index) {
+    return heap_resource_info{Index};
+  }
+};
 
-template <typename T, int N>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-distance_vec_impl(vector<T, N> X, vector<T, N> Y) {
-#if (__has_builtin(__builtin_spirv_distance))
-  return __builtin_spirv_distance(X, Y);
-#else
-  return length_vec_impl(X - Y);
-#endif
-}
+struct sampler_descriptor_heap_struct {
+  heap_sampler_info operator[](uint32_t Index) {
+    return heap_sampler_info{Index};
+  }
+};
+
 } // namespace __detail
 } // namespace hlsl
 #endif //_HLSL_HLSL_DETAILS_H_

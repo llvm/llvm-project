@@ -24,7 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Debuginfod/HTTPClient.h"
+#include "llvm/HTTP/HTTPClient.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/InstrProfReader.h"
@@ -50,10 +50,6 @@
 
 using namespace llvm;
 using namespace coverage;
-
-void exportCoverageDataToJson(const coverage::CoverageMapping &CoverageMapping,
-                              const CoverageViewOptions &Options,
-                              raw_ostream &OS);
 
 namespace {
 /// The implementation of the coverage tool.
@@ -147,13 +143,13 @@ private:
   std::vector<StringRef> ObjectFilenames;
   CoverageViewOptions ViewOpts;
   CoverageFiltersMatchAll Filters;
-  CoverageFilters IgnoreFilenameFilters;
+  CoverageFilters FilenameFilters;
 
   /// True if InputSourceFiles are provided.
   bool HadSourceFiles = false;
 
   /// The path to the indexed profile.
-  std::string PGOFilename;
+  std::optional<std::string> PGOFilename;
 
   /// A list of input source files.
   std::vector<std::string> SourceFiles;
@@ -222,7 +218,7 @@ void CodeCoverageTool::addCollectedPath(const std::string &Path) {
     return;
   }
   sys::path::remove_dots(EffectivePath, /*remove_dot_dot=*/true);
-  if (!IgnoreFilenameFilters.matchesFilename(EffectivePath))
+  if (!FilenameFilters.matchesFilename(EffectivePath))
     SourceFiles.emplace_back(EffectivePath.str());
   HadSourceFiles = !SourceFiles.empty();
 }
@@ -455,10 +451,12 @@ static bool modifiedTimeGT(StringRef LHS, StringRef RHS) {
 }
 
 std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
-  for (StringRef ObjectFilename : ObjectFilenames)
-    if (modifiedTimeGT(ObjectFilename, PGOFilename))
-      warning("profile data may be out of date - object is newer",
-              ObjectFilename);
+  if (PGOFilename) {
+    for (StringRef ObjectFilename : ObjectFilenames)
+      if (modifiedTimeGT(ObjectFilename, PGOFilename.value()))
+        warning("profile data may be out of date - object is newer",
+                ObjectFilename);
+  }
   auto FS = vfs::getRealFileSystem();
   auto CoverageOrErr = CoverageMapping::load(
       ObjectFilenames, PGOFilename, *FS, CoverageArches,
@@ -547,7 +545,7 @@ void CodeCoverageTool::removeUnmappedInputs(const CoverageMapping &Coverage) {
   // The user may have specified source files which aren't in the coverage
   // mapping. Filter these files away.
   llvm::erase_if(SourceFiles, [&](const std::string &SF) {
-    return !std::binary_search(CoveredFiles.begin(), CoveredFiles.end(), SF);
+    return !llvm::binary_search(CoveredFiles, SF);
   });
 }
 
@@ -588,8 +586,7 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
   // Invoke the demangler.
   std::vector<StringRef> ArgsV;
   ArgsV.reserve(ViewOpts.DemanglerOpts.size());
-  for (StringRef Arg : ViewOpts.DemanglerOpts)
-    ArgsV.push_back(Arg);
+  llvm::append_range(ArgsV, ViewOpts.DemanglerOpts);
   std::optional<StringRef> Redirects[] = {
       InputPath.str(), OutputPath.str(), {""}};
   std::string ErrMsg;
@@ -659,32 +656,36 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "object", cl::desc("Coverage executable or object file"));
 
   cl::opt<bool> DebugDumpCollectedObjects(
-      "dump-collected-objects", cl::Optional, cl::Hidden,
+      "dump-collected-objects", cl::Hidden,
       cl::desc("Show the collected coverage object files"));
 
   cl::list<std::string> InputSourceFiles("sources", cl::Positional,
                                          cl::desc("<Source files>"));
 
   cl::opt<bool> DebugDumpCollectedPaths(
-      "dump-collected-paths", cl::Optional, cl::Hidden,
+      "dump-collected-paths", cl::Hidden,
       cl::desc("Show the collected paths to source files"));
 
-  cl::opt<std::string, true> PGOFilename(
-      "instr-profile", cl::Required, cl::location(this->PGOFilename),
+  cl::opt<std::string> PGOFilename(
+      "instr-profile",
       cl::desc(
           "File with the profile data obtained after an instrumented run"));
+
+  cl::opt<bool> EmptyProfile(
+      "empty-profile",
+      cl::desc("Use a synthetic profile with no data to generate "
+               "baseline coverage"));
 
   cl::list<std::string> Arches(
       "arch", cl::desc("architectures of the coverage mapping binaries"));
 
-  cl::opt<bool> DebugDump("dump", cl::Optional,
-                          cl::desc("Show internal debug dump"));
+  cl::opt<bool> DebugDump("dump", cl::desc("Show internal debug dump"));
 
   cl::list<std::string> DebugFileDirectory(
       "debug-file-directory",
       cl::desc("Directories to search for object files by build ID"));
   cl::opt<bool> Debuginfod(
-      "debuginfod", cl::ZeroOrMore,
+      "debuginfod",
       cl::desc("Use debuginfod to look up object files from profile"),
       cl::init(canUseDebuginfod()));
 
@@ -699,86 +700,95 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       cl::init(CoverageViewOptions::OutputFormat::Text));
 
   cl::list<std::string> PathRemaps(
-      "path-equivalence", cl::Optional,
+      "path-equivalence",
       cl::desc("<from>,<to> Map coverage data paths to local source file "
                "paths"));
 
   cl::OptionCategory FilteringCategory("Function filtering options");
 
   cl::list<std::string> NameFilters(
-      "name", cl::Optional,
+      "name",
       cl::desc("Show code coverage only for functions with the given name"),
       cl::cat(FilteringCategory));
 
   cl::list<std::string> NameFilterFiles(
-      "name-allowlist", cl::Optional,
+      "name-allowlist",
       cl::desc("Show code coverage only for functions listed in the given "
                "file"),
       cl::cat(FilteringCategory));
 
   cl::list<std::string> NameRegexFilters(
-      "name-regex", cl::Optional,
+      "name-regex",
       cl::desc("Show code coverage only for functions that match the given "
                "regular expression"),
       cl::cat(FilteringCategory));
 
   cl::list<std::string> IgnoreFilenameRegexFilters(
-      "ignore-filename-regex", cl::Optional,
+      "ignore-filename-regex",
       cl::desc("Skip source code files with file paths that match the given "
                "regular expression"),
       cl::cat(FilteringCategory));
 
+  cl::list<std::string> IncludeFilenameRegexFilters(
+      "include-filename-regex",
+      cl::desc("Only include source code files with file paths that match the "
+               "given regular expression"),
+      cl::cat(FilteringCategory));
+
   cl::opt<double> RegionCoverageLtFilter(
-      "region-coverage-lt", cl::Optional,
+      "region-coverage-lt",
       cl::desc("Show code coverage only for functions with region coverage "
                "less than the given threshold"),
       cl::cat(FilteringCategory));
 
   cl::opt<double> RegionCoverageGtFilter(
-      "region-coverage-gt", cl::Optional,
+      "region-coverage-gt",
       cl::desc("Show code coverage only for functions with region coverage "
                "greater than the given threshold"),
       cl::cat(FilteringCategory));
 
   cl::opt<double> LineCoverageLtFilter(
-      "line-coverage-lt", cl::Optional,
+      "line-coverage-lt",
       cl::desc("Show code coverage only for functions with line coverage less "
                "than the given threshold"),
       cl::cat(FilteringCategory));
 
   cl::opt<double> LineCoverageGtFilter(
-      "line-coverage-gt", cl::Optional,
+      "line-coverage-gt",
       cl::desc("Show code coverage only for functions with line coverage "
                "greater than the given threshold"),
       cl::cat(FilteringCategory));
 
   cl::opt<cl::boolOrDefault> UseColor(
       "use-color", cl::desc("Emit colored output (default=autodetect)"),
-      cl::init(cl::BOU_UNSET));
+      cl::init(cl::boolOrDefault::BOU_UNSET));
 
   cl::list<std::string> DemanglerOpts(
       "Xdemangler", cl::desc("<demangler-path>|<demangler-option>"));
 
   cl::opt<bool> RegionSummary(
-      "show-region-summary", cl::Optional,
-      cl::desc("Show region statistics in summary table"),
-      cl::init(true));
+      "show-region-summary",
+      cl::desc("Show region statistics in summary table"), cl::init(true));
+
+  cl::opt<bool> FunctionSummary(
+      "show-function-summary",
+      cl::desc("Show function statistics in summary table"), cl::init(true));
 
   cl::opt<bool> BranchSummary(
-      "show-branch-summary", cl::Optional,
+      "show-branch-summary",
       cl::desc("Show branch condition statistics in summary table"),
       cl::init(true));
 
-  cl::opt<bool> MCDCSummary("show-mcdc-summary", cl::Optional,
+  cl::opt<bool> MCDCSummary("show-mcdc-summary",
                             cl::desc("Show MCDC statistics in summary table"),
                             cl::init(false));
 
   cl::opt<bool> InstantiationSummary(
-      "show-instantiation-summary", cl::Optional,
+      "show-instantiation-summary",
       cl::desc("Show instantiation statistics in summary table"));
 
   cl::opt<bool> SummaryOnly(
-      "summary-only", cl::Optional,
+      "summary-only",
       cl::desc("Export only summary information for each source file"));
 
   cl::opt<unsigned> NumThreads(
@@ -798,6 +808,29 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
+
+    // Initialize `Format` and `Colors` before any call to `error()` or
+    // `warning()`, which use `ViewOpts.colored_ostream()` and would read
+    // uninitialized `Colors`.
+    ViewOpts.Format = Format;
+    switch (ViewOpts.Format) {
+    case CoverageViewOptions::OutputFormat::Text:
+      ViewOpts.Colors = UseColor == cl::boolOrDefault::BOU_UNSET
+                            ? sys::Process::StandardOutHasColors()
+                            : UseColor == cl::boolOrDefault::BOU_TRUE;
+      break;
+    case CoverageViewOptions::OutputFormat::HTML:
+      if (UseColor == cl::boolOrDefault::BOU_FALSE)
+        errs() << "Color output cannot be disabled when generating html.\n";
+      ViewOpts.Colors = true;
+      break;
+    case CoverageViewOptions::OutputFormat::Lcov:
+      if (UseColor == cl::boolOrDefault::BOU_TRUE)
+        errs() << "Color output cannot be enabled when generating lcov.\n";
+      ViewOpts.Colors = false;
+      break;
+    }
+
     if (Debuginfod) {
       HTTPClient::initialize();
       BIDFetcher = std::make_unique<DebuginfodFetcher>(DebugFileDirectory);
@@ -805,6 +838,15 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       BIDFetcher = std::make_unique<object::BuildIDFetcher>(DebugFileDirectory);
     }
     this->CheckBinaryIDs = CheckBinaryIDs;
+
+    if (!PGOFilename.empty() == EmptyProfile) {
+      error(
+          "exactly one of -instr-profile and -empty-profile must be specified");
+      return 1;
+    }
+    if (!PGOFilename.empty()) {
+      this->PGOFilename = std::make_optional(PGOFilename.getValue());
+    }
 
     if (!CovFilename.empty())
       ObjectFilenames.emplace_back(CovFilename);
@@ -819,25 +861,6 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       for (StringRef OF : ObjectFilenames)
         outs() << OF << '\n';
       ::exit(0);
-    }
-
-    ViewOpts.Format = Format;
-    switch (ViewOpts.Format) {
-    case CoverageViewOptions::OutputFormat::Text:
-      ViewOpts.Colors = UseColor == cl::BOU_UNSET
-                            ? sys::Process::StandardOutHasColors()
-                            : UseColor == cl::BOU_TRUE;
-      break;
-    case CoverageViewOptions::OutputFormat::HTML:
-      if (UseColor == cl::BOU_FALSE)
-        errs() << "Color output cannot be disabled when generating html.\n";
-      ViewOpts.Colors = true;
-      break;
-    case CoverageViewOptions::OutputFormat::Lcov:
-      if (UseColor == cl::BOU_TRUE)
-        errs() << "Color output cannot be enabled when generating lcov.\n";
-      ViewOpts.Colors = false;
-      break;
     }
 
     if (!PathRemaps.empty()) {
@@ -916,8 +939,11 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 
     // Create the ignore filename filters.
     for (const auto &RE : IgnoreFilenameRegexFilters)
-      IgnoreFilenameFilters.push_back(
-          std::make_unique<NameRegexCoverageFilter>(RE));
+      FilenameFilters.push_back(std::make_unique<NameRegexCoverageFilter>(RE));
+
+    for (const auto &RE : IncludeFilenameRegexFilters)
+      FilenameFilters.push_back(std::make_unique<NameRegexCoverageFilter>(
+          RE, NameRegexCoverageFilter::FilterType::Include));
 
     if (!Arches.empty()) {
       for (const std::string &Arch : Arches) {
@@ -934,7 +960,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       }
     }
 
-    // IgnoreFilenameFilters are applied even when InputSourceFiles specified.
+    // FilenameFilters are applied even when InputSourceFiles specified.
     for (const std::string &File : InputSourceFiles)
       collectPaths(File);
 
@@ -947,6 +973,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ShowMCDCSummary = MCDCSummary;
     ViewOpts.ShowBranchSummary = BranchSummary;
     ViewOpts.ShowRegionSummary = RegionSummary;
+    ViewOpts.ShowFunctionSummary = FunctionSummary;
     ViewOpts.ShowInstantiationSummary = InstantiationSummary;
     ViewOpts.ExportSummaryOnly = SummaryOnly;
     ViewOpts.NumThreads = NumThreads;
@@ -972,18 +999,16 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   cl::OptionCategory ViewCategory("Viewing options");
 
   cl::opt<bool> ShowLineExecutionCounts(
-      "show-line-counts", cl::Optional,
-      cl::desc("Show the execution counts for each line"), cl::init(true),
-      cl::cat(ViewCategory));
+      "show-line-counts", cl::desc("Show the execution counts for each line"),
+      cl::init(true), cl::cat(ViewCategory));
 
   cl::opt<bool> ShowRegions(
-      "show-regions", cl::Optional,
-      cl::desc("Show the execution counts for each region"),
+      "show-regions", cl::desc("Show the execution counts for each region"),
       cl::cat(ViewCategory));
 
   cl::opt<CoverageViewOptions::BranchOutputType> ShowBranches(
-      "show-branches", cl::Optional,
-      cl::desc("Show coverage for branch conditions"), cl::cat(ViewCategory),
+      "show-branches", cl::desc("Show coverage for branch conditions"),
+      cl::cat(ViewCategory),
       cl::values(clEnumValN(CoverageViewOptions::BranchOutputType::Count,
                             "count", "Show True/False counts"),
                  clEnumValN(CoverageViewOptions::BranchOutputType::Percent,
@@ -991,29 +1016,34 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
       cl::init(CoverageViewOptions::BranchOutputType::Off));
 
   cl::opt<bool> ShowMCDC(
-      "show-mcdc", cl::Optional,
+      "show-mcdc",
       cl::desc("Show the MCDC Coverage for each applicable boolean expression"),
       cl::cat(ViewCategory));
 
+  cl::opt<bool> ShowMCDCNonExecutedVectors(
+      "show-mcdc-non-executed-vectors",
+      cl::desc("Show MC/DC test vectors that were not executed"),
+      cl::cat(ViewCategory));
+
   cl::opt<bool> ShowBestLineRegionsCounts(
-      "show-line-counts-or-regions", cl::Optional,
+      "show-line-counts-or-regions",
       cl::desc("Show the execution counts for each line, or the execution "
                "counts for each region on lines that have multiple regions"),
       cl::cat(ViewCategory));
 
-  cl::opt<bool> ShowExpansions("show-expansions", cl::Optional,
+  cl::opt<bool> ShowExpansions("show-expansions",
                                cl::desc("Show expanded source regions"),
                                cl::cat(ViewCategory));
 
-  cl::opt<bool> ShowInstantiations("show-instantiations", cl::Optional,
+  cl::opt<bool> ShowInstantiations("show-instantiations",
                                    cl::desc("Show function instantiations"),
                                    cl::init(true), cl::cat(ViewCategory));
 
-  cl::opt<bool> ShowDirectoryCoverage("show-directory-coverage", cl::Optional,
+  cl::opt<bool> ShowDirectoryCoverage("show-directory-coverage",
                                       cl::desc("Show directory coverage"),
                                       cl::cat(ViewCategory));
 
-  cl::opt<bool> ShowCreatedTime("show-created-time", cl::Optional,
+  cl::opt<bool> ShowCreatedTime("show-created-time",
                                 cl::desc("Show created time for each page."),
                                 cl::init(true), cl::cat(ViewCategory));
 
@@ -1024,7 +1054,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
                                  cl::aliasopt(ShowOutputDirectory));
 
   cl::opt<bool> BinaryCounters(
-      "binary-counters", cl::Optional,
+      "binary-counters",
       cl::desc("Show binary counters (1/0) in lines and branches instead of "
                "integer execution counts"),
       cl::cat(ViewCategory));
@@ -1035,11 +1065,10 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
           "Set tab expansion size for html coverage reports (default = 2)"));
 
   cl::opt<std::string> ProjectTitle(
-      "project-title", cl::Optional,
-      cl::desc("Set project title for the coverage report"));
+      "project-title", cl::desc("Set project title for the coverage report"));
 
   cl::opt<std::string> CovWatermark(
-      "coverage-watermark", cl::Optional,
+      "coverage-watermark",
       cl::desc("<high>,<low> value indicate thresholds for high and low"
                "coverage watermark"));
 
@@ -1101,6 +1130,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   ViewOpts.ShowBranchCounts =
       ShowBranches == CoverageViewOptions::BranchOutputType::Count;
   ViewOpts.ShowMCDC = ShowMCDC;
+  ViewOpts.ShowMCDCNonExecutedVectors = ShowMCDCNonExecutedVectors;
   ViewOpts.ShowBranchPercents =
       ShowBranches == CoverageViewOptions::BranchOutputType::Percent;
   ViewOpts.ShowFunctionInstantiations = ShowInstantiations;
@@ -1117,20 +1147,22 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
     }
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
-  }
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
 
-  if (ShowCreatedTime) {
-    auto ModifiedTime = Status.getLastModificationTime();
-    std::string ModifiedTimeStr = to_string(ModifiedTime);
-    size_t found = ModifiedTimeStr.rfind(':');
-    ViewOpts.CreatedTimeStr =
-        (found != std::string::npos)
-            ? "Created: " + ModifiedTimeStr.substr(0, found)
-            : "Created: " + ModifiedTimeStr;
+    if (ShowCreatedTime) {
+      auto ModifiedTime = Status.getLastModificationTime();
+      std::string ModifiedTimeStr = to_string(ModifiedTime);
+      size_t found = ModifiedTimeStr.rfind(':');
+      ViewOpts.CreatedTimeStr =
+          (found != std::string::npos)
+              ? "Created: " + ModifiedTimeStr.substr(0, found)
+              : "Created: " + ModifiedTimeStr;
+    }
   }
 
   auto Coverage = load();
@@ -1142,7 +1174,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   if (SourceFiles.empty() && !HadSourceFiles)
     // Get the source files from the function coverage mapping.
     for (StringRef Filename : Coverage->getUniqueSourceFiles()) {
-      if (!IgnoreFilenameFilters.matchesFilename(Filename))
+      if (!FilenameFilters.matchesFilename(Filename))
         SourceFiles.push_back(std::string(Filename));
     }
 
@@ -1224,7 +1256,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
 int CodeCoverageTool::doReport(int argc, const char **argv,
                                CommandLineParserType commandLineParser) {
   cl::opt<bool> ShowFunctionSummaries(
-      "show-functions", cl::Optional, cl::init(false),
+      "show-functions", cl::init(false),
       cl::desc("Show coverage summaries for each function"));
 
   auto Err = commandLineParser(argc, argv);
@@ -1239,10 +1271,12 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
     return 1;
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
   }
 
   auto Coverage = load();
@@ -1252,7 +1286,7 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
   CoverageReport Report(ViewOpts, *Coverage);
   if (!ShowFunctionSummaries) {
     if (SourceFiles.empty())
-      Report.renderFileReports(llvm::outs(), IgnoreFilenameFilters);
+      Report.renderFileReports(llvm::outs(), FilenameFilters);
     else
       Report.renderFileReports(llvm::outs(), SourceFiles);
   } else {
@@ -1272,17 +1306,27 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
 
   cl::OptionCategory ExportCategory("Exporting options");
 
-  cl::opt<bool> SkipExpansions("skip-expansions", cl::Optional,
+  cl::opt<bool> SkipExpansions("skip-expansions",
                                cl::desc("Don't export expanded source regions"),
                                cl::cat(ExportCategory));
 
-  cl::opt<bool> SkipFunctions("skip-functions", cl::Optional,
+  cl::opt<bool> SkipFunctions("skip-functions",
                               cl::desc("Don't export per-function data"),
                               cl::cat(ExportCategory));
 
-  cl::opt<bool> SkipBranches("skip-branches", cl::Optional,
-                              cl::desc("Don't export branch data (LCOV)"),
-                              cl::cat(ExportCategory));
+  cl::opt<bool> SkipBranches("skip-branches",
+                             cl::desc("Don't export branch data (LCOV)"),
+                             cl::cat(ExportCategory));
+
+  cl::opt<bool> UnifyInstantiations("unify-instantiations",
+                                    cl::desc("Unify function instantiations"),
+                                    cl::init(true), cl::cat(ExportCategory));
+
+  cl::opt<bool> ShowMCDCNonExecutedVectors(
+      "show-mcdc-non-executed-vectors",
+      cl::desc("Include MC/DC test vectors that were not executed in the "
+               "export"),
+      cl::cat(ExportCategory));
 
   auto Err = commandLineParser(argc, argv);
   if (Err)
@@ -1291,6 +1335,8 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
   ViewOpts.SkipExpansions = SkipExpansions;
   ViewOpts.SkipFunctions = SkipFunctions;
   ViewOpts.SkipBranches = SkipBranches;
+  ViewOpts.UnifyFunctionInstantiations = UnifyInstantiations;
+  ViewOpts.ShowMCDCNonExecutedVectors = ShowMCDCNonExecutedVectors;
 
   if (ViewOpts.Format != CoverageViewOptions::OutputFormat::Text &&
       ViewOpts.Format != CoverageViewOptions::OutputFormat::Lcov) {
@@ -1299,10 +1345,12 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
     return 1;
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
   }
 
   auto Coverage = load();
@@ -1329,7 +1377,7 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
   }
 
   if (SourceFiles.empty())
-    Exporter->renderRoot(IgnoreFilenameFilters);
+    Exporter->renderRoot(FilenameFilters);
   else
     Exporter->renderRoot(SourceFiles);
 

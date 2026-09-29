@@ -1662,19 +1662,46 @@ define <4 x double> @broadcast_v4f64_v2f64_4u61(ptr %vp, <4 x double> %default) 
   ret <4 x double> %res
 }
 
+; TODO: prefer vblend vs vunpckh on AVX1 targets
 define <8 x float> @broadcast_v8f32_v2f32_u1uu0uEu(ptr %vp, <8 x float> %default) {
-; X86-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vbroadcastsd (%eax), %ymm1
-; X86-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm1[1],ymm0[1],ymm1[3],ymm0[3]
-; X86-NEXT:    retl
+; X86-AVX1-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX1-NEXT:    vbroadcastsd (%eax), %ymm1
+; X86-AVX1-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm1[1],ymm0[1],ymm1[3],ymm0[3]
+; X86-AVX1-NEXT:    retl
 ;
-; X64-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
-; X64:       # %bb.0:
-; X64-NEXT:    vbroadcastsd (%rdi), %ymm1
-; X64-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm1[1],ymm0[1],ymm1[3],ymm0[3]
-; X64-NEXT:    retq
+; X86-AVX2-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX2-NEXT:    vbroadcastsd (%eax), %ymm1
+; X86-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
+; X86-AVX2-NEXT:    retl
+;
+; X86-AVX512-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    vbroadcastsd (%eax), %ymm1
+; X86-AVX512-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
+; X86-AVX512-NEXT:    retl
+;
+; X64-AVX1-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vbroadcastsd (%rdi), %ymm1
+; X64-AVX1-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm1[1],ymm0[1],ymm1[3],ymm0[3]
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vbroadcastsd (%rdi), %ymm1
+; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
+; X64-AVX2-NEXT:    retq
+;
+; X64-AVX512-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vbroadcastsd (%rdi), %ymm1
+; X64-AVX512-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
+; X64-AVX512-NEXT:    retq
   %vec = load <2 x float>, ptr %vp
   %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <8 x i32> <i32 undef, i32 1, i32 undef, i32 undef, i32 0, i32 2, i32 3, i32 undef>
   %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, <8 x float> %shuf, <8 x float> %default

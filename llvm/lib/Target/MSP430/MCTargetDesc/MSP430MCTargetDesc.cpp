@@ -19,6 +19,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -47,7 +48,7 @@ static MCRegisterInfo *createMSP430MCRegisterInfo(const Triple &TT) {
 static MCAsmInfo *createMSP430MCAsmInfo(const MCRegisterInfo &MRI,
                                         const Triple &TT,
                                         const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new MSP430MCAsmInfo(TT);
+  MCAsmInfo *MAI = new MSP430MCAsmInfo(TT, Options);
 
   // Initialize initial frame state.
   int stackGrowth = -2;
@@ -80,7 +81,8 @@ static MCInstPrinter *createMSP430MCInstPrinter(const Triple &T,
   return nullptr;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430TargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeMSP430TargetMC() {
   Target &T = getTheMSP430Target();
 
   TargetRegistry::RegisterMCAsmInfo(T, createMSP430MCAsmInfo);

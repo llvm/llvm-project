@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s --check-prefix=SCOPES
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S < %s | FileCheck %s --check-prefix=SCOPES
 ;
 ; Check that we create alias scopes that indicate the accesses to A, B and C cannot alias in any way.
 ;
@@ -11,7 +11,7 @@
 ; SCOPES:      store i32 %{{[._a-zA-Z0-9]*}}, ptr %[[AIdx]], align 4, !alias.scope !10, !noalias !11
 ;
 ; SCOPES: !0 = distinct !{!0, !1}
-; SCOPES: !1 = !{!"llvm.loop.vectorize.enable", i32 0}
+; SCOPES: !1 = !{!"llvm.loop.vectorize.disable"}
 ; SCOPES: !2 = !{!3}
 ; SCOPES: !3 = distinct !{!3, !4, !"polly.alias.scope.MemRef_B"}
 ; SCOPES: !4 = distinct !{!4, !"polly.alias.scope.domain"}

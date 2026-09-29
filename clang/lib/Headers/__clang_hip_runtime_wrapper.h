@@ -25,26 +25,12 @@
 #define __constant__ __attribute__((constant))
 #define __managed__ __attribute__((managed))
 
+#define __cluster_dims__(...) __attribute__((cluster_dims(__VA_ARGS__)))
+#define __no_cluster__ __attribute__((no_cluster))
+
 #if !defined(__cplusplus) || __cplusplus < 201103L
   #define nullptr NULL;
 #endif
-
-#ifdef __cplusplus
-extern "C" {
-  __attribute__((__visibility__("default")))
-  __attribute__((weak))
-  __attribute__((noreturn))
-  __device__ void __cxa_pure_virtual(void) {
-    __builtin_trap();
-  }
-  __attribute__((__visibility__("default")))
-  __attribute__((weak))
-  __attribute__((noreturn))
-  __device__ void __cxa_deleted_virtual(void) {
-    __builtin_trap();
-  }
-}
-#endif //__cplusplus
 
 #if !defined(__HIPCC_RTC__)
 #if __has_include("hip/hip_version.h")
@@ -108,6 +94,12 @@ __attribute__((weak)) inline __device__ void free(void *__ptr) {
 #endif //__cplusplus
 
 #if !defined(__HIPCC_RTC__)
+// We must include the forward declarations before cmath is included.
+// Otherwise `constexpr` functions in <cmath> would be implicitely __host__
+// __device__. Declaring the __device__ verison before allows us to overload
+// them with __device__ versions (this behavour is only valid for system
+// headers).
+#include <__clang_cuda_math_forward_declares.h>
 #include <cmath>
 #include <cstdlib>
 #include <stdlib.h>
@@ -125,11 +117,13 @@ typedef __SIZE_TYPE__ size_t;
 #pragma push_macro("uint64_t")
 #pragma push_macro("CHAR_BIT")
 #pragma push_macro("INT_MAX")
+#pragma push_macro("INT_MIN")
 #define NULL (void *)0
 #define uint32_t __UINT32_TYPE__
 #define uint64_t __UINT64_TYPE__
 #define CHAR_BIT __CHAR_BIT__
 #define INT_MAX __INTMAX_MAX__
+#define INT_MIN (-__INT_MAX__ - 1)
 #endif // __HIPCC_RTC__
 
 #include <__clang_hip_libdevice_declares.h>
@@ -139,7 +133,6 @@ typedef __SIZE_TYPE__ size_t;
 #if defined(__HIPCC_RTC__)
 #include <__clang_hip_cmath.h>
 #else
-#include <__clang_cuda_math_forward_declares.h>
 #include <__clang_hip_cmath.h>
 #include <__clang_cuda_complex_builtins.h>
 #include <algorithm>
@@ -154,6 +147,7 @@ typedef __SIZE_TYPE__ size_t;
 #pragma pop_macro("uint64_t")
 #pragma pop_macro("CHAR_BIT")
 #pragma pop_macro("INT_MAX")
+#pragma pop_macro("INT_MIN")
 #endif // __HIPCC_RTC__
 #endif // __HIP__
 #endif // __CLANG_HIP_RUNTIME_WRAPPER_H__

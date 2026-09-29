@@ -23,20 +23,20 @@ using namespace llvm;
 // - Its argN.
 // <arg1> to <argN> are absolute addresses in the object file, i.e.,
 // relative addresses from the beginning of the object file.
-void MCLOHDirective::emit_impl(const MCAssembler &Asm, raw_ostream &OutStream,
+void MCLOHDirective::emit_impl(raw_ostream &OutStream,
                                const MachObjectWriter &ObjWriter
 
 ) const {
   encodeULEB128(Kind, OutStream);
   encodeULEB128(Args.size(), OutStream);
   for (const MCSymbol *Arg : Args)
-    encodeULEB128(ObjWriter.getSymbolAddress(*Arg, Asm), OutStream);
+    encodeULEB128(ObjWriter.getSymbolAddress(*Arg), OutStream);
 }
 
 void MCLOHDirective::emit(const MCAssembler &Asm,
                           MachObjectWriter &ObjWriter) const {
   raw_ostream &OutStream = ObjWriter.W.OS;
-  emit_impl(Asm, OutStream, ObjWriter);
+  emit_impl(OutStream, ObjWriter);
 }
 
 uint64_t MCLOHDirective::getEmitSize(const MCAssembler &Asm,
@@ -54,6 +54,6 @@ uint64_t MCLOHDirective::getEmitSize(const MCAssembler &Asm,
   };
 
   raw_counting_ostream OutStream;
-  emit_impl(Asm, OutStream, ObjWriter);
+  emit_impl(OutStream, ObjWriter);
   return OutStream.tell();
 }

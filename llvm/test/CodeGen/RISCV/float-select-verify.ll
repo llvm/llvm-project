@@ -87,4 +87,3 @@ declare void @foo(i64)
 
 declare void @bar(float)
 
-declare float @llvm.round.f32(float)

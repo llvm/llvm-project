@@ -20,10 +20,10 @@
 using namespace llvm;
 
 void LiveRegUnits::removeRegsNotPreserved(const uint32_t *RegMask) {
-  for (unsigned U = 0, E = TRI->getNumRegUnits(); U != E; ++U) {
+  for (MCRegUnit U : TRI->regunits()) {
     for (MCRegUnitRootIterator RootReg(U, TRI); RootReg.isValid(); ++RootReg) {
       if (MachineOperand::clobbersPhysReg(RegMask, *RootReg)) {
-        Units.reset(U);
+        Units.reset(static_cast<unsigned>(U));
         break;
       }
     }
@@ -31,10 +31,10 @@ void LiveRegUnits::removeRegsNotPreserved(const uint32_t *RegMask) {
 }
 
 void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
-  for (unsigned U = 0, E = TRI->getNumRegUnits(); U != E; ++U) {
+  for (MCRegUnit U : TRI->regunits()) {
     for (MCRegUnitRootIterator RootReg(U, TRI); RootReg.isValid(); ++RootReg) {
       if (MachineOperand::clobbersPhysReg(RegMask, *RootReg)) {
-        Units.set(U);
+        Units.set(static_cast<unsigned>(U));
         break;
       }
     }
@@ -42,6 +42,9 @@ void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
 }
 
 void LiveRegUnits::stepBackward(const MachineInstr &MI) {
+  assert(!MI.isDebugInstr() &&
+         "Debug instructions must not affect liveness calculation");
+
   // Remove defined registers and regmask kills from the set.
   for (const MachineOperand &MOP : MI.operands()) {
     if (MOP.isReg()) {
@@ -91,21 +94,19 @@ static void addBlockLiveIns(LiveRegUnits &LiveUnits,
     LiveUnits.addRegMasked(LI.PhysReg, LI.LaneMask);
 }
 
+/// Add live-out registers of basic block \p MBB to \p LiveUnits.
+static void addBlockLiveOuts(LiveRegUnits &LiveUnits,
+                             const MachineBasicBlock &MBB) {
+  for (const auto &LO : MBB.liveouts())
+    LiveUnits.addRegMasked(LO.PhysReg, LO.LaneMask);
+}
+
 /// Adds all callee saved registers to \p LiveUnits.
 static void addCalleeSavedRegs(LiveRegUnits &LiveUnits,
                                const MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); CSR && *CSR; ++CSR) {
-    const unsigned N = *CSR;
-
-    const auto &CSI = MFI.getCalleeSavedInfo();
-    auto Info =
-        llvm::find_if(CSI, [N](auto Info) { return Info.getReg() == N; });
-    // If we have no info for this callee-saved register, assume it is liveout
-    if (Info == CSI.end() || Info->isRestored())
-      LiveUnits.addReg(N);
-  }
+  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); CSR && *CSR; ++CSR)
+    LiveUnits.addReg(*CSR);
 }
 
 void LiveRegUnits::addPristines(const MachineFunction &MF) {
@@ -137,18 +138,20 @@ void LiveRegUnits::addPristines(const MachineFunction &MF) {
 
 void LiveRegUnits::addLiveOuts(const MachineBasicBlock &MBB) {
   const MachineFunction &MF = *MBB.getParent();
-
   addPristines(MF);
-
-  // To get the live-outs we simply merge the live-ins of all successors.
-  for (const MachineBasicBlock *Succ : MBB.successors())
-    addBlockLiveIns(*this, *Succ);
+  addBlockLiveOuts(*this, MBB);
 
   // For the return block: Add all callee saved registers.
   if (MBB.isReturnBlock()) {
     const MachineFrameInfo &MFI = MF.getFrameInfo();
-    if (MFI.isCalleeSavedInfoValid())
+    if (MFI.isCalleeSavedInfoValid()) {
       addCalleeSavedRegs(*this, MF);
+      // We assume callee-saved registers without CalleeSavedInfo are liveout.
+      for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
+        if (!Info.isRestored())
+          removeReg(Info.getReg());
+      }
+    }
   }
 }
 

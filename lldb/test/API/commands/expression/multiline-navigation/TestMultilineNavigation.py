@@ -17,7 +17,7 @@ class TestCase(PExpectTest):
     @skipIfAsan
     @skipIfEditlineSupportMissing
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48316")
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])  # Randomly fails on buildbot
     def test_nav_arrow_up(self):
         """Tests that we can navigate back to the previous line with the up arrow"""
         self.launch()
@@ -36,12 +36,11 @@ class TestCase(PExpectTest):
         # and not 123 (the one we initially typed).
         self.child.expect_exact("(int) $0 = 124")
 
-        self.quit()
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48316")
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])  # Randomly fails on buildbot
     def test_nav_arrow_down(self):
         """Tests that we can navigate to the next line with the down arrow"""
         self.launch()
@@ -68,11 +67,10 @@ class TestCase(PExpectTest):
         # us back to the second line.
         self.child.expect_exact("(int) $0 = 334")
 
-        self.quit()
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])  # Randomly fails on buildbot
     def test_nav_arrow_up_empty(self):
         """
         Tests that navigating with the up arrow doesn't crash and skips
@@ -101,4 +99,3 @@ class TestCase(PExpectTest):
         self.child.send("\n\n")
         self.expect_prompt()
 
-        self.quit()

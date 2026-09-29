@@ -17,6 +17,7 @@
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
@@ -47,6 +48,7 @@ enum {
   MO_IE_PC64_HI,
   MO_LD_PC_HI,
   MO_GD_PC_HI,
+  MO_CALL30,
   MO_CALL36,
   MO_DESC_PC_HI,
   MO_DESC_PC_LO,
@@ -57,8 +59,43 @@ enum {
   MO_LE_HI_R,
   MO_LE_ADD_R,
   MO_LE_LO_R,
+  MO_PCADD_HI,
+  MO_PCADD_LO,
+  MO_GOT_PCADD_HI,
+  MO_GOT_PCADD_LO,
+  MO_IE_PCADD_HI,
+  MO_IE_PCADD_LO,
+  MO_LD_PCADD_HI,
+  MO_LD_PCADD_LO,
+  MO_GD_PCADD_HI,
+  MO_GD_PCADD_LO,
+  MO_DESC_PCADD_HI,
+  MO_DESC_PCADD_LO,
   // TODO: Add more flags.
+
+  // Used to differentiate between target-specific "direct" flags and "bitmask"
+  // flags. A machine operand can only have one "direct" flag, but can have
+  // multiple "bitmask" flags.
+  MO_DIRECT_FLAG_MASK = 0x3f,
+
+  MO_RELAX = 0x40
 };
+
+// Given a MachineOperand that may carry out "bitmask" flags, such as MO_RELAX,
+// return LoongArch target-specific "direct" flags.
+static inline unsigned getDirectFlags(const MachineOperand &MO) {
+  return MO.getTargetFlags() & MO_DIRECT_FLAG_MASK;
+}
+
+// Add MO_RELAX "bitmask" flag when FeatureRelax is enabled.
+static inline unsigned encodeFlags(unsigned Flags, bool Relax) {
+  return Flags | (Relax ? MO_RELAX : 0);
+}
+
+// \returns true if the given MachineOperand has MO_RELAX "bitmask" flag.
+static inline bool hasRelaxFlag(const MachineOperand &MO) {
+  return MO.getTargetFlags() & MO_RELAX;
+}
 
 // Target-specific flags of LAInst.
 // All definitions must match LoongArchInstrFormats.td.

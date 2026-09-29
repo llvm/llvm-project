@@ -16,7 +16,6 @@
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/Parallel.h"
 
 #define DEBUG_TYPE "lld"
 
@@ -60,6 +59,10 @@ void CodeSection::finalizeContents() {
     bodySize += func->getSize();
   }
 
+  if (bodySize > UINT32_MAX) {
+    error("section too large to encode: " + Twine(bodySize) + " bytes");
+  }
+
   createHeader(bodySize);
 }
 
@@ -101,12 +104,11 @@ void DataSection::finalizeContents() {
   });
 #ifndef NDEBUG
   unsigned activeCount = llvm::count_if(segments, [](OutputSegment *segment) {
-    return (segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0;
+    return segment->requiredInBinary() && segment->isActive();
   });
 #endif
 
-  assert((ctx.arg.sharedMemory || !ctx.isPic || ctx.arg.extendedConst ||
-          activeCount <= 1) &&
+  assert((!ctx.isPic || ctx.arg.extendedConst || activeCount <= 1) &&
          "output segments should have been combined by now");
 
   writeUleb128(os, segmentCount, "data segment count");
@@ -120,10 +122,10 @@ void DataSection::finalizeContents() {
     writeUleb128(os, segment->initFlags, "init flags");
     if (segment->initFlags & WASM_DATA_SEGMENT_HAS_MEMINDEX)
       writeUleb128(os, 0, "memory index");
-    if ((segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0) {
+    if (segment->isActive()) {
       if (ctx.isPic && ctx.arg.extendedConst) {
         writeU8(os, WASM_OPCODE_GLOBAL_GET, "global get");
-        writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
+        writeUleb128(os, ctx.sym.memoryBase->getGlobalIndex(),
                      "literal (global index)");
         if (segment->startVA) {
           writePtrConst(os, segment->startVA, is64, "offset");
@@ -136,7 +138,7 @@ void DataSection::finalizeContents() {
         if (ctx.isPic) {
           assert(segment->startVA == 0);
           initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
-          initExpr.Inst.Value.Global = WasmSym::memoryBase->getGlobalIndex();
+          initExpr.Inst.Value.Global = ctx.sym.memoryBase->getGlobalIndex();
         } else {
           initExpr = intConst(segment->startVA, is64);
         }
@@ -155,6 +157,10 @@ void DataSection::finalizeContents() {
       inputSeg->outSecOff = segment->sectionOffset + segment->header.size() +
                             inputSeg->outputSegmentOffset;
     }
+  }
+
+  if (bodySize > UINT32_MAX) {
+    error("section too large to encode: " + Twine(bodySize) + " bytes");
   }
 
   createHeader(bodySize);
@@ -232,7 +238,7 @@ void CustomSection::finalizeInputSections() {
     return;
 
   mergedSection->finalizeContents();
-  inputSections = newSections;
+  inputSections = std::move(newSections);
 }
 
 void CustomSection::finalizeContents() {
@@ -247,6 +253,11 @@ void CustomSection::finalizeContents() {
     payloadSize = alignTo(payloadSize, section->alignment);
     section->outSecOff = payloadSize;
     payloadSize += section->getSize();
+  }
+
+  if (payloadSize > UINT32_MAX) {
+    error("section '" + name + "' too large to encode: " + Twine(payloadSize) +
+          " bytes");
   }
 
   createHeader(payloadSize + nameData.size());
@@ -273,7 +284,7 @@ void CustomSection::writeTo(uint8_t *buf) {
 uint32_t CustomSection::getNumRelocations() const {
   uint32_t count = 0;
   for (const InputChunk *inputSect : inputSections)
-    count += inputSect->getNumRelocations();
+    count += inputSect->getNumLiveRelocations();
   return count;
 }
 

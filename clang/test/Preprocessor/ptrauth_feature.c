@@ -2,39 +2,42 @@
 //// For example, -fptrauth-init-fini will not affect codegen without -fptrauth-calls, but the preprocessor feature would be set anyway.
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-intrinsics | \
-// RUN:   FileCheck %s --check-prefixes=INTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT
+// RUN:   FileCheck %s --check-prefixes=INTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT,NOVTT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-calls | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,CALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,CALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT,NOVTT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-returns | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,RETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,RETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT,NOVTT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-vtable-pointer-address-discrimination | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,VPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,VPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT,NOVTT
+
+// RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-vtt-vtable-pointer-discrimination | \
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT,VTT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-vtable-pointer-type-discrimination | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,VPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,VPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT,NOVTT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-type-info-vtable-pointer-discrimination | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,TYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,TYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT,NOVTT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-function-pointer-type-discrimination | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,FUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,FUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT,NOVTT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-init-fini | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,INITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,INITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT,NOVTT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-init-fini-address-discrimination | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,INITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,INITFINI_ADDR_DISCR,NOGOTOS,NOELFGOT,NOVTT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-indirect-gotos | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,GOTOS,NOELFGOT
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,GOTOS,NOELFGOT,NOVTT
 
 // RUN: %clang_cc1 -E %s -triple=aarch64 -fptrauth-elf-got | \
-// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,ELFGOT
+// RUN:   FileCheck %s --check-prefixes=NOINTRIN,NOCALLS,NORETS,NOVPTR_ADDR_DISCR,NOVPTR_TYPE_DISCR,NOTYPE_INFO_DISCR,NOFUNC,NOINITFINI,NOINITFINI_ADDR_DISCR,NOGOTOS,ELFGOT,NOVTT
 
-#if __has_feature(ptrauth_intrinsics)
+#if defined(__PTRAUTH__)
 // INTRIN: has_ptrauth_intrinsics
 void has_ptrauth_intrinsics() {}
 #else
@@ -83,6 +86,14 @@ void has_ptrauth_vtable_pointer_type_discrimination() {}
 void no_ptrauth_vtable_pointer_type_discrimination() {}
 #endif
 
+#if __has_feature(ptrauth_vtt_vtable_pointer_discrimination)
+// VTT: has_ptrauth_vtt_vtable_pointer_discrimination
+void has_ptrauth_vtt_vtable_pointer_discrimination() {}
+#else
+// NOVTT: no_ptrauth_vtt_vtable_pointer_discrimination
+void no_ptrauth_vtt_vtable_pointer_discrimination() {}
+#endif
+
 #if __has_feature(ptrauth_type_info_vtable_pointer_discrimination)
 // TYPE_INFO_DISCR: has_ptrauth_type_info_vtable_pointer_discrimination
 void has_ptrauth_type_info_vtable_pointer_discrimination() {}
@@ -129,4 +140,12 @@ void has_ptrauth_elf_got() {}
 #else
 // NOELFGOT: no_ptrauth_elf_got
 void no_ptrauth_elf_got() {}
+#endif
+
+#if __has_feature(ptrauth_objc_signable_class)
+// INTRIN: has_ptrauth_objc_signable_class
+void has_ptrauth_objc_signable_class(){}
+#else
+// NOINTRIN: no_ptrauth_objc_signable_class
+void no_ptrauth_objc_signable_class(){}
 #endif

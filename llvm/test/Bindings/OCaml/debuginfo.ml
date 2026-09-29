@@ -8,7 +8,7 @@
 
 open Testsuite
 
-let context = Llvm.global_context ()
+let context = Llvm.create_context ()
 
 let filename = "di_test_file"
 
@@ -63,7 +63,7 @@ let test_get_module () =
     Llvm_debuginfo.dibuild_create_file dibuilder ~filename ~directory
   in
   stdout_metadata file_di;
-  (* CHECK: [[FILE_PTR:<0x[0-9a-f]*>]] = !DIFile(filename: "di_test_file", directory: "di_test_dir")
+  (* CHECK: [[FILE_PTR:![0-9]+]] = !DIFile(filename: "di_test_file", directory: "di_test_dir")
   *)
   insist
     ( Llvm_debuginfo.di_file_get_filename ~file:file_di = filename
@@ -79,7 +79,7 @@ let test_get_module () =
       ~di_inlining:false ~di_profiling:false ~sys_root:"" ~sdk:""
   in
   stdout_metadata cu_di;
-  (* CHECK: [[CMPUNIT_PTR:<0x[0-9a-f]*>]] = distinct !DICompileUnit(language: DW_LANG_C89, file: [[FILE_PTR]], producer: "TestGen", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false)
+  (* CHECK: [[CMPUNIT_PTR:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C89, file: [[FILE_PTR]], producer: "TestGen", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, splitDebugInlining: false)
   *)
   insist
     ( Llvm_debuginfo.get_metadata_kind cu_di
@@ -93,7 +93,7 @@ let test_get_module () =
     = Llvm_debuginfo.MetadataKind.DIModuleMetadataKind );
   insist (Llvm_debuginfo.get_module_debug_metadata_version m = cur_ver);
   stdout_metadata m_di;
-  (* CHECK: [[MODULE_PTR:<0x[0-9a-f]*>]] = !DIModule(scope: null, name: "di_test_module")
+  (* CHECK: [[MODULE_PTR:![0-9]+]] = !DIModule(scope: null, name: "di_test_module")
   *)
   (m, dibuilder, file_di, m_di)
 
@@ -110,9 +110,20 @@ let test_get_function m dibuilder file_di m_di =
   (* Create a function of type "void foo (int)". *)
   let int_ty_di = int_ty_di 32 dibuilder in
   stdout_metadata int_ty_di;
-  (* CHECK: [[INT32_PTR:<0x[0-9a-f]*>]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  (* CHECK: [[INT32_PTR:![0-9]+]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
   *)
-  let param_types = [| null_metadata; int_ty_di |] in
+  let int_ptr_ty_di =
+    Llvm_debuginfo.dibuild_create_pointer_type dibuilder
+      ~pointee_ty:int_ty_di
+      ~size_in_bits:32
+      ~align_in_bits:32
+      ~address_space:0
+      ~name:"ptrint"
+  in
+  stdout_metadata int_ptr_ty_di;
+  (* CHECK: [[PTRINT32_PTR:![0-9]+]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "ptrint", baseType: [[INT32_PTR]], size: 32, align: 32, dwarfAddressSpace: 0)
+  *)
+  let param_types = [| null_metadata; int_ty_di; int_ptr_ty_di |] in
   let fty_di =
     Llvm_debuginfo.dibuild_create_subroutine_type dibuilder ~file:file_di
       ~param_types flags_zero
@@ -126,15 +137,16 @@ let test_get_function m dibuilder file_di m_di =
     Llvm_debuginfo.dibuild_get_or_create_type_array dibuilder ~data:param_types
   in
   stdout_metadata fty_di_args;
-  (* CHECK: [[FARGS_PTR:<0x[0-9a-f]*>]] = !{null, [[INT32_PTR]]}
+  (* CHECK: [[FARGS_PTR:![0-9]+]] = !{null, [[INT32_PTR]], [[PTRINT32_PTR]]}
   *)
   stdout_metadata fty_di;
-  (* CHECK: [[SBRTNTY_PTR:<0x[0-9a-f]*>]] = !DISubroutineType(types: [[FARGS_PTR]])
+  (* CHECK: [[SBRTNTY_PTR:![0-9]+]] = !DISubroutineType(types: [[FARGS_PTR]])
   *)
   (* Let's create the LLVM-IR function now. *)
   let name = "tfun" in
   let fty =
-    Llvm.function_type (Llvm.void_type context) [| Llvm.i32_type context |]
+    Llvm.function_type (Llvm.void_type context)
+      [| Llvm.i32_type context; Llvm.pointer_type context |]
   in
   let f = Llvm.define_function name fty m in
   let f_di =
@@ -144,7 +156,7 @@ let test_get_function m dibuilder file_di m_di =
       ~flags:flags_zero ~is_optimized:false
   in
   stdout_metadata f_di;
-  (* CHECK: [[SBPRG_PTR:<0x[0-9a-f]*>]] = distinct !DISubprogram(name: "tfun", linkageName: "tfun", scope: [[MODULE_PTR]], file: [[FILE_PTR]], line: 10, type: [[SBRTNTY_PTR]], scopeLine: 10, spFlags: DISPFlagDefinition, unit: [[CMPUNIT_PTR]])
+  (* CHECK: [[SBPRG_PTR:![0-9]+]] = distinct !DISubprogram(name: "tfun", linkageName: "tfun", scope: [[MODULE_PTR]], file: [[FILE_PTR]], line: 10, type: [[SBRTNTY_PTR]], scopeLine: 10, spFlags: DISPFlagDefinition, unit: [[CMPUNIT_PTR]])
   *)
   Llvm_debuginfo.set_subprogram f f_di;
   ( match Llvm_debuginfo.get_subprogram f with
@@ -160,11 +172,12 @@ let test_bbinstr fty f f_di file_di dibuilder =
   group "basic_block and instructions tests";
   (* Create this pattern:
    *   if (arg0 != 0) {
-   *      foo(arg0);
+   *      foo(arg0, arg1);
    *   }
    *   return;
    *)
   let arg0 = (Llvm.params f).(0) in
+  let arg1 = (Llvm.params f).(1) in
   let builder = Llvm.builder_at_end context (Llvm.entry_block f) in
   let zero = Llvm.const_int (Llvm.i32_type context) 0 in
   let cmpi = Llvm.build_icmp Llvm.Icmp.Ne zero arg0 "cmpi" builder in
@@ -185,7 +198,7 @@ let test_bbinstr fty f f_di file_di dibuilder =
       | Some file_of_f_di', Some file_of_scope' ->
           file_of_f_di' = file_di && file_of_scope' = file_di
       | _ -> false );
-    let foocall = Llvm.build_call fty foodecl [| arg0 |] "" builder in
+    let foocall = Llvm.build_call fty foodecl [| arg0; arg1 |] "" builder in
     let foocall_loc =
       Llvm_debuginfo.dibuild_create_debug_location context ~line:10 ~column:12
         ~scope
@@ -196,7 +209,7 @@ let test_bbinstr fty f f_di file_di dibuilder =
       | Some foocall_loc' -> foocall_loc' = foocall_loc
       | None -> false );
     stdout_metadata scope;
-    (* CHECK: [[BLOCK_PTR:<0x[0-9a-f]*>]] = distinct !DILexicalBlock(scope: [[SBPRG_PTR]], file: [[FILE_PTR]], line: 9, column: 4)
+    (* CHECK: [[BLOCK_PTR:![0-9]+]] = distinct !DILexicalBlock(scope: [[SBPRG_PTR]], file: [[FILE_PTR]], line: 9, column: 4)
      *)
     stdout_metadata foocall_loc;
     (* CHECK: !DILocation(line: 10, column: 12, scope: [[BLOCK_PTR]])
@@ -232,7 +245,7 @@ let test_global_variable_expression dibuilder f_di m_di =
     = Llvm_debuginfo.MetadataKind.DIExpressionMetadataKind );
   let ty = int_ty_di 64 dibuilder in
   stdout_metadata ty;
-  (* CHECK: [[INT64TY_PTR:<0x[0-9a-f]*>]] = !DIBasicType(name: "int", size: 64, encoding: DW_ATE_signed)
+  (* CHECK: [[INT64TY_PTR:![0-9]+]] = !DIBasicType(name: "int", size: 64, encoding: DW_ATE_signed)
    *)
   let gvexpr_di =
     Llvm_debuginfo.dibuild_create_global_variable_expression dibuilder
@@ -250,11 +263,11 @@ let test_global_variable_expression dibuilder f_di m_di =
         ( Llvm_debuginfo.get_metadata_kind gvexpr_var_di
         = Llvm_debuginfo.MetadataKind.DIGlobalVariableMetadataKind );
       stdout_metadata gvexpr_var_di
-      (* CHECK: [[GV_PTR:<0x[0-9a-f]*>]] = distinct !DIGlobalVariable(name: "my_global", scope: [[MODULE_PTR]], file: [[FILE_PTR]], line: 5, type: [[INT64TY_PTR]], isLocal: true, isDefinition: true)
+      (* CHECK: [[GV_PTR:![0-9]+]] = distinct !DIGlobalVariable(name: "my_global", scope: [[MODULE_PTR]], file: [[FILE_PTR]], line: 5, type: [[INT64TY_PTR]], isLocal: true, isDefinition: true)
        *)
   | None -> insist false );
   stdout_metadata gvexpr_di;
-  (* CHECK: [[GVEXP_PTR:<0x[0-9a-f]*>]] = !DIGlobalVariableExpression(var: [[GV_PTR]], expr: [[DICEXPR]])
+  (* CHECK: [[GVEXP_PTR:![0-9]+]] = !DIGlobalVariableExpression(var: [[GV_PTR]], expr: [[DICEXPR]])
    *)
   ()
 
@@ -263,7 +276,7 @@ let test_variables f dibuilder file_di fun_di =
   group "Local and parameter variable tests";
   let ty = int_ty_di 64 dibuilder in
   stdout_metadata ty;
-  (* CHECK: [[INT64TY_PTR:<0x[0-9a-f]*>]] = !DIBasicType(name: "int", size: 64, encoding: DW_ATE_signed)
+  (* CHECK: [[INT64TY_PTR:![0-9]+]] = !DIBasicType(name: "int", size: 64, encoding: DW_ATE_signed)
   *)
   let auto_var =
     Llvm_debuginfo.dibuild_create_auto_variable dibuilder ~scope:fun_di
@@ -271,7 +284,7 @@ let test_variables f dibuilder file_di fun_di =
       ~always_preserve:false flags_zero ~align_in_bits:0
   in
   stdout_metadata auto_var;
-  (* CHECK: [[LOCAL_VAR_PTR:<0x[0-9a-f]*>]] = !DILocalVariable(name: "my_local", scope: <{{0x[0-9a-f]*}}>, file: <{{0x[0-9a-f]*}}>, line: 10, type: [[INT64TY_PTR]])
+  (* CHECK: [[LOCAL_VAR_PTR:![0-9]+]] = !DILocalVariable(name: "my_local", scope: [[SBPRG_PTR]], file: [[FILE_PTR]], line: 10, type: [[INT64TY_PTR]])
   *)
   let builder = Llvm.builder_before context entry_term in
   let all = Llvm.build_alloca (Llvm.i64_type context)  "my_alloca" builder in
@@ -290,17 +303,17 @@ let test_variables f dibuilder file_di fun_di =
   let () = Printf.printf "%s\n" (Llvm.string_of_lldbgrecord vdi) in
   (* CHECK: dbg_declare(ptr %my_alloca, ![[#]], !DIExpression(), ![[#]])
   *)
-  let arg0 = (Llvm.params f).(0) in
+  let arg1 = (Llvm.params f).(1) in
   let arg_var = Llvm_debuginfo.dibuild_create_parameter_variable dibuilder ~scope:fun_di
     ~name:"my_arg" ~argno:1 ~file:file_di ~line:10 ~ty
     ~always_preserve:false flags_zero
   in
-  let argdi = Llvm_debuginfo.dibuild_insert_declare_before dibuilder ~storage:arg0
+  let argdi = Llvm_debuginfo.dibuild_insert_declare_before dibuilder ~storage:arg1
     ~var_info:arg_var ~expr:(Llvm_debuginfo.dibuild_expression dibuilder [||])
     ~location ~instr:entry_term
   in
   let () = Printf.printf "%s\n" (Llvm.string_of_lldbgrecord argdi) in
-  (* CHECK: dbg_declare(i32 %0, ![[#]], !DIExpression(), ![[#]])
+  (* CHECK: dbg_declare(ptr %1, ![[#]], !DIExpression(), ![[#]])
   *)
   ()
 
@@ -311,7 +324,7 @@ let test_types dibuilder file_di m_di =
       ~name:"NameSpace1" ~export_symbols:false
   in
   stdout_metadata namespace_di;
-  (* CHECK: [[NAMESPACE_PTR:<0x[0-9a-f]*>]] = !DINamespace(name: "NameSpace1", scope: [[MODULE_PTR]])
+  (* CHECK: [[NAMESPACE_PTR:![0-9]+]] = !DINamespace(name: "NameSpace1", scope: [[MODULE_PTR]])
    *)
   let int64_ty_di = int_ty_di 64 dibuilder in
   let structty_args = [| int64_ty_di; int64_ty_di; int64_ty_di |] in
@@ -329,10 +342,10 @@ let test_types dibuilder file_di m_di =
       ~data:structty_args
   in
   stdout_metadata structty_di_eltypes;
-  (* CHECK: [[STRUCTELT_PTR:<0x[0-9a-f]*>]] = !{[[INT64TY_PTR]], [[INT64TY_PTR]], [[INT64TY_PTR]]}
+  (* CHECK: [[STRUCTELT_PTR:![0-9]+]] = !{[[INT64TY_PTR]], [[INT64TY_PTR]], [[INT64TY_PTR]]}
    *)
   stdout_metadata struct_ty_di;
-  (* CHECK: [[STRUCT_PTR:<0x[0-9a-f]*>]] = !DICompositeType(tag: DW_TAG_structure_type, name: "StructType1", scope: [[NAMESPACE_PTR]], file: [[FILE_PTR]], line: 20, size: 192, elements: [[STRUCTELT_PTR]], identifier: "StructType1")
+  (* CHECK: [[STRUCT_PTR:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "StructType1", scope: [[NAMESPACE_PTR]], file: [[FILE_PTR]], line: 20, size: 192, elements: [[STRUCTELT_PTR]], identifier: "StructType1")
    *)
   insist
     ( Llvm_debuginfo.get_metadata_kind struct_ty_di
@@ -343,7 +356,7 @@ let test_types dibuilder file_di m_di =
       ~address_space:0 ~name:""
   in
   stdout_metadata structptr_di;
-  (* CHECK: [[STRUCTPTR_PTR:<0x[0-9a-f]*>]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[STRUCT_PTR]], size: 192, dwarfAddressSpace: 0)
+  (* CHECK: [[STRUCTPTR_PTR:![0-9]+]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[STRUCT_PTR]], size: 192, dwarfAddressSpace: 0)
    *)
   insist
     ( Llvm_debuginfo.get_metadata_kind structptr_di
@@ -353,14 +366,14 @@ let test_types dibuilder file_di m_di =
       ~is_unsigned:true
   in
   stdout_metadata enumerator1;
-  (* CHECK: [[ENUMERATOR1_PTR:<0x[0-9a-f]*>]] = !DIEnumerator(name: "Test_A", value: 0, isUnsigned: true)
+  (* CHECK: [[ENUMERATOR1_PTR:![0-9]+]] = !DIEnumerator(name: "Test_A", value: 0, isUnsigned: true)
    *)
   let enumerator2 =
     Llvm_debuginfo.dibuild_create_enumerator dibuilder ~name:"Test_B" ~value:1
       ~is_unsigned:true
   in
   stdout_metadata enumerator2;
-  (* CHECK: [[ENUMERATOR2_PTR:<0x[0-9a-f]*>]] = !DIEnumerator(name: "Test_B", value: 1, isUnsigned: true)
+  (* CHECK: [[ENUMERATOR2_PTR:![0-9]+]] = !DIEnumerator(name: "Test_B", value: 1, isUnsigned: true)
    *)
   let enumerator3 =
     Llvm_debuginfo.dibuild_create_enumerator dibuilder ~name:"Test_C" ~value:2
@@ -374,7 +387,7 @@ let test_types dibuilder file_di m_di =
     && Llvm_debuginfo.get_metadata_kind enumerator3
        = Llvm_debuginfo.MetadataKind.DIEnumeratorMetadataKind );
   stdout_metadata enumerator3;
-  (* CHECK: [[ENUMERATOR3_PTR:<0x[0-9a-f]*>]] = !DIEnumerator(name: "Test_C", value: 2, isUnsigned: true)
+  (* CHECK: [[ENUMERATOR3_PTR:![0-9]+]] = !DIEnumerator(name: "Test_C", value: 2, isUnsigned: true)
    *)
   let elements = [| enumerator1; enumerator2; enumerator3 |] in
   let enumeration_ty_di =
@@ -386,10 +399,10 @@ let test_types dibuilder file_di m_di =
     Llvm_debuginfo.dibuild_get_or_create_array dibuilder ~data:elements
   in
   stdout_metadata elements_arr;
-  (* CHECK: [[ELEMENTS_PTR:<0x[0-9a-f]*>]] = !{[[ENUMERATOR1_PTR]], [[ENUMERATOR2_PTR]], [[ENUMERATOR3_PTR]]}
+  (* CHECK: [[ELEMENTS_PTR:![0-9]+]] = !{[[ENUMERATOR1_PTR]], [[ENUMERATOR2_PTR]], [[ENUMERATOR3_PTR]]}
    *)
   stdout_metadata enumeration_ty_di;
-  (* CHECK: [[ENUMERATION_PTR:<0x[0-9a-f]*>]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "EnumTest", scope: [[NAMESPACE_PTR]], file: [[FILE_PTR]], line: 1, baseType: [[INT64TY_PTR]], size: 64, elements: [[ELEMENTS_PTR]])
+  (* CHECK: [[ENUMERATION_PTR:![0-9]+]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "EnumTest", scope: [[NAMESPACE_PTR]], file: [[FILE_PTR]], line: 1, baseType: [[INT64TY_PTR]], size: 64, elements: [[ELEMENTS_PTR]])
    *)
   insist
     ( Llvm_debuginfo.get_metadata_kind enumeration_ty_di
@@ -401,7 +414,7 @@ let test_types dibuilder file_di m_di =
       ~align_in_bits:0 ~offset_in_bits:0 flags_zero ~ty:int32_ty_di
   in
   stdout_metadata class_mem1;
-  (* CHECK: [[MEMB1_PTR:<0x[0-9a-f]*>]] = !DIDerivedType(tag: DW_TAG_member, name: "Field1", scope: [[NAMESPACE_PTR]], file: [[FILE_PTR]], line: 3, baseType: [[INT32_PTR]], size: 32)
+  (* CHECK: [[MEMB1_PTR:![0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "Field1", scope: [[NAMESPACE_PTR]], file: [[FILE_PTR]], line: 3, baseType: [[INT32_PTR]], size: 32)
    *)
   insist (Llvm_debuginfo.di_type_get_name class_mem1 = "Field1");
   insist (Llvm_debuginfo.di_type_get_line class_mem1 = 3);
@@ -411,7 +424,7 @@ let test_types dibuilder file_di m_di =
       ~align_in_bits:8 ~offset_in_bits:32 flags_zero ~ty:int64_ty_di
   in
   stdout_metadata class_mem2;
-  (* CHECK: [[MEMB2_PTR:<0x[0-9a-f]*>]] = !DIDerivedType(tag: DW_TAG_member, name: "Field2", scope: [[NAMESPACE_PTR]], file: [[FILE_PTR]], line: 4, baseType: [[INT64TY_PTR]], size: 64, align: 8, offset: 32)
+  (* CHECK: [[MEMB2_PTR:![0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "Field2", scope: [[NAMESPACE_PTR]], file: [[FILE_PTR]], line: 4, baseType: [[INT64TY_PTR]], size: 64, align: 8, offset: 32)
    *)
   insist (Llvm_debuginfo.di_type_get_offset_in_bits class_mem2 = 32);
   insist (Llvm_debuginfo.di_type_get_size_in_bits class_mem2 = 64);
@@ -425,7 +438,7 @@ let test_types dibuilder file_di m_di =
   stdout_metadata
     (Llvm_debuginfo.dibuild_get_or_create_type_array dibuilder
        ~data:class_elements);
-  (* CHECK: [[CLASSMEM_PTRS:<0x[0-9a-f]*>]] = !{[[MEMB1_PTR]], [[MEMB2_PTR]]}
+  (* CHECK: [[CLASSMEM_PTRS:![0-9]+]] = !{[[MEMB1_PTR]], [[MEMB2_PTR]]}
    *)
   let classty_di =
     Llvm_debuginfo.dibuild_create_class_type dibuilder ~scope:namespace_di
@@ -435,7 +448,7 @@ let test_types dibuilder file_di m_di =
       ~template_params_node:null_metadata ~unique_identifier:"MyClass"
   in
   stdout_metadata classty_di;
-  (* [[CLASS_PTR:<0x[0-9a-f]*>]] = !DICompositeType(tag: DW_TAG_structure_type, name: "MyClass", scope: [[NAMESPACE_PTR]], file: [[FILE_PTR]], line: 1, size: 96, elements: [[CLASSMEM_PTRS]], identifier: "MyClass")
+  (* [[CLASS_PTR:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "MyClass", scope: [[NAMESPACE_PTR]], file: [[FILE_PTR]], line: 1, size: 96, elements: [[CLASSMEM_PTRS]], identifier: "MyClass")
    *)
   insist
     ( Llvm_debuginfo.get_metadata_kind classty_di
@@ -455,4 +468,5 @@ let () =
       prerr_endline ("Verification of module failed: " ^ err);
       exit_status := 1
   | None -> () );
+  Llvm.dispose_context context;
   exit !exit_status

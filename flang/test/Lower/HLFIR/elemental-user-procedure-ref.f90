@@ -18,7 +18,7 @@ end subroutine
 ! CHECK:  %[[VAL_6:.*]] = hlfir.elemental %[[VAL_4]] unordered : (!fir.shape<1>) -> !hlfir.expr<100xf32> {
 ! CHECK:  ^bb0(%[[VAL_7:.*]]: index):
 ! CHECK:    %[[VAL_8:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_7]])  : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
-! CHECK:    %[[VAL_9:.*]] = fir.call @_QPelem(%[[VAL_2]]#1, %[[VAL_8]]) proc_attrs<elemental, pure>  fastmath<contract> : (!fir.ref<i32>, !fir.ref<f32>) -> f32
+! CHECK:    %[[VAL_9:.*]] = fir.call @_QPelem(%[[VAL_2]]#0, %[[VAL_8]]) proc_attrs<elemental, pure>  fastmath<contract> : (!fir.ref<i32>, !fir.ref<f32>) -> f32
 ! CHECK:    hlfir.yield_element %[[VAL_9]] : f32
 ! CHECK:  }
 ! CHECK: fir.call
@@ -93,7 +93,7 @@ end subroutine
 ! CHECK:  fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_4]] step %[[VAL_7]] unordered {
 ! CHECK:    fir.do_loop %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_3]] step %[[VAL_7]] unordered {
 ! CHECK:      %[[VAL_10:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_9]], %[[VAL_8]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
-! CHECK:      fir.call @_QPelem_sub(%[[VAL_2]]#1, %[[VAL_10]]) proc_attrs<elemental, pure>  fastmath<contract> : (!fir.ref<i32>, !fir.ref<f32>) -> ()
+! CHECK:      fir.call @_QPelem_sub(%[[VAL_2]]#0, %[[VAL_10]]) proc_attrs<elemental, pure>  fastmath<contract> : (!fir.ref<i32>, !fir.ref<f32>) -> ()
 ! CHECK:    }
 ! CHECK:  }
 
@@ -111,7 +111,7 @@ end subroutine
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 20 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QFimpure_elementalEx"} : (!fir.ref<!fir.array<10x20xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<10x20xf32>>, !fir.ref<!fir.array<10x20xf32>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFimpure_elementalEx"} : (!fir.ref<!fir.array<10x20xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<10x20xf32>>, !fir.ref<!fir.array<10x20xf32>>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
 ! CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_5]] to %[[VAL_2]] step %[[VAL_5]] {
 ! CHECK:             fir.do_loop %[[VAL_7:.*]] = %[[VAL_5]] to %[[VAL_1]] step %[[VAL_5]] {
@@ -136,7 +136,7 @@ end subroutine
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 20 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QFordered_elementalEx"} : (!fir.ref<!fir.array<10x20xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<10x20xf32>>, !fir.ref<!fir.array<10x20xf32>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFordered_elementalEx"} : (!fir.ref<!fir.array<10x20xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<10x20xf32>>, !fir.ref<!fir.array<10x20xf32>>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
 ! CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_5]] to %[[VAL_2]] step %[[VAL_5]] {
 ! CHECK:             fir.do_loop %[[VAL_7:.*]] = %[[VAL_5]] to %[[VAL_1]] step %[[VAL_5]] {
@@ -161,7 +161,7 @@ end subroutine
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 20 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QFimpure_elemental_arg_evalEx"} : (!fir.ref<!fir.array<10x20xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<10x20xf32>>, !fir.ref<!fir.array<10x20xf32>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFimpure_elemental_arg_evalEx"} : (!fir.ref<!fir.array<10x20xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<10x20xf32>>, !fir.ref<!fir.array<10x20xf32>>)
 ! CHECK:           %[[VAL_5:.*]] = hlfir.elemental %[[VAL_3]] unordered : (!fir.shape<2>) -> !hlfir.expr<10x20xf32> {
 ! CHECK:           ^bb0(%[[VAL_6:.*]]: index, %[[VAL_7:.*]]: index):
 ! CHECK:             %[[VAL_8:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_6]], %[[VAL_7]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>

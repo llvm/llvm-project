@@ -13,7 +13,7 @@
 
 ; CHECK-NEXT: Globals cannot contain scalable types
 ; CHECK-NEXT: ptr @ScalableVecStructGlobal
-@ScalableVecStructGlobal = global { i32,  <vscale x 4 x i32> } zeroinitializer
+@ScalableVecStructGlobal = external global { i32,  <vscale x 4 x i32> }
 
 ; CHECK-NEXT: Globals cannot contain scalable types
 ; CHECK-NEXT: ptr @StructTestGlobal
@@ -23,9 +23,9 @@
 ; CHECK-NEXT: Globals cannot contain scalable types
 ; CHECK-NEXT: ptr @StructArrayTestGlobal
 %struct.array.test = type { [2 x <vscale x 1 x double>] }
-@StructArrayTestGlobal = global %struct.array.test zeroinitializer
+@StructArrayTestGlobal = external global %struct.array.test
 
 ; CHECK-NEXT: Globals cannot contain scalable types
 ; CHECK-NEXT: ptr @StructTargetTestGlobal
 %struct.target.test = type { target("aarch64.svcount"), target("aarch64.svcount") }
-@StructTargetTestGlobal = global %struct.target.test zeroinitializer
+@StructTargetTestGlobal = external global %struct.target.test

@@ -15,23 +15,16 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/Utils.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
 using llvm::dbgs;
@@ -62,9 +55,10 @@ static scf::ForOp replaceWithDifferentYield(RewriterBase &rewriter,
   assert(index < inits.size());
   inits[index] = newInitOperand;
 
-  scf::ForOp newLoop = rewriter.create<scf::ForOp>(
-      loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(), loop.getStep(),
-      inits, [](OpBuilder &, Location, Value, ValueRange) {});
+  scf::ForOp newLoop = scf::ForOp::create(
+      rewriter, loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(),
+      loop.getStep(), inits, [](OpBuilder &, Location, Value, ValueRange) {},
+      loop.getUnsignedCmp());
 
   // Generate the new yield with the replaced operand.
   auto yieldOp = cast<scf::YieldOp>(loop.getBody()->getTerminator());
@@ -113,7 +107,7 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
         return WalkResult::advance();
 
       // Check that the vector to extract from is a BlockArgument.
-      auto blockArg = dyn_cast<BlockArgument>(extractOp.getVector());
+      auto blockArg = dyn_cast<BlockArgument>(extractOp.getSource());
       if (!blockArg)
         return WalkResult::advance();
 
@@ -149,7 +143,7 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
           return WalkResult::advance();
 
       rewriter.modifyOpInPlace(broadcast, [&] {
-        extractOp.getVectorMutable().assign(initArg->get());
+        extractOp.getSourceMutable().assign(initArg->get());
       });
       loop.moveOutOfLoop(extractOp);
       rewriter.moveOpAfter(broadcast, loop);
@@ -167,36 +161,6 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
       return WalkResult::interrupt();
     });
   }
-}
-
-static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
-                                LoopLikeOpInterface loop) {
-  Value source = transferRead.getSource();
-
-  // Skip view-like Ops and retrive the actual soruce Operation
-  while (auto srcOp =
-             dyn_cast_or_null<ViewLikeOpInterface>(source.getDefiningOp()))
-    source = srcOp.getViewSource();
-
-  llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
-                                           source.getUsers().end());
-  llvm::SmallDenseSet<Operation *, 32> processed;
-  while (!users.empty()) {
-    Operation *user = users.pop_back_val();
-    // If the user has already been processed skip.
-    if (!processed.insert(user).second)
-      continue;
-    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
-      users.append(viewLike->getUsers().begin(), viewLike->getUsers().end());
-      continue;
-    }
-    if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
-      continue;
-    if (!loop->isAncestor(user))
-      continue;
-    return false;
-  }
-  return true;
 }
 
 void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
@@ -231,7 +195,8 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
           FailureOr<int64_t> maxLb =
               ValueBoundsConstraintSet::computeConstantBound(
                   presburger::BoundType::UB, lb,
-                  /*stopCondition=*/nullptr, /*closedUB=*/true);
+                  /*stopCondition=*/nullptr,
+                  ValueBoundsOptions{/*closedUB=*/true});
           if (failed(maxLb))
             return;
           FailureOr<int64_t> minUb =
@@ -276,7 +241,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       for (auto *sliceOp : llvm::reverse(forwardSlice)) {
         auto candidateWrite = dyn_cast<vector::TransferWriteOp>(sliceOp);
         if (!candidateWrite ||
-            candidateWrite.getSource() != transferRead.getSource())
+            candidateWrite.getBase() != transferRead.getBase())
           continue;
         transferWrite = candidateWrite;
       }
@@ -289,9 +254,11 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       // Only hoist transfer_read / transfer_write pairs and singleton
       // transfer_reads for now.
       if (!transferWrite) {
-        // Make sure there are no other accesses to the memref before
-        // hoisting transfer_read.
-        if (noAliasingUseInLoop(transferRead, loop))
+        // Hoisting a lone read is safe as long as no aliasing write remains in
+        // the loop; other reads never conflict.
+        if (memref::hasNoAliasingAccessInScope(transferRead.getBase(), loop,
+                                               /*excludedOps=*/{},
+                                               /*readsAreSafe=*/true))
           loop.moveOutOfLoop(transferRead);
         return WalkResult::advance();
       }
@@ -303,29 +270,70 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       //   1. indices, vector type and permutation map are the same (i.e., the
       //      transfer_read/transfer_write ops are matching),
       //   2. source operands for transfer.{read|write} do not originate from
-      //      Ops implementing ViewLikeOpInterface.
+      //      nor have users that are Ops implementing ViewLikeOpInterface.
       //   3. no other operations in the loop access the same memref except
       //      for transfer_read/transfer_write accessing statically disjoint
       //      slices.
+
+      // Check 1.
       if (transferRead.getIndices() != transferWrite.getIndices() ||
           transferRead.getVectorType() != transferWrite.getVectorType() ||
           transferRead.getPermutationMap() != transferWrite.getPermutationMap())
         return WalkResult::advance();
 
-      auto *source = transferRead.getSource().getDefiningOp();
-      if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
+      // Check 2. Note, since both xfer Ops share the source, we only need to
+      // look at one of them.
+      auto base = transferRead.getBase();
+      // Whether hoisting is safe despite a view base. Computed lazily and
+      // cached since it is only consulted when a view is present.
+      std::optional<bool> viewAliasingIsSafeCache;
+      auto viewAliasingIsSafe = [&]() {
+        if (!viewAliasingIsSafeCache) {
+          Operation *hoistedPair[] = {transferRead, transferWrite};
+          viewAliasingIsSafeCache =
+              memref::hasNoAliasingAccessInScope(base, loop, hoistedPair);
+        }
+        return *viewAliasingIsSafeCache;
+      };
+      auto *source = base.getDefiningOp();
+      if (source) {
+        // NOTE: We treat `memref.assume_alignment` as a special case.
+        //
+        // The idea is that it is safe to look past AssumeAlignmemtOp (i.e.
+        // MemRef _before_ alignment) iff:
+        //  1. It has exactly two uses (these have to be the xfer Ops
+        //     being looked at).
+        //  2. The original MemRef has only one use (i.e.
+        //     AssumeAlignmentOp).
+        //
+        // Relaxing these conditions will most likely require proper alias
+        // analysis.
+        if (auto assume = dyn_cast<memref::AssumeAlignmentOp>(source)) {
+          Value memPreAlignment = assume.getMemref();
+          auto numInLoopUses =
+              llvm::count_if(base.getUses(), [&loop](OpOperand &use) {
+                return loop->isAncestor(use.getOwner());
+              });
+
+          if (numInLoopUses && memPreAlignment.hasOneUse())
+            source = memPreAlignment.getDefiningOp();
+        }
+        if (isa_and_nonnull<ViewLikeOpInterface>(source) &&
+            !viewAliasingIsSafe())
+          return WalkResult::advance();
+      }
+
+      if (llvm::any_of(base.getUsers(), llvm::IsaPred<ViewLikeOpInterface>) &&
+          !viewAliasingIsSafe())
         return WalkResult::advance();
 
-      source = transferWrite.getSource().getDefiningOp();
-      if (source && isa_and_nonnull<ViewLikeOpInterface>(source))
-        return WalkResult::advance();
-
+      // Check 3.
       // TODO: may want to memoize this information for performance but it
       // likely gets invalidated often.
       DominanceInfo dom(loop);
       if (!dom.properlyDominates(transferRead.getOperation(), transferWrite))
         return WalkResult::advance();
-      for (auto &use : transferRead.getSource().getUses()) {
+      for (auto &use : transferRead.getBase().getUses()) {
         if (!loop->isAncestor(use.getOwner()))
           continue;
         if (use.getOwner() == transferRead.getOperation() ||
@@ -358,7 +366,8 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       // Hoist write after.
       transferWrite->moveAfter(loop);
 
-      // Rewrite `loop` with new yields by cloning and erase the original loop.
+      // Rewrite `loop` with new yields by cloning and erase the original
+      // loop.
       IRRewriter rewriter(transferRead.getContext());
       NewYieldValuesFn yieldFn = [&](OpBuilder &b, Location loc,
                                      ArrayRef<BlockArgument> newBBArgs) {
@@ -371,7 +380,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       if (failed(maybeNewLoop))
         return WalkResult::interrupt();
 
-      transferWrite.getVectorMutable().assign(
+      transferWrite.getValueToStoreMutable().assign(
           maybeNewLoop->getOperation()->getResults().back());
       changed = true;
       // Need to interrupt and restart because erasing the loop messes up

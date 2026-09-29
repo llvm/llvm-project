@@ -38,16 +38,16 @@ enum AssignFlags {
   ComponentCanBeDefinedAssignment = 1 << 3,
   ExplicitLengthCharacterLHS = 1 << 4,
   PolymorphicLHS = 1 << 5,
-  DeallocateLHS = 1 << 6
+  DeallocateLHS = 1 << 6,
+  UpdateLHSBounds = 1 << 7,
 };
 
 #ifdef RT_DEVICE_COMPILATION
 RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
-    Terminator &terminator, int flags, MemmoveFct memmoveFct = &MemmoveWrapper);
+    Terminator &terminator, int flags, MemmoveFct = &MemmoveWrapper);
 #else
 RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
-    Terminator &terminator, int flags,
-    MemmoveFct memmoveFct = &Fortran::runtime::memmove);
+    Terminator &terminator, int flags, MemmoveFct = &runtime::memmove);
 #endif
 
 extern "C" {
@@ -65,8 +65,18 @@ void RTDECL(AssignTemporary)(Descriptor &to, const Descriptor &from,
 // AssignTemporary.
 void RTDECL(CopyInAssign)(Descriptor &temp, const Descriptor &var,
     const char *sourceFile = nullptr, int sourceLine = 0);
-// When "var" is provided, copy "temp" to it assuming "var" is already
-// initialized. Destroy and deallocate "temp" in all cases.
+// Copy "temp" to the already initialized "var" without deallocating "temp".
+// The copy is performed only from the first element of "temp" whose bit
+// pattern differs from the corresponding element of "var" through the last
+// element; when "temp" is bitwise identical to "var", nothing is stored, so
+// a "var" backed by read-only storage is not written to unless it was
+// actually modified. Setting the system environment variable
+// FLANG_RT_COPYOUT_MODIFIED_ONLY=0 restores the unconditional whole-object
+// copy.
+void RTDECL(CopyOutAssignDirect)(const Descriptor &var, Descriptor &temp,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+// When "var" is provided, copy "temp" to it as CopyOutAssignDirect does.
+// Destroy and deallocate "temp" in all cases.
 void RTDECL(CopyOutAssign)(Descriptor *var, Descriptor &temp,
     const char *sourceFile = nullptr, int sourceLine = 0);
 // This variant is for assignments to explicit-length CHARACTER left-hand
@@ -78,6 +88,10 @@ void RTDECL(AssignExplicitLengthCharacter)(Descriptor &to,
     int sourceLine = 0);
 // This variant is assignments to whole polymorphic allocatables.
 void RTDECL(AssignPolymorphic)(Descriptor &to, const Descriptor &from,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+// Fast path for simple intrinsic type assignments (no derived types, no
+// finalization)
+void RTDECL(AssignSimple)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);
 } // extern "C"
 } // namespace Fortran::runtime

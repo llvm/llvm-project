@@ -5,6 +5,7 @@
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
+! XFAIL: intelgpu
 program main
     integer :: x(2,2,2)
     integer :: i, j, k

@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/remainder.h"
-#include "src/__support/FPUtil/DivisionAndRemainderOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/remainder.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, remainder, (double x, double y)) {
-  int quotient;
-  return fputil::remquo(x, y, quotient);
+  return math::remainder(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

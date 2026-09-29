@@ -62,8 +62,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -71,13 +71,13 @@ body:             |
   ; MM-LABEL: name: a
   ; MM: bb.0.entry:
   ; MM:   successors: %bb.2(0x50000000), %bb.1(0x30000000)
-  ; MM:   $f0 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
+  ; MM:   $d0_64 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
   ; MM:   BC1EQZC_MMR6 $d0_64, %bb.2, implicit-def $at
   ; MM: bb.1.entry:
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   BC_MMR6 %bb.3
   ; MM: bb.2.if.then:
-  ; MM:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
+  ; MM:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
   ; MM:   $v0 = LI16_MM 0
   ; MM:   JRC16_MM undef $ra, implicit $v0
   ; MM: bb.3.return:
@@ -86,7 +86,7 @@ body:             |
   ; PIC-LABEL: name: a
   ; PIC: bb.0.entry:
   ; PIC:   successors: %bb.3(0x50000000), %bb.1(0x30000000)
-  ; PIC:   $f0 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
+  ; PIC:   $d0_64 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
   ; PIC:   BC1EQZC_MMR6 $d0_64, %bb.3, implicit-def $at
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -102,7 +102,7 @@ body:             |
   ; PIC:   $sp = ADDiu $sp, 8
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.if.then:
-  ; PIC:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
+  ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
   ; PIC:   $v0 = LI16_MM 0
   ; PIC:   JRC16_MM undef $ra, implicit $v0
   ; PIC: bb.4.return:
@@ -112,7 +112,7 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $d12_64, $d14_64
 
-    $f0 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
+    $d0_64 = CMP_EQ_D_MMR6 killed $d12_64, killed $d14_64
     BC1NEZC_MMR6 killed $d0_64, %bb.2, implicit-def $at
 
   bb.1.if.then:
@@ -154,8 +154,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
 constants:
@@ -163,13 +163,13 @@ body:             |
   ; MM-LABEL: name: b
   ; MM: bb.0.entry:
   ; MM:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
-  ; MM:   $f0 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
+  ; MM:   $d0_64 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
   ; MM:   BC1NEZC_MMR6 $d0_64, %bb.2, implicit-def $at
   ; MM: bb.1.entry:
   ; MM:   successors: %bb.3(0x80000000)
   ; MM:   BC_MMR6 %bb.3
   ; MM: bb.2.if.then:
-  ; MM:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
+  ; MM:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
   ; MM:   $v0 = LI16_MM 0
   ; MM:   JRC16_MM undef $ra, implicit $v0
   ; MM: bb.3.return:
@@ -178,7 +178,7 @@ body:             |
   ; PIC-LABEL: name: b
   ; PIC: bb.0.entry:
   ; PIC:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
-  ; PIC:   $f0 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
+  ; PIC:   $d0_64 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
   ; PIC:   BC1NEZC_MMR6 $d0_64, %bb.3, implicit-def $at
   ; PIC: bb.1.entry:
   ; PIC:   successors: %bb.2(0x80000000)
@@ -194,7 +194,7 @@ body:             |
   ; PIC:   $sp = ADDiu $sp, 8
   ; PIC:   JIC_MMR6 $at, 0, implicit-def $at
   ; PIC: bb.3.if.then:
-  ; PIC:   INLINEASM &".space 810680", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $at
+  ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
   ; PIC:   $v0 = LI16_MM 0
   ; PIC:   JRC16_MM undef $ra, implicit $v0
   ; PIC: bb.4.return:
@@ -204,7 +204,7 @@ body:             |
     successors: %bb.1(0x30000000), %bb.2(0x50000000)
     liveins: $d12_64, $d14_64
 
-    $f0 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
+    $d0_64 = CMP_UEQ_D_MMR6 killed $d12_64, killed $d14_64
     BC1EQZC_MMR6 killed $d0_64, %bb.2, implicit-def $at
 
   bb.1.if.then:

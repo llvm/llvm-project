@@ -39,6 +39,11 @@ multiclass B<string name, string help1, string help2> {
   def no_ # NAME: Flag<["--", "-"], "no-" # name>, HelpText<help2>;
 }
 
+multiclass BB<string name, string help1, string help2> {
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
+}
+
 multiclass B_disable<string name, string help1, string help2> {
   def NAME: Flag<["--", "-"], name>, HelpText<help1>;
   def disable_ # NAME: Flag<["--", "-"], "disable-" # name>, HelpText<help2>;
@@ -79,6 +84,8 @@ defm exclude_symbols: Eq<"exclude-symbols",
     "Exclude symbols from automatic export">, MetaVarName<"<symbol[,symbol,...]>">;
 def export_all_symbols: F<"export-all-symbols">,
     HelpText<"Export all symbols even if a def file or dllexport attributes are used">;
+defm dll_search_prefix:Eq<"dll-search-prefix", "Specify DLL prefix instead of 'lib'">,
+    MetaVarName<"<dll_search_prefix>">;
 defm fatal_warnings: B<"fatal-warnings",
     "Treat warnings as errors",
     "Do not treat warnings as errors (default)">;
@@ -118,6 +125,10 @@ def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 defm out_implib: Eq<"out-implib", "Import library name">;
 defm output_def: Eq<"output-def", "Output def file">;
+def pop_state: F<"pop-state">,
+  HelpText<"Restore the states saved by --push-state">;
+def push_state: F<"push-state">,
+  HelpText<"Save the current state of --Bstatic/--Bdynamic and --whole-archive">;
 defm reloc_section: B_enable_disable<"reloc-section",
      "Enable base relocations", "Disable base relocations">;
 defm section_alignment: Eq<"section-alignment", "Set section alignment">;
@@ -164,6 +175,9 @@ def lto_emit_asm: FF<"lto-emit-asm">,
   HelpText<"Emit assembly code">;
 def lto_sample_profile: JJ<"lto-sample-profile=">,
   HelpText<"Sample profile file path">;
+defm fat_lto_objects: BB<"fat-lto-objects",
+    "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",
+    "Ignore the .llvm.lto section in relocatable object files (default).">;
 
 def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
@@ -219,6 +233,9 @@ def : F<"build-id">, Alias<build_id>, HelpText<"Alias for --build-id=">;
 def functionpadmin: J<"functionpadmin=">, HelpText<"Prepares an image for hotpatching">,
   MetaVarName<"<arg>">;
 def : F<"functionpadmin">, Alias<functionpadmin>, HelpText<"Alias for --functionpadmin=">;
+defm native_def
+    : EEq<"native-def",
+          "Use a module-definition file for the native view in a hybrid image">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;

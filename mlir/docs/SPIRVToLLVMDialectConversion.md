@@ -453,12 +453,12 @@ These ops are converted to their LLVM counterparts: `llvm.load` and
 following cases, based on the value of the attribute:
 
 *   **Aligned**: alignment is passed on to LLVM op builder, for example: `mlir
-    // llvm.store %ptr, %val {alignment = 4 : i64} : !llvm.ptr spirv.Store
+    // llvm.store %ptr, %val <alignment = 4> : !llvm.ptr spirv.Store
     "Function" %ptr, %val ["Aligned", 4] : f32`
 *   **None**: same case as if there is no memory access attribute.
 
 *   **Nontemporal**: set `nontemporal` flag, for example: `mlir // %res =
-    llvm.load %ptr {nontemporal} : !llvm.ptr %res = spirv.Load "Function"
+    llvm.load %ptr <nontemporal> : !llvm.ptr %res = spirv.Load "Function"
     %ptr ["Nontemporal"] : f32`
 
 *   **Volatile**: mark the op as `volatile`, for example: `mlir // %res =
@@ -817,7 +817,7 @@ to LLVM ops. At the moment, SPIR-V module attributes are ignored.
 
 ## SPIR-V CPU Runner Tests
 
-The `mlir-cpu-runner` has support for executing a `gpu` dialect kernel on the
+The `mlir-runner` has support for executing a `gpu` dialect kernel on the
 CPU via SPIR-V to LLVM dialect conversion. This is referred to as the "SPIR-V
 CPU Runner". The `--link-nested-modules` flag needs to be passed for this.
 Currently, only single-threaded kernels are supported.

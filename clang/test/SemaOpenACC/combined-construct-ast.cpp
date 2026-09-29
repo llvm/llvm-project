@@ -27,6 +27,22 @@ void NormalFunc() {
   // CHECK-NEXT: DeclRefExpr{{.*}}'i'
   // CHECK-NEXT: NullStmt
 
+_Pragma("acc parallel loop")
+  for(int i = 0; i < 5;++i);
+  // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
+  // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}}i
+  // CHECK-NEXT: IntegerLiteral {{.*}}'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator {{.*}} 'bool' '<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral {{.*}}'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}} '++'
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i'
+  // CHECK-NEXT: NullStmt
+
 #pragma acc serial loop
   for(int i = 0; i < 5;++i);
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} serial loop

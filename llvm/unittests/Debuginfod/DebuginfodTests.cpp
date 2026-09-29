@@ -1,4 +1,4 @@
-//===-- llvm/unittest/Support/DebuginfodTests.cpp - unit tests ------------===//
+//===--- DebuginfodTests.cpp - unit tests ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Debuginfod/HTTPClient.h"
+#include "llvm/HTTP/HTTPClient.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
@@ -37,7 +37,6 @@ TEST(DebuginfodClient, CacheHit) {
   sys::fs::createTemporaryFile("llvmcache-key", "temp", FD, CachedFilePath);
   StringRef CacheDir = sys::path::parent_path(CachedFilePath);
   StringRef UniqueKey = sys::path::filename(CachedFilePath);
-  llvm::CachePruningPolicy policy;
   EXPECT_TRUE(UniqueKey.consume_front("llvmcache-"));
   raw_fd_ostream OF(FD, true, /*unbuffered=*/true);
   OF << "contents\n";
@@ -45,7 +44,7 @@ TEST(DebuginfodClient, CacheHit) {
   OF.close();
   Expected<std::string> PathOrErr = getCachedOrDownloadArtifact(
       UniqueKey, /*UrlPath=*/"/null", CacheDir,
-      /*DebuginfodUrls=*/{}, /*Timeout=*/std::chrono::milliseconds(1), policy);
+      /*DebuginfodUrls=*/{}, /*Timeout=*/std::chrono::milliseconds(1));
   EXPECT_THAT_EXPECTED(PathOrErr, HasValue(CachedFilePath));
 }
 

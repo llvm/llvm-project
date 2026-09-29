@@ -11,8 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVMPass.h"
-
+#include "../SPIRVCommon/Pattern.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
@@ -45,32 +44,19 @@ static constexpr const char kSPIRVModule[] = "__spv__";
 // Utility functions
 //===----------------------------------------------------------------------===//
 
-/// Returns the string name of the `DescriptorSet` decoration.
-static std::string descriptorSetName() {
-  return llvm::convertToSnakeFromCamelCase(
-      stringifyDecoration(spirv::Decoration::DescriptorSet));
-}
-
-/// Returns the string name of the `Binding` decoration.
-static std::string bindingName() {
-  return llvm::convertToSnakeFromCamelCase(
-      stringifyDecoration(spirv::Decoration::Binding));
-}
-
 /// Calculates the index of the kernel's operand that is represented by the
 /// given global variable with the `bind` attribute. We assume that the index of
 /// each kernel's operand is mapped to (descriptorSet, binding) by the map:
 ///   i -> (0, i)
 /// which is implemented under `LowerABIAttributesPass`.
 static unsigned calculateGlobalIndex(spirv::GlobalVariableOp op) {
-  IntegerAttr binding = op->getAttrOfType<IntegerAttr>(bindingName());
-  return binding.getInt();
+  return *op.getBinding();
 }
 
 /// Copies the given number of bytes from src to dst pointers.
 static void copy(Location loc, Value dst, Value src, Value size,
                  OpBuilder &builder) {
-  builder.create<LLVM::MemcpyOp>(loc, dst, src, size, /*isVolatile=*/false);
+  LLVM::MemcpyOp::create(builder, loc, dst, src, size, /*isVolatile=*/false);
 }
 
 /// Encodes the binding and descriptor set numbers into a new symbolic name.
@@ -81,22 +67,16 @@ static void copy(Location loc, Value dst, Value src, Value size,
 static std::string
 createGlobalVariableWithBindName(spirv::GlobalVariableOp op,
                                  StringRef kernelModuleName) {
-  IntegerAttr descriptorSet =
-      op->getAttrOfType<IntegerAttr>(descriptorSetName());
-  IntegerAttr binding = op->getAttrOfType<IntegerAttr>(bindingName());
   return llvm::formatv("{0}_{1}_descriptor_set{2}_binding{3}",
                        kernelModuleName.str(), op.getSymName().str(),
-                       std::to_string(descriptorSet.getInt()),
-                       std::to_string(binding.getInt()));
+                       std::to_string(*op.getDescriptorSet()),
+                       std::to_string(*op.getBinding()));
 }
 
 /// Returns true if the given global variable has both a descriptor set number
 /// and a binding number.
 static bool hasDescriptorSetAndBinding(spirv::GlobalVariableOp op) {
-  IntegerAttr descriptorSet =
-      op->getAttrOfType<IntegerAttr>(descriptorSetName());
-  IntegerAttr binding = op->getAttrOfType<IntegerAttr>(bindingName());
-  return descriptorSet && binding;
+  return op.getDescriptorSetAttr() && op.getBindingAttr();
 }
 
 /// Fills `globalVariableMap` with SPIR-V global variables that represent kernel
@@ -196,8 +176,8 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
     if (!kernelFunc) {
       OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointToStart(module.getBody());
-      kernelFunc = rewriter.create<LLVM::LLVMFuncOp>(
-          rewriter.getUnknownLoc(), newKernelFuncName,
+      kernelFunc = LLVM::LLVMFuncOp::create(
+          rewriter, rewriter.getUnknownLoc(), newKernelFuncName,
           LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(context),
                                       ArrayRef<Type>()));
       rewriter.setInsertionPoint(launchOp);
@@ -247,8 +227,8 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       if (!dstGlobal) {
         OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointToStart(module.getBody());
-        dstGlobal = rewriter.create<LLVM::GlobalOp>(
-            loc, dstGlobalType,
+        dstGlobal = LLVM::GlobalOp::create(
+            rewriter, loc, dstGlobalType,
             /*isConstant=*/false, LLVM::Linkage::Linkonce, name, Attribute(),
             /*alignment=*/0);
         rewriter.setInsertionPoint(launchOp);
@@ -257,8 +237,8 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       // Copy the data from src operand pointer to dst global variable. Save
       // src, dst and size so that we can copy data back after emulating the
       // kernel call.
-      Value dst = rewriter.create<LLVM::AddressOfOp>(
-          loc, typeConverter->convertType(spirvGlobal.getType()),
+      Value dst = LLVM::AddressOfOp::create(
+          rewriter, loc, typeConverter->convertType(spirvGlobal.getType()),
           dstGlobal.getSymName());
       copy(loc, dst, src, sizeBytes, rewriter);
 
@@ -292,8 +272,8 @@ public:
 
     // Request C wrapper emission.
     for (auto func : module.getOps<func::FuncOp>()) {
-      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(&getContext()));
+      func->setDiscardableAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                               UnitAttr::get(&getContext()));
     }
 
     // Specify options to lower to LLVM and pull in the conversion patterns.

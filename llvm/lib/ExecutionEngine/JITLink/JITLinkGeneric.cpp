@@ -21,23 +21,21 @@ JITLinkerBase::~JITLinkerBase() = default;
 
 void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
 
-  LLVM_DEBUG({
-    dbgs() << "Starting link phase 1 for graph " << G->getName() << "\n";
-  });
+  LLVM_DEBUG(dbgs() << "Starting link phase 1\n");
 
   // Prune and optimize the graph.
   if (auto Err = runPasses(Passes.PrePrunePasses))
     return Ctx->notifyFailed(std::move(Err));
 
   LLVM_DEBUG({
-    dbgs() << "Link graph \"" << G->getName() << "\" pre-pruning:\n";
+    dbgs() << "Link graph pre-pruning:\n";
     G->dump(dbgs());
   });
 
   prune(*G);
 
   LLVM_DEBUG({
-    dbgs() << "Link graph \"" << G->getName() << "\" post-pruning:\n";
+    dbgs() << "Link graph post-pruning:\n";
     G->dump(dbgs());
   });
 
@@ -56,16 +54,14 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
   Ctx->getMemoryManager().allocate(
       Ctx->getJITLinkDylib(), *G,
       [S = std::move(Self)](AllocResult AR) mutable {
-        // FIXME: Once MSVC implements c++17 order of evaluation rules for calls
-        // this can be simplified to
-        //          S->linkPhase2(std::move(S), std::move(AR));
-        auto *TmpSelf = S.get();
-        TmpSelf->linkPhase2(std::move(S), std::move(AR));
+        S->linkPhase2(std::move(S), std::move(AR));
       });
 }
 
 void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
                                AllocResult AR) {
+
+  LLVM_DEBUG(dbgs() << "Starting link phase 2\n");
 
   if (AR)
     Alloc = std::move(*AR);
@@ -73,8 +69,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
     return Ctx->notifyFailed(AR.takeError());
 
   LLVM_DEBUG({
-    dbgs() << "Link graph \"" << G->getName()
-           << "\" before post-allocation passes:\n";
+    dbgs() << "Link graph before post-allocation passes:\n";
     G->dump(dbgs());
   });
 
@@ -96,10 +91,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
       dbgs() << "No external symbols for " << G->getName()
              << ". Proceeding immediately with link phase 3.\n";
     });
-    // FIXME: Once MSVC implements c++17 order of evaluation rules for calls
-    // this can be simplified. See below.
-    auto &TmpSelf = *Self;
-    TmpSelf.linkPhase3(std::move(Self), AsyncLookupResult());
+    Self->linkPhase3(std::move(Self), AsyncLookupResult());
     return;
   }
 
@@ -109,31 +101,18 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
            << " (may trigger materialization/linking of other graphs)...\n";
   });
 
-  // We're about to hand off ownership of ourself to the continuation. Grab a
-  // pointer to the context so that we can call it to initiate the lookup.
-  //
-  // FIXME: Once MSVC implements c++17 order of evaluation rules for calls this
-  // can be simplified to:
-  //
-  // Ctx->lookup(std::move(UnresolvedExternals),
-  //             [Self=std::move(Self)](Expected<AsyncLookupResult> Result) {
-  //               Self->linkPhase3(std::move(Self), std::move(Result));
-  //             });
   Ctx->lookup(std::move(ExternalSymbols),
               createLookupContinuation(
                   [S = std::move(Self)](
                       Expected<AsyncLookupResult> LookupResult) mutable {
-                    auto &TmpSelf = *S;
-                    TmpSelf.linkPhase3(std::move(S), std::move(LookupResult));
+                    S->linkPhase3(std::move(S), std::move(LookupResult));
                   }));
 }
 
 void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
                                Expected<AsyncLookupResult> LR) {
 
-  LLVM_DEBUG({
-    dbgs() << "Starting link phase 3 for graph " << G->getName() << "\n";
-  });
+  LLVM_DEBUG(dbgs() << "Starting link phase 3\n");
 
   // If the lookup failed, bail out.
   if (!LR)
@@ -143,8 +122,7 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
   applyLookupResult(*LR);
 
   LLVM_DEBUG({
-    dbgs() << "Link graph \"" << G->getName()
-           << "\" before pre-fixup passes:\n";
+    dbgs() << "Link graph before pre-fixup passes:\n";
     G->dump(dbgs());
   });
 
@@ -152,7 +130,7 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
     return abandonAllocAndBailOut(std::move(Self), std::move(Err));
 
   LLVM_DEBUG({
-    dbgs() << "Link graph \"" << G->getName() << "\" before copy-and-fixup:\n";
+    dbgs() << "Link graph before copy-and-fixup:\n";
     G->dump(dbgs());
   });
 
@@ -161,7 +139,7 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
     return abandonAllocAndBailOut(std::move(Self), std::move(Err));
 
   LLVM_DEBUG({
-    dbgs() << "Link graph \"" << G->getName() << "\" after copy-and-fixup:\n";
+    dbgs() << "Link graph after copy-and-fixup:\n";
     G->dump(dbgs());
   });
 
@@ -175,27 +153,21 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
   }
 
   Alloc->finalize([S = std::move(Self)](FinalizeResult FR) mutable {
-    // FIXME: Once MSVC implements c++17 order of evaluation rules for calls
-    // this can be simplified to
-    //          S->linkPhase2(std::move(S), std::move(AR));
-    auto *TmpSelf = S.get();
-    TmpSelf->linkPhase4(std::move(S), std::move(FR));
+    S->linkPhase4(std::move(S), std::move(FR));
   });
 }
 
 void JITLinkerBase::linkPhase4(std::unique_ptr<JITLinkerBase> Self,
                                FinalizeResult FR) {
 
-  LLVM_DEBUG({
-    dbgs() << "Starting link phase 4 for graph " << G->getName() << "\n";
-  });
+  LLVM_DEBUG(dbgs() << "Starting link phase 4\n");
 
   if (!FR)
     return Ctx->notifyFailed(FR.takeError());
 
   Ctx->notifyFinalized(std::move(*FR));
 
-  LLVM_DEBUG({ dbgs() << "Link of graph " << G->getName() << " complete\n"; });
+  LLVM_DEBUG({ dbgs() << "Link complete\n"; });
 }
 
 Error JITLinkerBase::runPasses(LinkGraphPassList &Passes) {

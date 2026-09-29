@@ -5,7 +5,7 @@
 // CHECK:      Sections [
 // CHECK:        Section {
 // CHECK:          Name: .xdata
-// CHECK:          RawDataSize: 16
+// CHECK:          RawDataSize: 0x10
 // CHECK:          RelocationCount: 1
 // CHECK:          Characteristics [
 // CHECK-NEXT:       ALIGN_4BYTES
@@ -21,7 +21,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
 // CHECK:          Name: .pdata
-// CHECK:          RawDataSize: 12
+// CHECK:          RawDataSize: 0xC
 // CHECK:          RelocationCount: 3
 // CHECK:          Characteristics [
 // CHECK-NEXT:       IMAGE_SCN_ALIGN_4BYTES
@@ -77,7 +77,9 @@
     .text
     .seh_endprologue
 func:
+    .seh_startepilogue
     pop %r13
     pop %r12
+    .seh_endepilogue
     ret
     .seh_endproc

@@ -8,7 +8,7 @@ subroutine s01(elem, subr)
       real, intent(in), value :: x
     end function
     subroutine subr(dummy)
-      !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface
+      !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface [-Wportability]
       procedure(sin) :: dummy
     end subroutine
     subroutine badsubr(dummy)
@@ -17,11 +17,11 @@ subroutine s01(elem, subr)
       procedure(elem) :: dummy
     end subroutine
     subroutine optionalsubr(dummy)
-      !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface
+      !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface [-Wportability]
       procedure(sin), optional :: dummy
     end subroutine
     subroutine ptrsubr(dummy)
-      !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface
+      !PORTABILITY: A dummy procedure should not have an ELEMENTAL intrinsic as its interface [-Wportability]
       procedure(sin), pointer, intent(in) :: dummy
     end subroutine
   end interface

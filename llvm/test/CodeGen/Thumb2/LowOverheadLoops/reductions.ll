@@ -446,8 +446,8 @@ define dso_local arm_aapcs_vfpcc i32 @two_loops_mul_add_v4i32(ptr nocapture read
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vdup.32 q0, r3
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w r3, r3, r7, lsr #2
 ; CHECK-NEXT:    vmov.32 q0[0], r12
+; CHECK-NEXT:    add.w r3, r3, r7, lsr #2
 ; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB6_5: @ %vector.body46
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -541,11 +541,11 @@ define dso_local arm_aapcs_vfpcc void @two_reductions_mul_add_v8i16(ptr nocaptur
 ; CHECK-NEXT:    cbz r2, .LBB7_4
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    adds r3, r2, #7
-; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    bic r3, r3, #7
 ; CHECK-NEXT:    movs r4, #1
+; CHECK-NEXT:    bic r3, r3, #7
+; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    subs r3, #8
-; CHECK-NEXT:    vmov q3, q1
+; CHECK-NEXT:    vmov.i32 q3, #0x0
 ; CHECK-NEXT:    add.w r12, r4, r3, lsr #3
 ; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    mov r4, r1
@@ -642,14 +642,12 @@ define i32 @wrongop(ptr nocapture readonly %pd) {
 ; CHECK-NEXT:    movw r4, #23593
 ; CHECK-NEXT:    movt r1, #163
 ; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    movt r4, #655
-; CHECK-NEXT:    ror.w r12, r3, #4
-; CHECK-NEXT:    cmp r12, r1
-; CHECK-NEXT:    cset r1, lo
-; CHECK-NEXT:    ror.w r3, r3, #2
 ; CHECK-NEXT:    mov.w r12, #1
-; CHECK-NEXT:    cmp r3, r4
-; CHECK-NEXT:    csel r3, r1, r12, lo
+; CHECK-NEXT:    movt r4, #655
+; CHECK-NEXT:    cmp.w r1, r3, ror #4
+; CHECK-NEXT:    cset r1, hi
+; CHECK-NEXT:    cmp.w r4, r3, ror #2
+; CHECK-NEXT:    csel r3, r1, r12, hi
 ; CHECK-NEXT:    lsls.w r4, lr, #30
 ; CHECK-NEXT:    csel r1, r1, r3, ne
 ; CHECK-NEXT:    cmp r2, #1

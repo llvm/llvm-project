@@ -1,16 +1,6 @@
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches \
-; RUN:     -polly-invariant-load-hoisting=true \
-; RUN:     -polly-allow-nonaffine-loops=true \
-; RUN:     '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=INNERMOST
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine \
-; RUN:     -polly-invariant-load-hoisting=true \
-; RUN:     -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true \
-; RUN:     '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALL
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine \
-; RUN:     -polly-invariant-load-hoisting=true \
-; RUN:     -polly-process-unprofitable=false \
-; RUN:     -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true \
-; RUN:     '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PROFIT
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine-branches -polly-invariant-load-hoisting=true -polly-allow-nonaffine-loops=true '-passes=polly-custom<scops>' -polly-print-detect -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=INNERMOST
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine -polly-invariant-load-hoisting=true -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true '-passes=polly-custom<scops>' -polly-print-detect -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ALL
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine -polly-invariant-load-hoisting=true -polly-process-unprofitable=false -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true '-passes=polly-custom<scops>' -polly-print-detect -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PROFIT
 ;
 ; Negative test for INNERMOST.
 ; At the moment we will optimistically assume A[i] in the conditional before the inner
@@ -38,7 +28,7 @@
 ; INNERMOST-NEXT:    Invalid Context:
 ; INNERMOST-NEXT:    [tmp6, p_1, p_2] -> {  : p_2 < p_1 and (tmp6 < 0 or tmp6 > 0) }
 ; INNERMOST:         p0: %tmp6
-; INNERMOST-NEXT:    p1: {0,+,(sext i32 %N to i64)}<%bb3>
+; INNERMOST-NEXT:    p1: {0,+,(sext i32 %N to i64)}<nsw><%bb3>
 ; INNERMOST-NEXT:    p2: {0,+,1}<nuw><nsw><%bb3>
 ; INNERMOST-NEXT:    Arrays {
 ; INNERMOST-NEXT:        i32 MemRef_A[*]; // Element size 4

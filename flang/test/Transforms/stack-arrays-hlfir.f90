@@ -9,7 +9,6 @@
 ! RUN: | fir-opt --lower-hlfir-ordered-assignments \
 ! RUN:           --bufferize-hlfir \
 ! RUN:           --convert-hlfir-to-fir \
-! RUN:           --array-value-copy \
 ! RUN:           --stack-arrays \
 ! RUN: | FileCheck %s
 
@@ -71,9 +70,9 @@ end subroutine omp_target_wsloop
 ! CHECK:         omp.target {{.*}} {
 ! CHECK-NOT:       fir.allocmem
 ! CHECK-NOT:       fir.freemem
-! CHECK:           fir.alloca !fir.array<2xi64>
 ! CHECK:         omp.teams {
-! CHECK:         omp.distribute {
+! CHECK:           fir.alloca !fir.array<2xi64>
+! CHECK:         omp.distribute private({{.*}}) {
 ! CHECK:         omp.loop_nest {{.*}} {
 ! CHECK-NOT:       fir.allocmem
 ! CHECK-NOT:       fir.freemem

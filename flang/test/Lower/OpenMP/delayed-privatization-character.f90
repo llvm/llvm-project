@@ -2,14 +2,14 @@
 
 ! RUN: split-file %s %t
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/dyn_len.f90 2>&1 | FileCheck %s --check-prefix=DYN_LEN
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %t/dyn_len.f90 2>&1 \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - %t/dyn_len.f90 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=DYN_LEN
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %t/static_len.f90 2>&1 | FileCheck %s --check-prefix=STATIC_LEN
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %t/static_len.f90 2>&1 \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization -o - %t/static_len.f90 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=STATIC_LEN
 
 !--- dyn_len.f90
@@ -24,13 +24,13 @@ subroutine delayed_privatization_character(var1, l)
 end subroutine
 
 ! DYN_LEN-LABEL: omp.private {type = firstprivate}
-! DYN_LEN-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.boxchar<1>]] alloc {
+! DYN_LEN-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.boxchar<1>]] init {
 
-! DYN_LEN-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
+! DYN_LEN-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]], %[[ALLOC_ARG:.*]]: [[TYPE]]):
 ! DYN_LEN-NEXT:   %[[UNBOX:.*]]:2 = fir.unboxchar %[[PRIV_ARG]]
-! DYN_LEN:        %[[PRIV_ALLOC:.*]] = fir.alloca !fir.char<1,?>(%[[UNBOX]]#1 : index)
-! DYN_LEN-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOC]] typeparams %[[UNBOX]]#1
-! DYN_LEN-NEXT:   omp.yield(%[[PRIV_DECL]]#0 : !fir.boxchar<1>)
+! DYN_LEN-NEXT:   %[[PRIV_ALLOC:.*]] = fir.allocmem !fir.char<1,?>(%[[UNBOX]]#1 : index)
+! DYN_LEN-NEXT:   %[[EMBOXCHAR:.*]] = fir.emboxchar %[[PRIV_ALLOC]], %[[UNBOX]]#1
+! DYN_LEN:        omp.yield(%[[EMBOXCHAR]] : !fir.boxchar<1>)
 
 ! DYN_LEN-NEXT: } copy {
 ! DYN_LEN-NEXT: ^bb0(%[[PRIV_ORIG_ARG:.*]]: [[TYPE]], %[[PRIV_PRIV_ARG:.*]]: [[TYPE]]):
@@ -51,9 +51,4 @@ subroutine delayed_privatization_character_static_len(var1)
 end subroutine
 
 ! STATIC_LEN-LABEL: omp.private {type = private}
-! STATIC_LEN-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.ref<!fir.char<1,10>>]] alloc {
-
-! STATIC_LEN-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
-! STATIC_LEN-NEXT:   %[[C10:.*]] = arith.constant 10 : index
-! STATIC_LEN-NEXT:   %[[PRIV_ALLOC:.*]] = fir.alloca !fir.char<1,10>
-! STATIC_LEN-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOC]] typeparams %[[C10]]
+! STATIC_LEN-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.char<1,10>]]

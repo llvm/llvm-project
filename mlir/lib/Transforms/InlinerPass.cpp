@@ -18,9 +18,10 @@
 #include "mlir/Analysis/CallGraph.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Inliner.h"
+#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_INLINER
+#define GEN_PASS_DEF_INLINERPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -38,8 +39,9 @@ static void defaultInlinerOptPipeline(OpPassManager &pm) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-class InlinerPass : public impl::InlinerBase<InlinerPass> {
+class InlinerPass : public impl::InlinerPassBase<InlinerPass> {
 public:
+  using impl::InlinerPassBase<InlinerPass>::InlinerPassBase;
   InlinerPass();
   InlinerPass(const InlinerPass &) = default;
   InlinerPass(std::function<void(OpPassManager &)> defaultPipeline);
@@ -120,8 +122,8 @@ static bool isProfitableToInline(const Inliner::ResolvedCall &resolvedCall,
     return true;
 
   unsigned ratio = countOps(calleeRegion) * 100 / callerOps;
-  LLVM_DEBUG(llvm::dbgs() << "Callee / caller operation ratio (max: "
-                          << inliningThreshold << "%): " << ratio << "%\n");
+  LDBG() << "Callee / caller operation ratio (max: " << inliningThreshold
+         << "%): " << ratio << "%";
   return ratio <= inliningThreshold;
 }
 
@@ -138,7 +140,7 @@ void InlinerPass::runOnOperation() {
   }
 
   // By default, assume that any inlining is profitable.
-  auto profitabilityCb = [=](const Inliner::ResolvedCall &call) {
+  auto profitabilityCb = [this](const Inliner::ResolvedCall &call) {
     return isProfitableToInline(call, inliningThreshold);
   };
 
@@ -149,7 +151,6 @@ void InlinerPass::runOnOperation() {
   // Run the inlining.
   if (failed(inliner.doInlining()))
     signalPassFailure();
-  return;
 }
 
 LogicalResult InlinerPass::initializeOptions(
@@ -183,9 +184,6 @@ LogicalResult InlinerPass::initializeOptions(
   return success();
 }
 
-std::unique_ptr<Pass> mlir::createInlinerPass() {
-  return std::make_unique<InlinerPass>();
-}
 std::unique_ptr<Pass>
 mlir::createInlinerPass(llvm::StringMap<OpPassManager> opPipelines) {
   return std::make_unique<InlinerPass>(defaultInlinerOptPipeline,

@@ -22,4 +22,6 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Tensor, tensor);
 }
 #endif
 
+#include "mlir/Dialect/Tensor/Transforms/Passes.capi.h.inc"
+
 #endif // MLIR_C_DIALECT_TENSOR_H

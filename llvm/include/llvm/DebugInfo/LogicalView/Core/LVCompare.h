@@ -15,6 +15,7 @@
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVCOMPARE_H
 
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace logicalview {
@@ -54,27 +55,27 @@ class LVCompare final {
 
 public:
   LVCompare() = delete;
-  LVCompare(raw_ostream &OS);
+  LLVM_ABI LVCompare(raw_ostream &OS);
   LVCompare(const LVCompare &) = delete;
   LVCompare &operator=(const LVCompare &) = delete;
   ~LVCompare() = default;
 
-  static LVCompare &getInstance();
+  LLVM_ABI static LVCompare &getInstance();
 
   // Scopes stack used during the missing/added reporting.
   void push(LVScope *Scope) { ScopeStack.push_back(Scope); }
   void pop() { ScopeStack.pop_back(); }
 
   // Perform comparison between the 'Reference' and 'Target' scopes tree.
-  Error execute(LVReader *ReferenceReader, LVReader *TargetReader);
+  LLVM_ABI Error execute(LVReader *ReferenceReader, LVReader *TargetReader);
 
   void addPassEntry(LVReader *Reader, LVElement *Element, LVComparePass Pass) {
     PassTable.emplace_back(Reader, Element, Pass);
   }
   const LVPassTable &getPassTable() const & { return PassTable; }
 
-  void printItem(LVElement *Element, LVComparePass Pass);
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void printItem(LVElement *Element, LVComparePass Pass);
+  LLVM_ABI void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const { print(dbgs()); }

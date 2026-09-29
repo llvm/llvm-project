@@ -16,18 +16,17 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Support/AArch64AttributeParser.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -208,12 +207,7 @@ static void updateSupportedARMFeatures(Ctx &ctx,
 }
 
 InputFile::InputFile(Ctx &ctx, Kind k, MemoryBufferRef m)
-    : ctx(ctx), mb(m), groupId(ctx.driver.nextGroupId), fileKind(k) {
-  // All files within the same --{start,end}-group get the same group ID.
-  // Otherwise, a new file will get a new group ID.
-  if (!ctx.driver.isInGroup)
-    ++ctx.driver.nextGroupId;
-}
+    : ctx(ctx), mb(m), fileKind(k) {}
 
 InputFile::~InputFile() {}
 
@@ -539,6 +533,44 @@ uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &sym) const {
       this);
 }
 
+template <class ELFT>
+static void
+handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
+                                const AArch64BuildAttrSubsections &baInfo) {
+  // Missing subsections have zero-initialized data fields, so we must check
+  // presence before comparing against GNU properties.
+  bool baPauthInfoPresent = baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema;
+
+  if (file->aarch64PauthAbiCoreInfo) {
+    // Check for data mismatch.
+    if (baPauthInfoPresent &&
+        (baInfo.Pauth.TagPlatform != file->aarch64PauthAbiCoreInfo->platform ||
+         baInfo.Pauth.TagSchema != file->aarch64PauthAbiCoreInfo->version))
+      Err(ctx) << file
+               << " GNU properties and build attributes have conflicting "
+                  "AArch64 PAuth data";
+    if (baInfo.AndFeatures && baInfo.AndFeatures != file->andFeatures)
+      Err(ctx) << file
+               << " GNU properties and build attributes have conflicting "
+                  "AArch64 PAuth data";
+  } else {
+    // When BuildAttributes are missing, PauthABI value defaults to (TagPlatform
+    // = 0, TagSchema = 0). GNU properties do not write PAuthAbiCoreInfo if GNU
+    // property is not present. To match this behaviour, we only write
+    // PAuthAbiCoreInfo when there is at least one non-zero value. The
+    // specification reserves TagPlatform = 0, TagSchema = 1 values to match the
+    // 'Invalid' GNU property section with platform = 0, version = 0.
+    if (baPauthInfoPresent) {
+      if (baInfo.Pauth.TagPlatform == 0 && baInfo.Pauth.TagSchema == 1)
+        file->aarch64PauthAbiCoreInfo = {0, 0};
+      else
+        file->aarch64PauthAbiCoreInfo = {baInfo.Pauth.TagPlatform,
+                                         baInfo.Pauth.TagSchema};
+    }
+    file->andFeatures |= baInfo.AndFeatures;
+  }
+}
+
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   object::ELFFile<ELFT> obj = this->getObj();
   // Read a section table. justSymbols is usually false.
@@ -556,6 +588,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   sections.resize(size);
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
+
     if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
       continue;
     if (LLVM_LIKELY(sec.sh_type == SHT_GROUP)) {
@@ -574,6 +607,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
                            .try_emplace(CachedHashStringRef(signature), this)
                            .second;
       if (keepGroup) {
+        keptGroups.push_back(i);
         if (!ctx.arg.resolveGroups)
           sections[i] = createInputSection(
               i, sec, check(obj.getSectionName(sec, shstrtab)));
@@ -606,6 +640,15 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         }
       }
       sections[i] = &InputSection::discarded;
+      continue;
+    }
+
+    if (sec.sh_type == SHT_LLVM_DYNDBG_ELF) {
+      if (check(obj.getSectionName(sec, shstrtab)) == dynDbgSecName) {
+        sections[i] = &InputSection::discarded;
+        dynDbgSec = std::make_unique<InputSection>(*this, sec, dynDbgSecName);
+        ctx.hasDynDbg = true;
+      }
       continue;
     }
 
@@ -700,13 +743,12 @@ bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
   if (entSize == 0)
     return false;
   if (sec.sh_size % entSize)
-    Fatal(ctx) << this << ":(" << name << "): SHF_MERGE section size ("
-               << uint64_t(sec.sh_size)
-               << ") must be a multiple of sh_entsize (" << entSize << ")";
-
+    ErrAlways(ctx) << this << ":(" << name << "): SHF_MERGE section size ("
+                   << uint64_t(sec.sh_size)
+                   << ") must be a multiple of sh_entsize (" << entSize << ")";
   if (sec.sh_flags & SHF_WRITE)
-    Fatal(ctx) << this << ":(" << name
-               << "): writable SHF_MERGE section is not supported";
+    Err(ctx) << this << ":(" << name
+             << "): writable SHF_MERGE section is not supported";
 
   return true;
 }
@@ -740,6 +782,10 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
   SmallVector<ArrayRef<Elf_Word>, 0> selectedGroups;
+  ArrayRef<uint32_t> keptGroups = this->keptGroups;
+  size_t keptIdx = 0;
+  AArch64BuildAttrSubsections aarch64BAsubSections;
+  bool hasAArch64BuildAttributes = false;
   for (size_t i = 0; i != size; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
@@ -771,18 +817,37 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       continue;
     }
 
+    // Processor-specific types that do not use the following switch statement.
+    //
+    // Extract Build Attributes section contents into aarch64BAsubSections.
+    // Input objects may contain both build Build Attributes and GNU
+    // properties. We delay processing Build Attributes until we have finished
+    // reading all sections so that we can check that these are consistent.
+    if (type == SHT_AARCH64_ATTRIBUTES && ctx.arg.emachine == EM_AARCH64) {
+      ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
+      AArch64AttributeParser attributes;
+      if (Error e = attributes.parse(contents, ELFT::Endianness)) {
+        StringRef name = check(obj.getSectionName(sec, shstrtab));
+        InputSection isec(*this, sec, name);
+        Warn(ctx) << &isec << ": " << std::move(e);
+      } else {
+        aarch64BAsubSections = extractBuildAttributesSubsections(attributes);
+        hasAArch64BuildAttributes = true;
+      }
+      this->sections[i] = &InputSection::discarded;
+      continue;
+    }
     switch (type) {
     case SHT_GROUP: {
       if (!ctx.arg.relocatable)
         sections[i] = &InputSection::discarded;
-      StringRef signature =
-          cantFail(this->getELFSyms<ELFT>()[sec.sh_info].getName(stringTable));
-      ArrayRef<Elf_Word> entries =
-          cantFail(obj.template getSectionContentsAsArray<Elf_Word>(sec));
-      if ((entries[0] & GRP_COMDAT) == 0 || ignoreComdats ||
-          ctx.symtab->comdatGroups.find(CachedHashStringRef(signature))
-                  ->second == this)
-        selectedGroups.push_back(entries);
+      // Use the verdict parse() recorded for this group instead of repeating
+      // the signature hashing and comdatGroups lookup.
+      while (keptIdx != keptGroups.size() && keptGroups[keptIdx] < i)
+        ++keptIdx;
+      if (keptIdx != keptGroups.size() && keptGroups[keptIdx] == i)
+        selectedGroups.push_back(
+            cantFail(obj.template getSectionContentsAsArray<Elf_Word>(sec)));
       break;
     }
     case SHT_SYMTAB_SHNDX:
@@ -817,10 +882,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     default:
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
-      if (type == SHT_LLVM_SYMPART)
-        ctx.hasSympart.store(true, std::memory_order_relaxed);
-      else if (ctx.arg.rejectMismatch &&
-               !isKnownSpecificSectionType(type, sec.sh_flags))
+      if (ctx.arg.rejectMismatch &&
+          !isKnownSpecificSectionType(type, sec.sh_flags))
         Err(ctx) << this->sections[i] << ": unknown section type 0x"
                  << Twine::utohexstr(type);
       break;
@@ -891,9 +954,11 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     InputSectionBase *linkSec = nullptr;
     if (sec.sh_link < size)
       linkSec = this->sections[sec.sh_link];
-    if (!linkSec)
-      Fatal(ctx) << this
-                 << ": invalid sh_link index: " << uint32_t(sec.sh_link);
+    if (!linkSec) {
+      ErrAlways(ctx) << this
+                     << ": invalid sh_link index: " << uint32_t(sec.sh_link);
+      continue;
+    }
 
     // A SHF_LINK_ORDER section is discarded if its linked-to section is
     // discarded.
@@ -906,13 +971,71 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
           << linkSec;
   }
 
+  // Handle AArch64 Build Attributes and GNU properties:
+  // - Err on mismatched values.
+  // - Store missing values as GNU properties.
+  if (hasAArch64BuildAttributes)
+    handleAArch64BAAndGnuProperties<ELFT>(this, ctx, aarch64BAsubSections);
+
   for (ArrayRef<Elf_Word> entries : selectedGroups)
     handleSectionGroup<ELFT>(this->sections, entries);
 }
 
+template <typename ELFT>
+static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
+                                 uint32_t featureAndType,
+                                 ArrayRef<uint8_t> &desc, const uint8_t *base,
+                                 ArrayRef<uint8_t> *data = nullptr) {
+  auto err = [&](const uint8_t *place) -> ELFSyncStream {
+    auto diag = Err(ctx);
+    diag << &f << ":(" << ".note.gnu.property+0x"
+         << Twine::utohexstr(place - base) << "): ";
+    return diag;
+  };
+
+  while (!desc.empty()) {
+    const uint8_t *place = desc.data();
+    if (desc.size() < 8)
+      return void(err(place) << "program property is too short");
+    uint32_t type = read32<ELFT::Endianness>(desc.data());
+    uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
+    desc = desc.slice(8);
+    if (desc.size() < size)
+      return void(err(place) << "program property is too short");
+
+    if (type == featureAndType) {
+      // We found a FEATURE_1_AND field. There may be more than one of these
+      // in a .note.gnu.property section, for a relocatable object we
+      // accumulate the bits set.
+      if (size < 4)
+        return void(err(place) << "FEATURE_1_AND entry is too short");
+      f.andFeatures |= read32<ELFT::Endianness>(desc.data());
+    } else if (ctx.arg.emachine == EM_AARCH64 &&
+               type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
+      ArrayRef<uint8_t> contents = data ? *data : desc;
+      if (f.aarch64PauthAbiCoreInfo) {
+        return void(
+            err(contents.data())
+            << "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
+               "not supported");
+      } else if (size != 16) {
+        return void(err(contents.data())
+                    << "GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry "
+                       "is invalid: expected 16 bytes, but got "
+                    << size);
+      }
+      f.aarch64PauthAbiCoreInfo = {
+          support::endian::read64<ELFT::Endianness>(&desc[0]),
+          support::endian::read64<ELFT::Endianness>(&desc[8])};
+    }
+
+    // Padding is present in the note descriptor, if necessary.
+    desc = desc.slice(alignTo<(ELFT::Is64Bits ? 8 : 4)>(size));
+  }
+}
 // Read the following info from the .note.gnu.property section and write it to
 // the corresponding fields in `ObjFile`:
-// - Feature flags (32 bits) representing x86 or AArch64 features for
+// - Feature flags (32 bits) representing x86, AArch64 or RISC-V features for
 //   hardware-assisted call flow control;
 // - AArch64 PAuth ABI core info (16 bytes).
 template <class ELFT>
@@ -921,18 +1044,35 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
   using Elf_Nhdr = typename ELFT::Nhdr;
   using Elf_Note = typename ELFT::Note;
 
+  uint32_t featureAndType;
+  switch (ctx.arg.emachine) {
+  case EM_386:
+  case EM_X86_64:
+    featureAndType = GNU_PROPERTY_X86_FEATURE_1_AND;
+    break;
+  case EM_AARCH64:
+    featureAndType = GNU_PROPERTY_AARCH64_FEATURE_1_AND;
+    break;
+  case EM_RISCV:
+    featureAndType = GNU_PROPERTY_RISCV_FEATURE_1_AND;
+    break;
+  default:
+    return;
+  }
+
   ArrayRef<uint8_t> data = sec.content();
-  auto reportFatal = [&](const uint8_t *place, const Twine &msg) {
-    Fatal(ctx) << sec.file << ":(" << sec.name << "+0x"
-               << Twine::utohexstr(place - sec.content().data())
-               << "): " << msg;
+  auto err = [&](const uint8_t *place) -> ELFSyncStream {
+    auto diag = Err(ctx);
+    diag << sec.file << ":(" << sec.name << "+0x"
+         << Twine::utohexstr(place - sec.content().data()) << "): ";
+    return diag;
   };
   while (!data.empty()) {
     // Read one NOTE record.
     auto *nhdr = reinterpret_cast<const Elf_Nhdr *>(data.data());
     if (data.size() < sizeof(Elf_Nhdr) ||
         data.size() < nhdr->getSize(sec.addralign))
-      reportFatal(data.data(), "data is too short");
+      return void(err(data.data()) << "data is too short");
 
     Elf_Note note(*nhdr);
     if (nhdr->n_type != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU") {
@@ -940,46 +1080,10 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
       continue;
     }
 
-    uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
-                                  ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
-                                  : GNU_PROPERTY_X86_FEATURE_1_AND;
-
     // Read a body of a NOTE record, which consists of type-length-value fields.
     ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
-    while (!desc.empty()) {
-      const uint8_t *place = desc.data();
-      if (desc.size() < 8)
-        reportFatal(place, "program property is too short");
-      uint32_t type = read32<ELFT::Endianness>(desc.data());
-      uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
-      desc = desc.slice(8);
-      if (desc.size() < size)
-        reportFatal(place, "program property is too short");
-
-      if (type == featureAndType) {
-        // We found a FEATURE_1_AND field. There may be more than one of these
-        // in a .note.gnu.property section, for a relocatable object we
-        // accumulate the bits set.
-        if (size < 4)
-          reportFatal(place, "FEATURE_1_AND entry is too short");
-        f.andFeatures |= read32<ELFT::Endianness>(desc.data());
-      } else if (ctx.arg.emachine == EM_AARCH64 &&
-                 type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
-        if (!f.aarch64PauthAbiCoreInfo.empty()) {
-          reportFatal(data.data(),
-                      "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
-                      "not supported");
-        } else if (size != 16) {
-          reportFatal(data.data(), "GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry "
-                                   "is invalid: expected 16 bytes, but got " +
-                                       Twine(size));
-        }
-        f.aarch64PauthAbiCoreInfo = desc;
-      }
-
-      // Padding is present in the note descriptor, if necessary.
-      desc = desc.slice(alignTo<(ELFT::Is64Bits ? 8 : 4)>(size));
-    }
+    const uint8_t *base = sec.content().data();
+    parseGnuPropertyNote<ELFT>(ctx, f, featureAndType, desc, base, &data);
 
     // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
     data = data.slice(nhdr->getSize(sec.addralign));
@@ -1025,14 +1129,23 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     // Therefore, we make LLD always add PT_GNU_STACK unless it is
     // explicitly told to do otherwise (by -z execstack). Because the stack
     // executable-ness is controlled solely by command line options,
-    // .note.GNU-stack sections are simply ignored.
-    if (name == ".note.GNU-stack")
+    // .note.GNU-stack sections are, with one exception, ignored. Report
+    // an error if we encounter an executable .note.GNU-stack to force the
+    // user to explicitly request an executable stack.
+    if (name == ".note.GNU-stack") {
+      if ((sec.sh_flags & SHF_EXECINSTR) && !ctx.arg.relocatable &&
+          ctx.arg.zGnustack != GnuStackKind::Exec) {
+        Err(ctx) << this
+                 << ": requires an executable stack, but -z execstack is not "
+                    "specified";
+      }
       return &InputSection::discarded;
+    }
 
     // Object files that use processor features such as Intel Control-Flow
-    // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
-    // .note.gnu.property section containing a bitfield of feature bits like the
-    // GNU_PROPERTY_X86_FEATURE_1_IBT flag. Read a bitmap containing the flag.
+    // Enforcement (CET), AArch64 Branch Target Identification BTI or RISC-V
+    // Zicfilp/Zicfiss extensions, use a .note.gnu.property section containing
+    // a bitfield of feature bits like the GNU_PROPERTY_X86_FEATURE_1_IBT flag.
     //
     // Since we merge bitmaps from multiple object files to create a new
     // .note.gnu.property containing a single AND'ed bitmap, we discard an input
@@ -1118,8 +1231,8 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     sym->isUsedInRegularObj = true;
     if (LLVM_UNLIKELY(eSym.st_shndx == SHN_COMMON)) {
       if (value == 0 || value >= UINT32_MAX)
-        Fatal(ctx) << this << ": common symbol '" << sym->getName()
-                   << "' has invalid alignment: " << value;
+        Err(ctx) << this << ": common symbol '" << sym->getName()
+                 << "' has invalid alignment: " << value;
       hasCommonSyms = true;
       sym->resolve(ctx, CommonSymbol{ctx, this, StringRef(), binding, stOther,
                                      type, value, size});
@@ -1145,6 +1258,71 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     sym->isUsedInRegularObj = true;
     sym->referenced = true;
   }
+
+  if (dynDbgSec)
+    initDynDbgSymbols();
+}
+
+// Add the undefined symbols of the embedded unoptimized dynamic debugging
+// object so that the outer link resolves the inner link's dependencies. Tag
+// those reached by an inner relocation against a SHF_ALLOC section with
+// `isDynDbgRef`; the rest are only needed by debug sections.
+template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
+  MemoryBufferRef dbgMb(toStringRef(dynDbgSec->contentMaybeDecompress()),
+                        mb.getBufferIdentifier());
+  std::unique_ptr<ELFFileBase> efb = createObjFile(ctx, dbgMb);
+  // Compare ekind (note ObjFile<ELFT>::classof only tests InputFile::kind()).
+  if (efb->ekind != ekind) {
+    Err(ctx) << this << ": " << dynDbgSecName
+             << " contains an incompatible ELF type";
+    return;
+  }
+  auto &dbgObj = cast<ObjFile<ELFT>>(*efb);
+  const object::ELFFile<ELFT> obj = dbgObj.getObj();
+
+  ArrayRef<Elf_Sym> dbgSyms = dbgObj.template getGlobalELFSyms<ELFT>();
+  SmallVector<bool, 0> globalUsed(dbgSyms.size());
+  auto setSymUsed = [&, firstGlobal = dbgObj.firstGlobal](uint32_t symIdx) {
+    if (symIdx >= firstGlobal)
+      globalUsed[symIdx - firstGlobal] = true;
+  };
+
+  for (const Elf_Shdr &sh : dbgObj.template getELFShdrs<ELFT>()) {
+    if (!isStaticRelSecType(sh.sh_type))
+      continue;
+    const Elf_Shdr &target = *CHECK2(obj.getSection(sh.sh_info), &dbgObj);
+    if (!(target.sh_flags & SHF_ALLOC))
+      continue;
+    if (sh.sh_type == SHT_CREL) {
+      auto [rels, relas] = CHECK2(obj.crels(sh), &dbgObj);
+      for (const Elf_Rel &r : rels)
+        setSymUsed(r.getSymbol(false));
+      for (const Elf_Rela &r : relas)
+        setSymUsed(r.getSymbol(false));
+    } else if (sh.sh_type == SHT_RELA) {
+      for (const Elf_Rela &r : CHECK2(obj.relas(sh), &dbgObj))
+        setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
+    } else {
+      for (const Elf_Rel &r : CHECK2(obj.rels(sh), &dbgObj))
+        setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
+    }
+  }
+
+  for (size_t i = 0, end = dbgSyms.size(); i != end; ++i) {
+    const Elf_Sym &s = dbgSyms[i];
+    if (s.st_shndx != SHN_UNDEF)
+      continue;
+    StringRef name = CHECK2(s.getName(dbgObj.stringTable), this);
+    Symbol *sym = ctx.symtab->addSymbol(
+        Undefined{this, name, s.getBinding(), s.st_other, s.getType()});
+    sym->isUsedInRegularObj = true;
+    sym->referenced = true;
+    if (globalUsed[i]) {
+      sym->isDynDbgRef = true;
+      if (sym->traced)
+        Msg(ctx) << this << ": dynamic debugging reference to " << name;
+    }
+  }
 }
 
 template <class ELFT>
@@ -1155,7 +1333,6 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
   if (!firstGlobal)
     return;
   SymbolUnion *locals = makeThreadLocalN<SymbolUnion>(firstGlobal);
-  memset(locals, 0, sizeof(SymbolUnion) * firstGlobal);
 
   ArrayRef<Elf_Sym> eSyms = this->getELFSyms<ELFT>();
   for (size_t i = 0, end = firstGlobal; i != end; ++i) {
@@ -1165,8 +1342,10 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
       secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
     else if (secIdx >= SHN_LORESERVE)
       secIdx = 0;
-    if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      Fatal(ctx) << this << ": invalid section index: " << secIdx;
+    if (LLVM_UNLIKELY(secIdx >= sections.size())) {
+      Err(ctx) << this << ": invalid section index: " << secIdx;
+      secIdx = 0;
+    }
     if (LLVM_UNLIKELY(eSym.getBinding() != STB_LOCAL))
       ErrAlways(ctx) << this << ": non-local symbol (" << i
                      << ") found at index < .symtab's sh_info (" << end << ")";
@@ -1175,9 +1354,12 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
     uint8_t type = eSym.getType();
     if (type == STT_FILE)
       sourceFile = CHECK2(eSym.getName(stringTable), this);
-    if (LLVM_UNLIKELY(stringTable.size() <= eSym.st_name))
-      Fatal(ctx) << this << ": invalid symbol name offset";
-    StringRef name(stringTable.data() + eSym.st_name);
+    unsigned stName = eSym.st_name;
+    if (LLVM_UNLIKELY(stringTable.size() <= stName)) {
+      Err(ctx) << this << ": invalid symbol name offset";
+      stName = 0;
+    }
+    StringRef name(stringTable.data() + stName);
 
     symbols[i] = reinterpret_cast<Symbol *>(locals + i);
     if (eSym.st_shndx == SHN_UNDEF || sec == &InputSection::discarded)
@@ -1186,7 +1368,6 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
     else
       new (symbols[i]) Defined(ctx, this, name, STB_LOCAL, eSym.st_other, type,
                                eSym.st_value, eSym.st_size, sec);
-    symbols[i]->partition = 1;
     symbols[i]->isUsedInRegularObj = true;
   }
 }
@@ -1228,8 +1409,10 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
         secIdx = 0;
     }
 
-    if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      Fatal(ctx) << this << ": invalid section index: " << secIdx;
+    if (LLVM_UNLIKELY(secIdx >= sections.size())) {
+      Err(ctx) << this << ": invalid section index: " << secIdx;
+      continue;
+    }
     InputSectionBase *sec = sections[secIdx];
     if (sec == &InputSection::discarded) {
       if (sym.traced) {
@@ -1253,73 +1436,6 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
       continue;
     std::lock_guard<std::mutex> lock(mu);
     ctx.duplicates.push_back({&sym, this, sec, eSym.st_value});
-  }
-}
-
-// The handling of tentative definitions (COMMON symbols) in archives is murky.
-// A tentative definition will be promoted to a global definition if there are
-// no non-tentative definitions to dominate it. When we hold a tentative
-// definition to a symbol and are inspecting archive members for inclusion
-// there are 2 ways we can proceed:
-//
-// 1) Consider the tentative definition a 'real' definition (ie promotion from
-//    tentative to real definition has already happened) and not inspect
-//    archive members for Global/Weak definitions to replace the tentative
-//    definition. An archive member would only be included if it satisfies some
-//    other undefined symbol. This is the behavior Gold uses.
-//
-// 2) Consider the tentative definition as still undefined (ie the promotion to
-//    a real definition happens only after all symbol resolution is done).
-//    The linker searches archive members for STB_GLOBAL definitions to
-//    replace the tentative definition with. This is the behavior used by
-//    GNU ld.
-//
-//  The second behavior is inherited from SysVR4, which based it on the FORTRAN
-//  COMMON BLOCK model. This behavior is needed for proper initialization in old
-//  (pre F90) FORTRAN code that is packaged into an archive.
-//
-//  The following functions search archive members for definitions to replace
-//  tentative definitions (implementing behavior 2).
-static bool isBitcodeNonCommonDef(MemoryBufferRef mb, StringRef symName,
-                                  StringRef archiveName) {
-  IRSymtabFile symtabFile = check(readIRSymtab(mb));
-  for (const irsymtab::Reader::SymbolRef &sym :
-       symtabFile.TheReader.symbols()) {
-    if (sym.isGlobal() && sym.getName() == symName)
-      return !sym.isUndefined() && !sym.isWeak() && !sym.isCommon();
-  }
-  return false;
-}
-
-template <class ELFT>
-static bool isNonCommonDef(Ctx &ctx, ELFKind ekind, MemoryBufferRef mb,
-                           StringRef symName, StringRef archiveName) {
-  ObjFile<ELFT> *obj = make<ObjFile<ELFT>>(ctx, ekind, mb, archiveName);
-  obj->init();
-  StringRef stringtable = obj->getStringTable();
-
-  for (auto sym : obj->template getGlobalELFSyms<ELFT>()) {
-    Expected<StringRef> name = sym.getName(stringtable);
-    if (name && name.get() == symName)
-      return sym.isDefined() && sym.getBinding() == STB_GLOBAL &&
-             !sym.isCommon();
-  }
-  return false;
-}
-
-static bool isNonCommonDef(Ctx &ctx, MemoryBufferRef mb, StringRef symName,
-                           StringRef archiveName) {
-  switch (getELFKind(ctx, mb, archiveName)) {
-  case ELF32LEKind:
-    return isNonCommonDef<ELF32LE>(ctx, ELF32LEKind, mb, symName, archiveName);
-  case ELF32BEKind:
-    return isNonCommonDef<ELF32BE>(ctx, ELF32BEKind, mb, symName, archiveName);
-  case ELF64LEKind:
-    return isNonCommonDef<ELF64LE>(ctx, ELF64LEKind, mb, symName, archiveName);
-  case ELF64BEKind:
-    return isNonCommonDef<ELF64BE>(ctx, ELF64BEKind, mb, symName, archiveName);
-  default:
-    llvm_unreachable("getELFKind");
   }
 }
 
@@ -1364,16 +1480,22 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
   ArrayRef<uint8_t> data = CHECK2(obj.getSectionContents(*sec), this);
   const uint8_t *verneedBuf = data.begin();
   for (unsigned i = 0; i != sec->sh_info; ++i) {
-    if (verneedBuf + sizeof(typename ELFT::Verneed) > data.end())
-      Fatal(ctx) << this << " has an invalid Verneed";
+    if (verneedBuf + sizeof(typename ELFT::Verneed) > data.end()) {
+      Err(ctx) << this << " has an invalid Verneed";
+      break;
+    }
     auto *vn = reinterpret_cast<const typename ELFT::Verneed *>(verneedBuf);
     const uint8_t *vernauxBuf = verneedBuf + vn->vn_aux;
     for (unsigned j = 0; j != vn->vn_cnt; ++j) {
-      if (vernauxBuf + sizeof(typename ELFT::Vernaux) > data.end())
-        Fatal(ctx) << this << " has an invalid Vernaux";
+      if (vernauxBuf + sizeof(typename ELFT::Vernaux) > data.end()) {
+        Err(ctx) << this << " has an invalid Vernaux";
+        break;
+      }
       auto *aux = reinterpret_cast<const typename ELFT::Vernaux *>(vernauxBuf);
-      if (aux->vna_name >= this->stringTable.size())
-        Fatal(ctx) << this << " has a Vernaux with an invalid vna_name";
+      if (aux->vna_name >= this->stringTable.size()) {
+        Err(ctx) << this << " has a Vernaux with an invalid vna_name";
+        break;
+      }
       uint16_t version = aux->vna_other & VERSYM_VERSION;
       if (version >= verneeds.size())
         verneeds.resize(version + 1);
@@ -1383,6 +1505,28 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
     verneedBuf += vn->vn_next;
   }
   return verneeds;
+}
+
+// Parse PT_GNU_PROPERTY segments in DSO. The process is similar to
+// readGnuProperty, but we don't have the InputSection information.
+template <typename ELFT>
+void SharedFile::parseGnuAndFeatures(const ELFFile<ELFT> &obj) {
+  if (ctx.arg.emachine != EM_AARCH64)
+    return;
+  const uint8_t *base = obj.base();
+  auto phdrs = CHECK2(obj.program_headers(), this);
+  for (auto phdr : phdrs) {
+    if (phdr.p_type != PT_GNU_PROPERTY)
+      continue;
+    typename ELFT::Note note(
+        *reinterpret_cast<const typename ELFT::Nhdr *>(base + phdr.p_offset));
+    if (note.getType() != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU")
+      continue;
+
+    ArrayRef<uint8_t> desc = note.getDesc(phdr.p_align);
+    parseGnuPropertyNote<ELFT>(ctx, *this, GNU_PROPERTY_AARCH64_FEATURE_1_AND,
+                               desc, base);
+  }
 }
 
 // We do not usually care about alignments of data in shared object
@@ -1461,13 +1605,17 @@ template <class ELFT> void SharedFile::parse() {
   for (const Elf_Dyn &dyn : dynamicTags) {
     if (dyn.d_tag == DT_NEEDED) {
       uint64_t val = dyn.getVal();
-      if (val >= this->stringTable.size())
-        Fatal(ctx) << this << ": invalid DT_NEEDED entry";
+      if (val >= this->stringTable.size()) {
+        Err(ctx) << this << ": invalid DT_NEEDED entry";
+        return;
+      }
       dtNeeded.push_back(this->stringTable.data() + val);
     } else if (dyn.d_tag == DT_SONAME) {
       uint64_t val = dyn.getVal();
-      if (val >= this->stringTable.size())
-        Fatal(ctx) << this << ": invalid DT_SONAME entry";
+      if (val >= this->stringTable.size()) {
+        Err(ctx) << this << ": invalid DT_SONAME entry";
+        return;
+      }
       soName = this->stringTable.data() + val;
     }
   }
@@ -1483,7 +1631,8 @@ template <class ELFT> void SharedFile::parse() {
   // --as-needed, --no-as-needed takes precedence over --as-needed because a
   // user can add an extra DSO with --no-as-needed to force it to be added to
   // the dependency list.
-  it->second->isNeeded |= isNeeded;
+  if (isNeeded)
+    it->second->isNeeded.store(true, std::memory_order_relaxed);
   if (!wasInserted)
     return;
 
@@ -1491,6 +1640,7 @@ template <class ELFT> void SharedFile::parse() {
 
   verdefs = parseVerdefs<ELFT>(obj.base(), verdefSec);
   std::vector<uint32_t> verneeds = parseVerneed<ELFT>(obj, verneedSec);
+  parseGnuAndFeatures<ELFT>(obj);
 
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use
@@ -1529,8 +1679,9 @@ template <class ELFT> void SharedFile::parse() {
 
     const uint16_t ver = versyms[i], idx = ver & ~VERSYM_HIDDEN;
     if (sym.isUndefined()) {
-      // For unversioned undefined symbols, VER_NDX_GLOBAL makes more sense but
-      // as of binutils 2.34, GNU ld produces VER_NDX_LOCAL.
+      // Index 0 (VER_NDX_LOCAL) is used for unversioned undefined symbols.
+      // GNU ld versions between 2.35 and 2.45 also generate VER_NDX_GLOBAL
+      // for this case (https://sourceware.org/PR33577).
       if (ver != VER_NDX_LOCAL && ver != VER_NDX_GLOBAL) {
         if (idx >= verneeds.size()) {
           ErrAlways(ctx) << "corrupt input file: version need index " << idx
@@ -1544,7 +1695,7 @@ template <class ELFT> void SharedFile::parse() {
       }
       Symbol *s = ctx.symtab->addSymbol(
           Undefined{this, name, sym.getBinding(), sym.st_other, sym.getType()});
-      s->exportDynamic = true;
+      s->isExported = true;
       if (sym.getBinding() != STB_WEAK &&
           ctx.arg.unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore)
         requiredSymbols.push_back(s);
@@ -1605,7 +1756,7 @@ static uint16_t getBitcodeMachineKind(Ctx &ctx, StringRef path,
   case Triple::aarch64:
   case Triple::aarch64_be:
     return EM_AARCH64;
-  case Triple::amdgcn:
+  case Triple::amdgpu:
   case Triple::r600:
     return EM_AMDGPU;
   case Triple::arm:
@@ -1686,9 +1837,11 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
                        ? ss.save(path)
                        : ss.save(archiveName + "(" + path::filename(path) +
                                  " at " + utostr(offsetInArchive) + ")");
+
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK2(lto::InputFile::create(mbref), this);
+  obj->setArchivePathAndName(archiveName, mb.getBufferIdentifier());
 
   Triple t(obj->getTargetTriple());
   ekind = getBitcodeELFKind(t);
@@ -1741,7 +1894,7 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
                    nullptr);
     // The definition can be omitted if all bitcode definitions satisfy
     // `canBeOmittedFromSymbolTable()` and isUsedInRegularObj is false.
-    // The latter condition is tested in Symbol::includeInDynsym.
+    // The latter condition is tested in parseVersionAndComputeIsPreemptible.
     sym->ltoCanOmit = objSym.canBeOmittedFromSymbolTable() &&
                       (!sym->isDefined() || sym->ltoCanOmit);
     sym->resolve(ctx, newSym);
@@ -1883,13 +2036,6 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
     if (!lazy)
       break;
   }
-}
-
-bool InputFile::shouldExtractForCommon(StringRef name) const {
-  if (isa<BitcodeFile>(this))
-    return isBitcodeNonCommonDef(mb, name, archiveName);
-
-  return isNonCommonDef(ctx, mb, name, archiveName);
 }
 
 std::string elf::replaceThinLTOSuffix(Ctx &ctx, StringRef path) {

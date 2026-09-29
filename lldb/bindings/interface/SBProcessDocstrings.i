@@ -117,7 +117,7 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
 ) lldb::SBProcess::WriteMemory;
 
 %feature("docstring", "
-    Reads a NUL terminated C string from the current process's address space.
+    Reads a null-terminated C string from the current process's address space.
     It returns a python string of the exact length, or truncates the string if
     the maximum character limit is reached. Example: ::
 
@@ -258,3 +258,14 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
     Deallocates the block of memory (previously allocated using
     AllocateMemory) given in the argument."
 ) lldb::SBProcess::DeallocateMemory;
+
+%feature("docstring", "
+    Get a list of all the memory regions associated with this process. ::
+    
+        readable_regions = []
+        for region in process.GetMemoryRegions():
+            if region.IsReadable():
+                readable_regions.append(region)
+    
+"
+) lldb::SBProcess::GetMemoryRegions;

@@ -348,8 +348,8 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_char(ptr nocapture readonly
 ; CHECK-NEXT:    cmpeq r7, #0
 ; CHECK-NEXT:    beq .LBB5_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    subs r7, r4, #1
 ; CHECK-NEXT:    and r12, r4, #3
+; CHECK-NEXT:    subs r7, r4, #1
 ; CHECK-NEXT:    cmp r7, #3
 ; CHECK-NEXT:    bhs .LBB5_6
 ; CHECK-NEXT:  @ %bb.3:
@@ -624,8 +624,8 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_uchar(ptr nocapture readonl
 ; CHECK-NEXT:    cmpeq r7, #0
 ; CHECK-NEXT:    beq .LBB7_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    subs r7, r4, #1
 ; CHECK-NEXT:    and r12, r4, #3
+; CHECK-NEXT:    subs r7, r4, #1
 ; CHECK-NEXT:    cmp r7, #3
 ; CHECK-NEXT:    bhs .LBB7_6
 ; CHECK-NEXT:  @ %bb.3:
@@ -900,8 +900,8 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_int(ptr nocapture readonly 
 ; CHECK-NEXT:    cmpeq r7, #0
 ; CHECK-NEXT:    beq .LBB9_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
-; CHECK-NEXT:    subs r7, r4, #1
 ; CHECK-NEXT:    and r12, r4, #3
+; CHECK-NEXT:    subs r7, r4, #1
 ; CHECK-NEXT:    cmp r7, #3
 ; CHECK-NEXT:    bhs .LBB9_6
 ; CHECK-NEXT:  @ %bb.3:

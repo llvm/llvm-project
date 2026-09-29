@@ -18,16 +18,17 @@ body:             |
 
     ; CHECK-LABEL: name: test_peephole_subreg_def
     ; CHECK: liveins: $x3
-    ; CHECK: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
-    ; CHECK: [[ADDI8_:%[0-9]+]]:g8rc = ADDI8 [[COPY]], 1
-    ; CHECK: [[EXTSW:%[0-9]+]]:g8rc_and_g8rc_nox0 = EXTSW [[ADDI8_]]
-    ; CHECK: [[LI8_:%[0-9]+]]:g8rc = LI8 0
-    ; CHECK: STB8 [[LI8_]], 0, [[EXTSW]]
-    ; CHECK: [[COPY1:%[0-9]+]]:gprc_and_gprc_nor0 = COPY [[EXTSW]].sub_32
-    ; CHECK: [[COPY2:%[0-9]+]]:gprc_and_gprc_nor0 = COPY [[COPY1]]
-    ; CHECK: [[ADDI:%[0-9]+]]:gprc = ADDI killed [[COPY2]], 1
-    ; CHECK: [[EXTSW_32_64_:%[0-9]+]]:g8rc_and_g8rc_nox0 = EXTSW_32_64 killed [[ADDI]]
-    ; CHECK: STB8 [[LI8_]], 0, killed [[EXTSW_32_64_]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
+    ; CHECK-NEXT: [[ADDI8_:%[0-9]+]]:g8rc = ADDI8 [[COPY]], 1
+    ; CHECK-NEXT: [[EXTSW:%[0-9]+]]:g8rc_and_g8rc_nox0 = EXTSW [[ADDI8_]]
+    ; CHECK-NEXT: [[LI8_:%[0-9]+]]:g8rc = LI8 0
+    ; CHECK-NEXT: STB8 [[LI8_]], 0, [[EXTSW]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gprc_and_gprc_nor0 = COPY [[EXTSW]].sub_32
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gprc_and_gprc_nor0 = COPY [[EXTSW]].sub_32
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gprc = ADDI killed [[COPY2]], 1
+    ; CHECK-NEXT: [[EXTSW_32_64_:%[0-9]+]]:g8rc_and_g8rc_nox0 = EXTSW_32_64 killed [[ADDI]]
+    ; CHECK-NEXT: STB8 [[LI8_]], 0, killed [[EXTSW_32_64_]]
     %0:g8rc_and_g8rc_nox0 = COPY $x3
     %1:g8rc = ADDI8 %0, 1
     %2:g8rc_and_g8rc_nox0 = EXTSW %1

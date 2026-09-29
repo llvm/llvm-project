@@ -83,7 +83,7 @@ end subroutine
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0 : !hlfir.expr<2xi32>, !fir.ref<!fir.array<2xi32>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]] : !hlfir.expr<2xi32>
 ! CHECK-NEXT:    return
-! CHECK-nEXT:  }
+! CHECK-NEXT:  }
 
 subroutine minval6(a, s, d)
   integer, pointer :: d
@@ -171,14 +171,14 @@ end subroutine
 ! CHECK-DAG:     %[[ARRAY:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK-DAG:     %[[MASK:.*]]:2 = hlfir.declare %[[ARG1]]
 ! CHECK-DAG:     %[[RES:.*]]:2 = hlfir.declare %[[ARG2]]
-! CHECK-NEXT:    %[[MASK_LOAD:.*]] = fir.load %[[MASK]]#1
+! CHECK-NEXT:    %[[MASK_LOAD:.*]] = fir.load %[[MASK]]#0
 ! CHECK-NEXT:    %[[MASK_ADDR:.*]] = fir.box_addr %[[MASK_LOAD]]
 ! CHECK-NEXT:    %[[MASK_ADDR_INT:.*]] = fir.convert %[[MASK_ADDR]]
 ! CHECK-NEXT:    %[[C0:.*]] = arith.constant 0 : i64
 ! CHECK-NEXT:    %[[CMP:.*]] = arith.cmpi ne, %[[MASK_ADDR_INT]], %[[C0]] : i64
 ! it is a shame there is a second load here. The first is generated for
 ! PreparedActualArgument::isPresent, the second is for optional handling
-! CHECK-NEXT:    %[[MASK_LOAD2:.*]] = fir.load %[[MASK]]#1
+! CHECK-NEXT:    %[[MASK_LOAD2:.*]] = fir.load %[[MASK]]#0
 ! CHECK-NEXT:    %[[ABSENT:.*]] = fir.absent !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>
 ! CHECK-NEXT:    %[[SELECT:.*]] = arith.select %[[CMP]], %[[MASK_LOAD2]], %[[ABSENT]]
 ! CHECK-NEXT:    %[[MINVAL:.*]] = hlfir.minval %[[ARRAY]]#0 mask %[[SELECT]]
@@ -216,15 +216,15 @@ end function
 ! CHECK-SAME:                                     %[[MASK_ARG:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "mask", fir.optional}) -> i32
 ! CHECK:           %[[ARRAY_VAR:.*]]:2 = hlfir.declare %[[ARRAY_ARG]]
 ! CHECK:           %[[MASK_VAR:.*]]:2 = hlfir.declare %[[MASK_ARG]]
-! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca i32 {bindc_name = "testoptionalscalar", uniq_name = "_QFtestoptionalscalarEtestoptionalscalar"}
+! CHECK:           %[[RET_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "testoptionalscalar", uniq_name = "_QFtestoptionalscalarEtestoptionalscalar"}>
 ! CHECK:           %[[RET_VAR:.*]]:2 = hlfir.declare %[[RET_ALLOC]]
 ! CHECK:           %[[MASK_IS_PRESENT:.*]] = fir.is_present %[[MASK_VAR]]#0 : (!fir.ref<!fir.logical<4>>) -> i1
-! CHECK:           %[[MASK_BOX:.*]] = fir.embox %[[MASK_VAR]]#1
+! CHECK:           %[[MASK_BOX:.*]] = fir.embox %[[MASK_VAR]]#0
 ! CHECK:           %[[ABSENT:.*]] = fir.absent !fir.box<!fir.logical<4>>
 ! CHECK:           %[[MASK_SELECT:.*]] = arith.select %[[MASK_IS_PRESENT]], %[[MASK_BOX]], %[[ABSENT]]
 ! CHECK:           %[[RES:.*]] = hlfir.minval %[[ARRAY_VAR]]#0 mask %[[MASK_SELECT]] {{.*}}: (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.logical<4>>) -> i32
 ! CHECK:           hlfir.assign %[[RES]] to %[[RET_VAR]]#0
-! CHECK:           %[[RET:.*]] = fir.load %[[RET_VAR]]#1 : !fir.ref<i32>
+! CHECK:           %[[RET:.*]] = fir.load %[[RET_VAR]]#0 : !fir.ref<i32>
 ! CHECK:           return %[[RET]] : i32
 ! CHECK:         }
 
@@ -272,10 +272,10 @@ end function
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 4 : index
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<3x4x!fir.char<1,3>> {bindc_name = "char", uniq_name = "_QFtest_type_mismatchEchar"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.array<3x4x!fir.char<1,3>> <{bindc_name = "char", uniq_name = "_QFtest_type_mismatchEchar"}>
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_4]]) typeparams %[[VAL_0]] {uniq_name = "_QFtest_type_mismatchEchar"} : (!fir.ref<!fir.array<3x4x!fir.char<1,3>>>, !fir.shape<2>, index) -> (!fir.ref<!fir.array<3x4x!fir.char<1,3>>>, !fir.ref<!fir.array<3x4x!fir.char<1,3>>>)
-! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {bindc_name = "test_type_mismatch", uniq_name = "_QFtest_type_mismatchEtest_type_mismatch"}
+! CHECK:           %[[VAL_6:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> <{bindc_name = "test_type_mismatch", uniq_name = "_QFtest_type_mismatchEtest_type_mismatch"}>
 ! CHECK:           %[[VAL_7:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
@@ -298,7 +298,7 @@ end function
 ! CHECK:           hlfir.assign %[[VAL_23]] to %[[VAL_12]]#0 realloc : !hlfir.expr<4x!fir.char<1,4>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:           hlfir.destroy %[[VAL_23]] : !hlfir.expr<4x!fir.char<1,4>>
 ! CHECK:           hlfir.destroy %[[VAL_17]] : !hlfir.expr<3x4x!fir.char<1,?>>
-! CHECK:           %[[VAL_24:.*]] = fir.load %[[VAL_12]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
+! CHECK:           %[[VAL_24:.*]] = fir.load %[[VAL_12]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:           %[[VAL_25:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_26:.*]] = fir.shift %[[VAL_25]] : (index) -> !fir.shift<1>
 ! CHECK:           %[[VAL_27:.*]] = fir.rebox %[[VAL_24]](%[[VAL_26]]) : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>, !fir.shift<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>

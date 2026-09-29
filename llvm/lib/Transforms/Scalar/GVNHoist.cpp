@@ -33,6 +33,7 @@
 // 2. geps when corresponding load/store cannot be hoisted.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/GVNHoist.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -43,7 +44,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
-#include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -66,7 +66,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/GVNValueTable.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 #include <cassert>
@@ -163,7 +163,7 @@ class InsnInfo {
 
 public:
   // Inserts I and its value number in VNtoScalars.
-  void insert(Instruction *I, GVNPass::ValueTable &VN) {
+  void insert(Instruction *I, GVNValueTable &VN) {
     // Scalar instruction.
     unsigned V = VN.lookupOrAdd(I);
     VNtoScalars[{V, InvalidVN}].push_back(I);
@@ -178,7 +178,7 @@ class LoadInfo {
 
 public:
   // Insert Load and the value number of its memory address in VNtoLoads.
-  void insert(LoadInst *Load, GVNPass::ValueTable &VN) {
+  void insert(LoadInst *Load, GVNValueTable &VN) {
     if (Load->isSimple()) {
       unsigned V = VN.lookupOrAdd(Load->getPointerOperand());
       // With opaque pointers we may have loads from the same pointer with
@@ -197,7 +197,7 @@ class StoreInfo {
 public:
   // Insert the Store and a hash number of the store address and the stored
   // value in VNtoStores.
-  void insert(StoreInst *Store, GVNPass::ValueTable &VN) {
+  void insert(StoreInst *Store, GVNValueTable &VN) {
     if (!Store->isSimple())
       return;
     // Hash the store address and the stored value.
@@ -217,7 +217,7 @@ class CallInfo {
 
 public:
   // Insert Call and its value numbering in one of the VNtoCalls* containers.
-  void insert(CallInst *Call, GVNPass::ValueTable &VN) {
+  void insert(CallInst *Call, GVNValueTable &VN) {
     // A call that doesNotAccessMemory is handled as a Scalar,
     // onlyReadsMemory will be handled as a Load instruction,
     // all other calls will be handled as stores.
@@ -243,8 +243,8 @@ public:
 class GVNHoist {
 public:
   GVNHoist(DominatorTree *DT, PostDominatorTree *PDT, AliasAnalysis *AA,
-           MemoryDependenceResults *MD, MemorySSA *MSSA)
-      : DT(DT), PDT(PDT), AA(AA), MD(MD), MSSA(MSSA),
+           MemorySSA *MSSA)
+      : DT(DT), PDT(PDT), AA(AA), MSSA(MSSA),
         MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {
     MSSA->ensureOptimizedUses();
   }
@@ -260,11 +260,10 @@ public:
   unsigned int rank(const Value *V) const;
 
 private:
-  GVNPass::ValueTable VN;
+  GVNValueTable VN;
   DominatorTree *DT;
   PostDominatorTree *PDT;
   AliasAnalysis *AA;
-  MemoryDependenceResults *MD;
   MemorySSA *MSSA;
   std::unique_ptr<MemorySSAUpdater> MSSAUpdater;
   DenseMap<const Value *, unsigned> DFSNumber;
@@ -507,7 +506,8 @@ bool GVNHoist::run(Function &F) {
   NumFuncArgs = F.arg_size();
   VN.setDomTree(DT);
   VN.setAliasAnalysis(AA);
-  VN.setMemDep(MD);
+  // TODO: Is this actually needed?
+  VN.setMemorySSA(MSSA, true);
   bool Res = false;
   // Perform DFS Numbering of instructions.
   unsigned BBI = 0;
@@ -564,21 +564,20 @@ unsigned int GVNHoist::rank(const Value *V) const {
 }
 
 bool GVNHoist::hasEH(const BasicBlock *BB) {
-  auto It = BBSideEffects.find(BB);
-  if (It != BBSideEffects.end())
+  auto [It, Inserted] = BBSideEffects.try_emplace(BB);
+  if (!Inserted)
     return It->second;
 
   if (BB->isEHPad() || BB->hasAddressTaken()) {
-    BBSideEffects[BB] = true;
+    It->second = true;
     return true;
   }
 
   if (BB->getTerminator()->mayThrow()) {
-    BBSideEffects[BB] = true;
+    It->second = true;
     return true;
   }
 
-  BBSideEffects[BB] = false;
   return false;
 }
 
@@ -823,7 +822,7 @@ void GVNHoist::fillChiArgs(BasicBlock *BB, OutValuesType &CHIBBs,
                      << ", VN: " << C.VN.first << ", " << C.VN.second);
         }
         // Move to next CHI of a different value
-        It = std::find_if(It, VCHI.end(), [It](CHIArg &A) { return A != *It; });
+        It = std::find_if(It, VCHI.end(), not_equal_to(*It));
       } else
         ++It;
     }
@@ -837,7 +836,7 @@ void GVNHoist::findHoistableCandidates(OutValuesType &CHIBBs,
 
   // CHIArgs now have the outgoing values, so check for anticipability and
   // accumulate hoistable candidates in HPL.
-  for (std::pair<BasicBlock *, SmallVector<CHIArg, 2>> &A : CHIBBs) {
+  for (auto &A : CHIBBs) {
     BasicBlock *BB = A.first;
     SmallVectorImpl<CHIArg> &CHIs = A.second;
     // Vector of PHIs contains PHIs for different instructions.
@@ -847,7 +846,7 @@ void GVNHoist::findHoistableCandidates(OutValuesType &CHIBBs,
     auto TI = BB->getTerminator();
     auto B = CHIs.begin();
     // [PreIt, PHIIt) form a range of CHIs which have identical VNs.
-    auto PHIIt = llvm::find_if(CHIs, [B](CHIArg &A) { return A != *B; });
+    auto PHIIt = llvm::find_if(CHIs, not_equal_to(*B));
     auto PrevIt = CHIs.begin();
     while (PrevIt != PHIIt) {
       // Collect values which satisfy safety checks.
@@ -922,7 +921,7 @@ void GVNHoist::makeGepsAvailable(Instruction *Repl, BasicBlock *HoistPt,
     }
 
   // Copy Gep and replace its uses in Repl with ClonedGep.
-  ClonedGep->insertBefore(HoistPt->getTerminator());
+  ClonedGep->insertBefore(HoistPt->getTerminator()->getIterator());
 
   // Conservatively discard any optimization hints, they may differ on the
   // other paths.
@@ -981,13 +980,13 @@ unsigned GVNHoist::rauw(const SmallVecInsn &Candidates, Instruction *Repl,
         MemoryAccess *OldMA = MSSA->getMemoryAccess(I);
         OldMA->replaceAllUsesWith(NewMemAcc);
         MSSAUpdater->removeMemoryAccess(OldMA);
+      } else if (MemoryAccess *OldMA = MSSA->getMemoryAccess(I)) {
+        MSSAUpdater->removeMemoryAccess(OldMA);
       }
 
       combineMetadataForCSE(Repl, I, true);
       Repl->andIRFlags(I);
       I->replaceAllUsesWith(Repl);
-      // Also invalidate the Alias Analysis cache.
-      MD->removeInstruction(I);
       I->eraseFromParent();
     }
   }
@@ -1002,7 +1001,7 @@ void GVNHoist::raMPHIuw(MemoryUseOrDef *NewMemAcc) {
 
   for (MemoryPhi *Phi : UsePhis) {
     auto In = Phi->incoming_values();
-    if (llvm::all_of(In, [&](Use &U) { return U == NewMemAcc; })) {
+    if (llvm::all_of(In, equal_to(NewMemAcc))) {
       Phi->replaceAllUsesWith(NewMemAcc);
       MSSAUpdater->removeMemoryAccess(Phi);
     }
@@ -1107,8 +1106,9 @@ std::pair<unsigned, unsigned> GVNHoist::hoist(HoistingPointList &HPL) {
 
       // Move the instruction at the end of HoistPt.
       Instruction *Last = DestBB->getTerminator();
-      MD->removeInstruction(Repl);
-      Repl->moveBefore(Last);
+      if (auto *MUD = MSSA->getMemoryAccess(Repl))
+        MSSAUpdater->moveToPlace(MUD, DestBB, MemorySSA::BeforeTerminator);
+      Repl->moveBefore(Last->getIterator());
 
       DFSNumber[Repl] = DFSNumber[Last]++;
     }
@@ -1167,8 +1167,7 @@ std::pair<unsigned, unsigned> GVNHoist::hoistExpressions(Function &F) {
         SI.insert(Store, VN);
       else if (auto *Call = dyn_cast<CallInst>(&I1)) {
         if (auto *Intr = dyn_cast<IntrinsicInst>(Call)) {
-          if (isa<DbgInfoIntrinsic>(Intr) ||
-              Intr->getIntrinsicID() == Intrinsic::assume ||
+          if (Intr->getIntrinsicID() == Intrinsic::assume ||
               Intr->getIntrinsicID() == Intrinsic::sideeffect)
             continue;
         }
@@ -1204,9 +1203,8 @@ PreservedAnalyses GVNHoistPass::run(Function &F, FunctionAnalysisManager &AM) {
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   AliasAnalysis &AA = AM.getResult<AAManager>(F);
-  MemoryDependenceResults &MD = AM.getResult<MemoryDependenceAnalysis>(F);
   MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  GVNHoist G(&DT, &PDT, &AA, &MD, &MSSA);
+  GVNHoist G(&DT, &PDT, &AA, &MSSA);
   if (!G.run(F))
     return PreservedAnalyses::all();
 

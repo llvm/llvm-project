@@ -99,8 +99,7 @@ ValueObjectVariable::CalculateNumChildren(uint32_t max) {
   CompilerType type(GetCompilerType());
 
   if (!type.IsValid())
-    return llvm::make_error<llvm::StringError>("invalid type",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("invalid type");
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
   const bool omit_empty_base_classes = true;
@@ -110,14 +109,10 @@ ValueObjectVariable::CalculateNumChildren(uint32_t max) {
   return *child_count <= max ? *child_count : max;
 }
 
-std::optional<uint64_t> ValueObjectVariable::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectVariable::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
   CompilerType type(GetCompilerType());
-
-  if (!type.IsValid())
-    return {};
-
   return type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
 }
 
@@ -145,6 +140,7 @@ bool ValueObjectVariable::UpdateValue() {
       m_error = Status::FromErrorString("empty constant data");
     // constant bytes can't be edited - sorry
     m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
+    m_resolved_value_is_implicit = true;
   } else {
     lldb::addr_t loclist_base_load_addr = LLDB_INVALID_ADDRESS;
     ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -169,6 +165,8 @@ bool ValueObjectVariable::UpdateValue() {
     if (maybe_value) {
       m_value = *maybe_value;
       m_resolved_value = m_value;
+      m_resolved_value_is_implicit =
+          expr_list.IsImplicit(&exe_ctx, nullptr, loclist_base_load_addr);
       m_value.SetContext(Value::ContextType::Variable, variable);
 
       CompilerType compiler_type = GetCompilerType();
@@ -249,6 +247,7 @@ bool ValueObjectVariable::UpdateValue() {
       m_error = Status::FromError(maybe_value.takeError());
       // could not find location, won't allow editing
       m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
+      m_resolved_value_is_implicit = true;
     }
   }
 
@@ -357,10 +356,23 @@ const char *ValueObjectVariable::GetLocationAsCString() {
     return ValueObject::GetLocationAsCString();
 }
 
+llvm::Error ValueObjectVariable::CanSetValue() {
+  // Refresh the resolved location so m_resolved_value_is_implicit is current.
+  UpdateValueIfNeeded();
+  if (m_resolved_value_is_implicit)
+    return llvm::createStringError("variable is not in a writable location");
+  return ValueObject::CanSetValue();
+}
+
 bool ValueObjectVariable::SetValueFromCString(const char *value_str,
                                               Status &error) {
   if (!UpdateValueIfNeeded()) {
     error = Status::FromErrorString("unable to update value before writing");
+    return false;
+  }
+
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
     return false;
   }
 
@@ -390,6 +402,11 @@ bool ValueObjectVariable::SetValueFromCString(const char *value_str,
 bool ValueObjectVariable::SetData(DataExtractor &data, Status &error) {
   if (!UpdateValueIfNeeded()) {
     error = Status::FromErrorString("unable to update value before writing");
+    return false;
+  }
+
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
     return false;
   }
 

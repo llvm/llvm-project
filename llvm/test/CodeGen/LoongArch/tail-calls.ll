@@ -6,7 +6,8 @@ declare i32 @callee_tail(i32 %i)
 define i32 @caller_tail(i32 %i) nounwind {
 ; CHECK-LABEL: caller_tail:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    b %plt(callee_tail)
+; CHECK-NEXT:    pcaddu18i $t8, %call36(callee_tail)
+; CHECK-NEXT:    jr $t8
 entry:
   %r = tail call i32 @callee_tail(i32 %i)
   ret i32 %r
@@ -25,7 +26,8 @@ define void @caller_extern(ptr %src) optsize {
 ; CHECK-NEXT:    move $a3, $a0
 ; CHECK-NEXT:    move $a0, $a1
 ; CHECK-NEXT:    move $a1, $a3
-; CHECK-NEXT:    b %plt(memcpy)
+; CHECK-NEXT:    pcaddu18i $t8, %call36(memcpy)
+; CHECK-NEXT:    jr $t8
 entry:
   tail call void @llvm.memcpy.p0.p0.i32(ptr @dest, ptr %src, i32 33, i1 false)
   ret void
@@ -68,7 +70,8 @@ define void @caller_varargs(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    move $a5, $a1
 ; CHECK-NEXT:    move $a6, $a1
 ; CHECK-NEXT:    move $a7, $a0
-; CHECK-NEXT:    bl %plt(callee_varargs)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_varargs)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
@@ -86,7 +89,8 @@ define i32 @caller_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %g
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    ld.d $t0, $sp, 16
 ; CHECK-NEXT:    st.d $t0, $sp, 0
-; CHECK-NEXT:    bl %plt(callee_args)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_args)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
@@ -108,7 +112,8 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-NEXT:    ori $a1, $zero, 1
 ; CHECK-NEXT:    addi.d $a0, $sp, 0
 ; CHECK-NEXT:    st.d $a1, $sp, 0
-; CHECK-NEXT:    bl %plt(callee_indirect_args)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_indirect_args)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 48
 ; CHECK-NEXT:    ret
@@ -127,7 +132,8 @@ define i32 @caller_byval() nounwind {
 ; CHECK-NEXT:    ld.d $a0, $sp, 16
 ; CHECK-NEXT:    st.d $a0, $sp, 8
 ; CHECK-NEXT:    addi.d $a0, $sp, 8
-; CHECK-NEXT:    bl %plt(callee_byval)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_byval)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 32
 ; CHECK-NEXT:    ret
@@ -149,7 +155,8 @@ define void @caller_nostruct() nounwind {
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    pcalau12i $a0, %got_pc_hi20(a)
 ; CHECK-NEXT:    ld.d $a0, $a0, %got_pc_lo12(a)
-; CHECK-NEXT:    bl %plt(callee_struct)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_struct)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
@@ -165,7 +172,8 @@ define void @caller_struct(ptr sret(%struct.A) %a) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    bl %plt(callee_nostruct)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_nostruct)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
@@ -180,7 +188,8 @@ define i32 @disable_tail_calls(i32 %i) nounwind "disable-tail-calls"="true" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    bl %plt(callee_tail)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_tail)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret

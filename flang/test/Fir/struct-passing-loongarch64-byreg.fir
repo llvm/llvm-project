@@ -7,7 +7,6 @@
 /// only the first example in each category checks the entire invocation process,
 /// while the other examples only check the signatures.
 
-// REQUIRES: loongarch-registered-target
 // RUN: fir-opt --split-input-file --target-rewrite="target=loongarch64-unknown-linux-gnu" %s | FileCheck %s
 
 

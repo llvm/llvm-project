@@ -30,9 +30,9 @@ define void @bar(i32 %E, i32 %H, i32 %C) nounwind {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movl %edx, %ebx
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    movl %edx, %ebx
 ; CHECK-NEXT:    mwaitx
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
@@ -40,8 +40,8 @@ define void @bar(i32 %E, i32 %H, i32 %C) nounwind {
 ; WIN64-LABEL: bar:
 ; WIN64:       # %bb.0: # %entry
 ; WIN64-NEXT:    pushq %rbx
-; WIN64-NEXT:    movl %r8d, %ebx
 ; WIN64-NEXT:    movl %edx, %eax
+; WIN64-NEXT:    movl %r8d, %ebx
 ; WIN64-NEXT:    mwaitx
 ; WIN64-NEXT:    popq %rbx
 ; WIN64-NEXT:    retq

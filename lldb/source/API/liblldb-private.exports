@@ -2,6 +2,10 @@ _ZN4lldb*
 _ZNK4lldb*
 _ZN12lldb_private*
 _ZNK12lldb_private*
+_ZTVN12lldb_private*
+_ZN4llvm*
+_ZNK4llvm*
+_ZTVN4llvm*
 init_lld*
 PyInit__lldb*
 luaopen_lldb*

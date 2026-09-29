@@ -39,6 +39,43 @@ template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
   return __builtin_fabs((double)__x);
 }
 
+// abs
+
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline float abs(float __x) _NOEXCEPT { return __builtin_fabsf(__x); }
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline double abs(double __x) _NOEXCEPT { return __builtin_fabs(__x); }
+
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline long double abs(long double __x) _NOEXCEPT {
+  return __builtin_fabsl(__x);
+}
+
+template <class = int>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline int abs(int __x) _NOEXCEPT {
+  return __builtin_abs(__x);
+}
+
+template <class = int>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline long abs(long __x) _NOEXCEPT {
+  return __builtin_labs(__x);
+}
+
+template <class = int>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline long long abs(long long __x) _NOEXCEPT {
+  return __builtin_llabs(__x);
+}
+
+#if _LIBCPP_HAS_INT128
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline __int128_t abs(__int128_t __x) _NOEXCEPT { return __x < 0 ? -__x : __x; }
+#endif
+
+#if defined(__BITINT_MAXWIDTH__)
+// _BitInt does not integer-promote, so without a same-type overload a narrow
+// signed _BitInt would be an ambiguous call against abs(int/long/long long).
+template <int _Np>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _BitInt(_Np) abs(_BitInt(_Np) __x) _NOEXCEPT {
+  return __x < 0 ? -__x : __x;
+}
+#endif
+
 } // namespace __math
 
 _LIBCPP_END_NAMESPACE_STD

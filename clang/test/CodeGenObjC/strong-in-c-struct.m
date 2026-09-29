@@ -470,7 +470,7 @@ void test_copy_assignment_StrongBlock(StrongBlock *d, StrongBlock *s) {
 // CHECK: %[[ADDR_CUR1:.*]] = phi ptr
 
 // CHECK: %[[V6:.*]] = load volatile i8, ptr %[[ADDR_CUR1]], align 1
-// CHECK: %[[TOBOOL:.*]] = trunc i8 %[[V6]] to i1
+// CHECK: %[[TOBOOL:.*]] = icmp ne i8 %[[V6]], 0
 // CHECK: %[[FROMBOOL:.*]] = zext i1 %[[TOBOOL]] to i8
 // CHECK: store volatile i8 %[[FROMBOOL]], ptr %[[ADDR_CUR]], align 1
 
@@ -819,10 +819,10 @@ id test_conditional0(int c) {
   return (c ? g2 : g1).f1;
 }
 
-// CHECK-LABEL: define{{.*}} ptr @test_conditional1(
+// CHECK-LABEL: define{{.*}} void @test_conditional1(
 // CHECK-NOT: call void @__destructor
 
-id test_conditional1(int c) {
+void test_conditional1(int c) {
   calleeStrongSmall(c ? g2 : g1);
 }
 
@@ -836,10 +836,10 @@ id test_assignment0(void) {
   return (g2 = g1).f1;
 }
 
-// CHECK-LABEL: define{{.*}} ptr @test_assignment1(
+// CHECK-LABEL: define{{.*}} void @test_assignment1(
 // CHECK-NOT: call void @__destructor
 
-id test_assignment1(void) {
+void test_assignment1(void) {
   calleeStrongSmall(g2 = g1);
 }
 

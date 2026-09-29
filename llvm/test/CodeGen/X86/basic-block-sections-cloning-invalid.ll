@@ -83,5 +83,5 @@ cold:
 ;; Check the warnings
 ; WARN1: warning: block #2 is not a successor of block #0 in function foo
 ; WARN2: warning: no block with id 100 in function foo
-; WARN3: warning: block #6 has its machine block address taken in function foo
+; WARN3: warning: block #6 is a branch target of an 'asm goto' in function foo
 

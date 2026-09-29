@@ -13,10 +13,10 @@
 #ifndef FORTRAN_FRONTEND_FRONTENDOPTIONS_H
 #define FORTRAN_FRONTEND_FRONTENDOPTIONS_H
 
-#include "flang/Common/Fortran-features.h"
 #include "flang/Lower/EnvironmentDefault.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/unparse.h"
+#include "flang/Support/Fortran-features.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cstdint>
@@ -272,6 +272,12 @@ struct FrontendOptions {
 
   /// The output file, if any.
   std::string outputFile;
+
+  /// The dependency-file (.d) to write, if any (-dependency-file).
+  std::string dependencyOutputFile;
+
+  /// Target name(s) for the dependency rule (-MT), already quoted for Make.
+  std::vector<std::string> dependencyTargets;
 
   /// The frontend action to perform.
   frontend::ActionKind programAction = ParseSyntaxOnly;

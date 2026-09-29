@@ -13,29 +13,55 @@ module m1
 
 contains
 
+!CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_class_allocatable_array
+!CHECK:       fir.call @_FortranAInitialize
+!CHECK-NOT:   omp.barrier
+!CHECK:       omp.yield
+
+!CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_class_allocatable
+!CHECK:       fir.call @_FortranAInitialize
+!CHECK-NOT:   omp.barrier
+!CHECK:       omp.yield
+
+!CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_allocatable
+!CHECK:       fir.call @_FortranAInitialize
+!CHECK-NOT:   omp.barrier
+!CHECK:       omp.yield
+
 !CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_pointer
 !CHECK-NOT:   fir.call @_FortranAInitializeClone
+!CHECK-NOT:   omp.barrier
 !CHECK:       omp.yield
 
 !CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_nested
 !CHECK:       fir.call @_FortranAInitializeClone
-!CHECK-NEXT:  omp.yield
+!CHECK-NOT:   omp.barrier
+!CHECK:       omp.yield
 
 !CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_array_of_allocs
 !CHECK:       fir.call @_FortranAInitializeClone
-!CHECK-NEXT:  omp.yield
+!CHECK-NOT:   omp.barrier
+!CHECK:       omp.yield
+!CHECK:       } dealloc {
+!CHECK:       fir.call @_FortranAAllocatableDeallocate
+!CHECK:       omp.yield
 
 !CHECK-LABEL: omp.private {type = firstprivate} @_QMm1Ftest_array
+!CHECK:       fir.call @_FortranAInitialize(
 !CHECK-NOT:   fir.call @_FortranAInitializeClone
+!CHECK-NOT:   omp.barrier
 !CHECK:       omp.yield
 
 !CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_array
+!CHECK:       fir.call @_FortranAInitialize(
 !CHECK:       fir.call @_FortranAInitializeClone
-!CHECK-NEXT:  omp.yield
+!CHECK-NOT:   omp.barrier
+!CHECK:       omp.yield
 
 !CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_scalar
 !CHECK:       fir.call @_FortranAInitializeClone
-!CHECK-NEXT:  omp.yield
+!CHECK-NOT:   omp.barrier
+!CHECK:       omp.yield
 
   subroutine test_scalar()
     type(x) :: v
@@ -100,6 +126,36 @@ contains
     type(x), pointer :: ptr
 
     !$omp parallel private(ptr)
+    !$omp end parallel
+  end subroutine
+
+  subroutine test_allocatable()
+    type needs_init
+      integer :: i = 1
+    end type
+    type(needs_init), allocatable :: a
+
+    !$omp parallel private(a)
+    !$omp end parallel
+  end subroutine
+
+  subroutine test_class_allocatable()
+    type needs_init
+      integer :: i = 1
+    end type
+    class(needs_init), allocatable :: a
+
+    !$omp parallel private(a)
+    !$omp end parallel
+  end subroutine
+
+  subroutine test_class_allocatable_array()
+    type needs_init
+      integer :: i = 1
+    end type
+    class(needs_init), allocatable :: a(:)
+
+    !$omp parallel private(a)
     !$omp end parallel
   end subroutine
 end module

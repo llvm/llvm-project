@@ -48,7 +48,7 @@ entry:
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #0
+declare void @llvm.lifetime.start.p0(ptr nocapture) #0
 
 ; Function Attrs: argmemonly nounwind readonly
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1

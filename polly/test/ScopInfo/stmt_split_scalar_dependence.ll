@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -polly-print-instructions '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -polly-print-instructions '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK:    Statements {
 ; CHECK-NEXT:  	Stmt_Stmt
@@ -12,7 +12,7 @@
 ; CHECK-NEXT:           { Stmt_Stmt[i0] -> MemRef_a[] };
 ; CHECK-NEXT:       Instructions {
 ; CHECK-NEXT:             %a = fadd double 2.100000e+01, 2.100000e+01
-; CHECK-NEXT:             store i32 %i.0, ptr %arrayidx, align 4, !polly_split_after !0
+; CHECK-NEXT:             store i32 %i.0, ptr %arrayidx, align 4, !polly_split_after !1
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:   Stmt_Stmt_b
 ; CHECK-NEXT:       Domain :=

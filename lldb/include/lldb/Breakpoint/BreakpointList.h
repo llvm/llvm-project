@@ -70,7 +70,7 @@ public:
   ///   error if the input name was not a legal breakpoint name, vector
   ///   of breakpoints otherwise.
   llvm::Expected<std::vector<lldb::BreakpointSP>>
-  FindBreakpointsByName(const char *name);
+  FindBreakpointsByName(llvm::StringRef name);
 
   /// Returns the number of elements in this breakpoint list.
   ///
@@ -163,8 +163,7 @@ protected:
   bool m_is_internal;
 
 public:
-  typedef LockingAdaptedIterable<bp_collection, lldb::BreakpointSP,
-                                 list_adapter, std::recursive_mutex>
+  typedef LockingAdaptedIterable<std::recursive_mutex, bp_collection>
       BreakpointIterable;
   BreakpointIterable Breakpoints() {
     return BreakpointIterable(m_breakpoints, GetMutex());

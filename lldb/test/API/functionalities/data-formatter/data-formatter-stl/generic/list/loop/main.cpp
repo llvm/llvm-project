@@ -1,8 +1,3 @@
-// Evil hack: To simulate memory corruption, we want to fiddle with some internals of std::list.
-// Make those accessible to us.
-#define private public
-#define protected public
-
 #include <list>
 #include <stdio.h>
 #include <assert.h>

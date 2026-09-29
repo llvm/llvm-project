@@ -7,19 +7,19 @@
 //===----------------------------------------------------------------------===//
 #include "hdr/sys_epoll_macros.h"
 #include "hdr/types/struct_epoll_event.h"
-#include "src/errno/libc_errno.h"
 #include "src/sys/epoll/epoll_create1.h"
 #include "src/sys/epoll/epoll_ctl.h"
 #include "src/sys/epoll/epoll_pwait.h"
 #include "src/unistd/close.h"
 #include "src/unistd/pipe.h"
-
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LlvmLibcEpollPwaitTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcEpollPwaitTest, Basic) {
+TEST_F(LlvmLibcEpollPwaitTest, Basic) {
   int epfd = LIBC_NAMESPACE::epoll_create1(0);
   ASSERT_GT(epfd, 0);
   ASSERT_ERRNO_SUCCESS();

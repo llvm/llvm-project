@@ -4,10 +4,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// REQUIRES: has-unix-headers
+// REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <mdspan>
 
@@ -35,28 +33,28 @@ int main(int, char**) {
   // mismatch of static extent
   {
     std::extents<int> e;
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { e.extent(0); }()), "extents access: index must be less than rank");
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { e.static_extent(0); }()), "extents access: index must be less than rank");
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { (void)e.extent(0); }()), "extents access: index must be less than rank");
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { (void)e.static_extent(0); }()), "extents access: index must be less than rank");
   }
   {
     std::extents<int, D> e;
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { e.extent(2); }()), "extents access: index must be less than rank");
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { e.static_extent(2); }()), "extents access: index must be less than rank");
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { (void)e.extent(2); }()), "extents access: index must be less than rank");
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { (void)e.static_extent(2); }()), "extents access: index must be less than rank");
   }
   {
     std::extents<int, 5> e;
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { e.extent(2); }()), "extents access: index must be less than rank");
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { e.static_extent(2); }()), "extents access: index must be less than rank");
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { (void)e.extent(2); }()), "extents access: index must be less than rank");
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { (void)e.static_extent(2); }()), "extents access: index must be less than rank");
   }
   {
     std::extents<int, D, 5> e;
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { e.extent(2); }()), "extents access: index must be less than rank");
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { e.static_extent(2); }()), "extents access: index must be less than rank");
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { (void)e.extent(2); }()), "extents access: index must be less than rank");
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { (void)e.static_extent(2); }()), "extents access: index must be less than rank");
   }
   {
     std::extents<int, 1, 2, 3, 4, 5, 6, 7, 8> e;
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { e.extent(9); }()), "extents access: index must be less than rank");
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { e.static_extent(9); }()), "extents access: index must be less than rank");
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { (void)e.extent(9); }()), "extents access: index must be less than rank");
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { (void)e.static_extent(9); }()), "extents access: index must be less than rank");
   }
 
   // check that static_extent works in constant expression with assertions enabled

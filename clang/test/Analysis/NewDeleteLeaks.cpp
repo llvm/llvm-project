@@ -13,6 +13,8 @@
 // RUN:     unix.DynamicMemoryModeling:AddNoOwnershipChangeNotes=true
 
 #include "Inputs/system-header-simulator-for-malloc.h"
+// For the tests in namespace protobuf_leak:
+#include "Inputs/system-header-simulator-for-protobuf.h"
 
 //===----------------------------------------------------------------------===//
 // Report for which we expect NoOwnershipChangeVisitor to add a new note.
@@ -218,3 +220,34 @@ void caller() {
   (void)n;
 } // no-warning: No potential memory leak here, because that's been already reported.
 } // namespace symbol_reaper_lifetime
+
+// Check that we do not report false positives in automatically generated
+// protobuf code that passes dynamically allocated memory to a certain function
+// named GetOwnedMessageInternal.
+namespace protobuf_leak {
+Arena *some_arena, *some_submessage_arena;
+
+MessageLite *protobuf_leak() {
+  MessageLite *p = new MessageLite(); // Real protobuf code instantiates a
+                                      // subclass of MessageLite, but that's
+                                      // not relevant for the bug.
+  MessageLite *q = GetOwnedMessageInternal(some_arena, p, some_submessage_arena);
+  return q;
+  // No leak at end of function -- the pointer escapes in GetOwnedMessageInternal.
+}
+
+void validate_system_header() {
+  // The case protobuf_leak would also pass if GetOwnedMessageInternal wasn't
+  // declared in a system header. This test verifies that another function
+  // declared in the same header behaves differently (doesn't escape memory) to
+  // demonstrate that GetOwnedMessageInternal is indeed explicitly recognized
+  // by the analyzer.
+
+  // expected-note@+1 {{Memory is allocated}}
+  MessageLite *p = new MessageLite();
+  SomeOtherFunction(p);
+  // expected-warning@+2 {{Potential leak of memory pointed to by 'p'}}
+  // expected-note@+1    {{Potential leak of memory pointed to by 'p'}}
+}
+
+} // namespace protobuf_leak

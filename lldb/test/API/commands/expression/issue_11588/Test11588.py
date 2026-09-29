@@ -21,7 +21,9 @@ class Issue11581TestCase(TestBase):
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
-
+        # This creates a synthetic child with an expression.  Those aren't
+        # properly accounted for yet, so don't check.
+        self.runCmd("settings set target.check-vo-ownership 0")
         """valobj.AddressOf() should return correct values."""
         self.build()
 

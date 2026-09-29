@@ -26,6 +26,11 @@ entry:
   ret double %0
 }
 
+; CHECK-DAG: declare half @dx.op.binary.f16(i32, half, half) #[[#ATTR0:]]
+; CHECK-DAG: declare float @dx.op.binary.f32(i32, float, float) #[[#ATTR0]]
+; CHECK-DAG: declare double @dx.op.binary.f64(i32, double, double) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
+
 declare half @llvm.maxnum.f16(half, half)
 declare float @llvm.maxnum.f32(float, float)
 declare double @llvm.maxnum.f64(double, double)

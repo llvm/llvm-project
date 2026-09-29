@@ -13,18 +13,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCResourceInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Target/TargetMachine.h"
+
+#define DEBUG_TYPE "amdgpu-mc-resource-usage"
 
 using namespace llvm;
 
 MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
                                     MCContext &OutContext) {
   auto GOCS = [FuncName, &OutContext](StringRef Suffix) {
-    return OutContext.getOrCreateSymbol(FuncName + Twine(Suffix));
+    StringRef Prefix = OutContext.getAsmInfo().getInternalSymbolPrefix();
+    return OutContext.getOrCreateSymbol(Twine(Prefix) + FuncName +
+                                        Twine(Suffix));
   };
   switch (RIK) {
   case RIK_NumVGPR:
@@ -33,6 +39,8 @@ MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
     return GOCS(".num_agpr");
   case RIK_NumSGPR:
     return GOCS(".numbered_sgpr");
+  case RIK_NumNamedBarrier:
+    return GOCS(".num_named_barrier");
   case RIK_PrivateSegSize:
     return GOCS(".private_seg_size");
   case RIK_UsesVCC:
@@ -60,6 +68,7 @@ void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
   MCSymbol *MaxVGPRSym = getMaxVGPRSymbol(OutContext);
   MCSymbol *MaxAGPRSym = getMaxAGPRSymbol(OutContext);
   MCSymbol *MaxSGPRSym = getMaxSGPRSymbol(OutContext);
+  MCSymbol *MaxNamedBarrierSym = getMaxNamedBarrierSymbol(OutContext);
 
   auto assignMaxRegSym = [&OutContext](MCSymbol *Sym, int32_t RegCount) {
     const MCExpr *MaxExpr = MCConstantExpr::create(RegCount, OutContext);
@@ -69,6 +78,7 @@ void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
   assignMaxRegSym(MaxVGPRSym, MaxVGPR);
   assignMaxRegSym(MaxAGPRSym, MaxAGPR);
   assignMaxRegSym(MaxSGPRSym, MaxSGPR);
+  assignMaxRegSym(MaxNamedBarrierSym, MaxNamedBarrier);
 }
 
 void MCResourceInfo::reset() { *this = MCResourceInfo(); }
@@ -91,6 +101,90 @@ MCSymbol *MCResourceInfo::getMaxSGPRSymbol(MCContext &OutContext) {
   return OutContext.getOrCreateSymbol("amdgpu.max_num_sgpr");
 }
 
+MCSymbol *MCResourceInfo::getMaxNamedBarrierSymbol(MCContext &OutContext) {
+  return OutContext.getOrCreateSymbol("amdgpu.max_num_named_barrier");
+}
+
+// Tries to flatten recursive call register resource gathering. Simple cycle
+// avoiding dfs to find the constants in the propagated symbols.
+// Assumes:
+// - RecSym has been confirmed to recurse (this means the callee symbols should
+//   all be populated, started at RecSym).
+// - Shape of the resource symbol's MCExpr (`max` args are order agnostic):
+//   RecSym.MCExpr := max(<constant>+, <callee_symbol>*)
+const MCExpr *MCResourceInfo::flattenedCycleMax(MCSymbol *RecSym,
+                                                ResourceInfoKind RIK,
+                                                MCContext &OutContext) {
+  SmallPtrSet<const MCExpr *, 8> Seen;
+  SmallVector<const MCExpr *, 8> WorkList;
+  int64_t Maximum = 0;
+
+  const MCExpr *RecExpr = RecSym->getVariableValue();
+  WorkList.push_back(RecExpr);
+
+  while (!WorkList.empty()) {
+    const MCExpr *CurExpr = WorkList.pop_back_val();
+    switch (CurExpr->getKind()) {
+    default: {
+      // Assuming the recursion is of shape `max(<constant>, <callee_symbol>)`
+      // where <callee_symbol> will eventually recurse. If this condition holds,
+      // the recursion occurs within some other (possibly unresolvable) MCExpr,
+      // thus using the worst case value then.
+      if (!AMDGPUMCExpr::isSymbolUsedInExpression(RecSym, CurExpr)) {
+        LLVM_DEBUG(dbgs() << "MCResUse:   " << RecSym->getName()
+                          << ": Recursion in unexpected sub-expression, using "
+                             "module maximum\n");
+        switch (RIK) {
+        default:
+          break;
+        case RIK_NumVGPR:
+          return MCSymbolRefExpr::create(getMaxVGPRSymbol(OutContext),
+                                         OutContext);
+          break;
+        case RIK_NumSGPR:
+          return MCSymbolRefExpr::create(getMaxSGPRSymbol(OutContext),
+                                         OutContext);
+          break;
+        case RIK_NumAGPR:
+          return MCSymbolRefExpr::create(getMaxAGPRSymbol(OutContext),
+                                         OutContext);
+          break;
+        }
+      }
+      break;
+    }
+    case MCExpr::ExprKind::Constant: {
+      int64_t Val = cast<MCConstantExpr>(CurExpr)->getValue();
+      Maximum = std::max(Maximum, Val);
+      break;
+    }
+    case MCExpr::ExprKind::SymbolRef: {
+      const MCSymbolRefExpr *SymExpr = cast<MCSymbolRefExpr>(CurExpr);
+      const MCSymbol &SymRef = SymExpr->getSymbol();
+      if (SymRef.isVariable()) {
+        const MCExpr *SymVal = SymRef.getVariableValue();
+        if (Seen.insert(SymVal).second)
+          WorkList.push_back(SymVal);
+      }
+      break;
+    }
+    case MCExpr::ExprKind::Target: {
+      const AMDGPUMCExpr *TargetExpr = cast<AMDGPUMCExpr>(CurExpr);
+      if (TargetExpr->getKind() == AMDGPUMCExpr::VariantKind::AGVK_Max) {
+        for (auto &Arg : TargetExpr->getArgs())
+          WorkList.push_back(Arg);
+      }
+      break;
+    }
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "MCResUse:   " << RecSym->getName()
+                    << ": Using flattened max: << " << Maximum << '\n');
+
+  return MCConstantExpr::create(Maximum, OutContext);
+}
+
 void MCResourceInfo::assignResourceInfoExpr(
     int64_t LocalValue, ResourceInfoKind RIK, AMDGPUMCExpr::VariantKind Kind,
     const MachineFunction &MF, const SmallVectorImpl<const Function *> &Callees,
@@ -101,6 +195,8 @@ void MCResourceInfo::assignResourceInfoExpr(
       MCConstantExpr::create(LocalValue, OutContext);
   const MCExpr *SymVal = LocalConstExpr;
   MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext);
+  LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
+                    << LocalValue << " as function local usage\n");
   if (!Callees.empty()) {
     SmallVector<const MCExpr *, 8> ArgExprs;
     SmallPtrSet<const Function *, 8> Seen;
@@ -117,26 +213,29 @@ void MCResourceInfo::assignResourceInfoExpr(
       // Avoid constructing recursive definitions by detecting whether `Sym` is
       // found transitively within any of its `CalleeValSym`.
       if (!CalleeValSym->isVariable() ||
-          !CalleeValSym->getVariableValue(/*isUsed=*/false)
-               ->isSymbolUsedInExpression(Sym)) {
+          !AMDGPUMCExpr::isSymbolUsedInExpression(
+              Sym, CalleeValSym->getVariableValue())) {
+        LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
+                          << CalleeValSym->getName() << " as callee\n");
         ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
       } else {
-        // In case of recursion: make sure to use conservative register counts
-        // (i.e., specifically for VGPR/SGPR/AGPR).
+        LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName()
+                          << ": Recursion found, attempt flattening of cycle "
+                             "for resource usage\n");
+        // In case of recursion for vgpr/sgpr/agpr resource usage: try to
+        // flatten and use the max of the call cycle. May still end up emitting
+        // module max if not fully resolvable.
         switch (RIK) {
         default:
           break;
         case RIK_NumVGPR:
-          ArgExprs.push_back(MCSymbolRefExpr::create(
-              getMaxVGPRSymbol(OutContext), OutContext));
-          break;
         case RIK_NumSGPR:
-          ArgExprs.push_back(MCSymbolRefExpr::create(
-              getMaxSGPRSymbol(OutContext), OutContext));
-          break;
         case RIK_NumAGPR:
+          ArgExprs.push_back(flattenedCycleMax(CalleeValSym, RIK, OutContext));
+          break;
+        case RIK_NumNamedBarrier:
           ArgExprs.push_back(MCSymbolRefExpr::create(
-              getMaxAGPRSymbol(OutContext), OutContext));
+              getMaxNamedBarrierSymbol(OutContext), OutContext));
           break;
         }
       }
@@ -149,21 +248,65 @@ void MCResourceInfo::assignResourceInfoExpr(
 
 void MCResourceInfo::gatherResourceInfo(
     const MachineFunction &MF,
-    const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &FRI,
+    const AMDGPUResourceUsageAnalysisWrapperPass::FunctionResourceInfo &FRI,
     MCContext &OutContext) {
   // Worst case VGPR use for non-hardware-entrypoints.
   MCSymbol *MaxVGPRSym = getMaxVGPRSymbol(OutContext);
   MCSymbol *MaxAGPRSym = getMaxAGPRSymbol(OutContext);
   MCSymbol *MaxSGPRSym = getMaxSGPRSymbol(OutContext);
+  MCSymbol *MaxNamedBarrierSym = getMaxNamedBarrierSymbol(OutContext);
 
-  if (!AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())) {
-    addMaxVGPRCandidate(FRI.NumVGPR);
+  CallingConv::ID CC = MF.getFunction().getCallingConv();
+  bool IsChainCC = AMDGPU::isChainCC(CC);
+  bool IsDynamicVGPREnabled =
+      MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled();
+
+  if (!AMDGPU::isEntryFunctionCC(CC)) {
+    if (!IsDynamicVGPREnabled || !IsChainCC)
+      addMaxVGPRCandidate(FRI.NumVGPR);
     addMaxAGPRCandidate(FRI.NumAGPR);
     addMaxSGPRCandidate(FRI.NumExplicitSGPR);
+    addMaxNamedBarrierCandidate(FRI.NumNamedBarrier);
   }
 
   const TargetMachine &TM = MF.getTarget();
   MCSymbol *FnSym = TM.getSymbol(&MF.getFunction());
+
+  LLVM_DEBUG(dbgs() << "MCResUse: Gathering resource information for "
+                    << FnSym->getName() << '\n');
+
+  auto SetToLocal = [&](int64_t Value, ResourceInfoKind RIK) {
+    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext);
+    Sym->setVariableValue(MCConstantExpr::create(Value, OutContext));
+  };
+
+  // When link-time object linking is enabled, set all resource symbols to
+  // concrete local values.
+  if (AMDGPUTargetMachine::EnableObjectLinking) {
+    LLVM_DEBUG(dbgs() << "MCResUse:   object linking enabled, no call-graph "
+                         "propagation; emitting local resource values only\n");
+    SetToLocal(FRI.NumVGPR, RIK_NumVGPR);
+    SetToLocal(FRI.NumAGPR, RIK_NumAGPR);
+    SetToLocal(FRI.NumExplicitSGPR, RIK_NumSGPR);
+    SetToLocal(FRI.NumNamedBarrier, RIK_NumNamedBarrier);
+    SetToLocal(FRI.PrivateSegmentSize, RIK_PrivateSegSize);
+    SetToLocal(FRI.UsesVCC, RIK_UsesVCC);
+    SetToLocal(FRI.UsesFlatScratch, RIK_UsesFlatScratch);
+    SetToLocal(FRI.HasDynamicallySizedStack, RIK_HasDynSizedStack);
+    SetToLocal(FRI.HasRecursion, RIK_HasRecursion);
+    SetToLocal(FRI.HasIndirectCall, RIK_HasIndirectCall);
+    return;
+  }
+
+  LLVM_DEBUG({
+    if (!FRI.Callees.empty()) {
+      dbgs() << "MCResUse: Callees:\n";
+      for (const Function *Callee : FRI.Callees) {
+        MCSymbol *CalleeFnSym = TM.getSymbol(&Callee->getFunction());
+        dbgs() << "MCResUse:   " << CalleeFnSym->getName() << '\n';
+      }
+    }
+  });
 
   auto SetMaxReg = [&](MCSymbol *MaxSym, int32_t numRegs,
                        ResourceInfoKind RIK) {
@@ -176,21 +319,52 @@ void MCResourceInfo::gatherResourceInfo(
       const MCExpr *MaxWithLocal = AMDGPUMCExpr::createMax(
           {MCConstantExpr::create(numRegs, OutContext), SymRef}, OutContext);
       LocalNumSym->setVariableValue(MaxWithLocal);
+      LLVM_DEBUG(dbgs() << "MCResUse:   " << LocalNumSym->getName()
+                        << ": Indirect callee within, using module maximum\n");
     }
   };
 
-  SetMaxReg(MaxVGPRSym, FRI.NumVGPR, RIK_NumVGPR);
-  SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
+  LLVM_DEBUG(dbgs() << "MCResUse: " << FnSym->getName() << '\n');
+
+  // When DynamicVGPR is enabled, chain functions should not propagate VGPR
+  // counts from other chain callees since each chain function can have its own
+  // VGPR allocation, but should still propagate from non-chain callees.
+  if (IsDynamicVGPREnabled && (IsChainCC || CC == CallingConv::AMDGPU_CS)) {
+    if (FRI.HasNonChainIndirectCall) {
+      // Has indirect calls to non-chain functions. Use max of local count and
+      // module-wide non-chain maximum.
+      MCSymbol *Sym = getSymbol(FnSym->getName(), RIK_NumVGPR, OutContext);
+      Sym->setVariableValue(AMDGPUMCExpr::createMax(
+          {MCConstantExpr::create(FRI.NumVGPR, OutContext),
+           MCSymbolRefExpr::create(MaxVGPRSym, OutContext)},
+          OutContext));
+      SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
+    } else {
+      // No indirect calls to non-chain functions. Propagate from direct callees
+      assignResourceInfoExpr(FRI.NumVGPR, RIK_NumVGPR, AMDGPUMCExpr::AGVK_Max,
+                             MF, FRI.Callees, OutContext);
+      assignResourceInfoExpr(FRI.NumAGPR, RIK_NumAGPR, AMDGPUMCExpr::AGVK_Max,
+                             MF, FRI.Callees, OutContext);
+    }
+  } else {
+    SetMaxReg(MaxVGPRSym, FRI.NumVGPR, RIK_NumVGPR);
+    SetMaxReg(MaxAGPRSym, FRI.NumAGPR, RIK_NumAGPR);
+  }
   SetMaxReg(MaxSGPRSym, FRI.NumExplicitSGPR, RIK_NumSGPR);
+  SetMaxReg(MaxNamedBarrierSym, FRI.NumNamedBarrier, RIK_NumNamedBarrier);
 
   {
     // The expression for private segment size should be: FRI.PrivateSegmentSize
     // + max(FRI.Callees, FRI.CalleeSegmentSize)
     SmallVector<const MCExpr *, 8> ArgExprs;
     MCSymbol *Sym = getSymbol(FnSym->getName(), RIK_PrivateSegSize, OutContext);
-    if (FRI.CalleeSegmentSize)
+    if (FRI.CalleeSegmentSize) {
+      LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
+                        << FRI.CalleeSegmentSize
+                        << " for indirect/recursive callees within\n");
       ArgExprs.push_back(
           MCConstantExpr::create(FRI.CalleeSegmentSize, OutContext));
+    }
 
     SmallPtrSet<const Function *, 8> Seen;
     Seen.insert(&MF.getFunction());
@@ -205,14 +379,19 @@ void MCResourceInfo::gatherResourceInfo(
         // Avoid constructing recursive definitions by detecting whether `Sym`
         // is found transitively within any of its `CalleeValSym`.
         if (!CalleeValSym->isVariable() ||
-            !CalleeValSym->getVariableValue(/*isUsed=*/false)
-                 ->isSymbolUsedInExpression(Sym)) {
+            !AMDGPUMCExpr::isSymbolUsedInExpression(
+                Sym, CalleeValSym->getVariableValue())) {
+          LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
+                            << CalleeValSym->getName() << " as callee\n");
           ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
         }
       }
     }
     const MCExpr *localConstExpr =
         MCConstantExpr::create(FRI.PrivateSegmentSize, OutContext);
+    LLVM_DEBUG(dbgs() << "MCResUse:   " << Sym->getName() << ": Adding "
+                      << FRI.PrivateSegmentSize
+                      << " as function local usage\n");
     if (!ArgExprs.empty()) {
       const AMDGPUMCExpr *transitiveExpr =
           AMDGPUMCExpr::createMax(ArgExprs, OutContext);
@@ -221,11 +400,6 @@ void MCResourceInfo::gatherResourceInfo(
     }
     Sym->setVariableValue(localConstExpr);
   }
-
-  auto SetToLocal = [&](int64_t LocalValue, ResourceInfoKind RIK) {
-    MCSymbol *Sym = getSymbol(FnSym->getName(), RIK, OutContext);
-    Sym->setVariableValue(MCConstantExpr::create(LocalValue, OutContext));
-  };
 
   if (!FRI.HasIndirectCall) {
     assignResourceInfoExpr(FRI.UsesVCC, ResourceInfoKind::RIK_UsesVCC,

@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -23,10 +24,11 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
-extern cl::opt<unsigned> SCEVCheapExpansionBudget;
+LLVM_ABI extern cl::opt<unsigned> SCEVCheapExpansionBudget;
 
 /// struct for holding enough information to help calculate the cost of the
 /// given SCEV when expanded into IR.
@@ -50,8 +52,8 @@ struct PoisonFlags {
   unsigned SameSign : 1;
   GEPNoWrapFlags GEPNW;
 
-  PoisonFlags(const Instruction *I);
-  void apply(Instruction *I);
+  LLVM_ABI PoisonFlags(const Instruction *I);
+  LLVM_ABI void apply(Instruction *I);
 };
 
 /// This class uses information about analyze scalars to rewrite expressions
@@ -60,7 +62,7 @@ struct PoisonFlags {
 /// Clients should create an instance of this class when rewriting is needed,
 /// and destroy it when finished to allow the release of the associated
 /// memory.
-class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
+class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
   friend class SCEVExpanderCleaner;
 
   ScalarEvolution &SE;
@@ -73,8 +75,16 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   bool PreserveLCSSA;
 
   // InsertedExpressions caches Values for reuse, so must track RAUW.
-  DenseMap<std::pair<const SCEV *, Instruction *>, TrackingVH<Value>>
+  DenseMap<std::pair<SCEVUse, Instruction *>, TrackingVH<Value>>
       InsertedExpressions;
+
+  // InsertedOverflowChecks caches Values for reuse, so must track RAUW.
+  // The key is a tuple containing the trip count for the loop, the absolute
+  // value of the recurrence step, and the insert point. The stored pair values
+  // are the multiply result and a boolean value indicating overflow.
+  DenseMap<std::tuple<Value *, Value *, Instruction *>,
+           std::pair<TrackingVH<Value>, TrackingVH<Value>>>
+      InsertedOverflowChecks;
 
   // InsertedValues only flags inserted instructions so needs no RAUW.
   DenseSet<AssertingVH<Value>> InsertedValues;
@@ -178,16 +188,16 @@ class SCEVExpander : public SCEVVisitor<SCEVExpander, Value *> {
   const char *DebugType;
 #endif
 
-  friend struct SCEVVisitor<SCEVExpander, Value *>;
+  friend struct SCEVUseVisitor<SCEVExpander, Value *>;
 
 public:
   /// Construct a SCEVExpander in "canonical" mode.
-  explicit SCEVExpander(ScalarEvolution &se, const DataLayout &DL,
-                        const char *name, bool PreserveLCSSA = true)
-      : SE(se), DL(DL), IVName(name), PreserveLCSSA(PreserveLCSSA),
-        IVIncInsertLoop(nullptr), IVIncInsertPos(nullptr), CanonicalMode(true),
-        LSRMode(false),
-        Builder(se.getContext(), InstSimplifyFolder(DL),
+  explicit SCEVExpander(ScalarEvolution &SE, const char *Name,
+                        bool PreserveLCSSA = true)
+      : SE(SE), DL(SE.getDataLayout()), IVName(Name),
+        PreserveLCSSA(PreserveLCSSA), IVIncInsertLoop(nullptr),
+        IVIncInsertPos(nullptr), CanonicalMode(true), LSRMode(false),
+        Builder(SE.getContext(), InstSimplifyFolder(DL),
                 IRBuilderCallbackInserter(
                     [this](Instruction *I) { rememberInstruction(I); })) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -209,6 +219,7 @@ public:
   /// places within the same BasicBlock can do so.
   void clear() {
     InsertedExpressions.clear();
+    InsertedOverflowChecks.clear();
     InsertedValues.clear();
     InsertedPostIncValues.clear();
     ReusedValues.clear();
@@ -271,8 +282,8 @@ public:
   }
 
   /// Return the induction variable increment's IV operand.
-  Instruction *getIVIncOperand(Instruction *IncV, Instruction *InsertPos,
-                               bool allowScale);
+  LLVM_ABI Instruction *
+  getIVIncOperand(Instruction *IncV, Instruction *InsertPos, bool allowScale);
 
   /// Utility for hoisting \p IncV (with all subexpressions requried for its
   /// computation) before \p InsertPos. If \p RecomputePoisonFlags is set, drops
@@ -280,37 +291,52 @@ public:
   /// re-infer them in the new location. It should be used when we are going to
   /// introduce a new use in the new position that didn't exist before, and may
   /// trigger new UB in case of poison.
-  bool hoistIVInc(Instruction *IncV, Instruction *InsertPos,
-                  bool RecomputePoisonFlags = false);
+  LLVM_ABI bool hoistIVInc(Instruction *IncV, Instruction *InsertPos,
+                           bool RecomputePoisonFlags = false);
 
   /// Return true if both increments directly increment the corresponding IV PHI
   /// nodes and have the same opcode. It is not safe to re-use the flags from
   /// the original increment, if it is more complex and SCEV expansion may have
   /// yielded a more simplified wider increment.
-  static bool canReuseFlagsFromOriginalIVInc(PHINode *OrigPhi, PHINode *WidePhi,
-                                             Instruction *OrigInc,
-                                             Instruction *WideInc);
+  LLVM_ABI static bool canReuseFlagsFromOriginalIVInc(PHINode *OrigPhi,
+                                                      PHINode *WidePhi,
+                                                      Instruction *OrigInc,
+                                                      Instruction *WideInc);
 
   /// replace congruent phis with their most canonical representative. Return
   /// the number of phis eliminated.
-  unsigned replaceCongruentIVs(Loop *L, const DominatorTree *DT,
-                               SmallVectorImpl<WeakTrackingVH> &DeadInsts,
-                               const TargetTransformInfo *TTI = nullptr);
+  LLVM_ABI unsigned
+  replaceCongruentIVs(Loop *L, const DominatorTree *DT,
+                      SmallVectorImpl<WeakTrackingVH> &DeadInsts,
+                      const TargetTransformInfo *TTI = nullptr);
 
   /// Return true if the given expression is safe to expand in the sense that
   /// all materialized values are safe to speculate anywhere their operands are
   /// defined, and the expander is capable of expanding the expression.
-  bool isSafeToExpand(const SCEV *S) const;
+  LLVM_ABI bool isSafeToExpand(const SCEV *S) const;
 
   /// Return true if the given expression is safe to expand in the sense that
   /// all materialized values are defined and safe to speculate at the specified
   /// location and their operands are defined at this location.
-  bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint) const;
+  LLVM_ABI bool isSafeToExpandAt(const SCEV *S,
+                                 const Instruction *InsertionPoint) const;
+
+  /// Drop poison-generating flags from \p I, then try re-infer via SCEV.
+  LLVM_ABI static void
+  dropPoisonGeneratingAnnotationsAndReinfer(ScalarEvolution &SE,
+                                            Instruction *I);
+
+  /// Find an existing cast among \p PtrOp's users that computes the same value
+  /// as a `ptrtoaddr` of \p PtrOp to \p Ty and can be reused when expanding
+  /// ptrtoaddr.
+  LLVM_ABI static CastInst *
+  findReusableCastForPtrToAddr(Value *PtrOp, Type *Ty, const DataLayout &DL,
+                               function_ref<bool(const CastInst *)> Dominates);
 
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
-  Value *expandCodeFor(const SCEV *SH, Type *Ty, BasicBlock::iterator I);
-  Value *expandCodeFor(const SCEV *SH, Type *Ty, Instruction *I) {
+  LLVM_ABI Value *expandCodeFor(SCEVUse SH, Type *Ty, BasicBlock::iterator I);
+  Value *expandCodeFor(SCEVUse SH, Type *Ty, Instruction *I) {
     return expandCodeFor(SH, Ty, I->getIterator());
   }
 
@@ -318,29 +344,32 @@ public:
   /// program.  The code is inserted into the SCEVExpander's current
   /// insertion point. If a type is specified, the result will be expanded to
   /// have that type, with a cast if necessary.
-  Value *expandCodeFor(const SCEV *SH, Type *Ty = nullptr);
+  LLVM_ABI Value *expandCodeFor(SCEVUse SH, Type *Ty = nullptr);
 
   /// Generates a code sequence that evaluates this predicate.  The inserted
   /// instructions will be at position \p Loc.  The result will be of type i1
   /// and will have a value of 0 when the predicate is false and 1 otherwise.
-  Value *expandCodeForPredicate(const SCEVPredicate *Pred, Instruction *Loc);
+  LLVM_ABI Value *expandCodeForPredicate(const SCEVPredicate *Pred,
+                                         Instruction *Loc);
 
   /// A specialized variant of expandCodeForPredicate, handling the case when
   /// we are expanding code for a SCEVComparePredicate.
-  Value *expandComparePredicate(const SCEVComparePredicate *Pred,
-                                Instruction *Loc);
+  LLVM_ABI Value *expandComparePredicate(const SCEVComparePredicate *Pred,
+                                         Instruction *Loc);
 
   /// Generates code that evaluates if the \p AR expression will overflow.
-  Value *generateOverflowCheck(const SCEVAddRecExpr *AR, Instruction *Loc,
-                               bool Signed);
+  LLVM_ABI Value *generateOverflowCheck(const SCEVAddRecExpr *AR,
+                                        Instruction *Loc, bool Signed);
 
   /// A specialized variant of expandCodeForPredicate, handling the case when
   /// we are expanding code for a SCEVWrapPredicate.
-  Value *expandWrapPredicate(const SCEVWrapPredicate *P, Instruction *Loc);
+  LLVM_ABI Value *expandWrapPredicate(const SCEVWrapPredicate *P,
+                                      Instruction *Loc);
 
   /// A specialized variant of expandCodeForPredicate, handling the case when
   /// we are expanding code for a SCEVUnionPredicate.
-  Value *expandUnionPredicate(const SCEVUnionPredicate *Pred, Instruction *Loc);
+  LLVM_ABI Value *expandUnionPredicate(const SCEVUnionPredicate *Pred,
+                                       Instruction *Loc);
 
   /// Set the current IV increment loop and position.
   void setIVIncInsertPos(const Loop *L, Instruction *Pos) {
@@ -417,30 +446,34 @@ public:
   ///
   /// Note that this function does not perform an exhaustive search. I.e if it
   /// didn't find any value it does not mean that there is no such value.
-  bool hasRelatedExistingExpansion(const SCEV *S, const Instruction *At,
-                                   Loop *L);
+  LLVM_ABI bool hasRelatedExistingExpansion(const SCEV *S,
+                                            const Instruction *At, Loop *L);
 
   /// Returns a suitable insert point after \p I, that dominates \p
   /// MustDominate. Skips instructions inserted by the expander.
-  BasicBlock::iterator findInsertPointAfter(Instruction *I,
-                                            Instruction *MustDominate) const;
+  LLVM_ABI BasicBlock::iterator
+  findInsertPointAfter(Instruction *I, Instruction *MustDominate) const;
+
+  /// Remove inserted instructions that are dead, e.g. due to InstSimplifyFolder
+  /// simplifications. \p Root is assumed to be used and won't be removed.
+  LLVM_ABI void eraseDeadInstructions(Value *Root);
 
 private:
   LLVMContext &getContext() const { return SE.getContext(); }
 
   /// Recursive helper function for isHighCostExpansion.
-  bool isHighCostExpansionHelper(const SCEVOperand &WorkItem, Loop *L,
-                                 const Instruction &At, InstructionCost &Cost,
-                                 unsigned Budget,
-                                 const TargetTransformInfo &TTI,
-                                 SmallPtrSetImpl<const SCEV *> &Processed,
-                                 SmallVectorImpl<SCEVOperand> &Worklist);
+  LLVM_ABI bool
+  isHighCostExpansionHelper(const SCEVOperand &WorkItem, Loop *L,
+                            const Instruction &At, InstructionCost &Cost,
+                            unsigned Budget, const TargetTransformInfo &TTI,
+                            SmallPtrSetImpl<const SCEV *> &Processed,
+                            SmallVectorImpl<SCEVOperand> &Worklist);
 
   /// Insert the specified binary operator, doing a small amount of work to
   /// avoid inserting an obviously redundant operation, and hoisting to an
   /// outer loop when the opportunity is there and it is safe.
   Value *InsertBinop(Instruction::BinaryOps Opcode, Value *LHS, Value *RHS,
-                     SCEV::NoWrapFlags Flags, bool IsSafeToHoist);
+                     SCEVFlags Flags, bool IsSafeToHoist);
 
   /// We want to cast \p V. What would be the best place for such a cast?
   BasicBlock::iterator GetOptimalInsertionPointForCastOf(Value *V) const;
@@ -457,21 +490,26 @@ private:
 
   /// Expand a SCEVAddExpr with a pointer type into a GEP instead of using
   /// ptrtoint+arithmetic+inttoptr.
-  Value *expandAddToGEP(const SCEV *Op, Value *V, SCEV::NoWrapFlags Flags);
+  Value *expandAddToGEP(SCEVUse Op, Value *V, SCEVFlags Flags);
 
   /// Find a previous Value in ExprValueMap for expand.
   /// DropPoisonGeneratingInsts is populated with instructions for which
   /// poison-generating flags must be dropped if the value is reused.
   Value *FindValueInExprValueMap(
-      const SCEV *S, const Instruction *InsertPt,
+      SCEVUse S, const Instruction *InsertPt,
       SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
 
-  Value *expand(const SCEV *S);
-  Value *expand(const SCEV *S, BasicBlock::iterator I) {
+  /// Like FindValueInExprValueMap, but on a successful lookup also drops the
+  /// poison-generating flags that reusing the value requires.
+  Value *findExistingExpansionAndDropPoisonFlags(SCEVUse S,
+                                                 const Instruction *InsertPt);
+
+  LLVM_ABI Value *expand(SCEVUse S);
+  Value *expand(SCEVUse S, BasicBlock::iterator I) {
     setInsertPoint(I);
     return expand(S);
   }
-  Value *expand(const SCEV *S, Instruction *I) {
+  Value *expand(SCEVUse S, Instruction *I) {
     setInsertPoint(I);
     return expand(S);
   }
@@ -479,42 +517,45 @@ private:
   /// Determine the most "relevant" loop for the given SCEV.
   const Loop *getRelevantLoop(const SCEV *);
 
-  Value *expandMinMaxExpr(const SCEVNAryExpr *S, Intrinsic::ID IntrinID,
-                          Twine Name, bool IsSequential = false);
+  Value *expandMinMaxExpr(SCEVUseT<const SCEVNAryExpr *> S,
+                          Intrinsic::ID IntrinID, Twine Name,
+                          bool IsSequential = false);
 
-  Value *visitConstant(const SCEVConstant *S) { return S->getValue(); }
+  Value *visitConstant(SCEVUseT<const SCEVConstant *> S) {
+    return S->getValue();
+  }
 
-  Value *visitVScale(const SCEVVScale *S);
+  Value *visitVScale(SCEVUseT<const SCEVVScale *> S);
 
-  Value *visitPtrToIntExpr(const SCEVPtrToIntExpr *S);
+  Value *visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S);
 
-  Value *visitTruncateExpr(const SCEVTruncateExpr *S);
+  Value *visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> S);
 
-  Value *visitZeroExtendExpr(const SCEVZeroExtendExpr *S);
+  Value *visitZeroExtendExpr(SCEVUseT<const SCEVZeroExtendExpr *> S);
 
-  Value *visitSignExtendExpr(const SCEVSignExtendExpr *S);
+  Value *visitSignExtendExpr(SCEVUseT<const SCEVSignExtendExpr *> S);
 
-  Value *visitAddExpr(const SCEVAddExpr *S);
+  Value *visitAddExpr(SCEVUseT<const SCEVAddExpr *> S);
 
-  Value *visitMulExpr(const SCEVMulExpr *S);
+  Value *visitMulExpr(SCEVUseT<const SCEVMulExpr *> S);
 
-  Value *visitUDivExpr(const SCEVUDivExpr *S);
+  Value *visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S);
 
-  Value *visitAddRecExpr(const SCEVAddRecExpr *S);
+  Value *visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S);
 
-  Value *visitSMaxExpr(const SCEVSMaxExpr *S);
+  Value *visitSMaxExpr(SCEVUseT<const SCEVSMaxExpr *> S);
 
-  Value *visitUMaxExpr(const SCEVUMaxExpr *S);
+  Value *visitUMaxExpr(SCEVUseT<const SCEVUMaxExpr *> S);
 
-  Value *visitSMinExpr(const SCEVSMinExpr *S);
+  Value *visitSMinExpr(SCEVUseT<const SCEVSMinExpr *> S);
 
-  Value *visitUMinExpr(const SCEVUMinExpr *S);
+  Value *visitUMinExpr(SCEVUseT<const SCEVUMinExpr *> S);
 
-  Value *visitSequentialUMinExpr(const SCEVSequentialUMinExpr *S);
+  Value *visitSequentialUMinExpr(SCEVUseT<const SCEVSequentialUMinExpr *> S);
 
-  Value *visitUnknown(const SCEVUnknown *S) { return S->getValue(); }
+  Value *visitUnknown(SCEVUseT<const SCEVUnknown *> S) { return S->getValue(); }
 
-  void rememberInstruction(Value *I);
+  LLVM_ABI void rememberInstruction(Value *I);
 
   void rememberFlags(Instruction *I);
 
@@ -522,7 +563,8 @@ private:
 
   bool isExpandedAddRecExprPHI(PHINode *PN, Instruction *IncV, const Loop *L);
 
-  Value *expandAddRecExprLiterally(const SCEVAddRecExpr *);
+  Value *tryToReuseLCSSAPhi(SCEVUseT<const SCEVAddRecExpr *> S);
+  Value *expandAddRecExprLiterally(SCEVUseT<const SCEVAddRecExpr *> S);
   PHINode *getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
                                      const Loop *L, Type *&TruncTy,
                                      bool &InvertStep);
@@ -561,7 +603,7 @@ public:
   /// Indicate that the result of the expansion is used.
   void markResultUsed() { ResultUsed = true; }
 
-  void cleanup();
+  LLVM_ABI void cleanup();
 };
 } // namespace llvm
 

@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
@@ -35,9 +36,9 @@ bool TargetFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const 
   return false;
 }
 
-bool TargetFrameLowering::enableCFIFixup(MachineFunction &MF) const {
+bool TargetFrameLowering::enableCFIFixup(const MachineFunction &MF) const {
   return MF.needsFrameMoves() &&
-         !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+         !MF.getTarget().getMCAsmInfo().usesWindowsCFI();
 }
 
 /// Returns the displacement from the frame register to the stack
@@ -92,15 +93,9 @@ void TargetFrameLowering::getCalleeSaves(const MachineFunction &MF,
     CalleeSaves.set(Info.getReg());
 }
 
-void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                               BitVector &SavedRegs,
-                                               RegScavenger *RS) const {
+const MCPhysReg *
+TargetFrameLowering::getMustPreserveRegisters(const MachineFunction &MF) const {
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-
-  // Resize before the early returns. Some backends expect that
-  // SavedRegs.size() == TRI.getNumRegs() after this call even if there are no
-  // saved registers.
-  SavedRegs.resize(TRI.getNumRegs());
 
   // Get the callee saved register list...
   const MCPhysReg *CSRegs = nullptr;
@@ -117,11 +112,11 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   // Early exit if there are no callee saved registers.
   if (!CSRegs || CSRegs[0] == 0)
-    return;
+    return nullptr;
 
   // In Naked functions we aren't going to save any registers.
   if (MF.getFunction().hasFnAttribute(Attribute::Naked))
-    return;
+    return nullptr;
 
   // Noreturn+nounwind functions never restore CSR, so no saves are needed.
   // Purely noreturn functions may still return through throws, so those must
@@ -134,15 +129,45 @@ void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
         MF.getFunction().hasFnAttribute(Attribute::NoUnwind) &&
         !MF.getFunction().hasFnAttribute(Attribute::UWTable) &&
         enableCalleeSaveSkip(MF))
+    return nullptr;
+
+  return CSRegs;
+}
+
+void TargetFrameLowering::determineUncondPrologCalleeSaves(
+    MachineFunction &MF, const MCPhysReg *CSRegs, BitVector &SavedRegs) const {
+  // Functions which call __builtin_unwind_init get all their registers saved.
+  if (!MF.callsUnwindInit())
+    return;
+  for (unsigned i = 0; CSRegs[i]; ++i) {
+    unsigned Reg = CSRegs[i];
+    SavedRegs.set(Reg);
+  }
+}
+
+void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
+                                               BitVector &PrologCSRs,
+                                               RegScavenger *RS) const {
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+
+  // Resize before the early returns. Some backends expect that
+  // SavedRegs.size() == TRI.getNumRegs() after this call even if there are no
+  // saved registers.
+  PrologCSRs.resize(TRI.getNumRegs());
+
+  // Get the callee saved register list...
+  const MCPhysReg *CSRegs = getMustPreserveRegisters(MF);
+  // Early exit if there are no callee saved registers.
+  if (!CSRegs || CSRegs[0] == 0)
     return;
 
-  // Functions which call __builtin_unwind_init get all their registers saved.
-  bool CallsUnwindInit = MF.callsUnwindInit();
+  determineUncondPrologCalleeSaves(MF, CSRegs, PrologCSRs);
+
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (unsigned i = 0; CSRegs[i]; ++i) {
     unsigned Reg = CSRegs[i];
-    if (CallsUnwindInit || MRI.isPhysRegModified(Reg))
-      SavedRegs.set(Reg);
+    if (MRI.isPhysRegModified(Reg))
+      PrologCSRs.set(Reg);
   }
 }
 
@@ -180,5 +205,38 @@ TargetFrameLowering::getInitialCFARegister(const MachineFunction &MF) const {
 TargetFrameLowering::DwarfFrameBase
 TargetFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
-  return DwarfFrameBase{DwarfFrameBase::Register, {RI->getFrameRegister(MF)}};
+  return DwarfFrameBase{DwarfFrameBase::Register, {RI->getFrameRegister(MF).id()}};
+}
+
+void TargetFrameLowering::spillCalleeSavedRegister(
+    MachineBasicBlock &SaveBlock, MachineBasicBlock::iterator MI,
+    const CalleeSavedInfo &CS, const TargetInstrInfo *TII,
+    const TargetRegisterInfo *TRI) const {
+  // Insert the spill to the stack frame.
+  MCRegister Reg = CS.getReg();
+
+  if (CS.isSpilledToReg()) {
+    BuildMI(SaveBlock, MI, DebugLoc(), TII->get(TargetOpcode::COPY),
+            CS.getDstReg())
+        .addReg(Reg, getKillRegState(true));
+  } else {
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    TII->storeRegToStackSlot(SaveBlock, MI, Reg, true, CS.getFrameIdx(), RC,
+                             Register());
+  }
+}
+
+void TargetFrameLowering::restoreCalleeSavedRegister(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    const CalleeSavedInfo &CS, const TargetInstrInfo *TII,
+    const TargetRegisterInfo *TRI) const {
+  MCRegister Reg = CS.getReg();
+  if (CS.isSpilledToReg()) {
+    BuildMI(MBB, MI, DebugLoc(), TII->get(TargetOpcode::COPY), Reg)
+        .addReg(CS.getDstReg(), getKillRegState(true));
+  } else {
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    TII->loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, Register());
+    assert(MI != MBB.begin() && "loadRegFromStackSlot didn't insert any code!");
+  }
 }

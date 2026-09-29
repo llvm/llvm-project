@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -30,67 +31,78 @@ namespace orc {
 // --raw_ostream operators for ORC types--
 
 /// Render a SymbolNameSet.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolNameSet &Symbols);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolNameSet &Symbols);
 
 /// Render a SymbolNameVector.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolNameVector &Symbols);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolNameVector &Symbols);
 
 /// Render an array of SymbolStringPtrs.
-raw_ostream &operator<<(raw_ostream &OS, ArrayRef<SymbolStringPtr> Symbols);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 ArrayRef<SymbolStringPtr> Symbols);
 
 /// Render JITSymbolFlags.
-raw_ostream &operator<<(raw_ostream &OS, const JITSymbolFlags &Flags);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const JITSymbolFlags &Flags);
 
 /// Render a SymbolFlagsMap entry.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolFlagsMap::value_type &KV);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolFlagsMap::value_type &KV);
 
 /// Render a SymbolMap entry.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolMap::value_type &KV);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolMap::value_type &KV);
 
 /// Render a SymbolFlagsMap.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolFlagsMap &SymbolFlags);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolFlagsMap &SymbolFlags);
 
 /// Render a SymbolMap.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolMap &Symbols);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolMap &Symbols);
 
 /// Render a SymbolDependenceMap entry.
-raw_ostream &operator<<(raw_ostream &OS,
-                        const SymbolDependenceMap::value_type &KV);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolDependenceMap::value_type &KV);
 
 /// Render a SymbolDependendeMap.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolDependenceMap &Deps);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolDependenceMap &Deps);
 
 /// Render a MaterializationUnit.
-raw_ostream &operator<<(raw_ostream &OS, const MaterializationUnit &MU);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const MaterializationUnit &MU);
 
 //// Render a JITDylibLookupFlags instance.
-raw_ostream &operator<<(raw_ostream &OS,
-                        const JITDylibLookupFlags &JDLookupFlags);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const JITDylibLookupFlags &JDLookupFlags);
 
 /// Render a SymbolLookupFlags instance.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupFlags &LookupFlags);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolLookupFlags &LookupFlags);
 
 /// Render a SymbolLookupSet entry.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupSet::value_type &KV);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolLookupSet::value_type &KV);
 
 /// Render a SymbolLookupSet.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupSet &LookupSet);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolLookupSet &LookupSet);
 
 /// Render a JITDylibSearchOrder.
-raw_ostream &operator<<(raw_ostream &OS,
-                        const JITDylibSearchOrder &SearchOrder);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const JITDylibSearchOrder &SearchOrder);
 
 /// Render a SymbolAliasMap.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolAliasMap &Aliases);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolAliasMap &Aliases);
 
 /// Render a SymbolState.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolState &S);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolState &S);
 
 /// Render a LookupKind.
-raw_ostream &operator<<(raw_ostream &OS, const LookupKind &K);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LookupKind &K);
 
 /// Dump a SymbolStringPool. Useful for debugging dangling-pointer crashes.
-raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
 
 /// A function object that can be used as an ObjectTransformLayer transform
 /// to dump object files to disk at a specified path.
@@ -109,10 +121,11 @@ public:
   /// identifier, the resulting files will be named <ident>.o, <ident>.2.o,
   /// <ident>.3.o, and so on). IdentifierOverride should not contain an
   /// extension, as a .o suffix will be added by DumpObjects.
-  DumpObjects(std::string DumpDir = "", std::string IdentifierOverride = "");
+  LLVM_ABI DumpObjects(std::string DumpDir = "",
+                       std::string IdentifierOverride = "");
 
   /// Dumps the given buffer to disk.
-  Expected<std::unique_ptr<MemoryBuffer>>
+  LLVM_ABI Expected<std::unique_ptr<MemoryBuffer>>
   operator()(std::unique_ptr<MemoryBuffer> Obj);
 
 private:

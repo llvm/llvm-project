@@ -31,7 +31,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
@@ -128,7 +127,7 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
 
   // Now, go through each block (with the current terminator type)
   // we've recorded, and rewrite it to branch to the new common block.
-  DILocation *CommonDebugLoc = nullptr;
+  DebugLoc CommonDebugLoc;
   for (BasicBlock *BB : BBs) {
     auto *Term = BB->getTerminator();
     assert(Term->getOpcode() == CanonicalTerm->getOpcode() &&
@@ -145,11 +144,11 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
       CommonDebugLoc = Term->getDebugLoc();
     else
       CommonDebugLoc =
-          DILocation::getMergedLocation(CommonDebugLoc, Term->getDebugLoc());
+          DebugLoc::getMergedLocation(CommonDebugLoc, Term->getDebugLoc());
 
     // And turn BB into a block that just unconditionally branches
     // to the canonical block.
-    Instruction *BI = BranchInst::Create(CanonicalBB, BB);
+    Instruction *BI = UncondBrInst::Create(CanonicalBB, BB);
     BI->setDebugLoc(Term->getDebugLoc());
     Term->eraseFromParent();
 
@@ -195,8 +194,7 @@ static bool tailMergeBlocksWithSimilarFunctionTerminators(Function &F,
     // Calls to experimental_deoptimize must be followed by a return
     // of the value computed by experimental_deoptimize.
     // I.e., we can not change `ret` to `br` for this block.
-    if (auto *CI =
-            dyn_cast_or_null<CallInst>(Term->getPrevNonDebugInstruction())) {
+    if (auto *CI = dyn_cast_or_null<CallInst>(Term->getPrevNode())) {
       if (Function *F = CI->getCalledFunction())
         if (Intrinsic::ID ID = F->getIntrinsicID())
           if (ID == Intrinsic::experimental_deoptimize)
@@ -246,7 +244,7 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
   unsigned IterCnt = 0;
   (void)IterCnt;
   while (LocalChange) {
-    assert(IterCnt++ < 1000 && "Iterative simplification didn't converge!");
+    assert(IterCnt++ < 2000 && "Iterative simplification didn't converge!");
     LocalChange = false;
 
     // Loop over all of the basic blocks and remove them if they are unneeded.
@@ -289,12 +287,16 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
   // iterate between the two optimizations.  We structure the code like this to
   // avoid rerunning iterativelySimplifyCFG if the second pass of
   // removeUnreachableBlocks doesn't do anything.
-  if (!removeUnreachableBlocks(F, DT ? &DTU : nullptr))
+  // Avoid scanning instructions to reduce compile-time.
+  if (!removeUnreachableBlocks(F, DT ? &DTU : nullptr, /*MSSAU=*/nullptr,
+                               /*FoldInstsToUnreachable=*/false))
     return true;
 
   do {
     EverChanged = iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options);
-    EverChanged |= removeUnreachableBlocks(F, DT ? &DTU : nullptr);
+    EverChanged |=
+        removeUnreachableBlocks(F, DT ? &DTU : nullptr, /*MSSAU=*/nullptr,
+                                /*FoldInstsToUnreachable=*/false);
   } while (EverChanged);
 
   return true;
@@ -357,6 +359,8 @@ void SimplifyCFGPass::printPipeline(
   OS << (Options.ForwardSwitchCondToPhi ? "" : "no-") << "forward-switch-cond;";
   OS << (Options.ConvertSwitchRangeToICmp ? "" : "no-")
      << "switch-range-to-icmp;";
+  OS << (Options.ConvertSwitchToArithmetic ? "" : "no-")
+     << "switch-to-arithmetic;";
   OS << (Options.ConvertSwitchToLookupTable ? "" : "no-")
      << "switch-to-lookup;";
   OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";
@@ -380,9 +384,13 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
     DT = &AM.getResult<DominatorTreeAnalysis>(F);
   if (!simplifyFunctionCFG(F, TTI, DT, Options))
     return PreservedAnalyses::all();
+  // If we removed some blocks, update block numbers to keep dense numbering.
+  F.renumberBlocks();
   PreservedAnalyses PA;
-  if (RequireAndPreserveDomTree)
+  if (RequireAndPreserveDomTree) {
+    DT->updateBlockNumbers();
     PA.preserve<DominatorTreeAnalysis>();
+  }
   return PA;
 }
 

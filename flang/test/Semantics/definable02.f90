@@ -36,9 +36,9 @@ program test
   x1(:) = [t1()] ! ok
   x2(:) = [t2()] ! ok
   x3(:) = [t3()] ! ok
-  !PORTABILITY: Variable 'x1([INTEGER(8)::1_8])' has a vector subscript and will be finalized by non-elemental subroutine 'f1'
+  !PORTABILITY: Variable 'x1([INTEGER(8)::1_8])' has a vector subscript and will be finalized by non-elemental subroutine 'f1' [-Wvector-subscript-finalization]
   x1([1]) = [t1()]
-  !PORTABILITY: Variable 'x2([INTEGER(8)::1_8])' has a vector subscript and will be finalized by non-elemental subroutine 'f2'
+  !PORTABILITY: Variable 'x2([INTEGER(8)::1_8])' has a vector subscript and will be finalized by non-elemental subroutine 'f2' [-Wvector-subscript-finalization]
   x2([1]) = [t2()]
   x3([1]) = [t3()] ! ok
 end

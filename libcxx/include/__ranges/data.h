@@ -28,9 +28,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [range.prim.data]
 
@@ -51,12 +51,12 @@ concept __ranges_begin_invocable = !__member_data<_Tp> && __can_borrow<_Tp> && r
 
 struct __fn {
   template <__member_data _Tp>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(__t.data())) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(__t.data())) {
     return __t.data();
   }
 
   template <__ranges_begin_invocable _Tp>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
       noexcept(noexcept(std::to_address(ranges::begin(__t)))) {
     return std::to_address(ranges::begin(__t));
   }
@@ -95,8 +95,8 @@ inline constexpr auto cdata = __cdata::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___RANGES_DATA_H

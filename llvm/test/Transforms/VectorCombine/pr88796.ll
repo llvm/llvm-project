@@ -4,7 +4,7 @@
 define i32 @test() {
 ; CHECK-LABEL: define i32 @test() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i16 @llvm.vector.reduce.and.nxv8i16(<vscale x 8 x i16> trunc (<vscale x 8 x i32> splat (i32 268435456) to <vscale x 8 x i16>))
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i16 @llvm.vector.reduce.and.nxv8i16(<vscale x 8 x i16> zeroinitializer)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

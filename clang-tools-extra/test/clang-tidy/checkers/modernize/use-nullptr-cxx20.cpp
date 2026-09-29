@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-nullptr %t -- -- -DGCC
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-nullptr %t -- -- -DCLANG
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-nullptr %t -- -- -DGCC
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-nullptr %t -- -- -DCLANG
 
 namespace std {
 class strong_ordering;

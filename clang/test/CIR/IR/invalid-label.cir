@@ -1,0 +1,12 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+module  {
+  // expected-error@+3 {{must be the first operation in a block}}
+  cir.func @error(){
+    %0 = cir.const #cir.int<0> : !s32i
+    cir.label "label"
+    cir.return
+  }
+}

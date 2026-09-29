@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +sha -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +sha -emit-llvm -flax-vector-conversions=none -o - | FileCheck %s
 
 
 #include <immintrin.h>

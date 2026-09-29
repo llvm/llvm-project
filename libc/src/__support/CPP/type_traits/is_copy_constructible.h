@@ -9,7 +9,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_COPY_CONSTRUCTIBLE_H
 
 #include "src/__support/CPP/type_traits/add_lvalue_reference.h"
-#include "src/__support/CPP/type_traits/integral_constant.h"
+#include "src/__support/CPP/type_traits/is_constructible.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -18,8 +18,7 @@ namespace cpp {
 // is copy constructible
 template <class T>
 struct is_copy_constructible
-    : public integral_constant<
-          bool, __is_constructible(T, cpp::add_lvalue_reference_t<const T>)> {};
+    : public cpp::is_constructible<T, cpp::add_lvalue_reference_t<const T>> {};
 
 template <class T>
 LIBC_INLINE_VAR constexpr bool is_copy_constructible_v =

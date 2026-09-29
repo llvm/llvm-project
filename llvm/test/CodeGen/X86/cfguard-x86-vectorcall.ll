@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefix=X86
 ; Control Flow Guard is currently only available on Windows
 
+%struct.HVA = type { double, double, double, double }
 
 ; Test that Control Flow Guard checks are correctly added for x86 vector calls.
 define void @func_cf_vector_x86(ptr %0, ptr %1) #0 {
@@ -31,8 +32,6 @@ entry:
   ; X86: 	     calll  *%ecx
 }
 attributes #0 = { "target-cpu"="pentium4" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" }
-
-%struct.HVA = type { double, double, double, double }
 
 declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1 immarg) #1
 attributes #1 = { argmemonly nounwind willreturn }

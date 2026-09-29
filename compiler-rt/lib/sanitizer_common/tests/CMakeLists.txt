@@ -134,6 +134,9 @@ append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread SANITIZER_TEST_LINK_FLAGS_COM
 if(CMAKE_SYSTEM MATCHES "FreeBSD-9.2-RELEASE")
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON "-lc++ -lm")
 endif()
+if(CMAKE_SYSTEM MATCHES "Haiku")
+  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON "-lbsd")
+endif()
 
 include_directories(..)
 include_directories(../..)
@@ -144,7 +147,7 @@ macro(add_sanitizer_common_lib library)
   add_library(${library} STATIC ${ARGN})
   set_target_properties(${library} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    FOLDER "Compiler-RT/Tests/Runtime")
+    FOLDER "compiler-rt/Tests/Runtime")
 endmacro()
 
 function(get_sanitizer_common_lib_for_arch arch lib)
@@ -158,7 +161,7 @@ endfunction()
 
 # Sanitizer_common unit tests testsuite.
 add_custom_target(SanitizerUnitTests)
-set_target_properties(SanitizerUnitTests PROPERTIES FOLDER "Compiler-RT/Tests")
+set_target_properties(SanitizerUnitTests PROPERTIES FOLDER "compiler-rt/Tests")
 
 # Adds sanitizer tests for architecture.
 macro(add_sanitizer_tests_for_arch arch)

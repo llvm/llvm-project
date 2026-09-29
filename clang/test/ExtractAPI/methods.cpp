@@ -45,10 +45,18 @@ class Foo {
   // GETCOUNT-NEXT: ]
 
   // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix SETL
-  void setLength(int length) noexcept;
+  virtual void setLength(int length) noexcept;
   // SETL: "!testRelLabel": "memberOf $ c:@S@Foo@F@setLength#I# $ c:@S@Foo"
   // SETL-LABEL: "!testLabel": "c:@S@Foo@F@setLength#I#"
   // SETL:      "declarationFragments": [
+  // SETL-NEXT:   {
+  // SETL-NEXT:     "kind": "keyword",
+  // SETL-NEXT:     "spelling": "virtual"
+  // SETL-NEXT:   },
+  // SETL-NEXT:   {
+  // SETL-NEXT:     "kind": "text",
+  // SETL-NEXT:     "spelling": " "
+  // SETL-NEXT:   },
   // SETL-NEXT:   {
   // SETL-NEXT:     "kind": "typeIdentifier",
   // SETL-NEXT:     "preciseIdentifier": "c:v",

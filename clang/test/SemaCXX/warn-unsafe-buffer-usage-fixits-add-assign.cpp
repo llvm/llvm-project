@@ -46,7 +46,7 @@ void add_assign_test(unsigned int n, int *a, int y) {
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:5-[[@LINE-1]]:9}:"p = p.subspan("
 }
 
-int expr_test(unsigned x, int *q, int y) {
+void expr_test(unsigned x, int *q, int y) {
   char *p = new char[8];
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:9}:"std::span<char> "
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"

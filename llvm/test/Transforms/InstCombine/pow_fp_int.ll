@@ -72,7 +72,7 @@ define double @pow_sitofp_double_const_base_power_of_2_fast(i32 %x) {
 ; CHECK-LABEL: define double @pow_sitofp_double_const_base_power_of_2_fast(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[SUBFP:%.*]] = sitofp i32 [[X]] to float
-; CHECK-NEXT:    [[MUL:%.*]] = fmul afn float [[SUBFP]], 4.000000e+00
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan afn float [[SUBFP]], 4.000000e+00
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call afn float @llvm.exp2.f32(float [[MUL]])
 ; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double
 ; CHECK-NEXT:    ret double [[RES]]
@@ -101,7 +101,7 @@ define double @pow_uitofp_const_base_power_of_2_fast(i31 %x) {
 ; CHECK-LABEL: define double @pow_uitofp_const_base_power_of_2_fast(
 ; CHECK-SAME: i31 [[X:%.*]]) {
 ; CHECK-NEXT:    [[SUBFP:%.*]] = uitofp i31 [[X]] to float
-; CHECK-NEXT:    [[MUL:%.*]] = fmul afn float [[SUBFP]], 4.000000e+00
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan afn float [[SUBFP]], 4.000000e+00
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call afn float @llvm.exp2.f32(float [[MUL]])
 ; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double
 ; CHECK-NEXT:    ret double [[RES]]
@@ -245,7 +245,7 @@ define double @pow_uitofp_const_base_fast_i32(i32 %x) {
 ; CHECK-LABEL: define double @pow_uitofp_const_base_fast_i32(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[SUBFP:%.*]] = uitofp i32 [[X]] to float
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], 0x4006757680000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], f0x4033ABB4
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call fast float @llvm.exp2.f32(float [[MUL]])
 ; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double
 ; CHECK-NEXT:    ret double [[RES]]
@@ -315,7 +315,7 @@ define double @pow_sitofp_const_base_fast_i64(i64 %x) {
 ; CHECK-LABEL: define double @pow_sitofp_const_base_fast_i64(
 ; CHECK-SAME: i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[SUBFP:%.*]] = sitofp i64 [[X]] to float
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], 0x4006757680000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], f0x4033ABB4
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call fast float @llvm.exp2.f32(float [[MUL]])
 ; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double
 ; CHECK-NEXT:    ret double [[RES]]
@@ -331,7 +331,7 @@ define double @pow_uitofp_const_base_fast_i64(i64 %x) {
 ; CHECK-LABEL: define double @pow_uitofp_const_base_fast_i64(
 ; CHECK-SAME: i64 [[X:%.*]]) {
 ; CHECK-NEXT:    [[SUBFP:%.*]] = uitofp i64 [[X]] to float
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], 0x4006757680000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], f0x4033ABB4
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call fast float @llvm.exp2.f32(float [[MUL]])
 ; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double
 ; CHECK-NEXT:    ret double [[RES]]
@@ -387,7 +387,7 @@ define double @pow_sitofp_const_base_power_of_2_no_fast(i32 %x) {
 ; CHECK-LABEL: define double @pow_sitofp_const_base_power_of_2_no_fast(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[SUBFP:%.*]] = sitofp i32 [[X]] to float
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUBFP]], 4.000000e+00
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan float [[SUBFP]], 4.000000e+00
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call float @llvm.exp2.f32(float [[MUL]])
 ; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double
 ; CHECK-NEXT:    ret double [[RES]]
@@ -416,7 +416,7 @@ define double @pow_uitofp_const_base_power_of_2_no_fast(i32 %x) {
 ; CHECK-LABEL: define double @pow_uitofp_const_base_power_of_2_no_fast(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[SUBFP:%.*]] = uitofp i32 [[X]] to float
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUBFP]], 4.000000e+00
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan float [[SUBFP]], 4.000000e+00
 ; CHECK-NEXT:    [[EXP2:%.*]] = tail call float @llvm.exp2.f32(float [[MUL]])
 ; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double
 ; CHECK-NEXT:    ret double [[RES]]
@@ -536,6 +536,30 @@ define <2 x float> @pow_sitofp_const_base_2_no_fast_vector(<2 x i8> %x) {
 ;
   %s = sitofp <2 x i8> %x to <2 x float>
   %r = call <2 x float> @llvm.pow.v2f32(<2 x float><float 2.0, float 2.0>, <2 x float> %s)
+  ret <2 x float> %r
+}
+
+define <2 x float> @pow_sitofp_vector_exp(<2 x float> %base, <2 x i16> %x) {
+; CHECK-LABEL: define <2 x float> @pow_sitofp_vector_exp(
+; CHECK-SAME: <2 x float> [[BASE:%.*]], <2 x i16> [[X:%.*]]) {
+; CHECK-NEXT:    [[S:%.*]] = sitofp <2 x i16> [[X]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = tail call afn <2 x float> @llvm.pow.v2f32(<2 x float> [[BASE]], <2 x float> [[S]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %s = sitofp <2 x i16> %x to <2 x float>
+  %r = tail call afn <2 x float> @llvm.pow.v2f32(<2 x float> %base, <2 x float> %s)
+  ret <2 x float> %r
+}
+
+define <2 x float> @pow_uitofp_vector_exp(<2 x float> %base, <2 x i16> %x) {
+; CHECK-LABEL: define <2 x float> @pow_uitofp_vector_exp(
+; CHECK-SAME: <2 x float> [[BASE:%.*]], <2 x i16> [[X:%.*]]) {
+; CHECK-NEXT:    [[S:%.*]] = uitofp <2 x i16> [[X]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = tail call afn <2 x float> @llvm.pow.v2f32(<2 x float> [[BASE]], <2 x float> [[S]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %s = uitofp <2 x i16> %x to <2 x float>
+  %r = tail call afn <2 x float> @llvm.pow.v2f32(<2 x float> %base, <2 x float> %s)
   ret <2 x float> %r
 }
 

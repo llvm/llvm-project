@@ -16,15 +16,13 @@
 
 using namespace llvm;
 
-template class llvm::GenericCycleInfo<llvm::MachineSSAContext>;
-template class llvm::GenericCycle<llvm::MachineSSAContext>;
+template class LLVM_ABI_FOR_TEST
+    llvm::GenericCycleInfo<llvm::MachineSSAContext>;
 
 char MachineCycleInfoWrapperPass::ID = 0;
 
 MachineCycleInfoWrapperPass::MachineCycleInfoWrapperPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineCycleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(MachineCycleInfoWrapperPass, "machine-cycles",
                       "Machine Cycle Info Analysis", true, true)
@@ -54,44 +52,72 @@ void MachineCycleInfoWrapperPass::releaseMemory() {
   F = nullptr;
 }
 
+AnalysisKey MachineCycleAnalysis::Key;
+
+MachineCycleInfo
+MachineCycleAnalysis::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  MachineCycleInfo MCI;
+  MCI.compute(MF);
+  return MCI;
+}
+
+bool MachineCycleAnalysis::invalidate(
+    MachineFunction &, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG have been preserved.
+  auto PAC = PA.getChecker<MachineCycleAnalysis>();
+  return !(PAC.preserved() ||
+           PAC.preservedSet<AllAnalysesOn<MachineFunction>>() ||
+           PAC.preservedSet<CFGAnalyses>());
+}
+
 namespace {
-class MachineCycleInfoPrinterPass : public MachineFunctionPass {
+class MachineCycleInfoPrinterLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  MachineCycleInfoPrinterPass();
+  MachineCycleInfoPrinterLegacy();
 
   bool runOnMachineFunction(MachineFunction &F) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 } // namespace
 
-char MachineCycleInfoPrinterPass::ID = 0;
+char MachineCycleInfoPrinterLegacy::ID = 0;
 
-MachineCycleInfoPrinterPass::MachineCycleInfoPrinterPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineCycleInfoPrinterPassPass(*PassRegistry::getPassRegistry());
-}
+MachineCycleInfoPrinterLegacy::MachineCycleInfoPrinterLegacy()
+    : MachineFunctionPass(ID) {}
 
-INITIALIZE_PASS_BEGIN(MachineCycleInfoPrinterPass, "print-machine-cycles",
+INITIALIZE_PASS_BEGIN(MachineCycleInfoPrinterLegacy, "print-machine-cycles",
                       "Print Machine Cycle Info Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
-INITIALIZE_PASS_END(MachineCycleInfoPrinterPass, "print-machine-cycles",
+INITIALIZE_PASS_END(MachineCycleInfoPrinterLegacy, "print-machine-cycles",
                     "Print Machine Cycle Info Analysis", true, true)
 
-void MachineCycleInfoPrinterPass::getAnalysisUsage(AnalysisUsage &AU) const {
+void MachineCycleInfoPrinterLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineCycleInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool MachineCycleInfoPrinterPass::runOnMachineFunction(MachineFunction &F) {
+bool MachineCycleInfoPrinterLegacy::runOnMachineFunction(MachineFunction &F) {
   auto &CI = getAnalysis<MachineCycleInfoWrapperPass>();
   CI.print(errs());
   return false;
 }
 
-bool llvm::isCycleInvariant(const MachineCycle *Cycle, MachineInstr &I) {
+PreservedAnalyses
+MachineCycleInfoPrinterPass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  auto &MCI = MFAM.getResult<MachineCycleAnalysis>(MF);
+  MCI.print(OS);
+  return PreservedAnalyses::all();
+}
+
+bool llvm::isCycleInvariant(const MachineCycleInfo &CI, CycleRef Cycle,
+                            MachineInstr &I) {
   MachineFunction *MF = I.getParent()->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   const TargetSubtargetInfo &ST = MF->getSubtarget();
@@ -118,14 +144,14 @@ bool llvm::isCycleInvariant(const MachineCycle *Cycle, MachineInstr &I) {
         // then this use is safe to hoist.
         if (!MRI->isConstantPhysReg(Reg) &&
             !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())) &&
-            !TII->isIgnorableUse(MO))
+            !TII->isIgnorableUse(I, I.getOperandNo(&MO)))
           return false;
         // Otherwise it's safe to move.
         continue;
       } else if (!MO.isDead()) {
         // A def that isn't dead can't be moved.
         return false;
-      } else if (any_of(Cycle->getEntries(),
+      } else if (any_of(CI.getEntries(Cycle),
                         [&](const MachineBasicBlock *Block) {
                           return Block->isLiveIn(Reg);
                         })) {
@@ -142,7 +168,7 @@ bool llvm::isCycleInvariant(const MachineCycle *Cycle, MachineInstr &I) {
 
     // If the cycle contains the definition of an operand, then the instruction
     // isn't cycle invariant.
-    if (Cycle->contains(MRI->getVRegDef(Reg)->getParent()))
+    if (CI.contains(Cycle, MRI->getDefBlock(Reg)))
       return false;
   }
 

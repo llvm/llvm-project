@@ -13,7 +13,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -67,12 +67,13 @@ struct SparseReinterpretMap
   SparseReinterpretMap(const SparseReinterpretMap &pass) = default;
   SparseReinterpretMap(const SparseReinterpretMapOptions &options) {
     scope = options.scope;
+    loopOrderingStrategy = options.loopOrderingStrategy;
   }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateSparseReinterpretMap(patterns, scope);
+    populateSparseReinterpretMap(patterns, scope, loopOrderingStrategy);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -435,6 +436,14 @@ std::unique_ptr<Pass>
 mlir::createSparseReinterpretMapPass(ReinterpretMapScope scope) {
   SparseReinterpretMapOptions options;
   options.scope = scope;
+  return std::make_unique<SparseReinterpretMap>(options);
+}
+
+std::unique_ptr<Pass> mlir::createSparseReinterpretMapPass(
+    ReinterpretMapScope scope, sparse_tensor::LoopOrderingStrategy strategy) {
+  SparseReinterpretMapOptions options;
+  options.scope = scope;
+  options.loopOrderingStrategy = strategy;
   return std::make_unique<SparseReinterpretMap>(options);
 }
 

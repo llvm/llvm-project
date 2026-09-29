@@ -1,13 +1,14 @@
 # AFL doesn't work on Windows. No reason to test the driver.
 UNSUPPORTED: target={{.*(freebsd|windows).*}}
-XFAIL: ios
+XFAIL: darwin-remote
 RUN: %no_fuzzer_cpp_compiler %S/AFLDriverTest.cpp %libfuzzer_src/afl/afl_driver.cpp -o %t-AFLDriverTest
 
 ; Test that not specifying a stderr file isn't broken.
 RUN: env -u AFL_DRIVER_STDERR_DUPLICATE_FILENAME %run %t-AFLDriverTest
 
 ; Test that specifying an invalid file causes a crash.
-RUN: env ASAN_OPTIONS= AFL_DRIVER_STDERR_DUPLICATE_FILENAME="%T" not --crash %run %t-AFLDriverTest
+RUN: mkdir -p %t.dir
+RUN: env ASAN_OPTIONS= AFL_DRIVER_STDERR_DUPLICATE_FILENAME="%t.dir" not --crash %run %t-AFLDriverTest
 
 ; Test that a file is created when specified as the duplicate stderr.
 RUN: env AFL_DRIVER_STDERR_DUPLICATE_FILENAME=%t %run %t-AFLDriverTest

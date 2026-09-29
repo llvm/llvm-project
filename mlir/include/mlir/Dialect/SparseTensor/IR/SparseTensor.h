@@ -122,7 +122,7 @@ public:
     unsigned m = llvm::countr_zero(storage);
     return m == 64 ? -1 : m;
   }
-  unsigned max() const { return 64 - llvm::countl_zero(storage); }
+  unsigned max() const { return llvm::bit_width(storage); }
   unsigned count() const { return llvm::popcount(storage); }
   bool empty() const { return storage == 0; }
 };
@@ -158,16 +158,14 @@ namespace sparse_tensor {
 /// Convenience method to abbreviate casting `getType()`.
 template <typename T>
 inline RankedTensorType getRankedTensorType(T &&t) {
-  assert(static_cast<bool>(std::forward<T>(t)) &&
-         "getRankedTensorType got null argument");
+  assert(static_cast<bool>(t) && "getRankedTensorType got null argument");
   return dyn_cast<RankedTensorType>(std::forward<T>(t).getType());
 }
 
 /// Convenience method to abbreviate casting `getType()`.
 template <typename T>
 inline MemRefType getMemRefType(T &&t) {
-  assert(static_cast<bool>(std::forward<T>(t)) &&
-         "getMemRefType got null argument");
+  assert(static_cast<bool>(t) && "getMemRefType got null argument");
   return cast<MemRefType>(std::forward<T>(t).getType());
 }
 

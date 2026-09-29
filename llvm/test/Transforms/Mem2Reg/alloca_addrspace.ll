@@ -10,9 +10,6 @@ define amdgpu_kernel void @addressspace_alloca() {
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca i8, align 8, addrspace(5)
-  %cast = addrspacecast ptr addrspace(5) %alloca to ptr
-  call void @llvm.lifetime.start.p0(i64 2, ptr %cast)
+  call void @llvm.lifetime.start(ptr addrspace(5) %alloca)
   ret void
 }
-
-declare void @llvm.lifetime.start.p0(i64 %size, ptr nocapture %ptr)

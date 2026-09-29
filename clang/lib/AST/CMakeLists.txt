@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   BinaryFormat
   Core
   FrontendOpenMP
+  FrontendHLSL
   Support
   TargetParser
   )
@@ -15,7 +16,7 @@ clang_tablegen(Opcodes.inc
   TARGET Opcodes)
 
 clang_tablegen(AttrDocTable.inc -gen-clang-attr-doc-table
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../include/
+  EXTRA_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/../../include/
   SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/../../include/clang/Basic/Attr.td
   TARGET ClangAttrDocTable)
 
@@ -50,6 +51,7 @@ add_clang_library(clangAST
   DeclFriend.cpp
   DeclGroup.cpp
   DeclObjC.cpp
+  DeclOpenACC.cpp
   DeclOpenMP.cpp
   DeclPrinter.cpp
   DeclTemplate.cpp
@@ -64,6 +66,8 @@ add_clang_library(clangAST
   ExternalASTMerger.cpp
   ExternalASTSource.cpp
   FormatString.cpp
+  GlobalDecl.cpp
+  InferAlloc.cpp
   InheritViz.cpp
   ByteCode/BitcastBuffer.cpp
   ByteCode/ByteCodeEmitter.cpp
@@ -72,14 +76,14 @@ add_clang_library(clangAST
   ByteCode/Descriptor.cpp
   ByteCode/Disasm.cpp
   ByteCode/EvalEmitter.cpp
-  ByteCode/Frame.cpp
   ByteCode/Function.cpp
-  ByteCode/FunctionPointer.cpp
   ByteCode/InterpBuiltin.cpp
   ByteCode/InterpBuiltinBitCast.cpp
+  ByteCode/InterpBuiltinObjectSize.cpp
   ByteCode/Floating.cpp
   ByteCode/EvaluationResult.cpp
   ByteCode/DynamicAllocator.cpp
+  ByteCode/InitMap.cpp
   ByteCode/Interp.cpp
   ByteCode/InterpBlock.cpp
   ByteCode/InterpFrame.cpp
@@ -93,6 +97,7 @@ add_clang_library(clangAST
   ByteCode/State.cpp
   ByteCode/MemberPointer.cpp
   ByteCode/InterpShared.cpp
+  HLSLResource.cpp
   ItaniumCXXABI.cpp
   ItaniumMangle.cpp
   JSONNodeDumper.cpp
@@ -133,6 +138,9 @@ add_clang_library(clangAST
   VTableBuilder.cpp
   VTTBuilder.cpp
 
+  PRECOMPILE_HEADERS
+  [["clang/AST/pch.h"]]
+
   LINK_LIBS
   clangBasic
   clangLex
@@ -144,5 +152,5 @@ add_clang_library(clangAST
   ClangDriverOptions
   intrinsics_gen
   # These generated headers are included transitively.
-  AArch64TargetParserTableGen
+  target_parser_gen
   )

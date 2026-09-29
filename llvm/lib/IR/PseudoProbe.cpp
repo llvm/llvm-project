@@ -19,9 +19,7 @@
 
 using namespace llvm;
 
-namespace llvm {
-
-std::optional<PseudoProbe>
+static std::optional<PseudoProbe>
 extractProbeFromDiscriminator(const DILocation *DIL) {
   if (DIL) {
     auto Discriminator = DIL->getDiscriminator();
@@ -43,7 +41,7 @@ extractProbeFromDiscriminator(const DILocation *DIL) {
   return std::nullopt;
 }
 
-std::optional<PseudoProbe>
+static std::optional<PseudoProbe>
 extractProbeFromDiscriminator(const Instruction &Inst) {
   assert(isa<CallBase>(&Inst) && !isa<IntrinsicInst>(&Inst) &&
          "Only call instructions should have pseudo probe encodes as their "
@@ -53,7 +51,7 @@ extractProbeFromDiscriminator(const Instruction &Inst) {
   return std::nullopt;
 }
 
-std::optional<PseudoProbe> extractProbe(const Instruction &Inst) {
+std::optional<PseudoProbe> llvm::extractProbe(const Instruction &Inst) {
   if (const auto *II = dyn_cast<PseudoProbeInst>(&Inst)) {
     PseudoProbe Probe;
     Probe.Id = II->getIndex()->getZExtValue();
@@ -73,7 +71,7 @@ std::optional<PseudoProbe> extractProbe(const Instruction &Inst) {
   return std::nullopt;
 }
 
-void setProbeDistributionFactor(Instruction &Inst, float Factor) {
+void llvm::setProbeDistributionFactor(Instruction &Inst, float Factor) {
   assert(Factor >= 0 && Factor <= 1 &&
          "Distribution factor must be in [0, 1.0]");
   if (auto *II = dyn_cast<PseudoProbeInst>(&Inst)) {
@@ -111,5 +109,3 @@ void setProbeDistributionFactor(Instruction &Inst, float Factor) {
     }
   }
 }
-
-} // namespace llvm

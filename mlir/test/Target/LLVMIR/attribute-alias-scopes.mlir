@@ -13,13 +13,13 @@ llvm.func @alias_scopes(%arg1 : !llvm.ptr) {
   // CHECK:  call void @llvm.experimental.noalias.scope.decl(metadata ![[SCOPES1:[0-9]+]])
   llvm.intr.experimental.noalias.scope.decl #alias_scope1
   // CHECK:  store {{.*}}, !alias.scope ![[SCOPES1]], !noalias ![[SCOPES23:[0-9]+]]
-  llvm.store %0, %arg1 {alias_scopes = [#alias_scope1], noalias_scopes = [#alias_scope2, #alias_scope3]} : i32, !llvm.ptr
+  llvm.store %0, %arg1 <alias_scopes = [#alias_scope1], noalias_scopes = [#alias_scope2, #alias_scope3]> : i32, !llvm.ptr
   // CHECK:  load {{.*}}, !alias.scope ![[SCOPES2:[0-9]+]], !noalias ![[SCOPES13:[0-9]+]]
-  %1 = llvm.load %arg1 {alias_scopes = [#alias_scope2], noalias_scopes = [#alias_scope1, #alias_scope3]} : !llvm.ptr -> i32
+  %1 = llvm.load %arg1 <alias_scopes = [#alias_scope2], noalias_scopes = [#alias_scope1, #alias_scope3]> : !llvm.ptr -> i32
   // CHECK:  atomicrmw {{.*}}, !alias.scope ![[SCOPES3:[0-9]+]], !noalias ![[SCOPES12:[0-9]+]]
-  %2 = llvm.atomicrmw add %arg1, %0 monotonic {alias_scopes = [#alias_scope3], noalias_scopes = [#alias_scope1, #alias_scope2]} : !llvm.ptr, i32
+  %2 = llvm.atomicrmw add %arg1, %0 monotonic <alias_scopes = [#alias_scope3], noalias_scopes = [#alias_scope1, #alias_scope2]> : !llvm.ptr, i32
   // CHECK:  cmpxchg {{.*}}, !alias.scope ![[SCOPES3]]
-  %3 = llvm.cmpxchg %arg1, %1, %2 acq_rel monotonic {alias_scopes = [#alias_scope3]} : !llvm.ptr, i32
+  %3 = llvm.cmpxchg %arg1, %1, %2 acq_rel monotonic <alias_scopes = [#alias_scope3]> : !llvm.ptr, i32
   %5 = llvm.mlir.constant(42 : i8) : i8
   // CHECK:  llvm.memcpy{{.*}}, !alias.scope ![[SCOPES3]]
   "llvm.intr.memcpy"(%arg1, %arg1, %0) <{isVolatile = false}> {alias_scopes = [#alias_scope3]} : (!llvm.ptr, !llvm.ptr, i32) -> ()
@@ -34,8 +34,8 @@ llvm.func @alias_scopes(%arg1 : !llvm.ptr) {
 
 // Check the intrinsic declarations.
 // CHECK-DAG: declare void @llvm.experimental.noalias.scope.decl(metadata)
-// CHECK-DAG: declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
-// CHECK-DAG: declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
+// CHECK-DAG: declare void @llvm.memcpy.p0.p0.i32(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i32, i1 immarg)
+// CHECK-DAG: declare void @llvm.memset.p0.i32(ptr writeonly captures(none), i8, i32, i1 immarg)
 
 // Check the translated metadata.
 // CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]], !"The domain"}
@@ -120,13 +120,13 @@ llvm.func @alias_scopes(%arg1 : !llvm.ptr) {
   // CHECK:  call void @llvm.experimental.noalias.scope.decl(metadata ![[SCOPES1:[0-9]+]])
   llvm.intr.experimental.noalias.scope.decl #alias_scope1
   // CHECK:  store {{.*}}, !alias.scope ![[SCOPES1]], !noalias ![[SCOPES23:[0-9]+]]
-  llvm.store %0, %arg1 {alias_scopes = [#alias_scope1], noalias_scopes = [#alias_scope2, #alias_scope3]} : i32, !llvm.ptr
+  llvm.store %0, %arg1 <alias_scopes = [#alias_scope1], noalias_scopes = [#alias_scope2, #alias_scope3]> : i32, !llvm.ptr
   // CHECK:  load {{.*}}, !alias.scope ![[SCOPES2:[0-9]+]], !noalias ![[SCOPES13:[0-9]+]]
-  %1 = llvm.load %arg1 {alias_scopes = [#alias_scope2], noalias_scopes = [#alias_scope1, #alias_scope3]} : !llvm.ptr -> i32
+  %1 = llvm.load %arg1 <alias_scopes = [#alias_scope2], noalias_scopes = [#alias_scope1, #alias_scope3]> : !llvm.ptr -> i32
   // CHECK:  atomicrmw {{.*}}, !alias.scope ![[SCOPES3:[0-9]+]], !noalias ![[SCOPES12:[0-9]+]]
-  %2 = llvm.atomicrmw add %arg1, %0 monotonic {alias_scopes = [#alias_scope3], noalias_scopes = [#alias_scope1, #alias_scope2]} : !llvm.ptr, i32
+  %2 = llvm.atomicrmw add %arg1, %0 monotonic <alias_scopes = [#alias_scope3], noalias_scopes = [#alias_scope1, #alias_scope2]> : !llvm.ptr, i32
   // CHECK:  cmpxchg {{.*}}, !alias.scope ![[SCOPES3]]
-  %3 = llvm.cmpxchg %arg1, %1, %2 acq_rel monotonic {alias_scopes = [#alias_scope3]} : !llvm.ptr, i32
+  %3 = llvm.cmpxchg %arg1, %1, %2 acq_rel monotonic <alias_scopes = [#alias_scope3]> : !llvm.ptr, i32
   %5 = llvm.mlir.constant(42 : i8) : i8
   // CHECK:  llvm.memcpy{{.*}}, !alias.scope ![[SCOPES3]]
   "llvm.intr.memcpy"(%arg1, %arg1, %0) <{isVolatile = false}> {alias_scopes = [#alias_scope3]} : (!llvm.ptr, !llvm.ptr, i32) -> ()
@@ -141,8 +141,8 @@ llvm.func @alias_scopes(%arg1 : !llvm.ptr) {
 
 // Check the intrinsic declarations.
 // CHECK-DAG: declare void @llvm.experimental.noalias.scope.decl(metadata)
-// CHECK-DAG: declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
-// CHECK-DAG: declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
+// CHECK-DAG: declare void @llvm.memcpy.p0.p0.i32(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i32, i1 immarg)
+// CHECK-DAG: declare void @llvm.memset.p0.i32(ptr writeonly captures(none), i8, i32, i1 immarg)
 
 // Check the translated metadata.
 // CHECK-DAG: ![[DOMAIN:[0-9]+]] = !{!"domain1", !"The domain"}

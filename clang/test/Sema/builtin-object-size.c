@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-apple-darwin9 -verify %s
 // RUN: %clang_cc1 -DDYNAMIC -fsyntax-only -triple x86_64-apple-darwin9 -verify %s
 
+// RUN: %clang_cc1 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64-apple-darwin9 -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -DDYNAMIC -fsyntax-only -triple x86_64-apple-darwin9 -verify %s -fexperimental-new-constant-interpreter
+
 #ifndef DYNAMIC
 #define OBJECT_SIZE_BUILTIN __builtin_object_size
 #else
@@ -46,7 +50,7 @@ void f5(void)
 {
   char buf[10];
   memset((void *)0x100000000ULL, 0, 0x1000);
-  memcpy((char *)NULL + 0x10000, buf, 0x10);
+  memcpy((char *)NULL + 0x10000, buf, 0x10);  // expected-warning {{'memcpy' reading 16 bytes from a region of size 10}}
   memcpy1((char *)NULL + 0x10000, buf, 0x10); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
 

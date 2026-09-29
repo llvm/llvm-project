@@ -125,13 +125,13 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -284,7 +284,7 @@ private:
   const TargetRegisterInfo *TRI;
   const TargetInstrInfo *TII;
   const TargetFrameLowering *TFI;
-  TargetPassConfig *TPC;
+  bool ShouldEmitDebugEntryValues;
   BitVector CalleeSavedRegs;
   LexicalScopes LS;
   VarLocSet::Allocator Alloc;
@@ -986,7 +986,7 @@ private:
   /// VarLoc correspond to entries in the universal location bucket, which every
   /// VarLoc has exactly 1 entry for. Insert collected IDs into \p Collected.
   static void collectIDsForRegs(VarLocsInRange &Collected,
-                                const DefinedRegsSet &Regs,
+                                ArrayRef<Register> Regs,
                                 const VarLocSet &CollectFrom,
                                 const VarLocMap &VarLocIDs);
 
@@ -1088,14 +1088,14 @@ private:
   void flushPendingLocs(VarLocInMBB &PendingInLocs, VarLocMap &VarLocIDs);
 
   bool ExtendRanges(MachineFunction &MF, MachineDominatorTree *DomTree,
-                    TargetPassConfig *TPC, unsigned InputBBLimit,
+                    bool ShouldEmitDebugEntryValues, unsigned InputBBLimit,
                     unsigned InputDbgValLimit) override;
 
 public:
   /// Default construct and initialize the pass.
   VarLocBasedLDV();
 
-  ~VarLocBasedLDV();
+  ~VarLocBasedLDV() override;
 
   /// Print to ostream with a message.
   void printVarLocInMBB(const MachineFunction &MF, const VarLocInMBB &V,
@@ -1171,9 +1171,8 @@ void VarLocBasedLDV::OpenRangesSet::erase(const VarLocsInRange &KillSet,
 void VarLocBasedLDV::OpenRangesSet::insertFromLocSet(const VarLocSet &ToLoad,
                                                      const VarLocMap &Map) {
   VarLocsInRange UniqueVarLocIDs;
-  DefinedRegsSet Regs;
-  Regs.insert(LocIndex::kUniversalLocation);
-  collectIDsForRegs(UniqueVarLocIDs, Regs, ToLoad, Map);
+  Register UniversalLoc = LocIndex::kUniversalLocation;
+  collectIDsForRegs(UniqueVarLocIDs, UniversalLoc, ToLoad, Map);
   for (uint64_t ID : UniqueVarLocIDs) {
     LocIndex Idx = LocIndex::fromRawInteger(ID);
     const VarLoc &VarL = Map[Idx];
@@ -1202,13 +1201,14 @@ VarLocBasedLDV::OpenRangesSet::getEntryValueBackup(DebugVariable Var) {
 }
 
 void VarLocBasedLDV::collectIDsForRegs(VarLocsInRange &Collected,
-                                       const DefinedRegsSet &Regs,
+                                       ArrayRef<Register> Regs,
                                        const VarLocSet &CollectFrom,
                                        const VarLocMap &VarLocIDs) {
   assert(!Regs.empty() && "Nothing to collect");
   SmallVector<Register, 32> SortedRegs;
   append_range(SortedRegs, Regs);
-  array_pod_sort(SortedRegs.begin(), SortedRegs.end());
+  llvm::sort(SortedRegs, [](Register LHS, Register RHS) { return LHS < RHS; });
+  SortedRegs.erase(llvm::unique(SortedRegs), SortedRegs.end());
   auto It = CollectFrom.find(LocIndex::rawIndexForReg(SortedRegs.front()));
   auto End = CollectFrom.end();
   for (Register Reg : SortedRegs) {
@@ -1359,10 +1359,9 @@ void VarLocBasedLDV::removeEntryValue(const MachineInstr &MI,
     return;
 
   // Try to get non-debug instruction responsible for the DBG_VALUE.
-  const MachineInstr *TransferInst = nullptr;
   Register Reg = MI.getDebugOperand(0).getReg();
-  if (Reg.isValid() && RegSetInstrs.contains(Reg))
-    TransferInst = RegSetInstrs.find(Reg)->second;
+  const MachineInstr *TransferInst =
+      Reg.isValid() ? RegSetInstrs.lookup(Reg) : nullptr;
 
   // Case of the parameter's DBG_VALUE at the start of entry MBB.
   if (!TransferInst && !LastNonDbgMI && MI.getParent()->isEntryBlock())
@@ -1597,7 +1596,7 @@ void VarLocBasedLDV::transferRegisterDef(MachineInstr &MI,
   Register SP = TLI->getStackPointerRegisterToSaveRestore();
 
   // Find the regs killed by MI, and find regmasks of preserved regs.
-  DefinedRegsSet DeadRegs;
+  SmallVector<Register, 32> DeadRegs;
   SmallVector<const uint32_t *, 4> RegMasks;
   for (const MachineOperand &MO : MI.operands()) {
     // Determine whether the operand is a register def.
@@ -1605,8 +1604,7 @@ void VarLocBasedLDV::transferRegisterDef(MachineInstr &MI,
         !(MI.isCall() && MO.getReg() == SP)) {
       // Remove ranges of all aliased registers.
       for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
-        // FIXME: Can we break out of this loop early if no insertion occurs?
-        DeadRegs.insert(*RAI);
+        DeadRegs.push_back((*RAI).id());
       RegSetInstrs.erase(MO.getReg());
       RegSetInstrs.insert({MO.getReg(), &MI});
     } else if (MO.isRegMask()) {
@@ -1634,7 +1632,7 @@ void VarLocBasedLDV::transferRegisterDef(MachineInstr &MI,
             return MachineOperand::clobbersPhysReg(RegMask, Reg);
           });
       if (AnyRegMaskKillsReg)
-        DeadRegs.insert(Reg);
+        DeadRegs.push_back(Reg);
       if (AnyRegMaskKillsReg) {
         RegSetInstrs.erase(Reg);
         RegSetInstrs.insert({Reg, &MI});
@@ -1649,11 +1647,8 @@ void VarLocBasedLDV::transferRegisterDef(MachineInstr &MI,
   collectIDsForRegs(KillSet, DeadRegs, OpenRanges.getVarLocs(), VarLocIDs);
   OpenRanges.erase(KillSet, VarLocIDs, LocIndex::kUniversalLocation);
 
-  if (TPC) {
-    auto &TM = TPC->getTM<TargetMachine>();
-    if (TM.Options.ShouldEmitDebugEntryValues())
-      emitEntryValues(MI, OpenRanges, VarLocIDs, EntryValTransfers, KillSet);
-  }
+  if (ShouldEmitDebugEntryValues)
+    emitEntryValues(MI, OpenRanges, VarLocIDs, EntryValTransfers, KillSet);
 }
 
 void VarLocBasedLDV::transferWasmDef(MachineInstr &MI,
@@ -1866,7 +1861,7 @@ void VarLocBasedLDV::transferRegisterCopy(MachineInstr &MI,
 
   auto isCalleeSavedReg = [&](Register Reg) {
     for (MCRegAliasIterator RAI(Reg, TRI, true); RAI.isValid(); ++RAI)
-      if (CalleeSavedRegs.test(*RAI))
+      if (CalleeSavedRegs.test((*RAI).id()))
         return true;
     return false;
   };
@@ -2190,11 +2185,8 @@ void VarLocBasedLDV::recordEntryValue(const MachineInstr &MI,
                                        const DefinedRegsSet &DefinedRegs,
                                        OpenRangesSet &OpenRanges,
                                        VarLocMap &VarLocIDs) {
-  if (TPC) {
-    auto &TM = TPC->getTM<TargetMachine>();
-    if (!TM.Options.ShouldEmitDebugEntryValues())
-      return;
-  }
+  if (!ShouldEmitDebugEntryValues)
+    return;
 
   DebugVariable V(MI.getDebugVariable(), MI.getDebugExpression(),
                   MI.getDebugLoc()->getInlinedAt());
@@ -2218,7 +2210,8 @@ void VarLocBasedLDV::recordEntryValue(const MachineInstr &MI,
 /// extend ranges across basic blocks.
 bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
                                   MachineDominatorTree *DomTree,
-                                  TargetPassConfig *TPC, unsigned InputBBLimit,
+                                  bool ShouldEmitDebugEntryValues,
+                                  unsigned InputBBLimit,
                                   unsigned InputDbgValLimit) {
   (void)DomTree;
   LLVM_DEBUG(dbgs() << "\nDebug Range Extension: " << MF.getName() << "\n");
@@ -2236,8 +2229,9 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
   TII = MF.getSubtarget().getInstrInfo();
   TFI = MF.getSubtarget().getFrameLowering();
   TFI->getCalleeSaves(MF, CalleeSavedRegs);
-  this->TPC = TPC;
-  LS.initialize(MF);
+  this->ShouldEmitDebugEntryValues = ShouldEmitDebugEntryValues;
+
+  LS.scanFunction(MF);
 
   bool Changed = false;
   bool OLChanged = false;
@@ -2353,9 +2347,35 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
         OpenRanges.insertFromLocSet(getVarLocsInMBB(MBB, InLocs), VarLocIDs);
         LastNonDbgMI = nullptr;
         RegSetInstrs.clear();
-        for (auto &MI : *MBB)
-          process(MI, OpenRanges, VarLocIDs, Transfers, EntryValTransfers,
-                  RegSetInstrs);
+        // Iterate through instructions within each packet to handle VLIW
+        // bundles correctly; this keeps DBG_VALUE placement valid on
+        // packet-based targets.
+        for (auto I = MBB->instr_begin(), E = MBB->instr_end(); I != E;) {
+          auto BStart = llvm::getBundleStart(I);
+          auto BEnd = llvm::getBundleEnd(I);
+          bool PacketHasTerminator = false;
+          for (auto BI = BStart; BI != BEnd; ++BI) {
+            if (BI->isTerminator()) {
+              PacketHasTerminator = true;
+              break;
+            }
+          }
+          if (PacketHasTerminator) {
+            // FIXME: This drops debug info for spills in terminator bundles;
+            // DBG_VALUE instructions can't be inserted after the bundle.
+            // It may be possible to insert the DBG_VALUE elsewhere.
+            I = BEnd;
+            continue;
+          }
+          auto FirstOp = (BStart->isBundle()) ? std::next(BStart) : BStart;
+          for (auto BI = FirstOp; BI != BEnd; ++BI) {
+            if (BI->isTerminator())
+              continue;
+            process(*BI, OpenRanges, VarLocIDs, Transfers, EntryValTransfers,
+                    RegSetInstrs);
+          }
+          I = BEnd;
+        }
         OLChanged |= transferTerminator(MBB, OpenRanges, OutLocs, VarLocIDs);
 
         LLVM_DEBUG(printVarLocInMBB(MF, OutLocs, VarLocIDs,

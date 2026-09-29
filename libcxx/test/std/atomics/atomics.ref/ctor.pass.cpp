@@ -11,6 +11,7 @@
 // <atomic>
 
 // explicit atomic_ref(T&);
+// explicit atomic_ref(T&&) = delete;
 
 #include <atomic>
 #include <type_traits>
@@ -25,7 +26,11 @@ struct TestCtor {
     static_assert(!std::is_convertible_v<T, std::atomic_ref<T>>);
     static_assert(std::is_constructible_v<std::atomic_ref<T>, T&>);
 
-    T x(T(0));
+    static_assert(!std::is_constructible_v<std::atomic_ref<T>, T&&>);
+    static_assert(!std::is_constructible_v<std::atomic_ref<const T>, T&&>);
+    static_assert(!std::is_constructible_v<std::atomic_ref<const T>, const T&&>);
+
+    alignas(std::atomic_ref<T>::required_alignment) T x(T(0));
     std::atomic_ref<T> a(x);
     (void)a;
   }

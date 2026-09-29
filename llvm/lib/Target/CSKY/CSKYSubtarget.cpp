@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSKYSubtarget.h"
+#include "CSKYSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 
 using namespace llvm;
@@ -88,16 +89,17 @@ CSKYSubtarget &CSKYSubtarget::initializeSubtargetDependencies(
 }
 
 CSKYSubtarget::CSKYSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                             StringRef FS, const TargetMachine &TM)
+                             StringRef FS, FloatABI::ABIType FloatABI,
+                             const TargetMachine &TM)
     : CSKYGenSubtargetInfo(TT, CPU, TuneCPU, FS),
       FrameLowering(initializeSubtargetDependencies(TT, CPU, TuneCPU, FS)),
-      InstrInfo(*this), RegInfo(), TLInfo(TM, *this) {}
+      InstrInfo(*this, RegInfo), TLInfo(TM, *this),
+      UseHardFloatABI(FloatABI == FloatABI::Hard) {
+  TSInfo = std::make_unique<CSKYSelectionDAGInfo>();
+}
 
-bool CSKYSubtarget::useHardFloatABI() const {
-  auto FloatABI = getTargetLowering()->getTargetMachine().Options.FloatABIType;
+CSKYSubtarget::~CSKYSubtarget() = default;
 
-  if (FloatABI == FloatABI::Default)
-    return UseHardFloatABI;
-  else
-    return FloatABI == FloatABI::Hard;
+const SelectionDAGTargetInfo *CSKYSubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
 }

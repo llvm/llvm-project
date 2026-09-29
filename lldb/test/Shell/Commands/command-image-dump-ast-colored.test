@@ -1,0 +1,34 @@
+# Test AST dumping with and without color.
+
+# RUN: split-file %s %t
+# RUN: %clangxx_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.cpp
+
+int main() {}
+
+#--- commands.input
+
+settings set use-color true
+
+target modules dump ast
+
+# CHECK:      target modules dump ast
+# CHECK:      TranslationUnitDecl
+# CHECK-SAME: 
+
+target dump typesystem
+
+# CHECK:      target dump typesystem
+# CHECK:      TranslationUnitDecl
+# CHECK-SAME: 
+
+settings set use-color false
+
+target modules dump ast
+target dump typesystem
+
+# CHECK:     settings set use-color false
+# CHECK-NOT: 

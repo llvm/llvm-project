@@ -1,15 +1,11 @@
 ## Test the double jump removal peephole.
 
-## This test has commands that rely on shell capabilities that won't execute
-## correctly on Windows e.g. subshell execution
-REQUIRES: shell
-
 RUN: %clangxx %cxxflags %p/Inputs/double_jump.cpp -o %t.exe
-RUN: (llvm-bolt %t.exe --peepholes=double-jumps \
-RUN:   --eliminate-unreachable -o %t 2>&1 \
-RUN:   && llvm-objdump -d %t --print-imm-hex --no-show-raw-insn) | FileCheck %s
+RUN: llvm-bolt %t.exe --peepholes=double-jumps \
+RUN:   --eliminate-unreachable -o %t | FileCheck --check-prefix CHECK-BOLT %s
+RUN: llvm-objdump -d %t --print-imm-hex --no-show-raw-insn | FileCheck %s
 
-CHECK: BOLT-INFO: Peephole: 1 double jumps patched.
+CHECK-BOLT: BOLT-INFO: Peephole: 1 double jumps patched.
 
 CHECK: <_Z3foom>:
 CHECK-NEXT: pushq %rbp

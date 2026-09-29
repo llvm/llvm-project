@@ -15,10 +15,10 @@ namespace mlir::amdgpu {
 
 /// Represents the amdgpu gfx chipset version, e.g., gfx90a, gfx942, gfx1103.
 /// Note that the leading digits form a decimal number, while the last two
-/// digits for a hexadecimal number. For example:
+/// digits form a hexadecimal number. For example:
 ///   gfx942  --> major = 9, minor = 0x4, stepping = 0x2
 ///   gfx90a  --> major = 9, minor = 0x0, stepping = 0xa
-///   gfx1103 --> major = 10, minor = 0x0, stepping = 0x3
+///   gfx1103 --> major = 11, minor = 0x0, stepping = 0x3
 struct Chipset {
   unsigned majorVersion = 0;    // The major version (decimal).
   unsigned minorVersion = 0;    // The minor version (hexadecimal).
@@ -48,6 +48,11 @@ struct Chipset {
   DEFINE_COMP_OPERATOR(>=)
 #undef DEFINE_COMP_OPERATOR
 };
+
+inline bool hasOcpFp8(const Chipset &chipset) {
+  return (chipset.majorVersion == 9 && chipset.minorVersion >= 5) ||
+         chipset.majorVersion >= 12;
+}
 
 } // namespace mlir::amdgpu
 

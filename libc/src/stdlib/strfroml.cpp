@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/strfroml.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/printf_core/core_structs.h"
+#include "src/__support/printf_core/error_mapper.h"
 #include "src/stdlib/str_from_util.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -17,29 +20,27 @@ LLVM_LIBC_FUNCTION(int, strfroml,
                     long double fp)) {
   LIBC_ASSERT(s != nullptr);
 
-  printf_core::FormatSection section =
-      internal::parse_format_string(format, fp);
-
-  // To ensure that the conversion function actually uses long double,
-  // the length modifier has to be set to LenghtModifier::L
-  section.length_modifier = printf_core::LengthModifier::L;
-
-  printf_core::WriteBuffer wb(s, (n > 0 ? n - 1 : 0));
-  printf_core::Writer writer(&wb);
-
-  int result = 0;
-  if (section.has_conv)
-    result = internal::strfromfloat_convert<long double>(&writer, section);
-  else
-    result = writer.write(section.raw_string);
+  printf_core::Writer writer =
+      printf_core::make_drop_overflow_writer(s, (n > 0 ? n - 1 : 0));
+  int result = internal::strfromfloat_convert(&writer, format, fp);
+  if (result < 0)
+    return result;
 
   if (result < 0)
     return result;
 
-  if (n > 0)
+  if (n > 0) {
+    printf_core::WriteBuffer<char> &wb = writer.get_write_buffer();
     wb.buff[wb.buff_cur] = '\0';
+  }
 
-  return writer.get_chars_written();
+  if (writer.get_chars_written() >
+      static_cast<size_t>(cpp::numeric_limits<int>::max())) {
+    libc_errno =
+        printf_core::internal_error_to_errno(-printf_core::OVERFLOW_ERROR);
+    return -1;
+  }
+  return static_cast<int>(writer.get_chars_written());
 }
 
 } // namespace LIBC_NAMESPACE_DECL

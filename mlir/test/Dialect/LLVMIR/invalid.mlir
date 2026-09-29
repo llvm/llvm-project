@@ -9,8 +9,8 @@ llvm.func @ctor() {
   llvm.return
 }
 
-// expected-error@+1{{mismatch between the number of ctors and the number of priorities}}
-llvm.mlir.global_ctors {ctors = [@ctor], priorities = []}
+// expected-error@+1{{ctors, priorities, and data must have the same number of elements}}
+llvm.mlir.global_ctors ctors = [@ctor], priorities = [], data = [#llvm.zero]
 
 // -----
 
@@ -18,20 +18,29 @@ llvm.func @dtor() {
   llvm.return
 }
 
-// expected-error@+1{{mismatch between the number of dtors and the number of priorities}}
-llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32, 32767 : i32]}
+// expected-error@+1{{dtors, priorities, and data must have the same number of elements}}
+llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32, 32767 : i32], data = [#llvm.zero]
 
 // -----
 
 // expected-error@+1{{'ctor' does not reference a valid LLVM function}}
-llvm.mlir.global_ctors {ctors = [@ctor], priorities = [0 : i32]}
+llvm.mlir.global_ctors ctors = [@ctor], priorities = [0 : i32], data = [#llvm.zero]
 
 // -----
 
 llvm.func @dtor()
 
 // expected-error@+1{{'dtor' does not have a definition}}
-llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32]}
+llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32], data = [#llvm.zero]
+
+// -----
+
+llvm.func @dtor() {
+  llvm.return
+}
+
+// expected-error@+1{{data element must be symbol or #llvm.zero}}
+llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32], data = [0 : i32]
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -40,7 +49,7 @@ llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32]}
 // -----
 
 func.func @icmp_non_string(%arg0 : i32, %arg1 : i16) {
-  // expected-error@+1 {{invalid kind of attribute specified}}
+  // expected-error@+1 {{expected string}}
   llvm.icmp 42 %arg0, %arg0 : i32
   return
 }
@@ -112,7 +121,7 @@ func.func @gep_missing_result_type(%pos : i64, %base : !llvm.ptr) {
 // -----
 
 func.func @gep_non_function_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{invalid kind of type specified}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.function, but found '!llvm.ptr'}}
   llvm.getelementptr %base[%pos] : !llvm.ptr
 }
 
@@ -120,7 +129,7 @@ func.func @gep_non_function_type(%pos : i64, %base : !llvm.ptr) {
 
 func.func @gep_too_few_dynamic(%base : !llvm.ptr) {
   // expected-error@+1 {{expected as many dynamic indices as specified in 'rawConstantIndices'}}
-  %1 = "llvm.getelementptr"(%base) {elem_type = f32, rawConstantIndices = array<i32: -2147483648>} : (!llvm.ptr) -> !llvm.ptr
+  %1 = "llvm.getelementptr"(%base) <{elem_type = f32, rawConstantIndices = array<i32: -2147483648>}> : (!llvm.ptr) -> !llvm.ptr
 }
 
 // -----
@@ -134,35 +143,35 @@ func.func @load_non_llvm_type(%foo : memref<f32>) {
 
 func.func @load_syncscope(%ptr : !llvm.ptr) {
   // expected-error@below {{expected syncscope to be null for non-atomic access}}
-  %1 = "llvm.load"(%ptr) {syncscope = "singlethread"} : (!llvm.ptr) -> (f32)
+  %1 = "llvm.load"(%ptr) <{syncscope = "singlethread"}> : (!llvm.ptr) -> (f32)
 }
 
 // -----
 
 func.func @load_unsupported_ordering(%ptr : !llvm.ptr) {
   // expected-error@below {{unsupported ordering 'release'}}
-  %1 = llvm.load %ptr atomic release {alignment = 4 : i64} : !llvm.ptr -> f32
+  %1 = llvm.load %ptr atomic release <alignment = 4> : !llvm.ptr -> f32
 }
 
 // -----
 
 func.func @load_unsupported_type(%ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'f80' for atomic access}}
-  %1 = llvm.load %ptr atomic monotonic {alignment = 16 : i64} : !llvm.ptr -> f80
+  %1 = llvm.load %ptr atomic monotonic <alignment = 16> : !llvm.ptr -> f80
 }
 
 // -----
 
 func.func @load_unsupported_type(%ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'i1' for atomic access}}
-  %1 = llvm.load %ptr atomic monotonic {alignment = 16 : i64} : !llvm.ptr -> i1
+  %1 = llvm.load %ptr atomic monotonic <alignment = 16> : !llvm.ptr -> i1
 }
 
 // -----
 
 func.func @load_unsupported_type(%ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'i33' for atomic access}}
-  %1 = llvm.load %ptr atomic monotonic {alignment = 16 : i64} : !llvm.ptr -> i33
+  %1 = llvm.load %ptr atomic monotonic <alignment = 16> : !llvm.ptr -> i33
 }
 
 // -----
@@ -176,35 +185,35 @@ func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
 
 func.func @store_syncscope(%val : f32, %ptr : !llvm.ptr) {
   // expected-error@below {{expected syncscope to be null for non-atomic access}}
-  "llvm.store"(%val, %ptr) {syncscope = "singlethread"} : (f32, !llvm.ptr) -> ()
+  "llvm.store"(%val, %ptr) <{syncscope = "singlethread"}> : (f32, !llvm.ptr) -> ()
 }
 
 // -----
 
 func.func @store_unsupported_ordering(%val : f32, %ptr : !llvm.ptr) {
   // expected-error@below {{unsupported ordering 'acquire'}}
-  llvm.store %val, %ptr atomic acquire {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %val, %ptr atomic acquire <alignment = 4> : f32, !llvm.ptr
 }
 
 // -----
 
 func.func @store_unsupported_type(%val : f80, %ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'f80' for atomic access}}
-  llvm.store %val, %ptr atomic monotonic {alignment = 16 : i64} : f80, !llvm.ptr
+  llvm.store %val, %ptr atomic monotonic <alignment = 16> : f80, !llvm.ptr
 }
 
 // -----
 
 func.func @store_unsupported_type(%val : i1, %ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'i1' for atomic access}}
-  llvm.store %val, %ptr atomic monotonic {alignment = 16 : i64} : i1, !llvm.ptr
+  llvm.store %val, %ptr atomic monotonic <alignment = 16> : i1, !llvm.ptr
 }
 
 // -----
 
 func.func @store_unsupported_type(%val : i48, %ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'i48' for atomic access}}
-  llvm.store %val, %ptr atomic monotonic {alignment = 16 : i64} : i48, !llvm.ptr
+  llvm.store %val, %ptr atomic monotonic <alignment = 16> : i48, !llvm.ptr
 }
 
 // -----
@@ -218,9 +227,23 @@ func.func @store_unaligned_atomic(%val : f32, %ptr : !llvm.ptr) {
 
 func.func @invalid_call() {
   // expected-error@+1 {{'llvm.call' op must have either a `callee` attribute or at least an operand}}
-  "llvm.call"() {op_bundle_sizes = array<i32>} : () -> ()
+  "llvm.call"() <{op_bundle_sizes = array<i32>}> : () -> ()
   llvm.return
 }
+
+// -----
+
+llvm.func @invalid_invoke() attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op must have either a `callee` attribute or at least an operand}}
+  "llvm.invoke"()[^bb1, ^bb2] {op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 0, 0, 0, 0>} : () -> ()
+^bb1:
+  llvm.return
+^bb2:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+}
+
+llvm.func @__gxx_personality_v0(...) -> i32
 
 // -----
 
@@ -235,6 +258,7 @@ func.func @call_missing_ptr_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 func.func private @standard_func_callee()
 
 func.func @call_missing_ptr_type(%arg : i8) {
+  // expected-error@+2 {{expected '('}}
   // expected-error@+1 {{expected direct call to have 1 trailing type}}
   llvm.call @standard_func_callee(%arg) : !llvm.ptr, (i8) -> (i8)
   llvm.return
@@ -251,6 +275,7 @@ func.func @call_non_pointer_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 // -----
 
 func.func @call_non_function_type(%callee : !llvm.ptr, %arg : i8) {
+  // expected-error@+2 {{expected '('}}
   // expected-error@+1 {{expected trailing function type}}
   llvm.call %callee(%arg) : !llvm.ptr, !llvm.func<i8 (i8)>
   llvm.return
@@ -286,7 +311,7 @@ func.func @call_non_llvm() {
 
 func.func @call_non_llvm_arg(%arg0 : tensor<*xi32>) {
   // expected-error@+1 {{'llvm.call' op operand #0 must be variadic of LLVM dialect-compatible type}}
-  "llvm.call"(%arg0) {operandSegmentSizes = array<i32: 1, 0>, op_bundle_sizes = array<i32>} : (tensor<*xi32>) -> ()
+  "llvm.call"(%arg0) <{operandSegmentSizes = array<i32: 1, 0>, op_bundle_sizes = array<i32>}> : (tensor<*xi32>) -> ()
   llvm.return
 }
 
@@ -303,7 +328,7 @@ func.func @call_non_llvm_res(%callee : !llvm.ptr) {
 llvm.func @callee_func(i8) -> ()
 
 func.func @callee_arg_mismatch(%arg0 : i32) {
-  // expected-error@+1 {{'llvm.call' op operand type mismatch for operand 0: 'i32' != 'i8'}}
+  // expected-error@+1 {{'llvm.call' op operand type mismatch: expected operand type 'i8', but provided 'i32' for operand number 0}}
   llvm.call @callee_func(%arg0) : (i32) -> ()
   llvm.return
 }
@@ -383,7 +408,7 @@ llvm.func @array_attribute_two_different_types() -> !llvm.struct<(f64, f64)> {
 // -----
 
 llvm.func @struct_wrong_attribute_type() -> !llvm.struct<(f64, f64)> {
-  // expected-error @+1 {{expected array attribute}}
+  // expected-error @+1 {{expected array attribute for struct type}}
   %0 = llvm.mlir.constant(1.0 : f64) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
 }
@@ -428,6 +453,167 @@ llvm.func @scalable_vec_requires_splat() -> vector<[4]xf64> {
   llvm.return %0 : vector<[4]xf64>
 }
 
+
+// -----
+
+llvm.func @int_attr_requires_int_type() -> f32 {
+  // expected-error @below{{expected integer type}}
+  %0 = llvm.mlir.constant(1 : index) : f32
+  llvm.return %0 : f32
+}
+
+// -----
+
+llvm.func @vector_int_attr_requires_int_type() -> vector<2xf32> {
+  // expected-error @below{{expected integer element type}}
+  %0 = llvm.mlir.constant(dense<[1, 2]> : vector<2xi32>) : vector<2xf32>
+  llvm.return %0 : vector<2xf32>
+}
+
+// -----
+
+llvm.func @int_attr_and_type_required_same_index() -> i64 {
+  // expected-error @below{{attribute and type have different integer types: 'index' vs. 'i64'}}
+  %0 = llvm.mlir.constant(1 : index) : i64
+  llvm.return %0 : i64
+}
+
+// -----
+
+llvm.func @int_attr_and_type_required_same_width() -> i16 {
+  // expected-error @below{{attribute and type have different integer types: 'i8' vs. 'i16'}}
+  %0 = llvm.mlir.constant(1 : i8) : i16
+  llvm.return %0 : i16
+}
+
+// -----
+
+llvm.func @int_attr_and_type_required_same_signedness() -> i32 {
+  // expected-error @below{{attribute and type have different integer types: 'ui32' vs. 'i32'}}
+  %0 = llvm.mlir.constant(1 : ui32) : i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+llvm.func @vector_int_attr_and_type_required_same_index() -> vector<2xi64> {
+  // expected-error @below{{attribute and type have different integer element types: 'index' vs. 'i64'}}
+  %0 = llvm.mlir.constant(dense<[1, 2]> : vector<2xindex>) : vector<2xi64>
+  llvm.return %0 : vector<2xi64>
+}
+
+// -----
+
+llvm.func @vector_int_attr_and_type_required_same_width() -> vector<2xi64> {
+  // expected-error @below{{attribute and type have different integer element types: 'i32' vs. 'i64'}}
+  %0 = llvm.mlir.constant(dense<[1, 2]> : vector<2xi32>) : vector<2xi64>
+  llvm.return %0 : vector<2xi64>
+}
+
+// -----
+
+llvm.func @scalable_vector_int_attr_and_type_required_same() -> vector<[2]xi64> {
+  // expected-error @below{{attribute and type have different integer element types: 'i32' vs. 'i64'}}
+  %0 = llvm.mlir.constant(dense<1> : vector<2xi32>) : vector<[2]xi64>
+  llvm.return %0 : vector<[2]xi64>
+}
+
+// -----
+
+llvm.func @array_int_attr_and_type_required_same() -> !llvm.array<2 x i64> {
+  // expected-error @below{{attribute and type have different integer element types: 'i32' vs. 'i64'}}
+  %0 = llvm.mlir.constant(dense<[1, 2]> : tensor<2xi32>) : !llvm.array<2 x i64>
+  llvm.return %0 : !llvm.array<2 x i64>
+}
+
+// -----
+
+llvm.func @float_attr_and_type_required_same() -> f16 {
+  // expected-error @below{{attribute and type have different float semantics}}
+  %cst = llvm.mlir.constant(1.0 : bf16) : f16
+  llvm.return %cst : f16
+}
+
+// -----
+
+llvm.func @vector_float_attr_and_type_required_same() -> vector<2xf16> {
+  // expected-error @below{{attribute and type have different float semantics}}
+  %cst = llvm.mlir.constant(dense<[1.0, 2.0]> : vector<2xbf16>) : vector<2xf16>
+  llvm.return %cst : vector<2xf16>
+}
+
+// -----
+
+llvm.func @incompatible_integer_type_for_float_attr() -> i32 {
+  // expected-error @below{{expected integer type of width 16}}
+  %cst = llvm.mlir.constant(1.0 : f16) : i32
+  llvm.return %cst : i32
+}
+
+// -----
+
+llvm.func @vector_incompatible_integer_type_for_float_attr() -> vector<2xi8> {
+  // expected-error @below{{expected integer type of width 16}}
+  %cst = llvm.mlir.constant(dense<[1.0, 2.0]> : vector<2xf16>) : vector<2xi8>
+  llvm.return %cst : vector<2xi8>
+}
+
+// -----
+
+llvm.func @vector_with_non_vector_type() -> f32 {
+  // expected-error @below{{expected vector or array type}}
+  %cst = llvm.mlir.constant(dense<100.0> : vector<1xf64>) : f32
+  llvm.return %cst : f32
+}
+
+// -----
+
+llvm.func @array_attr_with_invalid_type() -> i32 {
+  // expected-error @below{{expected array or struct type for array attribute}}
+  %0 = llvm.mlir.constant([1 : i32]) : i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+llvm.func @elements_attribute_incompatible_nested_array_struct1_type() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
+  // expected-error @below{{expected integer element type for integer elements attribute}}
+  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
+  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
+}
+
+// -----
+
+llvm.func @elements_attribute_incompatible_nested_array_struct3_type() -> !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>> {
+  // expected-error @below{{expected integer element type for integer elements attribute}}
+  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
+  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
+}
+
+// -----
+
+llvm.func @invalid_struct_element_type() -> !llvm.struct<(f64, array<2 x i32>)> {
+  // expected-error @below{{expected struct element types to be floating point type or integer type}}
+  %0 = llvm.mlir.constant([1.0 : f64, dense<[1, 2]> : tensor<2xi32>]) : !llvm.struct<(f64, array<2 x i32>)>
+  llvm.return %0 : !llvm.struct<(f64, array<2 x i32>)>
+}
+
+// -----
+
+llvm.func @wrong_struct_element_attr_type() -> !llvm.struct<(f64, f64)> {
+  // expected-error @below{{expected element of array attribute to be floating point or integer}}
+  %0 = llvm.mlir.constant([dense<[1, 2]> : tensor<2xi32>, 2.0 : f64]) : !llvm.struct<(f64, f64)>
+  llvm.return %0 : !llvm.struct<(f64, f64)>
+}
+
+// -----
+
+llvm.func @struct_wrong_attribute_element_type() -> !llvm.struct<(f64, f64)> {
+  // expected-error @below{{struct element at index 0 is of wrong type}}
+  %0 = llvm.mlir.constant([1.0 : f32, 1.0 : f32]) : !llvm.struct<(f64, f64)>
+  llvm.return %0 : !llvm.struct<(f64, f64)>
+}
+
 // -----
 
 func.func @insertvalue_non_llvm_type(%a : i32, %b : i32) {
@@ -460,7 +646,7 @@ func.func @insertvalue_wrong_nesting() {
 
 func.func @insertvalue_invalid_type(%a : !llvm.array<1 x i32>) -> !llvm.array<1 x i32> {
   // expected-error@+1 {{'llvm.insertvalue' op Type mismatch: cannot insert '!llvm.array<1 x i32>' into '!llvm.array<1 x i32>'}}
-  %b = "llvm.insertvalue"(%a, %a) {position = array<i64: 0>} : (!llvm.array<1 x i32>, !llvm.array<1 x i32>) -> !llvm.array<1 x i32>
+  %b = "llvm.insertvalue"(%a, %a) <{position = array<i64: 0>}> : (!llvm.array<1 x i32>, !llvm.array<1 x i32>) -> !llvm.array<1 x i32>
   return %b : !llvm.array<1 x i32>
 }
 
@@ -468,11 +654,10 @@ func.func @insertvalue_invalid_type(%a : !llvm.array<1 x i32>) -> !llvm.array<1 
 
 func.func @extractvalue_invalid_type(%a : !llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>> {
   // expected-error@+1 {{'llvm.extractvalue' op Type mismatch: extracting from '!llvm.array<4 x vector<8xf32>>' should produce 'vector<8xf32>' but this op returns '!llvm.array<4 x vector<8xf32>>'}}
-  %b = "llvm.extractvalue"(%a) {position = array<i64: 1>}
+  %b = "llvm.extractvalue"(%a) <{position = array<i64: 1>}>
             : (!llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>>
   return %b : !llvm.array<4 x vector<8xf32>>
 }
-
 
 // -----
 
@@ -480,6 +665,7 @@ func.func @extractvalue_non_llvm_type(%a : i32, %b : tensor<*xi32>) {
   // expected-error@+2 {{expected LLVM IR Dialect type}}
   llvm.extractvalue %b[0] : tensor<*xi32>
 }
+
 // -----
 
 func.func @extractvalue_struct_out_of_bounds() {
@@ -504,21 +690,21 @@ func.func @extractvalue_wrong_nesting() {
 // -----
 
 func.func @invalid_vector_type_1(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.extractelement %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_2(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.insertelement %arg2, %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_3(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+2 {{expected an LLVM compatible vector type}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.shufflevector %arg2, %arg2 [0, 0, 0, 0, 7] : f32
 }
 
@@ -548,22 +734,22 @@ func.func @zero_non_llvm_type() {
 // -----
 
 func.func @nvvm_invalid_shfl_pred_1(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
-  // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
-  %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> i32
+  // expected-error@+1 {{expected return type to be a two-element struct}}
+  %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2  return_value_and_is_valid : i32 -> i32
 }
 
 // -----
 
 func.func @nvvm_invalid_shfl_pred_2(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
-  // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
-  %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32)>
+  // expected-error@+1 {{expected return type to be a two-element struct}}
+  %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2  return_value_and_is_valid : i32 -> !llvm.struct<(i32)>
 }
 
 // -----
 
 func.func @nvvm_invalid_shfl_pred_3(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
-  // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
-  %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i32)>
+  // expected-error@+1 {{expected second element in the returned struct to be of type 'i1' but got 'i32' instead}}
+  %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2  return_value_and_is_valid : i32 -> !llvm.struct<(i32, i32)>
 }
 
 // -----
@@ -571,10 +757,10 @@ func.func @nvvm_invalid_shfl_pred_3(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3
 func.func @nvvm_invalid_mma_0(%a0 : f16, %a1 : f16,
                          %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
-                         %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
+                         %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> {
   // expected-error@+1 {{Could not match types for the A operands; expected one of 2xvector<2xf16> but got f16, f16}}
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7]
-    {layoutA=#nvvm.mma_layout<row>, layoutB=#nvvm.mma_layout<col>, shape = #nvvm.shape<m = 8, n = 8, k = 4>} : (f16, vector<2xf16>, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+     shape = <m = 8, n = 8, k = 4>, layout_a = row, layout_b = col : (f16, vector<2xf16>, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
@@ -583,10 +769,10 @@ func.func @nvvm_invalid_mma_0(%a0 : f16, %a1 : f16,
 func.func @nvvm_invalid_mma_1(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                          %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
-                         %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
+                         %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f16)> {
   // expected-error@+1 {{Could not match allowed types for the result; expected one of !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>, !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> but got !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f16)>}}
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7]
-    {layoutA=#nvvm.mma_layout<row>, layoutB=#nvvm.mma_layout<col>, shape = #nvvm.shape<m = 8, n = 8, k = 4>} : (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f16)>
+     shape = <m = 8, n = 8, k = 4>, layout_a = row, layout_b = col : (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f16)>
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f16)>
 }
 
@@ -595,10 +781,10 @@ func.func @nvvm_invalid_mma_1(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 func.func @nvvm_invalid_mma_2(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                          %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
-                         %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
-  // expected-error@+1 {{op requires attribute 'layoutA'}}
+                         %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> {
+  // expected-error@+2 {{missing required property 'layoutA'}}
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7]
-    {shape = #nvvm.shape<m = 8, n = 8, k = 4>}: (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+     shape = <m = 8, n = 8, k = 4>: (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
@@ -606,9 +792,9 @@ func.func @nvvm_invalid_mma_2(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 
 func.func @nvvm_invalid_mma_3(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                          %b0 : vector<2xf16>, %b1 : vector<2xf16>,
-                         %c0 : vector<2xf16>, %c1 : vector<2xf16>) {
+                         %c0 : vector<2xf16>, %c1 : vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)> {
   // expected-error@+1 {{unimplemented variant for MMA shape <8, 8, 16>}}
-  %0 = nvvm.mma.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1] {layoutA=#nvvm.mma_layout<row>, layoutB=#nvvm.mma_layout<col>, shape = #nvvm.shape<m = 8, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+  %0 = nvvm.mma.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1]  shape = <m = 8, n = 8, k = 16>, layout_a = row, layout_b = col : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
   llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
 }
 
@@ -616,20 +802,46 @@ func.func @nvvm_invalid_mma_3(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 
 func.func @nvvm_invalid_mma_8(%a0 : i32, %a1 : i32,
                                %b0 : i32,
-                               %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) {
+                               %c0 : i32, %c1 : i32, %c2 : i32, %c3 : i32) -> !llvm.struct<(i32, i32, i32, i32)> {
   // expected-error@+1 {{op requires b1Op attribute}}
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0] C[%c0, %c1, %c2, %c3]
-    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
-     multiplicandAPtxType = #nvvm.mma_type<b1>, multiplicandBPtxType = #nvvm.mma_type<b1>,
-     shape = #nvvm.shape<m = 16, n = 8, k = 128>} : (i32, i32, i32) -> !llvm.struct<(i32,i32,i32,i32)>
+     shape = <m = 16, n = 8, k = 128>, layout_a = row, layout_b = col, multiplicand_a_ptx_type = b1, multiplicand_b_ptx_type = b1 : (i32, i32, i32) -> !llvm.struct<(i32,i32,i32,i32)>
   llvm.return %0 : !llvm.struct<(i32,i32,i32,i32)>
+}
+
+// -----
+
+// f32 return type, f16 accumulate type
+llvm.func @nvvm_mma_m16n8k16_f32_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+                                     %a2 : vector<2xf16>, %a3 : vector<2xf16>,
+                                     %b0 : vector<2xf16>, %b1 : vector<2xf16>,
+                                     %c0 : vector<2xf16>, %c1 : vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)> {
+  // C and D should have the same type according to PTX ISA
+  // expected-error@+1 {{'nvvm.mma.sync' op ctype does not match dtype}}
+  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1]
+     shape = <m = 16, n = 8, k = 16>, layout_a = row, layout_b = col : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32)>
+}
+
+// -----
+
+// f16 return type, f32 accumulate type
+llvm.func @nvvm_mma_m16n8k16_f16_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+                                     %a2 : vector<2xf16>, %a3 : vector<2xf16>,
+                                     %b0 : vector<2xf16>, %b1 : vector<2xf16>,
+                                     %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)> {
+  // C and D should have the same type according to PTX ISA
+  // expected-error@+1 {{'nvvm.mma.sync' op ctype does not match dtype}}
+  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1, %c2, %c3]
+     shape = <m = 16, n = 8, k = 16>, layout_a = row, layout_b = col : (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+  llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
 }
 
 // -----
 
 func.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{op failed to verify that result #0 and operand #1 have the same type}}
-  %0 = "llvm.atomicrmw"(%f32_ptr, %f32) {bin_op=11, ordering=1} : (!llvm.ptr, f32) -> i32
+  %0 = "llvm.atomicrmw"(%f32_ptr, %f32) <{bin_op=11, ordering=1}> : (!llvm.ptr, f32) -> i32
   llvm.return
 }
 
@@ -648,6 +860,7 @@ func.func @atomicrmw_scalable_vector(%ptr : !llvm.ptr, %f32_vec : vector<[2]xf32
   %0 = llvm.atomicrmw fadd %ptr, %f32_vec unordered : !llvm.ptr, vector<[2]xf32>
   llvm.return
 }
+
 // -----
 
 func.func @atomicrmw_vector_expected_float(%ptr : !llvm.ptr, %i32_vec : vector<3xi32>) {
@@ -676,7 +889,7 @@ func.func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr, %f32 : f32) {
 
 func.func @cmpxchg_mismatched_value_operands(%ptr : !llvm.ptr, %i32 : i32, %i64 : i64) {
   // expected-error@+1 {{op failed to verify that operand #1 and operand #2 have the same type}}
-  %0 = "llvm.cmpxchg"(%ptr, %i32, %i64) {success_ordering=2,failure_ordering=2} : (!llvm.ptr, i32, i64) -> !llvm.struct<(i32, i1)>
+  %0 = "llvm.cmpxchg"(%ptr, %i32, %i64) <{success_ordering=2,failure_ordering=2}> : (!llvm.ptr, i32, i64) -> !llvm.struct<(i32, i1)>
   llvm.return
 }
 
@@ -684,7 +897,7 @@ func.func @cmpxchg_mismatched_value_operands(%ptr : !llvm.ptr, %i32 : i32, %i64 
 
 func.func @cmpxchg_mismatched_result(%ptr : !llvm.ptr, %i64 : i64) {
   // expected-error@+1 {{op failed to verify that result #0 has an LLVM struct type consisting of the type of operand #2 and a bool}}
-  %0 = "llvm.cmpxchg"(%ptr, %i64, %i64) {success_ordering=2,failure_ordering=2} : (!llvm.ptr, i64, i64) -> !llvm.struct<(i64, i64)>
+  %0 = "llvm.cmpxchg"(%ptr, %i64, %i64) <{success_ordering=2,failure_ordering=2}> : (!llvm.ptr, i64, i64) -> !llvm.struct<(i64, i64)>
   llvm.return
 }
 
@@ -868,7 +1081,7 @@ func.func @switch_wrong_number_of_weights(%arg0 : i32) {
   // expected-error@+1 {{expects number of branch weights to match number of successors: 3 vs 2}}
   llvm.switch %arg0 : i32, ^bb1 [
     42: ^bb2(%arg0, %arg0 : i32, i32)
-  ] {branch_weights = array<i32: 13, 17, 19>}
+  ] weights([13, 17, 19])
 
 ^bb1: // pred: ^bb0
   llvm.return
@@ -908,7 +1121,7 @@ llvm.mlir.global appending @non_array_type_global_appending_linkage() : i32
 module {
   llvm.func @accessGroups(%arg0 : !llvm.ptr) {
       // expected-error@below {{attribute 'access_groups' failed to satisfy constraint: LLVM dialect access group metadata array}}
-      %0 = llvm.load %arg0 { "access_groups" = [@func1] } : !llvm.ptr -> i32
+      %0 = llvm.load %arg0 <access_groups = [@func1]> : !llvm.ptr -> i32
       llvm.return
   }
   llvm.func @func1() {
@@ -921,11 +1134,8 @@ module {
 module {
   llvm.func @accessGroups(%arg0 : !llvm.ptr, %arg1 : i32, %arg2 : i32) {
       // expected-error@below {{attribute 'access_groups' failed to satisfy constraint: LLVM dialect access group metadata array}}
-      %0 = llvm.cmpxchg %arg0, %arg1, %arg2 acq_rel monotonic { "access_groups" = [@metadata::@scope] } : !llvm.ptr, i32
+      %0 = llvm.cmpxchg %arg0, %arg1, %arg2 acq_rel monotonic <access_groups = ["test"]> : !llvm.ptr, i32
       llvm.return
-  }
-  llvm.metadata @metadata {
-    llvm.func @scope()
   }
 }
 
@@ -934,7 +1144,7 @@ module {
 module {
   llvm.func @aliasScope(%arg0 : !llvm.ptr, %arg1 : i32, %arg2 : i32) {
       // expected-error@below {{attribute 'alias_scopes' failed to satisfy constraint: LLVM dialect alias scope array}}
-      %0 = llvm.cmpxchg %arg0, %arg1, %arg2 acq_rel monotonic { "alias_scopes" = "test" } : !llvm.ptr, i32
+      %0 = llvm.cmpxchg %arg0, %arg1, %arg2 acq_rel monotonic <alias_scopes = ["test"]> : !llvm.ptr, i32
       llvm.return
   }
 }
@@ -944,7 +1154,7 @@ module {
 module {
   llvm.func @noAliasScopes(%arg0 : !llvm.ptr) {
       // expected-error@below {{attribute 'noalias_scopes' failed to satisfy constraint: LLVM dialect alias scope array}}
-      %0 = llvm.load %arg0 { "noalias_scopes" = "test" } : !llvm.ptr -> i32
+      %0 = llvm.load %arg0 <noalias_scopes = ["test"]> : !llvm.ptr -> i32
       llvm.return
   }
 }
@@ -954,7 +1164,7 @@ module {
 llvm.func @wmmaLoadOp_invalid_mem_space(%arg0: !llvm.ptr<5>, %arg1: i32) {
   // expected-error@+1 {{'nvvm.wmma.load' op expected source pointer in memory space 0, 1, 3}}
   %0 = nvvm.wmma.load %arg0, %arg1
-    {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<a>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+    , m = 16, n = 16, k = 16, layout = <row>, element_type = <f16>, fragment = a
     : (!llvm.ptr<5>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
   llvm.return
 }
@@ -964,7 +1174,7 @@ llvm.func @wmmaLoadOp_invalid_mem_space(%arg0: !llvm.ptr<5>, %arg1: i32) {
 llvm.func @wmmaLoadOp_invalid_AOp(%arg0: !llvm.ptr<3>, %arg1: i32) {
   // expected-error@+1 {{'nvvm.wmma.load' op expected destination type is a structure of 8 elements of type 'vector<2xf16>'}}
   %0 = nvvm.wmma.load %arg0, %arg1
-  {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<a>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+  , m = 16, n = 16, k = 16, layout = <row>, element_type = <f16>, fragment = a
   : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
   llvm.return
 }
@@ -974,7 +1184,7 @@ llvm.func @wmmaLoadOp_invalid_AOp(%arg0: !llvm.ptr<3>, %arg1: i32) {
 llvm.func @wmmaLoadOp_invalid_BOp(%arg0: !llvm.ptr<3>, %arg1: i32) {
   // expected-error@+1 {{'nvvm.wmma.load' op expected destination type is a structure of 8 elements of type 'vector<2xf16>'}}
  %0 = nvvm.wmma.load %arg0, %arg1
- {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<b>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+ , m = 16, n = 16, k = 16, layout = <row>, element_type = <f16>, fragment = b
  : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 
   llvm.return
@@ -985,7 +1195,7 @@ llvm.func @wmmaLoadOp_invalid_BOp(%arg0: !llvm.ptr<3>, %arg1: i32) {
 llvm.func @wmmaLoadOp_invalid_COp(%arg0: !llvm.ptr<3>, %arg1: i32) {
   // expected-error@+1 {{'nvvm.wmma.load' op expected destination type is a structure of 4 elements of type 'vector<2xf16>'}}
  %0 = nvvm.wmma.load %arg0, %arg1
-   {eltype = #nvvm.mma_type<f16>, frag = #nvvm.mma_frag<c>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+   , m = 16, n = 16, k = 16, layout = <row>, element_type = <f16>, fragment = c
    : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
 
   llvm.return
@@ -998,7 +1208,7 @@ llvm.func @wmmaStoreOp_invalid_mem_space(%arg0: !llvm.ptr<5>, %arg1: i32,
                             %arg4: vector<2 x f16>, %arg5: vector<2 xf16>) {
   // expected-error@+1 {{'nvvm.wmma.store' op expected operands to be a source pointer in memory space 0, 1, 3}}
   nvvm.wmma.store %arg0, %arg1, %arg2, %arg3, %arg4, %arg5
-    {eltype = #nvvm.mma_type<f16>, k = 16 : i32, layout = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+    m = 16, n = 16, k = 16, layout = <row>, element_type = <f16>
     : !llvm.ptr<5>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>
   llvm.return
 }
@@ -1017,7 +1227,7 @@ llvm.func @gpu_wmma_mma_op_invalid_operands(%arg0: vector<2 x f16>, %arg1: vecto
                         %arg18: vector<2 x f16>) {
   // expected-error@+1 {{'nvvm.wmma.mma' op expected 20 arguments}}
   %0 = nvvm.wmma.mma %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7, %arg8, %arg9, %arg10, %arg11, %arg12, %arg13, %arg14, %arg15, %arg16, %arg17, %arg18
-    {eltypeA = #nvvm.mma_type<f16>, eltypeB = #nvvm.mma_type<f16>, k = 16 : i32, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+    m = 16, n = 16, k = 16, layout_a = <row>, layout_b = <row>, element_type_a = <f16>, element_type_b = <f16>
     : (vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>,
        vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>)
       -> !llvm.struct<(vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>)>
@@ -1038,7 +1248,7 @@ llvm.func @gpu_wmma_mma_op_results(%arg0: vector<2 x f16>, %arg1: vector<2 x f16
                         %arg18: vector<2 x f16>, %arg19: vector<2 x f16>) {
   // expected-error@+1 {{'nvvm.wmma.mma' op expected destination type is a structure of 4 elements of type 'vector<2xf16>'}}
   %0 = nvvm.wmma.mma %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7, %arg8, %arg9, %arg10, %arg11, %arg12, %arg13, %arg14, %arg15, %arg16, %arg17, %arg18, %arg19
-    {eltypeA = #nvvm.mma_type<f16>, eltypeB = #nvvm.mma_type<f16>, k = 16 : i32, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+    m = 16, n = 16, k = 16, layout_a = <row>, layout_b = <row>, element_type_a = <f16>, element_type_b = <f16>
     : (vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>,
        vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>)
       -> !llvm.struct<(vector<2 x f16>, vector<2 x f16>, vector<2 x f16>)>  llvm.return
@@ -1058,7 +1268,7 @@ llvm.func @gpu_wmma_mma_op_invalid_ab_operands(%arg0: vector<2 x f16>, %arg1: ve
                         %arg20: f32, %arg21: f32, %arg22: f32, %arg23: f32) {
   // expected-error@+1 {{'nvvm.wmma.mma' op expected argument 15 to be of type 'vector<2xf16>'}}
   %0 = nvvm.wmma.mma %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7, %arg8, %arg9, %arg10, %arg11, %arg12, %arg13, %arg14, %arg15, %arg16, %arg17, %arg18, %arg19, %arg20, %arg21, %arg22, %arg23
-    {eltypeA = #nvvm.mma_type<f16>, eltypeB = #nvvm.mma_type<f32>, k = 16 : i32, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+    m = 16, n = 16, k = 16, layout_a = <row>, layout_b = <row>, element_type_a = <f16>, element_type_b = <f32>
     : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
   llvm.return
 }
@@ -1077,7 +1287,7 @@ llvm.func @gpu_wmma_mma_op_invalid_c_operand(%arg0: vector<2 x f16>, %arg1: vect
                         %arg20: f32, %arg21: f32, %arg22: f32, %arg23: vector<2xf16>) {
   // expected-error@+1 {{'nvvm.wmma.mma' op expected argument 23 to be of type 'f32'}}
   %0 = nvvm.wmma.mma %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7, %arg8, %arg9, %arg10, %arg11, %arg12, %arg13, %arg14, %arg15, %arg16, %arg17, %arg18, %arg19, %arg20, %arg21, %arg22, %arg23
-    {eltypeA = #nvvm.mma_type<f16>, eltypeB = #nvvm.mma_type<f32>, k = 16 : i32, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+    m = 16, n = 16, k = 16, layout_a = <row>, layout_b = <row>, element_type_a = <f16>, element_type_b = <f32>
     : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
   llvm.return
 }
@@ -1096,40 +1306,8 @@ llvm.func @gpu_wmma_mma_op_invalid_result(%arg0: vector<2 x f16>, %arg1: vector<
                         %arg20: f32, %arg21: f32, %arg22: f32, %arg23: f32) {
   // expected-error@+1 {{'nvvm.wmma.mma' op expected destination type is a structure of 8 elements of type 'f32'}}
   %0 = nvvm.wmma.mma %arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %arg6, %arg7, %arg8, %arg9, %arg10, %arg11, %arg12, %arg13, %arg14, %arg15, %arg16, %arg17, %arg18, %arg19, %arg20, %arg21, %arg22, %arg23
-    {eltypeA = #nvvm.mma_type<f16>, eltypeB = #nvvm.mma_type<f32>, k = 16 : i32, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<row>, m = 16 : i32, n = 16 : i32}
+    m = 16, n = 16, k = 16, layout_a = <row>, layout_b = <row>, element_type_a = <f16>, element_type_b = <f32>
     : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, vector<2xf16>)>
-  llvm.return
-}
-
-// -----
-
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected source pointer in memory space 3}}
-  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr) -> i32
-  llvm.return
-}
-
-// -----
-
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected num attribute to be 1, 2 or 4}}
-  %l = nvvm.ldmatrix %arg0 {num = 3 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> i32
-  llvm.return
-}
-
-// -----
-
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is i32}}
-  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32)>
-  llvm.return
-}
-
-// -----
-
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is a structure of 4 elements of type i32}}
-  %l = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
   llvm.return
 }
 
@@ -1189,6 +1367,14 @@ func.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
 
 // -----
 
+func.func @mapa(%a: !llvm.ptr, %b : i32) {
+  // expected-error @below {{'nvvm.mapa' op failed to verify that Valid address-space check(or mapping) for mapa Op}}
+  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr<7>
+  return
+}
+
+// -----
+
 func.func @gep_struct_variable(%arg0: !llvm.ptr, %arg1: i32, %arg2: i32) {
   // expected-error @below {{op expected index 1 indexing a struct to be constant}}
   llvm.getelementptr %arg0[%arg1, %arg1] : (!llvm.ptr, i32, i32) -> !llvm.ptr, !llvm.struct<(i32)>
@@ -1230,6 +1416,27 @@ func.func @insert_vector_invalid_source_vector_size(%arg0 : vector<16385xi8>, %a
 
 // -----
 
+func.func @insert_vector_overflowing_source_vector_size(%arg0 : vector<536870913xi8>, %arg1 : vector<16xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<536870913xi8> into vector<16xi8>
+}
+
+// -----
+
+func.func @insert_scalable_vector_truncating_source_vector_size(%arg0 : vector<[4294967296]xi8>, %arg1 : vector<[16]xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<[4294967296]xi8> into vector<[16]xi8>
+}
+
+// -----
+
+func.func @insert_vector_saturating_source_vector_size(%arg0 : vector<2305843009213693953xi8>, %arg1 : vector<16xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<2305843009213693953xi8> into vector<16xi8>
+}
+
+// -----
+
 func.func @insert_vector_invalid_dest_vector_size(%arg0 : vector<16xi8>, %arg1 : vector<[16385]xi8>) {
   // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
   %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<16xi8> into vector<[16385]xi8>
@@ -1247,6 +1454,27 @@ func.func @insert_scalable_into_fixed_length_vector(%arg0 : vector<[8]xf32>, %ar
 func.func @extract_vector_invalid_source_vector_size(%arg0 : vector<[16385]xi8>) {
   // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
   %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<[16385]xi8>
+}
+
+// -----
+
+func.func @extract_vector_overflowing_source_vector_size(%arg0 : vector<536870913xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<536870913xi8>
+}
+
+// -----
+
+func.func @extract_scalable_vector_truncating_source_vector_size(%arg0 : vector<[4294967296]xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<[4294967296]xi8>
+}
+
+// -----
+
+func.func @extract_vector_saturating_source_vector_size(%arg0 : vector<2305843009213693953xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<2305843009213693953xi8>
 }
 
 // -----
@@ -1318,16 +1546,16 @@ func.func @invalid_bitcast_i64_to_ptr() {
 
 // -----
 
-func.func @invalid_bitcast_vec_to_ptr(%arg : !llvm.vec<4 x ptr>) {
+func.func @invalid_bitcast_vec_to_ptr(%arg : vector<4x!llvm.ptr>) {
   // expected-error@+1 {{cannot cast vector of pointers to pointer}}
-  %0 = llvm.bitcast %arg : !llvm.vec<4 x ptr> to !llvm.ptr
+  %0 = llvm.bitcast %arg : vector<4x!llvm.ptr> to !llvm.ptr
 }
 
 // -----
 
 func.func @invalid_bitcast_ptr_to_vec(%arg : !llvm.ptr) {
   // expected-error@+1 {{cannot cast pointer to vector of pointers}}
-  %0 = llvm.bitcast %arg : !llvm.ptr to !llvm.vec<4 x ptr>
+  %0 = llvm.bitcast %arg : !llvm.ptr to vector<4x!llvm.ptr>
 }
 
 // -----
@@ -1339,9 +1567,9 @@ func.func @invalid_bitcast_addr_cast(%arg : !llvm.ptr<1>) {
 
 // -----
 
-func.func @invalid_bitcast_addr_cast_vec(%arg : !llvm.vec<4 x ptr<1>>) {
+func.func @invalid_bitcast_addr_cast_vec(%arg : vector<4x!llvm.ptr<1>>) {
   // expected-error@+1 {{cannot cast pointers of different address spaces, use 'llvm.addrspacecast' instead}}
-  %0 = llvm.bitcast %arg : !llvm.vec<4 x ptr<1>> to !llvm.vec<4 x ptr>
+  %0 = llvm.bitcast %arg : vector<4x!llvm.ptr<1>> to vector<4x!llvm.ptr>
 }
 
 // -----
@@ -1356,14 +1584,14 @@ func.func @invalid_target_ext_alloca() {
 
 func.func @invalid_target_ext_load(%arg0 : !llvm.ptr) {
   // expected-error@+1 {{result #0 must be LLVM type with size, but got '!llvm.target<"no_load">'}}
-  %0 = llvm.load %arg0 {alignment = 8 : i64} : !llvm.ptr -> !llvm.target<"no_load">
+  %0 = llvm.load %arg0 <alignment = 8> : !llvm.ptr -> !llvm.target<"no_load">
 }
 
 // -----
 
 func.func @invalid_target_ext_atomic(%arg0 : !llvm.ptr) {
   // expected-error@+1 {{unsupported type '!llvm.target<"spirv.Event">' for atomic access}}
-  %0 = llvm.load %arg0 atomic monotonic {alignment = 8 : i64} : !llvm.ptr -> !llvm.target<"spirv.Event">
+  %0 = llvm.load %arg0 atomic monotonic <alignment = 8> : !llvm.ptr -> !llvm.target<"spirv.Event">
 }
 
 // -----
@@ -1627,38 +1855,6 @@ llvm.func @foo(%arg: !llvm.ptr) {
 
 // -----
 
-func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
-  // expected-error@+1 {{to use im2col mode, the tensor has to be at least 3-dimensional}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr
-  return
-}
-// -----
-
-func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
-  // expected-error@+1 {{im2col offsets must be 2 less than number of coordinates}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr
-  return
-}
-
-// -----
-
-func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
-  // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[]: !llvm.ptr<3>, !llvm.ptr
-  return
-}
-
-
-// -----
-
-func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
-  // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd0,%crd1,%crd2,%crd3]: !llvm.ptr<3>, !llvm.ptr
-  return
-}
-
-// -----
-
 // expected-error @below {{no_inline and always_inline attributes are incompatible}}
 llvm.func @alwaysinline_noinline() attributes { always_inline, no_inline } {
   llvm.return
@@ -1683,6 +1879,15 @@ llvm.func @wrong_number_of_bundle_types() {
 
 // -----
 
+llvm.func @wrong_number_of_bundle_types_intrin(%arg0: i32) -> i32 {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  // expected-error@+1 {{expected 1 types for operand bundle operands for operand bundle #0, but actually got 2}}
+  %1 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) ["tag"(%0 : i32, i32)] : (i32 {llvm.signext}) -> (i32)
+  llvm.return %1 : i32
+}
+
+// -----
+
 llvm.func @foo()
 llvm.func @wrong_number_of_bundle_tags() {
   %0 = llvm.mlir.constant(0 : i32) : i32
@@ -1693,5 +1898,569 @@ llvm.func @wrong_number_of_bundle_tags() {
     operandSegmentSizes = array<i32: 0, 2>,
     op_bundle_sizes = array<i32: 1, 1>
   } : (i32, i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+// expected-error@+1 {{expects type to be a valid element type for an LLVM global alias}}
+llvm.mlir.alias external @y : !llvm.label {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+// expected-error@+1 {{linkage not supported in aliases, available options}}
+llvm.mlir.alias appending @y2 : i32 {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// expected-error@+1 {{initializer region must always return a pointer}}
+llvm.mlir.alias external @y3 : i32 {
+  %c = llvm.mlir.constant(42 : i64) : i64
+  llvm.return %c : i64
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+llvm.mlir.alias external @y4 : i32 {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  // expected-error@+1 {{ops with side effects are not allowed in alias initializers}}
+  %2 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+llvm.mlir.alias external @y5 : i32 {
+  // expected-error@+1 {{pointer address space must match address space}}
+  %0 = llvm.mlir.addressof @x : !llvm.ptr<4>
+  llvm.return %0 : !llvm.ptr<4>
+}
+
+// -----
+
+// expected-error@+1{{attribute 'function_metadata' failed to satisfy constraint: array of #llvm.func_metadata attributes}}
+llvm.func @function_metadata_value() attributes {function_metadata = [#llvm.md_string<"int">]}
+
+// -----
+
+// expected-error@+1{{function_metadata entry name must not be empty}}
+llvm.func @empty_function_metadata_name() attributes {function_metadata = [#llvm.func_metadata<"", #llvm.md_node<#llvm.md_string<"x">>>]}
+
+// -----
+
+// expected-error@+1{{reserved function_metadata entry 'dbg' is not supported by the generic carrier}}
+llvm.func @reserved_dbg_function_metadata() attributes {function_metadata = [#llvm.func_metadata<"dbg", #llvm.md_node<#llvm.md_string<"x">>>]}
+
+// -----
+
+// expected-error@+1{{reserved function_metadata entry 'prof' is not supported by the generic carrier}}
+llvm.func @reserved_prof_function_metadata() attributes {function_metadata = [#llvm.func_metadata<"prof", #llvm.md_node<#llvm.md_string<"unknown">, #llvm.md_string<"sample-pass">>>]}
+
+// -----
+
+// expected-error@+1{{attribute 'nodes' failed to satisfy constraint: array of #llvm.md_node attributes}}
+llvm.named_metadata "not_node" [#llvm.md_string<"int">]
+
+// -----
+
+module {
+  llvm.func @foo()
+
+  // expected-error@below {{only integer, integer-like dialect attributes, string, and string-array values are currently supported for unknown key '"yolo"'}}
+  llvm.module_flags [#llvm.mlir.module_flag<error, "yolo", @foo>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{expected module flag key 'amdgpu.buffer.oob.mode' to be unique for non-require flags}}
+  llvm.module_flags [#rocdl.buffer_oob_mode_flag<any>,
+                     #llvm.mlir.module_flag<max, "amdgpu.buffer.oob.mode",
+                                            #rocdl.buffer_oob_mode<strict>>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{'CG Profile' key expects an array of '#llvm.cgprofile_entry'}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", [
+    "yo"
+  ]>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{'CG Profile' key expects an array of '#llvm.cgprofile_entry'}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", 3 : i64>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{'ProfileSummary' key expects a '#llvm.profile_summary' attribute}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "ProfileSummary", 3 : i64>]
+}
+
+// -----
+
+llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
+     // expected-error@below {{expected one of [SampleProfile, InstrProf, CSInstrProf] for LLVM ProfileSummary format kinds, got: YoloFmt}}
+     #llvm.profile_summary<format = "YoloFmt", total_count = 263646, max_count = 86427,
+     // expected-error@above {{failed to parse ModuleFlagProfileSummaryAttr parameter 'format' which is to be a `ProfileSummaryFormatKind`}}
+       max_internal_count = 86427, max_function_count = 4691,
+       num_counts = 3712, num_functions = 796,
+       is_partial_profile = 0,
+       partial_profile_ratio = 0.000000e+00 : f64,
+       detailed_summary =
+         <cut_off = 10000, min_count = 86427, num_counts = 1>,
+         <cut_off = 100000, min_count = 86427, num_counts = 1>
+      // expected-error@below {{failed to parse ModuleFlagAttr parameter}}
+>>]
+
+// -----
+
+llvm.func @t0() -> !llvm.ptr {
+  %0 = llvm.blockaddress <function = @t0, tag = <id = 1>> : !llvm.ptr
+  llvm.blocktag <id = 1>
+  llvm.br ^bb1
+^bb1:
+  // expected-error@+1 {{duplicate block tag '1' in the same function}}
+  llvm.blocktag <id = 1>
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @t1() -> !llvm.ptr {
+  // expected-error@+1 {{expects an existing block label target in the referenced function}}
+  %0 = llvm.blockaddress <function = @t1, tag = <id = 1>> : !llvm.ptr
+  llvm.br ^bb1
+^bb1:
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @gep_inbounds_flag_usage(%ptr: !llvm.ptr, %idx: i64) {
+  // expected-error@+1 {{'inbounds_flag' cannot be used directly}}
+  llvm.getelementptr inbounds_flag %ptr[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @gep_inrange_reversed(%ptr: !llvm.ptr) {
+  // expected-error@+1 {{expected 'inrange' end to be larger than start}}
+  llvm.getelementptr inrange <i64, 4, -4> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return
+}
+
+// -----
+
+llvm.func @gep_inrange_empty(%ptr: !llvm.ptr) {
+  // expected-error@+1 {{expected 'inrange' end to be larger than start}}
+  llvm.getelementptr inrange <i64, 1, 1> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return
+}
+
+// -----
+
+llvm.func @gep_inrange_wrong_width(%ptr: !llvm.ptr) {
+  // expected-error@+1 {{'inrange' bitwidth 32 must match the pointer index bitwidth (64) specified in the datalayout}}
+  llvm.getelementptr inrange <i32, -4, 4> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.return
+}
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.ptr, dense<[32, 32, 64]> : vector<3xi64>>
+>} {
+  llvm.func @gep_inrange_wrong_width_32(%ptr: !llvm.ptr) {
+    // expected-error@+1 {{'inrange' bitwidth 64 must match the pointer index bitwidth (32) specified in the datalayout}}
+    llvm.getelementptr inrange <i64, -4, 4> %ptr[0] : (!llvm.ptr) -> !llvm.ptr, i8
+    llvm.return
+  }
+}
+
+// -----
+
+llvm.mlir.global @bad_struct_array_init_size() : !llvm.array<2x!llvm.struct<(i32, f32)>> {
+  // expected-error@below {{'llvm.mlir.constant' op array attribute size does not match array type size in dimension 0: 1 vs. 2}}
+  %0 = llvm.mlir.constant([[42 : i32, 1.000000e+00 : f32]]) : !llvm.array<2x!llvm.struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<2x!llvm.struct<(i32, f32)>>
+}
+
+// -----
+
+llvm.mlir.global @bad_struct_array_init_nesting() : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>> {
+  // expected-error@below {{'llvm.mlir.constant' op nested attribute for sub-array in dimension 1 at index 0 must be a zero, or undef, or array attribute}}
+  %0 = llvm.mlir.constant([[1 : i32]]) : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>>
+  llvm.return %0 : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>>
+}
+
+// -----
+
+llvm.mlir.global @bad_struct_array_init_elements() : !llvm.array<1x!llvm.struct<(i32, f32)>> {
+  // expected-error@below {{'llvm.mlir.constant' op nested array attribute size for struct element at index 0 must match struct size: 1 vs. 2}}
+  %0 = llvm.mlir.constant([[1 : i32]]) : !llvm.array<1x!llvm.struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<1x!llvm.struct<(i32, f32)>>
+}
+
+// -----
+
+llvm.mlir.global internal constant @bad_array_attr_simple_type() : !llvm.array<2 x f64> {
+  // expected-error@below {{'llvm.mlir.constant' op for array with an array attribute must have a struct element type}}
+  %0 = llvm.mlir.constant([2.5, 7.4]) : !llvm.array<2 x f64>
+  llvm.return %0 : !llvm.array<2 x f64>
+}
+
+// -----
+
+llvm.mlir.global internal constant @bad_ptr_array_attr_leaf() : !llvm.array<2 x ptr> {
+  // expected-error@below {{pointer array element at index 0 must be a flat symbol reference, zero, undef, or poison}}
+  %0 = llvm.mlir.constant([1 : i32, @s0]) : !llvm.array<2 x ptr>
+  llvm.return %0 : !llvm.array<2 x ptr>
+}
+
+llvm.mlir.global private constant @s0("a\00") {addr_space = 0 : i32} : !llvm.array<2 x i8>
+
+// -----
+
+llvm.func @inlineAsmMustTail(%arg0: i32, %arg1 : !llvm.ptr) {
+  // expected-error@+1 {{op tail call kind 'musttail' is not supported}}
+  %8 = llvm.inline_asm tail_call_kind = <musttail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_prefetch(%arg0: !llvm.ptr) {
+  // expected-error@+1 {{op operand #0 must be LLVM pointer in address space 1 or LLVM pointer in address space 4}}
+  xevm.prefetch %arg0 <{cache_control = #xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr)
+  llvm.return
+}
+
+// -----
+llvm.func @invalid_xevm_blockload(%arg0: !llvm.ptr<1>) {
+  // expected-error@+1 {{op vector size must be 2, 4 or 8 for element type > 8 bits}}
+  %0 = xevm.blockload %arg0 : (!llvm.ptr<1>) -> vector<3xi16>
+  llvm.return
+}
+
+// -----
+llvm.func @invalid_xevm_blockstore(%arg0: !llvm.ptr<1>, %arg1: vector<5xi8>) {
+  // expected-error@+1 {{op vector size must be 2, 4, 8 or 16 for 8-bit element type}}
+  xevm.blockstore %arg0, %arg1 : (!llvm.ptr<1>, vector<5xi8>)
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_mma(%loaded_c_casted: vector<4xf32>, %loaded_a: vector<8xi16>, %loaded_b_casted: vector<8xi32>) -> vector<8xf32> {
+  // expected-error@+1 {{op type of C operand must match result type}}
+  %c_result = xevm.mma %loaded_a, %loaded_b_casted, %loaded_c_casted {shape = <m = 8, n = 16, k = 16>, types = <d = f32, a = f16, b = f16, c = f32>} : (vector<8xi16>, vector<8xi32>, vector<4xf32>) -> vector<8xf32>
+  llvm.return %c_result : vector<8xf32>
+}
+
+// -----
+
+llvm.func @invalid_xevm_matrix_1(%c: !llvm.ptr<1>, %base_width_c: i32, %base_height_c: i32, %base_pitch_c: i32, %x: i32, %y: i32, %c_result_casted: vector<8xi32>) {
+  // expected-error@+1 {{op expecting tile_width to be between 1 and 8}}
+  xevm.blockstore2d %c, %base_width_c, %base_height_c, %base_pitch_c, %x, %y, %c_result_casted <{elem_size_in_bits=64 : i32, tile_width=16 : i32, tile_height=8 : i32}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_matrix_2(%c: !llvm.ptr<1>, %base_width_c: i32, %base_height_c: i32, %base_pitch_c: i32, %x: i32, %y: i32, %c_result_casted: vector<8xi32>) {
+  // expected-error@+1 {{op expecting elem_size_in_bits to be 8, 16, 32, or 64}}
+  xevm.blockstore2d %c, %base_width_c, %base_height_c, %base_pitch_c, %x, %y, %c_result_casted <{elem_size_in_bits=18 : i32, tile_width=16 : i32, tile_height=8 : i32}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_matrix_3(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32, %base_pitch_a: i32, %x: i32, %y: i32) -> vector<8xi16> {
+  // expected-error@+1 {{op result size of 128 bits does not match the expected size of 208 bits}}
+  %loaded_a = xevm.blockload2d %a, %base_width_a, %base_height_a, %base_pitch_a, %x, %y <{elem_size_in_bits=16 : i32, tile_width=26 : i32, tile_height=8 : i32, v_blocks=1 : i32, transpose=false, pack_register=false, cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<8xi16>
+  llvm.return %loaded_a : vector<8xi16>
+}
+
+// -----
+
+llvm.func @invalid_xevm_truncf_1(%arg0: vector<8xf16>) {
+  // expected-error@+1 {{op dst should be 64 bits wide to hold 8 value(s) of 8 bits, but it is 8}}
+  %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (vector<8xf16>) -> i8
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_truncf_2(%arg0: f16) {
+  // expected-error@+1 {{op dst should be 8 bits wide to hold 1 value(s) of 8 bits, but it is 64}}
+  %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (f16) -> vector<8xi8>
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_extf_1(%arg0: vector<8xi8>) {
+  // expected-error@+1 {{op src should be 8 bits wide to hold 1 value(s) of 8 bits, but it is 64}}
+  %0 = xevm.extf %arg0 { src_etype = bf8, dst_etype = f16 } : (vector<8xi8>) -> f16
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_extf_2(%arg0: i8) {
+  // expected-error@+1 {{op src should be 64 bits wide to hold 8 value(s) of 8 bits, but it is 8}}
+  %0 = xevm.extf %arg0 { src_etype = bf8, dst_etype = f16 } : (i8) -> vector<8xf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_bitcast_shuffle_1(%arg0: vector<8xi16>) {
+  // expected-error@+1 {{op expected exactly one of src and res to be a vector}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<8xi16>) -> vector<8xi16>
+  llvm.return
+}
+
+// -----
+
+// Only a pack and an unpack are supported, a vector to vector repack is not.
+llvm.func @invalid_xevm_bitcast_shuffle_repack(%arg0: vector<8xi16>) {
+  // expected-error@+1 {{op expected exactly one of src and res to be a vector}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<8xi16>) -> vector<4xi32>
+  llvm.return
+}
+
+// -----
+
+// Neither is a plain scalar to scalar bitcast.
+llvm.func @invalid_xevm_bitcast_shuffle_scalar(%arg0: i32) {
+  // expected-error@+1 {{op expected exactly one of src and res to be a vector}}
+  %0 = xevm.bitcast_shuffle %arg0 : (i32) -> i32
+  llvm.return
+}
+
+// -----
+
+// The op is bit-preserving and only accepts integer types; a producer holding
+// floating point data bitcasts it to a same-width integer beforehand.
+llvm.func @invalid_xevm_bitcast_shuffle_float_res(%arg0: vector<2xi16>) {
+  // expected-error@+1 {{op result #0 must be 8-bit signless integer or}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<2xi16>) -> f32
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_bitcast_shuffle_float_elem(%arg0: vector<4xbf16>) {
+  // expected-error@+1 {{op operand #0 must be 8-bit signless integer or}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<4xbf16>) -> i64
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_bitcast_shuffle_2(%arg0: vector<8xi16>) {
+  // expected-error@+1 {{op src and res types must have the same total bit width}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<8xi16>) -> i64
+  llvm.return
+}
+
+// -----
+
+// The shuffle operates at byte granularity, sub-byte element types are invalid.
+llvm.func @invalid_xevm_bitcast_shuffle_3(%arg0: vector<8xi4>) {
+  // expected-error@+1 {{op operand #0 must be 8-bit signless integer or}}
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<8xi4>) -> vector<4xi8>
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_mma_mx(%loaded_c_casted: vector<4xf32>, %loaded_a: vector<8xi16>, %loaded_b_casted: vector<8xi32>, %scale_a: vector<2xi8>, %scale_b: vector<2xi8>) -> vector<8xf32> {
+  // expected-error@+1 {{op type of C operand must match result type}}
+  %c_result = xevm.mma_mx %loaded_a, %loaded_b_casted, %scale_a, %scale_b, %loaded_c_casted { shape=<m=8, n=16, k=64>,
+    types=<d=f32, a=e2m1, b=e2m1, c=f32> } : (vector<8xi16>, vector<8xi32>, vector<2xi8>, vector<2xi8>, vector<4xf32>) -> vector<8xf32>
+  llvm.return %c_result : vector<8xf32>
+}
+
+// -----
+
+llvm.func external @resolve_foo() -> !llvm.ptr attributes {dso_local}
+// expected-error@+1 {{'llvm.mlir.ifunc' op resolver must be a definition}}
+llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo dso_local
+
+// -----
+
+llvm.mlir.global external @resolve_foo() : !llvm.ptr
+// expected-error@+1 {{'llvm.mlir.ifunc' op must have a function resolver}}
+llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo dso_local
+
+// -----
+
+llvm.func external @resolve_foo() -> !llvm.ptr
+// expected-error@+1 {{'llvm.mlir.ifunc' op 'common' linkage not supported in ifuncs}}
+llvm.mlir.ifunc common @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo dso_local
+
+// -----
+
+llvm.mlir.global external @resolve_foo() : !llvm.ptr
+llvm.mlir.alias external @alias_resolver : !llvm.ptr {
+  %0 = llvm.mlir.addressof @resolve_foo : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+// expected-error@+1 {{'llvm.mlir.ifunc' op must have a function resolver}}
+llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @alias_resolver dso_local
+
+// -----
+
+llvm.func @invalid_sincos_nonhomogeneous_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f64)>
+}
+
+// -----
+
+llvm.func @invalid_sincos_non_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.sincos(%f) : (f32) -> f32
+}
+
+// -----
+
+llvm.func @invalid_sincos_gt_2_element_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
+}
+
+// -----
+
+llvm.func @invalid_modf_nonhomogeneous_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> !llvm.struct<(f32, f64)>
+}
+
+// -----
+
+llvm.func @invalid_modf_non_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> f32
+}
+
+// -----
+
+llvm.func @invalid_modf_gt_2_element_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{'llvm.blockaddress' op expects an existing block label target in the referenced function}}
+  %0 = llvm.blockaddress <function = @missing_func, tag = <id = 1>> : !llvm.ptr
+}
+
+// -----
+
+llvm.func @too_narrow_ptr_to_addr(%arg0 : !llvm.ptr) -> () {
+  // expected-error@+1 {{'llvm.ptrtoaddr' op bit-width of integer result type 'i32' must match the pointer bitwidth (64) specified in the datalayout}}
+  %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i32
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.ptr, dense<[32, 32, 64]> : vector<3xi64>>
+>} {
+  llvm.func @too_narrow_ptr_to_addr(%arg0 : !llvm.ptr) -> () {
+    // expected-error@+1 {{'llvm.ptrtoaddr' op bit-width of integer result type 'i64' must match the pointer bitwidth (32) specified in the datalayout}}
+    %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
+  }
+}
+
+// -----
+
+func.func @nvvm_read_sreg_tid_x_wrong_type() {
+  // expected-error@+1 {{'nvvm.read.ptx.sreg.tid.x' op result #0 must be 32-bit signless integer, but got 'i64'}}
+  %0 = nvvm.read.ptx.sreg.tid.x : i64
+  return
+}
+
+// -----
+
+func.func @nvvm_read_sreg_clock64_wrong_type() {
+  // expected-error@+1 {{'nvvm.read.ptx.sreg.clock64' op result #0 must be 64-bit signless integer, but got 'i32'}}
+  %0 = nvvm.read.ptx.sreg.clock64 : i32
+  return
+}
+
+// -----
+
+// expected-error@+1{{custom op 'llvm.mlir.alias' invalid value for thread_local}}
+llvm.mlir.alias private thread_local(invalid) unnamed_addr @a30 {dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// expected-error@+1{{expected ')'}}
+llvm.mlir.alias private thread_local(localexec, generaldynamic) unnamed_addr @a30 {dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// expected-error@+1{{custom op 'llvm.mlir.global' invalid value for thread_local}}
+llvm.mlir.global internal thread_local(invalid) constant @thread_local(42 : i32) : i32
+
+// -----
+
+// expected-error@+1{{expected ')'}}
+llvm.mlir.global internal thread_local(generaldynamic, localexec) constant @thread_local(42 : i32) : i32
+
+// -----
+
+llvm.func @md_addrspacecast_bad_operand() {
+  // expected-error@+1{{expected #llvm.md_global_value, #llvm.md_null, or #llvm.md_addrspacecast operand, but got #llvm.md_string<"not a pointer">}}
+  %0 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_string<"not a pointer">, 0>
+  llvm.return
+}
+
+// -----
+
+llvm.func @md_addrspacecast_int_operand() {
+  // expected-error@+1{{expected #llvm.md_global_value, #llvm.md_null, or #llvm.md_addrspacecast operand, but got #llvm.md_const<42 : i32>}}
+  %0 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_const<42 : i32>, 0>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_duplicate_fp_modifier(%a: f32, %b: f32) {
+  // expected-error@+1 {{`ftz` clause can appear at most once in the expansion of the oilist directive}}
+  %0 = nvvm.addf %a, %b ftz = true ftz = true : f32
   llvm.return
 }

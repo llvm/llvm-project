@@ -61,6 +61,16 @@ SectionChunk::SectionChunk(ObjFile *f, const coff_section *h, Kind k)
     live = true;
 }
 
+MachineTypes SectionChunk::getMachine() const {
+  MachineTypes machine = file->getMachineType();
+  // On ARM64EC, the IMAGE_SCN_GPREL flag is repurposed to indicate that section
+  // code is x86_64. This enables embedding x86_64 code within ARM64EC object
+  // files. MSVC uses this for export thunks in .exp files.
+  if (isArm64EC(machine) && (header->Characteristics & IMAGE_SCN_GPREL))
+    machine = AMD64;
+  return machine;
+}
+
 // SectionChunk is one of the most frequently allocated classes, so it is
 // important to keep it as compact as possible. As of this writing, the number
 // below is the size of this class on x64 platforms.
@@ -290,13 +300,16 @@ static void applySecRelHigh12A(const SectionChunk *sec, uint8_t *off,
                                OutputSection *os, uint64_t s) {
   if (!checkSecRel(sec, os))
     return;
-  uint64_t secRel = (s - os->getRVA()) >> 12;
-  if (0xfff < secRel) {
+  uint32_t orig = read32le(off);
+  uint64_t imm = (orig >> 10) & 0xFFF;
+  orig &= ~(0xFFF << 10);
+  imm = (s + imm - os->getRVA()) >> 12;
+  if (0xfff < imm) {
     error("overflow in SECREL_HIGH12A relocation in section: " +
           sec->getSectionName());
     return;
   }
-  applyArm64Imm(off, secRel & 0xfff, 0);
+  write32le(off, orig | (imm << 10));
 }
 
 static void applySecRelLdr(const SectionChunk *sec, uint8_t *off,
@@ -349,6 +362,46 @@ void SectionChunk::applyRelARM64(uint8_t *off, uint16_t type, OutputSection *os,
     applySecIdx(off, os, file->symtab.ctx.outputSections.size());
     break;
   case IMAGE_REL_ARM64_REL32:          add32(off, s - p - 4); break;
+  default:
+    error("unsupported relocation type 0x" + Twine::utohexstr(type) + " in " +
+          toString(file));
+  }
+}
+
+static void applyMipsBranch(uint8_t *off, int64_t v) {
+  if (v & 3)
+    error("misaligned jmp offset");
+  add32(off, (v >> 2) & 0x03FFFFFC);
+}
+
+void SectionChunk::applyRelMIPS(uint8_t *off, uint16_t type, OutputSection *os,
+                                uint64_t s, uint64_t p,
+                                uint64_t imageBase) const {
+  switch (type) {
+  case IMAGE_REL_MIPS_REFWORD:
+    add32(off, s + imageBase);
+    break;
+  case IMAGE_REL_MIPS_JMPADDR:
+    applyMipsBranch(off, s + imageBase);
+    break;
+  case IMAGE_REL_MIPS_REFHI:
+    add16(off, (s + imageBase) >> 16);
+    break;
+  case IMAGE_REL_MIPS_REFLO:
+    add16(off, s + imageBase);
+    break;
+  case IMAGE_REL_MIPS_PAIR:
+    // Nothing to do
+    break;
+  case IMAGE_REL_MIPS_REFWORDNB:
+    add32(off, s);
+    break;
+  case IMAGE_REL_MIPS_SECTION:
+    applySecIdx(off, os, file->symtab.ctx.outputSections.size());
+    break;
+  case IMAGE_REL_MIPS_SECREL:
+    applySecRel(this, off, os, s);
+    break;
   default:
     error("unsupported relocation type 0x" + Twine::utohexstr(type) + " in " +
           toString(file));
@@ -412,12 +465,6 @@ void SectionChunk::writeTo(uint8_t *buf) const {
 
     applyRelocation(buf + rel.VirtualAddress, rel);
   }
-
-  // Write the offset to EC entry thunk preceding section contents. The low bit
-  // is always set, so it's effectively an offset from the last byte of the
-  // offset.
-  if (Defined *entryThunk = getEntryThunk())
-    write32le(buf - sizeof(uint32_t), entryThunk->getRVA() - rva + 1);
 }
 
 void SectionChunk::applyRelocation(uint8_t *off,
@@ -458,6 +505,9 @@ void SectionChunk::applyRelocation(uint8_t *off,
     break;
   case Triple::aarch64:
     applyRelARM64(off, rel.Type, os, s, p, imageBase);
+    break;
+  case Triple::mipsel:
+    applyRelMIPS(off, rel.Type, os, s, p, imageBase);
     break;
   default:
     llvm_unreachable("unknown machine type");
@@ -545,6 +595,8 @@ static uint8_t getBaserelType(const coff_relocation &rel,
     if (rel.Type == IMAGE_REL_ARM64_ADDR64)
       return IMAGE_REL_BASED_DIR64;
     return IMAGE_REL_BASED_ABSOLUTE;
+  case Triple::mipsel:
+    return IMAGE_REL_BASED_ABSOLUTE;
   default:
     llvm_unreachable("unknown machine type");
   }
@@ -560,7 +612,7 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
     if (ty == IMAGE_REL_BASED_ABSOLUTE)
       continue;
     Symbol *target = file->getSymbol(rel.SymbolTableIndex);
-    if (!target || isa<DefinedAbsolute>(target))
+    if (!isa_and_nonnull<Defined>(target) || isa<DefinedAbsolute>(target))
       continue;
     res->emplace_back(rva + rel.VirtualAddress, ty);
   }
@@ -570,14 +622,14 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
   // to match the value in the EC load config, which is expected to be
   // a relocatable pointer to the __chpe_metadata symbol.
   COFFLinkerContext &ctx = file->symtab.ctx;
-  if (ctx.hybridSymtab && ctx.symtab.loadConfigSym &&
-      ctx.symtab.loadConfigSym->getChunk() == this &&
-      ctx.hybridSymtab->loadConfigSym &&
-      ctx.symtab.loadConfigSize >=
+  if (ctx.config.machine == ARM64X && ctx.hybridSymtab->loadConfigSym &&
+      ctx.hybridSymtab->loadConfigSym->getChunk() == this &&
+      ctx.symtab.loadConfigSym &&
+      ctx.hybridSymtab->loadConfigSize >=
           offsetof(coff_load_configuration64, CHPEMetadataPointer) +
               sizeof(coff_load_configuration64::CHPEMetadataPointer))
     res->emplace_back(
-        ctx.symtab.loadConfigSym->getRVA() +
+        ctx.hybridSymtab->loadConfigSym->getRVA() +
             offsetof(coff_load_configuration64, CHPEMetadataPointer),
         IMAGE_REL_BASED_DIR64);
 }
@@ -773,7 +825,7 @@ uint32_t SectionChunk::getSectionNumber() const {
   return s.getIndex() + 1;
 }
 
-CommonChunk::CommonChunk(const COFFSymbolRef s) : sym(s) {
+CommonChunk::CommonChunk(const COFFSymbolRef s) : live(false), sym(s) {
   // The value of a common symbol is its size. Align all common symbols smaller
   // than 32 bytes naturally, i.e. round the size up to the next power of two.
   // This is what MSVC link.exe does.
@@ -871,6 +923,19 @@ void RangeExtensionThunkARM64::writeTo(uint8_t *buf) const {
   applyArm64Imm(buf + 4, target->getRVA() & 0xfff, 0);
 }
 
+void SameAddressThunkARM64EC::setDynamicRelocs(COFFLinkerContext &ctx) const {
+  // Add ARM64X relocations replacing adrp/add instructions with a version using
+  // the hybrid target.
+  RangeExtensionThunkARM64 hybridView(ARM64EC, hybridTarget);
+  uint8_t buf[sizeof(arm64Thunk)];
+  hybridView.setRVA(rva);
+  hybridView.writeTo(buf);
+  uint32_t addrp = *reinterpret_cast<ulittle32_t *>(buf);
+  uint32_t add = *reinterpret_cast<ulittle32_t *>(buf + sizeof(uint32_t));
+  ctx.dynamicRelocs->set(this, addrp);
+  ctx.dynamicRelocs->set(Arm64XRelocVal(this, sizeof(uint32_t)), add);
+}
+
 LocalImportChunk::LocalImportChunk(COFFLinkerContext &c, Defined *s)
     : sym(s), ctx(c) {
   setAlignment(ctx.config.wordsize);
@@ -886,7 +951,14 @@ void LocalImportChunk::writeTo(uint8_t *buf) const {
   if (ctx.config.is64()) {
     write64le(buf, sym->getRVA() + ctx.config.imageBase);
   } else {
-    write32le(buf, sym->getRVA() + ctx.config.imageBase);
+    uint32_t bit = 0;
+    // Pointer to thumb code must have the LSB set, so adjust it. Only code is
+    // adjusted: dllimport of a locally defined variable is valid, and the
+    // pointer to such a variable must stay unmodified.
+    if (ctx.config.machine == ARMNT && sym->getChunk() &&
+        (sym->getChunk()->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
+      bit = 1;
+    write32le(buf, (sym->getRVA() + ctx.config.imageBase) | bit);
   }
 }
 
@@ -929,7 +1001,7 @@ void ECCodeMapChunk::writeTo(uint8_t *buf) const {
   auto table = reinterpret_cast<chpe_range_entry *>(buf);
   for (uint32_t i = 0; i < map.size(); i++) {
     const ECCodeMapEntry &entry = map[i];
-    uint32_t start = entry.first->getRVA();
+    uint32_t start = entry.first->getRVA() & ~0xfff;
     table[i].StartOffset = start | entry.type;
     table[i].Length = entry.last->getRVA() + entry.last->getSize() - start;
   }
@@ -1070,15 +1142,19 @@ void MergeChunk::writeTo(uint8_t *buf) const {
 }
 
 // MinGW specific.
-size_t AbsolutePointerChunk::getSize() const { return ctx.config.wordsize; }
+size_t AbsolutePointerChunk::getSize() const {
+  return symtab.ctx.config.wordsize;
+}
 
 void AbsolutePointerChunk::writeTo(uint8_t *buf) const {
-  if (ctx.config.is64()) {
+  if (symtab.ctx.config.is64()) {
     write64le(buf, value);
   } else {
     write32le(buf, value);
   }
 }
+
+MachineTypes AbsolutePointerChunk::getMachine() const { return symtab.machine; }
 
 void ECExportThunkChunk::writeTo(uint8_t *buf) const {
   memcpy(buf, ECExportThunkCode, sizeof(ECExportThunkCode));
@@ -1167,25 +1243,29 @@ uint32_t ImportThunkChunkARM64EC::extendRanges() {
 }
 
 uint64_t Arm64XRelocVal::get() const {
-  return (sym ? sym->getRVA() : 0) + value;
+  return (sym ? sym->getRVA() : 0) + (chunk ? chunk->getRVA() : 0) + value;
 }
 
 size_t Arm64XDynamicRelocEntry::getSize() const {
   switch (type) {
+  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+    return sizeof(uint16_t); // Just a header.
   case IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
     return sizeof(uint16_t) + size; // A header and a payload.
   case IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
-  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
-    llvm_unreachable("unsupported type");
+    return 2 * sizeof(uint16_t); // A header and a delta.
   }
   llvm_unreachable("invalid type");
 }
 
 void Arm64XDynamicRelocEntry::writeTo(uint8_t *buf) const {
   auto out = reinterpret_cast<ulittle16_t *>(buf);
-  *out = (offset & 0xfff) | (type << 12);
+  *out = (offset.get() & 0xfff) | (type << 12);
 
   switch (type) {
+  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+    *out |= ((bit_width(size) - 1) << 14); // Encode the size.
+    break;
   case IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
     *out |= ((bit_width(size) - 1) << 14); // Encode the size.
     switch (size) {
@@ -1203,26 +1283,58 @@ void Arm64XDynamicRelocEntry::writeTo(uint8_t *buf) const {
     }
     break;
   case IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
-  case IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
-    llvm_unreachable("unsupported type");
+    int delta = value.get();
+    // Negative offsets use a sign bit in the header.
+    if (delta < 0) {
+      *out |= 1 << 14;
+      delta = -delta;
+    }
+    // Depending on the value, the delta is encoded with a shift of 2 or 3 bits.
+    if (delta & 7) {
+      assert(!(delta & 3));
+      delta >>= 2;
+    } else {
+      *out |= (1 << 15);
+      delta >>= 3;
+    }
+    out[1] = delta;
+    assert(!(delta & ~0xffff));
+    break;
   }
 }
 
 void DynamicRelocsChunk::finalize() {
   llvm::stable_sort(arm64xRelocs, [=](const Arm64XDynamicRelocEntry &a,
                                       const Arm64XDynamicRelocEntry &b) {
-    return a.offset < b.offset;
+    return a.offset.get() < b.offset.get();
   });
 
-  size = sizeof(coff_dynamic_reloc_table) + sizeof(coff_dynamic_relocation64) +
-         sizeof(coff_base_reloc_block_header);
+  size = sizeof(coff_dynamic_reloc_table) + sizeof(coff_dynamic_relocation64);
+  uint32_t prevPage = 0xfff;
 
   for (const Arm64XDynamicRelocEntry &entry : arm64xRelocs) {
-    assert(!(entry.offset & ~0xfff)); // Not yet supported.
+    uint32_t page = entry.offset.get() & ~0xfff;
+    if (page != prevPage) {
+      size = alignTo(size, sizeof(uint32_t)) +
+             sizeof(coff_base_reloc_block_header);
+      prevPage = page;
+    }
     size += entry.getSize();
   }
 
   size = alignTo(size, sizeof(uint32_t));
+}
+
+// Set the reloc value. The reloc entry must be allocated beforehand.
+void DynamicRelocsChunk::set(Arm64XRelocVal offset, Arm64XRelocVal value) {
+  uint32_t rva = offset.get();
+  auto entry =
+      llvm::find_if(arm64xRelocs, [rva](const Arm64XDynamicRelocEntry &e) {
+        return e.offset.get() == rva;
+      });
+  assert(entry != arm64xRelocs.end());
+  assert(!entry->value.get());
+  entry->value = value;
 }
 
 void DynamicRelocsChunk::writeTo(uint8_t *buf) const {
@@ -1235,17 +1347,31 @@ void DynamicRelocsChunk::writeTo(uint8_t *buf) const {
   header->Symbol = IMAGE_DYNAMIC_RELOCATION_ARM64X;
   buf += sizeof(*header);
 
-  auto pageHeader = reinterpret_cast<coff_base_reloc_block_header *>(buf);
-  pageHeader->BlockSize = sizeof(*pageHeader);
+  coff_base_reloc_block_header *pageHeader = nullptr;
+  size_t relocSize = 0;
   for (const Arm64XDynamicRelocEntry &entry : arm64xRelocs) {
-    entry.writeTo(buf + pageHeader->BlockSize);
-    pageHeader->BlockSize += entry.getSize();
-  }
-  pageHeader->BlockSize = alignTo(pageHeader->BlockSize, sizeof(uint32_t));
+    uint32_t page = entry.offset.get() & ~0xfff;
+    if (!pageHeader || page != pageHeader->PageRVA) {
+      relocSize = alignTo(relocSize, sizeof(uint32_t));
+      if (pageHeader)
+        pageHeader->BlockSize =
+            buf + relocSize - reinterpret_cast<uint8_t *>(pageHeader);
+      pageHeader =
+          reinterpret_cast<coff_base_reloc_block_header *>(buf + relocSize);
+      pageHeader->PageRVA = page;
+      relocSize += sizeof(*pageHeader);
+    }
 
-  header->BaseRelocSize = pageHeader->BlockSize;
-  table->Size += header->BaseRelocSize;
-  assert(size == sizeof(*table) + sizeof(*header) + header->BaseRelocSize);
+    entry.writeTo(buf + relocSize);
+    relocSize += entry.getSize();
+  }
+  relocSize = alignTo(relocSize, sizeof(uint32_t));
+  pageHeader->BlockSize =
+      buf + relocSize - reinterpret_cast<uint8_t *>(pageHeader);
+
+  header->BaseRelocSize = relocSize;
+  table->Size += relocSize;
+  assert(size == sizeof(*table) + sizeof(*header) + relocSize);
 }
 
 } // namespace lld::coff

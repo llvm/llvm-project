@@ -14,7 +14,6 @@
 
 #if _LIBCPP_HAS_LOCALIZATION
 
-#  include <__format/concepts.h>
 #  include <__format/format_error.h>
 #  include <__format/format_parse_context.h>
 #  include <__format/formatter_string.h>
@@ -139,7 +138,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __validate_time_zone(__flags __flags) {
 }
 
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS __parser_chrono {
+class __parser_chrono {
   using _ConstIterator _LIBCPP_NODEBUG = typename basic_format_parse_context<_CharT>::const_iterator;
 
 public:

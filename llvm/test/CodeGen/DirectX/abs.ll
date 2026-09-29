@@ -33,6 +33,11 @@ entry:
   ret i64 %elt.abs
 }
 
+; DOPCHECK-DAG: declare i16 @dx.op.binary.i16(i32, i16, i16) #[[#ATTR0:]]
+; DOPCHECK-DAG: declare i32 @dx.op.binary.i32(i32, i32, i32) #[[#ATTR0]]
+; DOPCHECK-DAG: declare i64 @dx.op.binary.i64(i32, i64, i64) #[[#ATTR0]]
+; DOPCHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
+
 declare i16 @llvm.abs.i16(i16, i1 immarg)
 declare i32 @llvm.abs.i32(i32, i1 immarg)
 declare i64 @llvm.abs.i64(i64, i1 immarg)

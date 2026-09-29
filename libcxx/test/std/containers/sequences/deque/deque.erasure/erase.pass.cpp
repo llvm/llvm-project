@@ -32,8 +32,7 @@ void test0(S s, U val, S expected, std::size_t expected_erased_count) {
 }
 
 template <class S>
-void test()
-{
+void test() {
   test0(S(), 1, S(), 0);
 
   test0(S({1}), 1, S(), 1);
@@ -67,15 +66,14 @@ void test()
   test0(S({1, 2, 1}), opt(3), S({1, 2, 1}), 0);
 }
 
-int main(int, char**)
-{
-    test<std::deque<int>>();
-    test<std::deque<int, min_allocator<int>>> ();
-    test<std::deque<int, safe_allocator<int>>> ();
-    test<std::deque<int, test_allocator<int>>> ();
+int main(int, char**) {
+  test<std::deque<int>>();
+  test<std::deque<int, min_allocator<int>>>();
+  test<std::deque<int, safe_allocator<int>>>();
+  test<std::deque<int, test_allocator<int>>>();
 
-    test<std::deque<long>>();
-    test<std::deque<double>>();
+  test<std::deque<long>>();
+  test<std::deque<double>>();
 
   return 0;
 }

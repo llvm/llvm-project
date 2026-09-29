@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries" -drop-equivalent-buffer-results -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only bufferize-function-boundaries" -split-input-file | FileCheck %s --check-prefix=CHECK-ANALYSIS
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
@@ -8,12 +9,122 @@
 // Test bufferization using memref types that have no layout map.
 // RUN: mlir-opt %s -one-shot-bufferize="unknown-type-conversion=identity-layout-map bufferize-function-boundaries" -split-input-file -o /dev/null
 
-// CHECK-LABEL: func @insert_slice_fun
+// A write to [0, 4) does not conflict with a read from [4, 8), even though
+// tensor.extract_slice itself is alias-only and the actual read is the return.
+
+// CHECK-LABEL: func @disjoint_insert_extract(
+//   CHECK-NOT:   memref.alloc
+//       CHECK:   memref.subview
+//       CHECK:   memref.copy
+//       CHECK:   memref.subview
+//   CHECK-NOT:   memref.alloc
+
+// CHECK-ANALYSIS-LABEL: func @disjoint_insert_extract(
+// CHECK-ANALYSIS: tensor.insert_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "true"]
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+func.func @disjoint_insert_extract(
+    %t: tensor<8xf32> {bufferization.writable = true},
+    %source: tensor<4xf32>) -> (tensor<8xf32>, tensor<4xf32>) {
+  %written = tensor.insert_slice %source into %t[0][4][1]
+      : tensor<4xf32> into tensor<8xf32>
+  %read = tensor.extract_slice %t[4][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  return %written, %read : tensor<8xf32>, tensor<4xf32>
+}
+
+// -----
+
+// A chain of alias-only ops between the extraction and the actual read is
+// traced back to the disjoint subset.
+
+// CHECK-LABEL: func @disjoint_insert_extract_alias_chain(
+//   CHECK-NOT:   memref.alloc
+//       CHECK:   memref.subview
+//       CHECK:   memref.copy
+//       CHECK:   memref.subview
+//   CHECK-NOT:   memref.alloc
+
+// CHECK-ANALYSIS-LABEL: func @disjoint_insert_extract_alias_chain(
+// CHECK-ANALYSIS: tensor.insert_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "true"]
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+// CHECK-ANALYSIS: tensor.cast
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+// CHECK-ANALYSIS: tensor.cast
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+// CHECK-ANALYSIS: tensor.cast
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+func.func @disjoint_insert_extract_alias_chain(
+    %t: tensor<8xf32> {bufferization.writable = true},
+    %source: tensor<4xf32>) -> (tensor<8xf32>, tensor<?xf32>) {
+  %written = tensor.insert_slice %source into %t[0][4][1]
+      : tensor<4xf32> into tensor<8xf32>
+  %extracted = tensor.extract_slice %t[4][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  %cast0 = tensor.cast %extracted : tensor<4xf32> to tensor<?xf32>
+  %cast1 = tensor.cast %cast0 : tensor<?xf32> to tensor<4xf32>
+  %cast2 = tensor.cast %cast1 : tensor<4xf32> to tensor<?xf32>
+  return %written, %cast2 : tensor<8xf32>, tensor<?xf32>
+}
+
+// -----
+
+// A write to [0, 4) conflicts with a read from [2, 6).
+
+// CHECK-LABEL: func @overlapping_insert_extract(
+//       CHECK:   %[[ALLOC:.*]] = memref.alloc
+//       CHECK:   memref.copy %{{.*}}, %[[ALLOC]]
+
+// CHECK-ANALYSIS-LABEL: func @overlapping_insert_extract(
+// CHECK-ANALYSIS: tensor.insert_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "false"]
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+func.func @overlapping_insert_extract(
+    %t: tensor<8xf32> {bufferization.writable = true},
+    %source: tensor<4xf32>) -> (tensor<8xf32>, tensor<4xf32>) {
+  %written = tensor.insert_slice %source into %t[0][4][1]
+      : tensor<4xf32> into tensor<8xf32>
+  %read = tensor.extract_slice %t[2][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  return %written, %read : tensor<8xf32>, tensor<4xf32>
+}
+
+// -----
+
+// Dynamic offsets that cannot be proven disjoint remain conservative.
+
+// CHECK-LABEL: func @unknown_insert_extract(
+//       CHECK:   %[[ALLOC:.*]] = memref.alloc
+//       CHECK:   memref.copy %{{.*}}, %[[ALLOC]]
+
+// CHECK-ANALYSIS-LABEL: func @unknown_insert_extract(
+// CHECK-ANALYSIS: tensor.insert_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "false", "none"]
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "none"]
+func.func @unknown_insert_extract(
+    %t: tensor<8xf32> {bufferization.writable = true},
+    %source: tensor<4xf32>, %write_idx: index,
+    %read_idx: index) -> (tensor<8xf32>, tensor<4xf32>) {
+  %written = tensor.insert_slice %source into %t[%write_idx][4][1]
+      : tensor<4xf32> into tensor<8xf32>
+  %read = tensor.extract_slice %t[%read_idx][4][1]
+      : tensor<8xf32> to tensor<4xf32>
+  return %written, %read : tensor<8xf32>, tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func private @insert_slice_fun
 //  CHECK-SAME:   %[[A0:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,
 //  CHECK-SAME:   %[[A1:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>,
 //  CHECK-SAME:   %[[t0:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>,
 //  CHECK-SAME:   %[[t1:[a-zA-Z0-9]*]]: memref<4xf32, strided<[?], offset: ?>>
-func.func @insert_slice_fun(
+func.func private @insert_slice_fun(
     %A0 : tensor<?xf32> {bufferization.writable = false},
     %A1 : tensor<?xf32> {bufferization.writable = true},
     %t0 : tensor<4xf32> {bufferization.writable = false},
@@ -114,7 +225,7 @@ func.func @insert_slice_fun_not_inplace(
     %t : tensor<4xf32> {bufferization.writable = false})
   -> tensor<?xf32>
 {
-  //      CHECK: %[[ALLOC:.*]] = memref.alloc(%{{.*}}) {alignment = 64 : i64} : memref<?xf32>
+  //      CHECK: %[[ALLOC:.*]] = memref.alloc(%{{.*}}) alignment = 64 : memref<?xf32>
   //      CHECK: memref.copy %[[A]], %[[ALLOC]] : memref<?xf32{{.*}} to memref<?xf32>
   //      CHECK: %[[SV:.*]] = memref.subview %[[ALLOC]][0] [4] [1] : memref<?xf32> to memref<4xf32, strided<[1]>>
   //      CHECK: memref.copy %[[t]], %[[SV]] : memref<4xf32, strided{{.*}}> to memref<4xf32, strided<[1]>>
@@ -251,7 +362,7 @@ func.func @pad_memory_space(%t: tensor<?xf32>, %h1: index, %f: f32, %pos: index)
   // CHECK: %[[alloc_tensor:.*]] = memref.alloc{{.*}} : memref<?xf32, 3>
   // CHECK: memref.copy %[[t]], %[[alloc_tensor]]
   %0 = bufferization.alloc_tensor() copy(%t)
-      {memory_space = 3 : i64} : tensor<?xf32>
+      <{memory_space = 3 : i64}> : tensor<?xf32>
   // CHECK: %[[padded_alloc:.*]] = memref.alloc() {{.*}} : memref<15xf32, 3>
   // CHECK: linalg.map
   // CHECK:     outs(%[[padded_alloc]] : memref<15xf32, 3>)
@@ -331,14 +442,36 @@ func.func @dim_not_reading(%t: tensor<?xf32>, %f: f32, %pos: index)
 // -----
 
 //       CHECK: #[[$map:.*]] = affine_map<(d0) -> (d0 + 5)>
-// CHECK-LABEL: func.func @cast_retains_buffer_layout(
+// CHECK-LABEL: func.func private @cast_retains_buffer_layout(
 //  CHECK-SAME:     %[[t:.*]]: memref<?xf32, #[[$map]]>, %[[sz:.*]]: index) -> memref<?xf32, strided<[1], offset: 7>> {
 //       CHECK:   %[[casted:.*]] = memref.cast %[[t]] : memref<?xf32, #[[$map]]> to memref<10xf32, #[[$map]]>
 //       CHECK:   %[[slice:.*]] = memref.subview %[[casted]][2] [%[[sz]]] [1] : memref<10xf32, #[[$map]]> to memref<?xf32, strided<[1], offset: 7>>
 //       CHECK:   return %[[slice]]
-func.func @cast_retains_buffer_layout(
+func.func private @cast_retains_buffer_layout(
     %t: tensor<?xf32>
         {bufferization.buffer_layout = affine_map<(d0) -> (d0 + 5)>},
+    %sz: index)
+  -> (tensor<10xf32>, tensor<?xf32>)
+{
+  %casted = tensor.cast %t : tensor<?xf32> to tensor<10xf32>
+  %slice = tensor.extract_slice %casted[2][%sz][1] : tensor<10xf32> to tensor<?xf32>
+
+  // Note: The %casted return type is folded away because both buffers are
+  // equivalent. Therefore, we currently loose some static type information
+  // in the caller.
+  return %casted, %slice : tensor<10xf32>, tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func private @cast_retains_buffer_layout_strided(
+//  CHECK-SAME:     %[[t:.*]]: memref<?xf32, strided<[1], offset: 5>>, %[[sz:.*]]: index) -> memref<?xf32, strided<[1], offset: 7>> {
+//       CHECK:   %[[casted:.*]] = memref.cast %[[t]] : memref<?xf32, strided<[1], offset: 5>> to memref<10xf32, strided<[1], offset: 5>>
+//       CHECK:   %[[slice:.*]] = memref.subview %[[casted]][2] [%[[sz]]] [1] : memref<10xf32, strided<[1], offset: 5>> to memref<?xf32, strided<[1], offset: 7>>
+//       CHECK:   return %[[slice]]
+func.func private @cast_retains_buffer_layout_strided(
+    %t: tensor<?xf32>
+        {bufferization.buffer_layout = strided<[1], offset: 5>},
     %sz: index)
   -> (tensor<10xf32>, tensor<?xf32>)
 {
@@ -398,6 +531,33 @@ func.func @tensor.reshape() -> tensor<2x2x5xf32> {
 
 // -----
 
+// CHECK-LABEL: func @tensor_reshape_aliasing
+//  CHECK-SAME:  (%[[ARG0:.+]]: index, %[[ARG1:.+]]: index)
+func.func @tensor_reshape_aliasing(%arg0: index, %arg1: index) -> tensor<?x?xf32> {
+  %t1_static = arith.constant dense<0.> : tensor<10xf32>
+  // CHECK-DAG: %[[T1:.+]] = memref.cast
+  %t1 = tensor.cast %t1_static : tensor<10xf32> to tensor<?xf32>
+
+  // CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  // CHECK-DAG: %[[C1:.+]] = arith.constant 1 : index
+  %c1 = arith.constant 1 : index
+
+  // CHECK-DAG: %[[SHAPE:.+]] = memref.alloc() {{.*}} : memref<2xindex>
+  %shape = bufferization.alloc_tensor() : tensor<2xindex>
+  // CHECK: memref.store %[[ARG0]], %[[SHAPE]][%[[C0]]]
+  %shape.0 = tensor.insert %arg0 into %shape[%c0] : tensor<2xindex>
+  // CHECK: memref.store %[[ARG1]], %[[SHAPE]][%[[C1]]]
+  %shape.1 = tensor.insert %arg1 into %shape.0[%c1] : tensor<2xindex>
+
+  // CHECK: %[[RESHAPED:.+]] = memref.reshape %[[T1]](%[[SHAPE]])
+  %reshaped = tensor.reshape %t1(%shape.1) : (tensor<?xf32>, tensor<2xindex>) -> tensor<?x?xf32>
+  // CHECK: return %[[RESHAPED]]
+  return %reshaped : tensor<?x?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @reshape_with_non_identity_layout(
 // CHECK-SAME:    %[[INPUT:[a-zA-Z0-9]*]]: memref<2x2xf32, strided<[?, ?], offset: ?>, 3>,
 // CHECK-SAME:    %[[LAYOUT:[a-zA-Z0-9]*]]: memref<2xi32, strided<[?], offset: ?>>,
@@ -440,4 +600,33 @@ func.func @collapse_shape_regression(
   // CHECK: memref.collapse_shape %[[alloc2]]
   tensor.collapse_shape %0[[0, 1]] : tensor<5x6xf32> into tensor<30xf32>
   return
+}
+
+// -----
+
+// CHECK-LABEL: func private @mult_return_callee(
+//  CHECK-SAME:   %[[T:.*]]: memref<?xf32, strided<[?], offset: ?>>, %[[COND:.*]]: i1,
+//  CHECK-SAME:   %[[A:.*]]: index, %[[B:.*]]: index) -> index {
+//       CHECK:   cf.cond_br %[[COND]], ^bb1, ^bb2
+//       CHECK: ^bb1:
+//       CHECK:   return %[[A]] : index
+//       CHECK: ^bb2:
+//       CHECK:   return %[[B]] : index
+func.func private @mult_return_callee(%t: tensor<?xf32>,  %cond:i1, %a: index, %b: index) -> (tensor<10xf32>, index) {
+  %casted = tensor.cast %t : tensor<?xf32> to tensor<10xf32>
+  cf.cond_br %cond,^a, ^b
+^a:
+  return %casted, %a : tensor<10xf32>, index
+^b:
+  return %casted, %b : tensor<10xf32>, index
+}
+
+// CHECK-LABEL: func @mult_return(
+//  CHECK-SAME:   %[[T:.*]]: memref<?xf32, strided<[?], offset: ?>>, %[[COND:.*]]: i1,
+//  CHECK-SAME:   %[[A:.*]]: index, %[[B:.*]]: index) -> (memref<?xf32, strided<[?], offset: ?>>, index) {
+func.func @mult_return(%t: tensor<?xf32>,  %cond:i1, %a: index, %b: index) -> (tensor<10xf32>, index) {
+  // CHECK: %[[RET:.*]] = call @mult_return_callee(%[[T]], %[[COND]], %[[A]], %[[B]]) : (memref<?xf32, strided<[?], offset: ?>>, i1, index, index) -> index
+  // CHECK: return %[[T]], %[[RET]] : memref<?xf32, strided<[?], offset: ?>>, index
+  %t_res, %v = func.call @mult_return_callee(%t, %cond, %a, %b) : (tensor<?xf32>, i1, index, index) -> (tensor<10xf32>, index) 
+  return %t_res, %v : tensor<10xf32>, index
 }

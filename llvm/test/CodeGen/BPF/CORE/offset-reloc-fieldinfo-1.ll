@@ -40,11 +40,11 @@ target triple = "bpfel"
 %struct.s = type { i32, i16 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @field_read(ptr %arg) local_unnamed_addr #0 !dbg !20 {
+define dso_local i32 @field_read(ptr %arg) local_unnamed_addr !dbg !20 {
 entry:
   %ull = alloca i64, align 8
   call void @llvm.dbg.value(metadata ptr %arg, metadata !31, metadata !DIExpression()), !dbg !37
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %ull) #5, !dbg !38
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %ull), !dbg !38
   %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr elementtype(%struct.s) %arg, i32 1, i32 2), !dbg !39, !llvm.preserve.access.index !25
   %1 = tail call i32 @llvm.bpf.preserve.field.info.p0(ptr %0, i64 0), !dbg !40
   call void @llvm.dbg.value(metadata i32 %1, metadata !34, metadata !DIExpression()), !dbg !37
@@ -52,7 +52,7 @@ entry:
   call void @llvm.dbg.value(metadata i32 %2, metadata !35, metadata !DIExpression()), !dbg !37
   %idx.ext = zext i32 %1 to i64, !dbg !43
   %add.ptr = getelementptr i8, ptr %arg, i64 %idx.ext, !dbg !43
-  call void @bpf_probe_read(ptr nonnull %ull, i32 %2, ptr %add.ptr) #5, !dbg !44
+  call void @bpf_probe_read(ptr nonnull %ull, i32 %2, ptr %add.ptr), !dbg !44
   %3 = call i32 @llvm.bpf.preserve.field.info.p0(ptr %0, i64 4), !dbg !45
   call void @llvm.dbg.value(metadata i32 %3, metadata !36, metadata !DIExpression()), !dbg !37
   %4 = load i64, ptr %ull, align 8, !dbg !46, !tbaa !47
@@ -68,7 +68,7 @@ entry:
   %shr3 = lshr i64 %shl, %sh_prom1, !dbg !53
   %retval.0.in = select i1 %tobool, i64 %shr3, i64 %shr, !dbg !53
   %retval.0 = trunc i64 %retval.0.in to i32, !dbg !37
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %ull) #5, !dbg !54
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %ull), !dbg !54
   ret i32 %retval.0, !dbg !54
 }
 
@@ -114,28 +114,21 @@ entry:
 ; CHECK-NEXT:        .long   3
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr, i32, i32) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr, i32, i32)
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.bpf.preserve.field.info.p0(ptr, i64) #2
+declare i32 @llvm.bpf.preserve.field.info.p0(ptr, i64)
 
-declare dso_local void @bpf_probe_read(ptr, i32, ptr) local_unnamed_addr #3
+declare dso_local void @bpf_probe_read(ptr, i32, ptr) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.value(metadata, metadata, metadata) #4
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { argmemonly nounwind willreturn }
-attributes #2 = { nounwind readnone }
-attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { nounwind readnone speculatable willreturn }
-attributes #5 = { nounwind }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!16, !17, !18}

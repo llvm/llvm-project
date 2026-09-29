@@ -1,13 +1,16 @@
 ; RUN: llvm-as -disable-output <%s 2>&1 | FileCheck %s
-; CHECK: invalid llvm.dbg.declare intrinsic variable
-; CHECK-NEXT: call void @llvm.dbg.declare({{.*}})
-; CHECK-NEXT: !""
+; CHECK: invalid #dbg record variable
+; CHECK-NEXT: #dbg_declare({{.*}})
+; CHECK-NEXT: DISubprogram
 ; CHECK: warning: ignoring invalid debug info
+
+;; This test ensures we report an illegal variable as illegal, but also that
+;; the illegal MDNode is printed out (DISubprogram) to help localise.
 
 define void @foo(i32 %a) {
 entry:
   %s = alloca i32
-  call void @llvm.dbg.declare(metadata ptr %s, metadata !"", metadata !DIExpression()), !dbg !DILocation(scope: !1)
+  call void @llvm.dbg.declare(metadata ptr %s, metadata !1, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   ret void
 }
 
@@ -15,4 +18,6 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DISubprogram()
+!1 = distinct !DISubprogram(type: !3)
+!2 = !{null}
+!3 = !DISubroutineType(types: !2)

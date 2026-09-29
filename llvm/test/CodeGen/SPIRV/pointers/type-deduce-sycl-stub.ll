@@ -1,8 +1,8 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=all --translator-compatibility-mode --avoid-spirv-capabilities=Shader %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=all --translator-compatibility-mode --avoid-spirv-capabilities=Shader %s -o - -filetype=obj | spirv-val --target-env spv1.4 %}
 
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=all --translator-compatibility-mode --avoid-spirv-capabilities=Shader %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=all --translator-compatibility-mode --avoid-spirv-capabilities=Shader %s -o - -filetype=obj | spirv-val --target-env spv1.4 %}
 
 ; CHECK-SPIRV-DAG: OpName %[[#F:]] "finish"
 ; CHECK-SPIRV-DAG: OpName %[[#FH:]] "finish_helper"

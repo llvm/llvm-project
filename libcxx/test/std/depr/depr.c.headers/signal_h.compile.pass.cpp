@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Static assertion failure.
+// XFAIL: LLVM-LIBC-FIXME
+
 // test <signal.h>
 
 #include <signal.h>

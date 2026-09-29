@@ -34,6 +34,7 @@
 #include "sanitizer_common/sanitizer_glibc_version.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_linux.h"
+#include "sanitizer_common/sanitizer_platform_interceptors.h"
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -214,6 +215,35 @@ INTERCEPTOR(void, free, void *ptr) {
   GET_MALLOC_STACK_TRACE;
   MsanDeallocate(&stack, ptr);
 }
+
+#if SANITIZER_INTERCEPT_FREE_SIZED
+INTERCEPTOR(void, free_sized, void *ptr, uptr size) {
+  if (UNLIKELY(!ptr))
+    return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  GET_MALLOC_STACK_TRACE;
+  MsanDeallocate(&stack, ptr);
+}
+#  define MSAN_MAYBE_INTERCEPT_FREE_SIZED INTERCEPT_FUNCTION(free_sized)
+#else
+#  define MSAN_MAYBE_INTERCEPT_FREE_SIZED
+#endif
+
+#if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+INTERCEPTOR(void, free_aligned_sized, void *ptr, uptr alignment, uptr size) {
+  if (UNLIKELY(!ptr))
+    return;
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+  GET_MALLOC_STACK_TRACE;
+  MsanDeallocate(&stack, ptr);
+}
+#  define MSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED \
+    INTERCEPT_FUNCTION(free_aligned_sized)
+#else
+#  define MSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED
+#endif
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
 INTERCEPTOR(void, cfree, void *ptr) {
@@ -1127,7 +1157,7 @@ static void SignalAction(int signo, void *si, void *uc) {
   SignalHandlerScope signal_handler_scope;
   ScopedThreadLocalStateBackup stlsb;
   UnpoisonParam(3);
-  __msan_unpoison(si, sizeof(__sanitizer_sigaction));
+  __msan_unpoison(si, sizeof(__sanitizer_siginfo));
   __msan_unpoison(uc, ucontext_t_sz(uc));
 
   typedef void (*sigaction_cb)(int, void *, void *);
@@ -1642,6 +1672,7 @@ static int msan_dl_iterate_phdr_cb(__sanitizer_dl_phdr_info *info, SIZE_T size,
   return cbdata->callback(info, size, cbdata->data);
 }
 
+#if SANITIZER_INTERCEPT_SHMAT
 INTERCEPTOR(void *, shmat, int shmid, const void *shmaddr, int shmflg) {
   ENSURE_MSAN_INITED();
   void *p = REAL(shmat)(shmid, shmaddr, shmflg);
@@ -1654,6 +1685,10 @@ INTERCEPTOR(void *, shmat, int shmid, const void *shmaddr, int shmflg) {
   }
   return p;
 }
+#  define MSAN_MAYBE_INTERCEPT_SHMAT INTERCEPT_FUNCTION(shmat)
+#else
+#  define MSAN_MAYBE_INTERCEPT_SHMAT
+#endif
 
 INTERCEPTOR(int, dl_iterate_phdr, dl_iterate_phdr_cb callback, void *data) {
   void *ctx;
@@ -1775,6 +1810,8 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(realloc);
   INTERCEPT_FUNCTION(reallocarray);
   INTERCEPT_FUNCTION(free);
+  MSAN_MAYBE_INTERCEPT_FREE_SIZED;
+  MSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED;
   MSAN_MAYBE_INTERCEPT_CFREE;
   MSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE;
   MSAN_MAYBE_INTERCEPT_MALLINFO;
@@ -1912,7 +1949,7 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(tzset);
   INTERCEPT_FUNCTION(atexit);
   INTERCEPT_FUNCTION(__cxa_atexit);
-  INTERCEPT_FUNCTION(shmat);
+  MSAN_MAYBE_INTERCEPT_SHMAT;
   MSAN_MAYBE_INTERCEPT_OPENPTY;
   MSAN_MAYBE_INTERCEPT_FORKPTY;
 

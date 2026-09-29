@@ -5,7 +5,7 @@ include "llvm/Target/Target.td"
 
 def archInstrInfo : InstrInfo { }
 
-def arch : Target {
+def X86 : Target {
   let InstructionSet = archInstrInfo;
 }
 
@@ -26,7 +26,7 @@ def InstA : Instruction {
   let InOperandList = (ins i8complex:$b, i32imm:$c);
   field bits<8> Inst;
   field bits<8> SoftFail = 0;
-  let Namespace = "MyNamespace";
+  let Namespace = "X86";
 }
 
 // RUN: llvm-tblgen -gen-instr-info -I %p/../../include %s \
@@ -46,3 +46,5 @@ def InstA : Instruction {
 // CHECK-NOEXPAND:        /* InstA */
 // CHECK-NOEXPAND-NEXT:   i512complex, i8complex, i32imm,
 // CHECK-NOEXPAND: #endif // GET_INSTRINFO_OPERAND_TYPE
+
+defm : RemapAllTargetPseudoPointerOperands<RegClass>;

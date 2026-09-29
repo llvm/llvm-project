@@ -25,13 +25,13 @@ contains
 end
 ! CHECK: End Module m2
 
-! CHECK: Program main
+! CHECK: Program MAIN
 program main
   real :: y
   ! CHECK-NEXT: OpenMPDeclarativeConstruct
   !$omp threadprivate(y)
 end
-! CHECK: End Program main
+! CHECK: End Program MAIN
 
 ! CHECK: Subroutine sub1
 subroutine sub1()

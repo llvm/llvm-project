@@ -48,7 +48,7 @@ public:
   /// If a breakpoint already exists for the given tag, return the existing
   /// instance.
   TagBreakpoint *addBreakpoint(StringRef tag) {
-    auto result = breakpoints.insert({tag, nullptr});
+    auto result = breakpoints.try_emplace(tag);
     auto &it = result.first;
     if (result.second)
       it->second = std::make_unique<TagBreakpoint>(tag.str());

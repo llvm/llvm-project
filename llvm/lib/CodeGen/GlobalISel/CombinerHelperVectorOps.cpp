@@ -364,11 +364,10 @@ bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI,
 
 bool CombinerHelper::matchAddOfVScale(const MachineOperand &MO,
                                       BuildFnTy &MatchInfo) const {
-  GAdd *Add = cast<GAdd>(MRI.getVRegDef(MO.getReg()));
-  GVScale *LHSVScale = cast<GVScale>(MRI.getVRegDef(Add->getLHSReg()));
-  GVScale *RHSVScale = cast<GVScale>(MRI.getVRegDef(Add->getRHSReg()));
-
-  Register Dst = Add->getReg(0);
+  Register Dst = MO.getReg();
+  GVScale *LHSVScale, *RHSVScale;
+  if (!mi_match(Dst, MRI, m_GAdd(m_GVScale(LHSVScale), m_GVScale(RHSVScale))))
+    return false;
 
   if (!MRI.hasOneNonDBGUse(LHSVScale->getReg(0)) ||
       !MRI.hasOneNonDBGUse(RHSVScale->getReg(0)))
@@ -383,14 +382,15 @@ bool CombinerHelper::matchAddOfVScale(const MachineOperand &MO,
 
 bool CombinerHelper::matchMulOfVScale(const MachineOperand &MO,
                                       BuildFnTy &MatchInfo) const {
-  GMul *Mul = cast<GMul>(MRI.getVRegDef(MO.getReg()));
-  GVScale *LHSVScale = cast<GVScale>(MRI.getVRegDef(Mul->getLHSReg()));
-
-  std::optional<APInt> MaybeRHS = getIConstantVRegVal(Mul->getRHSReg(), MRI);
-  if (!MaybeRHS)
+  Register Dst = MO.getReg();
+  GVScale *LHSVScale;
+  Register RHSReg;
+  if (!mi_match(Dst, MRI, m_GMul(m_GVScale(LHSVScale), m_Reg(RHSReg))))
     return false;
 
-  Register Dst = MO.getReg();
+  std::optional<APInt> MaybeRHS = getIConstantVRegVal(RHSReg, MRI);
+  if (!MaybeRHS)
+    return false;
 
   if (!MRI.hasOneNonDBGUse(LHSVScale->getReg(0)))
     return false;
@@ -404,10 +404,14 @@ bool CombinerHelper::matchMulOfVScale(const MachineOperand &MO,
 
 bool CombinerHelper::matchSubOfVScale(const MachineOperand &MO,
                                       BuildFnTy &MatchInfo) const {
-  GSub *Sub = cast<GSub>(MRI.getVRegDef(MO.getReg()));
-  GVScale *RHSVScale = cast<GVScale>(MRI.getVRegDef(Sub->getRHSReg()));
-
   Register Dst = MO.getReg();
+  Register SubLHS;
+  GVScale *RHSVScale;
+  uint32_t Flags;
+  if (!mi_match(Dst, MRI,
+                m_GSub(m_Reg(SubLHS), m_GVScale(RHSVScale), m_MIFlags(Flags))))
+    return false;
+
   LLT DstTy = MRI.getType(Dst);
 
   if (!MRI.hasOneNonDBGUse(RHSVScale->getReg(0)) ||
@@ -416,7 +420,7 @@ bool CombinerHelper::matchSubOfVScale(const MachineOperand &MO,
 
   MatchInfo = [=](MachineIRBuilder &B) {
     auto VScale = B.buildVScale(DstTy, -RHSVScale->getSrc());
-    B.buildAdd(Dst, Sub->getLHSReg(), VScale, Sub->getFlags());
+    B.buildAdd(Dst, SubLHS, VScale, Flags);
   };
 
   return true;
@@ -424,14 +428,16 @@ bool CombinerHelper::matchSubOfVScale(const MachineOperand &MO,
 
 bool CombinerHelper::matchShlOfVScale(const MachineOperand &MO,
                                       BuildFnTy &MatchInfo) const {
-  GShl *Shl = cast<GShl>(MRI.getVRegDef(MO.getReg()));
-  GVScale *LHSVScale = cast<GVScale>(MRI.getVRegDef(Shl->getSrcReg()));
+  Register Dst = MO.getReg();
+  GVScale *LHSVScale;
+  Register ShiftReg;
+  if (!mi_match(Dst, MRI, m_GShl(m_GVScale(LHSVScale), m_Reg(ShiftReg))))
+    return false;
 
-  std::optional<APInt> MaybeRHS = getIConstantVRegVal(Shl->getShiftReg(), MRI);
+  std::optional<APInt> MaybeRHS = getIConstantVRegVal(ShiftReg, MRI);
   if (!MaybeRHS)
     return false;
 
-  Register Dst = MO.getReg();
   LLT DstTy = MRI.getType(Dst);
 
   if (!MRI.hasOneNonDBGUse(LHSVScale->getReg(0)) ||

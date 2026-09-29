@@ -14,6 +14,7 @@
 #include <sys/types.h>
 
 #include "lldb/lldb-private.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb_private {
 
@@ -24,9 +25,9 @@ public:
     eFDTypeSocket, // Socket requiring send/recv
   };
 
-  // TODO: On Windows this should be a HANDLE, and wait should use
-  // WaitForMultipleObjects
-  typedef int WaitableHandle;
+  // A handle for integrating with the host event loop model.
+  using WaitableHandle = lldb::file_t;
+
   static const WaitableHandle kInvalidHandleValue;
 
   IOObject(FDType type) : m_fd_type(type) {}

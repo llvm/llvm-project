@@ -8,7 +8,7 @@ static int baz(int x) {
     return x * 10;
 }
 
-[[clang::noinline]] bool noi() { }
+[[clang::noinline]] bool noi() { return true; }
 [[msvc::noinline]] bool ms_noi() { return true; }
 
 void foo(int i) {

@@ -16,7 +16,7 @@ define void @klist_dec_and_del(ptr) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1: # Block address taken
+; CHECK-NEXT:  .LBB0_1: # Inline asm indirect target
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movq $0, -8(%rax)
 ; CHECK-NEXT:    retq

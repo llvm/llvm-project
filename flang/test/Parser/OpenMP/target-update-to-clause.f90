@@ -11,7 +11,7 @@ end
 !UNPARSE: !$OMP TARGET UPDATE  TO(x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target update
 !PARSE-TREE: OmpClauseList -> OmpClause -> To -> OmpToClause
 !PARSE-TREE: | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | bool = 'true'
@@ -26,7 +26,7 @@ end
 !UNPARSE: !$OMP TARGET UPDATE  TO(PRESENT: x)
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target update
 !PARSE-TREE: OmpClauseList -> OmpClause -> To -> OmpToClause
 !PARSE-TREE: | Modifier -> OmpExpectation -> Value = Present
 !PARSE-TREE: | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
@@ -42,7 +42,7 @@ end
 !UNPARSE: !$OMP TARGET UPDATE  TO(PRESENT, ITERATOR(INTEGER i = 1_4:10_4): x(i))
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target update
 !PARSE-TREE: OmpClauseList -> OmpClause -> To -> OmpToClause
 !PARSE-TREE: | Modifier -> OmpExpectation -> Value = Present
 !PARSE-TREE: | Modifier -> OmpIterator -> OmpIteratorSpecifier
@@ -71,7 +71,7 @@ end
 !UNPARSE: !$OMP TARGET UPDATE  TO(PRESENT, ITERATOR(INTEGER i = 1_4:10_4): x(i))
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target update
 !PARSE-TREE: OmpClauseList -> OmpClause -> To -> OmpToClause
 !PARSE-TREE: | Modifier -> OmpExpectation -> Value = Present
 !PARSE-TREE: | Modifier -> OmpIterator -> OmpIteratorSpecifier

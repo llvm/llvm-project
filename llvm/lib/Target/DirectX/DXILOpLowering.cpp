@@ -8,15 +8,15 @@
 
 #include "DXILOpLowering.h"
 #include "DXILConstants.h"
-#include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
-#include "DXILResourceAnalysis.h"
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -25,68 +25,38 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "dxil-op-lower"
 
 using namespace llvm;
 using namespace llvm::dxil;
 
-static bool isVectorArgExpansion(Function &F) {
-  switch (F.getIntrinsicID()) {
-  case Intrinsic::dx_dot2:
-  case Intrinsic::dx_dot3:
-  case Intrinsic::dx_dot4:
-    return true;
-  }
-  return false;
-}
-
-static SmallVector<Value *> populateOperands(Value *Arg, IRBuilder<> &Builder) {
-  SmallVector<Value *> ExtractedElements;
-  auto *VecArg = dyn_cast<FixedVectorType>(Arg->getType());
-  for (unsigned I = 0; I < VecArg->getNumElements(); ++I) {
-    Value *Index = ConstantInt::get(Type::getInt32Ty(Arg->getContext()), I);
-    Value *ExtractedElement = Builder.CreateExtractElement(Arg, Index);
-    ExtractedElements.push_back(ExtractedElement);
-  }
-  return ExtractedElements;
-}
-
-static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
-                                             IRBuilder<> &Builder) {
-  // Note: arg[NumOperands-1] is a pointer and is not needed by our flattening.
-  unsigned NumOperands = Orig->getNumOperands() - 1;
-  assert(NumOperands > 0);
-  Value *Arg0 = Orig->getOperand(0);
-  [[maybe_unused]] auto *VecArg0 = dyn_cast<FixedVectorType>(Arg0->getType());
-  assert(VecArg0);
-  SmallVector<Value *> NewOperands = populateOperands(Arg0, Builder);
-  for (unsigned I = 1; I < NumOperands; ++I) {
-    Value *Arg = Orig->getOperand(I);
-    [[maybe_unused]] auto *VecArg = dyn_cast<FixedVectorType>(Arg->getType());
-    assert(VecArg);
-    assert(VecArg0->getElementType() == VecArg->getElementType());
-    assert(VecArg0->getNumElements() == VecArg->getNumElements());
-    auto NextOperandList = populateOperands(Arg, Builder);
-    NewOperands.append(NextOperandList.begin(), NextOperandList.end());
-  }
-  return NewOperands;
-}
+/// Write mask covering all four components of a UAV element. Typed UAV stores
+/// (textures and typed buffers) must always use this mask - the DXIL validator
+/// rejects anything narrower. Only raw and / structured buffer stores may use a
+/// partial mask.
+static constexpr uint8_t TypedUAVStoreWriteMask = 0xF;
 
 namespace {
 class OpLowerer {
   Module &M;
   DXILOpBuilder OpBuilder;
-  DXILBindingMap &DBM;
+  DXILResourceMap &DRM;
   DXILResourceTypeMap &DRTM;
+  const ModuleMetadataInfo &MMDI;
   SmallVector<CallInst *> CleanupCasts;
+  Function *CleanupNURI = nullptr;
 
 public:
-  OpLowerer(Module &M, DXILBindingMap &DBM, DXILResourceTypeMap &DRTM)
-      : M(M), OpBuilder(M), DBM(DBM), DRTM(DRTM) {}
+  OpLowerer(Module &M, DXILResourceMap &DRM, DXILResourceTypeMap &DRTM,
+            const ModuleMetadataInfo &MMDI)
+      : M(M), OpBuilder(M), DRM(DRM), DRTM(DRTM), MMDI(MMDI) {}
 
   /// Replace every call to \c F using \c ReplaceCall, and then erase \c F. If
   /// there is an error replacing a call, we emit a diagnostic and return true.
@@ -100,9 +70,9 @@ public:
 
       if (Error E = ReplaceCall(CI)) {
         std::string Message(toString(std::move(E)));
-        DiagnosticInfoUnsupported Diag(*CI->getFunction(), Message,
-                                       CI->getDebugLoc());
-        M.getContext().diagnose(Diag);
+        M.getContext().diagnose(DiagnosticInfoUnsupported(
+            *CI->getFunction(), Message, CI->getDebugLoc()));
+
         return true;
       }
     }
@@ -120,12 +90,53 @@ public:
     int Value;
   };
 
+  /// Replaces uses of a struct with uses of an equivalent named struct.
+  ///
+  /// DXIL operations that return structs give them well known names, so we need
+  /// to update uses when we switch from an LLVM intrinsic to an op.
+  Error replaceNamedStructUses(CallInst *Intrin, CallInst *DXILOp) {
+    auto *IntrinTy = cast<StructType>(Intrin->getType());
+    auto *DXILOpTy = cast<StructType>(DXILOp->getType());
+    if (!IntrinTy->isLayoutIdentical(DXILOpTy))
+      return make_error<StringError>(
+          "Type mismatch between intrinsic and DXIL op",
+          inconvertibleErrorCode());
+
+    for (Use &U : make_early_inc_range(Intrin->uses()))
+      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser()))
+        EVI->setOperand(0, DXILOp);
+      else if (auto *IVI = dyn_cast<InsertValueInst>(U.getUser()))
+        IVI->setOperand(0, DXILOp);
+      else
+        return make_error<StringError>("DXIL ops that return structs may only "
+                                       "be used by insert- and extractvalue",
+                                       inconvertibleErrorCode());
+    return Error::success();
+  }
+
+  bool isFast(FastMathFlags Flags) {
+    // HLSL Fast Math doesn't enable AllowContract flag; This can be
+    // removed when we enable it in the future.
+    return Flags.allowReassoc() && Flags.noNaNs() && Flags.noInfs() &&
+           Flags.noSignedZeros() && Flags.allowReciprocal() &&
+           Flags.approxFunc();
+  }
+
+  void setDxPrecise(CallInst *CI) {
+    const StringRef Key = "dx.precise";
+    Module *M = CI->getModule();
+
+    LLVMContext &Ctx = M->getContext();
+    MDNode *One =
+        llvm::MDNode::get(Ctx, ConstantAsMetadata::get(ConstantInt::get(
+                                   llvm::Type::getInt32Ty(Ctx), 1)));
+
+    CI->setMetadata(Key, One);
+  }
+
   [[nodiscard]] bool
   replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
                         ArrayRef<IntrinArgSelect> ArgSelects) {
-    bool IsVectorArgExpansion = isVectorArgExpansion(F);
-    assert(!(IsVectorArgExpansion && ArgSelects.size()) &&
-           "Cann't do vector arg expansion when using arg selects.");
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       OpBuilder.getIRB().SetInsertPoint(CI);
       SmallVector<Value *> Args;
@@ -143,8 +154,6 @@ public:
             break;
           }
         }
-      } else if (IsVectorArgExpansion) {
-        Args = argVectorFlatten(CI, OpBuilder.getIRB());
       } else {
         Args.append(CI->arg_begin(), CI->arg_end());
       }
@@ -154,32 +163,17 @@ public:
       if (Error E = OpCall.takeError())
         return E;
 
-      CI->replaceAllUsesWith(*OpCall);
-      CI->eraseFromParent();
-      return Error::success();
-    });
-  }
+      if (isa<FPMathOperator>(CI) &&
+          !isFast(cast<FPMathOperator>(CI)->getFastMathFlags()))
+        setDxPrecise(*OpCall);
 
-  [[nodiscard]] bool replaceFunctionWithNamedStructOp(
-      Function &F, dxil::OpCode DXILOp, Type *NewRetTy,
-      llvm::function_ref<Error(CallInst *CI, CallInst *Op)> ReplaceUses) {
-    bool IsVectorArgExpansion = isVectorArgExpansion(F);
-    return replaceFunction(F, [&](CallInst *CI) -> Error {
-      SmallVector<Value *> Args;
-      OpBuilder.getIRB().SetInsertPoint(CI);
-      if (IsVectorArgExpansion) {
-        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
-        Args.append(NewArgs.begin(), NewArgs.end());
+      if (isa<StructType>(CI->getType())) {
+        if (Error E = replaceNamedStructUses(CI, *OpCall))
+          return E;
       } else
-        Args.append(CI->arg_begin(), CI->arg_end());
+        CI->replaceAllUsesWith(*OpCall);
 
-      Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), NewRetTy);
-      if (Error E = OpCall.takeError())
-        return E;
-      if (Error E = ReplaceUses(CI, *OpCall))
-        return E;
-
+      CI->eraseFromParent();
       return Error::success();
     });
   }
@@ -190,7 +184,7 @@ public:
   /// piecemeal way - we can add the casts in to avoid updating all of the uses
   /// or defs, and by the end all of the casts will be redundant.
   Value *createTmpHandleCast(Value *V, Type *Ty) {
-    CallInst *Cast = OpBuilder.getIRB().CreateIntrinsic(
+    CallInst *Cast = OpBuilder.getIRB().CreateIntrinsicWithoutFolding(
         Intrinsic::dx_resource_casthandle, {Ty, V->getType()}, {V});
     CleanupCasts.push_back(Cast);
     return Cast;
@@ -235,6 +229,21 @@ public:
     CleanupCasts.clear();
   }
 
+  void cleanupNonUniformResourceIndexCalls() {
+    // Replace all NonUniformResourceIndex calls with their argument.
+    if (!CleanupNURI)
+      return;
+    for (User *U : make_early_inc_range(CleanupNURI->users())) {
+      CallInst *CI = dyn_cast<CallInst>(U);
+      if (!CI)
+        continue;
+      CI->replaceAllUsesWith(CI->getArgOperand(0));
+      CI->eraseFromParent();
+    }
+    CleanupNURI->eraseFromParent();
+    CleanupNURI = nullptr;
+  }
+
   // Remove the resource global associated with the handleFromBinding call
   // instruction and their uses as they aren't needed anymore.
   // TODO: We should verify that all the globals get removed.
@@ -254,17 +263,88 @@ public:
     }
   }
 
+  void replaceHandleFromBindingCall(CallInst *CI, Value *Replacement) {
+    assert(CI->getCalledFunction()->getIntrinsicID() ==
+           Intrinsic::dx_resource_handlefrombinding);
+
+    removeResourceGlobals(CI);
+
+    auto *NameGlobal = dyn_cast<llvm::GlobalVariable>(CI->getArgOperand(4));
+
+    CI->replaceAllUsesWith(Replacement);
+    CI->eraseFromParent();
+
+    if (NameGlobal && NameGlobal->use_empty())
+      NameGlobal->eraseFromParent();
+  }
+
+  bool hasNonUniformIndex(Value *IndexOp) {
+    if (isa<llvm::Constant>(IndexOp))
+      return false;
+
+    SmallVector<Value *, 16> Worklist;
+    SmallPtrSet<Value *, 16> Visited;
+    Worklist.push_back(IndexOp);
+
+    while (!Worklist.empty()) {
+      Value *V = Worklist.pop_back_val();
+
+      if (isa<llvm::Constant>(V))
+        continue;
+
+      if (!Visited.insert(V).second)
+        continue;
+
+      if (auto *CI = dyn_cast<CallInst>(V))
+        if (CI->getIntrinsicID() == Intrinsic::dx_resource_nonuniformindex)
+          return true;
+
+      // If it's a PHI node, check ALL incoming values —
+      // taint from ANY predecessor counts
+      if (auto *Phi = dyn_cast<PHINode>(V)) {
+        for (Value *Incoming : Phi->incoming_values())
+          Worklist.push_back(Incoming);
+        continue;
+      }
+
+      if (auto *Inst = dyn_cast<Instruction>(V))
+        if (Inst->getNumOperands() > 0 && !Inst->isTerminator())
+          for (Value *Op : Inst->operands())
+            Worklist.push_back(Op);
+    }
+    return false;
+  }
+
+  Error validateRawBufferElementIndex(Value *Resource, Value *ElementIndex) {
+    bool IsStructured =
+        cast<RawBufferExtType>(Resource->getType())->isStructured();
+    bool IsPoison = isa<PoisonValue>(ElementIndex);
+
+    if (IsStructured && IsPoison)
+      return make_error<StringError>(
+          "Element index of structured buffer may not be poison",
+          inconvertibleErrorCode());
+
+    if (!IsStructured && !IsPoison)
+      return make_error<StringError>(
+          "Element index of raw buffer must be poison",
+          inconvertibleErrorCode());
+
+    return Error::success();
+  }
+
   [[nodiscard]] bool lowerToCreateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
     Type *Int32Ty = IRB.getInt32Ty();
+    Type *Int1Ty = IRB.getInt1Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      auto *It = DBM.find(CI);
-      assert(It != DBM.end() && "Resource not in map?");
-      dxil::ResourceBindingInfo &RI = *It;
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
       dxil::ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
@@ -274,21 +354,19 @@ public:
         IndexOp = IRB.CreateAdd(IndexOp,
                                 ConstantInt::get(Int32Ty, Binding.LowerBound));
 
+      bool HasNonUniformIndex =
+          (Binding.Size == 1) ? false : hasNonUniformIndex(IndexOp);
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RC)),
-          ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
-          CI->getArgOperand(4)};
+          ConstantInt::get(Int32Ty, Binding.BindingID), IndexOp,
+          ConstantInt::get(Int1Ty, HasNonUniformIndex)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
 
       Value *Cast = createTmpHandleCast(*OpCall, CI->getType());
-
-      removeResourceGlobals(CI);
-
-      CI->replaceAllUsesWith(Cast);
-      CI->eraseFromParent();
+      replaceHandleFromBindingCall(CI, Cast);
       return Error::success();
     });
   }
@@ -296,13 +374,14 @@ public:
   [[nodiscard]] bool lowerToBindAndAnnotateHandle(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
+    Type *Int1Ty = IRB.getInt1Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      auto *It = DBM.find(CI);
-      assert(It != DBM.end() && "Resource not in map?");
-      dxil::ResourceBindingInfo &RI = *It;
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
       dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
@@ -318,13 +397,15 @@ public:
 
       // For `CreateHandleFromBinding` we need the upper bound rather than the
       // size, so we need to be careful about the difference for "unbounded".
-      uint32_t Unbounded = std::numeric_limits<uint32_t>::max();
-      uint32_t UpperBound = Binding.Size == Unbounded
-                                ? Unbounded
+      uint32_t UpperBound = Binding.Size == 0
+                                ? std::numeric_limits<uint32_t>::max()
                                 : Binding.LowerBound + Binding.Size - 1;
       Constant *ResBind = OpBuilder.getResBind(Binding.LowerBound, UpperBound,
                                                Binding.Space, RC);
-      std::array<Value *, 3> BindArgs{ResBind, IndexOp, CI->getArgOperand(4)};
+      bool NonUniformIndex =
+          (Binding.Size == 1) ? false : hasNonUniformIndex(IndexOp);
+      Constant *NonUniformOp = ConstantInt::get(Int1Ty, NonUniformIndex);
+      std::array<Value *, 3> BindArgs{ResBind, IndexOp, NonUniformOp};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
           OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
       if (Error E = OpBind.takeError())
@@ -339,44 +420,61 @@ public:
         return E;
 
       Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
-
-      removeResourceGlobals(CI);
-
-      CI->replaceAllUsesWith(Cast);
-      CI->eraseFromParent();
-
+      replaceHandleFromBindingCall(CI, Cast);
       return Error::success();
     });
   }
 
   /// Lower `dx.resource.handlefrombinding` intrinsics depending on the shader
   /// model and taking into account binding information from
-  /// DXILResourceBindingAnalysis.
+  /// DXILResourceAnalysis.
   bool lowerHandleFromBinding(Function &F) {
-    Triple TT(Triple(M.getTargetTriple()));
-    if (TT.getDXILVersion() < VersionTuple(1, 6))
+    if (MMDI.DXILVersion < VersionTuple(1, 6))
       return lowerToCreateHandle(F);
     return lowerToBindAndAnnotateHandle(F);
   }
 
-  Error replaceSplitDoubleCallUsages(CallInst *Intrin, CallInst *Op) {
-    for (Use &U : make_early_inc_range(Intrin->uses())) {
-      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
+  bool lowerHandleFromHeap(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
 
-        if (EVI->getNumIndices() != 1)
-          return createStringError(std::errc::invalid_argument,
-                                   "Splitdouble has only 2 elements");
-        EVI->setOperand(0, Op);
-      } else {
-        return make_error<StringError>(
-            "Splitdouble use is not ExtractValueInst",
-            inconvertibleErrorCode());
-      }
-    }
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
 
-    Intrin->eraseFromParent();
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
+      dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
 
-    return Error::success();
+      Value *IndexOp = CI->getArgOperand(0);
+      Value *IsSamplerHeap =
+          ConstantInt::getBool(IRB.getContext(), RTI.isSampler());
+
+      std::pair<uint32_t, uint32_t> Props =
+          RI.getAnnotateProps(*F.getParent(), RTI);
+
+      bool NonUniformIndex = hasNonUniformIndex(IndexOp);
+      Value *NonUniformOp =
+          ConstantInt::getBool(IRB.getContext(), NonUniformIndex);
+
+      std::array<Value *, 3> Args{IndexOp, IsSamplerHeap, NonUniformOp};
+      Expected<CallInst *> OpCreateHandle = OpBuilder.tryCreateOp(
+          OpCode::CreateHandleFromHeap, Args, CI->getName());
+      if (Error E = OpCreateHandle.takeError())
+        return E;
+
+      std::array<Value *, 2> AnnotateArgs{
+          *OpCreateHandle, OpBuilder.getResProps(Props.first, Props.second)};
+      Expected<CallInst *> OpAnnotate = OpBuilder.tryCreateOp(
+          OpCode::AnnotateHandle, AnnotateArgs,
+          CI->hasName() ? CI->getName() + "_annot" : Twine());
+      if (Error E = OpAnnotate.takeError())
+        return E;
+
+      Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
+      CI->replaceAllUsesWith(Cast);
+      CI->eraseFromParent();
+      return Error::success();
+    });
   }
 
   /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
@@ -476,14 +574,16 @@ public:
       for (int I = 0, E = N; I != E; ++I) {
         if (!Extracts[I])
           Extracts[I] = IRB.CreateExtractValue(Op, I);
-        Value *GEP = IRB.CreateInBoundsGEP(
-            ArrayTy, Alloca, {Zero, ConstantInt::get(Int32Ty, I)});
+        Value *GEP = GetElementPtrInst::CreateInBounds(
+            ArrayTy, Alloca, {Zero, ConstantInt::get(Int32Ty, I)}, "",
+            IRB.GetInsertPoint());
         IRB.CreateStore(Extracts[I], GEP);
       }
 
       for (ExtractElementInst *EEI : DynamicAccesses) {
-        Value *GEP = IRB.CreateInBoundsGEP(ArrayTy, Alloca,
-                                           {Zero, EEI->getIndexOperand()});
+        Value *GEP = GetElementPtrInst::CreateInBounds(
+            ArrayTy, Alloca, {Zero, EEI->getIndexOperand()}, "",
+            IRB.GetInsertPoint());
         Value *Load = IRB.CreateLoad(ElTy, GEP);
         EEI->replaceAllUsesWith(Load);
         EEI->eraseFromParent();
@@ -498,7 +598,7 @@ public:
         if (!Extracts[I])
           Extracts[I] = IRB.CreateExtractValue(Op, I);
 
-      Value *Vec = UndefValue::get(OldTy);
+      Value *Vec = PoisonValue::get(OldTy);
       for (int I = 0, E = N; I != E; ++I)
         Vec = IRB.CreateInsertElement(Vec, Extracts[I], I);
       OldResult->replaceAllUsesWith(Vec);
@@ -542,9 +642,221 @@ public:
     });
   }
 
+  /// Recover the scalar components of `Vec` from the `insertelement` chain that
+  /// built it. Since we run after the scalarizer, such a chain is usually just
+  /// a temporary gathered to pass the vector to a call.
+  static void collectInsertedElements(Value *Vec,
+                                      MutableArrayRef<Value *> Elements) {
+    unsigned NumElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
+    assert(NumElts <= Elements.size() && "Not enough room for the components");
+
+    SmallVector<InsertElementInst *, 4> Chain;
+    for (auto *IEI = dyn_cast<InsertElementInst>(Vec); IEI;
+         IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0))) {
+      if (!isa<ConstantInt>(IEI->getOperand(2)))
+        break; // This break should never happen below SM6.9.
+      Chain.push_back(IEI);
+    }
+
+    // Replay element insertion from the innermost first, so that a repeated
+    // index ends up holding the live value.
+    while (!Chain.empty()) {
+      InsertElementInst *IEI = Chain.pop_back_val();
+      uint64_t IndexVal = cast<ConstantInt>(IEI->getOperand(2))->getZExtValue();
+      if (IndexVal < NumElts)
+        Elements[IndexVal] = IEI->getOperand(1);
+    }
+  }
+
+  // Copies `Src` into `Args` starting at `ArgIdx`. If `Src` is a vector, its
+  // elements are placed in consecutive slots; otherwise `Src` is stored
+  // directly. At most `MaxElements` elements are expected.
+  static void extractElementsIntoArgs(IRBuilder<> &IRB,
+                                      MutableArrayRef<Value *> Args,
+                                      unsigned ArgIdx, Value *Src,
+                                      unsigned MaxElements) {
+    auto *VecTy = dyn_cast<FixedVectorType>(Src->getType());
+    if (!VecTy) {
+      Args[ArgIdx] = Src;
+      return;
+    }
+
+    unsigned Count = VecTy->getNumElements();
+    assert(Count <= MaxElements && "Too many elements for the arg list");
+
+    SmallVector<Value *, 4> Elements(Count, nullptr);
+    collectInsertedElements(Src, Elements);
+
+    for (unsigned I = 0; I < Count; ++I)
+      Args[ArgIdx + I] = Elements[I]
+                             ? Elements[I]
+                             : IRB.CreateExtractElement(
+                                   Src, ConstantInt::get(IRB.getInt32Ty(), I));
+  }
+
+  /// Copy offsets into the argument list at the given index, unless
+  /// the offsets are known to be zero (i.e., a null constant).
+  static void extractNonZeroOffsets(IRBuilder<> &IRB,
+                                    MutableArrayRef<Value *> Args,
+                                    unsigned ArgIdx, Value *Offsets,
+                                    unsigned MaxElements) {
+    auto *COff = dyn_cast<Constant>(Offsets);
+    bool OffsetsAreZero = COff && COff->isNullValue();
+    if (!OffsetsAreZero)
+      extractElementsIntoArgs(IRB, Args, ArgIdx, Offsets, MaxElements);
+  }
+
+  [[nodiscard]] bool lowerTextureLoad(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      SmallVector<WeakTrackingVH, 4> VectorArgs = collectVectorArgs(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Coords = CI->getArgOperand(1);
+      Value *MipLevel = CI->getArgOperand(2);
+      Value *Offsets = CI->getArgOperand(3);
+
+      // A UAV descriptor binds a single mip slice, so there is no mip to select
+      // in the case of a UAV. Multisampled UAVs are the exception: the slot
+      // carries a sample index and stays live.
+      auto *HandleTy = cast<TargetExtType>(CI->getArgOperand(0)->getType());
+      dxil::ResourceTypeInfo &RTI = DRTM[HandleTy];
+      dxil::ResourceKind Kind = RTI.getResourceKind();
+      if (RTI.isUAV() && Kind != dxil::ResourceKind::Texture2DMS &&
+          Kind != dxil::ResourceKind::Texture2DMSArray)
+        MipLevel = UndefValue::get(Int32Ty);
+
+      Type *OldTy = CI->getType();
+      Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
+
+      Value *Undef = UndefValue::get(Int32Ty);
+      std::array<Value *, 8> Args{Handle, MipLevel, Undef, Undef,
+                                  Undef,  Undef,    Undef, Undef};
+
+      // Copy coordinates and offsets into Args.
+      extractElementsIntoArgs(IRB, Args, 2, Coords, 3);
+      extractNonZeroOffsets(IRB, Args, 5, Offsets, 3);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::TextureLoad, Args, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
+        return E;
+
+      eraseDeadInsertElementChains(VectorArgs);
+
+      return Error::success();
+    });
+  }
+
+  /// Common helper for lowering sample operations (SampleBias, SampleGrad,
+  /// etc.) that share the same pattern: extract handle/sampler, unpack
+  /// coordinates and offsets, build the DXIL arg list, and replace uses.
+  [[nodiscard]] bool lowerSampleOp(
+      Function &F, OpCode Op, unsigned CoordsIdx, unsigned OffsetsIdx,
+      llvm::function_ref<void(IRBuilder<> &, CallInst *,
+                              SmallVectorImpl<Value *> &)> EmitExtraArgs) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      SmallVector<WeakTrackingVH, 4> VectorArgs = collectVectorArgs(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Sampler =
+          createTmpHandleCast(CI->getArgOperand(1), OpBuilder.getHandleType());
+      Value *Coords = CI->getArgOperand(CoordsIdx);
+      Value *Offsets = CI->getArgOperand(OffsetsIdx);
+
+      Type *OldTy = CI->getType();
+      Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
+
+      Value *UndefF = UndefValue::get(IRB.getFloatTy());
+      Value *UndefI = UndefValue::get(IRB.getInt32Ty());
+      // Common prefix: Handle, Sampler, Coord0..3, Offset0..2
+      SmallVector<Value *, 17> Args{Handle, Sampler, UndefF, UndefF, UndefF,
+                                    UndefF, UndefI,  UndefI, UndefI};
+
+      // Copy coordinates and offsets into Args.
+      extractElementsIntoArgs(IRB, Args, 2, Coords, 4);
+      extractNonZeroOffsets(IRB, Args, 6, Offsets, 3);
+
+      // Emit op-specific trailing arguments (e.g. Bias+Clamp, DDX+DDY+Clamp).
+      EmitExtraArgs(IRB, CI, Args);
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(Op, Args, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
+        return E;
+
+      eraseDeadInsertElementChains(VectorArgs);
+
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerSample(Function &F, bool HasClamp) {
+    return lowerSampleOp(F, OpCode::Sample, /*CoordsIdx=*/2, /*OffsetsIdx=*/3,
+                         [HasClamp](IRBuilder<> &IRB, CallInst *CI,
+                                    SmallVectorImpl<Value *> &Args) {
+                           // Clamp
+                           Args.push_back(
+                               HasClamp ? CI->getArgOperand(4)
+                                        : UndefValue::get(IRB.getFloatTy()));
+                         });
+  }
+
+  [[nodiscard]] bool lowerSampleBias(Function &F, bool HasClamp) {
+    return lowerSampleOp(
+        F, OpCode::SampleBias, /*CoordsIdx=*/2, /*OffsetsIdx=*/4,
+        [HasClamp](IRBuilder<> &IRB, CallInst *CI,
+                   SmallVectorImpl<Value *> &Args) {
+          // Bias is operand 3.
+          Args.push_back(CI->getArgOperand(3));
+          // Clamp
+          Args.push_back(HasClamp ? CI->getArgOperand(5)
+                                  : UndefValue::get(IRB.getFloatTy()));
+        });
+  }
+
+  [[nodiscard]] bool lowerSampleLevel(Function &F) {
+    return lowerSampleOp(
+        F, OpCode::SampleLevel, /*CoordsIdx=*/2, /*OffsetsIdx=*/4,
+        [](IRBuilder<> &, CallInst *CI, SmallVectorImpl<Value *> &Args) {
+          // LOD is operand 3.
+          Args.push_back(CI->getArgOperand(3));
+        });
+  }
+
+  [[nodiscard]] bool lowerSampleGrad(Function &F, bool HasClamp) {
+    return lowerSampleOp(
+        F, OpCode::SampleGrad, /*CoordsIdx=*/2, /*OffsetsIdx=*/5,
+        [HasClamp](IRBuilder<> &IRB, CallInst *CI,
+                   SmallVectorImpl<Value *> &Args) {
+          Value *DDX = CI->getArgOperand(3);
+          Value *DDY = CI->getArgOperand(4);
+          Value *UndefF = UndefValue::get(IRB.getFloatTy());
+          // DDX0..2
+          size_t DDXStart = Args.size();
+          Args.append(3, UndefF);
+          extractElementsIntoArgs(IRB, Args, DDXStart, DDX, 3);
+          // DDY0..2
+          size_t DDYStart = Args.size();
+          Args.append(3, UndefF);
+          extractElementsIntoArgs(IRB, Args, DDYStart, DDY, 3);
+          // Clamp
+          Args.push_back(HasClamp ? CI->getArgOperand(6) : UndefF);
+        });
+  }
+
   [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
-    Triple TT(Triple(M.getTargetTriple()));
-    VersionTuple DXILVersion = TT.getDXILVersion();
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -567,8 +879,13 @@ public:
       Value *Align =
           ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value());
 
+      if (Error E = validateRawBufferElementIndex(CI->getOperand(0), Index1))
+        return E;
+      if (isa<PoisonValue>(Index1))
+        Index1 = UndefValue::get(Index1->getType());
+
       Expected<CallInst *> OpCall =
-          DXILVersion >= VersionTuple(1, 2)
+          MMDI.DXILVersion >= VersionTuple(1, 2)
               ? OpBuilder.tryCreateOp(OpCode::RawBufferLoad,
                                       {Handle, Index0, Index1, Mask, Align},
                                       CI->getName(), NewRetTy)
@@ -580,6 +897,32 @@ public:
       if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/true))
         return E;
 
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerCBufferLoad(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Type *OldTy = cast<StructType>(CI->getType())->getElementType(0);
+      Type *ScalarTy = OldTy->getScalarType();
+      Type *NewRetTy = OpBuilder.getCBufRetType(ScalarTy);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index = CI->getArgOperand(1);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::CBufferLoadLegacy, {Handle, Index}, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceNamedStructUses(CI, *OpCall))
+        return E;
+
+      CI->eraseFromParent();
       return Error::success();
     });
   }
@@ -608,6 +951,28 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerGetDimensionsX(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Undef = UndefValue::get(Int32Ty);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::GetDimensions, {Handle, Undef}, CI->getName(), Int32Ty);
+      if (Error E = OpCall.takeError())
+        return E;
+      Value *Dim = IRB.CreateExtractValue(*OpCall, 0);
+
+      CI->replaceAllUsesWith(Dim);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerGetPointer(Function &F) {
     // These should have already been handled in DXILResourceAccess, so we can
     // just clean up the dead prototype.
@@ -616,7 +981,42 @@ public:
     return false;
   }
 
-  [[nodiscard]] bool lowerTypedBufferStore(Function &F) {
+  /// Splits the value operand of a resource store into its (at most four)
+  /// scalar components. Slots beyond the length of `Data` are filled with
+  /// `undef` when `FillWithUndef` is set (raw and structured buffers), or with
+  /// the first component otherwise (typed UAVs, which must write all four
+  /// components - repeating the first one matches DXC).
+  static std::array<Value *, 4> splitStoreData(IRBuilder<> &IRB, Value *Data,
+                                               uint64_t NumElements,
+                                               bool FillWithUndef) {
+    std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
+    extractElementsIntoArgs(IRB, DataElements, 0, Data, 4);
+
+    // For any elements beyond the length of the vector, we should fill it up
+    // with undef - however, for typed UAVs we repeat the first element to
+    // match DXC.
+    for (uint64_t I = NumElements, E = 4; I < E; ++I)
+      if (DataElements[I] == nullptr)
+        DataElements[I] =
+            FillWithUndef ? UndefValue::get(Data->getType()->getScalarType())
+                          : DataElements[0];
+
+    return DataElements;
+  }
+
+  /// Erase the chain of `insertelement`s that only existed to build up a vector
+  /// operand of an intrinsic we've just replaced.
+  static void eraseDeadInsertElementChain(Value *Data) {
+    auto *IEI = dyn_cast<InsertElementInst>(Data);
+    while (IEI && IEI->use_empty()) {
+      InsertElementInst *Tmp = IEI;
+      IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+      Tmp->eraseFromParent();
+    }
+  }
+
+  [[nodiscard]] bool lowerBufferStore(Function &F, bool IsRaw) {
+    const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -627,57 +1027,192 @@ public:
       Value *Handle =
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Index0 = CI->getArgOperand(1);
-      Value *Index1 = UndefValue::get(Int32Ty);
-      // For typed stores, the mask must always cover all four elements.
-      Constant *Mask = ConstantInt::get(Int8Ty, 0xF);
+      Value *Index1 = IsRaw ? CI->getArgOperand(2) : UndefValue::get(Int32Ty);
 
-      Value *Data = CI->getArgOperand(2);
-      auto *DataTy = dyn_cast<FixedVectorType>(Data->getType());
-      if (!DataTy || DataTy->getNumElements() != 4)
-        return make_error<StringError>(
-            "typedBufferStore data must be a vector of 4 elements",
-            inconvertibleErrorCode());
-
-      // Since we're post-scalarizer, we likely have a vector that's constructed
-      // solely for the argument of the store. If so, just use the scalar values
-      // from before they're inserted into the temporary.
-      std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
-      auto *IEI = dyn_cast<InsertElementInst>(Data);
-      while (IEI) {
-        auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
-        if (!IndexOp)
-          break;
-        size_t IndexVal = IndexOp->getZExtValue();
-        assert(IndexVal < 4 && "Too many elements for buffer store");
-        DataElements[IndexVal] = IEI->getOperand(1);
-        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+      if (IsRaw) {
+        if (Error E = validateRawBufferElementIndex(CI->getOperand(0), Index1))
+          return E;
+        if (isa<PoisonValue>(Index1))
+          Index1 = UndefValue::get(Index1->getType());
       }
 
-      // If for some reason we weren't able to forward the arguments from the
-      // scalarizer artifact, then we need to actually extract elements from the
-      // vector.
-      for (int I = 0, E = 4; I != E; ++I)
-        if (DataElements[I] == nullptr)
-          DataElements[I] =
-              IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
+      Value *Data = CI->getArgOperand(IsRaw ? 3 : 2);
+      Type *DataTy = Data->getType();
+      Type *ScalarTy = DataTy->getScalarType();
 
-      std::array<Value *, 8> Args{
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
+      Value *Mask = ConstantInt::get(Int8Ty, IsRaw ? ~(~0U << NumElements)
+                                                   : TypedUAVStoreWriteMask);
+
+      // TODO: check that we only have vector or scalar...
+      if (NumElements > 4)
+        return make_error<StringError>(
+            "Buffer store data must have at most 4 elements",
+            inconvertibleErrorCode());
+
+      std::array<Value *, 4> DataElements =
+          splitStoreData(IRB, Data, NumElements, /*FillWithUndef=*/IsRaw);
+
+      dxil::OpCode Op = OpCode::BufferStore;
+      SmallVector<Value *, 9> Args{
           Handle,          Index0,          Index1,          DataElements[0],
           DataElements[1], DataElements[2], DataElements[3], Mask};
+      if (IsRaw && MMDI.DXILVersion >= VersionTuple(1, 2)) {
+        Op = OpCode::RawBufferStore;
+        // RawBufferStore requires the alignment
+        Args.push_back(
+            ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value()));
+      }
       Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::BufferStore, Args, CI->getName());
+          OpBuilder.tryCreateOp(Op, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
 
       CI->eraseFromParent();
-      // Clean up any leftover `insertelement`s
-      IEI = dyn_cast<InsertElementInst>(Data);
-      while (IEI && IEI->use_empty()) {
-        InsertElementInst *Tmp = IEI;
-        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
-        Tmp->eraseFromParent();
+      eraseDeadInsertElementChain(Data);
+
+      return Error::success();
+    });
+  }
+
+  /// Snapshot the vector-typed arguments of `CI` so their `insertelement`
+  /// chains can be cleaned up once `CI` has been replaced. The handles are weak
+  /// because two arguments can share an `insertelement` chain.
+  static SmallVector<WeakTrackingVH, 4> collectVectorArgs(CallInst *CI) {
+    SmallVector<WeakTrackingVH, 4> Vectors;
+    for (Value *Arg : CI->args())
+      if (isa<FixedVectorType>(Arg->getType()))
+        Vectors.emplace_back(Arg);
+    return Vectors;
+  }
+
+  static void eraseDeadInsertElementChains(ArrayRef<WeakTrackingVH> Vectors) {
+    for (const WeakTrackingVH &VH : Vectors)
+      if (Value *V = VH)
+        eraseDeadInsertElementChain(V);
+  }
+
+  [[nodiscard]] bool lowerTextureStore(Function &F) {
+    const DataLayout &DL = F.getDataLayout();
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int8Ty = IRB.getInt8Ty();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      SmallVector<WeakTrackingVH, 4> VectorArgs = collectVectorArgs(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Coords = CI->getArgOperand(1);
+      Value *Data = CI->getArgOperand(2);
+
+      Type *DataTy = Data->getType();
+      Type *ScalarTy = DataTy->getScalarType();
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
+      if (NumElements > 4)
+        return make_error<StringError>(
+            "Texture store data must have at most 4 elements",
+            inconvertibleErrorCode());
+
+      Value *Mask = ConstantInt::get(Int8Ty, TypedUAVStoreWriteMask);
+      std::array<Value *, 4> DataElements =
+          splitStoreData(IRB, Data, NumElements, /*FillWithUndef=*/false);
+
+      Value *Undef = UndefValue::get(Int32Ty);
+      std::array<Value *, 9> Args{
+          Handle,          Undef,           Undef,
+          Undef,           DataElements[0], DataElements[1],
+          DataElements[2], DataElements[3], Mask};
+
+      // Copy the coordinates into Args.
+      extractElementsIntoArgs(IRB, Args, 1, Coords, 3);
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode::TextureStore, Args, CI->getName());
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->eraseFromParent();
+      eraseDeadInsertElementChains(VectorArgs);
+
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerResourceAtomicBinOp(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      // Cast the target-extension typed handle to `%dx.types.Handle`, tracked
+      // via CleanupCasts so the pair is reconciled by `cleanupHandleCasts`.
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *BinOp = CI->getArgOperand(1);
+      Value *Coord0 = CI->getArgOperand(2);
+      Value *Coord1 = CI->getArgOperand(3);
+      Value *Coord2 = CI->getArgOperand(4);
+      Value *NewValue = CI->getArgOperand(5);
+
+      std::array<Value *, 6> Args{Handle, BinOp,  Coord0,
+                                  Coord1, Coord2, NewValue};
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          dxil::OpCode::AtomicBinOp, Args, CI->getName(), CI->getType());
+      if (Error E = OpCall.takeError()) {
+        // Preserve the DXIL op error text but attach it as a
+        // DiagnosticInfoUnsupported so we don't crash with a dangling call.
+        std::string Message(toString(std::move(E)));
+        CI->getContext().diagnose(DiagnosticInfoUnsupported(
+            *CI->getFunction(), Message, CI->getDebugLoc()));
+        CI->replaceAllUsesWith(PoisonValue::get(CI->getType()));
+        CI->eraseFromParent();
+        return Error::success();
       }
 
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerResourceAtomicCompareExchange(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      // Cast the target-extension typed handle to `%dx.types.Handle`, tracked
+      // via CleanupCasts so the pair is reconciled by `cleanupHandleCasts`.
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Coord0 = CI->getArgOperand(1);
+      Value *Coord1 = CI->getArgOperand(2);
+      Value *Coord2 = CI->getArgOperand(3);
+      Value *CompareValue = CI->getArgOperand(4);
+      Value *NewValue = CI->getArgOperand(5);
+
+      std::array<Value *, 6> Args{Handle, Coord0,       Coord1,
+                                  Coord2, CompareValue, NewValue};
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(dxil::OpCode::AtomicCompareExchange, Args,
+                                CI->getName(), CI->getType());
+      if (Error E = OpCall.takeError()) {
+        // Preserve the DXIL op error text but attach it as a
+        // DiagnosticInfoUnsupported so we don't crash with a dangling call.
+        std::string Message(toString(std::move(E)));
+        CI->getContext().diagnose(DiagnosticInfoUnsupported(
+            *CI->getFunction(), Message, CI->getDebugLoc()));
+        CI->replaceAllUsesWith(PoisonValue::get(CI->getType()));
+        CI->eraseFromParent();
+        return Error::success();
+      }
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
       return Error::success();
     });
   }
@@ -749,6 +1284,81 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerLifetimeIntrinsic(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Ptr = CI->getArgOperand(0);
+      assert(Ptr->getType()->isPointerTy() &&
+             "Expected operand of lifetime intrinsic to be a pointer");
+
+      auto ZeroOrUndef = [&](Type *Ty) {
+        return MMDI.ValidatorVersion < VersionTuple(1, 6)
+                   ? Constant::getNullValue(Ty)
+                   : UndefValue::get(Ty);
+      };
+
+      Value *Val = nullptr;
+      if (auto *GV = dyn_cast<GlobalVariable>(Ptr)) {
+        if (GV->hasInitializer() || GV->isExternallyInitialized())
+          return Error::success();
+        Val = ZeroOrUndef(GV->getValueType());
+      } else if (auto *AI = dyn_cast<AllocaInst>(Ptr))
+        Val = ZeroOrUndef(AI->getAllocatedType());
+
+      assert(Val && "Expected operand of lifetime intrinsic to be a global "
+                    "variable or alloca instruction");
+      IRB.CreateStore(Val, Ptr, false);
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerIsFPClass(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *RetTy = IRB.getInt1Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      SmallVector<Value *> Args;
+      Value *Fl = CI->getArgOperand(0);
+      Args.push_back(Fl);
+
+      dxil::OpCode OpCode;
+      Value *T = CI->getArgOperand(1);
+      auto *TCI = dyn_cast<ConstantInt>(T);
+      switch (TCI->getZExtValue()) {
+      case FPClassTest::fcInf:
+        OpCode = dxil::OpCode::IsInf;
+        break;
+      case FPClassTest::fcNan:
+        OpCode = dxil::OpCode::IsNaN;
+        break;
+      case FPClassTest::fcNormal:
+        OpCode = dxil::OpCode::IsNormal;
+        break;
+      case FPClassTest::fcFinite:
+        OpCode = dxil::OpCode::IsFinite;
+        break;
+      default:
+        SmallString<128> Msg =
+            formatv("Unsupported FPClassTest {0} for DXIL Op Lowering",
+                    TCI->getZExtValue());
+        return make_error<StringError>(Msg, inconvertibleErrorCode());
+      }
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode, Args, CI->getName(), RetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   bool lowerIntrinsics() {
     bool Updated = false;
     bool HasErrors = false;
@@ -758,8 +1368,26 @@ public:
         continue;
       Intrinsic::ID ID = F.getIntrinsicID();
       switch (ID) {
-      default:
+      // NOTE: Skip dx_resource_casthandle here. They are
+      // resolved after this loop in cleanupHandleCasts.
+      case Intrinsic::dx_resource_casthandle:
+      // NOTE: llvm.dbg.value is supported as is in DXIL.
+      case Intrinsic::dbg_value:
+      case Intrinsic::not_intrinsic:
+        if (F.use_empty())
+          F.eraseFromParent();
         continue;
+      default:
+        if (F.use_empty())
+          F.eraseFromParent();
+        else {
+          SmallString<128> Msg = formatv(
+              "Unsupported intrinsic {0} for DXIL lowering", F.getName());
+          M.getContext().emitError(Msg);
+          HasErrors |= true;
+        }
+        break;
+
 #define DXIL_OP_INTRINSIC(OpCode, Intrin, ...)                                 \
   case Intrin:                                                                 \
     HasErrors |= replaceFunctionWithOp(                                        \
@@ -769,39 +1397,98 @@ public:
       case Intrinsic::dx_resource_handlefrombinding:
         HasErrors |= lowerHandleFromBinding(F);
         break;
+      case Intrinsic::dx_resource_handlefromheap:
+        HasErrors |= lowerHandleFromHeap(F);
+        break;
+      case Intrinsic::dx_resource_getbasepointer:
       case Intrinsic::dx_resource_getpointer:
         HasErrors |= lowerGetPointer(F);
+        break;
+      case Intrinsic::dx_resource_nonuniformindex:
+        assert(!CleanupNURI &&
+               "overloaded llvm.dx.resource.nonuniformindex intrinsics?");
+        CleanupNURI = &F;
         break;
       case Intrinsic::dx_resource_load_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
         break;
+      case Intrinsic::dx_resource_load_level:
+        HasErrors |= lowerTextureLoad(F);
+        break;
+      case Intrinsic::dx_resource_sample:
+        HasErrors |= lowerSample(F, /*HasClamp=*/false);
+        break;
+      case Intrinsic::dx_resource_sample_clamp:
+        HasErrors |= lowerSample(F, /*HasClamp=*/true);
+        break;
+      case Intrinsic::dx_resource_samplebias:
+        HasErrors |= lowerSampleBias(F, /*HasClamp=*/false);
+        break;
+      case Intrinsic::dx_resource_samplebias_clamp:
+        HasErrors |= lowerSampleBias(F, /*HasClamp=*/true);
+        break;
+      case Intrinsic::dx_resource_samplelevel:
+        HasErrors |= lowerSampleLevel(F);
+        break;
+      case Intrinsic::dx_resource_samplegrad:
+        HasErrors |= lowerSampleGrad(F, /*HasClamp=*/false);
+        break;
+      case Intrinsic::dx_resource_samplegrad_clamp:
+        HasErrors |= lowerSampleGrad(F, /*HasClamp=*/true);
+        break;
       case Intrinsic::dx_resource_store_typedbuffer:
-        HasErrors |= lowerTypedBufferStore(F);
+        HasErrors |= lowerBufferStore(F, /*IsRaw=*/false);
+        break;
+      case Intrinsic::dx_resource_store_texture:
+        HasErrors |= lowerTextureStore(F);
         break;
       case Intrinsic::dx_resource_load_rawbuffer:
         HasErrors |= lowerRawBufferLoad(F);
         break;
+      case Intrinsic::dx_resource_store_rawbuffer:
+        HasErrors |= lowerBufferStore(F, /*IsRaw=*/true);
+        break;
+      case Intrinsic::dx_resource_load_cbufferrow_2:
+      case Intrinsic::dx_resource_load_cbufferrow_4:
+      case Intrinsic::dx_resource_load_cbufferrow_8:
+        HasErrors |= lowerCBufferLoad(F);
+        break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
         break;
-      // TODO: this can be removed when
-      // https://github.com/llvm/llvm-project/issues/113192 is fixed
-      case Intrinsic::dx_splitdouble:
-        HasErrors |= replaceFunctionWithNamedStructOp(
-            F, OpCode::SplitDouble,
-            OpBuilder.getSplitDoubleType(M.getContext()),
-            [&](CallInst *CI, CallInst *Op) {
-              return replaceSplitDoubleCallUsages(CI, Op);
-            });
+      case Intrinsic::dx_resource_atomic_binop:
+        HasErrors |= lowerResourceAtomicBinOp(F);
+        break;
+      case Intrinsic::dx_resource_atomic_compare_exchange:
+        HasErrors |= lowerResourceAtomicCompareExchange(F);
+        break;
+      case Intrinsic::dx_resource_getdimensions_x:
+        HasErrors |= lowerGetDimensionsX(F);
         break;
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);
         break;
+      case Intrinsic::lifetime_start:
+      case Intrinsic::lifetime_end:
+        if (F.use_empty())
+          F.eraseFromParent();
+        else {
+          if (MMDI.DXILVersion < VersionTuple(1, 6))
+            HasErrors |= lowerLifetimeIntrinsic(F);
+          else
+            continue;
+        }
+        break;
+      case Intrinsic::is_fpclass:
+        HasErrors |= lowerIsFPClass(F);
+        break;
       }
       Updated = true;
     }
-    if (Updated && !HasErrors)
+    if (Updated && !HasErrors) {
       cleanupHandleCasts();
+      cleanupNonUniformResourceIndexCalls();
+    }
 
     return Updated;
   }
@@ -809,16 +1496,18 @@ public:
 } // namespace
 
 PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
-  DXILBindingMap &DBM = MAM.getResult<DXILResourceBindingAnalysis>(M);
+  DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
+  const ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
 
-  bool MadeChanges = OpLowerer(M, DBM, DRTM).lowerIntrinsics();
+  const bool MadeChanges = OpLowerer(M, DRM, DRTM, MMDI).lowerIntrinsics();
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
-  PA.preserve<DXILResourceBindingAnalysis>();
+  PA.preserve<DXILResourceAnalysis>();
   PA.preserve<DXILMetadataAnalysis>();
   PA.preserve<ShaderFlagsAnalysis>();
+  PA.preserve<RootSignatureAnalysis>();
   return PA;
 }
 
@@ -826,12 +1515,14 @@ namespace {
 class DXILOpLoweringLegacy : public ModulePass {
 public:
   bool runOnModule(Module &M) override {
-    DXILBindingMap &DBM =
-        getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+    DXILResourceMap &DRM =
+        getAnalysis<DXILResourceWrapperPass>().getResourceMap();
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+    const ModuleMetadataInfo MMDI =
+        getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-    return OpLowerer(M, DBM, DRTM).lowerIntrinsics();
+    return OpLowerer(M, DRM, DRTM, MMDI).lowerIntrinsics();
   }
   StringRef getPassName() const override { return "DXIL Op Lowering"; }
   DXILOpLoweringLegacy() : ModulePass(ID) {}
@@ -839,11 +1530,12 @@ public:
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceTypeWrapperPass>();
-    AU.addRequired<DXILResourceBindingWrapperPass>();
-    AU.addPreserved<DXILResourceBindingWrapperPass>();
-    AU.addPreserved<DXILResourceMDWrapper>();
+    AU.addRequired<DXILResourceWrapperPass>();
+    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+    AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
+    AU.addPreserved<RootSignatureAnalysisWrapper>();
   }
 };
 char DXILOpLoweringLegacy::ID = 0;
@@ -852,7 +1544,7 @@ char DXILOpLoweringLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_END(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering", false,
                     false)
 

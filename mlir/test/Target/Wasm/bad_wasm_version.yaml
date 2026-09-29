@@ -1,0 +1,8 @@
+# RUN: yaml2obj %s -o - | not mlir-translate --import-wasm 2>&1 | FileCheck %s
+
+# CHECK: unsupported Wasm version
+
+--- !WASM
+FileHeader:
+  Version:         0xDEADBEEF
+...

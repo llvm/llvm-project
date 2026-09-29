@@ -58,7 +58,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      41
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.88
 # CHECK-NEXT: IPC:               4.88
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -125,7 +125,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    0.5       ldr	w0, [sp]
 # CHECK-NEXT: 1.     4     5.3    0.0    0.0       add	x0, x0, x0
-# CHECK-NEXT:        4     3.3    0.6    0.3       <total>
+# CHECK-NEXT:        8     3.3    0.6    0.3       <total>
 
 # CHECK:      [1] Code Region - FPR8-bit
 
@@ -134,7 +134,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -202,7 +202,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	b0, [sp]
 # CHECK-NEXT: 1.     4     7.3    0.0    0.0       fadd	d0, d0, d0
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT:        8     4.3    0.6    0.6       <total>
 
 # CHECK:      [2] Code Region - FPR16-bit
 
@@ -211,7 +211,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -279,7 +279,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	h0, [sp]
 # CHECK-NEXT: 1.     4     7.3    0.0    0.0       fadd	d0, d0, d0
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT:        8     4.3    0.6    0.6       <total>
 
 # CHECK:      [3] Code Region - FPR32-bit
 
@@ -288,7 +288,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -356,7 +356,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.3       ldr	s0, [sp]
 # CHECK-NEXT: 1.     4     7.3    0.0    0.0       fadd	d0, d0, d0
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT:        8     4.3    0.6    0.6       <total>
 
 # CHECK:      [4] Code Region - SIMD64-bit-b
 
@@ -365,7 +365,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -433,7 +433,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.8b }, [sp]
 # CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT:        8     4.3    0.6    0.6       <total>
 
 # CHECK:      [5] Code Region - SIMD64-bit-h
 
@@ -442,7 +442,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -510,7 +510,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.4h }, [sp]
 # CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	v0.8h, v0.8h, v0.8h
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT:        8     4.3    0.6    0.6       <total>
 
 # CHECK:      [6] Code Region - SIMD64-bit-s
 
@@ -519,7 +519,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -587,7 +587,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.2s }, [sp]
 # CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT:        8     4.3    0.6    0.6       <total>
 
 # CHECK:      [7] Code Region - SIMD64-bit-d
 
@@ -596,7 +596,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      44
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    4.55
 # CHECK-NEXT: IPC:               4.55
 # CHECK-NEXT: Block RThroughput: 0.3
@@ -664,7 +664,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     1.3    1.3    1.3       ld1	{ v0.1d }, [sp]
 # CHECK-NEXT: 1.     4     7.3    0.0    0.0       add	v0.2d, v0.2d, v0.2d
-# CHECK-NEXT:        4     4.3    0.6    0.6       <total>
+# CHECK-NEXT:        8     4.3    0.6    0.6       <total>
 
 # CHECK:      [8] Code Region - ins
 
@@ -673,7 +673,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      403
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.50
 # CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 0.5
@@ -741,7 +741,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     7.0    0.3    0.0       mov	v0.b[0], v1.b[1]
 # CHECK-NEXT: 1.     4     9.0    0.0    0.0       add	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:        4     8.0    0.1    0.0       <total>
+# CHECK-NEXT:        8     8.0    0.1    0.0       <total>
 
 # CHECK:      [9] Code Region - lanewise-load
 
@@ -750,7 +750,7 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: Total Cycles:      1003
 # CHECK-NEXT: Total uOps:        300
 
-# CHECK:      Dispatch Width:    15
+# CHECK:      Dispatch Width:    8
 # CHECK-NEXT: uOps Per Cycle:    0.30
 # CHECK-NEXT: IPC:               0.20
 # CHECK-NEXT: Block RThroughput: 0.5
@@ -805,9 +805,9 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [1,0]     D==========eeeeeeeeER    .    .    .    . .   ld1	{ v0.b }[0], [sp]
 # CHECK-NEXT: [1,1]     D==================eeER  .    .    .    . .   add	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [2,0]     D====================eeeeeeeeER    .    . .   ld1	{ v0.b }[0], [sp]
-# CHECK-NEXT: [2,1]     D============================eeER  .    . .   add	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT: [3,0]     D==============================eeeeeeeeER .   ld1	{ v0.b }[0], [sp]
-# CHECK-NEXT: [3,1]     D======================================eeER   add	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT: [2,1]     .D===========================eeER  .    . .   add	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT: [3,0]     .D=============================eeeeeeeeER .   ld1	{ v0.b }[0], [sp]
+# CHECK-NEXT: [3,1]     .D=====================================eeER   add	v0.16b, v0.16b, v0.16b
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -816,6 +816,6 @@ add v0.16b, v0.16b, v0.16b
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     16.0   0.3    0.0       ld1	{ v0.b }[0], [sp]
-# CHECK-NEXT: 1.     4     24.0   0.0    0.0       add	v0.16b, v0.16b, v0.16b
-# CHECK-NEXT:        4     20.0   0.1    0.0       <total>
+# CHECK-NEXT: 0.     4     15.8   0.3    0.0       ld1	{ v0.b }[0], [sp]
+# CHECK-NEXT: 1.     4     23.5   0.0    0.0       add	v0.16b, v0.16b, v0.16b
+# CHECK-NEXT:        8     19.6   0.1    0.0       <total>

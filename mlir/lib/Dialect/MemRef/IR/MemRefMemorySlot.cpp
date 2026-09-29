@@ -12,13 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MemRef/IR/MemRefMemorySlot.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -63,43 +64,87 @@ static void walkIndicesAsAttr(MLIRContext *ctx, ArrayRef<int64_t> shape,
 //  Interfaces for AllocaOp
 //===----------------------------------------------------------------------===//
 
-static bool isSupportedElementType(Type type) {
-  return llvm::isa<MemRefType>(type) ||
-         OpBuilder(type.getContext()).getZeroAttr(type);
+/// Returns the scalable vector width a `vscale`-sized memref maps to: the
+/// factor C when `size` is a known multiple of `vscale`.
+static std::optional<int64_t> matchVScaleMultiple(Value size) {
+  Operation *defOp = size.getDefiningOp();
+  if (!defOp)
+    return std::nullopt;
+
+  auto isVScale = [](Value v) {
+    Operation *op = v.getDefiningOp();
+    // Matched by name to avoid a MemRef -> Vector circular dependency, as in
+    // arith::MulIOp::getAsmResultNames.
+    return op && op->getName().getStringRef() == "vector.vscale";
+  };
+
+  // Bare `vector.vscale` == vscale * 1.
+  if (isVScale(size))
+    return 1;
+
+  // `vscale * C` or `C * vscale` (multiplication is commutative).
+  if (auto mul = dyn_cast<arith::MulIOp>(defOp)) {
+    if (isVScale(mul.getLhs()))
+      return getConstantIntValue(mul.getRhs());
+    if (isVScale(mul.getRhs()))
+      return getConstantIntValue(mul.getLhs());
+  }
+  return std::nullopt;
 }
 
 SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
   MemRefType type = getType();
-  if (!isSupportedElementType(type.getElementType()))
-    return {};
-  if (!type.hasStaticShape())
-    return {};
-  // Make sure the memref contains only a single element.
-  if (type.getNumElements() != 1)
-    return {};
 
-  return {MemorySlot{getResult(), type.getElementType()}};
+  // A single-element memref is promoted to a scalar SSA value.
+  if (type.hasStaticShape()) {
+    std::optional<int64_t> numElements =
+        ShapedType::tryGetNumElements(type.getShape());
+    // Element count overflow: not promotable.
+    if (!numElements)
+      return {};
+    if (*numElements == 1)
+      return {MemorySlot{getResult(), type.getElementType()}};
+  }
+
+  // A multi-element memref can be promoted to a single vector SSA value when it
+  // is only ever accessed as a whole buffer (e.g. through whole-buffer
+  // `vector.transfer_read`/`vector.transfer_write`).
+  if (VectorType::isValidElementType(type.getElementType())) {
+    // Vector types require strictly positive extents, so a memref with a zero
+    // extent has nothing to promote.
+    if (llvm::is_contained(type.getShape(), 0))
+      return {};
+
+    // Static shape: a fixed-size vector of the same extents.
+    if (type.hasStaticShape())
+      return {MemorySlot{getResult(), VectorType::get(type.getShape(),
+                                                      type.getElementType())}};
+
+    // A 1-D memref whose single dynamic extent is `vector.vscale * N` maps to a
+    // scalable `vector<[N]x...>` slot, for a strictly positive multiple `N`.
+    if (type.getRank() == 1 && type.isDynamicDim(0)) {
+      if (std::optional<int64_t> multiple =
+              matchVScaleMultiple(getDynamicSizes()[0]);
+          multiple && *multiple > 0)
+        return {MemorySlot{getResult(),
+                           VectorType::get({*multiple}, type.getElementType(),
+                                           /*scalableDims=*/{true})}};
+    }
+  }
+
+  return {};
 }
 
 Value memref::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                         OpBuilder &builder) {
-  assert(isSupportedElementType(slot.elemType));
-  // TODO: support more types.
-  return TypeSwitch<Type, Value>(slot.elemType)
-      .Case([&](MemRefType t) {
-        return builder.create<memref::AllocaOp>(getLoc(), t);
-      })
-      .Default([&](Type t) {
-        return builder.create<arith::ConstantOp>(getLoc(), t,
-                                                 builder.getZeroAttr(t));
-      });
+  return ub::PoisonOp::create(builder, getLoc(), slot.elemType);
 }
 
 std::optional<PromotableAllocationOpInterface>
 memref::AllocaOp::handlePromotionComplete(const MemorySlot &slot,
                                           Value defaultValue,
                                           OpBuilder &builder) {
-  if (defaultValue.use_empty())
+  if (defaultValue && defaultValue.use_empty())
     defaultValue.getDefiningOp()->erase();
   this->erase();
   return std::nullopt;
@@ -137,7 +182,7 @@ DenseMap<Attribute, MemorySlot> memref::AllocaOp::destructure(
   for (Attribute usedIndex : usedIndices) {
     Type elemType = memrefType.getTypeAtIndex(usedIndex);
     MemRefType elemPtr = MemRefType::get({}, elemType);
-    auto subAlloca = builder.create<memref::AllocaOp>(getLoc(), elemPtr);
+    auto subAlloca = memref::AllocaOp::create(builder, getLoc(), elemPtr);
     newAllocators.push_back(subAlloca);
     slotMap.try_emplace<MemorySlot>(usedIndex,
                                     {subAlloca.getResult(), elemType});
@@ -307,9 +352,12 @@ struct MemRefDestructurableTypeExternalModel
   getSubelementIndexMap(Type type) const {
     auto memrefType = llvm::cast<MemRefType>(type);
     constexpr int64_t maxMemrefSizeForDestructuring = 16;
-    if (!memrefType.hasStaticShape() ||
-        memrefType.getNumElements() > maxMemrefSizeForDestructuring ||
-        memrefType.getNumElements() == 1)
+    if (!memrefType.hasStaticShape())
+      return {};
+    std::optional<int64_t> numElements =
+        ShapedType::tryGetNumElements(memrefType.getShape());
+    if (!numElements || *numElements > maxMemrefSizeForDestructuring ||
+        *numElements == 1)
       return {};
 
     DenseMap<Attribute, Type> destructured;

@@ -19,22 +19,22 @@
 ; RUN: llvm-ar rc other.bc.a a.bc
 ; RUN: llvm-ar rc other.o.a a.o
 
-; RUN: ld.lld -o /dev/null --trace ref.o a.bc.b.bc.a other.bc.a | \
+; RUN: ld.lld --trace ref.o a.bc.b.bc.a other.bc.a | \
 ; RUN:   FileCheck %s --implicit-check-not={{.}}
-; RUN: ld.lld -o /dev/null --trace ref.o a.bc.b.bc.a other.o.a  | \
+; RUN: ld.lld --trace ref.o a.bc.b.bc.a other.o.a  | \
 ; RUN:   FileCheck %s --implicit-check-not={{.}}
-; RUN: ld.lld -o /dev/null --trace ref.o a.bc.b.o.a  other.bc.a | \
+; RUN: ld.lld --trace ref.o a.bc.b.o.a  other.bc.a | \
 ; RUN:   FileCheck %s --implicit-check-not={{.}}
-; RUN: ld.lld -o /dev/null --trace ref.o a.bc.b.o.a  other.o.a  | \
+; RUN: ld.lld --trace ref.o a.bc.b.o.a  other.o.a  | \
 ; RUN:   FileCheck %s --implicit-check-not={{.}}
-; RUN: ld.lld -o /dev/null --trace ref.o a.o.b.bc.a  other.bc.a | \
+; RUN: ld.lld --trace ref.o a.o.b.bc.a  other.bc.a | \
 ; RUN:   FileCheck %s --implicit-check-not={{.}}
-; RUN: ld.lld -o /dev/null --trace ref.o a.o.b.bc.a  other.o.a  | \
+; RUN: ld.lld --trace ref.o a.o.b.bc.a  other.o.a  | \
 ; RUN:   FileCheck %s --implicit-check-not={{.}}
-; RUN: ld.lld -o /dev/null --trace ref.o a.o.b.o.a   other.bc.a | \
+; RUN: ld.lld --trace ref.o a.o.b.o.a   other.bc.a | \
 ; RUN:   FileCheck %s --implicit-check-not={{.}}
 ;; Not an LTO test case, but here for completeness.
-; RUN: ld.lld -o /dev/null --trace ref.o a.o.b.o.a   other.o.a  | \
+; RUN: ld.lld --trace ref.o a.o.b.o.a   other.o.a  | \
 ; RUN:   FileCheck %s --implicit-check-not={{.}}
 
 ; CHECK:      ref.o

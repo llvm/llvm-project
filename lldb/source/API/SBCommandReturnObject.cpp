@@ -7,44 +7,46 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBCommandReturnObject.h"
+#include "SBCommandReturnObjectImpl.h"
 #include "Utils.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStructuredData.h"
+#include "lldb/API/SBValue.h"
+#include "lldb/API/SBValueList.h"
 #include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Host/File.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/lldb-forward.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-class lldb_private::SBCommandReturnObjectImpl {
-public:
-  SBCommandReturnObjectImpl() : m_ptr(new CommandReturnObject(false)) {}
-  SBCommandReturnObjectImpl(CommandReturnObject &ref)
-      : m_ptr(&ref), m_owned(false) {}
-  SBCommandReturnObjectImpl(const SBCommandReturnObjectImpl &rhs)
-      : m_ptr(new CommandReturnObject(*rhs.m_ptr)), m_owned(rhs.m_owned) {}
-  SBCommandReturnObjectImpl &operator=(const SBCommandReturnObjectImpl &rhs) {
-    SBCommandReturnObjectImpl copy(rhs);
-    std::swap(*this, copy);
-    return *this;
-  }
-  // rvalue ctor+assignment are not used by SBCommandReturnObject.
-  ~SBCommandReturnObjectImpl() {
-    if (m_owned)
-      delete m_ptr;
-  }
+SBCommandReturnObjectImpl::SBCommandReturnObjectImpl()
+    : m_ptr(new CommandReturnObject(false)) {}
 
-  CommandReturnObject &operator*() const { return *m_ptr; }
+SBCommandReturnObjectImpl::SBCommandReturnObjectImpl(CommandReturnObject &ref)
+    : m_ptr(&ref), m_owned(false) {}
 
-private:
-  CommandReturnObject *m_ptr;
-  bool m_owned = true;
-};
+SBCommandReturnObjectImpl::SBCommandReturnObjectImpl(
+    const SBCommandReturnObjectImpl &rhs)
+    : m_ptr(new CommandReturnObject(*rhs.m_ptr)), m_owned(rhs.m_owned) {}
+
+SBCommandReturnObjectImpl &
+SBCommandReturnObjectImpl::operator=(const SBCommandReturnObjectImpl &rhs) {
+  SBCommandReturnObjectImpl copy(rhs);
+  std::swap(*this, copy);
+  return *this;
+}
+
+SBCommandReturnObjectImpl::~SBCommandReturnObjectImpl() {
+  if (m_owned)
+    delete m_ptr;
+}
 
 SBCommandReturnObject::SBCommandReturnObject()
     : m_opaque_up(new SBCommandReturnObjectImpl()) {
@@ -82,6 +84,13 @@ SBCommandReturnObject::operator bool() const {
 
   // This method is not useful but it needs to stay to keep SB API stable.
   return true;
+}
+
+const char *SBCommandReturnObject::GetCommand() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ConstString output(ref().GetCommand());
+  return output.AsCString(/*value_if_empty*/ "");
 }
 
 const char *SBCommandReturnObject::GetOutput() {
@@ -210,19 +219,19 @@ void SBCommandReturnObject::AppendWarning(const char *message) {
 }
 
 CommandReturnObject *SBCommandReturnObject::operator->() const {
-  return &**m_opaque_up;
+  return m_opaque_up->get();
 }
 
 CommandReturnObject *SBCommandReturnObject::get() const {
-  return &**m_opaque_up;
+  return m_opaque_up->get();
 }
 
 CommandReturnObject &SBCommandReturnObject::operator*() const {
-  return **m_opaque_up;
+  return *m_opaque_up->get();
 }
 
 CommandReturnObject &SBCommandReturnObject::ref() const {
-  return **m_opaque_up;
+  return *m_opaque_up->get();
 }
 
 bool SBCommandReturnObject::GetDescription(SBStream &description) {
@@ -265,14 +274,16 @@ void SBCommandReturnObject::SetImmediateErrorFile(FILE *fh) {
 void SBCommandReturnObject::SetImmediateOutputFile(FILE *fh,
                                                    bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
-  FileSP file = std::make_shared<NativeFile>(fh, transfer_ownership);
+  FileSP file = std::make_shared<NativeFile>(fh, File::eOpenOptionWriteOnly,
+                                             transfer_ownership);
   ref().SetImmediateOutputFile(file);
 }
 
 void SBCommandReturnObject::SetImmediateErrorFile(FILE *fh,
                                                   bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
-  FileSP file = std::make_shared<NativeFile>(fh, transfer_ownership);
+  FileSP file = std::make_shared<NativeFile>(fh, File::eOpenOptionWriteOnly,
+                                             transfer_ownership);
   ref().SetImmediateErrorFile(file);
 }
 
@@ -302,8 +313,8 @@ void SBCommandReturnObject::PutCString(const char *string, int len) {
   if (len == 0 || string == nullptr || *string == 0) {
     return;
   } else if (len > 0) {
-    std::string buffer(string, len);
-    ref().AppendMessage(buffer.c_str());
+    const llvm::StringRef buffer(string, static_cast<size_t>(len));
+    ref().AppendMessage(buffer);
   } else
     ref().AppendMessage(string);
 }
@@ -348,4 +359,19 @@ void SBCommandReturnObject::SetError(const char *error_cstr) {
 
   if (error_cstr)
     ref().AppendError(error_cstr);
+}
+
+SBValueList
+SBCommandReturnObject::GetValues(lldb::DynamicValueType use_dynamic) {
+  LLDB_INSTRUMENT_VA(this, use_dynamic);
+
+  SBValueList value_list;
+  for (ValueObjectSP value_object_sp :
+       ref().GetValueObjectList().GetObjects()) {
+    SBValue value_sb;
+    value_sb.SetSP(value_object_sp, use_dynamic);
+    value_list.Append(value_sb);
+  }
+
+  return value_list;
 }

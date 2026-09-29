@@ -7,7 +7,7 @@ define <1 x float> @constrained_vector_fadd_v1f32() #0 {
 ; CHECK: $xmm0 = COPY [[ADDSSrm]]
 ; CHECK: RET 0, $xmm0
 entry:
-  %add = call <1 x float> @llvm.experimental.constrained.fadd.v1f32(<1 x float> <float 0x7FF0000000000000>, <1 x float> <float 1.0>, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %add = call <1 x float> @llvm.experimental.constrained.fadd.v1f32(<1 x float> <float +inf>, <1 x float> <float 1.0>, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret <1 x float> %add
 }
 
@@ -18,10 +18,10 @@ define <3 x float> @constrained_vector_fadd_v3f32() #0 {
 ; CHECK: [[ADDSSrr:%[0-9]+]]:fr32 = ADDSSrr [[MOVSSrm_alt]], killed [[FsFLD0SS]], implicit $mxcsr
 ; CHECK: [[ADDSSrm:%[0-9]+]]:fr32 = ADDSSrm [[MOVSSrm_alt]], $rip, 1, $noreg, %const.1, $noreg, implicit $mxcsr :: (load (s32) from constant-pool)
 ; CHECK: [[ADDSSrm1:%[0-9]+]]:fr32 = ADDSSrm [[MOVSSrm_alt]], $rip, 1, $noreg, %const.2, $noreg, implicit $mxcsr :: (load (s32) from constant-pool)
-; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY [[ADDSSrm1]]
-; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY [[ADDSSrm]]
+; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY killed [[ADDSSrm1]]
+; CHECK: [[COPY1:%[0-9]+]]:vr128 = COPY killed [[ADDSSrm]]
 ; CHECK: [[UNPCKLPSrr:%[0-9]+]]:vr128 = UNPCKLPSrr [[COPY1]], killed [[COPY]]
-; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY [[ADDSSrr]]
+; CHECK: [[COPY2:%[0-9]+]]:vr128 = COPY killed [[ADDSSrr]]
 ; CHECK: [[UNPCKLPDrr:%[0-9]+]]:vr128 = UNPCKLPDrr [[UNPCKLPSrr]], killed [[COPY2]]
 ; CHECK: $xmm0 = COPY [[UNPCKLPDrr]]
 ; CHECK: RET 0, $xmm0

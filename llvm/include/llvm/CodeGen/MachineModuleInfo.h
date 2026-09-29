@@ -31,11 +31,14 @@
 #define LLVM_CODEGEN_MACHINEMODULEINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <utility>
 #include <vector>
@@ -53,7 +56,7 @@ class Module;
 /// accessed/created with MachineModuleInfo::getObjFileInfo and destroyed when
 /// the MachineModuleInfo is destroyed.
 ///
-class MachineModuleInfoImpl {
+class LLVM_ABI MachineModuleInfoImpl {
 public:
   using StubValueTy = PointerIntPair<MCSymbol *, 1, bool>;
   using SymbolListTy = std::vector<std::pair<MCSymbol *, StubValueTy>>;
@@ -106,19 +109,26 @@ class MachineModuleInfo {
   const Function *LastRequest = nullptr; ///< Used for shortcut/cache.
   MachineFunction *LastResult = nullptr; ///< Used for shortcut/cache.
 
+  // MachineFunctions are freed only when all the functions in the same
+  // deletion grouping have been finalized.
+  EquivalenceClasses<const Function *> MFDeletionGrouping;
+  // Add to this set once a function has been fully processed.
+  DenseSet<const Function *> FinalizedMFs;
+
   MachineModuleInfo &operator=(MachineModuleInfo &&MMII) = delete;
 
 public:
-  explicit MachineModuleInfo(const TargetMachine *TM = nullptr);
+  LLVM_ABI explicit MachineModuleInfo(const TargetMachine *TM = nullptr);
 
-  explicit MachineModuleInfo(const TargetMachine *TM, MCContext *ExtContext);
+  LLVM_ABI explicit MachineModuleInfo(const TargetMachine *TM,
+                                      MCContext *ExtContext);
 
-  MachineModuleInfo(MachineModuleInfo &&MMII);
+  LLVM_ABI MachineModuleInfo(MachineModuleInfo &&MMII);
 
-  ~MachineModuleInfo();
+  LLVM_ABI ~MachineModuleInfo();
 
-  void initialize();
-  void finalize();
+  LLVM_ABI void initialize();
+  LLVM_ABI void finalize();
 
   const TargetMachine &getTarget() const { return TM; }
 
@@ -135,20 +145,33 @@ public:
   /// Creates a new MachineFunction if none exists yet.
   /// NOTE: New pass manager clients shall not use this method to get
   /// the `MachineFunction`, use `MachineFunctionAnalysis` instead.
-  MachineFunction &getOrCreateMachineFunction(Function &F);
+  LLVM_ABI MachineFunction &getOrCreateMachineFunction(Function &F);
 
   /// \brief Returns the MachineFunction associated to IR function \p F if there
   /// is one, otherwise nullptr.
   /// NOTE: New pass manager clients shall not use this method to get
   /// the `MachineFunction`, use `MachineFunctionAnalysis` instead.
-  MachineFunction *getMachineFunction(const Function &F) const;
+  LLVM_ABI MachineFunction *getMachineFunction(const Function &F) const;
+
+  /// Group two IR functions so their MachineFunctions are deleted together once
+  /// both functions have been finalized.
+  void groupMachineFunctionsForDeletion(const Function &F1,
+                                        const Function &F2) {
+    if (FinalizedMFs.count(&F1) || FinalizedMFs.count(&F2))
+      return;
+    MFDeletionGrouping.unionSets(&F1, &F2);
+  }
 
   /// Delete the MachineFunction \p MF and reset the link in the IR Function to
-  /// Machine Function map.
-  void deleteMachineFunctionFor(Function &F);
+  /// Machine Function map. When a function is not grouped with any other
+  /// function, its MF gets deleted right away. When a function is grouped with
+  /// other functions, its MF gets deleted when all functions in the same group
+  /// have been finalized.
+  LLVM_ABI void deleteMachineFunctionFor(Function &F);
 
   /// Add an externally created MachineFunction \p MF for \p F.
-  void insertFunction(const Function &F, std::unique_ptr<MachineFunction> &&MF);
+  LLVM_ABI void insertFunction(const Function &F,
+                               std::unique_ptr<MachineFunction> &&MF);
 
   /// Keep track of various per-module pieces of information for backends
   /// that would like to do so.
@@ -167,7 +190,7 @@ public:
   /// \}
 }; // End class MachineModuleInfo
 
-class MachineModuleInfoWrapperPass : public ImmutablePass {
+class LLVM_ABI MachineModuleInfoWrapperPass : public ImmutablePass {
   MachineModuleInfo MMI;
 
 public:
@@ -192,7 +215,7 @@ public:
 /// infrastructure must own the MachineModuleInfo.
 class MachineModuleAnalysis : public AnalysisInfoMixin<MachineModuleAnalysis> {
   friend AnalysisInfoMixin<MachineModuleAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   MachineModuleInfo &MMI;
 
@@ -215,7 +238,7 @@ public:
   MachineModuleAnalysis(MachineModuleInfo &MMI) : MMI(MMI) {}
 
   /// Run the analysis pass and produce machine module information.
-  Result run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI Result run(Module &M, ModuleAnalysisManager &);
 };
 
 } // end namespace llvm

@@ -1,6 +1,58 @@
 add_custom_target(libc-complex-unittests)
 
-add_libc_test(
+add_fp_unittest(
+  cabs_test
+  NEED_MPC
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cabs_test.cpp
+  HDRS
+    CAbsTest.h
+  DEPENDS
+    libc.src.complex.cabs
+)
+
+add_fp_unittest(
+  cabsf_test
+  NEED_MPC
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cabsf_test.cpp
+  HDRS
+    CAbsTest.h
+  DEPENDS
+    libc.src.complex.cabsf
+)
+
+add_fp_unittest(
+  carg_test
+  NEED_MPC
+  SUITE
+    libc-complex-unittests
+  SRCS
+    carg_test.cpp
+  HDRS
+    CArgTest.h
+  DEPENDS
+    libc.src.complex.carg
+)
+
+add_fp_unittest(
+  cargf_test
+  NEED_MPC
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cargf_test.cpp
+  HDRS
+    CArgTest.h
+  DEPENDS
+    libc.src.complex.cargf
+)
+
+add_fp_unittest(
   conj_test
   SUITE
     libc-complex-unittests
@@ -8,11 +60,9 @@ add_libc_test(
     conj_test.cpp
   DEPENDS
     libc.src.complex.conj
-  LINK_LIBRARIES
-      LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   conjf_test
   SUITE
     libc-complex-unittests
@@ -20,11 +70,9 @@ add_libc_test(
     conjf_test.cpp
   DEPENDS
     libc.src.complex.conjf
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   conjl_test
   SUITE
     libc-complex-unittests
@@ -32,11 +80,9 @@ add_libc_test(
     conjl_test.cpp
   DEPENDS
     libc.src.complex.conjl
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   conjf16_test
   SUITE
     libc-complex-unittests
@@ -44,11 +90,9 @@ add_libc_test(
     conjf16_test.cpp
   DEPENDS
     libc.src.complex.conjf16
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   conjf128_test
   SUITE
     libc-complex-unittests
@@ -56,11 +100,9 @@ add_libc_test(
     conjf128_test.cpp
   DEPENDS
     libc.src.complex.conjf128
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   cproj_test
   SUITE
     libc-complex-unittests
@@ -68,23 +110,20 @@ add_libc_test(
     cproj_test.cpp
   DEPENDS
     libc.src.complex.cproj
-  LINK_LIBRARIES
-      LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   cprojf_test
+  NEED_MPC
   SUITE
     libc-complex-unittests
   SRCS
     cprojf_test.cpp
   DEPENDS
     libc.src.complex.cprojf
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   cprojl_test
   SUITE
     libc-complex-unittests
@@ -92,11 +131,9 @@ add_libc_test(
     cprojl_test.cpp
   DEPENDS
     libc.src.complex.cprojl
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   cprojf16_test
   SUITE
     libc-complex-unittests
@@ -104,11 +141,9 @@ add_libc_test(
     cprojf16_test.cpp
   DEPENDS
     libc.src.complex.cprojf16
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   cprojf128_test
   SUITE
     libc-complex-unittests
@@ -116,11 +151,9 @@ add_libc_test(
     cprojf128_test.cpp
   DEPENDS
     libc.src.complex.cprojf128
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   creal_test
   SUITE
     libc-complex-unittests
@@ -128,11 +161,9 @@ add_libc_test(
     creal_test.cpp
   DEPENDS
     libc.src.complex.creal
-  LINK_LIBRARIES
-      LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   crealf_test
   SUITE
     libc-complex-unittests
@@ -140,11 +171,9 @@ add_libc_test(
     crealf_test.cpp
   DEPENDS
     libc.src.complex.crealf
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   creall_test
   SUITE
     libc-complex-unittests
@@ -152,11 +181,9 @@ add_libc_test(
     creall_test.cpp
   DEPENDS
     libc.src.complex.creall
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   crealf16_test
   SUITE
     libc-complex-unittests
@@ -164,11 +191,9 @@ add_libc_test(
     crealf16_test.cpp
   DEPENDS
     libc.src.complex.crealf16
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   crealf128_test
   SUITE
     libc-complex-unittests
@@ -176,11 +201,9 @@ add_libc_test(
     crealf128_test.cpp
   DEPENDS
     libc.src.complex.crealf128
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   cimag_test
   SUITE
     libc-complex-unittests
@@ -188,11 +211,9 @@ add_libc_test(
     cimag_test.cpp
   DEPENDS
     libc.src.complex.cimag
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   cimagf_test
   SUITE
     libc-complex-unittests
@@ -200,11 +221,9 @@ add_libc_test(
     cimagf_test.cpp
   DEPENDS
     libc.src.complex.cimagf
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   cimagl_test
   SUITE
     libc-complex-unittests
@@ -212,11 +231,9 @@ add_libc_test(
     cimagl_test.cpp
   DEPENDS
     libc.src.complex.cimagl
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   cimagf16_test
   SUITE
     libc-complex-unittests
@@ -224,11 +241,9 @@ add_libc_test(
     cimagf16_test.cpp
   DEPENDS
     libc.src.complex.cimagf16
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
-add_libc_test(
+add_fp_unittest(
   cimagf128_test
   SUITE
     libc-complex-unittests
@@ -236,6 +251,4 @@ add_libc_test(
     cimagf128_test.cpp
   DEPENDS
     libc.src.complex.cimagf128
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )

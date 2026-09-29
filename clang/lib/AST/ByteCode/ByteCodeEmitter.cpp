@@ -20,151 +20,60 @@
 using namespace clang;
 using namespace clang::interp;
 
-Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
-
-  // Manually created functions that haven't been assigned proper
-  // parameters yet.
-  if (!FuncDecl->param_empty() && !FuncDecl->param_begin())
-    return nullptr;
-
-  bool IsLambdaStaticInvoker = false;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
-      MD && MD->isLambdaStaticInvoker()) {
-    // For a lambda static invoker, we might have to pick a specialized
-    // version if the lambda is generic. In that case, the picked function
-    // will *NOT* be a static invoker anymore. However, it will still
-    // be a non-static member function, this (usually) requiring an
-    // instance pointer. We suppress that later in this function.
-    IsLambdaStaticInvoker = true;
-
-    const CXXRecordDecl *ClosureClass = MD->getParent();
-    assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
-    if (ClosureClass->isGenericLambda()) {
-      const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
-      assert(MD->isFunctionTemplateSpecialization() &&
-             "A generic lambda's static-invoker function must be a "
-             "template specialization");
-      const TemplateArgumentList *TAL = MD->getTemplateSpecializationArgs();
-      FunctionTemplateDecl *CallOpTemplate =
-          LambdaCallOp->getDescribedFunctionTemplate();
-      void *InsertPos = nullptr;
-      const FunctionDecl *CorrespondingCallOpSpecialization =
-          CallOpTemplate->findSpecialization(TAL->asArray(), InsertPos);
-      assert(CorrespondingCallOpSpecialization);
-      FuncDecl = cast<CXXMethodDecl>(CorrespondingCallOpSpecialization);
-    }
-  }
-
-  // Set up argument indices.
-  unsigned ParamOffset = 0;
-  SmallVector<PrimType, 8> ParamTypes;
-  SmallVector<unsigned, 8> ParamOffsets;
-  llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
-
-  // If the return is not a primitive, a pointer to the storage where the
-  // value is initialized in is passed as the first argument. See 'RVO'
-  // elsewhere in the code.
-  QualType Ty = FuncDecl->getReturnType();
-  bool HasRVO = false;
-  if (!Ty->isVoidType() && !Ctx.classify(Ty)) {
-    HasRVO = true;
-    ParamTypes.push_back(PT_Ptr);
-    ParamOffsets.push_back(ParamOffset);
-    ParamOffset += align(primSize(PT_Ptr));
-  }
-
-  // If the function decl is a member decl, the next parameter is
-  // the 'this' pointer. This parameter is pop()ed from the
-  // InterpStack when calling the function.
-  bool HasThisPointer = false;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (!IsLambdaStaticInvoker) {
-      HasThisPointer = MD->isInstance();
-      if (MD->isImplicitObjectMemberFunction()) {
-        ParamTypes.push_back(PT_Ptr);
-        ParamOffsets.push_back(ParamOffset);
-        ParamOffset += align(primSize(PT_Ptr));
-      }
-    }
-
-    // Set up lambda capture to closure record field mapping.
-    if (isLambdaCallOperator(MD)) {
-      // The parent record needs to be complete, we need to know about all
-      // the lambda captures.
-      if (!MD->getParent()->isCompleteDefinition())
-        return nullptr;
-
-      const Record *R = P.getOrCreateRecord(MD->getParent());
-      llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
-      FieldDecl *LTC;
-
-      MD->getParent()->getCaptureFields(LC, LTC);
-
-      for (auto Cap : LC) {
-        // Static lambdas cannot have any captures. If this one does,
-        // it has already been diagnosed and we can only ignore it.
-        if (MD->isStatic())
-          return nullptr;
-
-        unsigned Offset = R->getField(Cap.second)->Offset;
-        this->LambdaCaptures[Cap.first] = {
-            Offset, Cap.second->getType()->isReferenceType()};
-      }
-      if (LTC) {
-        QualType CaptureType = R->getField(LTC)->Decl->getType();
-        this->LambdaThisCapture = {R->getField(LTC)->Offset,
-                                   CaptureType->isReferenceType() ||
-                                       CaptureType->isPointerType()};
-      }
-    }
-  }
-
-  // Assign descriptors to all parameters.
-  // Composite objects are lowered to pointers.
-  for (const ParmVarDecl *PD : FuncDecl->parameters()) {
-    std::optional<PrimType> T = Ctx.classify(PD->getType());
-    PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P.createDescriptor(PD, PT);
-    ParamDescriptors.insert({ParamOffset, {PT, Desc}});
-    Params.insert({PD, {ParamOffset, T != std::nullopt}});
-    ParamOffsets.push_back(ParamOffset);
-    ParamOffset += align(primSize(PT));
-    ParamTypes.push_back(PT);
-  }
-
-  // Create a handle over the emitted code.
-  Function *Func = P.getFunction(FuncDecl);
-  if (!Func) {
-    unsigned BuiltinID = FuncDecl->getBuiltinID();
-    Func =
-        P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
-                         std::move(ParamDescriptors), std::move(ParamOffsets),
-                         HasThisPointer, HasRVO, BuiltinID);
-  }
-
+void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
+                                  Function *Func) {
+  assert(FuncDecl);
   assert(Func);
-  // For not-yet-defined functions, we only create a Function instance and
-  // compile their body later.
-  if (!FuncDecl->isDefined() ||
-      (FuncDecl->willHaveBody() && !FuncDecl->hasBody())) {
-    Func->setDefined(false);
-    return Func;
-  }
+  assert(FuncDecl->isThisDeclarationADefinition());
 
   Func->setDefined(true);
-
   // Lambda static invokers are a special case that we emit custom code for.
-  bool IsEligibleForCompilation = false;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl))
-    IsEligibleForCompilation = MD->isLambdaStaticInvoker();
-  if (!IsEligibleForCompilation)
-    IsEligibleForCompilation =
-        FuncDecl->isConstexpr() || FuncDecl->hasAttr<MSConstexprAttr>();
+  bool IsEligibleForCompilation = Func->isLambdaStaticInvoker() ||
+                                  FuncDecl->isConstexpr() ||
+                                  FuncDecl->hasAttr<MSConstexprAttr>();
+
+  if (!IsEligibleForCompilation) {
+    Func->setIsFullyCompiled(true);
+    return;
+  }
+
+  // Set up lambda captures.
+  if (Func->isLambdaCallOperator()) {
+    // Set up lambda capture to closure record field mapping.
+    const CXXRecordDecl *ParentDecl = Func->getParentDecl();
+    const Record *R = P.getOrCreateRecord(ParentDecl);
+    assert(R);
+    llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
+    FieldDecl *LTC;
+
+    ParentDecl->getCaptureFields(LC, LTC);
+
+    for (const auto &Cap : LC) {
+      unsigned Offset = R->getField(Cap.second)->Offset;
+      this->LambdaCaptures[Cap.first] = {
+          Offset, Cap.second->getType()->isReferenceType()};
+    }
+    if (LTC) {
+      QualType CaptureType = R->getField(LTC)->Decl->getType();
+      this->LambdaThisCapture = {R->getField(LTC)->Offset,
+                                 CaptureType->isPointerOrReferenceType()};
+    }
+  }
+
+  bool IsValid = !FuncDecl->isInvalidDecl();
+  // Register parameters and their index.
+  for (unsigned ParamIndex = 0, N = Func->getNumWrittenParams();
+       ParamIndex != N; ++ParamIndex) {
+    const ParmVarDecl *PD = FuncDecl->getParamDecl(ParamIndex);
+    if (PD->isInvalidDecl())
+      IsValid = false;
+    this->Params.insert({PD, {ParamIndex, Ctx.canClassify(PD->getType())}});
+  }
 
   // Compile the function body.
-  if (!IsEligibleForCompilation || !visitFunc(FuncDecl)) {
+  if (!visitFunc(FuncDecl)) {
     Func->setIsFullyCompiled(true);
-    return Func;
+    return;
   }
 
   // Create scopes from descriptors.
@@ -174,59 +83,16 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   }
 
   // Set the function's code.
-  Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
-                std::move(Scopes), FuncDecl->hasBody());
+  Func->setCode(FuncDecl, NextLocalOffset, std::move(Code), std::move(SrcMap),
+                std::move(Scopes), FuncDecl->hasBody(), IsValid);
   Func->setIsFullyCompiled(true);
-  return Func;
 }
 
-/// Compile an ObjC block, i.e. ^(){}, that thing.
-///
-/// FIXME: We do not support calling the block though, so we create a function
-/// here but do not compile any code for it.
-Function *ByteCodeEmitter::compileObjCBlock(const BlockExpr *BE) {
-  const BlockDecl *BD = BE->getBlockDecl();
-  // Set up argument indices.
-  unsigned ParamOffset = 0;
-  SmallVector<PrimType, 8> ParamTypes;
-  SmallVector<unsigned, 8> ParamOffsets;
-  llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
-
-  // Assign descriptors to all parameters.
-  // Composite objects are lowered to pointers.
-  for (const ParmVarDecl *PD : BD->parameters()) {
-    std::optional<PrimType> T = Ctx.classify(PD->getType());
-    PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P.createDescriptor(PD, PT);
-    ParamDescriptors.insert({ParamOffset, {PT, Desc}});
-    Params.insert({PD, {ParamOffset, T != std::nullopt}});
-    ParamOffsets.push_back(ParamOffset);
-    ParamOffset += align(primSize(PT));
-    ParamTypes.push_back(PT);
-  }
-
-  if (BD->hasCaptures())
-    return nullptr;
-
-  // Create a handle over the emitted code.
-  Function *Func =
-      P.createFunction(BE, ParamOffset, std::move(ParamTypes),
-                       std::move(ParamDescriptors), std::move(ParamOffsets),
-                       /*HasThisPointer=*/false, /*HasRVO=*/false,
-                       /*IsUnevaluatedBuiltin=*/false);
-
-  assert(Func);
-  Func->setDefined(true);
-  // We don't compile the BlockDecl code at all right now.
-  Func->setIsFullyCompiled(true);
-  return Func;
-}
-
-Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
+Scope::Local ByteCodeEmitter::createLocal(const Descriptor *D) {
   NextLocalOffset += sizeof(Block);
   unsigned Location = NextLocalOffset;
-  NextLocalOffset += align(D->getAllocSize());
-  return {Location, D};
+  NextLocalOffset += align(Block::InlineDescMD + D->getAllocSize());
+  return {D, Location};
 }
 
 void ByteCodeEmitter::emitLabel(LabelTy Label) {
@@ -263,104 +129,118 @@ int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
 }
 
 /// Helper to write bytecode and bail out if 32-bit offsets become invalid.
-/// Pointers will be automatically marshalled as 32-bit IDs.
 template <typename T>
-static void emit(Program &P, std::vector<std::byte> &Code, const T &Val,
-                 bool &Success) {
+static void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
+                 const T &Val, bool &Success) {
+  size_t ValPos = Code.size();
   size_t Size;
 
   if constexpr (std::is_pointer_v<T>)
-    Size = sizeof(uint32_t);
+    Size = align(sizeof(uintptr_t));
   else
-    Size = sizeof(T);
+    Size = align(sizeof(T));
 
-  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
+  if (ValPos + Size > std::numeric_limits<unsigned>::max()) {
     Success = false;
     return;
   }
 
   // Access must be aligned!
-  size_t ValPos = align(Code.size());
-  Size = align(Size);
+  assert(aligned(ValPos));
   assert(aligned(ValPos + Size));
-  Code.resize(ValPos + Size);
+  Code.resize_for_overwrite(ValPos + Size);
 
-  if constexpr (!std::is_pointer_v<T>) {
+  if constexpr (std::is_pointer_v<T>)
+    new (Code.data() + ValPos) uintptr_t(reinterpret_cast<uintptr_t>(Val));
+  else
     new (Code.data() + ValPos) T(Val);
-  } else {
-    uint32_t ID = P.getOrCreateNativePointer(Val);
-    new (Code.data() + ValPos) uint32_t(ID);
-  }
 }
 
 /// Emits a serializable value. These usually (potentially) contain
 /// heap-allocated memory and aren't trivially copyable.
 template <typename T>
-static void emitSerialized(std::vector<std::byte> &Code, const T &Val,
+static void emitSerialized(llvm::SmallVectorImpl<std::byte> &Code, const T &Val,
                            bool &Success) {
-  size_t Size = Val.bytesToSerialize();
+  size_t ValPos = Code.size();
+  size_t Size = align(Val.bytesToSerialize());
 
-  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
+  if (ValPos + Size > std::numeric_limits<unsigned>::max()) {
     Success = false;
     return;
   }
 
   // Access must be aligned!
-  size_t ValPos = align(Code.size());
-  Size = align(Size);
+  assert(aligned(ValPos));
   assert(aligned(ValPos + Size));
-  Code.resize(ValPos + Size);
+  Code.resize_for_overwrite(ValPos + Size);
 
   Val.serialize(Code.data() + ValPos);
 }
 
 template <>
-void emit(Program &P, std::vector<std::byte> &Code, const Floating &Val,
-          bool &Success) {
+void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
+          const Floating &Val, bool &Success) {
   emitSerialized(Code, Val, Success);
 }
 
 template <>
-void emit(Program &P, std::vector<std::byte> &Code,
+void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
           const IntegralAP<false> &Val, bool &Success) {
   emitSerialized(Code, Val, Success);
 }
 
 template <>
-void emit(Program &P, std::vector<std::byte> &Code, const IntegralAP<true> &Val,
-          bool &Success) {
+void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
+          const IntegralAP<true> &Val, bool &Success) {
+  emitSerialized(Code, Val, Success);
+}
+
+template <>
+void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
+          const FixedPoint &Val, bool &Success) {
   emitSerialized(Code, Val, Success);
 }
 
 template <typename... Tys>
-bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args,
-                             const SourceInfo &SI) {
+bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args, SourceInfo SI) {
   bool Success = true;
 
   // The opcode is followed by arguments. The source info is
   // attached to the address after the opcode.
   emit(P, Code, Op, Success);
-  if (SI)
-    SrcMap.emplace_back(Code.size(), SI);
+
+  SI = LocOverride.value_or(SI);
+  if (SrcMap.empty() || SrcMap.back() != SI)
+    SrcMap.push(Code.size(), SI);
 
   (..., emit(P, Code, Args, Success));
   return Success;
 }
 
-bool ByteCodeEmitter::jumpTrue(const LabelTy &Label) {
-  return emitJt(getOffset(Label), SourceInfo{});
+bool ByteCodeEmitter::jumpTrue(const LabelTy &Label, SourceInfo SI) {
+  return emitJt(getOffset(Label), SI);
 }
 
-bool ByteCodeEmitter::jumpFalse(const LabelTy &Label) {
-  return emitJf(getOffset(Label), SourceInfo{});
+bool ByteCodeEmitter::jumpFalse(const LabelTy &Label, SourceInfo SI) {
+  return emitJf(getOffset(Label), SI);
 }
 
-bool ByteCodeEmitter::jump(const LabelTy &Label) {
-  return emitJmp(getOffset(Label), SourceInfo{});
+bool ByteCodeEmitter::jump(const LabelTy &Label, SourceInfo SI) {
+  return emitJmp(getOffset(Label), SI);
 }
 
 bool ByteCodeEmitter::fallthrough(const LabelTy &Label) {
   emitLabel(Label);
+  return true;
+}
+
+bool ByteCodeEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
+  const Expr *Arg = E->getArg(0);
+  PrimType T = Ctx.classify(Arg->getType()).value_or(PT_Ptr);
+  if (!this->emitBCP(getOffset(EndLabel), T, E))
+    return false;
+  if (!this->visit(Arg))
+    return false;
   return true;
 }
 

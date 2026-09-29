@@ -1,5 +1,7 @@
 # RUN: llc -o - -run-pass=machine-scheduler -misched=shuffle %s | FileCheck %s
+# RUN: llc -o - -passes=machine-scheduler -misched=shuffle %s | FileCheck %s
 # RUN: llc -o - -run-pass=postmisched %s | FileCheck %s
+# RUN: llc -o - -passes=postmisched %s | FileCheck %s
 
 # REQUIRES: asserts
 # -misched=shuffle is only available with assertions enabled
@@ -145,7 +147,7 @@ body:             |
 
 # CHECK-LABEL: name:            foo_setjmp
 # CHECK:       body:
-# CHECK:         tBL 14 /* CC::al */, $noreg, @setjmp, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def $r0
+# CHECK: tBL 14 /* CC::al */, $noreg, @setjmp, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def $r0
 # CHECK-NEXT:    t2BTI
 
 ---

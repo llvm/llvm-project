@@ -125,8 +125,8 @@ void FreeHook(const volatile void *ptr) {
 void Fuzzer::HandleMalloc(size_t Size) {
   if (!Options.MallocLimitMb || (Size >> 20) < (size_t)Options.MallocLimitMb)
     return;
-  Printf("==%d== ERROR: libFuzzer: out-of-memory (malloc(%zd))\n", GetPid(),
-         Size);
+  Printf("==%d== ERROR: libFuzzer: out-of-memory (malloc(%zd))\n",
+         (int)GetPid(), Size);
   Printf("   To change the out-of-memory limit use -rss_limit_mb=<N>\n\n");
   PrintStackTrace();
   DumpCurrentUnit("oom-");
@@ -312,7 +312,7 @@ void Fuzzer::RssLimitCallback() {
   if (EF->__sanitizer_acquire_crash_state &&
       !EF->__sanitizer_acquire_crash_state())
     return;
-  Printf("==%lu== ERROR: libFuzzer: out-of-memory (used: %zdMb; limit: %dMb)\n",
+  Printf("==%lu== ERROR: libFuzzer: out-of-memory (used: %zdMB; limit: %dMB)\n",
          GetPid(), GetPeakRSSMb(), Options.RssLimitMb);
   Printf("   To change the out-of-memory limit use -rss_limit_mb=<N>\n\n");
   PrintMemoryProfile();
@@ -336,11 +336,11 @@ void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units,
     Printf(" corp: %zd", Corpus.NumActiveUnits());
     if (size_t N = Corpus.SizeInBytes()) {
       if (N < (1 << 14))
-        Printf("/%zdb", N);
+        Printf("/%zdB", N);
       else if (N < (1 << 24))
-        Printf("/%zdKb", N >> 10);
+        Printf("/%zdKB", N >> 10);
       else
-        Printf("/%zdMb", N >> 20);
+        Printf("/%zdMB", N >> 20);
     }
     if (size_t FF = Corpus.NumInputsThatTouchFocusFunction())
       Printf(" focus: %zd", FF);
@@ -351,7 +351,7 @@ void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units,
     Printf(" units: %zd", Units);
 
   Printf(" exec/s: %zd", ExecPerSec);
-  Printf(" rss: %zdMb", GetPeakRSSMb());
+  Printf(" rss: %zdMB", GetPeakRSSMb());
   Printf("%s", End);
 }
 
@@ -448,9 +448,9 @@ void Fuzzer::PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size) {
   if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)) &&
       secondsSinceProcessStartUp() >= 2)
     PrintStats("pulse ");
-  auto Threshhold =
+  auto Threshold =
       static_cast<long>(static_cast<double>(TimeOfLongestUnitInSeconds) * 1.1);
-  if (TimeOfUnit > Threshhold && TimeOfUnit >= Options.ReportSlowUnits) {
+  if (TimeOfUnit > Threshold && TimeOfUnit >= Options.ReportSlowUnits) {
     TimeOfLongestUnitInSeconds = TimeOfUnit;
     Printf("Slowest unit: %ld s:\n", TimeOfLongestUnitInSeconds);
     WriteUnitToFileWithPrefix({Data, Data + Size}, "slow-unit-");
@@ -568,7 +568,7 @@ size_t Fuzzer::GetCurrentUnitInFuzzingThead(const uint8_t **Data) const {
 
 void Fuzzer::CrashOnOverwrittenData() {
   Printf("==%d== ERROR: libFuzzer: fuzz target overwrites its const input\n",
-         GetPid());
+         (int)GetPid());
   PrintStackTrace();
   Printf("SUMMARY: libFuzzer: overwrites-const-input\n");
   DumpCurrentUnit("crash-");
@@ -666,7 +666,7 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U, const char *Text) {
 }
 
 void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
-  II->NumSuccessfullMutations++;
+  II->NumSuccessfulMutations++;
   MD.RecordSuccessfulMutationSequence();
   PrintStatusForNewUnit(U, II->Reduced ? "REDUCE" : "NEW   ");
   WriteToOutputCorpus(U);
@@ -683,9 +683,6 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
     return; // mallocs==frees, a leak is unlikely.
   if (!Options.DetectLeaks)
     return;
-  if (!DuringInitialCorpusExecution &&
-      TotalNumberOfRuns >= Options.MaxNumberOfRuns)
-    return;
   if (!&(EF->__lsan_enable) || !&(EF->__lsan_disable) ||
       !(EF->__lsan_do_recoverable_leak_check))
     return; // No lsan.
@@ -694,6 +691,10 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
   EF->__lsan_disable();
   ExecuteCallback(Data, Size);
   EF->__lsan_enable();
+  // The above is a verification run, and not a fuzzing run, without the
+  // correction the number of runs would exceed -runs.
+  // See https://github.com/llvm/llvm-project/issues/66331
+  TotalNumberOfRuns--;
   if (!HasMoreMallocsThanFrees)
     return; // a leak is unlikely.
   if (NumberOfLeakDetectionAttempts++ > 1000) {
@@ -816,8 +817,8 @@ void Fuzzer::ReadAndExecuteSeedCorpora(std::vector<SizedFile> &CorporaFiles) {
     Unit U({'\n'}); // Valid ASCII input.
     RunOne(U.data(), U.size());
   } else {
-    Printf("INFO: seed corpus: files: %zd min: %zdb max: %zdb total: %zdb"
-           " rss: %zdMb\n",
+    Printf("INFO: seed corpus: files: %zd min: %zdB max: %zdB total: %zdB"
+           " rss: %zdMB\n",
            CorporaFiles.size(), MinSize, MaxSize, TotalSize, GetPeakRSSMb());
     if (Options.ShuffleAtStartUp)
       std::shuffle(CorporaFiles.begin(), CorporaFiles.end(), MD.GetRand());
@@ -880,8 +881,7 @@ void Fuzzer::Loop(std::vector<SizedFile> &CorporaFiles) {
 
   while (true) {
     auto Now = system_clock::now();
-    if (!Options.StopFile.empty() &&
-        !FileToVector(Options.StopFile, 1, false).empty())
+    if (!Options.StopFile.empty() && IsFile(Options.StopFile))
       break;
     if (duration_cast<seconds>(Now - LastCorpusReload).count() >=
         Options.ReloadIntervalSec) {
@@ -921,14 +921,16 @@ void Fuzzer::MinimizeCrashLoop(const Unit &U) {
     return;
   while (!TimedOut() && TotalNumberOfRuns < Options.MaxNumberOfRuns) {
     MD.StartMutationSequence();
-    memcpy(CurrentUnitData, U.data(), U.size());
+    size_t Size = U.size();
+    memcpy(CurrentUnitData, U.data(), Size);
     for (int i = 0; i < Options.MutateDepth; i++) {
-      size_t NewSize = MD.Mutate(CurrentUnitData, U.size(), MaxMutationLen);
+      size_t NewSize = MD.Mutate(CurrentUnitData, Size, MaxMutationLen);
       assert(NewSize > 0 && NewSize <= MaxMutationLen);
       ExecuteCallback(CurrentUnitData, NewSize);
       PrintPulseAndReportSlowInput(CurrentUnitData, NewSize);
       TryDetectingAMemoryLeak(CurrentUnitData, NewSize,
                               /*DuringInitialCorpusExecution*/ false);
+      Size = NewSize;
     }
   }
 }

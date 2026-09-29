@@ -5,28 +5,30 @@
 // (The DYN case would also apply to libraries, not explicitly tested here.)
 
 // DEFINE: %{cflags} =
-// DEFINE: %{check} = (                                                           \
-// DEFINE:     %clang_profgen -fuse-ld=lld -Wl,--build-id -o %t %s %{cflags}   && \
-// DEFINE:     env LLVM_PROFILE_FILE=%t.profraw %run %t                        && \
-// DEFINE:     llvm-readelf --notes %t                                         && \
-// DEFINE:     llvm-profdata show --binary-ids %t.profraw                         \
-// DEFINE:   ) | FileCheck %s
 
 // REDEFINE: %{cflags} = -no-pie
-// RUN: %{check}
+// RUN: %clang_profgen -fuse-ld=lld -Wl,--build-id -o %t %s %{cflags}
+// RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
+// RUN: llvm-readelf --notes %t > %t2 && llvm-profdata show --binary-ids %t.profraw >> %t2 && FileCheck %s < %t2
 
 // REDEFINE: %{cflags} = -pie -fPIE
-// RUN: %{check}
+// RUN: %clang_profgen -fuse-ld=lld -Wl,--build-id -o %t %s %{cflags}
+// RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
+// RUN: llvm-readelf --notes %t > %t2 && llvm-profdata show --binary-ids %t.profraw >> %t2 && FileCheck %s < %t2
 
 // Moving the note after .bss also gives it extra LOAD segment padding,
 // making its memory offset different than its file offset.
 // RUN: echo "SECTIONS { .note.gnu.build-id : {} } INSERT AFTER .bss;" >%t.script
 
 // REDEFINE: %{cflags} = -no-pie -Wl,--script=%t.script
-// RUN: %{check}
+// RUN: %clang_profgen -fuse-ld=lld -Wl,--build-id -o %t %s %{cflags}
+// RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
+// RUN: llvm-readelf --notes %t > %t2 && llvm-profdata show --binary-ids %t.profraw >> %t2 && FileCheck %s < %t2
 
 // REDEFINE: %{cflags} = -pie -fPIE -Wl,--script=%t.script
-// RUN: %{check}
+// RUN: %clang_profgen -fuse-ld=lld -Wl,--build-id -o %t %s %{cflags}
+// RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
+// RUN: llvm-readelf --notes %t > %t2 && llvm-profdata show --binary-ids %t.profraw >> %t2 && FileCheck %s < %t2
 
 // CHECK-LABEL{LITERAL}: .note.gnu.build-id
 // CHECK: Build ID: [[ID:[0-9a-f]+]]

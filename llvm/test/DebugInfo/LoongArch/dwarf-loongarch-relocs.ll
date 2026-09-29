@@ -1,5 +1,5 @@
 ; RUN: llc --filetype=obj --mtriple=loongarch64 --mattr=-relax %s -o %t.o
-; RUN: llvm-readobj -r %t.o | FileCheck --check-prefixes=RELOCS-BOTH,RELOCS-NORL %s
+; RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=RELOCS-BOTH %s
 ; RUN: llvm-objdump --source %t.o | FileCheck --check-prefix=SOURCE %s
 ; RUN: llvm-dwarfdump --debug-info --debug-line %t.o | FileCheck --check-prefix=DWARF %s
 
@@ -16,10 +16,8 @@
 ; RELOCS-ENRL-NEXT:      0x18 R_LARCH_RELAX - 0x0
 ; RELOCS-BOTH-NEXT:    }
 ; RELOCS-BOTH:         Section ({{.*}}) .rela.debug_frame {
-; RELOCS-NORL-NEXT:      0x1C R_LARCH_32 .debug_frame 0x0
-; RELOCS-NORL-NEXT:      0x20 R_LARCH_64 .text 0x0
-; RELOCS-ENRL-NEXT:      0x1C R_LARCH_32 .L0  0x0
-; RELOCS-ENRL-NEXT:      0x20 R_LARCH_64 .L0  0x0
+; RELOCS-BOTH-NEXT:      0x1C R_LARCH_32 .L0  0x0
+; RELOCS-BOTH-NEXT:      0x20 R_LARCH_64 .L0  0x0
 ; RELOCS-ENRL-NEXT:      0x28 R_LARCH_ADD64 .L0  0x0
 ; RELOCS-ENRL-NEXT:      0x28 R_LARCH_SUB64 .L0  0x0
 ; RELOCS-ENRL-NEXT:      0x3F R_LARCH_ADD6 .L0  0x0
@@ -29,8 +27,7 @@
 ; RELOCS-BOTH-NEXT:      0x22 R_LARCH_32 .debug_line_str 0x0
 ; RELOCS-BOTH-NEXT:      0x31 R_LARCH_32 .debug_line_str 0x2
 ; RELOCS-BOTH-NEXT:      0x46 R_LARCH_32 .debug_line_str 0x1B
-; RELOCS-NORL-NEXT:      0x4F R_LARCH_64 .text 0x0
-; RELOCS-ENRL-NEXT:      0x4F R_LARCH_64 .L0  0x0
+; RELOCS-BOTH-NEXT:      0x4F R_LARCH_64 .L0  0x0
 ; RELOCS-ENRL-NEXT:      0x5F R_LARCH_ADD16 .L0  0x0
 ; RELOCS-ENRL-NEXT:      0x5F R_LARCH_SUB16 .L0  0x0
 ; RELOCS-BOTH-NEXT:    }

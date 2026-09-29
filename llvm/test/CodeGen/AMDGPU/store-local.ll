@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-- -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,VI,FUNC %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
+; RUN: llc -mtriple=amdgpu6.01-- < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgpu8.02-- < %s | FileCheck -check-prefixes=GCN,SICIVI,VI,FUNC %s
+; RUN: llc -mtriple=amdgpu9.00-- < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
 ; RUN: llc -mtriple=r600-- -mcpu=redwood < %s | FileCheck -check-prefixes=EG,FUNC %s
 ; RUN: llc -mtriple=r600-- -mcpu=cayman < %s | FileCheck -check-prefixes=CM,FUNC %s
 

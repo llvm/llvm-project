@@ -161,3 +161,52 @@ void template_inst() {
   // expected-note@+1 {{in instantiation of function template specialization 'templated_func_type_dependent<int>' requested here}}
   templated_func_type_dependent<int>();
 }
+
+namespace GH139073 {
+void f(void) {
+  // Clang would previously crash on this because of the invalid DeclRefExpr.
+#pragma omp tile sizes(a) // expected-error {{use of undeclared identifier 'a'}}
+  for (int i = 0; i < 10; i++)
+    ;
+}
+} // namespace GH139073
+
+// A loop transformation that consumes an inner tile's intra-tile loop would
+// miscompute the nest; that is diagnosed. Consuming only the generated floor
+// (one size, or unroll) is still accepted.
+namespace consumed_by_transformation {
+// Codegen: tile_codegen_tile_for.cpp;
+// run time: libomp transform/tile/parallel-wsloop-collapse-stacked-tile.cpp.
+void tile_of_tile() {
+#pragma omp tile sizes(3, 5)
+#pragma omp tile sizes(2)
+  // expected-error@+1 {{cannot apply a loop transformation to the intra-tile loop of a '#pragma omp tile' that is nested inside another loop-transforming directive; OpenMP permits this construct, but it is not yet supported}}
+  for (int i = 0; i < 100; ++i)
+    ;
+}
+
+// Same, for a range-based for loop.
+void tile_of_tile_range_for(int (&A)[100]) {
+#pragma omp tile sizes(3, 5)
+#pragma omp tile sizes(2)
+  // expected-error@+1 {{cannot apply a loop transformation to the intra-tile loop of a '#pragma omp tile' that is nested inside another loop-transforming directive; OpenMP permits this construct, but it is not yet supported}}
+  for (int &v : A)
+    (void)v;
+}
+
+// Outer tile takes only the inner floor, not the intra-tile loop.
+void tile_of_tile_one_size() {
+#pragma omp tile sizes(3)
+#pragma omp tile sizes(2)
+  for (int i = 0; i < 100; ++i)
+    ;
+}
+
+// 'unroll' only consumes the generated floor.
+void unroll_of_tile() {
+#pragma omp unroll partial(4)
+#pragma omp tile sizes(2)
+  for (int i = 0; i < 100; ++i)
+    ;
+}
+} // namespace consumed_by_transformation

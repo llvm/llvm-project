@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -38,9 +39,7 @@ using namespace llvm;
 namespace {
   struct PPCTLSDynamicCall : public MachineFunctionPass {
     static char ID;
-    PPCTLSDynamicCall() : MachineFunctionPass(ID) {
-      initializePPCTLSDynamicCallPass(*PassRegistry::getPassRegistry());
-    }
+    PPCTLSDynamicCall() : MachineFunctionPass(ID) {}
 
     const PPCInstrInfo *TII;
 
@@ -181,8 +180,8 @@ protected:
             if (!RegInfo.use_empty(OutReg)) {
               std::set<MachineInstr *> Uses;
               // Collect all instructions that use the OutReg.
-              for (MachineOperand &MO : RegInfo.use_operands(OutReg))
-                Uses.insert(MO.getParent());
+              for (MachineInstr &UseMI : RegInfo.use_instructions(OutReg))
+                Uses.insert(&UseMI);
               // Find the first user (e.g.: lwax/stfdx) of the OutReg within the
               // current BB.
               MachineBasicBlock::iterator UseIter = MBB.begin();
@@ -326,6 +325,7 @@ public:
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<LiveIntervalsWrapperPass>();
       AU.addRequired<SlotIndexesWrapperPass>();
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };

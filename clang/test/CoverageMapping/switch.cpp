@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++1z -triple %itanium_abi_triple -main-file-name switch.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-error=return-type -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++1z -triple %itanium_abi_triple -main-file-name switch.cpp %s | FileCheck %s
 
 // CHECK: foo
 void foo(int i) {   // CHECK-NEXT: File 0, [[@LINE]]:17 -> [[@LINE+11]]:2 = #0

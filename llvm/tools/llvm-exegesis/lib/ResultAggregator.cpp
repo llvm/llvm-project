@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ResultAggregator.h"
+#include <cmath>
 
 namespace llvm {
 namespace exegesis {

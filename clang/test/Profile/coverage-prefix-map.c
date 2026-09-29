@@ -25,7 +25,7 @@
 // COVERAGE-PREFIX-MAP-ORDER: @__llvm_coverage_mapping = {{.*"\\02.*newpath.*root.*nested.*coverage-prefix-map\.c}}
 
 // Test that last -fcoverage-prefix-map option (-fcoverage-prefix-map=%/t/root=.) is applied.
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -emit-llvm -mllvm -enable-name-compression=false -main-file-name coverage-prefix-map.c %t/root/nested/coverage-prefix-map.c -fcoverage-prefix-map==newpath -fcoverage-prefix-map=%/t/root=. -o - | FileCheck --check-prefix=COVERAGE-PREFIX-MAP-REORDER %s
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -emit-llvm -mllvm -enable-name-compression=false -main-file-name coverage-prefix-map.c %t/root/nested/coverage-prefix-map.c -fcoverage-compilation-dir=%t/root -fcoverage-prefix-map==newpath -fcoverage-prefix-map=%/t/root=. -o - | FileCheck --check-prefix=COVERAGE-PREFIX-MAP-REORDER %s
 // COVERAGE-PREFIX-MAP-REORDER: @__llvm_coverage_mapping =
 // COVERAGE-PREFIX-MAP-REORDER-NOT: newpath
 // COVERAGE-PREFIX-MAP-REORDER-SAME: nested{{.*coverage-prefix-map\.c}}

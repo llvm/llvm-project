@@ -41,6 +41,12 @@ entry:
   ret i32 %0
 }
 
+; CHECK-DAG: declare i32 @dx.op.threadId.i32(i32, i32) #[[#ATTR0:]]
+; CHECK-DAG: declare i32 @dx.op.groupId.i32(i32, i32) #[[#ATTR0]]
+; CHECK-DAG: declare i32 @dx.op.flattenedThreadIdInGroup.i32(i32) #[[#ATTR0]]
+; CHECK-DAG: declare i32 @dx.op.threadIdInGroup.i32(i32, i32) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
+
 ; Function Attrs: nounwind readnone willreturn
 declare i32 @llvm.dx.thread.id(i32) #1
 declare i32 @llvm.dx.group.id(i32) #1

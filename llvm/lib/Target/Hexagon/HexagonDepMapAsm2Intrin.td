@@ -3740,3 +3740,217 @@ def: Pat<(int_hexagon_V6_vsub_sf_bf HvxVR:$src1, HvxVR:$src2),
          (V6_vsub_sf_bf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsub_sf_bf_128B HvxVR:$src1, HvxVR:$src2),
          (V6_vsub_sf_bf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV73, UseHVX128B]>;
+
+// V79 HVX Instructions.
+
+def: Pat<(int_hexagon_V6_get_qfext HvxVR:$src1, IntRegs:$src2),
+         (V6_get_qfext HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV79, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_get_qfext_128B HvxVR:$src1, IntRegs:$src2),
+         (V6_get_qfext HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV79, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_get_qfext_oracc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
+         (V6_get_qfext_oracc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV79, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_get_qfext_oracc_128B HvxVR:$src1, HvxVR:$src2, IntRegs:$src3),
+         (V6_get_qfext_oracc HvxVR:$src1, HvxVR:$src2, IntRegs:$src3)>, Requires<[UseHVXV79, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_set_qfext HvxVR:$src1, IntRegs:$src2),
+         (V6_set_qfext HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV79, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_set_qfext_128B HvxVR:$src1, IntRegs:$src2),
+         (V6_set_qfext HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV79, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vabs_f8 HvxVR:$src1),
+         (V6_vabs_f8 HvxVR:$src1)>, Requires<[HasV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vabs_f8_128B HvxVR:$src1),
+         (V6_vabs_f8 HvxVR:$src1)>, Requires<[HasV79, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vadd_hf_f8 HvxVR:$src1, HvxVR:$src2),
+         (V6_vadd_hf_f8 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vadd_hf_f8_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vadd_hf_f8 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vcvt2_b_hf HvxVR:$src1, HvxVR:$src2),
+         (V6_vcvt2_b_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vcvt2_b_hf_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vcvt2_b_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV79, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vcvt2_hf_b HvxVR:$src1),
+         (V6_vcvt2_hf_b HvxVR:$src1)>, Requires<[UseHVXV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vcvt2_hf_b_128B HvxVR:$src1),
+         (V6_vcvt2_hf_b HvxVR:$src1)>, Requires<[UseHVXV79, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vcvt2_hf_ub HvxVR:$src1),
+         (V6_vcvt2_hf_ub HvxVR:$src1)>, Requires<[UseHVXV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vcvt2_hf_ub_128B HvxVR:$src1),
+         (V6_vcvt2_hf_ub HvxVR:$src1)>, Requires<[UseHVXV79, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vcvt2_ub_hf HvxVR:$src1, HvxVR:$src2),
+         (V6_vcvt2_ub_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vcvt2_ub_hf_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vcvt2_ub_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV79, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vcvt_f8_hf HvxVR:$src1, HvxVR:$src2),
+         (V6_vcvt_f8_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vcvt_f8_hf_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vcvt_f8_hf HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vcvt_hf_f8 HvxVR:$src1),
+         (V6_vcvt_hf_f8 HvxVR:$src1)>, Requires<[HasV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vcvt_hf_f8_128B HvxVR:$src1),
+         (V6_vcvt_hf_f8 HvxVR:$src1)>, Requires<[HasV79, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vfmax_f8 HvxVR:$src1, HvxVR:$src2),
+         (V6_vfmax_f8 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vfmax_f8_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vfmax_f8 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vfmin_f8 HvxVR:$src1, HvxVR:$src2),
+         (V6_vfmin_f8 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vfmin_f8_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vfmin_f8 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vfneg_f8 HvxVR:$src1),
+         (V6_vfneg_f8 HvxVR:$src1)>, Requires<[HasV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vfneg_f8_128B HvxVR:$src1),
+         (V6_vfneg_f8 HvxVR:$src1)>, Requires<[HasV79, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vmerge_qf HvxVR:$src1, HvxVR:$src2),
+         (V6_vmerge_qf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV79, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vmerge_qf_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vmerge_qf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV79, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vmpy_hf_f8 HvxVR:$src1, HvxVR:$src2),
+         (V6_vmpy_hf_f8 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vmpy_hf_f8_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vmpy_hf_f8 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vmpy_hf_f8_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_vmpy_hf_f8_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vmpy_hf_f8_acc_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_vmpy_hf_f8_acc HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV79, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vmpy_rt_hf HvxVR:$src1, IntRegs:$src2),
+         (V6_vmpy_rt_hf HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV79, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vmpy_rt_hf_128B HvxVR:$src1, IntRegs:$src2),
+         (V6_vmpy_rt_hf HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV79, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vmpy_rt_qf16 HvxVR:$src1, IntRegs:$src2),
+         (V6_vmpy_rt_qf16 HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV79, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vmpy_rt_qf16_128B HvxVR:$src1, IntRegs:$src2),
+         (V6_vmpy_rt_qf16 HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV79, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vmpy_rt_sf HvxVR:$src1, IntRegs:$src2),
+         (V6_vmpy_rt_sf HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV79, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vmpy_rt_sf_128B HvxVR:$src1, IntRegs:$src2),
+         (V6_vmpy_rt_sf HvxVR:$src1, IntRegs:$src2)>, Requires<[UseHVXV79, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vsub_hf_f8 HvxVR:$src1, HvxVR:$src2),
+         (V6_vsub_hf_f8 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vsub_hf_f8_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vsub_hf_f8 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX128B]>;
+
+// V81 HVX Instructions.
+
+def: Pat<(int_hexagon_V6_vabs_qf16_hf HvxVR:$src1),
+         (V6_vabs_qf16_hf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vabs_qf16_hf_128B HvxVR:$src1),
+         (V6_vabs_qf16_hf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vabs_qf16_qf16 HvxVR:$src1),
+         (V6_vabs_qf16_qf16 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vabs_qf16_qf16_128B HvxVR:$src1),
+         (V6_vabs_qf16_qf16 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vabs_qf32_qf32 HvxVR:$src1),
+         (V6_vabs_qf32_qf32 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vabs_qf32_qf32_128B HvxVR:$src1),
+         (V6_vabs_qf32_qf32 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vabs_qf32_sf HvxVR:$src1),
+         (V6_vabs_qf32_sf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vabs_qf32_sf_128B HvxVR:$src1),
+         (V6_vabs_qf32_sf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_valign4 HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
+         (V6_valign4 HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV81, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_valign4_128B HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3),
+         (V6_valign4 HvxVR:$src1, HvxVR:$src2, IntRegsLow8:$src3)>, Requires<[UseHVXV81, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vconv_bf_qf32 HvxWR:$src1),
+         (V6_vconv_bf_qf32 HvxWR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vconv_bf_qf32_128B HvxWR:$src1),
+         (V6_vconv_bf_qf32 HvxWR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vconv_f8_qf16 HvxVR:$src1),
+         (V6_vconv_f8_qf16 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vconv_f8_qf16_128B HvxVR:$src1),
+         (V6_vconv_f8_qf16 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vconv_h_hf_rnd HvxVR:$src1),
+         (V6_vconv_h_hf_rnd HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vconv_h_hf_rnd_128B HvxVR:$src1),
+         (V6_vconv_h_hf_rnd HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vconv_qf16_f8 HvxVR:$src1),
+         (V6_vconv_qf16_f8 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vconv_qf16_f8_128B HvxVR:$src1),
+         (V6_vconv_qf16_f8 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vconv_qf16_hf HvxVR:$src1),
+         (V6_vconv_qf16_hf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vconv_qf16_hf_128B HvxVR:$src1),
+         (V6_vconv_qf16_hf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vconv_qf16_qf16 HvxVR:$src1),
+         (V6_vconv_qf16_qf16 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vconv_qf16_qf16_128B HvxVR:$src1),
+         (V6_vconv_qf16_qf16 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vconv_qf32_qf32 HvxVR:$src1),
+         (V6_vconv_qf32_qf32 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vconv_qf32_qf32_128B HvxVR:$src1),
+         (V6_vconv_qf32_qf32 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vconv_qf32_sf HvxVR:$src1),
+         (V6_vconv_qf32_sf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vconv_qf32_sf_128B HvxVR:$src1),
+         (V6_vconv_qf32_sf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqhf HvxVR:$src1, HvxVR:$src2),
+         (V6_veqhf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqhf_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_veqhf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqhf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_veqhf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqhf_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_veqhf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqhf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_veqhf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqhf_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_veqhf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqhf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_veqhf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqhf_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_veqhf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqsf HvxVR:$src1, HvxVR:$src2),
+         (V6_veqsf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqsf_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_veqsf HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqsf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_veqsf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqsf_and_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_veqsf_and HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqsf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_veqsf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqsf_or_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_veqsf_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqsf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_veqsf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_veqsf_xor_128B HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_veqsf_xor HvxQR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vilog2_hf HvxVR:$src1),
+         (V6_vilog2_hf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vilog2_hf_128B HvxVR:$src1),
+         (V6_vilog2_hf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vilog2_qf16 HvxVR:$src1),
+         (V6_vilog2_qf16 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vilog2_qf16_128B HvxVR:$src1),
+         (V6_vilog2_qf16 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vilog2_qf32 HvxVR:$src1),
+         (V6_vilog2_qf32 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vilog2_qf32_128B HvxVR:$src1),
+         (V6_vilog2_qf32 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vilog2_sf HvxVR:$src1),
+         (V6_vilog2_sf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vilog2_sf_128B HvxVR:$src1),
+         (V6_vilog2_sf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vneg_qf16_hf HvxVR:$src1),
+         (V6_vneg_qf16_hf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vneg_qf16_hf_128B HvxVR:$src1),
+         (V6_vneg_qf16_hf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vneg_qf16_qf16 HvxVR:$src1),
+         (V6_vneg_qf16_qf16 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vneg_qf16_qf16_128B HvxVR:$src1),
+         (V6_vneg_qf16_qf16 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vneg_qf32_qf32 HvxVR:$src1),
+         (V6_vneg_qf32_qf32 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vneg_qf32_qf32_128B HvxVR:$src1),
+         (V6_vneg_qf32_qf32 HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vneg_qf32_sf HvxVR:$src1),
+         (V6_vneg_qf32_sf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vneg_qf32_sf_128B HvxVR:$src1),
+         (V6_vneg_qf32_sf HvxVR:$src1)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vsub_hf_mix HvxVR:$src1, HvxVR:$src2),
+         (V6_vsub_hf_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vsub_hf_mix_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vsub_hf_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vsub_sf_mix HvxVR:$src1, HvxVR:$src2),
+         (V6_vsub_sf_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vsub_sf_mix_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vsub_sf_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;

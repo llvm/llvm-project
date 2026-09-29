@@ -13,11 +13,13 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 
 class ObjCDataFormatterNSURL(ObjCDataFormatterTestCase):
+    SHARED_BUILD_TESTCASE = False
+
     def test_nsurl_with_run_command(self):
         """Test formatters for NSURL."""
         self.appkit_tester_impl(self.nsurl_data_formatter_commands, True)
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_nsurl_with_run_command_no_const(self):
         """Test formatters for NSURL."""
         self.appkit_tester_impl(self.nsurl_data_formatter_commands, False)

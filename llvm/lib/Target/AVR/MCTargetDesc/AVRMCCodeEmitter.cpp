@@ -12,7 +12,7 @@
 
 #include "AVRMCCodeEmitter.h"
 
-#include "MCTargetDesc/AVRMCExpr.h"
+#include "MCTargetDesc/AVRMCAsmInfo.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
 #include "llvm/ADT/APFloat.h"
@@ -34,6 +34,17 @@
 #undef GET_INSTRMAP_INFO
 
 namespace llvm {
+
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind) {
+  bool PCRel = false;
+  switch (Kind) {
+  case AVR::fixup_7_pcrel:
+  case AVR::fixup_13_pcrel:
+    PCRel = true;
+  }
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
 
 /// Performs a post-encoding step on a `LD` or `ST` instruction.
 ///
@@ -85,7 +96,7 @@ AVRMCCodeEmitter::loadStorePostEncoder(const MCInst &MI, unsigned EncodedValue,
     EncodedValue |= (1 << 12);
 
   // Encode the pointer register.
-  switch (MI.getOperand(Idx).getReg()) {
+  switch (MI.getOperand(Idx).getReg().id()) {
   case AVR::R27R26:
     EncodedValue |= 0xc;
     break;
@@ -110,8 +121,7 @@ AVRMCCodeEmitter::encodeRelCondBrTarget(const MCInst &MI, unsigned OpNo,
   const MCOperand &MO = MI.getOperand(OpNo);
 
   if (MO.isExpr()) {
-    Fixups.push_back(
-        MCFixup::create(0, MO.getExpr(), MCFixupKind(Fixup), MI.getLoc()));
+    addFixup(Fixups, 0, MO.getExpr(), MCFixupKind(Fixup));
     return 0;
   }
 
@@ -156,8 +166,7 @@ unsigned AVRMCCodeEmitter::encodeMemri(const MCInst &MI, unsigned OpNo,
     OffsetBits = OffsetOp.getImm();
   } else if (OffsetOp.isExpr()) {
     OffsetBits = 0;
-    Fixups.push_back(MCFixup::create(0, OffsetOp.getExpr(),
-                                     MCFixupKind(AVR::fixup_6), MI.getLoc()));
+    addFixup(Fixups, 0, OffsetOp.getExpr(), AVR::fixup_6);
   } else {
     llvm_unreachable("Invalid value for offset");
   }
@@ -191,8 +200,7 @@ unsigned AVRMCCodeEmitter::encodeImm(const MCInst &MI, unsigned OpNo,
     }
 
     MCFixupKind FixupKind = static_cast<MCFixupKind>(Fixup);
-    Fixups.push_back(
-        MCFixup::create(Offset, MO.getExpr(), FixupKind, MI.getLoc()));
+    addFixup(Fixups, Offset, MO.getExpr(), FixupKind);
 
     return 0;
   }
@@ -207,8 +215,8 @@ unsigned AVRMCCodeEmitter::encodeCallTarget(const MCInst &MI, unsigned OpNo,
   auto MO = MI.getOperand(OpNo);
 
   if (MO.isExpr()) {
-    MCFixupKind FixupKind = static_cast<MCFixupKind>(AVR::fixup_call);
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), FixupKind, MI.getLoc()));
+    MCFixupKind FixupKind = AVR::fixup_call;
+    addFixup(Fixups, 0, MO.getExpr(), FixupKind);
     return 0;
   }
 
@@ -230,7 +238,7 @@ unsigned AVRMCCodeEmitter::getExprOpValue(const MCExpr *Expr,
     Kind = Expr->getKind();
   }
 
-  if (Kind == MCExpr::Target) {
+  if (Kind == MCExpr::Specifier) {
     AVRMCExpr const *AVRExpr = cast<AVRMCExpr>(Expr);
     int64_t Result;
     if (AVRExpr->evaluateAsConstant(Result)) {
@@ -238,7 +246,7 @@ unsigned AVRMCCodeEmitter::getExprOpValue(const MCExpr *Expr,
     }
 
     MCFixupKind FixupKind = static_cast<MCFixupKind>(AVRExpr->getFixupKind());
-    Fixups.push_back(MCFixup::create(0, AVRExpr, FixupKind));
+    addFixup(Fixups, 0, AVRExpr, FixupKind);
     return 0;
   }
 

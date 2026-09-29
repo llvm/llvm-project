@@ -1,5 +1,15 @@
 add_custom_target(libc_include_tests)
-add_dependencies(check-libc libc_include_tests)
+add_dependencies(check-libc libc_include_tests-build)
+
+add_libc_test(
+  alloca_test
+  SUITE
+    libc_include_tests
+  SRCS
+    alloca_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.alloca_macros
+)
 
 add_libc_test(
   assert_test
@@ -21,6 +31,15 @@ add_libc_test(
     libc.include.llvm-libc-macros.complex_macros
 )
 
+add_libc_test(
+  unistd_macros_test
+  SUITE
+    libc_include_tests
+  SRCS
+    unistd_macros_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.unistd_macros
+)
 add_libc_test(
   sys_queue_test
   SUITE
@@ -48,15 +67,14 @@ add_libc_test(
     libc.include.llvm-libc-macros.stdbit_macros
     libc.include.llvm_libc_common_h
     libc.include.stdbit
-    # Intentionally do not depend on libc.src.stdbit.*. The include test is
-    # simply testing the macros provided by stdbit.h, not the implementation
-    # of the underlying functions which the type generic macros may dispatch
-    # to.
+  # Intentionally do not depend on libc.src.stdbit.*. The include test is
+  # simply testing the macros provided by stdbit.h, not the implementation
+  # of the underlying functions which the type generic macros may dispatch
+  # to.
 )
 add_libc_test(
   stdbit_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   HDRS
@@ -71,10 +89,10 @@ add_libc_test(
     libc.include.llvm_libc_common_h
     libc.include.stdbit
     libc.src.assert.__assert_fail
-    # Intentionally do not depend on libc.src.stdbit.*. The include test is
-    # simply testing the macros provided by stdbit.h, not the implementation
-    # of the underlying functions which the type generic macros may dispatch
-    # to.
+  # Intentionally do not depend on libc.src.stdbit.*. The include test is
+  # simply testing the macros provided by stdbit.h, not the implementation
+  # of the underlying functions which the type generic macros may dispatch
+  # to.
 )
 
 add_libc_test(
@@ -85,6 +103,17 @@ add_libc_test(
     stdckdint_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.stdckdint_macros
+)
+
+add_libc_test(
+  sched_test
+  SUITE
+    libc_include_tests
+  SRCS
+    sched_test.cpp
+  DEPENDS
+    libc.include.sched
+    libc.src.sched.sched_getscheduler
 )
 
 add_libc_test(
@@ -205,6 +234,16 @@ add_libc_test(
     iszerol_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  netinet_in_test
+  SUITE
+    libc_include_tests
+  SRCS
+    netinet_in_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.netinet_in_macros
 )
 
 add_libc_test(
@@ -330,7 +369,6 @@ add_libc_test(
 add_libc_test(
   signbit_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -345,7 +383,6 @@ add_libc_test(
 add_libc_test(
   isnan_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -360,7 +397,6 @@ add_libc_test(
 add_libc_test(
   isnormal_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -376,7 +412,6 @@ add_libc_test(
 # add_libc_test(
 #   issignaling_c_test
 #   C_TEST
-#   UNIT_TEST_ONLY
 #   SUITE
 #     libc_include_tests
 #   SRCS
@@ -394,7 +429,6 @@ add_libc_test(
 # add_libc_test(
 #   iscanonical_c_test
 #   C_TEST
-#   UNIT_TEST_ONLY
 #   SUITE
 #     libc_include_tests
 #   SRCS
@@ -407,12 +441,13 @@ add_libc_test(
 #     libc.src.math.iscanonical
 #     libc.src.math.iscanonicalf
 #     libc.src.math.iscanonicall
+#     libc.src.math.iscanonicalf16
+#     libc.src.math.iscanonicalf128
 # )
 
 add_libc_test(
   isinf_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -422,12 +457,11 @@ add_libc_test(
     -Werror
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-)  
+)
 
 add_libc_test(
   isfinite_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -442,7 +476,6 @@ add_libc_test(
 add_libc_test(
   issubnormal_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -457,7 +490,6 @@ add_libc_test(
 add_libc_test(
   fpclassify_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -472,7 +504,6 @@ add_libc_test(
 add_libc_test(
   iszero_c_test
   C_TEST
-  UNIT_TEST_ONLY
   SUITE
     libc_include_tests
   SRCS
@@ -483,3 +514,84 @@ add_libc_test(
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
 )
+
+add_libc_test(
+  math_constants_c_test
+  C_TEST
+  SUITE
+    libc_include_tests
+  SRCS
+    math_constants_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_macros
+)
+
+# Test `#include <...>` of each header in each available language mode.
+# This is gated on -DLLVM_LIBC_BUILD_HEADER_TESTS=ON until all the bugs
+# in headers are fixed so the tests all compile.
+set(TEST_STDC_VERSIONS 89;99;11;17;23)
+set(TEST_STDCXX_VERSIONS 03;11;14;17;20;23;26)
+
+function(add_header_test target_name source_file deps std_mode)
+  if(LLVM_LIBC_BUILD_HEADER_TESTS)
+    add_libc_test(
+      ${target_name}
+      C_TEST
+      FULL_BUILD_ONLY
+      SUITE
+        libc_include_tests
+      SRCS
+        ${source_file}
+      COMPILE_OPTIONS
+        -Werror
+        -Wsystem-headers
+        -Wall
+        -Wextra
+        -std=${std_mode}
+      DEPENDS
+        ${deps}
+    )
+  endif()
+endfunction()
+
+foreach(target ${TARGET_PUBLIC_HEADERS})
+  string(REPLACE "libc.include." "" header ${target})
+  get_target_property(HEADER_NAME ${target} HEADER_NAME)
+
+  set(test_stdc_file "${CMAKE_CURRENT_BINARY_DIR}/${header}_test.c")
+  configure_file(header-test-template.c ${test_stdc_file} @ONLY)
+  foreach(stdc_version ${TEST_STDC_VERSIONS})
+    add_header_test(
+      "${header}_c${stdc_version}_test"
+      ${test_stdc_file}
+      ${target}
+      "c${stdc_version}"
+    )
+    add_header_test(
+      "${header}_gnu${stdc_version}_test"
+      ${test_stdc_file}
+      ${target}
+      "gnu${stdc_version}"
+    )
+  endforeach()
+
+  set(test_stdcxx_file "${CMAKE_CURRENT_BINARY_DIR}/${header}_test.cpp")
+  configure_file(header-test-template.c ${test_stdcxx_file} @ONLY)
+  foreach(stdcxx_version ${TEST_STDCXX_VERSIONS})
+    add_header_test(
+      "${header}_cpp${stdcxx_version}_test"
+      ${test_stdcxx_file}
+      ${target}
+      "c++${stdcxx_version}"
+    )
+    add_header_test(
+      "${header}_gnucpp${stdcxx_version}_test"
+      ${test_stdcxx_file}
+      ${target}
+      "gnu++${stdcxx_version}"
+    )
+  endforeach()
+endforeach()

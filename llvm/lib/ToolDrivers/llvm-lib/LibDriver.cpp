@@ -37,10 +37,6 @@ using namespace llvm::object;
 
 namespace {
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
 enum {
   OPT_INVALID = 0,
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
@@ -48,22 +44,13 @@ enum {
 #undef OPTION
 };
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTION
-};
 
-class LibOptTable : public opt::GenericOptTable {
+class LibOptTable : public opt::OptTable {
 public:
-  LibOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                             true) {}
+  LibOptTable() : opt::OptTable(optionTables(), true) {}
 };
 } // namespace
 
@@ -503,22 +490,21 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
       return 1;
     }
   }
-  // llvm-lib uses relative paths for both regular and thin archives, unlike
-  // standard GNU ar, which only uses relative paths for thin archives and
-  // basenames for regular archives.
-  for (NewArchiveMember &Member : Members) {
-    if (sys::path::is_relative(Member.MemberName)) {
-      Expected<std::string> PathOrErr =
-          computeArchiveRelativePath(OutputPath, Member.MemberName);
-      if (PathOrErr)
-        Member.MemberName = Saver.save(*PathOrErr);
+
+  bool Thin = Args.hasArg(OPT_llvmlibthin);
+  if (Thin) {
+    for (NewArchiveMember &Member : Members) {
+      if (sys::path::is_relative(Member.MemberName)) {
+        Expected<std::string> PathOrErr =
+            computeArchiveRelativePath(OutputPath, Member.MemberName);
+        if (PathOrErr)
+          Member.MemberName = Saver.save(*PathOrErr);
+      }
     }
   }
 
   // For compatibility with MSVC, reverse member vector after de-duplication.
   std::reverse(Members.begin(), Members.end());
-
-  bool Thin = Args.hasArg(OPT_llvmlibthin);
 
   auto Symtab = Args.hasFlag(OPT_llvmlibindex, OPT_llvmlibindex_no,
                              /*default=*/true)

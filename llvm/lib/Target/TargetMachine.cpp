@@ -21,10 +21,17 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
+
+cl::opt<bool> llvm::NoKernelInfoEndLTO(
+    "no-kernel-info-end-lto",
+    cl::desc("remove the kernel-info pass at the end of the full LTO pipeline"),
+    cl::init(false), cl::Hidden);
 
 //---------------------------------------------------------------------------
 // TargetMachine Class
@@ -39,6 +46,26 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
       O0WantsFastISel(false), Options(Options) {}
 
 TargetMachine::~TargetMachine() = default;
+
+Expected<std::unique_ptr<MCStreamer>>
+TargetMachine::createMCStreamer(raw_pwrite_stream &Out,
+                                raw_pwrite_stream *DwoOut,
+                                CodeGenFileType FileType, MCContext &Ctx) {
+  return nullptr;
+}
+
+bool TargetMachine::isLargeDataSize(uint64_t Size) const {
+  if (getTargetTriple().getArch() != Triple::x86_64)
+    return false;
+
+  if (!getTargetTriple().isOSBinFormatELF())
+    return getCodeModel() == CodeModel::Large;
+
+  if (getCodeModel() == CodeModel::Medium || getCodeModel() == CodeModel::Large)
+    return Size == 0 || Size > LargeDataThreshold;
+
+  return false;
+}
 
 bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
   if (getTargetTriple().getArch() != Triple::x86_64)
@@ -85,14 +112,19 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
       return true;
   }
 
-  // Treat all globals in explicit sections as small, except for the standard
-  // large sections of .lbss, .ldata, .lrodata. This reduces the risk of linking
-  // together small and large sections, resulting in small references to large
-  // data sections. The code model attribute overrides this above.
-  if (GV->hasSection()) {
-    StringRef Name = GV->getSection();
-    return IsPrefix(Name, ".lbss") || IsPrefix(Name, ".ldata") ||
-           IsPrefix(Name, ".lrodata");
+  // Treat all globals in user-defined sections as small, except for the
+  // standard large sections of .lbss, .ldata, .lrodata. This reduces the risk
+  // of linking together small and large sections, resulting in small
+  // references to large data sections. The code model attribute overrides this
+  // above.
+  if (GV->hasSection() || GV->hasImplicitSection()) {
+    StringRef SectionName =
+        TargetLoweringObjectFile::getCustomSectionName(GV, *this);
+    if (!SectionName.empty()) {
+      return IsPrefix(SectionName, ".lbss") ||
+             IsPrefix(SectionName, ".ldata") ||
+             IsPrefix(SectionName, ".lrodata");
+    }
   }
 
   // Respect large data threshold for medium and large code models.
@@ -106,9 +138,21 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
                                 GV->getName().starts_with("__start_") ||
                                 GV->getName().starts_with("__stop_")))
       return true;
+    // Linkers do not currently support PT_GNU_RELRO for SHF_X86_64_LARGE
+    // sections; that would require the linker to emit more than one
+    // PT_GNU_RELRO because large sections are discontiguous by design, and most
+    // ELF dynamic loaders do not support that (bionic appears to support it but
+    // glibc/musl/FreeBSD/NetBSD/OpenBSD appear not to). With current linkers
+    // these sections will end up in .ldata which results in silently disabling
+    // RELRO. If this ever gets supported by downstream components in the future
+    // we could add an opt-in flag for moving these sections to .ldata.rel.ro
+    // which would trigger the creation of a second PT_GNU_RELRO.
+    if (!GV->isDeclarationForLinker() &&
+        TargetLoweringObjectFile::getKindForGlobal(GV, *this)
+            .isReadOnlyWithRel())
+      return false;
     const DataLayout &DL = GV->getDataLayout();
-    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
-    return Size == 0 || Size > LargeDataThreshold;
+    return isLargeDataSize(GV->getGlobalSize(DL));
   }
 
   return false;
@@ -116,27 +160,6 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
 
 bool TargetMachine::isPositionIndependent() const {
   return getRelocationModel() == Reloc::PIC_;
-}
-
-/// Reset the target options based on the function's attributes.
-/// setFunctionAttributes should have made the raw attribute value consistent
-/// with the command line flag if used.
-//
-// FIXME: This function needs to go away for a number of reasons:
-// a) global state on the TargetMachine is terrible in general,
-// b) these target options should be passed only on the function
-//    and not on the TargetMachine (via TargetOptions) at all.
-void TargetMachine::resetTargetOptions(const Function &F) const {
-#define RESET_OPTION(X, Y)                                              \
-  do {                                                                  \
-    Options.X = F.getFnAttribute(Y).getValueAsBool();     \
-  } while (0)
-
-  RESET_OPTION(UnsafeFPMath, "unsafe-fp-math");
-  RESET_OPTION(NoInfsFPMath, "no-infs-fp-math");
-  RESET_OPTION(NoNaNsFPMath, "no-nans-fp-math");
-  RESET_OPTION(NoSignedZerosFPMath, "no-signed-zeros-fp-math");
-  RESET_OPTION(ApproxFuncFPMath, "approx-func-fp-math");
 }
 
 /// Returns the code generation relocation model. The choices are static, PIC,
@@ -298,11 +321,34 @@ TargetIRAnalysis TargetMachine::getTargetIRAnalysis() const {
       [this](const Function &F) { return this->getTargetTransformInfo(F); });
 }
 
-std::pair<int, int> TargetMachine::parseBinutilsVersion(StringRef Version) {
-  if (Version == "none")
-    return {INT_MAX, INT_MAX}; // Make binutilsIsAtLeast() return true.
-  std::pair<int, int> Ret;
-  if (!Version.consumeInteger(10, Ret.first) && Version.consume_front("."))
-    Version.consumeInteger(10, Ret.second);
-  return Ret;
+StringRef TargetMachine::getTargetABIName(const Module &M) const {
+  if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
+    return MD->getString();
+  return Options.MCOptions.getABIName();
+}
+
+void TargetMachine::verifyOptionsConsistency(const Module &M) const {
+  // The "target-abi" module flag must agree with the -target-abi option.
+  StringRef OptionABI = Options.MCOptions.getABIName();
+  if (!OptionABI.empty()) {
+    if (const auto *MD =
+            cast_or_null<MDString>(M.getModuleFlag("target-abi"))) {
+      if (OptionABI != MD->getString())
+        M.getContext().emitError(
+            "-target-abi option != target-abi module flag");
+    }
+  }
+}
+
+const MCSubtargetInfo &TargetMachine::getMCSubtargetInfo(StringRef CPU,
+                                                         StringRef FS) {
+  if (CPU.empty() && FS.empty())
+    return *STI;
+  SmallString<128> Key = CPU;
+  Key += '/';
+  Key += FS;
+  auto &Entry = MCSubtargetMap[Key];
+  if (!Entry)
+    Entry.reset(getTarget().createMCSubtargetInfo(getTargetTriple(), CPU, FS));
+  return *Entry;
 }

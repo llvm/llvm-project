@@ -1,4 +1,4 @@
-//===--- PointerArithmeticOnPolymorphicObjectCheck.cpp - clang-tidy--------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,8 +15,12 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 
 namespace {
-AST_MATCHER(CXXRecordDecl, isAbstract) { return Node.isAbstract(); }
-AST_MATCHER(CXXRecordDecl, isPolymorphic) { return Node.isPolymorphic(); }
+AST_MATCHER(CXXRecordDecl, isAbstract) {
+  return Node.hasDefinition() && Node.isAbstract();
+}
+AST_MATCHER(CXXRecordDecl, isPolymorphic) {
+  return Node.hasDefinition() && Node.isPolymorphic();
+}
 } // namespace
 
 PointerArithmeticOnPolymorphicObjectCheck::
@@ -53,7 +57,9 @@ void PointerArithmeticOnPolymorphicObjectCheck::registerMatchers(
                                        ? PointerExprWithVirtualMethod
                                        : PolymorphicPointerExpr;
 
-  const auto ArraySubscript = arraySubscriptExpr(hasBase(SelectedPointerExpr));
+  const auto ArraySubscript =
+      expr(arraySubscriptExpr(hasBase(SelectedPointerExpr)),
+           unless(isInstantiationDependent()));
 
   const auto BinaryOperators =
       binaryOperator(hasAnyOperatorName("+", "-", "+=", "-="),

@@ -31,6 +31,22 @@ using namespace llvm;
 
 namespace {
 
+bool shouldPrintLoop(const Loop &L) {
+  Function *F = L.getHeader()->getParent();
+  bool SourceLocFilterEmpty = isSourceLocFilterEmpty();
+  if (!isFunctionInPrintList(F->getName()))
+    return false;
+
+  if (SourceLocFilterEmpty)
+    return true;
+
+  for (const BasicBlock *BB : L.blocks())
+    for (const Instruction &I : *BB)
+      if (isSourceLocInPrintList(I.getDebugLoc()))
+        return true;
+  return false;
+}
+
 /// PrintLoopPass - Print a Function corresponding to a Loop.
 ///
 class PrintLoopPassWrapper : public LoopPass {
@@ -48,11 +64,8 @@ public:
   }
 
   bool runOnLoop(Loop *L, LPPassManager &) override {
-    auto BBI = llvm::find_if(L->blocks(), [](BasicBlock *BB) { return BB; });
-    if (BBI != L->blocks().end() &&
-        isFunctionInPrintList((*BBI)->getParent()->getName())) {
+    if (shouldPrintLoop(*L))
       printLoop(*L, OS, Banner);
-    }
     return false;
   }
 
@@ -130,7 +143,7 @@ bool LPPassManager::runOnFunction(Function &F) {
   auto &LIWP = getAnalysis<LoopInfoWrapperPass>();
   LI = &LIWP.getLoopInfo();
   Module &M = *F.getParent();
-#if 0
+#ifndef NDEBUG
   DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 #endif
   bool Changed = false;
@@ -239,9 +252,7 @@ bool LPPassManager::runOnFunction(Function &F) {
         // is that LPPassManager might run passes which do not require LCSSA
         // form (LoopPassPrinter for example). We should skip verification for
         // such passes.
-        // FIXME: Loop-sink currently break LCSSA. Fix it and reenable the
-        // verification!
-#if 0
+#ifndef NDEBUG
         if (mustPreserveAnalysisID(LCSSAVerificationPass::ID))
           assert(CurrentLoop->isRecursivelyLCSSAForm(*DT, *LI));
 #endif
@@ -373,7 +384,7 @@ bool LoopPass::skipLoop(const Loop *L) const {
   if (!F)
     return false;
   // Check the opt bisect limit.
-  OptPassGate &Gate = F->getContext().getOptPassGate();
+  const OptPassGate &Gate = F->getContext().getOptPassGate();
   if (Gate.isEnabled() &&
       !Gate.shouldRunPass(this->getPassName(), getDescription(*L)))
     return true;
@@ -388,9 +399,7 @@ bool LoopPass::skipLoop(const Loop *L) const {
   return false;
 }
 
-LCSSAVerificationPass::LCSSAVerificationPass() : FunctionPass(ID) {
-  initializeLCSSAVerificationPassPass(*PassRegistry::getPassRegistry());
-}
+LCSSAVerificationPass::LCSSAVerificationPass() : FunctionPass(ID) {}
 
 char LCSSAVerificationPass::ID = 0;
 INITIALIZE_PASS(LCSSAVerificationPass, "lcssa-verification", "LCSSA Verifier",

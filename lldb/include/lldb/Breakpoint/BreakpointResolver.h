@@ -12,7 +12,6 @@
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/SearchFilter.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
@@ -45,9 +44,9 @@ public:
   ///   The breakpoint that owns this resolver.
   /// \param[in] resolverType
   ///   The concrete breakpoint resolver type for this breakpoint.
-  BreakpointResolver(const lldb::BreakpointSP &bkpt,
-                     unsigned char resolverType,
-                     lldb::addr_t offset = 0);
+  BreakpointResolver(const lldb::BreakpointSP &bkpt, unsigned char resolverType,
+                     lldb::addr_t offset = 0,
+                     bool offset_is_insn_count = false);
 
   /// The Destructor is virtual, all significant breakpoint resolvers derive
   /// from this class.
@@ -76,6 +75,7 @@ public:
   void SetOffset(lldb::addr_t offset);
 
   lldb::addr_t GetOffset() const { return m_offset; }
+  bool GetOffsetIsInsnCount() const { return m_offset_is_insn_count; }
 
   /// In response to this method the resolver scans all the modules in the
   /// breakpoint's target, and adds any new locations it finds.
@@ -112,6 +112,14 @@ public:
     return StructuredData::ObjectSP();
   }
 
+  /// The resolver_sp won't have had its breakpoint set by the time we are
+  /// checking the Override, but it might need to access the Target, so we pass
+  /// that in here.
+  virtual bool OverridesResolver(Target &target,
+                                 lldb::BreakpointResolverSP resolver_sp) {
+    return false;
+  }
+
   static const char *GetSerializationKey() { return "BKPTResolver"; }
 
   static const char *GetSerializationSubclassKey() { return "Type"; }
@@ -145,13 +153,21 @@ public:
   /// for any other purpose, as the values may change as LLDB evolves.
   unsigned getResolverID() const { return SubclassID; }
 
+  /// This checks whether the resolver's type matches the enum
+  /// lldb::BreakpointResolverType.
+  bool ResolverTyInMask(uint64_t mask);
+
+  static bool TypeMaskIsValid(uint64_t mask);
+
   enum ResolverTy GetResolverTy() {
     if (SubclassID > ResolverTy::LastKnownResolverType)
       return ResolverTy::UnknownResolver;
-    else
-      return (enum ResolverTy)SubclassID;
+    return (enum ResolverTy)SubclassID;
   }
 
+  uint64_t MaskForResolverTy();
+
+  static std::string DescribeMask(uint64_t mask);
   const char *GetResolverName() { return ResolverTyToName(GetResolverTy()); }
 
   static const char *ResolverTyToName(enum ResolverTy);
@@ -221,6 +237,8 @@ private:
   lldb::BreakpointWP m_breakpoint; // This is the breakpoint we add locations to.
   lldb::addr_t m_offset;    // A random offset the user asked us to add to any
                             // breakpoints we set.
+  bool m_offset_is_insn_count; // Use the offset as an instruction count
+                               // instead of an address offset.
 
   // Subclass identifier (for llvm isa/dyn_cast)
   const unsigned char SubclassID;

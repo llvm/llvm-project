@@ -293,28 +293,24 @@ define i16 @promote_arg_return(i16 zeroext %arg1, i16 zeroext %arg2, ptr %res) {
 define i16 @signext_bitcast_phi_select(i16 signext %start, ptr %in) {
 ; CHECK-LABEL: @signext_bitcast_phi_select(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[START:%.*]] to i32
 ; CHECK-NEXT:    [[CONST:%.*]] = bitcast i16 -1 to i16
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[SELECT:%.*]], [[IF_ELSE:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[IDX]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i16 [ [[SELECT:%.*]], [[IF_ELSE:%.*]] ], [ [[START:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp sgt i16 [[TMP1]], [[CONST]]
 ; CHECK-NEXT:    br i1 [[CMP_I]], label [[EXIT:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[IDX_NEXT:%.*]] = getelementptr i16, ptr [[IN:%.*]], i32 [[IDX]]
+; CHECK-NEXT:    [[IDX_NEXT:%.*]] = getelementptr i16, ptr [[IN:%.*]], i16 [[TMP1]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i16, ptr [[IDX_NEXT]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[LD]] to i32
-; CHECK-NEXT:    [[CMP1_I:%.*]] = icmp eq i32 [[TMP2]], [[IDX]]
+; CHECK-NEXT:    [[CMP1_I:%.*]] = icmp eq i16 [[LD]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP1_I]], label [[EXIT]], label [[IF_ELSE]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[LOBIT:%.*]] = lshr i32 [[IDX]], 15
-; CHECK-NEXT:    [[LOBIT_NOT:%.*]] = xor i32 [[LOBIT]], 1
-; CHECK-NEXT:    [[SELECT]] = add nuw i32 [[LOBIT_NOT]], [[IDX]]
+; CHECK-NEXT:    [[LOBIT:%.*]] = lshr i16 [[TMP1]], 15
+; CHECK-NEXT:    [[LOBIT_NOT:%.*]] = xor i16 [[LOBIT]], 1
+; CHECK-NEXT:    [[SELECT]] = add nuw i16 [[LOBIT_NOT]], [[TMP1]]
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP2]], [[IF_THEN]] ], [ 0, [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[RES]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i16 [ [[LD]], [[IF_THEN]] ], [ 0, [[FOR_BODY]] ]
 ; CHECK-NEXT:    ret i16 [[TMP3]]
 ;
 entry:

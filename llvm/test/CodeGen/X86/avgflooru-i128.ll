@@ -119,7 +119,7 @@ define <2 x i128> @avgflooru_i128_vec(<2 x i128> %x, <2 x i128> %y) {
 ; CHECK-LABEL: avgflooru_i128_vec:
 ; CHECK:       # %bb.0: # %start
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %rsi
+; CHECK-NEXT:    addq %r9, %rsi
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-NEXT:    setb %dil
 ; CHECK-NEXT:    movzbl %dil, %edi

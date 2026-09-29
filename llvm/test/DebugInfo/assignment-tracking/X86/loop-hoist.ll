@@ -1,10 +1,6 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
-
-; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
-; RUN: | FileCheck %s --implicit-check-not=DBG_
-
 ;; $ cat test.cpp
 ;; int d();
 ;; void e();
@@ -31,6 +27,9 @@
 ; CHECK:      DBG_VALUE $edi, $noreg, ![[A]], !DIExpression()
 
 ; CHECK: bb.1.do.body:
+; CHECK: DBG_VALUE %stack.0.a.addr, $noreg, ![[A]], !DIExpression(DW_OP_deref)
+;; After the escaping call to @_Z2esPi, the memory location is reinstated.
+; CHECK: CALL64pcrel32 {{.*}}@_Z2esPi
 ; CHECK: DBG_VALUE %stack.0.a.addr, $noreg, ![[A]], !DIExpression(DW_OP_deref)
 
 target triple = "x86_64-unknown-linux-gnu"

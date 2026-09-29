@@ -38,11 +38,9 @@ namespace llvm {
     static const char *getRegisterName(MCRegister Reg);
 
   private:
-    void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O,
-                      const char *Modifier = nullptr);
+    void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
     void printPCRelImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-    void printSrcMemOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O,
-                            const char *Modifier = nullptr);
+    void printSrcMemOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
     void printIndRegOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
     void printPostIndRegOperand(const MCInst *MI, unsigned OpNo,
                                 raw_ostream &O);

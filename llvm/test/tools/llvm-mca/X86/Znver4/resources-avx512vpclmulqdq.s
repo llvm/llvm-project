@@ -13,8 +13,8 @@ vpclmulqdq    $11, (%rax), %zmm17, %zmm19
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  4      4     2.00                        vpclmulqdq	$11, %zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  4      11    2.00    *                   vpclmulqdq	$11, (%rax), %zmm17, %zmm19
+# CHECK-NEXT:  4      4     1.50                        vpclmulqdq	$11, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  4      11    1.50    *                   vpclmulqdq	$11, (%rax), %zmm17, %zmm19
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn4AGU0
@@ -43,9 +43,9 @@ vpclmulqdq    $11, (%rax), %zmm17, %zmm19
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.00   4.00    -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     vpclmulqdq	$11, %zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00    -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpclmulqdq	$11, (%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -      -      -      -      -      -      -      -      -      -      -     vpclmulqdq	$11, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -     0.50   0.50    -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     vpclmulqdq	$11, (%rax), %zmm17, %zmm19

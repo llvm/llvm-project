@@ -202,19 +202,22 @@ void clang::EmitClangSACheckers(const RecordKeeper &Records, raw_ostream &OS) {
 
   // Emit a package option.
   //
-  // PACKAGE_OPTION(OPTIONTYPE, PACKAGENAME, OPTIONNAME, DESCRIPTION, DEFAULT)
-  //   - OPTIONTYPE: Type of the option, whether it's integer or boolean etc.
+  // PACKAGE_OPTION(TYPE, FULLNAME, CMDFLAG, DESC, DEFAULT_VAL,
+  //                DEVELOPMENT_STATUS, IS_HIDDEN)
+  //   - TYPE: Type of the option, whether it's integer or boolean etc.
   //                 This is important for validating user input. Note that
   //                 it's a string, rather than an actual type: since we can
   //                 load checkers runtime, we can't use template hackery for
   //                 sorting this out compile-time.
-  //   - PACKAGENAME: Name of the package.
-  //   - OPTIONNAME: Name of the option.
-  //   - DESCRIPTION
-  //   - DEFAULT: The default value for this option.
+  //   - FULLNAME: Name of the package.
+  //   - CMDFLAG: Name of the option.
+  //   - DESC: The description of the option.
+  //   - DEFAULT_VAL: The default value for this option as a string.
+  //   - DEVELOPMENT_STATUS: "released" or "alpha".
+  //   - IS_HIDDEN: Boolean (true or false) marking if the option is hidden.
   //
   // The full option can be specified in the command like this:
-  //   -analyzer-config PACKAGENAME:OPTIONNAME=VALUE
+  //   -analyzer-config FULLNAME:CMDFLAG=VALUE
   OS << "\n"
         "#ifdef GET_PACKAGE_OPTIONS\n";
   for (const Record *Package : packages) {
@@ -233,12 +236,21 @@ void clang::EmitClangSACheckers(const RecordKeeper &Records, raw_ostream &OS) {
 
   // Emit checkers.
   //
-  // CHECKER(FULLNAME, CLASS, HELPTEXT)
+  // CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN)
   //   - FULLNAME: The full name of the checker, including packages, e.g.:
   //               alpha.cplusplus.UninitializedObject
-  //   - CLASS: The name of the checker, with "Checker" appended, e.g.:
-  //            UninitializedObjectChecker
+  //   - CLASS: The common ending of the name of the register... and
+  //            shouldRegister... functions. Traditionally coincides with the
+  //            name of the class that implements the checker, but can be
+  //            anything else e.g. in checker families.
   //   - HELPTEXT: The description of the checker.
+  //   - DOC_URI: If the checker is NotDocumented, an empty string; if the
+  //              checker HasDocumentation, the concatenation of the fixed URL
+  //              https://clang.llvm.org/docs/analyzer/checkers.html# and
+  //              a html id derived from the full name by writing '-' instead
+  //              of '.' and lowercasing.
+  //   - IS_HIDDEN: Boolean (true or false) marking if the checker is hidden.
+
   OS << "\n"
         "#ifdef GET_CHECKERS\n"
         "\n";
@@ -300,19 +312,22 @@ void clang::EmitClangSACheckers(const RecordKeeper &Records, raw_ostream &OS) {
 
   // Emit a package option.
   //
-  // CHECKER_OPTION(OPTIONTYPE, CHECKERNAME, OPTIONNAME, DESCRIPTION, DEFAULT)
-  //   - OPTIONTYPE: Type of the option, whether it's integer or boolean etc.
+  // CHECKER_OPTION(TYPE, FULLNAME, CMDFLAG, DESC, DEFAULT_VAL,
+  //                DEVELOPMENT_STATUS, IS_HIDDEN)
+  //   - TYPE: Type of the option, whether it's integer or boolean etc.
   //                 This is important for validating user input. Note that
   //                 it's a string, rather than an actual type: since we can
   //                 load checkers runtime, we can't use template hackery for
   //                 sorting this out compile-time.
-  //   - CHECKERNAME: Name of the package.
-  //   - OPTIONNAME: Name of the option.
-  //   - DESCRIPTION
-  //   - DEFAULT: The default value for this option.
+  //   - FULLNAME: Name of the checker.
+  //   - CMDFLAG: Name of the option.
+  //   - DESC: The description of the option.
+  //   - DEFAULT_VAL: The default value for this option as a string.
+  //   - DEVELOPMENT_STATUS: "released" or "alpha".
+  //   - IS_HIDDEN: Boolean (true or false) marking if the option is hidden.
   //
   // The full option can be specified in the command like this:
-  //   -analyzer-config CHECKERNAME:OPTIONNAME=VALUE
+  //   -analyzer-config FULLNAME:CMDFLAG=VALUE
   OS << "\n"
         "#ifdef GET_CHECKER_OPTIONS\n";
   for (const Record *Checker : checkers) {

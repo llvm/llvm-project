@@ -60,13 +60,6 @@ namespace llvm {
 }
 
 namespace llvm {
-  namespace AArch64TSB {
-#define GET_TSBsList_IMPL
-#include "AArch64GenSystemOperands.inc"
-  }
-}
-
-namespace llvm {
   namespace AArch64PRFM {
 #define GET_PRFMsList_IMPL
 #include "AArch64GenSystemOperands.inc"
@@ -118,25 +111,11 @@ namespace llvm {
 }
 
 namespace llvm {
-  namespace AArch64PSBHint {
-#define GET_PSBsList_IMPL
+namespace AArch64TIndexHint {
+#define GET_TINDEX_IMPL
 #include "AArch64GenSystemOperands.inc"
-  }
-}
-
-namespace llvm {
-namespace AArch64PHint {
-#define GET_PHintsList_IMPL
-#include "AArch64GenSystemOperands.inc"
-} // namespace AArch64PHint
+} // namespace AArch64TIndexHint
 } // namespace llvm
-
-namespace llvm {
-  namespace AArch64BTIHint {
-#define GET_BTIsList_IMPL
-#include "AArch64GenSystemOperands.inc"
-  }
-}
 
 namespace llvm {
   namespace AArch64SysReg {
@@ -179,11 +158,46 @@ std::string AArch64SysReg::genericRegisterString(uint32_t Bits) {
 }
 
 namespace llvm {
-  namespace AArch64TLBI {
+namespace AArch64TLBI {
 #define GET_TLBITable_IMPL
 #include "AArch64GenSystemOperands.inc"
-  }
-}
+} // namespace AArch64TLBI
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64PLBI {
+#define GET_PLBITable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64PLBI
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64TLBIP {
+#define GET_TLBIPTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TLBIP
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64GIC {
+#define GET_GICTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GIC
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64GICR {
+#define GET_GICRTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GICR
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64GSB {
+#define GET_GSBTable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64GSB
+} // namespace llvm
 
 namespace llvm {
   namespace AArch64SVCR {

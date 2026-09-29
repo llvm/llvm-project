@@ -1,6 +1,8 @@
 set(LLVM_LINK_COMPONENTS
   MC
+  MCDisassembler
   Support
+  AArch64CodeGen
   AArch64Desc
   )
 
@@ -18,15 +20,19 @@ endif()
 
 add_llvm_library(LLVMBOLTTargetAArch64
   AArch64MCPlusBuilder.cpp
+  AArch64MCSymbolizer.cpp
 
   NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
+
+  LINK_LIBS
+  ${LLVM_PTHREAD_LIB}
 
   DEPENDS
   AArch64CommonTableGen
   )
 
-target_link_libraries(LLVMBOLTTargetAArch64 PRIVATE LLVMBOLTCore)
+target_link_libraries(LLVMBOLTTargetAArch64 PRIVATE LLVMBOLTCore LLVMBOLTUtils)
 
 include_directories(
   ${LLVM_MAIN_SRC_DIR}/lib/Target/AArch64

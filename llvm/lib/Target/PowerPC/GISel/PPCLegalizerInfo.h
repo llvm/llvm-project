@@ -9,8 +9,8 @@
 /// This file declares the targeting of the Machinelegalizer class for PowerPC
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_POWERPC_GISEL_PPCMACHINELEGALIZER_H
-#define LLVM_LIB_TARGET_POWERPC_GISEL_PPCMACHINELEGALIZER_H
+#ifndef LLVM_LIB_TARGET_POWERPC_GISEL_PPCLEGALIZERINFO_H
+#define LLVM_LIB_TARGET_POWERPC_GISEL_PPCLEGALIZERINFO_H
 
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 

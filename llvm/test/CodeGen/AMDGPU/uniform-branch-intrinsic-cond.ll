@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.01 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck %s
 
 ; This used to raise an assertion due to how the choice between uniform and
 ; non-uniform branches was determined.

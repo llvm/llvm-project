@@ -74,8 +74,8 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #3
 ; Function Attrs: mustprogress nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3
 
-attributes #0 = { nounwind uwtable "denormal-fp-math"="preserve-sign,preserve-sign" "frame-pointer"="none" "intel-lang"="fortran" "min-legal-vector-width"="0" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" }
-attributes #1 = { mustprogress nofree norecurse nosync nounwind uwtable willreturn writeonly "denormal-fp-math"="preserve-sign,preserve-sign" "frame-pointer"="none" "intel-lang"="fortran" "min-legal-vector-width"="0" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" }
+attributes #0 = { nounwind uwtable denormal_fpenv(preservesign) "frame-pointer"="none" "intel-lang"="fortran" "min-legal-vector-width"="0" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" }
+attributes #1 = { mustprogress nofree norecurse nosync nounwind uwtable willreturn writeonly denormal_fpenv(preservesign) "frame-pointer"="none" "intel-lang"="fortran" "min-legal-vector-width"="0" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" }
 attributes #2 = { nofree "intel-lang"="fortran" }
 attributes #3 = { mustprogress nofree nosync nounwind readnone speculatable willreturn }
 attributes #4 = { nounwind }
@@ -86,11 +86,11 @@ attributes #4 = { nounwind }
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "A", linkageName: "IF_TEST$A", scope: !2, file: !3, line: 11, type: !9, isLocal: true, isDefinition: true)
-!2 = distinct !DISubprogram(name: "IF_TEST", linkageName: "MAIN__", scope: !3, file: !3, line: 9, type: !4, scopeLine: 9, spFlags: DISPFlagDefinition | DISPFlagMainSubprogram, unit: !6, retainedNodes: !8)
+!2 = distinct !DISubprogram(name: "IF_TEST", linkageName: "MAIN__", scope: !3, file: !3, line: 9, type: !4, scopeLine: 9, spFlags: DISPFlagDefinition | DISPFlagMainSubprogram, unit: !6, retainedNodes: !7)
 !3 = !DIFile(filename: "tr1.f90", directory: "d:\\iusers\\cchen15\\examples\\tests\\jr14335")
 !4 = !DISubroutineType(types: !5)
 !5 = !{null}
-!6 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !3, producer: "Intel(R) Fortran 22.0-1087", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !7, splitDebugInlining: false, nameTableKind: None)
+!6 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !3, producer: "Intel(R) Fortran 22.0-1087", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !8, splitDebugInlining: false, nameTableKind: None)
 !7 = !{!0}
 !8 = !{}
 !9 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !10, size: 64)

@@ -58,7 +58,7 @@ INSERT-IDXS: INSERTVAL: Invalid type
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-fp-shift.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=FP-SHIFT %s
 
-FP-SHIFT: Invalid record
+FP-SHIFT: Invalid binary operator record
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-vbr-size-too-big.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=HUGE-ABBREV-OP %s
@@ -84,7 +84,7 @@ INVALID-TYPE: Invalid type for value
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-fwdref-type-mismatch.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=FWDREF-TYPE %s
 
-FWDREF-TYPE: Invalid record
+FWDREF-TYPE: Invalid binary operator record
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-fwdref-type-mismatch-2.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=FWDREF-TYPE-MISMATCH %s
@@ -113,7 +113,7 @@ ARRAY-NOT-2LAST: Array op not second to last
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-too-big-fwdref.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=HUGE-FWDREF %s
 
-HUGE-FWDREF: Invalid record
+HUGE-FWDREF: Invalid insertvalue record
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-load-pointer-type.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=LOAD-BAD-TYPE %s
@@ -218,12 +218,12 @@ INVALID-CONSTANT-GEP: Constant GEP record must have at least two elements
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-nonpointer-storeatomic.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NONPOINTER-STOREATOMIC %s
 
-NONPOINTER-STOREATOMIC: Invalid record
+NONPOINTER-STOREATOMIC: Invalid store atomic record
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-nonpointer-atomicrmw.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NONPOINTER-ATOMICRMW %s
 
-NONPOINTER-ATOMICRMW: Invalid record
+NONPOINTER-ATOMICRMW: Invalid atomicrmw record
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-fcmp-opnum.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-FCMP-OPNUM %s
@@ -289,4 +289,4 @@ INVALID-FORWARD-DECLARE: Assigned value does not match type of forward declarati
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-initializer.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-INITIALIZER %s
 
-INVALID-INITIALIZER: Invalid record
+INVALID-INITIALIZER: Invalid store record

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Wno-int-conversion -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,NULL-INVALID
-// RUN: %clang_cc1 -Wno-int-conversion -triple i386-unknown-unknown %s -emit-llvm -fno-delete-null-pointer-checks -o - | FileCheck %s -check-prefixes=CHECK,NULL-VALID
+// RUN: %clang_cc1 -Wno-error=incompatible-pointer-types -Wno-int-conversion -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,NULL-INVALID
+// RUN: %clang_cc1 -Wno-error=incompatible-pointer-types -Wno-int-conversion -triple i386-unknown-unknown %s -emit-llvm -fno-delete-null-pointer-checks -o - | FileCheck %s -check-prefixes=CHECK,NULL-VALID
 
 int b(char* x);
 
@@ -132,8 +132,8 @@ int test4(unsigned n, char (*p)[n][n+1][6]) {
 
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[P2]], align 4
   // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[P]], align 4
-  // CHECK-NEXT: [[T2:%.*]] = ptrtoint ptr [[T0]] to i32
-  // CHECK-NEXT: [[T3:%.*]] = ptrtoint ptr [[T1]] to i32
+  // CHECK-NEXT: [[T2:%.*]] = ptrtoaddr ptr [[T0]] to i32
+  // CHECK-NEXT: [[T3:%.*]] = ptrtoaddr ptr [[T1]] to i32
   // CHECK-NEXT: [[T4:%.*]] = sub i32 [[T2]], [[T3]]
   // CHECK-NEXT: [[T5:%.*]] = mul nuw i32 [[DIM0]], [[DIM1]]
   // CHECK-NEXT: [[T6:%.*]] = mul nuw i32 6, [[T5]]

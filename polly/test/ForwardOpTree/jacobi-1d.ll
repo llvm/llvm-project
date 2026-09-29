@@ -1,8 +1,8 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -polly-optree-normalize-phi=true '-passes=print<polly-optree>' -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -polly-optree-normalize-phi=true '-passes=polly-custom<optree>' -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define internal fastcc void @kernel_jacobi_1d(ptr noalias nocapture %A, ptr noalias nocapture %B) unnamed_addr #0 {
+define internal fastcc void @kernel_jacobi_1d(ptr noalias nocapture %A, ptr noalias nocapture %B) unnamed_addr {
 entry:
   br label %entry.split
 
@@ -46,8 +46,6 @@ for.end35:                                        ; preds = %for.inc33
   ret void
 }
 
-attributes #0 = { noinline norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}
 
@@ -59,7 +57,6 @@ attributes #0 = { noinline norecurse nounwind uwtable "correctly-rounded-divide-
 !5 = !{!"Simple C/C++ TBAA"}
 !6 = !{!7, !7, i64 0}
 !7 = !{!"double", !4, i64 0}
-
 
 ; CHECK: Statistics {
 ; CHECK:     Operand trees forwarded: 2
@@ -77,8 +74,8 @@ attributes #0 = { noinline norecurse nounwind uwtable "correctly-rounded-divide-
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 { Stmt_for_body[i0] -> MemRef2__phi[] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %.pre = load double, ptr %A, align 8, !tbaa !2
-; CHECK-NEXT:                   %.pre10 = load double, ptr %arrayidx6.phi.trans.insert, align 8, !tbaa !2
+; CHECK-NEXT:                   %.pre = load double, ptr %A, align 8, !tbaa !13
+; CHECK-NEXT:                   %.pre10 = load double, ptr %arrayidx6.phi.trans.insert, align 8, !tbaa !13
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_for_body3
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
@@ -99,10 +96,10 @@ attributes #0 = { noinline norecurse nounwind uwtable "correctly-rounded-divide-
 ; CHECK-NEXT:                   %0 = phi double [ %.pre10, %for.body ], [ %2, %for.body3 ]
 ; CHECK-NEXT:                   %1 = phi double [ %.pre, %for.body ], [ %0, %for.body3 ]
 ; CHECK-NEXT:                   %add = fadd double %1, %0
-; CHECK-NEXT:                   %2 = load double, ptr %arrayidx9, align 8, !tbaa !2
+; CHECK-NEXT:                   %2 = load double, ptr %arrayidx9, align 8, !tbaa !13
 ; CHECK-NEXT:                   %add10 = fadd double %add, %2
 ; CHECK-NEXT:                   %mul = fmul double %add10, 3.333300e-01
-; CHECK-NEXT:                   store double %mul, ptr %arrayidx12, align 8, !tbaa !2
+; CHECK-NEXT:                   store double %mul, ptr %arrayidx12, align 8, !tbaa !13
 ; CHECK-NEXT:                   %exitcond = icmp eq i64 %indvars.iv.next, 3
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

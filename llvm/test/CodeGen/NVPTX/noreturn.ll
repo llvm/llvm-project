@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mattr=+ptx64 -mcpu=sm_30 | FileCheck %s
-; RUN: %if ptxas %{llc < %s -mtriple=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
+; RUN: %if ptxas-isa-6.0 %{llc < %s -mtriple=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
 
 @function_pointer = addrspace(1) global ptr null
 
@@ -32,7 +32,7 @@ define ptx_kernel void @ignore_kernel_noreturn() #0 {
 }
 
 ; CHECK-LABEL: .entry callprototype_noreturn(
-; CHECK: prototype_{{[0-9]+}} : .callprototype ()_ (.param .b32 _) .noreturn;
+; CHECK: prototype_{{[0-9]+}} : .callprototype _ (.param .b32 _) .noreturn;
 ; CHECK: prototype_{{[0-9]+}} : .callprototype (.param .b32 _) _ (.param .b32 _);
 
 define ptx_kernel void @callprototype_noreturn(i32) {

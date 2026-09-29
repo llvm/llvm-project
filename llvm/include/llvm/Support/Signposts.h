@@ -16,6 +16,7 @@
 #ifndef LLVM_SUPPORT_SIGNPOSTS_H
 #define LLVM_SUPPORT_SIGNPOSTS_H
 
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {
@@ -28,15 +29,15 @@ class SignpostEmitter {
   std::unique_ptr<SignpostEmitterImpl> Impl;
 
 public:
-  SignpostEmitter();
-  ~SignpostEmitter();
+  LLVM_ABI SignpostEmitter();
+  LLVM_ABI ~SignpostEmitter();
 
-  bool isEnabled() const;
+  LLVM_ABI bool isEnabled() const;
 
   /// Begin a signposted interval for a given object.
-  void startInterval(const void *O, StringRef Name);
+  LLVM_ABI void startInterval(const void *O, StringRef Name);
   /// End a signposted interval for a given object.
-  void endInterval(const void *O, StringRef Name);
+  LLVM_ABI void endInterval(const void *O, StringRef Name);
 };
 
 } // end namespace llvm

@@ -1,5 +1,4 @@
 ; RUN: opt %s -o - -S --passes=instcombine | FileCheck %s
-; RUN: opt %s -o - -S --passes=instcombine --try-experimental-debuginfo-iterators | FileCheck %s
 ;
 ; CHECK-LABEL: for.body:
 ; CHECK-NEXT:  %sub.ptr.rhs.cast.i.i = ptrtoint ptr %call2.i.i to i64,

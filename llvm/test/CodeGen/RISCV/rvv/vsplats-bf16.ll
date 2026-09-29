@@ -7,6 +7,10 @@
 ; RUN:   | FileCheck %s --check-prefixes=NOZFBFMIN
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+d,+zvfbfmin,+v -target-abi lp64d -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=NOZFBFMIN
+; RUN: llc -mtriple=riscv32 -mattr=+f,+d,+experimental-zvfbfa,+v -target-abi ilp32d -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s --check-prefixes=ZVFBFA
+; RUN: llc -mtriple=riscv64 -mattr=+f,+d,+experimental-zvfbfa,+v -target-abi lp64d -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s --check-prefixes=ZVFBFA
 
 define <vscale x 8 x bfloat> @vsplat_nxv8bf16(bfloat %f) {
 ; CHECK-LABEL: vsplat_nxv8bf16:
@@ -22,6 +26,12 @@ define <vscale x 8 x bfloat> @vsplat_nxv8bf16(bfloat %f) {
 ; NOZFBFMIN-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; NOZFBFMIN-NEXT:    vmv.v.x v8, a0
 ; NOZFBFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vsplat_nxv8bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16alt, m2, ta, ma
+; ZVFBFA-NEXT:    vfmv.v.f v8, fa0
+; ZVFBFA-NEXT:    ret
   %head = insertelement <vscale x 8 x bfloat> poison, bfloat %f, i32 0
   %splat = shufflevector <vscale x 8 x bfloat> %head, <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x bfloat> %splat
@@ -39,6 +49,12 @@ define <vscale x 8 x bfloat> @vsplat_zero_nxv8bf16() {
 ; NOZFBFMIN-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; NOZFBFMIN-NEXT:    vmv.v.i v8, 0
 ; NOZFBFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vsplat_zero_nxv8bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vmv.v.i v8, 0
+; ZVFBFA-NEXT:    ret
   ret <vscale x 8 x bfloat> splat (bfloat zeroinitializer)
 }
 
@@ -56,5 +72,12 @@ define <vscale x 8 x bfloat> @vsplat_negzero_nxv8bf16() {
 ; NOZFBFMIN-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; NOZFBFMIN-NEXT:    vmv.v.x v8, a0
 ; NOZFBFMIN-NEXT:    ret
+;
+; ZVFBFA-LABEL: vsplat_negzero_nxv8bf16:
+; ZVFBFA:       # %bb.0:
+; ZVFBFA-NEXT:    lui a0, 1048568
+; ZVFBFA-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; ZVFBFA-NEXT:    vmv.v.x v8, a0
+; ZVFBFA-NEXT:    ret
   ret <vscale x 8 x bfloat> splat (bfloat -0.0)
 }

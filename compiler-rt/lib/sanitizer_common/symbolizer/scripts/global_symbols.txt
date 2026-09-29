@@ -100,9 +100,11 @@ fork U
 fprintf U
 fputc U
 fputwc U
+fread U
 free U
 freelocale U
 fwrite U
+getauxval U
 getc U
 getcwd U
 getenv U

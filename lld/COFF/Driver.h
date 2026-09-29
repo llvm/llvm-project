@@ -33,7 +33,7 @@ using llvm::COFF::MachineTypes;
 using llvm::COFF::WindowsSubsystem;
 using std::optional;
 
-class COFFOptTable : public llvm::opt::GenericOptTable {
+class COFFOptTable : public llvm::opt::OptTable {
 public:
   COFFOptTable();
 };
@@ -88,11 +88,16 @@ public:
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
                             StringRef parentName);
 
-  void enqueuePDB(StringRef Path) { enqueuePath(Path, false, false); }
+  enum class InputOpt { None, DefaultLib, WholeArchive };
+  void enqueuePDB(StringRef Path) { enqueuePath(Path, false); }
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
-  void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
+  void enqueuePath(StringRef path, bool lazy,
+                   InputOpt inputOpt = InputOpt::None);
+
+  // Returns a list of chunks of selected symbols.
+  std::vector<Chunk *> getChunks() const;
 
   std::unique_ptr<llvm::TarWriter> tar; // for /linkrepro
 
@@ -106,8 +111,6 @@ private:
   StringRef findLib(StringRef filename);
   StringRef findLibMinGW(StringRef filename);
 
-  bool findUnderscoreMangle(StringRef sym);
-
   // Determines the location of the sysroot based on `args`, environment, etc.
   void detectWinSysRoot(const llvm::opt::InputArgList &args);
 
@@ -115,15 +118,16 @@ private:
   // config.machine has been set.
   void addWinSysRootLibSearchPaths();
 
-  // Symbol names are mangled by prepending "_" on x86.
-  StringRef mangle(StringRef sym);
-
   void setMachine(llvm::COFF::MachineTypes machine);
   llvm::Triple::ArchType getArch();
 
   uint64_t getDefaultImageBase();
 
   bool isDecorated(StringRef sym);
+
+  InputFile *addObjectFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
+                           StringRef archiveName, uint64_t offsetInArchive,
+                           bool lazy);
 
   std::string getMapFile(const llvm::opt::InputArgList &args,
                          llvm::opt::OptSpecifier os,
@@ -140,12 +144,14 @@ private:
   //
   std::string getImportName(bool asLib);
 
+  // Write fullly resolved path to repro file if /linkreprofullpathrsp
+  // is specified.
+  void handleReproFile(StringRef path, InputOpt inputOpt);
+
   void createImportLibrary(bool asLib);
 
   // Used by the resolver to parse .drectve section contents.
   void parseDirectives(InputFile *file);
-
-  void parseModuleDefs(StringRef path);
 
   // Parse an /order file. If an option is given, the linker places COMDAT
   // sections int he same order as their names appear in the given file.
@@ -173,26 +179,13 @@ private:
 
   std::set<std::string> visitedLibs;
 
-  Symbol *addUndefined(StringRef sym, bool aliasEC = false);
-
-  void addUndefinedGlob(StringRef arg);
-
-  StringRef mangleMaybe(Symbol *s);
-
-  // Windows specific -- "main" is not the only main function in Windows.
-  // You can choose one from these four -- {w,}{WinMain,main}.
-  // There are four different entry point functions for them,
-  // {w,}{WinMain,main}CRTStartup, respectively. The linker needs to
-  // choose the right one depending on which "main" function is defined.
-  // This function looks up the symbol table and resolve corresponding
-  // entry point name.
-  StringRef findDefaultEntry();
-  WindowsSubsystem inferSubsystem();
-
   void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive,
                  bool lazy);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
-                        StringRef parentName, uint64_t offsetInArchive);
+                        StringRef parentName, uint64_t offsetInArchive,
+                        bool lazy);
+  void addThinArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
+                            bool lazy);
 
   void enqueueTask(std::function<void()> task);
   bool run();
@@ -200,7 +193,6 @@ private:
   std::list<std::function<void()>> taskQueue;
   std::vector<MemoryBufferRef> resources;
 
-  llvm::DenseSet<StringRef> directivesExports;
   llvm::DenseSet<StringRef> excludedSymbols;
 
   COFFLinkerContext &ctx;
@@ -212,6 +204,9 @@ private:
   llvm::SmallString<128> universalCRTLibPath;
   int sdkMajor = 0;
   llvm::SmallString<128> windowsSdkLibPath;
+
+  // For linkreprofullpathrsp
+  std::unique_ptr<llvm::raw_fd_ostream> reproFile;
 
   // Functions below this line are defined in DriverUtils.cpp.
 
@@ -230,11 +225,15 @@ private:
   void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
                       uint32_t *minor, bool *gotVersion = nullptr);
 
-  void parseAlternateName(StringRef);
   void parseMerge(StringRef);
   void parsePDBPageSize(StringRef);
   void parseSection(StringRef);
-  void parseAligncomm(StringRef);
+  void parseSectionLayout(StringRef);
+
+  void parseSameAddress(StringRef);
+
+  // Parses a MS-DOS stub file
+  void parseDosStub(StringRef path);
 
   // Parses a string in the form of "[:<integer>]"
   void parseFunctionPadMin(llvm::opt::Arg *a);
@@ -264,8 +263,6 @@ private:
 
   // Used for dllexported symbols.
   Export parseExport(StringRef arg);
-  void fixupExports();
-  void assignExportOrdinals();
 
   // Parses a string in the form of "key=value" and check
   // if value matches previous values for the key.

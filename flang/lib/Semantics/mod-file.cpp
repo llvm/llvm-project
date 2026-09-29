@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mod-file.h"
+#include "resolve-names-utils.h"
 #include "resolve-names.h"
 #include "flang/Common/restorer.h"
+#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parsing.h"
@@ -17,14 +19,16 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <fstream>
 #include <set>
 #include <string_view>
-#include <vector>
+#include <type_traits>
+#include <variant>
 
 namespace Fortran::semantics {
 
@@ -47,15 +51,17 @@ struct ModHeader {
 
 static std::optional<SourceName> GetSubmoduleParent(const parser::Program &);
 static void CollectSymbols(
-    const Scope &, SymbolVector &, SymbolVector &, UnorderedSymbolSet &);
+    const Scope &, SymbolVector &, SymbolVector &, SourceOrderedSymbolSet &);
 static void PutPassName(llvm::raw_ostream &, const std::optional<SourceName> &);
 static void PutInit(llvm::raw_ostream &, const Symbol &, const MaybeExpr &,
-    const parser::Expr *);
+    const parser::Expr *, SemanticsContext &);
 static void PutInit(llvm::raw_ostream &, const MaybeIntExpr &);
 static void PutBound(llvm::raw_ostream &, const Bound &);
 static void PutShapeSpec(llvm::raw_ostream &, const ShapeSpec &);
 static void PutShape(
     llvm::raw_ostream &, const ArraySpec &, char open, char close);
+static bool HasRankOneBound(const ArraySpec &);
+static void PutMapper(llvm::raw_ostream &, const Symbol &, SemanticsContext &);
 
 static llvm::raw_ostream &PutAttr(llvm::raw_ostream &, Attr);
 static llvm::raw_ostream &PutType(llvm::raw_ostream &, const DeclTypeSpec &);
@@ -66,6 +72,7 @@ static bool FileContentsMatch(
     const std::string &, const std::string &, const std::string &);
 static ModuleCheckSumType ComputeCheckSum(const std::string_view &);
 static std::string CheckSumString(ModuleCheckSumType);
+static bool ScopeHasCUDAModuleVariables(const Scope &);
 
 // Collect symbols needed for a subprogram interface
 class SubprogramSymbolCollector {
@@ -108,15 +115,14 @@ bool ModFileWriter::WriteAll() {
 }
 
 void ModFileWriter::WriteAll(const Scope &scope) {
-  for (const auto &child : scope.children()) {
+  for (const Scope &child : scope.children()) {
     WriteOne(child);
   }
 }
 
 void ModFileWriter::WriteOne(const Scope &scope) {
   if (scope.kind() == Scope::Kind::Module) {
-    auto *symbol{scope.symbol()};
-    if (!symbol->test(Symbol::Flag::ModFile)) {
+    if (const auto *symbol{scope.symbol()}) {
       Write(*symbol);
     }
     WriteAll(scope); // write out submodules
@@ -133,27 +139,31 @@ static std::string ModFileName(const SourceName &name,
 // Write the module file for symbol, which must be a module or submodule.
 void ModFileWriter::Write(const Symbol &symbol) {
   const auto &module{symbol.get<ModuleDetails>()};
-  if (module.moduleFileHash()) {
+  if (symbol.test(Symbol::Flag::ModFile) || module.moduleFileHash()) {
     return; // already written
   }
   const auto *ancestor{module.ancestor()};
   isSubmodule_ = ancestor != nullptr;
   auto ancestorName{ancestor ? ancestor->GetName().value().ToString() : ""s};
-  auto path{context_.moduleDirectory() + '/' +
+  std::string path{context_.moduleDirectory() + '/' +
       ModFileName(symbol.name(), ancestorName, context_.moduleFileSuffix())};
 
-  UnorderedSymbolSet hermeticModules;
-  hermeticModules.insert(symbol);
+  std::set<std::string> hermeticModuleNames;
+  hermeticModuleNames.insert(symbol.name().ToString());
   UnorderedSymbolSet additionalModules;
   PutSymbols(DEREF(symbol.scope()),
       hermeticModuleFileOutput_ ? &additionalModules : nullptr);
   auto asStr{GetAsString(symbol)};
   while (!additionalModules.empty()) {
-    for (auto ref : UnorderedSymbolSet{std::move(additionalModules)}) {
-      if (hermeticModules.insert(*ref).second &&
-          !ref->owner().IsIntrinsicModules()) {
-        PutSymbols(DEREF(ref->scope()), &additionalModules);
-        asStr += GetAsString(*ref);
+    UnorderedSymbolSet nextPass{std::move(additionalModules)};
+    additionalModules.clear();
+    for (const Symbol &modSym : nextPass) {
+      if (!modSym.owner().IsIntrinsicModules() &&
+          hermeticModuleNames.find(modSym.name().ToString()) ==
+              hermeticModuleNames.end()) {
+        hermeticModuleNames.insert(modSym.name().ToString());
+        PutSymbols(DEREF(modSym.scope()), &additionalModules);
+        asStr += GetAsString(modSym);
       }
     }
   }
@@ -203,6 +213,9 @@ std::string ModFileWriter::GetAsString(const Symbol &symbol) {
   }
   all << '\n' << uses_.str();
   uses_.str().clear();
+  // Re-exported reduction modules are tracked per module file, so reset the set
+  // (like usedNonIntrinsicModules_) now that this module's uses are emitted.
+  reexportedReductionModules_.clear();
   all << useExtraAttrs_.str();
   useExtraAttrs_.str().clear();
   all << decls_.str();
@@ -306,8 +319,10 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
   // to their names in this scope, creating those new names when needed.
   auto &renamings{context_.moduleFileOutputRenamings()};
   for (SymbolRef s : symbolsNeeded) {
-    if (s->owner().kind() == Scope::Kind::DerivedType) {
-      continue; // component or binding: ok
+    if (s->owner().kind() != Scope::Kind::Module) {
+      // Not a USE'able name from a module's top scope;
+      // component, binding, dummy argument, &c.
+      continue;
     }
     const Scope *sMod{FindModuleContaining(s->owner())};
     if (!sMod || sMod == &scope) {
@@ -346,10 +361,74 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
     uses_ << DEREF(sMod->symbol()).name() << ",only:";
     if (rename != s->name()) {
       uses_ << rename << "=>";
-      renamings.emplace(&*s, rename);
+      renamings.emplace(&s->GetUltimate(), rename);
     }
     uses_ << s->name() << '\n';
     useExtraAttrs_ << "private::" << rename << '\n';
+  }
+}
+
+static const WithOmpDeclarative *GetOmpDeclarative(const Symbol &symbol) {
+  return common::visit(
+      [&](auto &&details) -> const WithOmpDeclarative * {
+        using TypeD = llvm::remove_cvref_t<decltype(details)>;
+        if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+          return &static_cast<const WithOmpDeclarative &>(details);
+        } else {
+          return nullptr;
+        }
+      },
+      symbol.details());
+}
+
+static void PutOpenMPRequirements(
+    llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &semaCtx) {
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
+
+  if (const auto *decls{GetOmpDeclarative(symbol)}) {
+    if (const llvm::omp::Clauses &reqs{decls->ompRequires()}; reqs.count()) {
+      os << "!$omp "
+         << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                llvm::omp::Directive::OMPD_requires, version));
+      decls->printClauseSet(os, reqs, llvm::omp::Directive::OMPD_requires);
+      os << "\n";
+    }
+  }
+}
+
+static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
+    const SymbolVector &symbols, SemanticsContext &semaCtx) {
+  llvm::omp::Version version{semaCtx.langOptions().getOpenMPVersion()};
+
+  for (const Symbol &symbol : symbols) {
+    if (const auto *decls{GetOmpDeclarative(symbol)}) {
+      if (const llvm::omp::Clauses &dtgt{decls->ompDeclTarget()};
+          dtgt.count()) {
+        os << "!$omp "
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                  llvm::omp::Directive::OMPD_declare_target, version))
+           << " ";
+        decls->printClauseSet(
+            os, dtgt, llvm::omp::Directive::OMPD_declare_target, symbol.name());
+        os << "\n";
+      }
+      // Re-emit `!$omp groupprivate` (and its device_type) so a TU that `use`s
+      // this module recovers the directive from the .mod file. Common-block
+      // names must be wrapped in slashes when reparsed.
+      if (const llvm::omp::Clauses &gp{decls->ompGroupprivate()}; gp.count()) {
+        os << "!$omp "
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                  llvm::omp::Directive::OMPD_groupprivate, version))
+           << "(";
+        if (symbol.detailsIf<CommonBlockDetails>())
+          os << '/' << symbol.name() << '/';
+        else
+          os << symbol.name();
+        os << ") ";
+        decls->printClauseSet(os, gp, llvm::omp::Directive::OMPD_groupprivate);
+        os << "\n";
+      }
+    }
   }
 }
 
@@ -361,20 +440,23 @@ void ModFileWriter::PutSymbols(
   auto &renamings{context_.moduleFileOutputRenamings()};
   auto previousRenamings{std::move(renamings)};
   PrepareRenamings(scope);
-  UnorderedSymbolSet modules;
+  SourceOrderedSymbolSet modules;
   CollectSymbols(scope, sorted, uses, modules);
   // Write module files for dependencies first so that their
   // hashes are known.
-  for (auto ref : modules) {
+  for (const Symbol &mod : modules) {
     if (hermeticModules) {
-      hermeticModules->insert(*ref);
+      hermeticModules->insert(mod);
     } else {
-      Write(*ref);
-      needs_ << ModHeader::need
-             << CheckSumString(
-                    ref->get<ModuleDetails>().moduleFileHash().value())
-             << (ref->owner().IsIntrinsicModules() ? " i " : " n ")
-             << ref->name().ToString() << '\n';
+      Write(mod);
+      // It's possible that the module's file already existed and
+      // without its own hash due to being embedded in a hermetic
+      // module file.
+      if (auto hash{mod.get<ModuleDetails>().moduleFileHash()}) {
+        needs_ << ModHeader::need << CheckSumString(*hash)
+               << (mod.owner().IsIntrinsicModules() ? " i " : " n ")
+               << mod.name().ToString() << '\n';
+      }
     }
   }
   std::string buf; // stuff after CONTAINS in derived type
@@ -387,6 +469,9 @@ void ModFileWriter::PutSymbols(
   for (const Symbol &symbol : uses) {
     PutUse(symbol);
   }
+  PutOpenMPRequirements(decls_, DEREF(scope.symbol()), context_);
+  PutOpenMPDeclarativeDirectives(decls_, sorted, context_);
+
   for (const auto &set : scope.equivalenceSets()) {
     if (!set.empty() &&
         !set.front().symbol.test(Symbol::Flag::CompilerCreated)) {
@@ -543,6 +628,10 @@ void ModFileWriter::PutDerivedType(
     PutDECStructure(typeSymbol, scope);
     return;
   }
+  if (details.isEnumerationType()) {
+    PutEnumerationType(typeSymbol);
+    return;
+  }
   PutAttrs(decls_ << "type", typeSymbol.attrs());
   if (const DerivedTypeSpec * extends{typeSymbol.GetParentTypeSpec()}) {
     decls_ << ",extends(" << extends->name() << ')';
@@ -603,7 +692,7 @@ void ModFileWriter::PutDECStructure(
         }
         decls_ << ref->name();
         PutShape(decls_, object->shape(), '(', ')');
-        PutInit(decls_, *ref, object->init(), nullptr);
+        PutInit(decls_, *ref, object->init(), nullptr, context_);
         emittedDECFields_.insert(*ref);
       } else if (any) {
         break; // any later use of this structure will use RECORD/str/
@@ -615,9 +704,92 @@ void ModFileWriter::PutDECStructure(
   decls_ << "end structure\n";
 }
 
+void ModFileWriter::PutEnumerationType(const Symbol &typeSymbol) {
+  auto &details{typeSymbol.get<DerivedTypeDetails>()};
+  PutAttrs(decls_ << "enumeration type", typeSymbol.attrs());
+  decls_ << "::" << typeSymbol.name() << '\n';
+  // Collect the enumerator PARAMETER symbols of this enumeration type from the
+  // enclosing scope, sorted by ordinal value.  The intrinsic enumerators
+  // created by the ENUMERATOR statement carry
+  // Symbol::Flag::EnumeratorParameter, which distinguishes them from
+  // user-declared PARAMETERs of the same enumeration type; only the flagged
+  // symbols are listed here and suppressed from standalone emission.
+  struct EnumeratorInfo {
+    SourceName name;
+    const Symbol *sym{nullptr};
+    int ordinal{0};
+  };
+  int count{details.enumeratorCount()};
+  std::vector<EnumeratorInfo> enumerators(count); // indexed by ordinal-1
+  std::vector<bool> filled(count, false);
+  for (const auto &ref : typeSymbol.owner().GetSymbols()) {
+    if (ref->test(Symbol::Flag::EnumeratorParameter)) {
+      if (const auto *obj{ref->detailsIf<ObjectEntityDetails>()}) {
+        if (obj->type() &&
+            obj->type()->category() == DeclTypeSpec::TypeDerived &&
+            &obj->type()->derivedTypeSpec().typeSymbol() == &typeSymbol) {
+          int ordinal{0};
+          if (const auto &init{obj->init()}) {
+            // The init may be a bare StructureConstructor or a
+            // Constant<SomeDerived> (after folding). Use
+            // GetScalarConstantValue which handles both.
+            if (auto ctor{
+                    evaluate::GetScalarConstantValue<evaluate::SomeDerived>(
+                        *init)}) {
+              for (const auto &[compRef, val] : *ctor) {
+                if (auto intVal{evaluate::ToInt64(val.value())}) {
+                  ordinal = static_cast<int>(*intVal);
+                }
+              }
+            }
+          }
+          if (ordinal >= 1 && ordinal <= count && !filled[ordinal - 1]) {
+            enumerators[ordinal - 1] = {ref->name(), &*ref, ordinal};
+            filled[ordinal - 1] = true;
+          }
+        }
+      }
+    }
+  }
+  if (!enumerators.empty()) {
+    decls_ << "enumerator::";
+    bool first{true};
+    for (const auto &e : enumerators) {
+      if (!first) {
+        decls_ << ',';
+      }
+      decls_ << e.name;
+      first = false;
+    }
+    decls_ << '\n';
+  }
+  decls_ << "end enumeration type\n";
+  // Emit an explicit access statement for every enumerator that differs from
+  // the default the reader will reconstruct.  The reader derives that default
+  // solely from the ENUMERATION TYPE statement it reads back: PutAttrs writes
+  // the type's own PRIVATE attribute as an access-spec there, and an access-
+  // spec sets the enumerator default (F2023 7.6.2p2).  A module file never
+  // emits a bare module-default `private`, and enumeratorDefaultAccess() is
+  // not separately serialized, so the round-trip default is exactly "PRIVATE
+  // if the type itself is PRIVATE, else PUBLIC".
+  if (!isSubmodule_) {
+    Attr enumDefault{
+        typeSymbol.attrs().test(Attr::PRIVATE) ? Attr::PRIVATE : Attr::PUBLIC};
+    for (const auto &e : enumerators) {
+      Attr actual{
+          e.sym->attrs().test(Attr::PRIVATE) ? Attr::PRIVATE : Attr::PUBLIC};
+      if (actual != enumDefault) {
+        decls_ << (actual == Attr::PRIVATE ? "private::" : "public::") << e.name
+               << '\n';
+      }
+    }
+  }
+}
+
 // Attributes that may be in a subprogram prefix
 static const Attrs subprogramPrefixAttrs{Attr::ELEMENTAL, Attr::IMPURE,
-    Attr::MODULE, Attr::NON_RECURSIVE, Attr::PURE, Attr::RECURSIVE};
+    Attr::MODULE, Attr::NON_RECURSIVE, Attr::PURE, Attr::SIMPLE,
+    Attr::RECURSIVE};
 
 static void PutOpenACCDeviceTypeRoutineInfo(
     llvm::raw_ostream &os, const OpenACCRoutineDeviceTypeInfo &info) {
@@ -636,8 +808,14 @@ static void PutOpenACCDeviceTypeRoutineInfo(
   if (info.isWorker()) {
     os << " worker";
   }
-  if (info.bindName()) {
-    os << " bind(" << *info.bindName() << ")";
+  if (const std::variant<std::string, SymbolRef> *bindName{info.bindName()}) {
+    os << " bind(";
+    if (std::holds_alternative<std::string>(*bindName)) {
+      os << "\"" << std::get<std::string>(*bindName) << "\"";
+    } else {
+      os << std::get<SymbolRef>(*bindName)->name();
+    }
+    os << ")";
   }
 }
 
@@ -800,6 +978,59 @@ void ModFileWriter::PutGeneric(const Symbol &symbol) {
 }
 
 void ModFileWriter::PutUse(const Symbol &symbol) {
+  // A declare reduction named by an operator has an internal mangled symbol
+  // name
+  // ("op.remote.", "op.+") that is not valid Fortran and cannot be emitted as a
+  // "use,only:" item (that module file could not be re-parsed, and reading it
+  // crashed, both for a plain re-export and for an embedded module in a
+  // hermetic module file). Its operator is itself re-exported as a valid item,
+  // and the resolver recovers the reduction through it (FindUserReductionSymbol
+  // / SearchOperatorReduction), keeping one shared reduction symbol, so skip
+  // the reduction's own use item. This covers a defined operator (which always
+  // has a mandatory "interface operator(.x.)") and an intrinsic operator with a
+  // user "interface operator(+)". A reduction named by a plain identifier
+  // ("myred") has a valid name and is emitted normally below. An operator-less
+  // reduction (a special function, or an intrinsic operator on an intrinsic
+  // type) has an unwritable name and no operator to recover through; it is
+  // re-exported by a plain USE of the defining module (see below).
+  const Symbol &ultimate{symbol.GetUltimate()};
+  if (ultimate.has<UserReductionDetails>()) {
+    std::string opId{GetReductionFortranId(ultimate.name())};
+    const Symbol *opSym{
+        opId.empty() ? nullptr : ultimate.owner().FindSymbol(opId)};
+    if (opSym && opSym->GetUltimate().has<GenericDetails>()) {
+      return;
+    }
+    // An operator-less reduction (a special function, or an intrinsic operator
+    // on an intrinsic type) has an unwritable mangled name and no operator to
+    // recover through. It can only have been re-exported by a plain USE of the
+    // defining module (a mangled name cannot appear in an only-list, and there
+    // is no operator surrogate to name), so re-export the whole module. The
+    // reduction then comes in as a shared use-association, with no facade-owned
+    // duplicate and no re-resolved directive text. Any entities the facade
+    // renames or makes private are still emitted with their own use/rename/
+    // private items, which the reader honors, so the plain USE does not widen
+    // their visibility.
+    llvm::StringRef mangled{ultimate.name().begin(), ultimate.name().size()};
+    if (mangled.starts_with("op.")) {
+      // Only a PUBLIC operator-less reduction is re-exported. If the facade
+      // made it private, it must not be re-exported at all: emitting the plain
+      // use would re-import the whole module publicly and, because the mangled
+      // name is otherwise unwritable, silently change a consumer from the
+      // intrinsic reduction to this private one across a module-file
+      // round-trip.
+      if (!symbol.attrs().test(Attr::PRIVATE)) {
+        auto &reductionUse{symbol.get<UseDetails>()};
+        const Symbol &reexportModule{GetUsedModule(reductionUse)};
+        if (!reductionUse.symbol().owner().parent().IsIntrinsicModules() &&
+            reexportedReductionModules_.insert(reexportModule).second) {
+          uses_ << "use " << reexportModule.name() << '\n';
+          usedNonIntrinsicModules_.insert(reexportModule);
+        }
+      }
+      return;
+    }
+  }
   auto &details{symbol.get<UseDetails>()};
   auto &use{details.symbol()};
   const Symbol &module{GetUsedModule(details)};
@@ -834,45 +1065,45 @@ void ModFileWriter::PutUseExtraAttr(
   }
 }
 
-static inline SourceName NameInModuleFile(const Symbol &symbol) {
-  if (const auto *use{symbol.detailsIf<UseDetails>()}) {
-    if (use->symbol().attrs().test(Attr::PRIVATE)) {
-      // Avoid the use in sorting of names created to access private
-      // specific procedures as a result of generic resolution;
-      // they're not in the cooked source.
-      return use->symbol().name();
+static void CollectModules(const Scope &scope, const SymbolVector &symbols,
+    SourceOrderedSymbolSet &modules) {
+  for (const Symbol &symbol : symbols) {
+    const auto *generic{symbol.detailsIf<GenericDetails>()};
+    if (generic) {
+      for (const Symbol &used : generic->uses()) {
+        modules.insert(GetUsedModule(used.get<UseDetails>()));
+      }
+    } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
+      modules.insert(GetUsedModule(*use));
     }
   }
-  return symbol.name();
+  for (const Scope &child : scope.children()) {
+    if (!child.IsSubmodule()) {
+      CollectModules(child, child.GetSymbols(), modules);
+    }
+  }
 }
 
 // Collect the symbols of this scope sorted by their original order, not name.
 // Generics and namelists are exceptions: they are sorted after other symbols.
 void CollectSymbols(const Scope &scope, SymbolVector &sorted,
-    SymbolVector &uses, UnorderedSymbolSet &modules) {
+    SymbolVector &uses, SourceOrderedSymbolSet &modules) {
   SymbolVector namelist, generics;
   auto symbols{scope.GetSymbols()};
   std::size_t commonSize{scope.commonBlocks().size()};
   sorted.reserve(symbols.size() + commonSize);
-  for (SymbolRef symbol : symbols) {
-    const auto *generic{symbol->detailsIf<GenericDetails>()};
-    if (generic) {
-      uses.insert(uses.end(), generic->uses().begin(), generic->uses().end());
-      for (auto ref : generic->uses()) {
-        modules.insert(GetUsedModule(ref->get<UseDetails>()));
-      }
-    } else if (const auto *use{symbol->detailsIf<UseDetails>()}) {
-      modules.insert(GetUsedModule(*use));
-    }
-    if (symbol->test(Symbol::Flag::ParentComp)) {
-    } else if (symbol->has<NamelistDetails>()) {
+  CollectModules(scope, symbols, modules);
+  for (const Symbol &symbol : symbols) {
+    if (symbol.test(Symbol::Flag::ParentComp)) {
+    } else if (symbol.has<NamelistDetails>()) {
       namelist.push_back(symbol);
-    } else if (generic) {
+    } else if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
+      uses.insert(uses.end(), generic->uses().begin(), generic->uses().end());
       if (generic->specific() &&
-          &generic->specific()->owner() == &symbol->owner()) {
+          &generic->specific()->owner() == &symbol.owner()) {
         sorted.push_back(*generic->specific());
       } else if (generic->derivedType() &&
-          &generic->derivedType()->owner() == &symbol->owner()) {
+          &generic->derivedType()->owner() == &symbol.owner()) {
         sorted.push_back(*generic->derivedType());
       }
       generics.push_back(symbol);
@@ -880,13 +1111,8 @@ void CollectSymbols(const Scope &scope, SymbolVector &sorted,
       sorted.push_back(symbol);
     }
   }
-  // Sort most symbols by name: use of Symbol::ReplaceName ensures the source
-  // location of a symbol's name is the first "real" use.
-  auto sorter{[](SymbolRef x, SymbolRef y) {
-    return NameInModuleFile(*x).begin() < NameInModuleFile(*y).begin();
-  }};
-  std::sort(sorted.begin(), sorted.end(), sorter);
-  std::sort(generics.begin(), generics.end(), sorter);
+  std::sort(sorted.begin(), sorted.end(), SymbolSourcePositionCompare{});
+  std::sort(generics.begin(), generics.end(), SymbolSourcePositionCompare{});
   sorted.insert(sorted.end(), generics.begin(), generics.end());
   sorted.insert(sorted.end(), namelist.begin(), namelist.end());
   for (const auto &pair : scope.commonBlocks()) {
@@ -902,6 +1128,8 @@ void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol) {
           [&](const ObjectEntityDetails &) { PutObjectEntity(os, symbol); },
           [&](const ProcEntityDetails &) { PutProcEntity(os, symbol); },
           [&](const TypeParamDetails &) { PutTypeParam(os, symbol); },
+          [&](const UserReductionDetails &) { PutUserReduction(os, symbol); },
+          [&](const MapperDetails &) { PutMapper(decls_, symbol, context_); },
           [&](const auto &) {
             common::die("PutEntity: unexpected details: %s",
                 DetailsToString(symbol.details()).c_str());
@@ -924,18 +1152,63 @@ void PutShapeSpec(llvm::raw_ostream &os, const ShapeSpec &x) {
     }
   }
 }
+
+// Check whether any bound in an ArraySpec holds a RankOneBoundElement,
+// indicating the shape came from a rank-1 integer array expression.
+bool HasRankOneBound(const ArraySpec &shape) {
+  const auto &first{shape.front()};
+  if (auto lb{first.lbound().GetExplicit()}) {
+    if (evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*lb)) {
+      return true;
+    }
+  }
+  if (auto ub{first.ubound().GetExplicit()}) {
+    if (evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*ub)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void PutShape(
     llvm::raw_ostream &os, const ArraySpec &shape, char open, char close) {
   if (!shape.empty()) {
     os << open;
-    bool first{true};
-    for (const auto &shapeSpec : shape) {
-      if (first) {
-        first = false;
-      } else {
-        os << ',';
+    if (HasRankOneBound(shape)) {
+      // Rank-1 bounds: all ShapeSpecs share the same rank-1 expression
+      // wrapped in RankOneBoundElement. Extract the base expression from the
+      // first element and emit it whole so the mod file round-trips through
+      // the parser as an ExplicitShapeBoundsSpec.
+      const auto &first{shape.front()};
+      if (!first.lbound().isColon()) {
+        auto lb{first.lbound().GetExplicit()};
+        if (auto *robe =
+                evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*lb)) {
+          robe->base().AsFortran(os);
+        } else {
+          PutBound(os, first.lbound());
+        }
       }
-      PutShapeSpec(os, shapeSpec);
+      os << ':';
+      if (!first.ubound().isColon()) {
+        auto ub{first.ubound().GetExplicit()};
+        if (auto *robe =
+                evaluate::UnwrapExpr<evaluate::RankOneBoundElement>(*ub)) {
+          robe->base().AsFortran(os);
+        } else {
+          PutBound(os, first.ubound());
+        }
+      }
+    } else {
+      bool first{true};
+      for (const auto &shapeSpec : shape) {
+        if (first) {
+          first = false;
+        } else {
+          os << ',';
+        }
+        PutShapeSpec(os, shapeSpec);
+      }
     }
     os << close;
   }
@@ -953,13 +1226,23 @@ void ModFileWriter::PutObjectEntity(
         return; // symbol was emitted on STRUCTURE statement
       }
     }
+    // Enumerator PARAMETERs are emitted as part of the ENUMERATION TYPE
+    // block — suppress standalone emission to avoid duplicates on USE.
+    // Keyed on Symbol::Flag::EnumeratorParameter so this is independent of
+    // whether the enumeration type block has already been emitted (the
+    // enumerator may sort before its type, e.g. when an accessibility
+    // statement precedes the ENUMERATION TYPE definition).
+    if (symbol.test(Symbol::Flag::EnumeratorParameter)) {
+      return;
+    }
   }
   PutEntity(
       os, symbol, [&]() { PutType(os, DEREF(symbol.GetType())); },
       getSymbolAttrsToWrite(symbol));
   PutShape(os, details.shape(), '(', ')');
   PutShape(os, details.coshape(), '[', ']');
-  PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit());
+  PutInit(os, symbol, details.init(), details.unanalyzedPDTComponentInit(),
+      context_);
   os << '\n';
   if (auto tkr{GetIgnoreTKR(symbol)}; !tkr.empty()) {
     os << "!dir$ ignore_tkr(";
@@ -984,20 +1267,17 @@ void ModFileWriter::PutObjectEntity(
       case common::IgnoreTKR::Contiguous:
         os << 'c';
         break;
+      case common::IgnoreTKR::Pointer:
+        os << 'p';
+        break;
       }
     });
     os << ") " << symbol.name() << '\n';
   }
-  if (auto attr{details.cudaDataAttr()}) {
-    PutLower(os << "attributes(", common::EnumToString(*attr))
-        << ") " << symbol.name() << '\n';
-  }
   if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
-    if (!symbol.owner().crayPointers().empty()) {
-      for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
-        if (pointer == symbol) {
-          os << "pointer(" << symbol.name() << "," << pointee << ")\n";
-        }
+    for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+      if (pointer == symbol) {
+        os << "pointer(" << symbol.name() << "," << pointee << ")\n";
       }
     }
   }
@@ -1029,6 +1309,15 @@ void ModFileWriter::PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {
         PutPassName(os, details.passName());
       },
       attrs);
+  if (symbol.owner().IsDerivedType()) {
+    if (const auto &init{details.init()}) {
+      if (const Symbol *symbol{*init}) {
+        os << "=>" << symbol->name();
+      } else {
+        os << "=>NULL()";
+      }
+    }
+  }
   os << '\n';
 }
 
@@ -1052,12 +1341,52 @@ void ModFileWriter::PutTypeParam(llvm::raw_ostream &os, const Symbol &symbol) {
   os << '\n';
 }
 
+void ModFileWriter::PutUserReduction(
+    llvm::raw_ostream &os, const Symbol &symbol) {
+  const auto &details{symbol.get<UserReductionDetails>()};
+  // The module content for a OpenMP Declare Reduction is the OpenMP
+  // declaration. There may be multiple declarations.
+  // Decls are pointers, so do not use a reference.
+  for (const auto *decl : details.GetDeclList()) {
+    Unparse(os, *decl, context_.langOptions());
+  }
+  // Emit a Fortran accessibility statement for the reduction identifier
+  // so that PRIVATE survives module file round-trips.  Only needed when
+  // there is no corresponding generic interface that already carries
+  // PRIVATE (PutGeneric handles that case).
+  if (!isSubmodule_ && symbol.attrs().test(Attr::PRIVATE)) {
+    std::string fortranId{GetReductionFortranId(symbol.name())};
+    if (!fortranId.empty()) {
+      bool alreadyEmitted{false};
+      parser::CharBlock cb{fortranId};
+      auto it{symbol.owner().find(cb)};
+      if (it != symbol.owner().end() &&
+          it->second->detailsIf<GenericDetails>()) {
+        alreadyEmitted = it->second->attrs().test(Attr::PRIVATE);
+      }
+      if (!alreadyEmitted) {
+        os << "private::" << fortranId << '\n';
+      }
+    }
+  }
+}
+
+static void PutMapper(
+    llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &context) {
+  const auto &details{symbol.get<MapperDetails>()};
+  // Emit each saved DECLARE MAPPER construct as-is, so that consumers of the
+  // module can reparse it and recreate the mapper symbol and semantics state.
+  for (const auto *decl : details.GetDeclList()) {
+    Unparse(os, *decl, context.langOptions());
+  }
+}
+
 void PutInit(llvm::raw_ostream &os, const Symbol &symbol, const MaybeExpr &init,
-    const parser::Expr *unanalyzed) {
+    const parser::Expr *unanalyzed, SemanticsContext &context) {
   if (IsNamedConstant(symbol) || symbol.owner().IsDerivedType()) {
     const char *assign{symbol.attrs().test(Attr::POINTER) ? "=>" : "="};
     if (unanalyzed) {
-      parser::Unparse(os << assign, *unanalyzed);
+      parser::Unparse(os << assign, *unanalyzed, context.langOptions());
     } else if (init) {
       init->AsFortran(os << assign);
     }
@@ -1086,6 +1415,17 @@ void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol,
     std::function<void()> writeType, Attrs attrs) {
   writeType();
   PutAttrs(os, attrs, symbol.GetBindName(), symbol.GetIsExplicitBindName());
+  if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (auto attr{details->cudaDataAttr()}) {
+      PutLower(os << ',', common::EnumToString(*attr));
+      // Record that the compiler applied this attribute, so that a reader can
+      // tell it from one the user wrote and let an explicit memory space on an
+      // enclosing object take precedence over it.
+      if (details->cudaDataAttrIsImplicit()) {
+        os << "(implicit)";
+      }
+    }
+  }
   if (symbol.owner().kind() == Scope::Kind::DerivedType &&
       context_.IsTempName(symbol.name().ToString())) {
     os << "::%FILL";
@@ -1304,12 +1644,17 @@ std::optional<ModuleCheckSumType> ExtractCheckSum(const std::string_view &str) {
   return std::nullopt;
 }
 
+static bool VerifyMagic(llvm::ArrayRef<char> content) {
+  std::string_view sv{content.data(), content.size()};
+  return sv.substr(0, ModHeader::magicLen) == ModHeader::magic;
+}
+
 static std::optional<ModuleCheckSumType> VerifyHeader(
     llvm::ArrayRef<char> content) {
-  std::string_view sv{content.data(), content.size()};
-  if (sv.substr(0, ModHeader::magicLen) != ModHeader::magic) {
+  if (!VerifyMagic(content)) {
     return std::nullopt;
   }
+  std::string_view sv{content.data(), content.size()};
   ModuleCheckSumType checkSum{ComputeCheckSum(sv.substr(ModHeader::len))};
   std::string_view expectSum{sv.substr(ModHeader::magicLen, ModHeader::sumLen)};
   if (auto extracted{ExtractCheckSum(expectSum)};
@@ -1362,10 +1707,27 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     }
     ancestorName = ancestor->GetName().value().ToString();
   }
-  auto requiredHash{context_.moduleDependences().GetRequiredHash(
-      name.ToString(), isIntrinsic.value_or(false))};
+
+  // When offloading modules files are created for the host, but when compiling
+  // device-side code the builtin modules are exchanged with device-specific
+  // versions. They contain matching declarations, but have different checksums.
+  bool ignoreChecksumMismatch{
+      context_.langOptions().OffloadDevice && isIntrinsic.value_or(false)};
+
+  std::optional<size_t> requiredHash;
+  if (!ignoreChecksumMismatch) {
+    requiredHash = context_.moduleDependences().GetRequiredHash(
+        name.ToString(), isIntrinsic.value_or(false));
+  }
+
   if (!isIntrinsic.value_or(false) && !ancestor) {
     // Already present in the symbol table as a usable non-intrinsic module?
+    if (Scope * hermeticScope{context_.currentHermeticModuleFileScope()}) {
+      auto it{hermeticScope->find(name)};
+      if (it != hermeticScope->end()) {
+        return it->second->scope();
+      }
+    }
     auto it{context_.globalScope().find(name)};
     if (it != context_.globalScope().end()) {
       Scope *scope{it->second->scope()};
@@ -1392,13 +1754,26 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     // USE, NON_INTRINSIC global name isn't a module?
     fatalError = isIntrinsic.has_value();
   }
-  auto path{ModFileName(name, ancestorName, context_.moduleFileSuffix())};
+  std::string path{
+      ModFileName(name, ancestorName, context_.moduleFileSuffix())};
   parser::Parsing parsing{context_.allCookedSources()};
   parser::Options options;
   options.isModuleFile = true;
   options.features.Enable(common::LanguageFeature::BackslashEscapes);
+  // CUDA Fortran device code can call procedures whose device-side call target
+  // is described by an `acc routine bind(...)` directive in the module that
+  // declares them, so the sentinel must be recognized here even when this
+  // compilation itself was not given an OpenACC target.
+  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::OpenACC) ||
+      context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
+    options.features.Enable(common::LanguageFeature::OpenACC);
+  }
   options.features.Enable(common::LanguageFeature::OpenMP);
   options.features.Enable(common::LanguageFeature::CUDA);
+  // Module files may record that the compiler applied a CUDA data attribute
+  // itself, as MANAGED(IMPLICIT). That spelling exists only here.
+  options.features.Enable(
+      common::LanguageFeature::CUDAImplicitDataAttrSpelling);
   if (!isIntrinsic.value_or(false) && !notAModule) {
     // The search for this module file will scan non-intrinsic module
     // directories.  If a directory is in both the intrinsic and non-intrinsic
@@ -1437,12 +1812,11 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
       options.searchDirectories.push_back(dir);
     }
-    if (!requiredHash) {
+    if (!requiredHash && !ignoreChecksumMismatch) {
       requiredHash =
           context_.moduleDependences().GetRequiredHash(name.ToString(), true);
     }
   }
-
   // Look for the right module file if its hash is known
   if (requiredHash && !fatalError) {
     for (const std::string &maybe :
@@ -1465,10 +1839,13 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
         // symbol of the same name that is not a module.
         context_.SayWithDecl(
             *notAModule, name, "'%s' is not a module"_err_en_US, name);
+      } else if (sourceFile && !VerifyMagic(sourceFile->content())) {
+        Say("read", name, ancestorName,
+            "'%s' is not a module file for this compiler"_err_en_US, path);
       } else {
         for (auto &msg : parsing.messages().messages()) {
           std::string str{msg.ToString()};
-          Say(name, ancestorName,
+          Say("parse", name, ancestorName,
               parser::MessageFixedText{str.c_str(), str.size(), msg.severity()},
               path);
         }
@@ -1480,22 +1857,33 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   std::optional<ModuleCheckSumType> checkSum{
       VerifyHeader(sourceFile->content())};
   if (!checkSum) {
-    Say(name, ancestorName, "File has invalid checksum: %s"_err_en_US,
-        sourceFile->path());
+    if (!silent) {
+      if (!VerifyMagic(sourceFile->content())) {
+        Say("read", name, ancestorName,
+            "'%s' is not a module file for this compiler"_err_en_US, path);
+      } else {
+        Say("use", name, ancestorName,
+            "File has invalid checksum: %s"_err_en_US, sourceFile->path());
+      }
+    }
     return nullptr;
   } else if (requiredHash && *requiredHash != *checkSum) {
-    Say(name, ancestorName,
-        "File is not the right module file for %s"_err_en_US,
-        "'"s + name.ToString() + "': "s + sourceFile->path());
+    if (!silent) {
+      Say("use", name, ancestorName,
+          "File is not the right module file for %s"_err_en_US,
+          "'"s + name.ToString() + "': "s + sourceFile->path());
+    }
     return nullptr;
   }
   llvm::raw_null_ostream NullStream;
-  parsing.Parse(NullStream);
+  parsing.Parse(NullStream, context_.langOptions());
   std::optional<parser::Program> &parsedProgram{parsing.parseTree()};
   if (!parsing.messages().empty() || !parsing.consumedWholeFile() ||
       !parsedProgram) {
-    Say(name, ancestorName, "Module file is corrupt: %s"_err_en_US,
-        sourceFile->path());
+    if (!silent) {
+      Say("parse", name, ancestorName, "Module file is corrupt: %s"_err_en_US,
+          sourceFile->path());
+    }
     return nullptr;
   }
   parser::Program &parseTree{context_.SaveParseTree(std::move(*parsedProgram))};
@@ -1543,9 +1931,32 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   // Process declarations from the module file
   auto wasModuleFileName{context_.foldingContext().moduleFileName()};
   context_.foldingContext().set_moduleFileName(name);
+  // Are there multiple modules in the module file due to it having been
+  // created under -fhermetic-module-files?  If so, process them first in
+  // their own nested scope that will be visible only to USE statements
+  // within the module file.
+  Scope *previousHermetic{context_.currentHermeticModuleFileScope()};
+  if (parseTree.v.size() > 1) {
+    // Retain the embedded modules' parse tree for the lifetime of the
+    // SemanticsContext: symbols resolved from it (e.g. UserReductionDetails and
+    // MapperDetails, which hold raw parse-tree pointers) outlive this function
+    // and are dereferenced later, including at lowering time.
+    parser::Program &hermeticModules{
+        context_.SaveParseTree(parser::Program{std::move(parseTree.v)})};
+    parseTree.v.emplace_back(std::move(hermeticModules.v.front()));
+    hermeticModules.v.pop_front();
+    Scope &hermeticScope{topScope.MakeScope(Scope::Kind::Global)};
+    context_.set_currentHermeticModuleFileScope(&hermeticScope);
+    ResolveNames(context_, hermeticModules, hermeticScope);
+    for (auto &[_, ref] : hermeticScope) {
+      CHECK(ref->has<ModuleDetails>());
+      ref->set(Symbol::Flag::ModFile);
+    }
+  }
   GetModuleDependences(context_.moduleDependences(), sourceFile->content());
   ResolveNames(context_, parseTree, topScope);
   context_.foldingContext().set_moduleFileName(wasModuleFileName);
+  context_.set_currentHermeticModuleFileScope(previousHermetic);
   if (!moduleSymbol) {
     // Submodule symbols' storage are owned by their parents' scopes,
     // but their names are not in their parents' dictionaries -- we
@@ -1566,16 +1977,24 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     if (isIntrinsic.value_or(false)) {
       moduleSymbol->attrs().set(Attr::INTRINSIC);
     }
+    if (context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::OpenACC) &&
+        !context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
+        ScopeHasCUDAModuleVariables(*moduleSymbol->scope())) {
+      Say("use", name, ancestorName,
+          "CUDA is not enabled, but '%s' defines CUDA symbols"_err_en_US,
+          sourceFile->path());
+    }
     return moduleSymbol->scope();
   } else {
     return nullptr;
   }
 }
 
-parser::Message &ModFileReader::Say(SourceName name,
+parser::Message &ModFileReader::Say(const char *verb, SourceName name,
     const std::string &ancestor, parser::MessageFixedText &&msg,
     const std::string &arg) {
-  return context_.Say(name, "Cannot read module file for %s: %s"_err_en_US,
+  return context_.Say(name, "Cannot %s module file for %s: %s"_err_en_US, verb,
       parser::MessageFormattedText{ancestor.empty()
               ? "module '%s'"_en_US
               : "submodule '%s' of module '%s'"_en_US,
@@ -1599,6 +2018,35 @@ static std::optional<SourceName> GetSubmoduleParent(
   } else {
     return std::nullopt;
   }
+}
+
+// Does this symbol carry a CUDA data attribute the user actually wrote? An
+// attribute the compiler applied on the user's behalf does not make the module
+// a definer of CUDA symbols: the user wrote no CUDA Fortran, so a consumer
+// without CUDA enabled has nothing to object to.
+static bool HasExplicitCUDADataAttr(const Symbol &symbol) {
+  const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+  return object && object->cudaDataAttr() && !object->cudaDataAttrIsImplicit();
+}
+
+static bool ScopeHasCUDAModuleVariables(const Scope &scope) {
+  for (const auto &[_, symbolRef] : scope) {
+    const Symbol &symbol{*symbolRef};
+    if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if (HasExplicitCUDADataAttr(symbol)) {
+        return true;
+      }
+      const DeclTypeSpec *type{object->type()};
+      const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
+      if (derived &&
+          FindUltimateComponent(*derived, [](const Symbol &component) {
+            return HasExplicitCUDADataAttr(component);
+          })) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 void SubprogramSymbolCollector::Collect() {
@@ -1716,6 +2164,17 @@ void SubprogramSymbolCollector::DoSymbol(
   if (!scope.IsDerivedType()) {
     need_.push_back(symbol);
   }
+  if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
+    for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+      if (&*pointer == &symbol) {
+        auto iter{symbol.owner().find(pointee)};
+        CHECK(iter != symbol.owner().end());
+        DoSymbol(*iter->second);
+      }
+    }
+  } else if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
+    DoSymbol(GetCrayPointer(symbol));
+  }
 }
 
 void SubprogramSymbolCollector::DoType(const DeclTypeSpec *type) {
@@ -1779,8 +2238,8 @@ bool SubprogramSymbolCollector::NeedImport(
     return found->has<UseDetails>() && found->owner() != scope_;
   } else {
     // "found" can be null in the case of a use-associated derived type's
-    // parent type
-    CHECK(symbol.has<DerivedTypeDetails>());
+    // parent type, and also in the case of an object (like a dummy argument)
+    // used to define a length or bound of a nested interface.
     return false;
   }
 }

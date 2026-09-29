@@ -10,7 +10,8 @@
 # CHECK-NEXT:     "elapsed": {{[-+0-9.eE]+}},
 # CHECK-NEXT:     "metrics": {
 # CHECK-NEXT:       "value0": 1,
-# CHECK-NEXT:       "value1": 2.3456
+# CHECK-NEXT:       "value1": 2.3456,
+# CHECK-NEXT:       "value2": "stringy"
 # CHECK-NEXT:     }
 # CHECK-NEXT:     "name": "test-data :: metrics.ini",
 # CHECK-NEXT:     "output": "Test passed."

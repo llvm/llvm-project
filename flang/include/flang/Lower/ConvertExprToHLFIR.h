@@ -21,7 +21,6 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 
 namespace mlir {
 class Location;
@@ -62,7 +61,7 @@ fir::ExtendedValue convertToBox(mlir::Location loc,
                                 Fortran::lower::AbstractConverter &,
                                 hlfir::Entity entity,
                                 Fortran::lower::StatementContext &,
-                                mlir::Type fortranType);
+                                mlir::Type fortranType, unsigned corank = 0);
 
 /// Lower an evaluate::Expr to fir::ExtendedValue address.
 /// The address may be a raw fir.ref<T>, or a fir.box<T>/fir.class<T>, or a
@@ -136,6 +135,15 @@ hlfir::ElementalAddrOp convertVectorSubscriptedExprToElementalAddr(
     mlir::Location loc, Fortran::lower::AbstractConverter &,
     const Fortran::lower::SomeExpr &, Fortran::lower::SymMap &,
     Fortran::lower::StatementContext &);
+
+/// Lower a designator containing vector subscripts, creating a hlfir::Entity
+/// representing the first element in the vector subscripted array. This is a
+/// helper which calls convertVectorSubscriptedExprToElementalAddr and lowers
+/// the hlfir::ElementalAddrOp.
+hlfir::Entity genVectorSubscriptedDesignatorFirstElementAddress(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx);
 
 } // namespace Fortran::lower
 

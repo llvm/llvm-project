@@ -369,7 +369,8 @@ define void @ossfuzz34366() {
 ;
 ; X64-LABEL: ossfuzz34366:
 ; X64:       # %bb.0:
-; X64-NEXT:    cmpq $0, (%rax)
+; X64-NEXT:    movq (%rax), %rax
+; X64-NEXT:    orq %rax, %rax
 ; X64-NEXT:    sete (%rax)
 ; X64-NEXT:    retq
   %L10 = load i448, ptr undef, align 4

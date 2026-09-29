@@ -40,7 +40,6 @@ bool MipsSEDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
 }
 
 void MipsSEDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<DominatorTreeWrapperPass>();
   SelectionDAGISelLegacy::getAnalysisUsage(AU);
 }
 
@@ -48,7 +47,7 @@ void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
                                                MachineFunction &MF) {
   MachineInstrBuilder MIB(MF, &MI);
   unsigned Mask = MI.getOperand(1).getImm();
-  unsigned Flag =
+  RegState Flag =
       IsDef ? RegState::ImplicitDefine : RegState::Implicit | RegState::Undef;
 
   if (Mask & 1)
@@ -70,7 +69,7 @@ void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
     MIB.addReg(Mips::DSPEFI, Flag);
 }
 
-unsigned MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
+MCRegister MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
   uint64_t RegNum = RegIdx->getAsZExtVal();
   return Mips::MSACtrlRegClass.getRegister(RegNum);
 }
@@ -163,7 +162,7 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
         break;
       case Mips::BuildPairF64_64:
       case Mips::ExtractElementF64_64:
-        if (!Subtarget->useOddSPReg()) {
+        if (!Subtarget->useOddSPReg() || !Subtarget->hasMTHC1()) {
           MI.addOperand(MachineOperand::CreateReg(Mips::SP, false, true));
           break;
         }
@@ -176,7 +175,8 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
       case Mips::JAL:
       case Mips::JAL_MM:
         if (MI.getOperand(0).isGlobal() &&
-            MI.getOperand(0).getGlobal()->getGlobalIdentifier() == "_mcount")
+            MI.getOperand(0).getGlobal()->hasExternalLinkage() &&
+            MI.getOperand(0).getGlobal()->getName() == "_mcount")
           emitMCountABI(MI, MBB, MF);
         break;
       case Mips::JALRPseudo:
@@ -296,6 +296,32 @@ bool MipsSEDAGToDAGISel::selectAddrFrameIndexOffset(
 
       Offset = CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(Addr),
                                          ValTy);
+      if (Base.getOpcode() == ISD::ADD &&
+          (Subtarget->hasMips1() && !Subtarget->hasMips2())) {
+        // Instead of:
+        //  lui $2, %hi($CPI1_0)
+        //  addiu $2, $2, %lo($CPI1_0)
+        //  lwc1 $f0, 4($2)
+        // Generate:
+        //  lui $2, %hi($CPI1_0)
+        //  lwc1 $f0, %lo($CPI1_0+4)($2)
+        if (Base.getOperand(1).getOpcode() == MipsISD::Lo ||
+            Base.getOperand(1).getOpcode() == MipsISD::GPRel) {
+          SDValue Opnd0 = Base.getOperand(1).getOperand(0);
+          if (isa<ConstantPoolSDNode>(Opnd0) || isa<JumpTableSDNode>(Opnd0))
+            Base = Base.getOperand(0);
+          else if (GlobalAddressSDNode *GA =
+                       dyn_cast<GlobalAddressSDNode>(Opnd0)) {
+            Base = Base.getOperand(0);
+            const GlobalValue *GV = GA->getGlobal();
+            int64_t GAOffset = GA->getOffset();
+            Offset = CurDAG->getTargetGlobalAddress(
+                GV, SDLoc(Addr), MVT::i32, GAOffset + CN->getZExtValue(),
+                MipsII::MO_ABS_LO);
+            return true;
+          }
+        }
+      }
       return true;
     }
   }
@@ -723,7 +749,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
 
   case ISD::ConstantFP: {
     auto *CN = cast<ConstantFPSDNode>(Node);
-    if (Node->getValueType(0) == MVT::f64 && CN->isExactlyValue(+0.0)) {
+    if (Node->getValueType(0) == MVT::f64 && CN->isPosZero()) {
       if (Subtarget->isGP64bit()) {
         SDValue Zero = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
                                               Mips::ZERO_64, MVT::i64);
@@ -1036,8 +1062,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
     // same set/ of registers. Similarly, ldi.h isn't capable of producing {
     // 0x00000000, 0x00000001, 0x00000000, 0x00000001 } but 'ldi.d wd, 1' can.
 
-    const MipsABIInfo &ABI =
-        static_cast<const MipsTargetMachine &>(TM).getABI();
+    const MipsABIInfo &ABI = Subtarget->getABI();
 
     BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Node);
     APInt SplatValue, SplatUndef;
@@ -1158,10 +1183,8 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
                                      Hi ? SDValue(Res, 0) : ZeroVal, LoVal);
 
       Res = CurDAG->getMachineNode(
-              Mips::SUBREG_TO_REG, DL, MVT::i64,
-              CurDAG->getTargetConstant(((Hi >> 15) & 0x1), DL, MVT::i64),
-              SDValue(Res, 0),
-              CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
+          Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(Res, 0),
+          CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
 
       Res =
           CurDAG->getMachineNode(Mips::FILL_D, DL, MVT::v2i64, SDValue(Res, 0));
@@ -1264,16 +1287,12 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
 
         if (HiResNonZero)
           HiRes = CurDAG->getMachineNode(
-              Mips::SUBREG_TO_REG, DL, MVT::i64,
-              CurDAG->getTargetConstant(((Highest >> 15) & 0x1), DL, MVT::i64),
-              SDValue(HiRes, 0),
+              Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(HiRes, 0),
               CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
 
         if (ResNonZero)
           Res = CurDAG->getMachineNode(
-              Mips::SUBREG_TO_REG, DL, MVT::i64,
-              CurDAG->getTargetConstant(((Hi >> 15) & 0x1), DL, MVT::i64),
-              SDValue(Res, 0),
+              Mips::SUBREG_TO_REG, DL, MVT::i64, SDValue(Res, 0),
               CurDAG->getTargetConstant(Mips::sub_32, DL, MVT::i64));
 
         // We have 3 cases:

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -Wno-vla-cxx-extension -verify
+// RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -Wno-vla-cxx-extension -Wno-coroutines-unsupported-target -verify
 #include "Inputs/std-coroutine.h"
 
 struct promise;

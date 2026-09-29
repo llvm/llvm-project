@@ -1,3 +1,141 @@
+if(LIBC_TARGET_OS_IS_LINUX OR LIBC_TARGET_OS_IS_DARWIN)
+  set(LIBC_TEST_SUBPROCESS_TESTS 1)
+else()
+  set(LIBC_TEST_SUBPROCESS_TESTS 0)
+endif()
+
+function(_get_common_test_compile_options output_var c_test flags)
+  _get_compile_options_from_flags(compile_flags ${flags})
+  _get_compile_options_from_config(config_flags)
+  _get_compile_options_from_arch(arch_flags)
+
+  # Death test executor is only available in Linux for now.
+  if(NOT ${LIBC_TARGET_OS} STREQUAL "linux")
+    if(MSVC)
+      list(REMOVE_ITEM config_flags "/DLIBC_ADD_NULL_CHECKS")
+    else()
+      list(REMOVE_ITEM config_flags "-DLIBC_ADD_NULL_CHECKS")
+    endif()
+  endif()
+
+  set(compile_options
+    ${LIBC_COMPILE_OPTIONS_DEFAULT}
+    ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
+    ${compile_flags}
+    ${config_flags}
+    ${arch_flags})
+  libc_add_definition(compile_options
+    "LIBC_TEST_FLOAT_RANGE_COUNT=${LIBC_TEST_FLOAT_RANGE_COUNT}")
+
+  libc_add_definition(compile_options
+    "LIBC_TEST_SUBPROCESS_TESTS=${LIBC_TEST_SUBPROCESS_TESTS}")
+
+  if(LIBC_TEST_MAX_CONCURRENCY)
+    libc_add_definition(compile_options
+      "LIBC_TEST_MAX_CONCURRENCY=${LIBC_TEST_MAX_CONCURRENCY}")
+  endif()
+
+  if(LIBC_TEST_SUBPROCESS_TESTS)
+    # EXPECT_DEATH and ASSERT_DEATH might be quite slow.  LIBC_TEST_SKIP_DEATH_TESTS
+    # will make those tests no-op to reduce the overall test time.
+    if(LIBC_TEST_SKIP_DEATH_TESTS)
+      if(LIBC_CMAKE_VERBOSE_LOGGING)
+        message(STATUS "LIBC_TEST_SKIP_DEATH_TESTS is set.  EXPECT_DEATH/ASSERT_DEATH are no-op.")
+      endif()
+      list(APPEND compile_options "-DLIBC_TEST_SKIP_DEATH_TESTS")
+    endif()
+  endif()
+
+  if(CMAKE_CROSSCOMPILING_EMULATOR)
+    list(APPEND compile_options "-DLIBC_TEST_UNDER_EMULATOR")
+  endif()
+
+  if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
+    list(APPEND compile_options "-fpie")
+
+    if(LLVM_LIBC_FULL_BUILD)
+      list(APPEND compile_options "-DLIBC_FULL_BUILD")
+      # Only add -ffreestanding flag in full build mode.
+      list(APPEND compile_options "-ffreestanding")
+      list(APPEND compile_options "-fno-exceptions")
+      list(APPEND compile_options "-fno-unwind-tables")
+      list(APPEND compile_options "-fno-asynchronous-unwind-tables")
+      if(NOT c_test)
+        list(APPEND compile_options "-fno-rtti")
+      endif()
+    endif()
+
+    if(LIBC_COMPILER_HAS_FIXED_POINT)
+      list(APPEND compile_options "-ffixed-point")
+    endif()
+
+    list(APPEND compile_options "-Wall")
+    list(APPEND compile_options "-Wextra")
+    # -DLIBC_WNO_ERROR=ON if you can't build cleanly with -Werror.
+    if(NOT LIBC_WNO_ERROR)
+    # list(APPEND compile_options "-Werror")
+    endif()
+    if(NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13.0.0"))
+      list(APPEND compile_options "-Wconversion")
+    else()
+      list(APPEND compile_options "-Wno-type-limits")
+      list(APPEND compile_options "-Wno-attributes")
+    endif()
+    # FIXME: convert to -Wsign-conversion
+    list(APPEND compile_options "-Wno-sign-conversion")
+    list(APPEND compile_options "-Wimplicit-fallthrough")
+    list(APPEND compile_options "-Wwrite-strings")
+    # Silence this warning because _Complex is a part of C99.
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      if(NOT c_test)
+        list(APPEND compile_options "-fext-numeric-literals")
+      endif()
+    else()
+      list(APPEND compile_options "-Wno-c99-extensions")
+      list(APPEND compile_options "-Wno-gnu-imaginary-constant")
+    endif()
+    list(APPEND compile_options "-Wno-pedantic")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+      list(APPEND compile_options "-Wstrict-prototypes")
+      list(APPEND compile_options "-Wextra-semi")
+      list(APPEND compile_options "-Wnewline-eof")
+      list(APPEND compile_options "-Wnonportable-system-include-path")
+      list(APPEND compile_options "-Wthread-safety")
+    endif()
+
+    if(LIBC_COMPILER_HAS_STDC_FENV_ACCESS)
+      list(APPEND compile_options "-DLIBC_COMPILER_HAS_STDC_FENV_ACCESS")
+    endif()
+  endif()
+  set(${output_var} ${compile_options} PARENT_SCOPE)
+endfunction()
+
+function(_get_hermetic_test_compile_options output_var c_test flags)
+  _get_common_test_compile_options(compile_options "${c_test}" "${flags}")
+
+  # null check tests are death tests, remove from hermetic tests for now.
+  if(LIBC_ADD_NULL_CHECKS)
+    if(MSVC)
+      list(REMOVE_ITEM compile_options "/DLIBC_ADD_NULL_CHECKS")
+    else()
+      list(REMOVE_ITEM compile_options "-DLIBC_ADD_NULL_CHECKS")
+    endif()
+  endif()
+
+  # The GPU build requires overriding the default CMake triple and architecture.
+  if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
+    list(APPEND compile_options
+      -Wno-multi-gpu -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
+      -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
+  elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+    list(APPEND compile_options
+      -Wno-multi-gpu --cuda-path=${LIBC_CUDA_ROOT}
+      -nogpulib -march=${LIBC_GPU_TARGET_ARCHITECTURE} -fno-use-cxa-atexit)
+  endif()
+
+  set(${output_var} ${compile_options} PARENT_SCOPE)
+endfunction()
+
 # This is a helper function and not a build rule. It is to be used by the
 # various test rules to generate the full list of object files
 # recursively produced by "add_entrypoint_object" and "add_object_library"
@@ -20,11 +158,11 @@ function(get_object_files_for_test result skipped_entrypoints_list)
   list(REMOVE_DUPLICATES unchecked_list)
 
   foreach(dep IN LISTS unchecked_list)
-    if (NOT TARGET ${dep})
+    if(NOT TARGET ${dep})
       # Skip tests with undefined dependencies.
       # Compiler-RT targets are added only if they are enabled. However, such targets may not be defined
       # at the time of the libc build. We should skip checking such targets.
-      if (NOT ${dep} MATCHES "^RTScudo.*|^RTGwp.*")
+      if(NOT ${dep} MATCHES "^RTScudo.*|^RTGwp.*")
         list(APPEND skipped_list ${dep})
       endif()
       continue()
@@ -69,15 +207,11 @@ function(get_object_files_for_test result skipped_entrypoints_list)
         get_target_property(object_file_raw ${dep} "OBJECT_FILE_RAW")
         if(object_file_raw)
           # TODO: Remove this once we stop suffixing the target with ".__internal__"
-          if(fq_target_name STREQUAL "libc.test.include.issignaling_c_test.__unit__" OR fq_target_name STREQUAL "libc.test.include.iscanonical_c_test.__unit__")
+          if(fq_target_name STREQUAL "libc.test.include.issignaling_c_test" OR fq_target_name STREQUAL "libc.test.include.iscanonical_c_test")
             string(REPLACE ".__internal__" "" object_file_raw ${object_file_raw})
           endif()
           list(APPEND dep_obj ${object_file_raw})
         endif()
-      elseif(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
-        # Skip tests for externally implemented entrypoints.
-        list(APPEND dep_skip ${dep})
-        list(REMOVE_ITEM dep_obj ${dep})
       endif()
 
       set_target_properties(${dep} PROPERTIES
@@ -91,24 +225,34 @@ function(get_object_files_for_test result skipped_entrypoints_list)
     list(APPEND object_files ${dep_obj})
     list(APPEND skipped_list ${dep_skip})
 
-  endforeach(dep)
+  endforeach()
 
   list(REMOVE_DUPLICATES object_files)
   set(${result} ${object_files} PARENT_SCOPE)
   list(REMOVE_DUPLICATES skipped_list)
   set(${skipped_entrypoints_list} ${skipped_list} PARENT_SCOPE)
 
-endfunction(get_object_files_for_test)
+endfunction()
 
+function(get_link_options link_options)
+  set(link_opts "")
+  foreach(opt IN LISTS ARGN)
+    if((NOT ${opt} MATCHES "^/D") AND (NOT ${opt} MATCHES "^-D"))
+      list(APPEND link_opts ${opt})
+    endif()
+  endforeach()
+  set(${link_options} "${link_opts}" PARENT_SCOPE)
+endfunction()
 
 # Rule to add a libc unittest.
 # Usage
-#    add_libc_unittest(
+#    create_libc_unittest(
 #      <target name>
 #      SUITE <name of the suite this test belongs to>
 #      SRCS  <list of .cpp files for the test>
 #      HDRS  <list of .h files for the test>
 #      DEPENDS <list of dependencies>
+#      ENV <list of environment variables to set before running the test>
 #      COMPILE_OPTIONS <list of special compile options for this target>
 #      LINK_LIBRARIES <list of linking libraries for this target>
 #    )
@@ -121,27 +265,39 @@ function(create_libc_unittest fq_target_name)
     "LIBC_UNITTEST"
     "NO_RUN_POSTBUILD;C_TEST" # Optional arguments
     "SUITE;CXX_STANDARD" # Single value arguments
-    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS" # Multi-value arguments
     ${ARGN}
   )
   if(NOT LIBC_UNITTEST_SRCS)
-    message(FATAL_ERROR "'add_libc_unittest' target requires a SRCS list of .cpp "
-                        "files.")
+    message(FATAL_ERROR "'create_libc_unittest' target requires a SRCS list of .cpp "
+      "files.")
   endif()
   if(NOT LIBC_UNITTEST_DEPENDS)
-    message(FATAL_ERROR "'add_libc_unittest' target requires a DEPENDS list of "
-                        "'add_entrypoint_object' targets.")
+    message(FATAL_ERROR "'create_libc_unittest' target requires a DEPENDS list of "
+      "'add_entrypoint_object' targets.")
   endif()
 
   get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
-  if(NOT LIBC_UNITTEST_C_TEST)
-    list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
-                             libc.test.UnitTest.ErrnoSetterMatcher)
+  list(APPEND fq_deps_list libc.test.UnitTest.LibcTest)
+  if(LIBC_UNITTEST_C_TEST)
+    list(APPEND fq_deps_list libc.test.UnitTest.LibcCTest)
+  else()
+    list(APPEND fq_deps_list
+      libc.src.__support.StringUtil.error_to_string
+      libc.test.UnitTest.ErrnoSetterMatcher
+      libc.test.UnitTest.LibcDeathTestExecutors
+    )
   endif()
   list(REMOVE_DUPLICATES fq_deps_list)
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
-                                   "${LIBC_UNITTEST_FLAGS}")
+    "${LIBC_UNITTEST_FLAGS}")
+
+  get_link_options(link_options
+    ${compile_options}
+    ${LIBC_LINK_OPTIONS_DEFAULT}
+    ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+  )
   list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS})
 
   if(SHOW_INTERMEDIATE_OBJECTS)
@@ -154,7 +310,7 @@ function(create_libc_unittest fq_target_name)
   endif()
 
   get_object_files_for_test(
-      link_object_files skipped_entrypoints_list ${fq_deps_list})
+    link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
     # If a test is OS/target machine independent, it has to be skipped if the
     # OS/target machine combination does not provide any dependent entrypoints.
@@ -175,7 +331,7 @@ function(create_libc_unittest fq_target_name)
     # is happening here at the entrypoint level.
     if(LIBC_CMAKE_VERBOSE_LOGGING)
       set(msg "Skipping unittest ${fq_target_name} as it has missing deps: "
-              "${skipped_entrypoints_list}.")
+        "${skipped_entrypoints_list}.")
       message(STATUS ${msg})
     endif()
     return()
@@ -195,8 +351,9 @@ function(create_libc_unittest fq_target_name)
   )
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_BUILD_DIR})
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
-  target_link_options(${fq_build_target_name} PRIVATE ${compile_options})
+  target_link_options(${fq_build_target_name} PRIVATE ${link_options})
 
   if(NOT LIBC_UNITTEST_CXX_STANDARD)
     set(LIBC_UNITTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
@@ -209,13 +366,7 @@ function(create_libc_unittest fq_target_name)
 
   set(link_libraries ${link_object_files})
   # Test object files will depend on LINK_LIBRARIES passed down from `add_fp_unittest`
-  foreach(lib IN LISTS LIBC_UNITTEST_LINK_LIBRARIES)
-    if(TARGET ${lib}.unit)
-      list(APPEND link_libraries ${lib}.unit)
-    else()
-      list(APPEND link_libraries ${lib})
-    endif()
-  endforeach()
+  list(APPEND link_libraries ${LIBC_UNITTEST_LINK_LIBRARIES})
 
   set_target_properties(${fq_build_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -225,47 +376,50 @@ function(create_libc_unittest fq_target_name)
     ${fq_deps_list}
   )
 
-  # LibcUnitTest should not depend on anything in LINK_LIBRARIES.
-  if(NOT LIBC_UNITTEST_C_TEST)
-    list(APPEND link_libraries LibcDeathTestExecutors.unit LibcTest.unit)
-  endif()
-
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
 
   if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
     add_custom_target(
       ${fq_target_name}
-      COMMAND ${fq_build_target_name}
+      COMMAND ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name}
       COMMENT "Running unit test ${fq_target_name}"
+      DEPENDS ${fq_build_target_name}
     )
   endif()
 
+  # The SUITE variable can be used to group tests into a custom target.
+  # If a target named ${LIBC_UNITTEST_SUITE}-build exists, we add the
+  # test executable to it as a dependency. This allows building the
+  # test binaries for Lit without triggering their execution.
   if(LIBC_UNITTEST_SUITE)
-    add_dependencies(
-      ${LIBC_UNITTEST_SUITE}
-      ${fq_target_name}
-    )
+    add_dependencies(${LIBC_UNITTEST_SUITE} ${fq_target_name})
+    if(TARGET ${LIBC_UNITTEST_SUITE}-build)
+      add_dependencies(${LIBC_UNITTEST_SUITE}-build ${fq_build_target_name})
+    endif()
   endif()
   add_dependencies(libc-unit-tests ${fq_target_name})
-endfunction(create_libc_unittest)
+  if(TARGET libc-unit-tests-build)
+    add_dependencies(libc-unit-tests-build ${fq_build_target_name})
+  endif()
+endfunction()
 
-function(add_libc_unittest target_name)
+function(_add_libc_unittest target_name)
   add_target_with_flags(
     ${target_name}
     CREATE_TARGET create_libc_unittest
     ${ARGN}
   )
-endfunction(add_libc_unittest)
+endfunction()
 
 function(add_libc_exhaustive_testsuite suite_name)
   add_custom_target(${suite_name})
   add_dependencies(exhaustive-check-libc ${suite_name})
-endfunction(add_libc_exhaustive_testsuite)
+endfunction()
 
 function(add_libc_long_running_testsuite suite_name)
   add_custom_target(${suite_name})
   add_dependencies(libc-long-running-tests ${suite_name})
-endfunction(add_libc_long_running_testsuite)
+endfunction()
 
 # Rule to add a fuzzer test.
 # Usage
@@ -285,11 +439,11 @@ function(add_libc_fuzzer target_name)
   )
   if(NOT LIBC_FUZZER_SRCS)
     message(FATAL_ERROR "'add_libc_fuzzer' target requires a SRCS list of .cpp "
-                        "files.")
+      "files.")
   endif()
   if(NOT LIBC_FUZZER_DEPENDS)
     message(FATAL_ERROR "'add_libc_fuzzer' target requires a DEPENDS list of "
-                        "'add_entrypoint_object' targets.")
+      "'add_entrypoint_object' targets.")
   endif()
 
   list(APPEND LIBC_FUZZER_LINK_LIBRARIES "")
@@ -305,11 +459,11 @@ function(add_libc_fuzzer target_name)
   get_fq_target_name(${target_name} fq_target_name)
   get_fq_deps_list(fq_deps_list ${LIBC_FUZZER_DEPENDS})
   get_object_files_for_test(
-      link_object_files skipped_entrypoints_list ${fq_deps_list})
+    link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
     if(LIBC_CMAKE_VERBOSE_LOGGING)
       set(msg "Skipping fuzzer target ${fq_target_name} as it has missing deps: "
-              "${skipped_entrypoints_list}.")
+        "${skipped_entrypoints_list}.")
       message(STATUS ${msg})
     endif()
     add_custom_target(${fq_target_name})
@@ -338,7 +492,7 @@ function(add_libc_fuzzer target_name)
   )
 
   set_target_properties(${fq_target_name}
-      PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
   add_dependencies(
     ${fq_target_name}
@@ -348,14 +502,14 @@ function(add_libc_fuzzer target_name)
 
   target_compile_options(${fq_target_name}
     PRIVATE
-    ${LIBC_FUZZER_COMPILE_OPTIONS})
+      ${LIBC_FUZZER_COMPILE_OPTIONS})
 
-endfunction(add_libc_fuzzer)
+endfunction()
 
 # Get libgcc_s to be used in hermetic and integration tests.
 if(NOT MSVC AND NOT LIBC_CC_SUPPORTS_NOSTDLIBPP)
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libgcc_s.so.1
-                  OUTPUT_VARIABLE LIBGCC_S_LOCATION)
+    OUTPUT_VARIABLE LIBGCC_S_LOCATION)
   string(STRIP ${LIBGCC_S_LOCATION} LIBGCC_S_LOCATION)
 endif()
 
@@ -410,18 +564,18 @@ function(add_integration_test test_name)
 
   get_fq_deps_list(fq_deps_list ${INTEGRATION_TEST_DEPENDS})
   list(APPEND fq_deps_list
-      # All integration tests use the operating system's startup object with the
-      # integration test object and need to inherit the same dependencies.
-      libc.startup.${LIBC_TARGET_OS}.crt1
-      libc.test.IntegrationTest.test
-      # We always add the memory functions objects. This is because the
-      # compiler's codegen can emit calls to the C memory functions.
-      libc.src.string.memcmp
-      libc.src.string.memcpy
-      libc.src.string.memmove
-      libc.src.string.memset
-      libc.src.strings.bcmp
-      libc.src.strings.bzero
+    # All integration tests use the operating system's startup object with the
+    # integration test object and need to inherit the same dependencies.
+    libc.startup.${LIBC_TARGET_OS}.crt1
+    libc.test.IntegrationTest.test
+    # We always add the memory functions objects. This is because the
+    # compiler's codegen can emit calls to the C memory functions.
+    libc.src.string.memcmp
+    libc.src.string.memcpy
+    libc.src.string.memmove
+    libc.src.string.memset
+    libc.src.strings.bcmp
+    libc.src.strings.bzero
   )
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
@@ -435,11 +589,11 @@ function(add_integration_test test_name)
   # TODO: Instead of gathering internal object files from entrypoints,
   # collect the object files with public names of entrypoints.
   get_object_files_for_test(
-      link_object_files skipped_entrypoints_list ${fq_deps_list})
+    link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
     if(LIBC_CMAKE_VERBOSE_LOGGING)
       set(msg "Skipping integration test ${fq_target_name} as it has missing deps: "
-              "${skipped_entrypoints_list}.")
+        "${skipped_entrypoints_list}.")
       message(STATUS ${msg})
     endif()
     return()
@@ -451,12 +605,12 @@ function(add_integration_test test_name)
     ${fq_target_name}.__libc__
     STATIC
     EXCLUDE_FROM_ALL
-    ${link_object_files}
+      ${link_object_files}
   )
   set_target_properties(${fq_target_name}.__libc__
-      PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   set_target_properties(${fq_target_name}.__libc__
-      PROPERTIES ARCHIVE_OUTPUT_NAME ${fq_target_name}.libc)
+    PROPERTIES ARCHIVE_OUTPUT_NAME ${fq_target_name}.libc)
 
   set(fq_build_target_name ${fq_target_name}.__build__)
   add_executable(
@@ -466,51 +620,61 @@ function(add_integration_test test_name)
     ${INTEGRATION_TEST_HDRS}
   )
   set_target_properties(${fq_build_target_name}
-      PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
 
-  _get_hermetic_test_compile_options(compile_options "")
+  _get_hermetic_test_compile_options(compile_options "" "")
   target_compile_options(${fq_build_target_name} PRIVATE
-                         ${compile_options} ${INTEGRATION_TEST_COMPILE_OPTIONS})
+    ${compile_options} ${INTEGRATION_TEST_COMPILE_OPTIONS})
+
+  set(compiler_runtime "")
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
-      -Wno-multi-gpu -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
-      "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
+      -Wno-multi-gpu -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
       "-Wl,--suppress-stack-size-warning" -Wno-multi-gpu
-      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
       "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
-    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+    set(link_options
+      -nolibc
+      -nostartfiles
+      -nostdlib++
+      -static
+      ${LIBC_LINK_OPTIONS_DEFAULT}
+      ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+    )
+    target_link_options(${fq_build_target_name} PRIVATE ${link_options})
   else()
     # Older version of gcc does not support `nostdlib++` flag.  We use
     # `nostdlib` and link against libgcc_s, which cannot be linked statically.
-    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib)
-    list(APPEND link_libraries ${LIBGCC_S_LOCATION})
+    set(link_options
+      -nolibc
+      -nostartfiles
+      -nostdlib
+      ${LIBC_LINK_OPTIONS_DEFAULT}
+      ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+    )
+    target_link_options(${fq_build_target_name} PRIVATE ${link_options})
+    list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
   target_link_libraries(
     ${fq_build_target_name}
-    ${fq_target_name}.__libc__
     libc.startup.${LIBC_TARGET_OS}.crt1
     libc.test.IntegrationTest.test
+    ${fq_target_name}.__libc__
+    ${compiler_runtime}
   )
   add_dependencies(${fq_build_target_name}
-                   libc.test.IntegrationTest.test
-                   ${INTEGRATION_TEST_DEPENDS})
-
-  # Tests on the GPU require an external loader utility to launch the kernel.
-  if(TARGET libc.utils.gpu.loader)
-    add_dependencies(${fq_build_target_name} libc.utils.gpu.loader)
-    get_target_property(gpu_loader_exe libc.utils.gpu.loader "EXECUTABLE")
-  endif()
+    libc.test.IntegrationTest.test
+    ${INTEGRATION_TEST_DEPENDS})
 
   # We have to use a separate var to store the command as a list because
   # the COMMAND option of `add_custom_target` cannot handle empty vars in the
@@ -519,19 +683,54 @@ function(add_integration_test test_name)
   # to expand the list (by including the option COMMAND_EXPAND_LISTS). This
   # makes `add_custom_target` construct the correct command and execute it.
   set(test_cmd
-      ${INTEGRATION_TEST_ENV}
-      $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}>
-      ${CMAKE_CROSSCOMPILING_EMULATOR}
-      ${INTEGRATION_TEST_LOADER_ARGS}
-      $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
+    ${INTEGRATION_TEST_ENV}
+    $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
+    ${CMAKE_CROSSCOMPILING_EMULATOR}
+    ${INTEGRATION_TEST_LOADER_ARGS}
+    $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
+  # Generate a sidecar .params file alongside the executable for any test that
+  # requires specific command-line arguments or environment variables.  The
+  # LibcTest lit format reads this file at test time.  Format: one arg per line,
+  # a "---" separator, then one KEY=VALUE env entry per line.
+  set(_params_content "")
+  foreach(_arg IN LISTS INTEGRATION_TEST_LOADER_ARGS)
+    string(APPEND _params_content "${_arg}\n")
+  endforeach()
+  string(APPEND _params_content "---\n")
+  foreach(_arg IN LISTS INTEGRATION_TEST_ARGS)
+    string(APPEND _params_content "${_arg}\n")
+  endforeach()
+  string(APPEND _params_content "---\n")
+  foreach(_env_entry IN LISTS INTEGRATION_TEST_ENV)
+    string(APPEND _params_content "${_env_entry}\n")
+  endforeach()
+
+  if(INTEGRATION_TEST_LOADER_ARGS OR INTEGRATION_TEST_ARGS OR INTEGRATION_TEST_ENV)
+    file(GENERATE
+      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name}.params"
+      CONTENT "${_params_content}"
+    )
+  endif()
+
   add_custom_target(
     ${fq_target_name}
     COMMAND ${test_cmd}
     COMMAND_EXPAND_LISTS
     COMMENT "Running integration test ${fq_target_name}"
   )
-  add_dependencies(${INTEGRATION_TEST_SUITE} ${fq_target_name})
-endfunction(add_integration_test)
+  if(INTEGRATION_TEST_SUITE)
+    add_dependencies(${INTEGRATION_TEST_SUITE} ${fq_target_name})
+    # If a target named ${INTEGRATION_TEST_SUITE}-build exists, we add the
+    # test executable to it as a dependency. This allows building the
+    # test binaries for Lit without triggering their execution.
+    if(TARGET ${INTEGRATION_TEST_SUITE}-build)
+      add_dependencies(${INTEGRATION_TEST_SUITE}-build ${fq_build_target_name})
+    endif()
+  endif()
+  if(TARGET libc-integration-tests-build)
+    add_dependencies(libc-integration-tests-build ${fq_build_target_name})
+  endif()
+endfunction()
 
 # Rule to add a hermetic program. A hermetic program is one whose executable is fully
 # statically linked and consists of pieces drawn only from LLVM's libc. Nothing,
@@ -560,9 +759,9 @@ function(add_libc_hermetic test_name)
   endif()
   cmake_parse_arguments(
     "HERMETIC_TEST"
-    "IS_GPU_BENCHMARK" # Optional arguments
-    "SUITE" # Single value arguments
-    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
+    "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD;C_TEST" # Optional arguments
+    "SUITE;CXX_STANDARD" # Single value arguments
+    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
   )
 
@@ -578,19 +777,46 @@ function(add_libc_hermetic test_name)
 
   get_fq_deps_list(fq_deps_list ${HERMETIC_TEST_DEPENDS})
   list(APPEND fq_deps_list
-      # Hermetic tests use the platform's startup object. So, their deps also
-      # have to be collected.
-      libc.startup.${LIBC_TARGET_OS}.crt1
-      # We always add the memory functions objects. This is because the
-      # compiler's codegen can emit calls to the C memory functions.
-      libc.src.__support.StringUtil.error_to_string
-      libc.src.string.memcmp
-      libc.src.string.memcpy
-      libc.src.string.memmove
-      libc.src.string.memset
-      libc.src.strings.bcmp
-      libc.src.strings.bzero
+    # Hermetic tests use the platform's startup object. So, their deps also
+    # have to be collected.
+    libc.startup.${LIBC_TARGET_OS}.crt1
+    # We always add the memory functions objects. This is because the
+    # compiler's codegen can emit calls to the C memory functions.
+    libc.src.__support.StringUtil.error_to_string
+    libc.src.string.memcmp
+    libc.src.string.memcpy
+    libc.src.string.memmove
+    libc.src.string.memset
+    libc.src.strings.bcmp
+    libc.src.strings.bzero
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.test.UnitTest.LibcTest
+    libc.test.UnitTest.HermeticTestUtils
   )
+  if(HERMETIC_TEST_C_TEST)
+    list(APPEND fq_deps_list libc.test.UnitTest.LibcCTest)
+  endif()
+  if(LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
+    list(APPEND fq_deps_list libc.src.sys.auxv.getauxval)
+  endif()
+
+  # Syscalls used by death tests.
+  if(LIBC_TEST_SUBPROCESS_TESTS AND NOT HERMETIC_TEST_C_TEST)
+    list(APPEND fq_deps_list
+      libc.test.UnitTest.LibcDeathTestExecutors
+      libc.src.poll.poll
+      libc.src.signal.kill
+      libc.src.stdio.fflush
+      libc.src.stdio.stderr
+      libc.src.stdio.stdout
+      libc.src.stdlib.exit
+      libc.src.string.strsignal
+      libc.src.sys.wait.waitpid
+      libc.src.unistd.close
+      libc.src.unistd.fork
+      libc.src.unistd.pipe
+    )
+  endif()
 
   if(libc.src.compiler.__stack_chk_fail IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     # __stack_chk_fail should always be included if supported to allow building
@@ -603,169 +829,282 @@ function(add_libc_hermetic test_name)
     list(APPEND fq_deps_list libc.src.time.clock)
   endif()
 
+  if(LIBC_ENABLE_COVERAGE)
+     set(coverage_deps
+      libc.src.stdio.fclose
+      libc.src.stdio.fdopen
+      libc.src.stdio.feof
+      libc.src.stdio.fflush
+      libc.src.stdio.fileno
+      libc.src.stdio.fopen
+      libc.src.stdio.fprintf
+      libc.src.stdio.fread
+      libc.src.stdio.fseek
+      libc.src.stdio.ftell
+      libc.src.stdio.fwrite
+      libc.src.stdio.snprintf
+      libc.src.stdio.stderr
+      libc.src.stdio.vfprintf
+      libc.src.stdio.vsnprintf
+      libc.src.fcntl.fcntl
+      libc.src.fcntl.open
+      libc.src.stdlib.getenv
+      libc.src.stdlib.setenv
+      libc.src.stdlib.strtol
+      libc.src.string.strchr
+      libc.src.string.strcmp
+      libc.src.string.strdup
+      libc.src.string.strerror
+      libc.src.string.strlen
+      libc.src.string.strncpy
+      libc.src.string.strrchr
+      libc.src.sys.mman.madvise
+      libc.src.sys.mman.mmap
+      libc.src.sys.mman.munmap
+      libc.src.sys.prctl.prctl
+      libc.src.sys.stat.mkdir
+      libc.src.sys.utsname.uname
+      libc.src.unistd.fork
+      libc.src.unistd.ftruncate
+      libc.src.unistd.getpagesize
+      libc.src.unistd.getpid
+    )
+    list(APPEND fq_deps_list ${coverage_deps})
+  endif()
+
   list(REMOVE_DUPLICATES fq_deps_list)
 
   # TODO: Instead of gathering internal object files from entrypoints,
   # collect the object files with public names of entrypoints.
   get_object_files_for_test(
-      link_object_files skipped_entrypoints_list ${fq_deps_list})
+    link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
     if(LIBC_CMAKE_VERBOSE_LOGGING)
       set(msg "Skipping hermetic test ${fq_target_name} as it has missing deps: "
-              "${skipped_entrypoints_list}.")
+        "${skipped_entrypoints_list}.")
       message(STATUS ${msg})
     endif()
     return()
   endif()
   list(REMOVE_DUPLICATES link_object_files)
 
+  if(LIBC_ENABLE_COVERAGE)
+    foreach(cov_dep IN LISTS coverage_deps)
+      get_target_property(is_alias ${cov_dep} "IS_ALIAS")
+      if(is_alias)
+        get_target_property(real_target ${cov_dep} "DEPS")
+      else()
+        set(real_target ${cov_dep})
+      endif()
+      string(REPLACE "${real_target}.__internal__" "${real_target}" link_object_files "${link_object_files}")
+    endforeach()
+  endif()
+
   # Make a library of all deps
   add_library(
     ${fq_target_name}.__libc__
     STATIC
     EXCLUDE_FROM_ALL
-    ${link_object_files}
+      ${link_object_files}
   )
   set_target_properties(${fq_target_name}.__libc__
-      PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   set_target_properties(${fq_target_name}.__libc__
-      PROPERTIES ARCHIVE_OUTPUT_NAME ${fq_target_name}.libc)
+    PROPERTIES ARCHIVE_OUTPUT_NAME ${fq_target_name}.libc)
 
-  set(fq_build_target_name ${fq_target_name}.__build__)
+  if(HERMETIC_TEST_NO_RUN_POSTBUILD)
+    set(fq_build_target_name ${fq_target_name})
+  else()
+    set(fq_build_target_name ${fq_target_name}.__build__)
+  endif()
+
   add_executable(
     ${fq_build_target_name}
     EXCLUDE_FROM_ALL
     ${HERMETIC_TEST_SRCS}
     ${HERMETIC_TEST_HDRS}
   )
+
+  if(NOT HERMETIC_TEST_CXX_STANDARD)
+    set(HERMETIC_TEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
+  endif()
   set_target_properties(${fq_build_target_name}
     PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      #OUTPUT_NAME ${fq_target_name}
+      CXX_STANDARD ${HERMETIC_TEST_CXX_STANDARD}
   )
 
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  _get_hermetic_test_compile_options(compile_options "")
+  _get_hermetic_test_compile_options(compile_options "${HERMETIC_TEST_C_TEST}"
+    "${HERMETIC_TEST_FLAGS}")
   target_compile_options(${fq_build_target_name} PRIVATE
-                         ${compile_options}
-                         ${HERMETIC_TEST_COMPILE_OPTIONS})
+    ${compile_options}
+    ${HERMETIC_TEST_COMPILE_OPTIONS})
 
-  set(link_libraries "")
-  foreach(lib IN LISTS HERMETIC_TEST_LINK_LIBRARIES)
-    if(TARGET ${lib}.hermetic)
-      list(APPEND link_libraries ${lib}.hermetic)
-    else()
-      list(APPEND link_libraries ${lib})
-    endif()
-  endforeach()
+  set(compiler_runtime "")
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
-      -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
-      "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
+      -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       "-Wl,--suppress-stack-size-warning"
-      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
       "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
-    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+    set(link_options
+      -nolibc
+      -nostartfiles
+      -nostdlib++
+      -static
+      ${LIBC_LINK_OPTIONS_DEFAULT}
+      ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+    )
+    if(LIBC_ENABLE_COVERAGE)
+      list(APPEND link_options
+        -noprofilelib
+        -u__llvm_profile_runtime
+      )
+    endif()
+    target_link_options(${fq_build_target_name} PRIVATE ${link_options})
   else()
     # Older version of gcc does not support `nostdlib++` flag.  We use
     # `nostdlib` and link against libgcc_s, which cannot be linked statically.
-    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib)
-    list(APPEND link_libraries ${LIBGCC_S_LOCATION})
+    set(link_options
+      -nolibc
+      -nostartfiles
+      -nostdlib
+      ${LIBC_LINK_OPTIONS_DEFAULT}
+      ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+    )
+    if(LIBC_ENABLE_COVERAGE)
+      list(APPEND link_options
+        -noprofilelib
+        -u__llvm_profile_runtime
+      )
+    endif()
+    target_link_options(${fq_build_target_name} PRIVATE ${link_options})
+    list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
+
+  set(coverage_link_libs "")
+  if(LIBC_ENABLE_COVERAGE)
+    set(coverage_link_libs
+      "${LIBC_CLANG_PROFILE_LIB}"
+       ${fq_target_name}.__libc__
+    )
+  endif()
+
   target_link_libraries(
     ${fq_build_target_name}
     PRIVATE
       libc.startup.${LIBC_TARGET_OS}.crt1
-      ${link_libraries}
-      LibcHermeticTestSupport.hermetic
-      ${fq_target_name}.__libc__)
-  add_dependencies(${fq_build_target_name}
-                   LibcTest.hermetic
-                   libc.test.UnitTest.ErrnoSetterMatcher
-                   ${fq_deps_list})
-  # TODO: currently the dependency chain is broken such that getauxval cannot properly
-  # propagate to hermetic tests. This is a temporary workaround.
-  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
-    target_link_libraries(
-      ${fq_build_target_name}
-      PRIVATE
-        libc.src.sys.auxv.getauxval
+      ${HERMETIC_TEST_LINK_LIBRARIES}
+      ${fq_target_name}.__libc__
+      ${coverage_link_libs}
+      ${compiler_runtime}
+  )
+  add_dependencies(${fq_build_target_name} ${fq_deps_list})
+
+  if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
+    if(LIBC_TEST_CMD)
+      # In the form of "<command> binary=@BINARY@", e.g. "qemu-system-arm -loader$<COMMA>file=@BINARY@"
+      string(REPLACE "@BINARY@" "$<TARGET_FILE:${fq_build_target_name}>" test_cmd_parsed ${LIBC_TEST_CMD})
+      string(REPLACE " " ";" test_cmd "${test_cmd_parsed}")
+    else()
+      set(test_cmd ${HERMETIC_TEST_ENV}
+        $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
+        ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
+        $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
+    endif()
+
+    set(_params_content "")
+    foreach(_arg IN LISTS HERMETIC_TEST_LOADER_ARGS)
+      string(APPEND _params_content "${_arg}\n")
+    endforeach()
+    string(APPEND _params_content "---\n")
+    foreach(_arg IN LISTS HERMETIC_TEST_ARGS)
+      string(APPEND _params_content "${_arg}\n")
+    endforeach()
+    string(APPEND _params_content "---\n")
+    foreach(_env_entry IN LISTS HERMETIC_TEST_ENV)
+      string(APPEND _params_content "${_env_entry}\n")
+    endforeach()
+    if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+      string(APPEND _params_content "LIBOMPTARGET_STACK_SIZE=3072\n")
+    endif()
+
+    if(HERMETIC_TEST_LOADER_ARGS OR HERMETIC_TEST_ARGS OR HERMETIC_TEST_ENV OR LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+      file(GENERATE
+        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${fq_build_target_name}.params"
+        CONTENT "${_params_content}"
+      )
+    endif()
+
+    add_custom_target(
+      ${fq_target_name}
+      DEPENDS ${fq_target_name}.__cmd__
+    )
+
+    add_custom_command(
+      OUTPUT ${fq_target_name}.__cmd__
+      COMMAND ${test_cmd}
+      COMMAND_EXPAND_LISTS
+      COMMENT "Running hermetic test ${fq_target_name}"
+      ${LIBC_HERMETIC_TEST_JOB_POOL}
+    )
+
+    set_source_files_properties(${fq_target_name}.__cmd__
+      PROPERTIES
+        SYMBOLIC "TRUE"
     )
   endif()
-
-  # Tests on the GPU require an external loader utility to launch the kernel.
-  if(TARGET libc.utils.gpu.loader)
-    add_dependencies(${fq_build_target_name} libc.utils.gpu.loader)
-    get_target_property(gpu_loader_exe libc.utils.gpu.loader "EXECUTABLE")
-  endif()
-
-  set(test_cmd ${HERMETIC_TEST_ENV}
-      $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
-      $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
-  add_custom_target(
-    ${fq_target_name}
-    DEPENDS ${fq_target_name}-cmd
-  )
-
-  add_custom_command(
-    OUTPUT ${fq_target_name}-cmd
-    COMMAND ${test_cmd}
-    COMMAND_EXPAND_LISTS
-    COMMENT "Running hermetic test ${fq_target_name}"
-    ${LIBC_HERMETIC_TEST_JOB_POOL}
-  )
-
-  set_source_files_properties(${fq_target_name}-cmd
-    PROPERTIES
-      SYMBOLIC "TRUE"
-  )
 
   add_dependencies(${HERMETIC_TEST_SUITE} ${fq_target_name})
   if(NOT ${HERMETIC_TEST_IS_GPU_BENCHMARK})
     # If it is a benchmark, it will already have been added to the
     # gpu-benchmark target
     add_dependencies(libc-hermetic-tests ${fq_target_name})
+    if(LIBC_HERMETIC_TEST_SUITE)
+      add_dependencies(${LIBC_HERMETIC_TEST_SUITE} ${fq_target_name})
+      # If a target named ${LIBC_HERMETIC_TEST_SUITE}-build exists, we add the
+      # test executable to it as a dependency. This allows building the
+      # test binaries for Lit without triggering their execution.
+      if(TARGET ${LIBC_HERMETIC_TEST_SUITE}-build)
+        add_dependencies(${LIBC_HERMETIC_TEST_SUITE}-build ${fq_build_target_name})
+      endif()
+    endif()
+    if(TARGET libc-hermetic-tests-build)
+      add_dependencies(libc-hermetic-tests-build ${fq_build_target_name})
+    endif()
   endif()
-endfunction(add_libc_hermetic)
+endfunction()
 
 # A convenience function to add both a unit test as well as a hermetic test.
 function(add_libc_test test_name)
   cmake_parse_arguments(
     "LIBC_TEST"
-    "UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
+    "FULL_BUILD_ONLY;OVERLAY_BUILD_ONLY" # Optional arguments
     "" # Single value arguments
     "" # Multi-value arguments
     ${ARGN}
   )
-  if(LIBC_ENABLE_UNITTESTS AND NOT LIBC_TEST_HERMETIC_TEST_ONLY)
-    add_libc_unittest(${test_name}.__unit__ ${LIBC_TEST_UNPARSED_ARGUMENTS})
-  endif()
-  if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
-    add_libc_hermetic(
-      ${test_name}.__hermetic__
-      LINK_LIBRARIES
-        LibcTest.hermetic
-      ${LIBC_TEST_UNPARSED_ARGUMENTS}
-    )
-    get_fq_target_name(${test_name} fq_test_name)
-    if(TARGET ${fq_test_name}.__hermetic__ AND TARGET ${fq_test_name}.__unit__)
-      # Tests like the file tests perform file operations on disk file. If we
-      # don't chain up the unit test and hermetic test, then those tests will
-      # step on each other's files.
-      add_dependencies(${fq_test_name}.__hermetic__ ${fq_test_name}.__unit__)
+  if(LLVM_LIBC_FULL_BUILD)
+    if(NOT LIBC_TEST_OVERLAY_BUILD_ONLY)
+      add_libc_hermetic(${test_name} ${LIBC_TEST_UNPARSED_ARGUMENTS})
+    endif()
+  else()
+    # Overlay mode
+    if(NOT LIBC_TEST_FULL_BUILD_ONLY)
+      _add_libc_unittest(${test_name} ${LIBC_TEST_UNPARSED_ARGUMENTS})
     endif()
   endif()
-endfunction(add_libc_test)
+endfunction()
 
 # Tests all implementations that can run on the target CPU.
 function(add_libc_multi_impl_test name suite)
@@ -783,12 +1122,11 @@ function(add_libc_multi_impl_test name suite)
           ${suite}
         COMPILE_OPTIONS
           ${LIBC_COMPILE_OPTIONS_NATIVE}
-        LINK_LIBRARIES
-          LibcMemoryHelpers
         ${ARGN}
         DEPENDS
           ${fq_config_name}
           libc.src.__support.macros.sanitizer
+          libc.test.UnitTest.MemoryMatcher
       )
       get_fq_target_name(${fq_config_name}_test fq_target_name)
     else()

@@ -232,7 +232,7 @@ namespace ParameterScopes {
 
   const int k = 42;
   constexpr const int &ObscureTheTruth(const int &a) { return a; }
-  constexpr const int &MaybeReturnJunk(bool b, const int a) {
+  constexpr const int &MaybeReturnJunk(bool b, const int a) { // expected-note 2{{declared here}}
     return ObscureTheTruth(b ? a : k);
   }
   static_assert(MaybeReturnJunk(false, 0) == 42, ""); // ok
@@ -409,6 +409,10 @@ constexpr int a = 0;
 constexpr int b = 1;
 constexpr int n = &b - &a; // expected-error {{must be initialized by a constant expression}} \
                            // expected-note {{arithmetic involving unrelated objects '&b' and '&a' has unspecified value}}
+constexpr static int arrk[2] = {1,2};
+constexpr static int arrk2[2] = {3,4};
+constexpr int k2 = &arrk[1] - &arrk2[0]; // expected-error {{must be initialized by a constant expression}} \
+                                         // expected-note {{arithmetic involving unrelated objects}}
 
 namespace MaterializeTemporary {
 
@@ -690,7 +694,8 @@ static_assert(selfref[1][0][1] == 3, "");
 static_assert(selfref[1][1][0] == 0, "");
 static_assert(selfref[1][1][1] == 0, "");
 
-constexpr int badselfref[2][2][2] = { // expected-error {{constant expression}}
+constexpr int badselfref[2][2][2] = { // expected-error {{constant expression}} \
+                                      // expected-note {{declared here}}
   badselfref[1][0][0] // expected-note {{outside its lifetime}}
 };
 
@@ -1374,7 +1379,7 @@ namespace ExternConstexpr {
     constexpr int k; // expected-error {{constexpr variable 'k' must be initialized by a constant expression}}
   }
 
-  extern const int q;
+  extern const int q; // expected-note {{declared here}}
   constexpr int g() { return q; } // expected-note {{outside its lifetime}}
   constexpr int q = g(); // expected-error {{constant expression}} expected-note {{in call}}
 
@@ -1382,7 +1387,7 @@ namespace ExternConstexpr {
   constexpr int h() { return r; } // cxx11_20-error {{never produces a constant}} cxx11_20-note {{read of non-const}}
 
   struct S { int n; };
-  extern const S s;
+  extern const S s; // expected-note {{declared here}}
   constexpr int x() { return s.n; } // expected-note {{outside its lifetime}}
   constexpr S s = {x()}; // expected-error {{constant expression}} expected-note {{in call}}
 }
@@ -1409,8 +1414,8 @@ namespace ComplexConstexpr {
   static_assert(t2p[2] == 0.0, ""); // expected-error {{constant expr}} expected-note {{one-past-the-end pointer}}
   static_assert(t2p[3] == 0.0, ""); // expected-error {{constant expr}} expected-note {{cannot refer to element 3 of array of 2 elements}}
   constexpr _Complex float *p = 0; // expected-warning {{'_Complex' is a C99 extension}}
-  constexpr float pr = __real *p; // expected-error {{constant expr}} expected-note {{cannot access real component of null}}
-  constexpr float pi = __imag *p; // expected-error {{constant expr}} expected-note {{cannot access imaginary component of null}}
+  constexpr float pr = __real *p; // expected-error {{constant expr}} expected-note {{dereferencing a null pointer}}
+  constexpr float pi = __imag *p; // expected-error {{constant expr}} expected-note {{dereferencing a null pointer}}
   constexpr const _Complex double *q = &test3 + 1; // expected-warning {{'_Complex' is a C99 extension}}
   constexpr double qr = __real *q; // expected-error {{constant expr}} expected-note {{cannot access real component of pointer past the end}}
   constexpr double qi = __imag *q; // expected-error {{constant expr}} expected-note {{cannot access imaginary component of pointer past the end}}
@@ -1471,9 +1476,9 @@ namespace ConvertedConstantExpr {
   // useless note and instead just point to the non-constant subexpression.
   enum class E {
     em = m,
-    en = n, // expected-error {{not a constant expression}} expected-note {{initializer of 'n' is unknown}}
+    en = n, // expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}} cxx23-note {{read of non-constexpr variable 'n'}}
     eo = (m + // expected-error {{not a constant expression}}
-          n // expected-note {{initializer of 'n' is unknown}}
+          n // cxx11_20-note {{initializer of 'n' is unknown}} cxx23-note {{read of non-constexpr variable 'n'}}
           ),
     eq = reinterpret_cast<long>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
   };
@@ -1884,10 +1889,11 @@ namespace PR15884 {
 }
 
 namespace AfterError {
-  constexpr int error() {
+  constexpr int error() { // pre-cxx23-error {{no return statement in constexpr function}}
     return foobar; // expected-error {{undeclared identifier}}
-  }
-  constexpr int k = error(); // expected-error {{constexpr variable 'k' must be initialized by a constant expression}}
+  } // cxx23-note {{control reached end of constexpr function}}
+  constexpr int k = error(); // cxx23-error {{constexpr variable 'k' must be initialized by a constant expression}} \
+                                cxx23-note {{in call to 'error()'}}
 }
 
 namespace std {
@@ -1937,6 +1943,81 @@ namespace InitializerList {
     constexpr std::initializer_list<float> il = {1.0, 2.0, 3.0};
     static_assert(il.begin()[1] == 2.0, "");
   }
+}
+
+namespace ConstexprForRangeVar {
+  void invalid() {
+    for (constexpr auto x : {1, 2, 3}) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} expected-note-re {{read of implicit variable '__begin{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
+  }
+
+  struct S {
+    struct iterator {
+      constexpr iterator operator++() const { return {}; }
+      constexpr bool operator!=(const iterator &) const { return false; }
+      constexpr int operator*() const { return 42; }
+    };
+    static constexpr iterator begin() { return iterator(); }
+    static constexpr iterator end() { return iterator(); }
+  };
+
+  template <int x> constexpr int g() { return x; }
+
+  void valid() {
+    for (constexpr int x : S()) {
+      static_assert(x == 42, "");
+      static_assert(g<x>() == 42, "");
+    }
+  }
+
+  struct T {
+    struct iterator {
+      int n;
+      constexpr iterator operator++() const { return {n + 1}; }
+      constexpr bool operator!=(const iterator &o) const { return n != o.n; }
+      constexpr int operator*() const { return n; } // #member-read
+    };
+    static constexpr iterator begin() { return {0}; }
+    static constexpr iterator end() { return {3}; }
+  };
+
+  void member_read() {
+    for (constexpr int x : T()) {} // expected-error {{constexpr variable 'x' must be initialized by a constant expression}} \
+                                   // expected-note-re {{in call to '__begin{{[0-9]+}}.operator*()'}} \
+                                   // expected-note-re@#member-read {{read of implicit variable '__begin{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
+  }
+
+#if __cplusplus >= 202002L
+  struct Sentinel {
+    struct iterator {
+      friend consteval bool operator!=(const iterator &, const iterator &end) { return end.b; } // #sentinel-read
+      int operator*();
+      void operator++();
+      bool b;
+    };
+    iterator begin();
+    iterator end();
+  };
+
+  void end_var() {
+    Sentinel s = {};
+    for (int n : s) {} // cxx20_23-error-re {{call to consteval function '{{.*}}operator!=' is not a constant expression}} \
+                       // cxx20_23-note-re {{in call to '{{.*}}operator!=({{.*}})'}} \
+                       // cxx20_23-note-re@#sentinel-read {{read of implicit variable '__end{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
+  }
+#endif
+
+#if __cplusplus >= 202302L
+  struct ByValueBegin { int *p; };
+  consteval int *begin(ByValueBegin r) { return r.p; }
+  int *end(ByValueBegin r);
+
+  void range_var() {
+    ByValueBegin r = {nullptr};
+    for (int n : r) {} // cxx23-error-re {{call to consteval function '{{.*}}begin' is not a constant expression}} \
+                       // cxx23-note-re {{in call to 'ByValueBegin(__range{{[0-9]+}})'}} \
+                       // cxx23-note-re {{read of implicit variable '__range{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}
+  }
+#endif
 }
 
 namespace StmtExpr {
@@ -2007,8 +2088,11 @@ namespace ConstexprConstructorRecovery {
 
 namespace Lifetime {
   void f() {
-    constexpr int &n = n; // expected-error {{constant expression}} expected-note {{use of reference outside its lifetime}} expected-warning {{not yet bound to a value}}
-    constexpr int m = m; // expected-error {{constant expression}} expected-note {{read of object outside its lifetime}}
+    constexpr int &n = n; // expected-error {{constant expression}} cxx23-note {{reference to 'n' is not a constant expression}} cxx23-note {{address of non-static constexpr variable 'n' may differ}} expected-warning {{not yet bound to a value}}
+                          // cxx11_20-note@-1 {{use of reference outside its lifetime is not allowed in a constant expression}}
+    constexpr int m = m; // expected-error {{constant expression}} \
+                         // expected-note {{read of object outside its lifetime}} \
+                         // expected-note {{declared here}}
   }
 
   constexpr int &get(int &&n) { return n; }
@@ -2018,8 +2102,10 @@ namespace Lifetime {
     int &&r;
     int &s;
     int t;
-    constexpr S() : r(get_rv(0)), s(get(0)), t(r) {} // cxx11_20-note {{read of object outside its lifetime}}
-    constexpr S(int) : r(get_rv(0)), s(get(0)), t(s) {} // cxx11_20-note {{read of object outside its lifetime}}
+    constexpr S() : r(get_rv(0)), s(get(0)), t(r) {} // cxx11_20-note {{read of object outside its lifetime}} \
+                                                     // cxx11_20-note {{temporary created here}}
+    constexpr S(int) : r(get_rv(0)), s(get(0)), t(s) {} // cxx11_20-note {{read of object outside its lifetime}} \
+                                                        // cxx11_20-note {{temporary created here}}
   };
   constexpr int k1 = S().t; // expected-error {{constant expression}} cxx11_20-note {{in call}}
   constexpr int k2 = S(0).t; // expected-error {{constant expression}} cxx11_20-note {{in call}}
@@ -2028,7 +2114,8 @@ namespace Lifetime {
     int n = 0;
     constexpr int f() const { return 0; }
   };
-  constexpr Q *out_of_lifetime(Q q) { return &q; } // expected-warning {{address of stack}}
+  constexpr Q *out_of_lifetime(Q q) { return &q; } // expected-warning {{address of stack}} \
+                                                   // expected-note 2{{declared here}}
   constexpr int k3 = out_of_lifetime({})->n; // expected-error {{constant expression}} expected-note {{read of object outside its lifetime}}
   constexpr int k4 = out_of_lifetime({})->f(); // expected-error {{constant expression}} expected-note {{member call on object outside its lifetime}}
 
@@ -2064,9 +2151,14 @@ namespace Lifetime {
     int a = b.f(); // expected-warning {{uninitialized}} expected-note 2{{member call on object outside its lifetime}}
     Inner b;
   };
-  constexpr R r; // expected-error {{constant expression}} expected-note {{in call}} expected-note {{implicit default constructor for 'Lifetime::R' first required here}}
+  constexpr R r; // expected-error {{constant expression}} \
+                 // expected-note {{in call}} \
+                 // expected-note {{implicit default constructor for 'Lifetime::R' first required here}} \
+                 // expected-note {{declared here}}
   void rf() {
-    constexpr R r; // expected-error {{constant expression}} expected-note {{in call}}
+    constexpr R r; // expected-error {{constant expression}} \
+                   // expected-note {{in call}} \
+                   // expected-note {{declared here}}
   }
 }
 
@@ -2198,6 +2290,8 @@ namespace BuiltinStrlen {
   static_assert(__builtin_strlen("foo") == 3, "");
   static_assert(__builtin_strlen("foo\0quux") == 3, "");
   static_assert(__builtin_strlen("foo\0quux" + 4) == 4, "");
+  static_assert(__builtin_strlen("foo") + 1 + "foo" == "foo", ""); // expected-error {{static assertion expression is not an integral constant expression}}
+  // expected-note@-1 {{comparison against pointer '&"foo"[4]' that points past the end of a complete object has unspecified value}}
 
   constexpr bool check(const char *p) {
     return __builtin_strlen(p) == 3 &&
@@ -2427,15 +2521,15 @@ namespace array_size {
   template<typename T> void f1(T t) {
     constexpr int k = t.size();
   }
-  template<typename T> void f2(const T &t) { // expected-note 2{{declared here}}
-    constexpr int k = t.size(); // expected-error 2{{constant}} expected-note 2{{function parameter 't' with unknown value cannot be used in a constant expression}}
+  template<typename T> void f2(const T &t) { // cxx11_20-note 2{{declared here}}
+    constexpr int k = t.size();  // cxx11_20-error 2{{constexpr variable 'k' must be initialized by a constant expression}} cxx11_20-note 2{{function parameter 't' with unknown value cannot be used in a constant expression}}
   }
   template<typename T> void f3(const T &t) {
     constexpr int k = T::size();
   }
   void g(array<3> a) {
     f1(a);
-    f2(a); // expected-note {{instantiation of}}
+    f2(a); // cxx11_20-note {{in instantiation of function template}}
     f3(a);
   }
 
@@ -2444,8 +2538,9 @@ namespace array_size {
   };
   void h(array_nonstatic<3> a) {
     f1(a);
-    f2(a); // expected-note {{instantiation of}}
+    f2(a); // cxx11_20-note {{instantiation of}}
   }
+  //static_assert(f2(array_size::array<3>{}));
 }
 
 namespace flexible_array {
@@ -2505,6 +2600,9 @@ void testValueInRangeOfEnumerationValues() {
   // expected-error@-1 {{constexpr variable 'x2' must be initialized by a constant expression}}
   // expected-note@-2 {{integer value 8 is outside the valid range of values [-8, 7] for the enumeration type 'E1'}}
   E1 x2b = static_cast<E1>(8); // ok, not a constant expression context
+  static_assert(static_cast<E1>(8), "");
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+  // expected-note@-2 {{integer value 8 is outside the valid range of values [-8, 7] for the enumeration type 'E1'}}
 
   constexpr E2 x3 = static_cast<E2>(-8);
   // expected-error@-1 {{constexpr variable 'x3' must be initialized by a constant expression}}
@@ -2543,6 +2641,10 @@ void testValueInRangeOfEnumerationValues() {
   // expected-note@-2 {{integer value 2147483648 is outside the valid range of values [-2147483648, 2147483647] for the enumeration type 'EMaxInt'}}
 
   const NumberType neg_one = (NumberType) ((NumberType) 0 - (NumberType) 1); // ok, not a constant expression context
+  constexpr NumberType neg_one_constexpr = neg_one;
+  // expected-error@-1 {{constexpr variable 'neg_one_constexpr' must be initialized by a constant expression}}
+  // expected-note@-2 {{initializer of 'neg_one' is not a constant expression}}
+  // expected-note@-4 {{declared here}}
 
   CONSTEXPR_CAST_TO_SYSTEM_ENUM_OUTSIDE_OF_RANGE;
   // expected-error@-1 {{constexpr variable 'system_enum' must be initialized by a constant expression}}
@@ -2589,4 +2691,59 @@ struct S {
 void foo() {
   constexpr S s[2] = { }; // expected-error {{constexpr variable 's' must be initialized by a constant expression}}
 }
+}
+
+namespace DoubleCapture {
+  int DC() {
+  int a = 1000;
+    static auto f =
+      [a, &a] { // expected-error {{'a' can appear only once in a capture list}}
+    };
+  }
+}
+
+namespace GH150709 {
+  struct C { };
+  struct D : C {
+    constexpr int f() const { return 1; };
+  };
+  struct E : C { };
+  struct F : D { };
+  struct G : E { };
+  
+  constexpr C c1, c2[2];
+  constexpr D d1, d2[2];
+  constexpr E e1, e2[2];
+  constexpr F f;
+  constexpr G g;
+
+  constexpr auto mp = static_cast<int (C::*)() const>(&D::f);
+
+  // sanity checks for fix of GH150709 (unchanged behavior)
+  static_assert((c1.*mp)() == 1, ""); // expected-error {{constant expression}}
+  static_assert((d1.*mp)() == 1, "");
+  static_assert((f.*mp)() == 1, "");
+  static_assert((c2[0].*mp)() == 1, ""); // expected-error {{constant expression}}
+  static_assert((d2[0].*mp)() == 1, "");
+
+  // incorrectly undiagnosed before fix of GH150709
+  static_assert((e1.*mp)() == 1, ""); // expected-error {{constant expression}}
+  static_assert((e2[0].*mp)() == 1, ""); // expected-error {{constant expression}}
+  static_assert((g.*mp)() == 1, ""); // expected-error {{constant expression}}
+}
+
+namespace GH154567 {
+  struct T {
+    int i;
+  };
+
+  struct S {
+    struct { // expected-warning {{GNU extension}}
+      T val;
+    };
+    constexpr S() : val() {}
+  };
+
+  constexpr S s{};
+  static_assert(s.val.i == 0, "");
 }

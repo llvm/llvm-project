@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Module.h"
 
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Expression/ObjectFileJIT.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -99,6 +100,8 @@ public:
 
   ArchSpec GetArchitecture() override;
 
+  lldb::TargetSP GetTargetSP() override { return GetTarget(); }
+
   lldb::ModuleSP GetJITModule();
 
   lldb::addr_t FindSymbol(ConstString name, bool &missing_weak);
@@ -159,6 +162,12 @@ public:
 
   const std::vector<JittedGlobalVariable> &GetJittedGlobalVariables() {
     return m_jitted_global_variables;
+  }
+
+  void AppendPreferredSymbolContexts(SymbolContextList const &contexts) {
+    for (auto const &ctx : contexts)
+      if (ctx.module_sp)
+        m_preferred_modules.Append(ctx.module_sp);
   }
 
 private:
@@ -396,6 +405,11 @@ private:
   ///< defining no functions using that variable, would do this.)  If this
   ///< is true, any allocations need to be committed immediately -- no
   ///< opportunity for relocation.
+
+  ///< Any Module in this list will be used for symbol/function lookup
+  ///< before any other module (except for the module corresponding to the
+  ///< current frame).
+  ModuleList m_preferred_modules;
 };
 
 } // namespace lldb_private

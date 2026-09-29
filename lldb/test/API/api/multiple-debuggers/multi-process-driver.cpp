@@ -13,15 +13,26 @@
 // that are hit when lldb is being used to debug multiple processes
 // simultaneously.
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
-#include "lldb/API/LLDB.h"
+#include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
-#include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBError.h"
+#include "lldb/API/SBEvent.h"
+#include "lldb/API/SBFrame.h"
+#include "lldb/API/SBLaunchInfo.h"
+#include "lldb/API/SBListener.h"
+#include "lldb/API/SBProcess.h"
+#include "lldb/API/SBTarget.h"
+#include "lldb/API/SBThread.h"
 
 #include <chrono>
 #include <csignal>
@@ -77,7 +88,8 @@ walk_stack_to_main (SBThread thread)
     while (!found_main && curr_frame < framecount)
     {
         SBFrame frame = thread.GetFrameAtIndex (curr_frame);
-        if (strcmp (frame.GetFunctionName(), "main") == 0)
+        const char* function_name = frame.GetFunctionName();
+        if (function_name && strcmp (function_name, "main") == 0)
         {
             found_main = true;
             break;
@@ -147,11 +159,15 @@ void *do_one_debugger (void *in)
                 }
 
                 // On Linux the () are included.
-                const char* hit_fn = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName();
-                if (strcmp (hit_fn, "foo") != 0 && strcmp (hit_fn, "foo()") != 0)
+                const char* hit_fn_name = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName();
+                if (!hit_fn_name || (strcmp (hit_fn_name, "foo") != 0 && strcmp (hit_fn_name, "foo()") != 0))
                 {
 #if DEBUG == 1
-                    printf ("#%" PRIu64 ": First breakpoint did not stop at foo(), instead stopped at '%s'\n", threadnum, process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName());
+                    printf ("#%" PRIu64 ": First breakpoint did not stop at foo(), instead stopped at ", threadnum);
+                    if (hit_fn_name)
+                        printf ("'%s'\n", hit_fn_name);
+                    else
+                        printf ("an unnamed function\n");
 #endif
                     completed_threads_array[threadnum] = true;
                     return (void*) 1;
@@ -176,8 +192,8 @@ void *do_one_debugger (void *in)
                     return (void *) 1;
                 }
 
-                hit_fn = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName();
-                if (strcmp (hit_fn, "bar") != 0 && strcmp (hit_fn, "bar()") != 0)
+                hit_fn_name = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetFunctionName();
+                if (!hit_fn_name || (strcmp (hit_fn_name, "bar") != 0 && strcmp (hit_fn_name, "bar()") != 0))
                 {
                     printf ("#%" PRIu64 ": First breakpoint did not stop at bar()\n", threadnum);
                     completed_threads_array[threadnum] = true;
@@ -296,6 +312,9 @@ int main (int argc, char **argv)
                  NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS);
     }
 
-    SBDebugger::Terminate();
-    exit (1);
+    // We do not call SBDebugger::Terminate() here because it will destroy
+    // data that might be being used by threads that are still running. Which
+    // would change the timeout into an unrelated crash.
+    // _exit instead of exit, to skip more things that could cause a crash.
+    _exit(1);
 }

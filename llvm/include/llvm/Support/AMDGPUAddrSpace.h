@@ -15,6 +15,8 @@
 #ifndef LLVM_SUPPORT_AMDGPUADDRSPACE_H
 #define LLVM_SUPPORT_AMDGPUADDRSPACE_H
 
+#include <cstdint>
+
 namespace llvm {
 /// OpenCL uses address spaces to differentiate between
 /// various memory regions on the hardware. On the CPU
@@ -24,15 +26,14 @@ namespace llvm {
 /// memory locations.
 namespace AMDGPUAS {
 enum : unsigned {
-  // The maximum value for flat, generic, local, private, constant and region.
-  MAX_AMDGPU_ADDRESS = 9,
+  MAX_AMDGPU_ADDRESS = 15,
 
   FLAT_ADDRESS = 0,   ///< Address space for flat memory.
   GLOBAL_ADDRESS = 1, ///< Address space for global memory (RAT0, VTX0).
   REGION_ADDRESS = 2, ///< Address space for region memory. (GDS)
 
-  CONSTANT_ADDRESS = 4, ///< Address space for constant memory (VTX2).
   LOCAL_ADDRESS = 3,    ///< Address space for local memory.
+  CONSTANT_ADDRESS = 4, ///< Address space for constant memory (VTX2).
   PRIVATE_ADDRESS = 5,  ///< Address space for private memory.
 
   CONSTANT_ADDRESS_32BIT = 6, ///< Address space for 32-bit constant memory.
@@ -44,6 +45,25 @@ enum : unsigned {
 
   BUFFER_STRIDED_POINTER = 9, ///< Address space for 192-bit fat buffer
                               ///< pointers with an additional index.
+
+  RESERVED_ADDRESS_SPACE_10 = 10, ///< Reserved for downstream use.
+
+  RESERVED_ADDRESS_SPACE_11 = 11, ///< Reserved for downstream use.
+
+  VGPR = 13, ///< Address space for VGPRs. The 32-bit address is a byte offset
+             ///< into the wave's view of its vector registers. Note this shares
+             ///< its numeric value with CONSTANT_BUFFER_5, which is only used
+             ///< by the (graphics) R600 path.
+
+  RESERVED_ADDRESS_SPACE_14 = 14, ///< Reserved for downstream use.
+
+  BARRIER = 15, ///< Address space for modeling barrier IDs as addresses.
+
+  RESERVED_ADDRESS_SPACE_16 = 16, ///< Reserved for downstream use.
+
+  RESERVED_ADDRESS_SPACE_17 = 17, ///< Reserved for downstream use.
+
+  RESERVED_ADDRESS_SPACE_18 = 18, ///< Reserved for downstream use.
 
   /// Internal address spaces. Can be freely renumbered.
   STREAMOUT_REGISTER = 128, ///< Address space for GS NGG Streamout registers.
@@ -83,6 +103,10 @@ enum : unsigned {
 } // end namespace AMDGPUAS
 
 namespace AMDGPU {
+// Identifies which FLAT address-space segment an instruction operates on.
+// Passed to helpers like isLegalFLATOffset / splitFlatOffset.
+enum class FlatAddrSpace : unsigned { FLAT, FlatGlobal, FlatScratch };
+
 inline bool isFlatGlobalAddrSpace(unsigned AS) {
   return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
          AS == AMDGPUAS::CONSTANT_ADDRESS || AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
@@ -118,6 +142,65 @@ inline bool isConstantAddressSpace(unsigned AS) {
     return true;
   default:
     return false;
+  }
+}
+
+namespace DWARFAS {
+enum : unsigned {
+  GLOBAL = 0,
+  GENERIC = 1,
+  REGION = 2,
+  LOCAL = 3,
+  PRIVATE_LANE = 5,
+  PRIVATE_WAVE = 6,
+  DEFAULT = GLOBAL,
+};
+} // namespace DWARFAS
+
+namespace impl {
+// TODO: Move this into mapToDWARFAddrSpace when we switch to C++23
+// (see https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2647r1.html)
+static constexpr unsigned LLVMToDWARFAddrSpaceMapping[] = {
+    DWARFAS::GENERIC,     //< AMDGPUAS::FLAT_ADDRESS
+    DWARFAS::GLOBAL,      //< AMDGPUAS::GLOBAL_ADDRESS
+    DWARFAS::REGION,      //< AMDGPUAS::REGION_ADDRESS
+    DWARFAS::LOCAL,       //< AMDGPUAS::LOCAL_ADDRESS
+    DWARFAS::GLOBAL,      //< AMDGPUAS::CONSTANT_ADDRESS
+    DWARFAS::PRIVATE_LANE //< AMDGPUAS::PRIVATE_ADDRESS
+};
+} // end namespace impl
+
+/// If @p LLVMAddressSpace has a corresponding DWARF encoding,
+/// return it; otherwise return the sentinel value -1 to indicate
+/// no such mapping exists.
+///
+/// This maps private/scratch to the focused lane view.
+///
+/// These mappings must be kept in sync with llvm/docs/AMDGPUUsage.rst
+/// table "AMDGPU DWARF Address Space Mapping".
+///
+/// Note: This could return std::optional<int> but that would require
+/// an extra #include.
+constexpr int mapToDWARFAddrSpace(unsigned LLVMAddrSpace) {
+  constexpr unsigned SizeOfLLVMToDWARFAddrSpaceMapping =
+      sizeof(impl::LLVMToDWARFAddrSpaceMapping) /
+      sizeof(impl::LLVMToDWARFAddrSpaceMapping[0]);
+  if (LLVMAddrSpace < SizeOfLLVMToDWARFAddrSpaceMapping)
+    return impl::LLVMToDWARFAddrSpaceMapping[LLVMAddrSpace];
+  return -1;
+}
+
+/// Get the null pointer value for the given address space.
+constexpr int64_t getNullPointerValue(unsigned AS) {
+  switch (AS) {
+    using namespace AMDGPUAS;
+  case PRIVATE_ADDRESS:
+  case LOCAL_ADDRESS:
+  case REGION_ADDRESS:
+  case VGPR:
+    return -1;
+  default:
+    return 0;
   }
 }
 } // end namespace AMDGPU

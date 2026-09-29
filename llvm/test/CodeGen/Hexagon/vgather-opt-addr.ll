@@ -92,7 +92,7 @@ declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 declare <128 x i1> @llvm.hexagon.V6.vandvrt.128B(<32 x i32>, i32) #1
 
-attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv65" "target-features"="+hvx-length128b,+hvxv65,-long-calls" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv65" "target-features"="+hvx-length128b,+hvxv65,-long-calls" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }
 attributes #2 = { nounwind }
 

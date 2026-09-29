@@ -43,14 +43,14 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-NEXT: .dword 2
 
 ; RELOC:      Section ([[#]]) .relaxray_instr_map {
-; RELOC-NEXT:   0x0 R_LARCH_64_PCREL .text 0x0
-; RELOC-NEXT:   0x8 R_LARCH_64_PCREL .text 0x0
-; RELOC-NEXT:   0x20 R_LARCH_64_PCREL .text 0x34
-; RELOC-NEXT:   0x28 R_LARCH_64_PCREL .text 0x0
+; RELOC-NEXT:   0x0 R_LARCH_64_PCREL .L{{.*}} 0x0
+; RELOC-NEXT:   0x8 R_LARCH_64_PCREL .L{{.*}} 0x0
+; RELOC-NEXT:   0x20 R_LARCH_64_PCREL .L{{.*}} 0x0
+; RELOC-NEXT:   0x28 R_LARCH_64_PCREL .L{{.*}} 0x0
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Section ([[#]]) .relaxray_fn_idx {
-; RELOC-NEXT:   0x0 R_LARCH_64_PCREL xray_instr_map 0x0
+; RELOC-NEXT:   0x0 R_LARCH_64_PCREL .Lxray_sleds_start0 0x0
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Section ([[#]]) .rela.eh_frame {
-; RELOC-NEXT:   0x1C R_LARCH_32_PCREL .text 0x0
+; RELOC-NEXT:   0x1C R_LARCH_32_PCREL .L{{.*}} 0x0
 ; RELOC-NEXT: }

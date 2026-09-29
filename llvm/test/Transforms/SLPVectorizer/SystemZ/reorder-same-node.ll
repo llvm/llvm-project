@@ -4,8 +4,7 @@
 define void @test() {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.xor.v8i64(<8 x i64> zeroinitializer)
-; CHECK-NEXT:    store i64 [[TMP1]], ptr null, align 8
+; CHECK-NEXT:    store i64 0, ptr null, align 8
 ; CHECK-NEXT:    ret void
 ;
   %1 = zext i8 0 to i32

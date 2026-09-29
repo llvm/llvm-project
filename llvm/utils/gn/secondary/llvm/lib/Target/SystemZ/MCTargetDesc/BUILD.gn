@@ -64,12 +64,13 @@ static_library("MCTargetDesc") {
     "SystemZELFObjectWriter.cpp",
     "SystemZGNUInstPrinter.cpp",
     "SystemZGOFFObjectWriter.cpp",
+    "SystemZHLASMAsmStreamer.cpp",
     "SystemZHLASMInstPrinter.cpp",
     "SystemZInstPrinterCommon.cpp",
     "SystemZMCAsmBackend.cpp",
     "SystemZMCAsmInfo.cpp",
     "SystemZMCCodeEmitter.cpp",
-    "SystemZMCExpr.cpp",
     "SystemZMCTargetDesc.cpp",
+    "SystemZTargetStreamer.cpp",
   ]
 }

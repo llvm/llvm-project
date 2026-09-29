@@ -467,8 +467,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
     SE.forgetLoop(L);
     // Set incoming value to poison for phi nodes in the exit block.
     for (PHINode &P : ExitBlock->phis()) {
-      std::fill(P.incoming_values().begin(), P.incoming_values().end(),
-                PoisonValue::get(P.getType()));
+      llvm::fill(P.incoming_values(), PoisonValue::get(P.getType()));
     }
     ORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "NeverExecutes", L->getStartLoc(),
@@ -489,7 +488,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   // the situation of needing to be able to solve statically which exit block
   // will be branched to, or trying to preserve the branching logic in a loop
   // invariant manner.
-  if (!ExitBlock && !L->hasNoExitBlocks()) {
+  if (!ExitBlock && !LI.hasNoExitBlocks(*L)) {
     LLVM_DEBUG(dbgs() << "Deletion requires at most one exit block.\n");
     return LoopDeletionResult::Unmodified;
   }

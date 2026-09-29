@@ -226,14 +226,6 @@ public:
     SU->addPred(D);
   }
 
-  /// AddPred - adds a predecessor edge to SUnit SU.
-  /// This returns true if this is a new predecessor.
-  /// Updates the topological ordering if required.
-  void AddPred(SUnit *SU, const SDep &D) {
-    Topo.AddPred(SU, D.getSUnit());
-    SU->addPred(D);
-  }
-
   /// RemovePred - removes a predecessor edge from SUnit SU.
   /// This returns true if an edge was removed.
   /// Updates the topological ordering if required.
@@ -340,7 +332,7 @@ static void GetCostForDef(const ScheduleDAGSDNodes::RegDefIter &RegDefPos,
 
     unsigned Idx = RegDefPos.GetIdx();
     const MCInstrDesc &Desc = TII->get(Opcode);
-    const TargetRegisterClass *RC = TII->getRegClass(Desc, Idx, TRI, MF);
+    const TargetRegisterClass *RC = TII->getRegClass(Desc, Idx);
     assert(RC && "Not a valid register class");
     RegClass = RC->getID();
     // FIXME: Cost arbitrarily set to 1 because there doesn't seem to be a
@@ -370,7 +362,7 @@ void ScheduleDAGRRList::Schedule() {
   assert(Interferences.empty() && LRegsMap.empty() && "stale Interferences");
 
   // Build the scheduling graph.
-  BuildSchedGraph(nullptr);
+  BuildSchedGraph();
 
   LLVM_DEBUG(dump());
   Topo.MarkDirty();
@@ -712,6 +704,7 @@ void ScheduleDAGRRList::EmitNode(SUnit *SU) {
   case ISD::CopyToReg:
   case ISD::CopyFromReg:
   case ISD::EH_LABEL:
+  case ISD::ANNOTATION_LABEL:
     // Noops don't affect the scoreboard state. Copies are likely to be
     // removed.
     return;
@@ -1267,32 +1260,9 @@ void ScheduleDAGRRList::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
   ++NumPRCopies;
 }
 
-/// getPhysicalRegisterVT - Returns the ValueType of the physical register
-/// definition of the specified node.
-/// FIXME: Move to SelectionDAG?
-static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
-                                 const TargetInstrInfo *TII) {
-  unsigned NumRes;
-  if (N->getOpcode() == ISD::CopyFromReg) {
-    // CopyFromReg has: "chain, Val, glue" so operand 1 gives the type.
-    NumRes = 1;
-  } else {
-    const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
-    assert(!MCID.implicit_defs().empty() &&
-           "Physical reg def must be in implicit def list!");
-    NumRes = MCID.getNumDefs();
-    for (MCPhysReg ImpDef : MCID.implicit_defs()) {
-      if (Reg == ImpDef)
-        break;
-      ++NumRes;
-    }
-  }
-  return N->getSimpleValueType(NumRes);
-}
-
 /// CheckForLiveRegDef - Return true and update live register vector if the
 /// specified register def of the specified SUnit clobbers any "live" registers.
-static void CheckForLiveRegDef(SUnit *SU, unsigned Reg, SUnit **LiveRegDefs,
+static void CheckForLiveRegDef(SUnit *SU, MCRegister Reg, SUnit **LiveRegDefs,
                                SmallSet<unsigned, 4> &RegAdded,
                                SmallVectorImpl<unsigned> &LRegs,
                                const TargetRegisterInfo *TRI,
@@ -1528,8 +1498,8 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
         if (!BtSU->isPending)
           AvailableQueue->remove(BtSU);
       }
-      LLVM_DEBUG(dbgs() << "ARTIFICIAL edge from SU(" << BtSU->NodeNum
-                        << ") to SU(" << TrySU->NodeNum << ")\n");
+      LLVM_DEBUG(dbgs() << "ARTIFICIAL edge from " << *BtSU << " to " << *TrySU
+                        << "\n");
       AddPredQueued(TrySU, SDep(BtSU, SDep::Artificial));
 
       // If one or more successors has been unscheduled, then the current
@@ -1560,9 +1530,7 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
     assert(LRegs.size() == 1 && "Can't handle this yet!");
     unsigned Reg = LRegs[0];
     SUnit *LRDef = LiveRegDefs[Reg];
-    MVT VT = getPhysicalRegisterVT(LRDef->getNode(), Reg, TII);
-    const TargetRegisterClass *RC =
-      TRI->getMinimalPhysRegClass(Reg, VT);
+    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     const TargetRegisterClass *DestRC = TRI->getCrossCopyRegClass(RC);
 
     // If cross copy register class is the same as RC, then it must be possible
@@ -1769,10 +1737,10 @@ public:
       unsigned NumRC = TRI->getNumRegClasses();
       RegLimit.resize(NumRC);
       RegPressure.resize(NumRC);
-      std::fill(RegLimit.begin(), RegLimit.end(), 0);
-      std::fill(RegPressure.begin(), RegPressure.end(), 0);
-      for (const TargetRegisterClass *RC : TRI->regclasses())
-        RegLimit[RC->getID()] = tri->getRegPressureLimit(RC, MF);
+      llvm::fill(RegLimit, 0);
+      llvm::fill(RegPressure, 0);
+      for (const TargetRegisterClass &RC : TRI->regclasses())
+        RegLimit[RC.getID()] = tri->getRegPressureLimit(&RC, MF);
     }
   }
 
@@ -1793,7 +1761,7 @@ public:
   void releaseState() override {
     SUnits = nullptr;
     SethiUllmanNumbers.clear();
-    std::fill(RegPressure.begin(), RegPressure.end(), 0);
+    llvm::fill(RegPressure, 0);
   }
 
   unsigned getNodePriority(const SUnit *SU) const;
@@ -2080,11 +2048,11 @@ unsigned RegReductionPQBase::getNodePriority(const SUnit *SU) const {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RegReductionPQBase::dumpRegPressure() const {
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    unsigned Id = RC->getID();
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    unsigned Id = RC.getID();
     unsigned RP = RegPressure[Id];
     if (!RP) continue;
-    LLVM_DEBUG(dbgs() << TRI->getRegClassName(RC) << ": " << RP << " / "
+    LLVM_DEBUG(dbgs() << TRI->getRegClassName(&RC) << ": " << RP << " / "
                       << RegLimit[Id] << '\n');
   }
 }
@@ -2237,8 +2205,7 @@ void RegReductionPQBase::scheduledNode(SUnit *SU) {
     if (RegPressure[RCId] < Cost) {
       // Register pressure tracking is imprecise. This can happen. But we try
       // hard not to let it happen because it likely results in poor scheduling.
-      LLVM_DEBUG(dbgs() << "  SU(" << SU->NodeNum
-                        << ") has too many regdefs\n");
+      LLVM_DEBUG(dbgs() << "  " << *SU << " has too many regdefs\n");
       RegPressure[RCId] = 0;
     }
     else {
@@ -2429,7 +2396,7 @@ static void initVRegCycle(SUnit *SU) {
   if (!hasOnlyLiveInOpers(SU) || !hasOnlyLiveOutUses(SU))
     return;
 
-  LLVM_DEBUG(dbgs() << "VRegCycle: SU(" << SU->NodeNum << ")\n");
+  LLVM_DEBUG(dbgs() << "VRegCycle: " << *SU << "\n");
 
   SU->isVRegCycle = true;
 
@@ -2552,8 +2519,8 @@ static bool BURRSort(SUnit *left, SUnit *right, RegReductionPQBase *SPQ) {
                                                 " defines a physreg" };
       #endif
       LLVM_DEBUG(dbgs() << "  SU (" << left->NodeNum << ") "
-                        << PhysRegMsg[LHasPhysReg] << " SU(" << right->NodeNum
-                        << ") " << PhysRegMsg[RHasPhysReg] << "\n");
+                        << PhysRegMsg[LHasPhysReg] << " " << *right << " "
+                        << PhysRegMsg[RHasPhysReg] << "\n");
       return LHasPhysReg < RHasPhysReg;
     }
   }
@@ -2697,13 +2664,11 @@ bool hybrid_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
   // Avoid causing spills. If register pressure is high, schedule for
   // register pressure reduction.
   if (LHigh && !RHigh) {
-    LLVM_DEBUG(dbgs() << "  pressure SU(" << left->NodeNum << ") > SU("
-                      << right->NodeNum << ")\n");
+    LLVM_DEBUG(dbgs() << "  pressure " << *left << " > " << *right << "\n");
     return true;
   }
   else if (!LHigh && RHigh) {
-    LLVM_DEBUG(dbgs() << "  pressure SU(" << right->NodeNum << ") > SU("
-                      << left->NodeNum << ")\n");
+    LLVM_DEBUG(dbgs() << "  pressure " << *right << " > " << *left << "\n");
     return false;
   }
   if (!LHigh && !RHigh) {
@@ -2765,9 +2730,8 @@ bool ilp_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
     RPDiff = SPQ->RegPressureDiff(right, RLiveUses);
   }
   if (!DisableSchedRegPressure && LPDiff != RPDiff) {
-    LLVM_DEBUG(dbgs() << "RegPressureDiff SU(" << left->NodeNum
-                      << "): " << LPDiff << " != SU(" << right->NodeNum
-                      << "): " << RPDiff << "\n");
+    LLVM_DEBUG(dbgs() << "RegPressureDiff " << *left << ": " << LPDiff
+                      << " != " << *right << ": " << RPDiff << "\n");
     return LPDiff > RPDiff;
   }
 
@@ -2779,9 +2743,8 @@ bool ilp_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
   }
 
   if (!DisableSchedLiveUses && (LLiveUses != RLiveUses)) {
-    LLVM_DEBUG(dbgs() << "Live uses SU(" << left->NodeNum << "): " << LLiveUses
-                      << " != SU(" << right->NodeNum << "): " << RLiveUses
-                      << "\n");
+    LLVM_DEBUG(dbgs() << "Live uses " << *left << ": " << LLiveUses
+                      << " != " << *right << ": " << RLiveUses << "\n");
     return LLiveUses < RLiveUses;
   }
 
@@ -2795,9 +2758,9 @@ bool ilp_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
   if (!DisableSchedCriticalPath) {
     int spread = (int)left->getDepth() - (int)right->getDepth();
     if (std::abs(spread) > MaxReorderWindow) {
-      LLVM_DEBUG(dbgs() << "Depth of SU(" << left->NodeNum << "): "
-                        << left->getDepth() << " != SU(" << right->NodeNum
-                        << "): " << right->getDepth() << "\n");
+      LLVM_DEBUG(dbgs() << "Depth of " << *left << ": " << left->getDepth()
+                        << " != " << *right << ": " << right->getDepth()
+                        << "\n");
       return left->getDepth() < right->getDepth();
     }
   }

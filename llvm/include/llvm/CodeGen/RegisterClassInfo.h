@@ -19,12 +19,17 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 
 namespace llvm {
+
+class MachineRegisterClassAnalysis;
 
 class RegisterClassInfo {
   struct RCInfo {
@@ -49,6 +54,8 @@ class RegisterClassInfo {
   // entry is valid when its tag matches.
   unsigned Tag = 0;
 
+  bool Reverse = false;
+
   const MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
 
@@ -72,7 +79,7 @@ class RegisterClassInfo {
   ArrayRef<uint8_t> RegCosts;
 
   // Compute all information about RC.
-  void compute(const TargetRegisterClass *RC) const;
+  LLVM_ABI void compute(const TargetRegisterClass *RC) const;
 
   // Return an up-to-date RCInfo for RC.
   const RCInfo &get(const TargetRegisterClass *RC) const {
@@ -83,11 +90,28 @@ class RegisterClassInfo {
   }
 
 public:
-  RegisterClassInfo();
+  LLVM_ABI RegisterClassInfo();
 
-  /// runOnFunction - Prepare to answer questions about MF. This must be called
+  /// runOnFunction - Prepare to answer questions about MF. Rev indicates to
+  /// use reversed raw order when compute register order. This must be called
   /// before any other methods are used.
-  void runOnMachineFunction(const MachineFunction &MF);
+  LLVM_ABI void runOnMachineFunction(const MachineFunction &MF,
+                                     bool Rev = false);
+
+  /// Update cached register class information using ReservedInput, MRI's
+  /// current reserved-register set. Cached orders are compacted when
+  /// only registers are added and `-stress-regalloc` is disabled; otherwise,
+  /// they are invalidated and recomputed on demand.
+  ///
+  /// RegisterClassInfo must be initialized. Target information, callee-saved
+  /// registers, register costs, and allocation orders must remain unchanged.
+  LLVM_ABI void updateReservedRegs(const BitVector &ReservedInput);
+
+  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &) {
+    auto PAC = PA.getChecker<MachineRegisterClassAnalysis>();
+    return !PAC.preservedWhenStateless();
+  }
 
   /// getNumAllocatableRegs - Returns the number of actually allocatable
   /// registers in RC in the current function.
@@ -117,8 +141,8 @@ public:
   /// CalleeSavedAliases.
   MCRegister getLastCalleeSavedAlias(MCRegister PhysReg) const {
     MCRegister CSR;
-    for (MCRegUnitIterator UI(PhysReg, TRI); UI.isValid(); ++UI) {
-      CSR = CalleeSavedAliases[*UI];
+    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      CSR = CalleeSavedAliases[static_cast<unsigned>(Unit)];
       if (CSR)
         break;
     }
@@ -150,7 +174,41 @@ public:
   }
 
 protected:
-  unsigned computePSetLimit(unsigned Idx) const;
+  LLVM_ABI unsigned computePSetLimit(unsigned Idx) const;
+};
+
+class MachineRegisterClassAnalysis
+    : public AnalysisInfoMixin<MachineRegisterClassAnalysis> {
+  friend AnalysisInfoMixin<MachineRegisterClassAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = RegisterClassInfo;
+
+  LLVM_ABI Result run(MachineFunction &, MachineFunctionAnalysisManager &);
+};
+
+class LLVM_ABI MachineRegisterClassInfoWrapperPass
+    : public MachineFunctionPass {
+  virtual void anchor();
+
+  RegisterClassInfo RCI;
+
+public:
+  static char ID;
+
+  MachineRegisterClassInfoWrapperPass();
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  RegisterClassInfo &getRCI() { return RCI; }
+  const RegisterClassInfo &getRCI() const { return RCI; }
 };
 
 } // end namespace llvm

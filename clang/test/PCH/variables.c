@@ -31,7 +31,7 @@ int UNIQUE(a);  // a1
 #else
 
 int *ip2 = &x;
-float *fp = &ip; // expected-warning{{incompatible pointer types}}
+float *fp = &ip; // expected-error{{incompatible pointer types}}
 double z; // expected-error{{redefinition}} expected-note@14{{previous}}
 int z2 = 18; // expected-error{{redefinition}} expected-note@16{{previous}}
 double VeryHappy; // expected-error{{redefinition}} expected-note@19{{previous definition is here}}

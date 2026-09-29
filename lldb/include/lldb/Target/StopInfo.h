@@ -20,6 +20,7 @@ namespace lldb_private {
 class StopInfo : public std::enable_shared_from_this<StopInfo> {
   friend class Process::ProcessEventData;
   friend class ThreadPlanBase;
+  friend class ThreadPlanReverseContinue;
 
 public:
   // Constructors and Destructors
@@ -96,6 +97,12 @@ public:
   /// and silently continue again one more time.
   virtual bool WasContinueInterrupted(Thread &thread) { return false; }
 
+  virtual uint32_t GetStopReasonDataCount() const { return 0; }
+  virtual uint64_t GetStopReasonDataAtIndex(uint32_t idx) {
+    // Handle all the common cases that have no data.
+    return 0;
+  }
+
   // Sometimes the thread plan logic will know that it wants a given stop to
   // stop or not, regardless of what the ordinary logic for that StopInfo would
   // dictate.  The main example of this is the ThreadPlanCallFunction, which
@@ -116,6 +123,19 @@ public:
   }
 
   StructuredData::ObjectSP GetExtendedInfo() { return m_extended_info; }
+
+  /// Returns true if this is a stop reason that should be shown to a user when
+  /// viewing the thread with this stop info.
+  virtual bool ShouldShow() const { return IsValid(); }
+
+  /// Returns true if this is a stop reason that should cause a thread to be
+  /// selected when stopping.
+  virtual bool ShouldSelect() const {
+    lldb::StopReason reason = GetStopReason();
+    return reason != lldb::eStopReasonNone &&
+           reason != lldb::eStopReasonHistoryBoundary &&
+           reason != lldb::eStopReasonInvalid;
+  }
 
   static lldb::StopInfoSP
   CreateStopReasonWithBreakpointSiteID(Thread &thread,
@@ -154,6 +174,12 @@ public:
   static lldb::StopInfoSP
   CreateStopReasonProcessorTrace(Thread &thread, const char *description);
 
+  // This creates a StopInfo indicating that execution stopped because
+  // it was replaying some recorded execution history, and execution reached
+  // the end of that recorded history.
+  static lldb::StopInfoSP
+  CreateStopReasonHistoryBoundary(Thread &thread, const char *description);
+
   static lldb::StopInfoSP CreateStopReasonFork(Thread &thread,
                                                lldb::pid_t child_pid,
                                                lldb::tid_t child_tid);
@@ -191,6 +217,12 @@ protected:
   // done by the ProcessEventData::DoOnRemoval, though the ThreadPlanBase needs
   // to consult this later on.
   virtual bool ShouldStop(Event *event_ptr) { return true; }
+
+  // Shared implementation for when a trap instruction leaves the CPU PC at
+  // the trap instruction, instead of just after it. Currently the subclasses
+  // StopInfoMachException and StopInfoUnixSignal use this to skip over the
+  // instruction at the PC if it is a matching trap instruction.
+  void SkipOverTrapInstruction();
 
   // Classes that inherit from StackID can see and modify these
   lldb::ThreadWP m_thread_wp; // The thread corresponding to the stop reason.

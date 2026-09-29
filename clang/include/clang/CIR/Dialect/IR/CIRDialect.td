@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
-#define LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
+#ifndef CLANG_CIR_DIALECT_IR_CIRDIALECT_TD
+#define CLANG_CIR_DIALECT_IR_CIRDIALECT_TD
 
 include "mlir/IR/OpBase.td"
 
 def CIR_Dialect : Dialect {
   let name = "cir";
+  let useStrictPropertiesInAssemblyFormat = 1;
 
   // A short one-line summary of our dialect.
   let summary = "A high-level dialect for analyzing and optimizing Clang "
@@ -24,23 +25,107 @@ def CIR_Dialect : Dialect {
 
   let cppNamespace = "::cir";
 
-  let useDefaultAttributePrinterParser = 0;
-  let useDefaultTypePrinterParser = 0;
+  let useDefaultAttributePrinterParser = 1;
+
+  let hasOperationAttrVerify = 1;
+  let hasRegionArgAttrVerify = 1;
+  let hasRegionResultAttrVerify = 1;
+
+  // Enable constant materialization for the CIR dialect. This generates a
+  // declaration for the cir::CIRDialect::materializeConstant function. This
+  // hook is necessary for canonicalization to properly handle attributes
+  // returned by fold methods, allowing them to be materialized as constant
+  // operations in the IR.
+  let hasConstantMaterializer = 1;
 
   let extraClassDeclaration = [{
+    static llvm::StringRef getSourceLanguageAttrName() { return "cir.lang"; }
+    static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
+    static llvm::StringRef getSizeTypeWidthAttrName() { return "cir.size_type_width"; }
+    static llvm::StringRef getIntTypeWidthAttrName() { return "cir.int_type_width"; }
+    static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
+    static llvm::StringRef getCalleeAttrName() { return "callee"; }
+    static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
+    static llvm::StringRef getNoReturnAttrName() { return "noreturn"; }
+    static llvm::StringRef getMemoryEffectsAttrName() { return "memory_effects"; }
+    static llvm::StringRef getReturnsTwiceAttrName() { return "returns_twice"; }
+    static llvm::StringRef getColdAttrName() { return "cold"; }
+    static llvm::StringRef getHotAttrName() { return "hot"; }
+    static llvm::StringRef getStrictFPAttrName() { return "strictfp"; }
+    static llvm::StringRef getNoDuplicatesAttrName() { return "noduplicate"; }
+    static llvm::StringRef getConvergentAttrName() { return "convergent"; }
+    static llvm::StringRef getNoRecurseAttrName() { return "norecurse"; }
+    static llvm::StringRef getMustProgressAttrName() { return "mustprogress"; }
+    static llvm::StringRef getSYCLModuleIdAttrName() { return "sycl-module-id"; }
+    static llvm::StringRef getNoUnwindAttrName() { return "nounwind"; }
+    static llvm::StringRef getWillReturnAttrName() { return "willreturn"; }
+    static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
+    static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
+    static llvm::StringRef getGlobalDtorsAttrName() { return "cir.global_dtors"; }
+    static llvm::StringRef getOffloadContainerAttrName() { return "cir.offload.container"; }
+    static llvm::StringRef getOffloadKindAttrName() { return "cir.offload.kind"; }
+    static llvm::StringRef getOperandSegmentSizesAttrName() { return "operandSegmentSizes"; }
+    static llvm::StringRef getNoCallerSavedRegsAttrName() { return "no_caller_saved_registers"; }
+    static llvm::StringRef getNoCallbackAttrName() { return "nocallback"; }
+    static llvm::StringRef getAllocSizeAttrName() { return "allocsize"; }
+    static llvm::StringRef getOptimizeForSizeAttrName() { return "optsize"; }
+    static llvm::StringRef getMinSizeAttrName() { return "minsize"; }
+    // Note: we have to name this with the underscore instead of the dash like
+    // traditional LLVM-IR does, because the LLVM-IR-Dialect doesn't have a way
+    // of forming names with a dash instead of underscore in its auto-generated
+    // names. TGLexer.cpp(from tablegen) only allows tablegen-names
+    // of a [a-zA-Z0-9_] character regex(numbers only if not first), so there is
+    // no way to get an underscore into this, even with escaping.
+    static llvm::StringRef getModularFormatAttrName() { return "modular_format"; }
+    // NoBuiltins means "don't put builtins into my body", whereas "nobuiltin"
+    // means "I'm not a builtin, so don't replace me".  This is a subtle
+    // difference, but one that reflects Classic Codegen.
+    static llvm::StringRef getNoBuiltinsAttrName() { return "nobuiltins"; }
+    static llvm::StringRef getNoBuiltinAttrName() { return "nobuiltin"; }
+    static llvm::StringRef getBuiltinAttrName() { return "builtin"; }
+    static llvm::StringRef getTrapFuncNameAttrName() { return "trap_func_name"; }
+    static llvm::StringRef getZeroCallUsedRegsAttrName() { return "zero_call_used_regs"; }
+    static llvm::StringRef getSaveRegParamsAttrName() { return "save_reg_params"; }
+    static llvm::StringRef getDefaultFuncAttrsAttrName() { return "default_func_attrs"; }
+    static llvm::StringRef getUniformWorkGroupSizeAttrName() { return "uniform_work_group_size"; }
+    static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }
+    static llvm::StringRef getArgAttrsAttrName() { return "arg_attrs"; }
+    static llvm::StringRef getRecordLayoutsAttrName() { return "cir.record_layouts"; }
+    static llvm::StringRef getTargetCPUAttrName() { return "cir.target-cpu"; }
+    static llvm::StringRef getTuneCPUAttrName() { return "cir.tune-cpu"; }
+    static llvm::StringRef getTargetFeaturesAttrName() { return "cir.target-features"; }
+    // Raw bytes of the device-side fat binary, read by CIRGen so LoweringPrepare
+    // can build the runtime-registration globals without doing file I/O.
+    static llvm::StringRef getCUDADeviceBinaryAttrName() { return "cir.cu.device_binary"; }
+    // Mangled symbol name of the C++20 named-module initializer function,
+    // precomputed by CIRGen so later passes don't need a live ASTContext.
+    static llvm::StringRef getCXXModuleInitFnNameAttrName() { return "cir.cxx_module_init_fn_name"; }
+    // LangOptions facts that post-CIRGen lowering consumes, serialized by
+    // CIRGen so a reloaded .cir module is self-describing without a live
+    // clang::LangOptions. See #cir.lowering_lang_options.
+    static llvm::StringRef getLoweringLangOptionsAttrName() { return "cir.lowering_lang_options"; }
+    // Platform SDK version from -target-sdk-version, as printed by
+    // llvm::VersionTuple (e.g. "12.3"). Absent when none was given.
+    static llvm::StringRef getSDKVersionAttrName() { return "cir.sdk_version"; }
+    static llvm::StringRef getMustTailAttrName() { return "musttail"; }
+    static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
+
+    static llvm::StringRef getAMDGPUCodeObjectVersionAttrName() { return "cir.amdhsa_code_object_version"; }
+    static llvm::StringRef getAMDGPUPrintfKindAttrName() { return "cir.amdgpu_printf_kind"; }
+    static llvm::StringRef getAMDGPUXnackAttrName() { return "cir.amdgpu_xnack"; }
+    static llvm::StringRef getAMDGPUSramEccAttrName() { return "cir.amdgpu_sramecc"; }
+    static llvm::StringRef getOpenCLKernelArgMetadataAttrName() { return "cir.cl.kernel_arg_metadata"; }
+    static llvm::StringRef getOpenCLVersionAttrName() { return "cir.cl.version"; }
+    static llvm::StringRef getOpenCLCXXVersionAttrName() { return "cir.cl.cxx.version"; }
+    static llvm::StringRef getDefaultTlsModelAttrName() { return "cir.default_tls_model"; }
+
     void registerAttributes();
     void registerTypes();
 
     mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
     void printType(mlir::Type type,
                    mlir::DialectAsmPrinter &printer) const override;
-
-    mlir::Attribute parseAttribute(mlir::DialectAsmParser &parser,
-                                   mlir::Type type) const override;
-
-    void printAttribute(mlir::Attribute attr,
-                        mlir::DialectAsmPrinter &os) const override;
   }];
 }
 
-#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
+#endif // CLANG_CIR_DIALECT_IR_CIRDIALECT_TD

@@ -15,7 +15,6 @@ foo:
 ; CHECK: andi r27, 92                  ; encoding: [0xbc,0x75]
 
 ; CHECK: andi r20, BAR                 ; encoding: [0x40'A',0x70]
-; CHECK:                               ;   fixup A - offset: 0, value: BAR, kind: fixup_ldi
 
 ; CHECK-INST: andi r16, 255
 ; CHECK-INST: andi r29, 190

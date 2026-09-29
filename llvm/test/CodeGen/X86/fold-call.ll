@@ -24,3 +24,15 @@ entry:
   tail call void %0()
   ret void
 }
+
+; Don't fold the load+call if there's inline asm in between.
+; CHECK: test3
+; CHECK: mov{{.*}}
+; CHECK: jmp{{.*}}
+define void @test3(ptr nocapture %x) {
+entry:
+  %0 = load ptr, ptr %x
+  call void asm sideeffect "", ""()  ; It could do anything.
+  tail call void %0()
+  ret void
+}

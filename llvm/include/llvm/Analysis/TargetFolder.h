@@ -20,9 +20,11 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -31,7 +33,7 @@ class DataLayout;
 class Type;
 
 /// TargetFolder - Create constants with target dependent folding.
-class TargetFolder final : public IRBuilderFolder {
+class LLVM_ABI TargetFolder final : public IRBuilderFolder {
   const DataLayout &DL;
 
   /// Fold - Fold the constant using target specific information.
@@ -39,7 +41,7 @@ class TargetFolder final : public IRBuilderFolder {
     return ConstantFoldConstant(C, DL);
   }
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   explicit TargetFolder(const DataLayout &DL) : DL(DL) {}
@@ -114,8 +116,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 GEPNoWrapFlags NW) const override {
+  Value *FoldGEP(const DataLayout &, Type *Ty, Value *Ptr,
+                 ArrayRef<Value *> IdxList, GEPNoWrapFlags NW) const override {
     if (!ConstantExpr::isSupportedGetElementPtr(Ty))
       return nullptr;
 
@@ -123,12 +125,17 @@ public:
       // Every index must be constant.
       if (any_of(IdxList, [](Value *V) { return !isa<Constant>(V); }))
         return nullptr;
-      return Fold(ConstantExpr::getGetElementPtr(Ty, PC, IdxList, NW));
+      ArrayRef<Constant *> ConstIdxList =
+          ArrayRef((Constant *const *)IdxList.data(), IdxList.size());
+      if (Constant *GEP =
+              ConstantExpr::getGetElementPtr(DL, Ty, PC, ConstIdxList, NW))
+        return Fold(GEP);
     }
     return nullptr;
   }
 
-  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
+  Value *FoldSelect(Value *C, Value *True, Value *False,
+                    FastMathFlags FMF) const override {
     auto *CC = dyn_cast<Constant>(C);
     auto *TC = dyn_cast<Constant>(True);
     auto *FC = dyn_cast<Constant>(False);
@@ -181,6 +188,14 @@ public:
     return nullptr;
   }
 
+  Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
+    return nullptr;
+  }
+
+  Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
+    return nullptr;
+  }
+
   Value *FoldCast(Instruction::CastOps Op, Value *V,
                   Type *DestTy) const override {
     if (auto *C = dyn_cast<Constant>(V))
@@ -188,12 +203,13 @@ public:
     return nullptr;
   }
 
-  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource) const override {
-    auto *C1 = dyn_cast<Constant>(LHS);
-    auto *C2 = dyn_cast<Constant>(RHS);
-    if (C1 && C2)
-      return ConstantFoldBinaryIntrinsic(ID, C1, C2, Ty, FMFSource);
+  Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
+                       FastMathFlags FMF = {},
+                       Function *CtxF = nullptr) const override {
+    if (all_of(Ops, IsaPred<Constant>))
+      return ConstantFoldIntrinsic(
+          ID, ArrayRef((Constant *const *)Ops.data(), Ops.size()), Ty, DL,
+          CtxF);
     return nullptr;
   }
 
@@ -214,7 +230,6 @@ public:
     return Fold(ConstantExpr::getPointerBitCastOrAddrSpaceCast(C, DestTy));
   }
 };
-
 }
 
 #endif

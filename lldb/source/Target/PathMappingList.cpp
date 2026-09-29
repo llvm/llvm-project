@@ -180,7 +180,7 @@ void PathMappingList::Dump(Stream *s, int pair_index) {
   }
 }
 
-llvm::json::Value PathMappingList::ToJSON() {
+llvm::json::Value PathMappingList::ToJSON() const {
   llvm::json::Array entries;
   std::lock_guard<std::mutex> lock(m_pairs_mutex);
   for (const auto &pair : m_pairs) {
@@ -316,20 +316,6 @@ bool PathMappingList::Remove(ConstString path, bool notify) {
   }
   Notify(notify);
   return true;
-}
-
-PathMappingList::const_iterator
-PathMappingList::FindIteratorForPath(ConstString path) const {
-  std::lock_guard<std::mutex> lock(m_pairs_mutex);
-  const_iterator pos;
-  const_iterator begin = m_pairs.begin();
-  const_iterator end = m_pairs.end();
-
-  for (pos = begin; pos != end; ++pos) {
-    if (pos->first == path)
-      break;
-  }
-  return pos;
 }
 
 PathMappingList::iterator

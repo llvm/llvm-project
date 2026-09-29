@@ -10,11 +10,11 @@
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
 #include "Arch/Sparc.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -119,6 +119,8 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool Pie = Args.hasArg(options::OPT_pie);
   const bool Nopie = Args.hasArg(options::OPT_no_pie, options::OPT_nopie);
   const bool Relocatable = Args.hasArg(options::OPT_r);
+  const bool StaticPie =
+      Static && !Shared && !Profiling && !Nopie && !Relocatable;
   ArgStringList CmdArgs;
 
   // Silence warning for "clang -g foo.o -o foo"
@@ -156,12 +158,14 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Pie)
+  // OpenBSD's system linker defaults to PIE, but cross-linkers may not.
+  // Explicitly pass -pie so that rcrt0.o's reference to _DYNAMIC is resolved.
+  if (Pie || StaticPie)
     CmdArgs.push_back("-pie");
   if (Nopie || Profiling)
-    CmdArgs.push_back("-nopie");
+    CmdArgs.push_back("-no-pie");
 
-  if (Triple.isRISCV64()) {
+  if (Triple.isLoongArch64() || Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
     if (Args.hasArg(options::OPT_mno_relax))
       CmdArgs.push_back("--no-relax");
@@ -180,7 +184,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (!Shared) {
       if (Profiling)
         crt0 = "gcrt0.o";
-      else if (Static && !Nopie)
+      else if (StaticPie)
         crt0 = "rcrt0.o";
       else
         crt0 = "crt0.o";
@@ -199,21 +203,10 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addAllArgs(CmdArgs,
                   {options::OPT_T_Group, options::OPT_s, options::OPT_t});
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
+  if (auto LTO = ToolChain.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
-                  D.getLTOMode() == LTOK_Thin);
-  }
-
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
@@ -241,8 +234,8 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // AddRunTimeLibs).
     if (D.IsFlangMode() &&
         !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-      addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
       if (Profiling)
         CmdArgs.push_back("-lm_p");
       else
@@ -297,10 +290,12 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                          Exec, CmdArgs, Inputs, Output));
 }
 
-SanitizerMask OpenBSD::getSupportedSanitizers() const {
+SanitizerMask
+OpenBSD::getSupportedSanitizers(BoundArch BA,
+                                Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   if (IsX86 || IsX86_64) {
     Res |= SanitizerKind::Vptr;
     Res |= SanitizerKind::Fuzzer;
@@ -325,7 +320,7 @@ void OpenBSD::AddClangSystemIncludeArgs(
     llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
 
-  if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
@@ -372,7 +367,7 @@ void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,
 }
 
 std::string OpenBSD::getCompilerRT(const ArgList &Args, StringRef Component,
-                                   FileType Type) const {
+                                   FileType Type, bool IsFortran) const {
   if (Component == "builtins") {
     SmallString<128> Path(getDriver().SysRoot);
     llvm::sys::path::append(Path, "/usr/lib/libcompiler_rt.a");
@@ -380,13 +375,13 @@ std::string OpenBSD::getCompilerRT(const ArgList &Args, StringRef Component,
       return std::string(Path);
   }
   SmallString<128> P(getDriver().ResourceDir);
-  std::string CRTBasename =
-      buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/false);
+  std::string CRTBasename = buildCompilerRTBasename(
+      Args, Component, Type, /*AddArch=*/false, IsFortran);
   llvm::sys::path::append(P, "lib", CRTBasename);
   // Checks if this is the base system case which uses a different location.
   if (getVFS().exists(P))
     return std::string(P);
-  return ToolChain::getCompilerRT(Args, Component, Type);
+  return ToolChain::getCompilerRT(Args, Component, Type, IsFortran);
 }
 
 Tool *OpenBSD::buildAssembler() const {

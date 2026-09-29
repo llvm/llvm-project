@@ -1,4 +1,4 @@
-//===--- IncludeOrderCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,6 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
-
-#include <map>
 
 namespace clang::tidy::llvm_check {
 
@@ -42,7 +40,7 @@ private:
   };
 
   using FileIncludes = std::vector<IncludeDirective>;
-  std::map<clang::FileID, FileIncludes> IncludeDirectives;
+  llvm::DenseMap<FileID, FileIncludes> IncludeDirectives;
   bool LookForMainModule = true;
 
   ClangTidyCheck &Check;
@@ -153,8 +151,8 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
         continue;
 
       // Emit a warning.
-      auto D = Check.diag(FileDirectives[I].Loc,
-                          "#includes are not sorted properly");
+      const auto D = Check.diag(FileDirectives[I].Loc,
+                                "#includes are not sorted properly");
 
       // Emit fix-its for all following includes in this block.
       for (; I != E; ++I) {
@@ -162,16 +160,16 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
           continue;
         const IncludeDirective &CopyFrom = FileDirectives[IncludeIndices[I]];
 
-        SourceLocation FromLoc = CopyFrom.Range.getBegin();
+        const SourceLocation FromLoc = CopyFrom.Range.getBegin();
         const char *FromData = SM.getCharacterData(FromLoc);
-        unsigned FromLen = std::strcspn(FromData, "\n");
+        const unsigned FromLen = std::strcspn(FromData, "\n");
 
-        StringRef FixedName(FromData, FromLen);
+        const StringRef FixedName(FromData, FromLen);
 
-        SourceLocation ToLoc = FileDirectives[I].Range.getBegin();
+        const SourceLocation ToLoc = FileDirectives[I].Range.getBegin();
         const char *ToData = SM.getCharacterData(ToLoc);
-        unsigned ToLen = std::strcspn(ToData, "\n");
-        auto ToRange =
+        const unsigned ToLen = std::strcspn(ToData, "\n");
+        const auto ToRange =
             CharSourceRange::getCharRange(ToLoc, ToLoc.getLocWithOffset(ToLen));
 
         D << FixItHint::CreateReplacement(ToRange, FixedName);

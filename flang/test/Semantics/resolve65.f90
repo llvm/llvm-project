@@ -15,8 +15,8 @@ module m1
     procedure :: assign_t2
     procedure :: assign_t3
     !ERROR: Defined assignment subroutine 'assign_t2' must have two dummy arguments
-    !WARNING: In defined assignment subroutine 'assign_t3', second dummy argument 'y' should have INTENT(IN) or VALUE attribute
-    !WARNING: In defined assignment subroutine 'assign_t4', first dummy argument 'x' should have INTENT(OUT) or INTENT(INOUT)
+    !WARNING: In defined assignment subroutine 'assign_t3', second dummy argument 'y' should have INTENT(IN) or VALUE attribute [-Wdefined-operator-args]
+    !WARNING: In defined assignment subroutine 'assign_t4', first dummy argument 'x' should have INTENT(OUT) or INTENT(INOUT) [-Wdefined-operator-args]
     !ERROR: In defined assignment subroutine 'assign_t5', first dummy argument 'x' may not have INTENT(IN)
     !ERROR: In defined assignment subroutine 'assign_t6', second dummy argument 'y' may not have INTENT(OUT)
     generic :: assignment(=) => assign_t, assign_t2, assign_t3, assign_t4, assign_t5, assign_t6

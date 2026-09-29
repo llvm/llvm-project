@@ -38,6 +38,8 @@ public:
 
   bool IsBasePlan() override { return true; }
 
+  lldb::RunDirection GetDirection() const override;
+
 protected:
   bool DoWillResume(lldb::StateType resume_state, bool current_plan) override;
   bool DoPlanExplainsStop(Event *event_ptr) override;

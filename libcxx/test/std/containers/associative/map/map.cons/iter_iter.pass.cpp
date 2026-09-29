@@ -11,7 +11,7 @@
 // class map
 
 // template <class InputIterator>
-//     map(InputIterator first, InputIterator last);
+//     constexpr map(InputIterator first, InputIterator last); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -19,12 +19,10 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX26 bool test() {
+  {
     typedef std::pair<const int, double> V;
-    V ar[] =
-    {
+    V ar[] = {
         V(1, 1),
         V(1, 1.5),
         V(1, 2),
@@ -35,18 +33,17 @@ int main(int, char**)
         V(3, 1.5),
         V(3, 2),
     };
-    std::map<int, double> m(ar, ar+sizeof(ar)/sizeof(ar[0]));
+    std::map<int, double> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
     assert(*std::next(m.begin()) == V(2, 1));
     assert(*std::next(m.begin(), 2) == V(3, 1));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::pair<const int, double> V;
-    V ar[] =
-    {
+    V ar[] = {
         V(1, 1),
         V(1, 1.5),
         V(1, 2),
@@ -57,14 +54,22 @@ int main(int, char**)
         V(3, 1.5),
         V(3, 2),
     };
-    std::map<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> m(ar, ar+sizeof(ar)/sizeof(ar[0]));
+    std::map<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> m(
+        ar, ar + sizeof(ar) / sizeof(ar[0]));
     assert(m.size() == 3);
     assert(std::distance(m.begin(), m.end()) == 3);
     assert(*m.begin() == V(1, 1));
     assert(*std::next(m.begin()) == V(2, 1));
     assert(*std::next(m.begin(), 2) == V(3, 1));
-    }
+  }
 #endif
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

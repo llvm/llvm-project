@@ -14,11 +14,9 @@ define i32 @PR90847(<8 x float> %x) nounwind {
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm1[2,3,0,1]
 ; AVX1-NEXT:    vminps %ymm2, %ymm1, %ymm1
 ; AVX1-NEXT:    vcmpeqps %ymm0, %ymm1, %ymm0
-; AVX1-NEXT:    vmovmskps %ymm0, %eax
-; AVX1-NEXT:    movabsq $4294967296, %rcx # imm = 0x100000000
-; AVX1-NEXT:    orq %rax, %rcx
-; AVX1-NEXT:    rep bsfq %rcx, %rax
-; AVX1-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX1-NEXT:    vmovmskps %ymm0, %ecx
+; AVX1-NEXT:    movl $32, %eax
+; AVX1-NEXT:    rep bsfl %ecx, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -31,11 +29,9 @@ define i32 @PR90847(<8 x float> %x) nounwind {
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm1[2,3,0,1]
 ; AVX2-NEXT:    vminps %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vcmpeqps %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vmovmskps %ymm0, %eax
-; AVX2-NEXT:    movabsq $4294967296, %rcx # imm = 0x100000000
-; AVX2-NEXT:    orq %rax, %rcx
-; AVX2-NEXT:    rep bsfq %rcx, %rax
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX2-NEXT:    vmovmskps %ymm0, %ecx
+; AVX2-NEXT:    movl $32, %eax
+; AVX2-NEXT:    rep bsfl %ecx, %eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 entry:

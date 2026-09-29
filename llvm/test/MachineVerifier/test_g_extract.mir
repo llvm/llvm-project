@@ -1,14 +1,9 @@
-# RUN: not --crash llc -mtriple=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            test_extract
-legalized:       true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-liveins:
-body:             |
+name: test_extract
+body: |
   bb.0:
 
     ; CHECK: Bad machine code: Too few operands
@@ -31,5 +26,4 @@ body:             |
 
     ; CHECK: Bad machine code: extract reads past end of register
     %8:_(s1) = G_EXTRACT %6, 32
-
 ...

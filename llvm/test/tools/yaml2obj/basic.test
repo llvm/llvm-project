@@ -1,0 +1,4 @@
+# Test case when the input file does not exist.
+RUN: not yaml2obj %t.blah 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=ENOENT %s
+
+ENOENT: yaml2obj: error: {{.*}}.blah: [[MSG]]

@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx2 | FileCheck %s --check-prefix=AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=f16c,fma | FileCheck %s --check-prefix=F16C
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512vl | FileCheck %s --check-prefix=F16C
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512fp16 | FileCheck %s --check-prefix=FP16
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512fp16,avx512vl | FileCheck %s --check-prefix=FP16
 
-define <2 x half> @foo(<2 x half> %0) "unsafe-fp-math"="true" nounwind {
+define <2 x half> @foo(<2 x half> %0) nounwind {
 ; AVX2-LABEL: foo:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    subq $40, %rsp
@@ -33,7 +33,7 @@ define <2 x half> @foo(<2 x half> %0) "unsafe-fp-math"="true" nounwind {
 ; F16C-NEXT:    vcvtps2ph $4, %ymm1, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm0, %ymm0
 ; F16C-NEXT:    vcvtph2ps %xmm1, %ymm1
-; F16C-NEXT:    vsubps %ymm0, %ymm1, %ymm2
+; F16C-NEXT:    vsubps %xmm0, %xmm1, %xmm2
 ; F16C-NEXT:    vcvtps2ph $4, %ymm2, %xmm2
 ; F16C-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; F16C-NEXT:    vcvtps2ph $4, %ymm0, %xmm0

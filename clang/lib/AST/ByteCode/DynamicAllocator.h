@@ -43,27 +43,32 @@ private:
     std::unique_ptr<std::byte[]> Memory;
     Allocation(std::unique_ptr<std::byte[]> Memory)
         : Memory(std::move(Memory)) {}
+    Block *block() const { return reinterpret_cast<Block *>(Memory.get()); }
   };
 
   struct AllocationSite {
     llvm::SmallVector<Allocation> Allocations;
+    unsigned NumAllocs = 0;
     Form AllocForm;
 
     AllocationSite(std::unique_ptr<std::byte[]> Memory, Form AllocForm)
         : AllocForm(AllocForm) {
       Allocations.push_back({std::move(Memory)});
+      ++NumAllocs;
     }
 
     size_t size() const { return Allocations.size(); }
+    bool empty() const { return Allocations.empty(); }
   };
 
 public:
-  DynamicAllocator() = default;
+  DynamicAllocator(llvm::BumpPtrAllocator &DescAlloc)
+      : DescAllocator(DescAlloc) {}
+  DynamicAllocator(DynamicAllocator &) = delete;
+  DynamicAllocator(DynamicAllocator &&) = delete;
   ~DynamicAllocator();
 
   void cleanup();
-
-  unsigned getNumAllocations() const { return AllocationSites.size(); }
 
   /// Allocate ONE element of the given descriptor.
   Block *allocate(const Descriptor *D, unsigned EvalID, Form AllocForm);
@@ -76,8 +81,7 @@ public:
 
   /// Deallocate the given source+block combination.
   /// Returns \c true if anything has been deallocatd, \c false otherwise.
-  bool deallocate(const Expr *Source, const Block *BlockToDelete,
-                  InterpState &S);
+  bool deallocate(const Expr *Source, const Block *BlockToDelete);
 
   /// Checks whether the allocation done at the given source is an array
   /// allocation.
@@ -94,11 +98,15 @@ public:
     return llvm::make_range(AllocationSites.begin(), AllocationSites.end());
   }
 
+  bool hasAllocations() const { return !AllocationSites.empty(); }
+
 private:
   llvm::DenseMap<const Expr *, AllocationSite> AllocationSites;
+  // Allocations that have already been deallocated but had pointers
+  // to them.
+  llvm::SmallVector<Allocation> DeadAllocations;
 
-  using PoolAllocTy = llvm::BumpPtrAllocator;
-  PoolAllocTy DescAllocator;
+  llvm::BumpPtrAllocator &DescAllocator;
 
   /// Allocates a new descriptor.
   template <typename... Ts> Descriptor *allocateDescriptor(Ts &&...Args) {

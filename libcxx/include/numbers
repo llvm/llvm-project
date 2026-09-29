@@ -59,7 +59,7 @@ namespace std::numbers {
 */
 
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/numbers>
+#  include <__cxx03/__config>
 #else
 #  include <__concepts/arithmetic.h>
 #  include <__config>
@@ -159,11 +159,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  endif // _LIBCPP_STD_VER >= 20
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#    include <concepts>
-#    include <cstddef>
-#    include <type_traits>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_NUMBERS

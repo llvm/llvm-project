@@ -81,9 +81,9 @@ def FeatureNoOddSPReg  : SubtargetFeature<"nooddspreg", "UseOddSPReg", "false",
 def FeatureVFPU        : SubtargetFeature<"vfpu", "HasVFPU",
                                 "true", "Enable vector FPU instructions">;
 def FeatureMips1       : SubtargetFeature<"mips1", "MipsArchVersion", "Mips1",
-                                "Mips I ISA Support [highly experimental]">;
+                                "Mips I ISA Support">;
 def FeatureMips2       : SubtargetFeature<"mips2", "MipsArchVersion", "Mips2",
-                                "Mips II ISA Support [highly experimental]",
+                                "Mips II ISA Support",
                                 [FeatureMips1]>;
 def FeatureMips3_32    : SubtargetFeature<"mips3_32", "HasMips3_32", "true",
                                 "Subset of MIPS-III that is also in MIPS32 "
@@ -92,7 +92,7 @@ def FeatureMips3_32r2  : SubtargetFeature<"mips3_32r2", "HasMips3_32r2", "true",
                                 "Subset of MIPS-III that is also in MIPS32r2 "
                                 "[highly experimental]">;
 def FeatureMips3       : SubtargetFeature<"mips3", "MipsArchVersion", "Mips3",
-                                "MIPS III ISA Support [highly experimental]",
+                                "MIPS III ISA Support",
                                 [FeatureMips2, FeatureMips3_32,
                                  FeatureMips3_32r2, FeatureGP64Bit,
                                  FeatureFP64Bit]>;
@@ -186,6 +186,14 @@ def FeatureCnMipsP : SubtargetFeature<"cnmipsp", "HasCnMipsP",
                                       "true", "Octeon+ cnMIPS Support",
                                       [FeatureCnMips]>;
 
+def FeatureFixR5900 : SubtargetFeature<"fix-r5900", "FixR5900", "true",
+                                       "Enable R5900 short loop erratum fix">;
+
+def FeatureR5900 : SubtargetFeature<"r5900", "IsR5900", "true",
+                                    "R5900 (PS2 Emotion Engine) Support",
+                                    [FeatureMips3, FeatureSingleFloat,
+                                     FeatureFixR5900]>;
+
 def FeatureUseTCCInDIV : SubtargetFeature<
                                "use-tcc-in-div",
                                "UseTCCInDIV", "false",
@@ -212,20 +220,49 @@ def FeatureStrictAlign
     : SubtargetFeature<"strict-align", "StrictAlign", "true",
                        "Disable unaligned load store for r6">;
 
+def FeatureUseCompactBranches
+    : SubtargetFeature<"use-compact-branches", "UseCompactBranches", "true",
+                       "Use compact branch instructions for MIPS32R6/MIPS64R6">;
+
+//===----------------------------------------------------------------------===//
+// Mips Instruction Predicate Definitions.
+//===----------------------------------------------------------------------===//
+
+def IsPTR64bit    :   Predicate<"Subtarget->isABI_N64()">,
+                      AssemblerPredicate<(all_of FeaturePTR64Bit)>;
+def IsPTR32bit    :   Predicate<"!Subtarget->isABI_N64()">,
+                      AssemblerPredicate<(all_of (not FeaturePTR64Bit))>;
+def UseCompactBranches : Predicate<"Subtarget->useCompactBranches()">,
+                         AssemblerPredicate<(all_of FeatureUseCompactBranches)>;
+
+//===----------------------------------------------------------------------===//
+// HwModes
+//===----------------------------------------------------------------------===//
+
+defvar MIPS32 = DefaultMode;
+def MIPS64 : HwMode<[IsPTR64bit]>;
+
 //===----------------------------------------------------------------------===//
 // Register File, Calling Conv, Instruction Descriptions
 //===----------------------------------------------------------------------===//
 
 include "MipsRegisterInfo.td"
-include "MipsSchedule.td"
 include "MipsInstrInfo.td"
 include "MipsCallingConv.td"
 include "MipsRegisterBanks.td"
 include "MipsCombine.td"
 
+foreach i = {1-31} in
+  def FeatureReserveGPR#i :
+      SubtargetFeature<"reserve-gpr"#i, "UserReservedGPR["#i#"]", "true",
+                       "Reserve MIPS GPR "#i>;
+
 // Avoid forward declaration issues.
+include "MipsScheduleI6400.td"
 include "MipsScheduleP5600.td"
 include "MipsScheduleGeneric.td"
+
+defm : RemapAllTargetPseudoPointerOperands<mips_ptr_rc>;
 
 def MipsInstrInfo : InstrInfo {
 }
@@ -237,6 +274,16 @@ def MipsInstrInfo : InstrInfo {
 def ImplP5600 : SubtargetFeature<"p5600", "ProcImpl",
                                  "MipsSubtarget::CPU::P5600",
                                  "The P5600 Processor", [FeatureMips32r5]>;
+
+// The I6500 is the multi-cluster version of the I6400. Both are based on the
+// same CPU architecture.
+def ImplI6400
+    : SubtargetFeature<"i6400", "ProcImpl", "MipsSubtarget::CPU::I6400",
+                       "MIPS I6400 Processor", [FeatureMips64r6, FeatureMSA]>;
+
+def ImplI6500
+    : SubtargetFeature<"i6500", "ProcImpl", "MipsSubtarget::CPU::I6500",
+                       "MIPS I6500 Processor", [FeatureMips64r6, FeatureMSA]>;
 
 class Proc<string Name, list<SubtargetFeature> Features>
  : ProcessorModel<Name, MipsGenericModel, Features>;
@@ -261,9 +308,13 @@ def : Proc<"mips64r6", [FeatureMips64r6]>;
 def : Proc<"octeon", [FeatureMips64r2, FeatureCnMips]>;
 def : Proc<"octeon+", [FeatureMips64r2, FeatureCnMips, FeatureCnMipsP]>;
 def : ProcessorModel<"p5600", MipsP5600Model, [ImplP5600]>;
+def : Proc<"r5900", [FeatureR5900]>;
+def : ProcessorModel<"i6400", MipsI6400Model, [ImplI6400]>;
+def : ProcessorModel<"i6500", MipsI6400Model, [ImplI6500]>;
 
 def MipsAsmParser : AsmParser {
-  let ShouldEmitMatchRegisterName = 0;
+  let ShouldEmitMatchRegisterAltNameWithIndex = 1;
+  let AllowDuplicateRegisterNames = 1;
 }
 
 def MipsAsmParserVariant : AsmParserVariant {

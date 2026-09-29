@@ -8,13 +8,16 @@
 
 #include "lldb/DataFormatters/TypeSummary.h"
 
-#include "FormatterBytecode.h"
+#include "lldb/Core/FormatEntity.h"
+#include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/Interfaces/ScriptedStringSummaryInterface.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -43,8 +46,9 @@ TypeSummaryOptions::SetCapping(lldb::TypeSummaryCapping cap) {
   return *this;
 }
 
-TypeSummaryImpl::TypeSummaryImpl(Kind kind, const TypeSummaryImpl::Flags &flags)
-    : m_flags(flags), m_kind(kind) {}
+TypeSummaryImpl::TypeSummaryImpl(Kind kind, const TypeSummaryImpl::Flags &flags,
+                                 uint32_t ptr_match_depth)
+    : m_flags(flags), m_kind(kind), m_ptr_match_depth(ptr_match_depth) {}
 
 std::string TypeSummaryImpl::GetSummaryKindName() {
   switch (m_kind) {
@@ -58,12 +62,17 @@ std::string TypeSummaryImpl::GetSummaryKindName() {
     return "c++";
   case Kind::eBytecode:
     return "bytecode";
+  case Kind::eScriptedClass:
+    return "python class";
   }
+  llvm_unreachable("Unknown type kind name");
 }
 
 StringSummaryFormat::StringSummaryFormat(const TypeSummaryImpl::Flags &flags,
-                                         const char *format_cstr)
-    : TypeSummaryImpl(Kind::eSummaryString, flags), m_format_str() {
+                                         const char *format_cstr,
+                                         uint32_t ptr_match_depth)
+    : TypeSummaryImpl(Kind::eSummaryString, flags, ptr_match_depth),
+      m_format_str() {
   SetSummaryString(format_cstr);
 }
 
@@ -101,9 +110,9 @@ bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
     retval = std::string(s.GetString());
     return true;
   } else {
-    if (FormatEntity::Format(m_format, s, &sc, &exe_ctx,
-                             &sc.line_entry.range.GetBaseAddress(), valobj,
-                             false, false)) {
+    if (FormatEntity::Formatter(
+            &sc, &exe_ctx, &sc.line_entry.range.GetBaseAddress(), false, false)
+            .Format(m_format, s, valobj)) {
       retval.assign(std::string(s.GetString()));
       return true;
     } else {
@@ -116,7 +125,7 @@ bool StringSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
 std::string StringSummaryFormat::GetDescription() {
   StreamString sstr;
 
-  sstr.Printf("`%s`%s%s%s%s%s%s%s%s%s", m_format_str.c_str(),
+  sstr.Printf("`%s`%s%s%s%s%s%s%s%s%s ptr-match-depth=%u", m_format_str.c_str(),
               m_error.Fail() ? " error: " : "",
               m_error.Fail() ? m_error.AsCString() : "",
               Cascades() ? "" : " (not cascading)",
@@ -125,15 +134,17 @@ std::string StringSummaryFormat::GetDescription() {
               IsOneLiner() ? " (one-line printout)" : "",
               SkipsPointers() ? " (skip pointers)" : "",
               SkipsReferences() ? " (skip references)" : "",
-              HideNames(nullptr) ? " (hide member names)" : "");
+              HideNames(nullptr) ? " (hide member names)" : "",
+              GetPtrMatchDepth());
   return std::string(sstr.GetString());
 }
 
 std::string StringSummaryFormat::GetName() { return m_format_str; }
 
 CXXFunctionSummaryFormat::CXXFunctionSummaryFormat(
-    const TypeSummaryImpl::Flags &flags, Callback impl, const char *description)
-    : TypeSummaryImpl(Kind::eCallback, flags), m_impl(impl),
+    const TypeSummaryImpl::Flags &flags, Callback impl, const char *description,
+    uint32_t ptr_match_depth)
+    : TypeSummaryImpl(Kind::eCallback, flags, ptr_match_depth), m_impl(impl),
       m_description(description ? description : "") {}
 
 bool CXXFunctionSummaryFormat::FormatObject(ValueObject *valobj,
@@ -149,14 +160,15 @@ bool CXXFunctionSummaryFormat::FormatObject(ValueObject *valobj,
 
 std::string CXXFunctionSummaryFormat::GetDescription() {
   StreamString sstr;
-  sstr.Printf("%s%s%s%s%s%s%s %s", Cascades() ? "" : " (not cascading)",
+  sstr.Printf("%s%s%s%s%s%s%s ptr-match-depth=%u %s",
+              Cascades() ? "" : " (not cascading)",
               !DoesPrintChildren(nullptr) ? "" : " (show children)",
               !DoesPrintValue(nullptr) ? " (hide value)" : "",
               IsOneLiner() ? " (one-line printout)" : "",
               SkipsPointers() ? " (skip pointers)" : "",
               SkipsReferences() ? " (skip references)" : "",
               HideNames(nullptr) ? " (hide member names)" : "",
-              m_description.c_str());
+              GetPtrMatchDepth(), m_description.c_str());
   return std::string(sstr.GetString());
 }
 
@@ -164,8 +176,9 @@ std::string CXXFunctionSummaryFormat::GetName() { return m_description; }
 
 ScriptSummaryFormat::ScriptSummaryFormat(const TypeSummaryImpl::Flags &flags,
                                          const char *function_name,
-                                         const char *python_script)
-    : TypeSummaryImpl(Kind::eScript, flags), m_function_name(),
+                                         const char *python_script,
+                                         uint32_t ptr_match_depth)
+    : TypeSummaryImpl(Kind::eScript, flags, ptr_match_depth), m_function_name(),
       m_python_script(), m_script_function_sp() {
   // Take preference in the python script name over the function name.
   if (function_name) {
@@ -210,13 +223,15 @@ bool ScriptSummaryFormat::FormatObject(ValueObject *valobj, std::string &retval,
 
 std::string ScriptSummaryFormat::GetDescription() {
   StreamString sstr;
-  sstr.Printf("%s%s%s%s%s%s%s\n  ", Cascades() ? "" : " (not cascading)",
+  sstr.Printf("%s%s%s%s%s%s%s ptr-match-depth=%u\n  ",
+              Cascades() ? "" : " (not cascading)",
               !DoesPrintChildren(nullptr) ? "" : " (show children)",
               !DoesPrintValue(nullptr) ? " (hide value)" : "",
               IsOneLiner() ? " (one-line printout)" : "",
               SkipsPointers() ? " (skip pointers)" : "",
               SkipsReferences() ? " (skip references)" : "",
-              HideNames(nullptr) ? " (hide member names)" : "");
+              HideNames(nullptr) ? " (hide member names)" : "",
+              GetPtrMatchDepth());
   if (m_python_script.empty()) {
     if (m_function_name.empty()) {
       sstr.PutCString("no backing script");
@@ -230,6 +245,77 @@ std::string ScriptSummaryFormat::GetDescription() {
 }
 
 std::string ScriptSummaryFormat::GetName() { return m_script_formatter_name; }
+
+ScriptedSummaryFormat::ScriptedSummaryFormat(
+    const TypeSummaryImpl::Flags &flags, const char *class_name,
+    uint32_t ptr_match_depth)
+    : TypeSummaryImpl(Kind::eScriptedClass, flags, ptr_match_depth),
+      m_class_name(class_name ? class_name : ""), m_interface_sp() {}
+
+bool ScriptedSummaryFormat::FormatObject(ValueObject *valobj,
+                                         std::string &retval,
+                                         const TypeSummaryOptions &options) {
+  if (!valobj)
+    return false;
+
+  TargetSP target_sp(valobj->GetTargetSP());
+
+  if (!target_sp) {
+    retval.assign("error: no target");
+    return false;
+  }
+
+  ScriptInterpreter *script_interpreter =
+      target_sp->GetDebugger().GetScriptInterpreter();
+
+  if (!script_interpreter) {
+    retval.assign("error: no ScriptInterpreter");
+    return false;
+  }
+
+  if (!m_interface_sp) {
+    m_interface_sp = script_interpreter->CreateScriptedStringSummaryInterface();
+    if (!m_interface_sp) {
+      retval.assign("error: no ScriptedStringSummaryInterface");
+      return false;
+    }
+
+    llvm::Expected<StructuredData::GenericSP> obj_or_err =
+        m_interface_sp->CreatePluginObject(m_class_name);
+    if (!obj_or_err) {
+      retval.assign(llvm::toString(obj_or_err.takeError()));
+      m_interface_sp.reset();
+      return false;
+    }
+  }
+
+  llvm::Expected<std::string> summary =
+      m_interface_sp->GetSummary(*valobj, options);
+  if (!summary) {
+    retval.assign(llvm::toString(summary.takeError()));
+    return false;
+  }
+
+  retval = std::move(*summary);
+  return true;
+}
+
+std::string ScriptedSummaryFormat::GetDescription() {
+  StreamString sstr;
+  sstr.Printf("%s%s%s%s%s%s%s ptr-match-depth=%u\n  ",
+              Cascades() ? "" : " (not cascading)",
+              !DoesPrintChildren(nullptr) ? "" : " (show children)",
+              !DoesPrintValue(nullptr) ? " (hide value)" : "",
+              IsOneLiner() ? " (one-line printout)" : "",
+              SkipsPointers() ? " (skip pointers)" : "",
+              SkipsReferences() ? " (skip references)" : "",
+              HideNames(nullptr) ? " (hide member names)" : "",
+              GetPtrMatchDepth());
+  sstr.PutCString(m_class_name);
+  return std::string(sstr.GetString());
+}
+
+std::string ScriptedSummaryFormat::GetName() { return m_class_name; }
 
 BytecodeSummaryFormat::BytecodeSummaryFormat(
     const TypeSummaryImpl::Flags &flags,
@@ -250,11 +336,10 @@ bool BytecodeSummaryFormat::FormatObject(ValueObject *valobj,
     return false;
   }
 
-  std::vector<FormatterBytecode::ControlStackElement> control(
-      {m_bytecode->getBuffer()});
+  FormatterBytecode::ControlStack control({m_bytecode->getBuffer()});
   FormatterBytecode::DataStack data({valobj->GetSP()});
   llvm::Error error = FormatterBytecode::Interpret(
-      control, data, FormatterBytecode::sel_summary);
+      control, data, FormatterBytecode::sig_summary);
   if (error) {
     retval = llvm::toString(std::move(error));
     return false;
@@ -272,6 +357,8 @@ bool BytecodeSummaryFormat::FormatObject(ValueObject *valobj,
     os << *u;
   else if (auto i = std::get_if<int64_t>(&top))
     os << *i;
+  else if (auto ap = std::get_if<llvm::APSInt>(&top))
+    os << *ap;
   else if (auto valobj = std::get_if<ValueObjectSP>(&top)) {
     if (!valobj->get())
       os << "empty object";

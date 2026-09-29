@@ -38,7 +38,7 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) override {
+  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) const override {
     return m_current_value;
   }
 
@@ -46,10 +46,7 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  void Clear() override {
-    m_current_value = m_default_value;
-    m_value_was_set = false;
-  }
+  bool IsDefault() const override { return m_current_value == m_default_value; }
 
   // Subclass specific functions
 
@@ -73,22 +70,26 @@ public:
   }
 
   bool SetDefaultValue(uint64_t value) {
-    if (value >= m_min_value && value <= m_max_value) {
-      m_default_value = value;
-      return true;
-    }
-    return false;
+    assert(value >= m_min_value && value <= m_max_value &&
+           "disallowed default value");
+    m_default_value = value;
+    return true;
   }
 
-  void SetMinimumValue(int64_t v) { m_min_value = v; }
+  void SetMinimumValue(uint64_t v) { m_min_value = v; }
 
   uint64_t GetMinimumValue() const { return m_min_value; }
 
-  void SetMaximumValue(int64_t v) { m_max_value = v; }
+  void SetMaximumValue(uint64_t v) { m_max_value = v; }
 
   uint64_t GetMaximumValue() const { return m_max_value; }
 
 protected:
+  void ClearImpl() override {
+    m_current_value = m_default_value;
+    m_value_was_set = false;
+  }
+
   uint64_t m_current_value = 0;
   uint64_t m_default_value = 0;
   uint64_t m_min_value = std::numeric_limits<uint64_t>::min();

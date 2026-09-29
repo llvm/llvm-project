@@ -11,11 +11,13 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <stdarg.h>
 #include <sys/syscall.h> // For syscall numbers.
+
+#include "hdr/sys_mman_macros.h" // For MREMAP_FIXED, MAP_FAILED.
 
 namespace LIBC_NAMESPACE_DECL {
 

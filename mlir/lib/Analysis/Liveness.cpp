@@ -68,14 +68,11 @@ struct BlockInfoBuilder {
     // operands as used. All defined value will be removed from the used set
     // at the end.
     block->walk([&](Operation *op) {
-      for (Value result : op->getResults())
-        defValues.insert(result);
-      for (Value operand : op->getOperands())
-        useValues.insert(operand);
+      defValues.insert_range(op->getResults());
+      useValues.insert_range(op->getOperands());
       for (Region &region : op->getRegions())
         for (Block &child : region.getBlocks())
-          for (BlockArgument arg : child.getArguments())
-            defValues.insert(arg);
+          defValues.insert_range(child.getArguments());
     });
     llvm::set_subtract(useValues, defValues);
   }
@@ -201,8 +198,7 @@ Liveness::OperationListT Liveness::resolveLiveness(Value value) const {
 
   while (!toProcess.empty()) {
     // Get block and block liveness information.
-    Block *block = toProcess.back();
-    toProcess.pop_back();
+    Block *block = toProcess.pop_back_val();
     const LivenessBlockInfo *blockInfo = getLiveness(block);
 
     // Note that start and end will be in the same block.

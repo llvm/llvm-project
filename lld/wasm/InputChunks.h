@@ -45,6 +45,7 @@ public:
     Function,
     SyntheticFunction,
     Section,
+    SyntheticDataSegment,
   };
 
   StringRef name;
@@ -77,6 +78,7 @@ public:
   uint32_t getInputSectionOffset() const { return inputSectionOffset; }
 
   size_t getNumRelocations() const { return relocations.size(); }
+  size_t getNumLiveRelocations() const;
   void writeRelocations(llvm::raw_ostream &os) const;
   bool generateRelocationCode(raw_ostream &os) const;
 
@@ -96,7 +98,11 @@ public:
 
   // After assignAddresses is called, this represents the offset from
   // the beginning of the output section this chunk was assigned to.
-  int32_t outSecOff = 0;
+  //
+  // WASM sections can be up to 4GB. We use a larger, signed integer here to
+  // be able to detect section size overflow instead of a silent wrap-around
+  // and corrupted output sections.
+  int64_t outSecOff = 0;
 
   uint8_t sectionKind : 3;
 
@@ -334,6 +340,25 @@ public:
   }
 
   void setBody(ArrayRef<uint8_t> body) { rawData = body; }
+};
+
+class SyntheticInputSegment : public InputChunk {
+public:
+  SyntheticInputSegment(StringRef name, uint32_t alignment, uint32_t flags)
+      : InputChunk(nullptr, InputChunk::SyntheticDataSegment, name, alignment,
+                   flags) {}
+
+  static bool classof(const InputChunk *c) {
+    return c->kind() == SyntheticDataSegment;
+  }
+
+  void setSize(uint32_t s) { size = s; }
+  uint32_t getSize() const { return size; }
+
+  void writeTo(uint8_t *buf) const;
+
+private:
+  uint32_t size = 0;
 };
 
 // Represents a single Wasm Section within an input file.

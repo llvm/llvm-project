@@ -1,13 +1,7 @@
-// RUN: %clang_cc1 -O1 -triple x86_64                        %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK       %s
-
-// REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +neon %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,NEON  %s
-
-// REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +sve  %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,SVE   %s
-
-// REQUIRES: riscv-registered-target
-// RUN: %clang_cc1 -O1 -triple riscv64 -target-feature +v    %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,RISCV %s
+// RUN: %clang_cc1                                  -O1 -triple x86_64                        %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK       %s
+// RUN: %if aarch64-registered-target %{ %clang_cc1 -O1 -triple aarch64 -target-feature +neon %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,NEON  %s %}
+// RUN: %if aarch64-registered-target %{ %clang_cc1 -O1 -triple aarch64 -target-feature +sve  %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,SVE   %s %}
+// RUN: %if riscv-registered-target   %{ %clang_cc1 -O1 -triple riscv64 -target-feature +v    %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,RISCV %s %}
 
 /// Note that this does not make sense to check for x86 SIMD types, because
 /// __m128i, __m256i, and __m512i do not specify the element type. There are no
@@ -85,7 +79,7 @@ int test_builtin_vectorelements_neon64x1() {
 long test_builtin_vectorelements_sve32() {
   // SVE: i64 @test_builtin_vectorelements_sve32(
   // SVE: [[VSCALE:%.+]] = call i64 @llvm.vscale.i64()
-  // SVE: [[RES:%.+]] = mul i64 [[VSCALE]], 4
+  // SVE: [[RES:%.+]] = mul nuw i64 [[VSCALE]], 4
   // SVE: ret i64 [[RES]]
   return __builtin_vectorelements(svuint32_t);
 }
@@ -93,7 +87,7 @@ long test_builtin_vectorelements_sve32() {
 long test_builtin_vectorelements_sve8() {
   // SVE: i64 @test_builtin_vectorelements_sve8(
   // SVE: [[VSCALE:%.+]] = call i64 @llvm.vscale.i64()
-  // SVE: [[RES:%.+]] = mul i64 [[VSCALE]], 16
+  // SVE: [[RES:%.+]] = mul nuw i64 [[VSCALE]], 16
   // SVE: ret i64 [[RES]]
   return __builtin_vectorelements(svuint8_t);
 }
@@ -105,7 +99,7 @@ long test_builtin_vectorelements_sve8() {
 long test_builtin_vectorelements_riscv8() {
   // RISCV: i64 @test_builtin_vectorelements_riscv8(
   // RISCV: [[VSCALE:%.+]] = call i64 @llvm.vscale.i64()
-  // RISCV: [[RES:%.+]] = mul i64 [[VSCALE]], 8
+  // RISCV: [[RES:%.+]] = mul nuw i64 [[VSCALE]], 8
   // RISCV: ret i64 [[RES]]
   return __builtin_vectorelements(vuint8m1_t);
 }
@@ -120,7 +114,7 @@ long test_builtin_vectorelements_riscv64() {
 long test_builtin_vectorelements_riscv32m2() {
   // RISCV: i64 @test_builtin_vectorelements_riscv32m2(
   // RISCV: [[VSCALE:%.+]] = call i64 @llvm.vscale.i64()
-  // RISCV: [[RES:%.+]] = mul i64 [[VSCALE]], 4
+  // RISCV: [[RES:%.+]] = mul nuw i64 [[VSCALE]], 4
   // RISCV: ret i64 [[RES]]
   return __builtin_vectorelements(vuint32m2_t);
 }

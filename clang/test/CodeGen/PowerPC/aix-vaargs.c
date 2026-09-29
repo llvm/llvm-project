@@ -68,8 +68,8 @@ void testva (int n, ...) {
 
 // CHECK: declare void @llvm.va_start.p0(ptr)
 
-// AIX32: declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
-// AIX64: declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
+// AIX32: declare void @llvm.memcpy.p0.p0.i32(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i32, i1 immarg)
+// AIX64: declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i64, i1 immarg)
 
 // CHECK: declare void @llvm.va_copy.p0(ptr, ptr)
 // CHECK: declare void @llvm.va_end.p0(ptr)

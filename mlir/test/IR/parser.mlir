@@ -127,6 +127,18 @@ func.func private @memrefs_nomap_dictspace(memref<5x6x7xf32, {memSpace = "specia
 // CHECK: func private @memrefs_map_dictspace(memref<5x6x7xf32, #map{{[0-9]*}}, {memSpace = "special", subIndex = 3 : i64}>)
 func.func private @memrefs_map_dictspace(memref<5x6x7xf32, #map3, {memSpace = "special", subIndex = 3}>)
 
+// CHECK: func private @memrefs_nomap_opaquespace(memref<5x6x7xf32, #unknown_dialect.unknown_attr>)
+func.func private @memrefs_nomap_opaquespace(memref<5x6x7xf32, #unknown_dialect.unknown_attr>)
+
+// CHECK: func private @memrefs_map_opaquespace(memref<5x6x7xf32, #map{{[0-9]*}}, #unknown_dialect.unknown_attr>)
+func.func private @memrefs_map_opaquespace(memref<5x6x7xf32, #map3, #unknown_dialect.unknown_attr>)
+
+// CHECK: func private @memrefs_nomap_typespace(memref<5x6x7xf32, i8>)
+func.func private @memrefs_nomap_typespace(memref<5x6x7xf32, i8>)
+
+// CHECK: func private @memrefs_map_typespace(memref<5x6x7xf32, #map{{[0-9]*}}, i8>)
+func.func private @memrefs_map_typespace(memref<5x6x7xf32, #map3, i8>)
+
 // CHECK: func private @complex_types(complex<i1>) -> complex<f32>
 func.func private @complex_types(complex<i1>) -> complex<f32>
 
@@ -730,6 +742,17 @@ func.func @densetensorattr() -> () {
   "complex_attr"(){bar = dense<(1.000000e+00,0.000000e+00)> : tensor<complex<f32>>} : () -> ()
   // CHECK: dense<[(1.000000e+00,0.000000e+00), (2.000000e+00,2.000000e+00)]> : tensor<2xcomplex<f32>>
   "complex_attr"(){bar = dense<[(1.000000e+00,0.000000e+00), (2.000000e+00,2.000000e+00)]> : tensor<2xcomplex<f32>>} : () -> ()
+  // CHECK: dense<> : tensor<0xcomplex<i64>>
+  "complex_attr"(){bar = dense<> : tensor<0xcomplex<i64>>} : () -> ()
+  // CHECK: dense<> : tensor<2x0xcomplex<i64>>
+  "complex_attr"(){bar = dense<> : tensor<2x0xcomplex<i64>>} : () -> ()
+  // Test complex<i1> roundtrip (https://github.com/llvm/llvm-project/issues/140302).
+  // CHECK: dense<(true,true)> : tensor<complex<i1>>
+  "complex_attr"(){bar = dense<(true,true)> : tensor<complex<i1>>} : () -> ()
+  // CHECK: dense<[(true,true), (false,true)]> : tensor<2xcomplex<i1>>
+  "complex_attr"(){bar = dense<[(true,true), (false,true)]> : tensor<2xcomplex<i1>>} : () -> ()
+  // CHECK: dense<[(false,true), (true,false)]> : tensor<2xcomplex<i1>>
+  "complex_attr"(){bar = dense<[(false,true), (true,false)]> : tensor<2xcomplex<i1>>} : () -> ()
   return
 }
 
@@ -1129,6 +1152,37 @@ func.func @f80_special_values() {
   return
 }
 
+// Literals are parsed with the semantics of the target type, so f80 and f128
+// keep the range and precision that would be lost by going through a double.
+// CHECK-LABEL: @wide_float_literals
+func.func @wide_float_literals() {
+  // CHECK: arith.constant 9.99999999999999999986E+308 : f80
+  %0 = arith.constant 1.0E+309 : f80
+  // CHECK: arith.constant -9.99999999999999999986E+308 : f80
+  %1 = arith.constant -1.0E+309 : f80
+  // CHECK: arith.constant 1.000000e+400 : f128
+  %2 = arith.constant 1.0E+400 : f128
+
+  // CHECK: arith.constant 1.100000e+00 : f80
+  %3 = arith.constant 1.1 : f80
+  // CHECK: arith.constant 1.000000e-01 : f128
+  %4 = arith.constant 0.1 : f128
+
+  // CHECK: arith.constant 1.000000e-320 : f80
+  %5 = arith.constant 1.0E-320 : f80
+
+  // Out of range for the target type: still infinity.
+  // CHECK: arith.constant 0x7FFF8000000000000000 : f80
+  %6 = arith.constant 1.0E+5000 : f80
+  // CHECK: arith.constant 0x7FF0000000000000 : f64
+  %7 = arith.constant 1.0E+400 : f64
+
+  // CHECK: arith.constant dense<[1.100000e+00, 9.99999999999999999986E+308]> : tensor<2xf80>
+  %8 = arith.constant dense<[1.1, 1.0E+309]> : tensor<2xf80>
+
+  return
+}
+
 // We want to print floats in exponential notation with 6 significant digits,
 // but it may lead to precision loss when parsing back, in which case we print
 // the decimal form instead.
@@ -1162,6 +1216,15 @@ func.func @op_with_region_args() {
   test.polyfor %i, %j, %k {
     "foo"() : () -> ()
   }
+  return
+}
+
+// Test parsing an operation name from within another op custom syntax.
+
+// CHECK-LABEL: @custom_name_api
+func.func @custom_name_api() {
+  // CHECK: test.parse_custom_operation_name_api(builtin.module)
+  test.parse_custom_operation_name_api(builtin.module)
   return
 }
 
@@ -1216,6 +1279,13 @@ func.func @parse_wrapped_keyword_test() {
 func.func @parse_base64_test() {
   // GENERIC: "test.parse_b64"() <{b64 = "hello world"}>
   test.parse_b64 "aGVsbG8gd29ybGQ="
+  return
+}
+
+// CHECK-LABEL: func @parse_slash_test
+func.func @parse_slash_test() {
+  // CHECK: "test.slash_attr"() <{attr = #test.slash_attr<1 / 2>}> : () -> ()
+  "test.slash_attr"() { attr = #test.slash_attr<1 / 2> } : () -> ()
   return
 }
 

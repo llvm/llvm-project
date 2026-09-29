@@ -16,13 +16,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_BITCODEWRITER_H
 
 #include "Representation.h"
-#include "clang/AST/AST.h"
+#include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
-#include <initializer_list>
-#include <vector>
 
 namespace clang {
 namespace doc {
@@ -66,7 +62,11 @@ enum BlockId {
   BI_TEMPLATE_BLOCK_ID,
   BI_TEMPLATE_SPECIALIZATION_BLOCK_ID,
   BI_TEMPLATE_PARAM_BLOCK_ID,
+  BI_CONSTRAINT_BLOCK_ID,
   BI_TYPEDEF_BLOCK_ID,
+  BI_CONCEPT_BLOCK_ID,
+  BI_VAR_BLOCK_ID,
+  BI_FRIEND_BLOCK_ID,
   BI_LAST,
   BI_FIRST = BI_VERSION_BLOCK_ID
 };
@@ -81,6 +81,7 @@ enum RecordId {
   FUNCTION_LOCATION,
   FUNCTION_ACCESS,
   FUNCTION_IS_METHOD,
+  FUNCTION_IS_STATIC,
   COMMENT_KIND,
   COMMENT_TEXT,
   COMMENT_NAME,
@@ -92,13 +93,21 @@ enum RecordId {
   COMMENT_ATTRKEY,
   COMMENT_ATTRVAL,
   COMMENT_ARG,
+  TYPE_IS_BUILTIN,
+  TYPE_IS_TEMPLATE,
   FIELD_TYPE_NAME,
   FIELD_DEFAULT_VALUE,
+  FIELD_TYPE_IS_BUILTIN,
+  FIELD_TYPE_IS_TEMPLATE,
   MEMBER_TYPE_NAME,
   MEMBER_TYPE_ACCESS,
+  MEMBER_TYPE_IS_STATIC,
+  MEMBER_TYPE_IS_BUILTIN,
+  MEMBER_TYPE_IS_TEMPLATE,
   NAMESPACE_USR,
   NAMESPACE_NAME,
   NAMESPACE_PATH,
+  NAMESPACE_PARENT_USR,
   ENUM_USR,
   ENUM_NAME,
   ENUM_DEFLOCATION,
@@ -114,6 +123,8 @@ enum RecordId {
   RECORD_LOCATION,
   RECORD_TAG_TYPE,
   RECORD_IS_TYPE_DEF,
+  RECORD_MANGLED_NAME,
+  RECORD_PARENT_USR,
   BASE_RECORD_USR,
   BASE_RECORD_NAME,
   BASE_RECORD_PATH,
@@ -127,12 +138,24 @@ enum RecordId {
   REFERENCE_TYPE,
   REFERENCE_PATH,
   REFERENCE_FIELD,
+  REFERENCE_FILE,
   TEMPLATE_PARAM_CONTENTS,
   TEMPLATE_SPECIALIZATION_OF,
   TYPEDEF_USR,
   TYPEDEF_NAME,
   TYPEDEF_DEFLOCATION,
   TYPEDEF_IS_USING,
+  CONCEPT_USR,
+  CONCEPT_NAME,
+  CONCEPT_IS_TYPE,
+  CONCEPT_CONSTRAINT_EXPRESSION,
+  CONCEPT_DEFLOCATION,
+  CONSTRAINT_EXPRESSION,
+  VAR_USR,
+  VAR_NAME,
+  VAR_DEFLOCATION,
+  VAR_IS_STATIC,
+  FRIEND_IS_CLASS,
   RI_LAST,
   RI_FIRST = VERSION
 };
@@ -148,12 +171,15 @@ enum class FieldId {
   F_vparent,
   F_type,
   F_child_namespace,
-  F_child_record
+  F_child_record,
+  F_concept,
+  F_friend
 };
 
 class ClangDocBitcodeWriter {
 public:
-  ClangDocBitcodeWriter(llvm::BitstreamWriter &Stream) : Stream(Stream) {
+  ClangDocBitcodeWriter(llvm::BitstreamWriter &Stream, DiagnosticsEngine &Diags)
+      : Stream(Stream), Diags(Diags) {
     emitHeader();
     emitBlockInfoBlock();
     emitVersionBlock();
@@ -177,7 +203,11 @@ public:
   void emitBlock(const TemplateInfo &T);
   void emitBlock(const TemplateSpecializationInfo &T);
   void emitBlock(const TemplateParamInfo &T);
+  void emitBlock(const ConceptInfo &T);
+  void emitBlock(const ConstraintInfo &T);
   void emitBlock(const Reference &B, FieldId F);
+  void emitBlock(const FriendInfo &R);
+  void emitBlock(const VarInfo &B);
 
 private:
   class AbbreviationMap {
@@ -194,8 +224,8 @@ private:
     llvm::BitstreamWriter &Stream;
 
   public:
-    StreamSubBlockGuard(llvm::BitstreamWriter &Stream_, BlockId ID)
-        : Stream(Stream_) {
+    StreamSubBlockGuard(llvm::BitstreamWriter &Stream, BlockId ID)
+        : Stream(Stream) {
       // NOTE: SubBlockIDSize could theoretically be calculated on the fly,
       // based on the initialization list of records in each block.
       Stream.EnterSubblock(ID, BitCodeConstants::SubblockIDSize);
@@ -213,7 +243,7 @@ private:
   void emitRecordID(RecordId ID);
   void emitBlockID(BlockId ID);
   void emitBlockInfoBlock();
-  void emitBlockInfo(BlockId BID, const std::vector<RecordId> &RIDs);
+  void emitBlockInfo(BlockId BID, llvm::ArrayRef<RecordId> RIDs);
 
   // Emission of individual record types.
   void emitRecord(StringRef Str, RecordId ID);
@@ -234,6 +264,7 @@ private:
   SmallVector<uint32_t, BitCodeConstants::RecordSize> Record;
   llvm::BitstreamWriter &Stream;
   AbbreviationMap Abbrevs;
+  DiagnosticsEngine &Diags;
 };
 
 } // namespace doc

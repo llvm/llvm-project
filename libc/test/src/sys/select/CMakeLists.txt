@@ -1,6 +1,6 @@
 add_custom_target(libc_sys_select_unittests)
 
-add_libc_unittest(
+add_libc_test(
   select_ui_test
   NO_RUN_POSTBUILD
   SUITE
@@ -9,12 +9,14 @@ add_libc_unittest(
     select_ui_test.cpp
   DEPENDS
     libc.include.unistd
-    libc.src.errno.errno 
+    libc.src.errno.errno
     libc.src.sys.select.select
     libc.src.unistd.read
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   select_failure_test
   SUITE
     libc_sys_select_unittests
@@ -22,10 +24,43 @@ add_libc_unittest(
     select_failure_test.cpp
   DEPENDS
     libc.include.unistd
-    libc.src.errno.errno 
+    libc.src.errno.errno
     libc.src.sys.select.select
     libc.src.unistd.read
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  pselect_test
+  SUITE
+    libc_sys_select_unittests
+  SRCS
+    pselect_test.cpp
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.sys_select_macros
+    libc.hdr.sys_time_macros
+    libc.hdr.types.fd_set
+    libc.hdr.types.sigset_t
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_itimerval
+    libc.hdr.types.struct_sigaction
+    libc.hdr.types.struct_timespec
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.signal.raise
+    libc.src.signal.sigaction
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigprocmask
+    libc.src.sys.select.pselect
+    libc.src.sys.time.setitimer
+    libc.src.unistd.close
+    libc.src.unistd.pipe
+    libc.src.unistd.read
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_subdirectory(testdata)

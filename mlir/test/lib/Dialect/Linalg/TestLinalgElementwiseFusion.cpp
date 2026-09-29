@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Pass/Pass.h"
@@ -25,9 +25,9 @@ static void addOperands(Operation *op, SetVector<Value> &operandSet) {
   if (!op)
     return;
   TypeSwitch<Operation *, void>(op)
-      .Case<linalg::LinalgOp>([&](linalg::LinalgOp linalgOp) {
+      .Case([&](linalg::LinalgOp linalgOp) {
         SmallVector<Value> inputOperands = linalgOp.getDpsInputs();
-        operandSet.insert(inputOperands.begin(), inputOperands.end());
+        operandSet.insert_range(inputOperands);
       })
       .Default([&](Operation *operation) {
         operandSet.insert(operation->operand_begin(), operation->operand_end());
@@ -143,6 +143,11 @@ struct TestLinalgElementwiseFusion
       llvm::cl::desc("Test fusion of producer ops with multiple uses"),
       llvm::cl::init(false)};
 
+  Option<bool> testInvalidElementwiseKindBuilder{
+      *this, "test-invalid-elementwise-kind-builder",
+      llvm::cl::desc("Test building an elementwise op with an invalid kind"),
+      llvm::cl::init(false)};
+
   ListOption<int64_t> collapseDimensions{
       *this, "collapse-dimensions-control",
       llvm::cl::desc("Test controlling dimension collapse pattern")};
@@ -150,6 +155,19 @@ struct TestLinalgElementwiseFusion
   void runOnOperation() override {
     MLIRContext *context = &this->getContext();
     func::FuncOp funcOp = this->getOperation();
+
+    if (testInvalidElementwiseKindBuilder) {
+      OpBuilder builder = OpBuilder::atBlockBegin(&funcOp.front());
+      linalg::ElementwiseOp missingKindOp = linalg::ElementwiseOp::create(
+          builder, funcOp.getLoc(), ValueRange{}, ValueRange{});
+      missingKindOp.erase();
+
+      NamedAttribute kind = builder.getNamedAttr("kind", builder.getUnitAttr());
+      linalg::ElementwiseOp wrongKindOp = linalg::ElementwiseOp::create(
+          builder, funcOp.getLoc(), ValueRange{}, ValueRange{}, kind);
+      wrongKindOp.erase();
+      return;
+    }
 
     if (fuseGenericOps) {
       RewritePatternSet fusionPatterns(context);
@@ -235,6 +253,12 @@ struct TestLinalgElementwiseFusion
           // Skip fusing the first operand.
           return fusedOperand->getOperandNumber();
         }
+        Operation *consumer = fusedOperand->getOwner();
+        if (auto collapseOp = dyn_cast<tensor::CollapseShapeOp>(consumer)) {
+          auto producerResult = dyn_cast<OpResult>(collapseOp.getSrc());
+          // skip fusing first result.
+          return producerResult.getResultNumber();
+        }
         return true;
       };
       linalg::populateFoldReshapeOpsByCollapsingPatterns(patterns, controlFn);
@@ -246,7 +270,9 @@ struct TestLinalgElementwiseFusion
     if (fuseMultiUseProducer) {
       RewritePatternSet patterns(context);
       patterns.insert<TestMultiUseProducerFusion>(context);
-      if (failed(applyPatternsGreedily(funcOp.getBody(), std::move(patterns))))
+      if (failed(applyPatternsGreedily(
+              funcOp.getBody(), std::move(patterns),
+              GreedyRewriteConfig().setUseTopDownTraversal(true))))
         return signalPassFailure();
       return;
     }

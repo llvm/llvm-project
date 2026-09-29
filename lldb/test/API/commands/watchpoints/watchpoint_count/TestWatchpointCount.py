@@ -9,7 +9,7 @@ class TestWatchpointCount(TestBase):
 
     @skipIf(
         oslist=["freebsd", "linux"],
-        archs=["arm", "aarch64"],
+        archs=["arm$", "aarch64"],
         bugnumber="llvm.org/pr26031",
     )
     def test_watchpoint_count(self):
@@ -35,7 +35,7 @@ class TestWatchpointCount(TestBase):
         self.assertStopReason(
             stop_reason, lldb.eStopReasonWatchpoint, "watchpoint for x1 not hit"
         )
-        stop_reason_descr = thread.GetStopDescription(256)
+        stop_reason_descr = thread.stop_description
         self.assertEqual(stop_reason_descr, "watchpoint 1")
 
         process.Continue()
@@ -43,5 +43,5 @@ class TestWatchpointCount(TestBase):
         self.assertStopReason(
             stop_reason, lldb.eStopReasonWatchpoint, "watchpoint for x2 not hit"
         )
-        stop_reason_descr = thread.GetStopDescription(256)
+        stop_reason_descr = thread.stop_description
         self.assertEqual(stop_reason_descr, "watchpoint 2")

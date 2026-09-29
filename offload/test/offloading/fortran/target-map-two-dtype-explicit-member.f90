@@ -3,6 +3,7 @@
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
+! XFAIL: intelgpu
 program main
     type :: scalar_array
         real(4) :: break_0

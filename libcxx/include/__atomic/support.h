@@ -10,7 +10,6 @@
 #define _LIBCPP___ATOMIC_SUPPORT_H
 
 #include <__config>
-#include <__type_traits/is_trivially_copyable.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -100,12 +99,21 @@
 // template <class _Tp>
 // _Tp __cxx_atomic_fetch_xor(_Atmc<_Tp>* __a, _Tp __pattern, memory_order __order) noexcept;
 //
+// template <class _Tp>
+// _Tp __cxx_atomic_fetch_max(_Atmc<_Tp> volatile* __a, _Tp __pattern, memory_order __order) noexcept;
+// template <class _Tp>
+// _Tp __cxx_atomic_fetch_max(_Atmc<_Tp>* __a, _Tp __pattern, memory_order __order) noexcept;
+// template <class _Tp>
+// _Tp __cxx_atomic_fetch_min(_Atmc<_Tp> volatile* __a, _Tp __pattern, memory_order __order) noexcept;
+// template <class _Tp>
+// _Tp __cxx_atomic_fetch_min(_Atmc<_Tp>* __a, _Tp __pattern, memory_order __order) noexcept;
+//
 // clang-format on
 //
 
-#if _LIBCPP_HAS_GCC_ATOMIC_IMP
+#ifdef _LIBCPP_COMPILER_GCC
 #  include <__atomic/support/gcc.h>
-#elif _LIBCPP_HAS_C_ATOMIC_IMP
+#else
 #  include <__atomic/support/c11.h>
 #endif
 
@@ -113,8 +121,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <typename _Tp, typename _Base = __cxx_atomic_base_impl<_Tp> >
 struct __cxx_atomic_impl : public _Base {
-  static_assert(is_trivially_copyable<_Tp>::value, "std::atomic<T> requires that 'T' be a trivially copyable type");
-
   _LIBCPP_HIDE_FROM_ABI __cxx_atomic_impl() _NOEXCEPT = default;
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __cxx_atomic_impl(_Tp __value) _NOEXCEPT : _Base(__value) {}
 };

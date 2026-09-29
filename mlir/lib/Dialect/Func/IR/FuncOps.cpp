@@ -8,9 +8,9 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -23,9 +23,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/raw_ostream.h"
-#include <numeric>
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include "mlir/Dialect/Func/IR/FuncOpsDialect.cpp.inc"
 
@@ -41,6 +39,7 @@ void FuncDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Func/IR/FuncOps.cpp.inc"
       >();
+  declarePromisedInterface<ConvertToEmitCPatternInterface, FuncDialect>();
   declarePromisedInterface<DialectInlinerInterface, FuncDialect>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, FuncDialect>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, CallOp,
@@ -52,8 +51,8 @@ void FuncDialect::initialize() {
 Operation *FuncDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
   if (ConstantOp::isBuildableWith(value, type))
-    return builder.create<ConstantOp>(loc, type,
-                                      llvm::cast<FlatSymbolRefAttr>(value));
+    return ConstantOp::create(builder, loc, type,
+                              llvm::cast<FlatSymbolRefAttr>(value));
   return nullptr;
 }
 
@@ -63,7 +62,7 @@ Operation *FuncDialect::materializeConstant(OpBuilder &builder, Attribute value,
 
 LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that the callee attribute was specified.
-  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr = getCalleeAttr();
   if (!fnAttr)
     return emitOpError("requires a 'callee' symbol reference attribute");
   FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
@@ -72,28 +71,7 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                          << "' does not reference a valid function";
 
   // Verify that the operand and result types match the callee.
-  auto fnType = fn.getFunctionType();
-  if (fnType.getNumInputs() != getNumOperands())
-    return emitOpError("incorrect number of operands for callee");
-
-  for (unsigned i = 0, e = fnType.getNumInputs(); i != e; ++i)
-    if (getOperand(i).getType() != fnType.getInput(i))
-      return emitOpError("operand type mismatch: expected operand type ")
-             << fnType.getInput(i) << ", but provided "
-             << getOperand(i).getType() << " for operand number " << i;
-
-  if (fnType.getNumResults() != getNumResults())
-    return emitOpError("incorrect number of results for callee");
-
-  for (unsigned i = 0, e = fnType.getNumResults(); i != e; ++i)
-    if (getResult(i).getType() != fnType.getResult(i)) {
-      auto diag = emitOpError("result type mismatch at index ") << i;
-      diag.attachNote() << "      op result types: " << getResultTypes();
-      diag.attachNote() << "function result types: " << fnType.getResults();
-      return diag;
-    }
-
-  return success();
+  return call_interface_impl::verifyCallOpInterface(*this, fn);
 }
 
 FunctionType CallOp::getCalleeType() {
@@ -108,14 +86,17 @@ FunctionType CallOp::getCalleeType() {
 LogicalResult CallIndirectOp::canonicalize(CallIndirectOp indirectCall,
                                            PatternRewriter &rewriter) {
   // Check that the callee is a constant callee.
-  SymbolRefAttr calledFn;
+  FlatSymbolRefAttr calledFn;
   if (!matchPattern(indirectCall.getCallee(), m_Constant(&calledFn)))
     return failure();
 
-  // Replace with a direct call.
-  rewriter.replaceOpWithNewOp<CallOp>(indirectCall, calledFn,
-                                      indirectCall.getResultTypes(),
-                                      indirectCall.getArgOperands());
+  // Replace with a direct call, preserving the call-site attributes.
+  auto directCall = CallOp::create(
+      rewriter, indirectCall.getLoc(), indirectCall.getResultTypes(), calledFn,
+      indirectCall.getArgOperands(), indirectCall.getArgAttrsAttr(),
+      indirectCall.getResAttrsAttr());
+  directCall->setDiscardableAttrs(indirectCall->getDiscardableAttrDictionary());
+  rewriter.replaceOp(indirectCall, directCall.getResults());
   return success();
 }
 
@@ -181,8 +162,7 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
 void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
                    FunctionType type, ArrayRef<NamedAttribute> attrs,
                    ArrayRef<DictionaryAttr> argAttrs) {
-  state.addAttribute(SymbolTable::getSymbolAttrName(),
-                     builder.getStringAttr(name));
+  state.getOrAddProperties<Properties>().sym_name = builder.getStringAttr(name);
   state.addAttribute(getFunctionTypeAttrName(state.name), TypeAttr::get(type));
   state.attributes.append(attrs.begin(), attrs.end());
   state.addRegion();
@@ -190,8 +170,8 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
   if (argAttrs.empty())
     return;
   assert(type.getNumInputs() == argAttrs.size());
-  function_interface_impl::addArgAndResultAttrs(
-      builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
+  call_interface_impl::addArgAndResultAttrs(
+      builder, state, argAttrs, /*resultAttrs=*/{},
       getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }
 
@@ -218,16 +198,16 @@ void FuncOp::print(OpAsmPrinter &p) {
 void FuncOp::cloneInto(FuncOp dest, IRMapping &mapper) {
   // Add the attributes of this function to dest.
   llvm::MapVector<StringAttr, Attribute> newAttrMap;
-  for (const auto &attr : dest->getAttrs())
+  for (const auto &attr : dest->getDiscardableAttrDictionary().getValue())
     newAttrMap.insert({attr.getName(), attr.getValue()});
-  for (const auto &attr : (*this)->getAttrs())
+  for (const auto &attr : (*this)->getDiscardableAttrDictionary().getValue())
     newAttrMap.insert({attr.getName(), attr.getValue()});
 
-  auto newAttrs = llvm::to_vector(llvm::map_range(
+  auto newAttrs = llvm::map_to_vector(
       newAttrMap, [](std::pair<StringAttr, Attribute> attrPair) {
         return NamedAttribute(attrPair.first, attrPair.second);
-      }));
-  dest->setAttrs(DictionaryAttr::get(getContext(), newAttrs));
+      });
+  dest->setDiscardableAttrs(DictionaryAttr::get(getContext(), newAttrs));
 
   // Clone the body.
   getBody().cloneInto(&dest.getBody(), mapper);
@@ -285,23 +265,36 @@ FuncOp FuncOp::clone() {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult ReturnOp::verify() {
-  auto function = cast<FuncOp>((*this)->getParentOp());
+LogicalResult FuncOp::verifyRegions() {
+  // External declarations have no body to check.
+  if (isDeclaration())
+    return success();
+  // Hoist the result types once; they are the same for every return site.
+  auto resultTypes = getFunctionType().getResults();
+  for (Block &block : getBody()) {
+    if (block.empty())
+      continue;
+    // Check func.return or other return-like terminators ops (e.g.
+    // llvm.return, test.return).
+    auto returnOp = dyn_cast<RegionBranchTerminatorOpInterface>(&block.back());
+    if (!returnOp)
+      continue;
+    auto operands =
+        returnOp.getMutableSuccessorOperands(RegionSuccessor(getOperation()));
+    if (operands.size() != resultTypes.size())
+      return returnOp->emitOpError("has ")
+             << operands.size() << " operands, but enclosing function (@"
+             << getName() << ") returns " << resultTypes.size();
 
-  // The operand number and types must match the function signature.
-  const auto &results = function.getFunctionType().getResults();
-  if (getNumOperands() != results.size())
-    return emitOpError("has ")
-           << getNumOperands() << " operands, but enclosing function (@"
-           << function.getName() << ") returns " << results.size();
-
-  for (unsigned i = 0, e = results.size(); i != e; ++i)
-    if (getOperand(i).getType() != results[i])
-      return emitError() << "type of return operand " << i << " ("
-                         << getOperand(i).getType()
-                         << ") doesn't match function result type ("
-                         << results[i] << ")"
-                         << " in function @" << function.getName();
+    for (auto [i, opType] : llvm::enumerate(llvm::zip(operands, resultTypes))) {
+      auto [operand, resTy] = opType;
+      if (operand.get().getType() != resTy)
+        return returnOp->emitError() << "type of return operand " << i << " ("
+                                     << operand.get().getType()
+                                     << ") doesn't match function result type ("
+                                     << resTy << ") in function @" << getName();
+    }
+  }
 
   return success();
 }

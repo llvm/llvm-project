@@ -435,16 +435,16 @@ allocate(t1(2)::p)
 **FIR**
 ```
 // For allocatable
-%5 = fir.call @_FortranAAllocatableInitDerived(%desc, %type) : (!fir.box<none>, ) -> ()
+fir.call @_FortranAAllocatableInitDerived(%desc, %type) : (!fir.box<none>, ) -> ()
 // The AllocatableSetDerivedLength functions is called for each length type parameters.
-%6 = fir.call @_FortranAAllocatableSetDerivedLength(%desc, %pos, %value) : (!fir.box<none>, i32, i64) -> ()
-%7 = fir.call @_FortranAAllocatableAllocate(%3) : (!fir.box<none>) -> ()
+fir.call @_FortranAAllocatableSetDerivedLength(%desc, %pos, %value) : (!fir.box<none>, i32, i64) -> ()
+fir.call @_FortranAAllocatableAllocate(%3) : (!fir.box<none>) -> ()
 
 // For pointer
-%5 = fir.call @_FortranAPointerNullifyDerived(%desc, %type) : (!fir.box<none>, ) -> ()
+fir.call @_FortranAPointerNullifyDerived(%desc, %type) : (!fir.box<none>, ) -> ()
 // The PointerSetDerivedLength functions is called for each length type parameters.
-%6 = fir.call @_FortranAPointerSetDerivedLength(%desc, %pos, %value) : (!fir.box<none>, i32, i64) -> ()
-%7 = fir.call @_FortranAPointerAllocate(%3) : (!fir.box<none>) -> ()
+fir.call @_FortranAPointerSetDerivedLength(%desc, %pos, %value) : (!fir.box<none>, i32, i64) -> ()
+fir.call @_FortranAPointerAllocate(%3) : (!fir.box<none>) -> ()
 ```
 
 `DEALLOCATE`
@@ -478,7 +478,7 @@ NULLIFY(p)
 
 **FIR**
 ```
-%0 = fir.call @_FortranAPointerNullifyDerived(%desc, %type) : (!fir.box<none>, !fir.tdesc) -> ()
+fir.call @_FortranAPointerNullifyDerived(%desc, %type) : (!fir.box<none>, !fir.tdesc) -> ()
 ```
 
 #### Formatted I/O
@@ -518,7 +518,7 @@ func.func @_QMpdtPprint_pdt() {
   %c8_i32 = arith.constant 8 : i32
   %3 = fir.convert %1 : (!fir.box<!fir.type<_QMpdtTt{l:i32,i:!fir.array<?xi32>}>>) -> !fir.box<none>
   %4 = fir.convert %2 : (!fir.ref<!fir.char<1,22>>) -> !fir.ref<i8>
-  %5 = fir.call @_FortranAInitialize(%3, %4, %c8_i32) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+  fir.call @_FortranAInitialize(%3, %4, %c8_i32) : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
   %c-1_i32 = arith.constant -1 : i32
   %6 = fir.address_of(@_QQcl.2E2F6669725F7064745F6578616D706C652E66393000) : !fir.ref<!fir.char<1,22>>
   %7 = fir.convert %6 : (!fir.ref<!fir.char<1,22>>) -> !fir.ref<i8>
@@ -786,7 +786,7 @@ subroutine foo(x, n)
   ! type parameters of `x(n)%pdt_component` are not propagated from the caller.
 
   ! A descriptor local to this function is created to pass the array section
-  ! in bar. 
+  ! in bar.
   call bar(x%pdt_component)
 end subroutine
 
@@ -882,7 +882,7 @@ func.func @_QMpdt_initPlocal() {
   %c8_i32 = arith.constant 8 : i32
   %3 = fir.convert %1 : (!fir.box<!fir.type<_QMpdt_initTt{l:i32,i:!fir.array<?xi32>}>>) -> !fir.box<none>
   %4 = fir.convert %2 : (!fir.ref<!fir.char<1,22>>) -> !fir.ref<i8>
-  %5 = fir.call @_FortranAInitialize(%3, %4, %c8_i32) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+  fir.call @_FortranAInitialize(%3, %4, %c8_i32) : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
   return
 }
 ```
@@ -974,17 +974,6 @@ Current list of TODOs in lowering:
 - `flang/lib/Lower/Allocatable.cpp:461` not yet implement: derived type length parameters in allocate
 - `flang/lib/Lower/Allocatable.cpp:645` not yet implement: deferred length type parameters
 - `flang/lib/Lower/Bridge.cpp:454` not yet implemented: get length parameters from derived type BoxValue
-- `flang/lib/Lower/ConvertExpr.cpp:341` not yet implemented: copy derived type with length parameters
-- `flang/lib/Lower/ConvertExpr.cpp:993` not yet implemented: component with length parameters in structure constructor
-- `flang/lib/Lower/ConvertExpr.cpp:1063` not yet implemented: component with length parameters in structure constructor
-- `flang/lib/Lower/ConvertExpr.cpp:1146` not yet implemented: type parameter inquiry
-- `flang/lib/Lower/ConvertExpr.cpp:2424` not yet implemented: creating temporary for derived type with length parameters
-- `flang/lib/Lower/ConvertExpr.cpp:3742` not yet implemented: gather rhs LEN parameters in assignment to allocatable
-- `flang/lib/Lower/ConvertExpr.cpp:4725` not yet implemented: derived type array expression temp with LEN parameters
-- `flang/lib/Lower/ConvertExpr.cpp:6400` not yet implemented: PDT size
-- `flang/lib/Lower/ConvertExpr.cpp:6419` not yet implemented: PDT offset
-- `flang/lib/Lower/ConvertExpr.cpp:6679` not yet implemented: array expr type parameter inquiry
-- `flang/lib/Lower/ConvertExpr.cpp:7135` not yet implemented: need to adjust type parameter(s) to reflect the final component
 - `flang/lib/Lower/ConvertType.cpp:334` not yet implemented: parameterized derived types
 - `flang/lib/Lower/ConvertType.cpp:370` not yet implemented: derived type length parameters
 - `flang/lib/Lower/ConvertVariable.cpp:169` not yet implemented: initial-data-target with derived type length parameters
@@ -1020,7 +1009,6 @@ Current list of TODOs in code generation:
 
 Current list of TODOs in optimizations:
 
-- `flang/lib/Optimizer/Transforms/ArrayValueCopy.cpp:1007` not yet implemented: unhandled dynamic type parameters
 
 ---
 
