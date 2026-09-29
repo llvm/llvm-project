@@ -2562,9 +2562,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // Mark the branch weights explicitly unknown as in the general case we
       // cannot infer the probability of the condition without additional value
       // profiling.
-      if (std::optional<uint64_t> EC = F.getEntryCount(); !EC || *EC == 0)
-        return SI;
-      setExplicitlyUnknownBranchWeights(*SI, DEBUG_TYPE);
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
       return SI;
     }
 
