@@ -61,3 +61,6 @@ def allow_recovery : F<"allow-recovery">,
 def force : F<"force">, HelpText<"Force validation even if unnecessary">;
 
 def in_process : F<"in-process">, HelpText<"Validation in-process">;
+
+def verbose : F<"verbose">,
+              HelpText<"Print why validation failed when recovering">;
