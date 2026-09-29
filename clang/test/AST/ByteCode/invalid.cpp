@@ -313,3 +313,17 @@ namespace UnsizedArrayAndNonEmptyPath {
 
   void bar() { foo(); }
 }
+
+namespace StringLiteralDtor {
+  template <typename T> constexpr void foo(T *t) {
+    t->~T(); // both-note {{destruction of object}}
+  }
+  constexpr bool bar() {
+    foo(&"baz"[0]); // both-note {{in call to}} \
+                    // ref-note {{temporary created here}}
+    return true;
+  }
+
+  static_assert(bar(), ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{in call to}}
+}
