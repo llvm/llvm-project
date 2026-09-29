@@ -533,6 +533,9 @@ void NativeProcessWindows::OnExitProcess(uint32_t exit_code) {
   bool started = m_session_data && m_session_data->m_initial_stop_received;
   ProcessDebugger::OnExitProcess(exit_code);
 
+  // The exit replaces a stop that has not been reported yet.
+  m_deferred_stop = false;
+
   // No signal involved.  It is just an exit event.
   WaitStatus wait_status(WaitStatus::Exit, exit_code);
   SetExitStatus(wait_status, started);
@@ -581,6 +584,29 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
   assert(m_threads.empty());
   m_threads.push_back(std::make_unique<NativeThreadWindows>(
       *this, m_session_data->m_debugger->GetMainThread()));
+}
+
+void NativeProcessWindows::DeferStop() {
+  if (GetState() == eStateStopped) {
+    if (!m_deferred_stop)
+      LLDB_LOG(GetLog(WindowsLog::Exception),
+               "debug event on thread {0:x} while a reported stop is current",
+               GetCurrentThreadID());
+    return;
+  }
+  SetState(eStateStopped, /*notify_delegates=*/false);
+  m_deferred_stop = true;
+  m_deferred_stop_tid = GetCurrentThreadID();
+}
+
+void NativeProcessWindows::ReportDeferredStop() {
+  llvm::sys::ScopedLock lock(m_mutex);
+  if (!m_deferred_stop)
+    return;
+  m_deferred_stop = false;
+  if (GetThreadByID(m_deferred_stop_tid))
+    SetCurrentThreadID(m_deferred_stop_tid);
+  SynchronouslyNotifyProcessStateChanged(eStateStopped);
 }
 
 bool NativeProcessWindows::RewindTrapOfRemovedBreakpoint(
@@ -646,7 +672,7 @@ NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
     StopThread(record.GetThreadID(), StopReason::eStopReasonTrace);
   }
 
-  SetState(eStateStopped, true);
+  DeferStop();
   return ExceptionResult::MaskException;
 }
 
@@ -665,7 +691,7 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
       StopThread(thread_id, StopReason::eStopReasonBreakpoint);
       // The current PC is AFTER the BP opcode, on all architectures.
       reg_ctx.SetPC(reg_ctx.GetPC() - GetSoftwareBreakpointPCOffset());
-      SetState(eStateStopped, true);
+      DeferStop();
       return ExceptionResult::MaskException;
     }
 
@@ -692,7 +718,7 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
                     exception_addr)
                 .str();
         StopThread(thread_id, StopReason::eStopReasonWatchpoint, desc);
-        SetState(eStateStopped, true);
+        DeferStop();
         return ExceptionResult::MaskException;
       }
     }
@@ -750,7 +776,7 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
     SetCurrentThreadID(thread_id);
     if (NativeThreadWindows *injected = GetThreadByID(thread_id))
       injected->SetStopReason(signal_info, "interrupt");
-    SetState(eStateStopped, true);
+    DeferStop();
     return ExceptionResult::BreakInDebugger;
   }
 
@@ -767,7 +793,7 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
                              record.GetExceptionValue(), exception_addr)
                          .str();
   StopThread(thread_id, StopReason::eStopReasonException, std::move(desc));
-  SetState(eStateStopped, true);
+  DeferStop();
   return ExceptionResult::MaskException;
 }
 
@@ -793,7 +819,7 @@ NativeProcessWindows::HandleGenericException(bool first_chance,
   StopThread(record.GetThreadID(), StopReason::eStopReasonException,
              std::move(desc));
 
-  SetState(eStateStopped, true);
+  DeferStop();
   return ExceptionResult::BreakInDebugger;
 }
 
@@ -826,6 +852,8 @@ NativeProcessWindows::OnDebugException(bool first_chance,
 
 void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
   llvm::sys::ScopedLock lock(m_mutex);
+  const StateType state = GetState();
+  std::lock_guard<std::recursive_mutex> threads_guard(m_threads_mutex);
 
   auto thread = std::make_unique<NativeThreadWindows>(*this, new_thread);
   thread->GetRegisterContext().ClearAllHardwareWatchpoints();
@@ -835,8 +863,7 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
                           wp.m_hardware);
   }
 
-  if (StateType state = GetState();
-      state == eStateStopped || state == eStateCrashed) {
+  if (state == eStateStopped || state == eStateCrashed) {
     if (Status error = thread->DoStop(); error.Fail()) {
       Log *log = GetLog(WindowsLog::Thread);
       LLDB_LOG(log, "failed to suspend newly-created thread {0}: {1}",
@@ -853,6 +880,7 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
 
 void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
                                         uint32_t exit_code) {
+  llvm::sys::ScopedLock lock(m_mutex);
   std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   llvm::erase_if(m_threads, [thread_id](const auto &t) {
     return t->GetID() == thread_id;

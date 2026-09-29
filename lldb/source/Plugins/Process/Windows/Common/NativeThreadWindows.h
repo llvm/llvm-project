@@ -28,7 +28,7 @@ public:
   Status DoStop();
   Status DoResume(lldb::StateType resume_state);
 
-  /// Whether the current resume single-steps this thread.
+  /// Whether the last DoResume() single-stepped this thread.
   bool IsSingleStepping() const { return m_single_stepping; }
 
   void ClearSingleStepping() { m_single_stepping = false; }
