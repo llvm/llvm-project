@@ -390,6 +390,36 @@ _DXC_DEPRECATED_64BIT_FN(isfinite)
 constexpr bool3 isfinite(double3 V) { return isfinite((float3)V); }
 _DXC_DEPRECATED_64BIT_FN(isfinite)
 constexpr bool4 isfinite(double4 V) { return isfinite((float4)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool1x2 isfinite(double1x2 V) { return isfinite((float1x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool1x3 isfinite(double1x3 V) { return isfinite((float1x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool1x4 isfinite(double1x4 V) { return isfinite((float1x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool2x1 isfinite(double2x1 V) { return isfinite((float2x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool2x2 isfinite(double2x2 V) { return isfinite((float2x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool2x3 isfinite(double2x3 V) { return isfinite((float2x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool2x4 isfinite(double2x4 V) { return isfinite((float2x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool3x1 isfinite(double3x1 V) { return isfinite((float3x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool3x2 isfinite(double3x2 V) { return isfinite((float3x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool3x3 isfinite(double3x3 V) { return isfinite((float3x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool3x4 isfinite(double3x4 V) { return isfinite((float3x4)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool4x1 isfinite(double4x1 V) { return isfinite((float4x1)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool4x2 isfinite(double4x2 V) { return isfinite((float4x2)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool4x3 isfinite(double4x3 V) { return isfinite((float4x3)V); }
+_DXC_DEPRECATED_64BIT_FN(isfinite)
+constexpr bool4x4 isfinite(double4x4 V) { return isfinite((float4x4)V); }
 
 //===----------------------------------------------------------------------===//
 // isinf builtins overloads
