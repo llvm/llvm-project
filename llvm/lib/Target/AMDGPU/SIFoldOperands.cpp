@@ -2525,8 +2525,9 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
     if (OMod == SIOutMods::NONE)
       return {nullptr, SIOutMods::NONE};
 
-    // Modifiers other than op_sel_hi block OMOD folding.
-    // Src1 is inline constant and op_sel_lo is allowed.
+    // Modifiers other than op_sel_hi block OMOD folding. Per getOModValue
+    // above, Src1 is an inline constant (0.5/2.0/4.0), which may carry
+    // op_sel_lo to read it from the upper FP32 half, so allow that on src1.
     const MachineOperand *Src0Mods =
         TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
     const MachineOperand *Src1Mods =
