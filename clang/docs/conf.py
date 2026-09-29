@@ -17,9 +17,9 @@ from datetime import date
 
 from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
 
-globals().update(common_conf(tags, markdown=Markdown.EXCEPT_MAN))
+globals().update(common_conf(tags))
 
-myst_enable_extensions += ["deflist"]
+myst_enable_extensions += ["attrs_inline", "deflist"]
 
 # -- General configuration -----------------------------------------------------
 
@@ -29,9 +29,12 @@ extensions += [
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.graphviz",
+    "llvm_sphinx.ext.absolute_links",
     "llvm_sphinx.ext.ghlinks",
     "llvm_sphinx.ext.checks",
 ]
+
+llvm_sphinx_doc_url_prefixes = ("https://clang.llvm.org/docs/",)
 
 import sphinx
 

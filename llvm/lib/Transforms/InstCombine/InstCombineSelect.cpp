@@ -673,7 +673,7 @@ static Value *canoncalizeSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
   // (X >= Y) ? (X - Y) : 0
   if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
       match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))) &&
-      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CxtI, SQ.DT)) {
+      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CtxI, SQ.DT)) {
     Value *SMin =
         Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
     return Builder.CreateNSWSub(CmpLHS, SMin);
@@ -2462,7 +2462,8 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return &SI;
   }
 
-  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder, SQ))
+  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder,
+                                      SQ.getWithInstruction(&SI)))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectICmpAndZeroShl(ICI, TrueVal, FalseVal, Builder))
