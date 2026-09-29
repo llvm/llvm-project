@@ -21,6 +21,15 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 
+#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
+#include <sanitizer/lsan_interface.h>
+static int SkipLeakCheck;
+LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return SkipLeakCheck; }
+static void skipLeakCheck() { SkipLeakCheck = 1; }
+#else
+static void skipLeakCheck() {}
+#endif
+
 using namespace llvm;
 using namespace llvm::object;
 
@@ -112,6 +121,10 @@ int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);
   auto Fatal = [](const Twine &Msg) {
     WithColor::error(errs(), "obj2yaml") << Msg << '\n';
+    // exit() terminates without unwinding the stack or running destructors, and
+    // there is no guaranty that pointers to allocations will be preserved, so
+    // LSan reports in-flight heap allocations as leaks at atexit.
+    skipLeakCheck();
     exit(1);
   };
   BumpPtrAllocator A;
