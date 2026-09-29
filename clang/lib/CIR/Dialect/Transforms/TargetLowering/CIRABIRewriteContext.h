@@ -121,8 +121,7 @@ private:
       pendingParamSlots;
 };
 
-/// The signature an indirect call reaches its callee through, or a null type
-/// for a direct call.
+/// The signature the indirect call \p call reaches its callee through.
 cir::FuncType getIndirectCalleeType(cir::CIRCallOpInterface call);
 
 } // namespace cir

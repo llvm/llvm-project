@@ -1099,8 +1099,7 @@ bool isSSERegisterClass(mlir::Type ty) {
 } // namespace
 
 cir::FuncType cir::getIndirectCalleeType(cir::CIRCallOpInterface call) {
-  if (!call.isIndirect())
-    return {};
+  assert(call.isIndirect() && "expected an indirect call");
   return cast<cir::FuncType>(
       cast<cir::PointerType>(call.getIndirectCall().getType()).getPointee());
 }
