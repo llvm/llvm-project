@@ -1656,7 +1656,9 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     // Otherwise, special case the single use in the phi recurrence.
     return BO->hasOneUse() && DT.dominates(Cmp->getParent(), L->getLoopLatch());
   };
-  if (BO->getParent() != Cmp->getParent() && !IsReplacableIVIncrement(BO)) {
+  if (BO->getParent() != Cmp->getParent() &&
+      BO->getParent()->getUniquePredecessor() != Cmp->getParent() &&
+      !IsReplacableIVIncrement(BO)) {
     // We used to use a dominator tree here to allow multi-block optimization.
     // But that was problematic because:
     // 1. It could cause a perf regression by hoisting the math op into the
