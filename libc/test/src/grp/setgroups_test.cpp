@@ -41,6 +41,14 @@ TEST_F(LlvmLibcSetgroupsTest, PrivilegeCheck) {
   }
 }
 
+TEST_F(LlvmLibcSetgroupsTest, ZeroSizeWithNullList) {
+  if (LIBC_NAMESPACE::getuid() == 0) {
+    EXPECT_THAT(LIBC_NAMESPACE::setgroups(0, nullptr), Succeeds(0));
+  } else {
+    EXPECT_THAT(LIBC_NAMESPACE::setgroups(0, nullptr), Fails(EPERM));
+  }
+}
+
 #if defined(LIBC_ADD_NULL_CHECKS)
 TEST_F(LlvmLibcSetgroupsTest, NullPointerCrash) {
   ASSERT_DEATH([] { LIBC_NAMESPACE::setgroups(1, nullptr); }, WITH_SIGNAL(-1));
