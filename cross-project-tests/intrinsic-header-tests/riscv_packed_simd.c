@@ -2349,6 +2349,96 @@ uint32x2_t test_pwcvtu_u32x2(uint16x2_t rs1) {
   return __riscv_pwcvtu_u32x2(rs1);
 }
 
+// CHECK-LABEL: test_pwsll_s_u16x4:
+// RV32:        pwsll.bs
+// RV64:        pwcvtu.wb
+// RV64:        psll.hs
+uint16x4_t test_pwsll_s_u16x4(uint8x4_t rs1, unsigned shamt) {
+  return __riscv_pwsll_s_u16x4(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pwsll_s_u32x2:
+// RV32:        pwsll.hs
+// RV64:        pwcvtu.wh
+// RV64:        psll.ws
+uint32x2_t test_pwsll_s_u32x2(uint16x2_t rs1, unsigned shamt) {
+  return __riscv_pwsll_s_u32x2(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pwsla_s_i16x4:
+// RV32:        pwsla.bs
+// RV64:        pwcvtu.wb
+// RV64:        psext.h.b
+// RV64:        psll.hs
+int16x4_t test_pwsla_s_i16x4(int8x4_t rs1, unsigned shamt) {
+  return __riscv_pwsla_s_i16x4(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pwsla_s_i32x2:
+// RV32:        pwsla.hs
+// RV64:        pwcvtu.wh
+// RV64:        psext.w.h
+// RV64:        psll.ws
+int32x2_t test_pwsla_s_i32x2(int16x2_t rs1, unsigned shamt) {
+  return __riscv_pwsla_s_i32x2(rs1, shamt);
+}
+
+// CHECK-LABEL: test_pwsll_s_u16x4_imm:
+// RV32:        pwslli.b{{[[:space:]]}}a0, a0, 3
+// RV64:        pwcvtu.wb
+// RV64:        pslli.h{{[[:space:]]}}a0, a0, 3
+uint16x4_t test_pwsll_s_u16x4_imm(uint8x4_t rs1) {
+  return __riscv_pwsll_s_u16x4(rs1, 3);
+}
+
+// CHECK-LABEL: test_pwsll_s_u32x2_imm:
+// RV32:        pwslli.h{{[[:space:]]}}a0, a0, 7
+// RV64:        pwcvtu.wh
+// RV64:        pslli.w{{[[:space:]]}}a0, a0, 7
+uint32x2_t test_pwsll_s_u32x2_imm(uint16x2_t rs1) {
+  return __riscv_pwsll_s_u32x2(rs1, 7);
+}
+
+// CHECK-LABEL: test_pwsla_s_i16x4_imm:
+// RV32:        pwslai.b{{[[:space:]]}}a0, a0, 3
+// RV64:        pwcvtu.wb
+// RV64:        psext.h.b
+// RV64:        pslli.h{{[[:space:]]}}a0, a0, 3
+int16x4_t test_pwsla_s_i16x4_imm(int8x4_t rs1) {
+  return __riscv_pwsla_s_i16x4(rs1, 3);
+}
+
+// CHECK-LABEL: test_pwsla_s_i32x2_imm:
+// RV32:        pwslai.h{{[[:space:]]}}a0, a0, 7
+// RV64:        pwcvtu.wh
+// RV64:        psext.w.h
+// RV64:        pslli.w{{[[:space:]]}}a0, a0, 7
+int32x2_t test_pwsla_s_i32x2_imm(int16x2_t rs1) {
+  return __riscv_pwsla_s_i32x2(rs1, 7);
+}
+
+// The intrinsic uses the low 5 bits of the register-form instruction. Values
+// that do not fit an immediate form must retain that register-form semantics.
+// CHECK-LABEL: test_pwsll_s_u16x4_low5:
+// RV32:        li{{[[:space:]]}}a1, 31
+// RV32-NEXT:   pwsll.bs{{[[:space:]]}}a0, a0, a1
+// RV64:        li{{[[:space:]]}}a1, 31
+// RV64:        pwcvtu.wb
+// RV64:        psll.hs{{[[:space:]]}}a0, a0, a1
+uint16x4_t test_pwsll_s_u16x4_low5(uint8x4_t rs1) {
+  return __riscv_pwsll_s_u16x4(rs1, 31);
+}
+
+// CHECK-LABEL: test_pwsll_s_u32x2_low5:
+// RV32:        li{{[[:space:]]}}a1, 63
+// RV32-NEXT:   pwsll.hs{{[[:space:]]}}a0, a0, a1
+// RV64:        li{{[[:space:]]}}a1, 63
+// RV64:        pwcvtu.wh
+// RV64:        psll.ws{{[[:space:]]}}a0, a0, a1
+uint32x2_t test_pwsll_s_u32x2_low5(uint16x2_t rs1) {
+  return __riscv_pwsll_s_u32x2(rs1, 63);
+}
+
 // CHECK-LABEL: test_pwadd_i16x4:
 // RV32:        pwadd.b
 // RV64:        zip8p
@@ -3269,6 +3359,58 @@ int8x4_t test_ppairo_i8x4(int8x4_t rs1, int8x4_t rs2) {
 // CHECK:       ppairo.b
 uint8x4_t test_ppairo_u8x4(uint8x4_t rs1, uint8x4_t rs2) {
   return __riscv_ppairo_u8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaire_i16x2:
+// RV32:        pncvt.h
+// RV64:        zip16p
+int16x2_t test_ppaire_i16x2(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_ppaire_i16x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaire_u16x2:
+// RV32:        pncvt.h
+// RV64:        zip16p
+uint16x2_t test_ppaire_u16x2(uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_ppaire_u16x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_i16x2:
+// CHECK:       ppaireo.h
+int16x2_t test_ppaireo_i16x2(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_ppaireo_i16x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_u16x2:
+// CHECK:       ppaireo.h
+uint16x2_t test_ppaireo_u16x2(uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_ppaireo_u16x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_i16x2:
+// CHECK:       ppairoe.h
+int16x2_t test_ppairoe_i16x2(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_ppairoe_i16x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_u16x2:
+// CHECK:       ppairoe.h
+uint16x2_t test_ppairoe_u16x2(uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_ppairoe_u16x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_i16x2:
+// RV32:        pncvth.h
+// RV64:        ppairo.h
+int16x2_t test_ppairo_i16x2(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_ppairo_i16x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_u16x2:
+// RV32:        pncvth.h
+// RV64:        ppairo.h
+uint16x2_t test_ppairo_u16x2(uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_ppairo_u16x2(rs1, rs2);
 }
 
 // CHECK-LABEL: test_ppaire_i8x8:
