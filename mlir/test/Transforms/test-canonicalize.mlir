@@ -87,3 +87,27 @@ func.func @test_region_simplify(%input1 : i32, %cond : i1) -> i32 {
 ^bb1(%used_arg : i32, %unused_arg : i32):
   return %used_arg : i32
 }
+
+// When constant materialization fails for one result, the fold must not apply.
+// The driver erases only the constant that it materialized for the first
+// result, and keeps the op that defines the forwarded operand.
+// CHECK-LABEL: func @fold_unmaterializable_existing_op
+// CHECK-SAME: (%[[ARG_0:[a-z0-9]*]]: i32, %[[ARG_1:[a-z0-9]*]]: i32)
+func.func @fold_unmaterializable_existing_op(%arg0 : i32, %arg1 : i32) -> (i32, i32, i32) {
+  // CHECK-NEXT: %[[ADD:[a-z0-9]+]] = "test.addi"(%[[ARG_0]], %[[ARG_1]])
+  %0 = "test.addi"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK-NEXT: %[[RES:[a-z0-9]+]]:3 = "test.op_fold_unmaterializable"(%[[ADD]])
+  %1:3 = "test.op_fold_unmaterializable"(%0) : (i32) -> (i32, i32, i32)
+  // CHECK-NEXT: return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2
+  return %1#0, %1#1, %1#2 : i32, i32, i32
+}
+
+// Same as above, but the forwarded operand is a block argument.
+// CHECK-LABEL: func @fold_unmaterializable_block_arg
+// CHECK-SAME: (%[[ARG_0:[a-z0-9]*]]: i32)
+func.func @fold_unmaterializable_block_arg(%arg0 : i32) -> (i32, i32, i32) {
+  // CHECK-NEXT: %[[RES:[a-z0-9]+]]:3 = "test.op_fold_unmaterializable"(%[[ARG_0]])
+  %0:3 = "test.op_fold_unmaterializable"(%arg0) : (i32) -> (i32, i32, i32)
+  // CHECK-NEXT: return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2
+  return %0#0, %0#1, %0#2 : i32, i32, i32
+}
