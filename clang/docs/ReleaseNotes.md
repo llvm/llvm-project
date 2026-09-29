@@ -776,6 +776,13 @@ features cannot lower the translation-unit ABI level;
   a new-expression is now correctly rejected in a constant expression because
   it does not select a replaceable global allocation function. (#GH212211)
 
+- Fixed __attribute__((used)) and -fkeep-inline-functions being
+  incorrectly ignored for complete constructors and destructors (C1/D1 variants)
+  when -mconstructor-aliases is active. C1/D1 variants were previously
+  replaced with their base variants (C2/D2) in the IR before retention could
+  take effect, causing them to be dropped from llvm.used and omitted from
+  the object file. (#GH226572)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
