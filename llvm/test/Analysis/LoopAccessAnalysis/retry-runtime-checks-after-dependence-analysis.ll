@@ -150,20 +150,20 @@ define void @dependency_check_and_runtime_checks_needed_gepb_is_inbounds_iv2_ste
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %b High: (3 + %n + %b))
-; CHECK-NEXT:            Member: {%b,+,1}<%loop>
+; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
+; CHECK-NEXT:            Member: {%b,+,4}<%loop>
 ; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
 ; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      Equal predicate: %s == 1
+; CHECK-NEXT:      Equal predicate: %s == 4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv2:
 ; CHECK-NEXT:        {%b,+,%s}<%loop>
-; CHECK-NEXT:        --> {%b,+,1}<%loop>
+; CHECK-NEXT:        --> {%b,+,4}<%loop>
 ;
 entry:
   br label %loop
@@ -216,20 +216,20 @@ define void @dependency_check_and_runtime_checks_needed_gepb_not_inbounds_iv2_st
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %b High: (3 + %n + %b))
-; CHECK-NEXT:            Member: {%b,+,1}<%loop>
+; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
+; CHECK-NEXT:            Member: {%b,+,4}<%loop>
 ; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
 ; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      Equal predicate: %s == 1
+; CHECK-NEXT:      Equal predicate: %s == 4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv2:
 ; CHECK-NEXT:        {%b,+,%s}<%loop>
-; CHECK-NEXT:        --> {%b,+,1}<%loop>
+; CHECK-NEXT:        --> {%b,+,4}<%loop>
 ;
 entry:
   br label %loop
