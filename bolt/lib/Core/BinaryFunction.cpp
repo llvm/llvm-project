@@ -1793,22 +1793,10 @@ bool BinaryFunction::scanExternalRefs() {
     // On AArch64, we use instruction patches for fixing references. We make an
     // exception for branch instructions since they require optional
     // relocations.
-    if (BC.isAArch64()) {
-      if (!BranchTargetSymbol) {
-        LLVM_DEBUG(BC.printInstruction(dbgs(), Instruction, AbsoluteInstrAddr));
-        InstructionPatches.push_back({AbsoluteInstrAddr, Instruction});
-        continue;
-      }
-
-      // Conditional tail calls require new relocation types that are currently
-      // not supported. https://github.com/llvm/llvm-project/issues/138264
-      if (BC.MIB->isConditionalBranch(Instruction)) {
-        if (BinaryFunction *TargetBF =
-                BC.getFunctionForSymbol(BranchTargetSymbol)) {
-          TargetBF->setNeedsPatch(true);
-          continue;
-        }
-      }
+    if (BC.isAArch64() && !BranchTargetSymbol) {
+      LLVM_DEBUG(BC.printInstruction(dbgs(), Instruction, AbsoluteInstrAddr));
+      InstructionPatches.push_back({AbsoluteInstrAddr, Instruction});
+      continue;
     }
 
     // Emit the instruction using temp emitter and generate relocations.
@@ -1840,7 +1828,12 @@ bool BinaryFunction::scanExternalRefs() {
         // relocation value encoding.
         Rel->setOptional();
 
-        if (!opts::CompactCodeModel)
+        // The compact code model may allow conditional branches target
+        // addresses to be out of range, therefore be conservative and patch the
+        // target function.
+        const bool IsConditionalBranch = Rel->Type == ELF::R_AARCH64_CONDBR19 ||
+                                         Rel->Type == ELF::R_AARCH64_TSTBR14;
+        if (!opts::CompactCodeModel || IsConditionalBranch)
           if (BinaryFunction *TargetBF = BC.getFunctionForSymbol(Rel->Symbol))
             TargetBF->setNeedsPatch(true);
       }
@@ -1848,7 +1841,6 @@ bool BinaryFunction::scanExternalRefs() {
       Rel->Offset += getAddress() - getOriginSection()->getAddress() + Offset;
       FunctionRelocations.push_back(*Rel);
     }
-
     if (!Success)
       break;
   }
