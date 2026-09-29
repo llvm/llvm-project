@@ -4092,9 +4092,9 @@ static SDValue simplifyMul24(SDNode *Node24,
 
   // First try SimplifyDemandedBits which can simplify the nodes used by our
   // operands if this node is the only user.
-  if (TLI.SimplifyDemandedBits(LHS, Demanded, DCI))
+  if (LHS.hasOneUse() && TLI.SimplifyDemandedBits(LHS, Demanded, DCI))
     return SDValue(Node24, 0);
-  if (TLI.SimplifyDemandedBits(RHS, Demanded, DCI))
+  if (RHS.hasOneUse() && TLI.SimplifyDemandedBits(RHS, Demanded, DCI))
     return SDValue(Node24, 0);
 
   // Then try SimplifyMultipleUseDemandedBits which allows the operands to have
