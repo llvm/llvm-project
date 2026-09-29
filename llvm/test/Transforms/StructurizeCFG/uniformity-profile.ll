@@ -6,7 +6,7 @@
 
 ; CHECK-LABEL: define void @diamond(
 ; CHECK: entry:
-; CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !block.uniformity.profile ![[MD:[0-9]+]]{{$}}
+; CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !block.uniformity.profile ![[MD:[0-9]+]], !branch.uniformity.profile ![[MD]]{{$}}
 ; CHECK: then:
 ; CHECK-NEXT: store i32 1, ptr %out
 ; CHECK-NEXT: br label {{.*}}, !block.uniformity.profile ![[MD]]{{$}}
@@ -86,7 +86,7 @@ exit:
 ; Preserve the inner block profiles when a containing region is rewritten.
 ; CHECK-LABEL: define void @nested(
 ; CHECK: outer.then:
-; CHECK-NEXT: br i1 {{.*}}, label {{.*}}, label {{.*}}, !block.uniformity.profile ![[MD]]{{$}}
+; CHECK-NEXT: br i1 {{.*}}, label {{.*}}, label {{.*}}, !block.uniformity.profile ![[MD]], !branch.uniformity.profile ![[MD]]{{$}}
 ; CHECK: inner.then:
 ; CHECK-NEXT: store i32 5, ptr %out
 ; CHECK-NEXT: br label {{.*}}, !block.uniformity.profile ![[MD]]{{$}}
