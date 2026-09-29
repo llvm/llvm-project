@@ -2690,6 +2690,52 @@ define <4 x i8> @test_ppairo_v4i8(<4 x i8> %a, <4 x i8> %b) {
   ret <4 x i8> %res
 }
 
+define <2 x i16> @test_ppaire_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_ppaire_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pncvt.h a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppaire_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zip16p a0, a0, a1
+; RV64-NEXT:    ret
+  %res = shufflevector <2 x i16> %a, <2 x i16> %b, <2 x i32> <i32 0, i32 2>
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_ppaireo_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_ppaireo_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ppaireo.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = shufflevector <2 x i16> %a, <2 x i16> %b, <2 x i32> <i32 0, i32 3>
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_ppairoe_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_ppairoe_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ppairoe.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = shufflevector <2 x i16> %a, <2 x i16> %b, <2 x i32> <i32 1, i32 2>
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_ppairo_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; RV32-LABEL: test_ppairo_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pncvth.h a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_ppairo_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppairo.h a0, a0, a1
+; RV64-NEXT:    ret
+  %res = shufflevector <2 x i16> %a, <2 x i16> %b, <2 x i32> <i32 1, i32 3>
+  ret <2 x i16> %res
+}
+
 define <2 x i16> @test_bswap_v2i16(<2 x i16> %a) {
 ; CHECK-LABEL: test_bswap_v2i16:
 ; CHECK:       # %bb.0:
