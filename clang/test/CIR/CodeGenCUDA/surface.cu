@@ -20,13 +20,9 @@ struct surfaceReference {
   int desc;
 };
 
-template <class T, int dim = 1>
-struct __attribute__((device_builtin_surface_type)) surface;
-
-template <class T, int dim>
-struct __attribute__((device_builtin_surface_type)) surface {
-  typedef surfaceReference type;
-};
+template <typename T, int dim = 1>
+struct __attribute__((device_builtin_surface_type)) surface
+    : public surfaceReference {};
 
 template <int dim>
 struct __attribute__((device_builtin_surface_type)) surface<void, dim>
@@ -63,9 +59,10 @@ surface<void, 2> surf;
 // CIR-HOST-NEXT: %[[SURFACE_TYPE:.*]] = cir.const #cir.int<2> : !s32i
 // CIR-HOST-NEXT: cir.call @__cudaRegisterSurface(%[[FATBIN]], %[[HOST]], %[[NAME]], %[[NAME]], %[[SURFACE_TYPE]], %[[EXTERN]])
 
-// Check that the host-side shadow carries the surface registration metadata,
-// including the surface type extracted from surface<void, 2>.
-// CIR-HOST: cir.global{{.*}} @surf = {{.*}}cu.var_registration = #cir.cu.var_registration<surf, Surface, surface_type = 2>
+// Check that the host-side shadow is internalized and carries the surface
+// registration metadata, including the surface type from surface<void, 2>.
+// CIR-HOST: cir.global "private" internal dso_local @surf = {{.*}}cu.var_registration = #cir.cu.var_registration<surf, Surface, surface_type = 2>
+// LLVM-HOST: @surf = internal global %{{.*}} zeroinitializer
 
 // Check both CIR-lowered LLVM and original CodeGen registration.
 // LLVM-HOST-LABEL: define internal void @__cuda_register_globals

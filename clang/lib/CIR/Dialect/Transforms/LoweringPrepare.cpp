@@ -3065,8 +3065,8 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
     }
 
     case cir::CUDADeviceVarKind::Surface: {
-      auto surfaceType = ConstantOp::create(
-          builder, loc, IntAttr::get(intTy, regAttr.getSurfaceType()));
+      cir::ConstantOp surfaceType = ConstantOp::create(
+          builder, loc, IntAttr::get(intTy, regAttr.getSurfTexType()));
 
       builder.createCallOp(loc, cudaRegisterSurface,
                            {fatbinHandle, hostVar, deviceName, deviceName,
