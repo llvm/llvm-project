@@ -341,6 +341,20 @@ if(LLVM_LINK_LLVM_DYLIB)
   list(APPEND OFFLOAD_INSTALL_RPATH "$ORIGIN/${llvm_libdir_relpath}")
 endif()
 
+# Expose a high-level target to build the offloading runtimes.
+# This is used in pre-commit CI to run a build of the libraries without requiring
+# to invoke the check-* targets.
+add_custom_target(offload
+  COMMENT "Building offloading runtime libraries and plugins"
+)
+
+add_custom_target(install-offload
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload)
+add_custom_target(install-offload-stripped
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload --strip)
+add_dependencies(install-offload offload)
+add_dependencies(install-offload-stripped offload)
+
 add_subdirectory(tools/offload-tblgen)
 
 # Build offloading plugins and device RTLs if they are available.
@@ -362,29 +376,8 @@ if(OFFLOAD_INCLUDE_TESTS)
   add_subdirectory(unittests)
 endif()
 
-# Expose a high-level target to build the offloading runtimes.
-# This is used in pre-commit CI to run a build of the libraries without requiring
-# to invoke the check-* targets.
-add_custom_target(offload
-  COMMENT "Building offloading runtime libraries and plugins"
-)
-if(TARGET omptarget)
-  add_dependencies(offload omptarget)
-endif()
-if(TARGET LLVMOffload)
-  add_dependencies(offload LLVMOffload)
-endif()
-
-add_custom_target(install-offload
-  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload)
-add_custom_target(install-offload-stripped
-  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload --strip)
-
-if(TARGET omptarget)
-  add_dependencies(install-offload omptarget)
-  add_dependencies(install-offload-stripped omptarget)
-endif()
-if(TARGET LLVMOffload)
-  add_dependencies(install-offload LLVMOffload)
-  add_dependencies(install-offload-stripped LLVMOffload)
-endif()
+foreach(target omptarget LLVMOffload LLVMOffloadKernel)
+  if(TARGET ${target})
+    add_dependencies(offload ${target})
+  endif()
+endforeach()
