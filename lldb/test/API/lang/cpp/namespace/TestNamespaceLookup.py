@@ -42,7 +42,6 @@ class NamespaceLookupTestCase(TestBase):
             substrs=["stopped", "stop reason = breakpoint"],
         )
 
-    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     @unittest.expectedFailure  # CU-local objects incorrectly scoped
     def test_scope_lookup_with_run_command_globals(self):
         """Test scope lookup of functions in lldb."""
@@ -99,7 +98,6 @@ class NamespaceLookupTestCase(TestBase):
         # Evaluate ::func() - should call ::func()
         self.expect_expr("::func()", result_type="int", result_value="1")
 
-    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     @requireExpressionEvaluation
     def test_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
