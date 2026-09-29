@@ -536,3 +536,30 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_unstructured_parallel_loop_collapse3_stop
 ! CHECK: acc.parallel combined(loop)
 ! CHECK: acc.loop combined(parallel)
+
+! Nested DO loops inside `!$acc kernels` where the inner loop branches to its
+! own exit. Only the inner loop is unstructured, so the outer one still lowers
+! as a structured acc.loop and the inner one is wrapped.
+subroutine nested_loop_with_inner_goto()
+  integer :: ii = 0, jj = 0
+  integer, parameter :: nn = 3
+  real, dimension(nn, nn) :: aa
+
+  aa = -1
+
+  !$acc kernels
+  do ii = 1, nn
+    do jj = 1, nn
+      if (jj > 1) goto 300
+      aa(jj, ii) = 1337
+    end do
+    300 continue
+  end do
+  !$acc end kernels
+end subroutine
+
+! CHECK-LABEL: func.func @_QPnested_loop_with_inner_goto
+! CHECK: acc.kernels
+! CHECK: acc.loop private({{.*}}) control({{.*}}) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+! CHECK: scf.execute_region
+! CHECK: scf.yield

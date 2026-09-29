@@ -234,6 +234,7 @@ protected:
                            AMDGPU::OpName Src1OpName) const;
   bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
                      unsigned toIdx) const;
+  bool isNonCommutableDPP(const MachineInstr &MI) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
@@ -270,6 +271,13 @@ public:
 
   const SIRegisterInfo &getRegisterInfo() const {
     return RI;
+  }
+
+  // FIXME: This is inaccurate and needs to account for use context. Normal asm
+  // constraints should use 64-bit pointers.
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &AMDGPU::VGPR_32RegClass;
   }
 
   const GCNSubtarget &getSubtarget() const {
@@ -1191,14 +1199,6 @@ public:
            Opc == AMDGPU::GLOBAL_WBINV;
   }
 
-  static bool isF16PseudoScalarTrans(unsigned Opcode) {
-    return Opcode == AMDGPU::V_S_EXP_F16_e64 ||
-           Opcode == AMDGPU::V_S_LOG_F16_e64 ||
-           Opcode == AMDGPU::V_S_RCP_F16_e64 ||
-           Opcode == AMDGPU::V_S_RSQ_F16_e64 ||
-           Opcode == AMDGPU::V_S_SQRT_F16_e64;
-  }
-
   static bool doesNotReadTiedSource(const MachineInstr &MI) {
     return SIInstrFlags::isTiedSourceNotRead(MI);
   }
@@ -1766,6 +1766,8 @@ public:
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  unsigned getBlockingCycles(const MachineInstr &MI) const;
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 

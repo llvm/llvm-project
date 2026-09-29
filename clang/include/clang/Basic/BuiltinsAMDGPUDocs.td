@@ -576,7 +576,7 @@ and adds the 32x16 f32 accumulator ``C``.
 - ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
   3 = neg(abs)).
 
-Requires target feature ``wmma-n16-insts`` and wave32.
+Requires target feature ``wmma-f4-insts`` and wave32.
 }];
 }
 
@@ -597,7 +597,7 @@ WMMA with per-operand scale factors applied during the computation.
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
 
-Requires target feature ``wmma-n16-insts`` and wave32.
+Requires target feature ``wmma-f4-insts`` and wave32.
 }];
 }
 
@@ -672,6 +672,28 @@ scale variant.
   matrix A or B data can be reused from a previous WMMA instruction.
 
 Requires target feature ``wmma-n16-insts`` and wave32.
+}];
+}
+
+def DocWMMA_scale16_f4_GFX1250 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Scaled wave matrix multiply-accumulate with 64-bit (16-bit per element)
+scale exponents, as opposed to the 32-bit exponents used by the non-16
+scale variant.
+
+- For ``..._f8f6f4`` variants, ``matrix_a_fmt`` / ``matrix_b_fmt`` are format
+  selectors for A and B. They must be compile-time constants.
+- ``c_mod``: accumulator modifier.
+- ``matrix_a_scale`` / ``matrix_b_scale``: scale factor selectors.
+  Must be compile-time constants.
+- ``matrix_a_scale_fmt`` / ``matrix_b_scale_fmt``: scale format selectors.
+  Must be compile-time constants.
+- ``matrix_a_scale_exp`` / ``matrix_b_scale_exp``: 64-bit scale exponents.
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+
+Requires target feature ``wmma-f4-insts`` and wave32.
 }];
 }
 
@@ -852,6 +874,114 @@ Scales a packed 32-component single-precision floating-point input ``src``
 using the scale factor ``scale``, then converts the values to a packed
 32-component FP6 value, returned as a 6-element vector of 32-bit unsigned
 integers.
+}];
+}
+
+def DocCvtScalePk32BF16BF6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts 32 packed 6-bit brain-float values in ``src`` to brain-float16, then
+multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously.
+
+``scale`` contains four packed 8-bit E8M0 scale factors.
+
+``scale_sel`` is a compile-time constant in the range [0, 3] to select the
+byte in ``scale`` that contains the scale factor.
+
+This operation is available only for wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32BF16FP6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts 32 packed 6-bit float values in ``src`` to brain-float16, then
+multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously.
+
+``scale`` contains four packed 8-bit E8M0 scale factors.
+
+``scale_sel`` is a compile-time constant in the range [0, 3] to select the
+byte in ``scale`` that contains the scale factor.
+
+This operation is available only for wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32F16BF6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts 32 packed 6-bit brain-float values in ``src`` to half-precision
+float16, then multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously.
+
+``scale`` contains four packed 8-bit E8M0 scale factors.
+
+``scale_sel`` is a compile-time constant in the range [0, 3] to select the
+byte in ``scale`` that contains the scale factor.
+
+This operation is available only for wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32F16FP6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts 32 packed 6-bit float values in ``src`` to half-precision float16,
+then multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously.
+
+``scale`` contains four packed 8-bit E8M0 scale factors.
+
+``scale_sel`` is a compile-time constant in the range [0, 3] to select the
+byte in ``scale`` that contains the scale factor.
+
+This operation is available only for wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32F32BF6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts 32 packed 6-bit brain-float values in ``src`` to single-precision
+float32, then multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously.
+
+``scale`` contains four packed 8-bit E8M0 scale factors.
+
+``scale_sel`` is a compile-time constant in the range [0, 3] to select the
+byte in ``scale`` that contains the scale factor.
+
+This operation is available only for wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32F32FP6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts 32 packed 6-bit float values in ``src`` to single-precision float32,
+then multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously.
+
+``scale`` contains four packed 8-bit E8M0 scale factors.
+
+``scale_sel`` is a compile-time constant in the range [0, 3] to select the
+byte in ``scale`` that contains the scale factor.
+
+This operation is available only for wavefront size 32.
 }];
 }
 

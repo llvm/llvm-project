@@ -110,6 +110,8 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::FCEIL, ISD::FTRUNC, ISD::FROUNDEVEN, ISD::FFLOOR},
                      MVT::f64, Custom);
 
+  setOperationAction(ISD::FPOW, MVT::f32, Legal);
+
   setOperationAction(ISD::SELECT_CC, {MVT::f32, MVT::i32}, Custom);
 
   setOperationAction(ISD::SETCC, {MVT::i32, MVT::f32}, Expand);
