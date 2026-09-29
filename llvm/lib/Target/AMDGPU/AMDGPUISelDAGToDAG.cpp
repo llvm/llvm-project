@@ -5153,7 +5153,7 @@ bool AMDGPUDAGToDAGISel::Legalize16BitRegClass(SDNode *N) {
       // Do this here since it impacts decision in fix-sgpr-copy pass
       // t1:vgpr32 = reg_sequence t0:sreg32, lo16, undef, hi16
       // =>
-      // t1:sreg32 = copy_to_regclass t0, vgpr32
+      // t1:sreg32 = copy_to_regclass t0, sreg32
       if (IsSGPR32 && isVGPR32FromRegSeqLo16Hi16Undef(User)) {
         FoldRegSeq.emplace_back(User);
         continue;
