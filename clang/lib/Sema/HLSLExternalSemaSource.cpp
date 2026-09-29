@@ -1018,6 +1018,10 @@ void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
       *SemaPtr, HLSLNamespace, "InterlockedCompareExchange",
       "__builtin_hlsl_interlocked_compare_exchange",
       AtomicOverloadShape::CompareExchange);
+  defineHLSLInterlockedCompareFuncFloat(
+      *SemaPtr, HLSLNamespace, "InterlockedCompareExchangeFloatBitwise",
+      "__builtin_hlsl_interlocked_compare_exchange_float_bitwise",
+      AtomicOverloadShape::CompareExchange);
   defineHLSLInterlockedCompareFunc(*SemaPtr, HLSLNamespace,
                                    "InterlockedCompareStore",
                                    "__builtin_hlsl_interlocked_compare_store",
