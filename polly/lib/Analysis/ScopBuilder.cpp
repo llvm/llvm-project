@@ -746,6 +746,9 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
 
   isl::set UnionBackedgeCondition = HeaderBBDom.empty(HeaderBBDom.get_space());
 
+  // Parameter values for which a latch condition is not modeled correctly.
+  isl::set InvalidLatchCtx = isl::set::empty(HeaderBBDom.get_space().params());
+
   SmallVector<BasicBlock *, 4> LatchBlocks;
   L->getLoopLatches(LatchBlocks);
 
@@ -764,10 +767,18 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
     else if (auto *BI = dyn_cast<CondBrInst>(TI)) {
       SmallVector<isl_set *, 8> ConditionSets;
       int idx = BI->getSuccessor(0) != HeaderBB;
-      if (!buildConditionSets(LatchBB, TI, L, LatchBBDom.get(),
-                              InvalidDomainMap, ConditionSets,
-                              /*IsInsideDomain=*/false))
+      DenseMap<BasicBlock *, isl::set> LatchInvalidDomainMap;
+      LatchInvalidDomainMap[LatchBB] = LatchBBDom.empty(LatchBBDom.get_space());
+      bool Valid = buildConditionSets(LatchBB, TI, L, LatchBBDom.get(),
+                                      LatchInvalidDomainMap, ConditionSets,
+                                      /*IsInsideDomain=*/false);
+      isl::set LatchInvalidDomain = LatchInvalidDomainMap[LatchBB];
+      InvalidDomainMap[LatchBB] =
+          InvalidDomainMap[LatchBB].unite(LatchInvalidDomain);
+      if (!Valid)
         return false;
+      InvalidLatchCtx = InvalidLatchCtx.unite(
+          LatchInvalidDomain.intersect(LatchBBDom).params());
 
       // Free the non back edge condition set as we do not need it.
       isl_set_free(ConditionSets[1 - idx]);
@@ -806,6 +817,23 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
   bool RequiresRTC = !scop->hasNSWAddRecForLoop(L);
 
   isl::set UnboundedCtx = Parts.first.params();
+
+  // An unbounded loop only implies undefined behavior if its latch conditions
+  // are modeled correctly. Otherwise, e.g. if a zero-extended loop bound is
+  // assumed to be non-negative, the loop may just appear to be unbounded and
+  // the parameter values must be excluded by a runtime check. Assuming them
+  // to not occur would make the loop's domain empty, which also drops the
+  // restrictions that would have caught the invalid model.
+  if (!RequiresRTC) {
+    isl::set InvalidUnboundedCtx = UnboundedCtx.intersect(InvalidLatchCtx);
+    if (!InvalidUnboundedCtx.is_empty()) {
+      recordAssumption(&RecordedAssumptions, INFINITELOOP, InvalidUnboundedCtx,
+                       HeaderBB->getTerminator()->getDebugLoc(), AS_RESTRICTION,
+                       nullptr, /*RequiresRTC=*/true);
+      UnboundedCtx = UnboundedCtx.subtract(InvalidUnboundedCtx);
+    }
+  }
+
   recordAssumption(&RecordedAssumptions, INFINITELOOP, UnboundedCtx,
                    HeaderBB->getTerminator()->getDebugLoc(), AS_RESTRICTION,
                    nullptr, RequiresRTC);

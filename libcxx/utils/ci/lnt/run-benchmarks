@@ -107,12 +107,17 @@ def dict_to_params(d):
 def main(argv):
     parser = argparse.ArgumentParser(
         prog='run-benchmarks',
-        description='Benchmark libc++ at the given commit and produce a LNT JSON report.',
+        description='Run the libc++ benchmark suite against a Standard Library and produce a LNT JSON report. '
+                    'The library being benchmarked is selected by the testing configuration passed to --test-config.',
         epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.')
-    parser.add_argument('--libcxx-installation', type=pathlib.Path, required=True,
-        help='Directory where libc++ is installed.')
+    parser.add_argument('--test-config', type=str, required=True,
+        help='The Lit testing configuration to use. This has the same meaning as for test-at-commit: either an '
+             'absolute path to a Lit configuration file, or a path relative to the libcxx/test/configs directory '
+             'of the test suite being used.')
     parser.add_argument('--benchmark-commit', type=str, required=True,
-        help='The SHA representing the version of the library to benchmark.')
+        help='The SHA that the results are attributed to in LNT. When benchmarking libc++, this is the version '
+             'of the library being benchmarked. When benchmarking another Standard Library, this is merely a label '
+             'placing the results on the LNT time axis.')
     parser.add_argument('--test-suite-commit', type=str, required=True,
         help='The SHA representing the version of the test suite to use for benchmarking.')
     parser.add_argument('--compiler', type=str, required=True,
@@ -183,8 +188,6 @@ def main(argv):
     # check dependencies.
     if args.output.exists():
         sys.exit(f'error: output report {args.output} already exists; not overwriting it')
-    if not args.libcxx_installation.exists():
-        sys.exit(f'error: libc++ installation directory {args.libcxx_installation} does not exist')
     if args.artifacts_dir is not None and args.artifacts_dir.exists():
         sys.exit(f'error: artifacts directory {args.artifacts_dir} already exists; not overwriting it')
     if shutil.which('lnt') is None:
@@ -200,10 +203,9 @@ def main(argv):
             artifacts.mkdir(parents=True, exist_ok=True)
         logging.info(f'Storing artifacts in {artifacts}')
 
-        logging.info(f'Running benchmarks from {args.test_suite_commit} against libc++ at {args.libcxx_installation}')
+        logging.info(f'Running benchmarks from {args.test_suite_commit} against {args.test_config}')
         # Always add some lit parameters that are required or make sense when running benchmarks.
         lit_args = ['--param', f'compiler={args.compiler}',
-                    '--param', f'libcxx_installation={args.libcxx_installation}',
                     '--param', 'enable_werror=False'] # older versions of the library trigger new warnings, don't fail
         if args.spec_dir is not None:
             lit_args += ['--param', f'spec_dir={args.spec_dir}']
@@ -213,7 +215,7 @@ def main(argv):
                             '--build-dir', artifacts / 'benchmarks-build',
                             '--test-suite-commit', args.test_suite_commit,
                             '--tmp-src-dir', artifacts / 'benchmarks-src',
-                            '--test-config', 'installed-libc++.cfg.in',
+                            '--test-config', args.test_config,
                             '--compiler', args.compiler,
                             '--',
                             '-j1', '--time-tests', '--test-output=failed',
