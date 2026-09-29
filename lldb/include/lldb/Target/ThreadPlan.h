@@ -634,7 +634,7 @@ protected:
 llvm::Expected<std::vector<lldb::addr_t>>
 GetStepUntilAddresses(StackFrame &frame, const FileSpec &file,
                       llvm::ArrayRef<uint32_t> lines,
-                      llvm::ArrayRef<lldb::addr_t> addresses);
+                      llvm::ArrayRef<lldb::addr_t> requested_addresses);
 
 } // namespace lldb_private
 
