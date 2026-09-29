@@ -12,6 +12,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Value.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -262,13 +263,21 @@ void RemarkEngine::reportImpl(const Remark &remark) {
 }
 
 void RemarkEngine::report(const Remark &&remark) {
-  if (remarkEmittingPolicy)
-    remarkEmittingPolicy->reportRemark(remark);
+  if (!remarkEmittingPolicy)
+    return;
+  llvm::sys::SmartScopedLock<true> lock(mutex);
+  remarkEmittingPolicy->reportRemark(remark);
+}
+
+void RemarkEngine::finalizePolicy() {
+  if (!remarkEmittingPolicy)
+    return;
+  llvm::sys::SmartScopedLock<true> lock(mutex);
+  remarkEmittingPolicy->finalize();
 }
 
 RemarkEngine::~RemarkEngine() {
-  if (remarkEmittingPolicy)
-    remarkEmittingPolicy->finalize();
+  finalizePolicy();
 
   if (remarkStreamer)
     remarkStreamer->finalize();
@@ -365,13 +374,62 @@ namespace mlir::remark {
 RemarkEmittingPolicyAll::RemarkEmittingPolicyAll() = default;
 RemarkEmittingPolicyFinal::RemarkEmittingPolicyFinal() = default;
 
+namespace {
+/// Where RemarkEmittingPolicyFinal::finalize() places a root remark. The
+/// fields depend only on the remark's identity, never on its ID or arguments,
+/// so the order does not depend on which report of an identity was kept or on
+/// the order in which threads reported.
+struct FinalOrderKey {
+  /// Every file position nested in the location, in pre-order walk order. The
+  /// first is the one the diagnostic printer shows; the others tell apart,
+  /// for example, one callee inlined at two call sites.
+  SmallVector<std::tuple<StringRef, unsigned, unsigned>, 2> positions;
+  StringRef remarkName;
+  StringRef categoryName;
+  RemarkKind kind;
+  Location loc;
+
+  explicit FinalOrderKey(const detail::Remark &remark)
+      : remarkName(remark.getRemarkName()),
+        categoryName(remark.getCombinedCategoryName()),
+        kind(remark.getRemarkKind()), loc(remark.getLocation()) {
+    loc->walk([&](Location nested) {
+      if (auto flc = dyn_cast<FileLineColLoc>(nested))
+        positions.emplace_back(flc.getFilename().getValue(), flc.getLine(),
+                               flc.getColumn());
+      return WalkResult::advance();
+    });
+  }
+
+  bool operator<(const FinalOrderKey &other) const {
+    // Remarks without any file position go last.
+    if (positions.empty() != other.positions.empty())
+      return other.positions.empty();
+    auto fields = std::tie(positions, remarkName, categoryName, kind);
+    auto otherFields = std::tie(other.positions, other.remarkName,
+                                other.categoryName, other.kind);
+    if (fields != otherFields)
+      return fields < otherFields;
+    // Two different locations with the same file positions, e.g. two NameLocs
+    // around one position: fall back to their printed form.
+    auto printed = [](Location loc) {
+      std::string text;
+      llvm::raw_string_ostream os(text);
+      os << loc;
+      return text;
+    };
+    return printed(loc) < printed(other.loc);
+  }
+};
+} // namespace
+
 void RemarkEmittingPolicyFinal::finalize() {
   assert(reportImpl && "reportImpl is not set");
 
   // Take the pending remarks so that a second finalize(), e.g. from the engine
   // destructor after an explicit call, does not emit them again. IDs are
-  // assigned in creation order; sorting by them keeps the output independent
-  // of the set's hash layout.
+  // assigned in creation order; the source-position sort below falls back to
+  // it.
   std::vector<detail::Remark> remarks(postponedRemarks.begin(),
                                       postponedRemarks.end());
   postponedRemarks.clear();
@@ -383,25 +441,31 @@ void RemarkEmittingPolicyFinal::finalize() {
   llvm::DenseMap<uint64_t, const detail::Remark *> idMap;
   llvm::DenseSet<uint64_t> childIds; // IDs referenced as children
 
-  for (const auto &remark : remarks) {
+  for (const detail::Remark &remark : remarks) {
     if (remark.getId())
       idMap[remark.getId().getValue()] = &remark;
     for (auto relId : remark.getRelatedRemarkIds())
       childIds.insert(relId.getValue());
   }
 
-  // Emit remarks with related remarks grouped after their parents.
-  // Parent remarks are emitted first, followed by their related (child)
-  // remarks. Child-only remarks are skipped at the top level to avoid
-  // duplication.
-  for (const auto &remark : remarks) {
+  // Sort the root remarks, those not printed under a parent, by source
+  // position. Sort a side vector, since idMap points into `remarks`. The
+  // stable sort falls back to creation order only for two different locations
+  // that print the same.
+  SmallVector<std::pair<FinalOrderKey, const detail::Remark *>> roots;
+  for (const detail::Remark &remark : remarks) {
     if (remark.getId() && childIds.contains(remark.getId().getValue()))
       continue; // will be printed grouped under its parent
+    roots.emplace_back(FinalOrderKey(remark), &remark);
+  }
+  llvm::stable_sort(roots, llvm::less_first());
 
-    reportImpl(remark);
+  // Emit remarks with related remarks grouped after their parents.
+  for (const detail::Remark *remark : llvm::make_second_range(roots)) {
+    reportImpl(*remark);
 
     // Emit related remarks immediately after the parent.
-    for (auto relId : remark.getRelatedRemarkIds()) {
+    for (auto relId : remark->getRelatedRemarkIds()) {
       if (const auto *related = idMap.lookup(relId.getValue()))
         reportImpl(*related);
     }

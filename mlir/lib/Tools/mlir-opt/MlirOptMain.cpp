@@ -633,7 +633,7 @@ performActions(raw_ostream &os,
   // This is required if the remark policy is final. Otherwise, the remarks are
   // not emitted.
   if (remark::detail::RemarkEngine *engine = ctx.getRemarkEngine())
-    engine->getRemarkEmittingPolicy()->finalize();
+    engine->finalizePolicy();
 
   return success();
 }

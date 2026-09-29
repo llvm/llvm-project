@@ -14,6 +14,7 @@
 #include "mlir/Remark/RemarkStreamer.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/FileSystem.h"
@@ -21,7 +22,9 @@
 #include "llvm/Support/YAMLParser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <atomic>
 #include <optional>
+#include <thread>
 #include <vector>
 
 using namespace mlir;
@@ -426,22 +429,31 @@ private:
   std::vector<std::string> &out;
 };
 
-static LogicalResult enableFinalPolicy(MLIRContext &context,
-                                       std::vector<std::string> &emitted,
-                                       StringRef category) {
+/// Enables passed and analysis remarks of `category` with the given policy,
+/// recording what the streamer receives into `emitted`.
+static LogicalResult
+enablePolicy(MLIRContext &context, std::vector<std::string> &emitted,
+             StringRef category,
+             std::unique_ptr<remark::detail::RemarkEmittingPolicyBase> policy,
+             bool printAsEmitRemarks = false) {
   mlir::remark::RemarkCategories cats{/*all=*/std::nullopt,
                                       /*passed=*/category.str(),
                                       /*missed=*/std::nullopt,
                                       /*analysis=*/category.str(),
                                       /*failed=*/std::nullopt};
   return remark::enableOptimizationRemarks(
-      context, std::make_unique<RecordingStreamer>(emitted),
-      std::make_unique<remark::RemarkEmittingPolicyFinal>(), cats,
-      /*printAsEmitRemarks=*/false);
+      context, std::make_unique<RecordingStreamer>(emitted), std::move(policy),
+      cats, printAsEmitRemarks);
 }
 
-// The final policy emits remarks in creation order. A later report of an
-// identity replaces the earlier one and takes its own position.
+static LogicalResult enableFinalPolicy(MLIRContext &context,
+                                       std::vector<std::string> &emitted,
+                                       StringRef category) {
+  return enablePolicy(context, emitted, category,
+                      std::make_unique<remark::RemarkEmittingPolicyFinal>());
+}
+
+// A later report of an identity replaces the earlier one.
 TEST(Remark, TestRemarkFinalOrder) {
   std::vector<std::string> emitted;
   {
@@ -469,17 +481,17 @@ TEST(Remark, TestRemarkFinalDrains) {
     MLIRContext context;
     ASSERT_TRUE(succeeded(enableFinalPolicy(context, emitted, "LoopUnroll")));
     Location loc = FileLineColLoc::get(&context, "test.cpp", 1, 5);
-    auto *policy = context.getRemarkEngine()->getRemarkEmittingPolicy();
+    remark::detail::RemarkEngine *engine = context.getRemarkEngine();
     auto first = remark::RemarkOpts::name("First").category("LoopUnroll");
     auto second = remark::RemarkOpts::name("Second").category("LoopUnroll");
 
     remark::passed(loc, first) << "first";
     remark::passed(loc, second) << "second";
-    policy->finalize();
+    engine->finalizePolicy();
     EXPECT_THAT(emitted, ElementsAre("First: first", "Second: second"));
 
     // Nothing pending: a repeated call emits nothing.
-    policy->finalize();
+    engine->finalizePolicy();
     EXPECT_EQ(emitted.size(), 2u);
 
     // A drained identity can be reported again; it waits for the next call,
@@ -500,7 +512,7 @@ TEST(Remark, TestRemarkFinalLinkAcrossDrains) {
     MLIRContext context;
     ASSERT_TRUE(succeeded(enableFinalPolicy(context, emitted, "LoopUnroll")));
     Location loc = FileLineColLoc::get(&context, "test.cpp", 1, 5);
-    auto *policy = context.getRemarkEngine()->getRemarkEmittingPolicy();
+    remark::detail::RemarkEngine *engine = context.getRemarkEngine();
 
     remark::RemarkId analysisId;
     {
@@ -510,7 +522,7 @@ TEST(Remark, TestRemarkFinalLinkAcrossDrains) {
       analysis << "trip count 128";
       analysisId = analysis.getId();
     }
-    policy->finalize();
+    engine->finalizePolicy();
     EXPECT_THAT(emitted, ElementsAre("Analysis: trip count 128"));
 
     remark::passed(loc, remark::RemarkOpts::name("Unroller")
@@ -521,6 +533,178 @@ TEST(Remark, TestRemarkFinalLinkAcrossDrains) {
   EXPECT_THAT(emitted,
               ElementsAre("Analysis: trip count 128", "Unroller: unrolled"));
 }
+
+// Root remarks come out sorted by file, line and column, then by remark name.
+// Remarks whose location holds no file position go last.
+TEST(Remark, TestRemarkFinalSourceOrder) {
+  std::vector<std::string> emitted;
+  {
+    MLIRContext context;
+    ASSERT_TRUE(succeeded(enableFinalPolicy(context, emitted, "LoopUnroll")));
+    auto at = [&](StringRef file, unsigned line, unsigned col) -> Location {
+      return FileLineColLoc::get(&context, file, line, col);
+    };
+    auto named = [](StringRef name) {
+      return remark::RemarkOpts::name(name).category("LoopUnroll");
+    };
+
+    remark::passed(UnknownLoc::get(&context), named("R")) << "unknown";
+    remark::passed(at("b.cpp", 1, 1), named("R")) << "b.cpp:1:1";
+    remark::passed(at("a.cpp", 9, 1), named("R")) << "a.cpp:9:1";
+    remark::passed(
+        NameLoc::get(StringAttr::get(&context, "n"), at("a.cpp", 5, 1)),
+        named("R"))
+        << "a.cpp:5:1 via NameLoc";
+    remark::passed(at("a.cpp", 2, 7), named("R")) << "a.cpp:2:7";
+    remark::passed(at("a.cpp", 2, 3), named("Zeta")) << "a.cpp:2:3";
+    remark::passed(at("a.cpp", 2, 3), named("Alpha")) << "a.cpp:2:3";
+  }
+  EXPECT_THAT(emitted,
+              ElementsAre("Alpha: a.cpp:2:3", "Zeta: a.cpp:2:3", "R: a.cpp:2:7",
+                          "R: a.cpp:5:1 via NameLoc", "R: a.cpp:9:1",
+                          "R: b.cpp:1:1", "R: unknown"));
+}
+
+// The order depends only on the set of remarks, not on the order in which
+// they were reported. Code inlined from one callee at two call sites shares
+// the callee's position and is ordered by the call site.
+TEST(Remark, TestRemarkFinalOrderIndependentOfReportOrder) {
+  auto run = [](ArrayRef<unsigned> reportOrder) {
+    std::vector<std::string> emitted;
+    {
+      MLIRContext context;
+      EXPECT_TRUE(succeeded(enableFinalPolicy(context, emitted, "LoopUnroll")));
+      Location callee = FileLineColLoc::get(&context, "helper.h", 3, 1);
+      SmallVector<Location> locs = {
+          CallSiteLoc::get(callee,
+                           FileLineColLoc::get(&context, "a.cpp", 20, 1)),
+          CallSiteLoc::get(callee,
+                           FileLineColLoc::get(&context, "a.cpp", 10, 1)),
+          FileLineColLoc::get(&context, "a.cpp", 4, 2),
+          FileLineColLoc::get(&context, "a.cpp", 4, 1)};
+      auto opts = remark::RemarkOpts::name("R").category("LoopUnroll");
+      for (unsigned index : reportOrder)
+        remark::passed(locs[index], opts)
+            << ("remark " + std::to_string(index));
+    }
+    return emitted;
+  };
+  std::vector<std::string> forward = run({0, 1, 2, 3});
+  EXPECT_THAT(forward, ElementsAre("R: remark 3", "R: remark 2", "R: remark 1",
+                                   "R: remark 0"));
+  EXPECT_EQ(forward, run({3, 1, 0, 2}));
+}
+
+// A related remark is printed right after the remark that references it, not
+// at its own position.
+TEST(Remark, TestRemarkFinalChildFollowsParent) {
+  std::vector<std::string> emitted;
+  {
+    MLIRContext context;
+    ASSERT_TRUE(succeeded(enableFinalPolicy(context, emitted, "LoopUnroll")));
+    Location early = FileLineColLoc::get(&context, "test.cpp", 1, 1);
+    Location late = FileLineColLoc::get(&context, "test.cpp", 9, 1);
+
+    remark::RemarkId childId;
+    {
+      auto child = remark::analysis(
+          early, remark::RemarkOpts::name("Child").category("LoopUnroll"));
+      child << "at line 1";
+      childId = child.getId();
+    }
+    remark::passed(early,
+                   remark::RemarkOpts::name("Other").category("LoopUnroll"))
+        << "at line 1";
+    remark::passed(late, remark::RemarkOpts::name("Parent")
+                             .category("LoopUnroll")
+                             .relatedTo(childId))
+        << "at line 9";
+  }
+  EXPECT_THAT(emitted, ElementsAre("Other: at line 1", "Parent: at line 9",
+                                   "Child: at line 1"));
+}
+
+#if LLVM_ENABLE_THREADS
+/// Runs `body(threadIndex)` on `numThreads` threads released together.
+static void runOnThreads(unsigned numThreads,
+                         llvm::function_ref<void(unsigned)> body) {
+  std::atomic<bool> start{false};
+  std::vector<std::thread> threads;
+  for (unsigned t = 0; t < numThreads; ++t) {
+    threads.emplace_back([&, t] {
+      while (!start.load())
+        std::this_thread::yield();
+      body(t);
+    });
+  }
+  start.store(true);
+  for (std::thread &thread : threads)
+    thread.join();
+}
+
+// Reports from several threads reach the final policy one at a time, and the
+// emitted order does not depend on how the threads were scheduled.
+TEST(Remark, TestRemarkFinalConcurrent) {
+  constexpr unsigned numThreads = 8, perThread = 64;
+  std::vector<std::string> emitted;
+  {
+    MLIRContext context;
+    ASSERT_TRUE(succeeded(enableFinalPolicy(context, emitted, "LoopUnroll")));
+    SmallVector<Location> locs;
+    for (unsigned line = 1; line <= numThreads * perThread; ++line)
+      locs.push_back(FileLineColLoc::get(&context, "test.cpp", line, 1));
+    Location shared = FileLineColLoc::get(&context, "shared.cpp", 1, 1);
+    auto opts = remark::RemarkOpts::name("R").category("LoopUnroll");
+
+    runOnThreads(numThreads, [&](unsigned t) {
+      for (unsigned i = 0; i < perThread; ++i) {
+        unsigned line = i * numThreads + t + 1;
+        remark::passed(locs[line - 1], opts)
+            << ("line " + std::to_string(line));
+      }
+      // Every thread reports the same identity; one report survives.
+      remark::passed(shared, opts) << "shared";
+    });
+  }
+  std::vector<std::string> expected = {"R: shared"};
+  for (unsigned line = 1; line <= numThreads * perThread; ++line)
+    expected.push_back("R: line " + std::to_string(line));
+  EXPECT_EQ(emitted, expected);
+}
+
+// Under the All policy the streamer and the diagnostic printer run for every
+// report; the engine serializes them, so a streamer without a lock of its own
+// sees every remark exactly once.
+TEST(Remark, TestRemarkAllConcurrent) {
+  constexpr unsigned numThreads = 8, perThread = 64;
+  std::vector<std::string> emitted;
+  unsigned printed = 0;
+  {
+    MLIRContext context;
+    ScopedDiagnosticHandler handler(&context, [&](Diagnostic &) {
+      ++printed;
+      return success();
+    });
+    ASSERT_TRUE(succeeded(
+        enablePolicy(context, emitted, "LoopUnroll",
+                     std::make_unique<remark::RemarkEmittingPolicyAll>(),
+                     /*printAsEmitRemarks=*/true)));
+    Location loc = FileLineColLoc::get(&context, "test.cpp", 1, 1);
+    auto opts = remark::RemarkOpts::name("R").category("LoopUnroll");
+
+    runOnThreads(numThreads, [&](unsigned t) {
+      for (unsigned i = 0; i < perThread; ++i)
+        remark::passed(loc, opts)
+            << ("remark " + std::to_string(t * perThread + i));
+    });
+  }
+  std::vector<std::string> expected;
+  for (unsigned index = 0; index < numThreads * perThread; ++index)
+    expected.push_back("R: remark " + std::to_string(index));
+  EXPECT_THAT(emitted, ::testing::UnorderedElementsAreArray(expected));
+  EXPECT_EQ(printed, numThreads * perThread);
+}
+#endif // LLVM_ENABLE_THREADS
 
 TEST(Remark, TestArgWithAttribute) {
   MLIRContext context;

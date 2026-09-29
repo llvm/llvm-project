@@ -17,6 +17,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Mutex.h"
 #include "llvm/Support/Regex.h"
 
 #include "mlir/IR/Diagnostics.h"
@@ -449,6 +450,10 @@ private:
 /// optimization remarks to the underlying remark streamer. The derived classes
 /// should implement the `streamOptimizationRemark` method to provide the
 /// actual streaming implementation.
+///
+/// The RemarkEngine calls `streamOptimizationRemark` under its lock, so an
+/// implementation does not need a lock of its own. It must not report remarks
+/// or wait for threads that report remarks.
 class MLIRRemarkStreamerBase {
 public:
   virtual ~MLIRRemarkStreamerBase() = default;
@@ -468,6 +473,10 @@ using ReportFn = llvm::unique_function<void(const Remark &)>;
 /// optimization remarks to the underlying remark streamer. The derived classes
 /// should implement the `reportRemark` method to provide the actual emitting
 /// implementation.
+///
+/// Through the RemarkEngine, `reportRemark` and `finalize` run under the
+/// engine's lock and are never entered concurrently, even when passes report
+/// remarks from several threads.
 class RemarkEmittingPolicyBase {
 protected:
   ReportFn reportImpl;
@@ -514,6 +523,11 @@ private:
   bool printAsEmitRemarks = false;
   /// Atomic counter for generating unique remark IDs.
   std::atomic<uint64_t> nextRemarkId{1};
+  /// Serializes report() and finalizePolicy(). Passes running in parallel
+  /// report into the same engine, and neither the policies nor the streamers
+  /// are thread-safe. Recursive, like the DiagnosticEngine's lock, so a
+  /// callback that reports on the same thread does not deadlock.
+  llvm::sys::SmartMutex<true> mutex;
 
   /// Emit a remark using the given maker function, which should return
   /// a Remark instance. The remark will be emitted using the main
@@ -547,10 +561,16 @@ public:
              std::unique_ptr<RemarkEmittingPolicyBase> remarkEmittingPolicy,
              std::string *errMsg);
 
-  /// Get the remark emitting policy.
+  /// Get the remark emitting policy. Calling into the policy directly
+  /// bypasses the engine's lock; use finalizePolicy() to finalize it while
+  /// other threads may still report remarks.
   RemarkEmittingPolicyBase *getRemarkEmittingPolicy() const {
     return remarkEmittingPolicy.get();
   }
+
+  /// Finalize the emitting policy under the engine's lock, e.g. to emit the
+  /// remarks a RemarkEmittingPolicyFinal holds once a pipeline has finished.
+  void finalizePolicy();
 
   /// Generate a unique ID for a new remark.
   RemarkId generateRemarkId() {
@@ -607,7 +627,8 @@ public:
   findRemarks(const RemarkOpts &opts,
               std::optional<RemarkKind> kind = std::nullopt) const;
 
-  /// Report a remark.
+  /// Report a remark. Thread-safe: reports from several threads are handed to
+  /// the policy one at a time.
   void report(const Remark &&remark);
 
   /// Report a successful remark, this will create an InFlightRemark
@@ -667,7 +688,7 @@ public:
 
 /// Policy that emits only the last remark reported for each identity, see
 /// DenseMapInfo<Remark>. Remarks are stored until finalize(), which emits them
-/// in creation order, so the output does not depend on hash order.
+/// in source order, see there.
 class RemarkEmittingPolicyFinal : public detail::RemarkEmittingPolicyBase {
 private:
   /// Remarks reported since the last finalize().
@@ -681,7 +702,11 @@ public:
     postponedRemarks.insert(remark);
   }
 
-  /// Emits and drains all stored remarks. Related remarks are printed right
+  /// Emits and drains all stored remarks. Root remarks come out sorted by the
+  /// file positions nested in their location (remarks with none last), then
+  /// by remark name, category and kind, so the output does not depend on the
+  /// order in which remarks were reported or on how parallel passes were
+  /// scheduled. Related remarks are printed right
   /// after the remark that references them; a link only resolves when both
   /// remarks are in the same call. A later call emits only remarks reported
   /// since this one.

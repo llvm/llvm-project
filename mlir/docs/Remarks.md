@@ -205,8 +205,12 @@ Emits **all** remarks unconditionally.
 Stores remarks until `finalize()` is called and emits only the **final** remark
 for each location. This is useful in multi-pass compilers where an early pass
 may report a failure, but a later pass succeeds. `finalize()` drains the stored
-remarks and emits them in the order in which they were created. Calling it
-again emits only remarks reported since.
+remarks. Calling it again emits only remarks reported since.
+
+Remarks are emitted in source order (file, line, column), remarks without a
+file position last, and linked remarks right after the remark that references
+them. The order does not depend on the order in which remarks were reported,
+so it is the same whether or not passes run in parallel.
 
 **Example:** Only the successful remark is emitted:
 
@@ -221,6 +225,26 @@ remark::passed(loc, opts) << "Loop unrolled successfully";
 ```
 
 You can also implement custom policies by inheriting from the policy interface.
+
+### Thread safety
+
+Passes that run in parallel report into the same `RemarkEngine`. The engine
+takes a lock around each call into the policy, so `reportRemark` and
+`finalize`, and the streamer calls a policy makes from them, never run
+concurrently. Custom policies and streamers therefore need no lock of their
+own. They must not report remarks or wait for threads that report remarks,
+and diagnostic handlers must not report remarks either.
+
+To emit the remarks a final policy holds while other threads may still report,
+call `RemarkEngine::finalizePolicy()` rather than calling `finalize()` on
+`getRemarkEmittingPolicy()` directly. The engine destructor finalizes the
+policy as well.
+
+With several threads, some output still depends on scheduling. Under
+`RemarkEmittingPolicyAll`, the streamer receives remarks in the order in which
+threads reach the lock. `RemarkId` and `RelatedTo` values come from a shared
+counter. If two threads report the same identity, whichever reports last
+decides the content the final policy keeps.
 
 ***
 
