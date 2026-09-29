@@ -10,6 +10,11 @@
 // LLVM targets. We keep this test with the MC tests, which already do that, to
 // keep the SupportTests target small.
 
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
@@ -87,6 +92,35 @@ TEST(TargetRegistry, IsValidFeatureListFormat) {
   EXPECT_FALSE(Target::isValidFeatureListFormat(","));
   EXPECT_FALSE(Target::isValidFeatureListFormat(",,"));
   EXPECT_FALSE(Target::isValidFeatureListFormat(",,,"));
+}
+
+TEST(TargetRegistry, SubtargetCopyPreservesHwMode) {
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+
+  for (StringRef TripleName :
+       {"x86_64-unknown-linux-gnu", "riscv64-unknown-elf"}) {
+    Triple TT(TripleName);
+    std::string Error;
+    const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
+    if (!TheTarget)
+      continue;
+    std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
+    MCTargetOptions MCOptions;
+    std::unique_ptr<MCAsmInfo> MAI(
+        TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
+    std::unique_ptr<MCSubtargetInfo> STI(
+        TheTarget->createMCSubtargetInfo(TT, "", ""));
+    ASSERT_TRUE(MRI && MAI && STI);
+    EXPECT_NE(STI->getHwMode(), 0u);
+    EXPECT_NE(STI->getHwModeSet(), 0u);
+    MCContext Ctx(TT, *MAI, *MRI, *STI);
+    MCSubtargetInfo &Copy = Ctx.getSubtargetCopy(*STI);
+    // FIXME: MCContext::getSubtargetCopy slices MCSubtargetInfo to the base
+    // class, losing the target's getHwMode() and getHwModeSet() overrides.
+    EXPECT_EQ(Copy.getHwMode(), 0u);
+    EXPECT_EQ(Copy.getHwModeSet(), 0u);
+  }
 }
 
 } // end namespace

@@ -128,6 +128,15 @@ def foo : Instruction {
   let AsmString = "foo  $factor";
 }
 
+// CHECK-SUBTARGET-LABEL: struct TestTargetGenMCSubtargetInfo : public MCSubtargetInfo {
+// CHECK-SUBTARGET:         unsigned resolveVariantSchedClass(unsigned SchedClass,
+// CHECK-SUBTARGET-NEXT:        const MCInst *MI, const MCInstrInfo *MCII,
+// CHECK-SUBTARGET-NEXT:        unsigned CPUID) const final {
+// CHECK-SUBTARGET-NEXT:      return TestTarget_MC::resolveVariantSchedClassImpl(SchedClass, MI, MCII, *this, CPUID);
+// CHECK-SUBTARGET-NEXT:    }
+// CHECK-SUBTARGET-NEXT:    unsigned getHwModeSet() const final;
+// CHECK-SUBTARGET-NEXT:    unsigned getHwMode(enum HwModeType type = HwMode_Default) const final;
+// CHECK-SUBTARGET-NEXT:  };
 // CHECK-SUBTARGET-LABEL:  unsigned TestTargetGenMCSubtargetInfo::getHwModeSet() const {
 // CHECK-SUBTARGET{LITERAL}:[[maybe_unused]] const FeatureBitset &FB = getFeatureBits();
 // CHECK-SUBTARGET-NEXT:    // Collect HwModes and store them as a bit set.
