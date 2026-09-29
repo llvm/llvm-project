@@ -540,16 +540,20 @@ the same form regardless of the exact op. This is particularly useful for
 implementing declarative pattern rewrites.
 
 For operations with non-empty properties, the aggregate builder that takes a
-mixed `attributes` array partitions the array using the operation's statically
-known inherent-attribute and property names. It converts that subset into
-`Properties` and places only the remaining discardable attributes in
-`OperationState::attributes`. Defaults and result-type inference therefore
-observe the populated properties before the operation is created. Operations
-with empty properties retain the ordinary aggregate attribute builder.
+mixed `attributes` array is deprecated. Use the overload that takes a typed
+`Properties` structure and a separate `discardableAttributes` array instead.
+The deprecated overload remains available for compatibility: it partitions the
+mixed array using the operation's statically known inherent-attribute and
+property names, converts that subset into `Properties`, and places only the
+remaining discardable attributes in `OperationState::attributes`. Defaults and
+result-type inference therefore observe the populated properties before the
+operation is created. Operations with empty properties retain the ordinary
+aggregate attribute builder without a deprecation.
 
 This applies to all aggregate builder variants, including builders with
 explicit or inferred result types and builders that derive result types from
-operands or the first attribute.
+operands or the first attribute. The overload taking `Properties` and
+`discardableAttributes` is not deprecated.
 
 The third and fourth forms are good for use in manually written code, given that
 they provide better guarantee via signatures.
@@ -755,15 +759,12 @@ The available directives are as follows:
 
 *   `attr-dict`
 
-    -   Represents the attribute dictionary of the operation.
-    -   Any inherent attributes that are not used elsewhere in the format are
-        printed as part of the attribute dictionary unless a `prop-dict` is
-        present.
-    -   Discardable attributes are always part of the `attr-dict`.
-    -   For dialects that set `useStrictPropertiesInAssemblyFormat`,
-        `attr-dict` only carries discardable attributes for property-backed
-        operations. Inherent attributes must be bound directly in the format or
-        covered by `prop-dict`.
+    -   Represents the attribute dictionary of the operation. Under the
+        default strict format rules, it contains only discardable attributes.
+        Inherent attributes must be bound directly in the format or covered by
+        `prop-dict`. The deprecated `useStrictPropertiesInAssemblyFormat = 0`
+        setting temporarily allows inherent attributes to mix with discardable
+        attributes in `attr-dict`.
 
 *   `attr-dict-with-keyword`
 
@@ -1138,9 +1139,8 @@ to:
     directives.
 1.  Unless all non-attribute properties appear in the format, the `prop-dict`
     directive must be present.
-1.  For dialects that set `useStrictPropertiesInAssemblyFormat`, every inherent
-    attribute and property must either appear in the format or be covered by the
-    `prop-dict` directive.
+1.  Every inherent attribute and property must either appear in the format or
+    be covered by the `prop-dict` directive.
 1.  The `attr-dict` directive must always be present.
 1.  Must not contain overlapping information; e.g. multiple instances of
     'attr-dict', types, operands, etc.

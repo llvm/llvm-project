@@ -358,8 +358,6 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
 
       case RISCV::CZERO_EQZ:
       case RISCV::CZERO_NEZ:
-      case RISCV::VT_MASKC:
-      case RISCV::VT_MASKCN:
         if (OpIdx != 1)
           return false;
         Worklist.emplace_back(UserMI, Bits);
@@ -492,13 +490,11 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       const RISCVMachineFunctionInfo *RVFI =
           MF->getInfo<RISCVMachineFunctionInfo>();
 
-      // If this is the entry block and the register is livein, see if we know
-      // it is sign extended.
-      if (MI->getParent() == &MF->front()) {
-        Register VReg = MI->getOperand(0).getReg();
-        if (MF->getRegInfo().isLiveIn(VReg) && RVFI->isSExt32Register(VReg))
-          continue;
-      }
+      // If this is the entry block, see if we know the copied argument register
+      // is sign extended.
+      if (MI->getParent() == &MF->front() &&
+          RVFI->isSExt32Register(MI->getOperand(0).getReg()))
+        continue;
 
       Register CopySrcReg = MI->getOperand(1).getReg();
       if (CopySrcReg == RISCV::X10) {
@@ -648,8 +644,6 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
 
     case RISCV::CZERO_EQZ:
     case RISCV::CZERO_NEZ:
-    case RISCV::VT_MASKC:
-    case RISCV::VT_MASKCN:
       // Instructions return zero or operand 1. Result is sign extended if
       // operand 1 is sign extended.
       if (!AddRegToWorkList(MI->getOperand(1).getReg()))
@@ -699,6 +693,18 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::LXWU:
     case RISCV::MUL:
     case RISCV::SUB:
+      if (hasAllWUsers(*MI, ST, MRI)) {
+        FixableDef.insert(MI);
+        break;
+      }
+      return false;
+    case RISCV::ADD_UW:
+      // ZEXT.W is fixable to SEXT.W.
+      // TODO: In some cases it is better to delete the ZEXT.W and fix something
+      // earlier in the graph.
+      if (!MI->getOperand(2).isReg() || MI->getOperand(2).getReg() != RISCV::X0)
+        return false;
+
       if (hasAllWUsers(*MI, ST, MRI)) {
         FixableDef.insert(MI);
         break;
@@ -767,7 +773,16 @@ bool RISCVOptWInstrsImpl::removeSExtWInstrs(MachineFunction &MF,
       // Convert Fixable instructions to their W versions.
       for (MachineInstr *Fixable : FixableDefs) {
         LLVM_DEBUG(dbgs() << "Replacing " << *Fixable);
-        Fixable->setDesc(TII.get(getWOp(Fixable->getOpcode())));
+        // Convert zext.w to sext.w.
+        if (Fixable->getOpcode() == RISCV::ADD_UW) {
+          assert(Fixable->getOperand(2).isReg() &&
+                 Fixable->getOperand(2).getReg() == RISCV::X0 &&
+                 "Unexpected ADD_UW operand.");
+          Fixable->setDesc(TII.get(RISCV::ADDIW));
+          Fixable->getOperand(2).ChangeToImmediate(0);
+        } else {
+          Fixable->setDesc(TII.get(getWOp(Fixable->getOpcode())));
+        }
         Fixable->clearFlag(MachineInstr::MIFlag::NoSWrap);
         Fixable->clearFlag(MachineInstr::MIFlag::NoUWrap);
         Fixable->clearFlag(MachineInstr::MIFlag::IsExact);

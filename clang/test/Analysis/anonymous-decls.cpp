@@ -72,7 +72,7 @@ int main() {
 // CHECK-NEXT:   2: [B3.1] (ImplicitCastExpr, FunctionToPointerDecay, iterator_traits<pair<int, int> *>::reference (*)(void))
 // CHECK-NEXT:   3: __begin1
 // CHECK-NEXT:   4: * [B3.3] (OperatorCall)
-// CHECK-NEXT:   5: auto &;
+// CHECK-NEXT:   5: auto &{{.*}};
 // CHECK-NEXT:   6: get<0UL>
 // CHECK-NEXT:   7: [B3.6] (ImplicitCastExpr, FunctionToPointerDecay, tuple_element<0L, pair<int, int> >::type (*)(pair<int, int> &))
 // CHECK-NEXT:   8: decomposition-a-b

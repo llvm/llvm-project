@@ -234,6 +234,7 @@ protected:
                            AMDGPU::OpName Src1OpName) const;
   bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
                      unsigned toIdx) const;
+  bool isNonCommutableDPP(const MachineInstr &MI) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
@@ -270,6 +271,13 @@ public:
 
   const SIRegisterInfo &getRegisterInfo() const {
     return RI;
+  }
+
+  // FIXME: This is inaccurate and needs to account for use context. Normal asm
+  // constraints should use 64-bit pointers.
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &AMDGPU::VGPR_32RegClass;
   }
 
   const GCNSubtarget &getSubtarget() const {
@@ -932,6 +940,17 @@ public:
 
   bool isDPP(uint32_t Opcode) const { return SIInstrFlags::isDPP(get(Opcode)); }
 
+  // Some opcodes use Src1 for DPP instead of Src0, because the sequencer
+  // transforms them and reverse the order of their operands at runtime.
+  //
+  // Documentation is incomplete on which instructions are effected, so
+  // the implementation is derived from experimentation.
+  //
+  // Listed as target-independent pseudos; the per-subtarget MC opcodes
+  // (V_SUBREV_NC_U32_e32_gfx11 and friends) are all reached through these.
+  // Defined out of line because GCNSubtarget is incomplete here.
+  static bool isSrc1DPPRevOpcode(const GCNSubtarget &ST, uint32_t Opcode);
+
   static bool isTRANS(const MachineInstr &MI) {
     return SIInstrFlags::isTRANS(MI);
   }
@@ -1180,14 +1199,6 @@ public:
            Opc == AMDGPU::GLOBAL_WBINV;
   }
 
-  static bool isF16PseudoScalarTrans(unsigned Opcode) {
-    return Opcode == AMDGPU::V_S_EXP_F16_e64 ||
-           Opcode == AMDGPU::V_S_LOG_F16_e64 ||
-           Opcode == AMDGPU::V_S_RCP_F16_e64 ||
-           Opcode == AMDGPU::V_S_RSQ_F16_e64 ||
-           Opcode == AMDGPU::V_S_SQRT_F16_e64;
-  }
-
   static bool doesNotReadTiedSource(const MachineInstr &MI) {
     return SIInstrFlags::isTiedSourceNotRead(MI);
   }
@@ -1381,6 +1392,12 @@ public:
   /// Return true if this 64-bit VALU instruction has a 32-bit encoding.
   /// This function will return false if you pass it a 32-bit instruction.
   bool hasVALU32BitEncoding(unsigned Opcode) const;
+
+  /// Return true if \p Reg is a lane mask that already has 0 in every bit
+  /// corresponding to a lane that is inactive in EXEC where \p Use executes,
+  /// so that ANDing it with EXEC there would be a no-op. Requires SSA form.
+  bool isMaskedByExec(Register Reg, const MachineInstr &Use,
+                      const MachineRegisterInfo &MRI, unsigned Depth = 0) const;
 
   bool physRegUsesConstantBus(const MachineOperand &Reg) const;
   bool regUsesConstantBus(const MachineOperand &Reg,
@@ -1755,6 +1772,8 @@ public:
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  unsigned getBlockingCycles(const MachineInstr &MI) const;
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 

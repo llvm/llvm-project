@@ -33,7 +33,7 @@ define ptx_kernel void @ignore_kernel_noreturn() #0 {
 
 ; CHECK-LABEL: .entry callprototype_noreturn(
 ; CHECK: {{[$]}}L__prototype_{{[0-9]+}}:
-; CHECK-NEXT: ()_ (.param .b32 _) .noreturn;
+; CHECK-NEXT: _ (.param .b32 _) .noreturn;
 ; CHECK: {{[$]}}L__prototype_{{[0-9]+}}:
 ; CHECK-NEXT: .callprototype (.param .b32 _) _ (.param .b32 _);
 

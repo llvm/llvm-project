@@ -221,8 +221,15 @@ if(compiler_rt_path)
   foreach(target ${builtin_targets})
     check_apple_target(${target} builtin)
 
+    # builtins-spirv64* targets will invoke llvm-link to combine all
+    # bitcode from static archive library into libclang_rt.builtins.bc.
+    # Need to add dependency on llvm-link for it.
+    set(builtin_deps clang-resource-headers)
+    if(target MATCHES "^spirv64" AND TARGET llvm-link)
+      list(APPEND builtin_deps llvm-link)
+    endif()
     builtin_register_target(${compiler_rt_path} ${target}
-      DEPENDS clang-resource-headers
+      DEPENDS ${builtin_deps}
       CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
       EXTRA_ARGS TARGET_TRIPLE ${target})
 
@@ -387,10 +394,12 @@ function(runtime_register_target name)
     endif()
   endforeach()
 
+  set(${name}_runtime_targets)
   foreach(runtime_name ${runtime_names})
     set(${runtime_name}-${name} ${runtime_name})
     set(install-${runtime_name}-${name} install-${runtime_name})
     set(install-${runtime_name}-${name}-stripped install-${runtime_name}-stripped)
+    list(APPEND ${name}_runtime_targets ${runtime_name}-${name})
     list(APPEND ${name}_extra_targets ${runtime_name}-${name} install-${runtime_name}-${name} install-${runtime_name}-${name}-stripped)
     if(LLVM_INCLUDE_TESTS)
       set(check-${runtime_name}-${name} check-${runtime_name} )
@@ -523,6 +532,7 @@ function(runtime_register_target name)
   endforeach()
 
   add_flang_mod_deps(runtimes-${name}-build ${${name}_extra_targets})
+  set(${name}_runtime_targets ${${name}_runtime_targets} PARENT_SCOPE)
 endfunction()
 
 # Check if we have any runtimes to build.
@@ -756,7 +766,7 @@ if(build_runtimes)
     foreach(multilib ${LLVM_RUNTIME_MULTILIBS})
       foreach(name ${LLVM_RUNTIME_MULTILIB_${multilib}_TARGETS})
         runtime_register_target(${name}+${multilib}
-          DEPENDS runtimes-${name}
+          DEPENDS ${${name}_runtime_targets}
           CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name}
                      -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${multilib}
                      ${extra_cmake_args}

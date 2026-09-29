@@ -133,7 +133,7 @@ define void @indirect_caller(ptr %fp) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK:  $L__prototype_0: 
-; CHECK-NEXT:  .callprototype ()_ (.param .b32 _);
+; CHECK-NEXT:  .callprototype _ (.param .b32 _);
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [indirect_caller_param_0];
 ; CHECK-NEXT:    { // callseq 4, 0
