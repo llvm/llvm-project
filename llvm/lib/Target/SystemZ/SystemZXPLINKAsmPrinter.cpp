@@ -36,8 +36,7 @@ using namespace llvm;
 
 SystemZXPLINKAsmPrinter::SystemZXPLINKAsmPrinter(
     TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-    : SystemZAsmPrinter(TM, std::move(Streamer)),
-      ADATable(TM.getPointerSize(0)) {}
+    : SystemZAsmPrinter(TM, std::move(Streamer)), ADATable(8) {}
 
 bool SystemZXPLINKAsmPrinter::doInitialization(Module &M) {
   SM.reset();
@@ -341,6 +340,10 @@ void SystemZXPLINKAsmPrinter::emitADASection() {
       OutStreamer->emitSymbolAttribute(Alias, MCSA_Extern);
       MCSymbolGOFF *GOFFSym =
           static_cast<llvm::MCSymbolGOFF *>(const_cast<llvm::MCSymbol *>(Sym));
+      // A weak reference (extern_weak) stays weak through the indirect
+      // symbol, otherwise the binder fails on the unresolved reference.
+      if (GOFFSym->isWeak())
+        OutStreamer->emitSymbolAttribute(Alias, MCSA_WeakReference);
       ZOS->emitExternalName(Alias, GOFFSym->getExternalName());
       EMIT_COMMENT("pointer to function descriptor");
       OutStreamer->emitValue(
@@ -775,11 +778,23 @@ const MCExpr *SystemZXPLINKAsmPrinter::lowerConstant(const Constant *CV,
 
   if (IsFunc) {
     OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
-    if (FV->hasExternalLinkage())
-      return MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
+    // A function pointer must point to a function descriptor (a V-con would
+    // yield the entry point instead), and it must compare equal to the address
+    // of the same function taken in code. For a function that is not internal,
+    // code loads the address of the descriptor from an ADA slot that refers to
+    // the indirect symbol; the binder resolves that reference to the function
+    // descriptor. Use the same reference here. The slot is shared with code
+    // taking the address and defines the indirect symbol.
+    const GlobalValue *FGV = GA ? static_cast<const GlobalValue *>(GA)
+                                : static_cast<const GlobalValue *>(FV);
+    if (!FGV->hasLocalLinkage()) {
+      ADATable.insert(Sym, SystemZII::MO_ADA_INDIRECT_FUNC_DESC);
+      MCSymbol *Alias = OutContext.getOrCreateSymbol(
+          Twine(Sym->getName()).concat("@indirect"));
+      return MCSpecifierExpr::create(MCSymbolRefExpr::create(Alias, OutContext),
                                      SystemZ::S_VCon, OutContext);
-    // Trigger creation of function descriptor in ADA for internal
-    // functions.
+    }
+    // Internal functions: function descriptor in the ADA.
     unsigned Disp = ADATable.insert(Sym, SystemZII::MO_ADA_DIRECT_FUNC_DESC);
     return MCBinaryExpr::createAdd(
         MCSpecifierExpr::create(

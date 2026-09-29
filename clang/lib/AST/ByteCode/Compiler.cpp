@@ -3579,6 +3579,10 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
   bool IsStatic = E->getStorageDuration() == SD_Static;
   if (IsStatic ||
       (ExtendingDecl && Context::shouldBeGloballyIndexed(ExtendingDecl))) {
+
+    if (this->constantFolding())
+      return false;
+
     UnsignedOrNone GlobalIndex = P.createGlobal(E, Inner->getType());
     if (!GlobalIndex)
       return false;
@@ -4275,19 +4279,21 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
     // alignof(X) and X has new-extended alignment).
     if (PlacementArgs == 1) {
       const Expr *Arg1 = E->getPlacementArg(0);
-      if (Arg1->getType()->isNothrowT()) {
+      if (OperatorNew->isReservedGlobalPlacementOperator()) {
+        if (!this->emitCheckPlacementNew(E, E))
+          return false;
+        PlacementDest = Arg1;
+      } else if (
+          Arg1->getType()->isNothrowT() &&
+          OperatorNew
+              ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
         if (!this->discard(Arg1))
           return false;
         IsNoThrow = true;
       } else {
-        // Invalid unless we have C++26 or are in a std:: function.
-        if (!this->emitInvalidNewDeleteExpr(E, E))
-          return false;
-
-        // If we have a placement-new destination, we'll later use that instead
-        // of allocating.
-        if (OperatorNew->isReservedGlobalPlacementOperator())
-          PlacementDest = Arg1;
+        // Any other placement list is invalid. This includes a user-declared
+        // allocation function taking std::nothrow_t, e.g. by value.
+        return this->emitInvalidNewDeleteExpr(E, E);
       }
     } else {
       // Always invalid.
@@ -5491,6 +5497,8 @@ const Function *Compiler<Emitter>::getFunction(const FunctionDecl *FD) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
+  assert(E);
+  assert(!E->getType().isNull());
   LocalScope<Emitter> RootScope(this, ScopeKind::FullExpression);
 
   auto maybeDestroyLocals = [&]() -> bool {
@@ -5615,8 +5623,8 @@ bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
 
   // Return the value.
   if (!this->emitRet(VarT.value_or(PT_Ptr), VD)) {
-    // If the Ret above failed and this is a global variable, mark it as
-    // uninitialized, even everything else succeeded.
+    // If the Ret above failed and this is a global variable. Mark it as
+    // uninitialized, even if everything else succeeded.
     if (Context::shouldBeGloballyIndexed(VD)) {
       auto GlobalIndex = P.getGlobal(VD);
       assert(GlobalIndex);

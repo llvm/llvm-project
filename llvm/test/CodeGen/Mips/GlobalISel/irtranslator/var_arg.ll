@@ -39,7 +39,7 @@ define void @testVaCopyArg(ptr %fmt, ...) {
   ; MIPS32-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32-NEXT:   $a0 = COPY [[GV]](p0)
   ; MIPS32-NEXT:   $a1 = COPY [[LOAD2]](p0)
-  ; MIPS32-NEXT:   JAL @printf, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $v0
+  ; MIPS32-NEXT:   JAL @printf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $v0
   ; MIPS32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $v0
   ; MIPS32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32-NEXT:   RetRA

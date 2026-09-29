@@ -1171,13 +1171,7 @@ static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
 
 /// Try to simplify logical and bitwise recipes in \p Def.
 static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
-  // Simplify (X && Y) | (X && !Y) -> X.
-  // TODO: Remove now that we have smaller combines for this.
-  VPValue *X, *Y;
-  if (match(Def,
-            m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                         m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y))))))
-    return X;
+  VPValue *X;
 
   // X | AllOnes -> AllOnes
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes())))
@@ -1552,6 +1546,14 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
         Instruction::LShr,
         {X, Plan.getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
         *cast<VPRecipeWithIRFlags>(Def), Def->getDebugLoc());
+
+  // (X >> C) << C -> X & (-1 << C).
+  if (CanCreateNewRecipe &&
+      match(Def, m_Shl(m_LShr(m_VPValue(X), m_VPValue(Y, m_APInt(APC))),
+                       m_Deferred(Y))))
+    return Builder.createAnd(
+        X, Plan.getConstantInt(APInt::getAllOnes(APC->getBitWidth()) << *APC),
+        Def->getDebugLoc());
 
   if (match(Def, m_Not(m_VPValue(X)))) {
     // Try to fold Not into compares by adjusting the predicate in-place.

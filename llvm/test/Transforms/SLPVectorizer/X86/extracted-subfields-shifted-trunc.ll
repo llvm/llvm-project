@@ -8,18 +8,8 @@ define void @store_bytes_i64(i64 %x, ptr %out) {
 ; CHECK-LABEL: define void @store_bytes_i64(
 ; CHECK-SAME: i64 [[X:%.*]], ptr [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[X]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP10]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> poison, i64 [[X]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr <4 x i64> [[TMP4]], <i64 32, i64 40, i64 48, i64 56>
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i64> [[TMP5]] to <4 x i32>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i32> [[TMP7]], <8 x i32> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <8 x i32> [[TMP9]], <i32 255, i32 255, i32 255, i32 -1, i32 255, i32 255, i32 255, i32 -1>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[X]] to <8 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i32>
 ; CHECK-NEXT:    store <8 x i32> [[TMP1]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
