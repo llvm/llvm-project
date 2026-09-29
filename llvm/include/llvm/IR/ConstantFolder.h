@@ -104,8 +104,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                 GEPNoWrapFlags NW) const override {
+  Value *FoldGEP(const DataLayout &DL, Type *Ty, Value *Ptr,
+                 ArrayRef<Value *> IdxList, GEPNoWrapFlags NW) const override {
     if (!ConstantExpr::isSupportedGetElementPtr(Ty))
       return nullptr;
 
@@ -114,7 +114,9 @@ public:
       if (any_of(IdxList, [](Value *V) { return !isa<Constant>(V); }))
         return nullptr;
 
-      return ConstantExpr::getGetElementPtr(Ty, PC, IdxList, NW);
+      ArrayRef<Constant *> ConstIdxList =
+          ArrayRef((Constant *const *)IdxList.data(), IdxList.size());
+      return ConstantExpr::getGetElementPtr(DL, Ty, PC, ConstIdxList, NW);
     }
     return nullptr;
   }

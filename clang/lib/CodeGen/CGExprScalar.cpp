@@ -2225,7 +2225,7 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
     MB.CreateIndexAssumption(RowIdx, NumRows);
 
   Value *FlatMatrix = Visit(E->getBase());
-  llvm::Type *ElemTy = CGF.ConvertTypeForMem(MatrixTy->getElementType());
+  llvm::Type *ElemTy = CGF.ConvertType(MatrixTy->getElementType());
   auto *ResultTy = llvm::FixedVectorType::get(ElemTy, NumColumns);
   Value *RowVec = llvm::PoisonValue::get(ResultTy);
 
@@ -2239,7 +2239,7 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
     RowVec = Builder.CreateInsertElement(RowVec, Elt, Lane, "matrix_row_ins");
   }
 
-  return CGF.EmitFromMemory(RowVec, E->getType());
+  return RowVec;
 }
 
 Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
@@ -2559,8 +2559,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
     assert(LoadList.size() >= VecTy->getNumElements() &&
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
-    llvm::Value *V = CGF.Builder.CreateLoad(
-        CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
+    llvm::Value *V = llvm::PoisonValue::get(CGF.ConvertType(DestTy));
     // write to V.
     for (unsigned I = 0, E = VecTy->getNumElements(); I < E; I++) {
       RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
@@ -2580,8 +2579,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
 
     bool IsRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
 
-    llvm::Value *V = CGF.Builder.CreateLoad(
-        CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
+    llvm::Value *V = llvm::PoisonValue::get(CGF.ConvertType(DestTy));
     // V is an allocated temporary for constructing the matrix.
     for (unsigned Row = 0, RE = MatTy->getNumRows(); Row < RE; Row++) {
       for (unsigned Col = 0, CE = MatTy->getNumColumns(); Col < CE; Col++) {
