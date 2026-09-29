@@ -22,8 +22,6 @@ on:
 jobs:
   build:
     runs-on: ${{ inputs.SKU }}
-    env:
-      DXC_VERSION: 1.9.2607.13
     steps:
       - name: Setup Windows
         if: runner.os == 'Windows'
@@ -57,11 +55,11 @@ jobs:
         run: python -m pip install -r OffloadTest/test/requirements.txt
       - name: Download DXC validator
         run: |
-            nuget install Microsoft.Direct3D.DXC -Version $env:DXC_VERSION -OutputDirectory DXC -ExcludeVersion -NonInteractive
+            nuget install Microsoft.Direct3D.DXC -OutputDirectory DXC -ExcludeVersion -NonInteractive
             $dxcDir = "${{ github.workspace }}/DXC/Microsoft.Direct3D.DXC/build/native/bin/x64"
             foreach ($file in @("dxv.exe", "dxcompiler.dll", "dxil.dll")) {
               if (-not (Test-Path "$dxcDir/$file")) {
-                throw "$file was not found in Microsoft.Direct3D.DXC $env:DXC_VERSION"
+                throw "$file was not found in Microsoft.Direct3D.DXC"
               }
             }
             $dxcDir = $dxcDir.Replace('\', '/')
