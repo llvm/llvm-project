@@ -8,6 +8,7 @@
 
 #include "EvalEmitter.h"
 #include "Context.h"
+#include "EvalSettings.h"
 #include "IntegralAP.h"
 #include "Interp.h"
 #include "clang/AST/DeclCXX.h"
@@ -22,6 +23,11 @@ EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
                          ConstantExprKind ConstexprKind)
     : Ctx(Ctx), P(P), S(Parent, P, Stk, FA, Ctx, this), EvalResult(Ctx),
       ConstexprKind(ConstexprKind) {}
+
+EvalEmitter::EvalEmitter(Context &Ctx, Program &P, const EvalSettings &Settings,
+                         InterpStack &Stk, FrameAllocator &FA)
+    : Ctx(Ctx), P(P), S(Settings, P, Stk, FA, Ctx, this), EvalResult(Ctx),
+      ConstexprKind(Settings.ConstexprKind) {}
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
                          InterpStack &Stk, FrameAllocator &FA)
