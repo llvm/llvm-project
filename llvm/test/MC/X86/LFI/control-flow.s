@@ -8,7 +8,7 @@ jmpq *%rax
 // CHECK-NEXT: .bundle_unlock
 
 jmpq *(%rdi)
-// CHECK:      movq (%rdi), %r11
+// CHECK:      movq %gs:(%edi), %r11
 // CHECK-NEXT: .bundle_lock
 // CHECK-NEXT: andl $-32, %r11d
 // CHECK-NEXT: addq %r14, %r11
@@ -16,7 +16,7 @@ jmpq *(%rdi)
 // CHECK-NEXT: .bundle_unlock
 
 jmpq *8(%rdi,%rsi,4)
-// CHECK:      movq 8(%rdi,%rsi,4), %r11
+// CHECK:      movq %gs:8(%edi,%esi,4), %r11
 // CHECK-NEXT: .bundle_lock
 // CHECK-NEXT: andl $-32, %r11d
 // CHECK-NEXT: addq %r14, %r11
@@ -35,7 +35,7 @@ jmpq *foo(%rip)
 // resolved against the virtual thread pointer.
 jmpq *%fs:(%rdi)
 // CHECK:      movq 16(%r15), %r11
-// CHECK-NEXT: movq (%r11,%rdi), %r11
+// CHECK-NEXT: movq %gs:(%r11d,%edi), %r11
 // CHECK-NEXT: .bundle_lock
 // CHECK-NEXT: andl $-32, %r11d
 // CHECK-NEXT: addq %r14, %r11
@@ -50,7 +50,7 @@ notrack jmpq *%rax
 // CHECK-NEXT: .bundle_unlock
 
 notrack callq *(%rdx)
-// CHECK:      movq (%rdx), %r11
+// CHECK:      movq %gs:(%edx), %r11
 // CHECK-NEXT: .bundle_lock align_to_end
 // CHECK-NEXT: andl $-32, %r11d
 // CHECK-NEXT: addq %r14, %r11
@@ -65,7 +65,7 @@ callq *%rcx
 // CHECK-NEXT: .bundle_unlock
 
 callq *(%rdx)
-// CHECK:      movq (%rdx), %r11
+// CHECK:      movq %gs:(%edx), %r11
 // CHECK-NEXT: .bundle_lock align_to_end
 // CHECK-NEXT: andl $-32, %r11d
 // CHECK-NEXT: addq %r14, %r11
@@ -93,7 +93,10 @@ rep ret
 
 retq $16
 // CHECK:      popq %r11
-// CHECK-NEXT: addq $16, %rsp
+// CHECK-NEXT: .bundle_lock
+// CHECK-NEXT: addl $16, %esp
+// CHECK-NEXT: leaq (%rsp,%r14), %rsp
+// CHECK-NEXT: .bundle_unlock
 // CHECK-NEXT: .bundle_lock
 // CHECK-NEXT: andl $-32, %r11d
 // CHECK-NEXT: addq %r14, %r11
@@ -116,7 +119,7 @@ data16 jmp foo
 // CHECK-NEXT: jmp foo
 
 data16 callq foo
-// CHECK:      data16
-// CHECK-NEXT: .bundle_lock align_to_end
+// CHECK:      .bundle_lock align_to_end
+// CHECK-NEXT: data16
 // CHECK-NEXT: callq foo
 // CHECK-NEXT: .bundle_unlock
