@@ -317,8 +317,13 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
   LValue DestLV = CGF.EmitLValue(E->getArg(0));
   Address DestAddr = DestLV.getAddress();
   Value *Val = CGF.EmitScalarExpr(E->getArg(1));
-  assert(E->getArg(1)->getType()->isIntegerType() &&
-         "Intrinsic InterlockedOp value operand must be an integer");
+  [[maybe_unused]] QualType ValTy = E->getArg(1)->getType();
+  if (Op == llvm::AtomicRMWInst::Xchg)
+    assert((ValTy->isIntegerType() || ValTy->isFloatingType()) &&
+           "InterlockedExchange value operand must be an integer or a float");
+  else
+    assert(ValTy->isIntegerType() &&
+           "Intrinsic InterlockedOp value operand must be an integer");
 
   // Scopeless atomics will default to CrossDevice, which is illegal in Vulkan.
   // Set the memory scope: Workgroup for groupshared, otherwise Device.
@@ -1043,6 +1048,25 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitIntrinsicCall(IntrinsicID, {HandleTy, MainHandle->getType()},
                              Args);
   }
+  case Builtin::BI__builtin_hlsl_resource_handlefromheap: {
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    Value *IndexOp = EmitScalarExpr(E->getArg(1));
+    llvm::Intrinsic::ID IntrinsicID =
+        CGM.getHLSLRuntime().getCreateHandleFromHeapIntrinsic();
+    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, {IndexOp});
+  }
+  case Builtin::BI__builtin_hlsl_resource_counterhandlefromheap: {
+    Value *MainHandle = EmitScalarExpr(E->getArg(0));
+    if (!CGM.getTriple().isSPIRV())
+      return MainHandle;
+
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    llvm::Intrinsic::ID IntrinsicID =
+        llvm::Intrinsic::spv_resource_counterhandlefromheap;
+    return EmitIntrinsicCall(IntrinsicID, {HandleTy, MainHandle->getType()},
+                             {MainHandle});
+  }
+
   case Builtin::BI__builtin_hlsl_resource_nonuniformindex: {
     Value *IndexOp = EmitScalarExpr(E->getArg(0));
     llvm::Type *RetTy = ConvertType(E->getType());
@@ -1259,22 +1283,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     bool IsMat0 = QTy0->isConstantMatrixType();
     bool IsMat1 = QTy1->isConstantMatrixType();
 
-    // The matrix multiply intrinsic only operates on column-major order
-    // matrices. Therefore matrix memory layout transforms must be inserted
-    // before and after matrix multiply intrinsics.
-    // Use whichever operand is a matrix to discover its declared layout.
-    bool IsRowMajorMat0 = IsMat0 && isMatrixRowMajor(getLangOpts(), QTy0);
-    bool IsRowMajorMat1 = IsMat1 && isMatrixRowMajor(getLangOpts(), QTy1);
-
     llvm::MatrixBuilder MB(Builder);
     if (IsVec0 && IsMat1) {
       unsigned N = QTy0->castAs<VectorType>()->getNumElements();
       auto *MatTy = QTy1->castAs<ConstantMatrixType>();
-      unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
-      assert(N == Rows && "vector length must match matrix row count");
-      if (IsRowMajorMat1)
-        Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows, Cols);
+      assert(N == MatTy->getNumRows() &&
+             "vector length must match matrix row count");
       return MB.CreateMatrixMultiply(Op0, Op1, 1, N, Cols, "hlsl.mul");
     }
     if (IsMat0 && IsVec1) {
@@ -1283,31 +1298,17 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       unsigned Cols = MatTy->getNumColumns();
       assert(QTy1->castAs<VectorType>()->getNumElements() == Cols &&
              "vector length must match matrix column count");
-      if (IsRowMajorMat0)
-        Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
     }
     assert(IsMat0 && IsMat1);
     auto *MatTy0 = QTy0->castAs<ConstantMatrixType>();
     auto *MatTy1 = QTy1->castAs<ConstantMatrixType>();
     unsigned Rows0 = MatTy0->getNumRows();
-    unsigned Rows1 = MatTy1->getNumRows();
     unsigned Cols0 = MatTy0->getNumColumns();
     unsigned Cols1 = MatTy1->getNumColumns();
-    assert(Cols0 == Rows1 &&
+    assert(Cols0 == MatTy1->getNumRows() &&
            "inner matrix dimensions must match for multiplication");
-    if (IsRowMajorMat0)
-      Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows0, Cols0);
-    if (IsRowMajorMat1)
-      Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows1, Cols1);
-
-    Value *Result =
-        MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
-
-    bool IsResultRowMajor = isMatrixRowMajor(getLangOpts(), E->getType());
-    if (IsResultRowMajor)
-      Result = MB.CreateColumnMajorToRowMajorTransform(Result, Rows0, Cols1);
-    return Result;
+    return MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
   }
   case Builtin::BI__builtin_hlsl_transpose: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -1315,18 +1316,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     unsigned Rows = MatTy->getNumRows();
     unsigned Cols = MatTy->getNumColumns();
     llvm::MatrixBuilder MB(Builder);
-    // The correct lowering of a transpose depends on both the source layout
-    // and the result layout.
-    bool SrcRowMajor = isMatrixRowMajor(getLangOpts(), E->getArg(0)->getType());
-    bool DstRowMajor = isMatrixRowMajor(getLangOpts(), E->getType());
-    //  When the source & result layouts differ, the operand already holds the
-    //  transposed result, ie transpose is a no-op on the underlying vector.
-    if (SrcRowMajor != DstRowMajor)
-      return Op0;
-    // When the source and result share a layout, emit a transpose.
-    if (SrcRowMajor)
-      // For row-major operands the dimensions are swapped
-      return MB.CreateMatrixTranspose(Op0, Cols, Rows);
     return MB.CreateMatrixTranspose(Op0, Rows, Cols);
   }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
@@ -1461,6 +1450,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_interlocked_and: {
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::And);
   }
+  case Builtin::BI__builtin_hlsl_interlocked_exchange: {
+    return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Xchg);
+  }
   case Builtin::BI__builtin_hlsl_interlocked_max: {
     llvm::AtomicRMWInst::BinOp Op =
         E->getArg(0)->getType()->hasSignedIntegerRepresentation()
@@ -1569,6 +1561,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitIntrinsicCall(CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
                              {OpExpr->getType()}, ArrayRef{OpExpr, OpIndex},
                              "hlsl.wave.readlane");
+  }
+  case Builtin::BI__builtin_hlsl_wave_read_lane_first: {
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    return EmitIntrinsicCall(
+        CGM.getHLSLRuntime().getWaveReadLaneFirstIntrinsic(),
+        {OpExpr->getType()}, ArrayRef{OpExpr}, "hlsl.wave.readlane.first");
   }
   case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
