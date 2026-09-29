@@ -1,0 +1,87 @@
+Pass Arguments:  -tti -targetlibinfo -targetpassconfig -machinemoduleinfo -collector-metadata -profile-summary-info -assumption-cache-tracker -machine-branch-prob -pre-isel-intrinsic-lowering -expand-large-div-rem -expand-fp -atomic-expand -gc-lowering -shadow-stack-gc-lowering -lower-global-dtors -unreachableblockelim -post-inline-ee-instrument -scalarize-masked-mem-intrin -expand-reductions -domtree -loops -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -aarch64-stack-tagging -aarch64-sme-abi -dwarf-eh-prepare -callbrprepare -safe-stack -stack-protector -cseinfo -irtranslator -gisel-known-bits -aarch64-O0-prelegalizer-combiner -localizer -cseinfo -gisel-known-bits -legalizer -aarch64-postlegalizer-lowering -regbankselect -gisel-known-bits -instruction-select -debug-ata -aarch64-isel -finalize-isel -localstackalloc -phi-node-elimination -twoaddressinstruction -regallocfast -removeredundantdebugvalues -fixup-statepoint-caller-saved -lazy-machine-block-freq -machine-opt-remark-emitter -prologepilog -postrapseudos -aarch64-expand-pseudo -kcfi -aarch64-speculation-hardening -gc-analysis -fentry-insert -xray-instrumentation -patchable-function -aarch64-fix-cortex-a53-835769-pass -funclet-layout -remove-loads-into-fake-uses -stackmap-liveness -livedebugvalues -machine-sanmd -aarch64-sls-hardening -aarch64-ptrauth -aarch64-branch-targets -branch-relaxation -cfi-fixup -lazy-machine-block-freq -machine-opt-remark-emitter -stack-frame-layout -unpack-mi-bundles -lazy-machine-block-freq -machine-opt-remark-emitter -aarch64-asm-printer
+Target Transform Information
+Target Library Information
+Target Pass Configuration
+Machine Module Information
+Create Garbage Collector Module Metadata
+Profile summary info
+Assumption Cache Tracker
+Machine Branch Probability Analysis
+  ModulePass Manager
+    Pre-ISel Intrinsic Lowering
+    FunctionPass Manager
+      Expand large div/rem
+      Expand fp
+      Expand Atomic instructions
+      Lower Garbage Collection Instructions
+      Shadow Stack GC Lowering
+    Lower @llvm.global_dtors via `__cxa_atexit`
+    FunctionPass Manager
+      Remove unreachable blocks from the CFG
+      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
+      Scalarize Masked Memory Intrinsics
+      Expand reduction intrinsics
+      Dominator Tree Construction
+      Natural Loop Information
+      Lazy Branch Probability Analysis
+      Lazy Block Frequency Analysis
+      Optimization Remark Emitter
+      AArch64 Stack Tagging
+      SME ABI Pass
+      Exception handling preparation
+      Prepare callbr
+      Safe Stack instrumentation pass
+      Insert stack protectors
+      Analysis containing CSE Info
+      IRTranslator
+      Analysis for ComputingKnownBits
+      AArch64O0PreLegalizerCombiner
+      Localizer
+      Analysis containing CSE Info
+      Analysis for ComputingKnownBits
+      Legalizer
+      AArch64PostLegalizerLowering
+      RegBankSelect
+      Analysis for ComputingKnownBits
+      InstructionSelect
+      ResetMachineFunction
+      Assignment Tracking Analysis
+      AArch64 Instruction Selection
+      Finalize ISel and expand pseudo-instructions
+      Local Stack Slot Allocation
+      Eliminate PHI nodes for register allocation
+      Two-Address instruction pass
+      Fast Register Allocator
+      Remove Redundant DEBUG_VALUE analysis
+      Fixup Statepoint Caller Saved
+      Lazy Machine Block Frequency Analysis
+      Machine Optimization Remark Emitter
+      Prologue/Epilogue Insertion & Frame Finalization
+      Post-RA pseudo instruction expansion pass
+      AArch64 pseudo instruction expansion pass
+      Insert KCFI indirect call checks
+      AArch64 speculation hardening pass
+      Analyze Machine Code For Garbage Collection
+      Insert fentry calls
+      Insert XRay ops
+      Implement the 'patchable-function' attribute
+      Workaround A53 erratum 835769 pass
+      Contiguously Lay Out Funclets
+      Remove Loads Into Fake Uses
+      StackMap Liveness Analysis
+      Live DEBUG_VALUE analysis
+      Machine Sanitizer Binary Metadata
+      AArch64 sls hardening pass
+      AArch64 Pointer Authentication
+      AArch64 Branch Targets
+      Branch relaxation pass
+      Insert CFI remember/restore state instructions
+      Lazy Machine Block Frequency Analysis
+      Machine Optimization Remark Emitter
+      Stack Frame Layout Analysis
+      Unpack machine instruction bundles
+      Lazy Machine Block Frequency Analysis
+      Machine Optimization Remark Emitter
+      AArch64 Assembly Printer
+      Free MachineFunction
+
