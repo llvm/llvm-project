@@ -1036,7 +1036,8 @@ bool CodeGenFunction::checkIfLoopMustProgress(const Expr *ControllingExpression,
   Expr::EvalResult Result;
   bool CondIsConstInt =
       !ControllingExpression ||
-      (ControllingExpression->EvaluateAsInt(Result, getContext()) &&
+      (!ControllingExpression->containsErrors() &&
+       ControllingExpression->EvaluateAsInt(Result, getContext()) &&
        Result.Val.isInt());
 
   bool CondIsTrue = CondIsConstInt && (!ControllingExpression ||

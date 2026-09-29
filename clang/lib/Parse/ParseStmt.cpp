@@ -231,11 +231,6 @@ Retry:
                                    GNUAttrs.Range.getBegin());
       } else if (GNUAttrs.Range.getBegin().isValid())
         DeclStart = GNUAttrs.Range.getBegin();
-      // A declaration that declares nothing (`int;`) yields no Decl but still
-      // occupies the statement position; unlike a pragma, ParseStatement() must
-      // not skip it.
-      if (!Decl)
-        return Actions.ActOnNullStmt(PrevTokLocation);
       return Actions.ActOnDeclStmt(Decl, DeclStart, DeclEnd);
     }
 
@@ -1226,9 +1221,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
         ParsedAttributes DeclSpecAttrs(AttrFactory);
         DeclGroupPtrTy Res = ParseDeclaration(DeclaratorContext::Block, DeclEnd,
                                               attrs, DeclSpecAttrs);
-        // See ParseStatementOrDeclarationAfterAttributes.
-        R = Res ? Actions.ActOnDeclStmt(Res, DeclStart, DeclEnd)
-                : Actions.ActOnNullStmt(PrevTokLocation);
+        R = Actions.ActOnDeclStmt(Res, DeclStart, DeclEnd);
       } else {
         // Otherwise this was a unary __extension__ marker.
         ExprResult Res(ParseExpressionWithLeadingExtension(ExtLoc));

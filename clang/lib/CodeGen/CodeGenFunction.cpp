@@ -1774,6 +1774,10 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
                                                    bool AllowLabels) {
   // FIXME: Rename and handle conversion of other evaluatable things
   // to bool.
+  // A condition containing errors (e.g. a RecoveryExpr) is value-dependent
+  // and cannot be evaluated.
+  if (Cond->containsErrors())
+    return false;
   Expr::EvalResult Result;
   if (!Cond->EvaluateAsInt(Result, getContext()))
     return false;  // Not foldable, not integer or not fully evaluatable.
