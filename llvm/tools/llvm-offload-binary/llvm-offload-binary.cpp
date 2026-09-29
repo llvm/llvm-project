@@ -31,8 +31,6 @@
 using namespace llvm;
 using namespace llvm::object;
 
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
-
 static cl::OptionCategory OffloadBinaryCategory("llvm-offload-binary options");
 
 static cl::opt<std::string> OutputFile("o", cl::desc("Write output to <file>."),
@@ -212,13 +210,17 @@ static Error unbundleImages() {
     SmallVector<const OffloadBinary *> Extracted;
     for (const OffloadFile &File : Binaries) {
       const auto *Binary = File.getBinary();
-      // We handle the 'file' and 'kind' identifiers differently.
+      // We handle the 'file', 'kind', and 'member' identifiers differently.
       bool Match = llvm::all_of(Args, [&](auto &Arg) {
         const auto [Key, Value] = Arg;
         if (Key == "file")
           return true;
         if (Key == "kind")
           return Binary->getOffloadKind() == getOffloadKind(Value);
+        if (Key == "member")
+          return sys::path::filename(
+                     Binary->getMemoryBufferRef().getBufferIdentifier()) ==
+                 Value;
         return Binary->getString(Key) == Value;
       });
       if (Match)
@@ -276,7 +278,7 @@ int main(int argc, const char **argv) {
         << "'clang-offload-packager' is deprecated. Use 'llvm-offload-binary' "
            "instead.\n";
 
-  if (Help || (OutputFile.empty() && InputFile.empty())) {
+  if (OutputFile.empty() && InputFile.empty()) {
     cl::PrintHelpMessage();
     return EXIT_SUCCESS;
   }

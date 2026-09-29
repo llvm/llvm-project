@@ -238,9 +238,11 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterCaseLabel);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterClass);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterEnum);
+  CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterExportBlock);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterFunction);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterNamespace);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterObjCDeclaration);
+  CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterRequiresExpression);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterStruct);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterUnion);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterExternBlock);
@@ -272,6 +274,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InEmptyParentheses);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, Other);
   CHECK_PARSE_NESTED_BOOL(SortIncludes, Enabled);
+  CHECK_PARSE_NESTED_BOOL(SortIncludes, FilesBeforeFolders);
   CHECK_PARSE_NESTED_BOOL(SortIncludes, IgnoreCase);
   CHECK_PARSE_NESTED_BOOL(SortIncludes, IgnoreExtension);
 }
@@ -650,8 +653,30 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               "AlignAfterOpenBracket: AlwaysBreak",
               BreakAfterOpenBracketLoop, true);
   CHECK_PARSE("AlignAfterOpenBracket: false", AlignAfterOpenBracket, false);
+  // BlockIndent implies breaking after the open bracket and before the close
+  // bracket of braced lists, function calls/declarations, and if conditions.
+  Style.BreakAfterOpenBracketBracedList = false;
+  Style.BreakAfterOpenBracketFunction = false;
+  Style.BreakAfterOpenBracketIf = false;
+  Style.BreakAfterOpenBracketLoop = true;
+  Style.BreakAfterOpenBracketSwitch = true;
+  Style.BreakBeforeCloseBracketBracedList = false;
+  Style.BreakBeforeCloseBracketFunction = false;
+  Style.BreakBeforeCloseBracketIf = false;
+  Style.BreakBeforeCloseBracketLoop = true;
+  Style.BreakBeforeCloseBracketSwitch = true;
   CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracket,
               true);
+  EXPECT_TRUE(Style.BreakAfterOpenBracketBracedList);
+  EXPECT_TRUE(Style.BreakAfterOpenBracketFunction);
+  EXPECT_TRUE(Style.BreakAfterOpenBracketIf);
+  EXPECT_FALSE(Style.BreakAfterOpenBracketLoop);
+  EXPECT_FALSE(Style.BreakAfterOpenBracketSwitch);
+  EXPECT_TRUE(Style.BreakBeforeCloseBracketBracedList);
+  EXPECT_TRUE(Style.BreakBeforeCloseBracketFunction);
+  EXPECT_TRUE(Style.BreakBeforeCloseBracketIf);
+  EXPECT_FALSE(Style.BreakBeforeCloseBracketLoop);
+  EXPECT_FALSE(Style.BreakBeforeCloseBracketSwitch);
   Style.AlignAfterOpenBracket = false;
   CHECK_PARSE("AlignAfterOpenBracket: true", AlignAfterOpenBracket, true);
 
@@ -1145,20 +1170,28 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               IncludeStyle.IncludeIsMainSourceRegex, "abc$");
 
   Style.SortIncludes = {};
-  CHECK_PARSE(
-      "SortIncludes: true", SortIncludes,
-      FormatStyle::SortIncludesOptions(
-          {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
+  CHECK_PARSE("SortIncludes: true", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false,
+                   /*IgnoreExtension=*/false, /*Natural=*/false,
+                   /*FilesBeforeFolders=*/false}));
   CHECK_PARSE("SortIncludes: false", SortIncludes,
               FormatStyle::SortIncludesOptions{});
-  CHECK_PARSE(
-      "SortIncludes: CaseInsensitive", SortIncludes,
-      FormatStyle::SortIncludesOptions(
-          {/*Enabled=*/true, /*IgnoreCase=*/true, /*IgnoreExtension=*/false}));
-  CHECK_PARSE(
-      "SortIncludes: CaseSensitive", SortIncludes,
-      FormatStyle::SortIncludesOptions(
-          {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
+  CHECK_PARSE("SortIncludes: CaseInsensitive", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/true,
+                   /*IgnoreExtension=*/false, /*Natural=*/false,
+                   /*FilesBeforeFolders=*/false}));
+  CHECK_PARSE("SortIncludes: CaseSensitive", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false,
+                   /*IgnoreExtension=*/false, /*Natural=*/false,
+                   /*FilesBeforeFolders=*/false}));
+  CHECK_PARSE("SortIncludes: Natural", SortIncludes,
+              FormatStyle::SortIncludesOptions(
+                  {/*Enabled=*/true, /*IgnoreCase=*/false,
+                   /*IgnoreExtension=*/false, /*Natural=*/true,
+                   /*FilesBeforeFolders=*/false}));
   CHECK_PARSE("SortIncludes: Never", SortIncludes,
               FormatStyle::SortIncludesOptions{});
 
@@ -1226,6 +1259,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   // For backward compatibility:
   CHECK_PARSE("SpacesInAngles: false", SpacesInAngles, FormatStyle::SIAS_Never);
   CHECK_PARSE("SpacesInAngles: true", SpacesInAngles, FormatStyle::SIAS_Always);
+
+  Style.SpacesInBlockComments = FormatStyle::SIBCS_Always;
+  CHECK_PARSE("SpacesInBlockComments: Never", SpacesInBlockComments,
+              FormatStyle::SIBCS_Never);
+  CHECK_PARSE("SpacesInBlockComments: Always", SpacesInBlockComments,
+              FormatStyle::SIBCS_Always);
+  CHECK_PARSE("SpacesInBlockComments: Leave", SpacesInBlockComments,
+              FormatStyle::SIBCS_Leave);
 
   CHECK_PARSE("RequiresClausePosition: WithPreceding", RequiresClausePosition,
               FormatStyle::RCPS_WithPreceding);

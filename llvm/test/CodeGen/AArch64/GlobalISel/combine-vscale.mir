@@ -10,13 +10,13 @@ body:             |
     ; CHECK-LABEL: name: sum_of_vscale
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %sum:_(s64) = G_VSCALE i64 20
-    ; CHECK-NEXT: $x0 = COPY %sum(s64)
+    ; CHECK-NEXT: %sum:_(i64) = G_VSCALE i64 20
+    ; CHECK-NEXT: $x0 = COPY %sum(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %rhs:_(s64) = G_VSCALE i64 11
-    %lhs:_(s64) = G_VSCALE i64 9
-    %sum:_(s64) = nsw G_ADD %lhs(s64), %rhs(s64)
-    $x0 = COPY %sum(s64)
+    %rhs:_(i64) = G_VSCALE i64 11
+    %lhs:_(i64) = G_VSCALE i64 9
+    %sum:_(i64) = nsw G_ADD %lhs(i64), %rhs(i64)
+    $x0 = COPY %sum(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -27,17 +27,17 @@ body:             |
     ; CHECK-LABEL: name: sum_of_vscale_multi_use
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %rhs:_(s64) = G_VSCALE i64 11
-    ; CHECK-NEXT: %lhs:_(s64) = G_VSCALE i64 9
-    ; CHECK-NEXT: %sum:_(s64) = nsw G_ADD %lhs, %rhs
-    ; CHECK-NEXT: $x0 = COPY %sum(s64)
-    ; CHECK-NEXT: $x1 = COPY %rhs(s64)
+    ; CHECK-NEXT: %rhs:_(i64) = G_VSCALE i64 11
+    ; CHECK-NEXT: %lhs:_(i64) = G_VSCALE i64 9
+    ; CHECK-NEXT: %sum:_(i64) = nsw G_ADD %lhs, %rhs
+    ; CHECK-NEXT: $x0 = COPY %sum(i64)
+    ; CHECK-NEXT: $x1 = COPY %rhs(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %rhs:_(s64) = G_VSCALE i64 11
-    %lhs:_(s64) = G_VSCALE i64 9
-    %sum:_(s64) = nsw G_ADD %lhs(s64), %rhs(s64)
-    $x0 = COPY %sum(s64)
-    $x1 = COPY %rhs(s64)
+    %rhs:_(i64) = G_VSCALE i64 11
+    %lhs:_(i64) = G_VSCALE i64 9
+    %sum:_(i64) = nsw G_ADD %lhs(i64), %rhs(i64)
+    $x0 = COPY %sum(i64)
+    $x1 = COPY %rhs(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -48,13 +48,13 @@ body:             |
     ; CHECK-LABEL: name: mul_of_vscale
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %mul:_(s64) = G_VSCALE i64 99
-    ; CHECK-NEXT: $x0 = COPY %mul(s64)
+    ; CHECK-NEXT: %mul:_(i64) = G_VSCALE i64 99
+    ; CHECK-NEXT: $x0 = COPY %mul(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %rhs:_(s64) = G_CONSTANT i64 11
-    %lhs:_(s64) = G_VSCALE i64 9
-    %mul:_(s64) = nsw G_MUL %lhs(s64), %rhs(s64)
-    $x0 = COPY %mul(s64)
+    %rhs:_(i64) = G_CONSTANT i64 11
+    %lhs:_(i64) = G_VSCALE i64 9
+    %mul:_(i64) = nsw G_MUL %lhs(i64), %rhs(i64)
+    $x0 = COPY %mul(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -65,15 +65,15 @@ body:             |
     ; CHECK-LABEL: name: sub_of_vscale
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[VSCALE:%[0-9]+]]:_(s64) = G_VSCALE i64 -9
-    ; CHECK-NEXT: %sub:_(s64) = nsw G_ADD %x, [[VSCALE]]
-    ; CHECK-NEXT: $x0 = COPY %sub(s64)
+    ; CHECK-NEXT: %x:_(i64) = COPY $x0
+    ; CHECK-NEXT: [[VSCALE:%[0-9]+]]:_(i64) = G_VSCALE i64 -9
+    ; CHECK-NEXT: %sub:_(i64) = nsw G_ADD %x, [[VSCALE]]
+    ; CHECK-NEXT: $x0 = COPY %sub(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %x:_(s64) = COPY $x0
-    %rhs:_(s64) = G_VSCALE i64 9
-    %sub:_(s64) = nsw G_SUB %x(s64), %rhs(s64)
-    $x0 = COPY %sub(s64)
+    %x:_(i64) = COPY $x0
+    %rhs:_(i64) = G_VSCALE i64 9
+    %sub:_(i64) = nsw G_SUB %x(i64), %rhs(i64)
+    $x0 = COPY %sub(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -84,13 +84,13 @@ body:             |
     ; CHECK-LABEL: name: shl_of_vscale
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %shl:_(s64) = G_VSCALE i64 44
-    ; CHECK-NEXT: $x0 = COPY %shl(s64)
+    ; CHECK-NEXT: %shl:_(i64) = G_VSCALE i64 44
+    ; CHECK-NEXT: $x0 = COPY %shl(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %rhs:_(s64) = G_CONSTANT i64 2
-    %lhs:_(s64) = G_VSCALE i64 11
-    %shl:_(s64) = nsw G_SHL %lhs(s64), %rhs(s64)
-    $x0 = COPY %shl(s64)
+    %rhs:_(i64) = G_CONSTANT i64 2
+    %lhs:_(i64) = G_VSCALE i64 11
+    %shl:_(i64) = nsw G_SHL %lhs(i64), %rhs(i64)
+    $x0 = COPY %shl(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -101,13 +101,13 @@ body:             |
     ; CHECK-LABEL: name: shl_of_vscale_wrong_flag
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %rhs:_(s64) = G_CONSTANT i64 2
-    ; CHECK-NEXT: %lhs:_(s64) = G_VSCALE i64 11
-    ; CHECK-NEXT: %shl:_(s64) = nuw G_SHL %lhs, %rhs(s64)
-    ; CHECK-NEXT: $x0 = COPY %shl(s64)
+    ; CHECK-NEXT: %rhs:_(i64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: %lhs:_(i64) = G_VSCALE i64 11
+    ; CHECK-NEXT: %shl:_(i64) = nuw G_SHL %lhs, %rhs(i64)
+    ; CHECK-NEXT: $x0 = COPY %shl(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %rhs:_(s64) = G_CONSTANT i64 2
-    %lhs:_(s64) = G_VSCALE i64 11
-    %shl:_(s64) = nuw G_SHL %lhs(s64), %rhs(s64)
-    $x0 = COPY %shl(s64)
+    %rhs:_(i64) = G_CONSTANT i64 2
+    %lhs:_(i64) = G_VSCALE i64 11
+    %shl:_(i64) = nuw G_SHL %lhs(i64), %rhs(i64)
+    $x0 = COPY %shl(i64)
     RET_ReallyLR implicit $x0

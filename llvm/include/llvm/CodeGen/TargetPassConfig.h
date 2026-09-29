@@ -337,10 +337,6 @@ public:
   /// when GlobalISel failed and isGlobalISelAbortEnabled is false.
   virtual bool reportDiagnosticWhenGlobalISelFallback() const;
 
-  /// Check whether continuous CSE should be enabled in GISel passes.
-  /// By default, it's enabled for non O0 levels.
-  virtual bool isGISelCSEEnabled() const;
-
   /// Returns the CSEConfig object to use for the current optimization level.
   virtual std::unique_ptr<CSEConfigBase> getCSEConfig() const;
 

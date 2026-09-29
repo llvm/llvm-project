@@ -918,8 +918,8 @@ define <8 x i16> @test_qqqq_regsequence_subreg([6 x i64] %b) nounwind {
 ; DEFAULT-NEXT:    add r0, sp, #24
 ; DEFAULT-NEXT:    vld1.32 {d21[0]}, [r0:32]
 ; DEFAULT-NEXT:    add r0, sp, #28
-; DEFAULT-NEXT:    vmov.i32 d20, #0x0
 ; DEFAULT-NEXT:    vld1.32 {d21[1]}, [r0:32]
+; DEFAULT-NEXT:    vmov.i32 d20, #0x0
 ; DEFAULT-NEXT:    vld3.16 {d16[1], d18[1], d20[1]}, [r0]
 ; DEFAULT-NEXT:    vadd.i16 q12, q8, q9
 ; DEFAULT-NEXT:    vadd.i16 q8, q10, q12
@@ -932,8 +932,8 @@ define <8 x i16> @test_qqqq_regsequence_subreg([6 x i64] %b) nounwind {
 ; BASIC-NEXT:    add r0, sp, #24
 ; BASIC-NEXT:    vld1.32 {d23[0]}, [r0:32]
 ; BASIC-NEXT:    add r0, sp, #28
-; BASIC-NEXT:    vmov.i32 d22, #0x0
 ; BASIC-NEXT:    vld1.32 {d23[1]}, [r0:32]
+; BASIC-NEXT:    vmov.i32 d22, #0x0
 ; BASIC-NEXT:    vld3.16 {d18[1], d20[1], d22[1]}, [r0]
 ; BASIC-NEXT:    vadd.i16 q8, q9, q10
 ; BASIC-NEXT:    vadd.i16 q8, q11, q8

@@ -68,4 +68,28 @@ TEST(Symbolizer, DemangleSwiftAndCXX) {
 }
 #endif
 
+#if SANITIZER_POSIX
+namespace {
+class TestSymbolizerProcess final : public SymbolizerProcess {
+ public:
+  TestSymbolizerProcess() : SymbolizerProcess("/invalid/symbolizer/path") {}
+
+ private:
+  bool ReachedEndOfOutput(const char*, uptr) const override { return true; }
+};
+}  // namespace
+
+// A symbolizer that closes its stdout yields a 0-byte (EOF) read. That must be
+// reported as a failure, not silently accepted as success. Regression test for
+// the shadowed `ret` in SymbolizerProcess::ReadFromSymbolizer.
+TEST(Symbolizer, ReadFromSymbolizerReportsEofAsFailure) {
+  fd_t fd = OpenFile("/dev/null", RdOnly);
+  ASSERT_NE(fd, kInvalidFd);
+  TestSymbolizerProcess symbolizer;
+  symbolizer.input_fd_ = fd;
+  EXPECT_FALSE(symbolizer.ReadFromSymbolizer());
+  CloseFile(fd);
+}
+#endif  // SANITIZER_POSIX
+
 }  // namespace __sanitizer

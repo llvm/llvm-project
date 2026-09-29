@@ -294,11 +294,12 @@ define <8 x i32> @vpselect_vpload(<8 x i32> %passthru, ptr %p, <8 x i1> %m, i32 
 define <8 x i32> @vpselect_vpload2(<8 x i32> %passthru, ptr %p, <8 x i32> %x, <8 x i32> %y, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpload2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v11, (a0)
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
 ; CHECK-NEXT:    vmseq.vv v0, v9, v10
-; CHECK-NEXT:    vmerge.vvm v8, v8, v11, v0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; CHECK-NEXT:    ret
   %a = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %p, <8 x i1> splat (i1 true), i32 %vl)
   %m = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %x, <8 x i32> %y, metadata !"eq", <8 x i1> splat (i1 true), i32 %vl)

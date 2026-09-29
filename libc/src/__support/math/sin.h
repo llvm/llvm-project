@@ -1,9 +1,14 @@
-//===-- Implementation header for sin ---------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation header for sin.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SIN_H
@@ -94,11 +99,13 @@ LIBC_INLINE double sin(double x) {
         return fputil::multiply_add(x, -0x1.0p-54, x);
 #else
         if (LIBC_UNLIKELY(x_e < 4)) {
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
           int rounding_mode = fputil::quick_get_round();
           if (rounding_mode == FE_TOWARDZERO ||
               (xbits.sign() == Sign::POS && rounding_mode == FE_DOWNWARD) ||
               (xbits.sign() == Sign::NEG && rounding_mode == FE_UPWARD))
             return FPBits(xbits.uintval() - 1).get_val();
+#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         }
         return fputil::multiply_add(x, -0x1.0p-54, x);
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
@@ -125,8 +132,8 @@ LIBC_INLINE double sin(double x) {
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
       return x + r_lo;
 #else
-      // Overall errors <= 2 * ulp(x^3/6) + |x| * 2^-68.
-      double err = fputil::multiply_add(x_sq, 0x1.0p-53, 0x1.0p-68);
+      // Overall errors <= ulp(x^3) + |x| * 2^-68.
+      double err = fputil::multiply_add(x_sq, 0x1.0p-52, 0x1.0p-68);
       double r_lo_u = fputil::multiply_add(x, err, r_lo);
       double r_lo_l = fputil::multiply_add(-x, err, r_lo);
       double r_upper = x + r_lo_u;

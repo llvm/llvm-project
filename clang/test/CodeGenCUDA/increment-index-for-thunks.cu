@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -target-cpu gfx942 \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.42-amd-amdhsa \
 // RUN:   -emit-llvm -xhip %s -o - | FileCheck %s --check-prefix=GCN
 // RUN: %clang_cc1 -fcuda-is-device -triple spirv64-amd-amdhsa \
 // RUN:   -emit-llvm -xhip %s -o - | FileCheck %s --check-prefix=SPIRV

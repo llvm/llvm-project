@@ -297,3 +297,43 @@ entry:
   %vcmpd.i = zext i1 %0 to i32
   ret i32 %vcmpd.i
 }
+
+define <4 x i32> @dup_v4i32_bitcast_fp_to_int(float %a) {
+; CHECK-LABEL: dup_v4i32_bitcast_fp_to_int:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    dup v0.4s, v0.s[0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast float %a to i32
+  %vecinit.i = insertelement <4 x i32> poison, i32 %0, i64 0
+  %vecinit3.i = shufflevector <4 x i32> %vecinit.i, <4 x i32> poison, <4 x i32> zeroinitializer
+  ret <4 x i32> %vecinit3.i
+}
+
+define <4 x float> @dup_v4f32_bitcast_int_to_fp(i32 %x) {
+; CHECK-LABEL: dup_v4f32_bitcast_int_to_fp:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    dup v0.4s, v0.s[0]
+; CHECK-NEXT:    ret
+entry:
+  %bc = bitcast i32 %x to float
+  %vecinit = insertelement <4 x float> poison, float %bc, i64 0
+  %splat = shufflevector <4 x float> %vecinit, <4 x float> poison, <4 x
+  i32> zeroinitializer
+  ret <4 x float> %splat
+}
+
+define <2 x i64> @dup_v2i64_bitcast_double_to_int(double %a) {
+; CHECK-LABEL: dup_v2i64_bitcast_double_to_int:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    dup v0.2d, v0.d[0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast double %a to i64
+  %vecinit.i = insertelement <2 x i64> poison, i64 %0, i64 0
+  %vecinit3.i = shufflevector <2 x i64> %vecinit.i, <2 x i64> poison, <2 x i32> zeroinitializer
+  ret <2 x i64> %vecinit3.i
+}

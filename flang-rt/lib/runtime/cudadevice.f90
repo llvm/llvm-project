@@ -10,9 +10,9 @@
 
 module cudadevice
   use __cuda_device
-  use, intrinsic :: __fortran_builtins, only: dim3 => __builtin_dim3
-  use, intrinsic :: __fortran_builtins, only: c_devptr => __builtin_c_devptr
-  use, intrinsic :: __fortran_builtins, only: c_devloc => __builtin_c_devloc
+  use __fortran_builtins, only: dim3 => __builtin_dim3
+  use __fortran_builtins, only: c_devptr => __builtin_c_devptr
+  use __fortran_builtins, only: c_devloc => __builtin_c_devloc
 implicit none
 
   ! Synchronization Functions
@@ -1398,17 +1398,17 @@ implicit none
   ! Time function
 
   interface
-    attributes(device) integer function clock()
+    attributes(device) pure integer function clock()
     end function
   end interface
 
   interface
-    attributes(device) integer(8) function clock64()
+    attributes(device) pure integer(8) function clock64()
     end function
   end interface
 
   interface
-    attributes(device) integer(8) function globalTimer()
+    attributes(device) pure integer(8) function globalTimer()
     end function
   end interface
 

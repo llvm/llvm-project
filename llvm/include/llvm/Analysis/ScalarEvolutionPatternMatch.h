@@ -17,8 +17,6 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Support/PatternMatchHelpers.h"
 
-using namespace llvm::PatternMatchHelpers;
-
 namespace llvm {
 namespace PatternMatchHelpers {
 template <typename SCEVPtrT> struct match_bind<SCEVUseT<SCEVPtrT>> {
@@ -34,6 +32,8 @@ template <typename SCEVPtrT> struct match_bind<SCEVUseT<SCEVPtrT>> {
 } // namespace PatternMatchHelpers
 
 namespace SCEVPatternMatch {
+
+using namespace llvm::PatternMatchHelpers;
 
 template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
   return P.match(S);
@@ -187,12 +187,6 @@ m_scev_ZExt(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
-inline SCEVUnaryExpr_match<SCEVPtrToIntExpr, Op0_t>
-m_scev_PtrToInt(const Op0_t &Op0) {
-  return SCEVUnaryExpr_match<SCEVPtrToIntExpr, Op0_t>(Op0);
-}
-
-template <typename Op0_t>
 inline SCEVUnaryExpr_match<SCEVPtrToAddrExpr, Op0_t>
 m_scev_PtrToAddr(const Op0_t &Op0) {
   return SCEVUnaryExpr_match<SCEVPtrToAddrExpr, Op0_t>(Op0);
@@ -206,8 +200,7 @@ m_scev_Trunc(const Op0_t &Op0) {
 
 /// Match a binary SCEV.
 template <typename SCEVTy, typename Op0_t, typename Op1_t,
-          SCEV::NoWrapFlags WrapFlags = SCEV::FlagAnyWrap,
-          bool Commutable = false>
+          SCEV::NoWrapFlags WrapFlags = SCEV::FlagNone, bool Commutable = false>
 struct SCEVBinaryExpr_match {
   Op0_t Op0;
   Op1_t Op1;
@@ -229,8 +222,7 @@ struct SCEVBinaryExpr_match {
 };
 
 template <typename SCEVTy, typename Op0_t, typename Op1_t,
-          SCEV::NoWrapFlags WrapFlags = SCEV::FlagAnyWrap,
-          bool Commutable = false>
+          SCEV::NoWrapFlags WrapFlags = SCEV::FlagNone, bool Commutable = false>
 inline SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t, WrapFlags, Commutable>
 m_scev_Binary(const Op0_t &Op0, const Op1_t &Op1) {
   return SCEVBinaryExpr_match<SCEVTy, Op0_t, Op1_t, WrapFlags, Commutable>(Op0,
@@ -250,10 +242,10 @@ m_scev_Mul(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline SCEVBinaryExpr_match<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>
+inline SCEVBinaryExpr_match<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagNone, true>
 m_scev_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_scev_Binary<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>(Op0,
-                                                                           Op1);
+  return m_scev_Binary<SCEVMulExpr, Op0_t, Op1_t, SCEV::FlagNone, true>(Op0,
+                                                                        Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -270,9 +262,17 @@ m_scev_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline SCEVBinaryExpr_match<SCEVSMaxExpr, Op0_t, Op1_t>
+inline SCEVBinaryExpr_match<SCEVSMaxExpr, Op0_t, Op1_t, SCEV::FlagNone, true>
 m_scev_SMax(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_scev_Binary<SCEVSMaxExpr>(Op0, Op1);
+  return m_scev_Binary<SCEVSMaxExpr, Op0_t, Op1_t, SCEV::FlagNone, true>(Op0,
+                                                                         Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline SCEVBinaryExpr_match<SCEVUMaxExpr, Op0_t, Op1_t, SCEV::FlagNone, true>
+m_scev_UMax(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_scev_Binary<SCEVUMaxExpr, Op0_t, Op1_t, SCEV::FlagNone, true>(Op0,
+                                                                         Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -317,6 +317,13 @@ template <typename Op0_t, typename Op1_t> struct SCEVURem_match {
     const SCEV *A;
     const SCEVMulExpr *Mul;
     if (!SCEVPatternMatch::match(Expr, m_scev_Add(m_scev_Mul(Mul), m_SCEV(A))))
+      return false;
+
+    // URem is represented as `A - ((A udiv B) * B)`. Only construct the complex
+    // SCEV expression, if the multiply of the expression to check has a UDiv
+    // operand.
+    if (none_of(Mul->operands(),
+                [](const SCEV *Op) { return isa<SCEVUDivExpr>(Op); }))
       return false;
 
     const auto MatchURemWithDivisor = [&](const SCEV *B) {

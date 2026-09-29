@@ -172,6 +172,16 @@ public:
     return nullptr;
   }
 
+  Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
+    // TODO
+    return nullptr;
+  }
+
+  Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
+    // TODO
+    return nullptr;
+  }
+
   Value *FoldCast(Instruction::CastOps Op, Value *V,
                   Type *DestTy) const override {
     if (auto *C = dyn_cast<Constant>(V)) {
@@ -182,14 +192,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldUnaryIntrinsic(Intrinsic::ID ID, Value *Op, Type *Ty,
-                            FastMathFlags FMF) const override {
-    // Use TargetFolder or InstSimplifyFolder instead.
-    return nullptr;
-  }
-
-  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             FastMathFlags FMF) const override {
+  Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
+                       FastMathFlags FMF, Function *CtxF) const override {
     // Use TargetFolder or InstSimplifyFolder instead.
     return nullptr;
   }

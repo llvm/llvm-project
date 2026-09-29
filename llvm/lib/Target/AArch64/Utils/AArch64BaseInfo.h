@@ -24,6 +24,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
@@ -419,12 +420,13 @@ inline static bool isValidCBCond(AArch64CC::CondCode Code) {
 } // end namespace AArch64CC
 
 struct SysAlias {
-  const char *Name;
+  StringTable::Offset Name;
   uint16_t Encoding;
   FeatureBitset FeaturesRequired;
 
-  constexpr SysAlias(const char *N, uint16_t E) : Name(N), Encoding(E) {}
-  constexpr SysAlias(const char *N, uint16_t E, FeatureBitset F)
+  constexpr SysAlias(StringTable::Offset N, uint16_t E)
+      : Name(N), Encoding(E) {}
+  constexpr SysAlias(StringTable::Offset N, uint16_t E, FeatureBitset F)
       : Name(N), Encoding(E), FeaturesRequired(F) {}
 
   bool haveFeatures(FeatureBitset ActiveFeatures) const {
@@ -440,25 +442,27 @@ struct SysAlias {
 
 struct SysAliasReg : SysAlias {
   bool NeedsReg;
-  constexpr SysAliasReg(const char *N, uint16_t E, bool R)
+  constexpr SysAliasReg(StringTable::Offset N, uint16_t E, bool R)
       : SysAlias(N, E), NeedsReg(R) {}
-  constexpr SysAliasReg(const char *N, uint16_t E, bool R, FeatureBitset F)
+  constexpr SysAliasReg(StringTable::Offset N, uint16_t E, bool R,
+                        FeatureBitset F)
       : SysAlias(N, E, F), NeedsReg(R) {}
 };
 
 struct SysAliasOptionalReg : SysAlias {
   SysAliasRegUse RegUse;
-  constexpr SysAliasOptionalReg(const char *N, uint16_t E, SysAliasRegUse R)
+  constexpr SysAliasOptionalReg(StringTable::Offset N, uint16_t E,
+                                SysAliasRegUse R)
       : SysAlias(N, E), RegUse(R) {}
-  constexpr SysAliasOptionalReg(const char *N, uint16_t E, SysAliasRegUse R,
-                                FeatureBitset F)
+  constexpr SysAliasOptionalReg(StringTable::Offset N, uint16_t E,
+                                SysAliasRegUse R, FeatureBitset F)
       : SysAlias(N, E, F), RegUse(R) {}
 };
 
 struct TLBIPSysAlias : SysAliasOptionalReg {
   bool AllowWithTLBID;
 
-  constexpr TLBIPSysAlias(const char *N, uint16_t E, SysAliasRegUse R,
+  constexpr TLBIPSysAlias(StringTable::Offset N, uint16_t E, SysAliasRegUse R,
                           FeatureBitset F, bool AllowWithTLBID)
       : SysAliasOptionalReg(N, E, R, F), AllowWithTLBID(AllowWithTLBID) {}
 
@@ -472,9 +476,10 @@ struct TLBIPSysAlias : SysAliasOptionalReg {
 
 struct SysAliasImm : SysAlias {
   uint16_t ImmValue;
-  constexpr SysAliasImm(const char *N, uint16_t E, uint16_t I)
+  constexpr SysAliasImm(StringTable::Offset N, uint16_t E, uint16_t I)
       : SysAlias(N, E), ImmValue(I) {}
-  constexpr SysAliasImm(const char *N, uint16_t E, uint16_t I, FeatureBitset F)
+  constexpr SysAliasImm(StringTable::Offset N, uint16_t E, uint16_t I,
+                        FeatureBitset F)
       : SysAlias(N, E, F), ImmValue(I) {}
 };
 
@@ -541,15 +546,6 @@ namespace  AArch64ISB {
 #include "AArch64GenSystemOperands.inc"
 }
 
-namespace  AArch64TSB {
-  struct TSB : SysAlias {
-    using SysAlias::SysAlias;
-  };
-#define GET_TSBValues_DECL
-#define GET_TSBsList_DECL
-#include "AArch64GenSystemOperands.inc"
-}
-
 namespace AArch64PRFM {
   struct PRFM : SysAlias {
     using SysAlias::SysAlias;
@@ -579,7 +575,7 @@ struct RPRFM : SysAlias {
 
 namespace AArch64SVEPredPattern {
   struct SVEPREDPAT {
-    const char *Name;
+    StringTable::Offset Name;
     uint16_t Encoding;
   };
 #define GET_SVEPREDPATValues_DECL
@@ -589,7 +585,7 @@ namespace AArch64SVEPredPattern {
 
 namespace AArch64SVEVecLenSpecifier {
   struct SVEVECLENSPECIFIER {
-    const char *Name;
+    StringTable::Offset Name;
     uint16_t Encoding;
   };
 #define GET_SVEVECLENSPECIFIERValues_DECL
@@ -677,7 +673,7 @@ LLVM_DECLARE_ENUM_AS_BITMASK(TailFoldingOpts,
 namespace AArch64ExactFPImm {
 struct ExactFPImm {
   int Enum;
-  const char *Repr;
+  StringTable::Offset Repr;
 };
 #define GET_ExactFPImmValues_DECL
 #define GET_ExactFPImmsList_DECL
@@ -699,52 +695,6 @@ namespace AArch64PState {
 #define GET_PStateImm0_1sList_DECL
 #include "AArch64GenSystemOperands.inc"
 }
-
-namespace AArch64PSBHint {
-  struct PSB : SysAlias {
-    using SysAlias::SysAlias;
-  };
-#define GET_PSBValues_DECL
-#define GET_PSBsList_DECL
-#include "AArch64GenSystemOperands.inc"
-}
-
-namespace AArch64PHint {
-struct PHint {
-  const char *Name;
-  unsigned Encoding;
-  FeatureBitset FeaturesRequired;
-
-  bool haveFeatures(FeatureBitset ActiveFeatures) const {
-    return ActiveFeatures[llvm::AArch64::FeatureAll] ||
-           (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
-  }
-};
-
-#define GET_PHintValues_DECL
-#define GET_PHintsList_DECL
-#include "AArch64GenSystemOperands.inc"
-
-const PHint *lookupPHintByName(StringRef);
-const PHint *lookupPHintByEncoding(uint16_t);
-} // namespace AArch64PHint
-
-namespace AArch64BTIHint {
-  struct BTI : SysAlias {
-    using SysAlias::SysAlias;
-  };
-#define GET_BTIValues_DECL
-#define GET_BTIsList_DECL
-#include "AArch64GenSystemOperands.inc"
-}
-
-namespace AArch64CMHPriorityHint {
-struct CMHPriorityHint : SysAlias {
-  using SysAlias::SysAlias;
-};
-#define GET_CMHPRIORITYHINT_DECL
-#include "AArch64GenSystemOperands.inc"
-} // namespace AArch64CMHPriorityHint
 
 namespace AArch64TIndexHint {
 struct TIndex : SysAlias {
@@ -844,7 +794,7 @@ AArch64StringToVectorLayout(StringRef LayoutStr) {
 
 namespace AArch64SysReg {
   struct SysReg {
-    const char Name[32];
+    StringTable::Offset Name;
     unsigned Encoding;
     bool Readable;
     bool Writeable;

@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -std=c++20 %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -std=c++20 %s -triple x86_64-windows -emit-llvm -o - | FileCheck %s --check-prefix=MSABI
+// RUN: %clang_cc1 -std=c++20 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 %s -triple x86_64-windows -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefix=MSABI
+
 
 #define fold(x) (__builtin_constant_p(x) ? (x) : (x))
 

@@ -49,15 +49,3 @@ need to install them with the matching `pip3`.
 $ xcrun pip3
 $ /usr/bin/pip3
 ```
-
-The same is true for Python 2. Although Python 2 comes with the operating
-system rather than Xcode, you can still use `xcrun` to launch the system
-variant.
-
-```
-$ xcrun python
-$ /usr/bin/python
-```
-
-Keep in mind that Python 2 is deprecated and no longer maintained. Future
-versions of macOS will not include Python 2.7.

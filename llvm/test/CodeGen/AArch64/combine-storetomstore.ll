@@ -709,10 +709,10 @@ define void @test_masked_store_success_v64i8(<64 x i8> %x, ptr %ptr, <64 x i1> %
 define void @test_masked_store_success_invert_mask_v4i32(<4 x i32> %x, ptr %ptr, <4 x i1> %mask) {
 ; SVE-LABEL: test_masked_store_success_invert_mask_v4i32:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    movi v2.4h, #1
+; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
-; SVE-NEXT:    eor v1.8b, v1.8b, v2.8b
+; SVE-NEXT:    eor z1.h, z1.h, #0x1
 ; SVE-NEXT:    ushll v1.4s, v1.4h, #0
 ; SVE-NEXT:    shl v1.4s, v1.4s, #31
 ; SVE-NEXT:    cmpne p1.s, p0/z, z1.s, #0

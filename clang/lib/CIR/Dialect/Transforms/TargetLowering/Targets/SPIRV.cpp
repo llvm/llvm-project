@@ -21,6 +21,8 @@ constexpr unsigned SPIRVAddrSpaceMap[] = {
     1, // CrossWorkgroup
     2, // UniformConstant
     4, // Generic
+    5, // GlobalDevice
+    6, // GlobalHost
 };
 
 class SPIRVTargetLoweringInfo : public TargetLoweringInfo {

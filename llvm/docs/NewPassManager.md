@@ -1,8 +1,5 @@
 # Using the New Pass Manager
 
-```{contents}
-:local:
-```
 
 ## Overview
 

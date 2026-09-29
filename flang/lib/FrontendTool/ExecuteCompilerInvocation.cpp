@@ -28,7 +28,6 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Plugins/PassPlugin.h"
-#include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace Fortran::frontend {

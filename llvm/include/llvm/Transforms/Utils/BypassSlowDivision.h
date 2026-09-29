@@ -25,6 +25,7 @@
 namespace llvm {
 
 class BasicBlock;
+class BranchProbabilityInfo;
 class DomTreeUpdater;
 class LoopInfo;
 class Value;
@@ -63,7 +64,8 @@ template <> struct DenseMapInfo<DivRemMapKey> {
 LLVM_ABI bool
 bypassSlowDivision(BasicBlock *BB,
                    const DenseMap<unsigned int, unsigned int> &BypassWidth,
-                   DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr);
+                   DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
+                   BranchProbabilityInfo *BPI = nullptr);
 
 } // end namespace llvm
 

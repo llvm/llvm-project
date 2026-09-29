@@ -16,6 +16,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
+#include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -157,8 +158,8 @@ static AffineExprKind fromBytecodeKind(uint64_t kind) {
 /// is prefix order (operator and then children), which is self-delimiting.
 /// Instead of C++ recursion the reader uses an explicit work stack, bounding
 /// memory to O(depth) and eliminating stack-overflow risk on malicious input.
-static FailureOr<AffineExpr> readAffineExpr(DialectBytecodeReader &reader,
-                                            MLIRContext *context) {
+static LogicalResult readAffineExpr(DialectBytecodeReader &reader,
+                                    MLIRContext *context, AffineExpr &expr) {
   // A work-stack item is either ReadOperand (0) or a combine marker whose
   // payload is an AffineExprKind.
   struct WorkItem {
@@ -175,15 +176,14 @@ static FailureOr<AffineExpr> readAffineExpr(DialectBytecodeReader &reader,
   while (!work.empty()) {
     // Bound total iterations to catch malformed input.
     if (work.size() > 128)
-      return reader.emitError("AffineExpr work stack overflow"), failure();
+      return reader.emitError("AffineExpr work stack overflow");
 
     WorkItem item = work.pop_back_val();
 
     if (item.isCombine) {
       // Pop two operands and combine.
       if (operands.size() < 2)
-        return reader.emitError("malformed AffineExpr: operand underflow"),
-               failure();
+        return reader.emitError("malformed AffineExpr: operand underflow");
       AffineExpr rhs = operands.pop_back_val();
       AffineExpr lhs = operands.pop_back_val();
       operands.push_back(getAffineBinaryOpExpr(item.combineKind, lhs, rhs));
@@ -240,7 +240,8 @@ static FailureOr<AffineExpr> readAffineExpr(DialectBytecodeReader &reader,
     return reader.emitError("malformed AffineExpr: expected single result"),
            failure();
 
-  return operands.front();
+  expr = operands.front();
+  return success();
 }
 
 /// Write an AffineExpr in prefix order (operator first, then children).
@@ -337,10 +338,10 @@ static LogicalResult readAffineMap(DialectBytecodeReader &reader,
     SmallVector<AffineExpr> results;
     results.reserve(numResults);
     for (uint64_t i = 0; i < numResults; ++i) {
-      auto expr = readAffineExpr(reader, context);
-      if (failed(expr))
+      AffineExpr expr;
+      if (failed(readAffineExpr(reader, context, expr)))
         return failure();
-      results.push_back(*expr);
+      results.push_back(expr);
     }
     map = AffineMap::get(numDims, numSymbols, results, context);
     return success();

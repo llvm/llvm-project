@@ -38,4 +38,26 @@ void CIRGenModule::emitAMDGPUMetadata() {
     theModule->setAttr(cir::CIRDialect::getAMDGPUPrintfKindAttrName(),
                        builder.getStringAttr(printfKind));
   }
+
+  // Emit xnack module flag.
+  if (target.getTargetOpts().AMDGPUXnackState !=
+      TargetOptions::AMDGPUFeatureState::Any) {
+    theModule->setAttr(cir::CIRDialect::getAMDGPUXnackAttrName(),
+                       builder.getI32IntegerAttr(
+                           target.getTargetOpts().AMDGPUXnackState ==
+                                   TargetOptions::AMDGPUFeatureState::Enabled
+                               ? 1
+                               : 0));
+  }
+
+  // Emit sramecc module flag.
+  if (target.getTargetOpts().AMDGPUSramEccState !=
+      TargetOptions::AMDGPUFeatureState::Any) {
+    theModule->setAttr(cir::CIRDialect::getAMDGPUSramEccAttrName(),
+                       builder.getI32IntegerAttr(
+                           target.getTargetOpts().AMDGPUSramEccState ==
+                                   TargetOptions::AMDGPUFeatureState::Enabled
+                               ? 1
+                               : 0));
+  }
 }

@@ -110,8 +110,8 @@ def SGPR_IMM_OptOffset : OffsetMode<1, 1, "_SGPR_IMM",
 
 class SM_Probe_Pseudo <string opName, RegisterClass baseClass, OffsetMode offsets>
   : SM_Pseudo<opName, (outs),
-              !con((ins i8imm:$sdata, baseClass:$sbase), offsets.Ins),
-              " $sdata, $sbase, " # offsets.Asm> {
+              !con((ins i8imm:$sdata, baseClass:$sbase), offsets.Ins, (ins CPol_0:$cpol)),
+              " $sdata, $sbase, " # offsets.Asm # "$cpol"> {
   let mayLoad = 0;
   let mayStore = 0;
   let has_glc = 0;
@@ -239,8 +239,8 @@ class SM_WaveId_Pseudo<string opName, SDPatternOperator node> : SM_Pseudo<
 
 class SM_Prefetch_Pseudo <string opName, RegisterClass baseClass, bit hasSBase>
   : SM_Pseudo<opName, (outs), !con(!if(hasSBase, (ins baseClass:$sbase), (ins)),
-                                   (ins SMEMOffset:$offset, SReg_32:$soffset, i8imm:$sdata)),
-              !if(hasSBase, " $sbase,", "") # " $offset, $soffset, $sdata"> {
+                                   (ins SMEMOffset:$offset, SReg_32:$soffset, i8imm:$sdata, CPol_0:$cpol)),
+              !if(hasSBase, " $sbase,", "") # " $offset, $soffset, $sdata$cpol"> {
   // Mark prefetches as both load and store to prevent reordering with loads
   // and stores. This is also needed for pattern to match prefetch intrinsic.
   let mayLoad = 1;
@@ -1134,19 +1134,19 @@ def i32imm_one : TImmLeaf <i32, [{
 multiclass SMPrefetchPat<string type, TImmLeaf cache_type> {
   def : GCNPat <
     (smrd_prefetch (SMRDImm i64:$sbase, i32:$offset), timm, timm, cache_type),
-    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, $offset, (i32 SGPR_NULL), (i8 0))
+    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, $offset, (i32 SGPR_NULL), (i8 0), 0)
   >;
 
   def : GCNPat <
     (smrd_prefetch (i64 SReg_64:$sbase), timm, timm, cache_type),
-    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, 0, (i32 SGPR_NULL), (i8 0))
+    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, 0, (i32 SGPR_NULL), (i8 0), 0)
   >;
 
   def : GCNPat <
     (smrd_prefetch (i32 SReg_32:$sbase), timm, timm, cache_type),
     (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type)
         (i64 (REG_SEQUENCE SReg_64, $sbase, sub0, (i32 (S_MOV_B32 (i32 0))), sub1)),
-        0, (i32 SGPR_NULL), (i8 0))
+        0, (i32 SGPR_NULL), (i8 0), 0)
   >;
 }
 
@@ -1157,53 +1157,53 @@ defm : SMPrefetchPat<"DATA", i32imm_one>;
 let SubtargetPredicate = HasSmemPrefetchInsts in {
   def : GCNPat <
     (int_amdgcn_s_prefetch_data (SMRDImm i64:$sbase, i32:$offset), (i32 SReg_32:$len)),
-    (S_PREFETCH_DATA $sbase, $offset, $len, 0)
+    (S_PREFETCH_DATA $sbase, $offset, $len, 0, 0)
   >;
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_data (i64 SReg_64:$sbase), (i32 SReg_32:$len)),
-    (S_PREFETCH_DATA $sbase, 0, $len, 0)
+    (S_PREFETCH_DATA $sbase, 0, $len, 0, 0)
   >;
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_data (SMRDImm i64:$sbase, i32:$offset), imm:$len),
-    (S_PREFETCH_DATA $sbase, $offset, (i32 SGPR_NULL), (as_i8timm $len))
+    (S_PREFETCH_DATA $sbase, $offset, (i32 SGPR_NULL), (as_i8timm $len), 0)
   >;
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_data (i64 SReg_64:$sbase), imm:$len),
-    (S_PREFETCH_DATA $sbase, 0, (i32 SGPR_NULL), (as_i8timm $len))
+    (S_PREFETCH_DATA $sbase, 0, (i32 SGPR_NULL), (as_i8timm $len), 0)
 
   >;
 
   def : GCNPat <
     (SIsbuffer_prefetch v4i32:$sbase, (SMRDBufferImm i32:$offset), (i32 SReg_32:$len)),
-    (S_BUFFER_PREFETCH_DATA SReg_128:$sbase, i32imm:$offset, $len, 0)
+    (S_BUFFER_PREFETCH_DATA SReg_128:$sbase, i32imm:$offset, $len, 0, 0)
   >;
 
   def : GCNPat <
     (SIsbuffer_prefetch v4i32:$sbase, (SMRDBufferImm i32:$offset), imm:$len),
-    (S_BUFFER_PREFETCH_DATA SReg_128:$sbase, i32imm:$offset, (i32 SGPR_NULL), (as_i8timm $len))
+    (S_BUFFER_PREFETCH_DATA SReg_128:$sbase, i32imm:$offset, (i32 SGPR_NULL), (as_i8timm $len), 0)
   >;
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_inst (SMRDImm i64:$sbase, i32:$offset), (i32 SReg_32:$len)),
-    (S_PREFETCH_INST $sbase, $offset, $len, 0)
+    (S_PREFETCH_INST $sbase, $offset, $len, 0, 0)
   >;
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_inst (i64 SReg_64:$sbase), (i32 SReg_32:$len)),
-    (S_PREFETCH_INST $sbase, 0, $len, 0)
+    (S_PREFETCH_INST $sbase, 0, $len, 0, 0)
   >;
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_inst (SMRDImm i64:$sbase, i32:$offset), imm:$len),
-    (S_PREFETCH_INST $sbase, $offset, (i32 SGPR_NULL), (as_i8timm $len))
+    (S_PREFETCH_INST $sbase, $offset, (i32 SGPR_NULL), (as_i8timm $len), 0)
   >;
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_inst (i64 SReg_64:$sbase), imm:$len),
-    (S_PREFETCH_INST $sbase, 0, (i32 SGPR_NULL), (as_i8timm $len))
+    (S_PREFETCH_INST $sbase, 0, (i32 SGPR_NULL), (as_i8timm $len), 0)
   >;
 } // End let SubtargetPredicate = HasSmemPrefetchInsts
 
@@ -1499,6 +1499,9 @@ class SMEM_Real_Prefetch_gfx12<bits<6> op, SM_Pseudo ps> :
   let sdst = ?;
   let Inst{12-11} = 0; // Unused sdata bits.
   let Inst{10-6}  = !if(ps.has_sdst, sdata{4-0}, ?);
+  let Inst{20} = cpol{CPolBit.NV}; // non-volatile
+  let Inst{22-21} = cpol{4-3}; // scope
+  let Inst{24-23} = cpol{1-0}; // th - only lower 2 bits are supported
 }
 
 class SMEM_Real_Load_gfx12<bits<6> op, string ps, string opName, OffsetMode offsets> :
@@ -1580,6 +1583,9 @@ class SMEM_Real_Prefetch_gfx13<bits<6> op, SM_Pseudo ps> :
   let sdst = ?;
   let Inst{12-11} = 0; // Unused sdata bits.
   let Inst{10-6}  = !if(ps.has_sdst, sdata{4-0}, ?);
+  let Inst{20} = cpol{CPolBit.NV}; // non-volatile
+  let Inst{22-21} = cpol{4-3}; // scope
+  let Inst{24-23} = cpol{1-0}; // th - only lower 2 bits are supported
 }
 
 class SMEM_Real_Load_gfx13<bits<6> op, string ps, string opName, OffsetMode offsets> :

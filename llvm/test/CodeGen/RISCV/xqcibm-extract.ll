@@ -455,21 +455,24 @@ define i32 @extu_from_and_lshr_i32(i32 %x) {
 define i64 @extu_from_and_lshr_i64(i64 %x) {
 ; RV32I-LABEL: extu_from_and_lshr_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a1, 6
-; RV32I-NEXT:    srli a0, a0, 20
+; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    slli a0, a0, 6
+; RV32I-NEXT:    srli a0, a0, 20
 ; RV32I-NEXT:    ret
 ;
 ; RV32XQCIBM-LABEL: extu_from_and_lshr_i64:
 ; RV32XQCIBM:       # %bb.0:
-; RV32XQCIBM-NEXT:    qc.extu a0, a1, 12, 14
+; RV32XQCIBM-NEXT:    mv a0, a1
 ; RV32XQCIBM-NEXT:    li a1, 0
+; RV32XQCIBM-NEXT:    qc.extu a0, a0, 12, 14
 ; RV32XQCIBM-NEXT:    ret
 ;
 ; RV32XQCIBMZBB-LABEL: extu_from_and_lshr_i64:
 ; RV32XQCIBMZBB:       # %bb.0:
-; RV32XQCIBMZBB-NEXT:    qc.extu a0, a1, 12, 14
+; RV32XQCIBMZBB-NEXT:    mv a0, a1
 ; RV32XQCIBMZBB-NEXT:    li a1, 0
+; RV32XQCIBMZBB-NEXT:    qc.extu a0, a0, 12, 14
 ; RV32XQCIBMZBB-NEXT:    ret
   %shifted = lshr i64 %x, 46
   %masked = and i64 %shifted, 4095

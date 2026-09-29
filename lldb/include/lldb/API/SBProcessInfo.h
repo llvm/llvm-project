@@ -30,6 +30,10 @@ public:
 
   SBFileSpec GetExecutableFile();
 
+  /// If the process was laumched with a first argument that doesn't match
+  /// the executable file or name, this will return a valid string.
+  const char *GetArg0();
+
   lldb::pid_t GetProcessID();
 
   uint32_t GetUserID();

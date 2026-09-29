@@ -637,8 +637,12 @@ void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
   LDBG() << "  Processing " << successors.size() << " successor regions";
   for (const RegionSuccessor &successor : successors) {
     const AbstractDenseLattice *after;
-    if (successor.isParent() || successor.getSuccessor()->empty()) {
-      LDBG() << "    Successor is parent or empty region";
+    if (successor.isOperation()) {
+      LDBG() << "    Successor is operation";
+      after = getLatticeFor(point,
+                            getProgramPointAfter(successor.getSuccessorOp()));
+    } else if (successor.getSuccessor()->empty()) {
+      LDBG() << "    Successor is empty region";
       after = getLatticeFor(point, getProgramPointAfter(branch));
     } else {
       Region *successorRegion = successor.getSuccessor();

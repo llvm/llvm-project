@@ -7,8 +7,8 @@
 
 void foo(void) {
   // CIR-LABEL: cir.func no_inline dso_local @_Z3foov()
-  // CIR: %[[V0:.*]] = cir.alloca !cir.array<!cir.float x 4>, !cir.ptr<!cir.array<!cir.float x 4>>, ["f4"] {alignment = 16 : i64}
-  // CIR: %[[V1:.*]] = cir.alloca !cir.array<!cir.float x 8>, !cir.ptr<!cir.array<!cir.float x 8>>, ["f8"] {alignment = 16 : i64}
+  // CIR: %[[V0:.*]] = cir.alloca "f4" align(16) : !cir.ptr<!cir.array<!cir.float x 4>>
+  // CIR: %[[V1:.*]] = cir.alloca "f8" align(16) : !cir.ptr<!cir.array<!cir.float x 8>>
   // CIR: %[[V2:.*]] = cir.cast array_to_ptrdecay %[[V0]] : !cir.ptr<!cir.array<!cir.float x 4>> -> !cir.ptr<!cir.float>
   // CIR: %[[V3:.*]] = cir.cast bitcast %[[V2]] : !cir.ptr<!cir.float> -> !cir.ptr<!void>
   // CIR: %[[V4:.*]] = cir.cast array_to_ptrdecay %[[V1]] : !cir.ptr<!cir.array<!cir.float x 8>> -> !cir.ptr<!cir.float>
@@ -20,8 +20,8 @@ void foo(void) {
   // CIR: cir.return
 
   // LLVM-LABEL: define dso_local void @_Z3foov()
-  // LLVM: %[[V1:.*]] = alloca [4 x float], i64 1, align 16
-  // LLVM: %[[V2:.*]] = alloca [8 x float], i64 1, align 16
+  // LLVM: %[[V1:.*]] = alloca [4 x float], align 16
+  // LLVM: %[[V2:.*]] = alloca [8 x float], align 16
   // LLVM: %[[V3:.*]] = getelementptr float, ptr %[[V1]], i32 0
   // LLVM: %[[V4:.*]] = getelementptr float, ptr %[[V2]], i32 0
   // LLVM: call void @llvm.memmove.p0.p0.i64(ptr %[[V4]], ptr %[[V3]], i64 16, i1 false)
@@ -116,8 +116,8 @@ void testbcopy(const void *src, void *dest, size_t n) {
 }
 
 // CIR-LABEL: @testaddressof(
-// CIR: %[[SRC:.*]] = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["src", init]
-// CIR: %[[DEST:.*]] = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["dest", init]
+// CIR: %[[SRC:.*]] = cir.alloca "src" {{.*}} init : !cir.ptr<!cir.ptr<!s8i>>
+// CIR: %[[DEST:.*]] = cir.alloca "dest" {{.*}} init : !cir.ptr<!cir.ptr<!s8i>>
 // CIR: %[[SRC_TO_VOIDPTR:.*]] = cir.cast bitcast %[[SRC]] : !cir.ptr<!cir.ptr<!s8i>> -> !cir.ptr<!void>
 // CIR: %[[DEST_TO_VOIDPTR:.*]] = cir.cast bitcast %[[DEST]] : !cir.ptr<!cir.ptr<!s8i>> -> !cir.ptr<!void>
 // CIR: cir.libc.memmove {{.*}} bytes from %[[SRC_TO_VOIDPTR]] to %[[DEST_TO_VOIDPTR]]

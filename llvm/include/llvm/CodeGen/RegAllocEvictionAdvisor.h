@@ -122,8 +122,8 @@ public:
   LLVM_ABI bool isUnusedCalleeSavedReg(MCRegister PhysReg) const;
 
   /// Returns true if this is an urgent eviction.
-  bool isUrgentEviction(const LiveInterval &VirtReg,
-                        const LiveInterval &Intf) const;
+  LLVM_ABI bool isUrgentEviction(const LiveInterval &VirtReg,
+                                 const LiveInterval &Intf) const;
 
 protected:
   LLVM_ABI RegAllocEvictionAdvisor(const MachineFunction &MF,
@@ -280,7 +280,7 @@ createReleaseModeAdvisorAnalysisLegacy();
 LLVM_ABI RegAllocEvictionAdvisorAnalysisLegacy *
 createDevelopmentModeAdvisorAnalysisLegacy();
 
-LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ABI RegAllocEvictionAdvisorProvider *
+LLVM_ABI RegAllocEvictionAdvisorProvider *
 createReleaseModeAdvisorProvider(LLVMContext &Ctx);
 
 LLVM_ABI RegAllocEvictionAdvisorProvider *

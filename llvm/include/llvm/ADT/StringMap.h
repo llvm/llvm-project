@@ -49,6 +49,7 @@ protected:
     RHS.TheTable = nullptr;
     RHS.NumBuckets = 0;
     RHS.NumItems = 0;
+    RHS.incrementEpoch();
   }
 
   LLVM_ABI StringMapImpl(unsigned InitSize, unsigned ItemSize);
@@ -83,8 +84,8 @@ protected:
   /// table, returning it.  If the key is not in the table, this returns null.
   LLVM_ABI StringMapEntryBase *RemoveKey(StringRef Key);
 
-  /// Remove the entry at the given (live) bucket, whose value the caller has
-  /// already destroyed, and close the hole via Algorithm R backward shifting.
+  /// Remove the entry pointer at the given (live) bucket without destroying
+  /// the entry, and close the hole via Algorithm R backward shifting.
   LLVM_ABI void removeBucket(unsigned Bucket);
 
   /// Allocate the table with the specified number of buckets and otherwise
@@ -164,9 +165,8 @@ public:
              *RHSHashTable = (unsigned *)(RHS.TheTable + NumBuckets + 1);
 
     NumItems = RHS.NumItems;
-    // Copy the bucket layout verbatim.  Because RHS was built with linear
-    // probing, preserving each entry's slot keeps the probe-sequence invariant
-    // intact without re-probing.
+    // Copy the bucket layout verbatim.  Preserving each entry's slot keeps
+    // the probe-sequence invariant intact without re-probing.
     for (unsigned I = 0, E = NumBuckets; I != E; ++I) {
       StringMapEntryBase *Bucket = RHS.TheTable[I];
       if (!Bucket)
@@ -515,10 +515,7 @@ public:
 
   friend bool operator==(const StringMapIterBase &LHS,
                          const StringMapIterBase &RHS) {
-    assert((!LHS.getEpochAddress() || LHS.isHandleInSync()) &&
-           "handle not in sync!");
-    assert((!RHS.getEpochAddress() || RHS.isHandleInSync()) &&
-           "handle not in sync!");
+    assert(LHS.isComparableWith(RHS) && "incomparable iterators!");
     return LHS.Ptr == RHS.Ptr;
   }
 

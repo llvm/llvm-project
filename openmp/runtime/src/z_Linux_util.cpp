@@ -321,7 +321,8 @@ int __kmp_futex_determine_capable() {
 
 #endif // KMP_USE_FUTEX
 
-#if (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_WASM) && (!KMP_ASM_INTRINS)
+#if (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_WASM32 || KMP_ARCH_WASM64) && \
+    (!KMP_ASM_INTRINS)
 /* Only 32-bit "add-exchange" instruction on IA-32 architecture causes us to
    use compare_and_store for these routines */
 
@@ -381,7 +382,7 @@ kmp_uint32 __kmp_test_then_and32(volatile kmp_uint32 *p, kmp_uint32 d) {
   return old_value;
 }
 
-#if KMP_ARCH_X86 || KMP_ARCH_WASM
+#if KMP_ARCH_X86 || KMP_ARCH_WASM32
 kmp_int8 __kmp_test_then_add8(volatile kmp_int8 *p, kmp_int8 d) {
   kmp_int8 old_value, new_value;
 
@@ -446,7 +447,7 @@ void __kmp_terminate_thread(int gtid) {
   if (!th)
     return;
 
-#ifdef KMP_CANCEL_THREADS
+#if KMP_CANCEL_THREADS
   KA_TRACE(10, ("__kmp_terminate_thread: kill (%d)\n", gtid));
   status = pthread_cancel(th->th.th_info.ds.ds_thread);
   if (status != 0 && status != ESRCH) {
@@ -558,7 +559,7 @@ static void *__kmp_launch_worker(void *thr) {
   __kmp_affinity_bind_init_mask(gtid);
 #endif
 
-#ifdef KMP_CANCEL_THREADS
+#if KMP_CANCEL_THREADS
   status = pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &old_type);
   KMP_CHECK_SYSFAIL("pthread_setcanceltype", status);
   // josh todo: isn't PTHREAD_CANCEL_ENABLE default for newly-created threads?
@@ -636,7 +637,7 @@ static void *__kmp_launch_monitor(void *thr) {
 
   __kmp_check_stack_overlap((kmp_info_t *)thr);
 
-#ifdef KMP_CANCEL_THREADS
+#if KMP_CANCEL_THREADS
   status = pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &old_type);
   KMP_CHECK_SYSFAIL("pthread_setcanceltype", status);
   // josh todo: isn't PTHREAD_CANCEL_ENABLE default for newly-created threads?
@@ -1274,7 +1275,7 @@ void __kmp_remove_signals(void) {
 #endif // KMP_HANDLE_SIGNALS
 
 void __kmp_enable(int new_state) {
-#ifdef KMP_CANCEL_THREADS
+#if KMP_CANCEL_THREADS
   int status, old_state;
   status = pthread_setcancelstate(new_state, &old_state);
   KMP_CHECK_SYSFAIL("pthread_setcancelstate", status);
@@ -1283,7 +1284,7 @@ void __kmp_enable(int new_state) {
 }
 
 void __kmp_disable(int *old_state) {
-#ifdef KMP_CANCEL_THREADS
+#if KMP_CANCEL_THREADS
   int status;
   status = pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, old_state);
   KMP_CHECK_SYSFAIL("pthread_setcancelstate", status);

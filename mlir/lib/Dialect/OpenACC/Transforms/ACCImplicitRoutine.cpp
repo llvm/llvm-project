@@ -102,6 +102,7 @@ private:
     auto routineOp = acc::RoutineOp::create(
         builder, loc,
         /* sym_name=*/builder.getStringAttr(routineName),
+        /* sym_visibility=*/nullptr,
         /* func_name=*/
         mlir::SymbolRefAttr::get(builder.getContext(),
                                  builder.getStringAttr(callee.getName())),
@@ -119,10 +120,10 @@ private:
         /* gangDimDeviceType=*/nullptr);
 
     // Assert that the callee does not already have routine info attribute
-    assert(!callee->hasAttr(acc::getRoutineInfoAttrName()) &&
+    assert(!callee->hasDiscardableAttr(acc::getRoutineInfoAttrName()) &&
            "function is already associated with a routine");
 
-    callee->setAttr(
+    callee->setDiscardableAttr(
         acc::getRoutineInfoAttrName(),
         mlir::acc::RoutineInfoAttr::get(
             builder.getContext(),
@@ -132,10 +133,11 @@ private:
   }
 
   // Used to walk through a compute region looking for function calls.
-  void
+  LogicalResult
   implicitRoutineForCallsInComputeRegions(Operation *op, SymbolTable &symTab,
                                           mlir::OpBuilder &builder,
                                           acc::OpenACCSupport &accSupport) {
+    LogicalResult result = success();
     op->walk([&](CallOpInterface callOp) {
       if (!callOp.getCallableForCallee())
         return;
@@ -153,28 +155,41 @@ private:
       // regions, skip it
       if (!callee)
         return;
+      // Already a valid symbol for GPU regions (e.g. an existing routine or an
+      // LLVM intrinsic), skip it.
       if (accSupport.isValidSymbolUse(callOp.getOperation(), calleeSymbolRef))
         return;
+      // Without a definition in this compilation unit an implicit routine
+      // cannot be applied, so the call target needs explicit routine
+      // information.
+      if (callee.isExternal()) {
+        callOp->emitError() << "Calls in an acc compute region must be marked "
+                               "with acc routine: "
+                            << calleeSymbolRef.getLeafReference();
+        result = failure();
+        return;
+      }
       builder.setInsertionPoint(callee);
       createRoutineOp(builder, callee.getLoc(), callee);
     });
+    return result;
   }
 
   // Recursively handle calls within a routine operation
-  void implicitRoutineForCallsInRoutine(acc::RoutineOp routineOp,
-                                        mlir::OpBuilder &builder,
-                                        acc::OpenACCSupport &accSupport,
-                                        acc::DeviceType targetDeviceType) {
+  LogicalResult implicitRoutineForCallsInRoutine(
+      acc::RoutineOp routineOp, mlir::OpBuilder &builder,
+      acc::OpenACCSupport &accSupport, acc::DeviceType targetDeviceType) {
     // When bind clause is used, it means that the target is different than the
     // function to which the `acc routine` is used with. Skip this case to
     // avoid implicitly recursively marking calls that would not end up on
     // device.
     if (isACCRoutineBindDefaultOrDeviceType(routineOp, targetDeviceType))
-      return;
+      return success();
 
     SymbolTable symTab(routineOp->getParentOfType<ModuleOp>());
     std::queue<acc::RoutineOp> routineQueue;
     routineQueue.push(routineOp);
+    LogicalResult result = success();
     while (!routineQueue.empty()) {
       auto currentRoutine = routineQueue.front();
       routineQueue.pop();
@@ -197,13 +212,26 @@ private:
         // regions, skip it
         if (!callee)
           return;
+        // Already a valid symbol for GPU regions (e.g. an existing routine or
+        // an LLVM intrinsic), skip it.
         if (accSupport.isValidSymbolUse(callOp.getOperation(), calleeSymbolRef))
           return;
+        // Without a definition in this compilation unit an implicit routine
+        // cannot be applied, so the call target needs explicit routine
+        // information.
+        if (callee.isExternal()) {
+          callOp->emitError()
+              << "Calls in acc routine must also be marked with acc routine: "
+              << calleeSymbolRef.getLeafReference();
+          result = failure();
+          return;
+        }
         builder.setInsertionPoint(callee);
         auto newRoutineOp = createRoutineOp(builder, callee.getLoc(), callee);
         routineQueue.push(newRoutineOp);
       });
     }
+    return result;
   }
 
 public:
@@ -217,11 +245,14 @@ public:
 
     acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
 
+    LogicalResult result = success();
+
     // Handle compute regions
     module.walk([&](Operation *op) {
       if (isa<ACC_COMPUTE_CONSTRUCT_OPS>(op))
-        implicitRoutineForCallsInComputeRegions(op, symTab, builder,
-                                                accSupport);
+        if (failed(implicitRoutineForCallsInComputeRegions(op, symTab, builder,
+                                                           accSupport)))
+          result = failure();
     });
 
     // Use the device type option from the pass options.
@@ -229,9 +260,13 @@ public:
 
     // Handle existing routines
     module.walk([&](acc::RoutineOp routineOp) {
-      implicitRoutineForCallsInRoutine(routineOp, builder, accSupport,
-                                       targetDeviceType);
+      if (failed(implicitRoutineForCallsInRoutine(
+              routineOp, builder, accSupport, targetDeviceType)))
+        result = failure();
     });
+
+    if (failed(result))
+      return signalPassFailure();
   }
 };
 

@@ -82,8 +82,8 @@ public:
   static_assert(_Min < _Max, "independent_bits_engine invalid parameters");
 
   // engine characteristics
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
 
   // constructors and seeding functions
   _LIBCPP_HIDE_FROM_ABI independent_bits_engine() {}
@@ -105,7 +105,7 @@ public:
   }
 
   // generating functions
-  _LIBCPP_HIDE_FROM_ABI result_type operator()() {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()() {
     if _LIBCPP_CONSTEXPR (_Rp != 0) {
       result_type __sp = 0;
       for (size_t __k = 0; __k < __n0; ++__k) {
@@ -130,11 +130,11 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void discard(unsigned long long __z) {
     for (; __z; --__z)
-      operator()();
+      (void)operator()();
   }
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI const _Engine& base() const _NOEXCEPT { return __e_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Engine& base() const _NOEXCEPT { return __e_; }
 
   template <class _Eng, size_t _Wp, class _UInt>
   friend bool operator==(const independent_bits_engine<_Eng, _Wp, _UInt>& __x,

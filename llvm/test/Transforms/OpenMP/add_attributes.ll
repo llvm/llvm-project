@@ -724,7 +724,7 @@ declare i32 @__kmpc_masked(ptr, i32, i32);
 
 declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i64, ptr, ptr, ptr);
 
-declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, ptr, i32, i64, ptr, ptr, ptr, ptr, ptr, ptr, ptr);
+declare i32 @__kmpc_gpu_xteam_reduce_nowait(ptr, ptr, ptr, ptr, ptr, ptr, ptr);
 
 declare i32 @__kmpc_omp_reg_task_with_affinity(ptr, i32, ptr, i32, ptr);
 
@@ -1366,7 +1366,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; CHECK: declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i64, ptr, ptr, ptr)
 
 ; CHECK-NOT: Function Attrs
-; CHECK: declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, ptr, i32, i64, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+; CHECK: declare i32 @__kmpc_gpu_xteam_reduce_nowait(ptr, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK: declare i32 @__kmpc_omp_reg_task_with_affinity(ptr, i32, ptr, i32, ptr)
@@ -2008,7 +2008,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; OPTIMISTIC: declare i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i64, ptr, ptr, ptr)
 
 ; OPTIMISTIC-NOT: Function Attrs
-; OPTIMISTIC: declare i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, ptr, i32, i64, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+; OPTIMISTIC: declare i32 @__kmpc_gpu_xteam_reduce_nowait(ptr, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; OPTIMISTIC: nofree nosync nounwind willreturn
 ; OPTIMISTIC: declare i32 @__kmpc_omp_reg_task_with_affinity(ptr nofree readonly captures(none), i32, ptr nofree readonly captures(none), i32, ptr nofree readonly captures(none))
@@ -2666,7 +2666,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; EXT: declare signext i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr, i64, ptr, ptr, ptr)
 
 ; EXT-NOT: Function Attrs
-; EXT: declare signext i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr, ptr, i32 zeroext, i64, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+; EXT: declare signext i32 @__kmpc_gpu_xteam_reduce_nowait(ptr, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; EXT: ; Function Attrs: nounwind
 ; EXT: declare signext i32 @__kmpc_omp_reg_task_with_affinity(ptr, i32 signext, ptr, i32 signext, ptr)

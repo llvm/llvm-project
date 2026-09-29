@@ -277,3 +277,47 @@ TEST_F(OpenACCTypeInterfacesTest, PointerLikeGenCastPrivateTypeToMemref) {
   ASSERT_TRUE(unwrap);
   EXPECT_EQ(unwrap.getHandle(), handle);
 }
+
+//===----------------------------------------------------------------------===//
+// PointerLikeType::getAsMemRefType tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCTypeInterfacesTest, PointerLikeGetAsMemRefTypeRankedMemref) {
+  Location loc = UnknownLoc::get(&context);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+
+  auto memTy = MemRefType::get({4, 8}, Float32Type::get(&context));
+  auto ptrLike = cast<PointerLikeType>(memTy);
+  EXPECT_EQ(ptrLike.getAsMemRefType(*module), memTy);
+}
+
+TEST_F(OpenACCTypeInterfacesTest, PointerLikeGetAsMemRefTypeUnrankedMemref) {
+  Location loc = UnknownLoc::get(&context);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+
+  auto unrankedTy =
+      UnrankedMemRefType::get(Float32Type::get(&context), /*memorySpace=*/0);
+  auto ptrLike = cast<PointerLikeType>(unrankedTy);
+  EXPECT_FALSE(ptrLike.getAsMemRefType(*module));
+}
+
+TEST_F(OpenACCTypeInterfacesTest,
+       PointerLikeGetAsMemRefTypePrivateTypeMemrefBase) {
+  Location loc = UnknownLoc::get(&context);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+
+  Type memrefTy = MemRefType::get({10}, IntegerType::get(&context, 64));
+  Type privateTy = PrivateType::get(&context, memrefTy);
+  auto ptrLike = cast<PointerLikeType>(privateTy);
+  EXPECT_EQ(ptrLike.getAsMemRefType(*module), memrefTy);
+}
+
+TEST_F(OpenACCTypeInterfacesTest,
+       PointerLikeGetAsMemRefTypePrivateTypeNonMemrefBase) {
+  Location loc = UnknownLoc::get(&context);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+
+  Type privateTy = PrivateType::get(&context, IntegerType::get(&context, 8));
+  auto ptrLike = cast<PointerLikeType>(privateTy);
+  EXPECT_FALSE(ptrLike.getAsMemRefType(*module));
+}

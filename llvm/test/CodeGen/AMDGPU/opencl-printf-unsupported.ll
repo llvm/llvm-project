@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn-- -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck --strict-whitespace %s
+; RUN: not llc -mtriple=amdgpu9.00-- -filetype=null %s 2>&1 | FileCheck --strict-whitespace %s
 
 ; FIXME: Should be adequate to run just
 ; -passes=amdgpu-printf-runtime-binding, but llc and opt have

@@ -127,16 +127,6 @@ createMCSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
                    LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
                    MCContext *Ctx, std::unique_ptr<MCRelocationInfo> &&RelInfo);
 
-LLVM_ABI mca::CustomBehaviour *
-createCustomBehaviour(const MCSubtargetInfo &STI, const mca::SourceMgr &SrcMgr,
-                      const MCInstrInfo &MCII);
-
-LLVM_ABI mca::InstrPostProcess *
-createInstrPostProcess(const MCSubtargetInfo &STI, const MCInstrInfo &MCII);
-
-LLVM_ABI mca::InstrumentManager *
-createInstrumentManager(const MCSubtargetInfo &STI, const MCInstrInfo &MCII);
-
 /// Target - Wrapper for Target specific information.
 ///
 /// For registration purposes, this is a POD type so that targets can be
@@ -662,7 +652,7 @@ public:
   /// For example feature string "+a,+m,c" is accepted, and results in feature
   /// list {"+a", "+m", "c"}. Later in ApplyFeatureFlag, it asserts
   /// that all features must start with '+' or '-' and assert is failed.
-  static bool isValidFeatureListFormat(StringRef FeaturesString);
+  LLVM_ABI static bool isValidFeatureListFormat(StringRef FeaturesString);
 
   /// @}
 };

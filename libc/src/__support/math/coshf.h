@@ -40,9 +40,11 @@ LIBC_INLINE float coshf(float x) {
     if (xbits.is_inf_or_nan())
       return x + FPBits::inf().get_val();
 
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     int rounding = fputil::quick_get_round();
     if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
       return FPBits::max_normal().get_val();
+#endif
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);

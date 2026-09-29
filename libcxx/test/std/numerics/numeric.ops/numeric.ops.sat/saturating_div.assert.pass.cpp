@@ -8,9 +8,7 @@
 
 // REQUIRES: std-at-least-c++26
 
-// REQUIRES: has-unix-headers
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-extensive
 
 // <numeric>
 

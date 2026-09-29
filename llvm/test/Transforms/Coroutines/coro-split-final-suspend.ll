@@ -121,7 +121,6 @@ declare void @llvm.coro.resume(ptr)
 declare void @llvm.coro.destroy(ptr)
 
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
-declare ptr @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
 declare void @llvm.coro.end(ptr, i1, token)
 

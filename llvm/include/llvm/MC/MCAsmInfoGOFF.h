@@ -18,7 +18,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 
 namespace llvm {
-class MCAsmInfoGOFF : public MCAsmInfo {
+class LLVM_ABI MCAsmInfoGOFF : public MCAsmInfo {
   void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
                             raw_ostream &) const final;
 
