@@ -392,7 +392,6 @@ struct SimplifyCFGPass : public OptionalPassInfoMixin<SimplifyCFGPass> {
 };
 } // namespace
 
-// Parses the arguments given by -plugin-arg=SimplifyCFG,<arg>.
 static Error parseArguments(ArrayRef<const char *> Args) {
   SmallVector<const char *, 0> Argv = {"SimplifyCFG"};
   append_range(Argv, Args);

@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=tbaa %{polly,}-polly-parallel %{polly,}-polly-parallel-force %{polly,}-polly-parallel-force %{polly,}-polly-invariant-load-hoisting=true '-passes=polly-custom<ast>' %{polly,}-polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
-; RUN: opt %loadNPMPolly -aa-pipeline=tbaa %{polly,}-polly-parallel %{polly,}-polly-parallel-force %{polly,}-polly-parallel-force %{polly,}-polly-invariant-load-hoisting=true '-passes=polly<no-default-opts>' -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly -aa-pipeline=tbaa -plugin-arg=Polly,-polly-parallel -plugin-arg=Polly,-polly-parallel-force -plugin-arg=Polly,-polly-parallel-force -plugin-arg=Polly,-polly-invariant-load-hoisting=true '-passes=polly-custom<ast>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadNPMPolly -aa-pipeline=tbaa -plugin-arg=Polly,-polly-parallel -plugin-arg=Polly,-polly-parallel-force -plugin-arg=Polly,-polly-parallel-force -plugin-arg=Polly,-polly-invariant-load-hoisting=true '-passes=polly<no-default-opts>' -S -verify-dom-info < %s | FileCheck %s -check-prefix=IR
 
 ; #define N 1024
 ; float A[N];

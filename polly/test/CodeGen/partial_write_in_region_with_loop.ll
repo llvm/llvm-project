@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' %{polly,}-polly-import-jscop-postfix=transformed -verify-dom-info %{polly,}-polly-allow-nonaffine-loops -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -plugin-arg=Polly,-polly-import-jscop-postfix=transformed -verify-dom-info -plugin-arg=Polly,-polly-allow-nonaffine-loops -S < %s | FileCheck %s
 
 ; This test verifies that partial writes within non-affine loops are code
 ; generated correctly.

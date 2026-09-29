@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    int jd(int *restrict A, int x, int N, int c) {
 ;      for (int i = 0; i < N; i++)

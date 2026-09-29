@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-scops '-pass-remarks-analysis=.*' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops '-pass-remarks-analysis=.*' -disable-output < %s 2>&1 | FileCheck %s
 
 ; Make sure we hit the complexity bailout, and don't crash.
 ; CHECK: Low complexity assumption:       {  : false }

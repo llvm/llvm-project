@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<delicm>' %{polly,}-polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<delicm>' -plugin-arg=Polly,-polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ;    void func(float *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */

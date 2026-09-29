@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-parallel '-passes=polly-custom<ast>' %{polly,}-polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
-; RUN: opt %loadNPMPolly %{polly,}-polly-parallel '-passes=polly<no-default-opts>' -S < %s | FileCheck %s -check-prefix=IR
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-parallel '-passes=polly-custom<ast>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-parallel '-passes=polly<no-default-opts>' -S < %s | FileCheck %s -check-prefix=IR
 ;
 ; float A[100];
 ;

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<simplify>' %{polly,}-polly-print-simplify -disable-output -aa-pipeline=basic-aa < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<simplify>' -plugin-arg=Polly,-polly-print-simplify -disable-output -aa-pipeline=basic-aa < %s | FileCheck -match-full-lines %s
 ;
 ; Do not remove overwrites when the value is read before.
 ;

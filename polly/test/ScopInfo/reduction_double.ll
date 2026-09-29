@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output %{polly,}-polly-allow-nonaffine < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output -plugin-arg=Polly,-polly-allow-nonaffine < %s | FileCheck %s
 ;
 ; Verify if two independent reductions in same loop is detected
 ;

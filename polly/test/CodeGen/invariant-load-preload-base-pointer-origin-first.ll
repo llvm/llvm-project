@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' %{polly,}-polly-invariant-load-hoisting=true < %s
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -plugin-arg=Polly,-polly-invariant-load-hoisting=true < %s
 ;
 ; Check that we generate valid code as we did non preload the base pointer
 ; origin of %tmp4 at some point.

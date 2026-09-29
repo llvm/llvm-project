@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines
 ; Derived from test-suite/MultiSource/Applications/sgefa/blas.c
 ;
 ; The exit value of %i.0320 in land.rhs is not computable.

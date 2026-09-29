@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=scalar-indep %{polly,}-polly-print-instructions '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=scalar-indep -plugin-arg=Polly,-polly-print-instructions '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines
 ;
 ; Two PHIs, cross-referencing each other. The PHI READs must be carried-out
 ; before the PHI WRITEs to ensure that the value when entering the block is

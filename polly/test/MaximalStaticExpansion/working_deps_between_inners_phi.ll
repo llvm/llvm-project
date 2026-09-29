@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<mse>' %{polly,}-polly-print-mse -disable-output < %s | FileCheck %s
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb '-passes=polly-custom<mse>' %{polly,}-polly-print-mse -pass-remarks-analysis=polly-mse -disable-output < %s 2>&1 | FileCheck %s --check-prefix=MSE
+; RUN: opt %loadNPMPolly '-passes=polly-custom<mse>' -plugin-arg=Polly,-polly-print-mse -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<mse>' -plugin-arg=Polly,-polly-print-mse -pass-remarks-analysis=polly-mse -disable-output < %s 2>&1 | FileCheck %s --check-prefix=MSE
 ;
 ; Verify that the accesses are correctly expanded for MemoryKind::Array and MemoryKind::PHI.
 ; tmp_06_phi is not expanded because it need copy in.

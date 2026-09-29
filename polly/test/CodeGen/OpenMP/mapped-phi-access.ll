@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb %{polly,}-polly-parallel '-passes=polly<no-default-opts;delicm>' -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb -plugin-arg=Polly,-polly-parallel '-passes=polly<no-default-opts;delicm>' -S < %s | FileCheck %s
 ;
 ; Verify that -polly-parallel can handle mapped scalar MemoryAccesses.
 ;

@@ -15,6 +15,7 @@
 #include "NewPMDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -413,7 +414,10 @@ extern "C" int llcMain(int argc, char **argv) {
       reportFatalUsageError(Plugin.takeError());
     PluginList.emplace_back(Plugin.get());
   }
-  if (Error E = PassPlugin::passArguments(PluginList, PluginArgs))
+  if (Error E = passPluginArguments(
+          map_to_vector(PluginList,
+                        [](const PassPlugin &P) { return P.getInfo(); }),
+          PluginArgs))
     reportFatalUsageError(std::move(E));
 
   if (!PassPipeline.empty() && !getRunPassNames().empty()) {

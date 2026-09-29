@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect %{polly,}-polly-detect-track-failures '-passes=polly-custom<detect>' %{polly,}-polly-print-detect -disable-output 2>&1 < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -plugin-arg=Polly,-polly-detect-track-failures '-passes=polly-custom<detect>' -plugin-arg=Polly,-polly-print-detect -disable-output 2>&1 < %s | FileCheck %s -match-full-lines
 ;
 ; Derived from test-suite/MultiSource/Benchmarks/BitBench/uuencode/uuencode.c
 ;

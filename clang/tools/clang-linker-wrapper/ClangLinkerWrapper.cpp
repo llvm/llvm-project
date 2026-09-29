@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -1545,7 +1546,10 @@ int main(int Argc, char **Argv) {
       reportFatalUsageError(Plugin.takeError());
     PluginList.emplace_back(Plugin.get());
   }
-  if (Error E = PassPlugin::passArguments(PluginList, PluginArgs))
+  if (Error E = passPluginArguments(
+          map_to_vector(PluginList,
+                        [](const PassPlugin &P) { return P.getInfo(); }),
+          PluginArgs))
     reportFatalUsageError(std::move(E));
 
   Verbose = Args.hasArg(OPT_verbose);

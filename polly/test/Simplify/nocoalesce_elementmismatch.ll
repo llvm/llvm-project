@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb '-passes=polly-custom<import-jscop;simplify-0>' %{polly,}-polly-print-simplify %{polly,}-polly-import-jscop-postfix=transformed -disable-output < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<import-jscop;simplify-0>' -plugin-arg=Polly,-polly-print-simplify -plugin-arg=Polly,-polly-import-jscop-postfix=transformed -disable-output < %s | FileCheck -match-full-lines %s
 ;
 ; Do not combine stores that do not write to different elements in the
 ; same instance.

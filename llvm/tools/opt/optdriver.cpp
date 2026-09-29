@@ -62,6 +62,11 @@
 #include <algorithm>
 #include <memory>
 #include <optional>
+
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
+
 using namespace llvm;
 using namespace opt_tool;
 
@@ -454,14 +459,16 @@ optMain(int argc, char **argv,
   cl::ParseCommandLineOptions(
       argc, argv, "llvm .bc -> .bc modular optimizer and analysis printer\n");
 
-  SmallVector<PassPlugin, 1> PluginList;
+  SmallVector<PassPluginLibraryInfo, 0> Extensions;
   for (const std::string &Path : PassPlugins) {
     auto Plugin = PassPlugin::load(Path);
     if (!Plugin)
       reportFatalUsageError(Plugin.takeError());
-    PluginList.emplace_back(Plugin.get());
+    Extensions.push_back(Plugin->getInfo());
   }
-  if (Error E = PassPlugin::passArguments(PluginList, PluginArgs))
+#define HANDLE_EXTENSION(Ext) Extensions.push_back(get##Ext##PluginInfo());
+#include "llvm/Support/Extension.def"
+  if (Error E = passPluginArguments(Extensions, PluginArgs))
     reportFatalUsageError(std::move(E));
 
   LLVMContext Context;
@@ -479,7 +486,7 @@ optMain(int argc, char **argv,
     return 1;
   }
 
-  if (!UseNPM && PluginList.size()) {
+  if (!UseNPM && !PassPlugins.empty()) {
     errs() << argv[0] << ": " << PassPlugins.ArgStr
            << " specified with legacy PM.\n";
     return 1;
@@ -807,7 +814,7 @@ optMain(int argc, char **argv,
     // layer.
     if (!runPassPipeline(
             argv[0], *M, TM.get(), &TLII, Out.get(), ThinLinkOut.get(),
-            RemarksFile.get(), Pipeline, PluginList, PassBuilderCallbacks, OK,
+            RemarksFile.get(), Pipeline, Extensions, PassBuilderCallbacks, OK,
             VK, /* ShouldPreserveAssemblyUseListOrder */ false,
             /* ShouldPreserveBitcodeUseListOrder */ true, EmitSummaryIndex,
             EmitModuleHash, EnableDebugify, VerifyDebugInfoPreserve,

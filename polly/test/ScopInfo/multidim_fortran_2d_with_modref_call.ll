@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb '-passes=polly-custom<scops>' %{polly,}-polly-print-scops %{polly,}-polly-allow-modref-calls %{polly,}-polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb '-passes=polly-custom<scops>' %{polly,}-polly-print-scops %{polly,}-polly-allow-nonaffine %{polly,}-polly-invariant-load-hoisting=true %{polly,}-polly-allow-modref-calls -disable-output < %s 2>&1 | FileCheck %s --check-prefix=NONAFFINE
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -plugin-arg=Polly,-polly-allow-modref-calls -plugin-arg=Polly,-polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -plugin-arg=Polly,-polly-allow-nonaffine -plugin-arg=Polly,-polly-invariant-load-hoisting=true -plugin-arg=Polly,-polly-allow-modref-calls -disable-output < %s 2>&1 | FileCheck %s --check-prefix=NONAFFINE
 
 ;  TODO: We should delinearize the accesses despite the use in a call to a
 ;        readonly function. For now we verify we do not delinearize them though.

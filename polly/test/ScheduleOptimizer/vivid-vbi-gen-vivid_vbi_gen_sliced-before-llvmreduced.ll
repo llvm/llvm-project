@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-vectorizer=stripmine %{polly,}-polly-isl-arg=--no-schedule-serialize-sccs %{polly,}-polly-tiling=0 '-passes=polly-custom<opt-isl>' %{polly,}-polly-print-opt-isl -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-vectorizer=stripmine -plugin-arg=Polly,-polly-isl-arg=--no-schedule-serialize-sccs -plugin-arg=Polly,-polly-tiling=0 '-passes=polly-custom<opt-isl>' -plugin-arg=Polly,-polly-print-opt-isl -disable-output < %s | FileCheck %s
 
 ; isl_schedule_node_band_sink may sink into multiple children.
 ; https://llvm.org/PR52637

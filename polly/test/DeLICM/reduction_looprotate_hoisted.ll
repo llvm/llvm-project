@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb %{polly,}-polly-invariant-load-hoisting '-passes=polly-custom<flatten;delicm>' %{polly,}-polly-delicm-overapproximate-writes=true %{polly,}-polly-delicm-compute-known=true %{polly,}-polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb -plugin-arg=Polly,-polly-invariant-load-hoisting '-passes=polly-custom<flatten;delicm>' -plugin-arg=Polly,-polly-delicm-overapproximate-writes=true -plugin-arg=Polly,-polly-delicm-compute-known=true -plugin-arg=Polly,-polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ;    void func(int *A, int* StartPtr) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */

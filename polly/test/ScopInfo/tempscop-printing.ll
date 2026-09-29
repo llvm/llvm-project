@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa %{polly,}-polly-invariant-load-hoisting=true '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -plugin-arg=Polly,-polly-invariant-load-hoisting=true '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 
 ; void f(long A[], int N, int *init_ptr) {
 ;   long i, j;

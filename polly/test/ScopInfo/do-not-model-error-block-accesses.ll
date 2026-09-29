@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s
 
 ; Check that we do not crash on this input. Earlier this indeed crashed as
 ; we tried to model the access functions in an error block.

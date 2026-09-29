@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl>' %{polly,}-polly-pattern-matching-based-opts=true -debug %{polly,}-polly-tc-opt=true -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl;ast>' %{polly,}-polly-print-ast %{polly,}-polly-pattern-matching-based-opts=true %{polly,}-polly-target-throughput-vector-fma=1 %{polly,}-polly-target-latency-vector-fma=8 %{polly,}-polly-target-1st-cache-level-size=32768 %{polly,}-polly-target-vector-register-bitwidth=256 %{polly,}-polly-target-2nd-cache-level-size=262144 %{polly,}-polly-tc-opt=true -disable-output < %s | FileCheck %s --check-prefix=PATTERN-MATCHING-OPTS
+; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl>' -plugin-arg=Polly,-polly-pattern-matching-based-opts=true -debug -plugin-arg=Polly,-polly-tc-opt=true -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl;ast>' -plugin-arg=Polly,-polly-print-ast -plugin-arg=Polly,-polly-pattern-matching-based-opts=true -plugin-arg=Polly,-polly-target-throughput-vector-fma=1 -plugin-arg=Polly,-polly-target-latency-vector-fma=8 -plugin-arg=Polly,-polly-target-1st-cache-level-size=32768 -plugin-arg=Polly,-polly-target-vector-register-bitwidth=256 -plugin-arg=Polly,-polly-target-2nd-cache-level-size=262144 -plugin-arg=Polly,-polly-tc-opt=true -disable-output < %s | FileCheck %s --check-prefix=PATTERN-MATCHING-OPTS
 ; REQUIRES: asserts
 ;
 ;    C := A * B + C

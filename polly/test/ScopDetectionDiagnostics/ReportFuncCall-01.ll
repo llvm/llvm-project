@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect %{polly,}-polly-detect-track-failures '-passes=polly-custom<detect>' %{polly,}-polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-missed=polly-detect -plugin-arg=Polly,-polly-detect-track-failures '-passes=polly-custom<detect>' -plugin-arg=Polly,-polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
 
 ; #define N 1024
 ; double invalidCall(double A[N]);

@@ -1,8 +1,8 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' %{polly,}-polly-print-ast -aa-pipeline= -disable-output < %s | FileCheck %s --check-prefix=NOAA
-; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' %{polly,}-polly-print-ast -aa-pipeline=basic-aa -disable-output < %s | FileCheck %s --check-prefix=BASI
-; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' %{polly,}-polly-print-ast -aa-pipeline=tbaa -disable-output < %s | FileCheck %s --check-prefix=TBAA
-; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' %{polly,}-polly-print-ast -aa-pipeline=scev-aa -disable-output < %s | FileCheck %s --check-prefix=SCEV
-; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' %{polly,}-polly-print-ast -aa-pipeline=globals-aa -disable-output < %s | FileCheck %s --check-prefix=GLOB
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -plugin-arg=Polly,-polly-print-ast -aa-pipeline= -disable-output < %s | FileCheck %s --check-prefix=NOAA
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -plugin-arg=Polly,-polly-print-ast -aa-pipeline=basic-aa -disable-output < %s | FileCheck %s --check-prefix=BASI
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -plugin-arg=Polly,-polly-print-ast -aa-pipeline=tbaa -disable-output < %s | FileCheck %s --check-prefix=TBAA
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -plugin-arg=Polly,-polly-print-ast -aa-pipeline=scev-aa -disable-output < %s | FileCheck %s --check-prefix=SCEV
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -plugin-arg=Polly,-polly-print-ast -aa-pipeline=globals-aa -disable-output < %s | FileCheck %s --check-prefix=GLOB
 ;
 ;    int A[1024];
 ;

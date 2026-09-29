@@ -1,4 +1,4 @@
-; RUN: opt  %loadNPMPolly '-passes=polly-custom<delicm;codegen>' %{polly,}-polly-parallel %{polly,}--polly-parallel-force -S < %s | FileCheck %s
+; RUN: opt  %loadNPMPolly '-passes=polly-custom<delicm;codegen>' -plugin-arg=Polly,-polly-parallel -plugin-arg=Polly,--polly-parallel-force -S < %s | FileCheck %s
 
 ; https://github.com/llvm/llvm-project/issues/185313
 ; CHECK: @func_polly_subfn(

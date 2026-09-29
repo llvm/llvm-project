@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' %{polly,}-polly-codegen-perf-monitoring -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -plugin-arg=Polly,-polly-codegen-perf-monitoring -S < %s | FileCheck %s
 
 ; void f(long A[], long N) {
 ;   long i;

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-parallel %{polly,}-polly-vectorizer=stripmine -passes=polly-codegen-verify '-passes=polly-custom<opt-isl;ast;codegen>' %{polly,}-polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-parallel -plugin-arg=Polly,-polly-vectorizer=stripmine -passes=polly-codegen-verify '-passes=polly-custom<opt-isl;ast;codegen>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ; Check that there are no nested #pragma omp parallel for inside a
 ; #pragma omp parallel for loop.

@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb %{polly,}-polly-print-scops '-passes=polly-custom<import-jscop>' %{polly,}-polly-print-import-jscop %{polly,}-polly-import-jscop-postfix=transformed -disable-output < %s | FileCheck %s
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb '-passes=polly-custom<import-jscop;codegen>' %{polly,}-polly-import-jscop-postfix=transformed -S < %s | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb -plugin-arg=Polly,-polly-print-scops '-passes=polly-custom<import-jscop>' -plugin-arg=Polly,-polly-print-import-jscop -plugin-arg=Polly,-polly-import-jscop-postfix=transformed -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<import-jscop;codegen>' -plugin-arg=Polly,-polly-import-jscop-postfix=transformed -S < %s | FileCheck %s --check-prefix=CODEGEN
 ;
 ; #define Ni 1056
 ; #define Nj 1056

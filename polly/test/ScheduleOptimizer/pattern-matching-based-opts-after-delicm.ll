@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-pattern-matching-based-opts=true '-passes=polly-custom<optree;delicm;simplify;opt-isl>' %{polly,}-polly-tc-opt=true -debug -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-pattern-matching-based-opts=true '-passes=polly-custom<optree;delicm;simplify;opt-isl>' -plugin-arg=Polly,-polly-tc-opt=true -debug -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check that the pattern matching detects the matrix multiplication pattern

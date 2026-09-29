@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-allow-differing-element-types '-passes=polly<no-default-opts>' -S %{polly,}-polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-allow-differing-element-types '-passes=polly<no-default-opts>' -S -plugin-arg=Polly,-polly-invariant-load-hoisting=true < %s | FileCheck %s
 
 ; CHECK: %polly.access.global.load = getelementptr i32, ptr %global.load, i64 0
 ; CHECK: %polly.access.global.load.load = load i32, ptr %polly.access.global.load

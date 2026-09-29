@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-scops %{polly,}-polly-invariant-load-hoisting=true %{polly,}-polly-ignore-aliasing -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -plugin-arg=Polly,-polly-invariant-load-hoisting=true -plugin-arg=Polly,-polly-ignore-aliasing -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: Invariant Accesses:
 ; CHECK-NEXT: ReadAccess := [Reduction Type: NONE] [Scalar: 0]

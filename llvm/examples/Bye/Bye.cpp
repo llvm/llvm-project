@@ -84,7 +84,6 @@ static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
                                  false /* Only looks at CFG */,
                                  false /* Analysis Pass */);
 
-// Parses the arguments given by -plugin-arg=Bye,<arg>.
 static Error parseArguments(ArrayRef<const char *> Args) {
   SmallVector<const char *, 0> Argv = {"Bye"};
   append_range(Argv, Args);

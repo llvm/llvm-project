@@ -691,7 +691,6 @@ void registerPollyPasses(PassBuilder &PB) {
 }
 } // namespace polly
 
-// Parses the arguments given by -plugin-arg=Polly,<arg>.
 static Error parseArguments(ArrayRef<const char *> Args) {
   SmallVector<const char *, 0> Argv = {"Polly"};
   append_range(Argv, Args);

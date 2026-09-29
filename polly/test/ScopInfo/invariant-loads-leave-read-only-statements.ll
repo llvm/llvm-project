@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-scops %{polly,}-polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' %{polly,}-polly-invariant-load-hoisting=true -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -plugin-arg=Polly,-polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -plugin-arg=Polly,-polly-invariant-load-hoisting=true -disable-output < %s
 
 ; CHECK:      Statements {
 ; CHECK-NEXT: 	Stmt_L_4

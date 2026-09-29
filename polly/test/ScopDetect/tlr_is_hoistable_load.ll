@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-invariant-load-hoisting %{polly,}-polly-detect-full-functions '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-invariant-load-hoisting -plugin-arg=Polly,-polly-detect-full-functions '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; This testcase checks for compatibility of the -detect-full-functions
 ; flag in combination with the -invariant-load-hoisting option. More

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-invariant-load-hoisting=true '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-invariant-load-hoisting=true '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    void f(int *A, int *B, int *C) {
 ;      for (int i = 0; i < 1000; i++)

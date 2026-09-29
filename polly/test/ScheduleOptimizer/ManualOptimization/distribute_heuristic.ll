@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-reschedule=0 %{polly,}-polly-pragma-based-opts=1 '-passes=polly-custom<opt-isl>' %{polly,}-polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines --check-prefix=ON
-; RUN: opt %loadNPMPolly %{polly,}-polly-reschedule=0 %{polly,}-polly-pragma-based-opts=0 '-passes=polly-custom<opt-isl>' %{polly,}-polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines --check-prefix=OFF
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-reschedule=0 -plugin-arg=Polly,-polly-pragma-based-opts=1 '-passes=polly-custom<opt-isl>' -plugin-arg=Polly,-polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines --check-prefix=ON
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-reschedule=0 -plugin-arg=Polly,-polly-pragma-based-opts=0 '-passes=polly-custom<opt-isl>' -plugin-arg=Polly,-polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines --check-prefix=OFF
 ;
 define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:

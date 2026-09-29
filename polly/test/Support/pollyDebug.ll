@@ -1,5 +1,5 @@
 ; Test if "polly-debug" flag enables debug prints from different parts of polly
-; RUN: opt %loadNPMPolly -O3 %{polly,}-polly %{polly,}-polly-debug --disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -O3 -plugin-arg=Polly,-polly -plugin-arg=Polly,-polly-debug --disable-output < %s 2>&1 | FileCheck %s
 ;
 ; REQUIRES: asserts
 

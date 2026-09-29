@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-allow-nonaffine-loops '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly %{polly,}-polly-allow-nonaffine-loops '-passes=polly<no-default-opts>' -disable-output
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-allow-nonaffine-loops '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-allow-nonaffine-loops '-passes=polly<no-default-opts>' -disable-output
 ;
 ; CHECK:      Domain :=
 ; CHECK-NEXT:   { Stmt_loop2__TO__loop[] };

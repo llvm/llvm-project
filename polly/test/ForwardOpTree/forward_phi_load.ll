@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-optree-normalize-phi=true '-passes=polly-custom<optree>' %{polly,}-polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-optree-normalize-phi=true '-passes=polly-custom<optree>' -plugin-arg=Polly,-polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Rematerialize a load.
 ;

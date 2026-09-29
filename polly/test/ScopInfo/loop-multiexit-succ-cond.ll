@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S < %s 2>&1 | FileCheck %s --check-prefix=IR
 ;
 ; The SCoP contains a loop with multiple exit blocks (BBs after leaving

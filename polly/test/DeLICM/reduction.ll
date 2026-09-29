@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb %{polly,}-polly-delicm-partial-writes=true '-passes=polly-custom<delicm>' %{polly,}-polly-print-delicm -disable-output < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb -plugin-arg=Polly,-polly-delicm-partial-writes=true '-passes=polly-custom<delicm>' -plugin-arg=Polly,-polly-print-delicm -disable-output < %s | FileCheck -match-full-lines %s
 ;
 ;    void func(double *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */

@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa %{polly,}-polly-allow-nonaffine %{polly,}-polly-allow-nonaffine-branches %{polly,}-polly-allow-nonaffine-loops=true '-passes=polly-custom<scops>' %{polly,}-polly-print-detect %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -check-prefix=SCALAR
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa %{polly,}-polly-allow-nonaffine %{polly,}-polly-allow-nonaffine-branches %{polly,}-polly-allow-nonaffine-loops=true %{polly,}-polly-process-unprofitable=false '-passes=polly-custom<scops>' %{polly,}-polly-print-detect %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -check-prefix=PROFIT
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -plugin-arg=Polly,-polly-allow-nonaffine -plugin-arg=Polly,-polly-allow-nonaffine-branches -plugin-arg=Polly,-polly-allow-nonaffine-loops=true '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-detect -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -check-prefix=SCALAR
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -plugin-arg=Polly,-polly-allow-nonaffine -plugin-arg=Polly,-polly-allow-nonaffine-branches -plugin-arg=Polly,-polly-allow-nonaffine-loops=true -plugin-arg=Polly,-polly-process-unprofitable=false '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-detect -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -check-prefix=PROFIT
 ;
 ; SCALAR:      Function: f
 ; SCALAR-NEXT: Region: %bb1---%bb13

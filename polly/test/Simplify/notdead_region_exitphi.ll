@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<simplify>' %{polly,}-polly-print-simplify -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=polly-custom<simplify>' -plugin-arg=Polly,-polly-print-simplify -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
 ;
 ; Do not remove dependencies of a phi node in a region's exit block.
 ;

@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output %{polly,}-polly-detect-full-functions < %s 2>&1 | FileCheck %s -check-prefix=FULL
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -check-prefix=WITHOUT-FULL
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output -plugin-arg=Polly,-polly-detect-full-functions < %s 2>&1 | FileCheck %s -check-prefix=FULL
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -check-prefix=WITHOUT-FULL
 
 ; FULL:      Region: %bb---FunctionExit
 ; FULL:      Statements {

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' %{polly,}-polly-import-jscop-postfix=transformed -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -plugin-arg=Polly,-polly-import-jscop-postfix=transformed -S < %s | FileCheck %s
 ;
 ; Partial write of an array access.
 ;

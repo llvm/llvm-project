@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl>' %{polly,}-polly-pattern-matching-based-opts=true -debug-only=polly-opt-isl -disable-output %{polly,}-polly-tc-opt=true < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl>' -plugin-arg=Polly,-polly-pattern-matching-based-opts=true -debug-only=polly-opt-isl -disable-output -plugin-arg=Polly,-polly-tc-opt=true < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 ;
 ;    for (i = 0; i < _PB_NI; i++)

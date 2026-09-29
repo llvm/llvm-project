@@ -1,7 +1,7 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb %{polly,}-polly-use-llvm-names=0 '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=IDX
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb %{polly,}-polly-use-llvm-names=1 '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=BB
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=scalar-indep %{polly,}-polly-use-llvm-names=0 '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=IDX
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=scalar-indep %{polly,}-polly-use-llvm-names=1 '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=BB
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb -plugin-arg=Polly,-polly-use-llvm-names=0 '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=IDX
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb -plugin-arg=Polly,-polly-use-llvm-names=1 '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=BB
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=scalar-indep -plugin-arg=Polly,-polly-use-llvm-names=0 '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=IDX
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=scalar-indep -plugin-arg=Polly,-polly-use-llvm-names=1 '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines -check-prefix=BB
 ;
 ; Check that the statement has the same name, regardless of how the
 ; basic block is split into multiple statements.

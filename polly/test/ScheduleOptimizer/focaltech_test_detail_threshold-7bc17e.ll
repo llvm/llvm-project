@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl>' %{polly,}-polly-print-opt-isl %{polly,}-polly-vectorizer=stripmine %{polly,}-polly-invariant-load-hoisting -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl>' -plugin-arg=Polly,-polly-print-opt-isl -plugin-arg=Polly,-polly-vectorizer=stripmine -plugin-arg=Polly,-polly-invariant-load-hoisting -disable-output < %s | FileCheck %s
 ;
 ; llvm.org/PR46578
 ;

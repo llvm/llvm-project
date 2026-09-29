@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-scops %{polly,}-polly-invariant-load-hoisting=true %{polly,}-polly-ignore-aliasing %{polly,}-polly-process-unprofitable -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -plugin-arg=Polly,-polly-invariant-load-hoisting=true -plugin-arg=Polly,-polly-ignore-aliasing -plugin-arg=Polly,-polly-process-unprofitable -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: Region: %entry.split---%if.end
 ; CHECK:     Invariant Accesses: {

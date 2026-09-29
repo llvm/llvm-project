@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-vectorizer=stripmine %{polly,}-polly-parallel %{polly,}-polly-parallel-force %{polly,}-polly-process-unprofitable '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-vectorizer=stripmine -plugin-arg=Polly,-polly-parallel -plugin-arg=Polly,-polly-parallel-force -plugin-arg=Polly,-polly-process-unprofitable '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
 ; CHECK: define internal void @DoStringSort_polly_subfn
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnueabi"

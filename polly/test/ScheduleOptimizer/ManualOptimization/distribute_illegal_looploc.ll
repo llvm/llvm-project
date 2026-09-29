@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl>' %{polly,}-polly-reschedule=0 %{polly,}-polly-pragma-based-opts=1 -disable-output < %s 2>&1 | FileCheck %s --match-full-lines
+; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl>' -plugin-arg=Polly,-polly-reschedule=0 -plugin-arg=Polly,-polly-pragma-based-opts=1 -disable-output < %s 2>&1 | FileCheck %s --match-full-lines
 ;
 ; CHECK: warning: distribute_illegal.c:2:3: not applying loop fission/distribution: cannot ensure semantic equivalence due to possible dependency violations
 ;

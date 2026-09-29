@@ -1,6 +1,6 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-invariant-load-hoisting=true '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' %{polly,}-polly-invariant-load-hoisting=true < %s | FileCheck %s --check-prefix=IR
-; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' %{polly,}-polly-invariant-load-hoisting=true %{polly,}--polly-overflow-tracking=always < %s | FileCheck %s --check-prefix=IRA
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-invariant-load-hoisting=true '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -plugin-arg=Polly,-polly-invariant-load-hoisting=true < %s | FileCheck %s --check-prefix=IR
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -plugin-arg=Polly,-polly-invariant-load-hoisting=true -plugin-arg=Polly,--polly-overflow-tracking=always < %s | FileCheck %s --check-prefix=IRA
 ;
 ; As (p + q) can overflow we have to check that we load from
 ; I[p + q] only if it does not.

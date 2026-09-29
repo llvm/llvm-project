@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' %{polly,}-polly-print-detect %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-detect -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-NOT:   Assumed Context:
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

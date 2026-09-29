@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' %{polly,}-polly-import-jscop-postfix=transformed+withconst -S < %s | FileCheck -check-prefix=WITHCONST %s
-; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' %{polly,}-polly-import-jscop-postfix=transformed+withoutconst -S < %s | FileCheck -check-prefix=WITHOUTCONST %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -plugin-arg=Polly,-polly-import-jscop-postfix=transformed+withconst -S < %s | FileCheck -check-prefix=WITHCONST %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -plugin-arg=Polly,-polly-import-jscop-postfix=transformed+withoutconst -S < %s | FileCheck -check-prefix=WITHOUTCONST %s
 ;
 ;float A[1040];
 ;

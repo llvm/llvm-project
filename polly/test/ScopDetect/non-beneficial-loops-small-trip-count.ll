@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-process-unprofitable=false '-passes=polly-custom<detect>' %{polly,}-polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-process-unprofitable=false '-passes=polly-custom<detect>' -plugin-arg=Polly,-polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK-NOT: Valid
 ;

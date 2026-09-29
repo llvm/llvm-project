@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -loop-rotate -indvars       '-passes=polly-custom<prepare;scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -loop-rotate -indvars -licm '-passes=polly-custom<prepare;scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -loop-rotate -indvars       '-passes=polly-custom<prepare;scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -loop-rotate -indvars -licm '-passes=polly-custom<prepare;scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; XFAIL: *
 ;

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' %{polly,}-polly-allow-nonaffine-loops -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -plugin-arg=Polly,-polly-allow-nonaffine-loops -S < %s | FileCheck %s
 
 ; This test verifies that values defined in another scop statement and used by
 ; PHI-nodes in non-affine regions are code generated correctly.

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-allow-nonaffine %{polly,}-polly-process-unprofitable '-passes=polly-custom<scops>' %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-allow-nonaffine -plugin-arg=Polly,-polly-process-unprofitable '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK:        Domain :=
 ; CHECK-NEXT:       [srcHeight] -> { Stmt_for_cond6_preheader_us[i0] : 0 <= i0 <= -3 + srcHeight };

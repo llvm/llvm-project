@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb '-passes=polly-custom<delicm>' %{polly,}-polly-print-delicm -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<delicm>' -plugin-arg=Polly,-polly-print-delicm -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Reduction over parametric number of elements and a loopguard if the
 ; reduction loop is not executed at all.

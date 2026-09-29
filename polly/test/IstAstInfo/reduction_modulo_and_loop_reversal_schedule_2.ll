@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;ast>' %{polly,}-polly-print-ast %{polly,}-polly-ast-detect-parallel -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;ast>' -plugin-arg=Polly,-polly-print-ast -plugin-arg=Polly,-polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ; CHECK:    #pragma known-parallel reduction
 ; CHECK:    for (int c0 = 0; c0 <= 2; c0 += 1) {

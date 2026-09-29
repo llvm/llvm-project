@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' %{polly,}-polly-invariant-load-hoisting=true %{polly,}-polly-process-unprofitable -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -plugin-arg=Polly,-polly-invariant-load-hoisting=true -plugin-arg=Polly,-polly-process-unprofitable -S < %s | FileCheck %s
 ;
 ;    void fence(void);
 ;

@@ -64,8 +64,7 @@ struct PassPluginLibraryInfo {
                              raw_pwrite_stream &OS) = nullptr;
 
   /// Callback receiving the arguments given to the plugin, e.g. by
-  /// -plugin-arg=<PluginName>,<arg>. A plugin that defines cl::opt parses them
-  /// with cl::ParseCommandLineOptions.
+  /// -plugin-arg=<PluginName>,<arg>, in order.
   Error (*ParseArguments)(ArrayRef<const char *> Args) = nullptr;
 };
 }
@@ -83,12 +82,6 @@ public:
   /// version.
   LLVM_ABI static Expected<PassPlugin> load(StringRef Filename);
 
-  /// Passes each "<PluginName>,<arg>" in \p Args, as given by -plugin-arg, to
-  /// the \c ParseArguments callback of the plugin in \p Plugins with that
-  /// name. Each plugin receives its arguments in order in one call.
-  LLVM_ABI static Error passArguments(ArrayRef<PassPlugin> Plugins,
-                                      ArrayRef<std::string> Args);
-
   /// Get the filename of the loaded plugin.
   StringRef getFilename() const { return Filename; }
 
@@ -100,6 +93,8 @@ public:
 
   /// Get the plugin API version
   uint32_t getAPIVersion() const { return Info.APIVersion; }
+
+  const PassPluginLibraryInfo &getInfo() const { return Info; }
 
   /// Invoke the PassBuilder callback registration
   void registerPassBuilderCallbacks(PassBuilder &PB) const {
@@ -124,6 +119,12 @@ private:
   sys::DynamicLibrary Library;
   PassPluginLibraryInfo Info;
 };
+
+/// Passes each "<PluginName>,<arg>" in \p Args to the \c ParseArguments
+/// callback of the extension in \p Infos with that name. If two extensions have
+/// the same name, the last one receives the arguments.
+LLVM_ABI Error passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
+                                   ArrayRef<std::string> Args);
 } // namespace llvm
 
 // The function returns a struct with default initializers.

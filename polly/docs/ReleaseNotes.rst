@@ -19,7 +19,9 @@ In Polly |version| the following important changes have been incorporated.
 
  * The infrastructure around ScopPasses has been removed.
 
- * When Polly is loaded as a plugin with ``-load-pass-plugin``, its options
-   are passed with ``-plugin-arg=Polly,<option>``, e.g.
+ * Polly's options are passed to ``opt`` with ``-plugin-arg=Polly,<option>``,
+   whether Polly is linked into ``opt`` or loaded as a plugin, e.g.
    ``opt -load-pass-plugin=LLVMPolly.so -plugin-arg=Polly,-polly-process-unprofitable``.
+   When Polly is linked into ``opt``, the plain ``-polly-*`` options remain
+   accepted.
 

@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb %{polly,}-polly-process-unprofitable=false %{polly,}-polly-unprofitable-scalar-accs=false '-passes=polly-custom<scops>' %{polly,}-polly-print-detect %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly %{polly,}-polly-stmt-granularity=bb %{polly,}-polly-process-unprofitable=false %{polly,}-polly-unprofitable-scalar-accs=true '-passes=polly-custom<scops>' %{polly,}-polly-print-detect %{polly,}-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=HEURISTIC
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb -plugin-arg=Polly,-polly-process-unprofitable=false -plugin-arg=Polly,-polly-unprofitable-scalar-accs=false '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-detect -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb -plugin-arg=Polly,-polly-process-unprofitable=false -plugin-arg=Polly,-polly-unprofitable-scalar-accs=true '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-detect -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=HEURISTIC
 
 ; Check the effect of -polly-unprofitable-scalar-accs
 

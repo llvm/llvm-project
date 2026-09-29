@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=polly-custom<delicm>' %{polly,}-polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<delicm>' -plugin-arg=Polly,-polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ;    void func(double *A) {
 ;      fsomeval = 21.0 + 21.0;

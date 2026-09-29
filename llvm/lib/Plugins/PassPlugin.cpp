@@ -50,14 +50,13 @@ Expected<PassPlugin> PassPlugin::load(StringRef Filename) {
   return P;
 }
 
-Error PassPlugin::passArguments(ArrayRef<PassPlugin> Plugins,
+Error llvm::passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
                                 ArrayRef<std::string> Args) {
-  // If two plugins have the same name, the last one receives the arguments.
   DenseMap<StringRef, unsigned> Index;
-  for (auto [I, P] : enumerate(Plugins))
-    Index[P.getPluginName()] = I;
+  for (auto [I, Info] : enumerate(Infos))
+    Index[Info.PluginName] = I;
   // The argument follows the first comma, so it is NUL-terminated.
-  SmallVector<SmallVector<const char *, 0>, 0> PluginArgs(Plugins.size());
+  SmallVector<SmallVector<const char *, 0>, 0> PluginArgs(Infos.size());
   for (const std::string &Arg : Args) {
     auto [Name, Rest] = StringRef(Arg).split(',');
     if (!Rest.data())
@@ -68,13 +67,13 @@ Error PassPlugin::passArguments(ArrayRef<PassPlugin> Plugins,
                                "' is loaded, in -plugin-arg=" + Arg);
     PluginArgs[It->second].push_back(Rest.data());
   }
-  for (auto [P, PArgs] : zip_equal(Plugins, PluginArgs)) {
+  for (auto [Info, PArgs] : zip_equal(Infos, PluginArgs)) {
     if (PArgs.empty())
       continue;
-    if (!P.Info.ParseArguments)
-      return createStringError("pass plugin '" + P.getPluginName() +
+    if (!Info.ParseArguments)
+      return createStringError("pass plugin '" + Twine(Info.PluginName) +
                                "' does not accept arguments");
-    if (Error E = P.Info.ParseArguments(PArgs))
+    if (Error E = Info.ParseArguments(PArgs))
       return E;
   }
   return Error::success();
