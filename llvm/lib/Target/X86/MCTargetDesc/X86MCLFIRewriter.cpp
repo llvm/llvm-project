@@ -883,6 +883,4 @@ void X86::X86MCLFIRewriter::onLabel(const MCSymbol *Symbol, MCStreamer &Out) {
   discardPrefixes();
 }
 
-void X86::X86MCLFIRewriter::finish(MCStreamer &Out) {
-  discardPrefixes();
-}
+void X86::X86MCLFIRewriter::finish(MCStreamer &Out) { discardPrefixes(); }
