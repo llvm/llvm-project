@@ -16828,8 +16828,7 @@ static SDValue PerformLegalizedInterleavedStoreCombine(
 
   Ops.push_back(BaseStore->getBasePtr());
   Ops.append(Interleave->op_begin(), Interleave->op_end());
-  Ops.push_back(
-      DAG.getConstant(BaseStore->getAlign().value(), DL, MVT::i32));
+  Ops.push_back(DAG.getConstant(BaseStore->getAlign().value(), DL, MVT::i32));
 
   EVT MemVT =
       EVT::getVectorVT(*DAG.getContext(), SubVecTy.getVectorElementType(),
@@ -16887,8 +16886,7 @@ static SDValue PerformInterleavedStoreCombine(
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
-  if (!ISD::isNormalStore(ST) || !ST->isSimple() ||
-      !ST->getOffset().isUndef())
+  if (!ISD::isNormalStore(ST) || !ST->isSimple() || !ST->getOffset().isUndef())
     return SDValue();
 
   SDValue WideValue = ST->getValue();
@@ -16946,9 +16944,9 @@ static SDValue PerformInterleavedStoreCombine(
     }
     return NewStore;
   }
-  return DAG.getMemIntrinsicNode(
-      ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops,
-      ST->getMemoryVT(), ST->getMemOperand());
+  return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL,
+                                 DAG.getVTList(MVT::Other), Ops,
+                                 ST->getMemoryVT(), ST->getMemOperand());
 }
 
 /// PerformSTORECombine - Target-specific dag combine xforms for
