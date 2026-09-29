@@ -159,6 +159,14 @@ bool MCPlusBuilder::isTailCall(const MCInst &Inst) const {
   return false;
 }
 
+void MCPlusBuilder::setExternalBranch(MCInst &Inst) const {
+  setAnnotationOpValue(Inst, MCAnnotation::kExternalBranch, true);
+}
+
+bool MCPlusBuilder::isExternalBranch(const MCInst &Inst) const {
+  return hasAnnotation(Inst, MCAnnotation::kExternalBranch);
+}
+
 void MCPlusBuilder::setNegateRAState(MCInst &Inst) const {
   assert(!hasAnnotation(Inst, MCAnnotation::kNegateState));
   setAnnotationOpValue(Inst, MCAnnotation::kNegateState, true);

@@ -14,6 +14,7 @@
 #ifndef BOLT_CORE_RELOCATION_H
 #define BOLT_CORE_RELOCATION_H
 
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/TargetParser/Triple.h"
@@ -40,11 +41,12 @@ public:
   static constexpr uint32_t NoJmpRelocationIndex = (1u << 30) - 1;
 
   Relocation(uint64_t Offset, MCSymbol *Symbol, uint32_t Type, uint64_t Addend,
-             uint64_t Value, bool IsRELR = false,
+             uint64_t Value, uint8_t ELFSymType = ELF::STT_NOTYPE,
+             bool IsRELR = false,
              uint32_t JmpRelocationIndex = NoJmpRelocationIndex)
       : Offset(Offset), Symbol(Symbol), Addend(Addend), Value(Value),
-        Type(Type), JmpRelocationIndex(JmpRelocationIndex), Optional(false),
-        IsRELR(IsRELR) {
+        Type(Type), ELFSymType(ELFSymType),
+        JmpRelocationIndex(JmpRelocationIndex), Optional(false), IsRELR(IsRELR) {
     assert((isRelative() || !isRELR()) &&
            "Only relative relocations can be relr.");
   }
@@ -71,6 +73,10 @@ public:
 
   /// Relocation type.
   uint32_t Type;
+
+  /// ELF type of the original input symbol. This can differ from the type of
+  /// the canonicalized MCSymbol above.
+  uint8_t ELFSymType = ELF::STT_NOTYPE;
 
 private:
   /// Original index in DT_JMPREL, or NoJmpRelocationIndex for relocations

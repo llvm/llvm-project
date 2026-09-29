@@ -3351,8 +3351,10 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   ErrorOr<BinarySection &> ReferencedSection{std::errc::bad_address};
   symbol_iterator SymbolIter = Rel.getSymbol();
+  uint8_t ELFSymType = ELF::STT_NOTYPE;
   if (SymbolIter != InputFile->symbol_end()) {
     SymbolRef Symbol = *SymbolIter;
+    ELFSymType = ELFSymbolRef(Symbol).getELFType();
     section_iterator Section =
         cantFail(Symbol.getSection(), "cannot get symbol section");
     if (Section != InputFile->section_end()) {
@@ -3639,7 +3641,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   if (IsFromCode)
     ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
-                                Addend, ExtractedValue);
+                                Addend, ExtractedValue, ELFSymType);
   else if (IsToCode || ForceRelocation)
     BC->addRelocation(Rel.getOffset(), ReferencedSymbol, RType, Addend,
                       ExtractedValue);

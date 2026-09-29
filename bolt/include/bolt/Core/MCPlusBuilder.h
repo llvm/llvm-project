@@ -1370,6 +1370,12 @@ public:
   /// Return true if the instruction is a tail call.
   bool isTailCall(const MCInst &Inst) const;
 
+  /// Mark a branch whose target is outside the current function.
+  void setExternalBranch(MCInst &Inst) const;
+
+  /// Return true if the branch target is outside the current function.
+  bool isExternalBranch(const MCInst &Inst) const;
+
   /// Stores NegateRAState annotation on \p Inst.
   void setNegateRAState(MCInst &Inst) const;
 

@@ -44,6 +44,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInst.h"
@@ -1386,7 +1387,8 @@ public:
   /// against \p Symbol.
   /// Assert if the \p Address is not inside this function.
   void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t RelType,
-                     uint64_t Addend, uint64_t Value);
+                     uint64_t Addend, uint64_t Value,
+                     uint8_t ELFSymType = ELF::STT_NOTYPE);
 
   /// Return locations (offsets) of data section relocations targeting internals
   /// of this functions.
@@ -2475,11 +2477,9 @@ public:
   /// Clear execution profile of the function.
   void clearProfile();
 
-  /// Converts conditional tail calls to unconditional tail calls. We do this to
-  /// handle conditional tail calls correctly and to give a chance to the
-  /// simplify conditional tail call pass to decide whether to re-optimize them
-  /// using profile information.
-  void removeConditionalTailCalls();
+  /// Split conditional tail calls and conditional external branches into local
+  /// CFG edges to blocks with unconditional transfers.
+  void removeConditionalExits();
 
   // Convert COUNT_NO_PROFILE to 0
   void removeTagsFromProfile();

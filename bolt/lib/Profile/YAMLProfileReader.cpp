@@ -70,7 +70,7 @@ void YAMLProfileReader::CallGraphMatcher::constructBFCG(
   for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
     for (const BinaryBasicBlock &BB : BF->blocks()) {
       for (const MCInst &Instr : BB) {
-        if (!BC.MIB->isCall(Instr))
+        if (!BC.MIB->isCall(Instr) && !BC.MIB->isExternalBranch(Instr))
           continue;
         const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);
         if (!CallSymbol)
@@ -268,9 +268,11 @@ bool YAMLProfileReader::parseFunctionProfile(
         ++MismatchedCalls;
         continue;
       }
-      if (!BC.MIB->isCall(*Instr) && !BC.MIB->isIndirectBranch(*Instr)) {
+      if (!BC.MIB->isCall(*Instr) && !BC.MIB->isIndirectBranch(*Instr) &&
+          !BC.MIB->isExternalBranch(*Instr)) {
         if (opts::Verbosity >= 2)
-          errs() << "BOLT-WARNING: expected call at offset " << YamlCSI.Offset
+          errs() << "BOLT-WARNING: expected call or external branch at offset "
+                 << YamlCSI.Offset
                  << " in block " << BB.getName() << '\n';
         ++MismatchedCalls;
         continue;
@@ -296,6 +298,9 @@ bool YAMLProfileReader::parseFunctionProfile(
         setAnnotation("CTCMispredCount", YamlCSI.Mispreds);
       } else {
         setAnnotation("Count", YamlCSI.Count);
+        if (BC.MIB->isExternalBranch(*Instr) &&
+            BC.MIB->isConditionalBranch(*Instr))
+          setAnnotation("MispredCount", YamlCSI.Mispreds);
       }
     }
 
