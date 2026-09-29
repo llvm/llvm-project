@@ -1029,3 +1029,19 @@ define arm_aapcs_vfpcc <4 x float> @vcvt_negative2(<4 x i32> %0) {
   %3 = fmul <4 x float> %2, <float 0xBE00000000000000, float 0xBE00000000000000, float 0xBE00000000000000, float 0xBE00000000000000>
   ret <4 x float> %3
 }
+
+define arm_aapcs_vfpcc <4 x float> @extra_4(<4 x i32> %2, ptr %p, i32 %i) {
+; CHECK-LABEL: extra_4:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    movs r2, #4
+; CHECK-NEXT:    eor r1, r1, #4
+; CHECK-NEXT:    vcvt.f32.s32 q0, q0, r2
+; CHECK-NEXT:    str r1, [r0]
+; CHECK-NEXT:    bx lr
+entry:
+  %3 = sitofp <4 x i32> %2 to <4 x float>
+  %4 = fmul nnan <4 x float> %3, splat (float 6.250000e-02)
+  %o = xor i32 %i, 4
+  store i32 %o, ptr %p
+  ret <4 x float> %4
+}
