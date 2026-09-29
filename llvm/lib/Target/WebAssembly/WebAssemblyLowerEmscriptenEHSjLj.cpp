@@ -295,7 +295,7 @@ static cl::list<std::string>
 
 namespace {
 class WebAssemblyLowerEmscriptenEHSjLjImpl {
-  bool EnableEmEH;     // Enable Emscripten exception handling
+  bool EnableEmEH = false; // Enable Emscripten exception handling
   bool EnableEmSjLj;   // Enable Emscripten setjmp/longjmp handling
   bool EnableWasmSjLj; // Enable Wasm setjmp/longjmp handling
   bool DoSjLj;         // Whether we actually perform setjmp/longjmp handling
@@ -359,15 +359,12 @@ class WebAssemblyLowerEmscriptenEHSjLjImpl {
 
 public:
   WebAssemblyLowerEmscriptenEHSjLjImpl(
-      bool EnableEmEH,
       std::function<DominatorTree &(Function &F)> GetDominatorTree)
-      : EnableEmEH(EnableEmEH), EnableEmSjLj(WebAssembly::WasmEnableEmSjLj),
+      : EnableEmSjLj(WebAssembly::WasmEnableEmSjLj),
         EnableWasmSjLj(WebAssembly::WasmEnableSjLj),
         GetDominatorTree(GetDominatorTree) {
     assert(!(EnableEmSjLj && EnableWasmSjLj) &&
            "Two SjLj modes cannot be turned on at the same time");
-    assert(!(EnableEmEH && EnableWasmSjLj) &&
-           "Wasm SjLj should be only used with Wasm EH");
     EHAllowlistSet.insert(EHAllowlist.begin(), EHAllowlist.end());
   }
 
@@ -375,8 +372,6 @@ public:
 };
 
 class WebAssemblyLowerEmscriptenEHSjLjLegacy final : public ModulePass {
-  bool EnableEmEH;
-
   StringRef getPassName() const override {
     return "WebAssembly Lower Emscripten Exceptions";
   }
@@ -384,8 +379,7 @@ class WebAssemblyLowerEmscriptenEHSjLjLegacy final : public ModulePass {
 public:
   static char ID;
 
-  WebAssemblyLowerEmscriptenEHSjLjLegacy(bool EnableEmEH = false)
-      : ModulePass(ID), EnableEmEH(EnableEmEH) {}
+  WebAssemblyLowerEmscriptenEHSjLjLegacy() : ModulePass(ID) {}
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -399,9 +393,8 @@ INITIALIZE_PASS(WebAssemblyLowerEmscriptenEHSjLjLegacy, DEBUG_TYPE,
                 "WebAssembly Lower Emscripten Exceptions / Setjmp / Longjmp",
                 false, false)
 
-ModulePass *
-llvm::createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(bool EnableEmEH) {
-  return new WebAssemblyLowerEmscriptenEHSjLjLegacy(EnableEmEH);
+ModulePass *llvm::createWebAssemblyLowerEmscriptenEHSjLjLegacyPass() {
+  return new WebAssemblyLowerEmscriptenEHSjLjLegacy();
 }
 
 static bool canThrow(const Value *V) {
@@ -927,10 +920,9 @@ static void nullifySetjmp(Function *F) {
 bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Lower Emscripten EH & SjLj **********\n");
 
-  // The Emscripten EH model may come from the "exception-model" module flag
-  // (e.g. when this pass is run standalone via opt) in addition to being
-  // threaded in from the TargetMachine.
-  EnableEmEH |= M.getExceptionModel() == ExceptionHandling::Emscripten;
+  EnableEmEH = M.getExceptionModel() == ExceptionHandling::Emscripten;
+  assert((!EnableEmEH || !EnableWasmSjLj) &&
+         "Wasm SjLj should be only used with Wasm EH");
 
   LLVMContext &C = M.getContext();
   IRBuilder<> IRB(C);
@@ -1877,7 +1869,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::handleLongjmpableCallsForWasmSjLj(
 
 bool WebAssemblyLowerEmscriptenEHSjLjLegacy::runOnModule(Module &M) {
   WebAssemblyLowerEmscriptenEHSjLjImpl Impl(
-      EnableEmEH, [&](Function &F) -> DominatorTree & {
+      [&](Function &F) -> DominatorTree & {
         return getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
       });
   return Impl.runOnModule(M);
@@ -1887,7 +1879,7 @@ PreservedAnalyses
 WebAssemblyLowerEmscriptenEHSjLjPass::run(Module &M,
                                           ModuleAnalysisManager &MAM) {
   WebAssemblyLowerEmscriptenEHSjLjImpl Impl(
-      EnableEmEH, [&](Function &F) -> DominatorTree & {
+      [&](Function &F) -> DominatorTree & {
         return MAM.getResult<FunctionAnalysisManagerModuleProxy>(M)
             .getManager()
             .getResult<DominatorTreeAnalysis>(F);
