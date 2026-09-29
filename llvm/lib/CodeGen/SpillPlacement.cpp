@@ -55,7 +55,7 @@ using namespace llvm;
 #define DEBUG_TYPE "spill-code-placement"
 
 static cl::opt<bool> EnableWaveProfiledSpill(
-    "enable-wave-profiled-spill", cl::Hidden, cl::init(false),
+    "enable-wave-profiled-spill", cl::Hidden, cl::init(true),
     cl::desc("Use validated AMDGPU wave counts for spill placement"));
 static cl::opt<bool> ReportWaveProfiledSpill(
     "report-wave-profiled-spill", cl::Hidden, cl::init(false),

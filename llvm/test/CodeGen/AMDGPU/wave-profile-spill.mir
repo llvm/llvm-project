@@ -8,28 +8,31 @@
 # RUN: llvm-as %t/use.ll -o %t/use.bc
 # RUN: llvm-dis %t/use.bc -o %t/roundtrip.ll
 # RUN: %python %t/mir.py %t/roundtrip.ll %t/body.mir > %t/use.mir
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/use.mir 2>&1 | FileCheck %s --check-prefix=WAVES
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -report-wave-profiled-spill -filetype=null %t/use.mir 2>&1 | FileCheck %s --check-prefix=OFF
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -report-wave-profiled-spill -filetype=null %t/use.mir 2>&1 | FileCheck %s --check-prefix=WAVES
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-wave-profiled-spill=false -run-pass=spill-code-placement -report-wave-profiled-spill -filetype=null %t/use.mir 2>&1 | FileCheck %s --check-prefix=OFF
 # RUN: %python %t/mir.py %t/diamond.ll %t/body.mir > %t/no-profile.mir
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/no-profile.mir 2>&1 | FileCheck %s --check-prefix=FALLBACK
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -report-wave-profiled-spill -filetype=null %t/no-profile.mir 2>&1 | FileCheck %s --check-prefix=FALLBACK
 # RUN: %python %t/mir.py %t/use.ll %t/x86.mir x86 > %t/x86-input.mir
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/x86-input.mir 2>&1 | FileCheck %s --check-prefix=FALLBACK
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=spill-code-placement -report-wave-profiled-spill -filetype=null %t/x86-input.mir 2>&1 | FileCheck %s --check-prefix=FALLBACK
 # RUN: %python %t/raw.py %t/gen.ll zero-entry > %t/zero.raw
 # RUN: llvm-profdata merge %t/zero.raw -o %t/zero.data
 # RUN: opt -passes=pgo-instr-use -pgo-instrument-entry -pgo-test-profile-file=%t/zero.data -S %t/diamond.ll -o %t/zero.ll
 # RUN: %python %t/mir.py %t/zero.ll %t/body.mir > %t/zero.mir
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/zero.mir 2>&1 | FileCheck %s --check-prefix=FALLBACK
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -report-wave-profiled-spill -filetype=null %t/zero.mir 2>&1 | FileCheck %s --check-prefix=FALLBACK
 # RUN: %python %t/mir.py %t/use.ll %t/duplicate.mir > %t/duplicate-input.mir
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/duplicate-input.mir 2>&1 | FileCheck %s --check-prefix=DUPLICATE
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -report-wave-profiled-spill -filetype=null %t/duplicate-input.mir 2>&1 | FileCheck %s --check-prefix=DUPLICATE
 # RUN: %python %t/mir.py %t/use.ll %t/redirected.mir > %t/redirected-input.mir
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/redirected-input.mir 2>&1 | FileCheck %s --check-prefix=REDIRECTED
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -report-wave-profiled-spill -filetype=null %t/redirected-input.mir 2>&1 | FileCheck %s --check-prefix=REDIRECTED
 # RUN: %python %t/mir.py %t/use.ll %t/unmapped.mir > %t/unmapped-input.mir
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -enable-wave-profiled-spill -report-wave-profiled-spill -filetype=null %t/unmapped-input.mir 2>&1 | FileCheck %s --check-prefix=UNMAPPED
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -report-wave-profiled-spill -filetype=null %t/unmapped-input.mir 2>&1 | FileCheck %s --check-prefix=UNMAPPED
 # RUN: %python %t/mir.py %t/use.ll %t/choice.mir > %t/choice-input.mir
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=greedy -stress-regalloc=2 -verify-regalloc -verify-machineinstrs -o - %t/choice-input.mir | FileCheck %s --check-prefix=ALLOC-OFF
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=greedy -stress-regalloc=2 -verify-regalloc -verify-machineinstrs -enable-wave-profiled-spill -o - %t/choice-input.mir | FileCheck %s --check-prefix=ALLOC-ON
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-wave-profiled-spill=false -run-pass=greedy -stress-regalloc=2 -verify-regalloc -verify-machineinstrs -o - %t/choice-input.mir | FileCheck %s --check-prefix=ALLOC-OFF
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=greedy -stress-regalloc=2 -verify-regalloc -verify-machineinstrs -o %t/default.mir %t/choice-input.mir
+# RUN: FileCheck %s --check-prefix=ALLOC-ON < %t/default.mir
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-wave-profiled-spill=true -run-pass=greedy -stress-regalloc=2 -verify-regalloc -verify-machineinstrs -o %t/explicit.mir %t/choice-input.mir
+# RUN: diff %t/default.mir %t/explicit.mir
 # RUN: %python %t/mir.py %t/diamond.ll %t/choice.mir > %t/choice-no-profile.mir
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=greedy -stress-regalloc=2 -verify-regalloc -verify-machineinstrs -enable-wave-profiled-spill -o - %t/choice-no-profile.mir | FileCheck %s --check-prefix=ALLOC-OFF
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=greedy -stress-regalloc=2 -verify-regalloc -verify-machineinstrs -o - %t/choice-no-profile.mir | FileCheck %s --check-prefix=ALLOC-OFF
 
 # The measured right arm has half the lane frequency but the same wave
 # frequency as entry. Direct costs require matching machine control flow.
