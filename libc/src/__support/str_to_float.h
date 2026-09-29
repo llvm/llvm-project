@@ -112,7 +112,7 @@ eisel_lemire(ExpandedFloat<T> init_num,
   mantissa <<= clz;
 
   int32_t exp_2 = exp10_to_exp2(exp_10) + FPBits::STORAGE_LEN +
-                 FPBits::EXP_BIAS - static_cast<int32_t>(clz);
+                  FPBits::EXP_BIAS - static_cast<int32_t>(clz);
 
   // Multiplication
   const uint64_t *power_of_ten =
@@ -435,9 +435,9 @@ LIBC_INLINE FloatConvertReturn<T> simple_decimal_conversion(
     final_mantissa >>= 1;
     ++exp_2;
 
-    // Check if this rounding causes exp_2 to go out of range and make the result
-    // INF. If this is the case, then finalMantissa and exp_2 are already the
-    // correct values for an INF result.
+    // Check if this rounding causes exp_2 to go out of range and make the
+    // result INF. If this is the case, then finalMantissa and exp_2 are already
+    // the correct values for an INF result.
     if (exp_2 >= FPBits::MAX_BIASED_EXPONENT) {
       output.error = ERANGE;
     }
