@@ -83,7 +83,7 @@ void D::y() {}
 // CIR-RTTI-SAME:        #cir.global_view<@_ZTI1D> : !cir.ptr<!u8i>,
 // CIR-COMMON-SAME:      #cir.global_view<@_ZN1A1vEv> : !cir.ptr<!u8i>
 // CIR-COMMON-SAME:    ]> : !cir.array<!cir.ptr<!u8i> x 4>
-// CIR-COMMON-SAME: }> : ![[REC_D_VTABLE]] {alignment = 8 : i64}
+// CIR-COMMON-SAME: }> : ![[REC_D_VTABLE]] align(8)
 
 // LLVM-COMMON:       @_ZTV1D = constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
 // LLVM-NO-RTTI-SAME:   [5 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr null, ptr @_ZN1B1wEv, ptr @_ZN1D1yEv],
@@ -114,7 +114,7 @@ void D::y() {}
 // CIR-COMMON-SAME:   #cir.global_view<@_ZTC1D16_1C, [1 : i32, 3 : i32]> : !cir.ptr<!u8i>,
 // CIR-COMMON-SAME:   #cir.global_view<@_ZTV1D, [2 : i32, 3 : i32]> : !cir.ptr<!u8i>,
 // CIR-COMMON-SAME:   #cir.global_view<@_ZTV1D, [1 : i32, 3 : i32]> : !cir.ptr<!u8i>
-// CIR-COMMON-SAME: ]> : !cir.array<!cir.ptr<!u8i> x 7> {alignment = 8 : i64}
+// CIR-COMMON-SAME: ]> : !cir.array<!cir.ptr<!u8i> x 7> align(8)
 
 // LLVM-COMMON:      @_ZTT1D = constant [7 x ptr] [
 // LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 24),
