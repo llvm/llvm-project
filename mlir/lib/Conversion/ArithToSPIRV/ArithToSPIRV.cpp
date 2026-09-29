@@ -734,7 +734,7 @@ struct IntToFPPattern final : public OpConversionPattern<ArithOp> {
 
     if (!srcType ||
         !(isa<IntegerType, FloatType>(getElementTypeOrSelf(srcType)) ||
-          isa<mlir::VectorType>(srcType))) {
+          isa<VectorType>(srcType))) {
       return rewriter.notifyMatchFailure(op,
                                          "unsupported type for uitofp/sitofp");
     }
