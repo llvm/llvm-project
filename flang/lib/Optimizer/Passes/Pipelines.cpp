@@ -241,7 +241,14 @@ void createDefaultFIRPostCFGOptimizerPassPipeline(
 
   pm.addPass(mlir::createSCFToControlFlowPass());
 
-  pm.addPass(mlir::createCanonicalizerPass(config));
+  // Keep the entry branch of expanded array assignments at O0. Bypassing it
+  // moves the next loop's PHI initializations into the preceding loop header,
+  // losing the statement's breakpoint location outside the loop. Disabling
+  // region simplification alone does not disable this operation pattern.
+  llvm::SmallVector<std::string> disabledPatterns;
+  if (pc.OptLevel == llvm::OptimizationLevel::O0)
+    disabledPatterns.push_back("SimplifyPassThroughCondBranch");
+  pm.addPass(mlir::createCanonicalizerPass(config, disabledPatterns));
   pm.addPass(fir::createSimplifyRegionLite());
   if (!pc.SkipConvertComplexPow)
     pm.addPass(fir::createConvertComplexPow());
