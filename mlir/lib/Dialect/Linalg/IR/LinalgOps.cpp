@@ -1492,7 +1492,7 @@ void GenericOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<EraseIdentityLinalgOp<GenericOp>>(context);
 }
 
-LogicalResult GenericOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
+OpFoldResults GenericOp::fold(FoldAdaptor) {
   return memref::foldMemRefCast(*this);
 }
 
@@ -2302,22 +2302,17 @@ Speculation::Speculatability TransposeOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
-LogicalResult TransposeOp::fold(FoldAdaptor adaptor,
-                                SmallVectorImpl<OpFoldResult> &result) {
+OpFoldResults TransposeOp::fold(FoldAdaptor adaptor) {
   // Only the tensor type is supported.
   if (!isa<TensorType>(getInput().getType()))
     return failure();
 
   // Single dimension transpose.
-  if (getPermutation().empty()) {
-    result.push_back(getInput());
-    return success();
-  }
+  if (getPermutation().empty())
+    return getInput();
   // Identity permutation.
-  if (isIdentityPermutation(getPermutation())) {
-    result.push_back(getInput());
-    return success();
-  }
+  if (isIdentityPermutation(getPermutation()))
+    return getInput();
 
   return failure();
 }
@@ -3160,7 +3155,7 @@ LogicalResult SoftmaxOp::getResultTilePosition(
 }
 
 // cast(dynamic) -> static.
-LogicalResult SoftmaxOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
+OpFoldResults SoftmaxOp::fold(FoldAdaptor) {
   return memref::foldMemRefCast(*this);
 }
 
@@ -4267,7 +4262,7 @@ LogicalResult MatmulOp::verify() {
   return success();
 }
 
-LogicalResult MatmulOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
+OpFoldResults MatmulOp::fold(FoldAdaptor) {
   return memref::foldMemRefCast(*this);
 }
 
@@ -4861,7 +4856,7 @@ LogicalResult ContractOp::verify() {
                                [&]() { return emitError(); });
 }
 
-LogicalResult ContractOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
+OpFoldResults ContractOp::fold(FoldAdaptor) {
   return memref::foldMemRefCast(*this);
 }
 
@@ -5059,8 +5054,7 @@ LogicalResult BatchMatmulOp::verify() {
   return success();
 }
 
-LogicalResult BatchMatmulOp::fold(FoldAdaptor,
-                                  SmallVectorImpl<OpFoldResult> &) {
+OpFoldResults BatchMatmulOp::fold(FoldAdaptor) {
   return memref::foldMemRefCast(*this);
 }
 
@@ -5272,8 +5266,7 @@ void ElementwiseOp::regionBuilder(
   helper.yieldOutputs(yields);
 }
 
-LogicalResult ElementwiseOp::fold(FoldAdaptor,
-                                  SmallVectorImpl<OpFoldResult> &) {
+OpFoldResults ElementwiseOp::fold(FoldAdaptor) {
   return memref::foldMemRefCast(*this);
 }
 
@@ -6265,9 +6258,7 @@ bool PackOp::isLikePad() {
   return isLikePadUnPad(*this, packedTensorType);
 }
 
-::mlir::LogicalResult
-PackOp::fold(FoldAdaptor adaptor,
-             ::llvm::SmallVectorImpl<OpFoldResult> &results) {
+::mlir::OpFoldResults PackOp::fold(FoldAdaptor adaptor) {
   if (!hasPureTensorSemantics())
     return failure();
   std::optional<Attribute> paddingValue;
@@ -6275,10 +6266,8 @@ PackOp::fold(FoldAdaptor adaptor,
     paddingValue = pad;
   if (OpFoldResult reshapedSource = reshapeConstantSource(
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
-          cast<TensorType>(getDestType()), paddingValue)) {
-    results.push_back(reshapedSource);
-    return success();
-  }
+          cast<TensorType>(getDestType()), paddingValue))
+    return reshapedSource;
   return failure();
 }
 
@@ -6748,19 +6737,15 @@ bool UnPackOp::isLikeUnPad() {
   return isLikePadUnPad(*this, packedTensorType);
 }
 
-::mlir::LogicalResult
-UnPackOp::fold(FoldAdaptor adaptor,
-               ::llvm::SmallVectorImpl<OpFoldResult> &results) {
+::mlir::OpFoldResults UnPackOp::fold(FoldAdaptor adaptor) {
   // TODO: Support Memref UnPackOp. Temporarily return failure.
   if (!hasPureTensorSemantics())
     return failure();
 
   if (OpFoldResult reshapedSource = reshapeConstantSource(
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
-          cast<TensorType>(getResult().getType()))) {
-    results.push_back(reshapedSource);
-    return success();
-  }
+          cast<TensorType>(getResult().getType())))
+    return reshapedSource;
   return failure();
 }
 
@@ -7001,8 +6986,7 @@ LogicalResult BatchReduceMatmulOp::verify() {
   }
   return success();
 }
-LogicalResult BatchReduceMatmulOp::fold(FoldAdaptor,
-                                        SmallVectorImpl<OpFoldResult> &) {
+OpFoldResults BatchReduceMatmulOp::fold(FoldAdaptor) {
   return memref::foldMemRefCast(*this);
 }
 void BatchReduceMatmulOp::getEffects(
@@ -7303,8 +7287,7 @@ LogicalResult ScaledContractOp::verify() {
   return success();
 }
 
-LogicalResult ScaledContractOp::fold(FoldAdaptor,
-                                     SmallVectorImpl<OpFoldResult> &) {
+OpFoldResults ScaledContractOp::fold(FoldAdaptor) {
   return memref::foldMemRefCast(*this);
 }
 

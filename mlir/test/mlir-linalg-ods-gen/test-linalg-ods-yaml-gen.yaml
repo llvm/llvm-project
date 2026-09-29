@@ -103,6 +103,9 @@ structured_op: !LinalgStructuredOpConfig
 #   IMPL-DAG:  Value [[VAL3:[a-z0-9]+]] = helper.buildTypeFn(castVal, block.getArgument(0).getType(), [[VAL2]], emitError);
 #   IMPL-DAG:  Value [[VAL4:[a-z0-9]+]] = helper.buildBinaryFn(BinaryFn::add, [[VAL1]], [[VAL3]], emitError);
 
+#       IMPL:  OpFoldResults Test1Op::fold(FoldAdaptor) {
+#  IMPL-NEXT:    return memref::foldMemRefCast(*this);
+
 
 # @linalg_structured_op
 # def test2(I=TensorDef(T, S.M, S.N),
