@@ -58,17 +58,17 @@ protected:
     KernelFunc(detail::Builder::getElement(detail::declptr<ElementType>()));
   }
 
-  template <typename KN, typename... Args>
-  void sycl_kernel_launch(const char *KernelName, Args &&...args) {
-    static_assert(
-        sizeof...(args) == 1,
-        "sycl_kernel_launch expects only 2 arguments now: name of kernel and "
-        "callable object passed to kernel invocation by the user.");
+  template <typename KI, typename... Args>
+  void sycl_kernel_launch(Args &&...args) {
+    static_assert(sizeof...(args) == 1,
+                  "sycl_kernel_launch expects only 1 argument now: the "
+                  "callable object passed to kernel invocation by the user.");
 
     auto FirstArg = std::get<0>(std::tie(args...));
     static_cast<DerivedT *>(this)->submitKernelImpl(
-        detail::getDeviceKernelInfo<KN>(KernelName), &FirstArg,
-        sizeof(FirstArg));
+        detail::getDeviceKernelInfo<typename KI::kernel_name>(
+            KI::kernel_entry_point_name),
+        &FirstArg, sizeof(FirstArg));
   }
 
   template <typename KernelName, int Dims, template <int> class Range,

@@ -26,7 +26,7 @@ int foo() {
   return 1;
 }
 
-template <typename Name, typename... Ts>
+template <typename KernelInfo, typename... Ts>
 void sycl_kernel_launch(Ts...) {}
 
 template <typename Name, typename Func>

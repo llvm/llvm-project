@@ -11,8 +11,8 @@
 // is selected by overload resolution.
 
 // A generic kernel launch function.
-template<typename KernelName, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
+template<typename KernelInfo, typename... Ts>
+void sycl_kernel_launch(Ts...) {}
 
 // FIXME: C++23 [temp.expl.spec]p12 states:
 // FIXME:   ... Similarly, attributes appearing in the declaration of a template
