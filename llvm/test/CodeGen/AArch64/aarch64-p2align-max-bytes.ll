@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=aarch64-none-linux-gnu -max-bytes-for-alignment=8 --align-loops=32 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-EXPLICIT
-; RUN: llc -mtriple=aarch64-none-linux-gnu --align-loops=32 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-IMPLICIT
-; RUN: llc -mtriple=aarch64-none-linux-gnu --align-loops=32 < %s -o - --filetype=obj | llvm-objdump --arch=aarch64  -d -| FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-IMPLICIT
-; RUN: llc -mtriple=aarch64-none-linux-gnu -max-bytes-for-alignment=8 --align-loops=32 < %s -o - --filetype=obj | llvm-objdump --arch=aarch64  -d -| FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-EXPLICIT
+; RUN: llc -mtriple=aarch64-none-linux-gnu -max-bytes-for-alignment=8 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-EXPLICIT
+; RUN: llc -mtriple=aarch64-none-linux-gnu < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-IMPLICIT
+; RUN: llc -mtriple=aarch64-none-linux-gnu < %s -o - --filetype=obj | llvm-objdump --arch=aarch64  -d -| FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-IMPLICIT
+; RUN: llc -mtriple=aarch64-none-linux-gnu -max-bytes-for-alignment=8 < %s -o - --filetype=obj | llvm-objdump --arch=aarch64  -d -| FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-EXPLICIT
 
 ; This test is checking that the correct operands to the .p2align are emitted correctly, and that the resulting obj
 ; is padded as expected. The key interest in the CHECK-OBJ-* sections is the size of the padding region (the nops),
@@ -59,7 +59,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %11 = add <4 x i32> %9, %wide.load16
   %index.next = add nuw i64 %index, 8
   %12 = icmp eq i64 %index.next, %n.vec
-  br i1 %12, label %middle.block, label %vector.body
+  br i1 %12, label %middle.block, label %vector.body, !llvm.loop !0
 
 middle.block:                                     ; preds = %vector.body
   %bin.rdx = add <4 x i32> %11, %10
@@ -87,7 +87,10 @@ for.body:                                         ; preds = %for.body.preheader1
   %add3 = add i32 %add, %15
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 }
 
 declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.align", i32 32}
