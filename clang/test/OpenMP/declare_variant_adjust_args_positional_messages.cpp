@@ -176,6 +176,18 @@ void h6(int *aaa, int *bbb, ...);
   adjust_args(need_device_ptr: 1.5)
 void h7(int *aaa, int *bbb, ...);
 
+// A position with a dependent type is checked when the template is
+// instantiated.
+template <typename T, T N>
+void dependent_type_v(int *aaa, int *bbb, ...);
+
+#pragma omp declare variant(dependent_type_v<T, N>) \
+  match(construct={dispatch}) adjust_args(need_device_ptr: N)
+template <typename T, T N>
+void dependent_type(int *aaa, int *bbb, ...) {}
+
+template void dependent_type<int, 2>(int *, int *, ...);
+
 // need_device_addr's reference-type restriction is not scoped to named items
 // (OpenMP 6.0 [9.6.2]), so a position is checked too.
 // expected-error@+2 {{expected reference type argument on 'adjust_args' clause with 'need_device_addr' modifier}}

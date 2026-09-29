@@ -7905,8 +7905,7 @@ enum class OMPAdjustArgsVal { Known, Dependent, Invalid };
 static OMPAdjustArgsVal checkOMPAdjustArgsValue(SemaOpenMP &S, Expr *E,
                                                 bool StrictlyPositive,
                                                 llvm::APSInt &Result) {
-  if (E->isValueDependent() || E->isTypeDependent() ||
-      E->isInstantiationDependent())
+  if (E->isInstantiationDependent())
     return OMPAdjustArgsVal::Dependent; // re-checked on instantiation
   if (S.SemaRef.VerifyIntegerConstantExpression(E, &Result).isInvalid())
     return OMPAdjustArgsVal::Invalid; // already diagnosed
@@ -7961,7 +7960,7 @@ static SourceLocation getOMPAdjustArgsItemLoc(const OMPAdjustArgsItem &Item,
 
 void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
     FunctionDecl *FD, Expr *VariantRef, OMPTraitInfo &TI,
-    ArrayRef<OMPAdjustArgsClause> AdjustArgs,
+    ArrayRef<OMPAdjustArgsClause *> AdjustArgs,
     ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
     SourceLocation AppendArgsLoc, SourceRange SR) {
 
@@ -7992,8 +7991,8 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
   llvm::SmallPtrSet<const VarDecl *, 4> AdjustVars; // named items
   llvm::SmallSet<uint64_t, 4> AdjustPositions;      // literal positional items
 
-  for (const OMPAdjustArgsClause &Clause : AdjustArgs) {
-    for (const OMPAdjustArgsItem &ItemInfo : Clause.Items) {
+  for (const OMPAdjustArgsClause *Clause : AdjustArgs) {
+    for (const OMPAdjustArgsItem &ItemInfo : Clause->items()) {
       // OpenMP 6.0 [5.2.1]: a parameter range 'lb:ub'. A range is
       // exempt from the duplicate restriction above — it is one item
       // identifying one or more parameters — so nothing is recorded for
@@ -8035,7 +8034,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
       // OpenMP 6.0 [5.2.1]: the position of a parameter, given as a
       // positive constant integer expression. A dependent item is skipped
       // here and rechecked when the template is instantiated.
-      if (Item->getType()->isIntegerType()) {
+      if (Item->isTypeDependent() || Item->getType()->isIntegerType()) {
         llvm::APSInt Pos;
         switch (checkOMPAdjustArgsValue(*this, Item,
                                         /*StrictlyPositive=*/true, Pos)) {
@@ -8046,7 +8045,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
         case OMPAdjustArgsVal::Known:
           if (!AdjustPositions.insert(Pos.getZExtValue()).second) {
             Diag(Item->getExprLoc(), diag::err_omp_adjust_arg_multiple_clauses)
-                << static_cast<unsigned>(Pos.getZExtValue());
+                << Pos;
             return;
           }
           continue;
@@ -8068,10 +8067,10 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
   // so positions and ranges are checked too, via the shared item-to-positions
   // resolver.
   if (getLangOpts().OpenMP >= 60) {
-    for (const OMPAdjustArgsClause &Clause : AdjustArgs) {
-      if (Clause.AdjustOp != OMPC_ADJUST_ARGS_need_device_addr)
+    for (const OMPAdjustArgsClause *Clause : AdjustArgs) {
+      if (Clause->AdjustOp != OMPC_ADJUST_ARGS_need_device_addr)
         continue;
-      for (const OMPAdjustArgsItem &Item : Clause.Items) {
+      for (const OMPAdjustArgsItem &Item : Clause->items()) {
         SmallVector<unsigned, 8> Positions;
         // With no call site in hand, 'omp_num_args' is the declared parameter
         // count (OpenMP 6.0 [20.1]). Positions past it denote variadic
@@ -8101,7 +8100,7 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
 
   auto *NewAttr = OMPDeclareVariantAttr::CreateImplicit(
       getASTContext(), VariantRef, &TI,
-      const_cast<OMPAdjustArgsClause *>(AdjustArgs.data()), AdjustArgs.size(),
+      const_cast<OMPAdjustArgsClause **>(AdjustArgs.data()), AdjustArgs.size(),
       const_cast<OMPInteropInfo *>(AppendArgs.data()), AppendArgs.size(), SR);
   FD->addAttr(NewAttr);
 }

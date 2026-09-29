@@ -14,7 +14,7 @@
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Type.h"
 #include <optional>
 #include <type_traits>
@@ -230,14 +230,14 @@ void OMPDeclareVariantAttr::printPrettyPragma(
     OS << ":";
     PrintBound(Item.Upper);
   };
-  for (const OMPAdjustArgsClause &Clause : adjustArgs()) {
+  for (const OMPAdjustArgsClause *Clause : adjustArgs()) {
     OS << " adjust_args("
        << getOpenMPSimpleClauseTypeName(llvm::omp::OMPC_adjust_args,
-                                        Clause.AdjustOp);
-    if (Clause.AdjustOp == OMPC_ADJUST_ARGS_need_device_ptr &&
-        Clause.NeedDevicePtrModifier != OMPC_NEED_DEVICE_PTR_unknown) {
+                                        Clause->AdjustOp);
+    if (Clause->AdjustOp == OMPC_ADJUST_ARGS_need_device_ptr &&
+        Clause->NeedDevicePtrModifier != OMPC_NEED_DEVICE_PTR_unknown) {
       OS << "(";
-      switch (Clause.NeedDevicePtrModifier) {
+      switch (Clause->NeedDevicePtrModifier) {
       case OMPC_NEED_DEVICE_PTR_fb_nullify:
         OS << "fb_nullify";
         break;
@@ -250,11 +250,11 @@ void OMPDeclareVariantAttr::printPrettyPragma(
       OS << ")";
     }
     OS << ":";
-    if (!Clause.Items.empty() &&
-        Clause.Items.front().Kind == OMPAdjustArgsItem::Range &&
-        Clause.Items.front().Lower.Kind == OMPAdjustArgsItem::Bound::Omitted)
+    ArrayRef<OMPAdjustArgsItem> Items = Clause->items();
+    if (!Items.empty() && Items.front().Kind == OMPAdjustArgsItem::Range &&
+        Items.front().Lower.Kind == OMPAdjustArgsItem::Bound::Omitted)
       OS << " ";
-    llvm::interleave(Clause.Items, PrintItem, [&OS] { OS << ","; });
+    llvm::interleave(Items, PrintItem, [&OS] { OS << ","; });
     OS << ")";
   }
 
@@ -430,15 +430,15 @@ static bool equalOMPAdjustArgsItems(const OMPAdjustArgsItem &A,
 }
 
 template <>
-bool equalAttrArgs<OMPAdjustArgsClause>(OMPAdjustArgsClause A,
-                                        OMPAdjustArgsClause B,
-                                        StructuralEquivalenceContext &Context) {
-  if (A.AdjustOp != B.AdjustOp ||
-      A.NeedDevicePtrModifier != B.NeedDevicePtrModifier ||
-      A.Items.size() != B.Items.size())
+bool equalAttrArgs<OMPAdjustArgsClause *>(
+    OMPAdjustArgsClause *A, OMPAdjustArgsClause *B,
+    StructuralEquivalenceContext &Context) {
+  if (A->AdjustOp != B->AdjustOp ||
+      A->NeedDevicePtrModifier != B->NeedDevicePtrModifier ||
+      A->items().size() != B->items().size())
     return false;
-  for (unsigned I = 0, E = A.Items.size(); I != E; ++I)
-    if (!equalOMPAdjustArgsItems(A.Items[I], B.Items[I], Context))
+  for (unsigned I = 0, E = A->items().size(); I != E; ++I)
+    if (!equalOMPAdjustArgsItems(A->items()[I], B->items()[I], Context))
       return false;
   return true;
 }
@@ -566,13 +566,13 @@ static void profileOMPAdjustArgsItem(llvm::FoldingSetNodeID &ID,
 }
 
 template <>
-inline void profileAttrArg<OMPAdjustArgsClause>(llvm::FoldingSetNodeID &ID,
-                                                const ASTContext &Ctx,
-                                                OMPAdjustArgsClause Clause) {
-  ID.AddInteger(Clause.AdjustOp);
-  ID.AddInteger(Clause.NeedDevicePtrModifier);
-  ID.AddInteger(Clause.Items.size());
-  for (const OMPAdjustArgsItem &Item : Clause.Items)
+inline void profileAttrArg<OMPAdjustArgsClause *>(
+    llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+    OMPAdjustArgsClause *Clause) {
+  ID.AddInteger(Clause->AdjustOp);
+  ID.AddInteger(Clause->NeedDevicePtrModifier);
+  ID.AddInteger(Clause->items().size());
+  for (const OMPAdjustArgsItem &Item : Clause->items())
     profileOMPAdjustArgsItem(ID, Ctx, Item);
 }
 

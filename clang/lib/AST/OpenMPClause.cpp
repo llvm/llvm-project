@@ -31,6 +31,17 @@ using namespace clang;
 using namespace llvm;
 using namespace omp;
 
+OMPAdjustArgsClause *OMPAdjustArgsClause::Create(
+    const ASTContext &C, OpenMPAdjustArgsOpKind AdjustOp,
+    OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+    ArrayRef<OMPAdjustArgsItem> Items) {
+  void *Mem = C.Allocate(totalSizeToAlloc<OMPAdjustArgsItem>(Items.size()));
+  auto *Clause = new (Mem)
+      OMPAdjustArgsClause(AdjustOp, NeedDevicePtrModifier, Items.size());
+  llvm::copy(Items, Clause->getTrailingObjects());
+  return Clause;
+}
+
 OMPClause::child_range OMPClause::children() {
   switch (getClauseKind()) {
   default:
@@ -3287,7 +3298,7 @@ static bool evalOMPAdjustArgsBound(const OMPAdjustArgsItem::Bound &Bound,
       std::optional<llvm::APSInt> Val = OffsetExpr->getIntegerConstantExpr(Ctx);
       if (!Val)
         return false;
-      Offset = Val->getExtValue();
+      Offset = Val->getLimitedValue(INT32_MAX);
     }
     Result = static_cast<int64_t>(NumArgs) +
              (Bound.IsSubtraction ? -Offset : Offset);
@@ -3301,7 +3312,7 @@ static bool evalOMPAdjustArgsBound(const OMPAdjustArgsItem::Bound &Bound,
   std::optional<llvm::APSInt> Val = E->getIntegerConstantExpr(Ctx);
   if (!Val)
     return false;
-  Result = Val->getExtValue();
+  Result = Val->getLimitedValue(INT32_MAX);
   return true;
 }
 
@@ -3354,7 +3365,7 @@ bool clang::resolveOMPAdjustArgsItem(const OMPAdjustArgsItem &Item,
     std::optional<llvm::APSInt> Val = E->getIntegerConstantExpr(Ctx);
     if (!Val)
       return false;
-    AppendIfInRange(Val->getExtValue());
+    AppendIfInRange(Val->getLimitedValue(INT32_MAX));
     return true;
   }
 

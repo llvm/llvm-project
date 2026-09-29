@@ -48,6 +48,54 @@ namespace clang {
 
 class ASTContext;
 
+/// One item in an OpenMP 'adjust_args' parameter list.
+struct OMPAdjustArgsItem final {
+  /// One bound of a parameter range.
+  struct Bound final {
+    enum BoundKind : uint8_t { Omitted, Expression, NumArgs };
+
+    BoundKind Kind = Omitted;
+    /// The bound expression, or the logical offset for a NumArgs bound.
+    Expr *E = nullptr;
+    bool IsSubtraction = false;
+  };
+
+  enum ItemKind : uint8_t { Single, Range };
+
+  ItemKind Kind = Single;
+  /// A named parameter or positional expression for a Single item.
+  Expr *E = nullptr;
+  Bound Lower;
+  Bound Upper;
+};
+
+/// The source-level contents of one OpenMP 'adjust_args' clause.
+class OMPAdjustArgsClause final
+    : private llvm::TrailingObjects<OMPAdjustArgsClause, OMPAdjustArgsItem> {
+  friend TrailingObjects;
+
+  unsigned NumItems;
+
+  OMPAdjustArgsClause(OpenMPAdjustArgsOpKind AdjustOp,
+                      OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+                      unsigned NumItems)
+      : NumItems(NumItems), AdjustOp(AdjustOp),
+        NeedDevicePtrModifier(NeedDevicePtrModifier) {}
+
+public:
+  OpenMPAdjustArgsOpKind AdjustOp;
+  OpenMPNeedDevicePtrModifier NeedDevicePtrModifier;
+
+  static OMPAdjustArgsClause *
+  Create(const ASTContext &C, OpenMPAdjustArgsOpKind AdjustOp,
+         OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+         ArrayRef<OMPAdjustArgsItem> Items);
+
+  ArrayRef<OMPAdjustArgsItem> items() const {
+    return {getTrailingObjects(), NumItems};
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // AST classes for clauses.
 //===----------------------------------------------------------------------===//

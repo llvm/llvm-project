@@ -1371,7 +1371,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
       Actions.OpenMP().getOMPTraitInfoForSurroundingScope();
   ASTContext &ASTCtx = Actions.getASTContext();
   OMPTraitInfo &TI = ASTCtx.getNewOMPTraitInfo();
-  SmallVector<OMPAdjustArgsClause, 3> AdjustArgs;
+  SmallVector<OMPAdjustArgsClause *, 3> AdjustArgs;
   SmallVector<OMPInteropInfo, 3> AppendArgs;
   SourceLocation AdjustArgsLoc, AppendArgsLoc;
 
@@ -1411,15 +1411,16 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
             Item.E = E;
             Items.push_back(Item);
           }
-          OMPAdjustArgsClause Clause;
-          Clause.AdjustOp =
+          OpenMPAdjustArgsOpKind AdjustOp =
               static_cast<OpenMPAdjustArgsOpKind>(Data.ExtraModifier);
+          OpenMPNeedDevicePtrModifier NeedDevicePtrModifier =
+              OMPC_NEED_DEVICE_PTR_unknown;
           if (Data.NeedDevicePtrModifierLoc.isValid())
-            Clause.NeedDevicePtrModifier =
+            NeedDevicePtrModifier =
                 static_cast<OpenMPNeedDevicePtrModifier>(
                     Data.NeedDevicePtrModifier);
-          Clause.Items = std::move(Items);
-          AdjustArgs.push_back(std::move(Clause));
+          AdjustArgs.push_back(OMPAdjustArgsClause::Create(
+              ASTCtx, AdjustOp, NeedDevicePtrModifier, Items));
         }
         break;
       }
@@ -4841,6 +4842,7 @@ bool Parser::ParseOpenMPAdjustArgsBound(OMPAdjustArgsItem::Bound &Bound) {
 bool Parser::ParseOpenMPAdjustArgsList(
     SmallVectorImpl<OMPAdjustArgsItem> &Items) {
   bool IsError = false;
+  ColonProtectionRAIIObject ColonRAII(*this);
   while (true) {
     SourceLocation ItemLoc = Tok.getLocation();
     // An omitted lower bound stands for 1, and is written as a leading ':'.

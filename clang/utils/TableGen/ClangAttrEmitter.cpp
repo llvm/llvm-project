@@ -972,31 +972,31 @@ namespace {
   class VariadicOMPAdjustArgsClauseArgument : public VariadicArgument {
   public:
     VariadicOMPAdjustArgsClauseArgument(const Record &Arg, StringRef Attr)
-        : VariadicArgument(Arg, Attr, "OMPAdjustArgsClause") {}
+        : VariadicArgument(Arg, Attr, "OMPAdjustArgsClause *") {}
 
     void writeDump(raw_ostream &OS) const override {
       OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
          << "_iterator I = SA->" << getLowerName() << "_begin(), E = SA->"
          << getLowerName() << "_end(); I != E; ++I)\n";
       OS << "      OS << \" \" << getOpenMPSimpleClauseTypeName("
-            "llvm::omp::OMPC_adjust_args, I->AdjustOp);\n";
+            "llvm::omp::OMPC_adjust_args, (*I)->AdjustOp);\n";
     }
 
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    unsigned " << getLowerName() << "Size = Record.readInt();\n";
-      OS << "    SmallVector<OMPAdjustArgsClause, 4> " << getLowerName()
+      OS << "    SmallVector<OMPAdjustArgsClause *, 4> " << getLowerName()
          << ";\n";
       OS << "    " << getLowerName() << ".reserve(" << getLowerName()
          << "Size);\n";
       OS << "    for (unsigned I = 0, E = " << getLowerName()
          << "Size; I != E; ++I) {\n";
-      OS << "      OMPAdjustArgsClause Clause;\n";
-      OS << "      Clause.AdjustOp = static_cast<OpenMPAdjustArgsOpKind>("
-            "Record.readInt());\n";
-      OS << "      Clause.NeedDevicePtrModifier = "
+      OS << "      OpenMPAdjustArgsOpKind AdjustOp = "
+            "static_cast<OpenMPAdjustArgsOpKind>(Record.readInt());\n";
+      OS << "      OpenMPNeedDevicePtrModifier NeedDevicePtrModifier = "
             "static_cast<OpenMPNeedDevicePtrModifier>(Record.readInt());\n";
       OS << "      unsigned NumItems = Record.readInt();\n";
-      OS << "      Clause.Items.reserve(NumItems);\n";
+      OS << "      SmallVector<OMPAdjustArgsItem, 4> Items;\n";
+      OS << "      Items.reserve(NumItems);\n";
       OS << "      for (unsigned J = 0; J != NumItems; ++J) {\n";
       OS << "        OMPAdjustArgsItem Item;\n";
       OS << "        Item.Kind = static_cast<OMPAdjustArgsItem::ItemKind>("
@@ -1011,20 +1011,22 @@ namespace {
         OS << "        Item." << Bound
            << ".IsSubtraction = Record.readBool();\n";
       }
-      OS << "        Clause.Items.push_back(Item);\n";
+      OS << "        Items.push_back(Item);\n";
       OS << "      }\n";
-      OS << "      " << getLowerName() << ".push_back(std::move(Clause));\n";
+      OS << "      " << getLowerName()
+         << ".push_back(OMPAdjustArgsClause::Create("
+            "Context, AdjustOp, NeedDevicePtrModifier, Items));\n";
       OS << "    }\n";
     }
 
     void writePCHWrite(raw_ostream &OS) const override {
       OS << "    Record.push_back(SA->" << getLowerName() << "_size());\n";
-      OS << "    for (const OMPAdjustArgsClause &Clause : SA->"
+      OS << "    for (const OMPAdjustArgsClause *Clause : SA->"
          << getLowerName() << "()) {\n";
-      OS << "      Record.push_back(Clause.AdjustOp);\n";
-      OS << "      Record.push_back(Clause.NeedDevicePtrModifier);\n";
-      OS << "      Record.push_back(Clause.Items.size());\n";
-      OS << "      for (const OMPAdjustArgsItem &Item : Clause.Items) {\n";
+      OS << "      Record.push_back(Clause->AdjustOp);\n";
+      OS << "      Record.push_back(Clause->NeedDevicePtrModifier);\n";
+      OS << "      Record.push_back(Clause->items().size());\n";
+      OS << "      for (const OMPAdjustArgsItem &Item : Clause->items()) {\n";
       OS << "        Record.push_back(Item.Kind);\n";
       OS << "        Record.writeBool(Item.E != nullptr);\n";
       OS << "        if (Item.E) Record.AddStmt(Item.E);\n";
@@ -1040,9 +1042,9 @@ namespace {
     }
 
     void writeASTVisitorTraversal(raw_ostream &OS) const override {
-      OS << "  for (OMPAdjustArgsClause &Clause : A->" << getLowerName()
+      OS << "  for (OMPAdjustArgsClause *Clause : A->" << getLowerName()
          << "())\n";
-      OS << "    for (OMPAdjustArgsItem &Item : Clause.Items) {\n";
+      OS << "    for (const OMPAdjustArgsItem &Item : Clause->items()) {\n";
       for (StringRef E : {"Item.E", "Item.Lower.E", "Item.Upper.E"}) {
         OS << "      if (" << E << " && !getDerived().TraverseStmt(" << E
            << "))\n";
@@ -1052,9 +1054,9 @@ namespace {
     }
 
     void writeDumpChildren(raw_ostream &OS) const override {
-      OS << "    for (const OMPAdjustArgsClause &Clause : SA->"
+      OS << "    for (const OMPAdjustArgsClause *Clause : SA->"
          << getLowerName() << "())\n";
-      OS << "      for (const OMPAdjustArgsItem &Item : Clause.Items) {\n";
+      OS << "      for (const OMPAdjustArgsItem &Item : Clause->items()) {\n";
       for (StringRef E : {"Item.E", "Item.Lower.E", "Item.Upper.E"})
         OS << "        if (" << E << ") Visit(" << E << ");\n";
       OS << "      }\n";
