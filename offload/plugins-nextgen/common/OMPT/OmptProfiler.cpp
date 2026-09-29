@@ -19,52 +19,6 @@
 
 using namespace llvm::omp::target;
 
-void ompt::OmptProfilerTy::handleInit(plugin::GenericDeviceTy *Device,
-                                      plugin::GenericPluginTy *Plugin) {
-  auto DeviceId = Device->getDeviceId();
-  auto DevicePtr = reinterpret_cast<ompt_device_t *>(Device);
-  ompt::setDeviceId(DevicePtr, Plugin->getUserId(DeviceId));
-
-  if (ompt::Initialized) {
-    bool ExpectedStatus = false;
-    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
-      performOmptCallback(device_initialize, Plugin->getUserId(DeviceId),
-                          /*type=*/Device->getComputeUnitKind().c_str(),
-                          /*device=*/DevicePtr,
-                          /*lookup=*/ompt::lookupDeviceTracingFn,
-                          /*documentation=*/nullptr);
-  }
-}
-
-void ompt::OmptProfilerTy::handleDeinit(
-    plugin::GenericDeviceTy *Device, target::plugin::GenericPluginTy *Plugin) {
-  auto DeviceId = Device->getDeviceId();
-
-  if (ompt::Initialized) {
-    bool ExpectedStatus = true;
-    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
-      performOmptCallback(device_finalize, Plugin->getUserId(DeviceId));
-  }
-  ompt::removeDeviceId(reinterpret_cast<ompt_device_t *>(Device));
-}
-
-void ompt::OmptProfilerTy::handleLoadBinary(plugin::GenericDeviceTy *Device,
-                                            plugin::GenericPluginTy *Plugin,
-                                            const StringRef InputTgtImage) {
-
-  if (!ompt::Initialized)
-    return;
-
-  auto DeviceId = Device->getDeviceId();
-  size_t Bytes = InputTgtImage.size();
-  performOmptCallback(
-      device_load, Plugin->getUserId(DeviceId),
-      /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
-      /*ImgSize=*/Bytes,
-      /*HostAddr=*/const_cast<unsigned char *>(InputTgtImage.bytes_begin()),
-      /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
-}
-
 void ompt::OmptProfilerTy::handleDataAlloc(uint64_t StartNanos,
                                            uint64_t EndNanos, void *HostPtr,
                                            uint64_t Size, void *Data) {
