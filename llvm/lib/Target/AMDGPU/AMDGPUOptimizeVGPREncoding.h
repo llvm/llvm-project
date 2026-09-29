@@ -13,7 +13,7 @@
 
 namespace llvm {
 class AMDGPUOptimizeVGPREncodingPass
-    : public detail::PassInfoMixin<AMDGPUOptimizeVGPREncodingPass> {
+    : public OptionalPassInfoMixin<AMDGPUOptimizeVGPREncodingPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
