@@ -1,15 +1,15 @@
-; RUN: opt -force-target-supports-scalable-vectors -scalable-vectorization=preferred -passes=loop-vectorize -S %s | FileCheck %s
+; RUN: opt -force-target-supports-scalable-vectors -scalable-vectorization=off -passes=loop-vectorize -S %s | FileCheck %s
 ;
-; Clang lowers "#pragma clang loop vectorize(disable) interleave_count(1)" to
-; width 1, scalable.disable and interleave count 1.
-
-; Ensure the scalable preference does not override the usual fixed-width meaning
-; of that width hint:
-;   A UserVF of 1 should disable vectorization.
-;   -scalable-vectorization=preferred should not yield a VF of vscale x 1.
+; Clang lowers "#pragma clang loop vectorize_width(1, scalable)" and
+; "interleave_count(1)" to width 1, scalable.enable, and interleave count 1.
+; The explicit scalable width must remain vscale x 1 even with the global
+; scalable-vectorization option set to off.
 ;
 ; CHECK-LABEL: define void @repro(
-; CHECK-NOT: vector.body:
+; CHECK: vector.body:
+; CHECK: load <vscale x 1 x i8>
+; CHECK: store <vscale x 1 x i8>
+
 define void @repro(ptr %out, ptr %in, i32 %tc) {
 entry:
   %start = zext i32 %tc to i64
@@ -34,5 +34,5 @@ exit:
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 1}
-!3 = !{!"llvm.loop.vectorize.scalable.disable"}
-!4 = !{!"llvm.loop.interleave.count", i32 1}
+!3 = !{!"llvm.loop.interleave.count", i32 1}
+!4 = !{!"llvm.loop.vectorize.scalable.enable"}

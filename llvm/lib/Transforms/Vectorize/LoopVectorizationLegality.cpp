@@ -112,32 +112,25 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
   if (VectorizerParams::isInterleaveForced())
     Interleave.Value = VectorizerParams::VectorizationInterleave;
 
-  // If the metadata doesn't explicitly specify whether to enable scalable
-  // vectorization, then decide based on the following criteria (increasing
-  // level of priority):
-  //  - Target default
-  //  - Metadata width
-  //  - Force option (always overrides)
+  // Scalable vectorization is decided based on the following criteria
+  // (increasing level of priority):
+  //  1. Target TTI default
+  //  2. A UserVF (!loop or cl::opt) implies SK_FixedWidthOnly
+  //  3. -scalable-vectorization cl::opt
+  //  4. !loop.vectorize.scalable enable/disable metadata
+  //  5. A scalable -force-vector-width cl::opt implies SK_AlwaysScalable
   if ((LoopVectorizeHints::ScalableForceKind)Scalable == SK_Unspecified) {
     if (TTI)
       Scalable = TTI->enableScalableVectorization() ? SK_PreferScalable
                                                     : SK_FixedWidthOnly;
 
     if (Width.Value)
-      // If the width is set, but the metadata says nothing about the scalable
-      // property, then assume it concerns only a fixed-width UserVF.
-      // If width is not set, the flag takes precedence.
       Scalable = SK_FixedWidthOnly;
-  }
 
-  // If the flag is set to force any use of scalable vectors, override the loop
-  // hints.
-  // However: A preference must not turn a UserVF of 1, used by e.g.
-  // vectorize(disable) pragmas, into a vscale x 1 VF.
-  if (ForceScalableVectorization.getValue() != SK_Unspecified &&
-      (Width.Value != 1 ||
-       ForceScalableVectorization.getValue() != SK_PreferScalable))
-    Scalable = ForceScalableVectorization.getValue();
+    auto ForcedScalable = ForceScalableVectorization.getValue();
+    if (ForcedScalable != SK_Unspecified)
+      Scalable = ForcedScalable;
+  }
 
   // If force-vector-width is scalable, force scalable vectorization.
   if (VectorizerParams::VectorizationFactor.isScalable())
