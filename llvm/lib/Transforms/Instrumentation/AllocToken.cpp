@@ -233,21 +233,19 @@ public:
 };
 
 /// Implementation for TokenMode::TypeFuncHash and
-/// TokenMode::TypeFuncHashPointerSplit. The token ID is split into bitfields:
-/// the upper bits hold the type name hash, and the lower bits hold the hash of
-/// the name of the function containing the allocation. With pointer split, the
-/// most significant bit is set for types that contain pointers.
+/// TokenMode::TypeFuncHashPointerSplit.
 class TypeFuncHashMode : public TypeHashMode {
 public:
   TypeFuncHashMode(const IntegerType &TokenTy, uint64_t MaxTokens,
                    TokenMode Mode)
-      : TypeHashMode(TokenTy, MaxTokens), Mode(Mode),
-        // Use the full width by default, otherwise round down to power of 2.
-        Bits(this->MaxTokens == TokenTy.getBitMask()
-                 ? TokenTy.getBitWidth()
-                 : Log2_64(this->MaxTokens)) {
-    if (Bits < 3)
-      reportFatalUsageError("alloc-token-max must be at least 8 in mode " +
+      : TypeHashMode(TokenTy, MaxTokens), Mode(Mode) {
+    // At least one bit each for the type and function hashes, plus one bit for
+    // the pointer flag with pointer split.
+    const unsigned MinBits =
+        Mode == TokenMode::TypeFuncHashPointerSplit ? 3 : 2;
+    if (Log2_64(this->MaxTokens) < MinBits)
+      reportFatalUsageError("alloc-token-max must be at least " +
+                            Twine(1u << MinBits) + " in mode " +
                             getAllocTokenModeAsString(Mode));
   }
 
@@ -268,28 +266,11 @@ public:
     AllocTokenMetadata Metadata{cast<MDString>(N->getOperand(0))->getString(),
                                 containsPointer(N),
                                 cast<MDString>(N->getOperand(2))->getString()};
-
-    // If the number of bits is odd, the type name hash gets the extra bit.
-    const unsigned FuncBits = Bits / 2;
-    unsigned TypeBits = Bits - FuncBits;
-    uint64_t Token = 0;
-    if (Mode == TokenMode::TypeFuncHashPointerSplit) {
-      --TypeBits;
-      Token = uint64_t(Metadata.ContainsPointer) << (Bits - 1);
-    }
-    // An empty type name denotes an unknown type.
-    if (!Metadata.TypeName.empty())
-      Token |= (getStableSipHash(Metadata.TypeName) &
-                maskTrailingOnes<uint64_t>(TypeBits))
-               << FuncBits;
-    Token |= getStableSipHash(*Metadata.FunctionName) &
-             maskTrailingOnes<uint64_t>(FuncBits);
-    return Token;
+    return *getAllocToken(Mode, Metadata, MaxTokens);
   }
 
 private:
   const TokenMode Mode;
-  const unsigned Bits;
 };
 
 // Apply opt overrides and module flags.

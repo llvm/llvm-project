@@ -13,6 +13,7 @@
 #include "llvm/Support/AllocToken.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SipHash.h"
 
 using namespace llvm;
@@ -54,6 +55,33 @@ static uint64_t getStableHash(const AllocTokenMetadata &Metadata,
   return getStableSipHash(Metadata.TypeName) % MaxTokens;
 }
 
+/// The token ID is split into bitfields: the upper bits hold the type name
+/// hash, and the lower bits hold the hash of the name of the function
+/// containing the allocation. With pointer split, the most significant bit is
+/// set for types that contain pointers. Uses Log2(MaxTokens) bits, so that the
+/// token ID is always less than MaxTokens.
+static uint64_t getTypeFuncHash(const AllocTokenMetadata &Metadata,
+                                uint64_t MaxTokens, bool PointerSplit) {
+  const unsigned Bits = Log2_64(MaxTokens);
+  assert(Bits >= (PointerSplit ? 3u : 2u) && "MaxTokens too small");
+  // If the number of bits is odd, the type name hash gets the extra bit.
+  const unsigned FuncBits = Bits / 2;
+  unsigned TypeBits = Bits - FuncBits;
+  uint64_t Token = 0;
+  if (PointerSplit) {
+    --TypeBits;
+    Token = uint64_t(Metadata.ContainsPointer) << (Bits - 1);
+  }
+  // An empty type name denotes an unknown type.
+  if (!Metadata.TypeName.empty())
+    Token |= (getStableSipHash(Metadata.TypeName) &
+              maskTrailingOnes<uint64_t>(TypeBits))
+             << FuncBits;
+  Token |= getStableSipHash(*Metadata.FunctionName) &
+           maskTrailingOnes<uint64_t>(FuncBits);
+  return Token;
+}
+
 std::optional<uint64_t> llvm::getAllocToken(AllocTokenMode Mode,
                                             const AllocTokenMetadata &Metadata,
                                             uint64_t MaxTokens) {
@@ -67,9 +95,12 @@ std::optional<uint64_t> llvm::getAllocToken(AllocTokenMode Mode,
 
   case AllocTokenMode::TypeFuncHash:
   case AllocTokenMode::TypeFuncHashPointerSplit:
-    // Depends on the function containing the allocation, which is unknown in
-    // constant expressions; only supported by the AllocToken pass.
-    return std::nullopt;
+    // Depends on the function containing the allocation, which may be unknown
+    // (e.g. in constant expressions).
+    if (!Metadata.FunctionName)
+      return std::nullopt;
+    return getTypeFuncHash(Metadata, MaxTokens,
+                           Mode == AllocTokenMode::TypeFuncHashPointerSplit);
 
   case AllocTokenMode::TypeHash:
     return getStableHash(Metadata, MaxTokens);

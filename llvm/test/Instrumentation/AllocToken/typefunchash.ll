@@ -47,11 +47,11 @@ define void @test_typefunchash() sanitize_alloc_token {
 ; SPLIT-DEFAULT-LABEL: define void @test_typefunchash(
 ; SPLIT-DEFAULT-SAME: ) #[[ATTR2:[0-9]+]] {
 ; SPLIT-DEFAULT-NEXT:  [[ENTRY:.*:]]
-; SPLIT-DEFAULT-NEXT:    [[TMP0:%.*]] = call ptr @__alloc_token_malloc(i64 4, i64 6086435480860910281), !alloc_token [[META0:![0-9]+]]
-; SPLIT-DEFAULT-NEXT:    [[TMP1:%.*]] = call ptr @__alloc_token_malloc(i64 8, i64 -5987466274009226551), !alloc_token [[META1:![0-9]+]]
-; SPLIT-DEFAULT-NEXT:    [[TMP2:%.*]] = call ptr @__alloc_token_malloc(i64 4, i64 6086435482481861194), !alloc_token [[META2:![0-9]+]]
-; SPLIT-DEFAULT-NEXT:    [[TMP3:%.*]] = call ptr @__alloc_token_malloc(i64 4, i64 2433508041), !alloc_token [[META3:![0-9]+]]
-; SPLIT-DEFAULT-NEXT:    [[TMP4:%.*]] = call ptr @__alloc_token_malloc(i64 4, i64 6086435478597976305), !alloc_token [[META4:![0-9]+]]
+; SPLIT-DEFAULT-NEXT:    [[TMP0:%.*]] = call ptr @__alloc_token_malloc(i64 4, i64 3043217739499725513), !alloc_token [[META0:![0-9]+]]
+; SPLIT-DEFAULT-NEXT:    [[TMP1:%.*]] = call ptr @__alloc_token_malloc(i64 8, i64 6229638898919432905), !alloc_token [[META1:![0-9]+]]
+; SPLIT-DEFAULT-NEXT:    [[TMP2:%.*]] = call ptr @__alloc_token_malloc(i64 4, i64 3043217741120676426), !alloc_token [[META2:![0-9]+]]
+; SPLIT-DEFAULT-NEXT:    [[TMP3:%.*]] = call ptr @__alloc_token_malloc(i64 4, i64 286024393), !alloc_token [[META3:![0-9]+]]
+; SPLIT-DEFAULT-NEXT:    [[TMP4:%.*]] = call ptr @__alloc_token_malloc(i64 4, i64 3043217739384275185), !alloc_token [[META4:![0-9]+]]
 ; SPLIT-DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -78,7 +78,7 @@ define i64 @test_intrinsic_lowering() {
 ;
 ; SPLIT-DEFAULT-LABEL: define i64 @test_intrinsic_lowering() {
 ; SPLIT-DEFAULT-NEXT:  [[ENTRY:.*:]]
-; SPLIT-DEFAULT-NEXT:    ret i64 -5987466274009226551
+; SPLIT-DEFAULT-NEXT:    ret i64 6229638898919432905
 ;
 entry:
   %token = call i64 @llvm.alloc.token.id.i64(metadata !1)

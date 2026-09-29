@@ -5,12 +5,15 @@
 ; RUN: not opt < %s -passes='inferattrs,alloc-token<mode=typefunchash>' -disable-output 2>&1 | FileCheck %s --check-prefix=NOFUNC
 ; RUN: not opt < %s -passes='inferattrs,alloc-token<mode=typefunchashpointersplit>' -disable-output 2>&1 | FileCheck %s --check-prefix=NOFUNC-SPLIT
 ;
-; The token ID must have room for the pointer flag, type and function hashes.
-; RUN: not opt < %s -passes='inferattrs,alloc-token<mode=typefunchashpointersplit>' -alloc-token-max=4 -disable-output 2>&1 | FileCheck %s --check-prefix=MAX
+; The token ID must have room for the type and function hashes, and the pointer
+; flag with pointer split.
+; RUN: not opt < %s -passes='inferattrs,alloc-token<mode=typefunchash>' -alloc-token-max=2 -disable-output 2>&1 | FileCheck %s --check-prefix=MAX
+; RUN: not opt < %s -passes='inferattrs,alloc-token<mode=typefunchashpointersplit>' -alloc-token-max=4 -disable-output 2>&1 | FileCheck %s --check-prefix=MAX-SPLIT
 
 ; NOFUNC: error: !alloc_token without function name is incompatible with mode typefunchash{{$}}
 ; NOFUNC-SPLIT: error: !alloc_token without function name is incompatible with mode typefunchashpointersplit{{$}}
-; MAX: LLVM ERROR: alloc-token-max must be at least 8 in mode typefunchashpointersplit{{$}}
+; MAX: LLVM ERROR: alloc-token-max must be at least 4 in mode typefunchash{{$}}
+; MAX-SPLIT: LLVM ERROR: alloc-token-max must be at least 8 in mode typefunchashpointersplit{{$}}
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
