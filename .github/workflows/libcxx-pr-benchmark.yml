@@ -126,7 +126,6 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.extract-info.outputs.pr_head }}
           fetch-depth: 0
-          fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
 
       # This workflow is always taken from the default branch. Check out the tooling from the corresponding
       # commit so that we're always running tooling that's in sync with the workflow's definition. Only the

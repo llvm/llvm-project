@@ -2611,6 +2611,12 @@ let append Predicates = [IsRV32] in {
 
   def : Pat<(v2i16 (riscv_ppaire (v2i16 GPR:$lo), (v2i16 GPR:$hi))),
             (PACK GPR:$lo, GPR:$hi)>;
+  def : Pat<(v2i16 (riscv_ppaireo (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PPAIREO_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i16 (riscv_ppairoe (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PPAIROE_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i16 (riscv_ppairo (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PPAIRO_H GPR:$rs1, GPR:$rs2)>;
 
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
   // bits [15:0] coming from a zero extended value. We can use pack with
