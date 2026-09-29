@@ -1095,9 +1095,9 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   auto args = call.getArgs();
   const bool intentsAvailable = callee && !callee.isDeclaration() &&
                                 args.size() == callee.getNumArguments();
-  // Several aliasing arguments are combined. A missing intent or intent(inout)
-  // is already both, so only a pure read is merged with a pure write.
-  std::optional<ModRefResult> passed;
+  // NoModRef is the merge identity, so an argument that does not alias leaves
+  // this unchanged. A missing intent or intent(inout) is already both.
+  ModRefResult passed = ModRefResult::getNoModRef();
   for (auto [idx, arg] : llvm::enumerate(args)) {
     if (!fir::conformsWithPassByRef(arg.getType()) || alias(arg, var).isNo())
       continue;
@@ -1107,15 +1107,11 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
         fir::getFortranDummyIntent(callee, idx);
     if (!intent || *intent == fir::FortranDummyIntent::InOut)
       return ModRefResult::getModAndRef();
-    ModRefResult one = *intent == fir::FortranDummyIntent::In
-                           ? ModRefResult::getRef()
-                           : ModRefResult::getMod();
-    passed = passed ? passed->merge(one) : one;
+    passed = passed.merge(*intent == fir::FortranDummyIntent::In
+                               ? ModRefResult::getRef()
+                               : ModRefResult::getMod());
   }
-  if (passed)
-    return *passed;
-  // The call cannot access the variable.
-  return ModRefResult::getNoModRef();
+  return passed;
 }
 
 AliasAnalysis::AliasAnalysis(AliasAnalysisRecursiveEffectsCache &cacheRef)
