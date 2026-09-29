@@ -1465,10 +1465,10 @@ private:
     for (User *U : Ptr->users()) {
       if (auto *I = dyn_cast<Instruction>(U)) {
         if (AliasScope && I->mayReadOrWriteMemory()) {
-          // An instruction that touches several of these variables, lake a
-          // mpmcpy, lands in the scopes of all
-          // of them and so stays noalias with the fields it doesn't touch.
-          // Concatenating also keeps the scopes from other domains.
+          // An instruction that touches several of these variables, like a
+          // memcpy, lands in the scopes of all of them and so stays noalias
+          // with the fields it doesn't touch. Concatenating also keeps the
+          // scopes from other domains.
           MDNode *AS = MDNode::concatenate(
               I->getMetadata(LLVMContext::MD_alias_scope), AliasScope);
           I->setMetadata(LLVMContext::MD_alias_scope, AS);
