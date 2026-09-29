@@ -302,7 +302,10 @@ TEST(LEB128Operands, OversizedGenericConstants) {
 
     auto It = Expr.begin();
     ASSERT_FALSE(It->isError());
-    EXPECT_FALSE(It->isOperandError());
+    EXPECT_FALSE(
+        It->hasError(DWARFExpression::Operation::ErrorKind::OperandDecode));
+    EXPECT_FALSE(
+        It->hasError(DWARFExpression::Operation::ErrorKind::UnknownOperation));
     EXPECT_EQ(It->getRawOperand(0), 5u);
     EXPECT_EQ(It->getEndOffset(), 11u);
     ++It;
@@ -329,9 +332,36 @@ TEST(LEB128Operands, OversizedNonGenericOperand) {
 
   auto It = Expr.begin();
   EXPECT_TRUE(It->isError());
-  EXPECT_TRUE(It->isOperandError());
+  EXPECT_TRUE(
+      It->hasError(DWARFExpression::Operation::ErrorKind::OperandDecode));
+  EXPECT_FALSE(
+      It->hasError(DWARFExpression::Operation::ErrorKind::UnknownOperation));
   ++It;
   EXPECT_EQ(It, Expr.end());
+}
+
+TEST(LEB128Operands, ErrorKindsResetAndCombine) {
+  const uint8_t UnknownOpcode[] = {0xff};
+  DWARFExpression UnknownExpr(DataExtractor(UnknownOpcode, true), 8);
+  auto It = UnknownExpr.begin();
+  EXPECT_TRUE(It->isError());
+  EXPECT_FALSE(
+      It->hasError(DWARFExpression::Operation::ErrorKind::OperandDecode));
+  EXPECT_TRUE(
+      It->hasError(DWARFExpression::Operation::ErrorKind::UnknownOperation));
+  ++It;
+  EXPECT_EQ(It, UnknownExpr.end());
+  EXPECT_FALSE(It->isError());
+
+  const uint8_t TruncatedNVIDIAMux[] = {DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux,
+                                        0xa5};
+  DWARFExpression MuxExpr(DataExtractor(TruncatedNVIDIAMux, true), 8);
+  It = MuxExpr.begin();
+  EXPECT_TRUE(It->isError());
+  EXPECT_TRUE(
+      It->hasError(DWARFExpression::Operation::ErrorKind::OperandDecode));
+  EXPECT_TRUE(
+      It->hasError(DWARFExpression::Operation::ErrorKind::UnknownOperation));
 }
 
 TEST_F(DWARFExpressionCompactPrinterTest,

@@ -297,7 +297,7 @@ static bool printCompactDWARFExpr(
 
   while (I != E) {
     const DWARFExpression::Operation &Op = *I;
-    if (Op.isOperandError()) {
+    if (Op.hasError(DWARFExpression::Operation::ErrorKind::OperandDecode)) {
       OS << "<decoding error>";
       return false;
     }
