@@ -1212,8 +1212,9 @@ static BranchProbability getBranchProbabilityKeepingPartial(uint64_t Num,
 }
 
 BranchProbability vputils::getExecutionProbability(BlockFrequency Freq) {
-  return getBranchProbabilityKeepingPartial(Freq.getFrequency(),
-                                            AlwaysExecutesFreq);
+  return getBranchProbabilityKeepingPartial(
+      Freq.getFrequency(),
+      BlockFrequencyInfoImplBase::BlockMass::getFull().getMass());
 }
 
 /// Returns the probability of each successor edge of \p VPBB, computed via
@@ -1249,7 +1250,7 @@ vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
     BFI.Working.emplace_back(BFIBase::BlockNode(Idx)).Loop = &Loop;
   }
   BFI.Working.emplace_back(Outside);
-  BFI.Working[Header.Index].getMass() = BFIBase::BlockMass(AlwaysExecutesFreq);
+  BFI.Working[Header.Index].getMass() = BFIBase::BlockMass::getFull();
 
   // Keep track nodes reached via an edge without branch weighs or with
   // estimated ones
@@ -1341,13 +1342,13 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
     case Instruction::GetElementPtr: {
       auto &RFlags = cast<VPRecipeWithIRFlags>(R);
       auto *GEP = cast<GetElementPtrInst>(RFlags.getUnderlyingInstr());
-      return Folder.FoldGEP(GEP->getSourceElementType(), Ops[0],
+      return Folder.FoldGEP(DL, GEP->getSourceElementType(), Ops[0],
                             drop_begin(Ops), RFlags.getGEPNoWrapFlags());
     }
     case VPInstruction::PtrAdd:
     case VPInstruction::WidePtrAdd:
-      return Folder.FoldGEP(IntegerType::getInt8Ty(Plan.getContext()), Ops[0],
-                            Ops[1],
+      return Folder.FoldGEP(DL, IntegerType::getInt8Ty(Plan.getContext()),
+                            Ops[0], Ops[1],
                             cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
     // An extract of a live-in is an extract of a broadcast, so return the
     // broadcasted element.

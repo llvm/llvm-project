@@ -1018,6 +1018,14 @@ static void genNestedEvaluations(lower::AbstractConverter &converter,
                                  int collapseValue = 0) {
   lower::pft::Evaluation *curEval = getCollapsedLoopEval(eval, collapseValue);
 
+  // The directive consumes the DO itself, so genFIR(DoConstruct) -- where a
+  // plain loop's body is wrapped -- is never reached. Go through the same
+  // helper here, so the loop control statements are emitted outside the wrap
+  // exactly as they are for a structured loop.
+  if (curEval->isA<parser::DoConstruct>() && curEval->hasNestedEvaluations()) {
+    converter.genLoopBodyEvaluations(*curEval);
+    return;
+  }
   for (lower::pft::Evaluation &e : curEval->getNestedEvaluations())
     converter.genEval(e);
 }

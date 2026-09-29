@@ -25,7 +25,7 @@
 ;
 ; CODEGEN:    %S.load = load i32, ptr @S
 ; CODEGEN:    store i32 %S.load, ptr %S.a.preload.s2a
-; CODEGEN:    %.load = load float, ptr getelementptr (i32, ptr @S, i64 1)
+; CODEGEN:    %.load = load float, ptr getelementptr (i8, ptr @S, i64 4)
 ; CODEGEN:    store float %.load, ptr %S.b.preload.s2a
 ;
 ; CODEGEN:  polly.stmt.for.body:
