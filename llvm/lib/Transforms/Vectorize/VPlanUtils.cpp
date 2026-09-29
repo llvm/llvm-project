@@ -16,6 +16,8 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -717,6 +719,29 @@ VPBasicBlock *VPBlockUtils::getPlainCFGMiddleBlock(const VPlan &Plan) {
   return cast<VPBasicBlock>(Plan.getScalarPreheader()->getPredecessors()[0]);
 }
 
+VPIRFlags vputils::getFlagsForInduction(const InductionDescriptor &ID,
+                                        const VPPhi *PhiR) {
+  if (ID.getKind() == InductionDescriptor::IK_FpInduction)
+    return ID.getInductionBinOp()->getFastMathFlags();
+
+  // The flags only bound the induction values if the increment directly
+  // updates PhiR.
+  VPValue *Inc = PhiR->getOperand(1);
+  if (match(Inc, m_c_Add(m_Specific(PhiR), m_VPValue())))
+    return cast<VPInstruction>(Inc)->getNoWrapFlagsOrNone();
+
+  if (match(Inc, m_Sub(m_Specific(PhiR), m_VPValue()))) {
+    // The step of a sub induction is negated, so NUW cannot be preserved. NSW
+    // can, if the step is not the signed minimum.
+    ConstantInt *Step = ID.getConstIntStepValue();
+    bool NSW = cast<VPInstruction>(Inc)->getNoWrapFlagsOrNone().HasNSW &&
+               Step && !Step->isMinValue(/*IsSigned=*/true);
+    return VPIRFlags::WrapFlagsTy(/*NUW*/ false, NSW);
+  }
+
+  return VPIRFlags::WrapFlagsTy(false, false);
+}
+
 std::optional<MemoryLocation>
 vputils::getMemoryLocation(const VPRecipeBase &R) {
   auto *M = dyn_cast<VPIRMetadata>(&R);
@@ -1191,95 +1216,75 @@ BranchProbability vputils::getExecutionProbability(BlockFrequency Freq) {
                                             AlwaysExecutesFreq);
 }
 
-/// Returns the probability of reaching each unique successor of \p VPBB, taken
-/// from the branch weights recorded on its terminator, or unknown if not
-/// available. See llvm::getBranchProbability in
-/// llvm/Transforms/Utils/LoopUtils.h for the IR version.
-static SmallVector<std::pair<const VPBasicBlock *, BranchProbability>, 2>
+/// Returns the probability of each successor edge of \p VPBB, computed via
+/// BranchProbabilityInfo::getEdgeProbabilitiesFromWeights from the branch
+/// weights recorded on its terminator, or std::nullopt if not available.
+static std::optional<SmallVector<BranchProbability>>
 getSuccessorProbabilities(const VPBasicBlock *VPBB) {
-  ArrayRef<VPBlockBase *> Successors = VPBB->getSuccessors();
   // With a single successor the edge is always taken and needs no weights.
-  if (VPBlockBase *Succ = VPBB->getSingleSuccessor())
-    return {{cast<VPBasicBlock>(Succ), BranchProbability::getOne()}};
+  if (VPBB->getSingleSuccessor())
+    return SmallVector<BranchProbability>{BranchProbability::getOne()};
 
-  // Take the branch weights off the terminator. Without usable weights all
-  // successors have unknown probability; zero the weights, so the accumulation
-  // below still visits each of them.
   SmallVector<uint32_t> Weights;
   auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
   if (!Term || !extractBranchWeights(Term->getBranchWeights(), Weights) ||
-      Weights.size() != Successors.size())
-    Weights.assign(Successors.size(), 0);
-  uint64_t Total = sum_of(Weights, uint64_t(0));
-
-  // Sum the weights of parallel edges to the same successor, so that the
-  // division below rounds once per successor rather than once per edge.
-  SmallMapVector<const VPBasicBlock *, uint64_t, 2> WeightPerSuccessor;
-  for (const auto &[Succ, Weight] : zip_equal(Successors, Weights))
-    WeightPerSuccessor[cast<VPBasicBlock>(Succ)] += Weight;
-
-  return map_to_vector<2>(WeightPerSuccessor, [Total](const auto &SuccWeight) {
-    auto [Succ, Weight] = SuccWeight;
-    if (Total == 0)
-      return std::make_pair(Succ, BranchProbability::getUnknown());
-    return std::make_pair(Succ,
-                          getBranchProbabilityKeepingPartial(Weight, Total));
-  });
-}
-
-/// Returns \p Freq scaled by \p Prob, rounding up to 1 instead of 0 to keep a
-/// rarely executed block distinguishable from an unreachable one.
-static BlockFrequency scaleKeepingNonZero(BlockFrequency Freq,
-                                          BranchProbability Prob) {
-  BlockFrequency Scaled = Freq * Prob;
-  if (Scaled == BlockFrequency() && Freq != BlockFrequency() && !Prob.isZero())
-    return BlockFrequency(1);
-  return Scaled;
+      Weights.size() != VPBB->getNumSuccessors())
+    return std::nullopt;
+  return BranchProbabilityInfo::getEdgeProbabilitiesFromWeights(Weights);
 }
 
 DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
 vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
+  using BFIBase = BlockFrequencyInfoImplBase;
   assert(!Blocks.empty() && "expected at least the header block");
-  // Push each block's frequency along its outgoing edges. Blocks is in reverse
-  // post-order and forms a DAG with the backedge from the latch (the last
-  // block) ignored, so a block's frequency is final by the time it is visited.
-  DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
-      Frequencies;
-  Frequencies.reserve(Blocks.size());
-  // The header (first block) always executes, the others start out unreachable.
-  Frequencies[Blocks.front()].emplace(BlockFrequency(AlwaysExecutesFreq),
-                                      false);
-  for (VPBasicBlock *VPBB : Blocks.drop_front())
-    Frequencies[VPBB].emplace(BlockFrequency(), false);
+  // Distribute the header's frequency using BFI. Nodes for blocks are numbered
+  // in reverse post-order. Edges leaving Blocks, i.e. a plain CFG's edges to
+  // the middle block or to an exit block, exit to a node outside the loop.
+  BFIBase BFI;
+  BFIBase::BlockNode Header(0), Outside(Blocks.size());
+  BFIBase::LoopData &Loop = BFI.Loops.emplace_back(nullptr, Header);
+  DenseMap<const VPBlockBase *, BFIBase::BlockNode> Nodes;
+  for (auto [Idx, VPBB] : enumerate(Blocks)) {
+    Nodes[VPBB] = BFIBase::BlockNode(Idx);
+    BFI.Working.emplace_back(BFIBase::BlockNode(Idx)).Loop = &Loop;
+  }
+  BFI.Working.emplace_back(Outside);
+  BFI.Working[Header.Index].getMass() = BFIBase::BlockMass(AlwaysExecutesFreq);
 
-  for (VPBasicBlock *VPBB : Blocks) {
-    std::optional<VPExecutionFrequency> Src = Frequencies.at(VPBB);
+  // Keep track nodes reached via an edge without branch weighs or with
+  // estimated ones
+  SmallVector<bool> IsUnknown(Blocks.size()), IsEstimated(Blocks.size());
+  for (auto [Idx, VPBB] : enumerate(Blocks)) {
+    BFIBase::BlockNode Node(Idx);
+    auto Probs = getSuccessorProbabilities(VPBB);
     auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
     bool TermIsEstimated = Term && Term->hasEstimatedBranchWeights();
-    for (const auto &[Succ, EdgeProb] : getSuccessorProbabilities(VPBB)) {
-      // Ignore the backedge to the header (already treated as always
-      // executing).
-      if (Succ == Blocks.front())
-        continue;
-      // Ignore edges leaving Blocks, i.e. a plain CFG's edges to the middle
-      // block or to an exit block.
-      auto It = Frequencies.find(Succ);
-      if (It == Frequencies.end())
-        continue;
-      std::optional<VPExecutionFrequency> &SuccFreq = It->second;
-      // An unknown edge or predecessor poisons the successor.
-      if (!Src || EdgeProb.isUnknown() || !SuccFreq) {
-        SuccFreq = std::nullopt;
-        continue;
+    BFIBase::Distribution Dist;
+    for (auto [SuccIdx, Succ] : enumerate(VPBB->getSuccessors())) {
+      BFIBase::BlockNode SuccNode = Nodes.lookup_or(Succ, Outside);
+      if (SuccNode != Header && SuccNode != Outside) {
+        IsUnknown[SuccNode.Index] |= IsUnknown[Idx] || !Probs;
+        IsEstimated[SuccNode.Index] |= IsEstimated[Idx] || TermIsEstimated;
       }
-      // The sum can only exceed AlwaysExecutesFreq by rounding.
-      BlockFrequency NewFreq =
-          std::min(BlockFrequency(AlwaysExecutesFreq),
-                   SuccFreq->Freq + scaleKeepingNonZero(Src->Freq, EdgeProb));
-      bool NewIsEstimated =
-          SuccFreq->IsEstimated || Src->IsEstimated || TermIsEstimated;
-      SuccFreq.emplace(NewFreq, NewIsEstimated);
+      if (Probs)
+        BFI.addToDist(Dist, &Loop, Node, SuccNode,
+                      getWeightFromBranchProb((*Probs)[SuccIdx]));
     }
+    if (Probs)
+      BFI.distributeMass(Node, &Loop, Dist);
+  }
+
+  // Round frequencies up to at least 1, so all edges are reached with a
+  // non-zero frequency, to distinguish rarely executed blocks from unreachable
+  // ones. blocks distinguishable from unreachable ones.
+  DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
+      Frequencies;
+  for (auto [Idx, VPBB] : enumerate(Blocks)) {
+    std::optional<VPExecutionFrequency> &Freq = Frequencies[VPBB];
+    if (IsUnknown[Idx])
+      continue;
+    uint64_t Mass = BFI.Working[Idx].getMass().getMass();
+    Freq.emplace(BlockFrequency(std::max<uint64_t>(Mass, 1)), IsEstimated[Idx]);
   }
   return Frequencies;
 }

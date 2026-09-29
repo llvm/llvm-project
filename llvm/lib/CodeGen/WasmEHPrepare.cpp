@@ -86,12 +86,6 @@ class WasmEHPrepareImpl {
   friend class WasmEHPrepare;
 
   Type *LPadContextTy = nullptr; // type of 'struct _Unwind_LandingPadContext'
-  GlobalVariable *LPadContextGV = nullptr; // __wasm_lpad_context
-
-  // Field addresses of struct _Unwind_LandingPadContext
-  Value *LPadIndexField = nullptr; // lpad_index field
-  Value *LSDAField = nullptr;      // lsda field
-  Value *SelectorField = nullptr;  // selector
 
   Function *ThrowF = nullptr;       // wasm.throw() intrinsic
   Function *LPadIndexF = nullptr;   // wasm.landingpad.index() intrinsic
@@ -100,6 +94,8 @@ class WasmEHPrepareImpl {
   Function *CatchF = nullptr;       // wasm.catch() intrinsic
   Function *GetSelectorF = nullptr; // wasm.get.ehselector() intrinsic
   FunctionCallee PersonalityF = nullptr;
+  FunctionCallee GetWasmLPadContextF =
+      nullptr; // _Unwind_GetWasmLPadContext() wrapper
 
   bool prepareThrows(Function &F);
   bool prepareEHPads(Function &F);
@@ -207,7 +203,6 @@ bool WasmEHPrepareImpl::prepareThrows(Function &F) {
 bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   Module &M = *F.getParent();
   LLVMContext &Ctx = M.getContext();
-  const DataLayout &DL = M.getDataLayout();
 
   SmallVector<BasicBlock *, 16> CatchPads;
   SmallVector<BasicBlock *, 16> CleanupPads;
@@ -234,26 +229,6 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   }
   assert(F.hasPersonalityFn() && "Personality function not found");
 
-  // __wasm_lpad_context global variable.
-  // This variable should be thread local. If the target does not support TLS,
-  // we depend on CoalesceFeaturesAndStripAtomics to downgrade it to
-  // non-thread-local ones, in which case we don't allow this object to be
-  // linked with other objects using shared memory.
-  LPadContextGV = M.getOrInsertGlobal("__wasm_lpad_context", LPadContextTy);
-  LPadContextGV->setThreadLocalMode(GlobalValue::GeneralDynamicTLSModel);
-
-  LPadIndexField = LPadContextGV;
-  LSDAField =
-      ConstantExpr::getGetElementPtr(DL, LPadContextTy, LPadContextGV,
-                                     {ConstantInt::get(Ctx, APInt(32, 0)),
-                                      ConstantInt::get(Ctx, APInt(32, 1))},
-                                     GEPNoWrapFlags::inBounds());
-  SelectorField =
-      ConstantExpr::getGetElementPtr(DL, LPadContextTy, LPadContextGV,
-                                     {ConstantInt::get(Ctx, APInt(32, 0)),
-                                      ConstantInt::get(Ctx, APInt(32, 2))},
-                                     GEPNoWrapFlags::inBounds());
-
   // wasm.landingpad.index() intrinsic, which is to specify landingpad index
   LPadIndexF =
       Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_landingpad_index);
@@ -277,6 +252,24 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
       M.getOrInsertFunction(getEHPersonalityName(Personality), PersPrototype);
 
   if (Function *F = dyn_cast<Function>(PersonalityF.getCallee()))
+    F->setDoesNotThrow();
+
+  StringRef UnwindGetWasmLPadContextName =
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+          RTLIB::impl__Unwind_GetWasmLPadContext);
+
+  // _Unwind_GetWasmLPadContext() wrapper function
+  //
+  // We use this function to get the address of `libunwind`'s thread-local
+  // `__wasm_lpad_context` variable for the current thread.  Note that we
+  // cannot, in general, access the `__wasm_lpad_context` directly here because,
+  // when the cooperative multithreading feature is enabled, direct,
+  // cross-library access to thread local variables is not supported.
+  auto *UnwindGetWasmLPadContextType =
+      FunctionType::get(PointerType::getUnqual(Ctx), {}, false);
+  GetWasmLPadContextF = M.getOrInsertFunction(UnwindGetWasmLPadContextName,
+                                              UnwindGetWasmLPadContextType);
+  if (Function *F = dyn_cast<Function>(GetWasmLPadContextF.getCallee()))
     F->setDoesNotThrow();
 
   unsigned Index = 0;
@@ -345,6 +338,15 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
     return;
   }
   IRB.SetInsertPoint(CatchCI->getNextNode());
+
+  Instruction *LPadContext =
+      IRB.CreateCall(GetWasmLPadContextF, {}, OperandBundleDef("funclet", FPI));
+
+  Value *LPadIndexField = LPadContext;
+  Value *LSDAField = IRB.CreateConstInBoundsGEP2_32(LPadContextTy, LPadContext,
+                                                    0, 1, "lsda_gep");
+  Value *SelectorField = IRB.CreateConstInBoundsGEP2_32(
+      LPadContextTy, LPadContext, 0, 2, "selector_gep");
 
   // This is to create a map of <landingpad EH label, landingpad index> in
   // SelectionDAGISel, which is to be used in EHStreamer to emit LSDA tables.

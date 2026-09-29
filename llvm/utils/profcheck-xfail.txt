@@ -1,5 +1,4 @@
 CodeGen/ARM/sjljeh-swifterror.ll
-CodeGen/DirectX/legalize-i8-alloca.ll
 CodeGen/WinEH/wineh-comdat.ll
 CodeGen/WinEH/wineh-scope-statenumbering.ll
 CodeGen/WinEH/wineh-setjmp.ll
@@ -74,6 +73,7 @@ Transforms/InstCombine/xor-and-or.ll
 Transforms/InstCombine/zext-bool-add-sub.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte.ll
+Transforms/LoopIdiom/AArch64/find-first-byte-nested.ll
 Transforms/LowerAtomic/atomic-load.ll
 Transforms/LowerAtomic/atomic-swap.ll
 Transforms/LowerConstantIntrinsics/builtin-object-size-phi.ll

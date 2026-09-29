@@ -58,8 +58,7 @@ CommandLine library to have the following features:
 
 1. Capable: The CommandLine library can handle lots of different forms of
    options often found in real programs.  For example, {ref}`positional <positional>` arguments,
-   `ls` style {ref}`grouping <grouping>` options (to allow processing '`ls -lad`'
-   naturally), `ld` style {ref}`prefix <prefix>` options (to parse '`-lmalloc
+   `ld` style {ref}`prefix <prefix>` options (to parse '`-lmalloc
    -L/usr/lib`'), and interpreter style options.
 
 This document will hopefully let you jump in and start using CommandLine in your
@@ -517,53 +516,6 @@ the list is simple, just like above.  In this example, we used the
 {ref}`cl::OneOrMore <cl::OneOrMore>` modifier to inform the CommandLine library that it is an error
 if the user does not specify any `.o` files on our command line.  Again, this
 just reduces the amount of checking we have to do.
-
-### Collecting options as a set of flags
-
-Instead of collecting sets of options in a list, it is also possible to gather
-information for enum values in a **bit vector**.  The representation used by the
-{ref}`cl::bits <cl::bits>` class is an `unsigned` integer.  An enum value is represented by a
-0/1 in the enum's ordinal value bit position. 1 indicating that the enum was
-specified, 0 otherwise.  As each specified value is parsed, the resulting enum's
-bit is set in the option's bit vector:
-
-```cpp
-bits |= 1 << (unsigned)enum;
-```
-
-Options that are specified multiple times are redundant.  Any instances after
-the first are discarded.
-
-Reworking the above list example, we could replace {ref}`cl::list <cl::list>` with {ref}`cl::bits <cl::bits>`:
-
-```cpp
-cl::bits<Opts> OptimizationBits(cl::desc("Available Optimizations:"),
-  cl::values(
-    clEnumVal(dce               , "Dead Code Elimination"),
-    clEnumVal(instsimplify      , "Instruction Simplification"),
-   clEnumValN(inlining, "inline", "Procedure Integration"),
-    clEnumVal(strip             , "Strip Symbols")));
-```
-
-To test to see if `instsimplify` was specified, we can use the `cl:bits::isSet`
-function:
-
-```cpp
-if (OptimizationBits.isSet(instsimplify)) {
-  ...
-}
-```
-
-It's also possible to get the raw bit vector using the `cl::bits::getBits`
-function:
-
-```cpp
-unsigned bits = OptimizationBits.getBits();
-```
-
-Finally, if external storage is used, then the location specified must be of
-**type** `unsigned`. In all other ways a {ref}`cl::bits <cl::bits>` option is equivalent to a
-{ref}`cl::list <cl::list>` option.
 
 (additional extra text)=
 
@@ -1155,55 +1107,6 @@ As usual, you can only specify one of these arguments at most.
   **cl::Prefix** options must not have the **cl::ValueDisallowed** modifier
   specified.
 
-(grouping)=
-(cl::Grouping)=
-
-#### Controlling options grouping
-
-The **cl::Grouping** modifier can be combined with any formatting types except
-for {ref}`cl::Positional <cl::Positional>`.  It is used to implement Unix-style tools (like `ls`)
-that have lots of single letter arguments, but only require a single dash.
-For example, the '`ls -labF`' command actually enables four different options,
-all of which are single letters.
-
-Note that **cl::Grouping** options can have values only if they are used
-separately or at the end of the groups.  For {ref}`cl::ValueRequired <cl::ValueRequired>`, it is
-a runtime error if such an option is used elsewhere in the group.
-
-The CommandLine library does not restrict how you use the **cl::Prefix** or
-**cl::Grouping** modifiers, but it is possible to specify ambiguous argument
-settings.  Thus, it is possible to have multiple letter options that are prefix
-or grouping options, and they will still work as designed.
-
-To do this, the CommandLine library uses a greedy algorithm to parse the input
-option into (potentially multiple) prefix and grouping options.  The strategy
-basically looks like this:
-
-```
-parse(string OrigInput) {
-
-1. string Input = OrigInput;
-2. if (isOption(Input)) return getOption(Input).parse();  // Normal option
-3. while (!Input.empty() && !isOption(Input)) Input.pop_back();  // Remove the last letter
-4. while (!Input.empty()) {
-     string MaybeValue = OrigInput.substr(Input.length())
-     if (getOption(Input).isPrefix())
-       return getOption(Input).parse(MaybeValue)
-     if (!MaybeValue.empty() && MaybeValue[0] == '=')
-       return getOption(Input).parse(MaybeValue.substr(1))
-     if (!getOption(Input).isGrouping())
-       return error()
-     getOption(Input).parse()
-     Input = OrigInput = MaybeValue
-     while (!Input.empty() && !isOption(Input)) Input.pop_back();
-     if (!Input.empty() && !getOption(Input).isGrouping())
-       return error()
-   }
-5. if (!OrigInput.empty()) error();
-
-}
-```
-
 #### Miscellaneous option modifiers
 
 The miscellaneous option modifiers are the only flags where you can specify more
@@ -1373,25 +1276,6 @@ This class works the exact same as the {ref}`cl::opt <cl::opt>` class, except th
 argument is the **type** of the external storage, not a boolean value.  For this
 class, the marker type '`bool`' is used to indicate that internal storage
 should be used.
-
-(cl::bits)=
-
-#### The `cl::bits` class
-
-The `cl::bits` class is the class used to represent a list of command line
-options in the form of a bit vector.  It is also a templated class which can
-take up to three arguments:
-
-```cpp
-namespace cl {
-  template <class DataType, class Storage = bool,
-            class ParserClass = parser<DataType> >
-  class bits;
-}
-```
-
-This class works the exact same as the {ref}`cl::list <cl::list>` class, except that the second
-argument must be of **type** `unsigned` if external storage is used.
 
 (cl::alias)=
 
