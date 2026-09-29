@@ -1319,7 +1319,8 @@ private:
   // Find the Instrumented BB and set the value. Return false on error.
   bool setInstrumentedCounts(const std::vector<uint64_t> &CountFromProfile);
 
-  void setWaveCounts(ArrayRef<BasicBlock *> InstrumentBBs);
+  void setWaveCounts(ArrayRef<BasicBlock *> InstrumentBBs,
+                     ArrayRef<BasicBlock *> ExtraWaveBBs);
 
   // Set the edge counter value for the unknown edge -- there should be only
   // one unknown edge.
@@ -1357,8 +1358,10 @@ static void setupBBInfoEdges(
 }
 
 // Wave slots use the same indices as lane counters, including the trailing
-// select counters. Only block-counter slots describe block-entry events.
-void PGOUseFunc::setWaveCounts(ArrayRef<BasicBlock *> InstrumentBBs) {
+// select counters, followed by any dense block measurements. Select slots do
+// not describe block-entry events.
+void PGOUseFunc::setWaveCounts(ArrayRef<BasicBlock *> InstrumentBBs,
+                               ArrayRef<BasicBlock *> ExtraWaveBBs) {
   if (!PGOWaveMetadata || ProfileRecord.WaveCounts.empty() ||
       !isGPUProfTarget(*M) || IsCS)
     return;
@@ -1379,6 +1382,10 @@ void PGOUseFunc::setWaveCounts(ArrayRef<BasicBlock *> InstrumentBBs) {
   DenseMap<const BasicBlock *, uint64_t> MeasuredCounts;
   for (auto [Index, BB] : enumerate(InstrumentBBs))
     MeasuredCounts.try_emplace(BB, ProfileRecord.WaveCounts[Index]);
+  unsigned Index =
+      InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
+  for (BasicBlock *BB : ExtraWaveBBs)
+    MeasuredCounts.try_emplace(BB, ProfileRecord.WaveCounts[Index++]);
   // Lane-flow reconstruction cannot provide a missing wave normalization count.
   if (!MeasuredCounts.contains(&F.getEntryBlock()))
     return;
@@ -1429,7 +1436,7 @@ bool PGOUseFunc::setInstrumentedCounts(
     });
     return false;
   }
-  setWaveCounts(InstrumentBBs);
+  setWaveCounts(InstrumentBBs, ExtraWaveBBs);
   auto *FuncEntry = &*F.begin();
 
   // Set the profile count to the Instrumented BBs.

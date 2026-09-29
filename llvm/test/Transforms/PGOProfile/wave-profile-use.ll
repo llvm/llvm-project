@@ -1,5 +1,5 @@
 ; RUN: split-file %s %t
-; RUN: opt -passes=pgo-instr-gen -pgo-instrument-entry -S %t/input.ll | FileCheck %s --check-prefix=GEN
+; RUN: opt -passes=pgo-instr-gen -pgo-instrument-dense-wave-counts=false -pgo-instrument-entry -S %t/input.ll | FileCheck %s --check-prefix=GEN
 ; RUN: %python %t/raw.py wave > %t/wave.raw
 ; RUN: llvm-profdata merge %t/wave.raw -o %t/wave.profdata
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/wave.profdata -S %t/input.ll -o %t/used.ll
@@ -40,7 +40,7 @@
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/bad-lane.profdata -S %t/used.ll -o %t/bad-lane.ll 2>&1 | FileCheck %s --check-prefix=BAD-LANE
 ; RUN: FileCheck %s --check-prefix=NONE --implicit-check-not=wave.profile < %t/bad-lane.ll
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/wave.profdata -S %t/used.ll | FileCheck %s --check-prefix=NONE --implicit-check-not=wave.profile
-; RUN: opt -passes=pgo-instr-gen -pgo-instrument-entry -S %t/critical.ll | FileCheck %s --check-prefix=CGEN
+; RUN: opt -passes=pgo-instr-gen -pgo-instrument-dense-wave-counts=false -pgo-instrument-entry -S %t/critical.ll | FileCheck %s --check-prefix=CGEN
 ; RUN: %python %t/raw.py critical > %t/critical.raw
 ; RUN: llvm-profdata merge %t/critical.raw -o %t/critical.profdata
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/critical.profdata -S %t/critical.ll | FileCheck %s --check-prefix=CRIT
@@ -66,6 +66,42 @@
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/uniform.profdata -pgo-wave-metadata=false -S %t/input.ll -o %t/uniform-no-wave.ll
 ; RUN: FileCheck %s --check-prefixes=NONE,COUNTS --implicit-check-not=wave.profile < %t/uniform-no-wave.ll
 ; RUN: FileCheck %s --check-prefix=UNIFORM < %t/uniform-no-wave.ll
+
+; Dense layout is selected from the profile, even with generation disabled.
+; RUN: %python %t/raw.py dense > %t/dense.raw
+; RUN: llvm-profdata merge %t/dense.raw -o %t/dense.profdata
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/dense.profdata -S %t/input.ll -o %t/dense.ll
+; RUN: FileCheck %s --check-prefix=DENSE < %t/dense.ll
+; RUN: FileCheck %s --check-prefix=COUNTS < %t/dense.ll
+; RUN: FileCheck %s --check-prefix=UNIFORM < %t/dense.ll
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/dense.profdata -pgo-instrument-dense-wave-counts=false -S %t/input.ll -o %t/dense-disabled-gen.ll
+; RUN: diff %t/dense.ll %t/dense-disabled-gen.ll
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/dense.profdata -pgo-wave-metadata=false -S %t/input.ll -o %t/dense-off.ll
+; RUN: FileCheck %s --check-prefix=COUNTS --implicit-check-not=wave.profile < %t/dense-off.ll
+; RUN: FileCheck %s --check-prefix=UNIFORM < %t/dense-off.ll
+; RUN: %python %t/raw.py dense-no-entry > %t/dense-no-entry.raw
+; RUN: llvm-profdata merge %t/dense-no-entry.raw -o %t/dense-no-entry.profdata
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/dense-no-entry.profdata -S %t/input.ll -o %t/dense-no-entry.ll
+; RUN: FileCheck %s --check-prefix=DENSE < %t/dense-no-entry.ll
+; RUN: FileCheck %s --check-prefix=COUNTS < %t/dense-no-entry.ll
+; RUN: %python %t/raw.py dense-zero > %t/dense-zero.raw
+; RUN: llvm-profdata merge %t/dense-zero.raw -o %t/dense-zero.profdata
+; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/dense-zero.profdata -S %t/input.ll | FileCheck %s --check-prefix=DENSE-ZERO
+
+; All four blocks are measured. Appended zero lane steps do not change select
+; counts or expand uniformity coverage beyond its sparse measurements.
+; DENSE-LABEL: define void @diamond
+; DENSE-SAME: !wave.profile ![[DW:[0-9]+]]
+; DENSE: a:
+; DENSE-NEXT: store volatile i32 1, ptr %p
+; DENSE-NEXT: br label %exit, !wave.profile.block ![[DA:[0-9]+]]
+; DENSE: ret void, !wave.profile.block ![[DX:[0-9]+]]
+; DENSE-DAG: ![[DW]] = distinct !{i64 2, i64 [[DFID:-?[0-9]+]], i64 100, i64 100, i64 50, i64 100}
+; DENSE-DAG: ![[DA]] = !{i64 2, i64 [[DFID]], i64 1, i64 1, i64 3}
+; DENSE-DAG: ![[DX]] = !{i64 2, i64 [[DFID]], i64 3, i64 1}
+; DENSE-ZERO: distinct !{i64 2, i64 [[ZFID:-?[0-9]+]], i64 0, i64 0, i64 0, i64 0}
+; DENSE-ZERO-DAG: !{i64 2, i64 [[ZFID]], i64 1, i64 1, i64 3}
+; DENSE-ZERO-DAG: !{i64 2, i64 [[ZFID]], i64 3, i64 1}
 
 ; Wave slots follow instrumentation indices, not IR block order. Only entry and
 ; b have block counters. The trailing select counter must not make exit measured.
@@ -227,6 +263,16 @@ elif mode == "zero":
 version = 12 | (1 << 56)
 if mode != "no-entry":
     version |= 1 << 58
+if mode.startswith("dense"):
+    version |= 1 << 54
+    lanes = [6400, 3200, 1600, 0, 0]
+    waves = [100, 50, 100, 100, 100]
+    if mode == "dense-no-entry":
+        version &= ~(1 << 58)
+        lanes[0] = 3200
+    if mode == "dense-zero":
+        lanes = [0] * 5
+        waves = [0] * 5
 num_counters = len(lanes) + len(waves)
 counter_delta = 80
 uniform_delta = counter_delta + num_counters * 8
@@ -238,7 +284,7 @@ header = [0xff6c70726f667281, version, 0, 1, 0, num_counters, 0,
 record = struct.pack("<7QI4HII4x", name_ref, func_hash, counter_delta,
                      uniform_delta, 0, 0, 0, num_counters, 0, 0, 0, 64, 0,
                      len(waves))
-uniform = lanes if mode == "uniform-wave" else [0] * len(lanes)
+uniform = lanes if mode in ("uniform-wave", "dense") else [0] * len(lanes)
 counts = lanes + waves + uniform
 sys.stdout.buffer.write(struct.pack("<19Q", *header) + record +
                         struct.pack("<" + "Q" * len(counts), *counts) +
