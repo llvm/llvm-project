@@ -843,9 +843,6 @@ class DIE : IntrusiveBackListNode, public DIEValueList {
   unsigned AbbrevNumber = ~0u;
   /// Dwarf tag code.
   dwarf::Tag Tag = (dwarf::Tag)0;
-  /// Set to true to force a DIE to emit an abbreviation that says it has
-  /// children even when it doesn't. This is used for unit testing purposes.
-  bool ForceChildren = false;
   /// Children DIEs.
   IntrusiveBackList<DIE> Children;
 
@@ -880,8 +877,7 @@ public:
     assert(Size && "Size being queried before it's been ocmputed.");
     return Size;
   }
-  bool hasChildren() const { return ForceChildren || !Children.empty(); }
-  void setForceChildren(bool B) { ForceChildren = B; }
+  bool hasChildren() const { return !Children.empty(); }
 
   using child_iterator = IntrusiveBackList<DIE>::iterator;
   using const_child_iterator = IntrusiveBackList<DIE>::const_iterator;

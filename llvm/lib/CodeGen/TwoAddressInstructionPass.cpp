@@ -220,6 +220,7 @@ public:
     AU.setPreservesCFG();
     AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -1064,8 +1065,9 @@ bool TwoAddressInstructionImpl::rescheduleMIBelowKill(
   if (LIS) {
     // We have to move the copies (and any interleaved debug instructions)
     // first so that the MBB is still well-formed when calling handleMove().
-    for (MachineBasicBlock::iterator MBBI = AfterMI; MBBI != End;) {
-      auto CopyMI = MBBI++;
+    // Move them back to front, so a copy never ends up above its source def.
+    for (MachineBasicBlock::iterator MIIt(MI); std::next(MIIt) != End;) {
+      MachineBasicBlock::iterator CopyMI = std::prev(End);
       MBB->splice(InsertPos, MBB, CopyMI);
       if (!CopyMI->isDebugOrPseudoInstr())
         LIS->handleMove(*CopyMI);
