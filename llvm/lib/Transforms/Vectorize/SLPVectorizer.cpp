@@ -14548,8 +14548,7 @@ void BoUpSLP::transformNodes() {
           if (!isMaskedLoadCompress(
                   E.Scalars, PointerOps, {}, *TTI, *DL, *SE, *AC, *DT, *TLI,
                   CostKind, [](Value *) { return true; }, SLPReVec,
-                  CompressInfo.IsMasked, CompressInfo.InterleaveFactor,
-                  CompressInfo.CompressMask, CompressInfo.LoadVecTy))
+                  CompressInfo))
             return false;
           InstructionCost CompressedCost =
               getCompressedLoadCost(*TTI, LI0, CompressInfo, CostKind);
@@ -17443,8 +17442,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         bool IsVectorized = isMaskedLoadCompress(
             Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
             *TLI, CostKind, [](Value *) { return true; }, SLPReVec,
-            CompressInfo.IsMasked, CompressInfo.InterleaveFactor,
-            CompressInfo.CompressMask, CompressInfo.LoadVecTy);
+            CompressInfo);
         assert(IsVectorized && "Expected compressed load candidate.");
         CompressEntryToData.try_emplace(
             E, CompressInfo.CompressMask, CompressInfo.LoadVecTy,
