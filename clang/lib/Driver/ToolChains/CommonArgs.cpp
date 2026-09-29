@@ -1744,11 +1744,14 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
   if (SanArgs.needsAsanRt())
     HelperStaticRuntimes.push_back("asan_static");
 
-  // Offloading images can live in DSOs, the host interceptors must follow.
-  if (NeedsOffloadRt) {
+  // Offloading images can live in DSOs, the host interceptors must follow. The
+  // shared UBSan runtime already contains them.
+  if (NeedsOffloadRt && !SanArgs.needsSharedRt()) {
     NonWholeStaticRuntimes.push_back("ubsan_offload");
     RequiredSymbols.push_back("__ubsan_offload_init");
   }
+  if (NeedsOffloadRt && !Args.hasArg(options::OPT_shared))
+    HelperStaticRuntimes.push_back("ubsan_offload-preinit");
 
   // Collect static runtimes.
   if (Args.hasArg(options::OPT_shared)) {
