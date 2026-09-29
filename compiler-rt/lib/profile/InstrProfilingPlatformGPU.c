@@ -29,10 +29,11 @@ static int is_uniform(uint64_t mask) {
 
 // Wave-cooperative counter increment. The instrumentation pass emits calls to
 // this in place of the default non-atomic load/add/store or atomicrmw sequence.
-// The optional uniform counter allows calculating wave uniformity if present.
+// The uniform counter is optional; the wave counter records every wave visit.
 COMPILER_RT_VISIBILITY void INSTR_PROF_INSTRUMENT_GPU_FUNC(uint64_t *counter,
                                                            uint64_t *uniform,
-                                                           uint64_t step) {
+                                                           uint64_t step,
+                                                           uint64_t *wave) {
   uint64_t mask = __gpu_lane_mask();
   if (__gpu_is_first_in_lane(mask)) {
     __scoped_atomic_fetch_add(counter, step * __builtin_popcountg(mask),
@@ -40,6 +41,7 @@ COMPILER_RT_VISIBILITY void INSTR_PROF_INSTRUMENT_GPU_FUNC(uint64_t *counter,
     if (uniform && is_uniform(mask))
       __scoped_atomic_fetch_add(uniform, step * __builtin_popcountg(mask),
                                 __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);
+    __scoped_atomic_fetch_add(wave, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);
   }
 }
 

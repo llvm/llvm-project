@@ -6,7 +6,7 @@
 UNSUPPORTED: system-windows, system-zos
 // Header
 RUN: printf '\377lprofR\201' > %t
-RUN: printf '\0\0\0\0\0\0\0\13' >> %t
+RUN: printf '\0\0\0\0\0\0\0\14' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t

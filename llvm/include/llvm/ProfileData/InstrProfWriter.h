@@ -153,10 +153,10 @@ public:
   LLVM_ABI Error validateRecord(const InstrProfRecord &Func);
 
   /// Write \c Record in text format to \c OS
-  LLVM_ABI static void writeRecordInText(StringRef Name, uint64_t Hash,
-                                         const InstrProfRecord &Counters,
-                                         InstrProfSymtab &Symtab,
-                                         raw_fd_ostream &OS);
+  LLVM_ABI static Error writeRecordInText(StringRef Name, uint64_t Hash,
+                                          const InstrProfRecord &Counters,
+                                          InstrProfSymtab &Symtab,
+                                          raw_fd_ostream &OS);
 
   /// Write the profile, returning the raw data. For testing.
   LLVM_ABI std::unique_ptr<MemoryBuffer> writeBuffer();
@@ -200,6 +200,13 @@ public:
                           (Other & InstrProfKind::SingleByteCoverage))) {
       return make_error<InstrProfError>(
           instrprof_error::coverage_count_mismatch);
+    }
+    if (static_cast<bool>(
+            (ProfileKind & InstrProfKind::DenseWaveInstrumentation) ^
+            (Other & InstrProfKind::DenseWaveInstrumentation))) {
+      return make_error<InstrProfError>(
+          instrprof_error::unsupported_version,
+          "cannot merge dense and sparse wave instrumentation layouts");
     }
 
     // Now we update the profile type with the bits that are set.

@@ -99,6 +99,9 @@ INSTR_PROF_DATA(const uint16_t, llvm::Type::getInt16Ty(Ctx), \
                                  OffloadDeviceWaveSizeVal))
 INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes, \
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumBitmapBytes))
+/* The last NumWaveCounters entries in CounterPtr count GPU wave visits. */
+INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumWaveCounters, \
+                ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumWaveCounters))
 #undef INSTR_PROF_DATA
 /* INSTR_PROF_DATA end. */
 
@@ -773,9 +776,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
         (uint64_t)'f' << 16 | (uint64_t)'R' << 8 | (uint64_t)129
 
 /* Raw profile format version (start from 1). */
-#define INSTR_PROF_RAW_VERSION 11
+#define INSTR_PROF_RAW_VERSION 12
 /* Indexed profile format version (start from 1). */
-#define INSTR_PROF_INDEX_VERSION 14
+#define INSTR_PROF_INDEX_VERSION 15
 /* Coverage mapping format version (start from 0). */
 #define INSTR_PROF_COVMAP_VERSION 6
 
@@ -784,7 +787,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  * (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentation
  * generated profile, and 0 if this is a Clang FE generated profile.
  * 1 in bit 57 indicates there are context-sensitive records in the profile.
- * The 54th bit indicates whether to always instrument loop entry blocks.
+ * The 54th bit indicates dense GPU wave instrumentation.
+ * The 55th bit indicates whether to always instrument loop entry blocks.
  * The 58th bit indicates whether to always instrument function entry blocks.
  * The 59th bit indicates whether to use debug info to correlate profiles.
  * The 60th bit indicates single byte coverage instrumentation.
@@ -794,6 +798,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  */
 #define VARIANT_MASKS_ALL 0xffffffff00000000ULL
 #define GET_VERSION(V) ((V) & ~VARIANT_MASKS_ALL)
+#define VARIANT_MASK_DENSE_WAVE (0x1ULL << 54)
 #define VARIANT_MASK_INSTR_LOOP_ENTRIES (0x1ULL << 55)
 #define VARIANT_MASK_IR_PROF (0x1ULL << 56)
 #define VARIANT_MASK_CSIR_PROF (0x1ULL << 57)

@@ -994,11 +994,33 @@ static void mergeUniformityBits(std::vector<uint8_t> &Dst,
     Dst[I] &= Src[I];
 }
 
+static void mergeCounts(MutableArrayRef<uint64_t> Dst, ArrayRef<uint64_t> Src,
+                        uint64_t Weight,
+                        function_ref<void(instrprof_error)> Warn) {
+  assert(Dst.size() == Src.size() && "counter sizes must match");
+  for (size_t I = 0, E = Src.size(); I < E; ++I) {
+    bool Overflowed;
+    uint64_t Value = SaturatingMultiplyAdd(Src[I], Weight, Dst[I], &Overflowed);
+    if (Value > getInstrMaxCountValue()) {
+      Value = getInstrMaxCountValue();
+      Overflowed = true;
+    }
+    Dst[I] = Value;
+    if (Overflowed)
+      Warn(instrprof_error::counter_overflow);
+  }
+}
+
 void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
                             function_ref<void(instrprof_error)> Warn) {
   // If the number of counters doesn't match we either have bad data
   // or a hash collision.
   if (Counts.size() != Other.Counts.size()) {
+    Warn(instrprof_error::count_mismatch);
+    return;
+  }
+  // Reject partial wave profiles rather than mixing different populations.
+  if (WaveCounts.size() != Other.WaveCounts.size()) {
     Warn(instrprof_error::count_mismatch);
     return;
   }
@@ -1026,41 +1048,22 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
   OffloadDeviceWaveSize = Other.OffloadDeviceWaveSize;
   bool HasUniformCounts = !UniformCounts.empty();
   bool OtherHasUniformCounts = !Other.UniformCounts.empty();
-  for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
-    bool Overflowed;
-    uint64_t Value =
-        SaturatingMultiplyAdd(Other.Counts[I], Weight, Counts[I], &Overflowed);
-    if (Value > getInstrMaxCountValue()) {
-      Value = getInstrMaxCountValue();
-      Overflowed = true;
-    }
-    Counts[I] = Value;
-    if (Overflowed)
-      Warn(instrprof_error::counter_overflow);
-  }
+  mergeCounts(Counts, Other.Counts, Weight, Warn);
 
   if (HasUniformCounts && OtherHasUniformCounts) {
     if (UniformCounts.size() != Other.UniformCounts.size()) {
       UniformCounts.clear();
       UniformityBits.clear();
     } else {
-      for (size_t I = 0, E = Other.UniformCounts.size(); I < E; ++I) {
-        bool Overflowed;
-        UniformCounts[I] = SaturatingMultiplyAdd(Other.UniformCounts[I], Weight,
-                                                 UniformCounts[I], &Overflowed);
-        if (UniformCounts[I] > getInstrMaxCountValue()) {
-          UniformCounts[I] = getInstrMaxCountValue();
-          Overflowed = true;
-        }
-        if (Overflowed)
-          Warn(instrprof_error::counter_overflow);
-      }
+      mergeCounts(UniformCounts, Other.UniformCounts, Weight, Warn);
       computeBlockUniformity();
     }
   } else {
     UniformCounts.clear();
     mergeUniformityBits(UniformityBits, Other.UniformityBits);
   }
+
+  mergeCounts(WaveCounts, Other.WaveCounts, Weight, Warn);
 
   // If the number of bitmap bytes doesn't match we either have bad data
   // or a hash collision.
@@ -1088,25 +1091,17 @@ void InstrProfRecord::scaleValueProfData(
 void InstrProfRecord::scale(uint64_t N, uint64_t D,
                             function_ref<void(instrprof_error)> Warn) {
   assert(D != 0 && "D cannot be 0");
-  for (auto &Count : this->Counts) {
-    bool Overflowed;
-    Count = SaturatingMultiply(Count, N, &Overflowed) / D;
-    if (Count > getInstrMaxCountValue()) {
-      Count = getInstrMaxCountValue();
-      Overflowed = true;
+  for (auto *Counters : {&Counts, &UniformCounts, &WaveCounts}) {
+    for (auto &Count : *Counters) {
+      bool Overflowed;
+      Count = SaturatingMultiply(Count, N, &Overflowed) / D;
+      if (Count > getInstrMaxCountValue()) {
+        Count = getInstrMaxCountValue();
+        Overflowed = true;
+      }
+      if (Overflowed)
+        Warn(instrprof_error::counter_overflow);
     }
-    if (Overflowed)
-      Warn(instrprof_error::counter_overflow);
-  }
-  for (auto &Count : this->UniformCounts) {
-    bool Overflowed;
-    Count = SaturatingMultiply(Count, N, &Overflowed) / D;
-    if (Count > getInstrMaxCountValue()) {
-      Count = getInstrMaxCountValue();
-      Overflowed = true;
-    }
-    if (Overflowed)
-      Warn(instrprof_error::counter_overflow);
   }
   computeBlockUniformity();
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
@@ -1799,7 +1794,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
       IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version14,
+  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version15,
                 "Please update the reader as needed when a new field is added "
                 "or when indexed profile version gets bumped.");
 
@@ -1832,10 +1827,11 @@ size_t Header::size() const {
     // of the header, and byte offset of existing fields shouldn't change when
     // indexed profile version gets incremented.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version14,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version15,
         "Please update the size computation below if a new field has "
         "been added to the header; for a version bump without new "
         "fields, add a case statement to fall through to the latest version.");
+  case 15ull: // Wave counts added in record data, no header change
   case 14ull: // UniformityBits added in record data, no header change
   case 13ull:
   case 12ull:

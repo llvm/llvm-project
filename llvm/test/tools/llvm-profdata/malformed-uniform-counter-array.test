@@ -6,7 +6,7 @@ UNSUPPORTED: system-windows
 
 // UniformCounterPtr is one byte before UniformCountersDelta.
 RUN: printf '\201rforpl\377' > %t.neg.profraw
-RUN: printf '\13\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\14\0\0\0\0\0\0\0' >> %t.neg.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.neg.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
@@ -32,7 +32,7 @@ RUN: printf '\130\0\0\0\0\0\0\0' >> %t.neg.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
 RUN: printf '\2\0\0\0\0\0\0\0' >> %t.neg.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t.neg.profraw
+RUN: printf '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0' >> %t.neg.profraw
 RUN: printf '\067\0\0\0\0\0\0\0' >> %t.neg.profraw
 RUN: printf '\101\0\0\0\0\0\0\0' >> %t.neg.profraw
 RUN: printf '\5\0\0\0\0\0\0\0' >> %t.neg.profraw
@@ -44,7 +44,7 @@ NEG: error: no profile can be merged
 
 // UniformCounterPtr points one byte past the end of the uniform-counter section.
 RUN: printf '\201rforpl\377' > %t.past.profraw
-RUN: printf '\13\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\14\0\0\0\0\0\0\0' >> %t.past.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.past.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
@@ -70,7 +70,7 @@ RUN: printf '\130\0\0\0\0\0\0\0' >> %t.past.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
 RUN: printf '\2\0\0\0\0\0\0\0' >> %t.past.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t.past.profraw
+RUN: printf '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0' >> %t.past.profraw
 RUN: printf '\067\0\0\0\0\0\0\0' >> %t.past.profraw
 RUN: printf '\101\0\0\0\0\0\0\0' >> %t.past.profraw
 RUN: printf '\5\0\0\0\0\0\0\0' >> %t.past.profraw
@@ -82,7 +82,7 @@ PAST: error: no profile can be merged
 
 // UniformCounterPtr leaves only one uniform counter, but NumCounters is two.
 RUN: printf '\201rforpl\377' > %t.too-many.profraw
-RUN: printf '\13\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\14\0\0\0\0\0\0\0' >> %t.too-many.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.too-many.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
@@ -108,7 +108,7 @@ RUN: printf '\130\0\0\0\0\0\0\0' >> %t.too-many.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
 RUN: printf '\2\0\0\0\0\0\0\0' >> %t.too-many.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
+RUN: printf '\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0' >> %t.too-many.profraw
 RUN: printf '\067\0\0\0\0\0\0\0' >> %t.too-many.profraw
 RUN: printf '\101\0\0\0\0\0\0\0' >> %t.too-many.profraw
 RUN: printf '\5\0\0\0\0\0\0\0' >> %t.too-many.profraw

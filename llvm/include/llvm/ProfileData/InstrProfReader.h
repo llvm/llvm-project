@@ -143,6 +143,12 @@ public:
   /// individual attributes prefer using the helpers above.
   virtual InstrProfKind getProfileKind() const = 0;
 
+  /// Whether block wave measurements extend the sparse block/select layout.
+  bool hasDenseWaveProfile() const {
+    return static_cast<bool>(getProfileKind() &
+                             InstrProfKind::DenseWaveInstrumentation);
+  }
+
   /// Return the PGO symtab. There are three different readers:
   /// Raw, Text, and Indexed profile readers. The first two types
   /// of readers are used only by llvm-profdata tool, while the indexed
