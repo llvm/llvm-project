@@ -91,6 +91,61 @@ define void @vpstore_v2i64_allones_mask_vlmax(<2 x i64> %val, ptr %ptr) {
   ret void
 }
 
+define { <2 x i64>, i32 } @vpload_ff_v2i64(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: @vpload_ff_v2i64(
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EVL:%.*]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> <i32 0, i32 1>, [[DOTSPLAT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i1> [[TMP1]], [[M:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i1> [[TMP2]], <i1 true, i1 false>
+; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[PTR:%.*]], i32 1, <2 x i1> [[TMP3]], <2 x i64> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { <2 x i64>, i32 } poison, <2 x i64> [[TMP4]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { <2 x i64>, i32 } [[TMP5]], i32 1, 1
+; CHECK-NEXT:    ret { <2 x i64>, i32 } [[TMP6]]
+;
+  %load = call { <2 x i64>, i32 } @llvm.vp.load.ff.v2i64.p0(ptr %ptr, <2 x i1> %m, i32 %evl)
+  ret { <2 x i64>, i32 } %load
+}
+
+define { <2 x i64>, i32 } @vpload_ff_v2i64_vlmax(ptr %ptr, <2 x i1> %m) {
+; CHECK-LABEL: @vpload_ff_v2i64_vlmax(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i1> [[M:%.*]], <i1 true, i1 false>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[PTR:%.*]], i32 1, <2 x i1> [[TMP1]], <2 x i64> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <2 x i64>, i32 } poison, <2 x i64> [[TMP2]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertvalue { <2 x i64>, i32 } [[TMP3]], i32 1, 1
+; CHECK-NEXT:    ret { <2 x i64>, i32 } [[TMP4]]
+;
+  %load = call { <2 x i64>, i32 } @llvm.vp.load.ff.v2i64.p0(ptr %ptr, <2 x i1> %m, i32 2)
+  ret { <2 x i64>, i32 } %load
+}
+
+define { <2 x i64>, i32 } @vpload_ff_v2i64_allones_mask(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: @vpload_ff_v2i64_allones_mask(
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[EVL:%.*]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> <i32 0, i32 1>, [[DOTSPLAT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i1> [[TMP1]], splat (i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i1> [[TMP2]], <i1 true, i1 false>
+; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[PTR:%.*]], i32 1, <2 x i1> [[TMP3]], <2 x i64> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { <2 x i64>, i32 } poison, <2 x i64> [[TMP4]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { <2 x i64>, i32 } [[TMP5]], i32 1, 1
+; CHECK-NEXT:    ret { <2 x i64>, i32 } [[TMP6]]
+;
+  %load = call { <2 x i64>, i32 } @llvm.vp.load.ff.v2i64.p0(ptr %ptr, <2 x i1> <i1 1, i1 1>, i32 %evl)
+  ret { <2 x i64>, i32 } %load
+}
+
+define { <2 x i64>, i32 } @vpload_ff_v2i64_allones_mask_vlmax(ptr %ptr) {
+; CHECK-LABEL: @vpload_ff_v2i64_allones_mask_vlmax(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[PTR:%.*]], i32 1, <2 x i1> <i1 true, i1 false>, <2 x i64> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <2 x i64>, i32 } poison, <2 x i64> [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <2 x i64>, i32 } [[TMP2]], i32 1, 1
+; CHECK-NEXT:    ret { <2 x i64>, i32 } [[TMP3]]
+;
+  %load = call { <2 x i64>, i32 } @llvm.vp.load.ff.v2i64.p0(ptr %ptr, <2 x i1> <i1 1, i1 1>, i32 2)
+  ret { <2 x i64>, i32 } %load
+}
+
 ; Scalable vectors
 define <vscale x 1 x i64> @vpload_nxv1i64(ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: @vpload_nxv1i64(
@@ -194,6 +249,69 @@ define void @vpstore_nxv1i64_allones_mask_vscale(<vscale x 1 x i64> %val, ptr %p
   %vlmax = mul nuw i32 %vscale, 1
   call void @llvm.vp.store.nxv1i64.p0(<vscale x 1 x i64> %val, ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %vlmax)
   ret void
+}
+
+define { <vscale x 1 x i64>, i32 } @vpload_ff_nxv1i64(ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: @vpload_ff_nxv1i64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i1> @llvm.get.active.lane.mask.nxv1i1.i32(i32 0, i32 [[EVL:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = and <vscale x 1 x i1> [[TMP1]], [[M:%.*]]
+; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[SCALABLE_SIZE:%.*]] = mul nuw i32 [[VSCALE]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = and <vscale x 1 x i1> [[TMP2]], insertelement (<vscale x 1 x i1> zeroinitializer, i1 true, i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr [[PTR:%.*]], i32 1, <vscale x 1 x i1> [[TMP6]], <vscale x 1 x i64> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i64>, i32 } poison, <vscale x 1 x i64> [[TMP4]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i64>, i32 } [[TMP5]], i32 1, 1
+; CHECK-NEXT:    ret { <vscale x 1 x i64>, i32 } [[TMP3]]
+;
+  %load = call { <vscale x 1 x i64>, i32 } @llvm.vp.load.ff.nxv1i64.p0(ptr %ptr, <vscale x 1 x i1> %m, i32 %evl)
+  ret { <vscale x 1 x i64>, i32 } %load
+}
+
+define { <vscale x 1 x i64>, i32 } @vpload_ff_nxv1i64_vscale(ptr %ptr, <vscale x 1 x i1> %m) {
+; CHECK-LABEL: @vpload_ff_nxv1i64_vscale(
+; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[VLMAX:%.*]] = mul nuw i32 [[VSCALE]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = and <vscale x 1 x i1> [[M:%.*]], insertelement (<vscale x 1 x i1> zeroinitializer, i1 true, i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr [[PTR:%.*]], i32 1, <vscale x 1 x i1> [[TMP4]], <vscale x 1 x i64> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i64>, i32 } poison, <vscale x 1 x i64> [[TMP2]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, i32 } [[TMP3]], i32 1, 1
+; CHECK-NEXT:    ret { <vscale x 1 x i64>, i32 } [[TMP1]]
+;
+  %vscale = call i32 @llvm.vscale.i32()
+  %vlmax = mul nuw i32 %vscale, 1
+  %load = call { <vscale x 1 x i64>, i32 } @llvm.vp.load.ff.nxv1i64.p0(ptr %ptr, <vscale x 1 x i1> %m, i32 %vlmax)
+  ret { <vscale x 1 x i64>, i32 } %load
+}
+
+define { <vscale x 1 x i64>, i32 } @vpload_ff_nxv1i64_allones_mask(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: @vpload_ff_nxv1i64_allones_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i1> @llvm.get.active.lane.mask.nxv1i1.i32(i32 0, i32 [[EVL:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = and <vscale x 1 x i1> [[TMP1]], splat (i1 true)
+; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[SCALABLE_SIZE:%.*]] = mul nuw i32 [[VSCALE]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = and <vscale x 1 x i1> [[TMP2]], insertelement (<vscale x 1 x i1> zeroinitializer, i1 true, i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr [[PTR:%.*]], i32 1, <vscale x 1 x i1> [[TMP6]], <vscale x 1 x i64> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { <vscale x 1 x i64>, i32 } poison, <vscale x 1 x i64> [[TMP4]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 1 x i64>, i32 } [[TMP5]], i32 1, 1
+; CHECK-NEXT:    ret { <vscale x 1 x i64>, i32 } [[TMP3]]
+;
+  %load = call { <vscale x 1 x i64>, i32 } @llvm.vp.load.ff.nxv1i64.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %evl)
+  ret { <vscale x 1 x i64>, i32 } %load
+}
+
+define { <vscale x 1 x i64>, i32 } @vpload_ff_nxv1i64_allones_mask_vscale(ptr %ptr) {
+; CHECK-LABEL: @vpload_ff_nxv1i64_allones_mask_vscale(
+; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[VLMAX:%.*]] = mul nuw i32 [[VSCALE]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr [[PTR:%.*]], i32 1, <vscale x 1 x i1> insertelement (<vscale x 1 x i1> zeroinitializer, i1 true, i64 0), <vscale x 1 x i64> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 1 x i64>, i32 } poison, <vscale x 1 x i64> [[TMP3]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 1 x i64>, i32 } [[TMP2]], i32 1, 1
+; CHECK-NEXT:    ret { <vscale x 1 x i64>, i32 } [[TMP1]]
+;
+  %vscale = call i32 @llvm.vscale.i32()
+  %vlmax = mul nuw i32 %vscale, 1
+  %load = call { <vscale x 1 x i64>, i32 } @llvm.vp.load.ff.nxv1i64.p0(ptr %ptr, <vscale x 1 x i1> splat (i1 true), i32 %vlmax)
+  ret { <vscale x 1 x i64>, i32 } %load
 }
 
 declare i32 @llvm.vscale.i32()
