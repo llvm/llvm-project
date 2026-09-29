@@ -46,7 +46,8 @@ public:
              uint32_t JmpRelocationIndex = NoJmpRelocationIndex)
       : Offset(Offset), Symbol(Symbol), Addend(Addend), Value(Value),
         Type(Type), ELFSymType(ELFSymType),
-        JmpRelocationIndex(JmpRelocationIndex), Optional(false), IsRELR(IsRELR) {
+        JmpRelocationIndex(JmpRelocationIndex), Optional(false),
+        IsRELR(IsRELR) {
     assert((isRelative() || !isRELR()) &&
            "Only relative relocations can be relr.");
   }

@@ -2378,8 +2378,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
           !MIB->isIndirectBranch(*PrevInstr) &&
           !MIB->isUnconditionalBranch(*PrevInstr) &&
           !MIB->getConditionalTailCall(*PrevInstr) &&
-          !MIB->isExternalBranch(*PrevInstr) &&
-          !MIB->isReturn(*PrevInstr)) {
+          !MIB->isExternalBranch(*PrevInstr) && !MIB->isReturn(*PrevInstr)) {
         // Temporarily restore inserter basic block.
         InsertBB = PrevBB;
       } else {
@@ -2482,10 +2481,10 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
     if (BB->succ_size() == 0) {
       // Conditional tail calls and external branches have no local taken
       // successor, but can still fall through.
-      IsPrevFT = !MIB->isTerminator(*LastInstr) ||
-                 (MIB->isConditionalBranch(*LastInstr) &&
-                  (MIB->isExternalBranch(*LastInstr) ||
-                   MIB->isTailCall(*LastInstr)));
+      IsPrevFT =
+          !MIB->isTerminator(*LastInstr) ||
+          (MIB->isConditionalBranch(*LastInstr) &&
+           (MIB->isExternalBranch(*LastInstr) || MIB->isTailCall(*LastInstr)));
     } else if (BB->succ_size() == 1) {
       IsPrevFT = MIB->isConditionalBranch(*LastInstr);
     } else {
@@ -2631,10 +2630,10 @@ void BinaryFunction::removeConditionalExits() {
     uint64_t TakenCount = BinaryBasicBlock::COUNT_NO_PROFILE;
     uint64_t MispredCount = BinaryBasicBlock::COUNT_NO_PROFILE;
     if (hasValidProfile()) {
-      TakenCount = BC.MIB->getAnnotationWithDefault<uint64_t>(*CondBranch,
-          IsExternalBranch ? "Count" : "CTCTakenCount");
-      MispredCount = BC.MIB->getAnnotationWithDefault<uint64_t>(*CondBranch,
-          IsExternalBranch ? "MispredCount" : "CTCMispredCount");
+      TakenCount = BC.MIB->getAnnotationWithDefault<uint64_t>(
+          *CondBranch, IsExternalBranch ? "Count" : "CTCTakenCount");
+      MispredCount = BC.MIB->getAnnotationWithDefault<uint64_t>(
+          *CondBranch, IsExternalBranch ? "MispredCount" : "CTCMispredCount");
     }
 
     assert(!BC.MIB->getEHInfo(*CondBranch) &&
@@ -4898,8 +4897,7 @@ bool BinaryFunction::isPossibleVeneer() const {
 
 void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
                                    uint32_t RelType, uint64_t Addend,
-                                   uint64_t Value,
-                                   uint8_t ELFSymType) {
+                                   uint64_t Value, uint8_t ELFSymType) {
   assert(Address >= getAddress() && Address < getAddress() + getMaxSize() &&
          "address is outside of the function");
   uint64_t Offset = Address - getAddress();
@@ -4910,8 +4908,8 @@ void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
   std::map<uint64_t, Relocation> &Rels =
       IsCI ? Islands->Relocations : Relocations;
   if (BC.MIB->shouldRecordCodeRelocation(RelType))
-    Rels[Offset] = Relocation{Offset, Symbol, RelType, Addend, Value,
-                             ELFSymType};
+    Rels[Offset] =
+        Relocation{Offset, Symbol, RelType, Addend, Value, ELFSymType};
 }
 
 } // namespace bolt

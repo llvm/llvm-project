@@ -649,9 +649,9 @@ void DataReader::convertBranchData(BinaryFunction &BF) const {
       continue;
 
     MCInst *Instr = BF.getInstructionAtOffset(BI.From.Offset);
-    if (!Instr || (!BC.MIB->isCall(*Instr) &&
-                   !BC.MIB->isIndirectBranch(*Instr) &&
-                   !BC.MIB->isExternalBranch(*Instr)))
+    if (!Instr ||
+        (!BC.MIB->isCall(*Instr) && !BC.MIB->isIndirectBranch(*Instr) &&
+         !BC.MIB->isExternalBranch(*Instr)))
       continue;
 
     auto setOrUpdateAnnotation = [&](StringRef Name, uint64_t Count) {

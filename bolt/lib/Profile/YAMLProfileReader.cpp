@@ -272,8 +272,7 @@ bool YAMLProfileReader::parseFunctionProfile(
           !BC.MIB->isExternalBranch(*Instr)) {
         if (opts::Verbosity >= 2)
           errs() << "BOLT-WARNING: expected call or external branch at offset "
-                 << YamlCSI.Offset
-                 << " in block " << BB.getName() << '\n';
+                 << YamlCSI.Offset << " in block " << BB.getName() << '\n';
         ++MismatchedCalls;
         continue;
       }
