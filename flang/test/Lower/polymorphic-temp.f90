@@ -30,9 +30,9 @@ contains
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_intrinsic_spread() {
 ! CHECK: %[[TEMP_RES1:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?xnone>>>
 ! CHECK: %[[TEMP_RES0:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?xnone>>>
-! CHECK: %[[P:.*]] = fir.alloca !fir.class<!fir.ptr<none>> {bindc_name = "p", uniq_name = "_QMpoly_tmpFtest_temp_from_intrinsic_spreadEp"}
+! CHECK: %[[P:.*]] = fir.alloca !fir.class<!fir.ptr<none>> <{bindc_name = "p", uniq_name = "_QMpoly_tmpFtest_temp_from_intrinsic_spreadEp"}>
 ! CHECK: %[[P_DECL:.*]]:2 = hlfir.declare %[[P]]
-! CHECK: %[[PA:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?xnone>>> {bindc_name = "pa", uniq_name = "_QMpoly_tmpFtest_temp_from_intrinsic_spreadEpa"}
+! CHECK: %[[PA:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.array<?xnone>>> <{bindc_name = "pa", uniq_name = "_QMpoly_tmpFtest_temp_from_intrinsic_spreadEpa"}>
 ! CHECK: %[[PA_DECL:.*]]:2 = hlfir.declare %[[PA]]
 ! CHECK: fir.call @_FortranAPointerNullifyDerived
 ! CHECK: fir.call @_FortranAPointerAllocate
@@ -64,7 +64,7 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_temp_from_intrinsic_reshape(
 ! CHECK-SAME: %[[I:.*]]: !fir.class<!fir.array<20x20xnone>> {fir.bindc_name = "i"}) {
-! CHECK: %[[A:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x?xnone>>> {bindc_name = "a", uniq_name = "_QMpoly_tmpFtest_temp_from_intrinsic_reshapeEa"}
+! CHECK: %[[A:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?x?xnone>>> <{bindc_name = "a", uniq_name = "_QMpoly_tmpFtest_temp_from_intrinsic_reshapeEa"}>
 ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[A]]
 ! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I]]
 ! CHECK: %[[RESHAPE_RES:.*]] = hlfir.reshape %[[I_DECL]]#0 %{{.*}} : (!fir.class<!fir.array<20x20xnone>>, !fir.ref<!fir.array<2xi32>>) -> !hlfir.expr<10x10xnone?>
@@ -248,12 +248,12 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_merge_intrinsic4(
 ! CHECK-SAME: %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.read_only}) {
-! CHECK: %[[V_0:[0-9]+]] = fir.alloca !fir.class<!fir.heap<none>> {bindc_name = "a", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic4Ea"}
+! CHECK: %[[V_0:[0-9]+]] = fir.alloca !fir.class<!fir.heap<none>> <{bindc_name = "a", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic4Ea"}>
 ! CHECK: %[[V_1:[0-9]+]] = fir.zero_bits !fir.heap<none>
 ! CHECK: %[[V_2:[0-9]+]] = fir.embox %[[V_1]] : (!fir.heap<none>) -> !fir.class<!fir.heap<none>>
 ! CHECK: fir.store %[[V_2]] to %[[V_0]] : !fir.ref<!fir.class<!fir.heap<none>>>
 ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[V_0]]
-! CHECK: %[[V_3:[0-9]+]] = fir.alloca !fir.class<!fir.heap<none>> {bindc_name = "b", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic4Eb"}
+! CHECK: %[[V_3:[0-9]+]] = fir.alloca !fir.class<!fir.heap<none>> <{bindc_name = "b", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic4Eb"}>
 ! CHECK: %[[V_4:[0-9]+]] = fir.zero_bits !fir.heap<none>
 ! CHECK: %[[V_5:[0-9]+]] = fir.embox %[[V_4]] : (!fir.heap<none>) -> !fir.class<!fir.heap<none>>
 ! CHECK: fir.store %[[V_5]] to %[[V_3]] : !fir.ref<!fir.class<!fir.heap<none>>>
@@ -275,12 +275,12 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpoly_tmpPtest_merge_intrinsic5(
 ! CHECK-SAME: %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i", fir.read_only}) {
-! CHECK: %[[V_0:[0-9]+]] = fir.alloca !fir.class<!fir.ptr<none>> {bindc_name = "a", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic5Ea"}
+! CHECK: %[[V_0:[0-9]+]] = fir.alloca !fir.class<!fir.ptr<none>> <{bindc_name = "a", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic5Ea"}>
 ! CHECK: %[[V_1:[0-9]+]] = fir.zero_bits !fir.ptr<none>
 ! CHECK: %[[V_2:[0-9]+]] = fir.embox %[[V_1]] : (!fir.ptr<none>) -> !fir.class<!fir.ptr<none>>
 ! CHECK: fir.store %[[V_2]] to %[[V_0]] : !fir.ref<!fir.class<!fir.ptr<none>>>
 ! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[V_0]]
-! CHECK: %[[V_3:[0-9]+]] = fir.alloca !fir.class<!fir.ptr<none>> {bindc_name = "b", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic5Eb"}
+! CHECK: %[[V_3:[0-9]+]] = fir.alloca !fir.class<!fir.ptr<none>> <{bindc_name = "b", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic5Eb"}>
 ! CHECK: %[[V_4:[0-9]+]] = fir.zero_bits !fir.ptr<none>
 ! CHECK: %[[V_5:[0-9]+]] = fir.embox %[[V_4]] : (!fir.ptr<none>) -> !fir.class<!fir.ptr<none>>
 ! CHECK: fir.store %[[V_5]] to %[[V_3]] : !fir.ref<!fir.class<!fir.ptr<none>>>

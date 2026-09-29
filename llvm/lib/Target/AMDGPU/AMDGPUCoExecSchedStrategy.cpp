@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUCoExecSchedStrategy.h"
+#include "AMDGPUBarrierLatency.h"
 #include "AMDGPUIGroupLP.h"
 #include "GCNHazardRecognizer.h"
 #include "llvm/Support/Debug.h"
@@ -37,6 +38,9 @@ static cl::opt<CarriedLatency> BlockCarriedLatency(
         clEnumValN(
             CarriedLatency::All, "all",
             "Pad latency for any SU with an incoming ds_load dependency.")));
+
+// Default VGPR threshold percent for coexec scheduler.
+static constexpr unsigned DefaultCoExecVGPRThresholdPercent = 100;
 
 namespace {
 
@@ -1066,9 +1070,13 @@ AMDGPUCoExecSchedStrategy::AMDGPUCoExecSchedStrategy(
     : GCNSchedStrategy(C) {
   SchedStages.push_back(GCNSchedStageID::ILPInitialSchedule);
   SchedStages.push_back(GCNSchedStageID::RewriteMFMAForm);
+  SchedStages.push_back(GCNSchedStageID::LiveIntervalRPReschedule);
   SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
   // Use more accurate GCN pressure trackers.
   UseGCNTrackers = true;
+
+  if (!VGPRThresholdPercentOpt.getNumOccurrences())
+    VGPRThresholdPercent = DefaultCoExecVGPRThresholdPercent;
 }
 
 void AMDGPUCoExecSchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
@@ -1158,8 +1166,7 @@ SUnit *AMDGPUCoExecSchedStrategy::pickNode(bool &IsTopNode) {
   if (SU->isBottomReady())
     Bot.removeReady(SU);
 
-  LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
-                    << *SU->getInstr());
+  LLVM_DEBUG(dbgs() << "Scheduling " << *SU << " " << *SU->getInstr());
 
   assert(IsTopNode && "coexec scheduler must only schedule from top boundary");
   return SU;
@@ -1225,7 +1232,7 @@ void AMDGPUCoExecSchedStrategy::dumpPickSummary(SUnit *SU, bool IsTopNode,
   dbgs() << "=== Pick @ Cycle " << Cycle << " ===\n";
 
   const InstructionFlavor Flavor = classifyFlavor(*SU->getInstr(), *SII);
-  dbgs() << "Picked: SU(" << SU->NodeNum << ") ";
+  dbgs() << "Picked: " << *SU << " ";
   SU->getInstr()->print(dbgs(), /*IsStandalone=*/true, /*SkipOpers=*/false,
                         /*SkipDebugLoc=*/true);
   dbgs() << " [" << getFlavorName(Flavor) << "]\n";
@@ -1349,6 +1356,7 @@ llvm::createGCNCoExecMachineScheduler(MachineSchedContext *C) {
   ScheduleDAGMILive *DAG = new GCNScheduleDAGMILive(
       C, std::make_unique<AMDGPUCoExecSchedStrategy>(C));
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
+  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation(C->MF));
   return DAG;
 }
 

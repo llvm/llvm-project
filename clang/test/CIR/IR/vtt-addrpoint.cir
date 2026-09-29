@@ -32,8 +32,8 @@ module {
     cir.store align(8) %8, %9 : !cir.vptr, !cir.ptr<!cir.vptr>
     cir.return
   }
-  cir.global linkonce_odr dso_local @_ZTV1C = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct {alignment = 8 : i64}
-  cir.global linkonce_odr @_ZTT1C = #cir.const_array<[#cir.global_view<@_ZTV1C, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTC1C0_1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 2> {alignment = 8 : i64}
+  cir.global linkonce_odr dso_local @_ZTV1C = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct align(8)
+  cir.global linkonce_odr @_ZTT1C = #cir.const_array<[#cir.global_view<@_ZTV1C, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTC1C0_1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 2> align(8)
   cir.func dso_local @_ZN1CC1Ev(%arg0: !cir.ptr<!rec_C>) {
     %0 = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_C>>
     cir.store %arg0, %0 : !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>
@@ -51,5 +51,5 @@ module {
     cir.store align(8) %5, %6 : !cir.vptr, !cir.ptr<!cir.vptr>
     cir.return
   }
-  cir.global linkonce_odr dso_local @_ZTC1C0_1B = #cir.const_record<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct {alignment = 8 : i64}
+  cir.global linkonce_odr dso_local @_ZTC1C0_1B = #cir.const_record<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct align(8)
 }

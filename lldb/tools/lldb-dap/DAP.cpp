@@ -492,10 +492,6 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame &frame, std::string &expression,
   if (repl_mode != ReplMode::Auto)
     return repl_mode;
 
-  // We cannot check if expression is a variable without a frame.
-  if (!frame)
-    return ReplMode::Command;
-
   // To determine if the expression is a command or not, check if the first
   // term is a variable or command. If it's a variable in scope we will prefer
   // that behavior and give a warning to the user if they meant to invoke the
@@ -518,7 +514,12 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame &frame, std::string &expression,
   const bool is_command = interpreter.CommandExists(first_cstr) ||
                           interpreter.UserCommandExists(first_cstr) ||
                           interpreter.AliasExists(first_cstr);
-  const bool is_variable = frame.FindVariable(first_cstr).IsValid();
+  // Check both variables visible in the current frame and globals/statics.
+  // A valid frame should not prevent a global from taking precedence over an
+  // LLDB command with the same name.
+  const bool is_variable =
+      (frame && frame.FindVariable(first_cstr).IsValid()) ||
+      target.FindFirstGlobalVariable(first_cstr).IsValid();
 
   // If we have both a variable and command, warn the user about the conflict.
   if (!partial_expression && is_command && is_variable) {
@@ -692,7 +693,7 @@ void DAP::SetTarget(const lldb::SBTarget target) { this->target = target; }
 
 bool DAP::HandleObject(const Message &M) {
   TelemetryDispatcher dispatcher(&debugger);
-  dispatcher.Set("client_name", m_client_name.str());
+  dispatcher.Set("client_name", m_client_name);
   if (const auto *req = std::get_if<Request>(&M)) {
     {
       std::lock_guard<std::mutex> guard(m_active_request_mutex);
@@ -758,7 +759,7 @@ bool DAP::HandleObject(const Message &M) {
                            }),
                        *resp->message);
       }
-      dispatcher.Set("error", message.str());
+      dispatcher.Set("error", message);
 
       (*response_handler)(llvm::createStringError(
           std::error_code(-1, std::generic_category()), message));

@@ -4750,6 +4750,20 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
 
+  case Intrinsic::nvvm_st_bulk: {
+    Value *Dst = I.getArgOperand(0);
+    Value *Val = I.getArgOperand(2);
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::getVT(Val->getType());
+    Info.ptrVal = Dst;
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    Info.size = MemoryLocation::UnknownSize;
+    Infos.push_back(Info);
+    return;
+  }
+
   case Intrinsic::nvvm_prefetch_tensormap: {
     auto &DL = I.getDataLayout();
     Info.opc = ISD::INTRINSIC_VOID;
@@ -6893,24 +6907,22 @@ static SDValue PerformSELECTShiftCombine(SDNode *N,
 
   // Match logical shifts where the shift amount in the guard matches the shift
   // amount in the operation.
-  auto LogicalShift =
-      m_AllOf(m_Value(ShiftOp),
-              m_AnyOf(m_Srl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt))),
-                      m_Shl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt)))));
+  auto LogicalShift = m_Value(
+      ShiftOp, m_AnyOf(m_Srl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt))),
+                       m_Shl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt)))));
 
   // shift_amt > BitWidth-1 ? 0 : shift_op
-  bool MatchedUGT =
-      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
-                                   m_SpecificInt(APInt(BitWidth, BitWidth - 1)),
-                                   m_SpecificCondCode(ISD::SETUGT)),
-                           m_Zero(), LogicalShift));
+  bool MatchedUGT = sd_match(
+      N, m_Select(m_SpecificSetCC(ISD::SETUGT, m_Value(ShiftAmt),
+                                  m_SpecificInt(APInt(BitWidth, BitWidth - 1))),
+                  m_Zero(), LogicalShift));
   // shift_amt < BitWidth ? shift_op : 0
   bool MatchedULT =
       !MatchedUGT &&
-      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
-                                   m_SpecificInt(APInt(BitWidth, BitWidth)),
-                                   m_SpecificCondCode(ISD::SETULT)),
-                           LogicalShift, m_Zero()));
+      sd_match(
+          N, m_Select(m_SpecificSetCC(ISD::SETULT, m_Value(ShiftAmt),
+                                      m_SpecificInt(APInt(BitWidth, BitWidth))),
+                      LogicalShift, m_Zero()));
 
   if (!MatchedUGT && !MatchedULT)
     return SDValue();

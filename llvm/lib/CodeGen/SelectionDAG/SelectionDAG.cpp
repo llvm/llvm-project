@@ -4317,6 +4317,14 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known = Known.anyext(BitWidth);
     break;
   }
+  case ISD::BUILD_PAIR: {
+    // Operand 0 is the low half and operand 1 the high half,
+    // KnownBits::concat places its argument in the low bits.
+    Known = computeKnownBits(Op.getOperand(0), Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), Depth + 1);
+    Known = Known2.concat(Known);
+    break;
+  }
   case ISD::INSERT_VECTOR_ELT: {
     if (Op.getValueType().isScalableVector())
       break;
@@ -7439,6 +7447,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType().getScalarType() == MVT::i1)
       return getNode(ISD::VECREDUCE_AND, DL, VT, N1);
     break;
+  case ISD::VECTOR_REPEAT:
+    assert(N1.getValueType().isFixedLengthVector() &&
+           "VECTOR_REPEAT requires a fixed-length vector operand");
+    assert(VT.isScalableVector() &&
+           "VECTOR_REPEAT requires a scalable vector result");
+    assert(N1.getValueType().getVectorNumElements() ==
+               VT.getVectorMinNumElements() &&
+           "VECTOR_REPEAT operand and result element counts must match");
+    if (VT.getVectorMinNumElements() == 1)
+      return getSplatVector(
+          VT, DL, getExtractVectorElt(DL, VT.getVectorElementType(), N1, 0));
+    break;
   case ISD::SPLAT_VECTOR:
     assert(VT.isVector() && "Wrong return type!");
     // FIXME: Hexagon uses i32 scalar for a floating point zero vector so allow
@@ -9985,10 +10005,10 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
 }
 
 static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
-                                            unsigned AS) {
+                                            const DataLayout &DL, unsigned AS) {
   // Lowering memcpy / memset / memmove intrinsics to calls is only valid if all
   // pointer operands can be losslessly bitcasted to pointers of address space 0
-  if (AS != 0 && !TLI->getTargetMachine().isNoopAddrSpaceCast(AS, 0)) {
+  if (AS != 0 && !TLI->getTargetMachine().isNoopAddrSpaceCast(DL, AS, 0)) {
     report_fatal_error("cannot lower memory intrinsic in address space " +
                        Twine(AS));
   }
@@ -10156,8 +10176,10 @@ SDValue SelectionDAG::getMemcpy(
         DstMemCacheHint, SrcMemCacheHint);
   }
 
-  checkAddrSpaceIsValidForLibcall(TLI, DstPtrInfo.getAddrSpace());
-  checkAddrSpaceIsValidForLibcall(TLI, SrcPtrInfo.getAddrSpace());
+  checkAddrSpaceIsValidForLibcall(TLI, getDataLayout(),
+                                  DstPtrInfo.getAddrSpace());
+  checkAddrSpaceIsValidForLibcall(TLI, getDataLayout(),
+                                  SrcPtrInfo.getAddrSpace());
 
   // FIXME: If the memcpy is volatile (isVol), lowering it to a plain libc
   // memcpy is not guaranteed to be safe. libc memcpys aren't required to
@@ -10271,8 +10293,10 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
       return Result;
   }
 
-  checkAddrSpaceIsValidForLibcall(TLI, DstPtrInfo.getAddrSpace());
-  checkAddrSpaceIsValidForLibcall(TLI, SrcPtrInfo.getAddrSpace());
+  checkAddrSpaceIsValidForLibcall(TLI, getDataLayout(),
+                                  DstPtrInfo.getAddrSpace());
+  checkAddrSpaceIsValidForLibcall(TLI, getDataLayout(),
+                                  SrcPtrInfo.getAddrSpace());
 
   // FIXME: If the memmove is volatile, lowering it to plain libc memmove may
   // not be safe.  See memcpy above for more details.
@@ -10394,7 +10418,8 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
     return Result;
   }
 
-  checkAddrSpaceIsValidForLibcall(TLI, DstPtrInfo.getAddrSpace());
+  checkAddrSpaceIsValidForLibcall(TLI, getDataLayout(),
+                                  DstPtrInfo.getAddrSpace());
 
   // Emit a library call.
   auto &Ctx = *getContext();

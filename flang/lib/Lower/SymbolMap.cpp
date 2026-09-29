@@ -43,6 +43,19 @@ Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef symRef) {
   return SymbolBox::None{};
 }
 
+Fortran::lower::SymbolBox Fortran::lower::SymMap::lookupDeviceSymbol(
+    Fortran::semantics::SymbolRef symRef) {
+  auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+  for (auto jmap = deviceSymbolMapStack.rbegin(),
+            jend = deviceSymbolMapStack.rend();
+       jmap != jend; ++jmap) {
+    auto iter = jmap->find(sym);
+    if (iter != jmap->end())
+      return iter->second;
+  }
+  return SymbolBox::None{};
+}
+
 const Fortran::semantics::Symbol *
 Fortran::lower::SymMap::lookupSymbolByName(llvm::StringRef symName) {
   for (auto jmap = symbolMapStack.rbegin(), jend = symbolMapStack.rend();
