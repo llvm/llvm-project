@@ -2096,9 +2096,14 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
         Inits[MT->getRowMajorFlattenedIndex(Row, Col)] =
             C->getAggregateElement(MT->getColumnMajorFlattenedIndex(Row, Col));
     llvm::Constant *MemoryValue = llvm::ConstantVector::get(Inits);
-    if (CGM.getLangOpts().HLSL && destType->isConstantMatrixBoolType())
-      return llvm::ConstantExpr::getZExt(
-          MemoryValue, CGM.getTypes().convertTypeForLoadStore(destType));
+    if (destType->isConstantMatrixBoolType()) {
+      llvm::Constant *Res = llvm::ConstantFoldCastOperand(
+          llvm::Instruction::ZExt, MemoryValue,
+          CGM.getTypes().convertTypeForLoadStore(destType),
+          CGM.getDataLayout());
+      assert(Res && "Constant folding must succeed");
+      return Res;
+    }
     return MemoryValue;
   }
 

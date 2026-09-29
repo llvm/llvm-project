@@ -195,7 +195,7 @@ llvm::Type *CodeGenTypes::convertTypeForLoadStore(QualType T,
     return llvm::IntegerType::get(getLLVMContext(),
                                   (unsigned)Context.getTypeSize(T));
 
-  if (Context.getLangOpts().HLSL && T->isConstantMatrixBoolType()) {
+  if (T->isConstantMatrixBoolType()) {
     // Matrices are loaded and stored atomically as vectors. Therefore we
     // construct a FixedVectorType here instead of returning
     // ConvertTypeForMem(T) which would return an ArrayType instead.

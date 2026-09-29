@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -disable-llvm-passes \
-// RUN:   -emit-llvm -finclude-default-header -o - %s | FileCheck %s --check-prefix=CHECK,COL-CHECK
+// RUN:   -emit-llvm -finclude-default-header -o - %s | FileCheck %s --check-prefixes=CHECK,COL-CHECK
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -disable-llvm-passes \
 // RUN:   -emit-llvm -finclude-default-header -fmatrix-memory-layout=row-major -o - %s \
-// RUN:   | FileCheck %s --check-prefix=CHECK,ROW-CHECK
+// RUN:   | FileCheck %s --check-prefixes=CHECK,ROW-CHECK
 
 // Verify that matrix initializer lists produce values in canonical column-major
 // register layout. The initializer list {1,2,3,4,5,6} for a float2x3 (2 rows,
