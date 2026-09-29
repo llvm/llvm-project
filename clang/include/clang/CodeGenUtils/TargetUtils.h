@@ -46,6 +46,12 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 ArmSMEInlinability getArmSMEInlinability(const FunctionDecl *Caller,
                                          const FunctionDecl *Callee);
 
+/// Returns whether the Neon builtin \p BuiltinID takes a trailing argument
+/// that discriminates the operand type.  This should be kept consistent with
+/// the logic in Sema.
+/// TODO: Make this return false for SISD builtins.
+bool hasExtraNeonArgument(unsigned BuiltinID);
+
 } // namespace clang::CodeGenUtils
 
 #endif // LLVM_CLANG_CODEGENUTILS_TARGETUTILS_H
