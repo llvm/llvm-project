@@ -574,6 +574,9 @@ bool MemRefDependenceGraph::hasDependencePath(unsigned srcId,
   SmallVector<std::pair<unsigned, unsigned>, 4> worklist;
   worklist.push_back({srcId, 0});
   Operation *dstOp = getNode(dstId)->op;
+  // Track nodes already pushed onto the worklist to avoid redundant visit.
+  DenseSet<unsigned> visited;
+  visited.insert(srcId);
   // Run DFS traversal to see if 'dstId' is reachable from 'srcId'.
   while (!worklist.empty()) {
     auto &idAndIndex = worklist.back();
@@ -595,7 +598,8 @@ bool MemRefDependenceGraph::hasDependencePath(unsigned srcId,
     // nodes that are "after" dstId in the containing block; one can't have a
     // path to `dstId` from any of those nodes.
     bool afterDst = dstOp->isBeforeInBlock(getNode(edge.id)->op);
-    if (!afterDst && edge.id != idAndIndex.first)
+    if (!afterDst && edge.id != idAndIndex.first &&
+        visited.insert(edge.id).second)
       worklist.push_back({edge.id, 0});
   }
   return false;
