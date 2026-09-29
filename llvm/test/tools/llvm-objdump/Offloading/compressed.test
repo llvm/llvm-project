@@ -1,5 +1,4 @@
 # REQUIRES: zstd
-# UNSUPPORTED: system-zos
 
 # RUN: yaml2obj %s --docnum=1 -o %t.bin
 # RUN: llvm-objdump --offloading %t.bin | FileCheck %s --match-full-lines --strict-whitespace --implicit-check-not={{.}}

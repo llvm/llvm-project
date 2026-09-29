@@ -195,12 +195,9 @@ decompressOffloadBinary(MemoryBufferRef Buf) {
                              .drop_front(Header->EntriesOffset);
   uint64_t BodySize = Header->InflatedSize - Header->EntriesOffset;
 
-  ArrayRef<uint8_t> CompressedBytes = arrayRefFromStringRef(Compressed);
-  if (const char *Reason = compression::getReasonIfUnsupported(CompressedBytes))
-    return createStringError(Reason);
-
   SmallVector<uint8_t, 0> Body;
-  if (Error Err = compression::decompress(CompressedBytes, Body, BodySize))
+  if (Error Err = compression::decompress(arrayRefFromStringRef(Compressed),
+                                          Body, BodySize))
     return std::move(Err);
 
   // Restore the old header data for the newly uncompressed blob.

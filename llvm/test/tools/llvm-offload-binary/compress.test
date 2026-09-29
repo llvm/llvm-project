@@ -1,5 +1,4 @@
 # REQUIRES: zstd
-# UNSUPPORTED: system-zos
 
 # RUN: llvm-offload-binary -o %t --compress --compression-format=zstd --image=file=%s,arch=abc,triple=x-y-z
 # RUN: llvm-objdump --offloading %t | FileCheck %s

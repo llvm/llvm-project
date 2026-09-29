@@ -3652,17 +3652,19 @@ static void dumpInput(StringRef file) {
   OwningBinary<Binary> OBinary = unwrapOrError(createBinary(file), file);
   Binary &Binary = *OBinary.getBinary();
 
-  if (Archive *A = dyn_cast<Archive>(&Binary))
+  if (Archive *A = dyn_cast<Archive>(&Binary)) {
     dumpArchive(A);
-  else if (ObjectFile *O = dyn_cast<ObjectFile>(&Binary))
+  } else if (ObjectFile *O = dyn_cast<ObjectFile>(&Binary)) {
     dumpObject(O);
-  else if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Binary))
+  } else if (MachOUniversalBinary *UB =
+                 dyn_cast<MachOUniversalBinary>(&Binary)) {
     parseInputMachO(UB);
-  else if (isa<OffloadBinary>(&Binary)) {
+  } else if (isa<OffloadBinary>(&Binary)) {
     std::unique_ptr<MemoryBuffer> OB = OBinary.takeBinary().second;
     dumpOffloadSections(*OB);
-  } else
+  } else {
     reportError(errorCodeToError(object_error::invalid_file_type), file);
+  }
 }
 
 template <typename T>
