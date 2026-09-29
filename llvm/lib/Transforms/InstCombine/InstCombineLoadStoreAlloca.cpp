@@ -1063,6 +1063,17 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
     return nullptr;
 
   if (auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
+    // We know by precondition that null pointers are not defined in this
+    // address-space.
+    //
+    // If HasDereferenceable is true, we know that the GEP does not have null
+    // provenance.  Therefore, the operand must also not have null provenance.
+    // We assume ConstantPointerNull does not have provenance. (The address
+    // could be equal to zero, but that doesn't matter.)
+    //
+    // If HasDeferenceable is false, we know that the address is some non-zero
+    // value. If the GEP is inbounds, the operand must also have a non-zero
+    // value.
     if (HasDereferenceable || GEP->isInBounds()) {
       if (auto *Res = simplifyNonNullOperand(GEP->getPointerOperand(),
                                              HasDereferenceable, Depth + 1)) {

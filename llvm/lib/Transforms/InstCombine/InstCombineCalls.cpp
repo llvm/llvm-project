@@ -5046,18 +5046,23 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
 
   for (Value *V : Call.args()) {
     if (V->getType()->isPointerTy()) {
-      // Simplify the nonnull operand if the parameter is known to be nonnull.
-      // Otherwise, try to infer nonnull for it.
+      // If the operand is dereferenceable, it must be a valid pointer to a
+      // part of some object which is not located at null. If the operand is
+      // marked nonnull, it must not be null.  Try to simplify the argument
+      // based on this.
+      //
+      // Otherwise, try to infer nonnull.
       bool HasDereferenceable = Call.getParamDereferenceableBytes(ArgNo) > 0;
-      if (Call.paramHasAttr(ArgNo, Attribute::NonNull) ||
-          (HasDereferenceable &&
-           !NullPointerIsDefined(Call.getFunction(),
-                                 V->getType()->getPointerAddressSpace()))) {
+      if ((Call.paramHasAttr(ArgNo, Attribute::NonNull) ||
+           HasDereferenceable) &&
+          !NullPointerIsDefined(Call.getFunction(),
+                                V->getType()->getPointerAddressSpace())) {
         if (Value *Res = simplifyNonNullOperand(V, HasDereferenceable)) {
           replaceOperand(Call, ArgNo, Res);
           Changed = true;
         }
-      } else if (isKnownNonZero(V,
+      } else if (!Call.paramHasAttr(ArgNo, Attribute::NonNull) &&
+                 isKnownNonZero(V,
                                 getSimplifyQuery().getWithInstruction(&Call))) {
         ArgNos.push_back(ArgNo);
       }
