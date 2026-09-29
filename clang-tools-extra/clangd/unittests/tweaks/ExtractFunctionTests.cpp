@@ -939,6 +939,18 @@ TEST_F(ExtractFunctionTest, ConstParametersConditionalReferenceBinding) {
               HasSubstr("extracted(const bool &cond, int &c, int &d)"));
 }
 
+TEST_F(ExtractFunctionTest, ConstParametersConditionalMutatingAccess) {
+  Context = File;
+  // Same as above, but no named LHS.
+  EXPECT_THAT(apply(R"cpp(
+    struct S { int n; };
+    void f(bool cond, S s1, S s2) {
+      [[(cond ? s1 : s2).n = 0;]]
+    }
+  )cpp"),
+              HasSubstr("extracted(const bool &cond, S &s1, S &s2)"));
+}
+
 TEST_F(ExtractFunctionTest, ConstParametersStaticOperatorCall) {
   Context = File;
   // A static operator() (or operator[], since C++23) has no implicit

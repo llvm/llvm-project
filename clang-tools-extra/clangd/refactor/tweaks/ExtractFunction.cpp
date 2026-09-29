@@ -646,15 +646,15 @@ bool isLoop(const Stmt *S) {
          isa<CXXForRangeStmt>(S);
 }
 
-// Strips E down to the Decl whose storage it ultimately refers to, chaining
-// through parens, casts, and member/array-element access (e.g. `a.b[i]`
-// resolves to `a`), but only when that access reaches through value
-// semantics: mutating `a.b` mutates `a`'s own storage, so we keep chaining.
-// We deliberately stop at a pointer-typed base (e.g. `p->b`, `p[i]`,
-// `p->*pmf`): that only mutates `*p`, never `p`'s own binding, so chaining
-// through it would incorrectly require `p` to stay non-const. For the same
-// reason, a dereference (`*p = 1`) is intentionally not handled at all: it
-// only ever mutates the pointee, never the pointer itself.
+// Strips E down to the Decl(s) whose storage it ultimately refers to,
+// chaining through parens, casts, and member/array-element access (e.g.
+// `a.b[i]` resolves to `a`), but only when that access reaches through
+// value semantics: mutating `a.b` mutates `a`'s own storage, so we keep
+// chaining. We deliberately stop at a pointer-typed base (e.g. `p->b`,
+// `p[i]`, `p->*pmf`): that only mutates `*p`, never `p`'s own binding, so
+// chaining through it would incorrectly require `p` to stay non-const. For
+// the same reason, a dereference (`*p = 1`) is intentionally not handled
+// at all: it only ever mutates the pointee, never the pointer itself.
 //
 // A genuine array subscript (`arr[i]` where `arr` is an array, not a
 // pointer) also stops here: the base is always wrapped in an
@@ -663,29 +663,45 @@ bool isLoop(const Stmt *S) {
 // never makes an array-typed capture const in the first place, regardless
 // of what we compute here.
 //
-// Returns null if E isn't ultimately grounded in a variable this way (e.g.
-// it's a temporary, a call result, or reached through a pointer).
-const Decl *underlyingDecl(const Expr *E) {
+// A conditional expression (e.g. `(cond ? a : b).m`) could resolve to
+// either branch at runtime, so both are collected -- this can only grow
+// the result, never replace it, which is why this appends to Decls rather
+// than returning a single Decl the way the rest of this function might
+// suggest. This has to be handled at every level of the chain, not just
+// the top: `(cond ? a : b).m = 1` reaches the conditional through a
+// MemberExpr base, not directly.
+//
+// Appends nothing if E isn't ultimately grounded in a variable this way
+// (e.g. it's a temporary, a call result, or reached through a pointer).
+void collectUnderlyingDecls(const Expr *E,
+                            llvm::SmallVectorImpl<const Decl *> &Decls) {
   if (!E)
-    return nullptr;
+    return;
   E = E->IgnoreParenCasts();
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
-    return DRE->getDecl();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    Decls.push_back(DRE->getDecl());
+    return;
+  }
   if (const auto *ME = dyn_cast<MemberExpr>(E)) {
-    if (ME->getBase()->getType()->isPointerType())
-      return nullptr;
-    return underlyingDecl(ME->getBase());
+    if (!ME->getBase()->getType()->isPointerType())
+      collectUnderlyingDecls(ME->getBase(), Decls);
+    return;
   }
   if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
-    if (ASE->getBase()->getType()->isPointerType())
-      return nullptr;
-    return underlyingDecl(ASE->getBase());
+    if (!ASE->getBase()->getType()->isPointerType())
+      collectUnderlyingDecls(ASE->getBase(), Decls);
+    return;
   }
-  if (const auto *BO = dyn_cast<BinaryOperator>(E))
+  if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
     if ((BO->getOpcode() == BO_PtrMemD || BO->getOpcode() == BO_PtrMemI) &&
         !BO->getLHS()->getType()->isPointerType())
-      return underlyingDecl(BO->getLHS());
-  return nullptr;
+      collectUnderlyingDecls(BO->getLHS(), Decls);
+    return;
+  }
+  if (const auto *CO = dyn_cast<AbstractConditionalOperator>(E)) {
+    collectUnderlyingDecls(CO->getTrueExpr(), Decls);
+    collectUnderlyingDecls(CO->getFalseExpr(), Decls);
+  }
 }
 
 // Captures information from Extraction Zone
@@ -764,19 +780,10 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
         DeclInfo->IsPossiblyMutated = true;
     }
     void markPossiblyMutated(const Expr *E) {
-      if (!E)
-        return;
-      // A reference bound to (or a mutation reaching through) a conditional
-      // expression could end up aliasing either branch at runtime, so both
-      // have to be marked -- underlyingDecl() only follows a single lvalue
-      // path and can't express that.
-      if (const auto *CO =
-              dyn_cast<AbstractConditionalOperator>(E->IgnoreParenCasts())) {
-        markPossiblyMutated(CO->getTrueExpr());
-        markPossiblyMutated(CO->getFalseExpr());
-        return;
-      }
-      markPossiblyMutated(underlyingDecl(E));
+      llvm::SmallVector<const Decl *, 2> Decls;
+      collectUnderlyingDecls(E, Decls);
+      for (const Decl *D : Decls)
+        markPossiblyMutated(D);
     }
 
     bool VisitBinaryOperator(BinaryOperator *BO) {
