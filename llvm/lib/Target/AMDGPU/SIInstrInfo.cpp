@@ -6476,8 +6476,6 @@ static unsigned VOP3OpIdxToSrcN(const MachineInstr &MI, unsigned OpIdx) {
 }
 
 unsigned SIInstrInfo::getNumSubRegsForSpillOp(const MachineInstr &MI) const {
-  const SIInstrInfo *TII = ST.getInstrInfo();
-
   unsigned Op = MI.getOpcode();
   switch (Op) {
   case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
@@ -6487,7 +6485,7 @@ unsigned SIInstrInfo::getNumSubRegsForSpillOp(const MachineInstr &MI) const {
     // runtime. However, some ABIs may want to compute the mask dynamically and
     // this will need to be updated.
     return llvm::popcount(
-        (uint64_t)TII->getNamedOperand(MI, AMDGPU::OpName::mask)->getImm());
+        (uint64_t)getNamedOperand(MI, AMDGPU::OpName::mask)->getImm());
   case AMDGPU::SI_SPILL_S1024_SAVE:
   case AMDGPU::SI_SPILL_S1024_CFI_SAVE:
   case AMDGPU::SI_SPILL_S1024_RESTORE:
