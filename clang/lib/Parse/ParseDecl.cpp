@@ -4119,6 +4119,20 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
+        auto IsTypedefName = [&](const Token &T) {
+          if (!T.is(tok::identifier))
+            return false;
+          IdentifierInfo *II = T.getIdentifierInfo();
+          if (!II)
+            return false;
+          // Suppress diagnostics; the real parse will emit them later.
+          LookupResult R(Actions, II, T.getLocation(),
+                         Sema::LookupOrdinaryName);
+          Actions.LookupName(R, getCurScope(),
+                             /*AllowBuiltinCreation=*/false);
+          R.suppressDiagnostics();
+          return R.isSingleResult() && isa<TypeDecl>(R.getFoundDecl());
+        };
         auto MayBeTypeSpecifier = [&]() {
           // In pre-C23 C, auto can be used as a storage-class specifier.
           // C23 removes auto from the storage-class specifiers and repurposes
@@ -4131,6 +4145,15 @@ void Parser::ParseDeclarationSpecifiers(
           while (true) {
             const Token &T = GetLookAheadToken(I);
             if (isKnownToBeTypeSpecifier(T))
+              return true;
+
+            // C23: a bare identifier that names a typedef is a type
+            // specifier here, so `auto typedefName varName;` should be
+            // parsed with `auto` as the storage-class specifier — not as
+            // type inference. Without this check the parser would consume
+            // `auto` as type-inference and then error on the missing
+            // initializer for what it thinks is `typedefName`.
+            if (getLangOpts().C23 && IsTypedefName(T))
               return true;
 
             if (getLangOpts().C23 && isTypeSpecifierQualifier(T))
