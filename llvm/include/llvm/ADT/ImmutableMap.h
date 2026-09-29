@@ -103,6 +103,27 @@ public:
         return ImmutableMap(T);
     }
 
+    /// Merges \p A and \p B in a single traversal (see
+    /// ImutAVLFactory::mergeTrees), sharing subtrees the two maps do not
+    /// overlap. \p Combine(AElem, BElem) yields the stored element for a key;
+    /// \p KeepUnmatched governs keys unique to one side. \p SkipShared returns
+    /// a pointer-identical subtree unchanged in O(1); only pass true when the
+    /// merge is idempotent (Combine(a, a) == a, e.g. a lattice join). This is
+    /// more efficient than repeatedly adding \p B's entries to \p A when \p B
+    /// is large. Only valid for non-canonicalizing factories (the bulk path
+    /// does not canonicalize the nodes it creates). Does not short-circuit
+    /// equal/empty operands or reorder by size; callers wanting those apply
+    /// them first.
+    template <typename CombineFn>
+    [[nodiscard]] ImmutableMap mergeWith(ImmutableMap A, ImmutableMap B,
+                                         CombineFn Combine, bool KeepUnmatched,
+                                         bool SkipShared = false) {
+      static_assert(!Canonicalize,
+                    "mergeWith does not canonicalize the nodes it creates");
+      return ImmutableMap(F.mergeTrees(A.Root.get(), B.Root.get(), Combine,
+                                       KeepUnmatched, SkipShared));
+    }
+
     [[nodiscard]] ImmutableMap remove(ImmutableMap Old, key_type_ref K) {
       TreeTy *T = F.remove(Old.Root.get(), K);
       if constexpr (Canonicalize)

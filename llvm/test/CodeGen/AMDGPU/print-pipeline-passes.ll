@@ -9,8 +9,10 @@
 ; RUN: opt -mtriple=amdgpu--amdhsa -S -passes="lto-pre-link<O3>" -print-pipeline-passes -amdgpu-internalize-symbols %s -o - | FileCheck --check-prefix=PRE %s
 
 
+; CHECK: early-cse<memssa>
 ; CHECK: amdgpu-attributor
 ; O0-NOT: amdgpu-attributor
+; O0-NOT: early-cse<memssa>
 
 ; PRE-NOT: internalize
 ; PRE-NOT: amdgpu-attributor

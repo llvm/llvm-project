@@ -28,7 +28,7 @@
 
 using namespace __tsan;
 
-#if !SANITIZER_GO && __TSAN_HAS_INT128
+#if __TSAN_HAS_INT128
 // Protects emulation of 128-bit atomic operations.
 static StaticSpinMutex mutex128;
 #endif
@@ -112,8 +112,7 @@ T func_cas(volatile T *v, T cmp, T xch) {
 // Atomic ops are executed under tsan internal mutex,
 // here we assume that the atomic variables are not accessed
 // from non-instrumented code.
-#if !defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16) && !SANITIZER_GO && \
-    __TSAN_HAS_INT128
+#if !defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16) && __TSAN_HAS_INT128
 a128 func_xchg(volatile a128 *v, a128 op) {
   SpinMutexLock lock(&mutex128);
   a128 cmp = *v;
@@ -253,7 +252,7 @@ struct OpLoad {
     return atomic_load(to_atomic(a), to_mo(mo));
   }
 
-#if __TSAN_HAS_INT128 && !SANITIZER_GO
+#if __TSAN_HAS_INT128
   static a128 NoTsanAtomic(morder mo, const volatile a128 *a) {
     SpinMutexLock lock(&mutex128);
     return *a;
@@ -294,7 +293,7 @@ struct OpStore {
     atomic_store(to_atomic(a), v, to_mo(mo));
   }
 
-#if __TSAN_HAS_INT128 && !SANITIZER_GO
+#if __TSAN_HAS_INT128
   static void NoTsanAtomic(morder mo, volatile a128 *a, a128 v) {
     SpinMutexLock lock(&mutex128);
     *a = v;
@@ -931,6 +930,13 @@ void __tsan_go_atomic64_load(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
   *(a64 *)(a + 8) = AtomicGoRet<OpLoad>(thr, cpc, pc, mo_acquire, *(a64 **)a);
 }
 
+#  if __TSAN_HAS_INT128
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic128_load(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
+  *(a128*)(a + 8) = AtomicGoRet<OpLoad>(thr, cpc, pc, mo_acquire, *(a128**)a);
+}
+#  endif
+
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_store(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
   AtomicGo<OpStore>(thr, cpc, pc, mo_release, *(a32 **)a, *(a32 *)(a + 8));
@@ -940,6 +946,13 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic64_store(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
   AtomicGo<OpStore>(thr, cpc, pc, mo_release, *(a64 **)a, *(a64 *)(a + 8));
 }
+
+#  if __TSAN_HAS_INT128
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic128_store(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
+  AtomicGo<OpStore>(thr, cpc, pc, mo_release, *(a128**)a, *(a128*)(a + 8));
+}
+#  endif
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic32_fetch_add(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
@@ -1006,5 +1019,16 @@ void __tsan_go_atomic64_compare_exchange(ThreadState *thr, uptr cpc, uptr pc,
                                cmp, *(a64 *)(a + 16));
   *(bool *)(a + 24) = (cur == cmp);
 }
+
+#  if __TSAN_HAS_INT128
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_go_atomic128_compare_exchange(ThreadState* thr, uptr cpc, uptr pc,
+                                          u8* a) {
+  a128 cmp = *(a128*)(a + 8);
+  a128 cur = AtomicGoRet<OpCAS>(thr, cpc, pc, mo_acq_rel, mo_acquire,
+                                *(a128**)a, cmp, *(a128*)(a + 24));
+  *(bool*)(a + 40) = (cur == cmp);
+}
+#  endif
 }  // extern "C"
 #endif  // #if !SANITIZER_GO

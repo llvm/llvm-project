@@ -204,8 +204,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   if (Triple.getOS() == llvm::Triple::Linux)
     this->MCountName = "\01_mcount";
   else if (Triple.getOS() == llvm::Triple::UnknownOS)
-    this->MCountName =
-        Opts.EABIVersion == llvm::EABI::GNU ? "\01_mcount" : "mcount";
+    this->MCountName = Triple.isGNUEnvironment() ? "\01_mcount" : "mcount";
 }
 
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
@@ -254,7 +253,8 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  const LangOptions &LO,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, HasPAuthLR))
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, getTriple(),
+                                        HasPAuthLR))
     return false;
 
   // GCS is currently untested with ptrauth-returns, but enabling this could be

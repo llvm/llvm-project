@@ -32,7 +32,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
@@ -42,7 +41,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -222,10 +220,9 @@ public:
     AU.setPreservesCFG();
     AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addPreservedID(MachineLoopInfoID);
-    AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -240,7 +237,8 @@ TwoAddressInstructionPass::run(MachineFunction &MF,
   LiveIntervals *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
 
   TwoAddressInstructionImpl Impl(MF, MFAM, LIS);
-  if (MF.getFunction().hasOptNone())
+  if (MF.getFunction().hasOptNone() ||
+      shouldSkipOptimizationForOptBisect(MF.getFunction()))
     Impl.setOptLevel(CodeGenOptLevel::None);
 
   MFPropsModifier _(*this, MF);
@@ -256,8 +254,6 @@ TwoAddressInstructionPass::run(MachineFunction &MF,
 
   PA.preserve<LiveVariablesAnalysis>();
   PA.preserve<LiveIntervalsAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
@@ -1069,8 +1065,9 @@ bool TwoAddressInstructionImpl::rescheduleMIBelowKill(
   if (LIS) {
     // We have to move the copies (and any interleaved debug instructions)
     // first so that the MBB is still well-formed when calling handleMove().
-    for (MachineBasicBlock::iterator MBBI = AfterMI; MBBI != End;) {
-      auto CopyMI = MBBI++;
+    // Move them back to front, so a copy never ends up above its source def.
+    for (MachineBasicBlock::iterator MIIt(MI); std::next(MIIt) != End;) {
+      MachineBasicBlock::iterator CopyMI = std::prev(End);
       MBB->splice(InsertPos, MBB, CopyMI);
       if (!CopyMI->isDebugOrPseudoInstr())
         LIS->handleMove(*CopyMI);
@@ -2055,14 +2052,14 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     }
   }
 
-  // If there are no live intervals information, we scan the use list once
-  // in order to find which subregisters are used.
-  LaneBitmask UsedLanes = LaneBitmask::getNone();
-  if (!LIS) {
-    for (MachineOperand &Use : MRI->use_nodbg_operands(DstReg)) {
-      if (unsigned SubReg = Use.getSubReg())
-        UsedLanes |= TRI->getSubRegIndexLaneMask(SubReg);
-    }
+  // Undef lanes still need a COPY when a later read may not be marked undef;
+  // without live intervals that is every later read.
+  LaneBitmask KeepLanes = LaneBitmask::getNone();
+  for (const MachineOperand &Use : MRI->use_nodbg_operands(DstReg)) {
+    unsigned SubReg = Use.getSubReg();
+    if (SubReg &&
+        (!LIS || Use.getParent()->hasTiedAndOtherReadOf(DstReg, SubReg)))
+      KeepLanes |= TRI->getSubRegIndexLaneMask(SubReg);
   }
 
   LaneBitmask UndefLanes = LaneBitmask::getNone();
@@ -2072,11 +2069,9 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     Register SrcReg = UseMO.getReg();
     unsigned SubIdx = MI.getOperand(i+1).getImm();
     // Nothing needs to be inserted for undef operands.
-    // Unless there are no live intervals, and they are used at a later
-    // instruction as operand.
     if (UseMO.isUndef()) {
       LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubIdx);
-      if (LIS || (UsedLanes & LaneMask).none()) {
+      if ((KeepLanes & LaneMask).none()) {
         UndefLanes |= LaneMask;
         continue;
       }
@@ -2124,6 +2119,10 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     MI.setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
     for (int j = MI.getNumOperands() - 1, ee = 0; j > ee; --j)
       MI.removeOperand(j);
+    // The dead def of DstReg is left in place, so its live range is still
+    // correct. Drop it from the repaired set.
+    if (LIS)
+      llvm::erase(OrigRegs, DstReg);
   } else {
     if (LIS) {
       // Force live interval recomputation if we moved to a partial definition

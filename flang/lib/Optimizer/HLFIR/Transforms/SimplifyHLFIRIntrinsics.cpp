@@ -311,7 +311,10 @@ protected:
       auto constDim = fir::getIntIfConstant(getDim());
       if (!constDim)
         return rewriter.notifyMatchFailure(op, "Nonconstant DIM");
-      dimVal = *constDim;
+      std::optional<std::int64_t> constDim64 = constDim->trySExtValue();
+      if (!constDim64)
+        return rewriter.notifyMatchFailure(op, "DIM does not fit in int64_t");
+      dimVal = *constDim64;
 
       if ((dimVal <= 0 || dimVal > getSourceRank()))
         return rewriter.notifyMatchFailure(op,
@@ -1435,7 +1438,11 @@ public:
         if (!constDim)
           return rewriter.notifyMatchFailure(
               op, "Nonconstant DIM for CSHIFT/EOSHIFT");
-        dimVal = *constDim;
+        std::optional<std::int64_t> constDim64 = constDim->trySExtValue();
+        if (!constDim64)
+          return rewriter.notifyMatchFailure(
+              op, "DIM does not fit in int64_t for CSHIFT/EOSHIFT");
+        dimVal = *constDim64;
       }
 
     if (dimVal <= 0 || dimVal > arrayRank)
@@ -1454,10 +1461,11 @@ public:
           return rewriter.notifyMatchFailure(
               op, "EOSHIFT with BOUNDARY being CHARACTER expression");
       }
-      // TODO: selecting between ARRAY and BOUNDARY values with derived types
-      // need more work.
-      if (fir::isa_derived(expr.getEleTy()))
-        return rewriter.notifyMatchFailure(op, "EOSHIFT of derived type");
+      // TODO: selecting between ARRAY and BOUNDARY values with derived or
+      // polymorphic types need more work.
+      if (fir::isa_derived(expr.getEleTy()) || expr.isPolymorphic())
+        return rewriter.notifyMatchFailure(
+            op, "EOSHIFT of derived or polymorphic type");
     }
 
     // When DIM==1 and the contiguity of the input array is not statically
@@ -2505,7 +2513,7 @@ public:
     std::optional<bool> isBack;
     if (back) {
       if (auto backCst = fir::getIntIfConstant(back))
-        isBack = *backCst != 0;
+        isBack = !backCst->isZero();
     } else {
       isBack = false;
     }

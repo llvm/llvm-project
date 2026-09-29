@@ -12,7 +12,7 @@ from lldbsuite.test import lldbutil
 
 class TestCorefileExceptionReason(TestBase):
     @no_debug_info_test
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIf(archs=no_match(["arm64", "arm64e"]))
     @skipIfRemote
     def test(self):

@@ -4,11 +4,93 @@
 
 # Tests for LLVM libc socket.h functions.
 
-load("//libc/test:libc_test_rules.bzl", "libc_test")
+load("//libc/test:libc_test_rules.bzl", "libc_test", "libc_test_library")
 
 package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
+
+libc_test_library(
+    name = "socket_test_support",
+    hdrs = ["linux/socket_test_support.h"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:__support_cpp_string_view",
+        "//libc:chdir",
+        "//libc:close",
+        "//libc:fchdir",
+        "//libc:hdr_fcntl_macros",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:open",
+        "//libc:strncpy",
+        "//libc:strnlen",
+        "//libc:types_size_t",
+        "//libc:types_socklen_t",
+        "//libc:types_struct_sockaddr_un",
+        "//libc/test/UnitTest:LibcUnitTest",
+    ],
+)
+
+libc_test(
+    name = "bind_test",
+    srcs = ["linux/bind_test.cpp"],
+    deps = [
+        ":socket_test_support",
+        "//libc:__support_cpp_scope",
+        "//libc:bind",
+        "//libc:close",
+        "//libc:getsockname",
+        "//libc:hdr_netinet_in_macros",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:htonl",
+        "//libc:remove",
+        "//libc:socket",
+        "//libc:types_sa_family_t",
+        "//libc:types_struct_sockaddr_in",
+        "//libc:types_struct_sockaddr_in6",
+        "//libc:types_struct_sockaddr_un",
+    ],
+)
+
+libc_test(
+    name = "connect_accept_test",
+    srcs = ["linux/connect_accept_test.cpp"],
+    deps = [
+        ":socket_test_support",
+        "//libc:__support_cpp_scope",
+        "//libc:accept",
+        "//libc:accept4",
+        "//libc:bind",
+        "//libc:close",
+        "//libc:connect",
+        "//libc:fcntl",
+        "//libc:hdr_fcntl_macros",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:listen",
+        "//libc:remove",
+        "//libc:socket",
+        "//libc:types_sa_family_t",
+        "//libc:types_size_t",
+        "//libc:types_socklen_t",
+        "//libc:types_struct_sockaddr_un",
+    ],
+)
+
+libc_test(
+    name = "listen_test",
+    srcs = ["linux/listen_test.cpp"],
+    deps = [
+        ":socket_test_support",
+        "//libc:__support_cpp_scope",
+        "//libc:bind",
+        "//libc:close",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:listen",
+        "//libc:remove",
+        "//libc:socket",
+        "//libc:types_struct_sockaddr_un",
+    ],
+)
 
 libc_test(
     name = "send_recv_test",
@@ -135,6 +217,21 @@ libc_test(
 )
 
 libc_test(
+    name = "sockatmark_test",
+    srcs = ["linux/sockatmark_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_scope",
+        "//libc:close",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:pipe",
+        "//libc:send",
+        "//libc:sockatmark",
+        "//libc:socketpair",
+        "//libc/test/UnitTest:test_logger",
+    ],
+)
+
+libc_test(
     name = "socketpair_test",
     srcs = ["linux/socketpair_test.cpp"],
     deps = [
@@ -142,5 +239,27 @@ libc_test(
         "//libc:close",
         "//libc:hdr_sys_socket_macros",
         "//libc:socketpair",
+    ],
+)
+
+libc_test(
+    name = "sockname_test",
+    srcs = ["linux/sockname_test.cpp"],
+    deps = [
+        ":socket_test_support",
+        "//libc:__support_cpp_scope",
+        "//libc:accept",
+        "//libc:bind",
+        "//libc:close",
+        "//libc:connect",
+        "//libc:getpeername",
+        "//libc:getsockname",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:listen",
+        "//libc:remove",
+        "//libc:socket",
+        "//libc:types_sa_family_t",
+        "//libc:types_socklen_t",
+        "//libc:types_struct_sockaddr_un",
     ],
 )

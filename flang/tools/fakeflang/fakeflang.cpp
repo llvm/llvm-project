@@ -67,7 +67,8 @@ static bool isCompilerIdProbe(llvm::ArrayRef<const char *> OrigArgs) {
     return true;
 
   return llvm::any_of(OrigArgs, [](const char *Arg) {
-    return llvm::sys::path::filename(Arg) == "CMakeFortranCompilerId.F";
+    llvm::StringRef fname = llvm::sys::path::filename(Arg);
+    return fname == "CMakeFortranCompilerId.F" || fname == "CMakeTestGNU.c";
   });
 }
 

@@ -2,6 +2,7 @@
 ; pr33001 - Check that llc doesn't crash when running with O0 option.
 
 ; RUN: llc -O2 -opt-bisect-limit=0 -mtriple=x86_64-unknown-linux-gnu -mattr=+sse,+sse2 < %s -o /dev/null
+; RUN: llc -O2 -opt-bisect-limit=0 -enable-new-pm -mtriple=x86_64-unknown-linux-gnu -mattr=+sse,+sse2 < %s -o /dev/null
 ; Check that llc doesn't crash due to ScalarizeMaskedMemIntring not being run
 ; because of opt-bisect-limit that in turn causes crash in instruction selection
 ; for unsupported gather/scatter.

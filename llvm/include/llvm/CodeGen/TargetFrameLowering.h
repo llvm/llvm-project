@@ -34,6 +34,7 @@ enum Value {
   ScalableVector = 2,
   WasmLocal = 3,
   ScalablePredicateVector = 4,
+  AvrAlign = 5,
   NoAlloc = 255
 };
 }
@@ -214,7 +215,8 @@ public:
 
   /// emitZeroCallUsedRegs - Zeros out call used registers.
   virtual void emitZeroCallUsedRegs(BitVector RegsToZero,
-                                    MachineBasicBlock &MBB) const {}
+                                    MachineBasicBlock &MBB,
+                                    RegScavenger *RS) const {}
 
   /// With basic block sections, emit callee saved frame moves for basic blocks
   /// that are in a different section.

@@ -41,7 +41,7 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
 
 DeclContext *Sema::computeDeclContext(QualType T) {
   if (!T->isDependentType())
-    if (auto *D = T->getAsTagDecl())
+    if (auto *D = T->getAsRecordDecl())
       return D;
   return ::getCurrentInstantiationOf(T, CurContext);
 }
@@ -100,9 +100,9 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
                                return TPL->getDepth() == Depth;
                              });
       if (L != TemplateParamLists.end()) {
-        void *Pos = nullptr;
+        llvm::FoldingSetInsertToken InsertToken;
         PartialSpec = ClassTemplate->findPartialSpecialization(
-            SpecType->template_arguments(), *L, Pos);
+            SpecType->template_arguments(), *L, InsertToken);
       }
     } else {
       // FIXME: The fallback on the search of partial

@@ -427,6 +427,17 @@ bool AliasAnalysis::Source::isPointer() const {
   return attributes.test(Attribute::Pointer);
 }
 
+bool AliasAnalysis::Source::isDeclaredAllocatable() const {
+  auto isAllocatable = [](mlir::Operation *op) {
+    auto var = mlir::dyn_cast_or_null<fir::FortranVariableOpInterface>(op);
+    return var && var.isAllocatable();
+  };
+
+  auto value = origin.u.dyn_cast<mlir::Value>();
+  return (value && isAllocatable(value.getDefiningOp())) ||
+         isAllocatable(origin.instantiationPoint);
+}
+
 bool AliasAnalysis::Source::isCrayPointee() const {
   return attributes.test(Attribute::CrayPointee);
 }
@@ -662,6 +673,71 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   if (lhs == rhs || getZeroOffsetViewRoot(lhs) == getZeroOffsetViewRoot(rhs))
     return AliasResult::MustAlias;
 
+  // OpenMP private clause copy region arguments are guaranteed to be disjoint.
+  // The copy region has two arguments: %arg0 (original/mold) and %arg1
+  // (private). By omp.private semantics, %arg1 is initialized with freshly
+  // allocated memory (from the init region), while %arg0 references the
+  // original variable. These cannot alias. This check handles both direct block
+  // argument comparisons and cases where one value is loaded from a block
+  // argument (common pattern: hlfir.assign %loaded to %arg1 where %loaded =
+  // fir.load %arg0).
+  auto getBlockArgOrLoadSource = [](mlir::Value v) -> mlir::BlockArgument {
+    if (auto arg = mlir::dyn_cast<BlockArgument>(v))
+      return arg;
+    // Check if this is a load from a block argument
+    if (auto defOp = v.getDefiningOp()) {
+      if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(defOp)) {
+        return mlir::dyn_cast<BlockArgument>(loadOp.getMemref());
+      }
+    }
+    return {};
+  };
+
+  auto lhsArg = getBlockArgOrLoadSource(lhs);
+  auto rhsArg = getBlockArgOrLoadSource(rhs);
+
+  if (lhsArg && rhsArg &&
+      lhsArg.getParentRegion() == rhsArg.getParentRegion()) {
+    if (auto *parentOp = lhsArg.getParentRegion()->getParentOp()) {
+      if (auto privateOp = mlir::dyn_cast<omp::PrivateClauseOp>(parentOp)) {
+        auto &copyRegion = privateOp.getCopyRegion();
+        if (lhsArg.getParentRegion() == &copyRegion) {
+          // Both trace to block args from the copy region - check if they're
+          // the defined pair
+          auto moldArg = privateOp.getCopyMoldArg();
+          auto privArg = privateOp.getCopyPrivateArg();
+          if ((lhsArg == moldArg && rhsArg == privArg) ||
+              (lhsArg == privArg && rhsArg == moldArg)) {
+            // Check if this is a POINTER type.
+            // For POINTER + FIRSTPRIVATE: the descriptor is copied (private)
+            // but pointer association is preserved, so the DATA they point to
+            // is the same → ALIASING.
+            // For ALLOCATABLE: fresh memory is allocated → NO ALIASING.
+            auto isPointerType = [](mlir::Type ty) -> bool {
+              ty = fir::unwrapRefType(ty);
+              if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty))
+                return boxTy.isPointer();
+              return false;
+            };
+
+            if (isPointerType(lhsArg.getType()) ||
+                isPointerType(rhsArg.getType())) {
+              LLVM_DEBUG(llvm::dbgs()
+                         << "  may alias: omp.private POINTER preserves "
+                         << "association (data aliases)\n");
+              return AliasResult::MayAlias;
+            }
+
+            LLVM_DEBUG(llvm::dbgs()
+                       << "  no alias: omp.private copy region arguments "
+                       << "(mold vs private)\n");
+            return AliasResult::NoAlias;
+          }
+        }
+      }
+    }
+  }
+
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
   LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
@@ -766,8 +842,19 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
       return AliasResult::MayAlias;
     }
 
-    // Two host associated accesses may overlap due to an equivalence.
+    // Two host-associated accesses may overlap through EQUIVALENCE, so return
+    // MayAlias conservatively. The exception is distinct data accesses where
+    // at least one is allocatable, since allocatables cannot be EQUIVALENCE
+    // objects, provided neither can participate in pointer association.
     if (lhsSrc.kind == SourceKind::HostAssoc) {
+      if (lhsSrc.isData() && rhsSrc.isData() && !lhsSrc.isTargetOrPointer() &&
+          !rhsSrc.isTargetOrPointer() &&
+          (lhsSrc.isDeclaredAllocatable() || rhsSrc.isDeclaredAllocatable())) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "  no alias: distinct host-associated data involving "
+                      "an allocatable\n");
+        return AliasResult::NoAlias;
+      }
       LLVM_DEBUG(llvm::dbgs() << "  aliasing because of host association\n");
       return AliasResult::MayAlias;
     }
@@ -1008,9 +1095,237 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   return ModRefResult::getNoModRef();
 }
 
+AliasAnalysis::AliasAnalysis(AliasAnalysisRecursiveEffectsCache &cacheRef)
+    : cache(&cacheRef) {
+  cacheRef.aa = this;
+}
+
+AliasAnalysis::AliasAnalysis(AliasAnalysis &&other) noexcept
+    : symTabMap(std::move(other.symTabMap)),
+      domInfoCache(std::move(other.domInfoCache)),
+      sortedScopeCache(std::move(other.sortedScopeCache)),
+      multiScopeCache(std::move(other.multiScopeCache)),
+      getSourceCache(std::move(other.getSourceCache)),
+      sourceCacheEnabled(other.sourceCacheEnabled),
+      sourceCacheHits(other.sourceCacheHits),
+      sourceCacheMisses(other.sourceCacheMisses), cache(other.cache) {
+  other.cache = nullptr;
+  if (cache)
+    cache->aa = this;
+}
+
+AliasAnalysis::~AliasAnalysis() {
+  if (cache)
+    cache->aa = nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// AliasAnalysisRecursiveEffectsCache
+//===----------------------------------------------------------------------===//
+
+void AliasAnalysisRecursiveEffectsCache::buildSummary(mlir::Region &region,
+                                                      Summary &out) {
+  for (mlir::Operation &op : region.getOps())
+    buildSummary(&op, out);
+}
+
+void AliasAnalysisRecursiveEffectsCache::buildSummary(mlir::Operation *op,
+                                                      Summary &out) {
+  // fir.call: defer the entire analysis to per-query getCallModRef. Recording
+  // its generic interface effects here on top would over-pessimize: the
+  // uncached path only falls through to interface analysis when
+  // getCallModRef itself returns ModAndRef.
+  if (llvm::isa<fir::CallOp>(op)) {
+    CallInfo ci;
+    ci.op = op;
+    ci.isFortranUserProcedure = aa->isCallToFortranUserProcedure(op);
+    out.calls.push_back(ci);
+    return;
+  }
+
+  bool isRecursive = op->hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>();
+  if (isRecursive) {
+    for (mlir::Region &r : op->getRegions())
+      buildSummary(r, out);
+  }
+
+  auto iface = dyn_cast<MemoryEffectOpInterface>(op);
+
+  if (!iface) {
+    // No effect interface and not handled by the recursive branch: must
+    // conservatively assume both Mod and Ref (this mirrors the uncached
+    // AliasAnalysis::getModRef which returns ModAndRef in this case).
+    if (!isRecursive) {
+      out.hasUnknownWrite = true;
+      out.hasUnknownRead = true;
+    }
+    return;
+  }
+
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  iface.getEffects(effects);
+
+  for (const MemoryEffects::EffectInstance &effect : effects) {
+    if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
+      continue;
+
+    mlir::SideEffects::Resource *resource = effect.getResource();
+
+    if (!resource->isAddressable())
+      continue;
+
+    bool isRead = isa<MemoryEffects::Read>(effect.getEffect());
+    bool isWrite = isa<MemoryEffects::Write>(effect.getEffect());
+    mlir::Value v = effect.getValue();
+
+    if (!v) {
+      if (isRead)
+        out.hasUnknownRead = true;
+      if (isWrite)
+        out.hasUnknownWrite = true;
+      continue;
+    }
+
+    if (isRead)
+      out.readLocations.push_back(v);
+
+    if (isWrite)
+      out.writeLocations.push_back(v);
+  }
+}
+
+ModRefResult
+AliasAnalysisRecursiveEffectsCache::getModRefFromSummary(mlir::Operation *op,
+                                                         mlir::Value location) {
+  assert(aa &&
+         "cache used without a linked fir::AliasAnalysis; this should only "
+         "be invoked from AliasAnalysis::getModRef when the back-pointer is "
+         "set");
+  auto it = summaries.find(op);
+
+  if (it == summaries.end()) {
+    ++summaryMisses;
+    Summary s;
+    buildSummary(op, s);
+    it = summaries.try_emplace(op, std::move(s)).first;
+  } else {
+    ++summaryHits;
+  }
+
+  const Summary &s = it->second;
+  bool mod = s.hasUnknownWrite;
+  bool ref = s.hasUnknownRead;
+
+  if (!mod) {
+    for (mlir::Value v : s.writeLocations) {
+      if (!aa->alias(v, location).isNo()) {
+        mod = true;
+        break;
+      }
+    }
+  }
+
+  if (!ref) {
+    for (mlir::Value v : s.readLocations) {
+      if (!aa->alias(v, location).isNo()) {
+        ref = true;
+        break;
+      }
+    }
+  }
+
+  if (mod && ref)
+    return ModRefResult::getModAndRef();
+
+  for (const CallInfo &ci : s.calls) {
+    mlir::Operation *call = ci.op;
+
+    if (ci.isFortranUserProcedure) {
+      ModRefResult cr = aa->getCallModRef(call, location);
+
+      if (cr != ModRefResult::getModAndRef()) {
+        if (cr.isMod())
+          mod = true;
+
+        if (cr.isRef())
+          ref = true;
+
+        if (mod && ref)
+          break;
+
+        continue;
+      }
+      // Fall through to interface analysis below.
+    }
+    // Either getCallModRef gave conservative ModAndRef, or the callee is
+    // not a Fortran user procedure (in which case getCallModRef would
+    // unconditionally return ModAndRef). Mirror the uncached fall-through
+    // to MemoryEffectOpInterface for additional precision.
+    auto iface = dyn_cast<MemoryEffectOpInterface>(call);
+
+    if (!iface) {
+      mod = true;
+      ref = true;
+      break;
+    }
+
+    SmallVector<MemoryEffects::EffectInstance> callEffects;
+    iface.getEffects(callEffects);
+
+    for (const MemoryEffects::EffectInstance &effect : callEffects) {
+      if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
+        continue;
+
+      mlir::SideEffects::Resource *resource = effect.getResource();
+
+      if (!resource->isAddressable())
+        continue;
+
+      AliasResult ar = AliasResult::MayAlias;
+
+      if (mlir::Value v = effect.getValue())
+        ar = aa->alias(v, location);
+
+      if (ar.isNo())
+        continue;
+
+      if (isa<MemoryEffects::Read>(effect.getEffect()))
+        ref = true;
+
+      if (isa<MemoryEffects::Write>(effect.getEffect()))
+        mod = true;
+
+      if (mod && ref)
+        break;
+    }
+
+    if (mod && ref)
+      break;
+  }
+
+  if (mod && ref)
+    return ModRefResult::getModAndRef();
+
+  if (mod)
+    return ModRefResult::getMod();
+
+  if (ref)
+    return ModRefResult::getRef();
+
+  return ModRefResult::getNoModRef();
+}
+
 /// This is mostly inspired by MLIR::LocalAliasAnalysis, except that
 /// fir.call's are handled in a special way.
 ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
+  // If this AliasAnalysis is linked with a cache, route ops with
+  // HasRecursiveMemoryEffects through it. Non-recursive ops fall through to
+  // the inline path below; the cache eventually delegates back to
+  // alias()/getCallModRef() on this instance, which never re-enter this
+  // routing check, so there is no risk of infinite recursion.
+  if (cache && op->hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>())
+    return cache->getModRefFromSummary(op, location);
+
   if (auto call = llvm::dyn_cast<fir::CallOp>(op)) {
     ModRefResult result = getCallModRef(call, location);
     if (result != ModRefResult::getModAndRef())
@@ -1231,16 +1546,24 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
           type = SourceKind::Allocate;
           breakFromLoop = true;
         })
-        .Case([&](fir::LoadOp op) {
+        .Case([&](fir::FortranObjectLoadOpInterface op) {
+          // Keyed off the interface rather than fir::LoadOp so that any
+          // operation yielding a value read from memory participates in the
+          // walk. The interface reports provenance only, which is all this
+          // walk needs; it does not promise the operation is a pure load.
+          // Keep this ahead of the FortranObjectViewOpInterface case below,
+          // which would otherwise win for an operation implementing both.
+          mlir::Value loadSource = op.getLoadSource(opResult);
+
           // If load is inside target and it points to mapped item,
           // continue tracking.
-          Operation *loadMemrefOp = op.getMemref().getDefiningOp();
+          Operation *loadMemrefOp = loadSource.getDefiningOp();
           bool isDeclareOp =
               llvm::isa_and_present<fir::DeclareOp>(loadMemrefOp) ||
               llvm::isa_and_present<hlfir::DeclareOp>(loadMemrefOp);
           if (isDeclareOp &&
               llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
-            v = op.getMemref();
+            v = loadSource;
             defOp = v.getDefiningOp();
             return;
           }
@@ -1266,7 +1589,7 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
             // Passing true here would stop the inner walk at the declare
             // and force SourceKind::Indirect, which spuriously coarsens
             // getCallModRef (e.g. for box_addr of allocatable dummies).
-            auto boxSrc = getSource(op.getMemref(),
+            auto boxSrc = getSource(loadSource,
                                     /*getLastInstantiationPoint=*/false,
                                     collectScopedOrigins);
             attributes |= boxSrc.attributes;

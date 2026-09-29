@@ -33,7 +33,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
 
@@ -195,18 +194,6 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     }
   } while (Super);
   return RC;
-}
-
-const TargetRegisterClass *
-X86RegisterInfo::getPointerRegClass(unsigned Kind) const {
-  assert(Kind == 0 && "this should only be used for default cases");
-  if (IsTarget64BitLP64)
-    return &X86::GR64RegClass;
-  // If the target is 64bit but we have been told to use 32bit addresses,
-  // we can still use 64-bit register as long as we know the high bits
-  // are zeros.
-  // Reflect that in the returned register class.
-  return Is64Bit ? &X86::LOW32_ADDR_ACCESSRegClass : &X86::GR32RegClass;
 }
 
 const TargetRegisterClass *
@@ -575,7 +562,7 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(SubReg);
 
   // Set the frame-pointer register and its aliases as reserved if needed.
-  if (TFI->hasFP(MF) || MF.getTarget().Options.FramePointerIsReserved(MF)) {
+  if (TFI->hasFP(MF) || MF.framePointerIsReserved()) {
     if (MF.getInfo<X86MachineFunctionInfo>()->getFPClobberedByInvoke())
       MF.getContext().reportError(
           SMLoc(),
@@ -609,6 +596,12 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Mark the floating point stack registers as reserved.
   for (unsigned n = 0; n != 8; ++n)
     Reserved.set(X86::ST0 + n);
+
+  // Without usable x87 (soft float or -mno-x87), reserve the allocatable FPn
+  // pseudos (FP0-FP6; FP7 is already non-allocatable) so they aren't scrubbed.
+  if (ST.useSoftFloat() || !ST.hasX87())
+    for (unsigned n = 0; n != 7; ++n)
+      Reserved.set(X86::FP0 + n);
 
   // Reserve the registers that only exist in 64-bit mode.
   if (!Is64Bit) {
@@ -1019,7 +1012,19 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       BuildMI(MBB, II, DL, TII->get(X86::MOV64ri), ScratchReg).addImm(Offset);
 
       MI.getOperand(FIOperandNum + 3).setImm(0);
-      MI.getOperand(FIOperandNum + 2).setReg(ScratchReg);
+      if (MI.getOperand(FIOperandNum + 2).getReg() == X86::NoRegister) {
+        MI.getOperand(FIOperandNum + 2).setReg(ScratchReg);
+      } else {
+        // The index register slot is already in use, fold the offset into
+        // the base register instead. LEA does not clobber EFLAGS.
+        BuildMI(MBB, II, DL, TII->get(X86::LEA64r), ScratchReg)
+            .addReg(MachineBasePtr)
+            .addImm(1)
+            .addReg(ScratchReg)
+            .addImm(0)
+            .addReg(X86::NoRegister);
+        MI.getOperand(FIOperandNum).setReg(ScratchReg);
+      }
 
       return false;
     }
@@ -1289,4 +1294,14 @@ bool X86RegisterInfo::isNonRex2RegClass(const TargetRegisterClass *RC) const {
   case X86::GR64_with_sub_16bit_in_GR16_NOREX2RegClassID:
     return true;
   }
+}
+
+unsigned X86RegisterInfo::getCSRFirstUseCost(const MachineFunction &MF) const {
+  // If PPX is implemented, push/pop pairs don't access memory.
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  if (ST.is64Bit() && ST.hasPPX())
+    return 0;
+
+  // push + pop.
+  return 2;
 }

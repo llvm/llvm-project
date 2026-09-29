@@ -767,6 +767,13 @@ void CheckHelper::CheckObjectEntity(
   CheckConflicting(symbol, Attr::VOLATILE, Attr::PARAMETER);
   Check(details.shape());
   Check(details.coshape());
+  // Validate bounds of a zero-size explicit-shape bounds array (F2023).  The
+  // entity is scalar, so these bounds were dropped from its shape; they were
+  // stashed during name resolution and are checked here, where the scope is
+  // final.
+  for (const Bound &bound : details.droppedBoundsToCheck()) {
+    Check(bound);
+  }
   if (details.shape().Rank() > common::maxRank) {
     messages_.Say(
         "'%s' has rank %d, which is greater than the maximum supported rank %d"_err_en_US,
@@ -1316,6 +1323,12 @@ void CheckHelper::CheckObjectEntity(
       SayWithDeclaration(symbol,
           "Assumed rank entity of %s type is not supported"_err_en_US,
           typeName);
+    } else if (IsPointer(symbol)) {
+      SayWithDeclaration(
+          symbol, "Pointer to %s type is not supported"_err_en_US, typeName);
+    } else if (IsAllocatable(symbol)) {
+      SayWithDeclaration(symbol,
+          "Allocatable entity of %s type is not supported"_err_en_US, typeName);
     }
   }
 }
@@ -1720,6 +1733,29 @@ void CheckHelper::CheckSubprogram(
             symbol.name() == "logical")) { // F'2023 C1503
       messages_.Say(
           "An ABSTRACT interface may not have the same name as an intrinsic type"_err_en_US);
+    }
+    if (IsBindCProcedure(symbol) &&
+        context_.ShouldWarn(common::UsageWarning::BindCArrayDescriptor)) {
+      // A BIND(C) binding name that starts with '_' identifies an
+      // implementation-internal interface (e.g. one of the compiler's own
+      // runtime library wrappers, which choose such names deliberately)
+      // rather than a genuine external C/C++ interoperability interface,
+      // so it is excluded here: those internal wrappers are written to
+      // receive the CFI descriptor this warning is about, and warning on
+      // every one of them would drown out the cases that matter.
+      const std::string *bindName{symbol.GetBindName()};
+      bool isImplementationInternal{
+          bindName && !bindName->empty() && bindName->front() == '_'};
+      if (!isImplementationInternal) {
+        for (const Symbol *dummy : details.dummyArgs()) {
+          if (dummy && (IsAssumedShape(*dummy) || IsAssumedRank(*dummy))) {
+            Warn(common::UsageWarning::BindCArrayDescriptor, dummy->name(),
+                "Dummy argument '%s' of BIND(C) interface '%s' is %s; the C/C++ side must accept a Fortran 2018 CFI descriptor (CFI_cdesc_t), not a bare address, which may not match an external interface written for an older calling convention"_port_en_US,
+                dummy->name(), symbol.name(),
+                IsAssumedRank(*dummy) ? "assumed-rank" : "assumed-shape");
+          }
+        }
+      }
     }
   }
   CheckExternal(symbol);
@@ -2700,6 +2736,19 @@ void CheckHelper::CheckPassArg(
   }
 }
 
+static std::optional<std::size_t> FindOverrideDummyNameMismatch(
+    const Procedure &binding, const Procedure &overridden) {
+  if (binding.dummyArguments.size() != overridden.dummyArguments.size()) {
+    return std::nullopt;
+  }
+  for (std::size_t j{0}; j < binding.dummyArguments.size(); ++j) {
+    if (binding.dummyArguments[j].name != overridden.dummyArguments[j].name) {
+      return j;
+    }
+  }
+  return std::nullopt;
+}
+
 void CheckHelper::CheckProcBinding(
     const Symbol &symbol, const ProcBindingDetails &binding) {
   const Scope &dtScope{symbol.owner()};
@@ -2770,7 +2819,14 @@ void CheckHelper::CheckProcBinding(
         const auto *bindingChars{Characterize(symbol)};
         const auto *overriddenChars{Characterize(*overridden)};
         if (bindingChars && overriddenChars) {
-          if (isNopass) {
+          if (auto mismatch{FindOverrideDummyNameMismatch(
+                  *bindingChars, *overriddenChars)}) {
+            SayWithDeclaration(*overridden,
+                "Dummy argument '%s' of type-bound procedure '%s' must "
+                "correspond by name to '%s' in the overridden procedure"_err_en_US,
+                bindingChars->dummyArguments[*mismatch].name, symbol.name(),
+                overriddenChars->dummyArguments[*mismatch].name);
+          } else if (isNopass) {
             if (!bindingChars->CanOverride(*overriddenChars, std::nullopt)) {
               SayWithDeclaration(*overridden,
                   "A NOPASS type-bound procedure and its override must have identical interfaces"_err_en_US);
@@ -3652,6 +3708,12 @@ void CheckHelper::CheckDioDummyIsDerived(const Symbol &proc, const Symbol &arg,
     common::DefinedIo ioKind, const Symbol &generic) {
   if (const DeclTypeSpec *type{arg.GetType()}) {
     if (const DerivedTypeSpec *derivedType{type->AsDerived()}) {
+      if (derivedType->IsVectorType()) {
+        messages_.Say(arg.name(),
+            "Dummy argument '%s' of a defined input/output procedure must not be a vector type"_err_en_US,
+            arg.name());
+        return;
+      }
       CheckAlreadySeenDefinedIo(*derivedType, ioKind, proc, generic);
       bool isPolymorphic{type->IsPolymorphic()};
       if (isPolymorphic != IsExtensibleType(derivedType)) {

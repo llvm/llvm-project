@@ -175,13 +175,21 @@ void X86FastPreTileConfigImpl::InitializeTileConfigStackSpace() {
   MachineInstr *MI = &*MBB.getFirstNonPHI();
   DebugLoc DL;
   if (ST->hasAVX512()) {
+    Register Xmm = MRI->createVirtualRegister(&X86::VR128XRegClass);
+    BuildMI(MBB, MI, DL, TII->get(X86::AVX512_128_SET0), Xmm);
     Register Zmm = MRI->createVirtualRegister(&X86::VR512RegClass);
-    BuildMI(MBB, MI, DL, TII->get(X86::AVX512_512_SET0), Zmm);
+    BuildMI(MBB, MI, DL, TII->get(X86::SUBREG_TO_REG), Zmm)
+        .addReg(Xmm)
+        .addImm(X86::sub_xmm);
     addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSZmr)), CfgSS)
         .addReg(Zmm);
   } else if (ST->hasAVX2()) {
+    Register Xmm = MRI->createVirtualRegister(&X86::VR128RegClass);
+    BuildMI(MBB, MI, DL, TII->get(X86::V_SET0), Xmm);
     Register Ymm = MRI->createVirtualRegister(&X86::VR256RegClass);
-    BuildMI(MBB, MI, DL, TII->get(X86::AVX_SET0), Ymm);
+    BuildMI(MBB, MI, DL, TII->get(X86::SUBREG_TO_REG), Ymm)
+        .addReg(Xmm)
+        .addImm(X86::sub_xmm);
     addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSYmr)), CfgSS)
         .addReg(Ymm);
     addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::VMOVUPSYmr)), CfgSS,

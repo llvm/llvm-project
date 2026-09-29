@@ -18,11 +18,9 @@
 #include "R600Defines.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600Subtarget.h"
-#include "R600TargetMachine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
-#include "llvm/Passes/CodeGenPassBuilder.h"
 
 using namespace llvm;
 
@@ -111,6 +109,8 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::FCEIL, ISD::FTRUNC, ISD::FROUNDEVEN, ISD::FFLOOR},
                      MVT::f64, Custom);
+
+  setOperationAction(ISD::FPOW, MVT::f32, Legal);
 
   setOperationAction(ISD::SELECT_CC, {MVT::f32, MVT::i32}, Custom);
 
@@ -812,7 +812,8 @@ SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const 
 
   if (VT == MVT::f32) {
     DAGCombinerInfo DCI(DAG, AfterLegalizeVectorOps, true, nullptr);
-    SDValue MinMax = combineFMinMaxLegacy(DL, VT, LHS, RHS, True, False, CC, DCI);
+    SDValue MinMax = combineFMinMaxLegacy(DL, VT, LHS, RHS, True, False, CC,
+                                          SDNodeFlags(), DCI);
     if (MinMax)
       return MinMax;
   }
@@ -1511,13 +1512,13 @@ SDValue R600TargetLowering::LowerFormalArguments(
     Align Alignment = commonAlignment(Align(VT.getStoreSize()), PartOffset);
 
     MachinePointerInfo PtrInfo(AMDGPUAS::PARAM_I_ADDRESS);
-    SDValue Arg = DAG.getLoad(
-        ISD::UNINDEXED, Ext, VT, DL, Chain,
-        DAG.getConstant(PartOffset, DL, MVT::i32), DAG.getUNDEF(MVT::i32),
-        PtrInfo,
-        MemVT, Alignment, MachineMemOperand::MONonTemporal |
-                                        MachineMemOperand::MODereferenceable |
-                                        MachineMemOperand::MOInvariant);
+    SDValue Arg =
+        DAG.getLoad(ISD::UNINDEXED, Ext, VT, DL, Chain,
+                    DAG.getConstant(PartOffset, DL, MVT::i32),
+                    DAG.getPOISON(MVT::i32), PtrInfo, MemVT, Alignment,
+                    MachineMemOperand::MONonTemporal |
+                        MachineMemOperand::MODereferenceable |
+                        MachineMemOperand::MOInvariant);
 
     InVals.push_back(Arg);
   }

@@ -57,26 +57,6 @@ using WaitingOnGraph =
 using ResourceTrackerSP = IntrusiveRefCntPtr<ResourceTracker>;
 using JITDylibSP = IntrusiveRefCntPtr<JITDylib>;
 
-/// A definition of a Symbol within a JITDylib.
-class SymbolInstance {
-public:
-  using LookupAsyncOnCompleteFn =
-      unique_function<void(Expected<ExecutorSymbolDef>)>;
-
-  SymbolInstance(JITDylibSP JD, SymbolStringPtr Name)
-      : JD(std::move(JD)), Name(std::move(Name)) {}
-
-  const JITDylib &getJITDylib() const { return *JD; }
-  const SymbolStringPtr &getName() const { return Name; }
-
-  Expected<ExecutorSymbolDef> lookup() const;
-  LLVM_ABI void lookupAsync(LookupAsyncOnCompleteFn OnComplete) const;
-
-private:
-  JITDylibSP JD;
-  SymbolStringPtr Name;
-};
-
 using ResourceKey = uintptr_t;
 
 /// API to remove / transfer ownership of JIT resources.
@@ -1158,6 +1138,11 @@ public:
   /// object.
   LLVM_ABI ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC);
 
+  ExecutionSession(const ExecutionSession &) = delete;
+  ExecutionSession &operator=(const ExecutionSession &) = delete;
+  ExecutionSession(ExecutionSession &&) = delete;
+  ExecutionSession &operator=(ExecutionSession &&) = delete;
+
   /// Destroy an ExecutionSession. Verifies that endSession was called prior to
   /// destruction.
   LLVM_ABI ~ExecutionSession();
@@ -1415,38 +1400,6 @@ public:
                           ArgBuffer);
   }
 
-  /// Run a wrapper function in the executor. The wrapper function should be
-  /// callable as:
-  ///
-  /// \code{.cpp}
-  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
-  /// \endcode{.cpp}
-  shared::WrapperFunctionBuffer callWrapper(ExecutorAddr WrapperFnAddr,
-                                            ArrayRef<char> ArgBuffer) {
-    return EPC->callWrapper(WrapperFnAddr, ArgBuffer);
-  }
-
-  /// Run a wrapper function using SPS to serialize the arguments and
-  /// deserialize the results.
-  template <typename SPSSignature, typename SendResultT, typename... ArgTs>
-  void callSPSWrapperAsync(ExecutorAddr WrapperFnAddr, SendResultT &&SendResult,
-                           const ArgTs &...Args) {
-    EPC->callSPSWrapperAsync<SPSSignature, SendResultT, ArgTs...>(
-        WrapperFnAddr, std::forward<SendResultT>(SendResult), Args...);
-  }
-
-  /// Run a wrapper function using SPS to serialize the arguments and
-  /// deserialize the results.
-  ///
-  /// If SPSSignature is a non-void function signature then the second argument
-  /// (the first in the Args list) should be a reference to a return value.
-  template <typename SPSSignature, typename... WrapperCallArgTs>
-  Error callSPSWrapper(ExecutorAddr WrapperFnAddr,
-                       WrapperCallArgTs &&...WrapperCallArgs) {
-    return EPC->callSPSWrapper<SPSSignature, WrapperCallArgTs...>(
-        WrapperFnAddr, std::forward<WrapperCallArgTs>(WrapperCallArgs)...);
-  }
-
   /// Wrap a handler that takes concrete argument types (and a sender for a
   /// concrete return type) to produce an AsyncHandlerWrapperFunction. Uses SPS
   /// to unpack the arguments and pack the result.
@@ -1633,10 +1586,6 @@ private:
   DenseMap<ExecutorAddr, std::shared_ptr<JITDispatchHandlerFunction>>
       JITDispatchHandlers;
 };
-
-inline Expected<ExecutorSymbolDef> SymbolInstance::lookup() const {
-  return JD->getExecutionSession().lookup({JD.get()}, Name);
-}
 
 template <typename Func> Error ResourceTracker::withResourceKeyDo(Func &&F) {
   return getJITDylib().getExecutionSession().runSessionLocked([&]() -> Error {

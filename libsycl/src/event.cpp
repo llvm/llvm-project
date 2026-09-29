@@ -51,4 +51,13 @@ event::get_profiling_info() const {
                         "Profiling features are not supported.");
 }
 
+#define _LIBSYCL_EXPORT_GET_PROFILING_INFO(Desc)                               \
+  template _LIBSYCL_EXPORT                                                     \
+      detail::is_event_profiling_info_desc_t<info::event_profiling::Desc>      \
+      event::get_profiling_info<info::event_profiling::Desc>() const;
+_LIBSYCL_EXPORT_GET_PROFILING_INFO(command_submit)
+_LIBSYCL_EXPORT_GET_PROFILING_INFO(command_start)
+_LIBSYCL_EXPORT_GET_PROFILING_INFO(command_end)
+#undef _LIBSYCL_EXPORT_GET_PROFILING_INFO
+
 _LIBSYCL_END_NAMESPACE_SYCL

@@ -131,6 +131,22 @@ private:
       }
     }
 
+    if (attribute.getName() == "cir.amdgpu_xnack") {
+      if (auto intAttr =
+              mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue())) {
+        llvmModule->addModuleFlag(llvm::Module::Error, "amdgpu.xnack",
+                                  static_cast<uint32_t>(intAttr.getInt()));
+      }
+    }
+
+    if (attribute.getName() == "cir.amdgpu_sramecc") {
+      if (auto intAttr =
+              mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue())) {
+        llvmModule->addModuleFlag(llvm::Module::Error, "amdgpu.sramecc",
+                                  static_cast<uint32_t>(intAttr.getInt()));
+      }
+    }
+
     return mlir::success();
   }
 };

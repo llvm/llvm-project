@@ -203,7 +203,7 @@ Status DebuggerThread::StopDebugging(bool terminate) {
   // breakpoint messing around in the debugger), continue it now.  But only
   // AFTER calling TerminateProcess to make sure that the very next call to
   // WaitForDebugEventEx is an exit process event.
-  if (m_active_exception.get()) {
+  if (GetActiveException()) {
     LLDB_LOG(log, "masking active exception");
     ContinueAsyncException(ExceptionResult::MaskException);
   }
@@ -239,15 +239,23 @@ Status DebuggerThread::StopDebugging(bool terminate) {
   return error;
 }
 
+ExceptionRecordSP DebuggerThread::GetActiveException() {
+  std::lock_guard<std::mutex> guard(m_active_exception_mutex);
+  return m_active_exception;
+}
+
 void DebuggerThread::ContinueAsyncException(ExceptionResult result) {
-  if (!m_active_exception.get())
-    return;
+  {
+    std::lock_guard<std::mutex> guard(m_active_exception_mutex);
+    if (!m_active_exception)
+      return;
+    m_active_exception.reset();
+  }
 
   Log *log = GetLog(WindowsLog::Process | WindowsLog::Exception);
   LLDB_LOG(log, "broadcasting for inferior process {0}.",
            m_process.GetProcessId());
 
-  m_active_exception.reset();
   m_exception_pred.SetValue(result, eBroadcastAlways);
 }
 
@@ -401,15 +409,29 @@ DebuggerThread::HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
 
   bool first_chance = (info.dwFirstChance != 0);
 
-  m_active_exception.reset(
-      new ExceptionRecord(info.ExceptionRecord, thread_id));
+  ExceptionRecordSP active_exception =
+      std::make_shared<ExceptionRecord>(info.ExceptionRecord, thread_id);
+  {
+    std::lock_guard<std::mutex> guard(m_active_exception_mutex);
+    m_active_exception = active_exception;
+  }
+  // Set this before calling the delegate. The delegate can wake up the thread
+  // driving the debugger, and that thread can call ContinueAsyncException
+  // before OnDebugException returns.
+  m_exception_pred.SetValue(ExceptionResult::BreakInDebugger, eBroadcastNever);
+
   LLDB_LOG(log, "encountered {0} chance exception {1:x} on thread {2:x}",
            first_chance ? "first" : "second",
            info.ExceptionRecord.ExceptionCode, thread_id);
 
   ExceptionResult result =
-      m_debug_delegate->OnDebugException(first_chance, *m_active_exception);
-  m_exception_pred.SetValue(result, eBroadcastNever);
+      m_debug_delegate->OnDebugException(first_chance, *active_exception);
+  // The delegate only says what to do, it never continues the exception. If the
+  // result is not BreakInDebugger, continue it here, or the wait below never
+  // ends. If the other thread already continued it, this does nothing and its
+  // result is what the wait below returns.
+  if (result != ExceptionResult::BreakInDebugger)
+    ContinueAsyncException(result);
 
   LLDB_LOG(log, "waiting for ExceptionPred != BreakInDebugger");
   result = *m_exception_pred.WaitForValueNotEqualTo(

@@ -13,6 +13,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclAccessPair.h"
@@ -401,14 +402,40 @@ SourceLocation CXXPseudoDestructorExpr::getEndLoc() const {
   return End;
 }
 
-static bool UnresolvedLookupExprIsVariableOrConceptParameterPack(
-    UnresolvedSetIterator Begin, UnresolvedSetIterator End) {
-  if (std::distance(Begin, End) != 1)
-    return false;
-  NamedDecl *ND = *Begin;
-  if (const auto *TTP = llvm::dyn_cast<TemplateTemplateParmDecl>(ND))
-    return TTP->isParameterPack();
-  return false;
+DependentTemplateIdExpr::DependentTemplateIdExpr(
+    const ASTContext &Context, const DeclarationNameInfo &NameInfo,
+    TemplateName Name, const TemplateArgumentListInfo &TemplateArgs)
+    : Expr(DependentTemplateIdExprClass, Context.DependentTy, VK_LValue,
+           OK_Ordinary),
+      NameInfo(NameInfo), Name(Name) {
+  KWAndArgs.initializeFrom(/*TemplateKWLoc=*/{}, TemplateArgs,
+                           getTrailingObjects());
+  setDependence(computeDependence(this));
+}
+
+DependentTemplateIdExpr::DependentTemplateIdExpr(EmptyShell Empty,
+                                                 unsigned NumTemplateArgs)
+    : Expr(DependentTemplateIdExprClass, Empty) {
+  KWAndArgs.NumTemplateArgs = NumTemplateArgs;
+}
+
+DependentTemplateIdExpr *DependentTemplateIdExpr::Create(
+    const ASTContext &Context, const DeclarationNameInfo &NameInfo,
+    TemplateName Name, const TemplateArgumentListInfo &TemplateArgs) {
+  void *Mem = Context.Allocate(
+      totalSizeToAlloc<TemplateArgumentLoc>(TemplateArgs.size()),
+      alignof(DependentTemplateIdExpr));
+  return new (Mem)
+      DependentTemplateIdExpr(Context, NameInfo, Name, TemplateArgs);
+}
+
+DependentTemplateIdExpr *
+DependentTemplateIdExpr::CreateEmpty(const ASTContext &Context,
+                                     unsigned NumTemplateArgs) {
+  void *Mem =
+      Context.Allocate(totalSizeToAlloc<TemplateArgumentLoc>(NumTemplateArgs),
+                       alignof(DependentTemplateIdExpr));
+  return new (Mem) DependentTemplateIdExpr(EmptyShell(), NumTemplateArgs);
 }
 
 // UnresolvedLookupExpr
@@ -419,11 +446,10 @@ UnresolvedLookupExpr::UnresolvedLookupExpr(
     const TemplateArgumentListInfo *TemplateArgs, UnresolvedSetIterator Begin,
     UnresolvedSetIterator End, bool KnownDependent,
     bool KnownInstantiationDependent)
-    : OverloadExpr(
-          UnresolvedLookupExprClass, Context, QualifierLoc, TemplateKWLoc,
-          NameInfo, TemplateArgs, Begin, End, KnownDependent,
-          KnownInstantiationDependent,
-          UnresolvedLookupExprIsVariableOrConceptParameterPack(Begin, End)),
+    : OverloadExpr(UnresolvedLookupExprClass, Context, QualifierLoc,
+                   TemplateKWLoc, NameInfo, TemplateArgs, Begin, End,
+                   KnownDependent, KnownInstantiationDependent,
+                   /*KnownContainsUnexpandedParameterPack=*/false),
       NamingClass(NamingClass) {
   UnresolvedLookupExprBits.RequiresADL = RequiresADL;
 }
@@ -1602,14 +1628,13 @@ CXXThisExpr *CXXThisExpr::CreateEmpty(const ASTContext &Ctx) {
 static bool hasOnlyNonStaticMemberFunctions(UnresolvedSetIterator begin,
                                             UnresolvedSetIterator end) {
   do {
-    NamedDecl *decl = *begin;
+    NamedDecl *decl = (*begin)->getUnderlyingDecl();
     if (isa<UnresolvedUsingValueDecl>(decl))
       return false;
 
     // Unresolved member expressions should only contain methods and
     // method templates.
-    if (cast<CXXMethodDecl>(decl->getUnderlyingDecl()->getAsFunction())
-            ->isStatic())
+    if (cast<CXXMethodDecl>(decl->getAsFunction())->isStatic())
       return false;
   } while (++begin != end);
 
@@ -1865,10 +1890,10 @@ bool MaterializeTemporaryExpr::isUsableInConstantExpressions(
          VD->isUsableInConstantExpressions(Context);
 }
 
-TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
-                             ArrayRef<TypeSourceInfo *> Args,
-                             SourceLocation RParenLoc,
-                             std::variant<bool, APValue> Value)
+TypeTraitExpr::TypeTraitExpr(
+    QualType T, SourceLocation Loc, TypeTrait Kind,
+    ArrayRef<TypeSourceInfo *> Args, SourceLocation RParenLoc,
+    std::variant<bool, APValue, ComparisonCategoryResult> Value)
     : Expr(TypeTraitExprClass, T, VK_PRValue, OK_Ordinary), Loc(Loc),
       RParenLoc(RParenLoc) {
   assert(Kind <= TT_Last && "invalid enum value!");
@@ -1878,11 +1903,18 @@ TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
          "TypeTraitExprBits.Kind overflow!");
 
   TypeTraitExprBits.IsBooleanTypeTrait = std::holds_alternative<bool>(Value);
+  TypeTraitExprBits.IsComparisonResult =
+      std::holds_alternative<ComparisonCategoryResult>(Value);
   if (TypeTraitExprBits.IsBooleanTypeTrait)
     TypeTraitExprBits.Value = std::get<bool>(Value);
-  else
-    ::new (getTrailingObjects<APValue>())
-        APValue(std::get<APValue>(std::move(Value)));
+  else {
+    if (auto *CCR = std::get_if<ComparisonCategoryResult>(&Value)) {
+      llvm::APSInt EncodedValue = llvm::APSInt::get(llvm::to_underlying(*CCR));
+      ::new (getTrailingObjects<APValue>()) APValue(std::move(EncodedValue));
+    } else
+      ::new (getTrailingObjects<APValue>())
+          APValue(std::get<APValue>(std::move(Value)));
+  }
 
   TypeTraitExprBits.NumArgs = Args.size();
   assert(Args.size() == TypeTraitExprBits.NumArgs &&
@@ -1919,6 +1951,16 @@ TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
                                      SourceLocation Loc, TypeTrait Kind,
                                      ArrayRef<TypeSourceInfo *> Args,
                                      SourceLocation RParenLoc, APValue Value) {
+  void *Mem =
+      C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(1, Args.size()));
+  return new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, Value);
+}
+
+TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
+                                     SourceLocation Loc, TypeTrait Kind,
+                                     ArrayRef<TypeSourceInfo *> Args,
+                                     SourceLocation RParenLoc,
+                                     ComparisonCategoryResult Value) {
   void *Mem =
       C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(1, Args.size()));
   return new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, Value);

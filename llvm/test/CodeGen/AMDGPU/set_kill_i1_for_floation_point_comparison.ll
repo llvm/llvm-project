@@ -8,7 +8,7 @@ define amdgpu_ps void @_amdgpu_ps_main() {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
-  ; CHECK-NEXT:   [[S_BUFFER_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM killed [[REG_SEQUENCE]], 0, 0 :: (dereferenceable invariant load (s32))
+  ; CHECK-NEXT:   [[S_BUFFER_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM killed [[REG_SEQUENCE]], 0, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(8) null`, align 1, addrspace 8)
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
   ; CHECK-NEXT:   nofpexcept S_CMP_NLT_F32 [[S_BUFFER_LOAD_DWORD_IMM]], [[S_MOV_B32_1]], implicit-def $scc, implicit $mode
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $scc
@@ -23,7 +23,7 @@ define amdgpu_ps void @_amdgpu_ps_main() {
   ; CHECK-NEXT: bb.2.bb2:
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:
-  %i = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> zeroinitializer, i32 0, i32 0)
+  %i = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) null, i32 0, i32 0), !invariant.load !{}
   %i1 = bitcast i32 %i to float
   %i2 = fcmp uge float %i1, 0.000000e+00
   call void @llvm.amdgcn.kill(i1 %i2)

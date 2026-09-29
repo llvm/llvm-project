@@ -10,18 +10,18 @@ flw ft1, a0, -200 # CHECK: :[[@LINE]]:14: error: register must be a GPR
 fsw ft2, a1, 100 # CHECK: :[[@LINE]]:14: error: register must be a GPR
 
 # Invalid register names
-flw ft15, 100(a0) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
+flw ft15, 100(a0) # CHECK: :[[@LINE]]:5: error: register must be a FPR
 flw ft1, 100(a10) # CHECK: :[[@LINE]]:14: error: expected register
-fsgnjn.s fa100, fa2, fa3 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+fsgnjn.s fa100, fa2, fa3 # CHECK: :[[@LINE]]:10: error: register must be a FPR
 
 # Integer registers where FP regs are expected
 fmv.x.w fs7, a2 # CHECK: :[[@LINE]]:9: error: register must be a GPR
 
 # FP registers where integer regs are expected
-fmv.w.x a8, ft2 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
+fmv.w.x a8, ft2 # CHECK: :[[@LINE]]:9: error: register must be a FPR
 
 # Rounding mode when a register is expected
-fmadd.s f10, f11, f12, ree # CHECK: :[[@LINE]]:24: error: invalid operand for instruction
+fmadd.s f10, f11, f12, ree # CHECK: :[[@LINE]]:24: error: register must be a FPR
 
 # Invalid rounding modes
 fmadd.s f10, f11, f12, f13, ree # CHECK: :[[@LINE]]:29: error: operand must be a valid floating point rounding mode mnemonic

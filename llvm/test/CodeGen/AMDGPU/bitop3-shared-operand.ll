@@ -568,6 +568,62 @@ define amdgpu_ps float @bitop3_t1t2_and_xor_or(i32 %a, i32 %b, i32 %c) {
   ret float %ret
 }
 
+; ((b & T) | T) & ~T, where T = a & c
+; Sibling of bitop3_bxort_or_t_and_not_t with the inner xor replaced by an
+; and. T reaches the top and through both operands. The expression is zero
+; for every input: (b & T) | T absorbs to T, and T & ~T is 0.
+define i32 @bitop3_bandt_or_t_and_not_t(i32 %a, i32 %b, i32 %c) {
+; GCN-LABEL: bitop3_bandt_or_t_and_not_t:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; O0-LABEL: bitop3_bandt_or_t_and_not_t:
+; O0:       ; %bb.0:
+; O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; O0-NEXT:    v_mov_b32_e32 v3, v2
+; O0-NEXT:    v_mov_b32_e32 v2, v0
+; O0-NEXT:    v_and_b32_e64 v0, v2, v3
+; O0-NEXT:    v_bitop3_b32 v1, v1, v2, v3 bitop3:0x88
+; O0-NEXT:    v_bfi_b32 v0, v0, 0, v1
+; O0-NEXT:    s_setpc_b64 s[30:31]
+  %t  = and i32 %a, %c
+  %u  = and i32 %b, %t
+  %ut = or  i32 %u, %t
+  %nt = xor i32 %t, -1
+  %r  = and i32 %ut, %nt
+  ret i32 %r
+}
+
+; U ^ (~U | T), where T = c ^ b and U = (T | a) & T
+; U absorbs to T, so the whole expression is ~T. Both operands of the top
+; xor depend on T, and the ~U operand reaches it through a second level of
+; sharing.
+define i32 @bitop3_absorb_xor_not_or(i32 %a, i32 %b, i32 %c) {
+; GCN-LABEL: bitop3_absorb_xor_not_or:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xnor_b32_e32 v0, v2, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; O0-LABEL: bitop3_absorb_xor_not_or:
+; O0:       ; %bb.0:
+; O0:         s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; O0-NEXT:    v_mov_b32_e32 v3, v0
+; O0-NEXT:    v_bitop3_b32 v0, v2, v1, v3 bitop3:0x3c
+; O0-NEXT:    v_bitop3_b32 v1, v2, v1, v3 bitop3:0xff
+; O0-NEXT:    v_xor_b32_e64 v0, v0, v1
+; O0-NEXT:    s_setpc_b64 s[30:31]
+  %t  = xor i32 %c, %b
+  %ta = or  i32 %t, %a
+  %u  = and i32 %ta, %t
+  %nu = xor i32 %u, -1
+  %nut = or i32 %nu, %t
+  %r  = xor i32 %u, %nut
+  ret i32 %r
+}
+
 declare i32 @llvm.umax.i32(i32, i32)
 declare i32 @llvm.fshl.i32(i32, i32, i32)
 declare i32 @llvm.ctlz.i32(i32, i1 immarg)

@@ -234,9 +234,10 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     }
 
     if (flags & eCommandTryTargetAPILock) {
-      if (target && !target->IsDummyTarget())
-        m_api_locker =
-            std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
+      if (target && !target->IsDummyTarget()) {
+        m_api_mutex = target->GetAPIMutex();
+        m_api_locker = std::unique_lock<TargetAPIMutex>(m_api_mutex);
+      }
     }
   }
 
@@ -561,7 +562,7 @@ void CommandObject::GetFormattedCommandArguments(Stream &str,
   int num_args = m_arguments.size();
   for (int i = 0; i < num_args; ++i) {
     if (i > 0)
-      str.Printf(" ");
+      str.PutCString(" ");
     CommandArgumentEntry arg_entry =
         opt_set_mask == LLDB_OPT_SET_ALL
             ? m_arguments[i]
@@ -612,8 +613,8 @@ void CommandObject::GetFormattedCommandArguments(Stream &str,
       StreamString names;
       for (int j = 0; j < num_alternatives; ++j) {
         if (j > 0)
-          names.Printf(" | ");
-        names.Printf("%s", GetArgumentName(arg_entry[j].arg_type));
+          names.PutCString(" | ");
+        names.PutCString(GetArgumentName(arg_entry[j].arg_type));
       }
 
       std::string name_str = std::string(names.GetString());

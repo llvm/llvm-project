@@ -79,7 +79,7 @@
 #       (bb.1, bb.2, and bb.3).
 # var1: Its debug value is set in bb.0, but is reset to no info in bb.1. So a
 #       new DBG_VALUE will be added in the beginning of bb.1 and bb.2, but bb.3
-#       will not, because its two predecesors (bb.1 and bb.2) have different
+#       will not, because its two predecessors (bb.1 and bb.2) have different
 #       debug values.
 # var2: Its debug value is set both in bb.1 and bb.2 with the same value. bb.3
 #       will have a new DBG_VALUE representing that value.
@@ -196,7 +196,7 @@ body: |
 # bb.0 defines DBG_VALUEs for local index 2 and 3. The DBG_VALUE for local index
 # 2 is killed in bb.1 due to 'local.tee 2' there, and DBG_VALUE for local
 # index 3 is killed in bb.2 because there is 'local.set 3' there. As a result,
-# bb.3 shoudln't have any additional DBG_VALUEs added for those locals.
+# bb.3 shouldn't have any additional DBG_VALUEs added for those locals.
 # CHECK-LABEL: name: test_target_index_defs
 name: test_target_index_defs
 liveins:

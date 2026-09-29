@@ -10,6 +10,7 @@
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
@@ -33,13 +34,17 @@ AST_MATCHER(ParenExpr, isInMacro) {
          E->getBeginLoc().isMacroID() || E->getEndLoc().isMacroID();
 }
 
+AST_MATCHER(TypeLoc, isTypeOfExprTypeLoc) {
+  return !Node.getUnqualifiedLoc().getAs<TypeOfExprTypeLoc>().isNull();
+}
+
 } // namespace
 
 static FixItHint createSpacedRemoval(SourceLocation Loc,
                                      const SourceManager &SM,
                                      const LangOptions &LangOpts) {
   if (Loc.isValid() && !Loc.isMacroID()) {
-    auto LocInfo = SM.getDecomposedLoc(Loc);
+    const auto LocInfo = SM.getDecomposedLoc(Loc);
     bool Invalid = false;
     StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
     if (!Invalid && LocInfo.second > 0 && LocInfo.second + 1 < Buffer.size() &&
@@ -79,7 +84,9 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                     arraySubscriptExpr())),
                 unless(anyOf(isInMacro(),
                              // sizeof(...) is common used.
-                             hasParent(unaryExprOrTypeTraitExpr()))))
+                             hasParent(unaryExprOrTypeTraitExpr()),
+                             // typeof(...) parentheses are required syntax.
+                             hasParent(typeLoc(isTypeOfExprTypeLoc())))))
           .bind("dup"),
       this);
 }

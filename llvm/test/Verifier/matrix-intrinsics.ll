@@ -98,8 +98,7 @@ define void @column.major_store_non_int_float_type(ptr %m, ptr %n, i64 %arg) {
 
 define <4 x float> @column.major_load_stride_too_small(ptr %m, i32 %arg) {
 ;
-; CHECK-NEXT: Stride must be greater or equal than the number of rows!
-; CHECK-NEXT: ptr @llvm.matrix.column.major.load.v4f32.i64
+; CHECK-NOT: Stride must be greater or equal than the number of rows!
 ;
   %result.1 = call <4 x float> @llvm.matrix.column.major.load.v4f32.i64(ptr %m, i64 1, i1 false, i32 2, i32 2)
   ret <4 x float> %result.1
@@ -107,8 +106,7 @@ define <4 x float> @column.major_load_stride_too_small(ptr %m, i32 %arg) {
 
 define void @column.major_store_stride_too_small(ptr %m, i64 %arg) {
 ;
-; CHECK-NEXT: Stride must be greater or equal than the number of rows!
-; CHECK-NEXT: ptr @llvm.matrix.column.major.store.v4f32.i64
+; CHECK-NOT: Stride must be greater or equal than the number of rows!
 ;
   call void @llvm.matrix.column.major.store.v4f32.i64(<4 x float> zeroinitializer, ptr %m, i64 1, i1 false, i32 2, i32 2)
   ret void

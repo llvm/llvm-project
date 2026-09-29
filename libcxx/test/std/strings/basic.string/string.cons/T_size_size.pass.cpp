@@ -45,6 +45,7 @@ TEST_CONSTEXPR_CXX20 void test(SV sv, std::size_t pos, std::size_t n) {
   else if (!TEST_IS_CONSTANT_EVALUATED) {
     try {
       S s2(sv, static_cast<Size>(pos), static_cast<Size>(n));
+      (void)s2;
       assert(false);
     } catch (std::out_of_range&) {
       assert(pos > sv.size());
@@ -71,6 +72,7 @@ TEST_CONSTEXPR_CXX20 void test(SV sv, std::size_t pos, std::size_t n, const type
   else if (!TEST_IS_CONSTANT_EVALUATED) {
     try {
       S s2(sv, static_cast<Size>(pos), static_cast<Size>(n), a);
+      (void)s2;
       assert(false);
     } catch (std::out_of_range&) {
       assert(pos > sv.size());

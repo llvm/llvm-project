@@ -53,9 +53,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 26
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
@@ -289,9 +289,8 @@ private:
 
   template <typename _Func>
   _LIBCPP_HIDE_FROM_ABI constexpr auto __invoke_at_index(_Func&& __func) const {
-    // TODO(GCC 16): Just capture `this` when GCC PR113563 and PR121008 are fixed.
-    return [&__func, &__view_iter = *this]<std::size_t _Is>(this auto&& __self) {
-      if (_Is == __view_iter.__it_.index()) {
+    return [&__func, this]<std::size_t _Is>(this auto&& __self) {
+      if (_Is == __it_.index()) {
         return __func.template operator()<_Is>();
       }
       if constexpr (_Is + 1 < sizeof...(_Views)) {
@@ -642,9 +641,9 @@ inline constexpr auto concat = __concat::__fn{};
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 26
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_POP_MACROS
 

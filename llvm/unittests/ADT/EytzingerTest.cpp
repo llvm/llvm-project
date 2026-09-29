@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/Eytzinger.h"
 #include "llvm/Support/Endian.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -20,6 +21,8 @@ TEST(EytzingerTest, EmptyTable) {
   EXPECT_TRUE(Empty.empty());
   EXPECT_EQ(Empty.size(), 0u);
   EXPECT_EQ(Empty.data(), nullptr);
+  EXPECT_EQ(Empty.begin(), Empty.end());
+  EXPECT_EQ(Empty.begin(), nullptr);
   EXPECT_TRUE(Empty.isSorted());
   EXPECT_EQ(Empty.findIndex(42), std::nullopt);
   EXPECT_FALSE(Empty.contains(42));
@@ -28,6 +31,7 @@ TEST(EytzingerTest, EmptyTable) {
   EytzingerTableSpan<int> NullSpan(nullptr, 0);
   EXPECT_TRUE(NullSpan.empty());
   EXPECT_EQ(NullSpan.size(), 0u);
+  EXPECT_EQ(NullSpan.begin(), NullSpan.end());
   EXPECT_TRUE(NullSpan.isSorted());
   EXPECT_EQ(NullSpan.findIndex(42), std::nullopt);
   EXPECT_FALSE(NullSpan.contains(42));
@@ -250,12 +254,15 @@ TEST(EytzingerTest, EytzingerTableEmptyAndSingle) {
   auto EmptyTable = EytzingerTable<int>::create(std::vector<int>{});
   EXPECT_TRUE(EmptyTable.empty());
   EXPECT_EQ(EmptyTable.size(), 0u);
+  EXPECT_EQ(EmptyTable.begin(), EmptyTable.end());
   EXPECT_TRUE(EmptyTable.isSorted());
   EXPECT_FALSE(EmptyTable.contains(42));
 
   auto SingleTable = EytzingerTable<int>::create(std::vector<int>{42, 42});
   EXPECT_FALSE(SingleTable.empty());
   EXPECT_EQ(SingleTable.size(), 1u);
+  EXPECT_NE(SingleTable.begin(), SingleTable.end());
+  EXPECT_EQ(*SingleTable.begin(), 42);
   EXPECT_TRUE(SingleTable.isSorted());
   EXPECT_EQ(SingleTable[0], 42);
   EXPECT_TRUE(SingleTable.contains(42));
@@ -295,6 +302,46 @@ TEST(EytzingerTest, EytzingerTableHeterogeneousCreate) {
   EXPECT_TRUE(Table.contains(uint64_t(500ULL)));
   EXPECT_TRUE(Table.contains(uint64_t(600ULL)));
   EXPECT_FALSE(Table.contains(uint64_t(999ULL)));
+}
+
+TEST(EytzingerTest, EytzingerTableSpanBeginEnd) {
+  const int Data[] = {40, 20, 60, 10, 30, 50, 70};
+  EytzingerTableSpan<int> Span(Data, 7);
+
+  EXPECT_EQ(Span.begin(), Data);
+  EXPECT_EQ(Span.end(), Data + 7);
+  EXPECT_EQ(std::distance(Span.begin(), Span.end()), 7);
+
+  std::vector<int> Traversed(Span.begin(), Span.end());
+  const int Expected[] = {40, 20, 60, 10, 30, 50, 70};
+  EXPECT_THAT(Traversed, testing::ElementsAreArray(Expected));
+
+  // Range-based for loop verification.
+  std::vector<int> RangeTraversed;
+  for (const int &Val : Span)
+    RangeTraversed.push_back(Val);
+  EXPECT_THAT(RangeTraversed, testing::ElementsAreArray(Expected));
+}
+
+TEST(EytzingerTest, EytzingerTableBeginEnd) {
+  std::vector<int> Unsorted = {70, 20, 40, 10, 60, 30, 50};
+  auto Table = EytzingerTable<int>::create(std::move(Unsorted));
+
+  EXPECT_EQ(std::distance(Table.begin(), Table.end()), 7);
+
+  std::vector<int> Traversed(Table.begin(), Table.end());
+  const int Expected[] = {40, 20, 60, 10, 30, 50, 70};
+  EXPECT_THAT(Traversed, testing::ElementsAreArray(Expected));
+
+  // Range-based for loop verification on both non-const and const tables.
+  std::vector<int> RangeTraversed;
+  for (const int &Val : Table)
+    RangeTraversed.push_back(Val);
+  EXPECT_THAT(RangeTraversed, testing::ElementsAreArray(Expected));
+
+  const auto &ConstTable = Table;
+  std::vector<int> ConstTraversed(ConstTable.begin(), ConstTable.end());
+  EXPECT_THAT(ConstTraversed, testing::ElementsAreArray(Expected));
 }
 
 } // namespace

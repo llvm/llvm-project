@@ -5,16 +5,12 @@ define void @test_umax(ptr %dst, i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; CHECK-LABEL: define void @test_umax(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[X2:%.*]], i32 [[X3:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[UMAX0:%.*]] = call i32 @llvm.umax.i32(i32 [[X0]], i32 1)
-; CHECK-NEXT:    [[UMAX1:%.*]] = call i32 @llvm.umax.i32(i32 [[X1]], i32 2)
-; CHECK-NEXT:    [[UMAX2:%.*]] = call i32 @llvm.umax.i32(i32 [[X2]], i32 3)
-; CHECK-NEXT:    store i32 [[UMAX0]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i32, ptr [[DST]], i32 1
-; CHECK-NEXT:    store i32 [[UMAX1]], ptr [[P1]], align 4
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[DST]], i32 2
-; CHECK-NEXT:    store i32 [[UMAX2]], ptr [[P2]], align 4
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, ptr [[DST]], i32 3
-; CHECK-NEXT:    store i32 [[X3]], ptr [[P3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[TMP3]], <4 x i32> <i32 1, i32 2, i32 3, i32 0>)
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

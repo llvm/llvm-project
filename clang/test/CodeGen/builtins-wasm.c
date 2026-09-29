@@ -27,6 +27,18 @@ __SIZE_TYPE__ memory_grow(__SIZE_TYPE__ delta) {
   // WEBASSEMBLY64: call i64 @llvm.wasm.memory.grow.i64(i32 0, i64 %{{.*}})
 }
 
+void memory_copy(void *dest, const void *src, __SIZE_TYPE__ count) {
+  __builtin_wasm_memory_copy(0, 0, dest, src, count);
+  // WEBASSEMBLY32: call void @llvm.wasm.memory.copy.i32(i32 0, i32 0, ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}})
+  // WEBASSEMBLY64: call void @llvm.wasm.memory.copy.i64(i32 0, i32 0, ptr %{{.*}}, ptr %{{.*}}, i64 %{{.*}})
+}
+
+void memory_fill(void *dest, int value, __SIZE_TYPE__ count) {
+  __builtin_wasm_memory_fill(0, dest, value, count);
+  // WEBASSEMBLY32: call void @llvm.wasm.memory.fill.i32(i32 0, ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  // WEBASSEMBLY64: call void @llvm.wasm.memory.fill.i64(i32 0, ptr %{{.*}}, i32 %{{.*}}, i64 %{{.*}})
+}
+
 __SIZE_TYPE__ tls_size(void) {
   return __builtin_wasm_tls_size();
   // WEBASSEMBLY32: call i32 @llvm.wasm.tls.size.i32()

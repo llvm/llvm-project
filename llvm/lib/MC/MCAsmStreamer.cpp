@@ -186,6 +186,9 @@ class MCAsmStreamer final : public MCAsmBaseStreamer {
                                raw_svector_ostream &OS) const;
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
+  void emitBundleAlignMode(Align Alignment) override;
+  void emitBundleLock(bool AlignToEnd, const MCSubtargetInfo &STI) override;
+  void emitBundleUnlock(const MCSubtargetInfo &STI) override;
 
   /// Helper to emit common .loc directive flags, isa, and discriminator.
   void emitDwarfLocDirectiveFlags(unsigned Flags, unsigned Isa,
@@ -299,6 +302,7 @@ public:
   void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
                                            unsigned Minor, unsigned Update,
                                            VersionTuple SDKVersion) override;
+  void emitTargetTriple(StringRef TargetTriple) override;
 
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitConditionalAssignment(MCSymbol *Symbol,
@@ -493,6 +497,10 @@ public:
   void emitCFIWindowSave(SMLoc Loc) override;
   void emitCFINegateRAState(SMLoc Loc) override;
   void emitCFINegateRAStateWithPC(SMLoc Loc) override;
+  void emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
+                             SMLoc Loc) override;
+  void emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                             SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
   void emitCFILLVMRegisterPair(int64_t Register, int64_t R1, int64_t R1Size,
                                int64_t R2, int64_t R2Size, SMLoc Loc) override;
@@ -820,6 +828,11 @@ void MCAsmStreamer::emitDarwinTargetVariantBuildVersion(
     unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
     VersionTuple SDKVersion) {
   emitBuildVersion(Platform, Major, Minor, Update, SDKVersion);
+}
+
+void MCAsmStreamer::emitTargetTriple(StringRef TargetTriple) {
+  OS << "\t.target_triple \"" << TargetTriple << '"';
+  EmitEOL();
 }
 
 void MCAsmStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
@@ -2380,6 +2393,24 @@ void MCAsmStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
   EmitEOL();
 }
 
+void MCAsmStreamer::emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
+                                          SMLoc Loc) {
+  MCStreamer::emitCFILLVMSetRAState(State, PACSym, Loc);
+  OS << "\t.cfi_set_ra_state " << State << ", ";
+  if (PACSym)
+    PACSym->print(OS, MAI);
+  else
+    OS << "0";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                                          SMLoc Loc) {
+  MCStreamer::emitCFILLVMSetRAState(State, Offset, Loc);
+  OS << "\t.cfi_set_ra_state " << State << ", " << Offset;
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitCFIReturnColumn(int64_t Register) {
   MCStreamer::emitCFIReturnColumn(Register);
   OS << "\t.cfi_return_column ";
@@ -2645,6 +2676,24 @@ void MCAsmStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   OS << " ";
   FnSym->print(OS, MAI);
 
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitBundleAlignMode(Align Alignment) {
+  OS << "\t.bundle_align_mode " << Log2(Alignment);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitBundleLock(bool AlignToEnd,
+                                   const MCSubtargetInfo &STI) {
+  OS << "\t.bundle_lock";
+  if (AlignToEnd)
+    OS << " align_to_end";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {
+  OS << "\t.bundle_unlock";
   EmitEOL();
 }
 

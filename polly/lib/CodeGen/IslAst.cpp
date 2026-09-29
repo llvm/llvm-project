@@ -88,6 +88,11 @@ static cl::opt<bool>
                   cl::desc("Print the ISL abstract syntax tree"),
                   cl::cat(PollyCategory));
 
+static cl::opt<unsigned long>
+    AstGenComputeout("polly-astgen-computeout",
+                     cl::desc("Bound the AST generation by a maximal number of "
+                              "ISL operations [0 means un-bounded]"),
+                     cl::Hidden, cl::init(3000000), cl::cat(PollyCategory));
 STATISTIC(ScopsProcessed, "Number of SCoPs processed");
 STATISTIC(ScopsBeneficial, "Number of beneficial SCoPs");
 STATISTIC(BeneficialAffineLoops, "Number of beneficial affine loops");
@@ -206,28 +211,30 @@ static isl_printer *cbPrintFor(__isl_take isl_printer *Printer,
 static bool astScheduleDimIsParallel(const isl::ast_build &Build,
                                      const Dependences *D,
                                      IslAstUserPayload *NodeInfo) {
-  if (!D->hasValidDependences())
+  if (!D || !D->hasValidDependences())
     return false;
 
   isl::union_map Schedule = Build.get_schedule();
   isl::union_map Dep = D->getDependences(
       Dependences::TYPE_RAW | Dependences::TYPE_WAW | Dependences::TYPE_WAR);
 
-  if (!D->isParallel(Schedule.get(), Dep.release())) {
+  isl::boolean IsParallel = D->isKnownParallel(Schedule, Dep);
+  if (IsParallel.is_error())
+    return false;
+  if (IsParallel.is_false()) {
     isl::union_map DepsAll =
         D->getDependences(Dependences::TYPE_RAW | Dependences::TYPE_WAW |
                           Dependences::TYPE_WAR | Dependences::TYPE_TC_RED);
-    // TODO: We will need to change isParallel to stop the unwrapping
-    isl_pw_aff *MinimalDependenceDistanceIsl = nullptr;
-    D->isParallel(Schedule.get(), DepsAll.release(),
-                  &MinimalDependenceDistanceIsl);
-    NodeInfo->MinimalDependenceDistance =
-        isl::manage(MinimalDependenceDistanceIsl);
+    isl::pw_aff MinimalDependenceDistance;
+    isl::boolean IsParallelWithDistance =
+        D->isKnownParallel(Schedule, DepsAll, &MinimalDependenceDistance);
+    if (IsParallelWithDistance.is_false())
+      NodeInfo->MinimalDependenceDistance = MinimalDependenceDistance;
     return false;
   }
 
   isl::union_map RedDeps = D->getDependences(Dependences::TYPE_TC_RED);
-  if (!D->isParallel(Schedule.get(), RedDeps.release()))
+  if (D->isKnownParallel(Schedule, RedDeps).is_false())
     NodeInfo->IsReductionParallel = true;
 
   if (!NodeInfo->IsReductionParallel)
@@ -237,7 +244,7 @@ static bool astScheduleDimIsParallel(const isl::ast_build &Build,
     if (!MaRedPair.second)
       continue;
     isl::union_map MaRedDeps = isl::manage_copy(MaRedPair.second);
-    if (!D->isParallel(Schedule.get(), MaRedDeps.release()))
+    if (D->isKnownParallel(Schedule, MaRedDeps).is_false())
       NodeInfo->BrokenReductions.insert(MaRedPair.first);
   }
   return true;
@@ -317,6 +324,8 @@ astBuildAfterMark(__isl_take isl_ast_node *Node,
   assert(isl_ast_node_get_type(Node) == isl_ast_node_mark);
   AstBuildUserInfo *BuildInfo = (AstBuildUserInfo *)User;
   auto *Id = isl_ast_node_mark_get_id(Node);
+  if (!Id)
+    return Node;
   if (strcmp(isl_id_get_name(Id), "SIMD") == 0)
     BuildInfo->InSIMD = false;
   isl_id_free(Id);
@@ -548,10 +557,23 @@ void IslAst::init(const Dependences &D) {
   }
 
   RunCondition = buildRunCondition(S, isl::manage_copy(Build));
+  // Apply IslMaxOperationsGuard on the API that starts the process of AST
+  // generation from the schedule tree. This is to avoid a timeout when the
+  // schedule tree is too big and complex.
 
-  Root = isl::manage(
-      isl_ast_build_node_from_schedule(Build, S.getScheduleTree().release()));
-  walkAstForStatistics(Root);
+  {
+    IslMaxOperationsGuard MaxOpGuard(Ctx.get(), AstGenComputeout);
+    Root = isl::manage(
+        isl_ast_build_node_from_schedule(Build, S.getScheduleTree().release()));
+    if (MaxOpGuard.hasQuotaExceeded()) {
+      POLLY_DEBUG(
+          dbgs() << "AST generation for SCoP in function '"
+                 << S.getFunction().getName()
+                 << "' exceeded operation limit (operations). Skipping.\n");
+    }
+  }
+  if (!Root.is_null())
+    walkAstForStatistics(Root);
 
   isl_ast_build_free(Build);
 }

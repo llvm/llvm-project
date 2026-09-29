@@ -7,8 +7,8 @@
 ; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GFX11-PACKED,GFX11-PACKED-FAKE16 %s
 ; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-SDAG,GFX12-PACKED-SDAG-TRUE16 %s
 ; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-SDAG,GFX12-PACKED-SDAG-FAKE16 %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu12.00-amd-amdhsa -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-GISEL,GFX12-PACKED-GISEL-TRUE16 %s
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgpu12.00-amd-amdhsa -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-GISEL,GFX12-PACKED-GISEL-FAKE16 %s
+; RUN: llc -global-isel -mtriple=amdgpu12.00-amd-amdhsa -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-GISEL,GFX12-PACKED-GISEL-TRUE16 %s
+; RUN: llc -global-isel -mtriple=amdgpu12.00-amd-amdhsa -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GFX12-PACKED,GFX12-PACKED-GISEL,GFX12-PACKED-GISEL-FAKE16 %s
 
 define amdgpu_kernel void @tbuffer_store_d16_x(<4 x i32> %rsrc, half %data, i32 %vindex) {
 ; PREGFX10-UNPACKED-LABEL: tbuffer_store_d16_x:

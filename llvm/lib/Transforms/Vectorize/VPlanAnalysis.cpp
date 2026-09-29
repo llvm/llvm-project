@@ -26,12 +26,11 @@ void llvm::collectEphemeralRecipesForVPlan(
   SmallVector<VPRecipeBase *> Worklist;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
-    for (VPRecipeBase &R : *VPBB) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || !match(RepR, m_Intrinsic<Intrinsic::assume>()))
+    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB)) {
+      if (!match(&RepR, m_Intrinsic<Intrinsic::assume>()))
         continue;
-      Worklist.push_back(RepR);
-      EphRecipes.insert(RepR);
+      Worklist.push_back(&RepR);
+      EphRecipes.insert(&RepR);
     }
   }
 
@@ -54,9 +53,6 @@ void llvm::collectEphemeralRecipesForVPlan(
     }
   }
 }
-
-template void DomTreeBuilder::Calculate<DominatorTreeBase<VPBlockBase, false>>(
-    DominatorTreeBase<VPBlockBase, false> &DT);
 
 bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
                                         const VPRecipeBase *B) const {
@@ -106,9 +102,12 @@ VPRegisterUsage::spillCost(const TargetTransformInfo &TTI,
   return Cost;
 }
 
-SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
-    VPlan &Plan, ArrayRef<ElementCount> VFs, const TargetTransformInfo &TTI,
-    const SmallPtrSetImpl<const Value *> &ValuesToIgnore) {
+SmallVector<VPRegisterUsage, 8>
+llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
+                                    const TargetTransformInfo &TTI) {
+  DenseSet<VPRecipeBase *> EphemeralRecipes;
+  collectEphemeralRecipesForVPlan(Plan, EphemeralRecipes);
+
   // Each 'key' in the map opens a new interval. The values
   // of the map are the index of the 'last seen' usage of the
   // VPValue that is the key.
@@ -163,11 +162,10 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
     if (VPBB == LoopRegion->getExiting()) {
       // VPWidenIntOrFpInductionRecipes are used implicitly at the end of the
       // exiting block, where their increment will get materialized eventually.
-      for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
-        if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-          EndPoint[WideIV] = Idx2Recipe.size();
-          Ends.insert(WideIV);
-        }
+      for (auto &WideIV : make_isa_range<VPWidenIntOrFpInductionRecipe>(
+               LoopRegion->getEntryBasicBlock()->phis())) {
+        EndPoint[&WideIV] = Idx2Recipe.size();
+        Ends.insert(&WideIV);
       }
     }
   }
@@ -220,12 +218,10 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
         !R->mayHaveSideEffects())
       continue;
 
-    // Skip recipes for ignored values.
-    // TODO: Should mark recipes for ephemeral values that cannot be removed
-    // explictly in VPlan.
-    if (isa<VPSingleDefRecipe>(R) &&
-        ValuesToIgnore.contains(
-            cast<VPSingleDefRecipe>(R)->getUnderlyingValue()))
+    // Skip recipes for ephemeral values, i.e. those only feeding assumes. They
+    // are removed before code generation and must not contribute to the
+    // register pressure of the plan.
+    if (EphemeralRecipes.contains(R))
       continue;
 
     // For each VF find the maximum usage of registers.

@@ -96,9 +96,9 @@ void ThreadPlanStepUntil::Clear() {
 void ThreadPlanStepUntil::GetDescription(Stream *s,
                                          lldb::DescriptionLevel level) {
   if (level == lldb::eDescriptionLevelBrief) {
-    s->Printf("step until");
+    s->PutCString("step until");
     if (m_stepped_out)
-      s->Printf(" - stepped out");
+      s->PutCString(" - stepped out");
   } else {
     if (m_until_points.size() == 1)
       s->Printf("Stepping from address 0x%" PRIx64 " until we reach 0x%" PRIx64

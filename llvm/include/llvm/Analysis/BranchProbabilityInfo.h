@@ -27,8 +27,7 @@
 namespace llvm {
 
 class Function;
-class Loop;
-class LoopInfo;
+class CycleInfo;
 class raw_ostream;
 class DominatorTree;
 class PostDominatorTree;
@@ -110,11 +109,11 @@ class BranchProbabilityInfo {
 public:
   BranchProbabilityInfo() = default;
 
-  BranchProbabilityInfo(const Function &F, const LoopInfo &LI,
+  BranchProbabilityInfo(const Function &F, const CycleInfo &CI,
                         const TargetLibraryInfo *TLI = nullptr,
                         DominatorTree *DT = nullptr,
                         PostDominatorTree *PDT = nullptr) {
-    calculate(F, LI, TLI, DT, PDT);
+    calculate(F, CI, TLI, DT, PDT);
   }
 
   LLVM_ABI bool invalidate(Function &, const PreservedAnalyses &PA,
@@ -169,12 +168,18 @@ public:
   /// Swap outgoing edges probabilities for \p Src with branch terminator
   LLVM_ABI void swapSuccEdgesProbabilities(const BasicBlock *Src);
 
+  /// Returns the probabilities of edges with branch weights \p Weights.
+  /// Weights whose sum does not fit in 32 bits are scaled down, and if all
+  /// weights are zero, all edges are equally likely.
+  LLVM_ABI static SmallVector<BranchProbability>
+  getEdgeProbabilitiesFromWeights(ArrayRef<uint32_t> Weights);
+
   static BranchProbability getBranchProbStackProtector(bool IsLikely) {
     static const BranchProbability LikelyProb((1u << 20) - 1, 1u << 20);
     return IsLikely ? LikelyProb : LikelyProb.getCompl();
   }
 
-  LLVM_ABI void calculate(const Function &F, const LoopInfo &LI,
+  LLVM_ABI void calculate(const Function &F, const CycleInfo &CI,
                           const TargetLibraryInfo *TLI, DominatorTree *DT,
                           PostDominatorTree *PDT);
 

@@ -344,7 +344,7 @@ template <class _Tp, class _VoidPtr>
 class __list_const_iterator;
 
 template <class _Tp, class _VoidPtr>
-class __list_iterator {
+class _LIBCPP_WARN_UNUSED __list_iterator {
   typedef __list_node_pointer_traits<_Tp, _VoidPtr> _NodeTraits;
   typedef typename _NodeTraits::__base_pointer __base_pointer;
 
@@ -407,7 +407,7 @@ public:
 };
 
 template <class _Tp, class _VoidPtr>
-class __list_const_iterator {
+class _LIBCPP_WARN_UNUSED __list_const_iterator {
   typedef __list_node_pointer_traits<_Tp, _VoidPtr> _NodeTraits;
   typedef typename _NodeTraits::__base_pointer __base_pointer;
 
@@ -672,7 +672,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __list_imp<_Tp, _Alloc>::swap(__list_imp& __c
 }
 
 template <class _Tp, class _Alloc /*= allocator<_Tp>*/>
-class list : private __list_imp<_Tp, _Alloc> {
+class _LIBCPP_WARN_UNUSED list : private __list_imp<_Tp, _Alloc> {
   typedef __list_imp<_Tp, _Alloc> __base;
   typedef typename __base::__node_type __node_type;
   typedef typename __base::__node_allocator __node_allocator;
@@ -1815,19 +1815,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <algorithm>
-#    include <atomic>
-#    include <concepts>
-#    include <cstdint>
-#    include <cstdlib>
-#    include <functional>
-#    include <iosfwd>
-#    include <iterator>
-#    include <stdexcept>
-#    include <type_traits>
-#    include <typeinfo>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_LIST

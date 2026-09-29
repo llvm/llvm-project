@@ -424,9 +424,13 @@ LnoR2Fix:
 // register in the incorrect doubleword order.
 // FIXME: when supporting targets older than Power9 on LE is no longer required
 //        this can be changed to simply `stxv n, 16 * n(4)`.
+// Restore the register after storing: xxswapd is its own inverse, so a second
+// xxswapd undoes the in-place corruption of callee-saved VSRs (f14-f31,
+// VR20-VR31) that would otherwise persist after unw_getcontext returns.
 #define PPC64_STVS(n)      \
   xxswapd n, n            ;\
   stxvd2x n, 0, 4         ;\
+  xxswapd n, n            ;\
   addi    4, 4, 16
 #else
 #define PPC64_STVS(n)      \
@@ -854,6 +858,10 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_za_disable)
   .variant_pcs __libunwind_Registers_arm64_za_disable
+#if defined(__LFI__)
+  mov x0, #1
+  ret
+#else
 #if __has_feature(ptrauth_calls)
   pacibsp
 #endif
@@ -896,6 +904,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_za_disable)
   retab
 #else
   ret
+#endif
 #endif
 
 #elif defined(__arm__) && !defined(__APPLE__)

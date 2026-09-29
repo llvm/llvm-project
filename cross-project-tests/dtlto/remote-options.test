@@ -47,6 +47,15 @@ NO-SECTIONS-NOT: "-faddrsig"
 NO-SECTIONS-NOT: "-ffunction-sections"
 NO-SECTIONS-NOT: "-fdata-sections"
 
+## Loop interchange.
+RUN: %{lto2-elf} -enable-loopinterchange=true 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,LOOP-INTERCHANGE,ERR
+LOOP-INTERCHANGE: "-floop-interchange"
+
+RUN: %{lto2-elf} -enable-loopinterchange=false 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=ARGS,NO-LOOP-INTERCHANGE,ERR
+NO-LOOP-INTERCHANGE-NOT: "-floop-interchange"
+
 ## PIC is forwarded as -fpic for ELF targets but not for COFF targets because
 ## Clang does not accept -fpic for every target.
 RUN: %{lto2-elf} -relocation-model=pic 2>&1 | \

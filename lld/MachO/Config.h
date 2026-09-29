@@ -147,6 +147,7 @@ struct Configuration {
   bool dedupSymbolStrings = true;
   bool deadStripDuplicates = false;
   bool omitDebugInfo = false;
+  bool stripSwiftForceLoad = false;
   bool warnDylibInstallName = false;
   bool ignoreOptimizationHints = false;
   bool forceExactCpuSubtypeMatch = false;
@@ -223,6 +224,7 @@ struct Configuration {
   llvm::StringRef csProfilePath;
   bool pgoWarnMismatch;
   bool warnThinArchiveMissingMembers;
+  bool warnMissingSubsectionsViaSymbols = false;
   bool disableVerify;
   bool separateCstringLiteralSections;
   bool tailMergeStrings;

@@ -278,36 +278,49 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
 }
 
 /// Get the block for adding Allocas.
+mlir::Block *fir::getAllocaBlock(mlir::Region &region) {
+  // Find the closest parent operation that knows where its allocas belong.
+  for (mlir::Region *current = &region; current;
+       current = current->getParentRegion()) {
+    mlir::Operation *parent = current->getParentOp();
+    if (!parent)
+      break;
+
+    if (auto accComputeRegionIface =
+            mlir::dyn_cast<mlir::acc::ComputeRegionOpInterface>(parent))
+      return accComputeRegionIface.getAllocaBlock();
+
+    // Offload regions are isolated from above, so allocas cannot be hoisted
+    // past them.
+    if (auto accOffloadRegionIface =
+            mlir::dyn_cast<mlir::acc::OffloadRegionOpInterface>(parent))
+      return &accOffloadRegionIface.getOffloadRegion().front();
+
+    if (auto ompOutlineableIface =
+            mlir::dyn_cast<mlir::omp::OutlineableOpenMPOpInterface>(parent))
+      return ompOutlineableIface.getAllocaBlock();
+
+    if (auto recipeIface =
+            mlir::dyn_cast<mlir::accomp::RecipeInterface>(parent))
+      return recipeIface.getAllocaBlock(*current);
+
+    if (auto cufKernelOp = mlir::dyn_cast<cuf::KernelOp>(parent))
+      return &cufKernelOp.getRegion().front();
+
+    if (auto doConcurentOp = mlir::dyn_cast<fir::DoConcurrentOp>(parent))
+      return doConcurentOp.getBody();
+
+    if (mlir::isa<fir::LocalitySpecifierOp, fir::DeclareReductionOp>(parent))
+      return &current->front();
+  }
+
+  auto func = region.getParentOfType<mlir::func::FuncOp>();
+  assert(func && "region must be inside a function");
+  return &func.front();
+}
+
 mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
-  if (auto accComputeRegionIface =
-          getRegion().getParentOfType<mlir::acc::ComputeRegionOpInterface>()) {
-    return accComputeRegionIface.getAllocaBlock();
-  }
-
-  if (auto ompOutlineableIface =
-          getRegion()
-              .getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>()) {
-    return ompOutlineableIface.getAllocaBlock();
-  }
-
-  if (auto recipeIface =
-          getRegion().getParentOfType<mlir::accomp::RecipeInterface>()) {
-    return recipeIface.getAllocaBlock(getRegion());
-  }
-
-  if (auto cufKernelOp = getRegion().getParentOfType<cuf::KernelOp>())
-    return &cufKernelOp.getRegion().front();
-
-  if (auto doConcurentOp = getRegion().getParentOfType<fir::DoConcurrentOp>())
-    return doConcurentOp.getBody();
-
-  if (auto firLocalOp = getRegion().getParentOfType<fir::LocalitySpecifierOp>())
-    return &getRegion().front();
-
-  if (auto firLocalOp = getRegion().getParentOfType<fir::DeclareReductionOp>())
-    return &getRegion().front();
-
-  return getEntryBlock();
+  return fir::getAllocaBlock(getRegion());
 }
 
 static mlir::ArrayAttr makeI64ArrayAttr(llvm::ArrayRef<int64_t> values,
@@ -450,7 +463,7 @@ void fir::FirOpBuilder::genStackRestore(mlir::Location loc,
 /// must have a unique name to identify and reference it.
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
-    mlir::StringAttr linkage, mlir::Attribute value, bool isConst,
+    fir::LinkageAttr linkage, mlir::Attribute value, bool isConst,
     bool isTarget, cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment) {
   if (auto global = getNamedGlobal(name))
     return global;
@@ -478,7 +491,7 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
     bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
-    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr,
+    fir::LinkageAttr linkage, cuf::DataAttributeAttr dataAttr,
     bool setDefaultAlignment) {
   if (auto global = getNamedGlobal(name))
     return global;
@@ -1147,54 +1160,6 @@ fir::factory::getNonDefaultLowerBounds(fir::FirOpBuilder &builder,
       [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
 }
 
-llvm::SmallVector<mlir::Value>
-fir::factory::getNonDeferredLenParams(const fir::ExtendedValue &exv) {
-  return exv.match(
-      [&](const fir::CharArrayBoxValue &character)
-          -> llvm::SmallVector<mlir::Value> { return {character.getLen()}; },
-      [&](const fir::CharBoxValue &character)
-          -> llvm::SmallVector<mlir::Value> { return {character.getLen()}; },
-      [&](const fir::MutableBoxValue &box) -> llvm::SmallVector<mlir::Value> {
-        return {box.nonDeferredLenParams().begin(),
-                box.nonDeferredLenParams().end()};
-      },
-      [&](const fir::BoxValue &box) -> llvm::SmallVector<mlir::Value> {
-        return {box.getExplicitParameters().begin(),
-                box.getExplicitParameters().end()};
-      },
-      [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
-}
-
-// If valTy is a box type, then we need to extract the type parameters from
-// the box value.
-static llvm::SmallVector<mlir::Value> getFromBox(mlir::Location loc,
-                                                 fir::FirOpBuilder &builder,
-                                                 mlir::Type valTy,
-                                                 mlir::Value boxVal) {
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(valTy)) {
-    auto eleTy = fir::unwrapAllRefAndSeqType(boxTy.getEleTy());
-    if (auto recTy = mlir::dyn_cast<fir::RecordType>(eleTy)) {
-      if (recTy.getNumLenParams() > 0) {
-        // Walk each type parameter in the record and get the value.
-        TODO(loc, "generate code to get LEN type parameters");
-      }
-    } else if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
-      if (charTy.hasDynamicLen()) {
-        auto idxTy = builder.getIndexType();
-        auto eleSz = fir::BoxEleSizeOp::create(builder, loc, idxTy, boxVal);
-        auto kindBytes =
-            builder.getKindMap().getCharacterBitsize(charTy.getFKind()) / 8;
-        mlir::Value charSz =
-            builder.createIntegerConstant(loc, idxTy, kindBytes);
-        mlir::Value len =
-            mlir::arith::DivSIOp::create(builder, loc, eleSz, charSz);
-        return {len};
-      }
-    }
-  }
-  return {};
-}
-
 // fir::getTypeParams() will get the type parameters from the extended value.
 // When the extended value is a BoxValue or MutableBoxValue, it may be necessary
 // to generate code, so this factory function handles those cases.
@@ -1219,15 +1184,6 @@ fir::factory::getTypeParams(mlir::Location loc, fir::FirOpBuilder &builder,
       [&](const fir::BoxValue &box) { return handleBoxed(box); },
       [&](const fir::MutableBoxValue &box) { return handleBoxed(box); },
       [&](const auto &) { return fir::getTypeParams(exv); });
-}
-
-llvm::SmallVector<mlir::Value>
-fir::factory::getTypeParams(mlir::Location loc, fir::FirOpBuilder &builder,
-                            fir::ArrayLoadOp load) {
-  mlir::Type memTy = load.getMemref().getType();
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(memTy))
-    return getFromBox(loc, builder, boxTy, load.getMemref());
-  return load.getTypeparams();
 }
 
 std::string fir::factory::uniqueCGIdent(llvm::StringRef prefix,
@@ -1446,86 +1402,6 @@ void fir::factory::genScalarAssignment(
   }
 }
 
-static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
-                                              mlir::Location loc,
-                                              const fir::ExtendedValue &lhs,
-                                              const fir::ExtendedValue &rhs,
-                                              bool isTemporaryLHS) {
-  auto lbaseType = fir::unwrapPassByRefType(fir::getBase(lhs).getType());
-  auto lhsType = mlir::dyn_cast<fir::RecordType>(lbaseType);
-  assert(lhsType && "lhs must be a scalar record type");
-  auto rbaseType = fir::unwrapPassByRefType(fir::getBase(rhs).getType());
-  auto rhsType = mlir::dyn_cast<fir::RecordType>(rbaseType);
-  assert(rhsType && "rhs must be a scalar record type");
-  auto fieldIndexType = fir::FieldType::get(lhsType.getContext());
-  for (auto [lhsPair, rhsPair] :
-       llvm::zip(lhsType.getTypeList(), rhsType.getTypeList())) {
-    auto &[lFieldName, lFieldTy] = lhsPair;
-    auto &[rFieldName, rFieldTy] = rhsPair;
-    assert(!fir::hasDynamicSize(lFieldTy) && !fir::hasDynamicSize(rFieldTy));
-    mlir::Value rField =
-        fir::FieldIndexOp::create(builder, loc, fieldIndexType, rFieldName,
-                                  rhsType, fir::getTypeParams(rhs));
-    auto rFieldRefType = builder.getRefType(rFieldTy);
-    mlir::Value fromCoor = fir::CoordinateOp::create(
-        builder, loc, rFieldRefType, fir::getBase(rhs), rField);
-    mlir::Value field =
-        fir::FieldIndexOp::create(builder, loc, fieldIndexType, lFieldName,
-                                  lhsType, fir::getTypeParams(lhs));
-    auto fieldRefType = builder.getRefType(lFieldTy);
-    mlir::Value toCoor = fir::CoordinateOp::create(builder, loc, fieldRefType,
-                                                   fir::getBase(lhs), field);
-    std::optional<fir::DoLoopOp> outerLoop;
-    if (auto sequenceType = mlir::dyn_cast<fir::SequenceType>(lFieldTy)) {
-      // Create loops to assign array components elements by elements.
-      // Note that, since these are components, they either do not overlap,
-      // or are the same and exactly overlap. They also have compile time
-      // constant shapes.
-      mlir::Type idxTy = builder.getIndexType();
-      llvm::SmallVector<mlir::Value> indices;
-      mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-      for (auto extent : llvm::reverse(sequenceType.getShape())) {
-        // TODO: add zero size test !
-        mlir::Value ub = builder.createIntegerConstant(loc, idxTy, extent - 1);
-        auto loop = fir::DoLoopOp::create(builder, loc, zero, ub, one);
-        if (!outerLoop)
-          outerLoop = loop;
-        indices.push_back(loop.getInductionVar());
-        builder.setInsertionPointToStart(loop.getBody());
-      }
-      // Set indices in column-major order.
-      std::reverse(indices.begin(), indices.end());
-      auto elementRefType = builder.getRefType(sequenceType.getEleTy());
-      toCoor = fir::CoordinateOp::create(builder, loc, elementRefType, toCoor,
-                                         indices);
-      fromCoor = fir::CoordinateOp::create(builder, loc, elementRefType,
-                                           fromCoor, indices);
-    }
-    if (auto fieldEleTy = fir::unwrapSequenceType(lFieldTy);
-        mlir::isa<fir::BaseBoxType>(fieldEleTy)) {
-      assert(mlir::isa<fir::PointerType>(
-                 mlir::cast<fir::BaseBoxType>(fieldEleTy).getEleTy()) &&
-             "allocatable members require deep copy");
-      auto fromPointerValue = fir::LoadOp::create(builder, loc, fromCoor);
-      auto castTo = builder.createConvert(loc, fieldEleTy, fromPointerValue);
-      fir::StoreOp::create(builder, loc, castTo, toCoor);
-    } else {
-      auto from =
-          fir::factory::componentToExtendedValue(builder, loc, fromCoor);
-      auto to = fir::factory::componentToExtendedValue(builder, loc, toCoor);
-      // If LHS finalization is needed it is expected to be done
-      // for the parent record, so that component-by-component
-      // assignments may avoid finalization calls.
-      fir::factory::genScalarAssignment(builder, loc, to, from,
-                                        /*needFinalization=*/false,
-                                        isTemporaryLHS);
-    }
-    if (outerLoop)
-      builder.setInsertionPointAfter(*outerLoop);
-  }
-}
-
 /// Can the assignment of this record type be implement with a simple memory
 /// copy (it requires no deep copy or user defined assignment of components )?
 static bool recordTypeCanBeMemCopied(fir::RecordType recordType) {
@@ -1584,6 +1460,18 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
   bool disjoint = isTemporaryLHS || !recTy.isSequence() ||
                   (aa.alias(fir::getBase(lhs), fir::getBase(rhs)) ==
                    mlir::AliasResult::NoAlias);
+  // noOverlap is only safe when the operands are *known* to be
+  // non-overlapping: either the LHS is a compiler temporary (can't alias
+  // anything the user wrote), or alias analysis explicitly confirmed
+  // NoAlias.  The !recTy.isSequence() branch of disjoint is an assumption
+  // -- non-SEQUENCE types are expected to be disjoint, but a Cray pointee
+  // aliasing a TARGET variable is a documented counter-example (see
+  // flang/docs/Aliasing.md).  Using no_overlap on an assumed-disjoint pair
+  // emits memcpy, which has undefined behaviour for overlapping operands.
+  // Without no_overlap, fir.copy lowers to memmove, which is always safe.
+  bool noOverlap =
+      isTemporaryLHS || (aa.alias(fir::getBase(lhs), fir::getBase(rhs)) ==
+                         mlir::AliasResult::NoAlias);
   if ((needFinalization && mayHaveFinalizer(recTy, builder)) ||
       hasBoxOperands || !recordTypeCanBeMemCopied(recTy) || !disjoint) {
     auto to = fir::getBase(builder.createBox(loc, lhs));
@@ -1602,83 +1490,34 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
     return;
   }
 
-  // Otherwise, the derived type has compile time constant size and for which
-  // the component by component assignment can be replaced by a memory copy.
-  // Since we do not know the size of the derived type in lowering, do a
-  // component by component assignment. Note that a single fir.load/fir.store
-  // could be used on "small" record types, but as the type size grows, this
-  // leads to issues in LLVM (long compile times, long IR files, and even
-  // asserts at some point). Since there is no good size boundary, just always
-  // use component by component assignment here.
-  genComponentByComponentAssignment(builder, loc, lhs, rhs, isTemporaryLHS);
-}
-
-mlir::TupleType
-fir::factory::getRaggedArrayHeaderType(fir::FirOpBuilder &builder) {
-  mlir::IntegerType i64Ty = builder.getIntegerType(64);
-  auto arrTy = fir::SequenceType::get(builder.getIntegerType(8), 1);
-  auto buffTy = fir::HeapType::get(arrTy);
-  auto extTy = fir::SequenceType::get(i64Ty, 1);
-  auto shTy = fir::HeapType::get(extTy);
-  return mlir::TupleType::get(builder.getContext(), {i64Ty, buffTy, shTy});
-}
-
-mlir::Value fir::factory::genLenOfCharacter(
-    fir::FirOpBuilder &builder, mlir::Location loc, fir::ArrayLoadOp arrLoad,
-    llvm::ArrayRef<mlir::Value> path, llvm::ArrayRef<mlir::Value> substring) {
-  llvm::SmallVector<mlir::Value> typeParams(arrLoad.getTypeparams());
-  return genLenOfCharacter(builder, loc,
-                           mlir::cast<fir::SequenceType>(arrLoad.getType()),
-                           arrLoad.getMemref(), typeParams, path, substring);
-}
-
-mlir::Value fir::factory::genLenOfCharacter(
-    fir::FirOpBuilder &builder, mlir::Location loc, fir::SequenceType seqTy,
-    mlir::Value memref, llvm::ArrayRef<mlir::Value> typeParams,
-    llvm::ArrayRef<mlir::Value> path, llvm::ArrayRef<mlir::Value> substring) {
-  auto idxTy = builder.getIndexType();
-  auto zero = builder.createIntegerConstant(loc, idxTy, 0);
-  auto saturatedDiff = [&](mlir::Value lower, mlir::Value upper) {
-    auto diff = mlir::arith::SubIOp::create(builder, loc, upper, lower);
-    auto one = builder.createIntegerConstant(loc, idxTy, 1);
-    auto size = mlir::arith::AddIOp::create(builder, loc, diff, one);
-    auto cmp = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::sgt, size, zero);
-    return mlir::arith::SelectOp::create(builder, loc, cmp, size, zero);
-  };
-  if (substring.size() == 2) {
-    auto upper = builder.createConvert(loc, idxTy, substring.back());
-    auto lower = builder.createConvert(loc, idxTy, substring.front());
-    return saturatedDiff(lower, upper);
-  }
-  auto lower = zero;
-  if (substring.size() == 1)
-    lower = builder.createConvert(loc, idxTy, substring.front());
-  auto eleTy = fir::applyPathToType(seqTy, path);
-  if (!fir::hasDynamicSize(eleTy)) {
-    if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
-      // Use LEN from the type.
-      return builder.createIntegerConstant(loc, idxTy, charTy.getLen());
-    }
-    // Do we need to support !fir.array<!fir.char<k,n>>?
-    fir::emitFatalError(loc,
-                        "application of path did not result in a !fir.char");
-  }
-  if (fir::isa_box_type(memref.getType())) {
-    if (mlir::isa<fir::BoxCharType>(memref.getType()))
-      return fir::BoxCharLenOp::create(builder, loc, idxTy, memref);
-    if (mlir::isa<fir::BoxType>(memref.getType()))
-      return CharacterExprHelper(builder, loc).readLengthFromBox(memref);
-    fir::emitFatalError(loc, "memref has wrong type");
-  }
-  if (typeParams.empty()) {
-    fir::emitFatalError(loc, "array_load must have typeparams");
-  }
-  if (fir::isa_char(seqTy.getEleTy())) {
-    assert(typeParams.size() == 1 && "too many typeparams");
-    return typeParams.front();
-  }
-  TODO(loc, "LEN of character must be computed at runtime");
+  // Otherwise, the derived type has compile time constant size, no
+  // allocatable components, and no user-defined assignment. The size of the
+  // type is not known at this point in lowering, but fir.copy defers the size
+  // computation to codegen where the LLVM data layout is available. That allows
+  // it to copy the full allocated storage including any ABI tail-padding bytes,
+  // which a field-by-field copy would silently skip. Preserving those bytes
+  // matters for SEQUENCE types whose storage is reinterpreted via EQUIVALENCE
+  // or TRANSFER.
+  mlir::Value fromAddr = fir::getBase(rhs);
+  mlir::Value toAddr = fir::getBase(lhs);
+  // Ensure we have raw ref<RecordType> pointers for fir.copy.
+  // Use a per-operand target type that preserves the operand's volatility.
+  // If either operand is !fir.ref<T, volatile>, the target type is also
+  // !fir.ref<T, volatile>, so any emitted fir.convert does not strip the
+  // volatile qualifier and passes ConvertOp::verify under
+  // --strict-fir-volatile-verifier.  A convert is only emitted when the
+  // element type differs (e.g. a module record type assigned to a
+  // structurally identical local SEQUENCE type); when the types already
+  // match no convert is emitted at all.
+  auto fromRefTy =
+      builder.getRefType(recTy, fir::isa_volatile_type(fromAddr.getType()));
+  if (fromAddr.getType() != fromRefTy)
+    fromAddr = builder.createConvert(loc, fromRefTy, fromAddr);
+  auto toRefTy =
+      builder.getRefType(recTy, fir::isa_volatile_type(toAddr.getType()));
+  if (toAddr.getType() != toRefTy)
+    toAddr = builder.createConvert(loc, toRefTy, toAddr);
+  fir::CopyOp::create(builder, loc, fromAddr, toAddr, noOverlap);
 }
 
 mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,
@@ -1718,34 +1557,6 @@ mlir::Value fir::factory::createOneValue(fir::FirOpBuilder &builder,
   }
   fir::emitFatalError(loc, "internal: trying to generate one value of non "
                            "numeric or logical type");
-}
-
-std::optional<std::int64_t>
-fir::factory::getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
-                                   mlir::Value stride) {
-  std::function<std::optional<std::int64_t>(mlir::Value)> getConstantValue =
-      [&](mlir::Value value) -> std::optional<std::int64_t> {
-    if (auto valInt = fir::getIntIfConstant(value))
-      return *valInt;
-    auto *definingOp = value.getDefiningOp();
-    if (mlir::isa_and_nonnull<fir::ConvertOp>(definingOp)) {
-      auto valOp = mlir::dyn_cast<fir::ConvertOp>(definingOp);
-      return getConstantValue(valOp.getValue());
-    }
-    return {};
-  };
-  if (auto lbInt = getConstantValue(lb)) {
-    if (auto ubInt = getConstantValue(ub)) {
-      if (auto strideInt = getConstantValue(stride)) {
-        if (*strideInt != 0) {
-          std::int64_t extent = 1 + (*ubInt - *lbInt) / *strideInt;
-          if (extent > 0)
-            return extent;
-        }
-      }
-    }
-  }
-  return {};
 }
 
 mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,

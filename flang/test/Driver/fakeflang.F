@@ -1,8 +1,12 @@
 ! This is how CMake probes the compiler for CMAKE_Fortran_COMPILER_ID etc.
 
+! fakeflang is not built for standalone builds.
+! UNSUPPORTED: flang-standalone-build
+
 ! RUN: rm -rf %t
 ! RUN: mkdir -p %t
 ! RUN: cp %s %t/CMakeFortranCompilerId.F
+! RUN: cp %s %t/CMakeTestGNU.c
 ! RUN: cp %s %t/compiletest.F
 ! RUN: cd %t
 
@@ -16,6 +20,11 @@
 
 ! RUN: fakeflang -v -c -cpp -E --target=x86_64-pc-windows-msvc CMakeFortranCompilerId.F 2>&1 | FileCheck %s --check-prefix=FAKEWARNING
 ! RUN: FileCheck %s --input-file=a.out --check-prefixes=CHECK,MSVC --match-full-lines
+! RUN: rm a.out
+
+! CMakeTestGNU.c is a fallback used by CMake
+! RUN: fakeflang -E CMakeTestGNU.c --target=aarch64-linux-gnu 2>&1 | FileCheck %s --check-prefix=FAKEWARNING
+! RUN: FileCheck %s --input-file=a.out --check-prefixes=CHECK,GNU --match-full-lines
 ! RUN: rm a.out
 
 ! FLANG_BOOTSTRAP_PROBE forces probe mode

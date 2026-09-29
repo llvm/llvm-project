@@ -2097,12 +2097,92 @@ define i32 @shl1_cttz_extra_use(i32 %x) {
 
 define i32 @shl2_cttz(i32 %x) {
 ; CHECK-LABEL: @shl2_cttz(
-; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 2, [[TZ]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[SHL]]
 ;
   %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
   %shl = shl i32 2, %tz
+  ret i32 %shl
+}
+
+; C=4: different constant, should also fold
+define i32 @shl4_cttz(i32 %x) {
+; CHECK-LABEL: @shl4_cttz(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP1]], 2
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %shl = shl i32 4, %tz
+  ret i32 %shl
+}
+
+; negative test: cttz has multiple uses, should not fold
+define i32 @shl2_cttz_multiuse(i32 %x) {
+; CHECK-LABEL: @shl2_cttz_multiuse(
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    call void @use_i32(i32 [[TZ]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 2, [[TZ]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  call void @use_i32(i32 %tz)
+  %shl = shl i32 2, %tz
+  ret i32 %shl
+}
+
+; is_zero_poison = false is also optimized (LLVM auto-upgrades to true when used as shift amount)
+define i32 @shl2_cttz_zero_poison_false(i32 %x) {
+; CHECK-LABEL: @shl2_cttz_zero_poison_false(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 false)
+  %shl = shl i32 2, %tz
+  ret i32 %shl
+}
+
+; variable LHS operand
+define i32 @shl_var_cttz(i32 %x, i32 %a) {
+; CHECK-LABEL: @shl_var_cttz(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = mul i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %shl = shl i32 %a, %tz
+  ret i32 %shl
+}
+
+; nuw flag propagation
+define i32 @shl_cttz_nuw(i32 %x, i32 %a) {
+; CHECK-LABEL: @shl_cttz_nuw(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = mul nuw i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %shl = shl nuw i32 %a, %tz
+  ret i32 %shl
+}
+
+; New test: constant with nuw flag
+define i32 @shl2_cttz_nuw(i32 %x) {
+; CHECK-LABEL: @shl2_cttz_nuw(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X]], [[NEG]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %tz = call i32 @llvm.cttz.i32(i32 %x, i1 true)
+  %shl = shl nuw i32 2, %tz
   ret i32 %shl
 }
 

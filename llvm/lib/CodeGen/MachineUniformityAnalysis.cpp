@@ -109,7 +109,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
 
 template <>
 bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::usesValueFromCycle(
-    const MachineInstr &I, const MachineCycle &DefCycle) const {
+    const MachineInstr &I, CycleRef DefCycle) const {
   assert(!isAlwaysUniform(I));
   for (auto &Op : I.operands()) {
     if (!Op.isReg() || !Op.readsReg())
@@ -129,9 +129,9 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::usesValueFromCycle(
 }
 
 template <>
-void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::
-    propagateTemporalDivergence(const MachineInstr &I,
-                                const MachineCycle &DefCycle) {
+void llvm::GenericUniformityAnalysisImpl<
+    MachineSSAContext>::propagateTemporalDivergence(const MachineInstr &I,
+                                                    CycleRef DefCycle) {
   const auto &RegInfo = F.getRegInfo();
   for (auto &Op : I.all_defs()) {
     if (!Op.getReg().isVirtual())
@@ -142,7 +142,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::
         continue;
       markDivergent(UserInstr);
 
-      recordTemporalDivergence(Reg, &UserInstr, &DefCycle);
+      recordTemporalDivergence(Reg, &UserInstr, DefCycle);
     }
   }
 }
