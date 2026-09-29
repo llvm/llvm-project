@@ -3261,6 +3261,37 @@ bool SIInsertWaitcnts::mayStoreIncrementingDSCNT(const MachineInstr &MI) const {
   return MI.mayStore() && SIInstrInfo::isDS(MI);
 }
 
+// Issue order when the body has no in-loop branch: header, then each block's
+// one in-loop successor. Returns false if that walk is not the whole loop.
+static bool
+appendSinglePathLoopBlocks(const MachineLoop &ML,
+                           SmallVectorImpl<MachineBasicBlock *> &Order) {
+  MachineBasicBlock *Header = ML.getHeader();
+  if (!Header)
+    return false;
+
+  MachineBasicBlock *BB = Header;
+  SmallPtrSet<MachineBasicBlock *, 8> Seen;
+  do {
+    if (!Seen.insert(BB).second)
+      return false;
+    Order.push_back(BB);
+    MachineBasicBlock *Next = nullptr;
+    for (MachineBasicBlock *Succ : BB->successors()) {
+      if (!ML.contains(Succ) || Succ == Header)
+        continue;
+      if (Next)
+        return false;
+      Next = Succ;
+    }
+    if (!Next)
+      break;
+    BB = Next;
+  } while (true);
+
+  return Order.size() == ML.getNumBlocks();
+}
+
 // Return flags indicating which counters should be flushed in the preheader of
 // the given loop. We currently decide to flush in the following situations:
 // For VMEM (FlushVmCnt):
@@ -3279,12 +3310,12 @@ bool SIInsertWaitcnts::mayStoreIncrementingDSCNT(const MachineInstr &MI) const {
 //    Flushing in preheader reduces wait overhead if the wait requirement in
 //    iteration 1 would otherwise be more strict (but unfortunately preheader
 //    flush decision is taken before knowing that).
-// 5. (Single-block loops only) The loop has DS prefetch reads with flush point
-//    tracking. Some DS reads may be used in the same iteration (creating
-//    "flush points"), but others remain unflushed at the backedge. When a DS
-//    read is consumed in the same iteration, it and all prior reads are
-//    "flushed" (FIFO order). No DS writes are allowed in the loop.
-//    TODO: Find a way to extend to multi-block loops.
+// 5. The loop has DS prefetch reads with flush point tracking. Some DS reads
+//    may be used in the same iteration (creating "flush points"), but others
+//    remain unflushed at the backedge. When a DS read is consumed in the same
+//    iteration, it and all prior reads are "flushed" (FIFO order). No DS
+//    writes are allowed in the loop. Requires one issue order, so an in-loop
+//    branch skips this case.
 PreheaderFlushFlags
 SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
                                          const WaitcntBrackets &Brackets) {
@@ -3302,17 +3333,20 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   DenseSet<MCRegUnit> VgprDefVMEM;
   DenseSet<MCRegUnit> VgprDefDS;
 
-  // Track DS reads for prefetch pattern with flush points (single-block only).
+  // Track DS reads for prefetch pattern with flush points.
   // Keeps track of the last DS read (position counted from the top of the loop)
   // to each VGPR. Read is considered consumed (and thus needs flushing) if
   // the dest register has a use or is overwritten (by any later opertions).
   DenseMap<MCRegUnit, unsigned> LastDSReadPositionMap;
   unsigned DSReadPosition = 0;
-  bool IsSingleBlock = ML->getNumBlocks() == 1;
-  bool TrackDSFlushPoint = ST.hasExtendedWaitCounts() && IsSingleBlock;
+  SmallVector<MachineBasicBlock *, 8> BlockOrder;
+  bool SinglePath = appendSinglePathLoopBlocks(*ML, BlockOrder);
+  if (!SinglePath)
+    append_range(BlockOrder, ML->blocks());
+  bool TrackDSFlushPoint = ST.hasExtendedWaitCounts() && SinglePath;
   unsigned LastDSFlushPosition = 0;
 
-  for (MachineBasicBlock *MBB : ML->blocks()) {
+  for (MachineBasicBlock *MBB : BlockOrder) {
     for (MachineInstr &MI : *MBB) {
       if (isVMEMOrFlatVMEM(MI)) {
         HasVMemLoad |= MI.mayLoad();
