@@ -19,6 +19,7 @@
 #include "SLPUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
 
@@ -30,6 +31,7 @@ class APInt;
 class FastMathFlags;
 class FixedVectorType;
 class Instruction;
+class LoadInst;
 class TargetLibraryInfo;
 class Type;
 class User;
@@ -46,6 +48,19 @@ getStridedLoadCost(const TargetTransformInfo &TTI, Type *StridedLoadTy,
                    Type *VecTy, Value *Ptr, Align CommonAlignment,
                    TargetTransformInfo::CastContextHint Ctx,
                    TargetTransformInfo::TargetCostKind CostKind);
+
+struct CompressedLoadInfo {
+  bool IsMasked = false;
+  unsigned InterleaveFactor = 0;
+  SmallVector<int> CompressMask;
+  VectorType *LoadVecTy = nullptr;
+};
+
+/// Return the cost of a compressed load and accompanying shuffle.
+InstructionCost
+getCompressedLoadCost(const TargetTransformInfo &TTI, const LoadInst *LI0,
+                      const CompressedLoadInfo &Info,
+                      TargetTransformInfo::TargetCostKind CostKind);
 
 /// Returns the cost of the shuffle instructions with the given \p Kind, vector
 /// type \p Tp and optional \p Mask. Adds SLP-specific cost estimation for
