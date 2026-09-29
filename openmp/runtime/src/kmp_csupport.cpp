@@ -801,6 +801,39 @@ void __kmpc_flush(ident_t *loc) {
 #endif
 }
 
+/*!
+@ingroup SYNCHRONIZATION
+@param loc source location information.
+@param order memory order input from user.
+@param scope memory scope input from user.
+Perform memory fence with explicit memory semantics.
+*/
+void __kmpc_flush_explicit(ident_t *loc, kmp_int32 order, kmp_int32 scope) {
+  // `scope` is not used on the initial device.
+  switch (order) {
+  case std::memory_order_relaxed:
+    [[fallthrough]];
+  case std::memory_order_acquire:
+    [[fallthrough]];
+  case std::memory_order_release:
+    [[fallthrough]];
+  case std::memory_order_acq_rel:
+    [[fallthrough]];
+  case std::memory_order_seq_cst:
+    std::atomic_thread_fence(static_cast<std::memory_order>(order));
+    break;
+  default:
+    KMP_BUILTIN_UNREACHABLE;
+  }
+
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  if (ompt_enabled.ompt_callback_flush) {
+    ompt_callbacks.ompt_callback(ompt_callback_flush)(
+        __ompt_get_thread_data_internal(), OMPT_GET_RETURN_ADDRESS(0));
+  }
+#endif
+}
+
 /* -------------------------------------------------------------------------- */
 /*!
 @ingroup SYNCHRONIZATION
