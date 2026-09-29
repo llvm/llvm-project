@@ -1,0 +1,47 @@
+# An x86_64 PE image with no symbol table and no exports. Its two functions
+# are described only by .pdata/.xdata:
+#   0x140001000 caller: sub rsp, 0x28; call callee; add rsp, 0x28; ret
+#   0x140001010 callee: push rbp; push rbx; sub rsp, 0x48;
+#                       add rsp, 0x48; pop rbx; pop rbp; ret
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       5368709120
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA, IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ExceptionTable:
+    RelativeVirtualAddress: 12288
+    Size:            24
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     29
+    SectionData:     4883EC28E8070000004883C428C3CCCC55534883EC484883C4485B5DC3
+  - Name:            .xdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     20
+    SectionData:     0104010004420000010603000682023001500000
+  - Name:            .pdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  12288
+    VirtualSize:     24
+    SectionData:     001000000E10000000200000101000001D10000008200000
+symbols:         []
+...
