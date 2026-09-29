@@ -22,8 +22,6 @@
 #include <functional>
 #include <tuple>
 
-class OmptTracingBufferMgr;
-
 namespace llvm {
 namespace omp {
 namespace target {
@@ -60,14 +58,6 @@ class GenericProfilerTy {
 public:
   GenericProfilerTy() = default;
   virtual ~GenericProfilerTy() = default;
-
-  /// Obtain a pointer to profiler-specific data, if any.
-  virtual void *getProfilerSpecificData() { return nullptr; }
-
-  /// Obtain the trace record manager owned by this profiler, if any. Profilers
-  /// that produce trace records own the manager so that the records handed out
-  /// cannot outlive the buffers they point into.
-  virtual OmptTracingBufferMgr *getTraceRecordManager() { return nullptr; }
 
   /// Returns true if profiling is enabled, false otherwise.
   virtual bool isProfilingEnabled() { return false; }
