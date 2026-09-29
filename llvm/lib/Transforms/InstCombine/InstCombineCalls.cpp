@@ -1207,7 +1207,7 @@ static std::optional<bool> getKnownSign(Value *Op, const SimplifyQuery &SQ) {
 
   Value *X, *Y;
   if (match(Op, m_NSWSub(m_Value(X), m_Value(Y))))
-    return isImpliedByDomCondition(ICmpInst::ICMP_SLT, X, Y, SQ.CxtI, SQ.DL);
+    return isImpliedByDomCondition(ICmpInst::ICMP_SLT, X, Y, SQ.CtxI, SQ.DL);
 
   return std::nullopt;
 }
@@ -1219,7 +1219,7 @@ static std::optional<bool> getKnownSignOrZero(Value *Op,
 
   Value *X, *Y;
   if (match(Op, m_NSWSub(m_Value(X), m_Value(Y))))
-    return isImpliedByDomCondition(ICmpInst::ICMP_SLE, X, Y, SQ.CxtI, SQ.DL);
+    return isImpliedByDomCondition(ICmpInst::ICMP_SLE, X, Y, SQ.CtxI, SQ.DL);
 
   return std::nullopt;
 }
@@ -4146,13 +4146,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Type *ReturnType = II->getType();
     // (extract_vector (insert_vector InsertTuple, InsertValue, InsertIdx),
     // ExtractIdx)
-    unsigned ExtractIdx = cast<ConstantInt>(Idx)->getZExtValue();
+    uint64_t ExtractIdx = cast<ConstantInt>(Idx)->getZExtValue();
     Value *InsertTuple, *InsertIdx, *InsertValue;
     if (match(Vec, m_Intrinsic<Intrinsic::vector_insert>(m_Value(InsertTuple),
                                                          m_Value(InsertValue),
                                                          m_Value(InsertIdx))) &&
         InsertValue->getType() == ReturnType) {
-      unsigned Index = cast<ConstantInt>(InsertIdx)->getZExtValue();
+      uint64_t Index = cast<ConstantInt>(InsertIdx)->getZExtValue();
       // Case where we get the same index right after setting it.
       // extract.vector(insert.vector(InsertTuple, InsertValue, Idx), Idx) -->
       // InsertValue

@@ -426,26 +426,6 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
   }
 }
 
-// Loops containing convergent instructions that are uncontrolled or controlled
-// from outside the loop must have a count that divides their TripMultiple.
-LLVM_ATTRIBUTE_USED
-static bool canHaveUnrollRemainder(const Loop *L) {
-  if (getLoopConvergenceHeart(L))
-    return false;
-
-  // Check for uncontrolled convergent operations.
-  for (auto &BB : L->blocks()) {
-    for (auto &I : *BB) {
-      if (isa<ConvergenceControlInst>(I))
-        return true;
-      if (auto *CB = dyn_cast<CallBase>(&I))
-        if (CB->isConvergent())
-          return CB->getConvergenceControlToken();
-    }
-  }
-  return true;
-}
-
 // If LoopUnroll has proven OriginalLoopProb is incorrect for some iterations
 // of the original loop, adjust latch probabilities in the unrolled loop to
 // maintain the original total frequency of the original loop body.

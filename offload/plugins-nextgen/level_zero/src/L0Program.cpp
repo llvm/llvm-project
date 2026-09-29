@@ -312,15 +312,33 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
     }
 
     // Load module into Level Zero
-    return addModule(ImageData.size(), ImgBegin, Options, ModuleFormat);
+    auto Err = addModule(ImageData.size(), ImgBegin, Options, ModuleFormat);
+    if (Err)
+      return Err;
+
+    if (RequiresModuleLink) {
+      ODBG(OLDT_Module) << "Linking modules after adding OffloadBinary image";
+      if (auto Err = linkModules())
+        return Err;
+    }
+    return Plugin::success();
   }
 
   if (identify_magic(Image.getBuffer()) == file_magic::spirv_object) {
     ODBG(OLDT_Module) << "Processing raw SPIR-V image";
     const uint8_t *ImgBegin =
         reinterpret_cast<const uint8_t *>(Image.getBufferStart());
-    return addModule(Image.getBufferSize(), ImgBegin, BuildOptions,
-                     ZE_MODULE_FORMAT_IL_SPIRV);
+    auto Err = addModule(Image.getBufferSize(), ImgBegin, BuildOptions,
+                         ZE_MODULE_FORMAT_IL_SPIRV);
+    if (Err)
+      return Err;
+
+    if (RequiresModuleLink) {
+      ODBG(OLDT_Module) << "Linking modules after adding SPIR-V image";
+      if (auto Err = linkModules())
+        return Err;
+    }
+    return Plugin::success();
   }
 
   uint64_t MajorVer, MinorVer;
