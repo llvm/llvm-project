@@ -38,11 +38,6 @@
 </style>
 ```
 
-```{contents}
----
-local:
----
-```
 
 This document outlines the OpenMP API features supported by Flang. It is
 intended as a general reference.  For the most accurate information on
@@ -184,7 +179,7 @@ Parser/Semantics, MLIR, Lowering, or the OpenMPIRBuilder.
 | compare clause on atomic construct | <span class="part">partial</span> | SunilKuravinakop | Semantics and lowering coverage exist (`flang/test/Semantics/OpenMP/atomic-compare.f90`, `flang/test/Lower/OpenMP/atomic-compare.f90`); remaining gaps are primarily fail/capture combinations and broader type coverage. | [llvm/llvm-project#184761](https://github.com/llvm/llvm-project/pull/184761) |
 | fail clause on atomic construct | <span class="part">partial</span> | SunilKuravinakop | Semantics coverage exists (`flang/test/Semantics/OpenMP/atomic-compare.f90`), but lowering for `fail(...)` paths is still TODO (`flang/test/Lower/OpenMP/Todo/atomic-compare-fail.f90`). Complete lowering for compare+fail(+capture), then add non-TODO lowering tests. | [llvm/llvm-project#184761](https://github.com/llvm/llvm-project/pull/184761) |
 | interop construct | <span class="part">partial</span> | sshrestha-aa | Semantics coverage exists (`flang/test/Semantics/OpenMP/interop-construct.f90`), but lowering remains TODO-tracked (`flang/lib/Lower/OpenMP/OpenMP.cpp` TODO: `OpenMPInteropConstruct`; `flang/test/Lower/OpenMP/Todo/interop-construct.f90`). | [llvm/llvm-project#132343](https://github.com/llvm/llvm-project/pull/132343) |
-| dispatch construct | <span class="part">partial</span> | SunilKuravinakop | Semantics coverage exists (`flang/test/Semantics/OpenMP/dispatch.f90`), but lowering remains TODO-tracked (`flang/lib/Lower/OpenMP/OpenMP.cpp` TODO: `OpenMPDispatchConstruct`; `flang/test/Lower/OpenMP/Todo/dispatch.f90`). | [llvm/llvm-project#121982](https://github.com/llvm/llvm-project/pull/121982) |
+| dispatch construct | <span class="part">partial</span> | SunilKuravinakop | Semantics coverage exists (`flang/test/Semantics/OpenMP/dispatch.f90`), follow-on completeness work still in progress: Being implemented in 3 parts, MLIR support under review | [llvm/llvm-project#121982](https://github.com/llvm/llvm-project/pull/121982), [llvm/llvm-project#215877](https://github.com/llvm/llvm-project/pull/215877) |
 | masked construct | <span class="part">partial</span> | | Covered in semantics/lowering (`flang/test/Semantics/OpenMP/masked.f90`, `flang/test/Lower/OpenMP/masked.f90`). | [llvm/llvm-project#91432](https://github.com/llvm/llvm-project/pull/91432) |
 | masked combined constructs | <span class="part">partial</span> | | Covered in lowering tests (`flang/test/Lower/OpenMP/masked_taskloop.f90`, `flang/test/Lower/OpenMP/parallel-masked-taskloop.f90`) with ongoing breadth expansion. | [llvm/llvm-project#188071](https://github.com/llvm/llvm-project/pull/188071), [llvm/llvm-project#188070](https://github.com/llvm/llvm-project/pull/188070) |
 | present map type modifier | <span class="part">partial</span> | | Semantics coverage exists (`flang/test/Semantics/OpenMP/present.f90`) and map lowering exists, with ongoing completeness checks. | [llvm/llvm-project#129586](https://github.com/llvm/llvm-project/pull/129586) |
@@ -226,7 +221,7 @@ Parser/Semantics, MLIR, Lowering, or the OpenMPIRBuilder.
 | otherwise clause on metadirectives | <span class="good">done</span> | | Lowering handles `OmpClause::Otherwise` as the fallback variant in `genMetadirective` (`flang/lib/Lower/OpenMP/OpenMP.cpp`); the legacy `default` clause spelling is also handled. | [llvm/llvm-project#194402](https://github.com/llvm/llvm-project/pull/194402), [llvm/llvm-project#194424](https://github.com/llvm/llvm-project/pull/194424) |
 | doacross with omp_cur_iteration | <span class="progress">in progress</span> | dreachem | Implement parser/semantics validation for `omp_cur_iteration` placement and lowering of doacross dependence tokens, then add semantics+lowering tests for source/sink combinations. | |
 | implicit map type for target enter and exit data | <span class="good">done</span> | | Target enter data applies implicit `to` mapping; target exit data applies implicit `from` mapping. Lowering via `getImplicitMapTypeAndKind` and MapInfoFinalization pass. Comprehensive test coverage in `target-enter-data-default-openmp52.f90` for OpenMP 5.2+ including allocatable descriptor handling. | [llvm/llvm-project#174665](https://github.com/llvm/llvm-project/pull/174665), [llvm/llvm-project#193851](https://github.com/llvm/llvm-project/pull/193851) |
-| allocate and firstprivate on scope directive | <span class="part">partial</span> | | Firstprivate on scope is fully supported and tested (`scope.f90`). Allocate clause on scope is parsed/lowered to MLIR but not yet implemented in LLVM IR translation layer (checkImplementationStatus in OpenMPToLLVMIRTranslation.cpp blocks it). | [llvm/llvm-project#193098](https://github.com/llvm/llvm-project/pull/193098) |
+| allocate and firstprivate on scope directive | <span class="part">partial</span> | | Firstprivate on scope is fully supported and tested (`scope.f90`). Host-side allocate clauses on scope use allocator-backed storage for fixed-size intrinsic scalar PRIVATE/FIRSTPRIVATE items with omitted/default/explicit allocator and ALIGN (`scope-allocate-clause.f90`, `openmp-scope-allocate-clause.mlir`), including SAVE entities and individually listed common-block members. Arrays, descriptors, pointers, allocatables, derived types, named common-block list items, and target/device scope allocation remain unsupported. | [llvm/llvm-project#193098](https://github.com/llvm/llvm-project/pull/193098) |
 | loop consistency changes for order clause | <span class="none">unclaimed</span> | | Extend semantic loop-consistency checks for updated ORDER rules and add diagnostics tests for invalid nest/ordering combinations. | |
 | keep original base pointer on map without matched candidate | <span class="none">unclaimed</span> | | Update map finalization so unmatched candidates preserve original base-pointer mapping semantics; add lowering tests for pointer-member mapping regressions. | |
 | pure procedure support for certain directives | <span class="good">done</span> | ShashwathiNavada | Semantics enforce that metadirective, assumption directives (ASSUME/ASSUMES), NOTHING, ERROR, and the loop-transforming constructs TILE/UNROLL are permitted in a Fortran PURE procedure, in addition to the baseline of SIMD and declarative directives; other directives are rejected with a version-aware diagnostic. | [llvm/llvm-project#212676](https://github.com/llvm/llvm-project/pull/212676) |
@@ -285,4 +280,3 @@ The OpenMP spec requires intrinsic- or pointer-assignments, which include (as pe
 - `expr equalop x` is an allowed condition in ATOMIC UPDATE COMPARE. [1]
 
 [1] Code generation for ATOMIC UPDATE COMPARE is not implemented yet.
-
