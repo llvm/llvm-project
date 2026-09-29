@@ -692,13 +692,7 @@ void registerPollyPasses(PassBuilder &PB) {
 } // namespace polly
 
 static Error parseArguments(ArrayRef<const char *> Args) {
-  SmallVector<const char *, 0> Argv = {"Polly"};
-  append_range(Argv, Args);
-  std::string Msg;
-  raw_string_ostream OS(Msg);
-  if (!cl::ParseCommandLineOptions(Argv.size(), Argv.data(), "", &OS))
-    return createStringError(StringRef(Msg).trim());
-  return Error::success();
+  return parsePassPluginCommandLine("Polly", Args);
 }
 
 llvm::PassPluginLibraryInfo getPollyPluginInfo() {

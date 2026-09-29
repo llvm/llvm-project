@@ -85,13 +85,7 @@ static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
                                  false /* Analysis Pass */);
 
 static Error parseArguments(ArrayRef<const char *> Args) {
-  SmallVector<const char *, 0> Argv = {"Bye"};
-  append_range(Argv, Args);
-  std::string Msg;
-  raw_string_ostream OS(Msg);
-  if (!cl::ParseCommandLineOptions(Argv.size(), Argv.data(), "", &OS))
-    return createStringError(StringRef(Msg).trim());
-  return Error::success();
+  return parsePassPluginCommandLine("Bye", Args);
 }
 
 /* New PM Registration */

@@ -330,14 +330,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
-* `opt`, `llc`, and `clang-linker-wrapper` load `-load-pass-plugin` plugins
-  after parsing the command line, so a loaded plugin's options are no longer
-  accepted as ordinary options. Pass them with `-plugin-arg=<plugin>,<arg>`,
-  which calls the plugin's new `PassPluginLibraryInfo::ParseArguments`
-  callback. A plugin that defines `cl::opt` calls `cl::ParseCommandLineOptions`
-  from `ParseArguments`, as the `Bye` example and Polly do.
-  `LLVM_PLUGIN_API_VERSION` is now 3, and `PassPlugin::Load` is renamed to
-  `PassPlugin::load`.
+* `opt` and `llc` load `-load-pass-plugin` plugins after parsing the command line, so a loaded plugin's options are no longer accepted as ordinary options.
+  Pass them with `-plugin-arg=<plugin>,<arg>`, which calls the plugin's new `PassPluginLibraryInfo::ParseArguments` callback.
+  A plugin that defines `cl::opt` can call `parsePassPluginCommandLine` from `ParseArguments`, as the `Bye` example and Polly do.
+  `LLVM_PLUGIN_API_VERSION` is now 3.
 
 * llvm-mca no longer defaults -mcpu to "native"
 

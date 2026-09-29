@@ -17,7 +17,6 @@
 #include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -35,7 +34,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
-#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -91,15 +89,6 @@ static cl::opt<std::string> RemarksFormat(
     "pass-remarks-format",
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
-
-static cl::list<std::string>
-    PassPlugins("load-pass-plugin",
-                cl::desc("Load passes from plugin library"));
-
-static cl::list<std::string>
-    PluginArgs("plugin-arg",
-               cl::desc("Pass <arg> to the pass plugin named <plugin>"),
-               cl::value_desc("plugin>,<arg"));
 
 static cl::opt<std::string> PassPipeline(
     "passes",
@@ -1539,18 +1528,6 @@ int main(int Argc, char **Argv) {
   for (const opt::Arg *Arg : Args.filtered(OPT_offload_opt_eq_minus))
     NewArgv.push_back(Arg->getValue());
   cl::ParseCommandLineOptions(NewArgv.size(), &NewArgv[0]);
-  SmallVector<PassPlugin, 1> PluginList;
-  for (const std::string &Path : PassPlugins) {
-    auto Plugin = PassPlugin::load(Path);
-    if (!Plugin)
-      reportFatalUsageError(Plugin.takeError());
-    PluginList.emplace_back(Plugin.get());
-  }
-  if (Error E = passPluginArguments(
-          map_to_vector(PluginList,
-                        [](const PassPlugin &P) { return P.getInfo(); }),
-          PluginArgs))
-    reportFatalUsageError(std::move(E));
 
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);

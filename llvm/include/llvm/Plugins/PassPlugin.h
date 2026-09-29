@@ -125,6 +125,11 @@ private:
 /// the same name, the last one receives the arguments.
 LLVM_ABI Error passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
                                    ArrayRef<std::string> Args);
+
+/// Parses \p Args as options declared with llvm/Support/CommandLine.h, for a
+/// \c ParseArguments callback. \p PluginName prefixes diagnostics.
+LLVM_ABI Error parsePassPluginCommandLine(const char *PluginName,
+                                          ArrayRef<const char *> Args);
 } // namespace llvm
 
 // The function returns a struct with default initializers.

@@ -393,13 +393,7 @@ struct SimplifyCFGPass : public OptionalPassInfoMixin<SimplifyCFGPass> {
 } // namespace
 
 static Error parseArguments(ArrayRef<const char *> Args) {
-  SmallVector<const char *, 0> Argv = {"SimplifyCFG"};
-  append_range(Argv, Args);
-  std::string Msg;
-  raw_string_ostream OS(Msg);
-  if (!cl::ParseCommandLineOptions(Argv.size(), Argv.data(), "", &OS))
-    return createStringError(StringRef(Msg).trim());
-  return Error::success();
+  return parsePassPluginCommandLine("SimplifyCFG", Args);
 }
 
 /* New PM Registration */
