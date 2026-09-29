@@ -28,7 +28,6 @@ namespace target {
 namespace plugin {
 
 struct GenericDeviceTy;
-struct GenericPluginTy;
 class GenericProfilerTy;
 
 /// Helper function to unpack a tuple of arguments and call a function with
@@ -70,17 +69,6 @@ public:
     HostToDeviceOffset = Offset;
     setTimeConversionFactorsImpl(HostToDeviceSlope, HostToDeviceOffset);
   }
-
-  /// Hook that is called when the plugin is initialized.
-  virtual void handleInit(GenericDeviceTy *Device, GenericPluginTy *Plugin) {}
-
-  /// Hook that is called when the plugin is de-initialized.
-  virtual void handleDeinit(GenericDeviceTy *Device, GenericPluginTy *Plugin) {}
-
-  /// Hook that is called when the device image is loaded.
-  virtual void handleLoadBinary(GenericDeviceTy *Device,
-                                GenericPluginTy *Plugin,
-                                const StringRef InputTgtImage) {}
 
   /// Hook that is called when memory is allocated on the device.
   virtual void handleDataAlloc(uint64_t StartNanos, uint64_t EndNanos,
