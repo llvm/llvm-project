@@ -22,6 +22,8 @@
 #include <string>
 
 namespace llvm {
+template <typename T> class SmallVectorImpl;
+
 namespace IntelGPU {
 
 /// Intel GPU architecture names, covering both physical devices and the
@@ -34,46 +36,62 @@ enum GPUKind : uint8_t {
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
 };
 
-// TODO Do I want the IGCA_ prefix here?
-enum class IGCAFeatureSet : uint8_t {
+enum IGCAFeatureSet : uint8_t {
   IGCA_CORE = 0,
   IGCA_COMPUTE,
   IGCA_RENDER
 };
 
-// TODO these need to be tested:
-struct IGCATarget {
-  uint16_t Target = 0;
-  IGCAFeatureSet FeatureSet = IGCAFeatureSet::IGCA_CORE;
-  bool IsExactFeatureSet = false;
+/// Wrapper around an IGCA target's uint32_t representation, packed using the
+/// following format:
+///
+///    31              16 15           3 2           1 0         0
+///   +------------------+--------------+-------------+-----------+
+///   |      Target      |   Reserved   | Feature set | Is Exact? |
+///   +------------------+--------------+-------------+-----------+
+///          16 bits         13 bits        2 bits        1 bit
+///
+/// Target == 0 denotes an invalid IGCA Target.
+class IGCATarget {
+  uint32_t V = 0;
+  constexpr explicit IGCATarget(uint32_t V) : V(V) {}
 
-  /// Return true if the IGCATarget is a valid, properly initialized target.
-  bool isValid() const { return Target != 0; }
+public:
+  static constexpr uint32_t TargetShift = 16;
+  static constexpr uint32_t FeatureSetShift = 1;
+  static constexpr uint32_t IsExactShift = 0;
+  static constexpr uint32_t FeatureSetMask = 0x3;
+  static constexpr uint32_t IsExactMask = 0x1;
+
+  constexpr IGCATarget(uint16_t Target, IGCAFeatureSet FeatureSet, bool IsExact)
+      : V(uint32_t(Target) << TargetShift |
+          (uint32_t(FeatureSet) & FeatureSetMask) << FeatureSetShift |
+          (uint32_t(IsExact) & IsExactMask) << IsExactShift) {}
+
+  /// \return an invalid IGCATarget.
+  static constexpr IGCATarget invalid() { return IGCATarget(0); }
+
+  /// \return the packed uint32_t representation of the IGCA target.
+  constexpr uint32_t pack() const { return V; }
+  /// Wrap a packed uint32_t IGCA target with an IGCATarget class.
+  static constexpr IGCATarget unpack(uint32_t V) { return IGCATarget(V); }
+
+  uint16_t getTarget() const { return uint16_t(V >> TargetShift); }
+  IGCAFeatureSet getFeatureSet() const {
+    return IGCAFeatureSet((V >> FeatureSetShift) & FeatureSetMask);
+  }
+  bool isExact() const { return (V >> IsExactShift) & IsExactMask; }
+  bool isValid() const { return getTarget() != 0; }
   explicit operator bool() const { return isValid(); }
 
-  bool isCore() const { return FeatureSet == IGCAFeatureSet::IGCA_CORE; }
-  bool isExact() const { return IsExactFeatureSet; }
-  bool isCompute() const { return FeatureSet == IGCAFeatureSet::IGCA_COMPUTE; }
-  bool isRender() const { return FeatureSet == IGCAFeatureSet::IGCA_RENDER; }
-  bool isComputeExact() const { return isCompute() && isExact(); };
-  bool isRenderExact() const { return isRender() && isExact(); };
+  bool isCore() const { return getFeatureSet() == IGCA_CORE; }
+  bool isCompute() const { return getFeatureSet() == IGCA_COMPUTE; }
+  bool isRender() const { return getFeatureSet() == IGCA_RENDER; }
+  bool isComputeExact() const { return isCompute() && isExact(); }
+  bool isRenderExact() const { return isRender() && isExact(); }
 
-  /// Pack an IGCATarget into an uint32_t.
-  ///
-  /// We encode as [31:16] Target, [2:1] FeatureSet, [0] IsExactFeatureSet.
-  /// [15:3] is left as reserved.
-  uint32_t pack() const;
-
-  /// Obtain an IGCATarget from a packed uint32_t.
-  static IGCATarget unpack(uint32_t V);
-
-  friend bool operator==(IGCATarget A, IGCATarget B) {
-    // TODO is this bad?
-    return A.pack() == B.pack();
-  }
-
-  /// Return an invalid IGCA Target that returns false on IGCATarget::isValid().
-  static IGCATarget invalid() { return IGCATarget{}; }
+  friend bool operator==(IGCATarget A, IGCATarget B) { return A.V == B.V; }
+  friend bool operator!=(IGCATarget A, IGCATarget B) { return A.V != B.V; }
 };
 
 /// \return the device name that \p GPUIPVersion identifies, as reported by the
@@ -86,20 +104,17 @@ LLVM_ABI StringRef getArchName(uint32_t GPUIPVersion);
 /// \return the numeric name of \p GPUIPVersion, e.g. "xe_35.11.0".
 LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
 
-/// Parse an IGCA Target.
-IGCATarget parseIGCATarget(StringRef TargetStr);
+/// Parse an IGCA target string, such as "igca_60ca". \return an invalid
+/// IGCATarget if \p TargetStr is not a known target in 
+/// IntelGPUTargetParser.def
+LLVM_ABI IGCATarget parseIGCATarget(StringRef TargetStr);
 
-/// Return the IGCA string for a given IGCA Target, i.e. "igca_60ca". Returns
-/// empty string if Target is not a valid target.
-std::string getIGCATargetName(IGCATarget Target);
-// TODO to carry stringref's, I need to create that IGCA Target table
-// If that IGCA Target table gets really verbose, we should just use the
-// strings from that table and use StringRef here instead of std::string.
-// TODO DO STRINGREF'S
+/// \return the \p Target as a string, i.e. "igca_60ca". \return an empty string
+/// if \p Target is invalid or not a known target in IntelGPUTargetParser.def.
+LLVM_ABI StringRef getIGCATargetName(IGCATarget Target);
 
-// TODO
-// - get igcatarget
-// - translate other targets?
+/// Append every legal IGCA target spelling to \p Values.
+LLVM_ABI void fillValidIGCATargetList(SmallVectorImpl<StringRef> &Values);
 
 } // namespace IntelGPU
 } // namespace llvm

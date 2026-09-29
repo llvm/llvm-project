@@ -103,12 +103,12 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
   return OffloadArch::getUnknown();
 }
 
-// TODO: Append the IGCA target names once the IGCA target table exists.
 void fillValidOffloadArchList(llvm::SmallVectorImpl<llvm::StringRef> &Values) {
 #define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
   Values.push_back(NAME);
 #include "llvm/TargetParser/NVPTXTargetParser.def"
   llvm::AMDGPU::fillValidArchListAMDGCN(Values, llvm::Triple::NoSubArch);
+  llvm::IntelGPU::fillValidIGCATargetList(Values);
 }
 
 // TODO: Confirm IntelIGCA needs no subarch mapping; these only cover AMDGPU.
