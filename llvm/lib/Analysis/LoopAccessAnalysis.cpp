@@ -3955,8 +3955,7 @@ static Value *getLoopVariantGEPOperand(Value *Ptr, ScalarEvolution *SE,
 
 /// Get the stride of a pointer access in a loop. Looks for symbolic
 /// strides "a[i*stride]". Returns the symbolic stride, or null otherwise.
-static const SCEVUnknown *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE,
-                                               Loop *Lp) {
+static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
   auto *PtrTy = dyn_cast<PointerType>(Ptr->getType());
   if (!PtrTy)
     return nullptr;
@@ -3983,14 +3982,14 @@ static const SCEVUnknown *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE,
     return nullptr;
 
   // Look for the loop invariant symbolic value.
-  const SCEVUnknown *U;
-  if (match(V, m_SCEVUnknown(U)))
-    return U;
+  if (isa<SCEVUnknown>(V))
+    return V;
 
   // Look through multiplies that scale a stride by a constant.
   match(V, m_scev_Mul(m_SCEVConstant(), m_SCEV(V)));
-  if (match(V, m_scev_IntegralCast(m_SCEVUnknown(U))))
-    return U;
+  if (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
+    if (isa<SCEVUnknown>(C->getOperand()))
+      return V;
 
   return nullptr;
 }
@@ -4006,8 +4005,7 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // computation of an interesting IV - but we chose not to as we
   // don't have a cost model here, and broadening the scope exposes
   // far too many unprofitable cases.
-  const SCEVUnknown *StrideExpr =
-      getStrideFromPointer(Ptr, PSE->getSE(), TheLoop);
+  const SCEV *StrideExpr = getStrideFromPointer(Ptr, PSE->getSE(), TheLoop);
   if (!StrideExpr)
     return;
 
@@ -4035,8 +4033,13 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // of various possible stride specializations, considering the alternatives
   // of using gather/scatters (if available).
 
+  // Strip the integer cast to get the symbolic value used for versioning.
+  const SCEV *StrideBase = StrideExpr;
+  if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(StrideBase))
+    StrideBase = C->getOperand();
+
   ScalarEvolution *SE = PSE->getSE();
-  if (!SE->isAvailableAtLoopEntry(StrideExpr, TheLoop))
+  if (!SE->isAvailableAtLoopEntry(StrideBase, TheLoop))
     return;
 
   const SCEV *MaxBTC = PSE->getSymbolicMaxBackedgeTakenCount();
@@ -4048,9 +4051,9 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // comparing the stride and trip count, which may use different integer
   // extensions. Keep the predicate local: we have not decided to version the
   // access yet.
-  const SCEV *One = SE->getOne(StrideExpr->getType());
-  const SCEVPredicate *StrideIsOne = SE->getEqualPredicate(StrideExpr, One);
-  if (SE->isLoopEntryGuardedByCond(TheLoop, ICmpInst::ICMP_NE, StrideExpr,
+  const SCEV *One = SE->getOne(StrideBase->getType());
+  const SCEVPredicate *StrideIsOne = SE->getEqualPredicate(StrideBase, One);
+  if (SE->isLoopEntryGuardedByCond(TheLoop, ICmpInst::ICMP_NE, StrideBase,
                                    One) ||
       SE->rewriteUsingPredicate(MaxBTC, TheLoop, *StrideIsOne)->isZero()) {
     LLVM_DEBUG(dbgs() << "LAA: No point in versioning as the unit-stride path "
@@ -4059,9 +4062,9 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   }
 
   LLVM_DEBUG(dbgs() << "LAA: Found a strided access that we can version.\n");
-  assert(SE->isLoopInvariant(StrideExpr, TheLoop) &&
+  assert(SE->isLoopInvariant(StrideBase, TheLoop) &&
          "users of the map rely on the stride being loop invariant");
-  SymbolicStrides[Ptr] = StrideExpr;
+  SymbolicStrides[Ptr] = cast<SCEVUnknown>(StrideBase);
 }
 
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
