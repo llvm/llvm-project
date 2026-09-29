@@ -421,6 +421,18 @@ static Intrinsic::ID getPrefixCountBitsIntrinsic(llvm::Triple::ArchType Arch) {
   }
 }
 
+static Intrinsic::ID getWaveGetLaneCountIntrinsic(llvm::Triple::ArchType Arch) {
+  switch (Arch) {
+  case llvm::Triple::spirv:
+    return Intrinsic::spv_subgroup_size;
+  case llvm::Triple::dxil:
+    return Intrinsic::dx_wave_get_lane_count;
+  default:
+    llvm_unreachable("Intrinsic WaveGetLaneCount"
+                     " not supported by target architecture");
+  }
+}
+
 // Return wave prefix sum that corresponds to the QT scalar type
 static Intrinsic::ID getWavePrefixSumIntrinsic(llvm::Triple::ArchType Arch,
                                                QualType QT) {
@@ -1550,7 +1562,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitIntrinsicCall(ID);
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_count: {
-    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveGetLaneCountIntrinsic();
+    Intrinsic::ID ID =
+        getWaveGetLaneCountIntrinsic(getTarget().getTriple().getArch());
     return EmitIntrinsicCall(ID);
   }
   case Builtin::BI__builtin_hlsl_wave_read_lane_at: {
