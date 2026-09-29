@@ -26481,7 +26481,8 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
   // split the op into halves anyway, so the concat is purely an extra op.
   MVT StoreVT = StoredVal.getSimpleValueType();
   if (StoreVT.is256BitVector() || StoreVT.is512BitVector()) {
-    if (StoredVal.hasOneUse() && isFreeToSplitVector(StoredVal, DAG))
+    if (StoredVal.hasOneUse() &&
+        isFreeToSplitVector(peekThroughOneUseBitcasts(StoredVal), DAG))
       return splitVectorStore(St, DAG);
     return SDValue();
   }
@@ -65602,7 +65603,8 @@ X86TargetLowering::getStackProbeSize(const MachineFunction &MF) const {
                                                         4096);
 }
 
-Align X86TargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+Align X86TargetLowering::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   if (ML && ML->isInnermost() &&
       ExperimentalPrefInnermostLoopAlignment.getNumOccurrences())
     return Align(1ULL << ExperimentalPrefInnermostLoopAlignment);
