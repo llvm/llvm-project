@@ -319,8 +319,8 @@ TEST(ModuleTest, SetLoadAddressConcurrentWithModuleMutexHolder) {
   TargetSP target_sp;
   PlatformSP platform_sp;
   ASSERT_THAT_ERROR(debugger_sp->GetTargetList()
-                        .CreateTarget(*debugger_sp, "", arch,
-                                      eLoadDependentsNo, platform_sp, target_sp)
+                        .CreateTarget(*debugger_sp, "", arch, eLoadDependentsNo,
+                                      platform_sp, target_sp)
                         .takeError(),
                     llvm::Succeeded());
   ASSERT_TRUE(target_sp);
@@ -386,11 +386,10 @@ Sections:
   });
 
   auto timeout = std::chrono::seconds(30);
-  bool finished =
-      state->holder_done.get_future().wait_for(timeout) ==
-          std::future_status::ready &&
-      state->setter_done.get_future().wait_for(timeout) ==
-          std::future_status::ready;
+  bool finished = state->holder_done.get_future().wait_for(timeout) ==
+                      std::future_status::ready &&
+                  state->setter_done.get_future().wait_for(timeout) ==
+                      std::future_status::ready;
   if (!finished) {
     holder.detach();
     setter.detach();
