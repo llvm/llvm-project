@@ -40,6 +40,18 @@ using namespace llvm;
 
 namespace llvm::slpvectorizer {
 
+ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
+                                      Type *StrideTy, const DataLayout &DL) {
+  auto *CI = dyn_cast_or_null<ConstantInt>(Stride);
+  if (!CI)
+    return nullptr;
+
+  unsigned StrideWidth = cast<IntegerType>(StrideTy)->getBitWidth();
+  APInt ElementSize(StrideWidth, DL.getTypeAllocSize(ScalarTy));
+  APInt StrideValue = CI->getValue().sextOrTrunc(StrideWidth) * ElementSize;
+  return ConstantInt::get(StrideTy->getContext(), StrideValue);
+}
+
 bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                            const TargetLibraryInfo &TLI, unsigned MaxDepth,
                            bool CompareOpcodes) {

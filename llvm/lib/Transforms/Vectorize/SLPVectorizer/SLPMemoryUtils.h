@@ -22,6 +22,7 @@
 namespace llvm {
 class AssumptionCache;
 class BasicBlock;
+class ConstantInt;
 class DataLayout;
 class DominatorTree;
 class FixedVectorType;
@@ -39,6 +40,10 @@ namespace llvm::slpvectorizer {
 bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                            const TargetLibraryInfo &TLI, unsigned MaxDepth,
                            bool CompareOpcodes = true);
+
+/// Returns the byte stride if \p Stride is a constant, or nullptr otherwise.
+ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
+                                      Type *StrideTy, const DataLayout &DL);
 
 /// Calculates minimal alignment as a common alignment.
 template <typename T> Align computeCommonAlignment(ArrayRef<Value *> VL);
