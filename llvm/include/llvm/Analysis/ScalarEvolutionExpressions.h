@@ -1008,7 +1008,9 @@ private:
 
 template <typename SCEVPtrT>
 inline SCEVUseT<SCEVPtrT>::SCEVUseT(SCEVPtrT S, SCEVFlags Flags) : Base(S, 0) {
-  if (any(Flags & SCEVFlags::FlagsNoWrapMask)) {
+  assert((Flags & SCEVFlags::FlagsNoWrapMask) == Flags &&
+         "Expected only no-wrap flags");
+  if (any(Flags)) {
     assert((isa<SCEVAddExpr, SCEVMulExpr, SCEVAddRecExpr>(S)) &&
            "use flags require an expression that can carry no-wrap flags");
     // Drop flags already present on S.
