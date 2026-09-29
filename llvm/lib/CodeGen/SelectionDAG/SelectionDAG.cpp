@@ -4556,8 +4556,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       const Function &F = getMachineFunction().getFunction();
       ResKB = KnownBits::mul(getVScaleRange(&F, BitWidth).toKnownBits(), ResKB);
     }
-    Known.Zero.setHighBits(
-        std::max(VLKB.countMinLeadingZeros(), ResKB.countMinLeadingZeros()));
+    Known.Zero.setHighBits(KnownBits::umin(VLKB, ResKB).countMinLeadingZeros());
     break;
   }
 
