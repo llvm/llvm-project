@@ -2232,9 +2232,23 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
       // in a complete expression.
       return Arg.getAsExpr();
     }
-    // Otherwise try to rebuild expression if argument has been canonicalized
-    // into a non-expression form (e.g. integral value or template parameter
-    // object)
+
+    // Otherwise try rebuilding the expression if argument has been
+    // canonicalized into a non-expression form
+    // (e.g. integral value, template parameter object, ...).
+    // Any other kind indicates a mismatch between the template argument list
+    // and the parameter being rewritten.
+    switch (Arg.getKind()) {
+    case TemplateArgument::Integral:
+    case TemplateArgument::Declaration:
+    case TemplateArgument::NullPtr:
+    case TemplateArgument::StructuralValue:
+      break;
+    default:
+      assert(false &&
+             "unexpected nontype template argument kind in template rewrite");
+      return ExprError();
+    }
     ExprResult Rewritten = SemaRef.BuildExpressionFromNonTypeTemplateArgument(
         Arg, E->getLocation());
     if (Rewritten.isInvalid())
