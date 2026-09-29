@@ -7227,7 +7227,7 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
       // directly. Unlike the high half, only an fneg/fabs that acts on each
       // 16-bit element can be folded here: one that acts on the 32-bit value
       // touches bit 31 and leaves the low half alone.
-      if (MRI->getType(Src) == LLT::fixed_vector(2, 16))
+      if (MRI->getType(Src).isFixedVector(2, 16))
         CheckAbsNeg();
     }
     // Otherwise Src is genuinely 16 bits wide and widenSrcIfVGPR16 widens it
