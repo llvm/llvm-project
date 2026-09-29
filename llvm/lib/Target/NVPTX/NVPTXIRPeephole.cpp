@@ -19,14 +19,20 @@
 //    - fsub(fmul(a, b), c) => fma(a, b, fneg(c))
 //    - fsub(a, fmul(b, c)) => fma(fneg(b), c, a)
 //    - fsub(fmul(a, b), fmul(c, d)) => fma(a, b, fneg(fmul(c, d)))
+//    While DAGCombine handles these patterns, this enables cross-BB folding.
 //
 //===----------------------------------------------------------------------===//
 
+#include "NVPTX.h"
+#include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "nvptx-ir-peephole"
 
@@ -110,8 +116,10 @@ static bool tryFoldBinaryFMul(BinaryOperator *BI) {
   return true;
 }
 
-static bool foldFMA(Function &F) {
+static bool foldFMA(Function &F, const NVPTXTargetMachine &TM) {
   bool Changed = false;
+  const TargetLowering *TLI = TM.getSubtargetImpl(F)->getTargetLowering();
+  const DataLayout &DL = F.getParent()->getDataLayout();
 
   // Iterate and process float/double FAdd/FSub instructions with allow-contract
   for (auto &I : llvm::make_early_inc_range(instructions(F))) {
@@ -123,6 +131,14 @@ static bool foldFMA(Function &F) {
 
       // At minimum, the instruction should have allow-contract.
       if (!BI->hasAllowContract())
+        continue;
+
+      // Check legality on the scalar element type. NVPTX vector FP types
+      // without native packed arithmetic are split/promoted to their scalar
+      // element type during legalization, so we primarily care if the target
+      // can form a fused multiply-add for that element type.
+      EVT VT = TLI->getValueType(DL, BI->getType()->getScalarType());
+      if (!TLI->isOperationLegalOrCustom(ISD::FMA, VT))
         continue;
 
       if (tryFoldBinaryFMul(BI))
@@ -138,15 +154,24 @@ struct NVPTXIRPeephole : public FunctionPass {
   static char ID;
   NVPTXIRPeephole() : FunctionPass(ID) {}
   bool runOnFunction(Function &F) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetPassConfig>();
+  }
 };
 
 } // namespace
 
 char NVPTXIRPeephole::ID = 0;
-INITIALIZE_PASS(NVPTXIRPeephole, "nvptx-ir-peephole", "NVPTX IR Peephole",
-                false, false)
+INITIALIZE_PASS_BEGIN(NVPTXIRPeephole, "nvptx-ir-peephole",
+                      "NVPTX IR Peephole", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(NVPTXIRPeephole, "nvptx-ir-peephole", "NVPTX IR Peephole",
+                    false, false)
 
-bool NVPTXIRPeephole::runOnFunction(Function &F) { return foldFMA(F); }
+bool NVPTXIRPeephole::runOnFunction(Function &F) {
+  auto &TM = getAnalysis<TargetPassConfig>().getTM<NVPTXTargetMachine>();
+  return foldFMA(F, TM);
+}
 
 FunctionPass *llvm::createNVPTXIRPeepholePass() {
   return new NVPTXIRPeephole();
@@ -154,7 +179,8 @@ FunctionPass *llvm::createNVPTXIRPeepholePass() {
 
 PreservedAnalyses NVPTXIRPeepholePass::run(Function &F,
                                            FunctionAnalysisManager &) {
-  if (!foldFMA(F))
+  auto &NTM = static_cast<NVPTXTargetMachine &>(TM);
+  if (!foldFMA(F, NTM))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
