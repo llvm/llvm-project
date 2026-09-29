@@ -2,7 +2,7 @@
 // correctly inverts the Zibi branch-with-immediate instructions
 // (beqi/bnei) when the hot successor becomes the fallthrough block.
 
-// RUN: %clang %cflags64 -march=rv64gc_zibi0p1 -menable-experimental-extensions \
+// RUN: %clang %cflags64 -march=rv64gc_zibi0p7 -menable-experimental-extensions \
 // RUN:   -Wl,-q %s -o %t
 // RUN: link_fdata --no-lbr %s %t %t.fdata
 // RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp
