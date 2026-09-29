@@ -2488,7 +2488,9 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
             break;
           }
       }
-      assert(CSI && "Failed to find CapturedRegionScopeInfo");
+      // Lambdas and blocks at namespace scope have no enclosing function scope.
+      if (!CSI)
+        return nullptr;
       SmallVector<OpenMPDirectiveKind, 4> Regions;
       getOpenMPCaptureRegions(Regions,
                               DSAStack->getDirective(CSI->OpenMPLevel));

@@ -4727,7 +4727,7 @@ def LoopHint : Attr {
   std::string getDiagnosticName(const PrintingPolicy &Policy) const;
   }];
 
-  let Documentation = [LoopHintDocs, UnrollHintDocs];
+  let Documentation = [LoopHintDocs, UnrollHintDocs, PipelineHintDocs];
   let HasCustomParsing = 1;
 }
 

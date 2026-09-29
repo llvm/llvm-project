@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -1211,44 +1212,26 @@ static BranchProbability getBranchProbabilityKeepingPartial(uint64_t Num,
 }
 
 BranchProbability vputils::getExecutionProbability(BlockFrequency Freq) {
-  return getBranchProbabilityKeepingPartial(Freq.getFrequency(),
-                                            AlwaysExecutesFreq);
+  return getBranchProbabilityKeepingPartial(
+      Freq.getFrequency(),
+      BlockFrequencyInfoImplBase::BlockMass::getFull().getMass());
 }
 
-/// Returns the probability of reaching each unique successor of \p VPBB, taken
-/// from the branch weights recorded on its terminator, or unknown if not
-/// available. See llvm::getBranchProbability in
-/// llvm/Transforms/Utils/LoopUtils.h for the IR version.
-static SmallVector<std::pair<const VPBasicBlock *, BranchProbability>, 2>
+/// Returns the probability of each successor edge of \p VPBB, computed via
+/// BranchProbabilityInfo::getEdgeProbabilitiesFromWeights from the branch
+/// weights recorded on its terminator, or std::nullopt if not available.
+static std::optional<SmallVector<BranchProbability>>
 getSuccessorProbabilities(const VPBasicBlock *VPBB) {
-  ArrayRef<VPBlockBase *> Successors = VPBB->getSuccessors();
   // With a single successor the edge is always taken and needs no weights.
-  if (VPBlockBase *Succ = VPBB->getSingleSuccessor())
-    return {{cast<VPBasicBlock>(Succ), BranchProbability::getOne()}};
+  if (VPBB->getSingleSuccessor())
+    return SmallVector<BranchProbability>{BranchProbability::getOne()};
 
-  // Take the branch weights off the terminator. Without usable weights all
-  // successors have unknown probability; zero the weights, so the accumulation
-  // below still visits each of them.
   SmallVector<uint32_t> Weights;
   auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
   if (!Term || !extractBranchWeights(Term->getBranchWeights(), Weights) ||
-      Weights.size() != Successors.size())
-    Weights.assign(Successors.size(), 0);
-  uint64_t Total = sum_of(Weights, uint64_t(0));
-
-  // Sum the weights of parallel edges to the same successor, so that the
-  // division below rounds once per successor rather than once per edge.
-  SmallMapVector<const VPBasicBlock *, uint64_t, 2> WeightPerSuccessor;
-  for (const auto &[Succ, Weight] : zip_equal(Successors, Weights))
-    WeightPerSuccessor[cast<VPBasicBlock>(Succ)] += Weight;
-
-  return map_to_vector<2>(WeightPerSuccessor, [Total](const auto &SuccWeight) {
-    auto [Succ, Weight] = SuccWeight;
-    if (Total == 0)
-      return std::make_pair(Succ, BranchProbability::getUnknown());
-    return std::make_pair(Succ,
-                          getBranchProbabilityKeepingPartial(Weight, Total));
-  });
+      Weights.size() != VPBB->getNumSuccessors())
+    return std::nullopt;
+  return BranchProbabilityInfo::getEdgeProbabilitiesFromWeights(Weights);
 }
 
 DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
@@ -1267,29 +1250,28 @@ vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
     BFI.Working.emplace_back(BFIBase::BlockNode(Idx)).Loop = &Loop;
   }
   BFI.Working.emplace_back(Outside);
-  BFI.Working[Header.Index].getMass() = BFIBase::BlockMass(AlwaysExecutesFreq);
+  BFI.Working[Header.Index].getMass() = BFIBase::BlockMass::getFull();
 
   // Keep track nodes reached via an edge without branch weighs or with
   // estimated ones
   SmallVector<bool> IsUnknown(Blocks.size()), IsEstimated(Blocks.size());
   for (auto [Idx, VPBB] : enumerate(Blocks)) {
     BFIBase::BlockNode Node(Idx);
+    auto Probs = getSuccessorProbabilities(VPBB);
     auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
     bool TermIsEstimated = Term && Term->hasEstimatedBranchWeights();
     BFIBase::Distribution Dist;
-    bool HasProbs = true;
-    for (const auto &[Succ, Prob] : getSuccessorProbabilities(VPBB)) {
+    for (auto [SuccIdx, Succ] : enumerate(VPBB->getSuccessors())) {
       BFIBase::BlockNode SuccNode = Nodes.lookup_or(Succ, Outside);
       if (SuccNode != Header && SuccNode != Outside) {
-        IsUnknown[SuccNode.Index] |= IsUnknown[Idx] || Prob.isUnknown();
+        IsUnknown[SuccNode.Index] |= IsUnknown[Idx] || !Probs;
         IsEstimated[SuccNode.Index] |= IsEstimated[Idx] || TermIsEstimated;
       }
-      HasProbs &= !Prob.isUnknown();
-      if (!Prob.isUnknown())
+      if (Probs)
         BFI.addToDist(Dist, &Loop, Node, SuccNode,
-                      getWeightFromBranchProb(Prob));
+                      getWeightFromBranchProb((*Probs)[SuccIdx]));
     }
-    if (HasProbs)
+    if (Probs)
       BFI.distributeMass(Node, &Loop, Dist);
   }
 
@@ -1360,13 +1342,13 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
     case Instruction::GetElementPtr: {
       auto &RFlags = cast<VPRecipeWithIRFlags>(R);
       auto *GEP = cast<GetElementPtrInst>(RFlags.getUnderlyingInstr());
-      return Folder.FoldGEP(GEP->getSourceElementType(), Ops[0],
+      return Folder.FoldGEP(DL, GEP->getSourceElementType(), Ops[0],
                             drop_begin(Ops), RFlags.getGEPNoWrapFlags());
     }
     case VPInstruction::PtrAdd:
     case VPInstruction::WidePtrAdd:
-      return Folder.FoldGEP(IntegerType::getInt8Ty(Plan.getContext()), Ops[0],
-                            Ops[1],
+      return Folder.FoldGEP(DL, IntegerType::getInt8Ty(Plan.getContext()),
+                            Ops[0], Ops[1],
                             cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
     // An extract of a live-in is an extract of a broadcast, so return the
     // broadcasted element.
