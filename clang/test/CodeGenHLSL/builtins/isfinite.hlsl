@@ -36,6 +36,13 @@ bool3 test_isfinite_float3(float3 p0) { return isfinite(p0); }
 // CHECK: ret <4 x i1> %hlsl.isfinite
 bool4 test_isfinite_float4(float4 p0) { return isfinite(p0); }
 
+// CHECK: define hidden [[FN_TYPE]]noundef <5 x i1> @
+// CHECK: %hlsl.isfinite = call <5 x i1> @llvm.[[ICF]].isfinite.v5f32
+// CHECK: ret <5 x i1> %hlsl.isfinite
+vector<bool, 5> test_isfinite_float5(vector<float, 5> p0) {
+  return isfinite(p0);
+}
+
 // CHECK: define hidden [[FN_TYPE]]noundef i1 @
 // NATIVE_HALF: %hlsl.isfinite = call i1 @llvm.[[ICF]].isfinite.f16(
 // NO_HALF: %hlsl.isfinite = call i1 @llvm.[[ICF]].isfinite.f32(
@@ -59,4 +66,12 @@ bool3 test_isfinite_half3(half3 p0) { return isfinite(p0); }
 // NO_HALF: %hlsl.isfinite = call <4 x i1> @llvm.[[ICF]].isfinite.v4f32(
 // CHECK: ret <4 x i1> %hlsl.isfinite
 bool4 test_isfinite_half4(half4 p0) { return isfinite(p0); }
+
+// NATIVE_HALF: define hidden [[FN_TYPE]]noundef <5 x i1> @
+// NATIVE_HALF: %hlsl.isfinite = call <5 x i1> @llvm.[[ICF]].isfinite.v5f16
+// NO_HALF: %hlsl.isfinite = call <5 x i1> @llvm.[[ICF]].isfinite.v5f32(
+// CHECK: ret <5 x i1> %hlsl.isfinite
+vector<bool, 5> test_isfinite_half5(vector<half, 5> p0) {
+  return isfinite(p0);
+}
 
