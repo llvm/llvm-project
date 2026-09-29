@@ -660,11 +660,10 @@ SmallVector<RuntimePointerCheck, 4> RuntimePointerChecking::generateChecks() {
 }
 
 void RuntimePointerChecking::generateChecks(
-    MemoryDepChecker::DepCandidates &DepCands, PredicatedScalarEvolution &PSE,
-    Loop &L) {
+    MemoryDepChecker::DepCandidates &DepCands) {
   assert(Checks.empty() && "Checks is not empty");
   groupChecks(DepCands);
-  mergeStencilGroups(PSE, L);
+  mergeStencilGroups();
   Checks = generateChecks();
 }
 
@@ -1058,7 +1057,9 @@ public:
 ///   1 <= s     isNeverAbove assumes every stride is 1 or more.
 ///   s <= Max   Max is from getStencilStrideUpperLimit.
 /// A check is skipped when SCEV already proves it.
-/// Returns false if getStencilStrideUpperLimit finds no Max.
+/// Returns false if getStencilStrideUpperLimit finds no Max, or if SCEV proves
+/// that a check always fails. Example: s = smin(x, -1) can never pass 1 <= s,
+/// so a merge would send every run to the scalar loop.
 static bool collectStrideLimits(const StencilDecomposition &D,
                                 unsigned BitWidth, ScalarEvolution &SE,
                                 StrideLimits &Limits) {
@@ -1066,11 +1067,14 @@ static bool collectStrideLimits(const StencilDecomposition &D,
   if (!UpperLimit)
     return false;
 
+  const SCEV *Max = SE.getConstant(*UpperLimit);
   for (const auto &[Stride, Coeff] : D.Coefficients) {
+    if (SE.isKnownNonPositive(Stride) ||
+        SE.isKnownPredicate(ICmpInst::ICMP_SGT, Stride, Max))
+      return false;
     if (!SE.isKnownPositive(Stride))
       Limits.requireLowerLimit(Stride);
-    if (!SE.isKnownPredicate(ICmpInst::ICMP_SLE, Stride,
-                             SE.getConstant(*UpperLimit)))
+    if (!SE.isKnownPredicate(ICmpInst::ICMP_SLE, Stride, Max))
       Limits.requireUpperLimit(Stride, *UpperLimit);
   }
   return true;
@@ -1193,24 +1197,15 @@ collectCandidateMembers(ArrayRef<StencilDecomposition> Offsets, bool ForMin) {
 /// Returns {ChecksBefore, ChecksAfter}.
 static std::pair<unsigned, unsigned> computeStencilMergeCost(
     const RuntimePointerChecking &RtCheck, ArrayRef<unsigned> GroupIndices,
-    const SmallDenseSet<unsigned, 4> &MergedGroupIndices,
     const StrideLimits &Local, const StrideLimits &Committed,
     unsigned NumBoundOperands) {
-  ArrayRef<RuntimeCheckingPtrGroup> CheckingGroups = RtCheck.CheckingGroups;
   unsigned NumGroups = GroupIndices.size();
-  SmallDenseSet<unsigned, 4> GroupIndexSet(GroupIndices.begin(),
-                                           GroupIndices.end());
-  unsigned NumExternalChecks = 0;
-  for (unsigned I = 0; I < CheckingGroups.size(); ++I) {
-    if (GroupIndexSet.contains(I) || MergedGroupIndices.contains(I))
-      continue;
-    for (unsigned GI : GroupIndices) {
-      if (RtCheck.needsChecking(CheckingGroups[GI], CheckingGroups[I])) {
-        ++NumExternalChecks;
-        break;
-      }
-    }
-  }
+  unsigned NumExternalChecks =
+      count_if(RtCheck.CheckingGroups, [&](const RuntimeCheckingPtrGroup &G) {
+        return any_of(GroupIndices, [&](unsigned GI) {
+          return RtCheck.needsChecking(RtCheck.CheckingGroups[GI], G);
+        });
+      });
 
   unsigned NewPredicates = Local.countNew(Committed);
 
@@ -1245,8 +1240,7 @@ buildMergedStencilGroup(const RuntimePointerChecking &RtCheck,
   return CandidateGroup;
 }
 
-void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
-                                                Loop &L) {
+void RuntimePointerChecking::mergeStencilGroups() {
   LLVM_DEBUG(dbgs() << "LAA: Attempting stencil group merging on "
                     << CheckingGroups.size() << " groups\n");
 
@@ -1297,6 +1291,8 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
     LLVM_DEBUG(dbgs() << "LAA: stencil merge disabled\n");
     return;
   }
+
+  const Loop &L = *DC.getInnermostLoop();
 
   // visitPointers expands non-header pointer PHIs before runtime checks are
   // created, so their alternatives are not marked IsForked. An unused
@@ -1395,16 +1391,10 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
     if (!CanMerge)
       continue;
 
-    // We do not allow predicated accesses. They may result in overestimation
-    // of the boundaries. Imagine a stencil access where we must skip some first
-    // or last iterations because the stencil does not fit the array and has to
-    // go from 1..N-2 although the array is [0..N-1] (for example the dilate
-    // kernel from llvm-test-suite ImageProcessing/Dilate, which reads the
-    // neighbours of every pixel and guards the borders with conditions).
-    // Merging such bounds would widen the already overestimated range further.
-    // This is not necessary in StencilMergePolicy::Auto mode, but skipping it
-    // in StencilMergePolicy::Force mode causes a regression on that benchmark.
-    //
+    // A predicated access does not happen in every iteration. In the skipped
+    // iterations its address can be outside the array. Its bounds can
+    // underflow or overflow, so merging them can hide an overlap and allow
+    // unsafe vectorization.
     // Look at the block of the actual load/store, not of the pointer: a
     // loop-invariant address is computed in the preheader, outside the loop.
     if (any_of(AllMembers, [&](unsigned Idx) {
@@ -1452,7 +1442,7 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
 
     // Verify all members have the same access range (End - Start). The
     // merged upper bound is a umax over the members' own End values. The
-    // same decompositions order both the Start values and the End values
+    // same decompositions order both the Start and the End values
     // only when End = Start + Range with one shared Range for every member.
     // That is what this check enforces.
     // Compare each member's range (End - Start) and test Range - BaseRange ==
@@ -1553,9 +1543,9 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
     // single merged group actually reduces the number of runtime checks. Run
     // it before building the merged bounds: a rejected DepSet then creates no
     // umin/umax expressions that would only be thrown away.
-    auto [ChecksBefore, ChecksAfter] = computeStencilMergeCost(
-        *this, GroupIndices, MergedGroupIndices, LocalStrideLimits,
-        CommittedStrideLimits, NumBoundOperands);
+    auto [ChecksBefore, ChecksAfter] =
+        computeStencilMergeCost(*this, GroupIndices, LocalStrideLimits,
+                                CommittedStrideLimits, NumBoundOperands);
     if (ChecksAfter >= ChecksBefore) {
       LLVM_DEBUG(dbgs() << "LAA:   Not beneficial, skipping DepSet\n");
       continue;
@@ -1593,7 +1583,7 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
     MergedGroupIndices.insert(GroupIndices.begin(), GroupIndices.end());
   }
 
-  CommittedStrideLimits.addPredicates(PSE);
+  CommittedStrideLimits.addPredicates(DC.getPSE());
 
   // Rebuild CheckingGroups if we merged anything.
   if (!NewMergedGroups.empty()) {
@@ -2406,7 +2396,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
   }
 
   if (MayNeedRTCheck && (CanDoRT || AllowPartial))
-    RtCheck.generateChecks(DepCands, PSE, *TheLoop);
+    RtCheck.generateChecks(DepCands);
 
   LLVM_DEBUG(dbgs() << "LAA: We need to do " << RtCheck.getNumberOfChecks()
                     << " pointer comparisons.\n");

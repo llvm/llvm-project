@@ -331,6 +331,8 @@ public:
 
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
+  PredicatedScalarEvolution &getPSE() const { return PSE; }
+
   DenseMap<std::pair<const SCEV *, const SCEV *>,
            std::pair<const SCEV *, const SCEV *>> &
   getPointerBounds() {
@@ -607,8 +609,7 @@ public:
 
   /// Generate the checks and store it.  This also performs the grouping
   /// of pointers to reduce the number of memchecks necessary.
-  LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands,
-                               PredicatedScalarEvolution &PSE, Loop &L);
+  LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands);
 
   /// Returns the checks that generateChecks created. They can be used to ensure
   /// no read/write accesses overlap across all loop iterations.
@@ -681,7 +682,7 @@ private:
   /// Attempt to merge checking groups that share a base pointer and differ
   /// by stencil functions of loop-invariant strides. This reduces runtime
   /// checks for multi-dimensional stencil-like access patterns.
-  void mergeStencilGroups(PredicatedScalarEvolution &PSE, Loop &L);
+  void mergeStencilGroups();
 
   /// Generate the checks and return them.
   SmallVector<RuntimePointerCheck, 4> generateChecks();

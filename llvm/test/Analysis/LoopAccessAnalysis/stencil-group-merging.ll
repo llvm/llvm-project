@@ -465,10 +465,9 @@ exit:
 
 
 ;; Test 6: Predicated accesses are rejected from stencil merging.
-;; Models the dilateKernel pattern (llvm-test-suite MicroBenchmarks/ImageProcessing/Dilate):
 ;; 3 loads at {-cdj, 0, +cdj} where the -cdj and +cdj loads are conditional.
 ;; Predicated loads have overapproximated SCEV bounds; merging would widen
-;; them further, causing false runtime overlap detection.
+;; them further, causing false runtime overlap detection or even overflows.
 ;; Both modes: 3 checks (groups stay separate), no predicates.
 define void @predicated_access_rejection(ptr %a, ptr %out, i64 %n, i64 %cdj, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: 'predicated_access_rejection'
@@ -3898,6 +3897,142 @@ join:
   %next = add nuw nsw i64 %iv, 1
   %more = icmp ult i64 %next, 64
   br i1 %more, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+;; Test 30: No merge when SCEV proves that a stride check always fails.
+;; 3 loads from %a at offsets {-stride, 0, +stride}. Store to %out.
+;; @stride_known_negative_no_merge: stride = smin(%cdj_in, -1), so the check
+;; stride > 0 always fails.
+;; @stride_known_too_large_no_merge: stride = smax(%cdj_in, 2^62). The limit
+;; for these offsets is below 2^62, so the upper limit check always fails.
+define void @stride_known_negative_no_merge(ptr %a, ptr %out, i64 %n, i64 %cdj_in) {
+; CHECK-LABEL: 'stride_known_negative_no_merge'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %cdj
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %p0 = getelementptr inbounds i8, ptr %base, i64 %negcdj
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: ((8 * %n) + %out))
+; CHECK-NEXT:            Member: {%out,+,8}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: ((-1 smin %cdj_in) + %a) High: ((8 * %n) + (-1 smin %cdj_in) + %a))
+; CHECK-NEXT:            Member: {((-1 smin %cdj_in) + %a),+,8}<nw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %a High: ((8 * %n) + %a))
+; CHECK-NEXT:            Member: {%a,+,8}<nuw><%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: ((-1 * (-1 smin %cdj_in)) + %a) High: ((8 * %n) + (-1 * (-1 smin %cdj_in)) + %a))
+; CHECK-NEXT:            Member: {((-1 * (-1 smin %cdj_in)) + %a),+,8}<nw><%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %cdj = call i64 @llvm.smin.i64(i64 %cdj_in, i64 -1)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %base = getelementptr inbounds double, ptr %a, i64 %iv
+  %negcdj = sub nsw i64 0, %cdj
+  %p0 = getelementptr inbounds i8, ptr %base, i64 %negcdj
+  %v0 = load double, ptr %p0, align 8
+  %v1 = load double, ptr %base, align 8
+  %p2 = getelementptr inbounds i8, ptr %base, i64 %cdj
+  %v2 = load double, ptr %p2, align 8
+  %s0 = fadd double %v0, %v1
+  %s1 = fadd double %s0, %v2
+  %outp = getelementptr inbounds double, ptr %out, i64 %iv
+  store double %s1, ptr %outp, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @stride_known_too_large_no_merge(ptr %a, ptr %out, i64 %n, i64 %cdj_in) {
+; CHECK-LABEL: 'stride_known_too_large_no_merge'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %p2 = getelementptr inbounds i8, ptr %base, i64 %cdj
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %base = getelementptr inbounds double, ptr %a, i64 %iv
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %outp = getelementptr inbounds double, ptr %out, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %p0 = getelementptr inbounds i8, ptr %base, i64 %negcdj
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: ((8 * %n) + %out))
+; CHECK-NEXT:            Member: {%out,+,8}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: ((4611686018427387904 smax %cdj_in) + %a)<nuw> High: ((8 * %n) + (4611686018427387904 smax %cdj_in) + %a))
+; CHECK-NEXT:            Member: {((4611686018427387904 smax %cdj_in) + %a)<nuw>,+,8}<nuw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %a High: ((8 * %n) + %a))
+; CHECK-NEXT:            Member: {%a,+,8}<nuw><%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: ((-1 * (4611686018427387904 smax %cdj_in))<nsw> + %a) High: ((8 * %n) + (-1 * (4611686018427387904 smax %cdj_in))<nsw> + %a))
+; CHECK-NEXT:            Member: {((-1 * (4611686018427387904 smax %cdj_in))<nsw> + %a),+,8}<nw><%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %cdj = call i64 @llvm.smax.i64(i64 %cdj_in, i64 4611686018427387904) ; 2^62
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %base = getelementptr inbounds double, ptr %a, i64 %iv
+  %negcdj = sub nsw i64 0, %cdj
+  %p0 = getelementptr inbounds i8, ptr %base, i64 %negcdj
+  %v0 = load double, ptr %p0, align 8
+  %v1 = load double, ptr %base, align 8
+  %p2 = getelementptr inbounds i8, ptr %base, i64 %cdj
+  %v2 = load double, ptr %p2, align 8
+  %s0 = fadd double %v0, %v1
+  %s1 = fadd double %s0, %v2
+  %outp = getelementptr inbounds double, ptr %out, i64 %iv
+  store double %s1, ptr %outp, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
