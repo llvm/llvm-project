@@ -39301,6 +39301,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::LCMPXCHG16B_NO_RBX: {
     const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
     Register BasePtr = TRI->getBaseRegister();
+    bool DeadEFLAGS = MI.getOperand(8).isDead(); // implicit-def $eflags
     if (TRI->hasBasePointer(*MF) &&
         (BasePtr == X86::RBX || BasePtr == X86::EBX)) {
       if (!BB->isLiveIn(BasePtr))
@@ -39317,6 +39318,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         MIB.add(MI.getOperand(Idx));
       MIB.add(MI.getOperand(X86::AddrNumOperands));
       MIB.addReg(SaveRBX);
+      MIB->getOperand(11).setIsDead(DeadEFLAGS); // implicit-def $eflags
     } else {
       // Simple case, just copy the virtual register to RBX.
       BuildMI(*BB, MI, MIMD, TII->get(TargetOpcode::COPY), X86::RBX)
@@ -39325,6 +39327,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
           BuildMI(*BB, MI, MIMD, TII->get(X86::LCMPXCHG16B));
       for (unsigned Idx = 0; Idx < X86::AddrNumOperands; ++Idx)
         MIB.add(MI.getOperand(Idx));
+      MIB->getOperand(7).setIsDead(DeadEFLAGS); // implicit-def $eflags
     }
     MI.eraseFromParent();
     return BB;
