@@ -112,6 +112,9 @@ infrastructure are described first, followed by tool-specific sections.
   C++20 concepts.
   ([#206875](https://github.com/llvm/llvm-project/issues/206875))
 
+- Added support for loading dynamic plugins via the `-load` command-line
+  option.
+
 ### Improvements to clang-doc
 
 ### Improvements to clang-query
