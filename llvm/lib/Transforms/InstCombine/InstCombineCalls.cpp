@@ -2883,31 +2883,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
 
-  case Intrinsic::smulh:
-  case Intrinsic::umulh: {
+  case Intrinsic::smulh: {
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
-    bool IsSigned = IID == Intrinsic::smulh;
     unsigned BitWidth = II->getType()->getScalarSizeInBits();
-
-    // Multiply by undef -> zero (NOT undef!) as other arg could still be
-    // zero.
-    if (isa<UndefValue>(Arg0) || isa<UndefValue>(Arg1))
-      return replaceInstUsesWith(CI, ConstantInt::getNullValue(II->getType()));
-
-    // Multiply by zero.
-    if (match(Arg0, m_Zero()) || match(Arg1, m_Zero()))
-      return replaceInstUsesWith(CI, ConstantInt::getNullValue(II->getType()));
 
     // Multiply by one.
     if (match(Arg0, m_One()))
-      return replaceInstUsesWith(
-          CI, IsSigned ? Builder.CreateAShr(Arg1, BitWidth - 1)
-                       : ConstantInt::getNullValue(II->getType()));
+      return replaceInstUsesWith(CI, Builder.CreateAShr(Arg1, BitWidth - 1));
     if (match(Arg1, m_One()))
-      return replaceInstUsesWith(
-          CI, IsSigned ? Builder.CreateAShr(Arg0, BitWidth - 1)
-                       : ConstantInt::getNullValue(II->getType()));
+      return replaceInstUsesWith(CI, Builder.CreateAShr(Arg0, BitWidth - 1));
     break;
   }
 
