@@ -278,8 +278,11 @@ struct LIFeatureComponents {
   bool IsRemat = false;
 };
 
+// Inline capacity hint only, the real width is target-derived.
+static constexpr unsigned ExpectedMaxColumns = 40;
+
 using CandidateRegList =
-    SmallVector<std::pair<MCRegister, bool>, CompiledModelNumColumns>;
+    SmallVector<std::pair<MCRegister, bool>, ExpectedMaxColumns>;
 using FeaturesListNormalizer =
     llvm::SmallVector<float, FeatureIDs::FeatureCount>;
 
@@ -296,6 +299,7 @@ protected:
     return static_cast<const RegAllocEvictionAdvisor &>(DefaultAdvisor);
   }
 
+  // By convention the last column holds the virt reg seeking allocation.
   const ArrayRef<TensorSpec> InputFeatures;
   const size_t NumColumns;
   const size_t CandidateVirtRegPos = NumColumns - 1;
@@ -366,6 +370,9 @@ private:
 
   mutable DenseMap<unsigned, unsigned> VirtRegEvictionCounts;
 
+  // Reset per eviction attempt rather than reallocated.
+  mutable CandidateRegList Regs;
+
   void onEviction(Register RegBeingEvicted) const {
     // If we cannot find the virtual register in the map, we just assume it has
     // not been evicted before and thus has a value of zero (which is what the
@@ -384,13 +391,22 @@ private:
 #define _DECL_FEATURES(type, name, shape, _)                                   \
   TensorSpec::createSpec<type>(#name, shape),
 
-static int64_t getRequiredNumColumns(const TargetRegisterInfo &TRI,
-                                     const RegisterClassInfo &RegClassInfo) {
-  unsigned MaxOrder = 0;
+// Widest allocation order across all register classes, plus the candidate. A
+// runner fixes its tensor shapes once, so this has to be a target-static bound
+// rather than the per-function allocatable count.
+static int64_t getRequiredNumColumns(const TargetRegisterInfo &TRI) {
+  unsigned MaxRegs = 0;
   for (const TargetRegisterClass &RC : TRI.regclasses())
     if (RC.isAllocatable())
-      MaxOrder = std::max(MaxOrder, RegClassInfo.getNumAllocatableRegs(&RC));
-  return MaxOrder + 1;
+      MaxRegs = std::max(MaxRegs, RC.getNumRegs());
+  return MaxRegs + 1;
+}
+
+// RA_EVICT_FEATURES_LIST expands the bare name PerLiveRangeShape, so the local
+// below is what gives the specs their width.
+static std::vector<TensorSpec> getInputFeatures(int64_t NumColumns) {
+  const std::vector<int64_t> PerLiveRangeShape{1, NumColumns};
+  return {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
 }
 
 // ===================================
@@ -410,30 +426,36 @@ public:
   std::unique_ptr<RegAllocEvictionAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
-    if (!Runner) {
-      NumColumns =
-          InteractiveChannelBaseName.empty()
-              ? CompiledModelNumColumns
-              : getRequiredNumColumns(*MF.getSubtarget().getRegisterInfo(),
-                                      RA.getRegClassInfo());
-      const std::vector<int64_t> PerLiveRangeShape{1, NumColumns};
-      InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
-      Runner = createReleaseModeModelRunner<CompiledModelType,
-                                            HaveMLIRLoweringRegAlloc>(
-          MF.getFunction().getContext(), InputFeatures, DecisionName,
-          InteractiveChannelBaseName, DecisionSpec,
-          createMLGORegAllocModelRunner);
-    }
+    initializeOnce(MF);
     assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");
+    // RAGreedy cannot cope with a null advisor, and the reason we have no
+    // runner has already been reported.
+    if (!Runner)
+      return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
     return std::make_unique<MLEvictAdvisor>(MF, RA, Runner.get(), InputFeatures,
                                             *MBFI, *Loops);
   }
 
 private:
+  // Deferred: the tensor width is target-derived, and the target is only
+  // reachable from a MachineFunction.
+  void initializeOnce(const MachineFunction &MF) {
+    if (Initialized)
+      return;
+    Initialized = true;
+    InputFeatures = getInputFeatures(
+        getRequiredNumColumns(*MF.getSubtarget().getRegisterInfo()));
+    Runner = createReleaseModeModelRunner<CompiledModelType,
+                                          HaveMLIRLoweringRegAlloc>(
+        MF.getFunction().getContext(), InputFeatures, DecisionName,
+        InteractiveChannelBaseName, DecisionSpec,
+        createMLGORegAllocModelRunner);
+  }
+
   std::vector<TensorSpec> InputFeatures;
   std::unique_ptr<MLModelRunner> Runner;
-  int64_t NumColumns = CompiledModelNumColumns;
+  bool Initialized = false;
 };
 
 class ReleaseModeEvictionAdvisorAnalysisLegacy final
@@ -478,6 +500,18 @@ static const TensorSpec Reward = TensorSpec::createSpec<float>("reward", {1});
 #define _DECL_TRAIN_FEATURES(type, name, shape, _)                             \
   TensorSpec::createSpec<type>(std::string("action_") + #name, shape),
 
+static bool isDevModeRequested() {
+  return !ModelUnderTraining.empty() || !TrainingLog.empty();
+}
+
+static std::vector<TensorSpec> getTrainingInputFeatures(int64_t NumColumns) {
+  const std::vector<int64_t> PerLiveRangeShape{1, NumColumns};
+  return {RA_EVICT_FEATURES_LIST(_DECL_TRAIN_FEATURES)
+              TensorSpec::createSpec<float>("action_discount", {1}),
+          TensorSpec::createSpec<int32_t>("action_step_type", {1}),
+          TensorSpec::createSpec<float>("action_reward", {1})};
+}
+
 class DevelopmentModeEvictAdvisor : public MLEvictAdvisor {
 public:
   DevelopmentModeEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
@@ -501,18 +535,62 @@ class DevelopmentModeEvictionAdvisorProvider final
 public:
   DevelopmentModeEvictionAdvisorProvider(LLVMContext &Ctx)
       : RegAllocEvictionAdvisorProvider(AdvisorMode::Development, Ctx) {
-    const std::vector<int64_t> PerLiveRangeShape{1, CompiledModelNumColumns};
-    InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
-    TrainingInputFeatures = {
-        RA_EVICT_FEATURES_LIST(_DECL_TRAIN_FEATURES)
-            TensorSpec::createSpec<float>("action_discount", {1}),
-        TensorSpec::createSpec<int32_t>("action_step_type", {1}),
-        TensorSpec::createSpec<float>("action_reward", {1})};
-    if (ModelUnderTraining.empty() && TrainingLog.empty()) {
+    if (!isDevModeRequested())
       Ctx.emitError("Regalloc development mode should be requested with at "
                     "least logging enabled and/or a training model");
+  }
+
+  // support for isa<> and dyn_cast.
+  static bool classof(const RegAllocEvictionAdvisorProvider *R) {
+    return R->getAdvisorMode() == AdvisorMode::Development;
+  }
+
+  void logRewardIfNeeded(const MachineFunction &MF,
+                         llvm::function_ref<float()> GetReward) override {
+    if (!Log || !Log->hasAnyObservationForContext(MF.getName()))
       return;
+    // The function pass manager would run all the function passes for a
+    // function, so we assume the last context belongs to this function. If
+    // this invariant ever changes, we can implement at that time switching
+    // contexts. At this point, it'd be an error
+    if (Log->currentContext() != MF.getName()) {
+      MF.getFunction().getContext().emitError(
+          "The training log context shouldn't have had changed.");
     }
+    if (Log->hasObservationInProgress())
+      Log->logReward<float>(GetReward());
+  }
+
+  std::unique_ptr<RegAllocEvictionAdvisor>
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
+    initializeOnce(MF);
+    assert(MBFI && Loops &&
+           "Invalid provider state: must have analysis available");
+    // RAGreedy cannot cope with a null advisor, and the reason we have no
+    // runner has already been reported.
+    if (!Runner)
+      return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
+    if (Log)
+      Log->switchContext(MF.getName());
+    return std::make_unique<DevelopmentModeEvictAdvisor>(
+        MF, RA, Runner.get(), InputFeatures, *MBFI, *Loops, Log.get());
+  }
+
+private:
+  // Deferred: the tensor width is target-derived, and the target is only
+  // reachable from a MachineFunction.
+  void initializeOnce(const MachineFunction &MF) {
+    if (Initialized)
+      return;
+    Initialized = true;
+    if (!isDevModeRequested())
+      return;
+    const int64_t NumColumns =
+        getRequiredNumColumns(*MF.getSubtarget().getRegisterInfo());
+    InputFeatures = getInputFeatures(NumColumns);
+    const std::vector<TensorSpec> TrainingInputFeatures =
+        getTrainingInputFeatures(NumColumns);
     if (ModelUnderTraining.empty())
       Runner = std::make_unique<NoInferenceModelRunner>(Ctx, InputFeatures);
     else
@@ -540,47 +618,10 @@ public:
 
     Log = std::make_unique<Logger>(std::move(OS), LFS, Reward,
                                    /*IncludeReward*/ true);
-    return;
   }
 
-  // support for isa<> and dyn_cast.
-  static bool classof(const RegAllocEvictionAdvisorProvider *R) {
-    return R->getAdvisorMode() == AdvisorMode::Development;
-  }
-
-  void logRewardIfNeeded(const MachineFunction &MF,
-                         llvm::function_ref<float()> GetReward) override {
-    if (!Log || !Log->hasAnyObservationForContext(MF.getName()))
-      return;
-    // The function pass manager would run all the function passes for a
-    // function, so we assume the last context belongs to this function. If
-    // this invariant ever changes, we can implement at that time switching
-    // contexts. At this point, it'd be an error
-    if (Log->currentContext() != MF.getName()) {
-      MF.getFunction().getContext().emitError(
-          "The training log context shouldn't have had changed.");
-    }
-    if (Log->hasObservationInProgress())
-      Log->logReward<float>(GetReward());
-  }
-
-  std::unique_ptr<RegAllocEvictionAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
-             MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
-    if (!Runner)
-      return nullptr;
-    if (Log)
-      Log->switchContext(MF.getName());
-    assert(MBFI && Loops &&
-           "Invalid provider state: must have analysis available");
-    return std::make_unique<DevelopmentModeEvictAdvisor>(
-        MF, RA, Runner.get(), InputFeatures, *MBFI, *Loops, Log.get());
-  }
-
-private:
   std::vector<TensorSpec> InputFeatures;
-  std::vector<TensorSpec> TrainingInputFeatures;
-
+  bool Initialized = false;
   std::unique_ptr<MLModelRunner> Runner;
   std::unique_ptr<Logger> Log;
 };
@@ -758,7 +799,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   // Track the index->register mapping because AllocationOrder doesn't do that
   // and we'd have to scan it.
   // Also track their mask, to write asserts/debug.
-  CandidateRegList Regs(NumColumns);
+  Regs.assign(NumColumns, {MCRegister(), false});
 
   // Track the largest value of features seen during this eviction session. We
   // only normalize (some of) the float features, but it's just simpler to
@@ -772,9 +813,10 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   // reset all the features to 0) Use Pos to capture the column we load
   // features at - in AllocationOrder order.
   size_t Pos = 0;
-  SmallVector<LRStartEndInfo, CompiledModelNumColumns> LRPosInfo;
-  // The order can outrun the tensor width (fixed-width precompiled model,
-  // duplicated hints), so drop the tail rather than write out of bounds.
+  SmallVector<LRStartEndInfo, ExpectedMaxColumns> LRPosInfo;
+  // Hints are iterated ahead of the order proper, so the Pos bound is what
+  // keeps a target that hints outside its own class from writing past the
+  // tensor.
   for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit);
        I != E && Pos < CandidateVirtRegPos; ++I, ++Pos) {
     MCRegister PhysReg = *I;
@@ -812,9 +854,11 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
        ++FeatureIndex) {
     if (DoNotNormalize.test(FeatureIndex))
       continue;
+    // Skip the columns past ValidPosLimit: never written, so still 0.
     float *Tensor = Runner->getTensor<float>(FeatureIndex);
-    for (size_t Pos = 0; Pos < NumColumns; ++Pos)
-      Tensor[Pos] /= Largest[FeatureIndex];
+    for (size_t P = 0; P < ValidPosLimit; ++P)
+      Tensor[P] /= Largest[FeatureIndex];
+    Tensor[CandidateVirtRegPos] /= Largest[FeatureIndex];
   }
   *Runner->getTensor<float>(FeatureIDs::progress) =
       static_cast<float>(RA.getQueueSize()) / InitialQSize;
@@ -831,7 +875,6 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
     return MCRegister::NoRegister;
   }
   assert(CandidatePos < ValidPosLimit);
-  (void)ValidPosLimit;
 
   // Update information about how many times the virtual registers being
   // evicted have been evicted so that we can prevent the model from evicting
@@ -1017,8 +1060,9 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
     if (!PhysReg)
       Ret = CandidateVirtRegPos;
     else
+      // Same bound as the feature-loading loop in tryFindEvictionCandidate.
       for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit);
-           I != E; ++I, ++Ret)
+           I != E && static_cast<size_t>(Ret) < CandidateVirtRegPos; ++I, ++Ret)
         if (*I == PhysReg)
           break;
   }

@@ -24,7 +24,8 @@ POLICY_OUTPUT_SPEC = """
 ]
 """
 PER_REGISTER_FEATURE_LIST = ["mask"]
-NUM_REGISTERS = 33
+# Must match getRequiredNumColumns() for the target the tests run on (X86).
+NUM_REGISTERS = 37
 
 
 def get_input_signature():

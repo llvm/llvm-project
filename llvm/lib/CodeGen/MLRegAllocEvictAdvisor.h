@@ -33,17 +33,6 @@ struct LRStartEndInfo {
   size_t Pos = 0;
 };
 
-// Logically, we can think of the feature set given to the evaluator as a 2D
-// matrix. The rows are the features (see next). The columns correspond to the
-// interferences. We treat the candidate virt reg as an 'interference', too, as
-// its feature set is the same as that of the interferring ranges. So we'll have
-// one column per allocation order slot, plus one, and by convention, we will
-// use the last column for the virt reg seeking allocation.
-// The AOT and reference models bake this width in and do not expose it, so
-// changing it requires regenerating them. The interactive channel derives its
-// own width from the target instead.
-static const int64_t CompiledModelNumColumns = 33;
-
 // The number of instructions that a specific live range might have is variable,
 // but we're passing in a single matrix of instructions and tensorflow saved
 // models only support a fixed input size, so we have to cap the number of
@@ -54,13 +43,9 @@ static const int ModelMaxSupportedInstructionCount = 300;
 
 // When extracting per-instruction features, the advisor will currently create
 // a vector of size ModelMaxSupportedInstructionCount to hold the opcodes of the
-// instructions relevant to the eviction problem, and a NumberOfInterferences *
-// ModelMaxSupportedInstructionCount matrix that maps LRs to the instructions
-// that they span.
+// instructions relevant to the eviction problem.
 static const std::vector<int64_t> InstructionsShape{
     1, ModelMaxSupportedInstructionCount};
-static const std::vector<int64_t> InstructionsMappingShape{
-    1, CompiledModelNumColumns, ModelMaxSupportedInstructionCount};
 
 // When extracting mappings between MBBs and individual instructions, we create
 // a vector of MBB frequencies, currently of size 100, which was a value
