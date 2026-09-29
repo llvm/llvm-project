@@ -1736,3 +1736,27 @@ gpu.func @convert_layout_partial_subgroup() {
   gpu.return
 }
 }
+
+// -----
+// Two distributed dims: lane_layout [1, 2, 8] splits dims 1 and 2, so each
+// carries its own lane count and both the size and the offset along it are
+// rescaled by that count. Dim 0 is not split and keeps its offset.
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @extract_strided_slice_two_distributed_dims
+// CHECK:         %[[SRC:.*]] = "test.some_op"()
+// CHECK:         %[[DIST:.*]] = builtin.unrealized_conversion_cast %[[SRC]] : vector<16x32x32xbf16> to vector<16x16x4xbf16>
+// CHECK:         vector.extract_strided_slice %[[DIST]] offsets = [3, 1, 1], sizes = [1, 1, 1], strides = [1, 1, 1] : vector<16x16x4xbf16> to vector<1x1x1xbf16>
+gpu.func @extract_strided_slice_two_distributed_dims() {
+  %src = "test.some_op"() : () -> vector<16x32x32xbf16>
+  %0 = vector.extract_strided_slice %src offsets = [3, 2, 8], sizes = [1, 2, 8], strides = [1, 1, 1]
+    : vector<16x32x32xbf16> to vector<1x2x8xbf16>
+  // Anchors the layout on %0; recoverTemporaryLayouts derives the operand's
+  // layout from it.
+  %1 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 2, 8], lane_data = [1, 1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 2, 8], lane_data = [1, 1, 1]>
+    }> : vector<1x2x8xbf16>
+  gpu.return
+}
+}
