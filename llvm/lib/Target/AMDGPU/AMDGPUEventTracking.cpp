@@ -35,13 +35,6 @@ static cl::opt<bool> EventTrackerPrintAll(
 namespace AMDGPU {
 namespace eventtracking {
 
-namespace {
-static bool greaterThan(const EventTrackerRecord &A,
-                        const EventTrackerRecord &B) {
-  return A.getScore() > B.getScore();
-}
-} // namespace
-
 EventTrackerRecord::EventTrackerRecord(EventTrackingContext &Ctx,
                                        MachineInstr *MI, SingleHWEvent Kind,
                                        uint32_t Score)
@@ -290,7 +283,7 @@ void EventTracker::verify() const {
     }
 
     // Check live records are sorted
-    if (!is_sorted(C.LiveRecords, greaterThan)) {
+    if (!is_sorted(C.LiveRecords, EventTrackerRecord::isScoreGreaterThan)) {
       OnError();
       llvm_unreachable("live records are not sorted!");
     }
@@ -390,7 +383,7 @@ void EventTracker::recordIncomings(EventTrackingContext &ETC,
     CData.LiveRecords.append(AccVals.begin(), AccVals.end());
 
     // Sort records by Score (descending) for consistent iteration.
-    stable_sort(CData.LiveRecords, greaterThan);
+    stable_sort(CData.LiveRecords, EventTrackerRecord::isScoreGreaterThan);
   }
 
   LLVM_DEBUG(if (!Preds.empty()) {

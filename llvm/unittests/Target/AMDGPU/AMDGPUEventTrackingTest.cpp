@@ -615,4 +615,77 @@ body:             |
   EXPECT_FALSE(StoreCnt.next());
 }
 
+/// Assymetrical diamond
+///   - bb0 has one store
+///   - bb1 just falls through
+///   - bb2 adds 1 more store.
+///
+/// The timeline will showcase how the score of a counter can be different from
+/// the content of the timeline.
+///   - The timeline will have all records at a height of 0.
+///   - The counter will still be at 2.
+TEST_F(AMDGPUGFX12EventTrackingTest, AssymetricalDiamond2) {
+  StringRef MIR = R"(
+name:            AssymetricalDiamond2
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.3
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_ENDPGM 0
+...
+)";
+  ASSERT_TRUE(parseMIR(MIR));
+  MachineFunction &MF = getMF("AssymetricalDiamond2");
+  MachineBasicBlock &BB0 = *MF.getBlockNumbered(0);
+  MachineBasicBlock &BB1 = *MF.getBlockNumbered(1);
+  MachineBasicBlock &BB2 = *MF.getBlockNumbered(2);
+  MachineBasicBlock &BB3 = *MF.getBlockNumbered(3);
+
+  EventTrackingContext Ctx(MF, GFX12CounterInfos);
+
+  visitAll(Ctx, BB0);
+  visitAll(Ctx, BB1);
+  visitAll(Ctx, BB2);
+
+  auto &ET = visitAll(Ctx, BB3);
+
+  auto LoadCnt = TrackerRecordsChecker(ET, AMDGPU::LOAD_CNT);
+  EXPECT_TRUE(LoadCnt.unused());
+
+  auto DsCnt = TrackerRecordsChecker(ET, AMDGPU::DS_CNT);
+  EXPECT_TRUE(DsCnt.unused());
+
+  auto ExpCnt = TrackerRecordsChecker(ET, AMDGPU::EXP_CNT);
+  EXPECT_TRUE(ExpCnt.unused());
+
+  auto StoreCnt = TrackerRecordsChecker(ET, AMDGPU::STORE_CNT);
+
+  EXPECT_TRUE(StoreCnt.hasCount());
+  EXPECT_EQ(StoreCnt.getCount(), 2u);
+  EXPECT_FALSE(StoreCnt.empty());
+
+  EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
+  EXPECT_EQ(StoreCnt.cur().getMI()->getParent(), &BB2);
+  EXPECT_EQ(StoreCnt.cur().getScore(), 0u);
+  EXPECT_TRUE(StoreCnt.next());
+  EXPECT_EQ(StoreCnt.cur().getMI()->getOpcode(), AMDGPU::GLOBAL_STORE_DWORD);
+  EXPECT_EQ(StoreCnt.cur().getMI()->getParent(), &BB0);
+  EXPECT_EQ(StoreCnt.cur().getScore(), 0u);
+  EXPECT_FALSE(StoreCnt.next());
+}
+
 } // namespace
