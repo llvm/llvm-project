@@ -4,10 +4,8 @@
 define i64 @t0(i32 %x) {
 ; CHECK-LABEL: define i64 @t0(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X]], 16
-; CHECK-NEXT:    [[B:%.*]] = zext nneg i32 [[A]] to i64
-; CHECK-NEXT:    [[SEXT:%.*]] = shl nuw i64 [[B]], 48
-; CHECK-NEXT:    [[C:%.*]] = ashr exact i64 [[SEXT]], 48
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X]], 16
+; CHECK-NEXT:    [[C:%.*]] = sext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[C]]
 ;
   %a = lshr i32 %x, 16
