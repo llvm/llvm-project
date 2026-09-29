@@ -826,3 +826,46 @@ func.func @transfer_write_multi_dim_unit_vector(
 // CHECK-128B-LABEL: func @transfer_write_multi_dim_unit_vector
 //       CHECK-128B:   vector.shape_cast {{.*}}: vector<1x1x1xi8> to vector<1xi8>
 //       CHECK-128B:   vector.transfer_write {{.*}}: vector<1xi8>, memref<5x4x3x2xi8>
+
+// -----
+
+// Region-masked transfers cannot be flattened because the rewrite would
+// create multiple operations inside the vector.mask region.
+
+// CHECK-LABEL: func.func @region_masked_transfer_read
+//       CHECK:   %[[READ:.+]] = vector.mask %{{.+}} { vector.transfer_read
+//       CHECK:   return %[[READ]]
+
+// CHECK-128B-LABEL: func.func @region_masked_transfer_read
+//       CHECK-128B:   %[[READ:.+]] = vector.mask %{{.+}} { vector.transfer_read
+//       CHECK-128B:   return %[[READ]]
+func.func @region_masked_transfer_read(
+    %mem: memref<2x2xf32>, %mask: vector<2x2xi1>) -> vector<2x2xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
+  %read = vector.mask %mask {
+    vector.transfer_read %mem[%c0, %c0], %cst {in_bounds = [true, true]} :
+      memref<2x2xf32>, vector<2x2xf32>
+  } : vector<2x2xi1> -> vector<2x2xf32>
+  return %read : vector<2x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @region_masked_transfer_write
+//       CHECK:   vector.mask %{{.+}} { vector.transfer_write
+//       CHECK:   return
+
+// CHECK-128B-LABEL: func.func @region_masked_transfer_write
+//       CHECK-128B:   vector.mask %{{.+}} { vector.transfer_write
+//       CHECK-128B:   return
+func.func @region_masked_transfer_write(
+    %mem: memref<2x2xf32>, %value: vector<2x2xf32>,
+    %mask: vector<2x2xi1>) {
+  %c0 = arith.constant 0 : index
+  vector.mask %mask {
+    vector.transfer_write %value, %mem[%c0, %c0] {in_bounds = [true, true]} :
+      vector<2x2xf32>, memref<2x2xf32>
+  } : vector<2x2xi1>
+  return
+}

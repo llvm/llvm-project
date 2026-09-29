@@ -178,3 +178,26 @@ func.func @transfer_read_2d_extract_dynamic(%m: memref<?x?xf32>, %row_idx: index
   %elem = vector.extract %vec[%row_offset, %col_offset] : f32 from vector<10x5xf32>
   return %elem : f32
 }
+
+// -----
+
+// A region-masked transfer cannot be scalarized because the rewrite would
+// create multiple operations inside the vector.mask region.
+
+// CHECK-LABEL: func.func @region_masked_transfer_write
+//       CHECK:   vector.mask %{{.+}} { vector.transfer_write
+//       CHECK:   return
+
+// MULTIUSE-LABEL: func.func @region_masked_transfer_write
+//       MULTIUSE:   vector.mask %{{.+}} { vector.transfer_write
+//       MULTIUSE:   return
+func.func @region_masked_transfer_write(
+    %mem: memref<1x1xf32>, %value: vector<1x1xf32>,
+    %mask: vector<1x1xi1>) {
+  %c0 = arith.constant 0 : index
+  vector.mask %mask {
+    vector.transfer_write %value, %mem[%c0, %c0] {in_bounds = [true, true]} :
+      vector<1x1xf32>, memref<1x1xf32>
+  } : vector<1x1xi1>
+  return
+}
