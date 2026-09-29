@@ -116,7 +116,7 @@ define i32 @bitmask_v16i8(<16 x i8> %x) {
 
 ; CHECK-LABEL: bitselect_v16i8:
 ; CHECK-NEXT: .functype bitselect_v16i8 (v128, v128, v128) -> (v128){{$}}
-; CHECK-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; CHECK-NEXT: i8x16.relaxed_laneselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare <16 x i8> @llvm.wasm.bitselect.v16i8(<16 x i8>, <16 x i8>, <16 x i8>)
 define <16 x i8> @bitselect_v16i8(<16 x i8> %v1, <16 x i8> %v2, <16 x i8> %c) {
@@ -309,7 +309,7 @@ define i32 @bitmask_v8i16(<8 x i16> %x) {
 
 ; CHECK-LABEL: bitselect_v8i16:
 ; CHECK-NEXT: .functype bitselect_v8i16 (v128, v128, v128) -> (v128){{$}}
-; CHECK-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; CHECK-NEXT: i16x8.relaxed_laneselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare <8 x i16> @llvm.wasm.bitselect.v8i16(<8 x i16>, <8 x i16>, <8 x i16>)
 define <8 x i16> @bitselect_v8i16(<8 x i16> %v1, <8 x i16> %v2, <8 x i16> %c) {
@@ -445,7 +445,7 @@ define i32 @bitmask_v4i32(<4 x i32> %x) {
 
 ; CHECK-LABEL: bitselect_v4i32:
 ; CHECK-NEXT: .functype bitselect_v4i32 (v128, v128, v128) -> (v128){{$}}
-; CHECK-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; CHECK-NEXT: i32x4.relaxed_laneselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare <4 x i32> @llvm.wasm.bitselect.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 define <4 x i32> @bitselect_v4i32(<4 x i32> %v1, <4 x i32> %v2, <4 x i32> %c) {
@@ -628,7 +628,7 @@ define i32 @bitmask_v2i64(<2 x i64> %x) {
 
 ; CHECK-LABEL: bitselect_v2i64:
 ; CHECK-NEXT: .functype bitselect_v2i64 (v128, v128, v128) -> (v128){{$}}
-; CHECK-NEXT: v128.bitselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; CHECK-NEXT: i64x2.relaxed_laneselect $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare <2 x i64> @llvm.wasm.bitselect.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
 define <2 x i64> @bitselect_v2i64(<2 x i64> %v1, <2 x i64> %v2, <2 x i64> %c) {
