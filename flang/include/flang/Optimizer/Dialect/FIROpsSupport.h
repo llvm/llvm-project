@@ -248,31 +248,26 @@ inline std::optional<FortranDummyIntent>
 getFortranDummyIntent(mlir::func::FuncOp callee, unsigned argIdx) {
   if (!callee || argIdx >= callee.getNumArguments())
     return std::nullopt;
-  mlir::BlockArgument arg = callee.getArgument(argIdx);
-  std::optional<FortranVariableFlagsEnum> flags;
-  callee.walk([&](fir::DeclareOp decl) {
-    if (decl.getMemref() != arg)
-      return mlir::WalkResult::advance();
-    if (auto attrs = decl.getFortranAttrs()) {
-      flags = *attrs;
-      return mlir::WalkResult::interrupt();
-    }
-    return mlir::WalkResult::advance();
-  });
-  if (!flags)
+  // The dummy's fir.declare uses the block argument as its memref.
+  mlir::Value arg = callee.getArgument(argIdx);
+  for (mlir::Operation *user : arg.getUsers()) {
+    auto decl = mlir::dyn_cast<fir::DeclareOp>(user);
+    if (!decl || decl.getMemref() != arg)
+      continue;
+    auto attrs = decl.getFortranAttrs();
+    if (!attrs)
+      continue;
+    using F = FortranVariableFlagsEnum;
+    if (bitEnumContainsAny(*attrs, F::intent_inout) ||
+        (bitEnumContainsAny(*attrs, F::intent_in) &&
+         bitEnumContainsAny(*attrs, F::intent_out)))
+      return FortranDummyIntent::InOut;
+    if (bitEnumContainsAny(*attrs, F::intent_out))
+      return FortranDummyIntent::Out;
+    if (bitEnumContainsAny(*attrs, F::intent_in))
+      return FortranDummyIntent::In;
     return std::nullopt;
-  const bool isIn =
-      bitEnumContainsAny(*flags, FortranVariableFlagsEnum::intent_in);
-  const bool isInOut =
-      bitEnumContainsAny(*flags, FortranVariableFlagsEnum::intent_inout);
-  const bool isOut =
-      bitEnumContainsAny(*flags, FortranVariableFlagsEnum::intent_out);
-  if (isInOut || (isIn && isOut))
-    return FortranDummyIntent::InOut;
-  if (isOut)
-    return FortranDummyIntent::Out;
-  if (isIn)
-    return FortranDummyIntent::In;
+  }
   return std::nullopt;
 }
 
