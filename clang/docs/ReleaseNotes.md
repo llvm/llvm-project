@@ -766,7 +766,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash in constant evaluation when a new-expression selects a
   user-declared allocation function that takes std::nothrow_t by value. Such
   a new-expression is now correctly rejected in a constant expression because
-  it does not select a replaceable global allocation function. (#GH226753)
+  it does not select a replaceable global allocation function. (#GH212211)
 
 #### Bug Fixes to AST Handling
 
