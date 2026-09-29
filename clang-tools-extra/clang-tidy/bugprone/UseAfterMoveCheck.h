@@ -30,7 +30,6 @@ public:
 
 private:
   std::vector<StringRef> InvalidationFunctions;
-  std::vector<StringRef> ArgumentInvalidationFunctions;
   std::vector<StringRef> ReinitializationFunctions;
   std::vector<StringRef> ReportAccessOnlyUseForTypes;
 };

@@ -1,15 +1,13 @@
 // RUN: %check_clang_tidy -std=c++11,c++14 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     bugprone-use-after-move.InvalidationFunctions: "::std::move;::std::forward;::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection;::handle_accessor::Resource::invalidate", \
-// RUN:     bugprone-use-after-move.ArgumentInvalidationFunctions: "::argument_invalidation::Manager::close;::argument_invalidation::freeClose;::argument_invalidation::Manager::resetAt(1);::handle_accessor::Manager::release(0)", \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::std::move;::std::forward;::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection;::handle_accessor::Resource::invalidate;::argument_invalidation::Manager::close(0);::argument_invalidation::freeClose(0);::argument_invalidation::Manager::resetAt(1);::handle_accessor::Manager::release(0)", \
 // RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset", \
 // RUN:     bugprone-use-after-move.ReportAccessOnlyUseForTypes: "::report_access_only::AccessOnly;::report_access_only::HandleBase;::report_access_only::SmartHandle" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     bugprone-use-after-move.InvalidationFunctions: "::std::move;::std::forward;::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection;::handle_accessor::Resource::invalidate", \
-// RUN:     bugprone-use-after-move.ArgumentInvalidationFunctions: "::argument_invalidation::Manager::close;::argument_invalidation::freeClose;::argument_invalidation::Manager::resetAt(1);::handle_accessor::Manager::release(0)", \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::std::move;::std::forward;::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection;::handle_accessor::Resource::invalidate;::argument_invalidation::Manager::close(0);::argument_invalidation::freeClose(0);::argument_invalidation::Manager::resetAt(1);::handle_accessor::Manager::release(0)", \
 // RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset", \
 // RUN:     bugprone-use-after-move.ReportAccessOnlyUseForTypes: "::report_access_only::AccessOnly;::report_access_only::HandleBase;::report_access_only::SmartHandle" \
 // RUN:   }}' -- \
@@ -2197,11 +2195,10 @@ void smartHandleCompareIsNotUse() {
 } // namespace report_access_only
 
 ////////////////////////////////////////////////////////////////////////////////
-// Tests for the ArgumentInvalidationFunctions option
+// Tests for indexed entries in the InvalidationFunctions option
 //
-// Functions in this option invalidate one argument. The index in the option
-// gives the argument (for example, `foo(0)`). This applies to free functions
-// and to member functions. The argument can be at any index.
+// Indexed entries invalidate an explicit argument of a free or member
+// function. The argument can be at any index.
 
 namespace argument_invalidation {
 

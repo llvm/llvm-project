@@ -241,7 +241,12 @@ infrastructure are described first, followed by tool-specific sections.
   {option}`ReportAccessOnlyUseForTypes` option, which restricts diagnostics to
   uses that access the object (a member access, a dereference, or a subscript)
   for the configured pointer-like types, ignoring other references such as
-  passing, comparing, or copying the moved-from variable.
+  passing, comparing, or copying the moved-from variable. The
+  {option}`InvalidationFunctions` option now defaults to
+  `::std::move;::std::forward`; custom values replace this default, so list
+  these functions explicitly to continue checking them. Entries may specify
+  an explicit argument index to model functions that invalidate a specific
+  argument.
 
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing

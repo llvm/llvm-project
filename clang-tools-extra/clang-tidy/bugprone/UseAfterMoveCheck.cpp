@@ -66,7 +66,6 @@ class UseAfterMoveFinder {
 public:
   UseAfterMoveFinder(ASTContext *TheContext,
                      llvm::ArrayRef<StringRef> InvalidationFunctions,
-                     llvm::ArrayRef<StringRef> ArgumentInvalidationFunctions,
                      llvm::ArrayRef<StringRef> ReinitializationFunctions,
                      llvm::ArrayRef<StringRef> ReportAccessOnlyUseForTypes,
                      const CXXRecordDecl *MovedAs);
@@ -93,7 +92,6 @@ private:
 
   ASTContext *Context;
   llvm::ArrayRef<StringRef> InvalidationFunctions;
-  llvm::ArrayRef<StringRef> ArgumentInvalidationFunctions;
   llvm::ArrayRef<StringRef> ReinitializationFunctions;
   llvm::ArrayRef<StringRef> ReportAccessOnlyUseForTypes;
   const CXXRecordDecl *MovedAs;
@@ -104,28 +102,19 @@ private:
 
 } // namespace
 
-static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
-  return matchers::matchesAnyListedRegexName(InvalidationFunctions);
-}
-
-static SmallVector<std::pair<StringRef, unsigned>, 4>
-parseArgumentInvalidationFunctions(llvm::ArrayRef<StringRef> Entries);
+static SmallVector<std::pair<StringRef, std::optional<unsigned>>, 4>
+parseInvalidationFunctions(llvm::ArrayRef<StringRef> Entries);
 
 static StatementMatcher
 makeReinitMatcher(const ValueDecl *MovedVariable,
                   llvm::ArrayRef<StringRef> InvalidationFunctions,
-                  llvm::ArrayRef<StringRef> ArgumentInvalidationFunctions,
                   llvm::ArrayRef<StringRef> ReinitializationFunctions) {
   const auto DeclRefMatcher =
       declRefExpr(hasDeclaration(equalsNode(MovedVariable))).bind("declref");
 
-  // Functions in ArgumentInvalidationFunctions invalidate the variable. They do
-  // not reinitialize it. Thus, the check must not count an argument to these
-  // functions as a reinitialization. Collect their names to exclude them below.
-  SmallVector<StringRef, 4> ArgumentInvalidationNames;
-  for (const std::pair<StringRef, unsigned> &Func :
-       parseArgumentInvalidationFunctions(ArgumentInvalidationFunctions))
-    ArgumentInvalidationNames.push_back(Func.first);
+  SmallVector<StringRef, 4> InvalidationNames;
+  for (const auto &Func : parseInvalidationFunctions(InvalidationFunctions))
+    InvalidationNames.push_back(Func.first);
 
   const auto StandardContainerTypeMatcher = hasType(hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(cxxRecordDecl(hasAnyName(
@@ -198,10 +187,9 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
                               traverse(TK_AsIs, DeclRefMatcher),
                               unless(parmVarDecl(hasType(
                                   references(qualType(isConstQualified())))))),
-                          unless(callee(functionDecl(
-                              anyOf(getNameMatcher(InvalidationFunctions),
-                                    matchers::matchesAnyListedRegexName(
-                                        ArgumentInvalidationNames))))))))
+                          unless(callee(
+                              functionDecl(matchers::matchesAnyListedRegexName(
+                                  InvalidationNames)))))))
       .bind("reinit");
 }
 
@@ -221,12 +209,10 @@ static StatementMatcher inDecltypeOrTemplateArg() {
 
 UseAfterMoveFinder::UseAfterMoveFinder(
     ASTContext *TheContext, llvm::ArrayRef<StringRef> InvalidationFunctions,
-    llvm::ArrayRef<StringRef> ArgumentInvalidationFunctions,
     llvm::ArrayRef<StringRef> ReinitializationFunctions,
     llvm::ArrayRef<StringRef> ReportAccessOnlyUseForTypes,
     const CXXRecordDecl *MovedAs)
     : Context(TheContext), InvalidationFunctions(InvalidationFunctions),
-      ArgumentInvalidationFunctions(ArgumentInvalidationFunctions),
       ReinitializationFunctions(ReinitializationFunctions),
       ReportAccessOnlyUseForTypes(ReportAccessOnlyUseForTypes),
       MovedAs(MovedAs) {}
@@ -539,8 +525,7 @@ void UseAfterMoveFinder::getReinits(
     llvm::SmallPtrSetImpl<const Stmt *> *Stmts,
     llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs) {
   const auto ReinitMatcher = makeReinitMatcher(
-      MovedVariable, InvalidationFunctions, ArgumentInvalidationFunctions,
-      ReinitializationFunctions);
+      MovedVariable, InvalidationFunctions, ReinitializationFunctions);
 
   Stmts->clear();
   DeclRefs->clear();
@@ -623,8 +608,6 @@ UseAfterMoveCheck::UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       InvalidationFunctions(utils::options::parseStringList(
           Options.get("InvalidationFunctions", "::std::move;::std::forward"))),
-      ArgumentInvalidationFunctions(utils::options::parseStringList(
-          Options.get("ArgumentInvalidationFunctions", ""))),
       ReinitializationFunctions(utils::options::parseStringList(
           Options.get("ReinitializationFunctions", ""))),
       ReportAccessOnlyUseForTypes(utils::options::parseStringList(
@@ -633,9 +616,6 @@ UseAfterMoveCheck::UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)
 void UseAfterMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "InvalidationFunctions",
                 utils::options::serializeStringList(InvalidationFunctions));
-  Options.store(
-      Opts, "ArgumentInvalidationFunctions",
-      utils::options::serializeStringList(ArgumentInvalidationFunctions));
   Options.store(Opts, "ReinitializationFunctions",
                 utils::options::serializeStringList(ReinitializationFunctions));
   Options.store(
@@ -643,21 +623,18 @@ void UseAfterMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
       utils::options::serializeStringList(ReportAccessOnlyUseForTypes));
 }
 
-// Parses the ArgumentInvalidationFunctions option entries. Each entry has the
-// form `name(index)` (for example, `::mlir::RewriterBase::replaceOp(0)`). The
-// function returns a name (a regular expression) and the index of the argument
-// that the call invalidates. If an entry has no index, the function uses the
-// first argument (index 0).
-static SmallVector<std::pair<StringRef, unsigned>, 4>
-parseArgumentInvalidationFunctions(llvm::ArrayRef<StringRef> Entries) {
-  SmallVector<std::pair<StringRef, unsigned>, 4> Result;
+// An explicit index selects a call argument; without one, a member call
+// invalidates its object and a free function invalidates its first argument.
+static SmallVector<std::pair<StringRef, std::optional<unsigned>>, 4>
+parseInvalidationFunctions(llvm::ArrayRef<StringRef> Entries) {
+  SmallVector<std::pair<StringRef, std::optional<unsigned>>, 4> Result;
   for (StringRef Entry : Entries) {
     Entry = Entry.trim();
     if (Entry.empty())
       continue;
 
     StringRef Name = Entry;
-    unsigned ArgIndex = 0;
+    std::optional<unsigned> ArgIndex;
     if (Entry.ends_with(")")) {
       const size_t Open = Entry.rfind('(');
       if (Open != StringRef::npos) {
@@ -733,25 +710,20 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
             this);
       };
 
-  // std::move(), std::forward(), and the functions in InvalidationFunctions
-  // invalidate the object of a member call, or the first argument of a free
-  // function call.
-  AddMovingCallMatcher(
-      allOf(callee(functionDecl(getNameMatcher(InvalidationFunctions))
-                       .bind("move-decl")),
-            anyOf(cxxMemberCallExpr(IsMemberCallee, on(Arg)),
-                  callExpr(unless(cxxMemberCallExpr(IsMemberCallee)),
-                           hasArgument(0, Arg)))));
-
-  // Functions in ArgumentInvalidationFunctions invalidate one argument. The
-  // index in the option gives the argument (for example, `foo(0)`). This
-  // applies to free functions and to member functions.
-  for (const std::pair<StringRef, unsigned> &Func :
-       parseArgumentInvalidationFunctions(ArgumentInvalidationFunctions)) {
-    AddMovingCallMatcher(allOf(
-        callee(functionDecl(matchers::matchesAnyListedRegexName(Func.first))
-                   .bind("move-decl")),
-        hasArgument(Func.second, ignoringParenImpCasts(Arg))));
+  for (const auto &[Name, ArgIndex] :
+       parseInvalidationFunctions(InvalidationFunctions)) {
+    const auto Callee =
+        callee(functionDecl(matchers::matchesAnyListedRegexName(Name))
+                   .bind("move-decl"));
+    if (ArgIndex) {
+      AddMovingCallMatcher(
+          allOf(Callee, hasArgument(*ArgIndex, ignoringParenImpCasts(Arg))));
+    } else {
+      AddMovingCallMatcher(allOf(
+          Callee, anyOf(cxxMemberCallExpr(IsMemberCallee, on(Arg)),
+                        callExpr(unless(cxxMemberCallExpr(IsMemberCallee)),
+                                 hasArgument(0, ignoringParenImpCasts(Arg))))));
+    }
   }
 }
 
@@ -804,9 +776,9 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
       ParentCast ? ParentCast->getType()->getAsCXXRecordDecl() : nullptr;
 
   for (Stmt *CodeBlock : CodeBlocks) {
-    UseAfterMoveFinder Finder(
-        Result.Context, InvalidationFunctions, ArgumentInvalidationFunctions,
-        ReinitializationFunctions, ReportAccessOnlyUseForTypes, MovedAs);
+    UseAfterMoveFinder Finder(Result.Context, InvalidationFunctions,
+                              ReinitializationFunctions,
+                              ReportAccessOnlyUseForTypes, MovedAs);
     if (auto Use = Finder.find(CodeBlock, MovingCall, Arg))
       emitDiagnostic(MovingCall, Arg, *Use, this, Result.Context,
                      determineMoveType(MoveDecl), MoveDecl);
