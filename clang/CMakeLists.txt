@@ -642,19 +642,23 @@ if(CLANG_LIBS)
   endforeach()
 endif()
 
-# ClangIR's MLIR dependency is excluded from the aggregate build and install.
-# Promote and install only the MLIR targets reachable from Clang's SDK, along
-# with the headers needed to consume those targets. If Clang itself is an
-# implicit Flang dependency, Flang packages the required targets instead.
-if(CLANG_ENABLE_CIR AND "mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS AND
-   NOT "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+# ClangIR's MLIR dependency is packaged as part of Clang's own SDK. The MLIR
+# targets reachable from Clang's exports are promoted into ClangTargets.cmake,
+# so find_package(Clang) does not need to locate MLIR itself. This applies
+# whether MLIR is only an implicit dependency or an enabled project. The MLIR
+# headers are installed here only when MLIR does not install them itself. If
+# Clang is an implicit Flang dependency, Flang packages the required targets
+# instead.
+if(CLANG_ENABLE_CIR AND NOT "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
   get_property(clang_exports GLOBAL PROPERTY CLANG_EXPORTS)
   llvm_install_dependency_target_closure(
     PROJECT Clang
     COMPONENT clang-dependencies
-    ROOT_TARGETS ${clang_exports})
+    ROOT_TARGETS ${clang_exports}
+    DEPENDENCY_PROJECTS mlir)
 
-  if(NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  if(NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND
+     "mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
     get_target_property(mlir_source_dir mlir-headers SOURCE_DIR)
     get_target_property(mlir_binary_dir mlir-headers BINARY_DIR)
     install(DIRECTORY

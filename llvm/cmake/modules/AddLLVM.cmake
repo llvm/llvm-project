@@ -1787,9 +1787,15 @@ endfunction()
 function(llvm_install_dependency_target_closure)
   cmake_parse_arguments(ARG ""
     "PROJECT;COMPONENT"
-    "ROOT_TARGETS;EXTRA_BUILD_TARGETS" ${ARGN})
+    "ROOT_TARGETS;EXTRA_BUILD_TARGETS;DEPENDENCY_PROJECTS" ${ARGN})
 
-  if(NOT LLVM_DEPENDENCY_ONLY_PROJECTS OR NOT ARG_ROOT_TARGETS)
+  # DEPENDENCY_PROJECTS names the projects whose targets are packaged by the
+  # consumer. It defaults to the implicitly enabled dependency-only projects,
+  # but the consumer may also package a project enabled in its own right.
+  if(NOT ARG_DEPENDENCY_PROJECTS)
+    set(ARG_DEPENDENCY_PROJECTS ${LLVM_DEPENDENCY_ONLY_PROJECTS})
+  endif()
+  if(NOT ARG_DEPENDENCY_PROJECTS OR NOT ARG_ROOT_TARGETS)
     return()
   endif()
 
@@ -1798,7 +1804,7 @@ function(llvm_install_dependency_target_closure)
   set(dependency_targets)
   string(TOUPPER "${ARG_PROJECT}" project_upper)
   set(dependency_source_dirs)
-  foreach(project ${LLVM_DEPENDENCY_ONLY_PROJECTS})
+  foreach(project ${ARG_DEPENDENCY_PROJECTS})
     canonicalize_tool_name("${project}" dependency_upper)
     get_property(source_dir GLOBAL PROPERTY
       LLVM_PROJECT_${dependency_upper}_SOURCE_DIR)
