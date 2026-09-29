@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-macros/stdint-macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/macros/config.h"
 #include "str_to_fp_test.h"
 
