@@ -1676,6 +1676,15 @@ def TestOpWithVariadicResultsAndFolder: TEST_Op<"op_with_variadic_results_and_fo
   let hasFolder = 1;
 }
 
+// Op for testing the rollback of a fold when constant materialization fails
+// for one result. The folder returns a constant, the operand, and an attribute
+// that the test dialect cannot materialize.
+def TestOpFoldUnmaterializable : TEST_Op<"op_fold_unmaterializable"> {
+  let arguments = (ins I32:$operand);
+  let results = (outs I32, I32, I32);
+  let hasFolder = 1;
+}
+
 def TestAddIOp : TEST_Op<"addi"> {
   let arguments = (ins AnyTypeOf<[I32, TestI32]>:$op1,
                        AnyTypeOf<[I32, TestI32]>:$op2);
