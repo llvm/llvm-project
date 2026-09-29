@@ -53,9 +53,9 @@ def TestRC32 : RegisterClass<"Test", [i32], 32, (add R0, R1, R2, R3)>;
 def TestRC64 : RegisterClass<"Test", [i64], 64, (add R0R1, R2R3)>;
 
 // CHECK: extern const LaneBitmask TestTargetLaneMaskLists[] = {
-// CHECK-NEXT: /* 0 */ LaneBitmask(0x0000000000000002), LaneBitmask(0x0000000000000001),
-// CHECK-NEXT: /* 2 */ LaneBitmask(0x0000000000000002),
-// CHECK-NEXT: /* 3 */ LaneBitmask(0x0000000000000002), LaneBitmask(0x0000000000000001), LaneBitmask(0x0000000000000004), LaneBitmask(0x0000000000000008),
+// CHECK-NEXT: /* 0 */ LaneBitmask(0x0000000000000001),
+// CHECK-NEXT: /* 1 */ LaneBitmask(0x0000000000000001), LaneBitmask(0x0000000000000002),
+// CHECK-NEXT: /* 3 */ LaneBitmask(0x0000000000000001), LaneBitmask(0x0000000000000002), LaneBitmask(0x0000000000000004), LaneBitmask(0x0000000000000008),
 // CHECK-NEXT: /* 7 */ LaneBitmask(0x0000000000000003), LaneBitmask(0x000000000000000C),
 // CHECK-NEXT: /* 9 */ LaneBitmask(0xFFFFFFFFFFFFFFFF),
 // CHECK-NEXT: };
@@ -65,7 +65,7 @@ def TestRC64 : RegisterClass<"Test", [i64], 64, (add R0R1, R2R3)>;
 
 // CHECK: static const LaneBitmask TestTargetSubRegIndexLaneMaskTable[] = {
 // CHECK-NEXT: LaneBitmask::getAll(),
-// CHECK-NEXT: LaneBitmask(0x0000000000000001), // hi16
-// CHECK-NEXT: LaneBitmask(0x0000000000000002), // lo16
+// CHECK-NEXT: LaneBitmask(0x0000000000000001), // lo16
+// CHECK-NEXT: LaneBitmask(0x0000000000000002), // hi16
 // CHECK-NEXT: LaneBitmask(0x0000000000000003), // sub0
 // CHECK-NEXT: LaneBitmask(0x000000000000000C), // sub1
