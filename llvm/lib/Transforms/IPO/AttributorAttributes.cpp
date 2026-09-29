@@ -1603,13 +1603,13 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     assert(!OffsetInfoMap[CurPtr].isUnassigned() &&
            "Current pointer should be assigned");
 
-    // The result of a pointer-to-integer cast cannot be tracked as a pointer.
-    if (isa<PtrToIntOperator, PtrToAddrOperator>(Usr))
-      return false;
+    // Only address space casts are followed; other casts of a pointer (e.g.,
+    // ptrtoint, ptrtoaddr, or a bitcast to a byte type) do not produce a
+    // pointer that can be tracked.
+    if (isa<AddrSpaceCastOperator>(Usr))
+      return HandlePassthroughUser(Usr, CurPtr, Follow);
 
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
-      if (CE->isCast())
-        return HandlePassthroughUser(Usr, CurPtr, Follow);
       if (!isa<GEPOperator>(CE)) {
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled constant user " << *CE
                           << "\n");
@@ -1634,7 +1634,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       Follow = collectConstantsForGEP(A, DL, UsrOI, PtrOI, GEP);
       return true;
     }
-    if (isa<CastInst>(Usr) || isa<SelectInst>(Usr))
+    if (isa<SelectInst>(Usr))
       return HandlePassthroughUser(Usr, CurPtr, Follow);
     // Returns are allowed if they are in the associated functions. Users can
     // then check the call site return. Returns from other functions can't be

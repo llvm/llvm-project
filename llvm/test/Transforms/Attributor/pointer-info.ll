@@ -168,6 +168,39 @@ exit:
   store i32 1, ptr @g.ptrtoaddr
   ret i64 %p
 }
+
+define void @bitcast_to_byte_phi() {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@bitcast_to_byte_phi
+; TUNIT-SAME: () #[[ATTR0]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[A:%.*]] = alloca i64, align 8
+; TUNIT-NEXT:    [[B:%.*]] = bitcast ptr [[A]] to b64
+; TUNIT-NEXT:    br label [[EXIT:%.*]]
+; TUNIT:       exit:
+; TUNIT-NEXT:    [[P:%.*]] = phi b64 [ [[B]], [[ENTRY:%.*]] ]
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@bitcast_to_byte_phi
+; CGSCC-SAME: () #[[ATTR2]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[A:%.*]] = alloca i64, align 8
+; CGSCC-NEXT:    [[B:%.*]] = bitcast ptr [[A]] to b64
+; CGSCC-NEXT:    br label [[EXIT:%.*]]
+; CGSCC:       exit:
+; CGSCC-NEXT:    [[P:%.*]] = phi b64 [ [[B]], [[ENTRY:%.*]] ]
+; CGSCC-NEXT:    ret void
+;
+entry:
+  %a = alloca i64
+  %b = bitcast ptr %a to b64
+  br label %exit
+
+exit:
+  %p = phi b64 [ %b, %entry ]
+  ret void
+}
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
