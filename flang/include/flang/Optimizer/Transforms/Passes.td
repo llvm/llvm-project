@@ -588,13 +588,23 @@ def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
 
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
-  let dependentDialects = ["fir::FIROpsDialect", "mlir::gpu::GPUDialect",
+  let dependentDialects = ["fir::FIROpsDialect", "hlfir::hlfirDialect",
+                           "mlir::arith::ArithDialect", "mlir::gpu::GPUDialect",
                            "mlir::DLTIDialect"];
+  let options = [Option<
+      "deferAccRoutineDataTransfers", "defer-acc-routine-data-transfers",
+      "bool", /*default=*/"false",
+      "Do not convert cuf.data_transfer or cuf.on_device operations in the "
+      "host copy of an OpenACC routine. The routine is later specialized for "
+      "host and device, after which each copy can be handled according to its "
+      "execution context.">];
 }
 
 def CUFOpConversionLate : Pass<"cuf-convert-late", "mlir::ModuleOp"> {
   let summary = "Convert CUF operations to runtime calls late in the pipeline";
-  let dependentDialects = ["fir::FIROpsDialect"];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::arith::ArithDialect", "mlir::gpu::GPUDialect"
+  ];
 }
 
 def CUFDeviceGlobal :
@@ -705,18 +715,6 @@ def CUFDeviceFuncTransform
               "descriptor I/O">];
 }
 
-def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {
-  let summary = "Convert some CUDA Fortran specific call";
-  let dependentDialects = ["fir::FIROpsDialect"];
-  let options = [Option<
-      "deferAccRoutines", "defer-acc-routines", "bool", /*default=*/"false",
-      "Do not fold device-detection intrinsics located in the host copy of an "
-      "OpenACC routine. Such a routine is later cloned to build its device "
-      "counterpart, so folding it to the host value here would bake that value "
-      "into the device clone. Deferred calls are folded by a later run that "
-      "executes after device specialization.">];
-}
-
 def CUFLaunchAttachAttr : Pass<"cuf-launch-attach-attr", ""> {
   let summary = "Attach CUDA attribute to CUF kernel generated launch";
   let description = [{
@@ -824,6 +822,11 @@ def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
     fir.declare) and interfaces such as FortranObjectViewOpInterface.
     The pass only moves existing operations, so there are no dependent
     dialects.
+
+    With only-inside set, a loop must have an ancestor with the given operation
+    name, within the current function (including the function itself). A loop
+    matching the name does not qualify on that basis alone. No matching ancestor
+    means no hoisting. The pass and its analyses remain rooted at the function.
   }];
   let options = [Option<"hoistFromNestedRegions", "hoist-from-nested-regions",
                         "::fir::LICMNestedHoistingMode",
@@ -839,7 +842,12 @@ def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
                                 "loads"),
             clEnumValN(::fir::LICMNestedHoistingMode::Aggressive,
                        "aggressive", "Hoist all safe invariant ops")
-           )}]>];
+           )}]>,
+    Option<"onlyInside", "only-inside", "std::string",
+           /*default=*/"std::string{}",
+           "Only hoist from loops nested in an operation with this name "
+           "(empty means all loops)">
+  ];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

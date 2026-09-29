@@ -49,6 +49,7 @@ struct PtrView {
   bool isMutable() const {
     return !isRoot() && getInlineDesc()->IsFieldMutable;
   }
+  bool isExtern() const { return Pointee && Pointee->isExtern(); }
   bool isVolatile() const {
     return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
   }
@@ -302,6 +303,10 @@ struct PtrView {
   }
 
   bool isInitialized() const {
+
+    if (!Pointee->isInitialized())
+      return false;
+
     if (isRoot() && Base == sizeof(GlobalInlineDescriptor) && Offset == Base) {
       const auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
       return GD.InitState == GlobalInitState::Initialized;
@@ -444,8 +449,10 @@ struct OpaquePointer {
 
   ArrayRef<PointerPathEntry> path() const { return ArrayRef(Path, PathLength); }
   bool hasDeclBase() const { return Base.isDecl(); }
-  const VarDecl *getBaseDecl() const { return Base.asVarDecl(); }
+  const ValueDecl *getBaseDecl() const { return Base.asValueDecl(); }
+  const VarDecl *getBaseVarDecl() const { return Base.asVarDecl(); }
   const Expr *getBaseExpr() const { return Base.asExpr(); }
+  bool hasValidBase() const;
 
   OpaquePointer
   withFieldType(const Type *FieldTy,
@@ -740,6 +747,7 @@ public:
   }
 
   const VarDecl *getRootVarDecl() const;
+  const ValueDecl *getRootValueDecl() const;
   const Expr *getRootExpr() const;
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
@@ -874,7 +882,7 @@ public:
   /// Checks if the storage is extern.
   bool isExtern() const {
     if (isBlockPointer())
-      return BS.Pointee && BS.Pointee->isExtern();
+      return view().isExtern();
     return false;
   }
   /// Checks if the storage is static.
@@ -919,7 +927,7 @@ public:
     }
 
     if (isOpaquePointer()) {
-      if (const VarDecl *BaseDecl = Opaque.getBaseDecl())
+      if (const VarDecl *BaseDecl = Opaque.getBaseVarDecl())
         return BaseDecl->isWeak();
       return false;
     }
@@ -996,7 +1004,10 @@ public:
     return view().getNumElems();
   }
 
-  const Block *block() const { return BS.Pointee; }
+  const Block *block() const {
+    assert(isBlockPointer());
+    return BS.Pointee;
+  }
 
   /// If backed by actual data (i.e. a block or string pointer), return
   /// an address to that data.
@@ -1207,7 +1218,13 @@ public:
   /// of a primtive array.
   void initializeAllElements() const;
   /// Checks if an object was initialized.
-  bool isInitialized() const;
+  bool isInitialized() const {
+    if (!isBlockPointer())
+      return true;
+
+    return view().isInitialized();
+  }
+
   /// Like isInitialized(), but for primitive arrays.
   bool isElementInitialized(unsigned Index) const {
     if (!isBlockPointer())

@@ -725,11 +725,6 @@ mlir::Value CIRGenFunction::emitFromMemory(mlir::Value value, QualType ty) {
 
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
                                        bool isInit) {
-  if (lvalue.getType()->isConstantMatrixType()) {
-    assert(0 && "NYI: emitStoreOfScalar constant matrix type");
-    return;
-  }
-
   emitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
                     lvalue.getType(), lvalue.getBaseInfo(), isInit,
                     lvalue.isNontemporal());
@@ -779,18 +774,33 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
                           lvalue.isNontemporal());
 }
 
+static RValue emitLoadOfMatrixLValue(LValue lv, SourceLocation loc,
+                                     CIRGenFunction &cgf) {
+  if (cgf.getLangOpts().HLSL &&
+      lv.getType().getAddressSpace() == LangAS::hlsl_constant) {
+    cgf.cgm.errorNYI(
+        loc, "emitLoadOfMatrixLValue: HLSL & hlsl_constant address space");
+    return {};
+  }
+
+  return RValue::get(cgf.emitLoadOfScalar(lv, loc));
+}
+
 /// Given an expression that represents a value lvalue, this
 /// method emits the address of the lvalue, then loads the result as an rvalue,
 /// returning the rvalue.
 RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
   assert(!lv.getType()->isFunctionType());
-  assert(!(lv.getType()->isConstantMatrixType()) && "not implemented");
 
   if (lv.isBitField())
     return emitLoadOfBitfieldLValue(lv, loc);
 
-  if (lv.isSimple())
+  if (lv.isSimple()) {
+    if (lv.getType()->isConstantMatrixType())
+      return emitLoadOfMatrixLValue(lv, loc, *this);
+
     return RValue::get(emitLoadOfScalar(lv, loc));
+  }
 
   if (lv.isVectorElt()) {
     const mlir::Value load =
@@ -2623,6 +2633,14 @@ cir::IfOp CIRGenFunction::emitIfOnBoolExpr(
 
   // Emit the code with the fully general case.
   mlir::Value condV = emitOpOnBoolExpr(loc, cond);
+  return emitIfOnBoolValue(condV, loc, thenBuilder, thenLoc, elseBuilder,
+                           elseLoc);
+}
+
+cir::IfOp CIRGenFunction::emitIfOnBoolValue(
+    mlir::Value condV, mlir::Location loc, BuilderCallbackRef thenBuilder,
+    mlir::Location thenLoc, BuilderCallbackRef elseBuilder,
+    std::optional<mlir::Location> elseLoc) {
   cir::IfOp ifOp = cir::IfOp::create(builder, loc, condV, elseLoc.has_value(),
                                      /*thenBuilder=*/thenBuilder,
                                      /*elseBuilder=*/elseBuilder);
@@ -2842,8 +2860,10 @@ Address CIRGenFunction::createMemTemp(QualType ty, CharUnits align,
                        name, /*arraySize=*/nullptr, alloca, ip);
   if (ty->isConstantMatrixType()) {
     assert(!cir::MissingFeatures::matrixType());
-    cgm.errorNYI(loc, "temporary matrix value");
+    cgm.errorNYI(loc, "createMemTemp constant matrix type");
+    return Address::invalid();
   }
+
   return result;
 }
 
@@ -3092,7 +3112,7 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
 
   mlir::Value condV = emitOpOnBoolExpr(loc, e->getCond());
 
-  ConditionalEvaluation eval(*this);
+  ConditionalEvaluation eval(*this, loc);
 
   auto emitBranch = [&](mlir::OpBuilder &b, mlir::Location loc,
                         const Expr *expr, std::optional<LValue> &resultLV) {
