@@ -52,12 +52,14 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   # Python is dlopen'd at runtime by ScriptInterpreterRuntimeLoader, so the
   # plugin is built with allow-undefined-symbol semantics on POSIX.
   lldb_add_scriptinterpreter_dynamic_library(
-    lldbPluginScriptInterpreterPython add_python_wrapper
+    lldbPluginScriptInterpreterPython
     ${python_plugin_sources}
     LINK_LIBS
       liblldb
       ${LLDB_LIBEDIT_LIBS}
   )
+  add_python_wrapper(lldbPluginScriptInterpreterPython)
+
   if (APPLE)
     target_link_options(lldbPluginScriptInterpreterPython PRIVATE
       "LINKER:-undefined,dynamic_lookup")

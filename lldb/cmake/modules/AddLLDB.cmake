@@ -553,8 +553,6 @@ function(lldb_add_scriptinterpreter_plugin_to_buildtree_framework name)
     )
   endif()
 
-  set_property(TARGET ${name} APPEND PROPERTY
-    INSTALL_RPATH "@loader_path/../../..")
   # Copy under the unversioned name: PluginManager derives a plugin's
   # initializer symbol from it. A versioned copy would load but never
   # initialize.
@@ -569,9 +567,10 @@ function(lldb_add_scriptinterpreter_plugin_to_buildtree_framework name)
   add_dependencies(lldb-framework-cleanup ${name}-framework-cleanup)
 endfunction()
 
-function(lldb_add_scriptinterpreter_dynamic_library name wrapper_fn)
+function(lldb_add_scriptinterpreter_dynamic_library name)
   if (LLDB_BUILD_FRAMEWORK)
-    set(framework_arg INSTALL_PREFIX "${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/")
+    set(framework_install_prefix "${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/")
+    set(framework_arg INSTALL_PREFIX "${framework_install_prefix}")
   endif()
 
 
@@ -586,12 +585,16 @@ function(lldb_add_scriptinterpreter_dynamic_library name wrapper_fn)
     ${ARGN}
   )
 
-  cmake_language(CALL ${wrapper_fn} ${name})
+  if (LLDB_BUILD_FRAMEWORK)
+    lldb_add_post_install_steps_darwin(${name} ${framework_install_prefix})
+  endif()
 
   if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
     lldb_record_dynamic_script_interpreter_exports(${name})
   endif()
 
+  set_property(TARGET ${name} APPEND PROPERTY
+    INSTALL_RPATH "@loader_path/../../..")
   lldb_add_scriptinterpreter_plugin_to_buildtree_framework(${name})
 endfunction(lldb_add_scriptinterpreter_dynamic_library)
 
