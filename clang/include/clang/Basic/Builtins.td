@@ -1583,6 +1583,60 @@ def ElementwiseBitreverse : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseConvertFromF8E5M2F16 : Builtin {
+  let Spellings = ["__builtin_elementwise_convert_from_f8e5m2_f16"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseConvertFromF8E5M2BF16 : Builtin {
+  let Spellings = ["__builtin_elementwise_convert_from_f8e5m2_bf16"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseConvertFromF8E5M2F32 : Builtin {
+  let Spellings = ["__builtin_elementwise_convert_from_f8e5m2_f32"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseConvertFromF8E4M3FNF16 : Builtin {
+  let Spellings = ["__builtin_elementwise_convert_from_f8e4m3fn_f16"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseConvertFromF8E4M3FNBF16 : Builtin {
+  let Spellings = ["__builtin_elementwise_convert_from_f8e4m3fn_bf16"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseConvertFromF8E4M3FNF32 : Builtin {
+  let Spellings = ["__builtin_elementwise_convert_from_f8e4m3fn_f32"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseConvertFromF8E5M3FNUF16 : Builtin {
+  let Spellings = ["__builtin_elementwise_convert_from_f8e5m3fnu_f16"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseConvertFromF8E5M3FNUBF16 : Builtin {
+  let Spellings = ["__builtin_elementwise_convert_from_f8e5m3fnu_bf16"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseConvertFromF8E5M3FNUF32 : Builtin {
+  let Spellings = ["__builtin_elementwise_convert_from_f8e5m3fnu_f32"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseMax : Builtin {
   let Spellings = ["__builtin_elementwise_max"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];

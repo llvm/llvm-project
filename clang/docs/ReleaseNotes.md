@@ -247,6 +247,13 @@ features cannot lower the translation-unit ABI level;
 
 - Added support for the `__builtin_strlcat` and `__builtin_strlcpy` builtins.
 
+- Added the
+  [`__builtin_elementwise_convert_from_<source_format>_<destination_type>`](langext-elementwise-encoded-fp-conversions)
+  builtins to convert 8-bit integer encodings of `Float8E5M2`, `Float8E4M3FN`, and
+  `Float8E5M3FNU` values to `_Float16`, `__bf16`, or `float`. They support scalar
+  and fixed-length GNU and Clang/OpenCL vector arguments in C, C++, OpenCL, CUDA,
+  and HIP.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics

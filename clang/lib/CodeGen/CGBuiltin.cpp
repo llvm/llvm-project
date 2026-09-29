@@ -615,6 +615,24 @@ static Value *EmitISOVolatileStore(CodeGenFunction &CGF, const CallExpr *E) {
   return Store;
 }
 
+static Value *emitConvertFromArbitraryFPBuiltin(CodeGenFunction &CGF,
+                                                const CallExpr *E,
+                                                StringRef Format) {
+  Value *Bits = CGF.EmitScalarExpr(E->getArg(0));
+  // The opaque scalar __mfp8 container is represented as <1 x i8> in IR.
+  if (E->getArg(0)->getType()->isMFloat8Type())
+    Bits = CGF.Builder.CreateBitCast(Bits, CGF.Builder.getInt8Ty());
+
+  Function *F =
+      CGF.CGM.getIntrinsic(Intrinsic::convert_from_arbitrary_fp,
+                           {CGF.ConvertType(E->getType()), Bits->getType()});
+  Value *Interpretation = MetadataAsValue::get(
+      CGF.getLLVMContext(), MDString::get(CGF.getLLVMContext(), Format));
+  // These conversions have no floating-point environment side effects, even
+  // when the enclosing function uses strict floating-point semantics.
+  return CGF.Builder.CreateCall(F, {Bits, Interpretation});
+}
+
 // Emit a simple mangled intrinsic that has 1 argument and a return type
 // matching the argument type. Depending on mode, this may be a constrained
 // floating-point intrinsic.
@@ -4364,6 +4382,21 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_bitreverse:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, Intrinsic::bitreverse, "elt.bitreverse"));
+  case Builtin::BI__builtin_elementwise_convert_from_f8e5m2_f16:
+  case Builtin::BI__builtin_elementwise_convert_from_f8e5m2_bf16:
+  case Builtin::BI__builtin_elementwise_convert_from_f8e5m2_f32:
+    return RValue::get(
+        emitConvertFromArbitraryFPBuiltin(*this, E, "Float8E5M2"));
+  case Builtin::BI__builtin_elementwise_convert_from_f8e4m3fn_f16:
+  case Builtin::BI__builtin_elementwise_convert_from_f8e4m3fn_bf16:
+  case Builtin::BI__builtin_elementwise_convert_from_f8e4m3fn_f32:
+    return RValue::get(
+        emitConvertFromArbitraryFPBuiltin(*this, E, "Float8E4M3FN"));
+  case Builtin::BI__builtin_elementwise_convert_from_f8e5m3fnu_f16:
+  case Builtin::BI__builtin_elementwise_convert_from_f8e5m3fnu_bf16:
+  case Builtin::BI__builtin_elementwise_convert_from_f8e5m3fnu_f32:
+    return RValue::get(
+        emitConvertFromArbitraryFPBuiltin(*this, E, "Float8E5M3FNU"));
   case Builtin::BI__builtin_elementwise_popcount:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, Intrinsic::ctpop, "elt.ctpop"));
