@@ -4892,8 +4892,9 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
 
-  // Scalarizing fixed-length SVE vectors is expensive. Add an extra cost to
-  // prevent the SLP vectorizer from selecting unprofitable trees.
+  // Fixed-length SVE vectors assembled from constants and scalars may be
+  // materialized through the constant pool or stack. Per-lane insertion costs
+  // do not account for the shared setup cost, so add a conservative overhead.
   // TODO: Model the scalarization overhead of wide fixed-length SVE vectors
   // accurately.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
