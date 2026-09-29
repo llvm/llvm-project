@@ -216,6 +216,20 @@ TEST_F(QualTypeMapperSVETest, RepresentativeTypes) {
   EXPECT_EQ(SVBool->getSizeInBits(), llvm::TypeSize::getScalable(16));
 }
 
+// The __mfp8 scalar is an opaque 8-bit float, distinct from both an
+// integer and a one-element vector.
+TEST_F(QualTypeMapperSVETest, MFloat8ScalarIsOpaqueFloat8) {
+  const auto *MFP8 = dyn_cast<llvm::abi::OpaqueFloat8Type>(
+      Mapper.convertType(context().MFloat8Ty));
+  ASSERT_NE(MFP8, nullptr);
+  EXPECT_TRUE(MFP8->isOpaqueFloat8());
+  EXPECT_FALSE(MFP8->isFloat());
+  EXPECT_FALSE(MFP8->isInteger());
+  EXPECT_FALSE(MFP8->isVector());
+  EXPECT_EQ(MFP8->getSizeInBits(), llvm::TypeSize::getFixed(8));
+  EXPECT_EQ(MFP8->getAlignment(), llvm::Align(1));
+}
+
 // __mfp8 has no floating-point semantics, so mfloat8 vectors use an 8-bit
 // integer element. That makes svmfloat8_t share a representation with
 // svuint8_t, which is also how the two are represented in LLVM IR.
