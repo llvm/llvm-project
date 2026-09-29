@@ -61,14 +61,15 @@ LLVM_ABI StringRef getAllocTokenModeAsString(AllocTokenMode Mode);
 struct AllocTokenMetadata {
   SmallString<64> TypeName;
   bool ContainsPointer;
-  /// Name of the function containing the allocation. Only provided for modes
+  /// Name of the function containing the allocation. Required by the modes
   /// that use it (TypeFuncHash and TypeFuncHashPointerSplit).
   std::optional<SmallString<64>> FunctionName = std::nullopt;
 };
 
-/// Calculates stable allocation token ID. Returns std::nullopt for modes that
-/// are only available in the AllocToken pass: stateful modes, and modes that
-/// depend on the function containing the allocation.
+/// Calculates stable allocation token ID. Returns std::nullopt for stateful
+/// modes that are only available in the AllocToken pass, and for modes that
+/// depend on the function containing the allocation if no function name is
+/// provided.
 ///
 /// \param Mode The token generation mode.
 /// \param Metadata The metadata about the allocation.
