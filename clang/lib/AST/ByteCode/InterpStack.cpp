@@ -26,7 +26,6 @@ InterpStack::~InterpStack() {
   if (Chunk)
     std::free(Chunk);
 
-#if __has_cpp_attribute(no_unique_address)
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 // Clang and GCC complain that `offsetof` isn't allowed on non-standard-layout
@@ -36,15 +35,20 @@ InterpStack::~InterpStack() {
   TYPE_SWITCH(PrimType(), {
     using Frame = StackFrame<T>;
     static_assert(offsetof(Frame, PT) == sizeof(Frame) - 1);
+  });
+
+#if __has_cpp_attribute(no_unique_address)
+  TYPE_SWITCH(PrimType(), {
+    using Frame = StackFrame<T>;
     // Currently we don't need to use extra memory to store the type information
     // for any PrimType on 64 bit platforms. Nothing breaks if this changes, but
     // it would result in 8 extra bytes used just for the type information.
     static_assert(sizeof(void *) != 8 || sizeof(Frame) == sizeof(T) ||
                   sizeof(T) < sizeof(void *));
   });
+#endif
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
-#endif
 #endif
 }
 
