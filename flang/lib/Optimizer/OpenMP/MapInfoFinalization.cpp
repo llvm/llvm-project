@@ -400,6 +400,64 @@ class MapInfoFinalizationPass
                     });
   }
 
+  /// An absent optional passed by reference must retain its null address and
+  /// must not cause an allocation or transfer. Descriptor maps handle this when
+  /// expanding the descriptor. For non-descriptor arguments, express absence
+  /// as empty bounds, including a single-element bound for scalar arguments.
+  void genOptionalBounds(mlir::omp::MapInfoOp map, fir::FirOpBuilder &builder) {
+    if (map.getVarPtrPtr() || !map.getMembers().empty() ||
+        map.getMapCaptureType() != mlir::omp::VariableCaptureKind::ByRef ||
+        !fir::factory::isOptionalArgument(map.getVarPtr().getDefiningOp()))
+      return;
+
+    // Array bounds are supplied by lowering. A synthetic scalar bound would
+    // otherwise map only one element of a bounds-free array mapping.
+    if (map.getBounds().empty() &&
+        mlir::isa<fir::SequenceType>(
+            fir::unwrapRefType(map.getVarPtr().getType())))
+      return;
+
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPoint(map);
+    mlir::Location loc = map.getLoc();
+    mlir::Value present = fir::IsPresentOp::create(
+        builder, loc, builder.getI1Type(), map.getVarPtr());
+    auto selectIfPresent = [&](mlir::Value value,
+                               int64_t absent) -> mlir::Value {
+      if (!value)
+        return {};
+      mlir::Value absentValue =
+          builder.createIntegerConstant(loc, value.getType(), absent);
+      return builder.createOrFold<mlir::arith::SelectOp>(loc, present, value,
+                                                         absentValue);
+    };
+
+    llvm::SmallVector<mlir::Value> bounds;
+    if (map.getBounds().empty()) {
+      mlir::Value zero =
+          builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+      mlir::Value one =
+          builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+      bounds.push_back(mlir::omp::MapBoundsOp::create(
+          builder, loc, builder.getType<mlir::omp::MapBoundsType>(), zero,
+          selectIfPresent(zero, -1), selectIfPresent(one, 0), one,
+          /*stride_in_bytes=*/false, one));
+    } else {
+      for (mlir::Value value : map.getBounds()) {
+        auto bound = value.getDefiningOp<mlir::omp::MapBoundsOp>();
+        // Also clear section offsets so that an absent argument's null base
+        // address is not adjusted when computing the mapped address.
+        bounds.push_back(mlir::omp::MapBoundsOp::create(
+            builder, loc, bound.getType(),
+            selectIfPresent(bound.getLowerBound(), 0),
+            selectIfPresent(bound.getUpperBound(), -1),
+            selectIfPresent(bound.getExtent(), 0), bound.getStride(),
+            bound.getStrideInBytes(), bound.getStartIdx()));
+      }
+    }
+    map.getBoundsMutable().assign(bounds);
+  }
+
   /// When provided a MapInfoOp containing a descriptor type that
   /// we must expand into multiple maps this function will extract
   /// the value from it and return it, in certain cases we must
@@ -1728,6 +1786,8 @@ class MapInfoFinalizationPass
             genOptimizedUseDeviceAddr(builder, targetDataOp, newMapInfo,
                                       module);
           }
+        } else {
+          genOptionalBounds(op, builder);
         }
       });
 
