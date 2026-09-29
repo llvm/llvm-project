@@ -123,3 +123,15 @@ v_pk_mov_b32 v[0:1], v[3:4], v[4:5]
 
 v_pk_mov_b32 v[0:1], v[2:3], v[5:6]
 // GFX90A: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+ds_add_rtn_f64 a[0:1], v2, a[1:2]
+// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+
+ds_add_rtn_f64 a[1:2], v2, a[2:3]
+// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+
+flat_atomic_add_f64 a[1:2], v[0:1], a[2:3] glc
+// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+
+global_atomic_add_f64 a[1:2], v[0:1], a[2:3], off glc
+// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
