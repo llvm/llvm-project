@@ -747,8 +747,6 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   return nullptr;
 }
 
-using IndexPool = DenseMap<int64_t, Value>;
-
 // Emit an 'arith.constant' op for the given index if it has not been created
 // yet, or return an existing constant. This will prevent an excessive creation
 // of redundant constants, easing readability of emitted code for unit tests.
@@ -796,9 +794,10 @@ static bool operandsAndResultsRanked(Operation *operation) {
 // If the target size was inferred directly from one dominating operand, that
 // operand is returned in 'masterOperand'. If the target size is inferred from
 // multiple operands, 'masterOperand' is set to nullptr.
-static std::pair<OpFoldResult, Value>
-computeTargetSize(PatternRewriter &rewriter, Location loc, IndexPool &indexPool,
-                  ValueRange operands, int64_t dim) {
+std::pair<OpFoldResult, Value>
+mlir::tosa::computeTargetSize(PatternRewriter &rewriter, Location loc,
+                              IndexPool &indexPool, ValueRange operands,
+                              int64_t dim) {
   // If any input operand contains a static size greater than 1 for this
   // dimension, that is the target size. An occurrence of an additional static
   // dimension greater than 1 with a different value is undefined behavior.
