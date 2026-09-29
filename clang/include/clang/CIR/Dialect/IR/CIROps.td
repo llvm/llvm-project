@@ -6296,7 +6296,12 @@ def CIR_MatrixTransposeOp : CIR_Op<"matrix.transpose", [
 ]> {
   let summary = "Matrix transpose";
   let description = [{
-    The `cir.matrix.transpose` operation transposing a 2-D matrix.
+    The `cir.matrix.transpose` operation provides a representation for the
+    `__builtin_matrix_transpose` builtin and corresponds to the
+    `llvm.matrix.transpose` intrinsic in LLVM IR.
+
+    This operation performs transposition to switch the row and column
+    indices of the matrix and returns the transposed matrix,
 
     ```
     %result = cir.matrix.transpose %value : <3 x 2 x !cir.float>, 
