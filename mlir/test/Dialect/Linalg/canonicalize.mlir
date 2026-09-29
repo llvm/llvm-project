@@ -176,6 +176,29 @@ func.func @negative_reduce_broadcast_ori_non_identity_init(
 
 // -----
 
+// Init 1 is not the andi identity, so no fold.
+// CHECK-LABEL: func.func @negative_reduce_broadcast_andi_non_identity_init
+// CHECK: linalg.broadcast
+// CHECK: linalg.reduce
+func.func @negative_reduce_broadcast_andi_non_identity_init(
+    %input: tensor<3xi32>, %broadcast_init: tensor<3x4xi32>)
+    -> tensor<3xi32> {
+  %reduce_init = arith.constant dense<1> : tensor<3xi32>
+  %broadcasted = linalg.broadcast
+      ins(%input : tensor<3xi32>)
+      outs(%broadcast_init : tensor<3x4xi32>) dimensions = [1]
+  %result = linalg.reduce
+      ins(%broadcasted : tensor<3x4xi32>)
+      outs(%reduce_init : tensor<3xi32>) dimensions = [1]
+      (%in: i32, %out: i32) {
+      %and = arith.andi %in, %out : i32
+      linalg.yield %and : i32
+  }
+  return %result : tensor<3xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @memref_cast(
 func.func @memref_cast(%a: index, %b: index) -> memref<?x?xf32> {
   %c0 = arith.constant 0 : index
