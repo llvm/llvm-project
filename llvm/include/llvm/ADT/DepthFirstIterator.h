@@ -36,6 +36,7 @@
 
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include <iterator>
 #include <optional>
@@ -104,7 +105,7 @@ private:
   using StackElement = std::pair<NodeRef, std::optional<ChildItTy>>;
 
   // VisitStack - Used to maintain the ordering.  Top = current block
-  std::vector<StackElement> VisitStack;
+  SmallVector<StackElement, 8> VisitStack;
 
   inline df_iterator(NodeRef Node) {
     this->Visited.insert(Node);

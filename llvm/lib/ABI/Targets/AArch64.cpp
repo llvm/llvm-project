@@ -24,6 +24,10 @@ public:
   AArch64TargetInfo(TypeBuilder &TB, const AArch64ABIOptions &Opts)
       : TargetInfo(TB), Opts(Opts) {}
 
+  const ABICompatInfo &getABICompatInfo() const override {
+    return Opts.CompatInfo;
+  }
+
   void computeInfo(FunctionInfo &FI) const override {
     if (!maybeCommonClassifyReturnType(FI))
       FI.getReturnInfo() =
@@ -84,7 +88,7 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
     if (const auto *IntTy = dyn_cast<IntegerType>(RetTy)) {
       if (IntTy->isBitInt())
         if (RetTy->getSizeInBits().getFixedValue() > 128)
-          return getNaturalAlignIndirect(RetTy);
+          return getNaturalAlignIndirect(RetTy, getAllocaAddrSpace());
 
       if (isPromotableInteger(IntTy) && isDarwinPCS())
         return ArgInfo::getExtend(IntTy);
@@ -94,7 +98,9 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
     return ArgInfo::getDirect();
   }
 
-  // TODO: Handle empty records and zero-size non-SVE types.
+  uint64_t Size = RetTy->getFixedSizeInBitsOrZero();
+  if (!RetTy->isSVESizelessType() && (RetTy->isEmptyRecord() || Size == 0))
+    return ArgInfo::getIgnore();
 
   const Type *Base = nullptr;
   uint64_t Members = 0;
@@ -122,7 +128,8 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
     if (const auto *IntTy = dyn_cast<IntegerType>(Ty)) {
       if (IntTy->isBitInt())
         if (Ty->getSizeInBits().getFixedValue() > 128)
-          return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+          return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(),
+                                         /*ByVal=*/false);
 
       if (isPromotableInteger(IntTy) && isDarwinPCS())
         return ArgInfo::getExtend(IntTy);
@@ -140,8 +147,49 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
   // Structures with either a non-trivial destructor or a non-trivial
   // copy constructor are always indirect.
   if (auto RecordRAA = getRecordArgABI(Ty)) {
-    return getNaturalAlignIndirect(Ty, RecordRAA ==
-                                           RecordArgABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(),
+                                   /*ByVal=*/RecordRAA ==
+                                       RecordArgABI::RAA_DirectInMemory);
+  }
+
+  // AAPCS64 does not say that empty C records are ignored as arguments,
+  // but other compilers do so in certain situations, and we copy that behavior.
+  uint64_t Size = Ty->getFixedSizeInBitsOrZero();
+  if (!Ty->isSVESizelessType() && (Ty->isEmptyRecord() || Size == 0)) {
+    // Darwin overrides the psABI here to ignore all empty records in all modes.
+    // The ABI explicitly says that an empty class shall be treated as if its
+    // type were an aggregate with a single member of type unsigned byte.
+    if (!Opts.IsCXX || isDarwinPCS())
+      return ArgInfo::getIgnore();
+
+    // In C++ mode, arguments which have sizeof() == 0 (which are non-standard
+    // C++) are ignored. This isn't defined by any standard, so we copy GCC's
+    // behaviour here.
+    if (Size == 0)
+      return ArgInfo::getIgnore();
+  }
+
+  // Homogeneous Floating-point Aggregates (HFAs) need to be expanded.
+  const Type *Base = nullptr;
+  uint64_t Members = 0;
+  bool IsWin64 = Opts.Kind == AArch64ABIKind::Win64 ||
+                 CallingConvention == llvm::CallingConv::Win64;
+  bool IsWinVariadic = IsWin64 && IsVariadicFn;
+  // In variadic functions on Windows, all composite types are treated alike,
+  // no special handling of HFAs/HVAs.
+  if (!IsWinVariadic && isHomogeneousAggregate(Ty, Base, Members)) {
+    NSRN = std::min(NSRN + Members, uint64_t(8));
+    uint64_t BaseAllocSizeInBits = Base->getTypeAllocSize().getFixedValue() * 8;
+    const Type *CoerceTy =
+        TB.getArrayType(Base, Members, Members * BaseAllocSizeInBits);
+    if (Opts.Kind != AArch64ABIKind::AAPCS)
+      return ArgInfo::getDirect(CoerceTy);
+
+    // For HFAs/HVAs, cap the argument alignment to 16, otherwise
+    // set it to 8 according to the AAPCS64 document.
+    unsigned TyAlign = Ty->getUnadjustedAlignment().value();
+    TyAlign = (TyAlign >= 16) ? 16 : 8;
+    return ArgInfo::getDirect(CoerceTy, /*Offset=*/0, llvm::Align(TyAlign));
   }
 
   reportNYI("Aggregate argument type handling");

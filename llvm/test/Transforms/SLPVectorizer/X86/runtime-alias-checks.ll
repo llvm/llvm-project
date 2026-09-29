@@ -1561,6 +1561,304 @@ entry:
   store i32 %d7, ptr %dst7, align 4
   ret void
 }
+
+; The base object of the loads is reached through an addrspacecast from a
+; differently-sized address space, so the block cannot be versioned.
+define void @addrspacecast_base(ptr %p, ptr addrspace(270) %qas) {
+; CHECK-LABEL: define void @addrspacecast_base(
+; CHECK-SAME: ptr [[P:%.*]], ptr addrspace(270) [[QAS:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(270) [[QAS]] to ptr
+; CHECK-NEXT:    [[Q0:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    store i32 [[Q0]], ptr [[P]], align 4
+; CHECK-NEXT:    [[PQ1:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 1
+; CHECK-NEXT:    [[Q1:%.*]] = load i32, ptr [[PQ1]], align 4
+; CHECK-NEXT:    [[PP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
+; CHECK-NEXT:    store i32 [[Q1]], ptr [[PP1]], align 4
+; CHECK-NEXT:    [[PQ2:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 2
+; CHECK-NEXT:    [[Q2:%.*]] = load i32, ptr [[PQ2]], align 4
+; CHECK-NEXT:    [[PP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
+; CHECK-NEXT:    store i32 [[Q2]], ptr [[PP2]], align 4
+; CHECK-NEXT:    [[PQ3:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 3
+; CHECK-NEXT:    [[Q3:%.*]] = load i32, ptr [[PQ3]], align 4
+; CHECK-NEXT:    [[PP3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 3
+; CHECK-NEXT:    store i32 [[Q3]], ptr [[PP3]], align 4
+; CHECK-NEXT:    ret void
+;
+; NOCHK-LABEL: define void @addrspacecast_base(
+; NOCHK-SAME: ptr [[P:%.*]], ptr addrspace(270) [[QAS:%.*]]) #[[ATTR1]] {
+; NOCHK-NEXT:  [[ENTRY:.*:]]
+; NOCHK-NEXT:    [[Q:%.*]] = addrspacecast ptr addrspace(270) [[QAS]] to ptr
+; NOCHK-NEXT:    [[Q0:%.*]] = load i32, ptr [[Q]], align 4
+; NOCHK-NEXT:    store i32 [[Q0]], ptr [[P]], align 4
+; NOCHK-NEXT:    [[PQ1:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 1
+; NOCHK-NEXT:    [[Q1:%.*]] = load i32, ptr [[PQ1]], align 4
+; NOCHK-NEXT:    [[PP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
+; NOCHK-NEXT:    store i32 [[Q1]], ptr [[PP1]], align 4
+; NOCHK-NEXT:    [[PQ2:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 2
+; NOCHK-NEXT:    [[Q2:%.*]] = load i32, ptr [[PQ2]], align 4
+; NOCHK-NEXT:    [[PP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
+; NOCHK-NEXT:    store i32 [[Q2]], ptr [[PP2]], align 4
+; NOCHK-NEXT:    [[PQ3:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 3
+; NOCHK-NEXT:    [[Q3:%.*]] = load i32, ptr [[PQ3]], align 4
+; NOCHK-NEXT:    [[PP3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 3
+; NOCHK-NEXT:    store i32 [[Q3]], ptr [[PP3]], align 4
+; NOCHK-NEXT:    ret void
+;
+entry:
+  %q = addrspacecast ptr addrspace(270) %qas to ptr
+  %q0 = load i32, ptr %q, align 4
+  store i32 %q0, ptr %p, align 4
+  %pq1 = getelementptr inbounds i32, ptr %q, i64 1
+  %q1 = load i32, ptr %pq1, align 4
+  %pp1 = getelementptr inbounds i32, ptr %p, i64 1
+  store i32 %q1, ptr %pp1, align 4
+  %pq2 = getelementptr inbounds i32, ptr %q, i64 2
+  %q2 = load i32, ptr %pq2, align 4
+  %pp2 = getelementptr inbounds i32, ptr %p, i64 2
+  store i32 %q2, ptr %pp2, align 4
+  %pq3 = getelementptr inbounds i32, ptr %q, i64 3
+  %q3 = load i32, ptr %pq3, align 4
+  %pp3 = getelementptr inbounds i32, ptr %p, i64 3
+  store i32 %q3, ptr %pp3, align 4
+  ret void
+}
+
+define void @versioned_loop_block(ptr %dst, i64 %stride, ptr %src, i64 %n) {
+; CHECK-LABEL: define void @versioned_loop_block(
+; CHECK-SAME: ptr [[DST:%.*]], i64 [[STRIDE:%.*]], ptr [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[LOOP_RTVEC:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_RTCONT:.*]]
+; CHECK:       [[LOOP_RTCONT]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP_RTVEC]] ], [ [[IV_NEXT_SCALAR:%.*]], %[[LOOP_RTCONT]] ]
+; CHECK-NEXT:    [[D:%.*]] = phi ptr [ [[DST]], %[[LOOP_RTVEC]] ], [ [[D_NEXT_SCALAR:%.*]], %[[LOOP_RTCONT]] ]
+; CHECK-NEXT:    [[S:%.*]] = phi ptr [ [[SRC]], %[[LOOP_RTVEC]] ], [ [[S_NEXT_SCALAR:%.*]], %[[LOOP_RTCONT]] ]
+; CHECK-NEXT:    [[L0_SCALAR:%.*]] = load i16, ptr [[S]], align 2
+; CHECK-NEXT:    [[A0_SCALAR:%.*]] = ashr i16 [[L0_SCALAR]], 8
+; CHECK-NEXT:    [[B0_SCALAR:%.*]] = sub i16 [[L0_SCALAR]], [[A0_SCALAR]]
+; CHECK-NEXT:    [[C0_SCALAR:%.*]] = lshr i16 [[B0_SCALAR]], 6
+; CHECK-NEXT:    [[T0_SCALAR:%.*]] = trunc i16 [[C0_SCALAR]] to i8
+; CHECK-NEXT:    store i8 [[T0_SCALAR]], ptr [[D]], align 1
+; CHECK-NEXT:    [[S1_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 2
+; CHECK-NEXT:    [[D1_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 1
+; CHECK-NEXT:    [[L1_SCALAR:%.*]] = load i16, ptr [[S1_SCALAR]], align 2
+; CHECK-NEXT:    [[A1_SCALAR:%.*]] = ashr i16 [[L1_SCALAR]], 8
+; CHECK-NEXT:    [[B1_SCALAR:%.*]] = sub i16 [[L1_SCALAR]], [[A1_SCALAR]]
+; CHECK-NEXT:    [[C1_SCALAR:%.*]] = lshr i16 [[B1_SCALAR]], 6
+; CHECK-NEXT:    [[T1_SCALAR:%.*]] = trunc i16 [[C1_SCALAR]] to i8
+; CHECK-NEXT:    store i8 [[T1_SCALAR]], ptr [[D1_SCALAR]], align 1
+; CHECK-NEXT:    [[S2_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 4
+; CHECK-NEXT:    [[D2_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 2
+; CHECK-NEXT:    [[L2_SCALAR:%.*]] = load i16, ptr [[S2_SCALAR]], align 2
+; CHECK-NEXT:    [[A2_SCALAR:%.*]] = ashr i16 [[L2_SCALAR]], 8
+; CHECK-NEXT:    [[B2_SCALAR:%.*]] = sub i16 [[L2_SCALAR]], [[A2_SCALAR]]
+; CHECK-NEXT:    [[C2_SCALAR:%.*]] = lshr i16 [[B2_SCALAR]], 6
+; CHECK-NEXT:    [[T2_SCALAR:%.*]] = trunc i16 [[C2_SCALAR]] to i8
+; CHECK-NEXT:    store i8 [[T2_SCALAR]], ptr [[D2_SCALAR]], align 1
+; CHECK-NEXT:    [[S3_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 6
+; CHECK-NEXT:    [[D3_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 3
+; CHECK-NEXT:    [[L3_SCALAR:%.*]] = load i16, ptr [[S3_SCALAR]], align 2
+; CHECK-NEXT:    [[A3_SCALAR:%.*]] = ashr i16 [[L3_SCALAR]], 8
+; CHECK-NEXT:    [[B3_SCALAR:%.*]] = sub i16 [[L3_SCALAR]], [[A3_SCALAR]]
+; CHECK-NEXT:    [[C3_SCALAR:%.*]] = lshr i16 [[B3_SCALAR]], 6
+; CHECK-NEXT:    [[T3_SCALAR:%.*]] = trunc i16 [[C3_SCALAR]] to i8
+; CHECK-NEXT:    store i8 [[T3_SCALAR]], ptr [[D3_SCALAR]], align 1
+; CHECK-NEXT:    [[S4_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 8
+; CHECK-NEXT:    [[D4_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 4
+; CHECK-NEXT:    [[L4_SCALAR:%.*]] = load i16, ptr [[S4_SCALAR]], align 2
+; CHECK-NEXT:    [[A4_SCALAR:%.*]] = ashr i16 [[L4_SCALAR]], 8
+; CHECK-NEXT:    [[B4_SCALAR:%.*]] = sub i16 [[L4_SCALAR]], [[A4_SCALAR]]
+; CHECK-NEXT:    [[C4_SCALAR:%.*]] = lshr i16 [[B4_SCALAR]], 6
+; CHECK-NEXT:    [[T4_SCALAR:%.*]] = trunc i16 [[C4_SCALAR]] to i8
+; CHECK-NEXT:    store i8 [[T4_SCALAR]], ptr [[D4_SCALAR]], align 1
+; CHECK-NEXT:    [[S5_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 10
+; CHECK-NEXT:    [[D5_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 5
+; CHECK-NEXT:    [[L5_SCALAR:%.*]] = load i16, ptr [[S5_SCALAR]], align 2
+; CHECK-NEXT:    [[A5_SCALAR:%.*]] = ashr i16 [[L5_SCALAR]], 8
+; CHECK-NEXT:    [[B5_SCALAR:%.*]] = sub i16 [[L5_SCALAR]], [[A5_SCALAR]]
+; CHECK-NEXT:    [[C5_SCALAR:%.*]] = lshr i16 [[B5_SCALAR]], 6
+; CHECK-NEXT:    [[T5_SCALAR:%.*]] = trunc i16 [[C5_SCALAR]] to i8
+; CHECK-NEXT:    store i8 [[T5_SCALAR]], ptr [[D5_SCALAR]], align 1
+; CHECK-NEXT:    [[S6_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 12
+; CHECK-NEXT:    [[D6_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 6
+; CHECK-NEXT:    [[L6_SCALAR:%.*]] = load i16, ptr [[S6_SCALAR]], align 2
+; CHECK-NEXT:    [[A6_SCALAR:%.*]] = ashr i16 [[L6_SCALAR]], 8
+; CHECK-NEXT:    [[B6_SCALAR:%.*]] = sub i16 [[L6_SCALAR]], [[A6_SCALAR]]
+; CHECK-NEXT:    [[C6_SCALAR:%.*]] = lshr i16 [[B6_SCALAR]], 6
+; CHECK-NEXT:    [[T6_SCALAR:%.*]] = trunc i16 [[C6_SCALAR]] to i8
+; CHECK-NEXT:    store i8 [[T6_SCALAR]], ptr [[D6_SCALAR]], align 1
+; CHECK-NEXT:    [[S7_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 14
+; CHECK-NEXT:    [[D7_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 7
+; CHECK-NEXT:    [[L7_SCALAR:%.*]] = load i16, ptr [[S7_SCALAR]], align 2
+; CHECK-NEXT:    [[A7_SCALAR:%.*]] = ashr i16 [[L7_SCALAR]], 8
+; CHECK-NEXT:    [[B7_SCALAR:%.*]] = sub i16 [[L7_SCALAR]], [[A7_SCALAR]]
+; CHECK-NEXT:    [[C7_SCALAR:%.*]] = lshr i16 [[B7_SCALAR]], 6
+; CHECK-NEXT:    [[T7_SCALAR:%.*]] = trunc i16 [[C7_SCALAR]] to i8
+; CHECK-NEXT:    store i8 [[T7_SCALAR]], ptr [[D7_SCALAR]], align 1
+; CHECK-NEXT:    [[D_NEXT_SCALAR]] = getelementptr inbounds i8, ptr [[D]], i64 [[STRIDE]]
+; CHECK-NEXT:    [[S_NEXT_SCALAR]] = getelementptr inbounds nuw i8, ptr [[S]], i64 16
+; CHECK-NEXT:    [[IV_NEXT_SCALAR]] = add nuw i64 [[IV]], 1
+; CHECK-NEXT:    [[COND_SCALAR:%.*]] = icmp eq i64 [[IV_NEXT_SCALAR]], [[N]]
+; CHECK-NEXT:    br i1 [[COND_SCALAR]], label %[[EXIT:.*]], label %[[LOOP_RTCONT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+; NOCHK-LABEL: define void @versioned_loop_block(
+; NOCHK-SAME: ptr [[DST:%.*]], i64 [[STRIDE:%.*]], ptr [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR1]] {
+; NOCHK-NEXT:  [[ENTRY:.*]]:
+; NOCHK-NEXT:    br label %[[LOOP:.*]]
+; NOCHK:       [[LOOP]]:
+; NOCHK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; NOCHK-NEXT:    [[D:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[D_NEXT:%.*]], %[[LOOP]] ]
+; NOCHK-NEXT:    [[S:%.*]] = phi ptr [ [[SRC]], %[[ENTRY]] ], [ [[S_NEXT:%.*]], %[[LOOP]] ]
+; NOCHK-NEXT:    [[L0:%.*]] = load i16, ptr [[S]], align 2
+; NOCHK-NEXT:    [[A0:%.*]] = ashr i16 [[L0]], 8
+; NOCHK-NEXT:    [[B0:%.*]] = sub i16 [[L0]], [[A0]]
+; NOCHK-NEXT:    [[C0:%.*]] = lshr i16 [[B0]], 6
+; NOCHK-NEXT:    [[T0:%.*]] = trunc i16 [[C0]] to i8
+; NOCHK-NEXT:    store i8 [[T0]], ptr [[D]], align 1
+; NOCHK-NEXT:    [[S1:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 2
+; NOCHK-NEXT:    [[D1:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 1
+; NOCHK-NEXT:    [[L1:%.*]] = load i16, ptr [[S1]], align 2
+; NOCHK-NEXT:    [[A1:%.*]] = ashr i16 [[L1]], 8
+; NOCHK-NEXT:    [[B1:%.*]] = sub i16 [[L1]], [[A1]]
+; NOCHK-NEXT:    [[C1:%.*]] = lshr i16 [[B1]], 6
+; NOCHK-NEXT:    [[T1:%.*]] = trunc i16 [[C1]] to i8
+; NOCHK-NEXT:    store i8 [[T1]], ptr [[D1]], align 1
+; NOCHK-NEXT:    [[S2:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 4
+; NOCHK-NEXT:    [[D2:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 2
+; NOCHK-NEXT:    [[L2:%.*]] = load i16, ptr [[S2]], align 2
+; NOCHK-NEXT:    [[A2:%.*]] = ashr i16 [[L2]], 8
+; NOCHK-NEXT:    [[B2:%.*]] = sub i16 [[L2]], [[A2]]
+; NOCHK-NEXT:    [[C2:%.*]] = lshr i16 [[B2]], 6
+; NOCHK-NEXT:    [[T2:%.*]] = trunc i16 [[C2]] to i8
+; NOCHK-NEXT:    store i8 [[T2]], ptr [[D2]], align 1
+; NOCHK-NEXT:    [[S3:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 6
+; NOCHK-NEXT:    [[D3:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 3
+; NOCHK-NEXT:    [[L3:%.*]] = load i16, ptr [[S3]], align 2
+; NOCHK-NEXT:    [[A3:%.*]] = ashr i16 [[L3]], 8
+; NOCHK-NEXT:    [[B3:%.*]] = sub i16 [[L3]], [[A3]]
+; NOCHK-NEXT:    [[C3:%.*]] = lshr i16 [[B3]], 6
+; NOCHK-NEXT:    [[T3:%.*]] = trunc i16 [[C3]] to i8
+; NOCHK-NEXT:    store i8 [[T3]], ptr [[D3]], align 1
+; NOCHK-NEXT:    [[S4:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 8
+; NOCHK-NEXT:    [[D4:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 4
+; NOCHK-NEXT:    [[L4:%.*]] = load i16, ptr [[S4]], align 2
+; NOCHK-NEXT:    [[A4:%.*]] = ashr i16 [[L4]], 8
+; NOCHK-NEXT:    [[B4:%.*]] = sub i16 [[L4]], [[A4]]
+; NOCHK-NEXT:    [[C4:%.*]] = lshr i16 [[B4]], 6
+; NOCHK-NEXT:    [[T4:%.*]] = trunc i16 [[C4]] to i8
+; NOCHK-NEXT:    store i8 [[T4]], ptr [[D4]], align 1
+; NOCHK-NEXT:    [[S5:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 10
+; NOCHK-NEXT:    [[D5:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 5
+; NOCHK-NEXT:    [[L5:%.*]] = load i16, ptr [[S5]], align 2
+; NOCHK-NEXT:    [[A5:%.*]] = ashr i16 [[L5]], 8
+; NOCHK-NEXT:    [[B5:%.*]] = sub i16 [[L5]], [[A5]]
+; NOCHK-NEXT:    [[C5:%.*]] = lshr i16 [[B5]], 6
+; NOCHK-NEXT:    [[T5:%.*]] = trunc i16 [[C5]] to i8
+; NOCHK-NEXT:    store i8 [[T5]], ptr [[D5]], align 1
+; NOCHK-NEXT:    [[S6:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 12
+; NOCHK-NEXT:    [[D6:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 6
+; NOCHK-NEXT:    [[L6:%.*]] = load i16, ptr [[S6]], align 2
+; NOCHK-NEXT:    [[A6:%.*]] = ashr i16 [[L6]], 8
+; NOCHK-NEXT:    [[B6:%.*]] = sub i16 [[L6]], [[A6]]
+; NOCHK-NEXT:    [[C6:%.*]] = lshr i16 [[B6]], 6
+; NOCHK-NEXT:    [[T6:%.*]] = trunc i16 [[C6]] to i8
+; NOCHK-NEXT:    store i8 [[T6]], ptr [[D6]], align 1
+; NOCHK-NEXT:    [[S7:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 14
+; NOCHK-NEXT:    [[D7:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 7
+; NOCHK-NEXT:    [[L7:%.*]] = load i16, ptr [[S7]], align 2
+; NOCHK-NEXT:    [[A7:%.*]] = ashr i16 [[L7]], 8
+; NOCHK-NEXT:    [[B7:%.*]] = sub i16 [[L7]], [[A7]]
+; NOCHK-NEXT:    [[C7:%.*]] = lshr i16 [[B7]], 6
+; NOCHK-NEXT:    [[T7:%.*]] = trunc i16 [[C7]] to i8
+; NOCHK-NEXT:    store i8 [[T7]], ptr [[D7]], align 1
+; NOCHK-NEXT:    [[D_NEXT]] = getelementptr inbounds i8, ptr [[D]], i64 [[STRIDE]]
+; NOCHK-NEXT:    [[S_NEXT]] = getelementptr inbounds nuw i8, ptr [[S]], i64 16
+; NOCHK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
+; NOCHK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; NOCHK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; NOCHK:       [[EXIT]]:
+; NOCHK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %d = phi ptr [ %dst, %entry ], [ %d.next, %loop ]
+  %s = phi ptr [ %src, %entry ], [ %s.next, %loop ]
+  %l0 = load i16, ptr %s, align 2
+  %a0 = ashr i16 %l0, 8
+  %b0 = sub i16 %l0, %a0
+  %c0 = lshr i16 %b0, 6
+  %t0 = trunc i16 %c0 to i8
+  store i8 %t0, ptr %d, align 1
+  %s1 = getelementptr inbounds nuw i8, ptr %s, i64 2
+  %d1 = getelementptr inbounds nuw i8, ptr %d, i64 1
+  %l1 = load i16, ptr %s1, align 2
+  %a1 = ashr i16 %l1, 8
+  %b1 = sub i16 %l1, %a1
+  %c1 = lshr i16 %b1, 6
+  %t1 = trunc i16 %c1 to i8
+  store i8 %t1, ptr %d1, align 1
+  %s2 = getelementptr inbounds nuw i8, ptr %s, i64 4
+  %d2 = getelementptr inbounds nuw i8, ptr %d, i64 2
+  %l2 = load i16, ptr %s2, align 2
+  %a2 = ashr i16 %l2, 8
+  %b2 = sub i16 %l2, %a2
+  %c2 = lshr i16 %b2, 6
+  %t2 = trunc i16 %c2 to i8
+  store i8 %t2, ptr %d2, align 1
+  %s3 = getelementptr inbounds nuw i8, ptr %s, i64 6
+  %d3 = getelementptr inbounds nuw i8, ptr %d, i64 3
+  %l3 = load i16, ptr %s3, align 2
+  %a3 = ashr i16 %l3, 8
+  %b3 = sub i16 %l3, %a3
+  %c3 = lshr i16 %b3, 6
+  %t3 = trunc i16 %c3 to i8
+  store i8 %t3, ptr %d3, align 1
+  %s4 = getelementptr inbounds nuw i8, ptr %s, i64 8
+  %d4 = getelementptr inbounds nuw i8, ptr %d, i64 4
+  %l4 = load i16, ptr %s4, align 2
+  %a4 = ashr i16 %l4, 8
+  %b4 = sub i16 %l4, %a4
+  %c4 = lshr i16 %b4, 6
+  %t4 = trunc i16 %c4 to i8
+  store i8 %t4, ptr %d4, align 1
+  %s5 = getelementptr inbounds nuw i8, ptr %s, i64 10
+  %d5 = getelementptr inbounds nuw i8, ptr %d, i64 5
+  %l5 = load i16, ptr %s5, align 2
+  %a5 = ashr i16 %l5, 8
+  %b5 = sub i16 %l5, %a5
+  %c5 = lshr i16 %b5, 6
+  %t5 = trunc i16 %c5 to i8
+  store i8 %t5, ptr %d5, align 1
+  %s6 = getelementptr inbounds nuw i8, ptr %s, i64 12
+  %d6 = getelementptr inbounds nuw i8, ptr %d, i64 6
+  %l6 = load i16, ptr %s6, align 2
+  %a6 = ashr i16 %l6, 8
+  %b6 = sub i16 %l6, %a6
+  %c6 = lshr i16 %b6, 6
+  %t6 = trunc i16 %c6 to i8
+  store i8 %t6, ptr %d6, align 1
+  %s7 = getelementptr inbounds nuw i8, ptr %s, i64 14
+  %d7 = getelementptr inbounds nuw i8, ptr %d, i64 7
+  %l7 = load i16, ptr %s7, align 2
+  %a7 = ashr i16 %l7, 8
+  %b7 = sub i16 %l7, %a7
+  %c7 = lshr i16 %b7, 6
+  %t7 = trunc i16 %c7 to i8
+  store i8 %t7, ptr %d7, align 1
+  %d.next = getelementptr inbounds i8, ptr %d, i64 %stride
+  %s.next = getelementptr inbounds nuw i8, ptr %s, i64 16
+  %iv.next = add nuw i64 %iv, 1
+  %cond = icmp eq i64 %iv.next, %n
+  br i1 %cond, label %exit, label %loop
+
+exit:
+  ret void
+}
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.
