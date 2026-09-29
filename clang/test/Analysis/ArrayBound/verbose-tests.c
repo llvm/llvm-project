@@ -470,14 +470,48 @@ int *nothingIsCertain(int x, int y) {
 // We disable this test under Windows because 'struct Empty {}' has a nozero
 // size on that platform. Note that '_WIN32' is also defined on 64-bit systems
 // and is apparently the customary way to detect Windows OS.
+// The empty struct also has nonzero size under C++ so these corner cases are
+// only relevant under C.
 
 struct Empty {};
 struct Empty ZeroSizeElements[10];
 
 struct Empty zeroSizeElements(void) {
-  // FIXME: We probably shouldn't report this access.
-  return ZeroSizeElements[5];
-  // expected-warning@-1 {{Out of bound access to memory after the end of 'ZeroSizeElements'}}
-  // expected-note@-2 {{Access of 'ZeroSizeElements' at byte offset 0, while it holds only 0 byte}}
+  // Here the offset and extent are both 0, which previously caused a false
+  // positive out of bounds report.
+  return ZeroSizeElements[5]; // no-warning
 }
+
+struct Empty zeroSizeElementsNegativeIndex(void) {
+  // The negative index does not change anything, it still means offset = 0.
+  return ZeroSizeElements[-5]; // no-warning
+}
+
+int zeroSizeContainerIntAccess(void) {
+  return ((int*)ZeroSizeElements)[5];
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'ZeroSizeElements'}}
+  // expected-note@-2 {{Access of 'ZeroSizeElements' at index 5, while it holds only 0 'int' elements}}
+}
+
+struct Empty zeroSizeAccessOfPastTheEnd(void) {
+  // We currently allow zero-sized access of past-the-end pointers as a side
+  // effect of the logic that handles the testcase 'zeroSizeElements'.
+  return *(struct Empty *)(TenElements + 10); // no-warning
+}
+
+struct Empty zeroSizeAccessFarAway(void) {
+  // However, zero-sized access of other out-of-bounds pointers is reported
+  // (with byte offsets, because the zero-sized element is not suitable for
+  // calculating indices).
+  return *(struct Empty *)(TenElements + 20);
+  // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at byte offset 80, while it holds only 40 bytes}}
+}
+
+struct Empty zeroSizeAccessUnderflow(void) {
+  return *(struct Empty *)(TenElements - 10);
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -40}}
+}
+
 #endif

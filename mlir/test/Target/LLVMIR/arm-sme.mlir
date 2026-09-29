@@ -146,7 +146,7 @@ llvm.func @arm_sme_load(%nxv1i1  : vector<[1]xi1>,
                         %nxv8i1  : vector<[8]xi1>,
                         %nxv16i1 : vector<[16]xi1>,
                         %ptr    : !llvm.ptr) {
-  %c0 = llvm.mlir.constant(0 : index) : i32
+  %c0 = llvm.mlir.constant(0 : i32) : i32
   // CHECK: call void @llvm.aarch64.sme.ld1q.horiz
   "arm_sme.intr.ld1q.horiz"(%nxv1i1, %ptr, %c0) <{tile_id = 0 : i32}> :
               (vector<[1]xi1>, !llvm.ptr, i32) -> ()
@@ -189,7 +189,7 @@ llvm.func @arm_sme_store(%nxv1i1  : vector<[1]xi1>,
                          %nxv8i1  : vector<[8]xi1>,
                          %nxv16i1 : vector<[16]xi1>,
                          %ptr    : !llvm.ptr) {
-  %c0 = llvm.mlir.constant(0 : index) : i32
+  %c0 = llvm.mlir.constant(0 : i32) : i32
   // CHECK: call void @llvm.aarch64.sme.st1q.horiz
   "arm_sme.intr.st1q.horiz"(%nxv1i1, %ptr, %c0) <{tile_id = 0 : i32}> :
               (vector<[1]xi1>, !llvm.ptr, i32) -> ()

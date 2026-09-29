@@ -414,12 +414,11 @@ namespace ConstantDestruction {
     }
   };
 
-  struct X : virtual V { // expected-note {{in call to}}
+  struct X : virtual V {
     constexpr X() : V(true) {}
   };
   constexpr X x; // both-error {{constexpr variable 'x' must have constant destruction}} \
-                 // both-note {{in call to}} \
-                 // ref-note {{in call to}}
+                 // both-note 2{{in call to}}
 }
 
 namespace Offsets {

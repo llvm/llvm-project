@@ -130,6 +130,13 @@ def LValuePathSerializationHelper :
     PropertyType<"APValue::LValuePathSerializationHelper"> {
   let BufferElementTypes = [ LValuePathEntry ];
 }
+def MatrixLayoutKind : EnumPropertyType<"MatrixType::LayoutKind"> {
+  let PackOptional =
+    "value.value_or(static_cast<MatrixType::LayoutKind>(2))";
+  let UnpackOptional =
+    "value == static_cast<MatrixType::LayoutKind>(2) ? std::nullopt : "
+    "std::optional<MatrixType::LayoutKind>(value)";
+}
 def NestedNameSpecifier : PropertyType<"NestedNameSpecifier">;
 def NestedNameSpecifierKind : EnumPropertyType<"NestedNameSpecifier::Kind">;
 def OverloadedOperatorKind : EnumPropertyType;
@@ -808,6 +815,26 @@ let Class = PropertyTypeCase<TemplateName, "DeducedTemplate"> in {
   }
   def : Creator<[{
     return ctx.getDeducedTemplateName(underlying, {startPos, defaultArgs});
+  }]>;
+}
+let Class = PropertyTypeCase<TemplateName, "PackIndexingTemplate"> in {
+  def : ReadHelper<[{
+    auto PI = node.getAsPackIndexingTemplate();
+  }]>;
+  def : Property<"pattern", TemplateName> {
+    let Read = [{ PI->getPattern() }];
+  }
+  def : Property<"indexExpression", ExprRef> {
+    let Read = [{ PI->getIndexExpr() }];
+  }
+  def : Property<"isFullySubstituted", Bool> {
+    let Read = [{ PI->isFullySubstituted() }];
+  }
+  def : Property<"expansions", Array<TemplateName>> {
+    let Read = [{ PI->getExpansions() }];
+  }
+  def : Creator<[{
+    return ctx.getPackIndexingTemplateName(pattern, indexExpression, isFullySubstituted, expansions);
   }]>;
 }
 

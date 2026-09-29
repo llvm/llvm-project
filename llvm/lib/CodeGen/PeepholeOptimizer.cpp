@@ -81,7 +81,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -968,8 +967,8 @@ bool PeepholeOptimizer::optimizeCmpInstr(
 
   // The eliminated compare may have been the extra use preventing a
   // load from being folded into the flag-setting instruction.
-  if (SrcReg.isVirtual() && MRI->hasOneNonDBGUser(SrcReg)) {
-    MachineInstr *FlagProducer = MRI->use_nodbg_begin(SrcReg)->getParent();
+  if (MachineInstr *FlagProducer =
+          SrcReg.isVirtual() ? MRI->getOneNonDBGUser(SrcReg) : nullptr) {
     MachineInstr *LoadMI = MRI->getVRegDef(SrcReg);
     // No store between LoadMI and FlagProducer that could change the value.
     if (LocalMIs.count(FlagProducer) && LoadMI && LoadMI->canFoldAsLoad() &&

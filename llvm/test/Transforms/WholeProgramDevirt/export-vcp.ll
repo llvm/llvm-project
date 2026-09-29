@@ -70,12 +70,12 @@ target datalayout = "e-p:64:64"
 ; X86: @__typeid_typeid4_0_24_12_bit = hidden alias i8, inttoptr (i32 1 to ptr)
 ; ARM-NOT: alias {{.*}} inttoptr
 
-; CHECK: @vt3a = alias ptr, getelementptr inbounds ({ [8 x i8], ptr, [0 x i8] }, ptr [[CVT3A]], i32 0, i32 1)
-; CHECK: @vt3b = alias ptr, getelementptr inbounds ({ [8 x i8], ptr, [0 x i8] }, ptr [[CVT3B]], i32 0, i32 1)
-; CHECK: @vt3c = alias ptr, getelementptr inbounds ({ [8 x i8], ptr, [0 x i8] }, ptr [[CVT3C]], i32 0, i32 1)
-; CHECK: @vt3d = alias ptr, getelementptr inbounds ({ [8 x i8], ptr, [0 x i8] }, ptr [[CVT3D]], i32 0, i32 1)
-; CHECK: @vt4a = alias ptr, getelementptr inbounds ({ [8 x i8], ptr, [0 x i8] }, ptr [[CVT4A]], i32 0, i32 1)
-; CHECK: @vt4b = alias ptr, getelementptr inbounds ({ [8 x i8], ptr, [0 x i8] }, ptr [[CVT4B]], i32 0, i32 1)
+; CHECK: @vt3a = alias ptr, getelementptr inbounds (i8, ptr [[CVT3A]], i64 8)
+; CHECK: @vt3b = alias ptr, getelementptr inbounds (i8, ptr [[CVT3B]], i64 8)
+; CHECK: @vt3c = alias ptr, getelementptr inbounds (i8, ptr [[CVT3C]], i64 8)
+; CHECK: @vt3d = alias ptr, getelementptr inbounds (i8, ptr [[CVT3D]], i64 8)
+; CHECK: @vt4a = alias ptr, getelementptr inbounds (i8, ptr [[CVT4A]], i64 8)
+; CHECK: @vt4b = alias ptr, getelementptr inbounds (i8, ptr [[CVT4B]], i64 8)
 
 define i1 @vf0i1(ptr %this, i32, i32) readnone {
   ret i1 0

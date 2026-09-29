@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LVM_LIBC_SRC_SYS_RESOURCE_GETRUSAGE_H
-#define LVM_LIBC_SRC_SYS_RESOURCE_GETRUSAGE_H
+#ifndef LLVM_LIBC_SRC_SYS_RESOURCE_GETRUSAGE_H
+#define LLVM_LIBC_SRC_SYS_RESOURCE_GETRUSAGE_H
 
 #include "hdr/types/struct_rusage.h"
 #include "src/__support/macros/config.h"

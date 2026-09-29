@@ -47,6 +47,12 @@ void mlir::omp::setOpenMPVersionAttribute(ModuleOp module, int64_t version) {
       VersionAttr::get(module.getContext(), version));
 }
 
+void mlir::omp::setOpenMPIntegerWrapAround(ModuleOp module, bool value) {
+  module->setAttr(StringAttr::get(module.getContext(),
+                                  llvm::Twine{"omp.integer_wrap_around"}),
+                  IntegerWrapAroundAttr::get(module.getContext(), value));
+}
+
 int64_t mlir::omp::getOpenMPVersionAttribute(ModuleOp module,
                                              int64_t fallback) {
   if (Attribute verAttr = module->getDiscardableAttr("omp.version"))
@@ -132,9 +138,10 @@ bool mlir::omp::opInSharedDeviceContext(Operation &op) {
       return false;
   } else {
     auto declTargetIface = op.getParentOfType<omp::DeclareTargetInterface>();
-    if (!declTargetIface || !declTargetIface.isDeclareTarget() ||
-        declTargetIface.getDeclareTargetDeviceType() ==
-            omp::DeclareTargetDeviceType::host)
+    omp::DeclareTargetAttr declTargetAttr =
+        declTargetIface ? declTargetIface.getDeclareTarget() : nullptr;
+    if (!declTargetAttr ||
+        declTargetAttr.getDeviceType() == omp::DeclareTargetDeviceType::host)
       return false;
   }
   return true;

@@ -653,3 +653,10 @@ EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
     if (Plugin.is_initialized() && Plugin.getNumDevices() > 0)
       Plugin.getRPCServer().registerCallback(Callback);
 }
+
+EXTERN void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr) {
+  void *TargetPtr = omp_get_mapped_ptr(HostPtr, DeviceId);
+  if (!TargetPtr)
+    return const_cast<void *>(HostPtr);
+  return TargetPtr;
+}

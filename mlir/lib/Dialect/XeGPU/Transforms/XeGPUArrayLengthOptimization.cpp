@@ -91,6 +91,42 @@ static bool hasTransposeLaneLayout(xegpu::TensorDescType tdescType) {
   return laneLayout[0] != 1 && laneLayout[1] == 1;
 }
 
+/// Remaps a 2-D slice from the flattened array representation to the stacked
+/// register representation. Slices within the first array block are unchanged;
+/// later slices must start at a block boundary. Slices crossing a block
+/// boundary and non-2-D descriptors or slices cannot be represented and return
+/// failure.
+static FailureOr<SmallVector<int64_t>>
+getRemappedExtractOffsets(vector::ExtractStridedSliceOp op,
+                          xegpu::TensorDescType tdescType) {
+  if (tdescType.getRank() != 2)
+    return failure();
+
+  auto offsets = op.getOffsets().getValue();
+  auto sizes = op.getSizes().getValue();
+  auto strides = op.getStrides().getValue();
+  if (offsets.size() != 2 || sizes.size() != 2 || strides.size() != 2)
+    return failure();
+
+  int64_t origOffset0 = cast<IntegerAttr>(offsets[0]).getInt();
+  int64_t origOffset1 = cast<IntegerAttr>(offsets[1]).getInt();
+  int64_t size1 = cast<IntegerAttr>(sizes[1]).getInt();
+  int64_t blockHeight = tdescType.getShape()[0];
+  int64_t arrayWidth = tdescType.getShape()[1];
+
+  int64_t localOffset1 = origOffset1 % arrayWidth;
+  if (localOffset1 + size1 > arrayWidth)
+    return failure();
+  if (origOffset1 < arrayWidth)
+    return SmallVector<int64_t>{origOffset0, origOffset1};
+  if (origOffset1 % arrayWidth != 0)
+    return failure();
+
+  int64_t arrayIndex = origOffset1 / arrayWidth;
+  return SmallVector<int64_t>{origOffset0 + arrayIndex * blockHeight,
+                              /*offset1=*/0};
+}
+
 /// Rewrite `xegpu.create_nd_tdesc` to fold an array_length attribute into the
 /// resulting tensor descriptor type. Supports static memref, dynamic-shape
 /// memref, and raw-pointer (integer) sources — the memory region described by
@@ -131,161 +167,67 @@ public:
     auto shape = tdescType.getShape();
     int64_t arrayLength = computeArrayLength(shape[1], subgroupSize);
     SmallVector<int64_t> newShape = {shape[0], shape[1] / arrayLength};
+    if (auto layout = tdescType.getLayoutAttr();
+        layout && !layout.isDistributable(newShape))
+      return failure();
 
     auto newTdescType = xegpu::TensorDescType::get(
         newShape, tdescType.getElementType(), arrayLength,
         tdescType.getBoundaryCheck(), tdescType.getMemorySpace(),
         tdescType.getLayout());
 
-    Value newOp;
-    if (isa<MemRefType>(source.getType()))
-      newOp =
-          xegpu::CreateNdDescOp::create(rewriter, op.getLoc(), newTdescType,
-                                        cast<TypedValue<MemRefType>>(source));
-    else
-      newOp = xegpu::CreateNdDescOp::create(rewriter, op.getLoc(), newTdescType,
-                                            source, op.getMixedSizes(),
-                                            op.getMixedStrides());
-    rewriter.replaceOp(op, newOp);
-    return success();
-  }
-};
+    SmallVector<xegpu::LoadNdOp> loadOps;
+    for (Operation *descriptorUser : op.getResult().getUsers()) {
+      if (auto prefetchOp = dyn_cast<xegpu::PrefetchNdOp>(descriptorUser)) {
+        if (auto layout = prefetchOp.getAnchorLayout();
+            layout && !layout.isDistributable(newShape))
+          return failure();
+        continue;
+      }
 
-/// Pattern to rewrite xegpu.load_nd operations
-class OptimizeLoadNdOp : public OpRewritePattern<xegpu::LoadNdOp> {
-public:
-  using OpRewritePattern<xegpu::LoadNdOp>::OpRewritePattern;
+      auto loadOp = dyn_cast<xegpu::LoadNdOp>(descriptorUser);
+      if (!loadOp)
+        return failure();
 
-  LogicalResult matchAndRewrite(xegpu::LoadNdOp op,
-                                PatternRewriter &rewriter) const override {
-    auto tdescType = op.getTensorDescType();
-    int64_t arrayLength = tdescType.getArrayLength();
+      if (auto layout = loadOp.getAnchorLayout();
+          layout && !layout.isDistributable(newShape))
+        return failure();
+      auto loadType = dyn_cast<VectorType>(loadOp.getType());
+      if (!loadType || loadType.getRank() != 2)
+        return failure();
+      for (Operation *loadResultUser : loadOp.getResult().getUsers()) {
+        auto extractOp =
+            dyn_cast<vector::ExtractStridedSliceOp>(loadResultUser);
+        if (!extractOp ||
+            failed(getRemappedExtractOffsets(extractOp, newTdescType)))
+          return failure();
+      }
+      loadOps.push_back(loadOp);
+    }
 
-    if (arrayLength <= 1)
-      return failure();
+    // Updating the descriptor alone temporarily invalidates its load users.
+    // Keep the descriptor, load results, and extract offsets consistent within
+    // this single pattern application.
+    for (xegpu::LoadNdOp loadOp : loadOps) {
+      for (Operation *loadResultUser : loadOp.getResult().getUsers()) {
+        auto extractOp = cast<vector::ExtractStridedSliceOp>(loadResultUser);
+        SmallVector<int64_t> newOffsets =
+            *getRemappedExtractOffsets(extractOp, newTdescType);
+        rewriter.modifyOpInPlace(extractOp, [&]() {
+          extractOp.setOffsetsAttr(rewriter.getI64ArrayAttr(newOffsets));
+        });
+      }
 
-    // Transposing loads are not compatible with the stacked-on-non-FCD layout
-    // that this pass produces.
-    if (hasNonIdentityTranspose(op) || hasTransposeLaneLayout(tdescType))
-      return failure();
-
-    auto origVectorType = op.getType();
-    auto origShape = origVectorType.getShape();
-    if (origShape.size() != 2)
-      return failure();
-
-    // The expected vector shape is: [tdesc_non_FCD * array_length, tdesc_FCD]
-    int64_t expectedNonFCD = tdescType.getShape()[0] * arrayLength;
-    int64_t expectedFCD = tdescType.getShape()[1];
-
-    // If already matches expected shape, skip
-    if (origShape[0] == expectedNonFCD && origShape[1] == expectedFCD)
-      return failure();
-
-    // Compute new vector shape for register layout
-    SmallVector<int64_t> newShape = {expectedNonFCD, expectedFCD};
-    auto newVectorType =
-        VectorType::get(newShape, origVectorType.getElementType());
-
-    // Create new LoadNdOp with updated result type
-    auto newLoadOp = xegpu::LoadNdOp::create(
-        rewriter, op.getLoc(), newVectorType, op.getTensorDesc(),
-        op.getMixedOffsets(), op.getPackedAttr(), op.getTransposeAttr(),
-        op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
-        op.getLayoutAttr());
-
-    rewriter.replaceOp(op, newLoadOp.getResult());
-    return success();
-  }
-};
-
-/// Rewrite `vector.extract_strided_slice` offsets so they index into the
-/// stacked register layout produced by `OptimizeLoadNdOp`.
-///
-/// The optimized load places `arrayLength` blocks side-by-side in memory
-/// but stacks them along the non-FCD dimension in registers. Given a
-/// tensor desc of shape `[H, W]` with array_length = A:
-///
-///   memory layout (what the extract offsets refer to): `[H, W * A]`
-///   register layout (what the new load returns):       `[H * A, W]`
-///
-/// An extract at memory offset `[r, c]` therefore maps to register offset
-/// `[r + (c / W) * H, 0]` — provided the extract is block-aligned in the
-/// FCD dimension, i.e. `c % W == 0`.
-///
-/// Example (`A = 2`, `H = 32`, `W = 16`):
-///
-///   // before
-///   %v = xegpu.load_nd %t : ... -> vector<32x32xf16>
-///   %e = vector.extract_strided_slice %v
-///          {offsets = [0, 16], sizes = [16, 16], strides = [1, 1]}
-///          : vector<32x32xf16> to vector<16x16xf16>
-///
-///   // after (load rewritten to vector<64x16>, extract offset remapped)
-///   %v = xegpu.load_nd %t : ... -> vector<64x16xf16>
-///   %e = vector.extract_strided_slice %v
-///          {offsets = [32, 0], sizes = [16, 16], strides = [1, 1]}
-///          : vector<64x16xf16> to vector<16x16xf16>
-class UpdateExtractStridedSliceOp
-    : public OpRewritePattern<vector::ExtractStridedSliceOp> {
-public:
-  using OpRewritePattern<vector::ExtractStridedSliceOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::ExtractStridedSliceOp op,
-                                PatternRewriter &rewriter) const override {
-    auto sourceType = dyn_cast<VectorType>(op.getSource().getType());
-    if (!sourceType || sourceType.getRank() != 2)
-      return failure();
-
-    auto loadOp = op.getSource().getDefiningOp<xegpu::LoadNdOp>();
-    if (!loadOp)
-      return failure();
-
-    auto tdescType = loadOp.getTensorDescType();
-    int64_t arrayLength = tdescType.getArrayLength();
-    if (arrayLength <= 1)
-      return failure();
-
-    auto offsets = op.getOffsets().getValue();
-    auto sizes = op.getSizes().getValue();
-    auto strides = op.getStrides().getValue();
-
-    if (offsets.size() != 2 || sizes.size() != 2 || strides.size() != 2)
-      return failure();
-
-    int64_t origOffset0 = cast<IntegerAttr>(offsets[0]).getInt();
-    int64_t origOffset1 = cast<IntegerAttr>(offsets[1]).getInt();
-
-    int64_t blockHeight = tdescType.getShape()[0];
-    int64_t arrayWidth = tdescType.getShape()[1];
-
-    // Skip extracts that already live entirely inside block 0: their offsets
-    // are identical in the memory and register layouts, so there is nothing
-    // to rewrite.
-    if (origOffset1 < arrayWidth)
-      return failure();
-
-    // The remap is only well-defined when the extract is aligned to an array
-    // block along the FCD.
-    assert(origOffset1 % arrayWidth == 0 &&
-           "extract offset along FCD must be a multiple of the array width");
-
-    int64_t arrayIndex = origOffset1 / arrayWidth;
-    SmallVector<int64_t> newOffsets = {origOffset0 + arrayIndex * blockHeight,
-                                       /*offset1=*/0};
-
-    auto toInts = [](ArrayAttr arr) {
-      return llvm::to_vector(llvm::map_range(
-          arr, [](Attribute a) { return cast<IntegerAttr>(a).getInt(); }));
-    };
-    SmallVector<int64_t> sliceSizes = toInts(op.getSizes());
-    SmallVector<int64_t> sliceStrides = toInts(op.getStrides());
-
-    auto newOp = vector::ExtractStridedSliceOp::create(
-        rewriter, op.getLoc(), op.getSource(), newOffsets, sliceSizes,
-        sliceStrides);
-
-    rewriter.replaceOp(op, newOp.getResult());
+      auto loadType = cast<VectorType>(loadOp.getType());
+      SmallVector<int64_t> newLoadShape = {newShape[0] * arrayLength,
+                                           newShape[1]};
+      auto newLoadType =
+          VectorType::get(newLoadShape, loadType.getElementType());
+      rewriter.modifyOpInPlace(
+          loadOp, [&]() { loadOp.getResult().setType(newLoadType); });
+    }
+    rewriter.modifyOpInPlace(op,
+                             [&]() { op.getResult().setType(newTdescType); });
     return success();
   }
 };
@@ -294,6 +236,5 @@ public:
 
 void xegpu::populateXeGPUArrayLengthOptimizationPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<OptimizeCreateNdDescOp, OptimizeLoadNdOp,
-               UpdateExtractStridedSliceOp>(patterns.getContext());
+  patterns.add<OptimizeCreateNdDescOp>(patterns.getContext());
 }

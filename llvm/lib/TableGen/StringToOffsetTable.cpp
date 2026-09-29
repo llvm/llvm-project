@@ -72,7 +72,10 @@ void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS,
     ListSeparator CharSep(", ");
     for (char C : Str) {
       OS << CharSep << "'";
-      OS.write_escaped(StringRef(&C, 1));
+      if (C == '\'')
+        OS << "\\'";
+      else
+        OS.write_escaped(StringRef(&C, 1));
       OS << "'";
     }
     OS << CharSep << "'\\0'";

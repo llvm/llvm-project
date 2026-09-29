@@ -52,17 +52,17 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVStructurizerPass(PR);
   initializeSPIRVCBufferAccessLegacyPass(PR);
   initializeSPIRVPushConstantAccessLegacyPass(PR);
-  initializeSPIRVPreLegalizerCombinerPass(PR);
+  initializeSPIRVPreLegalizerCombinerLegacyPass(PR);
   initializeSPIRVLegalizePointerCastLegacyPass(PR);
   initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PR);
   initializeSPIRVRegularizerLegacyPass(PR);
-  initializeSPIRVPreLegalizerPass(PR);
-  initializeSPIRVPostLegalizerPass(PR);
+  initializeSPIRVPreLegalizerLegacyPass(PR);
+  initializeSPIRVPostLegalizerLegacyPass(PR);
   initializeSPIRVMergeRegionExitTargetsLegacyPass(PR);
   initializeSPIRVEmitIntrinsicsLegacyPass(PR);
   initializeSPIRVPrepareFunctionsLegacyPass(PR);
   initializeSPIRVPrepareGlobalsLegacyPass(PR);
-  initializeSPIRVLegalizeImplicitBindingLegacyPass(PR);
+  initializeSPIRVLegalizeResourceBindingLegacyPass(PR);
   initializeSPIRVCtorDtorLoweringLegacyPass(PR);
   initializeSPIRVFinalizeShaderLinkageLegacyPass(PR);
 }
@@ -82,7 +82,7 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<SPIRVTargetObjectFile>()),
@@ -224,7 +224,7 @@ void SPIRVPassConfig::addISelPrepare() {
   }
   SPIRVTargetMachine &TM = getTM<SPIRVTargetMachine>();
   addPass(createStripConvergenceIntrinsicsPass());
-  addPass(createSPIRVLegalizeImplicitBindingPass());
+  addPass(createSPIRVLegalizeResourceBindingPass());
   addPass(createSPIRVLegalizeZeroSizeArraysPass(TM));
   addPass(createSPIRVCBufferAccessLegacyPass());
   addPass(createSPIRVPushConstantAccessLegacyPass(&TM));
@@ -240,14 +240,14 @@ bool SPIRVPassConfig::addIRTranslator() {
 }
 
 void SPIRVPassConfig::addPreLegalizeMachineIR() {
-  addPass(createSPIRVPreLegalizerCombiner());
-  addPass(createSPIRVPreLegalizerPass());
+  addPass(createSPIRVPreLegalizerCombinerLegacyPass());
+  addPass(createSPIRVPreLegalizerLegacyPass());
 }
 
 // Use the default legalizer.
 bool SPIRVPassConfig::addLegalizeMachineIR() {
   addPass(new LegalizerLegacy());
-  addPass(createSPIRVPostLegalizerPass());
+  addPass(createSPIRVPostLegalizerLegacyPass());
   return false;
 }
 
@@ -266,7 +266,7 @@ static cl::opt<bool> SPVEnableNonSemanticDI(
     "spv-emit-nonsemantic-debug-info",
     cl::desc("Deprecated. Use -g to emit SPIR-V NonSemantic.Shader.DebugInfo "
              "instructions"),
-    cl::Optional, cl::init(false));
+    cl::init(false));
 
 // Add the custom SPIRVInstructionSelect from above.
 bool SPIRVPassConfig::addGlobalInstructionSelect() {

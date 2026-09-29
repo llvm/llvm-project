@@ -60,6 +60,12 @@ UdtRecordCompleter::UdtRecordCompleter(
   }
 }
 
+llvm::Error
+UdtRecordCompleter::visitMemberEnd(llvm::codeview::CVMemberRecord &Record) {
+  ++m_member_index;
+  return Error::success();
+}
+
 clang::QualType UdtRecordCompleter::AddBaseClassForTypeIndex(
     llvm::codeview::TypeIndex ti, llvm::codeview::MemberAccess access,
     std::optional<uint64_t> vtable_idx) {
@@ -300,8 +306,8 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
       bitfield_width ? bitfield_width : GetSizeOfType(ti, m_index.tpi()) * 8;
   if (field_size == 0)
     return Error::success();
-  m_record.CollectMember(data_member.Name, offset, field_size, member_qt, access,
-                bitfield_width);
+  m_record.CollectMember(data_member.Name, offset, field_size, member_qt,
+                         access, bitfield_width, m_member_index);
   return Error::success();
 }
 
@@ -465,11 +471,22 @@ void UdtRecordCompleter::FinishRecord() {
   }
 }
 
+void UdtRecordCompleter::Member::RestoreOriginalOrder() {
+  llvm::stable_sort(fields, [](const MemberUP &lhs, const MemberUP &rhs) {
+    return std::tie(lhs->original_index, lhs->bit_offset) <
+           std::tie(rhs->original_index, rhs->bit_offset);
+  });
+
+  for (MemberUP &field : fields)
+    field->RestoreOriginalOrder();
+}
+
 void UdtRecordCompleter::Record::CollectMember(
     llvm::StringRef name, uint64_t offset, uint64_t field_size,
-    clang::QualType qt, lldb::AccessType access, uint64_t bitfield_width) {
+    clang::QualType qt, lldb::AccessType access, uint64_t bitfield_width,
+    uint32_t member_index) {
   fields_map[offset].push_back(std::make_unique<Member>(
-      name, offset, field_size, qt, access, bitfield_width));
+      name, offset, field_size, qt, access, bitfield_width, member_index));
   if (start_offset > offset)
     start_offset = offset;
 }
@@ -555,6 +572,7 @@ void UdtRecordCompleter::Record::ConstructRecord() {
       if (parent->kind == Member::Struct) {
         parent->fields.push_back(std::make_unique<Member>(Member::Union));
         parent = parent->fields.back().get();
+        parent->original_index = std::numeric_limits<uint32_t>::max();
         parent->bit_offset = offset;
       } else {
         assert(parent == &record &&
@@ -562,10 +580,15 @@ void UdtRecordCompleter::Record::ConstructRecord() {
       }
       for (auto &field : fields) {
         int64_t bit_size = field->bit_size;
+        // Use the lowest index of the union members.
+        parent->original_index =
+            std::min(parent->original_index, field->original_index);
         parent->fields.push_back(std::move(field));
         end_offset_map[offset + bit_size].push_back(
             parent->fields.back().get());
       }
     }
   }
+
+  record.RestoreOriginalOrder();
 }

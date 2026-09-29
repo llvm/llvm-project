@@ -27,8 +27,8 @@ endif()
 if(APPLE OR WASM)
   message(WARNING "libomptarget cannot be built on MacOS X and WASM!")
   return()
-elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^(amdgcn|nvptx|spirv)" OR
-       "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^(amdgcn|nvptx|spirv)")
+elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^(amdgpu|amdgcn|nvptx|spirv)" OR
+       "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^(amdgpu|amdgcn|nvptx|spirv)")
   message(WARNING "offload cannot be built on GPU targets yet.")
   return()
 elseif(NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
@@ -171,13 +171,16 @@ endif()
 list(APPEND LIBOMPTARGET_PLUGINS_TO_BUILD "host")
 list(REMOVE_DUPLICATES LIBOMPTARGET_PLUGINS_TO_BUILD)
 
-if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)|(riscv64)$"
         AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   if("amdgpu" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
     message(STATUS "Not building AMDGPU plugin: only support AMDGPU in "
-                   "Linux x86_64, ppc64le, or aarch64 hosts")
+                   "Linux x86_64, ppc64le, aarch64, or riscv64 hosts")
     list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "amdgpu")
   endif()
+endif()
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
+        AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   if("cuda" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
     message(STATUS "Not building CUDA plugin: only support CUDA in "
                    "Linux x86_64, ppc64le, or aarch64 hosts")
@@ -338,6 +341,20 @@ if(LLVM_LINK_LLVM_DYLIB)
   list(APPEND OFFLOAD_INSTALL_RPATH "$ORIGIN/${llvm_libdir_relpath}")
 endif()
 
+# Expose a high-level target to build the offloading runtimes.
+# This is used in pre-commit CI to run a build of the libraries without requiring
+# to invoke the check-* targets.
+add_custom_target(offload
+  COMMENT "Building offloading runtime libraries and plugins"
+)
+
+add_custom_target(install-offload
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload)
+add_custom_target(install-offload-stripped
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload --strip)
+add_dependencies(install-offload offload)
+add_dependencies(install-offload-stripped offload)
+
 add_subdirectory(tools/offload-tblgen)
 
 # Build offloading plugins and device RTLs if they are available.
@@ -345,11 +362,12 @@ add_subdirectory(plugins-nextgen)
 add_subdirectory(tools)
 add_subdirectory(docs)
 
+add_subdirectory(liboffload)
+
 if(BUILD_LIBOMPTARGET)
   add_subdirectory(libomptarget)
 endif()
 
-add_subdirectory(liboffload)
 add_subdirectory(languages)
 
 # Add tests.
@@ -358,29 +376,8 @@ if(OFFLOAD_INCLUDE_TESTS)
   add_subdirectory(unittests)
 endif()
 
-# Expose a high-level target to build the offloading runtimes.
-# This is used in pre-commit CI to run a build of the libraries without requiring
-# to invoke the check-* targets.
-add_custom_target(offload
-  COMMENT "Building offloading runtime libraries and plugins"
-)
-if(TARGET omptarget)
-  add_dependencies(offload omptarget)
-endif()
-if(TARGET LLVMOffload)
-  add_dependencies(offload LLVMOffload)
-endif()
-
-add_custom_target(install-offload
-  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload)
-add_custom_target(install-offload-stripped
-  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload --strip)
-
-if(TARGET omptarget)
-  add_dependencies(install-offload omptarget)
-  add_dependencies(install-offload-stripped omptarget)
-endif()
-if(TARGET LLVMOffload)
-  add_dependencies(install-offload LLVMOffload)
-  add_dependencies(install-offload-stripped LLVMOffload)
-endif()
+foreach(target omptarget LLVMOffload LLVMOffloadKernel)
+  if(TARGET ${target})
+    add_dependencies(offload ${target})
+  endif()
+endforeach()

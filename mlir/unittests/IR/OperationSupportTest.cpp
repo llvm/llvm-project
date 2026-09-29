@@ -307,6 +307,11 @@ TEST(OperandStorageTest, PopulateDefaultAttrs) {
                                              nullptr, nullptr, req2);
   auto opt = op->getInherentAttr("default_valued_attr");
   EXPECT_NE(opt, nullptr) << *op;
+  auto typed = op->getInherentAttrOfType<IntegerAttr>("default_valued_attr");
+  ASSERT_TRUE(typed) << *op;
+  EXPECT_EQ(typed.getInt(), 42);
+  EXPECT_FALSE(op->getInherentAttrOfType<StringAttr>("default_valued_attr"));
+  EXPECT_FALSE(op->getInherentAttrOfType<IntegerAttr>("unknown_attr"));
 
   op->destroy();
 }
