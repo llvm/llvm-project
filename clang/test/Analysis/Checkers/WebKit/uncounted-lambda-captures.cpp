@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=webkit.UncountedLambdaCapturesChecker -verify %s
 
 #include "mock-types.h"
+#include "mock-system-header.h"
 
 struct A {
   static void b();
@@ -719,4 +720,8 @@ void instantiate_dependent_callables(NoEscapeCallable& noEscape,
                                      EscapeCallable& escape) {
   call_through_noescape_callable(noEscape);
   call_through_escaping_callable(escape);
+}
+
+void lambda_in_system_header(RefCountable* ref_countable) {
+  lambdaInSystemHeader(ref_countable);
 }

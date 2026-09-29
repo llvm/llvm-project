@@ -6250,49 +6250,49 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r0, s8
 ; CHECK-NEXT:    vmov q6, q1
-; CHECK-NEXT:    vmov.f32 s16, s24
+; CHECK-NEXT:    vmov.f32 s20, s24
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.f32 s22, s25
 ; CHECK-NEXT:    mov.w lr, #0
-; CHECK-NEXT:    vmov.f32 s18, s25
 ; CHECK-NEXT:    vmov.f32 s12, s8
 ; CHECK-NEXT:    vmov r12, s14
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    lsll r4, r5, #1
 ; CHECK-NEXT:    mov r2, r12
 ; CHECK-NEXT:    lsll r2, r3, #1
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
+; CHECK-NEXT:    vmov q4[2], q4[0], r4, r2
 ; CHECK-NEXT:    adr.w r2, .LCPI22_32
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
+; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    vmov q4[3], q4[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    vstrw.32 q1, [sp, #480] @ 16-byte Spill
-; CHECK-NEXT:    vmov r2, s20
-; CHECK-NEXT:    vmov.i64 q1, #0xffffffff
-; CHECK-NEXT:    vand q3, q3, q1
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vstrw.32 q0, [sp, #480] @ 16-byte Spill
+; CHECK-NEXT:    vand q0, q5, q0
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    lsll r4, r5, #2
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov.i64 q0, #0xffffffff
+; CHECK-NEXT:    vand q0, q3, q0
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
 ; CHECK-NEXT:    adr.w r2, .LCPI22_33
 ; CHECK-NEXT:    vmsr p0, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    vpsel q3, q1, q3
+; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    veor q3, q0, q4
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #464] @ 16-byte Spill
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6300,23 +6300,23 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmsr p0, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    lsll r2, r3, #2
-; CHECK-NEXT:    vpsel q3, q3, q0
+; CHECK-NEXT:    vpsel q3, q0, q3
 ; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
 ; CHECK-NEXT:    adr.w r2, .LCPI22_34
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #448] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #3
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6331,16 +6331,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #432] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #4
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6355,16 +6355,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #416] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #5
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6379,16 +6379,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #400] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #6
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6403,16 +6403,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #384] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #7
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6427,16 +6427,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #368] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #8
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6451,16 +6451,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #352] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #9
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6475,16 +6475,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #336] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #10
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6499,16 +6499,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #320] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #11
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6523,16 +6523,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #304] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #12
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6547,16 +6547,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #288] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #13
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6571,16 +6571,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #272] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #14
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6595,16 +6595,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #256] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #15
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6619,16 +6619,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #240] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #16
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6643,16 +6643,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #224] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #17
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6667,16 +6667,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #208] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6691,16 +6691,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #192] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #19
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6715,16 +6715,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #176] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #20
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6739,16 +6739,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #160] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #21
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6763,16 +6763,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #144] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #22
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6787,16 +6787,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #128] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #23
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6811,16 +6811,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #112] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #24
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6835,16 +6835,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #96] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #25
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6859,16 +6859,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #80] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #26
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6883,16 +6883,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #64] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #27
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6907,16 +6907,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #48] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #28
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6931,16 +6931,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #32] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #29
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6955,16 +6955,16 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vand q5, q4, q1
+; CHECK-NEXT:    vand q4, q5, q1
 ; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r2, s16
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #16] @ 16-byte Spill
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    lsll r4, r5, #30
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
+; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r2, eq
 ; CHECK-NEXT:    bfi r3, r2, #8, #8
@@ -6979,7 +6979,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    veor q1, q3, q0
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    vand q0, q4, q7
+; CHECK-NEXT:    vand q0, q5, q7
 ; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    lsll r0, r5, #31
@@ -6997,19 +6997,19 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vpsel q0, q3, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r0, r12
 ; CHECK-NEXT:    adr.w r0, .LCPI22_31
-; CHECK-NEXT:    vldrw.u32 q5, [r0]
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
 ; CHECK-NEXT:    vmov q1[3], q1[1], r5, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    vmov.i64 q3, #0xffffffff
-; CHECK-NEXT:    vand q4, q4, q5
-; CHECK-NEXT:    vmov r0, s16
-; CHECK-NEXT:    vmov.f32 s16, s26
+; CHECK-NEXT:    vand q5, q5, q4
+; CHECK-NEXT:    vmov r0, s20
+; CHECK-NEXT:    vmov.f32 s20, s26
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    bfi r2, r0, #0, #8
-; CHECK-NEXT:    vmov r0, s18
-; CHECK-NEXT:    vmov.f32 s18, s27
-; CHECK-NEXT:    vand q4, q4, q3
+; CHECK-NEXT:    vmov r0, s22
+; CHECK-NEXT:    vmov.f32 s22, s27
+; CHECK-NEXT:    vand q5, q5, q3
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    bfi r2, r0, #8, #8
@@ -7020,7 +7020,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov.f32 s6, s11
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    vand q0, q1, q3
-; CHECK-NEXT:    vand q6, q4, q6
+; CHECK-NEXT:    vand q6, q5, q6
 ; CHECK-NEXT:    vmov r3, s3
 ; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    vmov r4, s4
@@ -7058,7 +7058,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vpsel q0, q6, q0
 ; CHECK-NEXT:    vldrw.u32 q6, [sp, #464] @ 16-byte Reload
 ; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q6, q4, q6
+; CHECK-NEXT:    vand q6, q5, q6
 ; CHECK-NEXT:    vmov r0, s24
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
@@ -7072,7 +7072,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vpsel q0, q0, q2
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #448] @ 16-byte Reload
 ; CHECK-NEXT:    veor q1, q0, q1
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vmov r0, s8
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
@@ -7087,7 +7087,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #3
 ; CHECK-NEXT:    lsll r2, r7, #3
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7109,7 +7109,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #4
 ; CHECK-NEXT:    lsll r2, r7, #4
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7131,7 +7131,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #5
 ; CHECK-NEXT:    lsll r2, r7, #5
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7153,7 +7153,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #6
 ; CHECK-NEXT:    lsll r2, r7, #6
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7175,7 +7175,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #7
 ; CHECK-NEXT:    lsll r2, r7, #7
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7197,7 +7197,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #8
 ; CHECK-NEXT:    lsll r2, r7, #8
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7219,7 +7219,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #9
 ; CHECK-NEXT:    lsll r2, r7, #9
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7241,7 +7241,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #10
 ; CHECK-NEXT:    lsll r2, r7, #10
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7263,7 +7263,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #11
 ; CHECK-NEXT:    lsll r2, r7, #11
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7285,7 +7285,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #12
 ; CHECK-NEXT:    lsll r2, r7, #12
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7307,7 +7307,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #13
 ; CHECK-NEXT:    lsll r2, r7, #13
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7329,7 +7329,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #14
 ; CHECK-NEXT:    lsll r2, r7, #14
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7351,7 +7351,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #15
 ; CHECK-NEXT:    lsll r2, r7, #15
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7373,7 +7373,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #16
 ; CHECK-NEXT:    lsll r2, r7, #16
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7395,7 +7395,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #17
 ; CHECK-NEXT:    lsll r2, r7, #17
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7417,7 +7417,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #18
 ; CHECK-NEXT:    lsll r2, r7, #18
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7439,7 +7439,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #19
 ; CHECK-NEXT:    lsll r2, r7, #19
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7454,6 +7454,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r2, r0, #8, #8
 ; CHECK-NEXT:    b.w .LBB22_15
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
@@ -7555,14 +7556,13 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  .LBB22_15:
-; CHECK-NEXT:    bfi r2, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    vmsr p0, r2
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #160] @ 16-byte Reload
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #20
 ; CHECK-NEXT:    lsll r2, r7, #20
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7584,7 +7584,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #21
 ; CHECK-NEXT:    lsll r2, r7, #21
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7606,7 +7606,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #22
 ; CHECK-NEXT:    lsll r2, r7, #22
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7628,7 +7628,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #23
 ; CHECK-NEXT:    lsll r2, r7, #23
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7650,7 +7650,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #24
 ; CHECK-NEXT:    lsll r2, r7, #24
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7672,7 +7672,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #25
 ; CHECK-NEXT:    lsll r2, r7, #25
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7694,7 +7694,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #26
 ; CHECK-NEXT:    lsll r2, r7, #26
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7716,7 +7716,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #27
 ; CHECK-NEXT:    lsll r2, r7, #27
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7738,7 +7738,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #28
 ; CHECK-NEXT:    lsll r2, r7, #28
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7760,7 +7760,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    lsll r0, r5, #29
 ; CHECK-NEXT:    lsll r2, r7, #29
-; CHECK-NEXT:    vand q2, q4, q2
+; CHECK-NEXT:    vand q2, q5, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
 ; CHECK-NEXT:    vmov r0, s8
@@ -7773,7 +7773,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    bfi r2, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
-; CHECK-NEXT:    vand q2, q4, q7
+; CHECK-NEXT:    vand q2, q5, q7
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    bfi r2, r0, #8, #8
@@ -7794,7 +7794,7 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    bfi r2, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
-; CHECK-NEXT:    vand q2, q4, q5
+; CHECK-NEXT:    vand q2, q5, q4
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    bfi r2, r0, #8, #8
