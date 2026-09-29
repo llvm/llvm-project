@@ -11358,7 +11358,7 @@ def note_empty_body_on_separate_line : Note<
   "put the semicolon on a separate line to silence this warning">;
 
 def warn_redundant_defer: Warning<
-  "redundant use of '_Defer'; the deferred statement is executed immediately">,
+  "redundant use of '%0'; the deferred statement is executed immediately">,
   InGroup<DiagGroup<"redundant-defer">>;
 
 def err_va_start_captured_stmt : Error<

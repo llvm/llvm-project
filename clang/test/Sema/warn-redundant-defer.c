@@ -1,54 +1,58 @@
 // RUN: %clang_cc1 -std=c23 -fdefer-ts -fsyntax-only -verify %s -Wredundant-defer
 
-#define defer _Defer
-
 void f1() {
-  defer {} // expected-warning {{redundant use of defer}}
+  _Defer {} // expected-warning {{redundant use of '_Defer'}}
 }
 
+#define defer _Defer
+
 void f2() {
+  defer {} // expected-warning {{redundant use of 'defer'}}
+}
+
+void f3() {
   defer {} // OK
 
-  defer defer {} // expected-warning {{redundant use of defer}}
+  defer defer {} // expected-warning {{redundant use of 'defer'}}
 
-  defer defer defer {} // expected-warning 2 {{redundant use of defer}}
+  defer defer defer {} // expected-warning 2 {{redundant use of 'defer'}}
 
-  l1: defer defer {} // expected-warning {{redundant use of defer}}
+  l1: defer defer {} // expected-warning {{redundant use of 'defer'}}
 
-  l2: defer defer defer {} // expected-warning 2 {{redundant use of defer}}
+  l2: defer defer defer {} // expected-warning 2 {{redundant use of 'defer'}}
 
-  l3: l4: defer defer {} // expected-warning {{redundant use of defer}}
+  l3: l4: defer defer {} // expected-warning {{redundant use of 'defer'}}
 
-  defer [[clang::likely]] defer {} // expected-warning {{redundant use of defer}}
+  defer [[clang::likely]] defer {} // expected-warning {{redundant use of 'defer'}}
 
   defer
     [[clang::likely]] [[clang::suppress]]
-    defer {}; // expected-warning {{redundant use of defer}}
+    defer {}; // expected-warning {{redundant use of 'defer'}}
 
-  [[clang::likely]] defer defer {} // expected-warning {{redundant use of defer}}
+  [[clang::likely]] defer defer {} // expected-warning {{redundant use of 'defer'}}
 
   l5:
   [[clang::likely]] defer
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
 
   defer __attribute__((suppress))
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
 
   __attribute__((suppress)) defer
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
 
   l6:
   __attribute__((unknown)) defer // expected-warning {{unknown attribute}}
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
 
   {
     defer {} // OK
     f1();
   }
 
-  { defer {} } // expected-warning {{redundant use of defer}}
+  { defer {} } // expected-warning {{redundant use of 'defer'}}
 
-  { defer defer {} } // expected-warning 2 {{redundant use of defer}}
+  { defer defer {} } // expected-warning 2 {{redundant use of 'defer'}}
 
   {
     defer { // OK
@@ -59,15 +63,15 @@ void f2() {
   }
 
   {
-    defer { // expected-warning {{redundant use of defer}}
-      defer defer {} // expected-warning 2 {{redundant use of defer}}
+    defer { // expected-warning {{redundant use of 'defer'}}
+      defer defer {} // expected-warning 2 {{redundant use of 'defer'}}
     }
   }
 
   {
-    [[clang::likely]] defer { // expected-warning {{redundant use of defer}}
+    [[clang::likely]] defer { // expected-warning {{redundant use of 'defer'}}
       [[clang::likely]]
-      defer defer {} // expected-warning 2 {{redundant use of defer}}
+      defer defer {} // expected-warning 2 {{redundant use of 'defer'}}
     }
   }
 
@@ -77,10 +81,10 @@ void f2() {
   }
 
   if (true)
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
 
   if (true) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
   }
 
   for (;;) {
@@ -89,10 +93,10 @@ void f2() {
   }
 
   for (;;)
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
   }
 
   for (;;) {
@@ -102,7 +106,7 @@ void f2() {
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     break;
   }
 
@@ -113,12 +117,12 @@ void f2() {
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     l8: break;
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     l9: l10: break;
   }
 
@@ -129,22 +133,22 @@ void f2() {
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     [[clang::likely]] break;
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     [[clang::likely]] [[clang::suppress]] break;
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     __attribute__((suppress)) continue;
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     l11: [[clang::likely]] break;
   }
 
@@ -155,7 +159,7 @@ void f2() {
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     continue;
   }
 
@@ -166,12 +170,12 @@ void f2() {
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     l13: continue;
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     l14: l15: continue;
   }
 
@@ -182,22 +186,22 @@ void f2() {
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     [[clang::likely]] continue;
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     [[clang::likely]] [[clang::suppress]] continue;
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     __attribute__((suppress)) continue;
   }
 
   for (;;) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     l16: [[clang::likely]] continue;
   }
 
@@ -207,10 +211,10 @@ void f2() {
   }
 
   while (true)
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
 
   while (true) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
   }
 
   while (true) {
@@ -220,7 +224,7 @@ void f2() {
   }
 
   while (true) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     break;
   }
 
@@ -231,7 +235,7 @@ void f2() {
   }
 
   while (true) {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     continue;
   }
 
@@ -241,7 +245,7 @@ void f2() {
   } while (true);
 
   do {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
   } while (true);
 
   do {
@@ -251,7 +255,7 @@ void f2() {
   } while (true);
 
   do {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     break;
   } while (true);
 
@@ -262,40 +266,40 @@ void f2() {
   } while (true);
 
   do {
-    defer {} // expected-warning {{redundant use of defer}}
+    defer {} // expected-warning {{redundant use of 'defer'}}
     continue;
   } while (true);
 
-  defer {} // expected-warning {{redundant use of defer}}
+  defer {} // expected-warning {{redundant use of 'defer'}}
 }
 
-int f3() {
+int f4() {
   defer {} // OK
   return 0;
 }
 
-void f4() {
+void f5() {
   defer {} // OK
   f1();
   return;
 }
 
-void f5() {
-  defer {} // expected-warning {{redundant use of defer}}
+void f6() {
+  defer {} // expected-warning {{redundant use of 'defer'}}
   return;
 }
 
-void f6() {
-  defer {} // expected-warning {{redundant use of defer}}
+void f7() {
+  defer {} // expected-warning {{redundant use of 'defer'}}
   l17: return;
 }
 
-void f7() {
-  defer {} // expected-warning {{redundant use of defer}}
+void f8() {
+  defer {} // expected-warning {{redundant use of 'defer'}}
   [[clang::likely]] return;
 }
 
-void f8() {
-  defer {} // expected-warning {{redundant use of defer}}
+void f9() {
+  defer {} // expected-warning {{redundant use of 'defer'}}
   l18: l19: [[clang::likely]] [[clang::suppress]] return;
 }

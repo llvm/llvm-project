@@ -446,9 +446,15 @@ static Stmt *GetInnermostStatement(Stmt *Outer) {
 static void CheckRedundantDeferStmt(Sema &S, Stmt *Body) {
   Stmt *Inner = GetInnermostStatement(Body);
 
-  if (isa<DeferStmt>(Inner))
-    S.Diag(Inner->getBeginLoc(), diag::warn_redundant_defer)
-        << Inner->getSourceRange();
+  if (isa<DeferStmt>(Inner)) {
+    SourceLocation InnerLoc = Inner->getBeginLoc();
+    StringRef DeferSpelling =
+        S.PP.getLastMacroWithSpelling(InnerLoc, {tok::kw__Defer});
+
+    S.Diag(InnerLoc, diag::warn_redundant_defer)
+        << Inner->getSourceRange()
+        << (DeferSpelling.empty() ? "_Defer" : DeferSpelling);
+  }
 }
 
 sema::CompoundScopeInfo &Sema::getCurCompoundScope() const {
