@@ -50,7 +50,7 @@ define amdgpu_ps <2 x bfloat> @fsub_v2bf16_vc(<2 x bfloat> %a) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, 2.0 op_sel:[0,1] neg_lo:[0,1] neg_hi:[0,1]
+; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, -2.0 op_sel:[0,1]
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fsub <2 x bfloat> %a, <bfloat 2.0, bfloat 2.0>
   ret <2 x bfloat> %result
@@ -63,7 +63,7 @@ define amdgpu_ps <2 x bfloat> @fsub_v2bf16_vl(<2 x bfloat> %a) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_pk_add_bf16 v0, 0x42c83f80, v0 neg_lo:[1,0] neg_hi:[1,0]
+; GFX1250-NEXT:    v_pk_add_bf16 v0, 0xc2c8bf80, v0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fsub <2 x bfloat> %a, <bfloat 1.0, bfloat 100.0>
   ret <2 x bfloat> %result
