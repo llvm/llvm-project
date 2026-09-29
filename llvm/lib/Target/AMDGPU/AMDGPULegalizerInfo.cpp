@@ -3506,7 +3506,6 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
 
   const LLT ValTy = MRI.getType(ValReg);
   const unsigned ValSize = ValTy.getSizeInBits();
-  // The selection patterns match integer LLTs rather than plain scalars.
   const LLT I32 = LLT::integer(32);
 
   // The index is the pointer >> 2, so an under-aligned access would silently
