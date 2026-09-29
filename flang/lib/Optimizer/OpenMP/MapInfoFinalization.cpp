@@ -438,21 +438,23 @@ class MapInfoFinalizationPass
           builder.createIntegerConstant(loc, builder.getIndexType(), 0);
       mlir::Value one =
           builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+      mlir::Value upperBound = selectIfPresent(zero, -1);
+      mlir::Value extent = selectIfPresent(one, 0);
       bounds.push_back(mlir::omp::MapBoundsOp::create(
           builder, loc, builder.getType<mlir::omp::MapBoundsType>(), zero,
-          selectIfPresent(zero, -1), selectIfPresent(one, 0), one,
+          upperBound, extent, one,
           /*stride_in_bytes=*/false, one));
     } else {
       for (mlir::Value value : map.getBounds()) {
         auto bound = value.getDefiningOp<mlir::omp::MapBoundsOp>();
         // Also clear section offsets so that an absent argument's null base
         // address is not adjusted when computing the mapped address.
+        mlir::Value lowerBound = selectIfPresent(bound.getLowerBound(), 0);
+        mlir::Value upperBound = selectIfPresent(bound.getUpperBound(), -1);
+        mlir::Value extent = selectIfPresent(bound.getExtent(), 0);
         bounds.push_back(mlir::omp::MapBoundsOp::create(
-            builder, loc, bound.getType(),
-            selectIfPresent(bound.getLowerBound(), 0),
-            selectIfPresent(bound.getUpperBound(), -1),
-            selectIfPresent(bound.getExtent(), 0), bound.getStride(),
-            bound.getStrideInBytes(), bound.getStartIdx()));
+            builder, loc, bound.getType(), lowerBound, upperBound, extent,
+            bound.getStride(), bound.getStrideInBytes(), bound.getStartIdx()));
       }
     }
     map.getBoundsMutable().assign(bounds);
