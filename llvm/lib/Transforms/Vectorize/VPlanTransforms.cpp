@@ -35,6 +35,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TypeSize.h"
@@ -88,6 +89,14 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         continue;
 
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
+
+      // llvm.prefetch is an optional hint. Drop it from the vector loop;
+      // subsequent VPlan DCE removes address computations used only by it.
+      if (PatternMatch::match(
+              Inst, PatternMatch::m_Intrinsic<Intrinsic::prefetch>())) {
+        Ingredient.eraseFromParent();
+        continue;
+      }
 
       // Atomic accesses and fences have ordering/atomicity semantics that
       // cannot be preserved by lane-wise widening.
@@ -5894,6 +5903,12 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
         continue;
 
       auto *CI = cast<CallInst>(VPI.getUnderlyingInstr());
+      if (PatternMatch::match(
+              CI, PatternMatch::m_Intrinsic<Intrinsic::prefetch>())) {
+        VPI.eraseFromParent();
+        continue;
+      }
+
       SmallVector<VPValue *, 4> Ops(VPI.op_begin(),
                                     VPI.op_begin() + CI->arg_size());
 
