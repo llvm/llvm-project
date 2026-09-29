@@ -1095,27 +1095,21 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   auto args = call.getArgs();
   const bool intentsAvailable = callee && !callee.isDeclaration() &&
                                 args.size() == callee.getNumArguments();
+  // Several aliasing arguments are combined. A missing intent or intent(inout)
+  // is already both, so only a pure read is merged with a pure write.
   std::optional<ModRefResult> passed;
   for (auto [idx, arg] : llvm::enumerate(args)) {
     if (!fir::conformsWithPassByRef(arg.getType()) || alias(arg, var).isNo())
       continue;
-    ModRefResult one = ModRefResult::getModAndRef();
-    if (intentsAvailable) {
-      if (std::optional<fir::FortranDummyIntent> intent =
-              fir::getFortranDummyIntent(callee, idx)) {
-        switch (*intent) {
-        case fir::FortranDummyIntent::In:
-          one = ModRefResult::getRef();
-          break;
-        case fir::FortranDummyIntent::Out:
-          one = ModRefResult::getMod();
-          break;
-        case fir::FortranDummyIntent::InOut:
-          one = ModRefResult::getModAndRef();
-          break;
-        }
-      }
-    }
+    if (!intentsAvailable)
+      return ModRefResult::getModAndRef();
+    std::optional<fir::FortranDummyIntent> intent =
+        fir::getFortranDummyIntent(callee, idx);
+    if (!intent || *intent == fir::FortranDummyIntent::InOut)
+      return ModRefResult::getModAndRef();
+    ModRefResult one = *intent == fir::FortranDummyIntent::In
+                           ? ModRefResult::getRef()
+                           : ModRefResult::getMod();
     passed = passed ? passed->merge(one) : one;
   }
   if (passed)
