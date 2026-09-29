@@ -4184,6 +4184,28 @@ OpFoldResult cir::VecTernaryOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// MatrixTransposeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::MatrixTransposeOp::verify() {
+  cir::MatrixType valueTy = getValue().getType();
+  cir::MatrixType resultTy = getResult().getType();
+  if (valueTy.getElementType() != resultTy.getElementType()) {
+    emitOpError() << "operand type doesn't match the result type";
+    return failure();
+  }
+
+  if ((valueTy.getRowNum() != resultTy.getColumnNum()) ||
+      (valueTy.getColumnNum() != resultTy.getRowNum())) {
+    emitOpError()
+        << "result type doesn't match the transpose type of the operand type";
+    return failure();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ComplexCreateOp
 //===----------------------------------------------------------------------===//
 
