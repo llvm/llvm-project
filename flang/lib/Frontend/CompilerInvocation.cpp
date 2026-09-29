@@ -46,6 +46,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstdlib>
+#include <limits>
 #include <memory>
 #include <optional>
 
@@ -879,6 +880,10 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     } else if (columns < 7) {
       diags.Report(clang::diag::err_drv_small_columns)
           << arg->getOption().getName() << arg->getValue() << "7";
+    } else if (columns > std::numeric_limits<int>::max()) {
+      diags.Report(clang::diag::err_drv_large_columns)
+          << arg->getOption().getName() << arg->getValue()
+          << std::to_string(std::numeric_limits<int>::max());
     } else {
       opts.fixedFormColumns = columns;
     }

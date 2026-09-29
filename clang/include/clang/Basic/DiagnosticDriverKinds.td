@@ -443,6 +443,8 @@ def err_drv_negative_columns : Error<
   "invalid value '%1' in '%0', value must be 'none' or a positive integer">;
 def err_drv_small_columns : Error<
   "invalid value '%1' in '%0', value must be '%2' or greater">;
+def err_drv_large_columns : Error<
+  "invalid value '%1' in '%0', value must be '%2' or less">;
 def warn_drv_fraw_string_literals_in_cxx11 : Warning<
   "ignoring '-f%select{no-|}0raw-string-literals', which is only valid for C and C++ standards before C++11">,
   InGroup<UnusedCommandLineArgument>;
