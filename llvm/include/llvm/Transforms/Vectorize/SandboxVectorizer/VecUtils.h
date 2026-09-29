@@ -34,6 +34,49 @@ template <> struct DenseMapInfo<SmallVector<sandboxir::Value *>> {
 
 namespace sandboxir {
 
+/// An ArrayRef of Values or Instructions that we can print/dump for debugging.
+/// It is mainly used for the vectorizer's instr/value bundles.
+template <typename T> class BndlRef : public ArrayRef<T> {
+public:
+  // Inherit constructors.
+  using ArrayRef<T>::ArrayRef;
+
+#ifndef NDEBUG
+  /// Helper dump function for debugging.
+  void print(raw_ostream &OS) const {
+    for (const auto &[Idx, Val] : enumerate(*this))
+      OS << Idx << ". " << *Val << "\n";
+  }
+  LLVM_DUMP_METHOD void dump() const;
+#endif // NDEBUG
+};
+
+/// @name BndlRef Deduction guides
+/// @{
+/// Deduction guide to construct a BndlRef from a single element.
+template <typename T> BndlRef(const T &OneElt) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a pointer and length
+template <typename T> BndlRef(const T *data, size_t length) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a range
+template <typename T> BndlRef(const T *data, const T *end) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a SmallVector
+template <typename T> BndlRef(const SmallVectorImpl<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a SmallVector
+template <typename T, unsigned N>
+BndlRef(const SmallVector<T, N> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a std::vector
+template <typename T> BndlRef(const std::vector<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a std::array
+template <typename T, std::size_t N>
+BndlRef(const std::array<T, N> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from an BndlRef (const)
+template <typename T> BndlRef(const BndlRef<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from an BndlRef
+template <typename T> BndlRef(BndlRef<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a C array.
+template <typename T, size_t N> BndlRef(const T (&Arr)[N]) -> BndlRef<T>;
+/// @}
+
 class InstrMaps;
 
 using BundleTy = SmallVector<Value *, 4>;
@@ -122,13 +165,14 @@ public:
   /// \Returns the combined vector type for \p Bndl, even when the element types
   /// differ. For example: i8,i8,i16 will return <4 x i8>. \Returns null if
   /// types are of mixed float/integer types.
-  static Type *getCombinedVectorTypeFor(ArrayRef<Instruction *> Bndl,
+  template <typename T>
+  static Type *getCombinedVectorTypeFor(BndlRef<T *> Bndl,
                                         const DataLayout &DL) {
     assert(!Bndl.empty() && "Expected non-empty Bndl!");
     unsigned TotalBits = 0;
     unsigned MinElmBits = std::numeric_limits<unsigned>::max();
     Type *MinElmTy = nullptr;
-    for (auto [Idx, V] : enumerate(Bndl)) {
+    for (T *V : Bndl) {
       Type *ElmTy = getElementType(Utils::getExpectedType(V));
 
       unsigned ElmBits = Utils::getNumBits(ElmTy, DL);
@@ -140,6 +184,11 @@ public:
     }
     unsigned NumElms = TotalBits / MinElmBits;
     return FixedVectorType::get(MinElmTy, NumElms);
+  }
+
+  static Type *getCombinedVectorTypeFor(std::initializer_list<Value *> Bndl,
+                                        const DataLayout &DL) {
+    return getCombinedVectorTypeFor(BndlRef<Value *>(Bndl), DL);
   }
   /// \Returns the instruction in \p Instrs that is lowest in the BB. Expects
   /// that all instructions are in the same BB.
@@ -414,7 +463,7 @@ public:
     /// For load/store bundles, also record non-first-lane pointer operands;
     /// the first lane's pointer is skipped because the vector load/store
     /// reuses it. Erased later by \c tryEraseDeadInstrs().
-    template <typename T> void collectPotentiallyDeadInstrs(ArrayRef<T *> Bndl);
+    template <typename T> void collectPotentiallyDeadInstrs(BndlRef<T *> Bndl);
 
     /// Erase candidates recorded by \c collectPotentiallyDeadInstrs() that
     /// now have no uses, then clear the candidate set.
@@ -453,49 +502,6 @@ public:
   LLVM_DUMP_METHOD static void dump(ArrayRef<Instruction *> Bndl);
 #endif // NDEBUG
 };
-
-/// An ArrayRef of Values or Instructions that we can print/dump for debugging.
-/// It is mainly used for the vectorizer's instr/value bundles.
-template <typename T> class BndlRef : public ArrayRef<T> {
-public:
-  // Inherit constructors.
-  using ArrayRef<T>::ArrayRef;
-
-#ifndef NDEBUG
-  /// Helper dump function for debugging.
-  void print(raw_ostream &OS) const {
-    for (const auto &[Idx, Val] : enumerate(*this))
-      OS << Idx << ". " << *Val << "\n";
-  }
-  LLVM_DUMP_METHOD void dump() const;
-#endif // NDEBUG
-};
-
-/// @name BndlRef Deduction guides
-/// @{
-/// Deduction guide to construct a BndlRef from a single element.
-template <typename T> BndlRef(const T &OneElt) -> BndlRef<T>;
-/// Deduction guide to construct a BndlRef from a pointer and length
-template <typename T> BndlRef(const T *data, size_t length) -> BndlRef<T>;
-/// Deduction guide to construct a BndlRef from a range
-template <typename T> BndlRef(const T *data, const T *end) -> BndlRef<T>;
-/// Deduction guide to construct a BndlRef from a SmallVector
-template <typename T> BndlRef(const SmallVectorImpl<T> &Vec) -> BndlRef<T>;
-/// Deduction guide to construct a BndlRef from a SmallVector
-template <typename T, unsigned N>
-BndlRef(const SmallVector<T, N> &Vec) -> BndlRef<T>;
-/// Deduction guide to construct a BndlRef from a std::vector
-template <typename T> BndlRef(const std::vector<T> &Vec) -> BndlRef<T>;
-/// Deduction guide to construct a BndlRef from a std::array
-template <typename T, std::size_t N>
-BndlRef(const std::array<T, N> &Vec) -> BndlRef<T>;
-/// Deduction guide to construct a BndlRef from an BndlRef (const)
-template <typename T> BndlRef(const BndlRef<T> &Vec) -> BndlRef<T>;
-/// Deduction guide to construct a BndlRef from an BndlRef
-template <typename T> BndlRef(BndlRef<T> &Vec) -> BndlRef<T>;
-/// Deduction guide to construct a BndlRef from a C array.
-template <typename T, size_t N> BndlRef(const T (&Arr)[N]) -> BndlRef<T>;
-/// @}
 
 } // namespace sandboxir
 

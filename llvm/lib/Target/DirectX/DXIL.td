@@ -1074,6 +1074,17 @@ def AtomicBinOp : DXILOp<78, atomicBinOp> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
+def AtomicCompareExchange : DXILOp<79, atomicCompareExchange> {
+  let Doc = "performs an atomic compare-exchange on a UAV resource element, "
+            "returning the original value";
+  // Handle, Coord0, Coord1, Coord2, CompareValue, NewValue
+  let arguments = [HandleTy, Int32Ty, Int32Ty, Int32Ty, OverloadTy, OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>,
+                   Overloads<DXIL1_6, [Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def Barrier : DXILOp<80, barrier> {
   let Doc = "inserts a memory barrier in the shader";
   let intrinsics = [
@@ -1266,6 +1277,16 @@ def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
   let Doc = "returns the value from the specified lane";
   let intrinsics = [IntrinSelect<int_dx_wave_readlane>];
   let arguments = [OverloadTy, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<
+      DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def WaveReadLaneFirst : DXILOp<118, waveReadLaneFirst> {
+  let Doc = "returns the value from the first active lane";
+  let intrinsics = [IntrinSelect<int_dx_wave_readlane_first>];
+  let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<
       DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
