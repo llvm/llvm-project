@@ -1404,12 +1404,19 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   if (callOp)
     *callOp = theCall;
 
-  // If we have the error-attr we need the source location info so that the
-  // backend diagnostics pick it up.
-  if (calleeDecl && calleeDecl->hasAttr<ErrorAttr>())
-    theCall->setAttr(
-        cir::CIRDialect::getSrcLocAttrName(),
-        builder.getI64IntegerAttr(clangLoc.getBegin().getRawEncoding()));
+  // Add srcloc if we have [[gnu::error/warning]] or ShowInliningChain.
+  if (calleeDecl) {
+    bool needSrcLoc = calleeDecl->hasAttr<ErrorAttr>();
+    if (!needSrcLoc && cgm.getCodeGenOpts().ShowInliningChain)
+      needSrcLoc = calleeDecl->isInlined() ||
+                   calleeDecl->hasAttr<AlwaysInlineAttr>() ||
+                   calleeDecl->getStorageClass() == SC_Static ||
+                   calleeDecl->isInAnonymousNamespace();
+    if (needSrcLoc)
+      theCall->setAttr(
+          cir::CIRDialect::getSrcLocAttrName(),
+          builder.getI64IntegerAttr(clangLoc.getBegin().getRawEncoding()));
+  }
 
   // Sema/emitAttributedStmt (see
   // https://github.com/llvm/llvm-project/issues/214764) should one-day enforce

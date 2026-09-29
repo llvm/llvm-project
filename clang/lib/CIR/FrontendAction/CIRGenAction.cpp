@@ -226,6 +226,11 @@ public:
 
       LLVMModule->setDataLayout(C.getTargetInfo().getDataLayoutString());
 
+      for (llvm::Function &F : LLVMModule->functions())
+        if (const Decl *FD = Gen->getDeclForMangledName(F.getName()))
+          DiagConsumer.addFunctionSourceLocation(
+              F.getName(), FD->getASTContext().getFullLoc(FD->getLocation()));
+
       if (linkInModules(*LLVMModule))
         return;
 

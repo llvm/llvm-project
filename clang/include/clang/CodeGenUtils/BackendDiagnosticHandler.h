@@ -85,7 +85,7 @@ public:
 
   /// Get the best possible source location to represent a diagnostic that
   /// may have associated debug info.
-  FullSourceLoc
+  const FullSourceLoc
   getBestLocationFromDebugLoc(const llvm::DiagnosticInfoWithLocationBase &D,
                               bool &BadDebugInfo, StringRef &Filename,
                               unsigned &Line, unsigned &Column) const;
@@ -99,13 +99,28 @@ public:
   void handleDiagnostics(const llvm::DiagnosticInfo &DI);
 
 private:
+  /// Specialized handler for InlineAsm diagnostic.
+  /// \return True if the diagnostic has been successfully reported, false
+  /// otherwise.
   bool InlineAsmDiagHandler(const llvm::DiagnosticInfoInlineAsm &D);
+  /// Specialized handler for diagnostics reported using SMDiagnostic.
   void SrcMgrDiagHandler(const llvm::DiagnosticInfoSrcMgr &D);
+  /// Specialized handler for StackSize diagnostic.
+  /// \return True if the diagnostic has been successfully reported, false
+  /// otherwise.
   bool StackSizeDiagHandler(const llvm::DiagnosticInfoStackSize &D);
+  /// Specialized handler for ResourceLimit diagnostic.
+  /// \return True if the diagnostic has been successfully reported, false
+  /// otherwise.
   bool ResourceLimitDiagHandler(const llvm::DiagnosticInfoResourceLimit &D);
+  /// Specialized handler for unsupported backend feature diagnostic.
   void UnsupportedDiagHandler(const llvm::DiagnosticInfoUnsupported &D);
+  /// Specialized handler for unsupported target intrinsic diagnostic.
   void UnsupportedTargetIntrinsicDiagHandler(
       const llvm::DiagnosticInfoUnsupportedTargetIntrinsic &D);
+  /// Specialized handlers for optimization remarks.
+  /// Note that these handlers only accept remarks and they always handle
+  /// them.
   void EmitOptimizationMessage(const llvm::DiagnosticInfoOptimizationBase &D,
                                unsigned DiagID);
   void OptimizationRemarkHandler(const llvm::DiagnosticInfoOptimizationBase &D);
@@ -116,6 +131,8 @@ private:
   void
   OptimizationFailureHandler(const llvm::DiagnosticInfoOptimizationFailure &D);
   void DontCallDiagHandler(const llvm::DiagnosticInfoDontCall &D);
+  /// Specialized handler for misexpect warnings.
+  /// Note that misexpect remarks are emitted through ORE
   void MisExpectDiagHandler(const llvm::DiagnosticInfoMisExpect &D);
 
   DiagnosticsEngine &Diags;

@@ -14,12 +14,7 @@
 #include "clang/CodeGen/ModuleLinker.h"
 #include "clang/CodeGenUtils/BackendDiagnosticHandler.h"
 
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Timer.h"
-
-namespace llvm {
-  class DiagnosticInfoDontCall;
-}
 
 namespace clang {
 class ASTContext;

@@ -147,7 +147,7 @@ BackendDiagnosticConsumer::getFunctionSourceLocation(const Function &F) const {
   return std::nullopt;
 }
 
-FullSourceLoc BackendDiagnosticConsumer::getBestLocationFromDebugLoc(
+const FullSourceLoc BackendDiagnosticConsumer::getBestLocationFromDebugLoc(
     const llvm::DiagnosticInfoWithLocationBase &D, bool &BadDebugInfo,
     StringRef &Filename, unsigned &Line, unsigned &Column) const {
   SourceManager &SourceMgr = *SM;
@@ -447,7 +447,7 @@ void BackendDiagnosticConsumer::OptimizationRemarkHandler(
 void BackendDiagnosticConsumer::OptimizationRemarkHandler(
     const llvm::OptimizationRemarkAnalysisFPCommute &D) {
   // Optimization analysis remarks are active if the pass name is set to
-  // llvm::DiagnosticInfo::AlwasyPrint or if the -Rpass-analysis flag has a
+  // llvm::DiagnosticInfo::AlwaysPrint or if the -Rpass-analysis flag has a
   // regular expression that matches the name of the pass name in \p D.
 
   if (D.shouldAlwaysPrint() ||
@@ -459,7 +459,7 @@ void BackendDiagnosticConsumer::OptimizationRemarkHandler(
 void BackendDiagnosticConsumer::OptimizationRemarkHandler(
     const llvm::OptimizationRemarkAnalysisAliasing &D) {
   // Optimization analysis remarks are active if the pass name is set to
-  // llvm::DiagnosticInfo::AlwasyPrint or if the -Rpass-analysis flag has a
+  // llvm::DiagnosticInfo::AlwaysPrint or if the -Rpass-analysis flag has a
   // regular expression that matches the name of the pass name in \p D.
 
   if (D.shouldAlwaysPrint() ||
