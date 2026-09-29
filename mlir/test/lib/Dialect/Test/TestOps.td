@@ -1685,6 +1685,65 @@ def TestOpFoldUnmaterializable : TEST_Op<"op_fold_unmaterializable"> {
   let hasFolder = 1;
 }
 
+// Op for testing a partial fold. The folder replaces result 0 with a constant
+// and result 1 with the operand, and keeps result 2.
+def TestOpPartialFold : TEST_Op<"op_partial_fold", [NoMemoryEffect]> {
+  let arguments = (ins I32:$operand);
+  let results = (outs I32, I32, I32);
+  let hasFolder = 1;
+}
+
+// Op for testing a partial fold together with an in-place change. The first
+// fold sets `folded`, marks the in-place change, replaces `forwarded` with the
+// operand, and keeps `kept`. Later folds fail.
+def TestOpPartialFoldInPlace : TEST_Op<"op_partial_fold_in_place"> {
+  let arguments = (ins I32:$operand, UnitAttr:$folded);
+  let results = (outs I32:$forwarded, I32:$kept);
+  let hasFolder = 1;
+}
+
+// Op for testing that a fold fails when it keeps every result and does not
+// change the op in place. The folder returns the results of the op.
+def TestOpFoldKeepAll : TEST_Op<"op_fold_keep_all"> {
+  let results = (outs I32, I32);
+  let hasFolder = 1;
+}
+
+// Op for testing a fold that forwards its operands. In a graph region where
+// operand i is result i of the same op, the folder returns only the results of
+// the op, and the fold must fail.
+def TestOpFoldForwardOperands : TEST_Op<"op_fold_forward_operands"> {
+  let arguments = (ins I32:$first, I32:$second);
+  let results = (outs I32, I32);
+  let hasFolder = 1;
+}
+
+// Op for testing a partial fold that fails constant materialization. The
+// folder replaces result 0 with a constant, replaces result 1 with an attribute
+// that the test dialect cannot materialize, and keeps result 2.
+def TestOpPartialFoldUnmaterializable
+    : TEST_Op<"op_partial_fold_unmaterializable"> {
+  let results = (outs I32, I32, I32);
+  let hasFolder = 1;
+}
+
+// Op for testing the check for an in-place change without an in-place mark.
+// The first fold sets `folded` but does not mark the in-place change. Every
+// fold replaces `forwarded` with the operand and keeps `kept`.
+def TestOpPartialFoldUnmarkedInPlace
+    : TEST_Op<"op_partial_fold_unmarked_in_place"> {
+  let arguments = (ins I32:$operand, UnitAttr:$folded);
+  let results = (outs I32:$forwarded, I32:$kept);
+  let hasFolder = 1;
+}
+
+// Op for testing an in-place fold of an op without results. The first fold
+// sets `folded`. Later folds fail.
+def TestOpZeroResultsFoldInPlace : TEST_Op<"op_zero_results_fold_in_place"> {
+  let arguments = (ins UnitAttr:$folded);
+  let hasFolder = 1;
+}
+
 def TestAddIOp : TEST_Op<"addi"> {
   let arguments = (ins AnyTypeOf<[I32, TestI32]>:$op1,
                        AnyTypeOf<[I32, TestI32]>:$op2);
@@ -1767,8 +1826,7 @@ def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {
   let results = (outs Variadic<I1>);
   let hasFolder = 1;
   let extraClassDefinition = [{
-    ::llvm::LogicalResult $cppClass::fold(FoldAdaptor adaptor,
-        SmallVectorImpl<OpFoldResult> &results) {
+    ::mlir::OpFoldResults $cppClass::fold(FoldAdaptor adaptor) {
       return success();
     }
   }];

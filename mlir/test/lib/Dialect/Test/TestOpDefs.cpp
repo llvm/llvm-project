@@ -228,27 +228,90 @@ OpFoldResult TestOpConstant::fold(FoldAdaptor adaptor) { return getValue(); }
 // TestOpWithVariadicResultsAndFolder
 //===----------------------------------------------------------------------===//
 
-LogicalResult TestOpWithVariadicResultsAndFolder::fold(
-    FoldAdaptor adaptor, SmallVectorImpl<OpFoldResult> &results) {
-  for (Value input : this->getOperands()) {
-    results.push_back(input);
-  }
-  return success();
+OpFoldResults TestOpWithVariadicResultsAndFolder::fold(FoldAdaptor adaptor) {
+  return getOperands();
 }
 
 //===----------------------------------------------------------------------===//
 // TestOpFoldUnmaterializable
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-TestOpFoldUnmaterializable::fold(FoldAdaptor adaptor,
-                                 SmallVectorImpl<OpFoldResult> &results) {
-  // The unmaterializable slot comes last, so that the rollback sees both a
-  // materialized constant and an existing value.
+OpFoldResults TestOpFoldUnmaterializable::fold(FoldAdaptor adaptor) {
+  // The unmaterializable replacement comes last, so that the rollback sees
+  // both a materialized constant and an existing value.
   Builder b(getContext());
-  results.push_back(b.getI32IntegerAttr(42));
-  results.push_back(getOperand());
-  results.push_back(b.getStringAttr("unmaterializable"));
+  return {b.getI32IntegerAttr(42), getOperand(),
+          b.getStringAttr("unmaterializable")};
+}
+
+//===----------------------------------------------------------------------===//
+// TestOpPartialFold
+//===----------------------------------------------------------------------===//
+
+OpFoldResults TestOpPartialFold::fold(FoldAdaptor adaptor) {
+  Builder b(getContext());
+  return {b.getI32IntegerAttr(42), getOperand(), OpFoldResult()};
+}
+
+//===----------------------------------------------------------------------===//
+// TestOpPartialFoldInPlace
+//===----------------------------------------------------------------------===//
+
+OpFoldResults TestOpPartialFoldInPlace::fold(FoldAdaptor adaptor) {
+  if (getFolded())
+    return {};
+  setFolded(true);
+  OpFoldResults results(getOperation());
+  results.replace(getForwarded(), getOperand());
+  results.setModifiedInPlace();
+  return results;
+}
+
+//===----------------------------------------------------------------------===//
+// TestOpFoldKeepAll
+//===----------------------------------------------------------------------===//
+
+OpFoldResults TestOpFoldKeepAll::fold(FoldAdaptor adaptor) {
+  return {getResult(0), getResult(1)};
+}
+
+//===----------------------------------------------------------------------===//
+// TestOpFoldForwardOperands
+//===----------------------------------------------------------------------===//
+
+OpFoldResults TestOpFoldForwardOperands::fold(FoldAdaptor adaptor) {
+  return {getFirst(), getSecond()};
+}
+
+//===----------------------------------------------------------------------===//
+// TestOpPartialFoldUnmaterializable
+//===----------------------------------------------------------------------===//
+
+OpFoldResults TestOpPartialFoldUnmaterializable::fold(FoldAdaptor adaptor) {
+  Builder b(getContext());
+  return {b.getI32IntegerAttr(42), b.getStringAttr("unmaterializable"),
+          OpFoldResult()};
+}
+
+//===----------------------------------------------------------------------===//
+// TestOpPartialFoldUnmarkedInPlace
+//===----------------------------------------------------------------------===//
+
+OpFoldResults TestOpPartialFoldUnmarkedInPlace::fold(FoldAdaptor adaptor) {
+  // The missing setModifiedInPlace() is the defect under test.
+  if (!getFolded())
+    setFolded(true);
+  return {getOperand(), OpFoldResult()};
+}
+
+//===----------------------------------------------------------------------===//
+// TestOpZeroResultsFoldInPlace
+//===----------------------------------------------------------------------===//
+
+OpFoldResults TestOpZeroResultsFoldInPlace::fold(FoldAdaptor adaptor) {
+  if (getFolded())
+    return failure();
+  setFolded(true);
   return success();
 }
 
