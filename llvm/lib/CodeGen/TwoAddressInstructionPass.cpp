@@ -1669,7 +1669,7 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
       LastCopyIdx = LIS->InsertMachineInstrInMaps(*PrevMI).getRegSlot();
 
       SlotIndex endIdx =
-          LIS->getInstructionIndex(*MI).getRegSlot(IsEarlyClobber);
+          LIS->getInstructionIndex(*MI).getRegSlot(DstMO.isEarlyClobber());
       if (RegA.isVirtual()) {
         LiveInterval &LI = LIS->getInterval(RegA);
         VNInfo *VNI = LI.getNextValue(LastCopyIdx, LIS->getVNInfoAllocator());
