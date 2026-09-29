@@ -5147,28 +5147,6 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         Offsets.Splits.push_back(P.endOffset() - S.beginOffset());
       }
     }
-
-    // Now scan the already split slices, and add a split for any of them which
-    // we're going to pre-split.
-    for (Slice *S : P.splitSliceTails()) {
-      auto SplitOffsetsMapI =
-          SplitOffsetsMap.find(cast<Instruction>(S->getUse()->getUser()));
-      if (SplitOffsetsMapI == SplitOffsetsMap.end())
-        continue;
-      auto &Offsets = SplitOffsetsMapI->second;
-
-      assert(Offsets.S == S && "Found a mismatched slice!");
-      assert(!Offsets.Splits.empty() &&
-             "Cannot have an empty set of splits on the second partition!");
-      assert(Offsets.Splits.back() ==
-                 P.beginOffset() - Offsets.S->beginOffset() &&
-             "Previous split does not end where this one begins!");
-
-      // Record each split. The last partition's end isn't needed as the size
-      // of the slice dictates that.
-      if (S->endOffset() > P.endOffset())
-        Offsets.Splits.push_back(P.endOffset() - Offsets.S->beginOffset());
-    }
   }
 
   // We may have split loads where some of their stores are split stores. For
