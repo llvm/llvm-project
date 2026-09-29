@@ -670,14 +670,6 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Add CFI for the new frame location.
     buildDefCFAReg(MBB, MBBI, DL, SystemZ::R11D, ZII);
-
-    // Mark the FramePtr as live at the beginning of every block except
-    // the entry block.  (We'll have marked R11 as live on entry when
-    // saving the GPRs.)
-    if (&MBB == &MF.front()) {
-      for (MachineBasicBlock &MBBJ : llvm::drop_begin(MF))
-        MBBJ.addLiveIn(SystemZ::R11D);
-    }
   }
 
   // Skip over the FPR/VR saves.
