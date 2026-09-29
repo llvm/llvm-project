@@ -2,6 +2,8 @@
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
+// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
 // A union passed byval is copied as bytes. Its LLVM type is built from one
 // member, so a record load/store would drop bytes that are padding in that
@@ -39,3 +41,24 @@ void pass(void) {
 // LLVM:         %[[SLOT:.+]] = alloca %union.U, align 8
 // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[SLOT]], ptr align 8 %[[U]], i64 24, i1 false)
 // LLVM-NEXT:    call i32 @get_b(ptr noundef byval(%union.U) align 8 %[[SLOT]])
+
+// FIXME: Classic codegen copies neither the parameter nor the argument, so
+// LLVM and OGCG differ at -O0 (not at -O2, where the copies go away). To match:
+// - callee: use the byval pointer as the parameter's storage instead of
+//   copying it into the spill slot, as CallConvLowering already does for
+//   non-byval indirect parameters; copy only when the slot needs more
+//   alignment than the byval pointer has.
+// - caller: pass the address the argument was loaded from straight to the
+//   byval call (byval already gives the callee its own copy), when it is
+//   aligned enough and nothing writes that memory between the load and call.
+
+// OGCG-LABEL: define {{.*}}i32 @get_b(
+// OGCG-SAME:    ptr noundef byval(%union.U) align 8 %[[U:.+]])
+// OGCG-NOT:     call void @llvm.memcpy
+// OGCG:         %[[B:.+]] = getelementptr inbounds nuw %struct.anon.0, ptr %[[U]], i32 0, i32 1
+// OGCG-NEXT:    load i32, ptr %[[B]], align 4
+
+// OGCG-LABEL: define {{.*}}void @pass()
+// OGCG:         %[[U:.+]] = alloca %union.U, align 8
+// OGCG-NOT:     call void @llvm.memcpy
+// OGCG:         call i32 @get_b(ptr noundef byval(%union.U) align 8 %[[U]])
