@@ -1,5 +1,7 @@
 // RUN: %clang_omp_offload_csan -fno-exceptions %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %clang_omp_offload_csan -fno-exceptions -shared-libsan %s -o %t
+// RUN: %run %t 2>&1 | FileCheck %s
 
 #include "race.h"
 

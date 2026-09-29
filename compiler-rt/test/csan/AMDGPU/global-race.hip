@@ -2,6 +2,15 @@
 // RUN: %run %t 2>&1 | FileCheck %s
 // RUN: %clang_hip_csan -O2 %s -o %t %hip_libs
 // RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hip_csan -shared-libsan %s -o %t %hip_libs
+// RUN: %run %t 2>&1 | FileCheck %s
+
+// The host has no references to the shared runtime, it must still be loaded.
+// RUN: %clang_hip -Xarch_device -fsanitize=concurrency -shared-libsan %s \
+// RUN:   -o %t %hip_libs
+// RUN: llvm-readelf -d %t | FileCheck %s --check-prefix=NEEDED
+// RUN: %run %t 2>&1 | FileCheck %s
+// NEEDED: libclang_rt.csan.so
 
 #include "race.h"
 
