@@ -134,6 +134,12 @@ struct ExtractSliceOpInterface
         cstr.bound(value)[dim] == extractSliceOp.getMixedSizes()[i];
         int64_t staticStride = extractSliceOp.getStaticStrides()[i];
         if (staticStride > 0) {
+          // Force analysis of the size value to get a better bound. Example:
+          //   %size  = affine.min affine_map<(d0) -> (5, -d0 + 24)>(%iv)
+          //   %slice = tensor.extract_slice %source[%iv][%size][1]
+          //          : tensor<24xf32> to tensor<?xf32>
+          // Here we get a bound of 24 immediately, so %size is skipped under
+          // the default stop condition unless we force its analysis.
           if (auto sizeValue =
                   llvm::dyn_cast<Value>(extractSliceOp.getMixedSizes()[i]))
             cstr.populateConstraints(sizeValue, std::nullopt);
