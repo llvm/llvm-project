@@ -13,16 +13,16 @@
 
 using namespace llvm;
 
-Expected<PassPlugin> PassPlugin::Load(const std::string &Filename) {
+Expected<PassPlugin> PassPlugin::load(StringRef Filename) {
   std::string Error;
   auto Library =
-      sys::DynamicLibrary::getPermanentLibrary(Filename.c_str(), &Error);
+      sys::DynamicLibrary::getPermanentLibrary(Filename.str().c_str(), &Error);
   if (!Library.isValid())
     return make_error<StringError>(Twine("Could not load library '") +
                                        Filename + "': " + Error,
                                    inconvertibleErrorCode());
 
-  PassPlugin P{Filename, Library};
+  PassPlugin P{Filename.str(), Library};
 
   // llvmGetPassPluginInfo should be resolved to the definition from the plugin
   // we are currently loading.

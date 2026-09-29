@@ -1534,7 +1534,7 @@ int main(int Argc, char **Argv) {
     NewArgv.push_back(Arg->getValue());
   SmallVector<PassPlugin, 1> PluginList;
   PassPlugins.setCallback([&](const std::string &PluginPath) {
-    auto Plugin = PassPlugin::Load(PluginPath);
+    auto Plugin = PassPlugin::load(PluginPath);
     if (!Plugin)
       reportFatalUsageError(Plugin.takeError());
     PluginList.emplace_back(Plugin.get());
