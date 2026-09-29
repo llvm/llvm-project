@@ -1358,10 +1358,9 @@ struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
   }
 };
 
-/// Count entries in loose-compressed tensors by traversing their stored
-/// elements. The values buffer may contain holes, so its size is not the
-/// number of entries. Keep the constant-time buffer-size query for formats
-/// without loose-compressed levels.
+/// Count entries in loose-compressed tensors with an O(n) traversal of their
+/// stored elements instead of a constant-time buffer-size query. This is
+/// necessary because the values buffer may contain holes.
 struct NumberOfEntriesRewriter : public OpRewritePattern<NumberOfEntriesOp> {
   using OpRewritePattern::OpRewritePattern;
 
