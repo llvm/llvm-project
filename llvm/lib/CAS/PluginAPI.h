@@ -88,6 +88,11 @@ struct llcas_functions_t {
   llcas_object_refs_t (*loaded_object_get_refs)(llcas_cas_t,
                                                 llcas_loaded_object_t);
 
+  llcas_data_t (*loaded_object_get_standalone_data)(llcas_cas_t,
+                                                    llcas_loaded_object_t);
+
+  void (*standalone_data_dispose)(llcas_data_t);
+
   size_t (*object_refs_get_count)(llcas_cas_t, llcas_object_refs_t);
 
   llcas_objectid_t (*object_refs_get_id)(llcas_cas_t, llcas_object_refs_t,

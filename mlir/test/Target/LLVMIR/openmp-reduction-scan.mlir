@@ -18,7 +18,7 @@ llvm.func @scan_reduction() {
   %10 = llvm.mlir.constant(100 : i32) : i32
   %11 = llvm.mlir.constant(1 : i32) : i32
   %12 = llvm.mlir.constant(0 : i32) : i32
-  %13 = llvm.mlir.constant(100 : index) : i64
+  %13 = llvm.mlir.constant(100 : i64) : i64
   %14 = llvm.mlir.addressof @_QFEa : !llvm.ptr
   %15 = llvm.mlir.addressof @_QFEb : !llvm.ptr
   omp.parallel {
@@ -141,9 +141,9 @@ llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i3
 //CHECK:   br label %omp.scan.loop.exit
 
 // The shared scan buffer is allocated with malloc in the masked region. The
-// element count is multiplied by the element size in the target's pointer-width
-// integer type (size_t), not the loop index type, so the size computation
-// cannot overflow a narrow (e.g. i32) index before the call to malloc.
-//CHECK: %[[MALLOCSZ:.+]] = mul i64 {{.*}}ptrtoint
-//CHECK: %[[ARR:.+]] = tail call ptr @malloc(i64 %[[MALLOCSZ]])
+// element count (Span + 1) is multiplied by the element size in the target's
+// pointer-width integer type (size_t, i64 here), not the narrow loop index
+// type, so the size computation cannot overflow before the call to malloc. For
+// these constant bounds the size folds to i64 404 (101 elements * 4 bytes).
+//CHECK: %[[ARR:.+]] = tail call ptr @malloc(i64 404)
 //CHECK: store ptr %[[ARR]], ptr %{{.*}}, align 8

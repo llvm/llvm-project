@@ -18,15 +18,21 @@ include "llvm/Target/Target.td"
 // PTX ISA versions.
 //===----------------------------------------------------------------------===//
 
-class FeaturePTX<int version>:
-   SubtargetFeature<"ptx"# version, "PTXVersion",
+class FeaturePTX<int version, list<SubtargetFeature> implies>:
+   SubtargetFeature<"ptx" # version, "PTXVersion",
                     "" # version,
-                    "Use PTX version " # version>;
+                    "Use PTX version " # version, implies>,
+   Predicate<"Subtarget->hasFeature(NVPTX::" # NAME # ")">;
 
-foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65, 70, 71, 72,
-                   73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88,
-                   90, 91, 92, 93, 94] in
-  def PTX#version : FeaturePTX<version>;
+defvar PTXVersions = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65, 70, 71,
+                      72, 73, 74, 75, 76, 77, 78, 80, 81, 82, 83, 84, 85, 86,
+                      87, 88, 90, 91, 92, 93, 94];
+
+foreach version = PTXVersions in
+  def PTX # version : FeaturePTX<version,
+                                 !foreach(earlier,
+                                      !filter(v, PTXVersions, !lt(v, version)),
+                                      !cast<SubtargetFeature>("PTX" # earlier))>;
 
 //===----------------------------------------------------------------------===//
 // Target architectures.

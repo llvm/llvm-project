@@ -581,10 +581,11 @@ define amdgpu_ps float @s_fmaak_f32(float inreg %x, float inreg %y) {
 ;
 ; GFX1250-LABEL: s_fmaak_f32:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE ; encoding: [0x7c,0x40,0x17,0xee,0x00,0x00,0x04,0x00,0x00,0x00,0x00,0x00]
-; GFX1250-NEXT:    v_nop ; encoding: [0x00,0x00,0x00,0x7e]
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    ; encoding: [0x41,0x06,0x80,0xb9,0x01,0x00,0x00,0x00]
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0 ; encoding: [0x80,0x01,0xc0,0xbe]
+; GFX1250-NEXT:    v_nop ; encoding: [0x00,0x00,0x00,0x7e]
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE ; encoding: [0x40,0x40,0x17,0xee,0x00,0x00,0x04,0x00,0x00,0x00,0x00,0x00]
 ; GFX1250-NEXT:    s_fmaak_f32 s0, s0, s1, 0x43800000 ; encoding: [0x00,0x01,0x80,0xa2,0x00,0x00,0x80,0x43]
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) ; encoding: [0x0b,0x00,0x87,0xbf]
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0 ; encoding: [0x00,0x02,0x00,0x7e]
@@ -598,7 +599,7 @@ define amdgpu_ps float @s_fmaak_f32(float inreg %x, float inreg %y) {
 ; GFX1100: codeLenInByte = 16
 ; GFX1150: codeLenInByte = 16
 ; GFX1200: codeLenInByte = 16
-; GFX1250: codeLenInByte = 40
+; GFX1250: codeLenInByte = 44
 
 define double @v_mul_f64_vop2_literal_32(double %x) {
 ; GFX9-LABEL: v_mul_f64_vop2_literal_32:

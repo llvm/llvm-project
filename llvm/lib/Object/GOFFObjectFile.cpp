@@ -13,8 +13,10 @@
 #include "llvm/Object/GOFFObjectFile.h"
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/Object/GOFF.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 #ifndef DEBUG_TYPE
@@ -23,6 +25,197 @@
 
 using namespace llvm::object;
 using namespace llvm;
+
+// Return the type of the record.
+static GOFF::RecordType getRecordType(const uint8_t *PhysicalRecord) {
+  return GOFF::RecordType((PhysicalRecord[1] & 0xF0) >> 4);
+}
+
+// Return true if the record is a continuation record.
+static bool isContinuation(const uint8_t *PhysicalRecord) {
+  return PhysicalRecord[1] & 0x02;
+}
+
+// Return true if the record has a continuation.
+static bool isContinued(const uint8_t *PhysicalRecord) {
+  return PhysicalRecord[1] & 0x01;
+}
+
+// Helper function to get continuous data from a logical record
+// Includes PTV header + everything from first record + continuation payloads
+// Returns the number of physical records consumed (including the initial
+// record)
+Expected<unsigned>
+GOFFObjectFile::getContinuousData(SmallVectorImpl<uint8_t> &CompleteData,
+                                  int DataIndex, uint16_t DataLength,
+                                  const uint8_t *Record) const {
+
+  CompleteData.reserve(DataLength + GOFF::RecordLength - DataIndex);
+
+  // First record - include PTV header (bytes 0-2)
+  CompleteData.append(Record, Record + GOFF::RecordPrefixLength);
+  // Append everything from the first record before the start of the data.
+  CompleteData.append(Record + GOFF::RecordPrefixLength, Record + DataIndex);
+  // Append the data.
+  const uint8_t *Ptr = Record + DataIndex;
+  size_t SliceLength = std::min(
+      DataLength, static_cast<uint16_t>(GOFF::RecordLength - DataIndex));
+  CompleteData.append(Ptr, Ptr + SliceLength);
+  DataLength -= SliceLength;
+  Ptr += SliceLength;
+
+  unsigned BlocksConsumed = 1; // Count the initial record
+  // Continuation records.
+  while (DataLength > 0) {
+    // Ptr now points to the start of the next physical record.
+    // Check that this block is a Continuation.
+    assert(isContinuation(Ptr) && "Continuation bit must be set");
+    // Check that the last Continuation is terminated correctly.
+    if (DataLength <= GOFF::PayloadLength && isContinued(Ptr))
+      return createStringError(object_error::parse_failed,
+                               "continued bit should not be set");
+
+    SliceLength =
+        std::min(DataLength, static_cast<uint16_t>(GOFF::PayloadLength));
+    Ptr += GOFF::RecordPrefixLength; // Skip the 3-byte prefix
+    CompleteData.append(Ptr, Ptr + SliceLength);
+    DataLength -= SliceLength;
+    // Advance to the start of the next record
+    Ptr += (GOFF::RecordLength - GOFF::RecordPrefixLength);
+    BlocksConsumed++;
+  }
+  return BlocksConsumed;
+}
+
+// Walk over the object file and populate FlattenedData.
+Error GOFFObjectFile::createFlattenedData() {
+  const uint8_t *It = base();
+  const uint8_t *End = base() + getData().size();
+
+  // First pass: validate continuation records.
+  const uint8_t *ValidateIt = It;
+  unsigned ValidateIndex = 0;
+  bool PrevContinued = false;
+  bool PrevWasContinuation = false;
+  GOFF::RecordType PrevRecordType = GOFF::RT_HDR;
+
+  while (ValidateIt < End) {
+    bool IsCont = isContinuation(ValidateIt);
+    bool IsContd = isContinued(ValidateIt);
+    GOFF::RecordType CurrentType = ::getRecordType(ValidateIt);
+
+    if (IsCont) {
+      // Continuation record must be preceded by a continued record.
+      if (!PrevContinued) {
+        return createStringError(object_error::parse_failed,
+                                 "record " + std::to_string(ValidateIndex) +
+                                     " is a continuation record that is not "
+                                     "preceded by a continued record");
+      }
+      // Continuation record type must match previous record type.
+      if (CurrentType != PrevRecordType) {
+        return createStringError(
+            object_error::parse_failed,
+            "record " + std::to_string(ValidateIndex) +
+                " is a continuation record that does not match "
+                "the type of the previous record");
+      }
+      // Update PrevContinued for continuation records.
+      PrevContinued = IsContd;
+    } else {
+      // Check if previous non-continuation was marked as continued.
+      if (PrevContinued && !PrevWasContinuation) {
+        return createStringError(object_error::parse_failed,
+                                 "record " + std::to_string(ValidateIndex) +
+                                     " is not a continuation record but the "
+                                     "preceding record is continued");
+      }
+      PrevRecordType = CurrentType;
+      PrevContinued = IsContd;
+    }
+
+    PrevWasContinuation = IsCont;
+    ValidateIt += GOFF::RecordLength;
+    ValidateIndex++;
+  }
+
+  // Second pass: process records now that we know they're valid.
+  while (It < End) {
+    // Skip continuation records - only process first physical record of each
+    // logical record.
+    if (isContinuation(It)) {
+      It += GOFF::RecordLength;
+      continue;
+    }
+
+    GOFF::RecordType RecordType = ::getRecordType(It);
+
+    // Call get continuous data based on record type.
+    int DataIndex = 0;
+    uint16_t DataLength = 0;
+    ArrayRef<uint8_t> Slice(It, GOFF::RecordLength);
+    DataExtractor DE(Slice, false);
+
+    switch (RecordType) {
+    case GOFF::RT_ESD: {
+      DataIndex = 72;
+      uint64_t Offset = 70;
+      DataLength = DE.getU16(&Offset);
+      break;
+    }
+    case GOFF::RT_TXT: {
+      DataIndex = 24;
+      uint64_t Offset = 22;
+      DataLength = DE.getU16(&Offset);
+      break;
+    }
+    case GOFF::RT_RLD: {
+      DataIndex = 6;
+      uint64_t Offset = 4;
+      DataLength = DE.getU16(&Offset);
+      break;
+    }
+    case GOFF::RT_LEN: {
+      DataIndex = 8;
+      uint64_t Offset = 6;
+      DataLength = DE.getU16(&Offset);
+      break;
+    }
+    case GOFF::RT_END: {
+      DataIndex = 26;
+      uint64_t Offset = 24;
+      DataLength = DE.getU16(&Offset);
+      break;
+    }
+    case GOFF::RT_HDR: {
+      DataIndex = 60;
+      uint64_t Offset = 52;
+      DataLength = DE.getU16(&Offset);
+      break;
+    }
+    }
+    // Get the flattened data for this logical record (including continuations).
+    SmallVector<uint8_t> CompleteData;
+    Expected<unsigned> BlocksConsumed =
+        getContinuousData(CompleteData, DataIndex, DataLength, It);
+    if (!BlocksConsumed) {
+      // Log the error but don't fail construction - errors in continuation
+      // data will be caught when the data is actually accessed.
+      llvm::handleAllErrors(
+          BlocksConsumed.takeError(), [](const llvm::ErrorInfoBase &EIB) {
+            llvm::errs() << "ERROR: " << EIB.message() << "\n";
+          });
+      // Skip this record and continue.
+      It += GOFF::RecordLength;
+      continue;
+    }
+    FlattenedData.push_back({RecordType, std::move(CompleteData)});
+
+    // Move to next logical record using the number of blocks consumed.
+    It += (*BlocksConsumed) * GOFF::RecordLength;
+  }
+  return Error::success();
+}
 
 Expected<std::unique_ptr<ObjectFile>>
 ObjectFile::createGOFFObjectFile(MemoryBufferRef Object) {
@@ -61,56 +254,21 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
     }
   }
 
+  if (Error E = createFlattenedData()) {
+    Err = std::move(E);
+    return;
+  }
+
   SectionEntryImpl DummySection;
   SectionList.emplace_back(DummySection); // Dummy entry at index 0.
 
-  uint8_t PrevRecordType = 0;
-  uint8_t PrevContinuationBits = 0;
-  const uint8_t *End = reinterpret_cast<const uint8_t *>(Data.getBufferEnd());
-  for (const uint8_t *I = base(); I < End; I += GOFF::RecordLength) {
-    uint8_t RecordType = (I[1] & 0xF0) >> 4;
-    bool IsContinuation = I[1] & 0x02;
-    bool PrevWasContinued = PrevContinuationBits & 0x01;
-    size_t RecordNum = (I - base()) / GOFF::RecordLength;
+  // Dummy relocation entry at index 0.
+  GOFFRelEntry DummyRelEntry;
+  DummyRelEntry.PEsdId = 0;
+  RelEntries.emplace_back(DummyRelEntry);
 
-    // If the previous record was continued, the current record should be a
-    // continuation.
-    if (PrevWasContinued && !IsContinuation) {
-      if (PrevRecordType == RecordType) {
-        Err = createStringError(object_error::parse_failed,
-                                "record " + std::to_string(RecordNum) +
-                                    " is not a continuation record but the "
-                                    "preceding record is continued");
-        return;
-      }
-    }
-    // Don't parse continuations records, only parse initial record.
-    if (IsContinuation) {
-      if (RecordType != PrevRecordType) {
-        Err = createStringError(object_error::parse_failed,
-                                "record " + std::to_string(RecordNum) +
-                                    " is a continuation record that does not "
-                                    "match the type of the previous record");
-        return;
-      }
-      if (!PrevWasContinued) {
-        Err = createStringError(object_error::parse_failed,
-                                "record " + std::to_string(RecordNum) +
-                                    " is a continuation record that is not "
-                                    "preceded by a continued record");
-        return;
-      }
-      PrevRecordType = RecordType;
-      PrevContinuationBits = I[1] & 0x03;
-      continue;
-    }
-    LLVM_DEBUG(for (size_t J = 0; J < GOFF::RecordLength; ++J) {
-      const uint8_t *P = I + J;
-      if (J % 8 == 0)
-        dbgs() << "  ";
-      dbgs() << format("%02hhX", *P);
-    });
-
+  for (const auto &[RecordType, Data] : FlattenedData) {
+    const uint8_t *I = Data.data();
     switch (RecordType) {
     case GOFF::RT_ESD: {
       // Save ESD record.
@@ -171,7 +329,8 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
       LLVM_DEBUG(dbgs() << "  --  TXT\n");
       break;
     case GOFF::RT_RLD:
-      LLVM_DEBUG(dbgs() << "  --  RLD (GOFF record type) unhandled\n");
+      setRelocationData(I);
+      LLVM_DEBUG(dbgs() << "  --  RLD\n");
       break;
     case GOFF::RT_LEN:
       LLVM_DEBUG(dbgs() << "  --  LEN (GOFF record type) unhandled\n");
@@ -182,14 +341,7 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
     case GOFF::RT_HDR:
       LLVM_DEBUG(dbgs() << "  --  HDR (GOFF record type) unhandled\n");
       break;
-    default:
-      Err = createStringError(object_error::parse_failed,
-                              "record %zu has unknown record type 0x%02" PRIX8,
-                              RecordNum, RecordType);
-      return;
     }
-    PrevRecordType = RecordType;
-    PrevContinuationBits = I[1] & 0x03;
   }
 }
 
@@ -204,9 +356,18 @@ Expected<StringRef> GOFFObjectFile::getSymbolName(DataRefImpl Symb) const {
     return StringRef(StrPtr.second.get(), StrPtr.first);
   }
 
+  // Get the ESD record pointer from EsdPtrs (points to FlattenedData)
+  const uint8_t *EsdRecord = getSymbolEsdRecord(Symb);
+  // Extract name from the flattened ESD record
+  // Name length is at byte 70-71, name data starts at byte 72
+  uint16_t NameLength = ESDRecord::getNameLength(EsdRecord);
   SmallString<256> SymbolName;
-  if (auto Err = ESDRecord::getData(getSymbolEsdRecord(Symb), SymbolName))
-    return std::move(Err);
+  if (NameLength > 0) {
+    // Name starts at byte 72 in the record (already flattened, no
+    // continuations)
+    const uint8_t *NameStart = EsdRecord + 72;
+    SymbolName.append(NameStart, NameStart + NameLength);
+  }
 
   SmallString<256> SymbolNameConverted;
   ConverterEBCDIC::convertToUTF8(SymbolName, SymbolNameConverted);
@@ -381,6 +542,44 @@ GOFFObjectFile::getSymbolSection(DataRefImpl Symb) const {
                                std::to_string(SymEdId));
 }
 
+uint32_t GOFFObjectFile::getZOSSymbolArchiveAttributes(DataRefImpl Symb) const {
+  const uint8_t *SymRecord = getSymbolEsdRecord(Symb);
+  uint32_t Attrs = 0;
+
+  // Bit 2 (0x4): 64-bit AMODE. If the child AMODE is unspecified,
+  // query the parent ED.
+  // TODO: The parent-walk path (child ESD_AMODE_None with a parent that has
+  // ESD_AMODE_64) cannot currently be tested as GOFFObjectWriter always emits
+  // ESD_AMODE_64 directly on LD/ER records and does not set AMODE on ED
+  // records. Full coverage requires yaml2obj GOFF ESD record support.
+  GOFF::ESDAmode Amode;
+  ESDRecord::getAmode(SymRecord, Amode);
+  if (Amode == GOFF::ESD_AMODE_None) {
+    uint32_t ParentEsdId;
+    ESDRecord::getParentEsdId(SymRecord, ParentEsdId);
+    if (ParentEsdId) {
+      const uint8_t *EdRecord = EsdPtrs[ParentEsdId];
+      ESDRecord::getAmode(EdRecord, Amode);
+    }
+  }
+  if (Amode == GOFF::ESD_AMODE_64)
+    Attrs |= 0x4;
+
+  // Bit 1 (0x2): XPLink — LinkageType is ESD_LT_XPLink.
+  GOFF::ESDLinkageType LinkageType;
+  ESDRecord::getLinkageType(SymRecord, LinkageType);
+  if (LinkageType == GOFF::ESD_LT_XPLink)
+    Attrs |= 0x2;
+
+  // Bit 0 (0x1): Writable Static Area.
+  GOFF::ESDNameSpaceId NameSpace;
+  ESDRecord::getNameSpaceId(SymRecord, NameSpace);
+  if (NameSpace == GOFF::ESD_NS_Parts)
+    Attrs |= 0x1;
+
+  return Attrs;
+}
+
 uint64_t GOFFObjectFile::getSymbolSize(DataRefImpl Symb) const {
   const uint8_t *Record = getSymbolEsdRecord(Symb);
   uint32_t Length;
@@ -492,8 +691,7 @@ GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
   SmallVector<uint8_t> Data(SectionSize, FillByte);
 
   // Replace section with content from text records.
-  for (const uint8_t *TxtRecordInt : TextPtrs) {
-    const uint8_t *TxtRecordPtr = TxtRecordInt;
+  for (const uint8_t *TxtRecordPtr : TextPtrs) {
     uint32_t TxtEsdId;
     TXTRecord::getElementEsdId(TxtRecordPtr, TxtEsdId);
     LLVM_DEBUG(dbgs() << "Got txt EsdId: " << TxtEsdId << '\n');
@@ -510,13 +708,12 @@ GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
     LLVM_DEBUG(dbgs() << "Record offset " << TxtDataOffset << ", data size "
                       << TxtDataSize << "\n");
 
-    SmallString<256> CompleteData;
-    CompleteData.reserve(TxtDataSize);
-    if (Error Err = TXTRecord::getData(TxtRecordPtr, CompleteData))
-      return std::move(Err);
-    assert(CompleteData.size() == TxtDataSize && "Wrong length of data");
-    std::copy(CompleteData.data(), CompleteData.data() + TxtDataSize,
-              Data.begin() + TxtDataOffset);
+    // Text data starts at byte 24 in the flattened record (already processed
+    // continuations)
+    const uint8_t *TxtData = TxtRecordPtr + 24;
+    assert(TxtDataSize <= Data.size() - TxtDataOffset &&
+           "Text data exceeds section size");
+    std::copy(TxtData, TxtData + TxtDataSize, Data.begin() + TxtDataOffset);
   }
   auto &Cache = SectionDataCache[Sec.d.a];
   Cache = std::move(Data);
@@ -608,55 +805,113 @@ basic_symbol_iterator GOFFObjectFile::symbol_end() const {
   return basic_symbol_iterator(SymbolRef(Symb, this));
 }
 
-Error Record::getContinuousData(const uint8_t *Record, uint16_t DataLength,
-                                int DataIndex, SmallString<256> &CompleteData) {
-  // First record.
-  const uint8_t *Slice = Record + DataIndex;
-  size_t SliceLength =
-      std::min(DataLength, (uint16_t)(GOFF::RecordLength - DataIndex));
-  CompleteData.append(Slice, Slice + SliceLength);
-  DataLength -= SliceLength;
-  Slice += SliceLength;
+inline constexpr uint8_t SAME_R_ID = 0x80;
+inline constexpr uint8_t SAME_P_ID = 0x40;
+inline constexpr uint8_t SAME_OFFSET = 0x20;
+inline constexpr uint8_t EXT_ATTR_PRESENT = 0x04;
+inline constexpr uint8_t BYTE_OFFSET_8 = 0x02;
 
-  // Continuation records.
-  for (; DataLength > 0;
-       DataLength -= SliceLength, Slice += GOFF::PayloadLength) {
-    // Slice points to the start of the new record.
-    // Check that this block is a Continuation.
-    assert(Record::isContinuation(Slice) && "Continuation bit must be set");
-    // Check that the last Continuation is terminated correctly.
-    if (DataLength <= 77 && Record::isContinued(Slice))
-      return createStringError(object_error::parse_failed,
-                               "continued bit should not be set");
+// Populate the relocation entries.
+void GOFFObjectFile::setRelocationData(const uint8_t *RldRecord) {
+  SmallVector<uint8_t, 8> RelocationData;
+  int DataIndex = 6;
+  uint16_t DataLength;
+  RLDRecord::getDataLength(RldRecord, DataLength);
 
-    SliceLength = std::min(DataLength, (uint16_t)GOFF::PayloadLength);
-    Slice += GOFF::RecordPrefixLength;
-    CompleteData.append(Slice, Slice + SliceLength);
+  // The record is already flattened if it's continued.
+  const uint8_t *RldI = RldRecord + DataIndex;
+  const uint8_t *RldE = RldI + DataLength;
+  uint32_t CurREsdId = 0;
+  uint32_t CurPEsdId = 0;
+  uint64_t CurPOffset = 0;
+  for (const uint8_t *Rld = RldI; Rld < RldE;) {
+    GOFFRelEntry RelEntry;
+    uint8_t Flags = Rld[0];
+    int32_t Length = 8;
+    if (!(Flags & SAME_R_ID)) {
+      CurREsdId = support::endian::read32be(&Rld[Length]);
+      Length += 4;
+    }
+    if (!(Flags & SAME_P_ID)) {
+      CurPEsdId = support::endian::read32be(&Rld[Length]);
+      Length += 4;
+    }
+    if (!(Flags & SAME_OFFSET)) {
+      if (Flags & BYTE_OFFSET_8) {
+        CurPOffset = support::endian::read64be(&Rld[Length]);
+        Length += 8;
+      } else {
+        CurPOffset = support::endian::read32be(&Rld[Length]);
+        Length += 4;
+      }
+    }
+    if (Flags & EXT_ATTR_PRESENT)
+      Length += 8;
+
+    RelEntry.PEsdId = CurPEsdId;
+    RelEntry.REsdId = CurREsdId;
+    RelEntry.POffset = CurPOffset;
+    RelEntry.RelType = getRldType(Rld);
+    RelEntries.emplace_back(RelEntry);
+
+    Rld += Length;
+    assert(Rld <= RldE && "RLD length?");
   }
-  return Error::success();
 }
 
-Error HDRRecord::getData(const uint8_t *Record,
-                         SmallString<256> &CompleteData) {
-  uint16_t Length = getPropertyModuleLength(Record);
-  return getContinuousData(Record, Length, 60, CompleteData);
+void GOFFObjectFile::moveRelocationNext(DataRefImpl &Rel) const {
+  for (size_t I = Rel.d.b + 1, E = RelEntries.size(); I < E; ++I) {
+    const GOFFRelEntry &RelEntry = RelEntries[I];
+    if (Rel.d.a == RelEntry.PEsdId) {
+      Rel.d.b = I;
+      return;
+    }
+  }
+
+  Rel.d.b = 0;
 }
 
-Error ESDRecord::getData(const uint8_t *Record,
-                         SmallString<256> &CompleteData) {
-  uint16_t DataSize = getNameLength(Record);
-  return getContinuousData(Record, DataSize, 72, CompleteData);
+uint64_t GOFFObjectFile::getRelocationOffset(DataRefImpl Rel) const {
+  assert(Rel.d.b > 0 && Rel.d.b < RelEntries.size() &&
+         "Rel Index out of boundary");
+  const GOFFRelEntry &RelEntry = RelEntries[Rel.d.b];
+  return RelEntry.POffset;
 }
 
-Error TXTRecord::getData(const uint8_t *Record,
-                         SmallString<256> &CompleteData) {
-  uint16_t Length;
-  getDataLength(Record, Length);
-  return getContinuousData(Record, Length, 24, CompleteData);
+symbol_iterator GOFFObjectFile::getRelocationSymbol(DataRefImpl Rel) const {
+  assert(Rel.d.b > 0 && Rel.d.b < RelEntries.size() &&
+         "Rel Index out of boundary");
+  const GOFFRelEntry &RelEntry = RelEntries[Rel.d.b];
+  DataRefImpl RefSym;
+  RefSym.d.a = RelEntry.REsdId;
+  return basic_symbol_iterator(SymbolRef(RefSym, this));
 }
 
-Error ENDRecord::getData(const uint8_t *Record,
-                         SmallString<256> &CompleteData) {
-  uint16_t Length = getNameLength(Record);
-  return getContinuousData(Record, Length, 26, CompleteData);
+uint64_t GOFFObjectFile::getRelocationType(DataRefImpl Rel) const {
+  assert(Rel.d.b > 0 && Rel.d.b < RelEntries.size() &&
+         "Rel Index out of boundary");
+  const GOFFRelEntry &RelEntry = RelEntries[Rel.d.b];
+  return RelEntry.RelType;
+}
+
+void GOFFObjectFile::getRelocationTypeName(
+    DataRefImpl Rel, SmallVectorImpl<char> &Result) const {
+  uint64_t RelType = getRelocationType(Rel);
+  std::string HexStr = formatv("R_{0:x-8}", RelType).str();
+  Result.append(HexStr.begin(), HexStr.end());
+}
+
+relocation_iterator GOFFObjectFile::section_rel_begin(DataRefImpl Sec) const {
+  DataRefImpl Rel;
+  Rel.d.a = getSectionDefEsdId(Sec);
+  Rel.d.b = 0;
+  moveRelocationNext(Rel);
+  return relocation_iterator(RelocationRef(Rel, this));
+}
+
+relocation_iterator GOFFObjectFile::section_rel_end(DataRefImpl Sec) const {
+  DataRefImpl Rel;
+  Rel.d.a = getSectionDefEsdId(Sec);
+  Rel.d.b = 0;
+  return relocation_iterator(RelocationRef(Rel, this));
 }

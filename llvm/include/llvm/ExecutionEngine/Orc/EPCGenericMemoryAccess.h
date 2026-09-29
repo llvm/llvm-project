@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 //
 // Implements the MemoryAccess interface by calling executor-side wrapper
-// functions through rt::Proxy objects.
+// functions through Proxy objects.
 //
 // This simplifies the implementaton of new ExecutorProcessControl instances,
 // as this implementation will always work (at the cost of some performance
 // overhead for the calls).
+//
+// This header is protocol-agnostic. To build an instance that targets the ORC
+// runtime's SPS controller interface, see EPCGenericMemoryAccessSPS.h.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,56 +23,54 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/ProxySpecs.h"
+#include "llvm/ExecutionEngine/Orc/Proxy.h"
+#include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+
+#include <cstdint>
+#include <string>
+#include <vector>
 
 namespace llvm {
 namespace orc {
 
 class EPCGenericMemoryAccess : public MemoryAccess {
 public:
+  using WriteUInt8sProxy = Proxy<void(ArrayRef<tpctypes::UInt8Write>)>;
+  using WriteUInt16sProxy = Proxy<void(ArrayRef<tpctypes::UInt16Write>)>;
+  using WriteUInt32sProxy = Proxy<void(ArrayRef<tpctypes::UInt32Write>)>;
+  using WriteUInt64sProxy = Proxy<void(ArrayRef<tpctypes::UInt64Write>)>;
+  using WritePointersProxy = Proxy<void(ArrayRef<tpctypes::PointerWrite>)>;
+  using WriteBuffersProxy = Proxy<void(ArrayRef<tpctypes::BufferWrite>)>;
+  using ReadUInt8sProxy = Proxy<std::vector<uint8_t>(ArrayRef<ExecutorAddr>)>;
+  using ReadUInt16sProxy = Proxy<std::vector<uint16_t>(ArrayRef<ExecutorAddr>)>;
+  using ReadUInt32sProxy = Proxy<std::vector<uint32_t>(ArrayRef<ExecutorAddr>)>;
+  using ReadUInt64sProxy = Proxy<std::vector<uint64_t>(ArrayRef<ExecutorAddr>)>;
+  using ReadPointersProxy =
+      Proxy<std::vector<ExecutorAddr>(ArrayRef<ExecutorAddr>)>;
+  using ReadBuffersProxy =
+      Proxy<std::vector<std::vector<uint8_t>>(ArrayRef<ExecutorAddrRange>)>;
+  using ReadStringsProxy =
+      Proxy<std::vector<std::string>(ArrayRef<ExecutorAddr>)>;
+
   /// Proxies for the executor-side memory-access functions. These are
-  /// protocol-agnostic: EPCGenericMemoryAccess::Create populates them for the
-  /// runtime's SPS controller interface, but a client targeting a different
+  /// protocol-agnostic: sps::createEPCGenericMemoryAccess populates them for
+  /// the runtime's SPS controller interface, but a client targeting a different
   /// protocol can build its own Funcs and pass them to the constructor.
   struct Funcs {
-    rt::MemWriteUInt8sProxy WriteUInt8s;
-    rt::MemWriteUInt16sProxy WriteUInt16s;
-    rt::MemWriteUInt32sProxy WriteUInt32s;
-    rt::MemWriteUInt64sProxy WriteUInt64s;
-    rt::MemWritePointersProxy WritePointers;
-    rt::MemWriteBuffersProxy WriteBuffers;
-    rt::MemReadUInt8sProxy ReadUInt8s;
-    rt::MemReadUInt16sProxy ReadUInt16s;
-    rt::MemReadUInt32sProxy ReadUInt32s;
-    rt::MemReadUInt64sProxy ReadUInt64s;
-    rt::MemReadPointersProxy ReadPointers;
-    rt::MemReadBuffersProxy ReadBuffers;
-    rt::MemReadStringsProxy ReadStrings;
+    WriteUInt8sProxy WriteUInt8s;
+    WriteUInt16sProxy WriteUInt16s;
+    WriteUInt32sProxy WriteUInt32s;
+    WriteUInt64sProxy WriteUInt64s;
+    WritePointersProxy WritePointers;
+    WriteBuffersProxy WriteBuffers;
+    ReadUInt8sProxy ReadUInt8s;
+    ReadUInt16sProxy ReadUInt16s;
+    ReadUInt32sProxy ReadUInt32s;
+    ReadUInt64sProxy ReadUInt64s;
+    ReadPointersProxy ReadPointers;
+    ReadBuffersProxy ReadBuffers;
+    ReadStringsProxy ReadStrings;
   };
-
-  /// Create an EPCGenericMemoryAccess instance that reaches the memory-access
-  /// wrappers in ES's bootstrap JITDylib via the runtime's SPS controller
-  /// interface.
-  static Expected<std::unique_ptr<MemoryAccess>> Create(ExecutionSession &ES) {
-    namespace sps = rt::sps;
-    Funcs Fns;
-    if (auto Err = rt::buildProxies(
-            ES, rt::proxyInit<sps::MemWriteUInt8sProxySpec>(&Fns.WriteUInt8s),
-            rt::proxyInit<sps::MemWriteUInt16sProxySpec>(&Fns.WriteUInt16s),
-            rt::proxyInit<sps::MemWriteUInt32sProxySpec>(&Fns.WriteUInt32s),
-            rt::proxyInit<sps::MemWriteUInt64sProxySpec>(&Fns.WriteUInt64s),
-            rt::proxyInit<sps::MemWritePointersProxySpec>(&Fns.WritePointers),
-            rt::proxyInit<sps::MemWriteBuffersProxySpec>(&Fns.WriteBuffers),
-            rt::proxyInit<sps::MemReadUInt8sProxySpec>(&Fns.ReadUInt8s),
-            rt::proxyInit<sps::MemReadUInt16sProxySpec>(&Fns.ReadUInt16s),
-            rt::proxyInit<sps::MemReadUInt32sProxySpec>(&Fns.ReadUInt32s),
-            rt::proxyInit<sps::MemReadUInt64sProxySpec>(&Fns.ReadUInt64s),
-            rt::proxyInit<sps::MemReadPointersProxySpec>(&Fns.ReadPointers),
-            rt::proxyInit<sps::MemReadBuffersProxySpec>(&Fns.ReadBuffers),
-            rt::proxyInit<sps::MemReadStringsProxySpec>(&Fns.ReadStrings)))
-      return std::move(Err);
-    return std::make_unique<EPCGenericMemoryAccess>(ES, std::move(Fns));
-  }
 
   /// Create an EPCGenericMemoryAccess instance from a given set of memory
   /// access proxies.

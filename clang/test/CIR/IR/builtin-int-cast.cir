@@ -17,8 +17,9 @@ module {
   }
 
   // Builtin integer -> CIR integer.
-  cir.func @from_builtin(%arg0: i64) {
-    %0 = cir.builtin_int_cast %arg0 : i64 -> !u64i
+  cir.func @from_builtin() {
+    %0 = llvm.mlir.constant(42 : i64) : i64
+    %1 = cir.builtin_int_cast %0 : i64 -> !u64i
     cir.return
   }
 
@@ -28,8 +29,9 @@ module {
     cir.return
   }
 
-  cir.func @from_index(%arg0: index) {
-    %0 = cir.builtin_int_cast %arg0 : index -> !u64i
+  cir.func @from_index(%arg0: !u64i) {
+    %0 = cir.builtin_int_cast %arg0 : !u64i -> index
+    %1 = cir.builtin_int_cast %0 : index -> !u64i
     cir.return
   }
 }
@@ -40,11 +42,13 @@ module {
 // CHECK: cir.func{{.*}} @to_builtin_signed(%arg0: !s32i)
 // CHECK: %0 = cir.builtin_int_cast %arg0 : !s32i -> si32
 
-// CHECK: cir.func{{.*}} @from_builtin(%arg0: i64)
-// CHECK: %0 = cir.builtin_int_cast %arg0 : i64 -> !u64i
+// CHECK: cir.func{{.*}} @from_builtin()
+// CHECK: %0 = llvm.mlir.constant(42 : i64) : i64
+// CHECK: %1 = cir.builtin_int_cast %0 : i64 -> !u64i
 
 // CHECK: cir.func{{.*}} @to_index(%arg0: !u64i)
 // CHECK: %0 = cir.builtin_int_cast %arg0 : !u64i -> index
 
-// CHECK: cir.func{{.*}} @from_index(%arg0: index)
-// CHECK: %0 = cir.builtin_int_cast %arg0 : index -> !u64i
+// CHECK: cir.func{{.*}} @from_index(%arg0: !u64i)
+// CHECK: %0 = cir.builtin_int_cast %arg0 : !u64i -> index
+// CHECK: %1 = cir.builtin_int_cast %0 : index -> !u64i

@@ -30,7 +30,7 @@ llvm.func @scan_reduction_noncommutative() {
   %10 = llvm.mlir.constant(100 : i32) : i32
   %11 = llvm.mlir.constant(1 : i32) : i32
   %12 = llvm.mlir.constant(0 : i32) : i32
-  %13 = llvm.mlir.constant(100 : index) : i64
+  %13 = llvm.mlir.constant(100 : i64) : i64
   %14 = llvm.mlir.addressof @_QFEa : !llvm.ptr
   %15 = llvm.mlir.addressof @_QFEb : !llvm.ptr
   omp.parallel {

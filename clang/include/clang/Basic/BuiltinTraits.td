@@ -126,6 +126,11 @@ def TypeCompatible : BinaryTrait {
   let KeyFlags = [KEYNOCXX];
 }
 
+def TypeOrder : BinaryTrait {
+  let Spelling = "__builtin_type_order";
+  let KeyFlags = [KEYCXX20];
+}
+
 // MS Extensions
 def IsInterfaceClass : UnaryTrait {
   let Spelling = "__is_interface_class";

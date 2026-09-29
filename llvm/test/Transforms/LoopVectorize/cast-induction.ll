@@ -276,16 +276,16 @@ define void @cast_induction_tail_folding(ptr %A) {
 ; IC2-NEXT:    [[INDEX1:%.*]] = add i32 [[INDEX]], 1
 ; IC2-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[INDEX]], 2
 ; IC2-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[INDEX1]], 2
-; IC2-NEXT:    [[TMP4:%.*]] = sext i32 [[INDEX]] to i64
-; IC2-NEXT:    [[TMP6:%.*]] = sext i32 [[INDEX1]] to i64
 ; IC2-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; IC2:       [[PRED_STORE_IF]]:
+; IC2-NEXT:    [[TMP4:%.*]] = sext i32 [[INDEX]] to i64
 ; IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP4]]
 ; IC2-NEXT:    store i32 [[INDEX]], ptr [[TMP5]], align 4
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; IC2:       [[PRED_STORE_CONTINUE]]:
 ; IC2-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; IC2:       [[PRED_STORE_IF1]]:
+; IC2-NEXT:    [[TMP6:%.*]] = sext i32 [[INDEX1]] to i64
 ; IC2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP6]]
 ; IC2-NEXT:    store i32 [[INDEX1]], ptr [[TMP7]], align 4
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
@@ -321,7 +321,6 @@ define void @test_start_zext(i32 %start, ptr %dst) {
 ; VF4-SAME: i32 [[START:%.*]], ptr [[DST:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
 ; VF4-NEXT:    [[START_EXT:%.*]] = zext i32 [[START]] to i64
-; VF4-NEXT:    [[TMP0:%.*]] = sub i64 100, [[START_EXT]]
 ; VF4-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; VF4:       [[VECTOR_SCEVCHECK]]:
 ; VF4-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[START]], 1
@@ -423,10 +422,8 @@ define i64 @induction_cast_chain_cleared_by_dce(i64 %n, i64 %mask.init) {
 ; VF4-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[MASK]], 1
 ; VF4-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[MASK]], 2
 ; VF4-NEXT:    [[TMP2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP0]])
-; VF4-NEXT:    [[TMP21:%.*]] = lshr i64 [[MASK_INIT]], 32
-; VF4-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP21]], -4294967296
-; VF4-NEXT:    [[SMAX1:%.*]] = add i64 [[TMP2]], [[TMP22]]
-; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[SMAX1]], -1
+; VF4-NEXT:    [[TMP23:%.*]] = add i64 [[TMP2]], -1
+; VF4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP23]], [[MASK]]
 ; VF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; VF4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; VF4:       [[VECTOR_SCEVCHECK]]:
@@ -493,10 +490,8 @@ define i64 @induction_cast_chain_cleared_by_dce(i64 %n, i64 %mask.init) {
 ; IC2-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[MASK]], 1
 ; IC2-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[MASK]], 2
 ; IC2-NEXT:    [[TMP2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP0]])
-; IC2-NEXT:    [[TMP23:%.*]] = lshr i64 [[MASK_INIT]], 32
-; IC2-NEXT:    [[TMP24:%.*]] = mul i64 [[TMP23]], -4294967296
-; IC2-NEXT:    [[SMAX1:%.*]] = add i64 [[TMP2]], [[TMP24]]
-; IC2-NEXT:    [[TMP1:%.*]] = add i64 [[SMAX1]], -1
+; IC2-NEXT:    [[TMP25:%.*]] = add i64 [[TMP2]], -1
+; IC2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP25]], [[MASK]]
 ; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 2
 ; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; IC2:       [[VECTOR_SCEVCHECK]]:
@@ -569,4 +564,67 @@ loop:
 
 exit:
   ret i64 %acc.next
+}
+
+; The truncate feeds off an identity operation on the induction, which VPlan
+; folds away before the narrowing runs.
+define void @cast_induction_through_identity_op(ptr %dst) {
+; VF4-LABEL: define void @cast_induction_through_identity_op(
+; VF4-SAME: ptr [[DST:%.*]]) {
+; VF4-NEXT:  [[ENTRY:.*:]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
+; VF4-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP0]], align 4
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; VF4-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; VF4-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+; VF4-NEXT:    br label %[[EXIT:.*]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    ret void
+;
+; IC2-LABEL: define void @cast_induction_through_identity_op(
+; IC2-SAME: ptr [[DST:%.*]]) {
+; IC2-NEXT:  [[ENTRY:.*:]]
+; IC2-NEXT:    br label %[[VECTOR_PH:.*]]
+; IC2:       [[VECTOR_PH]]:
+; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; IC2:       [[VECTOR_BODY]]:
+; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; IC2-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDEX]] to i32
+; IC2-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
+; IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
+; IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP0]]
+; IC2-NEXT:    store i32 [[TMP1]], ptr [[TMP3]], align 4
+; IC2-NEXT:    store i32 [[TMP2]], ptr [[TMP4]], align 4
+; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; IC2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; IC2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; IC2:       [[MIDDLE_BLOCK]]:
+; IC2-NEXT:    br label %[[EXIT:.*]]
+; IC2:       [[EXIT]]:
+; IC2-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %identity = mul i64 %iv, 1
+  %trunc = trunc i64 %identity to i32
+  %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i32 %trunc, ptr %gep, align 4
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
 }

@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // Defines OpenACC codegen attributes (GPU parallel dimensions used for
-// privatization, barrier management, and loop work-sharing).
+// privatization, barrier management, and loop work-sharing, plus active
+// parallel dimensions for predication analysis).
 //
 //===----------------------------------------------------------------------===//
 
@@ -100,6 +101,21 @@ def OpenACC_GPUBlockRedundantAttr
     parallelism may be assigned, and during GPU code generation its enclosing
     block dimensions are treated as active (not predicated away).
   }];
+}
+
+def OpenACC_ActiveParDimsAttr
+    : OpenACC_Attr<"ActiveParDims", "active_par_dims"> {
+  let summary = "Active GPU parallel dimensions for an OpenACC operation.";
+  let description = [{
+    Ordered list of GPU parallel dimensions that are active (not predicated
+    away) for an operation. Distinct from ownership `par_dims`: ownership
+    records which dimensions a privatization or reduction is associated with,
+    while active dimensions record which launch dimensions execute the op
+    without predication. Used by privatization / private_local analysis ahead
+    of GPU code generation.
+  }];
+  let parameters = (ins ArrayRefParameter<"::mlir::acc::GPUParallelDimAttr">:$array);
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // OPENACCCG_ATTRIBUTES

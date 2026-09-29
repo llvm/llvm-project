@@ -67,6 +67,8 @@ public:
 /// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf
 class DILParser {
 public:
+  /// Parse the lexed tokens.
+  /// \returns An ASTNode tree or an error.
   static llvm::Expected<ASTNodeUP>
   Parse(llvm::StringRef dil_input_expr, DILLexer lexer, StackFrame &stack_frame,
         lldb::DynamicValueType use_dynamic, lldb::DILMode mode);
@@ -82,11 +84,17 @@ private:
   ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
-
   ASTNodeUP ParseAssignmentExpression();
+  ASTNodeUP ParsePureExpression();
+  ASTNodeUP ParseConditionalExpression();
+  ASTNodeUP ParseConditionalBranches(ASTNodeUP condition);
+  ASTNodeUP ParseLogicalOrExpression();
+  ASTNodeUP ParseLogicalAndExpression();
   ASTNodeUP ParseInclusiveOrExpression();
   ASTNodeUP ParseExclusiveOrExpression();
   ASTNodeUP ParseAndExpression();
+  ASTNodeUP ParseEqualityExpression();
+  ASTNodeUP ParseRelationalExpression();
   ASTNodeUP ParseShiftExpression();
   ASTNodeUP ParseAdditiveExpression();
   ASTNodeUP ParseMultiplicativeExpression();

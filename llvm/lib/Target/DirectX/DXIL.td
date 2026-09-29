@@ -414,9 +414,7 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 
 def LoadInput : DXILOp<4, loadInput> {
   let Doc = "Loads a scalar value from a shader input register component.";
-  let intrinsics = [IntrinSelect<int_dx_load_input,
-      [IntrinArgIndex<1>, IntrinArgIndex<2>, IntrinArgIndex<3>,
-       IntrinArgIndex<4>]>];
+  let intrinsics = [IntrinSelect<int_dx_load_input>];
   // inputSigId, rowIndex, colIndex, gsVertexOrPrimIndex
   let arguments = [Int32Ty, Int32Ty, Int8Ty, Int32Ty];
   let result = OverloadTy;
@@ -427,9 +425,7 @@ def LoadInput : DXILOp<4, loadInput> {
 
 def StoreOutput : DXILOp<5, storeOutput> {
   let Doc = "Stores a scalar value to a shader output register component.";
-  let intrinsics = [IntrinSelect<int_dx_store_output,
-      [IntrinArgIndex<1>, IntrinArgIndex<2>, IntrinArgIndex<3>,
-       IntrinArgIndex<4>]>];
+  let intrinsics = [IntrinSelect<int_dx_store_output>];
   // outputSigId, rowIndex, colIndex, value
   let arguments = [Int32Ty, Int32Ty, Int8Ty, OverloadTy];
   let result = VoidTy;
@@ -1007,6 +1003,18 @@ def TextureLoad : DXILOp<66, textureLoad> {
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
+def TextureStore : DXILOp<67, textureStore> {
+  let Doc = "writes to an RWTexture";
+  // Handle, Coord0, Coord1, Coord2, Val0, Val1, Val2, Val3, Mask
+  let arguments = [
+    HandleTy, Int32Ty, Int32Ty, Int32Ty, OverloadTy, OverloadTy, OverloadTy,
+    OverloadTy, Int8Ty
+  ];
+  let result = VoidTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def BufferLoad : DXILOp<68, bufferLoad> {
   let Doc = "reads from a TypedBuffer";
   // Handle, Coord0, Coord1
@@ -1060,6 +1068,17 @@ def AtomicBinOp : DXILOp<78, atomicBinOp> {
             "element, returning the original value";
   // Handle, AtomicBinOpCode, Coord0, Coord1, Coord2, NewValue
   let arguments = [HandleTy, Int32Ty, Int32Ty, Int32Ty, Int32Ty, OverloadTy];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>,
+                   Overloads<DXIL1_6, [Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def AtomicCompareExchange : DXILOp<79, atomicCompareExchange> {
+  let Doc = "performs an atomic compare-exchange on a UAV resource element, "
+            "returning the original value";
+  // Handle, Coord0, Coord1, Coord2, CompareValue, NewValue
+  let arguments = [HandleTy, Int32Ty, Int32Ty, Int32Ty, OverloadTy, OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>,
                    Overloads<DXIL1_6, [Int32Ty, Int64Ty]>];
@@ -1258,6 +1277,16 @@ def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
   let Doc = "returns the value from the specified lane";
   let intrinsics = [IntrinSelect<int_dx_wave_readlane>];
   let arguments = [OverloadTy, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<
+      DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def WaveReadLaneFirst : DXILOp<118, waveReadLaneFirst> {
+  let Doc = "returns the value from the first active lane";
+  let intrinsics = [IntrinSelect<int_dx_wave_readlane_first>];
+  let arguments = [OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<
       DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
@@ -1519,6 +1548,14 @@ def AnnotateHandle : DXILOp<216, annotateHandle> {
 def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let Doc = "create resource handle from binding";
   let arguments = [ResBindTy, Int32Ty, Int1Ty];
+  let result = HandleTy;
+  let stages = [Stages<DXIL1_6, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def CreateHandleFromHeap : DXILOp<218, createHandleFromHeap> {
+  let Doc = "create resource handle from heap";
+  let arguments = [Int32Ty, Int1Ty, Int1Ty];
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];

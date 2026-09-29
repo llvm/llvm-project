@@ -6,8 +6,8 @@ define void @test_ptr_iv_no_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1_END1:%.*]] = ptrtoaddr ptr [[P1_END:%.*]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoaddr ptr [[P1_START:%.*]] to i64
-; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP8]], [[P1_END1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP14]], -4
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TMP8]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P1_END1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
@@ -94,8 +94,8 @@ define void @test_ptr_iv_with_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1_END1:%.*]] = ptrtoaddr ptr [[P1_END:%.*]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[P1_START:%.*]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP4]], [[P1_END1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP10]], -4
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TMP4]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P1_END1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
@@ -175,8 +175,8 @@ define void @store_pointer_induction(ptr %start, ptr %end) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START:%.*]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[START2]], [[END1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP9]], -8
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[START2]], -8
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP9]], [[END1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2

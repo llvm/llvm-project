@@ -11,7 +11,9 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/clone.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/getpid.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mprotect.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
@@ -20,6 +22,7 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_getparam.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_getscheduler.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/sched_setscheduler.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/tgkill.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/write.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
@@ -27,24 +30,22 @@
 #include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
-
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
-#include <arm_acle.h>
-#endif
+#include "src/__support/threads/linux/futex_word.h"
+#include "src/__support/threads/thread_attributes.h"
 
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
 #include "hdr/sched_macros.h" // For CLONE_* flags.
+#include "hdr/signal_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/sys_mman_macros.h" // For PROT_* and MAP_* definitions.
-#include <linux/param.h> // For EXEC_PAGESIZE.
-#include <linux/prctl.h> // For PR_SET_NAME
-#include <sys/syscall.h> // For syscall numbers.
+#include <linux/param.h>         // For EXEC_PAGESIZE.
+#include <linux/prctl.h>         // For PR_SET_NAME
+#include <sys/syscall.h>         // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
 static constexpr size_t NAME_SIZE_MAX = 16; // Includes the null terminator
-static constexpr uint32_t CLEAR_TID_VALUE = 0xABCD1234;
 static constexpr unsigned CLONE_SYSCALL_FLAGS =
     CLONE_VM        // Share the memory space with the parent.
     | CLONE_FS      // Share the file system with the parent.
@@ -57,16 +58,6 @@ static constexpr unsigned CLONE_SYSCALL_FLAGS =
     | CLONE_CHILD_CLEARTID // Let the kernel clear the tid address
                            // wake the joining thread.
     | CLONE_SETTLS;        // Setup the thread pointer of the new thread.
-
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
-#define CLONE_RESULT_REGISTER "x0"
-#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
-#define CLONE_RESULT_REGISTER "t0"
-#elif defined(LIBC_TARGET_ARCH_IS_X86_64)
-#define CLONE_RESULT_REGISTER "rax"
-#else
-#error "CLONE_RESULT_REGISTER not defined for your target architecture"
-#endif
 
 static constexpr ErrorOr<size_t> add_no_overflow(size_t lhs, size_t rhs) {
   if (lhs > SIZE_MAX - rhs)
@@ -154,46 +145,18 @@ cleanup_thread_resources(ThreadAttributes *attrib) {
     free_stack(attrib->stack, attrib->stacksize, attrib->guardsize);
 }
 
-[[gnu::always_inline]] LIBC_INLINE uintptr_t get_start_args_addr() {
-// NOTE: For __builtin_frame_address to work reliably across compilers,
-// architectures and various optimization levels, the TU including this file
-// should be compiled with -fno-omit-frame-pointer.
-#ifdef LIBC_TARGET_ARCH_IS_X86_64
-  return reinterpret_cast<uintptr_t>(__builtin_frame_address(0))
-         // The x86_64 call instruction pushes resume address on to the stack.
-         // Next, The x86_64 SysV ABI requires that the frame pointer be pushed
-         // on to the stack. So, we have to step past two 64-bit values to get
-         // to the start args.
-         + sizeof(uintptr_t) * 2;
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
-  // The frame pointer after cloning the new thread in the Thread::run method
-  // is set to the stack pointer where start args are stored. So, we fetch
-  // from there.
-  return reinterpret_cast<uintptr_t>(__builtin_frame_address(1));
-#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
-  // The current frame pointer is the previous stack pointer where the start
-  // args are stored.
-  return reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
-#endif
-}
-
-[[gnu::noinline]] void start_thread() {
-  auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
+static int start_thread(void *arg) {
+  auto *start_args = reinterpret_cast<StartArgs *>(arg);
   auto *attrib = start_args->thread_attrib;
-  self.attrib = attrib;
-  self.attrib->atexit_callback_mgr = internal::get_thread_atexit_callback_mgr();
 
   if (attrib->style == ThreadStyle::POSIX) {
-    attrib->retval.posix_retval =
-        start_args->runner.posix_runner(start_args->arg);
-    thread_exit(ThreadReturnValue(attrib->retval.posix_retval),
-                ThreadStyle::POSIX);
+    ThreadReturnValue retval = start_args->runner.posix_runner(start_args->arg);
+    thread_exit(retval, ThreadStyle::POSIX);
   } else {
-    attrib->retval.stdc_retval =
-        start_args->runner.stdc_runner(start_args->arg);
-    thread_exit(ThreadReturnValue(attrib->retval.stdc_retval),
-                ThreadStyle::STDC);
+    ThreadReturnValue retval = start_args->runner.stdc_runner(start_args->arg);
+    thread_exit(retval, ThreadStyle::STDC);
   }
+  return 0;
 }
 
 int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
@@ -223,6 +186,10 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
     else
       stack = alloc.value();
     owned_stack = true;
+  } else {
+    // The user is responsible for setting up the stack guard (or not) for the
+    // provided stack.
+    guardsize = 0;
   }
 
   // Validate that stack/stacksize are validly aligned.
@@ -238,14 +205,11 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   init_tls(tls);
 
   // When the new thread is spawned by the kernel, the new thread gets the
-  // stack we pass to the clone syscall. However, this stack is empty and does
-  // not have any local vars present in this function. Hence, one cannot
-  // pass arguments to the thread start function, or use any local vars from
-  // here. So, we pack them into the new stack from where the thread can sniff
-  // them out.
-  //
-  // Likewise, the actual thread state information is also stored on the
-  // stack memory.
+  // stack we pass to the clone syscall. Thread initialization structures
+  // (StartArgs, ThreadAttributes, and the clear_tid Futex) are allocated on
+  // the new thread's stack memory so their lifetime is managed with the stack
+  // without requiring heap allocation. A pointer to StartArgs is passed
+  // directly to start_thread via the clone syscall wrapper's argument.
 
   static constexpr size_t INTERNAL_STACK_DATA_SIZE =
       sizeof(StartArgs) + sizeof(ThreadAttributes) + sizeof(Futex);
@@ -291,72 +255,42 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
 
   auto clear_tid = reinterpret_cast<Futex *>(
       adjusted_stack + sizeof(StartArgs) + sizeof(ThreadAttributes));
-  clear_tid->set(CLEAR_TID_VALUE);
+  clear_tid->set(1);
   attrib->platform_data = clear_tid;
 
-  // The clone syscall takes arguments in an architecture specific order.
-  // Also, we want the result of the syscall to be in a register as the child
-  // thread gets a completely different stack after it is created. The stack
-  // variables from this function will not be availalbe to the child thread.
-#if defined(LIBC_TARGET_ARCH_IS_X86_64)
-  long register clone_result asm(CLONE_RESULT_REGISTER);
-  clone_result = LIBC_NAMESPACE::syscall_impl<long>(
-      SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,
-      &attrib->tid,    // The address where the child tid is written
-      &clear_tid->val, // The futex where the child thread status is signalled
-      tls.tp           // The thread pointer value for the new thread.
-  );
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                  \
-    defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
-  long register clone_result asm(CLONE_RESULT_REGISTER);
-  clone_result = LIBC_NAMESPACE::syscall_impl<long>(
-      SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,
-      &attrib->tid,   // The address where the child tid is written
-      tls.tp,         // The thread pointer value for the new thread.
-      &clear_tid->val // The futex where the child thread status is signalled
-  );
-#else
-#error "Unsupported architecture for the clone syscall."
-#endif
+  get_tcb(tls.tp)->attrib = attrib;
 
-  if (clone_result == 0) {
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
-    // We set the frame pointer to be the same as the "sp" so that start args
-    // can be sniffed out from start_thread.
-#ifdef __clang__
-    // GCC does not currently implement __arm_wsr64/__arm_rsr64.
-    __arm_wsr64("x29", __arm_rsr64("sp"));
-#else
-    asm volatile("mov x29, sp");
-#endif
-#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
-    asm volatile("mv fp, sp");
-#endif
-    start_thread();
-  } else if (clone_result < 0) {
+  auto clone_result = linux_syscalls::clone(
+      start_thread, reinterpret_cast<void *>(adjusted_stack),
+      CLONE_SYSCALL_FLAGS, start_args, &attrib->tid,
+      reinterpret_cast<void *>(tls.tp),
+      reinterpret_cast<pid_t *>(&clear_tid->val));
+
+  if (!clone_result.has_value()) {
     cleanup_thread_resources(attrib);
-    return static_cast<int>(-clone_result);
+    return clone_result.error();
   }
 
   return 0;
 }
 
 int Thread::join(ThreadReturnValue &retval) {
-  if (self.attrib) {
+  if (current_thread().attrib) {
     // Reject self join.
-    if (self.attrib == attrib)
+    if (current_thread().attrib == attrib)
       return EDEADLK;
 
     // Do a best-effort check of concurrent/repeated join.
     // This cmpxchg establishes exclusive joiner role by setting the joiner
     // field iff there is no previous joiner
     ThreadAttributes *expected = nullptr;
-    if (!attrib->joiner.compare_exchange_strong(expected, self.attrib,
-                                                cpp::MemoryOrder::ACQ_REL))
+    if (!attrib->joiner.compare_exchange_strong(
+            expected, current_thread().attrib, cpp::MemoryOrder::ACQ_REL))
       return EINVAL;
 
     // Reject mutual join.
-    if (self.attrib->joiner.load(cpp::MemoryOrder::ACQUIRE) == attrib) {
+    if (current_thread().attrib->joiner.load(cpp::MemoryOrder::ACQUIRE) ==
+        attrib) {
       attrib->joiner.store(nullptr, cpp::MemoryOrder::RELEASE);
       return EDEADLK;
     }
@@ -398,8 +332,9 @@ void Thread::wait() {
   auto *clear_tid = reinterpret_cast<Futex *>(attrib->platform_data);
   // We cannot do a FUTEX_WAIT_PRIVATE here as the kernel does a
   // FUTEX_WAKE and not a FUTEX_WAKE_PRIVATE.
-  while (clear_tid->load() != 0)
-    clear_tid->wait(CLEAR_TID_VALUE, cpp::nullopt, true);
+  FutexWordType clear_tid_value;
+  while ((clear_tid_value = clear_tid->load()) != 0)
+    clear_tid->wait(clear_tid_value, cpp::nullopt, true);
 }
 
 bool Thread::operator==(const Thread &thread) const {
@@ -423,7 +358,7 @@ int Thread::set_name(const cpp::string_view &name) {
   if (name.size() >= NAME_SIZE_MAX)
     return ERANGE;
 
-  if (*this == self) {
+  if (*this == current_thread()) {
     // If we are setting the name of the current thread, then we can
     // use the syscall to set the name.
     int retval =
@@ -459,7 +394,7 @@ int Thread::get_name(cpp::StringStream &name) const {
 
   char name_buffer[NAME_SIZE_MAX];
 
-  if (*this == self) {
+  if (*this == current_thread()) {
     // If we are getting the name of the current thread, then we can
     // use the syscall to get the name.
     int retval =
@@ -514,8 +449,45 @@ ErrorOr<SchedParameters> Thread::getschedparam() const {
   return SchedParameters{pol_result.value(), param};
 }
 
+ErrorOr<void> Thread::kill(int sig) {
+  auto state = static_cast<DetachState>(
+      attrib->detach_state.load(cpp::MemoryOrder::RELAXED));
+  switch (state) {
+  case DetachState::EXITING:
+    // The thread is exiting, or has already exited. POSIX.1-2024 requires that
+    // pthread_kill does not return ESRCH because the pthread_t (unlike the OS
+    // TID) is still valid. Calling tgkill would return ESRCH (or target a
+    // recycled TID), so we return success directly. We only need to "request
+    // that a signal be delivered", and not actually make sure it has been
+    // handled. A zombie thread cannot handle signals.
+    return {};
+  case DetachState::JOINABLE:
+  case DetachState::DETACHED:
+    // A thread in these states can handle a signal. Note that a JOINABLE thread
+    // can transition to the EXITING state at any moment (and a DETACHED thread
+    // can disappear), but we're not allowed to take any locks to prevent that
+    // from happening (this function needs to be async-signal-safe).
+    break;
+  }
+
+  pid_t pid = linux_syscalls::getpid();
+  auto result = linux_syscalls::tgkill(pid, attrib->tid, sig);
+
+  if (!result.has_value()) {
+    if (result.error() == ESRCH) {
+      // Either the thread has exited since we've checked its state, or this
+      // object is corrupted. The latter is UB, so we're going to assume the
+      // former.
+      return {};
+    }
+    return Error(result.error());
+  }
+  return {};
+}
+
 void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
-  auto attrib = self.attrib;
+  auto attrib = current_thread().attrib;
+  attrib->retval = retval;
 
   // The very first thing we do is to call the thread's atexit callbacks.
   // These callbacks could be the ones registered by the language runtimes,
@@ -525,7 +497,7 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   // cleanup_thread_resources function as that function can be called from a
   // different thread. The destructors of thread local and TSS objects should
   // be called by the thread which owns them.
-  internal::call_atexit_callbacks(attrib);
+  internal::call_atexit_callbacks();
 
   uint32_t joinable_state = uint32_t(DetachState::JOINABLE);
   if (!attrib->detach_state.compare_exchange_strong(

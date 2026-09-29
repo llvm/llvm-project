@@ -312,21 +312,46 @@ func.func @two_consecutive_merge_points(%cond1: i1, %cond2: i1) -> i32 {
 
 // -----
 
-// Ensure that AllocaScopeOp does not block mem2reg.
+// A memref with a zero extent holds no elements and cannot be promoted.
 
-// CHECK-LABEL: func.func @alloca_scope
-func.func @alloca_scope() -> i32 {
-  %c0 = arith.constant 0 : i32
-  %alloca = memref.alloca() {alignment = 4 : i64} : memref<i32>
-  memref.store %c0, %alloca[] : memref<i32>
-  // CHECK:  %[[RET:.*]] = memref.alloca_scope
-  memref.alloca_scope  {
-    %c1 = arith.constant 1 : i32
-    memref.store %c1, %alloca[] : memref<i32>
-    // CHECK: %[[ONE:.*]] = arith.constant 1
-    // CHECK: memref.alloca_scope.return %[[ONE]]
-  }
-  %value = memref.load %alloca[] : memref<i32>
-  // CHECK: return %[[RET]]
-  return %value : i32
+// CHECK-LABEL: func.func @zero_extent_alloca
+func.func @zero_extent_alloca() {
+  // CHECK: memref.alloca() : memref<0xf32>
+  %alloca = memref.alloca() : memref<0xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @zero_extent_alloca_multi_dim
+func.func @zero_extent_alloca_multi_dim() {
+  // CHECK: memref.alloca() : memref<2x0x3xf32>
+  %alloca = memref.alloca() : memref<2x0x3xf32>
+  return
+}
+
+// -----
+
+// A memref with a `vector.vscale * 0` extent holds no elements and cannot be promoted.
+
+// CHECK-LABEL: func.func @scalable_zero_extent_alloca
+func.func @scalable_zero_extent_alloca() {
+  %vscale = vector.vscale
+  %c0 = arith.constant 0 : index
+  %size = arith.muli %vscale, %c0 : index
+  // CHECK: memref.alloca(%{{.*}}) : memref<?xf32>
+  %alloca = memref.alloca(%size) : memref<?xf32>
+  return
+}
+
+// -----
+
+// Make sure mem2reg does not crash on an alloca whose element count overflows
+// int64. https://github.com/llvm/llvm-project/issues/204297
+
+// CHECK-LABEL: func.func @alloca_element_count_overflow
+func.func @alloca_element_count_overflow() {
+  // CHECK: memref.alloca() : memref<9223372036854775807x3xi32>
+  %alloca = memref.alloca() : memref<9223372036854775807x3xi32>
+  return
 }

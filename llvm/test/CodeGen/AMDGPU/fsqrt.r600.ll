@@ -128,7 +128,7 @@ define amdgpu_kernel void @elim_redun_check_neg0(ptr addrspace(1) %out, float %i
 entry:
   %sqrt = call float @llvm.sqrt.f32(float %in)
   %cmp = fcmp olt float %in, -0.000000e+00
-  %res = select i1 %cmp, float 0x7FF8000000000000, float %sqrt
+  %res = select i1 %cmp, float +qnan, float %sqrt
   store float %res, ptr addrspace(1) %out
   ret void
 }
@@ -148,7 +148,7 @@ define amdgpu_kernel void @elim_redun_check_pos0(ptr addrspace(1) %out, float %i
 entry:
   %sqrt = call float @llvm.sqrt.f32(float %in)
   %cmp = fcmp olt float %in, 0.000000e+00
-  %res = select i1 %cmp, float 0x7FF8000000000000, float %sqrt
+  %res = select i1 %cmp, float +qnan, float %sqrt
   store float %res, ptr addrspace(1) %out
   ret void
 }
@@ -168,7 +168,7 @@ define amdgpu_kernel void @elim_redun_check_ult(ptr addrspace(1) %out, float %in
 entry:
   %sqrt = call float @llvm.sqrt.f32(float %in)
   %cmp = fcmp ult float %in, -0.000000e+00
-  %res = select i1 %cmp, float 0x7FF8000000000000, float %sqrt
+  %res = select i1 %cmp, float +qnan, float %sqrt
   store float %res, ptr addrspace(1) %out
   ret void
 }
@@ -190,7 +190,7 @@ define amdgpu_kernel void @elim_redun_check_v2(ptr addrspace(1) %out, <2 x float
 entry:
   %sqrt = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %in)
   %cmp = fcmp olt <2 x float> %in, <float -0.000000e+00, float -0.000000e+00>
-  %res = select <2 x i1> %cmp, <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <2 x float> %sqrt
+  %res = select <2 x i1> %cmp, <2 x float> <float +qnan, float +qnan>, <2 x float> %sqrt
   store <2 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -212,7 +212,7 @@ define amdgpu_kernel void @elim_redun_check_v2_ult(ptr addrspace(1) %out, <2 x f
 entry:
   %sqrt = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %in)
   %cmp = fcmp ult <2 x float> %in, <float -0.000000e+00, float -0.000000e+00>
-  %res = select <2 x i1> %cmp, <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <2 x float> %sqrt
+  %res = select <2 x i1> %cmp, <2 x float> <float +qnan, float +qnan>, <2 x float> %sqrt
   store <2 x float> %res, ptr addrspace(1) %out
   ret void
 }

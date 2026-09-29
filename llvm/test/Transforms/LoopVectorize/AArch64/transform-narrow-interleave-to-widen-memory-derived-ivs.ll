@@ -132,8 +132,8 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
 ; VF2-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; VF2-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[A]] to i64
-; VF2-NEXT:    [[TMP5:%.*]] = sub i64 [[END1]], [[TMP4]]
-; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -16
+; VF2-NEXT:    [[TMP5:%.*]] = add i64 [[END1]], -16
+; VF2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP5]], [[TMP4]]
 ; VF2-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; VF2-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; VF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
@@ -164,8 +164,8 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2IC2-NEXT:  [[ENTRY:.*:]]
 ; VF2IC2-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[A]] to i64
-; VF2IC2-NEXT:    [[TMP5:%.*]] = sub i64 [[END1]], [[TMP4]]
-; VF2IC2-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -16
+; VF2IC2-NEXT:    [[TMP5:%.*]] = add i64 [[END1]], -16
+; VF2IC2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP5]], [[TMP4]]
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; VF2IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
@@ -202,8 +202,8 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
 ; VF4-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; VF4-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[A]] to i64
-; VF4-NEXT:    [[TMP5:%.*]] = sub i64 [[END1]], [[TMP4]]
-; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -16
+; VF4-NEXT:    [[TMP5:%.*]] = add i64 [[END1]], -16
+; VF4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP5]], [[TMP4]]
 ; VF4-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; VF4-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; VF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4

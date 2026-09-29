@@ -24,6 +24,7 @@ namespace interp {
 class Context;
 class Function;
 class InterpStack;
+class FrameAllocator;
 class Program;
 enum Opcode : uint32_t;
 
@@ -36,9 +37,14 @@ public:
   using PtrCallback =
       llvm::function_ref<bool(InterpState &S, CodePtr OpPC, const Pointer &)>;
 
-  EvaluationResult interpretExpr(const Expr *E,
-                                 bool ConvertResultToRValue = false,
+  EvaluationResult interpretExpr(const Expr *E) {
+    return interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue(),
+                         /*DestroyToplevelScope=*/false);
+  }
+
+  EvaluationResult interpretExpr(const Expr *E, bool ConvertResultToRValue,
                                  bool DestroyToplevelScope = false);
+
   EvaluationResult interpretDecl(const VarDecl *VD, const Expr *Init,
                                  bool CheckFullyInitialized);
   EvaluationResult interpretDestructor(const VarDecl *VD, const APValue &Value);
@@ -57,10 +63,20 @@ public:
   /// Clean up all resources.
   void cleanup();
 
-protected:
-  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
+  /// Returns the source location of the current opcode.
+  SourceInfo getSource(CodePtr PC) const override { return CurrentSource; }
 
-  virtual ~EvalEmitter();
+  bool constantFolding() const {
+    return S.EvalMode == EvaluationMode::ConstantFold;
+  }
+
+protected:
+  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
+              FrameAllocator &FrameAlloc,
+              ConstantExprKind ConstexprKind = ConstantExprKind::Normal);
+
+  EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
+              InterpStack &Stk, FrameAllocator &FrameAlloc);
 
   /// Define a label.
   void emitLabel(LabelTy Label);
@@ -97,17 +113,12 @@ protected:
   }
 
   /// Callback for registering a local.
-  Local createLocal(Descriptor *D);
-
-  /// Returns the source location of the current opcode.
-  SourceInfo getSource(const Function *F, CodePtr PC) const override {
-    return (F && F->hasBody()) ? F->getSource(PC) : CurrentSource;
-  }
+  Local createLocal(const Descriptor *D);
 
   /// Parameter indices.
   llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;
   /// Local descriptors.
-  llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
+  llvm::SmallVector<SmallVector<Local, 2>, 1> Descriptors;
   std::optional<SourceInfo> LocOverride = std::nullopt;
 
 private:
@@ -119,6 +130,7 @@ private:
   InterpState S;
   /// Location to write the result to.
   EvaluationResult EvalResult;
+  ConstantExprKind ConstexprKind = ConstantExprKind::Normal;
   /// Whether the result should be converted to an RValue.
   bool ConvertResultToRValue = false;
   /// Whether we should check if the result has been fully
@@ -128,11 +140,11 @@ private:
   std::optional<PtrCallback> PtrCB;
 
   /// Temporaries which require storage.
-  llvm::SmallVector<std::unique_ptr<char[]>> Locals;
+  llvm::SmallVector<char *> Locals;
 
   Block *getLocal(unsigned Index) const {
     assert(Index < Locals.size());
-    return reinterpret_cast<Block *>(Locals[Index].get());
+    return reinterpret_cast<Block *>(Locals[Index]);
   }
 
   void updateGlobalTemporaries();

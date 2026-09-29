@@ -12,6 +12,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -33,6 +34,7 @@
 #include "lldb/Target/SectionLoadHistory.h"
 #include "lldb/Target/Statistics.h"
 #include "lldb/Target/SyntheticFrameProvider.h"
+#include "lldb/Target/TargetAPIMutex.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -278,6 +280,10 @@ public:
   bool GetUseDIL(ExecutionContext *exe_ctx) const;
 
   void SetUseDIL(ExecutionContext *exe_ctx, bool b);
+
+  bool GetUseDILForCreatingValues() const;
+
+  void SetUseDILForCreatingValues(bool b);
 
   void SetRequireHardwareBreakpoints(bool b);
 
@@ -528,6 +534,10 @@ public:
 
   bool GetCppIgnoreContextQualifiers() const;
 
+  void SetTryDILFirst(bool b) { m_try_DIL_first = b; }
+
+  bool GetTryDILFirst() const { return m_try_DIL_first; }
+
 private:
   const StructuredData::Dictionary &GetLanguageOptions() const;
 
@@ -554,6 +564,10 @@ private:
   /// True if the executed code should be treated as utility code that is only
   /// used by LLDB internally.
   bool m_running_utility_expression = false;
+  /// If enabled, Data Inspection Language (DIL) should attempt to evaluate the
+  /// expression first. If DIL is not called or fails, the evaluation falls
+  /// back to UserExpression.
+  bool m_try_DIL_first = false;
 
   lldb::DynamicValueType m_use_dynamic = lldb::eNoDynamicValues;
   Timeout<std::micro> m_timeout = default_timeout;
@@ -585,6 +599,7 @@ class Target : public std::enable_shared_from_this<Target>,
 public:
   friend class TargetList;
   friend class Debugger;
+  friend class TargetAPIMutex;
 
   /// Broadcaster event bits definitions.
   enum {
@@ -765,7 +780,11 @@ public:
 
   static TargetProperties &GetGlobalProperties();
 
-  std::recursive_mutex &GetAPIMutex();
+  /// Returns a handle resolved to the mutex to serialize on before
+  /// touching the target through the SB API. The handle isn't locked yet;
+  /// lock()/try_lock() it (typically via std::lock_guard<TargetAPIMutex>/
+  /// std::unique_lock<TargetAPIMutex>) to actually acquire it.
+  TargetAPIMutex GetAPIMutex();
 
   void DeleteCurrentProcess();
 
@@ -1362,14 +1381,13 @@ public:
                                size_t dst_max_len, Status &result_error,
                                bool force_live_memory = false);
 
-  /// Read a NULL terminated string from memory
+  /// Read a null-terminated string from memory
   ///
-  /// This function will read a cache page at a time until a NULL string
-  /// terminator is found. It will stop reading if an aligned sequence of NULL
-  /// termination \a type_width bytes is not found before reading \a
-  /// cstr_max_len bytes.  The results are always guaranteed to be NULL
-  /// terminated, and that no more than (max_bytes - type_width) bytes will be
-  /// read.
+  /// This function will read a cache page at a time until a null terminator
+  /// is found. It will stop reading if an aligned null terminator of \a
+  /// type_width bytes is not found before reading \a cstr_max_len bytes. The
+  /// results are always guaranteed to be null-terminated, and that no more
+  /// than (max_bytes - type_width) bytes will be read.
   ///
   /// \param[in] addr
   ///     The address to start the memory read.
@@ -1564,9 +1582,7 @@ public:
   ///     if none can be found.
   llvm::Expected<lldb_private::Address> GetEntryPointAddress();
 
-  CompilerType GetRegisterType(const std::string &name,
-                               const lldb_private::RegisterType &type_info,
-                               uint32_t byte_size);
+  CompilerType GetRegisterType(const RegisterInfo &reg_info);
 
   /// Sends a breakpoint notification event.
   void NotifyBreakpointChanged(Breakpoint &bp,
@@ -2045,6 +2061,10 @@ public:
   void PrintDummySignals(Stream &strm, Args &signals);
 
 protected:
+  /// The mutex the calling thread must serialize on for its current policy, or
+  /// nullptr when that policy bypasses the API mutex entirely.
+  std::recursive_mutex *GetAPIMutexForCurrentPolicy();
+
   /// Implementing of ModuleList::Notifier.
 
   void NotifyModuleAdded(const ModuleList &module_list,

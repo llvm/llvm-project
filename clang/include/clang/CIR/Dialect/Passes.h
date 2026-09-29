@@ -38,7 +38,9 @@ std::unique_ptr<Pass> createTargetLoweringPass();
 std::unique_ptr<Pass> createCallConvLoweringPass();
 std::unique_ptr<Pass>
 createCallConvLoweringPass(cir::CallConvTarget target,
-                           llvm::abi::X86AVXABILevel x86AvxAbiLevel);
+                           llvm::abi::X86AVXABILevel x86AvxAbiLevel,
+                           bool allowsX86TargetAttrAvx,
+                           const llvm::abi::X86ABICompatInfo &x86AbiCompat);
 std::unique_ptr<Pass> createHoistAllocasPass();
 std::unique_ptr<Pass> createLoweringPreparePass();
 std::unique_ptr<Pass> createLoweringPreparePass(clang::ASTContext *astCtx);
