@@ -26,6 +26,7 @@
 #if __HLSL_VERSION <= __HLSL_202x
 #include "hlsl/hlsl_compat_overloads.h"
 #endif
+#include "hlsl/hlsl_resources.h"
 
 #ifdef __spirv__
 #include "hlsl/hlsl_spirv.h"

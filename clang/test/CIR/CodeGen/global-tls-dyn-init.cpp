@@ -23,7 +23,7 @@ struct CtorDtor {
 // LLVM-BOTH-DAG: @_ZTH6tls_cd = alias void (), ptr @__tls_init
 
 // Wrappers & aliases.
-// CIR:       cir.global internal tls_model = tls_dyn @__tls_guard = #cir.int<0> : !s8i {alignment = 1 : i64}
+// CIR:       cir.global internal tls_model = tls_dyn @__tls_guard = #cir.int<0> : !s8i align(1)
 // CIR-LABEL: cir.func comdat weak_odr private hidden @_ZTW19tls_cd_dyn_not_used() -> !cir.ptr<!rec_CtorDtor> {
 // CIR: cir.call @_ZTH19tls_cd_dyn_not_used() : () -> ()
 // CIR: %[[GET_GLOB:.*]] = cir.get_global thread_local @tls_cd_dyn_not_used : !cir.ptr<!rec_CtorDtor>
@@ -63,25 +63,25 @@ struct CtorDtor {
 // CIR:  }
 // CIR:  cir.return
 
-// LLVM: define weak_odr hidden ptr @_ZTW19tls_cd_dyn_not_used() {
+// LLVM: define weak_odr hidden ptr @_ZTW19tls_cd_dyn_not_used() comdat {
 // LLVM:   call void @_ZTH19tls_cd_dyn_not_used()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_dyn_not_used)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
 //
-// LLVM: define weak_odr hidden ptr @_ZTW10tls_cd_ref() {
+// LLVM: define weak_odr hidden ptr @_ZTW10tls_cd_ref() comdat {
 // LLVM:   call void @_ZTH10tls_cd_ref()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_ref)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
 //
-// LLVM: define weak_odr hidden ptr @_ZTW10tls_cd_dyn() {
+// LLVM: define weak_odr hidden ptr @_ZTW10tls_cd_dyn() comdat {
 // LLVM:   call void @_ZTH10tls_cd_dyn()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_dyn)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
 //
-// LLVM: define weak_odr hidden ptr @_ZTW6tls_cd() {
+// LLVM: define weak_odr hidden ptr @_ZTW6tls_cd() comdat {
 // LLVM:   call void @_ZTH6tls_cd()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd)
 // LLVM:   ret ptr %[[GET_GLOB]]
