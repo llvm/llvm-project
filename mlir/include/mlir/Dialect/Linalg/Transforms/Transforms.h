@@ -1553,7 +1553,7 @@ rewriteInIm2Col(RewriterBase &rewriter,
 FailureOr<std::pair<Operation *, Operation *>>
 rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp);
 
-/// Quantized variant of rewriteInIm2Col for linalg::Conv2DNchwFchwOp.
+/// Quantized variant of rewriteInIm2Col for linalg::Conv2DNchwFchwQOp.
 FailureOr<std::pair<Operation *, Operation *>>
 rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwQOp convOp);
 

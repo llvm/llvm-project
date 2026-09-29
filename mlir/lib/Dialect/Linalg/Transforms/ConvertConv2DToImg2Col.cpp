@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include <cassert>
 #include <utility>
+#include <type_traits>
 
 namespace mlir {
 namespace linalg {
@@ -412,7 +413,11 @@ rewriteInIm2Col(RewriterBase &rewriter,
 
 template <typename ConvOp>
 static FailureOr<std::pair<Operation *, Operation *>>
-rewriteNchwFchwInIm2col(RewriterBase &rewriter, ConvOp convOp) {
+rewriteNchwFchwInIm2Col(RewriterBase &rewriter, ConvOp convOp) {
+  static_assert(std::is_same_v<ConvOp, linalg::Conv2DNchwFchwOp> ||
+                std::is_same_v<ConvOp, linalg::Conv2DNchwFchwQOp>,
+                "expected Conv2DNchwFchwOp or Conv2DNchwFchwQOp");
+
   auto inputType = cast<ShapedType>(convOp.getInputs()[0].getType());
   auto filterType = cast<ShapedType>(convOp.getInputs()[1].getType());
   auto outputType = cast<ShapedType>(convOp.getOutputs()[0].getType());
