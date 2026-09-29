@@ -937,7 +937,8 @@ getOptimizableIVOf(VPValue *VPV, VPlan &Plan, PredicatedScalarEvolution &PSE,
 
   // (Start + C) + IV * Step stays affine for any constant C, including the
   // Step, so it can be folded into the Start value.
-  // It would not be profitable to look for a non-constant Start or C, as it would necessitate introducing an extra add or sub instruction.
+  // It would not be profitable to look for a non-constant Start or C, as it
+  // would necessitate introducing an extra add or sub instruction.
   const APInt *C;
   APInt Offset;
   if (match(VPV, m_c_Add(m_Specific(WideIV), m_APInt(C))))
