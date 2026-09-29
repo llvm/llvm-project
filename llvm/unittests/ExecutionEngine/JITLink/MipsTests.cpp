@@ -14,8 +14,8 @@ using namespace llvm::jitlink;
 
 TEST(MipsJITLinkTest, N32PointerSize) {
   LinkGraph G("n32", std::make_shared<orc::SymbolStringPool>(),
-              Triple("mips64el-unknown-linux-gnuabin32"), SubtargetFeatures(),
-              mips::getEdgeKindName, 4);
+              Triple("mips64el-unknown-linux-gnuabin32"), 4,
+              SubtargetFeatures(), mips::getEdgeKindName);
   EXPECT_EQ(G.getPointerSize(), 4U);
   EXPECT_EQ(G.getEndianness(), endianness::little);
   EXPECT_EQ(mips::getPointerEdgeKind(G), mips::Pointer32);
@@ -23,7 +23,7 @@ TEST(MipsJITLinkTest, N32PointerSize) {
 
 TEST(MipsJITLinkTest, GOTAndStubs) {
   LinkGraph G("mips-r6", std::make_shared<orc::SymbolStringPool>(),
-              Triple("mipsel-unknown-linux"), SubtargetFeatures("+mips32r6"),
+              Triple("mipsel-unknown-linux"), 4, SubtargetFeatures("+mips32r6"),
               mips::getEdgeKindName);
   auto &GOT =
       G.createSection("$__GOT", orc::MemProt::Read | orc::MemProt::Write);
@@ -49,7 +49,7 @@ TEST(MipsJITLinkTest, GOTAndStubs) {
   EXPECT_EQ(&StubEdge->getTarget(), &Pointer);
 
   LinkGraph G64("mips64be-r2", std::make_shared<orc::SymbolStringPool>(),
-                Triple("mips64-unknown-linux-gnuabi64"),
+                Triple("mips64-unknown-linux-gnuabi64"), 8,
                 SubtargetFeatures("+mips64r2"), mips::getEdgeKindName);
   auto &GOT64 =
       G64.createSection("$__GOT", orc::MemProt::Read | orc::MemProt::Write);

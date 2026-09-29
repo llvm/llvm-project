@@ -1027,13 +1027,10 @@ public:
   using GetEdgeKindNameFunction = const char *(*)(Edge::Kind);
 
   LinkGraph(std::string Name, std::shared_ptr<orc::SymbolStringPool> SSP,
-            Triple TT, SubtargetFeatures Features,
-            GetEdgeKindNameFunction GetEdgeKindName,
-            std::optional<unsigned> PointerSize = std::nullopt)
+            Triple TT, unsigned PointerSize, SubtargetFeatures Features,
+            GetEdgeKindNameFunction GetEdgeKindName)
       : Name(std::move(Name)), SSP(std::move(SSP)), TT(std::move(TT)),
-        Features(std::move(Features)),
-        PointerSize(PointerSize.value_or(
-            Triple::getArchPointerBitWidth(this->TT.getArch()) / 8)),
+        PointerSize(PointerSize), Features(std::move(Features)),
         GetEdgeKindName(std::move(GetEdgeKindName)) {}
 
   LinkGraph(const LinkGraph &) = delete;
@@ -1678,8 +1675,8 @@ private:
   std::string Name;
   std::shared_ptr<orc::SymbolStringPool> SSP;
   Triple TT;
-  SubtargetFeatures Features;
   unsigned PointerSize;
+  SubtargetFeatures Features;
   GetEdgeKindNameFunction GetEdgeKindName = nullptr;
   DenseMap<StringRef, std::unique_ptr<Section>> Sections;
   ExternalSymbolMap ExternalSymbols;

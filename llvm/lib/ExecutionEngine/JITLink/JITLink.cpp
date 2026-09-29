@@ -548,9 +548,10 @@ absoluteSymbolsLinkGraph(Triple TT, std::shared_ptr<orc::SymbolStringPool> SSP,
                          orc::SymbolMap Symbols) {
   static std::atomic<uint64_t> Counter = {0};
   auto Index = Counter.fetch_add(1, std::memory_order_relaxed);
+  unsigned PointerSize = TT.getArchPointerBitWidth() / 8;
   auto G = std::make_unique<LinkGraph>(
       "<Absolute Symbols " + std::to_string(Index) + ">", std::move(SSP),
-      std::move(TT), SubtargetFeatures(), getGenericEdgeKindName);
+      std::move(TT), PointerSize, SubtargetFeatures(), getGenericEdgeKindName);
   for (auto &[Name, Def] : Symbols) {
     auto &Sym =
         G->addAbsoluteSymbol(*Name, Def.getAddress(), /*Size=*/0,

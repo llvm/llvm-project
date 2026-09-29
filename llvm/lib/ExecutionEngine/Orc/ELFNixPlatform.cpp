@@ -58,7 +58,8 @@ std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(ELFNixPlatform &MOP,
   auto &ES = MOP.getExecutionSession();
   return std::make_unique<jitlink::LinkGraph>(
       std::move(Name), ES.getSymbolStringPool(), ES.getTargetTriple(),
-      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
+      ES.getTargetTriple().getArchPointerBitWidth() / 8, SubtargetFeatures(),
+      jitlink::getGenericEdgeKindName);
 }
 
 // Creates a Bootstrap-Complete LinkGraph to run deferred actions.
@@ -151,7 +152,7 @@ public:
     auto &ES = ENP.getExecutionSession();
 
     jitlink::Edge::Kind EdgeKind;
-    std::optional<unsigned> PointerSize;
+    unsigned PointerSize = ES.getTargetTriple().getArchPointerBitWidth() / 8;
 
     switch (ES.getTargetTriple().getArch()) {
     case Triple::x86_64:
@@ -191,7 +192,7 @@ public:
     // void *__dso_handle = &__dso_handle;
     auto G = std::make_unique<jitlink::LinkGraph>(
         "<DSOHandleMU>", ES.getSymbolStringPool(), ES.getTargetTriple(),
-        SubtargetFeatures(), jitlink::getGenericEdgeKindName, PointerSize);
+        PointerSize, SubtargetFeatures(), jitlink::getGenericEdgeKindName);
     auto &DSOHandleSection =
         G->createSection(".data.__dso_handle", MemProt::Read);
     auto &DSOHandleBlock = G->createContentBlock(
