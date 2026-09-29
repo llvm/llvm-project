@@ -83,7 +83,14 @@ Profiles that are not yet ratified cannot be used unless
 `-menable-experimental-extensions` (or equivalent for other tools) is
 specified. This applies to the following profiles:
 
+- `rva23p1s64`
+- `rvb23p1s64`
 - `rvm23u32`
+
+The `rva23p1s64` and `rvb23p1s64` profiles enable the same mandatory extensions
+as `rva23s64` and `rvb23s64`, respectively. Their additional optional extensions
+must be requested explicitly, for example
+`-march=rva23p1s64_ssctr -menable-experimental-extensions`.
 
 (riscv-extensions)=
 
@@ -124,6 +131,7 @@ on support follow.
 | `Smepmp` | Supported |
 | `Smmpm` | Supported |
 | `Smnpm` | Supported |
+| `Smpmpdeleg` | Supported |
 | `Smrnmi` | Supported |
 | `Smstateen` | Assembly Support |
 | `Ssaia` | Supported |
@@ -136,6 +144,8 @@ on support follow.
 | `Ssdbltrp` | Supported |
 | `Ssnpm` | Supported |
 | `Sspm` | Supported |
+| `Sspmp` | Supported |
+| `Sspmpen` | Supported |
 | `Ssqosid` | Assembly Support |
 | `Ssstateen` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
 | `Ssstrict` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
@@ -228,7 +238,6 @@ on support follow.
 | `Zvfbfwma` | Supported |
 | `Zvfh` | Supported |
 | `Zvfhmin` | Supported |
-| `Zvfofp8min` | Assembly Support |
 | `Zvkb` | Supported |
 | `Zvkg` | Supported ([See note](#riscv-vector-crypto-note)) |
 | `Zvkn` | Supported ([See note](#riscv-vector-crypto-note)) |
@@ -243,10 +252,6 @@ on support follow.
 | `Zvksg` | Supported ([See note](#riscv-vector-crypto-note)) |
 | `Zvksh` | Supported ([See note](#riscv-vector-crypto-note)) |
 | `Zvkt` | Supported |
-| `Zvvfmm` | Assembly Support |
-| `Zvvmm` | Assembly Support |
-| `Zvvmtls` | Assembly Support |
-| `Zvvmttls` | Assembly Support |
 | `Zvl32b` | ([Partially](#riscv-vlen-32-note)) Supported |
 | `Zvl64b` | Supported |
 | `Zvl128b` | Supported |
@@ -346,9 +351,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 : LLVM implements the [1.0 release specification](https://github.com/riscv/riscv-cfi/releases/tag/v1.0).
 
-`experimental-smcsps`, `experimental-sscsps`, `experimental-smijt`, `experimental-ssijt`, `experimental-smehv`, `experimental-ssehv`
+`experimental-smcsps`, `experimental-sscsps`, `experimental-smijt`, `experimental-ssijt`, `experimental-smehv`, `experimental-ssehv`, `experimental-smip`, `experimental-ssip`, `experimental-smidctrl`, `experimental-ssidctrl`, `experimental-smnip`, `experimental-ssnip`
 
-: LLVM implements the [0.19 release specification](https://github.com/riscv/riscv-fast-interrupt/releases/tag/v0.19).
+: LLVM implements the [0.20 release specification](https://github.com/riscv/riscv-fast-interrupt/releases/tag/v0.20).
 
 `experimental-zvbc32e`, `experimental-zvkgs`
 
@@ -372,11 +377,11 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 `experimental-zvabd`
 
-: LLVM implements the [0.7 draft specification](https://github.com/riscv/integer-vector-absolute-difference/releases/tag/v0.7).
+: LLVM implements the [0.9 draft specification](https://github.com/riscv/integer-vector-absolute-difference/releases/tag/v0.9).
 
 `experimental-zvzip`
 
-: LLVM implements the [0.1 draft specification](https://github.com/ved-rivos/riscv-isa-manual/blob/zvzip/src/zvzip.adoc).
+: LLVM implements the [0.3 draft specification](https://github.com/riscv/riscv-isa-manual/pull/3233).
 
 `experimental-zvvfmm`
 
@@ -401,6 +406,10 @@ The primary goal of experimental support is to assist in the process of ratifica
 `experimental-zilx`
 
 : LLVM implements the [0.1 draft specification](https://github.com/riscv/riscv-zilx).
+
+`experimental-zvfofp8min`
+
+: LLVM implements the [0.9 draft specification](https://github.com/riscv/riscv-isa-manual/pull/2979).
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using. To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`. Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
@@ -461,10 +470,6 @@ The current vendor extensions supported are:
 `XTHeadVdot`
 
 : LLVM implements [version 1.0.0 of the THeadV-family custom instructions specification](https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.0/xthead-2022-12-04-2.2.0.pdf) by T-HEAD of Alibaba. All instructions are prefixed with `th.` as described in the specification, and the riscv-toolchain-convention document linked above.
-
-`XVentanaCondOps`
-
-: LLVM implements [version 1.0.0 of the VTx-family custom instructions specification](https://github.com/ventanamicro/ventana-custom-extensions/releases/download/v1.0.0/ventana-custom-extensions-v1.0.0.pdf) by Ventana Micro Systems. All instructions are prefixed with `vt.` as described in the specification, and the riscv-toolchain-convention document linked above. These instructions are only available for riscv64 at this time.
 
 `Xsfmm*`
 
@@ -537,6 +542,10 @@ The current vendor extensions supported are:
 `Xwchc`
 
 : LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
+
+`experimental-Xqccmi`
+
+: LLVM implements [version 0.2 of the Qualcomm 16-bit Instruction Lookup Table extension specification](https://github.com/qualcomm/riscv-unified-db/releases#release-Xqccmi-0.2.0) by Qualcomm. All instructions are prefixed with `qc.` as described in the specification.
 
 `Xqccmp`
 

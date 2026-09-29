@@ -12,8 +12,7 @@ define i32 @gep_nusw_nuw(ptr %ptr, i32 %idx) {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = nsw G_MUL [[SEXT]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nusw inbounds G_PTR_ADD [[COPY]], [[MUL]](i64)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY2]](p0) :: (load (i32) from %ir.gep1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[PTR_ADD]](p0) :: (load (i32) from %ir.gep1)
   ; CHECK-NEXT:   [[MUL1:%[0-9]+]]:_(i64) = nuw nsw G_MUL [[SEXT]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[MUL1]](i64)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
@@ -42,8 +41,7 @@ define i32 @gep_nuw(ptr %ptr, i32 %idx) {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = nsw G_MUL [[SEXT]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nusw inbounds G_PTR_ADD [[COPY]], [[MUL]](i64)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY2]](p0) :: (load (i32) from %ir.gep1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[PTR_ADD]](p0) :: (load (i32) from %ir.gep1)
   ; CHECK-NEXT:   [[MUL1:%[0-9]+]]:_(i64) = nuw G_MUL [[SEXT]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[MUL1]](i64)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
@@ -72,8 +70,7 @@ define i32 @gep_nusw(ptr %ptr, i32 %idx) {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = nsw G_MUL [[SEXT]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nusw inbounds G_PTR_ADD [[COPY]], [[MUL]](i64)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY2]](p0) :: (load (i32) from %ir.gep1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[PTR_ADD]](p0) :: (load (i32) from %ir.gep1)
   ; CHECK-NEXT:   [[MUL1:%[0-9]+]]:_(i64) = nsw G_MUL [[SEXT]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nusw G_PTR_ADD [[COPY]], [[MUL1]](i64)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
@@ -102,8 +99,7 @@ define i32 @gep_none(ptr %ptr, i32 %idx) {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = nsw G_MUL [[SEXT]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nusw inbounds G_PTR_ADD [[COPY]], [[MUL]](i64)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY2]](p0) :: (load (i32) from %ir.gep1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[PTR_ADD]](p0) :: (load (i32) from %ir.gep1)
   ; CHECK-NEXT:   [[MUL1:%[0-9]+]]:_(i64) = G_MUL [[SEXT]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL1]](i64)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
@@ -132,8 +128,7 @@ define i32 @gep_nusw_negative(ptr %ptr, i32 %idx) {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = nsw G_MUL [[SEXT]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nusw inbounds G_PTR_ADD [[COPY]], [[MUL]](i64)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY2]](p0) :: (load (i32) from %ir.gep1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[PTR_ADD]](p0) :: (load (i32) from %ir.gep1)
   ; CHECK-NEXT:   [[MUL1:%[0-9]+]]:_(i64) = nsw G_MUL [[SEXT]], [[C]]
   ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nusw G_PTR_ADD [[COPY]], [[MUL1]](i64)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 -4

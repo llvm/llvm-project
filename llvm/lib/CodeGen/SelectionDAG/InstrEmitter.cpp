@@ -1394,6 +1394,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
         for (unsigned j = 0; j != NumVals; ++j, ++i) {
           Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
           MIB.addReg(Reg, RegState::Define | RegState::EarlyClobber |
+                              getDeadRegState(F.isClobberKind()) |
                               getImplRegState(Reg.isPhysical()));
           ECRegs.push_back(Reg);
         }

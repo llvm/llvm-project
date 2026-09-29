@@ -38,17 +38,8 @@ gpu.func @store_2D_vector(%vec: vector<8x16xf32>,
 // STORE-ND-SAME:  %[[VEC:.+]]: vector<8x16xf32>,
 // STORE-ND-SAME:  %[[SRC:.+]]: memref<8x16x32xf32>,
 // STORE-ND-SAME:  %[[OFFSET:.+]]: index
-// STORE-ND:       %[[ELEM_BYTES:.+]] = arith.constant 4 : index
-// STORE-ND:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFFSET]], 0, 0]
-// STORE-ND:       %[[BASE_BUFFER:.*]], %[[OFF1:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[COLLAPSED]]
-// STORE-ND:       %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE_BUFFER]]
-// STORE-ND-SAME:    : memref<f32> -> index
-// STORE-ND:       %[[MUL:.+]] = arith.muli %[[OFF1]], %[[ELEM_BYTES]] : index
-// STORE-ND:       %[[ADD:.+]] = arith.addi %[[INTPTR]], %[[MUL]] : index
-// STORE-ND:       %[[I64PTR:.*]] = arith.index_cast %[[ADD]] : index to i64
-// STORE-ND:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[I64PTR]], shape : [16, 32],
-// STORE-ND-SAME:                   strides : [32, 1] : i64 -> !xegpu.tensor_desc<8x16xf32,
-// STORE-ND-SAME:    boundary_check = false
+// STORE-ND:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFFSET]], 0, 0] [1, 16, 32] [1, 1, 1] : memref<8x16x32xf32> to memref<16x32xf32, strided<[32, 1], offset: ?>>
+// STORE-ND:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[COLLAPSED]] : memref<16x32xf32, strided<[32, 1], offset: ?>> -> !xegpu.tensor_desc<8x16xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
 // STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFFSET]], %[[OFFSET]]] : vector<8x16xf32>
 
 // STORE-SCATTER-LABEL:  @store_2D_vector(
@@ -80,15 +71,9 @@ gpu.func @store_dynamic_source(%vec: vector<8x16xf32>,
 // STORE-ND-SAME:  %[[VEC:.+]]: vector<8x16xf32>,
 // STORE-ND-SAME:  %[[SRC:.+]]: memref<?x?x?xf32>,
 // STORE-ND-SAME:  %[[OFF0:.+]]: index, %[[OFF1:.+]]: index, %[[OFF2:.+]]: index
-// STORE-ND:       %[[ELEM_BYTES:.+]] = arith.constant 4 : index
-// STORE-ND:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFF0]], 0, 0]
-// STORE-ND:       %[[BASE_BUFFER:.*]], %[[OFFSET:.*]], %[[SIZES:.+]]:2, %[[STRIDES:.+]]:2 = memref.extract_strided_metadata %[[COLLAPSED]]
-// STORE-ND:       %[[INTPTR:.+]] = memref.extract_aligned_pointer_as_index %[[BASE_BUFFER]] : memref<f32> -> index
-// STORE-ND:       %[[MUL:.+]] = arith.muli %[[OFFSET]], %[[ELEM_BYTES]] : index
-// STORE-ND:       %[[ADD:.+]] = arith.addi %[[INTPTR]], %[[MUL]] : index
-// STORE-ND:       %[[I64PTR:.*]] = arith.index_cast %[[ADD]] : index to i64
-// STORE-ND:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[I64PTR]], shape : [%[[SIZES]]#0, %[[SIZES]]#1],
-// STORE-ND-SAME:                   strides : [%[[STRIDES]]#0, 1] : i64 -> !xegpu.tensor
+// STORE-ND:       %{{.*}}, %{{.*}}, %[[SIZES:.+]]:3, %{{.+}}:3 = memref.extract_strided_metadata %[[SRC]]
+// STORE-ND:       %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFF0]], 0, 0] [1, %[[SIZES]]#1, %[[SIZES]]#2] [1, 1, 1] : memref<?x?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
+// STORE-ND:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[COLLAPSED]] : memref<?x?xf32, strided<[?, 1], offset: ?>> -> !xegpu.tensor_desc<8x16xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
 // STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFF1]], %[[OFF2]]] : vector<8x16xf32>
 
 // STORE-SCATTER-LABEL: @store_dynamic_source(
@@ -104,6 +89,33 @@ gpu.func @store_dynamic_source(%vec: vector<8x16xf32>,
 // STORE-SCATTER-DAG:   %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<?x?x?xf32> -> index
 // STORE-SCATTER-DAG:   %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
 // STORE-SCATTER:       xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8x16xf32>, i64, vector<8x16xindex>, vector<8x16xi1>
+}
+
+// -----
+// Equal vector and memref rank: the whole memref stays the create_nd source.
+gpu.module @xevm_module {
+gpu.func @store_high_dim_dyn(%vec: vector<1x1x8x16xf16>, %source: memref<?x?x8x16xf16>,
+    %i: index, %j: index, %k: index, %l: index) {
+  vector.transfer_write %vec, %source[%i, %j, %k, %l]
+    {in_bounds = [true, true, true, true]}
+    : vector<1x1x8x16xf16>, memref<?x?x8x16xf16>
+  gpu.return
+}
+
+// STORE-ND-LABEL: @store_high_dim_dyn(
+// STORE-ND-SAME:  %[[VEC:.+]]: vector<1x1x8x16xf16>, %[[SRC:.+]]: memref<?x?x8x16xf16>,
+// STORE-ND-SAME:  %[[OFF0:.+]]: index, %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index
+// STORE-ND-NOT:   memref.subview
+// STORE-ND:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]] : memref<?x?x8x16xf16> -> !xegpu.tensor_desc<1x1x8x16xf16, #xegpu.block_tdesc_attr<boundary_check = false>>
+// STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFF0]], %[[OFF1]], %[[OFF2]], %[[OFF3]]] : vector<1x1x8x16xf16>
+
+// STORE-SCATTER-LABEL: @store_high_dim_dyn(
+// STORE-SCATTER-SAME:  %[[VEC:.+]]: vector<1x1x8x16xf16>, %[[SRC:.+]]: memref<?x?x8x16xf16>
+// STORE-SCATTER:       %[[CST:.+]] = arith.constant dense<true> : vector<1x1x8x16xi1>
+// STORE-SCATTER:       memref.extract_strided_metadata %[[SRC]]
+// STORE-SCATTER:       %[[PTR:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<?x?x8x16xf16> -> index
+// STORE-SCATTER:       %[[PTR_I:.+]] = arith.index_cast %[[PTR]] : index to i64
+// STORE-SCATTER:       xegpu.store %[[VEC]], %[[PTR_I]]{{\[}}%{{.+}}{{\]}}, %[[CST]] : vector<1x1x8x16xf16>, i64, vector<1x1x8x16xindex>, vector<1x1x8x16xi1>
 }
 
 // -----
@@ -125,8 +137,13 @@ gpu.func @store_out_of_bounds(%vec: vector<8x16xf32>,
 // STORE-ND-SAME:    memref<7x64xf32> -> !xegpu.tensor_desc<8x16xf32>
 // STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFFSET]], %[[OFFSET]]] : vector<8x16xf32>
 
+// Only the outer dimension is out of bounds, so its 1D mask is spread over the
+// full vector shape.
 // STORE-SCATTER-LABEL:  @store_out_of_bounds(
-// STORE-SCATTER:   vector.transfer_write
+// STORE-SCATTER:   %[[CMP:.+]] = arith.cmpi slt, {{.*}} : vector<8xindex>
+// STORE-SCATTER:   %[[CAST:.+]] = vector.shape_cast %[[CMP]] : vector<8xi1> to vector<8x1xi1>
+// STORE-SCATTER:   %[[MASK:.+]] = vector.broadcast %[[CAST]] : vector<8x1xi1> to vector<8x16xi1>
+// STORE-SCATTER:   xegpu.store {{.*}}, %[[MASK]] : vector<8x16xf32>, i64, vector<8x16xindex>, vector<8x16xi1>
 }
 
 // -----
@@ -304,7 +321,7 @@ gpu.func @no_store_unsupported_map(%vec: vector<8x16xf32>,
 
 // -----
 gpu.module @xevm_module {
-gpu.func @no_store_out_of_bounds_1D_vector(%vec: vector<8xf32>,
+gpu.func @store_out_of_bounds_1D_vector(%vec: vector<8xf32>,
     %source: memref<8x16x32xf32>, %offset: index) {
   vector.transfer_write %vec, %source[%offset, %offset, %offset]
     {in_bounds = [false]}
@@ -312,8 +329,21 @@ gpu.func @no_store_out_of_bounds_1D_vector(%vec: vector<8xf32>,
   gpu.return
 }
 
-// CHECK-LABEL:  @no_store_out_of_bounds_1D_vector(
-// CHECK:        vector.transfer_write
+// A 1D vector has no nd block instruction to get a boundary check from, so the
+// out-of-bounds elements are masked off in the scattered path instead. Unlike a
+// read, a store needs no padding counterpart - the masked lanes just are not
+// written.
+// CHECK-LABEL:  @store_out_of_bounds_1D_vector(
+// CHECK-SAME:   %[[VEC:.+]]: vector<8xf32>,
+// CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
+// CHECK-SAME:   %[[OFFSET:.+]]: index
+// CHECK-DAG:    %[[C32:.+]] = arith.constant 32 : index
+// CHECK:        %[[LIMIT:.+]] = arith.subi %[[C32]], %[[OFFSET]] : index
+// CHECK:        %[[STEP:.+]] = vector.step : vector<8xindex>
+// CHECK:        %[[LIMIT_V:.+]] = vector.broadcast %[[LIMIT]] : index to vector<8xindex>
+// CHECK:        %[[MASK:.+]] = arith.cmpi slt, %[[STEP]], %[[LIMIT_V]] : vector<8xindex>
+// CHECK:        xegpu.store %[[VEC]], {{.*}}, %[[MASK]] : vector<8xf32>, i64, vector<8xindex>, vector<8xi1>
+// CHECK-NOT:    arith.select
 }
 
 // -----
@@ -386,6 +416,21 @@ gpu.func @store_1D_vector_addrspace3(%vec: vector<8xf32>,
 // CHECK: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<32xf32, 3> -> !xegpu.mem_desc<32xf32>
 // CHECK: xegpu.store_matrix %[[VEC]], %[[MEM_DESC]][%[[OFFSET]]] : vector<8xf32>, !xegpu.mem_desc<32xf32>, index
 // CHECK: gpu.return
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @no_store_addrspace3_out_of_bounds(%vec: vector<8xf32>,
+    %source: memref<32xf32, 3>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset] {in_bounds = [false]}
+    : vector<8xf32>, memref<32xf32, 3>
+  gpu.return
+}
+
+// CHECK-LABEL: @no_store_addrspace3_out_of_bounds
+// CHECK-NOT: xegpu.create_mem_desc
+// CHECK-NOT: xegpu.store_matrix
+// CHECK: vector.transfer_write
 }
 
 // -----

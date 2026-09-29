@@ -61,9 +61,13 @@ static cl::opt<bool> DisableI2pP2iOpt(
 //                            AllocaInst Class
 //===----------------------------------------------------------------------===//
 
+TypeSize AllocaInst::getAllocationBaseSize(const DataLayout &DL) const {
+  return DL.getTypeAllocSize(getAllocatedType());
+}
+
 std::optional<TypeSize>
 AllocaInst::getAllocationSize(const DataLayout &DL) const {
-  TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
+  TypeSize Size = getAllocationBaseSize(DL);
   // Zero-sized types can return early since 0 * N = 0 for any array size N.
   if (Size.isZero())
     return Size;
@@ -1406,7 +1410,9 @@ StoreInst::StoreInst(Value *Val, Value *Ptr,
                      const LoadStoreInstProperties &Props,
                      InsertPosition InsertBefore)
     : StoreInst(Val, Ptr, Props.IsVolatile, Props.Alignment, Props.Ordering,
-                Props.SSID, InsertBefore) {}
+                Props.SSID, InsertBefore) {
+  setElementwise(Props.IsElementwise);
+}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      AtomicOrdering Order, SyncScope::ID SSID,
@@ -2624,6 +2630,59 @@ Type *ExtractValueInst::getIndexedType(Type *Agg,
     }
   }
   return Agg;
+}
+
+//===----------------------------------------------------------------------===//
+//                             BitInsert Class
+//===----------------------------------------------------------------------===//
+BitInsertInst::BitInsertInst(Value *Base, Value *Val, Value *Offset,
+                             const Twine &Name, InsertPosition InsertBef)
+    : Instruction(Base->getType(), BitInsert, AllocMarker, InsertBef) {
+  assert(!areInvalidOperands(Base, Val, Offset) &&
+         "Invalid bitinsert instruction operands!");
+  Op<0>() = Base;
+  Op<1>() = Val;
+  Op<2>() = Offset;
+  setName(Name);
+}
+
+const char *BitInsertInst::areInvalidOperands(Value *Base, Value *Val,
+                                              Value *Offset) {
+  if (!Base->getType()->isByteTy())
+    return "bitinsert base must be a byte type";
+  if (!(Val->getType()->isFloatingPointTy() || Val->getType()->isIntegerTy() ||
+        Val->getType()->isPointerTy() || Val->getType()->isByteTy()))
+    return "bitinsert value must be an integer, floating-point, pointer, or "
+           "byte type";
+  if (!Offset->getType()->isIntegerTy(32))
+    return "bitinsert offset must be i32";
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+//                             BitExtract Class
+//===----------------------------------------------------------------------===//
+BitExtractInst::BitExtractInst(Type *Ty, Value *Src, Value *Offset,
+                               const Twine &Name, InsertPosition InsertBef)
+    : Instruction(Ty, BitExtract, AllocMarker, InsertBef) {
+  assert(!areInvalidOperands(Ty, Src, Offset) &&
+         "Invalid bitextract instruction operands!");
+  Op<0>() = Src;
+  Op<1>() = Offset;
+  setName(Name);
+}
+
+const char *BitExtractInst::areInvalidOperands(const Type *Ty, Value *Src,
+                                               Value *Offset) {
+  if (!(Ty->isFloatingPointTy() || Ty->isIntegerTy() || Ty->isPointerTy() ||
+        Ty->isByteTy()))
+    return "bitextract result must be an integer, floating-point, pointer, or "
+           "byte type";
+  if (!Src->getType()->isByteTy())
+    return "bitextract source must be a byte type";
+  if (!Offset->getType()->isIntegerTy(32))
+    return "bitextract offset must be i32";
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4454,8 +4513,8 @@ LoadInst *LoadInst::cloneImpl() const {
 }
 
 StoreInst *StoreInst::cloneImpl() const {
-  return new StoreInst(getOperand(0), getOperand(1), isVolatile(), getAlign(),
-                       getOrdering(), getSyncScopeID());
+  return new StoreInst(getOperand(0), getOperand(1), getProperties(),
+                       /*InsertBefore=*/nullptr);
 }
 
 AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {
@@ -4570,6 +4629,14 @@ ExtractElementInst *ExtractElementInst::cloneImpl() const {
 
 InsertElementInst *InsertElementInst::cloneImpl() const {
   return InsertElementInst::Create(getOperand(0), getOperand(1), getOperand(2));
+}
+
+BitInsertInst *BitInsertInst::cloneImpl() const {
+  return BitInsertInst::Create(getOperand(0), getOperand(1), getOperand(2));
+}
+
+BitExtractInst *BitExtractInst::cloneImpl() const {
+  return BitExtractInst::Create(getType(), getOperand(0), getOperand(1));
 }
 
 ShuffleVectorInst *ShuffleVectorInst::cloneImpl() const {

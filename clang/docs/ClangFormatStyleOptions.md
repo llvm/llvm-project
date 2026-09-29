@@ -1949,7 +1949,7 @@ the configuration (without a prefix: `Auto`).
 
   - `InlineOnly`
     Only merge functions defined inside a class. Same as `inline`,
-    except it does not implies `empty`: i.e. top level empty functions
+    except it does not imply `empty`: i.e. top level empty functions
     are not merged either. See `Inline` of `ShortFunctionStyle`.
 
     ```c++
@@ -2552,6 +2552,23 @@ the configuration (without a prefix: `Auto`).
     according to `AfterControlStatement` flag.
     :::
 
+  - `bool AfterRequiresExpression` Wrap requires expression body.
+
+    ```c++
+    true:
+    template <typename T>
+    concept C = requires(T t)
+    {
+      foo(t);
+    };
+
+    false:
+    template <typename T>
+    concept C = requires(T t) {
+      foo(t);
+    };
+    ```
+
   - `bool AfterStruct` Wrap struct definitions.
 
     ```c++
@@ -2579,6 +2596,16 @@ the configuration (without a prefix: `Auto`).
     false:
     union foo {
       int x;
+    }
+    ```
+
+  - `bool AfterExportBlock` Wrap export blocks.
+
+    ```c++
+    true:                            false:
+    export             vs.           export {
+    {                                  int foo();
+      int foo();                     }
     }
     ```
 
@@ -6393,6 +6420,17 @@ the configuration (without a prefix: `Auto`).
     - `constexpr`
     - `volatile`
     - `restrict`
+    - `typedef`
+    - `consteval`
+    - `constinit`
+    - `thread_local`
+    - `extern`
+    - `mutable`
+    - `signed`
+    - `unsigned`
+    - `long`
+    - `short`
+    - `explicit`
     - `type`
 
   :::{note}
@@ -6402,6 +6440,9 @@ the configuration (without a prefix: `Auto`).
   Items to the left of `type` will be placed to the left of the type and
   aligned in the order supplied. Items to the right of `type` will be
   placed to the right of the type and aligned in the order supplied.
+  If only one of `signed` and `unsigned` is specified, both are placed at
+  that position. The same applies to `long` and `short`. Specifying both
+  members of a pair allows them to be placed independently.
 
   ```yaml
   QualifierOrder: [inline, static, type, const, volatile]
@@ -6963,6 +7004,29 @@ the configuration (without a prefix: `Auto`).
     true:                      false:
     #include "A2.h"     vs.    #include "A10.h"
     #include "A10.h"           #include "A2.h"
+    ```
+
+  - `bool FilesBeforeFolders` When `true`, sort includes so that files in a directory appear
+    before subdirectories at each level, recursively. Within a level,
+    files and folders are each sorted alphabetically.
+    When `false` (default), sorts includes purely alphabetically.
+
+    This option is a secondary sort key within each `Priority` group
+    defined by `IncludeCategories`. Includes in different `Priority`
+    groups are still separated by that primary ordering.
+
+    ```c++
+    true:                             false (default):
+    #include "x.h"             vs.    #include "bar/alpha/e.h"
+    #include "y.h"                    #include "bar/alpha/f.h"
+    #include "z.h"                    #include "bar/beta/d.h"
+    #include "bar/g.h"                #include "bar/g.h"
+    #include "bar/h.h"                #include "bar/h.h"
+    #include "bar/i.h"                #include "bar/i.h"
+    #include "bar/alpha/e.h"          #include "foo/a.h"
+    #include "bar/alpha/f.h"          #include "x.h"
+    #include "bar/beta/d.h"           #include "y.h"
+    #include "foo/a.h"                #include "z.h"
     ```
 
 

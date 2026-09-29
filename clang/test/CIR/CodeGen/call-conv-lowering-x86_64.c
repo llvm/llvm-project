@@ -7,10 +7,10 @@
 
 // Anonymous record aliases are numbered in the order they are printed, so
 // capture each one rather than naming it.
-// CIR-DAG: ![[X87PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{!cir.f80, !cir.f80}>
-// CIR-DAG: ![[I64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{!u64i, !u64i}>
-// CIR-DAG: ![[F64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{!cir.double, !cir.double}>
-// CIR-DAG: ![[F32X2PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>}>
+// CIR-DAG: ![[X87PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.f80, data !cir.f80}>
+// CIR-DAG: ![[I64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !u64i, data !u64i}>
+// CIR-DAG: ![[F64PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.double, data !cir.double}>
+// CIR-DAG: ![[F32X2PAIR:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.vector<2 x !cir.float>, data !cir.vector<2 x !cir.float>}>
 
 typedef struct { int x; int y; } Pair2;
 typedef struct { long a; long b; } Pair16;
@@ -84,13 +84,11 @@ Big ret_big(void) { Big b = {1, 2, 3, 4}; return b; }
 // CIR: cir.func {{.*}}@ret_big(%arg0: !cir.ptr<!rec_Big> {{.*}}llvm.sret = !rec_Big{{.*}})
 // LLVM: define dso_local void @ret_big(ptr dead_on_unwind noalias writable sret(%struct.Big) align 8 %{{.+}})
 
-// Large struct passed byval.  CIR also emits noalias on byval; OGCG only does
-// so under -fpass-by-value-is-noalias.
+// Large struct passed byval.
 void take_big(Big b) { (void)b; }
 
 // CIR: cir.func {{.*}}@take_big(%arg0: !cir.ptr<!rec_Big> {{.*}}llvm.byval = !rec_Big{{.*}})
-// LLVM-CIR: define dso_local void @take_big(ptr noalias noundef byval(%struct.Big) align 8 %{{.+}})
-// LLVM-OGCG: define dso_local void @take_big(ptr noundef byval(%struct.Big) align 8 %{{.+}})
+// LLVM: define dso_local void @take_big(ptr noundef byval(%struct.Big) align 8 %{{.+}})
 
 // Union members all start at offset zero, so a 4-byte union takes one INTEGER
 // eightbyte and coerces to i32.
@@ -118,21 +116,18 @@ UIntFloat ret_union(int a) { UIntFloat u; u.i = a; return u; }
 // CIR: cir.func {{.*}}@ret_union(%arg0: !s32i {{.*}}) -> !s32i
 // LLVM: define dso_local i32 @ret_union(i32 noundef %{{.+}})
 
-// A union too large for registers is passed byval, with the same noalias
-// divergence as a large struct.
+// A union too large for registers is passed byval.
 void take_union_big(UBig u) { (void)u; }
 
 // CIR: cir.func {{.*}}@take_union_big(%arg0: !cir.ptr<!rec_UBig> {{.*}}llvm.byval = !rec_UBig{{.*}})
-// LLVM-CIR: define dso_local void @take_union_big(ptr noalias noundef byval(%union.UBig) align 8 %{{.+}})
-// LLVM-OGCG: define dso_local void @take_union_big(ptr noundef byval(%union.UBig) align 8 %{{.+}})
+// LLVM: define dso_local void @take_union_big(ptr noundef byval(%union.UBig) align 8 %{{.+}})
 
 // The byval alignment follows the union's declared alignment, not the alignment
 // its members imply, which is 1 here.
 void take_union_big_over_aligned(UBigOverAligned u) { (void)u; }
 
 // CIR: cir.func {{.*}}@take_union_big_over_aligned(%arg0: !cir.ptr<!rec_UBigOverAligned> {{.*}}llvm.align = 32 : i64{{.*}}llvm.byval = !rec_UBigOverAligned{{.*}})
-// LLVM-CIR: define dso_local void @take_union_big_over_aligned(ptr noalias noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
-// LLVM-OGCG: define dso_local void @take_union_big_over_aligned(ptr noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
+// LLVM: define dso_local void @take_union_big_over_aligned(ptr noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
 
 void call_union(UIntFloat u) { take_union(u); }
 
@@ -147,11 +142,9 @@ void call_union_big_over_aligned(UBigOverAligned u) {
 
 // CIR: cir.func {{.*}}@call_union_big_over_aligned(%arg0: !cir.ptr<!rec_UBigOverAligned> {{.*}}llvm.align = 32 : i64{{.*}})
 // CIR:   cir.call @take_union_big_over_aligned(%{{.+}}) : (!cir.ptr<!rec_UBigOverAligned> {{.*}}llvm.align = 32 : i64{{.*}}) -> ()
-// LLVM-CIR: define dso_local void @call_union_big_over_aligned(ptr noalias noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
+// LLVM: define dso_local void @call_union_big_over_aligned(ptr noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
 // LLVM-CIR:   alloca %union.UBigOverAligned, align 32
-// LLVM-CIR:   call void @take_union_big_over_aligned(ptr noalias noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
-// LLVM-OGCG: define dso_local void @call_union_big_over_aligned(ptr noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
-// LLVM-OGCG:   call void @take_union_big_over_aligned(ptr noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
+// LLVM: call void @take_union_big_over_aligned(ptr noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
 
 // The declared alignment reaches the sret slot of an indirect return too, not
 // just a byval argument.
@@ -168,8 +161,7 @@ typedef struct { char c[32]; } __attribute__((aligned(32))) SOverAligned;
 void take_struct_over_aligned(SOverAligned s) { (void)s; }
 
 // CIR: cir.func {{.*}}@take_struct_over_aligned(%arg0: !cir.ptr<!rec_SOverAligned> {{.*}}llvm.align = 32 : i64{{.*}}llvm.byval = !rec_SOverAligned{{.*}})
-// LLVM-CIR: define dso_local void @take_struct_over_aligned(ptr noalias noundef byval(%struct.SOverAligned) align 32 %{{.+}})
-// LLVM-OGCG: define dso_local void @take_struct_over_aligned(ptr noundef byval(%struct.SOverAligned) align 32 %{{.+}})
+// LLVM: define dso_local void @take_struct_over_aligned(ptr noundef byval(%struct.SOverAligned) align 32 %{{.+}})
 
 // A half occupies one SSE eightbyte.
 _Float16 sse_half(_Float16 h) { return h; }
@@ -201,8 +193,7 @@ typedef struct { long double l; } SLongDouble;
 SLongDouble ret_long_double_struct(SLongDouble s) { return s; }
 
 // CIR: cir.func {{.*}}@ret_long_double_struct(%arg0: !cir.ptr<!rec_SLongDouble> {{.*}}llvm.byval = !rec_SLongDouble{{.*}}) -> !cir.f80
-// LLVM-CIR: define dso_local x86_fp80 @ret_long_double_struct(ptr noalias noundef byval(%struct.SLongDouble) align 16 %{{.+}})
-// LLVM-OGCG: define dso_local x86_fp80 @ret_long_double_struct(ptr noundef byval(%struct.SLongDouble) align 16 %{{.+}})
+// LLVM: define dso_local x86_fp80 @ret_long_double_struct(ptr noundef byval(%struct.SLongDouble) align 16 %{{.+}})
 
 // A union holding a long double is accepted because the long double spans the
 // union's declared size.
@@ -210,16 +201,14 @@ typedef union { long double l; int i; } ULongDouble;
 void take_union_long_double(ULongDouble u) { (void)u; }
 
 // CIR: cir.func {{.*}}@take_union_long_double(%arg0: !cir.ptr<!rec_ULongDouble> {{.*}}llvm.byval = !rec_ULongDouble{{.*}})
-// LLVM-CIR: define dso_local void @take_union_long_double(ptr noalias noundef byval(%union.ULongDouble) align 16 %{{.+}})
-// LLVM-OGCG: define dso_local void @take_union_long_double(ptr noundef byval(%union.ULongDouble) align 16 %{{.+}})
+// LLVM: define dso_local void @take_union_long_double(ptr noundef byval(%union.ULongDouble) align 16 %{{.+}})
 
 // A _Complex of quads exceeds two eightbytes and goes to memory both ways, so
 // the sret and byval pointees here are a _Complex rather than a record.
 _Complex __float128 complex_quad(_Complex __float128 z) { return z; }
 
 // CIR: cir.func {{.*}}@complex_quad(%arg0: !cir.ptr<!cir.complex<!cir.f128>> {{.*}}llvm.sret = !cir.complex<!cir.f128>{{.*}}, %arg1: !cir.ptr<!cir.complex<!cir.f128>> {{.*}}llvm.byval = !cir.complex<!cir.f128>{{.*}})
-// LLVM-CIR: define dso_local void @complex_quad(ptr dead_on_unwind noalias writable sret({ fp128, fp128 }) align 16 %{{[^,)]+}}, ptr noalias noundef byval({ fp128, fp128 }) align 16 %{{[^,)]+}})
-// LLVM-OGCG: define dso_local void @complex_quad(ptr dead_on_unwind noalias writable sret({ fp128, fp128 }) align 16 %{{[^,)]+}}, ptr noundef byval({ fp128, fp128 }) align 16 %{{[^,)]+}})
+// LLVM: define dso_local void @complex_quad(ptr dead_on_unwind noalias writable sret({ fp128, fp128 }) align 16 %{{[^,)]+}}, ptr noundef byval({ fp128, fp128 }) align 16 %{{[^,)]+}})
 
 // Both halves of a _Complex float share one SSE eightbyte, so it coerces to
 // the two-element vector that eightbyte holds.
@@ -246,8 +235,7 @@ _Complex int complex_int(_Complex int c) { return c; }
 _Complex long double complex_long_double(_Complex long double c) { return c; }
 
 // CIR: cir.func {{.*}}@complex_long_double(%arg0: !cir.ptr<!cir.complex<!cir.long_double<!cir.f80>>> {{.*}}llvm.byval = !cir.complex<!cir.long_double<!cir.f80>>{{.*}}) -> ![[X87PAIR]]
-// LLVM-CIR: define dso_local { x86_fp80, x86_fp80 } @complex_long_double(ptr noalias noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
-// LLVM-OGCG: define dso_local { x86_fp80, x86_fp80 } @complex_long_double(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
+// LLVM: define dso_local { x86_fp80, x86_fp80 } @complex_long_double(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
 
 // A _Complex of 16-bit floats fits one eightbyte, so it coerces to the
 // two-element vector of that format.
@@ -263,6 +251,82 @@ _Complex long long complex_longlong(_Complex long long c) { return c; }
 // CIR: cir.func {{.*}}@complex_longlong(%arg0: !u64i {{.*}}, %arg1: !u64i {{.*}}) -> ![[I64PAIR]]
 // LLVM-CIR: define dso_local { i64, i64 } @complex_longlong(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 // LLVM-OGCG: define dso_local { i64, i64 } @complex_longlong(i64 noundef %{{[^,)]+}}, i64 noundef %{{[^,)]+}})
+
+// A 128-bit vector fills one xmm register and passes in its own type.
+typedef float v4f __attribute__((vector_size(16)));
+v4f vector128(v4f v) { return v; }
+
+// CIR: cir.func {{.*}}@vector128(%arg0: !cir.vector<4 x !cir.float> {{.*}}) -> !cir.vector<4 x !cir.float>
+// LLVM: define dso_local <4 x float> @vector128(<4 x float> noundef %{{[^,)]+}})
+
+// The classifier does not look inside a vector when picking the type for an SSE
+// eightbyte, so a 64-bit vector coerces to double rather than to a two-element
+// vector.
+typedef float v2f __attribute__((vector_size(8)));
+v2f vector64(v2f v) { return v; }
+
+// CIR: cir.func {{.*}}@vector64(%arg0: !cir.double {{.*}}) -> !cir.double
+// LLVM: define dso_local double @vector64(double noundef %{{[^,)]+}})
+
+// A vector at or below 32 bits classifies INTEGER, so it passes as the integer
+// covering it rather than in an xmm register.
+typedef int v1i __attribute__((vector_size(4)));
+v1i vector32(v1i v) { return v; }
+
+// CIR: cir.func {{.*}}@vector32(%arg0: !u32i {{.*}}) -> !u32i
+// LLVM: define dso_local i32 @vector32(i32 noundef %{{[^,)]+}})
+
+// An eightbyte holding a 16-bit float vector coerces to double, the same as
+// any other all-float eightbyte, but at 128 bits the format is preserved.
+typedef _Float16 v4h __attribute__((ext_vector_type(4)));
+typedef _Float16 v8h __attribute__((ext_vector_type(8)));
+void take_v4h(v4h v) { (void)v; }
+void take_v8h(v8h v) { (void)v; }
+
+// CIR: cir.func {{.*}}@take_v4h(%arg0: !cir.double{{.*}})
+// CIR: cir.func {{.*}}@take_v8h(%arg0: !cir.vector<8 x !cir.f16>{{.*}})
+// LLVM: define dso_local void @take_v4h(double noundef %{{[^,)]+}})
+// LLVM: define dso_local void @take_v8h(<8 x half> noundef %{{[^,)]+}})
+
+typedef __bf16 v4bf __attribute__((ext_vector_type(4)));
+typedef __bf16 v8bf __attribute__((ext_vector_type(8)));
+void take_v4bf(v4bf v) { (void)v; }
+void take_v8bf(v8bf v) { (void)v; }
+
+// CIR: cir.func {{.*}}@take_v4bf(%arg0: !cir.double{{.*}})
+// CIR: cir.func {{.*}}@take_v8bf(%arg0: !cir.vector<8 x !cir.bf16>{{.*}})
+// LLVM: define dso_local void @take_v4bf(double noundef %{{[^,)]+}})
+// LLVM: define dso_local void @take_v8bf(<8 x bfloat> noundef %{{[^,)]+}})
+
+// An integer element narrower than an eightbyte does not change the rule: the
+// eightbyte is what gets classified, and here it is SSE.
+typedef char v8c __attribute__((ext_vector_type(8)));
+void take_v8c(v8c v) { (void)v; }
+
+// CIR: cir.func {{.*}}@take_v8c(%arg0: !cir.double{{.*}})
+// LLVM: define dso_local void @take_v8c(double noundef %{{[^,)]+}})
+
+// A vector of a 64-bit element keeps its own type, and a one-element vector of
+// __int128 coerces to the pair of eightbytes it occupies.
+typedef double v2d __attribute__((vector_size(16)));
+void take_v2d(v2d v) { (void)v; }
+
+// CIR: cir.func {{.*}}@take_v2d(%arg0: !cir.vector<2 x !cir.double>{{.*}})
+// LLVM: define dso_local void @take_v2d(<2 x double> noundef %{{[^,)]+}})
+
+typedef __int128 v1i128 __attribute__((vector_size(16)));
+void take_v1i128(v1i128 v) { (void)v; }
+
+// CIR: cir.func {{.*}}@take_v1i128(%arg0: !cir.vector<2 x !u64i>{{.*}})
+// LLVM: define dso_local void @take_v1i128(<2 x i64> noundef %{{[^,)]+}})
+
+// gcc passes a one-element vector of a 64-bit float in memory.  Its byval
+// alignment is the greater of the vector's own alignment and 8.
+typedef double v1d __attribute__((vector_size(8)));
+void take_v1d(v1d v) { (void)v; }
+
+// CIR: cir.func {{.*}}@take_v1d(%arg0: !cir.ptr<!cir.vector<1 x !cir.double>> {{.*}}llvm.align = 8 : i64{{.*}}llvm.byval = !cir.vector<1 x !cir.double>{{.*}})
+// LLVM: define dso_local void @take_v1d(ptr noundef byval(<1 x double>) align 8 %{{[^,)]+}})
 
 // A _Complex reaches the classifier as a record member too, not just on its
 // own, so these cover the field walk rather than the top-level mapping.

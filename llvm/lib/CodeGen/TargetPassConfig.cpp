@@ -50,7 +50,6 @@
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
-#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include <cassert>
 #include <optional>
 #include <string>
@@ -83,9 +82,6 @@ static cl::opt<bool> DisableMachineLICM("disable-machine-licm", cl::Hidden,
     cl::desc("Disable Machine LICM"));
 static cl::opt<bool> DisableMachineCSE("disable-machine-cse", cl::Hidden,
     cl::desc("Disable Machine Common Subexpression Elimination"));
-static cl::opt<cl::boolOrDefault> OptimizeRegAlloc(
-    "optimize-regalloc", cl::Hidden,
-    cl::desc("Enable optimized register allocation compilation path."));
 static cl::opt<bool> DisablePostRAMachineLICM("disable-postra-machine-licm",
     cl::Hidden,
     cl::desc("Disable Machine LICM"));
@@ -104,6 +100,21 @@ static cl::opt<bool> DisableCGP("disable-cgp", cl::Hidden,
 static cl::opt<bool>
     TriggerCrash("codegen-pipeline-trigger-crash", cl::init(false), cl::Hidden,
                  cl::desc("Trigger crash in codegen pipeline"));
+
+namespace {
+class TriggerCrashFunctionLegacyPass : public FunctionPass {
+public:
+  static char ID;
+  TriggerCrashFunctionLegacyPass() : FunctionPass(ID) {}
+  bool runOnFunction(Function &F) override {
+    abort();
+    return false;
+  }
+  StringRef getPassName() const override { return "TriggerCrashFunctionPass"; }
+};
+} // namespace
+
+char TriggerCrashFunctionLegacyPass::ID = 0;
 
 static cl::opt<bool> DisableCopyProp("disable-copyprop", cl::Hidden,
     cl::desc("Disable Copy Propagation pass"));
@@ -216,10 +227,6 @@ static cl::opt<bool> MISchedPostRA(
     cl::desc(
         "Run MachineScheduler post regalloc (independent of preRA sched)"));
 
-// Experimental option to run live interval analysis early.
-static cl::opt<bool> EarlyLiveIntervals("early-live-intervals", cl::Hidden,
-    cl::desc("Run live interval analysis earlier in the pipeline"));
-
 static cl::opt<bool> DisableReplaceWithVecLib(
     "disable-replace-with-vec-lib", cl::Hidden,
     cl::desc("Disable replace with vector math call pass"));
@@ -283,13 +290,13 @@ static cl::opt<bool> BasicBlockSectionMatchInfer(
     "basic-block-section-match-infer",
     cl::desc(
         "Enable matching and inference when generating basic block sections"),
-    cl::init(false), cl::Optional);
+    cl::init(false));
 
 cl::opt<bool> EmitBBHash(
     "emit-bb-hash",
     cl::desc(
         "Emit the hash of basic block in the SHT_LLVM_BB_ADDR_MAP section."),
-    cl::init(false), cl::Optional);
+    cl::init(false));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -508,7 +515,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
 
 #define SET_OPTION(Option) Opt.Option = Option;
 
-  SET_OPTION(OptimizeRegAlloc)
   SET_OPTION(EnableFastISelOption)
   SET_OPTION(EnableGlobalISelOption)
   SET_OPTION(VerifyMachineCode)
@@ -517,7 +523,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_OPTION(PrintAfterISel)
   SET_OPTION(FSProfileFile)
   SET_OPTION(EnableGCEmptyBlocks)
-  SET_OPTION(EarlyLiveIntervals)
   SET_OPTION(EnableBlockPlacementStats)
   SET_OPTION(EnableGlobalMergeFunc)
   SET_OPTION(EnableImplicitNullChecks)
@@ -543,7 +548,7 @@ void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
                                    TargetMachine &TM) {
 
   // Register a callback for disabling passes.
-  PIC.registerShouldRunOptionalPassCallback([](StringRef P, const Any &) {
+  PIC.registerShouldRunOptionalPassCallback([](StringRef P, IRUnitRef) {
 
 #define DISABLE_PASS(Option, Name)                                             \
   if (Option && P.contains(#Name))                                             \
@@ -946,11 +951,15 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     // Wasm EH uses Windows EH instructions, but it does not need to demote PHIs
     // on catchpads and cleanuppads because it does not outline them into
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
-    // should remove PHIs there.
-    addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/true));
-    addPass(createWasmEHPass());
+    // should remove PHIs there. WinEHPrepare derives this from the Wasm
+    // personality, so no explicit flag is needed here.
+    addPass(createWinEHPass());
     break;
+  case ExceptionHandling::Default:
   case ExceptionHandling::None:
+  case ExceptionHandling::Emscripten:
+    // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
+    // by this point it needs no generic EH preparation, like the None case.
     addPass(createLowerInvokePass());
 
     // The lower invoke pass may create unreachable code. Remove it.
@@ -1061,7 +1070,7 @@ bool TargetPassConfig::addCoreISelPasses() {
   // Pass to reset the MachineFunction if the ISel failed. Outside of the above
   // if so that the verifier is not added to it.
   if (Selector == SelectorType::GlobalISel)
-    addPass(createResetMachineFunctionPass(
+    addPass(createResetMachineFunctionLegacyPass(
         reportDiagnosticWhenGlobalISelFallback(), isGlobalISelAbortEnabled()));
 
   // Run the SDAG InstSelector, providing a fallback path when we do not want to
@@ -1094,7 +1103,7 @@ bool TargetPassConfig::addISelPasses() {
   addIRPasses();
 
   if (TriggerCrash)
-    addPass(createTriggerCrashFunctionPass());
+    addPass(new TriggerCrashFunctionLegacyPass());
 
   addCodeGenPrepare();
   addPassesToHandleExceptions();
@@ -1366,18 +1375,6 @@ void TargetPassConfig::addMachineSSAOptimization() {
 /// Register Allocation Pass Configuration
 //===---------------------------------------------------------------------===//
 
-bool TargetPassConfig::getOptimizeRegAlloc() const {
-  switch (OptimizeRegAlloc) {
-  case cl::boolOrDefault::BOU_UNSET:
-    return getOptLevel() != CodeGenOptLevel::None;
-  case cl::boolOrDefault::BOU_TRUE:
-    return true;
-  case cl::boolOrDefault::BOU_FALSE:
-    return false;
-  }
-  llvm_unreachable("Invalid optimize-regalloc state");
-}
-
 /// A dummy default pass factory indicates whether the register allocator is
 /// overridden on the command line.
 static llvm::once_flag InitializeDefaultRegisterAllocatorFlag;
@@ -1390,6 +1387,18 @@ defaultRegAlloc("default",
 static void initializeDefaultRegisterAllocatorOnce() {
   if (!RegisterRegAlloc::getDefault())
     RegisterRegAlloc::setDefault(RegAlloc);
+}
+
+bool TargetPassConfig::getOptimizeRegAlloc() const {
+  // An explicit -regalloc choice implies its pipeline: only the fast
+  // allocator uses the unoptimized one.
+  llvm::call_once(InitializeDefaultRegisterAllocatorFlag,
+                  initializeDefaultRegisterAllocatorOnce);
+  RegisterRegAlloc::FunctionPassCtor Ctor = RegisterRegAlloc::getDefault();
+  if (Ctor != (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator)
+    return Ctor !=
+           (RegisterRegAlloc::FunctionPassCtor)&createFastRegisterAllocator;
+  return getOptLevel() != CodeGenOptLevel::None;
 }
 
 /// Instantiate the default register allocator pass for this target for either
@@ -1417,10 +1426,8 @@ FunctionPass *TargetPassConfig::createTargetRegisterAllocator(bool Optimized) {
 /// FIXME: When MachinePassRegistry register pass IDs instead of function ptrs,
 /// this can be folded into addPass.
 FunctionPass *TargetPassConfig::createRegAllocPass(bool Optimized) {
-  // Initialize the global default.
-  llvm::call_once(InitializeDefaultRegisterAllocatorFlag,
-                  initializeDefaultRegisterAllocatorOnce);
-
+  // getOptimizeRegAlloc, called before the pipeline branches, has initialized
+  // the global default.
   RegisterRegAlloc::FunctionPassCtor Ctor = RegisterRegAlloc::getDefault();
   if (Ctor != useDefaultRegisterAllocator)
     return Ctor();
@@ -1506,9 +1513,11 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&MachineLoopInfoID);
   addPass(&PHIEliminationID);
 
-  // Eventually, we want to run LiveIntervals before PHI elimination.
-  if (EarlyLiveIntervals)
-    addPass(&LiveIntervalsID);
+  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
+  // that pass can rely on it instead of LiveVariables. This is a step toward
+  // removing LiveVariables entirely.
+  // FIXME: Eventually, we want to run LiveIntervals before PHI elimination.
+  addPass(&LiveIntervalsID);
 
   addPass(&TwoAddressInstructionPassID);
   addPass(&RegisterCoalescerID);
@@ -1596,10 +1605,6 @@ bool TargetPassConfig::isGlobalISelAbortEnabled() const {
 
 bool TargetPassConfig::reportDiagnosticWhenGlobalISelFallback() const {
   return TM->Options.GlobalISelAbort == GlobalISelAbortMode::DisableWithDiag;
-}
-
-bool TargetPassConfig::isGISelCSEEnabled() const {
-  return true;
 }
 
 std::unique_ptr<CSEConfigBase> TargetPassConfig::getCSEConfig() const {

@@ -19,7 +19,6 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include <cmath>
@@ -844,8 +843,12 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
       SmallVector<APFloat, 4> Values;
       Values.reserve(vecSize);
       for (int eltNo = 0; eltNo < vecSize; ++eltNo) {
-        ConstantFP *eltval =
-            cast<ConstantFP>(CV->getAggregateElement((unsigned)eltNo));
+        // A lane may be undef or poison, in which case there is nothing to
+        // look up in the table.
+        ConstantFP *eltval = dyn_cast_or_null<ConstantFP>(
+            CV->getAggregateElement((unsigned)eltNo));
+        if (!eltval)
+          return false;
         auto MatchingRow = llvm::find_if(tr, [eltval](const TableEntry &entry) {
           return eltval->isExactlyValue(entry.input);
         });
@@ -908,41 +911,15 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   // 0x1111111 means that we don't do anything for this call.
   int ci_opr1 = (CINT ? (int)CINT->getSExtValue() : 0x1111111);
 
-  if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0)) {
-    //  pow/powr/pown(x, 0) == 1
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1\n");
-    Constant *cnval = ConstantFP::get(eltType, 1.0);
-    if (getVecSize(FInfo) > 1) {
-      cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
-    }
-    replaceCall(FPOp, cnval);
-    return true;
-  }
-  if ((CF && CF->isOne()) || (CINT && ci_opr1 == 1)) {
-    // pow/powr/pown(x, 1.0) = x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
-    replaceCall(FPOp, opr0);
-    return true;
-  }
-  if ((CF && CF->isExactlyValue(2.0)) || (CINT && ci_opr1 == 2)) {
-    // pow/powr/pown(x, 2.0) = x*x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << " * "
-                      << *opr0 << "\n");
-    Value *nval = B.CreateFMul(opr0, opr0, "__pow2");
-    replaceCall(FPOp, nval);
-    return true;
-  }
-  if ((CF && CF->isMinusOne()) || (CINT && ci_opr1 == -1)) {
-    // pow/powr/pown(x, -1.0) = 1.0/x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1 / " << *opr0 << "\n");
-    Constant *cnval = ConstantFP::get(eltType, 1.0);
-    if (getVecSize(FInfo) > 1) {
-      cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
-    }
-    Value *nval = B.CreateFDiv(cnval, opr0, "__powrecip");
-    replaceCall(FPOp, nval);
-    return true;
-  }
+  // OpenCL powr(x<0, y) = NaN, but the folds below would turn it into a
+  // finite number. Skip them unless NaNs are ignored or the base is known
+  // non-negative.
+  bool IsPowr = FInfo.getId() == AMDGPULibFunc::EI_POWR ||
+                FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST;
+  bool SkipConstantFolds =
+      IsPowr && !FPOp->hasNoNaNs() &&
+      !cannotBeOrderedLessThanZero(
+          opr0, SQ.getWithInstruction(cast<Instruction>(FPOp)));
 
   if (CF && (CF->isExactlyValue(0.5) || CF->isExactlyValue(-0.5))) {
     // pow[r](x, [-]0.5) = sqrt(x) / rsqrt(x)
@@ -953,9 +930,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     // powr requires x >= 0 by the OpenCL spec, so -Inf is undefined behaviour
     // and the ninf check can be skipped for powr/powr_fast. -0.0 is a valid
     // input for powr since -0.0 >= 0 by IEEE comparison, so nsz is still
-    // required for all variants.
-    bool IsPowr = FInfo.getId() == AMDGPULibFunc::EI_POWR ||
-                  FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST;
+    // required for all variants. sqrt/rsqrt already return NaN for a
+    // negative base like powr does, so this fold skips the base-sign check.
     if (FPOp->hasNoSignedZeros() && (IsPowr || FPOp->hasNoInfs())) {
       bool issqrt = CF->isExactlyValue(0.5);
       if (FunctionCallee FPExpr =
@@ -969,6 +945,44 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
         replaceCall(FPOp, nval);
         return true;
       }
+    }
+  }
+
+  if (!SkipConstantFolds) {
+    if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0)) {
+      //  pow/powr/pown(x, 0) == 1
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1\n");
+      Constant *cnval = ConstantFP::get(eltType, 1.0);
+      if (getVecSize(FInfo) > 1) {
+        cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
+      }
+      replaceCall(FPOp, cnval);
+      return true;
+    }
+    if ((CF && CF->isOne()) || (CINT && ci_opr1 == 1)) {
+      // pow/powr/pown(x, 1.0) = x
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
+      replaceCall(FPOp, opr0);
+      return true;
+    }
+    if ((CF && CF->isExactlyValue(2.0)) || (CINT && ci_opr1 == 2)) {
+      // pow/powr/pown(x, 2.0) = x*x
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << " * "
+                        << *opr0 << "\n");
+      Value *nval = B.CreateFMul(opr0, opr0, "__pow2");
+      replaceCall(FPOp, nval);
+      return true;
+    }
+    if ((CF && CF->isMinusOne()) || (CINT && ci_opr1 == -1)) {
+      // pow/powr/pown(x, -1.0) = 1.0/x
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1 / " << *opr0 << "\n");
+      Constant *cnval = ConstantFP::get(eltType, 1.0);
+      if (getVecSize(FInfo) > 1) {
+        cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
+      }
+      Value *nval = B.CreateFDiv(cnval, opr0, "__powrecip");
+      replaceCall(FPOp, nval);
+      return true;
     }
   }
 
@@ -1681,7 +1695,7 @@ AMDGPULibCalls::insertSinCos(Value *Arg, FastMathFlags FMF, IRBuilder<> &B,
     // sincos call there. Otherwise, right after the allocas works well enough
     // if it's an argument or constant.
 
-    B.SetInsertPoint(ArgInst->getParent(), ++ArgInst->getIterator());
+    B.SetInsertPoint(*ArgInst->getInsertionPointAfterDef());
 
     // SetInsertPoint unwelcomely always tries to set the debug loc.
     B.SetCurrentDebugLocation(DL);
@@ -1794,6 +1808,11 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   if (SinCalls.empty() || CosCalls.empty())
     return false;
 
+  // insertSinCos needs an insertion point after the argument's def.
+  if (auto *ArgInst = dyn_cast<Instruction>(CArgVal);
+      ArgInst && !ArgInst->getInsertionPointAfterDef())
+    return false;
+
   B.setFastMathFlags(FMF);
   B.setDefaultFPMathTag(FPMath);
   DILocation *DbgLoc = DILocation::getMergedLocations(MergeDbgLocs);
@@ -1820,23 +1839,16 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
 bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
                                             APFloat &Res0, APFloat &Res1,
                                             Constant *copr0, Constant *copr1) {
-  // By default, opr0/opr1/opr3 holds values of float/double type.
-  // If they are not float/double, each function has to its
-  // operand separately.
-  double opr0 = 0.0, opr1 = 0.0;
+  // Every function handled below reads its first operand as a floating-point
+  // value. Refuse anything else, e.g. a poison vector lane: silently treating
+  // it as 0.0 misfolds the whole call.
   ConstantFP *fpopr0 = dyn_cast_or_null<ConstantFP>(copr0);
-  ConstantFP *fpopr1 = dyn_cast_or_null<ConstantFP>(copr1);
-  if (fpopr0) {
-    opr0 = (getArgType(FInfo) == AMDGPULibFunc::F64)
-             ? fpopr0->getValueAPF().convertToDouble()
-             : (double)fpopr0->getValueAPF().convertToFloat();
-  }
+  if (!fpopr0)
+    return false;
 
-  if (fpopr1) {
-    opr1 = (getArgType(FInfo) == AMDGPULibFunc::F64)
-             ? fpopr1->getValueAPF().convertToDouble()
-             : (double)fpopr1->getValueAPF().convertToFloat();
-  }
+  double opr0 = (getArgType(FInfo) == AMDGPULibFunc::F64)
+                    ? fpopr0->getValueAPF().convertToDouble()
+                    : (double)fpopr0->getValueAPF().convertToFloat();
 
   switch (FInfo.getId()) {
   default:
@@ -1952,9 +1964,16 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
 
   // two-arg functions
   case AMDGPULibFunc::EI_POW:
-  case AMDGPULibFunc::EI_POWR:
+  case AMDGPULibFunc::EI_POWR: {
+    ConstantFP *fpopr1 = dyn_cast_or_null<ConstantFP>(copr1);
+    if (!fpopr1)
+      return false;
+    double opr1 = (getArgType(FInfo) == AMDGPULibFunc::F64)
+                      ? fpopr1->getValueAPF().convertToDouble()
+                      : (double)fpopr1->getValueAPF().convertToFloat();
     Res0 = APFloat{pow(opr0, opr1)};
     return true;
+  }
 
   case AMDGPULibFunc::EI_POWN: {
     if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
@@ -2014,11 +2033,14 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
       return false;
     }
   } else {
-    ConstantDataVector *CDV0 = dyn_cast_or_null<ConstantDataVector>(copr0);
-    ConstantDataVector *CDV1 = dyn_cast_or_null<ConstantDataVector>(copr1);
+    // An operand of a vector variant is not necessarily a vector: sincos takes
+    // a pointer as its second operand, and fmin/fmax/ldexp accept an
+    // implicitly splatted scalar. Only index into actual vectors.
+    Constant *CV0 = copr0 && copr0->getType()->isVectorTy() ? copr0 : nullptr;
+    Constant *CV1 = copr1 && copr1->getType()->isVectorTy() ? copr1 : nullptr;
     for (int i = 0; i < FuncVecSize; ++i) {
-      Constant *celt0 = CDV0 ? CDV0->getElementAsConstant(i) : nullptr;
-      Constant *celt1 = CDV1 ? CDV1->getElementAsConstant(i) : nullptr;
+      Constant *celt0 = CV0 ? CV0->getAggregateElement((unsigned)i) : nullptr;
+      Constant *celt1 = CV1 ? CV1->getAggregateElement((unsigned)i) : nullptr;
       if (!evaluateScalarMathFunc(FInfo, Val0.emplace_back(0.0),
                                   Val1.emplace_back(0.0), celt0, celt1)) {
         return false;

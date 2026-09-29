@@ -22,6 +22,7 @@
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -149,6 +150,9 @@ public:
   size_t getNumRefs(ObjectHandle Node) const final;
   ArrayRef<char> getData(ObjectHandle Node,
                          bool RequiresNullTerminator = false) const final;
+  std::unique_ptr<MemoryBuffer>
+  getStandaloneMemoryBufferImpl(ObjectHandle Node, StringRef Name,
+                                bool RequiresNullTerminator) final;
   Error validateObject(const CASID &ID) final {
     // Not supported yet. Always return success.
     return Error::success();
@@ -370,6 +374,53 @@ ArrayRef<char> PluginObjectStore::getData(ObjectHandle Node,
   llcas_data_t c_data = Ctx->Functions.loaded_object_get_data(
       Ctx->c_cas, llcas_loaded_object_t{Node.getInternalRef(*this)});
   return ArrayRef((const char *)c_data.data, c_data.size);
+}
+
+namespace {
+/// A MemoryBuffer over a plugin's standalone buffer, which it releases when
+/// destroyed. It holds the dispose function directly rather than the
+/// \c llcas_cas_t, since the point of the buffer is to outlive that.
+class PluginStandaloneMemoryBuffer final : public MemoryBuffer {
+public:
+  using DisposeFn = void (*)(llcas_data_t);
+
+  PluginStandaloneMemoryBuffer(llcas_data_t Data, StringRef Name,
+                               DisposeFn Dispose)
+      : Data(Data), Name(Name.str()), Dispose(Dispose) {
+    const char *Start = static_cast<const char *>(Data.data);
+    init(Start, Start + Data.size, /*RequiresNullTerminator=*/true);
+  }
+
+  ~PluginStandaloneMemoryBuffer() override { Dispose(Data); }
+
+  StringRef getBufferIdentifier() const final { return Name; }
+
+  BufferKind getBufferKind() const final { return MemoryBuffer_Malloc; }
+
+private:
+  llcas_data_t Data;
+  std::string Name;
+  DisposeFn Dispose;
+};
+} // namespace
+
+std::unique_ptr<MemoryBuffer> PluginObjectStore::getStandaloneMemoryBufferImpl(
+    ObjectHandle Node, StringRef Name, bool RequiresNullTerminator) {
+  // Both halves are needed: without the disposer there is no way to release
+  // what the getter hands out.
+  if (!Ctx->Functions.loaded_object_get_standalone_data ||
+      !Ctx->Functions.standalone_data_dispose)
+    return ObjectStore::getStandaloneMemoryBufferImpl(Node, Name,
+                                                      RequiresNullTerminator);
+
+  llcas_data_t c_data = Ctx->Functions.loaded_object_get_standalone_data(
+      Ctx->c_cas, llcas_loaded_object_t{Node.getInternalRef(*this)});
+  if (!c_data.data)
+    return ObjectStore::getStandaloneMemoryBufferImpl(Node, Name,
+                                                      RequiresNullTerminator);
+
+  return std::make_unique<PluginStandaloneMemoryBuffer>(
+      c_data, Name, Ctx->Functions.standalone_data_dispose);
 }
 
 Error PluginObjectStore::setSizeLimit(std::optional<uint64_t> SizeLimit) {

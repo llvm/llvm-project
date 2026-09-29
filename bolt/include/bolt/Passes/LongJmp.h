@@ -10,6 +10,7 @@
 #define BOLT_PASSES_LONGJMP_H
 
 #include "bolt/Passes/BinaryPasses.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 namespace bolt {
@@ -79,6 +80,9 @@ class LongJmpPass : public BinaryFunctionPass {
   /// be relaxed.
   bool relaxLocalBranches(BinaryFunction &BF,
                           const BranchLivenessInfo *BLI = nullptr);
+
+  /// Relax calls and direct unconditional branches using one cluster layout.
+  void relaxWithClusters(BinaryContext &BC);
 
   ///                 -- Layout estimation methods --
   /// Try to do layout before running the emitter, by looking at BinaryFunctions

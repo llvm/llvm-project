@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
@@ -27,7 +28,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto swap_ranges) {
       benchmark::RegisterBenchmark(
           name,
-          [swap_ranges](auto& st) {
+          [swap_ranges](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c1, c2;
@@ -58,7 +59,7 @@ int main(int argc, char** argv) {
     auto bm = []<bool Aligned>(std::string name, auto swap_ranges) {
       benchmark::RegisterBenchmark(
           name,
-          [swap_ranges](auto& st) {
+          [swap_ranges](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             std::vector<bool> c1(size, true);
             std::vector<bool> c2(Aligned ? size : size + 4, false);

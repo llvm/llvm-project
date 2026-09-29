@@ -200,31 +200,12 @@ validateTilingSemiAffineMaps(LinalgOp linalgOp, ArrayRef<OpFoldResult> sizes) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// External model implementation of TilingInterface for LinalgOps. An external
-/// model implementation is used for now till the use of `TilingInterface` is
-/// on-par with the current Linalg tiling + fusion patterns. Once it is
-/// maybe possible to move this into the op-definition (though there are
-/// advantages to leaving it as an external model)
-template <typename LinalgOpTy>
-struct LinalgOpTilingInterface
-    : public TilingInterface::ExternalModel<LinalgOpTilingInterface<LinalgOpTy>,
-                                            LinalgOpTy> {
-  using Base =
-      TilingInterface::ExternalModel<LinalgOpTilingInterface<LinalgOpTy>,
-                                     LinalgOpTy>;
-  // Inherit the defaulted hint-bearing overloads; these ops do not require the
-  // hint (no inner tiles).
-  using Base::generateResultTileValue;
-  using Base::getIterationDomainTileFromOperandTiles;
-  using Base::getTiledImplementation;
-  using Base::getTiledImplementationFromOperandTiles;
-
-  /// Return the loop iterator type.
-  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
-    LinalgOpTy concreteOp = cast<LinalgOpTy>(op);
-    return concreteOp.getIteratorTypesArray();
-  }
-
+/// Operation-independent implementation shared by the external models for
+/// LinalgOps. External models are used for now until `TilingInterface` is
+/// on-par with the current Linalg tiling and fusion patterns. It may then be
+/// possible to move this into the op definitions, though there are advantages
+/// to leaving it as an external model.
+struct LinalgOpTilingInterfaceImpl {
   /// Return the iteration domain range.
   SmallVector<Range> getIterationDomain(Operation *op, OpBuilder &b) const {
     OpBuilder::InsertionGuard g(b);
@@ -517,6 +498,69 @@ struct LinalgOpTilingInterface
   }
 };
 
+template <typename LinalgOpTy>
+struct LinalgOpTilingInterfaceModel
+    : public TilingInterface::ExternalModel<
+          LinalgOpTilingInterfaceModel<LinalgOpTy>, LinalgOpTy>,
+      public LinalgOpTilingInterfaceImpl {
+  using ExternalModel =
+      TilingInterface::ExternalModel<LinalgOpTilingInterfaceModel<LinalgOpTy>,
+                                     LinalgOpTy>;
+
+  using LinalgOpTilingInterfaceImpl::generateScalarImplementation;
+  using LinalgOpTilingInterfaceImpl::getIterationDomain;
+  using LinalgOpTilingInterfaceImpl::getIterationDomainTileFromResultTile;
+  using LinalgOpTilingInterfaceImpl::getResultTilePosition;
+  using LinalgOpTilingInterfaceImpl::isOpFusableWithConsumerSlice;
+  using LinalgOpTilingInterfaceImpl::isOpFusableWithProducerSlices;
+
+  /// Return the loop iterator type without a dynamic LinalgOp interface lookup.
+  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
+    return cast<LinalgOpTy>(op).getIteratorTypesArray();
+  }
+
+  // Preserve the hint-bearing ExternalModel defaults while routing the
+  // no-hint overloads through the shared implementation.
+  using ExternalModel::generateResultTileValue;
+  FailureOr<TilingResult>
+  generateResultTileValue(Operation *op, OpBuilder &b, unsigned resultNumber,
+                          ArrayRef<OpFoldResult> offsets,
+                          ArrayRef<OpFoldResult> sizes) const {
+    return LinalgOpTilingInterfaceImpl::generateResultTileValue(
+        op, b, resultNumber, offsets, sizes);
+  }
+
+  using ExternalModel::getIterationDomainTileFromOperandTiles;
+  LogicalResult getIterationDomainTileFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes,
+      SmallVectorImpl<OpFoldResult> &iterDomainOffsets,
+      SmallVectorImpl<OpFoldResult> &iterDomainSizes) const {
+    return LinalgOpTilingInterfaceImpl::getIterationDomainTileFromOperandTiles(
+        op, b, operandNumbers, allOffsets, allSizes, iterDomainOffsets,
+        iterDomainSizes);
+  }
+
+  using ExternalModel::getTiledImplementation;
+  FailureOr<TilingResult>
+  getTiledImplementation(Operation *op, OpBuilder &b,
+                         ArrayRef<OpFoldResult> offsets,
+                         ArrayRef<OpFoldResult> sizes) const {
+    return LinalgOpTilingInterfaceImpl::getTiledImplementation(op, b, offsets,
+                                                               sizes);
+  }
+
+  using ExternalModel::getTiledImplementationFromOperandTiles;
+  FailureOr<TilingResult> getTiledImplementationFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
+    return LinalgOpTilingInterfaceImpl::getTiledImplementationFromOperandTiles(
+        op, b, operandNumbers, allOffsets, allSizes);
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // External Model for implementing `PartialReductionInterface` for `LinalgOp`s.
 //===----------------------------------------------------------------------===//
@@ -655,12 +699,9 @@ static InitSliceInfo getInitSliceInfo(MLIRContext *context,
       partialReductionMap, initOperandShape);
 }
 
-/// External model implementation of PartialReductionInterface for
-/// LinalgOps.
-template <typename LinalgOpTy>
-struct LinalgOpPartialReductionInterface
-    : public PartialReductionOpInterface::ExternalModel<
-          LinalgOpPartialReductionInterface<LinalgOpTy>, LinalgOpTy> {
+/// Operation-independent implementation shared by the
+/// PartialReductionInterface external models for LinalgOps.
+struct LinalgOpPartialReductionInterfaceImpl {
   FailureOr<SmallVector<Value>> generateInitialTensorForPartialReduction(
       Operation *op, OpBuilder &b, Location loc, ArrayRef<OpFoldResult> sizes,
       const SetVector<unsigned> &reductionDims) const {
@@ -890,6 +931,18 @@ struct LinalgOpPartialReductionInterface
 
     return success();
   }
+};
+
+template <typename LinalgOpTy>
+struct LinalgOpPartialReductionInterfaceModel
+    : public PartialReductionOpInterface::ExternalModel<
+          LinalgOpPartialReductionInterfaceModel<LinalgOpTy>, LinalgOpTy>,
+      public LinalgOpPartialReductionInterfaceImpl {
+  using LinalgOpPartialReductionInterfaceImpl::
+      generateInitialTensorForPartialReduction;
+  using LinalgOpPartialReductionInterfaceImpl::getPartialResultTilePosition;
+  using LinalgOpPartialReductionInterfaceImpl::mergeReductions;
+  using LinalgOpPartialReductionInterfaceImpl::tileToPartialReduction;
 };
 
 template <typename OpTy>
@@ -1149,8 +1202,10 @@ struct PackOpTiling
     for (auto tile : packOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledPackOp = PackOp::create(
-        b, loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
+    PackOp tiledPackOp =
+        PackOp::create(b, loc, TypeRange{outSlice.getType()}, tiledOperands,
+                       packOp.getProperties(),
+                       packOp->getDiscardableAttrDictionary().getValue());
 
     return TilingResult{
         {tiledPackOp},
@@ -1486,8 +1541,10 @@ struct PackOpTiling
     for (auto tile : packOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledPackOp = PackOp::create(
-        b, loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
+    PackOp tiledPackOp =
+        PackOp::create(b, loc, TypeRange{outSlice.getType()}, tiledOperands,
+                       packOp.getProperties(),
+                       packOp->getDiscardableAttrDictionary().getValue());
 
     return TilingResult{
         {tiledPackOp},
@@ -1727,8 +1784,10 @@ struct UnPackOpTiling
     for (auto tile : unpackOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledUnpackOp = UnPackOp::create(
-        b, loc, TypeRange{sliceDest.getType()}, tiledOperands, op->getAttrs());
+    UnPackOp tiledUnpackOp =
+        UnPackOp::create(b, loc, TypeRange{sliceDest.getType()}, tiledOperands,
+                         unpackOp.getProperties(),
+                         unpackOp->getDiscardableAttrDictionary().getValue());
 
     if (isPerfectTilingCase)
       return TilingResult{{tiledUnpackOp},
@@ -1986,9 +2045,10 @@ struct UnPackOpTiling
       tiledOperands.push_back(tile);
 
     // Create tiled unpack op.
-    Operation *tiledUnPackOp =
+    UnPackOp tiledUnPackOp =
         UnPackOp::create(b, loc, TypeRange{extractDestSlice.getType()},
-                         tiledOperands, op->getAttrs());
+                         tiledOperands, unPackOp.getProperties(),
+                         unPackOp->getDiscardableAttrDictionary().getValue());
 
     return TilingResult{{tiledUnPackOp},
                         SmallVector<Value>(tiledUnPackOp->getResults()),
@@ -2001,9 +2061,9 @@ struct UnPackOpTiling
 
 template <typename OpType>
 static void registerOne(MLIRContext *ctx) {
-  OpType::template attachInterface<LinalgOpTilingInterface<OpType>>(*ctx);
-  OpType::template attachInterface<LinalgOpPartialReductionInterface<OpType>>(
-      *ctx);
+  OpType::template attachInterface<LinalgOpTilingInterfaceModel<OpType>>(*ctx);
+  OpType::template attachInterface<
+      LinalgOpPartialReductionInterfaceModel<OpType>>(*ctx);
 }
 
 /// Variadic helper function.
