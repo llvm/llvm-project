@@ -1,5 +1,6 @@
 ; RUN: opt -S -passes='function(instsimplify),strip' -instnamer-after-each-pass %s | FileCheck %s --check-prefix=FINAL
 ; RUN: opt -disable-output -passes='function(instsimplify),strip' -instnamer-after-each-pass -print-changed %s 2>&1 | FileCheck %s --check-prefix=CHANGED
+; RUN: opt -S -passes=no-op-module %s | FileCheck %s --check-prefix=DEFAULT
 
 ; InstSimplify removes i.1. Strip removes the remaining names, so the
 ; instrumentation must assign fresh names before the next snapshot. In
@@ -10,6 +11,9 @@ entry:
   %2 = mul i32 %1, 3
   ret i32 %2
 }
+
+; DEFAULT-LABEL: define i32 @f(i32 %0)
+; DEFAULT: %1 = add i32 %0, 0
 
 ; FINAL-LABEL: define i32 @f(i32 %arg.3)
 ; FINAL: bb.4:

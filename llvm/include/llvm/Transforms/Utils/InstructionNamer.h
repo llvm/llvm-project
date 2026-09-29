@@ -17,7 +17,7 @@ class PassInstrumentationCallbacks;
 struct InstructionNamerPass : OptionalPassInfoMixin<InstructionNamerPass> {
   LLVM_ABI PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 
-  /// Name unnamed values before and after each new-PM pass when requested.
+  /// Register callbacks to name unnamed values around new-PM passes.
   LLVM_ABI static void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 } // namespace llvm

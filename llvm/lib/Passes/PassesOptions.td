@@ -125,6 +125,8 @@ defm : BoolField<"dropped-variable-stats", "false",
 // work as expected.
 defm : ValueField<"exec-on-ir-change", "StringRef", "",
   "exe called with module IR after each pass that changes it">;
+defm : BoolField<"instnamer-after-each-pass", "false",
+  "Name unnamed IR values before and after each new-PM pass with pipeline-unique names">;
 let MetaVarName = "<filename>" in
 defm : ValueField<"ir-dump-directory", "StringRef", "",
   "If specified, IR printed using the -print-[before|after]{-all} options will be dumped into files in this directory rather than written to stderr">;
