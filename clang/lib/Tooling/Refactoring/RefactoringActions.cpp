@@ -10,6 +10,7 @@
 #include "clang/Tooling/Refactoring/RefactoringAction.h"
 #include "clang/Tooling/Refactoring/RefactoringOptions.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
+#include "clang/Tooling/Refactoring/SwitchToIf/SwitchToIf.h"
 
 namespace clang {
 namespace tooling {
@@ -93,6 +94,24 @@ public:
   }
 };
 
+class SwitchToIfRefactoring final : public RefactoringAction {
+public:
+  StringRef getCommand() const override { return "switch-to-if"; }
+
+  StringRef getDescription() const override {
+    return "Converts a switch statement into an if-else chain";
+  }
+
+  /// Returns a set of refactoring actions rules that are defined by this
+  /// action.
+  RefactoringActionRules createActionRules() const override {
+    RefactoringActionRules Rules;
+    Rules.push_back(createRefactoringActionRule<SwitchToIf>(
+        ASTSelectionRequirement()));
+    return Rules;
+  }
+};
+
 } // end anonymous namespace
 
 std::vector<std::unique_ptr<RefactoringAction>> createRefactoringActions() {
@@ -100,6 +119,7 @@ std::vector<std::unique_ptr<RefactoringAction>> createRefactoringActions() {
 
   Actions.push_back(std::make_unique<LocalRename>());
   Actions.push_back(std::make_unique<ExtractRefactoring>());
+  Actions.push_back(std::make_unique<SwitchToIfRefactoring>());
 
   return Actions;
 }
