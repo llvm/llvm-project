@@ -2093,6 +2093,9 @@ findAssumesThroughMergesForTypeTest(SmallVectorImpl<CallInst *> &Assumes,
                                     CallInst &TypeTest,
                                     SmallPtrSetImpl<Value *> &VisitedMerges) {
   SmallVector<Value *, 4> Worklist;
+#ifndef NDEBUG
+  SmallPtrSet<CallInst *, 4> DirectAssumes(Assumes.begin(), Assumes.end());
+#endif
 
   auto GetMergeUser = [](User *U, Value *V) -> Value * {
     if (isa<PHINode>(U))
@@ -2117,8 +2120,11 @@ findAssumesThroughMergesForTypeTest(SmallVectorImpl<CallInst *> &Assumes,
 
     for (User *U : V->users()) {
       if (auto *Assume = dyn_cast<AssumeInst>(U)) {
-        if (Assume->getArgOperand(0) == V)
+        if (Assume->getArgOperand(0) == V) {
+          assert(!DirectAssumes.contains(Assume) &&
+                 "assume must not be both direct and merged");
           Assumes.push_back(Assume);
+        }
         continue;
       }
 

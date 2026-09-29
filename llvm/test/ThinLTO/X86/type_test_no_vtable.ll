@@ -19,7 +19,9 @@
 ; RUN:   -r=%t.o,observe, \
 ; RUN:   -r=%t.o,puts, \
 ; RUN:   -o %t2
-; RUN: llvm-dis %t2.1.4.opt.bc -o - | FileCheck %s
+; RUN: llvm-dis %t2.1.4.opt.bc -o - | FileCheck %s \
+; RUN:   --implicit-check-not='@llvm{{(\.public)?}}.type.test' \
+; RUN:   --implicit-check-not='@llvm.assume'
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -45,8 +47,6 @@ entry:
 }
 
 ; CHECK-LABEL: @test_select(
-; CHECK-NOT: @llvm.type.test
-; CHECK-NOT: @llvm.assume
 ; CHECK: call void %{{.*}}(ptr {{.*}}%object)
 ; CHECK: call i32 @puts(ptr {{.*}})
 ; CHECK: ret void
@@ -69,8 +69,6 @@ entry:
 }
 
 ; CHECK-LABEL: @test_select_one_missing(
-; CHECK-NOT: @llvm.type.test
-; CHECK-NOT: @llvm.assume
 ; CHECK: call void %{{.*}}(ptr {{.*}}%object)
 ; CHECK: call i32 @puts(ptr {{.*}})
 ; CHECK: ret void
@@ -99,8 +97,6 @@ entry:
 }
 
 ; CHECK-LABEL: @test_select_chain(
-; CHECK-NOT: @llvm.type.test
-; CHECK-NOT: @llvm.assume
 ; CHECK: call void %{{.*}}(ptr {{.*}}%object)
 ; CHECK: call void @observe(i1 %first)
 ; CHECK: call i32 @puts(ptr {{.*}})
@@ -140,8 +136,6 @@ merge:
 }
 
 ; CHECK-LABEL: @test_phi(
-; CHECK-NOT: @llvm.type.test
-; CHECK-NOT: @llvm.assume
 ; CHECK: call void %{{.*}}(ptr {{.*}})
 ; CHECK: call i32 @puts(ptr {{.*}})
 ; CHECK: ret void
