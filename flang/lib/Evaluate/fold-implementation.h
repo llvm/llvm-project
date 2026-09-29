@@ -1366,6 +1366,25 @@ static inline Expr<SomeDerived> FoldEnumerationNextOrPrevious(
   return Expr<SomeDerived>{std::move(funcRef)};
 }
 
+// Returns true when the j-th dummy argument of an intrinsic contributes only
+// its declared type, kind type parameters, and rank to the result, such as X
+// in PRECISION(X). The intrinsic table marks these dummies with
+// ArgFlag::onlyConstantInquiry, and IsConstantExpr() uses the same attribute.
+// STORAGE_SIZE and LEN aren't marked, because their results also depend on
+// the dynamic type or on length type parameters.
+static inline bool IsTypeOnlyInquiryArg(
+    const SpecificIntrinsic &intrinsic, std::size_t j) {
+  const auto &dummies{intrinsic.characteristics.value().dummyArguments};
+  if (j < dummies.size()) {
+    if (const auto *object{
+            std::get_if<characteristics::DummyDataObject>(&dummies[j].u)}) {
+      return object->attrs.test(
+          characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry);
+    }
+  }
+  return false;
+}
+
 template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
   ActualArguments &args{funcRef.arguments()};
@@ -1382,10 +1401,14 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
     }
   }
   if (intrinsic) {
-    // Skip intrinsic folding if any argument is still a conditional arg
-    // (i.e. its condition was not a compile-time constant).  When the
-    // condition is a compile-time constant, FoldConditionalArg already resolved
-    // it to a plain Expr above, and intrinsic folding proceeds normally.
+    // A conditional arg that survives the argument folding above has a
+    // condition that isn't a compile-time constant, or belongs to KIND, whose
+    // arguments aren't folded. Either way, skip intrinsic folding unless every
+    // such argument corresponds to a type-only inquiry dummy. F2023 C1538
+    // (declared type and kind type parameters) and C1539 (rank) make every
+    // consequent-arg agree on what such an inquiry examines, so the first
+    // consequent-arg stands in for the whole argument in a copy of the
+    // reference.
     //
     // TODO:
     // For elemental/pure intrinsics, distribute the call over each
@@ -1396,31 +1419,40 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
     // consequent, fold each clone, and reassemble into a new ConditionalArg.
     // When multiple arguments are conditional args, distribute one at a
     // time to avoid a combinatorial cross-product expansion.
-    // This is NOT valid for non-elemental intrinsics like RESHAPE or
-    // TRANSFER whose results depend on seeing all arguments together.
-    //
-    // TODO (conformance):
-    // Type-inquiry intrinsics whose result depends only on the argument's
-    // declared type/rank (e.g. KIND, BIT_SIZE, DIGITS, HUGE, TINY, EPSILON,
-    // PRECISION, RANGE, RADIX, MAXEXPONENT, MINEXPONENT, STORAGE_SIZE, RANK)
-    // are foldable even when the condition is not constant, because C1538/C1539
-    // guarantee every consequent has the same type and rank.  Because they are
-    // not folded here, a reference such as
-    //   integer, parameter :: k = kind((flag ? a : b))
-    // is wrongly rejected ("cannot be computed as a constant value") even
-    // though it is a valid F2023 constant expression.
-    // Fix:
-    // For such a curated allow-list of type-only inquiries, before the bailout
-    // below, a curated allow-list of type-only inquiries, before the bailout
-    // below, replace the conditional-arg argument with its first non-.NIL.
-    // consequent (a representative) and fold normally.  This must NOT be
-    // applied to shape/value inquiries (SIZE, SHAPE, LBOUND/UBOUND, LEN of
-    // deferred length, ALLOCATED, ASSOCIATED, PRESENT, IS_CONTIGUOUS), whose
-    // results can differ between consequents.
-    for (const std::optional<ActualArgument> &arg : args) {
-      if (arg && arg->isConditionalArg()) {
-        return Expr<T>{std::move(funcRef)};
+    // This is not valid for non-elemental intrinsics such as RESHAPE or
+    // TRANSFER, whose results depend on seeing all arguments together.
+    std::optional<FunctionRef<T>> viaRepresentative;
+    for (std::size_t j{0}; j < args.size(); ++j) {
+      if (args[j] && args[j]->isConditionalArg()) {
+        const ActualArgument::ConditionalArg &condArg{
+            DEREF(args[j]->GetConditionalArg())};
+        // A .NIL. consequent can leave an OPTIONAL dummy absent at run time,
+        // and an inquiry such as IEEE_SUPPORT_UNDERFLOW_CONTROL gives a
+        // different answer for an absent argument than for a present one.
+        // TODO: Fold such a reference twice, once with the representative
+        // and once with the argument absent, and keep the result when both
+        // agree. Blocked on llvm/llvm-project#227390: semantics rejects .NIL.
+        // for every OPTIONAL dummy of an intrinsic, so this can't be tested.
+        if (condArg.HasNilConsequent() ||
+            !IsTypeOnlyInquiryArg(*intrinsic, j)) {
+          return Expr<T>{std::move(funcRef)};
+        }
+        if (!viaRepresentative) {
+          viaRepresentative.emplace(funcRef);
+        }
+        // Assigning the Expr keeps the argument's keyword and dummy intent.
+        *viaRepresentative->arguments()[j] =
+            common::Clone(DEREF(condArg.FirstNonNilConsequent()));
       }
+    }
+    if (viaRepresentative) {
+      Expr<T> folded{FoldOperation(context, std::move(*viaRepresentative))};
+      // Anything but a constant still refers to the representative alone, so
+      // keep the conditional reference. RANK of consequent-args that are all
+      // assumed-rank, which C1539 allows, folds to a DescriptorInquiry.
+      return std::holds_alternative<Constant<T>>(folded.u)
+          ? std::move(folded)
+          : Expr<T>{std::move(funcRef)};
     }
     const std::string name{intrinsic->name};
     if (name == "cshift") {
