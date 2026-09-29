@@ -21,6 +21,14 @@ define nonnull ptr @nonnull_ret(i1 %cond, ptr %p) {
   ret ptr %res
 }
 
+define nonnull ptr @nonnull_ret_nullvalid(i1 %cond, ptr %p) null_pointer_is_valid {
+; CHECK-LABEL: @nonnull_ret_nullvalid(
+; CHECK-NEXT:    ret ptr [[P:%.*]]
+;
+  %res = select i1 %cond, ptr %p, ptr null
+  ret ptr %res
+}
+
 define nonnull ptr @nonnull_ret2(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_ret2(
 ; CHECK-NEXT:    ret ptr [[RES:%.*]]
@@ -49,6 +57,16 @@ define nonnull noundef ptr @nonnull_noundef_ret2(i1 %cond, ptr %p) {
 define void @nonnull_call(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_call(
 ; CHECK-NEXT:    call void @f(ptr nonnull [[RES:%.*]])
+; CHECK-NEXT:    ret void
+;
+  %res = select i1 %cond, ptr %p, ptr null
+  call void @f(ptr nonnull %res)
+  ret void
+}
+
+define void @nonnull_call_nullvalid(i1 %cond, ptr %p) null_pointer_is_valid {
+; CHECK-LABEL: @nonnull_call_nullvalid(
+; CHECK-NEXT:    call void @f(ptr nonnull [[P:%.*]])
 ; CHECK-NEXT:    ret void
 ;
   %res = select i1 %cond, ptr %p, ptr null
@@ -166,6 +184,19 @@ define void @nonnull_dereferenceable_call_gep(i1 %cond, ptr %p, i64 %off) {
   ret void
 }
 
+define void @nonnull_dereferenceable_call_gep_nullvalid(i1 %cond, ptr %p, i64 %off) null_pointer_is_valid {
+; CHECK-LABEL: @nonnull_dereferenceable_call_gep_nullvalid(
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P1:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    call void @f(ptr dereferenceable(1) [[GEP]])
+; CHECK-NEXT:    ret void
+;
+  %ptr = select i1 %cond, ptr null, ptr %p
+  %gep = getelementptr i8, ptr %ptr, i64 %off
+  call void @f(ptr dereferenceable(1) %gep)
+  ret void
+}
+
 define nonnull ptr @nonnull_ret_gep(i1 %cond, ptr %p, i64 %off) {
 ; CHECK-LABEL: @nonnull_ret_gep(
 ; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
@@ -180,6 +211,17 @@ define nonnull ptr @nonnull_ret_gep(i1 %cond, ptr %p, i64 %off) {
 define nonnull ptr @nonnull_ret_gep_inbounds(i1 %cond, ptr %p, i64 %off) {
 ; CHECK-LABEL: @nonnull_ret_gep_inbounds(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %ptr = select i1 %cond, ptr null, ptr %p
+  %gep = getelementptr inbounds i8, ptr %ptr, i64 %off
+  ret ptr %gep
+}
+
+define nonnull ptr @nonnull_ret_gep_inbounds_nullvalid(i1 %cond, ptr %p, i64 %off) null_pointer_is_valid {
+; CHECK-LABEL: @nonnull_ret_gep_inbounds_nullvalid(
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 [[OFF:%.*]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %ptr = select i1 %cond, ptr null, ptr %p

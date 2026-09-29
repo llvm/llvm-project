@@ -4172,10 +4172,9 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
   Type *RetTy = RetVal->getType();
   if (RetTy->isPointerTy()) {
     bool HasDereferenceable =
-        F->getAttributes().getRetDereferenceableBytes() > 0;
-    if (F->hasRetAttribute(Attribute::NonNull) ||
-        (HasDereferenceable &&
-         !NullPointerIsDefined(F, RetTy->getPointerAddressSpace()))) {
+        F->getAttributes().getRetDereferenceableBytes() > 0 &&
+        !NullPointerIsDefined(F, RetTy->getPointerAddressSpace());
+    if (F->hasRetAttribute(Attribute::NonNull) || HasDereferenceable) {
       if (Value *V = simplifyNonNullOperand(RetVal, HasDereferenceable))
         return replaceOperand(RI, 0, V);
     }
