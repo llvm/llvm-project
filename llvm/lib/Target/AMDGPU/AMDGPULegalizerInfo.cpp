@@ -3495,14 +3495,14 @@ static LLT widenToNextPowerOf2(LLT Ty) {
 
 /// Lower a whole-dword G_LOAD / G_STORE on AMDGPUAS::VGPR into
 /// G_AMDGPU_REG_LOAD / G_AMDGPU_REG_STORE. Parallels LowerLoadStoreVGPR.
-static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
+static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, GLoadStore &LdSt) {
   MachineIRBuilder &B = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *B.getMRI();
-  MachineMemOperand &MMO = **MI.memoperands_begin();
+  MachineMemOperand &MMO = LdSt.getMMO();
 
-  const bool IsStore = MI.getOpcode() == AMDGPU::G_STORE;
-  Register ValReg = MI.getOperand(0).getReg();
-  Register PtrReg = MI.getOperand(1).getReg();
+  const bool IsStore = isa<GStore>(LdSt);
+  Register ValReg = LdSt.getReg(0);
+  Register PtrReg = LdSt.getPointerReg();
 
   const LLT ValTy = MRI.getType(ValReg);
   const unsigned ValSize = ValTy.getSizeInBits();
@@ -3512,16 +3512,16 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
   // reach the containing dword.
   if (!isVGPRLoadStoreSizeSupported(MMO.getMemoryType().getSizeInBits(),
                                     ValSize) ||
-      MMO.getAlign() < Align(4)) {
+      LdSt.getAlign() < Align(4)) {
     const Function &F = B.getMF().getFunction();
     F.getContext().diagnose(DiagnosticInfoUnsupported(
         F,
         "unsupported access of VGPR 'as memory' address space (13); only "
         "dword-aligned whole-dword loads and stores are implemented",
-        MI.getDebugLoc()));
+        LdSt.getDebugLoc()));
     if (!IsStore)
       B.buildUndef(ValReg);
-    MI.eraseFromParent();
+    LdSt.eraseFromParent();
     return true;
   }
 
@@ -3552,7 +3552,7 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
     B.buildBitcast(ValReg, Result);
   }
 
-  MI.eraseFromParent();
+  LdSt.eraseFromParent();
   return true;
 }
 
@@ -3567,7 +3567,7 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
   unsigned AddrSpace = PtrTy.getAddressSpace();
 
   if (AddrSpace == AMDGPUAS::VGPR && MI.getOpcode() == AMDGPU::G_LOAD)
-    return lowerLoadStoreVGPR(Helper, MI);
+    return lowerLoadStoreVGPR(Helper, cast<GLoadStore>(MI));
 
   if (AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
     LLT ConstPtr = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
@@ -3659,7 +3659,7 @@ bool AMDGPULegalizerInfo::legalizeStore(LegalizerHelper &Helper,
 
   if (MRI.getType(MI.getOperand(1).getReg()).getAddressSpace() ==
       AMDGPUAS::VGPR)
-    return lowerLoadStoreVGPR(Helper, MI);
+    return lowerLoadStoreVGPR(Helper, cast<GLoadStore>(MI));
 
   if (hasBufferRsrcWorkaround(DataTy)) {
     Observer.changingInstr(MI);
