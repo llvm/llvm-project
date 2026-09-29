@@ -24,7 +24,6 @@ class FrameProviderPassThroughPrefixTestCase(TestBase):
         TestBase.setUp(self)
         self.source = "main.c"
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_pass_through_with_prefix(self):
         """
         Test that a provider can read every frame from its parent list and
