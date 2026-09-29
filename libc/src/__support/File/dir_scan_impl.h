@@ -33,9 +33,9 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
                        int (*compare)(const struct dirent **,
                                       const struct dirent **)) {
   auto res_open = DirType::open(name);
-  if (!res_open) {
+  if (!res_open)
     return LIBC_NAMESPACE::Error(res_open.error());
-  }
+
   DirType *dir = res_open.value();
 
   int error_code = 0;
@@ -44,12 +44,11 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
   size_t buffer_capacity = 0;
 
   auto free_entries = [&entries, &count]() {
-    if (entries == nullptr) {
+    if (entries == nullptr)
       return;
-    }
-    for (size_t i = 0; i < count; ++i) {
+
+    for (size_t i = 0; i < count; ++i)
       ::free(entries[i]);
-    }
 
     ::free(entries);
   };
@@ -62,13 +61,11 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
     }
 
     struct dirent *entry = res_read.value();
-    if (entry == nullptr) {
+    if (entry == nullptr)
       break;
-    }
 
-    if (filter != nullptr && !filter(entry)) {
+    if (filter != nullptr && !filter(entry))
       continue;
-    }
 
     // Scandir must return the number of entries as int, anything
     // above that is non-representable.
