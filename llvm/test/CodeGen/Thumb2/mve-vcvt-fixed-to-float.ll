@@ -1033,9 +1033,8 @@ define arm_aapcs_vfpcc <4 x float> @vcvt_negative2(<4 x i32> %0) {
 define arm_aapcs_vfpcc <4 x float> @extra_4(<4 x i32> %2, ptr %p, i32 %i) {
 ; CHECK-LABEL: extra_4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #4
+; CHECK-NEXT:    vcvt.f32.s32 q0, q0, #4
 ; CHECK-NEXT:    eor r1, r1, #4
-; CHECK-NEXT:    vcvt.f32.s32 q0, q0, r2
 ; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
