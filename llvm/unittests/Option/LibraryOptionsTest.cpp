@@ -46,13 +46,13 @@ TEST(LibraryOptionsTest, Apply) {
   EXPECT_EQ(O.lib_count, 7u);
   EXPECT_EQ(O.lib_ratio, 0.25);
   EXPECT_EQ(O.Path, "a=b");
-  EXPECT_THAT(Apply({"-lib-enable=0"}), testing::Each(true));
+  EXPECT_THAT(Apply({"-lib-enable=false"}), testing::Each(true));
   EXPECT_FALSE(O.lib_enable);
   EXPECT_THAT(Apply({"-lib-enable=1"}), testing::Each(true));
   EXPECT_TRUE(O.lib_enable);
 
   // A rejected value leaves the member unchanged.
-  EXPECT_THAT(Apply({"-lib-enable=2", "-lib-count=x", "-lib-ratio=y"}),
+  EXPECT_THAT(Apply({"-lib-enable=2", "-lib-count=-1", "-lib-ratio=y"}),
               testing::Each(false));
   EXPECT_TRUE(O.lib_enable);
   EXPECT_EQ(O.lib_count, 7u);

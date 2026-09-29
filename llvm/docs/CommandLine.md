@@ -1580,7 +1580,7 @@ def FooOptions : OptionsStruct;
 defm : BoolField<"foo-enable", "1", "Enable foo">;
 defm : ValueField<"foo-threshold", "unsigned", "8", "The threshold">;
 let Hidden = 0 in
-defm : ValueField<"foo-path", "StringRef", "", "The input path">;
+defm : ValueField<"foo-path", "StringRef", "\"-\"", "The input path">;
 ```
 
 The struct is in namespace `llvm` unless the def names another, as in
@@ -1592,8 +1592,9 @@ integer type, `double`, or `StringRef` is set by `-x=value` or `-x value`.
 Both accept `--` for `-`. Only `-help-hidden` lists the options, like
 `cl::Hidden`; those declared in `let Hidden = 0 in` are also listed by `-help`.
 
-The header declares the struct after including what the member defaults need,
-and one source file defines it and registers it with `cl::`.
+A default is the member's C++ initializer, so `"\"-\""` initializes `foo_path`
+to `"-"`. The header declares the struct after including what the member
+defaults need, and one source file defines it and registers it with `cl::`.
 
 The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under
 `LINK_COMPONENTS`. Code reads `FooOptions::Global.foo_enable`, the instance the
