@@ -522,18 +522,27 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // --------------------------------------------------------------------
 
 // The mapper's own `iterator(i = 0:10)` (11 total trips) is emitted as a
-// dynamic segment: each iteration pushes one component via
-// __tgt_push_mapper_component from inside a generated loop nested in the
-// mapper function's usual per-array-element loop, rather than being added
-// to the static offload arrays.
+// dynamic segment: each iteration computes an address from the induction
+// variable (rather than remapping the whole array element on every
+// iteration) and, since the per-iteration map carries its own mapper,
+// invokes that child mapper directly instead of pushing a flat component
+// via __tgt_push_mapper_component.
 module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  omp.declare_mapper @inner_mapper : !llvm.struct<"inner_type", (i32)> {
+  ^bb0(%arg0: !llvm.ptr):
+    %m = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<"inner_type", (i32)>) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+    omp.declare_mapper.info map_entries(%m : !llvm.ptr)
+  }
+
   omp.declare_mapper @mapper_with_iterator : !llvm.struct<"mapper_type", (i32)> {
   ^bb0(%arg: !llvm.ptr):
     %c0 = llvm.mlir.constant(0 : i64) : i64
     %c10 = llvm.mlir.constant(10 : i64) : i64
     %c1 = llvm.mlir.constant(1 : i64) : i64
     %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
-      %m = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+      %elem = llvm.getelementptr %arg[%iv]
+          : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<"inner_type", (i32)>
+      %m = omp.map.info var_ptr(%elem : !llvm.ptr, !llvm.struct<"inner_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@inner_mapper) name("") -> !llvm.ptr
       omp.yield(%m : !llvm.ptr)
     } -> !omp.iterated<!llvm.ptr>
     omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
@@ -565,11 +574,16 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // MAPPER: %[[CMP:.*]] = icmp ult i64 %[[IV]], 11
 // MAPPER: br i1 %[[CMP]], label %omp_mapper.iterator.body, label %omp_mapper.iterator.exit
 //
-// Body: push one component per iteration via __tgt_push_mapper_component,
-// using the current array element as both base and begin address, and the
-// mapper's own var_ptr type size (4 bytes for the i32 field) as the size.
+// Body: the mapped address is derived from the current array element via a
+// GEP indexed by the iterator's (normalized) induction variable, computed
+// from [[IV]] rather than the array element pointer used directly, and since
+// this per-iteration map carries its own mapper, the inner mapper function is
+// called directly instead of __tgt_push_mapper_component.
 // MAPPER: omp_mapper.iterator.body:
-// MAPPER: call void @__tgt_push_mapper_component(ptr %[[HANDLE]], ptr %omp.arraymap.ptrcurrent, ptr %omp.arraymap.ptrcurrent, i64 4, i64 %{{.*}}, ptr null)
+// MAPPER: %{{.*}} = urem i64 %[[IV]], 11
+// MAPPER: %[[PHYSIV:.*]] = add i64 0, %{{.*}}
+// MAPPER: %[[ELEM:.*]] = getelementptr {{.*}}, ptr %omp.arraymap.ptrcurrent, i64 %[[PHYSIV]]
+// MAPPER: call void @.omp_mapper.inner_mapper(ptr %[[HANDLE]], ptr %[[ELEM]], ptr %[[ELEM]], i64 4, i64 %{{.*}}, ptr null)
 // MAPPER: br label %omp_mapper.iterator.inc
 //
 // MAPPER: omp_mapper.iterator.inc:

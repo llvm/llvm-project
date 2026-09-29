@@ -1442,6 +1442,28 @@ static bool isArraySectionSubscript(const omp::Object &object) {
   });
 }
 
+// Returns true if `sym`'s declared shape has an explicit lower bound other
+// than 1. The iterator-driven derived-type-member map path builds its
+// coordinate from a bare fir.coordinate_of address (see the `hasParentObj`
+// case in processMap), which carries no shape/bounds information, so
+// genIteratorCoordinate would otherwise assume a lower bound of 1 for such a
+// member.
+static bool hasExplicitNonDefaultLowerBound(const semantics::Symbol &sym) {
+  const auto *details =
+      sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>();
+  if (!details)
+    return false;
+  for (const semantics::ShapeSpec &spec : details->shape()) {
+    if (!spec.lbound().isExplicit())
+      continue;
+    if (const auto &lb = spec.lbound().GetExplicit())
+      if (auto lbVal = evaluate::ToInt64(*lb))
+        if (*lbVal != 1)
+          return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processDefaultMap(lower::StatementContext &stmtCtx,
                                         DefaultMapsTy &result) const {
   auto process = [&](const omp::clause::Defaultmap &clause,
@@ -2145,6 +2167,11 @@ bool ClauseProcessor::processMap(
           TODO(currentLocation,
                "Iterator modifier on a nested derived-type member in a map "
                "clause is not implemented yet");
+
+        if (hasExplicitNonDefaultLowerBound(*object.sym()))
+          TODO(currentLocation,
+               "Iterator modifier on a derived-type member with a "
+               "non-default lower bound is not implemented yet");
 
         fir::factory::AddrAndBoundsInfo parentInfo =
             Fortran::lower::getDataOperandBaseAddr(
