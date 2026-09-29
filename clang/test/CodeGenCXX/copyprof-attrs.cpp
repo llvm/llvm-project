@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -disable-llvm-passes -fcopyprof -fcopyprof-static-size-threshold=16 %s -o - | FileCheck %s --check-prefix=T16
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -disable-llvm-passes -fcopyprof -fcopyprof-static-size-threshold=8 %s -o - | FileCheck %s --check-prefix=T8
 
