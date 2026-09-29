@@ -1592,6 +1592,23 @@ bool SystemZELFFrameLowering::canUseAsPrologue(
   return true;
 }
 
+bool SystemZELFFrameLowering::canUseAsEpilogue(
+    const MachineBasicBlock &MBB) const {
+  // If epilogue instructions (such as AGHI/AGFI) clobber CC,
+  // we cannot insert the epilogue here if CC is needed by or after the
+  // terminators.
+  for (const MachineInstr &MI : MBB.terminators()) {
+    if (MI.readsRegister(SystemZ::CC, /*TRI=*/nullptr))
+      return false;
+  }
+  for (const MachineBasicBlock *Succ : MBB.successors()) {
+    if (Succ->isLiveIn(SystemZ::CC))
+      return false;
+  }
+
+  return true;
+}
+
 // Determines the size of the frame, and creates the deferred spill objects.
 void SystemZXPLINKFrameLowering::determineFrameLayout(
     MachineFunction &MF) const {

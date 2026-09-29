@@ -122,6 +122,8 @@ public:
 
   bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
 
+  bool canUseAsEpilogue(const MachineBasicBlock &MBB) const override;
+
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 };
