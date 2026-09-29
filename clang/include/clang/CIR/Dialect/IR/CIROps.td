@@ -6300,7 +6300,7 @@ def CIR_MatrixTransposeOp : CIR_Op<"matrix.transpose", [
 
     ```
     %result = cir.matrix.transpose %value : <3 x 2 x !cir.float>, 
-        !cir.matrix<3 x 3 x !cir.float>
+        !cir.matrix<2 x 3 x !cir.float>
     ```
   }];
 

@@ -4190,15 +4190,14 @@ OpFoldResult cir::VecTernaryOp::fold(FoldAdaptor adaptor) {
 LogicalResult cir::MatrixTransposeOp::verify() {
   cir::MatrixType valueTy = getValue().getType();
   cir::MatrixType resultTy = getResult().getType();
-  if (valueTy.getElementType() != resultTy.getElementType()) {
-    emitOpError() << "operand type doesn't match the result type";
-    return failure();
-  }
 
-  if ((valueTy.getRowNum() != resultTy.getColumnNum()) ||
+  if ((valueTy.getElementType() != resultTy.getElementType()) ||
+      (valueTy.getRowNum() != resultTy.getColumnNum()) ||
       (valueTy.getColumnNum() != resultTy.getRowNum())) {
-    emitOpError()
-        << "result type doesn't match the transpose type of the operand type";
+    auto expectedTy = cir::MatrixType::get(
+        valueTy.getElementType(), valueTy.getColumnNum(), valueTy.getRowNum());
+    emitOpError() << "operand type " << valueTy << " expects result type of "
+                  << expectedTy << " but got " << resultTy;
     return failure();
   }
 
