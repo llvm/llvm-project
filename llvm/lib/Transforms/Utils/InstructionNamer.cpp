@@ -22,18 +22,12 @@
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
 #include <string>
 
 using namespace llvm;
-
-static cl::opt<bool> InstNamerAfterEachPass(
-    "instnamer-after-each-pass", cl::Hidden,
-    cl::desc("Name unnamed IR values before and after each new-PM pass with "
-             "pipeline-unique names"));
 
 static void nameInstructions(Function &F,
                              std::atomic<uint64_t> *NextID = nullptr) {
@@ -83,9 +77,8 @@ static void nameIRUnit(IRUnitRef IR, std::atomic<uint64_t> &NextID) {
 
 void InstructionNamerPass::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-  if (!InstNamerAfterEachPass)
-    return;
-
+  // The symbol table only detects collisions with live values. Keep an ID
+  // across callbacks so deleting a value does not reuse its generated ID.
   auto NextID = std::make_shared<std::atomic<uint64_t>>(0);
   PIC.registerBeforeNonSkippedPassCallback(
       [NextID](StringRef, IRUnitRef IR) { nameIRUnit(IR, *NextID); });
