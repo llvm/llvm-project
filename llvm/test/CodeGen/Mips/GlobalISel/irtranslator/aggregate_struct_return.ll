@@ -82,7 +82,7 @@ define void @call_ret_complex_float(ptr %z) {
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
   ; MIPS32-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-  ; MIPS32-NEXT:   JAL @ret_complex_float, csr_o32, implicit-def $ra, implicit-def $sp, implicit-def $f0, implicit-def $f2
+  ; MIPS32-NEXT:   JAL @ret_complex_float, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def $f0, implicit-def $f2
   ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f0
   ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f2
   ; MIPS32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
@@ -110,7 +110,7 @@ define void @call_ret_complex_double(ptr %z) {
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
   ; MIPS32-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-  ; MIPS32-NEXT:   JAL @ret_complex_double, csr_o32, implicit-def $ra, implicit-def $sp, implicit-def $d0, implicit-def $d1
+  ; MIPS32-NEXT:   JAL @ret_complex_double, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def $d0, implicit-def $d1
   ; MIPS32-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $d0
   ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $d1
   ; MIPS32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
