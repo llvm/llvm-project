@@ -1,8 +1,5 @@
 # "Clang" CFE Internals Manual
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -45,7 +42,7 @@ when the code is incorrect or dubious. In Clang, each diagnostic produced has
 {ref}`SourceLocation <SourceLocation>` to "put the caret", and a severity
 (e.g., `WARNING` or `ERROR`). They can also optionally include a number of
 arguments to the diagnostic (which fill in "%0"'s in the string) as well as a
-number of source ranges that related to the diagnostic.
+number of source ranges that are related to the diagnostic.
 
 In this section, we'll be giving examples produced by the Clang command line
 driver, but diagnostics can be {ref}`rendered in many different ways
@@ -116,6 +113,17 @@ Mapping to `Fatal` should only be used for diagnostics that are considered so
 severe that error recovery won't be able to recover sensibly from them (thus
 spewing a ton of bogus errors). One example of this class of error is failure
 to `#include` a file.
+
+##### Extension vs ExtWarn
+
+Deciding whether to use `Extension` or `ExtWarn` can be difficult. 
+`ExtWarn` should be used if one of the following applies (or another good reason is stated):
+- the extension is likely to be used incorrectly (e.g. `-Wvla`);
+- the diagnosed code is likely wrong (e.g. `-Wmain`);
+- the extension is likely surprising in some cases (e.g. `SFINAEFailure`);
+- the extension is deprecated (e.g. `-Wauto-storage-class`).
+
+`Extension` should be used in all other circumstances.
 
 #### Diagnostic Wording
 
@@ -2863,8 +2871,9 @@ Clang preserves in the normalized form intermediate concept-ids
 (`ConceptIdConstraint`) This is used for diagnostics only and no substitution
 happens in a ConceptIdConstraint if its expression is satisfied.
 
-The normal form of the associated constraints of a declaration is cached in
-Sema::NormalizationCache such that it is only computed once.
+The normal form of each associated constraint expression is cached in
+`Sema::NormalizedConstraintExprCache`, so that it is only computed once even if
+several declarations share it (e.g. members of class template specializations).
 
 A `NormalizedConstraint` is a recursive data structure, where each node
 contains a parameter mapping, represented by the indexes of all parameter
@@ -2922,7 +2931,7 @@ allowing the programmer to pass semantic information along to the compiler for
 various uses. For example, attributes may be used to alter the code generation
 for a program construct, or to provide extra semantic information for static
 analysis. This document explains how to add a custom attribute to Clang.
-Documentation on existing attributes can be found [here](https://clang.llvm.org/docs/AttributeReference.html).
+Documentation on existing attributes can be found [here](AttributeReference.md).
 
 #### Attribute Basics
 
@@ -3612,7 +3621,8 @@ int A = B; // expected-error {{use of undeclared identifier 'B'}}
 ```
 
 You can place as many diagnostics on one line as you wish. To make the code
-more readable, you can use slash-newline to separate out the diagnostics.
+more readable, you can use backslashes to separate out the diagnostics into
+multiple lines.
 
 Alternatively, it is possible to specify the line on which the diagnostic
 should appear by appending `@<line>` to `expected-<type>`, for example:

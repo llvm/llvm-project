@@ -14,6 +14,14 @@
 #undef DeviceSynchronize
 #undef Success
 #undef ErrorInvalidValue
+#undef ErrorInvalidDevice
+#undef ErrorUnknown
+#undef ErrorInvalidResourceHandle
+#undef ErrorInvalidConfiguration
+#undef GetErrorName
+#undef GetErrorString
+#undef GetLastError
+#undef PeekAtLastError
 #undef MemcpyKind
 #undef MemcpyHostToHost
 #undef MemcpyHostToDevice
@@ -24,7 +32,6 @@
 #undef GetDeviceCount
 #undef SetDevice
 #undef HostAlloc
-#undef HostAllocFlags
 #undef HostAllocDefault
 #undef HostAllocPortable
 #undef HostAllocMapped
@@ -33,6 +40,9 @@
 #undef FreeHost
 #undef GetDeviceProperties
 #undef Stream_t
+#undef StreamDefault
+#undef StreamNonBlocking
 #undef StreamCreate
+#undef StreamCreateWithFlags
 #undef StreamDestroy
 #undef StreamSynchronize

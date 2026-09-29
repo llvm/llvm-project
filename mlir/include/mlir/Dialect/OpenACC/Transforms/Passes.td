@@ -160,6 +160,47 @@ def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mli
   ];
 }
 
+def ACCDeclareCtorDtorConversion
+    : Pass<"acc-declare-ctor-dtor-conversion", "mlir::ModuleOp"> {
+  let summary = "Convert OpenACC declare global constructors and destructors "
+                "to LLVM functions";
+  let description = [{
+    Converts `acc.global_ctor` into `llvm.func` entry points and registers them
+    in `llvm.mlir.global_ctors`. When enabled, similarly converts
+    `acc.global_dtor` and registers the functions in `llvm.mlir.global_dtors`;
+    otherwise, removes the destructor operations.
+
+    The ctor/dtor priority defaults to 102 so declare constructors run after
+    libacctarget init (priority 101).
+
+    Nested OpenACC operations inside the ctor/dtor regions are left unchanged
+    for later lowering.
+  }];
+  let options = [
+    Option<"priority", "priority", "int32_t", /*default=*/"102",
+           "Priority for ACC declare global constructors and destructors">,
+    Option<"generateDtors", "generate-dtors", "bool", /*default=*/"true",
+           "Generate LLVM destructor functions and register them globally">,
+    Option<"extraCtorName", "extra-ctor-name", "std::string",
+           /*default=*/"\"acc.extra_ctor\"",
+           "Name of the extra constructor function added to global ctors.">,
+    ListOption<"extraConstructors", "extra-constructors", "std::string",
+               "Extra functions to declare and call from an OpenACC "
+               "constructor.">,
+    ListOption<"entryOnlyConstructors", "entry-only-constructors",
+               "std::string",
+               "Extra functions to declare and call from an OpenACC "
+               "constructor when the entry-point-name is defined and present "
+               "in the module">,
+    Option<"entryPointName", "entry-point-name", "std::string",
+           /*default=*/"",
+           "Symbol name of the entry point. Extra constructors with "
+           "in entryOnlyConstructors are emitted only when this symbol is "
+           "present. Empty means entryOnlyConstructors are never emitted.">
+  ];
+  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
+}
+
 def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
   let summary = "Legalize OpenACC serial constructs";
   let description = [{
@@ -529,6 +570,19 @@ def ACCRoutineToGPUFunc : Pass<"acc-routine-to-gpu-func", "mlir::ModuleOp"> {
   let options = [ AccDeviceTypeOption ];
 }
 
+def ACCMaterializeRoutineBindTargets
+    : Pass<"acc-materialize-routine-bind-targets"> {
+  let summary = "Materialize string-bound ACC routine call targets";
+  let description = [{
+    Materialize declarations for string-valued `acc routine bind` targets in
+    the current symbol table. This parent-level pass must run before
+    `acc-bind-routine`, which can then rewrite calls in parallel without
+    mutating a parent operation.
+  }];
+  let dependentDialects = ["mlir::func::FuncDialect"];
+  let options = [ AccDeviceTypeOption ];
+}
+
 def ACCBindRoutine
     : InterfacePass<"acc-bind-routine", "mlir::FunctionOpInterface"> {
   let summary = "Apply bind clause to function calls in ACC compute regions";
@@ -536,7 +590,8 @@ def ACCBindRoutine
     For calls inside offload regions that target a function with an
     `acc routine` directive and a `bind(name)` clause, rewrite the
     call to use the bound symbol so device code calls the correct
-    call target.
+    call target. String-valued bind targets must first be created by
+    `acc-materialize-routine-bind-targets`.
   }];
   let options = [ AccDeviceTypeOption ];
 }

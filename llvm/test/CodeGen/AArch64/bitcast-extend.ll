@@ -25,10 +25,9 @@ define <4 x i32> @z_i32_v4i32(i32 %x) {
 ; CHECK-SD-LABEL: z_i32_v4i32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    movi v1.2d, #0x0000ff000000ff
 ; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: z_i32_v4i32:
@@ -61,16 +60,16 @@ define <4 x i32> @z_i32_v4i32(i32 %x) {
 define <4 x i64> @z_i32_v4i64(i32 %x) {
 ; CHECK-SD-LABEL: z_i32_v4i64:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    movi v1.2d, #0x000000000000ff
-; CHECK-SD-NEXT:    mov b2, v0.b[0]
-; CHECK-SD-NEXT:    mov b3, v0.b[2]
-; CHECK-SD-NEXT:    mov v2.b[4], v0.b[1]
-; CHECK-SD-NEXT:    mov v3.b[4], v0.b[3]
-; CHECK-SD-NEXT:    ushll v0.2d, v2.2s, #0
-; CHECK-SD-NEXT:    ushll v2.2d, v3.2s, #0
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-SD-NEXT:    fmov s1, w0
+; CHECK-SD-NEXT:    movi d0, #0x0000ff000000ff
+; CHECK-SD-NEXT:    mov b2, v1.b[0]
+; CHECK-SD-NEXT:    mov b3, v1.b[2]
+; CHECK-SD-NEXT:    mov v2.b[4], v1.b[1]
+; CHECK-SD-NEXT:    mov v3.b[4], v1.b[3]
+; CHECK-SD-NEXT:    and v1.8b, v2.8b, v0.8b
+; CHECK-SD-NEXT:    and v2.8b, v3.8b, v0.8b
+; CHECK-SD-NEXT:    ushll v0.2d, v1.2s, #0
+; CHECK-SD-NEXT:    ushll v1.2d, v2.2s, #0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: z_i32_v4i64:

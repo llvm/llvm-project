@@ -1,11 +1,12 @@
 ; RUN: opt < %s -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
+target datalayout = "e-p:32:32"
 
 declare i32 @strcmp(ptr, ptr)
 declare i32 @strncmp(ptr, ptr, i32)
 declare i32 @strcasecmp(ptr, ptr)
 declare i32 @strncasecmp(ptr, ptr, i32)
-declare i32 @memcmp(ptr, ptr)
-declare i32 @bcmp(ptr, ptr)
+declare i32 @memcmp(ptr, ptr, i32)
+declare i32 @bcmp(ptr, ptr, i32)
 declare i32 @nonstrcmp(ptr, ptr)
 
 
@@ -194,7 +195,7 @@ exit:
 define i32 @test_memcmp_sgt(ptr %p, ptr %q) {
 ; CHECK: Printing analysis {{.*}} for function 'test_memcmp_sgt'
 entry:
-  %val = call i32 @memcmp(ptr %p, ptr %q)
+  %val = call i32 @memcmp(ptr %p, ptr %q, i32 4)
   %cond = icmp sgt i32 %val, 0
   br i1 %cond, label %then, label %else
 ; CHECK: edge %entry -> %then probability is 0x40000000 / 0x80000000 = 50.00%
@@ -288,7 +289,7 @@ exit:
 define i32 @test_bcmp_eq(ptr %p, ptr %q) {
 ; CHECK: Printing analysis {{.*}} for function 'test_bcmp_eq'
 entry:
-  %val = call i32 @bcmp(ptr %p, ptr %q)
+  %val = call i32 @bcmp(ptr %p, ptr %q, i32 4)
   %cond = icmp eq i32 %val, 0
   br i1 %cond, label %then, label %else
 ; CHECK: edge %entry -> %then probability is 0x30000000 / 0x80000000 = 37.50%
@@ -310,7 +311,7 @@ exit:
 define i32 @test_bcmp_eq5(ptr %p, ptr %q) {
 ; CHECK: Printing analysis {{.*}} for function 'test_bcmp_eq5'
 entry:
-  %val = call i32 @bcmp(ptr %p, ptr %q)
+  %val = call i32 @bcmp(ptr %p, ptr %q, i32 4)
   %cond = icmp eq i32 %val, 5
   br i1 %cond, label %then, label %else
 ; CHECK: edge %entry -> %then probability is 0x30000000 / 0x80000000 = 37.50%
@@ -334,7 +335,7 @@ exit:
 define i32 @test_bcmp_ne(ptr %p, ptr %q) {
 ; CHECK: Printing analysis {{.*}} for function 'test_bcmp_ne'
 entry:
-  %val = call i32 @bcmp(ptr %p, ptr %q)
+  %val = call i32 @bcmp(ptr %p, ptr %q, i32 4)
   %cond = icmp ne i32 %val, 0
   br i1 %cond, label %then, label %else
 ; CHECK: edge %entry -> %then probability is 0x50000000 / 0x80000000 = 62.50%

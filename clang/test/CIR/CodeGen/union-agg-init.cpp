@@ -5,6 +5,19 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
 
+union PtrToIntUnion { int id; char *str; };
+struct Base { int b; };
+struct Derived : Base { union PtrToIntUnion u; };
+struct DerivedFromDerived : Derived { int i; };
+Derived derived = { { 1 }, { 2 } };
+// CIR: cir.global external @derived = #cir.const_record<{#cir.const_record<{#cir.int<1> : !s32i}> : !rec_Base, #cir.const_record<{#cir.int<2> : !s32i}> : !rec_PtrToIntUnion}> : !rec_Derived
+// LLVMCIR: @derived = global { %struct.Base, [4 x i8], { i32, [4 x i8] } } { %struct.Base { i32 1 }, [4 x i8] zeroinitializer, { i32, [4 x i8] } { i32 2, [4 x i8] zeroinitializer } }
+// OGCG: @derived = global { i32, [4 x i8], { i32, [4 x i8] } } { i32 1, [4 x i8] undef, { i32, [4 x i8] } { i32 2, [4 x i8] undef } }, align 8
+DerivedFromDerived derivedFromDerived = { { { 1 }, { 2 } }, 3};
+// CIR: cir.global external @derivedFromDerived = #cir.const_record<{#cir.const_record<{#cir.const_record<{#cir.int<1> : !s32i}> : !rec_Base, #cir.const_record<{#cir.int<2> : !s32i}> : !rec_PtrToIntUnion}> : !rec_Derived, #cir.int<3> : !s32i, #cir.zero : !cir.array<!u8i x 4>}> : !rec_DerivedFromDerived
+// LLVMCIR: @derivedFromDerived = global <{ { %struct.Base, [4 x i8], { i32, [4 x i8] } }, i32, [4 x i8] }> <{ { %struct.Base, [4 x i8], { i32, [4 x i8] } } { %struct.Base { i32 1 }, [4 x i8] zeroinitializer, { i32, [4 x i8] } { i32 2, [4 x i8] zeroinitializer } }, i32 3, [4 x i8] zeroinitializer }>
+// OGCG: @derivedFromDerived = global { i32, [4 x i8], { i32, [4 x i8] }, i32, [4 x i8] } { i32 1, [4 x i8] undef, { i32, [4 x i8] } { i32 2, [4 x i8] undef }, i32 3, [4 x i8] undef }, align 8
+
 typedef union vec3 {
   struct { double x, y, z; };
   double component[3];

@@ -117,8 +117,7 @@ public:
                                      mlir::OpBuilder &builder) const override;
 
   clang::CharUnits
-  getArrayCookieSizeImpl(mlir::Type elementType,
-                         const mlir::DataLayout &dataLayout) const override;
+  getArrayCookieSizeImpl(clang::CharUnits elementAlign) const override;
 
   mlir::Value readArrayCookieImpl(mlir::Location loc, mlir::Value allocPtr,
                                   clang::CharUnits cookieSize,
@@ -192,7 +191,7 @@ mlir::Type LowerItaniumCXXABI::lowerMethodType(
   // function pointers. Let's follow this approach.
   mlir::Type members[] = {ptrdiffCIRTy, ptrdiffCIRTy};
   return cir::StructType::get(type.getContext(), members, /*packed=*/false,
-                              /*padded=*/false, /*is_class=*/false,
+                              /*is_class=*/false,
                               cir::RecordType::getAllDataKinds(members));
 }
 
@@ -889,14 +888,12 @@ LowerItaniumCXXABI::lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
 }
 
 clang::CharUnits LowerItaniumCXXABI::getArrayCookieSizeImpl(
-    mlir::Type elementType, const mlir::DataLayout &dataLayout) const {
+    clang::CharUnits elementAlign) const {
   // The array cookie is a size_t; pad that up to the element alignment.
   // The cookie is actually right-justified in that space.
   clang::CharUnits sizeOfSizeT =
       clang::CharUnits::fromQuantity(getPtrSizeInBits() / 8);
-  clang::CharUnits eltAlign = clang::CharUnits::fromQuantity(
-      dataLayout.getTypePreferredAlignment(elementType));
-  return std::max(sizeOfSizeT, eltAlign);
+  return std::max(sizeOfSizeT, elementAlign);
 }
 
 mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(

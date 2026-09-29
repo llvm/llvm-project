@@ -426,12 +426,13 @@ let isCodeGenOnly = 1, AdditionalPredicates = [NotInMicroMips] in {
 let isCodeGenOnly = 1, rs = 0, shamt = 0 in {
   def DSLL64_32 : FR<0x00, 0x3c, (outs GPR64:$rd), (ins GPR32:$rt),
                      "dsll\t$rd, $rt, 32", []>, GPR_64;
-  let isMoveReg = 1 in {
-    def SLL64_32 : FR<0x0, 0x00, (outs GPR64:$rd), (ins GPR32:$rt),
-                      "sll\t$rd, $rt, 0", []>, GPR_64;
-    def SLL64_64 : FR<0x0, 0x00, (outs GPR64:$rd), (ins GPR64:$rt),
-                      "sll\t$rd, $rt, 0", []>, GPR_64;
-  }
+  let isMoveReg = 1 in
+  def SLL64_32 : FR<0x0, 0x00, (outs GPR64:$rd), (ins GPR32:$rt),
+                    "sll\t$rd, $rt, 0", []>, GPR_64;
+  // Not isMoveReg: with a 64-bit source this truncates to 32 bits and
+  // sign-extends, which is not value-preserving.
+  def SLL64_64 : FR<0x0, 0x00, (outs GPR64:$rd), (ins GPR64:$rt),
+                    "sll\t$rd, $rt, 0", []>, GPR_64;
 }
 
 // We need the following pseudo instruction to avoid offset calculation for

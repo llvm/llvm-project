@@ -21,6 +21,7 @@
 #include "lldb/Host/PosixApi.h" // Adds PATH_MAX for windows
 
 #include <iomanip>
+#include <mutex>
 #include <optional>
 #include <sstream>
 

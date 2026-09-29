@@ -24,6 +24,8 @@ typedef short  v8s   __attribute__((ext_vector_type(8)));
 typedef short  v16s  __attribute__((ext_vector_type(16)));
 typedef short  v32s  __attribute__((ext_vector_type(32)));
 typedef double v4d   __attribute__((ext_vector_type(4)));
+typedef uint   v6u   __attribute__((ext_vector_type(6)));
+typedef __bf16 v32bf __attribute__((ext_vector_type(32)));
 
 void builtin_test_unsupported(double a_double, float a_float,
                               int a_int, long  a_long,
@@ -31,7 +33,8 @@ void builtin_test_unsupported(double a_double, float a_float,
                               v2s a_v2s, v4s a_v4s, v8s a_v8s,
                               v2i a_v2i, v4i a_v4i, v16i a_v16i, v32i a_v32i,
                               v2f a_v2f, v4f a_v4f, v16f a_v16f, v32f  a_v32f,
-                              v4h a_v4h, v8h a_v8h,
+                              v4h a_v4h, v8h a_v8h, v32h a_v32h,
+                              v6u a_v6u, v32bf a_v32bf,
 
                               uint a, uint b) {
 
@@ -94,4 +97,11 @@ void builtin_test_unsupported(double a_double, float a_float,
   a_v16f = __builtin_amdgcn_smfmac_f32_32x32x32_bf8_fp8(a_v2i, a_v4i, a_v16f, a_int, 0, 0); // expected-error {{'__builtin_amdgcn_smfmac_f32_32x32x32_bf8_fp8' needs target feature fp8-insts}}
   a_v16f = __builtin_amdgcn_smfmac_f32_32x32x32_fp8_bf8(a_v2i, a_v4i, a_v16f, a_int, 0, 0); // expected-error {{'__builtin_amdgcn_smfmac_f32_32x32x32_fp8_bf8' needs target feature fp8-insts}}
   a_v16f = __builtin_amdgcn_smfmac_f32_32x32x32_fp8_fp8(a_v2i, a_v4i, a_v16f, a_int, 0, 0); // expected-error {{'__builtin_amdgcn_smfmac_f32_32x32x32_fp8_fp8' needs target feature fp8-insts}}
+
+  a_v32bf = __builtin_amdgcn_cvt_scale_pk32_bf16_bf6(a_v6u, a, 0); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_bf16_bf6' needs target feature fp6bf6-to-f16bf16f32-cvt-scale-insts,wavefrontsize32}}
+  a_v32bf = __builtin_amdgcn_cvt_scale_pk32_bf16_fp6(a_v6u, a, 0); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_bf16_fp6' needs target feature fp6bf6-to-f16bf16f32-cvt-scale-insts,wavefrontsize32}}
+  a_v32h  = __builtin_amdgcn_cvt_scale_pk32_f16_bf6(a_v6u, a, 0); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f16_bf6' needs target feature fp6bf6-to-f16bf16f32-cvt-scale-insts,wavefrontsize32}}
+  a_v32h  = __builtin_amdgcn_cvt_scale_pk32_f16_fp6(a_v6u, a, 0); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f16_fp6' needs target feature fp6bf6-to-f16bf16f32-cvt-scale-insts,wavefrontsize32}}
+  a_v32f  = __builtin_amdgcn_cvt_scale_pk32_f32_bf6(a_v6u, a, 0); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f32_bf6' needs target feature fp6bf6-to-f16bf16f32-cvt-scale-insts,wavefrontsize32}}
+  a_v32f  = __builtin_amdgcn_cvt_scale_pk32_f32_fp6(a_v6u, a, 0); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f32_fp6' needs target feature fp6bf6-to-f16bf16f32-cvt-scale-insts,wavefrontsize32}}
 }

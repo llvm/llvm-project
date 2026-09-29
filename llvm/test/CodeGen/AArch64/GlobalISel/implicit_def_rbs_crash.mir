@@ -1,4 +1,4 @@
-# RUN: llc -O0 -mtriple arm64-- -run-pass=regbankselect -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple arm64-- -run-pass=reg-bank-select -verify-machineinstrs %s -o - | FileCheck %s
 
 # Check we don't crash given an non-generic implicit_def. These may
 # come from swifterror handling in the translator.

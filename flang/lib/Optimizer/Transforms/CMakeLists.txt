@@ -15,7 +15,7 @@ add_flang_library(FIRTransforms
   CUDA/CUFComputeSharedMemoryOffsetsAndSize.cpp
   CUDA/CUFDeviceFuncTransform.cpp
   CUDA/CUFDeviceGlobal.cpp
-  CUDA/CUFFunctionRewrite.cpp
+  CUDA/CUFDuplicateDeviceFunc.cpp
   CUDA/CUFGPUToLLVMConversion.cpp
   CUDA/CUFLaunchAttachAttr.cpp
   CUDA/CUFOpConversion.cpp
@@ -26,6 +26,7 @@ add_flang_library(FIRTransforms
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
   ConvertComplexPow.cpp
+  CudaHeapAllocPromotion.cpp
   DebugTypeGenerator.cpp
   EmitMIFGlobalCtors.cpp
   ExternalNameConversion.cpp
@@ -91,6 +92,7 @@ add_flang_library(FIRTransforms
   MLIRMathTransforms
   MLIRNVVMDialect
   MLIROpenACCDialect
+  MLIROpenACCUtils
   MLIROpenMPDialect
   MLIRTransformUtils
 )

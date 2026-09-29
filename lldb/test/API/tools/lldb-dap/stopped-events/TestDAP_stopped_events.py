@@ -4,13 +4,7 @@ Test lldb-dap 'stopped' events.
 
 from typing import Sequence
 
-from lldbsuite.test.decorators import (
-    expectedFailureAll,
-    expectedFailureNetBSD,
-    requireThreadSupport,
-    skipIfLinux,
-    skipIfWindows,
-)
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, StoppedEvent, ThreadsArgs

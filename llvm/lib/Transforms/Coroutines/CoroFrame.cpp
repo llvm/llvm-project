@@ -835,7 +835,10 @@ static void buildFrameLayout(Function &F, const DominatorTree &DT,
     // Add a field to store the suspend index.  This doesn't need to
     // be in the header.
     unsigned IndexBits = std::max(1U, Log2_64_Ceil(Shape.CoroSuspends.size()));
-    SwitchIndexType = Type::getIntNTy(F.getContext(), IndexBits);
+    Type *LegalTy =
+        F.getDataLayout().getSmallestLegalIntType(F.getContext(), IndexBits);
+    SwitchIndexType = LegalTy ? cast<IntegerType>(LegalTy)
+                              : Type::getIntNTy(F.getContext(), IndexBits);
 
     SwitchIndexFieldId = B.addField(SwitchIndexType, MaybeAlign());
   } else {

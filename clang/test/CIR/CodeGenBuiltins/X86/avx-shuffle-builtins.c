@@ -1,15 +1,13 @@
 // REQUIRES: x86-registered-target
 
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports vector types.
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx -disable-O0-optnone -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir | opt -S -passes=mem2reg
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx -disable-O0-optnone -fclangir -emit-cir -o %t.cir | opt -S -passes=mem2reg
 // RUN: FileCheck --check-prefixes=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -ffreestanding %s -triple=i386-unknown-linux -target-feature +avx -disable-O0-optnone -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir | opt -S -passes=mem2reg
+// RUN: %clang_cc1 -ffreestanding %s -triple=i386-unknown-linux -target-feature +avx -disable-O0-optnone -fclangir -emit-cir -o %t.cir | opt -S -passes=mem2reg
 // RUN: FileCheck --check-prefixes=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx -disable-O0-optnone -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll | opt -S -passes=mem2reg
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx -disable-O0-optnone -fclangir -emit-llvm -o %t.ll | opt -S -passes=mem2reg
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
-// RUN: %clang_cc1 -ffreestanding %s -triple=i386-unknown-linux -target-feature +avx -disable-O0-optnone -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll | opt -S -passes=mem2reg
+// RUN: %clang_cc1 -ffreestanding %s -triple=i386-unknown-linux -target-feature +avx -disable-O0-optnone -fclangir -emit-llvm -o %t.ll | opt -S -passes=mem2reg
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx -disable-O0-optnone -emit-llvm -o - | opt -S -passes=mem2reg | FileCheck %s --check-prefixes=OGCG
