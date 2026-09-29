@@ -442,9 +442,16 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
       if (!ReferenceTemporaryDtor)
         return;
 
+      // Like in `EmitDeclDestroy`, destructors that return `this` need a helper
+      // if the target does not tolerate the mismatch (e.g. WebAssembly).
+      bool CanRegisterDestructor =
+          !CGF.CGM.getCXXABI().HasThisReturn(
+              GlobalDecl(ReferenceTemporaryDtor, Dtor_Complete)) ||
+          CGF.CGM.getCXXABI().canCallMismatchedFunctionType();
+
       llvm::FunctionCallee CleanupFn;
       llvm::Constant *CleanupArg;
-      if (E->getType()->isArrayType()) {
+      if (E->getType()->isArrayType() || !CanRegisterDestructor) {
         CleanupFn = CodeGenFunction(CGF.CGM).generateDestroyHelper(
             ReferenceTemporary, E->getType(), CodeGenFunction::destroyCXXObject,
             CGF.getLangOpts().Exceptions,
@@ -2425,6 +2432,13 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
 // (VectorType).
 static void EmitStoreOfMatrixScalar(llvm::Value *value, LValue lvalue,
                                     bool isInit, CodeGenFunction &CGF) {
+  if (CGF.getLangOpts().HLSL &&
+      isMatrixRowMajor(CGF.getLangOpts(), lvalue.getType())) {
+    const auto *MatrixTy = lvalue.getType()->castAs<ConstantMatrixType>();
+    llvm::MatrixBuilder MB(CGF.Builder);
+    value = MB.CreateColumnMajorToRowMajorTransform(
+        value, MatrixTy->getNumRows(), MatrixTy->getNumColumns());
+  }
   Address Addr = MaybeConvertMatrixAddress(lvalue.getAddress(), CGF,
                                            value->getType()->isVectorTy());
   CGF.EmitStoreOfScalar(value, Addr, lvalue.isVolatile(), lvalue.getType(),
@@ -2515,7 +2529,15 @@ static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
 
   Address Addr = MaybeConvertMatrixAddress(DestAddr, CGF);
   LV.setAddress(Addr);
-  return RValue::get(CGF.EmitLoadOfScalar(LV, Loc));
+  llvm::Value *Value = CGF.EmitLoadOfScalar(LV, Loc);
+  if (CGF.getLangOpts().HLSL &&
+      isMatrixRowMajor(CGF.getLangOpts(), LV.getType())) {
+    const auto *MatrixTy = LV.getType()->castAs<ConstantMatrixType>();
+    llvm::MatrixBuilder MB(CGF.Builder);
+    Value = MB.CreateRowMajorToColumnMajorTransform(
+        Value, MatrixTy->getNumRows(), MatrixTy->getNumColumns());
+  }
+  return RValue::get(Value);
 }
 
 RValue CodeGenFunction::EmitLoadOfAnyValue(LValue LV, AggValueSlot Slot,

@@ -2765,37 +2765,6 @@ bool SemaHLSL::diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
 
 // Transpose and matrix mul need to read the destination layout.
 // Elementwise builtins reuse the operand layout instead.
-static bool isLayoutAdaptingMatrixBuiltin(unsigned BuiltinID) {
-  switch (BuiltinID) {
-  case Builtin::BI__builtin_hlsl_mul:
-  case Builtin::BI__builtin_hlsl_transpose:
-    return true;
-  default:
-    return false;
-  }
-}
-
-void SemaHLSL::propagateContextualMatrixLayout(Expr *E, QualType DestType) {
-  if (!E || DestType.isNull())
-    return;
-  const auto *DestMat = DestType->getAs<ConstantMatrixType>();
-  if (!DestMat)
-    return;
-  auto *Call = dyn_cast<CallExpr>(E->IgnoreParenImpCasts());
-  if (!Call)
-    return;
-  const FunctionDecl *Callee = Call->getDirectCallee();
-  if (!Callee || !isLayoutAdaptingMatrixBuiltin(Callee->getBuiltinID()))
-    return;
-  const auto *CallMat = Call->getType()->getAs<ConstantMatrixType>();
-  if (!CallMat || CallMat->getNumRows() != DestMat->getNumRows() ||
-      CallMat->getNumColumns() != DestMat->getNumColumns())
-    return;
-  // Re-type the call with the destination sugar so CodeGen lowers into that
-  // layout, not the TU default.
-  Call->setType(DestType.getUnqualifiedType());
-}
-
 namespace {
 
 /// This class implements HLSL availability diagnostics for default
@@ -3536,11 +3505,39 @@ static bool CheckAnyScalarOrVector(Sema *S, CallExpr *TheCall,
   if (!(ArgType->isScalarType() ||
         (VTy && VTy->getElementType()->isScalarType()))) {
     S->Diag(TheCall->getArg(0)->getBeginLoc(),
-            diag::err_typecheck_expect_any_scalar_or_vector)
+            diag::err_typecheck_expect_any_scalar_or_vector_or_matrix)
         << ArgType << 1;
     return true;
   }
   return false;
+}
+
+static bool CheckAnyScalarOrVectorOrMatrix(Sema *S, CallExpr *TheCall,
+                                           unsigned ArgIndex) {
+  assert(TheCall->getNumArgs() > ArgIndex);
+  QualType ArgType = TheCall->getArg(ArgIndex)->getType();
+  if (ArgType->isDependentType())
+    return false;
+
+  QualType ElementType = ArgType;
+  if (const auto *VectorTy = ArgType->getAs<VectorType>())
+    ElementType = VectorTy->getElementType();
+  else if (const auto *MatrixTy = ArgType->getAs<ConstantMatrixType>())
+    ElementType = MatrixTy->getElementType();
+
+  if (ElementType->isBooleanType())
+    return false;
+
+  if (ElementType->isIntegerType() || ElementType->isRealFloatingType()) {
+    unsigned BitWidth = S->Context.getTypeSize(ElementType);
+    if (BitWidth == 16 || BitWidth == 32 || BitWidth == 64)
+      return false;
+  }
+
+  S->Diag(TheCall->getArg(ArgIndex)->getBeginLoc(),
+          diag::err_typecheck_expect_any_scalar_or_vector_or_matrix)
+      << ArgType << 2;
+  return true;
 }
 
 // Check that the argument is not a bool or vector<bool>
@@ -3556,7 +3553,7 @@ static bool CheckNotBoolScalarOrVector(Sema *S, CallExpr *TheCall,
       (VTy &&
        S->Context.hasSameUnqualifiedType(VTy->getElementType(), BoolType))) {
     S->Diag(TheCall->getArg(0)->getBeginLoc(),
-            diag::err_typecheck_expect_any_scalar_or_vector)
+            diag::err_typecheck_expect_any_scalar_or_vector_or_matrix)
         << ArgType << 0;
     return true;
   }
@@ -4639,6 +4636,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_interlocked_add:
   case Builtin::BI__builtin_hlsl_interlocked_and:
+  case Builtin::BI__builtin_hlsl_interlocked_compare_store:
   case Builtin::BI__builtin_hlsl_interlocked_exchange:
   case Builtin::BI__builtin_hlsl_interlocked_max:
   case Builtin::BI__builtin_hlsl_interlocked_min:
@@ -4651,9 +4649,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     // argument count, integer-type matching, and the address-space requirement
     // on `dest`. The checks below are a safety net for callers that invoke the
     // builtin by its mangled name and would otherwise reach CodeGen unchecked.
+    // InterlockedCompareStore takes `compare_value` and `value`, so its third
+    // argument is an input rather than an output.
+    const bool IsCompareStore =
+        BuiltinID == Builtin::BI__builtin_hlsl_interlocked_compare_store;
     // InterlockedExchange always reports the previous value, so it requires
     // `original_value` instead of accepting it as an optional argument.
-    if (BuiltinID == Builtin::BI__builtin_hlsl_interlocked_exchange) {
+    if (IsCompareStore ||
+        BuiltinID == Builtin::BI__builtin_hlsl_interlocked_exchange) {
       if (SemaRef.checkArgCount(TheCall, 3))
         return true;
     } else {
@@ -4710,7 +4713,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (TheCall->getNumArgs() == 3) {
       if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), DestTy))
         return true;
-      if (CheckModifiableLValue(&SemaRef, TheCall, 2))
+      // Only the read-modify-write operations write the previous value back
+      // through the third argument. For compare-store it is the new value.
+      if (!IsCompareStore && CheckModifiableLValue(&SemaRef, TheCall, 2))
         return true;
     }
 
@@ -4735,14 +4740,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     if (!(ArgType->isScalarType())) {
       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
-                   diag::err_typecheck_expect_any_scalar_or_vector)
+                   diag::err_typecheck_expect_any_scalar_or_vector_or_matrix)
           << ArgType << 0;
       return true;
     }
 
     if (!(ArgType->isBooleanType())) {
       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
-                   diag::err_typecheck_expect_any_scalar_or_vector)
+                   diag::err_typecheck_expect_any_scalar_or_vector_or_matrix)
           << ArgType << 0;
       return true;
     }
@@ -4770,6 +4775,16 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     ExprResult Expr = TheCall->getArg(0);
     QualType ArgTyExpr = Expr.get()->getType();
     TheCall->setType(ArgTyExpr);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_read_lane_first: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    if (CheckAnyScalarOrVectorOrMatrix(&SemaRef, TheCall, 0))
+      return true;
+
+    TheCall->setType(TheCall->getArg(0)->getType());
     break;
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
@@ -6661,7 +6676,7 @@ bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
   ASTContext &Context = SemaRef.getASTContext();
 
   APValue InitValue;
-  if (!Init->isCXX11ConstantExpr(Context, &InitValue)) {
+  if (!Init->isCXX11ConstantExpr(Context, InitValue)) {
     Diag(VDecl->getLocation(), diag::err_specialization_const);
     VDecl->setInvalidDecl();
     return false;

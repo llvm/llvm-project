@@ -310,12 +310,49 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
   llvm_unreachable("Intrinsic F32ToF16 not supported by target architecture");
 }
 
+// Scopeless atomics will default to CrossDevice, which is illegal in Vulkan.
+// Set the memory scope: Workgroup for groupshared, otherwise Device.
+static llvm::SyncScope::ID getHLSLAtomicScope(CodeGenFunction &CGF,
+                                              const LValue &DestLV) {
+  StringRef ScopeName = DestLV.getAddressSpace() == LangAS::hlsl_groupshared
+                            ? "workgroup"
+                            : "device";
+  return CGF.getLLVMContext().getOrInsertSyncScopeID(ScopeName);
+}
+
+// The destination can name one element of a vector, as in `buf[0].z` or
+// `gs[i]`. `LValue::getAddress` gives the address of the whole vector for such
+// an lvalue, so index into the vector to get the address of the element. Sema
+// rejects a multi-element swizzle, so the access is always a single element.
+static Address getHLSLAtomicDestAddr(CodeGenFunction &CGF,
+                                     const LValue &DestLV) {
+  if (!DestLV.isVectorElt() && !DestLV.isExtVectorElt())
+    return DestLV.getAddress();
+
+  Address VecAddr = DestLV.isVectorElt() ? DestLV.getVectorAddress()
+                                         : DestLV.getExtVectorAddress();
+  Value *Idx = DestLV.isVectorElt()
+                   ? DestLV.getVectorIdx()
+                   : llvm::ConstantInt::get(CGF.SizeTy,
+                                            CodeGenFunction::getAccessedFieldNo(
+                                                0, DestLV.getExtVectorElts()));
+
+  // A vector-element lvalue reports the type of the whole vector, so take the
+  // element type from the address. HLSL also treats a scalar as a one-element
+  // vector, in which case the address already has the element type.
+  llvm::Type *VecTy = VecAddr.getElementType();
+  llvm::Type *ElemTy = VecTy->isVectorTy()
+                           ? cast<llvm::VectorType>(VecTy)->getElementType()
+                           : VecTy;
+  return CGF.Builder.CreateGEP(CGF, VecAddr.withElementType(ElemTy), Idx);
+}
+
 static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
                                   llvm::AtomicRMWInst::BinOp Op) {
   // Emit `atomicrmw <op>` directly — no intermediate intrinsic needed on
   // either DXIL or SPIR-V.
   LValue DestLV = CGF.EmitLValue(E->getArg(0));
-  Address DestAddr = DestLV.getAddress();
+  Address DestAddr = getHLSLAtomicDestAddr(CGF, DestLV);
   Value *Val = CGF.EmitScalarExpr(E->getArg(1));
   [[maybe_unused]] QualType ValTy = E->getArg(1)->getType();
   if (Op == llvm::AtomicRMWInst::Xchg)
@@ -325,13 +362,7 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
     assert(ValTy->isIntegerType() &&
            "Intrinsic InterlockedOp value operand must be an integer");
 
-  // Scopeless atomics will default to CrossDevice, which is illegal in Vulkan.
-  // Set the memory scope: Workgroup for groupshared, otherwise Device.
-  StringRef ScopeName = DestLV.getAddressSpace() == LangAS::hlsl_groupshared
-                            ? "workgroup"
-                            : "device";
-  llvm::SyncScope::ID SSID =
-      CGF.getLLVMContext().getOrInsertSyncScopeID(ScopeName);
+  llvm::SyncScope::ID SSID = getHLSLAtomicScope(CGF, DestLV);
 
   llvm::AtomicRMWInst *Call = CGF.Builder.CreateAtomicRMW(
       Op, DestAddr, Val, llvm::AtomicOrdering::Monotonic, SSID);
@@ -343,6 +374,21 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
     CGF.EmitStoreThroughLValue(RValue::get(Call), OrigLV);
   }
   return Call;
+}
+
+// InterlockedCompareStore(dest, compare_value, value) stores `value` only when
+// `dest` holds `compare_value`. It reports nothing, so the `cmpxchg` result is
+// unused. DXILResourceAccess and the SPIR-V selector both match `cmpxchg`.
+static Value *handleInterlockedCompareStore(CodeGenFunction &CGF,
+                                            const CallExpr *E) {
+  LValue DestLV = CGF.EmitLValue(E->getArg(0));
+  Address DestAddr = getHLSLAtomicDestAddr(CGF, DestLV);
+  Value *Compare = CGF.EmitScalarExpr(E->getArg(1));
+  Value *Val = CGF.EmitScalarExpr(E->getArg(2));
+
+  return CGF.Builder.CreateAtomicCmpXchg(
+      DestAddr, Compare, Val, llvm::AtomicOrdering::Monotonic,
+      llvm::AtomicOrdering::Monotonic, getHLSLAtomicScope(CGF, DestLV));
 }
 
 static Value *emitBufferStride(CodeGenFunction *CGF, const Expr *HandleExpr,
@@ -1283,22 +1329,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     bool IsMat0 = QTy0->isConstantMatrixType();
     bool IsMat1 = QTy1->isConstantMatrixType();
 
-    // The matrix multiply intrinsic only operates on column-major order
-    // matrices. Therefore matrix memory layout transforms must be inserted
-    // before and after matrix multiply intrinsics.
-    // Use whichever operand is a matrix to discover its declared layout.
-    bool IsRowMajorMat0 = IsMat0 && isMatrixRowMajor(getLangOpts(), QTy0);
-    bool IsRowMajorMat1 = IsMat1 && isMatrixRowMajor(getLangOpts(), QTy1);
-
     llvm::MatrixBuilder MB(Builder);
     if (IsVec0 && IsMat1) {
       unsigned N = QTy0->castAs<VectorType>()->getNumElements();
       auto *MatTy = QTy1->castAs<ConstantMatrixType>();
-      unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
-      assert(N == Rows && "vector length must match matrix row count");
-      if (IsRowMajorMat1)
-        Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows, Cols);
+      assert(N == MatTy->getNumRows() &&
+             "vector length must match matrix row count");
       return MB.CreateMatrixMultiply(Op0, Op1, 1, N, Cols, "hlsl.mul");
     }
     if (IsMat0 && IsVec1) {
@@ -1307,31 +1344,17 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       unsigned Cols = MatTy->getNumColumns();
       assert(QTy1->castAs<VectorType>()->getNumElements() == Cols &&
              "vector length must match matrix column count");
-      if (IsRowMajorMat0)
-        Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
     }
     assert(IsMat0 && IsMat1);
     auto *MatTy0 = QTy0->castAs<ConstantMatrixType>();
     auto *MatTy1 = QTy1->castAs<ConstantMatrixType>();
     unsigned Rows0 = MatTy0->getNumRows();
-    unsigned Rows1 = MatTy1->getNumRows();
     unsigned Cols0 = MatTy0->getNumColumns();
     unsigned Cols1 = MatTy1->getNumColumns();
-    assert(Cols0 == Rows1 &&
+    assert(Cols0 == MatTy1->getNumRows() &&
            "inner matrix dimensions must match for multiplication");
-    if (IsRowMajorMat0)
-      Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows0, Cols0);
-    if (IsRowMajorMat1)
-      Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows1, Cols1);
-
-    Value *Result =
-        MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
-
-    bool IsResultRowMajor = isMatrixRowMajor(getLangOpts(), E->getType());
-    if (IsResultRowMajor)
-      Result = MB.CreateColumnMajorToRowMajorTransform(Result, Rows0, Cols1);
-    return Result;
+    return MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
   }
   case Builtin::BI__builtin_hlsl_transpose: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -1339,18 +1362,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     unsigned Rows = MatTy->getNumRows();
     unsigned Cols = MatTy->getNumColumns();
     llvm::MatrixBuilder MB(Builder);
-    // The correct lowering of a transpose depends on both the source layout
-    // and the result layout.
-    bool SrcRowMajor = isMatrixRowMajor(getLangOpts(), E->getArg(0)->getType());
-    bool DstRowMajor = isMatrixRowMajor(getLangOpts(), E->getType());
-    //  When the source & result layouts differ, the operand already holds the
-    //  transposed result, ie transpose is a no-op on the underlying vector.
-    if (SrcRowMajor != DstRowMajor)
-      return Op0;
-    // When the source and result share a layout, emit a transpose.
-    if (SrcRowMajor)
-      // For row-major operands the dimensions are swapped
-      return MB.CreateMatrixTranspose(Op0, Cols, Rows);
     return MB.CreateMatrixTranspose(Op0, Rows, Cols);
   }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
@@ -1485,6 +1496,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_interlocked_and: {
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::And);
   }
+  case Builtin::BI__builtin_hlsl_interlocked_compare_store: {
+    return handleInterlockedCompareStore(*this, E);
+  }
   case Builtin::BI__builtin_hlsl_interlocked_exchange: {
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Xchg);
   }
@@ -1596,6 +1610,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitIntrinsicCall(CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
                              {OpExpr->getType()}, ArrayRef{OpExpr, OpIndex},
                              "hlsl.wave.readlane");
+  }
+  case Builtin::BI__builtin_hlsl_wave_read_lane_first: {
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    return EmitIntrinsicCall(
+        CGM.getHLSLRuntime().getWaveReadLaneFirstIntrinsic(),
+        {OpExpr->getType()}, ArrayRef{OpExpr}, "hlsl.wave.readlane.first");
   }
   case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));

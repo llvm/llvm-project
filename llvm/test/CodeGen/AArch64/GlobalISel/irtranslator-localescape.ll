@@ -54,7 +54,7 @@ define void @local_escape_strip_ptr_cast() {
   ; CHECK-NEXT:   G_STORE [[C]](i32), [[FRAME_INDEX]](p0) :: (store (i32) into %ir.a)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[FRAME_INDEX]](p0)
-  ; CHECK-NEXT:   BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
+  ; CHECK-NEXT:   BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
   %a = alloca [128 x i32]
