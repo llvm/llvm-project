@@ -29,7 +29,7 @@
 # BIND-NEXT: segment       section          address         type     addend dylib   symbol
 # BIND-DAG:  __DATA        __data           0x{{[0-9a-f]+}} pointer       0 libfoo  _foo (weak_import)
 # BIND-DAG:  __DATA_CONST  __got            0x{{[0-9a-f]+}} pointer       0 libfoo  _foo (weak_import)
-# BIND-DAG:  __DATA        __thread_ptrs    0x{{[0-9a-f]+}} pointer       0 libfoo  _foo_tlv (weak_import)
+# BIND-DAG:  __DATA_CONST  __got            0x{{[0-9a-f]+}} pointer       0 libfoo  _foo_tlv (weak_import)
 # BIND-DAG:  __DATA        __data           0x{{[0-9a-f]+}} pointer       0 libfoo  _weak_foo (weak_import)
 # BIND-DAG:  __DATA        __la_symbol_ptr  0x{{[0-9a-f]+}} pointer       0 libfoo  _weak_foo_fn (weak_import)
 # BIND:      Lazy bind table:
@@ -40,7 +40,7 @@
 # CHAINED-NEXT: segment      section       address pointer type  addend dylib    symbol/vm address
 # CHAINED-DAG:  __DATA_CONST __got             {{.*}}      bind  0x0    libfoo   _foo (weak import)
 # CHAINED-DAG:  __DATA       __data            {{.*}}      bind  0x0    libfoo   _foo (weak import)
-# CHAINED-DAG:  __DATA       __thread_ptrs     {{.*}}      bind  0x0    libfoo   _foo_tlv (weak import)
+# CHAINED-DAG:  __DATA_CONST __got             {{.*}}      bind  0x0    libfoo   _foo_tlv (weak import)
 # CHAINED-DAG:  __DATA_CONST __got             {{.*}}      bind  0x0    libfoo   _foo_fn (weak import)
 # CHAINED-DAG:  __DATA       __data            {{.*}}      bind  0x0    weak     _weak_foo (weak import)
 # CHAINED-DAG:  __DATA_CONST __got             {{.*}}      bind  0x0    weak     _weak_foo_fn (weak import)
@@ -97,7 +97,7 @@
 # STRONG-BIND-DAG:  __DATA        __data           0x{{[0-9a-f]+}} pointer         0 libfoo  _foo{{$}}
 # STRONG-BIND-DAG:  __DATA        __data           0x{{[0-9a-f]+}} pointer         0 libfoo  _foo{{$}}
 # STRONG-BIND-DAG:  __DATA_CONST  __got            0x{{[0-9a-f]+}} pointer         0 libfoo  _foo{{$}}
-# STRONG-BIND-DAG:  __DATA        __thread_ptrs    0x{{[0-9a-f]+}} pointer         0 libfoo  _foo_tlv{{$}}
+# STRONG-BIND-DAG:  __DATA_CONST  __got            0x{{[0-9a-f]+}} pointer         0 libfoo  _foo_tlv{{$}}
 # STRONG-BIND-DAG:  __DATA        __data           0x{{[0-9a-f]+}} pointer         0 libfoo  _weak_foo{{$}}
 # STRONG-BIND-DAG:  __DATA        __data           0x{{[0-9a-f]+}} pointer         0 libfoo  _weak_foo{{$}}
 # STRONG-BIND-DAG:  __DATA        __la_symbol_ptr  0x{{[0-9a-f]+}} pointer         0 libfoo  _weak_foo_fn{{$}}
@@ -111,7 +111,7 @@
 # STRONG-CHAINED-DAG:  __DATA       __data           {{.*}}      bind  0x0    libfoo  _foo{{$}}
 # STRONG-CHAINED-DAG:  __DATA       __data           {{.*}}      bind  0x0    weak    _weak_foo{{$}}
 # STRONG-CHAINED-DAG:  __DATA       __data           {{.*}}      bind  0x0    weak    _weak_foo{{$}}
-# STRONG-CHAINED-DAG:  __DATA       __thread_ptrs    {{.*}}      bind  0x0    libfoo  _foo_tlv{{$}}
+# STRONG-CHAINED-DAG:  __DATA_CONST __got             {{.*}}      bind  0x0    libfoo  _foo_tlv{{$}}
 
 # STRONG-YAML-LABEL: WeakBindOpcodes:
 # STRONG-YAML:        - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM

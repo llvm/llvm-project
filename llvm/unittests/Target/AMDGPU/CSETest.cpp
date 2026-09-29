@@ -25,7 +25,7 @@ TEST_F(AMDGPUTestBase, TestCSEForRegisterClassOrBankAndLLT) {
 
   LLVMContext Ctx;
   Module Mod("Module", Ctx);
-  Mod.setDataLayout(TM->createDataLayout());
+  Mod.setDataLayout(TM->getTargetTriple().computeDataLayout());
 
   auto *Type = FunctionType::get(Type::getVoidTy(Ctx), false);
   auto *F = Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &Mod);

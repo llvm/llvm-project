@@ -1545,7 +1545,7 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   // Sink only "cheap" (or nop) address-space casts.  This is a weaker condition
   // than sinking only nop casts, but is helpful on some platforms.
   if (auto *ASC = dyn_cast<AddrSpaceCastInst>(CI)) {
-    if (!TLI.isFreeAddrSpaceCast(ASC->getSrcAddressSpace(),
+    if (!TLI.isFreeAddrSpaceCast(DL, ASC->getSrcAddressSpace(),
                                  ASC->getDestAddressSpace()))
       return false;
   }
@@ -2817,8 +2817,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       return true;
     }
 
-    case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group: {
+    case Intrinsic::launder_invariant_group: {
       Value *ArgVal = II->getArgOperand(0);
       auto it = LargeOffsetGEPMap.find(II);
       if (it != LargeOffsetGEPMap.end()) {
@@ -5246,7 +5245,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     unsigned SrcAS =
         AddrInst->getOperand(0)->getType()->getPointerAddressSpace();
     unsigned DestAS = AddrInst->getType()->getPointerAddressSpace();
-    if (TLI.getTargetMachine().isNoopAddrSpaceCast(SrcAS, DestAS))
+    if (TLI.getTargetMachine().isNoopAddrSpaceCast(DL, SrcAS, DestAS))
       return matchAddr(AddrInst->getOperand(0), Depth);
     return false;
   }

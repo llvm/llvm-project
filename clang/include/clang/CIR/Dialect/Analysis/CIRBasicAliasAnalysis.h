@@ -37,10 +37,10 @@ public:
   ///
   /// Both values are traced back to the object they point into and to their
   /// byte offset within it. Pointers into provably different objects don't
-  /// alias, and pointers at the same offset into the same object must alias.
-  /// MayAlias is returned whenever a more precise answer cannot be determined.
-  /// Every value queried is assumed to be dereferenced. Results for pointers
-  /// that are only compared or stored are not meaningful.
+  /// alias. Within one object, pointers at the same offset must alias, pointers
+  /// whose accessed byte ranges are disjoint don't alias, and pointers whose
+  /// ranges overlap partially alias. MayAlias is returned whenever a more
+  /// precise answer cannot be determined.
   mlir::AliasResult alias(mlir::Value lhs, mlir::Value rhs);
 
   /// Return the modify-reference behavior of `op` on `location`.

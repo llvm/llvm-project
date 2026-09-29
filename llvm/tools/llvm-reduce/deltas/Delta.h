@@ -124,6 +124,9 @@ using ReductionFunc = function_ref<void(Oracle &, ReducerWorkItem &)>;
 /// Other implementations of the Delta Debugging algorithm can also be found in
 /// the CReduce, Delta, and Lithium projects.
 void runDeltaPass(TestRunner &Test, const DeltaPass &Pass);
+
+/// Returns the number of threads requested with -j to process chunks with.
+unsigned getNumChunkProcessingJobs();
 } // namespace llvm
 
 #endif
