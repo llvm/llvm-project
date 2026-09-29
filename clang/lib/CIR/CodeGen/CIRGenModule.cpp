@@ -2369,6 +2369,8 @@ LangAS CIRGenModule::getGlobalConstantAddressSpace() const {
   LangAS as =
       CodeGenUtils::getGlobalConstantAddressSpace(langOpts, getTarget());
   // CIR cannot represent SYCL address spaces yet.
+  /// TODO: Remove this wrapper once CIR supports the global constant address
+  /// space for SYCL.
   if (as == LangAS::sycl_global) {
     errorNYI("SYCL global constant address space");
     return LangAS::Default;
