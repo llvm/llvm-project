@@ -13454,8 +13454,9 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     // a) IV is either nuw or nsw depending upon signedness (indicated by the
     //    NoWrap flag).
     // b) the loop is guaranteed to be finite (e.g. is mustprogress and has
-// b) the loop is guaranteed to be finite (e.g. is mustprogress and has
-//    no side effects within the loop) or a predicate is added to ensure stride is positive.
+    // b) the loop is guaranteed to be finite (e.g. is mustprogress and has
+    //    no side effects within the loop) or a predicate is added to ensure
+    //    stride is positive.
     // c) loop has a single static exit (with no abnormal exits)
     //
     // Precondition a) implies that if the stride is negative, this is a single
@@ -13478,7 +13479,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         return getCouldNotCompute();
 
       const SCEV *Zero = getZero(Stride->getType());
-      const SCEVPredicate *P = getComparePredicate(ICmpInst::ICMP_SGT, Stride, Zero);
+      const SCEVPredicate *P =
+          getComparePredicate(ICmpInst::ICMP_SGT, Stride, Zero);
       Predicates.push_back(P);
       // When the predicate holds (Stride > 0), umax(Stride, 1) == Stride,
       // so the result is unchanged. To prevent div by zero.
