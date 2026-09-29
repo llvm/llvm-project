@@ -20,7 +20,6 @@
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
-#include "flang/Evaluate/formatting.h"
 #include "flang/Evaluate/intrinsics-library.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/shape.h"
@@ -33,7 +32,6 @@
 #include "flang/Semantics/tools.h"
 #include <algorithm>
 #include <cmath>
-#include <complex>
 #include <cstdio>
 #include <optional>
 #include <type_traits>
@@ -138,6 +136,8 @@ Expr<T> FoldOperation(FoldingContext &context, Designator<T> &&designator) {
 }
 Expr<TypeParamInquiry::Result> FoldOperation(
     FoldingContext &, TypeParamInquiry &&);
+Expr<RankOneBoundElement::Result> FoldOperation(
+    FoldingContext &, RankOneBoundElement &&);
 Expr<ImpliedDoIndex::Result> FoldOperation(
     FoldingContext &context, ImpliedDoIndex &&);
 template <typename T>
@@ -1255,6 +1255,117 @@ template <int KIND>
 Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     FoldingContext &context, FunctionRef<Type<TypeCategory::Logical, KIND>> &&);
 
+// Fold NEXT(enum) / PREVIOUS(enum) to a constant enumerator (scalar or array)
+// when the argument is a constant enumeration value.  Returns the folded
+// constant, or the original reference left unfolded (e.g. at a boundary,
+// where error termination is deferred to run time).
+static inline Expr<SomeDerived> FoldEnumerationNextOrPrevious(
+    FoldingContext &context, FunctionRef<SomeDerived> &&funcRef, bool isNext) {
+  ActualArguments &args{funcRef.arguments()};
+  // Don't fold if STAT is present — STAT assignment is a side effect
+  if (args.size() >= 2 && args[1]) {
+    return Expr<SomeDerived>{std::move(funcRef)};
+  }
+  auto *expr{args.size() >= 1 && args[0]
+          ? UnwrapExpr<Expr<SomeDerived>>(args[0])
+          : nullptr};
+  if (!expr) {
+    return Expr<SomeDerived>{std::move(funcRef)};
+  }
+  const auto *derived{GetEnumerationTypeSpec(expr->GetType())};
+  const semantics::Scope *scope{derived ? derived->GetScope() : nullptr};
+  if (!scope) {
+    return Expr<SomeDerived>{std::move(funcRef)};
+  }
+  auto ordIter{scope->find(
+      semantics::SourceName{semantics::DerivedTypeDetails::ordinalComponentName,
+          sizeof(semantics::DerivedTypeDetails::ordinalComponentName) - 1})};
+  if (ordIter == scope->end()) {
+    return Expr<SomeDerived>{std::move(funcRef)};
+  }
+  const semantics::Symbol &ordSym{*ordIter->second};
+  int count{derived->typeSymbol()
+          .GetUltimate()
+          .get<semantics::DerivedTypeDetails>()
+          .enumeratorCount()};
+  auto *constant{UnwrapConstantValue<SomeDerived>(*expr)};
+  if (!constant) {
+    return Expr<SomeDerived>{std::move(funcRef)};
+  }
+  // A boundary hit (NEXT() of the last enumerator or PREVIOUS() of the first)
+  // without STAT= is, in the final design, a runtime error termination.  In a
+  // required-constant context that value cannot be deferred, so it is
+  // diagnosed as out of range.  Outside a constant context the reference would
+  // otherwise be left unfolded and deferred to run time — but lowering has no
+  // NEXT/PREVIOUS support yet (IntrinsicCall.cpp aborts), so a constant
+  // boundary argument is temporarily gated here, mirroring the STAT= and
+  // non-constant guards in intrinsics.cpp, until the lowering handler lands.
+  auto handleBoundary{[&]() -> Expr<SomeDerived> {
+    if (context.inConstantContext()) {
+      context.messages().Say(isNext
+              ? "NEXT() of the last enumerator is out of range"_err_en_US
+              : "PREVIOUS() of the first enumerator is out of range"_err_en_US);
+    } else {
+      // TEMPORARY: gate the boundary case until lowering handler lands in PR
+      // 4/5
+      context.messages().Say(isNext
+              ? "NEXT() at the last enumerator is not yet supported"_err_en_US
+              : "PREVIOUS() at the first enumerator is not yet supported"_err_en_US);
+    }
+    return MakeInvalidIntrinsic<SomeDerived>(std::move(funcRef));
+  }};
+  if (auto sc{constant->GetScalarValue()}) {
+    if (auto ordExpr{sc->Find(ordSym)}) {
+      if (auto ordVal{ToInt64(*ordExpr)}) {
+        if (isNext ? *ordVal >= count : *ordVal <= 1) {
+          return handleBoundary();
+        }
+        int newOrd{isNext ? static_cast<int>(*ordVal + 1)
+                          : static_cast<int>(*ordVal - 1)};
+        StructureConstructor ctor{*derived};
+        ctor.Add(
+            ordSym, Expr<SomeType>{Expr<SomeInteger>{Expr<CInteger>{newOrd}}});
+        return Expr<SomeDerived>{Constant<SomeDerived>{std::move(ctor)}};
+      }
+    }
+  } else if (constant->Rank() > 0) {
+    // Array constant: NEXT/PREVIOUS are elemental, so fold elementwise into
+    // a constant array of enumerators.  STAT= is absent here (the
+    // STAT-present case bails out above), so there is no side effect to
+    // preserve.
+    //
+    // NOTE (enum-lowering / next PR): the runtime counterpart of this array
+    // case is not yet implemented.  genEnumerationNext/Previous in
+    // flang/lib/Lower/ConvertExprToHLFIR.cpp call hlfir::loadTrivialScalar
+    // and emit scalar arith, so they only accept scalar arguments.  When a
+    // non-constant array argument reaches lowering, those emitters must be
+    // wrapped in an hlfir.elemental region (one scalar min/max plus a
+    // per-element boundary test, per element), and STAT handling must reduce
+    // the per-element boundary flags (any-boundary -> STAT/abort).  This
+    // elementwise fold is the compile-time mirror of that loop.  Until the
+    // lowering lands, only constant array arguments fold here; the sem-3
+    // handler's temporary "non-constant argument is not yet supported" guard
+    // still rejects runtime arrays.
+    std::vector<StructureConstructor> elements;
+    elements.reserve(constant->values().size());
+    for (const StructureConstructorValues &scv : constant->values()) {
+      auto ordVal{ToInt64(scv.find(ordSym)->second.value())};
+      if (isNext ? *ordVal >= count : *ordVal <= 1) {
+        return handleBoundary();
+      }
+      int newOrd{isNext ? static_cast<int>(*ordVal + 1)
+                        : static_cast<int>(*ordVal - 1)};
+      StructureConstructor ctor{*derived};
+      ctor.Add(
+          ordSym, Expr<SomeType>{Expr<SomeInteger>{Expr<CInteger>{newOrd}}});
+      elements.emplace_back(std::move(ctor));
+    }
+    return Expr<SomeDerived>{Constant<SomeDerived>{
+        *derived, std::move(elements), ConstantSubscripts{constant->shape()}}};
+  }
+  return Expr<SomeDerived>{std::move(funcRef)};
+}
+
 template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
   ActualArguments &args{funcRef.arguments()};
@@ -1263,12 +1374,54 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
     // Don't fold the argument to KIND(); it might be a TypeParamInquiry
     // with a forced result type that doesn't match the parameter.
     for (std::optional<ActualArgument> &arg : args) {
-      if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
+      if (arg && arg->GetConditionalArg()) {
+        FoldConditionalArg(context, arg);
+      } else if (auto *expr{UnwrapExpr<Expr<SomeType>>(arg)}) {
         *expr = Fold(context, std::move(*expr));
       }
     }
   }
   if (intrinsic) {
+    // Skip intrinsic folding if any argument is still a conditional arg
+    // (i.e. its condition was not a compile-time constant).  When the
+    // condition is a compile-time constant, FoldConditionalArg already resolved
+    // it to a plain Expr above, and intrinsic folding proceeds normally.
+    //
+    // TODO:
+    // For elemental/pure intrinsics, distribute the call over each
+    // consequent of the conditional arg and fold each branch independently:
+    //   abs((c1 ? a : c2 ? b : c))
+    //     → (c1 ? abs(a) : c2 ? abs(b) : abs(c))
+    // Use ForEachConsequent to walk the chain, clone the call per
+    // consequent, fold each clone, and reassemble into a new ConditionalArg.
+    // When multiple arguments are conditional args, distribute one at a
+    // time to avoid a combinatorial cross-product expansion.
+    // This is NOT valid for non-elemental intrinsics like RESHAPE or
+    // TRANSFER whose results depend on seeing all arguments together.
+    //
+    // TODO (conformance):
+    // Type-inquiry intrinsics whose result depends only on the argument's
+    // declared type/rank (e.g. KIND, BIT_SIZE, DIGITS, HUGE, TINY, EPSILON,
+    // PRECISION, RANGE, RADIX, MAXEXPONENT, MINEXPONENT, STORAGE_SIZE, RANK)
+    // are foldable even when the condition is not constant, because C1538/C1539
+    // guarantee every consequent has the same type and rank.  Because they are
+    // not folded here, a reference such as
+    //   integer, parameter :: k = kind((flag ? a : b))
+    // is wrongly rejected ("cannot be computed as a constant value") even
+    // though it is a valid F2023 constant expression.
+    // Fix:
+    // For such a curated allow-list of type-only inquiries, before the bailout
+    // below, a curated allow-list of type-only inquiries, before the bailout
+    // below, replace the conditional-arg argument with its first non-.NIL.
+    // consequent (a representative) and fold normally.  This must NOT be
+    // applied to shape/value inquiries (SIZE, SHAPE, LBOUND/UBOUND, LEN of
+    // deferred length, ALLOCATED, ASSOCIATED, PRESENT, IS_CONTIGUOUS), whose
+    // results can differ between consequents.
+    for (const std::optional<ActualArgument> &arg : args) {
+      if (arg && arg->isConditionalArg()) {
+        return Expr<T>{std::move(funcRef)};
+      }
+    }
     const std::string name{intrinsic->name};
     if (name == "cshift") {
       return Folder<T>{context}.CSHIFT(std::move(funcRef));
@@ -1290,7 +1443,21 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
       return Folder<T>{context}.UNPACK(std::move(funcRef));
     }
     // TODO: extends_type_of, same_type_as
-    if constexpr (!std::is_same_v<T, SomeDerived>) {
+    if constexpr (std::is_same_v<T, SomeDerived>) {
+      // Fold enumeration type intrinsics: HUGE(enum), NEXT(enum),
+      // PREVIOUS(enum)
+      if (name == "huge") {
+        // HUGE was eagerly folded — the first arg is the constant result
+        if (args.size() >= 1 && args[0]) {
+          if (auto *expr{UnwrapExpr<Expr<SomeDerived>>(args[0])}) {
+            return std::move(*expr);
+          }
+        }
+      } else if (name == "next" || name == "previous") {
+        return FoldEnumerationNextOrPrevious(
+            context, std::move(funcRef), name == "next");
+      }
+    } else {
       return FoldIntrinsicFunction(context, std::move(funcRef));
     }
   }

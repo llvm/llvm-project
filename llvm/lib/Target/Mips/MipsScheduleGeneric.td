@@ -870,7 +870,8 @@ def : InstRW<[GenericWriteFPUMoveGPRFPU], (instrs BuildPairF64,
                                            ExtractElementF64_64, CFC1, CTC1,
                                            MFC1, MFC1_D64, MFHC1_D32,
                                            MFHC1_D64, MTC1, MTC1_D64,
-                                           MTHC1_D32, MTHC1_D64)>;
+                                           MTHC1_D32, MTHC1_D64,
+                                           BuildPairF64_FPR)>;
 
 // swc1, swxc1
 def : InstRW<[GenericWriteFPUStore], (instrs SDC1, SDC164, SDXC1, SDXC164,
@@ -1600,9 +1601,7 @@ def : InstRW<[GenericWriteFPUMoveGPRFPU], (instregex "^COPY_U_[BHW]$")>;
 def : InstRW<[GenericWriteFPUMoveGPRFPU], (instregex "^COPY_S_[BHWD]$")>;
 
 def : InstRW<[GenericWriteFPUStore], (instregex "^ST_[BHWD]$")>;
-def : InstRW<[GenericWriteFPUStore], (instrs ST_F16)>;
 def : InstRW<[GenericWriteFPULoad], (instregex "^LD_[BHWD]$")>;
-def : InstRW<[GenericWriteFPULoad], (instrs LD_F16)>;
 
 // Atomic instructions
 

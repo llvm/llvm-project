@@ -1520,11 +1520,42 @@ private:
 
 Expr *extractElementInitializerFromNestedAILE(const ArrayInitLoopExpr *AILE);
 
-} // namespace clang
-
 //===----------------------------------------------------------------------===//
 // GraphTraits specializations for CFG basic block graphs (source-level CFGs)
 //===----------------------------------------------------------------------===//
+
+namespace detail {
+// The GraphTraits below present a CFGBlock's successors and predecessors as
+// plain CFGBlock *, so generic graph algorithms need not know about
+// AdjacentBlock. AB_Unreachable edges, whose reachable target is null, are kept
+// in the CFG to preserve terminator successor positions but are not real
+// control-flow edges and are skipped here.
+struct CFGBlockReachableEdge {
+  bool operator()(const CFGBlock::AdjacentBlock &AB) const {
+    return AB.getReachableBlock() != nullptr;
+  }
+};
+template <typename BlockT> struct CFGBlockEdgeTarget {
+  BlockT *operator()(const CFGBlock::AdjacentBlock &AB) const {
+    return AB.getReachableBlock();
+  }
+};
+
+// A GraphTraits child iterator over BlockT: each AdjacentBlock edge projected
+// to its reachable target, with unreachable (null) edges skipped.
+template <typename IterT, typename BlockT>
+using CFGReachableChildIterator =
+    llvm::mapped_iterator<llvm::filter_iterator<IterT, CFGBlockReachableEdge>,
+                          CFGBlockEdgeTarget<BlockT>>;
+
+template <typename BlockT, typename RangeT>
+auto cfgReachableChildren(RangeT Edges) {
+  return llvm::map_range(
+      llvm::make_filter_range(Edges, CFGBlockReachableEdge()),
+      CFGBlockEdgeTarget<BlockT>());
+}
+} // namespace detail
+} // namespace clang
 
 namespace llvm {
 
@@ -1540,62 +1571,129 @@ template <> struct simplify_type< ::clang::CFGTerminator> {
 
 // Traits for: CFGBlock
 
-template <> struct GraphTraits< ::clang::CFGBlock *> {
-  using NodeRef = ::clang::CFGBlock *;
-  using ChildIteratorType = ::clang::CFGBlock::succ_iterator;
+// CFGBlocks are numbered densely from 0 by their BlockID, so dominator tree
+// construction can index by number instead of using a DenseMap.
+template <> struct GraphTraits<clang::CFGBlock *> {
+  using NodeRef = clang::CFGBlock *;
+  using ChildIteratorType =
+      clang::detail::CFGReachableChildIterator<clang::CFGBlock::succ_iterator,
+                                               clang::CFGBlock>;
 
-  static NodeRef getEntryNode(::clang::CFGBlock *BB) { return BB; }
-  static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+  static NodeRef getEntryNode(clang::CFGBlock *BB) { return BB; }
+  static ChildIteratorType child_begin(NodeRef N) {
+    return clang::detail::cfgReachableChildren<clang::CFGBlock>(N->succs())
+        .begin();
+  }
+  static ChildIteratorType child_end(NodeRef N) {
+    return clang::detail::cfgReachableChildren<clang::CFGBlock>(N->succs())
+        .end();
+  }
+
+  static unsigned getNumber(const clang::CFGBlock *BB) {
+    return BB->getBlockID();
+  }
 };
 
-template <> struct GraphTraits< const ::clang::CFGBlock *> {
-  using NodeRef = const ::clang::CFGBlock *;
-  using ChildIteratorType = ::clang::CFGBlock::const_succ_iterator;
+static_assert(GraphHasNodeNumbers<clang::CFGBlock *>,
+              "GraphTraits getNumber() not detected");
+
+template <> struct GraphTraits<const clang::CFGBlock *> {
+  using NodeRef = const clang::CFGBlock *;
+  using ChildIteratorType = clang::detail::CFGReachableChildIterator<
+      clang::CFGBlock::const_succ_iterator, const clang::CFGBlock>;
 
   static NodeRef getEntryNode(const clang::CFGBlock *BB) { return BB; }
-  static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
-};
-
-template <> struct GraphTraits<Inverse< ::clang::CFGBlock *>> {
-  using NodeRef = ::clang::CFGBlock *;
-  using ChildIteratorType = ::clang::CFGBlock::const_pred_iterator;
-
-  static NodeRef getEntryNode(Inverse<::clang::CFGBlock *> G) {
-    return G.Graph;
+  static ChildIteratorType child_begin(NodeRef N) {
+    return clang::detail::cfgReachableChildren<const clang::CFGBlock>(
+               N->succs())
+        .begin();
+  }
+  static ChildIteratorType child_end(NodeRef N) {
+    return clang::detail::cfgReachableChildren<const clang::CFGBlock>(
+               N->succs())
+        .end();
   }
 
-  static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+  static unsigned getNumber(const clang::CFGBlock *BB) {
+    return BB->getBlockID();
+  }
 };
 
-template <> struct GraphTraits<Inverse<const ::clang::CFGBlock *>> {
-  using NodeRef = const ::clang::CFGBlock *;
-  using ChildIteratorType = ::clang::CFGBlock::const_pred_iterator;
+static_assert(GraphHasNodeNumbers<const clang::CFGBlock *>,
+              "GraphTraits getNumber() not detected");
 
-  static NodeRef getEntryNode(Inverse<const ::clang::CFGBlock *> G) {
-    return G.Graph;
+template <> struct GraphTraits<Inverse<clang::CFGBlock *>> {
+  using NodeRef = clang::CFGBlock *;
+  using ChildIteratorType =
+      clang::detail::CFGReachableChildIterator<clang::CFGBlock::pred_iterator,
+                                               clang::CFGBlock>;
+
+  static NodeRef getEntryNode(Inverse<clang::CFGBlock *> G) { return G.Graph; }
+  static ChildIteratorType child_begin(NodeRef N) {
+    return clang::detail::cfgReachableChildren<clang::CFGBlock>(N->preds())
+        .begin();
+  }
+  static ChildIteratorType child_end(NodeRef N) {
+    return clang::detail::cfgReachableChildren<clang::CFGBlock>(N->preds())
+        .end();
   }
 
-  static ChildIteratorType child_begin(NodeRef N) { return N->pred_begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->pred_end(); }
+  static unsigned getNumber(const clang::CFGBlock *BB) {
+    return BB->getBlockID();
+  }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<clang::CFGBlock *>>,
+              "GraphTraits getNumber() not detected");
+
+template <> struct GraphTraits<Inverse<const clang::CFGBlock *>> {
+  using NodeRef = const clang::CFGBlock *;
+  using ChildIteratorType = clang::detail::CFGReachableChildIterator<
+      clang::CFGBlock::const_pred_iterator, const clang::CFGBlock>;
+
+  static NodeRef getEntryNode(Inverse<const clang::CFGBlock *> G) {
+    return G.Graph;
+  }
+  static ChildIteratorType child_begin(NodeRef N) {
+    return clang::detail::cfgReachableChildren<const clang::CFGBlock>(
+               N->preds())
+        .begin();
+  }
+  static ChildIteratorType child_end(NodeRef N) {
+    return clang::detail::cfgReachableChildren<const clang::CFGBlock>(
+               N->preds())
+        .end();
+  }
+
+  static unsigned getNumber(const clang::CFGBlock *BB) {
+    return BB->getBlockID();
+  }
+};
+
+static_assert(GraphHasNodeNumbers<Inverse<const clang::CFGBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 // Traits for: CFG
 
-template <> struct GraphTraits< ::clang::CFG* >
-    : public GraphTraits< ::clang::CFGBlock *>  {
+template <>
+struct GraphTraits<::clang::CFG *> : public GraphTraits<clang::CFGBlock *> {
   using nodes_iterator = ::clang::CFG::iterator;
 
   static NodeRef getEntryNode(::clang::CFG *F) { return &F->getEntry(); }
   static nodes_iterator nodes_begin(::clang::CFG* F) { return F->nodes_begin();}
   static nodes_iterator   nodes_end(::clang::CFG* F) { return F->nodes_end(); }
   static unsigned              size(::clang::CFG* F) { return F->size(); }
+
+  static unsigned getMaxNumber(const ::clang::CFG *F) {
+    return F->getNumBlockIDs();
+  }
+  // Block numbers are fixed when the CFG is built and never change afterwards.
+  static unsigned getNumberEpoch(const ::clang::CFG *F) { return 0; }
 };
 
-template <> struct GraphTraits<const ::clang::CFG* >
-    : public GraphTraits<const ::clang::CFGBlock *>  {
+template <>
+struct GraphTraits<const ::clang::CFG *>
+    : public GraphTraits<const clang::CFGBlock *> {
   using nodes_iterator = ::clang::CFG::const_iterator;
 
   static NodeRef getEntryNode(const ::clang::CFG *F) { return &F->getEntry(); }
@@ -1611,19 +1709,31 @@ template <> struct GraphTraits<const ::clang::CFG* >
   static unsigned size(const ::clang::CFG* F) {
     return F->size();
   }
+
+  static unsigned getMaxNumber(const ::clang::CFG *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const ::clang::CFG *F) { return 0; }
 };
 
-template <> struct GraphTraits<Inverse< ::clang::CFG *>>
-  : public GraphTraits<Inverse< ::clang::CFGBlock *>> {
+template <>
+struct GraphTraits<Inverse<::clang::CFG *>>
+    : public GraphTraits<Inverse<clang::CFGBlock *>> {
   using nodes_iterator = ::clang::CFG::iterator;
 
   static NodeRef getEntryNode(::clang::CFG *F) { return &F->getExit(); }
   static nodes_iterator nodes_begin( ::clang::CFG* F) {return F->nodes_begin();}
   static nodes_iterator nodes_end( ::clang::CFG* F) { return F->nodes_end(); }
+
+  static unsigned getMaxNumber(const ::clang::CFG *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const ::clang::CFG *F) { return 0; }
 };
 
-template <> struct GraphTraits<Inverse<const ::clang::CFG *>>
-  : public GraphTraits<Inverse<const ::clang::CFGBlock *>> {
+template <>
+struct GraphTraits<Inverse<const ::clang::CFG *>>
+    : public GraphTraits<Inverse<const clang::CFGBlock *>> {
   using nodes_iterator = ::clang::CFG::const_iterator;
 
   static NodeRef getEntryNode(const ::clang::CFG *F) { return &F->getExit(); }
@@ -1635,6 +1745,11 @@ template <> struct GraphTraits<Inverse<const ::clang::CFG *>>
   static nodes_iterator nodes_end(const ::clang::CFG* F) {
     return F->nodes_end();
   }
+
+  static unsigned getMaxNumber(const ::clang::CFG *F) {
+    return F->getNumBlockIDs();
+  }
+  static unsigned getNumberEpoch(const ::clang::CFG *F) { return 0; }
 };
 
 } // namespace llvm

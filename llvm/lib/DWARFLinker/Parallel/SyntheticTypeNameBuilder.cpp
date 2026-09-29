@@ -405,11 +405,14 @@ Error SyntheticTypeNameBuilder::addDIETypeName(
   // Check if DIE already has a name.
   if (!TypeEntryPtr) {
     size_t NameStart = SyntheticName.size();
-    if (AssignNameToTypeDescriptor) {
-      if (Error Err = addParentName(*UnitEntryPair))
-        return Err;
-    }
-    addTypePrefix(UnitEntryPair->DieEntry);
+    // Prepend the parent scope so this name matches the key the type is
+    // stored under in the pool (the getKey() branch below). Otherwise the
+    // same type gets different names depending on whether it already has a
+    // pool entry, which races under parallel assignment and breaks
+    // deterministic deduplication.
+    if (Error Err = addParentName(*UnitEntryPair))
+      return Err;
+    addTypePrefix(*UnitEntryPair->CU, UnitEntryPair->DieEntry);
 
     if (ChildIndex) {
       addOrderedName(*ChildIndex);
@@ -430,8 +433,28 @@ Error SyntheticTypeNameBuilder::addDIETypeName(
   return Error::success();
 }
 
+/// A C++ static data member is spelled as a DW_TAG_member carrying
+/// DW_AT_declaration in DWARF 4 and as a DW_TAG_variable in DWARF 5 (DWARF 5
+/// section 5.7.6). Returns true when this declares a static data member instead
+/// of describing storage in the record.
+static bool isStaticDataMember(CompileUnit &CU,
+                               const DWARFDebugInfoEntry *DieEntry) {
+  assert(DieEntry->getTag() == dwarf::DW_TAG_member &&
+         "expected a DW_TAG_member");
+
+  if (!dwarf::toUnsigned(CU.find(DieEntry, dwarf::DW_AT_declaration), 0))
+    return false;
+
+  // A member that has a location occupies storage in the record regardless of
+  // how else it is marked, so it is the absence of a location that makes this a
+  // pure declaration. Zero is a valid offset, so only the attribute's presence
+  // matters, not its value.
+  return !CU.find(DieEntry, {dwarf::DW_AT_data_member_location,
+                             dwarf::DW_AT_data_bit_offset});
+}
+
 void SyntheticTypeNameBuilder::addTypePrefix(
-    const DWARFDebugInfoEntry *DieEntry) {
+    CompileUnit &CU, const DWARFDebugInfoEntry *DieEntry) {
   switch (DieEntry->getTag()) {
   case dwarf::DW_TAG_base_type: {
     SyntheticName += "{0}";
@@ -475,7 +498,12 @@ void SyntheticTypeNameBuilder::addTypePrefix(
     SyntheticName += "{A}";
   } break;
   case dwarf::DW_TAG_member: {
-    SyntheticName += "{B}";
+    // Treat a static data member the same way regardless of whether it's
+    // described as a DW_TAG_member or a DW_TAG_variable.
+    if (isStaticDataMember(CU, DieEntry))
+      SyntheticName += "{d}";
+    else
+      SyntheticName += "{B}";
   } break;
   case dwarf::DW_TAG_pointer_type: {
     SyntheticName += "{C}";
@@ -743,6 +771,10 @@ std::optional<size_t> OrderedChildrenIndexAssigner::tagToArrayIndex(
   case dwarf::DW_TAG_namelist_item:
     return 6;
   case dwarf::DW_TAG_member:
+    // Treat a static data member the same way regardless of whether it's
+    // described as a DW_TAG_member or a DW_TAG_variable.
+    if (isStaticDataMember(CU, DieEntry))
+      return std::nullopt;
     return 7;
   default:
     return std::nullopt;

@@ -10,8 +10,6 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timeout.h"
 
-#include <cstring>
-
 using namespace lldb;
 using namespace lldb_private;
 

@@ -136,9 +136,17 @@ private:
 // .obj or .o file. This may be a member of an archive file.
 class ObjFile : public InputFile {
 public:
-  static ObjFile *create(COFFLinkerContext &ctx, MemoryBufferRef mb,
+  static ObjFile *create(COFFLinkerContext &ctx, COFFObjectFile *coffObj,
                          bool lazy = false);
+  static ObjFile *create(COFFLinkerContext &ctx, MemoryBufferRef mb,
+                         bool lazy = false) {
+    return ObjFile::create(ctx, ObjFile::createCOFFObject(ctx, mb).release(),
+                           lazy);
+  }
   explicit ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj, bool lazy);
+
+  static std::unique_ptr<COFFObjectFile>
+  createCOFFObject(COFFLinkerContext &ctx, MemoryBufferRef mb);
 
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
   void parse() override;
@@ -416,8 +424,10 @@ private:
 // .dll file. MinGW only.
 class DLLFile : public InputFile {
 public:
-  explicit DLLFile(SymbolTable &symtab, MemoryBufferRef m)
-      : InputFile(symtab, DLLKind, m) {}
+  explicit DLLFile(SymbolTable &symtab, std::unique_ptr<COFFObjectFile> &obj)
+      : InputFile(symtab, DLLKind, obj->getMemoryBufferRef()) {
+    coffObj.swap(obj);
+  }
   static bool classof(const InputFile *f) { return f->kind() == DLLKind; }
   void parse() override;
   MachineTypes getMachineType() const override;

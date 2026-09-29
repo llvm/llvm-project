@@ -21,6 +21,7 @@ namespace llvm {
 
 class Value;
 class ConstraintSystem {
+public:
   struct Entry {
     int64_t Coefficient;
     uint16_t Id;
@@ -29,26 +30,41 @@ class ConstraintSystem {
         : Coefficient(Coefficient), Id(Id) {}
   };
 
-  static int64_t getConstPart(const Entry &E) {
-    if (E.Id == 0)
-      return E.Coefficient;
-    return 0;
-  }
+  /// A single constraint of the form 'c >= v1 * c1 + ... + vn * cn'.
+  using RowTy = SmallVector<Entry, 8>;
 
-  static int64_t getLastCoefficient(ArrayRef<Entry> Row, uint16_t Id) {
-    if (Row.empty())
+private:
+  static int64_t getLastCoefficient(ArrayRef<Entry> R, uint16_t Id) {
+    if (R.empty() || R.back().Id != Id)
       return 0;
-    if (Row.back().Id == Id)
-      return Row.back().Coefficient;
-    return 0;
+    return R.back().Coefficient;
   }
 
+  /// Returns true if \p R has an entry for the constant part.
+  static bool hasConstantEntry(ArrayRef<Entry> R) {
+    return !R.empty() && R.front().Id == 0;
+  }
+
+  /// Returns true if \p R does not have an entry for any variable, i.e. it is
+  /// of the form 'c >= 0'.
+  static bool isConstantOnly(ArrayRef<Entry> R) {
+    return R.empty() || (R.size() == 1 && R.front().Id == 0);
+  }
+
+  /// Returns the constant part of \p R, which is 0 if \p R does not have an
+  /// entry for it.
+  static int64_t getConstant(ArrayRef<Entry> R) {
+    return hasConstantEntry(R) ? R.front().Coefficient : 0;
+  }
+
+  /// Number of variables in the system, not counting the constant part. The
+  /// variables use the indices 1 to NumVariables.
   size_t NumVariables = 0;
 
   /// Current linear constraints in the system.
-  /// An entry of the form c0, c1, ... cn represents the following constraint:
+  /// Each entry represents a constraint like
   ///   c0 >= v0 * c1 + .... + v{n-1} * cn
-  SmallVector<SmallVector<Entry, 8>, 4> Constraints;
+  SmallVector<RowTy, 4> Constraints;
 
   /// A map of variables (IR values) to their corresponding index in the
   /// constraint system.
@@ -74,22 +90,20 @@ public:
   ConstraintSystem(const DenseMap<Value *, unsigned> &Value2Index)
       : NumVariables(Value2Index.size()), Value2Index(Value2Index) {}
 
-  bool addVariableRow(ArrayRef<int64_t> R) {
-    assert(Constraints.empty() || R.size() == NumVariables);
+  bool addRow(ArrayRef<Entry> R, size_t NumVars) {
     // If all variable coefficients are 0, the constraint does not provide any
     // usable information.
-    if (all_of(ArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
+    if (isConstantOnly(R))
       return false;
 
-    SmallVector<Entry, 4> NewRow;
-    for (const auto &[Idx, C] : enumerate(R)) {
-      if (C == 0)
-        continue;
-      NewRow.emplace_back(C, Idx);
-    }
-    if (Constraints.empty())
-      NumVariables = R.size();
-    Constraints.push_back(std::move(NewRow));
+    assert(NumVars >= R.back().Id && "NumVars must cover all variables in R");
+    NumVariables = std::max(NumVars, NumVariables);
+    // Only keep non-zero coefficients; in particular drop the entry for the
+    // constant part if it is 0.
+    RowTy &NewRow = Constraints.emplace_back();
+    for (const Entry &E : R)
+      if (E.Coefficient != 0)
+        NewRow.push_back(E);
     return true;
   }
 
@@ -98,65 +112,60 @@ public:
     return Value2Index;
   }
 
-  bool addVariableRowFill(ArrayRef<int64_t> R) {
-    // If all variable coefficients are 0, the constraint does not provide any
-    // usable information.
-    if (all_of(ArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
-      return false;
-
-    NumVariables = std::max(R.size(), NumVariables);
-    return addVariableRow(R);
-  }
-
   /// Returns true if there may be a solution for the constraints in the system.
   LLVM_ABI bool mayHaveSolution();
 
-  static SmallVector<int64_t, 8> negate(SmallVector<int64_t, 8> R) {
+  static RowTy negate(RowTy R) {
+    assert(hasConstantEntry(R) && "row must have a constant entry");
     // The negated constraint R is obtained by multiplying by -1 and adding 1 to
     // the constant.
-    if (AddOverflow(R[0], int64_t(1), R[0]))
+    if (AddOverflow(R[0].Coefficient, int64_t(1), R[0].Coefficient))
       return {};
 
-    return negateOrEqual(R);
+    return negateOrEqual(std::move(R));
   }
 
-  /// Multiplies each coefficient in the given vector by -1. Does not modify the
-  /// original vector.
+  /// Multiplies each coefficient in the given row by -1. Returns an empty row
+  /// on overflow. Does not modify the original row.
   ///
-  /// \param R The vector of coefficients to be negated.
-  static SmallVector<int64_t, 8> negateOrEqual(SmallVector<int64_t, 8> R) {
+  /// \param R The row of coefficients to be negated.
+  static RowTy negateOrEqual(RowTy R) {
     // The negated constraint R is obtained by multiplying by -1.
-    for (auto &C : R)
-      if (MulOverflow(C, int64_t(-1), C))
+    for (Entry &E : R)
+      if (MulOverflow(E.Coefficient, int64_t(-1), E.Coefficient))
         return {};
     return R;
   }
 
-  /// Converts the given vector to form a strict less than inequality. Does not
-  /// modify the original vector.
+  /// Converts the given row to form a strict less than inequality. Returns an
+  /// empty row on overflow. Does not modify the original row.
   ///
-  /// \param R The vector of coefficients to be converted.
-  static SmallVector<int64_t, 8> toStrictLessThan(SmallVector<int64_t, 8> R) {
+  /// \param R The row of coefficients to be converted.
+  static RowTy toStrictLessThan(RowTy R) {
+    assert(hasConstantEntry(R) && "row must have a constant entry");
     // The strict less than is obtained by subtracting 1 from the constant.
-    if (SubOverflow(R[0], int64_t(1), R[0])) {
+    if (SubOverflow(R[0].Coefficient, int64_t(1), R[0].Coefficient))
       return {};
-    }
     return R;
   }
 
-  LLVM_ABI bool isConditionImplied(SmallVector<int64_t, 8> R) const;
+  /// Build and return a sub-system of constraints connected (transitively) to
+  /// query \p R, with variables compacted to a dense index range. Also
+  /// translate \p R's entries to the sub-system.
+  LLVM_ABI std::pair<ConstraintSystem, RowTy>
+  getSubSystem(ArrayRef<Entry> R) const;
 
-  SmallVector<int64_t> getLastConstraint() const {
+  LLVM_ABI bool isConditionImplied(RowTy R) const;
+  LLVM_ABI bool isConditionImpliedInSubSystem(ArrayRef<Entry> R) const;
+
+  const RowTy &getLastConstraint() const {
     assert(!Constraints.empty() && "Constraint system is empty");
-    SmallVector<int64_t> Result(NumVariables, 0);
-    for (auto &Entry : Constraints.back())
-      Result[Entry.Id] = Entry.Coefficient;
-    return Result;
+    return Constraints.back();
   }
 
   void popLastConstraint() { Constraints.pop_back(); }
   void popLastNVariables(unsigned N) {
-    assert(NumVariables > N);
+    assert(NumVariables >= N);
     NumVariables -= N;
   }
 

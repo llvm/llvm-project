@@ -35,10 +35,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -262,7 +262,7 @@ template <> struct llvm::DenseMapInfo<ModelledPHI> {
   }
 };
 
-using ModelledPHISet = DenseSet<ModelledPHI>;
+using ModelledPHISet = SetVector<ModelledPHI>;
 
 namespace {
 
@@ -606,7 +606,10 @@ GVNSink::analyzeInstructionForSinking(LockstepReverseIterator<false> &LRI,
       return std::nullopt;
     VNums[N]++;
   }
-  unsigned VNumToSink = llvm::max_element(VNums, llvm::less_second())->first;
+  unsigned VNumToSink =
+      llvm::max_element(VNums, [](const auto &L, const auto &R) {
+        return L.second < R.second;
+      })->first;
 
   if (VNums[VNumToSink] == 1)
     // Can't sink anything!
@@ -645,7 +648,7 @@ GVNSink::analyzeInstructionForSinking(LockstepReverseIterator<false> &LRI,
   ModelledPHI NewPHI(NewInsts, ActivePreds, RPOTOrder);
 
   // Does sinking this instruction render previous PHIs redundant?
-  if (NeededPHIs.erase(NewPHI))
+  if (NeededPHIs.remove(NewPHI))
     RecomputePHIContents = true;
 
   if (RecomputePHIContents) {
@@ -693,7 +696,6 @@ GVNSink::analyzeInstructionForSinking(LockstepReverseIterator<false> &LRI,
         PHI.areAnyIncomingValuesConstant())
       return std::nullopt;
 
-    NeededPHIs.reserve(NeededPHIs.size());
     NeededPHIs.insert(PHI);
     PHIContents.insert_range(PHI.getValues());
   }

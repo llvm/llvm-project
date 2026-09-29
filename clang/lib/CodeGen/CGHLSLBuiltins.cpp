@@ -13,6 +13,7 @@
 #include "CGBuiltin.h"
 #include "CGHLSLRuntime.h"
 #include "CodeGenFunction.h"
+#include "clang/AST/HLSLResource.h"
 #include "clang/AST/MatrixUtils.h"
 #include "llvm/IR/MatrixBuilder.h"
 
@@ -124,7 +125,7 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
 
     auto *RetTy = llvm::StructType::get(RetElementTy, RetElementTy);
 
-    CallInst *CI = CGF->Builder.CreateIntrinsic(
+    Value *CI = CGF->Builder.CreateIntrinsic(
         RetTy, Intrinsic::dx_splitdouble, {Op0}, nullptr, "hlsl.splitdouble");
 
     LowBits = CGF->Builder.CreateExtractValue(CI, 0);
@@ -309,6 +310,41 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
   llvm_unreachable("Intrinsic F32ToF16 not supported by target architecture");
 }
 
+static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
+                                  llvm::AtomicRMWInst::BinOp Op) {
+  // Emit `atomicrmw <op>` directly — no intermediate intrinsic needed on
+  // either DXIL or SPIR-V.
+  LValue DestLV = CGF.EmitLValue(E->getArg(0));
+  Address DestAddr = DestLV.getAddress();
+  Value *Val = CGF.EmitScalarExpr(E->getArg(1));
+  [[maybe_unused]] QualType ValTy = E->getArg(1)->getType();
+  if (Op == llvm::AtomicRMWInst::Xchg)
+    assert((ValTy->isIntegerType() || ValTy->isFloatingType()) &&
+           "InterlockedExchange value operand must be an integer or a float");
+  else
+    assert(ValTy->isIntegerType() &&
+           "Intrinsic InterlockedOp value operand must be an integer");
+
+  // Scopeless atomics will default to CrossDevice, which is illegal in Vulkan.
+  // Set the memory scope: Workgroup for groupshared, otherwise Device.
+  StringRef ScopeName = DestLV.getAddressSpace() == LangAS::hlsl_groupshared
+                            ? "workgroup"
+                            : "device";
+  llvm::SyncScope::ID SSID =
+      CGF.getLLVMContext().getOrInsertSyncScopeID(ScopeName);
+
+  llvm::AtomicRMWInst *Call = CGF.Builder.CreateAtomicRMW(
+      Op, DestAddr, Val, llvm::AtomicOrdering::Monotonic, SSID);
+
+  // The 3-arg overload writes the old value (the RMW's return value) into
+  // the `original_value` reference parameter.
+  if (E->getNumArgs() == 3) {
+    LValue OrigLV = CGF.EmitLValue(E->getArg(2));
+    CGF.EmitStoreThroughLValue(RValue::get(Call), OrigLV);
+  }
+  return Call;
+}
+
 static Value *emitBufferStride(CodeGenFunction *CGF, const Expr *HandleExpr,
                                LValue &Stride) {
   // Figure out the stride of the buffer elements from the handle type.
@@ -457,11 +493,32 @@ static std::string getSpecConstantFunctionName(clang::QualType SpecConstantType,
   return Name;
 }
 
-static llvm::Type *getOffsetType(CodeGenModule &CGM, llvm::Type *CoordTy) {
+static const HLSLAttributedResourceType *
+getHandleAttributedType(QualType HandleQT) {
+  if (const auto *RT = HandleQT->getAs<HLSLAttributedResourceType>())
+    return RT;
+  // If the expr is a texture/sampler record (or similar), peel to __handle.
+  if (const HLSLAttributedResourceType *RT =
+          HLSLAttributedResourceType::findHandleTypeOnResource(
+              HandleQT.getTypePtr()))
+    return RT;
+  llvm_unreachable("attributed handle type not found");
+}
+
+static const HLSLAttributedResourceType *
+getRequiredHandleType(const CallExpr *E, unsigned ArgNo) {
+  return getHandleAttributedType(E->getArg(ArgNo)->getType());
+}
+
+static llvm::Type *getOffsetType(CodeGenModule &CGM,
+                                 const HLSLAttributedResourceType *RT) {
+  const auto &Attrs = RT->getAttrs();
+  unsigned OffsetSize =
+      clang::hlsl::getResourceDimensions(Attrs.ResourceDimension);
   llvm::Type *Int32Ty = CGM.Int32Ty;
-  if (auto *VT = dyn_cast<llvm::FixedVectorType>(CoordTy))
-    return llvm::FixedVectorType::get(Int32Ty, VT->getNumElements());
-  return Int32Ty;
+  if (OffsetSize == 1)
+    return Int32Ty;
+  return llvm::FixedVectorType::get(Int32Ty, OffsetSize);
 }
 
 static Value *emitHlslOffset(CodeGenFunction &CGF, const CallExpr *E,
@@ -472,15 +529,20 @@ static Value *emitHlslOffset(CodeGenFunction &CGF, const CallExpr *E,
   return llvm::Constant::getNullValue(OffsetTy);
 }
 
-static Value *emitHlslClamp(CodeGenFunction &CGF, const CallExpr *E,
-                            unsigned ClampArgIndex) {
-  Value *Clamp = CGF.EmitScalarExpr(E->getArg(ClampArgIndex));
-  // The builtin is defined with variadic arguments, so the clamp parameter
-  // might have been promoted to double. The intrinsic requires a 32-bit
-  // float.
-  if (Clamp->getType() != CGF.Builder.getFloatTy())
-    Clamp = CGF.Builder.CreateFPCast(Clamp, CGF.Builder.getFloatTy());
-  return Clamp;
+static Value *emitHlslSampleOffset(CodeGenFunction &CGF, const CallExpr *E,
+                                   const HLSLAttributedResourceType *RT,
+                                   unsigned OffsetArgIndex) {
+  llvm::Type *OffsetTy = getOffsetType(CGF.CGM, RT);
+  if (!clang::hlsl::hasResourceOffset(RT->getAttrs().ResourceDimension))
+    return llvm::Constant::getNullValue(OffsetTy);
+  return emitHlslOffset(CGF, E, OffsetArgIndex, OffsetTy);
+}
+
+static unsigned getHlslClampArgIndex(const HLSLAttributedResourceType *RT,
+                                     unsigned OffsetArgIndex) {
+  return clang::hlsl::hasResourceOffset(RT->getAttrs().ResourceDimension)
+             ? OffsetArgIndex + 1
+             : OffsetArgIndex;
 }
 
 static Value *emitGetDimensions(CodeGenFunction &CGF, const CallExpr *E,
@@ -512,6 +574,16 @@ static Value *emitGetDimensions(CodeGenFunction &CGF, const CallExpr *E,
     LastStore = CGF.Builder.CreateStore(Elem, DimOut.getAddress());
   }
   return LastStore;
+}
+
+static llvm::Type *getAggregateType(llvm::Type *ScalarTy, QualType ArgTy) {
+  if (auto *MatTy = ArgTy->getAs<ConstantMatrixType>())
+    return llvm::VectorType::get(
+        ScalarTy, ElementCount::getFixed(MatTy->getNumElementsFlattened()));
+  if (auto *VecTy = ArgTy->getAs<clang::VectorType>())
+    return llvm::VectorType::get(
+        ScalarTy, ElementCount::getFixed(VecTy->getNumElements()));
+  return ScalarTy;
 }
 
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
@@ -603,52 +675,74 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     CI->setCallingConv(IntrFn->getCallingConv());
     return CI;
   }
+  case Builtin::BI__builtin_hlsl_transpose_if_memory_is_row_major: {
+    const Expr *ValueExpr = E->getArg(0);
+    if (hasAggregateEvaluationKind(ValueExpr->getType())) {
+      EmitAnyExprToMem(ValueExpr, ReturnValue.getAddress(),
+                       ValueExpr->getType().getQualifiers(), /*IsInit=*/true);
+      return ReturnValue.getAddress().getBasePointer();
+    }
+
+    Value *ValueOp = EmitScalarExpr(ValueExpr);
+    const auto *MatTy = ValueExpr->getType()->getAs<ConstantMatrixType>();
+    if (!MatTy || !getLangOpts().HLSLSpvUseLegacyBufferMatrixOrder)
+      return ValueOp;
+
+    bool IsLoad =
+        E->getArg(1)->EvaluateKnownConstInt(getContext()).getBoolValue();
+    unsigned Rows = MatTy->getNumRows();
+    unsigned Columns = MatTy->getNumColumns();
+    llvm::MatrixBuilder MB(Builder);
+    return IsLoad ? MB.CreateMatrixTranspose(ValueOp, Columns, Rows)
+                  : MB.CreateMatrixTranspose(ValueOp, Rows, Columns);
+  }
   case Builtin::BI__builtin_hlsl_resource_sample: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 4> Args;
     Args.push_back(HandleOp);
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 3, getOffsetType(CGM, CoordOp->getType())));
+    constexpr unsigned OffsetIdx = 3;
+    Args.push_back(emitHlslSampleOffset(*this, E, RT, OffsetIdx));
 
     llvm::Type *RetTy = ConvertType(E->getType());
-    if (E->getNumArgs() <= 4) {
-      return Builder.CreateIntrinsic(
-          RetTy, CGM.getHLSLRuntime().getSampleIntrinsic(), Args);
-    }
+    const unsigned ClampIdx = getHlslClampArgIndex(RT, OffsetIdx);
+    if (E->getNumArgs() <= ClampIdx)
+      return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleIntrinsic(), Args,
+                               RetTy);
 
-    Args.push_back(emitHlslClamp(*this, E, 4));
-    return Builder.CreateIntrinsic(
-        RetTy, CGM.getHLSLRuntime().getSampleClampIntrinsic(), Args);
+    Args.push_back(EmitScalarExpr(E->getArg(ClampIdx)));
+    return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleClampIntrinsic(),
+                             Args, RetTy);
   }
   case Builtin::BI__builtin_hlsl_resource_sample_bias: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *BiasOp = EmitScalarExpr(E->getArg(3));
-    if (BiasOp->getType() != Builder.getFloatTy())
-      BiasOp = Builder.CreateFPCast(BiasOp, Builder.getFloatTy());
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 6> Args; // Max 6 arguments for SampleBias
     Args.push_back(HandleOp);
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(BiasOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 4, getOffsetType(CGM, CoordOp->getType())));
+    constexpr unsigned OffsetIdx = 4;
+    Args.push_back(emitHlslSampleOffset(*this, E, RT, OffsetIdx));
 
     llvm::Type *RetTy = ConvertType(E->getType());
-    if (E->getNumArgs() <= 5)
-      return Builder.CreateIntrinsic(
-          RetTy, CGM.getHLSLRuntime().getSampleBiasIntrinsic(), Args);
+    const unsigned ClampIdx = getHlslClampArgIndex(RT, OffsetIdx);
+    if (E->getNumArgs() <= ClampIdx)
+      return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleBiasIntrinsic(),
+                               Args, RetTy);
 
-    Args.push_back(emitHlslClamp(*this, E, 5));
-    return Builder.CreateIntrinsic(
-        RetTy, CGM.getHLSLRuntime().getSampleBiasClampIntrinsic(), Args);
+    Args.push_back(EmitScalarExpr(E->getArg(ClampIdx)));
+    return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleBiasClampIntrinsic(),
+                             Args, RetTy);
   }
   case Builtin::BI__builtin_hlsl_resource_sample_grad: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
@@ -656,6 +750,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *DDXOp = EmitScalarExpr(E->getArg(3));
     Value *DDYOp = EmitScalarExpr(E->getArg(4));
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 7> Args;
     Args.push_back(HandleOp);
@@ -663,17 +758,17 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Args.push_back(CoordOp);
     Args.push_back(DDXOp);
     Args.push_back(DDYOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 5, getOffsetType(CGM, CoordOp->getType())));
+    constexpr unsigned OffsetIdx = 5;
+    Args.push_back(emitHlslSampleOffset(*this, E, RT, OffsetIdx));
 
     llvm::Type *RetTy = ConvertType(E->getType());
 
-    if (E->getNumArgs() <= 6) {
+    const unsigned ClampIdx = getHlslClampArgIndex(RT, OffsetIdx);
+    if (E->getNumArgs() <= ClampIdx)
       return Builder.CreateIntrinsic(
           RetTy, CGM.getHLSLRuntime().getSampleGradIntrinsic(), Args);
-    }
 
-    Args.push_back(emitHlslClamp(*this, E, 6));
+    Args.push_back(EmitScalarExpr(E->getArg(ClampIdx)));
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getSampleGradClampIntrinsic(), Args);
   }
@@ -682,16 +777,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *LODOp = EmitScalarExpr(E->getArg(3));
-    if (LODOp->getType() != Builder.getFloatTy())
-      LODOp = Builder.CreateFPCast(LODOp, Builder.getFloatTy());
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 5> Args; // Max 5 arguments for SampleLevel
     Args.push_back(HandleOp);
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(LODOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 4, getOffsetType(CGM, CoordOp->getType())));
+    constexpr unsigned OffsetIdx = 4;
+    Args.push_back(emitHlslSampleOffset(*this, E, RT, OffsetIdx));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(
@@ -700,55 +794,89 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_resource_load_level: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *CoordLODOp = EmitScalarExpr(E->getArg(1));
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
-    auto *CoordLODVecTy = cast<llvm::FixedVectorType>(CoordLODOp->getType());
-    unsigned NumElts = CoordLODVecTy->getNumElements();
-    assert(NumElts >= 2 && "CoordLOD must have at least 2 elements");
+    const auto &Attrs = RT->getAttrs();
 
-    // Split CoordLOD into Coord and LOD
-    SmallVector<int, 4> Mask;
-    for (unsigned I = 0; I < NumElts - 1; ++I)
-      Mask.push_back(I);
+    Value *CoordOp = nullptr;
+    Value *LODOp = nullptr;
+    if (Attrs.ResourceClass == llvm::dxil::ResourceClass::UAV) {
+      // A UAV descriptor binds a single mip slice, so a RWTexture location is
+      // all coordinate and there is no mip level to select.
+      CoordOp = CoordLODOp;
+      LODOp = llvm::PoisonValue::get(Int32Ty);
+    } else {
+      // Split CoordLOD into Coord and LOD. 1D resources use a scalar
+      // coordinate rather than a 1-element vector.
+      unsigned CoordSize =
+          clang::hlsl::getResourceDimensions(Attrs.ResourceDimension) +
+          (Attrs.IsArray ? 1 : 0);
+      assert(cast<llvm::FixedVectorType>(CoordLODOp->getType())
+                     ->getNumElements() == CoordSize + 1 &&
+             "CoordLOD must have one element per coordinate, plus the level");
 
-    Value *CoordOp =
-        Builder.CreateShuffleVector(CoordLODOp, Mask, "hlsl.load.coord");
-    Value *LODOp =
-        Builder.CreateExtractElement(CoordLODOp, NumElts - 1, "hlsl.load.lod");
+      if (CoordSize == 1) {
+        CoordOp = Builder.CreateExtractElement(CoordLODOp, uint64_t(0),
+                                               "hlsl.load.coord");
+      } else {
+        SmallVector<int, 4> Mask;
+        for (unsigned I = 0; I < CoordSize; ++I)
+          Mask.push_back(I);
+        CoordOp =
+            Builder.CreateShuffleVector(CoordLODOp, Mask, "hlsl.load.coord");
+      }
+      LODOp =
+          Builder.CreateExtractElement(CoordLODOp, CoordSize, "hlsl.load.lod");
+    }
 
     SmallVector<Value *, 4> Args;
     Args.push_back(HandleOp);
     Args.push_back(CoordOp);
     Args.push_back(LODOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 2, getOffsetType(CGM, CoordOp->getType())));
+    Args.push_back(emitHlslOffset(*this, E, 2, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getLoadLevelIntrinsic(), Args);
+  }
+  case Builtin::BI__builtin_hlsl_resource_load_ms: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *CoordOp = EmitScalarExpr(E->getArg(1));
+    Value *SampleOp = EmitScalarExpr(E->getArg(2));
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
+
+    SmallVector<Value *, 4> Args;
+    Args.push_back(HandleOp);
+    Args.push_back(CoordOp);
+    Args.push_back(SampleOp);
+    Args.push_back(emitHlslOffset(*this, E, 3, getOffsetType(CGM, RT)));
+
+    llvm::Type *RetTy = ConvertType(E->getType());
+    return Builder.CreateIntrinsic(
+        RetTy, CGM.getHLSLRuntime().getLoadMSIntrinsic(), Args);
   }
   case Builtin::BI__builtin_hlsl_resource_sample_cmp: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *CmpOp = EmitScalarExpr(E->getArg(3));
-    if (CmpOp->getType() != Builder.getFloatTy())
-      CmpOp = Builder.CreateFPCast(CmpOp, Builder.getFloatTy());
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 6> Args; // Max 6 arguments for SampleCmp
     Args.push_back(HandleOp);
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(CmpOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 4, getOffsetType(CGM, CoordOp->getType())));
+    constexpr unsigned OffsetIdx = 4;
+    Args.push_back(emitHlslSampleOffset(*this, E, RT, OffsetIdx));
 
     llvm::Type *RetTy = ConvertType(E->getType());
-    if (E->getNumArgs() <= 5) {
+    const unsigned ClampIdx = getHlslClampArgIndex(RT, OffsetIdx);
+    if (E->getNumArgs() <= ClampIdx)
       return Builder.CreateIntrinsic(
           RetTy, CGM.getHLSLRuntime().getSampleCmpIntrinsic(), Args);
-    }
 
-    Args.push_back(emitHlslClamp(*this, E, 5));
+    Args.push_back(EmitScalarExpr(E->getArg(ClampIdx)));
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getSampleCmpClampIntrinsic(), Args);
   }
@@ -757,17 +885,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *CmpOp = EmitScalarExpr(E->getArg(3));
-    if (CmpOp->getType() != Builder.getFloatTy())
-      CmpOp = Builder.CreateFPCast(CmpOp, Builder.getFloatTy());
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 5> Args;
     Args.push_back(HandleOp);
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(CmpOp);
-
-    Args.push_back(
-        emitHlslOffset(*this, E, 4, getOffsetType(CGM, CoordOp->getType())));
+    constexpr unsigned OffsetIdx = 4;
+    Args.push_back(emitHlslSampleOffset(*this, E, RT, OffsetIdx));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(
@@ -778,37 +904,32 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
 
-    return Builder.CreateIntrinsic(
-        ConvertType(E->getType()),
-        CGM.getHLSLRuntime().getCalculateLodIntrinsic(),
-        {HandleOp, SamplerOp, CoordOp});
+    return EmitIntrinsicCall(CGM.getHLSLRuntime().getCalculateLodIntrinsic(),
+                             {HandleOp, SamplerOp, CoordOp},
+                             ConvertType(E->getType()));
   }
   case Builtin::BI__builtin_hlsl_resource_calculate_lod_unclamped: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
 
-    return Builder.CreateIntrinsic(
-        ConvertType(E->getType()),
+    return EmitIntrinsicCall(
         CGM.getHLSLRuntime().getCalculateLodUnclampedIntrinsic(),
-        {HandleOp, SamplerOp, CoordOp});
+        {HandleOp, SamplerOp, CoordOp}, ConvertType(E->getType()));
   }
   case Builtin::BI__builtin_hlsl_resource_gather: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *ComponentOp = EmitScalarExpr(E->getArg(3));
-    if (ComponentOp->getType() != Builder.getInt32Ty())
-      ComponentOp = Builder.CreateIntCast(ComponentOp, Builder.getInt32Ty(),
-                                          /*isSigned=*/false);
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 5> Args;
     Args.push_back(HandleOp);
     Args.push_back(SamplerOp);
     Args.push_back(CoordOp);
     Args.push_back(ComponentOp);
-    Args.push_back(
-        emitHlslOffset(*this, E, 4, getOffsetType(CGM, CoordOp->getType())));
+    Args.push_back(emitHlslOffset(*this, E, 4, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(
@@ -819,8 +940,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *CompareOp = EmitScalarExpr(E->getArg(3));
-    if (CompareOp->getType() != Builder.getFloatTy())
-      CompareOp = Builder.CreateFPCast(CompareOp, Builder.getFloatTy());
 
     SmallVector<Value *, 6> Args;
     Args.push_back(HandleOp);
@@ -830,14 +949,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     if (CGM.getTarget().getTriple().isDXIL()) {
       Value *ComponentOp = EmitScalarExpr(E->getArg(4));
-      if (ComponentOp->getType() != Builder.getInt32Ty())
-        ComponentOp = Builder.CreateIntCast(ComponentOp, Builder.getInt32Ty(),
-                                            /*isSigned=*/false);
       Args.push_back(ComponentOp);
     }
 
-    Args.push_back(
-        emitHlslOffset(*this, E, 5, getOffsetType(CGM, CoordOp->getType())));
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
+    Args.push_back(emitHlslOffset(*this, E, 5, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(
@@ -929,8 +1045,28 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     llvm::Intrinsic::ID IntrinsicID =
         llvm::Intrinsic::spv_resource_counterhandlefromimplicitbinding;
     SmallVector<Value *> Args{MainHandle, OrderID, SpaceOp};
-    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
+    return EmitIntrinsicCall(IntrinsicID, {HandleTy, MainHandle->getType()},
+                             Args);
   }
+  case Builtin::BI__builtin_hlsl_resource_handlefromheap: {
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    Value *IndexOp = EmitScalarExpr(E->getArg(1));
+    llvm::Intrinsic::ID IntrinsicID =
+        CGM.getHLSLRuntime().getCreateHandleFromHeapIntrinsic();
+    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, {IndexOp});
+  }
+  case Builtin::BI__builtin_hlsl_resource_counterhandlefromheap: {
+    Value *MainHandle = EmitScalarExpr(E->getArg(0));
+    if (!CGM.getTriple().isSPIRV())
+      return MainHandle;
+
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    llvm::Intrinsic::ID IntrinsicID =
+        llvm::Intrinsic::spv_resource_counterhandlefromheap;
+    return EmitIntrinsicCall(IntrinsicID, {HandleTy, MainHandle->getType()},
+                             {MainHandle});
+  }
+
   case Builtin::BI__builtin_hlsl_resource_nonuniformindex: {
     Value *IndexOp = EmitScalarExpr(E->getArg(0));
     llvm::Type *RetTy = ConvertType(E->getType());
@@ -1005,22 +1141,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/OpX->getType(), Intr,
         ArrayRef<Value *>{OpX, OpMin, OpMax}, nullptr, "hlsl.clamp");
   }
-  case Builtin::BI__builtin_hlsl_crossf16:
-  case Builtin::BI__builtin_hlsl_crossf32: {
-    Value *Op0 = EmitScalarExpr(E->getArg(0));
-    Value *Op1 = EmitScalarExpr(E->getArg(1));
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           E->getArg(1)->getType()->hasFloatingRepresentation() &&
-           "cross operands must have a float representation");
-    // make sure each vector has exactly 3 elements
-    assert(
-        E->getArg(0)->getType()->castAs<VectorType>()->getNumElements() == 3 &&
-        E->getArg(1)->getType()->castAs<VectorType>()->getNumElements() == 3 &&
-        "input vectors must have 3 elements each");
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getCrossIntrinsic(),
-        ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.cross");
-  }
   case Builtin::BI__builtin_hlsl_dot: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
@@ -1091,37 +1211,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         CGM.getHLSLRuntime().getFirstBitLowIntrinsic(), ArrayRef<Value *>{X},
         nullptr, "hlsl.firstbitlow");
   }
-  case Builtin::BI__builtin_hlsl_lerp: {
-    Value *X = EmitScalarExpr(E->getArg(0));
-    Value *Y = EmitScalarExpr(E->getArg(1));
-    Value *S = EmitScalarExpr(E->getArg(2));
-    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
-      llvm_unreachable("lerp operand must have a float representation");
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getLerpIntrinsic(),
-        ArrayRef<Value *>{X, Y, S}, nullptr, "hlsl.lerp");
-  }
-  case Builtin::BI__builtin_hlsl_normalize: {
-    Value *X = EmitScalarExpr(E->getArg(0));
-
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           "normalize operand must have a float representation");
-
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType(),
-        CGM.getHLSLRuntime().getNormalizeIntrinsic(), ArrayRef<Value *>{X},
-        nullptr, "hlsl.normalize");
-  }
-  case Builtin::BI__builtin_hlsl_elementwise_degrees: {
-    Value *X = EmitScalarExpr(E->getArg(0));
-
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           "degree operand must have a float representation");
-
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getDegreesIntrinsic(),
-        ArrayRef<Value *>{X}, nullptr, "hlsl.degrees");
-  }
   case Builtin::BI__builtin_hlsl_elementwise_f16tof32: {
     return handleElementwiseF16ToF32(*this, E);
   }
@@ -1138,30 +1227,20 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
-    llvm::Type *Xty = Op0->getType();
-    llvm::Type *retType = llvm::Type::getInt1Ty(this->getLLVMContext());
-    if (Xty->isVectorTy()) {
-      auto *XVecTy = E->getArg(0)->getType()->castAs<VectorType>();
-      retType = llvm::VectorType::get(
-          retType, ElementCount::getFixed(XVecTy->getNumElements()));
-    }
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("isinf operand must have a float representation");
+    llvm::Type *retType = getAggregateType(
+        llvm::Type::getInt1Ty(getLLVMContext()), E->getArg(0)->getType());
     return Builder.CreateIntrinsic(
         retType, CGM.getHLSLRuntime().getIsInfIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.isinf");
   }
   case Builtin::BI__builtin_hlsl_elementwise_isnan: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
-    llvm::Type *Xty = Op0->getType();
-    llvm::Type *retType = llvm::Type::getInt1Ty(this->getLLVMContext());
-    if (Xty->isVectorTy()) {
-      auto *XVecTy = E->getArg(0)->getType()->castAs<VectorType>();
-      retType = llvm::VectorType::get(
-          retType, ElementCount::getFixed(XVecTy->getNumElements()));
-    }
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("isnan operand must have a float representation");
+    llvm::Type *retType = getAggregateType(
+        llvm::Type::getInt1Ty(getLLVMContext()), E->getArg(0)->getType());
     return Builder.CreateIntrinsic(
         retType, CGM.getHLSLRuntime().getIsNaNIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.isnan");
@@ -1204,22 +1283,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     bool IsMat0 = QTy0->isConstantMatrixType();
     bool IsMat1 = QTy1->isConstantMatrixType();
 
-    // The matrix multiply intrinsic only operates on column-major order
-    // matrices. Therefore matrix memory layout transforms must be inserted
-    // before and after matrix multiply intrinsics.
-    // Use whichever operand is a matrix to discover its declared layout.
-    bool IsRowMajorMat0 = IsMat0 && isMatrixRowMajor(getLangOpts(), QTy0);
-    bool IsRowMajorMat1 = IsMat1 && isMatrixRowMajor(getLangOpts(), QTy1);
-
     llvm::MatrixBuilder MB(Builder);
     if (IsVec0 && IsMat1) {
       unsigned N = QTy0->castAs<VectorType>()->getNumElements();
       auto *MatTy = QTy1->castAs<ConstantMatrixType>();
-      unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
-      assert(N == Rows && "vector length must match matrix row count");
-      if (IsRowMajorMat1)
-        Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows, Cols);
+      assert(N == MatTy->getNumRows() &&
+             "vector length must match matrix row count");
       return MB.CreateMatrixMultiply(Op0, Op1, 1, N, Cols, "hlsl.mul");
     }
     if (IsMat0 && IsVec1) {
@@ -1228,31 +1298,17 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       unsigned Cols = MatTy->getNumColumns();
       assert(QTy1->castAs<VectorType>()->getNumElements() == Cols &&
              "vector length must match matrix column count");
-      if (IsRowMajorMat0)
-        Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
     }
     assert(IsMat0 && IsMat1);
     auto *MatTy0 = QTy0->castAs<ConstantMatrixType>();
     auto *MatTy1 = QTy1->castAs<ConstantMatrixType>();
     unsigned Rows0 = MatTy0->getNumRows();
-    unsigned Rows1 = MatTy1->getNumRows();
     unsigned Cols0 = MatTy0->getNumColumns();
     unsigned Cols1 = MatTy1->getNumColumns();
-    assert(Cols0 == Rows1 &&
+    assert(Cols0 == MatTy1->getNumRows() &&
            "inner matrix dimensions must match for multiplication");
-    if (IsRowMajorMat0)
-      Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows0, Cols0);
-    if (IsRowMajorMat1)
-      Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows1, Cols1);
-
-    Value *Result =
-        MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
-
-    bool IsResultRowMajor = isMatrixRowMajor(getLangOpts(), E->getType());
-    if (IsResultRowMajor)
-      Result = MB.CreateColumnMajorToRowMajorTransform(Result, Rows0, Cols1);
-    return Result;
+    return MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
   }
   case Builtin::BI__builtin_hlsl_transpose: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -1260,13 +1316,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     unsigned Rows = MatTy->getNumRows();
     unsigned Cols = MatTy->getNumColumns();
     llvm::MatrixBuilder MB(Builder);
-    // The matrix transpose intrinsic operates on column-major matrices.
-    // For row-major, a row-major RxC matrix is equivalent to a column-major
-    // CxR matrix, so transposing with swapped dimensions produces the correct
-    // row-major CxR result directly.
-    bool IsRowMajor = isMatrixRowMajor(getLangOpts(), E->getArg(0)->getType());
-    if (IsRowMajor)
-      return MB.CreateMatrixTranspose(Op0, Cols, Rows);
     return MB.CreateMatrixTranspose(Op0, Rows, Cols);
   }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
@@ -1339,16 +1388,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     return SelectVal;
   }
-  case Builtin::BI__builtin_hlsl_step: {
-    Value *Op0 = EmitScalarExpr(E->getArg(0));
-    Value *Op1 = EmitScalarExpr(E->getArg(1));
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           E->getArg(1)->getType()->hasFloatingRepresentation() &&
-           "step operands must have a float representation");
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getStepIntrinsic(),
-        ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.step");
-  }
   case Builtin::BI__builtin_hlsl_wave_active_all_equal: {
     Value *Op = EmitScalarExpr(E->getArg(0));
 
@@ -1400,6 +1439,39 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveBitAndIntrinsic();
     return EmitIntrinsicCall(ID, {Op->getType()}, ArrayRef{Op},
                              "hlsl.wave.active.bit.and");
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_add: {
+    // Emit `atomicrmw` directly for both DXIL and SPIR-V — the backends pick
+    // up the raw instruction (DXIL routes it via `dx.resource.atomic.binop`
+    // in DXILResourceAccess for resource pointers, SPIR-V lowers via
+    // selectAtomicRMW). No intermediate intrinsic.
+    return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Add);
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_and: {
+    return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::And);
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_exchange: {
+    return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Xchg);
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_max: {
+    llvm::AtomicRMWInst::BinOp Op =
+        E->getArg(0)->getType()->hasSignedIntegerRepresentation()
+            ? llvm::AtomicRMWInst::Max
+            : llvm::AtomicRMWInst::UMax;
+    return handleInterlockedOp(*this, E, Op);
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_min: {
+    llvm::AtomicRMWInst::BinOp Op =
+        E->getArg(0)->getType()->hasSignedIntegerRepresentation()
+            ? llvm::AtomicRMWInst::Min
+            : llvm::AtomicRMWInst::UMin;
+    return handleInterlockedOp(*this, E, Op);
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_or: {
+    return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Or);
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_xor: {
+    return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Xor);
   }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
     [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));
@@ -1490,6 +1562,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                              {OpExpr->getType()}, ArrayRef{OpExpr, OpIndex},
                              "hlsl.wave.readlane");
   }
+  case Builtin::BI__builtin_hlsl_wave_read_lane_first: {
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    return EmitIntrinsicCall(
+        CGM.getHLSLRuntime().getWaveReadLaneFirstIntrinsic(),
+        {OpExpr->getType()}, ArrayRef{OpExpr}, "hlsl.wave.readlane.first");
+  }
   case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Intrinsic::ID IID = getWavePrefixSumIntrinsic(
@@ -1516,6 +1594,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitIntrinsicCall(ID, {OpExpr->getType()}, ArrayRef{OpExpr},
                              "hlsl.quad.read.across.y");
   }
+  case Builtin::BI__builtin_hlsl_quad_read_across_diagonal: {
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID ID =
+        CGM.getHLSLRuntime().getQuadReadAcrossDiagonalIntrinsic();
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), ID, {OpExpr->getType()}),
+                           ArrayRef{OpExpr}, "hlsl.quad.read.across.diagonal");
+  }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     auto *Arg0 = E->getArg(0);
     Value *Op0 = EmitScalarExpr(Arg0);
@@ -1539,15 +1625,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         retType, CGM.getHLSLRuntime().getSignIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.sign");
-  }
-  case Builtin::BI__builtin_hlsl_elementwise_radians: {
-    Value *Op0 = EmitScalarExpr(E->getArg(0));
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           "radians operand must have a float representation");
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/Op0->getType(),
-        CGM.getHLSLRuntime().getRadiansIntrinsic(), ArrayRef<Value *>{Op0},
-        nullptr, "hlsl.radians");
   }
   case Builtin::BI__builtin_hlsl_buffer_update_counter: {
     Value *ResHandle = EmitScalarExpr(E->getArg(0));

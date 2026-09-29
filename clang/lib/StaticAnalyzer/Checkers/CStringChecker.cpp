@@ -28,6 +28,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
@@ -82,20 +83,16 @@ class CStringChecker
     : public CheckerFamily<eval::Call, check::PreStmt<DeclStmt>,
                            check::LiveSymbols, check::DeadSymbols,
                            check::RegionChanges> {
-  mutable const char *CurrentFunctionDescription = nullptr;
+  mutable StringRef CurrentFunctionDescription;
 
 public:
-  // FIXME: The bug types emitted by this checker family have confused garbage
-  // in their Description and Category fields (e.g. `categories::UnixAPI` is
-  // passed as the description in several cases and `uninitialized` is mistyped
-  // as `unitialized`). This should be cleaned up.
-  CheckerFrontendWithBugType NullArg{categories::UnixAPI};
+  CheckerFrontendWithBugType NullArg{"Null pointer argument"};
   CheckerFrontendWithBugType OutOfBounds{"Out-of-bound array access"};
-  CheckerFrontendWithBugType BufferOverlap{categories::UnixAPI,
+  CheckerFrontendWithBugType BufferOverlap{"Overlapping buffers",
                                            "Improper arguments"};
-  CheckerFrontendWithBugType NotNullTerm{categories::UnixAPI};
+  CheckerFrontendWithBugType NotNullTerm{"Not null-terminated string"};
   CheckerFrontendWithBugType UninitializedRead{
-      "Accessing unitialized/garbage values"};
+      "Accessing uninitialized/garbage values"};
 
   StringRef getDebugTag() const override { return "MallocChecker"; }
 
@@ -162,6 +159,15 @@ public:
       {{CDM::CLibrary, {"strncasecmp"}, 3}, &CStringChecker::evalStrncasecmp},
       {{CDM::CLibrary, {"strsep"}, 2}, &CStringChecker::evalStrsep},
       {{CDM::CLibrary, {"strxfrm"}, 3}, &CStringChecker::evalStrxfrm},
+      {{CDM::CLibraryMaybeHardened, {"strchr"}, 2},
+       &CStringChecker::evalStrchr},
+      {{CDM::CLibraryMaybeHardened, {"strrchr"}, 2},
+       &CStringChecker::evalStrrchr},
+      {{CDM::CLibraryMaybeHardened, {"memchr"}, 3},
+       &CStringChecker::evalMemchr},
+      {{CDM::CLibrary, {"strstr"}, 2}, &CStringChecker::evalStrstr},
+      {{CDM::CLibrary, {"strpbrk"}, 2}, &CStringChecker::evalStrpbrk},
+      {{CDM::CLibrary, {"strchrnul"}, 2}, &CStringChecker::evalStrchrnul},
       {{CDM::CLibrary, {"bcopy"}, 3}, &CStringChecker::evalBcopy},
       {{CDM::CLibrary, {"bcmp"}, 3},
        std::bind(&CStringChecker::evalMemcmp, _1, _2, _3, CK_Regular)},
@@ -225,6 +231,19 @@ public:
 
   void evalStrsep(CheckerContext &C, const CallEvent &Call) const;
 
+  void evalStrchr(CheckerContext &C, const CallEvent &Call) const;
+  void evalStrrchr(CheckerContext &C, const CallEvent &Call) const;
+  void evalMemchr(CheckerContext &C, const CallEvent &Call) const;
+  void evalStrstr(CheckerContext &C, const CallEvent &Call) const;
+  void evalStrpbrk(CheckerContext &C, const CallEvent &Call) const;
+  void evalStrchrnul(CheckerContext &C, const CallEvent &Call) const;
+
+  /// Shared transition logic for strchr-family functions.
+  /// ConstOffset: nullopt = unknown, npos = not found, other = exact offset.
+  void evalStrchrCommon(CheckerContext &C, const CallEvent &Call,
+                        bool CanReturnNull,
+                        std::optional<size_t> ConstOffset) const;
+
   void evalStdCopy(CheckerContext &C, const CallEvent &Call) const;
   void evalStdCopyBackward(CheckerContext &C, const CallEvent &Call) const;
   void evalStdCopyCommon(CheckerContext &C, const CallEvent &Call) const;
@@ -250,6 +269,8 @@ public:
                                         const MemRegion *MR,
                                         bool hypothetical);
   static const StringLiteral *getStringLiteralFromRegion(const MemRegion *MR);
+  // Like getStringLiteralFromRegion, but also handles ElementRegion offsets.
+  static std::optional<StringRef> getStringRefAtRegion(const MemRegion *R);
 
   SVal getCStringLength(CheckerContext &C,
                         ProgramStateRef &state,
@@ -380,7 +401,7 @@ ProgramStateRef CStringChecker::checkNonNull(CheckerContext &C,
     if (NullArg.isEnabled()) {
       SmallString<80> buf;
       llvm::raw_svector_ostream OS(buf);
-      assert(CurrentFunctionDescription);
+      assert(!CurrentFunctionDescription.empty());
       OS << "Null pointer passed as " << (Arg.ArgumentIndex + 1)
          << llvm::getOrdinalSuffix(Arg.ArgumentIndex + 1) << " argument to "
          << CurrentFunctionDescription;
@@ -1025,12 +1046,40 @@ CStringChecker::getStringLiteralFromRegion(const MemRegion *MR) {
     return cast<StringRegion>(MR)->getStringLiteral();
   case MemRegion::NonParamVarRegionKind:
     if (const VarDecl *Decl = cast<NonParamVarRegion>(MR)->getDecl();
-        Decl->getType().isConstQualified() && Decl->hasGlobalStorage())
+        Decl->getType().isConstQualified())
       return dyn_cast_or_null<StringLiteral>(Decl->getInit());
     return nullptr;
   default:
     return nullptr;
   }
+}
+
+std::optional<StringRef>
+CStringChecker::getStringRefAtRegion(const MemRegion *R) {
+  if (!R)
+    return std::nullopt;
+  size_t Offset = 0;
+  const MemRegion *Base = R->StripCasts();
+  if (const auto *ER = dyn_cast<ElementRegion>(Base)) {
+    if (auto Idx = ER->getIndex().getAs<nonloc::ConcreteInt>()) {
+      Offset = Idx->getValue().get()->getZExtValue();
+      Base = ER->getSuperRegion()->StripCasts();
+    } else {
+      return std::nullopt;
+    }
+  }
+  const StringLiteral *Lit = getStringLiteralFromRegion(Base);
+  if (!Lit)
+    return std::nullopt;
+  // getBytes() exposes the literal's raw storage, which for wide literals holds
+  // the code units in host byte order (see StringLiteral::getCodeUnit()).
+  // Only narrow literals can be interpreted as a target byte string.
+  if (Lit->getCharByteWidth() != 1)
+    return std::nullopt;
+  StringRef S = Lit->getBytes();
+  if (Offset > S.size())
+    return std::nullopt;
+  return S.substr(Offset);
 }
 
 SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
@@ -1045,7 +1094,7 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
       if (NotNullTerm.isEnabled()) {
         SmallString<120> buf;
         llvm::raw_svector_ostream os(buf);
-        assert(CurrentFunctionDescription);
+        assert(!CurrentFunctionDescription.empty());
         os << "Argument to " << CurrentFunctionDescription
            << " is the address of the label '" << Label->getLabel()->getName()
            << "', which is not a null-terminated string";
@@ -1115,7 +1164,7 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
       SmallString<120> buf;
       llvm::raw_svector_ostream os(buf);
 
-      assert(CurrentFunctionDescription);
+      assert(!CurrentFunctionDescription.empty());
       os << "Argument to " << CurrentFunctionDescription << " is ";
 
       if (SummarizeRegion(os, C.getASTContext(), MR))
@@ -2614,6 +2663,221 @@ void CStringChecker::evalStrsep(CheckerContext &C,
 
   // Set the return value, and finish.
   State = State->BindExpr(Call.getOriginExpr(), SF, Result);
+  C.addTransition(State);
+}
+
+/// Compute the constant search offset for strchr/strrchr/strchrnul.
+/// Try to resolve the source (first) argument to its string literal content.
+static std::optional<StringRef> getHaystack(CheckerContext &C,
+                                            const CallEvent &Call) {
+  ProgramStateRef State = C.getState();
+  const StackFrame *SF = C.getStackFrame();
+  SVal SrcVal = State->getSVal(Call.getArgExpr(0), SF);
+  return CStringChecker::getStringRefAtRegion(SrcVal.getAsRegion());
+}
+
+/// Get the null-terminated C string view of the haystack.
+static StringRef getCStr(StringRef Haystack) {
+  size_t NulPos = Haystack.find('\0');
+  return (NulPos != StringRef::npos) ? Haystack.substr(0, NulPos) : Haystack;
+}
+
+/// Try to extract the constant character from the second argument.
+static std::optional<char> getSearchChar(CheckerContext &C,
+                                         const CallEvent &Call) {
+  SValBuilder &SVB = C.getSValBuilder();
+  SVal Arg1Val = C.getState()->getSVal(Call.getArgExpr(1), C.getStackFrame());
+  const llvm::APSInt *CharInt = SVB.getKnownValue(C.getState(), Arg1Val);
+  if (!CharInt)
+    return std::nullopt;
+  return static_cast<char>(CharInt->getExtValue());
+}
+
+/// Resolve the haystack and delegate to a function-specific search lambda.
+using SearchFn = std::function<std::optional<size_t>(
+    CheckerContext &, const CallEvent &, StringRef)>;
+
+static std::optional<size_t>
+computeStringOffset(CheckerContext &C, const CallEvent &Call, SearchFn Search) {
+  auto Haystack = getHaystack(C, Call);
+  if (!Haystack)
+    return std::nullopt;
+  return Search(C, Call, *Haystack);
+}
+
+/// Search for a character in the null-terminated C string view.
+// SearchFn for strchr/strrchr/strchrnul.
+static std::optional<size_t> searchChar(CheckerContext &C,
+                                        const CallEvent &Call,
+                                        StringRef Haystack, bool Reverse,
+                                        bool NulOnMiss) {
+  auto Ch = getSearchChar(C, Call);
+  if (!Ch)
+    return std::nullopt;
+  StringRef CStr = getCStr(Haystack);
+  if (*Ch == '\0')
+    return CStr.size();
+  size_t Pos = Reverse ? CStr.rfind(*Ch) : CStr.find(*Ch);
+  if (Pos == StringRef::npos && NulOnMiss)
+    return CStr.size();
+  return Pos;
+}
+
+void CStringChecker::evalStrchr(CheckerContext &C,
+                                const CallEvent &Call) const {
+  CurrentFunctionDescription = "strchr()";
+  evalStrchrCommon(
+      C, Call, /*CanReturnNull=*/true,
+      computeStringOffset(
+          C, Call,
+          llvm::bind_back(searchChar, /*Reverse=*/false, /*NulOnMiss=*/false)));
+}
+
+void CStringChecker::evalStrrchr(CheckerContext &C,
+                                 const CallEvent &Call) const {
+  CurrentFunctionDescription = "strrchr()";
+  evalStrchrCommon(
+      C, Call, /*CanReturnNull=*/true,
+      computeStringOffset(
+          C, Call,
+          llvm::bind_back(searchChar, /*Reverse=*/true, /*NulOnMiss=*/false)));
+}
+
+void CStringChecker::evalStrchrnul(CheckerContext &C,
+                                   const CallEvent &Call) const {
+  CurrentFunctionDescription = "strchrnul()";
+  evalStrchrCommon(
+      C, Call, /*CanReturnNull=*/false,
+      computeStringOffset(
+          C, Call,
+          llvm::bind_back(searchChar, /*Reverse=*/false, /*NulOnMiss=*/true)));
+}
+
+void CStringChecker::evalMemchr(CheckerContext &C,
+                                const CallEvent &Call) const {
+  CurrentFunctionDescription = "memchr()";
+  auto Search = [](CheckerContext &C, const CallEvent &Call,
+                   StringRef Haystack) -> std::optional<size_t> {
+    auto Ch = getSearchChar(C, Call);
+    if (!Ch || Call.getNumArgs() < 3)
+      return std::nullopt;
+    SValBuilder &SVB = C.getSValBuilder();
+    const llvm::APSInt *Len = SVB.getKnownValue(
+        C.getState(),
+        C.getState()->getSVal(Call.getArgExpr(2), C.getStackFrame()));
+    if (!Len)
+      return std::nullopt;
+    uint64_t N = Len->getZExtValue();
+    // Include the implicit null terminator in the searchable region.
+    SmallString<64> Buf(Haystack);
+    Buf.push_back('\0');
+    StringRef Region = StringRef(Buf.data(), Buf.size());
+    if (N > Region.size())
+      return std::nullopt;
+    return Region.substr(0, N).find(*Ch);
+  };
+  evalStrchrCommon(C, Call, /*CanReturnNull=*/true,
+                   computeStringOffset(C, Call, Search));
+}
+
+void CStringChecker::evalStrstr(CheckerContext &C,
+                                const CallEvent &Call) const {
+  CurrentFunctionDescription = "strstr()";
+  auto Search = [](CheckerContext &C, const CallEvent &Call,
+                   StringRef Haystack) -> std::optional<size_t> {
+    SVal Arg1Val = C.getState()->getSVal(Call.getArgExpr(1), C.getStackFrame());
+    auto Needle = CStringChecker::getStringRefAtRegion(Arg1Val.getAsRegion());
+    if (!Needle)
+      return std::nullopt;
+    StringRef CStr = getCStr(Haystack);
+    StringRef CNeedle = getCStr(*Needle);
+    return CNeedle.empty() ? size_t{0} : CStr.find(CNeedle);
+  };
+  evalStrchrCommon(C, Call, /*CanReturnNull=*/true,
+                   computeStringOffset(C, Call, Search));
+}
+
+void CStringChecker::evalStrpbrk(CheckerContext &C,
+                                 const CallEvent &Call) const {
+  CurrentFunctionDescription = "strpbrk()";
+  auto Search = [](CheckerContext &C, const CallEvent &Call,
+                   StringRef Haystack) -> std::optional<size_t> {
+    SVal Arg1Val = C.getState()->getSVal(Call.getArgExpr(1), C.getStackFrame());
+    auto Accept = CStringChecker::getStringRefAtRegion(Arg1Val.getAsRegion());
+    if (!Accept)
+      return std::nullopt;
+    return getCStr(Haystack).find_first_of(getCStr(*Accept));
+  };
+  evalStrchrCommon(C, Call, /*CanReturnNull=*/true,
+                   computeStringOffset(C, Call, Search));
+}
+
+void CStringChecker::evalStrchrCommon(CheckerContext &C, const CallEvent &Call,
+                                      bool CanReturnNull,
+                                      std::optional<size_t> ConstOffset) const {
+  const Expr *CE = Call.getOriginExpr();
+  assert(CE);
+
+  if (!CE->getType()->isPointerType())
+    return;
+
+  ProgramStateRef State = C.getState();
+  const StackFrame *SF = C.getStackFrame();
+  SValBuilder &SVB = C.getSValBuilder();
+  ASTContext &Ctx = C.getASTContext();
+
+  SourceArgExpr Src = {{Call.getArgExpr(0), 0}};
+  SVal SrcVal = State->getSVal(Src.Expression, SF);
+  State = checkNonNull(C, State, Src, SrcVal);
+  if (!State)
+    return;
+
+  bool MustMatch = ConstOffset && *ConstOffset != StringRef::npos;
+  bool MustNotMatch = ConstOffset && *ConstOffset == StringRef::npos;
+
+  // NULL (no-match) branch — skip when the match is guaranteed.
+  if (CanReturnNull && !MustMatch) {
+    ProgramStateRef NullState =
+        State->BindExpr(CE, SF, SVB.makeNullWithType(CE->getType()));
+    C.addTransition(NullState);
+  }
+
+  // Found branch — skip when the match is impossible.
+  if (MustNotMatch)
+    return;
+
+  std::optional<Loc> SrcLoc = SrcVal.getAs<Loc>();
+  if (!SrcLoc) {
+    SVal Result = SVB.conjureSymbolVal(Call, C.blockCount());
+    State = State->BindExpr(CE, SF, Result);
+    C.addTransition(State);
+    return;
+  }
+
+  // If we know the exact offset, use a concrete value.
+  if (MustMatch) {
+    NonLoc ConcreteOffset =
+        SVB.makeIntVal(*ConstOffset, Ctx.getSizeType()).castAs<NonLoc>();
+    SVal Result = SVB.evalBinOpLN(State, BO_Add, *SrcLoc, ConcreteOffset,
+                                  Src.Expression->getType());
+    State = State->BindExpr(CE, SF, Result);
+    C.addTransition(State);
+    return;
+  }
+
+  // Unknown match: use a symbolic offset constrained to be in bounds.
+  auto RemainingExtentBytes =
+      getDynamicExtentWithOffset(State, *SrcLoc).castAs<DefinedOrUnknownSVal>();
+  NonLoc SymOffset =
+      SVB.conjureSymbolVal(Call, Ctx.getSizeType(), C.blockCount())
+          .castAs<NonLoc>();
+  State = State->assumeInBound(SymOffset, RemainingExtentBytes, true);
+  if (!State)
+    return;
+
+  SVal Result = SVB.evalBinOpLN(State, BO_Add, *SrcLoc, SymOffset,
+                                Src.Expression->getType());
+  State = State->BindExpr(CE, SF, Result);
   C.addTransition(State);
 }
 

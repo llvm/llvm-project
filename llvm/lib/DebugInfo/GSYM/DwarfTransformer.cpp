@@ -437,7 +437,6 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
       // so break out after printing a warning.
       auto FirstLE = FI.OptLineTable->first();
       if (FirstLE && *FirstLE == LE)
-        // if (Log && !Gsym.isQuiet()) { TODO <-- This looks weird
         Out.Report("Duplicate line table detected", [&](raw_ostream &OS) {
           OS << "warning: duplicate line table detected for DIE:\n";
           Die.dump(OS, 0, DIDumpOptions::getForSingleDIE());
@@ -530,18 +529,16 @@ void DwarfTransformer::handleDie(OutputAggregator &Out, CUInfo &CUI,
         // and the debug info wasn't able to be stripped from the DWARF. If
         // the LowPC isn't zero or -1, then we should emit an error.
         if (Range.LowPC != 0) {
-          if (!Gsym.isQuiet()) {
-            // Unexpected invalid address, emit a warning
-            Out.Report("Address range starts outside executable section",
-                       [&](raw_ostream &OS) {
-                         OS << "warning: DIE has an address range whose "
-                               "start address "
-                               "is not in any executable sections ("
-                            << *Gsym.GetValidTextRanges()
-                            << ") and will not be processed:\n";
-                         Die.dump(OS, 0, DIDumpOptions::getForSingleDIE());
-                       });
-          }
+          // Unexpected invalid address, emit a warning
+          Out.Report("Address range starts outside executable section",
+                     [&](raw_ostream &OS) {
+                       OS << "warning: DIE has an address range whose "
+                             "start address "
+                             "is not in any executable sections ("
+                          << *Gsym.GetValidTextRanges()
+                          << ") and will not be processed:\n";
+                       Die.dump(OS, 0, DIDumpOptions::getForSingleDIE());
+                     });
         }
         break;
       }
@@ -569,7 +566,7 @@ void DwarfTransformer::handleDie(OutputAggregator &Out, CUInfo &CUI,
         // information object, we will know if we got anything valid from the
         // debug info.
         if (FI.Inline->Children.empty()) {
-          if (WarnIfEmpty && !Gsym.isQuiet())
+          if (WarnIfEmpty)
             Out.Report("DIE contains inline functions with no valid ranges",
                        [&](raw_ostream &OS) {
                          OS << "warning: DIE contains inline function "
@@ -653,10 +650,9 @@ void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
 Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
   size_t NumBefore = Gsym.getNumFunctionInfos();
   auto getDie = [&](DWARFUnit &DwarfUnit) -> DWARFDie {
-    DWARFDie ReturnDie = DwarfUnit.getUnitDIE(false);
     // Apple uses DW_AT_GNU_dwo_id for things other than split DWARF.
     if (IsMachO)
-      return ReturnDie;
+      return DwarfUnit.getUnitDIE(false);
 
     if (DwarfUnit.getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit.getNonSkeletonUnitDIE(false).getDwarfUnit();
@@ -673,10 +669,10 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
                  << DWOName << "\n";
             });
       else {
-        ReturnDie = DWOCU->getUnitDIE(false);
+        return DWOCU->getUnitDIE(false);
       }
     }
-    return ReturnDie;
+    return DwarfUnit.getUnitDIE(false);
   };
   if (NumThreads == 1) {
     // Parse all DWARF data from this thread, use the same string/file table
@@ -713,7 +709,8 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
         pool.async([this, CUI, &LogMutex, &Out, Die]() mutable {
           std::string storage;
           raw_string_ostream StrStream(storage);
-          OutputAggregator ThreadOut(Out.GetOS() ? &StrStream : nullptr);
+          OutputAggregator ThreadOut(Out.GetOS() ? &StrStream : nullptr,
+                                     Out.IsQuiet());
           handleDie(ThreadOut, CUI, Die);
           // Print ThreadLogStorage lines into an actual stream under a lock
           std::lock_guard<std::mutex> guard(LogMutex);

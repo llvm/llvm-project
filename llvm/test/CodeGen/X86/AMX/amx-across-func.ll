@@ -105,6 +105,7 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; O0-NEXT:    andq $-1024, %rsp # imm = 0xFC00
 ; O0-NEXT:    subq $8192, %rsp # imm = 0x2000
 ; O0-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; O0-NEXT:    # kill: def $zmm0 killed $xmm0
 ; O0-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movw %si, %cx
@@ -338,6 +339,7 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; O0-NEXT:    andq $-1024, %rsp # imm = 0xFC00
 ; O0-NEXT:    subq $4096, %rsp # imm = 0x1000
 ; O0-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; O0-NEXT:    # kill: def $zmm0 killed $xmm0
 ; O0-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -557,6 +559,7 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; O0-NEXT:    andq $-1024, %rsp # imm = 0xFC00
 ; O0-NEXT:    subq $3072, %rsp # imm = 0xC00
 ; O0-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; O0-NEXT:    # kill: def $zmm0 killed $xmm0
 ; O0-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill

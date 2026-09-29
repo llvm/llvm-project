@@ -722,8 +722,8 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
       // Create placeholder modules for any modules we couldn't load from disk
       // or from memory.
       ModuleSpec module_spec(so_entry.file_spec, target.GetArchitecture());
-      if (UUID uuid = m_process->FindModuleUUID(so_entry.file_spec.GetPath()))
-        module_spec.GetUUID() = uuid;
+      module_spec.SetLoadAddress(so_entry.base_addr);
+      m_process->FindModuleUUID(module_spec);
       module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
           module_spec, so_entry.base_addr, 512);
       bool load_addr_changed = false;
@@ -997,6 +997,11 @@ void DynamicLoaderPOSIXDYLD::ResolveExecutableModule(
 
   ModuleSpec module_spec(process_info.GetExecutableFile(),
                          process_info.GetArchitecture());
+  // See if the process has UUID info for the executable. If this is a core
+  // file we really want the UUID in the module spec so we don't load a
+  // random executable with the same name from the current system and ignore
+  // the required UUID.
+  m_process->FindModuleUUID(module_spec);
   if (module_sp && module_sp->MatchesModuleSpec(module_spec))
     return;
 

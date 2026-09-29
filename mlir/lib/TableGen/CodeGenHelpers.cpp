@@ -157,18 +157,16 @@ std::string mlir::tblgen::buildErrorStreamingString(
 
     os << " << " << tgfmt(var, &ctx);
 
-    if (rest.empty())
-      break;
-
-    split = rest.split("{{");
-    if (split.second.empty() &&
-        errorStreamType == ErrorStreamType::InsideOpError) {
+    if (errorStreamType == ErrorStreamType::InsideOpError) {
       // To enable having part of string post, this adds a parenthesis before
       // the last string segment to match the existing one.
-      os << " << (\"" << split.first;
+      os << " << (\"";
     } else {
-      os << " << \"" << split.first;
+      os << " << \"";
     }
+
+    split = rest.split("{{");
+    os << split.first;
     msg = split.second;
   }
 
@@ -244,7 +242,7 @@ static ::llvm::LogicalResult {0}(
     ::llvm::StringRef successorName, unsigned successorIndex) {
   if (!({1})) {
     return op->emitOpError("successor #") << successorIndex << " ('"
-        << successorName << ")' failed to verify constraint: {2}";
+        << successorName << "') failed to verify constraint: {2}";
   }
   return ::mlir::success();
 }

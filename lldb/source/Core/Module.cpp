@@ -96,10 +96,7 @@ static ModuleCollection &GetModuleCollection() {
   // it for now.  If we decide this is a big problem we can introduce a
   // Finalize method that will tear everything down in a predictable order.
 
-  static ModuleCollection *g_module_collection = nullptr;
-  if (g_module_collection == nullptr)
-    g_module_collection = new ModuleCollection();
-
+  static ModuleCollection *g_module_collection = new ModuleCollection();
   return *g_module_collection;
 }
 
@@ -109,9 +106,8 @@ std::recursive_mutex &Module::GetAllocationModuleCollectionMutex() {
   // will tear itself down before the "g_module_collection_mutex" below will.
   // So we leak a Mutex object below to safeguard against that
 
-  static std::recursive_mutex *g_module_collection_mutex = nullptr;
-  if (g_module_collection_mutex == nullptr)
-    g_module_collection_mutex = new std::recursive_mutex; // NOTE: known leak
+  static std::recursive_mutex *g_module_collection_mutex =
+      new std::recursive_mutex; // NOTE: known leak
   return *g_module_collection_mutex;
 }
 
@@ -626,10 +622,13 @@ Module::LookupInfo::LookupInfo(const LookupInfo &lookup_info,
       m_language(lookup_info.GetLanguageType()),
       m_name_type_mask(lookup_info.GetNameTypeMask()) {}
 
-Module::LookupInfo::LookupInfo(ConstString name, ConstString lookup_name,
+Module::LookupInfo::LookupInfo(ConstString name,
+                               ConstString lookup_name_override,
                                FunctionNameType name_type_mask,
                                LanguageType lang_type)
-    : m_name(name), m_lookup_name(lookup_name), m_language(lang_type) {
+    : m_name(name),
+      m_lookup_name(lookup_name_override ? lookup_name_override : name),
+      m_language(lang_type) {
   std::optional<ConstString> basename;
   Language *lang = Language::FindPlugin(lang_type);
 
@@ -670,7 +669,7 @@ Module::LookupInfo::LookupInfo(ConstString name, ConstString lookup_name,
     }
   }
 
-  if (basename) {
+  if (basename && !lookup_name_override) {
     // The name supplied was incomplete for lookup purposes. For example, in C++
     // we may have gotten something like "a::count". In this case, we want to do
     // a lookup on the basename "count" and then make sure any matching results
@@ -701,12 +700,11 @@ std::vector<Module::LookupInfo> Module::LookupInfo::MakeLookupInfos(
       lang_types = {eLanguageTypeObjC, eLanguageTypeC_plus_plus};
   }
 
-  ConstString lookup_name = lookup_name_override ? lookup_name_override : name;
-
   std::vector<Module::LookupInfo> infos;
   infos.reserve(lang_types.size());
   for (LanguageType lang_type : lang_types) {
-    Module::LookupInfo info(name, lookup_name, name_type_mask, lang_type);
+    Module::LookupInfo info(name, lookup_name_override, name_type_mask,
+                            lang_type);
     infos.push_back(info);
   }
   return infos;
@@ -1041,8 +1039,8 @@ void Module::GetDescription(llvm::raw_ostream &s,
   }
 
   if (level == eDescriptionLevelBrief) {
-    const char *filename = m_file.GetFilename().GetCString();
-    if (filename)
+    llvm::StringRef filename = m_file.GetFilename();
+    if (!filename.empty())
       s << filename;
   } else {
     char path[PATH_MAX];
@@ -1070,8 +1068,8 @@ bool Module::FileHasChanged() const {
 
 void Module::ReportWarningOptimization(
     std::optional<lldb::user_id_t> debugger_id) {
-  ConstString file_name = GetFileSpec().GetFilename();
-  if (file_name.IsEmpty())
+  llvm::StringRef file_name = GetFileSpec().GetFilename();
+  if (file_name.empty())
     return;
 
   StreamString ss;
@@ -1183,7 +1181,7 @@ ObjectFile *Module::GetObjectFile() {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_did_load_objfile.load()) {
       LLDB_SCOPED_TIMERF("Module::GetObjectFile () module = %s",
-                         GetFileSpec().GetFilename().AsCString(""));
+                         GetFileSpec().GetFilename().str().c_str());
       lldb::offset_t data_offset = 0;
       lldb::offset_t file_size = 0;
 
@@ -1221,10 +1219,12 @@ ObjectFile *Module::GetObjectFile() {
 }
 
 SectionList *Module::GetSectionList() {
-  // Populate m_sections_up with sections from objfile.
+  // Guard the lazy build with m_sections_mutex rather than m_mutex:
+  // Module::PreloadSymbols holds m_mutex across the parallel DWARF index, whose
+  // worker threads re-enter GetSectionList, so taking m_mutex here deadlocks.
+  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
   if (!m_sections_up) {
-    ObjectFile *obj_file = GetObjectFile();
-    if (obj_file != nullptr)
+    if (ObjectFile *obj_file = GetObjectFile())
       obj_file->CreateSections(*GetUnifiedSectionList());
   }
   return m_sections_up.get();
@@ -1334,6 +1334,9 @@ void Module::FindSymbolsMatchingRegExAndType(
 }
 
 void Module::PreloadSymbols() {
+  if (m_did_preload_symbols.exchange(true))
+    return;
+
   LockedPtr<SymbolFile> sym_file = GetSymbolFileLocked();
   if (!sym_file)
     return;
@@ -1407,6 +1410,7 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
   m_symfile_spec = file;
   m_symfile_up.reset();
   m_did_load_symfile = false;
+  m_did_preload_symbols = false;
 }
 
 bool Module::IsExecutable() {

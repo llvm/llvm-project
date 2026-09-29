@@ -25,7 +25,7 @@
 namespace llvm {
 namespace mca {
 
-class RetireStage final : public Stage {
+class LLVM_ABI RetireStage final : public Stage {
   // Owner will go away when we move listeners/eventing to the stages.
   RetireControlUnit &RCU;
   RegisterFile &PRF;

@@ -112,10 +112,10 @@ default:
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 600}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 2, i32 3}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 429496730, i32 644245095}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 1717986918, i32 -1717986918}
 ; CHECK: [[PROF3]] = !{!"function_entry_count", i64 800}
 ; CHECK: [[PROF4]] = !{!"branch_weights", i32 2, i32 3, i32 5}
-; CHECK: [[PROF5]] = !{!"branch_weights", i32 214748365, i32 858993459}
+; CHECK: [[PROF5]] = !{!"branch_weights", i32 858993460, i32 -858993460}
 ; CHECK: [[PROF6]] = !{!"function_entry_count", i64 300}
-; CHECK: [[PROF7]] = !{!"branch_weights", i32 751619277, i32 322122547}
+; CHECK: [[PROF7]] = !{!"branch_weights", i32 -1288490188, i32 1288490188}
 ;.

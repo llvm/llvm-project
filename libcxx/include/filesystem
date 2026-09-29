@@ -568,14 +568,6 @@ inline constexpr bool std::ranges::enable_view<std::filesystem::recursive_direct
 #    pragma GCC system_header
 #  endif
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <concepts>
-#    include <cstdlib>
-#    include <cstring>
-#    include <iosfwd>
-#    include <new>
-#    include <system_error>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_FILESYSTEM

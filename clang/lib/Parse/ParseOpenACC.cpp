@@ -656,9 +656,9 @@ Parser::OpenACCClauseParseResult Parser::OpenACCSuccess(OpenACCClause *Clause) {
 
 ExprResult Parser::ParseOpenACCConditionExpr() {
   // FIXME: It isn't clear if the spec saying 'condition' means the same as
-  // it does in an if/while/etc (See ParseCXXCondition), however as it was
-  // written with Fortran/C in mind, we're going to assume it just means an
-  // 'expression evaluating to boolean'.
+  // it does in an if/while/etc (See ParseCondition), however as it was written
+  // with Fortran/C in mind, we're going to assume it just means an 'expression
+  // evaluating to boolean'.
   ExprResult ER = ParseExpression();
 
   if (!ER.isUsable())
@@ -1682,7 +1682,9 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
         getActions().OpenACC(), DirInfo.DirKind, DirInfo.DirLoc, {},
         DirInfo.Clauses);
     ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
-    ParseScope ACCScope(this, getOpenACCScopeFlags(DirInfo.DirKind));
+
+    unsigned scopeFlags = getOpenACCScopeFlags(DirInfo.DirKind);
+    ParseScope ACCScope(this, scopeFlags, /*EnteredScope=*/scopeFlags != 0);
 
     AssocStmt = getActions().OpenACC().ActOnAssociatedStmt(
         DirInfo.StartLoc, DirInfo.DirKind, DirInfo.AtomicKind, DirInfo.Clauses,

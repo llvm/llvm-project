@@ -115,12 +115,15 @@ define void @struct_return_f32_widen_rt_checks(ptr %in, ptr writeonly %out_a, pt
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[OUT_B1]], [[OUT_A2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[TMP0]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP10]], 7
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[OUT_A2]], [[IN3]]
-; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i32 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP1]], 1
+; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i32 [[TMP11]], 7
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[OUT_B1]], [[IN3]]
-; CHECK-NEXT:    [[DIFF_CHECK5:%.*]] = icmp ult i32 [[TMP2]], 8
+; CHECK-NEXT:    [[TMP12:%.*]] = sub i32 [[TMP2]], 1
+; CHECK-NEXT:    [[DIFF_CHECK5:%.*]] = icmp ult i32 [[TMP12]], 7
 ; CHECK-NEXT:    [[CONFLICT_RDX6:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK5]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX6]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

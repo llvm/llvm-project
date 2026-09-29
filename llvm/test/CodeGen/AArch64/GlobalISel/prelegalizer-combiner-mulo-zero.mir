@@ -14,18 +14,18 @@ body:             |
     ; CHECK-LABEL: name: umulo_zero
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %mulo:_(s32) = COPY %zero(s32)
-    ; CHECK-NEXT: %carry:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %carry_wide:_(s32) = G_ZEXT %carry(s1)
-    ; CHECK-NEXT: $w0 = COPY %mulo(s32)
-    ; CHECK-NEXT: $w1 = COPY %carry_wide(s32)
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %mulo:_(i32) = COPY %zero(i32)
+    ; CHECK-NEXT: %carry:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %carry_wide:_(i32) = G_ZEXT %carry(i1)
+    ; CHECK-NEXT: $w0 = COPY %mulo(i32)
+    ; CHECK-NEXT: $w1 = COPY %carry_wide(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %lhs:_(s32) = COPY $w0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %mulo:_(s32), %carry:_(s1) = G_UMULO %lhs, %zero
-    %carry_wide:_(s32) = G_ZEXT %carry(s1)
-    $w0 = COPY %mulo(s32)
+    %lhs:_(i32) = COPY $w0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %mulo:_(i32), %carry:_(i1) = G_UMULO %lhs, %zero
+    %carry_wide:_(i32) = G_ZEXT %carry(i1)
+    $w0 = COPY %mulo(i32)
     $w1 = COPY %carry_wide
     RET_ReallyLR implicit $w0
 ...
@@ -38,18 +38,18 @@ body:             |
     ; CHECK-LABEL: name: smulo_zero
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %mulo:_(s32) = COPY %zero(s32)
-    ; CHECK-NEXT: %carry:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %carry_wide:_(s32) = G_ZEXT %carry(s1)
-    ; CHECK-NEXT: $w0 = COPY %mulo(s32)
-    ; CHECK-NEXT: $w1 = COPY %carry_wide(s32)
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %mulo:_(i32) = COPY %zero(i32)
+    ; CHECK-NEXT: %carry:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %carry_wide:_(i32) = G_ZEXT %carry(i1)
+    ; CHECK-NEXT: $w0 = COPY %mulo(i32)
+    ; CHECK-NEXT: $w1 = COPY %carry_wide(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %lhs:_(s32) = COPY $w0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %mulo:_(s32), %carry:_(s1) = G_SMULO %lhs, %zero
-    %carry_wide:_(s32) = G_ZEXT %carry(s1)
-    $w0 = COPY %mulo(s32)
+    %lhs:_(i32) = COPY $w0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %mulo:_(i32), %carry:_(i1) = G_SMULO %lhs, %zero
+    %carry_wide:_(i32) = G_ZEXT %carry(i1)
+    $w0 = COPY %mulo(i32)
     $w1 = COPY %carry_wide
     RET_ReallyLR implicit $w0
 ...
@@ -62,18 +62,18 @@ body:             |
     ; CHECK-LABEL: name: wrong_cst
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %lhs:_(s32) = COPY $w0
-    ; CHECK-NEXT: %not_zero:_(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: %mulo:_(s32), %carry:_(s1) = G_UMULO %lhs, %not_zero
-    ; CHECK-NEXT: %carry_wide:_(s32) = G_ZEXT %carry(s1)
-    ; CHECK-NEXT: $w0 = COPY %mulo(s32)
-    ; CHECK-NEXT: $w1 = COPY %carry_wide(s32)
+    ; CHECK-NEXT: %lhs:_(i32) = COPY $w0
+    ; CHECK-NEXT: %not_zero:_(i32) = G_CONSTANT i32 3
+    ; CHECK-NEXT: %mulo:_(i32), %carry:_(i1) = G_UMULO %lhs, %not_zero
+    ; CHECK-NEXT: %carry_wide:_(i32) = G_ZEXT %carry(i1)
+    ; CHECK-NEXT: $w0 = COPY %mulo(i32)
+    ; CHECK-NEXT: $w1 = COPY %carry_wide(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %lhs:_(s32) = COPY $w0
-    %not_zero:_(s32) = G_CONSTANT i32 3
-    %mulo:_(s32), %carry:_(s1) = G_UMULO %lhs, %not_zero
-    %carry_wide:_(s32) = G_ZEXT %carry(s1)
-    $w0 = COPY %mulo(s32)
+    %lhs:_(i32) = COPY $w0
+    %not_zero:_(i32) = G_CONSTANT i32 3
+    %mulo:_(i32), %carry:_(i1) = G_UMULO %lhs, %not_zero
+    %carry_wide:_(i32) = G_ZEXT %carry(i1)
+    $w0 = COPY %mulo(i32)
     $w1 = COPY %carry_wide
     RET_ReallyLR implicit $w0
 ...
@@ -86,23 +86,23 @@ body:             |
     ; CHECK-LABEL: name: umulo_vec_zero
     ; CHECK: liveins: $q0, $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK-NEXT: %mulo:_(<2 x s64>) = COPY %zero_vec(<2 x s64>)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %carry:_(<2 x s1>) = G_BUILD_VECTOR [[C]](s1), [[C]](s1)
-    ; CHECK-NEXT: %carry_elt_0:_(s1) = G_EXTRACT_VECTOR_ELT %carry(<2 x s1>), %zero(s64)
-    ; CHECK-NEXT: %carry_wide:_(s64) = G_ZEXT %carry_elt_0(s1)
-    ; CHECK-NEXT: $q0 = COPY %mulo(<2 x s64>)
-    ; CHECK-NEXT: $x0 = COPY %carry_wide(s64)
+    ; CHECK-NEXT: %zero:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x i64>) = G_BUILD_VECTOR %zero(i64), %zero(i64)
+    ; CHECK-NEXT: %mulo:_(<2 x i64>) = COPY %zero_vec(<2 x i64>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %carry:_(<2 x i1>) = G_BUILD_VECTOR [[C]](i1), [[C]](i1)
+    ; CHECK-NEXT: %carry_elt_0:_(i1) = G_EXTRACT_VECTOR_ELT %carry(<2 x i1>), %zero(i64)
+    ; CHECK-NEXT: %carry_wide:_(i64) = G_ZEXT %carry_elt_0(i1)
+    ; CHECK-NEXT: $q0 = COPY %mulo(<2 x i64>)
+    ; CHECK-NEXT: $x0 = COPY %carry_wide(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:_(<2 x s64>) = COPY $q0
-    %zero:_(s64) = G_CONSTANT i64 0
-    %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
-    %mulo:_(<2 x s64>), %carry:_(<2 x s1>) = G_UMULO %lhs, %zero_vec
-    %carry_elt_0:_(s1) = G_EXTRACT_VECTOR_ELT %carry:_(<2 x s1>), %zero:_(s64)
-    %carry_wide:_(s64) = G_ZEXT %carry_elt_0
-    $q0 = COPY %mulo(<2 x s64>)
+    %lhs:_(<2 x i64>) = COPY $q0
+    %zero:_(i64) = G_CONSTANT i64 0
+    %zero_vec:_(<2 x i64>) = G_BUILD_VECTOR %zero, %zero
+    %mulo:_(<2 x i64>), %carry:_(<2 x i1>) = G_UMULO %lhs, %zero_vec
+    %carry_elt_0:_(i1) = G_EXTRACT_VECTOR_ELT %carry:_(<2 x i1>), %zero:_(i64)
+    %carry_wide:_(i64) = G_ZEXT %carry_elt_0
+    $q0 = COPY %mulo(<2 x i64>)
     $x0 = COPY %carry_wide
     RET_ReallyLR implicit $q0
 ...
@@ -115,22 +115,22 @@ body:             |
     ; CHECK-LABEL: name: smulo_vec_zero
     ; CHECK: liveins: $q0, $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK-NEXT: %mulo:_(<2 x s64>) = COPY %zero_vec(<2 x s64>)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: %carry:_(<2 x s1>) = G_BUILD_VECTOR [[C]](s1), [[C]](s1)
-    ; CHECK-NEXT: %carry_elt_0:_(s1) = G_EXTRACT_VECTOR_ELT %carry(<2 x s1>), %zero(s64)
-    ; CHECK-NEXT: %carry_wide:_(s64) = G_ZEXT %carry_elt_0(s1)
-    ; CHECK-NEXT: $q0 = COPY %mulo(<2 x s64>)
-    ; CHECK-NEXT: $x0 = COPY %carry_wide(s64)
+    ; CHECK-NEXT: %zero:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x i64>) = G_BUILD_VECTOR %zero(i64), %zero(i64)
+    ; CHECK-NEXT: %mulo:_(<2 x i64>) = COPY %zero_vec(<2 x i64>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 false
+    ; CHECK-NEXT: %carry:_(<2 x i1>) = G_BUILD_VECTOR [[C]](i1), [[C]](i1)
+    ; CHECK-NEXT: %carry_elt_0:_(i1) = G_EXTRACT_VECTOR_ELT %carry(<2 x i1>), %zero(i64)
+    ; CHECK-NEXT: %carry_wide:_(i64) = G_ZEXT %carry_elt_0(i1)
+    ; CHECK-NEXT: $q0 = COPY %mulo(<2 x i64>)
+    ; CHECK-NEXT: $x0 = COPY %carry_wide(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %lhs:_(<2 x s64>) = COPY $q0
-    %zero:_(s64) = G_CONSTANT i64 0
-    %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
-    %mulo:_(<2 x s64>), %carry:_(<2 x s1>) = G_SMULO %lhs, %zero_vec
-    %carry_elt_0:_(s1) = G_EXTRACT_VECTOR_ELT %carry:_(<2 x s1>), %zero:_(s64)
-    %carry_wide:_(s64) = G_ZEXT %carry_elt_0
-    $q0 = COPY %mulo(<2 x s64>)
+    %lhs:_(<2 x i64>) = COPY $q0
+    %zero:_(i64) = G_CONSTANT i64 0
+    %zero_vec:_(<2 x i64>) = G_BUILD_VECTOR %zero, %zero
+    %mulo:_(<2 x i64>), %carry:_(<2 x i1>) = G_SMULO %lhs, %zero_vec
+    %carry_elt_0:_(i1) = G_EXTRACT_VECTOR_ELT %carry:_(<2 x i1>), %zero:_(i64)
+    %carry_wide:_(i64) = G_ZEXT %carry_elt_0
+    $q0 = COPY %mulo(<2 x i64>)
     $x0 = COPY %carry_wide
     RET_ReallyLR implicit $q0

@@ -45,6 +45,7 @@ class EarliestEscapeAnalysis;
 class ExtractValueInst;
 class Function;
 class FunctionPass;
+class GVNLegacyPass;
 class GetElementPtrInst;
 class ImplicitControlFlowTracking;
 class LoadInst;
@@ -61,15 +62,6 @@ class PHINode;
 class TargetLibraryInfo;
 class Value;
 class IntrinsicInst;
-/// A private "module" namespace for types and utilities used by GVN. These
-/// are implementation details and should not be used by clients.
-namespace LLVM_LIBRARY_VISIBILITY_NAMESPACE gvn {
-
-struct AvailableValue;
-struct AvailableValueInBlock;
-class GVNLegacyPass;
-
-} // end namespace gvn
 
 /// A set of parameters to control various transforms performed by GVN pass.
 //  Each of the optional boolean parameters can be set to:
@@ -124,6 +116,84 @@ struct GVNOptions {
   }
 };
 
+/// A mapping from value numbers to lists of Value*'s that
+/// have that value number. Use getLeaders to query it.
+class GVNLeaderMap {
+public:
+  struct LeaderTableEntry {
+    // Use AssertingVH here to catch dangling Value*'s in the leader table.
+    // Will crash if the value gets deleted before the AssertingVH is
+    // destroyed.
+    AssertingVH<Value> Val;
+    const BasicBlock *BB;
+    LeaderTableEntry(Value *V, const BasicBlock *BB) : Val(V), BB(BB) {}
+  };
+
+private:
+  struct LeaderListNode {
+    LeaderTableEntry Entry;
+    LeaderListNode *Next;
+    LeaderListNode(Value *V, const BasicBlock *BB, LeaderListNode *Next)
+        : Entry(V, BB), Next(Next) {}
+  };
+  DenseMap<uint32_t, LeaderListNode> NumToLeaders;
+  BumpPtrAllocator TableAllocator;
+
+public:
+  class leader_iterator {
+    const LeaderListNode *Current;
+
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = const LeaderTableEntry;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+    leader_iterator(const LeaderListNode *C) : Current(C) {}
+    leader_iterator &operator++() {
+      assert(Current && "Dereferenced end of leader list!");
+      Current = Current->Next;
+      return *this;
+    }
+    bool operator==(const leader_iterator &Other) const {
+      return Current == Other.Current;
+    }
+    bool operator!=(const leader_iterator &Other) const {
+      return Current != Other.Current;
+    }
+    reference operator*() const { return Current->Entry; }
+  };
+
+  iterator_range<leader_iterator> getLeaders(uint32_t N) {
+    auto I = NumToLeaders.find(N);
+    if (I == NumToLeaders.end()) {
+      return iterator_range(leader_iterator(nullptr), leader_iterator(nullptr));
+    }
+
+    return iterator_range(leader_iterator(&I->second),
+                          leader_iterator(nullptr));
+  }
+
+  LLVM_ABI void insert(uint32_t N, Value *V, const BasicBlock *BB);
+  LLVM_ABI void erase(uint32_t N, Instruction *I, const BasicBlock *BB);
+  void clear() {
+    // Manually destroy non-head nodes (in BumpPtrAllocator) to properly
+    // clean up AssertingVH handles before Reset(). Head nodes are destroyed
+    // by NumToLeaders.clear() below.
+    for (auto &[_, HeadNode] : NumToLeaders) {
+      LeaderListNode *N = HeadNode.Next;
+      while (N) {
+        auto *Next = N->Next;
+        N->~LeaderListNode();
+        N = Next;
+      }
+    }
+    NumToLeaders.clear();
+    TableAllocator.Reset();
+  }
+};
+
 /// The core GVN pass object.
 ///
 /// FIXME: We should have a good summary of the GVN algorithm implemented by
@@ -133,6 +203,8 @@ class GVNPass : public OptionalPassInfoMixin<GVNPass> {
 
 public:
   struct Expression;
+  struct AvailableValue;
+  struct AvailableValueInBlock;
 
   GVNPass(GVNOptions Options = {}) : Options(Options) {}
 
@@ -198,16 +270,18 @@ public:
     Expression createExpr(Instruction *I);
     Expression createCmpExpr(unsigned Opcode, CmpInst::Predicate Predicate,
                              Value *LHS, Value *RHS);
-    Expression createExtractvalueExpr(ExtractValueInst *EI);
+    Expression createExtractValueExpr(ExtractValueInst *EI);
     Expression createGEPExpr(GetElementPtrInst *GEP);
     uint32_t lookupOrAddCall(CallInst *C);
     uint32_t computeLoadStoreVN(Instruction *I);
     uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
-                              uint32_t Num, GVNPass &GVN);
+                              uint32_t Num, GVNLeaderMap &LeaderTable);
     bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,
-                          const BasicBlock *PhiBlock, GVNPass &GVN);
+                          const BasicBlock *PhiBlock,
+                          GVNLeaderMap &LeaderTable);
     std::pair<uint32_t, bool> assignExpNewValueNum(Expression &Exp);
-    bool areAllValsInBB(uint32_t Num, const BasicBlock *BB, GVNPass &GVN);
+    bool areAllValsInBB(uint32_t Num, const BasicBlock *BB,
+                        GVNLeaderMap &LeaderTable);
     void addMemoryStateToExp(Instruction *I, Expression &Exp);
 
   public:
@@ -222,9 +296,10 @@ public:
     LLVM_ABI uint32_t lookup(Value *V, bool Verify = true) const;
     LLVM_ABI uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
                                      Value *LHS, Value *RHS);
+    LLVM_ABI uint32_t lookupPtrToInt(Value *Ptr, Type *Ty);
     LLVM_ABI uint32_t phiTranslate(const BasicBlock *BB,
                                    const BasicBlock *PhiBlock, uint32_t Num,
-                                   GVNPass &GVN);
+                                   GVNLeaderMap &LeaderTable);
     LLVM_ABI void eraseTranslateCacheEntry(uint32_t Num,
                                            const BasicBlock &CurrBlock);
     LLVM_ABI bool exists(Value *V) const;
@@ -247,7 +322,7 @@ public:
   };
 
 private:
-  friend class gvn::GVNLegacyPass;
+  friend class GVNLegacyPass;
   friend struct DenseMapInfo<Expression>;
 
   MemoryDependenceResults *MD = nullptr;
@@ -263,85 +338,7 @@ private:
 
   ValueTable VN;
 
-  /// A mapping from value numbers to lists of Value*'s that
-  /// have that value number.  Use findLeader to query it.
-  class LeaderMap {
-  public:
-    struct LeaderTableEntry {
-      // Use AssertingVH here to catch dangling Value*'s in the leader table.
-      // Will crash if the value gets deleted before the AssertingVH is
-      // destroyed.
-      AssertingVH<Value> Val;
-      const BasicBlock *BB;
-      LeaderTableEntry(Value *V, const BasicBlock *BB) : Val(V), BB(BB) {}
-    };
-
-  private:
-    struct LeaderListNode {
-      LeaderTableEntry Entry;
-      LeaderListNode *Next;
-      LeaderListNode(Value *V, const BasicBlock *BB, LeaderListNode *Next)
-          : Entry(V, BB), Next(Next) {}
-    };
-    DenseMap<uint32_t, LeaderListNode> NumToLeaders;
-    BumpPtrAllocator TableAllocator;
-
-  public:
-    class leader_iterator {
-      const LeaderListNode *Current;
-
-    public:
-      using iterator_category = std::forward_iterator_tag;
-      using value_type = const LeaderTableEntry;
-      using difference_type = std::ptrdiff_t;
-      using pointer = value_type *;
-      using reference = value_type &;
-
-      leader_iterator(const LeaderListNode *C) : Current(C) {}
-      leader_iterator &operator++() {
-        assert(Current && "Dereferenced end of leader list!");
-        Current = Current->Next;
-        return *this;
-      }
-      bool operator==(const leader_iterator &Other) const {
-        return Current == Other.Current;
-      }
-      bool operator!=(const leader_iterator &Other) const {
-        return Current != Other.Current;
-      }
-      reference operator*() const { return Current->Entry; }
-    };
-
-    iterator_range<leader_iterator> getLeaders(uint32_t N) {
-      auto I = NumToLeaders.find(N);
-      if (I == NumToLeaders.end()) {
-        return iterator_range(leader_iterator(nullptr),
-                              leader_iterator(nullptr));
-      }
-
-      return iterator_range(leader_iterator(&I->second),
-                            leader_iterator(nullptr));
-    }
-
-    LLVM_ABI void insert(uint32_t N, Value *V, const BasicBlock *BB);
-    LLVM_ABI void erase(uint32_t N, Instruction *I, const BasicBlock *BB);
-    void clear() {
-      // Manually destroy non-head nodes (in BumpPtrAllocator) to properly
-      // clean up AssertingVH handles before Reset(). Head nodes are destroyed
-      // by NumToLeaders.clear() below.
-      for (auto &[_, HeadNode] : NumToLeaders) {
-        LeaderListNode *N = HeadNode.Next;
-        while (N) {
-          auto *Next = N->Next;
-          N->~LeaderListNode();
-          N = Next;
-        }
-      }
-      NumToLeaders.clear();
-      TableAllocator.Reset();
-    }
-  };
-  LeaderMap LeaderTable;
+  GVNLeaderMap LeaderTable;
 
   // Map the block to reversed postorder traversal number. It is used to
   // find back edge easily.
@@ -353,7 +350,7 @@ private:
   bool InvalidBlockRPONumbers = true;
 
   using LoadDepVect = SmallVector<NonLocalDepResult, 64>;
-  using AvailValInBlkVect = SmallVector<gvn::AvailableValueInBlock, 64>;
+  using AvailValInBlkVect = SmallVector<AvailableValueInBlock, 64>;
   using UnavailBlkVect = SmallVector<BasicBlock *, 64>;
 
   bool runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
@@ -368,6 +365,7 @@ private:
     Other = 0, // Unknown value.
     Def,       // Exactly overlapping locations.
     Clobber,   // Reaching value superset of needed bits.
+    Select,    // Reaching value is a select of two reaching addresses.
   };
 
   // Describe a memory location value, such that there exists a path to a point
@@ -378,6 +376,11 @@ private:
     const Value *Addr;
     Instruction *Inst;
     int32_t Offset;
+    // For DepKind::Select only: the condition and the two addresses referenced
+    // by the "true" and "false" side of the select-dependent load.
+    const Value *SelCond = nullptr;
+    const Value *SelTrueAddr = nullptr;
+    const Value *SelFalseAddr = nullptr;
 
     static ReachingMemVal getUnknown(BasicBlock *BB, const Value *Addr,
                                      Instruction *Inst = nullptr) {
@@ -391,6 +394,13 @@ private:
     static ReachingMemVal getClobber(const Value *Addr, Instruction *Inst,
                                      int32_t Offset = -1) {
       return {DepKind::Clobber, Inst->getParent(), Addr, Inst, Offset};
+    }
+
+    static ReachingMemVal getSelect(BasicBlock *BB, const Value *Cond,
+                                    const Value *TrueAddr,
+                                    const Value *FalseAddr) {
+      return {DepKind::Select, BB,       nullptr, nullptr, -1, Cond,
+              TrueAddr,        FalseAddr};
     }
   };
 
@@ -416,8 +426,8 @@ private:
 
   std::optional<GVNPass::ReachingMemVal>
   accessMayModifyLocation(MemoryAccess *ClobberMA, const MemoryLocation &Loc,
-                          bool IsInvariantLoad, BasicBlock *BB, MemorySSA &MSSA,
-                          BatchAAResults &AA);
+                          Align LoadAlign, bool IsInvariantLoad, BasicBlock *BB,
+                          MemorySSA &MSSA, BatchAAResults &AA);
 
   bool collectPredecessors(BasicBlock *BB, const PHITransAddr &Addr,
                            MemoryAccess *ClobberMA, DependencyBlockSet &Blocks,
@@ -440,14 +450,22 @@ private:
 
   /// Given a local dependency (Def or Clobber) determine if a value is
   /// available for the load.
-  std::optional<gvn::AvailableValue>
-  AnalyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
+  std::optional<AvailableValue>
+  analyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
                           Value *Address);
+
+  /// Given a select-dependency for the load (the load address is a select of
+  /// \p TrueAddr and \p FalseAddr guarded by \p Cond), determine whether a
+  /// value is available by finding dominating values for both addresses.  If
+  /// so, the load can be rematerialized as a select of those two values.
+  std::optional<AvailableValue>
+  analyzeSelectAvailability(LoadInst *Load, Value *Cond, Value *TrueAddr,
+                            Value *FalseAddr, Instruction *From);
 
   /// Given a list of non-local dependencies, determine if a value is
   /// available for the load in each specified block.  If it is, add it to
   /// ValuesPerBlock.  If not, add it to UnavailableBlocks.
-  void AnalyzeLoadAvailability(LoadInst *Load,
+  void analyzeLoadAvailability(LoadInst *Load,
                                SmallVectorImpl<ReachingMemVal> &Deps,
                                AvailValInBlkVect &ValuesPerBlock,
                                UnavailBlkVect &UnavailableBlocks);
@@ -457,7 +475,7 @@ private:
   LoadInst *findLoadToHoistIntoPred(BasicBlock *Pred, BasicBlock *LoadBB,
                                     LoadInst *Load);
 
-  bool PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
+  bool performLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
                       UnavailBlkVect &UnavailableBlocks);
 
   /// Try to replace a load which executes on each loop iteraiton with Phi
@@ -476,7 +494,6 @@ private:
   // Other helper routines.
   bool processInstruction(Instruction *I);
   bool processBlock(BasicBlock *BB);
-  void dump(DenseMap<uint32_t, Value *> &Map) const;
   bool iterateOnFunction(Function &F);
   bool performPRE(Function &F);
   bool performScalarPRE(Instruction *I);

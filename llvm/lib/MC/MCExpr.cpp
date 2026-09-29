@@ -218,7 +218,7 @@ const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx,
 /* *** */
 
 MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, Spec specifier,
-                                 const MCAsmInfo *MAI, SMLoc Loc)
+                                 SMLoc Loc)
     : MCExpr(MCExpr::SymbolRef, Loc, specifier), Symbol(Symbol) {
   assert(Symbol);
 }
@@ -226,7 +226,7 @@ MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, Spec specifier,
 const MCSymbolRefExpr *MCSymbolRefExpr::create(const MCSymbol *Sym,
                                                uint16_t specifier,
                                                MCContext &Ctx, SMLoc Loc) {
-  return new (Ctx) MCSymbolRefExpr(Sym, specifier, &Ctx.getAsmInfo(), Loc);
+  return new (Ctx) MCSymbolRefExpr(Sym, specifier, Loc);
 }
 
 /* *** */

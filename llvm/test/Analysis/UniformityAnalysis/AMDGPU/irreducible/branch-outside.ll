@@ -1,4 +1,4 @@
-; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
 ; CHECK=LABEL: UniformityInfo for function 'basic':
 ; CHECK: CYCLES ASSUMED DIVERGENT:
@@ -39,7 +39,7 @@ exit:
 
 ; CHECK=LABEL: UniformityInfo for function 'nested':
 ; CHECK: CYCLES ASSUMED DIVERGENT:
-; CHECK:  depth=1: entries(P T) Q A C B
+; CHECK:  depth=1: entries(P T) Q A B C
 define amdgpu_kernel void @nested(i32 %a, i32 %b, i32 %c) {
 entry:
  %cond.uni = icmp slt i32 %a, 0

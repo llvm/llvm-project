@@ -23,12 +23,10 @@
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cinttypes>
 #include <cstdint>
 #include <string>
 
@@ -250,6 +248,11 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     if (const char *Name =
             Die.getAttributeValueAsReferencedDie(FormValue).getName(
                 DINameKind::LinkageName))
+      OS << Space << "\"" << Name << '\"';
+  } else if (Attr == DW_AT_property_forward) {
+    if (const char *Name =
+            Die.getAttributeValueAsReferencedDie(FormValue).getName(
+                DINameKind::ShortName))
       OS << Space << "\"" << Name << '\"';
   } else if (Attr == DW_AT_APPLE_property) {
     auto PropDIE = Die.getAttributeValueAsReferencedDie(FormValue);
@@ -481,13 +484,25 @@ bool DWARFDie::addressRangeContainsAddress(const uint64_t Address) const {
   return false;
 }
 
+// FIXME: should we return a structure akin to DISourceLanguageName here
+// encapsulates an unversioned (dwarf::SourceLanguage) and versioned
+// (dwarf::SourceLanguageName) language, and put the burden on the
+// user to determine which to use?
 std::optional<uint64_t> DWARFDie::getLanguage() const {
-  if (isValid()) {
-    if (std::optional<DWARFFormValue> LV =
-            U->getUnitDIE().find(dwarf::DW_AT_language))
-      return LV->getAsUnsignedConstant();
-  }
-  return std::nullopt;
+  if (!isValid())
+    return std::nullopt;
+
+  DWARFDie Unit = U->getUnitDIE();
+
+  if (std::optional<DWARFFormValue> LV = Unit.find(dwarf::DW_AT_language))
+    return LV->getAsUnsignedConstant();
+
+  uint16_t Name =
+      dwarf::toUnsigned(Unit.find(dwarf::DW_AT_language_name), /*Default=*/0);
+  uint32_t Version = dwarf::toUnsigned(Unit.find(dwarf::DW_AT_language_version),
+                                       /*Default=*/0);
+
+  return llvm::dwarf::toDW_LANG(static_cast<SourceLanguageName>(Name), Version);
 }
 
 Expected<DWARFLocationExpressionsVector>

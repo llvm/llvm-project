@@ -91,16 +91,16 @@ OptionCategory Retired("clangd flags no longer in use");
 const OptionCategory *ClangdCategories[] = {&Features, &Protocol,
                                             &CompileCommands, &Misc, &Retired};
 
+std::vector<const llvm::cl::Option *> RetiredOptions;
+
 template <typename T> class RetiredFlag {
   opt<T> Option;
 
 public:
   RetiredFlag(llvm::StringRef Name)
-      : Option(Name, cat(Retired), desc("Obsolete flag, ignored"), Hidden,
-               llvm::cl::callback([Name](const T &) {
-                 llvm::errs()
-                     << "The flag `-" << Name << "` is obsolete and ignored.\n";
-               })) {}
+      : Option(Name, cat(Retired), desc("Obsolete flag, ignored"), Hidden) {
+    RetiredOptions.push_back(&Option);
+  }
 };
 
 enum CompileArgsFrom { LSPCompileArgs, FilesystemCompileArgs };
@@ -798,6 +798,10 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   llvm::cl::HideUnrelatedOptions(ClangdCategories);
   llvm::cl::ParseCommandLineOptions(argc, argv, Overview, /*Errs=*/nullptr,
                                     /*VFS=*/nullptr, FlagsEnvVar);
+  for (const llvm::cl::Option *O : RetiredOptions)
+    if (O->getNumOccurrences())
+      llvm::errs() << "The flag `-" << O->ArgStr
+                   << "` is obsolete and ignored.\n";
   if (Test) {
     if (!Sync.getNumOccurrences())
       Sync = true;
@@ -912,6 +916,26 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     log("argv[{0}]: {1}", I, argv[I]);
   if (auto EnvFlags = llvm::sys::Process::GetEnv(FlagsEnvVar))
     log("{0}: {1}", FlagsEnvVar, *EnvFlags);
+  // Log environment variables that influence how clangd finds system headers.
+  // This helps diagnose missing-include issues, especially on Windows.
+  for (const char *EnvVar : {
+           // MSVC environment variables (set by vcvarsall.bat)
+           "INCLUDE",
+           "LIB",
+           "LIBPATH",
+           "CL",
+           "_CL_",
+           // GCC/Clang environment variables
+           "CPATH",
+           "C_INCLUDE_PATH",
+           "CPLUS_INCLUDE_PATH",
+           "OBJC_INCLUDE_PATH",
+           "LIBRARY_PATH",
+           "GCC_EXEC_PREFIX",
+       }) {
+    if (auto Val = llvm::sys::Process::GetEnv(EnvVar))
+      log("Env {0}: {1}", EnvVar, *Val);
+  }
 
   ClangdLSPServer::Options Opts;
   Opts.UseDirBasedCDB = (CompileArgsFrom == FilesystemCompileArgs);

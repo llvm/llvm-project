@@ -1645,10 +1645,10 @@ define <8 x i16> @umull_smaller_v8i16(<8 x i4> %src1, <8 x i16> %src2) {
 ;
 ; CHECK-SVE-LABEL: umull_smaller_v8i16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    movi v2.8b, #15
 ; CHECK-SVE-NEXT:    bic v1.8h, #255, lsl #8
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    and z0.b, z0.b, #0xf
 ; CHECK-SVE-NEXT:    xtn v1.8b, v1.8h
-; CHECK-SVE-NEXT:    and v0.8b, v0.8b, v2.8b
 ; CHECK-SVE-NEXT:    umull v0.8h, v0.8b, v1.8b
 ; CHECK-SVE-NEXT:    ret
 ;

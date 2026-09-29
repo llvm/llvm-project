@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
-// RUN:   -fgpu-rdc -std=c++11 -emit-llvm -o - -target-cpu gfx906 | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN:   -fgpu-rdc -std=c++11 -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
-// RUN:   -fgpu-rdc -std=c++11 -emit-llvm -o - -target-cpu gfx906 \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN:   -fgpu-rdc -std=c++11 -emit-llvm -o - \
 // RUN:   | FileCheck -check-prefix=NEG %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
-// RUN:   -std=c++11 -emit-llvm -o - -target-cpu gfx906 \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN:   -std=c++11 -emit-llvm -o - \
 // RUN:   | FileCheck -check-prefixes=NEG,NORDC %s
 
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -x hip %s \

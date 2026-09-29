@@ -47,14 +47,13 @@ define i64 @rotl_i64_const_shift(i64 %x) {
 define i16 @rotl_i16(i16 %x, i16 %z) {
 ; CHECK-LABEL: rotl_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi $1, $5, 15
-; CHECK-NEXT:    sllv $1, $4, $1
-; CHECK-NEXT:    negu $2, $5
-; CHECK-NEXT:    andi $2, $2, 15
-; CHECK-NEXT:    andi $3, $4, 65535
-; CHECK-NEXT:    srlv $2, $3, $2
+; CHECK-NEXT:    andi $1, $4, 65535
+; CHECK-NEXT:    sll $2, $4, 16
+; CHECK-NEXT:    or $1, $2, $1
+; CHECK-NEXT:    andi $2, $5, 15
+; CHECK-NEXT:    sllv $1, $1, $2
 ; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    or $2, $1, $2
+; CHECK-NEXT:    srl $2, $1, 16
   %f = call i16 @llvm.fshl.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f
 }
@@ -195,14 +194,12 @@ define i32 @rotr_i32_const_shift(i32 %x) {
 define i16 @rotr_i16(i16 %x, i16 %z) {
 ; CHECK-LABEL: rotr_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi $1, $5, 15
-; CHECK-NEXT:    andi $2, $4, 65535
-; CHECK-NEXT:    srlv $1, $2, $1
-; CHECK-NEXT:    negu $2, $5
-; CHECK-NEXT:    andi $2, $2, 15
-; CHECK-NEXT:    sllv $2, $4, $2
+; CHECK-NEXT:    andi $1, $4, 65535
+; CHECK-NEXT:    sll $2, $4, 16
+; CHECK-NEXT:    or $1, $2, $1
+; CHECK-NEXT:    andi $2, $5, 15
 ; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    or $2, $1, $2
+; CHECK-NEXT:    srlv $2, $1, $2
   %f = call i16 @llvm.fshr.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f
 }

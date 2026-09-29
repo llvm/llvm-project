@@ -86,6 +86,11 @@ public:
 
   const RISCVRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &RISCV::GPRRegClass;
+  }
+
   MCInst getNop() const override;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
@@ -176,6 +181,8 @@ public:
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
 
+  int getJumpTableIndex(const MachineInstr &MI) const override;
+
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
                                bool) const override;
@@ -256,6 +263,10 @@ public:
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      outliner::Candidate &C) const override;
+
+  void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator Iter, DebugLoc &DL,
+                          bool AllowSideEffects = true) const override;
 
   std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                            Register Reg) const override;
@@ -406,7 +417,8 @@ unsigned getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW);
 static constexpr int64_t VLMaxSentinel = -1LL;
 
 /// Given two VL operands, do we know that LHS <= RHS?
-bool isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS);
+bool isVLKnownLE(const MachineRegisterInfo &MRI, const MachineOperand &LHS,
+                 const MachineOperand &RHS);
 
 // Mask assignments for floating-point
 static constexpr unsigned FPMASK_Negative_Infinity = 0x001;

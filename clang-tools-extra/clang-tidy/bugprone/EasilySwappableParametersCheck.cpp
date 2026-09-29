@@ -278,7 +278,7 @@ struct ConversionSequence {
   /// the conversion sequence. This method does **NOT** return Begin and End.
   SmallVector<QualType, 4> getInvolvedTypesInSequence() const {
     SmallVector<QualType, 4> Ret;
-    auto EmplaceIfDifferent = [&Ret](QualType QT) {
+    const auto EmplaceIfDifferent = [&Ret](QualType QT) {
       if (QT.isNull())
         return;
       if (Ret.empty())
@@ -976,7 +976,7 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
   // Get out the qualifiers of the original type. This will always be
   // re-applied to the WorkType to ensure it is the same qualification as the
   // original From was.
-  auto FastQualifiersToApply = static_cast<unsigned>(
+  const auto FastQualifiersToApply = static_cast<unsigned>(
       From.split().Quals.getAsOpaqueValue() & Qualifiers::FastMask);
 
   // LValue->RValue is irrelevant for the check, because it is a thing to be
@@ -1563,14 +1563,13 @@ static bool isIgnoredParameter(const TheCheck &Check, const ParmVarDecl *Node) {
   }();
 
   LLVM_DEBUG(llvm::dbgs() << "\tType name is '" << NodeTypeName << "'\n");
-  if (!NodeTypeName.empty()) {
-    if (llvm::any_of(Check.IgnoredParameterTypeSuffixes,
-                     [NodeTypeName](StringRef E) {
-                       return !E.empty() && NodeTypeName.ends_with(E);
-                     })) {
-      LLVM_DEBUG(llvm::dbgs() << "\tType suffix ignored.\n");
-      return true;
-    }
+  if (!NodeTypeName.empty() && llvm::any_of(Check.IgnoredParameterTypeSuffixes,
+                                            [NodeTypeName](StringRef E) {
+                                              return !E.empty() &&
+                                                     NodeTypeName.ends_with(E);
+                                            })) {
+    LLVM_DEBUG(llvm::dbgs() << "\tType suffix ignored.\n");
+    return true;
   }
 
   return false;
@@ -1595,7 +1594,7 @@ using ParamToSmallPtrSetMap =
 template <typename MapTy, typename ElemTy>
 static bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
                                             const ElemTy &E2) {
-  auto E1Iterator = Map.find(E1);
+  const auto E1Iterator = Map.find(E1);
   auto E2Iterator = Map.find(E2);
   if (E1Iterator == Map.end() || E2Iterator == Map.end())
     return false;
@@ -1637,7 +1636,7 @@ public:
   }
 
   bool TraverseStmt(Stmt *S, DataRecursionQueue *Queue = nullptr) {
-    if (auto *E = dyn_cast_or_null<Expr>(S)) {
+    if (const auto *E = dyn_cast_or_null<Expr>(S)) {
       bool RootSetInCurrentStackFrame = false;
       if (!CurrentExprOnlyTreeRoot) {
         CurrentExprOnlyTreeRoot = E;
@@ -1661,9 +1660,9 @@ public:
     if (!CurrentExprOnlyTreeRoot)
       return true;
 
-    if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
-      if (llvm::find(FD->parameters(), PVD))
-        ParentExprsForParamRefs[PVD].insert(CurrentExprOnlyTreeRoot);
+    if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl());
+        PVD && llvm::find(FD->parameters(), PVD))
+      ParentExprsForParamRefs[PVD].insert(CurrentExprOnlyTreeRoot);
 
     return true;
   }
@@ -1678,7 +1677,7 @@ class PassedToSameFunction {
 
 public:
   void setup(const FunctionDecl *FD) {
-    auto ParamsAsArgsInFnCalls =
+    const auto ParamsAsArgsInFnCalls =
         match(functionDecl(forEachDescendant(
                   callExpr(forEachArgumentWithParam(
                                paramRefExpr(), parmVarDecl().bind("passed-to")))
@@ -1718,7 +1717,7 @@ class AccessedSameMemberOf {
 
 public:
   void setup(const FunctionDecl *FD) {
-    auto MembersCalledOnParams = match(
+    const auto MembersCalledOnParams = match(
         functionDecl(forEachDescendant(
             memberExpr(hasObjectExpression(paramRefExpr())).bind("mem-expr"))),
         *FD, FD->getASTContext());
@@ -1745,9 +1744,9 @@ class Returned {
 public:
   void setup(const FunctionDecl *FD) {
     // TODO: Handle co_return.
-    auto ParamReturns = match(functionDecl(forEachDescendant(
-                                  returnStmt(hasReturnValue(paramRefExpr())))),
-                              *FD, FD->getASTContext());
+    const auto ParamReturns = match(functionDecl(forEachDescendant(returnStmt(
+                                        hasReturnValue(paramRefExpr())))),
+                                    *FD, FD->getASTContext());
     for (const auto &Match : ParamReturns) {
       const auto *ReturnedParam = Match.getNodeAs<ParmVarDecl>("param");
       assert(ReturnedParam);
@@ -2001,7 +2000,7 @@ struct FormattedConversionSequence {
       Trivial = false;
     }
 
-    auto AddType = [&](StringRef ToAdd) {
+    const auto AddType = [&](StringRef ToAdd) {
       if (LastAddedType != ToAdd && ToAdd != SeqEndTypeStr) {
         OS << " -> '" << ToAdd << "'";
         LastAddedType = ToAdd.str();
@@ -2217,8 +2216,8 @@ void EasilySwappableParametersCheck::check(
         DiagText = "%0 adjacent parameters of %1 of similar type ('%2') are "
                    "easily swapped by mistake";
 
-      auto Diag = diag(First->getOuterLocStart(), DiagText)
-                  << static_cast<unsigned>(R.NumParamsChecked) << FD;
+      const auto Diag = diag(First->getOuterLocStart(), DiagText)
+                        << static_cast<unsigned>(R.NumParamsChecked) << FD;
       if (!NeedsAnyTypeNote)
         Diag << FirstParamTypeAsWritten;
 
@@ -2281,7 +2280,7 @@ void EasilySwappableParametersCheck::check(
           ExplicitlyPrintCommonType = true;
         }
 
-        auto Diag =
+        const auto Diag =
             diag(LVar->getOuterLocStart(), DiagText, DiagnosticIDs::Note)
             << LTypeStr << RTypeStr;
         if (ExplicitlyPrintCommonType)
@@ -2312,7 +2311,7 @@ void EasilySwappableParametersCheck::check(
           DiagText = "'%0' and '%1' may be implicitly converted: %2, %3";
 
         {
-          auto Diag =
+          const auto Diag =
               diag(RVar->getOuterLocStart(), DiagText, DiagnosticIDs::Note)
               << LTypeStr << RTypeStr;
 

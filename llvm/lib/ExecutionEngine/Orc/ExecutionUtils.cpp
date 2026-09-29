@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
@@ -18,7 +17,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Target/TargetMachine.h"
 #include <string>
@@ -553,9 +551,23 @@ Error DLLImportDefinitionGenerator::tryToGenerate(
 
 Expected<std::unique_ptr<jitlink::LinkGraph>>
 DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
+  Triple TT = ES.getTargetTriple();
+
+  auto CreatePointer = jitlink::getAnonymousPointerCreator(TT);
+  if (!CreatePointer)
+    return make_error<StringError>(
+        "DLLImportDefinitionGenerator: no pointer creator for " + TT.str(),
+        inconvertibleErrorCode());
+
+  auto CreateStub = jitlink::getPointerJumpStubCreator(TT);
+  if (!CreateStub)
+    return make_error<StringError>(
+        "DLLImportDefinitionGenerator: no stub creator for " + TT.str(),
+        inconvertibleErrorCode());
+
   auto G = std::make_unique<jitlink::LinkGraph>(
-      "<DLLIMPORT_STUBS>", ES.getSymbolStringPool(), ES.getTargetTriple(),
-      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
+      "<DLLIMPORT_STUBS>", ES.getSymbolStringPool(), TT, SubtargetFeatures(),
+      jitlink::getGenericEdgeKindName);
   jitlink::Section &Sec =
       G->createSection(getSectionName(), MemProt::Read | MemProt::Exec);
 
@@ -565,19 +577,17 @@ DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
         jitlink::Linkage::Strong, jitlink::Scope::Local, false);
 
     // Create __imp_ symbol
-    jitlink::Symbol &Ptr =
-        jitlink::x86_64::createAnonymousPointer(*G, Sec, &Target);
+    jitlink::Symbol &Ptr = CreatePointer(*G, Sec, &Target, 0);
     Ptr.setName(G->intern((Twine(getImpPrefix()) + *KV.first).str()));
     Ptr.setLinkage(jitlink::Linkage::Strong);
     Ptr.setScope(jitlink::Scope::Default);
 
     // Create PLT stub
     // FIXME: check PLT stub of data symbol is not accessed
-    jitlink::Block &StubBlock =
-        jitlink::x86_64::createPointerJumpStubBlock(*G, Sec, Ptr);
-    G->addDefinedSymbol(StubBlock, 0, *KV.first, StubBlock.getSize(),
-                        jitlink::Linkage::Strong, jitlink::Scope::Default, true,
-                        false);
+    jitlink::Symbol &Stub = CreateStub(*G, Sec, Ptr);
+    Stub.setName(G->intern(*KV.first));
+    Stub.setLinkage(jitlink::Linkage::Strong);
+    Stub.setScope(jitlink::Scope::Default);
   }
 
   return std::move(G);

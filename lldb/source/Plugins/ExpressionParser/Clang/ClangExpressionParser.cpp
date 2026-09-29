@@ -652,6 +652,12 @@ static void SetupLangOpts(CompilerInstance &compiler,
     break;
   }
 
+  // The cases above enable Objective-C speculatively; undo that for targets
+  // whose object file format can't support it.
+  if (!ObjCLanguageRuntime::IsSupportedForArchitecture(
+          ArchSpec(compiler.getTargetOpts().Triple)))
+    lang_opts.ObjC = false;
+
   diagnostic_manager.AddDiagnostic(
       llvm::formatv("{0}Ran expression as '{1}'.", language_fallback_reason,
                     lldb_private::Language::GetDisplayNameForLanguageType(

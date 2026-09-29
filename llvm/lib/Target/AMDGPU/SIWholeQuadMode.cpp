@@ -71,8 +71,6 @@
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -936,11 +934,14 @@ MachineInstr *SIWholeQuadMode::lowerKillF32(MachineInstr &MI) {
   MachineInstr *ExecMaskMI =
       BuildMI(MBB, MI, DL, TII->get(LMC.AndN2Opc), LMC.ExecReg)
           .addReg(LMC.ExecReg)
-          .addReg(LMC.VccReg);
+          .addReg(LMC.VccReg)
+          .setOperandDead(3);
 
   assert(MBB.succ_size() == 1);
 
   // Update live intervals
+  LIS->removeAllRegUnitsForPhysReg(LMC.VccReg);
+
   LIS->ReplaceMachineInstrInMaps(MI, *VcmpMI);
   MBB.remove(&MI);
 
@@ -979,7 +980,7 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
       if (!IsLastTerminator) {
         LIS->RemoveMachineInstrFromMaps(MI);
       } else {
-        assert(MBB.succ_size() == 1 && MI.getOpcode() != AMDGPU::SI_DEMOTE_I1);
+        assert(MBB.succ_size() == 1);
         MachineInstr *NewTerm = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_BRANCH))
                                     .addMBB(*MBB.succ_begin());
         LIS->ReplaceMachineInstrInMaps(MI, *NewTerm);
@@ -994,7 +995,8 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
       TmpReg = MRI->createVirtualRegister(TRI->getBoolRC());
       ComputeKilledMaskMI = BuildMI(MBB, MI, DL, TII->get(LMC.AndN2Opc), TmpReg)
                                 .addReg(LMC.ExecReg)
-                                .add(Op);
+                                .add(Op)
+                                .setOperandDead(3);
       MaskUpdateMI = BuildMI(MBB, MI, DL, TII->get(LMC.AndN2Opc), LiveMaskReg)
                          .addReg(LiveMaskReg)
                          .addReg(TmpReg);
@@ -1020,10 +1022,12 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
     // Demote - deactivate quads with only helper lanes
     LiveMaskWQM = MRI->createVirtualRegister(TRI->getBoolRC());
     WQMMaskMI = BuildMI(MBB, MI, DL, TII->get(LMC.WQMOpc), LiveMaskWQM)
-                    .addReg(LiveMaskReg);
+                    .addReg(LiveMaskReg)
+                    .setOperandDead(2);
     NewTerm = BuildMI(MBB, MI, DL, TII->get(LMC.AndOpc), LMC.ExecReg)
                   .addReg(LMC.ExecReg)
-                  .addReg(LiveMaskWQM);
+                  .addReg(LiveMaskWQM)
+                  .setOperandDead(3);
   } else {
     // Kill - deactivate lanes no longer in live mask
     if (Op.isImm()) {
@@ -1032,12 +1036,14 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
     } else if (!IsWQM) {
       NewTerm = BuildMI(MBB, &MI, DL, TII->get(LMC.AndOpc), LMC.ExecReg)
                     .addReg(LMC.ExecReg)
-                    .addReg(LiveMaskReg);
+                    .addReg(LiveMaskReg)
+                    .setOperandDead(3);
     } else {
       unsigned Opcode = KillVal ? LMC.AndN2Opc : LMC.AndOpc;
       NewTerm = BuildMI(MBB, &MI, DL, TII->get(Opcode), LMC.ExecReg)
                     .addReg(LMC.ExecReg)
-                    .add(Op);
+                    .add(Op)
+                    .setOperandDead(3);
     }
   }
 
@@ -1221,13 +1227,15 @@ void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
   if (SaveWQM) {
     unsigned Opcode =
         IsTerminator ? LMC.AndSaveExecTermOpc : LMC.AndSaveExecOpc;
-    MI =
-        BuildMI(MBB, Before, DL, TII->get(Opcode), SaveWQM).addReg(LiveMaskReg);
+    MI = BuildMI(MBB, Before, DL, TII->get(Opcode), SaveWQM)
+             .addReg(LiveMaskReg)
+             .setOperandDead(3);
   } else {
     unsigned Opcode = IsTerminator ? LMC.AndTermOpc : LMC.AndOpc;
     MI = BuildMI(MBB, Before, DL, TII->get(Opcode), LMC.ExecReg)
              .addReg(LMC.ExecReg)
-             .addReg(LiveMaskReg);
+             .addReg(LiveMaskReg)
+             .setOperandDead(3);
   }
 
   LIS->InsertMachineInstrInMaps(*MI);
@@ -1246,7 +1254,8 @@ void SIWholeQuadMode::toWQM(MachineBasicBlock &MBB,
              .addReg(SavedWQM);
   } else {
     MI = BuildMI(MBB, Before, DL, TII->get(LMC.WQMOpc), LMC.ExecReg)
-             .addReg(LMC.ExecReg);
+             .addReg(LMC.ExecReg)
+             .setOperandDead(2);
   }
 
   LIS->InsertMachineInstrInMaps(*MI);
@@ -1265,10 +1274,12 @@ void SIWholeQuadMode::toStrictMode(MachineBasicBlock &MBB,
 
   if (StrictStateNeeded == StateStrictWWM) {
     MI = BuildMI(MBB, Before, DL, TII->get(AMDGPU::ENTER_STRICT_WWM), SaveOrig)
-             .addImm(-1);
+             .addImm(-1)
+             .setOperandDead(3);
   } else {
     MI = BuildMI(MBB, Before, DL, TII->get(AMDGPU::ENTER_STRICT_WQM), SaveOrig)
-             .addImm(-1);
+             .addImm(-1)
+             .setOperandDead(3);
   }
   LIS->InsertMachineInstrInMaps(*MI);
   StateTransition[MI] = StrictStateNeeded;
@@ -1614,7 +1625,8 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
     Register EntryExec = MRI->createVirtualRegister(TRI->getBoolRC());
     MachineInstr *SaveExec = BuildMI(*MBB, MBB->begin(), MI.getDebugLoc(),
                                      TII->get(LMC.OrSaveExecOpc), EntryExec)
-                                 .addImm(-1);
+                                 .addImm(-1)
+                                 .setOperandDead(3);
 
     // Replace all uses of MI's destination reg with EntryExec.
     MRI->replaceRegWith(MI.getOperand(0).getReg(), EntryExec);
@@ -1679,7 +1691,8 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
   Register CountReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
   auto BfeMI = BuildMI(*MBB, FirstMI, DL, TII->get(AMDGPU::S_BFE_U32), CountReg)
                    .addReg(InputReg)
-                   .addImm((MI.getOperand(1).getImm() & Mask) | 0x70000);
+                   .addImm((MI.getOperand(1).getImm() & Mask) | 0x70000)
+                   .setOperandDead(3);
   auto BfmMI = BuildMI(*MBB, FirstMI, DL, TII->get(LMC.BfmOpc), LMC.ExecReg)
                    .addReg(CountReg)
                    .addImm(0);
@@ -1792,7 +1805,8 @@ bool SIWholeQuadMode::run(MachineFunction &MF) {
     // Shader only needs WQM
     auto MI =
         BuildMI(Entry, EntryMI, DebugLoc(), TII->get(LMC.WQMOpc), LMC.ExecReg)
-            .addReg(LMC.ExecReg);
+            .addReg(LMC.ExecReg)
+            .setOperandDead(2);
     LIS->InsertMachineInstrInMaps(*MI);
     lowerKillInstrs(true);
     Changed = true;

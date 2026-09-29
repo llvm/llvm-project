@@ -275,8 +275,8 @@ define i32 @test_odd_type(i328 %p) {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i64) = COPY $x4
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(i64) = COPY $x5
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s384) = G_MERGE_VALUES [[COPY]](i64), [[COPY1]](i64), [[COPY2]](i64), [[COPY3]](i64), [[COPY4]](i64), [[COPY5]](i64)
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i328) = G_TRUNC [[MV]](s384)
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i384) = G_MERGE_VALUES [[COPY]](i64), [[COPY1]](i64), [[COPY2]](i64), [[COPY3]](i64), [[COPY4]](i64), [[COPY5]](i64)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i328) = G_TRUNC [[MV]](i384)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i328) = G_CONSTANT i328 114
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 42
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 0

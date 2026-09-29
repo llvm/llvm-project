@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=hawaii < %s | FileCheck -check-prefixes=GCN,NOSI %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgpu7.01 < %s | FileCheck -check-prefixes=GCN,NOSI %s
 
 @compute_lds = external addrspace(3) global [512 x i32], align 16
 

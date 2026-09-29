@@ -245,3 +245,87 @@ func.func @test_f64_scalar() {
   }
   return
 }
+
+// -----
+
+// Test call to a function marked as an acc routine - should pass
+acc.routine @acc_routine_0 func(@routine_callee) gang
+func.func @routine_callee() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>} {
+  return
+}
+
+func.func @test_acc_routine() {
+  // expected-remark @below {{passed validity check}}
+  acc.parallel {
+    func.call @routine_callee() : () -> ()
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// Test call to a function marked as a specialized acc routine - should pass
+acc.routine @acc_routine_1 func(@specialized_callee) gang
+func.func @specialized_callee() attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_1, <gang_dim1>, "specialized_callee">} {
+  return
+}
+
+func.func @test_acc_specialized_routine() {
+  // expected-remark @below {{passed validity check}}
+  acc.parallel {
+    func.call @specialized_callee() : () -> ()
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// A call to a function defined in a gpu.module is valid.
+func.func private @device_callee()
+gpu.module @device_mod {
+  gpu.func @device_callee() {
+    gpu.return
+  }
+}
+
+func.func @test_gpu_module_function() {
+  // expected-remark @below {{passed validity check}}
+  acc.serial {
+    func.call @device_callee() : () -> ()
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// A reference to a global defined in a gpu.module is valid.
+memref.global @device_global : memref<10xf32> = uninitialized
+gpu.module @device_mod {
+  memref.global @device_global : memref<10xf32> = uninitialized
+}
+
+func.func @test_gpu_module_global() {
+  // expected-remark @below {{passed validity check}}
+  acc.serial {
+    %g = memref.get_global @device_global : memref<10xf32>
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// Arguments of a specialized acc routine are already on the device.
+acc.routine @acc_routine_spec_arg func(@specialized_with_arg) seq
+func.func @specialized_with_arg(%arg0: memref<f32>) attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_spec_arg, <seq>, "specialized_with_arg">} {
+  %width = acc.par_width par_dim(#acc.par_dim<sequential>)
+  // expected-remark @below {{passed validity check}}
+  acc.compute_region launch(%arg1 = %width) ins(%arg2 = %arg0) : (memref<f32>) {
+    %load = memref.load %arg2[] : memref<f32>
+    acc.yield
+  } <{origin = "acc.routine"}>
+  return
+}

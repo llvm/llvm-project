@@ -43,7 +43,8 @@ class SDNode;
 class SUnit;
 class ScheduleDAG;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
   /// Scheduling dependency. This represents one direction of an edge in the

@@ -16,5 +16,5 @@ define i32 @target_cpu_prescott_call_target_cpu_nocona() #1 {
   ret i32 %call
 }
 
-attributes #0 = { nounwind "target-cpu"="nocona" }
+attributes #0 = { nounwind "target-cpu"="nocona" "target-features"="-cx16" }
 attributes #1 = { nounwind "target-cpu"="prescott" }

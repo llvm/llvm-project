@@ -117,7 +117,7 @@ protected:
   }
 
 public:
-  LLVM_ABI static const char *getOpcodeName(Opcode Opc) {
+  static const char *getOpcodeName(Opcode Opc) {
     switch (Opc) {
 #define OP(OPC)                                                                \
   case Opcode::OPC:                                                            \
@@ -1097,8 +1097,8 @@ class UncondBrInst : public SingleLLVMInstructionImpl<llvm::UncondBrInst>,
   friend Context; // for UncondBrInst()
 
 public:
-  static UncondBrInst *create(BasicBlock *Target, InsertPosition InsertBefore,
-                              Context &Ctx);
+  LLVM_ABI static UncondBrInst *
+  create(BasicBlock *Target, InsertPosition InsertBefore, Context &Ctx);
   LLVM_ABI BasicBlock *getSuccessor() const;
   LLVM_ABI void setSuccessor(BasicBlock *NewSucc);
   unsigned getNumSuccessors() const { return 1; }
@@ -1123,11 +1123,11 @@ class CondBrInst : public SingleLLVMInstructionImpl<llvm::CondBrInst>,
   friend Context; // for UcnondBrInst()
 
 public:
-  static CondBrInst *create(Value *Cond, BasicBlock *IfTrue,
-                            BasicBlock *IfFalse, InsertPosition InsertBefore,
-                            Context &Ctx);
+  LLVM_ABI static CondBrInst *create(Value *Cond, BasicBlock *IfTrue,
+                                     BasicBlock *IfFalse,
+                                     InsertPosition InsertBefore, Context &Ctx);
   LLVM_ABI Value *getCondition() const;
-  void setCondition(Value *V);
+  LLVM_ABI void setCondition(Value *V);
   LLVM_ABI BasicBlock *getSuccessor(unsigned SuccIdx) const;
   LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
   unsigned getNumSuccessors() const { return 2; }
@@ -1967,8 +1967,8 @@ public:
   public:
     CaseHandleImpl(Context &Ctx, LLVMCaseItT LLVMCaseIt)
         : Ctx(Ctx), LLVMCaseIt(LLVMCaseIt) {}
-    LLVM_ABI_FOR_TEST ConstT *getCaseValue() const;
-    LLVM_ABI_FOR_TEST BlockT *getCaseSuccessor() const;
+    LLVM_ABI ConstT *getCaseValue() const;
+    LLVM_ABI BlockT *getCaseSuccessor() const;
     unsigned getCaseIndex() const {
       const auto &LLVMCaseHandle = *LLVMCaseIt;
       return LLVMCaseHandle.getCaseIndex();
@@ -2627,9 +2627,6 @@ protected:
   CmpInst(llvm::CmpInst *CI, Context &Ctx, ClassID Id, Opcode Opc)
       : SingleLLVMInstructionImpl(Id, Opc, CI, Ctx) {}
   friend Context; // for CmpInst()
-  LLVM_ABI static Value *createCommon(Value *Cond, Value *True, Value *False,
-                                      const Twine &Name, IRBuilder<> &Builder,
-                                      Context &Ctx);
 
 public:
   using Predicate = llvm::CmpInst::Predicate;

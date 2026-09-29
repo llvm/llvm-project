@@ -48,9 +48,11 @@ LIBC_INLINE double acos(double x) {
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     // acos(x) = pi/2 - asin(x)
-    //         = pi/2 - x * P(x^2)
-    double p = asin_eval(x * x);
-    return PI_OVER_TWO.hi + fputil::multiply_add(-x, p, PI_OVER_TWO.lo);
+    //         = pi/2 - x * (1 + x^2 * P1(x^2))
+    //         = pi/2 - x - x^3 * P1(x^2)
+    double xsq = x * x;
+    return PI_OVER_TWO.hi +
+           fputil::multiply_add(-x * xsq, asin_eval(xsq), PI_OVER_TWO.lo - x);
 #else
     unsigned idx = 0;
     DoubleDouble x_sq = fputil::exact_mult(x, x);
@@ -177,9 +179,9 @@ LIBC_INLINE double acos(double x) {
   constexpr DoubleDouble CONST_TERM[2] = {{0.0, 0.0}, PI};
   DoubleDouble const_term = CONST_TERM[xbits.is_neg()];
 
-  double p = asin_eval(u);
   double scale = x_sign * 2.0 * v_hi;
-  double r = const_term.hi + fputil::multiply_add(scale, p, const_term.lo);
+  double r = const_term.hi + fputil::multiply_add(scale * u, asin_eval(u),
+                                                  const_term.lo + scale);
   return r;
 #else
 

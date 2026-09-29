@@ -4,5 +4,7 @@
   },
   "id_table": [],
   "linkage_table": [],
-  "data": []
+  "data": [],
+  "target_triple": "arm64-apple-macosx",
+  "type": "TUSummary"
 }

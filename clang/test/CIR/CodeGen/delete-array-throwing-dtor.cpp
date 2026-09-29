@@ -23,7 +23,7 @@ void test_delete_array_throwing_dtor(ThrowingDtor *ptr) {
 // CIR-BEFORE-CXXABI:   %[[NULL:.*]] = cir.const #cir.ptr<null>
 // CIR-BEFORE-CXXABI:   %[[NOT_NULL:.*]] = cir.cmp ne %[[PTR]], %[[NULL]]
 // CIR-BEFORE-CXXABI:   cir.if %[[NOT_NULL]] {
-// CIR-BEFORE-CXXABI:     cir.delete_array %[[PTR]] : !cir.ptr<!rec_ThrowingDtor> dtor_may_throw {delete_fn = @_ZdaPvm, delete_params = #cir.usual_delete_params<size = true>, element_dtor = @_ZN12ThrowingDtorD1Ev}
+// CIR-BEFORE-CXXABI:     cir.delete_array %[[PTR]] : !cir.ptr<!rec_ThrowingDtor> delete_fn(@_ZdaPvm) delete_params<size = true> element_dtor(@_ZN12ThrowingDtorD1Ev) dtor_may_throw element_align(4)
 // CIR-BEFORE-CXXABI:   }
 
 // CIR-AFTER-CXXABI: IR Dump After CXXABILowering: cir-cxxabi-lowering
@@ -58,7 +58,7 @@ void test_delete_array_throwing_dtor(ThrowingDtor *ptr) {
 // CIR:       %[[END:.*]] = cir.ptr_stride %[[PTR]], %[[NUM_ELEM]]
 // CIR:       %[[NOT_EMPTY:.*]] = cir.cmp ne %[[END]], %[[PTR]]
 // CIR:       cir.if %[[NOT_EMPTY]] {
-// CIR:         %[[ARR_IDX:.*]] = cir.alloca {{.*}} ["__array_idx"]
+// CIR:         %[[ARR_IDX:.*]] = cir.alloca "__array_idx"
 // CIR:         cir.store %[[END]], %[[ARR_IDX]]
 //
 // CIR:         cir.cleanup.scope {

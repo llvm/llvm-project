@@ -9,7 +9,7 @@
 ; RUN: llvm-nm -jU %t/prevailing_import.2 | FileCheck --match-full-lines --check-prefix=NM %s
 
 ;; def should remain weak after function importing in the weak_def module
-; WEAK_DEF: @def = weak constant i32 0
+; WEAK_DEF: @def = weak constant i32 0, !guid !0
 
 ;; It should also be defined in the corresponding object file
 ; NM: def

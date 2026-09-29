@@ -1,4 +1,4 @@
-; RUN: not llc -O0 -mtriple=spirv-vulkan-compute %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc -O0 -mtriple=spirv-vulkan-compute %s -o - 2>&1 | FileCheck %s
 
 ; CHECK: error: {{.*}} Non-constant offsets are not supported in sample instructions.
 
