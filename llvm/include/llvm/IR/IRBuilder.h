@@ -1866,11 +1866,16 @@ public:
   Value *CreateUnOp(Instruction::UnaryOps Opc,
                     Value *V, const Twine &Name = "",
                     MDNode *FPMathTag = nullptr) {
-    if (Value *Res = Folder.FoldUnOpFMF(Opc, V, FMF))
+    return CreateUnOpFMF(Opc, V, {}, Name, FPMathTag);
+  }
+
+  Value *CreateUnOpFMF(Instruction::UnaryOps Opc, Value *V, FMFSource FMFSource,
+                       const Twine &Name = "", MDNode *FPMathTag = nullptr) {
+    if (Value *Res = Folder.FoldUnOpFMF(Opc, V, FMFSource.get(FMF)))
       return Res;
     Instruction *UnOp = UnaryOperator::Create(Opc, V);
     if (isa<FPMathOperator>(UnOp))
-      setFPAttrs(UnOp, FPMathTag, FMF);
+      setFPAttrs(UnOp, FPMathTag, FMFSource.get(FMF));
     return Insert(UnOp, Name);
   }
 
@@ -2019,7 +2024,7 @@ public:
   Value *CreateGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                    const Twine &Name = "",
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none()) {
-    if (auto *V = Folder.FoldGEP(Ty, Ptr, IdxList, NW))
+    if (auto *V = Folder.FoldGEP(BB->getDataLayout(), Ty, Ptr, IdxList, NW))
       return V;
     return Insert(GetElementPtrInst::Create(Ty, Ptr, IdxList, NW), Name);
   }

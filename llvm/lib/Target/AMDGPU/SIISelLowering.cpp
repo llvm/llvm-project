@@ -7335,7 +7335,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned ReturnAddrReg = TII->getRegisterInfo().getReturnAddressReg(*MF);
 
     MachineInstrBuilder MIB;
-    MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg);
+    MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL))
+              .addDef(ReturnAddrReg, RegState::Dead);
 
     for (const MachineOperand &MO : MI.operands())
       MIB.add(MO);
@@ -20569,21 +20570,26 @@ Align SITargetLowering::computeKnownAlignForTargetInstr(
   return Align(1);
 }
 
-Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+Align SITargetLowering::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   const Align PrefAlign = TargetLowering::getPrefLoopAlignment(ML);
   const Align CacheLineAlign = Align(64);
 
-  // GFX950: Prevent an 8-byte instruction at loop header from being split by
-  // the 32-byte instruction fetch window boundary. This avoids a significant
-  // fetch delay after backward branch. We use 32-byte alignment with max
-  // padding of 4 bytes (one s_nop), see getMaxPermittedBytesForAlignment().
+  // GFX950: Prevent an 8-byte instruction at the block being aligned from being
+  // split by the 32-byte instruction fetch window boundary. This avoids a
+  // significant fetch delay after a backward branch. We use 32-byte alignment
+  // with max padding of 4 bytes (one s_nop), see
+  // getMaxPermittedBytesForAlignment().
   if (ML && !DisableLoopAlignment &&
       getSubtarget()->hasLoopHeadInstSplitSensitivity()) {
-    const MachineBasicBlock *Header = ML->getHeader();
+    // Loop rotation can make the backedge destination a block other than the
+    // LoopInfo header, so prefer the block the caller is actually aligning.
+    if (!BlockToAlign)
+      BlockToAlign = ML->getHeader();
     // Respect user-specified or previously set alignment.
-    if (Header->getAlignment() != PrefAlign)
-      return Header->getAlignment();
-    if (needsFetchWindowAlignment(*Header))
+    if (BlockToAlign->getAlignment() != PrefAlign)
+      return BlockToAlign->getAlignment();
+    if (needsFetchWindowAlignment(*BlockToAlign))
       return Align(32);
   }
 
