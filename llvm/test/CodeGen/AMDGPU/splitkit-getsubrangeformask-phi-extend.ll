@@ -329,6 +329,7 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    buffer_load_dword v60, off, s[0:3], s32 offset:8
 ; CHECK-NEXT:    buffer_load_dword v46, off, s[0:3], s32 offset:4
 ; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s32
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:708
 ; CHECK-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:704
 ; CHECK-NEXT:    buffer_load_dword v54, off, s[0:3], s32 offset:700
