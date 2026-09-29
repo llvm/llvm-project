@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN
-// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS64
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS64 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS64
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN,GPR64
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN,GPR64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN,ILP32
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOHFAALIGN,ILP32 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS64,GPR64 --implicit-check-not="not yet implemented"
 
 // This test is verifying that the LLVM ABI library classifies C++ record
 // arguments that cannot be passed in registers the same way Clang does without
@@ -98,6 +98,64 @@ struct __attribute__((aligned(16))) OveralignedDerivedHFA : DoubleBase {
 void arg_overaligned_derived_hfa(OveralignedDerivedHFA d) {}
 // AAPCS64: define{{.*}} void @arg_overaligned_derived_hfa([2 x double] alignstack(8) %{{.*}})
 // NOHFAALIGN: define{{.*}} void @arg_overaligned_derived_hfa([2 x double] %{{.*}})
+
+// Aggregates of at most 16 bytes are passed directly. A one-byte empty class
+// is ignored on Darwin and passed as i64 on AAPCS. An empty base makes the
+// record an integer slot instead of a pointer.
+
+struct Empty {};
+void arg_empty_record(Empty e) {}
+// AAPCS64: define{{.*}} void @arg_empty_record(i64 %{{.*}})
+// NOHFAALIGN: define{{.*}} void @arg_empty_record()
+
+struct OnePtr {
+  void *p;
+};
+struct NestedPtr {
+  OnePtr inner;
+};
+void arg_nested_ptr(NestedPtr s) {}
+// GPR64: define{{.*}} void @arg_nested_ptr(ptr %{{.*}})
+// ILP32: define{{.*}} void @arg_nested_ptr(i32 %{{.*}})
+
+struct PtrBase {
+  void *a;
+};
+struct DerivedPtr : PtrBase {
+  void *b;
+};
+void arg_derived_ptr(DerivedPtr d) {}
+// GPR64: define{{.*}} void @arg_derived_ptr([2 x ptr] %{{.*}})
+// ILP32: define{{.*}} void @arg_derived_ptr([2 x i32] %{{.*}})
+
+struct EmptyBase {};
+struct PtrWithEmptyBase : EmptyBase {
+  void *p;
+};
+void arg_ptr_empty_base(PtrWithEmptyBase s) {}
+// GPR64: define{{.*}} void @arg_ptr_empty_base(i64 %{{.*}})
+// ILP32: define{{.*}} void @arg_ptr_empty_base(i32 %{{.*}})
+
+struct __attribute__((aligned(16))) OveralignedInt {
+  int a;
+};
+void arg_overaligned_int(OveralignedInt s) {}
+// AAPCS64: define{{.*}} void @arg_overaligned_int([2 x i64] %{{.*}})
+// NOHFAALIGN: define{{.*}} void @arg_overaligned_int(i128 %{{.*}})
+
+struct __attribute__((aligned(16))) OveralignedPtr {
+  void *p;
+};
+void arg_overaligned_ptr(OveralignedPtr s) {}
+// AAPCS64: define{{.*}} void @arg_overaligned_ptr([2 x ptr] %{{.*}})
+// NOHFAALIGN: define{{.*}} void @arg_overaligned_ptr(i128 %{{.*}})
+
+struct ThreeInts {
+  int a, b, c;
+};
+void arg_three_ints(ThreeInts s) {}
+// GPR64: define{{.*}} void @arg_three_ints([2 x i64] %{{.*}})
+// ILP32: define{{.*}} void @arg_three_ints([3 x i32] %{{.*}})
 
 }
 
