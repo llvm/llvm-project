@@ -24,28 +24,28 @@ define void @test(ptr %B) {
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB.loaded = load i64, ptr %inB, align 8
-; AVX1:  Cost of 2 for VF 2: WIDEN ir<%valB.loaded> = load vp<[[VP6:%[0-9]+]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX1:  Cost of 2 for VF 4: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX1:  Cost of 4 for VF 8: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX1:  Cost of 8 for VF 16: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX1:  Cost of 16 for VF 32: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
+; AVX1:  Cost of 2 for VF 2: WIDEN ir<%valB.loaded> = load vp<[[VP6:%[0-9]+]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX1:  Cost of 2 for VF 4: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX1:  Cost of 4 for VF 8: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX1:  Cost of 8 for VF 16: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX1:  Cost of 16 for VF 32: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB.loaded = load i64, ptr %inB, align 8
-; AVX2:  Cost of 2 for VF 2: WIDEN ir<%valB.loaded> = load vp<[[VP6:%[0-9]+]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX2:  Cost of 2 for VF 4: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX2:  Cost of 4 for VF 8: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX2:  Cost of 8 for VF 16: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX2:  Cost of 16 for VF 32: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
+; AVX2:  Cost of 2 for VF 2: WIDEN ir<%valB.loaded> = load vp<[[VP6:%[0-9]+]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX2:  Cost of 2 for VF 4: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX2:  Cost of 4 for VF 8: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX2:  Cost of 8 for VF 16: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX2:  Cost of 16 for VF 32: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB.loaded = load i64, ptr %inB, align 8
-; AVX512:  Cost of 1 for VF 2: WIDEN ir<%valB.loaded> = load vp<[[VP6:%[0-9]+]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX512:  Cost of 1 for VF 4: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX512:  Cost of 1 for VF 8: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX512:  Cost of 2 for VF 16: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX512:  Cost of 4 for VF 32: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX512:  Cost of 8 for VF 64: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
+; AVX512:  Cost of 1 for VF 2: WIDEN ir<%valB.loaded> = load vp<[[VP6:%[0-9]+]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 1 for VF 4: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 1 for VF 8: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 2 for VF 16: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 4 for VF 32: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 8 for VF 64: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad> (!alias.scope !7, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ;
 entry:
   br label %for.body

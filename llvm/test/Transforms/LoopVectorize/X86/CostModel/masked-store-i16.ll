@@ -40,12 +40,12 @@ define void @test(ptr %C) {
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i16 %valB, ptr %out, align 2
-; AVX512:  Cost of 2 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX512:  Cost of 2 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX512:  Cost of 1 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX512:  Cost of 1 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX512:  Cost of 1 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
-; AVX512:  Cost of 2 for VF 64: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
+; AVX512:  Cost of 2 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 2 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 1 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 1 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 1 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
+; AVX512:  Cost of 2 for VF 64: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !8, !noalias !4, !vplan.execution.frequency 11529215046068469760 (62.5%, estimated))
 ;
 entry:
   br label %for.body
