@@ -55,18 +55,13 @@ static uint64_t getStableHash(const AllocTokenMetadata &Metadata,
   return getStableSipHash(Metadata.TypeName) % MaxTokens;
 }
 
-/// The token ID is split into bitfields: the upper bits hold the type name
-/// hash, and the lower bits hold the hash of the name of the function
-/// containing the allocation. With pointer split, the most significant bit is
-/// set for types that contain pointers. Uses Log2(MaxTokens) bits, so that the
-/// token ID is always less than MaxTokens; with few bits, the function name
-/// hash (and then the type name hash) may get no bits.
+/// Splits the Log2(MaxTokens) bits into: [pointer flag,] type name hash,
+/// function name hash. The type name hash gets the extra bit, if any.
 static uint64_t getTypeFuncHash(const AllocTokenMetadata &Metadata,
                                 uint64_t MaxTokens, bool PointerSplit) {
-  const unsigned Bits = Log2_64(MaxTokens);
-  if (Bits == 0) // MaxTokens == 1
+  if (MaxTokens == 1)
     return 0;
-  // If the number of bits is odd, the type name hash gets the extra bit.
+  const unsigned Bits = Log2_64(MaxTokens);
   const unsigned FuncBits = Bits / 2;
   unsigned TypeBits = Bits - FuncBits;
   uint64_t Token = 0;
@@ -97,8 +92,6 @@ std::optional<uint64_t> llvm::getAllocToken(AllocTokenMode Mode,
 
   case AllocTokenMode::TypeFuncHash:
   case AllocTokenMode::TypeFuncHashPointerSplit:
-    // Depends on the function containing the allocation, which may be unknown
-    // (e.g. in constant expressions).
     if (!Metadata.FunctionName)
       return std::nullopt;
     return getTypeFuncHash(Metadata, MaxTokens,

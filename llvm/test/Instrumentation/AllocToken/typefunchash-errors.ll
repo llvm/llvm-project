@@ -1,7 +1,5 @@
-; Test errors in the typefunchash modes.
-;
-; Metadata without function name may come from bitcode compiled with another
-; mode, which may already contain token IDs computed by that mode.
+; Test that metadata without function name (generated for another mode) is
+; rejected in the typefunchash modes.
 ; RUN: not opt < %s -passes='inferattrs,alloc-token<mode=typefunchash>' -disable-output 2>&1 | FileCheck %s --check-prefix=NOFUNC
 ; RUN: not opt < %s -passes='inferattrs,alloc-token<mode=typefunchashpointersplit>' -disable-output 2>&1 | FileCheck %s --check-prefix=NOFUNC-SPLIT
 

@@ -985,8 +985,8 @@ propagateAllocTokenMetadata(Function *CalledFunc, CallBase &CB,
     if (InlinedFunctionInfo.isSimplified(OrigCall, ClonedCall))
       continue;
     // Fill missing only: never overwrite a more specific token the wrapper
-    // already set on an internal allocation. With a function name, an empty
-    // type name denotes an unknown type, which is not more specific.
+    // already set on an internal allocation. An unknown type (empty type name
+    // with function name) is not more specific.
     if (MDNode *MD = ClonedCall->getMetadata(LLVMContext::MD_alloc_token)) {
       if (MD->getNumOperands() != 3 ||
           !cast<MDString>(MD->getOperand(0))->getString().empty())

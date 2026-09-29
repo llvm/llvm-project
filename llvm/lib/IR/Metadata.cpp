@@ -1360,7 +1360,7 @@ MDNode *MDNode::getMergedAllocTokenMetadata(const MDNode *A, const MDNode *B) {
   if (!CIA || !CIB)
     return nullptr;
 
-  // Merge the names (type or function) at operand Idx, joined with '|'.
+  // Join different names with '|'.
   LLVMContext &Ctx = A->getContext();
   auto MergeNames = [&](unsigned Idx) -> Metadata * {
     MDString *NameA = dyn_cast<MDString>(A->getOperand(Idx));
