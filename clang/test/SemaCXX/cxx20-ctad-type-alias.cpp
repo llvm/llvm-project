@@ -629,3 +629,29 @@ template <typename T> using S3 = S2<T>; // expected-note {{candidate function no
                                         // expected-note {{cannot deduce template arguments for 'GH190517::S3' from 'GH190517::S1<char>'}}
 S3 foo(42); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'S3'}}
 }
+
+namespace GH227007 {
+
+// A non-type template parameter that defaults to another non-type template
+// parameter is canonicalized to a non-expression argument, so the rewrite has
+// to rebuild the expression from the canonical argument.
+struct Id {};
+
+template <auto Kind, class Value, auto Token = Kind> struct Tagged { Value value; };
+template <auto Kind = Id{}, class Value, auto Token = Kind>
+Tagged(Value) -> Tagged<Kind, Value, Token>;
+template <class Value> using Default = Tagged<Id{}, Value>;
+
+Default value{false};
+static_assert(__is_same(decltype(value), Tagged<Id{}, bool, Id{}>));
+
+// Same, but with both defaulted parameters being of integral type.
+template <auto Kind, class Value, auto Token = Kind> struct IntTagged { Value value; };
+template <auto Kind = 0, class Value, auto Token = Kind>
+IntTagged(Value) -> IntTagged<Kind, Value, Token>;
+template <class Value> using IntDefault = IntTagged<0, Value>;
+
+IntDefault int_value{false};
+static_assert(__is_same(decltype(int_value), IntTagged<0, bool, 0>));
+
+} // namespace GH227007

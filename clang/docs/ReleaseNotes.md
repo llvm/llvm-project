@@ -802,6 +802,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when a method or function definition follows an
   Objective-C `@implementation` that was ended by a nested `@interface`,
   `@protocol` or `@implementation` before its `@end`. (#GH209503)
+- Fixed a crash and an assertion failure when a non-type template parameter 
+  is canonicalized into a non-expression form (e.g. in a deduction guide),
+  which the template rewrite now rebuilds instead of asserting. (#GH227007)
 
 ### OpenACC Specific Changes
 
