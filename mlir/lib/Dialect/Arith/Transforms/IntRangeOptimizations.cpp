@@ -503,17 +503,22 @@ private:
   SmallVector<unsigned, 4> targetBitwidths;
 };
 
-/// Fold index_cast(index_cast(%arg: i8, index), i8) -> %arg
+/// Fold:
+///  - index_cast(index_cast(%arg: i8, index), i8) -> %arg
+///  - index_castui(index_castui(%arg: i8, index), i8) -> %arg
+///  - index_cast(index_castui(%arg: i8, index), i8) -> %arg
+///  - index_castui(index_cast(%arg: i8, index), i8) -> %arg
 /// This pattern assumes all passed `targetBitwidths` are not wider than index
 /// type.
-template <typename CastOp>
-struct FoldIndexCastChain final : OpRewritePattern<CastOp> {
-  FoldIndexCastChain(MLIRContext *context, ArrayRef<unsigned> target)
-      : OpRewritePattern<CastOp>(context), targetBitwidths(target) {}
 
-  LogicalResult matchAndRewrite(CastOp op,
+template <typename OuterCastOp, typename InnerCastOp>
+struct FoldIndexCastChain final : OpRewritePattern<OuterCastOp> {
+  FoldIndexCastChain(MLIRContext *context, ArrayRef<unsigned> target)
+      : OpRewritePattern<OuterCastOp>(context), targetBitwidths(target) {}
+
+  LogicalResult matchAndRewrite(OuterCastOp op,
                                 PatternRewriter &rewriter) const override {
-    auto srcOp = op.getIn().template getDefiningOp<CastOp>();
+    auto srcOp = op.getIn().template getDefiningOp<InnerCastOp>();
     if (!srcOp)
       return rewriter.notifyMatchFailure(op, "doesn't come from an index cast");
 
@@ -794,9 +799,12 @@ void mlir::arith::populateIntRangeNarrowingPatterns(
     ArrayRef<unsigned> bitwidthsSupported) {
   patterns.add<NarrowElementwise, NarrowCmpI>(patterns.getContext(), solver,
                                               bitwidthsSupported);
-  patterns.add<FoldIndexCastChain<arith::IndexCastUIOp>,
-               FoldIndexCastChain<arith::IndexCastOp>>(patterns.getContext(),
-                                                       bitwidthsSupported);
+
+  patterns.add<FoldIndexCastChain<arith::IndexCastOp, arith::IndexCastOp>,
+               FoldIndexCastChain<arith::IndexCastOp, arith::IndexCastUIOp>,
+               FoldIndexCastChain<arith::IndexCastUIOp, arith::IndexCastOp>,
+               FoldIndexCastChain<arith::IndexCastUIOp, arith::IndexCastUIOp>>(
+      patterns.getContext(), bitwidthsSupported);
 }
 
 void mlir::arith::populateControlFlowValuesNarrowingPatterns(
