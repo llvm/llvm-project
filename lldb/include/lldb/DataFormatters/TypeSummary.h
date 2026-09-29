@@ -483,10 +483,13 @@ private:
 /// lldb/docs/resources/formatterbytecode.rst
 class BytecodeSummaryFormat : public TypeSummaryImpl {
   std::unique_ptr<llvm::MemoryBuffer> m_bytecode;
+  /// The version of the record the bytecode was loaded from.
+  uint32_t m_version;
 
 public:
   BytecodeSummaryFormat(const TypeSummaryImpl::Flags &flags,
-                        std::unique_ptr<llvm::MemoryBuffer> bytecode);
+                        std::unique_ptr<llvm::MemoryBuffer> bytecode,
+                        uint32_t version);
   bool FormatObject(ValueObject *valobj, std::string &dest,
                     const TypeSummaryOptions &options) override;
   std::string GetDescription() override;
