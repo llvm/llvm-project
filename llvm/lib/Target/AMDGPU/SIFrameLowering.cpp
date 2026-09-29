@@ -1966,11 +1966,10 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   SmallVector<Register> SortedWWMVGPRs;
   for (Register Reg : MFI->getWWMReservedRegs()) {
-    // The shift-back is needed only for the VGPRs used for SGPR spills and they
-    // are of 32-bit size. SIPreAllocateWWMRegs pass can add tuples into WWM
-    // reserved registers.
+    // The shift-back supports only 32-bit VGPRs. WWM reserved registers may
+    // also contain AGPRs or tuples.
     const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
-    if (TRI->getRegSizeInBits(*RC) != 32)
+    if (!TRI->isVGPRClass(RC) || TRI->getRegSizeInBits(*RC) != 32)
       continue;
     SortedWWMVGPRs.push_back(Reg);
   }
