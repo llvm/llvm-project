@@ -281,9 +281,11 @@ TEST_F(ObjectContainerClangOffloadBundleTest,
   std::array<BundleInput, 3> inputs = {{
       {"host-x86_64-unknown-linux-gnu", {}},
       {"hipv4-amdgpu-amd-amdhsa--gfx908",
-       {gfx908_data->GetDataStart(), gfx908_data->GetByteSize()}},
+       {gfx908_data->GetDataStart(),
+        static_cast<size_t>(gfx908_data->GetByteSize())}},
       {"hipv4-amdgpu-amd-amdhsa--gfx942",
-       {gfx942_data->GetDataStart(), gfx942_data->GetByteSize()}},
+       {gfx942_data->GetDataStart(),
+        static_cast<size_t>(gfx942_data->GetByteSize())}},
   }};
   BundleData bundle = MakeBundle(inputs);
   auto bundled_file = MakeELFContainingBundle(bundle.bytes);

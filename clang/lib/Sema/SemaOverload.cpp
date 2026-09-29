@@ -9170,11 +9170,8 @@ public:
   typedef TypeSet::iterator iterator;
 
   BuiltinCandidateTypeSet(Sema &SemaRef)
-    : HasNonRecordTypes(false),
-      HasArithmeticOrEnumeralTypes(false),
-      HasNullPtrType(false),
-      SemaRef(SemaRef),
-      Context(SemaRef.Context) { }
+      : HasNonRecordTypes(false), HasArithmeticOrEnumeralTypes(false),
+        HasNullPtrType(false), SemaRef(SemaRef), Context(SemaRef.Context) {}
 
   void AddTypesConvertedFrom(QualType Ty,
                              SourceLocation Loc,
@@ -9677,18 +9674,16 @@ class BuiltinOperatorOverloadBuilder {
 
 public:
   BuiltinOperatorOverloadBuilder(
-    Sema &S, ArrayRef<Expr *> Args,
-    QualifiersAndAtomic VisibleTypeConversionsQuals,
-    bool HasArithmeticOrEnumeralCandidateType,
-    SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes,
-    OverloadCandidateSet &CandidateSet)
-    : S(S), Args(Args),
-      VisibleTypeConversionsQuals(VisibleTypeConversionsQuals),
-      HasArithmeticOrEnumeralCandidateType(
-        HasArithmeticOrEnumeralCandidateType),
-      CandidateTypes(CandidateTypes),
-      CandidateSet(CandidateSet) {
-
+      Sema &S, ArrayRef<Expr *> Args,
+      QualifiersAndAtomic VisibleTypeConversionsQuals,
+      bool HasArithmeticOrEnumeralCandidateType,
+      SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes,
+      OverloadCandidateSet &CandidateSet)
+      : S(S), Args(Args),
+        VisibleTypeConversionsQuals(VisibleTypeConversionsQuals),
+        HasArithmeticOrEnumeralCandidateType(
+            HasArithmeticOrEnumeralCandidateType),
+        CandidateTypes(CandidateTypes), CandidateSet(CandidateSet) {
     InitArithmeticTypes();
   }
 
