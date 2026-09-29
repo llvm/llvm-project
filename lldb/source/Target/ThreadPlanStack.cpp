@@ -432,7 +432,9 @@ void ThreadPlanStackMap::Update(ThreadList &current_threads,
   // then scan for absent TID's:
   for (auto &thread_plans : m_plans_list) {
     lldb::tid_t cur_tid = thread_plans.first;
-    ThreadSP thread_sp = current_threads.FindThreadByID(cur_tid);
+    // Callers pass a thread list that's already up-to-date.
+    ThreadSP thread_sp =
+        current_threads.FindThreadByID(cur_tid, /*can_update=*/false);
     if (!thread_sp)
       missing_threads.push_back(cur_tid);
   }
