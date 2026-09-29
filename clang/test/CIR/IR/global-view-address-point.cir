@@ -1,0 +1,35 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+// RUN: cir-opt %s -cir-to-llvm | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering | FileCheck %s -check-prefix=LLVM
+
+!u8i = !cir.int<u, 8>
+!rec_anon_struct = !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 5>, data !cir.array<!cir.ptr<!u8i> x 4>}>
+!rec_B = !cir.struct<"B" {data !cir.vptr}>
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.global "private" constant external @_ZTV1D : !rec_anon_struct
+
+  // CHECK: #cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point> : !cir.ptr<!u8i>
+  // CHECK: #cir.global_view<@_ZTV1D, [1 : i32, 2 : i32], address_point> : !cir.ptr<!u8i>
+  // CHECK: #cir.global_view<@_ZTV1D, [1 : i32, 2 : i32]> : !cir.ptr<!u8i>
+  cir.global external @vtt = #cir.const_array<[
+    #cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point> : !cir.ptr<!u8i>,
+    #cir.global_view<@_ZTV1D, [1 : i32, 2 : i32], address_point> : !cir.ptr<!u8i>,
+    #cir.global_view<@_ZTV1D, [1 : i32, 2 : i32]> : !cir.ptr<!u8i>
+  ]> : !cir.array<!cir.ptr<!u8i> x 3>
+
+  // CHECK: #cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point> : !cir.vptr
+  cir.global external @b = #cir.const_record<{#cir.global_view<@_ZTV1D, [0 : i32, 3 : i32], address_point> : !cir.vptr}> : !rec_B
+}
+
+// An address point is inbounds and can only reach the vtable it points into.
+
+// MLIR: llvm.getelementptr inbounds inrange <i64, -24, 16> %{{.*}}[0, 0, 3]
+// MLIR: llvm.getelementptr inbounds inrange <i64, -16, 16> %{{.*}}[0, 1, 2]
+// MLIR: llvm.getelementptr %{{.*}}[0, 1, 2]
+// MLIR: llvm.getelementptr inbounds inrange <i64, -24, 16> %{{.*}}[0, 0, 3]
+
+// LLVM: @vtt = global [3 x ptr] [
+// LLVM-SAME: ptr getelementptr inbounds nuw inrange(-24, 16) (i8, ptr @_ZTV1D, i64 24),
+// LLVM-SAME: ptr getelementptr inbounds nuw inrange(-16, 16) (i8, ptr @_ZTV1D, i64 56),
+// LLVM-SAME: ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 56)]
+// LLVM: @b = global %struct.B { ptr getelementptr inbounds nuw inrange(-24, 16) (i8, ptr @_ZTV1D, i64 24) }

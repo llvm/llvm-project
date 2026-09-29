@@ -1033,28 +1033,35 @@ def CIR_GlobalViewAttr : CIR_ValueLikeAttr<"GlobalView", "global_view"> {
       int b;
     };
     ```
+    `address_point` marks a vtable address point: `symbol` is a vtable and
+    `indices` are the vtable within the group and the address point within
+    it. As in classic codegen, it lowers to an `inbounds` GEP whose `inrange`
+    spans that one vtable.
+
     VTT for B in CIR:
     ```
     cir.global linkonce_odr @_ZTT1B = #cir.const_array<[
-              #cir.global_view<@_ZTV1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]>
-                   : !cir.array<!cir.ptr<!u8i> x 1>
+              #cir.global_view<@_ZTV1B, [0 : i32, 3 : i32], address_point>
+                   : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>
     ```
     VTT for B in LLVM IR:
     ```
     @_ZTT1B = linkonce_odr global [1 x ptr] [ptr getelementptr inbounds
-              ({ [3 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 3)], align 8
+              inrange(-24, 0) (i8, ptr @_ZTV1B, i64 24)], align 8
     ```
   }];
 
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
                         "mlir::FlatSymbolRefAttr":$symbol,
-                        OptionalParameter<"mlir::ArrayAttr">:$indices);
+                        OptionalParameter<"mlir::ArrayAttr">:$indices,
+                        DefaultValuedParameter<"bool", "false">:$address_point);
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
                                         "mlir::FlatSymbolRefAttr":$symbol,
-                                        CArg<"mlir::ArrayAttr", "{}">:$indices), [{
-      return $_get(type.getContext(), type, symbol, indices);
+                                        CArg<"mlir::ArrayAttr", "{}">:$indices,
+                                        CArg<"bool", "false">:$addressPoint), [{
+      return $_get(type.getContext(), type, symbol, indices, addressPoint);
     }]>
   ];
 
@@ -1063,6 +1070,7 @@ def CIR_GlobalViewAttr : CIR_ValueLikeAttr<"GlobalView", "global_view"> {
     `<`
       $symbol
       (`,` $indices^)?
+      `` custom<GlobalViewAddressPoint>($address_point)
     `>`
   }];
 }
