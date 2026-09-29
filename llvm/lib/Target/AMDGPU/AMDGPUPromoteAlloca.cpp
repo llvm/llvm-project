@@ -476,8 +476,8 @@ static bool isSupportedMemset(MemSetInst *I, AllocaInst *AI,
 
 /// Materializes the vector element index that \p Ptr refers to.
 ///
-/// Recurses through phis and selects, which contribute an index that is itself
-/// a phi or select. All entries are expected to have been created during
+/// Recurses through phis and selects, which contribute an index itself.
+/// All entries of PtrVectorIdx are expected to have been created during
 /// analysis, so this only ever updates them and never invalidates the map.
 static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
   IRBuilder<> B(Ptr->getContext());
@@ -1294,9 +1294,10 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
     I->eraseFromParent();
   }
 
-  // Delete all the users that are known to be removeable. A loop-carried
-  // pointer phi forms a use cycle with the pointers derived from it, so break
-  // all the references first rather than relying on a deletion order.
+  // Delete all the users that are known to be removeable.
+  //
+  // UsersToRemove is address-calculating instructions
+  // such as GEP, phi, select, etc.
   for (Instruction *I : AA.Vector.UsersToRemove) {
     I->dropDroppableUses();
     assert(all_of(I->users(),
