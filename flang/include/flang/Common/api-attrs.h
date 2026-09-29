@@ -146,6 +146,15 @@
 #endif
 
 /*
+ * RT_THIN_IO leaves out the I/O paths that need descriptor-io.cpp and the
+ * external unit machinery, which the native GPU builds don't include. The
+ * CUDA PTX library also sets it, from CMake.
+ */
+#if RT_GPU_TARGET && !defined(RT_DEVICE_COMPILATION)
+#define RT_THIN_IO 1
+#endif
+
+/*
  * Recurrence in the call graph prevents computing minimal stack size
  * required for a kernel execution. This macro can be used to disable
  * some F18 runtime functionality that is implemented using recurrent
