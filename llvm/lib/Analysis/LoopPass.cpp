@@ -386,11 +386,9 @@ bool LoopPass::skipLoop(const Loop *L) const {
   // Check the opt bisect limit.
   const OptPassGate &Gate = F->getContext().getOptPassGate();
 
-  if (Gate.isEnabled() &&
-      !Gate.shouldRunPass(this->getPassName(), getDescription(*L),
-                          F->getName())) {
+  if (Gate.isEnabled() && !Gate.shouldRunPass(this->getPassName(),
+                                              getDescription(*L), F->getName()))
     return true;
-  }
 
   // Check for the OptimizeNone attribute.
   if (F->hasOptNone()) {
