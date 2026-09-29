@@ -76,7 +76,7 @@ public:
 
   bool HasSubstitutionFailure() {
     for (const auto &Detail : Details)
-      if (Detail.dyn_cast<const ConstraintSubstitutionDiagnostic *>())
+      if (dyn_cast<const ConstraintSubstitutionDiagnostic *>(Detail))
         return true;
     return false;
   }
@@ -212,7 +212,7 @@ public:
 
   void print(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;
   void dump() const;
-  void dump(llvm::raw_ostream &) const;
+  void dump(llvm::raw_ostream &OS, const ASTContext &Context) const;
 };
 
 /// Models the abbreviated syntax to constrain a template type parameter:

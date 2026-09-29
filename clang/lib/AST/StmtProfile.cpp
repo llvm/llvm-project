@@ -486,9 +486,12 @@ void OMPClauseProfiler::VisitOMPFinalClause(const OMPFinalClause *C) {
 }
 
 void OMPClauseProfiler::VisitOMPNumThreadsClause(const OMPNumThreadsClause *C) {
+  Profiler->VisitInteger(C->getPrescriptivenessModifier());
+  Profiler->VisitInteger(C->getDimsModifier());
+  if (const Expr *Modifier = C->getDimsModifierExpr())
+    Profiler->VisitStmt(Modifier);
+  VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
-  if (C->getNumThreads())
-    Profiler->VisitStmt(C->getNumThreads());
 }
 
 void OMPClauseProfiler::VisitOMPAlignClause(const OMPAlignClause *C) {
@@ -530,6 +533,11 @@ void OMPClauseProfiler::VisitOMPFullClause(const OMPFullClause *C) {}
 void OMPClauseProfiler::VisitOMPPartialClause(const OMPPartialClause *C) {
   if (const Expr *Factor = C->getFactor())
     Profiler->VisitExpr(Factor);
+}
+
+void OMPClauseProfiler::VisitOMPDepthClause(const OMPDepthClause *C) {
+  if (const Expr *Depth = C->getDepth())
+    Profiler->VisitExpr(Depth);
 }
 
 void OMPClauseProfiler::VisitOMPLoopRangeClause(const OMPLoopRangeClause *C) {
@@ -1091,6 +1099,10 @@ void StmtProfiler::VisitOMPInterchangeDirective(
   VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
+void StmtProfiler::VisitOMPFlattenDirective(const OMPFlattenDirective *S) {
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
+}
+
 void StmtProfiler::VisitOMPSplitDirective(const OMPSplitDirective *S) {
   VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
@@ -1483,10 +1495,13 @@ void StmtProfiler::VisitIntegerLiteral(const IntegerLiteral *S) {
   if (Canonical)
     T = T.getCanonicalType();
   ID.AddInteger(T->getTypeClass());
-  if (auto BitIntT = T->getAs<BitIntType>())
-    BitIntT->Profile(ID);
-  else
+  if (auto BitIntT = T->getAs<BitIntType>()) {
+    auto [IsUnsigned, NumBits] = BitIntT->getKey();
+    ID.AddInteger(IsUnsigned);
+    ID.AddInteger(NumBits);
+  } else {
     ID.AddInteger(T->castAs<BuiltinType>()->getKind());
+  }
 }
 
 void StmtProfiler::VisitFixedPointLiteral(const FixedPointLiteral *S) {
@@ -2240,7 +2255,11 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
     else if (auto *FD = dyn_cast<FunctionDecl>(SubDecl))
       Call = FD;
 
-    if (!Call)
+    // Ignore implicit conversion functions and __invoke. They are not
+    // part of the lambda signature.
+    // Semantically, it is better to use `getLambdaCallOperator` but that may
+    // not be properly deserialized yet.
+    if (!Call || Call->getOverloadedOperator() != OO_Call)
       continue;
 
     Hasher.AddFunctionDecl(Call, /*SkipBody=*/true);

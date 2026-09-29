@@ -1736,13 +1736,8 @@ define amdgpu_ps <2 x half> @fma_v2s16_uniform(<2 x half> inreg %a, <2 x half> i
 ;
 ; GFX12-LABEL: fma_v2s16_uniform:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_lshr_b32 s3, s0, 16
-; GFX12-NEXT:    s_lshr_b32 s4, s1, 16
-; GFX12-NEXT:    s_lshr_b32 s5, s2, 16
-; GFX12-NEXT:    s_fmac_f16 s2, s0, s1
-; GFX12-NEXT:    s_fmac_f16 s5, s3, s4
-; GFX12-NEXT:    s_pack_ll_b32_b16 s0, s2, s5
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    v_mov_b32_e32 v0, s2
+; GFX12-NEXT:    v_pk_fma_f16 v0, s0, s1, v0
 ; GFX12-NEXT:    ; return to shader part epilog
   %fma = call <2 x half> @llvm.fma.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)
   ret <2 x half> %fma

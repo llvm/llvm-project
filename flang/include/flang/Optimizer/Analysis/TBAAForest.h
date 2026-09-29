@@ -137,16 +137,10 @@ public:
       : separatePerFunction{separatePerFunction} {}
 
   inline const TBAATree &operator[](mlir::func::FuncOp func) {
-    return getFuncTree(func.getSymNameAttr());
+    return getFuncTree(getInternalOrSymbolName(func));
   }
   inline const TBAATree &operator[](mlir::LLVM::LLVMFuncOp func) {
-    // the external name conversion pass may rename some functions. Their old
-    // name must be used so that we add to the tbaa tree added in the FIR pass
-    mlir::Attribute attr = func->getAttr(getInternalFuncNameAttrName());
-    if (attr) {
-      return getFuncTree(mlir::cast<mlir::StringAttr>(attr));
-    }
-    return getFuncTree(func.getSymNameAttr());
+    return getFuncTree(getInternalOrSymbolName(func));
   }
   // Returns the TBAA tree associated with the scope enclosed
   // within the given function. With MLIR inlining, there may
@@ -156,7 +150,7 @@ public:
   // "root" scope of the given function.
   inline TBAATree &getMutableFuncTreeWithScope(mlir::func::FuncOp func,
                                                llvm::StringRef scope) {
-    mlir::StringAttr name = func.getSymNameAttr();
+    mlir::StringAttr name = getInternalOrSymbolName(func);
     if (!scope.empty())
       name = mlir::StringAttr::get(name.getContext(),
                                    llvm::Twine(name) + " - " + scope);
@@ -169,6 +163,17 @@ public:
   }
 
 private:
+  template <typename FuncOp>
+  static mlir::StringAttr getInternalOrSymbolName(FuncOp func) {
+    // External name conversion may rename a function before TBAA construction.
+    // Use its original name consistently so tags created at different pipeline
+    // stages belong to the same tree.
+    if (auto name = func->template getAttrOfType<mlir::StringAttr>(
+            getInternalFuncNameAttrName()))
+      return name;
+    return func.getSymNameAttr();
+  }
+
   TBAATree &getFuncTree(mlir::StringAttr symName) {
     if (!separatePerFunction)
       symName = mlir::StringAttr::get(symName.getContext(), "");
