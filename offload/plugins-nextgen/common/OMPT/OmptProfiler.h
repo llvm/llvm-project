@@ -41,15 +41,11 @@ namespace omp {
 namespace target {
 namespace plugin {
 struct GenericDeviceTy;
-struct GenericPluginTy;
 class GenericProfilerTy;
 
 } // namespace plugin
 
 namespace ompt {
-
-// From Callback.h / Callback.cpp
-extern bool Initialized;
 
 /**
  * Implements an OMPT backend for the Profiler interface used in the plugins.
@@ -58,44 +54,7 @@ extern bool Initialized;
  */
 class OmptProfilerTy : public plugin::GenericProfilerTy {
 public:
-  /** Public members **/
-  OmptProfilerTy() {
-
-    OmptInitialized.store(false);
-    // Bind the callbacks to this device's member functions
-#define bindOmptCallback(Name, Type, Code)                                     \
-  if (ompt::Initialized && ompt::lookupCallbackByCode) {                       \
-    ompt::lookupCallbackByCode((ompt_callbacks_t)(Code),                       \
-                               ((ompt_callback_t *)&(Name##_fn)));             \
-    ODBG(ODT_Tool) << "class bound " << #Name << "="                           \
-                   << ((void *)(uint64_t)Name##_fn);                           \
-  }
-
-    FOREACH_OMPT_DEVICE_EVENT(bindOmptCallback);
-#undef bindOmptCallback
-
-#define bindOmptTracingFunction(FunctionName)                                  \
-  if (ompt::Initialized && ompt::lookupDeviceTracingFn) {                      \
-    FunctionName##_fn = ompt::lookupDeviceTracingFn(#FunctionName);            \
-    ODBG(ODT_Tool) << "device tracing fn bound " << #FunctionName << "="       \
-                   << ((void *)(uint64_t)FunctionName##_fn);                   \
-  }
-
-    FOREACH_OMPT_DEVICE_TRACING_FN_COMMON(bindOmptTracingFunction);
-#undef bindOmptTracingFunction
-  }
-
   bool isProfilingEnabled() override;
-
-  void handleInit(plugin::GenericDeviceTy *Device,
-                  plugin::GenericPluginTy *Plugin) override;
-
-  void handleDeinit(plugin::GenericDeviceTy *Device,
-                    plugin::GenericPluginTy *Plugin) override;
-
-  void handleLoadBinary(plugin::GenericDeviceTy *Device,
-                        plugin::GenericPluginTy *Plugin,
-                        const StringRef InputTgtImage) override;
 
   void handleDataAlloc(uint64_t StartNanos, uint64_t EndNanos, void *HostPtr,
                        uint64_t Size, void *Data) override;
@@ -148,19 +107,6 @@ private:
 
   /// Lock to guard STL ProfilerData map
   std::mutex ProfilerDataMutex;
-
-  /// OMPT callback functions
-#define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
-  FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
-#undef defineOmptCallback
-
-  /// OMPT device tracing functions
-#define defineOmptTracingFunction(Name) ompt_interface_fn_t Name##_fn = nullptr;
-  FOREACH_OMPT_DEVICE_TRACING_FN_COMMON(defineOmptTracingFunction);
-#undef defineOmptTracingFunction
-
-  /// Internal representation for OMPT device (initialize & finalize)
-  std::atomic<bool> OmptInitialized;
 };
 
 /// Process-wide OMPT profiler owned by libomptarget; nullptr before it has
