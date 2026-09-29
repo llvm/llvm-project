@@ -1542,7 +1542,7 @@ void VPlanTransforms::attachMemoryChecks(VPlan &Plan,
                                          ArrayRef<RuntimePointerCheck> Checks,
                                          ScalarEvolution &SE, DebugLoc DL,
                                          bool AddBranchWeights) {
-  assert(!Checks.empty() && "no checks to generate");
+  assert(!Checks.empty() && "No checks to generate");
 
   auto *MemCheckVPBB = Plan.createVPBasicBlock("vector.memcheck");
   VPBuilder Builder(MemCheckVPBB);
