@@ -229,6 +229,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_jMultiBreakpoint,
       &GDBRemoteCommunicationServerLLGS::Handle_jMultiBreakpoint);
   RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jThreadExtendedInfo,
+      &GDBRemoteCommunicationServerLLGS::Handle_jThreadExtendedInfo);
+  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jAcceleratorPluginInitialize,
       &GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize);
   RegisterMemberFunctionHandler(
@@ -4731,4 +4734,50 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
   }
   return SendErrorResponse(
       Status::FromErrorString("unknown accelerator plugin name"));
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jThreadExtendedInfo(
+    StringExtractorGDBRemote &packet) {
+  llvm::StringRef packet_str = packet.GetStringRef();
+  if (!packet_str.consume_front("jThreadExtendedInfo:"))
+    return SendIllFormedResponse(packet,
+                                 "Invalid jThreadExtendedInfo packet prefix");
+  // Empty packet is sent to check if we support jThreadExtendedInfo.
+  if (packet_str.empty())
+    return SendOKResponse();
+
+  llvm::Expected<llvm::json::Value> parsed = llvm::json::parse(packet_str);
+  if (!parsed) {
+    llvm::consumeError(parsed.takeError());
+    return SendIllFormedResponse(
+        packet, "jThreadExtendedInfo did not contain valid JSON");
+  }
+  llvm::json::Object *request_dict = parsed->getAsObject();
+  if (!request_dict)
+    return SendIllFormedResponse(
+        packet, "jThreadExtendedInfo did not contain a JSON dictionary");
+
+  std::optional<int64_t> thread_id = request_dict->getInteger("thread");
+  if (!thread_id)
+    return SendIllFormedResponse(packet, "jThreadExtendedInfo did not contain "
+                                         "a valid 'breakpoint_requests' field");
+
+  if (!m_current_process)
+    return SendIllFormedResponse(packet, "no current process");
+
+  NativeThreadProtocol *thread = m_current_process->GetThreadByID(*thread_id);
+  if (!thread)
+    return SendIllFormedResponse(packet, "no thread with specified ID");
+
+  StructuredData::ObjectSP ext_info = thread->GetExtendedInfo();
+
+  StreamString stream;
+  if (ext_info)
+    ext_info->Dump(stream, false);
+
+  StringRef response_str = stream.GetString();
+  StreamGDBRemote response;
+  response.PutEscapedBytes(response_str.data(), response_str.size());
+  return SendPacketNoLock(response.GetString());
 }
