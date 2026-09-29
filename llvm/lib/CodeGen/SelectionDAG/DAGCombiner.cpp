@@ -17384,7 +17384,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   bool Frozen = N0.getOpcode() == ISD::FREEZE;
 
   // fold (sext_inreg (extload x)) -> (sextload x)
-  // fold (sext_inreg (freeze (extload x))) -> (freeze (sextload x))
+  // fold (sext_inreg (freeze (extload x))) -> (assertsext (freeze (sextload x)))
   // If sextload is not supported by target, we can only do the combine when
   // load has one use. Doing otherwise can block folding the extload with other
   // extends that the target does support.
@@ -17399,7 +17399,12 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
       SDValue ExtLoad =
           DAG.getExtLoad(ISD::SEXTLOAD, DL, VT, LN0->getChain(),
                          LN0->getBasePtr(), ExtVT, LN0->getMemOperand());
-      CombineTo(N, Frozen ? N0 : ExtLoad);
+      SDValue Res = ExtLoad;
+      if (Frozen)
+        // Allow value tracking to see the sign extension through the freeze.
+        Res = DAG.getNode(ISD::AssertSext, DL, VT, DAG.getFreeze(ExtLoad),
+                          DAG.getValueType(ExtVT.getScalarType()));
+      CombineTo(N, Res);
       CombineTo(LN0, ExtLoad, ExtLoad.getValue(1));
       AddToWorklist(ExtLoad.getNode());
       return SDValue(N, 0); // Return N so it doesn't get rechecked!
