@@ -1527,9 +1527,8 @@ compilation on systems with very large system headers (e.g., macOS).
 
 #### Generating a PCH File
 
-To generate a PCH file, compile the header with `-c`, using
-`-x <language>-header` if the file extension does not identify it as a
-header. This mirrors the interface in GCC for generating PCH files:
+To generate a PCH file, compile the header with `-c`, using `-x <language>-header` if the file extension does not identify it as a header.
+This mirrors the interface in GCC for generating PCH files:
 
 ```console
 $ gcc -c -x c-header test.h -o test.h.gch
