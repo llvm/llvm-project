@@ -73,7 +73,7 @@ void PluginManager::deinit() {
       std::string InfoMsg = toString(std::move(Err));
       ODBG(ODT_Deinit) << "Failed to deinit plugin: " << InfoMsg;
     }
-    Plugin.release();
+    Plugin.reset();
   }
 
   ODBG(ODT_Deinit) << "RTLs unloaded!";
