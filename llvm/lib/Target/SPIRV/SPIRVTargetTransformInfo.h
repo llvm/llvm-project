@@ -62,6 +62,8 @@ public:
 
   bool allowVectorElementIndexingUsingGEP() const override { return false; }
 
+  bool allowLoadWidening() const override { return false; }
+
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const override;
   bool isLegalMaskedScatter(Type *DataType, Align Alignment) const override;
 
