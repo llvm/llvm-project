@@ -2562,8 +2562,21 @@ GetSSETypeAtOffset(llvm::Type *IRType, unsigned IROffset,
     // If we can't get a second FP type, return a simple half or float.
     // avx512fp16-abi.c:pr51813_2 shows it works to return float for
     // {float, i8} too.
-    if (T1 == nullptr)
+    if (T1 == nullptr) {
+      // T0 does not cover the whole eightbyte.  If the rest of the
+      // eightbyte holds user data in the source type, the whole eightbyte
+      // has to be transferred.  A union is lowered to the IR type of its
+      // largest member, so a smaller member may have a field in bytes that
+      // are padding in the largest member and therefore invisible here;
+      // returning T0 would drop those bytes when the union is passed or
+      // returned in SSE registers.  As in GetINTEGERTypeAtOffset, this
+      // analysis has to run on the source type, because we can't depend
+      // on unions being lowered a specific way.
+      if (!BitsContainNoUserData(SourceTy, (SourceOffset + T0Size) * 8,
+                                 (SourceOffset + 8) * 8, getContext()))
+        return llvm::Type::getDoubleTy(getVMContext());
       return T0;
+    }
   }
 
   if (T0->isFloatTy() && T1->isFloatTy())
@@ -2573,8 +2586,15 @@ GetSSETypeAtOffset(llvm::Type *IRType, unsigned IROffset,
     llvm::Type *T2 = nullptr;
     if (SourceSize > 4)
       T2 = getFPTypeAtOffset(IRType, IROffset + 4, TD);
-    if (T2 == nullptr)
+    if (T2 == nullptr) {
+      // <2 x half> covers only the first half of the eightbyte; fall back
+      // to double if another union member has data in the rest, for the
+      // same reason as above.
+      if (!BitsContainNoUserData(SourceTy, (SourceOffset + 4) * 8,
+                                 (SourceOffset + 8) * 8, getContext()))
+        return llvm::Type::getDoubleTy(getVMContext());
       return llvm::FixedVectorType::get(T0, 2);
+    }
     return llvm::FixedVectorType::get(T0, 4);
   }
 
