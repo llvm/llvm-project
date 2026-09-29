@@ -3140,11 +3140,7 @@ static bool shouldVetoLoopCarriedSelect(BasicBlock *BB, BasicBlock *ThenBB,
 
   // Usually the merge block feeds a separate loop header.  A previous CFG
   // simplification can instead make the merge block itself the loop header;
-  // in that form its PHI is used directly by its own terminator.  It can also
-  // remain a latch-like merge block whose conditional terminator feeds a loop
-  // header.  Handle all of these forms so this protection remains effective
-  // across repeated SimplifyCFG invocations, even when LoopHeaders was built
-  // before the CFG was reshaped.
+  // in that form its PHI is used directly by its own terminator.
   BasicBlock *Header = nullptr;
   auto IsLoopHeader = [&LoopHeaders](BasicBlock *Block) {
     return is_contained(LoopHeaders, WeakVH(Block));
