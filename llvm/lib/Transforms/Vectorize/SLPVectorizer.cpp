@@ -32825,9 +32825,9 @@ public:
         for (unsigned Cnt = 0; Cnt < NumReducedVals; ++Cnt) {
           if (Cnt >= Pos && Cnt < Pos + ReduxWidth)
             continue;
-          Value *RdxVal = Candidates[Cnt];
-          if (auto It = TrackedVals.find(RdxVal); It != TrackedVals.end())
-            RdxVal = It->second;
+          // The candidate may be replaced by the previous vectorization
+          // attempts, use the currently tracked value.
+          Value *RdxVal = TrackedVals.at(TrackedToOrig[Cnt]);
           if (!Visited.insert(RdxVal).second)
             continue;
           // Scalars not reduced by the top node may be used by the reduction
