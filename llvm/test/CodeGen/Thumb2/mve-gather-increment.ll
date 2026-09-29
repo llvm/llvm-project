@@ -1597,16 +1597,16 @@ define void @_Z6gatherv() {
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .pad #576
 ; CHECK-NEXT:    sub.w sp, sp, #576
-; CHECK-NEXT:    adr r0, .LCPI20_0
 ; CHECK-NEXT:    mov.w lr, #30
+; CHECK-NEXT:    adr r0, .LCPI20_0
+; CHECK-NEXT:    add r1, sp, #96
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    add r0, sp, #96
-; CHECK-NEXT:    movs r1, #4
+; CHECK-NEXT:    movs r0, #4
 ; CHECK-NEXT:    movs r2, #1
-; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:  .LBB20_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vadd.i32 q1, q0, r1
+; CHECK-NEXT:    vadd.i32 q1, q0, r0
 ; CHECK-NEXT:    vadd.i32 q0, q0, r2
 ; CHECK-NEXT:    vcvt.f32.u32 q0, q0
 ; CHECK-NEXT:    vstrb.8 q0, [r3], #16
@@ -1614,22 +1614,26 @@ define void @_Z6gatherv() {
 ; CHECK-NEXT:    le lr, .LBB20_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    adr r2, .LCPI20_1
-; CHECK-NEXT:    mov r1, sp
+; CHECK-NEXT:    mov.w lr, #6
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vadd.i32 q0, q0, r0
-; CHECK-NEXT:    movs r0, #4
+; CHECK-NEXT:    vadd.i32 q0, q0, r1
+; CHECK-NEXT:    movs r1, #4
 ; CHECK-NEXT:  .LBB20_3: @ %for.cond6.preheader
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vdup.32 q1, r2
-; CHECK-NEXT:    add r2, r0
+; CHECK-NEXT:    add r2, r1
 ; CHECK-NEXT:    vshl.i32 q1, q1, #2
 ; CHECK-NEXT:    vadd.i32 q1, q0, q1
 ; CHECK-NEXT:    vldrw.u32 q2, [q1]
-; CHECK-NEXT:    vstrb.8 q2, [r1], #16
-; CHECK-NEXT:    b .LBB20_3
+; CHECK-NEXT:    vstrb.8 q2, [r0], #16
+; CHECK-NEXT:    le lr, .LBB20_3
+; CHECK-NEXT:  @ %bb.4: @ %for.cond.cleanup3
+; CHECK-NEXT:    add.w sp, sp, #576
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.4:
+; CHECK-NEXT:  @ %bb.5:
 ; CHECK-NEXT:  .LCPI20_0:
 ; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 1 @ 0x1

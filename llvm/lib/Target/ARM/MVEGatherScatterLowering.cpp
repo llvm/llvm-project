@@ -1051,17 +1051,9 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
   // If the phi is not used by anything else, we can just adapt it when
   // replacing the instruction; if it is, we'll have to duplicate it
   PHINode *NewPhi;
-  if (Phi->hasNUses(2)) {
+  if (Phi->hasNUses(2) && IncInstruction->hasOneUse()) {
     // No other users -> reuse existing phi (One user is the instruction
     // we're looking at, the other is the phi increment)
-    if (!IncInstruction->hasOneUse()) {
-      // If the incrementing instruction does have more users than
-      // our phi, we need to copy it
-      IncInstruction = BinaryOperator::Create(
-          Instruction::BinaryOps(IncInstruction->getOpcode()), Phi,
-          IncrementPerRound, "LoopIncrement", IncInstruction->getIterator());
-      Phi->setIncomingValue(IncrementingBlock, IncInstruction);
-    }
     NewPhi = Phi;
   } else {
     // There are other users -> create a new phi
