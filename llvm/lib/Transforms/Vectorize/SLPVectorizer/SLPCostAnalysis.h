@@ -40,6 +40,13 @@ enum class RecurKind;
 
 namespace llvm::slpvectorizer {
 
+/// Return the cost of a strided load and accompanying bitcast.
+InstructionCost
+getStridedLoadCost(const TargetTransformInfo &TTI, Type *StridedLoadTy,
+                   Type *VecTy, Value *Ptr, Align CommonAlignment,
+                   TargetTransformInfo::CastContextHint Ctx,
+                   TargetTransformInfo::TargetCostKind CostKind);
+
 /// Returns the cost of the shuffle instructions with the given \p Kind, vector
 /// type \p Tp and optional \p Mask. Adds SLP-specific cost estimation for
 /// insert subvector pattern.

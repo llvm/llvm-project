@@ -14598,16 +14598,9 @@ void BoUpSLP::transformNodes() {
           auto *VecTy = cast<FixedVectorType>(
               getWidenedType(ScalarTy, E.getVectorFactor()));
           FixedVectorType *StridedLoadTy = SPtrInfo.Ty;
-          InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
-              MemIntrinsicCostAttributes(
-                  Intrinsic::experimental_vp_strided_load, StridedLoadTy,
-                  LI0->getPointerOperand(), /*VariableMask=*/false,
-                  CommonAlignment),
-              CostKind);
-          if (StridedLoadTy != VecTy)
-            StridedCost += TTI->getCastInstrCost(
-                Instruction::BitCast, VecTy, StridedLoadTy,
-                TTI::CastContextHint::None, CostKind);
+          InstructionCost StridedCost = getStridedLoadCost(
+              *TTI, StridedLoadTy, VecTy, LI0->getPointerOperand(),
+              CommonAlignment, getCastContextHint(E), CostKind);
           return StridedCost < CompressedCost;
         };
 
@@ -17472,16 +17465,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         assert(StridedLoadTy && "Missing StridedPointerInfo for tree entry.");
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
-        VecLdCost = TTI->getMemIntrinsicInstrCost(
-            MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
-                                       StridedLoadTy, LI0->getPointerOperand(),
-                                       /*VariableMask=*/false, CommonAlignment),
-            CostKind);
-        if (StridedLoadTy != VecTy)
-          VecLdCost +=
-              TTI->getCastInstrCost(Instruction::BitCast, VecTy, StridedLoadTy,
-                                    getCastContextHint(*E), CostKind);
-
+        VecLdCost = getStridedLoadCost(
+            *TTI, StridedLoadTy, VecTy, LI0->getPointerOperand(),
+            CommonAlignment, getCastContextHint(*E), CostKind);
         break;
       }
       case TreeEntry::CompressVectorize: {

@@ -61,6 +61,22 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                             /*CtxI=*/nullptr, VIC);
 }
 
+InstructionCost
+getStridedLoadCost(const TargetTransformInfo &TTI, Type *StridedLoadTy,
+                   Type *VecTy, Value *Ptr, Align CommonAlignment,
+                   TargetTransformInfo::CastContextHint Ctx,
+                   TargetTransformInfo::TargetCostKind CostKind) {
+  InstructionCost StridedCost = TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
+                                 StridedLoadTy, Ptr,
+                                 /*VariableMask=*/false, CommonAlignment),
+      CostKind);
+  if (StridedLoadTy != VecTy)
+    StridedCost += TTI.getCastInstrCost(Instruction::BitCast, VecTy,
+                                        StridedLoadTy, Ctx, CostKind);
+  return StridedCost;
+}
+
 std::pair<InstructionCost, InstructionCost>
 getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
             Value *BasePtr, unsigned Opcode, const TTI::TargetCostKind CostKind,
