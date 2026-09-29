@@ -3920,6 +3920,7 @@ bool AArch64InstructionSelector::selectTLSGlobalValueMachO(
   }
 
   MIB.buildInstr(Opcode, {}, {Load})
+      .setOperandDead(1) // implicit-def $lr
       .addUse(AArch64::X0, RegState::Implicit)
       .addDef(AArch64::X0, RegState::Implicit)
       .addRegMask(TRI.getTLSCallPreservedMask());
@@ -4889,7 +4890,9 @@ bool AArch64InstructionSelector::selectOverflowOp(MachineInstr &I,
   Register CarryOutReg = CarryMI.getCarryOutReg();
 
   // Don't convert carry-out to VReg if it is never used
-  if (!MRI.use_nodbg_empty(CarryOutReg)) {
+  if (MRI.use_nodbg_empty(CarryOutReg)) {
+    OpAndCC.first->addRegisterDead(AArch64::NZCV, &TRI);
+  } else {
     // Now, put the overflow result in the register given by the first operand
     // to the overflow op. CSINC increments the result when the predicate is
     // false, so to get the increment when it's true, we need to use the

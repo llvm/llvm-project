@@ -536,7 +536,6 @@ features cannot lower the translation-unit ABI level;
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 - Fixed an assertion on omp taskloop transparent (#GH197162)
-- Fixed an assertion failure and a garbled diagnostic when the `message` clause of `#pragma omp error` was given a string literal that is not of `char` type, such as a wide string literal. Such literals are now diagnosed and ignored. (#GH140338)
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
@@ -690,6 +689,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when an invalid statement appeared in a ``switch``
   statement nested inside a C++26 expansion statement. (#GH210575)
 
+- Fixed an assertion when a ``matrix_type`` with constant dimensions and a
+  dependent element type was instantiated with an invalid element type.
+  (#GH202744)
+
 - Fixed friend declarations sometimes making non-visible default arguments
   incorrectly visible to default argument redefinition checks across modules.
 
@@ -763,6 +766,11 @@ features cannot lower the translation-unit ABI level;
   an ill-formed template argument. Clang now checks for a failed declaration 
   lookup before asserting that the name is not dependent, avoiding an assertion 
   after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
+
+- Fixed a crash in constant evaluation when a new-expression selects a
+  user-declared allocation function that takes std::nothrow_t by value. Such
+  a new-expression is now correctly rejected in a constant expression because
+  it does not select a replaceable global allocation function. (#GH212211)
 
 #### Bug Fixes to AST Handling
 
