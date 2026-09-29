@@ -1533,3 +1533,105 @@ latch.exit:
 early.exit:
   ret i64 %iv
 }
+
+define i64 @two_early_exits_shared_condition() {
+; CHECK-LABEL: define i64 @two_early_exits_shared_condition() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    [[B:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[A]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[B]], i64 1024)
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i8> [[WIDE_LOAD1]], zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> zeroinitializer, <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[PREDPHI]], <4 x i1> splat (i1 true), <4 x i1> [[PREDPHI2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[VECTOR_EARLY_EXIT_CHECK:.*]], label %[[VECTOR_BODY_INTERIM]]
+; CHECK:       [[VECTOR_BODY_INTERIM]]:
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT_CHECK]]:
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP5]], i1 false)
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[PREDPHI]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[VECTOR_EARLY_EXIT_0:.*]], label %[[VECTOR_EARLY_EXIT_1:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT_1]]:
+; CHECK-NEXT:    br label %[[EXIT_LEFT:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT_0]]:
+; CHECK-NEXT:    br label %[[EXIT_RIGHT:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 64, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[LD_A:%.*]] = load i8, ptr [[GEP_A]], align 1
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[LD_B:%.*]] = load i8, ptr [[GEP_B]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[LD_A]], 0
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i8 [[LD_B]], 0
+; CHECK-NEXT:    br i1 [[COND]], label %[[LEFT:.*]], label %[[RIGHT:.*]]
+; CHECK:       [[LEFT]]:
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT_LEFT]], label %[[LOOP_LATCH]]
+; CHECK:       [[RIGHT]]:
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT_RIGHT]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp ne i64 [[IV_NEXT]], 67
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_HEADER]], label %[[EXIT:.*]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK:       [[EXIT_LEFT]]:
+; CHECK-NEXT:    ret i64 1
+; CHECK:       [[EXIT_RIGHT]]:
+; CHECK-NEXT:    ret i64 2
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i64 43
+;
+entry:
+  %A = alloca [1024 x i8]
+  %B = alloca [1024 x i8]
+  call void @init_mem(ptr %A, i64 1024)
+  call void @init_mem(ptr %B, i64 1024)
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
+  %ld.A = load i8, ptr %gep.A, align 1
+  %gep.B = getelementptr inbounds i8, ptr %B, i64 %iv
+  %ld.B = load i8, ptr %gep.B, align 1
+  %cmp = icmp eq i8 %ld.A, 0
+  %cond = icmp slt i8 %ld.B, 0
+  br i1 %cond, label %left, label %right
+
+left:
+  br i1 %cmp, label %exit.left, label %loop.latch
+
+right:
+  br i1 %cmp, label %exit.right, label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp ne i64 %iv.next, 67
+  br i1 %ec, label %loop.header, label %exit
+
+exit.left:
+  ret i64 1
+
+exit.right:
+  ret i64 2
+
+exit:
+  ret i64 43
+}

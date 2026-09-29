@@ -26,25 +26,30 @@ define i64 @single_exit_in_conditional_block(ptr dereferenceable(64) %a, ptr der
 ; CHECK-NEXT:    EMIT ir<%gep.B> = getelementptr inbounds ir<%b>, ir<%iv> (!vplan.execution.frequency 3458764513820540928 (37.5%, estimated))
 ; CHECK-NEXT:    EMIT-SCALAR ir<%l.B> = load ir<%gep.B> (!vplan.execution.frequency 3458764513820540928 (37.5%, estimated))
 ; CHECK-NEXT:    EMIT ir<%cmp> = icmp eq ir<%l.A>, ir<%l.B> (!vplan.execution.frequency 3458764513820540928 (37.5%, estimated))
-; CHECK-NEXT:  Successor(s): loop.latch
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = masked-cond ir<%cmp>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = first-active-lane vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = step-vector i64
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = icmp ult vp<[[VP4]]>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP5]]> (!vplan.prof.estimated estimated {67108864, 2080374784}, !vplan.execution.frequency 3458764513820540928 (37.5%, estimated))
+; CHECK-NEXT:  Successor(s): loop.latch, loop.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  loop.latch:
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = phi [ ir<%cmp>, block.a ], [ ir<false>, loop.header ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP6:%[0-9]+]]> = phi [ ir<%cmp>, block.a ], [ ir<false>, loop.header ], [ ir<%cmp>, block.a ]
 ; CHECK-NEXT:    EMIT ir<%iv.next> = add ir<%iv>, ir<1> (!vplan.execution.frequency 9115285645797883904 (98.83%, estimated))
 ; CHECK-NEXT:    EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<64> (!vplan.execution.frequency 9115285645797883904 (98.83%, estimated))
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = freeze vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = any-of vp<[[VP3]]>
-; CHECK-NEXT:    EMIT branch-on-two-conds vp<[[VP4]]>, ir<%ec>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = freeze vp<[[VP6]]>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = any-of vp<[[VP7]]>
+; CHECK-NEXT:    EMIT branch-on-two-conds vp<[[VP8]]>, ir<%ec>
 ; CHECK-NEXT:  Successor(s): vector.early.exit, middle.block, loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<64>, vp<[[VP1]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<loop.end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.early.exit:
-; CHECK-NEXT:    EMIT vp<%first.active.lane> = first-active-lane vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<%first.active.lane> = first-active-lane vp<[[VP7]]>
 ; CHECK-NEXT:    EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%iv>
 ; CHECK-NEXT:  Successor(s): ir-bb<loop.end>
 ; CHECK-EMPTY:
@@ -53,7 +58,7 @@ define i64 @single_exit_in_conditional_block(ptr dereferenceable(64) %a, ptr der
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.header>:
