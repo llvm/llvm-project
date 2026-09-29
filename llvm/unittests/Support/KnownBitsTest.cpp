@@ -693,8 +693,6 @@ TEST(KnownBitsTest, UnaryExhaustive) {
       },
       [](const APInt &N) { return N * N; }, /*CheckOptimality=*/false);
 }
-// implementing googletest for SDIV having unknown bit in denominator.
-// To set the lowest unknown bit to get the minimum non-zero denominator.
 
 TEST(KnownBitsTest, NonZeroDenomSDiv) {
 
