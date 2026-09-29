@@ -4574,3 +4574,68 @@ func.func @interleave_splat() -> vector<[4]xf32> {
   %0 = vector.interleave %cst, %cst : vector<[2]xf32> -> vector<[4]xf32>
   return %0 : vector<[4]xf32>
 }
+
+// -----
+
+// In a graph region, a forwarded element can be another result of the same
+// vector.to_elements. The fold also replaces that result, so it must not apply.
+// CHECK-LABEL: func @to_elements_from_elements_graph_region_chain
+//       CHECK:   test.graph_region
+//       CHECK:     %[[ELE:.+]]:2 = vector.to_elements %[[VEC:.+]] : vector<2xf32>
+//       CHECK:     %[[VEC]] = vector.from_elements %[[ELE]]#1, %{{.+}} : vector<2xf32>
+func.func @to_elements_from_elements_graph_region_chain(%x: f32) {
+  test.graph_region {
+    %e:2 = vector.to_elements %v : vector<2xf32>
+    %v = vector.from_elements %e#1, %x : vector<2xf32>
+    "test.use"(%e#0, %e#1) : (f32, f32) -> ()
+  }
+  return
+}
+
+// -----
+
+// Same as above, but the forwarded elements form a cycle.
+// CHECK-LABEL: func @to_elements_from_elements_graph_region_cycle
+//       CHECK:   test.graph_region
+//       CHECK:     %[[ELE:.+]]:2 = vector.to_elements %[[VEC:.+]] : vector<2xf32>
+//       CHECK:     %[[VEC]] = vector.from_elements %[[ELE]]#1, %[[ELE]]#0 : vector<2xf32>
+func.func @to_elements_from_elements_graph_region_cycle() {
+  test.graph_region {
+    %e:2 = vector.to_elements %v : vector<2xf32>
+    %v = vector.from_elements %e#1, %e#0 : vector<2xf32>
+    "test.use"(%e#0, %e#1) : (f32, f32) -> ()
+  }
+  return
+}
+
+// -----
+
+// Same as above, but the second element forwards the first result.
+// CHECK-LABEL: func @to_elements_from_elements_graph_region_backward_chain
+//       CHECK:   test.graph_region
+//       CHECK:     %[[ELE:.+]]:2 = vector.to_elements %[[VEC:.+]] : vector<2xf32>
+//       CHECK:     %[[VEC]] = vector.from_elements %{{.+}}, %[[ELE]]#0 : vector<2xf32>
+func.func @to_elements_from_elements_graph_region_backward_chain(%x: f32) {
+  test.graph_region {
+    %e:2 = vector.to_elements %v : vector<2xf32>
+    %v = vector.from_elements %x, %e#0 : vector<2xf32>
+    "test.use"(%e#0, %e#1) : (f32, f32) -> ()
+  }
+  return
+}
+
+// -----
+
+// In a graph region, a value that an empty vector.mask yields can be another
+// result of the same mask. The fold also replaces that result, so it must not
+// apply.
+// CHECK-LABEL: func @empty_mask_graph_region_cycle
+//       CHECK:   test.graph_region
+//       CHECK:     %[[MASK:.+]]:2 = vector.mask %{{.+}} { vector.yield %[[MASK]]#1, %[[MASK]]#0 : f32, f32 }
+func.func @empty_mask_graph_region_cycle(%m: vector<1xi1>) {
+  test.graph_region {
+    %r:2 = vector.mask %m { vector.yield %r#1, %r#0 : f32, f32 } : vector<1xi1> -> (f32, f32)
+    "test.use"(%r#0, %r#1) : (f32, f32) -> ()
+  }
+  return
+}

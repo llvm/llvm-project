@@ -2653,16 +2653,14 @@ static bool haveSameDefiningOp(OperandRange operands, Operation *defOp) {
 ///
 ///   user_op %a, %b, %c
 ///
-static LogicalResult
-foldToElementsFromElements(ToElementsOp toElementsOp,
-                           SmallVectorImpl<OpFoldResult> &results) {
+static FailureOr<OpFoldResults>
+foldToElementsFromElements(ToElementsOp toElementsOp) {
   auto fromElementsOp =
       toElementsOp.getSource().getDefiningOp<FromElementsOp>();
   if (!fromElementsOp)
     return failure();
 
-  llvm::append_range(results, fromElementsOp.getElements());
-  return success();
+  return OpFoldResults(fromElementsOp.getElements());
 }
 
 /// Folds vector.to_elements(vector.broadcast(%x)) for the scalar case only.
@@ -2675,9 +2673,7 @@ foldToElementsFromElements(ToElementsOp toElementsOp,
 ///  user_op %x, %x, %x
 ///
 /// The vector source case is handled by a canonicalization pattern.
-static LogicalResult
-foldToElementsOfBroadcast(ToElementsOp toElementsOp,
-                          SmallVectorImpl<OpFoldResult> &results) {
+static OpFoldResults foldToElementsOfBroadcast(ToElementsOp toElementsOp) {
   auto bcastOp = toElementsOp.getSource().getDefiningOp<BroadcastOp>();
   if (!bcastOp)
     return failure();
@@ -2688,14 +2684,13 @@ foldToElementsOfBroadcast(ToElementsOp toElementsOp,
   auto resultVecType = cast<VectorType>(toElementsOp.getSource().getType());
 
   Value scalar = bcastOp.getSource();
-  results.assign(resultVecType.getNumElements(), scalar);
-  return success();
+  return SmallVector<OpFoldResult>(resultVecType.getNumElements(), scalar);
 }
 
-LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
-                                 SmallVectorImpl<OpFoldResult> &results) {
-  if (succeeded(foldToElementsFromElements(*this, results)))
-    return success();
+OpFoldResults ToElementsOp::fold(FoldAdaptor adaptor) {
+  if (FailureOr<OpFoldResults> results = foldToElementsFromElements(*this);
+      succeeded(results))
+    return std::move(*results);
 
   // Y = ToElements(ShapeCast(X)) -> Y = ToElements(X)
   if (auto shapeCast = getSource().getDefiningOp<ShapeCastOp>()) {
@@ -2703,7 +2698,7 @@ LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
     return success();
   }
 
-  return foldToElementsOfBroadcast(*this, results);
+  return foldToElementsOfBroadcast(*this);
 }
 
 LogicalResult
@@ -5909,46 +5904,44 @@ VectorType TransferWriteOp::getVectorType() {
 ///
 /// The producer of t1 may or may not be DCE'd depending on whether it is a
 /// block argument or has side effects.
-static LogicalResult foldReadInitWrite(TransferWriteOp write,
-                                       ArrayRef<Attribute>,
-                                       SmallVectorImpl<OpFoldResult> &results) {
+static Value foldReadInitWrite(TransferWriteOp write) {
   // TODO: support 0-d corner case.
   if (write.getTransferRank() == 0)
-    return failure();
+    return {};
   auto rankedTensorType =
       llvm::dyn_cast<RankedTensorType>(write.getBase().getType());
   // If not operating on tensors, bail.
   if (!rankedTensorType)
-    return failure();
+    return {};
   // If no read, bail.
   auto read = write.getVector().getDefiningOp<vector::TransferReadOp>();
   if (!read)
-    return failure();
+    return {};
   // TODO: support 0-d corner case.
   if (read.getTransferRank() == 0)
-    return failure();
+    return {};
   // For now, only accept minor identity. Future: composition is minor identity.
   if (!read.getPermutationMap().isMinorIdentity() ||
       !write.getPermutationMap().isMinorIdentity())
-    return failure();
+    return {};
   // Bail on mismatching ranks.
   if (read.getTransferRank() != write.getTransferRank())
-    return failure();
+    return {};
   // Bail on potential out-of-bounds accesses.
   if (read.hasOutOfBoundsDim() || write.hasOutOfBoundsDim())
-    return failure();
+    return {};
   // Masked transfers have padding/select semantics and are not identity folds.
   if (read.getMask() || write.getMask())
-    return failure();
+    return {};
   // Tensor types must be the same.
   if (read.getBase().getType() != rankedTensorType)
-    return failure();
+    return {};
   // Vector types must be the same.
   if (read.getVectorType() != write.getVectorType())
-    return failure();
+    return {};
   // Vector and Tensor shapes must match.
   if (read.getVectorType().getShape() != rankedTensorType.getShape())
-    return failure();
+    return {};
   // If any index is nonzero.
   auto isNotConstantZero = [](Value v) {
     auto cstOp = getConstantIntValue(v);
@@ -5956,10 +5949,8 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
   };
   if (llvm::any_of(read.getIndices(), isNotConstantZero) ||
       llvm::any_of(write.getIndices(), isNotConstantZero))
-    return failure();
-  // Success.
-  results.push_back(read.getBase());
-  return success();
+    return {};
+  return read.getBase();
 }
 
 static bool checkSameValueWAR(vector::TransferReadOp read,
@@ -5984,26 +5975,23 @@ static bool checkSameValueWAR(vector::TransferReadOp read,
 /// ```
 ///    %t0
 /// ```
-static LogicalResult foldWAR(TransferWriteOp write,
-                             SmallVectorImpl<OpFoldResult> &results) {
+static Value foldWAR(TransferWriteOp write) {
   if (!llvm::isa<RankedTensorType>(write.getBase().getType()))
-    return failure();
+    return {};
   auto read = write.getVector().getDefiningOp<vector::TransferReadOp>();
   if (!read)
-    return failure();
+    return {};
 
   if (!checkSameValueWAR(read, write))
-    return failure();
-  results.push_back(read.getBase());
-  return success();
+    return {};
+  return read.getBase();
 }
 
-LogicalResult TransferWriteOp::fold(FoldAdaptor adaptor,
-                                    SmallVectorImpl<OpFoldResult> &results) {
-  if (succeeded(foldReadInitWrite(*this, adaptor.getOperands(), results)))
-    return success();
-  if (succeeded(foldWAR(*this, results)))
-    return success();
+OpFoldResults TransferWriteOp::fold(FoldAdaptor adaptor) {
+  if (Value replacement = foldReadInitWrite(*this))
+    return replacement;
+  if (Value replacement = foldWAR(*this))
+    return replacement;
   if (succeeded(foldTransferInBoundsAttribute(*this)))
     return success();
   if (succeeded(foldTransferFullMask(*this)))
@@ -6328,8 +6316,7 @@ LogicalResult vector::StoreOp::verify() {
   return success();
 }
 
-LogicalResult StoreOp::fold(FoldAdaptor adaptor,
-                            SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults StoreOp::fold(FoldAdaptor adaptor) {
   return memref::foldMemRefCast(*this);
 }
 
@@ -6468,8 +6455,7 @@ void MaskedStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<MaskedStoreFolder>(context);
 }
 
-LogicalResult MaskedStoreOp::fold(FoldAdaptor adaptor,
-                                  SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults MaskedStoreOp::fold(FoldAdaptor adaptor) {
   return memref::foldMemRefCast(*this);
 }
 
@@ -8194,8 +8180,8 @@ LogicalResult MaskOp::verify() {
 /// Empty `vector.mask` with passthru operand are handled by the canonicalizer
 /// as it requires creating new operations.
 
-static LogicalResult foldEmptyMaskOp(MaskOp maskOp, MaskOp::FoldAdaptor adaptor,
-                                     SmallVectorImpl<OpFoldResult> &results) {
+static FailureOr<OpFoldResults> foldEmptyMaskOp(MaskOp maskOp,
+                                                MaskOp::FoldAdaptor adaptor) {
   if (!maskOp.isEmpty() || maskOp.hasPassthru())
     return failure();
 
@@ -8205,14 +8191,13 @@ static LogicalResult foldEmptyMaskOp(MaskOp maskOp, MaskOp::FoldAdaptor adaptor,
     return failure();
 
   // `vector.mask` has results, propagate the results.
-  llvm::append_range(results, terminator.getOperands());
-  return success();
+  return OpFoldResults(terminator.getOperands());
 }
 
-LogicalResult MaskOp::fold(FoldAdaptor adaptor,
-                           SmallVectorImpl<OpFoldResult> &results) {
-  if (succeeded(foldEmptyMaskOp(*this, adaptor, results)))
-    return success();
+OpFoldResults MaskOp::fold(FoldAdaptor adaptor) {
+  if (FailureOr<OpFoldResults> results = foldEmptyMaskOp(*this, adaptor);
+      succeeded(results))
+    return std::move(*results);
 
   MaskFormat maskFormat = getMaskFormat(getMask());
   if (maskFormat != MaskFormat::AllTrue)
@@ -8227,8 +8212,13 @@ LogicalResult MaskOp::fold(FoldAdaptor adaptor,
   maskableOp->dropAllUses();
   maskableOp->moveBefore(getOperation());
 
-  llvm::append_range(results, maskableOp->getResults());
-  return success();
+  // After the move, the terminator has null operands, so the fold must replace
+  // every result. The driver then erases the op. A mask without results has
+  // nothing to replace, and an empty range means failure, so report the move as
+  // an in-place change.
+  if (getNumResults() == 0)
+    return success();
+  return maskableOp->getResults();
 }
 
 /// Canonialize empty `vector.mask` operations that can't be handled in
