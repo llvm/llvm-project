@@ -655,8 +655,9 @@ void RAGreedy::evictInterference(const LiveInterval &VirtReg,
   }
 }
 
-MCRegister RegAllocEvictionAdvisor::
-getUnusedCalleeSavedReg(const LiveInterval &VirtReg, MCRegister PhysReg) const {
+MCRegister
+RegAllocEvictionAdvisor::getUnusedCalleeSavedReg(const LiveInterval &VirtReg,
+                                                 MCRegister PhysReg) const {
   auto IsUnusedCSR = [&](MCRegUnit Unit) {
     MCRegister CSR = RegClassInfo.getCalleeSavedAlias(Unit);
     if (CSR && !Matrix->isPhysRegUsed(CSR))
@@ -668,9 +669,10 @@ getUnusedCalleeSavedReg(const LiveInterval &VirtReg, MCRegister PhysReg) const {
     MCRegUnit Unit = (*Units).first;
     LaneBitmask Mask = (*Units).second;
     if (VirtReg.hasSubRanges() &&
-        llvm::none_of(VirtReg.subranges(), [&](const LiveInterval::SubRange &S) {
-          return (S.LaneMask & Mask).any();
-        }))
+        llvm::none_of(VirtReg.subranges(),
+                      [&](const LiveInterval::SubRange &S) {
+                        return (S.LaneMask & Mask).any();
+                      }))
       continue;
     if (MCRegister CSR = IsUnusedCSR(Unit))
       return CSR;
@@ -1338,8 +1340,7 @@ unsigned RAGreedy::calculateRegionSplitCost(const LiveInterval &VirtReg,
   unsigned BestCand = NoCand;
   for (MCRegister PhysReg : Order) {
     assert(PhysReg);
-    if (IgnoreCSR &&
-        EvictAdvisor->getUnusedCalleeSavedReg(VirtReg, PhysReg))
+    if (IgnoreCSR && EvictAdvisor->getUnusedCalleeSavedReg(VirtReg, PhysReg))
       continue;
 
     calculateRegionSplitCostAroundReg(PhysReg, Order, BestCost, NumCands,
