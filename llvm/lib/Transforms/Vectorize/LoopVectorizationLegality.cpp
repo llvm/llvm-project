@@ -326,13 +326,17 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
 
 // Return true if the inner loop \p Lp is uniform with regard to the outer loop
 // \p OuterLp (i.e., if the outer loop is vectorized, all the vector lanes
-// executing the inner loop will execute the same iterations). This check is
-// very constrained for now but it will be relaxed in the future. \p Lp is
+// executing the inner loop will execute the same iterations). \p Lp is
 // considered uniform if it meets all the following conditions:
-//   1) it has a canonical IV (starting from 0 and with stride 1),
-//   2) its latch terminator is a conditional branch and,
-//   3) its latch condition is a compare instruction whose operands are the
-//      canonical IV and an OuterLp invariant.
+//   1) its latch terminator is a conditional branch and,
+//   2) its latch condition is a compare instruction whose operands are both
+//      loop-uniform in \p OuterLp, i.e. for a given iteration of \p Lp their
+//      value is the same in every iteration of \p OuterLp (see
+//      ScalarEvolution::isLoopUniform). Every lane then computes the same latch
+//      condition, and as nested loops only exit via their latch (checked by the
+//      caller), all lanes leave \p Lp together.
+// A loop whose compared values differ between lanes is rejected, even if its
+// trip count is the same in every lane.
 // This check doesn't take into account the uniformity of other conditions not
 // related to the loop latch because they don't affect the loop uniformity.
 //
@@ -347,7 +351,7 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
 // before introducing the aforementioned infrastructure. However, if this is not
 // the case, we should move the \p OuterLp independent checks to a separate
 // function that is only executed once for each \p Lp.
-static bool isUniformLoop(Loop *Lp, Loop *OuterLp) {
+static bool isUniformLoop(Loop *Lp, Loop *OuterLp, ScalarEvolution &SE) {
   assert(Lp->getLoopLatch() && "Expected loop with a single latch.");
 
   // If Lp is the outer loop, it's uniform by definition.
@@ -356,13 +360,6 @@ static bool isUniformLoop(Loop *Lp, Loop *OuterLp) {
   assert(OuterLp->contains(Lp) && "OuterLp must contain Lp.");
 
   // 1.
-  PHINode *IV = Lp->getCanonicalInductionVariable();
-  if (!IV) {
-    LLVM_DEBUG(dbgs() << "LV: Canonical IV not found.\n");
-    return false;
-  }
-
-  // 2.
   BasicBlock *Latch = Lp->getLoopLatch();
   auto *LatchBr = dyn_cast<CondBrInst>(Latch->getTerminator());
   if (!LatchBr) {
@@ -370,7 +367,7 @@ static bool isUniformLoop(Loop *Lp, Loop *OuterLp) {
     return false;
   }
 
-  // 3.
+  // 2.
   auto *LatchCmp = dyn_cast<CmpInst>(LatchBr->getCondition());
   if (!LatchCmp) {
     LLVM_DEBUG(
@@ -378,13 +375,12 @@ static bool isUniformLoop(Loop *Lp, Loop *OuterLp) {
     return false;
   }
 
-  Value *CondOp0 = LatchCmp->getOperand(0);
-  Value *CondOp1 = LatchCmp->getOperand(1);
-  Value *IVUpdate = IV->getIncomingValueForBlock(Latch);
-  if (!(CondOp0 == IVUpdate && OuterLp->isLoopInvariant(CondOp1)) &&
-      !(CondOp1 == IVUpdate && OuterLp->isLoopInvariant(CondOp0))) {
-    LLVM_DEBUG(dbgs() << "LV: Loop latch condition is not uniform.\n");
-    return false;
+  for (Value *Op : LatchCmp->operand_values()) {
+    if (!SE.isSCEVable(Op->getType()) ||
+        !SE.isLoopUniform(SE.getSCEV(Op), OuterLp)) {
+      LLVM_DEBUG(dbgs() << "LV: Loop latch condition is not uniform.\n");
+      return false;
+    }
   }
 
   return true;
@@ -392,13 +388,13 @@ static bool isUniformLoop(Loop *Lp, Loop *OuterLp) {
 
 // Return true if \p Lp and all its nested loops are uniform with regard to \p
 // OuterLp.
-static bool isUniformLoopNest(Loop *Lp, Loop *OuterLp) {
-  if (!isUniformLoop(Lp, OuterLp))
+static bool isUniformLoopNest(Loop *Lp, Loop *OuterLp, ScalarEvolution &SE) {
+  if (!isUniformLoop(Lp, OuterLp, SE))
     return false;
 
   // Check if nested loops are uniform.
   for (Loop *SubLp : *Lp)
-    if (!isUniformLoopNest(SubLp, OuterLp))
+    if (!isUniformLoopNest(SubLp, OuterLp, SE))
       return false;
 
   return true;
@@ -678,8 +674,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
 
   // Check whether inner loops are uniform. At this point, we only support
   // simple outer loops scenarios with uniform nested loops.
-  if (!isUniformLoopNest(TheLoop /*loop nest*/,
-                         TheLoop /*context outer loop*/)) {
+  if (!isUniformLoopNest(TheLoop /*loop nest*/, TheLoop /*context outer loop*/,
+                         *PSE.getSE())) {
     reportVectorizationFailure(
         "Outer loop contains divergent loops",
         "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
