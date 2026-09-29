@@ -65,7 +65,7 @@ RUN: printf "%16377se\342\200\212e\342\200\213e\342\200\212e\342\200\212e" | \
 RUN: tr " " "\0" | llvm-strings -e utf8 | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-B --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 #                            v chunk boundary
-RUN: printf "%16373se\342\200\213e\342\200\212e\342\200\212e" | \
+RUN: printf "%16373se\342\200\213e\342\200\212e\342\200\212e\342" | \
 RUN: tr " " "\0" | llvm-strings -e utf8 | \
 RUN: FileCheck %s --check-prefix=CHECK-UTF8-CHUNK-B --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 CHECK-UTF8-CHUNK-B:{{e\xe2\x80\x8ae\xe2\x80\x8ae}}

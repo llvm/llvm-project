@@ -175,7 +175,9 @@ static void strings(raw_ostream &OS, StringRef FileName,
         }
         // Otherwise treat it as an error. A null byte is safe to treat as an
         // error, as a null byte is never printable in any locale.
-      } else if (Res == std::codecvt_base::partial && !AtEOF) {
+      } else if ((Res == std::codecvt_base::ok ||
+                  Res == std::codecvt_base::partial) &&
+                 !AtEOF) {
         // If we got a partial result but no character was written, we have an
         // incomplete multibyte character.  Do not treat this as an error,
         // instead reset the conversion state so that we can try again if/when
@@ -203,7 +205,7 @@ static void strings(raw_ostream &OS, StringRef FileName,
           P = reinterpret_cast<const char *>(UP);
           return true;
         }
-      } else if (Res == sourceExhausted) {
+      } else if (Res == sourceExhausted && !AtEOF) {
         Ch = 0;
         return false;
       }
