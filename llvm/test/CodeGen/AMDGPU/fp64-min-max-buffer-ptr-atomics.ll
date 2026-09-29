@@ -571,12 +571,11 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrsp
 ; GFX1310-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24 nv
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
-; GFX1310-NEXT:    v_mov_b32_e32 v2, s6
+; GFX1310-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_mov_b32 v3, s7
 ; GFX1310-NEXT:    s_mov_b32 s4, 4
 ; GFX1310-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[0:3], s4 offen th:TH_ATOMIC_NT_RETURN
-; GFX1310-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX1310-NEXT:    s_wait_loadcnt 0x0
-; GFX1310-NEXT:    ds_store_b64 v2, v[0:1]
+; GFX1310-NEXT:    ds_store_b64 v3, v[0:1]
 ; GFX1310-NEXT:    s_endpgm
 ;
 ; G_SI-LABEL: raw_ptr_buffer_atomic_max_rtn_f64_off4_slc:
@@ -638,12 +637,11 @@ define amdgpu_kernel void @raw_ptr_buffer_atomic_max_rtn_f64_off4_slc(ptr addrsp
 ; G_GFX1310-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24 nv
 ; G_GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; G_GFX1310-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
-; G_GFX1310-NEXT:    v_mov_b32_e32 v2, s6
+; G_GFX1310-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_mov_b32 v3, s7
 ; G_GFX1310-NEXT:    s_mov_b32 s4, 4
 ; G_GFX1310-NEXT:    buffer_atomic_max_num_f64 v[0:1], v2, s[0:3], s4 offen th:TH_ATOMIC_NT_RETURN
-; G_GFX1310-NEXT:    v_mov_b32_e32 v2, s7
 ; G_GFX1310-NEXT:    s_wait_loadcnt 0x0
-; G_GFX1310-NEXT:    ds_store_b64 v2, v[0:1]
+; G_GFX1310-NEXT:    ds_store_b64 v3, v[0:1]
 ; G_GFX1310-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 4, i32 2)

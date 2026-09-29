@@ -2449,14 +2449,13 @@ define amdgpu_kernel void @v_test_umin_ule_v3i16(ptr addrspace(1) %out, ptr addr
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_load_b64 v[0:1], v4, s[2:3] scale_offset
 ; GFX1250-NEXT:    global_load_b64 v[2:3], v4, s[6:7] scale_offset
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v4, 3, v4
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v5, 3, v4
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_pk_min_u16 v1, v1, v3
 ; GFX1250-NEXT:    v_pk_min_u16 v0, v0, v2
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b16 v4, v1, s[0:1] offset:4
-; GFX1250-NEXT:    global_store_b32 v4, v0, s[0:1]
+; GFX1250-NEXT:    global_store_b16 v5, v1, s[0:1] offset:4
+; GFX1250-NEXT:    global_store_b32 v5, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds <3 x i16>, ptr addrspace(1) %a.ptr, i32 %tid

@@ -165,8 +165,8 @@ define amdgpu_kernel void @sqrt_v2bf16(ptr addrspace(1) %r, ptr addrspace(1) %a)
 ; GFX12-FAKE16-SDAG-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX12-FAKE16-SDAG-NEXT:    v_nop
 ; GFX12-FAKE16-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-FAKE16-SDAG-NEXT:    v_dual_lshrrev_b32 v0, 16, v0 :: v_dual_bitop2_b32 v1, s0, v1 bitop3:0x40
-; GFX12-FAKE16-SDAG-NEXT:    v_sqrt_bf16_e32 v0, v0
+; GFX12-FAKE16-SDAG-NEXT:    v_dual_lshrrev_b32 v2, 16, v0 :: v_dual_bitop2_b32 v1, s0, v1 bitop3:0x40
+; GFX12-FAKE16-SDAG-NEXT:    v_sqrt_bf16_e32 v0, v2
 ; GFX12-FAKE16-SDAG-NEXT:    v_nop
 ; GFX12-FAKE16-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
 ; GFX12-FAKE16-SDAG-NEXT:    v_lshl_or_b32 v0, v0, 16, v1

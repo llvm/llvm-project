@@ -7569,12 +7569,12 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) 
 ; GFX1251-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1251-NEXT:    s_mov_b32 s2, 0x3ff
 ; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1251-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
+; GFX1251-NEXT:    v_dual_mov_b32 v5, 0 :: v_dual_bitop2_b32 v4, s2, v0 bitop3:0x40
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-NEXT:    global_load_b128 v[0:3], v0, s[0:1] scale_offset
+; GFX1251-NEXT:    global_load_b128 v[0:3], v4, s[0:1] scale_offset
 ; GFX1251-NEXT:    s_wait_loadcnt 0x0
 ; GFX1251-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[0:3]
-; GFX1251-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX1251-NEXT:    global_store_b128 v5, v[0:3], s[0:1]
 ; GFX1251-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x double>, ptr addrspace(1) %out, i32 %tid

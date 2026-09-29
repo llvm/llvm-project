@@ -4083,13 +4083,21 @@ define amdgpu_ps void @image_store_wait(<8 x i32> inreg %arg, <8 x i32> inreg %a
 ; GFX10PLUS-NEXT:    image_store v[0:3], v4, s[16:23] dmask:0xf dim:SQ_RSRC_IMG_1D unorm
 ; GFX10PLUS-NEXT:    s_endpgm
 ;
-; GFX12PLUS-LABEL: image_store_wait:
-; GFX12PLUS:       ; %bb.0: ; %main_body
-; GFX12PLUS-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX12PLUS-NEXT:    image_load v[0:3], v4, s[8:15] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX12PLUS-NEXT:    s_wait_loadcnt 0x0
-; GFX12PLUS-NEXT:    image_store v[0:3], v4, s[16:23] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX12PLUS-NEXT:    s_endpgm
+; GFX12-LABEL: image_store_wait:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12-NEXT:    image_load v[0:3], v4, s[8:15] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    image_store v[0:3], v4, s[16:23] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX12-NEXT:    s_endpgm
+;
+; GFX13-LABEL: image_store_wait:
+; GFX13:       ; %bb.0: ; %main_body
+; GFX13-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    image_load v[5:8], v4, s[8:15] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    image_store v[5:8], v4, s[16:23] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %arg3, i32 15, i32 %arg4, <8 x i32> %arg, i32 0, i32 0)
   %data = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %arg4, <8 x i32> %arg1, i32 0, i32 0)
@@ -4162,15 +4170,25 @@ define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, ptr addrspace(3) %
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12PLUS-LABEL: image_load_mmo:
-; GFX12PLUS:       ; %bb.0:
-; GFX12PLUS-NEXT:    image_load v1, [v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D
-; GFX12PLUS-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12PLUS-NEXT:    ds_store_2addr_b32 v0, v2, v2 offset1:4
-; GFX12PLUS-NEXT:    s_wait_loadcnt 0x0
-; GFX12PLUS-NEXT:    v_mov_b32_e32 v0, v1
-; GFX12PLUS-NEXT:    s_wait_dscnt 0x0
-; GFX12PLUS-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: image_load_mmo:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    image_load v1, [v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    ds_store_2addr_b32 v0, v2, v2 offset1:4
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-NEXT:    s_wait_dscnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX13-LABEL: image_load_mmo:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    image_load v1, [v1, v2], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D
+; GFX13-NEXT:    v_mov_b32_e32 v3, 0
+; GFX13-NEXT:    ds_store_2addr_b32 v0, v3, v3 offset1:4
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    v_mov_b32_e32 v0, v1
+; GFX13-NEXT:    s_wait_dscnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
   store float 0.000000e+00, ptr addrspace(3) %lds
   %c0 = extractelement <2 x i32> %c, i32 0
   %c1 = extractelement <2 x i32> %c, i32 1
