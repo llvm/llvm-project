@@ -1577,27 +1577,28 @@ include "llvm/Option/OptParser.td"
 
 def FooOptions : OptionsStruct;
 
-defm : BoolField<"foo-enable", "1", "Enable foo">;
-defm : ValueField<"foo-threshold", "unsigned", "8", "The threshold">;
+defm : BoolField<"enable-foo", "1", "Enable foo">;
+defm threshold : ValueField<"foo-threshold", "unsigned", "8", "The threshold">;
 let Hidden = 0 in
 defm : ValueField<"foo-path", "StringRef", "\"-\"", "The input path">;
 ```
 
 The struct is in namespace `llvm` unless the def names another, as in
-`OptionsStruct<"mlir">`. A member is named after its option, `foo_enable` for
-`-foo-enable`, unless the `defm` names it.
+`OptionsStruct<"mlir">`. A member is named after its option, `enable_foo` for
+`-enable-foo`; a named `defm` such as `defm threshold` names it `threshold`.
 
-A `BoolField` is set by `-x` or `-x=true|false|1|0`. A `ValueField` of an
-integer type, `double`, or `StringRef` is set by `-x=value` or `-x value`.
-Both accept `--` for `-`. Only `-help-hidden` lists the options, like
-`cl::Hidden`; those declared in `let Hidden = 0 in` are also listed by `-help`.
+The `BoolField` is set by `-enable-foo` or `-enable-foo=true|false|1|0`. A
+`ValueField`, of an integer type, `double`, or `StringRef`, is set by
+`-foo-threshold=8` or `-foo-threshold 8`. Both accept `--` for `-`. Only
+`-help-hidden` lists the options, like `cl::Hidden`; those declared in
+`let Hidden = 0 in` are also listed by `-help`.
 
 A default is the member's C++ initializer, so `"\"-\""` initializes `foo_path`
 to `"-"`. The header declares the struct after including what the member
 defaults need, and one source file defines it and registers it with `cl::`.
 
 The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under
-`LINK_COMPONENTS`. Code reads `FooOptions::Global.foo_enable`, the instance the
+`LINK_COMPONENTS`. Code reads `FooOptions::Global.enable_foo`, the instance the
 command line sets. Keep the header in `lib/`, as private as the `static cl::opt`
 it replaces; another library that needs a value calls a function or takes a
 parameter.

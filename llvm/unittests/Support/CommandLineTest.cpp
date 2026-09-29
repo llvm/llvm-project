@@ -2361,6 +2361,20 @@ TEST(CommandLineTest, LibraryOptionsRegisteredWhileParsing) {
   cl::ResetCommandLineParser();
 }
 
+// An unregistered subcommand, as MLIR's PassOptions is, may reuse a library
+// option's name.
+TEST(CommandLineTest, LibraryOptionsUnregisteredSubCommand) {
+  cl::ResetCommandLineParser();
+  TestLibrary L;
+  cl::addLibraryOptions(L);
+  const char *Args[] = {"prog"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
+                                          &llvm::nulls()));
+  cl::SubCommand Unregistered;
+  StackOption<int> Opt("library-flag", cl::sub(Unregistered));
+  cl::ResetCommandLineParser();
+}
+
 #if GTEST_HAS_DEATH_TEST
 TEST(CommandLineTest, LibraryOptionsConflict) {
   cl::ResetCommandLineParser();

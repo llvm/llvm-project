@@ -227,8 +227,11 @@ public:
     bool HadErrors = false;
     if (O->hasArgStr()) {
       // Add argument to the argument map!
+      // An unregistered subcommand, such as MLIR's PassOptions, parses its
+      // own arguments.
       if (!SC->OptionsMap.insert(std::make_pair(O->ArgStr, O)).second ||
-          LibraryIndex.contains(O->ArgStr)) {
+          (RegisteredSubCommands.contains(SC) &&
+           LibraryIndex.contains(O->ArgStr))) {
         errs() << ProgramName << ": CommandLine Error: Option '" << O->ArgStr
                << "' registered more than once!\n";
         HadErrors = true;
