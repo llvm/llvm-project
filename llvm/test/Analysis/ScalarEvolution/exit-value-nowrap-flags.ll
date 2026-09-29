@@ -290,16 +290,20 @@ exit:
   ret void
 }
 
-define ptr @exit_value_mul_drops_nuw(ptr %first, ptr %last) {
-; CHECK-LABEL: 'exit_value_mul_drops_nuw'
-; CHECK-NEXT:  Classifying expressions for: @exit_value_mul_drops_nuw
+; A pointer recurrence: the exit value's offset is (BTC * 24), and both that
+; multiply and the getelementptr adding it to the start carry the recurrence's
+; nuw.
+define ptr @ptr_step_mul_nuw(ptr %first, ptr %last) {
+;
+; CHECK-LABEL: 'ptr_step_mul_nuw'
+; CHECK-NEXT:  Classifying expressions for: @ptr_step_mul_nuw
 ; CHECK-NEXT:    %p = phi ptr [ %first, %entry ], [ %p.next, %loop ]
-; CHECK-NEXT:    --> {%first,+,24}<nuw><%loop> U: full-set S: full-set Exits: ((24 * (((-24 + (-1 * (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64)))))<nuw><nsw> + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64))) /u 24) + (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64)))))) + %first)<u nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%first,+,24}<nuw><%loop> U: full-set S: full-set Exits: ((24 * (((-24 + (-1 * (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64)))))<nuw><nsw> + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64))) /u 24) + (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64))))))<u nuw> + %first)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %p.next = getelementptr inbounds nuw i8, ptr %p, i64 24
-; CHECK-NEXT:    --> {(24 + %first),+,24}<nuw><%loop> U: full-set S: full-set Exits: (24 + (24 * (((-24 + (-1 * (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64)))))<nuw><nsw> + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64))) /u 24) + (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64)))))) + %first) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(24 + %first),+,24}<nuw><%loop> U: full-set S: full-set Exits: (24 + (24 * (((-24 + (-1 * (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64)))))<nuw><nsw> + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64))) /u 24) + (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64))))))<u nuw> + %first) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %lc = phi ptr [ %p, %loop ]
-; CHECK-NEXT:    --> {%first,+,24}<nuw><%loop> U: full-set S: full-set --> ((24 * (((-24 + (-1 * (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64)))))<nuw><nsw> + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64))) /u 24) + (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64)))))) + %first)<u nuw> U: full-set S: full-set
-; CHECK-NEXT:  Determining loop execution counts for: @exit_value_mul_drops_nuw
+; CHECK-NEXT:    --> {%first,+,24}<nuw><%loop> U: full-set S: full-set --> ((24 * (((-24 + (-1 * (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64)))))<nuw><nsw> + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64))) /u 24) + (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64))))))<u nuw> + %first)<u nuw> U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_step_mul_nuw
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (((-24 + (-1 * (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64)))))<nuw><nsw> + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64))) /u 24) + (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64)))))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 768614336404564650
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (((-24 + (-1 * (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64)))))<nuw><nsw> + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64))) /u 24) + (1 umin (-24 + (-1 * (ptrtoaddr ptr %first to i64)) + ((24 + (ptrtoaddr ptr %first to i64)) umax (ptrtoaddr ptr %last to i64)))))

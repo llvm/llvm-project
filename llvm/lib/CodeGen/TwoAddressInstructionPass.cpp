@@ -220,6 +220,7 @@ public:
     AU.setPreservesCFG();
     AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -236,7 +237,8 @@ TwoAddressInstructionPass::run(MachineFunction &MF,
   LiveIntervals *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
 
   TwoAddressInstructionImpl Impl(MF, MFAM, LIS);
-  if (MF.getFunction().hasOptNone())
+  if (MF.getFunction().hasOptNone() ||
+      shouldSkipOptimizationForOptBisect(MF.getFunction()))
     Impl.setOptLevel(CodeGenOptLevel::None);
 
   MFPropsModifier _(*this, MF);
