@@ -3781,19 +3781,19 @@ define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x 
 ; AVX512VL-ONLY-NEXT:    vpextrw $1, %xmm1, %eax
 ; AVX512VL-ONLY-NEXT:    vmovd %xmm1, %ecx
 ; AVX512VL-ONLY-NEXT:    addl %eax, %ecx
-; AVX512VL-ONLY-NEXT:    kmovd %k6, %r10d
-; AVX512VL-ONLY-NEXT:    kshiftrd $11, %k7, %k6
 ; AVX512VL-ONLY-NEXT:    kmovd %k6, %r11d
-; AVX512VL-ONLY-NEXT:    kshiftrd $10, %k7, %k6
+; AVX512VL-ONLY-NEXT:    kshiftrd $11, %k7, %k6
 ; AVX512VL-ONLY-NEXT:    kmovd %k6, %ebx
-; AVX512VL-ONLY-NEXT:    kshiftrd $9, %k7, %k6
+; AVX512VL-ONLY-NEXT:    kshiftrd $10, %k7, %k6
 ; AVX512VL-ONLY-NEXT:    kmovd %k6, %r14d
-; AVX512VL-ONLY-NEXT:    kshiftrd $8, %k7, %k6
+; AVX512VL-ONLY-NEXT:    kshiftrd $9, %k7, %k6
 ; AVX512VL-ONLY-NEXT:    kmovd %k6, %r15d
-; AVX512VL-ONLY-NEXT:    kshiftrd $7, %k7, %k6
+; AVX512VL-ONLY-NEXT:    kshiftrd $8, %k7, %k6
 ; AVX512VL-ONLY-NEXT:    kmovd %k6, %r12d
-; AVX512VL-ONLY-NEXT:    kshiftrd $6, %k7, %k6
+; AVX512VL-ONLY-NEXT:    kshiftrd $7, %k7, %k6
 ; AVX512VL-ONLY-NEXT:    kmovd %k6, %r13d
+; AVX512VL-ONLY-NEXT:    kshiftrd $6, %k7, %k6
+; AVX512VL-ONLY-NEXT:    kmovd %k6, %r10d
 ; AVX512VL-ONLY-NEXT:    kshiftrd $5, %k7, %k6
 ; AVX512VL-ONLY-NEXT:    kmovd %k6, %r9d
 ; AVX512VL-ONLY-NEXT:    kshiftrd $4, %k7, %k6
@@ -3833,31 +3833,31 @@ define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x 
 ; AVX512VL-ONLY-NEXT:    andl $1, %ecx
 ; AVX512VL-ONLY-NEXT:    addq %rax, %rcx
 ; AVX512VL-ONLY-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX512VL-ONLY-NEXT:    movzbl %r13b, %eax
-; AVX512VL-ONLY-NEXT:    andl $1, %eax
-; AVX512VL-ONLY-NEXT:    addq %rcx, %rax
-; AVX512VL-ONLY-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX512VL-ONLY-NEXT:    movzbl %r12b, %ecx
-; AVX512VL-ONLY-NEXT:    andl $1, %ecx
-; AVX512VL-ONLY-NEXT:    addq %rax, %rcx
-; AVX512VL-ONLY-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX512VL-ONLY-NEXT:    movzbl %r15b, %eax
-; AVX512VL-ONLY-NEXT:    andl $1, %eax
-; AVX512VL-ONLY-NEXT:    addq %rcx, %rax
-; AVX512VL-ONLY-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX512VL-ONLY-NEXT:    movzbl %r14b, %ecx
-; AVX512VL-ONLY-NEXT:    andl $1, %ecx
-; AVX512VL-ONLY-NEXT:    addq %rax, %rcx
-; AVX512VL-ONLY-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX512VL-ONLY-NEXT:    movzbl %bl, %eax
-; AVX512VL-ONLY-NEXT:    andl $1, %eax
-; AVX512VL-ONLY-NEXT:    addq %rcx, %rax
-; AVX512VL-ONLY-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX512VL-ONLY-NEXT:    movzbl %r11b, %ecx
-; AVX512VL-ONLY-NEXT:    andl $1, %ecx
-; AVX512VL-ONLY-NEXT:    addq %rax, %rcx
-; AVX512VL-ONLY-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX512VL-ONLY-NEXT:    movzbl %r10b, %eax
+; AVX512VL-ONLY-NEXT:    andl $1, %eax
+; AVX512VL-ONLY-NEXT:    addq %rcx, %rax
+; AVX512VL-ONLY-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX512VL-ONLY-NEXT:    movzbl %r13b, %ecx
+; AVX512VL-ONLY-NEXT:    andl $1, %ecx
+; AVX512VL-ONLY-NEXT:    addq %rax, %rcx
+; AVX512VL-ONLY-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX512VL-ONLY-NEXT:    movzbl %r12b, %eax
+; AVX512VL-ONLY-NEXT:    andl $1, %eax
+; AVX512VL-ONLY-NEXT:    addq %rcx, %rax
+; AVX512VL-ONLY-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX512VL-ONLY-NEXT:    movzbl %r15b, %ecx
+; AVX512VL-ONLY-NEXT:    andl $1, %ecx
+; AVX512VL-ONLY-NEXT:    addq %rax, %rcx
+; AVX512VL-ONLY-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX512VL-ONLY-NEXT:    movzbl %r14b, %eax
+; AVX512VL-ONLY-NEXT:    andl $1, %eax
+; AVX512VL-ONLY-NEXT:    addq %rcx, %rax
+; AVX512VL-ONLY-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX512VL-ONLY-NEXT:    movzbl %bl, %ecx
+; AVX512VL-ONLY-NEXT:    andl $1, %ecx
+; AVX512VL-ONLY-NEXT:    addq %rax, %rcx
+; AVX512VL-ONLY-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX512VL-ONLY-NEXT:    movzbl %r11b, %eax
 ; AVX512VL-ONLY-NEXT:    andl $1, %eax
 ; AVX512VL-ONLY-NEXT:    addq %rcx, %rax
 ; AVX512VL-ONLY-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -3942,13 +3942,13 @@ define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x 
 ; AVX512VL-ONLY-NEXT:    vpextrw $0, %xmm0, (%rsp)
 ; AVX512VL-ONLY-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 4-byte Reload
 ; AVX512VL-ONLY-NEXT:    vpextrw $1, %xmm0, (%rsp,%r13,2)
-; AVX512VL-ONLY-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
+; AVX512VL-ONLY-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 2-byte Folded Reload
 ; AVX512VL-ONLY-NEXT:    vpextrw $2, %xmm0, (%rsp,%r13,2)
-; AVX512VL-ONLY-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
+; AVX512VL-ONLY-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 2-byte Folded Reload
 ; AVX512VL-ONLY-NEXT:    vpextrw $3, %xmm0, (%rsp,%r13,2)
-; AVX512VL-ONLY-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
+; AVX512VL-ONLY-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 2-byte Folded Reload
 ; AVX512VL-ONLY-NEXT:    vpextrw $4, %xmm0, (%rsp,%r13,2)
-; AVX512VL-ONLY-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
+; AVX512VL-ONLY-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 2-byte Folded Reload
 ; AVX512VL-ONLY-NEXT:    vpextrw $5, %xmm0, (%rsp,%r13,2)
 ; AVX512VL-ONLY-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
 ; AVX512VL-ONLY-NEXT:    andl $31, %r13d
