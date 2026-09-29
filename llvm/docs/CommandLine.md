@@ -1568,9 +1568,7 @@ TODO: fill in this section
 ## Declaring a Library's Options in TableGen
 
 A library can declare its options in a `.td` file instead of as `cl::opt` globals.
-`llvm-tblgen -gen-opt-parser-defs` generates a struct with a member per option,
-the table that parses them, and the hooks through which
-`cl::ParseCommandLineOptions` parses them and `-help-hidden` lists them.
+`llvm-tblgen -gen-opt-parser-defs` generates a struct with a member per option, the table that parses them, and the hooks through which `cl::ParseCommandLineOptions` parses them and `-help-hidden` lists them.
 
 ```text
 include "llvm/Option/OptParser.td"
@@ -1583,22 +1581,17 @@ let Hidden = 0 in
 defm : ValueField<"foo-path", "StringRef", "\"-\"", "The input path">;
 ```
 
-The struct is in namespace `llvm` unless the def names another, as in
-`OptionsStruct<"mlir">`. A member is named after its option, `enable_foo` for
-`-enable-foo`; a named `defm` such as `defm threshold` names it `threshold`.
+The struct is in namespace `llvm` unless the def names another, as in `OptionsStruct<"mlir">`.
+A member is named after its option, `enable_foo` for `-enable-foo`; a named `defm` such as `defm threshold` names it `threshold`.
 
-The `BoolField` is set by `-enable-foo` or `-enable-foo=true|false|1|0`. A
-`ValueField`, of an integer type, `double`, or `StringRef`, is set by
-`-foo-threshold=8` or `-foo-threshold 8`. Both accept `--` for `-`. Only
-`-help-hidden` lists the options, like `cl::Hidden`; those declared in
-`let Hidden = 0 in` are also listed by `-help`.
+The `BoolField` is set by `-enable-foo` or `-enable-foo=true|false|1|0`.
+A `ValueField`, of an integer type, `double`, or `StringRef`, is set by `-foo-threshold=8` or `-foo-threshold 8`.
+Both accept `--` for `-`.
+Only `-help-hidden` lists the options, like `cl::Hidden`; those declared in `let Hidden = 0 in` are also listed by `-help`.
 
-A default is the member's C++ initializer, so `"\"-\""` initializes `foo_path`
-to `"-"`. The header declares the struct after including what the member
-defaults need, and one source file defines it and registers it with `cl::`.
+A default is the member's C++ initializer, so `"\"-\""` initializes `foo_path` to `"-"`.
+The header declares the struct after including what the member defaults need, and one source file defines it and registers it with `cl::`.
 
-The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under
-`LINK_COMPONENTS`. Code reads `FooOptions::Global.enable_foo`, the instance the
-command line sets. Keep the header in `lib/`, as private as the `static cl::opt`
-it replaces; another library that needs a value calls a function or takes a
-parameter.
+The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under `LINK_COMPONENTS`.
+Code reads `FooOptions::Global.enable_foo`, the instance the command line sets.
+Keep the header in `lib/`, as private as the `static cl::opt` it replaces; another library that needs a value calls a function or takes a parameter.
