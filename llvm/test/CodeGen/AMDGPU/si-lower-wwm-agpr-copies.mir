@@ -1,0 +1,28 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -run-pass=liveintervals,virtregmap,si-lower-wwm-copies -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -passes="require<live-intervals>,require<virtregmap>,si-lower-wwm-copies" -verify-machineinstrs -o - %s | FileCheck %s
+
+---
+name: lower-wwm-agpr-copies
+registers:
+  - { id: 0, class: vgpr_32, flags: [ WWM_REG ] }
+machineFunctionInfo:
+  sgprForEXECCopy: '$sgpr2_sgpr3'
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: lower-wwm-agpr-copies
+    ; CHECK: wwmReservedRegs:
+    ; CHECK-NEXT: - '$agpr0'
+    ; CHECK-NEXT: - '$vgpr1'
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $sgpr2_sgpr3 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; CHECK-NEXT: $agpr0 = COPY $vgpr0
+    ; CHECK-NEXT: $exec = S_MOV_B64 killed $sgpr2_sgpr3
+    ; CHECK-NEXT: $sgpr2_sgpr3 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; CHECK-NEXT: $vgpr1 = COPY $agpr0
+    ; CHECK-NEXT: $exec = S_MOV_B64 killed $sgpr2_sgpr3
+    $agpr0 = WWM_COPY $vgpr0
+    $vgpr1 = WWM_COPY $agpr0
+...

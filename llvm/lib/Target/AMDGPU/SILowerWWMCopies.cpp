@@ -38,7 +38,7 @@ public:
 
 private:
   bool isSCCLiveAtMI(const MachineInstr &MI);
-  void addToWWMSpills(MachineFunction &MF, Register Reg);
+  void reserveWWMRegister(MachineFunction &MF, Register Reg);
 
   LiveIntervals *LIS;
   SlotIndexes *Indexes;
@@ -92,9 +92,9 @@ bool SILowerWWMCopies::isSCCLiveAtMI(const MachineInstr &MI) {
   return LR.liveAt(Idx);
 }
 
-// Preserve the inactive lanes of a WWM copy destination at function entry/exit.
-// Fast register allocation has already rewritten virtual registers here.
-void SILowerWWMCopies::addToWWMSpills(MachineFunction &MF, Register Reg) {
+// Record the physical register assigned to a WWM copy destination. It remains
+// owned by the WWM allocation after the temporary allocation mask is cleared.
+void SILowerWWMCopies::reserveWWMRegister(MachineFunction &MF, Register Reg) {
   Register PhysReg = Reg;
   if (Reg.isVirtual()) {
     assert(VRM && "expected VirtRegMap after WWM register allocation");
@@ -102,6 +102,7 @@ void SILowerWWMCopies::addToWWMSpills(MachineFunction &MF, Register Reg) {
     assert(PhysReg && "should have allocated a physical register");
   }
 
+  MFI->reserveWWMRegister(PhysReg);
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(PhysReg);
   MFI->allocateWWMSpill(MF, PhysReg, TRI->getSpillSize(*RC),
                         TRI->getSpillAlign(*RC));
@@ -161,7 +162,7 @@ bool SILowerWWMCopies::run(MachineFunction &MF) {
       TII->insertScratchExecCopy(MF, MBB, InsertPt, DL, RegForExecCopy,
                                  isSCCLiveAtMI(MI), Indexes);
       TII->restoreExec(MF, MBB, ++InsertPt, DL, RegForExecCopy, Indexes);
-      addToWWMSpills(MF, MI.getOperand(0).getReg());
+      reserveWWMRegister(MF, MI.getOperand(0).getReg());
       LLVM_DEBUG(dbgs() << "WWM copy manipulation for " << MI);
 
       // Lower WWM_COPY back to COPY
