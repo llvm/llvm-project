@@ -463,6 +463,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
        config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
        config.Reciprocals, config.PreferVectorWidth, config.UseSampleProfile,
+       config.DisableTailCalls, config.UniqueInternalLinkageNames,
        /*tuneCPU=*/"", setNoCapture, setNoAlias, setReadOnly}));
 
   if (config.EnableOpenMP) {

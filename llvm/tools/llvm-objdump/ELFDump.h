@@ -18,7 +18,6 @@ class Error;
 namespace object {
 class ELFObjectFileBase;
 class ELFSectionRef;
-class ObjectFile;
 class RelocationRef;
 } // namespace object
 
@@ -28,8 +27,6 @@ Error getELFRelocationValueString(const object::ELFObjectFileBase *Obj,
                                   const object::RelocationRef &Rel,
                                   llvm::SmallVectorImpl<char> &Result);
 uint64_t getELFSectionLMA(const object::ELFSectionRef &Sec);
-
-void printELFFileHeader(const object::ObjectFile *O);
 
 } // namespace objdump
 } // namespace llvm

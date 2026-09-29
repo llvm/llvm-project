@@ -445,7 +445,7 @@ optMain(int argc, char **argv,
 
   SmallVector<PassPlugin, 1> PluginList;
   PassPlugins.setCallback([&](const std::string &PluginPath) {
-    auto Plugin = PassPlugin::Load(PluginPath);
+    auto Plugin = PassPlugin::load(PluginPath);
     if (!Plugin)
       reportFatalUsageError(Plugin.takeError());
     PluginList.emplace_back(Plugin.get());
@@ -847,9 +847,8 @@ optMain(int argc, char **argv,
       (VerifyDebugInfoPreserve && !VerifyEachDebugInfoPreserve);
 
   Passes.add(new TargetLibraryInfoWrapperPass(TLII));
-  Passes.add(new RuntimeLibraryInfoWrapper(
-      Options->ExceptionModel, Options->EABIVersion, Options->MCOptions.ABIName,
-      Options->VecLib));
+  Passes.add(new RuntimeLibraryInfoWrapper(Options->MCOptions.ABIName,
+                                           Options->VecLib));
 
   // Add internal analysis passes from the target machine.
   Passes.add(createTargetTransformInfoWrapperPass(TM ? TM->getTargetIRAnalysis()

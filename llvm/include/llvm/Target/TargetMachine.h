@@ -258,11 +258,10 @@ public:
   /// assembly.
   const MCSubtargetInfo &getMCSubtargetInfo(StringRef CPU, StringRef FS);
 
-  /// Return the ExceptionHandling to use, considering TargetOptions and the
-  /// Triple's default.
+  /// Return the ExceptionHandling to use. A Default model resolves to the
+  /// triple's default; None means exceptions are disabled.
   ExceptionHandling getExceptionModel() const {
-    // FIXME: This interface fails to distinguish default from not supported.
-    return Options.ExceptionModel == ExceptionHandling::None
+    return Options.ExceptionModel == ExceptionHandling::Default
                ? TargetTriple.getDefaultExceptionHandling()
                : Options.ExceptionModel;
   }
@@ -329,10 +328,6 @@ public:
 
   void setCFIFixup(bool Enable) { Options.EnableCFIFixup = Enable; }
 
-  bool getAIXExtendedAltivecABI() const {
-    return Options.EnableAIXExtendedAltivecABI;
-  }
-
   bool getUniqueSectionNames() const { return Options.UniqueSectionNames; }
 
   /// Return true if unique basic block section names must be generated.
@@ -382,7 +377,8 @@ public:
   }
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
-  virtual bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {
+  virtual bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                                   unsigned DestAS) const {
     return false;
   }
 

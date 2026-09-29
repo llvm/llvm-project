@@ -14,7 +14,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/TransformOps/LinalgMatchOps.h"
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCFDialect.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorDialect.h"

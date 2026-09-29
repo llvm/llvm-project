@@ -7,6 +7,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.errno
     libc.include.fenv
     libc.include.float
+    libc.include.grp
     libc.include.inttypes
     libc.include.langinfo
     libc.include.libgen

@@ -18,7 +18,6 @@
 #include "AMDGPUIGroupLP.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 
@@ -58,27 +57,6 @@ static cl::opt<bool> UseCostHeur(
              "attempting to put the later nodes in the later sched groups. "
              "Experimentally, results are mixed, so this should be set on a "
              "case-by-case basis."));
-
-// Components of the mask that determines which instruction types may be may be
-// classified into a SchedGroup.
-enum class SchedGroupMask {
-  NONE = 0u,
-  ALU = 1u << 0,
-  VALU = 1u << 1,
-  SALU = 1u << 2,
-  MFMA = 1u << 3,
-  VMEM = 1u << 4,
-  VMEM_READ = 1u << 5,
-  VMEM_WRITE = 1u << 6,
-  DS = 1u << 7,
-  DS_READ = 1u << 8,
-  DS_WRITE = 1u << 9,
-  TRANS = 1u << 10,
-  LDSDMA = 1u << 11,
-  ALL = ALU | VALU | SALU | MFMA | VMEM | VMEM_READ | VMEM_WRITE | DS |
-        DS_READ | DS_WRITE | TRANS | LDSDMA,
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
-};
 
 class SchedGroup;
 
@@ -475,7 +453,7 @@ void PipelineSolver::makePipeline() {
       for (auto &SU : SG.Collection) {
         if (SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
           SGBarr = SU;
-        LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << ")\n");
+        LLVM_DEBUG(dbgs() << *SU << "\n");
       }
       // Command line requested IGroupLP doesn't have SGBarr
       if (!SGBarr)
@@ -743,8 +721,8 @@ bool PipelineSolver::solveExact() {
   assert(static_cast<size_t>(CurrConflInstNo) <
          PipelineInstrs[CurrSyncGroupIdx].size());
   SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
-  LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
-                    << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
+  LLVM_DEBUG(dbgs() << "Fitting " << *CurrSU.first << " in Pipeline # "
+                    << CurrSyncGroupIdx << "\n");
 
   // SchedGroup -> Cost pairs
   SmallVector<std::pair<int, int>, 4> ReadyList;
@@ -842,8 +820,8 @@ void PipelineSolver::greedyFind(
   std::optional<GroupInfo> Best;
 
   auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
-  LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
-                    << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
+  LLVM_DEBUG(dbgs() << "Fitting " << *CurrSU.first << " in Pipeline # "
+                    << CurrSyncGroupIdx << "\n");
 
   EdgeSetBuilder Builder(CurrSU.first, SyncPipeline, IsBottomUp);
 

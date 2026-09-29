@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -165,10 +166,15 @@ std::optional<AArch64::ExtensionInfo>
 AArch64::parseArchExtension(StringRef ArchExt) {
   if (ArchExt.empty())
     return {};
-  for (const auto &A : Extensions) {
-    if (ArchExt == StrTab[A.UserVisibleName] || ArchExt == StrTab[A.Alias])
-      return A;
-  }
+  static const DenseMap<StringRef, const ExtensionInfo *> NameToExt = [] {
+    DenseMap<StringRef, const ExtensionInfo *> Map;
+    for (const auto &A : Extensions)
+      for (StringRef Name : {StrTab[A.UserVisibleName], StrTab[A.Alias]})
+        Map.try_emplace(Name, &A);
+    return Map;
+  }();
+  if (const ExtensionInfo *A = NameToExt.lookup(ArchExt))
+    return *A;
   return {};
 }
 
@@ -186,10 +192,16 @@ std::optional<AArch64::FMVInfo> AArch64::parseFMVExtension(StringRef FMVExt) {
 
 std::optional<AArch64::ExtensionInfo>
 AArch64::targetFeatureToExtension(StringRef TargetFeature) {
-  for (const auto &E : Extensions)
-    if (TargetFeature == StrTab[E.PosTargetFeature] ||
-        TargetFeature == StrTab[E.NegTargetFeature])
-      return E;
+  static const DenseMap<StringRef, const ExtensionInfo *> FeatureToExt = [] {
+    DenseMap<StringRef, const ExtensionInfo *> Map;
+    for (const auto &E : Extensions)
+      for (StringRef Feature :
+           {StrTab[E.PosTargetFeature], StrTab[E.NegTargetFeature]})
+        Map.try_emplace(Feature, &E);
+    return Map;
+  }();
+  if (const ExtensionInfo *E = FeatureToExt.lookup(TargetFeature))
+    return *E;
   return {};
 }
 
@@ -352,6 +364,15 @@ void AArch64::ExtensionSet::addCPUDefaults(const CpuInfo &CPU) {
   for (const auto &E : Extensions)
     if (CPU.DefaultExtensions.test(E.ID))
       enable(E.ID);
+
+  // Workaround: mark extensions implied by the base architecture as Enabled
+  // so that an explicit "+nofeat" is not silently ignored. We set Enabled
+  // directly instead of calling enable() to keep them out of Touched,
+  // preserving the previous output as much as possible and avoiding a flood
+  // of redundant "+feat" entries.
+  for (const auto &E : Extensions)
+    if (BaseArch->DefaultExts.test(E.ID))
+      Enabled.set(E.ID);
 }
 
 void AArch64::ExtensionSet::addArchDefaults(const ArchInfo &Arch) {
