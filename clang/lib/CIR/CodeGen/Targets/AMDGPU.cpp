@@ -23,20 +23,6 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-bool clang::CIRGen::requiresAMDGPUProtectedVisibility(
-    const Decl *d, cir::VisibilityKind visibility) {
-  if (visibility != cir::VisibilityKind::Hidden)
-    return false;
-
-  return !d->hasAttr<OMPDeclareTargetDeclAttr>() &&
-         (d->hasAttr<DeviceKernelAttr>() ||
-          (isa<FunctionDecl>(d) && d->hasAttr<CUDAGlobalAttr>()) ||
-          (isa<VarDecl>(d) &&
-           (d->hasAttr<CUDADeviceAttr>() || d->hasAttr<CUDAConstantAttr>() ||
-            cast<VarDecl>(d)->getType()->isCUDADeviceBuiltinSurfaceType() ||
-            cast<VarDecl>(d)->getType()->isCUDADeviceBuiltinTextureType())));
-}
-
 namespace {
 
 /// Handle amdgpu-flat-work-group-size attribute.
