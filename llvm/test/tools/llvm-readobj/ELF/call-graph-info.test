@@ -232,6 +232,7 @@ Symbols:
 # LLVM-RELOC:   CallGraph [
 # LLVM-RELOC-NEXT:   Function {
 # LLVM-RELOC-NEXT:     Reloc {
+# LLVM-RELOC-NEXT:       Type: R_X86_64_64 (1)
 # LLVM-RELOC-NEXT:       SymbolIndex: 1
 # LLVM-RELOC-NEXT:       SymbolName: foo
 # LLVM-RELOC-NEXT:     }
@@ -246,6 +247,7 @@ Symbols:
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT:   Function {
 # LLVM-RELOC-NEXT:     Reloc {
+# LLVM-RELOC-NEXT:       Type: R_X86_64_64 (1)
 # LLVM-RELOC-NEXT:       SymbolIndex: 2
 # LLVM-RELOC-NEXT:       SymbolName: bar
 # LLVM-RELOC-NEXT:     }
@@ -260,6 +262,7 @@ Symbols:
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT:   Function {
 # LLVM-RELOC-NEXT:     Reloc {
+# LLVM-RELOC-NEXT:       Type: R_X86_64_64 (1)
 # LLVM-RELOC-NEXT:       SymbolIndex: 3
 # LLVM-RELOC-NEXT:       SymbolName: baz
 # LLVM-RELOC-NEXT:     }
@@ -274,6 +277,7 @@ Symbols:
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT:   Function {
 # LLVM-RELOC-NEXT:     Reloc {
+# LLVM-RELOC-NEXT:       Type: R_X86_64_64 (1)
 # LLVM-RELOC-NEXT:       SymbolIndex: 4
 # LLVM-RELOC-NEXT:       SymbolName: caller
 # LLVM-RELOC-NEXT:     }
@@ -284,18 +288,21 @@ Symbols:
 # LLVM-RELOC-NEXT:     DirectCallees [
 # LLVM-RELOC-NEXT:       {
 # LLVM-RELOC-NEXT:         Reloc {
+# LLVM-RELOC-NEXT:           Type: R_X86_64_64 (1)
 # LLVM-RELOC-NEXT:           SymbolIndex: 1
 # LLVM-RELOC-NEXT:           SymbolName: foo
 # LLVM-RELOC-NEXT:         }
 # LLVM-RELOC-NEXT:       }
 # LLVM-RELOC-NEXT:       {
 # LLVM-RELOC-NEXT:         Reloc {
+# LLVM-RELOC-NEXT:           Type: R_X86_64_64 (1)
 # LLVM-RELOC-NEXT:           SymbolIndex: 2
 # LLVM-RELOC-NEXT:           SymbolName: bar
 # LLVM-RELOC-NEXT:         }
 # LLVM-RELOC-NEXT:       }
 # LLVM-RELOC-NEXT:       {
 # LLVM-RELOC-NEXT:         Reloc {
+# LLVM-RELOC-NEXT:           Type: R_X86_64_64 (1)
 # LLVM-RELOC-NEXT:           SymbolIndex: 3
 # LLVM-RELOC-NEXT:           SymbolName: baz
 # LLVM-RELOC-NEXT:         }
@@ -310,6 +317,10 @@ Symbols:
 # JSON-RELOC-NEXT:      {
 # JSON-RELOC-NEXT:        "Function": {
 # JSON-RELOC-NEXT:          "Reloc": {
+# JSON-RELOC-NEXT:            "Type": {
+# JSON-RELOC-NEXT:              "Name": "R_X86_64_64",
+# JSON-RELOC-NEXT:              "Value": 1
+# JSON-RELOC-NEXT:            },
 # JSON-RELOC-NEXT:            "SymbolIndex": 1,
 # JSON-RELOC-NEXT:            "SymbolName": "foo"
 # JSON-RELOC-NEXT:          },
@@ -325,6 +336,10 @@ Symbols:
 # JSON-RELOC-NEXT:      {
 # JSON-RELOC-NEXT:        "Function": {
 # JSON-RELOC-NEXT:          "Reloc": {
+# JSON-RELOC-NEXT:            "Type": {
+# JSON-RELOC-NEXT:              "Name": "R_X86_64_64",
+# JSON-RELOC-NEXT:              "Value": 1
+# JSON-RELOC-NEXT:            },
 # JSON-RELOC-NEXT:            "SymbolIndex": 2,
 # JSON-RELOC-NEXT:            "SymbolName": "bar"
 # JSON-RELOC-NEXT:          },
@@ -340,6 +355,10 @@ Symbols:
 # JSON-RELOC-NEXT:      {
 # JSON-RELOC-NEXT:        "Function": {
 # JSON-RELOC-NEXT:          "Reloc": {
+# JSON-RELOC-NEXT:            "Type": {
+# JSON-RELOC-NEXT:              "Name": "R_X86_64_64",
+# JSON-RELOC-NEXT:              "Value": 1
+# JSON-RELOC-NEXT:            },
 # JSON-RELOC-NEXT:            "SymbolIndex": 3,
 # JSON-RELOC-NEXT:            "SymbolName": "baz"
 # JSON-RELOC-NEXT:          },
@@ -355,6 +374,10 @@ Symbols:
 # JSON-RELOC-NEXT:      {
 # JSON-RELOC-NEXT:        "Function": {
 # JSON-RELOC-NEXT:          "Reloc": {
+# JSON-RELOC-NEXT:            "Type": {
+# JSON-RELOC-NEXT:              "Name": "R_X86_64_64",
+# JSON-RELOC-NEXT:              "Value": 1
+# JSON-RELOC-NEXT:            },
 # JSON-RELOC-NEXT:            "SymbolIndex": 4,
 # JSON-RELOC-NEXT:            "SymbolName": "caller"
 # JSON-RELOC-NEXT:          },
@@ -365,18 +388,30 @@ Symbols:
 # JSON-RELOC-NEXT:          "DirectCallees": [
 # JSON-RELOC-NEXT:            {
 # JSON-RELOC-NEXT:              "Reloc": {
+# JSON-RELOC-NEXT:                "Type": {
+# JSON-RELOC-NEXT:                  "Name": "R_X86_64_64",
+# JSON-RELOC-NEXT:                  "Value": 1
+# JSON-RELOC-NEXT:                },
 # JSON-RELOC-NEXT:                "SymbolIndex": 1,
 # JSON-RELOC-NEXT:                "SymbolName": "foo"
 # JSON-RELOC-NEXT:              }
 # JSON-RELOC-NEXT:            },
 # JSON-RELOC-NEXT:            {
 # JSON-RELOC-NEXT:              "Reloc": {
+# JSON-RELOC-NEXT:                "Type": {
+# JSON-RELOC-NEXT:                  "Name": "R_X86_64_64",
+# JSON-RELOC-NEXT:                  "Value": 1
+# JSON-RELOC-NEXT:                },
 # JSON-RELOC-NEXT:                "SymbolIndex": 2,
 # JSON-RELOC-NEXT:                "SymbolName": "bar"
 # JSON-RELOC-NEXT:              }
 # JSON-RELOC-NEXT:            },
 # JSON-RELOC-NEXT:            {
 # JSON-RELOC-NEXT:              "Reloc": {
+# JSON-RELOC-NEXT:                "Type": {
+# JSON-RELOC-NEXT:                  "Name": "R_X86_64_64",
+# JSON-RELOC-NEXT:                  "Value": 1
+# JSON-RELOC-NEXT:                },
 # JSON-RELOC-NEXT:                "SymbolIndex": 3,
 # JSON-RELOC-NEXT:                "SymbolName": "baz"
 # JSON-RELOC-NEXT:              }
@@ -494,6 +529,7 @@ Symbols:
 # LLVM-ARM-THUMB:      CallGraph [
 # LLVM-ARM-THUMB-NEXT:   Function {
 # LLVM-ARM-THUMB-NEXT:     Reloc {
+# LLVM-ARM-THUMB-NEXT:       Type: R_ARM_ABS32 (2)
 # LLVM-ARM-THUMB-NEXT:       SymbolIndex: 1
 # LLVM-ARM-THUMB-NEXT:       SymbolName: foo
 # LLVM-ARM-THUMB-NEXT:       Addend: 1
@@ -505,6 +541,7 @@ Symbols:
 # LLVM-ARM-THUMB-NEXT:     DirectCallees [
 # LLVM-ARM-THUMB-NEXT:       {
 # LLVM-ARM-THUMB-NEXT:         Reloc {
+# LLVM-ARM-THUMB-NEXT:           Type: R_ARM_ABS32 (2)
 # LLVM-ARM-THUMB-NEXT:           SymbolIndex: 2
 # LLVM-ARM-THUMB-NEXT:           SymbolName: bar
 # LLVM-ARM-THUMB-NEXT:           Addend: -4
@@ -520,6 +557,10 @@ Symbols:
 # JSON-ARM-THUMB-NEXT:    {
 # JSON-ARM-THUMB-NEXT:      "Function": {
 # JSON-ARM-THUMB-NEXT:        "Reloc": {
+# JSON-ARM-THUMB-NEXT:          "Type": {
+# JSON-ARM-THUMB-NEXT:            "Name": "R_ARM_ABS32",
+# JSON-ARM-THUMB-NEXT:            "Value": 2
+# JSON-ARM-THUMB-NEXT:          },
 # JSON-ARM-THUMB-NEXT:          "SymbolIndex": 1,
 # JSON-ARM-THUMB-NEXT:          "SymbolName": "foo",
 # JSON-ARM-THUMB-NEXT:          "Addend": 1
@@ -531,6 +572,10 @@ Symbols:
 # JSON-ARM-THUMB-NEXT:        "DirectCallees": [
 # JSON-ARM-THUMB-NEXT:          {
 # JSON-ARM-THUMB-NEXT:            "Reloc": {
+# JSON-ARM-THUMB-NEXT:              "Type": {
+# JSON-ARM-THUMB-NEXT:                "Name": "R_ARM_ABS32",
+# JSON-ARM-THUMB-NEXT:                "Value": 2
+# JSON-ARM-THUMB-NEXT:              },
 # JSON-ARM-THUMB-NEXT:              "SymbolIndex": 2,
 # JSON-ARM-THUMB-NEXT:              "SymbolName": "bar",
 # JSON-ARM-THUMB-NEXT:              "Addend": -4
@@ -666,6 +711,7 @@ Symbols:
 # LLVM-MULTI-RELOC:      CallGraph [
 # LLVM-MULTI-RELOC-NEXT:   Function {
 # LLVM-MULTI-RELOC-NEXT:     Reloc {
+# LLVM-MULTI-RELOC-NEXT:       Type: R_X86_64_64 (1)
 # LLVM-MULTI-RELOC-NEXT:       SymbolIndex: 1
 # LLVM-MULTI-RELOC-NEXT:       SymbolName: foo
 # LLVM-MULTI-RELOC-NEXT:     }
@@ -680,6 +726,7 @@ Symbols:
 # LLVM-MULTI-RELOC-NEXT:   }
 # LLVM-MULTI-RELOC-NEXT:   Function {
 # LLVM-MULTI-RELOC-NEXT:     Reloc {
+# LLVM-MULTI-RELOC-NEXT:       Type: R_X86_64_64 (1)
 # LLVM-MULTI-RELOC-NEXT:       SymbolIndex: 2
 # LLVM-MULTI-RELOC-NEXT:       SymbolName: bar
 # LLVM-MULTI-RELOC-NEXT:     }
@@ -698,6 +745,10 @@ Symbols:
 # JSON-MULTI-RELOC-NEXT:      {
 # JSON-MULTI-RELOC-NEXT:        "Function": {
 # JSON-MULTI-RELOC-NEXT:          "Reloc": {
+# JSON-MULTI-RELOC-NEXT:            "Type": {
+# JSON-MULTI-RELOC-NEXT:              "Name": "R_X86_64_64",
+# JSON-MULTI-RELOC-NEXT:              "Value": 1
+# JSON-MULTI-RELOC-NEXT:            },
 # JSON-MULTI-RELOC-NEXT:            "SymbolIndex": 1,
 # JSON-MULTI-RELOC-NEXT:            "SymbolName": "foo"
 # JSON-MULTI-RELOC-NEXT:          },
@@ -713,6 +764,10 @@ Symbols:
 # JSON-MULTI-RELOC-NEXT:      {
 # JSON-MULTI-RELOC-NEXT:        "Function": {
 # JSON-MULTI-RELOC-NEXT:          "Reloc": {
+# JSON-MULTI-RELOC-NEXT:            "Type": {
+# JSON-MULTI-RELOC-NEXT:              "Name": "R_X86_64_64",
+# JSON-MULTI-RELOC-NEXT:              "Value": 1
+# JSON-MULTI-RELOC-NEXT:            },
 # JSON-MULTI-RELOC-NEXT:            "SymbolIndex": 2,
 # JSON-MULTI-RELOC-NEXT:            "SymbolName": "bar"
 # JSON-MULTI-RELOC-NEXT:          },
@@ -900,6 +955,7 @@ Symbols:
 # LLVM-RELOC-ADDEND:      CallGraph [
 # LLVM-RELOC-ADDEND-NEXT:   Function {
 # LLVM-RELOC-ADDEND-NEXT:     Reloc {
+# LLVM-RELOC-ADDEND-NEXT:       Type: R_X86_64_64 (1)
 # LLVM-RELOC-ADDEND-NEXT:       SymbolIndex: 3
 # LLVM-RELOC-ADDEND-NEXT:       SymbolName: caller
 # LLVM-RELOC-ADDEND-NEXT:     }
@@ -910,12 +966,14 @@ Symbols:
 # LLVM-RELOC-ADDEND-NEXT:     DirectCallees [
 # LLVM-RELOC-ADDEND-NEXT:       {
 # LLVM-RELOC-ADDEND-NEXT:         Reloc {
+# LLVM-RELOC-ADDEND-NEXT:           Type: R_X86_64_64 (1)
 # LLVM-RELOC-ADDEND-NEXT:           SymbolIndex: 1
 # LLVM-RELOC-ADDEND-NEXT:           Addend: 16
 # LLVM-RELOC-ADDEND-NEXT:         }
 # LLVM-RELOC-ADDEND-NEXT:       }
 # LLVM-RELOC-ADDEND-NEXT:       {
 # LLVM-RELOC-ADDEND-NEXT:         Reloc {
+# LLVM-RELOC-ADDEND-NEXT:           Type: R_X86_64_64 (1)
 # LLVM-RELOC-ADDEND-NEXT:           SymbolIndex: 1
 # LLVM-RELOC-ADDEND-NEXT:           Addend: 24
 # LLVM-RELOC-ADDEND-NEXT:         }
@@ -926,6 +984,7 @@ Symbols:
 # LLVM-RELOC-ADDEND-NEXT:   }
 # LLVM-RELOC-ADDEND-NEXT:   Function {
 # LLVM-RELOC-ADDEND-NEXT:     Reloc {
+# LLVM-RELOC-ADDEND-NEXT:       Type: R_X86_64_64 (1)
 # LLVM-RELOC-ADDEND-NEXT:       SymbolIndex: 1
 # LLVM-RELOC-ADDEND-NEXT:       Addend: 16
 # LLVM-RELOC-ADDEND-NEXT:     }
@@ -940,6 +999,7 @@ Symbols:
 # LLVM-RELOC-ADDEND-NEXT:   }
 # LLVM-RELOC-ADDEND-NEXT:   Function {
 # LLVM-RELOC-ADDEND-NEXT:     Reloc {
+# LLVM-RELOC-ADDEND-NEXT:       Type: R_X86_64_64 (1)
 # LLVM-RELOC-ADDEND-NEXT:       SymbolIndex: 1
 # LLVM-RELOC-ADDEND-NEXT:       Addend: 24
 # LLVM-RELOC-ADDEND-NEXT:     }
@@ -958,6 +1018,10 @@ Symbols:
 # JSON-RELOC-ADDEND-NEXT:       {
 # JSON-RELOC-ADDEND-NEXT:         "Function": {
 # JSON-RELOC-ADDEND-NEXT:           "Reloc": {
+# JSON-RELOC-ADDEND-NEXT:             "Type": {
+# JSON-RELOC-ADDEND-NEXT:               "Name": "R_X86_64_64",
+# JSON-RELOC-ADDEND-NEXT:               "Value": 1
+# JSON-RELOC-ADDEND-NEXT:             },
 # JSON-RELOC-ADDEND-NEXT:             "SymbolIndex": 3,
 # JSON-RELOC-ADDEND-NEXT:             "SymbolName": "caller"
 # JSON-RELOC-ADDEND-NEXT:           },
@@ -968,12 +1032,20 @@ Symbols:
 # JSON-RELOC-ADDEND-NEXT:           "DirectCallees": [
 # JSON-RELOC-ADDEND-NEXT:             {
 # JSON-RELOC-ADDEND-NEXT:               "Reloc": {
+# JSON-RELOC-ADDEND-NEXT:                 "Type": {
+# JSON-RELOC-ADDEND-NEXT:                   "Name": "R_X86_64_64",
+# JSON-RELOC-ADDEND-NEXT:                   "Value": 1
+# JSON-RELOC-ADDEND-NEXT:                 },
 # JSON-RELOC-ADDEND-NEXT:                 "SymbolIndex": 1,
 # JSON-RELOC-ADDEND-NEXT:                 "Addend": 16
 # JSON-RELOC-ADDEND-NEXT:               }
 # JSON-RELOC-ADDEND-NEXT:             },
 # JSON-RELOC-ADDEND-NEXT:             {
 # JSON-RELOC-ADDEND-NEXT:               "Reloc": {
+# JSON-RELOC-ADDEND-NEXT:                 "Type": {
+# JSON-RELOC-ADDEND-NEXT:                   "Name": "R_X86_64_64",
+# JSON-RELOC-ADDEND-NEXT:                   "Value": 1
+# JSON-RELOC-ADDEND-NEXT:                 },
 # JSON-RELOC-ADDEND-NEXT:                 "SymbolIndex": 1,
 # JSON-RELOC-ADDEND-NEXT:                 "Addend": 24
 # JSON-RELOC-ADDEND-NEXT:               }
@@ -986,6 +1058,10 @@ Symbols:
 # JSON-RELOC-ADDEND-NEXT:       {
 # JSON-RELOC-ADDEND-NEXT:         "Function": {
 # JSON-RELOC-ADDEND-NEXT:           "Reloc": {
+# JSON-RELOC-ADDEND-NEXT:             "Type": {
+# JSON-RELOC-ADDEND-NEXT:               "Name": "R_X86_64_64",
+# JSON-RELOC-ADDEND-NEXT:               "Value": 1
+# JSON-RELOC-ADDEND-NEXT:             },
 # JSON-RELOC-ADDEND-NEXT:             "SymbolIndex": 1,
 # JSON-RELOC-ADDEND-NEXT:             "Addend": 16
 # JSON-RELOC-ADDEND-NEXT:           },
@@ -1001,6 +1077,10 @@ Symbols:
 # JSON-RELOC-ADDEND-NEXT:       {
 # JSON-RELOC-ADDEND-NEXT:         "Function": {
 # JSON-RELOC-ADDEND-NEXT:           "Reloc": {
+# JSON-RELOC-ADDEND-NEXT:             "Type": {
+# JSON-RELOC-ADDEND-NEXT:               "Name": "R_X86_64_64",
+# JSON-RELOC-ADDEND-NEXT:               "Value": 1
+# JSON-RELOC-ADDEND-NEXT:             },
 # JSON-RELOC-ADDEND-NEXT:             "SymbolIndex": 1,
 # JSON-RELOC-ADDEND-NEXT:             "Addend": 24
 # JSON-RELOC-ADDEND-NEXT:           },
@@ -1089,6 +1169,7 @@ Symbols:
 # LLVM-REL-ADDEND:      CallGraph [
 # LLVM-REL-ADDEND-NEXT:   Function {
 # LLVM-REL-ADDEND-NEXT:     Reloc {
+# LLVM-REL-ADDEND-NEXT:       Type: R_ARM_ABS32 (2)
 # LLVM-REL-ADDEND-NEXT:       SymbolIndex: 3
 # LLVM-REL-ADDEND-NEXT:       SymbolName: caller
 # LLVM-REL-ADDEND-NEXT:     }
@@ -1099,12 +1180,14 @@ Symbols:
 # LLVM-REL-ADDEND-NEXT:     DirectCallees [
 # LLVM-REL-ADDEND-NEXT:       {
 # LLVM-REL-ADDEND-NEXT:         Reloc {
+# LLVM-REL-ADDEND-NEXT:           Type: R_ARM_ABS32 (2)
 # LLVM-REL-ADDEND-NEXT:           SymbolIndex: 1
 # LLVM-REL-ADDEND-NEXT:           Addend: 20
 # LLVM-REL-ADDEND-NEXT:         }
 # LLVM-REL-ADDEND-NEXT:       }
 # LLVM-REL-ADDEND-NEXT:       {
 # LLVM-REL-ADDEND-NEXT:         Reloc {
+# LLVM-REL-ADDEND-NEXT:           Type: R_ARM_ABS32 (2)
 # LLVM-REL-ADDEND-NEXT:           SymbolIndex: 1
 # LLVM-REL-ADDEND-NEXT:           Addend: 32
 # LLVM-REL-ADDEND-NEXT:         }
@@ -1115,6 +1198,7 @@ Symbols:
 # LLVM-REL-ADDEND-NEXT:   }
 # LLVM-REL-ADDEND-NEXT:   Function {
 # LLVM-REL-ADDEND-NEXT:     Reloc {
+# LLVM-REL-ADDEND-NEXT:       Type: R_ARM_ABS32 (2)
 # LLVM-REL-ADDEND-NEXT:       SymbolIndex: 1
 # LLVM-REL-ADDEND-NEXT:       Addend: 20
 # LLVM-REL-ADDEND-NEXT:     }
@@ -1129,6 +1213,7 @@ Symbols:
 # LLVM-REL-ADDEND-NEXT:   }
 # LLVM-REL-ADDEND-NEXT:   Function {
 # LLVM-REL-ADDEND-NEXT:     Reloc {
+# LLVM-REL-ADDEND-NEXT:       Type: R_ARM_ABS32 (2)
 # LLVM-REL-ADDEND-NEXT:       SymbolIndex: 1
 # LLVM-REL-ADDEND-NEXT:       Addend: 32
 # LLVM-REL-ADDEND-NEXT:     }
@@ -1147,6 +1232,10 @@ Symbols:
 # JSON-REL-ADDEND-NEXT:       {
 # JSON-REL-ADDEND-NEXT:         "Function": {
 # JSON-REL-ADDEND-NEXT:           "Reloc": {
+# JSON-REL-ADDEND-NEXT:             "Type": {
+# JSON-REL-ADDEND-NEXT:               "Name": "R_ARM_ABS32",
+# JSON-REL-ADDEND-NEXT:               "Value": 2
+# JSON-REL-ADDEND-NEXT:             },
 # JSON-REL-ADDEND-NEXT:             "SymbolIndex": 3,
 # JSON-REL-ADDEND-NEXT:             "SymbolName": "caller"
 # JSON-REL-ADDEND-NEXT:           },
@@ -1157,12 +1246,20 @@ Symbols:
 # JSON-REL-ADDEND-NEXT:           "DirectCallees": [
 # JSON-REL-ADDEND-NEXT:             {
 # JSON-REL-ADDEND-NEXT:               "Reloc": {
+# JSON-REL-ADDEND-NEXT:                 "Type": {
+# JSON-REL-ADDEND-NEXT:                   "Name": "R_ARM_ABS32",
+# JSON-REL-ADDEND-NEXT:                   "Value": 2
+# JSON-REL-ADDEND-NEXT:                 },
 # JSON-REL-ADDEND-NEXT:                 "SymbolIndex": 1,
 # JSON-REL-ADDEND-NEXT:                 "Addend": 20
 # JSON-REL-ADDEND-NEXT:               }
 # JSON-REL-ADDEND-NEXT:             },
 # JSON-REL-ADDEND-NEXT:             {
 # JSON-REL-ADDEND-NEXT:               "Reloc": {
+# JSON-REL-ADDEND-NEXT:                 "Type": {
+# JSON-REL-ADDEND-NEXT:                   "Name": "R_ARM_ABS32",
+# JSON-REL-ADDEND-NEXT:                   "Value": 2
+# JSON-REL-ADDEND-NEXT:                 },
 # JSON-REL-ADDEND-NEXT:                 "SymbolIndex": 1,
 # JSON-REL-ADDEND-NEXT:                 "Addend": 32
 # JSON-REL-ADDEND-NEXT:               }
@@ -1175,6 +1272,10 @@ Symbols:
 # JSON-REL-ADDEND-NEXT:       {
 # JSON-REL-ADDEND-NEXT:         "Function": {
 # JSON-REL-ADDEND-NEXT:           "Reloc": {
+# JSON-REL-ADDEND-NEXT:             "Type": {
+# JSON-REL-ADDEND-NEXT:               "Name": "R_ARM_ABS32",
+# JSON-REL-ADDEND-NEXT:               "Value": 2
+# JSON-REL-ADDEND-NEXT:             },
 # JSON-REL-ADDEND-NEXT:             "SymbolIndex": 1,
 # JSON-REL-ADDEND-NEXT:             "Addend": 20
 # JSON-REL-ADDEND-NEXT:           },
@@ -1190,6 +1291,10 @@ Symbols:
 # JSON-REL-ADDEND-NEXT:       {
 # JSON-REL-ADDEND-NEXT:         "Function": {
 # JSON-REL-ADDEND-NEXT:           "Reloc": {
+# JSON-REL-ADDEND-NEXT:             "Type": {
+# JSON-REL-ADDEND-NEXT:               "Name": "R_ARM_ABS32",
+# JSON-REL-ADDEND-NEXT:               "Value": 2
+# JSON-REL-ADDEND-NEXT:             },
 # JSON-REL-ADDEND-NEXT:             "SymbolIndex": 1,
 # JSON-REL-ADDEND-NEXT:             "Addend": 32
 # JSON-REL-ADDEND-NEXT:           },
@@ -1277,20 +1382,30 @@ Symbols:
 # RUN:     --check-prefix=JSON-RELNAME
 
 # LLVM-RELNAME:           Reloc {
+# LLVM-RELNAME-NEXT:        Type: R_X86_64_64 (1)
 # LLVM-RELNAME-NEXT:        SymbolIndex: 1
 # LLVM-RELNAME-NEXT:        Addend: 16
 # LLVM-RELNAME-NEXT:      }
 # LLVM-RELNAME:           Reloc {
+# LLVM-RELNAME-NEXT:        Type: R_X86_64_64 (1)
 # LLVM-RELNAME-NEXT:        SymbolIndex: 2
 # LLVM-RAW-NEXT:            SymbolName: _Z3foov
 # LLVM-DEMANGLE-NEXT:       SymbolName: foo()
 # LLVM-RELNAME-NEXT:      }
 
 # JSON-RELNAME:           "Reloc": {
+# JSON-RELNAME-NEXT:        "Type": {
+# JSON-RELNAME-NEXT:          "Name": "R_X86_64_64",
+# JSON-RELNAME-NEXT:          "Value": 1
+# JSON-RELNAME-NEXT:        },
 # JSON-RELNAME-NEXT:        "SymbolIndex": 1,
 # JSON-RELNAME-NEXT:        "Addend": 16
 # JSON-RELNAME-NEXT:      },
 # JSON-RELNAME:           "Reloc": {
+# JSON-RELNAME-NEXT:        "Type": {
+# JSON-RELNAME-NEXT:          "Name": "R_X86_64_64",
+# JSON-RELNAME-NEXT:          "Value": 1
+# JSON-RELNAME-NEXT:        },
 # JSON-RELNAME-NEXT:        "SymbolIndex": 2,
 # JSON-RELNAME-NEXT:        "SymbolName": "_Z3foov"
 # JSON-RELNAME-NEXT:      },
@@ -1466,12 +1581,14 @@ Symbols:
 
 # LLVM-SYM0-NEG:      Function {
 # LLVM-SYM0-NEG-NEXT:   Reloc {
+# LLVM-SYM0-NEG-NEXT:     Type: R_X86_64_64 (1)
 # LLVM-SYM0-NEG-NEXT:     SymbolIndex: 0
 # LLVM-SYM0-NEG-NEXT:     Addend: 16
 # LLVM-SYM0-NEG-NEXT:   }
 # LLVM-SYM0-NEG:        DirectCallees [
 # LLVM-SYM0-NEG-NEXT:     {
 # LLVM-SYM0-NEG-NEXT:       Reloc {
+# LLVM-SYM0-NEG-NEXT:         Type: R_X86_64_64 (1)
 # LLVM-SYM0-NEG-NEXT:         SymbolIndex: 1
 # LLVM-SYM0-NEG-NEXT:         SymbolName: foo
 # LLVM-SYM0-NEG-NEXT:         Addend: -8
@@ -1480,10 +1597,18 @@ Symbols:
 # LLVM-SYM0-NEG-NEXT:   ]
 
 # JSON-SYM0-NEG:      "Reloc": {
+# JSON-SYM0-NEG-NEXT:   "Type": {
+# JSON-SYM0-NEG-NEXT:     "Name": "R_X86_64_64",
+# JSON-SYM0-NEG-NEXT:     "Value": 1
+# JSON-SYM0-NEG-NEXT:   },
 # JSON-SYM0-NEG-NEXT:   "SymbolIndex": 0,
 # JSON-SYM0-NEG-NEXT:   "Addend": 16
 # JSON-SYM0-NEG-NEXT: },
 # JSON-SYM0-NEG:      "Reloc": {
+# JSON-SYM0-NEG-NEXT:   "Type": {
+# JSON-SYM0-NEG-NEXT:     "Name": "R_X86_64_64",
+# JSON-SYM0-NEG-NEXT:     "Value": 1
+# JSON-SYM0-NEG-NEXT:   },
 # JSON-SYM0-NEG-NEXT:   "SymbolIndex": 1,
 # JSON-SYM0-NEG-NEXT:   "SymbolName": "foo",
 # JSON-SYM0-NEG-NEXT:   "Addend": -8

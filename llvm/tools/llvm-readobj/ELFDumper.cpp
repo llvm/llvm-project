@@ -184,6 +184,7 @@ struct GroupSection {
 // A relocation that applies to an address field of a SHT_LLVM_CALL_GRAPH
 // section in a relocatable object file.
 struct CallGraphReloc {
+  uint32_t Type = 0;
   uint32_t SymbolIndex = 0;
   // The name that st_name refers to, demangled if --demangle is specified.
   // Empty if the symbol has no name.
@@ -5568,6 +5569,7 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection,
       return;
     }
     CallGraphReloc &Reloc = Target.Reloc.emplace();
+    Reloc.Type = It->Type;
     Reloc.SymbolIndex = It->Symbol;
     Reloc.Addend = It->Addend.value_or(Target.InBandAddend);
     // Report the name exactly as recorded in st_name. RelSymbol::Name comes
@@ -8497,6 +8499,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
           return;
         }
         DictScope RelocScope(W, "Reloc");
+        SmallString<32> TypeName;
+        this->Obj.getRelocationTypeName(Target.Reloc->Type, TypeName);
+        W.printNumber("Type", TypeName, Target.Reloc->Type);
         W.printNumber("SymbolIndex", Target.Reloc->SymbolIndex);
         if (!Target.Reloc->SymbolName.empty())
           W.printString("SymbolName", Target.Reloc->SymbolName);
