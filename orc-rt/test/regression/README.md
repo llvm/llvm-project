@@ -99,7 +99,6 @@ Tests that need more than one source file (e.g. to link several objects) are
 # Stresses: fixups for code addressing data defined in another object, which
 # the compiler usually addresses through the GOT.
 
-REQUIRES: split-file
 RUN: rm -rf %t && split-file %s %t
 RUN: %{cc} -O0 -c -o %t/def.O0.o %t/def.c
 RUN: %{cc} -O0 -c -o %t/main.O0.o %t/main.c
@@ -156,7 +155,6 @@ the host:
 * **`orc-rt-cxx`**: `%{cxx}` is usable.
 * **`llvm-mc`**: `%{mc}` is usable.
 * **`llvm-jitlink`**: `%{obj-jit}` is usable.
-* **`split-file`**: `split-file` is usable.
 * **`target-arch=<arch>`**: The runtime's target architecture (`arm64` and
   `aarch64` are aliases).
 * **`target-object-format=<coff|elf|mach-o>`**: The runtime's target object
