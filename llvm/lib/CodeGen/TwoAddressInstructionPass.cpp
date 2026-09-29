@@ -400,7 +400,8 @@ bool TwoAddressInstructionImpl::isPlainlyKilled(const MachineInstr *MI,
 
   SlotIndex useIdx = LIS->getInstructionIndex(*MI);
   LiveInterval::const_iterator I = LR.find(useIdx);
-  assert(I != LR.end() && "Reg must be live-in to use.");
+  if (I == LR.end())
+    return false;
   return !I->end.isBlock() && SlotIndex::isSameInstr(I->end, useIdx);
 }
 
@@ -1972,6 +1973,19 @@ bool TwoAddressInstructionImpl::run() {
         // From %reg = INSERT_SUBREG %reg, %subreg, subidx
         // To   %reg:subidx = COPY %subreg
         unsigned SubIdx = mi->getOperand(3).getImm();
+        Register Reg = mi->getOperand(0).getReg();
+        LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubIdx);
+        LiveInterval *LI = LIS ? &LIS->getInterval(Reg) : nullptr;
+
+        // The fixup below keeps or discards a subrange's value as a whole, so
+        // split the ones straddling SubIdx. This must precede narrowing the
+        // def, or refineSubRanges drops the value for the untouched lanes.
+        if (LI && LI->hasSubRanges()) {
+          LI->refineSubRanges(
+              LIS->getVNInfoAllocator(), LaneMask,
+              [](LiveInterval::SubRange &) {}, *LIS->getSlotIndexes(), *TRI);
+        }
+
         mi->removeOperand(3);
         assert(mi->getOperand(0).getSubReg() == 0 && "Unexpected subreg idx");
         mi->getOperand(0).setSubReg(SubIdx);
@@ -1981,16 +1995,12 @@ bool TwoAddressInstructionImpl::run() {
         LLVM_DEBUG(dbgs() << "\t\tconvert to:\t" << *mi);
 
         // Update LiveIntervals.
-        if (LIS) {
-          Register Reg = mi->getOperand(0).getReg();
-          LiveInterval &LI = LIS->getInterval(Reg);
-          if (LI.hasSubRanges()) {
+        if (LI) {
+          if (LI->hasSubRanges()) {
             // The COPY no longer defines subregs of %reg except for
             // %reg.subidx.
-            LaneBitmask LaneMask =
-                TRI->getSubRegIndexLaneMask(mi->getOperand(0).getSubReg());
             SlotIndex Idx = LIS->getInstructionIndex(*mi).getRegSlot();
-            for (auto &S : LI.subranges()) {
+            for (auto &S : LI->subranges()) {
               if ((S.LaneMask & LaneMask).none()) {
                 LiveRange::iterator DefSeg = S.FindSegmentContaining(Idx);
                 if (mi->getOperand(0).isUndef()) {
@@ -2003,7 +2013,7 @@ bool TwoAddressInstructionImpl::run() {
             }
 
             // The COPY no longer has a use of %reg.
-            LIS->shrinkToUses(&LI);
+            LIS->shrinkToUses(LI);
           } else {
             // The live interval for Reg did not have subranges but now it needs
             // them because we have introduced a subreg def. Recompute it.
