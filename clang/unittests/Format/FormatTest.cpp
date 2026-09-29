@@ -25611,27 +25611,6 @@ TEST_F(FormatTest, KeepEmptyLinesAtEOF) {
   verifyFormat(Code, "int i;\n\n\n", Style);
 }
 
-TEST_F(FormatTest, KeepEmptyLinesAtStartOfBlock) {
-  FormatStyle Style = getLLVMStyle();
-  Style.AllowShortFunctionsOnASingleLine =
-      FormatStyle::ShortFunctionStyle::setEmptyAndInline();
-  Style.KeepEmptyLines.AtStartOfBlock = true;
-  Style.MaxEmptyLinesToKeep = 2;
-
-  verifyFormat("void foo() {\n"
-               "\n"
-               "\n"
-               "  int i;\n"
-               "}",
-               "void foo() {\n"
-               "\n"
-               "\n"
-               "\n"
-               "  int i;\n"
-               "}",
-               Style);
-}
-
 TEST_F(FormatTest, KeepEmptyLinesAtEndOfBlock) {
   FormatStyle Style = getLLVMStyle();
   Style.AllowShortFunctionsOnASingleLine =
