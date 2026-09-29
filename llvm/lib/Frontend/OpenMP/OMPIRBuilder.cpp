@@ -2114,11 +2114,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
   }
 
   OI->FixUpNonEntryAllocas = true;
-  OI->OuterAllocBB = OuterAllocaBlock;
+  // With device shared memory the aggregate arguments struct is allocated and
+  // freed with explicit runtime calls, so its allocation and deallocation must
+  // stay in the same scope to remain balanced when the region is nested in a
+  // loop. Allocate it at the parallel region's (caller-side) entry block,
+  // paired with the free at the region exit. Host uses a stack alloca reclaimed
+  // implicitly, so it keeps the function entry block.
+  OI->OuterAllocBB = UsesDeviceSharedMemory ? EntryBB : OuterAllocaBlock;
   OI->EntryBB = PRegEntryBB;
   OI->ExitBB = PRegExitBB;
-  OI->OuterDeallocBBs.reserve(OuterDeallocBlocks.size());
-  copy(OuterDeallocBlocks, OI->OuterDeallocBBs.end());
 
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
@@ -12381,9 +12385,7 @@ std::unique_ptr<CodeExtractor> DeviceSharedMemOutlineInfo::createCodeExtractor(
       /* AllowVarArgs */ true,
       /* AllowAlloca */ true,
       /* AllocationBlock*/ OuterAllocBB,
-      /* DeallocationBlocks */ OuterDeallocBBs.empty()
-          ? SmallVector<BasicBlock *>{ExitBB}
-          : OuterDeallocBBs,
+      /* DeallocationBlocks */ SmallVector<BasicBlock *>{ExitBB},
       /* Suffix */ Suffix.str(), ArgsInZeroAddressSpace);
 }
 
