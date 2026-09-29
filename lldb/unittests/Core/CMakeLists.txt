@@ -31,6 +31,7 @@ add_lldb_unittest(LLDBCoreTests
     lldbPluginObjectFileELF
     lldbPluginObjectFileMachO
     lldbPluginObjectFilePECOFF
+    lldbPluginPlatformLinux
     lldbPluginPlatformMacOSX
     lldbPluginSymbolFileSymtab
     lldbSymbol

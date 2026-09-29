@@ -9,17 +9,23 @@
 #include "lldb/Core/Module.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "Plugins/Platform/Linux/PlatformLinux.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Target/Platform.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "gtest/gtest.h"
+#include <chrono>
 #include <condition_variable>
+#include <future>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -291,4 +297,107 @@ Sections:
     ASSERT_NE(sections, nullptr);
     EXPECT_TRUE(sections->FindSectionByName(text_name));
   }
+}
+
+// ObjectFile::GetSectionList() takes ObjectFile::m_sections_mutex and then
+// Module::m_mutex, while callers such as Module::GetUUID() hold Module::m_mutex
+// and can reach ObjectFile::GetSectionList() (e.g. ObjectFileELF::GetUUID ->
+// GetBaseAddress for in-memory images). Module::SetLoadAddress must take
+// Module::m_mutex before calling into the object file, otherwise running it
+// concurrently with such a caller (as parallel module loading does) deadlocks.
+TEST(ModuleTest, SetLoadAddressConcurrentWithModuleMutexHolder) {
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF,
+                platform_linux::PlatformLinux>
+      subsystems;
+  std::call_once(TestUtilities::g_debugger_initialize_flag,
+                 []() { Debugger::Initialize(nullptr); });
+  ArchSpec arch("x86_64-pc-linux");
+  Platform::SetHostPlatform(
+      platform_linux::PlatformLinux::CreateInstance(true, &arch));
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  TargetSP target_sp;
+  PlatformSP platform_sp;
+  ASSERT_THAT_ERROR(debugger_sp->GetTargetList()
+                        .CreateTarget(*debugger_sp, "", arch,
+                                      eLoadDependentsNo, platform_sp, target_sp)
+                        .takeError(),
+                    llvm::Succeeded());
+  ASSERT_TRUE(target_sp);
+
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x10
+    Size:            0x100
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  // State is shared with the worker threads by value so that, if they
+  // deadlock, it outlives this test once they are detached.
+  struct State {
+    ModuleSP module_sp;
+    TargetSP target_sp;
+    std::promise<void> holding_module_mutex;
+    std::promise<void> setter_started;
+    std::promise<void> holder_done;
+    std::promise<void> setter_done;
+  };
+  auto state = std::make_shared<State>();
+  state->module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+  state->target_sp = target_sp;
+
+  // Load the object file up front: the first Module::GetObjectFile() call takes
+  // Module::m_mutex. This must not create the section list, as the lazy build
+  // in ObjectFile::GetSectionList() is where the lock inversion happens.
+  ASSERT_NE(state->module_sp->GetObjectFile(), nullptr);
+
+  // Models Module::GetUUID(): hold Module::m_mutex, then reach
+  // ObjectFile::GetSectionList().
+  std::thread holder([state] {
+    std::lock_guard<std::recursive_mutex> guard(state->module_sp->GetMutex());
+    state->holding_module_mutex.set_value();
+    state->setter_started.get_future().wait();
+    // Give the setter time to get as far as it can. Without the fix it takes
+    // ObjectFile::m_sections_mutex and blocks on Module::m_mutex; with the fix
+    // it blocks on Module::m_mutex before touching the object file.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    state->module_sp->GetObjectFile()->GetSectionList();
+    state->holder_done.set_value();
+  });
+
+  std::thread setter([state] {
+    state->holding_module_mutex.get_future().wait();
+    state->setter_started.set_value();
+    bool changed = false;
+    state->module_sp->SetLoadAddress(*state->target_sp, 0x10000,
+                                     /*value_is_offset=*/true, changed);
+    state->setter_done.set_value();
+  });
+
+  auto timeout = std::chrono::seconds(30);
+  bool finished =
+      state->holder_done.get_future().wait_for(timeout) ==
+          std::future_status::ready &&
+      state->setter_done.get_future().wait_for(timeout) ==
+          std::future_status::ready;
+  if (!finished) {
+    holder.detach();
+    setter.detach();
+    FAIL() << "deadlock between Module::SetLoadAddress and a Module::m_mutex "
+              "holder calling ObjectFile::GetSectionList";
+  }
+  holder.join();
+  setter.join();
+  Debugger::Destroy(debugger_sp);
 }
