@@ -139,7 +139,7 @@ static llvm::Error FormatImpl(DataStack &data) {
       format(FormatFunctor(type->GetDisplayTypeName()));
     else if (auto sel = std::get_if<FormatterBytecode::Selectors>(&arg))
       format(FormatFunctor(toString(*sel)));
-    else if (auto *dict = std::get_if<DictionarySP>(&arg))
+    else if (std::holds_alternative<DictionarySP>(arg))
       format(FormatFunctor("dict"));
   }
   data.Push(s);
