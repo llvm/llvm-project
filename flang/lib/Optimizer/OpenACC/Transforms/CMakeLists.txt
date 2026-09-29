@@ -2,6 +2,7 @@ add_flang_library(FIROpenACCTransforms
   ACCDeclareActionConversion.cpp
   ACCDevicePtrToCUFKernel.cpp
   ACCEmitNYIFlang.cpp
+  ACCEraseUnusedKernelAllocations.cpp
   ACCInitializeFIRAnalyses.cpp
   ACCMapInfoPrep.cpp
   ACCOptimizeFirstprivateMap.cpp
@@ -30,5 +31,6 @@ add_flang_library(FIROpenACCTransforms
   MLIRPass
   MLIROpenACCDialect
   MLIROpenACCUtils
+  MLIRViewLikeInterface
   MLIRTransformUtils
 )
