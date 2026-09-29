@@ -1200,15 +1200,15 @@ LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange(
  * Create a descriptor for a value range with support for expressions.
  * \param Builder    The DIBuilder.
  * \param Count Count of elements in the subrange
- * \param Low Lower bound of the subrange, e.g. 0 for C, 1 for Fortran.
- * \param High Higher bound of the subrange. Not needed when Count is already specified
+ * \param LowerBound LowerBound of the subrange, e.g. 0 for C, 1 for Fortran.
+ * \param Higherbound Higherbound of the subrange. Not needed when Count is already specified
  * \param Stride Stride of the subrange 
  */    
-LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange2(
+LLVM_C_ABI LLVMMetadataRef LLVMDIBuilderGetOrCreateDynamicSubrange(
                                                  LLVMDIBuilderRef Builder,
                                                  LLVMMetadataRef Count,
-                                                 LLVMMetadataRef Low,
-                                                 LLVMMetadataRef High, 
+                                                 LLVMMetadataRef LowerBound,
+                                                 LLVMMetadataRef HigherBound, 
                                                  LLVMMetadataRef Stride);
 
 /**
