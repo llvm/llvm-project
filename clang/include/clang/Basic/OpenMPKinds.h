@@ -523,3 +523,4 @@ struct llvm::enum_iteration_traits<clang::OpenMPDefaultmapClauseKind> {
   static constexpr bool is_iterable = true;
 };
 #endif
+

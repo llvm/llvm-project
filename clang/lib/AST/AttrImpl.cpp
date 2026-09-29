@@ -437,7 +437,7 @@ bool equalAttrArgs<OMPAdjustArgsClause *>(
       A->NeedDevicePtrModifier != B->NeedDevicePtrModifier ||
       A->items().size() != B->items().size())
     return false;
-  for (unsigned I = 0, E = A->items().size(); I != E; ++I)
+  for (unsigned I : llvm::seq<unsigned>(A->items().size()))
     if (!equalOMPAdjustArgsItems(A->items()[I], B->items()[I], Context))
       return false;
   return true;

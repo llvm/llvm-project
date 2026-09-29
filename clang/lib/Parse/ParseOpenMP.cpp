@@ -711,8 +711,10 @@ static bool parseDeclareSimdClauses(
         }
 
         P.ConsumeToken();
+        SmallVector<OMPAdjustArgsItem> AdjustArgsItems;
         if (P.ParseOpenMPVarList(OMPD_declare_simd,
-                                 getOpenMPClauseKind(ClauseName), *Vars, Data))
+                                 getOpenMPClauseKind(ClauseName), *Vars, Data,
+                                 AdjustArgsItems))
           IsError = true;
         if (CKind == OMPC_aligned) {
           Alignments.append(Aligneds.size() - Alignments.size(),
@@ -1404,7 +1406,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
         SmallVector<Expr *> Vars;
         SmallVector<OMPAdjustArgsItem> Items;
         IsError = ParseOpenMPVarList(OMPD_declare_variant, OMPC_adjust_args,
-                                     Vars, Data, &Items);
+                                     Vars, Data, Items);
         if (!IsError) {
           for (Expr *E : Vars) {
             OMPAdjustArgsItem Item;
@@ -5016,7 +5018,7 @@ parseOpenMPAllocateClauseModifiers(Parser &P, OpenMPClauseKind Kind,
 bool Parser::ParseOpenMPVarList(
     OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
     SmallVectorImpl<Expr *> &Vars, SemaOpenMP::OpenMPVarListDataTy &Data,
-    SmallVectorImpl<OMPAdjustArgsItem> *AdjustArgsItems) {
+    SmallVectorImpl<OMPAdjustArgsItem> &AdjustArgsItems) {
   UnqualifiedId UnqualifiedReductionId;
   bool InvalidReductionId = false;
   bool IsInvalidMapperModifier = false;
@@ -5424,10 +5426,8 @@ bool Parser::ParseOpenMPVarList(
       // colon terminates it.
       if (getLangOpts().OpenMP >= 60 &&
           Data.ExtraModifier != OMPC_ADJUST_ARGS_unknown) {
-        assert(AdjustArgsItems &&
-               "expected storage for OpenMP 6.0 adjust_args items");
         ParsedAdjustArgsList = true;
-        InvalidAdjustArgsList = ParseOpenMPAdjustArgsList(*AdjustArgsItems);
+        InvalidAdjustArgsList = ParseOpenMPAdjustArgsList(AdjustArgsItems);
       }
     }
   } else if (Kind == OMPC_use_device_ptr) {
@@ -5651,7 +5651,7 @@ bool Parser::ParseOpenMPVarList(
   if (HasIterator)
     ExitScope();
   return (Kind != OMPC_depend && Kind != OMPC_doacross && Kind != OMPC_map &&
-          Vars.empty() && (!AdjustArgsItems || AdjustArgsItems->empty())) ||
+          Vars.empty() && AdjustArgsItems.empty()) ||
          (MustHaveTail && !Data.DepModOrTailExpr && StepFound) ||
          InvalidReductionId || IsInvalidMapperModifier || InvalidIterator ||
          InvalidAdjustArgsList;
@@ -5663,9 +5663,10 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
   SourceLocation Loc = Tok.getLocation();
   SourceLocation LOpen = ConsumeToken();
   SmallVector<Expr *, 4> Vars;
+  SmallVector<OMPAdjustArgsItem> AdjustArgsItems;
   SemaOpenMP::OpenMPVarListDataTy Data;
 
-  if (ParseOpenMPVarList(DKind, Kind, Vars, Data))
+  if (ParseOpenMPVarList(DKind, Kind, Vars, Data, AdjustArgsItems))
     return nullptr;
 
   if (ParseOnly)

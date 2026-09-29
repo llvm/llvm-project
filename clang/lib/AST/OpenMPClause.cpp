@@ -3338,7 +3338,9 @@ bool clang::resolveOMPAdjustArgsItem(const OMPAdjustArgsItem &Item,
     // unbounded loop.
     Lower = std::max<int64_t>(Lower, 1);
     Upper = std::min<int64_t>(Upper, NumArgs);
-    for (int64_t Pos = Lower; Pos <= Upper; ++Pos)
+    if (Lower > Upper)
+      return true;
+    for (int64_t Pos : llvm::seq_inclusive<int64_t>(Lower, Upper))
       AppendIfInRange(Pos);
     return true;
   }

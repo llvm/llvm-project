@@ -7068,7 +7068,7 @@ public:
   bool ParseOpenMPVarList(
       OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
       SmallVectorImpl<Expr *> &Vars, SemaOpenMP::OpenMPVarListDataTy &Data,
-      SmallVectorImpl<OMPAdjustArgsItem> *AdjustArgsItems = nullptr);
+      SmallVectorImpl<OMPAdjustArgsItem> &AdjustArgsItems);
 
   /// Parses the mapper modifier in map, to, and from clauses.
   bool parseMapperModifier(SemaOpenMP::OpenMPVarListDataTy &Data);
