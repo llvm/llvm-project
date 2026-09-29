@@ -872,6 +872,10 @@ FailureOr<bool> ValueBoundsConstraintSet::strongCompare(const Variable &lhs,
 
 FailureOr<bool> ValueBoundsConstraintSet::areEqual(const Variable &var1,
                                                    const Variable &var2) {
+  // Avoid constructing a constraint set for variables that are already known
+  // to be identical.
+  if (var1.map == var2.map && var1.mapOperands == var2.mapOperands)
+    return true;
   return strongCompare(var1, ComparisonOperator::EQ, var2);
 }
 
@@ -955,10 +959,6 @@ FailureOr<bool> ValueBoundsConstraintSet::areEquivalentSlices(
   // "failure".
   for (auto [offset1, offset2] :
        llvm::zip_equal(slice1.getMixedOffsets(), slice2.getMixedOffsets())) {
-    // Avoid constructing a constraint set for values/attributes that are
-    // already known to be identical.
-    if (offset1 == offset2)
-      continue;
     FailureOr<bool> equal = areEqual(offset1, offset2);
     if (failed(equal))
       return failure();
@@ -967,8 +967,6 @@ FailureOr<bool> ValueBoundsConstraintSet::areEquivalentSlices(
   }
   for (auto [size1, size2] :
        llvm::zip_equal(slice1.getMixedSizes(), slice2.getMixedSizes())) {
-    if (size1 == size2)
-      continue;
     FailureOr<bool> equal = areEqual(size1, size2);
     if (failed(equal))
       return failure();
@@ -977,8 +975,6 @@ FailureOr<bool> ValueBoundsConstraintSet::areEquivalentSlices(
   }
   for (auto [stride1, stride2] :
        llvm::zip_equal(slice1.getMixedStrides(), slice2.getMixedStrides())) {
-    if (stride1 == stride2)
-      continue;
     FailureOr<bool> equal = areEqual(stride1, stride2);
     if (failed(equal))
       return failure();
