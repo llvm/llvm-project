@@ -2678,10 +2678,8 @@ void SemaHLSL::handleParamModifierAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-static bool isMatrixOrArrayOfMatrix(const ASTContext &Ctx, QualType QT) {
+static bool isMatrixType(QualType QT) {
   const Type *Ty = QT->getUnqualifiedDesugaredType();
-  while (isa<ArrayType>(Ty))
-    Ty = Ty->getArrayElementTypeNoTypeQual();
   return Ty->isDependentType() || Ty->isConstantMatrixType();
 }
 
@@ -2711,9 +2709,8 @@ Attr *SemaHLSL::buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL) {
                          ? attr::HLSLRowMajor
                          : attr::HLSLColumnMajor;
 
-  // For non-dependent types, the operand must be a matrix (or array of
-  // matrices).
-  if (!T->isDependentType() && !isMatrixOrArrayOfMatrix(Ctx, T)) {
+  // For non-dependent types, the operand must be a matrix.
+  if (!T->isDependentType() && !isMatrixType(T)) {
     Diag(AL.getLoc(), diag::err_hlsl_matrix_layout_non_matrix)
         << AL.getAttrName();
     AL.setInvalid();
@@ -2755,7 +2752,7 @@ bool SemaHLSL::diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
     return false;
   if (T.isNull() || T->isDependentType())
     return false;
-  if (isMatrixOrArrayOfMatrix(getASTContext(), T))
+  if (isMatrixType(T))
     return false;
   IdentifierInfo *II = &getASTContext().Idents.get(
       K == attr::HLSLRowMajor ? "row_major" : "column_major");
