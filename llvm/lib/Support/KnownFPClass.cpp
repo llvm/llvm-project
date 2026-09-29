@@ -640,6 +640,20 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
   return Known;
 }
 
+KnownFPClass KnownFPClass::fma_neg_square(const KnownFPClass &KnownSquared,
+                                          const KnownFPClass &KnownAddend,
+                                          DenormalMode Mode) {
+  KnownFPClass NegSquared = neg_square(KnownSquared, Mode);
+  KnownFPClass Known = fadd_impl(NegSquared, KnownAddend, Mode);
+
+  if (KnownAddend.isKnownNever(fcPosInf | fcNan) &&
+      NegSquared.isKnownNever(fcNan))
+    Known.knownNot(fcNan);
+
+  Known.propagateNonSNaN(KnownSquared, KnownAddend);
+  return Known;
+}
+
 KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
   KnownFPClass Known;
   Known.knownNot(fcNegative);
