@@ -435,6 +435,7 @@ private:
                                  bool IsAnd, bool RHSIsLogical);
 
   Value *foldDisjointOr(Value *LHS, Value *RHS);
+  Value *foldDisjointOrOfAddOrXor(Value *BinOp, Value *C);
 
   Value *reassociateDisjointOr(Value *LHS, Value *RHS);
 

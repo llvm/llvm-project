@@ -508,8 +508,7 @@ define i8 @xor_or2(i8 %x) {
 
 define i32 @xor_disjoint_or_constant(i32 %x) {
 ; CHECK-LABEL: @xor_disjoint_or_constant(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -1025
-; CHECK-NEXT:    [[OR:%.*]] = xor i32 [[TMP1]], 1600
+; CHECK-NEXT:    [[OR:%.*]] = xor i32 [[TMP1:%.*]], 1600
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %xor = xor i32 %x, 576
@@ -521,7 +520,7 @@ define i32 @xor_disjoint_or_constant_multiuse(i32 %x, ptr %p) {
 ; CHECK-LABEL: @xor_disjoint_or_constant_multiuse(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], 576
 ; CHECK-NEXT:    store i32 [[XOR]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[XOR]], 1024
+; CHECK-NEXT:    [[OR:%.*]] = xor i32 [[X]], 1600
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %xor = xor i32 %x, 576
@@ -532,8 +531,7 @@ define i32 @xor_disjoint_or_constant_multiuse(i32 %x, ptr %p) {
 
 define <2 x i32> @xor_disjoint_or_constant_vector(<2 x i32> %x) {
 ; CHECK-LABEL: @xor_disjoint_or_constant_vector(
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[X:%.*]], <i32 576, i32 3>
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i32> [[XOR]], <i32 1024, i32 1>
+; CHECK-NEXT:    [[OR:%.*]] = xor <2 x i32> [[X:%.*]], <i32 1600, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[OR]]
 ;
   %xor = xor <2 x i32> <i32 576, i32 3>, %x
@@ -543,8 +541,7 @@ define <2 x i32> @xor_disjoint_or_constant_vector(<2 x i32> %x) {
 
 define <vscale x 2 x i32> @xor_disjoint_or_constant_scalable_vector(<vscale x 2 x i32> %x) {
 ; CHECK-LABEL: @xor_disjoint_or_constant_scalable_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <vscale x 2 x i32> [[X:%.*]], splat (i32 -1025)
-; CHECK-NEXT:    [[OR:%.*]] = xor <vscale x 2 x i32> [[TMP1]], splat (i32 1600)
+; CHECK-NEXT:    [[OR:%.*]] = xor <vscale x 2 x i32> [[TMP1:%.*]], splat (i32 1600)
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[OR]]
 ;
   %xor = xor <vscale x 2 x i32> %x, splat (i32 576)
