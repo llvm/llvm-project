@@ -2920,7 +2920,7 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
   return getContext().getGOFFSection(
       SectionKind::getData(), Name,
       GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
-                   GOFF::ESD_LT_XPLink, GOFF::ESD_AMODE_64, GOFF::ESD_BSC_Section, 0},
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_AMODE_None, GOFF::ESD_BSC_Section, 0},
       WSA);
 }
 
@@ -2995,7 +2995,7 @@ TargetLoweringObjectFileGOFF::getStaticXtorSection(unsigned Priority) const {
   MCSectionGOFF *Xtor = Ctx.getGOFFSection(
       SectionKind::getData(), Name,
       GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
-                   GOFF::ESD_LT_XPLink, GOFF::ESD_AMODE_64,
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_AMODE_None,
                    GOFF::ESD_BSC_Section, Prio},
       SInit);
   return Xtor;
