@@ -446,6 +446,14 @@ static Value *MakeFAdd(unsigned IntrinsicID, APFloat::roundingMode RM,
 Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
                                              const CallExpr *E) {
   switch (BuiltinID) {
+  case NVPTX::BI__nvvm_mulhi_i:
+  case NVPTX::BI__nvvm_mulhi_ui:
+  case NVPTX::BI__nvvm_mulhi_ll:
+  case NVPTX::BI__nvvm_mulhi_ull:
+    return Builder.CreateBinaryIntrinsic(
+        E->getType()->hasSignedIntegerRepresentation() ? Intrinsic::smulh
+                                                       : Intrinsic::umulh,
+        EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)));
   case NVPTX::BI__nvvm_atom_add_gen_i:
   case NVPTX::BI__nvvm_atom_add_gen_l:
   case NVPTX::BI__nvvm_atom_add_gen_ll:
@@ -1077,6 +1085,19 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     PZO_CVT(bf16x2_to_e3m2x2_rn_relu_satfinite);
     PZO_CVT(bf16x2_to_e3m2x2_rz_satfinite);
     PZO_CVT(bf16x2_to_e3m2x2_rz_relu_satfinite);
+
+    PZO_CVT(ff_to_e2m1x2_rn_satfinite);
+    PZO_CVT(ff_to_e2m1x2_rn_relu_satfinite);
+    PZO_CVT(ff_to_e2m1x2_rz_satfinite);
+    PZO_CVT(ff_to_e2m1x2_rz_relu_satfinite);
+    PZO_CVT(f16x2_to_e2m1x2_rn_satfinite);
+    PZO_CVT(f16x2_to_e2m1x2_rn_relu_satfinite);
+    PZO_CVT(f16x2_to_e2m1x2_rz_satfinite);
+    PZO_CVT(f16x2_to_e2m1x2_rz_relu_satfinite);
+    PZO_CVT(bf16x2_to_e2m1x2_rn_satfinite);
+    PZO_CVT(bf16x2_to_e2m1x2_rn_relu_satfinite);
+    PZO_CVT(bf16x2_to_e2m1x2_rz_satfinite);
+    PZO_CVT(bf16x2_to_e2m1x2_rz_relu_satfinite);
 
 #undef PZO_CVT
 
