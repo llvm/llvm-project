@@ -93,3 +93,20 @@ namespace PR41607 {
   static_assert(Outer<123>::f<>() == 123, "");
   static_assert(Outer<123>::f<>() != 125, "");
 }
+
+namespace GH226183 {
+  template <typename T> struct A {
+    struct B { int n = 1; };
+    struct C { int n = 2; };
+    enum E : int { e };
+  };
+
+  A<int>::B b; // expected-note 2 {{implicit instantiation first required here}}
+  template <> struct A<int>::B {}; // expected-error {{explicit specialization of 'B' after instantiation}}
+  template <> enum A<int>::E : int { f }; // expected-error {{explicit specialization of 'E' after instantiation}}
+  template <typename T> template <> struct A<T>::C {}; // expected-error {{cannot specialize (with 'template<>') a member of an unspecialized template}}
+
+  static_assert(A<int>::B().n == 1, "");
+  static_assert(sizeof(A<int>::E) == sizeof(int), "");
+  static_assert(A<int>::C().n == 2, "");
+}

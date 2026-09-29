@@ -19199,7 +19199,9 @@ CreateNewDecl:
 
   if (TUK == TagUseKind::Definition) {
     if (!SkipBody || !SkipBody->ShouldSkip) {
-      New->startDefinition();
+      // An invalid redefinition must not replace the existing definition.
+      if (!Invalid || !PrevDecl || !PrevDecl->getDefinition())
+        New->startDefinition();
     } else {
       New->setCompleteDefinition();
       New->demoteThisDefinitionToDeclaration();
