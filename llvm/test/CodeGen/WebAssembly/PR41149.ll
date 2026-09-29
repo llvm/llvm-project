@@ -10,10 +10,9 @@ define void @mod() {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.load8_u 0
+; CHECK-NEXT:    i32.load8_s 0
 ; CHECK-NEXT:    local.tee 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.extend8_s
 ; CHECK-NEXT:    i32.const 7
 ; CHECK-NEXT:    i32.shr_s
 ; CHECK-NEXT:    local.tee 0
