@@ -177,6 +177,19 @@ public:
     return RTLIB::Unsupported;
   }
 
+  /// Get size of a C-level int or unsigned int, in bits.
+  // FIXME Could move into Triple class.
+  unsigned getIntSize(const Triple &TT) const {
+    return TT.isArch16Bit() ? 16 : 32;
+  }
+
+  /// Get the C-type function signature of the Libcall if provided,
+  /// and convert it to IR FunctionType and Attributes.
+  /// If the C-type function signature is not provided, return nullptr.
+  std::pair<FunctionType *, AttributeList>
+  getDefaultFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
+                       RTLIB::LibcallImpl LibcallImpl) const;
+
   /// \returns the function type and attributes for the \p LibcallImpl,
   /// depending on the target \p TT. If the function has incomplete type
   /// information, return nullptr for the function type.

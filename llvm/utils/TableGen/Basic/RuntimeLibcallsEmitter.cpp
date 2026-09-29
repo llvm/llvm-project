@@ -433,27 +433,27 @@ const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
   emitNameMatchHashTable(OS, Table);
 }
 
+using Signature = std::vector<StringRef>;
+
+static Signature getSignature(const Record *R) {
+  const auto *Tys = R->getValueAsListInit("ArgumentTypes");
+  Signature Sig;
+  Sig.reserve(Tys->size() + 1);
+  const Record *RetType = R->getValueAsOptionalDef("ReturnType");
+  if (RetType && (RetType->getName() != "NoneType"))
+    Sig.push_back(RetType->getName());
+  for (unsigned I = 0, E = Tys->size(); I < E; ++I) {
+    Sig.push_back(Tys->getElementAsRecord(I)->getName());
+  }
+  return Sig;
+}
+
 void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallSignatures(
     raw_ostream &OS) const {
-
-  using Signature = std::vector<StringRef>;
   SequenceToOffsetTable<Signature> SignatureTable("NoFuncArgType");
 
-  auto GetSignature = [](const Record *R) -> Signature {
-    const auto *Tys = R->getValueAsListInit("ArgumentTypes");
-    Signature Sig;
-    Sig.reserve(Tys->size() + 1);
-    const Record *RetType = R->getValueAsOptionalDef("ReturnType");
-    if (RetType && (RetType->getName() != "NoneType"))
-      Sig.push_back(RetType->getName());
-    for (unsigned I = 0, E = Tys->size(); I < E; ++I) {
-      Sig.push_back(Tys->getElementAsRecord(I)->getName());
-    }
-    return Sig;
-  };
-
   for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList())
-    SignatureTable.add(GetSignature(LC.getDef()));
+    SignatureTable.add(getSignature(LC.getDef()));
   SignatureTable.layout();
 
   IfDefEmitter IfDef(OS, "GET_INIT_RUNTIME_LIBCALL_SIGNATURES");
@@ -469,7 +469,7 @@ const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
 )";
   for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList()) {
     const Record *LibcallDef = LC.getDef();
-    OS << formatv("  {}, // {}\n", SignatureTable.get(GetSignature(LibcallDef)),
+    OS << formatv("  {}, // {}\n", SignatureTable.get(getSignature(LibcallDef)),
                   LibcallDef->getName());
   }
   OS << "};\n";
