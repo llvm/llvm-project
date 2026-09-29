@@ -8498,7 +8498,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
           W.printHex("Offset", Target.AddrOrOffset);
           return;
         }
-        DictScope RelocScope(W, "Reloc");
+        DictScope RelocScope(W, "Relocation");
         SmallString<32> TypeName;
         this->Obj.getRelocationTypeName(Target.Reloc->Type, TypeName);
         W.printNumber("Type", TypeName, Target.Reloc->Type);
