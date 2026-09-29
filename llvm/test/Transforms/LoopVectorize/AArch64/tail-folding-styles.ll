@@ -17,8 +17,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; NONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX]], [[TMP1]]
 ; NONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NONE:       vector.ph:
-; NONE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; NONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX]], [[TMP3]]
+; NONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX]], [[TMP1]]
 ; NONE-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX]], [[N_MOD_VF]]
 ; NONE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
 ; NONE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -27,7 +26,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; NONE-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
 ; NONE-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
 ; NONE-NEXT:    store <vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP5]], align 4
-; NONE-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], [[TMP3]]
+; NONE-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], [[TMP1]]
 ; NONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT2]], [[N_VEC]]
 ; NONE-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NONE:       middle.block:
@@ -151,6 +150,6 @@ while.end.loopexit:
 
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.vectorize.predicate.enable"}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.scalable.enable"}
 !3 = !{!"llvm.loop.interleave.count", i32 1}
 !4 = !{!"llvm.loop.vectorize.width", i32 4}

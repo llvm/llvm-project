@@ -152,7 +152,7 @@ private:
     lldb::offset_t offset;
     uint32_t size;
     uint32_t id;
-    ConstString name;
+    std::string name;
     lldb::offset_t GetFileOffset() const { return offset & 0xffffffff; }
   };
 

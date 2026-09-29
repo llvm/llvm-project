@@ -360,6 +360,9 @@ def FeatureAVX10_2 : SubtargetFeature<"avx10.2", "HasAVX10_2", "true",
 def FeatureAVX10_2_512 : SubtargetFeature<"avx10.2-512", "HasAVX10_2_512", "true",
                                           "Support AVX10.2 instruction",
                                           [FeatureAVX10_2]>;
+def FeatureAVX10_V2_AUX : SubtargetFeature<"avx10v2aux", "HasAVX10_V2_AUX", "true",
+                                           "Support AVX10 V2 AUX instructions",
+                                           [FeatureAVX10_1]>;
 def FeatureEGPR : SubtargetFeature<"egpr", "HasEGPR", "true",
                                    "Support extended general purpose register">;
 def FeaturePush2Pop2 : SubtargetFeature<"push2pop2", "HasPush2Pop2", "true",
@@ -501,6 +504,14 @@ def TuningSlowSHLD : SubtargetFeature<"slow-shld", "IsSHLDSlow", "true",
                                        "SHLD instruction is slow",
                                        [], InlineIgnore>;
 
+def TuningSlowPDEP : SubtargetFeature<"slow-pdep", "IsPDEPSlow", "true",
+                                       "PDEP instruction is slow",
+                                       [], InlineIgnore>;
+
+def TuningSlowPEXT : SubtargetFeature<"slow-pext", "IsPEXTSlow", "true",
+                                       "PEXT instruction is slow",
+                                       [], InlineIgnore>;
+
 def TuningSlowPMULLD : SubtargetFeature<"slow-pmulld", "IsPMULLDSlow", "true",
                                         "PMULLD instruction is slow (compared to PMULLW/PMULHW and PMULUDQ)",
                                         [], InlineIgnore>;
@@ -513,6 +524,11 @@ def TuningSlowPMADDWD : SubtargetFeature<"slow-pmaddwd", "IsPMADDWDSlow",
                                           "true",
                                           "PMADDWD is slower than PMULLD",
                                           [], InlineIgnore>;
+
+def TuningSlowVecMaskStore
+    : SubtargetFeature<"slow-vec-mask-store", "IsVecMaskStoreSlow", "true",
+                        "Vector mask store instruction is slow",
+                        [], InlineIgnore>;
 
 // FIXME: This should not apply to CPUs that do not have SSE.
 def TuningSlowUAMem16 : SubtargetFeature<"slow-unaligned-mem-16",
@@ -990,7 +1006,8 @@ def ProcessorFeatures {
     TuningLZCNTFalseDeps,
     TuningTZCNTFalseDeps,
     TuningInsertVZEROUPPER,
-    TuningAllowLight256Bit
+    TuningAllowLight256Bit,
+    TuningSlowVecMaskStore
   ];
 
   list<SubtargetFeature> X86_64V4Features = !listconcat(X86_64V3Features, [
@@ -1006,7 +1023,6 @@ def ProcessorFeatures {
     TuningFastScalarFSQRT,
     TuningFastVectorFSQRT,
     TuningFast15ByteNOP,
-    TuningFastVariableCrossLaneShuffle,
     TuningFastVariablePerLaneShuffle,
     TuningPrefer256Bit,
     TuningFastGather,
@@ -1519,7 +1535,6 @@ def ProcessorFeatures {
                                       TuningFastMOVBE,
                                       TuningFastImm16,
                                       TuningSlowPMADDWD];
-  // TODO Add AVX5124FMAPS/AVX5124VNNIW features
   list<SubtargetFeature> KNMFeatures =
     !listconcat(KNLFeatures, [FeatureVPOPCNTDQ]);
 
@@ -1642,7 +1657,10 @@ def ProcessorFeatures {
                                                      FeatureMOVBE,
                                                      FeatureRDRAND,
                                                      FeatureMWAITX];
-  list<SubtargetFeature> BdVer4Tuning = BdVer3Tuning;
+  list<SubtargetFeature> BdVer4AdditionalTuning = [TuningSlowPDEP,
+                                                   TuningSlowPEXT];
+  list<SubtargetFeature> BdVer4Tuning =
+    !listconcat(BdVer3Tuning, BdVer4AdditionalTuning);
   list<SubtargetFeature> BdVer4Features =
     !listconcat(BdVer3Features, BdVer4AdditionalFeatures);
 
@@ -1692,10 +1710,13 @@ def ProcessorFeatures {
                                      TuningFastMOVBE,
                                      TuningFastImm16,
                                      TuningSlowDivide64,
+                                     TuningSlowPDEP,
+                                     TuningSlowPEXT,
                                      TuningSlowSHLD,
                                      TuningSBBDepBreaking,
                                      TuningInsertVZEROUPPER,
-                                     TuningAllowLight256Bit];
+                                     TuningAllowLight256Bit,
+                                     TuningSlowVecMaskStore];
   list<SubtargetFeature> ZN2AdditionalFeatures = [FeatureCLWB,
                                                   FeatureRDPID,
                                                   FeatureRDPRU,
@@ -1709,8 +1730,11 @@ def ProcessorFeatures {
                                                   FeatureVAES,
                                                   FeatureVPCLMULQDQ];
   list<SubtargetFeature> ZN3AdditionalTuning = [TuningMacroFusion];
+  list<SubtargetFeature> ZN3RemoveTuning = [TuningSlowPDEP,
+                                            TuningSlowPEXT,
+                                            TuningSlowSHLD];
   list<SubtargetFeature> ZN3Tuning =
-    !listremove(!listconcat(ZN2Tuning, ZN3AdditionalTuning), [TuningSlowSHLD]);
+    !listremove(!listconcat(ZN2Tuning, ZN3AdditionalTuning), ZN3RemoveTuning);
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
@@ -1718,7 +1742,8 @@ def ProcessorFeatures {
                                                 TuningCOMPRESSFalseDeps,
                                                 TuningEXPANDFalseDeps];
   list<SubtargetFeature> ZN4Tuning =
-    !listconcat(ZN3Tuning, ZN4AdditionalTuning);
+    !listremove(!listconcat(ZN3Tuning, ZN4AdditionalTuning),
+                [TuningSlowVecMaskStore]);
   list<SubtargetFeature> ZN4AdditionalFeatures = [FeatureAVX512,
                                                   FeatureCDI,
                                                   FeatureDQI,

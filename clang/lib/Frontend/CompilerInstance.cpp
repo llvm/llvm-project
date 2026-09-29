@@ -188,6 +188,11 @@ void CompilerInstance::setPreprocessor(std::shared_ptr<Preprocessor> Value) {
   PP = std::move(Value);
 }
 
+IntrusiveRefCntPtr<ASTContext> CompilerInstance::getASTContextPtr() const {
+  assert(Context && "Compiler instance has no AST context!");
+  return Context;
+}
+
 void CompilerInstance::setASTContext(
     llvm::IntrusiveRefCntPtr<ASTContext> Value) {
   Context = std::move(Value);
@@ -1164,6 +1169,17 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
                    return HSOpts.ModulesIgnoreMacros.contains(
                        llvm::CachedHashString(MacroDef.split('=').first));
                  });
+  HSOpts.ModulesIgnoreMacros.clear();
+
+  // Remove any search paths that are explicitly ignored by the module.
+  // They aren't supposed to affect how the module is built anyway.
+  if (!HSOpts.ModulesIgnoreSearchPaths.empty())
+    llvm::erase_if(HSOpts.UserEntries,
+                   [&HSOpts](const HeaderSearchOptions::Entry &E) {
+                     return HSOpts.ModulesIgnoreSearchPaths.contains(
+                         llvm::CachedHashString(E.Path));
+                   });
+  HSOpts.ModulesIgnoreSearchPaths.clear();
 
   // If the original compiler invocation had -fmodule-name, pass it through.
   Invocation->getLangOpts().ModuleName =

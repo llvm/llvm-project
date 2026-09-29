@@ -89,7 +89,11 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
              /*default=*/"false",
              "Disable checks for operations that are determined to be invalid due to their "
              "operand/result datatypes not aligning with the 'Supported Data Types' "
-             "sections of the specifciation">
+             "sections of the specifciation">,
+      Option<"validateFunctionSignature", "validate-function-signature", "bool",
+             /*default=*/"true",
+             "Verify if the function signature is valid for TOSA dialect, i.e. all "
+             "function arguments and return types are tosa-conformant tensor types">,
    ];
 }
 
@@ -195,6 +199,24 @@ def TosaDowngrade1p1To1p0Pass
   }];
 }
 
+def TosaGatherScatterHardeningPass
+    : Pass<"tosa-gather-scatter-hardening", "func::FuncOp"> {
+  let summary = "Clamp TOSA gather and scatter indices to valid bounds";
+  let description = [{
+    Bounds the indices used by each gather and scatter with TOSA minimum and
+    maximum operations so that all accesses are in bounds. This improves
+    security in the context of untrusted TOSA graph by preventing memory access
+    outside values (gather) and values_out (scatter) tensor.
+
+    Each operation is rewritten independently; a subsequent CSE pass is
+    required to share bounding ops between gather/scatter with the same input
+    and bounds. Other users continue to use the original indices.
+
+    Currently the pass only supports static index dimensions and fails
+    otherwise.
+  }];
+}
+
 def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   let summary = "Narrow I64 TOSA operations to I32";
   let description = [{
@@ -234,6 +256,37 @@ def TosaNarrowF64ToF32Pass : Pass<"tosa-narrow-f64-to-f32", "func::FuncOp"> {
     Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool", "false",
       "If enabled, the pass will convert function I/O types as well. Otherwise casts will"
       "be inserted at the I/O boundaries.">
+  ];
+
+  let dependentDialects = [
+    "func::FuncDialect"
+  ];
+}
+
+def TosaNarrowF32ToF16Pass : Pass<"tosa-narrow-f32-to-f16", "func::FuncOp"> {
+  let summary = "Narrow F32 TOSA operations to F16";
+  let description = [{
+    This pass destructively narrows TOSA operations with 32-bit floating-point
+    tensor types to 16-bit floating-point tensor types. It can reduce model
+    size and improve execution time on backends with native F16 support.
+
+    This conversion is not correctness-preserving and does not perform range
+    analysis on graph inputs. Before applying this pass, users must verify that
+    all possible input values can be represented with the required range and
+    precision in F16. Otherwise, the conversion may reduce accuracy or produce
+    incorrect results.
+  }];
+
+  let options = [
+    Option<"aggressiveRewrite", "aggressive-rewrite", "bool", "false",
+      "If enabled, all TOSA operations are rewritten, regardless of whether the narrowing "
+      "is safe. This option may lead to data loss if not used carefully.">,
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool", "false",
+      "If enabled, the pass will convert function I/O types as well. Otherwise casts will "
+      "be inserted at the I/O boundaries.">,
+    Option<"convertAccumulatorType", "convert-accumulator-type", "bool", "false",
+      "If enabled, F32 accumulator type attributes are narrowed to F16. This "
+      "conversion may lose precision and is performed without range analysis.">
   ];
 
   let dependentDialects = [

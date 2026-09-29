@@ -43,11 +43,6 @@ void AMDGCN::Linker::constructLLVMLinkCommand(
     if (Input.isFilename())
       LinkerInputs.push_back(Input.getFilename());
 
-  // Look for archive of bundled bitcode in arguments, and add temporary files
-  // for the extracted archive of bitcode to inputs.
-  auto TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
-  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkerInputs, "amdgcn",
-                             TargetID, /*IsBitCodeSDL=*/true);
   tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkerInputs, Output,
                                   Args);
 }
@@ -133,12 +128,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   LldArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
-
-  // Look for archive of bundled bitcode in arguments, and add temporary files
-  // for the extracted archive of bitcode to inputs.
-  auto TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
-  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LldArgs, "amdgcn",
-                             TargetID, /*IsBitCodeSDL=*/true);
+  TC.addProfileRTLibs(Args, LldArgs);
 
   LldArgs.push_back("--no-whole-archive");
 
@@ -169,9 +159,9 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
   constructLLVMLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
 
   if (UseSPIRVBackend) {
-    // This code handles the case in the new driver when --offload-device-only
-    // is unset and clang-linker-wrapper forwards the bitcode that must be
-    // compiled to SPIR-V.
+    // This code handles the case when --offload-device-only is unset and
+    // clang-linker-wrapper forwards the bitcode that must be compiled to
+    // SPIR-V.
 
     llvm::opt::ArgStringList CmdArgs;
 
@@ -206,11 +196,6 @@ void AMDGCN::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfoList &Inputs,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
-  if (!Inputs.empty() && Inputs[0].getType() == types::TY_Image &&
-      JA.getType() == types::TY_Object)
-    return HIP::constructGenerateObjFileFromHIPFatBinary(C, Output, Inputs,
-                                                         Args, JA, *this);
-
   if (JA.getType() == types::TY_HIP_FATBIN)
     return HIP::constructHIPFatbinCommand(C, JA, Output.getFilename(), Inputs,
                                           Args, *this);

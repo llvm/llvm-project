@@ -54,7 +54,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
@@ -1425,6 +1424,17 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
         return true;
       Res = MCUnaryExpr::createNot(Res, getContext(), FirstTokenLoc);
       return false;
+    }
+    // Parse IMAGEREL operator.
+    if (Identifier.equals_insensitive("imagerel")) {
+      if (parsePrimaryExpr(Res, EndLoc, nullptr))
+        return true;
+      if (const MCExpr *ModifiedRes =
+              applySpecifier(Res, MCSymbolRefExpr::VK_COFF_IMGREL32)) {
+        Res = ModifiedRes;
+        return false;
+      }
+      return Error(FirstTokenLoc, "cannot apply 'imagerel' to this expression");
     }
     // Parse directional local label references.
     if (Identifier.equals_insensitive("@b") ||

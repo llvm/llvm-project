@@ -321,13 +321,23 @@ TargetIRAnalysis TargetMachine::getTargetIRAnalysis() const {
       [this](const Function &F) { return this->getTargetTransformInfo(F); });
 }
 
-std::pair<int, int> TargetMachine::parseBinutilsVersion(StringRef Version) {
-  if (Version == "none")
-    return {INT_MAX, INT_MAX}; // Make binutilsIsAtLeast() return true.
-  std::pair<int, int> Ret;
-  if (!Version.consumeInteger(10, Ret.first) && Version.consume_front("."))
-    Version.consumeInteger(10, Ret.second);
-  return Ret;
+StringRef TargetMachine::getTargetABIName(const Module &M) const {
+  if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
+    return MD->getString();
+  return Options.MCOptions.getABIName();
+}
+
+void TargetMachine::verifyOptionsConsistency(const Module &M) const {
+  // The "target-abi" module flag must agree with the -target-abi option.
+  StringRef OptionABI = Options.MCOptions.getABIName();
+  if (!OptionABI.empty()) {
+    if (const auto *MD =
+            cast_or_null<MDString>(M.getModuleFlag("target-abi"))) {
+      if (OptionABI != MD->getString())
+        M.getContext().emitError(
+            "-target-abi option != target-abi module flag");
+    }
+  }
 }
 
 const MCSubtargetInfo &TargetMachine::getMCSubtargetInfo(StringRef CPU,

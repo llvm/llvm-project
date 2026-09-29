@@ -259,5 +259,5 @@ void UpdateVCEPass::runOnOperation() {
   auto triple = spirv::VerCapExtAttr::get(
       deducedVersion, deducedCapabilities.getArrayRef(),
       deducedExtensions.getArrayRef(), &getContext());
-  module->setAttr(spirv::ModuleOp::getVCETripleAttrName(), triple);
+  module.setVceTripleAttr(triple);
 }

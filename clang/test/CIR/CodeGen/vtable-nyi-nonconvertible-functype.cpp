@@ -1,16 +1,14 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports padded, packed, and over-aligned record shapes.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM,LLVMCIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
 
 // CIR-DAG: !rec_Param2 = !cir.struct<"Param2" incomplete>
 // CIR-DAG: !rec_Ret1 = !cir.struct<"Ret1" incomplete>
-// CIR-DAG: !rec_S1 = !cir.struct<"S1" {!cir.vptr}>
-// CIR-DAG: !rec_S2 = !cir.struct<"S2" {!cir.vptr}>
+// CIR-DAG: !rec_S1 = !cir.struct<"S1" {data !cir.vptr}>
+// CIR-DAG: !rec_S2 = !cir.struct<"S2" {data !cir.vptr}>
 // LLVMCIR-DAG: %struct.Ret1 = type {}
 // LLVMCIR-DAG: %struct.Param2 = type {}
 

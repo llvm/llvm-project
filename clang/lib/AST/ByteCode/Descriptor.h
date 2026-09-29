@@ -128,9 +128,7 @@ private:
   const unsigned ElemSize;
   /// Size of the storage, in host bytes.
   const unsigned Size;
-  /// Size of the metadata.
-  const unsigned MDSize;
-  /// Size of the allocation (storage + metadata), in host bytes.
+  /// Size of the allocation (storage), in host bytes.
   const unsigned AllocSize;
 
   /// Value to denote arrays of unknown size.
@@ -140,14 +138,9 @@ public:
   /// Token to denote structures of unknown size.
   struct UnknownSize {};
 
-  using MetadataSize = std::optional<unsigned>;
-  static constexpr MetadataSize InlineDescMD = sizeof(InlineDescriptor);
-  static constexpr MetadataSize GlobalMD = sizeof(GlobalInlineDescriptor);
-
   /// Maximum number of bytes to be used for array elements.
   static constexpr unsigned MaxArrayElemBytes =
-      std::numeric_limits<decltype(AllocSize)>::max() - sizeof(InitMapPtr) -
-      align(std::max(*InlineDescMD, *GlobalMD));
+      std::numeric_limits<decltype(AllocSize)>::max() - sizeof(InitMapPtr);
 
   /// Pointer to the record, if block contains records.
   const Record *const ElemRecord = nullptr;
@@ -173,33 +166,31 @@ public:
   const BlockDtorFn DtorFn = nullptr;
 
   /// Allocates a descriptor for a primitive.
-  Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type, MetadataSize MD,
-             bool IsConst, bool IsTemporary, bool IsMutable, bool IsVolatile);
+  Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type, bool IsConst,
+             bool IsTemporary, bool IsMutable, bool IsVolatile);
 
   /// Allocates a descriptor for an array of primitives.
-  Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type, MetadataSize MD,
-             size_t NumElems, bool IsConst, bool IsTemporary, bool IsMutable,
-             bool IsVolatile);
+  Descriptor(DeclOrExpr D, const Type *SourceTy, PrimType Type, size_t NumElems,
+             bool IsConst, bool IsTemporary, bool IsMutable, bool IsVolatile);
 
   /// Allocates a descriptor for an array of primitives of unknown size.
-  Descriptor(DeclOrExpr D, PrimType Type, MetadataSize MDSize, bool IsConst,
-             bool IsTemporary, UnknownSize);
+  Descriptor(DeclOrExpr D, PrimType Type, bool IsConst, bool IsTemporary,
+             UnknownSize);
 
   /// Allocates a descriptor for an array of composites.
   Descriptor(DeclOrExpr D, const Type *SourceTy, const Descriptor *Elem,
-             MetadataSize MD, unsigned NumElems, bool IsConst, bool IsTemporary,
-             bool IsMutable);
+             unsigned NumElems, bool IsConst, bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of composites of unknown size.
-  Descriptor(DeclOrExpr D, const Descriptor *Elem, MetadataSize MD,
-             bool IsTemporary, UnknownSize);
+  Descriptor(DeclOrExpr D, const Descriptor *Elem, bool IsTemporary,
+             UnknownSize);
 
   /// Allocates a descriptor for a record.
-  Descriptor(DeclOrExpr D, const Record *R, MetadataSize MD, bool IsConst,
-             bool IsTemporary, bool IsMutable, bool IsVolatile);
+  Descriptor(DeclOrExpr D, const Record *R, bool IsConst, bool IsTemporary,
+             bool IsMutable, bool IsVolatile);
 
   /// Allocates a dummy descriptor.
-  Descriptor(DeclOrExpr D, MetadataSize MD = std::nullopt);
+  Descriptor(DeclOrExpr D);
 
   QualType getType() const;
   QualType getElemQualType() const;
@@ -250,9 +241,6 @@ public:
   /// our primitive data type is, but what the data size of that is.
   /// E.g., for PT_SInt32, that's 4 bytes.
   unsigned getElemDataSize() const;
-
-  /// Returns the size of the metadata.
-  unsigned getMetadataSize() const { return MDSize; }
 
   /// Returns the number of elements stored in the block.
   unsigned getNumElems() const {

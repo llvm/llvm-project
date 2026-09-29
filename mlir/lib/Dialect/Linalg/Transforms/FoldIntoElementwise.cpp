@@ -93,7 +93,8 @@ struct FoldIntoElementwisePattern : public OpInterfaceRewritePattern<LinalgOp> {
     rewriter.modifyOpInPlace(op, [&] {
       for (auto [index, operand] : llvm::enumerate(op.getDpsInputOperands()))
         op->setOperand(operand->getOperandNumber(), newIns[index]);
-      op->setAttr("indexing_maps", rewriter.getAffineMapArrayAttr(newMaps));
+      op->setInherentAttr(rewriter.getStringAttr("indexing_maps"),
+                          rewriter.getAffineMapArrayAttr(newMaps));
     });
     return success();
   }

@@ -1,7 +1,11 @@
 ; RUN: llc -enable-new-pm -mtriple=riscv32 -O3 -print-pipeline-passes=tree < %s 2>&1 \
+; RUN:   | grep -v verify \
 ; RUN:   | FileCheck %s
 ; RUN: llc -enable-new-pm -mtriple=riscv64 -O3 -print-pipeline-passes=tree < %s 2>&1 \
-; RUN:   | FileCheck %s
+; RUN:   | grep -v verify \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
+
+; REQUIRES: asserts
 
 ; CHECK: require<MachineModuleAnalysis>
 ; CHECK-NEXT: require<profile-summary>
@@ -19,7 +23,6 @@
 ; CHECK-NEXT:   riscv-gather-scatter-lowering
 ; CHECK-NEXT:   interleaved-access
 ; CHECK-NEXT:   riscv-codegenprepare
-; CHECK-NEXT:   verify
 ; CHECK-NEXT:   loop
 ; CHECK-NEXT:     canon-freeze
 ; CHECK-NEXT:     loop-reduce
@@ -39,13 +42,15 @@
 ; CHECK-NEXT:   inline-asm-prepare
 ; CHECK-NEXT:   safe-stack
 ; CHECK-NEXT:   stack-protector
-; CHECK-NEXT:   verify
 ; CHECK-NEXT: riscv-asm-printer-begin
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   machine-function
 ; CHECK-NEXT:     riscv-isel
 ; CHECK-NEXT:     finalize-isel
 ; CHECK-NEXT:     early-machinelicm
+; CHECK-NEXT:     riscv-vl-optimizer
+; CHECK-NEXT:     riscv-vector-peephole
+; CHECK-NEXT:     riscv-fold-mem-offset
 ; CHECK-NEXT:     early-tailduplication
 ; CHECK-NEXT:     opt-phis
 ; CHECK-NEXT:     stack-coloring
@@ -56,6 +61,8 @@
 ; CHECK-NEXT:     machine-sink
 ; CHECK-NEXT:     peephole-opt
 ; CHECK-NEXT:     dead-mi-elimination
+; RV64-NEXT:      riscv-opt-w-instrs
+; CHECK-NEXT:     riscv-expand-pseudo-pre-ra
 ; CHECK-NEXT:     detect-dead-lanes
 ; CHECK-NEXT:     init-undef
 ; CHECK-NEXT:     process-imp-defs
@@ -82,6 +89,7 @@
 ; CHECK-NEXT:     tailduplication
 ; CHECK-NEXT:     machine-cp
 ; CHECK-NEXT:     post-ra-pseudos
+; CHECK-NEXT:     riscv-expand-pseudo-post-ra
 ; CHECK-NEXT:     kcfi
 ; CHECK-NEXT:     post-RA-sched
 ; CHECK-NEXT:     block-placement
@@ -90,7 +98,7 @@
 ; CHECK-NEXT:     patchable-function
 ; CHECK-NEXT:     machine-cp
 ; CHECK-NEXT:     branch-relaxation
-; CHECK-NEXT:     FuncletLayoutPass
+; CHECK-NEXT:     funclet-layout
 ; CHECK-NEXT:     remove-loads-into-fake-uses
 ; CHECK-NEXT:     StackMapLivenessPass
 ; CHECK-NEXT:     live-debug-values<emit-debug-entry-values>
@@ -99,12 +107,9 @@
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   machine-function
 ; CHECK-NEXT:     stack-frame-layout
+; CHECK-NEXT:     riscv-expand-pseudo-pre-emit
+; CHECK-NEXT:     riscv-expand-pseudo-atomics
 ; CHECK-NEXT:     unpack-mi-bundles
-; CHECK-NEXT:     verify
 ; CHECK-NEXT:     riscv-asm-printer
 ; CHECK-NEXT:   free-machine-function
 ; CHECK-NEXT: riscv-asm-printer-end
-
-define void @f() {
-  ret void
-}
