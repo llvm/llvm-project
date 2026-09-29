@@ -2345,9 +2345,8 @@ define <32 x i1> @pr51133(<32 x i8> %x, <32 x i8> %y) {
 ; CHECK-AVX512VL-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2
 ; CHECK-AVX512VL-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm2
 ; CHECK-AVX512VL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; CHECK-AVX512VL-NEXT:    vpcmpeqb %ymm0, %ymm1, %ymm1
-; CHECK-AVX512VL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; CHECK-AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 ^ (ymm1 | ymm2)
+; CHECK-AVX512VL-NEXT:    vpcmpeqb %ymm0, %ymm1, %ymm0
+; CHECK-AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm0 = ~(ymm0 | ymm2)
 ; CHECK-AVX512VL-NEXT:    retq
   %rem = srem <32 x i8> %x, <i8 13, i8 5, i8 19, i8 34, i8 2, i8 8, i8 2, i8 88, i8 62, i8 62, i8 5, i8 7, i8 97, i8 2, i8 3, i8 60, i8 3, i8 87, i8 7, i8 6, i8 84, i8 -128, i8 127, i8 56, i8 114, i8 1, i8 50, i8 7, i8 2, i8 8, i8 97, i8 117>
   %cmp = icmp ne <32 x i8> %rem, zeroinitializer

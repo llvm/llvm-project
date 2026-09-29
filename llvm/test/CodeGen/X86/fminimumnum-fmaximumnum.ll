@@ -2429,7 +2429,7 @@ define <4 x half> @test_fmaximumnum_v4f16(<4 x half> %x, <4 x half> %y) nounwind
 ; AVX512BF16-NEXT:    vcvtph2ps %xmm2, %xmm4
 ; AVX512BF16-NEXT:    vmaxss %xmm3, %xmm4, %xmm5
 ; AVX512BF16-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
-; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm5 = xmm5 & (xmm4 | xmm2)
+; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm5 = xmm5 & (xmm2 | xmm4)
 ; AVX512BF16-NEXT:    vcmpunordss %xmm4, %xmm4, %k1
 ; AVX512BF16-NEXT:    vmovss %xmm3, %xmm5, %xmm5 {%k1}
 ; AVX512BF16-NEXT:    vcmpunordss %xmm3, %xmm3, %k1
@@ -2440,7 +2440,7 @@ define <4 x half> @test_fmaximumnum_v4f16(<4 x half> %x, <4 x half> %y) nounwind
 ; AVX512BF16-NEXT:    vshufps {{.*#+}} xmm5 = xmm0[3,3,3,3]
 ; AVX512BF16-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX512BF16-NEXT:    vmaxss %xmm4, %xmm5, %xmm6
-; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm6 = xmm6 & (xmm5 | xmm2)
+; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm6 = xmm6 & (xmm2 | xmm5)
 ; AVX512BF16-NEXT:    vcmpunordss %xmm5, %xmm5, %k1
 ; AVX512BF16-NEXT:    vmovss %xmm4, %xmm6, %xmm6 {%k1}
 ; AVX512BF16-NEXT:    vcmpunordss %xmm4, %xmm4, %k1
@@ -2452,7 +2452,7 @@ define <4 x half> @test_fmaximumnum_v4f16(<4 x half> %x, <4 x half> %y) nounwind
 ; AVX512BF16-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm0[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512BF16-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX512BF16-NEXT:    vmaxss %xmm4, %xmm5, %xmm6
-; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm6 = xmm6 & (xmm5 | xmm2)
+; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm6 = xmm6 & (xmm2 | xmm5)
 ; AVX512BF16-NEXT:    vcmpunordss %xmm5, %xmm5, %k1
 ; AVX512BF16-NEXT:    vmovss %xmm4, %xmm6, %xmm6 {%k1}
 ; AVX512BF16-NEXT:    vcmpunordss %xmm4, %xmm4, %k1
@@ -2463,7 +2463,7 @@ define <4 x half> @test_fmaximumnum_v4f16(<4 x half> %x, <4 x half> %y) nounwind
 ; AVX512BF16-NEXT:    vshufpd {{.*#+}} xmm6 = xmm0[1,0]
 ; AVX512BF16-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX512BF16-NEXT:    vmaxss %xmm5, %xmm6, %xmm7
-; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm7 = xmm7 & (xmm6 | xmm2)
+; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm7 = xmm7 & (xmm2 | xmm6)
 ; AVX512BF16-NEXT:    vcmpunordss %xmm6, %xmm6, %k1
 ; AVX512BF16-NEXT:    vmovss %xmm5, %xmm7, %xmm7 {%k1}
 ; AVX512BF16-NEXT:    vcmpunordss %xmm5, %xmm5, %k1
@@ -2476,7 +2476,7 @@ define <4 x half> @test_fmaximumnum_v4f16(<4 x half> %x, <4 x half> %y) nounwind
 ; AVX512BF16-NEXT:    vpsrlq $48, %xmm0, %xmm5
 ; AVX512BF16-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX512BF16-NEXT:    vmaxss %xmm4, %xmm5, %xmm6
-; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm6 = xmm6 & (xmm5 | xmm2)
+; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm6 = xmm6 & (xmm2 | xmm5)
 ; AVX512BF16-NEXT:    vcmpunordss %xmm5, %xmm5, %k1
 ; AVX512BF16-NEXT:    vmovss %xmm4, %xmm6, %xmm6 {%k1}
 ; AVX512BF16-NEXT:    vcmpunordss %xmm4, %xmm4, %k1
@@ -2487,7 +2487,7 @@ define <4 x half> @test_fmaximumnum_v4f16(<4 x half> %x, <4 x half> %y) nounwind
 ; AVX512BF16-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm0[1,1,3,3]
 ; AVX512BF16-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX512BF16-NEXT:    vmaxss %xmm5, %xmm6, %xmm7
-; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm7 = xmm7 & (xmm6 | xmm2)
+; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm7 = xmm7 & (xmm2 | xmm6)
 ; AVX512BF16-NEXT:    vcmpunordss %xmm6, %xmm6, %k1
 ; AVX512BF16-NEXT:    vmovss %xmm5, %xmm7, %xmm7 {%k1}
 ; AVX512BF16-NEXT:    vcmpunordss %xmm5, %xmm5, %k1
@@ -2497,7 +2497,7 @@ define <4 x half> @test_fmaximumnum_v4f16(<4 x half> %x, <4 x half> %y) nounwind
 ; AVX512BF16-NEXT:    vcvtph2ps %xmm1, %xmm5
 ; AVX512BF16-NEXT:    vcvtph2ps %xmm0, %xmm6
 ; AVX512BF16-NEXT:    vmaxss %xmm5, %xmm6, %xmm7
-; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm7 = xmm7 & (xmm6 | xmm2)
+; AVX512BF16-NEXT:    vpternlogd {{.*#+}} xmm7 = xmm7 & (xmm2 | xmm6)
 ; AVX512BF16-NEXT:    vcmpunordss %xmm6, %xmm6, %k1
 ; AVX512BF16-NEXT:    vmovss %xmm5, %xmm7, %xmm7 {%k1}
 ; AVX512BF16-NEXT:    vcmpunordss %xmm5, %xmm5, %k1

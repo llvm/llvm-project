@@ -259,8 +259,8 @@ define <8 x bfloat> @round_v8bf16(<8 x bfloat> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; CHECK-NEXT:    vpslld $16, %ymm0, %ymm0
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
-; CHECK-NEXT:    vpternlogd {{.*#+}} ymm1 = ymm1 | (ymm0 & m32bcst)
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpternlogd {{.*#+}} ymm1 = (ymm1 & ymm0) | m32bcst
 ; CHECK-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vroundps $11, %ymm0, %ymm0
 ; CHECK-NEXT:    vcvtneps2bf16 %ymm0, %xmm0

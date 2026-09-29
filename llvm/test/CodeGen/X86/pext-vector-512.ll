@@ -141,16 +141,15 @@ define <64 x i8> @pext_v64i8(<64 x i8> %val, <64 x i8> %mask) nounwind {
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm5 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
 ; AVX512-NEXT:    vpternlogq {{.*#+}} zmm4 = zmm3 ^ (zmm4 & zmm5)
 ; AVX512-NEXT:    vpsubb %zmm2, %zmm1, %zmm2
-; AVX512-NEXT:    vpternlogd {{.*#+}} zmm3 = -1
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm3 ^ (zmm2 | zmm4)
-; AVX512-NEXT:    vpaddb %zmm3, %zmm3, %zmm2
-; AVX512-NEXT:    vpxorq %zmm2, %zmm3, %zmm2
-; AVX512-NEXT:    vpaddb %zmm2, %zmm2, %zmm6
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm2 = ~(zmm2 | zmm4)
+; AVX512-NEXT:    vpaddb %zmm2, %zmm2, %zmm3
+; AVX512-NEXT:    vpxorq %zmm3, %zmm2, %zmm3
+; AVX512-NEXT:    vpaddb %zmm3, %zmm3, %zmm6
 ; AVX512-NEXT:    vpaddb %zmm6, %zmm6, %zmm6
-; AVX512-NEXT:    vpxorq %zmm6, %zmm2, %zmm2
-; AVX512-NEXT:    vpsllw $4, %zmm2, %zmm6
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm6 = zmm2 ^ (zmm6 & zmm5)
-; AVX512-NEXT:    vpandnq %zmm3, %zmm6, %zmm2
+; AVX512-NEXT:    vpxorq %zmm6, %zmm3, %zmm3
+; AVX512-NEXT:    vpsllw $4, %zmm3, %zmm6
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm6 = zmm3 ^ (zmm6 & zmm5)
+; AVX512-NEXT:    vpandnq %zmm2, %zmm6, %zmm2
 ; AVX512-NEXT:    vpaddb %zmm2, %zmm2, %zmm3
 ; AVX512-NEXT:    vpxorq %zmm3, %zmm2, %zmm2
 ; AVX512-NEXT:    vpaddb %zmm2, %zmm2, %zmm3
@@ -177,10 +176,11 @@ define <64 x i8> @pext_v64i8(<64 x i8> %val, <64 x i8> %mask) nounwind {
 ; AVX512-NEXT:    vpxorq %zmm0, %zmm1, %zmm1
 ; AVX512-NEXT:    vpsrlw $2, %zmm0, %zmm0
 ; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = (zmm0 & zmm8) | zmm1
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm6 = zmm6 & zmm0 & zmm3
-; AVX512-NEXT:    vpxorq %zmm6, %zmm0, %zmm1
-; AVX512-NEXT:    vpsrlw $4, %zmm6, %zmm0
-; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & m32bcst) | zmm1
+; AVX512-NEXT:    vpandq %zmm6, %zmm0, %zmm1
+; AVX512-NEXT:    vpandq %zmm3, %zmm1, %zmm1
+; AVX512-NEXT:    vpxorq %zmm1, %zmm0, %zmm2
+; AVX512-NEXT:    vpsrlw $4, %zmm1, %zmm0
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = (zmm0 & m32bcst) | zmm2
 ; AVX512-NEXT:    retq
   %res = call <64 x i8> @llvm.pext.v64i8(<64 x i8> %val, <64 x i8> %mask)
   ret <64 x i8> %res
@@ -365,29 +365,29 @@ define <32 x i16> @pext_v32i16(<32 x i16> %val, <32 x i16> %mask) nounwind {
 ; AVX512-NEXT:    vpsllw $4, %zmm2, %zmm6
 ; AVX512-NEXT:    vpxorq %zmm6, %zmm2, %zmm2
 ; AVX512-NEXT:    vpsllw $8, %zmm2, %zmm6
-; AVX512-NEXT:    vpxorq %zmm6, %zmm2, %zmm2
 ; AVX512-NEXT:    vpandq %zmm1, %zmm3, %zmm3
-; AVX512-NEXT:    vpsrlw $1, %zmm3, %zmm6
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm6 = zmm6 | (zmm1 ^ zmm3)
-; AVX512-NEXT:    vpandq %zmm6, %zmm4, %zmm4
-; AVX512-NEXT:    vpsrlw $2, %zmm4, %zmm7
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm7 = zmm7 | (zmm6 ^ zmm4)
-; AVX512-NEXT:    vpandq %zmm7, %zmm5, %zmm5
-; AVX512-NEXT:    vpsrlw $4, %zmm5, %zmm6
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm6 = zmm6 | (zmm7 ^ zmm5)
+; AVX512-NEXT:    vpsrlw $1, %zmm3, %zmm7
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm7 = zmm7 | (zmm3 ^ zmm1)
+; AVX512-NEXT:    vpandq %zmm7, %zmm4, %zmm4
+; AVX512-NEXT:    vpsrlw $2, %zmm4, %zmm8
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm8 = zmm8 | (zmm4 ^ zmm7)
+; AVX512-NEXT:    vpandq %zmm8, %zmm5, %zmm5
+; AVX512-NEXT:    vpsrlw $4, %zmm5, %zmm7
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm7 = zmm7 | (zmm5 ^ zmm8)
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm7 = zmm7 & (zmm2 ^ zmm6)
 ; AVX512-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpandq %zmm3, %zmm0, %zmm1
-; AVX512-NEXT:    vpsrlw $1, %zmm1, %zmm3
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm3 | (zmm0 ^ zmm1)
-; AVX512-NEXT:    vpandq %zmm4, %zmm3, %zmm0
+; AVX512-NEXT:    vpsrlw $1, %zmm1, %zmm2
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm2 = zmm2 | (zmm1 ^ zmm0)
+; AVX512-NEXT:    vpandq %zmm4, %zmm2, %zmm0
 ; AVX512-NEXT:    vpsrlw $2, %zmm0, %zmm1
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm1 | (zmm3 ^ zmm0)
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm1 | (zmm0 ^ zmm2)
 ; AVX512-NEXT:    vpandq %zmm5, %zmm1, %zmm0
-; AVX512-NEXT:    vpsrlw $4, %zmm0, %zmm3
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm3 | (zmm1 ^ zmm0)
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm6 = zmm6 & zmm3 & zmm2
-; AVX512-NEXT:    vpsrlw $8, %zmm6, %zmm0
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm3 ^ zmm6)
+; AVX512-NEXT:    vpsrlw $4, %zmm0, %zmm2
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm2 = zmm2 | (zmm0 ^ zmm1)
+; AVX512-NEXT:    vpandq %zmm7, %zmm2, %zmm1
+; AVX512-NEXT:    vpsrlw $8, %zmm1, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm1 ^ zmm2)
 ; AVX512-NEXT:    retq
   %res = call <32 x i16> @llvm.pext.v32i16(<32 x i16> %val, <32 x i16> %mask)
   ret <32 x i16> %res

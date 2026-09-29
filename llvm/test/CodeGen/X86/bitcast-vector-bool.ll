@@ -1252,7 +1252,7 @@ define i1 @trunc_v128i8_cmp(<128 x i8> %a0) nounwind {
 ; AVX512-LABEL: trunc_v128i8_cmp:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpbroadcastb {{.*#+}} zmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 & zmm2 & zmm1
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 & zmm1 & zmm2
 ; AVX512-NEXT:    vpcmpneqd %zmm2, %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    setne %al

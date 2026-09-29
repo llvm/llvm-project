@@ -4,7 +4,7 @@
 define <8 x i64> @foo(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = ~(zmm0 | zmm2 | zmm1)
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = ~(zmm0 | zmm1 | zmm2)
 ; CHECK-NEXT:    retq
   %and.demorgan = or <8 x i64> %b, %a
   %and3.demorgan = or <8 x i64> %and.demorgan, %c
@@ -15,11 +15,177 @@ define <8 x i64> @foo(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c) {
 define <8 x i64> @xorbitcast(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c) {
 ; CHECK-LABEL: xorbitcast:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = ~(zmm0 | zmm2 | zmm1)
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = ~(zmm0 | zmm1 | zmm2)
 ; CHECK-NEXT:    retq
   %or1 = or <64 x i8> %a, %b
   %or2 = or <64 x i8> %or1, %c
   %cast = bitcast <64 x i8> %or2 to <8 x i64>
   %xor = xor <8 x i64> %cast, splat (i64 -1)
   ret <8 x i64> %xor
+}
+
+; Two chained 3-input VPTERNLOGs (5 distinct inputs).
+define <8 x i64> @foobar(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d, <8 x i64> %e) {
+; CHECK-LABEL: foobar:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 & (zmm2 | ~zmm1)
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 & ~(zmm4 | zmm3)
+; CHECK-NEXT:    retq
+  %nb = xor <8 x i64> %b, splat (i64 -1)
+  %or = or <8 x i64> %nb, %c
+  %foo = and <8 x i64> %or, %a
+  %de = or <8 x i64> %d, %e
+  %nde = xor <8 x i64> %de, splat (i64 -1)
+  %bar = and <8 x i64> %foo, %nde
+  ret <8 x i64> %bar
+}
+
+; A & ~(B | C) nested under another AND; the inner OR stays a plain vporq.
+define <8 x i64> @or_not_and(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
+; CHECK-LABEL: or_not_and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vporq %zmm2, %zmm1, %zmm1
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 & zmm3 & ~zmm1
+; CHECK-NEXT:    retq
+  %or = or <8 x i64> %b, %c
+  %not_or = xor <8 x i64> %or, splat (i64 -1)
+  %lhs = and <8 x i64> %a, %not_or
+  %res = and <8 x i64> %lhs, %d
+  ret <8 x i64> %res
+}
+
+; Depth-4 heterogeneous chain.
+define <8 x i64> @depth4_chain(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d, <8 x i64> %e) {
+; CHECK-LABEL: depth4_chain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm2 | (zmm0 ^ zmm1)
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm4 ^ (zmm0 & zmm3)
+; CHECK-NEXT:    retq
+  %t0 = xor <8 x i64> %a, %b
+  %t1 = or <8 x i64> %t0, %c
+  %t2 = and <8 x i64> %t1, %d
+  %t3 = xor <8 x i64> %t2, %e
+  ret <8 x i64> %t3
+}
+
+; Depth-5 heterogeneous chain.
+define <8 x i64> @depth5_chain(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d, <8 x i64> %e, <8 x i64> %f) {
+; CHECK-LABEL: depth5_chain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpandq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm3 | (zmm0 ^ zmm2)
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm5 ^ (zmm0 & zmm4)
+; CHECK-NEXT:    retq
+  %t0 = and <8 x i64> %a, %b
+  %t1 = xor <8 x i64> %t0, %c
+  %t2 = or <8 x i64> %t1, %d
+  %t3 = and <8 x i64> %t2, %e
+  %t4 = xor <8 x i64> %t3, %f
+  ret <8 x i64> %t4
+}
+
+; Balanced tree.
+define <8 x i64> @balanced_depth(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d, <8 x i64> %e, <8 x i64> %f) {
+; CHECK-LABEL: balanced_depth:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 & (zmm2 ^ zmm3)
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm4 ^ zmm5)
+; CHECK-NEXT:    retq
+  %l0 = or <8 x i64> %a, %b
+  %l1 = xor <8 x i64> %c, %d
+  %l2 = and <8 x i64> %l0, %l1
+  %r0 = xor <8 x i64> %e, %f
+  %res = or <8 x i64> %l2, %r0
+  ret <8 x i64> %res
+}
+
+; NOT of a load: folds the memory operand into a single VPTERNLOG.
+define <8 x i64> @flip(ptr %x) {
+; CHECK-LABEL: flip:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = ~mem
+; CHECK-NEXT:    retq
+  %ld = load <8 x i64>, ptr %x, align 64
+  %not = xor <8 x i64> %ld, splat (i64 -1)
+  ret <8 x i64> %not
+}
+
+; 9-input OR reduction -> chain of 3-input VPTERNLOGs.
+define <8 x i64> @or_reduce9(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d, <8 x i64> %e, <8 x i64> %f, <8 x i64> %g, <8 x i64> %h, <8 x i64> %i) {
+; CHECK-LABEL: or_reduce9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbp, -16
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    .cfi_def_cfa_register %rbp
+; CHECK-NEXT:    andq $-64, %rsp
+; CHECK-NEXT:    subq $64, %rsp
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | zmm1 | zmm2
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | zmm3 | zmm4
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | zmm5 | zmm6
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | zmm7 | mem
+; CHECK-NEXT:    movq %rbp, %rsp
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
+; CHECK-NEXT:    retq
+  %r1 = or <8 x i64> %b, %a
+  %r2 = or <8 x i64> %r1, %c
+  %r3 = or <8 x i64> %r2, %d
+  %r4 = or <8 x i64> %r3, %e
+  %r5 = or <8 x i64> %r4, %f
+  %r6 = or <8 x i64> %r5, %g
+  %r7 = or <8 x i64> %r6, %h
+  %r8 = or <8 x i64> %r7, %i
+  ret <8 x i64> %r8
+}
+
+; 256-bit vector case - exercises VLX path.
+define <4 x i64> @foo_256(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c) {
+; CHECK-LABEL: foo_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpternlogq {{.*#+}} ymm0 = ~(ymm0 | ymm1 | ymm2)
+; CHECK-NEXT:    retq
+  %or1 = or <4 x i64> %b, %a
+  %or2 = or <4 x i64> %or1, %c
+  %not = xor <4 x i64> %or2, splat (i64 -1)
+  ret <4 x i64> %not
+}
+
+; 128-bit vector case - exercises VLX path.
+define <2 x i64> @foo_128(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) {
+; CHECK-LABEL: foo_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm0 = ~(xmm0 | xmm1 | xmm2)
+; CHECK-NEXT:    retq
+  %or1 = or <2 x i64> %b, %a
+  %or2 = or <2 x i64> %or1, %c
+  %not = xor <2 x i64> %or2, splat (i64 -1)
+  ret <2 x i64> %not
+}
+
+; Balanced OR-4 tree; one leaf OR stays a plain vporq.
+define <8 x i64> @balanced_or4(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
+; CHECK-LABEL: balanced_or4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | zmm2 | zmm3
+; CHECK-NEXT:    retq
+  %t1 = or <8 x i64> %a, %b
+  %t2 = or <8 x i64> %c, %d
+  %res = or <8 x i64> %t1, %t2
+  ret <8 x i64> %res
+}
+
+; Multi-use operand - %a feeds both ORs; reuse collapses to one VPTERNLOG.
+define <8 x i64> @shared_operand(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c) {
+; CHECK-LABEL: shared_operand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm1 & zmm2)
+; CHECK-NEXT:    retq
+  %or1 = or <8 x i64> %a, %b
+  %or2 = or <8 x i64> %a, %c
+  %res = and <8 x i64> %or1, %or2
+  ret <8 x i64> %res
 }
