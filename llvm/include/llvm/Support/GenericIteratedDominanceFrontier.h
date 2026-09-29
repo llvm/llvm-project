@@ -23,6 +23,7 @@
 #ifndef LLVM_SUPPORT_GENERICITERATEDDOMINANCEFRONTIER_H
 #define LLVM_SUPPORT_GENERICITERATEDDOMINANCEFRONTIER_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
@@ -144,18 +145,20 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
 
   DT.updateDFSNumbers();
 
+  // The DFS in-numbers are unique and dense in [0, number of nodes), with the
+  // root's DFS out-number being the number of nodes. Use them to index the
+  // visited sets.
+  const DomTreeNodeBase<NodeTy> *RootNode = DT.getRootNode();
+  unsigned NumNodes = RootNode ? RootNode->getDFSNumOut() : 0;
+
   SmallVector<DomTreeNodeBase<NodeTy> *, 32> Worklist;
-  SmallPtrSet<DomTreeNodeBase<NodeTy> *, 16> VisitedPQ;
-  SmallPtrSet<DomTreeNodeBase<NodeTy> *, 16> VisitedWorklist;
-  if (useLiveIn) {
-    VisitedPQ.reserve(LiveInBlocks->size());
-    VisitedWorklist.reserve(LiveInBlocks->size());
-  }
+  BitVector VisitedPQ(NumNodes);
+  BitVector VisitedWorklist(NumNodes);
 
   for (NodeTy *BB : *DefBlocks)
     if (DomTreeNodeBase<NodeTy> *Node = DT.getNode(BB)) {
       PQ.push({Node, std::make_pair(Node->getLevel(), Node->getDFSNumIn())});
-      VisitedWorklist.insert(Node);
+      VisitedWorklist.set(Node->getDFSNumIn());
     }
 
   while (!PQ.empty()) {
@@ -184,8 +187,9 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
         if (SuccLevel > RootLevel)
           return;
 
-        if (!VisitedPQ.insert(SuccNode).second)
+        if (VisitedPQ.test(SuccNode->getDFSNumIn()))
           return;
+        VisitedPQ.set(SuccNode->getDFSNumIn());
 
         NodeTy *SuccBB = SuccNode->getBlock();
         if (useLiveIn && !LiveInBlocks->count(SuccBB))
@@ -201,8 +205,10 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
         DoWork(Succ);
 
       for (auto DomChild : *Node) {
-        if (VisitedWorklist.insert(DomChild).second)
-          Worklist.push_back(DomChild);
+        if (VisitedWorklist.test(DomChild->getDFSNumIn()))
+          continue;
+        VisitedWorklist.set(DomChild->getDFSNumIn());
+        Worklist.push_back(DomChild);
       }
     }
   }
