@@ -1138,14 +1138,6 @@ private:
                   parent->constructExit->isNewBlock = true;
               }
             }
-            auto iter = assignSymbolLabelMap->find(*sym);
-            if (iter == assignSymbolLabelMap->end()) {
-              lower::pft::LabelSet labelSet{};
-              labelSet.insert(label);
-              assignSymbolLabelMap->try_emplace(*sym, labelSet);
-            } else {
-              iter->second.insert(label);
-            }
           },
           [&](const parser::AssignedGotoStmt &s) {
             // See Fortran 90 Clause 8.2.4.
@@ -2828,23 +2820,74 @@ static bool isInLoopBody(const Fortran::lower::pft::Evaluation *eval,
 /// A CYCLE is not an escape: its target is the EndDoStmt, which is where the
 /// wrap's yield sits, so it lands on the boundary. An EXIT targets the
 /// construct exit, beyond the loop entirely, and does escape.
-/// Follow the chain of unconditional GO TOs starting at \p start and return
-/// true if it closes on itself.
+/// Return true if control can get from where \p start branches back to \p
+/// start itself, without leaving \p loop's body.
 ///
-/// Such a cycle has no exit edge, which makes it a statically known infinite
-/// loop. Only unconditional transfers are followed, so the answer is a
-/// certainty rather than a guess -- the same bound the cf.br canonicalization
-/// applies when it declines to collapse cyclic branches.
-static bool
-startsExitFreeGotoCycle(const Fortran::lower::pft::Evaluation &start) {
-  auto gotoTarget = [](const Fortran::lower::pft::Evaluation &e) {
-    return e.getIf<parser::GotoStmt>() ? e.controlSuccessor : nullptr;
+/// A branch closes a cycle with whatever carries control back to it, and that
+/// return path is made of ordinary statements: the one branched to simply runs
+/// on, through the constructs it meets, until it reaches the branch again.
+/// Following a single path would lose the way back wherever control could go
+/// more than one way, so every successor is followed.
+///
+/// A cycle may run forever, which disqualifies the loop holding it: its
+/// structured form puts the body in an scf.execute_region carrying no memory
+/// effects, and DCE deletes such a region outright. Whether the cycle can be
+/// left is not checked, so a loop that does terminate is rejected as well.
+///
+/// The search stays inside the body. Beyond it lies the loop's own iteration
+/// edge, from the EndDoStmt back to the DO statement, which would carry the
+/// search back into the body and make every branch look like a cycle.
+static bool startsBranchCycle(const Fortran::lower::pft::Evaluation &start,
+                              const Fortran::lower::pft::Evaluation &loop) {
+  // Only a GO TO starts the search. A loop reaches its own DO statement from
+  // its EndDoStmt on every iteration, and asking of either would find that
+  // edge and call the loop holding it non-terminating.
+  if (!start.getIf<parser::GotoStmt>() &&
+      !start.getIf<parser::AssignedGotoStmt>())
+    return false;
+
+  // Every way control may leave \p e: where it branches, and the statement
+  // after it.
+  // A loop reaches its own DO statement from its EndDoStmt on every iteration.
+  // That edge would lead the search back through the loop's body and make any
+  // branch inside it look like a cycle, so it is skipped: the loop terminates
+  // through its own control.
+  auto isOwnIterationEdge = [](const Fortran::lower::pft::Evaluation &e,
+                               const Fortran::lower::pft::Evaluation *target) {
+    const Fortran::lower::pft::Evaluation *parent = e.parentConstruct;
+    return parent && parent->getIf<parser::DoConstruct>() &&
+           parent->evaluationList && &parent->evaluationList->back() == &e &&
+           &parent->evaluationList->front() == target;
   };
 
-  llvm::SmallPtrSet<const Fortran::lower::pft::Evaluation *, 4> visited;
-  for (const Fortran::lower::pft::Evaluation *e = &start; e; e = gotoTarget(*e))
-    if (!visited.insert(e).second)
+  auto successors =
+      [&](const Fortran::lower::pft::Evaluation &e,
+          llvm::SmallVectorImpl<const Fortran::lower::pft::Evaluation *> &out) {
+        if (e.controlSuccessor && !isOwnIterationEdge(e, e.controlSuccessor))
+          out.push_back(e.controlSuccessor);
+        for (const Fortran::lower::pft::Evaluation *extra :
+             e.extraControlSuccessors)
+          out.push_back(extra);
+        // A GO TO reaches only its target; the statement it precedes is not a
+        // successor of it. An assigned GO TO reaches every label ASSIGNed to
+        // its variable, which the successors already name.
+        if (!e.getIf<parser::GotoStmt>() &&
+            !e.getIf<parser::AssignedGotoStmt>() && e.lexicalSuccessor)
+          out.push_back(e.lexicalSuccessor);
+      };
+
+  llvm::SmallVector<const Fortran::lower::pft::Evaluation *> worklist;
+  successors(start, worklist);
+
+  llvm::SmallPtrSet<const Fortran::lower::pft::Evaluation *, 16> seen;
+  while (!worklist.empty()) {
+    const Fortran::lower::pft::Evaluation *e = worklist.pop_back_val();
+    if (e == &start)
       return true;
+    if (!isInLoopBody(e, loop) || !seen.insert(e).second)
+      continue;
+    successors(*e, worklist);
+  }
   return false;
 }
 
@@ -2908,7 +2951,7 @@ static bool isStructurableWithUnstructuredInternals(
     // followed to be recognized.
     if (e.isA<parser::ReturnStmt>() ||
         isInfiniteDo(e.getIf<parser::DoConstruct>()) ||
-        startsExitFreeGotoCycle(e))
+        startsBranchCycle(e, loop))
       return false;
 
     // Condition 1: nothing leaves the body, CYCLE excepted.
