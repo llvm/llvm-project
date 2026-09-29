@@ -9,7 +9,9 @@
 #include "RedundantParenthesesCheck.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -36,6 +38,23 @@ AST_MATCHER(ParenExpr, isInMacro) {
 
 AST_MATCHER(TypeLoc, isTypeOfExprTypeLoc) {
   return !Node.getUnqualifiedLoc().getAs<TypeOfExprTypeLoc>().isNull();
+}
+
+AST_MATCHER(Expr, isObjCBoxedExpr) { return isa<ObjCBoxedExpr>(&Node); }
+
+AST_MATCHER_P(Expr, hasParentIgnoringImpCasts,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  const Expr *E = &Node;
+  do {
+    const DynTypedNodeList Parents = Finder->getASTContext().getParents(*E);
+    if (Parents.size() != 1)
+      return false;
+    E = Parents[0].get<Expr>();
+    if (!E)
+      return false;
+  } while (isa<ImplicitCastExpr>(E));
+
+  return InnerMatcher.matches(*E, Finder, Builder);
 }
 
 } // namespace
@@ -73,6 +92,8 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
   const auto ConstantExpr =
       expr(anyOf(integerLiteral(), floatLiteral(), characterLiteral(),
                  cxxBoolLiteral(), stringLiteral(), cxxNullPtrLiteralExpr()));
+  const auto ObjCBoxedOperand =
+      hasParentIgnoringImpCasts(expr(isObjCBoxedExpr()));
   Finder->addMatcher(
       parenExpr(subExpr(anyOf(
                     parenExpr(), ConstantExpr,
@@ -86,7 +107,9 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                              // sizeof(...) is common used.
                              hasParent(unaryExprOrTypeTraitExpr()),
                              // typeof(...) parentheses are required syntax.
-                             hasParent(typeLoc(isTypeOfExprTypeLoc())))))
+                             hasParent(typeLoc(isTypeOfExprTypeLoc())),
+                             // @(...) parentheses are required syntax.
+                             ObjCBoxedOperand)))
           .bind("dup"),
       this);
 }

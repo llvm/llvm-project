@@ -313,7 +313,8 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {doc}`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
-  positive on the required parentheses of `typeof` and `typeof_unqual` operands.
+  positive on the required parentheses of `typeof` and `typeof_unqual` operands,
+  and on the required parentheses of Objective-C boxed expressions `@(...)`.
 
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
