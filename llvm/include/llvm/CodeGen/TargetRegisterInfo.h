@@ -240,6 +240,10 @@ public:
   /// access sub-registers at different offsets), return -1.
   unsigned getSubRegIdxOffset(unsigned Idx) const;
 
+  /// Find a SubReg index for the given bit size and bit offset.
+  /// Returns 0(no-op sub-register) if no matching index exists.
+  unsigned getSubRegIdxFromOffsetSize(unsigned Offset, unsigned Size) const;
+
   /// Return a bitmask representing the parts of a register that are covered by
   /// SubIdx \see LaneBitmask.
   ///
@@ -248,9 +252,6 @@ public:
     assert(SubIdx < getNumSubRegIndices() && "This is not a subregister index");
     return SubRegIndexLaneMasks[SubIdx];
   }
-
-  /// Try to find a matching subreg from the given lanemask.
-  unsigned getSubRegIdxFromLaneMask(LaneBitmask LaneMask) const;
 
   /// Try to find one or more subregister indexes to cover \p LaneMask.
   ///

@@ -454,27 +454,18 @@ unsigned
 AMDGPURewriteAGPRCopyMFMAImpl::getSubRegFromReload(MachineInstr &MI,
                                                    Register Reg) const {
   unsigned NumRegs = TRI.getRegSizeInBits(*MRI.getRegClass(Reg)) / 32;
-  unsigned SubReg = AMDGPU::NoSubRegister;
+  unsigned NumSpilledRegs = TII.getNumSubRegsForSpillOp(MI);
   // SubReg accesses for the tuple registers are of interest here.
+  // Skip if the entire tuple is reloaded.
   // Note: We don't support 16-bit subreg reloads. If that assumption is
   // changed in the future, this function should be revised.
-  if (NumRegs == 1)
-    return SubReg;
+  if (NumRegs == 1 || NumRegs == NumSpilledRegs)
+    return AMDGPU::NoSubRegister;
 
-  unsigned NumSpilledRegs = TII.getNumSubRegsForSpillOp(MI);
-  // Skip if the entire tuple is reloaded.
-  if (NumRegs == NumSpilledRegs)
-    return SubReg;
-
-  // Construct the covering lanes for the reloaded portion.
-  unsigned SubRegIdx =
-      TII.getNamedOperand(MI, AMDGPU::OpName::offset)->getImm() / 4;
-  // Subreg lane masks are maintained in terms of regunits and each 32-bit
-  // register consists of two regunits.
-  uint64_t Lanes = (1ULL << NumSpilledRegs * 2) - 1;
-  LaneBitmask CoveringLanes = LaneBitmask(Lanes << SubRegIdx * 2);
-  SubReg = TRI.getSubRegIdxFromLaneMask(CoveringLanes);
-  return SubReg;
+  unsigned StackSlotBitOffset =
+      TII.getNamedOperand(MI, AMDGPU::OpName::offset)->getImm() * 8;
+  return TRI.getSubRegIdxFromOffsetSize(StackSlotBitOffset,
+                                        NumSpilledRegs * 32);
 }
 
 void AMDGPURewriteAGPRCopyMFMAImpl::replaceSpillWithCopyToVReg(
