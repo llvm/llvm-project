@@ -2598,8 +2598,8 @@ fn -> other_fn -> other_fn ; fn is norecurse
     attribute; this attribute is also incompatible
     with the `minsize`, `optsize`, and `optdebug` attributes.
 
-    This attribute requires the `noinline` attribute to be specified on
-    the function as well, so the function is never inlined into any caller.
+    This attribute implies `noinline`, so the function is never inlined into
+    any caller; the `noinline` attribute need not be specified as well.
     Only functions with the `alwaysinline` attribute are valid
     candidates for inlining into the body of this function.
 

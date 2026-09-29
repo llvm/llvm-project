@@ -218,6 +218,8 @@ def DeadOnReturn : IntAttr<"dead_on_return", IntersectMin, [ParamAttr]>;
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 
 /// inline=never.
+/// Note: optnone implies noinline. Use Function::isNoInline() or
+/// CallBase::isNoInline() rather than querying this attribute directly.
 def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
 
 /// nooutline
