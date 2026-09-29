@@ -400,7 +400,8 @@ bool TwoAddressInstructionImpl::isPlainlyKilled(const MachineInstr *MI,
 
   SlotIndex useIdx = LIS->getInstructionIndex(*MI);
   LiveInterval::const_iterator I = LR.find(useIdx);
-  assert(I != LR.end() && "Reg must be live-in to use.");
+  if (I == LR.end())
+    return false;
   return !I->end.isBlock() && SlotIndex::isSameInstr(I->end, useIdx);
 }
 
