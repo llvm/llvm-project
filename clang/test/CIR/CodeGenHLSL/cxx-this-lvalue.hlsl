@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -x hlsl -triple spirv-unknown-vulkan-library -fclangir -emit-llvm %s -o %t.cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.cir.ll %s
 // RUN: %clang_cc1 -x hlsl -triple spirv-unknown-vulkan-library -emit-llvm -disable-llvm-passes %s -o %t.ll
-// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 struct S {
   int a;
@@ -39,15 +39,6 @@ export int testGet() {
 // LLVM:   %[[VAL:.*]] = load i32, ptr %[[GEP]]
 // LLVM:   ret i32 %{{.*}}
 
-// OGCG-LABEL: define {{.*}} @_ZN1S4getAEv(
-// OGCG-SAME: ptr {{.*}} %[[ARG0:.*]])
-// OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
-// OGCG:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]]
-// OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// OGCG:   %[[GEP:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[THIS]], i32 0, i32 0
-// OGCG:   %[[VAL:.*]] = load i32, ptr %[[GEP]]
-// OGCG:   ret i32 %[[VAL]]
-
 export void testSet(int v) {
   S s;
   s.setA(v);
@@ -68,12 +59,3 @@ export void testSet(int v) {
 // LLVM:   %[[GEP:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[THIS]], i32 0, i32 0
 // LLVM:   store i32 {{.*}}, ptr %[[GEP]]
 // LLVM:   ret void
-
-// OGCG-LABEL: define {{.*}} @_ZN1S4setAEi(
-// OGCG-SAME: ptr {{.*}} %[[ARG0:.*]], i32 {{.*}} %[[ARG1:.*]])
-// OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
-// OGCG:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]]
-// OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// OGCG:   %[[GEP:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[THIS]], i32 0, i32 0
-// OGCG:   store i32 {{.*}}, ptr %[[GEP]]
-// OGCG:   ret void
