@@ -63,3 +63,63 @@ std::string llvm::IntelGPU::getNumericArchName(uint32_t GPUIPVersion) {
   return ("xe_" + Twine(Major) + "." + Twine(Minor) + "." + Twine(Revision))
       .str();
 }
+
+IGCATarget llvm::IntelGPU::parseIGCATarget(StringRef MaybeTarget) {
+  if (!MaybeTarget.consume_front("igca_"))
+    return IGCATarget::invalid();
+
+  uint16_t Target;
+  if (MaybeTarget.consumeInteger(10, Target))
+    return IGCATarget::invalid();
+  // TODO check that Target contains a valid target level
+  
+  IGCAFeatureSet FS = IGCAFeatureSet::IGCA_CORE;
+  if (MaybeTarget.consume_front("c"))
+    FS = IGCAFeatureSet::IGCA_COMPUTE;
+  else if (MaybeTarget.consume_front("r"))
+    FS = IGCAFeatureSet::IGCA_RENDER;
+  bool IsExactFS = MaybeTarget.consume_front("a");
+  if (!MaybeTarget.empty())
+    return IGCATarget::invalid();
+
+  return { Target, FS, IsExactFS };
+}
+
+static constexpr uint32_t IGCATargetShift     = 16;
+static constexpr uint32_t IGCAFeatureSetShift = 1;
+static constexpr uint32_t IGCAIsExactFSShift  = 0;
+static constexpr uint32_t IGCAFeatureSetMask  = 0x03;
+static constexpr uint32_t IGCAIsExactFSMask   = 0x1;
+
+// An IGCA Target is packed as follows:
+//
+//    31              16 15           3 2           1 0         0 
+//   +------------------+--------------+-------------+-----------+
+//   |      Target      |   Reserved   | Feature set | Is Exact? |
+//   +------------------+--------------+-------------+-----------+
+//          16 bits         13 bits        2 bits        1 bit
+//
+uint32_t llvm::IntelGPU::IGCATarget::pack() const {
+  // TODO add debug mode asserts here
+  return uint32_t(Target) << IGCATargetShift |
+        (uint32_t(FeatureSet) & IGCAFeatureSetMask) << IGCAFeatureSetShift |
+        (uint32_t(IsExactFeatureSet) & IGCAIsExactFSMask)
+            << IGCAIsExactFSShift;
+}
+
+IGCATarget llvm::IntelGPU::IGCATarget::unpack(uint32_t V) {
+  return {
+    uint16_t(V >> IGCATargetShift),
+    IGCAFeatureSet((V >> IGCAFeatureSetShift) & IGCAFeatureSetMask),
+    bool((V >> IGCAIsExactFSShift) & IGCAIsExactFSMask)
+  };
+}
+
+std::string llvm::IntelGPU::getIGCATargetName(IGCATarget T) {
+  if (!T)
+    return "";
+
+  StringRef FS = T.isCompute() ? "c" : T.isRender() ? "r" : "";
+  StringRef Exact = T.isExact() ? "a" : "";
+  return ("igca_" + Twine(T.Target) + FS + Exact).str();
+}
