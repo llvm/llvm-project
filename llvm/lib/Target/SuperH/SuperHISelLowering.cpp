@@ -411,6 +411,7 @@ SDValue SuperHTargetLowering::LowerConstant(SDValue Op,
                                             SelectionDAG &DAG) const {
 
   // Get the address of the target into a register
+  // TODO: Remove this?
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
     auto DL = SDLoc(C);
 
@@ -423,8 +424,17 @@ SDValue SuperHTargetLowering::LowerConstant(SDValue Op,
     SDValue Const = DAG.getTargetConstant(*C->getConstantIntValue(), DL, C->getValueType(0));
     return DAG.getNode(SHISD::WRAPPER, DL, C->getValueType(0), Const);
   }
+
+  // FP Constant Lowering
   if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op)) {
     auto DL = SDLoc(C);
+
+    // Zero and One are special cases with fast instructions.
+    if (C->isZero())
+      return SDValue(DAG.getMachineNode(SH::FLDI0, DL, C->getValueType(0)), 0);
+
+    if (C->isOne())
+      return SDValue(DAG.getMachineNode(SH::FLDI1, DL, C->getValueType(0)), 0);
 
     // lower to constpool.
     SDValue Const = DAG.getTargetConstantFP(*C->getConstantFPValue(), DL, C->getValueType(0));
