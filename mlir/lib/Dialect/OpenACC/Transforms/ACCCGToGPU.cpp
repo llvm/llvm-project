@@ -397,6 +397,20 @@ static bool isThreadXPrivatize(PrivatizeOp privatize) {
   return false;
 }
 
+/// True when \p block is nested in a region that only part of the workgroup
+/// enters.
+static bool isInsideConditional(Block *block) {
+  if (!block)
+    return false;
+  for (Operation *parent = block->getParentOp();
+       parent && !isa<gpu::LaunchOp, FunctionOpInterface>(parent);
+       parent = parent->getParentOp())
+    if (isa<RegionBranchOpInterface>(parent) &&
+        !isa<LoopLikeOpInterface, scf::ExecuteRegionOp>(parent))
+      return true;
+  return false;
+}
+
 /// Emits a workgroup-wide GPU barrier.
 static void emitGPUBarrierWorkgroup(OpBuilder &builder, Location loc) {
   gpu::BarrierOp::create(builder, loc);
@@ -570,9 +584,34 @@ private:
   /// `acc.privatize` that materialized the private buffer for \p memref.
   acc::PrivatizeOp getPrivatizeForMemref(Value memref);
 
+  /// Collect privatize ops of the shared private buffers stored to under \p
+  /// root, keeping the gang- and worker-private ones apart: the two scopes need
+  /// different barriers, so a store at one scope must not stand in for the
+  /// other.
+  void collectSharedPrivateStores(
+      Operation *root, llvm::SmallPtrSetImpl<Operation *> &gangPrivatizes,
+      llvm::SmallPtrSetImpl<Operation *> &workerPrivatizes);
+
+  /// True when \p memref is backed by one of \p storePrivatizes at \p
+  /// storeScope.
+  bool isMatchingPrivateMemref(
+      Value memref, PrivateMemScope storeScope,
+      const llvm::SmallPtrSetImpl<Operation *> &storePrivatizes);
+
+  /// True when a parallel region under \p seqLoopOp, outside \p skipOp, uses a
+  /// private buffer at \p storeScope backed by one of \p storePrivatizes.
+  bool hasParallelPrivateReuse(
+      LoopLikeOpInterface seqLoopOp, Operation *skipOp,
+      PrivateMemScope storeScope,
+      const llvm::SmallPtrSetImpl<Operation *> &storePrivatizes);
+
   /// Whether a predicate region needs a barrier before stores that will be read
   /// by a later parallel loop over the same private memory.
   PrivateMemScope needsPreStoreReuseBarrier(acc::PredicateRegionOp interOp);
+
+  /// Whether \p loopOp needs a barrier at the top of its body because a
+  /// gang-private slot it writes is reused by the next iteration.
+  bool needsInLoopReuseBarrier(Operation *loopOp);
 
   /// Emit `gpu.all_reduce` for a reduction partial.
   void createGPUAllReduceOp(Location loc, Value input, Value memref,
@@ -1269,7 +1308,7 @@ LogicalResult ACCCGToGPULowering::rewrite() {
 
   if (!threadPrivateVarNames.empty()) {
     accSupport.emitRemark(computeRegion, [&]() {
-      return (llvm::Twine("Thread-private storage used for ") +
+      return (llvm::Twine("Local memory or registers used for ") +
               llvm::join(threadPrivateVarNames, ","))
           .str();
     });
@@ -2192,37 +2231,43 @@ acc::PrivatizeOp ACCCGToGPULowering::getPrivatizeForMemref(Value memref) {
   return acc::PrivatizeOp();
 }
 
-PrivateMemScope
-ACCCGToGPULowering::needsPreStoreReuseBarrier(acc::PredicateRegionOp interOp) {
-
-  // Check if we need a pre-predicate barrier first.
-  // Next, check if the barrier should be gang- or worker-level.
-  LoopLikeOpInterface seqLoopOp = findFirstSequentialLoop(interOp);
-  if (!seqLoopOp)
-    return PrivateMemScope::None;
-
-  // Check if any op in the predicate region stores to gang- or worker-private
-  // memory. If not, no barrier is needed.
-  PrivateMemScope storeScope = PrivateMemScope::None;
-  llvm::SmallPtrSet<Operation *, 4> storePrivatizes;
-  interOp.getRegion().walk([&](memref::StoreOp storeOp) {
+void ACCCGToGPULowering::collectSharedPrivateStores(
+    Operation *root, llvm::SmallPtrSetImpl<Operation *> &gangPrivatizes,
+    llvm::SmallPtrSetImpl<Operation *> &workerPrivatizes) {
+  root->walk([&](memref::StoreOp storeOp) {
     PrivateMemScope scope = getPrivateScopeForMemref(storeOp.getMemref());
     if (scope != PrivateMemScope::Gang && scope != PrivateMemScope::Worker)
-      return WalkResult::advance();
-    if (auto privatize = getPrivatizeForMemref(storeOp.getMemref()))
-      storePrivatizes.insert(privatize.getOperation());
-    if (storeScope == PrivateMemScope::None)
-      storeScope = scope;
-    return WalkResult::advance();
+      return;
+    acc::PrivatizeOp privatize = getPrivatizeForMemref(storeOp.getMemref());
+    if (!privatize)
+      return;
+    if (scope == PrivateMemScope::Gang)
+      gangPrivatizes.insert(privatize.getOperation());
+    else
+      workerPrivatizes.insert(privatize.getOperation());
   });
-  if (storeScope == PrivateMemScope::None || storePrivatizes.empty())
-    return PrivateMemScope::None;
+}
 
-  // Check that there is a subsequent parallel region that uses private memory
+bool ACCCGToGPULowering::isMatchingPrivateMemref(
+    Value memref, PrivateMemScope storeScope,
+    const llvm::SmallPtrSetImpl<Operation *> &storePrivatizes) {
+  if (getPrivateScopeForMemref(memref) != storeScope)
+    return false;
+  acc::PrivatizeOp usePrivatize = getPrivatizeForMemref(memref);
+  return usePrivatize && storePrivatizes.contains(usePrivatize.getOperation());
+}
+
+bool ACCCGToGPULowering::hasParallelPrivateReuse(
+    LoopLikeOpInterface seqLoopOp, Operation *skipOp,
+    PrivateMemScope storeScope,
+    const llvm::SmallPtrSetImpl<Operation *> &storePrivatizes) {
+  if (storePrivatizes.empty())
+    return false;
+
   bool hasParallelPrivateUse = false;
   seqLoopOp.getOperation()->walk([&](Operation *op) {
     // Ignore loads inside the predicate.
-    if (interOp->isAncestor(op))
+    if (skipOp->isAncestor(op))
       return WalkResult::advance();
 
     Value memref;
@@ -2233,12 +2278,7 @@ ACCCGToGPULowering::needsPreStoreReuseBarrier(acc::PredicateRegionOp interOp) {
     else
       return WalkResult::advance();
 
-    PrivateMemScope scope = getPrivateScopeForMemref(memref);
-    if (scope != storeScope)
-      return WalkResult::advance();
-
-    acc::PrivatizeOp usePrivatize = getPrivatizeForMemref(memref);
-    if (!usePrivatize || !storePrivatizes.contains(usePrivatize.getOperation()))
+    if (!isMatchingPrivateMemref(memref, storeScope, storePrivatizes))
       return WalkResult::advance();
 
     bool insideNestedParallel = false;
@@ -2263,10 +2303,104 @@ ACCCGToGPULowering::needsPreStoreReuseBarrier(acc::PredicateRegionOp interOp) {
     return WalkResult::interrupt();
   });
 
-  if (!hasParallelPrivateUse)
+  return hasParallelPrivateUse;
+}
+
+PrivateMemScope
+ACCCGToGPULowering::needsPreStoreReuseBarrier(acc::PredicateRegionOp interOp) {
+
+  // Check if we need a pre-predicate barrier first.
+  // Next, check if the barrier should be gang- or worker-level.
+  LoopLikeOpInterface seqLoopOp = findFirstSequentialLoop(interOp);
+  if (!seqLoopOp)
     return PrivateMemScope::None;
 
-  return storeScope;
+  // Check if any op in the predicate region stores to gang- or worker-private
+  // memory. If not, no barrier is needed.
+  llvm::SmallPtrSet<Operation *, 4> gangPrivatizes, workerPrivatizes;
+  collectSharedPrivateStores(interOp, gangPrivatizes, workerPrivatizes);
+
+  // A reused gang slot needs the workgroup barrier, which also reconverges the
+  // worker rows, so look for that hazard first. A gang store whose slot is
+  // never read back does not stand in for a worker one: fall through and check
+  // the worker slots on their own, otherwise their per-row barrier is lost.
+  if (hasParallelPrivateReuse(seqLoopOp, interOp, PrivateMemScope::Gang,
+                              gangPrivatizes))
+    return PrivateMemScope::Gang;
+  if (hasParallelPrivateReuse(seqLoopOp, interOp, PrivateMemScope::Worker,
+                              workerPrivatizes))
+    return PrivateMemScope::Worker;
+  return PrivateMemScope::None;
+}
+
+bool ACCCGToGPULowering::needsInLoopReuseBarrier(Operation *loopOp) {
+  // A sequential scf.parallel is the remainder of a partitioned gang loop: the
+  // gang iterations this workgroup still runs as a grid stride. Its scalar
+  // stores stay predicated and already reconverge between iterations, so the
+  // reuse hole is the nested scf.for coming from `acc loop seq`.
+  if (scf::ParallelOp par = dyn_cast<scf::ParallelOp>(loopOp))
+    return false;
+
+  // The hazard needs a worker- or vector-level routine call in the body: every
+  // workgroup thread reaches such a call and the callee synchronizes
+  // internally, so threads leave it in no particular order and can then be
+  // running different iterations of this loop at the same time.
+  if (!hasThreadLevelRoutineCall)
+    return false;
+  bool callsThreadLevelRoutine = false;
+  loopOp->walk([&](CallOpInterface callOp) -> WalkResult {
+    if (mlir::acc::GPUParallelDimAttr parDim =
+            getAccRoutineCallParDim(callOp, defaultPolicy)) {
+      if (parDim.isThreadX() || parDim.isThreadY()) {
+        callsThreadLevelRoutine = true;
+        return WalkResult::interrupt();
+      }
+    }
+    return WalkResult::advance();
+  });
+  if (!callsThreadLevelRoutine)
+    return false;
+
+  // Only gang-level privatizations are a single copy shared by the whole
+  // workgroup and reused by every iteration; worker- and thread-private copies
+  // cannot be clobbered by another thread.
+  llvm::SmallPtrSet<Operation *, 4> storedPrivatizes, workerPrivatizes;
+  collectSharedPrivateStores(loopOp, storedPrivatizes, workerPrivatizes);
+  if (storedPrivatizes.empty())
+    return false;
+
+  // Storing alone is harmless: the next iteration only clobbers a value someone
+  // still needs when the slot is read back in the body, either directly or by a
+  // callee it is handed to.
+  bool reusesGangPrivate = false;
+  loopOp->walk([&](Operation *op) -> WalkResult {
+    if (memref::LoadOp loadOp = dyn_cast<memref::LoadOp>(op))
+      reusesGangPrivate = isMatchingPrivateMemref(
+          loadOp.getMemref(), PrivateMemScope::Gang, storedPrivatizes);
+    else if (CallOpInterface callOp = dyn_cast<CallOpInterface>(op))
+      reusesGangPrivate = llvm::any_of(callOp.getArgOperands(), [&](Value arg) {
+        return isMatchingPrivateMemref(arg, PrivateMemScope::Gang,
+                                       storedPrivatizes);
+      });
+    return reusesGangPrivate ? WalkResult::interrupt() : WalkResult::advance();
+  });
+  if (!reusesGangPrivate)
+    return false;
+
+  // A barrier inside the body is only safe when the whole workgroup runs every
+  // iteration, so bail out under any thread-level worksharing loop, whose trip
+  // count varies per thread.
+  for (Operation *p = loopOp->getParentOp();
+       p && p != computeRegion.getOperation(); p = p->getParentOp()) {
+    scf::ParallelOp par = dyn_cast<scf::ParallelOp>(p);
+    if (!par)
+      continue;
+    if (mlir::acc::GPUParallelDimsAttr parDims = mlir::acc::getParDimsAttr(par))
+      for (mlir::acc::GPUParallelDimAttr d : parDims.getArray())
+        if (d.isThreadX() || d.isThreadY())
+          return false;
+  }
+  return true;
 }
 
 void ACCCGToGPULowering::processPredicateRegion(
@@ -3099,6 +3233,14 @@ void ACCCGToGPULowering::processSeqLoop(LoopOp loopOp) {
   Block::BlockArgListType blockArgs = loopOp.getBody()->getArguments();
   assert(blockArgs.size() && "expected block arguments for loop");
   mapping.map(blockArgs, newLoop.getBody()->getArguments());
+
+  // A gang-private slot written here is one copy per workgroup, reused by every
+  // iteration, and a thread that has already started the next iteration would
+  // overwrite the value another thread has not read yet. Separate the
+  // iterations with a barrier at the top of the body.
+  if (needsInLoopReuseBarrier(loopOp.getOperation()) &&
+      !isInsideConditional(rewriter.getInsertionBlock()))
+    emitGPUBarrierWorkgroup(rewriter, loopOp->getLoc());
 
   for (auto &bodyOp : loopOp.getBody()->getOperations()) {
     if (preProcessedPrivateLocals.contains(&bodyOp))
