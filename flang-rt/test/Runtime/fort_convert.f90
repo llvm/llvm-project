@@ -15,8 +15,9 @@
 ! Second test: FORT_CONVERT_UNIT="swap:10-11;little_endian:12;big_endian:13;native:14"
 
 ! RUN: %flang %isysroot -L"%libdir" %s -o %t
-! RUN: %t | FileCheck %s
-! RUN: env FORT_CONVERT_UNIT="swap:10-11;little_endian:12;big_endian:13;native:14" %t | FileCheck %s
+! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t | FileCheck %s
+! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" FORT_CONVERT_UNIT="swap:10-11;little_endian:12;big_endian:13;native:14" %t | FileCheck %s
+
 
 ! CHECK: PASS
 module testmod
