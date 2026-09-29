@@ -497,6 +497,8 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
   if (auto *Phi = dyn_cast<PHINode>(Ptr)) {
     // Memoize the new phi before recursing. The pointer phi may be
     // loop-carried, in which case resolving an incoming value comes back here.
+    // Currently, a loop-carried phi does not reach here as an earlier-check
+    // using getUnderlyingObject() already rejected it.
     PHINode *NewPhi =
         PHINode::Create(B.getInt32Ty(), Phi->getNumIncomingValues(),
                         Phi->getName() + ".vecidx", Phi->getIterator());
