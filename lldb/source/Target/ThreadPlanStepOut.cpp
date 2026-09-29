@@ -64,8 +64,19 @@ ThreadPlanStepOut::ThreadPlanStepOut(
     Vote report_stop_vote, Vote report_run_vote, uint32_t frame_idx,
     LazyBool step_out_avoids_code_without_debug_info,
     bool continue_to_next_branch, bool gather_return_value)
-    : ThreadPlan(ThreadPlan::eKindStepOut, "Step out", thread, report_stop_vote,
-                 report_run_vote),
+    : ThreadPlanStepOut(ThreadPlan::eKindStepOut, "Step out", thread, context,
+                        first_insn, stop_others, report_stop_vote,
+                        report_run_vote, frame_idx,
+                        step_out_avoids_code_without_debug_info,
+                        continue_to_next_branch, gather_return_value) {}
+
+ThreadPlanStepOut::ThreadPlanStepOut(
+    ThreadPlanKind kind, const char *name, Thread &thread,
+    SymbolContext *context, bool first_insn, bool stop_others,
+    Vote report_stop_vote, Vote report_run_vote, uint32_t frame_idx,
+    LazyBool step_out_avoids_code_without_debug_info,
+    bool continue_to_next_branch, bool gather_return_value)
+    : ThreadPlan(kind, name, thread, report_stop_vote, report_run_vote),
       ThreadPlanShouldStopHere(this), m_step_from_insn(LLDB_INVALID_ADDRESS),
       m_return_bp_id(LLDB_INVALID_BREAK_ID),
       m_return_addr(LLDB_INVALID_ADDRESS), m_stop_others(stop_others),
