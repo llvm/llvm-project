@@ -8,7 +8,7 @@
 define float @ceilf_libcall(float %x) {
 ; CHECK-LABEL: define float @ceilf_libcall(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call float @ceilf(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.ceil.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @ceilf(float %x)
@@ -28,7 +28,7 @@ define double @ceil_libcall(double %x) {
 define x86_fp80 @ceill_libcall(x86_fp80 %x) {
 ; CHECK-LABEL: define x86_fp80 @ceill_libcall(
 ; CHECK-SAME: x86_fp80 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @ceill(x86_fp80 [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.ceil.f80(x86_fp80 [[X]])
 ; CHECK-NEXT:    ret x86_fp80 [[R]]
 ;
   %r = call x86_fp80 @ceill(x86_fp80 %x)
@@ -38,7 +38,7 @@ define x86_fp80 @ceill_libcall(x86_fp80 %x) {
 define float @floorf_libcall(float %x) {
 ; CHECK-LABEL: define float @floorf_libcall(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call float @floorf(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.floor.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @floorf(float %x)
@@ -58,7 +58,7 @@ define double @floor_libcall(double %x) {
 define x86_fp80 @floorl_libcall(x86_fp80 %x) {
 ; CHECK-LABEL: define x86_fp80 @floorl_libcall(
 ; CHECK-SAME: x86_fp80 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @floorl(x86_fp80 [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.floor.f80(x86_fp80 [[X]])
 ; CHECK-NEXT:    ret x86_fp80 [[R]]
 ;
   %r = call x86_fp80 @floorl(x86_fp80 %x)
@@ -68,7 +68,7 @@ define x86_fp80 @floorl_libcall(x86_fp80 %x) {
 define float @roundf_libcall(float %x) {
 ; CHECK-LABEL: define float @roundf_libcall(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call float @roundf(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.round.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @roundf(float %x)
@@ -88,7 +88,7 @@ define double @round_libcall(double %x) {
 define x86_fp80 @roundl_libcall(x86_fp80 %x) {
 ; CHECK-LABEL: define x86_fp80 @roundl_libcall(
 ; CHECK-SAME: x86_fp80 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @roundl(x86_fp80 [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.round.f80(x86_fp80 [[X]])
 ; CHECK-NEXT:    ret x86_fp80 [[R]]
 ;
   %r = call x86_fp80 @roundl(x86_fp80 %x)
@@ -98,7 +98,7 @@ define x86_fp80 @roundl_libcall(x86_fp80 %x) {
 define float @roundevenf_libcall(float %x) {
 ; CHECK-LABEL: define float @roundevenf_libcall(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call float @roundevenf(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.roundeven.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @roundevenf(float %x)
@@ -118,7 +118,7 @@ define double @roundeven_libcall(double %x) {
 define x86_fp80 @roundevenl_libcall(x86_fp80 %x) {
 ; CHECK-LABEL: define x86_fp80 @roundevenl_libcall(
 ; CHECK-SAME: x86_fp80 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @roundevenl(x86_fp80 [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.roundeven.f80(x86_fp80 [[X]])
 ; CHECK-NEXT:    ret x86_fp80 [[R]]
 ;
   %r = call x86_fp80 @roundevenl(x86_fp80 %x)
@@ -128,7 +128,7 @@ define x86_fp80 @roundevenl_libcall(x86_fp80 %x) {
 define float @nearbyintf_libcall(float %x) {
 ; CHECK-LABEL: define float @nearbyintf_libcall(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call float @nearbyintf(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.nearbyint.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @nearbyintf(float %x)
@@ -148,7 +148,7 @@ define double @nearbyint_libcall(double %x) {
 define x86_fp80 @nearbyintl_libcall(x86_fp80 %x) {
 ; CHECK-LABEL: define x86_fp80 @nearbyintl_libcall(
 ; CHECK-SAME: x86_fp80 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @nearbyintl(x86_fp80 [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.nearbyint.f80(x86_fp80 [[X]])
 ; CHECK-NEXT:    ret x86_fp80 [[R]]
 ;
   %r = call x86_fp80 @nearbyintl(x86_fp80 %x)
@@ -158,7 +158,7 @@ define x86_fp80 @nearbyintl_libcall(x86_fp80 %x) {
 define float @rintf_libcall(float %x) {
 ; CHECK-LABEL: define float @rintf_libcall(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call float @rintf(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.rint.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @rintf(float %x)
@@ -178,7 +178,7 @@ define double @rint_libcall(double %x) {
 define x86_fp80 @rintl_libcall(x86_fp80 %x) {
 ; CHECK-LABEL: define x86_fp80 @rintl_libcall(
 ; CHECK-SAME: x86_fp80 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @rintl(x86_fp80 [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.rint.f80(x86_fp80 [[X]])
 ; CHECK-NEXT:    ret x86_fp80 [[R]]
 ;
   %r = call x86_fp80 @rintl(x86_fp80 %x)
@@ -188,7 +188,7 @@ define x86_fp80 @rintl_libcall(x86_fp80 %x) {
 define float @truncf_libcall(float %x) {
 ; CHECK-LABEL: define float @truncf_libcall(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call float @truncf(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.trunc.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @truncf(float %x)
@@ -208,7 +208,7 @@ define double @trunc_libcall(double %x) {
 define x86_fp80 @truncl_libcall(x86_fp80 %x) {
 ; CHECK-LABEL: define x86_fp80 @truncl_libcall(
 ; CHECK-SAME: x86_fp80 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @truncl(x86_fp80 [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.trunc.f80(x86_fp80 [[X]])
 ; CHECK-NEXT:    ret x86_fp80 [[R]]
 ;
   %r = call x86_fp80 @truncl(x86_fp80 %x)
@@ -218,7 +218,7 @@ define x86_fp80 @truncl_libcall(x86_fp80 %x) {
 define float @floorf_libcall_fmf_tail(float %x) {
 ; CHECK-LABEL: define float @floorf_libcall_fmf_tail(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = tail call nnan ninf float @floorf(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = tail call nnan ninf float @llvm.floor.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = tail call nnan ninf float @floorf(float %x)
@@ -258,7 +258,7 @@ define x86_fp80 @rintl_libcall_strictfp(x86_fp80 %x) strictfp {
 define float @sqrtf_libcall_readnone(float %x) {
 ; CHECK-LABEL: define float @sqrtf_libcall_readnone(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call float @sqrtf(float [[X]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @sqrtf(float %x) memory(none)
@@ -278,7 +278,7 @@ define float @sqrtf_libcall_errno(float %x) {
 define double @sqrt_libcall_readnone(double %x) {
 ; CHECK-LABEL: define double @sqrt_libcall_readnone(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call double @sqrt(double [[X]]) #[[ATTR4]]
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.sqrt.f64(double [[X]])
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @sqrt(double %x) memory(none)
@@ -298,7 +298,7 @@ define double @sqrt_libcall_errno(double %x) {
 define x86_fp80 @sqrtl_libcall_readnone(x86_fp80 %x) {
 ; CHECK-LABEL: define x86_fp80 @sqrtl_libcall_readnone(
 ; CHECK-SAME: x86_fp80 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @sqrtl(x86_fp80 [[X]]) #[[ATTR4]]
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.sqrt.f80(x86_fp80 [[X]])
 ; CHECK-NEXT:    ret x86_fp80 [[R]]
 ;
   %r = call x86_fp80 @sqrtl(x86_fp80 %x) memory(none)
@@ -318,7 +318,7 @@ define x86_fp80 @sqrtl_libcall_errno(x86_fp80 %x) {
 define float @sqrtf_libcall_readnone_fmf_tail(float %x) {
 ; CHECK-LABEL: define float @sqrtf_libcall_readnone_fmf_tail(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = tail call nnan nsz float @sqrtf(float [[X]]) #[[ATTR4]]
+; CHECK-NEXT:    [[R:%.*]] = tail call nnan nsz float @llvm.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = tail call nnan nsz float @sqrtf(float %x) memory(none)
@@ -328,7 +328,7 @@ define float @sqrtf_libcall_readnone_fmf_tail(float %x) {
 define float @sqrtf_libcall_errno_memory_write(float %x) {
 ; CHECK-LABEL: define float @sqrtf_libcall_errno_memory_write(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call float @sqrtf(float [[X]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = call float @sqrtf(float [[X]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @sqrtf(float %x) memory(errnomem: write)
@@ -338,7 +338,7 @@ define float @sqrtf_libcall_errno_memory_write(float %x) {
 define float @sqrtf_libcall_readnone_strictfp(float %x) strictfp {
 ; CHECK-LABEL: define float @sqrtf_libcall_readnone_strictfp(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call float @sqrtf(float [[X]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = call float @sqrtf(float [[X]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @sqrtf(float %x) strictfp memory(none)
@@ -348,7 +348,7 @@ define float @sqrtf_libcall_readnone_strictfp(float %x) strictfp {
 define float @sqrtf_libcall_readnone_nobuiltin(float %x) {
 ; CHECK-LABEL: define float @sqrtf_libcall_readnone_nobuiltin(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call float @sqrtf(float [[X]]) #[[ATTR7:[0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = call float @sqrtf(float [[X]]) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @sqrtf(float %x) nobuiltin memory(none)
@@ -359,7 +359,7 @@ define float @sqrtf_libcall_readnone_nobuiltin(float %x) {
 define float @sqrt_libcall_readnone_shrink(float %x) {
 ; CHECK-LABEL: define float @sqrt_libcall_readnone_shrink(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[X]]) #[[ATTR4]]
+; CHECK-NEXT:    [[SQRTF:%.*]] = call float @llvm.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[SQRTF]]
 ;
   %ext = fpext float %x to double
@@ -383,7 +383,7 @@ define double @sqrt_libcall_readnone_fast_mul(double %x) {
 define float @copysignf_libcall(float %x, float %y) {
 ; CHECK-LABEL: define float @copysignf_libcall(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call float @copysignf(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @copysignf(float %x, float %y)
@@ -393,7 +393,7 @@ define float @copysignf_libcall(float %x, float %y) {
 define double @copysign_libcall(double %x, double %y) {
 ; CHECK-LABEL: define double @copysign_libcall(
 ; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call double @copysign(double [[X]], double [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.copysign.f64(double [[X]], double [[Y]])
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @copysign(double %x, double %y)
@@ -403,7 +403,7 @@ define double @copysign_libcall(double %x, double %y) {
 define x86_fp80 @copysignl_libcall(x86_fp80 %x, x86_fp80 %y) {
 ; CHECK-LABEL: define x86_fp80 @copysignl_libcall(
 ; CHECK-SAME: x86_fp80 [[X:%.*]], x86_fp80 [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @copysignl(x86_fp80 [[X]], x86_fp80 [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.copysign.f80(x86_fp80 [[X]], x86_fp80 [[Y]])
 ; CHECK-NEXT:    ret x86_fp80 [[R]]
 ;
   %r = call x86_fp80 @copysignl(x86_fp80 %x, x86_fp80 %y)
@@ -413,7 +413,7 @@ define x86_fp80 @copysignl_libcall(x86_fp80 %x, x86_fp80 %y) {
 define double @copysign_libcall_fmf_tail(double %x, double %y) {
 ; CHECK-LABEL: define double @copysign_libcall_fmf_tail(
 ; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = tail call nnan double @copysign(double [[X]], double [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = tail call nnan double @llvm.copysign.f64(double [[X]], double [[Y]])
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = tail call nnan double @copysign(double %x, double %y)
@@ -424,7 +424,7 @@ define double @copysign_libcall_fmf_tail(double %x, double %y) {
 define double @copysign_libcall_shrink(float %x, float %y) {
 ; CHECK-LABEL: define double @copysign_libcall_shrink(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[COPYSIGNF:%.*]] = call float @copysignf(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[COPYSIGNF:%.*]] = call float @llvm.copysign.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    [[R:%.*]] = fpext float [[COPYSIGNF]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
