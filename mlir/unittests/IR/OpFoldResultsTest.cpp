@@ -162,6 +162,24 @@ TEST_F(OpFoldResultsTest, Range) {
   EXPECT_TRUE(failed(normalize(op, SmallVector<OpFoldResult>())));
 }
 
+TEST_F(OpFoldResultsTest, InitializerList) {
+  Operation *producer = createOp({i32});
+  Operation *op = createOp({i32, i32});
+  Value value = producer->getResult(0);
+  Attribute attr = builder.getI32IntegerAttr(1);
+
+  NormalizedOpFoldResults result = normalize(op, {value, attr});
+  EXPECT_TRUE(result.replacesAll());
+  ASSERT_EQ(result.getReplacements().size(), 2u);
+  EXPECT_EQ(result.getReplacements()[0], OpFoldResult(value));
+  EXPECT_EQ(result.getReplacements()[1], OpFoldResult(attr));
+
+  // A null element keeps its result.
+  NormalizedOpFoldResults partial = normalize(op, {nullptr, attr});
+  EXPECT_TRUE(partial.replacesAny());
+  EXPECT_FALSE(partial.replacesAll());
+}
+
 TEST_F(OpFoldResultsTest, NormalizeMapsOwnResultsToKeep) {
   Operation *op = createOp({i32, i32});
   Attribute attr = builder.getI32IntegerAttr(4);

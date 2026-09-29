@@ -3418,6 +3418,19 @@ void OpEmitter::genCanonicalizerDecls() {
   }
 }
 
+namespace {
+/// The form of the `fold` method that ODS declares for an op.
+enum class FoldForm { SingleResult, Results, Legacy };
+} // namespace
+
+static FoldForm getFoldForm(const Operator &op) {
+  if (op.getNumResults() == 1 && op.getNumVariableLengthResults() == 0)
+    return FoldForm::SingleResult;
+  if (op.getDialect().useOpFoldResults())
+    return FoldForm::Results;
+  return FoldForm::Legacy;
+}
+
 void OpEmitter::genFolderDecls() {
   if (!op.hasFolder())
     return;
@@ -3426,14 +3439,18 @@ void OpEmitter::genFolderDecls() {
   paramList.emplace_back("FoldAdaptor", "adaptor");
 
   StringRef retType;
-  bool hasSingleResult =
-      op.getNumResults() == 1 && op.getNumVariableLengthResults() == 0;
-  if (hasSingleResult) {
+  switch (getFoldForm(op)) {
+  case FoldForm::SingleResult:
     retType = "::mlir::OpFoldResult";
-  } else {
+    break;
+  case FoldForm::Results:
+    retType = "::mlir::OpFoldResults";
+    break;
+  case FoldForm::Legacy:
     paramList.emplace_back("::llvm::SmallVectorImpl<::mlir::OpFoldResult> &",
                            "results");
     retType = "::llvm::LogicalResult";
+    break;
   }
 
   auto *m = opClass.declareMethod(retType, "fold", std::move(paramList));

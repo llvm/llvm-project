@@ -99,6 +99,8 @@ public:
   /// fold fails. Unlike `OpFoldResult fold`, the op's own result does not mean
   /// in place; use success() or setModifiedInPlace() for an in-place change.
   OpFoldResults(OpFoldResult replacement);
+  /// One replacement per result.
+  OpFoldResults(std::initializer_list<OpFoldResult> list);
   /// One replacement per range element. An empty range is a failure.
   template <typename RangeT,
             typename = std::enable_if_t<
