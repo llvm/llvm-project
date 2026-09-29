@@ -162,16 +162,6 @@ declare void @use()
 define void @PR207131(i32 noundef %a, i32 noundef %b) {
 ; CHECK-LABEL: @PR207131(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = tail call i32 @llvm.smin.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[OR_COND2:%.*]] = icmp ult i32 [[TMP0]], 16
-; CHECK-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[COND]], 15
-; CHECK-NEXT:    [[OR_COND3:%.*]] = and i1 [[OR_COND2]], [[CMP7]]
-; CHECK-NEXT:    br i1 [[OR_COND3]], label [[IF_THEN8:%.*]], label [[IF_END9:%.*]]
-; CHECK:       if.then8:
-; CHECK-NEXT:    tail call void @use()
-; CHECK-NEXT:    br label [[IF_END9]]
-; CHECK:       if.end9:
 ; CHECK-NEXT:    ret void
 ;
 entry:

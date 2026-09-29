@@ -9968,6 +9968,20 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
   if (!LHSIsTrue)
     LPred = ICmpInst::getInverseCmpPredicate(LPred);
 
+  // E.g. (X | Y) u< C implies X u< C, since X u<= X | Y.
+  if (L0 != R0) {
+    CmpInst::Predicate Pred = LPred.dropSameSign();
+    CmpInst::Predicate LEPred =
+        ICmpInst::isSigned(Pred) ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
+    if (((ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred)) &&
+         isTruePredicate(LEPred, R0, L0)) ||
+        ((ICmpInst::isGT(Pred) || ICmpInst::isGE(Pred)) &&
+         isTruePredicate(LEPred, L0, R0)))
+      if (std::optional<bool> Implied = isImpliedCondICmps(
+              Pred, R0, L1, RPred, R0, R1, DL, /*LHSIsTrue=*/true))
+        return Implied;
+  }
+
   // We can have non-canonical operands, so try to normalize any common operand
   // to L0/R0.
   if (L0 == R1) {
@@ -10178,6 +10192,41 @@ isImpliedCondAndOr(const Instruction *LHS, CmpPredicate RHSPred,
   return std::nullopt;
 }
 
+/// min/max(X, Y) is X or Y. For an ordered compare one operand may suffice,
+/// e.g. smin(X, Y) s> Z is X s> Z && Y s> Z.
+static std::optional<bool> isImpliedCondMinMax(const Value *LHS,
+                                               CmpPredicate RPred,
+                                               const Value *R0, const Value *R1,
+                                               const DataLayout &DL,
+                                               bool LHSIsTrue, unsigned Depth) {
+  const auto *MinMax = dyn_cast<MinMaxIntrinsic>(R0);
+  if (!MinMax) {
+    MinMax = dyn_cast<MinMaxIntrinsic>(R1);
+    if (!MinMax)
+      return std::nullopt;
+    R1 = R0;
+    RPred = ICmpInst::getSwappedCmpPredicate(RPred);
+  }
+
+  CmpInst::Predicate Pred = RPred.dropSameSign();
+  CmpInst::Predicate StrictPred = ICmpInst::getStrictPredicate(Pred);
+  bool IsAnd =
+      StrictPred == ICmpInst::getSwappedPredicate(MinMax->getPredicate());
+  bool IsOr = StrictPred == MinMax->getPredicate();
+
+  std::optional<bool> ImpliedX = isImpliedCondition(
+      LHS, Pred, MinMax->getLHS(), R1, DL, LHSIsTrue, Depth + 1);
+  if ((IsAnd && ImpliedX == false) || (IsOr && ImpliedX == true))
+    return ImpliedX;
+  std::optional<bool> ImpliedY = isImpliedCondition(
+      LHS, Pred, MinMax->getRHS(), R1, DL, LHSIsTrue, Depth + 1);
+  if ((IsAnd && ImpliedY == false) || (IsOr && ImpliedY == true))
+    return ImpliedY;
+  if (ImpliedX && ImpliedX == ImpliedY)
+    return ImpliedX;
+  return std::nullopt;
+}
+
 std::optional<bool>
 llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
                          const Value *RHSOp0, const Value *RHSOp1,
@@ -10202,9 +10251,13 @@ llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
   if (RHSOp0->getType()->getScalarType()->isIntOrPtrTy()) {
     CmpPredicate LHSPred;
     Value *LHSOp0, *LHSOp1;
-    if (match(LHS, m_ICmpLike(LHSPred, m_Value(LHSOp0), m_Value(LHSOp1))))
-      return isImpliedCondICmps(LHSPred, LHSOp0, LHSOp1, RHSPred, RHSOp0,
-                                RHSOp1, DL, LHSIsTrue);
+    if (match(LHS, m_ICmpLike(LHSPred, m_Value(LHSOp0), m_Value(LHSOp1)))) {
+      if (std::optional<bool> Implied = isImpliedCondICmps(
+              LHSPred, LHSOp0, LHSOp1, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue))
+        return Implied;
+      return isImpliedCondMinMax(LHS, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue,
+                                 Depth);
+    }
   } else {
     assert(RHSOp0->getType()->isFPOrFPVectorTy() &&
            "Expected floating point type only!");
@@ -10220,9 +10273,13 @@ llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
   if (const Instruction *LHSI = dyn_cast<Instruction>(LHS)) {
     if ((LHSI->getOpcode() == Instruction::And ||
          LHSI->getOpcode() == Instruction::Or ||
-         LHSI->getOpcode() == Instruction::Select))
-      return isImpliedCondAndOr(LHSI, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue,
-                                Depth);
+         LHSI->getOpcode() == Instruction::Select)) {
+      if (std::optional<bool> Implied = isImpliedCondAndOr(
+              LHSI, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue, Depth))
+        return Implied;
+      return isImpliedCondMinMax(LHS, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue,
+                                 Depth);
+    }
   }
   return std::nullopt;
 }

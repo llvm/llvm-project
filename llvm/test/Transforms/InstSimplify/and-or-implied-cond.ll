@@ -400,12 +400,7 @@ define i1 @neg_or_trunc_implied(i8 %x, i8 %y) {
 
 define i1 @pr207131(i32 %a, i32 %b) {
 ; CHECK-LABEL: @pr207131(
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[OR]], 16
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[M]], 15
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = call i32 @llvm.smin.i32(i32 %a, i32 %b)
   %or = or i32 %b, %a
@@ -417,12 +412,7 @@ define i1 @pr207131(i32 %a, i32 %b) {
 
 define i1 @and_smin_of_bounded_or_commuted(i32 %a, i32 %b) {
 ; CHECK-LABEL: @and_smin_of_bounded_or_commuted(
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[OR]], 16
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 15, [[M]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = call i32 @llvm.smin.i32(i32 %a, i32 %b)
   %or = or i32 %b, %a
@@ -434,12 +424,7 @@ define i1 @and_smin_of_bounded_or_commuted(i32 %a, i32 %b) {
 
 define i1 @and_smax_of_bounded_or(i32 %a, i32 %b) {
 ; CHECK-LABEL: @and_smax_of_bounded_or(
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[OR]], 16
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[M]], 15
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = call i32 @llvm.smax.i32(i32 %a, i32 %b)
   %or = or i32 %b, %a
@@ -451,12 +436,9 @@ define i1 @and_smax_of_bounded_or(i32 %a, i32 %b) {
 
 define i1 @and_smax_of_bounded_or_implied(i32 %a, i32 %b) {
 ; CHECK-LABEL: @and_smax_of_bounded_or_implied(
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[A]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[OR]], 16
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[M]], 16
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 [[C1]]
 ;
   %m = call i32 @llvm.smax.i32(i32 %a, i32 %b)
   %or = or i32 %b, %a
@@ -485,11 +467,7 @@ define i1 @and_smin_of_bounded_or_neg(i32 %a, i32 %b) {
 
 define i1 @and_smin_one_operand_bounded(i32 %a, i32 %b) {
 ; CHECK-LABEL: @and_smin_one_operand_bounded(
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A]], 16
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[M]], 15
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = call i32 @llvm.smin.i32(i32 %a, i32 %b)
   %c1 = icmp ult i32 %a, 16
@@ -515,11 +493,7 @@ define i1 @and_smax_one_operand_bounded_neg(i32 %a, i32 %b) {
 
 define i1 @and_smin_signed_bound(i32 %a, i32 %b) {
 ; CHECK-LABEL: @and_smin_signed_bound(
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[A]], 16
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[M]], 15
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = call i32 @llvm.smin.i32(i32 %a, i32 %b)
   %c1 = icmp slt i32 %a, 16
@@ -530,12 +504,7 @@ define i1 @and_smin_signed_bound(i32 %a, i32 %b) {
 
 define i1 @and_smin_of_bounded_or_eq(i32 %a, i32 %b) {
 ; CHECK-LABEL: @and_smin_of_bounded_or_eq(
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[OR]], 16
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[M]], 16
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = call i32 @llvm.smin.i32(i32 %a, i32 %b)
   %or = or i32 %b, %a
@@ -564,12 +533,7 @@ define i1 @and_smin_of_bounded_or_eq_neg(i32 %a, i32 %b) {
 
 define i1 @and_smin_of_bounded_or_ucmp(i32 %a, i32 %b) {
 ; CHECK-LABEL: @and_smin_of_bounded_or_ucmp(
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[OR]], 16
-; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[M]], 15
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = call i32 @llvm.smin.i32(i32 %a, i32 %b)
   %or = or i32 %b, %a
@@ -581,11 +545,7 @@ define i1 @and_smin_of_bounded_or_ucmp(i32 %a, i32 %b) {
 
 define i1 @and_bounded_or_operand(i32 %a, i32 %b) {
 ; CHECK-LABEL: @and_bounded_or_operand(
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[OR]], 16
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[A]], 15
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %or = or i32 %b, %a
   %c1 = icmp ult i32 %or, 16
@@ -596,12 +556,7 @@ define i1 @and_bounded_or_operand(i32 %a, i32 %b) {
 
 define i1 @or_umax_of_bounded_or(i32 %a, i32 %b) {
 ; CHECK-LABEL: @or_umax_of_bounded_or(
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp uge i32 [[OR]], 16
-; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[M]], 16
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %m = call i32 @llvm.umax.i32(i32 %a, i32 %b)
   %or = or i32 %b, %a
@@ -617,9 +572,7 @@ define i1 @smin_of_bounded_or_dom_cond(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[OR]], 16
 ; CHECK-NEXT:    br i1 [[C1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[A]], i32 [[B]])
-; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[M]], 15
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 true
 ;
