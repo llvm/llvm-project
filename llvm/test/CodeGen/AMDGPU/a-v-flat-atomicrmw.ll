@@ -9173,7 +9173,7 @@ define void @flat_atomic_fadd_f32_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -9249,7 +9249,7 @@ define void @flat_atomic_fadd_f32_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -9312,7 +9312,7 @@ define void @flat_atomic_fsub_f32_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -9371,7 +9371,7 @@ define void @flat_atomic_fsub_f32_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -9438,7 +9438,7 @@ define void @flat_atomic_fmax_f32_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -9501,7 +9501,7 @@ define void @flat_atomic_fmax_f32_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -9568,7 +9568,7 @@ define void @flat_atomic_fmin_f32_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -9631,7 +9631,7 @@ define void @flat_atomic_fmin_f32_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -9698,7 +9698,7 @@ define void @flat_atomic_fmaximum_f32_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -9761,7 +9761,7 @@ define void @flat_atomic_fmaximum_f32_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -9828,7 +9828,7 @@ define void @flat_atomic_fminimum_f32_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -9891,7 +9891,7 @@ define void @flat_atomic_fminimum_f32_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -17801,7 +17801,7 @@ define void @flat_atomic_fadd_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -17888,7 +17888,7 @@ define void @flat_atomic_fadd_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -17955,7 +17955,7 @@ define void @flat_atomic_fsub_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -18018,7 +18018,7 @@ define void @flat_atomic_fsub_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -18089,7 +18089,7 @@ define void @flat_atomic_fmax_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -18156,7 +18156,7 @@ define void @flat_atomic_fmax_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -18227,7 +18227,7 @@ define void @flat_atomic_fmin_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -18294,7 +18294,7 @@ define void @flat_atomic_fmin_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -18365,7 +18365,7 @@ define void @flat_atomic_fmaximum_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -18432,7 +18432,7 @@ define void @flat_atomic_fmaximum_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -18503,7 +18503,7 @@ define void @flat_atomic_fminimum_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -18570,7 +18570,7 @@ define void @flat_atomic_fminimum_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }

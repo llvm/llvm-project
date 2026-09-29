@@ -98,7 +98,6 @@ CGOPT_EXP(bool, EnableTLSDESC)
 CGOPT(bool, UniqueSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
 CGOPT(bool, SeparateNamedSections)
-CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(VectorLibrary, VectorLibrary)
 CGOPT(bool, EnableStackSizeSection)
@@ -372,16 +371,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(SeparateNamedSections);
 
-  static cl::opt<EABI> EABIVersion(
-      "meabi", cl::desc("Set EABI type (default depends on triple):"),
-      cl::init(EABI::Default),
-      cl::values(
-          clEnumValN(EABI::Default, "default", "Triple default EABI version"),
-          clEnumValN(EABI::EABI4, "4", "EABI version 4"),
-          clEnumValN(EABI::EABI5, "5", "EABI version 5"),
-          clEnumValN(EABI::GNU, "gnu", "EABI GNU")));
-  CGBINDOPT(EABIVersion);
-
   static cl::opt<DebuggerKind> DebuggerTuningOpt(
       "debugger-tune", cl::desc("Tune debug info for a particular debugger"),
       cl::init(DebuggerKind::Default),
@@ -576,7 +565,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
 
   Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
 
-  Options.EABIVersion = getEABIVersion();
   Options.DebuggerTuning = getDebuggerTuningOpt();
   Options.SwiftAsyncFramePointer = getSwiftAsyncFramePointer();
   return Options;
@@ -737,6 +725,36 @@ void codegen::setFunctionAttributes(Module &M, StringRef CPU,
           Module::Error, "float-abi",
           MDString::get(M.getContext(), FloatABI::getABITypeName(ABI)));
     }
+  }
+
+  // Synthesize the "exception-model" module flag from the -exception-model
+  // option.
+  ExceptionHandling EH = getExceptionModel();
+  if (EH != ExceptionHandling::Default) {
+    if (auto *Existing =
+            dyn_cast_or_null<MDString>(M.getModuleFlag("exception-model"))) {
+      // The module already records an exception model; -exception-model must
+      // not contradict it.
+      if (Existing->getString() != getExceptionModelName(EH)) {
+        reportFatalUsageError(
+            "-exception-model=" + getExceptionModelName(EH) +
+            " conflicts with the \"exception-model\" module flag \"" +
+            Existing->getString() + "\"");
+      }
+    } else {
+      M.addModuleFlag(Module::Error, "exception-model",
+                      MDString::get(M.getContext(), getExceptionModelName(EH)));
+    }
+  }
+
+  // Synthesize the "target-abi" module flag from the -target-abi option.
+  //
+  // FIXME: verifyOptionsConsistency validates consistency for target-abi. We
+  // should consistently handle all ABI module flags either here or there.
+  StringRef ABIName = mc::getABIName();
+  if (!ABIName.empty() && !M.getModuleFlag("target-abi")) {
+    M.addModuleFlag(Module::Error, "target-abi",
+                    MDString::get(M.getContext(), ABIName));
   }
 
   for (Function &F : M)

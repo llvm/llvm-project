@@ -450,6 +450,7 @@ cc_library(
     hdrs = glob([
         "include/mlir/IR/*.h",
     ]) + [
+        "include/mlir/Dialect/Utils/StaticValueUtils.h",
         "include/mlir/IR/PDLPatternMatch.h.inc",
         "include/mlir/Interfaces/CallInterfaces.h",
         "include/mlir/Interfaces/FoldInterfaces.h",
@@ -8716,6 +8717,7 @@ cc_library(
     hdrs = ["include/mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"],
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":ConvertToLLVMInterface",
@@ -8950,6 +8952,7 @@ cc_library(
     hdrs = glob(["include/mlir/Conversion/ArithToLLVM/*.h"]),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
         ":ArithTransforms",
@@ -9037,6 +9040,7 @@ cc_library(
     ],
     deps = [
         ":ConversionPassIncGen",
+        ":ConvertToEmitCInterface",
         ":EmitCCommon",
         ":EmitCDialect",
         ":MathDialect",
@@ -10044,6 +10048,7 @@ cc_library(
         ":LLVMToLLVMIRTranslation",
         ":LinalgTransformOps",
         ":MPIToLLVM",
+        ":MathToEmitC",
         ":MathToLLVM",
         ":MemRefToEmitC",
         ":MemRefToLLVM",
@@ -11130,6 +11135,7 @@ cc_library(
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":FuncToLLVM",
+        ":FunctionInterfaces",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -11140,6 +11146,7 @@ cc_library(
         ":OpenACCUtils",
         ":Pass",
         ":SideEffectInterfaces",
+        ":TransformUtils",
         ":Transforms",
         "//llvm:Support",
     ],
@@ -12195,6 +12202,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":Analysis",
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
         ":ArithUtils",
@@ -13547,6 +13555,7 @@ cc_library(
         ":ArithDialect",
         ":BytecodeOpInterface",
         ":CommonFolders",
+        ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
         ":IR",
         ":InferTypeOpInterface",
@@ -15140,6 +15149,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":Pass",
+        ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
         ":VectorDialect",
