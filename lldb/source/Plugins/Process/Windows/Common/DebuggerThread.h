@@ -50,6 +50,10 @@ public:
   void ContinueAsyncDllEvent();
 
 private:
+  /// Have the delegate report the stop it collected, then wait until the
+  /// client resumes before taking the next debug event.
+  void ReportDeferredStopAndWaitForResume();
+
   void FreeProcessHandles();
   void DebugLoop();
   ExceptionResult HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,

@@ -28,6 +28,9 @@ public:
   Status DoStop();
   Status DoResume(lldb::StateType resume_state);
 
+  /// Whether the last DoResume() single-stepped this thread.
+  bool IsSingleStepping() const { return m_single_stepping; }
+
   std::string GetName() override;
 
   lldb::StateType GetState() override { return m_state; }
@@ -55,6 +58,7 @@ public:
 protected:
   lldb::StateType m_state = lldb::StateType::eStateInvalid;
   std::string m_name;
+  bool m_single_stepping = false;
   std::unique_ptr<NativeRegisterContextWindows> m_reg_context_up;
   // Cache address and index of the watchpoints and hardware breakpoints since
   // the register context does not.
