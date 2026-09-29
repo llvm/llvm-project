@@ -18,10 +18,11 @@ define void @loop_carried_select(ptr %p, ptr %q, i64 %max) {
 ; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = load i64, ptr [[Q]], align 4
 ; CHECK-NEXT:    [[LESS:%.*]] = icmp slt i64 [[A]], [[B]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[LESS]], i64 [[UPDATED]], i64 [[DOUBLED]]
+; CHECK-NEXT:    br i1 [[LESS]], label %[[EMPTY:.*]], label %[[MERGE]]
+; CHECK:       [[EMPTY]]:
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[NEXT]] = phi i64 [ [[DOUBLED]], %[[BODY]] ], [ [[SPEC_SELECT]], %[[CHECK]] ]
+; CHECK-NEXT:    [[NEXT]] = phi i64 [ [[UPDATED]], %[[EMPTY]] ], [ [[DOUBLED]], %[[CHECK]] ], [ [[DOUBLED]], %[[BODY]] ]
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
