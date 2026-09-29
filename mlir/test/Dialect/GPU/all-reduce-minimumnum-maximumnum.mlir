@@ -8,15 +8,15 @@ gpu.module @kernels {
 // CHECK-SAME:      %[[ARG0:.*]]: f32,
 // CHECK-SAME:      %[[ARG1:.*]]: memref<f32>) workgroup(
 // CHECK-SAME:      %[[ARG2:.*]] : memref<32xf32, #gpu.address_space<workgroup>>) kernel {
-// CHECK:             %[[CONSTANT_0:.*]] = arith.constant 0 : index
-// CHECK:             %[[CONSTANT_1:.*]] = arith.constant 16 : i32
-// CHECK:             %[[CONSTANT_2:.*]] = arith.constant 8 : i32
-// CHECK:             %[[CONSTANT_3:.*]] = arith.constant 4 : i32
-// CHECK:             %[[CONSTANT_4:.*]] = arith.constant 2 : i32
-// CHECK:             %[[CONSTANT_5:.*]] = arith.constant 1 : i32
-// CHECK:             %[[CONSTANT_6:.*]] = arith.constant 32 : i32
-// CHECK:             %[[CONSTANT_7:.*]] = arith.constant 0 : i32
-// CHECK:             %[[CONSTANT_8:.*]] = arith.constant 31 : i32
+// CHECK-DAG:         %[[CONSTANT_0:.*]] = arith.constant 0 : index
+// CHECK-DAG:         %[[CONSTANT_1:.*]] = arith.constant 16 : i32
+// CHECK-DAG:         %[[CONSTANT_2:.*]] = arith.constant 8 : i32
+// CHECK-DAG:         %[[CONSTANT_3:.*]] = arith.constant 4 : i32
+// CHECK-DAG:         %[[CONSTANT_4:.*]] = arith.constant 2 : i32
+// CHECK-DAG:         %[[CONSTANT_5:.*]] = arith.constant 1 : i32
+// CHECK-DAG:         %[[CONSTANT_6:.*]] = arith.constant 32 : i32
+// CHECK-DAG:         %[[CONSTANT_7:.*]] = arith.constant 0 : i32
+// CHECK-DAG:         %[[CONSTANT_8:.*]] = arith.constant 31 : i32
 // CHECK:             %[[BLOCK_DIM_0:.*]] = gpu.block_dim x
 // CHECK:             %[[INDEX_CAST_0:.*]] = arith.index_cast %[[BLOCK_DIM_0]] : index to i32
 // CHECK:             %[[BLOCK_DIM_1:.*]] = gpu.block_dim y
@@ -190,15 +190,15 @@ gpu.module @kernels {
 // CHECK-SAME:      %[[ARG0:.*]]: f32,
 // CHECK-SAME:      %[[ARG1:.*]]: memref<f32>) workgroup(
 // CHECK-SAME:      %[[ARG2:.*]] : memref<32xf32, #gpu.address_space<workgroup>>) kernel {
-// CHECK:             %[[CONSTANT_0:.*]] = arith.constant 0 : index
-// CHECK:             %[[CONSTANT_1:.*]] = arith.constant 16 : i32
-// CHECK:             %[[CONSTANT_2:.*]] = arith.constant 8 : i32
-// CHECK:             %[[CONSTANT_3:.*]] = arith.constant 4 : i32
-// CHECK:             %[[CONSTANT_4:.*]] = arith.constant 2 : i32
-// CHECK:             %[[CONSTANT_5:.*]] = arith.constant 1 : i32
-// CHECK:             %[[CONSTANT_6:.*]] = arith.constant 32 : i32
-// CHECK:             %[[CONSTANT_7:.*]] = arith.constant 0 : i32
-// CHECK:             %[[CONSTANT_8:.*]] = arith.constant 31 : i32
+// CHECK-DAG:         %[[CONSTANT_0:.*]] = arith.constant 0 : index
+// CHECK-DAG:         %[[CONSTANT_1:.*]] = arith.constant 16 : i32
+// CHECK-DAG:         %[[CONSTANT_2:.*]] = arith.constant 8 : i32
+// CHECK-DAG:         %[[CONSTANT_3:.*]] = arith.constant 4 : i32
+// CHECK-DAG:         %[[CONSTANT_4:.*]] = arith.constant 2 : i32
+// CHECK-DAG:         %[[CONSTANT_5:.*]] = arith.constant 1 : i32
+// CHECK-DAG:         %[[CONSTANT_6:.*]] = arith.constant 32 : i32
+// CHECK-DAG:         %[[CONSTANT_7:.*]] = arith.constant 0 : i32
+// CHECK-DAG:         %[[CONSTANT_8:.*]] = arith.constant 31 : i32
 // CHECK:             %[[BLOCK_DIM_0:.*]] = gpu.block_dim x
 // CHECK:             %[[INDEX_CAST_0:.*]] = arith.index_cast %[[BLOCK_DIM_0]] : index to i32
 // CHECK:             %[[BLOCK_DIM_1:.*]] = gpu.block_dim y
@@ -371,12 +371,12 @@ gpu.module @kernels {
 // CHECK-LABEL:     gpu.func @minimum_number_vector(
 // CHECK-SAME:      %[[ARG0:.*]]: vector<2xf16>,
 // CHECK-SAME:      %[[ARG1:.*]]: memref<vector<2xf16>>) kernel {
-// CHECK:             %[[CONSTANT_0:.*]] = arith.constant 16 : i32
-// CHECK:             %[[CONSTANT_1:.*]] = arith.constant 8 : i32
-// CHECK:             %[[CONSTANT_2:.*]] = arith.constant 4 : i32
-// CHECK:             %[[CONSTANT_3:.*]] = arith.constant 2 : i32
-// CHECK:             %[[CONSTANT_4:.*]] = arith.constant 32 : i32
-// CHECK:             %[[CONSTANT_5:.*]] = arith.constant 1 : i32
+// CHECK-DAG:         %[[CONSTANT_0:.*]] = arith.constant 16 : i32
+// CHECK-DAG:         %[[CONSTANT_1:.*]] = arith.constant 8 : i32
+// CHECK-DAG:         %[[CONSTANT_2:.*]] = arith.constant 4 : i32
+// CHECK-DAG:         %[[CONSTANT_3:.*]] = arith.constant 2 : i32
+// CHECK-DAG:         %[[CONSTANT_4:.*]] = arith.constant 32 : i32
+// CHECK-DAG:         %[[CONSTANT_5:.*]] = arith.constant 1 : i32
 // CHECK:             %[[BITCAST_0:.*]] = vector.bitcast %[[ARG0]] : vector<2xf16> to vector<1xi32>
 // CHECK:             %[[EXTRACT_0:.*]] = vector.extract %[[BITCAST_0]][0] : i32 from vector<1xi32>
 // CHECK:             %[[VAL_0:.*]], %[[SHUFFLE_0:.*]] = gpu.shuffle xor %[[EXTRACT_0]], %[[CONSTANT_5]], %[[CONSTANT_4]] : i32
@@ -419,12 +419,12 @@ gpu.module @kernels {
 // CHECK-LABEL:     gpu.func @maximum_number_vector(
 // CHECK-SAME:      %[[ARG0:.*]]: vector<2xf16>,
 // CHECK-SAME:      %[[ARG1:.*]]: memref<vector<2xf16>>) kernel {
-// CHECK:             %[[CONSTANT_0:.*]] = arith.constant 16 : i32
-// CHECK:             %[[CONSTANT_1:.*]] = arith.constant 8 : i32
-// CHECK:             %[[CONSTANT_2:.*]] = arith.constant 4 : i32
-// CHECK:             %[[CONSTANT_3:.*]] = arith.constant 2 : i32
-// CHECK:             %[[CONSTANT_4:.*]] = arith.constant 32 : i32
-// CHECK:             %[[CONSTANT_5:.*]] = arith.constant 1 : i32
+// CHECK-DAG:         %[[CONSTANT_0:.*]] = arith.constant 16 : i32
+// CHECK-DAG:         %[[CONSTANT_1:.*]] = arith.constant 8 : i32
+// CHECK-DAG:         %[[CONSTANT_2:.*]] = arith.constant 4 : i32
+// CHECK-DAG:         %[[CONSTANT_3:.*]] = arith.constant 2 : i32
+// CHECK-DAG:         %[[CONSTANT_4:.*]] = arith.constant 32 : i32
+// CHECK-DAG:         %[[CONSTANT_5:.*]] = arith.constant 1 : i32
 // CHECK:             %[[BITCAST_0:.*]] = vector.bitcast %[[ARG0]] : vector<2xf16> to vector<1xi32>
 // CHECK:             %[[EXTRACT_0:.*]] = vector.extract %[[BITCAST_0]][0] : i32 from vector<1xi32>
 // CHECK:             %[[VAL_0:.*]], %[[SHUFFLE_0:.*]] = gpu.shuffle xor %[[EXTRACT_0]], %[[CONSTANT_5]], %[[CONSTANT_4]] : i32
