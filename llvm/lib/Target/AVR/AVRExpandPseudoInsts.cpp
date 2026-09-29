@@ -2627,10 +2627,15 @@ template <> bool AVRExpandPseudo::expand<AVR::FRMSP>(Block &MBB, BlockIt MBBI) {
   Register ASOPointer = MI.getOperand(0).getReg();
   int64_t ASOAlignment = MI.getOperand(1).getImm();
 
+  // Note: `FrameReg` is an out-param here - passing `ASOPointer` instead would
+  // overwrite the register we are supposed to write the aligned stack address
+  // into.
+  Register FrameReg;
+
   StackOffset ASOOffset =
       MF.getSubtarget<AVRSubtarget>()
           .getFrameLowering()
-          ->getFrameIndexReference(MF, AFI->AlignedStackObjectIdx, ASOPointer);
+          ->getFrameIndexReference(MF, AFI->AlignedStackObjectIdx, FrameReg);
 
   TII->copyPhysReg(MBB, MI, DL, ASOPointer, AVR::R29R28, false, false, false);
 
