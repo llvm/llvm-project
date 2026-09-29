@@ -11,7 +11,6 @@ from lldbsuite.test import lldbutil
 
 @requireThreadSupport
 class ExitDuringStepTestCase(TestBase):
-    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     def test(self):
         """Test thread exit during step handling."""
         self.build()
@@ -19,7 +18,6 @@ class ExitDuringStepTestCase(TestBase):
             "thread step-inst -m all-threads", "stop reason = instruction step", True
         )
 
-    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     def test_step_over(self):
         """Test thread exit during step-over handling."""
         self.build()
@@ -27,7 +25,6 @@ class ExitDuringStepTestCase(TestBase):
             "thread step-over -m all-threads", "stop reason = step over", False
         )
 
-    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     def test_step_in(self):
         """Test thread exit during step-in handling."""
         self.build()
