@@ -7724,8 +7724,7 @@ ExprResult Sema::BuildCompoundLiteralExpr(
     SmallVector<PartialDiagnosticAt, 4> Notes;
     Expr::EvalResult Eval;
     Eval.Diag = &Notes;
-    if (!LiteralExpr->EvaluateAsConstantExpr(Eval, Context) ||
-        !Notes.empty()) {
+    if (!LiteralExpr->EvaluateAsConstantExpr(Eval, Context) || !Notes.empty()) {
       SourceLocation DiagLoc = ConstexprLoc;
       if (Notes.size() == 1 && Notes.front().second.getDiagID() ==
                                    diag::note_invalid_subexpr_in_const_expr) {
