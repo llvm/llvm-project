@@ -158,6 +158,7 @@ void associative_container_benchmarks(std::string container) {
       }
       rs2.release();
       srcs.clear();
+      rs.release();
       for (size_t i = 0; i != BatchSize; ++i)
         srcs.emplace_back(&rs).insert(in.begin(), in.end());
 
