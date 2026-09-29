@@ -43,7 +43,7 @@ module attributes {cir.amdgpu_printf_kind = "hostcall"} {
 !s8i = !cir.int<s, 8>
 
 module attributes {cir.amdgpu_printf_kind = "buffered"} {
-  cir.global "private" constant cir_private @".str" = #cir.const_array<"%d %s\0A" : !cir.array<!s8i x 6>, trailing_zeros> : !cir.array<!s8i x 7> {alignment = 1 : i64}
+  cir.global "private" constant cir_private @".str" = #cir.const_array<"%d %s\0A" : !cir.array<!s8i x 6>, trailing_zeros> : !cir.array<!s8i x 7>
   cir.func @buffered(%v: !s32i, %str: !cir.ptr<!s8i>) -> !s32i {
     %0 = cir.get_global @".str" : !cir.ptr<!cir.array<!s8i x 7>>
     %1 = cir.cast array_to_ptrdecay %0 : !cir.ptr<!cir.array<!s8i x 7>> -> !cir.ptr<!s8i>
