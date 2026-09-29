@@ -1755,6 +1755,10 @@ bool Fortran::lower::pft::Evaluation::lowerAsUnstructured() const {
   return isUnstructured() || clDisableStructuredFir;
 }
 
+bool Fortran::lower::pft::Evaluation::lowerBodyAsWrappedRegion() const {
+  return hasUnstructuredInternals() && !lowerAsUnstructured();
+}
+
 bool Fortran::lower::pft::Evaluation::forceAsUnstructured() const {
   return clDisableStructuredFir;
 }
