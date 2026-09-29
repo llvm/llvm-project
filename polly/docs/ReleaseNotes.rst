@@ -19,3 +19,7 @@ In Polly |version| the following important changes have been incorporated.
 
  * The infrastructure around ScopPasses has been removed.
 
+ * The matrix multiplication optimization allocates packed arrays larger than
+   ``-polly-pattern-matching-max-stack-array-size`` (1 MiB by default) on the
+   heap instead of the stack. ``-1`` keeps all of them on the stack.
+
