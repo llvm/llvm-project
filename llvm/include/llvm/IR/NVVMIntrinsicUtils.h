@@ -1,0 +1,831 @@
+//===--- NVVMIntrinsicUtils.h -----------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+/// \file
+/// This file contains the definitions of the enumerations and flags
+/// associated with NVVM Intrinsics, along with some helper functions.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_IR_NVVMINTRINSICUTILS_H
+#define LLVM_IR_NVVMINTRINSICUTILS_H
+
+#include <stdint.h>
+
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/Support/raw_ostream.h"
+
+namespace llvm {
+namespace nvvm {
+
+// Reduction Ops supported with TMA Copy from Shared
+// to Global Memory for the "cp.reduce.async.bulk.tensor.*"
+// family of PTX instructions.
+enum class TMAReductionOp : uint8_t {
+  ADD = 0,
+  MIN = 1,
+  MAX = 2,
+  INC = 3,
+  DEC = 4,
+  AND = 5,
+  OR = 6,
+  XOR = 7,
+};
+
+inline StringRef getTMATensorReductionOpName(TMAReductionOp Op) {
+  switch (Op) {
+  case TMAReductionOp::ADD:
+    return "add";
+  case TMAReductionOp::MIN:
+    return "min";
+  case TMAReductionOp::MAX:
+    return "max";
+  case TMAReductionOp::INC:
+    return "inc";
+  case TMAReductionOp::DEC:
+    return "dec";
+  case TMAReductionOp::AND:
+    return "and";
+  case TMAReductionOp::OR:
+    return "or";
+  case TMAReductionOp::XOR:
+    return "xor";
+  }
+  llvm_unreachable("invalid TMA tensorreduction operation");
+}
+
+// Enum to represent the cta_group::1 and
+// cta_group::2 variants in TMA/TCGEN05 family of
+// PTX instructions.
+enum class CTAGroupKind : uint8_t {
+  CG_NONE = 0, // default with no cta_group modifier
+  CG_1 = 1,    // cta_group::1 modifier
+  CG_2 = 2,    // cta_group::2 modifier
+};
+
+// Validate data patterns supported with the TMA Copy from Global to Shared
+// memory (CTA and Cluster) intrinsics.
+enum class TMAValidateDataPattern : uint8_t {
+  DISABLED = 0, // Default; no validate_data qualifier is emitted.
+  PER_16BYTES_80000000 = 1,
+  PER_16BYTES_8000 = 2,
+  PER_16BYTES_80 = 3,
+  PER_16BYTES_8 = 4,
+  PER_ELEMENT_FF = 5,
+};
+
+inline StringRef getTMAValidateDataPatternName(TMAValidateDataPattern Pattern) {
+  using VDTy = TMAValidateDataPattern;
+  switch (Pattern) {
+  case VDTy::DISABLED:
+    return "disabled";
+  case VDTy::PER_16BYTES_80000000:
+    return "per_16bytes::80000000";
+  case VDTy::PER_16BYTES_8000:
+    return "per_16bytes::8000";
+  case VDTy::PER_16BYTES_80:
+    return "per_16bytes::80";
+  case VDTy::PER_16BYTES_8:
+    return "per_16bytes::8";
+  case VDTy::PER_ELEMENT_FF:
+    return "per_element::ff";
+  }
+  llvm_unreachable("invalid TMA validate data pattern");
+}
+
+// Scope of the memory ordering semantics.
+enum class MemScope : uint8_t {
+  CTA = 0,
+  CLUSTER = 1,
+  GPU = 2,
+  SYS = 3,
+};
+
+inline StringRef getMemScopeName(MemScope Scope) {
+  switch (Scope) {
+  case MemScope::CTA:
+    return "cta";
+  case MemScope::CLUSTER:
+    return "cluster";
+  case MemScope::GPU:
+    return "gpu";
+  case MemScope::SYS:
+    return "sys";
+  }
+  llvm_unreachable("invalid memory scope");
+}
+
+// Eviction priorities applicable for prefetch and applypriority intrinsics.
+enum class EvictPolicyType : uint8_t {
+  EVICT_NORMAL = 0, // default
+  EVICT_LAST = 1,
+};
+
+inline StringRef getEvictPolicyName(EvictPolicyType Policy) {
+  switch (Policy) {
+  case EvictPolicyType::EVICT_NORMAL:
+    return "L2::evict_normal";
+  case EvictPolicyType::EVICT_LAST:
+    return "L2::evict_last";
+  }
+  llvm_unreachable("invalid evict policy");
+}
+
+enum class Tcgen05MMAKind : uint8_t {
+  F16 = 0,
+  TF32 = 1,
+  F8F6F4 = 2,
+  I8 = 3,
+  TI16 = 4,
+};
+
+enum class Tcgen05CollectorUsageOp : uint8_t {
+  DISCARD = 0,
+  LASTUSE = 1,
+  FILL = 2,
+  USE = 3,
+};
+
+enum class Tcgen05MMACollectorBBuffer : uint8_t {
+  B0 = 0,
+  B1 = 1,
+  B2 = 2,
+  B3 = 3,
+};
+
+enum class TensormapElemType : uint8_t {
+  U8 = 0,
+  U16 = 1,
+  U32 = 2,
+  S32 = 3,
+  U64 = 4,
+  S64 = 5,
+  F16 = 6,
+  F32 = 7,
+  F32_FTZ = 8,
+  F64 = 9,
+  BF16 = 10,
+  TF32 = 11,
+  TF32_FTZ = 12,
+  B4x16 = 13,
+  B4x16_p64 = 14,
+  B6x16_p32 = 15,
+};
+
+enum class TensormapInterleaveLayout : uint8_t {
+  NO_INTERLEAVE = 0,
+  INTERLEAVE_16B = 1,
+  INTERLEAVE_32B = 2,
+};
+
+enum class TensormapSwizzleMode : uint8_t {
+  NO_SWIZZLE = 0,
+  SWIZZLE_32B = 1,
+  SWIZZLE_64B = 2,
+  SWIZZLE_128B = 3,
+  SWIZZLE_96B = 4,
+};
+
+enum class TensormapSwizzleAtomicity : uint8_t {
+  SWIZZLE_ATOMICITY_16B = 0,
+  SWIZZLE_ATOMICITY_32B = 1,
+  SWIZZLE_ATOMICITY_32B_FLIP_8B = 2,
+  SWIZZLE_ATOMICITY_64B = 3,
+};
+
+enum class TensormapFillMode : uint8_t {
+  ZERO_FILL = 0,
+  OOB_NAN_FILL = 1,
+};
+
+// In-memory layout of an mbarrier object, as selected by the layout operand of
+// the llvm.nvvm.mbarrier.init and llvm.nvvm.mbarrier.check_layout intrinsics.
+enum class MBarrierLayout : uint8_t {
+  V0 = 0,
+  V1 = 1,
+};
+
+LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printMBarrierLayout(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printEvictPolicyType(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printTMAValidateDataPattern(raw_ostream &OS,
+                                          const Constant *ImmArgVal);
+
+LLVM_ABI void printMemScope(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
+                                           const Constant *ImmArgVal);
+
+LLVM_ABI void printTcgen05MMACollectorBBuffer(raw_ostream &OS,
+                                              const Constant *ImmArgVal);
+
+LLVM_ABI void printTensormapElemType(raw_ostream &OS,
+                                     const Constant *ImmArgVal);
+LLVM_ABI void printTensormapInterleaveLayout(raw_ostream &OS,
+                                             const Constant *ImmArgVal);
+LLVM_ABI void printTensormapSwizzleMode(raw_ostream &OS,
+                                        const Constant *ImmArgVal);
+LLVM_ABI void printTensormapSwizzleAtomicity(raw_ostream &OS,
+                                             const Constant *ImmArgVal);
+LLVM_ABI void printTensormapFillMode(raw_ostream &OS,
+                                     const Constant *ImmArgVal);
+LLVM_ABI void printFPRoundingMode(raw_ostream &OS, const Constant *ImmArgVal);
+
+inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_f2i_rm_ftz:
+  case Intrinsic::nvvm_f2i_rn_ftz:
+  case Intrinsic::nvvm_f2i_rp_ftz:
+  case Intrinsic::nvvm_f2i_rz_ftz:
+
+  case Intrinsic::nvvm_f2ui_rm_ftz:
+  case Intrinsic::nvvm_f2ui_rn_ftz:
+  case Intrinsic::nvvm_f2ui_rp_ftz:
+  case Intrinsic::nvvm_f2ui_rz_ftz:
+
+  case Intrinsic::nvvm_f2ll_rm_ftz:
+  case Intrinsic::nvvm_f2ll_rn_ftz:
+  case Intrinsic::nvvm_f2ll_rp_ftz:
+  case Intrinsic::nvvm_f2ll_rz_ftz:
+
+  case Intrinsic::nvvm_f2ull_rm_ftz:
+  case Intrinsic::nvvm_f2ull_rn_ftz:
+  case Intrinsic::nvvm_f2ull_rp_ftz:
+  case Intrinsic::nvvm_f2ull_rz_ftz:
+    return true;
+
+  case Intrinsic::nvvm_f2i_rm:
+  case Intrinsic::nvvm_f2i_rn:
+  case Intrinsic::nvvm_f2i_rp:
+  case Intrinsic::nvvm_f2i_rz:
+
+  case Intrinsic::nvvm_f2ui_rm:
+  case Intrinsic::nvvm_f2ui_rn:
+  case Intrinsic::nvvm_f2ui_rp:
+  case Intrinsic::nvvm_f2ui_rz:
+
+  case Intrinsic::nvvm_d2i_rm:
+  case Intrinsic::nvvm_d2i_rn:
+  case Intrinsic::nvvm_d2i_rp:
+  case Intrinsic::nvvm_d2i_rz:
+
+  case Intrinsic::nvvm_d2ui_rm:
+  case Intrinsic::nvvm_d2ui_rn:
+  case Intrinsic::nvvm_d2ui_rp:
+  case Intrinsic::nvvm_d2ui_rz:
+
+  case Intrinsic::nvvm_f2ll_rm:
+  case Intrinsic::nvvm_f2ll_rn:
+  case Intrinsic::nvvm_f2ll_rp:
+  case Intrinsic::nvvm_f2ll_rz:
+
+  case Intrinsic::nvvm_f2ull_rm:
+  case Intrinsic::nvvm_f2ull_rn:
+  case Intrinsic::nvvm_f2ull_rp:
+  case Intrinsic::nvvm_f2ull_rz:
+
+  case Intrinsic::nvvm_d2ll_rm:
+  case Intrinsic::nvvm_d2ll_rn:
+  case Intrinsic::nvvm_d2ll_rp:
+  case Intrinsic::nvvm_d2ll_rz:
+
+  case Intrinsic::nvvm_d2ull_rm:
+  case Intrinsic::nvvm_d2ull_rn:
+  case Intrinsic::nvvm_d2ull_rp:
+  case Intrinsic::nvvm_d2ull_rz:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid f2i/d2i intrinsic");
+}
+
+inline bool FPToIntegerIntrinsicResultIsSigned(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  // f2i
+  case Intrinsic::nvvm_f2i_rm:
+  case Intrinsic::nvvm_f2i_rm_ftz:
+  case Intrinsic::nvvm_f2i_rn:
+  case Intrinsic::nvvm_f2i_rn_ftz:
+  case Intrinsic::nvvm_f2i_rp:
+  case Intrinsic::nvvm_f2i_rp_ftz:
+  case Intrinsic::nvvm_f2i_rz:
+  case Intrinsic::nvvm_f2i_rz_ftz:
+  // d2i
+  case Intrinsic::nvvm_d2i_rm:
+  case Intrinsic::nvvm_d2i_rn:
+  case Intrinsic::nvvm_d2i_rp:
+  case Intrinsic::nvvm_d2i_rz:
+  // f2ll
+  case Intrinsic::nvvm_f2ll_rm:
+  case Intrinsic::nvvm_f2ll_rm_ftz:
+  case Intrinsic::nvvm_f2ll_rn:
+  case Intrinsic::nvvm_f2ll_rn_ftz:
+  case Intrinsic::nvvm_f2ll_rp:
+  case Intrinsic::nvvm_f2ll_rp_ftz:
+  case Intrinsic::nvvm_f2ll_rz:
+  case Intrinsic::nvvm_f2ll_rz_ftz:
+  // d2ll
+  case Intrinsic::nvvm_d2ll_rm:
+  case Intrinsic::nvvm_d2ll_rn:
+  case Intrinsic::nvvm_d2ll_rp:
+  case Intrinsic::nvvm_d2ll_rz:
+    return true;
+
+  // f2ui
+  case Intrinsic::nvvm_f2ui_rm:
+  case Intrinsic::nvvm_f2ui_rm_ftz:
+  case Intrinsic::nvvm_f2ui_rn:
+  case Intrinsic::nvvm_f2ui_rn_ftz:
+  case Intrinsic::nvvm_f2ui_rp:
+  case Intrinsic::nvvm_f2ui_rp_ftz:
+  case Intrinsic::nvvm_f2ui_rz:
+  case Intrinsic::nvvm_f2ui_rz_ftz:
+  // d2ui
+  case Intrinsic::nvvm_d2ui_rm:
+  case Intrinsic::nvvm_d2ui_rn:
+  case Intrinsic::nvvm_d2ui_rp:
+  case Intrinsic::nvvm_d2ui_rz:
+  // f2ull
+  case Intrinsic::nvvm_f2ull_rm:
+  case Intrinsic::nvvm_f2ull_rm_ftz:
+  case Intrinsic::nvvm_f2ull_rn:
+  case Intrinsic::nvvm_f2ull_rn_ftz:
+  case Intrinsic::nvvm_f2ull_rp:
+  case Intrinsic::nvvm_f2ull_rp_ftz:
+  case Intrinsic::nvvm_f2ull_rz:
+  case Intrinsic::nvvm_f2ull_rz_ftz:
+  // d2ull
+  case Intrinsic::nvvm_d2ull_rm:
+  case Intrinsic::nvvm_d2ull_rn:
+  case Intrinsic::nvvm_d2ull_rp:
+  case Intrinsic::nvvm_d2ull_rz:
+    return false;
+  }
+  llvm_unreachable(
+      "Checking invalid f2i/d2i intrinsic for signed int conversion");
+}
+
+inline bool FPToIntegerIntrinsicNaNZero(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  // f2i
+  case Intrinsic::nvvm_f2i_rm:
+  case Intrinsic::nvvm_f2i_rn:
+  case Intrinsic::nvvm_f2i_rp:
+  case Intrinsic::nvvm_f2i_rz:
+  case Intrinsic::nvvm_f2i_rm_ftz:
+  case Intrinsic::nvvm_f2i_rn_ftz:
+  case Intrinsic::nvvm_f2i_rp_ftz:
+  case Intrinsic::nvvm_f2i_rz_ftz:
+  // f2ui
+  case Intrinsic::nvvm_f2ui_rm:
+  case Intrinsic::nvvm_f2ui_rn:
+  case Intrinsic::nvvm_f2ui_rp:
+  case Intrinsic::nvvm_f2ui_rz:
+  case Intrinsic::nvvm_f2ui_rm_ftz:
+  case Intrinsic::nvvm_f2ui_rn_ftz:
+  case Intrinsic::nvvm_f2ui_rp_ftz:
+  case Intrinsic::nvvm_f2ui_rz_ftz:
+    return true;
+  // d2i
+  case Intrinsic::nvvm_d2i_rm:
+  case Intrinsic::nvvm_d2i_rn:
+  case Intrinsic::nvvm_d2i_rp:
+  case Intrinsic::nvvm_d2i_rz:
+  // d2ui
+  case Intrinsic::nvvm_d2ui_rm:
+  case Intrinsic::nvvm_d2ui_rn:
+  case Intrinsic::nvvm_d2ui_rp:
+  case Intrinsic::nvvm_d2ui_rz:
+  // f2ll
+  case Intrinsic::nvvm_f2ll_rm:
+  case Intrinsic::nvvm_f2ll_rn:
+  case Intrinsic::nvvm_f2ll_rp:
+  case Intrinsic::nvvm_f2ll_rz:
+  case Intrinsic::nvvm_f2ll_rm_ftz:
+  case Intrinsic::nvvm_f2ll_rn_ftz:
+  case Intrinsic::nvvm_f2ll_rp_ftz:
+  case Intrinsic::nvvm_f2ll_rz_ftz:
+  // f2ull
+  case Intrinsic::nvvm_f2ull_rm:
+  case Intrinsic::nvvm_f2ull_rn:
+  case Intrinsic::nvvm_f2ull_rp:
+  case Intrinsic::nvvm_f2ull_rz:
+  case Intrinsic::nvvm_f2ull_rm_ftz:
+  case Intrinsic::nvvm_f2ull_rn_ftz:
+  case Intrinsic::nvvm_f2ull_rp_ftz:
+  case Intrinsic::nvvm_f2ull_rz_ftz:
+  // d2ll
+  case Intrinsic::nvvm_d2ll_rm:
+  case Intrinsic::nvvm_d2ll_rn:
+  case Intrinsic::nvvm_d2ll_rp:
+  case Intrinsic::nvvm_d2ll_rz:
+  // d2ull
+  case Intrinsic::nvvm_d2ull_rm:
+  case Intrinsic::nvvm_d2ull_rn:
+  case Intrinsic::nvvm_d2ull_rp:
+  case Intrinsic::nvvm_d2ull_rz:
+    return false;
+  }
+  llvm_unreachable("Checking NaN result for invalid f2i/d2i intrinsic");
+}
+
+inline APFloat::roundingMode
+GetFPToIntegerRoundingMode(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  // RM:
+  case Intrinsic::nvvm_f2i_rm:
+  case Intrinsic::nvvm_f2ui_rm:
+  case Intrinsic::nvvm_f2i_rm_ftz:
+  case Intrinsic::nvvm_f2ui_rm_ftz:
+  case Intrinsic::nvvm_d2i_rm:
+  case Intrinsic::nvvm_d2ui_rm:
+
+  case Intrinsic::nvvm_f2ll_rm:
+  case Intrinsic::nvvm_f2ull_rm:
+  case Intrinsic::nvvm_f2ll_rm_ftz:
+  case Intrinsic::nvvm_f2ull_rm_ftz:
+  case Intrinsic::nvvm_d2ll_rm:
+  case Intrinsic::nvvm_d2ull_rm:
+    return APFloat::rmTowardNegative;
+
+  // RN:
+  case Intrinsic::nvvm_f2i_rn:
+  case Intrinsic::nvvm_f2ui_rn:
+  case Intrinsic::nvvm_f2i_rn_ftz:
+  case Intrinsic::nvvm_f2ui_rn_ftz:
+  case Intrinsic::nvvm_d2i_rn:
+  case Intrinsic::nvvm_d2ui_rn:
+
+  case Intrinsic::nvvm_f2ll_rn:
+  case Intrinsic::nvvm_f2ull_rn:
+  case Intrinsic::nvvm_f2ll_rn_ftz:
+  case Intrinsic::nvvm_f2ull_rn_ftz:
+  case Intrinsic::nvvm_d2ll_rn:
+  case Intrinsic::nvvm_d2ull_rn:
+    return APFloat::rmNearestTiesToEven;
+
+  // RP:
+  case Intrinsic::nvvm_f2i_rp:
+  case Intrinsic::nvvm_f2ui_rp:
+  case Intrinsic::nvvm_f2i_rp_ftz:
+  case Intrinsic::nvvm_f2ui_rp_ftz:
+  case Intrinsic::nvvm_d2i_rp:
+  case Intrinsic::nvvm_d2ui_rp:
+
+  case Intrinsic::nvvm_f2ll_rp:
+  case Intrinsic::nvvm_f2ull_rp:
+  case Intrinsic::nvvm_f2ll_rp_ftz:
+  case Intrinsic::nvvm_f2ull_rp_ftz:
+  case Intrinsic::nvvm_d2ll_rp:
+  case Intrinsic::nvvm_d2ull_rp:
+    return APFloat::rmTowardPositive;
+
+  // RZ:
+  case Intrinsic::nvvm_f2i_rz:
+  case Intrinsic::nvvm_f2ui_rz:
+  case Intrinsic::nvvm_f2i_rz_ftz:
+  case Intrinsic::nvvm_f2ui_rz_ftz:
+  case Intrinsic::nvvm_d2i_rz:
+  case Intrinsic::nvvm_d2ui_rz:
+
+  case Intrinsic::nvvm_f2ll_rz:
+  case Intrinsic::nvvm_f2ull_rz:
+  case Intrinsic::nvvm_f2ll_rz_ftz:
+  case Intrinsic::nvvm_f2ull_rz_ftz:
+  case Intrinsic::nvvm_d2ll_rz:
+  case Intrinsic::nvvm_d2ull_rz:
+    return APFloat::rmTowardZero;
+  }
+  llvm_unreachable("Checking rounding mode for invalid f2i/d2i intrinsic");
+}
+
+inline bool FMinFMaxShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fmax_ftz_f:
+  case Intrinsic::nvvm_fmax_ftz_nan_f:
+  case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
+
+  case Intrinsic::nvvm_fmin_ftz_f:
+  case Intrinsic::nvvm_fmin_ftz_nan_f:
+  case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
+    return true;
+
+  case Intrinsic::nvvm_fmax_d:
+  case Intrinsic::nvvm_fmax_f:
+  case Intrinsic::nvvm_fmax_nan_f:
+  case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_xorsign_abs_f:
+
+  case Intrinsic::nvvm_fmin_d:
+  case Intrinsic::nvvm_fmin_f:
+  case Intrinsic::nvvm_fmin_nan_f:
+  case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_xorsign_abs_f:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid fmin/fmax intrinsic");
+}
+
+inline bool FMinFMaxPropagatesNaNs(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fmax_ftz_nan_f:
+  case Intrinsic::nvvm_fmax_nan_f:
+  case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
+
+  case Intrinsic::nvvm_fmin_ftz_nan_f:
+  case Intrinsic::nvvm_fmin_nan_f:
+  case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
+    return true;
+
+  case Intrinsic::nvvm_fmax_d:
+  case Intrinsic::nvvm_fmax_f:
+  case Intrinsic::nvvm_fmax_ftz_f:
+  case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_xorsign_abs_f:
+
+  case Intrinsic::nvvm_fmin_d:
+  case Intrinsic::nvvm_fmin_f:
+  case Intrinsic::nvvm_fmin_ftz_f:
+  case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_xorsign_abs_f:
+    return false;
+  }
+  llvm_unreachable("Checking NaN flag for invalid fmin/fmax intrinsic");
+}
+
+inline bool FMinFMaxIsXorSignAbs(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_xorsign_abs_f:
+
+  case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_xorsign_abs_f:
+    return true;
+
+  case Intrinsic::nvvm_fmax_d:
+  case Intrinsic::nvvm_fmax_f:
+  case Intrinsic::nvvm_fmax_ftz_f:
+  case Intrinsic::nvvm_fmax_ftz_nan_f:
+  case Intrinsic::nvvm_fmax_nan_f:
+
+  case Intrinsic::nvvm_fmin_d:
+  case Intrinsic::nvvm_fmin_f:
+  case Intrinsic::nvvm_fmin_ftz_f:
+  case Intrinsic::nvvm_fmin_ftz_nan_f:
+  case Intrinsic::nvvm_fmin_nan_f:
+    return false;
+  }
+  llvm_unreachable("Checking XorSignAbs flag for invalid fmin/fmax intrinsic");
+}
+
+inline bool UnaryMathIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_ceil_ftz_f:
+  case Intrinsic::nvvm_fabs_ftz:
+  case Intrinsic::nvvm_floor_ftz_f:
+  case Intrinsic::nvvm_round_ftz_f:
+  case Intrinsic::nvvm_saturate_ftz_f:
+  case Intrinsic::nvvm_sqrt_rn_ftz_f:
+    return true;
+  case Intrinsic::nvvm_ceil_f:
+  case Intrinsic::nvvm_ceil_d:
+  case Intrinsic::nvvm_fabs:
+  case Intrinsic::nvvm_floor_f:
+  case Intrinsic::nvvm_floor_d:
+  case Intrinsic::nvvm_round_f:
+  case Intrinsic::nvvm_round_d:
+  case Intrinsic::nvvm_saturate_d:
+  case Intrinsic::nvvm_saturate_f:
+  case Intrinsic::nvvm_sqrt_f:
+  case Intrinsic::nvvm_sqrt_rn_d:
+  case Intrinsic::nvvm_sqrt_rn_f:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid unary intrinsic");
+}
+
+inline bool RCPShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_rcp_rm_ftz_f:
+  case Intrinsic::nvvm_rcp_rn_ftz_f:
+  case Intrinsic::nvvm_rcp_rp_ftz_f:
+  case Intrinsic::nvvm_rcp_rz_ftz_f:
+    return true;
+  case Intrinsic::nvvm_rcp_rm_d:
+  case Intrinsic::nvvm_rcp_rm_f:
+  case Intrinsic::nvvm_rcp_rn_d:
+  case Intrinsic::nvvm_rcp_rn_f:
+  case Intrinsic::nvvm_rcp_rp_d:
+  case Intrinsic::nvvm_rcp_rp_f:
+  case Intrinsic::nvvm_rcp_rz_d:
+  case Intrinsic::nvvm_rcp_rz_f:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid rcp intrinsic");
+}
+
+inline APFloat::roundingMode GetRCPRoundingMode(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_rcp_rm_f:
+  case Intrinsic::nvvm_rcp_rm_d:
+  case Intrinsic::nvvm_rcp_rm_ftz_f:
+    return APFloat::rmTowardNegative;
+
+  case Intrinsic::nvvm_rcp_rn_f:
+  case Intrinsic::nvvm_rcp_rn_d:
+  case Intrinsic::nvvm_rcp_rn_ftz_f:
+    return APFloat::rmNearestTiesToEven;
+
+  case Intrinsic::nvvm_rcp_rp_f:
+  case Intrinsic::nvvm_rcp_rp_d:
+  case Intrinsic::nvvm_rcp_rp_ftz_f:
+    return APFloat::rmTowardPositive;
+
+  case Intrinsic::nvvm_rcp_rz_f:
+  case Intrinsic::nvvm_rcp_rz_d:
+  case Intrinsic::nvvm_rcp_rz_ftz_f:
+    return APFloat::rmTowardZero;
+  }
+  llvm_unreachable("Checking rounding mode for invalid rcp intrinsic");
+}
+
+inline DenormalMode GetNVVMDenormMode(bool ShouldFTZ) {
+  if (ShouldFTZ)
+    return DenormalMode::getPreserveSign();
+  return DenormalMode::getIEEE();
+}
+
+inline APFloat::roundingMode GetRoundingModeFromImmArg(const Value *ImmArgVal) {
+  return static_cast<APFloat::roundingMode>(
+      cast<ConstantInt>(ImmArgVal)->getSExtValue());
+}
+
+inline StringRef GetRoundingModeName(APFloat::roundingMode RM) {
+  switch (RM) {
+  case APFloat::rmNearestTiesToEven:
+    return "rn";
+  case APFloat::rmTowardZero:
+    return "rz";
+  case APFloat::rmTowardNegative:
+    return "rm";
+  case APFloat::rmTowardPositive:
+    return "rp";
+  default:
+    return "";
+  }
+}
+
+inline bool FMulShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_mul_rm_ftz_f:
+  case Intrinsic::nvvm_mul_rn_ftz_f:
+  case Intrinsic::nvvm_mul_rp_ftz_f:
+  case Intrinsic::nvvm_mul_rz_ftz_f:
+    return true;
+
+  case Intrinsic::nvvm_mul_rm_f:
+  case Intrinsic::nvvm_mul_rn_f:
+  case Intrinsic::nvvm_mul_rp_f:
+  case Intrinsic::nvvm_mul_rz_f:
+  case Intrinsic::nvvm_mul_rm_d:
+  case Intrinsic::nvvm_mul_rn_d:
+  case Intrinsic::nvvm_mul_rp_d:
+  case Intrinsic::nvvm_mul_rz_d:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid NVVM mul intrinsic");
+}
+
+inline APFloat::roundingMode GetFMulRoundingMode(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_mul_rm_f:
+  case Intrinsic::nvvm_mul_rm_d:
+  case Intrinsic::nvvm_mul_rm_ftz_f:
+    return APFloat::rmTowardNegative;
+  case Intrinsic::nvvm_mul_rn_f:
+  case Intrinsic::nvvm_mul_rn_d:
+  case Intrinsic::nvvm_mul_rn_ftz_f:
+    return APFloat::rmNearestTiesToEven;
+  case Intrinsic::nvvm_mul_rp_f:
+  case Intrinsic::nvvm_mul_rp_d:
+  case Intrinsic::nvvm_mul_rp_ftz_f:
+    return APFloat::rmTowardPositive;
+  case Intrinsic::nvvm_mul_rz_f:
+  case Intrinsic::nvvm_mul_rz_d:
+  case Intrinsic::nvvm_mul_rz_ftz_f:
+    return APFloat::rmTowardZero;
+  }
+  llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM mul");
+}
+
+inline bool FDivShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_div_rm_ftz_f:
+  case Intrinsic::nvvm_div_rn_ftz_f:
+  case Intrinsic::nvvm_div_rp_ftz_f:
+  case Intrinsic::nvvm_div_rz_ftz_f:
+    return true;
+
+  case Intrinsic::nvvm_div_rm_f:
+  case Intrinsic::nvvm_div_rn_f:
+  case Intrinsic::nvvm_div_rp_f:
+  case Intrinsic::nvvm_div_rz_f:
+  case Intrinsic::nvvm_div_rm_d:
+  case Intrinsic::nvvm_div_rn_d:
+  case Intrinsic::nvvm_div_rp_d:
+  case Intrinsic::nvvm_div_rz_d:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid NVVM div intrinsic");
+}
+
+inline APFloat::roundingMode GetFDivRoundingMode(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_div_rm_f:
+  case Intrinsic::nvvm_div_rm_d:
+  case Intrinsic::nvvm_div_rm_ftz_f:
+    return APFloat::rmTowardNegative;
+  case Intrinsic::nvvm_div_rn_f:
+  case Intrinsic::nvvm_div_rn_d:
+  case Intrinsic::nvvm_div_rn_ftz_f:
+    return APFloat::rmNearestTiesToEven;
+  case Intrinsic::nvvm_div_rp_f:
+  case Intrinsic::nvvm_div_rp_d:
+  case Intrinsic::nvvm_div_rp_ftz_f:
+    return APFloat::rmTowardPositive;
+  case Intrinsic::nvvm_div_rz_f:
+  case Intrinsic::nvvm_div_rz_d:
+  case Intrinsic::nvvm_div_rz_ftz_f:
+    return APFloat::rmTowardZero;
+  }
+  llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM div");
+}
+
+inline bool FMAShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fma_rm_ftz_f:
+  case Intrinsic::nvvm_fma_rn_ftz_f:
+  case Intrinsic::nvvm_fma_rp_ftz_f:
+  case Intrinsic::nvvm_fma_rz_ftz_f:
+    return true;
+
+  case Intrinsic::nvvm_fma_rm_f:
+  case Intrinsic::nvvm_fma_rn_f:
+  case Intrinsic::nvvm_fma_rp_f:
+  case Intrinsic::nvvm_fma_rz_f:
+  case Intrinsic::nvvm_fma_rm_d:
+  case Intrinsic::nvvm_fma_rn_d:
+  case Intrinsic::nvvm_fma_rp_d:
+  case Intrinsic::nvvm_fma_rz_d:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid NVVM fma intrinsic");
+}
+
+inline APFloat::roundingMode GetFMARoundingMode(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fma_rm_f:
+  case Intrinsic::nvvm_fma_rm_d:
+  case Intrinsic::nvvm_fma_rm_ftz_f:
+    return APFloat::rmTowardNegative;
+  case Intrinsic::nvvm_fma_rn_f:
+  case Intrinsic::nvvm_fma_rn_d:
+  case Intrinsic::nvvm_fma_rn_ftz_f:
+    return APFloat::rmNearestTiesToEven;
+  case Intrinsic::nvvm_fma_rp_f:
+  case Intrinsic::nvvm_fma_rp_d:
+  case Intrinsic::nvvm_fma_rp_ftz_f:
+    return APFloat::rmTowardPositive;
+  case Intrinsic::nvvm_fma_rz_f:
+  case Intrinsic::nvvm_fma_rz_d:
+  case Intrinsic::nvvm_fma_rz_ftz_f:
+    return APFloat::rmTowardZero;
+  }
+  llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM fma");
+}
+
+} // namespace nvvm
+} // namespace llvm
+#endif // LLVM_IR_NVVMINTRINSICUTILS_H

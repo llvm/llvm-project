@@ -1,0 +1,601 @@
+# RUN: llc -O0 -mtriple arm-linux-gnueabi -mattr=+hwdiv-arm -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,HWDIV
+# RUN: llc -O0 -mtriple arm-linux-gnueabi -mattr=-hwdiv-arm -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,SOFT,SOFT-AEABI,ARM-AEABI
+# RUN: llc -O0 -mtriple arm-linux-gnu -mattr=+hwdiv-arm -run-pass=legalizer %s -o - | FileCheck %s  -check-prefixes=CHECK,HWDIV
+# RUN: llc -O0 -mtriple arm-linux-gnu -mattr=-hwdiv-arm -run-pass=legalizer %s -o - | FileCheck %s  -check-prefixes=CHECK,SOFT,SOFT-DEFAULT,ARM-DEFAULT
+# RUN: llc -O0 -mtriple thumb-linux-gnueabi -mattr=+v6t2,+hwdiv -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,HWDIV
+# RUN: llc -O0 -mtriple thumb-linux-gnueabi -mattr=+v6t2,-hwdiv -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,SOFT,SOFT-AEABI,THUMB-AEABI
+# RUN: llc -O0 -mtriple thumb-linux-gnu -mattr=+v6t2,+hwdiv -run-pass=legalizer %s -o - | FileCheck %s  -check-prefixes=CHECK,HWDIV
+# RUN: llc -O0 -mtriple thumb-linux-gnu -mattr=+v6t2,-hwdiv -run-pass=legalizer %s -o - | FileCheck %s  -check-prefixes=CHECK,SOFT,SOFT-DEFAULT,THUMB-DEFAULT
+--- |
+  define void @test_sdiv_i32() { ret void }
+  define void @test_udiv_i32() { ret void }
+
+  define void @test_sdiv_i16() { ret void }
+  define void @test_udiv_i16() { ret void }
+
+  define void @test_sdiv_i8() { ret void }
+  define void @test_udiv_i8() { ret void }
+
+  define void @test_srem_i32() { ret void }
+  define void @test_urem_i32() { ret void }
+
+  define void @test_srem_i16() { ret void }
+  define void @test_urem_i16() { ret void }
+
+  define void @test_srem_i8() { ret void }
+  define void @test_urem_i8() { ret void }
+...
+---
+name:            test_sdiv_i32
+# CHECK-LABEL: name: test_sdiv_i32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY $r1
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    ; HWDIV: [[R:%[0-9]+]]:_(s32) = G_SDIV [[X]], [[Y]]
+    ; SOFT-NOT: G_SDIV
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: $r0 = COPY [[X]]
+    ; SOFT-DAG: $r1 = COPY [[Y]]
+    ; ARM-AEABI: BL &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY $r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_SDIV
+    %2(s32) = G_SDIV %0, %1
+    ; CHECK: $r0 = COPY [[R]]
+    $r0 = COPY %2(s32)
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...
+---
+name:            test_udiv_i32
+# CHECK-LABEL: name: test_udiv_i32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY $r1
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    ; HWDIV: [[R:%[0-9]+]]:_(s32) = G_UDIV [[X]], [[Y]]
+    ; SOFT-NOT: G_UDIV
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: $r0 = COPY [[X]]
+    ; SOFT-DAG: $r1 = COPY [[Y]]
+    ; ARM-AEABI: BL &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY $r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_UDIV
+    %2(s32) = G_UDIV %0, %1
+    ; CHECK: $r0 = COPY [[R]]
+    $r0 = COPY %2(s32)
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...
+---
+name:            test_sdiv_i16
+# CHECK-LABEL: name: test_sdiv_i16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1
+    ; The G_TRUNC will combine with the extensions introduced by the legalizer,
+    ; leading to the following complicated sequences.
+    ; CHECK-DAG: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-DAG: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[R0]], [[BITS]]
+    ; CHECK-DAG: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
+    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[R1]], [[BITS]]
+    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    %0(s32) = COPY $r0
+    %1(s16) = G_TRUNC %0(s32)
+    %2(s32) = COPY $r1
+    %3(s16) = G_TRUNC %2(s32)
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_SDIV [[X32]], [[Y32]]
+    ; SOFT-NOT: G_SDIV
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: $r0 = COPY [[X32]]
+    ; SOFT-DAG: $r1 = COPY [[Y32]]
+    ; ARM-AEABI: BL &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_SDIV
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR
+    ; SOFT-NOT: G_SDIV
+    %4(s16) = G_SDIV %1, %3
+    ; CHECK: $r0 = COPY [[R]]
+    %5(s32) = G_SEXT %4(s16)
+    $r0 = COPY %5(s32)
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...
+---
+name:            test_udiv_i16
+# CHECK-LABEL: name: test_udiv_i16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1
+    ; The G_TRUNC will combine with the extensions introduced by the legalizer,
+    ; leading to the following complicated sequences.
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[R0]], [[BITS]]
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[R1]], [[BITS]]
+    %0(s32) = COPY $r0
+    %1(s16) = G_TRUNC %0(s32)
+    %2(s32) = COPY $r1
+    %3(s16) = G_TRUNC %2(s32)
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_UDIV [[X32]], [[Y32]]
+    ; SOFT-NOT: G_UDIV
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: $r0 = COPY [[X32]]
+    ; SOFT-DAG: $r1 = COPY [[Y32]]
+    ; ARM-AEABI: BL &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_UDIV
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_AND
+    ; SOFT-NOT: G_UDIV
+    %4(s16) = G_UDIV %1, %3
+    ; CHECK: $r0 = COPY [[R]]
+    %5(s32) = G_ZEXT %4(s16)
+    $r0 = COPY %5(s32)
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...
+---
+name:            test_sdiv_i8
+# CHECK-LABEL: name: test_sdiv_i8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1
+    ; The G_TRUNC will combine with the extensions introduced by the legalizer,
+    ; leading to the following complicated sequences.
+    ; CHECK-DAG: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK-DAG: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[R0]], [[BITS]]
+    ; CHECK-DAG: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
+    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[R1]], [[BITS]]
+    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    %0(s32) = COPY $r0
+    %1(s8) = G_TRUNC %0(s32)
+    %2(s32) = COPY $r1
+    %3(s8) = G_TRUNC %2(s32)
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_SDIV [[X32]], [[Y32]]
+    ; SOFT-NOT: G_SDIV
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: $r0 = COPY [[X32]]
+    ; SOFT-DAG: $r1 = COPY [[Y32]]
+    ; ARM-AEABI: BL &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_SDIV
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR
+    ; SOFT-NOT: G_SDIV
+    %4(s8) = G_SDIV %1, %3
+    ; CHECK: $r0 = COPY [[R]]
+    %5(s32) = G_SEXT %4(s8)
+    $r0 = COPY %5(s32)
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...
+---
+name:            test_udiv_i8
+# CHECK-LABEL: name: test_udiv_i8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY $r1
+    ; The G_TRUNC will combine with the extensions introduced by the legalizer,
+    ; leading to the following complicated sequences.
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[R0]], [[BITS]]
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[R1]], [[BITS]]
+    %0(s32) = COPY $r0
+    %1(s8) = G_TRUNC %0(s32)
+    %2(s32) = COPY $r1
+    %3(s8) = G_TRUNC %2(s32)
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_UDIV [[X32]], [[Y32]]
+    ; SOFT-NOT: G_UDIV
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: $r0 = COPY [[X32]]
+    ; SOFT-DAG: $r1 = COPY [[Y32]]
+    ; ARM-AEABI: BL &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_UDIV
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_AND
+    ; SOFT-NOT: G_UDIV
+    %4(s8) = G_UDIV %1, %3
+    ; CHECK: $r0 = COPY [[R]]
+    %5(s32) = G_ZEXT %4(s8)
+    $r0 = COPY %5(s32)
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...
+---
+name:            test_srem_i32
+# CHECK-LABEL: name: test_srem_i32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY $r1
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    ; HWDIV: [[Q:%[0-9]+]]:_(s32) = G_SDIV [[X]], [[Y]]
+    ; HWDIV: [[P:%[0-9]+]]:_(s32) = G_MUL [[Q]], [[Y]]
+    ; HWDIV: [[R:%[0-9]+]]:_(s32) = G_SUB [[X]], [[P]]
+    ; SOFT-NOT: G_SREM
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: $r0 = COPY [[X]]
+    ; SOFT-DAG: $r1 = COPY [[Y]]
+    ; ARM-AEABI: BL &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = COPY $r1
+    ; ARM-DEFAULT: BL &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s32) = COPY $r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_SREM
+    %2(s32) = G_SREM %0, %1
+    ; CHECK: $r0 = COPY [[R]]
+    $r0 = COPY %2(s32)
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...
+---
+name:            test_urem_i32
+# CHECK-LABEL: name: test_urem_i32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[Y:%[0-9]+]]:_(s32) = COPY $r1
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    ; HWDIV: [[Q:%[0-9]+]]:_(s32) = G_UDIV [[X]], [[Y]]
+    ; HWDIV: [[P:%[0-9]+]]:_(s32) = G_MUL [[Q]], [[Y]]
+    ; HWDIV: [[R:%[0-9]+]]:_(s32) = G_SUB [[X]], [[P]]
+    ; SOFT-NOT: G_UREM
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: $r0 = COPY [[X]]
+    ; SOFT-DAG: $r1 = COPY [[Y]]
+    ; ARM-AEABI: BL &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
+    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = COPY $r1
+    ; ARM-DEFAULT: BL &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s32) = COPY $r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_UREM
+    %2(s32) = G_UREM %0, %1
+    ; CHECK: $r0 = COPY [[R]]
+    $r0 = COPY %2(s32)
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...
+---
+name:            test_srem_i16
+# CHECK-LABEL: name: test_srem_i16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1
+    ; The G_TRUNC will combine with the extensions introduced by the legalizer,
+    ; leading to the following complicated sequences.
+    ; CHECK-DAG: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-DAG: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[R0]], [[BITS]]
+    ; CHECK-DAG: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
+    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[R1]], [[BITS]]
+    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    %0(s32) = COPY $r0
+    %1(s16) = G_TRUNC %0(s32)
+    %2(s32) = COPY $r1
+    %3(s16) = G_TRUNC %2(s32)
+    ; HWDIV: [[Q32:%[0-9]+]]:_(s32) = G_SDIV [[X32]], [[Y32]]
+    ; HWDIV: [[P32:%[0-9]+]]:_(s32) = G_MUL [[Q32]], [[Y32]]
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_SUB [[X32]], [[P32]]
+    ; SOFT-NOT: G_SREM
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: $r0 = COPY [[X32]]
+    ; SOFT-DAG: $r1 = COPY [[Y32]]
+    ; ARM-AEABI: BL &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r1
+    ; ARM-DEFAULT: BL &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_SREM
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR
+    ; SOFT-NOT: G_SREM
+    %4(s16) = G_SREM %1, %3
+    ; CHECK: $r0 = COPY [[R]]
+    %5(s32) = G_SEXT %4(s16)
+    $r0 = COPY %5(s32)
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...
+---
+name:            test_urem_i16
+# CHECK-LABEL: name: test_urem_i16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1
+    ; The G_TRUNC will combine with the extensions introduced by the legalizer,
+    ; leading to the following complicated sequences.
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[R0]], [[BITS]]
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[R1]], [[BITS]]
+    %0(s32) = COPY $r0
+    %1(s16) = G_TRUNC %0(s32)
+    %2(s32) = COPY $r1
+    %3(s16) = G_TRUNC %2(s32)
+    ; HWDIV: [[Q32:%[0-9]+]]:_(s32) = G_UDIV [[X32]], [[Y32]]
+    ; HWDIV: [[P32:%[0-9]+]]:_(s32) = G_MUL [[Q32]], [[Y32]]
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_SUB [[X32]], [[P32]]
+    ; SOFT-NOT: G_UREM
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: $r0 = COPY [[X32]]
+    ; SOFT-DAG: $r1 = COPY [[Y32]]
+    ; ARM-AEABI: BL &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r1
+    ; ARM-DEFAULT: BL &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_UREM
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_AND
+    ; SOFT-NOT: G_UREM
+    %4(s16) = G_UREM %1, %3
+    ; CHECK: $r0 = COPY [[R]]
+    %5(s32) = G_ZEXT %4(s16)
+    $r0 = COPY %5(s32)
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...
+---
+name:            test_srem_i8
+# CHECK-LABEL: name: test_srem_i8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1
+    ; The G_TRUNC will combine with the extensions introduced by the legalizer,
+    ; leading to the following complicated sequences.
+    ; CHECK-DAG: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK-DAG: [[SHIFTEDX:%[0-9]+]]:_(s32) = G_SHL [[R0]], [[BITS]]
+    ; CHECK-DAG: [[X32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDX]], [[BITS]]
+    ; CHECK-DAG: [[SHIFTEDY:%[0-9]+]]:_(s32) = G_SHL [[R1]], [[BITS]]
+    ; CHECK-DAG: [[Y32:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDY]], [[BITS]]
+    %0(s32) = COPY $r0
+    %1(s8) = G_TRUNC %0(s32)
+    %2(s32) = COPY $r1
+    %3(s8) = G_TRUNC %2(s32)
+    ; HWDIV: [[Q32:%[0-9]+]]:_(s32) = G_SDIV [[X32]], [[Y32]]
+    ; HWDIV: [[P32:%[0-9]+]]:_(s32) = G_MUL [[Q32]], [[Y32]]
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_SUB [[X32]], [[P32]]
+    ; SOFT-NOT: G_SREM
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: $r0 = COPY [[X32]]
+    ; SOFT-DAG: $r1 = COPY [[Y32]]
+    ; ARM-AEABI: BL &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r1
+    ; ARM-DEFAULT: BL &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_SREM
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR
+    ; SOFT-NOT: G_SREM
+    %4(s8) = G_SREM %1, %3
+    ; CHECK: $r0 = COPY [[R]]
+    %5(s32) = G_SEXT %4(s8)
+    $r0 = COPY %5(s32)
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...
+---
+name:            test_urem_i8
+# CHECK-LABEL: name: test_urem_i8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    ; CHECK-DAG: [[R0:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1
+    ; The G_TRUNC will combine with the extensions introduced by the legalizer,
+    ; leading to the following complicated sequences.
+    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[R0]], [[BITS]]
+    ; CHECK: [[Y32:%[0-9]+]]:_(s32) = G_AND [[R1]], [[BITS]]
+    %0(s32) = COPY $r0
+    %1(s8) = G_TRUNC %0(s32)
+    %2(s32) = COPY $r1
+    %3(s8) = G_TRUNC %2(s32)
+    ; HWDIV: [[Q32:%[0-9]+]]:_(s32) = G_UDIV [[X32]], [[Y32]]
+    ; HWDIV: [[P32:%[0-9]+]]:_(s32) = G_MUL [[Q32]], [[Y32]]
+    ; HWDIV: [[R32:%[0-9]+]]:_(s32) = G_SUB [[X32]], [[P32]]
+    ; SOFT-NOT: G_UREM
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: $r0 = COPY [[X32]]
+    ; SOFT-DAG: $r1 = COPY [[Y32]]
+    ; ARM-AEABI: BL &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14 /* CC::al */, $noreg, &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r1
+    ; ARM-DEFAULT: BL &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14 /* CC::al */, $noreg, &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-NOT: G_UREM
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_AND
+    ; SOFT-NOT: G_UREM
+    %4(s8) = G_UREM %1, %3
+    ; CHECK: $r0 = COPY [[R]]
+    %5(s32) = G_ZEXT %4(s8)
+    $r0 = COPY %5(s32)
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...

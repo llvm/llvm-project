@@ -1,0 +1,19 @@
+---
+TypeIdMap:
+  typeid1:
+    WPDRes:
+      0:
+        Kind: Indir
+        ResByArg:
+          1:
+            Kind: UniformRetVal
+            Info: 42
+  typeid2:
+    WPDRes:
+      8:
+        Kind: Indir
+        ResByArg:
+          1:
+            Kind: UniformRetVal
+            Info: 42
+...

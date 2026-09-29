@@ -1,0 +1,82 @@
+## Check we are able to use integers as both
+## symbol name indices (st_name values) and symbol names.
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-readobj --symbols %t | FileCheck %s
+
+# CHECK: Name: test (1)
+# CHECK: Name: test (1)
+# CHECK: Name: est (2)
+# CHECK: Name: 1 (8)
+# CHECK: Name: 2 (6)
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Symbols:
+  - Name:   test
+  - StName: 1
+  - StName: 2
+  - Name:   1
+  - Name:   2
+
+## Check we allow specifying both Name and StName at once.
+## In this case StName has priority, but the symbol Name is still added
+## to the symbol string table.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --symbols --sections --section-data -r --expand-relocs %t2 | FileCheck %s --check-prefix=BOTH
+
+# BOTH:      Name: .strtab
+# BOTH:      SectionData (
+# BOTH-NEXT:   0000: 00666F6F 00 |.foo.|
+# BOTH-NEXT: )
+
+# BOTH:       Relocations [
+# BOTH-NEXT:   Section (1) .rela.data {
+# BOTH-NEXT:     Relocation {
+# BOTH-NEXT:       Offset: 0x0
+# BOTH-NEXT:       Type: R_X86_64_NONE (0)
+# BOTH-NEXT:       Symbol: <null> (1)
+# BOTH-NEXT:       Addend: 0x0
+# BOTH-NEXT:     }
+# BOTH-NEXT:   }
+# BOTH-NEXT: ]
+
+# BOTH:      Symbols [
+# BOTH-NEXT:   Symbol {
+# BOTH-NEXT:     Name:  (0)
+# BOTH-NEXT:     Value: 0x0
+# BOTH-NEXT:     Size: 0
+# BOTH-NEXT:     Binding: Local (0x0)
+# BOTH-NEXT:     Type: None (0x0)
+# BOTH-NEXT:     Other: 0
+# BOTH-NEXT:     Section: Undefined (0x0)
+# BOTH-NEXT:   }
+# BOTH-NEXT:   Symbol {
+# BOTH-NEXT:     Name:  (0)
+# BOTH-NEXT:     Value: 0x0
+# BOTH-NEXT:     Size: 0
+# BOTH-NEXT:     Binding: Local (0x0)
+# BOTH-NEXT:     Type: None (0x0)
+# BOTH-NEXT:     Other: 0
+# BOTH-NEXT:     Section: Undefined (0x0)
+# BOTH-NEXT:   }
+# BOTH-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .rela.data
+    Type: SHT_RELA
+    Relocations:
+      - Type:   R_X86_64_NONE
+        Symbol: foo
+Symbols:
+  - Name:   foo
+    StName: 0

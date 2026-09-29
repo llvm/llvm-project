@@ -1,0 +1,9 @@
+RUN: llvm-objdump -t %p/Inputs/trivial.obj.wasm | FileCheck %s
+
+CHECK:      SYMBOL TABLE:
+CHECK-NEXT: 00000001 g     F CODE	00000018	main
+CHECK-NEXT: 00000000 l     O DATA	0000000d	.L.str
+CHECK-NEXT: 00000000       F *UND*	00000000	puts
+CHECK-NEXT: 00000019 l     F CODE	0000000b	.LSomeOtherFunction_bitcast
+CHECK-NEXT: 00000000       F *UND*	00000000	SomeOtherFunction
+CHECK-NEXT: 00000010 g     O DATA	00000004	var

@@ -1,0 +1,941 @@
+## Check that we correctly display the contents of the .stack_sizes section
+## in a relocatable object file.
+
+# RUN: yaml2obj --docnum=1 %s -o %t01
+# RUN: llvm-readelf --stack-sizes %t01 \
+# RUN:   | FileCheck %s --check-prefix=RELOC-GNU --strict-whitespace --match-full-lines
+# RUN: llvm-readobj --stack-sizes %t01 | FileCheck %s --check-prefix=RELOC-LLVM
+
+#      RELOC-GNU:         Size     Functions
+# RELOC-GNU-NEXT:           16     referenced_by_symbol_foo
+# RELOC-GNU-NEXT:           32     referenced_via_section_bar
+# RELOC-GNU-NEXT:            8     separate_text_section_baz
+#  RELOC-GNU-NOT:{{.}}
+
+# RELOC-LLVM:      StackSizes [
+# RELOC-LLVM-NEXT:   Entry {
+# RELOC-LLVM-NEXT:     Functions: [referenced_by_symbol_foo]
+# RELOC-LLVM-NEXT:     Size: 0x10
+# RELOC-LLVM-NEXT:   }
+# RELOC-LLVM-NEXT:   Entry {
+# RELOC-LLVM-NEXT:     Functions: [referenced_via_section_bar]
+# RELOC-LLVM-NEXT:     Size: 0x20
+# RELOC-LLVM-NEXT:   }
+# RELOC-LLVM-NEXT:   Entry {
+# RELOC-LLVM-NEXT:     Functions: [separate_text_section_baz]
+# RELOC-LLVM-NEXT:     Size: 0x8
+# RELOC-LLVM-NEXT:   }
+# RELOC-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC]
+    Size:    16
+  - Name:    .text.baz
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC]
+    Size:    16
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+      - Size: 0x10
+      - Size: 0x20
+    Link:    .text
+  - Name:    '.stack_sizes (1)'
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x20
+        Size:    0x8
+    Link:    .text.baz
+  - Name:    .rela.stack_sizes
+    Type:    SHT_RELA
+    Info:    .stack_sizes
+    Relocations:
+## A symbol relative reference. 
+      - Offset: 0
+        Symbol: referenced_by_symbol_foo 
+        Type:   R_X86_64_64
+## A section relative reference. 
+      - Offset: 9
+        Addend: 16
+        Symbol: .text
+        Type:   R_X86_64_64
+  - Name:   '.rela.stack_sizes (1)'
+    Type:   SHT_RELA
+    Info:   '.stack_sizes (1)'
+    Relocations:
+      - Offset: 0
+        Symbol: separate_text_section_baz
+        Type:   R_X86_64_64
+  - Name:     .symtab
+    Type:     SHT_SYMTAB
+    ShOffset: [[SYMTABOFFSET=<none>]]
+Symbols:
+  - Name:    separate_text_section_baz
+    Section: [[SEC1=.text.baz]]
+    Type:    STT_FUNC
+    Index:   [[SEC1INDEX=<none>]]
+  - Name:    .text
+    Section: .text
+    Type:    STT_SECTION
+  - Name:    referenced_by_symbol_foo
+    Section: .text
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  - Name:    referenced_via_section_bar
+    Section: .text
+    Value:   0x10
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+
+## Check that we report a warning when we are unable to read
+## the symbol table when dumping stack sizes.
+
+# RUN: yaml2obj --docnum=1 %s -DSYMTABOFFSET=0xffffeeee -o %t01.broken.symtab
+# RUN: llvm-readelf --stack-sizes %t01.broken.symtab 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t01.broken.symtab --check-prefix=SYMTAB-GNU --implicit-check-not=warning:
+# RUN: llvm-readobj --stack-sizes %t01.broken.symtab 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t01.broken.symtab --check-prefix=SYMTAB-LLVM --implicit-check-not=warning:
+
+# SYMTAB-GNU:      Stack Sizes:
+# SYMTAB-GNU-NEXT:          Size     Functions
+# SYMTAB-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 0 in SHT_RELA section with index 5: unable to read an entry with index 3 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-GNU-NEXT: warning: '[[FILE]]': unable to read the symbol table: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-GNU-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 3
+# SYMTAB-GNU-NEXT:            16     ?
+# SYMTAB-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 5: unable to read an entry with index 2 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-GNU-NEXT:            32     ?
+# SYMTAB-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 0 in SHT_RELA section with index 6: unable to read an entry with index 1 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-GNU-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 4
+# SYMTAB-GNU-NEXT:             8     ?
+
+# SYMTAB-LLVM:      StackSizes [
+# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 0 in SHT_RELA section with index 5: unable to read an entry with index 3 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to read the symbol table: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 3
+# SYMTAB-LLVM-NEXT:   Entry {
+# SYMTAB-LLVM-NEXT:     Functions: [?]
+# SYMTAB-LLVM-NEXT:     Size: 0x10
+# SYMTAB-LLVM-NEXT:   }
+# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 5: unable to read an entry with index 2 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-LLVM-NEXT:   Entry {
+# SYMTAB-LLVM-NEXT:     Functions: [?]
+# SYMTAB-LLVM-NEXT:     Size: 0x20
+# SYMTAB-LLVM-NEXT:   }
+# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 0 in SHT_RELA section with index 6: unable to read an entry with index 1 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 4
+# SYMTAB-LLVM-NEXT:   Entry {
+# SYMTAB-LLVM-NEXT:     Functions: [?]
+# SYMTAB-LLVM-NEXT:     Size: 0x8
+# SYMTAB-LLVM-NEXT:   }
+# SYMTAB-LLVM-NEXT: ]
+
+## In this case we have a function symbol with an invalid section index.
+## Document what we dump.
+
+# RUN: yaml2obj --docnum=1 %s -DSEC1="<none>" -DSEC1INDEX=0xFF -o %t01.broken.sym
+# RUN: llvm-readelf --stack-sizes %t01.broken.sym 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t01.broken.sym --check-prefix=SYM-GNU --implicit-check-not=warning:
+# RUN: llvm-readobj --stack-sizes %t01.broken.sym 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t01.broken.sym --check-prefix=SYM-LLVM --implicit-check-not=warning:
+
+# SYM-GNU:      Stack Sizes:
+# SYM-GNU-NEXT:          Size     Functions
+# SYM-GNU-NEXT: warning: '[[FILE]]': unable to get address of symbol 'separate_text_section_baz': invalid section index: 255
+# SYM-GNU-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 3
+# SYM-GNU-NEXT:            16     ?
+# SYM-GNU-NEXT:            32     ?
+# SYM-GNU-NEXT: warning: '[[FILE]]': cannot identify the section for relocation symbol 'separate_text_section_baz': invalid section index: 255
+# SYM-GNU-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 4
+# SYM-GNU-NEXT:             8     ?
+
+# SYM-LLVM:      StackSizes [
+# SYM-LLVM-NEXT: warning: '[[FILE]]': unable to get address of symbol 'separate_text_section_baz': invalid section index: 255
+# SYM-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 3
+# SYM-LLVM-NEXT:   Entry {
+# SYM-LLVM-NEXT:     Functions: [?]
+# SYM-LLVM-NEXT:     Size: 0x10
+# SYM-LLVM-NEXT:   }
+# SYM-LLVM-NEXT:   Entry {
+# SYM-LLVM-NEXT:     Functions: [?]
+# SYM-LLVM-NEXT:     Size: 0x20
+# SYM-LLVM-NEXT:   }
+# SYM-LLVM-NEXT: warning: '[[FILE]]': cannot identify the section for relocation symbol 'separate_text_section_baz': invalid section index: 255
+# SYM-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 4
+# SYM-LLVM-NEXT:   Entry {
+# SYM-LLVM-NEXT:     Functions: [?]
+# SYM-LLVM-NEXT:     Size: 0x8
+# SYM-LLVM-NEXT:   }
+# SYM-LLVM-NEXT: ]
+
+## Check that we correctly report the stack sizes in an executable (non-relocatable)
+## object file. This also shows that the sh_link field is ignored in this situation
+## without warning.
+
+# RUN: yaml2obj --docnum=2 %s -o %t02
+# RUN: llvm-readelf --stack-sizes %t02 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=EXEC-GNU --strict-whitespace \
+# RUN:                  --match-full-lines --implicit-check-not=warning:
+# RUN: llvm-readobj --stack-sizes %t02 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=EXEC-LLVM --implicit-check-not=warning:
+
+#      EXEC-GNU:         Size     Functions
+# EXEC-GNU-NEXT:           16     other
+# EXEC-GNU-NEXT:           32     other_end
+# EXEC-GNU-NEXT:           48     bar
+#  EXEC-GNU-NOT:{{.}}
+
+# EXEC-LLVM:      StackSizes [
+# EXEC-LLVM-NEXT:   Entry {
+# EXEC-LLVM-NEXT:     Functions: [other]
+# EXEC-LLVM-NEXT:     Size: 0x10
+# EXEC-LLVM-NEXT:   }
+# EXEC-LLVM-NEXT:   Entry {
+# EXEC-LLVM-NEXT:     Functions: [other_end]
+# EXEC-LLVM-NEXT:     Size: 0x20
+# EXEC-LLVM-NEXT:   }
+# EXEC-LLVM-NEXT:   Entry {
+# EXEC-LLVM-NEXT:     Functions: [bar]
+# EXEC-LLVM-NEXT:     Size: 0x30
+# EXEC-LLVM-NEXT:   }
+# EXEC-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC]
+    Size:    16
+  - Name:    .text2
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC]
+    Size:    16
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x0
+        Size:    0x10
+      - Address: 0x10
+        Size:    0x20
+      - Address: 0x20
+        Size:    0x30
+    Link:    .text2
+Symbols:
+  ## Undefined symbols are ignored.
+  - Name:    undefined
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  ## sh_link of .stack_sizes is ignored for non-reloctable objects.
+  - Name:    other
+    Section: .text
+    Value:   0
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  - Name:    other_end
+    Section: .text
+    Value:   0x10
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  - Name:    bar
+    Section: .text2
+    Value:   0x20
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+
+## Check that we report a warning when we find relocations whose offsets point outside
+## of the .stack_sizes section.
+
+# RUN: yaml2obj --docnum=3 %s -o %t03
+# RUN: llvm-readelf --stack-sizes %t03 2>&1 | FileCheck %s --check-prefix=SHORT-GNU -DFILE=%t03
+# RUN: llvm-readobj --stack-sizes %t03 2>&1 | FileCheck %s --check-prefix=SHORT-LLVM -DFILE=%t03
+
+# SHORT-GNU:      Stack Sizes:
+# SHORT-GNU-NEXT:  Size     Functions
+# SHORT-GNU-NEXT:     8     foo
+# SHORT-GNU-NEXT: warning: '[[FILE]]': found invalid relocation offset (0x1) into SHT_PROGBITS section with index 2 while trying to extract a stack size entry
+# SHORT-GNU-NEXT:     8     foo
+
+# SHORT-LLVM:     StackSizes [
+# SHORT-LLVM-NEXT:   Entry {
+# SHORT-LLVM-NEXT:     Functions: [foo]
+# SHORT-LLVM-NEXT:     Size: 0x8
+# SHORT-LLVM-NEXT:   }
+# SHORT-LLVM-NEXT: warning: '[[FILE]]': found invalid relocation offset (0x1) into SHT_PROGBITS section with index 2 while trying to extract a stack size entry
+# SHORT-LLVM-NEXT:   Entry {
+# SHORT-LLVM-NEXT:     Functions: [foo]
+# SHORT-LLVM-NEXT:     Size: 0x8
+# SHORT-LLVM-NEXT:   }
+# SHORT-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC]
+    Size:    16
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Link:    .text
+    Entries:
+      - Size: 0x8
+  - Name:    .rela.stack_sizes
+    Type:    SHT_RELA
+    Info:    .stack_sizes
+    Relocations:
+      - Offset: 0x0
+        Symbol: foo
+        Type:   R_X86_64_64
+      - Offset: 0x1
+        Symbol: foo
+        Type:   R_X86_64_64
+      - Offset: 0x1
+        Symbol: foo
+        Type:   R_X86_64_64
+      - Offset: 0x0
+        Symbol: foo
+        Type:   R_X86_64_64
+Symbols:
+  - Name:    foo
+    Section: .text
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+
+## Check that we warn about a function symbol that is not in the section
+## that is referenced by the stack sizes section's sh_link, for relocatable
+## output.
+
+# RUN: yaml2obj --docnum=4 %s -o %t04
+# RUN: llvm-readelf --stack-sizes %t04 2> %t04-gnu.err | FileCheck %s --check-prefix=WRONGSECTION-GNU
+# RUN: FileCheck %s < %t04-gnu.err --check-prefix=WRONGSECTION-ERR -DFILE=%t04
+# RUN: llvm-readobj --stack-sizes %t04 2> %t04-llvm.err | FileCheck %s --check-prefix=WRONGSECTION-LLVM
+# RUN: FileCheck %s < %t04-llvm.err --check-prefix=WRONGSECTION-ERR -DFILE=%t04
+
+# RUN: llvm-readelf --stack-sizes --demangle %t04 2>&1 | FileCheck %s --check-prefix=WRONGSECTION-DEMANGLE-ERR -DFILE=%t04
+# RUN: llvm-readobj --stack-sizes --demangle %t04 2>&1 | FileCheck %s --check-prefix=WRONGSECTION-DEMANGLE-ERR -DFILE=%t04
+
+# WRONGSECTION-GNU:      Size Functions
+# WRONGSECTION-GNU-NEXT: 8 _Z3foof
+
+# WRONGSECTION-LLVM:      StackSizes [
+# WRONGSECTION-LLVM-NEXT:   Entry {
+# WRONGSECTION-LLVM-NEXT:     Functions: [_Z3foof]
+# WRONGSECTION-LLVM-NEXT:     Size: 0x8
+# WRONGSECTION-LLVM-NEXT:   }
+# WRONGSECTION-LLVM-NEXT: ]
+
+# WRONGSECTION-ERR:           warning: '[[FILE]]': relocation symbol '_Z3foof' is not in the expected section
+# WRONGSECTION-DEMANGLE-ERR:  warning: '[[FILE]]': relocation symbol 'foo(float)' is not in the expected section
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Size:    8
+  - Name:    .text2
+    Type:    SHT_PROGBITS
+    Size:    8
+    Flags:   [SHF_ALLOC]
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+      - Size: 0x8
+    Link:    .text2
+  - Name:    .rela.stack_sizes
+    Type:    SHT_RELA
+    Info:    .stack_sizes
+    Relocations:
+      - Offset: 0
+        Symbol: _Z3foof
+        Type:   R_X86_64_64
+Symbols:
+  - Name:    _Z3foof
+    Section: .text
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+
+## Check that we report a warning when a stack sizes section ends with an incomplete stack size entry.
+
+# RUN: yaml2obj --docnum=5 %s -o %t05
+# RUN: llvm-readelf --stack-sizes %t05 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SUDDENEND-GNU -DFILE=%t05
+# RUN: llvm-readobj --stack-sizes %t05 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SUDDENEND-LLVM -DFILE=%t05
+
+# SUDDENEND-GNU:      Stack Sizes:
+# SUDDENEND-GNU-NEXT:  Size     Functions
+# SUDDENEND-GNU-NEXT:     8     foo
+# SUDDENEND-GNU-NEXT: warning: '[[FILE]]': SHT_PROGBITS section with index 2 ended while trying to extract a stack size entry
+# SUDDENEND-GNU-NEXT:     8     foo
+# SUDDENEND-GNU-NEXT: warning: '[[FILE]]': SHT_PROGBITS section with index 3 ended while trying to extract a stack size entry
+
+# SUDDENEND-LLVM:      StackSizes [
+# SUDDENEND-LLVM-NEXT:   Entry {
+# SUDDENEND-LLVM-NEXT:     Functions: [foo]
+# SUDDENEND-LLVM-NEXT:     Size: 0x8
+# SUDDENEND-LLVM-NEXT:   }
+# SUDDENEND-LLVM-NEXT: warning: '[[FILE]]': SHT_PROGBITS section with index 2 ended while trying to extract a stack size entry
+# SUDDENEND-LLVM-NEXT:   Entry {
+# SUDDENEND-LLVM-NEXT:     Functions: [foo]
+# SUDDENEND-LLVM-NEXT:     Size: 0x8
+# SUDDENEND-LLVM-NEXT:   }
+# SUDDENEND-LLVM-NEXT: warning: '[[FILE]]': SHT_PROGBITS section with index 3 ended while trying to extract a stack size entry
+# SUDDENEND-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .stack_sizes
+    Type: SHT_PROGBITS
+    Link: .text
+    Entries:
+      - Size: 0x8
+      - Size: 0x10
+## 0x11 == the normal size minus 1.
+    ShSize: 0x11
+  - Name: .stack_sizes (1)
+    Type: SHT_PROGBITS
+    Link: .text
+    Entries:
+      - Size: 0x8
+      - Size: 0x10
+    ShSize: 0x11
+Symbols:
+  - Name:    foo
+    Section: .text
+    Type:    STT_FUNC
+
+## Check that we report an invalid stack size, which is represented by a ULEB that
+## ends in a byte with the high bit set.
+
+# RUN: yaml2obj --docnum=6 %s -o %t06
+# RUN: llvm-readelf --stack-sizes %t06 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BADSIZE -DFILE=%t06 --implicit-check-not=warning:
+# RUN: llvm-readobj --stack-sizes %t06 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BADSIZE -DFILE=%t06 --implicit-check-not=warning:
+
+# BADSIZE: warning: '[[FILE]]': could not extract a valid stack size from SHT_PROGBITS section with index 2: unable to decode LEB128 at offset 0x00000008: malformed uleb128, extends past end
+# BADSIZE: warning: '[[FILE]]': could not extract a valid stack size from SHT_PROGBITS section with index 3: unable to decode LEB128 at offset 0x00000008: malformed uleb128, extends past end
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC]
+    Size:    16
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Content: "100000000000000080"
+    Link:    .text
+  - Name:    .stack_sizes (1)
+    Type:    SHT_PROGBITS
+    Content: "100000000000000080"
+    Link:    .text
+Symbols:
+  - Name:    foo
+    Section: .text
+    Value:   0x10
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+
+## Check that we report a warning when a relocation symbol does not belong to a
+## valid section or when it has an invalid index. We expect a stack size entry
+## with an unknown symbol in the output.
+
+# RUN: yaml2obj --docnum=7 %s -o %t07
+# RUN: llvm-readelf --stack-sizes %t07 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t07 --check-prefix=BADSECTION-OUT-GNU --implicit-check-not=warning:
+# RUN: llvm-readobj --stack-sizes %t07 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t07 --check-prefix=BADSECTION-OUT-LLVM --implicit-check-not=warning:
+
+# BADSECTION-OUT-GNU:      Stack Sizes:
+# BADSECTION-OUT-GNU-NEXT:          Size     Functions
+# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': cannot identify the section for relocation symbol '_Z3foof': invalid section index: 10
+# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': unable to get address of symbol '_Z3foof': invalid section index: 10
+# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 2
+# BADSECTION-OUT-GNU-NEXT:             8     ?
+# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
+# BADSECTION-OUT-GNU-NEXT:            22     ?
+# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 2 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
+# BADSECTION-OUT-GNU-NEXT:            36     ?
+
+# BADSECTION-OUT-LLVM:      StackSizes [
+# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': cannot identify the section for relocation symbol '_Z3foof': invalid section index: 10
+# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': unable to get address of symbol '_Z3foof': invalid section index: 10
+# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 2
+# BADSECTION-OUT-LLVM-NEXT:   Entry {
+# BADSECTION-OUT-LLVM-NEXT:     Functions: [?]
+# BADSECTION-OUT-LLVM-NEXT:     Size: 0x8
+# BADSECTION-OUT-LLVM-NEXT:   }
+# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
+# BADSECTION-OUT-LLVM-NEXT:   Entry {
+# BADSECTION-OUT-LLVM-NEXT:     Functions: [?]
+# BADSECTION-OUT-LLVM-NEXT:     Size: 0x16
+# BADSECTION-OUT-LLVM-NEXT:   }
+# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 2 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
+# BADSECTION-OUT-LLVM-NEXT:   Entry {
+# BADSECTION-OUT-LLVM-NEXT:     Functions: [?]
+# BADSECTION-OUT-LLVM-NEXT:     Size: 0x24
+# BADSECTION-OUT-LLVM-NEXT:   }
+# BADSECTION-OUT-LLVM-NEXT: ]
+
+# RUN: llvm-readelf --stack-sizes --demangle %t07 2>&1 | FileCheck %s --check-prefix=BADSECTION-DEMANGLE-ERR -DFILE=%t07
+# RUN: llvm-readobj --stack-sizes --demangle %t07 2>&1 | FileCheck %s --check-prefix=BADSECTION-DEMANGLE-ERR -DFILE=%t07
+
+# BADSECTION-DEMANGLE-ERR: warning: '[[FILE]]': cannot identify the section for relocation symbol 'foo(float)'
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Size:    16
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Link:    .text
+    Entries:
+      - Size: 0x8
+      - Size: 0x16
+      - Size: 0x24
+  - Name:    .rela.stack_sizes
+    Type:    SHT_RELA
+    Info:    .stack_sizes
+    Relocations:
+    - Offset: 0
+      Symbol: _Z3foof
+      Type:   R_X86_64_64
+    - Offset: 9
+## An invalid symbol index.
+      Symbol: 0xff
+      Type:   R_X86_64_64
+## One more invalid symbol index with the same symbol value (0xff).
+    - Offset: 0x12
+      Symbol: 0xff
+      Type:   R_X86_64_64
+Symbols:
+  - Name:    _Z3foof
+## An invalid section index.
+    Index:   10
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+
+## Check that we report a warning when a stack sizes section does not come with
+## a corresponding relocation section.
+
+# RUN: yaml2obj --docnum=8 %s -o %t08
+# RUN: llvm-readelf --stack-sizes %t08 2> %t08-gnu.err | FileCheck %s --check-prefix=NORELOCSECTION-OUT-GNU
+# RUN: FileCheck %s < %t08-gnu.err --check-prefix=NORELOCSECTION-ERR -DFILE=%t08
+# RUN: llvm-readobj --stack-sizes %t08 2> %t08-llvm.err | FileCheck %s --check-prefix=NORELOCSECTION-OUT-LLVM
+# RUN: FileCheck %s < %t08-llvm.err --check-prefix=NORELOCSECTION-ERR -DFILE=%t08
+
+# NORELOCSECTION-OUT-GNU:     Size Functions
+# NORELOCSECTION-OUT-GNU-NOT: {{.}}
+
+# NORELOCSECTION-OUT-LLVM:      StackSizes [
+# NORELOCSECTION-OUT-LLVM-NEXT: ]
+
+# NORELOCSECTION-ERR: warning: '[[FILE]]': .stack_sizes (SHT_PROGBITS section with index 2) does not have a corresponding relocation section
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Size:    8
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Link:    .text
+    Entries:
+      - Size: 0x1
+
+## Check that we handle multiple object files, separately and when they
+## are in an archive. This also checks whether we have blank lines between the
+## tables.
+
+# RUN: llvm-ar rc %t1.a %t01 %t02
+# RUN: llvm-readelf --stack-sizes %t01 %t02 \
+# RUN:   | FileCheck %s --check-prefixes=MULTIPLE-GNU,OBJECT -DFILE1=%t01 -DFILE2=%t02
+# RUN: llvm-readelf --stack-sizes %t1.a \
+# RUN:   | FileCheck %s --check-prefixes=MULTIPLE-GNU,ARCHIVE --strict-whitespace\
+# RUN:   --match-full-lines -DFILE=%t1.a
+# RUN: llvm-readobj --stack-sizes %t01 %t02 \
+# RUN:   | FileCheck %s --check-prefixes=MULTIPLE-LLVM,OBJECT -DFILE1=%t01 -DFILE2=%t02
+# RUN: llvm-readobj --stack-sizes %t1.a \
+# RUN:   | FileCheck %s --check-prefixes=MULTIPLE-LLVM,ARCHIVE -DFILE=%t1.a
+
+#        OBJECT:File: [[FILE1]]
+#       ARCHIVE:File: [[FILE]]({{.*01}})
+
+#      MULTIPLE-GNU:Stack Sizes:
+# MULTIPLE-GNU-NEXT:         Size     Functions
+# MULTIPLE-GNU-NEXT:           16     referenced_by_symbol_foo
+# MULTIPLE-GNU-NEXT:           32     referenced_via_section_bar
+# MULTIPLE-GNU-NEXT:            8     separate_text_section_baz
+# MULTIPLE-GNU-EMPTY:
+
+# MULTIPLE-LLVM:      StackSizes [
+# MULTIPLE-LLVM-NEXT:   Entry {
+# MULTIPLE-LLVM-NEXT:     Functions: [referenced_by_symbol_foo]
+# MULTIPLE-LLVM-NEXT:     Size: 0x10
+# MULTIPLE-LLVM-NEXT:   }
+# MULTIPLE-LLVM-NEXT:   Entry {
+# MULTIPLE-LLVM-NEXT:     Functions: [referenced_via_section_bar]
+# MULTIPLE-LLVM-NEXT:     Size: 0x20
+# MULTIPLE-LLVM-NEXT:   }
+# MULTIPLE-LLVM-NEXT:   Entry {
+# MULTIPLE-LLVM-NEXT:     Functions: [separate_text_section_baz]
+# MULTIPLE-LLVM-NEXT:     Size: 0x8
+# MULTIPLE-LLVM-NEXT:   }
+# MULTIPLE-LLVM-NEXT: ]
+
+#        OBJECT:File: [[FILE2]]
+#       ARCHIVE:File: [[FILE]]({{.*02}})
+
+# MULTIPLE-GNU-EMPTY:
+# MULTIPLE-GNU-NEXT:Stack Sizes:
+# MULTIPLE-GNU-NEXT:         Size     Functions
+# MULTIPLE-GNU-NEXT:           16     other
+# MULTIPLE-GNU-NEXT:           32     other_end
+# MULTIPLE-GNU-NEXT:           48     bar
+
+# MULTIPLE-LLVM:      StackSizes [
+# MULTIPLE-LLVM-NEXT:   Entry {
+# MULTIPLE-LLVM-NEXT:     Functions: [other]
+# MULTIPLE-LLVM-NEXT:     Size: 0x10
+# MULTIPLE-LLVM-NEXT:   }
+# MULTIPLE-LLVM-NEXT:   Entry {
+# MULTIPLE-LLVM-NEXT:     Functions: [other_end]
+# MULTIPLE-LLVM-NEXT:     Size: 0x20
+# MULTIPLE-LLVM-NEXT:   }
+# MULTIPLE-LLVM-NEXT:   Entry {
+# MULTIPLE-LLVM-NEXT:     Functions: [bar]
+# MULTIPLE-LLVM-NEXT:     Size: 0x30
+# MULTIPLE-LLVM-NEXT:   }
+# MULTIPLE-LLVM-NEXT: ]
+
+## Check that we do not consider symbols that are not function symbols, even though
+## a relocation references them. 
+
+# RUN: yaml2obj --docnum=9 %s -o %t14
+# RUN: llvm-readelf --stack-sizes %t14 2> %t14-gnu.err | FileCheck %s --check-prefix=NONFUNCTIONSYM-GNU
+# RUN: FileCheck %s < %t14-gnu.err --check-prefix=NONFUNCTIONSYM-ERR -DFILE=%t14
+# RUN: llvm-readobj --stack-sizes %t14 2> %t14-llvm.err | FileCheck %s --check-prefix=NONFUNCTIONSYM-LLVM
+# RUN: FileCheck %s < %t14-llvm.err --check-prefix=NONFUNCTIONSYM-ERR -DFILE=%t14
+
+# NONFUNCTIONSYM-GNU:     Stack Sizes:
+# NONFUNCTIONSYM-GNU:     0 ?
+
+# NONFUNCTIONSYM-LLVM:      StackSizes [
+# NONFUNCTIONSYM-LLVM-NEXT:   Entry {
+# NONFUNCTIONSYM-LLVM-NEXT:     Functions: [?]
+# NONFUNCTIONSYM-LLVM-NEXT:     Size: 0x0
+# NONFUNCTIONSYM-LLVM-NEXT:   }
+# NONFUNCTIONSYM-LLVM-NEXT: ]
+
+# NONFUNCTIONSYM-ERR: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 2
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Size: 16
+  - Name: .stack_sizes
+    Type: SHT_PROGBITS
+    Entries:
+      - Size: 0
+    Link: .text
+  - Name: .rela.stack_sizes
+    Type: SHT_RELA
+    Info: .stack_sizes
+    Relocations:
+      - Offset: 0
+        Symbol: foo
+        Type:   R_X86_64_64
+Symbols:
+  - Name:    foo
+    Section: .text
+    Type:    STT_OBJECT
+    Binding: STB_GLOBAL
+
+## Check that we report a warning when we find an unsupported relocation
+## in the section that contains the stack size entries' relocations.
+
+# RUN: yaml2obj --docnum=10 %s -o %t15
+# RUN: llvm-readelf --stack-sizes %t15 2>&1 | FileCheck %s --check-prefix=UNSUPPRELOC-GNU -DFILE=%t15
+# RUN: llvm-readobj --stack-sizes %t15 2>&1 | FileCheck %s --check-prefix=UNSUPPRELOC-LLVM -DFILE=%t15
+
+# UNSUPPRELOC-GNU:      Stack Sizes:
+# UNSUPPRELOC-GNU-NEXT:   Size     Functions
+# UNSUPPRELOC-GNU-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 0: R_X86_64_RELATIVE
+# UNSUPPRELOC-GNU-NEXT:      0     foo
+# UNSUPPRELOC-GNU-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 2: R_X86_64_RELATIVE
+
+# UNSUPPRELOC-LLVM:      StackSizes [
+# UNSUPPRELOC-LLVM-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 0: R_X86_64_RELATIVE
+# UNSUPPRELOC-LLVM-NEXT:   Entry {
+# UNSUPPRELOC-LLVM-NEXT:     Functions: [foo]
+# UNSUPPRELOC-LLVM-NEXT:     Size: 0x0
+# UNSUPPRELOC-LLVM-NEXT:   }
+# UNSUPPRELOC-LLVM-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 2: R_X86_64_RELATIVE
+# UNSUPPRELOC-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Size: 8
+  - Name: .stack_sizes
+    Type: SHT_PROGBITS
+    Link: .text
+    Entries:
+      - Size: 0
+  - Name: .rela.stack_sizes
+    Type: SHT_RELA
+    Info: .stack_sizes
+    Relocations:
+      - Offset: 0
+        Symbol: foo
+        Type:   R_X86_64_RELATIVE
+      - Offset: 0
+        Symbol: foo
+        Type:   R_X86_64_64
+      - Offset: 0
+        Symbol: foo
+        Type:   R_X86_64_RELATIVE
+Symbols:
+  - Name:    foo
+    Section: .text
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+
+## Check that warning messages in archives do not impact other members. In the following
+## test, the first archive member generates a warning and we make sure all the information
+## is still dumped.
+
+# RUN: llvm-ar rc %t2.a %t04 %t01
+# RUN: llvm-readelf --stack-sizes %t2.a 2>&1 | FileCheck %s --check-prefix=ARCHIVEWARN-GNU \
+# RUN:   -DFILE=%t2.a --strict-whitespace --match-full-lines
+# RUN: llvm-readobj --stack-sizes %t2.a 2>&1 | FileCheck %s --check-prefix=ARCHIVEWARN-LLVM -DFILE=%t2.a
+
+#      ARCHIVEWARN-GNU:File: [[FILE]]({{.*04}})
+#      ARCHIVEWARN-GNU:Stack Sizes:
+# ARCHIVEWARN-GNU-NEXT:         Size     Functions
+#      ARCHIVEWARN-GNU:{{.*}}: warning: '{{.*04}}': relocation symbol '_Z3foof' is not in the expected section
+#      ARCHIVEWARN-GNU:            8     _Z3foof
+#      ARCHIVEWARN-GNU:File: [[FILE]]({{.*01}})
+#      ARCHIVEWARN-GNU:Stack Sizes:
+# ARCHIVEWARN-GNU-NEXT:         Size     Functions
+# ARCHIVEWARN-GNU-NEXT:           16     referenced_by_symbol_foo
+# ARCHIVEWARN-GNU-NEXT:           32     referenced_via_section_bar
+# ARCHIVEWARN-GNU-NEXT:            8     separate_text_section_baz
+#  ARCHIVEWARN-GNU-NOT:{{.}}
+
+
+# ARCHIVEWARN-LLVM:      File: [[FILE]]({{.*04}})
+# ARCHIVEWARN-LLVM:      StackSizes [
+# ARCHIVEWARN-LLVM:      warning: '{{.*04}}': relocation symbol '_Z3foof' is not in the expected section
+# ARCHIVEWARN-LLVM-NEXT:   Entry {
+# ARCHIVEWARN-LLVM-NEXT:     Functions: [_Z3foof]
+# ARCHIVEWARN-LLVM-NEXT:     Size: 0x8
+# ARCHIVEWARN-LLVM-NEXT:   }
+# ARCHIVEWARN-LLVM-NEXT: ]
+# ARCHIVEWARN-LLVM:      File: [[FILE]]({{.*01}})
+# ARCHIVEWARN-LLVM:      StackSizes [
+# ARCHIVEWARN-LLVM-NEXT:   Entry {
+# ARCHIVEWARN-LLVM-NEXT:     Functions: [referenced_by_symbol_foo]
+# ARCHIVEWARN-LLVM-NEXT:     Size: 0x10
+# ARCHIVEWARN-LLVM-NEXT:   }
+# ARCHIVEWARN-LLVM-NEXT:   Entry {
+# ARCHIVEWARN-LLVM-NEXT:     Functions: [referenced_via_section_bar]
+# ARCHIVEWARN-LLVM-NEXT:     Size: 0x20
+# ARCHIVEWARN-LLVM-NEXT:   }
+# ARCHIVEWARN-LLVM-NEXT:   Entry {
+# ARCHIVEWARN-LLVM-NEXT:     Functions: [separate_text_section_baz]
+# ARCHIVEWARN-LLVM-NEXT:     Size: 0x8
+# ARCHIVEWARN-LLVM-NEXT:   }
+# ARCHIVEWARN-LLVM-NEXT: ]
+
+## Check that we demangle function names when requested.
+
+# RUN: yaml2obj --docnum=11 %s -o %t16
+# RUN: llvm-readelf --stack-sizes --demangle %t16 | FileCheck %s --check-prefix=DEMANGLE-GNU
+# RUN: llvm-readobj --stack-sizes --demangle %t16 | FileCheck %s --check-prefix=DEMANGLE-LLVM
+
+# DEMANGLE-GNU:  16 foo(float)
+# DEMANGLE-LLVM: Functions: [foo(float)]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC]
+    Size:    16
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x10
+        Size:    0x10
+    Link:    .text
+Symbols:
+  - Name:    _Z3foof
+    Section: .text
+    Value:   0x10
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+
+## Check that we report a warning when we are unable to resolve a relocation for a given ELF architecture.
+## Here we have a 64-bit relocation used in a 32-bit object.
+
+# RUN: yaml2obj --docnum=12 %s -o %t17
+# RUN: llvm-readelf --stack-sizes %t17 2>&1 | FileCheck %s -DFILE=%t17 --check-prefix=UNSUPPRELOC2
+# RUN: llvm-readobj --stack-sizes %t17 2>&1 | FileCheck %s -DFILE=%t17 --check-prefix=UNSUPPRELOC2
+
+# UNSUPPRELOC2: warning: '[[FILE]]': SHT_RELA section with index 2 contains an unsupported relocation with index 0: R_X86_64_64
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .stack_sizes
+    Type: SHT_PROGBITS
+    Content: "00"
+  - Name: .rela.stack_sizes
+    Type: SHT_RELA
+    Info: .stack_sizes
+    Relocations:
+      - Offset: 0
+        Type:   R_X86_64_64
+
+## Check we report a warning when dumping stack sizes if the relocated section
+## identified by the sh_info field is invalid. Here the sh_info value is larger than
+## the number of sections.
+
+# RUN: yaml2obj --docnum=13 %s -o %t18
+# RUN: llvm-readelf --stack-sizes %t18 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not="warning:" -DFILE=%t18 --check-prefix=INVALID-TARGET
+# RUN: llvm-readobj --stack-sizes %t18 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not="warning:" -DFILE=%t18 --check-prefix=INVALID-TARGET
+
+# INVALID-TARGET: warning: '[[FILE]]': unable to get stack size map section(s): SHT_RELA section with index 1: failed to get a relocated section: invalid section index: 255
+# INVALID-TARGET: SHT_RELA section with index 2: failed to get a relocated section: invalid section index: 255
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2MSB
+  Type:  ET_REL
+Sections:
+  - Name: .rela.stack_sizes
+    Type: SHT_RELA
+    Link: 0
+    Info: 0xFF
+    Relocations: []
+  - Name: .rela.stack_sizes (1)
+    Type: SHT_RELA
+    Link: 0
+    Info: 0xFF
+    Relocations: []
+    
+## Check that that we see multiple symbols output in cases when multiple symbols
+## share the same stack size entry, for example when use of ICF means two functions
+## are represented by the same code.
+    
+# RUN: yaml2obj --docnum=14 %s -o %t19
+# RUN: llvm-readelf --stack-sizes %t19 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=MULTIPLE-SYMBOLS-GNU
+# RUN: llvm-readobj --stack-sizes %t19 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=MULTIPLE-SYMBOLS-LLVM
+
+# MULTIPLE-SYMBOLS-GNU:         Size     Functions
+# MULTIPLE-SYMBOLS-GNU:           16     foo, bar
+# MULTIPLE-SYMBOLS-GNU-NOT:{{.}}
+
+# MULTIPLE-SYMBOLS-LLVM:      StackSizes [
+# MULTIPLE-SYMBOLS-LLVM-NEXT:   Entry {
+# MULTIPLE-SYMBOLS-LLVM-NEXT:     Functions: [foo, bar]
+# MULTIPLE-SYMBOLS-LLVM-NEXT:     Size: 0x10
+# MULTIPLE-SYMBOLS-LLVM-NEXT:   }
+# MULTIPLE-SYMBOLS-LLVM-NEXT: ]
+# MULTIPLE-SYMBOLS-LLVM-NOT:{{.}}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC]
+    Size:    16
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x0
+        Size:    0x10
+    Link:    .text
+Symbols:
+  - Name:    foo
+    Section: .text
+    Value:   0x0
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  - Name:    bar
+    Section: .text
+    Value:   0x0
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL

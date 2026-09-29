@@ -1,0 +1,22 @@
+REQUIRES: x86_64-linux
+
+To update the inputs used below run Inputs/update_memprof_inputs.sh /path/to/updated/clang
+RUN: llvm-readelf --notes %p/Inputs/buildid.memprofexe > %t1.txt
+RUN: llvm-profdata show --memory %p/Inputs/buildid.memprofraw --profiled-binary %p/Inputs/buildid.memprofexe -o -  > %t2.txt
+RUN: cat %t1.txt %t2.txt | FileCheck %s
+
+Test that we print out the profile build ids when --profiled-binary is empty. 
+RUN: not llvm-profdata show --memory %p/Inputs/buildid.memprofraw -o - 2> %t3.txt
+RUN: cat %t1.txt %t3.txt | FileCheck %s
+
+COM: First extract the id from the llvm-readelf output.
+CHECK: Build ID: [[ID:[[:xdigit:]]+]]
+
+COM: Then match it with the profdata output.
+CHECK-COUNT-1: BuildId: {{.*}}[[ID]]
+
+Test error message when profile build id does not match build id in a different binary.
+RUN: not llvm-profdata show --memory %p/Inputs/buildid.memprofraw --profiled-binary %p/Inputs/basic.memprofexe -o - 2>&1 | FileCheck %s -check-prefix=BUILDID-NOT-MATCH
+RUN: not llvm-profdata merge %p/Inputs/buildid.memprofraw %p/Inputs/basic.memprofraw  --profiled-binary %p/Inputs/basic.memprofexe -o %t4.prof 2>&1 | FileCheck %s -check-prefix=BUILDID-NOT-MATCH
+
+BUILDID-NOT-MATCH: No matching executable segments found in binary

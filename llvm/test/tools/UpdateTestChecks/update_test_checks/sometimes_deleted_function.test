@@ -1,0 +1,5 @@
+# RUN: cp -f %S/Inputs/sometimes_deleted_function.ll %t.ll && %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/sometimes_deleted_function.ll.expected
+## Check that running the script again does not change the result:
+# RUN: %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/sometimes_deleted_function.ll.expected

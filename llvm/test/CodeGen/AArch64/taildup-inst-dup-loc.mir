@@ -1,0 +1,125 @@
+# RUN: llc -mtriple aarch64 -run-pass=early-tailduplication -verify-machineinstrs %s -o - 2>&1 | FileCheck %s
+---
+name:            pluto
+tracksRegLiveness: true
+body:             |
+  ; This test checks that the COPY3 and COPY4 copies are correctly placed in the bb.5 block,
+  ; instead of crashing.
+
+  ; CHECK-LABEL: name: pluto
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   liveins: $x0
+  ; CHECK:   [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+  ; CHECK:   [[DEF1:%[0-9]+]]:gpr32common = IMPLICIT_DEF
+  ; CHECK:   [[DEF2:%[0-9]+]]:gpr64 = IMPLICIT_DEF
+  ; CHECK:   [[DEF3:%[0-9]+]]:gpr64common = IMPLICIT_DEF
+  ; CHECK:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1
+  ; CHECK:   [[FMOVD0_:%[0-9]+]]:fpr64 = FMOVD0
+  ; CHECK:   TBNZW [[DEF]], 0, %bb.1
+  ; CHECK:   B %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors: %bb.9(0x80000000)
+  ; CHECK:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[DEF3]], 0 :: (load (s64) from `ptr undef`)
+  ; CHECK:   B %bb.9
+  ; CHECK: bb.2:
+  ; CHECK:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
+  ; CHECK:   $wzr = SUBSWri [[DEF1]], 19, 0, implicit-def $nzcv
+  ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+  ; CHECK:   TBNZW [[CSINCWr]], 0, %bb.3
+  ; CHECK:   B %bb.4
+  ; CHECK: bb.3:
+  ; CHECK:   successors: %bb.9(0x80000000)
+  ; CHECK:   [[SCVTFUXDri:%[0-9]+]]:fpr64 = SCVTFUXDri [[DEF2]], implicit $fpcr
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY [[SCVTFUXDri]]
+  ; CHECK:   [[COPY1:%[0-9]+]]:fpr64 = COPY [[SCVTFUXDri]]
+  ; CHECK:   B %bb.9
+  ; CHECK: bb.4:
+  ; CHECK:   successors: %bb.5(0x40000000), %bb.8(0x40000000)
+  ; CHECK:   TBNZW [[DEF]], 0, %bb.5
+  ; CHECK:   B %bb.8
+  ; CHECK: bb.5:
+  ; CHECK:   successors: %bb.9(0x80000000)
+  ; CHECK:   [[COPY2:%[0-9]+]]:fpr64 = COPY [[DEF2]]
+  ; CHECK:   [[COPY3:%[0-9]+]]:gpr64 = COPY [[COPY2]]
+  ; CHECK:   [[COPY4:%[0-9]+]]:fpr64 = COPY [[DEF2]]
+  ; CHECK:   B %bb.9
+  ; CHECK: bb.8:
+  ; CHECK:   successors: %bb.9(0x80000000)
+  ; CHECK: bb.9:
+  ; CHECK:   [[PHI:%[0-9]+]]:gpr64 = PHI [[LDRXui]], %bb.1, [[FMOVD0_]], %bb.8, [[COPY]], %bb.3, [[COPY3]], %bb.5
+  ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK:   $d0 = COPY [[PHI]]
+  ; CHECK:   BL @pluto, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit-def $d0
+  ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK:   $w0 = COPY [[MOVi32imm]]
+  ; CHECK:   RET_ReallyLR implicit $w0
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+    liveins: $x0
+
+    %1:gpr32 = IMPLICIT_DEF
+    %2:gpr32common = IMPLICIT_DEF
+    %5:gpr64 = IMPLICIT_DEF
+    %9:gpr64common = IMPLICIT_DEF
+    %13:gpr32 = MOVi32imm 1
+    %14:fpr64 = FMOVD0
+    TBNZW %1, 0, %bb.2
+    B %bb.3
+
+  bb.2:
+    successors: %bb.8(0x80000000)
+
+    %8:gpr64 = LDRXui %9, 0 :: (load (s64) from `ptr undef`)
+    B %bb.8
+
+  bb.3:
+    successors: %bb.4(0x40000000), %bb.5(0x40000000)
+
+    $wzr = SUBSWri %2, 19, 0, implicit-def $nzcv
+    %15:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+    TBNZW %15, 0, %bb.4
+    B %bb.5
+
+  bb.4:
+    successors: %bb.7(0x80000000)
+
+    %6:fpr64 = SCVTFUXDri %5, implicit $fpcr
+    B %bb.7
+
+  bb.5:
+    successors: %bb.6(0x40000000), %bb.9(0x40000000)
+
+    TBNZW %1, 0, %bb.6
+    B %bb.9
+
+  bb.6:
+    successors: %bb.7(0x80000000)
+
+
+  bb.7:
+    successors: %bb.8(0x80000000)
+
+    %7:fpr64 = PHI %6, %bb.4, %5, %bb.6
+
+  bb.8:
+    successors: %bb.10(0x80000000)
+
+    %10:gpr64 = PHI %8, %bb.2, %7, %bb.7
+    B %bb.10
+
+  bb.9:
+    successors: %bb.10(0x80000000)
+
+
+  bb.10:
+    %11:gpr64 = PHI %10, %bb.8, %14, %bb.9
+    ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+    $d0 = COPY %11
+    BL @pluto, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit-def $d0
+    ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+    $w0 = COPY %13
+    RET_ReallyLR implicit $w0
+
+...

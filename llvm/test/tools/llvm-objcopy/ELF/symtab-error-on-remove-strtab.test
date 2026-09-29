@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-objcopy -R .strtab %t %t2 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR1 -DINPUT=%t
+# RUN: cp %t %t3
+# RUN: not llvm-strip --no-strip-all -R .strtab %t3 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR2 -DINPUT=%t3
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Symbols: []
+
+# ERR1: error: '[[INPUT]]': string table '.strtab' cannot be removed because it is referenced by the symbol table '.symtab'
+# ERR2: error: '[[INPUT]]': string table '.strtab' cannot be removed because it is referenced by the symbol table '.symtab'
+
+# RUN: llvm-objcopy --allow-broken-links -R .strtab %t %t4
+# RUN: llvm-readobj --section-headers %t4 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.strtab
+# RUN: cp %t %t5
+# RUN: llvm-strip --no-strip-all --allow-broken-links -R .strtab %t %t5
+# RUN: llvm-readobj --section-headers %t5 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.strtab
+
+# SECTIONS:      Name: .symtab
+# SECTIONS:      Link
+# SECTIONS-SAME:     : 0

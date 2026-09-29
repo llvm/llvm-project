@@ -1,0 +1,8 @@
+// RUN: FileCheck -input-file %s %s
+
+op r1
+op r2, [x r1]
+op r3, [r1]
+; CHECK:        op [[REG:r[0-9]]]
+; CHECK:        op [[REG2:r[0-9]]], [x [[REG]]]
+; CHECK:        op [[REG3:r[0-9]]], [[[REG]]]

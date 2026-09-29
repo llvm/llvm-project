@@ -1,0 +1,48 @@
+static_library("Analysis") {
+  output_name = "clangAnalysis"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/include/clang/AST:StmtDataCollectors",
+    "//clang/lib/AST",
+    "//clang/lib/ASTMatchers",
+    "//clang/lib/Analysis/LifetimeSafety",
+    "//clang/lib/Basic",
+    "//clang/lib/Lex",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "AnalysisDeclContext.cpp",
+    "AnnexKDetection.cpp",
+    "BodyFarm.cpp",
+    "CFG.cpp",
+    "CFGBackEdges.cpp",
+    "CFGReachabilityAnalysis.cpp",
+    "CFGStmtMap.cpp",
+    "CallGraph.cpp",
+    "CalledOnceCheck.cpp",
+    "CloneDetection.cpp",
+    "CocoaConventions.cpp",
+    "CodeInjector.cpp",
+    "ConstructionContext.cpp",
+    "Consumed.cpp",
+    "Dominators.cpp",
+    "ExprMutationAnalyzer.cpp",
+    "FixitUtil.cpp",
+    "IntervalPartition.cpp",
+    "IssueHash.cpp",
+    "LiveVariables.cpp",
+    "MacroExpansionContext.cpp",
+    "ObjCNoReturn.cpp",
+    "PathDiagnostic.cpp",
+    "PostOrderCFGView.cpp",
+    "ProgramPoint.cpp",
+    "ReachableCode.cpp",
+    "RetainSummaryManager.cpp",
+    "ThreadSafety.cpp",
+    "ThreadSafetyCommon.cpp",
+    "ThreadSafetyLogical.cpp",
+    "ThreadSafetyTIL.cpp",
+    "UninitializedValues.cpp",
+    "UnsafeBufferUsage.cpp",
+  ]
+}

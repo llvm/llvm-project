@@ -1,0 +1,63 @@
+# RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=zEC12 -verify-machineinstrs \
+# RUN:   -start-before=greedy | FileCheck %s -check-prefix=CHECK
+# RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z16 -verify-machineinstrs \
+# RUN:   -start-before=greedy | FileCheck %s -check-prefix=VECTOR
+
+# Test spilling / reloading fp16bit virtual registers.
+
+---
+name: fun0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $f0h, $f2h, $f4h
+
+    ; CHECK-LABEL: fun0:
+    ; CHECK:      aghi %r15, -240
+    ; CHECK:      ste %f4, 172(%r15)          # 4-byte Spill
+    ; CHECK-NEXT: ste %f2, 164(%r15)          # 4-byte Spill
+    ; CHECK-NEXT: ste %f0, 168(%r15)          # 4-byte Spill
+    ; CHECK-NEXT: #APP
+    ; CHECK-NEXT: #NO_APP
+    ; CHECK-NEXT: le %f0, 164(%r15)           # 4-byte Reload
+    ; CHECK:      le %f0, 168(%r15)           # 4-byte Reload
+    ; CHECK:      le %f0, 172(%r15)           # 4-byte Reload
+
+    ; VECTOR-LABEL: fun0:
+    ; VECTOR:      aghi %r15, -232
+    ; VECTOR:      vsteh %v4, 166(%r15), 0     # 2-byte Spill
+    ; VECTOR-NEXT: vsteh %v2, 162(%r15), 0     # 2-byte Spill
+    ; VECTOR-NEXT: vsteh %v0, 164(%r15), 0     # 2-byte Spill
+    ; VECTOR-NEXT: #APP
+    ; VECTOR-NEXT: #NO_APP
+    ; VECTOR-NEXT: vlreph %v0, 162(%r15)       # 2-byte Reload
+    ; VECTOR:      vlreph %v0, 164(%r15)       # 2-byte Reload
+    ; VECTOR:      vlreph %v0, 166(%r15)       # 2-byte Reload
+
+    %2:fp16bit = COPY $f4h
+    %1:fp16bit = COPY $f2h
+    %0:fp16bit = COPY $f0h
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $f0d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
+    $f0h = COPY %1
+    CallBRASL &__extendhfsf2, $f0h, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $f0s
+    %3:fp32bit = COPY $f0s
+    $f0h = COPY %0
+    CallBRASL &__extendhfsf2, $f0h, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $f0s
+    %5:fp32bit = COPY $f0s
+    %5:fp32bit = nofpexcept AEBR %5, %3, implicit-def dead $cc, implicit $fpc
+    $f0s = COPY %5
+    CallBRASL &__truncsfhf2, $f0s, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $f0h
+    %6:fp16bit = COPY $f0h
+    $f0h = COPY %6
+    CallBRASL &__extendhfsf2, $f0h, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $f0s
+    %7:fp32bit = COPY $f0s
+    $f0h = COPY %2
+    CallBRASL &__extendhfsf2, $f0h, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $f0s
+    %9:fp32bit = COPY $f0s
+    %9:fp32bit = nofpexcept AEBR %9, %7, implicit-def dead $cc, implicit $fpc
+    $f0s = COPY %9
+    CallBRASL &__truncsfhf2, $f0s, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $f0h
+    %10:fp16bit = COPY $f0h
+    $f0h = COPY %10
+    Return implicit $f0h
+...

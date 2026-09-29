@@ -1,0 +1,115 @@
+## Test reading ELF with .dynsym under the following conditions:
+##  * Section headers are available.
+##  * Section headers are stripped but there is a DT_GNU_HASH dynamic tag.
+##  * Section headers are stripped but there is a DT_HASH dynamic tag.
+
+## Test if llvm-ifs reads DT_SYMTAB size through section headers by puting the wrong terminator in DT_GNU_HASH.
+# RUN: yaml2obj %s -o %tfull -DGNUHASHVALUE="[0x9]" -DTAG1="DT_GNU_HASH" -DVAL1="0xC00"
+# RUN: llvm-ifs --input-format=ELF --output-ifs=- %tfull | FileCheck %s
+
+## Test if llvm-ifs fails to read DT_SYMTAB size through section headers when the value of sh_entsize is invalid.
+# RUN: yaml2obj %s -o %tfull -DGNUHASHVALUE="[0x9]" -DTAG1="DT_GNU_HASH" -DVAL1="0xC00" -DENTSIZE="0x19"
+# RUN: not llvm-ifs --input-format=ELF --output-ifs=- %tfull 2>&1 | FileCheck %s --check-prefix=BADENTSIZE
+
+## Test if llvm-ifs reads DT_SYMTAB size through DT_GNU_HASH.
+# RUN: yaml2obj %s -o %tw.gnu.hash -DGNUHASHVALUE="[0x8, 0x9]" -DTAG1="DT_GNU_HASH" -DVAL1="0xC00" -DNOHEADER="true"
+# RUN: llvm-ifs --input-format=ELF --output-ifs=- %tw.gnu.hash | FileCheck %s
+
+## Test if llvm-ifs fails to read DT_SYMTAB size through DT_GNU_HASH when there is no terminator.
+# RUN: yaml2obj %s -o %tw.gnu.hash -DGNUHASHVALUE="[0x8, 0xA]" -DTAG1="DT_GNU_HASH" -DVAL1="0xC00" -DNOHEADER="true"
+# RUN: not llvm-ifs --input-format=ELF --output-ifs=- %tw.gnu.hash  2>&1 | FileCheck %s --check-prefix=NOTERMINATOR
+
+# CHECK:      --- !ifs-v1
+# CHECK-NEXT: IfsVersion:      3.0
+# CHECK-NEXT: Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+# CHECK-NEXT: Symbols:
+# CHECK-NEXT:   - { Name: bar, Type: Object, Size: 0, Undefined: true }
+# CHECK-NEXT:   - { Name: foo, Type: Func, Undefined: true }
+# CHECK-NEXT: ...
+
+# BADENTSIZE: SHT_DYNSYM section has sh_size (72) % sh_entsize (25) that is not 0
+
+# NOTERMINATOR: error: no terminator found for GNU hash section before buffer end
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_DYN
+  Machine:    EM_AARCH64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+  - Name:         .data
+    Type:         SHT_PROGBITS
+  - Name:         .strtab
+    Type:         SHT_STRTAB
+  - Name:         .shstrtab
+    Type:         SHT_STRTAB
+  - Name:         .dynsym
+    Type:         SHT_DYNSYM
+    Flags:        [ SHF_ALLOC ]
+    EntSize:      [[ENTSIZE=0x18]]
+    Address:      0x400
+    AddressAlign: 0x400
+  - Name:         .dynstr
+    Type:         SHT_STRTAB
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x600
+    AddressAlign: 0x200
+  - Name:         .dynamic
+    Type:         SHT_DYNAMIC
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x800
+    AddressAlign: 0x200
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x600
+      - Tag:   DT_STRSZ
+        Value: 9
+      - Tag:   DT_SYMTAB
+        Value: 0x400
+      - Tag:   [[TAG1]]
+        Value: [[VAL1]]
+      - Tag:   DT_NULL
+        Value: 0
+  - Name:         .hash
+    Type:         SHT_HASH
+    Flags:        [ SHF_ALLOC ]
+    Address:      0xA00
+    AddressAlign: 0x200
+    Bucket:       [ 1 ]
+    Chain:        [ 1, 2, 3 ]
+  - Name:         .gnu.hash
+    Type:         SHT_GNU_HASH
+    Flags:        [ SHF_ALLOC ]
+    Address:      0xC00
+    AddressAlign: 0x200
+    Header:
+      SymNdx:    0x1
+      Shift2:    0x2
+      MaskWords: 2
+      NBuckets:  2
+    BloomFilter: [0x3, 0x4]
+    HashBuckets: [0x0, 0x1]
+    HashValues:  [[GNUHASHVALUE]]
+  - Type: SectionHeaderTable
+    NoHeaders: [[NOHEADER=false]]
+DynamicSymbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Value:   0x100
+    Binding: 1
+  - Name:    bar
+    Type:    STT_OBJECT
+    Value:   0x200
+    Binding: 1
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x400
+    FirstSec: .dynsym
+    LastSec:  .gnu.hash
+  - Type:     PT_DYNAMIC
+    VAddr:    0x800
+    FirstSec: .dynamic
+    LastSec:  .dynamic

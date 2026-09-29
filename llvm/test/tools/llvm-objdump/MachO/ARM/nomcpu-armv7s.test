@@ -1,0 +1,3 @@
+@ RUN: llvm-objdump -m -d %p/Inputs/divs.macho-armv7s | FileCheck %s
+
+@ CHECK: 10 f0 10 e7 sdiv r0, r0, r0

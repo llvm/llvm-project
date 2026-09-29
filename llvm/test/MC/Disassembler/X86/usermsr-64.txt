@@ -1,0 +1,28 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=x86_64 --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+# ATT:   urdmsr $123, %r9
+# INTEL: urdmsr r9, 123
+0xc4,0xc7,0x7b,0xf8,0xc1,0x7b,0x00,0x00,0x00
+
+# ATT:   urdmsr %r9, %r9
+# INTEL: urdmsr r9, r9
+0xf2,0x45,0x0f,0x38,0xf8,0xc9
+
+# Test if WIG is supported for this instruction/form.
+# ATT:   urdmsr %r9, %r9
+# INTEL: urdmsr r9, r9
+0xf2,0x4d,0x0f,0x38,0xf8,0xc9
+
+# ATT:   uwrmsr %r9, $123
+# INTEL: uwrmsr 123, r9
+0xc4,0xc7,0x7a,0xf8,0xc1,0x7b,0x00,0x00,0x00
+
+# ATT:   uwrmsr %r9, %r9
+# INTEL: uwrmsr r9, r9
+0xf3,0x45,0x0f,0x38,0xf8,0xc9
+
+# Test if WIG is supported for this instruction/form.
+# ATT:   uwrmsr %r9, %r9
+# INTEL: uwrmsr r9, r9
+0xf3,0x4d,0x0f,0x38,0xf8,0xc9

@@ -1,0 +1,49 @@
+# RUN: llc -mtriple aarch64 -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+# CHECK-NOT: OUTLINED_FUNCTION
+
+...
+---
+name:            foo1
+tracksRegLiveness: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $x0
+    $x0 = ADDXri $x0, 0, 0
+    EH_LABEL <mcsymbol .Ltmp0>
+    EH_LABEL <mcsymbol .Ltmp1>
+    EH_LABEL <mcsymbol .Ltmp2>
+    EH_LABEL <mcsymbol .Ltmp3>
+    RET_ReallyLR implicit $x0
+...
+---
+name:            foo2
+tracksRegLiveness: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $x0
+    $x0 = ADDXri $x0, 0, 0
+    EH_LABEL <mcsymbol .Ltmp0>
+    EH_LABEL <mcsymbol .Ltmp1>
+    EH_LABEL <mcsymbol .Ltmp2>
+    EH_LABEL <mcsymbol .Ltmp3>
+    RET_ReallyLR implicit $x0
+...
+---
+name:            foo3
+tracksRegLiveness: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $x0
+    $x0 = ADDXri $x0, 0, 0
+    EH_LABEL <mcsymbol .Ltmp0>
+    EH_LABEL <mcsymbol .Ltmp1>
+    EH_LABEL <mcsymbol .Ltmp2>
+    EH_LABEL <mcsymbol .Ltmp3>
+    RET_ReallyLR implicit $x0
+...

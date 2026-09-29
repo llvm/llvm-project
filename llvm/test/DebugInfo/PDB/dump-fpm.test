@@ -1,0 +1,9 @@
+RUN: llvm-pdbutil bytes -fpm %p/Inputs/empty.pdb | FileCheck %s
+
+CHECK:                             Free Page Map
+CHECK-NEXT: ============================================================
+CHECK-NEXT: Block 2 (
+CHECK-NEXT:   2000: 380300FE FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |8...............................|
+CHECK-NEXT:   2020: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................................|
+CHECK:        2FE0: FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  |................................|
+CHECK-NEXT: )

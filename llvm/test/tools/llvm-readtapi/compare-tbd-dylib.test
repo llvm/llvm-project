@@ -1,0 +1,41 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: mkdir -p %t
+; RUN: yaml2obj %S/Inputs/macho.yaml -o %t/macho.dylib
+; RUN: not llvm-readtapi --compare %t/macho.tbd %t/macho.dylib 2>&1 | FileCheck %s
+
+; CHECK:      macho.tbd
+; CHECK-NEXT: macho.dylib
+; CHECK:      Current Version
+; CHECK-NEXT: 	< 1.2
+; CHECK-NEXT: 	> 1
+; CHECK-NEXT: Compatibility Version
+; CHECK-NEXT: 	< 3.1
+; CHECK-NEXT: 	> 1
+
+;--- macho.tbd
+{
+  "main_library": {
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "current_versions":[{"version": "1.2"}],
+    "compatibility_versions":[{ "version": "3.1"}],
+    "install_names": [
+      {
+        "name": "macho-no-exports.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "10.10",
+        "target": "x86_64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

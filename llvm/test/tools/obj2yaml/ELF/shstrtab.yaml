@@ -1,0 +1,447 @@
+## Show that the SectionHeaderStringTable field in the document header is set,
+## iff the section name is not ".shstrtab".
+## Also show that no section appears in the Sections table for this section,
+## unless some property is different to the default.
+
+## Show the case when the name is a custom string (the key should be set).
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
+# RUN: obj2yaml %t1.o > %t1.yaml
+# RUN: FileCheck %s --input-file=%t1.yaml --check-prefix=CUSTOM
+
+# CUSTOM:      --- !ELF
+# CUSTOM-NEXT: FileHeader:
+# CUSTOM-NEXT:   Class:           ELFCLASS64
+# CUSTOM-NEXT:   Data:            ELFDATA2LSB
+# CUSTOM-NEXT:   Type:            ET_EXEC
+# CUSTOM-NEXT:   SectionHeaderStringTable: .foo
+# CUSTOM-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  SectionHeaderStringTable: .foo
+
+## Show the case when the e_shstrndx value is SHN_XINDEX and the name is not
+## ".shstrtab" (the key should be set).
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: obj2yaml %t2.o > %t2.yaml
+# RUN: FileCheck %s --input-file=%t2.yaml --check-prefix=XINDEX
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_EXEC
+  EShStrNdx: 0xffff
+  SectionHeaderStringTable: .foo
+Sections:
+  - Type: SHT_NULL
+    Link: .foo
+
+# XINDEX:      --- !ELF
+# XINDEX-NEXT: FileHeader:
+# XINDEX-NEXT:   Class:           ELFCLASS64
+# XINDEX-NEXT:   Data:            ELFDATA2LSB
+# XINDEX-NEXT:   Type:            ET_EXEC
+# XINDEX-NEXT:   SectionHeaderStringTable: .foo
+# XINDEX-NEXT: Sections:
+# XINDEX-NEXT:   - Type:            SHT_NULL
+# XINDEX-NEXT:     Link:            .foo
+# XINDEX-NEXT:     Size:            0x0
+# XINDEX-NEXT: ...
+
+## Show the case when the string table section is also the symbol table's string
+## table (the key should be set).
+# RUN: yaml2obj --docnum=3 %s -o %t3.o
+# RUN: obj2yaml %t3.o > %t3.yaml
+# RUN: FileCheck %s --input-file=%t3.yaml --check-prefix=STRTAB
+
+# STRTAB:      --- !ELF
+# STRTAB-NEXT: FileHeader:
+# STRTAB-NEXT:   Class:           ELFCLASS64
+# STRTAB-NEXT:   Data:            ELFDATA2LSB
+# STRTAB-NEXT:   Type:            ET_EXEC
+# STRTAB-NEXT:   SectionHeaderStringTable: .strtab
+# STRTAB-NEXT: Symbols:
+# STRTAB-NEXT:   - Name:            boz
+# STRTAB-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  SectionHeaderStringTable: ".strtab"
+Symbols:
+  - Name: boz
+
+## Document the case when the string table section is also the symbol table's
+## dynamic string table (the key should be set).
+## FIXME: Regardless of whether it is shared with the section header string
+##        table or not, the dynstr (and also the dynsym) should be omitted if
+##        they match the default behaviour.
+# RUN: yaml2obj --docnum=4 %s -o %t4.o
+# RUN: obj2yaml %t4.o > %t4.yaml
+# RUN: FileCheck %s --input-file=%t4.yaml --check-prefix=DYNSTR
+
+# DYNSTR:      --- !ELF
+# DYNSTR-NEXT: FileHeader:
+# DYNSTR-NEXT:   Class:           ELFCLASS64
+# DYNSTR-NEXT:   Data:            ELFDATA2LSB
+# DYNSTR-NEXT:   Type:            ET_EXEC
+# DYNSTR-NEXT:   SectionHeaderStringTable: .dynstr
+# DYNSTR-NEXT: Sections:
+# DYNSTR-NEXT:   - Name:            .dynsym
+# DYNSTR-NEXT:     Type:            SHT_DYNSYM
+# DYNSTR-NEXT:     Flags:           [ SHF_ALLOC ]
+# DYNSTR-NEXT:     Link:            .dynstr
+# DYNSTR-NEXT:     AddressAlign:    0x8
+# DYNSTR-NEXT:   - Name:            .dynstr
+# DYNSTR-NEXT:     Type:            SHT_STRTAB
+# DYNSTR-NEXT:     Flags:           [ SHF_ALLOC ]
+# DYNSTR-NEXT:     Address:         0x30
+# DYNSTR-NEXT:     AddressAlign:    0x1
+# DYNSTR-NEXT: DynamicSymbols:
+# DYNSTR-NEXT:   - Name:            boz
+# DYNSTR-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  SectionHeaderStringTable: ".dynstr"
+DynamicSymbols:
+  - Name: boz
+
+## Show the case when the name is the default ".shstrtab" (the key should not be
+## set).
+# RUN: yaml2obj --docnum=5 %s -o %t5.o
+# RUN: obj2yaml %t5.o > %t5.yaml
+# RUN: FileCheck %s --input-file=%t5.yaml --check-prefix=DEFAULT
+
+# DEFAULT:      --- !ELF
+# DEFAULT-NEXT: FileHeader:
+# DEFAULT-NEXT:   Class:           ELFCLASS64
+# DEFAULT-NEXT:   Data:            ELFDATA2LSB
+# DEFAULT-NEXT:   Type:            ET_EXEC
+# DEFAULT-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+
+## Show the case when the e_shstrndx value is 0 and the name is ".shstrtab" (the
+## key should not be set).
+# RUN: yaml2obj --docnum=6 %s -o %t6.o
+# RUN: obj2yaml %t6.o > %t6.yaml
+# RUN: FileCheck %s --input-file=%t6.yaml --check-prefix=DEFXINDEX
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_EXEC
+  EShStrNdx: 0xffff
+Sections:
+  - Type: SHT_NULL
+    Link: .shstrtab
+
+# DEFXINDEX:      --- !ELF
+# DEFXINDEX-NEXT: FileHeader:
+# DEFXINDEX-NEXT:   Class:           ELFCLASS64
+# DEFXINDEX-NEXT:   Data:            ELFDATA2LSB
+# DEFXINDEX-NEXT:   Type:            ET_EXEC
+# DEFXINDEX-NEXT: Sections:
+# DEFXINDEX-NEXT:   - Type:            SHT_NULL
+# DEFXINDEX-NEXT:     Link:            .shstrtab
+# DEFXINDEX-NEXT:     Size:            0x0
+# DEFXINDEX-NEXT: ...
+
+## Show that if there are no section headers, the key is not set.
+# RUN: yaml2obj --docnum=7 %s -o %t7.o
+# RUN: obj2yaml %t7.o > %t7.yaml
+# RUN: FileCheck %s --input-file=%t7.yaml --check-prefix=NOHDRS
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Type: SectionHeaderTable
+    NoHeaders: true
+
+# NOHDRS:      --- !ELF
+# NOHDRS-NEXT: FileHeader:
+# NOHDRS-NEXT:   Class:  ELFCLASS64
+# NOHDRS-NEXT:   Data:   ELFDATA2LSB
+# NOHDRS-NEXT:   Type:   ET_EXEC
+## FIXME: There should be a SectionHeaderTable key as per the input.
+# NOHDRS-NEXT: ...
+
+## Show that a custom-named section header string table can be in a reordered
+## section header table.
+# RUN: yaml2obj --docnum=8 %s -o %t8.o
+# RUN: obj2yaml %t8.o > %t8.yaml
+# RUN: FileCheck %s --input-file=%t8.yaml --check-prefix=REORDER
+
+# REORDER:      --- !ELF
+# REORDER-NEXT: FileHeader:
+# REORDER-NEXT:   Class:           ELFCLASS64
+# REORDER-NEXT:   Data:            ELFDATA2LSB
+# REORDER-NEXT:   Type:            ET_EXEC
+# REORDER-NEXT:   SectionHeaderStringTable: .foo
+# REORDER-NEXT: Sections:
+# REORDER-NEXT:   - Name:            .baz
+# REORDER-NEXT:     Type:            SHT_PROGBITS
+# REORDER-NEXT:     Offset:          0x180
+# REORDER-NEXT:   - Name:            .bar
+# REORDER-NEXT:     Type:            SHT_PROGBITS
+## FIXME: This should be at the start of the sections list.
+# REORDER-NEXT:   - Type:            SectionHeaderTable
+# REORDER-NEXT:     Sections:
+# REORDER-NEXT:       - Name:            .baz
+# REORDER-NEXT:       - Name:            .foo
+# REORDER-NEXT:       - Name:            .bar
+# REORDER-NEXT:       - Name:            .strtab
+# REORDER-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  SectionHeaderStringTable: .foo
+Sections:
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .baz
+      - Name: .foo
+      - Name: .bar
+      ## FIXME: we shouldn't need a .strtab section if there are no symbols.
+      - Name: .strtab
+  - Name: .baz
+    Type: SHT_PROGBITS
+  - Name: .bar
+    Type: SHT_PROGBITS
+
+## Document what happens when a custom-named section header string table is
+## placed in between other sections.
+## FIXME: obj2yaml should preserve the ordering in the Sections list, but it
+##        doesn't for custom or default named tables.
+# RUN: yaml2obj --docnum=9 %s -o %t9.o
+# RUN: obj2yaml %t9.o > %t9.yaml
+# RUN: FileCheck %s --input-file=%t9.yaml --check-prefix=PLACED
+
+# PLACED:      --- !ELF
+# PLACED-NEXT: FileHeader:
+# PLACED-NEXT:   Class:           ELFCLASS64
+# PLACED-NEXT:   Data:            ELFDATA2LSB
+# PLACED-NEXT:   Type:            ET_EXEC
+# PLACED-NEXT:   SectionHeaderStringTable: .foo
+# PLACED-NEXT: Sections:
+# PLACED-NEXT:   - Name:            .baz
+# PLACED-NEXT:     Type:            SHT_PROGBITS
+# PLACED-NEXT:   - Name:            .bar
+# PLACED-NEXT:     Type:            SHT_PROGBITS
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  SectionHeaderStringTable: .foo
+Sections:
+  - Name: .baz
+    Type: SHT_PROGBITS
+  - Name: .foo
+    Type: SHT_STRTAB
+  - Name: .bar
+    Type: SHT_PROGBITS
+
+## Show that a custom-named section header string table can be given different
+## properties.
+# RUN: yaml2obj --docnum=10 %s -o %t10.o
+# RUN: obj2yaml %t10.o > %t10.yaml
+# RUN: FileCheck %s --input-file=%t10.yaml --check-prefix=PROPS
+
+# PROPS:      --- !ELF
+# PROPS-NEXT: FileHeader:
+# PROPS-NEXT:   Class: ELFCLASS64
+# PROPS-NEXT:   Data:  ELFDATA2LSB
+# PROPS-NEXT:   Type:  ET_EXEC
+# PROPS-NEXT:   SectionHeaderStringTable: .foo
+# PROPS-NEXT: Sections:
+# PROPS-NEXT:   - Name:  .foo
+# PROPS-NEXT:     Type:  SHT_STRTAB
+# PROPS-NEXT:     Flags: [ SHF_ALLOC ]
+# PROPS-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  SectionHeaderStringTable: .foo
+Sections:
+  - Name:  .foo
+    Type:  SHT_STRTAB
+    Flags: [ SHF_ALLOC ]
+
+## Show that an error is reported if the section header string table name cannot
+## be read.
+# RUN: yaml2obj --docnum=11 %s -o %t11.o
+# RUNasda: not obj2yaml %t11.o 2>&1 | FileCheck %s --check-prefix=ERR -DFILE=%t11.o
+
+# ERR: Error reading file: [[FILE]]: unable to read section header string table name: a section [index 1] has an invalid sh_name (0x10000) offset which goes past the end of the section name string table
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .shstrtab
+    Type:  SHT_STRTAB
+    ShName: 0x10000
+
+## Show that the name is uniquified if necessary.
+
+## Case 1: generic name.
+# RUN: yaml2obj --docnum=12 %s -o %t12.o
+# RUN: obj2yaml %t12.o > %t12.yaml
+# RUN: FileCheck %s --input-file=%t12.yaml --check-prefix=UNIQUIFY1
+
+# UNIQUIFY1:      --- !ELF
+# UNIQUIFY1-NEXT: FileHeader:
+# UNIQUIFY1-NEXT:   Class: ELFCLASS64
+# UNIQUIFY1-NEXT:   Data:  ELFDATA2LSB
+# UNIQUIFY1-NEXT:   Type:  ET_EXEC
+# UNIQUIFY1-NEXT:   SectionHeaderStringTable: '.strings (1)'
+# UNIQUIFY1-NEXT: Sections:
+# UNIQUIFY1-NEXT:   - Name:  .strings
+# UNIQUIFY1-NEXT:     Type:  SHT_PROGBITS
+# UNIQUIFY1-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  SectionHeaderStringTable: '.strings (1)'
+Sections:
+  - Name: '.strings (2)'
+    Type: SHT_PROGBITS
+
+## Case 2: '.strtab' when symbols are present.
+# RUN: yaml2obj --docnum=13 %s -o %t13.o '-DNAME=".strtab (1)"'
+# RUN: obj2yaml %t13.o > %t13.yaml
+# RUN: FileCheck %s --input-file=%t13.yaml --check-prefix=UNIQUIFY2 \
+# RUN:   -DNAME=.strtab
+
+# UNIQUIFY2:      --- !ELF
+# UNIQUIFY2-NEXT: FileHeader:
+# UNIQUIFY2-NEXT:   Class: ELFCLASS64
+# UNIQUIFY2-NEXT:   Data:  ELFDATA2LSB
+# UNIQUIFY2-NEXT:   Type:  ET_EXEC
+# UNIQUIFY2-NEXT:   SectionHeaderStringTable: '[[NAME]] (1)'
+# UNIQUIFY2-NEXT: Symbols:
+# UNIQUIFY2-NEXT:   - Name:  foo
+# UNIQUIFY2-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  SectionHeaderStringTable: [[NAME]]
+Symbols:
+  - Name: foo
+
+## Case 3: '.symtab' when symbols are present.
+# RUN: yaml2obj --docnum=13 %s -o %t14.o '-DNAME=".symtab (1)"'
+# RUN: obj2yaml %t14.o > %t14.yaml
+# RUN: FileCheck %s --input-file=%t14.yaml --check-prefix=UNIQUIFY2 \
+# RUN:   -DNAME=.symtab
+
+## Case 4: '.dynstr' when dynamic symbols are present.
+# RUN: yaml2obj --docnum=14 %s -o %t15.o '-DNAME=".dynstr (1)"'
+# RUN: obj2yaml %t15.o > %t15.yaml
+# RUN: FileCheck %s --input-file=%t15.yaml --check-prefix=UNIQUIFY3 \
+# RUN:   -DNAME=.dynstr
+
+# UNIQUIFY3:      --- !ELF
+# UNIQUIFY3-NEXT: FileHeader:
+# UNIQUIFY3-NEXT:   Class: ELFCLASS64
+# UNIQUIFY3-NEXT:   Data:  ELFDATA2LSB
+# UNIQUIFY3-NEXT:   Type:  ET_EXEC
+# UNIQUIFY3-NEXT:   SectionHeaderStringTable: '[[NAME]] (1)'
+## FIXME: The .dynsym and .dynstr sections shouldn't need to be emitted, since
+##        their values are the default produced by yaml2obj.
+# UNIQUIFY3-NEXT: Sections:
+# UNIQUIFY3-NEXT:   - Name:            .dynsym
+# UNIQUIFY3-NEXT:     Type:            SHT_DYNSYM
+# UNIQUIFY3-NEXT:     Flags:           [ SHF_ALLOC ]
+# UNIQUIFY3-NEXT:     Link:            .dynstr
+# UNIQUIFY3-NEXT:     AddressAlign:    0x8
+# UNIQUIFY3-NEXT:   - Name:            .dynstr
+# UNIQUIFY3-NEXT:     Type:            SHT_STRTAB
+# UNIQUIFY3-NEXT:     Flags:           [ SHF_ALLOC ]
+# UNIQUIFY3-NEXT:     Address:         0x30
+# UNIQUIFY3-NEXT:     AddressAlign:    0x1
+# UNIQUIFY3-NEXT: DynamicSymbols:
+# UNIQUIFY3-NEXT:   - Name:  foo
+# UNIQUIFY3-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  SectionHeaderStringTable: [[NAME]]
+DynamicSymbols:
+  - Name: foo
+
+## Case 5: '.dynsym' when dynamic symbols are present.
+# RUN: yaml2obj --docnum=14 %s -o %t16.o '-DNAME=".dynsym (1)"'
+# RUN: obj2yaml %t16.o > %t16.yaml
+# RUN: FileCheck %s --input-file=%t16.yaml --check-prefix=UNIQUIFY3 \
+# RUN:   -DNAME=.dynsym
+
+## Case 6: Document what happens for '.debug_str' when DWARF debug strings are
+##         requested. The dwarf2yaml code uses the last .debug_* named section
+##         to populate the corresponding DWARF block. As a result, the original
+##         .debug_str content is lost.
+## TODO: We should prevent the dwarf2yaml code from using the section header
+##       string table to populate the DWARF block.
+# RUN: yaml2obj --docnum=15 %s -o %t17.o
+# RUN: obj2yaml %t17.o > %t17.yaml
+# RUN: FileCheck %s --input-file=%t17.yaml --check-prefix=UNIQUIFY6
+
+# UNIQUIFY6:      --- !ELF
+# UNIQUIFY6-NEXT: FileHeader:
+# UNIQUIFY6-NEXT:   Class:           ELFCLASS64
+# UNIQUIFY6-NEXT:   Data:            ELFDATA2LSB
+# UNIQUIFY6-NEXT:   Type:            ET_EXEC
+# UNIQUIFY6-NEXT:   SectionHeaderStringTable: '.debug_str (1)'
+# UNIQUIFY6-NEXT: DWARF:
+# UNIQUIFY6-NEXT:   debug_str:
+# UNIQUIFY6-NEXT:     - ''
+# UNIQUIFY6-NEXT:     - .debug_str
+# UNIQUIFY6-NEXT:     - .strtab
+# UNIQUIFY6-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  SectionHeaderStringTable: '.debug_str (1)'
+DWARF:
+  debug_str:
+    - string

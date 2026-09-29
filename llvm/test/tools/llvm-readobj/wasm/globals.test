@@ -1,0 +1,32 @@
+# RUN: yaml2obj %s | llvm-readobj --sections - | FileCheck %s
+
+# Test use of global.get in initializer expressions.
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            DATA
+    Segments:
+      - SectionOffset:   6
+        InitFlags:       0
+        Offset:
+          Opcode:          GLOBAL_GET
+          Index:           1
+        Content:         '64'
+...
+
+# CHECK:      Section {
+# CHECK-NEXT:     Type: DATA (0xB)
+# CHECK-NEXT:     Size: 7
+# CHECK-NEXT:     Offset: 14
+# CHECK-NEXT:     Segments [
+# CHECK-NEXT:       Segment {
+# CHECK-NEXT:         Size: 1
+# CHECK-NEXT:         Offset [
+# CHECK-NEXT:           Global: 1
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]

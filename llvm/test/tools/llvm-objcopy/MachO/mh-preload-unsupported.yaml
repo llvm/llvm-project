@@ -1,0 +1,16 @@
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x5
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x1
+  reserved:        0x0
+...
+
+# RUN: yaml2obj %s > %t
+# RUN: not llvm-objcopy %t 2>&1 | FileCheck %s -DFILE=%t
+#
+# CHECK: error: [[FILE]]: MH_PRELOAD files are not supported

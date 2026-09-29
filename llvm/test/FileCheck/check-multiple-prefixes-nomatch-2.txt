@@ -1,0 +1,20 @@
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -input-file %s %s -check-prefix=FOO -check-prefix=BAR \
+; RUN: 2>&1 | FileCheck %s
+;
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -input-file %s %s -check-prefixes=FOO,BAR 2>&1 \
+; RUN: | FileCheck %s
+;
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck -input-file %s %s -check-prefixes=BAR,FOO 2>&1 \
+; RUN: | FileCheck %s
+
+fog
+bar
+; _FOO not a valid check-line
+; FOO: fo{{o}}
+; BAR: ba{{r}}
+
+; CHECK: {{error: FOO: expected string not found in input}}
+; CHECK-NEXT: {{F}}OO: fo{{[{][{]o[}][}]}}

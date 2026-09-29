@@ -1,0 +1,31 @@
+## Show that llvm-size reads stdin if the input file is '-'.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-size -B - < %t | FileCheck %s --check-prefix=BERKELEY
+# RUN: llvm-size -A - < %t | FileCheck %s --check-prefix=SYSV
+
+# BERKELEY: 1 2 4 7 7 <stdin>
+# SYSV:      <stdin>  :
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Size:    1
+    Address: 4
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    2
+    Address: 2
+  - Name:    .bss
+    Type:    SHT_NOBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    4
+    Address: 1

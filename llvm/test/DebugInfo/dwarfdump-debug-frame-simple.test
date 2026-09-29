@@ -1,0 +1,28 @@
+; RUN: llvm-dwarfdump %p/Inputs/dwarfdump-test-32bit.elf.o --debug-frame | FileCheck %s -check-prefix FRAMES
+; Note: the input file was generated from Inputs/dwarfdump-test-32bit.elf.c
+; REQUIRES: x86-registered-target
+
+; FRAMES: .debug_frame
+
+; FRAMES: 00000000 00000010 ffffffff CIE
+; FRAMES: Version: 1
+; FRAMES:      DW_CFA_def_cfa: {{reg4|ESP}} +4
+; FRAMES-NEXT: DW_CFA_offset: {{reg8|EIP}} -4
+; FRAMES-NEXT: DW_CFA_nop:
+; FRAMES-NEXT: DW_CFA_nop:
+
+; FRAMES: 00000014 00000010 00000000 FDE cie=00000000 pc=00000000...00000022
+; FRAMES:      DW_CFA_advance_loc: 3 to 0x3
+; FRAMES-NEXT: DW_CFA_def_cfa_offset: +12
+; FRAMES-NEXT: DW_CFA_nop:
+
+; FRAMES: 00000028 00000014 00000000 FDE cie=00000000 pc=00000030...00000080
+; FRAMES:      DW_CFA_advance_loc: 1 to 0x31
+; FRAMES-NEXT: DW_CFA_def_cfa_offset: +8
+; FRAMES-NEXT: DW_CFA_offset: {{reg5|EBP}} -8
+; FRAMES-NEXT: DW_CFA_advance_loc: 2 to 0x33
+; FRAMES-NEXT: DW_CFA_def_cfa_register: {{reg5|EBP}}
+
+; FRAMES-NOT: CIE
+; FRAMES-NOT: FDE
+; FRAMES: .eh_frame

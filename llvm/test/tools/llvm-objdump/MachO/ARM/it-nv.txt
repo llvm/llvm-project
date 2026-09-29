@@ -1,0 +1,10 @@
+# RUN: llvm-objdump --macho -d %p/Inputs/it-nv.o | FileCheck %s
+
+# CHECK: ite	al @ unpredictable IT predicate sequence
+# CHECK: itet	al @ unpredictable IT predicate sequence
+# CHECK: itte	al @ unpredictable IT predicate sequence
+# CHECK: ite	eq{{$}}
+# CHECK: it	al{{$}}
+# CHECK: itt	al{{$}}
+# CHECK: ittt	al{{$}}
+# CHECK: itttt	al{{$}}

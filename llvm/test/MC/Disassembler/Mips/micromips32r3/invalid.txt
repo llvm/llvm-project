@@ -1,0 +1,4 @@
+# RUN: llvm-mc --disassemble %s -triple=mips-unknown-linux -mattr=micromips \
+# RUN:     2>&1 | FileCheck %s
+
+0x21 0xe2 0x5c 0x71 # CHECK: :[[@LINE]]:1: warning: invalid instruction encoding

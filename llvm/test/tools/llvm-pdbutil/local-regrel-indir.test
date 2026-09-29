@@ -1,0 +1,31 @@
+; RUN: llvm-pdbutil yaml2pdb %p/Inputs/local-regrel-indir.yaml --pdb=%t.pdb
+; RUN: llvm-pdbutil dump --symbols %t.pdb | FileCheck --check-prefix=CHECK_YAML2PDB %s
+
+; RUN: llvm-pdbutil pdb2yaml --module-syms %t.pdb > %t.yaml
+; RUN: FileCheck --input-file=%t.yaml --check-prefix=CHECK_PDB2YAML %s
+
+CHECK_YAML2PDB:                           Symbols                           
+CHECK_YAML2PDB: ============================================================
+CHECK_YAML2PDB:   Mod 0000 | `/tmp/nrvo.obj`:
+CHECK_YAML2PDB:          4 | S_LOCAL [size = 16] `foo`
+CHECK_YAML2PDB:              type=0x0074 (int), flags = none
+CHECK_YAML2PDB:         20 | S_DEFRANGE_REGISTER_REL_INDIR [size = 24]
+CHECK_YAML2PDB:              register = RSP, offset = 48, offset in udt = 0, offset in parent = 0, has spilled udt = false
+CHECK_YAML2PDB:              range = [0001:0081,+23), gaps = []
+
+CHECK_PDB2YAML: - Kind:            S_LOCAL
+CHECK_PDB2YAML:   LocalSym:
+CHECK_PDB2YAML:     Type:            116
+CHECK_PDB2YAML:     Flags:           [  ]
+CHECK_PDB2YAML:     VarName:         foo
+CHECK_PDB2YAML: - Kind:            S_DEFRANGE_REGISTER_REL_INDIR
+CHECK_PDB2YAML:   DefRangeRegisterRelIndirSym:
+CHECK_PDB2YAML:     Register:        335
+CHECK_PDB2YAML:     Flags:           0
+CHECK_PDB2YAML:     BasePointerOffset: 48
+CHECK_PDB2YAML:     OffsetInUdt:     0
+CHECK_PDB2YAML:     Range:
+CHECK_PDB2YAML:       OffsetStart:     81
+CHECK_PDB2YAML:       ISectStart:      1
+CHECK_PDB2YAML:       Range:           23
+CHECK_PDB2YAML:     Gaps:            []

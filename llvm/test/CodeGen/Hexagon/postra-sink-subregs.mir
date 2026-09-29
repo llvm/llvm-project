@@ -1,0 +1,33 @@
+# RUN: llc -mtriple=hexagon -run-pass postra-machine-sink,postrapseudos,if-converter -verify-machineinstrs -o - %s | FileCheck %s
+
+# 1. Post-RA machine sinking moves the copy (1) to block %bb.1. The
+#    subregisters $r2 and $r3 of $d1 are not removed from the live-ins.
+# 2. Expand post-RA pseudos replaces the COPY with A2_tfrp which is
+#    predicable.
+# 3. If-conversion predicates block %bb.1. Since $d1 (made of $r2 and $r3)
+#    is in the live-in list to %bb.1, it assumes that $d1 in (1) is live,
+#    and adds an implicit use of $d1 to the predicated copy.
+#    This results in an invalid machine code, since the implicit use
+#    refers to an undefined register.
+
+# Make sure that post-RA machine sinking removes subregisters from live-ins
+# to block bb.1.
+
+# CHECK: $d1 = A2_tfrpf $p0, $d0
+# CHECK-NOT: implicit killed $d1
+
+name: fred
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d0, $p0
+    renamable $d1 = COPY $d0                ;; (1)
+    J2_jumpt $p0, %bb.2, implicit-def $pc
+  bb.1:
+    liveins: $r2, $r3
+    $r0 = A2_addi $r2, 1
+  bb.2:
+    liveins: $r0
+    A2_nop
+    J2_jumpr $r31, implicit-def $pc
+...

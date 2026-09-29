@@ -1,0 +1,116 @@
+# RUN: yaml2obj %s -o - | not llvm-dwarfdump -verify - | FileCheck %s
+
+# Verifying local type units. Local type units and compile units are identical
+# except that the DWARF Unit offset for the type unit is specified using a
+# DW_IDX_type_unit. This is a single test that tests if we get an error for a
+# local type unit. We only need to verify that errors work for type units and
+# we can rely on the test for compile units to verify all other errors that can
+# happen in the .debug_names entries.
+
+# CHECK: Verifying .debug_names...
+# CHECK: error: Name Index @ 0x0: Entry @ 0x7f references a non-existing DIE @ 0x25.
+# CHECK: error: Aggregated error counts:
+# CHECK: error: NameIndex references nonexistent DIE occurred 1 time(s).
+# Errors detected.
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x200040
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .eh_frame
+    LastSec:         .eh_frame
+    VAddr:           0x200000
+    Align:           0x1000
+    Offset:          0x0
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .text
+    VAddr:           0x201160
+    Align:           0x1000
+    Offset:          0x160
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x0
+    Offset:          0x0
+Sections:
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x200120
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C0708900100001C0000001C000000201000000F00000000410E108602430D064A0C070800000000000000
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x201160
+    AddressAlign:    0x10
+    Content:         554889E5C745FC0000000031C05DC3
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         260000000500020800000000F23532F3E4235D67230000000121000000000008000000020506010001004800000005000108000000000300210001080000000000000002000F0000000800000004000F00000001560300033E0000000502917B05000442000000000604050407F23532F3E4235D6700
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         0141011305101772170000021300360B03250B0B3A0B3B0B0000031101252513050325721710171B25111B120673170000042E01111B1206401803253A0B3B0B49133F190000053400021803253A0B3B0B4913000006240003253E0B0B0B00000713003C196920000000
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         20000000050000000400000096000000A80000009F000000A400000000000000D1000000
+  - Name:            .debug_names
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x4
+    Content:         900000000500000001000000010000000000000003000000030000001B000000080000004C4C564D303730302A000000000000000100000002000000030000008973880B6A7F9A7C3080880BD10000009F000000A400000000000000070000000D0000000113020B031304190000022E03130419000003240313041900000001002500000000022300000000033E000000000000
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         46616365626F6F6B20636C616E672076657273696F6E2031352E302E30202868747470733A2F2F6769742E696E7465726E616C2E7466626E772E6E65742F7265706F732F6769742F726F2F6F736D6574612F65787465726E616C2F6C6C766D2D70726F6A656374203864356561396432616431633161356139303862623632343663303261626162323235643562633829004C696E6B65723A204C4C442031392E302E300000
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         590000000500080037000000010101FB0E0D00010101010000000100000101011F010900000003011F020F051E01000000000014E7C4DFD187393499D4332D94A1154D040000090260112000000000001405030AAE060B2E0202000101
+  - Name:            .debug_line_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         6D61696E2E637070002F55736572732F67636C6179746F6E2F446F63756D656E74732F7372632F7665726966792D74757300
+Symbols:
+  - Name:            main.cpp
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x201160
+    Size:            0xF
+DWARF:
+  debug_str:
+    - foo
+    - 'Facebook clang version 15.0.0 (https://git.internal.tfbnw.net/repos/git/ro/osmeta/external/llvm-project 8d5ea9d2ad1c1a5a908bb6246c02abab225d5bc8)'
+    - main.cpp
+    - main
+    - int
+    - '/Users/gclayton/Documents/src/verify-tus'
+    - Foo
+  debug_addr:
+    - Length:          0xC
+      Version:         0x5
+      AddressSize:     0x8
+      Entries:
+        - Address:         0x201160
+...

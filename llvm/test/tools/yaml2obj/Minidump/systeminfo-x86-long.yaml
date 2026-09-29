@@ -1,0 +1,15 @@
+# RUN: not yaml2obj %s 2>&1 | FileCheck %s
+
+--- !minidump
+Streams:
+  - Type:            SystemInfo
+    Processor Arch:  X86
+    Platform ID:     Linux
+    CPU:
+      Vendor ID:       LLVMLLVMLLVML
+      Version Info:    0x01020304
+      Feature Info:    0x05060708
+      AMD Extended Features: 0x09000102
+
+# CHECK: String too long
+# CHECK-NEXT: Vendor ID:       LLVMLLVMLLVML

@@ -1,0 +1,3 @@
+RUN: llvm-cov show %t -instr-profile %t -dump-collected-objects -object a,b | FileCheck %s
+
+CHECK: a,b

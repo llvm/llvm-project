@@ -1,0 +1,32 @@
+a
+
+; RUN: %ProtectFileCheckOutput not FileCheck -input-file %s %s 2>&1 | \
+; RUN:   FileCheck -check-prefix CHECK-ERROR -DDIR=%S \
+; RUN:   --match-full-lines --strict-whitespace %s
+
+; CHECK:        a[[]]
+; CHECK-ERROR:[[DIR]]{{/|\\}}empty-variable-name.txt:7:13: error: empty variable name
+; CHECK-ERROR-NEXT:; CHECK: a{{\[\[\]\]}}
+;      CHECK-ERROR-NEXT:            ^
+
+b
+
+; RUN: %ProtectFileCheckOutput not FileCheck -input-file %s -check-prefix CHECK-PSEUDO %s 2>&1 | \
+; RUN:   FileCheck -check-prefix CHECK-ERROR-PSEUDO -DDIR=%S \
+; RUN:   --match-full-lines --strict-whitespace %s
+
+; CHECK-PSEUDO: b[[@]]
+; CHECK-ERROR-PSEUDO:[[DIR]]{{/|\\}}empty-variable-name.txt:18:21: error: empty pseudo variable name
+; CHECK-ERROR-PSEUDO-NEXT:; CHECK-PSEUDO: b{{\[\[@\]\]}}
+;      CHECK-ERROR-PSEUDO-NEXT:                    ^
+
+c
+
+; RUN: %ProtectFileCheckOutput not FileCheck -input-file %s -check-prefix CHECK-GLOBAL %s 2>&1 | \
+; RUN:   FileCheck -check-prefix CHECK-ERROR-GLOBAL -DDIR=%S \
+; RUN:   --match-full-lines --strict-whitespace %s
+
+; CHECK-GLOBAL: c[[$]]
+; CHECK-ERROR-GLOBAL:[[DIR]]{{/|\\}}empty-variable-name.txt:29:21: error: empty global variable name
+; CHECK-ERROR-GLOBAL-NEXT:; CHECK-GLOBAL: c{{\[\[\$\]\]}}
+;       CHECK-ERROR-GLOBAL-NEXT:                    ^

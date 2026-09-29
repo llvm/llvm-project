@@ -1,0 +1,112 @@
+--- |
+ ; RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -o - -force-instr-ref-livedebugvalues=1 -emulate-old-livedebugvalues=0 | FileCheck %s -implicit-check-not=DBG_VALUE
+
+  ;; When using instruction referencing LiveDebugValues, when a register gets
+  ;; clobbered, we should transfer variable locations to backup locations, if
+  ;; one is available.
+  ;; I've written this test in terms of DBG_VALUEs rather than DBG_INSTR_REFs
+  ;; as this is purely a LiveDebugValues feature, and should work without the
+  ;; need to use any other instructoin referencing work.
+
+  declare i32 @use() local_unnamed_addr;
+
+  define i32 @_Z8bb_to_bb() local_unnamed_addr !dbg !12 {
+  entry:
+    br label %bb1, !dbg !17
+  bb1:
+    br label %bb2, !dbg !17
+  bb2:
+    br label %bb3, !dbg !17
+  bb3:
+    br label %bb3, !dbg !17
+  bb4:
+    br label %bb3, !dbg !17
+  bb5:
+    ret i32 0, !dbg !17
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!7, !8, !9, !10}
+  !llvm.ident = !{!11}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 10.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3, debugInfoForProfiling: true, nameTableKind: None)
+  !1 = !DIFile(filename: "main.cpp", directory: "F:\")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
+  !5 = distinct !DIGlobalVariable(name: "start", scope: !0, file: !1, line: 4, type: !6, isLocal: false, isDefinition: true)
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !{i32 2, !"Dwarf Version", i32 4}
+  !8 = !{i32 2, !"Debug Info Version", i32 3}
+  !9 = !{i32 1, !"wchar_size", i32 2}
+  !10 = !{i32 7, !"PIC Level", i32 2}
+  !11 = !{!"clang version 10.0.0"}
+  !12 = distinct !DISubprogram(name: "bb_to_bb", linkageName: "bb_to_bb", scope: !1, file: !1, line: 6, type: !13, scopeLine: 6, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !15)
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{!6, !6}
+  !15 = !{!16}
+  !16 = !DILocalVariable(name: "myVar", scope: !12, file: !1, line: 7, type: !6)
+  !17 = !DILocation(line: 10, scope: !12)
+
+...
+---
+name: _Z8bb_to_bb
+debugInstrRef: true
+stack:
+  - { id: 0, type: spill-slot, offset: -12, size: 4, alignment: 4 }
+body:  |
+  bb.0.entry:
+    $eax = MOV32ri 0, debug-location !17
+    $eax = COPY $ebx
+    DBG_VALUE $eax, $noreg, !16, !DIExpression(), debug-location !17
+    ;; Over-write eax, we should recover its location as being in ebx.
+    $eax = MOV32ri 0, debug-location !17
+
+    ; CHECK:      DBG_VALUE $eax
+    ; CHECK-NEXT: $eax = MOV32ri 0
+    ; CHECK-NEXT: DBG_VALUE $ebx
+
+    ;; The same should occur for spills.
+    $ebx = MOV32ri 2, debug-location !17
+    MOV32mr $rsp, 1, _, -12, _, killed $ebx :: (store 4 into %stack.0)
+    DBG_VALUE $ebx, $noreg, !16, !DIExpression(), debug-location !17
+    $ebx = MOV32ri 0, debug-location !17
+
+    ; CHECK-NEXT: $ebx = MOV32ri 2
+    ; CHECK-NEXT: MOV32mr $rsp
+    ; CHECK-NEXT: DBG_VALUE $ebx
+    ; CHECK-NEXT: $ebx = MOV32ri
+    ; CHECK-NEXT: DBG_VALUE $rsp
+
+    ;; Try re-loading the variable value from the stack; we shouldn't issue a
+    ;; DBG_VALUE to follow it, the stack locations are usually longer lived and
+    ;; this reduces location list entropy. Then, clobber the stack location,
+    ;; and check that we can relocate the variable to being in the loaded
+    ;; register.
+    $ebx = MOV32rm $rsp, 1, _, -12, _ :: (load 4 from %stack.0)
+    MOV32mr $rsp, 1, _, -12, _, killed $esi :: (store 4 into %stack.0)
+    ; CHECK:      $ebx = MOV32rm
+    ; CHECK-NEXT: MOV32mr $rsp
+    ; CHECK-NEXT: DBG_VALUE $ebx
+
+    ;; Now test copies and register masks.
+    $eax = COPY $ebx
+    DBG_VALUE $ebx, $noreg, !16, !DIExpression(), debug-location !17
+    ;; Overwrite ebx with a copy.
+    $ecx = MOV32ri 1, debug-location !17
+    $ebx = COPY $ecx
+
+    ; CHECK:      DBG_VALUE $ebx
+    ; CHECK-NEXT: $ecx = MOV32ri
+    ; CHECK-NEXT: $ebx = COPY
+    ; CHECK-NEXT: DBG_VALUE $eax
+
+    ;; Similarly, with a register mask
+    $ebx = COPY $eax
+    CALL64pcrel32 @use, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, debug-location !17
+
+    ; CHECK-NEXT: $ebx = COPY $eax
+    ; CHECK-NEXT: CALL64pcrel32
+    ; CHECK-NEXT: DBG_VALUE $ebx
+
+    RET64 $eax, debug-location !17
+...

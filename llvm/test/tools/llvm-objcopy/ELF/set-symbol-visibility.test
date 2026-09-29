@@ -1,0 +1,311 @@
+# RUN: yaml2obj --docnum=1 %s -o %t.o
+# RUN: echo '.*' > %t.symbols.regex
+
+## Check that the visibility of all symbols is properly set to DEFAULT.
+# RUN: llvm-objcopy %t.o %t0.o --set-symbols-visibility=%t.symbols.regex=default --regex
+# RUN: llvm-readelf -s %t0.o | FileCheck %s --check-prefix=DEF
+
+# DEF-DAG: DEFAULT     1 default_local
+# DEF-DAG: DEFAULT     1 internal_local
+# DEF-DAG: DEFAULT     1 hidden_local
+# DEF-DAG: DEFAULT     1 protected_local
+# DEF-DAG: DEFAULT     1 default_global
+# DEF-DAG: DEFAULT     1 default_weak
+# DEF-DAG: DEFAULT     1 internal_global
+# DEF-DAG: DEFAULT     1 internal_weak
+# DEF-DAG: DEFAULT     1 hidden_global
+# DEF-DAG: DEFAULT     1 hidden_weak
+# DEF-DAG: DEFAULT     1 protected_global
+# DEF-DAG: DEFAULT     1 protected_weak
+
+## Check that the visibility of all symbols is properly set to HIDDEN.
+# RUN: llvm-objcopy %t.o %t1.o --set-symbols-visibility=%t.symbols.regex=hidden --regex
+# RUN: llvm-readelf -s %t1.o | FileCheck %s --check-prefix=HID
+
+# HID-DAG: HIDDEN      1 default_local
+# HID-DAG: HIDDEN      1 internal_local
+# HID-DAG: HIDDEN      1 hidden_local
+# HID-DAG: HIDDEN      1 protected_local
+# HID-DAG: HIDDEN      1 default_global
+# HID-DAG: HIDDEN      1 default_weak
+# HID-DAG: HIDDEN      1 internal_global
+# HID-DAG: HIDDEN      1 internal_weak
+# HID-DAG: HIDDEN      1 hidden_global
+# HID-DAG: HIDDEN      1 hidden_weak
+# HID-DAG: HIDDEN      1 protected_global
+# HID-DAG: HIDDEN      1 protected_weak
+
+## Check that the visibility of all symbols is properly set to PROTECTED.
+# RUN: llvm-objcopy %t.o %t2.o --set-symbols-visibility=%t.symbols.regex=protected --regex
+# RUN: llvm-readelf -s %t2.o | FileCheck %s --check-prefix=PRO
+
+# PRO-DAG: PROTECTED   1 default_local
+# PRO-DAG: PROTECTED   1 internal_local
+# PRO-DAG: PROTECTED   1 hidden_local
+# PRO-DAG: PROTECTED   1 protected_local
+# PRO-DAG: PROTECTED   1 default_global
+# PRO-DAG: PROTECTED   1 default_weak
+# PRO-DAG: PROTECTED   1 internal_global
+# PRO-DAG: PROTECTED   1 internal_weak
+# PRO-DAG: PROTECTED   1 hidden_global
+# PRO-DAG: PROTECTED   1 hidden_weak
+# PRO-DAG: PROTECTED   1 protected_global
+# PRO-DAG: PROTECTED   1 protected_weak
+
+## Check that the visibility of all symbols is properly set to INTERNAL.
+# RUN: llvm-objcopy %t.o %t3.o --set-symbols-visibility=%t.symbols.regex=internal --regex
+# RUN: llvm-readelf -s %t3.o | FileCheck %s --check-prefix=INT
+
+# INT-DAG: INTERNAL    1 default_local
+# INT-DAG: INTERNAL    1 internal_local
+# INT-DAG: INTERNAL    1 hidden_local
+# INT-DAG: INTERNAL    1 protected_local
+# INT-DAG: INTERNAL    1 default_global
+# INT-DAG: INTERNAL    1 default_weak
+# INT-DAG: INTERNAL    1 internal_global
+# INT-DAG: INTERNAL    1 internal_weak
+# INT-DAG: INTERNAL    1 hidden_global
+# INT-DAG: INTERNAL    1 hidden_weak
+# INT-DAG: INTERNAL    1 protected_global
+# INT-DAG: INTERNAL    1 protected_weak
+
+## Check that setting the visibility of certain symbols that were read from
+## a file does not affect other symbols.
+# RUN: echo -e "default_local\ninternal_local" > %t.symbol.list
+# RUN: llvm-objcopy %t.o %t4.o --set-symbols-visibility=%t.symbol.list=hidden
+# RUN: llvm-readelf -s %t4.o | FileCheck %s --check-prefix=FILE
+
+# FILE-DAG: HIDDEN      1 default_local
+# FILE-DAG: HIDDEN      1 internal_local
+## Unaffected symbols:
+# FILE-DAG: HIDDEN      1 hidden_local
+# FILE-DAG: PROTECTED   1 protected_local
+# FILE-DAG: DEFAULT     1 default_global
+# FILE-DAG: DEFAULT     1 default_weak
+# FILE-DAG: INTERNAL    1 internal_global
+# FILE-DAG: INTERNAL    1 internal_weak
+# FILE-DAG: HIDDEN      1 hidden_global
+# FILE-DAG: HIDDEN      1 hidden_weak
+# FILE-DAG: PROTECTED   1 protected_global
+# FILE-DAG: PROTECTED   1 protected_weak
+
+## Check that the visibility of a single symbol is set correctly,
+## and that no other symbols are affected.
+# RUN: llvm-objcopy %t.o %t5.o --set-symbol-visibility=default_local=hidden \
+# RUN:                         --set-symbol-visibility=internal_local=protected \
+# RUN:                         --set-symbol-visibility=hidden_local=internal \
+# RUN:                         --set-symbol-visibility=protected_local=default
+# RUN: llvm-readelf -s %t5.o | FileCheck %s --check-prefix=SINGLE
+
+# SINGLE-DAG: HIDDEN      1 default_local
+# SINGLE-DAG: PROTECTED   1 internal_local
+# SINGLE-DAG: INTERNAL    1 hidden_local
+# SINGLE-DAG: DEFAULT     1 protected_local
+## Unaffected symbols:
+# SINGLE-DAG: DEFAULT     1 default_global
+# SINGLE-DAG: DEFAULT     1 default_weak
+# SINGLE-DAG: INTERNAL    1 internal_global
+# SINGLE-DAG: INTERNAL    1 internal_weak
+# SINGLE-DAG: HIDDEN      1 hidden_global
+# SINGLE-DAG: HIDDEN      1 hidden_weak
+# SINGLE-DAG: PROTECTED   1 protected_global
+# SINGLE-DAG: PROTECTED   1 protected_weak
+
+## Check that the visibility of symbols specified by a regex are set correctly,
+## and that no other symbols are affected.
+# RUN: llvm-objcopy %t.o %t6.o --set-symbol-visibility='.*'_local=hidden --regex
+# RUN: llvm-readelf -s %t6.o | FileCheck %s --check-prefix=REGEX
+
+# REGEX-DAG: HIDDEN      1 default_local
+# REGEX-DAG: HIDDEN      1 internal_local
+# REGEX-DAG: HIDDEN      1 hidden_local
+# REGEX-DAG: HIDDEN      1 protected_local
+## Unaffected symbols:
+# REGEX-DAG: DEFAULT     1 default_global
+# REGEX-DAG: DEFAULT     1 default_weak
+# REGEX-DAG: INTERNAL    1 internal_global
+# REGEX-DAG: INTERNAL    1 internal_weak
+# REGEX-DAG: HIDDEN      1 hidden_global
+# REGEX-DAG: HIDDEN      1 hidden_weak
+# REGEX-DAG: PROTECTED   1 protected_global
+# REGEX-DAG: PROTECTED   1 protected_weak
+
+## Check that the visibility of symbols specified by a wildcard are set correctly,
+## and that no other symbols are affected.
+# RUN: llvm-objcopy %t.o %t7.o --set-symbol-visibility='*_local'=hidden --wildcard
+# RUN: llvm-readelf -s %t7.o | FileCheck %s --check-prefix=WILDCARD
+
+# WILDCARD-DAG: HIDDEN      1 default_local
+# WILDCARD-DAG: HIDDEN      1 internal_local
+# WILDCARD-DAG: HIDDEN      1 hidden_local
+# WILDCARD-DAG: HIDDEN      1 protected_local
+## Unaffected symbols:
+# WILDCARD-DAG: DEFAULT     1 default_global
+# WILDCARD-DAG: DEFAULT     1 default_weak
+# WILDCARD-DAG: INTERNAL    1 internal_global
+# WILDCARD-DAG: INTERNAL    1 internal_weak
+# WILDCARD-DAG: HIDDEN      1 hidden_global
+# WILDCARD-DAG: HIDDEN      1 hidden_weak
+# WILDCARD-DAG: PROTECTED   1 protected_global
+# WILDCARD-DAG: PROTECTED   1 protected_weak
+
+## Check that the latest option that matches the same symbols as any of the previous
+## options overwrites the visibility of these symbols.
+# RUN: echo -e '*_weak\n*_local' > %t.symbols.pattern
+# RUN: llvm-objcopy %t.o %t8.o --set-symbol-visibility='default_*'=hidden \
+# RUN:                         --set-symbol-visibility='internal_*'=hidden \
+# RUN:                         --set-symbols-visibility=%t.symbols.pattern=protected \
+# RUN:                         --wildcard
+# RUN: llvm-readelf -s %t8.o | FileCheck %s --check-prefix=REWRITE
+
+# REWRITE-DAG: PROTECTED   1 default_local
+# REWRITE-DAG: HIDDEN      1 default_global
+# REWRITE-DAG: PROTECTED   1 default_weak
+# REWRITE-DAG: PROTECTED   1 internal_local
+# REWRITE-DAG: HIDDEN      1 internal_global
+# REWRITE-DAG: PROTECTED   1 internal_weak
+# REWRITE-DAG: PROTECTED   1 hidden_local
+# REWRITE-DAG: PROTECTED   1 hidden_weak
+# REWRITE-DAG: PROTECTED   1 protected_local
+# REWRITE-DAG: PROTECTED   1 protected_weak
+## Unaffected symbols:
+# REWRITE-DAG: HIDDEN      1 hidden_global
+# REWRITE-DAG: PROTECTED   1 protected_global
+
+## Check that a symbol name with a special charater is treated as a plain name
+## when pattern matching options are not enabled.
+# RUN: yaml2obj --docnum=2 %s -o %t9.o
+# RUN: llvm-objcopy %t9.o --set-symbol-visibility='f*o'=hidden
+# RUN: llvm-readelf -s %t9.o | FileCheck %s --check-prefix=SPECIAL
+
+# SPECIAL-DAG: HIDDEN      1 f*o
+## Unaffected symbol:
+# SPECIAL-DAG: DEFAULT     1 foo
+
+# RUN: yaml2obj --docnum=3 %s -o %t10.o
+
+## Check that the visibility of undefined symbols can be changed as well.
+# RUN: llvm-objcopy %t10.o --set-symbol-visibility=foo=hidden
+# RUN: llvm-readelf -s %t10.o | FileCheck %s --check-prefix=UNDEF
+# UNDEF: HIDDEN    UND foo
+
+## Check that passing an invalid visibility type generates an error message.
+# RUN: echo 'foo' > %t.symbols
+# RUN: not llvm-objcopy %t10.o --set-symbols-visibility=%t.symbols=invalid-type 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=TYPE
+# RUN: not llvm-objcopy %t10.o --set-symbol-visibility=foo=invalid-type 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=TYPE
+# TYPE: error: 'invalid-type' is not a valid symbol visibility
+
+## Check that omitting the '=' character generates an error.
+# RUN: not llvm-objcopy %t10.o --set-symbols-visibility=%t.symbols,hidden 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=FORMAT -DOPTION=--set-symbols-visibility
+# RUN: not llvm-objcopy %t10.o --set-symbol-visibility=foo default 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=FORMAT -DOPTION=--set-symbol-visibility
+# FORMAT: error: bad format for [[OPTION]]
+
+## Check that using an invalid symbol pattern generates an error.
+# RUN: echo '*.' > %t.symbols.regex
+# RUN: not llvm-objcopy %t10.o --set-symbols-visibility=%t.symbols.regex=hidden --regex 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SYMBOL
+# RUN: not llvm-objcopy %t10.o --set-symbol-visibility='*.'=default --regex 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SYMBOL
+# SYMBOL: error: cannot compile regular expression '*.': repetition-operator operand invalid
+
+## Check passing an invalid filename generates an error.
+# RUN: not llvm-objcopy %t10.o --set-symbols-visibility=no_file=hidden 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NO_FILE -DMSG=%errc_ENOENT
+# NO_FILE: error: 'no_file': [[MSG]]
+
+---
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+Symbols:
+  - Name:    default_local
+    Section: .text
+    Binding:  STB_LOCAL
+  - Name:    protected_local
+    Section: .text
+    Binding:  STB_LOCAL
+    Other:    [ STV_PROTECTED ]
+  - Name:    internal_local
+    Section: .text
+    Binding:  STB_LOCAL
+    Other:    [ STV_INTERNAL ]
+  - Name:    hidden_local
+    Section: .text
+    Binding:  STB_LOCAL
+    Other:    [ STV_HIDDEN ]
+  - Name:    default_weak
+    Section: .text
+    Binding:  STB_WEAK
+  - Name:    internal_weak
+    Section: .text
+    Binding:  STB_WEAK
+    Other:    [ STV_INTERNAL ]
+  - Name:    hidden_weak
+    Section: .text
+    Binding:  STB_WEAK
+    Other:    [ STV_HIDDEN ]
+  - Name:    protected_weak
+    Section: .text
+    Binding:  STB_WEAK
+    Other:    [ STV_PROTECTED ]
+  - Name:    default_global
+    Section: .text
+    Binding:  STB_GLOBAL
+  - Name:    internal_global
+    Section: .text
+    Binding:  STB_GLOBAL
+    Other:    [ STV_INTERNAL ]
+  - Name:    hidden_global
+    Section: .text
+    Binding:  STB_GLOBAL
+    Other:    [ STV_HIDDEN ]
+  - Name:    protected_global
+    Section: .text
+    Binding:  STB_GLOBAL
+    Other:    [ STV_PROTECTED ]
+  - Name:    ignored_name
+    Section: .text
+    Binding:  STB_GLOBAL
+    Other:    [ STV_INTERNAL ]
+...
+
+---
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+Symbols:
+  - Name:    f*o
+    Section: .text
+    Binding:  STB_LOCAL
+  - Name:    foo
+    Section: .text
+    Binding:  STB_LOCAL
+...
+
+---
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Symbols:
+  - Name:     foo
+    Binding:  STB_LOCAL
+...

@@ -1,0 +1,105 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z16 -start-before=peephole-opt \
+# RUN:   -stop-after=peephole-opt %s -o - | FileCheck %s
+
+--- |
+  define double @f1(ptr %x, i32 %a, i32 %b, i32 %limit, ptr %dst) #0 {
+    %arrayidx1 = getelementptr inbounds double, ptr %x, i64 1
+    ret double 0.0
+  }
+  define double @f2(ptr %x, i32 %a, i32 %b, i32 %limit, ptr %dst) #0 {
+    %arrayidx1 = getelementptr inbounds double, ptr %x, i64 1
+    ret double 0.0
+  }
+
+...
+
+# Do not fold where CC is live.
+# CHECK: name: f1
+# CHECK: {{.*}} WFADB
+---
+name:            f1
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: addr64bit }
+  - { id: 1, class: gr32bit }
+  - { id: 2, class: gr32bit }
+  - { id: 3, class: gr32bit }
+  - { id: 4, class: addr64bit }
+  - { id: 5, class: vr64bit }
+  - { id: 6, class: vr64bit }
+  - { id: 7, class: vr64bit }
+  - { id: 8, class: grx32bit }
+liveins:
+  - { reg: '$r2d', virtual-reg: '%0' }
+  - { reg: '$r3l', virtual-reg: '%1' }
+  - { reg: '$r4l', virtual-reg: '%2' }
+  - { reg: '$r5l', virtual-reg: '%3' }
+  - { reg: '$r6d', virtual-reg: '%4' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r2d, $r3l, $r4l, $r5l, $r6d
+  
+    %4:addr64bit = COPY $r6d
+    %3:gr32bit = COPY $r5l
+    %2:gr32bit = COPY $r4l
+    %1:gr32bit = COPY $r3l
+    %0:addr64bit = COPY $r2d
+    CLFIMux %3, 42, implicit-def $cc
+    %5:vr64bit = VL64 %0, 0, $noreg :: (load (s64) from %ir.x)
+    %6:vr64bit = VL64 %0, 8, $noreg :: (load (s64) from %ir.arrayidx1)
+    %7:vr64bit = nsz arcp contract afn reassoc nofpexcept WFADB killed %6, killed %5, implicit $fpc
+    %8:grx32bit = SELRMux %2, %1, 14, 4, implicit $cc
+    STMux killed %8, %4, 0, $noreg :: (store (s32) into %ir.dst)
+    $f0d = COPY %7
+    Return implicit $f0d
+
+...
+
+# Do not fold where CC is live in.
+# CHECK: name: f2
+# CHECK: {{.*}} WFADB
+---
+name:            f2
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: addr64bit }
+  - { id: 1, class: gr32bit }
+  - { id: 2, class: gr32bit }
+  - { id: 3, class: gr32bit }
+  - { id: 4, class: addr64bit }
+  - { id: 5, class: vr64bit }
+  - { id: 6, class: vr64bit }
+  - { id: 7, class: vr64bit }
+  - { id: 8, class: grx32bit }
+liveins:
+  - { reg: '$r2d', virtual-reg: '%0' }
+  - { reg: '$r3l', virtual-reg: '%1' }
+  - { reg: '$r4l', virtual-reg: '%2' }
+  - { reg: '$r5l', virtual-reg: '%3' }
+  - { reg: '$r6d', virtual-reg: '%4' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r2d, $r3l, $r4l, $r5l, $r6d, $cc
+  
+    %4:addr64bit = COPY $r6d
+    %3:gr32bit = COPY $r5l
+    %2:gr32bit = COPY $r4l
+    %1:gr32bit = COPY $r3l
+    %0:addr64bit = COPY $r2d
+    %5:vr64bit = VL64 %0, 0, $noreg :: (load (s64) from %ir.x)
+    %6:vr64bit = VL64 %0, 8, $noreg :: (load (s64) from %ir.arrayidx1)
+    %7:vr64bit = nsz arcp contract afn reassoc nofpexcept WFADB killed %6, killed %5, implicit $fpc
+    %8:grx32bit = SELRMux %2, %1, 14, 4, implicit $cc
+    STMux killed %8, %4, 0, $noreg :: (store (s32) into %ir.dst)
+    $f0d = COPY %7
+    Return implicit $f0d
+
+...

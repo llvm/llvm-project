@@ -1,0 +1,795 @@
+; Test to make sure NVVM intrinsics are automatically upgraded.
+; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+; RUN: verify-uselistorder %s
+
+declare i32 @llvm.nvvm.brev32(i32)
+declare i64 @llvm.nvvm.brev64(i64)
+declare i32 @llvm.nvvm.clz.i(i32)
+declare i32 @llvm.nvvm.clz.ll(i64)
+declare i32 @llvm.nvvm.popc.i(i32)
+declare i32 @llvm.nvvm.popc.ll(i64)
+declare float @llvm.nvvm.h2f(i16)
+
+declare i32 @llvm.nvvm.abs.i(i32)
+declare i64 @llvm.nvvm.abs.ll(i64)
+
+declare float @llvm.nvvm.fabs.f(float)
+declare float @llvm.nvvm.fabs.ftz.f(float)
+declare double @llvm.nvvm.fabs.d(double)
+
+declare float @llvm.nvvm.tanh.approx.f32(float)
+
+declare i16 @llvm.nvvm.max.s(i16, i16)
+declare i32 @llvm.nvvm.max.i(i32, i32)
+declare i64 @llvm.nvvm.max.ll(i64, i64)
+declare i16 @llvm.nvvm.max.us(i16, i16)
+declare i32 @llvm.nvvm.max.ui(i32, i32)
+declare i64 @llvm.nvvm.max.ull(i64, i64)
+declare i16 @llvm.nvvm.min.s(i16, i16)
+declare i32 @llvm.nvvm.min.i(i32, i32)
+declare i64 @llvm.nvvm.min.ll(i64, i64)
+declare i16 @llvm.nvvm.min.us(i16, i16)
+declare i32 @llvm.nvvm.min.ui(i32, i32)
+declare i64 @llvm.nvvm.min.ull(i64, i64)
+
+declare i32 @llvm.nvvm.bitcast.f2i(float)
+declare float @llvm.nvvm.bitcast.i2f(i32)
+declare i64 @llvm.nvvm.bitcast.d2ll(double)
+declare double @llvm.nvvm.bitcast.ll2d(i64)
+
+declare i32 @llvm.nvvm.rotate.b32(i32, i32)
+declare i64 @llvm.nvvm.rotate.right.b64(i64, i32)
+declare i64 @llvm.nvvm.rotate.b64(i64, i32)
+declare i64 @llvm.nvvm.swap.lo.hi.b64(i64)
+
+declare ptr addrspace(1) @llvm.nvvm.ptr.gen.to.global.p1.p0(ptr)
+declare ptr addrspace(3) @llvm.nvvm.ptr.gen.to.shared.p3.p0(ptr)
+declare ptr addrspace(4) @llvm.nvvm.ptr.gen.to.constant.p4.p0(ptr)
+declare ptr addrspace(5) @llvm.nvvm.ptr.gen.to.local.p5.p0(ptr)
+declare ptr addrspace(101) @llvm.nvvm.ptr.gen.to.param.p101.p0(ptr)
+declare ptr @llvm.nvvm.ptr.global.to.gen.p0.p1(ptr addrspace(1))
+declare ptr @llvm.nvvm.ptr.shared.to.gen.p0.p3(ptr addrspace(3))
+declare ptr @llvm.nvvm.ptr.constant.to.gen.p0.p4(ptr addrspace(4))
+declare ptr @llvm.nvvm.ptr.local.to.gen.p0.p5(ptr addrspace(5))
+declare ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101))
+
+declare i32 @llvm.nvvm.ldg.global.i.i32.p1(ptr addrspace(1), i32)
+declare ptr @llvm.nvvm.ldg.global.p.p1(ptr addrspace(1), i32)
+declare float @llvm.nvvm.ldg.global.f.f32.p1(ptr addrspace(1), i32)
+declare i32 @llvm.nvvm.ldg.global.i.i32.p0(ptr, i32)
+declare ptr @llvm.nvvm.ldg.global.p.p0(ptr, i32)
+declare float @llvm.nvvm.ldg.global.f.f32.p0(ptr, i32)
+
+declare i32 @llvm.nvvm.atomic.load.inc.32.p0(ptr, i32)
+declare i32 @llvm.nvvm.atomic.load.dec.32.p0(ptr, i32)
+declare i32 @llvm.nvvm.atomic.load.add.f32.p0(ptr, float)
+declare i32 @llvm.nvvm.atomic.load.add.f64.p0(ptr, double)
+
+declare i32 @llvm.nvvm.atomic.add.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.add.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.add.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.add.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.exch.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.exch.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.exch.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.exch.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.max.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.max.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.max.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.max.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.min.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.min.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.min.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.min.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.inc.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.inc.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.inc.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.inc.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.dec.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.dec.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.dec.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.dec.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.and.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.and.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.and.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.and.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.or.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.or.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.or.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.or.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.xor.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.xor.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.xor.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.xor.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.cas.gen.i.cta.i32.p0(ptr, i32, i32)
+declare i64 @llvm.nvvm.atomic.cas.gen.i.cta.i64.p0(ptr, i64, i64)
+declare i32 @llvm.nvvm.atomic.cas.gen.i.sys.i32.p0(ptr, i32, i32)
+declare i64 @llvm.nvvm.atomic.cas.gen.i.sys.i64.p0(ptr, i64, i64)
+declare float @llvm.nvvm.atomic.add.gen.f.cta.f32.p0(ptr, float)
+declare double @llvm.nvvm.atomic.add.gen.f.cta.f64.p0(ptr, double)
+declare float @llvm.nvvm.atomic.add.gen.f.sys.f32.p0(ptr, float)
+declare double @llvm.nvvm.atomic.add.gen.f.sys.f64.p0(ptr, double)
+
+declare ptr addrspace(3) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3), i32)
+
+declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3), ptr addrspace(3), ptr addrspace(1), i32, i16, i64, i1, i1)
+declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3), ptr addrspace(3), ptr addrspace(1), i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(3), ptr addrspace(3), ptr addrspace(3), i32)
+
+declare void @llvm.nvvm.tcgen05.commit.cg1(ptr)
+declare void @llvm.nvvm.tcgen05.commit.cg2(ptr)
+declare void @llvm.nvvm.tcgen05.commit.shared.cg1(ptr addrspace(3))
+declare void @llvm.nvvm.tcgen05.commit.shared.cg2(ptr addrspace(3))
+declare void @llvm.nvvm.tcgen05.commit.mc.cg1(ptr, i16)
+declare void @llvm.nvvm.tcgen05.commit.mc.cg2(ptr, i16)
+declare void @llvm.nvvm.tcgen05.commit.mc.shared.cg1(ptr addrspace(3), i16)
+declare void @llvm.nvvm.tcgen05.commit.mc.shared.cg2(ptr addrspace(3), i16)
+
+declare void @llvm.nvvm.tcgen05.alloc.cg1(ptr, i32)
+declare void @llvm.nvvm.tcgen05.alloc.cg2(ptr, i32)
+declare void @llvm.nvvm.tcgen05.alloc.shared.cg1(ptr addrspace(3), i32)
+declare void @llvm.nvvm.tcgen05.alloc.shared.cg2(ptr addrspace(3), i32)
+declare void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6), i32)
+declare void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6), i32)
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.1d(ptr addrspace(3), ptr, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.2d(ptr addrspace(3), ptr, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.min.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.max.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.inc.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.dec.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.and.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.or.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.xor.tile.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.4d(ptr addrspace(3), ptr, i32, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.5d(ptr addrspace(3), ptr, i32, i32, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.3d(ptr addrspace(3), ptr, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.4d(ptr addrspace(3), ptr, i32, i32, i32, i32, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.5d(ptr addrspace(3), ptr, i32, i32, i32, i32, i32, i64, i1)
+
+declare void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6), i64, i64, i32, i1, i32, i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6), i64, i64, i32, i1, ptr addrspace(6), i32, i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.ashift(ptr addrspace(6), ptr addrspace(6), i64, i32, i1, ptr addrspace(6), i32, i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg1(ptr addrspace(6), i64, i64, i32, i1, <4 x i32>, i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg2.ashift(ptr addrspace(6), ptr addrspace(6), i64, i32, i1, ptr addrspace(6), <8 x i32>, i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6), i64, i64, i32, i1, ptr addrspace(6), ptr addrspace(6), i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale.block32(ptr addrspace(6), i64, i64, i32, i1, ptr addrspace(6), ptr addrspace(6), ptr addrspace(6), i32, i32)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6), ptr addrspace(6), i64, i32, i1, ptr addrspace(6), ptr addrspace(6), ptr addrspace(6), i32, i32)
+
+declare void @llvm.nvvm.barrier0()
+declare void @llvm.nvvm.barrier.n(i32)
+declare void @llvm.nvvm.bar.sync(i32)
+declare void @llvm.nvvm.barrier(i32, i32)
+declare void @llvm.nvvm.barrier.sync(i32)
+declare void @llvm.nvvm.barrier.sync.cnt(i32, i32)
+
+declare i32 @llvm.nvvm.barrier0.popc(i32)
+declare i32 @llvm.nvvm.barrier0.and(i32)
+declare i32 @llvm.nvvm.barrier0.or(i32)
+
+declare float @llvm.nvvm.ex2.approx.f(float)
+declare double @llvm.nvvm.ex2.approx.d(double)
+declare <2 x half> @llvm.nvvm.ex2.approx.f16x2(<2 x half>)
+declare float @llvm.nvvm.ex2.approx.ftz.f(float)
+
+; CHECK-LABEL: @simple_upgrade
+define void @simple_upgrade(i32 %a, i64 %b, i16 %c) {
+; CHECK: call i32 @llvm.bitreverse.i32(i32 %a)
+  %r1 = call i32 @llvm.nvvm.brev32(i32 %a)
+
+; CHECK: call i64 @llvm.bitreverse.i64(i64 %b)
+  %r2 = call i64 @llvm.nvvm.brev64(i64 %b)
+
+; CHECK: call i32 @llvm.ctlz.i32(i32 %a, i1 false)
+  %r3 = call i32 @llvm.nvvm.clz.i(i32 %a)
+
+; CHECK: [[clz:%[a-zA-Z0-9.]+]] = call i64 @llvm.ctlz.i64(i64 %b, i1 false)
+; CHECK: trunc i64 [[clz]] to i32
+  %r4 = call i32 @llvm.nvvm.clz.ll(i64 %b)
+
+; CHECK: call i32 @llvm.ctpop.i32(i32 %a)
+  %r5 = call i32 @llvm.nvvm.popc.i(i32 %a)
+
+; CHECK: [[popc:%[a-zA-Z0-9.]+]] = call i64 @llvm.ctpop.i64(i64 %b)
+; CHECK: trunc i64 [[popc]] to i32
+  %r6 = call i32 @llvm.nvvm.popc.ll(i64 %b)
+
+; CHECK: [[BITCAST_C:%.+]] = bitcast i16 %c to half
+; CHECK-NEXT: = fpext half [[BITCAST_C]] to float
+  %r7 = call float @llvm.nvvm.h2f(i16 %c)
+  ret void
+}
+
+; CHECK-LABEL: @abs
+define void @abs(i32 %a, i64 %b) {
+; CHECK: call i32 @llvm.abs.i32(i32 %a, i1 true)
+  %r1 = call i32 @llvm.nvvm.abs.i(i32 %a)
+
+; CHECK: call i64 @llvm.abs.i64(i64 %b, i1 true)
+  %r2 = call i64 @llvm.nvvm.abs.ll(i64 %b)
+
+  ret void
+}
+
+; CHECK-LABEL: @fabs
+define void @fabs(float %a, double %b) {
+; CHECK: call float @llvm.nvvm.fabs.f32(float %a)
+; CHECK: call float @llvm.nvvm.fabs.ftz.f32(float %a)
+; CHECK: call double @llvm.nvvm.fabs.f64(double %b)
+  %r1 = call float @llvm.nvvm.fabs.f(float %a)
+  %r2 = call float @llvm.nvvm.fabs.ftz.f(float %a)
+  %r3 = call double @llvm.nvvm.fabs.d(double %b)
+  ret void
+}
+
+; CHECK-LABEL: @tanh
+define void @tanh(float %a) {
+; CHECK: call afn float @llvm.tanh.f32(float %a)
+  %r1 = call float @llvm.nvvm.tanh.approx.f32(float %a)
+  ret void
+}
+
+; CHECK-LABEL: @min_max
+define void @min_max(i16 %a1, i16 %a2, i32 %b1, i32 %b2, i64 %c1, i64 %c2) {
+; CHECK: %r1 = call i16 @llvm.smax.i16(i16 %a1, i16 %a2)
+  %r1 = call i16 @llvm.nvvm.max.s(i16 %a1, i16 %a2)
+
+; CHECK: %r2 = call i32 @llvm.smax.i32(i32 %b1, i32 %b2)
+  %r2 = call i32 @llvm.nvvm.max.i(i32 %b1, i32 %b2)
+
+; CHECK: %r3 = call i64 @llvm.smax.i64(i64 %c1, i64 %c2)
+  %r3 = call i64 @llvm.nvvm.max.ll(i64 %c1, i64 %c2)
+
+; CHECK: %r4 = call i16 @llvm.umax.i16(i16 %a1, i16 %a2)
+  %r4 = call i16 @llvm.nvvm.max.us(i16 %a1, i16 %a2)
+
+; CHECK: %r5 = call i32 @llvm.umax.i32(i32 %b1, i32 %b2)
+  %r5 = call i32 @llvm.nvvm.max.ui(i32 %b1, i32 %b2)
+
+; CHECK: %r6 = call i64 @llvm.umax.i64(i64 %c1, i64 %c2)
+  %r6 = call i64 @llvm.nvvm.max.ull(i64 %c1, i64 %c2)
+
+; CHECK: %r7 = call i16 @llvm.smin.i16(i16 %a1, i16 %a2)
+  %r7 = call i16 @llvm.nvvm.min.s(i16 %a1, i16 %a2)
+
+; CHECK: %r8 = call i32 @llvm.smin.i32(i32 %b1, i32 %b2)
+  %r8 = call i32 @llvm.nvvm.min.i(i32 %b1, i32 %b2)
+
+; CHECK: %r9 = call i64 @llvm.smin.i64(i64 %c1, i64 %c2)
+  %r9 = call i64 @llvm.nvvm.min.ll(i64 %c1, i64 %c2)
+
+; CHECK: %r10 = call i16 @llvm.umin.i16(i16 %a1, i16 %a2)
+  %r10 = call i16 @llvm.nvvm.min.us(i16 %a1, i16 %a2)
+
+; CHECK: %r11 = call i32 @llvm.umin.i32(i32 %b1, i32 %b2)
+  %r11 = call i32 @llvm.nvvm.min.ui(i32 %b1, i32 %b2)
+
+; CHECK: %r12 = call i64 @llvm.umin.i64(i64 %c1, i64 %c2)
+  %r12 = call i64 @llvm.nvvm.min.ull(i64 %c1, i64 %c2)
+
+  ret void
+}
+
+; CHECK-LABEL: @bitcast
+define void @bitcast(i32 %a, i64 %b, float %c, double %d) {
+; CHECK: bitcast float %c to i32
+; CHECK: bitcast i32 %a to float
+; CHECK: bitcast double %d to i64
+; CHECK: bitcast i64 %b to double
+;
+  %r1 = call i32 @llvm.nvvm.bitcast.f2i(float %c)
+  %r2 = call float @llvm.nvvm.bitcast.i2f(i32 %a)
+  %r3 = call i64 @llvm.nvvm.bitcast.d2ll(double %d)
+  %r4 = call double @llvm.nvvm.bitcast.ll2d(i64 %b)
+
+  ret void
+}
+
+; CHECK-LABEL: @rotate
+define void @rotate(i32 %a, i64 %b) {
+; CHECK: call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 6)
+; CHECK: call i64 @llvm.fshr.i64(i64 %b, i64 %b, i64 7)
+; CHECK: call i64 @llvm.fshl.i64(i64 %b, i64 %b, i64 8)
+; CHECK: call i64 @llvm.fshl.i64(i64 %b, i64 %b, i64 32)
+;
+  %r1 = call i32 @llvm.nvvm.rotate.b32(i32 %a, i32 6)
+  %r2 = call i64 @llvm.nvvm.rotate.right.b64(i64 %b, i32 7)
+  %r3 = call i64 @llvm.nvvm.rotate.b64(i64 %b, i32 8)
+  %r4 = call i64 @llvm.nvvm.swap.lo.hi.b64(i64 %b)
+  ret void
+}
+
+; CHECK-LABEL: @addrspacecast
+define void @addrspacecast(ptr %p0) {
+; CHECK: %1 = addrspacecast ptr %p0 to ptr addrspace(1)
+; CHECK: %2 = addrspacecast ptr addrspace(1) %1 to ptr
+; CHECK: %3 = addrspacecast ptr %2 to ptr addrspace(3)
+; CHECK: %4 = addrspacecast ptr addrspace(3) %3 to ptr
+; CHECK: %5 = addrspacecast ptr %4 to ptr addrspace(4)
+; CHECK: %6 = addrspacecast ptr addrspace(4) %5 to ptr
+; CHECK: %7 = addrspacecast ptr %6 to ptr addrspace(5)
+; CHECK: %8 = addrspacecast ptr addrspace(5) %7 to ptr
+; CHECK: %9 = addrspacecast ptr %8 to ptr addrspace(101)
+; CHECK: %10 = addrspacecast ptr addrspace(101) %9 to ptr
+;
+  %p1 = call ptr addrspace(1) @llvm.nvvm.ptr.gen.to.global.p1.p0(ptr %p0)
+  %p2 = call ptr @llvm.nvvm.ptr.global.to.gen.p0.p1(ptr addrspace(1) %p1)
+
+  %p3 = call ptr addrspace(3) @llvm.nvvm.ptr.gen.to.shared.p3.p0(ptr %p2)
+  %p4 = call ptr @llvm.nvvm.ptr.shared.to.gen.p0.p3(ptr addrspace(3) %p3)
+
+  %p5 = call ptr addrspace(4) @llvm.nvvm.ptr.gen.to.constant.p4.p0(ptr %p4)
+  %p6 = call ptr @llvm.nvvm.ptr.constant.to.gen.p0.p4(ptr addrspace(4) %p5)
+
+  %p7 = call ptr addrspace(5) @llvm.nvvm.ptr.gen.to.local.p5.p0(ptr %p6)
+  %p8 = call ptr @llvm.nvvm.ptr.local.to.gen.p0.p5(ptr addrspace(5) %p7)
+
+  %p9 = call ptr addrspace(101) @llvm.nvvm.ptr.gen.to.param.p101.p0(ptr %p8)
+  %p10 = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) %p9)
+
+  ret void
+}
+
+; CHECK-LABEL: @ldg
+define void @ldg(ptr %p0, ptr addrspace(1) %p1) {
+; CHECK: %1 = load i32, ptr addrspace(1) %p1, align 4, !invariant.load !0
+; CHECK: %2 = load ptr, ptr addrspace(1) %p1, align 8, !invariant.load !0
+; CHECK: %3 = load float, ptr addrspace(1) %p1, align 16, !invariant.load !0
+
+; CHECK: %4 = addrspacecast ptr %p0 to ptr addrspace(1)
+; CHECK: %5 = load i32, ptr addrspace(1) %4, align 4, !invariant.load !0
+; CHECK: %6 = addrspacecast ptr %p0 to ptr addrspace(1)
+; CHECK: %7 = load ptr, ptr addrspace(1) %6, align 8, !invariant.load !0
+; CHECK: %8 = addrspacecast ptr %p0 to ptr addrspace(1)
+; CHECK: %9 = load float, ptr addrspace(1) %8, align 16, !invariant.load !0
+;
+  %v1 = call i32 @llvm.nvvm.ldg.global.i.i32.p1(ptr addrspace(1) %p1, i32 4)
+  %v2 = call ptr @llvm.nvvm.ldg.global.p.p1(ptr addrspace(1) %p1, i32 8 )
+  %v3 = call float @llvm.nvvm.ldg.global.f.f32.p1(ptr addrspace(1) %p1, i32 16)
+
+  %v4 = call i32 @llvm.nvvm.ldg.global.i.i32.p0(ptr %p0, i32 4)
+  %v5 = call ptr @llvm.nvvm.ldg.global.p.p0(ptr %p0, i32 8)
+  %v6 = call float @llvm.nvvm.ldg.global.f.f32.p0(ptr %p0, i32 16)
+
+  ret void
+}
+
+; CHECK-LABEL: @atomics
+define i32 @atomics(ptr %p0, i32 %a, float %b, double %c) {
+; CHECK: %1 = atomicrmw uinc_wrap ptr %p0, i32 %a syncscope("device") monotonic
+; CHECK: %2 = atomicrmw udec_wrap ptr %p0, i32 %a syncscope("device") monotonic
+; CHECK: %3 = atomicrmw fadd ptr %p0, float %b syncscope("device") monotonic
+; CHECK: %4 = atomicrmw fadd ptr %p0, double %c syncscope("device") monotonic
+
+  %r1 = call i32 @llvm.nvvm.atomic.load.inc.32.p0(ptr %p0, i32 %a)
+  %r2 = call i32 @llvm.nvvm.atomic.load.dec.32.p0(ptr %p0, i32 %a)
+  %r3 = call float @llvm.nvvm.atomic.load.add.f32.p0(ptr %p0, float %b)
+  %r4 = call double @llvm.nvvm.atomic.load.add.f64.p0(ptr %p0, double %c)
+  ret i32 %r2
+}
+
+; The scoped int_nvvm_atomic_*_gen_*_{cta,sys} intrinsics upgrade to atomicrmw /
+; cmpxchg: "_cta" -> syncscope("block"), "_sys" -> system scope. Signed min/max
+; (the old intrinsics carried no signedness and lowered signed).
+;
+; This covers the full cross product of removed intrinsics: every op, both scopes
+; (cta/sys), and both element widths (i32/i64, plus f32/f64 for the float add).
+; CHECK-LABEL: @atomics_scoped
+define void @atomics_scoped(ptr %p, i32 %a, i64 %b, float %c, double %d) {
+; CHECK: atomicrmw add ptr %p, i32 %a syncscope("block") monotonic
+  %add.i.cta.i32 = call i32 @llvm.nvvm.atomic.add.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw add ptr %p, i64 %b syncscope("block") monotonic
+  %add.i.cta.i64 = call i64 @llvm.nvvm.atomic.add.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw add ptr %p, i32 %a monotonic
+  %add.i.sys.i32 = call i32 @llvm.nvvm.atomic.add.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw add ptr %p, i64 %b monotonic
+  %add.i.sys.i64 = call i64 @llvm.nvvm.atomic.add.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw xchg ptr %p, i32 %a syncscope("block") monotonic
+  %exch.i.cta.i32 = call i32 @llvm.nvvm.atomic.exch.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw xchg ptr %p, i64 %b syncscope("block") monotonic
+  %exch.i.cta.i64 = call i64 @llvm.nvvm.atomic.exch.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw xchg ptr %p, i32 %a monotonic
+  %exch.i.sys.i32 = call i32 @llvm.nvvm.atomic.exch.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw xchg ptr %p, i64 %b monotonic
+  %exch.i.sys.i64 = call i64 @llvm.nvvm.atomic.exch.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw max ptr %p, i32 %a syncscope("block") monotonic
+  %max.i.cta.i32 = call i32 @llvm.nvvm.atomic.max.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw max ptr %p, i64 %b syncscope("block") monotonic
+  %max.i.cta.i64 = call i64 @llvm.nvvm.atomic.max.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw max ptr %p, i32 %a monotonic
+  %max.i.sys.i32 = call i32 @llvm.nvvm.atomic.max.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw max ptr %p, i64 %b monotonic
+  %max.i.sys.i64 = call i64 @llvm.nvvm.atomic.max.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw min ptr %p, i32 %a syncscope("block") monotonic
+  %min.i.cta.i32 = call i32 @llvm.nvvm.atomic.min.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw min ptr %p, i64 %b syncscope("block") monotonic
+  %min.i.cta.i64 = call i64 @llvm.nvvm.atomic.min.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw min ptr %p, i32 %a monotonic
+  %min.i.sys.i32 = call i32 @llvm.nvvm.atomic.min.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw min ptr %p, i64 %b monotonic
+  %min.i.sys.i64 = call i64 @llvm.nvvm.atomic.min.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw uinc_wrap ptr %p, i32 %a syncscope("block") monotonic
+  %inc.i.cta.i32 = call i32 @llvm.nvvm.atomic.inc.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw uinc_wrap ptr %p, i64 %b syncscope("block") monotonic
+  %inc.i.cta.i64 = call i64 @llvm.nvvm.atomic.inc.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw uinc_wrap ptr %p, i32 %a monotonic
+  %inc.i.sys.i32 = call i32 @llvm.nvvm.atomic.inc.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw uinc_wrap ptr %p, i64 %b monotonic
+  %inc.i.sys.i64 = call i64 @llvm.nvvm.atomic.inc.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw udec_wrap ptr %p, i32 %a syncscope("block") monotonic
+  %dec.i.cta.i32 = call i32 @llvm.nvvm.atomic.dec.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw udec_wrap ptr %p, i64 %b syncscope("block") monotonic
+  %dec.i.cta.i64 = call i64 @llvm.nvvm.atomic.dec.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw udec_wrap ptr %p, i32 %a monotonic
+  %dec.i.sys.i32 = call i32 @llvm.nvvm.atomic.dec.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw udec_wrap ptr %p, i64 %b monotonic
+  %dec.i.sys.i64 = call i64 @llvm.nvvm.atomic.dec.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw and ptr %p, i32 %a syncscope("block") monotonic
+  %and.i.cta.i32 = call i32 @llvm.nvvm.atomic.and.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw and ptr %p, i64 %b syncscope("block") monotonic
+  %and.i.cta.i64 = call i64 @llvm.nvvm.atomic.and.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw and ptr %p, i32 %a monotonic
+  %and.i.sys.i32 = call i32 @llvm.nvvm.atomic.and.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw and ptr %p, i64 %b monotonic
+  %and.i.sys.i64 = call i64 @llvm.nvvm.atomic.and.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw or ptr %p, i32 %a syncscope("block") monotonic
+  %or.i.cta.i32 = call i32 @llvm.nvvm.atomic.or.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw or ptr %p, i64 %b syncscope("block") monotonic
+  %or.i.cta.i64 = call i64 @llvm.nvvm.atomic.or.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw or ptr %p, i32 %a monotonic
+  %or.i.sys.i32 = call i32 @llvm.nvvm.atomic.or.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw or ptr %p, i64 %b monotonic
+  %or.i.sys.i64 = call i64 @llvm.nvvm.atomic.or.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw xor ptr %p, i32 %a syncscope("block") monotonic
+  %xor.i.cta.i32 = call i32 @llvm.nvvm.atomic.xor.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw xor ptr %p, i64 %b syncscope("block") monotonic
+  %xor.i.cta.i64 = call i64 @llvm.nvvm.atomic.xor.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw xor ptr %p, i32 %a monotonic
+  %xor.i.sys.i32 = call i32 @llvm.nvvm.atomic.xor.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw xor ptr %p, i64 %b monotonic
+  %xor.i.sys.i64 = call i64 @llvm.nvvm.atomic.xor.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: [[CAS_cta_i32:%.*]] = cmpxchg ptr %p, i32 %a, i32 %a syncscope("block") monotonic monotonic
+; CHECK: extractvalue { i32, i1 } [[CAS_cta_i32]], 0
+  %cas.i.cta.i32 = call i32 @llvm.nvvm.atomic.cas.gen.i.cta.i32.p0(ptr %p, i32 %a, i32 %a)
+; CHECK: [[CAS_cta_i64:%.*]] = cmpxchg ptr %p, i64 %b, i64 %b syncscope("block") monotonic monotonic
+; CHECK: extractvalue { i64, i1 } [[CAS_cta_i64]], 0
+  %cas.i.cta.i64 = call i64 @llvm.nvvm.atomic.cas.gen.i.cta.i64.p0(ptr %p, i64 %b, i64 %b)
+; CHECK: [[CAS_sys_i32:%.*]] = cmpxchg ptr %p, i32 %a, i32 %a monotonic monotonic
+; CHECK: extractvalue { i32, i1 } [[CAS_sys_i32]], 0
+  %cas.i.sys.i32 = call i32 @llvm.nvvm.atomic.cas.gen.i.sys.i32.p0(ptr %p, i32 %a, i32 %a)
+; CHECK: [[CAS_sys_i64:%.*]] = cmpxchg ptr %p, i64 %b, i64 %b monotonic monotonic
+; CHECK: extractvalue { i64, i1 } [[CAS_sys_i64]], 0
+  %cas.i.sys.i64 = call i64 @llvm.nvvm.atomic.cas.gen.i.sys.i64.p0(ptr %p, i64 %b, i64 %b)
+; CHECK: atomicrmw fadd ptr %p, float %c syncscope("block") monotonic
+  %add.f.cta.f32 = call float @llvm.nvvm.atomic.add.gen.f.cta.f32.p0(ptr %p, float %c)
+; CHECK: atomicrmw fadd ptr %p, double %d syncscope("block") monotonic
+  %add.f.cta.f64 = call double @llvm.nvvm.atomic.add.gen.f.cta.f64.p0(ptr %p, double %d)
+; CHECK: atomicrmw fadd ptr %p, float %c monotonic
+  %add.f.sys.f32 = call float @llvm.nvvm.atomic.add.gen.f.sys.f32.p0(ptr %p, float %c)
+; CHECK: atomicrmw fadd ptr %p, double %d monotonic
+  %add.f.sys.f64 = call double @llvm.nvvm.atomic.add.gen.f.sys.f64.p0(ptr %p, double %d)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_shared_cluster_intrinsics
+define void @nvvm_shared_cluster_intrinsics(ptr addrspace(3) %p0, i32 %offset) {
+; CHECK: %r = call ptr addrspace(7) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3) %p0, i32 %offset)
+  %r = call ptr addrspace(3) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3) %p0, i32 %offset)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_cp_async_bulk_intrinsics
+define void @nvvm_cp_async_bulk_intrinsics(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, ptr addrspace(3) %src_shared, ptr addrspace(7) %dst_cluster, i32 %size, i16 %mc, i64 %ch) {
+; CHECK: call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster.i16(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 0, i64 0, i1 false, i1 false, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster.i16(ptr addrspace(7) %dst_cluster, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 true, i1 true, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i32 0, i32 0, i64 %ch, i1 true, i1 false, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(7) %2, ptr addrspace(3) %bar, ptr addrspace(3) %src_shared, i32 %size)
+  call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 0, i64 0, i1 false, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(7) %dst_cluster, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 true, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i64 %ch, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(3) %src_shared, i32 %size)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_tcgen05_commit_intrinsics
+define void @nvvm_tcgen05_commit_intrinsics(ptr %bar, ptr addrspace(3) %bar_shared) {
+; CHECK: call void @llvm.nvvm.tcgen05.commit.cg1.p0(ptr %bar)
+; CHECK: call void @llvm.nvvm.tcgen05.commit.cg2.p0(ptr %bar)
+; CHECK: call void @llvm.nvvm.tcgen05.commit.cg1.p3(ptr addrspace(3) %bar_shared)
+; CHECK: call void @llvm.nvvm.tcgen05.commit.cg2.p3(ptr addrspace(3) %bar_shared)
+  call void @llvm.nvvm.tcgen05.commit.cg1(ptr %bar)
+  call void @llvm.nvvm.tcgen05.commit.cg2(ptr %bar)
+  call void @llvm.nvvm.tcgen05.commit.shared.cg1(ptr addrspace(3) %bar_shared)
+  call void @llvm.nvvm.tcgen05.commit.shared.cg2(ptr addrspace(3) %bar_shared)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_tcgen05_alloc_intrinsics
+define void @nvvm_tcgen05_alloc_intrinsics(ptr %dst, ptr addrspace(3) %dst_shared, i32 %ncols) {
+; CHECK: call void @llvm.nvvm.tcgen05.alloc.cg1.p0(ptr %dst, i32 %ncols, /* is_exclusive= */ i1 false)
+; CHECK: call void @llvm.nvvm.tcgen05.alloc.cg2.p0(ptr %dst, i32 %ncols, /* is_exclusive= */ i1 false)
+; CHECK: call void @llvm.nvvm.tcgen05.alloc.cg1.p3(ptr addrspace(3) %dst_shared, i32 %ncols, /* is_exclusive= */ i1 false)
+; CHECK: call void @llvm.nvvm.tcgen05.alloc.cg2.p3(ptr addrspace(3) %dst_shared, i32 %ncols, /* is_exclusive= */ i1 false)
+  call void @llvm.nvvm.tcgen05.alloc.cg1(ptr %dst, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.alloc.cg2(ptr %dst, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.alloc.shared.cg1(ptr addrspace(3) %dst_shared, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.alloc.shared.cg2(ptr addrspace(3) %dst_shared, i32 %ncols)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_tcgen05_dealloc_intrinsics
+define void @nvvm_tcgen05_dealloc_intrinsics(ptr addrspace(6) %tmem_addr, i32 %ncols) {
+; CHECK: call void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6) %tmem_addr, i32 %ncols, /* is_exclusive= */ i1 false)
+; CHECK: call void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6) %tmem_addr, i32 %ncols, /* is_exclusive= */ i1 false)
+  call void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6) %tmem_addr, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6) %tmem_addr, i32 %ncols)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_tcgen05_commit_mc_16b_intrinsics
+define void @nvvm_tcgen05_commit_mc_16b_intrinsics(ptr %bar, ptr addrspace(3) %bar_shared, i16 %cta_mask) {
+; CHECK: call void @llvm.nvvm.tcgen05.commit.mc.cg1.p0.i16(ptr %bar, i16 %cta_mask)
+; CHECK: call void @llvm.nvvm.tcgen05.commit.mc.cg2.p0.i16(ptr %bar, i16 %cta_mask)
+; CHECK: call void @llvm.nvvm.tcgen05.commit.mc.cg1.p3.i16(ptr addrspace(3) %bar_shared, i16 %cta_mask)
+; CHECK: call void @llvm.nvvm.tcgen05.commit.mc.cg2.p3.i16(ptr addrspace(3) %bar_shared, i16 %cta_mask)
+  call void @llvm.nvvm.tcgen05.commit.mc.cg1(ptr %bar, i16 %cta_mask)
+  call void @llvm.nvvm.tcgen05.commit.mc.cg2(ptr %bar, i16 %cta_mask)
+  call void @llvm.nvvm.tcgen05.commit.mc.shared.cg1(ptr addrspace(3) %bar_shared, i16 %cta_mask)
+  call void @llvm.nvvm.tcgen05.commit.mc.shared.cg2(ptr addrspace(3) %bar_shared, i16 %cta_mask)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_im2col
+define void @nvvm_cp_async_bulk_tensor_g2s_im2col(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 %mc, i64 %ch) {
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d.i16(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d.i16(ptr addrspace(7) %2, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d.i16(ptr addrspace(7) %3, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 0, i64 0, i1 0, i1 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 0, i64 0, i1 0, i1 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 0, i64 0, i1 0, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_tile
+define void @nvvm_cp_async_bulk_tensor_g2s_tile(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %mc, i64 %ch) {
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d.i16(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d.i16(ptr addrspace(7) %2, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d.i16(ptr addrspace(7) %3, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d.i16(ptr addrspace(7) %4, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d.i16(ptr addrspace(7) %5, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 0, i64 0, i1 0, i1 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 0, i64 0, i1 0, i1 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 0, i64 0, i1 0, i1 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 0, i64 0, i1 0, i1 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 0, i64 0, i1 0, i1 0)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_tile_with_cta_group
+define void @nvvm_cp_async_bulk_tensor_g2s_tile_with_cta_group(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 %mc, i64 %ch) {
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d.i16(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 0, i64 0, i1 false, i1 true, i32 2, /* flag_valid_pattern=disabled */ i32 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 0, i64 0, i1 0, i1 1, i32 2)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_cta_tile
+define void @nvvm_cp_async_bulk_tensor_g2s_cta_tile(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i64 %ch) {
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.1d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i64 0, i1 true, /* flag_valid_pattern=disabled */ i32 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.1d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i64 0, i1 1)
+  ret void
+}
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.3d(ptr addrspace(7), ptr addrspace(3), ptr, i32, i32, i32, i16, i16, i16, i64, i1, i1, i32)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.3d(ptr addrspace(7), ptr addrspace(3), ptr, i32, i32, i32, i16, i16, i16, i64, i1, i1, i32)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d(ptr addrspace(7), ptr addrspace(3), ptr, i32, i32, i32, i32, i32, i16, i64, i1, i1, i32)
+
+; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_im2col_with_cta_group
+define void @nvvm_cp_async_bulk_tensor_g2s_im2col_with_cta_group(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch) {
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.3d.i16(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 true, i1 true, i32 2, /* flag_valid_pattern=disabled */ i32 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 1, i1 1, i32 2)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.3d.i16(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 true, i1 false, i32 2, /* flag_valid_pattern=disabled */ i32 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 1, i1 0, i32 2)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d.i16(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %mc, i64 %ch, i1 true, i1 true, i32 2, /* flag_valid_pattern=disabled */ i32 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %mc, i64 %ch, i1 1, i1 1, i32 2)
+  ret void
+}
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.3d(ptr addrspace(3), ptr addrspace(3), ptr, i32, i32, i32, i16, i16, i64, i1)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.2d(ptr addrspace(3), ptr addrspace(3), ptr, i32, i32, i32, i32, i32, i64, i1)
+
+; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_cta
+define void @nvvm_cp_async_bulk_tensor_g2s_cta(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %wHalo, i16 %wOffset, i64 %ch) {
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 true, /* flag_valid_pattern=disabled */ i32 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 1)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.2d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 true, /* flag_valid_pattern=disabled */ i32 0)
+  call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.2d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 1)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_reduce_ops
+define void @nvvm_cp_async_bulk_tensor_reduce_ops(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch) {
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=add */ i32 0, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=min */ i32 1, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.min.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=max */ i32 2, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.max.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=inc */ i32 3, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.inc.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=dec */ i32 4, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.dec.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=and */ i32 5, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.and.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=or */ i32 6, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.or.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=xor */ i32 7, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.xor.tile.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 false)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_reduce_shapes
+define void @nvvm_cp_async_bulk_tensor_reduce_shapes(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch) {
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.1d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i64 %ch, /* red_op=add */ i32 0, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.1d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i64 %ch, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.2d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i64 %ch, /* red_op=add */ i32 0, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.2d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.4d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i64 %ch, /* red_op=add */ i32 0, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.4d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i64 %ch, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.5d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, /* red_op=add */ i32 0, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.tile.5d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, /* red_op=add */ i32 0, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.3d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 false)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.4d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i64 %ch, /* red_op=add */ i32 0, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.4d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i64 %ch, i1 true)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.5d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, /* red_op=add */ i32 0, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.tensor.reduce.add.im2col.5d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 false)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_tcgen05_mma_default_collector_b
+define void @nvvm_tcgen05_mma_default_collector_b(
+    ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor,
+    i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d,
+    ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a,
+    ptr addrspace(6) %scale_b, <4 x i32> %disable_output_lanev4,
+    <8 x i32> %disable_output_lanev8) {
+; CHECK: call void @llvm.nvvm.tcgen05.mma.shared({{.*}}/* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.shared(
+    ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc,
+    i1 %enable_inp_d, i32 0, i32 1, i32 0)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.sp.shared({{.*}}/* kind=tf32 */ i32 1, /* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared(
+    ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc,
+    i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 1, i32 2,
+    i32 1)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.sp.tensor.ashift({{.*}}/* kind=f8f6f4 */ i32 2, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor.ashift(
+    ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b,
+    i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata,
+    i32 2, i32 1, i32 0)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg1({{.*}}/* kind=f16 */ i32 0, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg1(
+    ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc,
+    i1 %enable_inp_d, <4 x i32> %disable_output_lanev4, i32 0,
+    i32 3)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg2.ashift({{.*}}/* kind=tf32 */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg2.ashift(
+    ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b,
+    i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata,
+    <8 x i32> %disable_output_lanev8, i32 1, i32 0)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale({{.*}}/* cta_group= */ i32 2, /* collector_a=lastuse */ i32 1, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(
+    ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc,
+    i1 %enable_inp_d, ptr addrspace(6) %scale_a,
+    ptr addrspace(6) %scale_b, i32 2, i32 1)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale.block32({{.*}}/* cta_group= */ i32 1, /* collector_a=fill */ i32 2, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale.block32(
+    ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc,
+    i1 %enable_inp_d, ptr addrspace(6) %spmetadata,
+    ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1,
+    i32 2)
+
+; CHECK: call void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block16({{.*}}/* cta_group= */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+  call void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block16(
+    ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b,
+    i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata,
+    ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 1,
+    i32 3)
+
+  ret void
+}
+
+define void @cta_barriers(i32 %x, i32 %y, i32 %z) {
+; CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
+; CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %x)
+; CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %x)
+; CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %x, i32 %y)
+; CHECK: call void @llvm.nvvm.barrier.cta.sync.all(i32 %x)
+; CHECK: call void @llvm.nvvm.barrier.cta.sync.count(i32 %x, i32 %y)
+
+; CHECK: %1 = icmp ne i32 %z, 0
+; CHECK: %2 = call i32 @llvm.nvvm.barrier.cta.red.popc.aligned.all(i32 0, i1 %1)
+; CHECK: %3 = icmp ne i32 %z, 0
+; CHECK: %4 = call i1 @llvm.nvvm.barrier.cta.red.and.aligned.all(i32 0, i1 %3)
+; CHECK: %5 = zext i1 %4 to i32
+; CHECK: %6 = icmp ne i32 %z, 0
+; CHECK: %7 = call i1 @llvm.nvvm.barrier.cta.red.or.aligned.all(i32 0, i1 %6)
+; CHECK: %8 = zext i1 %7 to i32
+
+  call void @llvm.nvvm.barrier0()
+  call void @llvm.nvvm.barrier.n(i32 %x)
+  call void @llvm.nvvm.bar.sync(i32 %x)
+  call void @llvm.nvvm.barrier(i32 %x, i32 %y)
+  call void @llvm.nvvm.barrier.sync(i32 %x)
+  call void @llvm.nvvm.barrier.sync.cnt(i32 %x, i32 %y)
+
+  %r1 = call i32 @llvm.nvvm.barrier0.popc(i32 %z)
+  %r2 = call i32 @llvm.nvvm.barrier0.and(i32 %z)
+  %r3 = call i32 @llvm.nvvm.barrier0.or(i32 %z)
+  ret void
+}
+
+define void @nvvm_ex2_approx(float %a, double %b, half %c, <2 x half> %d) {
+; CHECK: call float @llvm.nvvm.ex2.approx.f32(float %a)
+; CHECK: call double @llvm.nvvm.ex2.approx.f64(double %b)
+; CHECK: call <2 x half> @llvm.nvvm.ex2.approx.v2f16(<2 x half> %d)
+; CHECK: call float @llvm.nvvm.ex2.approx.ftz.f32(float %a)
+  %r1 = call float @llvm.nvvm.ex2.approx.f(float %a)
+  %r2 = call double @llvm.nvvm.ex2.approx.d(double %b)
+  %r3 = call <2 x half> @llvm.nvvm.ex2.approx.f16x2(<2 x half> %d)
+  %r4 = call float @llvm.nvvm.ex2.approx.ftz.f(float %a)
+  ret void
+}
+
+define void @nvvm_add(float %a, double %b, half %c, <2 x half> %d) {
+; CHECK: call float @llvm.nvvm.fadd.f32(float %a, float %a, /* rnd=rn */ i32 1)
+; CHECK: call float @llvm.nvvm.fadd.ftz.f32(float %a, float %a, /* rnd=rz */ i32 0)
+; CHECK: call float @llvm.nvvm.fadd.sat.f32(float %a, float %a, /* rnd=rm */ i32 3)
+; CHECK: call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %a, /* rnd=rp */ i32 2)
+; CHECK: call double @llvm.nvvm.fadd.f64(double %b, double %b, /* rnd=rn */ i32 1)
+; CHECK: call double @llvm.nvvm.fadd.f64(double %b, double %b, /* rnd=rz */ i32 0)
+; CHECK: call half @llvm.nvvm.fadd.sat.f16(half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call half @llvm.nvvm.fadd.ftz.sat.f16(half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call <2 x half> @llvm.nvvm.fadd.sat.v2f16(<2 x half> %d, <2 x half> %d, /* rnd=rn */ i32 1)
+; CHECK: call <2 x half> @llvm.nvvm.fadd.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d, /* rnd=rn */ i32 1)
+  %r1 = call float @llvm.nvvm.add.rn.f(float %a, float %a)
+  %r2 = call float @llvm.nvvm.add.rz.ftz.f(float %a, float %a)
+  %r3 = call float @llvm.nvvm.add.rm.sat.f(float %a, float %a)
+  %r4 = call float @llvm.nvvm.add.rp.ftz.sat.f(float %a, float %a)
+  %r5 = call double @llvm.nvvm.add.rn.d(double %b, double %b)
+  %r6 = call double @llvm.nvvm.add.rz.d(double %b, double %b)
+  %r7 = call half @llvm.nvvm.add.rn.sat.f16(half %c, half %c)
+  %r8 = call half @llvm.nvvm.add.rn.ftz.sat.f16(half %c, half %c)
+  %r9 = call <2 x half> @llvm.nvvm.add.rn.sat.v2f16(<2 x half> %d, <2 x half> %d)
+  %r10 = call <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d)
+  ret void
+}
+
+declare void @llvm.nvvm.mbarrier.init(ptr, i32)
+declare void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3), i32)
+
+; CHECK-LABEL: @nvvm_mbarrier_init_default_layout
+define void @nvvm_mbarrier_init_default_layout(ptr %gen, ptr addrspace(3) %shared, i32 %count) {
+; CHECK: call void @llvm.nvvm.mbarrier.init.p0(ptr %gen, i32 %count, /* layout=v0 */ i32 0)
+; CHECK: call void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) %shared, i32 %count, /* layout=v0 */ i32 0)
+  call void @llvm.nvvm.mbarrier.init(ptr %gen, i32 %count)
+  call void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3) %shared, i32 %count)
+  ret void
+}

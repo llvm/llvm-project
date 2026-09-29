@@ -1,0 +1,21 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t  
+; RUN: llvm-readtapi --compare %t/Simple_v5.tbd  %t/Simple_v5.tbd 2>&1 | FileCheck %s --allow-empty
+; RUN: llvm-readtapi --compare %t/Simple_v5.tbd  %t/Simple_v4.tbd 2>&1 | FileCheck %s --allow-empty
+
+; CHECK-NOT: error:
+; CHECK-NOT: warning:
+
+//--- Simple_v4.tbd
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ x86_64-macos, arm64-macos ]
+flags:           [ not_app_extension_safe ]
+install-name:    '@rpath/libFake.dylib'
+exports:
+  - targets:         [ x86_64-macos, arm64-macos ]
+    symbols:         [ _foo ]
+...
+
+//--- Simple_v5.tbd
+{"main_library":{"exported_symbols":[{"text":{"global":["_foo"]}}],"flags":[{"attributes":["not_app_extension_safe"]}],"install_names":[{"name":"@rpath/libFake.dylib"}],"target_info":[{"min_deployment":"13","target":"x86_64-macos"},{"min_deployment":"13","target":"arm64-macos"}]},"tapi_tbd_version":5}

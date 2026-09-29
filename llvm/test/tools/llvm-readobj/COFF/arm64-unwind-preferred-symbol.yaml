@@ -1,0 +1,81 @@
+# Check that we print the external symbol "func", even though the pdata
+# relocation points at the '$LN4' symbol.
+
+# RUN: yaml2obj %s -o %t.obj
+# RUN: llvm-readobj --unwind %t.obj | FileCheck %s
+
+# CHECK: Function: func (0x0)
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_ARM64
+  Characteristics: [  ]
+sections:
+  - Name:            '.text$mn'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       8
+    SectionData:     FE0F1FF8FF0301D1E003009100000094FF030191FE0741F8C0035FD6
+    Relocations:
+      - VirtualAddress:  12
+        SymbolName:      other
+        Type:            IMAGE_REL_ARM64_BRANCH26
+  - Name:            .pdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     000000001D00A002
+    Relocations:
+      - VirtualAddress:  0
+        SymbolName:      '$LN4'
+        Type:            IMAGE_REL_ARM64_ADDR32NB
+symbols:
+  - Name:            '.text$mn'
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          28
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        1015150991
+      Number:          0
+      Selection:       IMAGE_COMDAT_SELECT_NODUPLICATES
+  - Name:            other
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            func
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '$LN4'
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_LABEL
+  - Name:            .pdata
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        3799667335
+      Number:          2
+      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
+  - Name:            '$pdata$func'
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+...

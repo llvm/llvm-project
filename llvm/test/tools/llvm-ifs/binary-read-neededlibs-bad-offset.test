@@ -1,0 +1,49 @@
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-ifs --input-format=ELF --output-ifs=%t.tbe %t 2>&1 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1000
+    #                "\0libfoo.so\0libbar.so\0somelib.so\0foo\0"
+    Content:         "006c6962666f6f2e736f006c69626261722e736f00736f6d656c69622e736f00666f6f00"
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000001024
+    EntSize:         0x0000000000000010
+    Entries:
+      - Tag:             DT_NEEDED
+        Value:           0x0000000000000001
+      - Tag:             DT_SONAME
+        Value:           0x0000000000000015
+      # Bad DT_NEEDED entry (offset outside string table):
+      - Tag:             DT_NEEDED
+        Value:           0x000000000000FFFF
+      - Tag:             DT_STRSZ
+        Value:           0x0000000000000024
+      - Tag:             DT_STRTAB
+        Value:           0x0000000000001000
+      - Tag:             DT_SYMTAB
+        Value:           0x0000000000001000
+      - Tag:             DT_NULL
+        Value:           0x0000000000000000
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    Align:    8
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:  PT_DYNAMIC
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x1024
+
+# CHECK: DT_NEEDED string offset (0x000000000000ffff) outside of dynamic string table

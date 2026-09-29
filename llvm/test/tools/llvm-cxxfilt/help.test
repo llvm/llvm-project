@@ -1,0 +1,7 @@
+RUN: llvm-cxxfilt -h | FileCheck %s
+RUN: llvm-cxxfilt --help | FileCheck %s
+
+CHECK: OVERVIEW: LLVM symbol undecoration tool
+CHECK: USAGE: {{.*}}llvm-cxxfilt{{(.exe)?}} [options] <mangled>{{$}}
+CHECK: OPTIONS:
+CHECK: @FILE

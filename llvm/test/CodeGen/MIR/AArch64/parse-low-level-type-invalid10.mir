@@ -1,0 +1,12 @@
+# RUN: not llc -mtriple=aarch64-- -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+# When a low-level type pointer has an address space greater than supported, and make sure an implicit truncate to 32-bits doesn't happen.
+
+---
+name: test_address_space_number_too_big64
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK: [[@LINE+1]]:10: invalid address space number
+    %0:_(p17179869185) = G_IMPLICIT_DEF
+...

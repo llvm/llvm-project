@@ -1,0 +1,47 @@
+# UNSUPPORTED: system-windows
+# RUN: llvm-mc -triple=riscv64 -mattr=+zcmp,+zfa,+v --cdis %s | FileCheck %s --strict-whitespace --match-full-lines -check-prefixes=ASM,ABINAME
+# RUN: llvm-mc -triple=riscv64 -mattr=+zcmp,+zfa,+v -M numeric --cdis %s | FileCheck %s --strict-whitespace --match-full-lines -check-prefixes=ASM,ARCHNAME
+
+# Registers and immediates
+0x03 0xe0 0x40 0x00
+# ABINAME:	lwu	[0;36mzero[0m, [0;31m4[0m([0;36mra[0m)
+# ARCHNAME:	lwu	[0;36mx0[0m, [0;31m4[0m([0;36mx1[0m)
+
+# Branch targets
+0x63 0x00 0xb5 0x04
+# ABINAME-NEXT:	beq	[0;36ma0[0m, [0;36ma1[0m, [0;33m64[0m
+# ARCHNAME-NEXT:	beq	[0;36mx10[0m, [0;36mx11[0m, [0;33m64[0m
+
+# CSRs
+0xf3 0x23 0x10 0xf1
+# ABINAME-NEXT:	csrr	[0;36mt2[0m, [0;36mmvendorid[0m
+# ARCHNAME-NEXT:	csrr	[0;36mx7[0m, [0;36mmvendorid[0m
+
+# FP immediates
+0xd3 0x00 0x1f 0xf0
+# ABINAME-NEXT:	fli.s	[0;36mft1[0m, [0;31minf[0m
+# ARCHNAME-NEXT:	fli.s	[0;36mf1[0m, [0;31minf[0m
+0xd3 0x80 0x1e 0xf0
+# ABINAME-NEXT:	fli.s	[0;36mft1[0m, [0;31m65536.0[0m
+# ARCHNAME-NEXT:	fli.s	[0;36mf1[0m, [0;31m65536.0[0m
+
+# Rlist and spimm
+0x42 0xbe
+# ABINAME-NEXT:	cm.popret	{[0;36mra[0m}, [0;31m16[0m
+# ARCHNAME-NEXT:	cm.popret	{[0;36mx1[0m}, [0;31m16[0m
+0x5e 0xbe
+# ABINAME-NEXT:	cm.popret	{[0;36mra[0m, [0;36ms0[0m}, [0;31m64[0m
+# ARCHNAME-NEXT:	cm.popret	{[0;36mx1[0m, [0;36mx8[0m}, [0;31m64[0m
+0x62 0xbe
+# ABINAME-NEXT:	cm.popret	{[0;36mra[0m, [0;36ms0[0m-[0;36ms1[0m}, [0;31m32[0m
+# ARCHNAME-NEXT:	cm.popret	{[0;36mx1[0m, [0;36mx8[0m-[0;36mx9[0m}, [0;31m32[0m
+0x76 0xbe
+# ABINAME-NEXT:	cm.popret	{[0;36mra[0m, [0;36ms0[0m-[0;36ms2[0m}, [0;31m48[0m
+# ARCHNAME-NEXT:	cm.popret	{[0;36mx1[0m, [0;36mx8[0m-[0;36mx9[0m, [0;36mx18[0m}, [0;31m48[0m
+0xfe 0xbe
+# ABINAME-NEXT:	cm.popret	{[0;36mra[0m, [0;36ms0[0m-[0;36ms11[0m}, [0;31m160[0m
+# ARCHNAME-NEXT:	cm.popret	{[0;36mx1[0m, [0;36mx8[0m-[0;36mx9[0m, [0;36mx18[0m-[0;36mx27[0m}, [0;31m160[0m
+
+# mask registers
+0x57 0x04 0x4a 0x00
+# ASM-NEXT:	vadd.vv	[0;36mv8[0m, [0;36mv4[0m, [0;36mv20[0m, [0;36mv0[0m.t

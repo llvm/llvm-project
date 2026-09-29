@@ -1,0 +1,17 @@
+; RUN: llvm-rc -no-preprocess /FO %t -- %p/Inputs/cpp-output.rc
+; RUN: llvm-readobj %t | FileCheck %s
+
+; CHECK:      Resource type (int): STRINGTABLE (ID 6)
+; CHECK-NEXT: Resource name (int): 1
+; CHECK-NEXT: Data version: 0
+; CHECK-NEXT: Memory flags: 0x1030
+; CHECK-NEXT: Language ID: 1033
+; CHECK-NEXT: Version (major): 0
+; CHECK-NEXT: Version (minor): 0
+; CHECK-NEXT: Characteristics: 0
+; CHECK-NEXT: Data size: 40
+; CHECK-NEXT: Data: (
+; CHECK-NEXT:   0000: 00000100 61000100 62000100 63000100  |....a...b...c...|
+; CHECK-NEXT:   0010: 64000000 00000000 00000000 00000000  |d...............|
+; CHECK-NEXT:   0020: 00000000 00000000                    |........|
+; CHECK-NEXT: )

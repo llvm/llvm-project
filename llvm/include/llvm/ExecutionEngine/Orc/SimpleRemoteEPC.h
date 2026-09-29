@@ -1,0 +1,140 @@
+//===---- SimpleRemoteEPC.h - Simple remote executor control ----*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Simple remote executor process control.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_EXECUTIONENGINE_ORC_SIMPLEREMOTEEPC_H
+#define LLVM_EXECUTIONENGINE_ORC_SIMPLEREMOTEEPC_H
+
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ExecutionEngine/Orc/CallProxies.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MSVCErrorWorkarounds.h"
+
+#include <future>
+
+namespace llvm {
+namespace orc {
+
+class LLVM_ABI SimpleRemoteEPC : public ExecutorProcessControl,
+                                 public SimpleRemoteEPCTransportClient {
+public:
+  /// Create a SimpleRemoteEPC using the given transport type and args.
+  template <typename TransportT, typename... TransportTCtorArgTs>
+  static Expected<std::unique_ptr<SimpleRemoteEPC>>
+  Create(std::unique_ptr<TaskDispatcher> D,
+         TransportTCtorArgTs &&...TransportTCtorArgs) {
+    std::unique_ptr<SimpleRemoteEPC> SREPC(
+        new SimpleRemoteEPC(std::make_shared<SymbolStringPool>(),
+                            std::move(D)));
+    auto T = TransportT::Create(
+        *SREPC, std::forward<TransportTCtorArgTs>(TransportTCtorArgs)...);
+    if (!T)
+      return T.takeError();
+    SREPC->T = std::move(*T);
+    if (auto Err = SREPC->setup())
+      return joinErrors(std::move(Err), SREPC->disconnect());
+    return std::move(SREPC);
+  }
+
+  SimpleRemoteEPC(const SimpleRemoteEPC &) = delete;
+  SimpleRemoteEPC &operator=(const SimpleRemoteEPC &) = delete;
+  SimpleRemoteEPC(SimpleRemoteEPC &&) = delete;
+  SimpleRemoteEPC &operator=(SimpleRemoteEPC &&) = delete;
+  ~SimpleRemoteEPC() override;
+
+  Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
+                              ArrayRef<std::string> Args) override;
+
+  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                        IncomingWFRHandler OnComplete,
+                        ArrayRef<char> ArgBuffer) override;
+
+  Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createDefaultMemoryManager() override;
+
+  Expected<std::unique_ptr<DylibManager>> createDefaultDylibMgr() override;
+
+  Expected<std::unique_ptr<MemoryAccess>> createDefaultMemoryAccess() override;
+
+  Error disconnect() override;
+
+  Expected<HandleMessageAction>
+  handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo, ExecutorAddr TagAddr,
+                shared::WrapperFunctionBuffer ArgBytes) override;
+
+  void handleDisconnect(Error Err) override;
+
+private:
+  SimpleRemoteEPC(std::shared_ptr<SymbolStringPool> SSP,
+                  std::unique_ptr<TaskDispatcher> D)
+      : ExecutorProcessControl(std::move(SSP), std::move(D)) {}
+
+  Error sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
+                    ExecutorAddr TagAddr, ArrayRef<char> ArgBytes);
+
+  Error handleSetup(uint64_t SeqNo, ExecutorAddr TagAddr,
+                    shared::WrapperFunctionBuffer ArgBytes);
+  Error setup();
+
+  Error handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
+                     shared::WrapperFunctionBuffer ArgBytes);
+  void handleCallWrapper(uint64_t RemoteSeqNo, ExecutorAddr TagAddr,
+                         shared::WrapperFunctionBuffer ArgBytes);
+  Error handleHangup(shared::WrapperFunctionBuffer ArgBytes);
+
+  uint64_t getNextSeqNo() { return NextSeqNo++; }
+  void releaseSeqNo(uint64_t SeqNo) {}
+
+  using PendingCallWrapperResultsMap =
+    DenseMap<uint64_t, IncomingWFRHandler>;
+
+  std::mutex SimpleRemoteEPCMutex;
+  std::condition_variable DisconnectCV;
+  bool Disconnected = false;
+
+  // Whether either side announced the end of the session. If the transport
+  // reports a disconnection and neither of these is set then the executor went
+  // away without saying so, which is reported as an error: see
+  // handleDisconnect.
+  //
+  // LocalHangup has to be shared state: disconnect() sets it on the calling
+  // thread, while handleDisconnect reads it on the transport's listener thread.
+  //
+  // RemoteHangup is shared state only because the read loop lives in the
+  // transport: the hangup is observed in handleMessage but needed in
+  // handleDisconnect, and the two are separate entry points on the
+  // SimpleRemoteEPCTransportClient interface with no call edge between them.
+  //
+  // TODO: Once the read loop is reshaped into a reactor (mirroring
+  // FDSimpleRemoteCA in the ORC runtime), RemoteHangup should fold into a stop
+  // reason returned from it, leaving only LocalHangup as state -- as
+  // FDSimpleRemoteCA does with ShutdownRequested.
+  bool LocalHangup = false;
+  bool RemoteHangup = false;
+
+  Error DisconnectErr = Error::success();
+
+  std::unique_ptr<SimpleRemoteEPCTransport> T;
+
+  CallMainProxy CallMain;
+
+  uint64_t NextSeqNo = 0;
+  PendingCallWrapperResultsMap PendingCallWrapperResults;
+};
+
+} // end namespace orc
+} // end namespace llvm
+
+#endif // LLVM_EXECUTIONENGINE_ORC_SIMPLEREMOTEEPC_H

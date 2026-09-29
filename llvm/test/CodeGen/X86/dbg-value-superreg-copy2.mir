@@ -1,0 +1,68 @@
+# RUN: llc -O1 -start-after register-coalescer -o - %s -experimental-debug-variable-locations=true | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-pc-linux-gnu"
+
+  define i16 @foo(i8 %zzz) !dbg !4 {
+  entry:
+    ret i16 1
+  }
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2)
+  !1 = !DIFile(filename: "test.c", directory: "")
+  !2 = !{}
+  !3 = !{i32 1, !"Debug Info Version", i32 3}
+  !4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null}
+  !7 = !DILocalVariable(name: "zzz", arg: 1, scope: !4, file: !1, line: 3, type: !8)
+  !8 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed)
+  !9 = !DILocation(line: 0, scope: !4)
+  !10 = !DILocation(line: 4, column: 22, scope: !11)
+  !11 = distinct !DILexicalBlock(scope: !4, file: !1, line: 3, column: 19)
+
+...
+---
+name:            foo
+tracksRegLiveness: true
+debugInstrRef: true
+debugValueSubstitutions:
+  - { srcinst: 2, srcop: 0, dstinst: 1, dstop: 0, subreg: 2 }
+body:             |
+  bb.0:
+    %0:gr16_abcd = MOV16ri 1, debug-instr-number 1, debug-location !9
+
+  bb.1:
+    DBG_INSTR_REF !7, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0), debug-location !9
+    %1:gr16 = COPY %0, debug-location !9
+    %2:gr16 = COPY %0
+
+  bb.2:
+    $ax = COPY %1, debug-location !9
+    $dx = COPY %2
+    RET64 killed $ax, killed $dx, debug-location !9
+...
+
+# This test is an instruction-referencing flavour of the
+# dbg-value-superreg-copy.mir test. Over there, we ran into difficulties where
+# register coalescing would transform DBG_VALUEs of subregisters such as:
+#
+#   DBG_VALUE %0.sub_8bit_hi, $noreg,
+#
+# Into references to larger registers, potentially with the wrong offset. We
+# can't refer to vregs in instruction referencing mode, so this test replicates
+# the same scenario in a new test. The defining storing load gets an instruction
+# number, and we encode which subregister we want through a substitution. Check
+# that it comes out the other end of regalloc through coalescing still in a
+# high register.
+#
+# CHECK-NOT:    #DEBUG_VALUE:
+# CHECK:        #DEBUG_VALUE: foo:zzz <- ${{[abcd]+}}h
+# CHECK-NOT:    #DEBUG_VALUE:

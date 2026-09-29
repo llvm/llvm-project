@@ -1,0 +1,6 @@
+# RUN: yaml-bench -canonical %s
+
+> # Simple folded scalar
+ folded
+ text
+ 	lines

@@ -1,0 +1,255 @@
+# RUN: yaml2obj %s -o %t
+
+## Verify that the input file is valid and contains the expected load command.
+# RUN: llvm-objdump --private-headers %t | FileCheck %s --check-prefix=CHECK-ORIGINAL
+
+# CHECK-ORIGINAL:      cmd LC_CODE_SIGNATURE
+# CHECK-ORIGINAL-NEXT: cmdsize 16
+# CHECK-ORIGINAL-NEXT: dataoff 16544
+# CHECK-ORIGINAL-NEXT: datasize 280
+
+# RUN: llvm-objcopy %t %t.copy
+# RUN: obj2yaml %t > %t.yaml
+# RUN: obj2yaml %t.copy > %t.copy.yaml
+
+## Verify that the copy still includes the load command
+# RUN: FileCheck %s --check-prefix=CHECK-COPY < %t.copy.yaml
+# CHECK-COPY:      - cmd:             LC_CODE_SIGNATURE
+# CHECK-COPY-NEXT:   cmdsize:         16
+# CHECK-COPY-NEXT:   dataoff:         16544
+# CHECK-COPY-NEXT:   datasize:        304
+
+## Remove information changed by regeneration of load command:
+## - __LINKEDIT segment filesize may change (4 lines)
+## - LC_CODE_SIGNATURE command dataoff and datasize may change (3 lines)
+## - __LINKEDIT data locations may change
+## NOTE: The {N;N;N;N;d} means delete the next four lines for BSD and GNU sed.
+##       The ,+4d is a GNU extension which seems not to work in macOS 10.15
+
+# RUN: sed -e '/__LINKEDIT/{N;N;N;N;d;}' \
+# RUN:     -e '/LC_CODE_SIGNATURE/{N;N;N;d;}' \
+# RUN:     -e '/n_strx/d' \ 
+# RUN:     -e '/dyld_stub_binder/d' %t.yaml > %t.clean.yaml
+
+# RUN: sed -e '/__LINKEDIT/{N;N;N;N;d;}' \
+# RUN:     -e '/LC_CODE_SIGNATURE/{N;N;N;d;}' \
+# RUN:     -e '/n_strx/d' \ 
+# RUN:     -e '/dyld_stub_binder/d' %t.copy.yaml > %t.copy.clean.yaml
+
+## Verify the remainder of the object file remains unchanged
+# RUN: diff %t.clean.yaml %t.copy.clean.yaml
+
+## Verify the new signature is valid
+# RUN: %python %p/Inputs/code-signature-check.py %t.copy 16544 304 0 16544
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x2
+  ncmds:           15
+  sizeofcmds:      760
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x100003FA0
+        size:            15
+        offset:          0x3FA0
+        align:           4
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         554889E531C0C745FC000000005DC3
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x100003FB0
+        size:            72
+        offset:          0x3FB0
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000000000001C000000000000001C00000002000000A03F00003400000034000000B03F00000000000034000000030000000C000100100001000000000000000001
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294983680
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        440
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      16384
+    export_size:     48
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          16440
+    nsyms:           3
+    stroff:          16488
+    strsize:         48
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      2
+    iundefsym:       2
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         32
+    name:            12
+    Content:         '/usr/lib/dyld'
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            42759668-1CBA-3094-8E2D-F01E1A66E815
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           720896
+    sdk:             721664
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         42600704
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        16288
+    stacksize:       0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 84698117
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         16432
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         16440
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         16544
+    datasize:        280
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      5
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      33
+            Name:            _mh_execute_header
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      37
+            Name:            main
+            Flags:           0x0
+            Address:         0x3FA0
+            Other:           0x0
+            ImportName:      ''
+  NameList:
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          22
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294983584
+    - n_strx:          28
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+  StringTable:
+    - ' '
+    - __mh_execute_header
+    - _main
+    - dyld_stub_binder
+    - ''
+    - ''
+    - ''
+...

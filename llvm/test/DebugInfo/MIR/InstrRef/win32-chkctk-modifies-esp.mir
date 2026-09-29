@@ -1,0 +1,177 @@
+# RUN: llc %s -o - -run-pass=livedebugvalues \
+# RUN:      -experimental-debug-variable-locations \
+# RUN:  | FileCheck %s
+#
+## Copy of DebugInfo/COFF/types-array-advanced.ll, altered to test its behaviour
+## in MIR when fed to LiveDebugValues. The matter of interest is that on win32,
+## calls to _chkstk will modify $esp, where we would normally ignore defs of the
+## stack pointer on calls.
+##
+## Check that on win32, for this specific symbol, when the stack is adjusted,
+## that we track the modified $esp from _chkstk like any other value in
+## LiveDebugValues, where it can be recovered after a clobber or moved around.
+## Check lines written inline.
+--- |
+  target datalayout = "e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:32-n8:16:32-a:0:32-S32"
+  target triple = "i686-pc-windows-msvc18.0.31101"
+
+  %struct.incomplete_struct = type { i32 }
+
+  @"\01?multi_dim_arr@@3PAY146DA" = global [2 x [5 x [7 x i8]]] zeroinitializer, align 1, !dbg !0
+  @"\01?p_incomplete_struct_arr@@3PAY02Uincomplete_struct@@A" = global ptr null, align 4, !dbg !6
+  @"\01?incomplete_struct_arr@@3PAUincomplete_struct@@A" = global [3 x %struct.incomplete_struct] zeroinitializer, align 4, !dbg !16
+  @"\01?typedef_arr@@3SDHD" = constant [4 x i32] zeroinitializer, align 4, !dbg !18
+
+  define void @"\01?foo@@YAXH@Z"(i32 %x) !dbg !35 {
+  entry:
+    %x.addr = alloca i32, align 4
+    %saved_stack = alloca ptr, align 4
+    store i32 %x, ptr %x.addr, align 4
+    call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !38, metadata !DIExpression()), !dbg !39
+    %0 = load i32, ptr %x.addr, align 4, !dbg !40
+    %1 = call ptr @llvm.stacksave(), !dbg !41
+    store ptr %1, ptr %saved_stack, align 4, !dbg !41
+    %vla = alloca i32, i32 %0, align 4, !dbg !41
+    call void @llvm.dbg.declare(metadata ptr %vla, metadata !42, metadata !DIExpression(DW_OP_deref)), !dbg !46
+    %arrayidx1 = bitcast ptr %vla to ptr, !dbg !47
+    store i32 0, ptr %arrayidx1, align 4, !dbg !48
+    %2 = load ptr, ptr %saved_stack, align 4, !dbg !49
+    call void @llvm.stackrestore(ptr %2), !dbg !49
+    ret void, !dbg !49
+  }
+
+  ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.declare(metadata, metadata, metadata)
+
+  ; Function Attrs: nofree nosync nounwind willreturn
+  declare ptr @llvm.stacksave()
+
+  ; Function Attrs: nofree nosync nounwind willreturn
+  declare void @llvm.stackrestore(ptr)
+
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!32, !33}
+  !llvm.ident = !{!34}
+
+  !0 = distinct !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = !DIGlobalVariable(name: "multi_dim_arr", linkageName: "\01?multi_dim_arr@@3PAY146DA", scope: !2, file: !3, line: 1, type: !26, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.9.0 (trunk 273874)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+  !3 = !DIFile(filename: "t.cpp", directory: "/")
+  !4 = !{}
+  !5 = !{!0, !6, !16, !18}
+  !6 = distinct !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
+  !7 = !DIGlobalVariable(name: "p_incomplete_struct_arr", linkageName: "\01?p_incomplete_struct_arr@@3PAY02Uincomplete_struct@@A", scope: !2, file: !3, line: 3, type: !8, isLocal: false, isDefinition: true)
+  !8 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !9, size: 32, align: 32)
+  !9 = !DICompositeType(tag: DW_TAG_array_type, baseType: !10, elements: !14)
+  !10 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "incomplete_struct", file: !3, line: 4, size: 32, align: 32, elements: !11, identifier: ".?AUincomplete_struct@@")
+  !11 = !{!12}
+  !12 = !DIDerivedType(tag: DW_TAG_member, name: "s1", scope: !10, file: !3, line: 5, baseType: !13, size: 32, align: 32)
+  !13 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+  !14 = !{!15}
+  !15 = !DISubrange(count: 3)
+  !16 = distinct !DIGlobalVariableExpression(var: !17, expr: !DIExpression())
+  !17 = !DIGlobalVariable(name: "incomplete_struct_arr", linkageName: "\01?incomplete_struct_arr@@3PAUincomplete_struct@@A", scope: !2, file: !3, line: 6, type: !9, isLocal: false, isDefinition: true)
+  !18 = distinct !DIGlobalVariableExpression(var: !19, expr: !DIExpression())
+  !19 = !DIGlobalVariable(name: "typedef_arr", linkageName: "\01?typedef_arr@@3SDHD", scope: !2, file: !3, line: 14, type: !20, isLocal: false, isDefinition: true)
+  !20 = !DICompositeType(tag: DW_TAG_array_type, baseType: !21, size: 128, align: 32, elements: !24)
+  !21 = !DIDerivedType(tag: DW_TAG_typedef, name: "T_INT", file: !3, line: 13, baseType: !22)
+  !22 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !23)
+  !23 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !13)
+  !24 = !{!25}
+  !25 = !DISubrange(count: 4)
+  !26 = !DICompositeType(tag: DW_TAG_array_type, baseType: !27, size: 560, align: 8, elements: !28)
+  !27 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
+  !28 = !{!29, !30, !31}
+  !29 = !DISubrange(count: 2)
+  !30 = !DISubrange(count: 5)
+  !31 = !DISubrange(count: 7)
+  !32 = !{i32 2, !"CodeView", i32 1}
+  !33 = !{i32 2, !"Debug Info Version", i32 3}
+  !34 = !{!"clang version 3.9.0 (trunk 273874)"}
+  !35 = distinct !DISubprogram(name: "foo", linkageName: "\01?foo@@YAXH@Z", scope: !3, file: !3, line: 8, type: !36, scopeLine: 8, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !4)
+  !36 = !DISubroutineType(types: !37)
+  !37 = !{null, !13}
+  !38 = !DILocalVariable(name: "x", arg: 1, scope: !35, file: !3, line: 8, type: !13)
+  !39 = !DILocation(line: 8, column: 14, scope: !35)
+  !40 = !DILocation(line: 9, column: 21, scope: !35)
+  !41 = !DILocation(line: 9, column: 4, scope: !35)
+  !42 = !DILocalVariable(name: "dyn_size_arr", scope: !35, file: !3, line: 9, type: !43)
+  !43 = !DICompositeType(tag: DW_TAG_array_type, baseType: !13, align: 32, elements: !44)
+  !44 = !{!45}
+  !45 = !DISubrange(count: -1)
+  !46 = !DILocation(line: 9, column: 8, scope: !35)
+  !47 = !DILocation(line: 10, column: 4, scope: !35)
+  !48 = !DILocation(line: 10, column: 20, scope: !35)
+  !49 = !DILocation(line: 11, column: 1, scope: !35)
+
+...
+---
+name:            "\x01?foo@@YAXH@Z"
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef: true
+hasWinCFI:       true
+frameInfo:
+  stackSize:       8
+  offsetAdjustment: -8
+  maxAlignment:    4
+  adjustsStack:    true
+  maxCallFrameSize: 0
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 4 }
+  - { id: 1, size: 4, alignment: 4, debug-info-variable: '!38', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!39' }
+stack:
+  - { id: 1, name: saved_stack, offset: -12, size: 4, alignment: 4 }
+  - { id: 2, name: vla, type: variable-sized, offset: -12, alignment: 1 }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    frame-setup PUSH32r killed $ebp, implicit-def $esp, implicit $esp
+    CFI_INSTRUCTION def_cfa_offset 8
+    CFI_INSTRUCTION offset $ebp, -8
+    frame-setup SEH_PushReg 23
+    $ebp = frame-setup MOV32rr $esp
+    CFI_INSTRUCTION def_cfa_register $ebp
+    frame-setup SEH_SetFrame 23, 0
+    frame-setup PUSH32r undef $eax, implicit-def $esp, implicit $esp
+    frame-setup SEH_StackAlloc 4
+    frame-setup SEH_EndPrologue
+    renamable $eax = MOV32rm $ebp, 1, $noreg, 8, $noreg, debug-location !40 :: (dereferenceable load (s32) from %ir.x.addr)
+    MOV32mr $ebp, 1, $noreg, -4, $noreg, $esp, debug-location !41 :: (store (s32) into %ir.saved_stack)
+    renamable $eax = SHL32ri killed renamable $eax, 2, implicit-def dead $eflags, debug-location !41
+    CALLpcrel32 &_chkstk, implicit $esp, implicit $ssp, implicit $eax, implicit $esp, implicit-def dead $eax, implicit-def $esp, implicit-def dead $eflags, debug-instr-number 2, debug-location !41
+    $ebx = MOV32rr $esp, debug-location !41
+    $eax = MOV32ri 0
+    DBG_INSTR_REF !42, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref), dbg-instr-ref(2, 6), debug-location !46
+    ; CHECK-LABEL: DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 6)
+    ; CHECK:       DBG_VALUE_LIST {{.+}}, $esp
+
+    ;; Variable value is $esp / $ebx, will be based on $esp initially. We'll now
+    ;; allocate more stack space, and several things should happen:
+    ;;  * We recognise it as modifying $esp, and move the variable location to
+    ;;    be based on $ebx,
+    ;;  * We recognise the modified $esp as a new value, and if we assign it to
+    ;;    the variable location, will base the variable on $esp,
+    ;;  * Clobbering the second modified $esp won't re-locate the variable to
+    ;;    $ebx, which comes from the first modified $esp.
+    CALLpcrel32 &_chkstk, implicit $esp, implicit $ssp, implicit $eax, implicit $esp, implicit-def dead $eax, implicit-def $esp, implicit-def dead $eflags, debug-instr-number 3, debug-location !41
+    ; CHECK-NEXT: CALLpcrel32
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $ebx
+
+    DBG_INSTR_REF !42, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref), dbg-instr-ref(3, 6), debug-location !46
+    ; CHECK-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 6)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $esp
+
+    $esp = ADD32ri killed $esp, 0, implicit-def dead $eflags
+    ; CHECK-NEXT: ADD32ri
+
+    DBG_INSTR_REF !42, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref), dbg-instr-ref(3, 6), debug-location !46
+    ; CHECK-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 6)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
+
+    $esp = MOV32rr $ebp, debug-location !49
+    $ebp = frame-destroy POP32r implicit-def $esp, implicit $esp, debug-location !49
+    RET32 debug-location !49
+
+...

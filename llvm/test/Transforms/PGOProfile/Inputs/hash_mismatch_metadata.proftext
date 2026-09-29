@@ -1,0 +1,17 @@
+:ir
+:entry_first
+foo
+# Func Hash:
+11111
+# Num Counters:
+1
+# Counter Values:
+100
+
+bar
+# Func Hash:
+11111
+# Num Counters:
+1
+# Counter Values:
+100

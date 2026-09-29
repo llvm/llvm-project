@@ -1,0 +1,290 @@
+# RUN: llvm-mc -triple x86_64 -show-encoding -x86-asm-syntax=intel -output-asm-variant=1 %s | FileCheck %s
+
+# CHECK: cmovb	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x42,0xc2]
+         cmovb	r9w, ax, dx
+# CHECK: cmovb	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x42,0xd1]
+         cmovb	r10d, edx, ecx
+# CHECK: cmovb	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x42,0xf9]
+         cmovb	r11, r15, r9
+# CHECK: cmovb	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x42,0x54,0x80,0x7b]
+         cmovb	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovb	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x42,0x4c,0x80,0x7b]
+         cmovb	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovb	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x42,0x4c,0x80,0x7b]
+         cmovb	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmovbe	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x46,0xc2]
+         cmovbe	r9w, ax, dx
+# CHECK: cmovbe	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x46,0xd1]
+         cmovbe	r10d, edx, ecx
+# CHECK: cmovbe	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x46,0xf9]
+         cmovbe	r11, r15, r9
+# CHECK: cmovbe	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x46,0x54,0x80,0x7b]
+         cmovbe	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovbe	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x46,0x4c,0x80,0x7b]
+         cmovbe	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovbe	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x46,0x4c,0x80,0x7b]
+         cmovbe	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmovl	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x4c,0xc2]
+         cmovl	r9w, ax, dx
+# CHECK: cmovl	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x4c,0xd1]
+         cmovl	r10d, edx, ecx
+# CHECK: cmovl	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x4c,0xf9]
+         cmovl	r11, r15, r9
+# CHECK: cmovl	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x4c,0x54,0x80,0x7b]
+         cmovl	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovl	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x4c,0x4c,0x80,0x7b]
+         cmovl	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovl	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x4c,0x4c,0x80,0x7b]
+         cmovl	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmovle	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x4e,0xc2]
+         cmovle	r9w, ax, dx
+# CHECK: cmovle	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x4e,0xd1]
+         cmovle	r10d, edx, ecx
+# CHECK: cmovle	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x4e,0xf9]
+         cmovle	r11, r15, r9
+# CHECK: cmovle	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x4e,0x54,0x80,0x7b]
+         cmovle	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovle	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x4e,0x4c,0x80,0x7b]
+         cmovle	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovle	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x4e,0x4c,0x80,0x7b]
+         cmovle	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmovae	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x43,0xc2]
+         cmovae	r9w, ax, dx
+# CHECK: cmovae	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x43,0xd1]
+         cmovae	r10d, edx, ecx
+# CHECK: cmovae	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x43,0xf9]
+         cmovae	r11, r15, r9
+# CHECK: cmovae	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x43,0x54,0x80,0x7b]
+         cmovae	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovae	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x43,0x4c,0x80,0x7b]
+         cmovae	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovae	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x43,0x4c,0x80,0x7b]
+         cmovae	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmova	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x47,0xc2]
+         cmova	r9w, ax, dx
+# CHECK: cmova	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x47,0xd1]
+         cmova	r10d, edx, ecx
+# CHECK: cmova	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x47,0xf9]
+         cmova	r11, r15, r9
+# CHECK: cmova	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x47,0x54,0x80,0x7b]
+         cmova	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmova	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x47,0x4c,0x80,0x7b]
+         cmova	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmova	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x47,0x4c,0x80,0x7b]
+         cmova	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmovge	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x4d,0xc2]
+         cmovge	r9w, ax, dx
+# CHECK: cmovge	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x4d,0xd1]
+         cmovge	r10d, edx, ecx
+# CHECK: cmovge	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x4d,0xf9]
+         cmovge	r11, r15, r9
+# CHECK: cmovge	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x4d,0x54,0x80,0x7b]
+         cmovge	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovge	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x4d,0x4c,0x80,0x7b]
+         cmovge	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovge	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x4d,0x4c,0x80,0x7b]
+         cmovge	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmovg	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x4f,0xc2]
+         cmovg	r9w, ax, dx
+# CHECK: cmovg	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x4f,0xd1]
+         cmovg	r10d, edx, ecx
+# CHECK: cmovg	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x4f,0xf9]
+         cmovg	r11, r15, r9
+# CHECK: cmovg	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x4f,0x54,0x80,0x7b]
+         cmovg	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovg	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x4f,0x4c,0x80,0x7b]
+         cmovg	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovg	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x4f,0x4c,0x80,0x7b]
+         cmovg	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmovno	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x41,0xc2]
+         cmovno	r9w, ax, dx
+# CHECK: cmovno	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x41,0xd1]
+         cmovno	r10d, edx, ecx
+# CHECK: cmovno	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x41,0xf9]
+         cmovno	r11, r15, r9
+# CHECK: cmovno	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x41,0x54,0x80,0x7b]
+         cmovno	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovno	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x41,0x4c,0x80,0x7b]
+         cmovno	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovno	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x41,0x4c,0x80,0x7b]
+         cmovno	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmovnp	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x4b,0xc2]
+         cmovnp	r9w, ax, dx
+# CHECK: cmovnp	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x4b,0xd1]
+         cmovnp	r10d, edx, ecx
+# CHECK: cmovnp	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x4b,0xf9]
+         cmovnp	r11, r15, r9
+# CHECK: cmovnp	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x4b,0x54,0x80,0x7b]
+         cmovnp	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovnp	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x4b,0x4c,0x80,0x7b]
+         cmovnp	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovnp	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x4b,0x4c,0x80,0x7b]
+         cmovnp	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmovns	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x49,0xc2]
+         cmovns	r9w, ax, dx
+# CHECK: cmovns	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x49,0xd1]
+         cmovns	r10d, edx, ecx
+# CHECK: cmovns	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x49,0xf9]
+         cmovns	r11, r15, r9
+# CHECK: cmovns	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x49,0x54,0x80,0x7b]
+         cmovns	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovns	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x49,0x4c,0x80,0x7b]
+         cmovns	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovns	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x49,0x4c,0x80,0x7b]
+         cmovns	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmovne	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x45,0xc2]
+         cmovne	r9w, ax, dx
+# CHECK: cmovne	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x45,0xd1]
+         cmovne	r10d, edx, ecx
+# CHECK: cmovne	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x45,0xf9]
+         cmovne	r11, r15, r9
+# CHECK: cmovne	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x45,0x54,0x80,0x7b]
+         cmovne	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovne	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x45,0x4c,0x80,0x7b]
+         cmovne	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovne	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x45,0x4c,0x80,0x7b]
+         cmovne	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmovo	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x40,0xc2]
+         cmovo	r9w, ax, dx
+# CHECK: cmovo	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x40,0xd1]
+         cmovo	r10d, edx, ecx
+# CHECK: cmovo	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x40,0xf9]
+         cmovo	r11, r15, r9
+# CHECK: cmovo	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x40,0x54,0x80,0x7b]
+         cmovo	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovo	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x40,0x4c,0x80,0x7b]
+         cmovo	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovo	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x40,0x4c,0x80,0x7b]
+         cmovo	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmovp	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x4a,0xc2]
+         cmovp	r9w, ax, dx
+# CHECK: cmovp	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x4a,0xd1]
+         cmovp	r10d, edx, ecx
+# CHECK: cmovp	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x4a,0xf9]
+         cmovp	r11, r15, r9
+# CHECK: cmovp	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x4a,0x54,0x80,0x7b]
+         cmovp	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovp	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x4a,0x4c,0x80,0x7b]
+         cmovp	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovp	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x4a,0x4c,0x80,0x7b]
+         cmovp	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmovs	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x48,0xc2]
+         cmovs	r9w, ax, dx
+# CHECK: cmovs	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x48,0xd1]
+         cmovs	r10d, edx, ecx
+# CHECK: cmovs	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x48,0xf9]
+         cmovs	r11, r15, r9
+# CHECK: cmovs	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x48,0x54,0x80,0x7b]
+         cmovs	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmovs	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x48,0x4c,0x80,0x7b]
+         cmovs	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmovs	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x48,0x4c,0x80,0x7b]
+         cmovs	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: cmove	r9w, ax, dx
+# CHECK: encoding: [0x62,0xf4,0x35,0x18,0x44,0xc2]
+         cmove	r9w, ax, dx
+# CHECK: cmove	r10d, edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x2c,0x18,0x44,0xd1]
+         cmove	r10d, edx, ecx
+# CHECK: cmove	r11, r15, r9
+# CHECK: encoding: [0x62,0x54,0xa4,0x18,0x44,0xf9]
+         cmove	r11, r15, r9
+# CHECK: cmove	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x7d,0x18,0x44,0x54,0x80,0x7b]
+         cmove	ax, dx, word ptr [r8 + 4*rax + 123]
+# CHECK: cmove	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0xd4,0x6c,0x18,0x44,0x4c,0x80,0x7b]
+         cmove	edx, ecx, dword ptr [r8 + 4*rax + 123]
+# CHECK: cmove	r15, r9, qword ptr [r8 + 4*rax + 123]
+# CHECK: encoding: [0x62,0x54,0x84,0x18,0x44,0x4c,0x80,0x7b]
+         cmove	r15, r9, qword ptr [r8 + 4*rax + 123]

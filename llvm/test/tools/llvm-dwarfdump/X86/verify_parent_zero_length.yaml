@@ -1,0 +1,236 @@
+# This test verifies that: if a parent die(DW_TAG_subprogram) has zero
+# length address range and has a child with normal address range then
+# the "DIE address ranges are not contained in its parent's ranges"
+# error is reported. It also checks that if a parent die has zero
+# length address range and has children with overlapped addresses
+# then the error "DIEs have overlapping address ranges" is reported.
+#
+# The DWARF looks like:
+# 0x0000000b: DW_TAG_compile_unit
+#               DW_AT_name        [DW_FORM_strp] ("/tmp/main.c")
+#               DW_AT_language    (DW_LANG_C)
+#               DW_AT_low_pc      (0x0000000000000000)
+#               DW_AT_ranges      (0x00000000
+#                  [0x0000000000001000, 0x0000000000002000))
+#
+# 0x0000001e:   DW_TAG_subprogram
+#                 DW_AT_name      ("main")
+#                 DW_AT_low_pc    (0x0000000000000000)
+#                 DW_AT_high_pc   (0x0000000000000000)
+#
+# 0x00000033:     DW_TAG_lexical_block
+#                   DW_AT_low_pc  (0x0000000000001001)
+#                   DW_AT_high_pc (0x0000000000002000)
+#
+# 0x00000044:     DW_TAG_lexical_block
+#                   DW_AT_low_pc  (0x0000000000001000)
+#                   DW_AT_high_pc (0x0000000000002000)
+# 0x00000055:     NULL
+#
+# 0x00000056:   NULL
+
+
+# RUN: yaml2obj %s | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --implicit-check-not=error:
+
+# CHECK: Verifying -:	file format Mach-O 64-bit x86-64
+# CHECK: Verifying .debug_abbrev...
+# CHECK: Verifying .debug_info Unit Header Chain...
+# CHECK: error: DIE address ranges are not contained in its parent's ranges:
+# CHECK: 0x0000001e: DW_TAG_subprogram
+# CHECK:               DW_AT_name	[DW_FORM_strp] ( .debug_str[0x0000000d] = "main")
+# CHECK:               DW_AT_low_pc	[DW_FORM_addr] (0x0000000000000000)
+# CHECK:               DW_AT_high_pc	[DW_FORM_addr] (0x0000000000000000)
+
+# CHECK: 0x00000033:   DW_TAG_lexical_block
+# CHECK:                 DW_AT_low_pc	[DW_FORM_addr] (0x0000000000001000)
+# CHECK:                 DW_AT_high_pc	[DW_FORM_addr] (0x0000000000002000)
+
+# CHECK: error: DIEs have overlapping address ranges:
+# CHECK: 0x00000044: DW_TAG_lexical_block
+# CHECK:               DW_AT_low_pc	[DW_FORM_addr] (0x0000000000001001)
+# CHECK:               DW_AT_high_pc	[DW_FORM_addr] (0x0000000000002000)
+
+# CHECK: 0x00000033: DW_TAG_lexical_block
+# CHECK:               DW_AT_low_pc	[DW_FORM_addr] (0x0000000000001000)
+# CHECK:               DW_AT_high_pc	[DW_FORM_addr] (0x0000000000002000)
+
+# CHECK: error: DIE address ranges are not contained in its parent's ranges:
+# CHECK: 0x0000001e: DW_TAG_subprogram
+# CHECK:               DW_AT_name	[DW_FORM_strp] ( .debug_str[0x0000000d] = "main")
+# CHECK:               DW_AT_low_pc	[DW_FORM_addr] (0x0000000000000000)
+# CHECK:               DW_AT_high_pc	[DW_FORM_addr] (0x0000000000000000)
+
+# CHECK: 0x00000044:   DW_TAG_lexical_block
+# CHECK:                 DW_AT_low_pc	[DW_FORM_addr] (0x0000000000001001)
+# CHECK:                 DW_AT_high_pc	[DW_FORM_addr] (0x0000000000002000)
+
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           4
+  sizeofcmds:      464
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         392
+    segname:         ''
+    vmaddr:          0
+    vmsize:          261
+    fileoff:         528
+    filesize:        261
+    maxprot:         7
+    initprot:        7
+    nsects:          4
+    flags:           0
+    Sections:
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0x0000000000000000
+        size:            36
+        offset:          0x00000210
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x0000000000000024
+        size:            87
+        offset:          0x00000234
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_ranges
+        segname:         __DWARF
+        addr:            0x000000000000008B
+        size:            32
+        offset:          0x0000029B
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0x00000000000000DB
+        size:            18
+        offset:          0x000002EB
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0
+    nsyms:           0
+    stroff:          792
+    strsize:         8
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           658944
+    sdk:             658944
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         34734080
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         792
+    datasize:        0
+LinkEditData:
+  StringTable:
+    - ' '
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+DWARF:
+  debug_str:
+    - ''
+    - '/tmp/main.c'
+    - main
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_ranges
+              Form:            DW_FORM_sec_offset
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+        - Code:            0x00000003
+          Tag:             DW_TAG_lexical_block
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+
+  debug_ranges:
+    - Offset:          0x00000000
+      AddrSize:        0x08
+      Entries:
+        - LowOffset:       0x0000000000001000
+          HighOffset:      0x0000000000002000
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000002
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000000
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000001000
+            - Value:           0x0000000000002000
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000001001
+            - Value:           0x0000000000002000
+        - AbbrCode:        0x00000000
+        - AbbrCode:        0x00000000
+...

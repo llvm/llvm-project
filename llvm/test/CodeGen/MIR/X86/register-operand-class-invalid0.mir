@@ -1,0 +1,13 @@
+# RUN: not llc -o /dev/null %s -mtriple=x86_64 -run-pass none 2>&1 | FileCheck %s
+# This test ensures that an error is reported for specifying the register class
+# of a physical register.
+--- |
+  define void @t() { ret void }
+...
+---
+name: t
+body: |
+  bb.0:
+    ; CHECK: [[@LINE+1]]:10: register class specification expects a virtual register
+    $eax : gr32 = COPY $rdx
+...

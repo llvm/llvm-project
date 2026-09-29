@@ -1,0 +1,15 @@
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name: test_ubsantrap
+body: |
+  bb.0:
+
+    ; CHECK: Crash kind must be 8 bit wide
+    G_UBSANTRAP 4096
+
+    ; CHECK: Crash kind must be an immediate
+    %5:_(s32) = IMPLICIT_DEF
+    G_UBSANTRAP %5
+...

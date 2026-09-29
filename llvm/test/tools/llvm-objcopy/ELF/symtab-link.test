@@ -1,0 +1,81 @@
+# RUN: yaml2obj %s -o %t
+## No-op copy.
+# RUN: llvm-objcopy %t %t2
+# RUN: llvm-readobj --sections %t2 | FileCheck %s
+## No-op strip.
+# RUN: cp %t %t3
+# RUN: llvm-strip --no-strip-all %t3
+# RUN: llvm-readobj --sections %t3 | FileCheck %s
+## Add symbol.
+# RUN: llvm-objcopy --add-symbol=another=.text:0,function %t %t4
+# RUN: llvm-readobj --sections %t4 | FileCheck %s
+
+## A section with sh_link referencing SHT_SYMTAB indicates that its content may
+## use the old symbol indices. If the symbol indices change, reset sh_link to 0
+## to inform tools like linkers that the sh_link has been invalidated.
+
+## Strip first symbol.
+# RUN: llvm-objcopy --strip-symbol bar %t %t5
+# RUN: llvm-readobj --sections %t5 | FileCheck %s --check-prefix=LINK-0
+## Strip last symbol.
+# RUN: llvm-objcopy --strip-symbol baz %t %t6
+# RUN: llvm-readobj --sections %t6 | FileCheck %s --check-prefix=LINK-0
+## Re-order symbols.
+# RUN: llvm-objcopy --localize-symbol baz %t %t7
+# RUN: llvm-readobj --sections %t7 | FileCheck %s --check-prefix=LINK-0
+## Remove .text section.
+# RUN: llvm-objcopy --remove-section=.text %t %t8
+# RUN: llvm-readobj --sections %t8 | FileCheck %s --check-prefix=LINK-0
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000000010
+    Size:            32
+  - Name:            .foo
+    Link:            .symtab
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+Symbols:
+  - Name:     bar
+    Type:     STT_FUNC
+    Size:     8
+    Section:  .text
+    Value:    0x1000
+    Binding:  STB_GLOBAL
+  - Name:     baz
+    Type:     STT_FUNC
+    Size:     8
+    Section:  .text
+    Value:    0x1010
+    Binding:  STB_GLOBAL
+
+# CHECK:      Name: .foo
+# CHECK-NEXT: Type:
+# CHECK-NEXT: Flags [ (0x0)
+# CHECK-NEXT: ]
+# CHECK-NEXT: Address:
+# CHECK-NEXT: Offset:
+# CHECK-NEXT: Size:
+# CHECK-NEXT: Link: [[#SYMTABIDX:]]
+
+# CHECK:      Index: [[#SYMTABIDX]]
+# CHECK-NEXT: Name: .symtab
+# CHECK-NEXT: Type: SHT_SYMTAB
+
+# LINK-0:      Name: .foo
+# LINK-0-NEXT: Type:
+# LINK-0-NEXT: Flags [ (0x0)
+# LINK-0-NEXT: ]
+# LINK-0-NEXT: Address:
+# LINK-0-NEXT: Offset:
+# LINK-0-NEXT: Size:
+# LINK-0-NEXT: Link: 0

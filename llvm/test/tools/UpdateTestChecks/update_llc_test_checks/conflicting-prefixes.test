@@ -1,0 +1,7 @@
+# REQUIRES: riscv-registered-target
+
+# RUN: cp -f %S/Inputs/conflicting-prefixes.ll %t.ll
+# RUN: %update_llc_test_checks --no-generate-body-for-unused-prefixes %t.ll 2>&1 | FileCheck %s
+# RUN: diff -u %S/Inputs/conflicting-prefixes.ll.expected %t.ll
+
+# CHECK: WARNING: For function 'foo', the following RUN lines will not generate checks due to conflicting output: RUN #1 (prefixes: CHECK, CHECKA), RUN #2 (prefixes: CHECK, CHECKA), RUN #3 (prefixes: CHECK, CHECKB), RUN #4 (prefixes: CHECK, CHECKB):

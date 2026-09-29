@@ -1,0 +1,27 @@
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t | FileCheck %s
+
+## Check obj2yaml is able to dump the STB_GNU_UNIQUE symbol.
+
+# CHECK:      --- !ELF
+# CHECK-NEXT: FileHeader:
+# CHECK-NEXT:   Class: ELFCLASS64
+# CHECK-NEXT:   Data:  ELFDATA2LSB
+# CHECK-NEXT:   OSABI: ELFOSABI_GNU
+# CHECK-NEXT:   Type:  ET_REL
+# CHECK-NEXT: Symbols:
+# CHECK-NEXT:   - Name:    foo
+# CHECK-NEXT:     Type:    STT_OBJECT
+# CHECK-NEXT:     Binding: STB_GNU_UNIQUE
+# CHECK-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  OSABI: ELFOSABI_GNU
+  Type:  ET_REL
+Symbols:
+  - Name:    foo
+    Type:    STT_OBJECT
+    Binding: STB_GNU_UNIQUE

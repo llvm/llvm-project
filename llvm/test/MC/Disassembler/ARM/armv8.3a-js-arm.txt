@@ -1,0 +1,10 @@
+# RUN:     llvm-mc -triple arm-none-eabi -mattr=+v8.3a,+fp-armv8 --disassemble < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple arm-none-eabi -mattr=+v8.2a,+fp-armv8 --disassemble < %s 2>&1 | FileCheck %s --check-prefix=UNDEF
+# RUN: not llvm-mc -triple arm-none-eabi -mattr=+v8.3a,-fp-armv8 --disassemble < %s 2>&1 | FileCheck %s --check-prefix=UNDEF
+
+[0xc2,0x0b,0xf9,0xee]
+# CHECK: vjcvt.s32.f64 s1, d2
+# UNDEF: :[[@LINE-2]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0xe2,0x8b,0xf9,0xee]
+# CHECK: vjcvt.s32.f64 s17, d18
+# UNDEF: :[[@LINE-2]]:{{[0-9]+}}: warning: invalid instruction encoding

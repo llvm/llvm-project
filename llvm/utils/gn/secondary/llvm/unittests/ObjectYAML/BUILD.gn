@@ -1,0 +1,18 @@
+import("//third-party/unittest/unittest.gni")
+
+unittest("ObjectYAMLTests") {
+  deps = [
+    "//llvm/lib/Object",
+    "//llvm/lib/ObjectYAML",
+    "//llvm/lib/Testing/Support",
+  ]
+  sources = [
+    "ContiguousBlobAccumulatorTest.cpp",
+    "DWARFYAMLTest.cpp",
+    "DXContainerYAMLTest.cpp",
+    "ELFYAMLTest.cpp",
+    "MinidumpYAMLTest.cpp",
+    "YAML2ObjTest.cpp",
+    "YAMLTest.cpp",
+  ]
+}

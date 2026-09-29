@@ -1,0 +1,24 @@
+Test that import libraries (and the members thereof) can be added to another
+static library.
+
+RUN: rm -rf %t
+RUN: mkdir -p %t
+
+RUN: echo -e "EXPORTS\nMyFunc" > %t/lib.def
+RUN: llvm-dlltool -m i386:x86-64 -l %t/lib.lib -d %t/lib.def -D lib.dll
+RUN: llvm-lib -out:%t/newlib.lib %t/lib.lib
+
+RUN: llvm-ar t %t/newlib.lib | FileCheck %s
+CHECK: lib.dll
+
+Test that import libraries can be created from a def file
+
+RUN: echo -e "NAME lib.dll\nEXPORTS\nMyFunc\nAnotherFunc" > %t/implib.def
+RUN: llvm-lib -out:%t/implib.lib -def:%t/implib.def -machine:x64
+
+RUN: llvm-ar t %t/implib.lib | FileCheck %s
+
+RUN: llvm-nm --print-armap %t/implib.lib | FileCheck --check-prefix=SYMTAB %s
+SYMTAB:      Archive map
+SYMTAB-NEXT: AnotherFunc in lib.dll
+SYMTAB-NEXT: MyFunc in lib.dll

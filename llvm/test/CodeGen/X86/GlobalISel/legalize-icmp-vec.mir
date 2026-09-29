@@ -1,0 +1,25 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -run-pass=legalizer -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -o - 2>%t | FileCheck %s
+# RUN: FileCheck -check-prefix=ILLEGAL %s < %t
+
+# ILLEGAL: remark: <unknown>:0:0: unable to legalize instruction: %2:_(<4 x s1>) = G_ICMP intpred(sle), %0:_(<4 x s64>), %1:_ (in function: test_icmp_v4i64)
+
+# PR86203
+---
+name: test_icmp_v4i64
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_icmp_v4i64
+    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<4 x s64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s1>) = G_ICMP intpred(sle), [[DEF]](<4 x s64>), [[DEF1]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<4 x s32>) = G_ANYEXT [[ICMP]](<4 x s1>)
+    ; CHECK-NEXT: $xmm0 = COPY [[ANYEXT]](<4 x s32>)
+    ; CHECK-NEXT: RET 0, implicit $xmm0
+    %0:_(<4 x s64>) = G_IMPLICIT_DEF
+    %1:_(<4 x s64>) = G_IMPLICIT_DEF
+    %3:_(<4 x s1>) = G_ICMP intpred(sle), %0(<4 x s64>), %1
+    %4:_(<4 x s32>) = G_ANYEXT %3(<4 x s1>)
+    $xmm0 = COPY %4(<4 x s32>)
+    RET 0, implicit $xmm0
+...

@@ -1,0 +1,14 @@
+RUN: rm -rf %t %t.cas
+RUN: mkdir %t
+
+RUN: llvm-cas --cas %t.cas --make-blob \
+RUN:   --data /dev/null > %t/empty.casid
+RUN: echo "abc" | \
+RUN:   llvm-cas --cas %t.cas --make-blob \
+RUN:   --data - >%t/abc.casid
+
+RUN: llvm-cas --cas %t/cas --put-cache-key @%t/abc.casid @%t/empty.casid
+RUN: llvm-cas --cas %t/cas --get-cache-result @%t/abc.casid > %t/empty2.casid
+RUN: diff %t/empty.casid %t/empty2.casid
+
+RUN: not llvm-cas --cas %t/cas --get-cache-result @%t/empty.casid

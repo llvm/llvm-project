@@ -1,0 +1,31 @@
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+
+# This test checks the expansion of the 16-bit NEG pseudo instruction.
+
+--- |
+  target triple = "avr--"
+  define void @test_negwrd() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_negwrd
+body: |
+  bb.0.entry:
+    liveins: $r15r14
+
+    ; CHECK-LABEL: test_negwrd
+
+    ; CHECK:      $r15 = NEGRd killed $r15, implicit-def dead $sreg
+    ; CHECK-NEXT: $r14 = NEGRd $r14
+    ; CHECK-NEXT: $r15 = SBCRdRr $r15, $r1, implicit-def $sreg, implicit killed $sreg
+    $r15r14 = NEGWRd $r15r14, $r1, implicit-def $sreg
+
+    ; avrtiny variant
+    ; CHECK:      $r15 = NEGRd killed $r15, implicit-def dead $sreg
+    ; CHECK-NEXT: $r14 = NEGRd $r14
+    ; CHECK-NEXT: $r15 = SBCRdRr $r15, $r17, implicit-def $sreg, implicit killed $sreg
+    $r15r14 = NEGWRd $r15r14, $r17, implicit-def $sreg
+...

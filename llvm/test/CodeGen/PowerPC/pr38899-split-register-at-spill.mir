@@ -1,0 +1,74 @@
+# RUN: llc -mtriple=powerpc64le-unknown-unknown -start-before=greedy -stop-after=virtregrewriter -o - %s | FileCheck %s
+
+--- |
+  ; Function Attrs: nounwind
+  define signext i32 @test1(i32 signext %a, i32 signext %b) local_unnamed_addr !dbg !8 {
+  entry:
+    %mul = mul nsw i32 %b, %a, !dbg !18
+    call void @llvm.dbg.value(metadata i32 %mul, metadata !15, metadata !DIExpression()), !dbg !19
+    tail call void asm sideeffect "", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{r16},~{r17},~{r18},~{r19},~{r20},~{r21},~{r22},~{r23},~{r24},~{r25},~{r26},~{r27},~{r28},~{r29},~{r30},~{r31}"() #2, !dbg !20, !srcloc !25
+    ret i32 %mul, !dbg !26
+  }
+
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5, !6}
+  !llvm.ident = !{!7}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 8.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
+  !1 = !DIFile(filename: "foo.c", directory: "/")
+  !2 = !{}
+  !3 = !{i32 2, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{i32 7, !"PIC Level", i32 2}
+  !7 = !{!"clang version 8.0.0"}
+  !8 = distinct !DISubprogram(name: "test1", scope: !1, file: !1, line: 8, type: !9, scopeLine: 8, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !9 = !DISubroutineType(types: !10)
+  !10 = !{!11, !11, !11}
+  !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !12 = !{!15}
+  !15 = !DILocalVariable(name: "c", scope: !8, file: !1, line: 9, type: !11)
+  !16 = !DILocation(line: 8, column: 14, scope: !8)
+  !17 = !DILocation(line: 8, column: 21, scope: !8)
+  !18 = !DILocation(line: 9, column: 13, scope: !8)
+  !19 = !DILocation(line: 9, column: 7, scope: !8)
+  !20 = !DILocation(line: 2, column: 3, scope: !21, inlinedAt: !24)
+  !21 = distinct !DISubprogram(name: "force_spill", scope: !1, file: !1, line: 1, type: !22, scopeLine: 1, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+  !22 = !DISubroutineType(types: !23)
+  !23 = !{null}
+  !24 = distinct !DILocation(line: 10, column: 3, scope: !8)
+  !25 = !{i32 55}
+  !26 = !DILocation(line: 11, column: 3, scope: !8)
+
+...
+---
+name:            test1
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x3, $x4
+
+    %4:gprc = nsw MULLW $r4, $r3, debug-location !18
+    DBG_VALUE %4, $noreg, !15, !DIExpression(), debug-location !19
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0, 12, implicit-def early-clobber $r1, 12, implicit-def early-clobber $r2, 12, implicit-def dead early-clobber $r3, 12, implicit-def dead early-clobber $r4, 12, implicit-def dead early-clobber $r5, 12, implicit-def dead early-clobber $r6, 12, implicit-def dead early-clobber $r7, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $r16, 12, implicit-def dead early-clobber $r17, 12, implicit-def dead early-clobber $r18, 12, implicit-def dead early-clobber $r19, 12, implicit-def dead early-clobber $r20, 12, implicit-def dead early-clobber $r21, 12, implicit-def dead early-clobber $r22, 12, implicit-def dead early-clobber $r23, 12, implicit-def dead early-clobber $r24, 12, implicit-def dead early-clobber $r25, 12, implicit-def dead early-clobber $r26, 12, implicit-def dead early-clobber $r27, 12, implicit-def dead early-clobber $r28, 12, implicit-def dead early-clobber $r29, 12, implicit-def dead early-clobber $r30, 12, implicit-def early-clobber $r31, !25, debug-location !20
+    %5:g8rc = EXTSW_32_64 %4, debug-location !26
+    $x3 = COPY %5, debug-location !26
+    BLR8 implicit $lr8, implicit $rm, implicit $x3, debug-location !26
+
+...
+
+# Verify that we get three DBG_VALUE instructions. One between the MULLW and
+# the spill, one between the spill and reload, and one after the reload.
+#
+# CHECK-LABEL: name:            test1
+# CHECK:         renamable [[REG1:\$r[0-9]+]] = nsw MULLW
+# CHECK-NEXT:    DBG_VALUE [[REG1]], $noreg, [[VAR:![0-9]+]], !DIExpression(),
+# CHECK-NEXT:    STW killed renamable [[REG1]], 0, %stack.0 ::
+# CHECK-NEXT:    DBG_VALUE %stack.0, 0, [[VAR]], !DIExpression(),
+# CHECK-NEXT:    INLINEASM
+# CHECK-NEXT:    renamable [[REG2:\$r[0-9]+]] = LWZ 0, %stack.0,
+# CHECK-NEXT:    DBG_VALUE [[REG2]], $noreg, [[VAR]], !DIExpression(),
+# CHECK-NEXT:    EXTSW_32_64 killed renamable [[REG2]],

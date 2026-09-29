@@ -1,0 +1,5 @@
+# REQUIRES: ve-registered-target
+## Check that the function regex for VE works as expected.
+
+# RUN: cp -f %S/Inputs/ve-basic.ll %t.ll && %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/ve-basic.ll.expected %t.ll

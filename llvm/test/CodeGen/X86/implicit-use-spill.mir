@@ -1,0 +1,22 @@
+# RUN: llc -run-pass=greedy -mtriple=x86_64-apple-macosx -o - %s | FileCheck %s
+
+# Make sure we don't assert when we try to reload a value that is just implicitly used.
+---
+# CHECK: name: foo
+# This test forces a spill of %0.
+name: foo
+registers:
+  - { id: 0, class: gr64 }
+body: |
+  bb.0:
+  ; CHECK: NOOP implicit-def [[VAL:%[0-9]+]]
+  ; VAL should be spilled before csr_noregs, i.e., before we clobber all the registers
+  ; CHECK-NEXT: MOV64mr [[SLOT:%stack.[0-9]+]], 1, $noreg, 0, $noreg, [[VAL]]
+  ; CHECK-NEXT: NOOP csr_noregs
+  ; We need to reload before the (implicit) use.
+  ; CHECK-NEXT: [[RELOADED_VAL:%[0-9]+]]:gr64 = MOV64rm [[SLOT]], 1, $noreg, 0, $noreg
+  ; CHECK-NEXT: NOOP implicit [[RELOADED_VAL]]
+  NOOP implicit-def %0
+  NOOP csr_noregs
+  NOOP implicit %0
+...

@@ -1,0 +1,11 @@
+RUN: rm -rf %t
+RUN: mkdir -p %t
+RUN: cp %p/Inputs/split-dwarf-addr-object-relocation.dwo %t
+
+RUN: cd %t
+RUN: llvm-symbolizer --obj=%p/Inputs/split-dwarf-addr-object-relocation.o 0x14 | FileCheck %s
+
+CHECK:      f2
+CHECK-NEXT: split-dwarf-addr-object-relocation.cpp:3:3
+CHECK-NEXT: f3
+CHECK-NEXT: split-dwarf-addr-object-relocation.cpp:6:0

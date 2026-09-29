@@ -1,0 +1,228 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0x00000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           4
+  sizeofcmds:      660
+  flags:           0x00002000
+LoadCommands:
+  - cmd:             LC_SEGMENT
+    cmdsize:         532
+    segname:         ''
+    vmaddr:          0
+    vmsize:          175
+    fileoff:         688
+    filesize:        160
+    maxprot:         7
+    initprot:        7
+    nsects:          7
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        size:            72
+        offset:          0x000002B0
+        align:           4
+        reloff:          0x00000350
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x0000000000000048
+        size:            4
+        offset:          0x000002F8
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __bss
+        segname:         __DATA
+        addr:            0x00000000000000A0
+        size:            8
+        offset:          0x00000000
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000001
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __thread_bss
+        segname:         __DATA
+        addr:            0x00000000000000A8
+        size:            7
+        offset:          0x00000000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000012
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __thread_vars
+        segname:         __DATA
+        addr:            0x000000000000004C
+        size:            12
+        offset:          0x000002FC
+        align:           0
+        reloff:          0x00000388
+        nreloc:          0
+        flags:           0x00000013
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           658944
+    sdk:             0
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          928
+    nsyms:           7
+    stroff:          1012
+    strsize:         48
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       4
+    iextdefsym:      4
+    nextdefsym:      2
+    iundefsym:       6
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          44
+      n_type:          0x0E
+      n_sect:          2
+      n_desc:          0
+      n_value:         72
+    - n_strx:          41
+      n_type:          0x0E
+      n_sect:          3
+      n_desc:          0
+      n_value:         160
+    - n_strx:          38
+      n_type:          0x0E
+      n_sect:          3
+      n_desc:          0
+      n_value:         164
+    - n_strx:          1
+      n_type:          0x0E
+      n_sect:          4
+      n_desc:          0
+      n_value:         168
+    - n_strx:          35
+      n_type:          0x0F
+      n_sect:          5
+      n_desc:          0
+      n_value:         76
+    - n_strx:          29
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          13
+      n_type:          0x01
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - '_d$tlv$init'
+    - __tlv_bootstrap
+    - _main
+    - _d
+    - _c
+    - _b
+    - _a
+    - ''
+...
+
+# CHECK:           - sectname:        __text
+# CHECK-NEXT:        segname:         __TEXT
+# CHECK-NEXT:        addr:            0x0
+# CHECK-NEXT:        size:            72
+# CHECK-NEXT:        offset:          0x2B0
+# CHECK-NEXT:        align:           4
+# CHECK-NEXT:        reloff:          0x350
+# CHECK-NEXT:        nreloc:          0
+# CHECK-NEXT:        flags:           0x80000400
+# CHECK-NEXT:        reserved1:       0x0
+# CHECK-NEXT:        reserved2:       0x0
+# CHECK-NEXT:        reserved3:       0x0
+# CHECK-NEXT:        content:         {{(DEADBEEF|EFBEADDE){18}$}}
+# CHECK-NEXT:      - sectname:        __data
+# CHECK-NEXT:        segname:         __DATA
+# CHECK-NEXT:        addr:            0x48
+# CHECK-NEXT:        size:            4
+# CHECK-NEXT:        offset:          0x2F8
+# CHECK-NEXT:        align:           2
+# CHECK-NEXT:        reloff:          0x0
+# CHECK-NEXT:        nreloc:          0
+# CHECK-NEXT:        flags:           0x0
+# CHECK-NEXT:        reserved1:       0x0
+# CHECK-NEXT:        reserved2:       0x0
+# CHECK-NEXT:        reserved3:       0x0
+# CHECK-NEXT:        content:         {{(DEADBEEF|EFBEADDE)$}}
+# CHECK-NEXT:      - sectname:        __bss
+# CHECK-NEXT:        segname:         __DATA
+# CHECK-NEXT:        addr:            0xA0
+# CHECK-NEXT:        size:            8
+# CHECK-NEXT:        offset:          0x0
+# CHECK-NEXT:        align:           2
+# CHECK-NEXT:        reloff:          0x0
+# CHECK-NEXT:        nreloc:          0
+# CHECK-NEXT:        flags:           0x1
+# CHECK-NEXT:        reserved1:       0x0
+# CHECK-NEXT:        reserved2:       0x0
+# CHECK-NEXT:        reserved3:       0x0
+# CHECK-NEXT:      - sectname:        __thread_bss
+# CHECK-NEXT:        segname:         __DATA
+# CHECK-NEXT:        addr:            0xA8
+# CHECK-NEXT:        size:            7
+# CHECK-NEXT:        offset:          0x0
+# CHECK-NEXT:        align:           0
+# CHECK-NEXT:        reloff:          0x0
+# CHECK-NEXT:        nreloc:          0
+# CHECK-NEXT:        flags:           0x12
+# CHECK-NEXT:        reserved1:       0x0
+# CHECK-NEXT:        reserved2:       0x0
+# CHECK-NEXT:        reserved3:       0x0
+# CHECK-NEXT:      - sectname:        __thread_vars
+# CHECK-NEXT:        segname:         __DATA
+# CHECK-NEXT:        addr:            0x4C
+# CHECK-NEXT:        size:            12
+# CHECK-NEXT:        offset:          0x2FC
+# CHECK-NEXT:        align:           0
+# CHECK-NEXT:        reloff:          0x388
+# CHECK-NEXT:        nreloc:          0
+# CHECK-NEXT:        flags:           0x13
+# CHECK-NEXT:        reserved1:       0x0
+# CHECK-NEXT:        reserved2:       0x0
+# CHECK-NEXT:        reserved3:       0x0
+# CHECK-NEXT:        content:         {{.*}}

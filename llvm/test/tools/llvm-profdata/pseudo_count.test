@@ -1,0 +1,22 @@
+Tests for merging instrumented profiles with pseudo counts.
+
+RUN: llvm-profdata merge -instr %p/Inputs/pseudo-count-warm.proftext -o %t1.out 2>&1 | FileCheck %s -check-prefix=MERGE_OVERFLOW -allow-empty
+RUN: llvm-profdata show -instr -all-functions -counts %t1.out | FileCheck %s --check-prefix=MERGE_WARM
+RUN: llvm-profdata merge -instr %p/Inputs/pseudo-count-warm.proftext %p/Inputs/pseudo-count-warm.proftext -o %t2.out 2>&1 | FileCheck %s -check-prefix=MERGE_OVERFLOW -allow-empty
+RUN: llvm-profdata show -instr -all-functions -counts %t2.out | FileCheck %s --check-prefix=MERGE_WARM
+RUN: llvm-profdata merge -instr %p/Inputs/pseudo-count-hot.proftext -o %t3.out 2>&1 | FileCheck %s -check-prefix=MERGE_OVERFLOW -allow-empty
+RUN: llvm-profdata show -instr -all-functions -counts %t3.out | FileCheck %s --check-prefix=MERGE_HOT
+RUN: llvm-profdata merge -instr %p/Inputs/pseudo-count-hot.proftext %p/Inputs/pseudo-count-hot.proftext -o %t4.out 2>&1 | FileCheck %s -check-prefix=MERGE_OVERFLOW -allow-empty
+RUN: llvm-profdata show -instr -all-functions -counts %t4.out | FileCheck %s --check-prefix=MERGE_HOT
+RUN: llvm-profdata merge -instr %p/Inputs/pseudo-count-hot.proftext %p/Inputs/pseudo-count-warm.proftext -o %t5.out 2>&1 | FileCheck %s -check-prefix=MERGE_OVERFLOW -allow-empty
+RUN: llvm-profdata show -instr -all-functions -counts %t5.out | FileCheck %s --check-prefix=MERGE_HOT
+RUN: llvm-profdata merge -instr %p/Inputs/overflow-instr.proftext %p/Inputs/pseudo-count-warm.proftext -o %t6.out 2>&1 | FileCheck %s -check-prefix=MERGE_WARNING
+RUN: llvm-profdata merge -instr %p/Inputs/overflow-instr.proftext %p/Inputs/pseudo-count-hot.proftext -o %t7.out 2>&1 | FileCheck %s -check-prefix=MERGE_WARNING
+
+MERGE_OVERFLOW-NOT: {{.*}}.proftext: overflow: counter overflow
+MERGE_WARM: Counters: 3    <PseudoWarm>
+MERGE_WARM-NEXT: Instrumentation level: Front-end
+MERGE_HOT: Counters: 3    <PseudoHot>
+MERGE_HOT-NEXT: Instrumentation level: Front-end
+MERGE_WARNING: {{.*}}.proftext: overflow: function basic block count change detected (counter mismatch)
+

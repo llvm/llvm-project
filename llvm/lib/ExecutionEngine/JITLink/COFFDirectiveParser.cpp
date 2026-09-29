@@ -1,0 +1,55 @@
+//===-- COFFDirectiveParser.cpp - JITLink coff directive parser --*- C++ -*===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// MSVC COFF directive parser
+//
+//===----------------------------------------------------------------------===//
+
+#include "COFFDirectiveParser.h"
+
+using namespace llvm;
+using namespace jitlink;
+
+#define DEBUG_TYPE "jitlink"
+
+using namespace llvm::opt;
+#define OPTTABLE_CODE
+#include "COFFOptions.inc"
+
+class COFFOptTable : public opt::OptTable {
+public:
+  COFFOptTable() : OptTable(optionTables(), true) {}
+};
+
+static COFFOptTable optTable;
+
+Expected<opt::InputArgList> COFFDirectiveParser::parse(StringRef Str) {
+  SmallVector<StringRef, 16> Tokens;
+  SmallVector<const char *, 16> Buffer;
+  cl::TokenizeWindowsCommandLineNoCopy(Str, saver, Tokens);
+  for (StringRef Tok : Tokens) {
+    bool HasNul = Tok.end() != Str.end() && Tok.data()[Tok.size()] == '\0';
+    Buffer.push_back(HasNul ? Tok.data() : saver.save(Tok).data());
+  }
+
+  unsigned missingIndex;
+  unsigned missingCount;
+
+  auto Result = optTable.ParseArgs(Buffer, missingIndex, missingCount);
+
+  if (missingCount)
+    return make_error<JITLinkError>(Twine("COFF directive parsing failed: ") +
+                                    Result.getArgString(missingIndex) +
+                                    " missing argument");
+  LLVM_DEBUG({
+    for (auto *arg : Result.filtered(COFF_OPT_UNKNOWN))
+      dbgs() << "Unknown coff option argument: " << arg->getAsString(Result)
+             << "\n";
+  });
+  return std::move(Result);
+}

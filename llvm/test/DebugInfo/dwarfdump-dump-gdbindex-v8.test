@@ -1,0 +1,68 @@
+RUN: llvm-dwarfdump -gdb-index %p/Inputs/dwarfdump-gdbindex-v8.elf-x86-64 | FileCheck %s
+
+; main.cpp:
+; typedef struct
+; {
+;   unsigned a;
+;   unsigned b;
+; } S;
+;
+; int main() {
+;   S s;
+;   s.a = 0x64A40101;
+; }
+; helper.cpp:
+; typedef struct
+; {
+;   unsigned a;
+;   unsigned b;
+; } S2;
+;
+; int foo() {
+;   S2 s;
+;   s.a = 0x64A40101;
+; }
+; Compiled with:
+; clang++ -ggnu-pubnames -g2 -gdwarf-4 -fdebug-types-section -c test.cpp test2.cpp
+; ld.lld main.o helper.o -o dwarfdump-gdbindex-v8.elf-x86-64
+; gdb-11/bin/gdb-add-index dwarfdump-gdbindex-v8.elf-x86-64
+; clang version 17.0.0 (https://github.com/llvm/llvm-project.git 128b050d3c234c7238966349f8878884123a0030)
+; GNU gdb (GDB) 11.2
+; Info about gdb-index: https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html
+
+; CHECK-LABEL: .gdb_index contents:
+; CHECK: Version = 8
+
+; CHECK:      CU list offset = 0x18, has 2 entries:
+; CHECK-NEXT:   0: Offset = 0x0, Length = 0x6e
+; CHECK-NEXT:   1: Offset = 0x6e, Length = 0x72
+
+; CHECK:      Types CU list offset = 0x38, has 2 entries:
+; CHECK-NEXT:   0: offset = 0x00000000, type_offset = 0x0000001e, type_signature = 0x418503b8111e9a7b
+; CHECK-NEXT;   1: offset = 0x00000044, type_offset = 0x0000001e, type_signature = 0x00f6cca4e3a15118
+
+; CHECK:      Address area offset = 0x68, has 2 entries:
+; CHECK-NEXT:   Low/High address = [0x201180, 0x20118f) (Size: 0xf), CU id = 0
+; CHECK-NEXT:   Low/High address = [0x201190, 0x20119d) (Size: 0xd), CU id = 1
+
+; CHECK:        Symbol table offset = 0x90, size = 1024, filled slots:
+; CHECK-NEXT:     2: Name offset = 0x28, CU vector offset = 0x0
+; CHECK-NEXT:       String name: S, CU vector index: 0
+; CHECK-NEXT:     71: Name offset = 0x2a, CU vector offset = 0x8
+; CHECK-NEXT:       String name: S2, CU vector index: 1
+; CHECK-NEXT:     489: Name offset = 0x2d, CU vector offset = 0x10
+; CHECK-NEXT:       String name: main, CU vector index: 2
+; CHECK-NEXT:     661: Name offset = 0x32, CU vector offset = 0x18
+; CHECK-NEXT:       String name: foo, CU vector index: 3
+; CHECK-NEXT:     732: Name offset = 0x36, CU vector offset = 0x20
+; CHECK-NEXT:       String name: unsigned int, CU vector index: 4
+; CHECK-NEXT:     754: Name offset = 0x43, CU vector offset = 0x0
+; CHECK-NEXT:       String name: int, CU vector index: 0
+
+
+; CHECK:      Constant pool offset = 0x2090, has 5 CU vectors:
+; CHECK-NEXT:   0(0x0): 0x90000000
+; CHECK-NEXT:   1(0x8): 0x90000001
+; CHECK-NEXT:   2(0x10): 0x30000000
+; CHECK-NEXT:   3(0x18): 0x30000001
+; CHECK-NEXT:   4(0x20): 0x90000002

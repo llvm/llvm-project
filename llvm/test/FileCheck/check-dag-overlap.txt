@@ -1,0 +1,221 @@
+;---------------------------------------------------------------------
+; RUN: not FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:               -check-prefix=IdentPat
+; RUN: FileCheck -input-file %s %s -check-prefix=IdentPat
+
+__IdentPat
+add r10, r1, r2
+add r11, r3, r4
+mul r5, r10, r11
+__IdentPat
+
+; IdentPat:     {{^}}__IdentPat
+; IdentPat-DAG: {{^}}add [[REG1:r[0-9]+]], {{r[0-9]+}}, {{r[0-9]+}}
+; IdentPat-DAG: {{^}}add [[REG2:r[0-9]+]], {{r[0-9]+}}, {{r[0-9]+}}
+; IdentPat:     {{^}}mul r5, [[REG1]], [[REG2]]
+; IdentPat:     {{^}}__IdentPat
+
+;---------------------------------------------------------------------
+; RUN: not FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:               -check-prefix=IdentPatNot
+; RUN: FileCheck -input-file %s %s -check-prefix=IdentPatNot
+
+__IdentPatNot
+add r11, r1, r2
+xor r12, r1, r2
+add r10, r3, r4
+mul r5, r10, r11
+__IdentPatNot
+
+; IdentPatNot:     {{^}}__IdentPatNot
+; IdentPatNot-DAG: {{^}}add {{r[0-9]+}}, {{r[0-9]+}}, {{r[0-9]+}}
+; IdentPatNot-DAG: {{^}}add {{r[0-9]+}}, {{r[0-9]+}}, {{r[0-9]+}}
+; IdentPatNot-NOT: {{^}}xor
+; IdentPatNot-DAG: {{^}}mul r5, r10, r11
+; IdentPatNot:     {{^}}__IdentPatNot
+
+;---------------------------------------------------------------------
+; RUN: FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:           -check-prefix=IdentPatVarDiff
+; RUN: FileCheck -input-file %s %s -check-prefix=IdentPatVarDiff
+
+__IdentPatVarDiff
+call void @foo(), !dbg !0
+call void @bar(), !dbg !1
+!1 = !DILocation(line: 1,
+!0 = !DILocation(line: 1,
+__IdentPatVarDiff
+
+; IdentPatVarDiff:     {{^}}__IdentPatVarDiff
+; IdentPatVarDiff:     {{^}}call void @foo(), !dbg [[DBG0:![0-9]+]]
+; IdentPatVarDiff:     {{^}}call void @bar(), !dbg [[DBG1:![0-9]+]]
+; IdentPatVarDiff-DAG: {{^}}[[DBG0]] = !DILocation(line: 1,
+; IdentPatVarDiff-DAG: {{^}}[[DBG1]] = !DILocation(line: 1,
+; IdentPatVarDiff:     {{^}}__IdentPatVarDiff
+
+;---------------------------------------------------------------------
+; RUN: FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:           -check-prefix=IdentPatVarSame
+; RUN: not FileCheck -input-file %s %s -check-prefix=IdentPatVarSame
+
+__IdentPatVarSame
+call void @foo(), !dbg !0
+call void @bar(), !dbg !0
+!1 = !DILocation(line: 1,
+!0 = !DILocation(line: 1,
+__IdentPatVarSame
+
+; IdentPatVarSame:     {{^}}__IdentPatVarSame
+; IdentPatVarSame:     {{^}}call void @foo(), !dbg [[DBG0:![0-9]+]]
+; IdentPatVarSame:     {{^}}call void @bar(), !dbg [[DBG1:![0-9]+]]
+; IdentPatVarSame-DAG: {{^}}[[DBG0]] = !DILocation(line: 1,
+; IdentPatVarSame-DAG: {{^}}[[DBG1]] = !DILocation(line: 1,
+; IdentPatVarSame:     {{^}}__IdentPatVarSame
+
+;---------------------------------------------------------------------
+; RUN: FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:           -check-prefix=SupSubSet
+; RUN: not FileCheck -input-file %s %s -check-prefix=SupSubSet
+
+__SupSubSet
+store i64 8, i64* %a
+store i64 4, i64* %a
+store i64 4, i64* %b
+store i64 8, i64* %b
+__SupSubSet
+
+; SupSubSet:     {{^}}__SupSubSet
+; SupSubSet-DAG: {{^}}store i64 {{4|8}}, i64* %a
+; SupSubSet-DAG: {{^}}store i64 4, i64* %a
+; SupSubSet-DAG: {{^}}store i64 {{4|8}}, i64* %b
+; SupSubSet-DAG: {{^}}store i64 4, i64* %b
+; SupSubSet:     {{^}}__SupSubSet
+
+;---------------------------------------------------------------------
+; RUN: FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:           -check-prefix=SubSupSet
+; RUN: FileCheck -input-file %s %s -check-prefix=SubSupSet
+
+__SubSupSet
+store i64 8, i64* %a
+store i64 4, i64* %a
+store i64 4, i64* %b
+store i64 8, i64* %b
+__SubSupSet
+
+; SubSupSet:     {{^}}__SubSupSet
+; SubSupSet-DAG: {{^}}store i64 4, i64* %a
+; SubSupSet-DAG: {{^}}store i64 {{4|8}}, i64* %a
+; SubSupSet-DAG: {{^}}store i64 4, i64* %b
+; SubSupSet-DAG: {{^}}store i64 {{4|8}}, i64* %b
+; SubSupSet:     {{^}}__SubSupSet
+
+;---------------------------------------------------------------------
+; RUN: not FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:               -check-prefixes=WrongNumReps
+; RUN: not FileCheck -input-file %s %s -check-prefixes=WrongNumReps
+;
+; RUN: not FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:               -check-prefixes=WrongNumReps,WrongNumReps2
+; RUN: FileCheck -input-file %s %s \
+; RUN:           -check-prefixes=WrongNumReps,WrongNumReps2
+;
+; RUN: not FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:               -check-prefixes=WrongNumReps,WrongNumReps2,WrongNumReps3
+; RUN: not FileCheck -input-file %s %s \
+; RUN:               -check-prefixes=WrongNumReps,WrongNumReps2,WrongNumReps3
+
+__WrongNumReps
+0: task_begin
+1: task_begin
+0: barrier_begin
+1: barrier_begin
+__WrongNumReps
+
+; WrongNumReps:      {{^}}__WrongNumReps
+; WrongNumReps-DAG:  {{^}}[[THID:[0-9]+]]: task_begin
+; WrongNumReps-DAG:  {{^}}[[THID]]: barrier_begin
+; WrongNumReps2-DAG: {{^}}[[THID:[0-9]+]]: task_begin
+; WrongNumReps2-DAG: {{^}}[[THID]]: barrier_begin
+; WrongNumReps3-DAG: {{^}}[[THID:[0-9]+]]: task_begin
+; WrongNumReps3-DAG: {{^}}[[THID]]: barrier_begin
+; WrongNumReps-NEXT: {{^}}__WrongNumReps
+
+;---------------------------------------------------------------------
+; RUN: not FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:               -check-prefix=SameSimple
+; RUN: FileCheck -input-file %s %s -check-prefix=SameSimple
+
+__SameSimple
+(<foo><bar><foo>)
+__SameSimple
+
+; SameSimple:      {{^}}__SameSimple
+; SameSimple:      {{^}}(
+; SameSimple-DAG:  <foo>
+; SameSimple-DAG:  <foo>
+; SameSimple-DAG:  <bar>
+; SameSimple-NOT:  <foo>
+; SameSimple-SAME: ){{$}}
+; SameSimple:      {{^}}__SameSimple
+
+;---------------------------------------------------------------------
+; RUN: not FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:               -check-prefix=DagNotDag
+; RUN: FileCheck -input-file %s %s -check-prefix=DagNotDag
+
+Assume we have DAGs, NOTs, DAGs, NOTs, and then DAGs.  Let X, Y, and Z be
+the DAG groups such that the leading DAGs are x, y, and z.  y won't match
+overlaps with matches from:
+
+1. X.  Otherwise, we used to get a spurious reordering complaint (back
+   when reordering complaints on DAG-NOT-DAG were still implemented).
+2. Y, because y is in Y.  To prevent these overlaps, the implementation must be
+   careful not to drop y's match from the previous matches list when it drops
+   matches from X to save search time.
+3. z.  This follows by applying rule #1 for z instead of y.
+
+__DagNotDag
+abcdefgh
+abcd
+efgh
+
+abcd
+ab
+cd
+
+abcd
+cd
+ab
+__DagNotDag
+
+; DagNotDag:     {{^}}__DagNotDag
+;
+; X:
+;   x:DagNotDag-DAG: {{^}}abcdefgh
+;     DagNotDag-DAG: {{^}}abcd
+;     DagNotDag-DAG: efgh{{$}}
+;
+; Reordering complaint if rule #1 is broken.
+; DagNotDag-NOT: abcd
+; DagNotDag-NOT: efgh
+;
+; Y:
+;   y:DagNotDag-DAG: {{^}}abcd
+;     DagNotDag-DAG: {{^}}ab
+;     DagNotDag-DAG: cd{{$}}
+;
+; Matches if rule #2 is broken.
+; DagNotDag-NOT: ab
+; DagNotDag-NOT: cd
+;
+; Z:
+;   z:DagNotDag-DAG: {{^}}abcd
+;     DagNotDag-DAG: {{^}}ab
+;     DagNotDag-DAG: cd{{$}}
+;
+; Matches if rule #3 is broken.
+; DagNotDag-NOT: {{^}}ab
+; DagNotDag-NOT: {{^}}cd
+;
+; DagNotDag:     {{^}}__DagNotDag

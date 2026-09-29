@@ -1,0 +1,42 @@
+# This test verifies that llvm-objcopy copies a univeral Mach-O object file properly.
+
+# RUN: yaml2obj %p/Inputs/i386.yaml -o %t.i386
+# RUN: yaml2obj %p/Inputs/x86_64.yaml -o %t.x86_64
+
+## Case 1: copy a universal object containing regular Mach-O objects.
+# RUN: llvm-lipo %t.i386 %t.x86_64 -create -output %t.universal
+# RUN: llvm-objcopy %t.universal %t.universal.copy
+# RUN: llvm-lipo %t.universal.copy -archs | FileCheck --check-prefix=VERIFY_ARCHS %s
+# RUN: llvm-lipo %t.universal.copy -thin i386 -output %t.i386.copy
+# RUN: llvm-lipo %t.universal.copy -thin x86_64 -output %t.x86_64.copy
+# RUN: cmp %t.i386 %t.i386.copy
+# RUN: cmp %t.x86_64 %t.x86_64.copy
+
+## Case 2: copy a universal object file containing an archive with darwin specific timestamps.
+# RUN: rm -f %t.archive.i386
+# RUN: llvm-ar --format=darwin cr %t.archive.i386 %t.i386 %t.i386
+# RUN: llvm-lipo %t.archive.i386 %t.x86_64 -create -output %t.universal.containing.archive
+# RUN: llvm-objcopy %t.universal.containing.archive %t.universal.containing.archive.copy
+# RUN: llvm-lipo %t.universal.containing.archive.copy -archs | FileCheck --check-prefix=VERIFY_ARCHS %s
+# RUN: llvm-lipo %t.universal.containing.archive.copy -thin i386 -output %t.archive.i386.copy
+# RUN: llvm-lipo %t.universal.containing.archive.copy -thin x86_64 -output %t.archive.x86_64.copy
+# RUN: cmp %t.archive.i386 %t.archive.i386.copy
+# RUN: cmp %t.x86_64 %t.archive.x86_64.copy
+
+## Case 3: copy an archive containing a universal object.
+# RUN: llvm-ar cr %t.archive.containing.universal %t.universal
+# RUN: llvm-objcopy %t.archive.containing.universal %t.archive.containing.universal.copy
+
+## Case 4: try to copy a universal object file contaning a bitcode slice.
+# RUN: echo 'target triple = "arm64-apple-ios8.0.0"' | llvm-as -o %t.bitcode
+# RUN: llvm-lipo %t.bitcode  %t.x86_64 -create -output %t.universal.containing.bitcode
+# RUN: not llvm-objcopy %t.universal.containing.bitcode %t.universal.containing.bitcode.copy 2>&1 \
+# RUN:  | FileCheck --check-prefix=UNSUPPORTED_UNIVERSAL_OBJECT %s
+
+## Case 5: try to copy an archive containing an unsupported universal object.
+# RUN: llvm-ar cr %t.archive.universal.bitcode %t.universal.containing.bitcode
+# RUN: not llvm-objcopy %t.archive.universal.bitcode %t.archive.universal.bitcode.copy 2>&1 \
+# RUN:  | FileCheck --check-prefix=UNSUPPORTED_UNIVERSAL_OBJECT %s
+
+# VERIFY_ARCHS: i386 x86_64
+# UNSUPPORTED_UNIVERSAL_OBJECT: slice for 'arm64' of the universal Mach-O binary {{.*}} is not a Mach-O object or an archive

@@ -1,0 +1,8 @@
+RUN: llvm-nm -f sysv %p/Inputs/hello.obj.macho-x86_64 2>&1 | FileCheck %s --strict-whitespace
+
+CHECK: Name                  Value           Class        Type         Size             Line  Section
+CHECK: EH_frame0           |0000000000000068|   s  |                  |0000000000000000|     |
+CHECK: L_.str              |000000000000003b|   s  |                  |0000000000000000|     |
+CHECK: _main               |0000000000000000|   T  |                  |0000000000000000|     |
+CHECK: _main.eh            |0000000000000080|   S  |                  |0000000000000000|     |
+CHECK: _printf             |                |   U  |                  |                |     |

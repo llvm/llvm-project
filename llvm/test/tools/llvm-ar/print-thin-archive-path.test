@@ -1,0 +1,10 @@
+RUN: mkdir -p %t/foo
+RUN: touch %t/foo/a.txt
+RUN: rm -f %t/foo/archive.a
+
+RUN: cd %t && llvm-ar rcST foo/archive.a foo/a.txt
+RUN: cd %t && llvm-ar t foo/archive.a | FileCheck %s --match-full-lines --check-prefix=PARENT-DIR
+RUN: cd %t/foo && llvm-ar t archive.a | FileCheck %s --match-full-lines --check-prefix=CHILD-DIR
+
+PARENT-DIR: foo/a.txt
+CHILD-DIR:  a.txt

@@ -1,0 +1,158 @@
+# RUN: llc -mtriple=mips64 -mcpu=mips64r6 -start-after=block-placement -o - %s | FileCheck %s
+
+# Check that MipsHazardSchedule sees through basic blocks with transient instructions.
+# The mir code in this file isn't representative of the llvm-ir.
+
+--- |
+  ; ModuleID = 'test.ll'
+  source_filename = "test.c"
+  target datalayout = "E-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128"
+  target triple = "mips64-img-linux-gnu"
+
+  ; Function Attrs: nounwind
+  define i32 @f(i32 signext %a) {
+  entry:
+    %retval = alloca i32, align 4
+    %a.addr = alloca i32, align 4
+    store i32 %a, ptr %a.addr, align 4
+    %0 = load i32, ptr %a.addr, align 4
+    %cmp = icmp sgt i32 %0, 5
+    br i1 %cmp, label %if.then, label %if.else
+
+  if.then:                                          ; preds = %entry
+    %1 = load i32, ptr %a.addr, align 4
+    %2 = load i32, ptr %a.addr, align 4
+    %add = add nsw i32 %1, %2
+    store i32 %add, ptr %retval, align 4
+    br label %return
+
+  if.else:                                          ; preds = %entry
+    %3 = load i32, ptr %a.addr, align 4
+    %call = call i32 @g(i32 signext %3)
+    store i32 %call, ptr %retval, align 4
+    br label %return
+
+  return:                                           ; preds = %if.else, %if.then
+    %4 = load i32, ptr %retval, align 4
+    ret i32 %4
+  }
+
+  declare i32 @g(i32 signext)
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(ptr, ptr)
+
+  !llvm.ident = !{!0}
+
+  !0 = !{!"clang version 4.0.0 "}
+
+...
+---
+# CHECK-LABEL: f:
+# CHECK: bgtzc
+# CHECK-NEXT: nop
+# CHECK: bltzc
+# CHECK-NEXT: nop
+# CHECK: blezc
+name:            f
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+  - { reg: '$a0_64' }
+  - { reg: '$t9_64' }
+calleeSavedRegisters: [ '$fp', '$gp', '$ra', '$d12', '$d13', '$d14', '$d15',
+                        '$f24', '$f25', '$f26', '$f27', '$f28', '$f29',
+                        '$f30', '$f31', '$fp_64', '$f_hi24', '$f_hi25',
+                        '$f_hi26', '$f_hi27', '$f_hi28', '$f_hi29', '$f_hi30',
+                        '$f_hi31', '$gp_64', '$ra_64', '$s0', '$s1', '$s2',
+                        '$s3', '$s4', '$s5', '$s6', '$s7', '$d24_64', '$d25_64',
+                        '$d26_64', '$d27_64', '$d28_64', '$d29_64', '$d30_64',
+                        '$d31_64', '$s0_64', '$s1_64', '$s2_64', '$s3_64',
+                        '$s4_64', '$s5_64', '$s6_64', '$s7_64' ]
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       32
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+stack:
+  - { id: 0, name: retval, offset: -28, size: 4, alignment: 4 }
+  - { id: 1, name: a.addr, offset: -32, size: 4, alignment: 4 }
+  - { id: 2, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$ra_64' }
+  - { id: 3, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '$fp_64' }
+  - { id: 4, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$gp_64' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1.if.then(0x40000000), %bb.5.if.else(0x40000000)
+    liveins: $a0_64, $t9_64, $ra_64, $fp_64, $gp_64
+
+    $sp_64 = DADDiu $sp_64, -32
+    CFI_INSTRUCTION def_cfa_offset 32
+    SD killed $ra_64, $sp_64, 24 :: (store (s64) into %stack.2)
+    SD killed $fp_64, $sp_64, 16 :: (store (s64) into %stack.3)
+    SD killed $gp_64, $sp_64, 8 :: (store (s64) into %stack.4)
+    CFI_INSTRUCTION offset $ra_64, -8
+    CFI_INSTRUCTION offset $fp_64, -16
+    CFI_INSTRUCTION offset $gp_64, -24
+    CFI_INSTRUCTION def_cfa_register $fp_64
+    $at_64 = LUi64 @f
+    $v0_64 = DADDu killed $at_64, $t9_64
+    SW $a0, $sp_64, 0 :: (store (s32) into %ir.a.addr)
+    BGTZC $a0, %bb.5.if.else, implicit-def $at
+
+  bb.1.if.then:
+    successors: %bb.6.return(0x40000000), %bb.2.if.then(0x40000000)
+    liveins: $a0
+
+    BLTZC $a0, %bb.6.return, implicit-def $at
+
+  bb.2.if.then:
+    successors: %bb.3.if.else(0x80000000)
+    $t8 = IMPLICIT_DEF
+
+  bb.3.if.else:
+    successors: %bb.6.return(0x40000000), %bb.4.if.else(0x40000000)
+    liveins: $t8
+
+    BLEZC $t8, %bb.6.return, implicit-def $at
+
+  bb.4.if.else:
+    successors: %bb.6.return(0x80000000)
+    liveins: $t8
+
+    $at = LW $sp_64, 0 :: (dereferenceable load (s32) from %ir.a.addr)
+    $at = ADDu killed $at, $t8
+    SW killed $at, $sp_64, 4 :: (store (s32) into %ir.retval)
+    J %bb.6.return, implicit-def dead $at
+
+  bb.5.if.else:
+    successors: %bb.6.return(0x80000000)
+    liveins: $v0_64
+
+    $gp_64 = DADDiu killed $v0_64, @f
+    $a0_64 = LW64 $sp_64, 0 :: (dereferenceable load (s32) from %ir.a.addr)
+    $t9_64 = LD $gp_64, @g :: (load (s64) from call-entry @g)
+    JALR64Pseudo $t9_64, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0
+    SW killed $v0, $sp_64, 4 :: (store (s32) into %ir.retval)
+
+  bb.6.return:
+    $v0 = LW $sp_64, 4 :: (dereferenceable load (s32) from %ir.retval)
+    $gp_64 = LD $sp_64, 8 :: (load (s64) from %stack.4)
+    $fp_64 = LD $sp_64, 16 :: (load (s64) from %stack.3)
+    $ra_64 = LD $sp_64, 24 :: (load (s64) from %stack.2)
+    $sp_64 = DADDiu $sp_64, 32
+    PseudoReturn64 $ra_64
+
+...

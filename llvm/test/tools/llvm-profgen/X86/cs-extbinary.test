@@ -1,0 +1,14 @@
+; test for dwarf-based cs profile
+; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/recursion-compression-noprobe.perfscript --binary=%S/Inputs/recursion-compression-noprobe.perfbin --output=%t1 --profile-summary-hot-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: llvm-profdata merge --sample --text --output=%t2 %t1
+; RUN: FileCheck %S/recursion-compression-noprobe.test --input-file %t2
+; RUN: llvm-profdata merge --sample --extbinary --output=%t3 %t2 && llvm-profdata merge --sample --text --output=%t4 %t3
+; RUN: diff -b %t2 %t4
+
+
+; test for probe-based cs profile
+; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t5 --profile-summary-hot-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: llvm-profdata merge --sample --text --output=%t6 %t5
+; RUN: FileCheck %S/recursion-compression-pseudoprobe.test --input-file %t6
+; RUN: llvm-profdata merge --sample --extbinary --output=%t7 %t6 && llvm-profdata merge --sample --text --output=%t8 %t7
+; RUN: diff -b %t6 %t8

@@ -1,0 +1,95 @@
+// This tests that we can deserialize and reserialize every known type record.
+// If you need to update the object file, enable the RUNX line below using MSVC
+// from VS 2012. Newer versions of MSVC emit tons of internal types for
+// attributes that pollute the test output. When Clang fully supports all these
+// type records, we can regenerate the test using it instead.
+
+// RUNX: cl -GR- -Z7 -c -TP %s -Fo%S/Inputs/codeview-types.obj
+// RUN: llvm-readobj --codeview %S/Inputs/codeview-types.obj | FileCheck %s
+// RUN: llvm-readobj --codeview-merged-types %S/Inputs/codeview-types.obj | FileCheck %s
+
+// TYPE_RECORD
+// CHECK-DAG: {{^ *Pointer (.*) {$}}
+// CHECK-DAG: {{^ *Modifier (.*) {$}}
+// CHECK-DAG: {{^ *Procedure (.*) {$}}
+// CHECK-DAG: {{^ *MemberFunction (.*) {$}}
+// CHECK-DAG: {{^ *ArgList (.*) {$}}
+// CHECK-DAG: {{^ *Array (.*) {$}}
+// CHECK-DAG: {{^ *Class (.*) {$}}
+// CHECK-DAG: {{^ *Union (.*) {$}}
+// CHECK-DAG: {{^ *Enum (.*) {$}}
+// CHECK-DAG: {{^ *VFTable (.*) {$}}
+// CHECK-DAG: {{^ *VFTableShape (.*) {$}}
+// CHECK-DAG: {{^ *FuncId (.*) {$}}
+// CHECK-DAG: {{^ *MemberFuncId (.*) {$}}
+// CHECK-DAG: {{^ *BuildInfo (.*) {$}}
+// CHECK-DAG: {{^ *StringId (.*) {$}}
+// CHECK-DAG: {{^ *UdtSourceLine (.*) {$}}
+// CHECK-DAG: {{^ *MethodOverloadList (.*) {$}}
+// No TypeServer2, since that is used with /Zi
+
+// MEMBER_RECORD
+// CHECK-DAG: {{^ *BaseClass {$}}
+// CHECK-DAG: {{^ *VirtualBaseClass {$}}
+// CHECK-DAG: {{^ *VFPtr {$}}
+// CHECK-DAG: {{^ *StaticDataMember {$}}
+// CHECK-DAG: {{^ *OverloadedMethod {$}}
+// CHECK-DAG: {{^ *DataMember {$}}
+// CHECK-DAG: {{^ *NestedType {$}}
+// CHECK-DAG: {{^ *OneMethod {$}}
+// CHECK-DAG: {{^ *Enumerator {$}}
+
+#if !defined(__clang__) && _MSC_VER >= 1800
+#error "use clang or MSVC 2012 to regenerate the test"
+#endif
+
+struct VBaseA;
+void FriendFunc();
+
+class Class {
+public:
+  const Class *DataMember;
+private:
+  static int StaticDataMember;
+protected:
+  virtual void MemberFunction();
+public:
+  struct Nested;
+  friend ::VBaseA;
+  friend void FriendFunc() { }
+  void OverloadedMethod();
+  void OverloadedMethod(int);
+};
+
+enum Enum {
+  E1 = 0,
+  E2 = 1
+};
+
+int array[4] = {1, 2, 3, 4};
+
+struct Class::Nested {};
+
+struct ClassWithBase : Class {
+  virtual void MemberFunction();
+  virtual void NewVirtual();
+};
+struct VBaseA { int x; };
+struct VBaseB : virtual VBaseA { int x; };
+struct VBaseC : virtual VBaseA { int x; };
+struct VBaseD : VBaseB, VBaseC { int x; };
+
+union Union {
+  float f;
+  int i;
+};
+
+void UseAllTypes() {
+  Class a;
+  Class::Nested b;
+  ClassWithBase c;
+  VBaseD d;
+  Union e;
+  Enum f;
+  FriendFunc();
+}

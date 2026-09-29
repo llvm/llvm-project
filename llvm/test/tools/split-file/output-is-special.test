@@ -1,0 +1,7 @@
+# UNSUPPORTED: system-windows
+
+## Don't delete the output if it is special, otherwise root may accidentally
+## remove important special files.
+# RUN: not split-file %s /dev/null 2>&1 | FileCheck %s
+
+# CHECK: error: /dev/null: output cannot be a special file

@@ -1,0 +1,226 @@
+# RUN: llvm-mc -triple i386 -disassemble %s | FileCheck %s --check-prefix=ATT
+# RUN: llvm-mc -triple i386 -disassemble -output-asm-variant=1 %s | FileCheck %s --check-prefix=INTEL
+
+# ATT:   vp2intersectq	%zmm2, %zmm1, %k0
+# INTEL: vp2intersectq	k0, zmm1, zmm2
+0x62,0xf2,0xf7,0x48,0x68,0xc2
+
+# ATT:   vp2intersectq	(%edi), %zmm1, %k0
+# INTEL: vp2intersectq	k0, zmm1, zmmword ptr [edi]
+0x62,0xf2,0xf7,0x48,0x68,0x07
+
+# ATT:   vp2intersectq	(%edi){1to8}, %zmm1, %k0
+# INTEL: vp2intersectq	k0, zmm1, qword ptr [edi]{1to8}
+0x62,0xf2,0xf7,0x58,0x68,0x07
+
+# ATT:   vp2intersectq	%zmm2, %zmm1, %k0
+# INTEL: vp2intersectq	k0, zmm1, zmm2
+0x62,0xf2,0xf7,0x48,0x68,0xc2
+
+# ATT:   vp2intersectq	(%edi), %zmm1, %k0
+# INTEL: vp2intersectq	k0, zmm1, zmmword ptr [edi]
+0x62,0xf2,0xf7,0x48,0x68,0x07
+
+# ATT:   vp2intersectq	(%edi){1to8}, %zmm1, %k0
+# INTEL: vp2intersectq	k0, zmm1, qword ptr [edi]{1to8}
+0x62,0xf2,0xf7,0x58,0x68,0x07
+
+# ATT:   vp2intersectq	%zmm7, %zmm4, %k6
+# INTEL: vp2intersectq	k6, zmm4, zmm7
+0x62,0xf2,0xdf,0x48,0x68,0xf7
+
+# ATT:   vp2intersectq	(%esi), %zmm4, %k6
+# INTEL: vp2intersectq	k6, zmm4, zmmword ptr [esi]
+0x62,0xf2,0xdf,0x48,0x68,0x36
+
+# ATT:   vp2intersectq	(%esi){1to8}, %zmm4, %k6
+# INTEL: vp2intersectq	k6, zmm4, qword ptr [esi]{1to8}
+0x62,0xf2,0xdf,0x58,0x68,0x36
+
+# ATT:   vp2intersectq	%zmm7, %zmm4, %k6
+# INTEL: vp2intersectq	k6, zmm4, zmm7
+0x62,0xf2,0xdf,0x48,0x68,0xf7
+
+# ATT:   vp2intersectq	(%esi), %zmm4, %k6
+# INTEL: vp2intersectq	k6, zmm4, zmmword ptr [esi]
+0x62,0xf2,0xdf,0x48,0x68,0x36
+
+# ATT:   vp2intersectq	(%esi){1to8}, %zmm4, %k6
+# INTEL: vp2intersectq	k6, zmm4, qword ptr [esi]{1to8}
+0x62,0xf2,0xdf,0x58,0x68,0x36
+
+# ATT:   vp2intersectq	%ymm2, %ymm1, %k0
+# INTEL: vp2intersectq	k0, ymm1, ymm2
+0x62,0xf2,0xf7,0x28,0x68,0xc2
+
+# ATT:   vp2intersectq	(%edi), %ymm1, %k0
+# INTEL: vp2intersectq	k0, ymm1, ymmword ptr [edi]
+0x62,0xf2,0xf7,0x28,0x68,0x07
+
+# ATT:   vp2intersectq	(%edi){1to4}, %ymm1, %k0
+# INTEL: vp2intersectq	k0, ymm1, qword ptr [edi]{1to4}
+0x62,0xf2,0xf7,0x38,0x68,0x07
+
+# ATT:   vp2intersectq	%ymm2, %ymm1, %k0
+# INTEL: vp2intersectq	k0, ymm1, ymm2
+0x62,0xf2,0xf7,0x28,0x68,0xc2
+
+# ATT:   vp2intersectq	(%edi), %ymm1, %k0
+# INTEL: vp2intersectq	k0, ymm1, ymmword ptr [edi]
+0x62,0xf2,0xf7,0x28,0x68,0x07
+
+# ATT:   vp2intersectq	(%edi){1to4}, %ymm1, %k0
+# INTEL: vp2intersectq	k0, ymm1, qword ptr [edi]{1to4}
+0x62,0xf2,0xf7,0x38,0x68,0x07
+
+# ATT:   vp2intersectq	%ymm7, %ymm4, %k6
+# INTEL: vp2intersectq	k6, ymm4, ymm7
+0x62,0xf2,0xdf,0x28,0x68,0xf7
+
+# ATT:   vp2intersectq	(%esi), %ymm4, %k6
+# INTEL: vp2intersectq	k6, ymm4, ymmword ptr [esi]
+0x62,0xf2,0xdf,0x28,0x68,0x36
+
+# ATT:   vp2intersectq	(%esi){1to4}, %ymm4, %k6
+# INTEL: vp2intersectq	k6, ymm4, qword ptr [esi]{1to4}
+0x62,0xf2,0xdf,0x38,0x68,0x36
+
+# ATT:   vp2intersectq	%ymm7, %ymm4, %k6
+# INTEL: vp2intersectq	k6, ymm4, ymm7
+0x62,0xf2,0xdf,0x28,0x68,0xf7
+
+# ATT:   vp2intersectq	(%esi), %ymm4, %k6
+# INTEL: vp2intersectq	k6, ymm4, ymmword ptr [esi]
+0x62,0xf2,0xdf,0x28,0x68,0x36
+
+# ATT:   vp2intersectq	%xmm2, %xmm1, %k0
+# INTEL: vp2intersectq	k0, xmm1, xmm2
+0x62,0xf2,0xf7,0x08,0x68,0xc2
+
+# ATT:   vp2intersectq	(%edi), %xmm1, %k0
+# INTEL: vp2intersectq	k0, xmm1, xmmword ptr [edi]
+0x62,0xf2,0xf7,0x08,0x68,0x07
+
+# ATT:   vp2intersectq	(%edi){1to2}, %xmm1, %k0
+# INTEL: vp2intersectq	k0, xmm1, qword ptr [edi]{1to2}
+0x62,0xf2,0xf7,0x18,0x68,0x07
+
+# ATT:   vp2intersectq	%xmm2, %xmm1, %k0
+# INTEL: vp2intersectq	k0, xmm1, xmm2
+0x62,0xf2,0xf7,0x08,0x68,0xc2
+
+# ATT:   vp2intersectq	(%edi), %xmm1, %k0
+# INTEL: vp2intersectq	k0, xmm1, xmmword ptr [edi]
+0x62,0xf2,0xf7,0x08,0x68,0x07
+
+# ATT:   vp2intersectq	%xmm7, %xmm4, %k6
+# INTEL: vp2intersectq	k6, xmm4, xmm7
+0x62,0xf2,0xdf,0x08,0x68,0xf7
+
+# ATT:   vp2intersectq	(%esi), %xmm4, %k6
+# INTEL: vp2intersectq	k6, xmm4, xmmword ptr [esi]
+0x62,0xf2,0xdf,0x08,0x68,0x36
+
+# ATT:   vp2intersectq	%xmm7, %xmm4, %k6
+# INTEL: vp2intersectq	k6, xmm4, xmm7
+0x62,0xf2,0xdf,0x08,0x68,0xf7
+
+# ATT:   vp2intersectq	(%esi), %xmm4, %k6
+# INTEL: vp2intersectq	k6, xmm4, xmmword ptr [esi]
+0x62,0xf2,0xdf,0x08,0x68,0x36
+
+# ATT:   vp2intersectd	%zmm2, %zmm1, %k0
+# INTEL: vp2intersectd	k0, zmm1, zmm2
+0x62,0xf2,0x77,0x48,0x68,0xc2
+
+# ATT:   vp2intersectd	(%edi), %zmm1, %k0
+# INTEL: vp2intersectd	k0, zmm1, zmmword ptr [edi]
+0x62,0xf2,0x77,0x48,0x68,0x07
+
+# ATT:   vp2intersectd	%zmm2, %zmm1, %k0
+# INTEL: vp2intersectd	k0, zmm1, zmm2
+0x62,0xf2,0x77,0x48,0x68,0xc2
+
+# ATT:   vp2intersectd	(%edi), %zmm1, %k0
+# INTEL: vp2intersectd	k0, zmm1, zmmword ptr [edi]
+0x62,0xf2,0x77,0x48,0x68,0x07
+
+# ATT:   vp2intersectd	%zmm7, %zmm4, %k6
+# INTEL: vp2intersectd	k6, zmm4, zmm7
+0x62,0xf2,0x5f,0x48,0x68,0xf7
+
+# ATT:   vp2intersectd	(%esi), %zmm4, %k6
+# INTEL: vp2intersectd	k6, zmm4, zmmword ptr [esi]
+0x62,0xf2,0x5f,0x48,0x68,0x36
+
+# ATT:   vp2intersectd	%zmm7, %zmm4, %k6
+# INTEL: vp2intersectd	k6, zmm4, zmm7
+0x62,0xf2,0x5f,0x48,0x68,0xf7
+
+# ATT:   vp2intersectd	(%esi), %zmm4, %k6
+# INTEL: vp2intersectd	k6, zmm4, zmmword ptr [esi]
+0x62,0xf2,0x5f,0x48,0x68,0x36
+
+# ATT:   vp2intersectd	%ymm2, %ymm1, %k0
+# INTEL: vp2intersectd	k0, ymm1, ymm2
+0x62,0xf2,0x77,0x28,0x68,0xc2
+
+# ATT:   vp2intersectd	(%edi), %ymm1, %k0
+# INTEL: vp2intersectd	k0, ymm1, ymmword ptr [edi]
+0x62,0xf2,0x77,0x28,0x68,0x07
+
+# ATT:   vp2intersectd	%ymm2, %ymm1, %k0
+# INTEL: vp2intersectd	k0, ymm1, ymm2
+0x62,0xf2,0x77,0x28,0x68,0xc2
+
+# ATT:   vp2intersectd	(%edi), %ymm1, %k0
+# INTEL: vp2intersectd	k0, ymm1, ymmword ptr [edi]
+0x62,0xf2,0x77,0x28,0x68,0x07
+
+# ATT:   vp2intersectd	%ymm7, %ymm4, %k6
+# INTEL: vp2intersectd	k6, ymm4, ymm7
+0x62,0xf2,0x5f,0x28,0x68,0xf7
+
+# ATT:   vp2intersectd	(%esi), %ymm4, %k6
+# INTEL: vp2intersectd	k6, ymm4, ymmword ptr [esi]
+0x62,0xf2,0x5f,0x28,0x68,0x36
+
+# ATT:   vp2intersectd	%ymm7, %ymm4, %k6
+# INTEL: vp2intersectd	k6, ymm4, ymm7
+0x62,0xf2,0x5f,0x28,0x68,0xf7
+
+# ATT:   vp2intersectd	(%esi), %ymm4, %k6
+# INTEL: vp2intersectd	k6, ymm4, ymmword ptr [esi]
+0x62,0xf2,0x5f,0x28,0x68,0x36
+
+# ATT:   vp2intersectd	%xmm2, %xmm1, %k0
+# INTEL: vp2intersectd	k0, xmm1, xmm2
+0x62,0xf2,0x77,0x08,0x68,0xc2
+
+# ATT:   vp2intersectd	(%edi), %xmm1, %k0
+# INTEL: vp2intersectd	k0, xmm1, xmmword ptr [edi]
+0x62,0xf2,0x77,0x08,0x68,0x07
+
+# ATT:   vp2intersectd	%xmm2, %xmm1, %k0
+# INTEL: vp2intersectd	k0, xmm1, xmm2
+0x62,0xf2,0x77,0x08,0x68,0xc2
+
+# ATT:   vp2intersectd	(%edi), %xmm1, %k0
+# INTEL: vp2intersectd	k0, xmm1, xmmword ptr [edi]
+0x62,0xf2,0x77,0x08,0x68,0x07
+
+# ATT:   vp2intersectd	%xmm7, %xmm4, %k6
+# INTEL: vp2intersectd	k6, xmm4, xmm7
+0x62,0xf2,0x5f,0x08,0x68,0xf7
+
+# ATT:   vp2intersectd	(%esi), %xmm4, %k6
+# INTEL: vp2intersectd	k6, xmm4, xmmword ptr [esi]
+0x62,0xf2,0x5f,0x08,0x68,0x36
+
+# ATT:   vp2intersectd	%xmm7, %xmm4, %k6
+# INTEL: vp2intersectd	k6, xmm4, xmm7
+0x62,0xf2,0x5f,0x08,0x68,0xf7
+
+# ATT:   vp2intersectd	(%esi), %xmm4, %k6
+# INTEL: vp2intersectd	k6, xmm4, xmmword ptr [esi]
+0x62,0xf2,0x5f,0x08,0x68,0x36

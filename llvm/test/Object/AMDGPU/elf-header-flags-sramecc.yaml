@@ -1,0 +1,61 @@
+# RUN: yaml2obj --docnum=1 %s -o %t.o.1
+# RUN: llvm-readobj -S --file-headers %t.o.1 | FileCheck --check-prefixes=ELF-SRAM-ECC-NONE %s
+# RUN: obj2yaml %t.o.1 | FileCheck --check-prefixes=YAML-SRAM-ECC-NONE %s
+# RUN: yaml2obj --docnum=2 %s -o %t.o.2
+# RUN: llvm-readobj -S --file-headers %t.o.2 | FileCheck --check-prefixes=ELF-SRAM-ECC-GFX900 %s
+# RUN: obj2yaml %t.o.2 | FileCheck --check-prefixes=YAML-SRAM-ECC-GFX900 %s
+# RUN: yaml2obj --docnum=3 %s -o %t.o.3
+# RUN: llvm-readobj -S --file-headers %t.o.3 | FileCheck --check-prefixes=ELF-SRAM-ECC-XNACK-GFX900 %s
+# RUN: obj2yaml %t.o.3 | FileCheck --check-prefixes=YAML-SRAM-ECC-XNACK-GFX900 %s
+
+# ELF-SRAM-ECC-NONE:      Flags [
+# ELF-SRAM-ECC-NONE-NEXT:   EF_AMDGPU_FEATURE_SRAMECC_V3 (0x200)
+# ELF-SRAM-ECC-NONE-NEXT: ]
+
+# ELF-SRAM-ECC-GFX900:      Flags [
+# ELF-SRAM-ECC-GFX900-NEXT:   EF_AMDGPU_FEATURE_SRAMECC_V3 (0x200)
+# ELF-SRAM-ECC-GFX900-NEXT:   EF_AMDGPU_MACH_AMDGCN_GFX900 (0x2C)
+# ELF-SRAM-ECC-GFX900-NEXT: ]
+
+# ELF-SRAM-ECC-XNACK-GFX900:      Flags [
+# ELF-SRAM-ECC-XNACK-GFX900-NEXT:   EF_AMDGPU_FEATURE_SRAMECC_V3 (0x200)
+# ELF-SRAM-ECC-XNACK-GFX900-NEXT:   EF_AMDGPU_FEATURE_XNACK_V3   (0x100)
+# ELF-SRAM-ECC-XNACK-GFX900-NEXT:   EF_AMDGPU_MACH_AMDGCN_GFX900 (0x2C)
+# ELF-SRAM-ECC-XNACK-GFX900-NEXT: ]
+
+# YAML-SRAM-ECC-NONE:         Flags: [ EF_AMDGPU_MACH_NONE, EF_AMDGPU_FEATURE_SRAMECC_V3 ]
+# YAML-SRAM-ECC-GFX900:       Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX900, EF_AMDGPU_FEATURE_SRAMECC_V3 ]
+# YAML-SRAM-ECC-XNACK-GFX900: Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX900, EF_AMDGPU_FEATURE_XNACK_V3, EF_AMDGPU_FEATURE_SRAMECC_V3 ]
+
+# Doc1
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_FEATURE_SRAMECC_V3 ]
+...
+
+# Doc2
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX900, EF_AMDGPU_FEATURE_SRAMECC_V3 ]
+...
+
+# Doc3
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX900, EF_AMDGPU_FEATURE_XNACK_V3, EF_AMDGPU_FEATURE_SRAMECC_V3 ]
+...

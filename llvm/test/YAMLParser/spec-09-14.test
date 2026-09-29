@@ -1,0 +1,18 @@
+# RUN: not yaml-bench -canonical %s 2>&1 | FileCheck %s
+#
+# CHECK: error: Expected a line break after block scalar header
+
+---
+--- ||| : foo
+... >>>: bar
+---
+[
+---
+,
+... ,
+{
+--- :
+... # Nested
+}
+]
+...

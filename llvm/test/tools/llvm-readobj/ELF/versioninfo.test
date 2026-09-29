@@ -1,0 +1,275 @@
+## Test how llvm-readobj/llvm-readelf tools dump versioning sections.
+## Check that SHT_GNU_versym dumper can see versions described in
+## SHT_GNU_verdef and SHT_GNU_verneed sections.
+
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: llvm-readobj -V %t1 | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf -V %t1 | FileCheck %s --check-prefix=GNU
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  OSABI: ELFOSABI_FREEBSD
+  Type:  ET_DYN
+Sections:
+  - Name:         .gnu.version
+    Type:         SHT_GNU_versym
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: 0x0000000000000002
+    Entries:      [ 0, 2, 3, 4, 5, 6]
+  - Name:         .gnu.version_d
+    Type:         SHT_GNU_verdef
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: 0x0000000000000004
+    Entries:
+      - Names:
+          - VERSION1
+      - Flags: 1
+        Names:
+          - VERSION1
+      - Flags: 2
+        Names:
+          - VERSION1
+      - Flags: 4
+        Names:
+          - VERSION1
+      - Flags:      7
+        VersionNdx: 2
+        Hash:       175630257
+        Names:
+          - VERSION1
+      - Flags:      8
+        VersionNdx: 3
+        Hash:       175630258
+        Names:
+          - VERSION2
+          - VERSION1
+          - VERSION3
+  - Name:         .gnu.version_r
+    Type:         SHT_GNU_verneed
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: 0x0000000000000004
+    Dependencies:
+      - Version: 1
+        File:    verneed1.so.0
+        Entries:
+          - Name:  v1
+            Hash:  0
+            Flags: 1
+            Other: 0
+          - Name:  v1
+            Hash:  0
+            Flags: 2
+            Other: 0
+          - Name:  v1
+            Hash:  0
+            Flags: 4
+            Other: 0
+          - Name:  v1
+            Hash:  1938
+            Flags: 7
+            Other: 4
+          - Name:  v2
+            Hash:  1939
+            Flags: 8
+            Other: 5
+      - Version: 1
+        File:    verneed2.so.0
+        Entries:
+          - Name:  v3
+            Hash:  1937
+            Flags: 0
+            Other: 6
+DynamicSymbols:
+  - Name:            sym1
+    Binding:         STB_GLOBAL
+  - Name:            sym2
+    Binding:         STB_GLOBAL
+  - Name:            sym3
+    Binding:         STB_GLOBAL
+  - Name:            sym4
+    Binding:         STB_GLOBAL
+  - Name:            sym5
+    Binding:         STB_GLOBAL
+...
+
+# LLVM:      VersionSymbols [
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Version: 0
+# LLVM-NEXT:     Name:
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Version: 2
+# LLVM-NEXT:     Name: sym1@VERSION1
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Version: 3
+# LLVM-NEXT:     Name: sym2@VERSION2
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Version: 4
+# LLVM-NEXT:     Name: sym3@v1
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Version: 5
+# LLVM-NEXT:     Name: sym4@v2
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Version: 6
+# LLVM-NEXT:     Name: sym5@v3
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+# LLVM-NEXT: VersionDefinitions [
+# LLVM-NEXT:   Definition {
+# LLVM-NEXT:     Version: 1
+# LLVM-NEXT:     Flags [ (0x0)
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     Index: 0
+# LLVM-NEXT:     Hash: 0
+# LLVM-NEXT:     Name: VERSION1
+# LLVM-NEXT:     Predecessors: []
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Definition {
+# LLVM-NEXT:     Version: 1
+# LLVM-NEXT:     Flags [ (0x1)
+# LLVM-NEXT:       Base (0x1)
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     Index: 0
+# LLVM-NEXT:     Hash: 0
+# LLVM-NEXT:     Name: VERSION1
+# LLVM-NEXT:     Predecessors: []
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Definition {
+# LLVM-NEXT:     Version: 1
+# LLVM-NEXT:     Flags [ (0x2)
+# LLVM-NEXT:       Weak (0x2)
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     Index: 0
+# LLVM-NEXT:     Hash: 0
+# LLVM-NEXT:     Name: VERSION1
+# LLVM-NEXT:     Predecessors: []
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Definition {
+# LLVM-NEXT:     Version: 1
+# LLVM-NEXT:     Flags [ (0x4)
+# LLVM-NEXT:       Info (0x4)
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     Index: 0
+# LLVM-NEXT:     Hash: 0
+# LLVM-NEXT:     Name: VERSION1
+# LLVM-NEXT:     Predecessors: []
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Definition {
+# LLVM-NEXT:     Version: 1
+# LLVM-NEXT:     Flags [ (0x7)
+# LLVM-NEXT:       Base (0x1)
+# LLVM-NEXT:       Info (0x4)
+# LLVM-NEXT:       Weak (0x2)
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     Index: 2
+# LLVM-NEXT:     Hash: 175630257
+# LLVM-NEXT:     Name: VERSION1
+# LLVM-NEXT:     Predecessors: []
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Definition {
+# LLVM-NEXT:     Version: 1
+# LLVM-NEXT:     Flags [ (0x8)
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     Index: 3
+# LLVM-NEXT:     Hash: 175630258
+# LLVM-NEXT:     Name: VERSION2
+# LLVM-NEXT:     Predecessors: [VERSION1, VERSION3]
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+# LLVM-NEXT: VersionRequirements [
+# LLVM-NEXT:   Dependency {
+# LLVM-NEXT:     Version: 1
+# LLVM-NEXT:     Count: 5
+# LLVM-NEXT:     FileName: verneed1.so.0
+# LLVM-NEXT:     Entries [
+# LLVM-NEXT:       Entry {
+# LLVM-NEXT:         Hash: 0
+# LLVM-NEXT:         Flags [ (0x1)
+# LLVM-NEXT:           Base (0x1)
+# LLVM-NEXT:         ]
+# LLVM-NEXT:         Index: 0
+# LLVM-NEXT:         Name: v1
+# LLVM-NEXT:       }
+# LLVM-NEXT:       Entry {
+# LLVM-NEXT:         Hash: 0
+# LLVM-NEXT:         Flags [ (0x2)
+# LLVM-NEXT:           Weak (0x2)
+# LLVM-NEXT:         ]
+# LLVM-NEXT:         Index: 0
+# LLVM-NEXT:         Name: v1
+# LLVM-NEXT:       }
+# LLVM-NEXT:       Entry {
+# LLVM-NEXT:         Hash: 0
+# LLVM-NEXT:         Flags [ (0x4)
+# LLVM-NEXT:           Info (0x4)
+# LLVM-NEXT:         ]
+# LLVM-NEXT:         Index: 0
+# LLVM-NEXT:         Name: v1
+# LLVM-NEXT:       }
+# LLVM-NEXT:       Entry {
+# LLVM-NEXT:         Hash: 1938
+# LLVM-NEXT:         Flags [ (0x7)
+# LLVM-NEXT:           Base (0x1)
+# LLVM-NEXT:           Info (0x4)
+# LLVM-NEXT:           Weak (0x2)
+# LLVM-NEXT:         ]
+# LLVM-NEXT:         Index: 4
+# LLVM-NEXT:         Name: v1
+# LLVM-NEXT:       }
+# LLVM-NEXT:       Entry {
+# LLVM-NEXT:         Hash: 1939
+# LLVM-NEXT:         Flags [ (0x8)
+# LLVM-NEXT:         ]
+# LLVM-NEXT:         Index: 5
+# LLVM-NEXT:         Name: v2
+# LLVM-NEXT:       }
+# LLVM-NEXT:     ]
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Dependency {
+# LLVM-NEXT:     Version: 1
+# LLVM-NEXT:     Count: 1
+# LLVM-NEXT:     FileName: verneed2.so.0
+# LLVM-NEXT:     Entries [
+# LLVM-NEXT:       Entry {
+# LLVM-NEXT:         Hash: 1937
+# LLVM-NEXT:         Flags [ (0x0)
+# LLVM-NEXT:         ]
+# LLVM-NEXT:         Index: 6
+# LLVM-NEXT:         Name: v3
+# LLVM-NEXT:       }
+# LLVM-NEXT:     ]
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+
+# GNU:      Version symbols section '.gnu.version' contains 6 entries:
+# GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 4 (.dynsym)
+# GNU-NEXT:   000:   0 (*local*) 2 (VERSION1) 3 (VERSION2) 4 (v1)
+# GNU-NEXT:   004:   5 (v2)      6 (v3)
+# GNU-EMPTY:
+# GNU-NEXT:  Version definition section '.gnu.version_d' contains 6 entries:
+# GNU-NEXT:   Addr: 000000000000000c  Offset: 0x00004c  Link: 5 (.dynstr)
+# GNU-NEXT:    0x0000: Rev: 1  Flags: none  Index: 0  Cnt: 1  Name: VERSION1
+# GNU-NEXT:    0x001c: Rev: 1  Flags: BASE  Index: 0  Cnt: 1  Name: VERSION1
+# GNU-NEXT:    0x0038: Rev: 1  Flags: WEAK  Index: 0  Cnt: 1  Name: VERSION1
+# GNU-NEXT:    0x0054: Rev: 1  Flags: INFO  Index: 0  Cnt: 1  Name: VERSION1
+# GNU-NEXT:    0x0070: Rev: 1  Flags: BASE | WEAK | INFO  Index: 2  Cnt: 1  Name: VERSION1
+# GNU-NEXT:    0x008c: Rev: 1  Flags: <unknown>  Index: 3  Cnt: 3  Name: VERSION2
+# GNU-NEXT:    0x00b0: Parent 1: VERSION1
+# GNU-NEXT:    0x00b0: Parent 2: VERSION3
+# GNU-EMPTY:
+# GNU-NEXT:  Version needs section '.gnu.version_r' contains 2 entries:
+# GNU-NEXT:   Addr: 00000000000000c4  Offset: 0x000104  Link: 5 (.dynstr)
+# GNU-NEXT:    0x0000: Version: 1  File: verneed1.so.0  Cnt: 5
+# GNU-NEXT:    0x0010:   Name: v1  Flags: BASE  Version: 0
+# GNU-NEXT:    0x0020:   Name: v1  Flags: WEAK  Version: 0
+# GNU-NEXT:    0x0030:   Name: v1  Flags: INFO  Version: 0
+# GNU-NEXT:    0x0040:   Name: v1  Flags: BASE | WEAK | INFO  Version: 4
+# GNU-NEXT:    0x0050:   Name: v2  Flags: <unknown>  Version: 5
+# GNU-NEXT:    0x0060: Version: 1  File: verneed2.so.0  Cnt: 1
+# GNU-NEXT:    0x0070:   Name: v3  Flags: none  Version: 6

@@ -1,0 +1,3 @@
+// RUN: llvm-objdump -t %p/Inputs/proc-specific-section-elf | FileCheck %s
+
+CHECK: 00000000         *UND*  00000000 print

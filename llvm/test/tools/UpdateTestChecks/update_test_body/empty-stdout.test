@@ -1,0 +1,13 @@
+# RUN: cp %s %t && not %update_test_body %t 2>&1 | FileCheck %s
+# RUN: diff -u %t %s
+
+# CHECK: stdout is empty; forgot -o - ?
+
+.ifdef GEN
+#--- a.txt
+.long 0
+#--- b.txt
+.long 1
+#--- gen
+true
+.endif

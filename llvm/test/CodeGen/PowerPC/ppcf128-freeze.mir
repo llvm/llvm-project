@@ -1,0 +1,35 @@
+# RUN: llc -mtriple powerpc64le-unknown-linux-gnu -start-after=codegenprepare \
+# RUN:   -o - %s -verify-machineinstrs | FileCheck %s
+
+--- |
+  define ppc_fp128 @freeze_select(ppc_fp128 %a, ppc_fp128 %b) {
+    %sel.frozen = freeze ppc_fp128 %a
+    %cmp = fcmp one ppc_fp128 %sel.frozen, 0xM00000000000000000000000000000000
+    br i1 %cmp, label %select.end, label %select.false
+
+  select.false:                                     ; preds = %0
+    br label %select.end
+
+  select.end:                                       ; preds = %0, %select.false
+    %sel = phi ppc_fp128 [ %a, %0 ], [ %b, %select.false ]
+    ret ppc_fp128 %sel
+  }
+
+  ; CHECK-LABEL: freeze_select
+  ; CHECK:       # %bb.0:
+  ; CHECK-NEXT:    xxlxor 0, 0, 0
+  ; CHECK-NEXT:    fcmpu 1, 2, 2
+  ; CHECK-NEXT:    fcmpu 0, 2, 0
+  ; CHECK-NEXT:    crnor 20, 7, 2
+  ; CHECK-NEXT:    fcmpu 0, 1, 0
+  ; CHECK-NEXT:    fcmpu 1, 1, 1
+  ; CHECK-NEXT:    crand 20, 2, 20
+  ; CHECK-NEXT:    bclr 12, 20, 0
+  ; CHECK-NEXT:  # %bb.1:
+  ; CHECK-NEXT:    crnor 20, 7, 2
+  ; CHECK-NEXT:    bclr 12, 20, 0
+  ; CHECK-NEXT:  # %bb.2:                                # %select.false
+  ; CHECK-NEXT:    fmr 1, 3
+  ; CHECK-NEXT:    fmr 2, 4
+  ; CHECK-NEXT:    blr
+...

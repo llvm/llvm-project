@@ -1,0 +1,18 @@
+# UNSUPPORTED: zlib
+# RUN: yaml2obj %s -o %t.o
+# RUN: not llvm-dwp %t.o -o /dev/null 2>&1 | FileCheck %s
+
+# CHECK: error: failure while decompressing compressed section: '.debug_{{.*}}.dwo', LLVM was not built with LLVM_ENABLE_ZLIB or did not find zlib at build time
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .debug_info.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_COMPRESSED ]
+    AddressAlign:    0x8
+    Content:         01000000fd7f000056000000000000000100000000000000789c0b626060606100010e462083f1e6eb7f7c0d8b756299188480628c614ccc8c8ccc4c136b5818190381024066051b9c59c20e67167040980c2cacac2c0c00109a0afa

@@ -1,0 +1,85 @@
+## This checks that the group section is shrunk when its member is removed.
+
+# RUN: yaml2obj --docnum=1 %s -o - \
+# RUN:   | llvm-objcopy -R .foo - - \
+# RUN:   | obj2yaml - \
+# RUN:   | FileCheck %s
+
+# CHECK:      - Name: .group
+# CHECK:        Members:
+# CHECK-NEXT:     - SectionOrType:  GRP_COMDAT
+# CHECK-NEXT:     - SectionOrType:  .bar
+# CHECK-NOT:      - SectionOrType:
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_REL
+  Machine:    EM_X86_64
+Sections:
+  - Name:     .group
+    Type:     SHT_GROUP
+    Info:     foo_bar_grp
+    Members:
+      - SectionOrType:  GRP_COMDAT
+      - SectionOrType:  .foo
+      - SectionOrType:  .bar
+  - Name:     .foo
+    Type:     SHT_PROGBITS
+    Flags:    [ SHF_ALLOC, SHF_GROUP ]
+  - Name:     .bar
+    Type:     SHT_PROGBITS
+    Flags:    [ SHF_ALLOC, SHF_GROUP ]
+Symbols:
+  - Name:     foo_bar_grp
+    Section:  .group
+    Binding:  STB_GLOBAL
+
+# RUN: yaml2obj --docnum=2 %s -o %t
+# RUN: llvm-objcopy --remove-section=.debug_macro %t
+# RUN: llvm-readelf --section-groups %t | FileCheck %s --check-prefix=GROUP-REMOVED
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_REL
+  Machine:    EM_X86_64
+Sections:
+  - Name:     .group
+    Type:     SHT_GROUP
+    Info:     foo_grp
+    Members:
+      - SectionOrType:  GRP_COMDAT
+      - SectionOrType:  .debug_macro
+  - Name:     .debug_macro
+    Type:     SHT_PROGBITS
+    Flags:    [ SHF_GROUP ]
+Symbols:
+  - Name:     foo_grp
+    Section:  .group
+
+# GROUP-REMOVED: There are no section groups in this file.
+
+# RUN: yaml2obj --docnum=3 %s -o %t
+# RUN: llvm-objcopy --remove-section=.group %t
+# RUN: llvm-readelf --section-groups %t | FileCheck %s --check-prefix=EMPTY-GROUP-REMOVED
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_REL
+  Machine:    EM_X86_64
+Sections:
+  - Name:     .group
+    Type:     SHT_GROUP
+    Info:     foo_grp
+    Members:
+      - SectionOrType:  GRP_COMDAT
+Symbols:
+  - Name:     foo_grp
+    Section:  .group
+
+# EMPTY-GROUP-REMOVED: There are no section groups in this file.

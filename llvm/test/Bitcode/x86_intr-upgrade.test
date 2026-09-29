@@ -1,0 +1,11 @@
+RUN: llvm-dis %p/Inputs/x86_intrcc_upgrade.bc -o - | FileCheck %s
+
+Make sure we upgrade x86_intrcc to a byval with explicit type
+
+CHECK: define x86_intrcc void @no_args() {
+CHECK: define x86_intrcc void @non_byval_ptr_arg0(ptr byval(i32) %0)
+CHECK: define x86_intrcc void @non_byval_ptr_struct(ptr byval(%struct) %0)
+
+CHECK: declare x86_intrcc void @no_args_decl()
+CHECK: declare x86_intrcc void @non_byval_ptr_arg0_decl(ptr byval(i32))
+CHECK: declare x86_intrcc void @non_byval_ptr_struct_decl(ptr byval(%struct))

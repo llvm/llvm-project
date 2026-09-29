@@ -1,0 +1,32 @@
+# Test dump between the binary and text formats.
+
+RUN: split-file %s %t
+
+RUN: llvm-cgdata --convert --format binary %t/dump.cgtext -o %t/dump.cgdata
+RUN: llvm-cgdata --convert --format text %t/dump.cgdata -o %t/dump-round.cgtext
+RUN: llvm-cgdata -c -f binary %t/dump-round.cgtext -o %t/dump-round.cgdata
+RUN: llvm-cgdata -c -f text %t/dump-round.cgtext -o %t/dump-round-round.cgtext
+RUN: diff %t/dump.cgdata %t/dump-round.cgdata
+RUN: diff %t/dump-round.cgtext %t/dump-round-round.cgtext
+
+;--- dump.cgtext
+# Outlined stable hash tree
+:outlined_hash_tree
+---
+0:
+  Hash:            0x0
+  Terminals:       0
+  SuccessorIds:    [ 1 ]
+1:
+  Hash:            0x1
+  Terminals:       0
+  SuccessorIds:    [ 2, 3 ]
+2:
+  Hash:            0x3
+  Terminals:       5
+  SuccessorIds:    [  ]
+3:
+  Hash:            0x2
+  Terminals:       4
+  SuccessorIds:    [  ]
+...

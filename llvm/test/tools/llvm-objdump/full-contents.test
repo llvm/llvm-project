@@ -1,0 +1,67 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump --full-contents %t > %t.out1
+# RUN: llvm-objdump -s %t > %t.out2
+# RUN: cmp %t.out1 %t.out2
+# RUN: FileCheck %s --input-file=%t.out1 --implicit-check-not=.empty-progbits \
+# RUN:              --implicit-check-not=.empty-nobits
+
+# CHECK:      .bss
+# CHECK-NEXT: <skipping contents of bss section at [1000, 1040)>
+# CHECK:      .text
+# CHECK-NEXT:  1010 01234567                             .#Eg
+# CHECK:      .user-defined
+# CHECK-NEXT:  1020 76543210                             vT2.
+# CHECK:      .nobits-section
+# CHECK-NEXT: <skipping contents of bss section at [1030, 1050)>
+# CHECK:      .non-alloc
+# CHECK:       0000 11112222                             ..""
+# CHECK:      .symtab
+# CHECK:      .strtab
+# CHECK:      .shstrtab
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000000010
+    Size:            64
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1010
+    AddressAlign:    0x0000000000000010
+    Content:         "01234567"
+    Size:            4
+  - Name:            .user-defined
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1020
+    AddressAlign:    0x0000000000000010
+    Content:         "76543210"
+    Size:            4
+  - Name:            .nobits-section
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1030
+    AddressAlign:    0x0000000000000010
+    Size:            32
+  - Name:            .empty-progbits
+    Type:            SHT_PROGBITS
+    Address:         0x1040
+    Flags:           [ SHF_ALLOC ]
+  - Name:            .empty-nobits
+    Type:            SHT_NOBITS
+    Address:         0x1050
+    Flags:           [ SHF_ALLOC ]
+  - Name:            .non-alloc
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Content:         '11112222'
+Symbols: []

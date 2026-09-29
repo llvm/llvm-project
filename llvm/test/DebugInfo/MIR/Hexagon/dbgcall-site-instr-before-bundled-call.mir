@@ -1,0 +1,189 @@
+# We do not support the call site info for the target now, so we use the experimental option (-emit-call-site-info -debug-entry-values).
+
+# RUN: llc -emit-call-site-info -debug-entry-values -mtriple hexagon -start-after=machineverifier -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s
+
+# Based on the following C reproducer:
+#
+# int ga, gb, gc;
+#
+# extern void callee(int, int, int);
+#
+# void caller() {
+#   int a = ga;
+#   int b = gb;
+#   int c = gc;
+#
+#   // Clobber all integer registers.
+#   __asm("" : : :
+#         "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10",
+#         "r11", "r12", "r13", "r14", "r15", "r16", "r17", "r18", "r19", "r20",
+#         "r21", "r22", "r23", "r24", "r25", "r26", "r27", "r28");
+#
+#   callee(a, b, c);
+# }
+
+--- |
+  target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+  target triple = "hexagon"
+
+  @ga = common global i32 0, align 4
+  @gb = common global i32 0, align 4
+  @gc = common global i32 0, align 4
+
+  ; Function Attrs: nounwind
+  define void @caller() #0 !dbg !12 {
+  entry:
+    %0 = load i32, ptr @ga, align 4, !dbg !15
+    %1 = load i32, ptr @gb, align 4, !dbg !16
+    %2 = load i32, ptr @gc, align 4, !dbg !17
+    call void asm sideeffect "", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{r16},~{r17},~{r18},~{r19},~{r20},~{r21},~{r22},~{r23},~{r24},~{r25},~{r26},~{r27},~{r28}"(), !dbg !18, !srcloc !19
+    call void @callee(i32 %0, i32 %1, i32 %2), !dbg !20
+    ret void, !dbg !21
+  }
+
+  declare !dbg !4 void @callee(i32, i32, i32)
+
+  attributes #0 = { nounwind }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!8, !9, !10}
+  !llvm.ident = !{!11}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, globals: !2, nameTableKind: None)
+  !1 = !DIFile(filename: "h.c", directory: "/")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DISubprogram(name: "callee", scope: !1, file: !1, line: 3, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null, !7, !7, !7}
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !8 = !{i32 7, !"Dwarf Version", i32 4}
+  !9 = !{i32 2, !"Debug Info Version", i32 3}
+  !10 = !{i32 1, !"wchar_size", i32 4}
+  !11 = !{!"clang version 10.0.0"}
+  !12 = distinct !DISubprogram(name: "caller", scope: !1, file: !1, line: 5, type: !13, scopeLine: 5, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{null}
+  !15 = !DILocation(line: 6, scope: !12)
+  !16 = !DILocation(line: 7, scope: !12)
+  !17 = !DILocation(line: 8, scope: !12)
+  !18 = !DILocation(line: 11, scope: !12)
+  !19 = !{i32 158}
+  !20 = !DILocation(line: 16, scope: !12)
+  !21 = !DILocation(line: 17, scope: !12)
+
+...
+---
+name:            caller
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       64
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -48, size: 8, alignment: 8, callee-saved-register: '$d13' }
+  - { id: 1, type: spill-slot, offset: -40, size: 8, alignment: 8, callee-saved-register: '$d12' }
+  - { id: 2, type: spill-slot, offset: -32, size: 8, alignment: 8, callee-saved-register: '$d11' }
+  - { id: 3, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$d10' }
+  - { id: 4, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '$d9' }
+  - { id: 5, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '$d8' }
+stack:
+  - { id: 0, type: spill-slot, offset: -52, size: 4, alignment: 4 }
+  - { id: 1, type: spill-slot, offset: -56, size: 4, alignment: 4 }
+  - { id: 2, type: spill-slot, offset: -60, size: 4, alignment: 4 }
+callSites:
+  - { bb: 0, offset: 40, fwdArgRegs:
+      - { arg: 0, reg: '$r0' }
+      - { arg: 1, reg: '$r1' }
+      - { arg: 2, reg: '$r2' } }
+body:             |
+  bb.0.entry:
+    liveins: $d8, $d9, $d10, $d11, $d12, $d13, $d8, $d9, $d10, $d11, $d12, $d13
+
+    BUNDLE implicit-def $r29, implicit-def $r30, implicit $r29, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, implicit killed $d8, debug-location !15 {
+      $r29 = S2_allocframe $r29, 64, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, debug-location !15 :: (store (s32) into stack)
+      S2_storerd_io internal $r29, -16, killed $d8, debug-location !15 :: (store (s64) into %fixed-stack.5)
+    }
+    CFI_INSTRUCTION def_cfa $r30, 8
+    CFI_INSTRUCTION offset $r31, -4
+    CFI_INSTRUCTION offset $r30, -8
+    CFI_INSTRUCTION offset $r17, -12
+    CFI_INSTRUCTION offset $r16, -16
+    CFI_INSTRUCTION offset $r19, -20
+    CFI_INSTRUCTION offset $r18, -24
+    CFI_INSTRUCTION offset $r21, -28
+    CFI_INSTRUCTION offset $r20, -32
+    CFI_INSTRUCTION offset $r23, -36
+    CFI_INSTRUCTION offset $r22, -40
+    CFI_INSTRUCTION offset $r25, -44
+    CFI_INSTRUCTION offset $r24, -48
+    CFI_INSTRUCTION offset $r27, -52
+    CFI_INSTRUCTION offset $r26, -56
+    BUNDLE implicit $r29, implicit killed $d9, implicit killed $d10, debug-location !15 {
+      S2_storerd_io $r29, 48, killed $d9, debug-location !15 :: (store (s64) into %fixed-stack.4)
+      S2_storerd_io $r29, 40, killed $d10, debug-location !15 :: (store (s64) into %fixed-stack.3)
+    }
+    BUNDLE implicit $r29, implicit killed $d11, implicit killed $d12, debug-location !15 {
+      S2_storerd_io $r29, 32, killed $d11, debug-location !15 :: (store (s64) into %fixed-stack.2)
+      S2_storerd_io $r29, 24, killed $d12, debug-location !15 :: (store (s64) into %fixed-stack.1)
+    }
+    BUNDLE implicit-def $r0, implicit $r29, implicit killed $d13, implicit $gp, debug-location !15 {
+      S2_storerd_io $r29, 16, killed $d13, debug-location !15 :: (store (s64) into %fixed-stack.0)
+      renamable $r0 = L2_loadrigp @ga, implicit $gp, debug-location !15 :: (dereferenceable load (s32) from @ga)
+    }
+    BUNDLE implicit-def $r0, implicit $r29, implicit killed $r0, implicit $gp, debug-location !16 {
+      S2_storeri_io $r29, 12, killed renamable $r0, debug-location !16 :: (store (s32) into %stack.0)
+      renamable $r0 = L2_loadrigp @gb, implicit $gp, debug-location !16 :: (dereferenceable load (s32) from @gb)
+    }
+    BUNDLE implicit-def $r0, implicit $r29, implicit killed $r0, implicit killed $gp, debug-location !17 {
+      S2_storeri_io $r29, 8, killed renamable $r0, debug-location !17 :: (store (s32) into %stack.1)
+      renamable $r0 = L2_loadrigp @gc, implicit killed $gp, debug-location !17 :: (dereferenceable load (s32) from @gc)
+    }
+    S2_storeri_io $r29, 4, killed renamable $r0, debug-location !18 :: (store (s32) into %stack.2)
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0, 12, implicit-def dead early-clobber $r1, 12, implicit-def dead early-clobber $r2, 12, implicit-def dead early-clobber $r3, 12, implicit-def dead early-clobber $r4, 12, implicit-def dead early-clobber $r5, 12, implicit-def dead early-clobber $r6, 12, implicit-def dead early-clobber $r7, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $r16, 12, implicit-def dead early-clobber $r17, 12, implicit-def dead early-clobber $r18, 12, implicit-def dead early-clobber $r19, 12, implicit-def dead early-clobber $r20, 12, implicit-def dead early-clobber $r21, 12, implicit-def dead early-clobber $r22, 12, implicit-def dead early-clobber $r23, 12, implicit-def dead early-clobber $r24, 12, implicit-def dead early-clobber $r25, 12, implicit-def dead early-clobber $r26, 12, implicit-def dead early-clobber $r27, 12, implicit-def dead early-clobber $r28, !19, debug-location !18
+    BUNDLE implicit-def $r0, implicit-def $r1, implicit $r29, debug-location !20 {
+      $r0 = L2_loadri_io $r29, 12, debug-location !20 :: (load (s32) from %stack.0)
+      $r1 = L2_loadri_io $r29, 8, debug-location !20 :: (load (s32) from %stack.1)
+    }
+    BUNDLE implicit-def dead $r2, implicit-def dead $pc, implicit-def dead $r31, implicit-def $r29, implicit $r29, implicit killed $r0, implicit killed $r1, debug-location !20 {
+      $r2 = L2_loadri_io $r29, 4, debug-location !20 :: (load (s32) from %stack.2)
+      J2_call @callee, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit killed $r0, implicit killed $r1, implicit internal killed $r2, implicit-def $r29, debug-location !20
+    }
+    BUNDLE implicit-def $d8, implicit-def $r16, implicit-def $r17, implicit-def $d9, implicit-def $r18, implicit-def $r19, implicit $r29, debug-location !21 {
+      $d8 = L2_loadrd_io $r29, 56, debug-location !21 :: (load (s64) from %fixed-stack.5)
+      $d9 = L2_loadrd_io $r29, 48, debug-location !21 :: (load (s64) from %fixed-stack.4)
+    }
+    BUNDLE implicit-def $d10, implicit-def $r20, implicit-def $r21, implicit-def $d11, implicit-def $r22, implicit-def $r23, implicit $r29, debug-location !21 {
+      $d10 = L2_loadrd_io $r29, 40, debug-location !21 :: (load (s64) from %fixed-stack.3)
+      $d11 = L2_loadrd_io $r29, 32, debug-location !21 :: (load (s64) from %fixed-stack.2)
+    }
+    BUNDLE implicit-def $d12, implicit-def $r24, implicit-def $r25, implicit-def $d13, implicit-def $r26, implicit-def $r27, implicit killed $r29, debug-location !21 {
+      $d12 = L2_loadrd_io $r29, 24, debug-location !21 :: (load (s64) from %fixed-stack.1)
+      $d13 = L2_loadrd_io killed $r29, 16, debug-location !21 :: (load (s64) from %fixed-stack.0)
+    }
+    $d15 = L4_return killed $r30, implicit-def $pc, implicit-def $r29, implicit killed $framekey, implicit-def dead $pc, implicit $d8, implicit $d9, implicit $d10, implicit $d11, implicit $d12, implicit $d13, debug-location !21
+
+...
+
+# Verify that call site entries are emitted for all three parameters.
+# Previously the code that's looking for instructions to describe parameters
+# with would stop when reaching the bundle header for the bundled call,
+# resulting in $r0 and $r1 not being described.
+#
+# Please note that at the time of creating this test the Hexagon target did not
+# support call site information, so the "callSites" array has been manually
+# added.
+
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg2 R2)
+# CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_breg29 R29+4, DW_OP_deref_size 0x4)
+
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg1 R1)
+# CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_breg29 R29+8, DW_OP_deref_size 0x4)
+
+# CHECK: DW_TAG_GNU_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg0 R0)
+# CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_breg29 R29+12, DW_OP_deref_size 0x4)

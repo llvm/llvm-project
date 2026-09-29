@@ -1,0 +1,79 @@
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the stack protector stack
+# object reference in the machine frame info correctly.
+
+--- |
+  @.str = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
+  @__stack_chk_guard = external global ptr
+
+  define i32 @test() #0 {
+  entry:
+    %StackGuardSlot = alloca ptr
+    %StackGuard = load ptr, ptr @__stack_chk_guard
+    call void @llvm.stackprotector(ptr %StackGuard, ptr %StackGuardSlot)
+    %test = alloca ptr, align 8
+    %a = alloca i8, i64 5
+    store ptr %a, ptr %test, align 8
+    %b = load ptr, ptr %test, align 8
+    %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %b)
+    call void @llvm.stackprotectorcheck(ptr @__stack_chk_guard)
+    ret i32 %call
+  }
+
+  declare i32 @printf(ptr, ...)
+
+  declare void @llvm.stackprotector(ptr, ptr) #1
+
+  declare void @llvm.stackprotectorcheck(ptr) #2
+
+  attributes #0 = { ssp "stack-protector-buffer-size"="5" }
+  attributes #1 = { nounwind }
+  attributes #2 = { nounwind argmemonly }
+...
+---
+name:            test
+alignment:       16
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       40
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+# CHECK-LABEL: name: test
+# CHECK: frameInfo
+# CHECK: stackProtector: '%stack.0.StackGuardSlot'
+  stackProtector:  '%stack.0.StackGuardSlot'
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16,
+      callee-saved-register: '$rbx' }
+stack:
+  - { id: 0, name: StackGuardSlot, offset: -24, size: 8, alignment: 8 }
+  - { id: 1, name: test, offset: -40, size: 8, alignment: 8 }
+  - { id: 2, name: a, offset: -29, size: 5, alignment: 1 }
+body: |
+  bb.0.entry:
+    successors: %bb.1.entry, %bb.2.entry
+    liveins: $rbx, $rbx
+
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    $rsp = frame-setup SUB64ri8 $rsp, 32, implicit-def dead $eflags
+    $rbx = LOAD_STACK_GUARD :: (invariant load (s64) from @__stack_chk_guard)
+    MOV64mr $rsp, 1, _, 24, _, $rbx
+    $rsi = LEA64r $rsp, 1, _, 19, _
+    MOV64mr $rsp, 1, _, 8, _, $rsi
+    $rdi = LEA64r $rip, 1, _, @.str, _
+    dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def $al
+    CALL64pcrel32 @printf, csr_64, implicit $rsp, implicit $rdi, implicit $rsi, implicit $al, implicit-def $rsp, implicit-def $eax
+    CMP64rm killed $rbx, $rsp, 1, _, 24, _, implicit-def $eflags
+    JCC_1 %bb.2.entry, 5, implicit $eflags
+
+  bb.1.entry:
+    liveins: $eax
+
+    $rsp = ADD64ri8 $rsp, 32, implicit-def dead $eflags
+    $rbx = POP64r implicit-def $rsp, implicit $rsp
+    RET64 $eax
+
+  bb.2.entry:
+    CALL64pcrel32 &__stack_chk_fail, csr_64, implicit $rsp, implicit-def $rsp
+...

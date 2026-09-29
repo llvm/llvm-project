@@ -1,0 +1,59 @@
+# RUN: llc -run-pass=peephole-opt %s -o - | FileCheck %s
+
+# CHECK: [[IN:%.*]]:gprnopc = COPY $r0
+# CHECK: [[SUM1TMP:%.*]]:rgpr = ADDri [[IN]], 133
+# CHECK: [[SUM1:%.*]]:rgpr = ADDri killed [[SUM1TMP]], 25600
+
+# CHECK: [[SUM2TMP:%.*]]:rgpr = SUBri [[IN]], 133
+# CHECK: [[SUM2:%.*]]:rgpr = SUBri killed [[SUM2TMP]], 25600
+
+# CHECK: [[SUM3TMP:%.*]]:rgpr = SUBri [[IN]], 133
+# CHECK: [[SUM3:%.*]]:rgpr = SUBri killed [[SUM3TMP]], 25600
+
+# CHECK: [[SUM4TMP:%.*]]:rgpr = ADDri killed [[IN]], 133
+# CHECK: [[SUM4:%.*]]:rgpr = ADDri killed [[SUM4TMP]], 25600
+
+
+--- |
+  target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
+  target triple = "armv7-apple-ios"
+
+  define i32 @foo(i32 %in) {
+    ret i32 undef
+  }
+...
+---
+name:            foo
+registers:
+  - { id: 0, class: gprnopc }
+  - { id: 1, class: rgpr }
+  - { id: 2, class: rgpr }
+  - { id: 3, class: rgpr }
+  - { id: 4, class: rgpr }
+  - { id: 5, class: rgpr }
+  - { id: 6, class: rgpr }
+  - { id: 7, class: rgpr }
+  - { id: 8, class: rgpr }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $r0
+
+    %0 = COPY $r0
+    %1 = MOVi32imm -25733
+    %2 = SUBrr %0, killed %1, 14, $noreg, $noreg
+
+    %3 = MOVi32imm 25733
+    %4 = SUBrr %0, killed %3, 14, $noreg, $noreg
+
+    %5 = MOVi32imm -25733
+    %6 = ADDrr %0, killed %5, 14, $noreg, $noreg
+
+    %7 = MOVi32imm 25733
+    %8 = ADDrr killed %0, killed %7, 14, $noreg, $noreg
+
+    $r0 = COPY killed %8
+    BX_RET 14, $noreg, implicit $r0
+
+...

@@ -1,0 +1,19 @@
+## This test checks general llvm-install-name-tool behavior.
+
+# RUN: yaml2obj %s -o %t
+
+## Passing something that doesn't exist
+# RUN: not llvm-install-name-tool -add_rpath foo non-existent-binary 2>&1 | FileCheck %s --check-prefix=DOES_NOT_EXIST
+
+# DOES_NOT_EXIST: {{.*}}non-existent-binary
+
+## Passing a non-Mach-O binary
+# RUN: not llvm-install-name-tool -add_rpath foo %t 2>&1 | FileCheck %s --check-prefix=NON_MACH_O -DFILE=%t
+
+# NON_MACH_O: error: input file: [[FILE]] is not a Mach-O file
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC

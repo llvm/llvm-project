@@ -1,0 +1,4 @@
+RUN: llvm-objdump -r %p/Inputs/reloc-half.obj.macho-arm | FileCheck %s
+
+CHECK-DAG: 00000004 ARM_RELOC_HALF :upper16:(_stringbuf)
+CHECK-DAG: 00000000 ARM_RELOC_HALF :lower16:(_stringbuf)

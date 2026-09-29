@@ -1,0 +1,29 @@
+# RUN: yaml2obj %s | not llvm-objdump -h - 2>&1 | FileCheck %s
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - I32
+  - Type:            IMPORT
+    Imports:
+      - Module:          foo
+        Field:           a
+        Kind:            FUNCTION
+        SigIndex:        0
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+      - Index:         0
+        Name:          a
+      - Index:         0
+        Name:          b
+...
+
+# CHECK: {{.*}}: function named more than once

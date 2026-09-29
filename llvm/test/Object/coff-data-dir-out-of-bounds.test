@@ -1,0 +1,10 @@
+; Check an executable, where the baes relocation data directory points into
+; a section (within the range specified by VirtualSize), but outside of the
+; raw data provided in the executable. Make sure that we don't error out on
+; the executable - but we don't try to print any base relocs (as their data
+; is missing).
+
+RUN: yaml2obj %p/Inputs/COFF/data-dir-out-of-bounds.yaml | llvm-readobj --coff-basereloc - | FileCheck %s
+
+CHECK:      BaseReloc [
+CHECK-NEXT: ]

@@ -1,0 +1,127 @@
+# RUN: echo -n abcd > %t.x-txt
+# Preserve input to verify it is not modified
+# RUN: cp %t.x-txt %t-copy.txt
+# RUN: llvm-objcopy -I binary -O elf64-x86-64 %t.x-txt %t.o
+# RUN: llvm-readobj --sections --symbols %t.o | FileCheck %s
+# RUN: cmp %t.x-txt %t-copy.txt
+
+# CHECK:      Sections [
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 0
+# CHECK-NEXT:     Name:  (0)
+# CHECK-NEXT:     Type: SHT_NULL (0x0)
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address: 0x0
+# CHECK-NEXT:     Offset:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Link: 0
+# CHECK-NEXT:     Info: 0
+# CHECK-NEXT:     AddressAlignment: 0
+# CHECK-NEXT:     EntrySize: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 1
+# CHECK-NEXT:     Name: .strtab
+# CHECK-NEXT:     Type: SHT_STRTAB (0x3)
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address: 0x0
+# CHECK-NEXT:     Offset:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Link: 0
+# CHECK-NEXT:     Info: 0
+# CHECK-NEXT:     AddressAlignment: 1
+# CHECK-NEXT:     EntrySize: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 2
+# CHECK-NEXT:     Name: .symtab
+# CHECK-NEXT:     Type: SHT_SYMTAB (0x2)
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address: 0x0
+# CHECK-NEXT:     Offset:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Link: 1
+# CHECK-NEXT:     Info: 1
+# CHECK-NEXT:     AddressAlignment: 8
+# CHECK-NEXT:     EntrySize: 24
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 3
+# CHECK-NEXT:     Name: .data
+# CHECK-NEXT:     Type: SHT_PROGBITS (0x1)
+# CHECK-NEXT:     Flags [ (0x3)
+# CHECK-NEXT:       SHF_ALLOC (0x2)
+# CHECK-NEXT:       SHF_WRITE (0x1)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address: 0x0
+# CHECK-NEXT:     Offset:
+# CHECK-NEXT:     Size: 4
+# CHECK-NEXT:     Link: 0
+# CHECK-NEXT:     Info: 0
+# CHECK-NEXT:     AddressAlignment: 1
+# CHECK-NEXT:     EntrySize: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+# Note: the symbol names are derived from the full path (with non-alnum values
+# replaced with "_"), e.g. "/tmp/a-b.c" should yield
+# _binary__tmp_a_b_c_{start,end,size}.
+# Just check for _binary_{{[_a-zA-Z0-9]*}}_x_txt_{start,end,size} to avoid
+# making assumptions about how this test is run.
+
+# CHECK:      Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name:
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Local (0x0)
+# CHECK-NEXT:     Type: None (0x0)
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Undefined (0x0)
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _binary_{{[_a-zA-Z0-9]*}}_x_txt_start
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Global (0x1)
+# CHECK-NEXT:     Type: None (0x0)
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: .data
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _binary_{{[_a-zA-Z0-9]*}}_x_txt_end
+# CHECK-NEXT:     Value: 0x4
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Global (0x1)
+# CHECK-NEXT:     Type: None (0x0)
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: .data
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _binary_{{[_a-zA-Z0-9]*}}_x_txt_size
+# CHECK-NEXT:     Value: 0x4
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Global (0x1)
+# CHECK-NEXT:     Type: None (0x0)
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Absolute
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+## The alignment can be changed by --set-section-alignment.
+# RUN: llvm-objcopy -I binary -O elf64-x86-64 --set-section-alignment .data=8 %t.x-txt %t2.o
+# RUN: llvm-readobj --sections %t2.o | FileCheck --check-prefix=ALIGN %s
+
+# ALIGN:      Name: .data
+# ALIGN:      AddressAlignment:
+# ALIGN-SAME:                   8{{$}}
+
+## Show that a filename with non-ASCII characters can be handled appropriately.
+## The exact encoding of the non-ASCII character will determine what characters
+## are used, so don't check for them specifically.
+# RUN: cp %t.x-txt %t€.x-txt
+# RUN: llvm-objcopy -I binary -O elf64-x86-64 %t€.x-txt %t3.o
+# RUN: llvm-readobj --sections --symbols %t3.o | FileCheck %s

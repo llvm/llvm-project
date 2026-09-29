@@ -1,0 +1,66 @@
+# RUN: llc -mtriple=x86_64-linux-gnu    -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64
+# RUN: llc -mtriple=i386-linux-gnu      -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32
+
+--- |
+
+  define i32 @test(i32 %a) {
+  entry:
+    %cmp = trunc i32 %a to i1
+    br i1 %cmp, label %true, label %false
+
+  true:                                             ; preds = %entry
+    ret i32 0
+
+  false:                                            ; preds = %entry
+    ret i32 1
+  }
+
+...
+---
+name:            test
+# CHECK-LABEL: name:  test
+alignment:       16
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+  - { id: 2, class: gpr, preferred-register: '' }
+  - { id: 3, class: gpr, preferred-register: '' }
+# X64:           %0:gr32 = COPY $edi
+# X32:           %0:gr32_abcd = COPY $edi
+# CHECK-NEXT:    %2:gr32 = MOV32r0 implicit-def dead $eflags
+# CHECK-NEXT:    %3:gr32 = MOV32ri 1
+# CHECK-NEXT:    %1:gr8 = COPY %0.sub_8bit
+# CHECK-NEXT:    TEST8ri %1, 1, implicit-def $eflags
+# CHECK-NEXT:    JCC_1 %[[TRUE:bb.[0-9]+]], 5, implicit $eflags
+# CHECK-NEXT:    JMP_1 %[[FALSE:bb.[0-9]+]]
+# CHECK:      [[TRUE]].{{[a-zA-Z0-9]+}}:
+# CHECK-NEXT:    $eax = COPY %2
+# CHECK-NEXT:    RET 0, implicit $eax
+# CHECK:      [[FALSE]].{{[a-zA-Z0-9]+}}:
+# CHECK-NEXT:    $eax = COPY %3
+# CHECK-NEXT:    RET 0, implicit $eax
+
+
+body:             |
+  bb.1.entry:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+    liveins: $edi
+
+    %0(s32) = COPY $edi
+    %2(s32) = G_CONSTANT i32 0
+    %3(s32) = G_CONSTANT i32 1
+    %1(s1) = G_TRUNC %0(s32)
+    G_BRCOND %1(s1), %bb.2
+    G_BR %bb.3
+
+  bb.2.true:
+    $eax = COPY %2(s32)
+    RET 0, implicit $eax
+
+  bb.3.false:
+    $eax = COPY %3(s32)
+    RET 0, implicit $eax
+
+...

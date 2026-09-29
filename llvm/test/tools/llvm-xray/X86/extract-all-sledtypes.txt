@@ -1,0 +1,11 @@
+# Test that we can extract all the sled types we know about. This is built with
+# a file with functions always instrumented, and using the built-ins and
+# intrinsics supported by clang. Those are built with:
+#
+#   clang++ -c all-sleds.cc -o all-sleds.o -fpic -std=c++11 -fxray-instrument
+#
+# RUN: llvm-xray extract %S/Inputs/all-sleds.o -s | FileCheck %s
+# CHECK-DAG: {{kind:.function-enter}}
+# CHECK-DAG: {{kind:.function-exit}}
+# CHECK-DAG: {{kind:.custom-event}}
+# CHECK-DAG: {{kind:.log-args-enter}}

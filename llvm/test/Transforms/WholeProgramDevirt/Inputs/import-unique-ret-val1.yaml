@@ -1,0 +1,11 @@
+---
+TypeIdMap:
+  typeid2:
+    WPDRes:
+      8:
+        Kind: Indir
+        ResByArg:
+          3:
+            Kind: UniqueRetVal
+            Info: 1
+...

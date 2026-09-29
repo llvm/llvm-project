@@ -1,0 +1,7 @@
+RUN: llvm-symbolizer --obj=%p/Inputs/llvm-symbolizer-tu.elf-x86-64 0x0 | FileCheck %s
+
+Built from the following source:
+
+...
+
+CHECK: b.cpp:3:0

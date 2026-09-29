@@ -1,0 +1,20 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t  
+; RUN: not llvm-readtapi --compare %t/missing_rpath.tbd  %t/rpaths.tbd 2>&1 | FileCheck %s 
+
+; CHECK: < {{.*}}missing_rpath.tbd
+; CHECK: > {{.*}}rpaths.tbd
+
+; CHECK: Run Path Search Paths
+; CHECK-NEXT:         x86_64-apple-macos13
+; CHECK-NEXT:                 > /usr/lib/swift
+; CHECK-NEXT:                 > @loader_path/../../../
+; CHECK-NEXT:         arm64-apple-macos13
+; CHECK-NEXT:                 > /usr/lib/swift
+; CHECK-NEXT:                 > @loader_path/../../../
+
+//--- missing_rpath.tbd
+{"main_library":{"exported_symbols":[{"text":{"global":["_foo"]}}],"flags":[{"attributes":["not_app_extension_safe"]}],"install_names":[{"name":"@rpath/libFake.dylib"}],"target_info":[{"min_deployment":"13","target":"x86_64-macos"},{"min_deployment":"13","target":"arm64-macos"}]},"tapi_tbd_version":5}
+
+//--- rpaths.tbd
+{"main_library":{"exported_symbols":[{"text":{"global":["_foo"]}}],"rpaths": [{"paths": [ "@loader_path/../../../", "/usr/lib/swift"]}], "flags":[{"attributes":["not_app_extension_safe"]}],"install_names":[{"name":"@rpath/libFake.dylib"}],"target_info":[{"min_deployment":"13","target":"x86_64-macos"},{"min_deployment":"13","target":"arm64-macos"}]},"tapi_tbd_version":5}

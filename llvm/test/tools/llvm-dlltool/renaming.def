@@ -1,0 +1,39 @@
+; RUN: llvm-dlltool -k -m i386 --input-def %s --output-lib %t.a
+; RUN: llvm-readobj %t.a | FileCheck %s
+; RUN: llvm-nm %t.a | FileCheck %s -check-prefix=CHECK-NM
+
+LIBRARY test.dll
+EXPORTS
+
+symbolname == actualimport
+
+dataname DATA == actualdata
+
+_wcstok == wcstok
+wcstok == wcstok_s
+
+; CHECK-NM-NOT: actualimport
+; CHECK-NM-NOT: actualdata
+
+; CHECK:      Type: code
+; CHECK-NEXT: Name type: export as
+; CHECK-NEXT: Export name: actualimport
+; CHECK-NEXT: Symbol: __imp__symbolname
+; CHECK-NEXT: Symbol: _symbolname
+
+; CHECK:      Type: data
+; CHECK-NEXT: Name type: export as
+; CHECK-NEXT: Export name: actualdata
+; CHECK-NEXT: Symbol: __imp__dataname
+
+; CHECK:      Type: code
+; CHECK-NEXT: Name type: export as
+; CHECK-NEXT: Export name: wcstok
+; CHECK-NEXT: Symbol: __imp___wcstok
+; CHECK-NEXT: Symbol: __wcstok
+
+; CHECK:      Type: code
+; CHECK-NEXT: Name type: export as
+; CHECK-NEXT: Export name: wcstok_s
+; CHECK-NEXT: Symbol: __imp__wcstok
+; CHECK-NEXT: Symbol: _wcstok

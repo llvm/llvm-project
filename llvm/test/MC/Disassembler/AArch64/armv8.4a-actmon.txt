@@ -1,0 +1,277 @@
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.4a --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=-v8.4a --disassemble < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-V84
+
+[0x00,0xd2,0x1b,0xd5]
+[0x60,0xd2,0x1b,0xd5]
+[0x80,0xd2,0x1b,0xd5]
+[0xa0,0xd2,0x1b,0xd5]
+[0x00,0xd4,0x1b,0xd5]
+[0x20,0xd4,0x1b,0xd5]
+[0x40,0xd4,0x1b,0xd5]
+[0x60,0xd4,0x1b,0xd5]
+[0x00,0xd3,0x1b,0xd5]
+[0x20,0xd3,0x1b,0xd5]
+[0x00,0xdc,0x1b,0xd5]
+[0x20,0xdc,0x1b,0xd5]
+[0x40,0xdc,0x1b,0xd5]
+[0x60,0xdc,0x1b,0xd5]
+[0x80,0xdc,0x1b,0xd5]
+[0xa0,0xdc,0x1b,0xd5]
+[0xc0,0xdc,0x1b,0xd5]
+[0xe0,0xdc,0x1b,0xd5]
+[0x00,0xdd,0x1b,0xd5]
+[0x20,0xdd,0x1b,0xd5]
+[0x40,0xdd,0x1b,0xd5]
+[0x60,0xdd,0x1b,0xd5]
+[0x80,0xdd,0x1b,0xd5]
+[0xa0,0xdd,0x1b,0xd5]
+[0xc0,0xdd,0x1b,0xd5]
+[0xe0,0xdd,0x1b,0xd5]
+[0x00,0xde,0x1b,0xd5]
+[0x20,0xde,0x1b,0xd5]
+[0x40,0xde,0x1b,0xd5]
+[0x60,0xde,0x1b,0xd5]
+[0x80,0xde,0x1b,0xd5]
+[0xa0,0xde,0x1b,0xd5]
+[0xc0,0xde,0x1b,0xd5]
+[0xe0,0xde,0x1b,0xd5]
+[0x00,0xdf,0x1b,0xd5]
+[0x20,0xdf,0x1b,0xd5]
+[0x40,0xdf,0x1b,0xd5]
+[0x60,0xdf,0x1b,0xd5]
+[0x80,0xdf,0x1b,0xd5]
+[0xa0,0xdf,0x1b,0xd5]
+[0xc0,0xdf,0x1b,0xd5]
+[0xe0,0xdf,0x1b,0xd5]
+
+[0x00,0xd2,0x3b,0xd5]
+[0x20,0xd2,0x3b,0xd5]
+[0x40,0xd2,0x3b,0xd5]
+[0x60,0xd2,0x3b,0xd5]
+[0x80,0xd2,0x3b,0xd5]
+[0xa0,0xd2,0x3b,0xd5]
+[0x00,0xd4,0x3b,0xd5]
+[0x20,0xd4,0x3b,0xd5]
+[0x40,0xd4,0x3b,0xd5]
+[0x60,0xd4,0x3b,0xd5]
+[0x00,0xd6,0x3b,0xd5]
+[0x20,0xd6,0x3b,0xd5]
+[0x40,0xd6,0x3b,0xd5]
+[0x60,0xd6,0x3b,0xd5]
+[0x00,0xd3,0x3b,0xd5]
+[0x20,0xd3,0x3b,0xd5]
+[0x00,0xdc,0x3b,0xd5]
+[0x20,0xdc,0x3b,0xd5]
+[0x40,0xdc,0x3b,0xd5]
+[0x60,0xdc,0x3b,0xd5]
+[0x80,0xdc,0x3b,0xd5]
+[0xa0,0xdc,0x3b,0xd5]
+[0xc0,0xdc,0x3b,0xd5]
+[0xe0,0xdc,0x3b,0xd5]
+[0x00,0xdd,0x3b,0xd5]
+[0x20,0xdd,0x3b,0xd5]
+[0x40,0xdd,0x3b,0xd5]
+[0x60,0xdd,0x3b,0xd5]
+[0x80,0xdd,0x3b,0xd5]
+[0xa0,0xdd,0x3b,0xd5]
+[0xc0,0xdd,0x3b,0xd5]
+[0xe0,0xdd,0x3b,0xd5]
+[0x00,0xde,0x3b,0xd5]
+[0x20,0xde,0x3b,0xd5]
+[0x40,0xde,0x3b,0xd5]
+[0x60,0xde,0x3b,0xd5]
+[0x80,0xde,0x3b,0xd5]
+[0xa0,0xde,0x3b,0xd5]
+[0xc0,0xde,0x3b,0xd5]
+[0xe0,0xde,0x3b,0xd5]
+[0x00,0xdf,0x3b,0xd5]
+[0x20,0xdf,0x3b,0xd5]
+[0x40,0xdf,0x3b,0xd5]
+[0x60,0xdf,0x3b,0xd5]
+[0x80,0xdf,0x3b,0xd5]
+[0xa0,0xdf,0x3b,0xd5]
+[0xc0,0xdf,0x3b,0xd5]
+[0xe0,0xdf,0x3b,0xd5]
+
+#CHECK:  msr AMCR_EL0, x0
+#CHECK:  msr AMUSERENR_EL0, x0
+#CHECK:  msr AMCNTENCLR0_EL0, x0
+#CHECK:  msr AMCNTENSET0_EL0, x0
+#CHECK:  msr AMEVCNTR00_EL0, x0
+#CHECK:  msr AMEVCNTR01_EL0, x0
+#CHECK:  msr AMEVCNTR02_EL0, x0
+#CHECK:  msr AMEVCNTR03_EL0, x0
+#CHECK:  msr AMCNTENCLR1_EL0, x0
+#CHECK:  msr AMCNTENSET1_EL0, x0
+#CHECK:  msr AMEVCNTR10_EL0, x0
+#CHECK:  msr AMEVCNTR11_EL0, x0
+#CHECK:  msr AMEVCNTR12_EL0, x0
+#CHECK:  msr AMEVCNTR13_EL0, x0
+#CHECK:  msr AMEVCNTR14_EL0, x0
+#CHECK:  msr AMEVCNTR15_EL0, x0
+#CHECK:  msr AMEVCNTR16_EL0, x0
+#CHECK:  msr AMEVCNTR17_EL0, x0
+#CHECK:  msr AMEVCNTR18_EL0, x0
+#CHECK:  msr AMEVCNTR19_EL0, x0
+#CHECK:  msr AMEVCNTR110_EL0, x0
+#CHECK:  msr AMEVCNTR111_EL0, x0
+#CHECK:  msr AMEVCNTR112_EL0, x0
+#CHECK:  msr AMEVCNTR113_EL0, x0
+#CHECK:  msr AMEVCNTR114_EL0, x0
+#CHECK:  msr AMEVCNTR115_EL0, x0
+#CHECK:  msr AMEVTYPER10_EL0, x0
+#CHECK:  msr AMEVTYPER11_EL0, x0
+#CHECK:  msr AMEVTYPER12_EL0, x0
+#CHECK:  msr AMEVTYPER13_EL0, x0
+#CHECK:  msr AMEVTYPER14_EL0, x0
+#CHECK:  msr AMEVTYPER15_EL0, x0
+#CHECK:  msr AMEVTYPER16_EL0, x0
+#CHECK:  msr AMEVTYPER17_EL0, x0
+#CHECK:  msr AMEVTYPER18_EL0, x0
+#CHECK:  msr AMEVTYPER19_EL0, x0
+#CHECK:  msr AMEVTYPER110_EL0, x0
+#CHECK:  msr AMEVTYPER111_EL0, x0
+#CHECK:  msr AMEVTYPER112_EL0, x0
+#CHECK:  msr AMEVTYPER113_EL0, x0
+#CHECK:  msr AMEVTYPER114_EL0, x0
+#CHECK:  msr AMEVTYPER115_EL0, x0
+
+#CHECK:  mrs x0, AMCR_EL0
+#CHECK:  mrs x0, AMCFGR_EL0
+#CHECK:  mrs x0, AMCGCR_EL0
+#CHECK:  mrs x0, AMUSERENR_EL0
+#CHECK:  mrs x0, AMCNTENCLR0_EL0
+#CHECK:  mrs x0, AMCNTENSET0_EL0
+#CHECK:  mrs x0, AMEVCNTR00_EL0
+#CHECK:  mrs x0, AMEVCNTR01_EL0
+#CHECK:  mrs x0, AMEVCNTR02_EL0
+#CHECK:  mrs x0, AMEVCNTR03_EL0
+#CHECK:  mrs x0, AMEVTYPER00_EL0
+#CHECK:  mrs x0, AMEVTYPER01_EL0
+#CHECK:  mrs x0, AMEVTYPER02_EL0
+#CHECK:  mrs x0, AMEVTYPER03_EL0
+#CHECK:  mrs x0, AMCNTENCLR1_EL0
+#CHECK:  mrs x0, AMCNTENSET1_EL0
+#CHECK:  mrs x0, AMEVCNTR10_EL0
+#CHECK:  mrs x0, AMEVCNTR11_EL0
+#CHECK:  mrs x0, AMEVCNTR12_EL0
+#CHECK:  mrs x0, AMEVCNTR13_EL0
+#CHECK:  mrs x0, AMEVCNTR14_EL0
+#CHECK:  mrs x0, AMEVCNTR15_EL0
+#CHECK:  mrs x0, AMEVCNTR16_EL0
+#CHECK:  mrs x0, AMEVCNTR17_EL0
+#CHECK:  mrs x0, AMEVCNTR18_EL0
+#CHECK:  mrs x0, AMEVCNTR19_EL0
+#CHECK:  mrs x0, AMEVCNTR110_EL0
+#CHECK:  mrs x0, AMEVCNTR111_EL0
+#CHECK:  mrs x0, AMEVCNTR112_EL0
+#CHECK:  mrs x0, AMEVCNTR113_EL0
+#CHECK:  mrs x0, AMEVCNTR114_EL0
+#CHECK:  mrs x0, AMEVCNTR115_EL0
+#CHECK:  mrs x0, AMEVTYPER10_EL0
+#CHECK:  mrs x0, AMEVTYPER11_EL0
+#CHECK:  mrs x0, AMEVTYPER12_EL0
+#CHECK:  mrs x0, AMEVTYPER13_EL0
+#CHECK:  mrs x0, AMEVTYPER14_EL0
+#CHECK:  mrs x0, AMEVTYPER15_EL0
+#CHECK:  mrs x0, AMEVTYPER16_EL0
+#CHECK:  mrs x0, AMEVTYPER17_EL0
+#CHECK:  mrs x0, AMEVTYPER18_EL0
+#CHECK:  mrs x0, AMEVTYPER19_EL0
+#CHECK:  mrs x0, AMEVTYPER110_EL0
+#CHECK:  mrs x0, AMEVTYPER111_EL0
+#CHECK:  mrs x0, AMEVTYPER112_EL0
+#CHECK:  mrs x0, AMEVTYPER113_EL0
+#CHECK:  mrs x0, AMEVTYPER114_EL0
+#CHECK:  mrs x0, AMEVTYPER115_EL0
+
+#CHECK-NO-V84:  msr S3_3_C13_C2_0, x0
+#CHECK-NO-V84:  msr S3_3_C13_C2_3, x0
+#CHECK-NO-V84:  msr S3_3_C13_C2_4, x0
+#CHECK-NO-V84:  msr S3_3_C13_C2_5, x0
+#CHECK-NO-V84:  msr S3_3_C13_C4_0, x0
+#CHECK-NO-V84:  msr S3_3_C13_C4_1, x0
+#CHECK-NO-V84:  msr S3_3_C13_C4_2, x0
+#CHECK-NO-V84:  msr S3_3_C13_C4_3, x0
+#CHECK-NO-V84:  msr S3_3_C13_C3_0, x0
+#CHECK-NO-V84:  msr S3_3_C13_C3_1, x0
+#CHECK-NO-V84:  msr S3_3_C13_C12_0, x0
+#CHECK-NO-V84:  msr S3_3_C13_C12_1, x0
+#CHECK-NO-V84:  msr S3_3_C13_C12_2, x0
+#CHECK-NO-V84:  msr S3_3_C13_C12_3, x0
+#CHECK-NO-V84:  msr S3_3_C13_C12_4, x0
+#CHECK-NO-V84:  msr S3_3_C13_C12_5, x0
+#CHECK-NO-V84:  msr S3_3_C13_C12_6, x0
+#CHECK-NO-V84:  msr S3_3_C13_C12_7, x0
+#CHECK-NO-V84:  msr S3_3_C13_C13_0, x0
+#CHECK-NO-V84:  msr S3_3_C13_C13_1, x0
+#CHECK-NO-V84:  msr S3_3_C13_C13_2, x0
+#CHECK-NO-V84:  msr S3_3_C13_C13_3, x0
+#CHECK-NO-V84:  msr S3_3_C13_C13_4, x0
+#CHECK-NO-V84:  msr S3_3_C13_C13_5, x0
+#CHECK-NO-V84:  msr S3_3_C13_C13_6, x0
+#CHECK-NO-V84:  msr S3_3_C13_C13_7, x0
+#CHECK-NO-V84:  msr S3_3_C13_C14_0, x0
+#CHECK-NO-V84:  msr S3_3_C13_C14_1, x0
+#CHECK-NO-V84:  msr S3_3_C13_C14_2, x0
+#CHECK-NO-V84:  msr S3_3_C13_C14_3, x0
+#CHECK-NO-V84:  msr S3_3_C13_C14_4, x0
+#CHECK-NO-V84:  msr S3_3_C13_C14_5, x0
+#CHECK-NO-V84:  msr S3_3_C13_C14_6, x0
+#CHECK-NO-V84:  msr S3_3_C13_C14_7, x0
+#CHECK-NO-V84:  msr S3_3_C13_C15_0, x0
+#CHECK-NO-V84:  msr S3_3_C13_C15_1, x0
+#CHECK-NO-V84:  msr S3_3_C13_C15_2, x0
+#CHECK-NO-V84:  msr S3_3_C13_C15_3, x0
+#CHECK-NO-V84:  msr S3_3_C13_C15_4, x0
+#CHECK-NO-V84:  msr S3_3_C13_C15_5, x0
+#CHECK-NO-V84:  msr S3_3_C13_C15_6, x0
+#CHECK-NO-V84:  msr S3_3_C13_C15_7, x0
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C2_0
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C2_1
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C2_2
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C2_3
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C2_4
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C2_5
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C4_0
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C4_1
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C4_2
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C4_3
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C6_0
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C6_1
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C6_2
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C6_3
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C3_0
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C3_1
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C12_0
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C12_1
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C12_2
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C12_3
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C12_4
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C12_5
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C12_6
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C12_7
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C13_0
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C13_1
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C13_2
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C13_3
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C13_4
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C13_5
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C13_6
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C13_7
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C14_0
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C14_1
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C14_2
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C14_3
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C14_4
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C14_5
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C14_6
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C14_7
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C15_0
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C15_1
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C15_2
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C15_3
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C15_4
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C15_5
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C15_6
+#CHECK-NO-V84:  mrs x0, S3_3_C13_C15_7

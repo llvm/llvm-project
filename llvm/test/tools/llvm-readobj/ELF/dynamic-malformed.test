@@ -1,0 +1,471 @@
+## Test handling of a dynamic section size which is not a multiple of its entry size.
+## Test the full output to demonstrate how we print the warnings.
+
+# RUN: yaml2obj %s --docnum=1 -o %t.bad-size
+# RUN: llvm-readobj --all %t.bad-size 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.bad-size --implicit-check-not=warning: --check-prefix WARN
+# RUN: llvm-readelf --all %t.bad-size 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.bad-size --implicit-check-not=warning: --check-prefix WARN-GNU
+
+# WARN: warning: '[[FILE]]': invalid PT_DYNAMIC size (0x4){{$}}
+# WARN: warning: '[[FILE]]': SHT_DYNAMIC section with index 1 has invalid size (0x4){{$}}
+# WARN: warning: '[[FILE]]': no valid dynamic table was found
+# WARN-EMPTY:
+# WARN: File:
+# WARN: ProgramHeaders [
+# WARN: Symbols [
+# WARN: ]
+
+# WARN-GNU: warning: '[[FILE]]': invalid PT_DYNAMIC size (0x4){{$}}
+# WARN-GNU: warning: '[[FILE]]': SHT_DYNAMIC section with index 1 has invalid size (0x4){{$}}
+# WARN-GNU: warning: '[[FILE]]': no valid dynamic table was found
+# WARN-GNU-NEXT: ELF Header:
+# WARN-GNU:      Symbol table '.symtab' contains 1 entries:
+# WARN-GNU:        0:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1000
+    Content: "01234567"
+Symbols: []
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Test handling of a .dynamic section with an invalid entsize (i.e. not 2 * sizeof(Elf_Dyn)).
+# RUN: yaml2obj %s --docnum=2 -o %t.bad-entsize
+# RUN: llvm-readobj --dynamic-table %t.bad-entsize | FileCheck %s --check-prefix BAD-ENTSIZE-LLVM
+# RUN: llvm-readelf --dynamic-table %t.bad-entsize | FileCheck %s --check-prefix BAD-ENTSIZE-GNU
+
+# BAD-ENTSIZE-LLVM:      DynamicSection [ (2 entries)
+# BAD-ENTSIZE-LLVM-NEXT:   Tag                Type                 Name/Value
+# BAD-ENTSIZE-LLVM-NEXT:   0x0000000000000015 DEBUG                0x0
+# BAD-ENTSIZE-LLVM-NEXT:   0x0000000000000000 NULL                 0x0
+# BAD-ENTSIZE-LLVM-NEXT: ]
+
+# BAD-ENTSIZE-GNU:      Dynamic section at offset 0x{{.*}} contains 2 entries:
+# BAD-ENTSIZE-GNU-NEXT:   Tag                Type                 Name/Value
+# BAD-ENTSIZE-GNU-NEXT:   0x0000000000000015 (DEBUG)              0x0
+# BAD-ENTSIZE-GNU-NEXT:   0x0000000000000000 (NULL)               0x0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1000
+    EntSize: 0x2
+    Entries:
+      - Tag:   DT_DEBUG
+        Value: 0
+      - Tag:   DT_NULL
+        Value: 0
+Symbols: []
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Test handling of string references pointing past the end of the dynamic string table.
+# RUN: yaml2obj %s --docnum=3 -o %t.bad-string
+# RUN: llvm-readobj --dynamic-table %t.bad-string 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: --check-prefix BAD-STRING-LLVM -DFILE=%t.bad-string
+# RUN: llvm-readelf --dynamic-table %t.bad-string 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: --check-prefix BAD-STRING-GNU -DFILE=%t.bad-string
+
+# BAD-STRING-LLVM:      warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb6: it goes past the end of the table (0xb1)
+# BAD-STRING-LLVM:      LoadName: <?>
+# BAD-STRING-LLVM:      DynamicSection [ (10 entries)
+# BAD-STRING-LLVM-NEXT:   Tag                Type      Name/Value
+# BAD-STRING-LLVM-NEXT:   0x0000000000000005 STRTAB    0x1000
+# BAD-STRING-LLVM-NEXT:   0x000000000000000A STRSZ     1 (bytes)
+# BAD-STRING-LLVM-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb2: it goes past the end of the table (0xb1)
+# BAD-STRING-LLVM-NEXT:   0x0000000000000001 NEEDED    Shared library: [<?>]
+# BAD-STRING-LLVM-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb3: it goes past the end of the table (0xb1)
+# BAD-STRING-LLVM-NEXT:   0x000000007FFFFFFF FILTER    Filter library: [<?>]
+# BAD-STRING-LLVM-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb4: it goes past the end of the table (0xb1)
+# BAD-STRING-LLVM-NEXT:   0x000000007FFFFFFD AUXILIARY Auxiliary library: [<?>]
+# BAD-STRING-LLVM-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb5: it goes past the end of the table (0xb1)
+# BAD-STRING-LLVM-NEXT:   0x000000007FFFFFFE USED      Not needed object: [<?>]
+## Note: there is no "string table at offset 0xb0..." warning here, because it was printed earlier.
+# BAD-STRING-LLVM-NEXT:   0x000000000000000E SONAME    Library soname: [<?>]
+# BAD-STRING-LLVM-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb7: it goes past the end of the table (0xb1)
+# BAD-STRING-LLVM-NEXT:   0x000000000000000F RPATH     Library rpath: [<?>]
+# BAD-STRING-LLVM-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb8: it goes past the end of the table (0xb1)
+# BAD-STRING-LLVM-NEXT:   0x000000000000001D RUNPATH   Library runpath: [<?>]
+# BAD-STRING-LLVM-NEXT:   0x0000000000000000 NULL      0x0
+# BAD-STRING-LLVM-NEXT: ]
+
+# BAD-STRING-GNU:      Dynamic section at offset 0xb1 contains 10 entries:
+# BAD-STRING-GNU-NEXT:   Tag                Type        Name/Value
+# BAD-STRING-GNU-NEXT:   0x0000000000000005 (STRTAB)    0x1000
+# BAD-STRING-GNU-NEXT:   0x000000000000000a (STRSZ)     1 (bytes)
+# BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb2: it goes past the end of the table (0xb1)
+# BAD-STRING-GNU-NEXT:   0x0000000000000001 (NEEDED)    Shared library: [<?>]
+# BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb3: it goes past the end of the table (0xb1)
+# BAD-STRING-GNU-NEXT:   0x000000007fffffff (FILTER)    Filter library: [<?>]
+# BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb4: it goes past the end of the table (0xb1)
+# BAD-STRING-GNU-NEXT:   0x000000007ffffffd (AUXILIARY) Auxiliary library: [<?>]
+# BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb5: it goes past the end of the table (0xb1)
+# BAD-STRING-GNU-NEXT:   0x000000007ffffffe (USED)      Not needed object: [<?>]
+# BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb6: it goes past the end of the table (0xb1)
+# BAD-STRING-GNU-NEXT:   0x000000000000000e (SONAME)    Library soname: [<?>]
+# BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb7: it goes past the end of the table (0xb1)
+# BAD-STRING-GNU-NEXT:   0x000000000000000f (RPATH)     Library rpath: [<?>]
+# BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb8: it goes past the end of the table (0xb1)
+# BAD-STRING-GNU-NEXT:   0x000000000000001d (RUNPATH)   Library runpath: [<?>]
+# BAD-STRING-GNU-NEXT:   0x0000000000000000 (NULL)      0x0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1010
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x1000
+      - Tag:   DT_STRSZ
+        Value: 1
+      - Tag:   DT_NEEDED
+        Value: 2
+      - Tag:   DT_FILTER
+        Value: 3
+      - Tag:   DT_AUXILIARY
+        Value: 4
+      - Tag:   DT_USED
+        Value: 5
+      - Tag:   DT_SONAME
+        Value: 6
+      - Tag:   DT_RPATH
+        Value: 7
+      - Tag:   DT_RUNPATH
+        Value: 8
+      - Tag:   DT_NULL
+        Value: 0
+Symbols: []
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1010
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Test handling of DT_STRTAB pointing outside the file's address space.
+# RUN: yaml2obj %s --docnum=4 -o %t.bad-strtab
+
+# RUN: llvm-readobj --dynamic-table %t.bad-strtab 2>&1 >/dev/null | \
+# RUN:   FileCheck -DFILE=%t.bad-strtab %s --implicit-check-not=warning: --check-prefix=BAD-STRTAB-ERR
+# RUN: llvm-readelf --dynamic-table %t.bad-strtab 2>&1 >/dev/null | \
+# RUN:   FileCheck -DFILE=%t.bad-strtab %s --implicit-check-not=warning: --check-prefix=BAD-STRTAB-ERR
+# BAD-STRTAB-ERR:    warning: '[[FILE]]': unable to parse DT_STRTAB: virtual address is not in any segment: 0x2000000
+# BAD-STRTAB-ERR:    warning: '[[FILE]]': string table was not found
+# BAD-STRTAB-ERR-NOT:{{.}}
+
+# RUN: llvm-readobj --dynamic-table --needed-libs %t.bad-strtab 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.bad-strtab %s --check-prefixes=BAD-STRTAB-ERR2,BAD-STRTAB,BAD-STRTAB-LLVM
+# RUN: llvm-readelf --dynamic-table --needed-libs %t.bad-strtab 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.bad-strtab %s --check-prefixes=BAD-STRTAB-ERR2,BAD-STRTAB,BAD-STRTAB-GNU
+
+#      BAD-STRTAB-ERR2: warning: '[[FILE]]': unable to parse DT_STRTAB: virtual address is not in any segment: 0x2000000
+#      BAD-STRTAB-LLVM: LoadName: <Not found>
+#           BAD-STRTAB: warning: '[[FILE]]': string table was not found
+# BAD-STRTAB-LLVM-NEXT: 0x0000000000000001  NEEDED   Shared library: [<?>]
+#  BAD-STRTAB-GNU-NEXT: 0x0000000000000001 (NEEDED)  Shared library: [<?>]
+#           BAD-STRTAB: NeededLibraries [
+#           BAD-STRTAB:   <?>
+#           BAD-STRTAB: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1000
+    Entries:
+## Two DT_STRTAB entries are needed to check that we don't report it twice.
+      - Tag:   DT_STRTAB
+        Value: 0x2000000
+      - Tag:   DT_STRTAB
+        Value: 0x2000000
+      - Tag:   DT_STRSZ
+        Value: 10
+      - Tag:   DT_NEEDED
+        Value: 1
+      - Tag:   DT_NULL
+        Value: 0x0
+Symbols: []
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Test handling of other d_ptr tags pointing outside the file's address space.
+# RUN: yaml2obj %s --docnum=5 -o %t.bad-rela
+# RUN: llvm-readobj --dynamic-table %t.bad-rela 2>&1 | FileCheck -DFILE=%t.bad-rela %s --check-prefixes=CHECK,BAD-RELA
+# RUN: llvm-readelf --dynamic-table %t.bad-rela 2>&1 | FileCheck -DFILE=%t.bad-rela %s --check-prefixes=CHECK,BAD-RELA-GNU
+
+# CHECK: warning: '[[FILE]]': unable to parse DT_RELA: virtual address is not in any segment: 0x1000000
+
+# BAD-RELA:      DynamicSection [ (2 entries)
+# BAD-RELA-NEXT:   Tag                Type Name/Value
+# BAD-RELA-NEXT:   0x0000000000000007 RELA 0x1000000
+# BAD-RELA-NEXT:   0x0000000000000000 NULL 0x0
+# BAD-RELA-NEXT: ]
+# BAD-RELA-GNU:      Dynamic section at offset 0xb0 contains 2 entries:
+# BAD-RELA-GNU-NEXT: Tag                Type   Name/Value
+# BAD-RELA-GNU-NEXT: 0x0000000000000007 (RELA) 0x1000000
+# BAD-RELA-GNU-NEXT: 0x0000000000000000 (NULL) 0x0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1000
+    Entries:
+      - Tag:   DT_RELA
+        Value: 0x1000000
+      - Tag:   DT_NULL
+        Value: 0x0
+Symbols: []
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Check how we handle cases when the dynamic string table is not null-terminated.
+
+## Case A: the value of the DT_STRSZ tag is equal to the size of
+##         the not null-terminated dynamic string table.
+# RUN: yaml2obj %s -DSTRSZ=7 --docnum=6 -o %t6
+# RUN: llvm-readobj --dynamic-table %t6 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-LLVM,NOT-TERMINATED-GREQ
+# RUN: llvm-readelf --dynamic-table %t6 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-GNU,NOT-TERMINATED-GREQ
+
+## Case B: the value of the DT_STRSZ tag is less than the size of
+##         the not null-terminated dynamic string table.
+# RUN: yaml2obj %s -DSTRSZ=6 --docnum=6 -o %t7
+# RUN: llvm-readobj --dynamic-table %t7 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t7 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-LLVM,NOT-TERMINATED-LESS
+# RUN: llvm-readelf --dynamic-table %t7 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t7 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-GNU,NOT-TERMINATED-LESS
+
+## Case C: the value of the DT_STRSZ tag is one byte larger than the size of
+##         the not null-terminated dynamic string table.
+# RUN: yaml2obj %s -DSTRSZ=8 --docnum=6 -o %t8
+# RUN: llvm-readobj --dynamic-table %t8 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t8 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-LLVM,NOT-TERMINATED-GREQ
+# RUN: llvm-readelf --dynamic-table %t8 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t8 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-GNU,NOT-TERMINATED-GREQ
+
+# NOT-TERMINATED-LLVM: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb4: the string table is not null-terminated
+# NOT-TERMINATED:      warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb0: the string table is not null-terminated
+# NOT-TERMINATED-NEXT: {{[(]?}}NEEDED{{[)]?}}    Shared library: [<?>]
+# NOT-TERMINATED-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb1: the string table is not null-terminated
+# NOT-TERMINATED-NEXT: {{[(]?}}FILTER{{[)]?}}    Filter library: [<?>]
+# NOT-TERMINATED-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb2: the string table is not null-terminated
+# NOT-TERMINATED-NEXT: {{[(]?}}AUXILIARY{{[)]?}} Auxiliary library: [<?>]
+# NOT-TERMINATED-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb3: the string table is not null-terminated
+# NOT-TERMINATED-NEXT: {{[(]?}}USED{{[)]?}}      Not needed object: [<?>]
+# NOT-TERMINATED-GNU-NEXT:  warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb4: the string table is not null-terminated
+# NOT-TERMINATED-NEXT: {{[(]?}}SONAME{{[)]?}}    Library soname: [<?>]
+# NOT-TERMINATED-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb5: the string table is not null-terminated
+# NOT-TERMINATED-NEXT: {{[(]?}}RPATH{{[)]?}}     Library rpath: [<?>]
+# NOT-TERMINATED-GREQ-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb6: the string table is not null-terminated
+# NOT-TERMINATED-LESS-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb6: it goes past the end of the table (0xb6)
+# NOT-TERMINATED-NEXT: {{[(]?}}RUNPATH{{[)]?}}   Library runpath: [<?>]
+# NOT-TERMINATED-NEXT: {{[(]?}}NULL{{[)]?}}      0x0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+    Content: '746573742e736f' ## "test.so", not null terminated.
+  - Type:    Fill
+    Pattern: "61626300" ## 'a', 'b', 'c', '\0'.
+    Size:    "4"
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1100
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x1000
+      - Tag:   DT_STRSZ
+        Value: [[STRSZ]]
+      - Tag:   DT_NEEDED
+        Value: 0
+      - Tag:   DT_FILTER
+        Value: 1
+      - Tag:   DT_AUXILIARY
+        Value: 2
+      - Tag:   DT_USED
+        Value: 3
+      - Tag:   DT_SONAME
+        Value: 4
+      - Tag:   DT_RPATH
+        Value: 5
+      - Tag:   DT_RUNPATH
+        Value: 6
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1100
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Check that we emit an appropriate warning when the dynamic string table ends past the end of the file.
+
+## Case A: the value of DT_STRSZ tag is set so that the string table ends
+## right before the EOF. No warning should be emitted.
+# RUN: yaml2obj %s -DSTRSZ=0x210 --docnum=6 -o %t9.1
+# RUN: llvm-readobj --dynamic-table %t9.1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: --check-prefix=BEFORE-THE-EOF
+# RUN: llvm-readelf --dynamic-table %t9.1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: --check-prefix=BEFORE-THE-EOF
+
+## Note: The code reads the data in [DT_STRTAB, DT_STRTAB + DT_STRSZ] as the string table
+## as normal. Since the file ends with a zero byte, strings are dumped, but if it didn't,
+## we'd get <?> printed instead. The important bit is that we don't get the past the end warning.
+
+# BEFORE-THE-EOF:      {{[(]?}}NEEDED{{[)]?}}    Shared library: [test.soabc]
+# BEFORE-THE-EOF-NEXT: {{[(]?}}FILTER{{[)]?}}    Filter library: [est.soabc]
+# BEFORE-THE-EOF-NEXT: {{[(]?}}AUXILIARY{{[)]?}} Auxiliary library: [st.soabc]
+# BEFORE-THE-EOF-NEXT: {{[(]?}}USED{{[)]?}}      Not needed object: [t.soabc]
+# BEFORE-THE-EOF-NEXT: {{[(]?}}SONAME{{[)]?}}    Library soname: [.soabc]
+# BEFORE-THE-EOF-NEXT: {{[(]?}}RPATH{{[)]?}}     Library rpath: [soabc]
+# BEFORE-THE-EOF-NEXT: {{[(]?}}RUNPATH{{[)]?}}   Library runpath: [oabc]
+# BEFORE-THE-EOF-NEXT: {{[(]?}}NULL{{[)]?}}      0x0
+
+## Case B: the value of DT_STRSZ tag is set so that the string table goes 1 byte past the EOF.
+# RUN: yaml2obj %s -DSTRSZ=0x211 --docnum=6 -o %t9.2
+# RUN: llvm-readobj --dynamic-table %t9.2 2>&1 | FileCheck %s -DFILE=%t9.2 --check-prefix=PAST-THE-EOF
+# RUN: llvm-readelf --dynamic-table %t9.2 2>&1 | FileCheck %s -DFILE=%t9.2 --check-prefix=PAST-THE-EOF
+
+# PAST-THE-EOF:      warning: '[[FILE]]': the dynamic string table at 0xb0 goes past the end of the file (0x2c0) with DT_STRSZ = 0x211
+# PAST-THE-EOF:      warning: '[[FILE]]': string table was not found
+# PAST-THE-EOF:      {{[(]?}}NEEDED{{[)]?}}    Shared library: [<?>]
+# PAST-THE-EOF-NEXT: {{[(]?}}FILTER{{[)]?}}    Filter library: [<?>]
+# PAST-THE-EOF-NEXT: {{[(]?}}AUXILIARY{{[)]?}} Auxiliary library: [<?>]
+# PAST-THE-EOF-NEXT: {{[(]?}}USED{{[)]?}}      Not needed object: [<?>]
+# PAST-THE-EOF-NEXT: {{[(]?}}SONAME{{[)]?}}    Library soname: [<?>]
+# PAST-THE-EOF-NEXT: {{[(]?}}RPATH{{[)]?}}     Library rpath: [<?>]
+# PAST-THE-EOF-NEXT: {{[(]?}}RUNPATH{{[)]?}}   Library runpath: [<?>]
+# PAST-THE-EOF-NEXT: {{[(]?}}NULL{{[)]?}}      0x0
+
+## Check that we report a warning when we try to map an address, but loadable
+## segments appear unsorted by the p_vaddr member. In this case we are still
+## able to map an address.
+
+# RUN: yaml2obj %s --docnum=7 -o %t10
+# RUN: llvm-readobj --dynamic-table %t10 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10 --implicit-check-not=warning: --check-prefixes=OUT-OF-ORDER,OUT-OF-ORDER-LLVM
+# RUN: llvm-readelf --dynamic-table %t10 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10 --implicit-check-not=warning: --check-prefixes=OUT-OF-ORDER,OUT-OF-ORDER-GNU
+
+# OUT-OF-ORDER:           warning: '[[FILE]]': loadable segments are unsorted by virtual address
+
+# OUT-OF-ORDER-LLVM:      DynamicSection [ (2 entries)
+# OUT-OF-ORDER-LLVM-NEXT:   Tag                Type   Name/Value
+# OUT-OF-ORDER-LLVM-NEXT:   0x0000000000000005 STRTAB 0x1000
+# OUT-OF-ORDER-LLVM-NEXT:   0x0000000000000000 NULL   0x0
+# OUT-OF-ORDER-LLVM-NEXT: ]
+
+# OUT-OF-ORDER-GNU:       Dynamic section at offset 0xe9 contains 2 entries:
+# OUT-OF-ORDER-GNU-NEXT:   Tag                Type     Name/Value
+# OUT-OF-ORDER-GNU-NEXT:   0x0000000000000005 (STRTAB) 0x1000
+# OUT-OF-ORDER-GNU-NEXT:   0x0000000000000000 (NULL)   0x0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1010
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x1000
+      - Tag:   DT_NULL
+        Value: 0
+Symbols: []
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1010
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynstr
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1010
+    FirstSec: .dynamic
+    LastSec:  .dynamic

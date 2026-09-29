@@ -1,0 +1,5 @@
+RUN: llvm-nm %p/Inputs/fileset.macho-aarch64 | FileCheck %s
+
+CHECK:      Symbols for fileset_entry:
+CHECK-NEXT: 0000000000004010 s bar
+CHECK-NEXT: 0000000000004000 s foo

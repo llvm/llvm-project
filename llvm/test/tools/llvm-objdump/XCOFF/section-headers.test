@@ -1,0 +1,84 @@
+## Test various details of llvm-objdump -h/--section-headers for XCOFF.
+
+## Check the -h/--section-headers option prints section headers correctly.
+# RUN: yaml2obj %s --docnum=1 -o %t-basic.o
+# RUN: llvm-objdump --section-headers %t-basic.o | FileCheck %s
+
+# CHECK:      Sections:
+# CHECK-NEXT: Idx Name          Size     VMA      Type
+# CHECK-NEXT:   0 .text         00000008 00000008 TEXT
+# CHECK-NEXT:   1 .data         00000004 00000000 DATA
+# CHECK-NEXT:   2 .bss          00000000 00000010 BSS
+# CHECK-NEXT:   3 .tdata        00000004 00000000 DATA
+# CHECK-NEXT:   4 .tbss         00000000 00000004 BSS
+# CHECK-NEXT:   5 .dwline       00000046 00000000 DEBUG
+# CHECK-NEXT:   6 .debug        00000046 00000000 DEBUG
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Sections:
+  - Name:    .text
+    Address: 0x8
+    Size:    0x8
+    Flags:   [ STYP_TEXT ]
+  - Name:    .data
+    Size:    0x4
+    Flags:   [ STYP_DATA ]
+  - Name:    .bss
+    Size:    0x0
+    Address: 0x10
+    Flags:   [ STYP_BSS ]
+  - Name:    .tdata
+    Size:    0x4
+    Flags:   [ STYP_TDATA ]
+  - Name:    .tbss
+    Size:    0x0
+    Flags:   [ STYP_TBSS ]
+  - Name:    .dwline
+    Size:    0x46
+    Flags:   [ STYP_DWARF ]
+  - Name:    .debug
+    Size:    0x46
+    Flags:   [ STYP_DEBUG ]
+
+## Check the -h/--section-headers option prints long section names.
+# RUN: yaml2obj %s --docnum=2 -o %t-longname.o
+# RUN: llvm-objdump --section-headers %t-longname.o \
+# RUN:   | FileCheck %s --check-prefix=LONG
+
+# LONG:      Sections:
+# LONG-NEXT: Idx Name          Size     VMA      Type
+# LONG-NEXT:   0 .dwarnge      00000004 00000000
+# LONG-NEXT:   1 .dwpbnms      00000004 00000000
+# LONG-NEXT:   2 .dwpbtyp      00000004 00000000
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Sections:
+  - Name:  .dwarnge
+    Size:  0x4
+    Flags: [ STYP_PAD ]
+  - Name:  .dwpbnms
+    Size:  0x4
+    Flags: [ STYP_PAD ]
+  - Name:  .dwpbtyp
+    Size:  0x4
+    Flags: [ STYP_PAD ]
+
+## Truncate the file to end before the section header table ends.
+# RUN: yaml2obj %s --docnum=3 -o %t-truncate.o
+# RUN: %python -c "with open('%/t-truncate.o', 'r+b') as input: input.truncate(20)"
+# RUN: not llvm-objdump --section-headers %t-truncate.o 2>&1 \
+# RUN:  | FileCheck --check-prefix=ERROR %s
+
+# ERROR: The end of the file was unexpectedly encountered: section headers with offset 0x14 and size 0x28 go past the end of the file
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Sections:
+  - Name:  .text
+    Size:  0x8
+    Flags: [ STYP_TEXT ]

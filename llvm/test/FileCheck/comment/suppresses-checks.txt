@@ -1,0 +1,33 @@
+# Comment directives successfully comment out check directives.
+
+# Check all default comment prefixes.
+# Check that a comment directive at the beginning/end of the file is handled.
+# Check that the preceding/following line's check directive is not affected.
+RUN: echo 'foo'                    >  %t-1.in
+RUN: echo 'COM: CHECK: bar'        >  %t-1.chk
+RUN: echo 'CHECK: foo'             >> %t-1.chk
+RUN: echo 'RUN: echo "CHECK: baz"' >> %t-1.chk
+RUN: %ProtectFileCheckOutput FileCheck -dump-input=never -vv %t-1.chk < %t-1.in 2>&1 | \
+RUN:   FileCheck -DCHECK_LINE=2 %s
+
+# Check the case of one user-specified comment prefix.
+# Check that a comment directive not at the beginning of a line is handled.
+RUN: echo 'foo'                                      >  %t-2.in
+RUN: echo 'CHECK: foo'                               >  %t-2.chk
+RUN: echo 'letters then space MY-PREFIX: CHECK: bar' >> %t-2.chk
+RUN: %ProtectFileCheckOutput \
+RUN: FileCheck -dump-input=never -vv %t-2.chk -comment-prefixes=MY-PREFIX < %t-2.in 2>&1 | \
+RUN:   FileCheck -DCHECK_LINE=1 %s
+
+# Check the case of multiple user-specified comment prefixes.
+RUN: echo 'foo'               >  %t-3.in
+RUN: echo 'Bar_2: CHECK: Bar' >  %t-3.chk
+RUN: echo 'CHECK: foo'        >> %t-3.chk
+RUN: echo 'Foo_1: CHECK: Foo' >> %t-3.chk
+RUN: echo 'Baz_3: CHECK: Baz' >> %t-3.chk
+RUN: %ProtectFileCheckOutput \
+RUN: FileCheck -dump-input=never -vv %t-3.chk -comment-prefixes=Foo_1,Bar_2 \
+RUN:           -comment-prefixes=Baz_3 < %t-3.in 2>&1 | \
+RUN:   FileCheck -DCHECK_LINE=2 %s
+
+CHECK: .chk:[[CHECK_LINE]]:8: remark: CHECK: expected string found in input

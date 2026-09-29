@@ -1,0 +1,54 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+// Check invalid tbd file contents was propagated as error.
+; RUN: not llvm-readtapi -merge %t/libfoo.tbd %t/libbar.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix DIFF
+// Check missing input.
+; RUN: not llvm-readtapi -merge %t/libfoo.tbd 2>&1 | FileCheck %s --allow-empty --check-prefix INPUT
+
+; DIFF: install names do not match
+; INPUT: merge requires at least two input files
+
+;--- libfoo.tbd
+{
+  "main_library": {
+    "allowable_clients": [
+      {
+        "clients": [
+          "ClientAll"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "/usr/lib/libfoo.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13.1",
+        "target": "x86_64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+;--- libbar.tbd
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ arm64-macos ]
+install-name:    '/usr/lib/libbar.dylib'
+allowable-clients:
+  - targets:         [ arm64-macos ]
+    clients:         [ ClientAll ]
+reexported-libraries:
+  - targets:         [ arm64-macos ]
+    libraries:       [ '/usr/lib/liball.dylib' ]
+exports:
+  - targets:         [ arm64-macos ]
+    symbols:         [ _sym1 ]
+    objc-classes:    [ _A ]
+    objc-ivars:      [ _A._ivar1 ]
+    weak-symbols:    [ _weak1 ]
+    thread-local-symbols: [ _tlv1 ]
+...

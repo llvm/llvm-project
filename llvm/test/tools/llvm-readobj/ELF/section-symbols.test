@@ -1,0 +1,193 @@
+## ELF section symbols use the corresponding section names when printing
+## unnamed symbols. This test verifies this and also that appropriate things
+## are printed if the section is somehow invalid.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-readobj %t1 --symbols --relocations 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=LLVM1 --implicit-check-not="warning:"
+# RUN: llvm-readelf %t1 --symbols --relocations 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=GNU1 --implicit-check-not="warning:"
+# RUN: llvm-readelf %t1 --symbols -X 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=GNUX1 --implicit-check-not="warning:"
+
+# LLVM1:      Relocations [
+# LLVM1-NEXT:   Section (5) .rela.foo {
+# LLVM1-NEXT:     0x1 R_X86_64_NONE .foo 0x0
+# LLVM1-NEXT:     0x2 R_X86_64_NONE symbol1 0x0
+# LLVM1-NEXT: warning: '[[FILE]]': invalid section index: 67
+# LLVM1-NEXT:     0x3 R_X86_64_NONE <section 67> 0x0
+# LLVM1-NEXT:     0x4 R_X86_64_NONE symbol2 0x0
+# LLVM1-NEXT:     0x5 R_X86_64_NONE .bar 0x0
+# LLVM1-NEXT:     0x6 R_X86_64_NONE symbol3 0x0
+# LLVM1-NEXT: warning: '[[FILE]]': invalid section index: 66
+# LLVM1-NEXT:     0x7 R_X86_64_NONE <section 66> 0x0
+# LLVM1-NEXT:     0x8 R_X86_64_NONE symbol4 0x0
+# LLVM1-NEXT:   }
+# LLVM1-NEXT: ]
+
+# LLVM1: Name: (0)
+# LLVM1: Name: .foo (0)
+# LLVM1: Name: symbol1 (25)
+# LLVM1: Name: <section 67> (0)
+# LLVM1: Name: symbol2 (17)
+# LLVM1: Name: .bar (0)
+# LLVM1: Name: symbol3 (9)
+# LLVM1: Name: <section 66> (0)
+# LLVM1: Name: symbol4 (1)
+# LLVM1: warning: '[[FILE]]': a section [index 3] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# LLVM1: Name: <section 3> (0)
+
+# GNU1:      Relocation section '.rela.foo' at offset {{.*}} contains 8 entries:
+# GNU1-NEXT:  Offset     Info    Type         Sym. Value  Symbol's Name + Addend
+# GNU1-NEXT: 00000001  00000100 R_X86_64_NONE   00000000   .foo + 0
+# GNU1-NEXT: 00000002  00000200 R_X86_64_NONE   00000000   symbol1 + 0
+# GNU1-NEXT: warning: '[[FILE]]': invalid section index: 67
+# GNU1-NEXT: 00000003  00000300 R_X86_64_NONE   00000000   <section 67> + 0
+# GNU1-NEXT: 00000004  00000400 R_X86_64_NONE   00000000   symbol2 + 0
+# GNU1-NEXT: 00000005  00000500 R_X86_64_NONE   00000000   .bar + 0
+# GNU1-NEXT: 00000006  00000600 R_X86_64_NONE   00000000   symbol3 + 0
+# GNU1-NEXT: warning: '[[FILE]]': invalid section index: 66
+# GNU1-NEXT: 00000007  00000700 R_X86_64_NONE   00000000   <section 66> + 0
+# GNU1-NEXT: 00000008  00000800 R_X86_64_NONE   00000000   symbol4 + 0
+
+# GNU1:      Symbol table '.symtab' contains 10 entries:
+# GNU1-NEXT:    Num: {{.*}} Type    {{.*}} Ndx Name
+# GNU1-NEXT:      0: {{.*}} NOTYPE  {{.*}} UND {{$}}
+# GNU1-NEXT:      1: {{.*}} SECTION {{.*}}  1 .foo
+# GNU1-NEXT:      2: {{.*}} SECTION {{.*}}  1 symbol1
+# GNU1-NEXT:      3: {{.*}} SECTION {{.*}} 67 <section 67>
+# GNU1-NEXT:      4: {{.*}} SECTION {{.*}} 67 symbol2
+# GNU1-NEXT:      5: {{.*}} SECTION {{.*}}  2 .bar
+# GNU1-NEXT:      6: {{.*}} SECTION {{.*}}  2 symbol3
+# GNU1-NEXT:      7: {{.*}} SECTION {{.*}} 66 <section 66>
+# GNU1-NEXT:      8: {{.*}} SECTION {{.*}} 66 symbol4
+# GNU1-NEXT: warning: '[[FILE]]': a section [index 3] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# GNU1-NEXT:      9: {{.*}} SECTION {{.*}}  3 <section 3>
+
+# GNUX1:      Symbol table '.symtab' contains 10 entries:
+# GNUX1-NEXT:    Num: {{.*}} Type    {{.*}} Ndx(SecName) Name
+# GNUX1-NEXT:      0: {{.*}} NOTYPE  {{.*}} UND {{$}}
+# GNUX1-NEXT:      1: {{.*}} SECTION {{.*}}   1 (.foo)    .foo
+# GNUX1-NEXT:      2: {{.*}} SECTION {{.*}}   1 (.foo)     symbol1
+# GNUX1-NEXT: warning: '[[FILE]]': invalid section index: 67
+# GNUX1-NEXT:      3: {{.*}} SECTION {{.*}}  67            <section 67>
+# GNUX1-NEXT:      4: {{.*}} SECTION {{.*}}  67            symbol2
+# GNUX1-NEXT:      5: {{.*}} SECTION {{.*}}   2 (.bar)     .bar
+# GNUX1-NEXT:      6: {{.*}} SECTION {{.*}}   2 (.bar)     symbol3
+# GNUX1-NEXT: warning: '[[FILE]]': invalid section index: 66
+# GNUX1-NEXT:      7: {{.*}} SECTION {{.*}}  66            <section 66>
+# GNUX1-NEXT:      8: {{.*}} SECTION {{.*}}  66            symbol4
+# GNUX1-NEXT: warning: '[[FILE]]': a section [index 3] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# GNUX1-NEXT:      9: {{.*}} SECTION {{.*}}   3            <section 3>
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+  - Name: .bar
+    Type: SHT_PROGBITS
+  - Name:   .invalid
+    Type:   SHT_PROGBITS
+    ShName: 0xffff
+  - Name: .symtab_shndx
+    Type: SHT_SYMTAB_SHNDX
+    Link: .symtab
+    Entries: [ 0, 0, 0, 0, 0, 2, 2, 0x42, 0x42, 0 ]
+  - Name: .rela.foo
+    Type: SHT_RELA
+    Link: .symtab
+    Info: .foo
+    Relocations:
+      - Offset: 0x1
+        Symbol: 1
+        Type:   R_X86_64_NONE
+      - Offset: 0x2
+        Symbol: 2
+        Type:   R_X86_64_NONE
+      - Offset: 0x3
+        Symbol: 3
+        Type:   R_X86_64_NONE
+      - Offset: 0x4
+        Symbol: 4
+        Type:   R_X86_64_NONE
+      - Offset: 0x5
+        Symbol: 5
+        Type:   R_X86_64_NONE
+      - Offset: 0x6
+        Symbol: 6
+        Type:   R_X86_64_NONE
+      - Offset: 0x7
+        Symbol: 7
+        Type:   R_X86_64_NONE
+      - Offset: 0x8
+        Symbol: 8
+        Type:   R_X86_64_NONE
+Symbols:
+## Case 1: a valid unnamed section symbol.
+  - Name: ""
+    Section: .foo
+    Type: STT_SECTION
+## Case 2: a valid named section symbol.
+  - Name: "symbol1"
+    Section: .foo
+    Type: STT_SECTION
+## Case 3: an unnamed section symbol with invalid index.
+  - Name: ""
+    Index: 0x43
+    Type: STT_SECTION
+## Case 4: a named section symbol with invalid index.
+  - Name: "symbol2"
+    Index: 0x43
+    Type: STT_SECTION
+## Case 5: a valid unnamed section symbol via SHT_SYMTAB_SHNDX.
+  - Name: ""
+    Index: SHN_XINDEX
+    Type: STT_SECTION
+## Case 6: a valid named section symbol via SHT_SYMTAB_SHNDX.
+  - Name: "symbol3"
+    Index: SHN_XINDEX
+    Type: STT_SECTION
+## Case 7: a unnamed section symbol via SHT_SYMTAB_SHNDX with invalid index.
+  - Name: ""
+    Index: SHN_XINDEX
+    Type: STT_SECTION
+## Case 8: a named section symbol via SHT_SYMTAB_SHNDX with invalid index.
+  - Name: "symbol4"
+    Index: SHN_XINDEX
+    Type: STT_SECTION
+## Case 9: a unnamed section symbol with invalid name.
+  - Name: ""
+    Index: 3
+    Type: STT_SECTION
+
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: llvm-readobj %t2 --symbols 2> %t.llvm.err2 | FileCheck %s --check-prefix=LLVM2
+# RUN: FileCheck %s --input-file %t.llvm.err2 --check-prefix=WARN2 --implicit-check-not=warning
+# RUN: llvm-readelf %t2 --symbols 2> %t.gnu.err2 | FileCheck %s --check-prefix=GNU2
+# RUN: FileCheck %s --input-file %t.gnu.err2 --check-prefix=WARN2 --implicit-check-not=warning
+
+# LLVM2: Name: (0)
+# LLVM2: Name: <?> (0)
+
+# GNU2:      Symbol table '.symtab' contains 2 entries:
+# GNU2-NEXT:    Num: {{.*}} Type    {{.*}} Ndx Name
+# GNU2-NEXT:      0: {{.*}} NOTYPE  {{.*}} UND {{$}}
+# GNU2-NEXT:      1: {{.*}} SECTION {{.*}} RSV[0xffff] <?>
+
+# WARN2: warning: '{{.*}}.tmp2': found an extended symbol index (1), but unable to locate the extended symbol index table
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Symbols:
+  # Section symbol via SHT_SYMTAB_SHNDX when SHT_SYMTAB_SHNDX is missing.
+  - Name: ""
+    Index: SHN_XINDEX
+    Type: STT_SECTION

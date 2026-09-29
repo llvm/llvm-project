@@ -1,0 +1,59 @@
+; Should find the bitmap if it is in the same folder as the rc file.
+; RUN: rm -f %t.include.res
+; RUN: llvm-rc -no-preprocess /FO %t.include.res -- %p/Inputs/include.rc
+; RUN: llvm-readobj %t.include.res | FileCheck --check-prefix=FOUND %s
+
+; Try including files without quotes.
+; RUN: rm -f %t.noquotes.res
+; RUN: llvm-rc -no-preprocess /FO %t.noquotes.res -- %p/Inputs/include-noquotes.rc
+; RUN: llvm-readobj %t.noquotes.res | FileCheck --check-prefix=FOUND %s
+
+; Should find the bitmap if the folder is explicitly specified.
+; RUN: rm -f %t.nested-include.res
+; RUN: llvm-rc -no-preprocess /FO %t.nested-include.res /I %p/Inputs/nested -- %p/Inputs/deep-include.rc
+; RUN: llvm-readobj %t.nested-include.res | FileCheck --check-prefix=FOUND %s
+
+; The include dir can be specified via the INCLUDE env var too.
+; RUN: rm -f %t.nested-include.res
+; RUN: env INCLUDE=%p/Inputs/nested llvm-rc -no-preprocess /FO %t.nested-include.res -- %p/Inputs/deep-include.rc
+; RUN: llvm-readobj %t.nested-include.res | FileCheck --check-prefix=FOUND %s
+
+; Specifying the /X option should make it ignore the INCLUDE variable.
+; RUN: rm -f %t.nested-include.res
+; RUN: not env INCLUDE=%p/Inputs/nested llvm-rc -no-preprocess /X /FO %t.nested-include.res -- %p/Inputs/deep-include.rc 2>&1 \
+; RUN:   | FileCheck --check-prefix=MISSING %s
+
+; Otherwise, it should not find the bitmap.
+; RUN: rm -f %t.nested-include.res
+; RUN: not llvm-rc -no-preprocess /FO %t.nested-include.res -- %p/Inputs/deep-include.rc 2>&1 \
+; RUN:   | FileCheck --check-prefix=MISSING %s
+
+; Should find the bitmap if the process's current working directory
+; contains the resource being searched for.  Do this test last since it
+; changes the current working directory and could affect the success or
+; failure of other tests if run first.
+; RUN: rm -f %t.nested-include.res
+; RUN: cd %p/Inputs/nested
+; RUN: llvm-rc -no-preprocess /FO %t.nested-include.res -- %p/Inputs/include.rc
+; RUN: llvm-readobj %t.nested-include.res | FileCheck --check-prefix=FOUND %s
+
+FOUND:      Resource type (int): BITMAP (ID 2)
+FOUND-NEXT: Resource name (string): FOO
+FOUND-NEXT: Data version: 0
+FOUND-NEXT: Memory flags: 0x30
+FOUND-NEXT: Language ID: 1033
+FOUND-NEXT: Version (major): 0
+FOUND-NEXT: Version (minor): 0
+FOUND-NEXT: Characteristics: 0
+FOUND-NEXT: Data size: 96
+FOUND-NEXT: Data: (
+FOUND-NEXT:   0000: 28000000 02000000 07000000 01001800  |(...............|
+FOUND-NEXT:   0010: 00000000 38000000 00000000 00000000  |....8...........|
+FOUND-NEXT:   0020: 00000000 00000000 5BB3855B B3850000  |........[..[....|
+FOUND-NEXT:   0030: FFFFFFFF FFFF0000 FFFFFFFF FFFF0000  |................|
+FOUND-NEXT:   0040: FFFFFFFF FFFF0000 5BB385FF FFFF0000  |........[.......|
+FOUND-NEXT:   0050: FFFFFF0E C9FF0000 241CEDFF FFFF0000  |........$.......|
+FOUND-NEXT: )
+
+MISSING:      llvm-rc: Error in BITMAP statement (ID foo):
+MISSING-NEXT: error : file not found : nested_bitmap.bmp

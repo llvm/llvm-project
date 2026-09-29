@@ -1,0 +1,16 @@
+some text
+more text
+
+RUN: FileCheck %s --check-prefix=NEXT --input-file=%s
+NEXT:      {{^}}
+NEXT-NEXT: more text
+
+RUN: FileCheck %s --check-prefix=SAME --input-file=%s
+SAME:      {{^}}
+SAME-SAME: some text
+
+RUN: echo "" > %t
+RUN: echo "" >> %t
+RUN: FileCheck %s --check-prefix=EMPTY --input-file=%t
+EMPTY:       {{^}}
+EMPTY-EMPTY:

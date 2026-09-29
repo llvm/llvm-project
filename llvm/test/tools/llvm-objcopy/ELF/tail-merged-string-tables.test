@@ -1,0 +1,83 @@
+## This test shows that when symbol/section names are optimized in the string
+## table to share the same entry, due to tail merging, llvm-objcopy operations
+## function correctly without corrupting the names of unchanged sections/symbols.
+
+# RUN: yaml2obj %s -o %t.o
+## Validate that the strings have been pooled.
+# RUN: llvm-readobj %t.o --string-dump .strtab --string-dump .shstrtab \
+# RUN:   | FileCheck %s --check-prefix=VALIDATE --implicit-check-not='] bar' --implicit-check-not=.blag
+
+# VALIDATE:      String dump of section '.strtab':
+# VALIDATE-NEXT: [     1] bazfoobar
+# VALIDATE-EMPTY:
+# VALIDATE-NEXT: String dump of section '.shstrtab':
+# VALIDATE-NEXT: [     1] .blam.blah.blag
+
+## Case 1: Basic copy.
+# RUN: llvm-objcopy %t.o %t.copy
+# RUN: llvm-readobj --section-headers --symbols %t.copy | FileCheck %s --check-prefix=COPY
+
+# COPY: Sections [
+# COPY:   Name: .blam.blah.blag (
+# COPY:   Name: .blah.blag (
+# COPY:   Name: .blag (
+# COPY: Symbols [
+# COPY:   Name: bar (
+# COPY:   Name: foobar (
+# COPY:   Name: bazfoobar (
+
+## Case 2: Rename section.
+# RUN: llvm-objcopy %t.o %t.rename-section --rename-section .blah.blag=.blob.blab
+# RUN: llvm-readobj --section-headers %t.rename-section \
+# RUN:   | FileCheck %s --check-prefix=RENAME-SECTION
+
+# RENAME-SECTION: Sections [
+# RENAME-SECTION:   Name: .blam.blah.blag (
+# RENAME-SECTION:   Name: .blob.blab (
+# RENAME-SECTION:   Name: .blag (
+
+## Case 3: Rename symbol.
+# RUN: llvm-objcopy %t.o %t.rename-symbol --redefine-sym foobar=raboof
+# RUN: llvm-readobj --symbols %t.rename-symbol \
+# RUN:   | FileCheck %s --check-prefix=RENAME-SYMBOL
+
+# RENAME-SYMBOL: Symbols [
+# RENAME-SYMBOL:   Name: bar (
+# RENAME-SYMBOL:   Name: raboof (
+# RENAME-SYMBOL:   Name: bazfoobar (
+
+## Case 4: Remove section.
+# RUN: llvm-objcopy %t.o %t.remove-section -R .blah.blag
+# RUN: llvm-readobj --section-headers %t.remove-section \
+# RUN:   | FileCheck %s --check-prefix=REMOVE-SECTION --implicit-check-not .blah.blag
+
+# REMOVE-SECTION: Sections [
+# REMOVE-SECTION:   Name: .blam.blah.blag (
+# REMOVE-SECTION:   Name: .blag (
+
+## Case 5: Remove symbol.
+# RUN: llvm-objcopy %t.o %t.remove-symbol -N foobar
+# RUN: llvm-readobj --symbols %t.remove-symbol \
+# RUN:   | FileCheck %s --check-prefix=REMOVE-SYMBOL --implicit-check-not='Name: foobar'
+
+# REMOVE-SYMBOL: Symbols [
+# REMOVE-SYMBOL:   Name: bar (
+# REMOVE-SYMBOL:   Name: bazfoobar (
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .blam.blah.blag
+    Type: SHT_PROGBITS
+  - Name: .blah.blag
+    Type: SHT_PROGBITS
+  - Name: .blag
+    Type: SHT_PROGBITS
+Symbols:
+  - Name: bar
+  - Name: foobar
+  - Name: bazfoobar

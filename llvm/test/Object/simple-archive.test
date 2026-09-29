@@ -1,0 +1,12 @@
+#
+# Check if the index is appearing properly in the output file
+#
+RUN: llvm-nm --print-armap %p/Inputs/libsimple_archive.a | FileCheck -check-prefix=CHECKIDX %s
+
+CHECKIDX: Archive map
+CHECKIDX: abcdefghijklmnopqrstuvwxyz12345678 in 1.o
+CHECKIDX: main in 1.o
+CHECKIDX: 1.o:
+CHECKIDX: 00000000 D abcdefghijklmnopqrstuvwxyz12345678
+CHECKIDX:          U fn1
+CHECKIDX: 00000000 T main

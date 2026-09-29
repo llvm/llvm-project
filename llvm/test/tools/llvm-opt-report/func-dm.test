@@ -1,0 +1,17 @@
+RUN: llvm-opt-report -r %p %p/Inputs/dm.yaml | FileCheck -strict-whitespace %s
+
+; CHECK: < {{.*[/\]}}dm.c
+; CHECK-NEXT:  1   | void bar(void);
+; CHECK-NEXT:  2   | void foo(int n) {
+; CHECK-NEXT:  3   |   if (n) { bar(); } else { while (1) {} }
+; CHECK-NEXT:  4   | }
+; CHECK-NEXT:  5   | 
+; CHECK-NEXT:  6   | void quack(void) {
+; CHECK-NEXT:  7 I |   foo(0);
+; CHECK-NEXT:  8   | }
+; CHECK-NEXT:  9   | 
+; CHECK-NEXT: 10   | void quack2(void) {
+; CHECK-NEXT: 11 I |   foo(4);
+; CHECK-NEXT: 12   | }
+; CHECK-NEXT: 13   | 
+

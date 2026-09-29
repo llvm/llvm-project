@@ -1,0 +1,66 @@
+## Check that we are able to dump the SHT_MIPS_REGINFO section using -A properly.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj -A %t1 | FileCheck %s --check-prefix=OPTIONS
+# RUN: llvm-readelf -A %t1 | FileCheck %s --check-prefix=OPTIONS
+
+# OPTIONS:      MIPS RegInfo {
+# OPTIONS-NEXT:   GP:            0x807060504030201
+# OPTIONS-NEXT:   General Mask:  0xD0C0B0A
+# OPTIONS-NEXT:   Co-Proc Mask0: 0x88776655
+# OPTIONS-NEXT:   Co-Proc Mask1: 0xCCBBAA99
+# OPTIONS-NEXT:   Co-Proc Mask2: 0x1EFFEEDD
+# OPTIONS-NEXT:   Co-Proc Mask3: 0x5E4E3E2E
+# OPTIONS-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Name: .reginfo
+    Type: SHT_MIPS_REGINFO
+    ContentArray: [ 0xA, 0xB, 0xC, 0xD,     ## Bit-mask of used general registers.
+                    0x11, 0x22, 0x33, 0x44, ## Unused padding field.
+                    0x55, 0x66, 0x77, 0x88, ## Bit-mask of used co-processor registers (0).
+                    0x99, 0xAA, 0xBB, 0xCC, ## Bit-mask of used co-processor registers (1).
+                    0xDD, 0xEE, 0xFF, 0x1E, ## Bit-mask of used co-processor registers (2).
+                    0x2E, 0x3E, 0x4E, 0x5E, ## Bit-mask of used co-processor registers (3).
+                    0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8 ] ## GP register value.
+
+## Check that we try to dump the .reginfo section when we are able to locate it by name.
+# RUN: yaml2obj --docnum=2 -DNAME=0xffff %s -o %t.err1
+# RUN: llvm-readelf -A %t.err1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err1 --check-prefix=NAME-ERR-FOUND --implicit-check-not=warning:
+# RUN: llvm-readobj -A %t.err1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err1 --check-prefix=NAME-ERR-FOUND --implicit-check-not=warning:
+
+# NAME-ERR-FOUND:      warning: '[[FILE]]': unable to read the name of SHT_PROGBITS section with index 1: a section [index 1] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# NAME-ERR-FOUND-NEXT: warning: '[[FILE]]': unable to read the name of SHT_PROGBITS section with index 3: a section [index 3] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# NAME-ERR-FOUND:      warning: '[[FILE]]': the .reginfo section has an invalid size (0x0)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Type:   SHT_PROGBITS
+    ShName: [[NAME=<none>]]
+  - Name:   .reginfo
+    Type:   SHT_MIPS_REGINFO
+    ShName: [[REGINFONAME=<none>]]
+  - Type:   SHT_PROGBITS
+    ShName: [[NAME=<none>]]
+
+## Check we report a warning when we are unable to find the .reginfo section due to an error.
+# RUN: yaml2obj --docnum=2 -DREGINFONAME=0xffff %s -o %t.err2
+# RUN: llvm-readelf -A %t.err2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err2 --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning:
+# RUN: llvm-readobj -A %t.err2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err2 --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning:
+
+# NAME-ERR-NOTFOUND: warning: '[[FILE]]': unable to read the name of SHT_MIPS_REGINFO section with index 2: a section [index 2] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table

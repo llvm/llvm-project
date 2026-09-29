@@ -1,0 +1,28 @@
+RUN: yaml2obj %p/Inputs/COFF/dwarf-debug-only.yaml | llvm-objdump -p -h - | FileCheck %s
+
+CHECK:      The Data Directory
+CHECK-NEXT: Entry 0 00000000006a3f20 0000004b Export Directory [.edata (or where ever we found it)]
+CHECK-NEXT: Entry 1 00000000006a3f6b 000001a4 Import Directory [parts of .idata]
+CHECK-NEXT: Entry 2 0000000000000000 00000000 Resource Directory [.rsrc]
+CHECK-NEXT: Entry 3 00000000006ac000 00000714 Exception Directory [.pdata]
+CHECK-NEXT: Entry 4 0000000000000000 00000000 Security Directory
+CHECK-NEXT: Entry 5 00000000006ae000 0000009c Base Relocation Directory [.reloc]
+CHECK-NEXT: Entry 6 00000000006aa000 0000001c Debug Directory
+CHECK-NEXT: Entry 7 0000000000000000 00000000 Description Directory
+CHECK-NEXT: Entry 8 0000000000000000 00000000 Special Directory
+CHECK-NEXT: Entry 9 00000000006a3bf8 00000028 Thread Storage Directory [.tls]
+CHECK-NEXT: Entry a 0000000000000000 00000000 Load Configuration Directory
+CHECK-NEXT: Entry b 0000000000000000 00000000 Bound Import Directory
+CHECK-NEXT: Entry c 00000000006a48f8 000007e8 Import Address Table Directory
+CHECK-NEXT: Entry d 0000000000000000 00000000 Delay Import Directory
+CHECK-NEXT: Entry e 0000000000000000 00000000 CLR Runtime Header
+CHECK-NEXT: Entry f 0000000000000000 00000000 Reserved
+
+CHECK:      0 .text         00000000 0000000180001000 TEXT
+CHECK-NEXT: 1 .rdata        00000000 0000000180010000 DATA
+CHECK-NEXT: 2 .buildid      00000035 00000001806aa000 DATA
+CHECK-NEXT: 3 .data         00000000 00000001806ab000 DATA
+CHECK-NEXT: 4 .pdata        00000000 00000001806ac000 DATA
+CHECK-NEXT: 5 .tls          00000000 00000001806ad000 DATA
+CHECK-NEXT: 6 .reloc        00000000 00000001806ae000 DATA
+CHECK-NEXT: 7 .debug_info   00000040 00000001806af000 DATA, DEBUG

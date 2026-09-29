@@ -1,0 +1,3 @@
+; RUN: not llvm-xray extract %S/Inputs/elf32-noxray.bin 2>&1 | FileCheck %s
+; CHECK: llvm-xray: Cannot extract instrumentation map from '{{.*}}elf32-noxray.bin'.
+; CHECK-NEXT: File format not supported (only does ELF and Mach-O little endian 64-bit)

@@ -1,0 +1,8 @@
+## Test that --hex-dump/-x can be used to display the contents
+## of the indicated section as hexadecimal bytes.
+
+# RUN: llvm-readobj -x 1 %p/Inputs/trivial.obj.wasm | FileCheck %s
+# RUN: llvm-readobj --hex-dump 1 %p/Inputs/trivial.obj.wasm | FileCheck %s
+
+# CHECK: 0x00000000 04600001 7f60017f 017f6000 0060017f .`...`....`..`..
+# CHECK: 0x00000010 00                                  .

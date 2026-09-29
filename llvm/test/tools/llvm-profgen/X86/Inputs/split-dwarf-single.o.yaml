@@ -1,0 +1,92 @@
+# Source code:
+
+# int foo() {
+#   return 1;
+# }
+#
+# int main() {
+#   foo();
+#   return 0;
+# }
+
+# Build instructions (clang version 15.0.0):
+# split-dwarf-single.o:       clang -gsplit-dwarf=single -fdebug-compilation-dir=.  test.c   -fdebug-info-for-profiling  -O0 -g -o split-dwarf-single.o -c
+# split-dwarf-single.o.yaml:  obj2yaml split-dwarf-single.o > split-dwarf-single.o.yaml
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         014A00101772171B25B442197625111B12067317000000
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         2400000005000408000000000428758115ED87CF0100000000000000000001002C00000000000000
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         0C000000050000000000000000000000
+  - Name:            .debug_str_offsets.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         1C000000050000000000000004000000080000000D000000760000007D000000
+  - Name:            .debug_str.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE, SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         666F6F00696E74006D61696E00636C616E672076657273696F6E2031352E302E30202868747470733A2F2F6769746875622E636F6D2F6C6C766D2F6C6C766D2D70726F6A6563742E67697420313565336538396239626162323838363862303930656539663336326161386630333233303934372900746573742E630073706C69742D64776172662D73696E676C652E6F00
+  - Name:            .debug_info.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         3900000005000508000000000428758115ED87CF01030C00040502000B00000001560000013800000002011C0000000156020005380000000301050400
+  - Name:            .debug_abbrev.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         01110125251305032576250000022E00111B1206401803253A0B3B0B49133F19000003240003253E0B0B0B000000
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         5E0000000500080037000000010101FB0E0D00010101010000000100000101011F010000000003011F020F051E010000000000EF173AFD4B2F5E20815DE19BD24360F4040000090200000000000000000105030A4B0500BD05030AE5590208000101
+  - Name:            .debug_line_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         2E00746573742E6300
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .debug_abbrev
+      - Name:            .debug_info
+      - Name:            .debug_str_offsets
+      - Name:            .debug_str
+      - Name:            .debug_str_offsets.dwo
+      - Name:            .debug_str.dwo
+      - Name:            .debug_info.dwo
+      - Name:            .debug_abbrev.dwo
+      - Name:            .debug_addr
+      - Name:            .debug_line
+      - Name:            .debug_line_str
+DWARF:
+  debug_str:
+    - .
+    - split-dwarf-single.o
+  debug_addr:
+    - Length:          0x14
+      Version:         0x5
+      AddressSize:     0x8
+      Entries:
+        - {}
+        - Address:         0x10
+...

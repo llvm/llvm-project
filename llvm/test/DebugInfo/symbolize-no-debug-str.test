@@ -1,0 +1,9 @@
+RUN: llvm-objcopy -R .debug_str %p/Inputs/llvm-symbolizer-test.elf-x86-64 %t.elf
+RUN: llvm-symbolizer --functions=linkage --obj=%t.elf 0x401140 | FileCheck %s --check-prefix=LINKAGE
+RUN: llvm-symbolizer --functions=short --obj=%t.elf 0x401140 | FileCheck %s --check-prefix=SHORT
+
+LINKAGE:      main
+LINKAGE-NEXT: {{^}}llvm-symbolizer-test.c:10:0
+
+SHORT:        ??
+SHORT-NEXT:   {{^}}llvm-symbolizer-test.c:10:0

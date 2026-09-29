@@ -1,0 +1,6 @@
+## This test checks the error message displayed if
+## an input file does not exist.
+
+# RUN: not llvm-dwarfutil not-existed not-existed 2>&1 | FileCheck %s -DMSG=%errc_ENOENT
+
+# CHECK: error: 'not-existed': [[MSG]]

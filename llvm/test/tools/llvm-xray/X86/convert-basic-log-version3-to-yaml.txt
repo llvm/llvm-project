@@ -1,0 +1,19 @@
+; RUN: llvm-xray convert %S/Inputs/basic-log-version-3.xray -f yaml -o - | FileCheck %s
+
+; CHECK:      ---
+; CHECK-NEXT: header:
+; CHECK-NEXT:   version:         3
+; CHECK-NEXT:   type:            0
+; CHECK-NEXT:   constant-tsc:    true
+; CHECK-NEXT:   nonstop-tsc:     true
+; CHECK-NEXT:   cycle-frequency: 3900000000
+; CHECK-NEXT: records:
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', cpu: 7, thread: 25518, process: 25518, kind: function-enter, tsc: 2070767347414784, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', cpu: 7, thread: 25518, process: 25518, kind: function-exit, tsc: 2070767347496472, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '2', cpu: 7, thread: 25518, process: 25518, kind: function-enter, tsc: 2070768324320264, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '2', cpu: 7, thread: 25518, process: 25518, kind: function-exit, tsc: 2070768324344100, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', cpu: 7, thread: 25518, process: 25518, kind: function-enter, tsc: 2070768921602152, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', cpu: 7, thread: 25518, process: 25518, kind: function-exit, tsc: 2070768921625968, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '2', cpu: 7, thread: 25518, process: 25518, kind: function-enter, tsc: 2070769627174140, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: '2', cpu: 7, thread: 25518, process: 25518, kind: function-exit, tsc: 2070769627197624, data: '' }
+; CHECK-NEXT: ...

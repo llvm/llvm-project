@@ -1,0 +1,12 @@
+# RUN: llc -mtriple=x86_64 -run-pass=none -verify-machineinstrs %s -o - | FileCheck %s
+
+---
+name: test
+body: |
+  bb.0:
+    %0:gr32 = IMPLICIT_DEF
+    %1:gr32 = IMPLICIT_DEF
+    %0:gr32 = IMPLICIT_DEF
+    %2:gr32 = IMPLICIT_DEF
+    KILL %0, %2
+...

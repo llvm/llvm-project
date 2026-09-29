@@ -1,0 +1,62 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t2
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_MIPS
+Symbols:
+  - Name:     test_mips_acommon
+    Index:    SHN_MIPS_ACOMMON
+    Value:    0x1234
+    Binding:  STB_GLOBAL
+  - Name:     test_mips_scommon
+    Index:    SHN_MIPS_SCOMMON
+    Value:    0x1237
+    Binding:  STB_GLOBAL
+  - Name:     test_mips_sundefined
+    Index:    SHN_MIPS_SUNDEFINED
+    Value:    0x1238
+    Binding:  STB_GLOBAL
+
+# CHECK:     Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:    Name:
+# CHECK-NEXT:    Value: 0x0
+# CHECK-NEXT:    Size: 0
+# CHECK-NEXT:    Binding: Local (0x0)
+# CHECK-NEXT:    Type: None (0x0)
+# CHECK-NEXT:    Other: 0
+# CHECK-NEXT:    Section: Undefined (0x0)
+# CHECK-NEXT:  }
+# CHECK-NEXT:  Symbol {
+# CHECK-NEXT:    Name: test_mips_acommon
+# CHECK-NEXT:    Value: 0x1234
+# CHECK-NEXT:    Size: 0
+# CHECK-NEXT:    Binding: Global (0x1)
+# CHECK-NEXT:    Type: None (0x0)
+# CHECK-NEXT:    Other: 0
+# CHECK-NEXT:    Section: Processor Specific (0xFF00)
+# CHECK-NEXT:  }
+# CHECK-NEXT:  Symbol {
+# CHECK-NEXT:    Name: test_mips_scommon
+# CHECK-NEXT:    Value: 0x1237
+# CHECK-NEXT:    Size: 0
+# CHECK-NEXT:    Binding: Global (0x1)
+# CHECK-NEXT:    Type: None (0x0)
+# CHECK-NEXT:    Other: 0
+# CHECK-NEXT:    Section: Processor Specific (0xFF03)
+# CHECK-NEXT:  }
+# CHECK-NEXT:  Symbol {
+# CHECK-NEXT:    Name: test_mips_sundefined
+# CHECK-NEXT:    Value: 0x1238
+# CHECK-NEXT:    Size: 0
+# CHECK-NEXT:    Binding: Global (0x1)
+# CHECK-NEXT:    Type: None (0x0)
+# CHECK-NEXT:    Other: 0
+# CHECK-NEXT:    Section: Processor Specific (0xFF04)
+# CHECK-NEXT:  }
+# CHECK-NEXT:]

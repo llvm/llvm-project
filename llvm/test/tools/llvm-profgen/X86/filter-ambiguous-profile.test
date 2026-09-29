@@ -1,0 +1,8 @@
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/filter-ambiguous-profile.prof --binary=%S/Inputs/inline-cs-noprobe.perfbin --csspgo-preinliner=0 --output=%t1 || FileCheck %s --input-file %t1
+
+;CHECK:    foo:12345:1000
+;CHECK-NEXT  1: 1000
+;CHECK-NEXT  4: bar:1000
+;CHECK-NEXT   1: 1000
+;CHECK-NEXT   3: goo:300
+;CHECK-NEXT    1: 300

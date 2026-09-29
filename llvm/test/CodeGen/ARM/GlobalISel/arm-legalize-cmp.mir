@@ -1,0 +1,123 @@
+# RUN: llc -mtriple arm-- -run-pass=legalizer %s -o - | FileCheck %s
+# RUN: llc -mtriple thumb-- -mattr=+v6t2 -run-pass=legalizer %s -o - | FileCheck %s
+--- |
+  define void @test_icmp_s8() { ret void }
+  define void @test_icmp_s16() { ret void }
+  define void @test_icmp_s32() { ret void }
+
+  define void @test_icmp_p0() { ret void }
+...
+---
+name:            test_icmp_s8
+# CHECK-LABEL: name: test_icmp_s8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    %1(s8) = G_LOAD %0 :: (load (s8))
+    %2(p0) = COPY $r1
+    %3(s8) = G_LOAD %2 :: (load (s8))
+    %4(s1) = G_ICMP intpred(ne), %1(s8), %3
+    ; G_ICMP with s8 should widen
+    ; CHECK: {{%[0-9]+}}:_(s1) = G_ICMP intpred(ne), {{%[0-9]+}}(s32), {{%[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}:_(s1) = G_ICMP intpred(ne), {{%[0-9]+}}(s8), {{%[0-9]+}}
+    %5(s32) = G_ZEXT %4(s1)
+    $r0 = COPY %5(s32)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_icmp_s16
+# CHECK-LABEL: name: test_icmp_s16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    %1(s16) = G_LOAD %0 :: (load (s16))
+    %2(p0) = COPY $r1
+    %3(s16) = G_LOAD %2 :: (load (s16))
+    %4(s1) = G_ICMP intpred(slt), %1(s16), %3
+    ; G_ICMP with s16 should widen
+    ; CHECK: {{%[0-9]+}}:_(s1) = G_ICMP intpred(slt), {{%[0-9]+}}(s32), {{%[0-9]+}}
+    ; CHECK-NOT: {{%[0-9]+}}:_(s1) = G_ICMP intpred(slt), {{%[0-9]+}}(s16), {{%[0-9]+}}
+    %5(s32) = G_ZEXT %4(s1)
+    $r0 = COPY %5(s32)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_icmp_s32
+# CHECK-LABEL: name: test_icmp_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    %2(s1) = G_ICMP intpred(eq), %0(s32), %1
+    ; G_ICMP with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}:_(s1) = G_ICMP intpred(eq), {{%[0-9]+}}(s32), {{%[0-9]+}}
+    %3(s32) = G_ZEXT %2(s1)
+    $r0 = COPY %3(s32)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_icmp_p0
+# CHECK-LABEL: name: test_icmp_p0
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    %1(p0) = COPY $r1
+    %2(s1) = G_ICMP intpred(eq), %0(p0), %1
+    ; G_ICMP with p0 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}:_(s1) = G_ICMP intpred(eq), {{%[0-9]+}}(p0), {{%[0-9]+}}
+    %3(s32) = G_ZEXT %2(s1)
+    $r0 = COPY %3(s32)
+    BX_RET 14, $noreg, implicit $r0
+...

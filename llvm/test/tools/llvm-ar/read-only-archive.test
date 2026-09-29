@@ -1,0 +1,30 @@
+## Test that read-only archives cannot be edited
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: touch %t/1.txt
+# RUN: touch %t/2.txt
+# RUN: touch %t/3.txt
+
+# RUN: llvm-ar rc %t/archive.a %t/1.txt %t/2.txt
+
+## Make read only:
+# RUN: chmod 444 %t/archive.a
+
+# RUN: not llvm-ar r %t/archive.a %t/3.txt \
+# RUN:   FileCheck %s --check-prefix=ERROR -DFILE=%t/archive.a -DMSG=%errc_ENOENT
+
+# ERROR: error: [[FILE]]: [[MSG]]
+
+# RUN: not llvm-ar q %t/archive.a %t/3.txt \
+# RUN:   FileCheck %s --check-prefix=ERROR -DFILE=%t/archive.a -DMSG=%errc_ENOENT
+
+# RUN: not llvm-ar m %t/archive.a t/1.txt \
+# RUN:   FileCheck %s --check-prefix=ERROR-2 -DFILE=%t/archive.a
+
+# ERROR-2: error: [[FILE]]: permission denied
+
+# RUN: llvm-ar t %t/archive.a \
+# RUN:   | FileCheck %s --check-prefix=ARCHIVE --match-full-lines --implicit-check-not {{.}}
+
+# ARCHIVE: 1.txt
+# ARCHIVE-NEXT: 2.txt

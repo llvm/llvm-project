@@ -1,0 +1,9 @@
+# RUN: not yaml2obj %s 2>&1 | FileCheck %s
+
+--- !minidump
+Streams:
+  - Type:            LinuxAuxv
+    Size:            7
+    Content:         DEADBEEFBAADF00D
+
+# CHECK: Stream size must be greater or equal to the content size

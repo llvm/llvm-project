@@ -1,0 +1,18 @@
+import("//third-party/unittest/unittest.gni")
+
+unittest("DWARFLinkerParallelTests") {
+  deps = [
+    "//llvm/lib/DWARFLinker/Parallel",
+    "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
+  ]
+
+  # Reaches into the internal headers of DWARFLinker/Parallel.
+  include_dirs = [ "//llvm/lib/DWARFLinker/Parallel" ]
+
+  sources = [
+    "DIEInfoPlacementTest.cpp",
+    "DWARFLinkerTest.cpp",
+    "StringPoolTest.cpp",
+  ]
+}

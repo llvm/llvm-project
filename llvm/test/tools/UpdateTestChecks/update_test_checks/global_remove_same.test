@@ -1,0 +1,4 @@
+## Basic test checking global checks split over multiple lines are removed together
+# RUN: cp -f %S/Inputs/global_remove_same.ll %t.ll && %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/global_remove_same.ll.expected
+

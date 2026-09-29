@@ -1,0 +1,12 @@
+# REQUIRES: x86-registered-target
+
+## Make sure the darwin format specifics are preserved when updating archives.
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %p/Inputs/macho.64.s -o %t/dup.o
+# RUN: llvm-ar --format=darwin crD %t/lib.a %t/dup.o %t/dup.o
+# RUN: llvm-objcopy %t/lib.a %t/lib.copy.a
+# RUN: obj2yaml %t/lib.copy.a | FileCheck --implicit-check-not=LastModified %s
+
+# CHECK: LastModified: '1'
+# CHECK: LastModified: '2'

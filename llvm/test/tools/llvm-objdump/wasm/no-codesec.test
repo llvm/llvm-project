@@ -1,0 +1,26 @@
+## Test that sections that use function indices (e.g. name) work without the code section
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -h %t | FileCheck %s
+
+# CHECK: Sections:
+# CHECK-NEXT: Idx Name          Size     VMA      Type
+# CHECK-NEXT:   0 TYPE          00000004 0000000e
+# CHECK-NEXT:   1 FUNCTION      00000002 00000018
+# CHECK-NEXT:   2 name          00000008 00000020
+  
+--- !WASM
+FileHeader:
+  Version: 0x00000001
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes: []
+        ReturnTypes: []
+  - Type: FUNCTION
+    FunctionTypes: [ 0 ]
+  - Type: CUSTOM
+    Name: name
+    FunctionNames:
+     - Index:          0
+       Name:           foo

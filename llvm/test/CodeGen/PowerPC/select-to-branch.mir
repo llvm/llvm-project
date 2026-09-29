@@ -1,0 +1,117 @@
+# RUN: llc -verify-machineinstrs -mcpu=pwr9 -mtriple powerpc64le-unknown-linux-gnu \
+# RUN:   -run-pass=codegenprepare -o - %s | FileCheck %s
+# RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc64le-unknown-linux-gnu \
+# RUN:   -run-pass=codegenprepare -o - %s | FileCheck %s
+--- |
+  define i32 @weighted_select1(i32 %a, i32 %b) {
+    %cmp = icmp ne i32 %a, 0
+    %sel = select i1 %cmp, i32 %a, i32 %b, !prof !14
+    ret i32 %sel
+
+  ; If branch_weights > 99% or branch_weights < 1%, the select will be
+  ; converted to branch, here !14 = 99/100, !14 = 99%, so it will do nothing.
+  ; CHECK-LABEL: weighted_select1
+  ; CHECK:         %cmp = icmp ne i32 %a, 0
+  ; CHECK-NEXT:    %sel = select i1 %cmp, i32 %a, i32 %b, !prof !14
+  ; CHECK-NEXT:    ret i32 %sel
+  }
+
+  define i32 @weighted_select2(i32 %a, i32 %b) {
+    %cmp = icmp ne i32 %a, 0
+    %sel = select i1 %cmp, i32 %a, i32 %b, !prof !15
+    ret i32 %sel
+
+  ; If branch_weights > 99% or branch_weights < 1%, the select will be converted
+  ; to branch, here !15 = 100/101, !15 > 99%, so it will convert select to
+  ; branch.
+  ; CHECK-LABEL: weighted_select2
+  ; CHECK:         %sel.frozen = freeze i32 %a
+  ; CHECK:         %cmp = icmp ne i32 %sel.frozen, 0
+  ; CHECK-NEXT:    br i1 %cmp, label %select.end, label %select.false, !prof !15
+  ; CHECK:       select.false:
+  ; CHECK-NEXT:    br label %select.end
+  ; CHECK:       select.end:
+  ; CHECK-NEXT:    %sel = phi i32 [ %a, %0 ], [ %b, %select.false ]
+  ; CHECK-NEXT:    ret i32 %sel
+  }
+
+  define i32 @weighted_select3(i32 %a, i32 %b) {
+    %cmp = icmp ne i32 %a, 0
+    %sel = select i1 %cmp, i32 %a, i32 %b, !prof !16
+    ret i32 %sel
+
+  ; If branch_weights > 99% or branch_weights < 1%, the select will be converted
+  ; to branch, here !16 = 1/101, !16 < 1%, so it will convert select to branch.
+  ; CHECK-LABEL: weighted_select3
+  ; CHECK:         %sel.frozen = freeze i32 %a
+  ; CHECK:         %cmp = icmp ne i32 %sel.frozen, 0
+  ; CHECK-NEXT:    br i1 %cmp, label %select.end, label %select.false, !prof !16
+  ; CHECK:       select.false:
+  ; CHECK-NEXT:    br label %select.end
+  ; CHECK:       select.end:
+  ; CHECK-NEXT:    %sel = phi i32 [ %a, %0 ], [ %b, %select.false ]
+  ; CHECK-NEXT:    ret i32 %sel
+  }
+
+  define i32 @unweighted_select(i32 %a, i32 %b) {
+    %cmp = icmp ne i32 %a, 0
+    %sel = select i1 %cmp, i32 %a, i32 %b, !prof !17
+    ret i32 %sel
+
+  ; There is no weight_branch information, so it will do nothing.
+  ; CHECK-LABEL: unweighted_select
+  ; CHECK:         %cmp = icmp ne i32 %a, 0
+  ; CHECK-NEXT:    %sel = select i1 %cmp, i32 %a, i32 %b, !prof !17
+  ; CHECK-NEXT:    ret i32 %sel
+  }
+
+  ; Function Attrs: optsize
+  define i32 @weighted_select_optsize(i32 %a, i32 %b) #0 {
+    %cmp = icmp ne i32 %a, 0
+    %sel = select i1 %cmp, i32 %a, i32 %b, !prof !15
+    ret i32 %sel
+
+  ; This function has used the optsize flag, so it will do nothing.
+  ; CHECK-LABEL: weighted_select_optsize
+  ; CHECK:         %cmp = icmp ne i32 %a, 0
+  ; CHECK-NEXT:    %sel = select i1 %cmp, i32 %a, i32 %b, !prof !15
+  ; CHECK-NEXT:    ret i32 %sel
+  }
+
+  define i32 @weighted_select_pgso(i32 %a, i32 %b) !prof !18 {
+    %cmp = icmp ne i32 %a, 0
+    %sel = select i1 %cmp, i32 %a, i32 %b, !prof !15
+    ret i32 %sel
+
+  ; The function_entry_count of this function is 0, so it will do nothing.
+  ; CHECK-LABEL: weighted_select_pgso
+  ; CHECK:         %cmp = icmp ne i32 %a, 0
+  ; CHECK-NEXT:    %sel = select i1 %cmp, i32 %a, i32 %b, !prof !15
+  ; CHECK-NEXT:    ret i32 %sel
+  }
+  
+  attributes #0 = { optsize }
+  
+  !llvm.module.flags = !{!0}
+  
+  !0 = !{i32 1, !"ProfileSummary", !1}
+  !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+  !2 = !{!"ProfileFormat", !"InstrProf"}
+  !3 = !{!"TotalCount", i64 10000}
+  !4 = !{!"MaxCount", i64 10}
+  !5 = !{!"MaxInternalCount", i64 1}
+  !6 = !{!"MaxFunctionCount", i64 1000}
+  !7 = !{!"NumCounts", i64 3}
+  !8 = !{!"NumFunctions", i64 3}
+  !9 = !{!"DetailedSummary", !10}
+  !10 = !{!11, !12, !13}
+  !11 = !{i32 10000, i64 100, i32 1}
+  !12 = !{i32 999000, i64 100, i32 1}
+  !13 = !{i32 999999, i64 1, i32 2}
+  !14 = !{!"branch_weights", i32 1, i32 99}
+  !15 = !{!"branch_weights", i32 1, i32 100}
+  !16 = !{!"branch_weights", i32 100, i32 1}
+  !17 = !{!"branch_weights", i32 0, i32 0}
+  !18 = !{!"function_entry_count", i64 0}
+
+...

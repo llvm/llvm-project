@@ -1,0 +1,54 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("ARMTargetParserDef") {
+  visibility = [ ":gen" ]
+  args = [ "-gen-arm-target-def" ]
+  td_file = "//llvm/lib/Target/ARM/ARM.td"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
+}
+
+tablegen("AArch64TargetParserDef") {
+  visibility = [ ":gen" ]
+  args = [ "-gen-arm-target-def" ]
+  td_file = "//llvm/lib/Target/AArch64/AArch64.td"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
+}
+
+tablegen("PPCGenTargetFeatures") {
+  visibility = [ ":gen" ]
+  args = [ "-gen-target-features" ]
+  td_file = "//llvm/lib/Target/PowerPC/PPC.td"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
+}
+
+tablegen("RISCVTargetParserDef") {
+  visibility = [ ":gen" ]
+  args = [ "-gen-riscv-target-def" ]
+  td_file = "//llvm/lib/Target/RISCV/RISCV.td"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
+}
+
+tablegen("R600TargetParserDef") {
+  visibility = [ ":gen" ]
+  args = [ "-gen-amdgpu-target-def" ]
+  td_file = "//llvm/lib/Target/AMDGPU/R600.td"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
+}
+
+tablegen("AMDGPUTargetParserDef") {
+  visibility = [ ":gen" ]
+  args = [ "-gen-amdgpu-target-def" ]
+  td_file = "//llvm/lib/Target/AMDGPU/AMDGPU.td"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
+}
+
+group("gen") {
+  deps = [
+    ":AArch64TargetParserDef",
+    ":AMDGPUTargetParserDef",
+    ":ARMTargetParserDef",
+    ":PPCGenTargetFeatures",
+    ":R600TargetParserDef",
+    ":RISCVTargetParserDef",
+  ]
+}

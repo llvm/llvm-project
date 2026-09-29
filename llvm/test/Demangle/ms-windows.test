@@ -1,0 +1,20 @@
+; See clang/test/CodeGenCXX/mangle-windows.cpp
+; These tests are based on clang/test/CodeGenCXX/mangle-ms.cpp
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+?bar@Foo@@SGXXZ
+; CHECK: static void __stdcall Foo::bar(void)
+
+?bar@Foo@@QAGXXZ
+; CHECK: void __stdcall Foo::bar(void)
+
+?f2@@YIXXZ
+; CHECK: void __fastcall f2(void)
+
+?f1@@YGXXZ
+; CHECK: void __stdcall f1(void)
+
+?f5@@YCXXZ
+; CHECK: void __pascal f5(void)

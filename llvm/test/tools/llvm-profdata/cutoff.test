@@ -1,0 +1,23 @@
+Basic tests for cutoff options in show command.
+
+RUN: llvm-profdata show -value-cutoff=1 %p/Inputs/cutoff.proftext | FileCheck %s -check-prefixes=CUTOFF1,CHECK
+RUN: llvm-profdata show -value-cutoff=1000 %p/Inputs/cutoff.proftext | FileCheck %s -check-prefixes=CUTOFF1000,CHECK
+RUN: llvm-profdata show -all-functions -value-cutoff=1 %p/Inputs/cutoff.proftext | FileCheck %s -check-prefixes=CUTOFF1FUNC,CUTOFF1,CHECK
+RUN: llvm-profdata show -all-functions -value-cutoff=1000 %p/Inputs/cutoff.proftext | FileCheck %s -check-prefixes=CUTOFF1000FUNC,CUTOFF1000,CHECK
+RUN: llvm-profdata show -value-cutoff=1 -list-below-cutoff %p/Inputs/cutoff.proftext | FileCheck %s -check-prefixes=BELOW1,CUTOFF1,CHECK
+RUN: llvm-profdata show -value-cutoff=1000 -list-below-cutoff %p/Inputs/cutoff.proftext | FileCheck %s -check-prefixes=BELOW1000,CUTOFF1000,CHECK
+CUTOFF1FUNC-NOT: bar
+CUTOFF1FUNC: Functions shown: 2
+CUTOFF1000FUNC-NOT: bar
+CUTOFF1000FUNC-NOT: foo
+CUTOFF1000FUNC: Functions shown: 1
+BELOW1: The list of functions with the maximum counter less than 1:
+BELOW1:  bar: (Max = 0 Sum = 0)
+BELOW1000:The list of functions with the maximum counter less than 1000:
+BELOW1000:  bar: (Max = 0 Sum = 0)
+BELOW1000:  foo: (Max = 999 Sum = 1000)
+CHECK: Total functions: 3
+CUTOFF1: Number of functions with maximum count (< 1): 1
+CUTOFF1: Number of functions with maximum count (>= 1): 2
+CUTOFF1000: Number of functions with maximum count (< 1000): 2
+CUTOFF1000: Number of functions with maximum count (>= 1000): 1

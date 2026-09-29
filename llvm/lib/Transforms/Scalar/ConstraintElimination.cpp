@@ -1,0 +1,2684 @@
+//===-- ConstraintElimination.cpp - Eliminate conds using constraints. ----===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Eliminate conditions based on constraints collected from dominating
+// conditions.
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/Transforms/Scalar/ConstraintElimination.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/ConstraintSystem.h"
+#include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
+
+#include <optional>
+#include <string>
+
+using namespace llvm;
+using namespace PatternMatch;
+using namespace SCEVPatternMatch;
+
+#define DEBUG_TYPE "constraint-elimination"
+
+STATISTIC(NumCondsRemoved, "Number of instructions removed");
+DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
+              "Controls which conditions are eliminated");
+
+static cl::opt<unsigned>
+    MaxRows("constraint-elimination-max-rows", cl::init(500), cl::Hidden,
+            cl::desc("Maximum number of rows to keep in constraint system"));
+
+static cl::opt<bool> DumpReproducers(
+    "constraint-elimination-dump-reproducers", cl::init(false), cl::Hidden,
+    cl::desc("Dump IR to reproduce successful transformations."));
+
+static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
+static int64_t MinSignedConstraintValue = std::numeric_limits<int64_t>::min();
+
+static Instruction *getContextInstForUse(Use &U) {
+  Instruction *UserI = cast<Instruction>(U.getUser());
+  if (auto *Phi = dyn_cast<PHINode>(UserI))
+    UserI = Phi->getIncomingBlock(U)->getTerminator();
+  return UserI;
+}
+
+/// Returns the closest program point dominating all uses of \p I.
+static Instruction *findCommonDominatorOfUses(Instruction &I,
+                                              DominatorTree &DT) {
+  Instruction *CommonDom = nullptr;
+  unsigned NumUses = 0;
+  for (Use &U : I.uses()) {
+    // Conservatively use original instruction, if there are too many uses.
+    if (++NumUses == 16)
+      return &I;
+    Instruction *UserI = getContextInstForUse(U);
+    CommonDom =
+        CommonDom ? DT.findNearestCommonDominator(CommonDom, UserI) : UserI;
+  }
+  if (!CommonDom)
+    return &I;
+  // Uses in unreachable blocks are not in the dominator tree.
+  return DT.getNode(CommonDom->getParent()) ? CommonDom : &I;
+}
+
+namespace {
+using Entry = ConstraintSystem::Entry;
+using RowTy = ConstraintSystem::RowTy;
+
+/// Struct to express a condition of the form %Op0 Pred %Op1.
+struct ConditionTy {
+  CmpPredicate Pred;
+  Value *Op0 = nullptr;
+  Value *Op1 = nullptr;
+
+  ConditionTy() = default;
+  ConditionTy(CmpPredicate Pred, Value *Op0, Value *Op1)
+      : Pred(Pred), Op0(Op0), Op1(Op1) {}
+};
+
+/// Represents either
+///  * a condition that holds on entry to a block (=condition fact)
+///  * an assume (=assume fact)
+///  * a use of a compare instruction to simplify.
+/// It also tracks the Dominator DFS in and out numbers for each entry.
+struct FactOrCheck {
+  enum class EntryTy {
+    ConditionFact, /// A condition that holds on entry to a block.
+    InstFact,      /// A fact that holds after Inst executed (e.g. an assume or
+                   /// min/mix intrinsic.
+    InstCheck,     /// An instruction to simplify (e.g. an overflow math
+                   /// intrinsics) or whose flags may be strengthened.
+    UseCheck       /// An use of a compare instruction to simplify.
+  };
+
+  union {
+    Instruction *Inst;
+    Use *U;
+    ConditionTy Cond;
+  };
+
+  union {
+    /// A pre-condition that must hold for the current fact to be added to the
+    /// system. Only used by condition facts.
+    ConditionTy DoesHold;
+
+    /// Context instruction for the point where conditions are checked for
+    /// InstCheck simplifications.
+    Instruction *ContextInst;
+  };
+
+  unsigned NumIn;
+  unsigned NumOut;
+  EntryTy Ty;
+
+  FactOrCheck(EntryTy Ty, DomTreeNode *DTN, Instruction *Inst,
+              Instruction *ContextInst = nullptr)
+      : Inst(Inst), ContextInst(ContextInst ? ContextInst : Inst),
+        NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()), Ty(Ty) {}
+
+  FactOrCheck(DomTreeNode *DTN, Use *U)
+      : U(U), ContextInst(nullptr), NumIn(DTN->getDFSNumIn()),
+        NumOut(DTN->getDFSNumOut()), Ty(EntryTy::UseCheck) {}
+
+  FactOrCheck(DomTreeNode *DTN, CmpPredicate Pred, Value *Op0, Value *Op1,
+              ConditionTy Precond = {})
+      : Cond(Pred, Op0, Op1), DoesHold(Precond), NumIn(DTN->getDFSNumIn()),
+        NumOut(DTN->getDFSNumOut()), Ty(EntryTy::ConditionFact) {}
+
+  static FactOrCheck getConditionFact(DomTreeNode *DTN, CmpPredicate Pred,
+                                      Value *Op0, Value *Op1,
+                                      ConditionTy Precond = {}) {
+    return FactOrCheck(DTN, Pred, Op0, Op1, Precond);
+  }
+
+  static FactOrCheck getInstFact(DomTreeNode *DTN, Instruction *Inst) {
+    return FactOrCheck(EntryTy::InstFact, DTN, Inst);
+  }
+
+  static FactOrCheck getCheck(DomTreeNode *DTN, Use *U) {
+    return FactOrCheck(DTN, U);
+  }
+
+  static FactOrCheck getCheck(DomTreeNode *DTN, Instruction *I,
+                              Instruction *ContextInst = nullptr) {
+    assert((ContextInst ? ContextInst : I)->getParent() == DTN->getBlock() &&
+           "anchoring instruction must be in DTN's block");
+    return FactOrCheck(EntryTy::InstCheck, DTN, I, ContextInst);
+  }
+
+  bool isCheck() const {
+    return Ty == EntryTy::InstCheck || Ty == EntryTy::UseCheck;
+  }
+
+  Instruction *getContextInst() const {
+    assert(!isConditionFact());
+    if (Ty == EntryTy::UseCheck)
+      return getContextInstForUse(*U);
+    return ContextInst;
+  }
+
+  Instruction *getInstructionToSimplify() const {
+    assert(isCheck());
+    if (Ty == EntryTy::InstCheck)
+      return Inst;
+    // The use may have been simplified to a constant already.
+    return dyn_cast<Instruction>(*U);
+  }
+
+  bool isConditionFact() const { return Ty == EntryTy::ConditionFact; }
+};
+
+/// The senses in which an induction phi is monotonic, together with the
+/// direction it moves in.
+struct MonotonicInfo {
+  /// True if the phi steps by a negative constant.
+  bool Decreasing = false;
+  /// True if the phi is monotonic in the unsigned sense.
+  bool Unsigned = false;
+  /// True if the phi is monotonic in the signed sense.
+  bool Signed = false;
+};
+
+/// Keep state required to build worklist.
+struct State {
+  DominatorTree &DT;
+  LoopInfo &LI;
+  ScalarEvolution &SE;
+  TargetLibraryInfo &TLI;
+  SmallVector<FactOrCheck, 64> WorkList;
+
+  State(DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE,
+        TargetLibraryInfo &TLI)
+      : DT(DT), LI(LI), SE(SE), TLI(TLI) {}
+
+  /// Process block \p BB and add known facts to work-list.
+  void addInfoFor(BasicBlock &BB);
+
+  /// If \p BB is a loop header, bound each induction phi in it by its start
+  /// value.
+  void addBoundsForHeaderInductions(BasicBlock &BB);
+
+  /// Try to add facts for loop inductions (AddRecs) in EQ/NE compares
+  /// controlling the loop header.
+  void addInfoForInductions(BasicBlock &BB);
+
+  /// Returns the direction the induction phi \p PN with backedge value \p Step
+  /// moves in, and the senses in which it is monotonic in that direction.
+  MonotonicInfo getMonotonicityInfo(PHINode &PN, Value *Step);
+
+  /// Returns true if we can add a known condition from BB to its successor
+  /// block Succ.
+  bool canAddSuccessor(BasicBlock &BB, BasicBlock *Succ) const {
+    return DT.dominates(BasicBlockEdge(&BB, Succ), Succ);
+  }
+};
+
+class ConstraintInfo;
+
+struct StackEntry {
+  unsigned NumIn;
+  unsigned NumOut;
+  bool IsSigned = false;
+  /// Variables that can be removed from the system once the stack entry gets
+  /// removed.
+  SmallVector<Value *, 2> ValuesToRelease;
+
+  StackEntry(unsigned NumIn, unsigned NumOut, bool IsSigned,
+             SmallVector<Value *, 2> ValuesToRelease)
+      : NumIn(NumIn), NumOut(NumOut), IsSigned(IsSigned),
+        ValuesToRelease(std::move(ValuesToRelease)) {}
+};
+
+struct ConstraintTy {
+  RowTy Coefficients;
+
+  /// Number of variables the constraint is defined over.
+  unsigned NumVars = 0;
+
+  bool IsSigned = false;
+
+  ConstraintTy() = default;
+
+  ConstraintTy(RowTy Coefficients, unsigned NumVars, bool IsSigned, bool IsEq,
+               bool IsNe)
+      : Coefficients(std::move(Coefficients)), NumVars(NumVars),
+        IsSigned(IsSigned), IsEq(IsEq), IsNe(IsNe) {}
+
+  bool empty() const { return Coefficients.empty(); }
+
+  bool isEq() const { return IsEq; }
+
+  bool isNe() const { return IsNe; }
+
+  /// Check if the current constraint is implied by the given ConstraintSystem.
+  ///
+  /// \return true or false if the constraint is proven to be respectively true,
+  /// or false. When the constraint cannot be proven to be either true or false,
+  /// std::nullopt is returned.
+  std::optional<bool> isImpliedBy(const ConstraintSystem &CS) const;
+
+private:
+  bool IsEq = false;
+  bool IsNe = false;
+};
+
+/// Represents a (Coefficient * Variable) entry after IR decomposition.
+struct DecompEntry {
+  int64_t Coefficient;
+  Value *Variable;
+
+  DecompEntry(int64_t Coefficient, Value *Variable)
+      : Coefficient(Coefficient), Variable(Variable) {}
+};
+
+/// Represents an Offset + Coefficient1 * Variable1 + ... decomposition.
+struct Decomposition {
+  int64_t Offset = 0;
+  SmallVector<DecompEntry, 3> Vars;
+
+  Decomposition(int64_t Offset) : Offset(Offset) {}
+  Decomposition(Value *V) { Vars.emplace_back(1, V); }
+  Decomposition(int64_t Offset, ArrayRef<DecompEntry> Vars)
+      : Offset(Offset), Vars(Vars) {}
+
+  /// Add \p OtherOffset and return true if the operation overflows, i.e. the
+  /// new decomposition is invalid.
+  [[nodiscard]] bool add(int64_t OtherOffset) {
+    return AddOverflow(Offset, OtherOffset, Offset);
+  }
+
+  /// Add \p Other and return true if the operation overflows, i.e. the new
+  /// decomposition is invalid.
+  [[nodiscard]] bool add(const Decomposition &Other) {
+    if (add(Other.Offset))
+      return true;
+    append_range(Vars, Other.Vars);
+    return false;
+  }
+
+  /// Subtract \p Other and return true if the operation overflows, i.e. the new
+  /// decomposition is invalid.
+  [[nodiscard]] bool sub(const Decomposition &Other) {
+    Decomposition Tmp = Other;
+    if (Tmp.mul(-1))
+      return true;
+    if (add(Tmp.Offset))
+      return true;
+    append_range(Vars, Tmp.Vars);
+    return false;
+  }
+
+  /// Multiply all coefficients by \p Factor and return true if the operation
+  /// overflows, i.e. the new decomposition is invalid.
+  [[nodiscard]] bool mul(int64_t Factor) {
+    if (MulOverflow(Offset, Factor, Offset))
+      return true;
+    for (auto &Var : Vars)
+      if (MulOverflow(Var.Coefficient, Factor, Var.Coefficient))
+        return true;
+    return false;
+  }
+};
+
+/// Wrapper encapsulating separate constraint systems and corresponding value
+/// mappings for both unsigned and signed information. Facts are added to and
+/// conditions are checked against the corresponding system depending on the
+/// signed-ness of their predicates. While the information is kept separate
+/// based on signed-ness, certain conditions can be transferred between the two
+/// systems.
+class ConstraintInfo {
+
+  ConstraintSystem UnsignedCS;
+  ConstraintSystem SignedCS;
+
+  const DataLayout &DL;
+
+  /// Decompositions computed against the current state of the systems. Must be
+  /// cleared when the system changes.
+  DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> DecomposeCache;
+
+public:
+  DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> &
+  getDecomposeCache() {
+    return DecomposeCache;
+  }
+
+  ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs)
+      : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL) {
+    auto &Value2Index = getValue2Index(false);
+    // Add Arg > -1 constraints to unsigned system for all function arguments.
+    for (Value *Arg : FunctionArgs)
+      UnsignedCS.addRow({Entry(0, 0), Entry(-1, Value2Index.at(Arg))},
+                        Value2Index.size());
+  }
+
+  DenseMap<Value *, unsigned> &getValue2Index(bool Signed) {
+    return Signed ? SignedCS.getValue2Index() : UnsignedCS.getValue2Index();
+  }
+  const DenseMap<Value *, unsigned> &getValue2Index(bool Signed) const {
+    return Signed ? SignedCS.getValue2Index() : UnsignedCS.getValue2Index();
+  }
+
+  ConstraintSystem &getCS(bool Signed) {
+    return Signed ? SignedCS : UnsignedCS;
+  }
+  const ConstraintSystem &getCS(bool Signed) const {
+    return Signed ? SignedCS : UnsignedCS;
+  }
+
+  void popLastConstraint(bool Signed) {
+    assert(DecomposeCache.empty() && "Cache must be cleared");
+    getCS(Signed).popLastConstraint();
+  }
+  void popLastNVariables(bool Signed, unsigned N) {
+    assert(DecomposeCache.empty() && "Cache must be cleared");
+    getCS(Signed).popLastNVariables(N);
+  }
+
+  bool doesHold(CmpInst::Predicate Pred, Value *A, Value *B);
+
+  /// Returns true if \p V is known to be non-negative, either because the
+  /// signed system implies it or because ValueTracking can prove it.
+  bool isKnownNonNegative(Value *V);
+
+  void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
+               unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
+
+  /// Turn a comparison of the form \p Op0 \p Pred \p Op1 into a vector of
+  /// constraints, using indices from the corresponding constraint system.
+  /// New variables that need to be added to the system are collected in
+  /// \p NewVariables.
+  ConstraintTy getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
+                             SmallVectorImpl<Value *> &NewVariables,
+                             bool ForceSignedSystem = false);
+
+  /// Turns a comparison of the form \p Op0 \p Pred \p Op1 into a vector of
+  /// constraints using getConstraint. Returns an empty constraint if the result
+  /// cannot be used to query the existing constraint system, e.g. because it
+  /// would require adding new variables. Also tries to convert signed
+  /// predicates to unsigned ones if possible to allow using the unsigned system
+  /// which increases the effectiveness of the signed <-> unsigned transfer
+  /// logic.
+  ConstraintTy getConstraintForSolving(CmpInst::Predicate Pred, Value *Op0,
+                                       Value *Op1);
+
+  /// Try to add information from \p A \p Pred \p B to the unsigned/signed
+  /// system if \p Pred is signed/unsigned.
+  void transferToOtherSystem(CmpInst::Predicate Pred, Value *A, Value *B,
+                             unsigned NumIn, unsigned NumOut,
+                             SmallVectorImpl<StackEntry> &DFSInStack);
+
+private:
+  /// Adds facts into constraint system. \p ForceSignedSystem can be set when
+  /// the \p Pred is eq/ne, and signed constraint system is used when it's
+  /// specified.
+  void addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
+                   unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack,
+                   bool ForceSignedSystem);
+
+  /// Try to use the inequality \p A != \p B to tighten a non-strict bound the
+  /// system already implies to the corresponding strict bound.
+  void tightenBoundUsingNe(Value *A, Value *B, unsigned NumIn, unsigned NumOut,
+                           SmallVectorImpl<StackEntry> &DFSInStack);
+};
+
+// Variable and constant offsets for a chain of GEPs, with base pointer BasePtr.
+struct OffsetResult {
+  Value *BasePtr;
+  APInt ConstantOffset;
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
+  GEPNoWrapFlags NW;
+
+  OffsetResult() : BasePtr(nullptr), ConstantOffset(0, uint64_t(0)) {}
+
+  OffsetResult(GEPOperator &GEP, const DataLayout &DL)
+      : BasePtr(GEP.getPointerOperand()), NW(GEP.getNoWrapFlags()) {
+    ConstantOffset = APInt(DL.getIndexTypeSizeInBits(BasePtr->getType()), 0);
+  }
+};
+} // namespace
+
+// Try to collect variable and constant offsets for \p GEP, partly traversing
+// nested GEPs. Returns an OffsetResult with nullptr as BasePtr of collecting
+// the offset fails.
+static OffsetResult collectOffsets(GEPOperator &GEP, const DataLayout &DL) {
+  OffsetResult Result(GEP, DL);
+  unsigned BitWidth = Result.ConstantOffset.getBitWidth();
+  if (!GEP.collectOffset(DL, BitWidth, Result.VariableOffsets,
+                         Result.ConstantOffset))
+    return {};
+
+  // If we have a nested GEP, check if we can combine the constant offset of the
+  // inner GEP with the outer GEP.
+  if (auto *InnerGEP = dyn_cast<GetElementPtrInst>(Result.BasePtr)) {
+    SmallMapVector<Value *, APInt, 4> VariableOffsets2;
+    APInt ConstantOffset2(BitWidth, 0);
+    bool CanCollectInner = InnerGEP->collectOffset(
+        DL, BitWidth, VariableOffsets2, ConstantOffset2);
+    // TODO: Support cases with more than 1 variable offset.
+    if (!CanCollectInner || Result.VariableOffsets.size() > 1 ||
+        VariableOffsets2.size() > 1 ||
+        (Result.VariableOffsets.size() >= 1 && VariableOffsets2.size() >= 1)) {
+      // More than 1 variable index, use outer result.
+      return Result;
+    }
+    Result.BasePtr = InnerGEP->getPointerOperand();
+    Result.ConstantOffset += ConstantOffset2;
+    if (Result.VariableOffsets.size() == 0 && VariableOffsets2.size() == 1)
+      Result.VariableOffsets = std::move(VariableOffsets2);
+    Result.NW &= InnerGEP->getNoWrapFlags();
+  }
+  return Result;
+}
+
+static Decomposition decompose(Value *V, ConstraintInfo &Info, bool IsSigned,
+                               const DataLayout &DL);
+
+static bool canUseSExt(ConstantInt *CI) {
+  const APInt &Val = CI->getValue();
+  return Val.sgt(MinSignedConstraintValue) && Val.slt(MaxConstraintValue);
+}
+
+/// Returns true if \p Info implies that \p Op is in \p R, interpreting \p R as
+/// a signed range if \p Signed is set and as an unsigned range otherwise.
+static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
+                            const ConstantRange &R, bool Signed) {
+  if (R.isEmptySet() || (Signed ? R.isSignWrappedSet() : R.isWrappedSet()))
+    return false;
+
+  if (R.isFullSet())
+    return true;
+
+  unsigned BitWidth = R.getBitWidth();
+  APInt Min = Signed ? R.getSignedMin() : R.getUnsignedMin();
+  APInt Max = Signed ? R.getSignedMax() : R.getUnsignedMax();
+  APInt MinVal = Signed ? APInt::getSignedMinValue(BitWidth)
+                        : APInt::getMinValue(BitWidth);
+  APInt MaxVal = Signed ? APInt::getSignedMaxValue(BitWidth)
+                        : APInt::getMaxValue(BitWidth);
+  // Replace bound too large to be decomposed by the largest usable one.
+  if (!Signed && Max.uge(MaxConstraintValue))
+    Max = APInt(BitWidth, MaxConstraintValue - 1);
+
+  Type *Ty = Op->getType();
+  if (Min != MinVal &&
+      !Info.doesHold(Signed ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE, Op,
+                     ConstantInt::get(Ty, Min)))
+    return false;
+  if (Max != MaxVal &&
+      !Info.doesHold(Signed ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE, Op,
+                     ConstantInt::get(Ty, Max)))
+    return false;
+  return true;
+}
+
+/// Returns true if \p Opcode applied to \p Op0 and \p Op1 with \p NoWrapFlags
+/// is known to not wrap in signed or unsigned, depending on \p Signed.
+static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
+                          unsigned NoWrapFlags, ConstraintInfo &Info,
+                          bool Signed) {
+  using OBO = OverflowingBinaryOperator;
+
+  if (NoWrapFlags & (Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap))
+    return true;
+
+  if (Opcode == Instruction::Sub) {
+    // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
+    if (!Signed)
+      return Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1);
+
+    // Op0 - Op1 does not wrap signed if 0 <=s Op1 <=s Op0.
+    if (Info.isKnownNonNegative(Op1) &&
+        Info.doesHold(CmpInst::ICMP_SGE, Op0, Op1))
+      return true;
+  }
+
+  if (!Signed && (NoWrapFlags & OBO::NoSignedWrap) &&
+      (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1)) &&
+      Info.isKnownNonNegative(Op0))
+    return true;
+
+  // For a constant Op1, the ranges of Op0 for which the operation does not
+  // wrap are known exactly; check if the systems imply one of them.
+  auto *C = dyn_cast<ConstantInt>(Op1);
+  if (!C)
+    return false;
+
+  return doesHoldInRange(Info, Op0,
+                         ConstantRange::makeExactNoWrapRegion(
+                             Opcode, C->getValue(),
+                             Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap),
+                         Signed);
+}
+
+/// Returns true if \p V is known to not wrap in signed or unsigned, depending
+/// on \p Signed.
+static bool isKnownNoWrap(Value *V, ConstraintInfo &Info, bool Signed) {
+  if (match(V, m_DisjointOr(m_Value(), m_Value())))
+    return true;
+
+  if (auto *WO = dyn_cast<WithOverflowInst>(V))
+    return isKnownNoWrap(WO->getBinaryOp(), WO->getLHS(), WO->getRHS(),
+                         /*NoWrapFlags=*/0, Info, Signed);
+
+  if (auto *Trunc = dyn_cast<TruncInst>(V)) {
+    if (Signed)
+      return Trunc->hasNoSignedWrap();
+
+    // A trunc nsw only truncates without unsigned wrap if its operand is
+    // non-negative.
+    return Trunc->hasNoUnsignedWrap() ||
+           (Trunc->hasNoSignedWrap() &&
+            Info.isKnownNonNegative(Trunc->getOperand(0)));
+  }
+
+  auto *BO = dyn_cast<OverflowingBinaryOperator>(V);
+  return BO &&
+         isKnownNoWrap(static_cast<Instruction::BinaryOps>(BO->getOpcode()),
+                       BO->getOperand(0), BO->getOperand(1),
+                       BO->getNoWrapKind(), Info, Signed);
+}
+
+static Decomposition decomposeGEP(GEPOperator &GEP, ConstraintInfo &Info,
+                                  bool IsSigned, const DataLayout &DL) {
+  // Do not reason about pointers where the index size is larger than 64 bits,
+  // as the coefficients used to encode constraints are 64 bit integers.
+  if (DL.getIndexTypeSizeInBits(GEP.getPointerOperand()->getType()) > 64)
+    return &GEP;
+
+  assert(!IsSigned && "The logic below only supports decomposition for "
+                      "unsigned predicates at the moment.");
+  const auto &[BasePtr, ConstantOffset, VariableOffsets, NW] =
+      collectOffsets(GEP, DL);
+  // We support either plain gep nuw, or gep nusw with non-negative offset,
+  // which implies gep nuw.
+  if (!BasePtr || NW == GEPNoWrapFlags::none())
+    return &GEP;
+
+  // For a nuw-only GEP (nuw without nusw/inbounds), the offset must be
+  // interpreted as unsigned.
+  if (!NW.hasNoUnsignedSignedWrap() && ConstantOffset.isNegative())
+    return &GEP;
+
+  Decomposition Result(ConstantOffset.getSExtValue(), DecompEntry(1, BasePtr));
+  for (auto [Index, Scale] : VariableOffsets) {
+    if (!NW.hasNoUnsignedWrap()) {
+      // Try to prove nuw from nusw and nneg. If the index cannot be proven
+      // non-negative, keep the GEP as-is instead of decomposing it.
+      assert(NW.hasNoUnsignedSignedWrap() && "Must have nusw flag");
+      if (!Info.isKnownNonNegative(Index))
+        return &GEP;
+    }
+
+    auto IdxResult = decompose(Index, Info, IsSigned, DL);
+    if (IdxResult.mul(Scale.getSExtValue()))
+      return &GEP;
+    if (Result.add(IdxResult))
+      return &GEP;
+  }
+  return Result;
+}
+
+// Decomposes \p V into a constant offset + list of pairs { Coefficient,
+// Variable } where Coefficient * Variable. The sum of the constant offset and
+// pairs equals \p V.
+//
+// Looking through certain expressions is only valid if a pre-condition holds.
+// Pre-conditions are checked against \p Info as needed.
+static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
+                                   bool IsSigned, const DataLayout &DL);
+
+/// Returns true if \p V is an operation decomposeImpl can look through.
+static bool mayLookThrough(Value *V) {
+  auto *Op = dyn_cast<Operator>(V);
+  if (!Op)
+    return false;
+  switch (Op->getOpcode()) {
+  case Instruction::GetElementPtr:
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::Shl:
+  case Instruction::ZExt:
+  case Instruction::SExt:
+  case Instruction::Trunc:
+  case Instruction::Or:
+  case Instruction::Xor:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static Decomposition decompose(Value *V, ConstraintInfo &Info, bool IsSigned,
+                               const DataLayout &DL) {
+  if (!mayLookThrough(V))
+    return decomposeImpl(V, Info, IsSigned, DL);
+
+  PointerIntPair<Value *, 1, bool> Key(V, IsSigned);
+  auto &Cache = Info.getDecomposeCache();
+  auto It = Cache.find(Key);
+  if (It != Cache.end())
+    return It->second;
+
+  Decomposition Result = decomposeImpl(V, Info, IsSigned, DL);
+  Info.getDecomposeCache().insert({Key, Result});
+  return Result;
+}
+
+static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
+                                   bool IsSigned, const DataLayout &DL) {
+  auto MergeResults = [&Info, IsSigned,
+                       &DL](Value *A, Value *B,
+                            bool IsSignedB) -> std::optional<Decomposition> {
+    auto ResA = decompose(A, Info, IsSigned, DL);
+    auto ResB = decompose(B, Info, IsSignedB, DL);
+    if (ResA.add(ResB))
+      return std::nullopt;
+    return ResA;
+  };
+
+  Type *Ty = V->getType()->getScalarType();
+  if (Ty->isPointerTy() && !IsSigned) {
+    if (auto *GEP = dyn_cast<GEPOperator>(V))
+      return decomposeGEP(*GEP, Info, IsSigned, DL);
+    if (isa<ConstantPointerNull>(V))
+      return int64_t(0);
+
+    return V;
+  }
+
+  // Don't handle integers > 64 bit. Our coefficients are 64-bit large, so
+  // coefficient add/mul may wrap, while the operation in the full bit width
+  // would not.
+  if (!Ty->isIntegerTy() || Ty->getIntegerBitWidth() > 64)
+    return V;
+
+  if (auto *CI = dyn_cast<ConstantInt>(V)) {
+    if (IsSigned) {
+      if (canUseSExt(CI))
+        return CI->getSExtValue();
+    } else if (!CI->uge(MaxConstraintValue)) {
+      return int64_t(CI->getZExtValue());
+    }
+    return V;
+  }
+
+  Value *Op0;
+  Value *Op1;
+  ConstantInt *CI;
+
+  if (match(V, m_ZExt(m_Value(Op0)))) {
+    // In the signed system, the ZExt must be non-negative.
+    if (IsSigned && !cast<ZExtInst>(V)->hasNonNeg())
+      return V;
+    V = Op0;
+  } else if (match(V, m_SExt(m_Value(Op0)))) {
+    // In the unsigned system, the SExt operand must be non-negative.
+    if (!IsSigned && !Info.isKnownNonNegative(Op0))
+      return V;
+    V = Op0;
+  } else if (auto *Trunc = dyn_cast<TruncInst>(V)) {
+    if (Trunc->getSrcTy()->getScalarSizeInBits() <= 64 &&
+        isKnownNoWrap(Trunc, Info, IsSigned))
+      V = Trunc->getOperand(0);
+  }
+
+  if (match(V, m_AddLike(m_Value(Op0), m_Value(Op1)))) {
+    if (isKnownNoWrap(V, Info, IsSigned)) {
+      if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
+        return *Decomp;
+      return V;
+    }
+    // In the unsigned system, adding a negative constant only wraps if Op0 is
+    // smaller than it.
+    if (!IsSigned && match(Op1, m_ConstantInt(CI)) && CI->isNegative() &&
+        canUseSExt(CI) &&
+        Info.doesHold(CmpInst::ICMP_UGE, Op0,
+                      ConstantInt::get(Op0->getType(), -CI->getSExtValue())))
+      if (auto Decomp = MergeResults(Op0, CI, /*IsSignedB=*/true))
+        return *Decomp;
+    return V;
+  }
+
+  // `xor %x, -1` is equivalent to `sub nsw -1, %x`.
+  if (IsSigned && match(V, m_Not(m_Value(Op0)))) {
+    Decomposition Result(-1);
+    if (!Result.sub(decompose(Op0, Info, IsSigned, DL)))
+      return Result;
+    return V;
+  }
+
+  if (match(V, m_Sub(m_Value(Op0), m_Value(Op1)))) {
+    if (isKnownNoWrap(V, Info, IsSigned)) {
+      auto ResA = decompose(Op0, Info, IsSigned, DL);
+      auto ResB = decompose(Op1, Info, IsSigned, DL);
+      if (!ResA.sub(ResB))
+        return ResA;
+    }
+    return V;
+  }
+
+  if (match(V, m_Mul(m_Value(Op0), m_ConstantInt(CI)))) {
+    // A negative constant is only a valid coefficient in the signed system; in
+    // the unsigned system the multiplier is the constant's unsigned value.
+    if (canUseSExt(CI) && (IsSigned || !CI->isNegative()) &&
+        isKnownNoWrap(V, Info, IsSigned)) {
+      auto Result = decompose(Op0, Info, IsSigned, DL);
+      if (!Result.mul(CI->getSExtValue()))
+        return Result;
+    }
+    return V;
+  }
+
+  if (match(V, m_Shl(m_Value(Op0), m_ConstantInt(CI)))) {
+    // (shl x, shift) is (mul x, 1 << shift). The scale must fit in the signed
+    // coefficient, so reject shifts >= 63. Also reject a shift of bw-1, for
+    // which the product is not representable.
+    int64_t MaxShift = IsSigned ? Ty->getIntegerBitWidth() - 1 : 63;
+    if (!CI->isNegative() && CI->getSExtValue() < MaxShift &&
+        isKnownNoWrap(V, Info, IsSigned)) {
+      auto Result = decompose(Op0, Info, IsSigned, DL);
+      if (!Result.mul(int64_t{1} << CI->getSExtValue()))
+        return Result;
+    }
+    return V;
+  }
+
+  return V;
+}
+
+/// Build the row for 'ADec <= BDec', using the indices from \p Value2Index.
+/// Variables not in \p Value2Index are appended to \p NewVariables and get the
+/// indices following the ones in \p Value2Index. Returns an empty row if the
+/// coefficients overflow.
+static RowTy getRowForLessEqual(const Decomposition &ADec,
+                                const Decomposition &BDec,
+                                const DenseMap<Value *, unsigned> &Value2Index,
+                                SmallVectorImpl<Value *> &NewVariables) {
+  // Build the row, by first adding all coefficients from A and then subtracting
+  // all coefficients from B.
+  int64_t OffsetSum;
+  if (SubOverflow(BDec.Offset, ADec.Offset, OffsetSum))
+    return {};
+  RowTy R(1, Entry(OffsetSum, 0));
+  auto GetCoefficient = [&R](unsigned Idx) -> int64_t & {
+    // The entry for Idx, or the place to insert it at, is the first entry with
+    // an index >= Idx.
+    Entry *I =
+        find_if(drop_begin(R), [Idx](const Entry &E) { return E.Id >= Idx; });
+    if (I == R.end() || I->Id != Idx)
+      I = R.insert(I, Entry(0, Idx));
+    return I->Coefficient;
+  };
+  // First try to look up \p V in Value2Index and NewVariables. Otherwise add a
+  // new entry to NewVariables.
+  auto GetOrAddIndex = [&Value2Index, &NewVariables](Value *V) -> unsigned {
+    auto V2I = Value2Index.find(V);
+    if (V2I != Value2Index.end())
+      return V2I->second;
+    unsigned Idx = find(NewVariables, V) - NewVariables.begin();
+    if (Idx == NewVariables.size())
+      NewVariables.push_back(V);
+    return Value2Index.size() + Idx + 1;
+  };
+  for (const DecompEntry &KV : ADec.Vars)
+    GetCoefficient(GetOrAddIndex(KV.Variable)) += KV.Coefficient;
+
+  for (const DecompEntry &KV : BDec.Vars) {
+    auto &Coeff = GetCoefficient(GetOrAddIndex(KV.Variable));
+    if (SubOverflow(Coeff, KV.Coefficient, Coeff))
+      return {};
+  }
+
+  // Drop coefficients that cancelled out.
+  erase_if(R, [](const Entry &E) { return E.Id != 0 && E.Coefficient == 0; });
+  return R;
+}
+
+ConstraintTy
+ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
+                              SmallVectorImpl<Value *> &NewVariables,
+                              bool ForceSignedSystem) {
+  assert(NewVariables.empty() && "NewVariables must be empty when passed in");
+  assert((!ForceSignedSystem || CmpInst::isEquality(Pred)) &&
+         "signed system can only be forced on eq/ne");
+
+  bool IsEq = false;
+  bool IsNe = false;
+
+  // Try to convert Pred to one of ULE/ULT/SLE/SLT.
+  switch (Pred) {
+  case CmpInst::ICMP_UGT:
+  case CmpInst::ICMP_UGE:
+  case CmpInst::ICMP_SGT:
+  case CmpInst::ICMP_SGE: {
+    Pred = CmpInst::getSwappedPredicate(Pred);
+    std::swap(Op0, Op1);
+    break;
+  }
+  case CmpInst::ICMP_EQ:
+    if (!ForceSignedSystem && match(Op1, m_Zero())) {
+      Pred = CmpInst::ICMP_ULE;
+    } else {
+      IsEq = true;
+      Pred = CmpInst::ICMP_ULE;
+    }
+    break;
+  case CmpInst::ICMP_NE:
+    if (!ForceSignedSystem && match(Op1, m_Zero())) {
+      Pred = CmpInst::getSwappedPredicate(CmpInst::ICMP_UGT);
+      std::swap(Op0, Op1);
+    } else {
+      IsNe = true;
+      Pred = CmpInst::ICMP_ULE;
+    }
+    break;
+  default:
+    break;
+  }
+
+  if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT &&
+      Pred != CmpInst::ICMP_SLE && Pred != CmpInst::ICMP_SLT)
+    return {};
+
+  bool IsSigned = ForceSignedSystem || CmpInst::isSigned(Pred);
+  auto &Value2Index = getValue2Index(IsSigned);
+  auto ADec = decompose(Op0->stripPointerCastsSameRepresentation(), *this,
+                        IsSigned, DL);
+  auto BDec = decompose(Op1->stripPointerCastsSameRepresentation(), *this,
+                        IsSigned, DL);
+  RowTy R = getRowForLessEqual(ADec, BDec, Value2Index, NewVariables);
+  if (R.empty())
+    return {};
+
+  if (Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_ULT)
+    if (AddOverflow(R[0].Coefficient, int64_t(-1), R[0].Coefficient))
+      return {};
+
+  // Remove any new variable without a coefficient in the row.
+  unsigned NumV2I = Value2Index.size();
+  NewVariables.truncate(R.back().Id > NumV2I ? R.back().Id - NumV2I : 0);
+
+  return ConstraintTy(std::move(R), Value2Index.size() + NewVariables.size(),
+                      IsSigned, IsEq, IsNe);
+}
+
+ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
+                                                     Value *Op0, Value *Op1) {
+  Constant *NullC = Constant::getNullValue(Op0->getType());
+  // Handle trivially true compares directly to avoid adding V UGE 0 constraints
+  // for all variables in the unsigned system.
+  if ((Pred == CmpInst::ICMP_ULE && Op0 == NullC) ||
+      (Pred == CmpInst::ICMP_UGE && Op1 == NullC)) {
+    // Return constraint that's trivially true.
+    return ConstraintTy(RowTy(1, Entry(0, 0)), /*NumVars=*/0,
+                        /*IsSigned=*/false, /*IsEq=*/false, /*IsNe=*/false);
+  }
+
+  // If both operands are known to be non-negative, change signed predicates to
+  // unsigned ones. This increases the reasoning effectiveness in combination
+  // with the signed <-> unsigned transfer logic.
+  if (CmpInst::isSigned(Pred) &&
+      ::isKnownNonNegative(Op0, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1) &&
+      ::isKnownNonNegative(Op1, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
+    Pred = ICmpInst::getUnsignedPredicate(Pred);
+
+  SmallVector<Value *> NewVariables;
+  ConstraintTy R = getConstraint(Pred, Op0, Op1, NewVariables);
+  if (!NewVariables.empty())
+    return {};
+  return R;
+}
+
+std::optional<bool>
+ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
+  const auto &[SubCS, NewCoefficients] = CS.getSubSystem(Coefficients);
+  bool IsConditionImplied = SubCS.isConditionImplied(NewCoefficients);
+
+  if (IsEq || IsNe) {
+    auto NegatedOrEqual = ConstraintSystem::negateOrEqual(NewCoefficients);
+    bool IsNegatedOrEqualImplied =
+        !NegatedOrEqual.empty() && SubCS.isConditionImplied(NegatedOrEqual);
+
+    // In order to check that `%a == %b` is true (equality), both conditions `%a
+    // >= %b` and `%a <= %b` must hold true. When checking for equality (`IsEq`
+    // is true), we return true if they both hold, false in the other cases.
+    if (IsConditionImplied && IsNegatedOrEqualImplied)
+      return IsEq;
+
+    auto Negated = ConstraintSystem::negate(NewCoefficients);
+    bool IsNegatedImplied =
+        !Negated.empty() && SubCS.isConditionImplied(Negated);
+
+    auto StrictLessThan = ConstraintSystem::toStrictLessThan(NewCoefficients);
+    bool IsStrictLessThanImplied =
+        !StrictLessThan.empty() && SubCS.isConditionImplied(StrictLessThan);
+
+    // In order to check that `%a != %b` is true (non-equality), either
+    // condition `%a > %b` or `%a < %b` must hold true. When checking for
+    // non-equality (`IsNe` is true), we return true if one of the two holds,
+    // false in the other cases.
+    if (IsNegatedImplied || IsStrictLessThanImplied)
+      return IsNe;
+
+    return std::nullopt;
+  }
+
+  if (IsConditionImplied)
+    return true;
+
+  auto Negated = ConstraintSystem::negate(NewCoefficients);
+  auto IsNegatedImplied = !Negated.empty() && SubCS.isConditionImplied(Negated);
+  if (IsNegatedImplied)
+    return false;
+
+  // Neither the condition nor its negated holds, did not prove anything.
+  return std::nullopt;
+}
+
+bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A, Value *B) {
+  auto R = getConstraintForSolving(Pred, A, B);
+  return !R.empty() &&
+         getCS(R.IsSigned).isConditionImpliedInSubSystem(R.Coefficients);
+}
+
+bool ConstraintInfo::isKnownNonNegative(Value *V) {
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return !CI->isNegative();
+  return ::isKnownNonNegative(V, DL) ||
+         doesHold(CmpInst::ICMP_SGE, V, ConstantInt::get(V->getType(), 0));
+}
+
+void ConstraintInfo::transferToOtherSystem(
+    CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
+    unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack) {
+  // Check if we can combine facts from the signed and unsigned systems to
+  // derive additional facts.
+  if (!A->getType()->isIntegerTy())
+    return;
+  // FIXME: This currently depends on the order we add facts. Ideally we
+  // would first add all known facts and only then try to add additional
+  // facts.
+  switch (Pred) {
+  default:
+    break;
+  case CmpInst::ICMP_ULT:
+  case CmpInst::ICMP_ULE:
+    //  If B is a signed positive constant, then A >=s 0 and A <s (or <=s) B.
+    if (isKnownNonNegative(B)) {
+      addFact(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0), NumIn,
+              NumOut, DFSInStack);
+      addFact(ICmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
+              DFSInStack);
+    }
+    break;
+  case CmpInst::ICMP_UGE:
+  case CmpInst::ICMP_UGT:
+    //  If A is a signed positive constant, then B >=s 0 and A >s (or >=s) B.
+    if (isKnownNonNegative(A)) {
+      addFact(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0), NumIn,
+              NumOut, DFSInStack);
+      addFact(ICmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
+              DFSInStack);
+    }
+    break;
+  case CmpInst::ICMP_SLT:
+  case CmpInst::ICMP_SLE:
+    if (isKnownNonNegative(A))
+      addFact(ICmpInst::getUnsignedPredicate(Pred), A, B, NumIn, NumOut,
+              DFSInStack);
+    break;
+  case CmpInst::ICMP_SGT: {
+    if (doesHold(CmpInst::ICMP_SGE, B, Constant::getAllOnesValue(B->getType())))
+      addFact(CmpInst::ICMP_UGE, A, ConstantInt::get(B->getType(), 0), NumIn,
+              NumOut, DFSInStack);
+    if (isKnownNonNegative(B))
+      addFact(CmpInst::ICMP_UGT, A, B, NumIn, NumOut, DFSInStack);
+
+    break;
+  }
+  case CmpInst::ICMP_SGE:
+    if (isKnownNonNegative(B))
+      addFact(CmpInst::ICMP_UGE, A, B, NumIn, NumOut, DFSInStack);
+    break;
+  }
+}
+
+#ifndef NDEBUG
+
+static void dumpConstraint(ArrayRef<Entry> C,
+                           const DenseMap<Value *, unsigned> &Value2Index) {
+  ConstraintSystem CS(Value2Index);
+  CS.addRow(C, Value2Index.size());
+  CS.dump();
+}
+#endif
+
+/// Splits the induction phi \p PN into the start value, coming from the loop
+/// predecessor \p LoopPred, and the backedge value, coming from inside the
+/// loop. Returns {nullptr, nullptr} if \p PN has other incoming values.
+static std::pair<Value *, Value *>
+getStartAndBackedgeValue(const PHINode &PN, const BasicBlock *LoopPred) {
+  assert(PN.getBasicBlockIndex(LoopPred) >= 0 &&
+         "LoopPred must be a predecessor of the phi's block");
+  if (PN.getNumIncomingValues() != 2)
+    return {nullptr, nullptr};
+  unsigned StartIdx = PN.getIncomingBlock(0) == LoopPred ? 0 : 1;
+  return {PN.getIncomingValue(StartIdx), PN.getIncomingValue(1 - StartIdx)};
+}
+
+/// Matches an increment of \p PhiM by a constant offset, captured in \p Off.
+/// The increment must be a plain IR add or [u|s]add.with.overflow.
+template <typename PhiMatchTy>
+static auto m_IncrementOf(const PhiMatchTy &PhiM, const APInt *&Off) {
+  return m_CombineOr(
+      m_c_Add(PhiM, m_APInt(Off)),
+      m_ExtractValue<0>(m_CombineOr(
+          m_c_Intrinsic<Intrinsic::uadd_with_overflow>(PhiM, m_APInt(Off)),
+          m_c_Intrinsic<Intrinsic::sadd_with_overflow>(PhiM, m_APInt(Off)))));
+}
+
+MonotonicInfo State::getMonotonicityInfo(PHINode &PN, Value *Step) {
+  MonotonicInfo Info;
+  const APInt *StepOffset = nullptr;
+  if (match(Step, m_IncrementOf(m_Specific(&PN), StepOffset))) {
+    Info.Decreasing = StepOffset->isNegative();
+    if (const auto *Add = dyn_cast<OverflowingBinaryOperator>(Step)) {
+      Info.Unsigned = !Info.Decreasing && Add->hasNoUnsignedWrap();
+      Info.Signed = Add->hasNoSignedWrap();
+    }
+  } else if (const auto *GEP = dyn_cast<GEPOperator>(Step)) {
+    // TODO: Handle the non-increasing direction, which needs a nusw GEP with a
+    // negative constant offset.
+    const DataLayout &DL = PN.getDataLayout();
+    APInt GEPOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+    Info.Unsigned = GEP->getPointerOperand() == &PN &&
+                    (GEP->hasNoUnsignedWrap() ||
+                     ((GEP->hasNoUnsignedSignedWrap() &&
+                       GEP->accumulateConstantOffset(DL, GEPOffset) &&
+                       !GEPOffset.isNegative())));
+  }
+
+  // Forming the SCEV of a phi is expensive, so only consult it for a PN + C
+  // step whose no-wrap flags prove nothing.
+  if (Info.Unsigned || Info.Signed || !StepOffset)
+    return Info;
+
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
+  if (!AR)
+    return Info;
+  ScalarEvolution::MonotonicPredicateType Expected =
+      Info.Decreasing ? ScalarEvolution::MonotonicallyDecreasing
+                      : ScalarEvolution::MonotonicallyIncreasing;
+  auto IsMonotonic = [&](CmpInst::Predicate Pred) {
+    return SE.getMonotonicPredicateType(AR, Pred) == Expected;
+  };
+  Info.Signed = IsMonotonic(CmpInst::ICMP_SGT);
+  Info.Unsigned = !Info.Decreasing && IsMonotonic(CmpInst::ICMP_UGT);
+  return Info;
+}
+
+void State::addBoundsForHeaderInductions(BasicBlock &BB) {
+  Loop *L = LI.getLoopFor(&BB);
+  if (!L || L->getHeader() != &BB)
+    return;
+  BasicBlock *LoopPred = L->getLoopPredecessor();
+  if (!LoopPred)
+    return;
+
+  DomTreeNode *DTN = DT.getNode(&BB);
+  for (PHINode &PN : BB.phis()) {
+    if (!PN.getType()->isIntegerTy() && !PN.getType()->isPointerTy())
+      continue;
+
+    auto [Start, Step] = getStartAndBackedgeValue(PN, LoopPred);
+    if (!Start)
+      continue;
+
+    MonotonicInfo Info = getMonotonicityInfo(PN, Step);
+    // Every variable in the unsigned system already has a `V >= 0` row, so a
+    // zero start value would just duplicate it.
+    if (match(Start, m_Zero()))
+      Info.Unsigned = false;
+    if (!Info.Unsigned && !Info.Signed)
+      continue;
+
+    // A non-decreasing induction cannot step below its start value, and a
+    // non-increasing one cannot step above it.
+    Value *LHS = &PN, *RHS = Start;
+    if (Info.Decreasing)
+      std::swap(LHS, RHS);
+    CmpPredicate Pred(Info.Unsigned ? CmpInst::ICMP_UGE : CmpInst::ICMP_SGE,
+                      /*HasSameSign=*/Info.Unsigned && Info.Signed);
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, Pred, LHS, RHS));
+  }
+}
+
+void State::addInfoForInductions(BasicBlock &BB) {
+  auto *L = LI.getLoopFor(&BB);
+  if (!L)
+    return;
+
+  BasicBlock *Header = L->getHeader();
+  BasicBlock *Latch = L->getLoopLatch();
+  if (Header != &BB && Latch != &BB)
+    return;
+
+  // A is either a phi or a post-increment PN + C with constant step. For the
+  // latter, extract the constant IncStep.
+  Value *A;
+  Value *B;
+  PHINode *PN = nullptr;
+  const APInt *IncStep = nullptr;
+  CmpPredicate Pred;
+  auto IndValue =
+      m_Value(A, m_CombineOr(m_Phi(PN), m_IncrementOf(m_Phi(PN), IncStep)));
+
+  auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
+  if (!Br)
+    return;
+
+  auto CountingCmp = m_c_ICmp(Pred, IndValue, m_Value(B));
+  std::optional<bool> PeeledOnEdge;
+  if (!match(Br->getCondition(), CountingCmp)) {
+    // Look through AND/OR, and remember which edge requires all operands to be
+    // true.
+    if (match(Br->getCondition(), m_c_LogicalAnd(CountingCmp, m_Value())))
+      PeeledOnEdge = true;
+    else if (match(Br->getCondition(), m_c_LogicalOr(CountingCmp, m_Value())))
+      PeeledOnEdge = false;
+    else
+      return;
+  }
+
+  if (PN->getParent() != Header || PN->getNumIncomingValues() != 2 ||
+      !SE.isSCEVable(PN->getType()))
+    return;
+
+  // For latch conditions, we need to inject the condition that holds for the
+  // next iteration into the header. We limit to post-inc conditions, for which
+  // an original PN + Step != B condition results in a PN < B constraint in the
+  // header, which also holds for the next loop iteration. This would no longer
+  // be correct if the post-inc handling would inject a more precise PN + Step <
+  // B constraint instead.
+  if (&BB == Latch && !IncStep)
+    return;
+
+  bool ContinueOnTrue =
+      Pred == CmpInst::ICMP_NE || ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
+  CmpInst::Predicate ContinuePred =
+      ContinueOnTrue ? Pred.dropSameSign() : CmpInst::getInversePredicate(Pred);
+  BasicBlock *InLoopSucc = Br->getSuccessor(ContinueOnTrue ? 0 : 1);
+
+  // The peeled condition only implies the compare on the edge where the
+  // combined condition forces its operands, which must be the in-loop edge.
+  if (PeeledOnEdge && *PeeledOnEdge != ContinueOnTrue)
+    return;
+
+  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB))
+    return;
+
+  BasicBlock *LoopPred = L->getLoopPredecessor();
+  if (!LoopPred || !L->isLoopInvariant(B))
+    return;
+
+  auto [StartValue, Backedge] = getStartAndBackedgeValue(*PN, LoopPred);
+  DomTreeNode *DTN = DT.getNode(InLoopSucc);
+
+  if (ICmpInst::isRelational(ContinuePred)) {
+    if (A != Backedge)
+      return;
+
+    // The latch condition ensures ContinuePred holds in the header on each
+    // iteration other than the first. Together with a precondition on the start
+    // value (StartValue ContinuePred B), we can add B as bound of PN.
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, ContinuePred, PN, B, ConditionTy(ContinuePred, StartValue, B)));
+
+    // A signed bound can be translated to the unsigned system if PN is signed
+    // non-decreasing (StartValue s<= PN s< B) and StartValue u< B holds.
+    // Then StartValue, PN and B must all have the same sign.
+    if (ICmpInst::isSigned(ContinuePred)) {
+      assert((ContinuePred == CmpInst::ICMP_SLT ||
+              ContinuePred == CmpInst::ICMP_SLE) &&
+             "Expected a signed less-than continuation predicate");
+      MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
+      if (Info.Signed && !Info.Decreasing) {
+        CmpInst::Predicate UPred = ICmpInst::getUnsignedPredicate(ContinuePred);
+        WorkList.push_back(FactOrCheck::getConditionFact(
+            DTN, UPred, PN, B, ConditionTy(UPred, StartValue, B)));
+      }
+    }
+
+    // A relational latch steps past B rather than landing on it, so none of the
+    // reasoning below applies.
+    return;
+  }
+
+  const APInt *StepOffset = nullptr;
+  const SCEV *StartSCEV = nullptr;
+  if (match(Backedge, m_c_Add(m_Specific(PN), m_APInt(StepOffset)))) {
+    if (StepOffset->isZero())
+      return;
+  } else {
+    const SCEV *Expr = SE.getSCEV(PN);
+    if (!match(Expr,
+               m_scev_AffineAddRec(m_SCEV(StartSCEV), m_scev_APInt(StepOffset),
+                                   m_SpecificLoop(L))))
+      return;
+  }
+
+  // If we looked through `PN + C`, only derive facts when that add is
+  // really the induction's post-increment or post-decrement.
+  if (IncStep && *IncStep != *StepOffset)
+    return;
+
+  MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
+
+  // Handle negative steps.
+  if (StepOffset->isNegative()) {
+    // TODO: Extend to allow steps > -1.
+    if (!(-*StepOffset).isOne())
+      return;
+
+    // AR may wrap.
+    // The loop exits once the compared value reaches B, that is at PN == B when
+    // comparing the phi, and at PN == B + 1 for a post-decrement. Use
+    // non-strict predicate for the former, and a strict one for the latter to
+    // ensure the loop exits before wrapping.
+    CmpInst::Predicate UPrecond =
+        IncStep ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE;
+    ConditionTy BBeforeStartUnsigned = {UPrecond, B, StartValue};
+    ConditionTy BBeforeStartSigned = {ICmpInst::getSignedPredicate(UPrecond), B,
+                                      StartValue};
+
+    // AR may wrap, so both facts are conditional on B being below StartValue.
+    // Add StartValue >= PN, which holds as the loop exits before wrapping.
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_UGE, StartValue, PN, BBeforeStartUnsigned));
+    if (!(Info.Decreasing && Info.Signed))
+      WorkList.push_back(FactOrCheck::getConditionFact(
+          DTN, CmpInst::ICMP_SGE, StartValue, PN, BBeforeStartSigned));
+    // Add PN > B, which holds as the loop exits when reaching B.
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_UGT, PN,
+                                                     B, BBeforeStartUnsigned));
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SGT, PN,
+                                                     B, BBeforeStartSigned));
+    return;
+  }
+
+  // Make sure AR either steps by 1 or that the value we compare against is a
+  // GEP based on the same start value and all offsets are a multiple of the
+  // step size, to guarantee that the induction will reach the value.
+  if (StepOffset->isZero() || StepOffset->isNegative())
+    return;
+
+  if (!StepOffset->isOne()) {
+    // Check whether B-Start is known to be a multiple of StepOffset.
+    if (!StartSCEV)
+      StartSCEV = SE.getSCEV(StartValue);
+    const SCEV *BMinusStart = SE.getMinusSCEV(SE.getSCEV(B), StartSCEV);
+    if (isa<SCEVCouldNotCompute>(BMinusStart) ||
+        !SE.getConstantMultiple(BMinusStart).urem(*StepOffset).isZero())
+      return;
+  }
+
+  // We already established that B - Start is a multiple of Step above. The loop
+  // exits once the compared value reaches B, that is at PN == B when comparing
+  // the phi, and at PN + Step == B for a post-increment. Together with the
+  // added precondition StartValue <= B for the former and the strict
+  // StartValue < B for the latter (which implies StartValue + Step <= B),
+  // neither PN nor the increment can wrap.
+  CmpInst::Predicate UPrecond = IncStep ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE;
+  ConditionTy StartBeforeBoundUnsigned = {UPrecond, StartValue, B};
+  ConditionTy StartBeforeBoundSigned = {ICmpInst::getSignedPredicate(UPrecond),
+                                        StartValue, B};
+
+  // Add PN >= StartValue, as the loop exits before wrapping.
+  if (!Info.Unsigned)
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_UGE, PN, StartValue, StartBeforeBoundUnsigned));
+  if (!Info.Signed)
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSigned));
+  // Add PN < B, as the loop exits once the compared value reaches B.
+  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
+                                                   B, StartBeforeBoundSigned));
+  WorkList.push_back(FactOrCheck::getConditionFact(
+      DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
+
+  // Try to add condition from the header or latch to the dedicated exit
+  // blocks. When exiting either with EQ or NE, we know that the induction value
+  // must be u<= B, as other exits may only exit earlier.
+  assert(!StepOffset->isNegative() && "induction must be increasing");
+  assert(ContinuePred == CmpInst::ICMP_NE && "unsupported predicate");
+  SmallVector<BasicBlock *> ExitBBs;
+  L->getExitBlocks(ExitBBs);
+  for (BasicBlock *EB : ExitBBs) {
+    // Bail out on non-dedicated exits.
+    if (DT.dominates(&BB, EB)) {
+      WorkList.emplace_back(FactOrCheck::getConditionFact(
+          DT.getNode(EB), CmpInst::ICMP_ULE, A, B, StartBeforeBoundUnsigned));
+    }
+  }
+}
+
+static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
+                                          uint64_t AccessSize,
+                                          CmpPredicate &Pred, Value *&A,
+                                          Value *&B, const DataLayout &DL,
+                                          const TargetLibraryInfo &TLI) {
+  auto Offset = collectOffsets(cast<GEPOperator>(GEP), DL);
+  if (!Offset.NW.hasNoUnsignedWrap())
+    return false;
+
+  if (Offset.VariableOffsets.size() != 1)
+    return false;
+
+  uint64_t BitWidth = Offset.ConstantOffset.getBitWidth();
+  auto &[Index, Scale] = Offset.VariableOffsets.front();
+  // Bail out on non-canonical GEPs.
+  if (Index->getType()->getScalarSizeInBits() != BitWidth)
+    return false;
+
+  ObjectSizeOpts Opts;
+  // Workaround for gep inbounds, ptr null, idx.
+  Opts.NullIsUnknownSize = true;
+  // Be conservative since we are not clear on whether an out of bounds access
+  // to the padding is UB or not.
+  Opts.RoundToAlign = true;
+  std::optional<TypeSize> Size =
+      getBaseObjectSize(Offset.BasePtr, DL, &TLI, Opts);
+  if (!Size || Size->isScalable())
+    return false;
+
+  // Index * Scale + ConstOffset + AccessSize <= AllocSize
+  // With nuw flag, we know that the index addition doesn't have unsigned wrap.
+  // If (AllocSize - (ConstOffset + AccessSize)) wraps around, there is no valid
+  // value for Index.
+  APInt MaxIndex = (APInt(BitWidth, Size->getFixedValue() - AccessSize,
+                          /*isSigned=*/false, /*implicitTrunc=*/true) -
+                    Offset.ConstantOffset)
+                       .udiv(Scale);
+  Pred = ICmpInst::ICMP_ULE;
+  A = Index;
+  B = ConstantInt::get(Index->getType(), MaxIndex);
+  return true;
+}
+
+/// Returns true if \p I is a candidate whose poison-generating flags may be
+/// strengthened using the constraint systems.
+static bool canStrengthenFlags(Instruction *I) {
+  if (auto *Trunc = dyn_cast<TruncInst>(I))
+    return Trunc->getType()->isIntegerTy() && Trunc->hasNoSignedWrap() &&
+           !Trunc->hasNoUnsignedWrap();
+
+  auto *BO = dyn_cast<BinaryOperator>(I);
+  if (!BO || !BO->getType()->isIntegerTy())
+    return false;
+
+  switch (BO->getOpcode()) {
+  case Instruction::Sub:
+    if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
+      return false;
+    // A - B does not wrap unsigned if A >=u B, and does not wrap signed if
+    // 0 <=s B <=s A. With a constant B, bounds on A can refine both flags.
+    return true;
+  case Instruction::Add:
+  case Instruction::Mul:
+  case Instruction::Shl:
+    if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
+      return false;
+    // With a constant second operand, we can use bounds on the first operand to
+    // refine no-wrap flags. Independently, nuw can be added for nsw if the
+    // operands are non-negative.
+    return isa<ConstantInt>(BO->getOperand(1)) || BO->hasNoSignedWrap();
+  default:
+    return false;
+  }
+}
+
+/// Try to strengthen \p I's poison generating flags using \p Info. Returns
+/// true if \p I was modified.
+static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info) {
+  assert(canStrengthenFlags(I) && "not a candidate for flag strengthening");
+
+  bool Changed = false;
+  if (!I->hasNoSignedWrap() && isKnownNoWrap(I, Info, /*Signed=*/true)) {
+    LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
+    I->setHasNoSignedWrap();
+    Changed = true;
+  }
+  if (!I->hasNoUnsignedWrap() && isKnownNoWrap(I, Info, /*Signed=*/false)) {
+    LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
+    I->setHasNoUnsignedWrap();
+    Changed = true;
+  }
+  return Changed;
+}
+
+void State::addInfoFor(BasicBlock &BB) {
+  addBoundsForHeaderInductions(BB);
+  addInfoForInductions(BB);
+  auto &DL = BB.getDataLayout();
+
+  Value *A, *B;
+  CmpPredicate Pred;
+  // True as long as the current instruction is guaranteed to execute.
+  bool GuaranteedToExecute = true;
+  // Queue conditions and assumes.
+  for (Instruction &I : BB) {
+    if (match(&I, m_ICmpLike(Pred, m_Value(), m_Value()))) {
+      for (Use &U : I.uses()) {
+        auto *UserI = getContextInstForUse(U);
+        auto *DTN = DT.getNode(UserI->getParent());
+        if (!DTN)
+          continue;
+        WorkList.push_back(FactOrCheck::getCheck(DTN, &U));
+      }
+      continue;
+    }
+
+    auto AddFactFromMemoryAccess = [&](Value *Ptr, Type *AccessType) {
+      auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+      if (!GEP)
+        return;
+      TypeSize AccessSize = DL.getTypeStoreSize(AccessType);
+      if (!AccessSize.isFixed())
+        return;
+      if (GuaranteedToExecute) {
+        if (getConstraintFromMemoryAccess(*GEP, AccessSize.getFixedValue(),
+                                          Pred, A, B, DL, TLI)) {
+          // The memory access is guaranteed to execute when BB is entered,
+          // hence the constraint holds on entry to BB.
+          WorkList.emplace_back(FactOrCheck::getConditionFact(
+              DT.getNode(I.getParent()), Pred, A, B));
+        }
+      } else {
+        WorkList.emplace_back(
+            FactOrCheck::getInstFact(DT.getNode(I.getParent()), &I));
+      }
+    };
+
+    if (auto *LI = dyn_cast<LoadInst>(&I)) {
+      if (!LI->isVolatile())
+        AddFactFromMemoryAccess(LI->getPointerOperand(), LI->getAccessType());
+    }
+    if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      if (!SI->isVolatile())
+        AddFactFromMemoryAccess(SI->getPointerOperand(), SI->getAccessType());
+    }
+
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    Intrinsic::ID ID = II ? II->getIntrinsicID() : Intrinsic::not_intrinsic;
+    switch (ID) {
+    case Intrinsic::assume: {
+      if (!match(I.getOperand(0), m_ICmpLike(Pred, m_Value(A), m_Value(B))))
+        break;
+      if (GuaranteedToExecute) {
+        // The assume is guaranteed to execute when BB is entered, hence Cond
+        // holds on entry to BB.
+        WorkList.emplace_back(FactOrCheck::getConditionFact(
+            DT.getNode(I.getParent()), Pred, A, B));
+      } else {
+        WorkList.emplace_back(
+            FactOrCheck::getInstFact(DT.getNode(I.getParent()), &I));
+      }
+      break;
+    }
+    // Enqueue intrinsics for simplification.
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::sadd_with_overflow:
+    case Intrinsic::usub_with_overflow:
+    case Intrinsic::ssub_with_overflow:
+    case Intrinsic::umul_with_overflow:
+    case Intrinsic::smul_with_overflow:
+    case Intrinsic::ucmp:
+    case Intrinsic::scmp:
+      WorkList.push_back(
+          FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
+      break;
+    // Enqueue the intrinsics to add extra info.
+    case Intrinsic::umin:
+    case Intrinsic::umax:
+    case Intrinsic::smin:
+    case Intrinsic::smax:
+    case Intrinsic::usub_sat:
+      // TODO: handle llvm.abs as well
+      WorkList.push_back(
+          FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
+      [[fallthrough]];
+    case Intrinsic::uadd_sat:
+      // TODO: Check if it is possible to instead only added the min/max facts
+      // when simplifying uses of the min/max intrinsics.
+      if (!isGuaranteedNotToBePoison(&I))
+        break;
+      [[fallthrough]];
+    case Intrinsic::abs:
+      WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
+      break;
+    }
+
+    // Add facts from unsigned division, remainder and logical shift right, and
+    // from signed remainder.
+    //   urem x, n: result < n  and  result <= x
+    //   udiv x, n: result <= x
+    //   lshr x, n: result <= x
+    //   srem x, n: result >= 0 and result <= x, if x >= 0
+    //              result < n,                  if n > 0
+    if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
+      if ((BO->getOpcode() == Instruction::URem ||
+           BO->getOpcode() == Instruction::UDiv ||
+           BO->getOpcode() == Instruction::LShr ||
+           BO->getOpcode() == Instruction::SRem) &&
+          isGuaranteedNotToBePoison(BO))
+        WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
+    }
+
+    // Queue instructions whose flags may be strengthened, checked at the
+    // closest point dominating all uses.
+    if (canStrengthenFlags(&I)) {
+      Instruction *CommonDom = findCommonDominatorOfUses(I, DT);
+      WorkList.push_back(FactOrCheck::getCheck(
+          DT.getNode(CommonDom->getParent()), &I, CommonDom));
+    }
+
+    GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
+  }
+
+  if (auto *Switch = dyn_cast<SwitchInst>(BB.getTerminator())) {
+    for (auto &Case : Switch->cases()) {
+      BasicBlock *Succ = Case.getCaseSuccessor();
+      Value *V = Case.getCaseValue();
+      if (!canAddSuccessor(BB, Succ))
+        continue;
+      WorkList.emplace_back(FactOrCheck::getConditionFact(
+          DT.getNode(Succ), CmpInst::ICMP_EQ, Switch->getCondition(), V));
+    }
+    return;
+  }
+
+  auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
+  if (!Br)
+    return;
+
+  Value *Cond = Br->getCondition();
+
+  // If the condition is a chain of ORs/AND and the successor only has the
+  // current block as predecessor, queue conditions for the successor.
+  Value *Op0, *Op1;
+  if (match(Cond, m_LogicalOr(m_Value(Op0), m_Value(Op1))) ||
+      match(Cond, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
+    bool IsOr = match(Cond, m_LogicalOr());
+    bool IsAnd = match(Cond, m_LogicalAnd());
+    // If there's a select that matches both AND and OR, we need to commit to
+    // one of the options. Arbitrarily pick OR.
+    if (IsOr && IsAnd)
+      IsAnd = false;
+
+    BasicBlock *Successor = Br->getSuccessor(IsOr ? 1 : 0);
+    if (canAddSuccessor(BB, Successor)) {
+      SmallVector<Value *> CondWorkList;
+      SmallPtrSet<Value *, 8> SeenCond;
+      auto QueueValue = [&CondWorkList, &SeenCond](Value *V) {
+        if (SeenCond.insert(V).second)
+          CondWorkList.push_back(V);
+      };
+      QueueValue(Op1);
+      QueueValue(Op0);
+      while (!CondWorkList.empty()) {
+        Value *Cur = CondWorkList.pop_back_val();
+        if (match(Cur, m_ICmpLike(Pred, m_Value(A), m_Value(B)))) {
+          WorkList.emplace_back(FactOrCheck::getConditionFact(
+              DT.getNode(Successor),
+              IsOr ? CmpPredicate::getInverse(Pred) : Pred, A, B));
+          continue;
+        }
+        if (IsOr && match(Cur, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
+          QueueValue(Op1);
+          QueueValue(Op0);
+          continue;
+        }
+        if (IsAnd && match(Cur, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
+          QueueValue(Op1);
+          QueueValue(Op0);
+          continue;
+        }
+      }
+    }
+    return;
+  }
+
+  if (!match(Br->getCondition(), m_ICmpLike(Pred, m_Value(A), m_Value(B))))
+    return;
+  if (canAddSuccessor(BB, Br->getSuccessor(0)))
+    WorkList.emplace_back(FactOrCheck::getConditionFact(
+        DT.getNode(Br->getSuccessor(0)), Pred, A, B));
+  if (canAddSuccessor(BB, Br->getSuccessor(1)))
+    WorkList.emplace_back(FactOrCheck::getConditionFact(
+        DT.getNode(Br->getSuccessor(1)), CmpPredicate::getInverse(Pred), A, B));
+}
+
+#ifndef NDEBUG
+static void dumpUnpackedICmp(raw_ostream &OS, ICmpInst::Predicate Pred,
+                             Value *LHS, Value *RHS) {
+  OS << "icmp " << Pred << ' ';
+  LHS->printAsOperand(OS, /*PrintType=*/true);
+  OS << ", ";
+  RHS->printAsOperand(OS, /*PrintType=*/false);
+}
+#endif
+
+namespace {
+/// Helper to keep track of a condition and if it should be treated as negated
+/// for reproducer construction.
+/// Pred == Predicate::BAD_ICMP_PREDICATE indicates that this entry is a
+/// placeholder to keep the ReproducerCondStack in sync with DFSInStack.
+struct ReproducerEntry {
+  ICmpInst::Predicate Pred;
+  Value *LHS;
+  Value *RHS;
+
+  ReproducerEntry(ICmpInst::Predicate Pred, Value *LHS, Value *RHS)
+      : Pred(Pred), LHS(LHS), RHS(RHS) {}
+};
+} // namespace
+
+/// Helper function to generate a reproducer function for simplifying \p Cond.
+/// The reproducer function contains a series of @llvm.assume calls, one for
+/// each condition in \p Stack. For each condition, the operand instruction are
+/// cloned until we reach operands that have an entry in \p Value2Index. Those
+/// will then be added as function arguments. \p DT is used to order cloned
+/// instructions. The reproducer function will get added to \p M, if it is
+/// non-null. Otherwise no reproducer function is generated.
+static void generateReproducer(Instruction *Cond, bool IsSigned, Module *M,
+                               ArrayRef<ReproducerEntry> Stack,
+                               ConstraintInfo &Info, DominatorTree &DT) {
+  if (!M)
+    return;
+
+  LLVMContext &Ctx = Cond->getContext();
+
+  LLVM_DEBUG(dbgs() << "Creating reproducer for " << *Cond << "\n");
+
+  ValueToValueMapTy Old2New;
+  SmallVector<Value *> Args;
+  SmallPtrSet<Value *, 8> Seen;
+  // Traverse Cond and its operands recursively until we reach a value that's in
+  // Value2Index or not an instruction, or not a operation that
+  // ConstraintElimination can decompose. Such values will be considered as
+  // external inputs to the reproducer, they are collected and added as function
+  // arguments later.
+  auto CollectArguments = [&](ArrayRef<Value *> Ops, bool IsSigned) {
+    auto &Value2Index = Info.getValue2Index(IsSigned);
+    SmallVector<Value *, 4> WorkList(Ops);
+    while (!WorkList.empty()) {
+      Value *V = WorkList.pop_back_val();
+      if (!Seen.insert(V).second)
+        continue;
+      if (Old2New.find(V) != Old2New.end())
+        continue;
+      if (isa<Constant>(V))
+        continue;
+
+      auto *I = dyn_cast<Instruction>(V);
+      if (Value2Index.contains(V) || !I ||
+          !isa<CmpInst, BinaryOperator, GEPOperator, CastInst>(V)) {
+        Old2New[V] = V;
+        Args.push_back(V);
+        LLVM_DEBUG(dbgs() << "  found external input " << *V << "\n");
+      } else {
+        append_range(WorkList, I->operands());
+      }
+    }
+  };
+
+  for (auto &Entry : Stack)
+    if (Entry.Pred != ICmpInst::BAD_ICMP_PREDICATE)
+      CollectArguments({Entry.LHS, Entry.RHS}, ICmpInst::isSigned(Entry.Pred));
+  CollectArguments(Cond, IsSigned);
+
+  SmallVector<Type *> ParamTys;
+  for (auto *P : Args)
+    ParamTys.push_back(P->getType());
+
+  FunctionType *FTy = FunctionType::get(Cond->getType(), ParamTys,
+                                        /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage,
+                                 Cond->getModule()->getName() +
+                                     Cond->getFunction()->getName() + "repro",
+                                 M);
+  // Add arguments to the reproducer function for each external value collected.
+  for (unsigned I = 0; I < Args.size(); ++I) {
+    F->getArg(I)->setName(Args[I]->getName());
+    Old2New[Args[I]] = F->getArg(I);
+  }
+
+  BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", F);
+  IRBuilder<> Builder(Entry);
+  Builder.CreateRet(Builder.getTrue());
+  Builder.SetInsertPoint(Entry->getTerminator());
+
+  // Clone instructions in \p Ops and their operands recursively until reaching
+  // an value in Value2Index (external input to the reproducer). Update Old2New
+  // mapping for the original and cloned instructions. Sort instructions to
+  // clone by dominance, then insert the cloned instructions in the function.
+  auto CloneInstructions = [&](ArrayRef<Value *> Ops, bool IsSigned) {
+    SmallVector<Value *, 4> WorkList(Ops);
+    SmallVector<Instruction *> ToClone;
+    auto &Value2Index = Info.getValue2Index(IsSigned);
+    while (!WorkList.empty()) {
+      Value *V = WorkList.pop_back_val();
+      if (Old2New.find(V) != Old2New.end())
+        continue;
+
+      auto *I = dyn_cast<Instruction>(V);
+      if (!Value2Index.contains(V) && I) {
+        Old2New[V] = nullptr;
+        ToClone.push_back(I);
+        append_range(WorkList, I->operands());
+      }
+    }
+
+    sort(ToClone,
+         [&DT](Instruction *A, Instruction *B) { return DT.dominates(A, B); });
+    for (Instruction *I : ToClone) {
+      Instruction *Cloned = I->clone();
+      Old2New[I] = Cloned;
+      Old2New[I]->setName(I->getName());
+      Cloned->insertBefore(Builder.GetInsertPoint());
+      Cloned->dropUnknownNonDebugMetadata();
+      Cloned->setDebugLoc({});
+    }
+  };
+
+  // Materialize the assumptions for the reproducer using the entries in Stack.
+  // That is, first clone the operands of the condition recursively until we
+  // reach an external input to the reproducer and add them to the reproducer
+  // function. Then add an ICmp for the condition (with the inverse predicate if
+  // the entry is negated) and an assert using the ICmp.
+  for (auto &Entry : Stack) {
+    if (Entry.Pred == ICmpInst::BAD_ICMP_PREDICATE)
+      continue;
+
+    LLVM_DEBUG(dbgs() << "  Materializing assumption ";
+               dumpUnpackedICmp(dbgs(), Entry.Pred, Entry.LHS, Entry.RHS);
+               dbgs() << "\n");
+    CloneInstructions({Entry.LHS, Entry.RHS}, CmpInst::isSigned(Entry.Pred));
+
+    auto *Cmp = Builder.CreateICmp(Entry.Pred, Entry.LHS, Entry.RHS);
+    Builder.CreateAssumption(Cmp);
+  }
+
+  // Finally, clone the condition to reproduce and remap instruction operands in
+  // the reproducer using Old2New.
+  CloneInstructions(Cond, IsSigned);
+  Entry->getTerminator()->setOperand(0, Cond);
+  remapInstructionsInBlocks({Entry}, Old2New);
+
+  assert(!verifyFunction(*F, &dbgs()));
+}
+
+/// If \p V is a variable in the system and constraint \p C does not contain \p
+/// V, we managed to decompose \p V at this point, but likely not earlier when
+/// the fact involving \p V was added. In that case, return a new row for
+/// V <= decompose(V) to link the variable with the decomposition result.
+static RowTy getDecompositionLinkRow(Value *V, const ConstraintTy &C,
+                                     ConstraintInfo &Info,
+                                     const DataLayout &DL) {
+  const auto &Value2Index = Info.getValue2Index(C.IsSigned);
+  auto It = Value2Index.find(V);
+  if (It == Value2Index.end() ||
+      any_of(C.Coefficients,
+             [Id = It->second](const Entry &E) { return E.Id == Id; }))
+    return {};
+
+  SmallVector<Value *> NewVariables;
+  RowTy Row =
+      getRowForLessEqual(Decomposition(V), decompose(V, Info, C.IsSigned, DL),
+                         Value2Index, NewVariables);
+  return NewVariables.empty() ? Row : RowTy();
+}
+
+static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
+                                          Value *B, Instruction *CheckInst,
+                                          ConstraintInfo &Info) {
+  LLVM_DEBUG(dbgs() << "Checking " << *CheckInst << "\n");
+
+  auto TryWithConstraint = [&](const ConstraintTy &R) -> std::optional<bool> {
+    if (R.empty()) {
+      LLVM_DEBUG(dbgs() << "   failed to decompose condition\n");
+      return std::nullopt;
+    }
+
+    auto &CSToUse = Info.getCS(R.IsSigned);
+    if (auto ImpliedCondition = R.isImpliedBy(CSToUse)) {
+      if (!DebugCounter::shouldExecute(EliminatedCounter))
+        return std::nullopt;
+      LLVM_DEBUG({
+        dbgs() << "Condition ";
+        dumpUnpackedICmp(dbgs(),
+                         *ImpliedCondition ? Pred
+                                           : CmpInst::getInversePredicate(Pred),
+                         A, B);
+        dbgs() << " implied by dominating constraints\n";
+        CSToUse.dump();
+      });
+      return ImpliedCondition;
+    }
+    return std::nullopt;
+  };
+
+  // Retry the query after adding additional facts for A == decompose(A) and B
+  // == decompose(B), if needed.
+  auto TryWithLinkedDecomposition =
+      [&](const ConstraintTy &C) -> std::optional<bool> {
+    if (C.empty())
+      return std::nullopt;
+
+    auto &CS = Info.getCS(C.IsSigned);
+    unsigned NumVars = Info.getValue2Index(C.IsSigned).size();
+    unsigned NumPushed = 0;
+    for (Value *V : {A, B}) {
+      RowTy Row =
+          getDecompositionLinkRow(V, C, Info, CheckInst->getDataLayout());
+      RowTy Negated = ConstraintSystem::negateOrEqual(Row);
+      if (Row.empty() || Negated.empty())
+        continue;
+      NumPushed += CS.addRow(Row, NumVars);
+      NumPushed += CS.addRow(Negated, NumVars);
+    }
+    if (NumPushed == 0)
+      return std::nullopt;
+
+    std::optional<bool> Res = TryWithConstraint(C);
+    while (NumPushed--)
+      CS.popLastConstraint();
+    return Res;
+  };
+
+  auto R = Info.getConstraintForSolving(Pred, A, B);
+  if (auto ImpliedCondition = TryWithConstraint(R))
+    return ImpliedCondition;
+  if (auto ImpliedCondition = TryWithLinkedDecomposition(R))
+    return ImpliedCondition;
+
+  // For non-negative operands unsigned queries can also be checked against the
+  // signed system.
+  if (CmpInst::isUnsigned(Pred) && A->getType()->isIntegerTy()) {
+    SmallVector<Value *> NewVariables;
+    auto SR = Info.getConstraint(ICmpInst::getSignedPredicate(Pred), A, B,
+                                 NewVariables);
+    if (NewVariables.empty() && !SR.empty() && Info.isKnownNonNegative(A) &&
+        Info.isKnownNonNegative(B))
+      if (auto ImpliedCondition = TryWithConstraint(SR))
+        return ImpliedCondition;
+  }
+
+  // Additionally, query the signed system for eq/ne predicates if we know about
+  // A or B.
+  if (CmpInst::isEquality(Pred)) {
+    const auto &Value2Index = Info.getValue2Index(/*Signed=*/true);
+    if (!Value2Index.contains(A) && !Value2Index.contains(B))
+      return std::nullopt;
+
+    SmallVector<Value *> NewVariables;
+    auto SR = Info.getConstraint(Pred, A, B, NewVariables,
+                                 /*ForceSignedSystem=*/true);
+    if (NewVariables.empty()) {
+      if (auto ImpliedCondition = TryWithConstraint(SR))
+        return ImpliedCondition;
+      if (auto ImpliedCondition = TryWithLinkedDecomposition(SR))
+        return ImpliedCondition;
+    }
+  }
+  return std::nullopt;
+}
+
+static bool checkAndReplaceCondition(
+    CmpPredicate Pred, Value *A, Value *B, Instruction *CheckInst,
+    ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
+    Instruction *ContextInst, Module *ReproducerModule,
+    ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT,
+    SmallVectorImpl<Instruction *> &ToRemove) {
+  auto ReplaceCmpWithConstant = [&](Instruction *CheckInst, bool IsTrue) {
+    generateReproducer(CheckInst, ICmpInst::isSigned(Pred), ReproducerModule,
+                       ReproducerCondStack, Info, DT);
+    Constant *ConstantC = ConstantInt::getBool(
+        CmpInst::makeCmpResultType(CheckInst->getType()), IsTrue);
+    bool Changed = CheckInst->replaceUsesWithIf(ConstantC, [&](Use &U) {
+      auto *UserI = getContextInstForUse(U);
+      auto *DTN = DT.getNode(UserI->getParent());
+      if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
+        return false;
+      if (UserI->getParent() == ContextInst->getParent() &&
+          UserI->comesBefore(ContextInst))
+        return false;
+
+      // Conditions in an assume trivially simplify to true. Skip uses
+      // in assume calls to not destroy the available information.
+      auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+      return !II || II->getIntrinsicID() != Intrinsic::assume;
+    });
+    NumCondsRemoved++;
+
+    // Update the debug value records that satisfy the same condition used
+    // in replaceUsesWithIf.
+    SmallVector<DbgVariableRecord *> DVRUsers;
+    findDbgUsers(CheckInst, DVRUsers);
+
+    for (auto *DVR : DVRUsers) {
+      auto *DTN = DT.getNode(DVR->getParent());
+      if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
+        continue;
+
+      auto *MarkedI = DVR->getInstruction();
+      if (MarkedI->getParent() == ContextInst->getParent() &&
+          MarkedI->comesBefore(ContextInst))
+        continue;
+
+      DVR->replaceVariableLocationOp(CheckInst, ConstantC);
+    }
+
+    if (CheckInst->use_empty())
+      ToRemove.push_back(CheckInst);
+
+    return Changed;
+  };
+
+  if (auto ImpliedCondition = checkCondition(Pred, A, B, CheckInst, Info))
+    return ReplaceCmpWithConstant(CheckInst, *ImpliedCondition);
+
+  // When the predicate is samesign and unsigned, we can also make use of the
+  // signed predicate information.
+  if (Pred.hasSameSign() && ICmpInst::isUnsigned(Pred))
+    if (auto ImpliedCondition = checkCondition(
+            ICmpInst::getSignedPredicate(Pred), A, B, CheckInst, Info))
+      return ReplaceCmpWithConstant(CheckInst, *ImpliedCondition);
+
+  return false;
+}
+
+static bool checkAndReplaceMinMax(MinMaxIntrinsic *MinMax, ConstraintInfo &Info,
+                                  SmallVectorImpl<Instruction *> &ToRemove) {
+  auto ReplaceMinMaxWithOperand = [&](MinMaxIntrinsic *MinMax, bool UseLHS) {
+    // TODO: generate reproducer for min/max.
+    MinMax->replaceAllUsesWith(MinMax->getOperand(UseLHS ? 0 : 1));
+    ToRemove.push_back(MinMax);
+    return true;
+  };
+
+  ICmpInst::Predicate Pred =
+      ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
+  if (auto ImpliedCondition = checkCondition(
+          Pred, MinMax->getOperand(0), MinMax->getOperand(1), MinMax, Info))
+    return ReplaceMinMaxWithOperand(MinMax, *ImpliedCondition);
+  if (auto ImpliedCondition = checkCondition(
+          Pred, MinMax->getOperand(1), MinMax->getOperand(0), MinMax, Info))
+    return ReplaceMinMaxWithOperand(MinMax, !*ImpliedCondition);
+  return false;
+}
+
+static bool checkAndReplaceCmp(CmpIntrinsic *I, ConstraintInfo &Info,
+                               SmallVectorImpl<Instruction *> &ToRemove) {
+  Value *LHS = I->getOperand(0);
+  Value *RHS = I->getOperand(1);
+  if (checkCondition(I->getGTPredicate(), LHS, RHS, I, Info).value_or(false)) {
+    I->replaceAllUsesWith(ConstantInt::get(I->getType(), 1));
+    ToRemove.push_back(I);
+    return true;
+  }
+  if (checkCondition(I->getLTPredicate(), LHS, RHS, I, Info).value_or(false)) {
+    I->replaceAllUsesWith(ConstantInt::getSigned(I->getType(), -1));
+    ToRemove.push_back(I);
+    return true;
+  }
+  if (checkCondition(ICmpInst::ICMP_EQ, LHS, RHS, I, Info).value_or(false)) {
+    I->replaceAllUsesWith(ConstantInt::get(I->getType(), 0));
+    ToRemove.push_back(I);
+    return true;
+  }
+  return false;
+}
+
+/// Try to replace \p USub by a plain subtract, if \p Info proves it cannot
+/// saturate. Returns true if \p USub was replaced.
+static bool checkAndReplaceUSubSat(SaturatingInst *USub, ConstraintInfo &Info,
+                                   SmallVectorImpl<Instruction *> &ToRemove) {
+  // usub.sat(A, B) is A - B exactly when A >=u B.
+  Value *A = USub->getLHS();
+  Value *B = USub->getRHS();
+  if (!checkCondition(CmpInst::ICMP_UGE, A, B, USub, Info).value_or(false))
+    return false;
+
+  IRBuilder<> Builder(USub);
+  Value *Sub = Builder.CreateSub(A, B, "", /*HasNUW=*/true,
+                                 /*HasNSW=*/Info.isKnownNonNegative(A));
+  USub->replaceAllUsesWith(Sub);
+  Sub->takeName(USub);
+  ToRemove.push_back(USub);
+  return true;
+}
+
+static void
+removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
+                     Module *ReproducerModule,
+                     SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
+                     SmallVectorImpl<StackEntry> &DFSInStack) {
+  Info.getDecomposeCache().clear();
+  Info.popLastConstraint(E.IsSigned);
+  // Remove variables in the system that went out of scope.
+  auto &Mapping = Info.getValue2Index(E.IsSigned);
+  for (Value *V : E.ValuesToRelease)
+    Mapping.erase(V);
+  Info.popLastNVariables(E.IsSigned, E.ValuesToRelease.size());
+  DFSInStack.pop_back();
+  if (ReproducerModule)
+    ReproducerCondStack.pop_back();
+}
+
+/// Check if either the first condition of an AND or OR is implied by the
+/// (negated in case of OR) second condition or vice versa.
+static bool checkOrAndOpImpliedByOther(
+    FactOrCheck &CB, ConstraintInfo &Info, Module *ReproducerModule,
+    SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
+    SmallVectorImpl<StackEntry> &DFSInStack,
+    SmallVectorImpl<Instruction *> &ToRemove) {
+  Instruction *JoinOp = CB.getContextInst();
+  if (JoinOp->use_empty())
+    return false;
+
+  Instruction *CmpToCheck = cast<Instruction>(CB.getInstructionToSimplify());
+  unsigned OtherOpIdx = JoinOp->getOperand(0) == CmpToCheck ? 1 : 0;
+
+  // Don't try to simplify the first condition of a select by the second, as
+  // this may make the select more poisonous than the original one.
+  // TODO: check if the first operand may be poison.
+  if (OtherOpIdx != 0 && isa<SelectInst>(JoinOp))
+    return false;
+
+  unsigned OldSize = DFSInStack.size();
+  llvm::scope_exit InfoRestorer([&]() {
+    // Remove entries again.
+    while (OldSize < DFSInStack.size()) {
+      StackEntry E = DFSInStack.back();
+      removeEntryFromStack(E, Info, ReproducerModule, ReproducerCondStack,
+                           DFSInStack);
+    }
+  });
+  bool IsOr = match(JoinOp, m_LogicalOr());
+  SmallVector<Value *, 4> Worklist({JoinOp->getOperand(OtherOpIdx)});
+  // Do a traversal of the AND/OR tree to add facts from leaf compares.
+  while (!Worklist.empty()) {
+    Value *Val = Worklist.pop_back_val();
+    Value *LHS, *RHS;
+    CmpPredicate Pred;
+    if (match(Val, m_ICmpLike(Pred, m_Value(LHS), m_Value(RHS)))) {
+      // For OR, check if the negated condition implies CmpToCheck.
+      if (IsOr)
+        Pred = CmpInst::getInversePredicate(Pred);
+      // Optimistically add fact from the other compares in the AND/OR.
+      Info.addFact(Pred, LHS, RHS, CB.NumIn, CB.NumOut, DFSInStack);
+      continue;
+    }
+    if (IsOr ? match(Val, m_LogicalOr(m_Value(LHS), m_Value(RHS)))
+             : match(Val, m_LogicalAnd(m_Value(LHS), m_Value(RHS)))) {
+      Worklist.push_back(LHS);
+      Worklist.push_back(RHS);
+    }
+  }
+  if (OldSize == DFSInStack.size())
+    return false;
+
+  Value *A, *B;
+  CmpPredicate Pred;
+  [[maybe_unused]] bool Matched =
+      match(CmpToCheck, m_ICmpLike(Pred, m_Value(A), m_Value(B)));
+  assert(Matched && "expected icmp-like match");
+  // Check if the second condition can be simplified now.
+  if (auto ImpliedCondition = checkCondition(Pred, A, B, CmpToCheck, Info)) {
+    if (IsOr == *ImpliedCondition)
+      JoinOp->replaceAllUsesWith(
+          ConstantInt::getBool(JoinOp->getType(), *ImpliedCondition));
+    else
+      JoinOp->replaceAllUsesWith(JoinOp->getOperand(OtherOpIdx));
+    ToRemove.push_back(JoinOp);
+    return true;
+  }
+
+  return false;
+}
+
+void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
+                             unsigned NumIn, unsigned NumOut,
+                             SmallVectorImpl<StackEntry> &DFSInStack) {
+  addFactImpl(Pred, A, B, NumIn, NumOut, DFSInStack, false);
+  // If the Pred is eq/ne, also add the fact to signed system.
+  if (CmpInst::isEquality(Pred))
+    addFactImpl(Pred, A, B, NumIn, NumOut, DFSInStack, true);
+  if (Pred == CmpInst::ICMP_NE)
+    tightenBoundUsingNe(A, B, NumIn, NumOut, DFSInStack);
+}
+
+void ConstraintInfo::tightenBoundUsingNe(
+    Value *A, Value *B, unsigned NumIn, unsigned NumOut,
+    SmallVectorImpl<StackEntry> &DFSInStack) {
+  if (!A->getType()->isIntOrPtrTy())
+    return;
+
+  for (bool IsSigned : {false, true}) {
+    // In the unsigned system `A u>= 0` holds for every A, so getConstraint
+    // already turned `A != 0` into `A u> 0`.
+    if (!IsSigned && match(B, m_Zero()))
+      continue;
+
+    // Skip if there are any unknown variables.
+    const auto &Value2Index = getValue2Index(IsSigned);
+    if (any_of(decompose(A, *this, IsSigned, DL).Vars,
+               [&Value2Index](const DecompEntry &E) {
+                 return !Value2Index.contains(E.Variable);
+               }))
+      continue;
+
+    // If the system implies `A >= B` then together with `A != B` we get the
+    // strict `A > B`; symmetrically `A <= B` becomes `A < B`.
+    CmpInst::Predicate GEPred =
+        IsSigned ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
+    CmpInst::Predicate LEPred =
+        IsSigned ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE;
+    for (CmpInst::Predicate NonStrict : {GEPred, LEPred}) {
+      if (!doesHold(NonStrict, A, B))
+        continue;
+      CmpInst::Predicate Strict = CmpInst::getStrictPredicate(NonStrict);
+      LLVM_DEBUG(dbgs() << "Tightening '";
+                 dumpUnpackedICmp(dbgs(), NonStrict, A, B); dbgs() << "' to '";
+                 dumpUnpackedICmp(dbgs(), Strict, A, B);
+                 dbgs() << "' using inequality\n");
+      addFactImpl(Strict, A, B, NumIn, NumOut, DFSInStack,
+                  /*ForceSignedSystem=*/false);
+      break;
+    }
+  }
+}
+
+void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
+                                 unsigned NumIn, unsigned NumOut,
+                                 SmallVectorImpl<StackEntry> &DFSInStack,
+                                 bool ForceSignedSystem) {
+  SmallVector<Value *> NewVariables;
+  auto R = getConstraint(Pred, A, B, NewVariables, ForceSignedSystem);
+
+  // TODO: Support non-equality for facts as well.
+  if (R.empty() || R.isNe())
+    return;
+
+  LLVM_DEBUG(dbgs() << "Adding '"; dumpUnpackedICmp(dbgs(), Pred, A, B);
+             dbgs() << "'\n");
+  auto &CSToUse = getCS(R.IsSigned);
+  bool Added = CSToUse.addRow(R.Coefficients, R.NumVars);
+  if (!Added)
+    return;
+
+  DecomposeCache.clear();
+
+  // If R has been added to the system, add the new variables and queue it for
+  // removal once it goes out-of-scope.
+  SmallVector<Value *, 2> ValuesToRelease;
+  auto &Value2Index = getValue2Index(R.IsSigned);
+  for (Value *V : NewVariables) {
+    Value2Index.try_emplace(V, Value2Index.size() + 1);
+    ValuesToRelease.push_back(V);
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "  constraint: ";
+    dumpConstraint(R.Coefficients, getValue2Index(R.IsSigned));
+    dbgs() << "\n";
+  });
+
+  DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
+                          std::move(ValuesToRelease));
+
+  if (!R.IsSigned) {
+    for (Value *V : NewVariables) {
+      // Add V > -1 constraints for all new variables.
+      CSToUse.addRow({Entry(0, 0), Entry(-1, Value2Index.at(V))},
+                     Value2Index.size());
+      DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
+                              SmallVector<Value *, 2>());
+    }
+  }
+
+  if (R.isEq()) {
+    // Also add the inverted constraint for equality constraints.
+    for (Entry &E : R.Coefficients)
+      if (MulOverflow(E.Coefficient, int64_t(-1), E.Coefficient))
+        return;
+    CSToUse.addRow(R.Coefficients, R.NumVars);
+
+    DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
+                            SmallVector<Value *, 2>());
+  }
+}
+
+/// Replace the uses of \p II, which is known not to overflow, by the
+/// corresponding plain binary operation and a false overflow flag.
+static bool replaceOverflowUses(WithOverflowInst *II,
+                                SmallVectorImpl<Instruction *> &ToRemove) {
+  bool Changed = false;
+  IRBuilder<> Builder(II->getParent(), II->getIterator());
+  Value *Res = nullptr;
+  for (User *U : make_early_inc_range(II->users())) {
+    if (match(U, m_ExtractValue<0>(m_Value()))) {
+      if (!Res)
+        Res = Builder.CreateNoWrapBinOp(II->getBinaryOp(), II->getLHS(),
+                                        II->getRHS(),
+                                        /*IsNUW=*/!II->isSigned(),
+                                        /*IsNSW=*/II->isSigned());
+      U->replaceAllUsesWith(Res);
+      Changed = true;
+    } else if (match(U, m_ExtractValue<1>(m_Value()))) {
+      U->replaceAllUsesWith(Builder.getFalse());
+      Changed = true;
+    } else
+      continue;
+
+    if (U->use_empty()) {
+      auto *I = cast<Instruction>(U);
+      ToRemove.push_back(I);
+      I->setOperand(0, PoisonValue::get(II->getType()));
+      Changed = true;
+    }
+  }
+
+  if (II->use_empty()) {
+    // Do not erase II here: the worklist may still hold Uses of II's operands.
+    for (Use &Arg : II->args())
+      Arg.set(PoisonValue::get(Arg->getType()));
+    ToRemove.push_back(II);
+    Changed = true;
+  }
+  return Changed;
+}
+
+static bool
+tryToSimplifyOverflowMath(WithOverflowInst *II, ConstraintInfo &Info,
+                          SmallVectorImpl<Instruction *> &ToRemove) {
+  if (!isKnownNoWrap(II, Info, II->isSigned()))
+    return false;
+  return replaceOverflowUses(II, ToRemove);
+}
+
+static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
+                                 ScalarEvolution &SE,
+                                 OptimizationRemarkEmitter &ORE,
+                                 TargetLibraryInfo &TLI) {
+  bool Changed = false;
+  DT.updateDFSNumbers();
+  SmallVector<Value *> FunctionArgs(llvm::make_pointer_range(F.args()));
+  ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
+  State S(DT, LI, SE, TLI);
+  std::unique_ptr<Module> ReproducerModule(
+      DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
+
+  // First, collect conditions implied by branches and blocks with their
+  // Dominator DFS in and out numbers.
+  for (BasicBlock &BB : F) {
+    if (!DT.getNode(&BB))
+      continue;
+    S.addInfoFor(BB);
+  }
+
+  // Next, sort worklist by dominance, so that dominating conditions to check
+  // and facts come before conditions and facts dominated by them. If a
+  // condition to check and a fact have the same numbers, conditional facts come
+  // first. Assume facts and checks are ordered according to their relative
+  // order in the containing basic block. Also make sure conditions with
+  // constant operands come before conditions without constant operands. This
+  // increases the effectiveness of the current signed <-> unsigned fact
+  // transfer logic.
+  stable_sort(S.WorkList, [](const FactOrCheck &A, const FactOrCheck &B) {
+    auto HasNoConstOp = [](const FactOrCheck &B) {
+      Value *V0 = B.isConditionFact() ? B.Cond.Op0 : B.Inst->getOperand(0);
+      Value *V1 = B.isConditionFact() ? B.Cond.Op1 : B.Inst->getOperand(1);
+      return !isa<ConstantInt>(V0) && !isa<ConstantInt>(V1);
+    };
+    // If both entries have the same In numbers, conditional facts come first.
+    // Otherwise use the relative order in the basic block.
+    if (A.NumIn == B.NumIn) {
+      if (A.isConditionFact() && B.isConditionFact()) {
+        bool NoConstOpA = HasNoConstOp(A);
+        bool NoConstOpB = HasNoConstOp(B);
+        return NoConstOpA < NoConstOpB;
+      }
+      if (A.isConditionFact())
+        return true;
+      if (B.isConditionFact())
+        return false;
+      auto *InstA = A.getContextInst();
+      auto *InstB = B.getContextInst();
+      return InstA->comesBefore(InstB);
+    }
+    return A.NumIn < B.NumIn;
+  });
+
+  SmallVector<Instruction *> ToRemove;
+
+  // Finally, process ordered worklist and eliminate implied conditions.
+  SmallVector<StackEntry, 16> DFSInStack;
+  SmallVector<ReproducerEntry> ReproducerCondStack;
+  for (FactOrCheck &CB : S.WorkList) {
+    // First, pop entries from the stack that are out-of-scope for CB. Remove
+    // the corresponding entry from the constraint system.
+    while (!DFSInStack.empty()) {
+      auto &E = DFSInStack.back();
+      LLVM_DEBUG(dbgs() << "Top of stack : " << E.NumIn << " " << E.NumOut
+                        << "\n");
+      LLVM_DEBUG(dbgs() << "CB: " << CB.NumIn << " " << CB.NumOut << "\n");
+      assert(E.NumIn <= CB.NumIn);
+      if (CB.NumOut <= E.NumOut)
+        break;
+      LLVM_DEBUG({
+        dbgs() << "Removing ";
+        dumpConstraint(Info.getCS(E.IsSigned).getLastConstraint(),
+                       Info.getValue2Index(E.IsSigned));
+        dbgs() << "\n";
+      });
+      removeEntryFromStack(E, Info, ReproducerModule.get(), ReproducerCondStack,
+                           DFSInStack);
+    }
+
+    CmpPredicate Pred;
+    Value *A, *B;
+    // For a block, check if any CmpInsts become known based on the current set
+    // of constraints.
+    if (CB.isCheck()) {
+      Instruction *Inst = CB.getInstructionToSimplify();
+      if (!Inst)
+        continue;
+      if (canStrengthenFlags(Inst)) {
+        Changed |= tryToStrengthenFlags(Inst, Info);
+        continue;
+      }
+      LLVM_DEBUG(dbgs() << "Processing condition to simplify: " << *Inst
+                        << "\n");
+      if (auto *II = dyn_cast<WithOverflowInst>(Inst)) {
+        Changed |= tryToSimplifyOverflowMath(II, Info, ToRemove);
+      } else if (match(Inst, m_ICmpLike(Pred, m_Value(A), m_Value(B)))) {
+        bool Simplified = checkAndReplaceCondition(
+            Pred, A, B, Inst, Info, CB.NumIn, CB.NumOut, CB.getContextInst(),
+            ReproducerModule.get(), ReproducerCondStack, S.DT, ToRemove);
+        if (!Simplified &&
+            match(CB.getContextInst(), m_LogicalOp(m_Value(), m_Value()))) {
+          Simplified = checkOrAndOpImpliedByOther(
+              CB, Info, ReproducerModule.get(), ReproducerCondStack, DFSInStack,
+              ToRemove);
+        }
+        Changed |= Simplified;
+      } else if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Inst)) {
+        Changed |= checkAndReplaceMinMax(MinMax, Info, ToRemove);
+      } else if (auto *CmpIntr = dyn_cast<CmpIntrinsic>(Inst)) {
+        Changed |= checkAndReplaceCmp(CmpIntr, Info, ToRemove);
+      } else if (match(Inst, m_Intrinsic<Intrinsic::usub_sat>())) {
+        Changed |=
+            checkAndReplaceUSubSat(cast<SaturatingInst>(Inst), Info, ToRemove);
+      }
+      continue;
+    }
+
+    auto AddFact = [&](CmpPredicate Pred, Value *A, Value *B) {
+      LLVM_DEBUG(dbgs() << "Processing fact to add to the system: ";
+                 dumpUnpackedICmp(dbgs(), Pred, A, B); dbgs() << "\n");
+      if (Info.getCS(CmpInst::isSigned(Pred)).size() > MaxRows) {
+        LLVM_DEBUG(
+            dbgs()
+            << "Skip adding constraint because system has too many rows.\n");
+        return;
+      }
+
+      Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
+      if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size())
+        ReproducerCondStack.emplace_back(Pred, A, B);
+
+      if (ICmpInst::isRelational(Pred)) {
+        // If samesign is present on the ICmp, simply flip the sign of the
+        // predicate, transferring the information from the signed system to the
+        // unsigned system, and viceversa.
+        if (Pred.hasSameSign())
+          Info.addFact(ICmpInst::getFlippedSignednessPredicate(Pred), A, B,
+                       CB.NumIn, CB.NumOut, DFSInStack);
+        else
+          Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut,
+                                     DFSInStack);
+      }
+
+      // (X | Y) >s -1 implies X >s -1 and Y >s -1, because the sign bit of an
+      // OR is the OR of the operand sign bits. Similarly, (X & Y) <s 0 implies
+      // X <s 0 and Y <s 0. Look through these canonical forms produced by
+      // InstCombine so the sign facts on the operands are available to the
+      // solver.
+      if ((Pred == CmpInst::ICMP_SGT && match(B, m_AllOnes())) ||
+          (Pred == CmpInst::ICMP_SLT && match(B, m_Zero()))) {
+        unsigned Opc =
+            Pred == CmpInst::ICMP_SGT ? Instruction::Or : Instruction::And;
+        SmallVector<Value *> Worklist = {A};
+        SmallPtrSet<Value *, 4> Seen;
+        while (!Worklist.empty()) {
+          Value *Cur = Worklist.pop_back_val();
+          auto *BO = dyn_cast<BinaryOperator>(Cur);
+          if (!BO || BO->getOpcode() != Opc)
+            continue;
+          for (Value *Op : {BO->getOperand(0), BO->getOperand(1)}) {
+            if (!Seen.insert(Op).second)
+              continue;
+            Worklist.push_back(Op);
+            Info.addFact(Pred, Op, B, CB.NumIn, CB.NumOut, DFSInStack);
+          }
+        }
+      }
+
+      if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size()) {
+        // Add dummy entries to ReproducerCondStack to keep it in sync with
+        // DFSInStack.
+        for (unsigned I = 0,
+                      E = (DFSInStack.size() - ReproducerCondStack.size());
+             I < E; ++I) {
+          ReproducerCondStack.emplace_back(ICmpInst::BAD_ICMP_PREDICATE,
+                                           nullptr, nullptr);
+        }
+      }
+    };
+
+    if (!CB.isConditionFact()) {
+      Value *X;
+      if (match(CB.Inst, m_Intrinsic<Intrinsic::abs>(m_Value(X)))) {
+        // If is_int_min_poison is true then we may assume llvm.abs >= 0.
+        if (cast<ConstantInt>(CB.Inst->getOperand(1))->isOne())
+          AddFact(CmpInst::ICMP_SGE, CB.Inst,
+                  ConstantInt::get(CB.Inst->getType(), 0));
+        AddFact(CmpInst::ICMP_SGE, CB.Inst, X);
+        continue;
+      }
+
+      if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(CB.Inst)) {
+        Pred = ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
+        AddFact(Pred, MinMax, MinMax->getLHS());
+        AddFact(Pred, MinMax, MinMax->getRHS());
+        continue;
+      }
+      if (auto *USatI = dyn_cast<SaturatingInst>(CB.Inst)) {
+        switch (USatI->getIntrinsicID()) {
+        default:
+          llvm_unreachable("Unexpected intrinsic.");
+        case Intrinsic::uadd_sat:
+          AddFact(ICmpInst::ICMP_UGE, USatI, USatI->getLHS());
+          AddFact(ICmpInst::ICMP_UGE, USatI, USatI->getRHS());
+          break;
+        case Intrinsic::usub_sat:
+          AddFact(ICmpInst::ICMP_ULE, USatI, USatI->getLHS());
+          break;
+        }
+        continue;
+      }
+
+      if (auto *BO = dyn_cast<BinaryOperator>(CB.Inst)) {
+        if (BO->getOpcode() == Instruction::URem) {
+          // urem x, n: result < n (remainder is always less than divisor)
+          AddFact(CmpInst::ICMP_ULT, BO, BO->getOperand(1));
+          // urem x, n: result <= x (remainder is at most the dividend)
+          AddFact(CmpInst::ICMP_ULE, BO, BO->getOperand(0));
+          continue;
+        }
+        if (BO->getOpcode() == Instruction::UDiv) {
+          // udiv x, n: result <= x (quotient is at most the dividend)
+          AddFact(CmpInst::ICMP_ULE, BO, BO->getOperand(0));
+          continue;
+        }
+        if (BO->getOpcode() == Instruction::LShr) {
+          // lshr x, n: result <= x (right shift cannot increase the value)
+          AddFact(CmpInst::ICMP_ULE, BO, BO->getOperand(0));
+          continue;
+        }
+        if (BO->getOpcode() == Instruction::SRem) {
+          Value *X = BO->getOperand(0);
+          Value *N = BO->getOperand(1);
+          Constant *Zero = Constant::getNullValue(BO->getType());
+          if (Info.doesHold(CmpInst::ICMP_SGE, X, Zero) ||
+              isKnownNonNegative(X, F.getDataLayout())) {
+            // srem x, n: result >= 0, if x >= 0 (result has the sign of x)
+            AddFact(CmpInst::ICMP_SGE, BO, Zero);
+            // srem x, n: result <= x, if x >= 0 (|result| <= |x| and both are
+            // non-negative)
+            AddFact(CmpInst::ICMP_SLE, BO, X);
+          }
+          if (Info.doesHold(CmpInst::ICMP_SGE, N, Zero) ||
+              isKnownPositive(N, F.getDataLayout())) {
+            // srem x, n: result <= n, if n >= 0 (|result| < n, so result <= n -
+            // 1
+            AddFact(CmpInst::ICMP_SLT, BO, N);
+          }
+          continue;
+        }
+      }
+
+      auto &DL = F.getDataLayout();
+      auto AddFactsAboutIndices = [&](Value *Ptr, Type *AccessType) {
+        CmpPredicate Pred;
+        Value *A, *B;
+        if (getConstraintFromMemoryAccess(
+                *cast<GetElementPtrInst>(Ptr),
+                DL.getTypeStoreSize(AccessType).getFixedValue(), Pred, A, B, DL,
+                TLI))
+          AddFact(Pred, A, B);
+      };
+
+      if (auto *LI = dyn_cast<LoadInst>(CB.Inst)) {
+        AddFactsAboutIndices(LI->getPointerOperand(), LI->getAccessType());
+        continue;
+      }
+      if (auto *SI = dyn_cast<StoreInst>(CB.Inst)) {
+        AddFactsAboutIndices(SI->getPointerOperand(), SI->getAccessType());
+        continue;
+      }
+    }
+
+    if (CB.isConditionFact()) {
+      Pred = CB.Cond.Pred;
+      A = CB.Cond.Op0;
+      B = CB.Cond.Op1;
+      if (CB.DoesHold.Pred != CmpInst::BAD_ICMP_PREDICATE &&
+          !Info.doesHold(CB.DoesHold.Pred, CB.DoesHold.Op0, CB.DoesHold.Op1)) {
+        LLVM_DEBUG({
+          dbgs() << "Not adding fact ";
+          dumpUnpackedICmp(dbgs(), Pred, A, B);
+          dbgs() << " because precondition ";
+          dumpUnpackedICmp(dbgs(), CB.DoesHold.Pred, CB.DoesHold.Op0,
+                           CB.DoesHold.Op1);
+          dbgs() << " does not hold.\n";
+        });
+        continue;
+      }
+    } else {
+      [[maybe_unused]] bool Matched =
+          match(CB.Inst, m_Intrinsic<Intrinsic::assume>(
+                             m_ICmpLike(Pred, m_Value(A), m_Value(B))));
+      assert(Matched &&
+             "Must have an assume intrinsic with a icmp like operand");
+    }
+    AddFact(Pred, A, B);
+  }
+
+  if (ReproducerModule && !ReproducerModule->functions().empty()) {
+    std::string S;
+    raw_string_ostream StringS(S);
+    ReproducerModule->print(StringS, nullptr);
+    OptimizationRemark Rem(DEBUG_TYPE, "Reproducer", &F);
+    Rem << ore::NV("module") << S;
+    ORE.emit(Rem);
+  }
+
+#ifndef NDEBUG
+  unsigned SignedEntries =
+      count_if(DFSInStack, [](const StackEntry &E) { return E.IsSigned; });
+  assert(Info.getCS(false).size() - FunctionArgs.size() ==
+             DFSInStack.size() - SignedEntries &&
+         "updates to CS and DFSInStack are out of sync");
+  assert(Info.getCS(true).size() == SignedEntries &&
+         "updates to CS and DFSInStack are out of sync");
+#endif
+
+  for (Instruction *I : ToRemove)
+    I->eraseFromParent();
+  return Changed;
+}
+
+PreservedAnalyses ConstraintEliminationPass::run(Function &F,
+                                                 FunctionAnalysisManager &AM) {
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+  auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  if (!eliminateConstraints(F, DT, LI, SE, ORE, TLI))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<ScalarEvolutionAnalysis>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}

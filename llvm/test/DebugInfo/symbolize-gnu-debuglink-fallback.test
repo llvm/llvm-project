@@ -1,0 +1,22 @@
+# UNSUPPORTED: system-windows
+# Ensures that .debuglink can fallback to a separate location. This is normally
+# /usr/lib/debug (or /usr/libdata/debug for NetBSD), but can be configured on
+# the command line (mainly for testing).
+
+RUN: rm -rf %t/foo %t/bar
+RUN: mkdir -p %t/foo %t/bar/%t/foo
+
+RUN: cp %p/Inputs/dwarfdump-test.elf-x86-64.debuglink %t/foo
+
+RUN: llvm-symbolizer --obj=%t/foo/dwarfdump-test.elf-x86-64.debuglink 0x40113f \
+RUN:   --fallback-debug-path=%t/bar | FileCheck %s --check-prefix=UNKNOWN
+
+UNKNOWN:      main
+UNKNOWN-NEXT: ??:0:0
+
+RUN: cp %p/Inputs/dwarfdump-test.elf-x86-64 %t/bar/%t/foo
+RUN: llvm-symbolizer --obj=%t/foo/dwarfdump-test.elf-x86-64.debuglink 0x40113f \
+RUN:   --fallback-debug-path=%t/bar | FileCheck %s --check-prefix=FOUND
+
+FOUND:      main
+FOUND-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test.cc:16

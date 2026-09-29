@@ -1,0 +1,142 @@
+# REQUIRES: zstd
+## This test checks that we can read compressed SHT_LLVM_BB_ADDR_MAP sections.
+
+## Check 64-bit:
+# RUN: yaml2obj --docnum=1 %s -DBITS=64 -DADDR=0x999999999 -o %t1.x64.o
+# RUN: llvm-objcopy %t1.x64.o --compress-sections .llvm_bb_addr_map=zstd %t1.x64.compressed.o
+# RUN: llvm-readobj %t1.x64.compressed.o --bb-addr-map 2>&1 | FileCheck %s -DADDR=0x999999999 -DFILE=%t1.x64.compressed.o --check-prefix=CHECK
+
+## Check 32-bit:
+# RUN: yaml2obj --docnum=1 %s -DBITS=32 -o %t1.x32.o
+# RUN: llvm-objcopy %t1.x32.o --compress-sections .llvm_bb_addr_map=zstd %t1.x32.compressed.o
+# RUN: llvm-readobj %t1.x32.compressed.o --bb-addr-map 2>&1 | FileCheck %s -DADDR=0x11111 -DFILE=%t1.x32.compressed.o --check-prefix=CHECK
+
+# CHECK:      BBAddrMap [
+# CHECK-NEXT:   Function {
+# CHECK-NEXT:     At: [[ADDR]]
+# CHECK-NEXT: warning: '[[FILE]]': could not identify function symbol for address ([[ADDR]]) in SHT_LLVM_BB_ADDR_MAP section with index 3
+# CHECK-NEXT:     Name: <?>
+# CHECK-NEXT:     BB Ranges [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Base Address: [[ADDR]]
+# CHECK-NEXT:         BB Entries [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 0
+# CHECK-NEXT:             Offset: 0x0
+# CHECK-NEXT:             Size: 0x1
+# CHECK-NEXT:             HasReturn: No
+# CHECK-NEXT:             HasTailCall: Yes
+# CHECK-NEXT:             IsEHPad: No
+# CHECK-NEXT:             CanFallThrough: No
+# CHECK-NEXT:             HasIndirectBranch: No
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Base Address: 0x44444
+# CHECK-NEXT:         BB Entries [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 2
+# CHECK-NEXT:             Offset: 0x3
+# CHECK-NEXT:             Size: 0x4
+# CHECK-NEXT:             HasReturn: Yes
+# CHECK-NEXT:             HasTailCall: No
+# CHECK-NEXT:             IsEHPad: Yes
+# CHECK-NEXT:             CanFallThrough: No
+# CHECK-NEXT:             HasIndirectBranch: Yes
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Function {
+# CHECK-NEXT:     At: 0x22222
+# CHECK-NEXT:     Name: foo
+# CHECK-NEXT:     BB Ranges [
+# CHECK-NEXT:       {
+# CHECK-NEXT:         Base Address: 0x22222
+# CHECK-NEXT:         BB Entries [
+# CHECK-NEXT:           {
+# CHECK-NEXT:             ID: 4
+# CHECK-NEXT:             Offset: 0x6
+# CHECK-NEXT:             Size: 0x7
+# CHECK-NEXT:             HasReturn: No
+# CHECK-NEXT:             HasTailCall: No
+# CHECK-NEXT:             IsEHPad: No
+# CHECK-NEXT:             CanFallThrough: Yes
+# CHECK-NEXT:            HasIndirectBranch: No
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+    Flags:  [SHF_ALLOC]
+  - Name:   .text.bar
+    Type:   SHT_PROGBITS
+    Flags:  [SHF_ALLOC]
+  - Name:   .llvm_bb_addr_map
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    ShSize: [[SIZE=<none>]]
+    Link:   .text
+    Entries:
+      - Version: 2
+        Feature: 0x8
+        BBRanges:
+          - BaseAddress: [[ADDR=0x11111]]
+            BBEntries:
+              - ID:            0
+                AddressOffset: 0x0
+                Size:          0x1
+                Metadata:      [[METADATA=0x2]]
+          - BaseAddress: 0x44444
+            BBEntries:
+              - ID:            2
+                AddressOffset: 0x3
+                Size:          0x4
+                Metadata:      0x15
+      - Version: 2
+        BBRanges:
+          - BaseAddress: 0x22222
+            BBEntries:
+              - ID:            4
+                AddressOffset: 0x6
+                Size:          0x7
+                Metadata:      0x8
+  - Name: dummy_section
+    Type: SHT_PROGBITS
+    Size: 16
+  - Name: '.llvm_bb_addr_map (1)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Link: .text.bar
+    Entries:
+      - Version: 2
+        BBRanges:
+          - BaseAddress: 0x33333
+            BBEntries:
+              - ID:            6
+                AddressOffset: 0x9
+                Size:          0xa
+                Metadata:      0x1b
+              - ID:            7
+                AddressOffset: 0xc
+                Size:          0xd
+                Metadata:      0xe
+Symbols:
+  - Name:    foo
+    Section: .text
+    Type:    STT_FUNC
+    Value:   0x22222
+  - Name:    bar
+    Section: .text.bar
+    Type:    STT_FUNC
+    Value:   0x33333

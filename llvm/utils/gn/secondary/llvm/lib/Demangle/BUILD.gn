@@ -1,0 +1,13 @@
+static_library("Demangle") {
+  output_name = "LLVMDemangle"
+
+  deps = [ "//llvm/include/llvm/Config:llvm-config" ]
+  sources = [
+    "DLangDemangle.cpp",
+    "Demangle.cpp",
+    "ItaniumDemangle.cpp",
+    "MicrosoftDemangle.cpp",
+    "MicrosoftDemangleNodes.cpp",
+    "RustDemangle.cpp",
+  ]
+}

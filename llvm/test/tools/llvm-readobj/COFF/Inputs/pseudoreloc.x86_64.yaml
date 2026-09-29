@@ -1,0 +1,123 @@
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       5368709120
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT, IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ExportTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ImportTable:
+    RelativeVirtualAddress: 8304
+    Size:            60
+  ResourceTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ExceptionTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  CertificateTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BaseRelocationTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  Debug:
+    RelativeVirtualAddress: 0
+    Size:            0
+  Architecture:
+    RelativeVirtualAddress: 0
+    Size:            0
+  GlobalPtr:
+    RelativeVirtualAddress: 0
+    Size:            0
+  TlsTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  LoadConfigTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BoundImport:
+    RelativeVirtualAddress: 0
+    Size:            0
+  IAT:
+    RelativeVirtualAddress: 8408
+    Size:            40
+  DelayImportDescriptor:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ClrRuntimeHeader:
+    RelativeVirtualAddress: 0
+    Size:            0
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_RELOCS_STRIPPED, IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     61
+    SectionData:     488B05F91F00000FBE00488B0DF71F00000FBE0901C1488B05F31F00000FBE10488B05F91F00000FBE0001D001C8C3908B051A1000002B05CC0F0000C3
+    SizeOfRawData:   512
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     318
+    SectionData:     3377115566228844000000000000000001000000[[SYMBOL0=E8200000]]0030000040000000[[SYMBOL1=F0200000]]0830000040000000[[SYMBOL2=D8200000]]1030000040000000D82000001830000040000000E82000002030000040000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF0000000000000000B0200000000000000000000018210000D8200000C020000000000000000000002B210000E82000000000000000000000000000000000000000000000000000000021000000000000000000000000000008210000000000001021000000000000000000000000000000210000000000000000000000000000082100000000000010210000000000000000000000000000000073796D330000000073796D310000000073796D3200006578706F7274322E7838365F36342E646C6C006578706F7274312E7838365F36342E646C6C00
+    SizeOfRawData:   512
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress:  12288
+    VirtualSize:     40
+    SectionData:     E920004001000000F220004001000000D920004001000000D920004001000000EA20004001000000
+    SizeOfRawData:   512
+symbols:
+  - Name:            start
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            local2a
+    Value:           8
+    SectionNumber:   [[SECTION_OF_LOCAL2A=3]]
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            local3a
+    Value:           16
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            _pei386_runtime_relocator
+    Value:           48
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            __RUNTIME_PSEUDO_RELOC_LIST_END__
+    Value:           [[END=80]]
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            __RUNTIME_PSEUDO_RELOC_LIST__
+    Value:           [[BEGIN=8]]
+    SectionNumber:   [[SECTION_OF_BEGIN=2]]
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

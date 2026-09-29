@@ -1,0 +1,90 @@
+# RUN: llc -mtriple=wasm32-unknown-unknown %s -o - -run-pass=postrapseudos | FileCheck %s
+
+---
+name: copy_i32
+# CHECK-LABEL: copy_i32
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %0:i32 = COPY_I32 %1:i32
+  ; CHECK-NEXT: RETURN
+  bb.0:
+    %0:i32 = COPY %1:i32
+    RETURN implicit-def $arguments
+...
+---
+name: copy_i64
+# CHECK-LABEL: copy_i64
+body:             |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %0:i64 = COPY_I64 %1:i64
+  ; CHECK-NEXT: RETURN
+  bb.0:
+    %0:i64 = COPY %1:i64
+    RETURN implicit-def $arguments
+...
+---
+name: copy_f32
+# CHECK-LABEL: copy_f32
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %0:f32 = COPY_F32 %1:f32
+  ; CHECK-NEXT: RETURN
+  bb.0:
+    %0:f32 = COPY %1:f32
+    RETURN implicit-def $arguments
+...
+---
+name: copy_f64
+# CHECK-LABEL: copy_f64
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %0:f64 = COPY_F64 %1:f64
+  ; CHECK-NEXT: RETURN
+  bb.0:
+    %0:f64 = COPY %1:f64
+    RETURN implicit-def $arguments
+...
+---
+name: copy_v128
+# CHECK-LABEL: copy_v128
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %0:v128 = COPY_V128 %1:v128
+  ; CHECK-NEXT: RETURN
+  bb.0:
+    %0:v128 = COPY %1:v128
+    RETURN implicit-def $arguments
+...
+---
+name: copy_funcref
+# CHECK-LABEL: copy_funcref
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %0:funcref = COPY_FUNCREF %1:funcref
+  ; CHECK-NEXT: RETURN
+  bb.0:
+    %0:funcref = COPY %1:funcref
+    RETURN implicit-def $arguments
+...
+---
+name: copy_externref
+# CHECK-LABEL: copy_externref
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %0:externref = COPY_EXTERNREF %1:externref
+  ; CHECK-NEXT: RETURN
+  bb.0:
+    %0:externref = COPY %1:externref
+    RETURN implicit-def $arguments
+...
+---
+name: copy_exnref
+# CHECK-LABEL: copy_exnref
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %0:exnref = COPY_EXNREF %1:exnref
+  ; CHECK-NEXT: RETURN
+  bb.0:
+    %0:exnref = COPY %1:exnref
+    RETURN implicit-def $arguments
+...

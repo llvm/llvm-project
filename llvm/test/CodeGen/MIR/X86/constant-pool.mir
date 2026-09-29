@@ -1,0 +1,145 @@
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses constant pool constants and
+# constant pool operands correctly.
+
+--- |
+
+  define double @test(double %a, float %b) {
+  entry:
+    %c = fadd double %a, 3.250000e+00
+    %d = fadd float %b, 6.250000e+00
+    %e = fpext float %d to double
+    %f = fmul double %c, %e
+    ret double %f
+  }
+
+  define double @test2(double %a, float %b) {
+  entry:
+    %c = fadd double %a, 3.250000e+00
+    %d = fadd float %b, 6.250000e+00
+    %e = fpext float %d to double
+    %f = fmul double %c, %e
+    ret double %f
+  }
+
+  define double @test3(double %a, float %b) {
+  entry:
+    %c = fadd double %a, 3.250000e+00
+    %d = fadd float %b, 6.250000e+00
+    %e = fpext float %d to double
+    %f = fmul double %c, %e
+    ret double %f
+  }
+
+  define double @test4(double %a, float %b) {
+  entry:
+    %c = fadd double %a, 3.250000e+00
+    %d = fadd float %b, 6.250000e+00
+    %e = fpext float %d to double
+    %f = fmul double %c, %e
+    ret double %f
+  }
+...
+---
+# CHECK: name: test
+# CHECK: constants:
+# CHECK-NEXT: - id: 0
+# CHECK-NEXT:   value: 'double 3.250000e+00'
+# CHECK-NEXT:   alignment: 8
+# CHECK-NEXT:   isTargetSpecific: false
+# CHECK-NEXT: - id: 1
+# CHECK-NEXT:   value: 'float 6.250000e+00'
+# CHECK-NEXT:   alignment: 4
+# CHECK-NEXT:   isTargetSpecific: false
+name:            test
+constants:
+  - id:          0
+    value:       'double 3.250000e+00'
+    alignment:   8
+  - id:          1
+    value:       'float 6.250000e+00'
+    alignment:   4
+body: |
+  bb.0.entry:
+    ; CHECK:      $xmm0 = ADDSDrm killed $xmm0, $rip, 1, $noreg, %const.0, $noreg, implicit $mxcsr
+    ; CHECK-NEXT: $xmm1 = ADDSSrm killed $xmm1, $rip, 1, $noreg, %const.1, $noreg, implicit $mxcsr
+    $xmm0 = ADDSDrm killed $xmm0, $rip, 1, _, %const.0, _, implicit $mxcsr
+    $xmm1 = ADDSSrm killed $xmm1, $rip, 1, _, %const.1, _, implicit $mxcsr
+    $xmm1 = CVTSS2SDrr killed $xmm1, implicit $mxcsr
+    $xmm0 = MULSDrr killed $xmm0, killed $xmm1, implicit $mxcsr
+    RET64 $xmm0
+...
+---
+# Verify that alignment can be inferred:
+# CHECK: name: test2
+# CHECK: constants:
+# CHECK-NEXT: - id: 0
+# CHECK-NEXT:   value: 'double 3.250000e+00'
+# CHECK-NEXT:   alignment: 8
+# CHECK-NEXT:   isTargetSpecific: false
+# CHECK-NEXT: - id: 1
+# CHECK-NEXT:   value: 'float 6.250000e+00'
+# CHECK-NEXT:   alignment: 4
+# CHECK-NEXT:   isTargetSpecific: false
+name:            test2
+constants:
+  - id:          0
+    value:       'double 3.250000e+00'
+  - id:          1
+    value:       'float 6.250000e+00'
+body: |
+  bb.0.entry:
+    $xmm0 = ADDSDrm killed $xmm0, $rip, 1, _, %const.0, _, implicit $mxcsr
+    $xmm1 = ADDSSrm killed $xmm1, $rip, 1, _, %const.1, _, implicit $mxcsr
+    $xmm1 = CVTSS2SDrr killed $xmm1, implicit $mxcsr
+    $xmm0 = MULSDrr killed $xmm0, killed $xmm1, implicit $mxcsr
+    RET64 $xmm0
+...
+---
+# Verify that the non-standard alignments are respected:
+# CHECK: name: test3
+# CHECK: constants:
+# CHECK-NEXT: - id: 0
+# CHECK-NEXT:   value: 'double 3.250000e+00'
+# CHECK-NEXT:   alignment: 128
+# CHECK-NEXT:   isTargetSpecific: false
+# CHECK-NEXT: - id: 1
+# CHECK-NEXT:   value: 'float 6.250000e+00'
+# CHECK-NEXT:   alignment: 1
+# CHECK-NEXT:   isTargetSpecific: false
+name:            test3
+constants:
+  - id:          0
+    value:       'double 3.250000e+00'
+    alignment:   128
+  - id:          1
+    value:       'float 6.250000e+00'
+    alignment:   1
+body: |
+  bb.0.entry:
+    ; CHECK:      $xmm0 = ADDSDrm killed $xmm0, $rip, 1, $noreg, %const.0, $noreg, implicit $mxcsr
+    ; CHECK-NEXT: $xmm1 = ADDSSrm killed $xmm1, $rip, 1, $noreg, %const.1, $noreg, implicit $mxcsr
+    $xmm0 = ADDSDrm killed $xmm0, $rip, 1, _, %const.0, _, implicit $mxcsr
+    $xmm1 = ADDSSrm killed $xmm1, $rip, 1, _, %const.1, _, implicit $mxcsr
+    $xmm1 = CVTSS2SDrr killed $xmm1, implicit $mxcsr
+    $xmm0 = MULSDrr killed $xmm0, killed $xmm1, implicit $mxcsr
+    RET64 $xmm0
+...
+---
+# CHECK:  name:  test4
+name:            test4
+constants:
+  - id:          0
+    value:       'double 3.250000e+00'
+  - id:          1
+    value:       'float 6.250000e+00'
+body: |
+  bb.0.entry:
+    ; CHECK:      $xmm0 = ADDSDrm killed $xmm0, $rip, 1, $noreg, %const.1 - 12, $noreg, implicit $mxcsr
+    ; CHECK-NEXT: $xmm1 = ADDSSrm killed $xmm1, $rip, 1, $noreg, %const.0 + 8, $noreg, implicit $mxcsr
+    $xmm0 = ADDSDrm killed $xmm0, $rip, 1, _, %const.1 - 12, _, implicit $mxcsr
+    $xmm1 = ADDSSrm killed $xmm1, $rip, 1, _, %const.0 + 8, _, implicit $mxcsr
+    $xmm1 = CVTSS2SDrr killed $xmm1, implicit $mxcsr
+    $xmm0 = MULSDrr killed $xmm0, killed $xmm1, implicit $mxcsr
+    RET64 $xmm0
+...

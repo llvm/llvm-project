@@ -1,0 +1,74 @@
+## Check how yaml2obj handles retain (SHF_GNU_RETAIN and
+## SHF_SUNW_NODISCARD) section flags.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --sections %t1 | FileCheck %s --check-prefix=GNU
+
+# GNU:      Name: .gnu.retain
+# GNU-NEXT: Type: SHT_PROGBITS (0x1)
+# GNU-NEXT: Flags [ (0x200000)
+# GNU-NEXT:   SHF_GNU_RETAIN (0x200000)
+# GNU-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:  .gnu.retain
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_GNU_RETAIN ]
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --sections %t2 | FileCheck %s --check-prefix=SOLARIS
+
+# SOLARIS:      Name: .sunw.nodiscard
+# SOLARIS-NEXT: Type: SHT_PROGBITS (0x1)
+# SOLARIS-NEXT: Flags [ (0x100000)
+# SOLARIS-NEXT:   SHF_SUNW_NODISCARD (0x100000)
+# SOLARIS-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  OSABI: ELFOSABI_SOLARIS
+  Type:  ET_REL
+Sections:
+  - Name:  .sunw.nodiscard
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_SUNW_NODISCARD ]
+
+# RUN: not yaml2obj --docnum=3 %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SOLARIS-GNU-ERR
+
+# SOLARIS-GNU-ERR:      error: unknown bit value
+# SOLARIS-GNU-ERR-NEXT: Flags: [ SHF_GNU_RETAIN ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  OSABI: ELFOSABI_SOLARIS
+  Type:  ET_REL
+Sections:
+  - Name:  .sunw.retain
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_GNU_RETAIN ]
+
+# RUN: not yaml2obj --docnum=4 %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=GNU-SOLARIS-ERR
+
+# GNU-SOLARIS-ERR:      error: unknown bit value
+# GNU-SOLARIS-ERR-NEXT: Flags: [ SHF_SUNW_NODISCARD ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:  .gnu.nodiscard
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_SUNW_NODISCARD ]

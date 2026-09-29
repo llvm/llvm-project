@@ -1,0 +1,230 @@
+## Test that llvm-readobj/llvm-readelf shows proper relocation type
+## names and values for i386 target.
+
+# RUN: yaml2obj %s -o %t-i386.o
+# RUN: llvm-readobj -r --expand-relocs %t-i386.o | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf -r --expand-relocs %t-i386.o | FileCheck %s --check-prefix=GNU
+
+# LLVM: Type: R_386_NONE (0)
+# LLVM: Type: R_386_32 (1)
+# LLVM: Type: R_386_PC32 (2)
+# LLVM: Type: R_386_GOT32 (3)
+# LLVM: Type: R_386_PLT32 (4)
+# LLVM: Type: R_386_COPY (5)
+# LLVM: Type: R_386_GLOB_DAT (6)
+# LLVM: Type: R_386_JUMP_SLOT (7)
+# LLVM: Type: R_386_RELATIVE (8)
+# LLVM: Type: R_386_GOTOFF (9)
+# LLVM: Type: R_386_GOTPC (10)
+# LLVM: Type: R_386_32PLT (11)
+# LLVM: Type: R_386_TLS_TPOFF (14)
+# LLVM: Type: R_386_TLS_IE (15)
+# LLVM: Type: R_386_TLS_GOTIE (16)
+# LLVM: Type: R_386_TLS_LE (17)
+# LLVM: Type: R_386_TLS_GD (18)
+# LLVM: Type: R_386_TLS_LDM (19)
+# LLVM: Type: R_386_16 (20)
+# LLVM: Type: R_386_PC16 (21)
+# LLVM: Type: R_386_8 (22)
+# LLVM: Type: R_386_PC8 (23)
+# LLVM: Type: R_386_TLS_GD_32 (24)
+# LLVM: Type: R_386_TLS_GD_PUSH (25)
+# LLVM: Type: R_386_TLS_GD_CALL (26)
+# LLVM: Type: R_386_TLS_GD_POP (27)
+# LLVM: Type: R_386_TLS_LDM_32 (28)
+# LLVM: Type: R_386_TLS_LDM_PUSH (29)
+# LLVM: Type: R_386_TLS_LDM_CALL (30)
+# LLVM: Type: R_386_TLS_LDM_POP (31)
+# LLVM: Type: R_386_TLS_LDO_32 (32)
+# LLVM: Type: R_386_TLS_IE_32 (33)
+# LLVM: Type: R_386_TLS_LE_32 (34)
+# LLVM: Type: R_386_TLS_DTPMOD32 (35)
+# LLVM: Type: R_386_TLS_DTPOFF32 (36)
+# LLVM: Type: R_386_TLS_TPOFF32 (37)
+# LLVM: Type: R_386_TLS_GOTDESC (39)
+# LLVM: Type: R_386_TLS_DESC_CALL (40)
+# LLVM: Type: R_386_TLS_DESC (41)
+# LLVM: Type: R_386_IRELATIVE (42)
+# LLVM: Type: R_386_GOT32X (43)
+
+# GNU:      Relocation section '.rel.text' at offset 0x34 contains 41 entries:
+# GNU-NEXT:  Offset     Info    Type                Sym. Value  Symbol's Name
+# GNU-NEXT: 00000002  00000100 R_386_NONE             00000000   foo
+# GNU-NEXT: 00000008  00000101 R_386_32               00000000   foo
+# GNU-NEXT: 0000000e  00000102 R_386_PC32             00000000   foo
+# GNU-NEXT: 00000014  00000103 R_386_GOT32            00000000   foo
+# GNU-NEXT: 0000001a  00000104 R_386_PLT32            00000000   foo
+# GNU-NEXT: 00000020  00000105 R_386_COPY             00000000   foo
+# GNU-NEXT: 00000026  00000106 R_386_GLOB_DAT         00000000   foo
+# GNU-NEXT: 0000002c  00000107 R_386_JUMP_SLOT        00000000   foo
+# GNU-NEXT: 00000032  00000108 R_386_RELATIVE         00000000   foo
+# GNU-NEXT: 00000038  00000109 R_386_GOTOFF           00000000   foo
+# GNU-NEXT: 0000003e  0000010a R_386_GOTPC            00000000   foo
+# GNU-NEXT: 00000044  0000010b R_386_32PLT            00000000   foo
+# GNU-NEXT: 0000004a  0000010e R_386_TLS_TPOFF        00000000   foo
+# GNU-NEXT: 00000050  0000010f R_386_TLS_IE           00000000   foo
+# GNU-NEXT: 00000056  00000110 R_386_TLS_GOTIE        00000000   foo
+# GNU-NEXT: 0000005c  00000111 R_386_TLS_LE           00000000   foo
+# GNU-NEXT: 00000062  00000112 R_386_TLS_GD           00000000   foo
+# GNU-NEXT: 00000068  00000113 R_386_TLS_LDM          00000000   foo
+# GNU-NEXT: 0000006e  00000114 R_386_16               00000000   foo
+# GNU-NEXT: 00000074  00000115 R_386_PC16             00000000   foo
+# GNU-NEXT: 0000007a  00000116 R_386_8                00000000   foo
+# GNU-NEXT: 00000080  00000117 R_386_PC8              00000000   foo
+# GNU-NEXT: 00000086  00000118 R_386_TLS_GD_32        00000000   foo
+# GNU-NEXT: 0000008c  00000119 R_386_TLS_GD_PUSH      00000000   foo
+# GNU-NEXT: 00000092  0000011a R_386_TLS_GD_CALL      00000000   foo
+# GNU-NEXT: 00000098  0000011b R_386_TLS_GD_POP       00000000   foo
+# GNU-NEXT: 0000009e  0000011c R_386_TLS_LDM_32       00000000   foo
+# GNU-NEXT: 000000a4  0000011d R_386_TLS_LDM_PUSH     00000000   foo
+# GNU-NEXT: 000000aa  0000011e R_386_TLS_LDM_CALL     00000000   foo
+# GNU-NEXT: 000000b0  0000011f R_386_TLS_LDM_POP      00000000   foo
+# GNU-NEXT: 000000b6  00000120 R_386_TLS_LDO_32       00000000   foo
+# GNU-NEXT: 000000bc  00000121 R_386_TLS_IE_32        00000000   foo
+# GNU-NEXT: 000000c2  00000122 R_386_TLS_LE_32        00000000   foo
+# GNU-NEXT: 000000c8  00000123 R_386_TLS_DTPMOD32     00000000   foo
+# GNU-NEXT: 000000ce  00000124 R_386_TLS_DTPOFF32     00000000   foo
+# GNU-NEXT: 000000d4  00000125 R_386_TLS_TPOFF32      00000000   foo
+# GNU-NEXT: 000000da  00000127 R_386_TLS_GOTDESC      00000000   foo
+# GNU-NEXT: 000000e0  00000128 R_386_TLS_DESC_CALL    00000000   foo
+# GNU-NEXT: 000000e6  00000129 R_386_TLS_DESC         00000000   foo
+# GNU-NEXT: 000000ec  0000012a R_386_IRELATIVE        00000000   foo
+# GNU-NEXT: 000000f2  0000012b R_386_GOT32X           00000000   foo
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .rel.text
+    Type: SHT_REL
+    Link: .symtab
+    Relocations:
+      - Offset: 0x0000000000000002
+        Type:   R_386_NONE
+        Symbol: foo
+      - Offset: 0x0000000000000008
+        Type:   R_386_32
+        Symbol: foo
+      - Offset: 0x000000000000000E
+        Type:   R_386_PC32
+        Symbol: foo
+      - Offset: 0x0000000000000014
+        Type:   R_386_GOT32
+        Symbol: foo
+      - Offset: 0x000000000000001A
+        Type:   R_386_PLT32
+        Symbol: foo
+      - Offset: 0x0000000000000020
+        Type:   R_386_COPY
+        Symbol: foo
+      - Offset: 0x0000000000000026
+        Type:   R_386_GLOB_DAT
+        Symbol: foo
+      - Offset: 0x000000000000002C
+        Type:   R_386_JUMP_SLOT
+        Symbol: foo
+      - Offset: 0x0000000000000032
+        Type:   R_386_RELATIVE
+        Symbol: foo
+      - Offset: 0x0000000000000038
+        Type:   R_386_GOTOFF
+        Symbol: foo
+      - Offset: 0x000000000000003E
+        Type:   R_386_GOTPC
+        Symbol: foo
+      - Offset: 0x0000000000000044
+        Type:   R_386_32PLT
+        Symbol: foo
+      - Offset: 0x000000000000004A
+        Type:   R_386_TLS_TPOFF
+        Symbol: foo
+      - Offset: 0x0000000000000050
+        Type:   R_386_TLS_IE
+        Symbol: foo
+      - Offset: 0x0000000000000056
+        Type:   R_386_TLS_GOTIE
+        Symbol: foo
+      - Offset: 0x000000000000005C
+        Type:   R_386_TLS_LE
+        Symbol: foo
+      - Offset: 0x0000000000000062
+        Type:   R_386_TLS_GD
+        Symbol: foo
+      - Offset: 0x0000000000000068
+        Type:   R_386_TLS_LDM
+        Symbol: foo
+      - Offset: 0x000000000000006E
+        Type:   R_386_16
+        Symbol: foo
+      - Offset: 0x0000000000000074
+        Type:   R_386_PC16
+        Symbol: foo
+      - Offset: 0x000000000000007A
+        Type:   R_386_8
+        Symbol: foo
+      - Offset: 0x0000000000000080
+        Type:   R_386_PC8
+        Symbol: foo
+      - Offset: 0x0000000000000086
+        Type:   R_386_TLS_GD_32
+        Symbol: foo
+      - Offset: 0x000000000000008C
+        Type:   R_386_TLS_GD_PUSH
+        Symbol: foo
+      - Offset: 0x0000000000000092
+        Type:   R_386_TLS_GD_CALL
+        Symbol: foo
+      - Offset: 0x0000000000000098
+        Type:   R_386_TLS_GD_POP
+        Symbol: foo
+      - Offset: 0x000000000000009E
+        Type:   R_386_TLS_LDM_32
+        Symbol: foo
+      - Offset: 0x00000000000000A4
+        Type:   R_386_TLS_LDM_PUSH
+        Symbol: foo
+      - Offset: 0x00000000000000AA
+        Type:   R_386_TLS_LDM_CALL
+        Symbol: foo
+      - Offset: 0x00000000000000B0
+        Type:   R_386_TLS_LDM_POP
+        Symbol: foo
+      - Offset: 0x00000000000000B6
+        Type:   R_386_TLS_LDO_32
+        Symbol: foo
+      - Offset: 0x00000000000000BC
+        Type:   R_386_TLS_IE_32
+        Symbol: foo
+      - Offset: 0x00000000000000C2
+        Type:   R_386_TLS_LE_32
+        Symbol: foo
+      - Offset: 0x00000000000000C8
+        Type:   R_386_TLS_DTPMOD32
+        Symbol: foo
+      - Offset: 0x00000000000000CE
+        Type:   R_386_TLS_DTPOFF32
+        Symbol: foo
+      - Offset: 0x00000000000000D4
+        Type:   R_386_TLS_TPOFF32
+        Symbol: foo
+      - Offset: 0x00000000000000DA
+        Type:   R_386_TLS_GOTDESC
+        Symbol: foo
+      - Offset: 0x00000000000000E0
+        Type:   R_386_TLS_DESC_CALL
+        Symbol: foo
+      - Offset: 0x00000000000000E6
+        Type:   R_386_TLS_DESC
+        Symbol: foo
+      - Offset: 0x00000000000000EC
+        Type:   R_386_IRELATIVE
+        Symbol: foo
+      - Offset: 0x00000000000000F2
+        Type:   R_386_GOT32X
+        Symbol: foo
+Symbols:
+  - Name:    foo
+    Binding: STB_GLOBAL

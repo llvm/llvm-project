@@ -1,0 +1,56 @@
+; RUN: sed 's#^;.*##' %s | FileCheck -check-prefix=CHECK-PASS -implicit-check-not=warning: %s
+
+; Check we report an error when an unknown prefix is used together with `-implicit-check-not`.
+; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=UNKNOWN-PREFIX -implicit-check-not=abc %s 2>&1 | FileCheck %s -DPREFIX=UNKNOWN-PREFIX -check-prefix CHECK-PREFIX-ERROR
+; CHECK-PREFIX-ERROR: error: no check strings found with prefix '[[PREFIX]]:'
+
+; Check we report an error when the "CHECK" prefix is used explicitly with `-implicit-check-not`, but not present in the input.
+; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=CHECK -implicit-check-not=abc %s 2>&1 | FileCheck %s -DPREFIX=CHECK -check-prefix CHECK-PREFIX-ERROR
+
+; Check we allow using `-implicit-check-not` when there is no `-check-prefix` specified and there
+; is no default `CHECK` line in an input.
+; RUN: sed 's#^;.*##' %s | FileCheck -implicit-check-not="unique_string" %s
+
+; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=CHECK-FAIL1 -implicit-check-not=warning: %s 2>&1 | FileCheck %s -check-prefix CHECK-ERROR1
+; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=CHECK-FAIL2 -implicit-check-not=warning: %s 2>&1 | FileCheck %s -check-prefix CHECK-ERROR2
+; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=CHECK-FAIL3 -implicit-check-not=warning: %s 2>&1 | FileCheck %s -check-prefix CHECK-ERROR3
+; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=CHECK-FAIL1 -implicit-check-not='{{aaa|bbb|ccc}}' %s 2>&1 | FileCheck %s -check-prefix CHECK-ERROR4
+; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=CHECK-FAIL1 -implicit-check-not=aaa -implicit-check-not=bbb -implicit-check-not=ccc %s 2>&1 | FileCheck %s -check-prefix CHECK-ERROR5
+; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=CHECK-FAIL2 -implicit-check-not=aaa -implicit-check-not=bbb -implicit-check-not=ccc %s 2>&1 | FileCheck %s -check-prefix CHECK-ERROR6
+; RUN: sed 's#^;.*##' %s | %ProtectFileCheckOutput not FileCheck -check-prefix=CHECK-FAIL3 -implicit-check-not=aaa -implicit-check-not=bbb -implicit-check-not=ccc %s 2>&1 | FileCheck %s -check-prefix CHECK-ERROR7
+
+warning: aaa
+; CHECK-PASS: warning: aaa
+; CHECK-ERROR1: command line:1:22: error: IMPLICIT-CHECK-NOT: excluded string found in input
+; CHECK-ERROR1-NEXT: -implicit-check-not='warning:'
+; CHECK-ERROR1: note: found here
+; CHECK-FAIL2: warning: aaa
+; CHECK-FAIL3: warning: aaa
+; CHECK-ERROR4: command line:1:22: error: IMPLICIT-CHECK-NOT: excluded string found in input
+; CHECK-ERROR4-NEXT: {{-implicit-check-not='\{\{aaa\|bbb\|ccc\}\}'}}
+; CHECK-ERROR4: note: found here
+; CHECK-ERROR5: command line:1:22: error: IMPLICIT-CHECK-NOT: excluded string found in input
+; CHECK-ERROR5-NEXT: -implicit-check-not='aaa'
+; CHECK-ERROR5: note: found here
+
+warning: bbb
+; CHECK-PASS: warning: bbb
+; CHECK-FAIL1: warning: bbb
+; CHECK-ERROR2: command line:1:22: error: IMPLICIT-CHECK-NOT: excluded string found in input
+; CHECK-ERROR2-NEXT: -implicit-check-not='warning:'
+; CHECK-ERROR2: note: found here
+; CHECK-FAIL3: warning: bbb
+; CHECK-ERROR6: command line:1:22: error: IMPLICIT-CHECK-NOT: excluded string found in input
+; CHECK-ERROR6-NEXT: -implicit-check-not='bbb'
+; CHECK-ERROR6: note: found here
+
+warning: ccc
+; CHECK-PASS: warning: ccc
+; CHECK-FAIL1: warning: ccc
+; CHECK-FAIL2: warning: ccc
+; CHECK-ERROR3: command line:1:22: error: IMPLICIT-CHECK-NOT: excluded string found in input
+; CHECK-ERROR3-NEXT: -implicit-check-not='warning:'
+; CHECK-ERROR3: note: found here
+; CHECK-ERROR7: command line:1:22: error: IMPLICIT-CHECK-NOT: excluded string found in input
+; CHECK-ERROR7-NEXT: -implicit-check-not='ccc'
+; CHECK-ERROR7: note: found here

@@ -1,0 +1,147 @@
+# RUN: llc -mtriple=riscv32 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: | FileCheck -check-prefixes=CHECK,RV32I-MO %s
+# RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: | FileCheck -check-prefixes=CHECK,RV64I-MO %s
+
+--- |
+  define i32 @outline_0(i32 %a, i32 %b) { ret i32 0 }
+
+  define i32 @outline_1(i32 %a, i32 %b) { ret i32 0 }
+
+  define i32 @outline_2(i32 %a, i32 %b) { ret i32 0 }
+
+  ; Should not outline linkonce_odr functions which could be deduplicated by the
+  ; linker.
+  define linkonce_odr i32 @dont_outline_0(i32 %a, i32 %b) { ret i32 0 }
+
+  ; Should not outline functions with named linker sections
+  define i32 @dont_outline_1(i32 %a, i32 %b) section "named" { ret i32 0 }
+
+  ; Cannot outline if the X5 (t0) register is not free
+  define i32 @dont_outline_2(i32 %a, i32 %b) { ret i32 0 }
+
+...
+---
+name:            outline_0
+tracksRegLiveness: true
+isOutlined: false
+body:             |
+  bb.0:
+    liveins: $x10, $x11
+    ; RV32I-MO-LABEL: name: outline_0
+    ; RV32I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
+    ;
+    ; RV64I-MO-LABEL: name: outline_0
+    ; RV64I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
+    $x11 = ORI $x11, 1023
+    $x12 = ADDI $x10, 17
+    $x11 = AND $x12, $x11
+    $x10 = SUB $x10, $x11
+    PseudoRET implicit $x10
+
+...
+---
+name:            outline_1
+tracksRegLiveness: true
+isOutlined: false
+body:             |
+  bb.0:
+    liveins: $x10, $x11
+    ; RV32I-MO-LABEL: name: outline_1
+    ; RV32I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
+    ;
+    ; RV64I-MO-LABEL: name: outline_1
+    ; RV64I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
+    $x11 = ORI $x11, 1023
+    $x12 = ADDI $x10, 17
+    $x11 = AND $x12, $x11
+    $x10 = SUB $x10, $x11
+    PseudoRET implicit $x10
+
+...
+---
+name:            outline_2
+tracksRegLiveness: true
+isOutlined: false
+body:             |
+  bb.0:
+    liveins: $x10, $x11
+    ; RV32I-MO-LABEL: name: outline_2
+    ; RV32I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
+    ;
+    ; RV64I-MO-LABEL: name: outline_2
+    ; RV64I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
+    $x11 = ORI $x11, 1023
+    $x12 = ADDI $x10, 17
+    $x11 = AND $x12, $x11
+    $x10 = SUB $x10, $x11
+    PseudoRET implicit $x10
+
+...
+---
+name:            dont_outline_0
+tracksRegLiveness: true
+isOutlined: false
+body:             |
+  bb.0:
+    liveins: $x10, $x11
+    ; RV32I-MO-LABEL: name: dont_outline_0
+    ; RV32I-MO-NOT: $x5 = PseudoCALLReg {{.*}} @OUTLINED_FUNCTION_0
+    ; RV32I-MO-NOT: PseudoTAIL @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
+    ;
+    ; RV64I-MO-LABEL: name: dont_outline_0
+    ; RV64I-MO-NOT: $x5 = PseudoCALLReg {{.*}} @OUTLINED_FUNCTION_0
+    ; RV64I-MO-NOT: PseudoTAIL @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
+    $x11 = ORI $x11, 1023
+    $x12 = ADDI $x10, 17
+    $x11 = AND $x12, $x11
+    $x10 = SUB $x10, $x11
+    PseudoRET implicit $x10
+
+...
+---
+name:            dont_outline_1
+tracksRegLiveness: true
+isOutlined: false
+body:             |
+  bb.0:
+    liveins: $x10, $x11
+    ; RV32I-MO-LABEL: name: dont_outline_1
+    ; RV32I-MO-NOT: $x5 = PseudoCALLReg {{.*}} @OUTLINED_FUNCTION_0
+    ; RV32I-MO-NOT: PseudoTAIL @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
+    ;
+    ; RV64I-MO-LABEL: name: dont_outline_1
+    ; RV64I-MO-NOT: $x5 = PseudoCALLReg {{.*}} @OUTLINED_FUNCTION_0
+    ; RV64I-MO-NOT: PseudoTAIL @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
+    $x11 = ORI $x11, 1023
+    $x12 = ADDI $x10, 17
+    $x11 = AND $x12, $x11
+    $x10 = SUB $x10, $x11
+    PseudoRET implicit $x10
+
+...
+---
+name:            dont_outline_2
+tracksRegLiveness: true
+isOutlined: false
+body:             |
+  bb.0:
+    liveins: $x10, $x11, $x5
+    ; RV32I-MO-LABEL: name: dont_outline_2
+    ; RV32I-MO-NOT: $x5 = PseudoCALLReg {{.*}} @OUTLINED_FUNCTION_0
+    ; RV32I-MO-NOT: PseudoTAIL @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
+    ;
+    ; RV64I-MO-LABEL: name: dont_outline_2
+    ; RV64I-MO-NOT: $x5 = PseudoCALLReg {{.*}} @OUTLINED_FUNCTION_0
+    ; RV64I-MO-NOT: PseudoTAIL @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x10, implicit $x11
+    $x11 = ORI $x11, 1023
+    $x12 = ADDI $x10, 17
+    $x11 = AND $x12, $x11
+    $x10 = SUB $x10, $x11
+    $x10 = ADD $x10, $x5
+    PseudoRET implicit $x10
+
+...
+
+# CHECK-LABEL: name: OUTLINED_FUNCTION_0
+# CHECK: isOutlined: true

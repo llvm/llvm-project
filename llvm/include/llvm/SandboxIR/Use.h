@@ -1,0 +1,86 @@
+//===- Use.h ----------------------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Sandbox IR Use.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_SANDBOXIR_USE_H
+#define LLVM_SANDBOXIR_USE_H
+
+#include "llvm/IR/Use.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/raw_ostream.h"
+
+namespace llvm::sandboxir {
+
+class Context;
+class Value;
+class User;
+class OperandUseIterator;
+class UserUseIterator;
+class CallBase;
+class CallBrInst;
+class PHINode;
+
+// Forward declare instruction wrapper classes so qualified friend
+// declarations below refer to SandboxIR classes instead of introducing new
+// unqualified declarations.
+#define DEF_INSTR(ID, OPC, CLASS) class CLASS;
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_INSTR
+
+/// Represents a Def-use/Use-def edge in SandboxIR.
+/// NOTE: Unlike llvm::Use, this is not an integral part of the use-def chains.
+/// It is also not uniqued and is currently passed by value, so you can have
+/// more than one sandboxir::Use objects for the same use-def edge.
+class Use {
+  llvm::Use *LLVMUse;
+  User *Usr;
+  Context *Ctx;
+
+  /// Don't allow the user to create a sandboxir::Use directly.
+  Use(llvm::Use *LLVMUse, User *Usr, Context &Ctx)
+      : LLVMUse(LLVMUse), Usr(Usr), Ctx(&Ctx) {}
+  Use() : LLVMUse(nullptr), Ctx(nullptr) {}
+
+  friend ::llvm::sandboxir::Value;              // For constructor
+  friend ::llvm::sandboxir::User;               // For constructor
+  friend ::llvm::sandboxir::OperandUseIterator; // For constructor
+  friend ::llvm::sandboxir::UserUseIterator;    // For accessing members
+  friend ::llvm::sandboxir::CallBase;           // For LLVMUse
+  friend ::llvm::sandboxir::PHINode;            // For LLVMUse
+  // Friend instructions so that they can call the constructor if needed.
+#define DEF_INSTR(ID, OPC, CLASS) friend ::llvm::sandboxir::CLASS;
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_INSTR
+
+public:
+  operator Value *() const { return get(); }
+  LLVM_ABI Value *get() const;
+  LLVM_ABI void set(Value *V);
+  class User *getUser() const { return Usr; }
+  LLVM_ABI unsigned getOperandNo() const;
+  LLVM_ABI void swap(Use &OtherUse);
+  Context *getContext() const { return Ctx; }
+  bool operator==(const Use &Other) const {
+    assert(Ctx == Other.Ctx && "Contexts differ!");
+    return LLVMUse == Other.LLVMUse && Usr == Other.Usr;
+  }
+  bool operator!=(const Use &Other) const { return !(*this == Other); }
+#ifndef NDEBUG
+  LLVM_ABI void dumpOS(raw_ostream &OS) const;
+  void dump() const;
+#endif // NDEBUG
+};
+
+} // namespace llvm::sandboxir
+
+#endif // LLVM_SANDBOXIR_USE_H

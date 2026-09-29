@@ -1,0 +1,18 @@
+RUN: llvm-dwarfdump --debug-info %S/../../dsymutil/Inputs/libfat-test.a \
+RUN:   | FileCheck %s
+CHECK: libfat-test.a(x86_64)(fat-test.o):        file format Mach-O 64-bit x86-64
+CHECK: .debug_info contents:
+CHECK: libfat-test.a(i386)(fat-test.o):  file format Mach-O 32-bit i386
+CHECK: .debug_info contents:
+
+RUN: llvm-dwarfdump --debug-info %S/../../dsymutil/Inputs/libfat-test.a \
+RUN:   --arch=i386 | FileCheck %s --check-prefix=I386
+I386-NOT: 64-bit
+I386: file format Mach-O 32-bit i386
+I386-NOT: 64-bit
+
+RUN: llvm-dwarfdump --debug-info %S/../../dsymutil/Inputs/libfat-test.a \
+RUN:   --arch=i386 --arch=x86_64 | FileCheck %s
+
+RUN: llvm-dwarfdump --debug-info %S/../../dsymutil/Inputs/libfat-test.a \
+RUN:   --arch=7 | FileCheck %s --check-prefix=I386

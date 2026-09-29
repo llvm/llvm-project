@@ -1,0 +1,107 @@
+// This test checks that the unwind data is dumped by llvm-objdump.
+// RUN: llvm-objdump -u %p/Inputs/win64-unwind.exe.coff-x86_64.obj \
+// RUN:   | FileCheck -check-prefix=OBJ %s
+// RUN: llvm-objdump -u %p/Inputs/win64-unwind.exe.coff-x86_64.exe \
+// RUN:   | FileCheck -check-prefix=EXE %s
+
+OBJ:      Unwind info:
+OBJ:      Function Table:
+OBJ-NEXT:   Start Address: func
+OBJ-NEXT:   End Address: func + 0x001b
+OBJ-NEXT:   Unwind Info Address: .xdata
+OBJ-NEXT:     Version: 1
+OBJ-NEXT:     Flags: 1 UNW_ExceptionHandler
+OBJ-NEXT:     Size of prolog: 18
+OBJ-NEXT:     Number of Codes: 8
+OBJ-NEXT:     Frame register: RBX
+OBJ-NEXT:     Frame offset: 0
+OBJ-NEXT:     Unwind Codes:
+OBJ-NEXT:       0x12: UOP_SetFPReg
+OBJ-NEXT:       0x0f: UOP_PushNonVol RBX
+OBJ-NEXT:       0x0e: UOP_SaveXMM128 XMM8 [0x0000]
+OBJ-NEXT:       0x09: UOP_SaveNonVol RSI [0x0010]
+OBJ-NEXT:       0x04: UOP_AllocSmall 24
+OBJ-NEXT:       0x00: UOP_PushMachFrame w/o error code
+OBJ:      Function Table:
+OBJ-NEXT:   Start Address: func + 0x0012
+OBJ-NEXT:   End Address: func + 0x0012
+OBJ-NEXT:   Unwind Info Address: .xdata + 0x001c
+OBJ-NEXT:     Version: 1
+OBJ-NEXT:     Flags: 4 UNW_ChainInfo
+OBJ-NEXT:     Size of prolog: 0
+OBJ-NEXT:     Number of Codes: 0
+OBJ-NEXT:     No frame pointer used
+OBJ:      Function Table:
+OBJ-NEXT:   Start Address: smallFunc
+OBJ-NEXT:   End Address: smallFunc + 0x0001
+OBJ-NEXT:   Unwind Info Address: .xdata + 0x002c
+OBJ-NEXT:     Version: 1
+OBJ-NEXT:     Flags: 0
+OBJ-NEXT:     Size of prolog: 0
+OBJ-NEXT:     Number of Codes: 0
+OBJ-NEXT:     No frame pointer used
+OBJ:      Function Table:
+OBJ-NEXT:   Start Address: allocFunc
+OBJ-NEXT:   End Address: allocFunc + 0x001d
+OBJ-NEXT:   Unwind Info Address: .xdata + 0x0034
+OBJ-NEXT:     Version: 1
+OBJ-NEXT:     Flags: 0
+OBJ-NEXT:     Size of prolog: 14
+OBJ-NEXT:     Number of Codes: 6
+OBJ-NEXT:     No frame pointer used
+OBJ-NEXT:     Unwind Codes:
+OBJ-NEXT:       0x0e: UOP_AllocLarge 8454128
+OBJ-NEXT:       0x07: UOP_AllocLarge 8190
+OBJ-NEXT:       0x00: UOP_PushMachFrame w/o error code
+
+EXE:      Function Table:
+EXE-NEXT:   Start Address: 0x1000
+EXE-NEXT:   End Address: 0x101b
+EXE-NEXT:   Unwind Info Address: 0x2000
+EXE-NEXT:     Version: 1
+EXE-NEXT:     Flags: 1 UNW_ExceptionHandler
+EXE-NEXT:     Size of prolog: 18
+EXE-NEXT:     Number of Codes: 8
+EXE-NEXT:     Frame register: RBX
+EXE-NEXT:     Frame offset: 0
+EXE-NEXT:     Unwind Codes:
+EXE-NEXT:       0x12: UOP_SetFPReg
+EXE-NEXT:       0x0f: UOP_PushNonVol RBX
+EXE-NEXT:       0x0e: UOP_SaveXMM128 XMM8 [0x0000]
+EXE-NEXT:       0x09: UOP_SaveNonVol RSI [0x0010]
+EXE-NEXT:       0x04: UOP_AllocSmall 24
+EXE-NEXT:       0x00: UOP_PushMachFrame w/o error code
+
+EXE:      Function Table:
+EXE-NEXT:   Start Address: 0x1012
+EXE-NEXT:   End Address: 0x1012
+EXE-NEXT:   Unwind Info Address: 0x201c
+EXE-NEXT:     Version: 1
+EXE-NEXT:     Flags: 4 UNW_ChainInfo
+EXE-NEXT:     Size of prolog: 0
+EXE-NEXT:     Number of Codes: 0
+EXE-NEXT:     No frame pointer used
+
+EXE:      Function Table:
+EXE-NEXT:   Start Address: 0x101b
+EXE-NEXT:   End Address: 0x101c
+EXE-NEXT:   Unwind Info Address: 0x202c
+EXE-NEXT:     Version: 1
+EXE-NEXT:     Flags: 0
+EXE-NEXT:     Size of prolog: 0
+EXE-NEXT:     Number of Codes: 0
+EXE-NEXT:     No frame pointer used
+
+EXE:      Function Table:
+EXE-NEXT:   Start Address: 0x101c
+EXE-NEXT:   End Address: 0x1039
+EXE-NEXT:   Unwind Info Address: 0x2034
+EXE-NEXT:     Version: 1
+EXE-NEXT:     Flags: 0
+EXE-NEXT:     Size of prolog: 14
+EXE-NEXT:     Number of Codes: 6
+EXE-NEXT:     No frame pointer used
+EXE-NEXT:     Unwind Codes:
+EXE-NEXT:       0x0e: UOP_AllocLarge 8454128
+EXE-NEXT:       0x07: UOP_AllocLarge 8190
+EXE-NEXT:       0x00: UOP_PushMachFrame w/o error code

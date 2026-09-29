@@ -1,0 +1,63 @@
+## This test checks prepending a new LC_RPATH load command to a MachO binary.
+
+# RUN: yaml2obj %p/Inputs/i386.yaml -o %t.i386
+# RUN: llvm-install-name-tool -add_rpath @executable_path/. %t.i386
+# RUN: llvm-install-name-tool -prepend_rpath first_rpath %t.i386
+# RUN: llvm-objdump -p %t.i386 | FileCheck --check-prefix=NEW-RPATH %s
+
+# RUN: yaml2obj %p/Inputs/x86_64.yaml -o %t.x86_64
+# RUN: llvm-install-name-tool -add_rpath @executable_path/. %t.x86_64
+# RUN: llvm-install-name-tool -prepend_rpath first_rpath %t.x86_64
+# RUN: llvm-objdump -p %t.x86_64 | FileCheck --check-prefix=NEW-RPATH %s
+
+# NEW-RPATH:      cmd LC_RPATH
+# NEW-RPATH-NEXT: cmdsize
+# NEW-RPATH-NEXT: first_rpath
+
+# NEW-RPATH:      cmd LC_RPATH
+# NEW-RPATH-NEXT: cmdsize
+# NEW-RPATH-NEXT: @executable_path/.
+
+## Prepend with dylib loads:
+# RUN: yaml2obj %p/Inputs/strip-all.yaml -o %t.dylib
+# RUN: llvm-install-name-tool -prepend_rpath first_rpath %t.dylib
+# RUN: llvm-objdump -p %t.dylib | FileCheck --check-prefix=DYLIB %s
+
+# DYLIB:      cmd LC_RPATH
+# DYLIB-NEXT: cmdsize
+# DYLIB-NEXT: first_rpath
+
+# RUN: not llvm-install-name-tool -prepend_rpath first_rpath %t.i386 2>&1 | \
+# RUN:   FileCheck --check-prefix=DUPLICATE-RPATH %s
+
+# DUPLICATE-RPATH: rpath 'first_rpath' would create a duplicate load command
+
+## Prepend same RPATH twice:
+# RUN: not llvm-install-name-tool -prepend_rpath @executable_X \
+# RUN:                            -prepend_rpath @executable_X %t.i386 2>&1 | \
+# RUN:   FileCheck --check-prefix=DOUBLE %s
+
+# DOUBLE: rpath '@executable_X' would create a duplicate load command
+
+## Prepend and delete RPATH:
+# RUN: not llvm-install-name-tool -prepend_rpath foo \
+# RUN:                            -delete_rpath foo %t.i386 2>&1 | \
+# RUN:   FileCheck --check-prefix=DELETE %s
+
+# DELETE: cannot specify both -prepend_rpath 'foo' and -delete_rpath 'foo'
+
+## Prepend and replace RPATH:
+# RUN: not llvm-install-name-tool -prepend_rpath foo \
+# RUN:                            -rpath foo bar %t.i386 2>&1 | \
+# RUN:   FileCheck --check-prefix=REPLACE %s
+
+# REPLACE: cannot specify both -prepend_rpath 'foo' and -rpath 'foo' 'bar'
+
+## Check that cmdsize accounts for NULL terminator:
+# RUN: yaml2obj %p/Inputs/x86_64.yaml -o %t.x86_64
+# RUN: llvm-install-name-tool -prepend_rpath abcd %t.x86_64
+# RUN: llvm-objdump -p %t.x86_64 | FileCheck %s --check-prefix=RPATH-SIZE
+
+# RPATH-SIZE:      cmd LC_RPATH
+# RPATH-SIZE-NEXT: cmdsize 24
+# RPATH-SIZE-NEXT: path abcd

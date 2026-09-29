@@ -1,0 +1,47 @@
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t | FileCheck %s
+
+## Check we are able to yamalize the SHT_GNU_versym section.
+
+# CHECK:      --- !ELF
+# CHECK-NEXT: FileHeader:
+# CHECK-NEXT:   Class: ELFCLASS64
+# CHECK-NEXT:   Data:  ELFDATA2LSB
+# CHECK-NEXT:   Type:  ET_EXEC
+# CHECK-NEXT:   Entry: 0x201000
+# CHECK-NEXT: Sections:
+# CHECK-NEXT:   - Name:         .gnu.version
+# CHECK-NEXT:     Type:         SHT_GNU_versym
+# CHECK-NEXT:     Flags:        [ SHF_ALLOC ]
+# CHECK-NEXT:     Address:      0x200210
+# CHECK-NEXT:     Link:         .dynsym
+# CHECK-NEXT:     AddressAlign: 0x2
+# CHECK-NEXT:     Entries:      [ 0, 3, 4 ]
+# CHECK-NEXT:   - Name:
+# CHECK:      DynamicSymbols:
+# CHECK-NEXT:   - Name:    f1
+# CHECK-NEXT:     Binding: STB_GLOBAL
+# CHECK-NEXT:   - Name:    f2
+# CHECK-NEXT:     Binding: STB_GLOBAL
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  Entry: 0x201000
+Sections:
+  - Name:            .gnu.version
+    Type:            SHT_GNU_versym
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x200210
+    Link:            .dynsym
+    AddressAlign:    0x2
+    EntSize:         0x2
+    Entries:         [ 0, 3, 4 ]
+DynamicSymbols:
+  - Name:    f1
+    Binding: STB_GLOBAL
+  - Name:    f2
+    Binding: STB_GLOBAL
+...

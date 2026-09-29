@@ -1,0 +1,221 @@
+## Verify that -T removes Swift symbols.
+# RUN: yaml2obj -D FLAGS=0x00200085 -D SEGMENT_NAME=__DATA \
+# RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=8 \
+# RUN:  -D SECTION_CONTENT=0000000040070105 %s -o %t1
+# RUN: llvm-strip -x -T %t1
+# RUN: llvm-readobj -s %t1 | FileCheck --check-prefix=NO-SWIFT-SYMBOLS %s
+
+# RUN: yaml2obj -D FLAGS=0x00200085 -D SEGMENT_NAME=__DATA_CONST \
+# RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=8 \
+# RUN:  -D SECTION_CONTENT=0000000040070105 %s -o %t2
+# RUN: llvm-strip -x -T %t2
+# RUN: llvm-readobj -s %t2 | FileCheck --check-prefix=NO-SWIFT-SYMBOLS %s
+
+# RUN: yaml2obj -D FLAGS=0x00200085 -D SEGMENT_NAME=__DATA_DIRTY \
+# RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=8 \
+# RUN:  -D SECTION_CONTENT=0000000040070105 %s -o %t3
+# RUN: llvm-strip -x -T %t3
+# RUN: llvm-readobj -s %t3 | FileCheck --check-prefix=NO-SWIFT-SYMBOLS %s
+
+# NO-SWIFT-SYMBOLS:      Symbols [
+# NO-SWIFT-SYMBOLS-NEXT:  Symbol {
+# NO-SWIFT-SYMBOLS-NEXT:    Name: _main (2)
+# NO-SWIFT-SYMBOLS-NEXT:    Extern
+# NO-SWIFT-SYMBOLS-NEXT:    Type: Section (0xE)
+# NO-SWIFT-SYMBOLS-NEXT:    Section: __text (0x1)
+# NO-SWIFT-SYMBOLS-NEXT:    RefType: UndefinedNonLazy (0x0)
+# NO-SWIFT-SYMBOLS-NEXT:    Flags [ (0x0)
+# NO-SWIFT-SYMBOLS-NEXT:    ]
+# NO-SWIFT-SYMBOLS-NEXT:    Value: 0x100000B70
+# NO-SWIFT-SYMBOLS-NEXT:  }
+# NO-SWIFT-SYMBOLS-NEXT: ]
+
+## Verify that -T does not remove (public) Swift symbols when the binary
+## does not contain __objc_imageinfo in one of the expected segments.
+
+# RUN: yaml2obj -D FLAGS=0x00200085 -D SEGMENT_NAME=__DATA \
+# RUN:  -D SECTION_NAME=__not_objc_imageinfo -D SECTION_SIZE=8 \
+# RUN:  -D SECTION_CONTENT=0000000040070105 %s -o %t4
+# RUN: llvm-strip -x -T %t4
+# RUN: llvm-readobj -s %t4 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
+
+# RUN: yaml2obj -D FLAGS=0x00200085 -D SEGMENT_NAME=__NOT_DATA \
+# RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=8 \
+# RUN:  -D SECTION_CONTENT=0000000040070105 %s -o %t5
+# RUN: llvm-strip -x -T %t5
+# RUN: llvm-readobj -s %t5 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
+
+## Verify that -T does not remove (public) Swift symbols when swift_version is zero.
+
+# RUN: yaml2obj -D FLAGS=0x00200085 -D SEGMENT_NAME=__DATA \
+# RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=8 \
+# RUN:  -D SECTION_CONTENT=0000000000000000 %s -o %t6
+# RUN: llvm-strip -x -T %t6
+# RUN: llvm-readobj -s %t6 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
+
+## Verify that -T does not remove (public) Swift symbols when the binary
+## contains invalid (too small) __objc_imageinfo.
+
+# RUN: yaml2obj -D FLAGS=0x00200085 -D SEGMENT_NAME=__DATA \
+# RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=4 \
+# RUN:  -D SECTION_CONTENT=00000000 %s -o %t7
+# RUN: llvm-strip -x -T %t7
+# RUN: llvm-readobj -s %t7 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
+
+## Verify that -T does not remove (public) Swift symbols
+## when the flag MH_DYLDLINK is not set.
+
+# RUN: yaml2obj -D FLAGS=0x00200000 -D SEGMENT_NAME=__DATA \
+# RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=8 \
+# RUN:  -D SECTION_CONTENT=0000000040070105 %s -o %t8
+# RUN: llvm-strip -x -T %t8
+# RUN: llvm-readobj -s %t8 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
+
+# SWIFT-SYMBOLS:      Symbols [
+# SWIFT-SYMBOLS-NEXT:  Symbol {
+# SWIFT-SYMBOLS-NEXT:    Name: _$S1a13PublicSymbol1Sivp (27)
+# SWIFT-SYMBOLS-NEXT:    Extern
+# SWIFT-SYMBOLS-NEXT:    Type: Section (0xE)
+# SWIFT-SYMBOLS-NEXT:    Section: __text (0x1)
+# SWIFT-SYMBOLS-NEXT:    RefType: UndefinedNonLazy (0x0)
+# SWIFT-SYMBOLS-NEXT:    Flags [ (0x0)
+# SWIFT-SYMBOLS-NEXT:    ]
+# SWIFT-SYMBOLS-NEXT:    Value: 0x100001160
+# SWIFT-SYMBOLS-NEXT:  }
+# SWIFT-SYMBOLS-NEXT:  Symbol {
+# SWIFT-SYMBOLS-NEXT:    Name: _$s1a13PublicSymbol2Sivp (2)
+# SWIFT-SYMBOLS-NEXT:    Extern
+# SWIFT-SYMBOLS-NEXT:    Type: Section (0xE)
+# SWIFT-SYMBOLS-NEXT:    Section: __text (0x1)
+# SWIFT-SYMBOLS-NEXT:    RefType: UndefinedNonLazy (0x0)
+# SWIFT-SYMBOLS-NEXT:    Flags [ (0x0)
+# SWIFT-SYMBOLS-NEXT:    ]
+# SWIFT-SYMBOLS-NEXT:    Value: 0x100001168
+# SWIFT-SYMBOLS-NEXT:  }
+# SWIFT-SYMBOLS-NEXT:  Symbol {
+# SWIFT-SYMBOLS-NEXT:    Name: _main (52)
+# SWIFT-SYMBOLS-NEXT:    Extern
+# SWIFT-SYMBOLS-NEXT:    Type: Section (0xE)
+# SWIFT-SYMBOLS-NEXT:    Section: __text (0x1)
+# SWIFT-SYMBOLS-NEXT:    RefType: UndefinedNonLazy (0x0)
+# SWIFT-SYMBOLS-NEXT:    Flags [ (0x0)
+# SWIFT-SYMBOLS-NEXT:    ]
+# SWIFT-SYMBOLS-NEXT:    Value: 0x100000B70
+# SWIFT-SYMBOLS-NEXT:  }
+# SWIFT-SYMBOLS-NEXT: ]
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           4
+  sizeofcmds:      400
+  flags:           [[FLAGS]]
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000100000B70
+        size:            845
+        offset:          0x00000B70
+        align:           4
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         [[SEGMENT_NAME]]
+    vmaddr:          4294971392
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        4096
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        [[SECTION_NAME]]
+        segname:         [[SEGMENT_NAME]]
+        addr:            0x0000000100001090
+        size:            [[SECTION_SIZE]]
+        offset:          0x00001090
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         "[[SECTION_CONTENT]]"
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294975488
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        188
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          8192
+    nsyms:           5
+    stroff:          8272
+    strsize:         108
+LinkEditData:
+  NameList:
+    - n_strx:          50
+      n_type:          0x1E
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294971760
+    - n_strx:          1
+      n_type:          0x1E
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294971768
+    - n_strx:          74
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294971744
+    - n_strx:          25
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294971752
+    - n_strx:          99
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294970224
+  StringTable:
+    - ''
+    - '_$s1a12LocalSymbol2Sivp'
+    - '_$s1a13PublicSymbol2Sivp'
+    - '_$S1a12LocalSymbol1Sivp'
+    - '_$S1a13PublicSymbol1Sivp'
+    - _main
+    - ''
+    - ''
+    - ''
+...

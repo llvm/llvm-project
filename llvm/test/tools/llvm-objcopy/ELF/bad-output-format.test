@@ -1,0 +1,19 @@
+# RUN: yaml2obj %s -o %t.o
+
+# RUN: not llvm-objcopy -O xyz %t.o %t.2.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BAD-OUTPUT-FORMAT
+
+# FreeBSD has some special output format parsing that looks up the name without
+# the trailing "-freebsd". Make sure we include the full output format name.
+# RUN: not llvm-objcopy -O xyz-freebsd %t.o %t.2.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BAD-OUTPUT-FORMAT-BSD
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_386
+
+# BAD-OUTPUT-FORMAT: invalid output format: 'xyz'
+# BAD-OUTPUT-FORMAT-BSD: invalid output format: 'xyz-freebsd'

@@ -1,0 +1,20 @@
+# RUN: llvm-ifs %s --output-ifs - --strip-size | FileCheck %s
+
+# CHECK:      Symbols:
+# CHECK-NEXT:   - { Name: sym, Type: Object }
+# CHECK-NEXT: ...
+
+## Check that the size when emitting to elf defaults to 1.
+# RUN: llvm-ifs %s --output-elf - --strip-size | llvm-ifs - --output-ifs - | \
+# RUN:   FileCheck %s --check-prefix=ELF
+
+# ELF:      Symbols:
+# ELF-NEXT:   - { Name: sym, Type: Object, Size: 0 }
+# ELF-NEXT: ...
+
+--- !ifs-v1
+IfsVersion: 3.0
+Target: x86_64
+Symbols:
+  - { Name: sym, Type: Object, Size: 2 }
+...

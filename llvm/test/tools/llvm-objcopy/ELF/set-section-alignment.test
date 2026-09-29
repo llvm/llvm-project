@@ -1,0 +1,62 @@
+# RUN: yaml2obj %s -o %t
+
+# RUN: llvm-objcopy --set-section-alignment .foo=4 --set-section-alignment .bar=0x5 \
+# RUN:   --set-section-alignment .baz=0 %t %t.2
+# RUN: llvm-readobj --sections %t.2 | FileCheck --check-prefix=CHECK %s
+
+# CHECK:      Name: .foo
+# CHECK:      AddressAlignment:
+# CHECK-SAME:                   4{{$}}
+# CHECK:      Name: .bar
+# CHECK:      AddressAlignment:
+# CHECK-SAME:                   5{{$}}
+# CHECK:      Name: .baz
+# CHECK:      AddressAlignment:
+# CHECK-SAME:                   0{{$}}
+
+## If a section is specified multiple times, the last wins.
+## Also incidentally show that unmentioned sections are not impacted.
+# RUN: llvm-objcopy --set-section-alignment .foo=4 --set-section-alignment=.foo=7 %t %t.3
+# RUN: llvm-readobj --sections %t.3 | FileCheck --check-prefix=MULTI %s
+
+# MULTI:      Name: .foo
+# MULTI:      AddressAlignment:
+# MULTI-SAME:                   7{{$}}
+# MULTI:      Name: .bar
+# MULTI:      AddressAlignment:
+# MULTI-SAME:                   0{{$}}
+# MULTI:      Name: .baz
+# MULTI:      AddressAlignment:
+# MULTI-SAME:                   4{{$}}
+
+## Ignore the option if the section does not exist.
+# RUN: llvm-objcopy --set-section-alignment .not_exist=4 %t.3 %t.4
+# RUN: cmp %t.3 %t.4
+
+# RUN: not llvm-objcopy --set-section-alignment=.foo %t /dev/null 2>&1 | \
+# RUN:   FileCheck --check-prefix=MISSING-EQUAL %s
+# MISSING-EQUAL:   error: bad format for --set-section-alignment: missing '='
+
+# RUN: not llvm-objcopy --set-section-alignment==4 %t /dev/null 2>&1 | \
+# RUN:   FileCheck --check-prefix=MISSING-SECTION %s
+# MISSING-SECTION: error: bad format for --set-section-alignment: missing section name
+
+# RUN: not llvm-objcopy --set-section-alignment=.foo=bar %t /dev/null 2>&1 | \
+# RUN:   FileCheck --check-prefix=INVALID-ALIGN %s
+# INVALID-ALIGN:   error: invalid value for --set-section-alignment: 'bar'
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:         .foo
+    Type:         SHT_PROGBITS
+  - Name:         .bar
+    Type:         SHT_NOBITS
+  - Name:         .baz
+    Type:         SHT_NOTE
+    AddressAlign: 4
+    Notes:        []

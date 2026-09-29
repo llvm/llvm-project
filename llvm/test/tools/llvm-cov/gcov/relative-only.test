@@ -1,0 +1,38 @@
+# Test -r (--relative-only) and -s (--source-prefix).
+# UNSUPPORTED: system-windows
+RUN: rm -rf %t && mkdir %t && cd %t
+RUN: cp %S/Inputs/abs-path.gcno %S/Inputs/abs-path.gcda .
+
+RUN: llvm-cov gcov abs-path.gcda | FileCheck %s
+RUN: rm abs-path.c.gcov a.h.gcov
+CHECK: File '/tmp/c/abs-path.c'
+CHECK: File '/tmp/h/a.h'
+
+# If there is no source file with a relative path, nothing is dumped.
+RUN: llvm-cov gcov -r abs-path.gcda 2>&1 | count 0
+RUN: llvm-cov gcov -r -s /t abs-path.gcda 2>&1 | count 0
+RUN: not ls abs-path.c.gcov 2> /dev/null
+
+# -s strips a prefix from filenames and can change filtering of -r.
+RUN: llvm-cov gcov -r -s /tmp abs-path.gcda | FileCheck %s --check-prefix=STRIP1 --match-full-lines --strict-whitespace
+RUN: FileCheck %s --check-prefix=STRIP1_C < abs-path.c.gcov
+RUN: FileCheck %s --check-prefix=STRIP1_H < a.h.gcov
+
+# Test full option names.
+RUN: llvm-cov gcov --relative-only --source-prefix=/tmp abs-path.gcda | FileCheck %s --check-prefix=STRIP1 --match-full-lines --strict-whitespace
+
+      STRIP1:File 'c/abs-path.c'
+ STRIP1-NEXT:Lines executed:100.00% of 1
+ STRIP1-NEXT:Creating 'abs-path.c.gcov'
+STRIP1-EMPTY:
+ STRIP1-NEXT:File 'h/a.h'
+ STRIP1-NEXT:Lines executed:0.00% of 1
+ STRIP1-NEXT:Creating 'a.h.gcov'
+
+STRIP1_C: 0:Source:c/abs-path.c
+STRIP1_H: 0:Source:h/a.h
+
+RUN: llvm-cov gcov -r -s /tmp/h abs-path.gcda | FileCheck %s --check-prefix=STRIP2
+
+STRIP2-NOT: File
+STRIP2:     File 'a.h'

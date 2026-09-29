@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s -o %t -DFLAG_NAME=EF_AVR_ARCH_AVR51
+# RUN: llvm-readobj -h %t | FileCheck %s -DFLAG_NAME=EF_AVR_ARCH_AVR51 -DFLAG_VALUE=0x33
+
+# RUN: yaml2obj %s -o %t -DFLAG_NAME="EF_AVR_ARCH_AVR2, EF_AVR_LINKRELAX_PREPARED"
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=DOUBLE -DFLAG0_NAME=EF_AVR_ARCH_AVR2 -DFLAG1_NAME=EF_AVR_LINKRELAX_PREPARED -DFLAG_VALUE=0x82
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_NONE
+  ABIVersion:      0
+  Type:            ET_REL
+  Machine:         EM_AVR
+  Flags:           [ [[FLAG_NAME]] ]
+
+# CHECK:          Flags [ ([[FLAG_VALUE]])
+# CHECK-NEXT:       [[FLAG_NAME]] ([[FLAG_VALUE]])
+# CHECK-NEXT:     ]
+
+# DOUBLE:          Flags [ ([[FLAG_VALUE]])
+# DOUBLE-NEXT:       [[FLAG0_NAME]]
+# DOUBLE-NEXT:       [[FLAG1_NAME]]
+# DOUBLE-NEXT:     ]
+

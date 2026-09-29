@@ -1,0 +1,2 @@
+# RUN: not obj2yaml %S/Inputs/aix_xcoff_truncated_file_header.o 2>&1 | FileCheck %s
+# CHECK: The end of the file was unexpectedly encountered

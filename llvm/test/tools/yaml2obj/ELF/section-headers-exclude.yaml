@@ -1,0 +1,501 @@
+## Check how we can use the "Excluded" key of the "SectionHeaderTable" tag to exclude
+## entries from the section header table.
+
+## Check we can use the "Excluded" key to omit a section from the section header table.
+## Check we do not include the name of the excluded section in the string table.
+# RUN: yaml2obj %s -DINCLUDED=.foo -DEXCLUDED=.bar --docnum=1 -o %t1
+# RUN: llvm-readelf --section-headers -p .shstrtab %t1 | \
+# RUN:   FileCheck %s -DSEC=.foo --check-prefixes=INCLUDE-SEC,INCLUDE-FOO
+# RUN: yaml2obj %s -DINCLUDED=.bar -DEXCLUDED=.foo --docnum=1 -o %t2
+# RUN: llvm-readelf --section-headers -p .shstrtab %t2 | \
+# RUN:   FileCheck %s -DSEC=.bar --check-prefixes=INCLUDE-SEC,INCLUDE-BAR
+
+# INCLUDE-SEC:      [Nr] Name
+# INCLUDE-SEC:      [ 1] [[SEC]]
+# INCLUDE-SEC-NEXT: [ 2] .strtab
+# INCLUDE-SEC-NEXT: [ 3] .shstrtab
+
+# INCLUDE-SEC:      String dump of section '.shstrtab':
+# INCLUDE-FOO-NEXT: [     1] .foo
+# INCLUDE-BAR-NEXT: [     1] .bar
+# INCLUDE-SEC-NEXT: [     6] .shstrtab
+# INCLUDE-SEC-NEXT: [    10] .strtab
+# INCLUDE-SEC-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+  - Name: .bar
+    Type: SHT_PROGBITS
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: [[INCLUDED]]
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: [[EXCLUDED]]
+
+## Check we report an error when a section is in both the "Sections" and "Excluded" lists at the same time.
+## Also check that we report an error if a section is missing from the lists.
+# RUN: not yaml2obj %s -DINCLUDED=.bar -DEXCLUDED=.strtab --docnum=1 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=EXCLUDE-INCLUDED
+
+# EXCLUDE-INCLUDED: error: repeated section name: '.strtab' in the section header description
+# EXCLUDE-INCLUDED: error: section '.foo' should be present in the 'Sections' or 'Excluded' lists
+
+## Check we report an error when the `Excluded` key mentions an unknown section.
+# RUN: not yaml2obj %s -DINCLUDED=.bar -DEXCLUDED=.unknown --docnum=1 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=EXCLUDE-UNKNOWN
+
+# EXCLUDE-UNKNOWN: error: section '.foo' should be present in the 'Sections' or 'Excluded' lists
+# EXCLUDE-UNKNOWN: error: section header contains undefined section '.unknown'
+
+## Check we report an error when the `Excluded` key mentions a section more than once.
+# RUN: not yaml2obj %s --docnum=2 -o /dev/null 2>&1 | FileCheck %s --check-prefix=EXCLUDE-TWICE
+
+# EXCLUDE-TWICE: error: repeated section name: '.strtab' in the section header description
+# EXCLUDE-TWICE: error: repeated section name: '.strtab' in the section header description
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .strtab
+      - Name: .strtab
+
+## Check that we are able to exclude all sections, except the implicit
+## null section, with the use of the "Excluded" key.
+
+## Case A: the "Sections" key is present, but empty.
+# RUN: yaml2obj %s --docnum=3 -o %t3
+# RUN: llvm-readelf --section-headers %t3 | FileCheck %s --check-prefix=NO-SECTIONS
+
+# NO-SECTIONS:      There are 1 section headers, starting at offset 0x48:
+# NO-SECTIONS:      Section Headers:
+# NO-SECTIONS-NEXT:  [Nr] Name         Type Address          Off    Size   ES Flg Lk Inf Al
+# NO-SECTIONS-NEXT:  [ 0] <no-strings> NULL 0000000000000000 000000 000000 00      0   0  0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type: SectionHeaderTable
+    Sections: []
+    Excluded:
+      - Name: .strtab
+      - Name: .shstrtab
+
+## Case B: the "Sections" key is not present.
+# RUN: yaml2obj %s --docnum=4 -o %t4
+# RUN: llvm-readelf --section-headers %t4 | FileCheck %s --check-prefix=NO-SECTIONS
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type: SectionHeaderTable
+    Excluded:
+      - Name: .strtab
+      - Name: .shstrtab
+
+## Check how we handle cases when a section is excluded, but its section index is needed.
+## The general rule is: when a section is explicitly linked with another section, which is
+## excluded, then we report an error. In the case when it is linked implicitly with an excluded
+## section, we use 0 as index value.
+
+## Case A: check we report an error when a regular section has a Link field which
+##         points to an excluded section.
+# RUN: not yaml2obj %s --docnum=5 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=LINK -DSEC=.foo -DTARGET=.bar
+
+# LINK: error: unable to link '[[SEC]]' to excluded section '[[TARGET]]'
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+    Link: .bar
+  - Name: .bar
+    Type: SHT_PROGBITS
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .foo
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .bar
+
+## Case B.1: check we report an error when a symbol table section has a Link field which
+##           points to an excluded section.
+# RUN: not yaml2obj %s --docnum=6 -DNAME=.symtab -DTYPE=SHT_SYMTAB -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=LINK -DSEC=.symtab -DTARGET=.foo
+# RUN: not yaml2obj %s --docnum=6 -DNAME=.dynsym -DTYPE=SHT_DYNSYM -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=LINK -DSEC=.dynsym -DTARGET=.foo
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:  [[NAME]]
+    Type:  [[TYPE]]
+    Link:  .foo
+  - Name:  .foo
+    Type:  SHT_PROGBITS
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: [[NAME]]
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .foo
+
+## Case B.2: check we do not link .dynsym with .dynstr implicitly when the latter is excluded.
+# RUN: yaml2obj %s --docnum=7 -o %t5
+# RUN: llvm-readelf %t5 --section-headers | FileCheck %s --check-prefix=LINK-DYNSYM
+
+# LINK-DYNSYM: [Nr] Name    Type   Address          Off    Size   ES Flg Lk
+# LINK-DYNSYM: [ 1] .dynsym DYNSYM 0000000000000000 000040 000018 18   A  0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:  .dynsym
+    Type:  SHT_DYNSYM
+  - Name:  .dynstr
+    Type:  SHT_PROGBITS
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .dynsym
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .dynstr
+
+## Case B.3: check we do not link .symtab with .strtab implicitly when the latter is excluded.
+# RUN: yaml2obj %s --docnum=8 -o %t6
+# RUN: llvm-readelf %t6 --section-headers | FileCheck %s --check-prefix=LINK-SYMTAB
+
+# LINK-SYMTAB: [Nr] Name    Type   Address          Off    Size   ES Flg Lk Inf Al
+# LINK-SYMTAB: [ 1] .symtab SYMTAB 0000000000000000 000040 000018 18      0   1  0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:  .symtab
+    Type:  SHT_SYMTAB
+  - Name:  .strtab
+    Type:  SHT_PROGBITS
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .symtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .strtab
+
+## Case C: check we report an error when a debug section has a Link field which
+##         points to an excluded section.
+# RUN: not yaml2obj %s --docnum=9 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=LINK -DSEC=.debug_unknown -DTARGET=.strtab
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .debug_unknown
+    Type:  SHT_PROGBITS
+    Link:  .strtab
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .debug_unknown
+      - Name: .shstrtab
+    Excluded:
+      - Name: .strtab
+
+## Case D.1: check we report an error when a relocatable section has an Info field which
+##           points to an excluded section.
+# RUN: not yaml2obj %s --docnum=10 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=LINK -DSEC=.rela -DTARGET=.strtab
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .rela
+    Type: SHT_RELA
+    Info: .strtab
+    Relocations: []
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .rela
+      - Name: .shstrtab
+    Excluded:
+      - Name: .strtab
+
+## Case D.2: check we report an error when the SHT_REL[A] section is linked
+##           with an excluded section explicitly.
+# RUN: not yaml2obj %s --docnum=11 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=LINK -DSEC=.rela -DTARGET=.symtab
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .rela
+    Type: SHT_RELA
+    Link: .symtab
+    Relocations: []
+  - Name: .symtab
+    Type: SHT_PROGBITS
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .rela
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .symtab
+
+## Case E: check we report an error when a symbol references an excluded section.
+# RUN: not yaml2obj %s --docnum=12 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SYMBOL-SECTION
+
+# SYMBOL-SECTION: error: excluded section referenced: '.foo' by symbol 'foo'
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .symtab
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .foo
+Symbols:
+  - Name:    foo
+    Type:    STT_OBJECT
+    Section: .foo
+
+## Case F.1: check we report an error when a group section
+##           contains an excluded section member.
+# RUN: not yaml2obj %s --docnum=13 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=LINK -DSEC=.group -DTARGET=.strtab
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .group
+    Type: SHT_GROUP
+    Members:
+      - SectionOrType: .strtab
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .group
+      - Name: .shstrtab
+    Excluded:
+      - Name: .strtab
+
+## Case F.2: check we report an error when the group section is linked
+##           to an excluded section explicitly.
+# RUN: not yaml2obj %s --docnum=14 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=LINK -DSEC=.group -DTARGET=.symtab
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .group
+    Type: SHT_GROUP
+    Link: .symtab
+    Members: []
+  - Name: .symtab
+    Type: SHT_SYMTAB
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .group
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .symtab
+
+## Case G: check we do not link SHT_LLVM_CALL_GRAPH_PROFILE/SHT_LLVM_ADDRSIG/SHT_GROUP/SHT_REL[A] sections
+##         with .symtab implicitly when the latter is excluded.
+# RUN: yaml2obj %s --docnum=15 -o %t7
+# RUN: llvm-readelf %t7 --section-headers | FileCheck %s --check-prefix=LINK-IMPLICIT
+
+# LINK-IMPLICIT:      [Nr] Name          Type                    Address          Off    Size   ES Flg Lk Inf Al
+# LINK-IMPLICIT:      [ 1] .cgp          LLVM_CALL_GRAPH_PROFILE 0000000000000000 000040 000000 08      0   0  0
+# LINK-IMPLICIT-NEXT: [ 2] .llvm_addrsig LLVM_ADDRSIG            0000000000000000 000040 000000 00      0   0  0
+# LINK-IMPLICIT-NEXT: [ 3] .group        GROUP                   0000000000000000 000040 000000 04      0   0  0
+# LINK-IMPLICIT-NEXT: [ 4] .rela         RELA                    0000000000000000 000040 000000 18      0   0  0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .cgp
+    Type:    SHT_LLVM_CALL_GRAPH_PROFILE
+    Content: ""
+  - Name:    .llvm_addrsig
+    Type:    SHT_LLVM_ADDRSIG
+    Content: ""
+  - Name: .group
+    Type: SHT_GROUP
+    Members: []
+  - Name: .rela
+    Type: SHT_RELA
+    Relocations: []
+  - Name: .symtab
+    Type: SHT_SYMTAB
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .cgp
+      - Name: .llvm_addrsig
+      - Name: .group
+      - Name: .rela
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .symtab
+
+## Case H: check we do not link SHT_HASH/SHT_GNU_HASH sections with .dynsym
+##         implicitly when the latter is excluded.
+# RUN: yaml2obj %s --docnum=16 -o %t8
+# RUN: llvm-readelf %t8 --section-headers | FileCheck %s --check-prefix=LINK-HASH
+
+# LINK-HASH:      [Nr] Name      Type     Address          Off    Size   ES Flg Lk Inf Al
+# LINK-HASH:      [ 1] .hash     HASH     0000000000000000 000040 000000 04      0   0  0
+# LINK-HASH-NEXT: [ 2] .gnu_hash GNU_HASH 0000000000000000 000040 000000 00      0   0  0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .hash
+    Type:    SHT_HASH
+    Content: ""
+  - Name:    .gnu_hash
+    Type:    SHT_GNU_HASH
+    Content: ""
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .hash
+      - Name: .gnu_hash
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .dynsym
+
+## Case I: document the case when an excluded section is explicitly linked to another excluded section.
+##         We report an error in this case, because:
+##         1) It is a reasonable behavior, as it is perhaps usually a result of a mistake
+##            in a YAML description.
+##         2) Helps to keep the code simpler.
+# RUN: not yaml2obj %s --docnum=17 -o /dev/null 2>&1 | FileCheck %s --check-prefix=CROSS-LINK
+
+# CROSS-LINK:      error: unable to link '.foo' to excluded section '.bar'
+# CROSS-LINK-NEXT: error: unable to link '.bar' to excluded section '.foo'
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+    Link: .bar
+  - Name: .bar
+    Type: SHT_PROGBITS
+    Link: .foo
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .foo
+      - Name: .bar
+
+## Check we set e_shstrndx field to 0 when the section header string table is excluded.
+## Check that the e_shnum field is adjusted properly when a section is removed.
+# RUN: yaml2obj --docnum=18 %s -o %t9
+# RUN: llvm-readelf --file-headers %t9 | FileCheck %s --check-prefix=SHSTRTAB
+
+# SHSTRTAB: Number of section headers:         2
+# SHSTRTAB: Section header string table index: 0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .strtab
+    Excluded:
+      - Name: .shstrtab
+
+## Check we do not allow using "Excluded" together with "NoHeaders".
+# RUN: not yaml2obj %s --docnum=19 -DNOHEADERS=true -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOHEADERS
+# RUN: not yaml2obj %s --docnum=19 -DNOHEADERS=false -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOHEADERS
+# NOHEADERS: NoHeaders can't be used together with Offset/Sections/Excluded
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type: SectionHeaderTable
+    NoHeaders: [[NOHEADERS]]
+    Excluded:  []

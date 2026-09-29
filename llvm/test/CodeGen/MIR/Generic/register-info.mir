@@ -1,0 +1,30 @@
+# RUN: llc -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses machine register info properties
+# correctly.
+
+--- |
+
+  define i32 @foo() {
+  entry:
+    ret i32 0
+  }
+
+  define i32 @bar() {
+  start:
+    ret i32 0
+  }
+
+...
+---
+# CHECK: name: foo
+# CHECK: tracksRegLiveness: false
+# CHECK: ...
+name:            foo
+...
+---
+# CHECK: name: bar
+# CHECK: tracksRegLiveness: true
+# CHECK: ...
+name: bar
+tracksRegLiveness: true
+...

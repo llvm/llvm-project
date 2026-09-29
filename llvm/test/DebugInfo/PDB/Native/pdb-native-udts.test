@@ -1,0 +1,539 @@
+; RUN: llvm-pdbutil pretty -native -classes %p/../Inputs/every-class.pdb \
+; RUN:     | FileCheck -check-prefix=PRETTY %s
+
+; RUN: llvm-pdbutil diadump -native -udts %p/../Inputs/every-class.pdb \
+; RUN:     | FileCheck -check-prefix=DUMP %s
+
+
+PRETTY: struct main::__l2::<unnamed-type-Anonymous> [sizeof = 1]
+PRETTY: struct main::__l2::Scoped [sizeof = 1]
+PRETTY: struct __vc_attributes::event_sourceAttribute [sizeof = 12]
+PRETTY: struct __vc_attributes::helper_attributes::v1_alttypeAttribute [sizeof = 4]
+PRETTY: struct __vc_attributes::helper_attributes::usageAttribute [sizeof = 4]
+PRETTY: struct __vc_attributes::threadingAttribute [sizeof = 4]
+PRETTY: struct __vc_attributes::aggregatableAttribute [sizeof = 4]
+PRETTY: struct __vc_attributes::event_receiverAttribute [sizeof = 8]
+PRETTY: struct __vc_attributes::moduleAttribute [sizeof = 96]
+PRETTY: struct Nested [sizeof = 1]
+PRETTY: struct Nested::F [sizeof = 1]
+PRETTY: struct Constructor [sizeof = 1]
+PRETTY: class Class [sizeof = 1]
+PRETTY: union Union [sizeof = 1]
+PRETTY: struct Operator [sizeof = 1]
+PRETTY: struct Cast [sizeof = 1]
+PRETTY: struct Nothing [sizeof = 1]
+PRETTY: struct Assignment [sizeof = 1]
+PRETTY: const struct Nothing
+PRETTY: volatile struct Nothing
+PRETTY: const volatile struct Nothing
+PRETTY: unaligned struct Nothing
+
+; DUMP:      {
+; DUMP-NEXT:   symIndexId: 2
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: main::__l2::<unnamed-type-Anonymous>
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 1
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 4
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: main::__l2::Scoped
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 1
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 5
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: __vc_attributes::event_sourceAttribute
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 12
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 1
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 1
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 6
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: __vc_attributes::helper_attributes::v1_alttypeAttribute
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 4
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 1
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 1
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 7
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: __vc_attributes::helper_attributes::usageAttribute
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 4
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 1
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 1
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 8
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: __vc_attributes::threadingAttribute
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 4
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 1
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 1
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 9
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: __vc_attributes::aggregatableAttribute
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 4
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 1
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 1
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 10
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: __vc_attributes::event_receiverAttribute
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 8
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 1
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 1
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 11
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: __vc_attributes::moduleAttribute
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 96
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 1
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 1
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 12
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: Nested
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 1
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 13
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: Nested::F
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 1
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 14
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: Constructor
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 1
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 15
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: Class
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: class
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 16
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: Union
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: union
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 17
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: Operator
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 1
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 18
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: Cast
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 1
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 1
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 19
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: Nothing
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 20
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: Assignment
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 1
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 1
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 21
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: Nothing
+; DUMP-NEXT:   unmodifiedTypeId: 19
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 1
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 22
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: Nothing
+; DUMP-NEXT:   unmodifiedTypeId: 19
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 1
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 23
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: Nothing
+; DUMP-NEXT:   unmodifiedTypeId: 19
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 1
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 0
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 1
+; DUMP-NEXT: }
+; DUMP-NEXT: {
+; DUMP-NEXT:   symIndexId: 24
+; DUMP-NEXT:   symTag: UDT
+; DUMP-NEXT:   name: Nothing
+; DUMP-NEXT:   unmodifiedTypeId: 19
+; DUMP-NEXT:   virtualTableShapeId: 3
+; DUMP-NEXT:   length: 1
+; DUMP-NEXT:   udtKind: struct
+; DUMP-NEXT:   constructor: 0
+; DUMP-NEXT:   constType: 0
+; DUMP-NEXT:   hasAssignmentOperator: 0
+; DUMP-NEXT:   hasCastOperator: 0
+; DUMP-NEXT:   hasNestedTypes: 0
+; DUMP-NEXT:   overloadedOperator: 0
+; DUMP-NEXT:   isInterfaceUdt: 0
+; DUMP-NEXT:   intrinsic: 0
+; DUMP-NEXT:   nested: 0
+; DUMP-NEXT:   packed: 0
+; DUMP-NEXT:   isRefUdt: 0
+; DUMP-NEXT:   scoped: 0
+; DUMP-NEXT:   unalignedType: 1
+; DUMP-NEXT:   isValueUdt: 0
+; DUMP-NEXT:   volatileType: 0
+; DUMP-NEXT: }

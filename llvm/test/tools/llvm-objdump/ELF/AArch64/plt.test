@@ -1,0 +1,76 @@
+# RUN: llvm-objdump -d %p/Inputs/cfi.elf-aarch64 | FileCheck %s
+
+# CHECK: Disassembly of section .plt:
+# CHECK: <__cfi_slowpath@plt>:
+# CHECK-NEXT: adrp      x16, {{.*}}
+# CHECK: bl {{.*}} <__cfi_slowpath@plt>
+
+# RUN: yaml2obj %s -o %t.aarch64
+# RUN: llvm-objdump -d --mattr=+bti %t.aarch64 | FileCheck --check-prefix=CHECK-BTI %s
+# RUN: yaml2obj -DENDIAN=MSB %s -o %t.aarch64_be
+# RUN: llvm-objdump -d --mattr=+bti %t.aarch64_be | FileCheck --check-prefix=CHECK-BTI %s
+# CHECK-BTI: bl {{.*}} <f1@plt>
+# CHECK-BTI: bl {{.*}} <f2@plt>
+# CHECK-BTI: Disassembly of section .plt:
+# CHECK-BTI: <f1@plt>:
+# CHECK-BTI-NEXT: bti   c
+# CHECK-BTI-NEXT: adrp  x16, {{.*}}
+# CHECK-BTI: <f2@plt>:
+# CHECK-BTI-NEXT: bti   c
+# CHECK-BTI-NEXT: adrp  x16, {{.*}}
+
+# RUN: yaml2obj -D SYM=0 %s -o %tindex
+# RUN: llvm-objdump -d %tindex 2>&1 | FileCheck %s --check-prefix=INVALID_INDEX -DFILE=%tindex
+
+# INVALID_INDEX: warning: '[[FILE]]': PLT entry at 0x210030 references an invalid symbol{{$}}
+# INVALID_INDEX: Disassembly of section .text:
+
+# RUN: yaml2obj -D ST_NAME=0x1234 %s -o %tst_name
+# RUN: llvm-objdump -d %tst_name 2>&1 | FileCheck %s --check-prefix=INVALID_ST_NAME -DFILE=%tst_name
+
+# INVALID_ST_NAME:      warning: '[[FILE]]': st_name (0x1234) is past the end of the string table of size 0x7
+# INVALID_ST_NAME-NEXT: warning: '[[FILE]]': PLT entry at 0x210030 references an invalid symbol{{$}}
+# INVALID_ST_NAME:      Disassembly of section .text:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2[[ENDIAN=LSB]]
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+Sections:
+  - Name:    .rela.plt
+    Type:    SHT_RELA
+    Flags:   [ SHF_ALLOC ]
+    EntSize: 0x0000000000000018
+    Info:    .got.plt
+    Relocations:
+      - Offset: 0x0000000000230018
+        Symbol: [[SYM=f1]]
+        Type:   R_AARCH64_JUMP_SLOT
+      - Offset: 0x0000000000230020
+        Symbol: f2
+        Type:   R_AARCH64_JUMP_SLOT
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x0000000000210000
+    Content: 0C00009411000094C0035FD6
+  - Name:    .plt
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x0000000000210010
+    Content: 5F2403D5F07BBFA910010090110A40F91042009120021FD61F2003D51F2003D55F2403D510010090110E40F9106200919F2103D520021FD65F2403D510010090111240F9108200919F2103D520021FD6
+  - Name:    .got.plt
+    Type:    SHT_PROGBITS
+## The content is in little-endian, but it does not affect aarch64_be PLT decoding.
+    Content: '000000000000000000000000000000000000000000000000100021000000000010002100000000001000210000000000'
+Symbols:
+  - Name:    f1
+    StName:  [[ST_NAME=<none>]]
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  - Name:    f2
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+...

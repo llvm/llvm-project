@@ -1,0 +1,60 @@
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+# This section contents exceeds default IHex line length of 16 bytes
+# so we expect two lines created for it.
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0
+    AddressAlign:    0x8
+    Content:         "000102030405060708090A0B0C0D0E0F1011121314"
+  - Name:            .data
+# This section overlap 16-bit segment boundary, so we expect
+# additional 'SegmentAddr' record of type '02'
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "3031323334353637383940"
+    Address:         0xFFF8
+    AddressAlign:    0x8
+  - Name:            .data2
+# Previous section '.data' should have forced creation of
+# 'SegmentAddr'(02) record with segment address of 0x10000,
+# so this section should have address of 0x100.
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "40414243"
+    Address:         0x10100
+    AddressAlign:    0x8
+  - Name:            .data3
+# The last section not only overlaps segment boundary, but
+# also has linear address which doesn't fit 20 bits. The 
+# following records should be created:
+# 'SegmentAddr'(02) record with address 0x0
+# 'ExtendedAddr'(04) record with address 0x100000
+# 'Data'(00) record with 8 bytes of section data
+# 'SegmentAddr'(02) record with address 0x10000
+# 'Data'(00) record with remaining 3 bytes of data.
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "5051525354555657585960"
+    Address:         0x10FFF8
+    AddressAlign:    0x8
+  - Name:            .bss
+# NOBITS sections are not written to IHex
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10100
+    Size:            0x1000
+    AddressAlign:    0x8
+  - Name:            .dummy
+# Non-allocatable sections are not written to IHex
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Address:         0x20FFF8
+    Size:            65536
+    AddressAlign:    0x8

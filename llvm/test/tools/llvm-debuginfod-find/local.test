@@ -1,0 +1,18 @@
+# Test that llvm-debuginfod-find can perform local directory lookups.
+
+# Test depends on POSIX file paths.
+UNSUPPORTED: system-windows
+
+RUN: mkdir -p %t/a/.build-id
+RUN: mkdir -p %t/b/.build-id/00/00000000000000
+RUN: mkdir -p %t/b/.build-id/01/23456789012345.debug
+RUN: mkdir -p %t/b/.build-id/02/22222222222222
+RUN: mkdir -p %t/c/.build-id/
+RUN: llvm-debuginfod-find \
+RUN:   --debug-file-directory %t/a \
+RUN:   --debug-file-directory %t/b \
+RUN:   --debug-file-directory %t/c \
+RUN:   --debuginfo 0123456789012345 > %t.out
+RUN: FileCheck -DT=%t --match-full-lines --implicit-check-not {{.}} %s < %t.out
+
+CHECK: [[T]]/b/.build-id/01/23456789012345.debug

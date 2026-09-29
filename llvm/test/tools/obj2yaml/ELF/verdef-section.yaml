@@ -1,0 +1,91 @@
+## Check how we dump SHT_GNU_verdef sections.
+## Check we don't dump the `Info` field when its value is equal
+## to the number of version definitions.
+
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t | FileCheck %s
+
+# CHECK:       - Name:         .gnu.version_d
+# CHECK-NEXT:    Type:         SHT_GNU_verdef
+# CHECK-NEXT:    Flags:        [ SHF_ALLOC ]
+# CHECK-NEXT:    Address:      0x230
+# CHECK-NEXT:    Link:         .dynstr
+# CHECK-NEXT:    AddressAlign: 0x4
+# INFO-NEXT:     Info:         0x4
+# CHECK-NEXT:    Entries:
+# CHECK-NEXT:      - Names:
+# CHECK-NEXT:          - VERSION_0
+# CHECK-NEXT:      - Flags:      2
+# CHECK-NEXT:        VersionNdx: 2
+# CHECK-NEXT:        Hash:       108387921
+# CHECK-NEXT:        Names:
+# CHECK-NEXT:          - VERSION_1
+# CHECK-NEXT:      - Flags:      3
+# CHECK-NEXT:        VersionNdx: 3
+# CHECK-NEXT:        Hash:       108387922
+# CHECK-NEXT:        Names:
+# CHECK-NEXT:          - VERSION_2
+# CHECK-NEXT:          - VERSION_3
+# CHECK-NEXT:          - VERSION_4
+# CHECK-NEXT:  - Name:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:            .gnu.version_d
+    Type:            SHT_GNU_verdef
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x230
+    AddressAlign:    0x4
+    Info:            [[INFO=<none>]]
+    Entries:
+## An entry that has all fields explicitly set to their default values.
+## Used to check that we don't dump them.
+      - Version:    [[VERSION=1]]
+        Flags:      0
+        VersionNdx: 0
+        Hash:       0
+        VDAux:      20
+        Names:
+          - VERSION_0
+## An entry with arbitrary values.
+      - Flags:      2
+        VersionNdx: 2
+        Hash:       108387921
+        VDAux:      [[VDAUX=20]]
+        Names:
+          - VERSION_1
+## Another entry with arbitrary values and version predecessors.
+      - Flags:      3
+        VersionNdx: 3
+        Hash:       108387922
+        Names:
+          - VERSION_2
+          - VERSION_3
+          - VERSION_4
+## Needed to emit the .dynstr section.
+DynamicSymbols: []
+
+## Check we dump the `Info` field when its value is not equal
+## to the number of version definitions.
+
+# RUN: yaml2obj %s -DINFO=0x4 -o %t.info
+# RUN: obj2yaml %t.info | FileCheck %s --check-prefixes=CHECK,INFO
+
+## Document that we are not able to dump a version definition which
+## has a version revision (vd_version) that is not equal to 1.
+
+# RUN: yaml2obj %s -DVERSION=2 -o %t.version
+# RUN: not obj2yaml %t.version 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.version --check-prefix=VERSION-ERR
+
+# VERSION-ERR: Error reading file: [[FILE]]: invalid SHT_GNU_verdef section version: 2
+
+# RUN: yaml2obj %s -DVDAUX=100 -o %t.vdaux
+# RUN: not obj2yaml %t.vdaux 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.vdaux --check-prefix=VDAUX-ERR
+
+# VDAUX-ERR: Error reading file: [[FILE]]: corrupted section: vd_aux value 100 in section verdef points past end of the section

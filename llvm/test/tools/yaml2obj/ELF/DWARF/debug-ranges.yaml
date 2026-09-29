@@ -1,0 +1,423 @@
+## Test that yaml2obj emits .debug_ranges section.
+
+## a) Generate the .debug_ranges section from the "DWARF" entry.
+
+## Generate and verify a little endian .debug_ranges section.
+
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB %s -o %t.le.o
+# RUN: llvm-readobj --sections --section-data %t.le.o | \
+# RUN:   FileCheck %s -DSIZE=120 -DADDRALIGN=1 --check-prefixes=DWARF-HEADER,DWARF-LE-CONTENT
+
+#          DWARF-HEADER: Index: 1
+#     DWARF-HEADER-NEXT: Name: .debug_ranges (1)
+#     DWARF-HEADER-NEXT: Type: SHT_PROGBITS (0x1)
+#     DWARF-HEADER-NEXT: Flags [ (0x0)
+#     DWARF-HEADER-NEXT: ]
+#     DWARF-HEADER-NEXT: Address: 0x0
+#     DWARF-HEADER-NEXT: Offset: 0x40
+#     DWARF-HEADER-NEXT: Size: [[SIZE]]
+#     DWARF-HEADER-NEXT: Link: 0
+#     DWARF-HEADER-NEXT: Info: 0
+#     DWARF-HEADER-NEXT: AddressAlignment: [[ADDRALIGN]]
+#     DWARF-HEADER-NEXT: EntrySize: 0
+# DWARF-LE-CONTENT-NEXT: SectionData (
+# DWARF-LE-CONTENT-NEXT:   0000: 10000000 20000000 30000000 40000000
+##                               |        |        |        |
+##                               |        |        |        +------- HighOffset (4-byte) 0x40
+##                               |        |        +------- LowOffset (4-byte) 0x30
+##                               |        +------- HighOffset (4-byte) 0x20
+##                               +------- LowOffset (4-byte) 0x10
+##
+# DWARF-LE-CONTENT-NEXT:   0010: FFFFFFFF 10000000 00000000 00000000
+##                               |        |        |        |
+##                               |        |        |        +------- HighOffset (4-byte) 0x00
+##                               |        |        +------- LowOffset (4-byte) 0x00
+##                               |        +------- Base Address (4-byte) 0x10
+##                               +------- Base Address Entry (4-byte) UINT32_MAX
+##
+# DWARF-LE-CONTENT-NEXT:   0020: 00000000 00000000 10000000 00000000
+##                               |                 |
+##                               |                 +---------------- LowOffset (8-byte) 0x10
+##                               +---------------- Terminating Entry (8-byte)
+##
+# DWARF-LE-CONTENT-NEXT:   0030: 20000000 00000000 30000000 00000000
+##                               |                 |
+##                               |                 +---------------- LowOffset (8-byte) 0x30
+##                               +---------------- HighOffset (8-byte) 0x20
+##
+# DWARF-LE-CONTENT-NEXT:   0040: 40000000 00000000 FFFFFFFF FFFFFFFF
+##                               |                 |
+##                               |                 +---------------- Base Address Entry (8-byte) UINT64_MAX
+##                               +---------------- HighOffset (8-byte) 0x40
+##
+# DWARF-LE-CONTENT-NEXT:   0050: 10000000 00000000 00000000 00000000
+##                               |                 |
+##                               |                 +---------------- LowOffset (8-byte) 0x00
+##                               +---------------- Base Address (8-byte) 0x10
+##
+# DWARF-LE-CONTENT-NEXT:   0060: 00000000 00000000 00000000 00000000
+##                               |                 |
+##                               |                 +---------------- Terminating Entry (16-byte)
+##                               +---------------- HighOffset (8-byte) 0x00
+##
+# DWARF-LE-CONTENT-NEXT:   0070: 00000000 00000000
+##                               |
+##                               +---------------- Terminating Entry (lower 8-byte)
+##
+# DWARF-LE-CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  [[ENDIAN]]
+  Type:  ET_EXEC
+DWARF:
+  debug_ranges:
+    - AddrSize: 0x04
+      Entries:
+        - LowOffset:  0x00000010
+          HighOffset: 0x00000020
+        - LowOffset:  0x00000030
+          HighOffset: 0x00000040
+        - LowOffset:  0xffffffff
+          HighOffset: 0x00000010
+        - LowOffset:  0x00000000
+          HighOffset: 0x00000000
+    - Entries:
+        - LowOffset:  0x0000000000000010
+          HighOffset: 0x0000000000000020
+        - LowOffset:  0x0000000000000030
+          HighOffset: 0x0000000000000040
+        - LowOffset:  0xffffffffffffffff
+          HighOffset: 0x0000000000000010
+        - LowOffset:  0x0000000000000000
+          HighOffset: 0x0000000000000000
+
+## Generate and verify a big endian .debug_ranges section.
+
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2MSB %s -o %t.be.o
+# RUN: llvm-readobj --sections --section-data %t.be.o | \
+# RUN:   FileCheck %s -DSIZE=120 -DADDRALIGN=1 --check-prefixes=DWARF-HEADER,DWARF-BE-CONTENT
+
+# DWARF-BE-CONTENT-NEXT: SectionData (
+# DWARF-BE-CONTENT-NEXT: 0000: 00000010 00000020 00000030 00000040
+##                             |        |        |        |
+##                             |        |        |        +------- HighOffset (4-byte) 0x40
+##                             |        |        +------- LowOffset (4-byte) 0x30
+##                             |        +------- HighOffset (4-byte) 0x20
+##                             +------- LowOffset (4-byte) 0x10
+##
+# DWARF-BE-CONTENT-NEXT: 0010: FFFFFFFF 00000010 00000000 00000000
+##                             |        |        |        |
+##                             |        |        |        +------- HighOffset (4-byte) 0x00
+##                             |        |        +------- LowOffset (4-byte) 0x00
+##                             |        +------- Base Address (4-byte) 0x10
+##                             +------- Base Address Entry (4-byte) UINT32_MAX
+##
+# DWARF-BE-CONTENT-NEXT: 0020: 00000000 00000000 00000000 00000010
+##                             |                 |
+##                             |                 +---------------- LowOffset (8-byte) 0x10
+##                             +---------------- Terminating Entry (8-byte)
+##
+# DWARF-BE-CONTENT-NEXT: 0030: 00000000 00000020 00000000 00000030
+##                             |                 |
+##                             |                 +---------------- LowOffset (8-byte) 0x30
+##                             +---------------- HighOffset (8-byte) 0x20
+##
+# DWARF-BE-CONTENT-NEXT: 0040: 00000000 00000040 FFFFFFFF FFFFFFFF
+##                             |                 |
+##                             |                 +---------------- Base Address Entry (8-byte) UINT64_MAX
+##                             +---------------- HighOffset (8-byte) 0x40
+##
+# DWARF-BE-CONTENT-NEXT: 0050: 00000000 00000010 00000000 00000000
+##                             |                 |
+##                             |                 +---------------- LowOffset (8-byte) 0x00
+##                             +---------------- Base Address (8-byte) 0x10
+##
+# DWARF-BE-CONTENT-NEXT: 0060: 00000000 00000000 00000000 00000000
+##                             |                 |
+##                             |                 +---------------- Terminating Entry (16-byte)
+##                             +---------------- HighOffset (8-byte) 0x00
+##
+# DWARF-BE-CONTENT-NEXT: 0070: 00000000 00000000
+##                             |
+##                             +---------------- Terminating Entry (lower 8-byte)
+##
+# DWARF-BE-CONTENT-NEXT: )
+
+## b) Generate the .debug_ranges section from raw section content.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: llvm-readobj --sections --section-data %t2.o | \
+# RUN:   FileCheck %s -DSIZE=3 -DADDRALIGN=0 --check-prefixes=DWARF-HEADER,ARBITRARY-CONTENT
+
+#      ARBITRARY-CONTENT: SectionData (
+# ARBITRARY-CONTENT-NEXT:   0000: 112233
+# ARBITRARY-CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .debug_ranges
+    Type:    SHT_PROGBITS
+    Content: "112233"
+
+## c) Generate the .debug_ranges section when the "Size" is specified.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3.o
+# RUN: llvm-readobj --hex-dump=.debug_ranges %t3.o | FileCheck %s --check-prefix=SIZE
+
+#       SIZE: Hex dump of section '.debug_ranges':
+#  SIZE-NEXT: 0x00000000 00000000 00000000 00000000 00000000 ................
+# SIZE-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .debug_ranges
+    Type: SHT_PROGBITS
+    Size: 0x10
+
+## d) Test that yaml2obj emits an error message when both the "Size" and the
+## "debug_ranges" entry are specified at the same time.
+
+# RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --check-prefix=ERROR
+
+# ERROR: yaml2obj: error: cannot specify section '.debug_ranges' contents in the 'DWARF' entry and the 'Content' or 'Size' in the 'Sections' entry at the same time
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .debug_ranges
+    Type: SHT_PROGBITS
+    Size: 0x10
+DWARF:
+  debug_ranges:
+    - Entries:
+        - LowOffset:  0x0000000000000001
+          HighOffset: 0x0000000000000002
+
+## e) Test that yaml2obj emits an error message when both the "Content" and the
+## "debug_ranges" entry are specified at the same time.
+
+# RUN: not yaml2obj --docnum=5 %s 2>&1 | FileCheck %s --check-prefix=ERROR
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .debug_ranges
+    Type:    SHT_PROGBITS
+    Content: "00"
+DWARF:
+  debug_ranges:
+    - Entries:
+        - LowOffset:  0x0000000000000001
+          HighOffset: 0x0000000000000002
+
+## f) Test that all the properties can be overridden by the section header when
+## the "debug_ranges" entry doesn't exist.
+
+# RUN: yaml2obj --docnum=6 %s -o %t6.o
+# RUN: llvm-readelf --sections %t6.o | FileCheck %s --check-prefix=OVERRIDDEN
+
+#      OVERRIDDEN: [Nr] Name          Type   Address          Off    Size   ES Flg Lk Inf Al
+#      OVERRIDDEN: [ 1] .debug_ranges STRTAB 0000000000002020 000050 000020 01   A  2   1  2
+# OVERRIDDEN-NEXT: [ 2] .sec          STRTAB 0000000000000000 000070 000000 00      0   0  0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .debug_ranges
+    Type:         SHT_STRTAB  # SHT_PROGBITS by default.
+    Flags:        [SHF_ALLOC] # 0 by default.
+    Link:         .sec        # 0 by default.
+    EntSize:      1           # 0 by default.
+    Info:         1           # 0 by default.
+    AddressAlign: 2           # 0 by default.
+    Address:      0x2020      # 0x00 by default.
+    Offset:       0x50        # 0x40 for the first section.
+    Size:         0x20        # Set the "Size" so that we can reuse the check tag "OVERRIDDEN".
+  - Name:         .sec        # Linked by .debug_ranges.
+    Type:         SHT_STRTAB
+
+## g) Test that all the properties can be overridden by the section header when
+## the "debug_ranges" entry exists.
+
+# RUN: yaml2obj --docnum=7 %s -o %t7.o
+# RUN: llvm-readelf --sections %t7.o | FileCheck %s --check-prefix=OVERRIDDEN
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .debug_ranges
+    Type:         SHT_STRTAB  # SHT_PROGBITS by default.
+    Flags:        [SHF_ALLOC] # 0 by default.
+    Link:         .sec        # 0 by default.
+    EntSize:      1           # 0 by default.
+    Info:         1           # 0 by default.
+    AddressAlign: 2           # 1 by default.
+    Address:      0x2020      # 0x00 by default.
+    Offset:       0x50        # 0x40 for the first section.
+  - Name:         .sec        # Linked by .debug_ranges.
+    Type:         SHT_STRTAB
+DWARF:
+  debug_ranges:
+    - Entries:
+        - LowOffset:  0x0000000000000001
+          HighOffset: 0x0000000000000002
+
+## h) Test that yaml2obj automatically pads zeros if we try to assign an offset that
+## is greater than or equal to the number of bytes written already.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8.o
+# RUN: llvm-readelf --hex-dump=.debug_ranges %t8.o | FileCheck %s --check-prefix=PADDED
+
+#      PADDED: Hex dump of section '.debug_ranges':
+# PADDED-NEXT: 0x00000000 01000000 00000000 02000000 00000000
+##                        |                 |
+##                        |                 +---------------- HighOffset (8-byte) 0x02
+##                        +---------------- LowOffset (8-byte) 0x01
+##
+# PADDED-NEXT: 0x00000010 00000000 00000000 00000000 00000000
+##                        |
+##                        +---------------------------------- Terminating Entry (16-byte) 0x00
+##
+# PADDED-NEXT: 0x00000020 00010000 00000000 00020000 00000000
+##                        |  |                 |
+##                        |  |                 +------------- HighOffset (8-byte) 0x02
+##                        |  +----------------- LowOffset (8-byte) 0x01
+##                        +- Padded zeros (1-byte) 0x00
+##
+# PADDED-NEXT: 0x00000030 00000000 00000000 00000000 00000000
+##                        | |
+##                        | +-------------------------------- Terminating Entry (16-byte) 0x00
+##                        +- higher byte(s) of HighOffset
+##
+# PADDED-NEXT: 0x00000040 00010000 00000000 00020000 00000000
+##                        | |                 |
+##                        | |                 +-------------- HighOffset (8-byte) 0x02
+##                        | +----------------- LowOffset (8-byte) 0x01
+##                        +- the last byte of terminating entry.
+##
+# PADDED-NEXT: 0x00000050 00000000 00000000 00000000 00000000
+##                        | |
+##                        | +-------------------------------- Terminating Entry (16-byte) 0x00
+##                        +- higher byte(s) of HighOffset
+##
+# PADDED-NEXT: 0x00000060 00
+##                        |
+##                        +- the last byte of terminating entry.
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_ranges:
+    - Entries:
+        - LowOffset:  0x01
+          HighOffset: 0x02
+    - Offset:   0x21  ## There are 0x20 bytes before this entry.
+      Entries:
+        - LowOffset:  0x01
+          HighOffset: 0x02
+    - Offset:   0x41  ## There are 0x41 bytes before this entry.
+      Entries:
+        - LowOffset:  0x01
+          HighOffset: 0x02
+
+## i) Test that yaml2obj emits an error message if we try to assign an invalid offset to an
+## entry of the '.debug_ranges' section.
+
+# RUN: not yaml2obj --docnum=9 %s -o %t9.o 2>&1 | FileCheck %s --check-prefix=INVALID-OFFSET
+
+# INVALID-OFFSET: yaml2obj: error: 'Offset' for 'debug_ranges' with index 1 must be greater than or equal to the number of bytes written already (0x20)
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_ranges:
+    - Entries:
+        - LowOffset:  0x01
+          HighOffset: 0x02
+    - Offset:   0x1F ## Must be greater than or equal to 0x20.
+      Entries:
+        - LowOffset:  0x01
+          HighOffset: 0x02
+
+## j) Test that yaml2obj still generates a .debug_ranges section if we assign an invalid value
+## to 'AddrSize' when the 'Entries' list is empty.
+
+# RUN: yaml2obj --docnum=10 %s -o %t10.o
+# RUN: llvm-readelf --hex-dump=.debug_ranges %t10.o | \
+# RUN:   FileCheck %s --check-prefix=ADDRSIZE
+
+#      ADDRSIZE: Hex dump of section '.debug_ranges':
+# ADDRSIZE-NEXT: 0x00000000 00000000 00000000 00000000 0000
+##                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ terminating entry (2*AddrSize=14-byte)
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_ranges:
+    - AddrSize: 0x07
+      Entries:  []
+
+## k) Test that yaml2obj emits an error message if we try to assign an invalid value to
+## 'AddrSize' when the 'Entries' list isn't empty.
+
+# RUN: not yaml2obj --docnum=11 %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-SIZE
+
+# INVALID-SIZE: yaml2obj: error: unable to write debug_ranges address offset: invalid integer write size: 7
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_ranges:
+    - AddrSize: 0x07
+      Entries:
+        - LowOffset:  0x1234
+          HighOffset: 0x5678
+
+## l) Test that the .debug_ranges section header is emitted if the "debug_ranges"
+## entry is empty.
+
+# RUN: yaml2obj --docnum=12 %s -o %t12.o
+# RUN: llvm-readobj -S %t12.o | FileCheck -DSIZE=0 -DADDRALIGN=1 %s --check-prefix=DWARF-HEADER
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_ranges: []

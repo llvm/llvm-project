@@ -1,0 +1,34 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: mkdir -p %t
+; RUN: yaml2obj %S/Inputs/macho.yaml -o %t/macho.dylib
+; RUN: llvm-readtapi %t/macho.dylib -o %t/out.tbd 2>&1 | FileCheck %s --allow-empty 
+; RUN: llvm-readtapi -compare %t/out.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty 
+
+; CHECK-NOT: error
+; CHECK-NOT: warning  
+
+;--- expected.tbd
+{
+  "main_library": {
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "macho-no-exports.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "10.10",
+        "target": "x86_64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
