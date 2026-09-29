@@ -8802,9 +8802,19 @@ static bool optimizeBranch(CondBrInst *Branch, const TargetLowering &TLI,
 //  store <vscale x 2 x ptr> %data.gep, ptr %addr.gep, align 8
 //  %vec.ind.next = add nuw nsw <vscale x 2 x i64> %vec.ind, %elt.cnt.splat
 //
-// This will end up with a multiply by a vscale-scaled term in the loop, as
-// well as adding to the base. Changing it to add a splat based on vscale *
-// min.elt.cnt * sizeof(ptrdiff) and remove the gep removes the multiply.
+// We want to change this to:
+//  %base = ptrtoint(%datap) + (<stepvector> * 72)
+//  %stride = splat(elementcount) * 72
+//  vector.body:
+//  %vec.ind = phi <vscale x 2 x i64> [ %base, %entry ],
+//                                    [ %vec.ind.next, %vector.body ]
+//  %data.val = inttoptr %vec.ind
+//  %addr.gep = getelementptr inbounds nuw [8 x i8], ptr %addrp, i64 %index
+//  store <vscale x 2 x ptr> %data.val, ptr %addr.gep, align 8
+//  %vec.ind.next = add nuw nsw <vscale x 2 x i64> %vec.ind, %stride
+//
+// Doing so will remove a multiply from the loop, and leave the update as just
+// an add.
 //
 // TODO: Support more cases, such as the address instead of value operand for
 //       strided memory operations.
