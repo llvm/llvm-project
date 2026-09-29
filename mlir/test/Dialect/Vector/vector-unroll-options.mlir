@@ -423,6 +423,105 @@ func.func @vector_broadcast_with_tailing_unit_dim(%v: vector<4x1xf32>) -> vector
 
 // -----
 
+/// Verify unrolling when the broadcast result rank is greater than the
+/// native shape rank.
+// CHECK-LABEL: func.func @vector_broadcast_rank_mismatch(
+//  CHECK-SAME:   %[[ARG:.*]]: vector<4x8xi16>
+//       CHECK:   %[[ZERO:.*]] = arith.constant dense<0> : vector<1x4x8xi16>
+//       CHECK:   %[[EXTRACT_0:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 0], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+//       CHECK:   %[[BCAST_0:.*]] = vector.broadcast %[[EXTRACT_0]] : vector<2x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_0:.*]] = vector.insert_strided_slice %[[BCAST_0]], %[[ZERO]] offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+//       CHECK:   %[[EXTRACT_1:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 2], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+//       CHECK:   %[[BCAST_1:.*]] = vector.broadcast %[[EXTRACT_1]] : vector<2x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_1:.*]] = vector.insert_strided_slice %[[BCAST_1]], %[[INSERT_0]] offsets = [0, 0, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+//       CHECK:   %[[EXTRACT_2:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 4], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+//       CHECK:   %[[BCAST_2:.*]] = vector.broadcast %[[EXTRACT_2]] : vector<2x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_2:.*]] = vector.insert_strided_slice %[[BCAST_2]], %[[INSERT_1]] offsets = [0, 0, 4], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+//       CHECK:   %[[EXTRACT_3:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 6], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+//       CHECK:   %[[BCAST_3:.*]] = vector.broadcast %[[EXTRACT_3]] : vector<2x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_3:.*]] = vector.insert_strided_slice %[[BCAST_3]], %[[INSERT_2]] offsets = [0, 0, 6], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+//       CHECK:   %[[EXTRACT_4:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [2, 0], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+//       CHECK:   %[[BCAST_4:.*]] = vector.broadcast %[[EXTRACT_4]] : vector<2x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_4:.*]] = vector.insert_strided_slice %[[BCAST_4]], %[[INSERT_3]] offsets = [0, 2, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+//       CHECK:   %[[EXTRACT_5:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [2, 2], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+//       CHECK:   %[[BCAST_5:.*]] = vector.broadcast %[[EXTRACT_5]] : vector<2x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_5:.*]] = vector.insert_strided_slice %[[BCAST_5]], %[[INSERT_4]] offsets = [0, 2, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+//       CHECK:   %[[EXTRACT_6:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [2, 4], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+//       CHECK:   %[[BCAST_6:.*]] = vector.broadcast %[[EXTRACT_6]] : vector<2x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_6:.*]] = vector.insert_strided_slice %[[BCAST_6]], %[[INSERT_5]] offsets = [0, 2, 4], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+//       CHECK:   %[[EXTRACT_7:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [2, 6], sizes = [2, 2], strides = [1, 1] : vector<4x8xi16> to vector<2x2xi16>
+//       CHECK:   %[[BCAST_7:.*]] = vector.broadcast %[[EXTRACT_7]] : vector<2x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_7:.*]] = vector.insert_strided_slice %[[BCAST_7]], %[[INSERT_6]] offsets = [0, 2, 6], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<1x4x8xi16>
+// CHECK-NOT: vector.broadcast
+//       CHECK:   return %[[INSERT_7]] : vector<1x4x8xi16>
+func.func @vector_broadcast_rank_mismatch(%arg: vector<4x8xi16>) -> vector<1x4x8xi16> {
+  %0 = vector.broadcast %arg : vector<4x8xi16> to vector<1x4x8xi16>
+  return %0 : vector<1x4x8xi16>
+}
+
+// -----
+
+/// Verify rank-mismatched unrolling when the source has a unit dimension.
+// CHECK-LABEL: func.func @vector_broadcast_rank_mismatch_unit_dim(
+//  CHECK-SAME:   %[[ARG:.*]]: vector<1x8xi16>
+//       CHECK:   %[[ZERO:.*]] = arith.constant dense<0> : vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_0:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 0], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_0:.*]] = vector.broadcast %[[EXTRACT_0]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_0:.*]] = vector.insert_strided_slice %[[BCAST_0]], %[[ZERO]] offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_1:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 2], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_1:.*]] = vector.broadcast %[[EXTRACT_1]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_1:.*]] = vector.insert_strided_slice %[[BCAST_1]], %[[INSERT_0]] offsets = [0, 0, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_2:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 4], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_2:.*]] = vector.broadcast %[[EXTRACT_2]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_2:.*]] = vector.insert_strided_slice %[[BCAST_2]], %[[INSERT_1]] offsets = [0, 0, 4], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_3:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 6], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_3:.*]] = vector.broadcast %[[EXTRACT_3]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_3:.*]] = vector.insert_strided_slice %[[BCAST_3]], %[[INSERT_2]] offsets = [0, 0, 6], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_4:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 0], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_4:.*]] = vector.broadcast %[[EXTRACT_4]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_4:.*]] = vector.insert_strided_slice %[[BCAST_4]], %[[INSERT_3]] offsets = [0, 2, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_5:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 2], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_5:.*]] = vector.broadcast %[[EXTRACT_5]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_5:.*]] = vector.insert_strided_slice %[[BCAST_5]], %[[INSERT_4]] offsets = [0, 2, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_6:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 4], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_6:.*]] = vector.broadcast %[[EXTRACT_6]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_6:.*]] = vector.insert_strided_slice %[[BCAST_6]], %[[INSERT_5]] offsets = [0, 2, 4], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_7:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 6], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_7:.*]] = vector.broadcast %[[EXTRACT_7]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_7:.*]] = vector.insert_strided_slice %[[BCAST_7]], %[[INSERT_6]] offsets = [0, 2, 6], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_8:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 0], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_8:.*]] = vector.broadcast %[[EXTRACT_8]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_8:.*]] = vector.insert_strided_slice %[[BCAST_8]], %[[INSERT_7]] offsets = [1, 0, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_9:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 2], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_9:.*]] = vector.broadcast %[[EXTRACT_9]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_9:.*]] = vector.insert_strided_slice %[[BCAST_9]], %[[INSERT_8]] offsets = [1, 0, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_10:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 4], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_10:.*]] = vector.broadcast %[[EXTRACT_10]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_10:.*]] = vector.insert_strided_slice %[[BCAST_10]], %[[INSERT_9]] offsets = [1, 0, 4], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_11:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 6], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_11:.*]] = vector.broadcast %[[EXTRACT_11]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_11:.*]] = vector.insert_strided_slice %[[BCAST_11]], %[[INSERT_10]] offsets = [1, 0, 6], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_12:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 0], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_12:.*]] = vector.broadcast %[[EXTRACT_12]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_12:.*]] = vector.insert_strided_slice %[[BCAST_12]], %[[INSERT_11]] offsets = [1, 2, 0], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_13:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 2], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_13:.*]] = vector.broadcast %[[EXTRACT_13]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_13:.*]] = vector.insert_strided_slice %[[BCAST_13]], %[[INSERT_12]] offsets = [1, 2, 2], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_14:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 4], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_14:.*]] = vector.broadcast %[[EXTRACT_14]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_14:.*]] = vector.insert_strided_slice %[[BCAST_14]], %[[INSERT_13]] offsets = [1, 2, 4], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+//       CHECK:   %[[EXTRACT_15:.*]] = vector.extract_strided_slice %[[ARG]] offsets = [0, 6], sizes = [1, 2], strides = [1, 1] : vector<1x8xi16> to vector<1x2xi16>
+//       CHECK:   %[[BCAST_15:.*]] = vector.broadcast %[[EXTRACT_15]] : vector<1x2xi16> to vector<1x2x2xi16>
+//       CHECK:   %[[INSERT_15:.*]] = vector.insert_strided_slice %[[BCAST_15]], %[[INSERT_14]] offsets = [1, 2, 6], strides = [1, 1, 1] : vector<1x2x2xi16> into vector<2x4x8xi16>
+// CHECK-NOT: vector.broadcast
+//       CHECK:   return %[[INSERT_15]] : vector<2x4x8xi16>
+func.func @vector_broadcast_rank_mismatch_unit_dim(%arg: vector<1x8xi16>) -> vector<2x4x8xi16> {
+  %0 = vector.broadcast %arg : vector<1x8xi16> to vector<2x4x8xi16>
+  return %0 : vector<2x4x8xi16>
+}
+
+// -----
+
 func.func @vector_load_2D(%mem: memref<4x4xf16>) -> vector<4x4xf16> {
   %c0 = arith.constant 0 : index
   %0 = vector.load %mem[%c0, %c0] : memref<4x4xf16>, vector<4x4xf16>

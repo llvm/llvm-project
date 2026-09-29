@@ -808,16 +808,22 @@ struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
     Location loc = broadcastOp.getLoc();
     VectorType srcType = dyn_cast<VectorType>(broadcastOp.getSourceType());
     VectorType resType = broadcastOp.getResultVectorType();
+
+    SmallVector<int64_t> originalShape = *broadcastOp.getShapeForUnroll();
+    // Pad the target shape with leading unit dimensions when the broadcast
+    // result has a higher rank than the native shape.
+    SmallVector<int64_t> adjustedTargetShape(originalShape.size(), 1);
+    llvm::copy(*targetShape, adjustedTargetShape.end() - targetShape->size());
+
     VectorType targetType =
-        resType.cloneWith(*targetShape, resType.getElementType());
+        resType.cloneWith(adjustedTargetShape, resType.getElementType());
     Value result = arith::ConstantOp::create(rewriter, loc, resType,
                                              rewriter.getZeroAttr(resType));
 
-    SmallVector<int64_t> originalShape = *broadcastOp.getShapeForUnroll();
     SmallVector<int64_t> strides(originalShape.size(), 1);
 
     for (SmallVector<int64_t> offsets :
-         StaticTileOffsetRange(originalShape, *targetShape)) {
+         StaticTileOffsetRange(originalShape, adjustedTargetShape)) {
       Value newSrc;
       if (!srcType) {
         // Scalar to vector broadcast.
@@ -826,8 +832,8 @@ struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
         // Vector to vector broadcast.
         int64_t rank = srcType.getRank();
         SmallVector<int64_t> srcOffsets(offsets.end() - rank, offsets.end());
-        SmallVector<int64_t> srcShape(targetShape->end() - rank,
-                                      targetShape->end());
+        SmallVector<int64_t> srcShape(adjustedTargetShape.end() - rank,
+                                      adjustedTargetShape.end());
         SmallVector<int64_t> srcStrides(strides.end() - rank, strides.end());
         // adjust the offset and shape for src if the corresponding dim is 1.
         for (int64_t i = 0; i < rank; ++i) {
