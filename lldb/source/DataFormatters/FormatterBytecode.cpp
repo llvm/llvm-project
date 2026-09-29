@@ -364,6 +364,9 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
     case op_lit_selector:
       data.Push(Selectors(cur_block.getU8(pc)));
       continue;
+    case op_lit_null:
+      data.Push(ValueObjectSP());
+      continue;
     case op_lit_string: {
       uint64_t length = cur_block.getULEB128(pc);
       llvm::StringRef bytes = cur_block.getBytes(pc, length);
