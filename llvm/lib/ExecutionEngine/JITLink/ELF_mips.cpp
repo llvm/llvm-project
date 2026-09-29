@@ -43,67 +43,16 @@ constexpr StringRef GOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
 constexpr StringRef GPName = "_gp";
 constexpr StringRef GPDispName = "_gp_disp";
 constexpr StringRef LocalGPName = "__gnu_local_gp";
-constexpr unsigned InstructionSize = sizeof(uint32_t);
 constexpr unsigned RelocationTypeBits = 8;
 constexpr unsigned MaxRelocationOperations = 3;
-constexpr unsigned GOTPageBits = 16;
-constexpr uint64_t GOTPageSize = UINT64_C(1) << GOTPageBits;
-constexpr uint64_t GOTPageMask = GOTPageSize - 1;
-constexpr uint64_t GOTPageBias = GOTPageSize / 2;
-constexpr unsigned JumpRegionBits = 28;
-constexpr uint64_t JumpRegionMask = ~maskTrailingOnes<uint64_t>(JumpRegionBits);
 constexpr int64_t CompactBranchPCBias = InstructionSize;
 // The MIPS psABI defines $gp as 0x7ff0 bytes past the GOT base.
 constexpr uint64_t GPAnchorOffset = 0x7ff0;
 
 enum class MipsABI { O32, N32, N64 };
 
-static uint16_t getLo16(uint64_t Value) { return static_cast<uint16_t>(Value); }
-
-static uint16_t getHi16(uint64_t Value) {
-  return static_cast<uint16_t>((Value + GOTPageBias) >> 16);
-}
-
-static uint16_t getHigher16(uint64_t Value) {
-  constexpr uint64_t Bias = GOTPageBias | (GOTPageBias << 16);
-  return static_cast<uint16_t>((Value + Bias) >> 32);
-}
-
-static uint16_t getHighest16(uint64_t Value) {
-  constexpr uint64_t Bias =
-      GOTPageBias | (GOTPageBias << 16) | (GOTPageBias << 32);
-  return static_cast<uint16_t>((Value + Bias) >> 48);
-}
-
-static uint64_t getGOTPage(uint64_t Value) {
-  return (Value + GOTPageBias) & ~GOTPageMask;
-}
-
 static Edge::Kind getPagePointerEdgeKind(const LinkGraph &G) {
   return G.getPointerSize() == 8 ? PagePointer64 : PagePointer32;
-}
-
-struct PCRelEncoding {
-  unsigned Bits;
-  unsigned Shift;
-  unsigned PCAlignment;
-};
-
-static PCRelEncoding getPCRelEncoding(Edge::Kind Kind) {
-  switch (Kind) {
-  case PC16:
-    return {16, 2, 1};
-  case PC18S3:
-    return {18, 3, 8};
-  case PC19S2:
-    return {19, 2, 4};
-  case PC21S2:
-    return {21, 2, 1};
-  case PC26S2:
-    return {26, 2, 1};
-  default:
-    llvm_unreachable("not a MIPS immediate branch edge");
-  }
 }
 
 template <unsigned Bits, unsigned Shift>
@@ -127,24 +76,6 @@ static std::string getRelocationChainName(ArrayRef<uint8_t> Types) {
     OS << object::getELFRelocationTypeName(ELF::EM_MIPS, Type);
   }
   return Result;
-}
-
-static bool needsGP(Edge::Kind K) {
-  switch (K) {
-  case GPRel16:
-  case GPRel32:
-  case GPRel64:
-  case GOTOffset16:
-  case GOTOffsetHi16:
-  case GOTOffsetLo16:
-  case GPDispHi16:
-  case GPDispLo16:
-  case NegGPRelHi16:
-  case NegGPRelLo16:
-    return true;
-  default:
-    return false;
-  }
 }
 
 static unsigned getFixupSize(Edge::Kind K) {
@@ -205,200 +136,20 @@ class ELFJITLinker_mips : public JITLinker<ELFJITLinker_mips> {
 public:
   ELFJITLinker_mips(std::unique_ptr<JITLinkContext> Ctx,
                     std::unique_ptr<LinkGraph> G, PassConfiguration PassConfig)
-      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
+      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
+    getPassConfig().PreFixupPasses.push_back([this](LinkGraph &G) {
+      GPSymbol = G.findDefinedSymbolByName(G.intern(GPName));
+      TLSBaseSymbol = G.findDefinedSymbolByName(G.intern(TLSBaseName));
+      return Error::success();
+    });
+  }
 
 private:
+  Symbol *GPSymbol = nullptr;
+  Symbol *TLSBaseSymbol = nullptr;
+
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    char *Fixup = B.getAlreadyMutableContent().data() + E.getOffset();
-    uint64_t P = B.getFixupAddress(E).getValue();
-    uint64_t S = E.getTarget().getAddress().getValue();
-    int64_t A = E.getAddend();
-    uint64_t TargetAddress = S + A;
-    const endianness Endianness = G.getEndianness();
-
-    auto TLSBaseAddr = [&]() -> Expected<uint64_t> {
-      auto Name = G.intern(TLSBaseName);
-      if (auto *Base = G.findDefinedSymbolByName(Name))
-        return Base->getAddress().getValue();
-      return make_error<JITLinkError>(
-          "MIPS DTPREL relocation requires a TLS template");
-    };
-    auto CheckSigned = [&](int64_t V, unsigned Bits) -> Error {
-      if (!isIntN(Bits, V))
-        return makeTargetOutOfRangeError(G, B, E);
-      return Error::success();
-    };
-    auto CheckAligned = [&](int64_t V, unsigned Align) -> Error {
-      if (V & (Align - 1))
-        return makeAlignmentError(orc::ExecutorAddr(P), V, Align, E);
-      return Error::success();
-    };
-
-    int64_t V = static_cast<int64_t>(TargetAddress);
-    std::optional<uint64_t> GP;
-    if (needsGP(E.getKind())) {
-      auto *GPSymbol = G.findDefinedSymbolByName(G.intern(GPName));
-      assert(GPSymbol && "missing MIPS _gp symbol");
-      GP = GPSymbol->getAddress().getValue();
-    }
-
-    switch (E.getKind()) {
-    case Pointer32:
-      if (TargetAddress > UINT32_MAX)
-        return makeTargetOutOfRangeError(G, B, E);
-      support::endian::write32(Fixup, static_cast<uint32_t>(TargetAddress),
-                               Endianness);
-      break;
-    case Pointer64:
-      support::endian::write64(Fixup, TargetAddress, Endianness);
-      break;
-    case PagePointer32: {
-      uint64_t Page = getGOTPage(TargetAddress);
-      if (Page > UINT32_MAX)
-        return makeTargetOutOfRangeError(G, B, E);
-      support::endian::write32(Fixup, Page, Endianness);
-      break;
-    }
-    case PagePointer64:
-      support::endian::write64(Fixup, getGOTPage(TargetAddress), Endianness);
-      break;
-    case Delta32:
-    case PC32:
-      V = static_cast<int64_t>(TargetAddress - P);
-      if (auto Err = CheckSigned(V, 32))
-        return Err;
-      support::endian::write32(Fixup, V, Endianness);
-      break;
-    case Delta64:
-      support::endian::write64(Fixup, TargetAddress - P, Endianness);
-      break;
-    case NegDelta32:
-      V = static_cast<int64_t>(P - S + A);
-      if (auto Err = CheckSigned(V, 32))
-        return Err;
-      support::endian::write32(Fixup, V, Endianness);
-      break;
-    case Abs16:
-      if (auto Err = CheckSigned(V, 16))
-        return Err;
-      support::endian::write16(Fixup, V, Endianness);
-      break;
-    case Hi16:
-      writeImmediate16(Fixup, getHi16(TargetAddress), Endianness);
-      break;
-    case Lo16:
-      writeImmediate16(Fixup, getLo16(TargetAddress), Endianness);
-      break;
-    case Higher16:
-      writeImmediate16(Fixup, getHigher16(TargetAddress), Endianness);
-      break;
-    case Highest16:
-      writeImmediate16(Fixup, getHighest16(TargetAddress), Endianness);
-      break;
-    case Jump26: {
-      if (auto Err = CheckAligned(TargetAddress, InstructionSize))
-        return Err;
-      if (((P + InstructionSize) & JumpRegionMask) !=
-          (TargetAddress & JumpRegionMask))
-        return makeTargetOutOfRangeError(G, B, E);
-      writeImmediate26(Fixup, TargetAddress >> 2, Endianness);
-      break;
-    }
-    case PC16:
-    case PC18S3:
-    case PC19S2:
-    case PC21S2:
-    case PC26S2: {
-      PCRelEncoding Encoding = getPCRelEncoding(E.getKind());
-      uint64_t FixupPC = alignDown(P, Encoding.PCAlignment);
-      V = static_cast<int64_t>(TargetAddress - FixupPC);
-      if (auto Err = CheckAligned(V, 1U << Encoding.Shift))
-        return Err;
-      if (auto Err = CheckSigned(V, Encoding.Bits + Encoding.Shift))
-        return Err;
-      uint32_t Mask = maskTrailingOnes<uint32_t>(Encoding.Bits);
-      writeMaskedInstruction32(
-          Fixup, Mask, static_cast<uint64_t>(V) >> Encoding.Shift, Endianness);
-      break;
-    }
-    case PCHi16:
-      V = static_cast<int64_t>(TargetAddress - P);
-      writeImmediate16(Fixup, getHi16(V), Endianness);
-      break;
-    case PCLo16:
-      writeImmediate16(Fixup, getLo16(TargetAddress - P), Endianness);
-      break;
-    case GPDispHi16:
-      V = static_cast<int64_t>(*GP + A - P);
-      writeImmediate16(Fixup, getHi16(V), Endianness);
-      break;
-    case GPDispLo16:
-      // Both halves use the address of the high instruction as P.
-      writeImmediate16(Fixup, getLo16(*GP + A - P + InstructionSize),
-                       Endianness);
-      break;
-    case GPRel16:
-    case GOTOffset16:
-      V = static_cast<int64_t>(S + A - *GP);
-      if (auto Err = CheckSigned(V, 16))
-        return Err;
-      writeImmediate16(Fixup, V, Endianness);
-      break;
-    case GPRel32:
-      V = static_cast<int64_t>(S + A - *GP);
-      if (auto Err = CheckSigned(V, 32))
-        return Err;
-      support::endian::write32(Fixup, V, Endianness);
-      break;
-    case GPRel64:
-      support::endian::write64(Fixup, TargetAddress - *GP, Endianness);
-      break;
-    case GOTOffsetHi16:
-      V = static_cast<int64_t>(S + A - *GP);
-      writeImmediate16(Fixup, getHi16(V), Endianness);
-      break;
-    case GOTOffsetLo16:
-      writeImmediate16(Fixup, getLo16(TargetAddress - *GP), Endianness);
-      break;
-    case GOTPageOffset16: {
-      uint64_t Page = getGOTPage(TargetAddress);
-      writeImmediate16(Fixup, getLo16(TargetAddress - Page), Endianness);
-      break;
-    }
-    case DTPRelHi16:
-    case DTPRelLo16:
-    case DTPRel32:
-    case DTPRel64: {
-      auto BaseOrErr = TLSBaseAddr();
-      if (!BaseOrErr)
-        return BaseOrErr.takeError();
-      V = static_cast<int64_t>(S + A - *BaseOrErr);
-      if (E.getKind() == DTPRelHi16)
-        writeImmediate16(Fixup, getHi16(V), Endianness);
-      else if (E.getKind() == DTPRelLo16)
-        writeImmediate16(Fixup, getLo16(V), Endianness);
-      else if (E.getKind() == DTPRel32) {
-        if (auto Err = CheckSigned(V, 32))
-          return Err;
-        support::endian::write32(Fixup, V, Endianness);
-      } else
-        support::endian::write64(Fixup, V, Endianness);
-      break;
-    }
-    case NegGPRelHi16:
-    case NegGPRelLo16:
-      V = static_cast<int64_t>(*GP - S - A);
-      if (E.getKind() == NegGPRelHi16)
-        writeImmediate16(Fixup, getHi16(V), Endianness);
-      else
-        writeImmediate16(Fixup, getLo16(V), Endianness);
-      break;
-    default:
-      return make_error<JITLinkError>(
-          "In graph " + G.getName() + ", section " + B.getSection().getName() +
-          ": unsupported MIPS edge kind " + G.getEdgeKindName(E.getKind()));
-    }
-    return Error::success();
+    return mips::applyFixup(G, B, E, GPSymbol, TLSBaseSymbol);
   }
 };
 

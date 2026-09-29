@@ -16,7 +16,6 @@ namespace mips {
 
 namespace {
 
-constexpr unsigned InstructionSize = sizeof(uint32_t);
 constexpr unsigned HalfwordBits = 16;
 constexpr unsigned MaxPointerJumpStubInstructions = 9;
 
