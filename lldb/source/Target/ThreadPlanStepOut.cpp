@@ -525,6 +525,8 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
         ThreadPlanStepOverRange *step_through_inline_plan_ptr =
             static_cast<ThreadPlanStepOverRange *>(
                 m_step_through_inline_plan_sp.get());
+        step_through_inline_plan_ptr->SetBreakpointsToYieldTo(
+            m_breakpoints_to_yield_to);
         m_step_through_inline_plan_sp->SetPrivate(true);
 
         step_through_inline_plan_ptr->SetOkayToDiscard(true);
@@ -548,6 +550,14 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
   }
 
   return false;
+}
+
+void ThreadPlanStepOut::SetBreakpointsToYieldTo(
+    llvm::ArrayRef<break_id_t> break_ids) {
+  m_breakpoints_to_yield_to = std::move(break_ids);
+  if (m_step_through_inline_plan_sp)
+    static_cast<ThreadPlanStepOverRange *>(m_step_through_inline_plan_sp.get())
+        ->SetBreakpointsToYieldTo(m_breakpoints_to_yield_to);
 }
 
 void ThreadPlanStepOut::CalculateReturnValue() {

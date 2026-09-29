@@ -66,6 +66,10 @@ protected:
   bool DoWillResume(lldb::StateType resume_state, bool current_plan) override;
   bool QueueInlinedStepPlan(bool queue_now);
 
+  /// If any ThreadPlans StepRange are enqueued by this plan, they won't explain
+  /// stops for `break_ids`, deferring back to this plan.
+  void SetBreakpointsToYieldTo(llvm::ArrayRef<lldb::break_id_t> break_ids);
+
 private:
   static uint32_t s_default_flag_values; // These are the default flag values
                                          // for the ThreadPlanStepThrough.
@@ -90,6 +94,7 @@ private:
   lldb::ValueObjectSP m_return_valobj_sp;
   bool m_calculate_return_value;
   StreamString m_constructor_errors;
+  std::vector<lldb::break_id_t> m_breakpoints_to_yield_to;
 
   friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepOut(
       bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
