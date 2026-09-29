@@ -10,25 +10,25 @@ define i8 @clmul_i8(i8 %a, i8 %b) nounwind {
 ; SCALAR-LABEL: clmul_i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    movl %edi, %ecx
-; SCALAR-NEXT:    andb $85, %cl
 ; SCALAR-NEXT:    movl %esi, %r9d
-; SCALAR-NEXT:    andb $-86, %r9b
 ; SCALAR-NEXT:    andb $-86, %dil
 ; SCALAR-NEXT:    andb $85, %sil
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %sil
 ; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    andb $85, %cl
+; SCALAR-NEXT:    andb $-86, %r9b
 ; SCALAR-NEXT:    movl %ecx, %eax
 ; SCALAR-NEXT:    mulb %r9b
 ; SCALAR-NEXT:    movl %eax, %r8d
-; SCALAR-NEXT:    xorb %dl, %r8b
-; SCALAR-NEXT:    andb $-86, %r8b
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %r9b
-; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    movl %eax, %edi
 ; SCALAR-NEXT:    movl %ecx, %eax
 ; SCALAR-NEXT:    mulb %sil
-; SCALAR-NEXT:    xorb %dl, %al
+; SCALAR-NEXT:    xorb %dl, %r8b
+; SCALAR-NEXT:    andb $-86, %r8b
+; SCALAR-NEXT:    xorb %dil, %al
 ; SCALAR-NEXT:    andb $85, %al
 ; SCALAR-NEXT:    orb %r8b, %al
 ; SCALAR-NEXT:    retq
@@ -2969,25 +2969,25 @@ define i8 @clmul_i8_noimplicitfloat(i8 %a, i8 %b) nounwind noimplicitfloat {
 ; CHECK-LABEL: clmul_i8_noimplicitfloat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    andb $85, %cl
 ; CHECK-NEXT:    movl %esi, %r9d
-; CHECK-NEXT:    andb $-86, %r9b
 ; CHECK-NEXT:    andb $-86, %dil
 ; CHECK-NEXT:    andb $85, %sil
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    mulb %sil
 ; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andb $85, %cl
+; CHECK-NEXT:    andb $-86, %r9b
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    mulb %r9b
 ; CHECK-NEXT:    movl %eax, %r8d
-; CHECK-NEXT:    xorb %dl, %r8b
-; CHECK-NEXT:    andb $-86, %r8b
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    mulb %r9b
-; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    movl %eax, %edi
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    mulb %sil
-; CHECK-NEXT:    xorb %dl, %al
+; CHECK-NEXT:    xorb %dl, %r8b
+; CHECK-NEXT:    andb $-86, %r8b
+; CHECK-NEXT:    xorb %dil, %al
 ; CHECK-NEXT:    andb $85, %al
 ; CHECK-NEXT:    orb %r8b, %al
 ; CHECK-NEXT:    retq

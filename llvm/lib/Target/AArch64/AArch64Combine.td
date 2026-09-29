@@ -45,7 +45,7 @@ def ext_uaddv_to_uaddlv : GICombineRule<
   (apply [{ applyExtUaddvToUaddlv(*${root}, MRI, B, Observer, ${matchinfo}); }])
 >;
 
-class push_opcode_through_ext<Instruction opcode, Instruction extOpcode> : GICombineRule <
+class push_opcode_through_ext<Instruction opcode, Instruction extOpcode> : GICombineRule<
   (defs root:$root),
   (match (extOpcode $ext1, $src1):$ExtMI,
          (extOpcode $ext2, $src2),
@@ -129,7 +129,7 @@ def uzp : GICombineRule<
   (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
-def dup: GICombineRule <
+def dup: GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchDup(*${root}, MRI, ${matchinfo}); }]),
@@ -143,14 +143,14 @@ def trn : GICombineRule<
   (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
-def ext: GICombineRule <
+def ext: GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchEXT(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyEXT(*${root}, ${matchinfo}); }])
 >;
 
-def fullrev: GICombineRule <
+def fullrev: GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (G_IMPLICIT_DEF $src2),
          (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask):$root,
@@ -159,19 +159,31 @@ def fullrev: GICombineRule <
   (apply [{ applyFullRev(*${root}, MRI); }])
 >;
 
-def insertelt_nonconst: GICombineRule <
-  (defs root:$root, shuffle_matchdata:$matchinfo),
-  (match (wip_match_opcode G_INSERT_VECTOR_ELT):$root,
-         [{ return matchNonConstInsert(*${root}, MRI); }]),
-  (apply [{ applyNonConstInsert(*${root}, MRI, B); }])
->;
-
 def shuf_to_ins_matchdata : GIDefMatchData<"std::tuple<Register, int, Register, int>">;
-def shuf_to_ins: GICombineRule <
+def shuf_to_ins: GICombineRule<
   (defs root:$root, shuf_to_ins_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchINS(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyINS(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
+def form_duplane_matchdata :
+  GIDefMatchData<"std::pair<unsigned, int>">;
+def form_duplane : GICombineRule<
+  (defs root:$root, form_duplane_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+          [{ return matchDupLane(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
+def shuffle_vector_lowering : GICombineGroup<[dup, form_duplane, rev, ext, zip,
+                                              uzp, trn, fullrev, shuf_to_ins]>;
+
+def insertelt_nonconst: GICombineRule<
+  (defs root:$root, shuffle_matchdata:$matchinfo),
+  (match (wip_match_opcode G_INSERT_VECTOR_ELT):$root,
+         [{ return matchNonConstInsert(*${root}, MRI); }]),
+  (apply [{ applyNonConstInsert(*${root}, MRI, B); }])
 >;
 
 def vashr_vlshr_imm : GICombineRule<
@@ -179,15 +191,6 @@ def vashr_vlshr_imm : GICombineRule<
   (match (wip_match_opcode G_ASHR, G_LSHR):$root,
           [{ return matchVAshrLshrImm(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyVAshrLshrImm(*${root}, MRI, ${matchinfo}); }])
->;
-
-def form_duplane_matchdata :
-  GIDefMatchData<"std::pair<unsigned, int>">;
-def form_duplane : GICombineRule <
-  (defs root:$root, form_duplane_matchdata:$matchinfo),
-  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
-          [{ return matchDupLane(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
 // Clean up G_UNMERGE(G_DUPLANE16) -> G_DUPLANE16
@@ -219,11 +222,8 @@ def unmerge_duplanes : GICombineGroup<[unmerge_duplane8, unmerge_duplane16,
                                        unmerge_duplane32, extract_duplane8,
                                        extract_duplane16, extract_duplane32]>;
 
-def shuffle_vector_lowering : GICombineGroup<[dup, form_duplane, rev, ext, zip,
-                                              uzp, trn, fullrev, shuf_to_ins]>;
-
 // Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
-def vector_unmerge_lowering : GICombineRule <
+def vector_unmerge_lowering : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_UNMERGE_VALUES):$root,
           [{ return matchScalarizeVectorUnmerge(*${root}, MRI); }]),
@@ -232,14 +232,14 @@ def vector_unmerge_lowering : GICombineRule <
 
 def adjust_icmp_imm_matchdata :
   GIDefMatchData<"std::pair<uint64_t, CmpInst::Predicate>">;
-def adjust_icmp_imm : GICombineRule <
+def adjust_icmp_imm : GICombineRule<
   (defs root:$root, adjust_icmp_imm_matchdata:$matchinfo),
   (match (G_ICMP $dst, $tst, $src1, $src2):$root,
           [{ return matchAdjustICmpImmAndPred(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyAdjustICmpImmAndPred(*${root}, ${matchinfo}, B, Observer); }])
 >;
 
-def swap_icmp_operands : GICombineRule <
+def swap_icmp_operands : GICombineRule<
   (defs root:$root),
   (match (G_ICMP $dst, $tst, $src1, $src2):$root,
           [{ return trySwapICmpOperands(*${root}, MRI); }]),
@@ -355,14 +355,14 @@ def unmerge_ext_to_unmerge : GICombineRule<
 >;
 
 def regtriple_matchdata : GIDefMatchData<"std::tuple<Register, Register, Register>">;
-def or_to_bsp: GICombineRule <
+def or_to_bsp: GICombineRule<
   (defs root:$root, regtriple_matchdata:$matchinfo),
   (match (G_OR $dst, $src1, $src2):$root,
          [{ return matchOrToBSP(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyOrToBSP(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
-def trunc_or_to_addhn : GICombineRule <
+def trunc_or_to_addhn : GICombineRule<
   (defs root:$root),
   (match (G_OR $trunc_src, $src1, $src2),
          (G_TRUNC $dst, $trunc_src):$root,
@@ -399,7 +399,7 @@ def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
                        [copy_prop, cast_of_cast_combines, constant_fold_fp_ops,
                         buildvector_of_truncate, integer_of_truncate,
-                        mutate_anyext_to_zext, combines_for_extload, 
+                        mutate_anyext_to_zext, combines_for_extload,
                         combine_indexed_load_store, sext_trunc_sextload,
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,

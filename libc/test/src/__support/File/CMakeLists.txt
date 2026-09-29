@@ -23,6 +23,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  file_mode_test
+  SUITE
+    libc-support-tests
+  SRCS
+    file_mode_test.cpp
+  DEPENDS
+    libc.src.__support.File.file
+)
+
+add_libc_test(
   platform_file_test
   SUITE
     libc-support-tests

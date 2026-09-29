@@ -32,8 +32,7 @@ class Target;
 MCInstrInfo *createAVRMCInstrInfo();
 
 /// Creates a machine code emitter for AVR.
-MCCodeEmitter *createAVRMCCodeEmitter(const MCInstrInfo &MCII,
-                                      MCContext &Ctx);
+MCCodeEmitter *createAVRMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx);
 
 /// Creates an assembly backend for AVR.
 MCAsmBackend *createAVRAsmBackend(const Target &T, const MCSubtargetInfo &STI,

@@ -895,21 +895,26 @@ def ConvertMathToSPIRVPass : Pass<"convert-math-to-spirv"> {
 
 def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
   let summary =
-      "Convert (fast) math operations to native XeVM/SPIRV equivalents";
+      "Convert math operations to their XeVM/SPIRV OpenCL equivalents";
   let description = [{
-    This pass converts supported math ops marked with the `afn` fastmath flag
-    to function calls for OpenCL `native_` math intrinsics: These intrinsics
-    are typically mapped directly to native device instructions, often resulting
-    in better performance. However, the precision/error of these intrinsics
-    are implementation-defined, and thus math ops are only converted when they
-    have the `afn` fastmath flag enabled. However, if the `convertToOCL` flag is
-    set then all supported math ops would be lowered to OpenCL math intrinsics.
+    This pass lowers supported math ops to OpenCL math intrinsic calls. The
+    fastmath flag on each op picks which intrinsic is used:
+
+    *   Ops marked `afn` or `fast` become calls to OpenCL `native_` intrinsics.
+        Both work because `fast` is a group flag that expands to every fastmath
+        bit, `afn` included. These intrinsics are typically mapped directly to
+        native device instructions, often resulting in better performance. Their
+        precision/error is implementation-defined, so `afn` is what opts in.
+        Other flags on their own (`nnan`, `ninf`, ...) do not.
+    *   Every other op becomes a call to the precise OpenCL intrinsic from the
+        `__spirv_ocl_` extended instruction set. Set the `convertToOCL` flag to
+        `false` to leave these ops alone instead.
   }];
   let options = [
     Option<"convertArith", "convert-arith", "bool", /*default=*/"true",
       "Convert supported Arith ops (e.g. arith.divf) as well.">,
-    Option<"convertToOCL", "convert-to-ocl", "bool", /*default=*/"false",
-      "Convert supported Math ops to OCL intrinsics.">
+    Option<"convertToOCL", "convert-to-ocl", "bool", /*default=*/"true",
+      "Convert Math ops without `afn` fastmath to precise OCL intrinsics.">
   ];
   let dependentDialects = [
     "arith::ArithDialect",
@@ -1415,7 +1420,14 @@ def TosaToLinalg
            "Disable tosa decompositions pass">,
     Option<"aggressiveReduceConstant", "aggressive-reduce-constant",
            "bool", /*default=*/"false",
-           "Always perform the reduce constant optimization">
+           "Always perform the reduce constant optimization">,
+    Option<"allowNonFinites", "allow-non-finites", "bool",
+           /*default=*/"false",
+           "When enabled, float min/max reductions are seeded with the "
+           "infinite identity mandated by the TOSA specification. When "
+           "disabled (default), the largest finite value is used instead. "
+           "This controls only compiler-generated identity values; NaN "
+           "results required by nan_mode are unaffected.">
   ];
 }
 

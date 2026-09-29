@@ -1,6 +1,6 @@
 ; REQUIRES: x86-registered-target
-; RUN: opt -disable-output -passes=infer-address-spaces \
-; RUN:   -assume-default-is-flat-addrspace -mtriple=x86_64-unknown-unknown %s
+; RUN: opt -disable-output -passes='infer-address-spaces<assume-default-is-flat-addrspace>' \
+; RUN:   -mtriple=x86_64-unknown-unknown %s
 
 ; InferAddressSpaces can queue the same dead instruction more than once.
 ; Deleting an earlier entry invalidates later raw pointers, so the deletion

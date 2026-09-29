@@ -4186,7 +4186,9 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
   SUnit *SU;
   if (RegionPolicy.OnlyTopDown) {
     SU = Top.pickOnlyChoice();
-    if (!SU) {
+    if (SU) {
+      tracePick(SU, Only1, /*IsTopNode=*/true);
+    } else {
       CandPolicy NoPolicy;
       TopCand.reset(NoPolicy);
       pickNodeFromQueue(Top, NoPolicy, DAG->getTopRPTracker(), TopCand);
@@ -4197,7 +4199,9 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
     IsTopNode = true;
   } else if (RegionPolicy.OnlyBottomUp) {
     SU = Bot.pickOnlyChoice();
-    if (!SU) {
+    if (SU) {
+      tracePick(SU, Only1, /*IsTopNode=*/false);
+    } else {
       CandPolicy NoPolicy;
       BotCand.reset(NoPolicy);
       pickNodeFromQueue(Bot, NoPolicy, DAG->getBotRPTracker(), BotCand);
