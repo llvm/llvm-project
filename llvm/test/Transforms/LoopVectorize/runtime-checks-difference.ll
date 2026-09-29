@@ -907,3 +907,63 @@ loop:
 exit:
   ret void
 }
+
+; The first pointer is read and written, while the second is read-only. The
+; read/read pair does not need checking, so use a difference check for the
+; write/read dependence instead of a full-range overlap check.
+define void @read_modify_write_and_read_only(ptr %dst, ptr %src) {
+; CHECK-LABEL: define void @read_modify_write_and_read_only(
+; CHECK:       vector.memcheck:
+; CHECK-NOT:     bound
+; CHECK:         [[DIFF_CHECK:%.*]] = icmp ult i64 {{.*}}, 15
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %{{.*}}, label %{{.*}}
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %src.gep = getelementptr inbounds i32, ptr %src, i64 %iv
+  %src.load = load i32, ptr %src.gep
+  %dst.base = getelementptr inbounds i32, ptr %dst, i64 128
+  %dst.gep = getelementptr inbounds i32, ptr %dst.base, i64 %iv
+  %dst.load = load i32, ptr %dst.gep
+  %add = add i32 %dst.load, %src.load
+  store i32 %add, ptr %dst.gep
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 256
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; A read-modify-write pointer against a write pointer may need multiple checks.
+; Keep the full-range overlap check in this case.
+define void @read_modify_write_and_write_only(ptr %dst, ptr %other) {
+; CHECK-LABEL: define void @read_modify_write_and_write_only(
+; CHECK:       vector.memcheck:
+; CHECK:         [[BOUND0:%.*]] = icmp ult ptr {{.*}}, {{.*}}
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr {{.*}}, {{.*}}
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %{{.*}}, label %{{.*}}
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %dst.base = getelementptr inbounds i32, ptr %dst, i64 128
+  %dst.gep = getelementptr inbounds i32, ptr %dst.base, i64 %iv
+  %dst.load = load i32, ptr %dst.gep
+  %add = add i32 %dst.load, 1
+  store i32 %add, ptr %dst.gep
+  %other.gep = getelementptr inbounds i32, ptr %other, i64 %iv
+  store i32 %dst.load, ptr %other.gep
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 256
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}

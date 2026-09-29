@@ -24,6 +24,7 @@ for.body:
   %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
   %l.2 = load i32, ptr %arrayidx2
   %add = add nsw i32 %l.1, %l.2
+  store i32 %l.1, ptr %arrayidx2, align 4
   store i32 %add, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 10000
