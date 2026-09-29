@@ -1543,6 +1543,9 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Now we can add the actual call instruction to the correct basic block.
   MIRBuilder.insertInstr(MIB);
 
+  // Add dead flag to already inserted implicit-def.
+  MIB->addRegisterDead(AArch64::LR, TRI);
+
   uint64_t CalleePopBytes =
       doesCalleeRestoreStack(Info.CallConv,
                              MF.getTarget().Options.GuaranteedTailCallOpt)

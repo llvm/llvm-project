@@ -4670,6 +4670,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_scale_pk16_bf16_bf6:
     case Intrinsic::amdgcn_cvt_scale_pk16_f32_fp6:
     case Intrinsic::amdgcn_cvt_scale_pk16_f32_bf6:
+    case Intrinsic::amdgcn_cvt_scale_pk32_f16_fp6:
+    case Intrinsic::amdgcn_cvt_scale_pk32_bf16_fp6:
+    case Intrinsic::amdgcn_cvt_scale_pk32_f16_bf6:
+    case Intrinsic::amdgcn_cvt_scale_pk32_bf16_bf6:
+    case Intrinsic::amdgcn_cvt_scale_pk32_f32_fp6:
+    case Intrinsic::amdgcn_cvt_scale_pk32_f32_bf6:
     case Intrinsic::amdgcn_cvt_scalef32_pk8_fp8_bf16:
     case Intrinsic::amdgcn_cvt_scalef32_pk8_bf8_bf16:
     case Intrinsic::amdgcn_cvt_scalef32_pk8_fp8_f16:
@@ -4740,6 +4746,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_exclusive_scan_max_u16:
     case Intrinsic::amdgcn_exclusive_scan_max_i32:
     case Intrinsic::amdgcn_exclusive_scan_max_u32:
+    case Intrinsic::amdgcn_wave_match_b32:
     case Intrinsic::amdgcn_fdot2:
     case Intrinsic::amdgcn_sdot2:
     case Intrinsic::amdgcn_udot2:
