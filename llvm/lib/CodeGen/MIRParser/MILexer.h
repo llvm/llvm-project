@@ -135,6 +135,7 @@ struct MIToken {
     kw_ehscope_entry,
     kw_ehfunclet_entry,
     kw_cleanup_funclet_entry,
+    kw_ehcont_target,
     kw_liveins,
     kw_successors,
     kw_floatpred,

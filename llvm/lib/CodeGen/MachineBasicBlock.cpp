@@ -567,6 +567,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << "cleanup-funclet-entry";
       hasAttributes = true;
     }
+    if (isEHContTarget()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "ehcont-target";
+      hasAttributes = true;
+    }
     if (getAlignment() != Align(1)) {
       os << (hasAttributes ? ", " : " (");
       os << "align " << getAlignment().value();
