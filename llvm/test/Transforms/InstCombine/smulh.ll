@@ -7,8 +7,7 @@
 
 define i32 @undef_smulh_i32(i32 %a0) {
 ; CHECK-LABEL: @undef_smulh_i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smulh.i32(i32 [[A0:%.*]], i32 undef)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = call i32 @llvm.smulh.i32(i32 %a0, i32 undef)
   ret i32 %1
@@ -16,8 +15,7 @@ define i32 @undef_smulh_i32(i32 %a0) {
 
 define i32 @undef_smulh_i32_commute(i32 %a0) {
 ; CHECK-LABEL: @undef_smulh_i32_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smulh.i32(i32 [[A0:%.*]], i32 undef)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = call i32 @llvm.smulh.i32(i32 undef, i32 %a0)
   ret i32 %1
@@ -25,8 +23,7 @@ define i32 @undef_smulh_i32_commute(i32 %a0) {
 
 define <8 x i16> @undef_smulh_v8i16(<8 x i16> %a0) {
 ; CHECK-LABEL: @undef_smulh_v8i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> [[A0:%.*]], <8 x i16> undef)
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
 ;
   %1 = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> %a0, <8 x i16> undef)
   ret <8 x i16> %1
@@ -34,8 +31,7 @@ define <8 x i16> @undef_smulh_v8i16(<8 x i16> %a0) {
 
 define <8 x i16> @undef_smulh_v8i16_commute(<8 x i16> %a0) {
 ; CHECK-LABEL: @undef_smulh_v8i16_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> [[A0:%.*]], <8 x i16> undef)
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
 ;
   %1 = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> undef, <8 x i16> %a0)
   ret <8 x i16> %1
@@ -43,8 +39,7 @@ define <8 x i16> @undef_smulh_v8i16_commute(<8 x i16> %a0) {
 
 define <16 x i16> @undef_smulh_v16i16(<16 x i16> %a0) {
 ; CHECK-LABEL: @undef_smulh_v16i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> [[A0:%.*]], <16 x i16> undef)
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i16> zeroinitializer
 ;
   %1 = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> %a0, <16 x i16> undef)
   ret <16 x i16> %1
@@ -52,8 +47,7 @@ define <16 x i16> @undef_smulh_v16i16(<16 x i16> %a0) {
 
 define <16 x i16> @undef_smulh_v16i16_commute(<16 x i16> %a0) {
 ; CHECK-LABEL: @undef_smulh_v16i16_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> [[A0:%.*]], <16 x i16> undef)
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i16> zeroinitializer
 ;
   %1 = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> undef, <16 x i16> %a0)
   ret <16 x i16> %1
@@ -61,8 +55,7 @@ define <16 x i16> @undef_smulh_v16i16_commute(<16 x i16> %a0) {
 
 define <32 x i16> @undef_smulh_v32i16(<32 x i16> %a0) {
 ; CHECK-LABEL: @undef_smulh_v32i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> [[A0:%.*]], <32 x i16> undef)
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i16> zeroinitializer
 ;
   %1 = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> %a0, <32 x i16> undef)
   ret <32 x i16> %1
@@ -70,8 +63,7 @@ define <32 x i16> @undef_smulh_v32i16(<32 x i16> %a0) {
 
 define <32 x i16> @undef_smulh_v32i16_commute(<32 x i16> %a0) {
 ; CHECK-LABEL: @undef_smulh_v32i16_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> [[A0:%.*]], <32 x i16> undef)
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i16> zeroinitializer
 ;
   %1 = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> undef, <32 x i16> %a0)
   ret <32 x i16> %1
@@ -83,8 +75,7 @@ define <32 x i16> @undef_smulh_v32i16_commute(<32 x i16> %a0) {
 
 define i32 @zero_smulh_i32(i32 %a0) {
 ; CHECK-LABEL: @zero_smulh_i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smulh.i32(i32 [[A0:%.*]], i32 0)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = call i32 @llvm.smulh.i32(i32 %a0, i32 zeroinitializer)
   ret i32 %1
@@ -92,8 +83,7 @@ define i32 @zero_smulh_i32(i32 %a0) {
 
 define i32 @zero_smulh_i32_commute(i32 %a0) {
 ; CHECK-LABEL: @zero_smulh_i32_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smulh.i32(i32 [[A0:%.*]], i32 0)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 0
 ;
   %1 = call i32 @llvm.smulh.i32(i32 zeroinitializer, i32 %a0)
   ret i32 %1
@@ -101,8 +91,7 @@ define i32 @zero_smulh_i32_commute(i32 %a0) {
 
 define <8 x i16> @zero_smulh_v8i16(<8 x i16> %a0) {
 ; CHECK-LABEL: @zero_smulh_v8i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> [[A0:%.*]], <8 x i16> zeroinitializer)
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
 ;
   %1 = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> %a0, <8 x i16> zeroinitializer)
   ret <8 x i16> %1
@@ -110,8 +99,7 @@ define <8 x i16> @zero_smulh_v8i16(<8 x i16> %a0) {
 
 define <8 x i16> @zero_smulh_v8i16_commute(<8 x i16> %a0) {
 ; CHECK-LABEL: @zero_smulh_v8i16_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> [[A0:%.*]], <8 x i16> zeroinitializer)
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
 ;
   %1 = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> zeroinitializer, <8 x i16> %a0)
   ret <8 x i16> %1
@@ -119,8 +107,7 @@ define <8 x i16> @zero_smulh_v8i16_commute(<8 x i16> %a0) {
 
 define <16 x i16> @zero_smulh_v16i16(<16 x i16> %a0) {
 ; CHECK-LABEL: @zero_smulh_v16i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> [[A0:%.*]], <16 x i16> zeroinitializer)
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i16> zeroinitializer
 ;
   %1 = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> %a0, <16 x i16> zeroinitializer)
   ret <16 x i16> %1
@@ -128,8 +115,7 @@ define <16 x i16> @zero_smulh_v16i16(<16 x i16> %a0) {
 
 define <16 x i16> @zero_smulh_v16i16_commute(<16 x i16> %a0) {
 ; CHECK-LABEL: @zero_smulh_v16i16_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> [[A0:%.*]], <16 x i16> zeroinitializer)
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i16> zeroinitializer
 ;
   %1 = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> zeroinitializer, <16 x i16> %a0)
   ret <16 x i16> %1
@@ -137,8 +123,7 @@ define <16 x i16> @zero_smulh_v16i16_commute(<16 x i16> %a0) {
 
 define <32 x i16> @zero_smulh_v32i16(<32 x i16> %a0) {
 ; CHECK-LABEL: @zero_smulh_v32i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> [[A0:%.*]], <32 x i16> zeroinitializer)
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i16> zeroinitializer
 ;
   %1 = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> %a0, <32 x i16> zeroinitializer)
   ret <32 x i16> %1
@@ -146,8 +131,7 @@ define <32 x i16> @zero_smulh_v32i16(<32 x i16> %a0) {
 
 define <32 x i16> @zero_smulh_v32i16_commute(<32 x i16> %a0) {
 ; CHECK-LABEL: @zero_smulh_v32i16_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> [[A0:%.*]], <32 x i16> zeroinitializer)
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i16> zeroinitializer
 ;
   %1 = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> zeroinitializer, <32 x i16> %a0)
   ret <32 x i16> %1
@@ -159,7 +143,7 @@ define <32 x i16> @zero_smulh_v32i16_commute(<32 x i16> %a0) {
 
 define i32 @one_smulh_i32(i32 %a0) {
 ; CHECK-LABEL: @one_smulh_i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smulh.i32(i32 [[A0:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[A0:%.*]], 31
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.smulh.i32(i32 %a0, i32 1)
@@ -168,7 +152,7 @@ define i32 @one_smulh_i32(i32 %a0) {
 
 define i32 @one_smulh_i32_commute(i32 %a0) {
 ; CHECK-LABEL: @one_smulh_i32_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smulh.i32(i32 [[A0:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[A0:%.*]], 31
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.smulh.i32(i32 1, i32 %a0)
@@ -177,7 +161,7 @@ define i32 @one_smulh_i32_commute(i32 %a0) {
 
 define <8 x i16> @one_smulh_v8i16(<8 x i16> %a0) {
 ; CHECK-LABEL: @one_smulh_v8i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> [[A0:%.*]], <8 x i16> splat (i16 1))
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i16> [[A0:%.*]], splat (i16 15)
 ; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
 ;
   %1 = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> %a0, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
@@ -186,7 +170,7 @@ define <8 x i16> @one_smulh_v8i16(<8 x i16> %a0) {
 
 define <8 x i16> @one_smulh_v8i16_commute(<8 x i16> %a0) {
 ; CHECK-LABEL: @one_smulh_v8i16_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> [[A0:%.*]], <8 x i16> splat (i16 1))
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i16> [[A0:%.*]], splat (i16 15)
 ; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
 ;
   %1 = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <8 x i16> %a0)
@@ -195,7 +179,7 @@ define <8 x i16> @one_smulh_v8i16_commute(<8 x i16> %a0) {
 
 define <16 x i16> @one_smulh_v16i16(<16 x i16> %a0) {
 ; CHECK-LABEL: @one_smulh_v16i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> [[A0:%.*]], <16 x i16> splat (i16 1))
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i16> [[A0:%.*]], splat (i16 15)
 ; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
 ;
   %1 = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> %a0, <16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
@@ -204,7 +188,7 @@ define <16 x i16> @one_smulh_v16i16(<16 x i16> %a0) {
 
 define <16 x i16> @one_smulh_v16i16_commute(<16 x i16> %a0) {
 ; CHECK-LABEL: @one_smulh_v16i16_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> [[A0:%.*]], <16 x i16> splat (i16 1))
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i16> [[A0:%.*]], splat (i16 15)
 ; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
 ;
   %1 = call <16 x i16> @llvm.smulh.v16i16(<16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <16 x i16> %a0)
@@ -213,7 +197,7 @@ define <16 x i16> @one_smulh_v16i16_commute(<16 x i16> %a0) {
 
 define <32 x i16> @one_smulh_v32i16(<32 x i16> %a0) {
 ; CHECK-LABEL: @one_smulh_v32i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> [[A0:%.*]], <32 x i16> splat (i16 1))
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <32 x i16> [[A0:%.*]], splat (i16 15)
 ; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
 ;
   %1 = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> %a0, <32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
@@ -222,7 +206,7 @@ define <32 x i16> @one_smulh_v32i16(<32 x i16> %a0) {
 
 define <32 x i16> @one_smulh_v32i16_commute(<32 x i16> %a0) {
 ; CHECK-LABEL: @one_smulh_v32i16_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> [[A0:%.*]], <32 x i16> splat (i16 1))
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <32 x i16> [[A0:%.*]], splat (i16 15)
 ; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
 ;
   %1 = call <32 x i16> @llvm.smulh.v32i16(<32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <32 x i16> %a0)
