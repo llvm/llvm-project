@@ -6,6 +6,7 @@ FileHeader:
 Sections:
   - Type:            CUSTOM
     Name:            dylink.0
+    TargetArch:      wasm32
     MemorySize:      4
     MemoryAlignment: 2
     TableSize:       1
@@ -19,6 +20,7 @@ Sections:
 # CHECK: Sections:
 # CHECK:   - Type:            CUSTOM
 # CHECK:     Name:            dylink.0
+# CHECK:     TargetArch:      wasm32
 # CHECK:     MemorySize:      4
 # CHECK:     MemoryAlignment: 2
 # CHECK:     TableSize:       1

@@ -345,7 +345,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Internal storage for NestedNameSpecifiers.
   ///
   /// This set is managed by the NestedNameSpecifier class.
-  mutable llvm::FoldingSet<NamespaceAndPrefixStorage>
+  mutable llvm::UniquingSet<NamespaceAndPrefixStorage>
       NamespaceAndPrefixStorages;
 
   /// A cache mapping from RecordDecls to ASTRecordLayouts.
@@ -548,6 +548,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Since so few decls have attrs, we keep them in a hash map instead of
   /// wasting space in the Decl class.
   llvm::DenseMap<const Decl*, AttrVec*> DeclAttrs;
+
+  /// One-entry cache for getDeclAttrs().
+  const Decl *LastDeclAttrsDecl = nullptr;
+  AttrVec *LastDeclAttrs = nullptr;
 
   /// A mapping from non-redeclarable declarations in modules that were
   /// merged with other declarations to the canonical declaration that they were
@@ -1681,6 +1685,22 @@ public:
                          bool OrNull,
                          ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
 
+  /// Return a `CountAttributedType` whose count expression has not been parsed
+  /// yet, for use by a late-parsed bounds attribute. The result is *not*
+  /// uniqued, and must be completed with `completeCountAttributedType` once the
+  /// argument becomes parseable. Returns the node rather than a `QualType` so
+  /// the caller can retain it for completion.
+  CountAttributedType *getIncompleteCountAttributedType(QualType WrappedTy,
+                                                        bool CountInBytes,
+                                                        bool OrNull) const;
+
+  /// Supply the count expression and coupled declarations for a type created by
+  /// `getIncompleteCountAttributedType`. Enclosing types keep pointing at the
+  /// same node, so nothing above it needs rebuilding.
+  void completeCountAttributedType(
+      CountAttributedType *CATy, Expr *CountExpr,
+      ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
+
   /// Return a placeholder type for a late-parsed type attribute.
   /// This type wraps another type and holds the LateParsedAttribute
   /// that will be parsed later.
@@ -1890,14 +1910,18 @@ public:
   ///
   /// \pre \p ElementType must be a valid matrix element type (see
   /// MatrixType::isValidElementType).
-  QualType getConstantMatrixType(QualType ElementType, unsigned NumRows,
-                                 unsigned NumColumns) const;
+  QualType getConstantMatrixType(
+      QualType ElementType, unsigned NumRows, unsigned NumColumns,
+      std::optional<MatrixType::LayoutKind> Layout = std::nullopt) const;
 
   /// Return the unique reference to the matrix type of the specified element
   /// type and size
   QualType getDependentSizedMatrixType(QualType ElementType, Expr *RowExpr,
                                        Expr *ColumnExpr,
                                        SourceLocation AttrLoc) const;
+
+  QualType getMatrixTypeWithLayout(QualType T,
+                                   MatrixType::LayoutKind Layout) const;
 
   QualType getDependentAddressSpaceType(QualType PointeeType,
                                         Expr *AddrSpaceExpr,

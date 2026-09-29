@@ -10,6 +10,7 @@ unittest("ABITests") {
     "AArch64TargetInfoTest.cpp",
     "IRTypeMapperTest.cpp",
     "FunctionInfoTest.cpp",
+    "TargetInfoTest.cpp",
     "X86TargetInfoTest.cpp",
     "TypesTest.cpp",
   ]
