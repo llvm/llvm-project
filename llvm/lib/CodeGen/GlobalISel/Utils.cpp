@@ -836,11 +836,11 @@ SmallVector<APFloat>
 llvm::ConstantFoldVectorFPBinop(unsigned Opcode, const Register Op1,
                                 const Register Op2,
                                 const MachineRegisterInfo &MRI) {
-  auto *SrcVec2 = getBuildVectorLikeDef(Op2, MRI);
+  GBuildVector *SrcVec2 = getBuildVectorLikeDef(Op2, MRI);
   if (!SrcVec2)
     return {};
 
-  auto *SrcVec1 = getBuildVectorLikeDef(Op1, MRI);
+  GBuildVector *SrcVec1 = getBuildVectorLikeDef(Op1, MRI);
   if (!SrcVec1)
     return {};
 
