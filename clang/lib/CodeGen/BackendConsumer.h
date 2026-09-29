@@ -81,7 +81,6 @@ public:
 
   // Links each entry in LinkModules into our module.  Returns true on error.
   bool LinkInModules(llvm::Module *M);
-  
   /// Create an llvm::DiagnosticHandler that routes LLVM backend diagnostics
   /// through this consumer's clang diagnostics.
   std::unique_ptr<llvm::DiagnosticHandler> createDiagnosticHandler();
