@@ -1182,7 +1182,9 @@ private:
   InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
                                          InsertPointTy AllocaIP,
                                          omp::WorksharingLoopType LoopType,
-                                         bool NoLoop);
+                                         bool NoLoop,
+                                         Value *ThreadChunk = nullptr,
+                                         Value *BlockChunk = nullptr);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
