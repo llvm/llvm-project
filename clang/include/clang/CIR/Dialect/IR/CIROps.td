@@ -7839,10 +7839,6 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$lhs,
-                   "mlir::Value":$rhs), [{
-      build($_builder, $_state, result, lhs, rhs, cir::FenvAttr{});
-    }]>,
     OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
       build($_builder, $_state, lhs, rhs, cir::FenvAttr{});
     }]>
