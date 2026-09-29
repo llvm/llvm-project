@@ -214,9 +214,9 @@ static Error validateOutOfProcess(StringRef LLVMCasBinary, StringRef RootPath,
     Args.push_back("-check-hash");
 
   llvm::SmallString<128> StdErrPath;
-  if (std::error_code EC = sys::fs::createTemporaryFile(
-          "llvm-cas-validate-stderr", "txt", StdErrPath,
-          llvm::sys::fs::OF_Text))
+  if (std::error_code EC =
+          sys::fs::createTemporaryFile("llvm-cas-validate-stderr", "txt",
+                                       StdErrPath, llvm::sys::fs::OF_Text))
     return createStringError(EC, "failed to create temporary file");
   FileRemover OutputRemover(StdErrPath.c_str());
 
