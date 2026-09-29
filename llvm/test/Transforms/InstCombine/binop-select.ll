@@ -553,9 +553,7 @@ define i8 @commonArgWithAdd0(i1 %arg0) {
 define i8 @or_select_shl_lsb_const_arms(i8 %x) {
 ; CHECK-LABEL: @or_select_shl_lsb_const_arms(
 ; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 5, i8 9
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 [[X]], 7
-; CHECK-NEXT:    [[RESULT:%.*]] = or disjoint i8 [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 -123, i8 9
 ; CHECK-NEXT:    ret i8 [[RESULT]]
 ;
   %cond = trunc i8 %x to i1
@@ -568,9 +566,8 @@ define i8 @or_select_shl_lsb_const_arms(i8 %x) {
 define i8 @or_select_shl_lsb(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_select_shl_lsb(
 ; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[Y:%.*]], i8 [[Z:%.*]]
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 [[X]], 7
-; CHECK-NEXT:    [[RESULT:%.*]] = or i8 [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[RESULT]]
 ;
   %cond = trunc i8 %x to i1
@@ -583,9 +580,8 @@ define i8 @or_select_shl_lsb(i8 %x, i8 %y, i8 %z) {
 define i8 @or_select_shl_lsb_commuted(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_select_shl_lsb_commuted(
 ; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[Y:%.*]], i8 [[Z:%.*]]
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 [[X]], 7
-; CHECK-NEXT:    [[RESULT:%.*]] = or i8 [[SHIFT]], [[SEL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[RESULT]]
 ;
   %cond = trunc i8 %x to i1
@@ -598,9 +594,8 @@ define i8 @or_select_shl_lsb_commuted(i8 %x, i8 %y, i8 %z) {
 define i8 @and_select_shl_lsb(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @and_select_shl_lsb(
 ; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[Y:%.*]], i8 [[Z:%.*]]
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 [[X]], 7
-; CHECK-NEXT:    [[RESULT:%.*]] = and i8 [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 0
 ; CHECK-NEXT:    ret i8 [[RESULT]]
 ;
   %cond = trunc i8 %x to i1
@@ -613,9 +608,8 @@ define i8 @and_select_shl_lsb(i8 %x, i8 %y, i8 %z) {
 define i8 @xor_select_shl_lsb(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @xor_select_shl_lsb(
 ; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[Y:%.*]], i8 [[Z:%.*]]
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 [[X]], 7
-; CHECK-NEXT:    [[RESULT:%.*]] = xor i8 [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[RESULT]]
 ;
   %cond = trunc i8 %x to i1
@@ -629,10 +623,8 @@ define i16 @or_select_shl_lsb_eq_zext(i8 %x, i16 %y, i16 %z) {
 ; CHECK-LABEL: @or_select_shl_lsb_eq_zext(
 ; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[MASKED]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i16 [[Z:%.*]], i16 [[Y:%.*]]
-; CHECK-NEXT:    [[WIDE:%.*]] = zext i8 [[X]] to i16
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl i16 [[WIDE]], 15
-; CHECK-NEXT:    [[RESULT:%.*]] = or i16 [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i16 [[Y:%.*]], -32768
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i16 [[Z:%.*]], i16 [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[RESULT]]
 ;
   %masked = and i8 %x, 1
@@ -647,10 +639,8 @@ define i16 @or_select_shl_lsb_eq_zext(i8 %x, i16 %y, i16 %z) {
 define i8 @or_select_shl_lsb_trunc(i16 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_select_shl_lsb_trunc(
 ; CHECK-NEXT:    [[COND:%.*]] = trunc i16 [[X:%.*]] to i1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[Y:%.*]], i8 [[Z:%.*]]
-; CHECK-NEXT:    [[NARROW:%.*]] = trunc i16 [[X]] to i8
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 [[NARROW]], 7
-; CHECK-NEXT:    [[RESULT:%.*]] = or i8 [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[RESULT]]
 ;
   %cond = trunc i16 %x to i1
@@ -664,9 +654,8 @@ define i8 @or_select_shl_lsb_trunc(i16 %x, i8 %y, i8 %z) {
 define i8 @or_select_shl_lsb_disjoint(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_select_shl_lsb_disjoint(
 ; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[Y:%.*]], i8 [[Z:%.*]]
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 [[X]], 7
-; CHECK-NEXT:    [[RESULT:%.*]] = or disjoint i8 [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[RESULT]]
 ;
   %cond = trunc i8 %x to i1
@@ -679,9 +668,8 @@ define i8 @or_select_shl_lsb_disjoint(i8 %x, i8 %y, i8 %z) {
 define <2 x i8> @or_select_shl_lsb_vec_splat(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @or_select_shl_lsb_vec_splat(
 ; CHECK-NEXT:    [[COND:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i1>
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND]], <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]]
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl <2 x i8> [[X]], splat (i8 7)
-; CHECK-NEXT:    [[RESULT:%.*]] = or <2 x i8> [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[Y:%.*]], splat (i8 -128)
+; CHECK-NEXT:    [[RESULT:%.*]] = select <2 x i1> [[COND]], <2 x i8> [[TMP1]], <2 x i8> [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[RESULT]]
 ;
   %cond = trunc <2 x i8> %x to <2 x i1>

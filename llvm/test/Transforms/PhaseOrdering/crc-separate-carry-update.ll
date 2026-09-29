@@ -20,26 +20,14 @@
 define i16 @crc16_le_carry(i8 %data, i16 %crc) {
 ; CHECK-LABEL: define i16 @crc16_le_carry(
 ; CHECK-SAME: i8 [[DATA:%.*]], i16 [[CRC:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[DATA_IV:%.*]] = phi i8 [ [[DATA]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CRC_IV:%.*]] = phi i16 [ [[CRC]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CRC_LO:%.*]] = trunc i16 [[CRC_IV]] to i8
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[DATA_IV]], [[CRC_LO]]
-; CHECK-NEXT:    [[X16_SET_NOT:%.*]] = trunc i8 [[XOR]] to i1
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i16 [[CRC_IV]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[TMP0]], 8193
-; CHECK-NEXT:    [[CRC_SHR:%.*]] = select i1 [[X16_SET_NOT]], i16 [[TMP1]], i16 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[XOR]] to i16
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i16 [[TMP2]], 15
-; CHECK-NEXT:    [[CRC_NEXT]] = or disjoint i16 [[CRC_SHR]], [[TMP3]]
-; CHECK-NEXT:    [[DATA_NEXT]] = lshr i8 [[DATA_IV]], 1
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i8 [[I]], 1
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i8 [[I_NEXT]], 8
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:  [[EXIT:.*:]]
+; CHECK-NEXT:    [[CRC_LE_SHIFT:%.*]] = lshr i16 [[CRC]], 8
+; CHECK-NEXT:    [[CRC_INDEXER_CAST:%.*]] = trunc i16 [[CRC]] to i8
+; CHECK-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i8 [[DATA]], [[CRC_INDEXER_CAST]]
+; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[CRC_DATA_INDEXER]] to i64
+; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds nuw [2 x i8], ptr @.crctable, i64 [[INDEXER_EXT]]
+; CHECK-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
+; CHECK-NEXT:    [[CRC_NEXT:%.*]] = xor i16 [[CRC_LE_SHIFT]], [[TBL_LD]]
 ; CHECK-NEXT:    ret i16 [[CRC_NEXT]]
 ;
 entry:
@@ -72,7 +60,3 @@ exit:
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.unroll.disable"}
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.unroll.disable"}
-;.
