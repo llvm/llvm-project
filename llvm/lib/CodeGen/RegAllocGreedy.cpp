@@ -655,14 +655,27 @@ void RAGreedy::evictInterference(const LiveInterval &VirtReg,
   }
 }
 
-/// Returns true if the given \p PhysReg is a callee saved register and has not
-/// been used for allocation yet.
-bool RegAllocEvictionAdvisor::isUnusedCalleeSavedReg(MCRegister PhysReg) const {
-  MCRegister CSR = RegClassInfo.getLastCalleeSavedAlias(PhysReg);
-  if (!CSR)
-    return false;
+MCRegister RegAllocEvictionAdvisor::
+getUnusedCalleeSavedReg(const LiveInterval &VirtReg, MCRegister PhysReg) const {
+  auto IsUnusedCSR = [&](MCRegUnit Unit) {
+    MCRegister CSR = RegClassInfo.getCalleeSavedAlias(Unit);
+    if (CSR && !Matrix->isPhysRegUsed(CSR))
+      return CSR;
+    return MCRegister();
+  };
 
-  return !Matrix->isPhysRegUsed(PhysReg);
+  for (MCRegUnitMaskIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
+    MCRegUnit Unit = (*Units).first;
+    LaneBitmask Mask = (*Units).second;
+    if (VirtReg.hasSubRanges() &&
+        llvm::none_of(VirtReg.subranges(), [&](const LiveInterval::SubRange &S) {
+          return (S.LaneMask & Mask).any();
+        }))
+      continue;
+    if (MCRegister CSR = IsUnusedCSR(Unit))
+      return CSR;
+  }
+  return MCRegister();
 }
 
 std::optional<unsigned>
@@ -695,18 +708,19 @@ RegAllocEvictionAdvisor::getOrderLimit(const LiveInterval &VirtReg,
   return OrderLimit;
 }
 
-bool RegAllocEvictionAdvisor::canAllocatePhysReg(unsigned CostPerUseLimit,
+bool RegAllocEvictionAdvisor::canAllocatePhysReg(const LiveInterval &VirtReg,
+                                                 unsigned CostPerUseLimit,
                                                  MCRegister PhysReg) const {
   if (RegCosts[PhysReg.id()] >= CostPerUseLimit)
     return false;
   // The first use of a callee-saved register in a function has cost 1.
   // Don't start using a CSR when the CostPerUseLimit is low.
-  if (CostPerUseLimit == 1 && isUnusedCalleeSavedReg(PhysReg)) {
-    LLVM_DEBUG(
-        dbgs() << printReg(PhysReg, TRI) << " would clobber CSR "
-               << printReg(RegClassInfo.getLastCalleeSavedAlias(PhysReg), TRI)
-               << '\n');
-    return false;
+  if (CostPerUseLimit == 1) {
+    if (MCRegister CSR = getUnusedCalleeSavedReg(VirtReg, PhysReg)) {
+      LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << " would clobber CSR "
+                        << printReg(CSR, TRI) << '\n');
+      return false;
+    }
   }
   return true;
 }
@@ -1324,7 +1338,8 @@ unsigned RAGreedy::calculateRegionSplitCost(const LiveInterval &VirtReg,
   unsigned BestCand = NoCand;
   for (MCRegister PhysReg : Order) {
     assert(PhysReg);
-    if (IgnoreCSR && EvictAdvisor->isUnusedCalleeSavedReg(PhysReg))
+    if (IgnoreCSR &&
+        EvictAdvisor->getUnusedCalleeSavedReg(VirtReg, PhysReg))
       continue;
 
     calculateRegionSplitCostAroundReg(PhysReg, Order, BestCost, NumCands,
@@ -2417,7 +2432,7 @@ BlockFrequency RAGreedy::calcRematCost(const LiveInterval &VirtReg,
     SlotIndex PrevIdx = UseIdx.getPrevSlot();
     bool HasNoFirstCSRReg = false;
     for (MCRegister RematPhysReg : Order) {
-      if (EvictAdvisor->isUnusedCalleeSavedReg(RematPhysReg))
+      if (EvictAdvisor->getUnusedCalleeSavedReg(VirtReg, RematPhysReg))
         continue;
       if (!Matrix->checkInterference(PrevIdx, UseIdx, RematPhysReg)) {
         HasNoFirstCSRReg = true;
@@ -2739,7 +2754,8 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     // a virtual register, go with the earlier decisions and use the physical
     // register.
     if (CSRCost.getFrequency() &&
-        EvictAdvisor->isUnusedCalleeSavedReg(PhysReg) && NewVRegs.empty()) {
+        EvictAdvisor->getUnusedCalleeSavedReg(VirtReg, PhysReg) &&
+        NewVRegs.empty()) {
       MCRegister CSRReg = tryAssignCSRFirstTime(VirtReg, Order, PhysReg,
                                                 CostPerUseLimit, NewVRegs);
       if (CSRReg || !NewVRegs.empty())

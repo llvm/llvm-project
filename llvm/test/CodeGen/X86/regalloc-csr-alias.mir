@@ -1,0 +1,42 @@
+# RUN: llc -mtriple=i386 -run-pass=greedy,virtregrewriter -regalloc-csr-cost-scale=100 -verify-machineinstrs %s -o - | FileCheck %s
+
+# BL already requires saving EBX, so allocating BH adds no CSR cost. The
+# control verifies that a genuinely unused CSR is still avoided.
+
+--- |
+  define i8 @bl_used() { ret i8 0 }
+  define void @unused_csr() { ret void }
+  declare void @callee()
+...
+---
+name: bl_used
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: bl_used
+  ; CHECK: renamable $bh = MOV8ri 1
+  ; CHECK-NEXT: CALLpcrel32 @callee
+  ; CHECK-NEXT: TEST8rr killed renamable $bh, renamable $bh, implicit-def dead $eflags
+  ; CHECK-NEXT: $al = COPY killed renamable $bl
+  bb.0:
+    liveins: $bl
+    %0:gr8 = COPY $bl
+    %1:gr8 = MOV8ri 1
+    CALLpcrel32 @callee, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
+    TEST8rr %1, %1, implicit-def dead $eflags
+    $al = COPY %0
+    RET 0, $al
+...
+---
+name: unused_csr
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: unused_csr
+  ; CHECK: CALLpcrel32 @callee
+  ; CHECK-NEXT: renamable $al = MOV8ri 1
+  ; CHECK-NEXT: TEST8rr killed renamable $al, renamable $al, implicit-def dead $eflags
+  bb.0:
+    %0:gr8 = MOV8ri 1
+    CALLpcrel32 @callee, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
+    TEST8rr %0, %0, implicit-def dead $eflags
+    RET 0
+...
