@@ -1472,7 +1472,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_LOCATION: {
-    // 9: irlayers.
+    // 5: inlinedAt, 6: isImplicit, 8: Key Instructions fields, 9: irlayers.
     if (Record.size() < 5 || Record.size() == 7 || Record.size() > 9)
       return error("Invalid record");
 
