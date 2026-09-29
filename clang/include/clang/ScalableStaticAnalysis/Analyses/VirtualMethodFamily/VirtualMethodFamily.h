@@ -12,7 +12,11 @@
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/SummaryName.h"
 #include "clang/ScalableStaticAnalysis/Core/TUSummary/EntitySummary.h"
+#include "clang/ScalableStaticAnalysis/Core/WholeProgramAnalysis/AnalysisName.h"
+#include "clang/ScalableStaticAnalysis/Core/WholeProgramAnalysis/AnalysisResult.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <tuple>
 #include <vector>
@@ -45,6 +49,29 @@ struct VirtualMethodSummary final : public EntitySummary {
     return !(*this == Other);
   }
 };
+
+struct VirtualMethodFamilyAnalysisResult final : AnalysisResult {
+  static AnalysisName analysisName() {
+    return AnalysisName("VirtualMethodFamilyAnalysisResult");
+  }
+
+  /// Maps each parameter or return slot to the ID of the family it belongs to.
+  /// The family ID is the smallest slot ID in the family.
+  llvm::DenseMap<EntityId, EntityId> RetAndParamData;
+
+  bool operator==(const VirtualMethodFamilyAnalysisResult &Other) const {
+    return RetAndParamData == Other.RetAndParamData;
+  }
+
+  bool operator!=(const VirtualMethodFamilyAnalysisResult &Other) const {
+    return !(*this == Other);
+  }
+};
+
+/// Prints \p R as one "<param/return id> -> <family id>" line per entry,
+/// ordered by the param/return id so that the output is stable across runs.
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const VirtualMethodFamilyAnalysisResult &R);
 
 } // namespace clang::ssaf
 
