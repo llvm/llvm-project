@@ -40,6 +40,7 @@
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Support/default-kinds.h"
