@@ -12,6 +12,7 @@ config.llvm_polly_link_into_tools = "@LLVM_POLLY_LINK_INTO_TOOLS@"
 config.targets_to_build = "@TARGETS_TO_BUILD@"
 config.extra_paths = "@POLLY_TEST_EXTRA_PATHS@".split(";")
 config.polly_test_c_compiler = "@POLLY_TEST_C_COMPILER@"
+config.polly_bundled_isl = "@POLLY_BUNDLED_ISL@"
 
 ## Check the current platform with regex
 import re
@@ -24,8 +25,12 @@ for arch in config.targets_to_build.split():
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
-# directories.
+# directories. The 'UnitIsl' directory contains testsuite, that depends
+# on bundled ISL targets, and should be excluded when bundled ISL is not used.
+import lit.util
 config.excludes = ['Inputs']
+if not lit.util.pythonize_bool('@POLLY_BUNDLED_ISL@'):
+    config.excludes.append('UnitIsl')
 
 commonOpts = ' -polly-process-unprofitable ' \
              + ' -polly-remarks-minimal ' \
