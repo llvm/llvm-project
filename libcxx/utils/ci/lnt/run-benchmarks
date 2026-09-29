@@ -115,9 +115,7 @@ def main(argv):
              'absolute path to a Lit configuration file, or a path relative to the libcxx/test/configs directory '
              'of the test suite being used.')
     parser.add_argument('--benchmark-commit', type=str, required=True,
-        help='The SHA that the results are attributed to in LNT. When benchmarking libc++, this is the version '
-             'of the library being benchmarked. When benchmarking another Standard Library, this is merely a label '
-             'placing the results on the LNT time axis.')
+        help='The SHA representing the version of the library to benchmark.')
     parser.add_argument('--test-suite-commit', type=str, required=True,
         help='The SHA representing the version of the test suite to use for benchmarking.')
     parser.add_argument('--compiler', type=str, required=True,
