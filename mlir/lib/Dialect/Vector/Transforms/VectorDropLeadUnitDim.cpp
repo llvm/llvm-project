@@ -357,7 +357,7 @@ static Value dropLeadingUnitDimViaShapeCastOrExtract(RewriterBase &rewriter,
 // BroadcastOp. The latter is used for scalar inputs as ShapeCastOp cannot
 // "broadcast" from a scalar. Scalars are used (instead of rank-0 vectors) as
 // ContractOp operands.
-static Value restoerLeadingUnitDimViaShapeCastOrBcast(RewriterBase &rewriter,
+static Value restoreLeadingUnitDimViaShapeCastOrBcast(RewriterBase &rewriter,
                                                       Location loc,
                                                       mlir::Value oldVal,
                                                       mlir::Type newTy) {
@@ -386,7 +386,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
   auto oldIteratorTypes = contractOp.getIteratorTypes();
   SmallVector<Attribute> newIteratorTypes;
 
-  // 0-th dim from the accuumlator
+  // 0-th dim from the accumulator
   int64_t dimToDrop = oldIndexingMaps[2].getDimPosition(0);
 
   if (!isParallelIterator(oldIteratorTypes[dimToDrop]))
@@ -520,9 +520,13 @@ namespace {
 
 /// Turns vector.contract on vector with leading 1 dimensions into
 /// vector.shape_cast followed by vector.contract on vector without leading
-/// 1 dimensions.
-/// TODO (check): Also performs transpose of lhs and rhs operands if required
-/// prior to extract.
+/// 1 dimensions. Also performs transpose of lhs and rhs operands if required.
+///
+/// TODO: While the discussion on the validity of folding TransposeOp into
+/// ShapeCastOp continues, see e.g.
+///  * https://github.com/llvm/llvm-project/pull/219611,
+/// keep the explicit TransposeOp here. Once the discussion settles, revisit and
+/// consider replacing TransposeOp with ShapeCastOp.
 struct CastAwayContractionLeadingOneDim
     : public MaskableOpRewritePattern<vector::ContractionOp> {
   using MaskableOpRewritePattern::MaskableOpRewritePattern;
