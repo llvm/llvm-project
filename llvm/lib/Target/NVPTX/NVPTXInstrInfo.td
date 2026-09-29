@@ -741,13 +741,13 @@ let hasSideEffects = false in {
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2, B32:$src3),
                 (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}${mode:pzo}." # FromName # ".f32">;
+                "cvt${mode:base}${mode:relu}." # FromName # ".f32">;
 
     def _f32_rs_sf :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2, B32:$src3),
                 (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}.satfinite${mode:pzo}." # FromName # ".f32">;
+                "cvt${mode:base}${mode:relu}.satfinite." # FromName # ".f32">;
   }
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_RS<"f16x2", B32>;
@@ -891,7 +891,7 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
       (ins B32:$src1, B32:$src2, CvtMode:$mode),
       !strconcat("{{ \n\t",
                  ".reg .b8 \t%e2m1x2_out; \n\t",
-                 "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.f32 \t%e2m1x2_out, $src1, $src2; \n\t",
+                 "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}.e2m1x2.f32 \t%e2m1x2_out, $src1, $src2; \n\t",
                  "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t",
                  "}}"), []>;
 
@@ -923,7 +923,7 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
       (ins B32:$src, CvtMode:$mode),
       "{{ \n\t" #  
       ".reg .b8 \t%e2m1x2_out; \n\t" #
-      "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.f16x2 \t%e2m1x2_out, $src; \n\t" #
+      "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}.e2m1x2.f16x2 \t%e2m1x2_out, $src; \n\t" #
       "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
       "}}", []>,
       Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
@@ -932,7 +932,7 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
       (ins B32:$src, CvtMode:$mode),
       "{{ \n\t" #  
       ".reg .b8 \t%e2m1x2_out; \n\t" #
-      "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.bf16x2 \t%e2m1x2_out, $src; \n\t" #
+      "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}.e2m1x2.bf16x2 \t%e2m1x2_out, $src; \n\t" #
       "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
       "}}", []>,
       Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
@@ -1019,7 +1019,7 @@ def : Pat<(v2f16 (build_vector (f16 (fpround_oneuse f32:$lo)),
 
 // selp instructions that don't have any pattern matches; we explicitly use
 // them within this file.
-let hasSideEffects = false in {
+let hasSideEffects = false, isSelect = 1 in {
   multiclass SELP_PATTERN<string TypeStr, RegTyInfo t> {
     defvar asm_str = "selp." # TypeStr;
     def rr :
