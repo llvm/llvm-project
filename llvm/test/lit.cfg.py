@@ -56,11 +56,19 @@ if config.enable_profcheck:
     config.excludes.extend(["UpdateTestChecks", "Bitcode"])
     # TODO(#166655): Reenable Instrumentation tests
     config.excludes.append("Instrumentation")
-    # profiling doesn't work quite well on GPU, excluding
-    config.excludes.append("AMDGPU")
-    # TODO targets where profiling may make sense but will be addressed later
+    # TODO targets that will be addressed later
     config.excludes.extend(
-        ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "SPIRV", "WebAssembly"]
+        [
+            "Hexagon",
+            "NVPTX",
+            "PowerPC",
+            "RISCV",
+            "SPARC",
+            "SPIRV",
+            "WebAssembly",
+            "AMDGPU",
+            "DirectX",
+        ]
     )
     # these passes aren't hooked up to the pass pipeline:
     config.excludes.extend(["IRCE", "LoopBoundSplit", "LoopInterchange", "Scalarizer"])
