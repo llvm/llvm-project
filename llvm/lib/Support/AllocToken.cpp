@@ -59,11 +59,13 @@ static uint64_t getStableHash(const AllocTokenMetadata &Metadata,
 /// hash, and the lower bits hold the hash of the name of the function
 /// containing the allocation. With pointer split, the most significant bit is
 /// set for types that contain pointers. Uses Log2(MaxTokens) bits, so that the
-/// token ID is always less than MaxTokens.
+/// token ID is always less than MaxTokens; with few bits, the function name
+/// hash (and then the type name hash) may get no bits.
 static uint64_t getTypeFuncHash(const AllocTokenMetadata &Metadata,
                                 uint64_t MaxTokens, bool PointerSplit) {
   const unsigned Bits = Log2_64(MaxTokens);
-  assert(Bits >= (PointerSplit ? 3u : 2u) && "MaxTokens too small");
+  if (Bits == 0) // MaxTokens == 1
+    return 0;
   // If the number of bits is odd, the type name hash gets the extra bit.
   const unsigned FuncBits = Bits / 2;
   unsigned TypeBits = Bits - FuncBits;
