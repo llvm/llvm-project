@@ -13,9 +13,11 @@
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
@@ -274,6 +276,35 @@ void ConvertMathToXeVMPass::runOnOperation() {
   Operation *op = getOperation();
   MLIRContext *ctx = op->getContext();
 
+  // Simplify before lowering, so the cheaper form is what reaches the
+  // intrinsics: `math.powf %x, 2.0` should become a multiply, not a call to
+  // `__spirv_ocl_native_powr`. This cannot be folded into the conversion below
+  // for two reasons. A simplification rewrites a whole expression, e.g.
+  // `exp(a) / exp(b)` into `exp(a - b)`, so it has to see the `math.exp` ops
+  // before they turn into calls: a call to an external function is never dead,
+  // so the two originals would stay and the result would be three
+  // exponentials instead of two. And the ops the simplifications create, like
+  // `arith.mulf`, are not legal for this target, which would roll the rewrite
+  // back.
+  //
+  // Only the ops the simplifications can match are handed to the driver. Every
+  // other op is left exactly as it was found. Folding stays off: constants are
+  // not this pass's business.
+  {
+    RewritePatternSet simplifications(ctx);
+    populateMathAlgebraicSimplificationPatterns(simplifications);
+    FrozenRewritePatternSet frozen(std::move(simplifications));
+    SmallVector<Operation *> candidates;
+    op->walk([&](Operation *nested) {
+      if (frozen.getOpSpecificNativePatterns().contains(nested->getName()))
+        candidates.push_back(nested);
+    });
+    GreedyRewriteConfig config;
+    config.enableFolding(false);
+    if (failed(applyOpPatternsGreedily(candidates, frozen, config)))
+      return signalPassFailure();
+  }
+
   const auto &dl = getAnalysis<DataLayoutAnalysis>();
 
   RewritePatternSet patterns(&getContext());
@@ -281,9 +312,6 @@ void ConvertMathToXeVMPass::runOnOperation() {
   LLVMTypeConverter converter(ctx, options);
   ConversionTarget target(getContext());
 
-  // Simplify algebraic expressions where possible.
-  populateMathAlgebraicSimplificationPatterns(patterns);
-  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   // The native (`afn`) patterns must outrank the precise OCL patterns: an op
   // marked `afn` gets the native intrinsic, and every other op falls through to
   // the precise OCL intrinsic.
