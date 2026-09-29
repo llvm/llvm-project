@@ -27,8 +27,6 @@ Transforms/IndVarSimplify/eliminate-rem.ll
 Transforms/IndVarSimplify/pr45835.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/IndirectBrExpand/basic.ll
-Transforms/InstCombine/X86/x86-avx512-inseltpoison.ll
-Transforms/InstCombine/X86/x86-avx512.ll
 Transforms/InstCombine/builtin-dynamic-object-size.ll
 Transforms/InstCombine/canonicalize-clamp-like-pattern-between-negative-and-positive-thresholds.ll
 Transforms/InstCombine/canonicalize-clamp-like-pattern-between-zero-and-positive-threshold.ll
