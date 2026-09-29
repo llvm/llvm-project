@@ -1,7 +1,7 @@
 // Test to ensure instrumentation of logical operator RHS True/False counters
 // are being instrumented for branch coverage
 
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -main-file-name branch-logical-mixed.cpp %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck -allow-deprecated-dag-overlap %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++11 -main-file-name branch-logical-mixed.cpp %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck -allow-deprecated-dag-overlap %s
 
 
 // CHECK: @[[FUNC:__profc__Z4funcv]] = {{.*}} global [61 x i64] zeroinitializer
