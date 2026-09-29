@@ -148,6 +148,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   }
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+  if (llvm::VersionTuple sdkVersion = getTarget().getSDKVersion();
+      !sdkVersion.empty())
+    theModule->setAttr(cir::CIRDialect::getSDKVersionAttrName(),
+                       builder.getStringAttr(sdkVersion.getAsString()));
   // TODO(CIR): These attributes should eventually be replaced by
   // TypeSizeInfoAttr once it is upstreamed.
   theModule->setAttr(cir::CIRDialect::getSizeTypeWidthAttrName(),
@@ -211,17 +215,6 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
     theModule->setLoc(mlir::FileLineColLoc::get(&mlirContext, path,
                                                 /*line=*/0,
                                                 /*column=*/0));
-  }
-
-  // Set CUDA GPU binary handle.
-  if (langOpts.CUDA) {
-    llvm::StringRef cudaBinaryName = codeGenOpts.OffloadBinaryToEmbedFile;
-    if (!cudaBinaryName.empty()) {
-      theModule->setAttr(cir::CIRDialect::getCUDABinaryHandleAttrName(),
-                         cir::CUDABinaryHandleAttr::get(
-                             &mlirContext, mlir::StringAttr::get(
-                                               &mlirContext, cudaBinaryName)));
-    }
   }
 }
 

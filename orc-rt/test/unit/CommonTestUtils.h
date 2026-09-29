@@ -11,7 +11,9 @@
 
 // Helpers here must not depend on Bedrock: this header is included by
 // SupportTests translation units, which link Support alone. Bedrock-dependent
-// helpers belong in BedrockTestUtils.h.
+// helpers belong in BedrockTestUtils.h. (Session is forward-declared below so
+// that the error-reporter helpers can also serve as Session error reporters;
+// they never use the Session, so this adds no link dependency.)
 
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/WrapperFunction.h"
@@ -29,12 +31,29 @@
 
 #include "gtest/gtest.h"
 
+namespace orc_rt {
+class Session;
+} // namespace orc_rt
+
 namespace orc_rt::test {
 
-inline void noErrors(Error Err) noexcept { cantFail(std::move(Err)); }
+/// Error reporter for tests that expect no errors. Usable both as a plain
+/// error reporter and as a Session error reporter.
+///
+/// This is a function object rather than a pair of overloaded functions so
+/// that it can be passed to templated callable parameters (e.g.
+/// move_only_function's constructor): the name of an overload set can't be
+/// deduced.
+inline constexpr struct NoErrors {
+  void operator()(Error Err) const noexcept { cantFail(std::move(Err)); }
+  void operator()(Session &, Error Err) const noexcept {
+    cantFail(std::move(Err));
+  }
+} noErrors;
 
 /// ReportError callback for tests that records the message of every reported
-/// error, in the order reported.
+/// error, in the order reported. Like noErrors, usable both as a plain error
+/// reporter and as a Session error reporter.
 class AccumulateErrors {
 public:
   AccumulateErrors(std::vector<std::string> &ErrMsgs) : ErrMsgs(ErrMsgs) {}
@@ -42,6 +61,8 @@ public:
   void operator()(Error Err) noexcept {
     ErrMsgs.push_back(toString(std::move(Err)));
   }
+
+  void operator()(Session &, Error Err) noexcept { (*this)(std::move(Err)); }
 
 private:
   std::vector<std::string> &ErrMsgs;
@@ -100,16 +121,19 @@ template <size_t Idx> size_t OpCounter<Idx>::MoveConstructions = 0;
 template <size_t Idx> size_t OpCounter<Idx>::MoveAssignments = 0;
 template <size_t Idx> size_t OpCounter<Idx>::Destructions = 0;
 
-template <typename T> move_only_function<void(T)> waitFor(std::future<T> &F) {
+template <typename T>
+move_only_function<void(T) noexcept> waitFor(std::future<T> &F) {
   std::promise<T> P;
   F = P.get_future();
-  return [P = std::move(P)](T Val) mutable { P.set_value(std::move(Val)); };
+  return [P = std::move(P)](T Val) mutable noexcept {
+    P.set_value(std::move(Val));
+  };
 }
 
-inline move_only_function<void()> waitFor(std::future<void> &F) {
+inline move_only_function<void() noexcept> waitFor(std::future<void> &F) {
   std::promise<void> P;
   F = P.get_future();
-  return [P = std::move(P)]() mutable { P.set_value(); };
+  return [P = std::move(P)]() mutable noexcept { P.set_value(); };
 }
 
 } // namespace orc_rt::test
