@@ -1569,7 +1569,6 @@ private:
   LogicalResult resolveTensorDescConsumer(OpOperand &operand);
   LogicalResult resolveVectorConsumer(OpOperand &operand);
   LogicalResult assignResultLayout(OpResult &result);
-  void sinkElementwiseConversions();
 };
 
 } // namespace
@@ -1632,129 +1631,12 @@ LogicalResult ResolveLayoutConflicts::run() {
   if (r.wasInterrupted())
     return failure();
 
-  sinkElementwiseConversions();
-
   LLVM_DEBUG({
     DBGS() << "IR after resolving layout conflicts:\n";
     parentOp->dump();
   });
 
   return success();
-}
-
-/// Optimize elementwise operations by sinking costly layout conversion.
-///
-///   %m  = vector.create_mask ...                        {L1}
-///   %d  = arith.mulf ...                                {L1}
-///   %cm = xegpu.convert_layout %m : L1 -> L2
-///   %cd = xegpu.convert_layout %d : L1 -> L2
-///   %s  = arith.select %cm, %cd, %splat                 {L2}
-///
-/// becomes
-///
-///   %s' = arith.select %m, %d, %splat                   {L1}
-///   %s  = xegpu.convert_layout %s' : L1 -> L2
-///
-/// We only sink if a coarser layout applies to an elementwise op
-///
-void ResolveLayoutConflicts::sinkElementwiseConversions() {
-  llvm::SmallSetVector<xegpu::ConvertLayoutOp, 8> deadConverts;
-  parentOp->walk([&](Operation *op) {
-    if (!OpTrait::hasElementwiseMappableTraits(op) || op->getNumResults() != 1)
-      return;
-    OpResult result = op->getResult(0);
-    if (!isa<VectorType>(result.getType()))
-      return;
-    xegpu::DistributeLayoutAttr resultLayout =
-        xegpu::getDistributeLayoutAttr(result);
-    if (!resultLayout)
-      return;
-
-    // Ensure that all feeding conversions have the same layout.
-    SmallVector<std::pair<OpOperand *, xegpu::ConvertLayoutOp>> conversions;
-    xegpu::DistributeLayoutAttr uniformConvSrcLayout;
-    for (OpOperand &operand : op->getOpOperands()) {
-      Value operandValue = operand.get();
-      if (!isa<VectorType>(operandValue.getType()))
-        continue;
-      auto operandConversionOp =
-          operandValue.getDefiningOp<xegpu::ConvertLayoutOp>();
-      // Those that are not a conversion should be easily materializable with
-      // another layout.
-      if (!operandConversionOp) {
-        Operation *definingOp = operandValue.getDefiningOp();
-        if (!definingOp || !xegpu::isTriviallyRematerializable(definingOp))
-          return;
-        continue;
-      }
-      xegpu::DistributeLayoutAttr input =
-          operandConversionOp.getEffectiveInputLayout();
-      if (!input)
-        return;
-      if (!uniformConvSrcLayout)
-        uniformConvSrcLayout = input;
-      else if (!uniformConvSrcLayout.isEqualTo(input))
-        return;
-      conversions.emplace_back(&operand, operandConversionOp);
-    }
-
-    if (!uniformConvSrcLayout)
-      return;
-
-    // Sink only when it leaves the op coarser.
-    // Conversion's source layout must be larger than the elemwise result
-    // layout.
-    SmallVector<int64_t> resultLayoutInstData =
-        resultLayout.getEffectiveInstDataAsInt();
-    SmallVector<int64_t> sourceInstData =
-        uniformConvSrcLayout.getEffectiveInstDataAsInt();
-    if (resultLayoutInstData.empty() || sourceInstData.empty() ||
-        computeProduct(sourceInstData) <= computeProduct(resultLayoutInstData))
-      return;
-
-    // Rewire the conversions, then rematerialize the remaining operands in the
-    // source layout.
-    llvm::SmallDenseSet<unsigned> rewiredOpIdxs;
-    for (auto [operand, convert] : conversions) {
-      operand->set(convert.getSource());
-      rewiredOpIdxs.insert(operand->getOperandNumber());
-    }
-    for (OpOperand &operand : op->getOpOperands()) {
-      Value operandValue = operand.get();
-      if (!isa<VectorType>(operandValue.getType()))
-        continue;
-      if (rewiredOpIdxs.contains(operand.getOperandNumber()))
-        continue;
-      Operation *definingOp = operandValue.getDefiningOp();
-      assert(definingOp && xegpu::isTriviallyRematerializable(definingOp) &&
-             "operand should have been rejected above");
-      // Rematerialize with uniform source layout.
-      builder.setInsertionPointAfter(definingOp);
-      Operation *clone = builder.clone(*definingOp);
-      OpResult cloneResult = clone->getResult(0);
-      xegpu::removeLayoutAttr(cloneResult);
-      xegpu::setDistributeLayoutAttr(cloneResult, uniformConvSrcLayout);
-      operand.set(cloneResult);
-    }
-
-    // Run the op in the source layout and bridge its result back, so that
-    // `getConsumerLayoutAt` now reports the source layout for every operand.
-    builder.setInsertionPointAfterValue(result);
-    auto newConvOp = xegpu::ConvertLayoutOp::create(
-        builder, op->getLoc(), result.getType(), result, uniformConvSrcLayout,
-        resultLayout);
-    result.replaceAllUsesExcept(newConvOp.getResult(), newConvOp);
-    xegpu::removeLayoutAttr(result);
-    xegpu::setDistributeLayoutAttr(result, uniformConvSrcLayout);
-
-    for (auto [operand, convert] : conversions)
-      if (convert.getResult().use_empty())
-        deadConverts.insert(convert);
-  });
-
-  // Memory effects block dce
-  for (xegpu::ConvertLayoutOp convert : deadConverts)
-    convert.erase();
 }
 
 LogicalResult ResolveLayoutConflicts::assignResultLayout(OpResult &result) {
@@ -1940,6 +1822,123 @@ static LogicalResult updateOpWithForwardFill(mlir::OpBuilder &builder,
   return success();
 }
 
+/// Optimize elementwise operations by sinking costly layout conversion.
+///
+///   %m  = vector.create_mask ...                        {L1}
+///   %d  = arith.mulf ...                                {L1}
+///   %cm = xegpu.convert_layout %m : L1 -> L2
+///   %cd = xegpu.convert_layout %d : L1 -> L2
+///   %s  = arith.select %cm, %cd, %splat                 {L2}
+///
+/// becomes
+///
+///   %s' = arith.select %m, %d, %splat                   {L1}
+///   %s  = xegpu.convert_layout %s' : L1 -> L2
+///
+/// We only sink if a coarser layout applies to an elementwise op
+///
+void xegpu::sinkElementwiseConversions(OpBuilder &builder,
+                                       Operation *parentOp) {
+  llvm::SmallSetVector<xegpu::ConvertLayoutOp, 8> deadConverts;
+  parentOp->walk([&](Operation *op) {
+    if (!OpTrait::hasElementwiseMappableTraits(op) || op->getNumResults() != 1)
+      return;
+    OpResult result = op->getResult(0);
+    if (!isa<VectorType>(result.getType()))
+      return;
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getDistributeLayoutAttr(result);
+    if (!resultLayout)
+      return;
+
+    // Ensure that all feeding conversions have the same layout.
+    SmallVector<std::pair<OpOperand *, xegpu::ConvertLayoutOp>> conversions;
+    xegpu::DistributeLayoutAttr uniformConvSrcLayout;
+    for (OpOperand &operand : op->getOpOperands()) {
+      Value operandValue = operand.get();
+      if (!isa<VectorType>(operandValue.getType()))
+        continue;
+      auto operandConversionOp =
+          operandValue.getDefiningOp<xegpu::ConvertLayoutOp>();
+      // Those that are not a conversion should be easily materializable with
+      // another layout.
+      if (!operandConversionOp) {
+        Operation *definingOp = operandValue.getDefiningOp();
+        if (!definingOp || !xegpu::isTriviallyRematerializable(definingOp))
+          return;
+        continue;
+      }
+      xegpu::DistributeLayoutAttr input =
+          operandConversionOp.getEffectiveInputLayout();
+      if (!input)
+        return;
+      if (!uniformConvSrcLayout)
+        uniformConvSrcLayout = input;
+      else if (!uniformConvSrcLayout.isEqualTo(input))
+        return;
+      conversions.emplace_back(&operand, operandConversionOp);
+    }
+
+    if (!uniformConvSrcLayout)
+      return;
+
+    // Sink only when it leaves the op coarser.
+    // Conversion's source layout must be larger than the elemwise result
+    // layout.
+    SmallVector<int64_t> resultLayoutInstData =
+        resultLayout.getEffectiveInstDataAsInt();
+    SmallVector<int64_t> sourceInstData =
+        uniformConvSrcLayout.getEffectiveInstDataAsInt();
+    if (resultLayoutInstData.empty() || sourceInstData.empty() ||
+        computeProduct(sourceInstData) <= computeProduct(resultLayoutInstData))
+      return;
+
+    // Rewire the conversions, then rematerialize the remaining operands in the
+    // source layout.
+    llvm::SmallDenseSet<unsigned> rewiredOpIdxs;
+    for (auto [operand, convert] : conversions) {
+      operand->set(convert.getSource());
+      rewiredOpIdxs.insert(operand->getOperandNumber());
+    }
+    for (OpOperand &operand : op->getOpOperands()) {
+      Value operandValue = operand.get();
+      if (!isa<VectorType>(operandValue.getType()))
+        continue;
+      if (rewiredOpIdxs.contains(operand.getOperandNumber()))
+        continue;
+      Operation *definingOp = operandValue.getDefiningOp();
+      assert(definingOp && xegpu::isTriviallyRematerializable(definingOp) &&
+             "operand should have been rejected above");
+      // Rematerialize with uniform source layout.
+      builder.setInsertionPointAfter(definingOp);
+      Operation *clone = builder.clone(*definingOp);
+      OpResult cloneResult =
+          clone->getResult(cast<OpResult>(operandValue).getResultNumber());
+      xegpu::removeLayoutAttr(cloneResult);
+      xegpu::setDistributeLayoutAttr(cloneResult, uniformConvSrcLayout);
+      operand.set(cloneResult);
+    }
+
+    // Run the op in the source layout and bridge its result back, so that
+    // `getConsumerLayoutAt` now reports the source layout for every operand.
+    builder.setInsertionPointAfterValue(result);
+    auto newConvOp = xegpu::ConvertLayoutOp::create(
+        builder, op->getLoc(), result.getType(), result, uniformConvSrcLayout,
+        resultLayout);
+    result.replaceAllUsesExcept(newConvOp.getResult(), newConvOp);
+    xegpu::removeLayoutAttr(result);
+    xegpu::setDistributeLayoutAttr(result, uniformConvSrcLayout);
+
+    for (auto [operand, convert] : conversions)
+      if (convert.getResult().use_empty())
+        deadConverts.insert(convert);
+  });
+
+  // Memory effects block dce
+  for (xegpu::ConvertLayoutOp convert : deadConverts)
+    convert.erase();
+}
+
 /// Update the function arguments and results with the layouts.
 static LogicalResult updateFunctionOpInterface(mlir::OpBuilder &builder,
                                                mlir::FunctionOpInterface funcOp,
@@ -2096,4 +2095,6 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     signalPassFailure();
     return;
   }
+  if (layoutKind == xegpu::LayoutKind::InstData)
+    xegpu::sinkElementwiseConversions(builder, getOperation());
 }
