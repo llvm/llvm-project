@@ -44,7 +44,7 @@ int main(void) {
 }
 
 // clang-format off
-// INFO: info: Waiting for asynchronous operations to complete at info_nowait.c:{{[0-9]+}}:{{[0-9]+}}
-// INFO: info: Copying data from host to device,{{.*}}at info_nowait.c:{{[0-9]+}}:{{[0-9]+}}
+// INFO: info: Waiting for asynchronous operations to complete at {{.*}}info_nowait.c:{{[0-9]+}}:{{[0-9]+}}
+// INFO: info: Copying data from host to device,{{.*}}at {{.*}}info_nowait.c:{{[0-9]+}}:{{[0-9]+}}
 // INFO-NOT: Waiting for asynchronous operations to complete
 // clang-format on
