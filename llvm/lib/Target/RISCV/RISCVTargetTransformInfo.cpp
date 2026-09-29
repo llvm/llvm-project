@@ -734,45 +734,29 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
 }
 
 std::optional<MVT> RISCVTTIImpl::getZvzipVZIPCostVT(MVT InterleavedVT) const {
+  assert(InterleavedVT.isScalableVector() && "Expected a scalable vector type");
   if (!InterleavedVT.getVectorElementCount().isKnownEven())
     return std::nullopt;
 
-  MVT CostVT = InterleavedVT;
-  if (InterleavedVT.isFixedLengthVector()) {
-    MVT SourceVT = InterleavedVT.getHalfNumVectorElementsVT();
-    CostVT = TLI->getContainerForFixedLengthVector(SourceVT)
-                 .getDoubleNumVectorElementsVT();
-  }
-
-  unsigned EltBits = CostVT.getScalarSizeInBits();
-  unsigned MinSize = CostVT.getSizeInBits().getKnownMinValue();
+  unsigned EltBits = InterleavedVT.getScalarSizeInBits();
+  unsigned MinSize = InterleavedVT.getSizeInBits().getKnownMinValue();
   unsigned LMULOctuple = MinSize / (RISCV::RVVBitsPerBlock / 8);
   // Perform the 2 * SEW <= LMUL * min(ELEN, VLEN) check.
   if (EltBits * 16 >
       LMULOctuple * std::min(ST->getELen(), ST->getRealMinVLen()))
     return std::nullopt;
-  return CostVT;
+  return InterleavedVT;
 }
 
 std::optional<MVT> RISCVTTIImpl::getZvzipVUNZIPCostVT(MVT InterleavedVT) const {
+  assert(InterleavedVT.isScalableVector() && "Expected a scalable vector type");
   if (!InterleavedVT.getVectorElementCount().isKnownEven())
     return std::nullopt;
 
-  MVT CostVT = InterleavedVT;
-  // lowerZvzipVUNZIP widens the source container if halving it would produce
-  // an illegal result type. Apply the same rule here so the cost uses the
-  // source LMUL selected by ISel.
-  if (InterleavedVT.isFixedLengthVector()) {
-    CostVT = TLI->getContainerForFixedLengthVector(InterleavedVT);
-    if (CostVT.getVectorMinNumElements() == 1 ||
-        !TLI->isTypeLegal(CostVT.getHalfNumVectorElementsVT()))
-      CostVT = CostVT.getDoubleNumVectorElementsVT();
-  }
-
-  MVT DeinterleavedVT = CostVT.getHalfNumVectorElementsVT();
+  MVT DeinterleavedVT = InterleavedVT.getHalfNumVectorElementsVT();
   if (RISCVTargetLowering::getLMUL(DeinterleavedVT) == RISCVVType::LMUL_8)
     return std::nullopt;
-  return CostVT;
+  return InterleavedVT;
 }
 
 InstructionCost RISCVTTIImpl::getShuffleCost(
