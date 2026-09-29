@@ -243,7 +243,7 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheConcurrentValidation) {
 
   // Runs \p Fn from multiple threads concurrently, and returns the number of
   // times each result occurred. Errors are reported as test failures.
-  constexpr unsigned NumTasks = 16;
+  static constexpr unsigned NumTasks = 16;
   auto runConcurrently = [&](function_ref<Expected<ValidationResult>()> Fn) {
     std::optional<ValidationResult> Results[NumTasks];
     std::string Errors[NumTasks];
