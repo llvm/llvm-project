@@ -185,6 +185,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` when
   the pointer points to an incomplete (forward-declared) type.
 
+- Improved {doc}`bugprone-redundant-branch-condition
+  <clang-tidy/checks/bugprone/redundant-branch-condition>` check by fixing
+  false positives when the condition variable is changed later in a loop that
+  encloses the inner `if`.
+
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
@@ -212,6 +217,10 @@ infrastructure are described first, followed by tool-specific sections.
 
   - No longer diagnoses variables declared with `decltype(auto)`, where the
     suggested `const` does not compile.
+    
+- Fixed an infinite loop in {doc}`misc-multiple-inheritance
+  <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
+  inherits from itself or has a circular inheritance graph.
 
 - Improved {doc}`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
@@ -266,6 +275,8 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
 
+  - Fixed a crash when a class inherits from a forward-declared base class.
+
   - Fixed a crash when checking forward-declared classes with
     {option}`DefaultHungarianPrefix` enabled.
 
@@ -279,7 +290,7 @@ infrastructure are described first, followed by tool-specific sections.
     typedef or type alias that provides the only name of an otherwise unnamed
     tag, such as `typedef enum {} MyEnum;`, against the style configured for
     that tag kind instead of the typedef or type alias style.
-    
+
   - Added support for naming lambda init-captures (e.g. `[Captured = Var]`) via
     the new `LambdaCapture` options. Simple, non-init captures continue to follow
     the naming style of the variable they capture.
@@ -304,6 +315,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
   positive on the required parentheses of `typeof` and `typeof_unqual` operands.
 
+- Fixed {doc}`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
+  fixes when applying De Morgan's theorem to overloaded comparison operators.
+
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:
 
@@ -311,6 +326,10 @@ infrastructure are described first, followed by tool-specific sections.
     synthesized for intermediate subobjects caused the trailing comma of the
     enclosing list to be incorrectly rewritten.
 
+  - Ignored preprocessor directives such as `#endif` that appear immediately
+    before an enum's closing brace, which previously produced a false positive
+    and a fix-it that inserted a comma after the directive.
+    
   - Fixed a false positive on empty brace initializers of types with default
     member initializers.
 
