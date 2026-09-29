@@ -1,4 +1,4 @@
-# Enable std::unique_ptr \[[clang::trivial_abi]\]
+# Enable `std::unique_ptr` `[[clang::trivial_abi]]`
 
 ## Background
 
