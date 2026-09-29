@@ -59,14 +59,14 @@ void builtin_matrix_transpose() {
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>, !cir.matrix<3 x 3 x !cir.float>
-// CIR: %[[TRANSPOE:.*]] = cir.matrix.transpose %[[TMP_A]] : <3 x 3 x !cir.float>, !cir.matrix<3 x 3 x !cir.float>
-// CIR: cir.store {{.*}} %[[TRANSPOE]], %[[B_ADDR]] : !cir.matrix<3 x 3 x !cir.float>, !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>
+// CIR: %[[TRANSPOSE:.*]] = cir.matrix.transpose %[[TMP_A]] : <3 x 3 x !cir.float>, !cir.matrix<3 x 3 x !cir.float>
+// CIR: cir.store {{.*}} %[[TRANSPOSE]], %[[B_ADDR]] : !cir.matrix<3 x 3 x !cir.float>, !cir.ptr<!cir.matrix<3 x 3 x !cir.float>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca [9 x float], align 4
 // LLVM: %[[B_ADDR:.*]] = alloca [9 x float], align 4
 // LLVM: %[[TMP_A:.*]] = load <9 x float>, ptr %[[A_ADDR]], align 4
-// LLVM: %[[TRANSPOE:.*]] = call <9 x float> @llvm.matrix.transpose.v9f32(<9 x float> %[[TMP_A]], i32 3, i32 3)
-// LLVM: store <9 x float> %[[TRANSPOE]], ptr %[[B_ADDR]], align 4
+// LLVM: %[[TRANSPOSE:.*]] = call <9 x float> @llvm.matrix.transpose.v9f32(<9 x float> %[[TMP_A]], i32 3, i32 3)
+// LLVM: store <9 x float> %[[TRANSPOSE]], ptr %[[B_ADDR]], align 4
 
 void builtin_matrix_transpose_different_sizes() {
   matrix3x2 a;
@@ -76,11 +76,11 @@ void builtin_matrix_transpose_different_sizes() {
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.matrix<3 x 2 x !cir.float>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.matrix<2 x 3 x !cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.matrix<3 x 2 x !cir.float>>, !cir.matrix<3 x 2 x !cir.float>
-// CIR: %[[TRANSPOE:.*]] = cir.matrix.transpose %[[TMP_A]] : <3 x 2 x !cir.float>, !cir.matrix<2 x 3 x !cir.float>
-// CIR: cir.store {{.*}} %[[TRANSPOE]], %[[B_ADDR]] : !cir.matrix<2 x 3 x !cir.float>, !cir.ptr<!cir.matrix<2 x 3 x !cir.float>>
+// CIR: %[[TRANSPOSE:.*]] = cir.matrix.transpose %[[TMP_A]] : <3 x 2 x !cir.float>, !cir.matrix<2 x 3 x !cir.float>
+// CIR: cir.store {{.*}} %[[TRANSPOSE]], %[[B_ADDR]] : !cir.matrix<2 x 3 x !cir.float>, !cir.ptr<!cir.matrix<2 x 3 x !cir.float>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca [6 x float], align 4
 // LLVM: %[[B_ADDR:.*]] = alloca [6 x float], align 4
 // LLVM: %[[TMP_A:.*]] = load <6 x float>, ptr %[[A_ADDR]], align 4
-// LLVM: %[[TRANSPOE:.*]] = call <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %[[TMP_A]], i32 3, i32 2)
-// LLVM: store <6 x float> %[[TRANSPOE:.*]], ptr %[[B_ADDR]], align 4
+// LLVM: %[[TRANSPOSE:.*]] = call <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %[[TMP_A]], i32 3, i32 2)
+// LLVM: store <6 x float> %[[TRANSPOSE:.*]], ptr %[[B_ADDR]], align 4
