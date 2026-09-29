@@ -792,10 +792,10 @@ features cannot lower the translation-unit ABI level;
   that was inherited from a different declarator, for example when
   ``__typeof__`` resolves to the type of another, already-processed
   declaration. (#GH217489)
-- Fixed a crash on arrays of zero-sized elements with a huge element count,
-  e.g. ``T s[-sizeof(0)][0]``. Such arrays are now diagnosed as too large when
-  their element count exceeds the limit that already applies to their size in
-  bytes. (#GH173728)
+- Fixed a crash when the constant evaluator default-constructed or copied a
+  very large array, such as a local ``T s[0xFFFFFFFF][0]`` of an empty class
+  ``T``. Such evaluations now fail once the element count exceeds the
+  ``-fconstexpr-steps`` limit, as they already did for ``new``. (#GH173728)
 - Fixed an assertion failure when instantiating a block that captures
   `this` via a member access through a dependent base class.
 - Fixed `DiagnoseUnguardedAvailability::TraverseIfStmt` dereferencing a nullptr

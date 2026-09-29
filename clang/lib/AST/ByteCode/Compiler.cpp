@@ -3033,6 +3033,8 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
   const Expr *SubExpr = E->getSubExpr();
   OptPrimType SubExprT = classify(SubExpr);
   size_t Size = E->getArraySize().getZExtValue();
+  if (!this->emitCheckArraySize(Size, E))
+    return false;
 
   if (SubExprT) {
     // Unwrap the OpaqueValueExpr so we don't cache something we won't reuse.
@@ -4032,8 +4034,10 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       if (!CAT)
         return false;
       QualType ElemTy = CAT->getElementType();
-      unsigned NumElems = CAT->getZExtSize();
-      for (size_t I = 0; I != NumElems; ++I) {
+      uint64_t NumElems = CAT->getZExtSize();
+      if (!this->emitCheckArraySize(NumElems, E))
+        return false;
+      for (uint64_t I = 0; I != NumElems; ++I) {
         if (!this->emitConstUint64(I, E))
           return false;
         if (!this->emitArrayElemPtrUint64(E))

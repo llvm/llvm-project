@@ -73,3 +73,45 @@ int d = stack_array<1025>();
 constexpr int e = stack_array<1024>();
 constexpr int f = stack_array<1025>(); // both-error {{constexpr variable 'f' must be initialized by a constant expression}} \
                                        // both-note {{in call}}
+
+namespace GH173728 {
+struct T {};
+
+int stmt_expr() { return 1 + ({ T s[0xFFFFFFFFu][0]; 0x97 < 10000; }); }
+#if __SIZEOF_SIZE_T__ == 8
+int stmt_expr_truncated() {
+  return 1 + ({ T s[(1ULL << 33) - 1][0]; 0x97 < 10000; });
+}
+#endif
+
+template <auto N>
+constexpr int default_construct() {
+  T s[N][0]; // #gh173728-construct
+  return 0;
+}
+
+constexpr int construct_ok = default_construct<1024>();
+constexpr int construct_limit = default_construct<1025>(); // both-error {{constexpr variable 'construct_limit' must be initialized by a constant expression}} \
+                                                           // both-note {{in call}}
+// both-note@#gh173728-construct {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}}
+// both-note@#gh173728-construct {{use -fconstexpr-steps}}
+
+#if __SIZEOF_SIZE_T__ == 8
+constexpr int construct_huge = default_construct<(1ULL << 33) - 1>(); // both-error {{constexpr variable 'construct_huge' must be initialized by a constant expression}} \
+                                                                      // ref-note {{in call}}
+// ref-note@#gh173728-construct {{cannot allocate array; evaluated array bound 8589934591 is too large}}
+#endif
+
+template <typename A>
+constexpr int capture_copy(const A &a) {
+  return [a] { return 0; }(); // #gh173728-capture
+}
+
+constexpr T src_ok[1024][0] = {};
+constexpr T src_limit[1025][0] = {};
+constexpr int capture_ok = capture_copy(src_ok);
+constexpr int capture_limit = capture_copy(src_limit); // both-error {{constexpr variable 'capture_limit' must be initialized by a constant expression}} \
+                                                       // both-note {{in call}}
+// both-note@#gh173728-capture {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}}
+// both-note@#gh173728-capture {{use -fconstexpr-steps}}
+}
