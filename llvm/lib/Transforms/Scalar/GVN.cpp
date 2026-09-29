@@ -288,13 +288,6 @@ public:
 
   GVNPassImpl(llvm::GVNOptions Options = {}) : Options(Options) {}
 
-  /// Run the pass over the function.
-  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  LLVM_ABI void
-  printPipeline(raw_ostream &OS,
-                function_ref<StringRef(StringRef)> MapClassName2PassName);
-
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
   LLVM_ABI void salvageAndRemoveInstruction(Instruction *I);
