@@ -4,8 +4,9 @@
 // RUN:   | FileCheck %s -check-prefixes='CHECK,CHECK-NO-ARITH'
 
 // Check that MathToXeVM simplifies math ops before lowering them, so the
-// cheaper form is what reaches the intrinsics. Every op here is marked `afn`,
-// so this test turns convert-to-ocl off and pins the native intrinsics.
+// cheaper form is what reaches the intrinsics. Every op here is marked `afn`
+// and so is lowered to a `native_` intrinsic. convert-to-ocl is off because it
+// only affects ops without `afn`, of which this test has none.
 
 // CHECK-LABEL: func @powf_strength_reduction
 // CHECK-SAME: (%[[X:.*]]: f32)
@@ -39,9 +40,7 @@ func.func @powf_strength_reduction(%x: f32) -> (f32, f32, f32, f32, f32) {
   return %pow1, %pow2, %pow3, %pow0_5, %powm0_5 : f32, f32, f32, f32, f32
 }
 
-// `exp(a) / exp(b)` becomes a single `exp(a - b)`. The fold has to happen
-// before the lowering: once the exponentials are calls they are no longer dead,
-// so all three would remain.
+// `exp(a) / exp(b)` becomes a single `exp(a - b)`.
 
 // CHECK-LABEL: func @exp_quotient
 // CHECK-SAME: (%[[A:.*]]: f32, %[[B:.*]]: f32)

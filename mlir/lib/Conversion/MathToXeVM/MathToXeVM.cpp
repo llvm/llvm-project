@@ -276,20 +276,11 @@ void ConvertMathToXeVMPass::runOnOperation() {
   Operation *op = getOperation();
   MLIRContext *ctx = op->getContext();
 
-  // Simplify before lowering, so the cheaper form is what reaches the
-  // intrinsics: `math.powf %x, 2.0` should become a multiply, not a call to
-  // `__spirv_ocl_native_powr`. This cannot be folded into the conversion below
-  // for two reasons. A simplification rewrites a whole expression, e.g.
-  // `exp(a) / exp(b)` into `exp(a - b)`, so it has to see the `math.exp` ops
-  // before they turn into calls: a call to an external function is never dead,
-  // so the two originals would stay and the result would be three
-  // exponentials instead of two. And the ops the simplifications create, like
-  // `arith.mulf`, are not legal for this target, which would roll the rewrite
-  // back.
-  //
-  // Only the ops the simplifications can match are handed to the driver. Every
-  // other op is left exactly as it was found. Folding stays off: constants are
-  // not this pass's business.
+  // Simplify first, so the cheaper form is what the conversion below lowers. A
+  // simplification rewrites a whole expression, so it must run before the
+  // lowering turns the parts of that expression into calls. Only the ops these
+  // patterns can match are given to the driver, and folding is off, so nothing
+  // else is touched.
   {
     RewritePatternSet simplifications(ctx);
     populateMathAlgebraicSimplificationPatterns(simplifications);

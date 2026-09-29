@@ -156,9 +156,8 @@ module @test_module {
     // CHECK: llvm.call @_Z24__spirv_ocl_native_log10d(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f64) -> f64
     %log10_afn_f64 = math.log10 %c1_f64 fastmath<afn> : f64
 
-    // The exponent must not be one the algebraic simplifications rewrite (1.0,
-    // 2.0, 3.0, -1.0, 0.5, -0.5 or 0.75), or there is no `math.powf` left to
-    // lower. See algebraic-simplification.mlir for those.
+    // The exponent must not be one the algebraic simplifications rewrite, or
+    // there is no `math.powf` left to lower. See algebraic-simplification.mlir.
     %c4_f16 = arith.constant 4. : f16
 
     // CHECK: llvm.call @_Z23__spirv_ocl_native_powrDhDh(%{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f16, f16) -> f16
