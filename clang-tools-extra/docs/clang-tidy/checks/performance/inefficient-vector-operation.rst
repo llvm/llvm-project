@@ -62,7 +62,7 @@ Options
 .. option:: ForRangeLoopClasses
 
    Semicolon-separated list of names of container classes that can be used as
-   sources in range-based for loops. Each configured class must provide an
+   sources in range-based ``for`` loops. Each configured class must provide an
    accessible ``size()`` method whose result is the number of elements visited
    by the loop. Defaults to
    ``::std::array``, ``::std::deque``, ``::std::map``, ``::std::set``,
