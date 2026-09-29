@@ -65,9 +65,9 @@ end program
 ! CHECK:         }
 
 ! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "REDUCE_POINTER"} {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "v", uniq_name = "_QFEv"}
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> <{bindc_name = "v", uniq_name = "_QFEv"}>
 ! CHECK:           %[[VAL_3:.*]] = fir.zero_bits !fir.ptr<i32>
 ! CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
 ! CHECK:           fir.store %[[VAL_4]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.ptr<i32>>>

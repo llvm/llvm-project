@@ -2009,9 +2009,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
 static void diagnoseUnsatisfiedConstraintExpr(
     Sema &S, const UnsatisfiedConstraintRecord &Record, SourceLocation Loc,
     bool First, concepts::NestedRequirement *Req) {
-  if (auto *Diag =
-          Record
-              .template dyn_cast<const ConstraintSubstitutionDiagnostic *>()) {
+  if (auto *Diag = dyn_cast<const ConstraintSubstitutionDiagnostic *>(Record)) {
     if (Req)
       S.Diag(Diag->first, diag::note_nested_requirement_substitution_error)
           << (int)First << Req->getInvalidConstraintEntity() << Diag->second;
@@ -2534,17 +2532,13 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
   if (CacheEntry == NormalizationCache.end()) {
     auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
         *this, ND, AssociatedConstraints);
-    if (!Normalized) {
-      NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, nullptr);
-      return nullptr;
-    }
     // substitute() can invalidate iterators of NormalizationCache.
-    bool Failed = SubstituteParameterMappings(*this).substitute(*Normalized);
+    if (Normalized &&
+        SubstituteParameterMappings(*this).substitute(*Normalized))
+      Normalized = nullptr;
     CacheEntry =
         NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
             .first;
-    if (Failed)
-      return nullptr;
   }
   return CacheEntry->second;
 }
