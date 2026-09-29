@@ -6569,7 +6569,7 @@ lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
                                          const RISCVSubtarget &Subtarget,
                                          SelectionDAG &DAG) {
   MVT VT = SVN->getSimpleValueType(0);
-  if (Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
+  if (VT != MVT::v4i8)
     return SDValue();
 
   SDValue V1 = SVN->getOperand(0);
