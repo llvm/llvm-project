@@ -81,18 +81,10 @@ public:
 
   // Links each entry in LinkModules into our module.  Returns true on error.
   bool LinkInModules(llvm::Module *M);
-
+  
   /// Create an llvm::DiagnosticHandler that routes LLVM backend diagnostics
   /// through this consumer's clang diagnostics.
   std::unique_ptr<llvm::DiagnosticHandler> createDiagnosticHandler();
-
-  /// Replace the set of modules to link in. LinkInModules() consumes the
-  /// modules, so incremental compilation (clang-repl) must reload and reseed
-  /// them before each translation unit; otherwise later inputs would miss the
-  /// linked-in bitcode (e.g. HIP device libraries).
-  void setLinkModules(SmallVector<LinkModule, 4> LMs) {
-    LinkModules = std::move(LMs);
-  }
 };
 
 } // namespace clang
