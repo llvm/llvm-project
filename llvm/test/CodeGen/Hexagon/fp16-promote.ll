@@ -13,8 +13,10 @@ define half @freeze_half_undef() nounwind {
 ; CHECK-NEXT:     call __extendhfsf2
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call __truncsfhf2
 ; CHECK-NEXT:     r0 = sfadd(r0,r0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     call __truncsfhf2
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
@@ -32,8 +34,10 @@ define half @freeze_half_poison(half %maybe.poison) {
 ; CHECK-NEXT:     allocframe(r29,#0):raw
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call __truncsfhf2
 ; CHECK-NEXT:     r0 = sfadd(r0,r0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     call __truncsfhf2
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw

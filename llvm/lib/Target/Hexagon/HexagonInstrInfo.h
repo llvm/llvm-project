@@ -474,6 +474,15 @@ public:
   short getEquivalentHWInstr(const MachineInstr &MI) const;
   unsigned getInstrTimingClassLatency(const InstrItineraryData *ItinData,
                                       const MachineInstr &MI) const;
+  /// Return true if \p DefMI defines \p Reg (or a super-register of it) with
+  /// a scheduling class whose per-operand write latency prevents packetizing
+  /// the def with a consumer that reads \p Reg in the same packet (currently
+  /// scalar floating-point TC4x classes, whose writes commit after the point
+  /// at which a co-packetized call transfers control). \p UseMI is retained
+  /// in the signature for future refinement using operand-pair latencies.
+  bool hasMultiCycleDefLatency(const InstrItineraryData *ItinData,
+                               const MachineInstr &DefMI,
+                               const MachineInstr &UseMI, Register Reg) const;
   bool getInvertedPredSense(SmallVectorImpl<MachineOperand> &Cond) const;
   unsigned getInvertedPredicatedOpcode(const int Opc) const;
   int getMaxValue(const MachineInstr &MI) const;
