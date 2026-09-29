@@ -273,8 +273,7 @@ define i32 @lshr_signbits(i32 %x) {
 ; CHECK-NEXT:    [[S:%.*]] = sext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[Y:%.*]] = add nsw i64 [[S]], 32
 ; CHECK-NEXT:    [[A:%.*]] = lshr i64 [[Y]], 17
-; CHECK-NEXT:    [[B:%.*]] = trunc i64 [[A]] to i16
-; CHECK-NEXT:    [[C:%.*]] = sext i16 [[B]] to i32
+; CHECK-NEXT:    [[C:%.*]] = trunc i64 [[A]] to i32
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = sext i32 %x to i64

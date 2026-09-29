@@ -1975,8 +1975,9 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     // If the input has more sign bits than bits truncated, then convert
     // directly to final type.
     unsigned XBitSize = X->getType()->getScalarSizeInBits();
+    unsigned TruncatedBits = XBitSize - SrcBitSize;
     bool HasNSW = cast<TruncInst>(Src)->hasNoSignedWrap();
-    if (HasNSW || (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)) {
+    if (HasNSW || (ComputeNumSignBits(X, &Sext) > TruncatedBits)) {
       auto *Res = CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
       if (auto *ResTrunc = dyn_cast<TruncInst>(Res); ResTrunc && HasNSW)
         ResTrunc->setHasNoSignedWrap(true);
@@ -1994,11 +1995,14 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     // the logic shift to arithmetic shift and eliminate the cast to
     // intermediate type:
     // sext (trunc (lshr Y, C)) --> sext/trunc (ashr Y, C)
+    // where C <= truncatedbits && signbits(Y) + C > truncatedbits
     Value *Y;
+    const APInt *C;
     if (Src->hasOneUse() &&
-        match(X, m_LShr(m_Value(Y),
-                        m_SpecificIntAllowPoison(XBitSize - SrcBitSize)))) {
-      Value *Ashr = Builder.CreateAShr(Y, XBitSize - SrcBitSize);
+        match(X, m_LShr(m_Value(Y), m_APIntAllowPoison(C))) &&
+        C->ule(TruncatedBits) &&
+        ComputeNumSignBits(Y, &Sext) + C->getZExtValue() > TruncatedBits) {
+      Value *Ashr = Builder.CreateAShr(Y, C->getZExtValue());
       return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
     }
   }
