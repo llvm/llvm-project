@@ -94,7 +94,7 @@ public:
                      getDeviceSideName(cast<NamedDecl>(vd)),
                      cir::CUDADeviceVarKind::Variable, isExtern, isConstant,
                      vd->hasAttr<HIPManagedAttr>(),
-                     /*surfaceType=*/0));
+                     /*surfTexType=*/0));
     deviceVars.push_back({
         var,
         vd,
@@ -131,7 +131,7 @@ public:
                      cir::CUDADeviceVarKind::Texture, isExtern,
                      /*isConstant=*/false,
                      /*isManaged=*/false,
-                     /*surfaceType=*/0));
+                     /*surfTexType=*/0));
 
     deviceVars.push_back({
         var,
@@ -437,6 +437,10 @@ void CIRGenNVCUDARuntime::internalizeDeviceSideVar(
       d->getType()->isCUDADeviceBuiltinTextureType()) {
     linkage = cir::GlobalLinkageKind::InternalLinkage;
   }
+
+  if (d->getType()->isCUDADeviceBuiltinTextureType())
+    cgm.errorNYI(d->getSourceRange(),
+                 "internalizeDeviceSideVar: CUDA Texture support");
 }
 
 std::string CIRGenNVCUDARuntime::getDeviceSideName(const NamedDecl *nd) {
@@ -505,7 +509,7 @@ void CIRGenNVCUDARuntime::handleVarRegistration(const VarDecl *vd,
            "Unexpected number of template arguments of CUDA device "
            "builtin surface type.");
 
-    auto surfaceType = args[1].getAsIntegral();
+    llvm::APSInt surfaceType = args[1].getAsIntegral();
 
     if (!vd->hasExternalStorage())
       registerDeviceSurf(vd, var, !vd->hasDefinition(),
