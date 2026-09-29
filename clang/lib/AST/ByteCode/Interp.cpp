@@ -875,6 +875,8 @@ static bool CheckLifetime(InterpState &S, CodePtr OpPC, Lifetime LT,
 }
 static bool CheckLifetime(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                           AccessKinds AK) {
+  if (!Ptr.isBlockPointer())
+    return true;
   return CheckLifetime(S, OpPC, Ptr.getLifetime(), Ptr.block(), AK);
 }
 
@@ -1096,7 +1098,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     if (!CheckMutable(S, OpPC, Ptr.view()))
       return false;
   }
-  if (Ptr.isConstexprUnknown())
+  if (!S.inConstantContext() && isConstexprUnknown(Ptr))
     return false;
   return true;
 }
