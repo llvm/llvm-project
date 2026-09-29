@@ -18844,12 +18844,12 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                 if (isMemberSpecialization) {
                   if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Def))
                     IsExplicitSpecializationAfterInstantiation =
-                        RD->getTemplateSpecializationKind() !=
-                        TSK_ExplicitSpecialization;
+                        isTemplateInstantiation(
+                            RD->getTemplateSpecializationKind());
                   else if (EnumDecl *ED = dyn_cast<EnumDecl>(Def))
                     IsExplicitSpecializationAfterInstantiation =
-                        ED->getTemplateSpecializationKind() !=
-                        TSK_ExplicitSpecialization;
+                        isTemplateInstantiation(
+                            ED->getTemplateSpecializationKind());
                 }
 
                 // Note that clang allows ODR-like semantics for ObjC/C, i.e.,
@@ -19199,9 +19199,7 @@ CreateNewDecl:
 
   if (TUK == TagUseKind::Definition) {
     if (!SkipBody || !SkipBody->ShouldSkip) {
-      // An invalid redefinition must not replace the existing definition.
-      if (!Invalid || !PrevDecl || !PrevDecl->getDefinition())
-        New->startDefinition();
+      New->startDefinition();
     } else {
       New->setCompleteDefinition();
       New->demoteThisDefinitionToDeclaration();
