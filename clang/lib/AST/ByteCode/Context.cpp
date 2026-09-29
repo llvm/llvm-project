@@ -73,35 +73,6 @@ void Context::isPotentialConstantExprUnevaluated(const EvalSettings &Settings,
   }
 }
 
-bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
-  ++EvalID;
-  bool Recursing = !Stk.empty();
-  size_t StackSizeBefore = Stk.size();
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
-
-  auto Res = C.interpretExpr(E);
-
-  if (Res.isInvalid()) {
-    C.cleanup();
-    Stk.clearTo(StackSizeBefore);
-    return false;
-  }
-
-  if (!Recursing) {
-    // We *can* actually get here with a non-empty stack, since
-    // things like InterpState::noteSideEffect() exist.
-    C.cleanup();
-#ifndef NDEBUG
-    // Make sure we don't rely on some value being still alive in
-    // InterpStack memory.
-    Stk.clearTo(StackSizeBefore);
-#endif
-  }
-
-  Result = Res.stealAPValue();
-  return true;
-}
-
 bool Context::evaluateAsRValue(const EvalSettings &Settings, const Expr *E,
                                APValue &Result) {
   ++EvalID;
