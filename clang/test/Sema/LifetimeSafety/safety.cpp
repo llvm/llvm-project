@@ -4076,6 +4076,29 @@ void capturing_multiple_locals() {
     use(v);                         // expected-note 2 {{later used here}}
 }
 
+namespace off_by_one_crash {
+struct Item {
+  const int* ptr;
+};
+
+struct Container {
+  const Item* saved;
+};
+
+struct Helper {
+  void AddItem(const Item& item [[clang::lifetime_capture_by(c)]],
+               Container& c) const;
+  void Populate() const {
+    Container c{};
+    {
+      Item item;
+      AddItem(item, c); // expected-warning {{local variable 'item' does not live long enough}}
+    }                   // expected-note {{local variable 'item' is destroyed here}}
+    use(c);             // expected-note {{later used here}}
+  }
+};
+} // namespace off_by_one_crash
+
 struct [[gsl::Pointer()]] PtrWithInt { int x; };
 PtrWithInt f() {
   return PtrWithInt{10};
