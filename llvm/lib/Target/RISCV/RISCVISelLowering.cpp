@@ -17613,8 +17613,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_pmhacc_b1:
     case Intrinsic::riscv_pmhaccsu_b0:
     case Intrinsic::riscv_pmhaccsu_b1: {
-      // pmhacc.h.bXX exists only on RV32; on RV64 the v2i16 result has to
-      // widen to the packed v4i16 form and extract the low half.
+      // pmhacc.h.bXX operates on the whole register: v2i16 on RV32 and
+      // v4i16 on RV64. On RV64 a v2i16 result widens to the packed v4i16
+      // form and extracts the low half.
       EVT VT = N->getValueType(0);
       if (!Subtarget.is64Bit() || VT != MVT::v2i16)
         return;
