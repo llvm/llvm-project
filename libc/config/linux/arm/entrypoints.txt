@@ -38,7 +38,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.grp.getgrouplist
     libc.src.grp.getgrnam
     libc.src.grp.getgrnam_r
+    libc.src.grp.initgroups
     libc.src.grp.setgrent
+    libc.src.grp.setgroups
 
     # poll.h entrypoints
     libc.src.poll.poll
