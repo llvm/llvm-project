@@ -139,3 +139,21 @@ func.func @switch_i128_signed_underflow(%flag: i128) {
 ^bb1:
   return
 }
+
+// -----
+
+func.func @switch_signed_flag(%flag: si8) {
+  // expected-error@+1 {{'cf.switch' op operand #0 must be signless integer, but got 'si8'}}
+  cf.switch %flag : si8, [default: ^bb1]
+^bb1:
+  return
+}
+
+// -----
+
+func.func @switch_unsigned_flag(%flag: ui8) {
+  // expected-error@+1 {{'cf.switch' op operand #0 must be signless integer, but got 'ui8'}}
+  cf.switch %flag : ui8, [default: ^bb1]
+^bb1:
+  return
+}
