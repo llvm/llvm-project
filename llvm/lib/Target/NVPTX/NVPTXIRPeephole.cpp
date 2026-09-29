@@ -163,8 +163,8 @@ struct NVPTXIRPeephole : public FunctionPass {
 } // namespace
 
 char NVPTXIRPeephole::ID = 0;
-INITIALIZE_PASS_BEGIN(NVPTXIRPeephole, "nvptx-ir-peephole",
-                      "NVPTX IR Peephole", false, false)
+INITIALIZE_PASS_BEGIN(NVPTXIRPeephole, "nvptx-ir-peephole", "NVPTX IR Peephole",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(NVPTXIRPeephole, "nvptx-ir-peephole", "NVPTX IR Peephole",
                     false, false)
