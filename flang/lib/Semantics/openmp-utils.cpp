@@ -2508,7 +2508,8 @@ void AppendDirectiveContextTraits(llvm::omp::Directive directive,
 namespace {
 // Profile the original parse tree: folding a whole expression would lose
 // declaration identity. Parse-tree operators already unify alternate spellings;
-// analyze only literals to normalize their values and effective kinds.
+// analyze only literals to normalize their values and effective kinds. Failed
+// analysis during semantic error recovery falls back to the structural walk.
 struct ConditionIdentity {
   SemanticsContext &context;
   llvm::FoldingSetNodeID id;
@@ -2540,23 +2541,21 @@ struct ConditionIdentity {
   }
   bool Pre(const parser::SignedIntLiteralConstant &literal) {
     AddNode<parser::SignedIntLiteralConstant>();
-    auto value{evaluate::ExpressionAnalyzer{context}.Analyze(literal)};
-    CHECK(value);
-    id.AddString(value->AsFortran());
-    return false;
+    if (auto value{evaluate::ExpressionAnalyzer{context}.Analyze(literal)}) {
+      id.AddString(value->AsFortran());
+      return false;
+    }
+    return true;
   }
   bool Pre(const parser::SignedRealLiteralConstant &literal) {
     AddNode<parser::SignedRealLiteralConstant>();
-    auto value{evaluate::ExpressionAnalyzer{context}.Analyze(literal)};
-    CHECK(value);
-    id.AddString(value->AsFortran());
-    return false;
-  }
-  bool Pre(const parser::Expr &expr) {
-    if (const auto *parens{std::get_if<parser::Expr::Parentheses>(&expr.u)}) {
-      parser::Walk(parens->v.value(), *this);
+    if (auto value{evaluate::ExpressionAnalyzer{context}.Analyze(literal)}) {
+      id.AddString(value->AsFortran());
       return false;
     }
+    return true;
+  }
+  bool Pre(const parser::Expr &expr) {
     AddNode<parser::Expr>();
     if (const auto *negate{std::get_if<parser::Expr::Negate>(&expr.u)}) {
       if (const auto *literal{
@@ -2565,11 +2564,11 @@ struct ConditionIdentity {
           // The magnitude of the most negative integer is not representable
           // in its kind. Analyze the signed literal together, as semantics
           // does, rather than reanalyzing its positive magnitude.
-          auto value{evaluate::ExpressionAnalyzer{context}.Analyze(expr)};
-          CHECK(value);
-          AddNode<parser::Expr::Negate>();
-          id.AddString(value->AsFortran());
-          return false;
+          if (auto value{evaluate::ExpressionAnalyzer{context}.Analyze(expr)}) {
+            AddNode<parser::Expr::Negate>();
+            id.AddString(value->AsFortran());
+            return false;
+          }
         }
       }
     }
@@ -2591,6 +2590,10 @@ llvm::StringRef GetConditionIdentity(
     const parser::ScalarExpr &condition, SemanticsContext &context) {
   const auto *expr{parser::Unwrap<parser::Expr>(condition)};
   CHECK(expr);
+  // Only outer parentheses are insignificant. Inner parentheses can constrain
+  // reassociation and must remain part of the original expression's identity.
+  while (const auto *parens{std::get_if<parser::Expr::Parentheses>(&expr->u)})
+    expr = &parens->v.value();
   ConditionIdentity profile{context, {}};
   parser::Walk(*expr, profile);
   llvm::FoldingSetNodeIDRef data{profile.id.getRef()};

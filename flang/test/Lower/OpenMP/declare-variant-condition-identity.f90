@@ -28,6 +28,7 @@
 ! LOCAL: fir.call @_QMconditionsPhigh()
 ! LOCAL: fir.call @_QMconditionsPhigh()
 ! LOCAL: fir.call @_QMconditionsPlow()
+! LOCAL: fir.call @_QMconditionsPhigh()
 ! LOCAL: return
 
 ! Conditions referring to USE-associated names are rebuilt in the importing
@@ -48,10 +49,10 @@
 ! Different variables must not be merged even when their values might agree.
 ! IMPORTED-LABEL: func.func @_QPruntime_distinct(
 ! IMPORTED: fir.if
-! IMPORTED: omp.taskyield
-! IMPORTED: } else {
+! IMPORTED-NEXT: omp.taskyield
+! IMPORTED-NEXT: } else {
 ! IMPORTED: fir.if
-! IMPORTED: omp.taskwait
+! IMPORTED-NEXT: omp.taskwait
 ! IMPORTED: return
 
 ! False conditions retain the same identity under match_none.
@@ -228,8 +229,17 @@ contains
     spelling_integer_min = 0
   end function
 
+  ! Inner parentheses remain significant even if both expressions fold alike.
+  integer function inner_parentheses()
+    !$omp declare variant(high) match(user={condition((1)+1 == 2)}, &
+    !$omp& implementation={vendor(score(100): llvm)})
+    !$omp declare variant(low) match(user={condition(1+1 == 2)}, &
+    !$omp& implementation={vendor(score(1): llvm)}, device={kind(cpu)})
+    inner_parentheses = 0
+  end function
+
   subroutine local_calls(a)
-    integer :: a(17)
+    integer :: a(18)
     a(1) = parentheses()
     a(2) = aliases()
     a(3) = compound_aliases()
@@ -247,6 +257,7 @@ contains
     a(15) = spelling_distinct_kind()
     a(16) = spelling_complex_values()
     a(17) = spelling_integer_min()
+    a(18) = inner_parentheses()
   end subroutine
 end module
 
@@ -309,7 +320,8 @@ end subroutine
 ! IMPORTED-LABEL: func.func @_QPruntime_operators(
 ! IMPORTED-NOT: omp.taskyield
 ! IMPORTED: fir.if
-! IMPORTED: omp.taskwait
+! IMPORTED-NEXT: omp.taskwait
+! IMPORTED-NEXT: } else {
 ! IMPORTED-NOT: omp.taskyield
 ! IMPORTED: return
 subroutine runtime_operators(n)
@@ -318,6 +330,28 @@ subroutine runtime_operators(n)
   !$omp& when(user={condition(n .eq. 1)}, &
   !$omp& implementation={vendor(score(100): llvm)}: taskyield) &
   !$omp& when(user={condition(n == 1)}, device={kind(cpu)}, &
+  !$omp& implementation={vendor(score(1): llvm)}: taskwait)
+end subroutine
+
+! Inner parentheses constrain reassociation. The higher-scoring condition
+! must be tested first, while an outer pair around it remains insignificant.
+! IMPORTED-LABEL: func.func @_QPruntime_inner_parentheses(
+! IMPORTED: %[[SUM:.*]] = arith.addf
+! IMPORTED: %[[GROUP:.*]] = {{(hlfir|fir)}}.no_reassoc %[[SUM]]
+! IMPORTED: arith.addf %[[GROUP]],
+! IMPORTED: fir.if
+! IMPORTED-NEXT: omp.taskyield
+! IMPORTED-NEXT: } else {
+! IMPORTED: fir.if
+! IMPORTED-NEXT: omp.taskwait
+! IMPORTED-NEXT: } else {
+! IMPORTED: return
+subroutine runtime_inner_parentheses(a, b, c)
+  real :: a, b, c
+  !$omp metadirective &
+  !$omp& when(user={condition(((a+b)+c > 0.0))}, &
+  !$omp& implementation={vendor(score(100): llvm)}: taskyield) &
+  !$omp& when(user={condition(a+b+c > 0.0)}, device={kind(cpu)}, &
   !$omp& implementation={vendor(score(1): llvm)}: taskwait)
 end subroutine
 

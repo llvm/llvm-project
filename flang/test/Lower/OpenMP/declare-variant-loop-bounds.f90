@@ -343,4 +343,24 @@ contains
     end do
     i = bound(n)
   end subroutine
+  ! Lastprivate re-evaluates the bound inside WSLOOP for the copy-back test.
+  ! Both evaluations belong to the original loop control, outside DO.
+  ! CHECK-LABEL: func.func @_QMloop_contextPlastprivate_bound(
+  ! CHECK: fir.call @_QMloop_contextPbound(
+  ! CHECK: omp.wsloop
+  ! CHECK-NOT: fir.call @_QMloop_contextPdo_bound(
+  ! CHECK: %[[COPY_UB:.*]] = fir.call @_QMloop_contextPbound(
+  ! CHECK-NOT: fir.call @_QMloop_contextPdo_bound(
+  ! CHECK: arith.cmpi sgt, %{{[^,]+}}, %[[COPY_UB]]
+  ! CHECK: fir.if
+  ! CHECK: {{hlfir.assign|fir.store}}
+  ! CHECK-NOT: fir.call @_QMloop_contextPdo_bound(
+  ! CHECK: return
+  subroutine lastprivate_bound(n, x)
+    integer :: n, x, i
+    !$omp do lastprivate(x)
+    do i = 1, bound(n)
+      x = i
+    end do
+  end subroutine
 end module
