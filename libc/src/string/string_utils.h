@@ -18,7 +18,6 @@
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
-
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/string_length.h"

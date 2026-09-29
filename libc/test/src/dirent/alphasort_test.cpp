@@ -15,19 +15,25 @@
 
 #include "hdr/types/struct_dirent.h"
 #include "src/stdlib/qsort.h"
+#include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/string_length.h"
 #include "test/UnitTest/Test.h"
 
 namespace {
 
 struct MockDirent {
-  alignas(struct dirent) char buf[sizeof(struct dirent) + 64]{};
+  static constexpr size_t EXTRA_NAME_LEN = 64;
+  static constexpr size_t BUFFER_SIZE = sizeof(struct dirent) + EXTRA_NAME_LEN;
+
+  alignas(struct dirent) char buf[BUFFER_SIZE]{};
 
   MockDirent(const char *name) {
     auto *d = reinterpret_cast<struct dirent *>(buf);
-    char *dst = d->d_name;
-    while (*name)
-      *dst++ = *name++;
-    *dst = '\0';
+    size_t len = LIBC_NAMESPACE::internal::string_length(name);
+    if (len > EXTRA_NAME_LEN)
+      len = EXTRA_NAME_LEN;
+    LIBC_NAMESPACE::inline_memcpy(d->d_name, name, len);
+    d->d_name[len] = '\0';
   }
 
   const struct dirent *get() const {
@@ -97,12 +103,8 @@ TEST(LlvmLibcAlphasortTest, QsortSorting) {
       entries, NUM_ENTRIES, sizeof(const struct dirent *),
       reinterpret_cast<QsortComparator>(LIBC_NAMESPACE::alphasort));
 
-  const struct dirent *e0 = entries[0];
-  const struct dirent *e1 = entries[1];
-  const struct dirent *e2 = entries[2];
-  const struct dirent *e3 = entries[3];
-
-  EXPECT_LT(LIBC_NAMESPACE::alphasort(&e0, &e1), 0); // alpha < bravo
-  EXPECT_LT(LIBC_NAMESPACE::alphasort(&e1, &e2), 0); // bravo < charlie
-  EXPECT_LT(LIBC_NAMESPACE::alphasort(&e2, &e3), 0); // charlie < delta
+  EXPECT_STREQ(entries[0]->d_name, "alpha");
+  EXPECT_STREQ(entries[1]->d_name, "bravo");
+  EXPECT_STREQ(entries[2]->d_name, "charlie");
+  EXPECT_STREQ(entries[3]->d_name, "delta");
 }
