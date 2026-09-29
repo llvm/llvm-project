@@ -471,13 +471,17 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   // The spill slot is shared with siblings. Moving the store earlier must
   // preserve lanes needed at the copy. If the slot already holds a value at
   // the new store point, it must also preserve lanes needed before the copy.
+  assert(StackInt && "No stack slot assigned yet.");
   LiveInterval &OrigLI = LIS.getInterval(Original);
   LaneBitmask OrigLiveLanes = getLiveLaneMaskAt(OrigLI, Idx.getRegSlot(), MRI);
   bool HasEarlierSlotValue = StackInt->liveAt(SrcVNI->def.getBaseIndex());
   if (HasEarlierSlotValue)
     OrigLiveLanes |= getLiveLaneMaskAt(OrigLI, SrcVNI->def, MRI);
-  if ((OrigLiveLanes & ~getLiveLaneMaskAt(SrcLI, SrcVNI->def, MRI)).any())
+  if ((OrigLiveLanes & ~getLiveLaneMaskAt(SrcLI, SrcVNI->def, MRI)).any()) {
+    LLVM_DEBUG(dbgs() << "\tRejecting hoist: source lacks lanes of original "
+                         "that are still live\n");
     return false;
+  }
   // With subregister liveness disabled, a live main range cannot tell us
   // whether an undef partial def actually provided all of these lanes.
   if (HasEarlierSlotValue && !SrcLI.hasSubRanges() && !SrcVNI->isPHIDef()) {
@@ -485,8 +489,11 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
     if (DefMI) {
       auto [UsedLanes, DefinedLanes] =
           AnalyzeVirtRegLanesInBundle(*DefMI, SrcReg, MRI, TRI);
-      if ((OrigLiveLanes & ~(UsedLanes | DefinedLanes)).any())
+      if ((OrigLiveLanes & ~(UsedLanes | DefinedLanes)).any()) {
+        LLVM_DEBUG(dbgs() << "\tRejecting hoist: source def lacks lanes of "
+                             "original that are still live\n");
         return false;
+      }
     }
   }
 
@@ -521,7 +528,6 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   // Conservatively extend the stack slot range to the range of the original
   // value. We may be able to do better with stack slot coloring by being more
   // careful here.
-  assert(StackInt && "No stack slot assigned yet.");
   VNInfo *OrigVNI = OrigLI.getVNInfoAt(Idx);
   StackInt->MergeValueInAsValue(OrigLI, OrigVNI, StackInt->getValNumInfo(0));
   LLVM_DEBUG(dbgs() << "\tmerged orig valno " << OrigVNI->id << ": "
@@ -1431,6 +1437,9 @@ void InlineSpiller::spillAroundUses(Register Reg) {
       LaneBitmask LiveLanes =
           getLiveLaneMaskAt(LIS.getInterval(Original), Idx, MRI);
       NeedsPreserve = (LiveLanes & ~(UsedLanes | DefinedLanes)).any();
+      if (NeedsPreserve)
+        LLVM_DEBUG(dbgs() << "\tReloading shared slot to preserve live "
+                             "lanes\n");
     }
 
     if (RI.Reads || NeedsPreserve)
