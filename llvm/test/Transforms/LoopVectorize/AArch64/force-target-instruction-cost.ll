@@ -450,8 +450,7 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COST1:       [[VECTOR_BODY]]:
 ; COST1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; COST1-NEXT:    [[TMP28:%.*]] = add i64 [[TMP26]], 0
-; COST1-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP28]], 1
+; COST1-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP26]], 1
 ; COST1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], [[TMP5]]
 ; COST1-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], 3
 ; COST1-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], 3

@@ -23,11 +23,6 @@ class TestFrameProviderStepping(TestBase):
         TestBase.setUp(self)
         self.source = lldb.SBFileSpec("main.c")
 
-    @expectedFailureAll(
-        oslist=["linux"],
-        archs=["arm$"],
-        bugnumber="github.com/llvm/llvm-project/issues/191859",
-    )
     def test_step_with_errors_api(self):
         """Test that errors in creating the step plan are reported"""
         self.do_test_with_errors(False)
