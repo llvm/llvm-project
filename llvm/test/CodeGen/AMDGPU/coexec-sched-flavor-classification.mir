@@ -14,7 +14,7 @@
 # GFX1251-DAG: VALU(1c): 4 cycles, 4 instrs
 # GFX1251-DAG: TRANS: 2 cycles, 2 instrs
 # GFX1251-DAG: VMEM: 3200 cycles, 10 instrs
-# GFX1251-DAG: DS: 5 cycles, 4 instrs
+# GFX1251-DAG: DS: 15 cycles, 4 instrs
 # GFX1251-DAG: DMA: 640 cycles, 2 instrs
 
 --- |
