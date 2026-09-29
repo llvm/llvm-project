@@ -4770,7 +4770,7 @@ Constant *llvm::ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
     return nullptr;
 
   llvm_fenv_clearexcept();
-  auto Input = FlushWithDenormKind(V, DenormMode.Input);
+  APFloat Input = FlushWithDenormKind(V, DenormMode.Input);
   double Result = NativeFP(Input.convertToDouble());
   if (llvm_fenv_testexcept()) {
     llvm_fenv_clearexcept();
@@ -4781,7 +4781,7 @@ Constant *llvm::ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
   if (DenormMode.Output == DenormalMode::DenormalModeKind::IEEE)
     return Output;
   const auto *CFP = static_cast<ConstantFP *>(Output);
-  const auto Res = FlushWithDenormKind(CFP->getValueAPF(), DenormMode.Output);
+  APFloat Res = FlushWithDenormKind(CFP->getValueAPF(), DenormMode.Output);
   return ConstantFP::get(Ty->getContext(), Res);
 }
 

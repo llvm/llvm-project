@@ -5159,8 +5159,8 @@ bool CombinerHelper::matchConstantFoldUnaryIntOp(MachineInstr &MI,
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
 
-  auto Csts = ConstantFoldUnaryIntOp(MI.getOpcode(), DstTy,
-                                     MI.getOperand(1).getReg(), MRI);
+  SmallVector<APInt> Csts = ConstantFoldUnaryIntOp(
+      MI.getOpcode(), DstTy, MI.getOperand(1).getReg(), MRI);
   if (Csts.empty())
     return false;
 
