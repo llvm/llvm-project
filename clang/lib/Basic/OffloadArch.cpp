@@ -10,8 +10,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
-#include "llvm/TargetParser/NVPTXTargetParser.h"
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
+#include "llvm/TargetParser/NVPTXTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace clang {
