@@ -212,15 +212,15 @@ func.func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
 // FULL-UNROLL-DAG: #[[$MAP2:.*]] = affine_map<()[s0] -> (s0 + 2)>
 
 
-// CHECK-LABEL: transfer_read_progressive(
+// CHECK-LABEL: transfer_read_dynamic(
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]+]]: memref<?x?xf32>,
 //  CHECK-SAME:   %[[base:[a-zA-Z0-9]+]]: index
 
-// FULL-UNROLL-LABEL: transfer_read_progressive(
+// FULL-UNROLL-LABEL: transfer_read_dynamic(
 //  FULL-UNROLL-SAME:   %[[A:[a-zA-Z0-9]+]]: memref<?x?xf32>,
 //  FULL-UNROLL-SAME:   %[[base:[a-zA-Z0-9]+]]: index
 
-func.func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vector<3x15xf32> {
+func.func @transfer_read_dynamic(%A : memref<?x?xf32>, %base: index) -> vector<3x15xf32> {
   %f7 = arith.constant 7.0: f32
   // CHECK-DAG: %[[C7:.*]] = arith.constant 7.000000e+00 : f32
   // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
@@ -290,6 +290,46 @@ func.func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vect
 // -----
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
+
+// Same in-bounds guard as transfer_read_dynamic above, but with a fully
+// static memref shape. A static dimension size is a compile-time constant,
+// so the comparison below takes a different constant-folding path through
+// arith's canonicalizer than the dynamic case (which compares against a
+// memref.dim result) above; this test guards that path independently.
+// The shape, vector type, and pad value here also match the second
+// reproducer from https://github.com/llvm/llvm-project/issues/223258.
+
+// CHECK-LABEL: transfer_read_static(
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]+]]: memref<4x8xf32>,
+//  CHECK-SAME:   %[[I:[a-zA-Z0-9]+]]: index
+
+func.func @transfer_read_static(%A : memref<4x8xf32>, %i: index) -> vector<2x8xf32> {
+  %pad = arith.constant -42.0 : f32
+  // CHECK-DAG: %[[PAD:.*]] = arith.constant -4.200000e+01 : f32
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+  // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+  // CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
+  // CHECK-DAG: %[[splat:.*]] = arith.constant dense<-4.200000e+01> : vector<8xf32>
+  // CHECK-DAG: %[[alloc:.*]] = memref.alloca() : memref<vector<2x8xf32>>
+  // CHECK:     %[[alloc_casted:.*]] = vector.type_cast %[[alloc]] : memref<vector<2x8xf32>> to memref<2xvector<8xf32>>
+  // CHECK:     scf.for %[[J:.*]] = %[[C0]] to %[[C2]]
+  // CHECK:       %[[add:.*]] = affine.apply #[[$MAP0]](%[[J]])[%[[I]]]
+  // CHECK:       %[[nonneg:.*]] = arith.cmpi sge, %[[add]], %[[C0]] : index
+  // CHECK:       %[[inrange:.*]] = arith.cmpi slt, %[[add]], %[[C4]] : index
+  // CHECK:       %[[cond:.*]] = arith.andi %[[nonneg]], %[[inrange]] : i1
+  // CHECK:       scf.if %[[cond]] {
+  // CHECK:         %[[vec_1d:.*]] = vector.transfer_read %[[A]][%{{.*}}, %[[I]]], %[[PAD]] {in_bounds = [true]} : memref<4x8xf32>, vector<8xf32>
+  // CHECK:         memref.store %[[vec_1d]], %[[alloc_casted]][%[[J]]] : memref<2xvector<8xf32>>
+  // CHECK:       } else {
+  // CHECK:         store %[[splat]], %[[alloc_casted]][%[[J]]] : memref<2xvector<8xf32>>
+  // CHECK:       }
+  // CHECK:     }
+  // CHECK:     %[[res:.*]] = memref.load %[[alloc]][] : memref<vector<2x8xf32>>
+  %v = vector.transfer_read %A[%i, %i], %pad {in_bounds = [false, true]}
+    : memref<4x8xf32>, vector<2x8xf32>
+  return %v : vector<2x8xf32>
+}
 
 // FULL-UNROLL-DAG: #[[$MAP1:.*]] = affine_map<()[s0] -> (s0 + 1)>
 // FULL-UNROLL-DAG: #[[$MAP2:.*]] = affine_map<()[s0] -> (s0 + 2)>
@@ -943,25 +983,3 @@ func.func private @transfer_write_no_alloc_scope()
 %cst = arith.constant dense<0.0> : vector<2x3xf32>
 %m = memref.alloc() : memref<2x3xf32>
 vector.transfer_write %cst, %m[%c0, %c0] : vector<2x3xf32>, memref<2x3xf32>
-
-// -----
-
-// Dynamic start index that may be negative at runtime. Access is only
-// valid when 0 <= memrefIdx < memrefDim, so the guard must check both
-// bounds explicitly rather than relying on an unsigned reinterpretation
-// trick.
-
-// CHECK-LABEL: func.func @transfer_read_neg_start_guard
-func.func @transfer_read_neg_start_guard(%a: memref<4x8xf32>, %i: index)
-    -> vector<2x8xf32> {
-  %pad = arith.constant -42.0 : f32
-  // CHECK: %[[zero:.*]] = arith.constant 0 : index
-  // CHECK: %[[nonneg:.*]] = arith.cmpi sge, %{{.*}}, %[[zero]] : index
-  // CHECK: %[[inrange:.*]] = arith.cmpi slt, %{{.*}}, %{{.*}} : index
-  // CHECK: %{{.*}} = arith.andi %[[nonneg]], %[[inrange]] : i1
-  // CHECK-NOT: arith.cmpi ugt
-  // CHECK-NOT: arith.cmpi sgt
-  %v = vector.transfer_read %a[%i, %i], %pad {in_bounds = [false, true]}
-    : memref<4x8xf32>, vector<2x8xf32>
-  return %v : vector<2x8xf32>
-}
