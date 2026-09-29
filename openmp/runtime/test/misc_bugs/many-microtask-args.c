@@ -1,6 +1,7 @@
 // RUN: %libomp-compile-and-run
 
-// All platforms should support at least 32 microtask arguments. On some platforms that is the limit. See too-many-microtask-args.c
+// All platforms should support at least 32 microtask arguments. 
+// On some platforms that is the limit. See too-many-microtask-args.c
 
 #include <stdio.h>
 
