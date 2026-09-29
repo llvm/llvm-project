@@ -1393,6 +1393,12 @@ public:
   /// This function will return false if you pass it a 32-bit instruction.
   bool hasVALU32BitEncoding(unsigned Opcode) const;
 
+  /// Return true if \p Reg is a lane mask that already has 0 in every bit
+  /// corresponding to a lane that is inactive in EXEC where \p Use executes,
+  /// so that ANDing it with EXEC there would be a no-op. Requires SSA form.
+  bool isMaskedByExec(Register Reg, const MachineInstr &Use,
+                      const MachineRegisterInfo &MRI, unsigned Depth = 0) const;
+
   bool physRegUsesConstantBus(const MachineOperand &Reg) const;
   bool regUsesConstantBus(const MachineOperand &Reg,
                           const MachineRegisterInfo &MRI) const;
