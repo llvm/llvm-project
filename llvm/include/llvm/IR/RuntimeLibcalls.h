@@ -186,7 +186,7 @@ public:
   /// Get the C-type function signature of the Libcall if provided,
   /// and convert it to IR FunctionType and Attributes.
   /// If the C-type function signature is not provided, return nullptr.
-  std::pair<FunctionType *, AttributeList>
+  LLVM_ABI std::pair<FunctionType *, AttributeList>
   getDefaultFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
                        RTLIB::LibcallImpl LibcallImpl) const;
 
