@@ -767,6 +767,11 @@ features cannot lower the translation-unit ABI level;
   lookup before asserting that the name is not dependent, avoiding an assertion 
   after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
 
+- Fixed a crash in constant evaluation when a new-expression selects a
+  user-declared allocation function that takes std::nothrow_t by value. Such
+  a new-expression is now correctly rejected in a constant expression because
+  it does not select a replaceable global allocation function. (#GH212211)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
