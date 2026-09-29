@@ -24,6 +24,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -1081,16 +1082,44 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
         !isSavedLocal(varSrc))
       return ModRefResult::getModAndRef();
   }
-  // 2. Check if the variable is passed via the arguments.
-  for (auto arg : call.getArgs()) {
-    if (fir::conformsWithPassByRef(arg.getType()) && !alias(arg, var).isNo()) {
-      // TODO: intent(in) would allow returning Ref here. This can be obtained
-      // in the func.func attributes for direct calls, but the module lookup is
-      // linear with the number of MLIR symbols, which would introduce a pseudo
-      // quadratic behavior num_calls * num_func.
-      return ModRefResult::getModAndRef();
-    }
+  // 2. Check if the variable is passed via the arguments. A dummy with a
+  // declared intent is a read, a write, or both. An argument with no visible
+  // intent stays ModAndRef. The callee is resolved through the cached symbol
+  // table.
+  mlir::func::FuncOp callee;
+  if (std::optional<mlir::SymbolRefAttr> calleeAttr = call.getCallee()) {
+    if (const mlir::SymbolTable *symTab = getNearestSymbolTable(call))
+      callee =
+          symTab->lookup<mlir::func::FuncOp>(calleeAttr->getLeafReference());
   }
+  auto args = call.getArgs();
+  const bool intentsAvailable = callee && !callee.isDeclaration() &&
+                                args.size() == callee.getNumArguments();
+  std::optional<ModRefResult> passed;
+  for (auto [idx, arg] : llvm::enumerate(args)) {
+    if (!fir::conformsWithPassByRef(arg.getType()) || alias(arg, var).isNo())
+      continue;
+    ModRefResult one = ModRefResult::getModAndRef();
+    if (intentsAvailable) {
+      if (std::optional<fir::FortranDummyIntent> intent =
+              fir::getFortranDummyIntent(callee, idx)) {
+        switch (*intent) {
+        case fir::FortranDummyIntent::In:
+          one = ModRefResult::getRef();
+          break;
+        case fir::FortranDummyIntent::Out:
+          one = ModRefResult::getMod();
+          break;
+        case fir::FortranDummyIntent::InOut:
+          one = ModRefResult::getModAndRef();
+          break;
+        }
+      }
+    }
+    passed = passed ? passed->merge(one) : one;
+  }
+  if (passed)
+    return *passed;
   // The call cannot access the variable.
   return ModRefResult::getNoModRef();
 }

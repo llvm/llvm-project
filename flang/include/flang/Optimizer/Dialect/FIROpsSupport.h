@@ -240,6 +240,42 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
 
 bool isDummyArgument(mlir::Value v);
 
+/// Intent of dummy argument `argIdx` when `callee`'s body declares it.
+/// Empty when the body is missing or the dummy has no intent attribute.
+enum class FortranDummyIntent { In, Out, InOut };
+
+inline std::optional<FortranDummyIntent>
+getFortranDummyIntent(mlir::func::FuncOp callee, unsigned argIdx) {
+  if (!callee || argIdx >= callee.getNumArguments())
+    return std::nullopt;
+  mlir::BlockArgument arg = callee.getArgument(argIdx);
+  std::optional<FortranVariableFlagsEnum> flags;
+  callee.walk([&](fir::DeclareOp decl) {
+    if (decl.getMemref() != arg)
+      return mlir::WalkResult::advance();
+    if (auto attrs = decl.getFortranAttrs()) {
+      flags = *attrs;
+      return mlir::WalkResult::interrupt();
+    }
+    return mlir::WalkResult::advance();
+  });
+  if (!flags)
+    return std::nullopt;
+  const bool isIn =
+      bitEnumContainsAny(*flags, FortranVariableFlagsEnum::intent_in);
+  const bool isInOut =
+      bitEnumContainsAny(*flags, FortranVariableFlagsEnum::intent_inout);
+  const bool isOut =
+      bitEnumContainsAny(*flags, FortranVariableFlagsEnum::intent_out);
+  if (isInOut || (isIn && isOut))
+    return FortranDummyIntent::InOut;
+  if (isOut)
+    return FortranDummyIntent::Out;
+  if (isIn)
+    return FortranDummyIntent::In;
+  return std::nullopt;
+}
+
 template <fir::FortranProcedureFlagsEnum Flag>
 inline bool hasProcedureAttr(fir::FortranProcedureFlagsEnumAttr flags) {
   return flags && bitEnumContainsAny(flags.getValue(), Flag);
