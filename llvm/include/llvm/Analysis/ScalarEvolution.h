@@ -491,7 +491,7 @@ public:
 /// have more than X iterations.
 class LLVM_ABI SCEVWrapPredicate final : public SCEVPredicate {
 public:
-  /// Similar to SCEV::NoWrapFlags, but with slightly different semantics
+  /// Similar to SCEVFlags, but with slightly different semantics
   /// for FlagNUSW. The increment is considered to be signed, and a + b
   /// (where b is the increment) is considered to wrap if:
   ///    zext(a + b) != zext(a) + sext(b)
@@ -642,7 +642,7 @@ public:
     ProperlyDominatesBlock ///< The SCEV properly dominates the block.
   };
 
-  /// Convenient NoWrapFlags manipulation. TODO: Replace with & operator of
+  /// Convenient SCEVFlags manipulation. TODO: Replace with & operator of
   /// enum class.
   [[nodiscard]] static SCEVFlags maskFlags(SCEVFlags Flags, SCEVFlags Mask) {
     return Flags & Mask;

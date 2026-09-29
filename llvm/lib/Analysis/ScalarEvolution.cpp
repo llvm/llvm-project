@@ -4114,7 +4114,7 @@ static bool scevUnconditionallyPropagatesPoisonFromOperands(SCEVTypes Kind) {
 namespace {
 // The only way poison may be introduced in a SCEV expression is from a
 // poison SCEVUnknown (ConstantExprs are also represented as SCEVUnknown,
-// not SCEVConstant). Notably, SCEFlags on SCEV nodes can *not*
+// not SCEVConstant). Notably, SCEVFlags on SCEV nodes can *not*
 // introduce poison -- they encode guaranteed, non-speculated knowledge.
 //
 // Additionally, all SCEV nodes propagate poison from inputs to outputs,
@@ -13896,7 +13896,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::howManyGreaterThans(
 
   // Avoid proven overflow cases: this will ensure that the backedge taken count
   // will not generate any unsigned overflow. Relaxed no-overflow conditions
-  // exploit NoWrapFlags, allowing to optimize in presence of undefined
+  // exploit no-wrap flags, allowing to optimize in presence of undefined
   // behaviors like the case of C language.
   bool MayAddOverflow = false;
   const SCEV *Start = IV->getStart();
