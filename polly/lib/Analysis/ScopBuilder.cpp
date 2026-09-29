@@ -980,7 +980,7 @@ bool ScopBuilder::buildDomainsWithBranchConstraints(
       isl::set CondSet = isl::manage(ConditionSets[u]);
       BasicBlock *SuccBB = getRegionNodeSuccessor(RN, TI, u);
 
-      // Skip blocks outside the region.
+      blocks outside the region.
       if (!scop->contains(SuccBB))
         continue;
 
@@ -1473,7 +1473,8 @@ void ScopBuilder::addUserAssumptions(
     auto *TI = InScop ? CI->getParent()->getTerminator() : nullptr;
     BasicBlock *BB = InScop ? CI->getParent() : R.getEntry();
 
-    // Skip assumptions in blocks with no computed domain (e.g. unreachable blocks).
+    // Skip assumptions in blocks with no computed domain (e.g. unreachable
+    // blocks).
     if (!InvalidDomainMap.count(BB))
       continue;
 
