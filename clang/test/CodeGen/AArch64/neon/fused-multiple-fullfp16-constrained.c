@@ -16,7 +16,7 @@
 // LLVM-LABEL: @test_vfma_f16(
 // CIR-LABEL: @vfma_f16(
 float16x4_t test_vfma_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
-// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM: [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
@@ -36,7 +36,7 @@ float16x4_t test_vfma_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
 // LLVM-LABEL: @test_vfmaq_f16(
 // CIR-LABEL: @vfmaq_f16(
 float16x8_t test_vfmaq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
-// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM: [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
@@ -57,7 +57,7 @@ float16x8_t test_vfmaq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 float16x4_t test_vfma_lane_f16(float16x4_t a, float16x4_t b,
                                 float16x4_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !cir.f16>
-// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.vector<4 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.vector<4 x !cir.f16> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM: [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
@@ -79,7 +79,7 @@ float16x4_t test_vfma_lane_f16(float16x4_t a, float16x4_t b,
 float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b,
                                  float16x4_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16>) [#cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i, #cir.int<3> : !s32i] : !cir.vector<8 x !cir.f16>
-// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.vector<8 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.vector<8 x !cir.f16> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM: [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
@@ -101,7 +101,7 @@ float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b,
 float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b,
                                  float16x8_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>) [#cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i] : !cir.vector<4 x !cir.f16>
-// CIR: cir.fma [[LANE]], %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.fma [[LANE]], %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM: [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
@@ -123,7 +123,7 @@ float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b,
 float16x8_t test_vfmaq_laneq_f16(float16x8_t a, float16x8_t b,
                                   float16x8_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>) [#cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !cir.f16>
-// CIR: cir.fma [[LANE]], %{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.fma [[LANE]], %{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]], <8 x half> {{.*}} [[B:%.*]], <8 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM: [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
@@ -145,7 +145,7 @@ float16x8_t test_vfmaq_laneq_f16(float16x8_t a, float16x8_t b,
 float16_t test_vfmah_lane_f16(float16_t a, float16_t b, float16x4_t c) {
 // CIR: [[INDEX:%.*]] = cir.const #cir.int<3> : !u64i
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}{{\[}}[[INDEX]] : !u64i] : !cir.vector<4 x !cir.f16>
-// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.f16 {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.f16 fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM: [[LANE:%.*]] = extractelement <4 x half> [[C]], i{{32|64}} 3

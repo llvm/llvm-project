@@ -9,7 +9,7 @@
 // LLVM-LABEL: @test_vfma_f64(
 // CIR-LABEL: @vfma_f64(
 float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
-// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<1 x !cir.double> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<1 x !cir.double> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: <1 x double> {{.*}} [[A:%.*]], <1 x double> {{.*}} [[B:%.*]], <1 x double> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM: [[A_I:%.*]] = bitcast <1 x double> [[A]] to i64
@@ -34,7 +34,7 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b,
                                  float64x2_t v) {
 // CIR: [[INDEX:%.*]] = cir.const #cir.int<0> : !u64i
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}{{\[}}[[INDEX]] : !u64i] : !cir.vector<2 x !cir.double>
-// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.double {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.double fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: <1 x double> {{.*}} [[A:%.*]], <1 x double> {{.*}} [[B:%.*]], <2 x double> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM: [[A_I:%.*]] = bitcast <1 x double> [[A]] to i64
@@ -59,7 +59,7 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b,
 float64x2_t test_vfmaq_laneq_f64(float64x2_t a, float64x2_t b,
                                   float64x2_t v) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<2 x !cir.double>) [#cir.int<1> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !cir.double>
-// CIR: cir.fma [[LANE]], %{{.*}}, %{{.*}} : !cir.vector<2 x !cir.double> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.fma [[LANE]], %{{.*}}, %{{.*}} : !cir.vector<2 x !cir.double> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: <2 x double> {{.*}} [[A:%.*]], <2 x double> {{.*}} [[B:%.*]], <2 x double> {{.*}} [[V:%.*]]) {{.*}} {
 // LLVM: [[A_I:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
@@ -81,7 +81,7 @@ float64x2_t test_vfmaq_laneq_f64(float64x2_t a, float64x2_t b,
 float32_t test_vfmas_lane_f32(float32_t a, float32_t b, float32x2_t c) {
 // CIR: [[INDEX:%.*]] = cir.const #cir.int<1> : !u64i
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}{{\[}}[[INDEX]] : !u64i] : !cir.vector<2 x !cir.float>
-// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.fma %{{.*}}, [[LANE]], %{{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: float {{.*}} [[A:%.*]], float {{.*}} [[B:%.*]], <2 x float> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM: [[LANE:%.*]] = extractelement <2 x float> [[C]], i{{32|64}} 1

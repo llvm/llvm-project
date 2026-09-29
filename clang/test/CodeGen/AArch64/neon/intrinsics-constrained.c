@@ -16,7 +16,7 @@
 // LLVM-LABEL: @test_vsqrt_f16(
 // CIR-LABEL: @vsqrt_f16(
 float16x4_t test_vsqrt_f16(float16x4_t a) {
-// CIR: cir.sqrt %{{.*}} : !cir.vector<4 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.sqrt %{{.*}} : !cir.vector<4 x !cir.f16> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: <4 x half> {{.*}} [[A:%.*]]) {{.*}} {
 // LLVM: [[A_I:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
@@ -30,7 +30,7 @@ float16x4_t test_vsqrt_f16(float16x4_t a) {
 // LLVM-LABEL: @test_vsqrtq_f16(
 // CIR-LABEL: @vsqrtq_f16(
 float16x8_t test_vsqrtq_f16(float16x8_t a) {
-// CIR: cir.sqrt %{{.*}} : !cir.vector<8 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.sqrt %{{.*}} : !cir.vector<8 x !cir.f16> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: <8 x half> {{.*}} [[A:%.*]]) {{.*}} {
 // LLVM: [[A_I:%.*]] = bitcast <8 x half> [[A]] to <8 x i16>
@@ -44,7 +44,7 @@ float16x8_t test_vsqrtq_f16(float16x8_t a) {
 // LLVM-LABEL: @test_vsqrtq_f64(
 // CIR-LABEL: @vsqrtq_f64(
 float64x2_t test_vsqrtq_f64(float64x2_t a) {
-// CIR: cir.sqrt %{{.*}} : !cir.vector<2 x !cir.double> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.sqrt %{{.*}} : !cir.vector<2 x !cir.double> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: <2 x double> {{.*}} [[A:%.*]]) {{.*}} {
 // LLVM: [[A_I:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>

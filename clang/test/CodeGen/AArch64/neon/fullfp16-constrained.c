@@ -14,7 +14,7 @@
 
 // ALL-LABEL: @test_vsqrth_f16(
 float16_t test_vsqrth_f16(float16_t a) {
-// CIR: cir.sqrt %{{.*}} : !cir.f16 {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.sqrt %{{.*}} : !cir.f16 fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: half {{.*}} [[A:%.*]]) {{.*}} {
 // LLVM: [[SQRT:%.*]] = call half @llvm.experimental.constrained.sqrt.f16(half [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict")
@@ -24,7 +24,7 @@ float16_t test_vsqrth_f16(float16_t a) {
 
 // ALL-LABEL: @test_vfmah_f16(
 float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
-// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.f16 {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.f16 fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 
 // LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]], half {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM: [[FMA:%.*]] = call half @llvm.experimental.constrained.fma.f16(half [[B]], half [[C]], half [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict")
