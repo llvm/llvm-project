@@ -745,6 +745,7 @@ bool MIParser::parseBasicBlockDefinition(
   bool IsEHFuncletEntry = false;
   bool IsEHScopeEntry = false;
   bool IsCleanupFuncletEntry = false;
+  bool IsEHContTarget = false;
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
   unsigned MaxBytesForAlignment = 0;
@@ -781,6 +782,10 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::kw_cleanup_funclet_entry:
         IsCleanupFuncletEntry = true;
+        lex();
+        break;
+      case MIToken::kw_ehcont_target:
+        IsEHContTarget = true;
         lex();
         break;
       case MIToken::kw_align:
@@ -848,6 +853,7 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
   MBB->setIsEHScopeEntry(IsEHScopeEntry);
   MBB->setIsCleanupFuncletEntry(IsCleanupFuncletEntry);
+  MBB->setIsEHContTarget(IsEHContTarget);
   if (SectionID) {
     MBB->setSectionID(*SectionID);
     MF.setBBSectionsType(BasicBlockSection::List);
