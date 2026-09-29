@@ -456,6 +456,10 @@ static constexpr IntrinsicHandler cudaHandlers[]{
          &CI::genMatchAnySync),
      {{{"mask", asValue}, {"value", asValue}}},
      /*isElemental=*/false},
+    {"on_device",
+     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(&CI::genOnDevice),
+     {},
+     /*isElemental=*/false},
     {"syncthreads",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
          &CI::genSyncThreads),
@@ -642,33 +646,16 @@ static constexpr IntrinsicHandler cudaHandlers[]{
 };
 static_assert(fir::isSorted(cudaHandlers) && "map must be sorted");
 
-// BIND(C) CUDA Fortran procedures. Kept separate because the other handlers
-// are not BIND(C) and must not match a user procedure with the same name.
-static constexpr IntrinsicHandler cudaBindcHandlers[]{
-    {"on_device",
-     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(&CI::genOnDevice),
-     {},
-     /*isElemental=*/false},
-};
-static_assert(fir::isSorted(cudaBindcHandlers) && "map must be sorted");
-
-static const IntrinsicHandler *
-lookupCUDAHandler(llvm::ArrayRef<IntrinsicHandler> handlers,
-                  llvm::StringRef name) {
+const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
+                                                 bool isBindcCall) {
+  if (isBindcCall)
+    return nullptr;
   auto compare = [](const IntrinsicHandler &cudaHandler, llvm::StringRef name) {
     return name.compare(cudaHandler.name) > 0;
   };
-  auto result = llvm::lower_bound(handlers, name, compare);
-  return result != handlers.end() && result->name == name ? &*result : nullptr;
-}
-
-const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
-                                                 bool isBindcCall) {
-  // The tables have different lengths, so they cannot share a ternary: that
-  // would decay both arrays to a pointer.
-  if (isBindcCall)
-    return lookupCUDAHandler(cudaBindcHandlers, name);
-  return lookupCUDAHandler(cudaHandlers, name);
+  auto result = llvm::lower_bound(cudaHandlers, name, compare);
+  return result != std::end(cudaHandlers) && result->name == name ? result
+                                                                  : nullptr;
 }
 
 mlir::Value
