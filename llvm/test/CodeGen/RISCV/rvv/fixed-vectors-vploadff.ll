@@ -594,7 +594,6 @@ define i32 @vploadff_new_evl_knownbits(ptr %p, i32 zeroext %evl) {
 ; CHECK-NEXT:    ret
   %load = call {<8 x i8>, i32} @llvm.vp.load.ff(ptr %p, <8 x i1> splat (i1 true), i32 %evl)
   %new.evl = extractvalue {<8 x i8>, i32} %load, 1
-  %shl = shl i32 %new.evl, 24
-  %lshr = lshr i32 %shl, 24
-  ret i32 %lshr
+  %ret = and i32 %new.evl, 31
+  ret i32 %ret
 }
