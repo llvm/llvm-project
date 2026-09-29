@@ -158,7 +158,7 @@ constexpr bool test() {
     assert(i == v.end());
   }
 #if TEST_STD_VER >= 23
-  { 
+  {
     std::ranges::stride_view r(SplitViewInput("a b c", ' '), 2);
 
     auto i = r.begin();
