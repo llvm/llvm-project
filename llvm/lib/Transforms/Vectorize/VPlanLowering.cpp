@@ -758,13 +758,13 @@ void VPlanTransforms::materializeConstantVectorTripCount(
   if (TC->user_empty())
     return;
 
-  // Skip cases for which the trip count may be non-trivial to materialize.
+  // Skip cases for which the trip count may be non-trivial to materikalize.
   // I.e., when a scalar tail is absent - due to tail folding, or when a scalar
   // tail is required.
   if (Plan.hasTailFolded() || !Plan.hasScalarTail() ||
       Plan.getMiddleBlock()->getSingleSuccessor() ==
           Plan.getScalarPreheader() ||
-      !isa<VPIRValue>(TC))
+      !isa<VPIRValue>(TC) || Plan.getCheckFirstExitBlock())
     return;
 
   // Materialize vector trip counts for constants early if it can simply

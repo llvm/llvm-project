@@ -53,6 +53,8 @@ struct VFRange;
 extern cl::opt<bool> EnableVPlanNativePath;
 extern cl::opt<unsigned> ForceTargetInstructionCost;
 extern cl::opt<bool> PreferInLoopReductions;
+extern cl::opt<bool> EnableCheckFirstVectorization;
+extern cl::opt<bool> EnableEarlyExitVectorizationWithSideEffects;
 
 /// \return An upper bound for vscale based on TTI or the vscale_range
 /// attribute.

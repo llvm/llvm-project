@@ -388,6 +388,10 @@ struct VPlanTransforms {
   /// Disconnect countable early exits from the loop.
   LLVM_ABI_FOR_TEST static void handleCountableEarlyExits(VPlan &Plan);
 
+  /// Connect vector.check.exit to the scalar preheader and resume the scalar
+  /// induction at the chunk that exited. See the definition for an IR example.
+  static void wireCheckFirstExitToScalar(VPlan &Plan);
+
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)
   /// to
