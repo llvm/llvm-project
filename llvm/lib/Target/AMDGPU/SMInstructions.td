@@ -829,6 +829,11 @@ def S_DCACHE_INV_VOL_ci : SMRD_Real_ci <0x1d, S_DCACHE_INV_VOL>;
 //===----------------------------------------------------------------------===//
 
 class SMRDLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{ return isUniformLoad(N);}]> {
+  // Scalar loads can only access memory through a 64-bit address, so never
+  // consider loads from LDS, GDS or scratch.
+  let IsLoad = 1;
+  let AddressSpaces = LoadAddress_flat.AddrSpaces;
+
   let GISelPredicateCode = [{
     if (!MI.hasOneMemOperand())
       return false;
