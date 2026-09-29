@@ -104,4 +104,6 @@ void builtin_test_unsupported(double a_double, float a_float,
   a_v32h  = __builtin_amdgcn_cvt_scale_pk32_f16_fp6(a_v6u, a, 0); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f16_fp6' needs target feature fp6bf6-to-f16bf16f32-cvt-scale-insts,wavefrontsize32}}
   a_v32f  = __builtin_amdgcn_cvt_scale_pk32_f32_bf6(a_v6u, a, 0); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f32_bf6' needs target feature fp6bf6-to-f16bf16f32-cvt-scale-insts,wavefrontsize32}}
   a_v32f  = __builtin_amdgcn_cvt_scale_pk32_f32_fp6(a_v6u, a, 0); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f32_fp6' needs target feature fp6bf6-to-f16bf16f32-cvt-scale-insts,wavefrontsize32}}
+
+  a = __builtin_amdgcn_wave_match_b32(a, b); // expected-error {{'__builtin_amdgcn_wave_match_b32' needs target feature wave-match-insts}}
 }
