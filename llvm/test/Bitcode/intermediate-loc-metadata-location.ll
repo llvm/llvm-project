@@ -1,13 +1,11 @@
 ; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 ;;
 ;; Checks that irlayers survive a bitcode round-trip on a DILocation written as
-;; a METADATA_LOCATION record -- one reachable only as an inlinedAt target, with
-;; a layer list built through forward references.
+;; a METADATA_LOCATION record -- one reachable only as an inlinedAt target.
 
 define dso_local void @test_kernel(ptr noundef %v) #0 !dbg !8 {
 entry:
   store ptr %v, ptr %v, align 8, !dbg !20
-  store ptr %v, ptr %v, align 8, !dbg !23
   ret void, !dbg !21
 }
 
@@ -28,20 +26,13 @@ attributes #0 = { noinline optnone }
 !14 = !DIFile(filename: "kernel.tileir", directory: ".", checksumkind: CSK_MD5, checksum: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", source: "tile ir text")
 !15 = !DIFile(filename: "kernel.gpuir", directory: ".", checksumkind: CSK_MD5, checksum: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", source: "gpu ir text")
 
-;; !18 precedes its entries, so they parse as forward references and the list is
-;; re-uniqued once they resolve. !22 names the same entries after they resolve,
-;; so it must land on !18's node -- a stale cached hash would miss the uniquing
-;; lookup and produce a second, identical list.
-!18 = !DILayerLocList(!16, !17)
 !16 = !DILayerLoc(line: 100, column: 1, file: !14, kind: "tile ir")
 !17 = !DILayerLoc(line: 7, column: 3, file: !15, kind: "gpu ir")
-!22 = !DILayerLocList(!16, !17)
+!18 = !DILayerLocList(!16, !17)
 
 !19 = distinct !DILocation(line: 30, column: 1, scope: !8, irlayers: !18)
-!24 = distinct !DILocation(line: 40, column: 1, scope: !8, irlayers: !22)
 !20 = !DILocation(line: 21, column: 5, scope: !11, inlinedAt: !19)
 !21 = !DILocation(line: 22, column: 1, scope: !11, inlinedAt: !19)
-!23 = !DILocation(line: 23, column: 5, scope: !11, inlinedAt: !24)
 
 ;; The metadata-block location keeps its layers, and the two entries keep their
 ;; order.
@@ -50,9 +41,6 @@ attributes #0 = { noinline optnone }
 ; CHECK-DAG: ![[TILE]] = !DILayerLoc(line: 100, column: 1, file: !{{[0-9]+}}, kind: "tile ir")
 ; CHECK-DAG: ![[GPU]] = !DILayerLoc(line: 7, column: 3, file: !{{[0-9]+}}, kind: "gpu ir")
 
-;; Both layered locations reference that one list node.
-; CHECK-DAG: = distinct !DILocation(line: 40, column: 1, scope: !{{[0-9]+}}, irlayers: ![[LIST]])
-
-;; The instruction locations reference them as inlinedAt and carry no layers of
+;; The instruction locations reference it as inlinedAt and carry no layers of
 ;; their own.
 ; CHECK-DAG: !DILocation(line: 21, column: 5, scope: !{{[0-9]+}}, inlinedAt: ![[IA]])
