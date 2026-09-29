@@ -6,12 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <dlfcn.h>
-
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_offload.h"
 #include "sanitizer_common/sanitizer_platform.h"
@@ -20,10 +17,6 @@
 
 #if !SANITIZER_LINUX
 #error "Offload UBSan reporting is supported on Linux only"
-#endif
-
-#if SANITIZER_GLIBC
-#pragma weak dlvsym
 #endif
 
 using namespace __sanitizer;
@@ -66,73 +59,6 @@ void Initialize() {
   UBSAN_HSA_ENTER(name);                                                       \
   if (UNLIKELY(!Offload::Get().Ready()))                                       \
     return REAL(name)(__VA_ARGS__);
-
-// PPC cannot transparently tail-call an indirect dlsym target for RTLD_NEXT.
-#if !SANITIZER_PPC
-#define UBSAN_HSA_WRAPS(X)                                                     \
-  X(hsa_init)                                                                  \
-  X(hsa_shut_down)                                                             \
-  X(hsa_executable_freeze)                                                     \
-  X(hsa_executable_destroy)
-
-static void *WrapperFor(const char *Name) {
-#define UBSAN_HSA_WRAP(Fn)                                                     \
-  if (!internal_strcmp(Name, #Fn))                                             \
-    return reinterpret_cast<void *>(Fn);
-  UBSAN_HSA_WRAPS(UBSAN_HSA_WRAP)
-#undef UBSAN_HSA_WRAP
-  return nullptr;
-}
-
-static bool FromHsa(void *P) {
-  Dl_info Info = {};
-  if (!dladdr(P, &Info) || !Info.dli_fname)
-    return false;
-  return internal_strstr(Info.dli_fname, SANITIZER_HSA_LIBRARY);
-}
-
-static void BindRealDlsym();
-
-// OpenMP and sometimes HIP access HSA through 'dlsym' so we need to intercept
-// it here if we want to reliably override its definitions.
-INTERCEPTOR(void *, dlsym, void *Handle, const char *Name) {
-  Initialize();
-  BindRealDlsym();
-
-  // This interceptor interferes with the order of 'RTLD_NEXT'. Force a tail
-  // call to bypass this process in the stack.
-  if (Handle == RTLD_NEXT) [[clang::musttail]]
-    return REAL(dlsym)(Handle, Name);
-
-  void *Sym = REAL(dlsym)(Handle, Name);
-  if (!Sym || !Name)
-    return Sym;
-
-  void *Wrapper = WrapperFor(Name);
-  if (!Wrapper || !FromHsa(Sym))
-    return Sym;
-  return Wrapper;
-}
-
-static void BindRealDlsym() {
-  if (LIKELY(REAL(dlsym)))
-    return;
-#if SANITIZER_GLIBC
-  static const char *kVers[] = {"GLIBC_2.34", "GLIBC_2.17", "GLIBC_2.2.5",
-                                "GLIBC_2.0"};
-  if (dlvsym) {
-    for (const char *Ver : kVers) {
-      if (void *P = dlvsym(RTLD_NEXT, "dlsym", Ver)) {
-        REAL(dlsym) = reinterpret_cast<decltype(REAL(dlsym))>(P);
-        return;
-      }
-    }
-  }
-#endif
-  Report("ERROR: %s: cannot bind dlsym\n", SanitizerToolName);
-  Die();
-}
-#endif
 
 INTERCEPTOR(hsa_status_t, hsa_init, void) {
   UBSAN_HSA_ENTER(hsa_init);
