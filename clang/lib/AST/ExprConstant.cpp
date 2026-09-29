@@ -33,6 +33,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ByteCode/Context.h"
+#include "ByteCode/EvalSettings.h"
 #include "ByteCode/Frame.h"
 #include "ByteCode/State.h"
 #include "ExprConstShared.h"
@@ -22006,15 +22007,17 @@ bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx,
          "Expression evaluator can't be called on a dependent expression.");
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsLValue");
+
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvaluationMode::ConstantFold, Result);
+    Settings.InConstantContext = InConstantContext;
+    return Ctx.getInterpContext().evaluate(Settings, this, Result.Val);
+  }
+
   EvalInfo Info(Ctx, Result, EvaluationMode::ConstantFold);
   Info.InConstantContext = InConstantContext;
   LValue LV;
   CheckedTemporaries CheckedTemps;
-
-  if (Info.EnableNewConstInterp) {
-    return Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val,
-                                                ConstantExprKind::Normal);
-  }
 
   if (!EvaluateLValue(this, LV, Info) || !Info.discardCleanups() ||
       Result.HasSideEffects ||
@@ -22061,12 +22064,16 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     return true;
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsConstantExpr");
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Result,
+                                  Kind);
+    Settings.InConstantContext = true;
+    return Ctx.getInterpContext().evaluate(Settings, this, Result.Val);
+  }
+
   EvaluationMode EM = EvaluationMode::ConstantExpression;
   EvalInfo Info(Ctx, Result, EM);
   Info.InConstantContext = true;
-
-  if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val, Kind);
 
   // The type of the object we're initializing is 'const T' for a class NTTP.
   QualType T = getType();
@@ -22127,21 +22134,25 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
     return Name;
   });
 
-  EvalInfo Info(Ctx, EStatus,
-                (IsConstantInitialization &&
-                 (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
-                    ? EvaluationMode::ConstantExpression
-                    : EvaluationMode::ConstantFold);
-  Info.setEvaluatingDecl(VD, EStatus.Val);
-  Info.InConstantContext = IsConstantInitialization;
+  EvaluationMode EvalMode =
+      (IsConstantInitialization &&
+       (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
+          ? EvaluationMode::ConstantExpression
+          : EvaluationMode::ConstantFold;
+
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvalMode, EStatus);
+    Settings.InConstantContext = IsConstantInitialization;
+    return Ctx.getInterpContext().evaluateAsInitializer(Settings, VD, this,
+                                                        EStatus.Val);
+  }
 
   SourceLocation DeclLoc = VD->getLocation();
   QualType DeclTy = VD->getType();
 
-  if (Info.EnableNewConstInterp) {
-    auto &InterpCtx = Ctx.getInterpContext();
-    return InterpCtx.evaluateAsInitializer(Info, VD, this, EStatus.Val);
-  }
+  EvalInfo Info(Ctx, EStatus, EvalMode);
+  Info.setEvaluatingDecl(VD, EStatus.Val);
+  Info.InConstantContext = IsConstantInitialization;
 
   LValue LVal;
   LVal.set(VD);
@@ -22207,11 +22218,12 @@ bool VarDecl::evaluateDestruction(
     return false;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
-    EvalInfo Info(Ctx, EStatus,
-                  IsConstantDestruction ? EvaluationMode::ConstantExpression
-                                        : EvaluationMode::ConstantFold);
-    Info.InConstantContext = IsConstantDestruction;
-    if (!Ctx.getInterpContext().evaluateDestruction(Info, this,
+    interp::EvalSettings Settings(IsConstantDestruction
+                                      ? EvaluationMode::ConstantExpression
+                                      : EvaluationMode::ConstantFold,
+                                  EStatus);
+    Settings.InConstantContext = IsConstantDestruction;
+    if (!Ctx.getInterpContext().evaluateDestruction(Settings, this,
                                                     std::move(DestroyedValue)))
       return false;
     ensureEvaluatedStmt()->HasConstantDestruction = true;
@@ -22910,18 +22922,22 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
   });
 
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpressionUnevaluated);
-  Info.InConstantContext = true;
 
-  if (Info.EnableNewConstInterp) {
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvaluationMode::ConstantExpressionUnevaluated,
+                                  Status);
+    Settings.InConstantContext = true;
     if (std::optional<bool> BoolResult =
-            Info.Ctx.getInterpContext().evaluateWithSubstitution(
-                Info, Callee, Args, This, this)) {
+            Ctx.getInterpContext().evaluateWithSubstitution(Settings, Callee,
+                                                            Args, This, this)) {
       Value = APValue(APSInt(APInt(1, static_cast<uint64_t>(*BoolResult))));
       return true;
     }
     return false;
   }
+
+  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpressionUnevaluated);
+  Info.InConstantContext = true;
 
   LValue ThisVal;
   const LValue *ThisPtr = nullptr;
@@ -22993,19 +23009,22 @@ bool Expr::isPotentialConstantExpr(const FunctionDecl *FD,
     return Name;
   });
 
+  const ASTContext &Ctx = FD->getASTContext();
   Expr::EvalStatus Status;
   Status.Diag = &Diags;
 
-  EvalInfo Info(FD->getASTContext(), Status,
-                EvaluationMode::ConstantExpression);
-  Info.InConstantContext = true;
-  Info.CheckingPotentialConstantExpression = true;
-
   // The constexpr VM attempts to compile all methods to bytecode here.
-  if (Info.EnableNewConstInterp) {
-    Info.Ctx.getInterpContext().isPotentialConstantExpr(Info, FD);
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Status);
+    Settings.InConstantContext = true;
+    Settings.CheckingPotentialConstantExpression = true;
+    Ctx.getInterpContext().isPotentialConstantExpr(Settings, FD);
     return Diags.empty();
   }
+
+  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
+  Info.InConstantContext = true;
+  Info.CheckingPotentialConstantExpression = true;
 
   const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
   const CXXRecordDecl *RD = MD ? MD->getParent()->getCanonicalDecl() : nullptr;
@@ -23043,18 +23062,22 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
   assert(!E->isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
+  const ASTContext &Ctx = FD->getASTContext();
   Expr::EvalStatus Status;
   Status.Diag = &Diags;
 
-  EvalInfo Info(FD->getASTContext(), Status,
-                EvaluationMode::ConstantExpressionUnevaluated);
-  Info.InConstantContext = true;
-  Info.CheckingPotentialConstantExpression = true;
-
-  if (Info.EnableNewConstInterp) {
-    Info.Ctx.getInterpContext().isPotentialConstantExprUnevaluated(Info, E, FD);
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvaluationMode::ConstantExpressionUnevaluated,
+                                  Status);
+    Settings.InConstantContext = true;
+    Settings.CheckingPotentialConstantExpression = true;
+    Ctx.getInterpContext().isPotentialConstantExprUnevaluated(Settings, E, FD);
     return Diags.empty();
   }
+
+  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpressionUnevaluated);
+  Info.InConstantContext = true;
+  Info.CheckingPotentialConstantExpression = true;
 
   // Fabricate a call stack frame to give the arguments a plausible cover story.
   CallStackFrame Frame(Info, SourceLocation(), FD, /*This=*/nullptr,
@@ -23071,12 +23094,13 @@ std::optional<uint64_t> Expr::tryEvaluateObjectSize(const ASTContext &Ctx,
     return std::nullopt;
 
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
-  if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(
-        Info, this, Type,
-        /*IsDynamic=*/false);
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvaluationMode::ConstantFold, Status);
+    return Ctx.getInterpContext().tryEvaluateObjectSize(Settings, this, Type,
+                                                        /*IsDynamic=*/false);
+  }
 
+  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
   return tryEvaluateBuiltinObjectSize(this, Type, Info);
 }
 
@@ -23127,15 +23151,16 @@ EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
 
 std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
   std::string StringResult;
 
-  if (Info.EnableNewConstInterp) {
-    if (!Info.Ctx.getInterpContext().evaluateString(Info, this, StringResult))
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvaluationMode::ConstantFold, Status);
+    if (!Ctx.getInterpContext().evaluateString(Settings, this, StringResult))
       return std::nullopt;
     return StringResult;
   }
 
+  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
   if (EvaluateBuiltinStrLen(this, Info, &StringResult))
     return StringResult;
   return std::nullopt;
@@ -23147,12 +23172,15 @@ static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
                                           const Expr *PtrExpression,
                                           ASTContext &Ctx,
                                           Expr::EvalResult &Status) {
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Status);
+    Settings.InConstantContext = true;
+    return Ctx.getInterpContext().evaluateCharRange(Settings, SizeExpression,
+                                                    PtrExpression, Result);
+  }
+
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpression);
   Info.InConstantContext = true;
-
-  if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().evaluateCharRange(Info, SizeExpression,
-                                                         PtrExpression, Result);
 
   LValue String;
   FullExpressionRAII Scope(Info);
@@ -23215,10 +23243,12 @@ bool Expr::EvaluateCharRangeAsString(APValue &Result,
 
 std::optional<uint64_t> Expr::tryEvaluateStrLen(const ASTContext &Ctx) const {
   Expr::EvalStatus Status;
-  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
 
-  if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().evaluateStrlen(Info, this);
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvaluationMode::ConstantFold, Status);
+    return Ctx.getInterpContext().evaluateStrlen(Settings, this);
+  }
+  EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
   return EvaluateBuiltinStrLen(this, Info);
 }
 
