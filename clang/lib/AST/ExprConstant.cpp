@@ -21967,6 +21967,28 @@ static bool EvaluateAsFixedPoint(const Expr *E, Expr::EvalResult &ExprResult,
   return true;
 }
 
+static bool doEvaluateAsRValue(const Expr *E, Expr::EvalResult &Result,
+                               const ASTContext &Ctx, SemaProxy *SProxy,
+                               bool InConstantContext) {
+  assert(!E->isValueDependent() &&
+         "Expression evaluator can't be called on a dependent expression.");
+
+  bool IsConst;
+  if (FastEvaluateAsRValue(E, Result.Val, Ctx, IsConst))
+    return IsConst;
+
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, Result,
+                                  SProxy);
+    Settings.InConstantContext = InConstantContext;
+    return Ctx.getInterpContext().evaluateAsRValue(Settings, E, Result.Val);
+  }
+
+  EvalInfo Info(Ctx, SProxy, Result, EvaluationMode::IgnoreSideEffects);
+  Info.InConstantContext = InConstantContext;
+  return ::EvaluateAsRValue(E, Result, Ctx, Info);
+}
+
 /// EvaluateAsRValue - Return true if this is a constant which we can fold using
 /// any crazy technique (that has nothing to do with language standards) that
 /// we want to.  If this function returns true, it returns the folded constant
@@ -21974,48 +21996,17 @@ static bool EvaluateAsFixedPoint(const Expr *E, Expr::EvalResult &ExprResult,
 /// will be applied to the result.
 bool Expr::EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx,
                             bool InConstantContext) const {
-  assert(!isValueDependent() &&
-         "Expression evaluator can't be called on a dependent expression.");
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsRValue");
-
-  bool IsConst;
-  if (FastEvaluateAsRValue(this, Result.Val, Ctx, IsConst))
-    return IsConst;
-
-  if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, Result,
-                                  /*SProxy=*/nullptr);
-    Settings.InConstantContext = InConstantContext;
-    return Ctx.getInterpContext().evaluateAsRValue(Settings, this, Result.Val);
-  }
-
-  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Result,
-                EvaluationMode::IgnoreSideEffects);
-  Info.InConstantContext = InConstantContext;
-  return ::EvaluateAsRValue(this, Result, Ctx, Info);
+  return ::doEvaluateAsRValue(this, Result, Ctx, /*SProxy=*/nullptr,
+                              InConstantContext);
 }
 
 bool Expr::EvaluateAsMandatedConstantRValue(EvalResult &Result,
                                             const ASTContext &Ctx,
                                             SemaProxy &SProxy) const {
-  assert(!isValueDependent() &&
-         "Expression evaluator can't be called on a dependent expression.");
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsMandatedConstantRValue");
-
-  bool IsConst;
-  if (FastEvaluateAsRValue(this, Result.Val, Ctx, IsConst))
-    return IsConst;
-
-  if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, Result,
-                                  &SProxy);
-    Settings.InConstantContext = true;
-    return Ctx.getInterpContext().evaluateAsRValue(Settings, this, Result.Val);
-  }
-
-  EvalInfo Info(Ctx, &SProxy, Result, EvaluationMode::IgnoreSideEffects);
-  Info.InConstantContext = true;
-  return ::EvaluateAsRValue(this, Result, Ctx, Info);
+  return ::doEvaluateAsRValue(this, Result, Ctx, &SProxy,
+                              /*InConstantContext=*/true);
 }
 
 bool Expr::EvaluateAsBooleanCondition(bool &Result, const ASTContext &Ctx,
@@ -22168,9 +22159,25 @@ static bool EvaluateDestruction(const ASTContext &Ctx, SemaProxy *SProxy,
   return true;
 }
 
-static bool EvaluateConstantExpr(Expr::EvalResult &Result,
-                                 const ASTContext &Ctx, EvalInfo &Info,
-                                 const Expr *E, ConstantExprKind Kind) {
+static bool doEvaluateConstantExpr(Expr::EvalResult &Result,
+                                   const ASTContext &Ctx, SemaProxy *SProxy,
+                                   const Expr *E, ConstantExprKind Kind) {
+  assert(!E->isValueDependent() &&
+         "Expression evaluator can't be called on a dependent expression.");
+
+  bool IsConst;
+  if (FastEvaluateAsRValue(E, Result.Val, Ctx, IsConst) &&
+      Result.Val.hasValue())
+    return true;
+
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Result,
+                                  SProxy, Kind);
+    Settings.InConstantContext = true;
+    return Ctx.getInterpContext().evaluate(Settings, E, Result.Val);
+  }
+
+  EvalInfo Info(Ctx, SProxy, Result, EvaluationMode::ConstantExpression);
   Info.InConstantContext = true;
 
   // The type of the object we're initializing is 'const T' for a class NTTP.
@@ -22221,58 +22228,46 @@ static bool EvaluateConstantExpr(Expr::EvalResult &Result,
 
 bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
                                   ConstantExprKind Kind) const {
-  assert(!isValueDependent() &&
-         "Expression evaluator can't be called on a dependent expression.");
-  bool IsConst;
-  if (FastEvaluateAsRValue(this, Result.Val, Ctx, IsConst) &&
-      Result.Val.hasValue())
-    return true;
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsConstantExpr");
-  if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Result,
-                                  /*SProxy=*/nullptr, Kind);
-    Settings.InConstantContext = true;
-    return Ctx.getInterpContext().evaluate(Settings, this, Result.Val);
-  }
-
-  EvaluationMode EM = EvaluationMode::ConstantExpression;
-  EvalInfo Info(Ctx, /*SProxy=*/nullptr, Result, EM);
-
-  return ::EvaluateConstantExpr(Result, Ctx, Info, this, Kind);
+  return ::doEvaluateConstantExpr(Result, Ctx, /*SProxy=*/nullptr, this, Kind);
 }
 
 bool Expr::EvaluateAsMandatedConstantExpr(EvalResult &Result,
                                           const ASTContext &Ctx,
                                           SemaProxy &SProxy,
                                           ConstantExprKind Kind) const {
-  assert(!isValueDependent() &&
-         "Expression evaluator can't be called on a dependent expression.");
-  bool IsConst;
-  if (FastEvaluateAsRValue(this, Result.Val, Ctx, IsConst) &&
-      Result.Val.hasValue())
-    return true;
-
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsMandatedConstantExpr");
-  if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, Result,
-                                  &SProxy, Kind);
-    Settings.InConstantContext = true;
-    return Ctx.getInterpContext().evaluate(Settings, this, Result.Val);
-  }
-
-  EvaluationMode EM = EvaluationMode::ConstantExpression;
-  EvalInfo Info(Ctx, &SProxy, Result, EM);
-
-  return ::EvaluateConstantExpr(Result, Ctx, Info, this, Kind);
+  return ::doEvaluateConstantExpr(Result, Ctx, &SProxy, this, Kind);
 }
 
-static bool EvaluateInitializer(const ASTContext &Ctx, EvalInfo &Info,
-                                const VarDecl *VD, const Expr *E,
-                                Expr::EvalResult &EStatus,
-                                bool IsConstantInitialization) {
+static bool doEvaluateInitializer(const ASTContext &Ctx, SemaProxy *SProxy,
+                                  const VarDecl *VD, const Expr *E,
+                                  Expr::EvalResult &EStatus,
+                                  bool IsConstantInitialization) {
+  assert(!E->isValueDependent() &&
+         "Expression evaluator can't be called on a dependent expression.");
+  assert(VD && "Need a valid VarDecl");
+
+  EvaluationMode EvalMode =
+      (IsConstantInitialization &&
+       (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
+          ? EvaluationMode::ConstantExpression
+          : EvaluationMode::ConstantFold;
+
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    interp::EvalSettings Settings(EvalMode, EStatus, SProxy);
+    Settings.InConstantContext = IsConstantInitialization;
+    return Ctx.getInterpContext().evaluateAsInitializer(Settings, VD, E,
+                                                        EStatus.Val);
+  }
+
   SourceLocation DeclLoc = VD->getLocation();
   QualType DeclTy = VD->getType();
+
+  EvalInfo Info(Ctx, SProxy, EStatus, EvalMode);
+  Info.setEvaluatingDecl(VD, EStatus.Val);
+  Info.InConstantContext = IsConstantInitialization;
 
   LValue LVal;
   LVal.set(VD);
@@ -22309,10 +22304,6 @@ static bool EvaluateInitializer(const ASTContext &Ctx, EvalInfo &Info,
 bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
                                  Expr::EvalResult &EStatus,
                                  bool IsConstantInitialization) const {
-  assert(!isValueDependent() &&
-         "Expression evaluator can't be called on a dependent expression.");
-  assert(VD && "Need a valid VarDecl");
-
   llvm::TimeTraceScope TimeScope("EvaluateAsInitializer", [&] {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
@@ -22320,35 +22311,14 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
     return Name;
   });
 
-  EvaluationMode EvalMode =
-      (IsConstantInitialization &&
-       (Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23))
-          ? EvaluationMode::ConstantExpression
-          : EvaluationMode::ConstantFold;
-
-  if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvalMode, EStatus, /*SProxy=*/nullptr);
-    Settings.InConstantContext = IsConstantInitialization;
-    return Ctx.getInterpContext().evaluateAsInitializer(Settings, VD, this,
-                                                        EStatus.Val);
-  }
-
-  EvalInfo Info(Ctx, /*SProxy=*/nullptr, EStatus, EvalMode);
-  Info.setEvaluatingDecl(VD, EStatus.Val);
-  Info.InConstantContext = IsConstantInitialization;
-
-  return ::EvaluateInitializer(Ctx, Info, VD, this, EStatus,
-                               IsConstantInitialization);
+  return ::doEvaluateInitializer(Ctx, /*SProxy=*/nullptr, VD, this, EStatus,
+                                 IsConstantInitialization);
 }
 
 bool Expr::EvaluateAsMandatedConstantInitializer(EvalResult &EStatus,
                                                  const ASTContext &Ctx,
                                                  SemaProxy &SProxy,
                                                  const VarDecl *VD) const {
-  assert(!isValueDependent() &&
-         "Expression evaluator can't be called on a dependent expression.");
-  assert(VD && "Need a valid VarDecl");
-
   llvm::TimeTraceScope TimeScope("EvaluateAsMandatedConstantInitializer", [&] {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
@@ -22356,25 +22326,13 @@ bool Expr::EvaluateAsMandatedConstantInitializer(EvalResult &EStatus,
     return Name;
   });
 
-  if (Ctx.getLangOpts().EnableNewConstInterp) {
-    interp::EvalSettings Settings(EvaluationMode::ConstantExpression, EStatus,
-                                  &SProxy);
-    Settings.InConstantContext = true;
-    return Ctx.getInterpContext().evaluateAsInitializer(Settings, VD, this,
-                                                        EStatus.Val);
-  }
-
-  EvalInfo Info(Ctx, &SProxy, EStatus, EvaluationMode::ConstantExpression);
-  Info.setEvaluatingDecl(VD, EStatus.Val);
-  Info.InConstantContext = true;
-
-  return ::EvaluateInitializer(Ctx, Info, VD, this, EStatus,
-                               /*IsConstantInitialization=*/true);
+  return ::doEvaluateInitializer(Ctx, &SProxy, VD, this, EStatus,
+                                 /*IsConstantInitialization=*/true);
 }
 
-static bool evaluateDestruction(const VarDecl *VD, SemaProxy *SProxy,
-                                bool IsConstantDestruction,
-                                SmallVectorImpl<PartialDiagnosticAt> &Notes) {
+static bool doEvaluateDestruction(const VarDecl *VD, SemaProxy *SProxy,
+                                  bool IsConstantDestruction,
+                                  SmallVectorImpl<PartialDiagnosticAt> &Notes) {
   ASTContext &Ctx = VD->getASTContext();
 
   // This function is only meaningful for records and arrays of records.
@@ -22428,15 +22386,15 @@ bool VarDecl::evaluateDestruction(
     SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
   bool IsConstantDestruction = hasConstantInitialization();
 
-  return ::evaluateDestruction(this, /*SProxy=*/nullptr, IsConstantDestruction,
-                               Notes);
+  return ::doEvaluateDestruction(this, /*SProxy=*/nullptr,
+                                 IsConstantDestruction, Notes);
 }
 
 bool VarDecl::evaluateConstantDestruction(
     SmallVectorImpl<PartialDiagnosticAt> &Notes, SemaProxy &SProxy) const {
   bool IsConstantDestruction = hasConstantInitialization();
 
-  return ::evaluateDestruction(this, &SProxy, IsConstantDestruction, Notes);
+  return ::doEvaluateDestruction(this, &SProxy, IsConstantDestruction, Notes);
 }
 
 /// isEvaluatable - Call EvaluateAsRValue to see if this expression can be
