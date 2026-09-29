@@ -2469,6 +2469,35 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
   return Folded;
 }
 
+/// Fold Res, Overflow = (umul.with.overflow x K); (and !Overflow (ult Res C))
+/// --> (ult x ceil(C / K)). If there's no overflow and x * K < C, then
+/// x < ceil(C / K).
+static Value *foldAndUnsignedUMulNoOverflowICmp(BinaryOperator &I,
+                                                InstCombiner::BuilderTy &Builder,
+                                                const DataLayout &DL) {
+  Value *WOV, *X;
+  const APInt *K, *C;
+  // Match: and (xor (extractvalue 1 WOV), true), (icmp ult (extractvalue 0 WOV), C)
+  // where WOV = umul.with.overflow(X, K)
+  if (match(&I,
+            m_c_And(m_Not(m_ExtractValue<1>(
+                        m_Value(WOV, m_Intrinsic<Intrinsic::umul_with_overflow>(
+                                         m_Value(X), m_APInt(K))))),
+                    m_OneUse(m_SpecificCmp(ICmpInst::ICMP_ULT,
+                                           m_ExtractValue<0>(m_Deferred(WOV)),
+                                           m_APInt(C))))) &&
+      !K->isZero()) {
+    // Compute ceil(C / K) = C / K + (C % K != 0 ? 1 : 0)
+    APInt Quotient = C->udiv(*K);
+    APInt Remainder = C->urem(*K);
+    if (!Remainder.isZero())
+      Quotient += 1;
+    Constant *NewC = ConstantInt::get(X->getType(), Quotient);
+    return Builder.CreateICmp(ICmpInst::ICMP_ULT, X, NewC);
+  }
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -2955,6 +2984,11 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
     return Res;
+
+  // Try to fold the pattern "!Overflow & icmp ult Res, C" into a single
+  // comparison instruction for umul.with.overflow.
+  if (Value *R = foldAndUnsignedUMulNoOverflowICmp(I, Builder, DL))
+    return replaceInstUsesWith(I, R);
 
   if (Value *V =
           simplifyAndOrWithOpReplaced(Op0, Op1, Constant::getAllOnesValue(Ty),
