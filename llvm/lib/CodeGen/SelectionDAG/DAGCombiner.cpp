@@ -26053,6 +26053,48 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     }
   }
 
+  // ext_elt (bitcast (build_vector/insert_vector_elt ... X ...) to vNiM), i -->
+  // trunc/srl of the wider scalar source operand X that contains element i.
+  // Recovers the extracted scalar when a wider vector load is narrowed and
+  // rebuilt into a vector.
+  if (IndexC && ScalarVT.isScalarInteger() &&
+      VecOp.getOpcode() == ISD::BITCAST && VecOp.hasOneUse()) {
+    SDValue Src = VecOp.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    if (SrcVT.isVector() && SrcVT.isInteger()) {
+      unsigned SrcEltBitWidth = SrcVT.getScalarSizeInBits();
+      if (SrcEltBitWidth > VecEltBitWidth &&
+          SrcEltBitWidth % VecEltBitWidth == 0) {
+        unsigned Scale = SrcEltBitWidth / VecEltBitWidth;
+        unsigned ExtractIndex = IndexC->getZExtValue();
+        unsigned SrcElt = ExtractIndex / Scale;
+
+        // Find the scalar feeding source element SrcElt, if any.
+        SDValue X;
+        if (Src.getOpcode() == ISD::BUILD_VECTOR)
+          X = Src.getOperand(SrcElt);
+        else if (Src.getOpcode() == ISD::INSERT_VECTOR_ELT &&
+                 Src.getOperand(0).isUndef())
+          if (auto *InsIdx = dyn_cast<ConstantSDNode>(Src.getOperand(2));
+              InsIdx && InsIdx->getZExtValue() == SrcElt)
+            X = Src.getOperand(1);
+
+        if (X && X.getValueType().isScalarInteger() &&
+            X.getValueSizeInBits() == SrcEltBitWidth) {
+          bool IsLE = DAG.getDataLayout().isLittleEndian();
+          EVT XVT = X.getValueType();
+          unsigned SubElt = ExtractIndex % Scale;
+          unsigned ShiftIndex = IsLE ? SubElt : (Scale - 1) - SubElt;
+          if (ShiftIndex)
+            X = DAG.getNode(ISD::SRL, DL, XVT, X,
+                            DAG.getShiftAmountConstant(
+                                ShiftIndex * VecEltBitWidth, XVT, DL));
+          return DAG.getAnyExtOrTrunc(X, DL, ScalarVT);
+        }
+      }
+    }
+  }
+
   // Transform: (EXTRACT_VECTOR_ELT( VECTOR_SHUFFLE )) -> EXTRACT_VECTOR_ELT.
   // We only perform this optimization before the op legalization phase because
   // we may introduce new vector instructions which are not backed by TD

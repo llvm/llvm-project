@@ -2120,16 +2120,12 @@ define void @test_v16i8_v8i16(ptr %p, ptr %q) {
 define %struct.struct1 @test_v4f16_struct(ptr %ret) {
 ; CHECK-SD-LABEL: test_v4f16_struct:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ld1 { v0.4h }, [x0]
-; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-SD-NEXT:    ldr h0, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-FI-LABEL: test_v4f16_struct:
 ; CHECK-FI:       // %bb.0: // %entry
-; CHECK-FI-NEXT:    ld1 { v1.4h }, [x0]
-; CHECK-FI-NEXT:    // implicit-def: $q0
-; CHECK-FI-NEXT:    fmov d0, d1
-; CHECK-FI-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-FI-NEXT:    ldr h0, [x0]
 ; CHECK-FI-NEXT:    // implicit-def: $h1
 ; CHECK-FI-NEXT:    // implicit-def: $h2
 ; CHECK-FI-NEXT:    // implicit-def: $h3

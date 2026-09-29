@@ -119,10 +119,14 @@ define { <2 x half>, <2 x half> } @test_modf_v2f16(<2 x half> %a) {
 ; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    sth r3, 66(r1)
 ; CHECK-NEXT:    xscvdphp f0, f1
-; CHECK-NEXT:    lxv v2, 48(r1)
 ; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    sth r3, 64(r1)
-; CHECK-NEXT:    lxv v3, 64(r1)
+; CHECK-NEXT:    lwz r3, 48(r1)
+; CHECK-NEXT:    mtfprwz f0, r3
+; CHECK-NEXT:    lwz r3, 64(r1)
+; CHECK-NEXT:    xxinsertw v2, vs0, 12
+; CHECK-NEXT:    mtfprwz f0, r3
+; CHECK-NEXT:    xxinsertw v3, vs0, 12
 ; CHECK-NEXT:    vextuhrx r3, r5, v3
 ; CHECK-NEXT:    vextuhrx r4, r6, v3
 ; CHECK-NEXT:    vextuhrx r5, r5, v2

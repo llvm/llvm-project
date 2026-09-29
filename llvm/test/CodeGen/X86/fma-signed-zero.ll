@@ -10,7 +10,8 @@ define float @fneg_fma32(float %x, float %y, float %z) {
 ; CHECK-LABEL: fneg_fma32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
-; CHECK-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %negx = fneg float %x
   %negz = fneg float %z
@@ -37,7 +38,8 @@ define double @fneg_fma64(double %x, double %y, double %z) {
 ; CHECK-LABEL: fneg_fma64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
-; CHECK-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; CHECK-NEXT:    vxorpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %negx = fneg double %x
   %negz = fneg double %z

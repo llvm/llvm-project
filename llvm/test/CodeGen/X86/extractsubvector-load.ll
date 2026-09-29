@@ -52,23 +52,23 @@ define <4 x float> @load_v16f32_v4f32_ofs7(ptr %val) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movaps 32(%eax), %xmm1
-; X86-SSE-NEXT:    movaps %xmm1, %xmm0
-; X86-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],mem[3,0]
-; X86-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[1,2]
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[1,2]
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: load_v16f32_v4f32_ofs7:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movaps 32(%rdi), %xmm1
-; X64-SSE-NEXT:    movaps %xmm1, %xmm0
-; X64-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],mem[3,0]
-; X64-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[1,2]
+; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[1,2]
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: load_v16f32_v4f32_ofs7:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovaps 32(%rdi), %xmm0
-; X64-AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],mem[3]
+; X64-AVX1-NEXT:    vbroadcastss 28(%rdi), %xmm0
+; X64-AVX1-NEXT:    vblendps {{.*#+}} xmm0 = mem[0,1,2],xmm0[3]
 ; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,0,1,2]
 ; X64-AVX1-NEXT:    retq
 ;

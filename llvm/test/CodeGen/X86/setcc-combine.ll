@@ -352,7 +352,7 @@ define i64 @sub_constant_to_shift_to_add(i32 %x, i64 %s1, i64 %s2) {
 define float @olt(float %x) {
 ; CHECK-LABEL: olt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    xorps %xmm0, %xmm1
 ; CHECK-NEXT:    minss %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -365,7 +365,7 @@ define float @olt(float %x) {
 define double @ogt(double %x) {
 ; CHECK-LABEL: ogt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
 ; CHECK-NEXT:    xorpd %xmm0, %xmm1
 ; CHECK-NEXT:    maxsd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -490,7 +490,7 @@ define double @ogt_no_fneg(double %x, double %y) {
 define double @ogt_no_zero(double %x) {
 ; SSE2-LABEL: ogt_no_zero:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; SSE2-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
 ; SSE2-NEXT:    xorpd %xmm0, %xmm1
 ; SSE2-NEXT:    movsd {{.*#+}} xmm2 = [1.0E+0,0.0E+0]
 ; SSE2-NEXT:    cmpltsd %xmm0, %xmm2
@@ -502,7 +502,7 @@ define double @ogt_no_zero(double %x) {
 ; SSE41-LABEL: ogt_no_zero:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movapd %xmm0, %xmm1
-; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; SSE41-NEXT:    movsd {{.*#+}} xmm2 = [-0.0E+0,0.0E+0]
 ; SSE41-NEXT:    xorpd %xmm0, %xmm2
 ; SSE41-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; SSE41-NEXT:    cmpltsd %xmm1, %xmm0

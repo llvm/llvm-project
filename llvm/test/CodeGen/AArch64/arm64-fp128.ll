@@ -937,28 +937,26 @@ define <2 x fp128> @vec_uitofp_64(<2 x i64> %src64) {
 define <2 x i1> @vec_setcc1(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 ; CHECK-SD-LABEL: vec_setcc1:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str d8, [sp, #32] // 8-byte Spill
-; CHECK-SD-NEXT:    str x30, [sp, #40] // 8-byte Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -8
-; CHECK-SD-NEXT:    .cfi_offset b8, -16
-; CHECK-SD-NEXT:    stp q0, q2, [sp] // 32-byte Folded Spill
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
-; CHECK-SD-NEXT:    mov v1.16b, v3.16b
-; CHECK-SD-NEXT:    bl __letf2
-; CHECK-SD-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
-; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    csetm x8, le
-; CHECK-SD-NEXT:    fmov d8, x8
+; CHECK-SD-NEXT:    sub sp, sp, #64
+; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    stp q1, q3, [sp, #16] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    mov v1.16b, v2.16b
 ; CHECK-SD-NEXT:    bl __letf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr x30, [sp, #40] // 8-byte Reload
 ; CHECK-SD-NEXT:    csetm x8, le
-; CHECK-SD-NEXT:    fmov d0, x8
-; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v8.2s
-; CHECK-SD-NEXT:    ldr d8, [sp, #32] // 8-byte Reload
-; CHECK-SD-NEXT:    add sp, sp, #48
+; CHECK-SD-NEXT:    fmov s0, w8
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-SD-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-SD-NEXT:    bl __letf2
+; CHECK-SD-NEXT:    cmp w0, #0
+; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
+; CHECK-SD-NEXT:    csetm x8, le
+; CHECK-SD-NEXT:    mov v0.s[1], w8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    add sp, sp, #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vec_setcc1:
@@ -990,28 +988,26 @@ define <2 x i1> @vec_setcc1(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 define <2 x i1> @vec_setcc2(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 ; CHECK-SD-LABEL: vec_setcc2:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sub sp, sp, #48
-; CHECK-SD-NEXT:    str d8, [sp, #32] // 8-byte Spill
-; CHECK-SD-NEXT:    str x30, [sp, #40] // 8-byte Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w30, -8
-; CHECK-SD-NEXT:    .cfi_offset b8, -16
-; CHECK-SD-NEXT:    stp q0, q2, [sp] // 32-byte Folded Spill
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
-; CHECK-SD-NEXT:    mov v1.16b, v3.16b
-; CHECK-SD-NEXT:    bl __letf2
-; CHECK-SD-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
-; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    csetm x8, gt
-; CHECK-SD-NEXT:    fmov d8, x8
+; CHECK-SD-NEXT:    sub sp, sp, #64
+; CHECK-SD-NEXT:    str x30, [sp, #48] // 8-byte Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    stp q1, q3, [sp, #16] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    mov v1.16b, v2.16b
 ; CHECK-SD-NEXT:    bl __letf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr x30, [sp, #40] // 8-byte Reload
 ; CHECK-SD-NEXT:    csetm x8, gt
-; CHECK-SD-NEXT:    fmov d0, x8
-; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v8.2s
-; CHECK-SD-NEXT:    ldr d8, [sp, #32] // 8-byte Reload
-; CHECK-SD-NEXT:    add sp, sp, #48
+; CHECK-SD-NEXT:    fmov s0, w8
+; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-SD-NEXT:    ldp q0, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-SD-NEXT:    bl __letf2
+; CHECK-SD-NEXT:    cmp w0, #0
+; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-SD-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
+; CHECK-SD-NEXT:    csetm x8, gt
+; CHECK-SD-NEXT:    mov v0.s[1], w8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    add sp, sp, #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vec_setcc2:
@@ -1043,38 +1039,36 @@ define <2 x i1> @vec_setcc2(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 define <2 x i1> @vec_setcc3(<2 x fp128> %lhs, <2 x fp128> %rhs) {
 ; CHECK-SD-LABEL: vec_setcc3:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sub sp, sp, #96
-; CHECK-SD-NEXT:    str d8, [sp, #64] // 8-byte Spill
-; CHECK-SD-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-SD-NEXT:    sub sp, sp, #80
+; CHECK-SD-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    .cfi_offset b8, -32
-; CHECK-SD-NEXT:    stp q1, q3, [sp] // 32-byte Folded Spill
-; CHECK-SD-NEXT:    stp q0, q2, [sp, #32] // 32-byte Folded Spill
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
-; CHECK-SD-NEXT:    mov v1.16b, v3.16b
+; CHECK-SD-NEXT:    stp q0, q2, [sp] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    stp q1, q3, [sp, #32] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    mov v1.16b, v2.16b
 ; CHECK-SD-NEXT:    bl __eqtf2
 ; CHECK-SD-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
 ; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    bl __unordtf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldp q0, q1, [sp, #32] // 32-byte Folded Reload
 ; CHECK-SD-NEXT:    ccmp w19, #0, #4, eq
 ; CHECK-SD-NEXT:    csetm x8, eq
-; CHECK-SD-NEXT:    fmov d8, x8
+; CHECK-SD-NEXT:    fmov s0, w8
+; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-SD-NEXT:    ldp q0, q1, [sp, #32] // 32-byte Folded Reload
 ; CHECK-SD-NEXT:    bl __eqtf2
 ; CHECK-SD-NEXT:    ldp q0, q1, [sp, #32] // 32-byte Folded Reload
 ; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    bl __unordtf2
 ; CHECK-SD-NEXT:    cmp w0, #0
+; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-SD-NEXT:    ccmp w19, #0, #4, eq
-; CHECK-SD-NEXT:    ldp x30, x19, [sp, #80] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    csetm x8, eq
-; CHECK-SD-NEXT:    fmov d0, x8
-; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v8.2s
-; CHECK-SD-NEXT:    ldr d8, [sp, #64] // 8-byte Reload
-; CHECK-SD-NEXT:    add sp, sp, #96
+; CHECK-SD-NEXT:    mov v0.s[1], w8
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    add sp, sp, #80
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vec_setcc3:

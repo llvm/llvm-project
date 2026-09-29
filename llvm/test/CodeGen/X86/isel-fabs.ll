@@ -9,7 +9,8 @@
 define float @test_float_abs(float %arg) nounwind {
 ; X64-LABEL: test_float_abs:
 ; X64:       # %bb.0:
-; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    andps %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
 ; GISEL-X64-LABEL: test_float_abs:
@@ -21,16 +22,18 @@ define float @test_float_abs(float %arg) nounwind {
 ;
 ; X86-LABEL: test_float_abs:
 ; X86:       # %bb.0:
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    movd %xmm0, %eax
+; X86-NEXT:    movd {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    pand %xmm0, %xmm1
+; X86-NEXT:    movd %xmm1, %eax
 ; X86-NEXT:    retl
 ;
 ; FASTISEL-X86-LABEL: test_float_abs:
 ; FASTISEL-X86:       # %bb.0:
 ; FASTISEL-X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; FASTISEL-X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; FASTISEL-X86-NEXT:    movd %xmm0, %eax
+; FASTISEL-X86-NEXT:    movd {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; FASTISEL-X86-NEXT:    pand %xmm0, %xmm1
+; FASTISEL-X86-NEXT:    movd %xmm1, %eax
 ; FASTISEL-X86-NEXT:    retl
 ;
 ; GISEL-X86-LABEL: test_float_abs:
@@ -45,7 +48,8 @@ define float @test_float_abs(float %arg) nounwind {
 define double @test_double_abs(double %arg) nounwind {
 ; X64-LABEL: test_double_abs:
 ; X64:       # %bb.0:
-; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movsd {{.*#+}} xmm1 = [NaN,0.0E+0]
+; X64-NEXT:    andps %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
 ; GISEL-X64-LABEL: test_double_abs:

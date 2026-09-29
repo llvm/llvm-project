@@ -70,7 +70,8 @@ declare <8 x float> @llvm.x86.avx.blend.ps.256(<8 x float>, <8 x float>, i8) nou
 define <2 x double> @commute_fold_vblendpd_128(<2 x double> %a, ptr %b) #0 {
 ; CHECK-LABEL: commute_fold_vblendpd_128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; CHECK-NEXT:    retq
   %1 = load <2 x double>, ptr %b
   %2 = call <2 x double> @llvm.x86.sse41.blendpd(<2 x double> %1, <2 x double> %a, i8 1)

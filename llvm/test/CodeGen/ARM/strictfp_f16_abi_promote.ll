@@ -237,17 +237,15 @@ define void @outgoing_v8f16_return(ptr %ptr) #0 {
 define half @call_split_type_used_outside_block_v8f16() #0 {
 ; NOFP16-LABEL: call_split_type_used_outside_block_v8f16:
 ; NOFP16:       @ %bb.0: @ %bb0
-; NOFP16-NEXT:    push {r4, r10, r11, lr}
-; NOFP16-NEXT:    add r11, sp, #8
-; NOFP16-NEXT:    sub sp, sp, #16
+; NOFP16-NEXT:    push {r11, lr}
+; NOFP16-NEXT:    mov r11, sp
+; NOFP16-NEXT:    sub sp, sp, #24
 ; NOFP16-NEXT:    bfc sp, #0, #4
-; NOFP16-NEXT:    mov r4, sp
-; NOFP16-NEXT:    mov r0, r4
+; NOFP16-NEXT:    mov r0, sp
 ; NOFP16-NEXT:    bl v8f16_result
-; NOFP16-NEXT:    vld1.32 {d16[0]}, [r4:32]
-; NOFP16-NEXT:    vmov.u16 r0, d16[0]
-; NOFP16-NEXT:    sub sp, r11, #8
-; NOFP16-NEXT:    pop {r4, r10, r11, pc}
+; NOFP16-NEXT:    ldr r0, [sp]
+; NOFP16-NEXT:    mov sp, r11
+; NOFP16-NEXT:    pop {r11, pc}
 bb0:
   %split.ret.type = call <8 x half> @v8f16_result() #0
   br label %bb1

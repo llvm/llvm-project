@@ -99,11 +99,13 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) nounwind
 ; CHECK-NEXT:    li r4, 2
 ; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    sth r3, 48(r1)
-; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    lxv v3, 48(r1)
 ; CHECK-NEXT:    lfiwzx f0, 0, r29
 ; CHECK-NEXT:    lfiwzx f1, 0, r30
+; CHECK-NEXT:    lwz r3, 48(r1)
 ; CHECK-NEXT:    xxmrghw v2, vs1, vs0
+; CHECK-NEXT:    mtfprwz f0, r3
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    xxinsertw v3, vs0, 12
 ; CHECK-NEXT:    vextuhrx r3, r3, v3
 ; CHECK-NEXT:    vextuhrx r4, r4, v3
 ; CHECK-NEXT:    addi r1, r1, 80
@@ -142,8 +144,10 @@ define <2 x half> @test_frexp_v2f16_v2i32_only_use_fract(<2 x half> %a) nounwind
 ; CHECK-NEXT:    li r4, 2
 ; CHECK-NEXT:    mffprwz r3, f0
 ; CHECK-NEXT:    sth r3, 48(r1)
+; CHECK-NEXT:    lwz r3, 48(r1)
+; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    lxv v2, 48(r1)
+; CHECK-NEXT:    xxinsertw v2, vs0, 12
 ; CHECK-NEXT:    vextuhrx r3, r3, v2
 ; CHECK-NEXT:    vextuhrx r4, r4, v2
 ; CHECK-NEXT:    addi r1, r1, 80

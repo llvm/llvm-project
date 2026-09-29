@@ -335,7 +335,8 @@ define void @test_half_exp10(half %a0, ptr %p0) nounwind {
 define void @test_half_fabs(half %a0, ptr %p0) nounwind {
 ; F16C-LABEL: test_half_fabs:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; F16C-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; F16C-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
@@ -348,8 +349,9 @@ define void @test_half_fabs(half %a0, ptr %p0) nounwind {
 ;
 ; X64-LABEL: test_half_fabs:
 ; X64:       # %bb.0:
-; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    pextrw $0, %xmm0, %eax
+; X64-NEXT:    pinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    pand %xmm0, %xmm1
+; X64-NEXT:    pextrw $0, %xmm1, %eax
 ; X64-NEXT:    movw %ax, (%rdi)
 ; X64-NEXT:    retq
 ;
@@ -514,7 +516,8 @@ define void @test_half_fma(half %a0, half %a1, half %a2, ptr %p0) nounwind {
 define void @test_half_fneg(half %a0, ptr %p0) nounwind {
 ; F16C-LABEL: test_half_fneg:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; F16C-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; F16C-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
@@ -527,8 +530,9 @@ define void @test_half_fneg(half %a0, ptr %p0) nounwind {
 ;
 ; X64-LABEL: test_half_fneg:
 ; X64:       # %bb.0:
-; X64-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    pextrw $0, %xmm0, %eax
+; X64-NEXT:    pinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    pxor %xmm0, %xmm1
+; X64-NEXT:    pextrw $0, %xmm1, %eax
 ; X64-NEXT:    movw %ax, (%rdi)
 ; X64-NEXT:    retq
 ;
