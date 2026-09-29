@@ -39,6 +39,12 @@ config.substitutions.append(
 if config.target_os not in ["Linux"]:
     config.unsupported = True
 
+# The host offloading runtime is optional, see lib/csan/offload.
+if os.path.exists(
+    os.path.join(config.compiler_rt_libdir, "libclang_rt.csan_offload.a")
+):
+    config.available_features.add("csan-offload")
+
 if "csan" in config.gpu_runtimes:
     if "hip" in config.available_features:
         config.available_features.add("csan-hip")

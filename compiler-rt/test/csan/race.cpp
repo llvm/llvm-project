@@ -1,4 +1,6 @@
 // RUN: %clangxx_csan -O1 -g %s -o %t -pthread && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_csan -O1 -g -shared-libsan %s -o %t -pthread
+// RUN: %run %t 2>&1 | FileCheck %s
 
 #include "AMDGPU/race.h"
 #include <pthread.h>
