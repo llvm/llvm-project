@@ -30,10 +30,6 @@
 #error "Offload CSan reporting is supported on Linux only"
 #endif
 
-#if SANITIZER_GLIBC
-#pragma weak dlvsym
-#endif
-
 using namespace __sanitizer;
 using namespace __csan;
 
@@ -77,25 +73,39 @@ void Initialize() {
   Offload::Get().RegisterHandler(HandleOffloadReport);
   Atexit([] { Offload::Get().UntrackImages(); });
   AddDieCallback([] { Offload::Get().UntrackImages(); });
-
-  // Mark ready before LateInitialize, as it can be reentrant through dlsym.
   atomic_store(&Initialized, 1, memory_order_release);
   Symbolizer::LateInitialize();
 }
 
 } // namespace
 
-static void BindRealDlsym();
-static void *HsaSymbol(const char *Name);
+// DSOs with a static runtime all export these wrappers and interpose onto the
+// first, so 'RTLD_NEXT' can loop back into it. Resolve from HSA directly
+// without loading it.
+static void *HsaSymbol(const char *Name) {
+  SpinMutexLock L(&HsaMutex);
+  constexpr const char *Libs[] = {SANITIZER_HSA_LIBRARY ".so.1",
+                                  SANITIZER_HSA_LIBRARY ".so"};
+  for (const char *Lib : Libs)
+    if (!HsaHandle)
+      HsaHandle = dlopen(Lib, RTLD_LAZY | RTLD_NOLOAD);
+  return HsaHandle ? dlsym(HsaHandle, Name) : nullptr;
+}
 
+template <typename T> static T HsaFunction(const char *Name) {
+  return reinterpret_cast<T>(HsaSymbol(Name));
+}
+
+// The shared runtime exports these to every program, act as if HSA is absent
+// when it is not loaded.
 #define CSAN_HSA_ENTER(name)                                                   \
   Initialize();                                                                \
-  if (UNLIKELY(!REAL(name) || REAL(name) == name)) {                           \
-    REAL(name) = reinterpret_cast<decltype(REAL(name))>(HsaSymbol(#name));     \
-    if (UNLIKELY(!REAL(name) || REAL(name) == name)) {                         \
-      Report("ERROR: %s: cannot find %s in this process\n", SanitizerToolName, \
-             #name);                                                           \
-      Die();                                                                   \
+  if (UNLIKELY(!REAL(name))) {                                                 \
+    REAL(name) = HsaFunction<decltype(REAL(name))>(#name);                     \
+    if (UNLIKELY(!REAL(name))) {                                               \
+      VReport(1, "%s: cannot find %s in this process\n", SanitizerToolName,    \
+              #name);                                                          \
+      return HSA_STATUS_ERROR;                                                 \
     }                                                                          \
   }
 
@@ -104,23 +114,6 @@ static void *HsaSymbol(const char *Name);
   if (UNLIKELY(!Offload::Get().Ready()))                                       \
     return REAL(name)(__VA_ARGS__);
 
-// PPC cannot transparently tail-call an indirect dlsym target for RTLD_NEXT.
-#if !SANITIZER_PPC
-#define CSAN_HSA_WRAPS(X)                                                      \
-  X(hsa_init)                                                                  \
-  X(hsa_shut_down)                                                             \
-  X(hsa_executable_freeze)                                                     \
-  X(hsa_executable_destroy)
-
-static void *WrapperFor(const char *Name) {
-#define CSAN_HSA_WRAP(Fn)                                                      \
-  if (!internal_strcmp(Name, #Fn))                                             \
-    return reinterpret_cast<void *>(Fn);
-  CSAN_HSA_WRAPS(CSAN_HSA_WRAP)
-#undef CSAN_HSA_WRAP
-  return nullptr;
-}
-
 static bool FromHsa(void *P) {
   Dl_info Info = {};
   if (!dladdr(P, &Info) || !Info.dli_fname)
@@ -128,69 +121,16 @@ static bool FromHsa(void *P) {
   return internal_strstr(Info.dli_fname, SANITIZER_HSA_LIBRARY);
 }
 
-// OpenMP and sometimes HIP access HSA through 'dlsym' so we need to intercept
-// it here if we want to reliably override its definitions.
-INTERCEPTOR(void *, dlsym, void *Handle, const char *Name) {
-  Initialize();
-  BindRealDlsym();
-
-  // This interceptor interferes with the order of 'RTLD_NEXT'. Force a tail
-  // call to bypass this process in the stack.
-  if (Handle == RTLD_NEXT) [[clang::musttail]]
-    return REAL(dlsym)(Handle, Name);
-
-  void *Sym = REAL(dlsym)(Handle, Name);
-  if (!Sym || !Name)
-    return Sym;
-
-  void *Wrapper = WrapperFor(Name);
-  if (!Wrapper || !FromHsa(Sym))
-    return Sym;
-  return Wrapper;
-}
-#else
-DEFINE_REAL(void *, dlsym, void *, const char *)
-#endif
-
-static void BindRealDlsym() {
-  if (LIKELY(REAL(dlsym)))
+// Callers bind to whichever 'hsa_init' comes first, if HSA was loaded before
+// the runtime the interceptors are bypassed.
+static void CheckInterposed() {
+  void *Sym = dlsym(RTLD_DEFAULT, "hsa_init");
+  if (!Sym || !FromHsa(Sym))
     return;
-#if SANITIZER_GLIBC
-  static const char *kVers[] = {"GLIBC_2.34", "GLIBC_2.17", "GLIBC_2.2.5",
-                                "GLIBC_2.0"};
-  if (dlvsym) {
-    for (const char *Ver : kVers) {
-      if (void *P = dlvsym(RTLD_NEXT, "dlsym", Ver)) {
-        REAL(dlsym) = reinterpret_cast<decltype(REAL(dlsym))>(P);
-        return;
-      }
-    }
-  }
-#endif
-  Report("ERROR: %s: cannot bind dlsym\n", SanitizerToolName);
-  Die();
-}
-
-static void *HsaSymbol(const char *Name) {
-  BindRealDlsym();
-  if (!HsaHandle) {
-    SpinMutexLock L(&HsaMutex);
-    if (HsaHandle)
-      return REAL(dlsym)(HsaHandle, Name);
-    constexpr const char *Names[] = {"libhsa-runtime64.so.1",
-                                     "libhsa-runtime64.so"};
-    for (const char *Name : Names)
-      if (void *H = dlopen(Name, RTLD_LAZY | RTLD_NOLOAD))
-        HsaHandle = H;
-    for (const char *Name : Names)
-      if (!HsaHandle)
-        HsaHandle = dlopen(Name, RTLD_LAZY | RTLD_LOCAL);
-  }
-  return HsaHandle ? REAL(dlsym)(HsaHandle, Name) : nullptr;
-}
-
-template <typename T> static T HsaFunction(const char *Name) {
-  return reinterpret_cast<T>(HsaSymbol(Name));
+  Report("WARNING: %s: the runtime is loaded too late to intercept HSA, GPU "
+         "races will not be reported. Link the runtime first or use "
+         "LD_PRELOAD.\n",
+         SanitizerToolName);
 }
 
 static bool Lookup(hsa_executable_t Executable, const char *Name,
@@ -360,11 +300,7 @@ INTERCEPTOR(hsa_status_t, hsa_executable_destroy, hsa_executable_t Executable) {
 
 extern "C" void __csan_offload_init() { Initialize(); }
 
-#if SANITIZER_CAN_USE_PREINIT_ARRAY
-__attribute__((section(".preinit_array"), used)) static void (
-    *csan_offload_preinit)(void) = __csan_offload_init;
-#endif
-
 __attribute__((constructor(0))) static void CsanOffloadDynInit() {
   __csan_offload_init();
+  CheckInterposed();
 }
