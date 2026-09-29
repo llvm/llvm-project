@@ -73,6 +73,7 @@ def MipsExtractElementF64_FPR : SDNode<"MipsISD::ExtractElementF64_FPR",
 // Node used to generate an MTC1 i32 to f64 instruction
 def MipsMTC1_D64 : SDNode<"MipsISD::MTC1_D64", SDT_MipsMTC1_D64>;
 
+
 // Operand for printing out a condition code.
 let PrintMethod = "printFCCOperand", DecoderMethod = "DecodeCondCode" in
   def condcode : Operand<i32>;
