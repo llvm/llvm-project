@@ -204,7 +204,10 @@ void SPIRVAuxDataHandler::emitAuxDataStrings(SPIRV::ModuleAnalysisInfo &MAI) {
       1;
   unsigned SeenMask = 0;
   for (const auto &Rec : MAI.InstrAuxDataRecords) {
-    SeenMask |= 1u << static_cast<unsigned>(Rec.Kind);
+    unsigned Bit = 1u << static_cast<unsigned>(Rec.Kind);
+    if (SeenMask & Bit)
+      continue;
+    SeenMask |= Bit;
     getOrEmitString(MAI.getAMDGPUAtomicMDName(Rec.Kind), MAI);
     if (SeenMask == AllMDKindsSeen)
       break;
