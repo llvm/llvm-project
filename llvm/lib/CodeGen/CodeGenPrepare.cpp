@@ -8992,66 +8992,56 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   if (!match(LoopStride, m_Splat(m_Shl(m_VScale(), m_APInt(ShiftAmt)))))
     return false;
 
-  // Record users of interest.
-  struct OffsetGEP {
-    GetElementPtrInst *GEP;
-    Value *Offset;
-  };
-  SmallVector<OffsetGEP, 4> Candidates;
-  Value *CommonBase = nullptr;
-  unsigned CommonSize = 0;
+  // Check that the elements are integers equal in size to pointers.
   DataLayout DL = Phi->getFunction()->getDataLayout();
+  VectorType *VTy = cast<VectorType>(Start->getType());
+  Type *ITy = VTy->getElementType();
+  if (DL.getTypeStoreSize(ITy) != DL.getPointerSize())
+    return false;
+
+  // For the simplest case, we're only interested if the phi has two users;
+  // The Step forming the incoming value for the backedge, and a GEP.
+  GetElementPtrInst *GEP = nullptr;
   for (User *U : Phi->users()) {
     Instruction *I = cast<Instruction>(U);
     // Skip over the step, handled above.
     if (Step == I)
       continue;
 
-    // If we have an offset from the Phi values, record that and then look
-    // for a GEP.
-    Value *Offset = nullptr;
-    if (match(I, m_OneUse(m_c_Add(m_Specific(Phi), m_Value(Offset)))))
-      I = cast<Instruction>(I->getSingleUndroppableUse()->getUser());
+    // If we've already found a GEP, bail out.
+    // TODO: Support multiple GEPs.
+    if (GEP)
+      return false;
 
-    // We're only interested in single index GEPs used only as the value
-    // operand in a store for now.
-    auto *GEP = dyn_cast<GetElementPtrInst>(I);
+    // We're only interested in single index GEPs
+    GEP = dyn_cast<GetElementPtrInst>(I);
     if (!GEP || GEP->getNumOperands() != 2)
       return false;
-
-    Use *GEPUse = GEP->getSingleUndroppableUse();
-    if (!GEPUse || !isa<StoreInst>(GEPUse->getUser()) ||
-        GEPUse->getOperandNo() != 0)
-      return false;
-
-    // Reject anything with a loop-varying base or if we have different bases
-    // for different GEPs.
-    // TODO: Support multiple bases.
-    Value *Base = I->getOperand(0);
-    if (!L->isLoopInvariant(Base) || (CommonBase && CommonBase != Base))
-      return false;
-
-    CommonBase = Base;
-
-    // Check that the indexed size is also the same.
-    unsigned Size = DL.getTypeStoreSize(GEP->getResultElementType());
-    if (!Size || (CommonSize && CommonSize != Size))
-      return false;
-
-    CommonSize = Size;
-    Candidates.push_back({GEP, Offset});
   }
+
+  // Only continue processing if the GEP has a single user, with said user
+  // being a store using the result of the GEP as the data operand.
+  Use *GEPUse = GEP->getSingleUndroppableUse();
+  if (!GEPUse || !isa<StoreInst>(GEPUse->getUser()) ||
+      GEPUse->getOperandNo() != 0)
+    return false;
+
+  // Reject if the base isn't loop invariant.
+  Value *Base = GEP->getOperand(0);
+  if (!L->isLoopInvariant(Base))
+    return false;
+
+  // Check that the indexed size is also the same.
+  unsigned Size = DL.getTypeStoreSize(GEP->getResultElementType());
 
   // Multiply the start by the size of the struct, and add the base pointer.
   IRBuilder<> PHBuilder(PreHeader->getTerminator());
-  VectorType *VTy = cast<VectorType>(Start->getType());
-  Type *ITy = VTy->getElementType();
-  Value *StructSize = ConstantInt::get(ITy, APInt(64, CommonSize));
+  Value *StructSize = ConstantInt::get(ITy, APInt(64, Size));
   StructSize = PHBuilder.CreateVectorSplat(VTy->getElementCount(), StructSize);
   Value *NewStart = PHBuilder.CreateMul(Start, StructSize);
-  CommonBase = PHBuilder.CreatePtrToInt(CommonBase, ITy);
-  CommonBase = PHBuilder.CreateVectorSplat(VTy->getElementCount(), CommonBase);
-  NewStart = PHBuilder.CreateAdd(NewStart, CommonBase);
+  Base = PHBuilder.CreatePtrToInt(Base, ITy);
+  Base = PHBuilder.CreateVectorSplat(VTy->getElementCount(), Base);
+  NewStart = PHBuilder.CreateAdd(NewStart, Base);
 
   // Create a new step based on the total size of all struct addresses per
   // iteration.
@@ -9071,15 +9061,8 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   // TODO: An alternative would be to order by offset, and just add from the
   // previous term in the loop. Requires fewer registers, but does increase the
   // critical path for each operation.
-  for (auto [GEP, Offset] : Candidates) {
-    Value *NewBase = Phi;
-    LBuilder.SetInsertPoint(GEP);
-    if (Offset) {
-      Offset = PHBuilder.CreateMul(Offset, StructStride);
-      NewBase = LBuilder.CreateAdd(NewBase, Offset);
-    }
-    GEP->replaceAllUsesWith(LBuilder.CreateIntToPtr(NewBase, GEP->getType()));
-  }
+  LBuilder.SetInsertPoint(GEP);
+  GEP->replaceAllUsesWith(LBuilder.CreateIntToPtr(Phi, GEP->getType()));
 
   return true;
 }
