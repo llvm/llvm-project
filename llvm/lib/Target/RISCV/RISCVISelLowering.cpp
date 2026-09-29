@@ -6604,7 +6604,8 @@ lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
 static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
                                           SelectionDAG &DAG) {
   MVT VT = SVN->getSimpleValueType(0);
-  if (VT != MVT::v4i8 && VT != MVT::v8i8 && VT != MVT::v4i16)
+  if (VT != MVT::v4i8 && VT != MVT::v8i8 && VT != MVT::v2i16 &&
+      VT != MVT::v4i16)
     return SDValue();
 
   SDValue V1 = SVN->getOperand(0);
@@ -12385,6 +12386,31 @@ static unsigned getRVPMulHighAccumulateOpcode(unsigned IntNo) {
   }
 }
 
+/// Return the multiply high accumulate node for \p IntNo.
+static unsigned getRVPMulHighAccumulateByHalvesOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V packed multiply high accumulate by "
+                     "halves intrinsic");
+  case Intrinsic::riscv_pmhacc_b0:
+    return RISCVISD::MHACC_H_B0;
+  case Intrinsic::riscv_pmhacc_b1:
+    return RISCVISD::MHACC_H_B1;
+  case Intrinsic::riscv_pmhaccsu_b0:
+    return RISCVISD::MHACCSU_H_B0;
+  case Intrinsic::riscv_pmhaccsu_b1:
+    return RISCVISD::MHACCSU_H_B1;
+  case Intrinsic::riscv_pmhacc_h0:
+    return RISCVISD::MHACC_W_H0;
+  case Intrinsic::riscv_pmhacc_h1:
+    return RISCVISD::MHACC_W_H1;
+  case Intrinsic::riscv_pmhaccsu_h0:
+    return RISCVISD::MHACCSU_W_H0;
+  case Intrinsic::riscv_pmhaccsu_h1:
+    return RISCVISD::MHACCSU_W_H1;
+  }
+}
+
 /// Return the multiply-high-parts node for a multiply-high-parts intrinsic.
 /// The scalar spelling maps to the same node; its product is the first
 /// element.
@@ -13167,6 +13193,26 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(getRVPShiftOpcode(IntNo), DL, Op.getValueType(),
                        Op.getOperand(1), ShAmt);
   }
+  case Intrinsic::riscv_pwsll:
+  case Intrinsic::riscv_pwsla: {
+    MVT VT = Op.getSimpleValueType();
+    SDValue Src = Op.getOperand(1);
+    MVT SrcVT = Src.getSimpleValueType();
+    if (!((VT == MVT::v4i16 && SrcVT == MVT::v4i8) ||
+          (VT == MVT::v2i32 && SrcVT == MVT::v2i16)))
+      reportFatalUsageError("unsupported packed widening shift intrinsic");
+
+    SDValue ShAmt = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op.getOperand(2));
+    bool IsSigned = IntNo == Intrinsic::riscv_pwsla;
+    if (!Subtarget.is64Bit()) {
+      unsigned Opc = IsSigned ? RISCVISD::PWSLA : RISCVISD::PWSLL;
+      return DAG.getNode(Opc, DL, VT, Src, ShAmt);
+    }
+
+    unsigned ExtOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    SDValue Wide = DAG.getNode(ExtOpc, DL, VT, Src);
+    return DAG.getNode(RISCVISD::PSLL, DL, VT, Wide, ShAmt);
+  }
   case Intrinsic::riscv_psati:
   case Intrinsic::riscv_pusati: {
     bool IsSigned = IntNo == Intrinsic::riscv_psati;
@@ -13300,6 +13346,54 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(MulOpc, DL, VT, Rd, Rs1, Rs2);
+  }
+  case Intrinsic::riscv_pmhacc_b0:
+  case Intrinsic::riscv_pmhacc_b1:
+  case Intrinsic::riscv_pmhaccsu_b0:
+  case Intrinsic::riscv_pmhaccsu_b1: {
+    EVT VT = Op.getValueType();
+    unsigned Opc = getRVPMulHighAccumulateByHalvesOpcode(IntNo);
+    SDValue Rd = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+
+    // RV32: split v4i16 into two v2i16 operations
+    if (!Subtarget.is64Bit() && VT == MVT::v4i16) {
+      auto [RdLo, RdHi] = DAG.SplitVector(Rd, DL);
+      auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::v2i16, RdLo, Rs1Lo, Rs2Lo);
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::v2i16, RdHi, Rs1Hi, Rs2Hi);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
+
+    return DAG.getNode(Opc, DL, VT, Rd, Rs1, Rs2);
+  }
+  case Intrinsic::riscv_pmhacc_h0:
+  case Intrinsic::riscv_pmhacc_h1:
+  case Intrinsic::riscv_pmhaccsu_h0:
+  case Intrinsic::riscv_pmhaccsu_h1: {
+    EVT VT = Op.getValueType();
+    unsigned Opc = getRVPMulHighAccumulateByHalvesOpcode(IntNo);
+    SDValue Rd = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+
+    // RV32 has no 64-bit packed form: split into two scalar operations, each
+    // accumulating one word of the result.
+    if (!Subtarget.is64Bit() && VT == MVT::v2i32) {
+      auto Extract = [&](SDValue V, unsigned Idx) {
+        return DAG.getExtractVectorElt(DL, MVT::i32, V, Idx);
+      };
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::i32, Extract(Rd, 0),
+                               Extract(Rs1, 0), Rs2Lo);
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::i32, Extract(Rd, 1),
+                               Extract(Rs1, 1), Rs2Hi);
+      return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
+    }
+
+    return DAG.getNode(Opc, DL, VT, Rd, Rs1, Rs2);
   }
   case Intrinsic::riscv_pmulh_b0:
   case Intrinsic::riscv_pmulh_b1:
@@ -17512,6 +17606,31 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
           DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(3), Undef);
       SDValue Res = DAG.getNode(getRVPMulHighAccumulateOpcode(IntNo), DL,
                                 WideVT, Rd, Rs1, Rs2);
+      Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_pmhacc_b0:
+    case Intrinsic::riscv_pmhacc_b1:
+    case Intrinsic::riscv_pmhaccsu_b0:
+    case Intrinsic::riscv_pmhaccsu_b1: {
+      // pmhacc.h.bXX operates on the whole register: v2i16 on RV32 and
+      // v4i16 on RV64. On RV64 a v2i16 result widens to the packed v4i16
+      // form and extracts the low half.
+      EVT VT = N->getValueType(0);
+      if (!Subtarget.is64Bit() || VT != MVT::v2i16)
+        return;
+
+      EVT WideVT = MVT::v4i16;
+      SDValue Undef = DAG.getUNDEF(VT);
+      SDValue Rd =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(1), Undef);
+      SDValue Rs1 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(2), Undef);
+      // Third operand is v4i8 - expand to v8i8
+      SDValue Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8,
+                                N->getOperand(3), DAG.getUNDEF(MVT::v4i8));
+      SDValue Res = DAG.getNode(getRVPMulHighAccumulateByHalvesOpcode(IntNo),
+                                DL, WideVT, Rd, Rs1, Rs2);
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
@@ -22477,8 +22596,8 @@ static SDValue performMaskedLoadToVPLoadCombine(MaskedLoadSDNode *MLoad,
 
   SDValue SetCCLHS, SetCCRHS;
   ISD::CondCode CC;
-  if (!sd_match(MLoad->getMask(), m_SetCC(m_Value(SetCCLHS), m_Value(SetCCRHS),
-                                          m_CondCode(CC))) ||
+  if (!sd_match(MLoad->getMask(),
+                m_SetCC(CC, m_Value(SetCCLHS), m_Value(SetCCRHS))) ||
       SetCCLHS->getOpcode() != ISD::BUILD_VECTOR ||
       !(CC == ISD::SETULT || CC == ISD::SETLT) ||
       !SetCCLHS.getValueType().isInteger())
@@ -23371,8 +23490,8 @@ static SDValue foldSelectToUSATI(SDNode *N, SelectionDAG &DAG,
   using namespace SDPatternMatch;
 
   SDValue Src, InnerSetCC, FalseSrc;
-  if (!sd_match(N, m_Select(m_SetCC(m_Value(Src), m_SpecificInt(MaxVal),
-                                    m_SpecificCondCode(ISD::SETUGT)),
+  if (!sd_match(N, m_Select(m_SpecificSetCC(ISD::SETUGT, m_Value(Src),
+                                            m_SpecificInt(MaxVal)),
                             m_SExt(m_Value(InnerSetCC)),
                             m_Trunc(m_Value(FalseSrc)))))
     return SDValue();
@@ -23382,9 +23501,10 @@ static SDValue foldSelectToUSATI(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Check inner setcc: src > -1 (signed comparison)
-  if (!sd_match(InnerSetCC,
-                m_SpecificVT(MVT::i1, m_SetCC(m_Specific(Src), m_AllOnes(),
-                                              m_SpecificCondCode(ISD::SETGT)))))
+  if (!sd_match(
+          InnerSetCC,
+          m_SpecificVT(MVT::i1, m_SpecificSetCC(ISD::SETGT, m_Specific(Src),
+                                                m_AllOnes()))))
     return SDValue();
 
   // It's possible that the input to the setccs is also a truncate, in that
