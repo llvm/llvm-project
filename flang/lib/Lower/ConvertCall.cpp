@@ -931,9 +931,8 @@ static hlfir::EntityWithAttributes genStmtFunctionRef(
     assert(arg && "alternate return in statement function");
     assert(bind && "optional argument in statement function");
     const auto *expr = bind->UnwrapExpr();
-    // TODO: assumed type in statement function, that surprisingly seems
-    // allowed, probably because nobody thought of restricting this usage.
-    // gfortran/ifort compiles this.
+    // Assumed-type entities cannot be statement function dummy arguments
+    // (F2023 15.6.4); semantics rejects them in HandleStmtFunction.
     assert(expr && "assumed type used as statement function argument");
     // As per Fortran 2018 C1580, statement function arguments can only be
     // scalars.
