@@ -33,6 +33,10 @@ static void print_usage(void) {
           "    Read bitcode from stdin - list summary of functions\n\n");
   fprintf(stderr, "  * --module-list-globals\n");
   fprintf(stderr, "    Read bitcode from stdin - list summary of globals\n\n");
+  fprintf(stderr, "  * --module-get-producer-string\n");
+  fprintf(
+      stderr,
+      "    Read bitcode from stdin - print the producer identification\n\n");
   fprintf(stderr, "  * --targets-list\n");
   fprintf(stderr, "    List available targets\n\n");
   fprintf(stderr, "  * --object-list-sections\n");
@@ -79,6 +83,8 @@ int main(int argc, char **argv) {
     return llvm_module_list_functions();
   } else if (argc == 2 && !strcmp(argv[1], "--module-list-globals")) {
     return llvm_module_list_globals();
+  } else if (argc == 2 && !strcmp(argv[1], "--module-get-producer-string")) {
+    return llvm_module_get_producer_string();
   } else if (argc == 2 && !strcmp(argv[1], "--targets-list")) {
     return llvm_targets_list();
   } else if (argc == 2 && !strcmp(argv[1], "--object-list-sections")) {
