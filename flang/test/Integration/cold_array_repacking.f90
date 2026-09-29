@@ -17,15 +17,17 @@
 ! CHECK:    br label %[[BB46:.*]]
 ! CHECK:  [[NO_REPACK]]:
 ! CHECK-NEXT: br label %[[BB46]]
-! CHECK:  [[ABSENT]]:
-! CHECK-NEXT: br label %[[BB46]]
 ! CHECK:  [[BB46]]:
+! CHECK:    br label %[[PRESENT_OR_ABSENT:.*]]
+! CHECK:  [[ABSENT]]:
+! CHECK-NEXT: br label %[[PRESENT_OR_ABSENT]]
+! CHECK:  [[PRESENT_OR_ABSENT]]:
 ! CHECK:    br i1 [[TMP5]], label %[[BB48:.*]], label %[[BB57:.*]]
 ! CHECK:  [[BB48]]:
 ! CHECK:    br i1 [[TMP55:.*]], label %[[BB56:.*]], label %[[NO_COPY_BACK:.*]], !prof [[PROF2]]
 ! CHECK:  [[BB56]]:
 ! CHECK:    call void @_FortranAShallowCopyDirect
-! CHECK:    br label %[[BB57]]
+! CHECK:    br label %[[NO_COPY_BACK]]
 ! CHECK:  [[NO_COPY_BACK]]:
 ! CHECK-NEXT: br label %[[BB57]]
 ! CHECK:  [[BB57]]:

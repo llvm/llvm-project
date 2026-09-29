@@ -94,6 +94,13 @@ void addPassToGPUModuleOperations(mlir::PassManager &pm, F ctor) {
 /// extra costs into account when doing block merging.
 void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm);
 
+/// Canonicalization patterns to exclude at the given optimization level.
+/// At O0, preserve loop-entry branches and their source locations on every
+/// incoming path. These exclusions are needed even with region simplification
+/// disabled, and must be used by canonicalizers running after CFG lowering.
+llvm::ArrayRef<std::string>
+getCanonicalizationDisabledPatterns(llvm::OptimizationLevel optLevel);
+
 void addCfgConversionPass(mlir::PassManager &pm,
                           const MLIRToLLVMPassPipelineConfig &config);
 
