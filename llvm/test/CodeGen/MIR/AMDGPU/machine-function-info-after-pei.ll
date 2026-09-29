@@ -13,6 +13,7 @@
 ; AFTER-PEI-NEXT: isChainFunction: false
 ; AFTER-PEI-NEXT: memoryBound:     false
 ; AFTER-PEI-NEXT: waveLimiter:     false
+; AFTER-PEI-NEXT: hasLDSContention: false
 ; AFTER-PEI-NEXT: hasSpilledSGPRs: true
 ; AFTER-PEI-NEXT: hasSpilledVGPRs: false
 ; AFTER-PEI-NEXT: hasNoWWMPoolSGPRSpillFallback: false

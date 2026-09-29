@@ -33,13 +33,17 @@ public:
   struct FuncInfo {
     unsigned MemInstCost;
     unsigned InstCost;
-    unsigned IAMInstCost;      // Indirect access memory instruction count
-    unsigned LSMInstCost;      // Large stride memory instruction count
+    unsigned IAMInstCost;        // Indirect access memory instruction count
+    unsigned LSMInstCost;        // Large stride memory instruction count
+    unsigned LDSInstLoopCost;    // LDS load in-loop instruction count
+    unsigned MatrixInstLoopCost; // matmul intrinsic in-loop instruction count
     bool HasDenseGlobalMemAcc; // Set if at least 1 basic block has relatively
                                // high global memory access
+    bool HasLDSContention; // Set if any loop has LDS loads >= 0.5 * WMMA/MFMA
     FuncInfo()
         : MemInstCost(0), InstCost(0), IAMInstCost(0), LSMInstCost(0),
-          HasDenseGlobalMemAcc(false) {}
+          LDSInstLoopCost(0), MatrixInstLoopCost(0),
+          HasDenseGlobalMemAcc(false), HasLDSContention(false) {}
   };
 
   typedef ValueMap<const Function *, FuncInfo> FuncInfoMap;
@@ -59,6 +63,8 @@ public:
   bool isMemoryBound(const Function *F) const;
 
   bool needsWaveLimiter(const Function *F) const;
+
+  bool hasLDSContention(const Function *F) const;
 };
 
 struct AMDGPUPerfHintAnalysisPass

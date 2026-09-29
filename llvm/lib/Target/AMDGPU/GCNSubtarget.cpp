@@ -854,7 +854,7 @@ void GCNSubtarget::adjustSchedDependency(
 
   // DS load/store latency is variable depending on LDS contention.
   if (InstrInfo.isDS(*DefI) &&
-      InstrInfo.getDSLatencyMultiplier(*DefI->getMF()) != 1) {
+      InstrInfo.getDSLatencyMultiplier(*DefI->getMF()) != 100) {
     // For LDS instructions, we have overrides to change default latencies.
     unsigned Latency = InstrInfo.getInstrLatency(*DefI);
     Dep.setLatency(Latency);

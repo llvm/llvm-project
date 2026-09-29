@@ -71,16 +71,31 @@ static cl::opt<bool> Fix16BitCopies(
   cl::init(true),
   cl::ReallyHidden);
 
-static cl::opt<SIInstrInfo::DSLatencyMode> DSLatency(
-    "amdgpu-ds-latency-mode", cl::desc("LDS latency mode (LDS contention)"),
-    cl::values(
-        clEnumValN(SIInstrInfo::DSLatencyMode::Fast, "fast",
-                   "Use default/pinged latency (no contention)"),
-        clEnumValN(SIInstrInfo::DSLatencyMode::Loaded, "loaded",
-                   "Use loaded latency (moderate contention, 3x latency)"),
-        clEnumValN(SIInstrInfo::DSLatencyMode::Overloaded, "overloaded",
-                   "Use overloaded latency (high contention, 5x latency)")),
-    cl::init(SIInstrInfo::DSLatencyMode::Fast), cl::Hidden);
+namespace {
+
+struct LDSContentionMultiplierParser : public cl::parser<unsigned> {
+  LDSContentionMultiplierParser(cl::Option &O) : cl::parser<unsigned>(O) {}
+
+  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg, unsigned &Value) {
+    if (Arg.getAsInteger(0, Value))
+      return O.error("'" + Arg + "' value invalid for uint argument!");
+
+    if (Value == 0)
+      return O.error("'" + Arg + "' value must be greater than 0!");
+
+    return false;
+  }
+};
+
+} // end anonymous namespace
+
+static cl::opt<unsigned, false, LDSContentionMultiplierParser>
+    LDSContentionMultiplier("amdgpu-lds-contention-multiplier",
+                            cl::ReallyHidden, cl::init(300),
+                            cl::desc("How much to scale the latency of LDS "
+                                     "instructions in kernels with high LDS "
+                                     "contention. Specified as a percent "
+                                     "(e.g. 300 = 3x, 50 = 0.5x)"));
 
 SIInstrInfo::SIInstrInfo(const GCNSubtarget &ST)
     : AMDGPUGenInstrInfo(ST, RI, AMDGPU::ADJCALLSTACKUP,
@@ -11256,7 +11271,9 @@ unsigned SIInstrInfo::getInstrLatency(const MachineInstr &MI) const {
   if (SchedModel.hasInstrSchedModel()) {
     unsigned Latency = SchedModel.computeInstrLatency(&MI);
     if (isDS(MI)) {
-      Latency *= getDSLatencyMultiplier(*MI.getMF());
+      unsigned Multiplier = getDSLatencyMultiplier(*MI.getMF());
+      if (Multiplier != 100)
+        Latency = Latency * Multiplier / 100;
     }
     return Latency;
   }
@@ -12010,32 +12027,16 @@ bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
 unsigned SIInstrInfo::getDSLatencyMultiplier(const MachineFunction &MF) {
   const Function &F = MF.getFunction();
 
-  // Priority selection goes to the attribute
-  Attribute A = F.getFnAttribute("amdgpu-ds-latency-mode");
-  if (A.isValid()) {
-    StringRef Val = A.getValueAsString();
-    if (Val == "fast")
-      return 1;
-    if (Val == "loaded")
-      return 3;
-    if (Val == "overloaded")
-      return 5;
-  }
+  // Only apply latency multiplier for coexec scheduler
+  if (AMDGPU::getSchedStrategy(F) != "coexec" &&
+      !LDSContentionMultiplier.getNumOccurrences())
+    return 100;
 
-  // If using coexec scheduler, default to "loaded" mode unless overridden
-  // by the command line option.
-  if (DSLatency.getNumOccurrences() == 0 &&
-      AMDGPU::getSchedStrategy(F) == "coexec")
-    return 3;
+  // Check for LDS contention detected by AMDGPUPerfHintAnalysis
+  const AMDGPUMachineFunctionInfo *MFI =
+      MF.getInfo<AMDGPUMachineFunctionInfo>();
+  if (MFI->hasLDSContention())
+    return LDSContentionMultiplier;
 
-  switch (DSLatency) {
-  case DSLatencyMode::Fast:
-    return 1; // Use default scheduling model latency
-  case DSLatencyMode::Loaded:
-    return 3;
-  case DSLatencyMode::Overloaded:
-    return 5;
-  }
-
-  return 1;
+  return 100;
 }

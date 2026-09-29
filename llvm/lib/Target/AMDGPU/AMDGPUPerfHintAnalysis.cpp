@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CommandLine.h"
@@ -52,6 +53,11 @@ static cl::opt<unsigned>
 static cl::opt<unsigned>
     LargeStrideThresh("amdgpu-large-stride-threshold", cl::init(64), cl::Hidden,
                       cl::desc("Large stride memory access threshold"));
+
+static cl::opt<unsigned>
+    LDSContentionThreshold("amdgpu-lds-contention-threshold", cl::init(50),
+                           cl::Hidden,
+                           cl::desc("Function mem bound threshold in %"));
 
 STATISTIC(NumMemBound, "Number of functions marked as memory bound");
 STATISTIC(NumLimitWave, "Number of functions marked as needing limit wave");
@@ -95,9 +101,12 @@ private:
 
   const SITargetLowering *TLI;
 
+  CycleInfo CI;
+
   AMDGPUPerfHintAnalysis::FuncInfo *visit(const Function &F);
   static bool isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &F);
   static bool needLimitWave(const AMDGPUPerfHintAnalysis::FuncInfo &F);
+  static bool hasLDSCont(const AMDGPUPerfHintAnalysis::FuncInfo &F);
 
   bool isIndirectAccess(const Instruction *Inst) const;
 
@@ -113,6 +122,8 @@ private:
   bool isGlobalAddr(const Value *V) const;
   bool isLocalAddr(const Value *V) const;
   bool isGlobalLoadUsedInBB(const Instruction &) const;
+  bool isLDSLoad(const Instruction *I) const;
+  static bool isMatrixIntrinsic(const Instruction *I);
 };
 
 static std::pair<const Value *, const Type *> getMemoryInstrPtrAndType(
@@ -216,10 +227,30 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
 
   LLVM_DEBUG(dbgs() << "[AMDGPUPerfHint] process " << F.getName() << '\n');
 
-  for (auto &B : F) {
+  auto IsInnermostCycle = [this](const BasicBlock &B) {
+    CycleRef C = CI.getCycle(&B);
+    if (!C.isValid())
+      return false;
+
+    return llvm::none_of(CI.getBlocks(C), [&](const BasicBlock *CB) {
+      CycleRef InnerC = CI.getCycle(CB);
+      return InnerC != C && CI.contains(C, InnerC);
+    });
+  };
+
+  for (const BasicBlock &B : F) {
     LastAccess = MemAccessInfo();
     unsigned UsedGlobalLoadsInBB = 0;
-    for (auto &I : B) {
+
+    bool InInnermostCycle = IsInnermostCycle(B);
+
+    for (const Instruction &I : B) {
+      if (InInnermostCycle) {
+        if (isMatrixIntrinsic(&I))
+          ++FI.MatrixInstLoopCost;
+        else if (isLDSLoad(&I))
+          ++FI.LDSInstLoopCost;
+      }
       if (const Type *Ty = getMemoryInstrPtrAndType(&I).second) {
         unsigned Size = divideCeil(Ty->getPrimitiveSizeInBits(), 32);
         // TODO: Check if the global load and its user are close to each other
@@ -277,6 +308,9 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
     }
   }
 
+  // Check for LDS contention after visiting all basic blocks
+  FI.HasLDSContention = hasLDSCont(FI);
+
   return &FI;
 }
 
@@ -285,8 +319,11 @@ bool AMDGPUPerfHint::runOnFunction(Function &F) {
   DL = &M.getDataLayout();
 
   if (F.hasFnAttribute("amdgpu-wave-limiter") &&
-      F.hasFnAttribute("amdgpu-memory-bound"))
+      F.hasFnAttribute("amdgpu-memory-bound") &&
+      F.hasFnAttribute("amdgpu-lds-contention"))
     return false;
+
+  CI.compute(F);
 
   const AMDGPUPerfHintAnalysis::FuncInfo *Info = visit(F);
 
@@ -312,6 +349,11 @@ bool AMDGPUPerfHint::runOnFunction(Function &F) {
     Changed = true;
   }
 
+  if (!F.hasFnAttribute("amdgpu-lds-contention") && Info->HasLDSContention) {
+    F.addFnAttr("amdgpu-lds-contention", "true");
+    Changed = true;
+  }
+
   return Changed;
 }
 
@@ -322,6 +364,21 @@ bool AMDGPUPerfHint::isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
     return true;
 
   return FI.MemInstCost * 100 / FI.InstCost > MemBoundThresh;
+}
+
+bool AMDGPUPerfHint::hasLDSCont(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
+  if (FI.MatrixInstLoopCost > 0 &&
+      FI.LDSInstLoopCost * 100 / FI.MatrixInstLoopCost >=
+          LDSContentionThreshold) {
+    LLVM_DEBUG(
+        dbgs() << "Found cycle with LDS contention: " << FI.LDSInstLoopCost
+               << " LDS loads, " << FI.MatrixInstLoopCost << " matrix ops\n"
+               << "Threshold for LDS/MatrixOp ratio: " << LDSContentionThreshold
+               << "\n");
+    return true;
+  }
+
+  return false;
 }
 
 bool AMDGPUPerfHint::needLimitWave(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
@@ -341,6 +398,28 @@ bool AMDGPUPerfHint::isGlobalAddr(const Value *V) const {
 bool AMDGPUPerfHint::isLocalAddr(const Value *V) const {
   if (auto *PT = dyn_cast<PointerType>(V->getType()))
     return PT->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+  return false;
+}
+
+bool AMDGPUPerfHint::isLDSLoad(const Instruction *I) const {
+  if (const auto *LdI = dyn_cast<LoadInst>(I))
+    return isLocalAddr(LdI->getPointerOperand());
+  if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
+    if (!II->mayReadFromMemory() || II->arg_empty())
+      return false;
+    return isLocalAddr(II->getArgOperand(0));
+  }
+  return false;
+}
+
+bool AMDGPUPerfHint::isMatrixIntrinsic(const Instruction *I) {
+  if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
+    StringRef Name = Intrinsic::getBaseName(II->getIntrinsicID());
+    return Name.starts_with("llvm.amdgcn.wmma.") ||
+           Name.starts_with("llvm.amdgcn.mfma.") ||
+           Name.starts_with("llvm.amdgcn.swmmac.") ||
+           Name.starts_with("llvm.amdgcn.smfmac.");
+  }
   return false;
 }
 
@@ -418,6 +497,14 @@ bool AMDGPUPerfHintAnalysis::needsWaveLimiter(const Function *F) const {
     return false;
 
   return AMDGPUPerfHint::needLimitWave(FI->second);
+}
+
+bool AMDGPUPerfHintAnalysis::hasLDSContention(const Function *F) const {
+  auto FI = FIM.find(F);
+  if (FI == FIM.end())
+    return false;
+
+  return FI->second.HasLDSContention;
 }
 
 bool AMDGPUPerfHintAnalysis::runOnSCC(const GCNTargetMachine &TM,

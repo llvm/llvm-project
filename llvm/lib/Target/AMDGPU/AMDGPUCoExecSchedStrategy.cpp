@@ -585,7 +585,7 @@ unsigned CandidateHeuristics::getMaxBlockingCycles(const MCSchedClassDesc *SC,
 unsigned CandidateHeuristics::getHWUICyclesForMI(MachineInstr *MI) {
   assert(SchedModel && SchedModel->hasInstrSchedModel());
   if (MI->mayLoadOrStore())
-    return SchedModel->computeInstrLatency(MI, false);
+    return SII->getInstrLatency(*MI);
   return getMaxBlockingCycles(SchedModel->resolveSchedClass(MI), MI);
 }
 

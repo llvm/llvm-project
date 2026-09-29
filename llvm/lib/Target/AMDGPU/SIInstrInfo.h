@@ -1261,31 +1261,21 @@ public:
     return Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
   }
 
-  /// DS latency modes. The latency of an individual DS load/store instruction
-  /// is variable. Some of the major sources that cause this variation are hard
-  /// to model at compile time. For example, if we have multiple LDS
-  /// instructions in flight, one of these may take longer than the other due to
-  /// a bank conflict. Given that these bank conflicts can occur across waves,
-  /// it is hard to accurately model this. This is compounded given the presence
-  /// of the LDS FIFO -- if an earlier LDS instruction has, for example, a bank
-  /// conflict, this will impact the latency of the current LDS instruction.
+  /// The latency of an individual DS load/store instruction is variable.
+  /// Some of the major sources that cause this variation are hard
+  /// to model at compile time.
   ///
-  /// Given these complexities, we offer different DSLatencyModes for kernels to
-  /// express the average latency for LDS instructions in the kernel. We expect
-  /// that for kernels with many closely packed LDS isntructions, the average
-  /// latency for LDS instructions will be relatively high. Thus we should use
-  /// DSLatencyMode::Loaded or DSLatencyMode::Overloaded.
-  enum class DSLatencyMode {
-    Fast,      // Use default/pinged latency (no contention)
-    Loaded,    // Use loaded latency (moderate contention, 3x latency)
-    Overloaded // Use overloaded latency (high contention, 5x latency)
-  };
-
-  /// \p returns the DS instruction latency multiplier based on the selected
-  /// DSLatencyMode. \p returns 1 if the default
-  /// scheduling model latency should be used (pinged mode).
-  /// Checks the function attribute first, then if using coexec scheduler
-  /// defaults to "loaded", then falls back to the global command line option.
+  /// Given these complexities, we do not attempt to model the latency, and
+  /// rather use a reasonable latency multiplier when there is LDS contention in
+  /// the kernel. While there are overrides to this multiplier, it is expected
+  /// that users can design kernels in such a way to acheive this latency on HW.
+  /// The compiler uses a simple heuristic to detect if the kernel has LDS
+  /// contention.
+  ///
+  /// Returns the DS latency multiplier as a percentage. If LDS contention was
+  /// detected by AMDGPUPerfHintAnalysis and using coexec scheduler, returns
+  /// amdgpu-lds-contention-multiplier (default 300 = 3x). Otherwise returns
+  /// 100 (no scaling).
   static unsigned getDSLatencyMultiplier(const MachineFunction &MF);
 
   static unsigned getNonSoftWaitcntOpcode(unsigned Opcode) {
@@ -1837,8 +1827,8 @@ public:
 
   unsigned getBlockingCycles(const MachineInstr &MI) const;
   /// \returns the latency of a given instruction \p MI. This implements custom
-  /// overrides for certain cases (e.g. when using dfifferent DSLatencyModes to
-  /// express increased LDS resource contention).
+  /// overrides for certain cases (e.g. increased LDS latency when contention
+  /// is detected).
   unsigned getInstrLatency(const MachineInstr &MI) const;
 
   /// GFX1250 blocking-cycles table lookup with no occupancy subtarget gate.

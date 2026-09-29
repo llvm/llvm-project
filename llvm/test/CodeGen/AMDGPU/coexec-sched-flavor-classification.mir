@@ -44,6 +44,9 @@
 ---
 name: test_flavor_classification
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  hasLDSContention: true
 body: |
   bb.0:
     %0:vreg_64_align2 = IMPLICIT_DEF

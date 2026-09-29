@@ -16,6 +16,9 @@
 ---
 name: test-sched-effective-stall
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  hasLDSContention: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: test-sched-effective-stall
@@ -74,6 +77,9 @@ body: |
 ---
 name: test-sched-pending-structural-stall
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  hasLDSContention: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: test-sched-pending-structural-stall
@@ -130,6 +136,9 @@ body: |
 ---
 name: test-fence-stall
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  hasLDSContention: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: test-fence-stall
@@ -237,6 +246,9 @@ body: |
 ---
 name: test-tensorcnt-stall
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  hasLDSContention: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: test-tensorcnt-stall
@@ -343,6 +355,9 @@ body: |
 ---
 name: test-dscnt-stall
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  hasLDSContention: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: test-dscnt-stall
@@ -449,6 +464,9 @@ body: |
 ---
 name: test-memory-pipeline-effective-stall
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  hasLDSContention: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: test-memory-pipeline-effective-stall
