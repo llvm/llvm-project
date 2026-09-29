@@ -2,7 +2,7 @@
 ; RUN: opt -passes='loop(loop-idiom)' < %s -S | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
+target triple = "x86_64-pc-windows-msvc"
 
 define i64 @valid_strlen16(ptr %src) {
 ; CHECK-LABEL: define i64 @valid_strlen16(
@@ -15,15 +15,19 @@ define i64 @valid_strlen16(ptr %src) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i16 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label %[[RETURN]], label %[[WHILE_COND_PREHEADER:.*]]
 ; CHECK:       [[WHILE_COND_PREHEADER]]:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 2
+; CHECK-NEXT:    [[WCSLEN:%.*]] = call i64 @wcslen(ptr [[SCEVGEP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[WCSLEN]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 2
+; CHECK-NEXT:    [[END:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    br label %[[WHILE_COND:.*]]
 ; CHECK:       [[WHILE_COND]]:
 ; CHECK-NEXT:    [[SRC_PN:%.*]] = phi ptr [ [[CURR_0:%.*]], %[[WHILE_COND]] ], [ [[SRC]], %[[WHILE_COND_PREHEADER]] ]
 ; CHECK-NEXT:    [[CURR_0]] = getelementptr inbounds i8, ptr [[SRC_PN]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[CURR_0]], align 2
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i16 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[WHILE_END:.*]], label %[[WHILE_COND]]
+; CHECK-NEXT:    br i1 true, label %[[WHILE_END:.*]], label %[[WHILE_COND]]
 ; CHECK:       [[WHILE_END]]:
-; CHECK-NEXT:    [[END:%.*]] = phi ptr [ [[CURR_0]], %[[WHILE_COND]] ]
 ; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[END]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]]

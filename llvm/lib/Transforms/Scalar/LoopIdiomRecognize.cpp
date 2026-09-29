@@ -2099,14 +2099,17 @@ public:
 
     // Verify that StepSize is consistent with platform char width.
     OpWidth = OperandType->getIntegerBitWidth();
-    unsigned WcharSize = TLI->getWCharSize(*LoopLoad->getModule());
+    Module *M = LoopLoad->getModule();
+    unsigned WcharSize = TLI->getWCharSize(*M);
+    Triple TT(M->getTargetTriple());
     if (OpWidth != StepSize * 8)
       return false;
     if (OpWidth != 8 && OpWidth != 16 && OpWidth != 32)
       return false;
-    if (OpWidth >= 16)
-      if (OpWidth != WcharSize * 8)
-        return false;
+    if (OpWidth >= 16 &&
+        (OpWidth != WcharSize * 8 || WcharSize != TT.getDefaultWCharSize())) {
+      return false;
+    }
 
     // Scan every instruction in the loop to ensure there are no side effects.
     for (Instruction &I : *LoopBody)
