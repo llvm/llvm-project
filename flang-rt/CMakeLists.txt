@@ -290,6 +290,7 @@ endif ()
 # directory ("flang-rt") and delegate it to the runtimes build dir.
 # AddFlangRT will add all non-EXCLUDE_FROM_ALL targets to it.
 add_custom_target(flang-rt)
+add_llvm_install_targets(install-flang-rt DEPENDS flang-rt COMPONENT flang-rt)
 
 
 ###################
