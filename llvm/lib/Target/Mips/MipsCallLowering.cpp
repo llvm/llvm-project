@@ -419,6 +419,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   MachineInstrBuilder MIB = MIRBuilder.buildInstrNoInsert(
       Info.Callee.isReg() || IsCalleeGlobalPIC ? Mips::JALRPseudo : Mips::JAL);
+  MIB.setOperandDead(0); // implicit-def $ra
   MIB.addDef(Mips::SP, RegState::Implicit);
   if (IsCalleeGlobalPIC) {
     Register CalleeReg =
