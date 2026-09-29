@@ -423,7 +423,7 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
   if (Base) {
     Type = mergeTypeForSet(Type, Base->getType());
   }
-  uint8_t Info = (Binding << 4) | Type;
+  uint8_t Info = ELF::getSymbolInfo(Binding, Type);
 
   // Other and Visibility share the same byte with Visibility using the lower
   // 2 bits
@@ -610,8 +610,8 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
     for (; FileNameIt != FileNames.end() && FileNameIt->second <= MSD.Order;
          ++FileNameIt) {
       Writer.writeSymbol(StrTabBuilder.getOffset(FileNameIt->first),
-                         ELF::STT_FILE | ELF::STB_LOCAL, 0, 0, ELF::STV_DEFAULT,
-                         ELF::SHN_ABS, true);
+                         ELF::getSymbolInfo(ELF::STB_LOCAL, ELF::STT_FILE), 0,
+                         0, ELF::STV_DEFAULT, ELF::SHN_ABS, true);
       ++Index;
     }
 
@@ -623,8 +623,8 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
   }
   for (; FileNameIt != FileNames.end(); ++FileNameIt) {
     Writer.writeSymbol(StrTabBuilder.getOffset(FileNameIt->first),
-                       ELF::STT_FILE | ELF::STB_LOCAL, 0, 0, ELF::STV_DEFAULT,
-                       ELF::SHN_ABS, true);
+                       ELF::getSymbolInfo(ELF::STB_LOCAL, ELF::STT_FILE), 0, 0,
+                       ELF::STV_DEFAULT, ELF::SHN_ABS, true);
     ++Index;
   }
 

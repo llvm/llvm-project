@@ -366,6 +366,7 @@ public:
     ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
 
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
+    LLVM_ABI void setAttributes(const AttributeList &Attrs, unsigned ArgIdx);
   };
   using ArgListTy = std::vector<ArgListEntry>;
 
@@ -2240,7 +2241,8 @@ public:
   /// Returns true if a cast from SrcAS to DestAS is "cheap", such that e.g. we
   /// are happy to sink it into basic blocks. A cast may be free, but not
   /// necessarily a no-op. e.g. a free truncate from a 64-bit to 32-bit pointer.
-  virtual bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const;
+  virtual bool isFreeAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                                   unsigned DestAS) const;
 
   /// Return true if the pointer arguments to CI should be aligned by aligning
   /// the object whose address is being passed. If so then MinSize is set to the
@@ -4349,6 +4351,13 @@ public:
     return makeLibCall(DAG, getLibcallImpl(LC), RetVT, Ops, CallOptions, dl,
                        Chain);
   }
+
+  /// Build a call argument list for \p FuncTy, taking the argument node values
+  /// from \p Ops and the parameter types and ABI attributes from \p FuncTy and
+  /// \p FuncAttrs. \p Ops must have one entry per parameter of \p FuncTy.
+  static ArgListTy getArgListForFunctionType(FunctionType *FuncTy,
+                                             const AttributeList &FuncAttrs,
+                                             ArrayRef<SDValue> Ops);
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be
