@@ -3920,6 +3920,7 @@ bool AArch64InstructionSelector::selectTLSGlobalValueMachO(
   }
 
   MIB.buildInstr(Opcode, {}, {Load})
+      .setOperandDead(1) // implicit-def $lr
       .addUse(AArch64::X0, RegState::Implicit)
       .addDef(AArch64::X0, RegState::Implicit)
       .addRegMask(TRI.getTLSCallPreservedMask());
