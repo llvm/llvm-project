@@ -62,6 +62,12 @@ struct ConstructDecomposition {
     return std::nullopt;
   }
 
+  bool isClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+                                  llvm::omp::Directive dirId,
+                                  llvm::omp::Version version) {
+    return llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+  }
+
   semantics::SemanticsContext &semaCtx;
   mlir::ModuleOp mod;
   lower::pft::Evaluation &eval;
