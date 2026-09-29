@@ -7,15 +7,15 @@
 # RUN:   %t.sources/mcdc-general.cpp | FileCheck %s --check-prefix=BASE
 # RUN: llvm-cov report %S/Inputs/mcdc-general.o -instr-profile=%t.profdata \
 # RUN:   -path-equivalence=.,%t.sources --show-mcdc-summary \
-# RUN:   --respect-lcov-exclusion-markers %t.sources/mcdc-general.cpp \
+# RUN:   --respect-coverage-exclusion-markers %t.sources/mcdc-general.cpp \
 # RUN:   | FileCheck %s --check-prefix=FILTERED
 # RUN: llvm-cov show %S/Inputs/mcdc-general.o -instr-profile=%t.profdata \
 # RUN:   -path-equivalence=.,%t.sources --show-mcdc \
-# RUN:   --respect-lcov-exclusion-markers %t.sources/mcdc-general.cpp \
+# RUN:   --respect-coverage-exclusion-markers %t.sources/mcdc-general.cpp \
 # RUN:   | FileCheck %s --check-prefix=SHOW
 # RUN: llvm-cov export --format=text %S/Inputs/mcdc-general.o \
 # RUN:   -instr-profile=%t.profdata -path-equivalence=.,%t.sources \
-# RUN:   --respect-lcov-exclusion-markers %t.sources/mcdc-general.cpp \
+# RUN:   --respect-coverage-exclusion-markers %t.sources/mcdc-general.cpp \
 # RUN:   | FileCheck %s --check-prefix=JSON
 
 # BASE: TOTAL{{.*}}24{{ +}}2{{ +}}91.67%{{ +}}12{{ +}}2{{ +}}83.33%

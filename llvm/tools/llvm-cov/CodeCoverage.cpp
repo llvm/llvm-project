@@ -137,7 +137,7 @@ private:
   /// If a demangler is available, demangle all symbol names.
   void demangleSymbols(const CoverageMapping &Coverage);
 
-  /// Load LCOV exclusion markers from source files required by the output.
+  /// Load coverage exclusion markers from source files required by the output.
   bool loadSourceExclusions(const CoverageMapping &Coverage,
                             ArrayRef<std::string> SelectedSourceFiles,
                             SourceExclusionScope Scope);
@@ -320,7 +320,7 @@ CodeCoverageTool::getSourceFile(StringRef SourceFile) {
 bool CodeCoverageTool::loadSourceExclusions(
     const CoverageMapping &Coverage, ArrayRef<std::string> SelectedSourceFiles,
     SourceExclusionScope Scope) {
-  if (!ViewOpts.RespectLcovExclusionMarkers)
+  if (!ViewOpts.RespectCoverageExclusionMarkers)
     return true;
 
   SmallVector<StringRef> Files;
@@ -885,10 +885,10 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "check-binary-ids", cl::desc("Fail if an object couldn't be found for a "
                                    "binary ID in the profile"));
 
-  cl::opt<bool> RespectLcovExclusionMarkers(
-      "respect-lcov-exclusion-markers", cl::Optional,
-      cl::desc("Exclude coverage for LCOV_EXCL_LINE and "
-               "LCOV_EXCL_START/LCOV_EXCL_STOP source markers"));
+  cl::opt<bool> RespectCoverageExclusionMarkers(
+      "respect-coverage-exclusion-markers", cl::Optional,
+      cl::desc("Exclude coverage for LLVM_COVERAGE_EXCLUDE_* and "
+               "LCOV_EXCL_* source markers"));
 
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
@@ -1064,7 +1064,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ExportSummaryOnly = SummaryOnly;
     ViewOpts.NumThreads = NumThreads;
     ViewOpts.CompilationDirectory = CompilationDirectory;
-    ViewOpts.RespectLcovExclusionMarkers = RespectLcovExclusionMarkers;
+    ViewOpts.RespectCoverageExclusionMarkers = RespectCoverageExclusionMarkers;
 
     return 0;
   };

@@ -1,17 +1,17 @@
-#define EXCLUDED_MACRO(x) ((x) ? 1 : 0) // LCOV_EXCL_LINE
+#define EXCLUDED_MACRO(x) ((x) ? 1 : 0) // LLVM_COVERAGE_EXCLUDE_LINE
 
 int excluded_line(int x) {
   return x ? 1 : 0; // LCOV_EXCL_LINE
 }
 
 int partially_excluded_block(int x) {
-  // LCOV_EXCL_START
+  // LLVM_COVERAGE_EXCLUDE_START
   if (x)
     return 1;
   return 0; // LCOV_EXCL_STOP
 }
 
-static int excluded_function(int x) { return x; } // LCOV_EXCL_LINE
+static int excluded_function(int x) { return x; } // LLVM_COVERAGE_EXCLUDE_LINE
 
 int included(int x) {
   if (x)
