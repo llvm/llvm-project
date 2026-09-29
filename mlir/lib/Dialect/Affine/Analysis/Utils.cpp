@@ -1142,6 +1142,9 @@ std::optional<bool> ComputationSliceState::isMaximal() const {
     // computed so we don't know if the slice is maximal.
     return std::nullopt;
 
+  if (!srcConstraints.getSpace().isCompatible(sliceConstraints.getSpace()))
+    return std::nullopt;
+
   // Compute the difference between the src loop nest and the slice integer
   // sets.
   PresburgerSet srcSet(srcConstraints);
