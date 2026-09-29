@@ -4,7 +4,7 @@
 # RUN: FileCheck %s -input-file %t.secinfo
 # RUN: llvm-profdata merge --sample --text %t.xfdo -o %t.text
 # RUN: FileCheck %s --check-prefix=TEXT -input-file %t.text
-# Extract and verify the Eytzinger span counts (NumCS, NumFlat,
+# Extract and verify the Eytzinger span counts (NumNested, NumFlat,
 # NumInlinees) from NameTableSection to ensure correct symbol
 # partitioning.
 # RUN: %python -c "import re; off = int(re.search(r'NameTableSection - Offset: (\d+)', open(r'%t.secinfo').read()).group(1)); d = open(r'%t.xfdo', 'rb').read()[off:off+3]; print(list(d))" | FileCheck %s --check-prefix=COUNTS

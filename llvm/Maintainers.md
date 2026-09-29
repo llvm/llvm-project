@@ -28,8 +28,8 @@ flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 
 #### Attributor, OpenMPOpt
 
-Johannes Doerfert \
-jdoerfert@llnl.gov (email), [jdoerfert](https://github.com/jdoerfert) (GitHub)
+Shilei Tian \
+<i@tianshilei.me>, <Shilei.Tian@amd.com> (email), [shiltian](https://github.com/shiltian) (GitHub)
 
 #### ConstraintElimination
 
@@ -158,6 +158,11 @@ mnadeem@quicinc.com (email), [UsmanNadeem](https://github.com/UsmanNadeem) (Gith
 
 Vitaly Buka \
 vitalybuka@google.com (email), [vitalybuka](https://github.com/vitalybuka) (GitHub)
+
+#### CopyProf
+
+Snehasish Kumar \
+snehasishk@google.com (email), [snehasish](https://github.com/snehasish) (GitHub)
 
 #### NumericalStabilitySanitizer
 
@@ -289,6 +294,15 @@ luweining@loongson.cn (email), [SixWeining](https://github.com/SixWeining) (GitH
 Min-Yih Hsu \
 min@myhsu.dev (email), [mshockwave](https://github.com/mshockwave) (GitHub)
 
+#### MIPS backend
+
+Weining Lu \
+luweining@loongson.cn (email), [SixWeining](https://github.com/SixWeining) (GitHub) \
+Ying Huang \
+yingopqq@gmail.com (email), [yingopq](https://github.com/yingopq) (GitHub) \
+Jiaxun Yang \
+jiaxun.yang@flygoat.com (email), [FlyGoat](https://github.com/FlyGoat) (GitHub)
+
 #### MSP430 backend
 
 Anton Korobeynikov \
@@ -301,7 +315,9 @@ jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (G
 Artem Belevich \
 tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub) \
 Alex MacLean \
-amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub)
+amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub) \
+Durgadoss R \
+durgadossr@nvidia.com (email), [durga4github](https://github.com/durga4github) (GitHub)
 
 #### PowerPC backend
 

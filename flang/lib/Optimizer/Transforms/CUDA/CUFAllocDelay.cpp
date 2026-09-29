@@ -45,15 +45,6 @@ static fir::CoordinateOp getHostAssocTupleSlot(fir::StoreOp storeOp,
   return coord;
 }
 
-/// Return true if \p coord's result is only stored into, so it writes the tuple
-/// rather than reading it.
-static bool onlyPopulatesSlot(fir::CoordinateOp coord) {
-  return llvm::all_of(coord->getUsers(), [&](mlir::Operation *user) {
-    auto storeOp = mlir::dyn_cast<fir::StoreOp>(user);
-    return storeOp && storeOp.getMemref() == coord.getResult();
-  });
-}
-
 /// Find the point before which the cuf.alloc group should be placed: the
 /// earliest use in the block that dominates all uses, or that block's
 /// terminator if it holds no use itself. Uses in nested regions resolve to
@@ -91,9 +82,18 @@ findDelayTarget(fir::DeclareOp declareOp, mlir::Block *entryBlock,
       hostAssocStores.push_back(storeOp);
       for (mlir::Operation *tupleUser : slot.getRef().getUsers()) {
         auto coord = mlir::dyn_cast<fir::CoordinateOp>(tupleUser);
-        if (coord && onlyPopulatesSlot(coord))
+        if (!coord) {
+          recordRealUse(tupleUser);
           continue;
-        recordRealUse(tupleUser);
+        }
+        // A coordinate_of only computes the slot address. Stores through that
+        // address populate the tuple; other users actually consume the slot.
+        for (mlir::Operation *coordUser : coord->getUsers()) {
+          auto slotStore = mlir::dyn_cast<fir::StoreOp>(coordUser);
+          if (slotStore && slotStore.getMemref() == coord.getResult())
+            continue;
+          recordRealUse(coordUser);
+        }
       }
     }
   }

@@ -4,7 +4,7 @@
 // RUN: cir-opt %s -cir-call-conv-lowering='target=x86_64 x86-avx-abi-level=avx512' \
 // RUN:   | FileCheck %s --check-prefix=AVX512
 // RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - 2>/dev/null \
-// RUN:   | mlir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | cir-translate -mlir-to-llvmir --allow-unregistered-dialect \
 // RUN:   | FileCheck %s --check-prefix=LLVM
 
 !s32i = !cir.int<s, 32>
@@ -117,7 +117,7 @@ module attributes {
 // LLVM: define <4 x float> @v128(<4 x float> %{{[^,)]+}})
 // LLVM: define double @v64(double %{{[^,)]+}})
 // LLVM: define i32 @v32(i32 %{{[^,)]+}})
-// LLVM: define void @v256(ptr noalias noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM: define void @v256(ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 // LLVM: define void @take_ff(<2 x float> %{{[^,)]+}})
 // LLVM: define <2 x float> @ret_ff()
 // LLVM: define void @take_farr(<2 x float> %{{[^,)]+}})
