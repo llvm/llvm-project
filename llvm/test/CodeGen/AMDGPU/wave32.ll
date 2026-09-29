@@ -1800,15 +1800,11 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) #0 {
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1032-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX1032-NEXT:    v_mov_b32_e32 v7, v3
-; GFX1032-NEXT:    v_mov_b32_e32 v6, v2
-; GFX1032-NEXT:    v_mov_b32_e32 v5, v1
-; GFX1032-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX1032-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX1032-NEXT:    s_branch .LBB33_3
 ; GFX1032-NEXT:  .LBB33_1: ; %body
 ; GFX1032-NEXT:    ; in Loop: Header=BB33_3 Depth=1
-; GFX1032-NEXT:    image_sample v[4:7], v0, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX1032-NEXT:    image_sample v[0:3], v4, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX1032-NEXT:    v_add_f32_e32 v8, 2.0, v8
 ; GFX1032-NEXT:    s_mov_b32 s1, 0
 ; GFX1032-NEXT:  .LBB33_2: ; %Flow
@@ -1821,34 +1817,34 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) #0 {
 ; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1032-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0x40e00000, v8
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
-; GFX1032-NEXT:    v_mov_b32_e32 v0, v4
-; GFX1032-NEXT:    v_mov_b32_e32 v1, v5
-; GFX1032-NEXT:    v_mov_b32_e32 v2, v6
-; GFX1032-NEXT:    v_mov_b32_e32 v3, v7
+; GFX1032-NEXT:    v_mov_b32_e32 v7, v3
+; GFX1032-NEXT:    v_mov_b32_e32 v6, v2
+; GFX1032-NEXT:    v_mov_b32_e32 v5, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX1032-NEXT:    s_cbranch_vccz .LBB33_1
 ; GFX1032-NEXT:  ; %bb.4: ; in Loop: Header=BB33_3 Depth=1
 ; GFX1032-NEXT:    s_mov_b32 s1, -1
-; GFX1032-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
+; GFX1032-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1032-NEXT:    ; implicit-def: $vgpr8
 ; GFX1032-NEXT:    s_branch .LBB33_2
 ; GFX1032-NEXT:  .LBB33_5: ; %break
 ; GFX1032-NEXT:    s_and_b32 exec_lo, exec_lo, s0
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1032-NEXT:    v_mov_b32_e32 v1, v5
+; GFX1032-NEXT:    v_mov_b32_e32 v2, v6
+; GFX1032-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX1032-NEXT:    ; return to shader part epilog
 ;
 ; GFX1064-LABEL: test_loop_vcc:
 ; GFX1064:       ; %bb.0: ; %entry
 ; GFX1064-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1064-NEXT:    s_wqm_b64 exec, exec
-; GFX1064-NEXT:    v_mov_b32_e32 v7, v3
-; GFX1064-NEXT:    v_mov_b32_e32 v6, v2
-; GFX1064-NEXT:    v_mov_b32_e32 v5, v1
-; GFX1064-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX1064-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX1064-NEXT:    s_branch .LBB33_3
 ; GFX1064-NEXT:  .LBB33_1: ; %body
 ; GFX1064-NEXT:    ; in Loop: Header=BB33_3 Depth=1
-; GFX1064-NEXT:    image_sample v[4:7], v0, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX1064-NEXT:    image_sample v[0:3], v4, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX1064-NEXT:    v_add_f32_e32 v8, 2.0, v8
 ; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
 ; GFX1064-NEXT:  .LBB33_2: ; %Flow
@@ -1861,19 +1857,23 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) #0 {
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1064-NEXT:    v_cmp_lt_f32_e32 vcc, 0x40e00000, v8
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
-; GFX1064-NEXT:    v_mov_b32_e32 v0, v4
-; GFX1064-NEXT:    v_mov_b32_e32 v1, v5
-; GFX1064-NEXT:    v_mov_b32_e32 v2, v6
-; GFX1064-NEXT:    v_mov_b32_e32 v3, v7
+; GFX1064-NEXT:    v_mov_b32_e32 v7, v3
+; GFX1064-NEXT:    v_mov_b32_e32 v6, v2
+; GFX1064-NEXT:    v_mov_b32_e32 v5, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX1064-NEXT:    s_cbranch_vccz .LBB33_1
 ; GFX1064-NEXT:  ; %bb.4: ; in Loop: Header=BB33_3 Depth=1
 ; GFX1064-NEXT:    s_mov_b64 s[2:3], -1
-; GFX1064-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
+; GFX1064-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1064-NEXT:    ; implicit-def: $vgpr8
 ; GFX1064-NEXT:    s_branch .LBB33_2
 ; GFX1064-NEXT:  .LBB33_5: ; %break
 ; GFX1064-NEXT:    s_and_b64 exec, exec, s[0:1]
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_mov_b32_e32 v0, v4
+; GFX1064-NEXT:    v_mov_b32_e32 v1, v5
+; GFX1064-NEXT:    v_mov_b32_e32 v2, v6
+; GFX1064-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX1064-NEXT:    ; return to shader part epilog
 entry:
   br label %loop

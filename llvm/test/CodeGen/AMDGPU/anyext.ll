@@ -58,13 +58,13 @@ entry:
 define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b) #0 {
 ; GCN-LABEL: s_anyext_i16_i32:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
-; GCN-NEXT:    s_mov_b32 s11, 0xf000
+; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s14, 0
-; GCN-NEXT:    s_mov_b32 s15, s11
+; GCN-NEXT:    s_mov_b32 s15, s3
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_mov_b64 s[12:13], s[2:3]
+; GCN-NEXT:    s_mov_b64 s[12:13], s[10:11]
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 1, v1
@@ -72,13 +72,13 @@ define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace
 ; GCN-NEXT:    v_mov_b32_e32 v1, v3
 ; GCN-NEXT:    buffer_load_ushort v2, v[2:3], s[12:15], 0 addr64
 ; GCN-NEXT:    buffer_load_ushort v0, v[0:1], s[4:7], 0 addr64
-; GCN-NEXT:    s_mov_b32 s10, -1
-; GCN-NEXT:    s_mov_b32 s8, s0
-; GCN-NEXT:    s_mov_b32 s9, s1
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_mov_b32 s0, s8
+; GCN-NEXT:    s_mov_b32 s1, s9
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, v2, v0
 ; GCN-NEXT:    v_bfi_b32 v0, v0, 0, 1
-; GCN-NEXT:    buffer_store_dword v0, off, s[8:11], 0
+; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
 ;
 ; GFX8-LABEL: s_anyext_i16_i32:
