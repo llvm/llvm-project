@@ -582,7 +582,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
     result =
         FPBits(float_mantissa * ClingerConsts<T>::POWERS_OF_TEN_ARRAY[exp10]);
   } else if (exp10 < 0) {
-    if (-exp10 > ClingerConsts<T>::EXACT_POWERS_OF_TEN) {
+    if (exp10 < -ClingerConsts<T>::EXACT_POWERS_OF_TEN) {
       return cpp::nullopt;
     }
     result =
@@ -594,10 +594,12 @@ clinger_fast_path(ExpandedFloat<T> init_num,
   // calculation is redone with a negative result, and the rounding mode is used
   // to select the correct result.
   if (round != RoundDirection::Nearest) {
-    FPBits negative_result;
     // I'm 99% sure this will break under fast math optimizations.
-    negative_result = FPBits((-float_mantissa) *
-                             ClingerConsts<T>::POWERS_OF_TEN_ARRAY[exp10]);
+    FPBits negative_result =
+        exp10 < 0 ? FPBits((-float_mantissa) /
+                           ClingerConsts<T>::POWERS_OF_TEN_ARRAY[-exp10])
+                  : FPBits((-float_mantissa) *
+                           ClingerConsts<T>::POWERS_OF_TEN_ARRAY[exp10]);
 
     // If the results are equal, then we don't need to use the rounding mode.
     if (result.get_val() != -negative_result.get_val()) {
