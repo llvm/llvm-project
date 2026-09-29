@@ -3067,8 +3067,7 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
   // If we don't find a combined condition in the latch, just return true
   // to proceed with vectorization.
   auto [_, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
-  VPValue *Uncountable = nullptr;
-  VPValue *Countable = nullptr;
+
   // We're looking for a conditional branch...
   auto *Term = dyn_cast<VPInstruction>(LatchVPBB->getTerminator());
   if (!Term || Term->getOpcode() != VPInstruction::BranchOnCond)
@@ -3076,6 +3075,8 @@ bool VPlanTransforms::splitCombinedExits(VPlan &Plan,
 
   // ...where the condition is a combination of both a countable and an
   // uncountable comparison.
+  VPValue *Uncountable = nullptr;
+  VPValue *Countable = nullptr;
   VPValue *Cond = Term->getOperand(0);
   if (!match(Cond, m_OneUse(m_CombineOr(
                        m_c_LogicalOr(m_Uncountable(Uncountable),

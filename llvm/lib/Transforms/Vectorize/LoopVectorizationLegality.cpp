@@ -1577,7 +1577,7 @@ static bool matchUncountableExitCondition(Value *Cond, Value *&Ptr,
                          m_Value(Other))));
 }
 
-/// Matches an exit condition formed by comparing the current value of a
+/// Matches an exit condition formed by comparing the current value of an
 /// affine add recurrence in the given loop with a stride of 1 against a
 /// loop-invariant term.
 static bool matchCountableExitCondition(Value *Cond, ScalarEvolution &SE,
@@ -1642,9 +1642,9 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   if (Reductions.size() || FixedOrderRecurrences.size()) {
     reportVectorizationFailure(
-        "Found reductions or recurrences in uncountable exit loop",
-        "Cannot vectorize uncountable exit loop with reductions or recurrences",
-        "RecurrencesInUncountableExitLoop", ORE, TheLoop);
+        "Found reductions or recurrences in early-exit loop",
+        "Cannot vectorize early exit loop with reductions or recurrences",
+        "RecurrencesInEarlyExitLoop", ORE, TheLoop);
     return false;
   }
 

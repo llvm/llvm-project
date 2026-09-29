@@ -517,8 +517,8 @@ exit:
 ; the early-exit loop is still rejected here.
 define i64 @same_exit_block_with_recurrence_that_is_also_an_induction() !dbg !59 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'same_exit_block_with_recurrence_that_is_also_an_induction'
-; CHECK-DEBUG:       LV: Not vectorizing: Found reductions or recurrences in uncountable exit loop.
-; CHECK-REMARK:      foo.c:160:3: loop not vectorized: Cannot vectorize uncountable exit loop with reductions or recurrences
+; CHECK-DEBUG:       LV: Not vectorizing: Found reductions or recurrences in early-exit loop.
+; CHECK-REMARK:      foo.c:160:3: loop not vectorized: Cannot vectorize early exit loop with reductions or recurrences
 entry:
   %p1 = alloca [4096 x i8]
   call void @init_mem(ptr %p1, i64 4096)
@@ -548,8 +548,8 @@ loop.end:
 
 define i64 @same_exit_block_pre_inc_use1_with_reduction() !dbg !61 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_with_reduction'
-; CHECK-DEBUG:       LV: Not vectorizing: Found reductions or recurrences in uncountable exit loop.
-; CHECK-REMARK:      foo.c:170:3: loop not vectorized: Cannot vectorize uncountable exit loop with reductions or recurrences
+; CHECK-DEBUG:       LV: Not vectorizing: Found reductions or recurrences in early-exit loop.
+; CHECK-REMARK:      foo.c:170:3: loop not vectorized: Cannot vectorize early exit loop with reductions or recurrences
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
