@@ -805,6 +805,17 @@ bool RecurrenceDescriptor::AddReductionVar(
         computeRecurrenceType(ExitInstruction, DB, AC, DT);
     if (ComputedType != RecurrenceType)
       return false;
+  } else if (RecurrenceType->isIntegerTy() && AC && DT &&
+             (Kind == RecurKind::Or || Kind == RecurKind::And ||
+              Kind == RecurKind::Xor)) {
+    auto [ComputedType, ComputedIsSigned] =
+        computeRecurrenceType(ExitInstruction, /*DB=*/nullptr, AC, DT);
+    unsigned ComputedBits = ComputedType->getScalarSizeInBits();
+    if (ComputedBits >= 8 &&
+        ComputedBits < RecurrenceType->getScalarSizeInBits()) {
+      RecurrenceType = ComputedType;
+      IsSigned = ComputedIsSigned;
+    }
   }
 
   // Collect cast instructions and the minimum width used by the recurrence.

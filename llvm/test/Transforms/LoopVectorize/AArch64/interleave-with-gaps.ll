@@ -20,7 +20,7 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:
 ; CHECK-NOTF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NOTF-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[TMP1:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], i64 [[INDEX]], i32 0, i64 3
 ; CHECK-NOTF-NEXT:    [[WIDE_VEC:%.*]] = load <64 x i8>, ptr [[TMP1]], align 1
 ; CHECK-NOTF-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <64 x i8> [[WIDE_VEC]], <64 x i8> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
@@ -30,18 +30,21 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NOTF-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP5]], align 1
 ; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = zext <16 x i32> [[TMP4]] to <16 x i64>
-; CHECK-NOTF-NEXT:    [[TMP7]] = or <16 x i64> [[VEC_PHI]], [[TMP6]]
+; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = or <16 x i64> [[VEC_PHI]], [[TMP6]]
+; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = trunc <16 x i64> [[TMP7]] to <16 x i8>
+; CHECK-NOTF-NEXT:    [[TMP9]] = zext <16 x i8> [[TMP10]] to <16 x i64>
 ; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; CHECK-NOTF-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-NOTF:       [[MIDDLE_BLOCK]]:
-; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.or.v16i64(<16 x i64> [[TMP7]])
+; CHECK-NOTF-NEXT:    [[TMP11:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP10]])
+; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP11]] to i64
 ; CHECK-NOTF-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK-NOTF:       [[SCALAR_PH]]:
 ; CHECK-NOTF-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-NOTF:       [[LOOP]]:
 ; CHECK-NOTF-NEXT:    [[IV:%.*]] = phi i64 [ 16, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NOTF-NEXT:    [[RED:%.*]] = phi i64 [ [[TMP9]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NOTF-NEXT:    [[RED:%.*]] = phi i64 [ [[TMP12]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NOTF-NEXT:    [[GEP_SRC_I_I:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], i64 [[IV]], i32 0, i64 3
 ; CHECK-NOTF-NEXT:    [[L:%.*]] = load i8, ptr [[GEP_SRC_I_I]], align 1
 ; CHECK-NOTF-NEXT:    [[L_EXT:%.*]] = zext i8 [[L]] to i32
@@ -125,7 +128,7 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:
 ; CHECK-NOTF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NOTF-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[TMP1:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], i64 [[INDEX]], i32 0, i64 3
 ; CHECK-NOTF-NEXT:    [[WIDE_VEC:%.*]] = load <64 x i8>, ptr [[TMP1]], align 1
 ; CHECK-NOTF-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <64 x i8> [[WIDE_VEC]], <64 x i8> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
@@ -135,18 +138,21 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NOTF-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP5]], align 1
 ; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = zext <16 x i32> [[TMP4]] to <16 x i64>
-; CHECK-NOTF-NEXT:    [[TMP7]] = or <16 x i64> [[VEC_PHI]], [[TMP6]]
+; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = or <16 x i64> [[VEC_PHI]], [[TMP6]]
+; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = trunc <16 x i64> [[TMP7]] to <16 x i8>
+; CHECK-NOTF-NEXT:    [[TMP9]] = zext <16 x i8> [[TMP10]] to <16 x i64>
 ; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; CHECK-NOTF-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-NOTF:       [[MIDDLE_BLOCK]]:
-; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.or.v16i64(<16 x i64> [[TMP7]])
+; CHECK-NOTF-NEXT:    [[TMP11:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP10]])
+; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP11]] to i64
 ; CHECK-NOTF-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK-NOTF:       [[SCALAR_PH]]:
 ; CHECK-NOTF-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-NOTF:       [[LOOP]]:
 ; CHECK-NOTF-NEXT:    [[IV:%.*]] = phi i64 [ 16, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NOTF-NEXT:    [[RED:%.*]] = phi i64 [ [[TMP9]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NOTF-NEXT:    [[RED:%.*]] = phi i64 [ [[TMP12]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NOTF-NEXT:    [[GEP_SRC_I_I:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], i64 [[IV]], i32 0, i64 3
 ; CHECK-NOTF-NEXT:    [[L:%.*]] = load i8, ptr [[GEP_SRC_I_I]], align 1
 ; CHECK-NOTF-NEXT:    [[L_EXT:%.*]] = zext i8 [[L]] to i32
