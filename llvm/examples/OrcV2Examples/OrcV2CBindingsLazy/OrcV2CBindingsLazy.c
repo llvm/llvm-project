@@ -200,7 +200,7 @@ int main(int argc, const char *argv[]) {
     LLVMOrcJITDylibRef MainJD = LLVMOrcLLJITGetMainJITDylib(J);
     LLVMOrcMaterializationUnitRef MU =
         LLVMOrcLazyReexports(LCTM, ISM, MainJD, ReExports, 2);
-    LLVMOrcJITDylibDefine(MainJD, MU);
+    (void)LLVMOrcJITDylibDefine(MainJD, MU);
   }
 
   // Look up the address of our demo entry point.
