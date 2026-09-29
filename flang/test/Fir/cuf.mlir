@@ -121,3 +121,12 @@ func.func @_QPdevice_is_active() {
 }
 
 // CHECK: %{{.*}} = cuf.device_is_active : i1
+
+// -----
+
+func.func @_QPon_device() {
+  %0 = cuf.on_device : i1
+  return
+}
+
+// CHECK: %{{.*}} = cuf.on_device : i1
