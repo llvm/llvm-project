@@ -78,6 +78,9 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   elseif(${feature} MATCHES "^builtin_" OR
       ${feature} STREQUAL "float16_conversion")
     set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
+    # Under LTO nothing in the test is used, so it is dropped before the
+    # compiler picks calls to a library, and every check passes.
+    list(APPEND compile_options -fno-lto)
     set(link_options -nostdlib)
     # The compiler might handle calls to math builtins by generating calls to
     # the respective libc math functions, in which case we cannot use these
