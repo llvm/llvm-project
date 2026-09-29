@@ -8,13 +8,6 @@
 # CHECK-NEXT: DBG_INSTR_REF !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0)
 
 --- |
-  define ptr @_ZNK4llvm5Error6getPtrEv(ptr %this) local_unnamed_addr #0 {
-  entry:
-    %0 = ptrtoint ptr %this to i64
-    %and = and i64 %0, -2
-    %1 = inttoptr i64 %and to ptr
-    ret ptr %1
-  }
   define noalias noundef ptr @_ZN4llvmlsERNS_11raw_ostreamERKNS_5ErrorE(ptr %E) local_unnamed_addr #1 !dbg !4 {
   entry:
     %0 = ptrtoint ptr %E to i64, !dbg !13

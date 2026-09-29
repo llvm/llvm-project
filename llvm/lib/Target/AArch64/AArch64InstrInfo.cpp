@@ -6804,7 +6804,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 bool llvm::isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
                                            const MachineInstr &UseMI,
                                            const TargetRegisterInfo *TRI) {
-  return any_of(instructionsWithoutDebug(std::next(DefMI.getIterator()),
+  return any_of(instructionsWithoutDebug(DefMI.getIterator(),
                                          UseMI.getIterator()),
                 [TRI](const MachineInstr &I) {
                   return I.modifiesRegister(AArch64::NZCV, TRI) ||

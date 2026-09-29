@@ -13,8 +13,9 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[COPY]], 32, 63
-  ; CHECK-NEXT:   CBNZX [[UBFMXri]], %bb.1
+  ; CHECK-NEXT:   [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 4294967296
+  ; CHECK-NEXT:   $xzr = SUBSXrr [[COPY]], [[MOVi64imm]], implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 2, %bb.1, implicit $nzcv
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
@@ -41,8 +42,9 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[COPY]], 47, 63
-  ; CHECK-NEXT:   CBNZX [[UBFMXri]], %bb.1
+  ; CHECK-NEXT:   [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 140737488355328
+  ; CHECK-NEXT:   $xzr = SUBSXrr [[COPY]], [[MOVi64imm]], implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 2, %bb.1, implicit $nzcv
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
@@ -69,8 +71,9 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 16, 31
-  ; CHECK-NEXT:   CBZW [[UBFMWri]], %bb.1
+  ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 65536
+  ; CHECK-NEXT:   $wzr = SUBSWrr [[COPY]], [[MOVi32imm]], implicit-def $nzcv
+  ; CHECK-NEXT:   Bcc 3, %bb.1, implicit $nzcv
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
@@ -287,9 +290,10 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[COPY]], 32, 63
+  ; CHECK-NEXT:   [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 4294967296
+  ; CHECK-NEXT:   $xzr = SUBSXrr [[COPY]], [[MOVi64imm]], implicit-def $nzcv
   ; CHECK-NEXT:   CBNZX [[COPY]], %bb.1
-  ; CHECK-NEXT:   CBZX [[UBFMXri]], %bb.1
+  ; CHECK-NEXT:   Bcc 3, %bb.1, implicit $nzcv
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR

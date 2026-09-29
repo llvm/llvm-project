@@ -678,7 +678,7 @@ examineCFlagsUse(MachineInstr &MI, MachineInstr &CmpInstr,
                  const TargetRegisterInfo &TRI,
                  SmallVectorImpl<MachineInstr *> *CCUseInstrs = nullptr);
 
-/// Return true if there is an instruction /after/ \p DefMI and before \p UseMI
+/// Return true if there is an instruction in the range [ \p DefMI, \p UseMI )
 /// which either reads or clobbers NZCV.
 bool isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
                                      const MachineInstr &UseMI,

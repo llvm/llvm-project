@@ -219,14 +219,15 @@ if.end:
 define void @test_lsr_cbnz(ptr %p0) {
 ; CHECK-LABEL: test_lsr_cbnz:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    mov x8, #4294967296 // =0x100000000
+; CHECK-NEXT:    mov x9, x0
 ; CHECK-NEXT:  .LBB10_1: // %loop.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr x9, [x8], #32
-; CHECK-NEXT:    lsr x10, x9, #32
-; CHECK-NEXT:    cbnz x10, .LBB10_1
+; CHECK-NEXT:    ldr x10, [x9], #32
+; CHECK-NEXT:    cmp x10, x8
+; CHECK-NEXT:    b.hs .LBB10_1
 ; CHECK-NEXT:  // %bb.2: // %loop.exit
-; CHECK-NEXT:    str x9, [x0]
+; CHECK-NEXT:    str x10, [x0]
 ; CHECK-NEXT:    ret
 entry:
   br label %loop.body
@@ -246,14 +247,15 @@ loop.exit:
 define void @test_lsr_cbz(ptr %p0) {
 ; CHECK-LABEL: test_lsr_cbz:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    mov x8, #4294967296 // =0x100000000
+; CHECK-NEXT:    mov x9, x0
 ; CHECK-NEXT:  .LBB11_1: // %loop.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr x9, [x8], #32
-; CHECK-NEXT:    lsr x10, x9, #32
-; CHECK-NEXT:    cbz x10, .LBB11_1
+; CHECK-NEXT:    ldr x10, [x9], #32
+; CHECK-NEXT:    cmp x10, x8
+; CHECK-NEXT:    b.lo .LBB11_1
 ; CHECK-NEXT:  // %bb.2: // %loop.exit
-; CHECK-NEXT:    str x9, [x0]
+; CHECK-NEXT:    str x10, [x0]
 ; CHECK-NEXT:    ret
 entry:
   br label %loop.body
@@ -273,14 +275,15 @@ loop.exit:
 define void @test_lshr_icmp0(ptr %p0) {
 ; CHECK-LABEL: test_lshr_icmp0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    mov x8, #68719476736 // =0x1000000000
+; CHECK-NEXT:    mov x9, x0
 ; CHECK-NEXT:  .LBB12_1: // %loop.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr x9, [x8], #32
-; CHECK-NEXT:    lsr x10, x9, #36
-; CHECK-NEXT:    cbnz x10, .LBB12_1
+; CHECK-NEXT:    ldr x10, [x9], #32
+; CHECK-NEXT:    cmp x10, x8
+; CHECK-NEXT:    b.hs .LBB12_1
 ; CHECK-NEXT:  // %bb.2: // %loop.exit
-; CHECK-NEXT:    str x9, [x0]
+; CHECK-NEXT:    str x10, [x0]
 ; CHECK-NEXT:    ret
 entry:
   br label %loop.body
