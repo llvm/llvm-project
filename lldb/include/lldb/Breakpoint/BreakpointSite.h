@@ -48,7 +48,7 @@ public:
   typedef lldb::break_id_t SiteID;
   typedef lldb::break_id_t ConstituentID;
 
-  ~BreakpointSite() override;
+  ~BreakpointSite() = default;
 
   // This section manages the breakpoint traps
 
