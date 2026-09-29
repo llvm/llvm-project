@@ -511,10 +511,9 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(MachineInstr *MI, unsigned UseOpNo,
   int OpNo = MI->getOperandNo(&Old);
   uint8_t OpType = TII->get(Opcode).operands()[OpNo].OperandType;
 
-  bool BF16FromUpperFP32 =
-      ST->hasBF16InlineConstFromUpperFP32() &&
-      (OpType == AMDGPU::OPERAND_REG_IMM_V2BF16 ||
-       OpType == AMDGPU::OPERAND_REG_INLINE_C_V2BF16);
+  bool BF16FromUpperFP32 = ST->hasBF16InlineConstFromUpperFP32() &&
+                           (OpType == AMDGPU::OPERAND_REG_IMM_V2BF16 ||
+                            OpType == AMDGPU::OPERAND_REG_INLINE_C_V2BF16);
 
   // If the literal can be inlined as-is, apply it and short-circuit the
   // tests below. The main motivation for this is to avoid unintuitive
