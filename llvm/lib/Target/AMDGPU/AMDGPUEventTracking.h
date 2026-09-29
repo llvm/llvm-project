@@ -49,24 +49,18 @@ struct CounterInfo {
   unsigned Limit;
 };
 
-/// Represents entries in the \ref EventTracker.
-///
 /// Records are all uniquely identified by a \ref DynamicInstanceID. For each
 /// unique \ref DynamicInstanceID value, all \ref EventTrackerRecord that use
 /// that ID should have the same MI and Kind. This is enforced by exposing these
 /// as read-only, and making the constructor assign a new \ref DynamicInstanceID
-/// every time.
-///
-/// Only the score can change as it may be unique to each instance
+/// every time. Only the score can change as it may be unique to each instance
 /// of \ref EventTracker that carry it.
 class EventTrackerRecord {
 public:
   /// An always-increasing counter used to represent a dynamic instance of a
-  /// record.
-  ///
-  /// Whenever we add a new \ref EventTrackerRecord, even if it's one we already
-  /// have seen in a previous dataflow iteration, this counter is increased so
-  /// that the new record has a unique `DynamicInstanceID`.
+  /// record. Whenever we add a new \ref EventTrackerRecord, even if it's one we
+  /// already have seen in a previous dataflow iteration, this counter is
+  /// increased so that the new record has a unique `DynamicInstanceID`.
   using DynamicInstanceID = uint32_t;
 
   EventTrackerRecord(EventTrackingContext &Ctx, MachineInstr *MI,
@@ -100,6 +94,11 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
+  static bool isScoreGreaterThan(const EventTrackerRecord &A,
+                                 const EventTrackerRecord &B) {
+    return A.getScore() > B.getScore();
+  }
+
 private:
   EventTrackerRecord(DynamicInstanceID ID, MachineInstr *MI, SingleHWEvent Kind,
                      uint32_t Score = 0)
@@ -121,25 +120,16 @@ static_assert(sizeof(EventTrackerRecord) == 16,
               "EventTrackerRecord should remain small to optimize its layout "
               "within cache lines, for maximum iteration speed");
 
-/// Per-MBB tracking context.
-///
-/// Tracks data across the following domains:
-///   - Current value (count) of each instruction counter.
-///   - In-flight (alive) \ref EventTrackerRecord of each instruction counter.
-///
-/// This class is only responsible for tracking records for every
-/// InstCounterType. It does not deal with calculating the waitcnts needed, or
-/// doing more advance reasoning over the timeline for specific queries (e.g.
-/// finding an aliasing store). These responsibilities are for
-/// utils/wrappers/users of the class.
-///
-/// The API should be kept as simple and clear as possible.
+/// Per-MBB tracking context which tracks the current value (count) of each
+/// instruction counter and the set of in-flight (alive) \ref EventTrackerRecord
+/// of each instruction counter. This class is only responsible for tracking
+/// records for every InstCounterType. It does not deal with calculating the
+/// waitcnts needed, or doing more advance reasoning over the timeline for
+/// specific queries (e.g. finding an aliasing store). These responsibilities
+/// are for utils/wrappers/users of the class.
 class EventTracker {
 public:
   EventTracker(MachineBasicBlock &MBB, EventTrackingContext &ET);
-
-  /// \defgroup MachineBasicBlock entry and exit
-  /// \{
 
   /// Notify this EventTracker that we are going to begin recording events.
   /// In case this is not the first time we are going through this block, this
@@ -150,23 +140,14 @@ public:
   /// Notify this EventTracker that we are done recording events.
   void leaveBlock();
 
-  /// \}
-
-  /// \defgroup InstCounters Tracking Entrypoints
-  /// Methods update the state of the InstCounters by adding/removing events
-  /// or signaling certain special conditions.
-  /// \{
-
   /// Record an event of type \p Event at a MachineInstr \p MI, which will
   /// affect all counters that have \p Event in their event set.
   void record(MachineInstr &MI, SingleHWEvent Event);
 
   /// Notify that we waited until the counter \p T reached the value \p N before
   /// continuing execution of the program (and recording more events).
-  ///
   /// This affects the count of \p T, an removes all records that have a score
   /// greater than or equal to \p N.
-  ///
   /// If \p N is zero, then \p T will no longer be in an indeterminate or
   /// out-of-order state afterwards if it previously was in such a state.
   void wait(InstCounterType T, unsigned N = 0);
@@ -175,19 +156,12 @@ public:
   /// we no longer accurately track \p T because there may be more records we do
   /// not know about. This primarily affects \ref getPendingEvents and
   /// \ref count.
-  ///
   /// Implies \ref markOutOfOrder for \p T as well.
   void markIndeterminate(InstCounterType T);
 
   /// Mark the counter \p T as being "out-of-order", meaning records may retire
   /// in any order. This sets the score of all records to zero.
   void markOutOfOrder(InstCounterType T);
-
-  /// \}
-
-  /// \defgroup InstCounters Tracking Queries
-  /// Query the current state of each InstCounter without modifying it.
-  /// \{
 
   /// \returns the current value of the counter \p T at this point in time, or
   /// std::nullopt if \p T is in the indeterminate state.
@@ -208,11 +182,6 @@ public:
   /// Note that if \p T is indeterminate, then this set is non-exhaustive. It
   /// only contains the records this class knows about.
   ArrayRef<EventTrackerRecord> getLiveRecords(InstCounterType T) const;
-
-  /// \}
-
-  /// \defgroup Miscellaneous helpers
-  /// \{
 
   /// Prints a dump of the internal tracking state of this class for \p T to the
   /// stream \p OS.
@@ -236,8 +205,6 @@ public:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
 #endif
-
-  /// \}
 
 private:
   struct CounterData {
@@ -293,7 +260,6 @@ private:
 };
 
 /// Per-MF Tracking Context.
-///
 /// This owns all \ref EventTrackers and keeps track of state that persists
 /// across dataflow analysis iterations, such as the current value of
 /// \ref DynamicInstanceID.
