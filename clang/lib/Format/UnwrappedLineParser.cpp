@@ -3922,9 +3922,15 @@ bool UnwrappedLineParser::parseEnum() {
     // Eat up enum class ...
     if (FormatTok->isOneOf(tok::kw_class, tok::kw_struct))
       nextToken();
-    while (FormatTok->is(tok::l_square))
-      if (!handleCppAttributes())
-        return false;
+    while (FormatTok->isOneOf(tok::l_square, TT_AttributeMacro)) {
+      if (FormatTok->is(tok::l_square)) {
+        if (!handleCppAttributes())
+          return false;
+      } else {
+        // TT_AttributeMacro
+        nextToken();
+      }
+    }
   }
 
   while (FormatTok->Tok.getIdentifierInfo() ||
