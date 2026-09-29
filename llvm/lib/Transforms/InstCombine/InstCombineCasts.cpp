@@ -1959,13 +1959,6 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
       return Res;
     }
 
-    // If input is a trunc from the destination type, then convert into shifts.
-    if (Src->hasOneUse() && X->getType() == DestTy) {
-      // sext (trunc X) --> ashr (shl X, C), C
-      Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
-      return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShAmt), ShAmt);
-    }
-
     // If we are replacing shifted-in high zero bits with sign bits, convert
     // the logic shift to arithmetic shift and eliminate the cast to
     // intermediate type:
@@ -1980,6 +1973,13 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
          ComputeNumSignBits(Y, &Sext) + C->getZExtValue() > TruncatedBits)) {
       Value *Ashr = Builder.CreateAShr(Y, C->getZExtValue());
       return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
+    }
+
+    // If input is a trunc from the destination type, then convert into shifts.
+    if (Src->hasOneUse() && X->getType() == DestTy) {
+      // sext (trunc X) --> ashr (shl X, C), C
+      Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
+      return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShAmt), ShAmt);
     }
   }
 

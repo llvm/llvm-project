@@ -18,9 +18,8 @@ define i32 @t1(i16 %x) {
 ; CHECK-LABEL: define i32 @t1(
 ; CHECK-SAME: i16 [[X:%.*]]) {
 ; CHECK-NEXT:    [[S:%.*]] = sext i16 [[X]] to i32
-; CHECK-NEXT:    [[Y:%.*]] = shl nsw i32 [[S]], 10
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[Y]], 32768
-; CHECK-NEXT:    [[C:%.*]] = ashr i32 [[TMP1]], 16
+; CHECK-NEXT:    [[Y:%.*]] = add nsw i32 [[S]], 32
+; CHECK-NEXT:    [[C:%.*]] = ashr i32 [[Y]], 6
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = sext i16 %x to i32
