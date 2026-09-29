@@ -46,11 +46,11 @@ module m_firstprivate_derived_user_def
 !
 ! CHECK-LABEL:   func.func @_QMm_firstprivate_derived_user_defPtest() {
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}> {bindc_name = "a", uniq_name = "_QMm_firstprivate_derived_user_defFtestEa"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}> <{bindc_name = "a", uniq_name = "_QMm_firstprivate_derived_user_defFtestEa"}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QMm_firstprivate_derived_user_defFtestEa"} : (!fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>>) -> (!fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>>, !fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>>)
-! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMm_firstprivate_derived_user_defFtestEi"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QMm_firstprivate_derived_user_defFtestEi"}>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QMm_firstprivate_derived_user_defFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_5:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QMm_firstprivate_derived_user_defFtestEn"}
+! CHECK:           %[[VAL_5:.*]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QMm_firstprivate_derived_user_defFtestEn"}>
 ! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QMm_firstprivate_derived_user_defFtestEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_7:.*]] = acc.firstprivate varPtr(%[[VAL_2]]#0 : !fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>>) recipe(@firstprivatization_ref_rec__QMm_firstprivate_derived_user_defTpoint) name("a") -> !fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>>
 ! CHECK:           acc.parallel combined(loop) firstprivate(%[[VAL_7]] : !fir.ref<!fir.type<_QMm_firstprivate_derived_user_defTpoint{x:f32,y:f32,z:f32}>>) {

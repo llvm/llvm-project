@@ -34,18 +34,10 @@ class Session;
 /// ensures that only requested transport mechanisms are available.
 class ConnectorRegistry {
 public:
-  struct AttachInfo {
-    Session &S;
-    BootstrapInfo BI;
-  };
-
-  /// Supplies the Session and BootstrapInfo to connect.
-  using GetAttachInfoFn = move_only_function<Expected<AttachInfo>() noexcept>;
-
-  /// Establishes the connection CS describes and attaches it to the Session
-  /// that GetSession returns.
+  /// Establishes the connection CS describes and attaches it to S, handing
+  /// over BI.
   using ConnectorFn = move_only_function<Error(
-      GetAttachInfoFn GetAttachInfo, const ConnectionSpec &) noexcept>;
+      const ConnectionSpec &CS, Session &S, BootstrapInfo BI) noexcept>;
 
   /// Registers Connector as the handler for Transport.
   ///
@@ -58,8 +50,8 @@ public:
   ///
   /// Fails if no connector is registered for it, which is how a spec naming a
   /// transport this process was not built with is reported.
-  Error connect(GetAttachInfoFn GetAttachInfo,
-                const ConnectionSpec &CS) noexcept;
+  Error connect(const ConnectionSpec &CS, Session &S,
+                BootstrapInfo BI) noexcept;
 
 private:
   std::mutex M;

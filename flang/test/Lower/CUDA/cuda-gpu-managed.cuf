@@ -202,9 +202,9 @@ end subroutine
 ! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>, hasDoubleDescriptor}
 ! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>, hasDoubleDescriptor}
 
-! CHECK: fir.global @_QMmod_globalsEglobal_arr {data_attr = #cuf.cuda<managed>} : !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK: fir.global @_QMmod_globalsEglobal_arr <{data_attr = #cuf.cuda<managed>}> : !fir.box<!fir.heap<!fir.array<?xf32>>>
 ! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
 
-! CHECK: fir.global @_QMmod_globalsEglobal_device {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK: fir.global @_QMmod_globalsEglobal_device <{data_attr = #cuf.cuda<device>}> : !fir.box<!fir.heap<!fir.array<?xf32>>>
 ! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
 

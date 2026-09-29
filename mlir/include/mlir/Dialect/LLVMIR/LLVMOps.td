@@ -2319,8 +2319,16 @@ def LLVM_ZeroOp
 
 def LLVM_ConstantOp
     : LLVM_Op<"mlir.constant", [Pure, ConstantLike]>,
-      LLVM_Builder<[{$res = getLLVMConstant($_resultType, $value, $_location,
-                                            moduleTranslation);}]>
+      LLVM_Builder<[{
+        llvm::Constant *cst = getLLVMConstant($_resultType, $value,
+                                              $_location, moduleTranslation);
+        // `getLLVMConstant` emits a diagnostic and returns null if the
+        // attribute cannot be converted, e.g. when it refers to a resource
+        // that is not present in the module.
+        if (!cst)
+          return failure();
+        $res = cst;
+      }]>
 {
   let summary = "Defines a constant of LLVM type.";
   let description = [{

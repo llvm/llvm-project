@@ -2374,6 +2374,12 @@ static bool CheckBitIntElementType(Sema &S, SourceLocation AttrLoc,
   return false;
 }
 
+// A bool vector is stored as an integer with one bit per element and can be
+// formed from any vector (e.g. by the conditional operator); the size bound
+// keeps the natural alignment within TypeInfo::Align.
+static constexpr uint64_t MaxVectorElements = llvm::IntegerType::MAX_INT_BITS;
+static constexpr uint64_t MaxVectorSizeInBits = 1ULL << 31;
+
 QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                SourceLocation AttrLoc) {
   // The base type must be integer (not Boolean or enumeration) or float, and
@@ -2414,8 +2420,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                           VectorKind::Generic);
 
   // vecSize is specified in bytes - convert to bits.
-  if (!VecSize->isIntN(61)) {
-    // Bit size will overflow uint64.
+  if (VecSize->ugt(MaxVectorSizeInBits / 8)) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << SizeExpr->getSourceRange() << "vector";
     return QualType();
@@ -2435,7 +2440,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return QualType();
   }
 
-  if (VectorSizeBits / TypeSize > std::numeric_limits<uint32_t>::max()) {
+  if (VectorSizeBits / TypeSize > MaxVectorElements) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << SizeExpr->getSourceRange() << "vector";
     return QualType();
@@ -2483,17 +2488,24 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
       return QualType();
     }
 
-    if (!VecSize->isIntN(32)) {
+    // Unlike gcc's vector_size attribute, the size is specified as the
+    // number of elements, not the number of bytes.
+    if (VecSize->ugt(MaxVectorElements)) {
       Diag(AttrLoc, diag::err_attribute_size_too_large)
           << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
-    // Unlike gcc's vector_size attribute, the size is specified as the
-    // number of elements, not the number of bytes.
     unsigned VectorSize = static_cast<unsigned>(VecSize->getZExtValue());
 
     if (VectorSize == 0) {
       Diag(AttrLoc, diag::err_attribute_zero_size)
+          << SizeExpr->getSourceRange() << "vector";
+      return QualType();
+    }
+
+    if (!T->isDependentType() &&
+        VectorSize * Context.getTypeSize(T) > MaxVectorSizeInBits) {
+      Diag(AttrLoc, diag::err_attribute_size_too_large)
           << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
@@ -9171,8 +9183,15 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_HLSLRowMajor:
     case ParsedAttr::AT_HLSLColumnMajor:
       if (Attr *A =
-              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr))
-        type = state.getAttributedType(A, type, type);
+              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr)) {
+        MatrixType::LayoutKind Layout =
+            attr.getKind() == ParsedAttr::AT_HLSLRowMajor
+                ? MatrixType::LayoutKind::RowMajor
+                : MatrixType::LayoutKind::ColumnMajor;
+        QualType Equivalent =
+            state.getSema().Context.getMatrixTypeWithLayout(type, Layout);
+        type = state.getAttributedType(A, type, Equivalent);
+      }
       attr.setUsedAsTypeAttr();
       break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:

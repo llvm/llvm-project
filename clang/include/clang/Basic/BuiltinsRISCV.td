@@ -203,6 +203,25 @@ def paas_x_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int
 def pasa_x_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>)">;
 def pasa_x_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>)">;
 
+// Packed Shift (32-bit)
+def psll_s_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, unsigned char>, unsigned int)">;
+def psll_s_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, unsigned short>, unsigned int)">;
+def psrl_s_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, unsigned char>, unsigned int)">;
+def psrl_s_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, unsigned short>, unsigned int)">;
+def psra_s_i8x4 : RISCVBuiltin<"_Vector<4, signed char>(_Vector<4, signed char>, unsigned int)">;
+def psra_s_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, unsigned int)">;
+
+// Packed Shift (64-bit)
+def psll_s_u8x8 : RISCVBuiltin<"_Vector<8, unsigned char>(_Vector<8, unsigned char>, unsigned int)">;
+def psll_s_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned short>, unsigned int)">;
+def psll_s_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>, unsigned int)">;
+def psrl_s_u8x8 : RISCVBuiltin<"_Vector<8, unsigned char>(_Vector<8, unsigned char>, unsigned int)">;
+def psrl_s_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned short>, unsigned int)">;
+def psrl_s_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>, unsigned int)">;
+def psra_s_i8x8 : RISCVBuiltin<"_Vector<8, signed char>(_Vector<8, signed char>, unsigned int)">;
+def psra_s_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, unsigned int)">;
+def psra_s_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, unsigned int)">;
+
 // Packed Absolute Value and Absolute Difference (32-bit)
 def pabd_i8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, signed char>, _Vector<4, signed char>)">;
 def pabd_i16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, short>, _Vector<2, short>)">;
@@ -285,6 +304,22 @@ def pmhaccsu_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<
 def pmhaccsu_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>, _Vector<2, unsigned int>)">;
 def pmhraccsu_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>, _Vector<4, unsigned short>)">;
 def pmhraccsu_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>, _Vector<2, unsigned int>)">;
+
+// Packed Multiply High Accumulate (32-bit)
+def pmhacc_b0_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>, _Vector<4, signed char>)">;
+def pmhacc_b1_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>, _Vector<4, signed char>)">;
+def pmhaccsu_b0_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>, _Vector<4, unsigned char>)">;
+def pmhaccsu_b1_i16x2 : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Vector<2, short>, _Vector<4, unsigned char>)">;
+
+// Packed Multiply High Accumulate (64-bit)
+def pmhacc_b0_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>, _Vector<8, signed char>)">;
+def pmhacc_b1_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>, _Vector<8, signed char>)">;
+def pmhaccsu_b0_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>, _Vector<8, unsigned char>)">;
+def pmhaccsu_b1_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Vector<4, short>, _Vector<8, unsigned char>)">;
+def pmhacc_h0_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>, _Vector<4, short>)">;
+def pmhacc_h1_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>, _Vector<4, short>)">;
+def pmhaccsu_h0_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>, _Vector<4, unsigned short>)">;
+def pmhaccsu_h1_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Vector<2, int>, _Vector<4, unsigned short>)">;
 
 // Packed Multiplication with Horizontal Addition (32-bit)
 def pm4add_i8x4 : RISCVBuiltin<"int(_Vector<4, signed char>, _Vector<4, signed char>)">;
@@ -479,6 +514,12 @@ def psext_b_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>)">;
 def psext_h_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>)">;
 def pzext_b_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned short>)">;
 def pzext_h_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>)">;
+
+// Packed Widening Shifts
+def pwsll_s_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned char>, unsigned int)">;
+def pwsll_s_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned short>, unsigned int)">;
+def pwsla_s_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, signed char>, unsigned int)">;
+def pwsla_s_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, short>, unsigned int)">;
 
 
 // Packed Narrowing Clip Pair (32-bit)
