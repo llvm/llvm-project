@@ -5,24 +5,25 @@ module @foo {
   "test.op"() : () -> ()
 }
 
-// Remarks come out in creation order. The two passed remarks in
-// "category-1-passed" share an identity, so only the second survives. mlir-opt
-// calls finalize() explicitly and the engine destructor calls it again. The
-// second call must not emit the remarks a second time. --implicit-check-not
-// pins the number of "remark:" lines and of YAML records to five.
+// The two passed remarks in "category-1-passed" share an identity, so only the
+// second survives. All remarks share a location and a name, so the category
+// decides their order. mlir-opt calls finalize() explicitly and the engine
+// destructor calls it again. The second call must not emit the remarks a
+// second time. --implicit-check-not pins the number of "remark:" lines and of
+// YAML records to five.
 
 // CHECK: remark: [Passed] test-remark | Category:category-1-passed |{{.*}}Remark="This is a test passed remark",
-// CHECK: remark: [Failure] test-remark | Category:category-2-failed
 // CHECK: remark: [Analysis] test-remark | Category:category-2-analysis
+// CHECK: remark: [Failure] test-remark | Category:category-2-failed
 // CHECK: remark: [Passed] test-remark | Category:category-link |{{.*}}RelatedTo=
 // CHECK: remark: [Analysis] test-remark | Category:category-link
 
 // CHECK-YAML:      --- !Passed
 // CHECK-YAML-NEXT: Pass:{{.*}}category-1-passed
-// CHECK-YAML:      --- !Failure
-// CHECK-YAML-NEXT: Pass:{{.*}}category-2-failed
 // CHECK-YAML:      --- !Analysis
 // CHECK-YAML-NEXT: Pass:{{.*}}category-2-analysis
+// CHECK-YAML:      --- !Failure
+// CHECK-YAML-NEXT: Pass:{{.*}}category-2-failed
 // CHECK-YAML:      --- !Passed
 // CHECK-YAML-NEXT: Pass:{{.*}}category-link
 // CHECK-YAML:      --- !Analysis

@@ -17,6 +17,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Mutex.h"
 #include "llvm/Support/Regex.h"
 
 #include "mlir/IR/Diagnostics.h"
@@ -209,6 +210,10 @@ public:
   void print(llvm::raw_ostream &os, bool printLocation = false) const;
 
   Location getLocation() const { return loc; }
+
+  /// The file position nested in the location, the one the diagnostic printer
+  /// shows, or null if there is none.
+  FileLineColLoc getFileLineColLoc() const;
   /// Diagnostic -> Remark
   llvm::remarks::Remark generateRemark() const;
 
@@ -514,6 +519,10 @@ private:
   bool printAsEmitRemarks = false;
   /// Atomic counter for generating unique remark IDs.
   std::atomic<uint64_t> nextRemarkId{1};
+  /// Serializes report(). Passes running in parallel report into the same
+  /// engine, and neither the policies nor the streamers are thread-safe. The
+  /// same recursive mutex type as the DiagnosticEngine's lock.
+  llvm::sys::SmartMutex<true> mutex;
 
   /// Emit a remark using the given maker function, which should return
   /// a Remark instance. The remark will be emitted using the main
@@ -607,7 +616,7 @@ public:
   findRemarks(const RemarkOpts &opts,
               std::optional<RemarkKind> kind = std::nullopt) const;
 
-  /// Report a remark.
+  /// Report a remark. Serialized, so passes may report from several threads.
   void report(const Remark &&remark);
 
   /// Report a successful remark, this will create an InFlightRemark
@@ -667,7 +676,7 @@ public:
 
 /// Policy that emits only the last remark reported for each identity, see
 /// DenseMapInfo<Remark>. Remarks are stored until finalize(), which emits them
-/// in creation order, so the output does not depend on hash order.
+/// in source order.
 class RemarkEmittingPolicyFinal : public detail::RemarkEmittingPolicyBase {
 private:
   /// Remarks reported since the last finalize().
@@ -681,10 +690,13 @@ public:
     postponedRemarks.insert(remark);
   }
 
-  /// Emits and drains all stored remarks. Related remarks are printed right
-  /// after the remark that references them; a link only resolves when both
-  /// remarks are in the same call. A later call emits only remarks reported
-  /// since this one.
+  /// Emits and drains all stored remarks. Root remarks come out in source
+  /// order: by the file position getFileLineColLoc() returns, remarks without
+  /// one last, then by remark name, category and kind, so the output does not
+  /// depend on how parallel passes were scheduled. Related remarks are printed
+  /// right after the remark that references them; a link only resolves when
+  /// both remarks are in the same call. A later call emits only remarks
+  /// reported since this one.
   void finalize() override;
 };
 
