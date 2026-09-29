@@ -37214,19 +37214,22 @@ X86TargetLowering::EmitVAARGWithCustomInserter(MachineInstr &MI,
       // Add the offset to the reg_save_area to get the final address.
       BuildMI(offsetMBB, MIMD, TII->get(X86::ADD64rr), OffsetDestReg)
           .addReg(OffsetReg64)
-          .addReg(RegSaveReg);
+          .addReg(RegSaveReg)
+          .setOperandDead(3); // implicit-def $eflags
     } else {
       // Add the offset to the reg_save_area to get the final address.
       BuildMI(offsetMBB, MIMD, TII->get(X86::ADD32rr), OffsetDestReg)
           .addReg(OffsetReg)
-          .addReg(RegSaveReg);
+          .addReg(RegSaveReg)
+          .setOperandDead(3); // implicit-def $eflags
     }
 
     // Compute the offset for the next argument
     Register NextOffsetReg = MRI.createVirtualRegister(OffsetRegClass);
     BuildMI(offsetMBB, MIMD, TII->get(X86::ADD32ri), NextOffsetReg)
-      .addReg(OffsetReg)
-      .addImm(UseFPOffset ? 16 : 8);
+        .addReg(OffsetReg)
+        .addImm(UseFPOffset ? 16 : 8)
+        .setOperandDead(3); // implicit-def $eflags
 
     // Store it back into the va_list.
     BuildMI(offsetMBB, MIMD, TII->get(X86::MOV32mr))
@@ -37271,14 +37274,16 @@ X86TargetLowering::EmitVAARGWithCustomInserter(MachineInstr &MI,
         TII->get(Subtarget.isTarget64BitLP64() ? X86::ADD64ri32 : X86::ADD32ri),
         TmpReg)
         .addReg(OverflowAddrReg)
-        .addImm(Alignment.value() - 1);
+        .addImm(Alignment.value() - 1)
+        .setOperandDead(3); // implicit-def $eflags
 
     BuildMI(
         overflowMBB, MIMD,
         TII->get(Subtarget.isTarget64BitLP64() ? X86::AND64ri32 : X86::AND32ri),
         OverflowDestReg)
         .addReg(TmpReg)
-        .addImm(~(uint64_t)(Alignment.value() - 1));
+        .addImm(~(uint64_t)(Alignment.value() - 1))
+        .setOperandDead(3); // implicit-def $eflags
   } else {
     BuildMI(overflowMBB, MIMD, TII->get(TargetOpcode::COPY), OverflowDestReg)
       .addReg(OverflowAddrReg);
@@ -37292,7 +37297,8 @@ X86TargetLowering::EmitVAARGWithCustomInserter(MachineInstr &MI,
       TII->get(Subtarget.isTarget64BitLP64() ? X86::ADD64ri32 : X86::ADD32ri),
       NextAddrReg)
       .addReg(OverflowDestReg)
-      .addImm(ArgSizeA8);
+      .addImm(ArgSizeA8)
+      .setOperandDead(3); // implicit-def $eflags
 
   // Store the new overflow address.
   BuildMI(overflowMBB, MIMD,

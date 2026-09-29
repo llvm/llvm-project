@@ -554,6 +554,7 @@ features cannot lower the translation-unit ABI level;
   (such as `std::map`) whose mapper lookup instantiates a class template specialization. (#GH154704)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
+- Fixed crashes on an OpenMP `target` region inside a lambda or block at namespace scope, including when the region used a global reference. (#GH223397)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
@@ -766,6 +767,11 @@ features cannot lower the translation-unit ABI level;
   an ill-formed template argument. Clang now checks for a failed declaration 
   lookup before asserting that the name is not dependent, avoiding an assertion 
   after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
+
+- Fixed a crash in constant evaluation when a new-expression selects a
+  user-declared allocation function that takes std::nothrow_t by value. Such
+  a new-expression is now correctly rejected in a constant expression because
+  it does not select a replaceable global allocation function. (#GH212211)
 
 #### Bug Fixes to AST Handling
 
