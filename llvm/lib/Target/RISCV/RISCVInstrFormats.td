@@ -356,9 +356,9 @@ class PseudoFloatLoad<string opcodestr, RegisterClass rdty>
   let isCodeGenOnly = 0;
 }
 
-// Pseudo store instructions.
+// Pseudo store instructions (needs a temporary register != x0).
 class PseudoStore<string opcodestr, DAGOperand rsty = GPR>
-    : Pseudo<(outs GPR:$tmp), (ins rsty:$rs, bare_symbol:$addr), [], opcodestr, "$rs, $addr, $tmp"> {
+    : Pseudo<(outs GPRNoX0:$tmp), (ins rsty:$rs, bare_symbol:$addr), [], opcodestr, "$rs, $addr, $tmp"> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 1;
