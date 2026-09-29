@@ -126,8 +126,7 @@ private:
 LLVM_ABI Error passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
                                    ArrayRef<std::string> Args);
 
-/// Parses \p Args as options declared with llvm/Support/CommandLine.h, for a
-/// \c ParseArguments callback. \p PluginName prefixes diagnostics.
+// Deprecated: a migration aid for plugins that still use cl::opt.
 LLVM_ABI Error parsePassPluginCommandLine(const char *PluginName,
                                           ArrayRef<const char *> Args);
 } // namespace llvm
