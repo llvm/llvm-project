@@ -833,6 +833,7 @@ enum AttributeKindCodes {
   ATTR_KIND_FLATTEN = 108,
   ATTR_KIND_NOIPA = 109,
   ATTR_KIND_NOFREEOBJ = 110,
+  ATTR_KIND_WRITE_RANGE = 111,
 };
 
 enum ComdatSelectionKindCodes {

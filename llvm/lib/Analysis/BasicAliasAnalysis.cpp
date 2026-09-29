@@ -942,6 +942,38 @@ AliasResult BasicAAResult::alias(const MemoryLocation &LocA,
   return aliasCheck(LocA.Ptr, LocA.Size, LocB.Ptr, LocB.Size, AAQI, CtxI);
 }
 
+static bool ArgWriteRangeDisjointFromLoc(const CallBase *Call,
+                                              unsigned ArgIdx,
+                                              const Value *Arg,
+                                              const MemoryLocation &Loc,
+                                              const DataLayout &DL) {
+  if (!Call->paramHasAttr(ArgIdx, Attribute::WriteRange))
+    return false;
+  if (!Loc.Size.hasValue() || !Loc.Size.isPrecise() ||
+      Loc.Size.getValue().isScalable())
+    return false;
+
+  unsigned IndexWidth = DL.getIndexTypeSizeInBits(Arg->getType());
+  APInt LocOffset(IndexWidth, 0);
+  const Value *LocBase = Loc.Ptr->stripAndAccumulateConstantOffsets(
+      DL, LocOffset, /*AllowNonInbounds=*/true);
+  if (LocBase != Arg)
+    return false;
+
+  int64_t Lo = LocOffset.getSExtValue();
+  int64_t Hi = Lo + static_cast<int64_t>(Loc.Size.getValue().getFixedValue());
+
+  ArrayRef<ConstantRange> Ranges =
+      Call->getParamAttr(ArgIdx, Attribute::WriteRange).getWriteRange();
+  for (const ConstantRange &CR : Ranges) {
+    int64_t RLo = CR.getLower().getSExtValue();
+    int64_t RHi = CR.getUpper().getSExtValue();
+    if (Lo < RHi && RLo < Hi)
+      return false; // Overlaps; cannot rule out.
+  }
+  return true; // Disjoint from every declared write range.
+}
+
 /// Checks to see if the specified callsite can clobber the specified memory
 /// object.
 ///
@@ -1031,8 +1063,16 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
               ? MemoryLocation::getForArgument(Call, ArgIdx, TLI)
               : MemoryLocation::getBeforeOrAfter(Arg);
       AliasResult ArgAlias = AAQI.AAR.alias(ArgLoc, Loc, AAQI, Call);
-      if (ArgAlias != AliasResult::NoAlias)
-        NewArgMR |= ArgMR & AAQI.AAR.getArgModRefInfo(Call, ArgIdx);
+      
+      if (ArgAlias != AliasResult::NoAlias) {
+        ModRefInfo PerArgMR = ArgMR & AAQI.AAR.getArgModRefInfo(Call, ArgIdx);
+
+        if (Call->isArgOperand(&U) && isModSet(PerArgMR) &&
+            ArgWriteRangeDisjointFromLoc(Call, ArgIdx, Arg, Loc, DL))
+          PerArgMR &= ~ModRefInfo::Mod;
+
+        NewArgMR |= PerArgMR;
+      }
 
       // Exit early if we cannot improve over the original ArgMR.
       if (NewArgMR == ArgMR)
@@ -1551,6 +1591,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
                                       const Instruction *CtxI) {
   // If either of the memory references is empty, it doesn't matter what the
   // pointer values are.
+
   if (V1Size.isZero() || V2Size.isZero())
     return AliasResult::NoAlias;
 

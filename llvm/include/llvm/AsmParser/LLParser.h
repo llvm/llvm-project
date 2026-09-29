@@ -414,6 +414,7 @@ namespace llvm {
                                     bool inAttrGrp, LocTy &BuiltinLoc);
     bool parseRangeAttr(AttrBuilder &B);
     bool parseInitializesAttr(AttrBuilder &B);
+    bool parseWriteRangeAttr(AttrBuilder &B);
     bool parseCapturesAttr(AttrBuilder &B);
     bool parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
                                Attribute::AttrKind AttrKind);

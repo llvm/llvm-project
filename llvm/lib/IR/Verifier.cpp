@@ -2392,6 +2392,16 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
           "Attribute 'initializes' does not support unordered ranges", V);
   }
 
+  if (Attrs.hasAttribute(Attribute::WriteRange)) {
+    auto Ranges = Attrs.getAttribute(Attribute::WriteRange).getWriteRange();
+    Check(!Ranges.empty(), "Attribute 'writerange' does not support empty list",
+          V);
+    Check(ConstantRangeList::isOrderedRanges(Ranges),
+          "Attribute 'writerange' does not support unordered ranges", V);
+    Check(!Attrs.hasAttribute(Attribute::ReadNone),
+          "Attribute 'writerange' is incompatible with 'readnone'", V);
+  }
+
   if (Attrs.hasAttribute(Attribute::NoFPClass)) {
     uint64_t Val = Attrs.getAttribute(Attribute::NoFPClass).getValueAsInt();
     Check(Val != 0, "Attribute 'nofpclass' must have at least one test bit set",

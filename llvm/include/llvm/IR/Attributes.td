@@ -151,6 +151,9 @@ def InAlloca : TypeAttr<"inalloca", IntersectPreserve, [ParamAttr, ABIAttr]>;
 /// Pointer argument memory is initialized.
 def Initializes : ConstantRangeListAttr<"initializes", IntersectPreserve, [ParamAttr]>;
 
+/// Pointer argument memory is written to.
+def WriteRange : ConstantRangeListAttr<"writerange", IntersectPreserve, [ParamAttr]>;
+
 /// Source said inlining was desirable.
 def InlineHint : EnumAttr<"inlinehint", IntersectAnd, [FnAttr]>;
 
