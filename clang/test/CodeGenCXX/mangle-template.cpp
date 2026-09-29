@@ -433,3 +433,18 @@ namespace GH133610 {
   }
   // CHECK: @_ZN8GH1336101kINS_1CENS_1AIiEENS_1DEEEDtdtfp_sr1U1BIT1_EE3MEMET_T0_S5_
 } // namespace GH133610
+
+namespace GH88592 {
+  template <bool> struct A;
+  template <typename> struct B { static constexpr bool value = false; };
+
+  template <class T, template <class> class TT>
+  using C = A<TT<T>::value>;
+
+  // The alias substitutes B for TT without B having been mangled earlier, so
+  // the substituted template template parameter can't be a substitution and
+  // must be mangled as the replacement template itself.
+  template <class T, C<T, B> * = nullptr> void f() {}
+  template void f<int>();
+  // CHECK: @_ZN7GH885921fIiTnPNS_1AIXsr1BIT_EE5valueEEELPNS1_ILb0EEE0EEEvv
+} // namespace GH88592
