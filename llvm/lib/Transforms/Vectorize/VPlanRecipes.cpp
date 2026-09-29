@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -2108,16 +2109,15 @@ static VPExecutionFrequency getExecutionFrequencyFromMD(const MDNode *Node) {
   assert(Node->getNumOperands() <= 2 && "unexpected frequency node shape");
   uint64_t Freq =
       mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
-  assert(Freq <= vputils::AlwaysExecutesFreq &&
+  assert(Freq <= BlockFrequencyInfoImplBase::BlockMass::getFull().getMass() &&
          "frequency cannot exceed the one of an always executing block");
   return {BlockFrequency(Freq), Node->getNumOperands() == 2};
 }
 
 void VPIRMetadata::setExecutionFrequency(
     std::optional<VPExecutionFrequency> Freq, LLVMContext &Ctx) {
-  // A recipe that never or always executes needs no annotation.
-  if (!Freq || Freq->Freq.getFrequency() == 0 ||
-      Freq->Freq.getFrequency() == vputils::AlwaysExecutesFreq)
+  // A recipe that always executes needs no annotation.
+  if (!Freq || vputils::getExecutionProbability(Freq->Freq).isOne())
     return;
   SmallVector<llvm::Metadata *, 2> Ops = {ConstantAsMetadata::get(
       ConstantInt::get(Type::getInt64Ty(Ctx), Freq->Freq.getFrequency()))};
@@ -2181,8 +2181,10 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
       // Print the frequency together with the probability it corresponds to.
       auto [Freq, IsEstimated] = getExecutionFrequencyFromMD(Node);
       const fltSemantics &Sem = APFloat::IEEEdouble();
+      uint64_t Full =
+          BlockFrequencyInfoImplBase::BlockMass::getFull().getMass();
       APFloat Percent = APFloat(Sem, Freq.getFrequency()) * APFloat(Sem, 100) /
-                        APFloat(Sem, vputils::AlwaysExecutesFreq);
+                        APFloat(Sem, Full);
       SmallString<16> PercentStr;
       Percent.toString(PercentStr, /*FormatPrecision=*/4);
       O << Freq.getFrequency() << " (" << PercentStr << "%"
