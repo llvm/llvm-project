@@ -2672,6 +2672,22 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   if (error.Fail())
     return false;
 
+  // __lldb_init_module may instantiate extensions from the module, so the
+  // path must be known before it runs.
+  if (llvm::Expected<PythonModule> py_module =
+          PythonModule::Import(module_name)) {
+    PythonObject py_file = py_module->GetAttributeValue("__file__");
+    if (PythonString::Check(py_file.get())) {
+      FileSpec module_path(
+          PythonString(PyRefType::Borrowed, py_file.get()).GetString());
+      FileSystem::Instance().Resolve(module_path);
+      SetImportedModulePath(module_name, module_path);
+    }
+  } else {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), py_module.takeError(),
+                   "failed to record the path of module {1}: {0}", module_name);
+  }
+
   // if we are here, everything worked
   // call __lldb_init_module(debugger,dict)
   if (!SWIGBridge::LLDBSwigPythonCallModuleInit(

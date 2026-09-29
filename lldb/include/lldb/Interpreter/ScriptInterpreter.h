@@ -22,11 +22,15 @@
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptObject.h"
+#include "lldb/Interpreter/ScriptedInstanceRegistry.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/StringMap.h"
+#include <memory>
+#include <mutex>
 #include <optional>
 
 namespace lldb_private {
@@ -379,6 +383,15 @@ public:
                       FileSpec extra_search_dir = {},
                       lldb::TargetSP loaded_into_target_sp = {});
 
+  void SetImportedModulePath(llvm::StringRef module_name, const FileSpec &path);
+
+  /// Falls back to the enclosing package for submodules of an imported one.
+  FileSpec GetImportedModulePath(llvm::StringRef module_name) const;
+
+  const lldb::ScriptedInstanceRegistrySP &GetScriptedInstanceRegistry() const {
+    return m_instance_registry_sp;
+  }
+
   virtual bool IsReservedWord(const char *word) { return false; }
 
   virtual std::unique_ptr<ScriptInterpreterLocker> AcquireInterpreterLock();
@@ -522,6 +535,12 @@ public:
 protected:
   Debugger &m_debugger;
   lldb::ScriptLanguage m_script_lang;
+
+private:
+  mutable std::mutex m_imported_modules_mutex;
+  llvm::StringMap<FileSpec> m_imported_modules;
+  lldb::ScriptedInstanceRegistrySP m_instance_registry_sp =
+      std::make_shared<ScriptedInstanceRegistry>();
 };
 
 } // namespace lldb_private
