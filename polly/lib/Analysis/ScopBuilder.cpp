@@ -980,7 +980,7 @@ bool ScopBuilder::buildDomainsWithBranchConstraints(
       isl::set CondSet = isl::manage(ConditionSets[u]);
       BasicBlock *SuccBB = getRegionNodeSuccessor(RN, TI, u);
 
-      blocks outside the region.
+      // Skip blocks outside the region.
       if (!scop->contains(SuccBB))
         continue;
 
