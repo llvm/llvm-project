@@ -1346,19 +1346,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_elementwise_isfinite: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
-    llvm::Type *Xty = Op0->getType();
-    llvm::Type *retType = llvm::Type::getInt1Ty(this->getLLVMContext());
-    if (Xty->isVectorTy()) {
-      unsigned NumElts;
-      if (auto *MatTy = E->getArg(0)->getType()->getAs<ConstantMatrixType>())
-        NumElts = MatTy->getNumRows() * MatTy->getNumColumns();
-      else
-        NumElts =
-            E->getArg(0)->getType()->castAs<VectorType>()->getNumElements();
-      retType = llvm::VectorType::get(retType, ElementCount::getFixed(NumElts));
-    }
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("isfinite operand must have a float representation");
+    llvm::Type *retType = getAggregateType(
+        llvm::Type::getInt1Ty(getLLVMContext()), E->getArg(0)->getType());
     return Builder.CreateIntrinsic(
         retType, CGM.getHLSLRuntime().getIsFiniteIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.isfinite");

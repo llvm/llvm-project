@@ -1101,7 +1101,7 @@ def hlsl_barrier : HLSLBuiltin<"Barrier", "__builtin_hlsl_barrier"> {
 // Determines if the specified value x is finite.
 def hlsl_isfinite : HLSLOneArgBuiltin<"isfinite", "__builtin_hlsl_elementwise_isfinite"> {
   let Doc = [{
-\fn T isinf(T x)
+\fn T isfinite(T x)
 \brief Determines if the specified value \a x  is finite.
 \param x The specified input value.
 
