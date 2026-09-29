@@ -116,22 +116,28 @@ export row_major float2x2 mat_mat_dst_rm(column_major float2x3 a, column_major f
 // CHECK: ret <4 x float> [[MUL]]
 
 
-// Transpose operates on the canonical column-major value after the load.
+// The transpose cancels the row-major load normalization.
 export column_major float3x2 transpose_rm_to_cm(row_major float2x3 m) { return transpose(m); }
 // CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_rm_to_cmu11matrix_typeILm2ELm3EfE
-// CHECK: [[RM:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
-// CHECK: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[RM]], i32 2, i32 3)
+// CHECK: [[TO_MEMORY:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+// CHECK: store <6 x float> [[TO_MEMORY]], ptr %{{.*}}
+// CHECK: [[FROM_MEMORY:%.*]] = load <6 x float>, ptr %{{.*}}
+// CHECK-NOT: @llvm.matrix.transpose
+// CHECK: ret <6 x float> [[FROM_MEMORY]]
 
 // Return layout metadata does not change the canonical value representation.
 export row_major float3x2 transpose_cm_to_rm(column_major float2x3 m) { return transpose(m); }
 // CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_cm_to_rmu11matrix_typeILm2ELm3EfE
 // CHECK: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
 
-// Row-major source -> row-major destination: real transpose, dims swapped.
+// Row-major source -> row-major destination: the transpose cancels load normalization.
 export row_major float3x2 transpose_rm_to_rm(row_major float2x3 m) { return transpose(m); }
 // CHECK-LABEL: define {{.*}} <6 x float> @_Z18transpose_rm_to_rmu11matrix_typeILm2ELm3EfE
-// CHECK: [[RM:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
-// CHECK: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[RM]], i32 2, i32 3)
+// CHECK: [[TO_MEMORY:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+// CHECK: store <6 x float> [[TO_MEMORY]], ptr %{{.*}}
+// CHECK: [[FROM_MEMORY:%.*]] = load <6 x float>, ptr %{{.*}}
+// CHECK-NOT: @llvm.matrix.transpose
+// CHECK: ret <6 x float> [[FROM_MEMORY]]
 
 // Column-major source -> column-major destination: real transpose, natural dims.
 export column_major float3x2 transpose_cm_to_cm(column_major float2x3 m) { return transpose(m); }
@@ -141,8 +147,11 @@ export column_major float3x2 transpose_cm_to_cm(column_major float2x3 m) { retur
 // The TU memory-layout default does not affect matrix prvalues.
 export float3x2 transpose_rm(row_major float2x3 m) { return transpose(m); }
 // CHECK-LABEL: define {{.*}} <6 x float> @_Z12transpose_rmu11matrix_typeILm2ELm3EfE
-// CHECK: [[RM:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 3, i32 2)
-// CHECK: call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[RM]], i32 2, i32 3)
+// CHECK: [[TO_MEMORY:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %{{.*}}, i32 2, i32 3)
+// CHECK: store <6 x float> [[TO_MEMORY]], ptr %{{.*}}
+// CHECK: [[FROM_MEMORY:%.*]] = load <6 x float>, ptr %{{.*}}
+// CHECK-NOT: @llvm.matrix.transpose
+// CHECK: ret <6 x float> [[FROM_MEMORY]]
 
 
 export float3x2 transpose_cm(column_major float2x3 m) { return transpose(m); }

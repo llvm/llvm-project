@@ -1361,6 +1361,18 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     auto *MatTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
     unsigned Rows = MatTy->getNumRows();
     unsigned Cols = MatTy->getNumColumns();
+    if (auto *Transpose = dyn_cast<CallInst>(Op0);
+        Transpose &&
+        Transpose->getIntrinsicID() == Intrinsic::matrix_transpose &&
+        Transpose->use_empty() &&
+        cast<ConstantInt>(Transpose->getArgOperand(1))->getZExtValue() ==
+            Cols &&
+        cast<ConstantInt>(Transpose->getArgOperand(2))->getZExtValue() ==
+            Rows) {
+      Value *Result = Transpose->getArgOperand(0);
+      Transpose->eraseFromParent();
+      return Result;
+    }
     llvm::MatrixBuilder MB(Builder);
     return MB.CreateMatrixTranspose(Op0, Rows, Cols);
   }
