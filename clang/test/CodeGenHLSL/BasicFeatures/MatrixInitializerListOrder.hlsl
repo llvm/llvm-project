@@ -23,8 +23,9 @@ static row_major bool2x3 B =
 export bool read_bool_matrix() {
 // CHECK-LABEL: define {{.*}} i1 @_Z16read_bool_matrixv
 // CHECK: [[FROM_MEMORY:%.*]] = load <6 x i32>, ptr @_ZL1B
-// CHECK: [[IN_REGISTER:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[FROM_MEMORY]], i32 3, i32 2)
-// CHECK: extractelement <6 x i32> [[IN_REGISTER]], i32 3
+// CHECK: [[AS_BOOL:%.*]] = icmp ne <6 x i32> [[FROM_MEMORY]], zeroinitializer
+// CHECK: [[IN_REGISTER:%.*]] = call <6 x i1> @llvm.matrix.transpose.v6i1(<6 x i1> [[AS_BOOL]], i32 3, i32 2)
+// CHECK: extractelement <6 x i1> [[IN_REGISTER]], i32 3
   return B[1][1];
 }
 
