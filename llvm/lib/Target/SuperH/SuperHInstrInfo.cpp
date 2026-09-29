@@ -44,7 +44,7 @@ using namespace llvm;
 
 SuperHInstrInfo::SuperHInstrInfo(const SuperHSubtarget &ST)
     : SuperHGenInstrInfo(ST, RI, SH::ADJCALLSTACKDOWN, SH::ADJCALLSTACKUP),
-      RI(ST), Subtarget(ST) {}
+      STI(ST), RI(ST) {}
 
 // Pin the vtable to this file.
 void SuperHInstrInfo::anchor() {}
@@ -199,6 +199,33 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   };
 
+  // GPR -> FR32
+  if (SH::GPRRegClass.contains(SrcReg) && 
+      SH::FR32RegClass.contains(DestReg)) {
+
+    BuildMI(MBB, MI, DL, get(SH::LDSFPUL))
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    BuildMI(MBB, MI, DL, get(SH::FSTS), DestReg);
+    return;
+  }
+
+  // FR32 -> GPR
+  if (SH::FR32RegClass.contains(SrcReg) && 
+      SH::GPRRegClass.contains(DestReg)) {
+    
+    BuildMI(MBB, MI, DL, get(SH::FLDS))
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    BuildMI(MBB, MI, DL, get(SH::STSFPUL), DestReg);
+    return;
+  }
+
+  // FR32 -> FR32
+  if (SH::FR32RegClass.contains(SrcReg, DestReg)) {
+    BuildMI(MBB, MI, DL, get(SH::FMOV), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
   // Otherwise this is not possible.
   llvm_unreachable("Impossible reg-to-reg copy");
 }
@@ -231,18 +258,28 @@ void SuperHInstrInfo::storeRegToStackSlot(
                     << "\n");
 
   unsigned Opc;
-  switch (ObjectSize) {
-  default:
-    llvm_unreachable("Cannot store this register into stack slot!");
-  case 1:
-    Opc = SH::MOVBSF;
-    break;
-  case 2:
-    Opc = SH::MOVWSF;
-    break;
-  case 4:
-    Opc = SH::MOVLSF;
-    break;
+
+  if (SH::FR32RegClass.contains(SrcReg)) {
+
+    // F32 Registers.
+    Opc = SH::MOVF32SF;
+  } else {
+
+    // Integer registers.
+    switch (ObjectSize) {
+    default:
+      llvm_unreachable("Cannot store this register into stack slot!");
+    case 1:
+      Opc = SH::MOVBSF;
+      break;
+    case 2:
+      Opc = SH::MOVWSF;
+      break;
+    case 4:
+      Opc = SH::MOVLSF;
+
+      break;
+    }
   }
   BuildMI(MBB, II, DebugLoc(), get(Opc))
       .addReg(SrcReg, getKillRegState(isKill))
@@ -276,18 +313,25 @@ void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
              << " from slot " << FrameIndex << " size=" << ObjectSize << "\n");
 
   unsigned Opc;
-  switch (ObjectSize) {
-  default:
-    llvm_unreachable("Cannot load this register from stack slot!");
-  case 1:
-    Opc = SH::MOVBLF;
-    break;
-  case 2:
-    Opc = SH::MOVWLF;
-    break;
-  case 4:
-    Opc = SH::MOVLLF;
-    break;
+
+  if (SH::FR32RegClass.contains(DestReg)) {
+
+    // F32 Registers.
+    Opc = SH::MOVF32LF;
+  } else {
+    switch (ObjectSize) {
+    default:
+      llvm_unreachable("Cannot load this register from stack slot!");
+    case 1:
+      Opc = SH::MOVBLF;
+      break;
+    case 2:
+      Opc = SH::MOVWLF;
+      break;
+    case 4:
+      Opc = SH::MOVLLF;
+      break;
+    }
   }
 
   BuildMI(MBB, II, DebugLoc(), get(Opc), DestReg)

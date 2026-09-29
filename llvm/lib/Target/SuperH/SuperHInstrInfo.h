@@ -65,8 +65,8 @@ static StringRef getCondName(CondCode CC) {
 } // end of namespace SHCC
 
 class SuperHInstrInfo : public SuperHGenInstrInfo {
+  const SuperHSubtarget &STI;
   const SuperHRegisterInfo RI;
-  const SuperHSubtarget &Subtarget;
   virtual void anchor();
 
 public:
@@ -134,8 +134,6 @@ public:
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
 };
-
-const SuperHInstrInfo *createSuperHInstrInfo(const SuperHSubtarget &STI);
 } // namespace llvm
 
 #endif // end LLVM_LIB_TARGET_SUPERH_SUPERHINSTRINFO_H

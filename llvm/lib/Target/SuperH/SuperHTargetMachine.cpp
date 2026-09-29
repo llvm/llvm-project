@@ -22,6 +22,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/Compiler.h"
+#include <memory>
 #include <optional>
 
 using namespace llvm;
@@ -78,9 +79,33 @@ void SuperHPassConfig::addPreEmitPass2() {
 } // namespace
 
 
+
 //
 //      TARGET MACHINE
 //
+
+/// Processes a CPU name.
+static StringRef getCPU(StringRef CPU, const Triple &TT) {
+#define CASE(ARCH) \
+  case Triple::SuperHSubArch_ ## ARCH: return "sh" # ARCH;
+
+  switch(TT.getSubArch()) {
+  CASE(1);
+  CASE(2);
+  CASE(2a);
+  CASE(2e);
+  CASE(3);
+  CASE(3e);
+  CASE(4);
+  CASE(4a);
+  default:
+    if (CPU.empty() || CPU == "generic") {
+      return "sh4";
+    }
+    return CPU;
+  }
+#undef CASE
+}
 
 SuperHTargetMachine::~SuperHTargetMachine() {}
 
@@ -94,7 +119,8 @@ SuperHTargetMachine::SuperHTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                RM.value_or(Reloc::Static),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
+      ST(std::make_unique<SuperHSubtarget>(std::string(getCPU(CPU, TT)), std::string(FS), *this)) {
   initAsmInfo();
 }
 
@@ -102,18 +128,13 @@ TargetPassConfig *SuperHTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new SuperHPassConfig(*this, PM);
 }
 
-const TargetSubtargetInfo *
+const SuperHSubtarget *
+SuperHTargetMachine::getSubtargetImpl() const {
+  return ST.get();
+}
+
+const SuperHSubtarget *
 SuperHTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
-
-  std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
-  std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
-
-  if (!ST)
-    ST = std::make_unique<SuperHSubtarget>(CPU, FS, *this);
   return ST.get();
 }
 

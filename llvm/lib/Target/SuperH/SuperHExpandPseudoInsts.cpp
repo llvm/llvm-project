@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstddef>
 
 using namespace llvm;
 
@@ -101,7 +102,7 @@ void SuperHExpandPseudo::getStackOffset(Block &MBB, BlockIt MBBI, Register Frame
   const DebugLoc &DL = MBBI->getDebugLoc();
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-
+  MachineInstr &MI = *MBBI;
 
   // Split the stack up into indexable chunks, each instruction has
   // a fixed range that it can access, this range is positive only.
@@ -117,19 +118,42 @@ void SuperHExpandPseudo::getStackOffset(Block &MBB, BlockIt MBBI, Register Frame
   if (!STI->isLittleEndian() && Scale != 4)
     RealOffset -= 4-(Scale-1);
 
-  int64_t SpAdjust = AccessRange * (alignTo(RealOffset, Scale) / AccessRange);
-
-  // Expand sequence to
-  // mov      <frame reg>,  r1
-  // add      #-SpOffset,   r1
-  BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1).addReg(FrameReg);
-  if (SpAdjust != 0)
-    BuildMI(MBB, MBBI, DL, TII->get(SH::ADDI), SH::R1)
-        .addReg(SH::R1)
-        .addImm(-SpAdjust);
-
   // Adjust the offset to be within the access range.
   Offset = RealOffset % AccessRange;
+
+  switch(MI.getOpcode()) {
+  case SH::MOVF32SF:
+  case SH::MOVF32LF: {
+
+    // Expand sequence to
+    // mov      <frame reg>,  r1
+    // add      (offset),     r1 ! Repeats until offset is reached.
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
+      .addReg(FrameReg);
+
+    ptrdiff_t OffsetLeft = RealOffset;
+    while(OffsetLeft != 0) {
+      int64_t V = OffsetLeft % 128;
+      BuildMI(MBB, MBBI, DL, TII->get(SH::ADDI), SH::R1)
+        .addImm(V);
+      OffsetLeft -= V;
+    }
+    break;
+  }
+  default: {
+
+    // Expand sequence to
+    // mov      <frame reg>,  r1
+    // add      #-SpOffset,   r1
+    int64_t SpAdjust = AccessRange * (alignTo(RealOffset, Scale) / AccessRange);  
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1).addReg(FrameReg);
+    if (SpAdjust != 0)
+      BuildMI(MBB, MBBI, DL, TII->get(SH::ADDI), SH::R1)
+          .addReg(SH::R1)
+          .addImm(-SpAdjust);
+    break;
+  }
+  }
 }
 
 
@@ -186,6 +210,13 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
         .addImm(Offset);
     break;
   }
+  case SH::MOVF32SF: {
+
+    // fmov.s   <src reg>, @r1
+    BuildMI(MBB, MBBI, DL, TII->get(SH::FMOV_STORE))
+        .addReg(SH::R1, RegState::Kill)
+        .addReg(SrcReg, RegState::Kill);
+  }
   }
 
   return eraseMI(MI);
@@ -238,6 +269,13 @@ bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
       Opc = SH::MOVLS4;
     break;
   }
+  case SH::MOVF32SP: {
+    if (Offset == 0)
+      Opc = SH::FMOV_STORE;
+    else
+      Opc = SH::FMOV_INDEX_STORE;
+    break;
+  }
   }
 
   // TODO: Allow bigger accesses.
@@ -277,6 +315,13 @@ bool SuperHExpandPseudo::expand<SH::MOVLSF>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
+bool SuperHExpandPseudo::expand<SH::MOVF32SF>(Block &MBB, BlockIt MBBI) {
+
+  // Store to stack frame
+  return storeToFrame(MBB, MBBI, 4);
+}
+
+template <>
 bool SuperHExpandPseudo::expand<SH::MOVBSP>(Block &MBB, BlockIt MBBI) {
   
   // Store to address.
@@ -295,6 +340,13 @@ bool SuperHExpandPseudo::expand<SH::MOVLSP>(Block &MBB, BlockIt MBBI) {
 
   // Store to address.
   return storeToAddress(MBB, MBBI);
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::MOVF32SP>(Block &MBB, BlockIt MBBI) {
+
+  // Store to stack frame
+  return storeToFrame(MBB, MBBI, 4);
 }
 
 
@@ -352,6 +404,12 @@ bool SuperHExpandPseudo::loadFromFrame(Block &MBB, BlockIt MBBI, int Scale) {
         .addImm(Offset);
     break;
   }
+  case SH::MOVF32LF: {
+
+    // fmov.s   @r1, <dst reg>
+    BuildMI(MBB, MBBI, DL, TII->get(SH::FMOV_STORE), DstReg)
+        .addReg(SH::R1);
+  }
   }
 
   return eraseMI(MI);
@@ -405,6 +463,13 @@ bool SuperHExpandPseudo::loadFromAddress(Block &MBB, BlockIt MBBI) {
       Opc = SH::MOVLL4;
     break;
   }
+  case SH::MOVF32LP: {
+    if (Offset == 0)
+      Opc = SH::FMOV_LOAD;
+    else
+      Opc = SH::FMOV_INDEX_LOAD;
+    break;
+  }
   }
 
   // TODO: Allow bigger accesses.
@@ -442,6 +507,13 @@ bool SuperHExpandPseudo::expand<SH::MOVLLF>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
+bool SuperHExpandPseudo::expand<SH::MOVF32LF>(Block &MBB, BlockIt MBBI) {
+
+  // Load from stack frame.
+  return loadFromFrame(MBB, MBBI, 4);
+}
+
+template <>
 bool SuperHExpandPseudo::expand<SH::MOVBLP>(Block &MBB, BlockIt MBBI) {
 
   // Load from address.
@@ -457,6 +529,13 @@ bool SuperHExpandPseudo::expand<SH::MOVWLP>(Block &MBB, BlockIt MBBI) {
 
 template <>
 bool SuperHExpandPseudo::expand<SH::MOVLLP>(Block &MBB, BlockIt MBBI) {
+
+  // Load from address.
+  return loadFromAddress(MBB, MBBI);
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::MOVF32LP>(Block &MBB, BlockIt MBBI) {
 
   // Load from address.
   return loadFromAddress(MBB, MBBI);
@@ -498,6 +577,39 @@ bool SuperHExpandPseudo::expand<SH::MOVIW>(Block &MBB, BlockIt MBBI) {
 template <>
 bool SuperHExpandPseudo::expand<SH::MOVIL>(Block &MBB, BlockIt MBBI) {
   return loadFromImmediate(MBB, MBBI);
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::MOVIF32>(Block &MBB, BlockIt MBBI) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  MachineInstr &MI = *MBBI;
+  auto DstReg = MI.getOperand(0).getReg();
+  auto Src = MI.getOperand(1);
+
+  if (Src.isFPImm()) {
+    if (Src.getFPImm()->isZero()) {
+      BuildMI(MBB, MBBI, DL, TII->get(SH::FLDI0), DstReg);
+      return eraseMI(MI);
+    }
+
+    if (Src.getFPImm()->isOne()) {
+      BuildMI(MBB, MBBI, DL, TII->get(SH::FLDI1), DstReg);
+      return eraseMI(MI);
+    }
+
+    llvm_unreachable("Invalid constant FP.");
+  } else if (Src.isCPI()) {
+
+    // Load to FPUL, assuming data is fr32, then move
+    // to destination register.
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLI), SH::R1)
+          .addConstantPoolIndex(MI.getOperand(1).getIndex());
+    BuildMI(MBB, MBBI, DL, TII->get(SH::LDSFPUL))
+          .addReg(SH::R1);
+    BuildMI(MBB, MBBI, DL, TII->get(SH::FSTS), DstReg);
+    return eraseMI(MI);
+  }
+  return false;
 }
 
 
@@ -653,6 +765,43 @@ bool SuperHExpandPseudo::expand<SH::SRArr>(Block &MBB, BlockIt MBBI) {
 
 
 //===----------------------------------------------------------------------===//
+//                                Conversion
+//===----------------------------------------------------------------------===//
+
+template <>
+bool SuperHExpandPseudo::expand<SH::F32TOI32>(Block &MBB, BlockIt MBBI) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  MachineInstr &MI = *MBBI;
+
+  auto SrcReg = MI.getOperand(1).getReg();
+  auto DstReg = MI.getOperand(2).getReg();
+
+  BuildMI(MBB, MBBI, DL, TII->get(SH::LDSFPUL))
+    .addReg(SrcReg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::FLOAT32), DstReg);
+
+  return eraseMI(MI);
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::I32TOF32>(Block &MBB, BlockIt MBBI) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  MachineInstr &MI = *MBBI;
+
+  auto SrcReg = MI.getOperand(1).getReg();
+  auto DstReg = MI.getOperand(2).getReg();
+
+  BuildMI(MBB, MBBI, DL, TII->get(SH::FTRC32))
+    .addReg(SrcReg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::STSFPUL), DstReg);
+
+  return eraseMI(MI);
+}
+
+
+
+
+//===----------------------------------------------------------------------===//
 //                            General Interface
 //===----------------------------------------------------------------------===//
 
@@ -728,12 +877,19 @@ bool SuperHExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(SH::MOVIB);
     EXPAND(SH::MOVIW);
     EXPAND(SH::MOVIL);
+    EXPAND(SH::MOVF32LF);
+    EXPAND(SH::MOVF32LP);
+    EXPAND(SH::MOVF32SP);
+    EXPAND(SH::MOVF32SF);
+    EXPAND(SH::MOVIF32);
     EXPAND(SH::SHLri);
     EXPAND(SH::SHRri);
     EXPAND(SH::SRAri);
     EXPAND(SH::SHLrr);
     EXPAND(SH::SHRrr);
     EXPAND(SH::SRArr);
+    EXPAND(SH::F32TOI32);
+    EXPAND(SH::I32TOF32);
   }
 #undef EXPAND
   return false;

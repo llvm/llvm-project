@@ -67,8 +67,7 @@ void SuperHFrameLowering::emitFrameAdjust(Register Base, MachineFunction &MF,
                                           MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI,
                                           int32_t AdjValue) const {
-  const SuperHInstrInfo &TII =
-      *static_cast<const SuperHInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const SuperHInstrInfo &TII = *MF.getSubtarget<SuperHSubtarget>().getInstrInfo();
   MachineInstr::MIFlag MFlag =
       AdjValue < 0 ? MachineInstr::FrameSetup : MachineInstr::FrameDestroy;
   DebugLoc DL = (MBBI != MBB.end()) ? MBBI->getDebugLoc() : DebugLoc();

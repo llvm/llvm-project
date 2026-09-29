@@ -28,19 +28,23 @@ using namespace llvm;
 SuperHSubtarget::SuperHSubtarget(const StringRef &CPU, const StringRef &FS,
                                  const TargetMachine &TM)
     : SuperHGenSubtargetInfo(TM.getTargetTriple(), CPU, CPU, FS), TM(TM),
-      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
-      TSInfo(), FrameLowering(*this) {}
+      InstrInfo(*this), TLInfo(TM, initializeSubtargetDependencies(CPU, FS)),
+      TSInfo(), FrameLowering(*this) {
+
+  // Parse features string.
+  ParseSubtargetFeatures(CPU, CPU, FS);
+
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  LLVM_DEBUG(dbgs() << #ATTRIBUTE "=" << GETTER() << "\n");
+#include "SuperHGenSubtargetInfo.inc"
+  LLVM_DEBUG(dbgs() << "\n");
+}
 
 SuperHSubtarget::~SuperHSubtarget() = default;
 
-SuperHSubtarget &
+const SuperHSubtarget &
 SuperHSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
-  // Determine default and user specified characteristics
-  const Triple &TT = getTargetTriple();
-  std::string CPUName = std::string(CPU);
-
-  // Parse features string.
-  ParseSubtargetFeatures(CPUName, CPUName, FS);
+  ParseSubtargetFeatures(CPU, CPU, FS);
   return *this;
 }
 

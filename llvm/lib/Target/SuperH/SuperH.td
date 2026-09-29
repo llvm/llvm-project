@@ -70,6 +70,24 @@ def FeatureSH4A     : SubtargetFeature<"sh4a", "SHArchVersion", "SH4A",
                           "SH-4A ISA Support",
                           [FeatureSH4, FeatureFSCA, FeatureFSRRA]>;
 
+//===--------------------------------------------------------------------------===//
+// Predicates
+//===--------------------------------------------------------------------------===//
+
+def HasFSCA     : Predicate<"Subtarget->hasFSCA()">;
+def HasFSRRA    : Predicate<"Subtarget->hasFSRRA()">;
+def HasFPU      : Predicate<"Subtarget->hasFPU()">;
+def HasDSP      : Predicate<"Subtarget->hasDSP()">;
+def HasSH2      : Predicate<"Subtarget->hasSH2Inst()">;
+def HasSH2E     : Predicate<"Subtarget->hasSH2EInst()">;
+def HasSH2A     : Predicate<"Subtarget->hasSH2AInst()">;
+def HasSH3      : Predicate<"Subtarget->hasSH3Inst()">;
+def HasSH3E     : Predicate<"Subtarget->hasSH3EInst()">;
+def HasSH4      : Predicate<"Subtarget->hasSH4Inst()">;
+def HasSH4A     : Predicate<"Subtarget->hasSH4AInst()">;
+def HasF64      : Predicate<"Subtarget->hasFP64()">,
+                  AssemblerPredicate<(all_of FeatureFPU)>;
+
 //===----------------------------------------------------------------------===//
 // SuperH Processors
 //===----------------------------------------------------------------------===//

@@ -243,46 +243,8 @@ def fraddr : ComplexPattern<iPTR, 2, "SelectFrAddr">;
 def anyimm8 : ComplexPattern<i8, 1, "SelectImm", [imm]>;
 def anyimm16 : ComplexPattern<i16, 1, "SelectImm", [imm]>;
 def anyimm32 : ComplexPattern<i32, 1, "SelectImm", [imm]>;
+def anyimmf32 : ComplexPattern<f32, 1, "SelectImm", [imm]>;
 }
-
-
-
-//===--------------------------------------------------------------------------===//
-// Predicates
-//===--------------------------------------------------------------------------===//
-
-def HasFSCA     : Predicate<"Subtarget->hasFSCA()">,
-                  AssemblerPredicate<(all_of FeatureFSCA)>;
-
-def HasFSRRA    : Predicate<"Subtarget->hasFSRRA()">,
-                  AssemblerPredicate<(all_of FeatureFSRRA)>;
-
-def HasFPU      : Predicate<"Subtarget->hasFPU()">,
-                  AssemblerPredicate<(all_of FeatureFPU)>;
-
-def HasDSP      : Predicate<"Subtarget->hasDSP()">,
-                  AssemblerPredicate<(all_of FeatureDSP)>;
-
-def HasSH2      : Predicate<"Subtarget->hasSH2Inst()">,
-                  AssemblerPredicate<(all_of FeatureSH2)>;
-
-def HasSH2E     : Predicate<"Subtarget->hasSH2EInst()">,
-                  AssemblerPredicate<(all_of FeatureSH2E)>;
-
-def HasSH2A     : Predicate<"Subtarget->hasSH2AInst()">,
-                  AssemblerPredicate<(all_of FeatureSH2A)>;
-
-def HasSH3      : Predicate<"Subtarget->hasSH3Inst()">,
-                  AssemblerPredicate<(all_of FeatureSH3)>;
-
-def HasSH3E     : Predicate<"Subtarget->hasSH3EInst()">,
-                  AssemblerPredicate<(all_of FeatureSH3E)>;
-
-def HasSH4      : Predicate<"Subtarget->hasSH4Inst()">,
-                  AssemblerPredicate<(all_of FeatureSH4)>;
-
-def HasSH4A     : Predicate<"Subtarget->hasSH4AInst()">,
-                  AssemblerPredicate<(all_of FeatureSH4A)>;  
 
 
 
@@ -1403,7 +1365,7 @@ def TRAPA             : InstI8<0b1100001100000000,
 //===--------------------------------------------------------------------------===//
 
 include "SuperHInstrDSP.td"
-
+include "SuperHInstrFPU.td"
 
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
