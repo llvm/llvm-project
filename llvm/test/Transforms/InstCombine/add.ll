@@ -1975,8 +1975,7 @@ define i8 @fold_add_constant_preserve_nuw(i8 %x) {
 
 define i32 @disjoint_or_of_add_constant(i32 %x) {
 ; CHECK-LABEL: @disjoint_or_of_add_constant(
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[ADD]], 1
+; CHECK-NEXT:    [[OR:%.*]] = add i32 [[X:%.*]], 4
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %add = add i32 3, %x
@@ -1999,8 +1998,7 @@ define i32 @disjoint_or_of_add_constant_multiuse(i32 %x, ptr %p) {
 
 define i8 @disjoint_or_of_nsw_add_constant(i8 %x) {
 ; CHECK-LABEL: @disjoint_or_of_nsw_add_constant(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[ADD]], 2
+; CHECK-NEXT:    [[OR:%.*]] = add i8 [[X:%.*]], -127
 ; CHECK-NEXT:    ret i8 [[OR]]
 ;
   %add = add nsw i8 %x, 127
@@ -2010,8 +2008,7 @@ define i8 @disjoint_or_of_nsw_add_constant(i8 %x) {
 
 define i8 @disjoint_or_of_add_constant_preserve_nuw(i8 %x) {
 ; CHECK-LABEL: @disjoint_or_of_add_constant_preserve_nuw(
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[ADD]], 4
+; CHECK-NEXT:    [[OR:%.*]] = add nuw i8 [[X:%.*]], 7
 ; CHECK-NEXT:    ret i8 [[OR]]
 ;
   %add = add nuw i8 %x, 3
@@ -2021,8 +2018,7 @@ define i8 @disjoint_or_of_add_constant_preserve_nuw(i8 %x) {
 
 define i8 @disjoint_or_of_add_constant_preserve_nsw(i8 %x) {
 ; CHECK-LABEL: @disjoint_or_of_add_constant_preserve_nsw(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[ADD]], 4
+; CHECK-NEXT:    [[OR:%.*]] = add nsw i8 [[X:%.*]], 7
 ; CHECK-NEXT:    ret i8 [[OR]]
 ;
   %add = add nsw i8 %x, 3
@@ -2032,8 +2028,7 @@ define i8 @disjoint_or_of_add_constant_preserve_nsw(i8 %x) {
 
 define i8 @disjoint_or_of_add_constant_preserve_nsw_negative_singleuse(i8 %x) {
 ; CHECK-LABEL: @disjoint_or_of_add_constant_preserve_nsw_negative_singleuse(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[OR:%.*]] = add nsw i8 [[TMP1]], -16
+; CHECK-NEXT:    [[OR:%.*]] = add nsw i8 [[X:%.*]], -12
 ; CHECK-NEXT:    ret i8 [[OR]]
 ;
   %add = add nsw i8 %x, -16
@@ -2069,8 +2064,7 @@ define i8 @disjoint_or_of_add_constant_preserve_flags_multiuse(i8 %x, ptr %p) {
 
 define <2 x i8> @disjoint_or_of_add_constant_preserve_flags_vector_singleuse(<2 x i8> %x) {
 ; CHECK-LABEL: @disjoint_or_of_add_constant_preserve_flags_vector_singleuse(
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i8> [[X:%.*]], <i8 3, i8 5>
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i8> [[ADD]], <i8 4, i8 8>
+; CHECK-NEXT:    [[OR:%.*]] = add nuw nsw <2 x i8> [[X:%.*]], <i8 7, i8 13>
 ; CHECK-NEXT:    ret <2 x i8> [[OR]]
 ;
   %add = add nuw nsw <2 x i8> %x, <i8 3, i8 5>
@@ -2093,8 +2087,7 @@ define <2 x i8> @disjoint_or_of_add_constant_preserve_flags_vector(<2 x i8> %x, 
 
 define <2 x i8> @disjoint_or_of_add_constant_drop_nsw_vector(<2 x i8> %x) {
 ; CHECK-LABEL: @disjoint_or_of_add_constant_drop_nsw_vector(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i8> [[X:%.*]], <i8 3, i8 127>
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint <2 x i8> [[ADD]], <i8 4, i8 2>
+; CHECK-NEXT:    [[OR:%.*]] = add <2 x i8> [[X:%.*]], <i8 7, i8 -127>
 ; CHECK-NEXT:    ret <2 x i8> [[OR]]
 ;
   %add = add nsw <2 x i8> %x, <i8 3, i8 127>
@@ -2104,8 +2097,7 @@ define <2 x i8> @disjoint_or_of_add_constant_drop_nsw_vector(<2 x i8> %x) {
 
 define <vscale x 2 x i8> @disjoint_or_of_add_constant_preserve_flags_scalable(<vscale x 2 x i8> %x) {
 ; CHECK-LABEL: @disjoint_or_of_add_constant_preserve_flags_scalable(
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <vscale x 2 x i8> [[X:%.*]], splat (i8 3)
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint <vscale x 2 x i8> [[ADD]], splat (i8 4)
+; CHECK-NEXT:    [[OR:%.*]] = add nuw nsw <vscale x 2 x i8> [[X:%.*]], splat (i8 7)
 ; CHECK-NEXT:    ret <vscale x 2 x i8> [[OR]]
 ;
   %add = add nuw nsw <vscale x 2 x i8> %x, splat (i8 3)
