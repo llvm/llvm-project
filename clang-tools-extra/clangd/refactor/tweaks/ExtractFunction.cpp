@@ -693,8 +693,12 @@ void collectUnderlyingDecls(const Expr *E,
     return;
   }
   if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
-    if ((BO->getOpcode() == BO_PtrMemD || BO->getOpcode() == BO_PtrMemI) &&
-        !BO->getLHS()->getType()->isPointerType())
+    // Only BO_PtrMemD (`.*`) is handled: its LHS is always an object, by
+    // grammar, so the chain always continues (matching MemberExpr's `.`
+    // above). BO_PtrMemI (`->*`) is excluded: its LHS is always a pointer,
+    // by grammar, so the chain should never continue (matching
+    // MemberExpr's `->` above).
+    if (BO->getOpcode() == BO_PtrMemD)
       collectUnderlyingDecls(BO->getLHS(), Decls);
     return;
   }
