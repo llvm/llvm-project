@@ -2692,10 +2692,10 @@ foldToElementsOfBroadcast(ToElementsOp toElementsOp,
   return success();
 }
 
-LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
-                                 SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults ToElementsOp::fold(FoldAdaptor adaptor) {
+  SmallVector<OpFoldResult> results;
   if (succeeded(foldToElementsFromElements(*this, results)))
-    return success();
+    return results;
 
   // Y = ToElements(ShapeCast(X)) -> Y = ToElements(X)
   if (auto shapeCast = getSource().getDefiningOp<ShapeCastOp>()) {
@@ -2703,7 +2703,9 @@ LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
     return success();
   }
 
-  return foldToElementsOfBroadcast(*this, results);
+  if (succeeded(foldToElementsOfBroadcast(*this, results)))
+    return results;
+  return failure();
 }
 
 LogicalResult
@@ -5998,12 +6000,12 @@ static LogicalResult foldWAR(TransferWriteOp write,
   return success();
 }
 
-LogicalResult TransferWriteOp::fold(FoldAdaptor adaptor,
-                                    SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults TransferWriteOp::fold(FoldAdaptor adaptor) {
+  SmallVector<OpFoldResult, 1> results;
   if (succeeded(foldReadInitWrite(*this, adaptor.getOperands(), results)))
-    return success();
+    return results;
   if (succeeded(foldWAR(*this, results)))
-    return success();
+    return results;
   if (succeeded(foldTransferInBoundsAttribute(*this)))
     return success();
   if (succeeded(foldTransferFullMask(*this)))
@@ -6328,8 +6330,7 @@ LogicalResult vector::StoreOp::verify() {
   return success();
 }
 
-LogicalResult StoreOp::fold(FoldAdaptor adaptor,
-                            SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults StoreOp::fold(FoldAdaptor adaptor) {
   return memref::foldMemRefCast(*this);
 }
 
@@ -6468,8 +6469,7 @@ void MaskedStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<MaskedStoreFolder>(context);
 }
 
-LogicalResult MaskedStoreOp::fold(FoldAdaptor adaptor,
-                                  SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults MaskedStoreOp::fold(FoldAdaptor adaptor) {
   return memref::foldMemRefCast(*this);
 }
 
@@ -8209,10 +8209,10 @@ static LogicalResult foldEmptyMaskOp(MaskOp maskOp, MaskOp::FoldAdaptor adaptor,
   return success();
 }
 
-LogicalResult MaskOp::fold(FoldAdaptor adaptor,
-                           SmallVectorImpl<OpFoldResult> &results) {
+OpFoldResults MaskOp::fold(FoldAdaptor adaptor) {
+  SmallVector<OpFoldResult> results;
   if (succeeded(foldEmptyMaskOp(*this, adaptor, results)))
-    return success();
+    return results;
 
   MaskFormat maskFormat = getMaskFormat(getMask());
   if (maskFormat != MaskFormat::AllTrue)
@@ -8227,8 +8227,13 @@ LogicalResult MaskOp::fold(FoldAdaptor adaptor,
   maskableOp->dropAllUses();
   maskableOp->moveBefore(getOperation());
 
-  llvm::append_range(results, maskableOp->getResults());
-  return success();
+  // The terminator now has null operands, so the fold must replace every
+  // result. The driver then erases the op. A mask without results has nothing
+  // to replace, and an empty range means failure, so report the move as an
+  // in-place change.
+  if (getNumResults() == 0)
+    return success();
+  return maskableOp->getResults();
 }
 
 /// Canonialize empty `vector.mask` operations that can't be handled in
