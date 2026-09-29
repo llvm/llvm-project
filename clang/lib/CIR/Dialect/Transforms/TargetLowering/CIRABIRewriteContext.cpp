@@ -1897,8 +1897,9 @@ mlir::Value copyRegisterToTemp(CIRBaseBuilderTy &b, mlir::Location loc,
         loc, b.createPtrBitcast(regAddr, f.ac.coercedType), 8);
     mlir::Value dst = temp;
     if (f.ac.directOffset) {
-      dst = b.createPtrStride(loc, b.createPtrBitcast(temp, byteTy),
-                              b.getSignedInt(loc, f.ac.directOffset, 32));
+      mlir::Value tempByte = b.createPtrBitcast(temp, byteTy);
+      mlir::Value offset = b.getSignedInt(loc, f.ac.directOffset, 32);
+      dst = b.createPtrStride(loc, tempByte, offset);
     }
     b.createStore(loc, val, b.createPtrBitcast(dst, f.ac.coercedType));
     return b.createPtrBitcast(temp, byteTy);

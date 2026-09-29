@@ -18,7 +18,7 @@ on:
         required: true
         type: string
       lnt-machine:
-        description: 'The LNT machine to run the benchmarks on'
+        description: 'The LNT machine configuration to use when benchmarking and to report results as'
         required: true
         type: string
       benchmark-suite-override:
@@ -131,13 +131,9 @@ jobs:
 
       - name: Install dependencies via Homebrew
         if: runner.os == 'macOS'
-        env:
-          # Extra packages needed by the test configuration
-          EXTRA_BREW_PACKAGES: ${{ join(matrix.brew-packages, ' ') }}
         run: |
-          read -ra extra_packages <<< "${EXTRA_BREW_PACKAGES}"
           brew update
-          brew install ninja cmake python@3.14 "${extra_packages[@]}"
+          brew install ninja cmake python@3.14
           echo "$(brew --prefix python@3.14)/bin" >> "$GITHUB_PATH"
 
       - name: Diagnose tools in use

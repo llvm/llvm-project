@@ -578,7 +578,7 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return False
 
-    def get_function_name(self) -> str:
+    def get_function_name(self) -> Optional[str]:
         """Get the scripted frame function name.
 
         Returns:
@@ -586,7 +586,7 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         return self.name
 
-    def get_display_function_name(self) -> str:
+    def get_display_function_name(self) -> Optional[str]:
         """Get the scripted frame display function name.
 
         Returns:
