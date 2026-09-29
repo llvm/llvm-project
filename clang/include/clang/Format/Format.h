@@ -3779,8 +3779,7 @@ struct FormatStyle {
     /// Keep empty lines at start of file.
     bool AtStartOfFile;
     bool operator==(const KeepEmptyLinesStyle &R) const {
-      return AtEndOfBlock == R.AtEndOfBlock &&
-             AtEndOfFile == R.AtEndOfFile &&
+      return AtEndOfBlock == R.AtEndOfBlock && AtEndOfFile == R.AtEndOfFile &&
              AtStartOfBlock == R.AtStartOfBlock &&
              AtStartOfFile == R.AtStartOfFile;
     }

@@ -25619,11 +25619,14 @@ TEST_F(FormatTest, KeepEmptyLinesAtStartOfBlock) {
   Style.MaxEmptyLinesToKeep = 2;
 
   verifyFormat("void foo() {\n"
-               "\n\n"
+               "\n"
+               "\n"
                "  int i;\n"
                "}",
                "void foo() {\n"
-               "\n\n\n\n"
+               "\n"
+               "\n"
+               "\n"
                "  int i;\n"
                "}",
                Style);
@@ -25638,20 +25641,26 @@ TEST_F(FormatTest, KeepEmptyLinesAtEndOfBlock) {
 
   verifyFormat("void foo() {\n"
                "  int i;\n"
-               "\n\n"
+               "\n"
+               "\n"
                "}",
                "void foo() {\n"
                "  int i;\n"
-               "\n\n\n\n"
+               "\n"
+               "\n"
+               "\n"
                "}",
                Style);
   verifyFormat("foo([]() {\n"
                "  int i;\n"
-               "\n\n"
+               "\n"
+               "\n"
                "});",
                "foo([]() {\n"
                "  int i;\n"
-               "\n\n\n\n"
+               "\n"
+               "\n"
+               "\n"
                "});",
                Style);
 }
