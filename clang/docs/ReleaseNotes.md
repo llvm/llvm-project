@@ -268,6 +268,11 @@ features cannot lower the translation-unit ABI level;
   path share one module cache, and is only sound when no module needs the path
   -- a lookup that would have resolved through an ignored path simply fails.
 
+- Added support for -fkeep-inline-functions in Clang. This option forces
+  inline function definitions that are available in the current translation
+  unit to be emitted into the object file, even when they are inlined into all
+  callers or are otherwise unused.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
