@@ -664,16 +664,14 @@ public:
   ///     A function that will be called only once per-process in a
   ///     thread-safe way to create the UtilityFunction if it has not
   ///     been initialized yet.
-  /// \param[out] error
-  ///     If the UtilityFunction could not be created, the reason why.
   ///
   /// \return
-  ///     The cached utility function or null if the platform is not the
-  ///     same as the target's platform, or if it could not be created.
-  UtilityFunction *GetLoadImageUtilityFunction(
+  ///     The cached utility function, or an Error if the platform is not
+  ///     the same as the target's platform, or if it could not be created.
+  llvm::Expected<UtilityFunction &> GetLoadImageUtilityFunction(
       Platform *platform,
-      llvm::function_ref<std::unique_ptr<UtilityFunction>()> factory,
-      Status &error);
+      llvm::function_ref<llvm::Expected<std::unique_ptr<UtilityFunction>>()>
+          factory);
 
   /// Get the dynamic loader plug-in for this process.
   ///
@@ -3594,7 +3592,7 @@ protected:
   std::unique_ptr<UtilityFunction> m_dlopen_utility_func_up;
   llvm::once_flag m_dlopen_utility_func_flag_once;
   /// The error from the one attempt to create m_dlopen_utility_func_up,
-  /// success or failure.
+  /// set only if that attempt failed.
   Status m_dlopen_utility_func_error;
 
   /// Per process source file cache.

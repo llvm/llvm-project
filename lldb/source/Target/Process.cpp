@@ -6710,18 +6710,25 @@ Status Process::UpdateAutomaticSignalFiltering() {
   return Status();
 }
 
-UtilityFunction *Process::GetLoadImageUtilityFunction(
+llvm::Expected<UtilityFunction &> Process::GetLoadImageUtilityFunction(
     Platform *platform,
-    llvm::function_ref<std::unique_ptr<UtilityFunction>()> factory,
-    Status &error) {
+    llvm::function_ref<llvm::Expected<std::unique_ptr<UtilityFunction>>()>
+        factory) {
   if (platform != GetTarget().GetPlatform().get())
-    return nullptr;
+    return llvm::createStringError(
+        "the platform requesting the load-image utility function is not "
+        "the target's platform");
   llvm::call_once(m_dlopen_utility_func_flag_once, [&] {
-    m_dlopen_utility_func_up = factory();
-    m_dlopen_utility_func_error = error.Clone();
+    llvm::Expected<std::unique_ptr<UtilityFunction>> factory_result = factory();
+    if (factory_result)
+      m_dlopen_utility_func_up = std::move(*factory_result);
+    else
+      m_dlopen_utility_func_error =
+          Status::FromError(factory_result.takeError());
   });
-  error = m_dlopen_utility_func_error.Clone();
-  return m_dlopen_utility_func_up.get();
+  if (m_dlopen_utility_func_up)
+    return *m_dlopen_utility_func_up;
+  return m_dlopen_utility_func_error.ToError();
 }
 
 llvm::Expected<TraceSupportedResponse> Process::TraceSupported() {
