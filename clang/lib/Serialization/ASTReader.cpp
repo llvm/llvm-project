@@ -3055,6 +3055,10 @@ ASTReader::ResolveImportedPath(SmallString<0> &Buf, StringRef Path,
       Path == "<built-in>" || Path == "<command line>")
     return {Path, Buf};
 
+  // The writer makes the base directory itself relative as ".".
+  if (Path == ".")
+    return {Prefix, Buf};
+
   Buf.clear();
   llvm::sys::path::append(Buf, Prefix, Path);
   StringRef ResolvedPath{Buf.data(), Buf.size()};
