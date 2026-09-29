@@ -20,11 +20,12 @@
 namespace mlir {
 /// Return all func.return ops in the given function.
 SmallVector<func::ReturnOp> bufferization::getReturnOps(func::FuncOp funcOp) {
-  SmallVector<func::ReturnOp> result;
+  SmallVector<func::ReturnOp> results;
   for (Block &b : funcOp.getBody())
     if (auto returnOp = dyn_cast<func::ReturnOp>(b.getTerminator()))
-      result.push_back(returnOp);
-  return result;
+      results.push_back(returnOp);
+  assert(!results.empty() && "expected at least one ReturnOp");
+  return results;
 }
 
 namespace bufferization {
