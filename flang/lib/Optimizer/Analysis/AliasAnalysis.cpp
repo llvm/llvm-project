@@ -1095,9 +1095,7 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   auto args = call.getArgs();
   const bool intentsAvailable = callee && !callee.isDeclaration() &&
                                 args.size() == callee.getNumArguments();
-  // NoModRef is the merge identity, so an argument that does not alias leaves
-  // this unchanged. A missing intent or intent(inout) is already both.
-  ModRefResult passed = ModRefResult::getNoModRef();
+  ModRefResult modRef = ModRefResult::getNoModRef();
   for (auto [idx, arg] : llvm::enumerate(args)) {
     if (!fir::conformsWithPassByRef(arg.getType()) || alias(arg, var).isNo())
       continue;
@@ -1107,11 +1105,11 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
         fir::getFortranDummyIntent(callee, idx);
     if (!intent || *intent == fir::FortranDummyIntent::InOut)
       return ModRefResult::getModAndRef();
-    passed = passed.merge(*intent == fir::FortranDummyIntent::In
-                               ? ModRefResult::getRef()
-                               : ModRefResult::getMod());
+    modRef = modRef.merge(*intent == fir::FortranDummyIntent::In
+                              ? ModRefResult::getRef()
+                              : ModRefResult::getMod());
   }
-  return passed;
+  return modRef;
 }
 
 AliasAnalysis::AliasAnalysis(AliasAnalysisRecursiveEffectsCache &cacheRef)
