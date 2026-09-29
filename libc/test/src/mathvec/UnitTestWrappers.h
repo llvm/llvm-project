@@ -118,7 +118,7 @@ LIBC_INLINE typename Op::VectorType wrap_vector(typename Op::ScalarType x) {
 #define TEST_MATHVEC_FLOAT_RANGE(Op)                                           \
   do {                                                                         \
     constexpr uint32_t COUNT = LIBC_TEST_FLOAT_RANGE_COUNT;                    \
-    constexpr uint32_t RANGE = 0x7f800000U;                                    \
+    constexpr uint32_t RANGE = 0x7f80'0000U;                                    \
     constexpr uint32_t STEP = (RANGE / COUNT) > 0 ? (RANGE / COUNT) : 1;       \
     for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {                  \
       float x = FPBits(v).get_val();                                           \
@@ -130,7 +130,7 @@ LIBC_INLINE typename Op::VectorType wrap_vector(typename Op::ScalarType x) {
 #define TEST_MATHVEC_FLOAT_RANGE_TOL(Op, TOL)                                  \
   do {                                                                         \
     constexpr uint32_t COUNT = LIBC_TEST_FLOAT_RANGE_COUNT;                    \
-    constexpr uint32_t RANGE = 0x7f800000U;                                    \
+    constexpr uint32_t RANGE = 0x7f80'0000U;                                    \
     constexpr uint32_t STEP = (RANGE / COUNT) > 0 ? (RANGE / COUNT) : 1;       \
     for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {                  \
       float x = FPBits(v).get_val();                                           \
