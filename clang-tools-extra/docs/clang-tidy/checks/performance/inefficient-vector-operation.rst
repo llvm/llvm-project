@@ -34,9 +34,9 @@ statement body:
   }
 
 * For-range loops like ``for (range-declaration : range_expression)``, the type
-  of ``range_expression`` can be ``std::vector``, ``std::array``,
-  ``std::deque``, ``std::set``, ``std::unordered_set``, ``std::map``,
-  ``std::unordered_set``:
+  of ``range_expression`` can be ``std::array``, ``std::deque``, ``std::map``,
+  ``std::set``, ``std::unordered_map``, ``std::unordered_set``, or
+  ``std::vector``:
 
 .. code-block:: c++
 
@@ -65,8 +65,8 @@ Options
    sources in range-based for loops. Each configured class must provide an
    accessible ``size()`` method whose result is the number of elements visited
    by the loop. Defaults to
-   ``::std::vector``, ``::std::set``, ``::std::unordered_set``, ``::std::map``,
-   ``::std::unordered_map``, ``::std::array``, and ``::std::deque``.
+   ``::std::array``, ``::std::deque``, ``::std::map``, ``::std::set``,
+   ``::std::unordered_map``, ``::std::unordered_set``, and ``::std::vector``.
 
 .. option:: EnableProto
 

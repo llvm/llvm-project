@@ -78,8 +78,8 @@ InefficientVectorOperationCheck::InefficientVectorOperationCheck(
           Options.get("VectorLikeClasses", "::std::vector"))),
       ForRangeLoopClasses(utils::options::parseStringList(Options.get(
           "ForRangeLoopClasses",
-          "::std::vector;::std::set;::std::unordered_set;::std::map;"
-          "::std::unordered_map;::std::array;::std::deque"))),
+          "::std::array;::std::deque;::std::map;::std::set;"
+          "::std::unordered_map;::std::unordered_set;::std::vector"))),
       EnableProto(Options.get("EnableProto", false)) {}
 
 void InefficientVectorOperationCheck::storeOptions(
