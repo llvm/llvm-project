@@ -1406,9 +1406,10 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
       case InlineAsm::Kind::Clobber:
         for (unsigned j = 0; j != NumVals; ++j, ++i) {
           Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
-          bool IsDead = F.isClobberKind() && none_of(GluedUses, [&](Register U) {
-                          return TRI->regsOverlap(U, Reg);
-                        });
+          bool IsDead =
+              F.isClobberKind() && none_of(GluedUses, [&](Register U) {
+                return TRI->regsOverlap(U, Reg);
+              });
           MIB.addReg(Reg, RegState::Define | RegState::EarlyClobber |
                               getDeadRegState(IsDead) |
                               getImplRegState(Reg.isPhysical()));
