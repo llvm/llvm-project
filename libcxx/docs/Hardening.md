@@ -454,7 +454,8 @@ The first character of an ABI tag encodes the hardening mode:
 - `d` -- [d]ebug mode;
 - `n` -- [n]one mode.
 
-The second character of an ABI tag encodes the assertion semantic:
+Then, a number representing the libc++ version follows. The character that follows
+encodes the assertion semantic:
 
 - `i` -- [i]gnore semantic;
 - `o` -- [o]bserve semantic;

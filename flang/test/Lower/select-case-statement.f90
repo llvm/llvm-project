@@ -348,9 +348,12 @@
   ! select case with goto exit
   subroutine sgoto
     n = 0
-    ! CHECK: cf.cond_br
+    ! The SELECT CASE and its GOTOs branch only within the loop body, so the
+    ! loop keeps its structured form and the raw blocks are confined to a wrap.
+    ! CHECK: fir.do_loop
+    ! CHECK: scf.execute_region no_inline {
     do i=1,8
-      ! CHECK: fir.select_case %8 : i32 [#fir.upper, %c2_i32, ^bb{{.*}}, #fir.lower, %c5_i32, ^bb{{.*}}, unit, ^bb{{.*}}]
+      ! CHECK: fir.select_case %{{[0-9]+}} : i32 [#fir.upper, %c2_i32, ^bb{{.*}}, #fir.lower, %c5_i32, ^bb{{.*}}, unit, ^bb{{.*}}]
       select case(i)
       case (:2)
         ! CHECK-DAG: arith.muli {{.*}}, %c10_i32 : i32

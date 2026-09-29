@@ -1171,7 +1171,9 @@ struct VPExecutionFrequency {
   const bool IsEstimated;
 
   VPExecutionFrequency(BlockFrequency Freq, bool IsEstimated)
-      : Freq(Freq), IsEstimated(IsEstimated) {}
+      : Freq(Freq), IsEstimated(IsEstimated) {
+    assert(Freq > BlockFrequency() && "execution frequency must be non-zero");
+  }
 };
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that
@@ -1903,19 +1905,19 @@ public:
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenCastSC)
 
   /// Produce widened copies of the cast.
-  LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPWidenCastRecipe.
-  LLVM_ABI_FOR_TEST InstructionCost
-  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   Instruction::CastOps getOpcode() const { return Opcode; }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -2011,7 +2013,7 @@ public:
   }
 
   /// Produce a widened version of the vector intrinsic.
-  LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override;
 
   /// Compute the cost of a vector intrinsic with \p ID and \p Operands.
   static InstructionCost computeCallCost(Intrinsic::ID ID,
@@ -2020,8 +2022,8 @@ public:
                                          ElementCount VF, VPCostContext &Ctx);
 
   /// Return the cost of this vector intrinsic.
-  LLVM_ABI_FOR_TEST InstructionCost
-  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   /// Return the ID of the intrinsic.
   Intrinsic::ID getVectorIntrinsicID() const { return VectorIntrinsicID; }
@@ -2038,13 +2040,13 @@ public:
   /// Returns true if the intrinsic may have side-effects.
   bool mayHaveSideEffects() const { return MayHaveSideEffects; }
 
-  LLVM_ABI_FOR_TEST bool usesFirstLaneOnly(const VPValue *Op) const override;
+  bool usesFirstLaneOnly(const VPValue *Op) const override;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
-  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const override;
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
