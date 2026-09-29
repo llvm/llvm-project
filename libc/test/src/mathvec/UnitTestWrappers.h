@@ -97,6 +97,20 @@ LIBC_INLINE typename Op::VectorType wrap_vector(typename Op::ScalarType x) {
     EXPECT_SIMD_EQ(wrap_ref<Op>((x), 1.0), wrap_vector<Op>((x), 1.0));         \
   } while (0)
 
+// Use the same control inputs with an allowed difference in output ULPs.
+#define TEST_VARIED_CASES_TOL(x, Op, TOL)                                      \
+  do {                                                                         \
+    EXPECT_SIMD_EQ(wrap_ref<Op>((x), -(x)), wrap_vector<Op>((x), -(x)), TOL);  \
+    EXPECT_SIMD_EQ(wrap_ref<Op>(-(x), (x)), wrap_vector<Op>(-(x), (x)), TOL);  \
+    EXPECT_SIMD_EQ(wrap_ref<Op>((x), aNaN), wrap_vector<Op>((x), aNaN), TOL);  \
+    EXPECT_SIMD_EQ(wrap_ref<Op>((x), inf), wrap_vector<Op>((x), inf), TOL);    \
+    EXPECT_SIMD_EQ(wrap_ref<Op>((x), neg_inf), wrap_vector<Op>((x), neg_inf),  \
+                   TOL);                                                       \
+    EXPECT_SIMD_EQ(wrap_ref<Op>((x), 0.0), wrap_vector<Op>((x), 0.0), TOL);    \
+    EXPECT_SIMD_EQ(wrap_ref<Op>((x), -0.0), wrap_vector<Op>((x), -0.0), TOL);  \
+    EXPECT_SIMD_EQ(wrap_ref<Op>((x), 1.0), wrap_vector<Op>((x), 1.0), TOL);    \
+  } while (0)
+
 // A helper macro to test a full range of float values, from 0 to 0x7f800000.
 // Negative values are tested via the TEST_VARIED_CASES macro.
 // The number of values to test is controlled by the LIBC_TEST_FLOAT_RANGE_COUNT
@@ -109,6 +123,18 @@ LIBC_INLINE typename Op::VectorType wrap_vector(typename Op::ScalarType x) {
     for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {                  \
       float x = FPBits(v).get_val();                                           \
       TEST_VARIED_CASES(x, Op);                                                \
+    }                                                                          \
+  } while (0)
+
+// Repeat the range test with an allowed difference in output ULPs.
+#define TEST_MATHVEC_FLOAT_RANGE_TOL(Op, TOL)                                  \
+  do {                                                                         \
+    constexpr uint32_t COUNT = LIBC_TEST_FLOAT_RANGE_COUNT;                    \
+    constexpr uint32_t RANGE = 0x7f800000U;                                    \
+    constexpr uint32_t STEP = (RANGE / COUNT) > 0 ? (RANGE / COUNT) : 1;       \
+    for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {                  \
+      float x = FPBits(v).get_val();                                           \
+      TEST_VARIED_CASES_TOL(x, Op, TOL);                                       \
     }                                                                          \
   } while (0)
 
