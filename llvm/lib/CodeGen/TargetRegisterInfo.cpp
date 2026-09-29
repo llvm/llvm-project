@@ -289,7 +289,7 @@ TargetRegisterInfo::getMatchingSuperRegClass(const TargetRegisterClass *A,
   assert(Idx && "Bad sub-register index");
 
   // Find Idx in the list of super-register indices.
-  for (SuperRegClassIterator RCI(B, this); RCI.isValid(); ++RCI)
+  for (SuperRegClassIterator RCI(B); RCI.isValid(); ++RCI)
     if (RCI.getSubReg() == Idx)
       // The bit mask contains all register classes that are projected into B
       // by Idx. Find a class that is also a sub-class of A.
@@ -328,9 +328,9 @@ getCommonSuperRegClass(const TargetRegisterClass *RCA, unsigned SubA,
   // RCA.
   unsigned MinSize = getRegSizeInBits(*RCA);
 
-  for (SuperRegClassIterator IA(RCA, this, true); IA.isValid(); ++IA) {
+  for (SuperRegClassIterator IA(RCA, true); IA.isValid(); ++IA) {
     unsigned FinalA = composeSubRegIndices(IA.getSubReg(), SubA);
-    for (SuperRegClassIterator IB(RCB, this, true); IB.isValid(); ++IB) {
+    for (SuperRegClassIterator IB(RCB, true); IB.isValid(); ++IB) {
       // Check if a common super-register class exists for this index pair.
       const TargetRegisterClass *RC =
         firstCommonClass(IA.getMask(), IB.getMask(), this);

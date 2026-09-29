@@ -193,9 +193,6 @@ public:
   /// masks, one per entry of getSuperRegIndices(). Identical masks are stored
   /// once and shared, so the masks of one class are not contiguous and cannot
   /// be reached by striding. Resolve an entry with getSuperRegClassMaskAt().
-  ///
-  /// Prefer this over getSuperRegClassMask() when walking the whole list: it
-  /// locates the offsets once, leaving one load per entry.
   const uint32_t *getSuperRegClassMaskOffsets() const {
     return reinterpret_cast<const uint32_t *>(
         reinterpret_cast<const char *>(this) + SuperRegMaskOffsetsOff);
@@ -207,12 +204,6 @@ public:
   const uint32_t *getSuperRegClassMaskAt(uint32_t Offset) const {
     return reinterpret_cast<const uint32_t *>(
         reinterpret_cast<const char *>(this) + Offset);
-  }
-
-  /// Returns the bit mask of register classes that the sub-register index
-  /// getSuperRegIndices()[N] projects into this class.
-  const uint32_t *getSuperRegClassMask(unsigned N) const {
-    return getSuperRegClassMaskAt(getSuperRegClassMaskOffsets()[N]);
   }
 
   /// Returns a 0-terminated list of sub-register indices that project some

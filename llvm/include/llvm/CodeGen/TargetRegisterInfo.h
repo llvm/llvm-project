@@ -1141,8 +1141,7 @@ class SuperRegClassIterator {
 public:
   /// Create a SuperRegClassIterator that visits all the super-register classes
   /// of RC. When IncludeSelf is set, also include the (0, sub-classes) entry.
-  SuperRegClassIterator(const TargetRegisterClass *RC,
-                        const TargetRegisterInfo *TRI, bool IncludeSelf = false)
+  SuperRegClassIterator(const TargetRegisterClass *RC, bool IncludeSelf = false)
       : RC(RC), Idx(RC->getSuperRegIndices()),
         MaskOff(RC->getSuperRegClassMaskOffsets()),
         Mask(RC->getSubClassMask()) {
