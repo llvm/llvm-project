@@ -604,7 +604,6 @@ namespace {
 /// with a memory pool (SmallVector was tried but slow and SparseSet is not
 /// applicable).
 using SUList = std::list<SUnit *>;
-} // end anonymous namespace
 
 static void dumpSUList(const SUList &L) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -618,7 +617,6 @@ static void dumpSUList(const SUList &L) {
 #endif
 }
 
-namespace {
 class Value2SUsMap : public SmallMapVector<ValueType, SUList, 4> {
   /// Current total number of SUs in map.
   unsigned NumNodes = 0;
