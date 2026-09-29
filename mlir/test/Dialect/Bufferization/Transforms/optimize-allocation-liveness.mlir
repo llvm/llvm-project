@@ -234,3 +234,18 @@ func.func private @test_alloc_with_multiple_results() -> () {
   memref.dealloc %alloc2 : memref<64xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: func.func private @test_alloc_no_non_dealloc_users
+// CHECK: %[[alloc:.*]] = memref.alloc
+// CHECK-NEXT: memref.dealloc %[[alloc]]
+// CHECK-NEXT: return
+
+// No non-dealloc users. The pass should not move the dealloc.
+func.func private @test_alloc_no_non_dealloc_users() {
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<32xf32>
+  memref.dealloc %alloc : memref<32xf32>
+  return
+}
+
