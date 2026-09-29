@@ -33,7 +33,7 @@ entry:
 !2 = !{!3}
 !3 = !{!"_ZTSFicE"}
 !4 = !{!5}
-!5 = !{!"_ZTSFPvS_"}
+!5 = !{!"_ZTSFPvS_E"}
 
 ; CHECK: .section .llvm.callgraph,"o",%llvm_call_graph,.text
 ;; Version
@@ -58,5 +58,5 @@ entry:
 ; CHECK-NEXT: .long 1534046230
 ; CHECK-NEXT: .long 1192513734
 ; CHECK-NEXT: .long 33125428
-; CHECK-NEXT: .long 2609506087
-; CHECK-NEXT: .long 2269360106
+; CHECK-NEXT: .long 1749022016
+; CHECK-NEXT: .long 2360566446

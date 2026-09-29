@@ -9,13 +9,13 @@
 #include <optional>
 
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialectDecl.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -792,7 +792,7 @@ struct TestCreateVectorBroadcast
 
   void runOnOperation() override {
     getOperation()->walk([](Operation *op) {
-      if (op->getName().getStringRef() != "test_create_broadcast")
+      if (op->getName().getStringRef() != "test.create_broadcast")
         return;
       auto targetShape =
           cast<VectorType>(op->getResult(0).getType()).getShape();
@@ -1055,6 +1055,10 @@ struct TestEliminateVectorMasks
   Option<unsigned> vscaleMax{
       *this, "vscale-max", llvm::cl::desc("Maximum possible value of vscale."),
       llvm::cl::init(16)};
+  Option<bool> fixedSize{
+      *this, "fixed-size",
+      llvm::cl::desc("Run without a vscale range, as fixed-size code would."),
+      llvm::cl::init(false)};
 
   StringRef getArgument() const final { return "test-eliminate-vector-masks"; }
   StringRef getDescription() const final {
@@ -1062,8 +1066,10 @@ struct TestEliminateVectorMasks
   }
   void runOnOperation() override {
     IRRewriter rewriter(&getContext());
-    eliminateVectorMasks(rewriter, getOperation(),
-                         VscaleRange{vscaleMin, vscaleMax});
+    std::optional<VscaleRange> vscaleRange;
+    if (!fixedSize)
+      vscaleRange = VscaleRange{vscaleMin, vscaleMax};
+    eliminateVectorMasks(rewriter, getOperation(), vscaleRange);
   }
 };
 

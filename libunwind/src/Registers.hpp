@@ -1896,11 +1896,9 @@ public:
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
     // Note the value of the PC was signed to its address in the register state
     // but everyone else expects it to be signed by the SP, so convert on return.
-    value = (uint64_t)ptrauth_auth_and_resign((void *)_registers.__pc,
-                                              ptrauth_key_return_address,
-                                              &_registers.__pc,
-                                              ptrauth_key_return_address,
-                                              getSP());
+    value = (uint64_t)ptrauth_auth_and_resign(
+        (void *)_registers.__pc, ptrauth_key_return_address, &_registers.__pc,
+        ptrauth_key_return_address, _registers.__sp);
 #endif
     return value;
   }
@@ -1909,14 +1907,37 @@ public:
     // Note the value which was set should have been signed with the SP.
     // We then resign with the slot we are being stored in to so that both SP
     // and LR can't be spoofed at the same time.
-    value = (uint64_t)ptrauth_auth_and_resign((void *)value,
-                                              ptrauth_key_return_address,
-                                              getSP(),
-                                              ptrauth_key_return_address,
-                                              &_registers.__pc);
+    value = (uint64_t)ptrauth_auth_and_resign(
+        (void *)value, ptrauth_key_return_address, _registers.__sp,
+        ptrauth_key_return_address, &_registers.__pc);
 #endif
     _registers.__pc = value;
   }
+  __attribute__((target("pauth-lr"))) void setIPPAuthLR(uint64_t value,
+                                                        uint64_t signing_pc) {
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+#if __has_builtin(__builtin_ptrauth_auth_with_pc_and_resign)
+    value = (uint64_t)ptrauth_auth_with_pc_and_resign(
+        (void *)value, ptrauth_key_return_address, _registers.__sp, signing_pc,
+        ptrauth_key_return_address, &_registers.__pc);
+#else
+    register uint64_t x17 __asm("x17") = value;
+    register uint64_t x16 __asm("x16") = _registers.__sp;
+    register uint64_t x15 __asm("x15") = signing_pc;
+    uint64_t resignDisc = (uint64_t)&_registers.__pc;
+    asm("autib171615\n\t"
+        "pacib %0, %3"
+        : "+r"(x17)
+        : "r"(x16), "r"(x15), "r"(resignDisc));
+    value = x17;
+#endif
+#endif
+    _registers.__pc = value;
+  }
+
   uint64_t getFP() const { return _registers.__fp; }
   void setFP(uint64_t value) { _registers.__fp = value; }
 

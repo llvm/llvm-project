@@ -37,16 +37,6 @@ entry:
 
 declare float @ldexpf(float, i32) memory(none)
 
-define fp128 @testExpl(fp128 %val, i32 %a) {
-; LINUX:    bl ldexpl
-; WINDOWS:    b.w ldexpl
-entry:
-  %call = tail call fp128 @ldexpl(fp128 %val, i32 %a)
-  ret fp128 %call
-}
-
-declare fp128 @ldexpl(fp128, i32) memory(none)
-
 define half @testExpf16(half %val, i32 %a) {
 ; LINUX: bl ldexpf
 ; WINDOWS: bl ldexp{{$}}

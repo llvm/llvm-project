@@ -164,7 +164,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
     if (name == "port") {
       // Make the Optional valid so we can use its value
       port = 0;
-      value.getAsInteger(0, *port);
+      value.getAsInteger(BASE_10, *port);
     }
   }
 

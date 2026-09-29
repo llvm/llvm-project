@@ -35,7 +35,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <optional>
 #include <string>
 #include <utility>
@@ -519,14 +518,14 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP,
   attachRangesOrLowHighPC(*SPDie, BB_List);
 
   if (DD->useAppleExtensionAttributes() &&
-      !DD->getCurrentFunction()->getTarget().Options.DisableFramePointerElim(
-          *DD->getCurrentFunction()))
+      !DD->getCurrentFunction()->disableFramePointerElim())
     addFlag(*SPDie, dwarf::DW_AT_APPLE_omit_frame_ptr);
 
   if (emitFuncLineTableOffsets() && LineTableSym) {
-    addSectionLabel(
-        *SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
-        Asm->getObjFileLowering().getDwarfLineSection()->getBeginSymbol());
+    MCSymbol *Symbol =
+        Asm->getObjFileLowering().getDwarfLineSection()->getBeginSymbol();
+    addSectionLabel(*SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
+                    Symbol);
   }
 
   // Only include DW_AT_frame_base in full debug info
@@ -642,12 +641,7 @@ void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
     const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
     const MCSymbol *RangeSectionSym =
         TLOF.getDwarfRangesSection()->getBeginSymbol();
-    if (isDwoUnit())
-      addSectionDelta(ScopeDIE, dwarf::DW_AT_ranges, List.Label,
-                      RangeSectionSym);
-    else
-      addSectionLabel(ScopeDIE, dwarf::DW_AT_ranges, List.Label,
-                      RangeSectionSym);
+    addSectionLabel(ScopeDIE, dwarf::DW_AT_ranges, List.Label, RangeSectionSym);
   }
 }
 
@@ -1258,19 +1252,25 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
 
   // Emit inner lexical scopes.
   auto skipLexicalScope = [this](LexicalScope *S) -> bool {
-    if (isa<DISubprogram>(S->getScopeNode()))
+    const DILocalScope *DS = S->getScopeNode();
+    if (isa<DISubprogram>(DS))
       return false;
     // Don't skip abstract lexical blocks that are scope targets for global
     // variables (e.g., function-scope statics). Those globals are emitted
     // later in endModule() and need to find the block via
     // getOrCreateContextDIE().
-    if (S->isAbstractScope() && hasGlobalVariableInScope(S->getScopeNode()))
+    if (S->isAbstractScope() && hasGlobalVariableInScope(DS))
+      return false;
+    // Create a concrete lexical block for a scope with an abstract lexical
+    // block to ensure visibility of scope-local types and static variables
+    // within the scope range.
+    if (getAbstractScopeDIEs().lookup(DS))
       return false;
     auto Vars = DU->getScopeVariables().lookup(S);
     if (!Vars.Args.empty() || !Vars.Locals.empty())
       return false;
     return includeMinimalInlineScopes() ||
-           DD->getLocalDeclsForScope(S->getScopeNode()).empty();
+           DD->getLocalDeclsForScope(DS).empty();
   };
   for (LexicalScope *LS : Scope->getChildren()) {
     // If the lexical block doesn't have non-scope children or global

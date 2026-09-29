@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -50,6 +51,7 @@
 #define DEBUG_TYPE "X86-isel"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 namespace {
 
@@ -1464,7 +1466,7 @@ bool X86InstructionSelector::selectInsert(MachineInstr &I,
   if (Index % InsertRegTy.getSizeInBits() != 0)
     return false; // Not insert subvector.
 
-  if (Index == 0 && MRI.getVRegDef(SrcReg)->isImplicitDef()) {
+  if (Index == 0 && mi_match(SrcReg, MRI, m_GImplicitDef())) {
     // Replace by subreg copy.
     if (!emitInsertSubreg(DstReg, InsertReg, I, MRI, MF))
       return false;
@@ -1856,8 +1858,8 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
               TII.get(OpEntry.OpSignExtend));
     else {
       Register Zero32 = MRI.createVirtualRegister(&X86::GR32RegClass);
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::MOV32r0),
-              Zero32);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::MOV32r0), Zero32)
+          .setOperandDead(1);
 
       // Copy the zero into the appropriate sub/super/identical physical
       // register. Unfortunately the operations needed are not uniform enough

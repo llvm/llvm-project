@@ -122,8 +122,10 @@ add_header_library(
   HDRS
     exp2f.h
   DEPENDS
+    .expf_utils
     libc.src.__support.CPP.simd
-    libc.src.__support.math.exp2f
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.common
 )
 
 add_header_library(
@@ -140,8 +142,10 @@ add_header_library(
   HDRS
     exp10f.h
   DEPENDS
+    .expf_utils
     libc.src.__support.CPP.simd
-    libc.src.__support.math.exp10f
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.common
 )
 
 add_header_library(
@@ -229,12 +233,25 @@ add_header_library(
 )
 
 add_header_library(
+  trig_reductionf
+  HDRS
+    trig_reductionf.h
+    trig_reductionf_nofma.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.simd
+)
+
+add_header_library(
   sinf
   HDRS
     sinf.h
   DEPENDS
+    .trig_reductionf
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.simd
-    libc.src.__support.math.sinf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(

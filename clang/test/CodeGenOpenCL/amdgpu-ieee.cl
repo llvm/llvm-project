@@ -1,30 +1,30 @@
 // REQUIRES: amdgpu-registered-target
 //
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -O0 -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -O0 -emit-llvm -o - %s \
 // RUN:   -target-feature +dx10-clamp-and-ieee-mode \
 // RUN:   | FileCheck -check-prefixes=COMMON,ON %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -O0 -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -O0 -emit-llvm -o - %s \
 // RUN:   -target-feature +dx10-clamp-and-ieee-mode \
 // RUN:   -mno-amdgpu-ieee -menable-no-nans \
 // RUN:   | FileCheck -check-prefixes=COMMON,OFF %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -O0 -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -O0 -emit-llvm -o - %s \
 // RUN:   -target-feature +dx10-clamp-and-ieee-mode \
-// RUN:   -mno-amdgpu-ieee -cl-fast-relaxed-math \
+// RUN:   -mno-amdgpu-ieee -cl-fast-relaxed-math -menable-no-nans \
 // RUN:   | FileCheck -check-prefixes=COMMON,OFF %s
 
 // Check AMDGCN ISA generation.
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -O3 -S -o - %s \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -O3 -S -o - %s \
 // RUN:   -target-feature +dx10-clamp-and-ieee-mode \
 // RUN:   | FileCheck -check-prefixes=ISA-ON %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -O3 -S -o - %s \
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -O3 -S -o - %s \
 // RUN:   -target-feature +dx10-clamp-and-ieee-mode \
 // RUN:   -mno-amdgpu-ieee -menable-no-nans \
 // RUN:   | FileCheck -check-prefixes=ISA-OFF %s
 
 // Check diagnostics when using -mno-amdgpu-ieee without NoHonorNaNs.
 
-// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa -O0 -emit-llvm -o - %s \
+// RUN: not %clang_cc1 -triple amdgpu7.00-amd-amdhsa -O0 -emit-llvm -o - %s \
 // RUN:   -mno-amdgpu-ieee 2>&1 | FileCheck -check-prefixes=DIAG %s
 
 // COMMON: define{{.*}} amdgpu_kernel void @kern{{.*}} [[ATTRS1:#[0-9]+]]

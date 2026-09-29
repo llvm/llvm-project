@@ -1,5 +1,5 @@
-! RUN: %flang_fc1 -emit-hlfir -fcoarray %s -o - | FileCheck %s --check-prefixes=COARRAY
-! RUN: not %flang_fc1 -emit-hlfir %s 2>&1 | FileCheck %s --check-prefixes=NOCOARRAY
+! RUN: %flang_fc1 -mmlir --wrap-unstructured-constructs-in-execute-region -emit-hlfir -fcoarray %s -o - | FileCheck %s --check-prefixes=COARRAY
+! RUN: not %flang_fc1 -mmlir --wrap-unstructured-constructs-in-execute-region -emit-hlfir %s 2>&1 | FileCheck %s --check-prefixes=NOCOARRAY
 
 ! NOCOARRAY: Not yet implemented: Multi-image features are experimental and are disabled by default, use '-fcoarray' to enable.
 

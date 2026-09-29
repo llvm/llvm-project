@@ -349,6 +349,13 @@ static opt<std::string>
                      "calculating variable definedness in coverage statistics "
                      "(implies --show-variable-coverage)"),
                 value_desc("filename"), cat(DwarfDumpCategory));
+static opt<bool> MaybeUndefined(
+    "variable-coverage-maybe-undefined",
+    desc("Use with --show-variable-coverage and "
+         "--variable-coverage-bitcode-file to consider variables live if they "
+         "are defined on at least one path (default behaviour is to require a "
+         "variable to be defined on all paths to be counted)"),
+    cat(DwarfDumpCategory));
 static opt<bool> CombineInstances(
     "combine-inline-variable-instances",
     desc(
@@ -492,11 +499,20 @@ static void filterByName(
     filterDieNames(CU.get());
     if (DumpNonSkeleton) {
       // If we have split DWARF, then recurse down into the .dwo files as well.
+      // Matching DIEs are printed as they are found and nothing here outlives
+      // them, so the split unit can be released instead of keeping every .dwo
+      // context resident until the end of the search.
+      const bool HadDWO = CU->getDWO();
       DWARFDie CUDie = CU->getUnitDIE(false);
       DWARFDie CUNonSkeletonDie = CU->getNonSkeletonUnitDIE(false);
       // If we have a DWO file, we need to search it as well
       if (CUNonSkeletonDie && CUDie != CUNonSkeletonDie)
         filterDieNames(CUNonSkeletonDie.getDwarfUnit());
+      const DWARFUnit *DWO = CU->getDWO();
+      // Don't release a DWP context -- it is the same for every non-skeleton CU
+      // and we benefit from keeping it resident to avoid the re-parse.
+      if (!HadDWO && DWO && !DWO->getContext().isDWP())
+        CU->clearDWO();
     }
   }
 }
@@ -986,7 +1002,8 @@ int main(int argc, char **argv) {
       auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
                               const Twine &Filename, raw_ostream &OS) {
         return showVariableCoverage(Obj, DICtx, &BaselineObj, &BaselineCtx,
-                                    BitcodeFile, CombineInstances, OS);
+                                    BitcodeFile, MaybeUndefined,
+                                    CombineInstances, OS);
       };
       for (StringRef Object : Objects)
         Success &= handleFile(Object, showCoverage, OutputFile.os());
@@ -997,7 +1014,7 @@ int main(int argc, char **argv) {
     auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
                             const Twine &Filename, raw_ostream &OS) {
       return showVariableCoverage(Obj, DICtx, nullptr, nullptr, BitcodeFile,
-                                  CombineInstances, OS);
+                                  MaybeUndefined, CombineInstances, OS);
     };
     for (StringRef Object : Objects)
       Success &= handleFile(Object, showCoverage, OutputFile.os());

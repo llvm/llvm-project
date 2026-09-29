@@ -24,7 +24,7 @@ void OptionValueFileSpecList::DumpValue(const ExecutionContext *exe_ctx,
     const bool one_line = dump_mask & eDumpOptionCommand;
     const uint32_t size = m_current_value.GetSize();
     if (dump_mask & (eDumpOptionType | eDumpOptionDefaultValue)) {
-      strm.Printf(" =");
+      strm.PutCString(" =");
       if (dump_mask & eDumpOptionDefaultValue && !m_current_value.IsEmpty()) {
         DefaultValueFormat label(strm);
         strm.PutCString("empty");

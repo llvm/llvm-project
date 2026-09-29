@@ -2212,7 +2212,7 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowFast(
               : IRB.CreateAnd(
                     WideShadow,
                     ConstantInt::get(WideShadowTy,
-                                     (1 - (1 << (WideShadowBitWidth / 2)))
+                                     ((1ULL << (WideShadowBitWidth / 2)) - 1)
                                          << (WideShadowBitWidth / 2)));
       Shadows.push_back(WideShadow);
       Origins.push_back(DFS.loadNextOrigin(Pos, OriginAlign, &OriginAddr));
@@ -3349,8 +3349,8 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
   if (F == DFSF.DFS.DFSanVarargWrapperFn.getCallee()->stripPointerCasts())
     return;
 
-  LibFunc LF;
-  if (DFSF.TLI.getLibFunc(CB, LF)) {
+  LibFunc LF = DFSF.TLI.getLibFunc(CB);
+  if (LF != NotLibFunc) {
     // libatomic.a functions need to have special handling because there isn't
     // a good way to intercept them or compile the library with
     // instrumentation.

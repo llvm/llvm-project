@@ -1,6 +1,6 @@
 ! Test unstructured code adjacent to and inside OpenMP constructs.
 
-! RUN: bbc %s -fopenmp -emit-hlfir -o "-" \
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region %s -fopenmp -emit-hlfir -o "-" \
 ! RUN: | FileCheck %s
 
 ! CHECK-LABEL: func @_QPss1{{.*}} {
@@ -61,7 +61,7 @@ end
 
 ! CHECK-LABEL: func @_QPss3{{.*}} {
 ! CHECK:   omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
-! CHECK:     %[[ALLOCA_K:.*]] = fir.alloca i32 {bindc_name = "k", pinned}
+! CHECK:     %[[ALLOCA_K:.*]] = fir.alloca i32 <{bindc_name = "k", pinned}>
 ! CHECK:     %[[K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_K]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 ! CHECK:     fir.do_loop

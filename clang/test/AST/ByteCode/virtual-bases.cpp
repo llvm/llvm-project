@@ -414,12 +414,11 @@ namespace ConstantDestruction {
     }
   };
 
-  struct X : virtual V { // expected-note {{in call to}}
+  struct X : virtual V {
     constexpr X() : V(true) {}
   };
   constexpr X x; // both-error {{constexpr variable 'x' must have constant destruction}} \
-                 // both-note {{in call to}} \
-                 // ref-note {{in call to}}
+                 // both-note 2{{in call to}}
 }
 
 namespace Offsets {
@@ -437,7 +436,7 @@ namespace Offsets {
   };
 
   constexpr C c{12};
-#if !defined(_WIN32)
+#if !defined(_WIN32) || defined(__MINGW32__)
 #if __SIZEOF_SIZE_T__ == 8
   static_assert( (fold((char*)&c.c - (char*)&c)) == 12);
   static_assert( (fold((char*)&c.b - (char*)&c)) == 8);

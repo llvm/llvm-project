@@ -66,7 +66,6 @@ class ExplodedGraph;
 class ExplodedNode : public llvm::FoldingSetNode {
   friend class CoreEngine;
   friend class ExplodedGraph;
-  friend class NodeBuilder;
 
   /// Efficiently stores a list of ExplodedNodes, or an optional flag.
   ///
@@ -142,6 +141,11 @@ public:
 
   const StackFrame *getStackFrame() const {
     return getLocation().getStackFrame();
+  }
+
+  /// Iterates over the current stack frame and all of its ancestors.
+  llvm::iterator_range<StackFrame::parent_iterator> stackframes() const {
+    return getStackFrame()->parentsIncludingSelf();
   }
 
   const Decl &getCodeDecl() const { return *getStackFrame()->getDecl(); }

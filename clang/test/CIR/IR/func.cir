@@ -164,7 +164,7 @@ cir.func @global_dtor_with_priority() global_dtor(201) {
 
 }
 
-!rec_Foo = !cir.struct<"Foo" {!s32i}>
+!rec_Foo = !cir.struct<"Foo" {data !s32i}>
 
 cir.func @Foo_default() func_info<#cir.cxx_ctor<!rec_Foo, default>> {
   cir.return
@@ -203,5 +203,26 @@ cir.func @has_attrs() attributes {foo, baz = 5, floof = "flop"} {
 }
 
 // CHECK: cir.func @has_attrs() attributes {baz = 5 : i64{{.*}}, floof = "flop", foo} {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func alignment(3) @has_alignment() {
+  cir.return
+}
+// CHECK: cir.func alignment(3) @has_alignment() {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func comdat alignment(3) @has_alignment2() {
+  cir.return
+}
+// CHECK: cir.func comdat alignment(3) @has_alignment2() {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func comdat alignment(3) preferred_alignment(4) @has_alignment3() {
+  cir.return
+}
+// CHECK: cir.func comdat alignment(3) preferred_alignment(4) @has_alignment3() {
 // CHECK:   cir.return
 // CHECK: }

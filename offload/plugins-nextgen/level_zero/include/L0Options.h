@@ -16,12 +16,13 @@
 #include <level_zero/ze_api.h>
 
 #include "Shared/EnvironmentVar.h"
+#include "llvm/Support/Allocator.h"
 
 #include "L0Defs.h"
 
 namespace llvm::omp::target::plugin {
 /// Command submission mode.
-enum class CommandModeTy { Sync = 0, Async, AsyncOrdered, InOrder };
+enum class CommandModeTy { Sync = 0, InOrder };
 
 /// Specialization constants used for a module compilation.
 class SpecConstantsTy {

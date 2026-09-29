@@ -43,6 +43,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
@@ -136,6 +137,7 @@ char X86FlagsCopyLoweringLegacy::ID = 0;
 
 void X86FlagsCopyLoweringLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

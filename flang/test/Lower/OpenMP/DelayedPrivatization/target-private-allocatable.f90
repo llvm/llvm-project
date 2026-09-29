@@ -69,7 +69,7 @@ end subroutine target_allocatable
 ! CPU-SAME: {bindc_name = "alloc_var", {{.*}}}
 ! CPU:  %[[VAR_DECL:.*]]:2 = hlfir.declare %[[VAR_ALLOC]]
 ! CPU:  %[[BASE_ADDR:.*]] = fir.box_offset %[[VAR_DECL]]#0 base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> [[MEMBER_TYPE:.*]]
-! CPU:  %[[MEMBER:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE:.*]], i32) -> {{.*}}
+! CPU:  %[[MEMBER:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE:.*]], i32) name("") -> {{.*}}
 ! CPU:  %[[MAP_VAR:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses({{.*}}to{{.*}}) capture(ByRef) members(%[[MEMBER]] : [0] : [[MEMBER_TYPE]]) -> !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CPU:  %[[ATTACH:.*]] = omp.map.info var_ptr(%[[VAR_DECL]]#0 : [[TYPE]], [[DESC_TYPE]]) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : [[MEMBER_TYPE]], i32) -> !fir.ref<!fir.box<!fir.heap<i32>>>
 
@@ -77,12 +77,13 @@ end subroutine target_allocatable
 ! CPU-SAME: @[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %{{.*}} [map_idx=0] : [[TYPE]]) {
 
 ! GPU-LABEL: omp.private {type = private} {{.*}} init {
+! GPU-NOT:     fir.allocmem i32
+! GPU:         %[[PRIV_ALLOC:.*]] = fir.alloca i32
 ! GPU:         fir.if %{{.*}} {
 ! GPU-NEXT:    %[[ZERO_BOX:.*]] = fir.embox %{{.*}}
 ! GPU-NEXT:     fir.store %[[ZERO_BOX]] to %{{.*}}
 ! GPU-NEXT:   } else {
-! GPU-NOT:      fir.allocmem i32
-! GPU-NEXT:     %[[PRIV_ALLOC:.*]] = fir.alloca i32
+! GPU-NOT:     fir.allocmem i32
 ! GPU-NEXT:     %[[PRIV_ALLOC_BOX:.*]] = fir.embox %[[PRIV_ALLOC]]
 ! GPU-NEXT:     fir.store %[[PRIV_ALLOC_BOX]] to %{{.*}}
 ! GPU-NEXT:   }

@@ -18,6 +18,7 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
@@ -35,7 +36,8 @@ template <> struct DomTreeNodeTraits<VPBlockBase> {
 
 /// Template specialization of the standard LLVM dominator tree utility for
 /// VPBlockBases.
-class VPDominatorTree : public DominatorTreeBase<VPBlockBase, false> {
+class LLVM_ABI_FOR_TEST VPDominatorTree
+    : public DominatorTreeBase<VPBlockBase, false> {
   using Base = DominatorTreeBase<VPBlockBase, false>;
 
 public:
@@ -67,5 +69,10 @@ template <>
 struct GraphTraits<const VPDomTreeNode *>
     : public DomTreeGraphTraitsBase<const VPDomTreeNode,
                                     VPDomTreeNode::const_iterator> {};
+
+struct VPPostDominanceFrontier
+    : public DominanceFrontierBase<VPBlockBase, true> {
+  explicit VPPostDominanceFrontier(const DomTreeT &VPDT);
+};
 } // namespace llvm
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLANDOMINATORTREE_H

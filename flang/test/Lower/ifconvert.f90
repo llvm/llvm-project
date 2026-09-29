@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fdebug-dump-pft %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -mmlir --wrap-unstructured-constructs-in-execute-region -fdebug-dump-pft %s 2>&1 | FileCheck %s
 
 ! Note: PFT dump output is fairly stable, including node indexes and
 !       annotations, so all output is CHECKed.
@@ -61,7 +61,7 @@
   ! CHECK:    <<End IfConstruct!>>
   ! CHECK:    28 ^EndDoStmt -> 17: 3 end do inner
   ! CHECK:  <<End DoConstruct!>>
-  ! CHECK:  29 ^EndDoStmt -> 16: end do outer
+  ! CHECK:  29 ^EndDoStmt -> 16 <- 25: end do outer
   ! CHECK:<<End DoConstruct>>
   outer: do i = 1, 3
     inner: do j = 1, 5

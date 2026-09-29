@@ -100,6 +100,18 @@ macros:
     macro_value: 40 # struct ip_mreq_source
   - macro_name: IP_MSFILTER
     macro_value: 41 # struct ip_msfilter
+  - macro_name: MCAST_JOIN_GROUP
+    macro_value: 42 # struct group_req
+  - macro_name: MCAST_BLOCK_SOURCE
+    macro_value: 43 # struct group_source_req
+  - macro_name: MCAST_UNBLOCK_SOURCE
+    macro_value: 44 # struct group_source_req
+  - macro_name: MCAST_LEAVE_GROUP
+    macro_value: 45 # struct group_req
+  - macro_name: MCAST_JOIN_SOURCE_GROUP
+    macro_value: 46 # struct group_source_req
+  - macro_name: MCAST_LEAVE_SOURCE_GROUP
+    macro_value: 47 # struct group_source_req
   - macro_name: IP_MULTICAST_ALL
     macro_value: 49 # int
   - macro_name: IP_LOCAL_PORT_RANGE
@@ -153,6 +165,8 @@ types:
   - type_name: in_addr_t
   - type_name: struct_sockaddr_in
   - type_name: struct_sockaddr_in6
+  - type_name: struct_group_req
+  - type_name: struct_group_source_req
   - type_name: struct_in_addr
   - type_name: struct_in6_addr
   - type_name: struct_ipv6_mreq

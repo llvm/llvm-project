@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN:  %clang_cc1 -fsyntax-only -x hip -fcuda-is-device -verify -triple amdgcn %s
+// RUN:  %clang_cc1 -fsyntax-only -x hip -fcuda-is-device -verify -triple amdgpu %s
 #define __device__ __attribute__((device))
 #define __host__ __attribute__((host))
 #define __global__ __attribute__((global))

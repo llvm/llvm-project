@@ -118,7 +118,9 @@ protected:
     SubRegisterOffsetInBits = OffsetInBits;
   }
 
-  /// Add masking operations to stencil out a subregister.
+  /// Emit shift/mask operations for the pending subregister. After the
+  /// operations are emitted, consume the pending subregister description by
+  /// clearing SubRegisterSizeInBits and SubRegisterOffsetInBits.
   void maskSubRegister();
 
   /// Output a dwarf operand and an optional assembler comment.

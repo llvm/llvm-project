@@ -12,7 +12,7 @@ define dllexport amdgpu_ps void @_amdgpu_ps_main(i32 %descTable2) #0 {
   %i4 = inttoptr i64 %i2 to ptr addrspace(4)
   %i159 = call reassoc nnan nsz arcp contract afn <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f32(i32 15, float poison, float poison, float poison, float poison, float poison, float poison, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
   %i1540 = shufflevector <4 x float> %i159, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
-  %i1526 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> poison, i32 2688, i32 0)
+  %i1526 = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) poison, i32 2688, i32 0), !invariant.load !{}
   %i1746 = load <4 x i32>, ptr addrspace(4) %i4, align 16
   br label %bb1750
 
@@ -24,7 +24,7 @@ bb1750:                                           ; preds = %bb1897, %.entry
   %i1754 = shufflevector <4 x i32> %__llpc_global_proxy_r10.19291, <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
   %__llpc_global_proxy_r7.12.vec.extract1953260 = bitcast float %i1751 to i32
   %i1760 = or i32 %__llpc_global_proxy_r7.12.vec.extract1953260, %__llpc_global_proxy_r3.12.vec.extract2358295
-  %i1786 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> poison, i32 %i1760, i32 0)
+  %i1786 = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) poison, i32 %i1760, i32 0), !invariant.load !{}
   %__llpc_global_proxy_r11.12.vec.insert1237 = insertelement <4 x i32> %i1754, i32 %i1786, i64 3
   %.not2783 = icmp eq i32 %i1786, 0
   br i1 %.not2783, label %bb1789, label %bb1787
@@ -44,7 +44,7 @@ bb1789:                                           ; preds = %bb1750
   %i1878 = shufflevector <4 x i32> %__llpc_global_proxy_r11.12.vec.insert1245, <4 x i32> poison, <3 x i32> <i32 3, i32 3, i32 3>
   %i1879 = bitcast <3 x i32> %i1878 to <3 x float>
   %i1881 = fmul reassoc nnan nsz arcp contract afn <3 x float> %i1540, %i1879
-  %i1882 = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> poison, i32 poison, i32 0)
+  %i1882 = call <3 x i32> @llvm.amdgcn.ptr.s.buffer.load.v3i32(ptr addrspace(8) poison, i32 poison, i32 0), !invariant.load !{}
   %i1883 = shufflevector <3 x i32> %i1882, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
   %i1884 = bitcast <4 x i32> %i1883 to <4 x float>
   %i1885 = shufflevector <4 x float> %i1884, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
@@ -84,7 +84,7 @@ bb1897:                                           ; preds = %bb1789, %bb1787
 declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f32(i32 immarg, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg)
 declare float @llvm.amdgcn.fmed3.f32(float, float, float)
 declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i32, i32 immarg)
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg)
-declare <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32>, i32, i32 immarg)
+declare i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8), i32, i32 immarg)
+declare <3 x i32> @llvm.amdgcn.ptr.s.buffer.load.v3i32(ptr addrspace(8), i32, i32 immarg)
 
 attributes #0 = { "target-features"="+wavefrontsize64,+cumode" }

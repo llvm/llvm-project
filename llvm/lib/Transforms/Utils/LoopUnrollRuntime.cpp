@@ -40,7 +40,6 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
-#include <cmath>
 
 using namespace llvm;
 
@@ -1077,7 +1076,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
 #if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
   if (DT) {
     assert(DT->verify(DominatorTree::VerificationLevel::Full));
-    LI->verify(*DT);
+    LI->verify();
   }
 #endif
 

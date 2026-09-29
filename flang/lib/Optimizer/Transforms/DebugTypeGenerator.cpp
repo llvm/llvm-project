@@ -12,7 +12,7 @@
 
 #define DEBUG_TYPE "flang-debug-type-generator"
 
-#include "DebugTypeGenerator.h"
+#include "flang/Optimizer/Transforms/DebugTypeGenerator.h"
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -224,8 +224,11 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
     mlir::Attribute lowerAttr = nullptr;
     // If declaration has a lower bound, use it.
     if (declOp && declOp.getShift().size() > index) {
-      if (std::optional<std::int64_t> optint =
-              getIntIfConstant(declOp.getShift()[index]))
+      std::optional<llvm::APInt> constant =
+          getIntIfConstant(declOp.getShift()[index]);
+      std::optional<std::int64_t> optint =
+          constant ? constant->trySExtValue() : std::nullopt;
+      if (optint)
         lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, *optint));
       else
         lowerAttr = generateArtificialVariable(
@@ -402,6 +405,16 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   if (nameKind != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return genPlaceholderType(context);
 
+  // The fir.type_info is at the derived type definition, so it names the file
+  // the type is written in. That is not the file being compiled when the
+  // definition was read through an INCLUDE statement. A type with no
+  // fir.type_info carries no position at all, and keeps the compile unit's
+  // file and a line of 1.
+  fir::TypeInfoOp tiOp = symbolTable->lookup<fir::TypeInfoOp>(Ty.getName());
+  unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
+  if (tiOp)
+    fileAttr = fir::getFileAttrFromLoc(tiOp.getLoc(), fileAttr);
+
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
   // Generate a place holder TypeAttr which will be used if a member
   // references the parent type.
@@ -415,9 +428,6 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
       /*discriminator=*/nullptr, elements);
   DerivedTypeCache::ActiveLevels nestedRecursions =
       derivedTypeCache.startTranslating(Ty, placeHolder);
-
-  fir::TypeInfoOp tiOp = symbolTable->lookup<fir::TypeInfoOp>(Ty.getName());
-  unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
 
   mlir::OpBuilder builder(context);
   mlir::IntegerType intTy = mlir::IntegerType::get(context, 64);
@@ -545,8 +555,11 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
     // bound. As an optimization, we don't create a lower bound when shift is a
     // constant 1 as that is the default.
     if (declOp && declOp.getShift().size() > index) {
-      if (std::optional<std::int64_t> optint =
-              getIntIfConstant(declOp.getShift()[index])) {
+      std::optional<llvm::APInt> constant =
+          getIntIfConstant(declOp.getShift()[index]);
+      std::optional<std::int64_t> optint =
+          constant ? constant->trySExtValue() : std::nullopt;
+      if (optint) {
         if (*optint != 1)
           lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, *optint));
       } else

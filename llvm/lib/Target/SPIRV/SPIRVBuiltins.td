@@ -122,6 +122,7 @@ def : DemangledBuiltin<"__spirv_DotAccSat", OpenCL_std, IntegerDot, 3, 3>;
 def : DemangledBuiltin<"read_imagei", OpenCL_std, ReadImage, 2, 4>;
 def : DemangledBuiltin<"read_imageui", OpenCL_std, ReadImage, 2, 4>;
 def : DemangledBuiltin<"read_imagef", OpenCL_std, ReadImage, 2, 4>;
+def : DemangledBuiltin<"read_imageh", OpenCL_std, ReadImage, 2, 4>;
 def : DemangledBuiltin<"__spirv_ImageRead", OpenCL_std, ReadImage, 2, 0>;
 
 def : DemangledBuiltin<"write_imagef", OpenCL_std, WriteImage, 3, 4>;
@@ -701,6 +702,7 @@ defm : DemangledNativeBuiltin<"__spirv_SMulExtended", GLSL_std_450, MulExtended,
 
 // Arithmetic builtin records:
 defm : DemangledNativeBuiltin<"__spirv_FMod", OpenCL_std, Arithmetic, 2, 2, OpFMod>;
+defm : DemangledNativeBuiltin<"__spirv_SMod", OpenCL_std, Arithmetic, 2, 2, OpSMod>;
 
 // cl_intel_split_work_group_barrier
 defm : DemangledNativeBuiltin<"intel_work_group_barrier_arrive", OpenCL_std, Barrier, 1, 2, OpControlBarrierArriveINTEL>;
@@ -896,8 +898,8 @@ class GroupBuiltin<string name, Op operation> {
 def GroupBuiltins : GenericTable {
   let FilterClass = "GroupBuiltin";
   let Fields = ["Name", "Opcode", "GroupOperation", "IsElect", "IsAllOrAny",
-                "IsAllEqual", "IsBallot", "IsInverseBallot", "IsBallotBitExtract",
-                "IsBallotFindBit", "IsLogical", "NoGroupOperation", "HasBoolArg"];
+                "IsAllEqual", "IsInverseBallot", "IsBallotBitExtract",
+                "IsLogical", "NoGroupOperation", "HasBoolArg"];
 }
 
 // Function to lookup group builtins by their name and set.
@@ -1764,7 +1766,7 @@ foreach i = ["", "2", "3", "4", "8", "16"] in {
   }
   defm : DemangledVectorLoadStoreBuiltin<!strconcat("vload", i), 2, 2, 171>;
   defm : DemangledVectorLoadStoreBuiltin<!strconcat("vstore", i), 3, 3, 172>;
-  defm : DemangledVectorLoadStoreBuiltin<!strconcat("vloada_half", i), 2, 2, 174>;
+  defm : DemangledVectorLoadStoreBuiltin<!strconcat("vloada_half", i), 2, 2, 179>;
   defm : DemangledVectorLoadStoreBuiltin<!strconcat("vstorea_half", i), 3, 3, 180>;
 
   // Also create records for each rounding mode.

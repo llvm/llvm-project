@@ -29,9 +29,36 @@ def StridedRC : MyClass<64, [untyped], (add StridedPair)>;
 def DensePair : RegisterTuples<[lo2, hi2], [(add R4, R6), (add R5, R7)]>;
 def UntypedRC : MyClass<8, [untyped], (add DensePair)>;
 
+// (3) Exact fit: a typed 64-bit pair whose two 32-bit halves tile exactly
+// [0,64). offset+size equals the register size, which is the boundary case;
+// the check rejects sub-registers that cover strictly more, so this is fine.
+def elo : SubRegIndex<32, 0>;
+def ehi : SubRegIndex<32, 32>;
+def E0 : MyReg<"e0">;
+def E1 : MyReg<"e1">;
+def EGPR : MyClass<32, [i32], (add E0, E1)>;
+let SubRegIndices = [elo, ehi] in
+  def EP0 : MyReg<"ep0", [E0, E1]>;
+def ExactRC : MyClass<64, [i64], (add EP0)>;
+
+// (4) Not covered by sub-registers: a register that does not set
+// CoveredBySubRegs makes no full-tiling promise, so an explicit SubRegIndex
+// running past its size ([0,32)+[32,96) = 96 > 64) is that register's own
+// business and must not be diagnosed.
+def nlo : SubRegIndex<32, 0>;
+def nhi : SubRegIndex<64, 32>;
+def N0 : MyReg<"n0">;
+def N1 : MyReg<"n1">;
+def NGPR : MyClass<32, [i32], (add N0, N1)>;
+let SubRegIndices = [nlo, nhi] in
+  def NC0 : Register<"nc0"> { let Namespace = "Test"; let SubRegs = [N0, N1]; }
+def NotCoveredRC : MyClass<64, [i64], (add NC0)>;
+
 def TestTarget : Target;
 
-// Both synthesized tuples must be emitted, i.e. neither was rejected by the
-// sub-register overflow check.
+// Every synthesized/explicit register below must be emitted, i.e. none was
+// rejected by the sub-register overflow check.
 // CHECK-DAG: R0_R1 =
 // CHECK-DAG: R4_R5 =
+// CHECK-DAG: EP0 =
+// CHECK-DAG: NC0 =

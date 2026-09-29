@@ -47,6 +47,7 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
@@ -207,10 +208,9 @@ static StoreInst *findStoreForOutArgument(BasicBlock *BB, Argument *OutArg,
       }
     }
 
-    // Any other memory access that writes the location prevents the
+    // Any other memory access that may read or write the location prevents the
     // rewrite.
-    // FIXME: should handle aliasing reads too.
-    if (isModSet(BAA.getModRefInfo(I, ArgLoc)))
+    if (isModOrRefSet(BAA.getModRefInfo(I, ArgLoc)))
       return nullptr;
   }
 
@@ -368,18 +368,15 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   // off any return attributes, e.g. zeroext doesn't make sense with a struct.
   NewFunc->stealArgumentListFrom(F);
 
-  AttributeMask RetAttrs;
-  RetAttrs.addAttribute(Attribute::SExt);
-  RetAttrs.addAttribute(Attribute::ZExt);
-  RetAttrs.addAttribute(Attribute::NoAlias);
-  NewFunc->removeRetAttrs(RetAttrs);
+  NewFunc->removeRetAttrs(AttributeFuncs::typeIncompatible(
+      NewRetTy, NewFunc->getAttributes().getRetAttrs()));
   // TODO: How to preserve metadata?
 
   // Move the body of the function into the new rewritten function, and replace
   // this function with a stub.
   NewFunc->splice(NewFunc->begin(), &F);
 
-  for (std::pair<ReturnInst *, ReplacementVec> &Replacement : Replacements) {
+  for (auto &Replacement : Replacements) {
     ReturnInst *RI = Replacement.first;
     IRBuilder<> B(RI);
     B.SetCurrentDebugLocation(RI->getDebugLoc());

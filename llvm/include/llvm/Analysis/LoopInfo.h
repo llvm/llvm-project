@@ -328,6 +328,13 @@ public:
   /// Return true if the loop body is safe to clone in practice.
   bool isSafeToClone() const;
 
+  /// Like `isSafeToClone`, but for transformations where the cloned loop
+  /// bodies may run conditionally. This additionally checks that we may form
+  /// phis for all values that are live-out from the loop (in particular that
+  /// no token-like values are live-out) and that there are no convergent calls
+  /// (which must not gain new control dependencies).
+  bool isSafeToCloneConditionally(const DominatorTree &DT) const;
+
   /// Returns true if the loop is annotated parallel.
   ///
   /// A parallel loop can be assumed to not contain any dependencies between
@@ -417,7 +424,6 @@ private:
 
   friend class LoopInfoBase<BasicBlock, Loop>;
   friend class LoopBase<BasicBlock, Loop>;
-  explicit Loop(BasicBlock *BB) : LoopBase<BasicBlock, Loop>(BB) {}
   ~Loop() = default;
 };
 
