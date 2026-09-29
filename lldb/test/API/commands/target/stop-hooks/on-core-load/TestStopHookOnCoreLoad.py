@@ -16,7 +16,6 @@ class TestStopOnCoreLoad(TestBase):
     # This was originally marked as expected failure on Windows, but it has
     # started timing out instead, so the expectedFailure attribute no longer
     # correctly tracks it: llvm.org/pr37371
-    @skipIfWindows
     def test_hook_runs_no_threads(self):
         # Create core form YAML.
         core_path = self.getBuildArtifact("test.core")
