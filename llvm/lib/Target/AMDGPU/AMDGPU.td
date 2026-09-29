@@ -1286,6 +1286,11 @@ defm TransCoexecutionHazard : AMDGPUSubtargetFeature<"trans-coexecution-hazard",
   /*GenPredicate=*/0
 >;
 
+defm GFX1250VALUBlockingCycles : AMDGPUSubtargetFeature<"gfx1250-valu-blocking-cycles",
+  "VALU pipe occupancy is modeled with GFX1250BlockingCycles",
+  /*GenPredicate=*/0
+>;
+
 defm WMMACoexecutionHazards : AMDGPUSubtargetFeature<"wmma-coexecution-hazards",
   "Hazards when WMMA co-executes with other WMMA/VALU instruction",
   /*GenPredicate=*/0
@@ -2560,6 +2565,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
+   FeatureGFX1250VALUBlockingCycles,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
@@ -2595,6 +2601,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
+   FeatureGFX1250VALUBlockingCycles,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
@@ -2658,6 +2665,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureRequiresCOV6,
    FeatureGFX125xLowestRateWMMA,
    FeatureTransCoexecutionHazard,
+   FeatureGFX1250VALUBlockingCycles,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
@@ -3340,6 +3348,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureF32ToF16BF16ConversionSRInsts, FeatureF32ToFP6BF6ConversionScaleInsts, FeatureFP4ConversionScaleInsts,
   FeatureFP6BF6ConversionScaleInsts, FeatureFP8ConversionInsts, FeatureFP8ConversionScaleInsts,
   FeatureBlock16ConversionScaleInsts, FeatureFP8E5M3Insts, FeatureFP8Insts,
+  FeatureFP6BF6ToF16BF16F32ConversionScaleInsts,
   FeatureFlatBufferGlobalAtomicFaddF64Inst, FeatureFlatGlobalInsts,
   FeatureGFX10Insts, FeatureGFX10_3Insts, FeatureGFX11Insts,
   FeatureGFX1250Insts, FeatureGFX1251GEMMInsts, FeatureGFX12Insts,
