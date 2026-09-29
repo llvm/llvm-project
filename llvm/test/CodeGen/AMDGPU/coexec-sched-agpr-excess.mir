@@ -17,6 +17,7 @@ name: agpr_excess_tracking
 tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
+  hasLDSContention: true
 body: |
   bb.0:
     ; LIMIT-LABEL: name: agpr_excess_tracking

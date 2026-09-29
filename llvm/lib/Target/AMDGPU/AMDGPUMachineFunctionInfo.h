@@ -67,6 +67,9 @@ protected:
   // Kernel may need limited waves per EU for better performance.
   bool WaveLimiter = false;
 
+  // Function has LDS contention (high LDS load to matrix op ratio in loops).
+  bool LDSContention = false;
+
   bool HasInitWholeWave = false;
 
 public:
@@ -98,6 +101,8 @@ public:
   bool isMemoryBound() const { return MemoryBound; }
 
   bool needsWaveLimiter() const { return WaveLimiter; }
+
+  bool hasLDSContention() const { return LDSContention; }
 
   bool hasInitWholeWave() const { return HasInitWholeWave; }
   void setInitWholeWave() { HasInitWholeWave = true; }

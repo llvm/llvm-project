@@ -14,6 +14,7 @@
 # FULL-NEXT: isChainFunction: false
 # FULL-NEXT: memoryBound:     true
 # FULL-NEXT: waveLimiter:     true
+# FULL-NEXT: hasLDSContention: false
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
 # FULL-NEXT: hasNoWWMPoolSGPRSpillFallback: false
@@ -128,6 +129,7 @@ body:             |
 # FULL-NEXT: isChainFunction: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
+# FULL-NEXT: hasLDSContention: false
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
 # FULL-NEXT: hasNoWWMPoolSGPRSpillFallback: false
@@ -212,6 +214,7 @@ body:             |
 # FULL-NEXT: isChainFunction: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
+# FULL-NEXT: hasLDSContention: false
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
 # FULL-NEXT: hasNoWWMPoolSGPRSpillFallback: false
@@ -297,6 +300,7 @@ body:             |
 # FULL-NEXT: isChainFunction: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
+# FULL-NEXT: hasLDSContention: false
 # FULL-NEXT: hasSpilledSGPRs: false
 # FULL-NEXT: hasSpilledVGPRs: false
 # FULL-NEXT: hasNoWWMPoolSGPRSpillFallback: false

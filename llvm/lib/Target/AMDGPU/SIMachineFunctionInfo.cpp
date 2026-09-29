@@ -730,6 +730,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       GDSSize(MFI.getGDSSize()), DynLDSAlign(MFI.getDynLDSAlign()),
       IsEntryFunction(MFI.isEntryFunction()), MemoryBound(MFI.isMemoryBound()),
       WaveLimiter(MFI.needsWaveLimiter()),
+      LDSContention(MFI.hasLDSContention()),
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
       HasSpilledVGPRs(MFI.hasSpilledVGPRs()),
       HasNoWWMPoolSGPRSpillFallback(MFI.hasNoWWMPoolSGPRSpillFallback()),
@@ -790,6 +791,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   IsEntryFunction = YamlMFI.IsEntryFunction;
   MemoryBound = YamlMFI.MemoryBound;
   WaveLimiter = YamlMFI.WaveLimiter;
+  LDSContention = YamlMFI.LDSContention;
   HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;
   HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
   HasNoWWMPoolSGPRSpillFallback = YamlMFI.HasNoWWMPoolSGPRSpillFallback;
