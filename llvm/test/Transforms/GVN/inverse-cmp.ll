@@ -8,7 +8,7 @@ define void @inverse_icmp(i32 %x,i32 %y) {
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[UGT1:%.*]] = icmp ugt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[UGT1]])
-; CHECK-NEXT:    [[UGT1_NOT:%.*]] = icmp ule i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[UGT1_NOT:%.*]] = xor i1 [[UGT1]], true
 ; CHECK-NEXT:    call void @use(i1 [[UGT1_NOT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -24,7 +24,7 @@ define void @inverse_icmp_samesign_1(i32 %x,i32 %y) {
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[UGT1:%.*]] = icmp ugt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[UGT1]])
-; CHECK-NEXT:    [[ULE1:%.*]] = icmp samesign ule i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[ULE1:%.*]] = xor i1 [[UGT1]], true
 ; CHECK-NEXT:    call void @use(i1 [[ULE1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -40,7 +40,7 @@ define void @inverse_icmp_samesign_2(i32 %x,i32 %y) {
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[UGT1:%.*]] = icmp samesign ugt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[UGT1]])
-; CHECK-NEXT:    [[UGT1_NOT:%.*]] = icmp samesign ule i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[UGT1_NOT:%.*]] = xor i1 [[UGT1]], true
 ; CHECK-NEXT:    call void @use(i1 [[UGT1_NOT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -54,9 +54,9 @@ define void @inverse_icmp_samesign_2(i32 %x,i32 %y) {
 define void @inverse_icmp_samesign_3(i32 %x,i32 %y) {
 ; CHECK-LABEL: define void @inverse_icmp_samesign_3(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[UGT1:%.*]] = icmp samesign ugt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[UGT1:%.*]] = icmp ugt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[UGT1]])
-; CHECK-NEXT:    [[ULE1:%.*]] = icmp ule i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[ULE1:%.*]] = xor i1 [[UGT1]], true
 ; CHECK-NEXT:    call void @use(i1 [[ULE1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -72,7 +72,7 @@ define void @inverse_fcmp(double %x,double %y) {
 ; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
 ; CHECK-NEXT:    [[OGT1:%.*]] = fcmp ogt double [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[OGT1]])
-; CHECK-NEXT:    [[OGT1_NOT:%.*]] = fcmp ule double [[X]], [[Y]]
+; CHECK-NEXT:    [[OGT1_NOT:%.*]] = xor i1 [[OGT1]], true
 ; CHECK-NEXT:    call void @use(i1 [[OGT1_NOT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -88,7 +88,7 @@ define void @inverse_fcmp_nnan(double %x,double %y) {
 ; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
 ; CHECK-NEXT:    [[OGT1:%.*]] = fcmp nnan ogt double [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[OGT1]])
-; CHECK-NEXT:    [[OGT1_NOT:%.*]] = fcmp nnan ule double [[X]], [[Y]]
+; CHECK-NEXT:    [[OGT1_NOT:%.*]] = xor i1 [[OGT1]], true
 ; CHECK-NEXT:    call void @use(i1 [[OGT1_NOT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -102,9 +102,9 @@ define void @inverse_fcmp_nnan(double %x,double %y) {
 define void @inverse_fcmp_nnan_1(double %x,double %y) {
 ; CHECK-LABEL: define void @inverse_fcmp_nnan_1(
 ; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
-; CHECK-NEXT:    [[OGT1:%.*]] = fcmp nnan ogt double [[X]], [[Y]]
+; CHECK-NEXT:    [[OGT1:%.*]] = fcmp ogt double [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[OGT1]])
-; CHECK-NEXT:    [[ULE1:%.*]] = fcmp ule double [[X]], [[Y]]
+; CHECK-NEXT:    [[ULE1:%.*]] = xor i1 [[OGT1]], true
 ; CHECK-NEXT:    call void @use(i1 [[ULE1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -120,7 +120,7 @@ define void @inverse_fcmp_nnan_2(double %x,double %y) {
 ; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
 ; CHECK-NEXT:    [[OGT1:%.*]] = fcmp ogt double [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[OGT1]])
-; CHECK-NEXT:    [[ULE1:%.*]] = fcmp nnan ule double [[X]], [[Y]]
+; CHECK-NEXT:    [[ULE1:%.*]] = xor i1 [[OGT1]], true
 ; CHECK-NEXT:    call void @use(i1 [[ULE1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -136,7 +136,7 @@ define void @inverse_icmp_swapped(i32 %x,i32 %y) {
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[UGT1:%.*]] = icmp ugt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[UGT1]])
-; CHECK-NEXT:    [[UGT1_NOT:%.*]] = icmp uge i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[UGT1_NOT:%.*]] = xor i1 [[UGT1]], true
 ; CHECK-NEXT:    call void @use(i1 [[UGT1_NOT]])
 ; CHECK-NEXT:    ret void
 ;
