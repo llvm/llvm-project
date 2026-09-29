@@ -9,6 +9,7 @@
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "CASTestConfig.h"
 #include "OnDiskCommonUtils.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
