@@ -65,7 +65,8 @@ static FnPtrTy indirectCallLookup(FnPtrTy HstPtr) {
 /// filename and line/column. \p File is not NUL-terminated, so \p FileLen gives
 /// its length. Returns false only if the string is missing or malformed; calls
 /// with no debug location parse successfully as "unknown" at 0:0, which the
-/// host runtime also reports.
+/// host runtime also reports. offload's SourceInfo parses the same format but
+/// needs std::string, which is unavailable here.
 static bool getSourceLocation(const IdentTy *Loc, const char *&File,
                               int32_t &FileLen, int32_t &Line,
                               int32_t &Column) {
