@@ -3324,8 +3324,12 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
       SCEVFlags Flags = AddRec->getNoWrapFlags(ComputeFlags({Scale, AddRec}));
 
       for (unsigned i = 0, e = AddRec->getNumOperands(); i != e; ++i) {
+        // The initial product is evaluated on the first loop iteration; NUW
+        // also holds for this specific use.
+        auto StartFlags =
+            i == 0 ? maskFlags(Flags, SCEV::FlagNUW) : SCEV::FlagNone;
         NewOps.push_back(getMulExpr(Scale, AddRec->getOperand(i),
-                                    SCEV::FlagNone, Depth + 1));
+                                    {SCEV::FlagNone, StartFlags}, Depth + 1));
 
         if (hasFlags(Flags, SCEV::FlagNSW) && !hasFlags(Flags, SCEV::FlagNUW)) {
           ConstantRange NSWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
@@ -3337,6 +3341,10 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
       }
 
       const SCEV *NewRec = getAddRecExpr(NewOps, AddRec->getLoop(), Flags);
+      // Flags also hold for the canonical recurrence in the same loop.
+      if (auto *CanonicalRec = dyn_cast<SCEVAddRecExpr>(NewRec->getCanonical());
+          CanonicalRec && CanonicalRec->getLoop() == AddRec->getLoop())
+        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(CanonicalRec), Flags);
 
       // If all of the other operands were loop invariant, we are done.
       if (Ops.size() == 1) return NewRec;
@@ -10227,7 +10235,7 @@ SCEVUse ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
     // expression has no loop-variant portions.
     for (unsigned i = 0, e = AddRec->getNumOperands(); i != e; ++i) {
       SCEVUse OpAtScope = getSCEVAtScope(AddRec->getOperand(i), L);
-      if (OpAtScope == AddRec->getOperand(i))
+      if (OpAtScope == AddRec->getOperand(i).getPointer())
         continue;
 
       // Okay, at least one of these operands is loop variant but might be
