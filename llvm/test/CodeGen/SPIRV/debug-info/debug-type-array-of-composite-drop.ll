@@ -1,15 +1,13 @@
-; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV --implicit-check-not=DebugTypeArray
+; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; An array whose element is a composite is dropped. Arrays are emitted before
-; composites, so the element has no id yet when emitDebugTypeArray runs and the
-; whole DebugTypeArray is skipped. The composite itself is still emitted.
-; Emitting the DebugType* nodes in dependency order, tracked in
-; https://github.com/llvm/llvm-project/issues/211850, would emit the
-; DebugTypeArray and change the expected output of this test.
+; An array of a composite. 
 
-; CHECK-SPIRV: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
-; CHECK-SPIRV: DebugTypeComposite
+; CHECK-SPIRV: [[ext:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+; CHECK-SPIRV-DAG: [[void:%[0-9]+]] = OpTypeVoid
+; CHECK-SPIRV-DAG: [[str_S:%[0-9]+]] = OpString "S"
+; CHECK-SPIRV: [[comp:%[0-9]+]] = OpExtInst [[void]] [[ext]] DebugTypeComposite [[str_S]]
+; CHECK-SPIRV: OpExtInst [[void]] [[ext]] DebugTypeArray [[comp]]
 
 define spir_func void @test() !dbg !11 {
 entry:
