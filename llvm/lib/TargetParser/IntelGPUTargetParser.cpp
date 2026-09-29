@@ -82,20 +82,19 @@ IGCATarget llvm::IntelGPU::parseIGCATarget(StringRef MaybeTarget) {
   uint16_t Target;
   if (MaybeTarget.consumeInteger(10, Target) || !isKnownIGCATargetLevel(Target))
     return IGCATarget::invalid();
-  
+
   IGCAFeatureSet FS = IGCAFeatureSet::IGCA_CORE;
   if (MaybeTarget.consume_front("c"))
     FS = IGCAFeatureSet::IGCA_COMPUTE;
   else if (MaybeTarget.consume_front("r"))
     FS = IGCAFeatureSet::IGCA_RENDER;
   // Exact form needs to either be compute or render:
-  bool IsExactFS = (
-      FS != IGCAFeatureSet::IGCA_CORE && MaybeTarget.consume_front("a")
-  );
+  bool IsExactFS =
+      (FS != IGCAFeatureSet::IGCA_CORE && MaybeTarget.consume_front("a"));
   if (!MaybeTarget.empty())
     return IGCATarget::invalid();
 
-  return { Target, FS, IsExactFS };
+  return {Target, FS, IsExactFS};
 }
 
 StringRef llvm::IntelGPU::getIGCATargetName(IGCATarget T) {

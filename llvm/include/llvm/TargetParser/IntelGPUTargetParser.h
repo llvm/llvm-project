@@ -36,11 +36,7 @@ enum GPUKind : uint8_t {
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
 };
 
-enum IGCAFeatureSet : uint8_t {
-  IGCA_CORE = 0,
-  IGCA_COMPUTE,
-  IGCA_RENDER
-};
+enum IGCAFeatureSet : uint8_t { IGCA_CORE = 0, IGCA_COMPUTE, IGCA_RENDER };
 
 /// Wrapper around an IGCA target's uint32_t representation, packed using the
 /// following format:
@@ -105,7 +101,7 @@ LLVM_ABI StringRef getArchName(uint32_t GPUIPVersion);
 LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
 
 /// Parse an IGCA target string, such as "igca_60ca". \return an invalid
-/// IGCATarget if \p TargetStr is not a known target in 
+/// IGCATarget if \p TargetStr is not a known target in
 /// IntelGPUTargetParser.def
 LLVM_ABI IGCATarget parseIGCATarget(StringRef TargetStr);
 

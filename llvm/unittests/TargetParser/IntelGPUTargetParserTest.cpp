@@ -122,24 +122,24 @@ TEST(IntelGPUTargetParserTest, ParseIGCATarget) {
 
 TEST(IntelGPUTargetParserTest, IGCATargetName) {
   using IntelGPU::IGCATarget;
-  EXPECT_EQ(IntelGPU::getIGCATargetName(
-                IGCATarget(60, IntelGPU::IGCA_CORE, false)),
-            "igca_60");
-  EXPECT_EQ(IntelGPU::getIGCATargetName(
-                IGCATarget(60, IntelGPU::IGCA_COMPUTE, true)),
-            "igca_60ca");
-  EXPECT_EQ(IntelGPU::getIGCATargetName(
-                IGCATarget(15, IntelGPU::IGCA_RENDER, false)),
-            "igca_15r");
+  EXPECT_EQ(
+      IntelGPU::getIGCATargetName(IGCATarget(60, IntelGPU::IGCA_CORE, false)),
+      "igca_60");
+  EXPECT_EQ(
+      IntelGPU::getIGCATargetName(IGCATarget(60, IntelGPU::IGCA_COMPUTE, true)),
+      "igca_60ca");
+  EXPECT_EQ(
+      IntelGPU::getIGCATargetName(IGCATarget(15, IntelGPU::IGCA_RENDER, false)),
+      "igca_15r");
   EXPECT_EQ(IntelGPU::getIGCATargetName(IGCATarget::invalid()), "");
   // A level that is not in the table has no spelling, and neither does an
   // exact core target.
-  EXPECT_EQ(IntelGPU::getIGCATargetName(
-                IGCATarget(11, IntelGPU::IGCA_CORE, false)),
-            "");
-  EXPECT_EQ(IntelGPU::getIGCATargetName(
-                IGCATarget(10, IntelGPU::IGCA_CORE, true)),
-            "");
+  EXPECT_EQ(
+      IntelGPU::getIGCATargetName(IGCATarget(11, IntelGPU::IGCA_CORE, false)),
+      "");
+  EXPECT_EQ(
+      IntelGPU::getIGCATargetName(IGCATarget(10, IntelGPU::IGCA_CORE, true)),
+      "");
 }
 
 TEST(IntelGPUTargetParserTest, EveryIGCASpellingRoundTrips) {
