@@ -39,7 +39,7 @@ using namespace llvm;
 SuperHRegisterInfo::SuperHRegisterInfo(const SuperHSubtarget &ST)
     : SuperHGenRegisterInfo(SH::R0, /*DwarfFlavour*/ 0, /*EHFlavor*/ 0,
                             /*PC*/ SH::PC),
-      Subtarget(ST) {}
+      STI(ST) {}
 
 const MCPhysReg *
 SuperHRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
@@ -56,26 +56,6 @@ const uint32_t *SuperHRegisterInfo::getNoPreservedMask() const {
   return CSR_SH_RegMask;
 }
 
-const TargetRegisterClass *
-SuperHRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
-                                              const MachineFunction &MF) const {
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-
-  if (TRI->isTypeLegalForClass(*RC, MVT::i16)) {
-    return &SH::GPRRegClass;
-  }
-
-  if (TRI->isTypeLegalForClass(*RC, MVT::i8)) {
-    return &SH::GPRRegClass;
-  }
-
-  if (TRI->isTypeLegalForClass(*RC, MVT::i1)) {
-    return &SH::GPRRegClass;
-  }
-
-  return TargetRegisterInfo::getLargestLegalSuperClass(RC, MF);
-}
-
 BitVector SuperHRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   const SuperHFrameLowering *FR = getFrameLowering(MF);
@@ -90,7 +70,7 @@ BitVector SuperHRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   Reserved.set(SH::R15);
 
   // Reserve GOT pointer
-  if (Subtarget.isPositionIndependent())
+  if (STI.isPositionIndependent())
     Reserved.set(SH::R12);
 
   // Reserver frame pointer if it's used.
@@ -115,12 +95,8 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   DebugLoc DL = MI.getDebugLoc();
   MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction &MF = *MBB.getParent();
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const SuperHTargetMachine &TM = (const SuperHTargetMachine &)MF.getTarget();
-  const TargetFrameLowering *TFI =
-      TM.getSubtargetImpl(MF.getFunction())->getFrameLowering();
-  const TargetInstrInfo &TII =
-      *TM.getSubtargetImpl(MF.getFunction())->getInstrInfo();
+  const TargetFrameLowering *TFI = STI.getFrameLowering();
+  const SuperHInstrInfo *TII = STI.getInstrInfo();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
   int64_t FrameOffset = MI.getOperand(FIOperandNum+1).getImm();
@@ -134,7 +110,7 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (MI.getOpcode() == SH::SHFrmIdx) {
     Register DstReg = MI.getOperand(0).getReg();
     if (DstReg != FrameReg) {
-      TII.copyPhysReg(MBB, MI, DL, DstReg, FrameReg, false, false, false);
+      TII->copyPhysReg(MBB, MI, DL, DstReg, FrameReg, false, false, false);
     }
 
     if (Offset > 0) {
@@ -146,7 +122,7 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
         int64_t NextOff = Offset % 255;
 
         // Add offset to register.
-        BuildMI(MBB, II, DL, TII.get(SH::ADDI), DstReg)
+        BuildMI(MBB, II, DL, TII->get(SH::ADDI), DstReg)
             .addReg(DstReg, RegState::Kill)
             .addImm(NextOff);
 

@@ -31,6 +31,9 @@ class SuperHTargetLowering : public TargetLowering {
 public:
   SuperHTargetLowering(const TargetMachine &TM, const SuperHSubtarget &STI);
 
+  // Whether to use software floating point
+  bool useSoftFloat() const override;
+
   /// ReplaceNodeResults - Replace a node with an illegal result type
   /// with a new node built out of custom code.
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
@@ -89,8 +92,6 @@ public:
 private:
   MachineBasicBlock *insertSELECTCC(MachineInstr &MI,
                                     MachineBasicBlock *BB) const;
-  MachineBasicBlock *insertLoad(MachineInstr &MI, MachineBasicBlock *BB) const;
-  MachineBasicBlock *insertStore(MachineInstr &MI, MachineBasicBlock *BB) const;
 
   SDValue getPICJumpTableRelocBase(SDValue Table,
                                    SelectionDAG &DAG) const override;

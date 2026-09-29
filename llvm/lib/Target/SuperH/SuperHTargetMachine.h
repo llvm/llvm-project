@@ -13,10 +13,10 @@
 #ifndef LLVM_LIB_TARGET_SPARC_SPARCTARGETMACHINE_H
 #define LLVM_LIB_TARGET_SPARC_SPARCTARGETMACHINE_H
 
-#include "SuperHSubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Target/TargetMachine.h"
+#include "SuperHSubtarget.h"
 #include <optional>
 
 namespace llvm {
@@ -37,7 +37,8 @@ public:
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
 
-  const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override;
+  const SuperHSubtarget *getSubtargetImpl() const;
+  const SuperHSubtarget *getSubtargetImpl(const Function &) const override;
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();

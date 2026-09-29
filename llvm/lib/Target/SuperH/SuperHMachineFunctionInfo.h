@@ -66,6 +66,9 @@ public:
   SuperHConstantPoolConstant *tryGetConstant(ConstantSDNode *N,
                                              SelectionDAG &DAG,
                                              SHCP::SHCPModifier Modifier);
+  SuperHConstantPoolConstant *tryGetConstant(ConstantFPSDNode *N,
+                                             SelectionDAG &DAG,
+                                             SHCP::SHCPModifier Modifier);
   SuperHConstantPoolSymbol *tryGetConstant(ExternalSymbolSDNode *N,
                                            SelectionDAG &DAG,
                                            SHCP::SHCPModifier Modifier);

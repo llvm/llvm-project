@@ -39,7 +39,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "sh-lower"
+#define DEBUG_TYPE "sh-isel-lowering"
 
 SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
                                            const SuperHSubtarget &STI)
@@ -48,24 +48,15 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
 
   // GPR Registers are always 32 bit on SuperH.
   addRegisterClass(MVT::i32, &SH::GPRRegClass);
-  computeRegisterProperties(Subtarget->getRegisterInfo());
-
-  setSchedulingPreference(Sched::RegPressure);
-  setSupportsUnalignedAtomics(false);
-  setStackPointerRegisterToSaveRestore(RegInfo->getStackRegister());
 
   // Loads and stores are legal
   for (MVT VT : MVT::integer_valuetypes()) {
     for (auto N : {ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}) {
       setLoadExtAction(N, VT, MVT::i1, Promote);
-      // setLoadExtAction(N, VT, MVT::i8, Expand);
-      // setLoadExtAction(N, VT, MVT::i16, Expand);
       setLoadExtAction(N, VT, MVT::i64, Expand);
     }
 
     setTruncStoreAction(VT, MVT::i1, Promote);
-    // setTruncStoreAction(VT, MVT::i8, Expand);
-    // setTruncStoreAction(VT, MVT::i16, Expand);
   }
 
   // Division and remainders are multi-instruction sequences
@@ -98,11 +89,39 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SETCC, MVT::i32, Custom);
   setOperationAction(ISD::SETCC, MVT::i64, Custom);
 
+  if (STI.hasFPU()) {
+    addRegisterClass(MVT::f32, &SH::FR32RegClass);
+
+    setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
+    setOperationAction(ISD::BR_CC, MVT::f32, Custom);
+    setOperationAction(ISD::SELECT_CC, MVT::f32, Custom);
+    setOperationAction(ISD::SETCC, MVT::f32, Custom);
+
+    if (STI.hasFP64()) {
+      addRegisterClass(MVT::f64, &SH::FR64RegClass);
+
+      setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
+      setOperationAction(ISD::BR_CC, MVT::f64, Custom);
+      setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
+      setOperationAction(ISD::SETCC, MVT::f64, Custom);
+    }
+  }
+
+
+  setStackPointerRegisterToSaveRestore(RegInfo->getStackRegister());
+  computeRegisterProperties(Subtarget->getRegisterInfo());
+
+  setSchedulingPreference(Sched::RegPressure);
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrOneBooleanContent);
+  setSupportsUnalignedAtomics(false);
   setJumpIsExpensive(false);
   setMinFunctionAlignment(Align(4));
   setMinStackArgumentAlignment(Align(4));
+}
+
+bool SuperHTargetLowering::useSoftFloat() const {
+  return !Subtarget->hasFPU();
 }
 
 
@@ -148,96 +167,155 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue &LHS, SDValue &RHS,
   SDValue InCC;
   SHCC::CondCode SHcc = SHCC::COND_INVALID;
   SHCC::CondCode SHocc = SHCC::COND_T;
+  unsigned Opc;
 
-  switch (CC) {
-  default:
-    break;
-  case ISD::SETEQ: {
-    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-      if (C->getSExtValue() == 0) {
-        SHcc = SHCC::COND_Z;
-        SHocc = SHCC::COND_T;
-        break;
-      }
+  if (Subtarget->hasFPU() &&
+      LHS.getSimpleValueType().isFloatingPoint() && 
+      RHS.getSimpleValueType().isFloatingPoint()) {
+
+    switch (CC) {
+    default:
+      break;
+    case ISD::SETOEQ:
+    case ISD::SETUEQ:
+    case ISD::SETEQ: {
+      SHcc = SHCC::COND_EQ;
+      SHocc = SHCC::COND_T;
+      break;
     }
-    SHcc = SHCC::COND_EQ;
-    SHocc = SHCC::COND_T;
-    break;
-  }
-  case ISD::SETNE: {
-    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-      if (C->getSExtValue() == 0) {
-        SHcc = SHCC::COND_Z;
-        SHocc = SHCC::COND_F;
-        break;
-      }
+    case ISD::SETONE:
+    case ISD::SETUNE:
+    case ISD::SETNE: {
+      SHcc = SHCC::COND_EQ;
+      SHocc = SHCC::COND_F;
+      break;
     }
-    SHcc = SHCC::COND_EQ;
-    SHocc = SHCC::COND_F;
-    break;
-  }
-  case ISD::SETLT: {
-    // Swap operands and reverse the branching condition.
-    std::swap(LHS, RHS);
-    SHcc = SHCC::COND_GE;
-    SHocc = SHCC::COND_F;
-    break;
-  }
-  case ISD::SETLE: {
-    // Swap operands and reverse the branching condition.
-    std::swap(LHS, RHS);
-    SHcc = SHCC::COND_GT;
-    SHocc = SHCC::COND_F;
-    break;
-  }
-  case ISD::SETGT: {
-    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-      switch (C->getSExtValue()) {
-      case -1: {
-        SHcc = SHCC::COND_PZ;
-        SHocc = SHCC::COND_T;
-        break;
-      }
-      case 0: {
-        SHcc = SHCC::COND_PL;
-        SHocc = SHCC::COND_T;
-        break;
-      }
-      }
+    case ISD::SETOGT:
+    case ISD::SETUGT:
+    case ISD::SETGT: {
+      SHcc = SHCC::COND_GT;
+      SHocc = SHCC::COND_T;
+      break;
     }
-    SHcc = SHCC::COND_GT;
-    SHocc = SHCC::COND_T;
-    break;
-  }
-  case ISD::SETGE: {
-    SHcc = SHCC::COND_GE;
-    SHocc = SHCC::COND_T;
-    break;
-  }
-  case ISD::SETUGT: {
-    SHcc = SHCC::COND_HI;
-    SHocc = SHCC::COND_T;
-    break;
-  }
-  case ISD::SETUGE: {
-    SHcc = SHCC::COND_HS;
-    SHocc = SHCC::COND_T;
-    break;
-  }
-  case ISD::SETULT: {
-    // Swap operands and reverse the branching condition.
-    std::swap(LHS, RHS);
-    SHcc = SHCC::COND_HS;
-    SHocc = SHCC::COND_F;
-    break;
-  }
-  case ISD::SETULE: {
-    // Swap operands and reverse the branching condition.
-    std::swap(LHS, RHS);
-    SHcc = SHCC::COND_HI;
-    SHocc = SHCC::COND_F;
-    break;
-  }
+    case ISD::SETOLT:
+    case ISD::SETULT:
+    case ISD::SETLT: {
+      std::swap(LHS, RHS);
+      SHcc = SHCC::COND_GT;
+      SHocc = SHCC::COND_T;
+      break;
+    }
+    case ISD::SETOGE:
+    case ISD::SETUGE:
+    case ISD::SETGE: {
+      std::swap(LHS, RHS);
+      SHcc = SHCC::COND_GT;
+      SHocc = SHCC::COND_F;
+      break;
+    }
+    case ISD::SETOLE:
+    case ISD::SETULE:
+    case ISD::SETLE: {
+      SHcc = SHCC::COND_GT;
+      SHocc = SHCC::COND_F;
+      break;
+    }
+    }
+    
+    Opc = SHISD::FCMP;
+  } else {
+    switch (CC) {
+    default:
+      break;
+    case ISD::SETEQ: {
+      if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
+        if (C->getSExtValue() == 0) {
+          SHcc = SHCC::COND_Z;
+          SHocc = SHCC::COND_T;
+          break;
+        }
+      }
+      SHcc = SHCC::COND_EQ;
+      SHocc = SHCC::COND_T;
+      break;
+    }
+    case ISD::SETNE: {
+      if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
+        if (C->getSExtValue() == 0) {
+          SHcc = SHCC::COND_Z;
+          SHocc = SHCC::COND_F;
+          break;
+        }
+      }
+      SHcc = SHCC::COND_EQ;
+      SHocc = SHCC::COND_F;
+      break;
+    }
+    case ISD::SETLT: {
+      // Swap operands and reverse the branching condition.
+      std::swap(LHS, RHS);
+      SHcc = SHCC::COND_GE;
+      SHocc = SHCC::COND_F;
+      break;
+    }
+    case ISD::SETLE: {
+      // Swap operands and reverse the branching condition.
+      std::swap(LHS, RHS);
+      SHcc = SHCC::COND_GT;
+      SHocc = SHCC::COND_F;
+      break;
+    }
+    case ISD::SETGT: {
+      if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
+        switch (C->getSExtValue()) {
+        case -1: {
+          SHcc = SHCC::COND_PZ;
+          SHocc = SHCC::COND_T;
+          break;
+        }
+        case 0: {
+          SHcc = SHCC::COND_PL;
+          SHocc = SHCC::COND_T;
+          break;
+        }
+        }
+      }
+      SHcc = SHCC::COND_GT;
+      SHocc = SHCC::COND_T;
+      break;
+    }
+    case ISD::SETGE: {
+      SHcc = SHCC::COND_GE;
+      SHocc = SHCC::COND_T;
+      break;
+    }
+    case ISD::SETUGT: {
+      SHcc = SHCC::COND_HI;
+      SHocc = SHCC::COND_T;
+      break;
+    }
+    case ISD::SETUGE: {
+      SHcc = SHCC::COND_HS;
+      SHocc = SHCC::COND_T;
+      break;
+    }
+    case ISD::SETULT: {
+      // Swap operands and reverse the branching condition.
+      std::swap(LHS, RHS);
+      SHcc = SHCC::COND_HS;
+      SHocc = SHCC::COND_F;
+      break;
+    }
+    case ISD::SETULE: {
+      // Swap operands and reverse the branching condition.
+      std::swap(LHS, RHS);
+      SHcc = SHCC::COND_HI;
+      SHocc = SHCC::COND_F;
+      break;
+    }
+    }
+    
+    Opc = SHISD::CMP;
   }
 
   LLVM_DEBUG(dbgs() << "Lowered CC " << CC << " to " 
@@ -246,7 +324,7 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue &LHS, SDValue &RHS,
 
   InCC = DAG.getTargetConstant(SHcc, DL, MVT::i8);
   OutCC = DAG.getTargetConstant(SHocc, DL, MVT::i8);
-  return DAG.getNode(SHISD::CMP, DL, MVT::Glue, LHS, RHS, InCC);
+  return DAG.getNode(Opc, DL, MVT::Glue, LHS, RHS, InCC);
 }
 
 SDValue SuperHTargetLowering::LowerSELECT_CC(SDValue Op,
@@ -345,6 +423,14 @@ SDValue SuperHTargetLowering::LowerConstant(SDValue Op,
     SDValue Const = DAG.getTargetConstant(*C->getConstantIntValue(), DL, C->getValueType(0));
     return DAG.getNode(SHISD::WRAPPER, DL, C->getValueType(0), Const);
   }
+  if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op)) {
+    auto DL = SDLoc(C);
+
+    // lower to constpool.
+    SDValue Const = DAG.getTargetConstantFP(*C->getConstantFPValue(), DL, C->getValueType(0));
+    return DAG.getNode(SHISD::WRAPPER, DL, C->getValueType(0), Const);
+  }
+
   return SDValue();
 }
 
@@ -442,6 +528,8 @@ SDValue SuperHTargetLowering::LowerFormalArguments(
         RC = &SH::GPRRegClass;
       } else if (RegVT == MVT::i32) {
         RC = &SH::GPRRegClass;
+      } else if (RegVT == MVT::f32) {
+        RC = &SH::FR32RegClass;
       } else {
         llvm_unreachable("Unknown argument type!");
       }
@@ -546,6 +634,9 @@ SuperHTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
     CCValAssign &VA = RVLocs[i];
     SDValue OutVal = OutVals[i];
+
+    if (!VA.isRegLoc())
+      break;
 
     // Promote values to the appropriate types.
     switch(VA.getLocInfo()) {
@@ -948,6 +1039,7 @@ SDValue SuperHTargetLowering::LowerOperation(SDValue Op,
   case ISD::MUL:
     return LowerMUL(Op, DAG);
   case ISD::Constant:
+  case ISD::ConstantFP:
     return LowerConstant(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
@@ -1078,6 +1170,7 @@ MachineBasicBlock *SuperHTargetLowering::EmitInstrWithCustomInserter(
   case SH::Select8:
   case SH::Select16:
   case SH::Select32:
+  case SH::SelectF32:
     return insertSELECTCC(MI, MBB);
   }
 

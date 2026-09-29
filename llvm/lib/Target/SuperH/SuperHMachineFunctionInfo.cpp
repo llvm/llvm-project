@@ -130,6 +130,35 @@ SuperHMachineFunctionInfo::tryGetConstant(ConstantSDNode *N, SelectionDAG &DAG,
       Modifier);
 }
 
+SuperHConstantPoolConstant *
+SuperHMachineFunctionInfo::tryGetConstant(ConstantFPSDNode *N, SelectionDAG &DAG,
+                                          SHCP::SHCPModifier Modifier) {
+
+  // Early exit for null node.
+  if (!N)
+    return nullptr;
+
+  // Run though the constant pool that is tied to the DAG and search for
+  // the constant there.
+  MachineConstantPool *MCP = DAG.getMachineFunction().getConstantPool();
+  for (auto &MC : MCP->getConstants()) {
+    if (MC.isMachineConstantPoolEntry()) {
+      if (auto *CPV = (SuperHConstantPoolConstant *)MC.Val.MachineCPVal) {
+        if (CPV->getPromotedGlobalInit() == N->getConstantFPValue())
+          return CPV;
+      }
+    }
+  }
+
+  // If not found, create a new one and add it.
+  MachineFunction &MF = DAG.getMachineFunction();
+  SuperHMachineFunctionInfo *SFI = MF.getInfo<SuperHMachineFunctionInfo>();
+  unsigned LabelIndex = SFI->createConstIndex();
+  return SuperHConstantPoolConstant::Create(
+      N->getConstantFPValue(), LabelIndex, SHCP::SHCPKind::CPPromotedGlobal,
+      Modifier);
+}
+
 SuperHConstantPoolSymbol *SuperHMachineFunctionInfo::tryGetConstant(
     ExternalSymbolSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier) {
 
