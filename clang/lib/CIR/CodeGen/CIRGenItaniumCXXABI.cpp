@@ -641,31 +641,6 @@ public:
 // TODO(cir): Will be removed after sharing them with the classical codegen
 namespace {
 
-// Pointer type info flags.
-enum {
-  /// PTI_Const - Type has const qualifier.
-  PTI_Const = 0x1,
-
-  /// PTI_Volatile - Type has volatile qualifier.
-  PTI_Volatile = 0x2,
-
-  /// PTI_Restrict - Type has restrict qualifier.
-  PTI_Restrict = 0x4,
-
-  /// PTI_Incomplete - Type is incomplete.
-  PTI_Incomplete = 0x8,
-
-  /// PTI_ContainingClassIncomplete - Containing class is incomplete.
-  /// (in pointer to member).
-  PTI_ContainingClassIncomplete = 0x10,
-
-  /// PTI_TransactionSafe - Pointee is transaction_safe function (C++ TM TS).
-  // PTI_TransactionSafe = 0x20,
-
-  /// PTI_Noexcept - Pointee is noexcept function (C++1z).
-  PTI_Noexcept = 0x40,
-};
-
 // VMI type info flags.
 enum {
   /// VMI_NonDiamondRepeat - Class has non-diamond repeated inheritance.
@@ -959,67 +934,6 @@ static bool canUseSingleInheritance(const CXXRecordDecl *rd) {
          baseDecl->isDynamicClass() == rd->isDynamicClass();
 }
 
-/// IsIncompleteClassType - Returns whether the given record type is incomplete.
-static bool isIncompleteClassType(const RecordType *recordTy) {
-  return !recordTy->getDecl()->getDefinitionOrSelf()->isCompleteDefinition();
-}
-
-/// Returns whether the given type contains an
-/// incomplete class type. This is true if
-///
-///   * The given type is an incomplete class type.
-///   * The given type is a pointer type whose pointee type contains an
-///     incomplete class type.
-///   * The given type is a member pointer type whose class is an incomplete
-///     class type.
-///   * The given type is a member pointer type whoise pointee type contains an
-///     incomplete class type.
-/// is an indirect or direct pointer to an incomplete class type.
-static bool containsIncompleteClassType(QualType ty) {
-  if (const auto *recordTy = dyn_cast<RecordType>(ty)) {
-    if (isIncompleteClassType(recordTy))
-      return true;
-  }
-
-  if (const auto *pointerTy = dyn_cast<PointerType>(ty))
-    return containsIncompleteClassType(pointerTy->getPointeeType());
-
-  if (const auto *memberPointerTy = dyn_cast<MemberPointerType>(ty)) {
-    // Check if the class type is incomplete.
-    if (!memberPointerTy->getMostRecentCXXRecordDecl()->hasDefinition())
-      return true;
-
-    return containsIncompleteClassType(memberPointerTy->getPointeeType());
-  }
-
-  return false;
-}
-
-static unsigned extractPBaseFlags(const ASTContext &ctx, QualType &ty) {
-  unsigned flags = 0;
-
-  if (ty.isConstQualified())
-    flags |= PTI_Const;
-  if (ty.isVolatileQualified())
-    flags |= PTI_Volatile;
-  if (ty.isRestrictQualified())
-    flags |= PTI_Restrict;
-
-  ty = ty.getUnqualifiedType();
-
-  if (containsIncompleteClassType(ty))
-    flags |= PTI_Incomplete;
-
-  if (const auto *proto = ty->getAs<FunctionProtoType>()) {
-    if (proto->isNothrow()) {
-      flags |= PTI_Noexcept;
-      ty = ctx.getFunctionTypeWithExceptionSpec(ty, EST_None);
-    }
-  }
-
-  return flags;
-}
-
 const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   // abi::__class_type_info.
   static const char *const classTypeInfo =
@@ -1133,7 +1047,7 @@ static cir::GlobalLinkageKind getTypeInfoLinkage(CIRGenModule &cgm,
   //   generated for the incomplete type that will not resolve to the final
   //   complete class RTTI (because the latter need not exist), possibly by
   //   making it a local static object.
-  if (containsIncompleteClassType(ty))
+  if (CodeGenUtils::containsIncompleteClassType(ty))
     return cir::GlobalLinkageKind::InternalLinkage;
 
   switch (ty->getLinkage()) {
@@ -1398,7 +1312,8 @@ void CIRGenItaniumRTTIBuilder::buildPointerTypeInfo(mlir::Location loc,
   //         __noexcept_mask = 0x40
   //       };
   //   };
-  const unsigned int flags = extractPBaseFlags(cgm.getASTContext(), ty);
+  const unsigned int flags =
+      CodeGenUtils::extractPBaseFlags(cgm.getASTContext(), ty);
 
   mlir::Type unsignedIntTy = cgm.convertType(cgm.getASTContext().UnsignedIntTy);
   mlir::Attribute flagsAttr = cir::IntAttr::get(unsignedIntTy, flags);
@@ -1421,11 +1336,12 @@ void CIRGenItaniumRTTIBuilder::buildPointerToMemberTypeInfo(
   //    };
   QualType pointeeTy = ty->getPointeeType();
 
-  unsigned flags = extractPBaseFlags(cgm.getASTContext(), pointeeTy);
+  unsigned flags =
+      CodeGenUtils::extractPBaseFlags(cgm.getASTContext(), pointeeTy);
 
   const auto *rd = ty->getMostRecentCXXRecordDecl();
   if (!rd->hasDefinition())
-    flags |= PTI_ContainingClassIncomplete;
+    flags |= CodeGenUtils::PTI_ContainingClassIncomplete;
 
   mlir::Type unsignedIntTy = cgm.convertType(cgm.getASTContext().UnsignedIntTy);
   mlir::Attribute flagsAttr = cir::IntAttr::get(unsignedIntTy, flags);
