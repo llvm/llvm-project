@@ -272,11 +272,6 @@ void SystemZXPLINKAsmPrinter::emitXXStructorList(const DataLayout &DL,
 
 void SystemZXPLINKAsmPrinter::emitEndOfAsmFile(Module &M) {
   auto *ZOS = getTargetStreamer();
-  // A main program needs CELQMAIN, through which the Language Environment
-  // startup (CELQSTRT) finds the main routine and its environment.
-  if (const Function *MainFn = M.getFunction("main");
-      MainFn && !MainFn->isDeclaration())
-    emitCELQMAIN(*MainFn);
   emitADASection();
   emitIDRLSection(M);
   // On z/OS, we need to associate an external data reference with an ED
@@ -683,6 +678,13 @@ void SystemZXPLINKAsmPrinter::calculatePPA1() {
 
 void SystemZXPLINKAsmPrinter::emitStartOfAsmFile(Module &M) {
   emitPPA2(M);
+  // A main program needs CELQMAIN, through which the Language Environment
+  // startup (CELQSTRT) finds the main routine and its environment. It is
+  // emitted here and not at the end of the file, because the text section
+  // may already be closed then (e.g. after emitting the DWARF aranges).
+  if (const Function *MainFn = M.getFunction("main");
+      MainFn && !MainFn->isDeclaration())
+    emitCELQMAIN(*MainFn);
   AsmPrinter::emitStartOfAsmFile(M);
 }
 
