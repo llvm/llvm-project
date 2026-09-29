@@ -326,9 +326,9 @@ private:
                                 llvm::dxbc::PSV::SemanticKind SemanticKind);
 
   // Check ElementCount consecutive indices for a system-value interpretation.
-  void diagnoseSemanticIndex(const HLSLAppliedSemanticAttr *A,
-                             llvm::dxbc::PSV::SemanticKind SemanticKind,
-                             unsigned ElementCount);
+  void diagnoseSystemSemanticIndex(const HLSLAppliedSemanticAttr *A,
+                                   llvm::dxbc::PSV::SemanticKind SemanticKind,
+                                   unsigned ElementCount);
 
   void diagnoseSemanticType(const Decl *D, const HLSLAppliedSemanticAttr *A,
                             llvm::dxbc::PSV::SemanticKind SemanticKind);

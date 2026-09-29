@@ -44,9 +44,15 @@ void nested_array_index(uint3 ID[1][2] : SV_DispatchThreadID) {}
 float4 position_ps(float4 P : SV_Position1) : SV_Target { return P; }
 // expected-error@-1 {{semantic 'SV_Position' does not allow indexing}}
 
-// On vertex shader inputs, SV_Position is arbitrary and may be indexed.
+// On vertex shader inputs, SV_Position is arbitrary: integer components,
+// explicit indices, and consecutive array indices are all allowed.
 [shader("vertex")]
-float4 position_vs(float4 P : SV_Position1) : SV_Position { return P; }
+float4 position_vs(int4 P[2] : SV_Position1) : SV_Position { return (float4)P[0]; }
+
+// The same name on a vertex output is a non-indexable system value.
+[shader("vertex")]
+float4 position_vs_out(float4 P : USER) : SV_Position1 { return P; }
+// expected-error@-1 {{semantic 'SV_Position' does not allow indexing}}
 
 [shader("pixel")]
 float4 user_index(float4 P : USER7) : SV_Target { return P; }

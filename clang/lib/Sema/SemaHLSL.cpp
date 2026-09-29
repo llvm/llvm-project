@@ -1106,12 +1106,20 @@ void SemaHLSL::checkSemanticAnnotation(
     return;
   }
 
-  diagnoseSemanticIndex(SemanticAttr, Kind, ElementCount);
+  // A system-value name can have an arbitrary interpretation, for example
+  // SV_Position on a vertex input. Only the general type restrictions apply.
+  if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary) {
+    diagnoseSemanticType(Param, SemanticAttr, SemanticKind::Arbitrary);
+    return;
+  }
+
+  diagnoseSystemSemanticIndex(SemanticAttr, Kind, ElementCount);
   diagnoseSemanticType(Param, SemanticAttr, Kind);
 }
 
-void SemaHLSL::diagnoseSemanticIndex(const HLSLAppliedSemanticAttr *A,
-                                     SemanticKind Kind, unsigned ElementCount) {
+void SemaHLSL::diagnoseSystemSemanticIndex(const HLSLAppliedSemanticAttr *A,
+                                           SemanticKind Kind,
+                                           unsigned ElementCount) {
   assert(Kind != SemanticKind::Invalid && Kind != SemanticKind::Arbitrary &&
          "expected a recognized system semantic");
   assert(ElementCount > 0 && "a semantic covers at least one element");
