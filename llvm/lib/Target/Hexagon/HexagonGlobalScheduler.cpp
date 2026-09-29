@@ -107,11 +107,11 @@ static cl::opt<unsigned> SecondaryCandidateQueueSize("pull-up-sec-queue-size",
                                                      cl::Hidden, cl::init(2));
 
 static cl::opt<bool> PostPullUpOpt(
-    "post-pull-up-opt", cl::Hidden, cl::Optional, cl::init(true),
+    "post-pull-up-opt", cl::Hidden, cl::init(true),
     cl::desc("Enable opt. exposed by pull-up e.g., remove redundant jumps"));
 
 static cl::opt<bool> SpeculateNonPredInsn(
-    "speculate-non-pred-insn", cl::Hidden, cl::Optional, cl::init(true),
+    "speculate-non-pred-insn", cl::Hidden, cl::init(true),
     cl::desc("Speculate non-predicable instructions in parent BB"));
 
 static cl::opt<bool>

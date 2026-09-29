@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_APVALUE_H
 
 #include "clang/AST/Reflection.h"
+#include "clang/AST/CharUnits.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APFloat.h"
@@ -22,6 +23,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/AlignOf.h"
+#include "llvm/Support/Compiler.h"
 
 namespace clang {
 namespace serialization {
@@ -30,7 +32,6 @@ template <typename T> class BasicReaderBase;
 
   class AddrLabelExpr;
   class ASTContext;
-  class CharUnits;
   class CXXRecordDecl;
   class Decl;
   class DiagnosticBuilder;
@@ -120,7 +121,7 @@ namespace clang {
 /// APValue - This class implements a discriminated union of [uninitialized]
 /// [APSInt] [APFloat], [Complex APSInt] [Complex APFloat], [Expr + Offset],
 /// [Vector: N * APValue], [Array: N * APValue]
-class APValue {
+class LLVM_ATTRIBUTE_WARN_UNUSED APValue {
   typedef llvm::APFixedPoint APFixedPoint;
   typedef llvm::APSInt APSInt;
   typedef llvm::APFloat APFloat;
@@ -388,7 +389,7 @@ public:
   /// \param Base The base of the lvalue.
   /// \param Offset The offset of the lvalue.
   /// \param IsNullPtr Whether this lvalue is a null pointer.
-  APValue(LValueBase Base, const CharUnits &Offset, NoLValuePath,
+  APValue(LValueBase Base, CharUnits Offset, NoLValuePath,
           bool IsNullPtr = false)
       : Kind(None), AllowConstexprUnknown(false) {
     MakeLValue();
@@ -401,9 +402,8 @@ public:
   /// \param OnePastTheEnd Whether this lvalue is one-past-the-end of the
   /// subobject it points to.
   /// \param IsNullPtr Whether this lvalue is a null pointer.
-  APValue(LValueBase Base, const CharUnits &Offset,
-          ArrayRef<LValuePathEntry> Path, bool OnePastTheEnd,
-          bool IsNullPtr = false)
+  APValue(LValueBase Base, CharUnits Offset, ArrayRef<LValuePathEntry> Path,
+          bool OnePastTheEnd, bool IsNullPtr = false)
       : Kind(None), AllowConstexprUnknown(false) {
     MakeLValue();
     setLValue(Base, Offset, Path, OnePastTheEnd, IsNullPtr);
@@ -412,7 +412,7 @@ public:
   /// \param Base The base of the lvalue.
   /// \param Offset The offset of the lvalue.
   /// \param IsNullPtr Whether this lvalue is a null pointer.
-  APValue(LValueBase Base, const CharUnits &Offset, ConstexprUnknown,
+  APValue(LValueBase Base, CharUnits Offset, ConstexprUnknown,
           bool IsNullPtr = false)
       : Kind(None), AllowConstexprUnknown(true) {
     MakeLValue();
@@ -594,7 +594,7 @@ public:
 
   const LValueBase getLValueBase() const;
   CharUnits &getLValueOffset();
-  const CharUnits &getLValueOffset() const {
+  CharUnits getLValueOffset() const {
     return const_cast<APValue*>(this)->getLValueOffset();
   }
   bool isLValueOnePastTheEnd() const;
@@ -785,11 +785,9 @@ public:
     ((ComplexAPFloat *)(char *)&Data)->Real = std::move(R);
     ((ComplexAPFloat *)(char *)&Data)->Imag = std::move(I);
   }
-  void setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
-                 bool IsNullPtr);
-  void setLValue(LValueBase B, const CharUnits &O,
-                 ArrayRef<LValuePathEntry> Path, bool OnePastTheEnd,
-                 bool IsNullPtr);
+  void setLValue(LValueBase B, CharUnits O, NoLValuePath, bool IsNullPtr);
+  void setLValue(LValueBase B, CharUnits O, ArrayRef<LValuePathEntry> Path,
+                 bool OnePastTheEnd, bool IsNullPtr);
   void setUnion(const FieldDecl *Field, const APValue &Value);
   void setAddrLabelDiff(const AddrLabelExpr* LHSExpr,
                         const AddrLabelExpr* RHSExpr) {
@@ -889,9 +887,10 @@ private:
     M->NumCols = NumCols;
     return {M->Elts, NumElts};
   }
-  MutableArrayRef<LValuePathEntry>
-  setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
-                  bool OnePastTheEnd, bool IsNullPtr);
+  MutableArrayRef<LValuePathEntry> setLValueUninit(LValueBase B, CharUnits O,
+                                                   unsigned Size,
+                                                   bool OnePastTheEnd,
+                                                   bool IsNullPtr);
   MutableArrayRef<const CXXRecordDecl *>
   setMemberPointerUninit(const ValueDecl *Member, bool IsDerivedMember,
                          unsigned Size);

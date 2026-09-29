@@ -2221,8 +2221,6 @@ bool Load(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
-  if (!Ptr.isReadablePointerType())
-    return false;
   if (!Ptr.canDeref(Name))
     return false;
   S.Stk.push<T>(Ptr.load<T>());
@@ -2233,8 +2231,6 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool LoadPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr))
-    return false;
-  if (!Ptr.isReadablePointerType())
     return false;
   if (!Ptr.canDeref(Name))
     return false;
@@ -3638,10 +3634,19 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
       return true;
     }
 
-    if (!Ptr.getType()->isArrayType()) {
+    const OpaquePointer &OP = Ptr.asOpaquePointer();
+    if (!OP.getFieldType()->isArrayType()) {
       S.Stk.push<Pointer>(Ptr);
       return true;
     }
+
+    if (OP.isUnknownSizeArray() && OP.PathLength != 0) {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_unsupported_unsized_array);
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
+
     return arrayElemPtrOpaque(S, OpPC, Ptr,
                               APSInt(APInt::getZero(1), /*IsUnsigned=*/true),
                               /*AllowReplace=*/false);
@@ -4075,6 +4080,7 @@ bool CheckNewTypeMismatchArray(InterpState &S, CodePtr OpPC, const Expr *E) {
   return CheckNewTypeMismatch(S, OpPC, E, static_cast<uint64_t>(Size));
 }
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
+bool CheckPlacementNew(InterpState &S, CodePtr OpPC, const Expr *E);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool BitCastPrim(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
