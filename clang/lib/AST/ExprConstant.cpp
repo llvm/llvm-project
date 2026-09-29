@@ -22473,6 +22473,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ArrayInitLoopExprClass:
   case Expr::ArrayInitIndexExprClass:
   case Expr::NoInitExprClass:
+  case Expr::CThisExprClass:
   case Expr::DesignatedInitUpdateExprClass:
   case Expr::ImplicitValueInitExprClass:
   case Expr::ParenListExprClass:

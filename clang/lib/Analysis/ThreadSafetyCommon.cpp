@@ -152,6 +152,11 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
       Ctx.NumArgs = CE->getNumArgs() - 1;
       Ctx.FunArgs = CE->getArgs() + 1;
     } else {
+      // Extract base object for standard C function pointers (e.g., ops->lock())
+      if (const auto *ME = dyn_cast<MemberExpr>(CE->getCallee()->IgnoreParenCasts())) {
+        Ctx.SelfArg = ME->getBase();
+        Ctx.SelfArrow = ME->isArrow();
+      }
       Ctx.NumArgs = CE->getNumArgs();
       Ctx.FunArgs = CE->getArgs();
     }
@@ -303,6 +308,8 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
     return translateDeclRefExpr(cast<DeclRefExpr>(S), Ctx);
   case Stmt::CXXThisExprClass:
     return translateCXXThisExpr(cast<CXXThisExpr>(S), Ctx);
+  case Stmt::CThisExprClass:                                 
+    return translateCThisExpr(cast<CThisExpr>(S), Ctx);      
   case Stmt::MemberExprClass:
     return translateMemberExpr(cast<MemberExpr>(S), Ctx);
   case Stmt::ObjCIvarRefExprClass:
@@ -495,6 +502,13 @@ til::SExpr *SExprBuilder::translateCXXThisExpr(const CXXThisExpr *TE,
   }
   assert(SelfVar && "We have no variable for 'this'!");
   return SelfVar;
+}
+
+til::SExpr *
+SExprBuilder::translateCThisExpr(const CThisExpr *CE,
+                                 CallingContext *Ctx) {
+  // Substitute the current SelfArg as we do for C++ this
+  return translateCXXThisExpr(/*TE=*/nullptr, Ctx);
 }
 
 // Grab the very first declaration of virtual method D
