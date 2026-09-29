@@ -767,6 +767,9 @@ void VPlanTransforms::materializeConstantVectorTripCount(
       !isa<VPIRValue>(TC))
     return;
 
+  if (Plan.getCheckFirstExitBlock())
+    return;
+
   // Materialize vector trip counts for constants early if it can simply
   // be computed as (Original TC / VF * UF) * VF * UF.
   // TODO: Compute vector trip counts for loops requiring a scalar epilogue and

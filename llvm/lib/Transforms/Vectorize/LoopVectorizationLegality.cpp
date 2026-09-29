@@ -79,6 +79,12 @@ static cl::opt<bool> EnableHistogramVectorization(
     "enable-histogram-loop-vectorization", cl::init(false), cl::Hidden,
     cl::desc("Enables autovectorization of some loops containing histograms"));
 
+static cl::opt<unsigned> MaxUncountableEarlyExits(
+    "max-uncountable-early-exits", cl::init(4), cl::Hidden,
+    cl::desc(
+        "Maximum number of uncountable early exits a loop may contain to be "
+        "eligible for check-first vectorization."));
+
 /// Maximum vectorization interleave count.
 static const unsigned MaxInterleaveFactor = 16;
 
@@ -1649,6 +1655,35 @@ bool LoopVectorizationLegality::canVectorizeLoopNestCFG(
   return Result;
 }
 
+/// Collects the loads feeding the exit conditions of early-exits.
+/// condition, which check-first widens speculatively.
+static void collectExitConditionSliceLoads(ArrayRef<BasicBlock *> ExitingBlocks,
+                                           Loop *L,
+                                           SmallVectorImpl<LoadInst *> &Out) {
+  SmallPtrSet<Value *, 16> Visited;
+  SmallVector<Value *, 16> Worklist;
+  for (BasicBlock *BB : ExitingBlocks) {
+    auto *Br = dyn_cast<CondBrInst>(BB->getTerminator());
+    assert(Br && "exiting block must terminate with a conditional branch");
+    Worklist.push_back(Br->getCondition());
+  }
+  // Duplicated code. Can we make it reusable?
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || !L->contains(I) || isa<PHINode>(I))
+      continue;
+    if (auto *LI = dyn_cast<LoadInst>(I)) {
+      Out.push_back(LI);
+      continue;
+    }
+    for (Value *Op : I->operands())
+      Worklist.push_back(Op);
+  }
+}
+
 bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   BasicBlock *LatchBB = TheLoop->getLoopLatch();
   if (!LatchBB) {
@@ -1766,10 +1801,15 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
       return false;
     }
   } else {
-    // Check all uncountable exiting blocks for movable loads.
-    for (BasicBlock *ExitingBB : UncountableExitingBlocks) {
-      if (!canUncountableExitConditionLoadBeMoved(ExitingBB))
+    if (EnableCheckFirstVectorization &&
+        !EnableEarlyExitVectorizationWithSideEffects) {
+      if (!canCheckFirstSpeculateExitConditions(UncountableExitingBlocks))
         return false;
+    } else {
+      for (BasicBlock *ExitingBB : UncountableExitingBlocks) {
+        if (!canUncountableExitConditionLoadBeMoved(ExitingBB))
+          return false;
+      }
     }
   }
 
@@ -1783,6 +1823,56 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
           "Cannot vectorize early exit loop with "
           "strided fault-only-first load",
           "EarlyExitLoopWithStridedFaultOnlyFirstLoad", ORE, TheLoop);
+      return false;
+    }
+  }
+
+  // Safe only if every widened condition slice load is dereferenceable.
+  if (HasSideEffects) {
+    SmallVector<LoadInst *, 4> SpeculatedCondLoads;
+    collectExitConditionSliceLoads(UncountableExitingBlocks, TheLoop,
+                                   SpeculatedCondLoads);
+
+    bool AllDeref = true;
+    for (LoadInst *LI : SpeculatedCondLoads) {
+      if (!isDereferenceableAndAlignedInLoop(LI, TheLoop, *PSE.getSE(), *DT,
+                                             AC)) {
+        AllDeref = false;
+        break;
+      }
+    }
+
+    AllExitLoadsDereferenceable = AllDeref;
+
+    LLVM_DEBUG({
+      dbgs() << "LV: check-first early-exit memory-safety strategy: ";
+      if (AllDeref)
+        dbgs() << "all speculated condition-slice loads provably "
+                  "dereferenceable. \n";
+      else
+        dbgs() << "Condition-slice loads not provably dereferenceable. \n";
+    });
+  }
+
+  bool WillUseCheckFirst =
+      HasSideEffects && !EnableEarlyExitVectorizationWithSideEffects;
+  if (WillUseCheckFirst) {
+    const InductionDescriptor *IndDesc = nullptr;
+    if (Inductions.size() == 1) {
+      IndDesc = &Inductions.begin()->second;
+    } else if (PHINode *PrimaryIV = getPrimaryInduction()) {
+      auto It = Inductions.find(PrimaryIV);
+      if (It != Inductions.end())
+        IndDesc = &It->second;
+    }
+    if (!IndDesc ||
+        (IndDesc->getKind() != InductionDescriptor::IK_IntInduction &&
+         IndDesc->getKind() != InductionDescriptor::IK_PtrInduction) ||
+        !IndDesc->getConstIntStepValue()) {
+      reportVectorizationFailure(
+          "Check-first early-exit vectorization requires a single integer or "
+          "pointer induction with a constant step",
+          "UnsupportedCheckFirstInduction", ORE, TheLoop);
       return false;
     }
   }
@@ -1884,6 +1974,135 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
     }
   }
 
+  return true;
+}
+
+bool LoopVectorizationLegality::canCheckFirstSpeculateExitConditions(
+    ArrayRef<BasicBlock *> ExitingBlocks) {
+  // Threshold check for the number of early exits.
+  // Should this check be moved to the caller?
+  if (ExitingBlocks.size() > MaxUncountableEarlyExits) {
+    reportVectorizationFailure(
+        "Too many uncountable early exits for check-first vectorization",
+        "TooManyEarlyExitsForCheckFirst", ORE, TheLoop);
+    return false;
+  }
+  // Is this check a duplicate from isVectorizableEarlyExitLoop()? 
+  // BasicBlock *Latch = TheLoop->getLoopLatch();
+  // if (!Latch) {
+  //   reportVectorizationFailure("Early-exit loop has no unique latch",
+  //                              "NoUniqueLatchForCheckFirst", ORE, TheLoop);
+  //   return false;
+  // }
+
+  // Collection of all the load instructions that are part of the early-exit
+  // condition slice.
+  SmallVector<LoadInst *, 8> CondLoads;
+  SmallVector<Value *, 16> Worklist;
+  SmallPtrSet<Value *, 16> Visited;
+  for (BasicBlock *BB : ExitingBlocks) {
+    auto *Br = dyn_cast<CondBrInst>(BB->getTerminator());
+    if (!Br) {
+      reportVectorizationFailure(
+          "Exiting block does not terminate with a conditional branch",
+          "UnsupportedCheckFirstExit", ORE, TheLoop);
+      return false;
+    }
+    Worklist.push_back(Br->getCondition());
+  }
+
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+    if (TheLoop->isLoopInvariant(V))
+      continue;
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || !TheLoop->contains(I)) {
+      reportVectorizationFailure(
+          "Early exit condition depends on a value that cannot be "
+          "speculatively evaluated for check-first vectorization",
+          "UnsupportedCheckFirstExitCondition", ORE, TheLoop);
+      return false;
+    }
+    // Conditions for loads.
+    // 1. Load should not be volatile or atomic.
+    // 2. AR should be affine and of the form {start + step}.
+    if (auto *LI = dyn_cast<LoadInst>(I)) {
+      const auto *AR = dyn_cast<SCEVAddRecExpr>(
+          PSE.getSE()->getSCEV(LI->getPointerOperand()));
+      if (!LI->isSimple() || !AR || AR->getLoop() != TheLoop ||
+          !AR->isAffine()) {
+        reportVectorizationFailure(
+            "Early exit condition depends on a load that is not a simple "
+            "affine (unit-stride) access",
+            "CheckFirstExitLoadInvariantAddress", ORE, TheLoop);
+        return false;
+      }
+      CondLoads.push_back(LI);
+      continue;
+    }
+    if (isa<PHINode>(I)) {
+      if (I->getParent() != TheLoop->getHeader()) {
+        reportVectorizationFailure(
+            "Early exit condition depends on a non-header PHI",
+            "UnsupportedCheckFirstExitCondition", ORE, TheLoop);
+        return false;
+      }
+      continue;
+    }
+    if (I->mayReadOrWriteMemory() || !isSafeToSpeculativelyExecute(I)) {
+      reportVectorizationFailure(
+          "Early exit condition contains an operation that cannot be "
+          "speculatively executed",
+          "UnsupportedCheckFirstExitCondition", ORE, TheLoop);
+      return false;
+    }
+    for (Value *Op : I->operands()) {
+      // Skip constants and loop invariants.
+      if (TheLoop->isLoopInvariant(Op))
+        continue;
+      Worklist.push_back(Op);
+    }
+  }
+
+  SmallPtrSet<const Instruction *, 4> CondLoadSet(CondLoads.begin(),
+                                                  CondLoads.end());
+  ConditionallyExecutedOps.clear();
+
+  // Condition loads and instructions that do not touch memory are skipped.
+  // Every other memory operation is recorded in ConditionallyExecutedOps.
+  // isMaskRequired later uses that set so those operations execute only for
+  // lanes that actually reach them. Other loads are allowed. They stay masked
+  // and are not speculated with the exit check. Anything that touches memoryand
+  // is neither a load nor a store is rejected. That includes calls, atomics,
+  // and similar operations. Each store must not alias any condition load.
+  for (auto *BB : TheLoop->blocks()) {
+    for (auto &I : *BB) {
+      if (CondLoadSet.contains(&I) || !I.mayReadOrWriteMemory())
+        continue;
+      ConditionallyExecutedOps.insert(&I);
+      if (isa<LoadInst>(&I))
+        continue;
+      auto *SI = dyn_cast<StoreInst>(&I);
+      if (!SI) {
+        reportVectorizationFailure(
+            "Unsupported memory operation in check-first early-exit loop",
+            "UnsupportedCheckFirstMemOp", ORE, TheLoop);
+        return false;
+      }
+      for (LoadInst *CL : CondLoads) {
+        if (AA->alias(CL->getPointerOperand(), SI->getPointerOperand()) !=
+            AliasResult::NoAlias) {
+          reportVectorizationFailure(
+              "Cannot determine whether an early-exit condition load aliases "
+              "a store (deferred stores must not be observed out of order)",
+              "CheckFirstExitLoadAliasesStore", ORE, TheLoop);
+          return false;
+        }
+      }
+    }
+  }
   return true;
 }
 

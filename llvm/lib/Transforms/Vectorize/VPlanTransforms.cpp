@@ -32,10 +32,12 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
@@ -2276,6 +2278,15 @@ static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
       match(&R, m_Intrinsic<Intrinsic::assume>()))
     return vputils::cannotHoistOrSinkRecipe(R, Sinking);
 
+  bool InSingleSuccChain = false;
+  for (VPBlockBase *Succ = FirstBB; Succ; Succ = Succ->getSingleSuccessor())
+    if (Succ == LastBB) {
+      InSingleSuccChain = true;
+      break;
+    }
+  if (!InSingleSuccChain)
+    return true;
+
   // Check that the memory operation doesn't alias between FirstBB and LastBB.
   auto MemLoc = vputils::getMemoryLocation(R);
 
@@ -3191,6 +3202,29 @@ static bool handleUncountableExitsWithSideEffects(
   return true;
 }
 
+/// Walk backward from ExitCond to collect the recipes needed to evaluate the
+/// exit condition, stopping at PHIs. Returns false if the condition depends on
+/// a memory-writing recipe which cannot be placed in the check block.
+static bool computeConditionSlice(VPValue *ExitCond,
+                                  SmallPtrSetImpl<VPRecipeBase *> &Slice) {
+  SmallVector<VPValue *, 16> Worklist;
+  Worklist.push_back(ExitCond);
+  while (!Worklist.empty()) {
+    VPValue *V = Worklist.pop_back_val();
+    VPRecipeBase *DefR = V->getDefiningRecipe();
+    if (!DefR || DefR->isPhi())
+      continue;
+    if (Slice.contains(DefR))
+      continue;
+    if (DefR->mayWriteToMemory())
+      return false;
+    Slice.insert(DefR);
+    for (VPValue *Op : DefR->operands())
+      Worklist.push_back(Op);
+  }
+  return true;
+}
+
 bool VPlanTransforms::handleUncountableEarlyExits(
     VPlan &Plan, Loop *TheLoop, PredicatedScalarEvolution &PSE,
     DominatorTree &DT, AssumptionCache *AC, UncountableExitStyle Style) {
@@ -3264,6 +3298,243 @@ bool VPlanTransforms::handleUncountableEarlyExits(
                                      Exits[I].EarlyExitingVPBB) &&
              "RPO sort must place dominating exits before dominated ones");
 #endif
+
+  if (Style == UncountableExitStyle::CheckFirst) {
+    // Check-first evaluates the early-exit conditions for the whole vector
+    // iteration before any side effect of that iteration takes place. For
+    //
+    //   for (i = 0; i < 1024; ++i) {
+    //     a[i] = 0;
+    //     if (x[i])
+    //       break;
+    //   }
+    //
+    // the incoming plan interleaves the store with the exit condition:
+    //
+    // loop:
+    //   ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<%0>
+    //   EMIT ir<%a.ptr> = getelementptr inbounds ir<@a>, ir<0>, ir<%iv>
+    //   EMIT store ir<0>, ir<%a.ptr>
+    //   EMIT ir<%x.ptr> = getelementptr inbounds ir<@x>, ir<0>, ir<%iv>
+    //   EMIT-SCALAR ir<%x.value> = load ir<%x.ptr>
+    //   EMIT ir<%exit.early> = icmp ne ir<%x.value>, ir<0>
+    //   EMIT branch-on-cond ir<%exit.early>
+    // Successor(s): ir-bb<exit>, latch
+    //
+    // latch:
+    //   EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+    //   EMIT ir<%done> = icmp eq ir<%iv.next>, ir<1024>
+    //   EMIT branch-on-cond ir<%done>
+    // Successor(s): middle.block, loop
+    //
+    // The recipes computing %exit.early stay in the header, which becomes the
+    // first check block and branches to vector.check.exit (resuming the scalar
+    // loop) when any lane exits. Everything else, including the latch recipes,
+    // sinks into a new vector.body that only runs if no lane exits:
+    //
+    // loop:
+    //   ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<%0>
+    //   EMIT ir<%x.ptr> = getelementptr inbounds ir<@x>, ir<0>, ir<%iv>
+    //   EMIT-SCALAR ir<%x.value> = load ir<%x.ptr>
+    //   EMIT ir<%exit.early> = icmp ne ir<%x.value>, ir<0>
+    //   EMIT vp<%2> = masked-cond ir<%exit.early>
+    //   EMIT vp<%3> = any-of vp<%2>
+    //   EMIT branch-on-cond vp<%3>
+    // Successor(s): vector.check.exit, vector.body
+    //
+    // vector.body:
+    //   EMIT ir<%a.ptr> = getelementptr inbounds ir<@a>, ir<0>, ir<%iv>
+    //   EMIT store ir<0>, ir<%a.ptr>
+    //   EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+    //   EMIT ir<%done> = icmp eq ir<%iv.next>, ir<1024>
+    //   EMIT branch-on-cond ir<%done>
+    // Successor(s): middle.block, loop
+    //
+    // With N early exits the header is followed by N-1 further vector.check
+    // blocks, each holding one exit's condition slice and branching to
+    // vector.check.exit or on to the next check.
+
+    // Keeping it simple for now. Only support the IV as resume value from the loop.
+    if (range_size(TheLoop->getHeader()->phis()) > 1)
+      return false;
+
+    SmallPtrSet<const VPBlockBase *, 4> ExitBlockSet;
+    SmallPtrSet<const VPBlockBase *, 4> EarlyExitingSet;
+    for (const EarlyExitInfo &E : Exits) {
+      ExitBlockSet.insert(E.EarlyExitVPBB);
+      EarlyExitingSet.insert(E.EarlyExitingVPBB);
+    }
+    // Latch should be a countable exit.
+    if (EarlyExitingSet.contains(LatchVPBB))
+      return false;
+
+    // Returns the single successor of VPBB that stays inside the loop, or
+    // nullptr if there is not exactly one. Edges to the middle block or to an
+    // early-exit block leave the loop and are not part of the chain.
+    auto GetUniqueInLoopSuccessor = [&](VPBasicBlock *VPBB) -> VPBasicBlock * {
+      VPBasicBlock *InLoopSucc = nullptr;
+      for (VPBlockBase *Succ : VPBB->getSuccessors()) {
+        if (Succ == MiddleVPBB || ExitBlockSet.contains(Succ))
+          continue;
+        auto *SuccVPBB = dyn_cast<VPBasicBlock>(Succ);
+        if (!SuccVPBB || InLoopSucc)
+          return nullptr;
+        InLoopSucc = SuccVPBB;
+      }
+      return InLoopSucc;
+    };
+
+    // Collect the chain of blocks from the header to the latch.
+    // The recipes of these blocks are redistributed into the check blocks and
+    // the body block, so anything other than a straight-line chain is
+    // unsupported.
+    SmallVector<VPBasicBlock *, 4> LoopChain;
+    SmallPtrSet<VPBasicBlock *, 8> VisitedBlocks;
+    VPBasicBlock *Cur = HeaderVPBB;
+    while (Cur) {
+      // Revisiting a block means the chain contains a nested cycle.
+      if (!VisitedBlocks.insert(Cur).second)
+        return false;
+
+      // Only the header may hold phis. the other blocks get flattened into it.
+      if (Cur != HeaderVPBB && !Cur->empty() && Cur->begin()->isPhi())
+        return false;
+
+      LoopChain.push_back(Cur);
+      if (Cur == LatchVPBB)
+        break;
+
+      Cur = GetUniqueInLoopSuccessor(Cur);
+      if (!Cur)
+        return false;
+    }
+
+    ArrayRef<VPBasicBlock *> Intermediates =
+        ArrayRef(LoopChain).drop_front().drop_back();
+
+    // All early exits must be inside the loop chain.
+    for (const EarlyExitInfo &Exit : Exits)
+      if (!is_contained(LoopChain, Exit.EarlyExitingVPBB))
+        return false;
+
+    // Compute each exit's condition slice.
+    SmallVector<SmallPtrSet<VPRecipeBase *, 16>, 4> Slices(Exits.size());
+    DenseMap<VPRecipeBase *, unsigned> EarliestCheck;
+    for (unsigned K = 0, E = Exits.size(); K != E; ++K) {
+      if (!computeConditionSlice(Exits[K].CondToExit, Slices[K]))
+        return false;
+      for (VPRecipeBase *R : Slices[K])
+        EarliestCheck.try_emplace(R, K);
+    }
+
+    // From here, all modifications are destructive. We cannot bail out.
+
+    // Detach each original early exit. The checks below take over branching to
+    // the scalar loop. The recipes computing the exit conditions stay in place,
+    // as the check cascade still needs them.
+    for (const EarlyExitInfo &Exit : Exits) {
+      for (VPRecipeBase &R : Exit.EarlyExitVPBB->phis())
+        cast<VPIRPhi>(&R)->removeIncomingValueFor(Exit.EarlyExitingVPBB);
+      // Erase the branch-on-cond terminating the exiting block.
+      Exit.EarlyExitingVPBB->getTerminator()->eraseFromParent();
+      // Drop the corresponding CFG edge, e.g. loop -> ir-bb<exit>.
+      VPBlockUtils::disconnectBlocks(Exit.EarlyExitingVPBB, Exit.EarlyExitVPBB);
+    }
+
+    // Flatten intermediate blocks recipes into the header, then connect the
+    // header straight to the latch. Single-exit chains are left untouched.
+    if (!Intermediates.empty()) {
+      // Erase the terminator of the header if it is not an early exit.
+      if (!EarlyExitingSet.contains(HeaderVPBB))
+        HeaderVPBB->getTerminator()->eraseFromParent();
+      // Erase the terminators of the intermediate blocks if they are not early exits.
+      for (VPBasicBlock *BB : Intermediates)
+        if (!EarlyExitingSet.contains(BB) && BB->getTerminator())
+          BB->getTerminator()->eraseFromParent();
+      // Move the recipes of the intermediate blocks to the header in chain
+      // order, so def use is preserved.
+      for (VPBasicBlock *BB : Intermediates)
+        for (VPRecipeBase &R : make_early_inc_range(*BB))
+          R.moveBefore(*HeaderVPBB, HeaderVPBB->end());
+      for (VPBlockBase *S : to_vector(HeaderVPBB->getSuccessors()))
+        VPBlockUtils::disconnectBlocks(HeaderVPBB, S);
+      for (VPBasicBlock *BB : Intermediates)
+        for (VPBlockBase *S : to_vector(BB->getSuccessors()))
+          VPBlockUtils::disconnectBlocks(BB, S);
+      VPBlockUtils::connectBlocks(HeaderVPBB, LatchVPBB);
+    }
+
+    // Create the check cascade. Checks[0] is the header.
+    // Checks[k] is a fresh block holding exit k's condition slice.
+    SmallVector<VPBasicBlock *, 4> Checks;
+    Checks.push_back(HeaderVPBB);
+    for (unsigned K = 1, E = Exits.size(); K != E; ++K)
+      Checks.push_back(Plan.createVPBasicBlock("vector.check"));
+
+    // Body block holds non-slice recipes. Runs when no exit fires.
+    VPBasicBlock *BodyVPBB = Plan.createVPBasicBlock("vector.body");
+
+    // Partition recipes. Slice recipes to their check block, everything else to
+    // the body.
+    auto PartitionBlock = [&](VPBasicBlock *BB) {
+      for (VPRecipeBase &R : make_early_inc_range(*BB)) {
+        if (R.isPhi() || &R == BB->getTerminator())
+          continue;
+        auto It = EarliestCheck.find(&R);
+        VPBasicBlock *Target =
+            It != EarliestCheck.end() ? Checks[It->second] : BodyVPBB;
+        if (Target != BB)
+          R.moveBefore(*Target, Target->end());
+      }
+    };
+    PartitionBlock(HeaderVPBB);
+    if (HeaderVPBB != LatchVPBB)
+      PartitionBlock(LatchVPBB);
+
+    // Routes to the scalar preheader.
+    VPBasicBlock *EarlyExitToScalarVPBB =
+        Plan.createVPBasicBlock("vector.check.exit");
+    Plan.setCheckFirstExitBlock(EarlyExitToScalarVPBB);
+
+    // Extract the latch condition before erasing the latch terminator.
+    auto *LatchBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
+    assert(LatchBranch->getOpcode() == VPInstruction::BranchOnCond &&
+           "Unexpected terminator");
+    VPValue *IsLatchExitTaken = LatchBranch->getOperand(0);
+    DebugLoc LatchDL = LatchBranch->getDebugLoc();
+    LatchBranch->eraseFromParent();
+
+    if (HeaderVPBB != LatchVPBB) {
+      for (VPBlockBase *Succ : to_vector(LatchVPBB->getSuccessors()))
+        VPBlockUtils::disconnectBlocks(LatchVPBB, Succ);
+    }
+
+    for (VPBlockBase *Succ : to_vector(HeaderVPBB->getSuccessors()))
+      VPBlockUtils::disconnectBlocks(HeaderVPBB, Succ);
+
+    // Wire each check.k to exit if exit k fires, else fall through to the next
+    // check or body. BranchOnCond takes successor 0 when true: wire exit first.
+    for (unsigned K = 0, E = Exits.size(); K != E; ++K) {
+      VPBasicBlock *CheckBB = Checks[K];
+      VPBuilder CheckBuilder(CheckBB, CheckBB->end());
+      VPValue *IsExitTaken = CheckBuilder.createNaryOp(VPInstruction::AnyOf,
+                                                       {Exits[K].CondToExit});
+      CheckBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsExitTaken});
+      VPBasicBlock *NextBB = (K + 1 != E) ? Checks[K + 1] : BodyVPBB;
+      VPBlockUtils::connectBlocks(CheckBB, EarlyExitToScalarVPBB);
+      VPBlockUtils::connectBlocks(CheckBB, NextBB);
+    }
+
+    VPBuilder BodyBuilder(BodyVPBB, BodyVPBB->end());
+    BodyBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsLatchExitTaken},
+                             LatchDL);
+
+    // Wire: BodyVPBB → {MiddleVPBB , HeaderVPBB}
+    VPBlockUtils::connectBlocks(BodyVPBB, MiddleVPBB);
+    VPBlockUtils::connectBlocks(BodyVPBB, HeaderVPBB);
+
+    return true;
+  }
 
   // Build the AnyOf condition for the latch terminator using logical OR
   // to avoid poison propagation from later exit conditions when an earlier
@@ -3425,6 +3696,166 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   }
 
   return true;
+}
+
+/// Returns true if Root transitively uses Target through its defining
+/// recipes operands.
+static bool vpValueDependsOn(VPValue *Root, VPValue *Target) {
+  SmallVector<VPValue *, 16> Worklist{Root};
+  SmallPtrSet<VPValue *, 16> Visited;
+  while (!Worklist.empty()) {
+    VPValue *V = Worklist.pop_back_val();
+    if (V == Target)
+      return true;
+    if (!Visited.insert(V).second)
+      continue;
+    if (VPRecipeBase *Def = V->getDefiningRecipe())
+      for (VPValue *Op : Def->operands())
+        Worklist.push_back(Op);
+  }
+  return false;
+}
+
+static VPValue *
+rebuildIVResumeExprImpl(VPBuilder &B, VPValue *V, VPValue *VectorTC,
+                        VPValue *NewIndex,
+                        SmallDenseMap<VPValue *, VPValue *> &Cache) {
+  using namespace VPlanPatternMatch;
+  if (V == VectorTC)
+    return NewIndex;
+  if (auto It = Cache.find(V); It != Cache.end())
+    return It->second;
+  auto Remap = [&](VPValue *Op) {
+    return rebuildIVResumeExprImpl(B, Op, VectorTC, NewIndex, Cache);
+  };
+  auto RemapBinOp = [&](unsigned Opcode, VPValue *LHS, VPValue *RHS,
+                        DebugLoc DL, const Twine &Name) -> VPValue * {
+    VPValue *NL = Remap(LHS), *NR = Remap(RHS);
+    if (NL == LHS && NR == RHS)
+      return V;
+    auto Flags =
+        cast<VPRecipeWithIRFlags>(V->getDefiningRecipe())->getNoWrapFlags();
+    return B.createOverflowingOp(Opcode, {NL, NR}, Flags, DL, Name);
+  };
+  auto RemapCast = [&](Instruction::CastOps Opcode, VPValue *Op) -> VPValue * {
+    VPValue *NO = Remap(Op);
+    if (NO == Op)
+      return V;
+    return B.createScalarCast(Opcode, NO, V->getScalarType(), DebugLoc());
+  };
+
+  VPValue *A, *Bv;
+  VPValue *Result = V;
+  if (match(V, m_VPInstruction<VPInstruction::PtrAdd>(m_VPValue(A),
+                                                      m_VPValue(Bv)))) {
+    VPValue *NB = Remap(Bv);
+    if (NB != Bv)
+      Result = B.createPtrAdd(A, NB, DebugLoc(), "check.exit.iv.resume");
+  } else if (match(V, m_Mul(m_VPValue(A), m_VPValue(Bv)))) {
+    Result = RemapBinOp(Instruction::Mul, A, Bv, DebugLoc::getUnknown(), "");
+  } else if (match(V, m_c_Add(m_VPValue(A), m_VPValue(Bv)))) {
+    Result =
+        RemapBinOp(Instruction::Add, A, Bv, DebugLoc(), "check.exit.iv.resume");
+  } else if (match(V, m_Sub(m_VPValue(A), m_VPValue(Bv)))) {
+    Result = RemapBinOp(Instruction::Sub, A, Bv, DebugLoc::getUnknown(), "");
+  } else if (match(V, m_Trunc(m_VPValue(A)))) {
+    Result = RemapCast(Instruction::Trunc, A);
+  } else if (match(V, m_ZExt(m_VPValue(A)))) {
+    Result = RemapCast(Instruction::ZExt, A);
+  } else if (match(V, m_SExt(m_VPValue(A)))) {
+    Result = RemapCast(Instruction::SExt, A);
+  } else if (vpValueDependsOn(V, VectorTC)) {
+    assert(false && "Unhandled VectorTC-dependent check-first resume "
+                    "value");
+  }
+  Cache[V] = Result;
+  return Result;
+}
+
+/// Returns the induction resume expression Expr rebuilt with VectorTC
+/// replaced by NewIndex.
+static VPValue *rebuildIVResumeExpr(VPBuilder &B, VPValue *Expr,
+                                    VPValue *VectorTC, VPValue *NewIndex) {
+  SmallDenseMap<VPValue *, VPValue *> Cache;
+  return rebuildIVResumeExprImpl(B, Expr, VectorTC, NewIndex, Cache);
+}
+
+void VPlanTransforms::wireCheckFirstExitToScalar(VPlan &Plan) {
+  VPBasicBlock *CheckExitVPBB = Plan.getCheckFirstExitBlock();
+  if (!CheckExitVPBB)
+    return;
+
+  VPBasicBlock *HeaderVPBB = Plan.getCheckFirstCheckHeaderBlock();
+  assert(HeaderVPBB && "check-first cascade header block not recorded");
+
+  // Replace the temporary check.exit→body edge with check.exit→ScalarPH.
+  assert(CheckExitVPBB->getNumSuccessors() == 1 &&
+         "check.exit should have exactly one successor after dissolution");
+  VPBlockBase *OldSucc = CheckExitVPBB->getSuccessors()[0];
+  VPBlockUtils::disconnectBlocks(CheckExitVPBB, OldSucc);
+
+  VPBasicBlock *ScalarPH = Plan.getScalarPreheader();
+  assert(ScalarPH &&
+         "CheckFirst requires a scalar preheader for early-exit replay. "
+         "Ensure the scalar tail is not removed by earlier passes.");
+  VPBlockUtils::connectBlocks(CheckExitVPBB, ScalarPH);
+
+  assert(HeaderVPBB->getNumPredecessors() == 2 &&
+         "loop header must have exactly two predecessors (preheader, latch)");
+  VPBasicBlock *LatchVPBB = nullptr;
+  for (VPBlockBase *Pred : HeaderVPBB->getPredecessors()) {
+    auto *PredVPBB = cast<VPBasicBlock>(Pred);
+    if (any_of(PredVPBB->getSuccessors(),
+               [&](VPBlockBase *S) { return S != HeaderVPBB; })) {
+      LatchVPBB = PredVPBB;
+      break;
+    }
+  }
+  assert(LatchVPBB &&
+         "could not identify the loop latch (backedge source) among the "
+         "header's predecessors");
+  VPValue *CanonIV = cast<VPPhi>(&*HeaderVPBB->begin());
+
+  auto SPHPhis = ScalarPH->phis();
+  assert(range_size(SPHPhis) == 1 &&
+         "CheckFirst expects exactly one scalar-preheader PHI (the IV). "
+         "Extending to multiple inductions or live-outs requires computing "
+         "proper resume values for each PHI.");
+
+  VPBasicBlock *MiddleVPBB = nullptr;
+  for (VPBlockBase *Succ : LatchVPBB->getSuccessors()) {
+    if (Succ != HeaderVPBB) {
+      MiddleVPBB = cast<VPBasicBlock>(Succ);
+      break;
+    }
+  }
+
+  VPBuilder CheckExitBuilder(CheckExitVPBB, CheckExitVPBB->getFirstNonPhi());
+  VPValue *VectorTC = &Plan.getVectorTripCount();
+
+  using namespace VPlanPatternMatch;
+  for (VPRecipeBase &R : SPHPhis) {
+    auto *Phi = cast<VPPhi>(&R);
+
+    VPValue *MidVal = nullptr;
+    for (unsigned I = 0, E = Phi->getNumIncoming(); I != E; ++I) {
+      if (MiddleVPBB && Phi->getIncomingBlock(I) == MiddleVPBB) {
+        MidVal = Phi->getIncomingValue(I);
+        break;
+      }
+    }
+
+    VPValue *ResumeVal = MidVal ? rebuildIVResumeExpr(CheckExitBuilder, MidVal,
+                                                      VectorTC, CanonIV)
+                                : CanonIV;
+
+    assert(!(MidVal && ResumeVal == MidVal &&
+             vpValueDependsOn(MidVal, VectorTC)) &&
+           "check-first early-exit resume value could not be rebuilt from the "
+           "vector trip count");
+
+    Phi->addIncoming(ResumeVal);
+  }
 }
 
 /// This function tries convert extended in-loop reductions to
