@@ -1242,6 +1242,16 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
 }
 } // End Spill = 1, VALU = 1, isConvergent = 1
 
+// Preserve the original word position when saving one part of a shared slot.
+let UseNamedOperandTable = 1, Spill = 1, SALU = 1, Uses = [EXEC] in {
+  def SI_SPILL_S32_SAVE_partial
+      : PseudoInstSI<(outs), (ins SReg_32:$data, i32imm:$addr,
+                                 i32imm:$offset)> {
+    let mayStore = 1;
+    let mayLoad = 0;
+  }
+}
+
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
 // UsesTmp adds to the total size of an expanded spill in this case.
