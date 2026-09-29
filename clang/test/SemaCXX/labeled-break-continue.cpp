@@ -49,3 +49,21 @@ void f3() {
     };
   }
 }
+
+void f4() {
+  l1: for (;;) {
+    constexpr int x = ({ // expected-error {{constexpr variable 'x' must be initialized by a constant expression}}
+      break l1; // expected-note {{not supported in a constant expression}}
+      1;
+    });
+  }
+}
+
+void f5() {
+  l1: for (;;) {
+    constexpr int x = ({ // expected-error {{constexpr variable 'x' must be initialized by a constant expression}}
+      continue l1; // expected-note {{not supported in a constant expression}}
+      1;
+    });
+  }
+}
