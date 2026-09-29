@@ -164,15 +164,15 @@ void call_atexit_callbacks() {
   // Thread-specific keys (pthread_key_create).
   for (size_t iter = 0; iter < PTHREAD_DESTRUCTOR_ITERATIONS; ++iter) {
     bool called_dtor = false;
-    for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
-      TSSValueUnit &unit = tss_values[i];
+    for (TSSValueUnit &unit : tss_values) {
       // Both dtor and value need to be nonnull to call dtor
-      if (unit.dtor != nullptr && unit.payload != nullptr) {
-        void *val = unit.payload;
-        unit.payload = nullptr;
-        unit.dtor(val);
-        called_dtor = true;
-      }
+      if (unit.dtor == nullptr || unit.payload == nullptr)
+        continue;
+
+      void *val = unit.payload;
+      unit.payload = nullptr;
+      unit.dtor(val);
+      called_dtor = true;
     }
     if (!called_dtor)
       break;
