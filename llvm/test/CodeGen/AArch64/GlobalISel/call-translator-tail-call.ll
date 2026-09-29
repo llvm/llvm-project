@@ -139,7 +139,7 @@ define i32 @test_too_big_stack() {
   ; DARWIN-NEXT:   $x5 = COPY [[DEF]](i64)
   ; DARWIN-NEXT:   $x6 = COPY [[DEF]](i64)
   ; DARWIN-NEXT:   $x7 = COPY [[DEF]](i64)
-  ; DARWIN-NEXT:   BL @too_big_stack, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $w0
+  ; DARWIN-NEXT:   BL @too_big_stack, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $w0
   ; DARWIN-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w0
   ; DARWIN-NEXT:   $w0 = COPY [[COPY1]](i32)
@@ -166,7 +166,7 @@ define i32 @test_too_big_stack() {
   ; WINDOWS-NEXT:   $x5 = COPY [[DEF]](i64)
   ; WINDOWS-NEXT:   $x6 = COPY [[DEF]](i64)
   ; WINDOWS-NEXT:   $x7 = COPY [[DEF]](i64)
-  ; WINDOWS-NEXT:   BL @too_big_stack, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $w0
+  ; WINDOWS-NEXT:   BL @too_big_stack, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit-def $w0
   ; WINDOWS-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w0
   ; WINDOWS-NEXT:   $w0 = COPY [[COPY1]](i32)
@@ -236,7 +236,7 @@ define void @test_varargs_2() {
   ; DARWIN-NEXT:   $w0 = COPY [[C]](i32)
   ; DARWIN-NEXT:   $d0 = COPY [[C1]](f64)
   ; DARWIN-NEXT:   $x1 = COPY [[C2]](i64)
-  ; DARWIN-NEXT:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
+  ; DARWIN-NEXT:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   ; DARWIN-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   RET_ReallyLR
   ;
@@ -294,7 +294,7 @@ define void @test_varargs_3([8 x <2 x double>], <4 x half> %arg) {
   ; DARWIN-NEXT:   $w0 = COPY [[C]](i32)
   ; DARWIN-NEXT:   $d0 = COPY [[C1]](f64)
   ; DARWIN-NEXT:   $x1 = COPY [[C2]](i64)
-  ; DARWIN-NEXT:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
+  ; DARWIN-NEXT:   BL @varargs, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit $d0, implicit $x1
   ; DARWIN-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   RET_ReallyLR
   ;
@@ -340,14 +340,14 @@ define void @test_bad_call_conv() {
   ; DARWIN-LABEL: name: test_bad_call_conv
   ; DARWIN: bb.1 (%ir-block.0):
   ; DARWIN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; DARWIN-NEXT:   BL @bad_call_conv_fn, csr_aarch64_noregs, implicit-def $lr, implicit $sp
+  ; DARWIN-NEXT:   BL @bad_call_conv_fn, csr_aarch64_noregs, implicit-def dead $lr, implicit $sp
   ; DARWIN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   RET_ReallyLR
   ;
   ; WINDOWS-LABEL: name: test_bad_call_conv
   ; WINDOWS: bb.1 (%ir-block.0):
   ; WINDOWS-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; WINDOWS-NEXT:   BL @bad_call_conv_fn, csr_aarch64_noregs, implicit-def $lr, implicit $sp
+  ; WINDOWS-NEXT:   BL @bad_call_conv_fn, csr_aarch64_noregs, implicit-def dead $lr, implicit $sp
   ; WINDOWS-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; WINDOWS-NEXT:   RET_ReallyLR
   tail call ghccc void @bad_call_conv_fn()
@@ -361,7 +361,7 @@ define void @test_byval(ptr byval(i8) %ptr) {
   ; DARWIN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY [[FRAME_INDEX]](p0)
   ; DARWIN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; DARWIN-NEXT:   BL @simple_fn, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; DARWIN-NEXT:   BL @simple_fn, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; DARWIN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   RET_ReallyLR
   ;
@@ -370,7 +370,7 @@ define void @test_byval(ptr byval(i8) %ptr) {
   ; WINDOWS-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY [[FRAME_INDEX]](p0)
   ; WINDOWS-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; WINDOWS-NEXT:   BL @simple_fn, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; WINDOWS-NEXT:   BL @simple_fn, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; WINDOWS-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; WINDOWS-NEXT:   RET_ReallyLR
   tail call void @simple_fn()
@@ -385,7 +385,7 @@ define void @test_inreg(ptr inreg %ptr) {
   ; DARWIN-NEXT: {{  $}}
   ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; DARWIN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; DARWIN-NEXT:   BL @simple_fn, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; DARWIN-NEXT:   BL @simple_fn, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; DARWIN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   RET_ReallyLR
   ;
@@ -395,7 +395,7 @@ define void @test_inreg(ptr inreg %ptr) {
   ; WINDOWS-NEXT: {{  $}}
   ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; WINDOWS-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; WINDOWS-NEXT:   BL @simple_fn, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; WINDOWS-NEXT:   BL @simple_fn, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
   ; WINDOWS-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; WINDOWS-NEXT:   RET_ReallyLR
   tail call void @simple_fn()
@@ -466,7 +466,7 @@ define hidden swiftcc i64 @swiftself_indirect_tail(ptr swiftself %arg) {
   ; DARWIN-NEXT: {{  $}}
   ; DARWIN-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x20
   ; DARWIN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; DARWIN-NEXT:   BL @pluto, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $x0
+  ; DARWIN-NEXT:   BL @pluto, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $x0
   ; DARWIN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; DARWIN-NEXT:   [[COPY1:%[0-9]+]]:tcgpr64(p0) = COPY $x0
   ; DARWIN-NEXT:   $x20 = COPY [[COPY]](p0)
@@ -478,7 +478,7 @@ define hidden swiftcc i64 @swiftself_indirect_tail(ptr swiftself %arg) {
   ; WINDOWS-NEXT: {{  $}}
   ; WINDOWS-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x20
   ; WINDOWS-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; WINDOWS-NEXT:   BL @pluto, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $x0
+  ; WINDOWS-NEXT:   BL @pluto, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $x0
   ; WINDOWS-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; WINDOWS-NEXT:   [[COPY1:%[0-9]+]]:tcgpr64(p0) = COPY $x0
   ; WINDOWS-NEXT:   $x20 = COPY [[COPY]](p0)

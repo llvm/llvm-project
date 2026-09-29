@@ -538,18 +538,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   DISubprogram::cleanupRetainedNodes(NewDistinctSPs);
   NewDistinctSPs.clear();
 
-  for (auto *Inst : InstsWithTBAATag) {
-    MDNode *MD = Inst->getMetadata(LLVMContext::MD_tbaa);
-    // With incomplete IR, the tbaa metadata may have been dropped.
-    if (!AllowIncompleteIR)
-      assert(MD && "UpgradeInstWithTBAATag should have a TBAA tag");
-    if (MD) {
-      auto *UpgradedMD = UpgradeTBAANode(*MD);
-      if (MD != UpgradedMD)
-        Inst->setMetadata(LLVMContext::MD_tbaa, UpgradedMD);
-    }
-  }
-
   // Look for intrinsic functions and CallInst that need to be upgraded.  We use
   // make_early_inc_range here because we may remove some functions.
   for (Function &F : llvm::make_early_inc_range(*M))
@@ -2551,9 +2539,6 @@ bool LLParser::parseInstructionMetadata(Instruction &Inst) {
       PendingDbgInsts.emplace_back(Loc, &Inst, N);
     else
       Inst.setMetadata(MDK, N);
-
-    if (MDK == LLVMContext::MD_tbaa)
-      InstsWithTBAATag.push_back(&Inst);
 
     // If this is the end of the list, we're done.
   } while (EatIfPresent(lltok::comma));
