@@ -5806,10 +5806,13 @@ void Verifier::visitCapturesMetadata(Instruction &I, const MDNode *Captures) {
 
 void Verifier::visitAllocTokenMetadata(Instruction &I, MDNode *MD) {
   Check(isa<CallBase>(I), "!alloc_token should only exist on calls", &I);
-  Check(MD->getNumOperands() == 2, "!alloc_token must have 2 operands", MD);
+  Check(MD->getNumOperands() == 2 || MD->getNumOperands() == 3,
+        "!alloc_token must have 2 or 3 operands", MD);
   Check(isa<MDString>(MD->getOperand(0)), "expected string", MD);
   Check(mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(1)),
         "expected integer constant", MD);
+  if (MD->getNumOperands() == 3)
+    Check(isa<MDString>(MD->getOperand(2)), "expected string", MD);
 }
 
 void Verifier::visitInlineHistoryMetadata(Instruction &I, MDNode *MD) {

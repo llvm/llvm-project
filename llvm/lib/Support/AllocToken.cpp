@@ -24,6 +24,9 @@ llvm::getAllocTokenModeFromString(StringRef Name) {
       .Case("random", AllocTokenMode::Random)
       .Case("typehash", AllocTokenMode::TypeHash)
       .Case("typehashpointersplit", AllocTokenMode::TypeHashPointerSplit)
+      .Case("typefunchash", AllocTokenMode::TypeFuncHash)
+      .Case("typefunchashpointersplit",
+            AllocTokenMode::TypeFuncHashPointerSplit)
       .Case("default", DefaultAllocTokenMode)
       .Default(std::nullopt);
 }
@@ -38,6 +41,10 @@ StringRef llvm::getAllocTokenModeAsString(AllocTokenMode Mode) {
     return "typehash";
   case AllocTokenMode::TypeHashPointerSplit:
     return "typehashpointersplit";
+  case AllocTokenMode::TypeFuncHash:
+    return "typefunchash";
+  case AllocTokenMode::TypeFuncHashPointerSplit:
+    return "typefunchashpointersplit";
   }
   llvm_unreachable("Unknown AllocTokenMode");
 }
@@ -56,6 +63,12 @@ std::optional<uint64_t> llvm::getAllocToken(AllocTokenMode Mode,
   case AllocTokenMode::Increment:
   case AllocTokenMode::Random:
     // Stateful modes cannot be implemented as a pure function.
+    return std::nullopt;
+
+  case AllocTokenMode::TypeFuncHash:
+  case AllocTokenMode::TypeFuncHashPointerSplit:
+    // Depends on the function containing the allocation, which is unknown in
+    // constant expressions; only supported by the AllocToken pass.
     return std::nullopt;
 
   case AllocTokenMode::TypeHash:

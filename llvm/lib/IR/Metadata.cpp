@@ -1352,35 +1352,35 @@ MDNode *MDNode::getMergedAllocTokenMetadata(const MDNode *A, const MDNode *B) {
     return nullptr;
   if (A == B)
     return const_cast<MDNode *>(A);
-  if (A->getNumOperands() != 2 || B->getNumOperands() != 2)
+  const unsigned NumOps = A->getNumOperands();
+  if ((NumOps != 2 && NumOps != 3) || B->getNumOperands() != NumOps)
     return nullptr;
   auto *CIA = mdconst::dyn_extract_or_null<ConstantInt>(A->getOperand(1));
   auto *CIB = mdconst::dyn_extract_or_null<ConstantInt>(B->getOperand(1));
   if (!CIA || !CIB)
     return nullptr;
 
-  MDString *NameA = dyn_cast<MDString>(A->getOperand(0));
-  MDString *NameB = dyn_cast<MDString>(B->getOperand(0));
-  if (!NameA || !NameB)
-    return nullptr;
-
-  if (NameA == NameB)
-    return CIA->isOne() ? const_cast<MDNode *>(A) : const_cast<MDNode *>(B);
-
+  // Merge the names (type or function) at operand Idx, joined with '|'.
   LLVMContext &Ctx = A->getContext();
-  StringRef StrA = NameA->getString();
-  StringRef StrB = NameB->getString();
-
-  SmallString<64> Buffer;
-  Buffer.reserve(StrA.size() + 1 + StrB.size());
-  Buffer.append(StrA);
-  Buffer.push_back('|');
-  Buffer.append(StrB);
+  auto MergeNames = [&](unsigned Idx) -> Metadata * {
+    MDString *NameA = dyn_cast<MDString>(A->getOperand(Idx));
+    MDString *NameB = dyn_cast<MDString>(B->getOperand(Idx));
+    if (!NameA || !NameB)
+      return nullptr;
+    if (NameA == NameB)
+      return NameA;
+    return MDString::get(Ctx,
+                         (NameA->getString() + "|" + NameB->getString()).str());
+  };
 
   bool MergedContainsPointer = CIA->isOne() || CIB->isOne();
-  Metadata *Ops[] = {MDString::get(Ctx, Buffer),
-                     ConstantAsMetadata::get(ConstantInt::get(
+  SmallVector<Metadata *, 3> Ops = {
+      MergeNames(0), ConstantAsMetadata::get(ConstantInt::get(
                          Type::getInt1Ty(Ctx), MergedContainsPointer))};
+  if (NumOps == 3)
+    Ops.push_back(MergeNames(2));
+  if (is_contained(Ops, nullptr))
+    return nullptr;
   return MDNode::get(Ctx, Ops);
 }
 
