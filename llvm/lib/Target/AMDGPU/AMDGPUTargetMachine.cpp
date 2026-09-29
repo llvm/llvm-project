@@ -168,6 +168,13 @@ public:
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
+  Error addIRTranslator(PassManagerWrapper &PMW) override;
+  void addPreLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  Error addLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  void addPreRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addRegBankSelect(PassManagerWrapper &PMW) override;
+  void addPreGlobalInstructionSelect(PassManagerWrapper &PMW) override;
+  Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
   void addPreRewrite(PassManagerWrapper &PMW) override;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) override;
   void addPostRegAlloc(PassManagerWrapper &PMW) override;
@@ -716,7 +723,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
-  initializeAMDGPUPostLegalizerCombinerPass(*PR);
+  initializeAMDGPUPostLegalizerCombinerLegacyPass(*PR);
   initializeAMDGPUPreLegalizerCombinerLegacyPass(*PR);
   initializeAMDGPURegBankCombinerLegacyPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
@@ -761,6 +768,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
   initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
   initializeAMDGPUUniformIntrinsicCombineLegacyPass(*PR);
+  initializeSIPostRA16BitMovFoldingLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -900,10 +908,10 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          std::optional<Reloc::Model> RM,
                                          std::optional<CodeModel::Model> CM,
                                          CodeGenOptLevel OptLevel)
-    : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(), TT, getGPUOrDefault(TT, CPU), FS, Options,
-          getEffectiveRelocModel(), getEffectiveCodeModel(CM, CodeModel::Small),
-          OptLevel),
+    : CodeGenTargetMachineImpl(T, TT, getGPUOrDefault(TT, CPU), FS, Options,
+                               getEffectiveRelocModel(),
+                               getEffectiveCodeModel(CM, CodeModel::Small),
+                               OptLevel),
       TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
   if (TT.isAMDGCN()) {
@@ -1191,7 +1199,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 }
 
-bool AMDGPUTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
+bool AMDGPUTargetMachine::isNoopAddrSpaceCast(const DataLayout &DL,
+                                              unsigned SrcAS,
                                               unsigned DestAS) const {
   return AMDGPU::isFlatGlobalAddrSpace(SrcAS) &&
          AMDGPU::isFlatGlobalAddrSpace(DestAS);
@@ -1802,7 +1811,7 @@ bool GCNPassConfig::addLegalizeMachineIR() {
 
 void GCNPassConfig::addPreRegBankSelect() {
   bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
-  addPass(createAMDGPUPostLegalizeCombiner(IsOptNone));
+  addPass(createAMDGPUPostLegalizeCombinerLegacy(IsOptNone));
   addPass(createAMDGPUGlobalISelDivergenceLoweringPass());
 }
 
@@ -2026,6 +2035,8 @@ void GCNPassConfig::addPreEmitPass() {
   if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less))
     addPass(&GCNCreateVOPDID);
   addPass(createSIMemoryLegalizerPass());
+  if (getOptLevel() > CodeGenOptLevel::None)
+    addPass(&SIPostRA16BitMovFoldingLegacyID);
   addPass(createSIInsertWaitcntsPass());
 
   addPass(createSIModeRegisterPass());
@@ -2534,6 +2545,45 @@ Error AMDGPUCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   return Error::success();
 }
 
+Error AMDGPUCodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(IRTranslatorPass(getOptLevel()), PMW);
+  return Error::success();
+}
+
+void AMDGPUCodeGenPassBuilder::addPreLegalizeMachineIR(
+    PassManagerWrapper &PMW) {
+  addMachineFunctionPass(AMDGPUPreLegalizerCombinerPass(), PMW);
+  addMachineFunctionPass(LocalizerPass(), PMW);
+}
+
+Error AMDGPUCodeGenPassBuilder::addLegalizeMachineIR(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(LegalizerPass(), PMW);
+  return Error::success();
+}
+
+void AMDGPUCodeGenPassBuilder::addPreRegBankSelect(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(AMDGPUPostLegalizerCombinerPass(), PMW);
+  addMachineFunctionPass(AMDGPUGlobalISelDivergenceLoweringPass(), PMW);
+}
+
+Error AMDGPUCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(AMDGPURegBankSelectPass(), PMW);
+  addMachineFunctionPass(AMDGPURegBankLegalizePass(), PMW);
+  return Error::success();
+}
+
+void AMDGPUCodeGenPassBuilder::addPreGlobalInstructionSelect(
+    PassManagerWrapper &PMW) {
+  bool IsOptLevelNone = getOptLevel() == CodeGenOptLevel::None;
+  addMachineFunctionPass(AMDGPURegBankCombinerPass(IsOptLevelNone), PMW);
+}
+
+Error AMDGPUCodeGenPassBuilder::addGlobalInstructionSelect(
+    PassManagerWrapper &PMW) {
+  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
+  return Error::success();
+}
+
 void AMDGPUCodeGenPassBuilder::addPreRewrite(PassManagerWrapper &PMW) {
   if (EnableRegReassign) {
     addMachineFunctionPass(GCNNSAReassignPass(), PMW);
@@ -2732,6 +2782,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   }
 
   addMachineFunctionPass(SIMemoryLegalizerPass(), PMW);
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addMachineFunctionPass(SIPostRA16BitMovFoldingPass(), PMW);
   addMachineFunctionPass(SIInsertWaitcntsPass(), PMW);
 
   addMachineFunctionPass(SIModeRegisterPass(), PMW);

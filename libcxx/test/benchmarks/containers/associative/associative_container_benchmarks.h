@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <memory>
 #include <memory_resource>
 #include <random>
 #include <string>
@@ -29,14 +30,22 @@ template <class Container>
 struct adapt_operations {
   // using ValueType = ...;
   // using KeyType   = ...;
-  // static ValueType value_from_key(KeyType const& k);
-  // static KeyType key_from_value(ValueType const& value);
+  // static ValueType make_value_from_key(KeyType const& k);
+  // static KeyType const& key_from_value(ValueType const& value);
 
   // using InsertionResult = ...;
   // static Container::iterator get_iterator(InsertionResult const&);
 
   // template <class Allocator>
   // using rebind_alloc = ...;
+};
+
+// Uninitialized storage for N objects of type T, whose lifetime is managed manually.
+template <class T, std::size_t N>
+union ScratchSpace {
+  ScratchSpace() {}
+  ~ScratchSpace() {}
+  T elems[N];
 };
 
 template <class Container>
@@ -56,11 +65,11 @@ void associative_container_benchmarks(std::string container) {
   auto make_value_types = [](std::vector<Key> const& keys) {
     std::vector<Value> kv;
     for (Key const& k : keys)
-      kv.push_back(adapt_operations<Container>::value_from_key(k));
+      kv.push_back(adapt_operations<Container>::make_value_from_key(k));
     return kv;
   };
 
-  auto get_key = [](Value const& v) { return adapt_operations<Container>::key_from_value(v); };
+  auto get_key = [](Value const& v) -> Key const& { return adapt_operations<Container>::key_from_value(v); };
 
   auto bench = [&](std::string operation, auto f) {
     benchmark::RegisterBenchmark(container + "::" + operation, f)->Arg(0)->Arg(32)->Arg(8192);
@@ -82,10 +91,6 @@ void associative_container_benchmarks(std::string container) {
   // PauseTiming() and ResumeTiming().
   static constexpr std::size_t BatchSize = 32;
 
-  struct alignas(Container) ScratchSpace {
-    char storage[sizeof(Container)];
-  };
-
   /////////////////////////
   // Constructors
   /////////////////////////
@@ -93,18 +98,18 @@ void associative_container_benchmarks(std::string container) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
-    ScratchSpace c[BatchSize];
+    ScratchSpace<Container, BatchSize> c;
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        new (c + i) Container(src);
-        benchmark::DoNotOptimize(c + i);
+        std::construct_at(c.elems + i, src);
+        benchmark::DoNotOptimize(c.elems + i);
         benchmark::ClobberMemory();
       }
 
       st.PauseTiming();
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        reinterpret_cast<Container*>(c + i)->~Container();
+        std::destroy_at(c.elems + i);
       }
       st.ResumeTiming();
     }
@@ -114,18 +119,18 @@ void associative_container_benchmarks(std::string container) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
-    ScratchSpace c[BatchSize];
+    ScratchSpace<Container, BatchSize> c;
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        new (c + i) Container(src, std::allocator<typename Container::value_type>());
-        benchmark::DoNotOptimize(c + i);
+        std::construct_at(c.elems + i, src, std::allocator<typename Container::value_type>());
+        benchmark::DoNotOptimize(c.elems + i);
         benchmark::ClobberMemory();
       }
 
       st.PauseTiming();
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        reinterpret_cast<Container*>(c + i)->~Container();
+        std::destroy_at(c.elems + i);
       }
       st.ResumeTiming();
     }
@@ -142,22 +147,23 @@ void associative_container_benchmarks(std::string container) {
     srcs.reserve(BatchSize);
     for (size_t i = 0; i != BatchSize; ++i)
       srcs.emplace_back(&rs).insert(in.begin(), in.end());
-    alignas(PMRContainer) char c[BatchSize * sizeof(PMRContainer)];
+    ScratchSpace<PMRContainer, BatchSize> c;
 
     std::pmr::monotonic_buffer_resource rs2(size * 64 * BatchSize); // 64 bytes should be enough per node
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        new (c + i * sizeof(PMRContainer)) PMRContainer(std::move(srcs[i]), &rs2);
-        benchmark::DoNotOptimize(c + i);
+        std::construct_at(c.elems + i, std::move(srcs[i]), &rs2);
+        benchmark::DoNotOptimize(c.elems + i);
         benchmark::ClobberMemory();
       }
 
       st.PauseTiming();
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        reinterpret_cast<PMRContainer*>(c + i * sizeof(PMRContainer))->~PMRContainer();
+        std::destroy_at(c.elems + i);
       }
       rs2.release();
       srcs.clear();
+      rs.release();
       for (size_t i = 0; i != BatchSize; ++i)
         srcs.emplace_back(&rs).insert(in.begin(), in.end());
 
@@ -171,18 +177,18 @@ void associative_container_benchmarks(std::string container) {
     std::vector<Key> keys = generate_unique_keys(size);
     std::shuffle(keys.begin(), keys.end(), randomness);
     std::vector<Value> in = make_value_types(keys);
-    ScratchSpace c[BatchSize];
+    ScratchSpace<Container, BatchSize> c;
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        new (c + i) Container(in.begin(), in.end());
-        benchmark::DoNotOptimize(c + i);
+        std::construct_at(c.elems + i, in.begin(), in.end());
+        benchmark::DoNotOptimize(c.elems + i);
         benchmark::ClobberMemory();
       }
 
       st.PauseTiming();
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        reinterpret_cast<Container*>(c + i)->~Container();
+        std::destroy_at(c.elems + i);
       }
       st.ResumeTiming();
     }
@@ -193,18 +199,18 @@ void associative_container_benchmarks(std::string container) {
     std::vector<Key> keys  = generate_unique_keys(size);
     std::sort(keys.begin(), keys.end());
     std::vector<Value> in = make_value_types(keys);
-    ScratchSpace c[BatchSize];
+    ScratchSpace<Container, BatchSize> c;
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        new (c + i) Container(in.begin(), in.end());
-        benchmark::DoNotOptimize(c + i);
+        std::construct_at(c.elems + i, in.begin(), in.end());
+        benchmark::DoNotOptimize(c.elems + i);
         benchmark::ClobberMemory();
       }
 
       st.PauseTiming();
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        reinterpret_cast<Container*>(c + i)->~Container();
+        std::destroy_at(c.elems + i);
       }
       st.ResumeTiming();
     }
@@ -706,12 +712,26 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   auto query_bench = [=](auto func) {
     return [=](auto& st) TEST_ALIGN_BENCHMARK {
-      const std::size_t size = st.range(0);
-      std::vector<Value> in  = make_value_types(generate_unique_keys(size));
-      Container c(in.begin(), in.end());
+      const std::size_t size    = st.range(0);
+      std::vector<Key> keys     = generate_unique_keys(size);
+      std::vector<Value> values = make_value_types(keys);
+      Container c(values.begin(), values.end());
 
+      // Create a pool of key indices to draw in the benchmark below. Make the
+      // pool large enough to defeat a branch predictor even when benchmarking
+      // small sizes.
+      const std::size_t N_DRAWS = std::max<std::size_t>(4096, keys.size());
+      std::vector<std::size_t> draws;
+      draws.reserve(N_DRAWS);
+      for (std::size_t i = 0; i != N_DRAWS; ++i) {
+        draws.push_back(getRandomEngine()() % keys.size());
+      }
+
+      std::size_t i = 0;
       for (auto _ : st) {
-        auto result = func(c, get_key(in[getRandomEngine()() % in.size()]));
+        Key const& key = keys[draws[i]];
+        auto result    = func(c, key);
+        i              = (i + 1 == N_DRAWS ? 0 : i + 1);
         benchmark::DoNotOptimize(c);
         benchmark::DoNotOptimize(result);
         benchmark::ClobberMemory();

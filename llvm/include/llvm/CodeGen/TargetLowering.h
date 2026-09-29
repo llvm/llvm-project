@@ -366,6 +366,7 @@ public:
     ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
 
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
+    LLVM_ABI void setAttributes(const AttributeList &Attrs, unsigned ArgIdx);
   };
   using ArgListTy = std::vector<ArgListEntry>;
 
@@ -929,13 +930,13 @@ public:
   // Given:
   //    (icmp eq/ne (and X, C0), (shift X, C1))
   // or
-  //    (icmp eq/ne X, (rotate X, CPow2))
+  //    (icmp eq/ne X, (rotate X, C1))
 
   // If C0 is a mask or shifted mask and the shift amt (C1) isolates the
   // remaining bits (i.e something like `(x64 & UINT32_MAX) == (x64 >> 32)`)
   // Do we prefer the shift to be shift-right, shift-left, or rotate.
-  // Note: Its only valid to convert the rotate version to the shift version iff
-  // the shift-amt (`C1`) is a power of 2 (including 0).
+  // Note: It's only valid to convert between the rotate and shift versions iff
+  // the shift-amt (`C1`) divides the bit width.
   // If ShiftOpc (current Opcode) is returned, do nothing.
   virtual unsigned preferedOpcodeForCmpEqPiecesOfOperand(
       EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
@@ -2240,7 +2241,8 @@ public:
   /// Returns true if a cast from SrcAS to DestAS is "cheap", such that e.g. we
   /// are happy to sink it into basic blocks. A cast may be free, but not
   /// necessarily a no-op. e.g. a free truncate from a 64-bit to 32-bit pointer.
-  virtual bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const;
+  virtual bool isFreeAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                                   unsigned DestAS) const;
 
   /// Return true if the pointer arguments to CI should be aligned by aligning
   /// the object whose address is being passed. If so then MinSize is set to the
@@ -2424,6 +2426,25 @@ public:
                                       MachineBasicBlock::instr_iterator &MBBI,
                                       const TargetInstrInfo *TII) const {
     llvm_unreachable("KCFI is not supported on this target");
+  }
+
+  /// @}
+
+  //===--------------------------------------------------------------------===//
+  /// \name Speculative load lowering.
+  /// @{
+
+  /// Emit code to check if a speculative load of the given size from Ptr is
+  /// safe. Returns a Value* representing the check result (i1), or nullptr
+  /// to use the default lowering (which returns false). Targets can override
+  /// to provide their own safety check (e.g., alignment-based page boundary
+  /// check).
+  /// \param Builder IRBuilder positioned at the intrinsic call site
+  /// \param Ptr the pointer operand
+  /// \param Size the size in bytes (constant or runtime value for scalable)
+  virtual Value *emitCanLoadSpeculatively(IRBuilderBase &Builder, Value *Ptr,
+                                          Value *Size) const {
+    return nullptr;
   }
 
   /// @}
@@ -4331,6 +4352,13 @@ public:
                        Chain);
   }
 
+  /// Build a call argument list for \p FuncTy, taking the argument node values
+  /// from \p Ops and the parameter types and ABI attributes from \p FuncTy and
+  /// \p FuncAttrs. \p Ops must have one entry per parameter of \p FuncTy.
+  static ArgListTy getArgListForFunctionType(FunctionType *FuncTy,
+                                             const AttributeList &FuncAttrs,
+                                             ArrayRef<SDValue> Ops);
+
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be
   /// checked for tail call eligibility.
@@ -5060,14 +5088,14 @@ public:
                                 const CallBase &Call) {
       RetTy = OrigRetTy = ResultType;
 
-      IsInReg = Call.hasABIRetAttr(Attribute::InReg);
+      IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn =
           Call.doesNotReturn() ||
           (!isa<InvokeInst>(Call) && isa<UnreachableInst>(Call.getNextNode()));
       IsVarArg = FTy->isVarArg();
       IsReturnValueUsed = !Call.use_empty();
-      RetSExt = Call.hasABIRetAttr(Attribute::SExt);
-      RetZExt = Call.hasABIRetAttr(Attribute::ZExt);
+      RetSExt = Call.hasRetAttr(Attribute::SExt);
+      RetZExt = Call.hasRetAttr(Attribute::ZExt);
       NoMerge = Call.hasFnAttr(Attribute::NoMerge);
 
       Callee = Target;
@@ -5994,6 +6022,9 @@ public:
   /// expansion was successful and populates the Result and Overflow arguments.
   bool expandMULO(SDNode *Node, SDValue &Result, SDValue &Overflow,
                   SelectionDAG &DAG) const;
+
+  // Expand ISD::MULH[SU]. Can expand to MUL_LOHI or wide MUL if available.
+  SDValue expandMULH(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Calculate the product twice the width of LHS and RHS. If HiLHS/HiRHS are
   /// non-null they will be included in the multiplication. The expansion works

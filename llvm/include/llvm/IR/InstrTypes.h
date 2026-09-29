@@ -1658,7 +1658,6 @@ public:
 
   /// Determine whether the return value has the given attribute.
   bool hasRetAttr(Attribute::AttrKind Kind) const {
-    assert(!Attribute::isABIAttr(Kind) && "Use hasABIRetAttr() instead");
     return hasRetAttrImpl(Kind);
   }
   /// Determine whether the return value has the given attribute.
@@ -1687,22 +1686,6 @@ public:
   /// poison.
   LLVM_ABI bool paramHasNonNullAttr(unsigned ArgNo,
                                     bool AllowUndefOrPoison) const;
-
-  /// Determine whether the argument has the given ABI attribute. As this is
-  /// an ABI attribute, only check the call-site and do not inherit from the
-  /// callee.
-  bool hasABIParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
-    assert(Attribute::isABIAttr(Kind) && "Expected ABI attribute");
-    return Attrs.hasParamAttr(ArgNo, Kind);
-  }
-
-  /// Determine whether the return value has the given ABI attribute. As this
-  /// is an ABI attribute, only check the call-site and do not inherit from the
-  /// callee.
-  bool hasABIRetAttr(Attribute::AttrKind Kind) const {
-    assert(Attribute::isABIAttr(Kind) && "Expected ABI attribute");
-    return Attrs.hasRetAttr(Kind);
-  }
 
   /// Get the attribute of a given kind at a position.
   Attribute getAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) const {
@@ -1793,20 +1776,20 @@ public:
 
   /// Determine whether this argument is passed by value.
   bool isByValArgument(unsigned ArgNo) const {
-    return hasABIParamAttr(ArgNo, Attribute::ByVal);
+    return paramHasAttr(ArgNo, Attribute::ByVal);
   }
 
   /// Determine whether this argument is passed in an alloca.
   bool isInAllocaArgument(unsigned ArgNo) const {
-    return hasABIParamAttr(ArgNo, Attribute::InAlloca);
+    return paramHasAttr(ArgNo, Attribute::InAlloca);
   }
 
   /// Determine whether this argument is passed by value, in an alloca, or is
   /// preallocated.
   bool isPassPointeeByValueArgument(unsigned ArgNo) const {
-    return hasABIParamAttr(ArgNo, Attribute::ByVal) ||
-           hasABIParamAttr(ArgNo, Attribute::InAlloca) ||
-           hasABIParamAttr(ArgNo, Attribute::Preallocated);
+    return paramHasAttr(ArgNo, Attribute::ByVal) ||
+           paramHasAttr(ArgNo, Attribute::InAlloca) ||
+           paramHasAttr(ArgNo, Attribute::Preallocated);
   }
 
   /// Determine whether passing undef to this argument is undefined behavior.
@@ -1823,7 +1806,7 @@ public:
   /// Determine if there are is an inalloca argument. Only the last argument can
   /// have the inalloca attribute.
   bool hasInAllocaArgument() const {
-    return !arg_empty() && hasABIParamAttr(arg_size() - 1, Attribute::InAlloca);
+    return !arg_empty() && paramHasAttr(arg_size() - 1, Attribute::InAlloca);
   }
 
   // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
@@ -1869,29 +1852,49 @@ public:
     return Attrs.getParamStackAlignment(ArgNo);
   }
 
-  /// Extract the byref type for a call argument.
+  /// Extract the byref type for a call or parameter.
   Type *getParamByRefType(unsigned ArgNo) const {
-    return Attrs.getParamByRefType(ArgNo);
+    if (auto *Ty = Attrs.getParamByRefType(ArgNo))
+      return Ty;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getParamByRefType(ArgNo);
+    return nullptr;
   }
 
-  /// Extract the byval type for a call argument.
+  /// Extract the byval type for a call or parameter.
   Type *getParamByValType(unsigned ArgNo) const {
-    return Attrs.getParamByValType(ArgNo);
+    if (auto *Ty = Attrs.getParamByValType(ArgNo))
+      return Ty;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getParamByValType(ArgNo);
+    return nullptr;
   }
 
-  /// Extract the preallocated type for a call argument.
+  /// Extract the preallocated type for a call or parameter.
   Type *getParamPreallocatedType(unsigned ArgNo) const {
-    return Attrs.getParamPreallocatedType(ArgNo);
+    if (auto *Ty = Attrs.getParamPreallocatedType(ArgNo))
+      return Ty;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getParamPreallocatedType(ArgNo);
+    return nullptr;
   }
 
-  /// Extract the inalloca type for a call argument.
+  /// Extract the inalloca type for a call or parameter.
   Type *getParamInAllocaType(unsigned ArgNo) const {
-    return Attrs.getParamInAllocaType(ArgNo);
+    if (auto *Ty = Attrs.getParamInAllocaType(ArgNo))
+      return Ty;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getParamInAllocaType(ArgNo);
+    return nullptr;
   }
 
-  /// Extract the sret type for a call argument.
+  /// Extract the sret type for a call or parameter.
   Type *getParamStructRetType(unsigned ArgNo) const {
-    return Attrs.getParamStructRetType(ArgNo);
+    if (auto *Ty = Attrs.getParamStructRetType(ArgNo))
+      return Ty;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getParamStructRetType(ArgNo);
+    return nullptr;
   }
 
   /// Extract the elementtype type for a parameter.
@@ -2040,7 +2043,8 @@ public:
     if (arg_empty())
       return false;
 
-    return hasABIParamAttr(0, Attribute::StructRet);
+    // Be friendly and also check the callee.
+    return paramHasAttr(0, Attribute::StructRet);
   }
 
   /// Determine if any call argument is an aggregate passed by value.

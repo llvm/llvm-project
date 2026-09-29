@@ -59,6 +59,19 @@ static NamedAttrList getAttrsForPrinting(Operation *op) {
   return attrs;
 }
 
+// TODO: Split inherent attributes from discardable attributes in the assembly
+// syntax of GlobalOp and AliasOp. For now, print the selected inherent
+// attributes in the regular attribute dictionary.
+static NamedAttrList
+getAttrsForPrinting(Operation *op, ArrayRef<StringAttr> inherentAttrNames) {
+  NamedAttrList attrs(op->getRawDictionaryAttrs());
+  for (StringAttr name : inherentAttrNames)
+    if (std::optional<Attribute> attr = op->getInherentAttr(name);
+        attr && *attr)
+      attrs.set(name, *attr);
+  return attrs;
+}
+
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute, 8> filteredAttrs(
       llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
@@ -285,79 +298,45 @@ std::optional<ParseResult> mlir::LLVM::parseOpBundles(
 // Printing, parsing, folding and builder for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
 
-void ICmpOp::print(OpAsmPrinter &p) {
-  p << " \"" << stringifyICmpPredicate(getPredicate()) << "\" " << getOperand(0)
-    << ", " << getOperand(1);
-  p.printOptionalAttrDict(getAttrsForPrinting(*this).getAttrs(), {"predicate"});
-  p << " : " << getLhs().getType();
-}
-
-void FCmpOp::print(OpAsmPrinter &p) {
-  p << " \"" << stringifyFCmpPredicate(getPredicate()) << "\" " << getOperand(0)
-    << ", " << getOperand(1);
-  p.printOptionalAttrDict(processFMFAttr(getAttrsForPrinting(*this).getAttrs()),
-                          {"predicate"});
-  p << " : " << getLhs().getType();
-}
-
-// <operation> ::= `llvm.icmp` string-literal ssa-use `,` ssa-use
-//                 attribute-dict? `:` type
-// <operation> ::= `llvm.fcmp` string-literal ssa-use `,` ssa-use
-//                 attribute-dict? `:` type
-template <typename CmpPredicateType>
-static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
-  StringAttr predicateAttr;
-  OpAsmParser::UnresolvedOperand lhs, rhs;
-  Type type;
-  SMLoc predicateLoc, trailingTypeLoc;
-  if (parser.getCurrentLocation(&predicateLoc) ||
-      parser.parseAttribute(predicateAttr, "predicate", result.attributes) ||
-      parser.parseOperand(lhs) || parser.parseComma() ||
-      parser.parseOperand(rhs) ||
-      parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
-      parser.getCurrentLocation(&trailingTypeLoc) || parser.parseType(type) ||
-      parser.resolveOperand(lhs, type, result.operands) ||
-      parser.resolveOperand(rhs, type, result.operands))
+template <typename PredicateAttr, typename Predicate>
+static ParseResult parseCmpPredicateImpl(
+    OpAsmParser &parser, PredicateAttr &predicate,
+    function_ref<std::optional<Predicate>(StringRef)> symbolize) {
+  std::string spelling;
+  SMLoc loc = parser.getCurrentLocation();
+  if (parser.parseString(&spelling))
     return failure();
-
-  // Replace the string attribute `predicate` with an integer attribute.
-  int64_t predicateValue = 0;
-  if (std::is_same<CmpPredicateType, ICmpPredicate>()) {
-    std::optional<ICmpPredicate> predicate =
-        symbolizeICmpPredicate(predicateAttr.getValue());
-    if (!predicate)
-      return parser.emitError(predicateLoc)
-             << "'" << predicateAttr.getValue()
-             << "' is an incorrect value of the 'predicate' attribute";
-    predicateValue = static_cast<int64_t>(*predicate);
-  } else {
-    std::optional<FCmpPredicate> predicate =
-        symbolizeFCmpPredicate(predicateAttr.getValue());
-    if (!predicate)
-      return parser.emitError(predicateLoc)
-             << "'" << predicateAttr.getValue()
-             << "' is an incorrect value of the 'predicate' attribute";
-    predicateValue = static_cast<int64_t>(*predicate);
-  }
-
-  result.attributes.set("predicate",
-                        parser.getBuilder().getI64IntegerAttr(predicateValue));
-
-  // The result type is either i1 or a vector type <? x i1> if the inputs are
-  // vectors.
-  if (!isCompatibleType(type))
-    return parser.emitError(trailingTypeLoc,
-                            "expected LLVM dialect-compatible type");
-  result.addTypes(getI1SameShape(type));
+  std::optional<Predicate> value = symbolize(spelling);
+  if (!value)
+    return parser.emitError(loc)
+           << "'" << spelling
+           << "' is an incorrect value of the 'predicate' attribute";
+  predicate = PredicateAttr::get(parser.getContext(), *value);
   return success();
 }
 
-ParseResult ICmpOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseCmpOp<ICmpPredicate>(parser, result);
+ParseResult mlir::LLVM::parseCmpPredicate(OpAsmParser &parser,
+                                          ICmpPredicateAttr &predicate) {
+  return parseCmpPredicateImpl<ICmpPredicateAttr, ICmpPredicate>(
+      parser, predicate,
+      [](StringRef spelling) { return symbolizeICmpPredicate(spelling); });
 }
 
-ParseResult FCmpOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseCmpOp<FCmpPredicate>(parser, result);
+ParseResult mlir::LLVM::parseCmpPredicate(OpAsmParser &parser,
+                                          FCmpPredicateAttr &predicate) {
+  return parseCmpPredicateImpl<FCmpPredicateAttr, FCmpPredicate>(
+      parser, predicate,
+      [](StringRef spelling) { return symbolizeFCmpPredicate(spelling); });
+}
+
+void mlir::LLVM::printCmpPredicate(OpAsmPrinter &printer, Operation *,
+                                   ICmpPredicateAttr predicate) {
+  printer << '"' << stringifyICmpPredicate(predicate.getValue()) << '"';
+}
+
+void mlir::LLVM::printCmpPredicate(OpAsmPrinter &printer, Operation *,
+                                   FCmpPredicateAttr predicate) {
+  printer << '"' << stringifyFCmpPredicate(predicate.getValue()) << '"';
 }
 
 /// Returns a scalar or vector boolean attribute of the given type.
@@ -599,8 +578,7 @@ ParseResult mlir::LLVM::parseSwitchOpCases(
     if (parser.parseColon() || parser.parseSuccessor(destination))
       return failure();
     if (!parser.parseOptionalLParen()) {
-      if (parser.parseOperandList(operands, OpAsmParser::Delimiter::None,
-                                  /*allowResultNumber=*/false) ||
+      if (parser.parseOperandList(operands, OpAsmParser::Delimiter::None) ||
           parser.parseColonTypeList(operandTypes) || parser.parseRParen())
         return failure();
     }
@@ -732,7 +710,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Type elementType, Value basePtr, ArrayRef<GEPArg> indices,
-                  GEPNoWrapFlags noWrapFlags,
+                  GEPNoWrapFlags noWrapFlags, ConstantRangeAttr inrange,
                   ArrayRef<NamedAttribute> attributes) {
   SmallVector<int32_t> rawConstantIndices;
   SmallVector<Value> dynamicIndices;
@@ -745,16 +723,17 @@ void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
   result.getOrAddProperties<Properties>().noWrapFlags = noWrapFlags;
   result.getOrAddProperties<Properties>().elem_type =
       TypeAttr::get(elementType);
+  result.getOrAddProperties<Properties>().inrange = inrange;
   result.addOperands(basePtr);
   result.addOperands(dynamicIndices);
 }
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Type elementType, Value basePtr, ValueRange indices,
-                  GEPNoWrapFlags noWrapFlags,
+                  GEPNoWrapFlags noWrapFlags, ConstantRangeAttr inrange,
                   ArrayRef<NamedAttribute> attributes) {
   build(builder, result, resultType, elementType, basePtr,
-        SmallVector<GEPArg>(indices), noWrapFlags, attributes);
+        SmallVector<GEPArg>(indices), noWrapFlags, inrange, attributes);
 }
 
 ParseResult mlir::LLVM::parseGEPIndices(
@@ -855,6 +834,27 @@ LogicalResult LLVM::GEPOp::verify() {
 
   if (getNoWrapFlags() == GEPNoWrapFlags::inboundsFlag)
     return emitOpError("'inbounds_flag' cannot be used directly.");
+
+  // LLVM stores `inrange` only on GetElementPtrConstantExpr, whose operands
+  // are already Constants. This dialect has one GEP operation, so proving the
+  // base and indices are constant expressions means walking SSA. A local check
+  // rejects valid cases such as a nested constant GEP base or a `ptrtoint`
+  // index.
+  if (auto inrange = getInrangeAttr()) {
+    auto pointerType =
+        cast<LLVMPointerType>(extractVectorElementType(getBase().getType()));
+    DataLayout dataLayout = DataLayout::closest(*this);
+    std::optional<uint64_t> indexWidth =
+        dataLayout.getTypeIndexBitwidth(pointerType);
+    assert(indexWidth && "pointers always return an index bitwidth");
+    if (inrange.getLower().getBitWidth() != *indexWidth)
+      return emitOpError("'inrange' bitwidth ")
+             << inrange.getLower().getBitWidth()
+             << " must match the pointer index bitwidth (" << *indexWidth
+             << ") specified in the datalayout";
+    if (inrange.getLower().sge(inrange.getUpper()))
+      return emitOpError("expected 'inrange' end to be larger than start");
+  }
 
   return verifyStructIndices(getElemType(), getIndices(),
                              [&] { return emitOpError(); });
@@ -1195,8 +1195,10 @@ Operation::operand_range CallOp::getArgOperands() {
 }
 
 MutableOperandRange CallOp::getArgOperandsMutable() {
-  return MutableOperandRange(*this, getNumConsumedCalleeOperands(*this),
-                             getArgOperandsImpl(*this).size());
+  // Slice the generated range to retain its segment-size metadata. A raw
+  // range would not update operandSegmentSizes when arguments are erased.
+  return getCalleeOperandsMutable().slice(getNumConsumedCalleeOperands(*this),
+                                          getArgOperandsImpl(*this).size());
 }
 
 /// Verify that an inlinable callsite of a debug-info-bearing function in a
@@ -1684,8 +1686,10 @@ Operation::operand_range InvokeOp::getArgOperands() {
 }
 
 MutableOperandRange InvokeOp::getArgOperandsMutable() {
-  return MutableOperandRange(*this, getNumConsumedCalleeOperands(*this),
-                             getArgOperandsImpl(*this).size());
+  // Slice the generated range to retain its segment-size metadata. A raw
+  // range would not update operandSegmentSizes when arguments are erased.
+  return getCalleeOperandsMutable().slice(getNumConsumedCalleeOperands(*this),
+                                          getArgOperandsImpl(*this).size());
 }
 
 LogicalResult InvokeOp::verify() {
@@ -1833,14 +1837,14 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.getBuilder(), result, argAttrs, resultAttrs,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 
+  result.addSuccessors({normalDest, unwindDest});
+  result.addOperands(normalOperands);
+  result.addOperands(unwindOperands);
+
   if (resolveOpBundleOperands(parser, opBundlesLoc, result, opBundleOperands,
                               opBundleOperandTypes,
                               getOpBundleSizesAttrName(result.name)))
     return failure();
-
-  result.addSuccessors({normalDest, unwindDest});
-  result.addOperands(normalOperands);
-  result.addOperands(unwindOperands);
 
   int32_t numOpBundleOperands = 0;
   for (const auto &operands : opBundleOperands)
@@ -2511,7 +2515,13 @@ void GlobalOp::print(OpAsmPrinter &p) {
   // default syntax here, even though it is an inherent attribute
   // (as defined in https://mlir.llvm.org/docs/LangRef/#attributes)
   p.printOptionalAttrDict(
-      (*this)->getAttrs(),
+      getAttrsForPrinting(
+          *this, {getDsoLocalAttrName(), getExternallyInitializedAttrName(),
+                  getAlignmentAttrName(), getAddrSpaceAttrName(),
+                  getSectionAttrName(), getAssociatedAttrName(),
+                  getAbsoluteSymbolAttrName(), getDbgExprsAttrName(),
+                  getTargetSpecificAttrsAttrName(), getSymVisibilityAttrName()})
+          .getAttrs(),
       {getSymNameAttrName(), getGlobalTypeAttrName(), getConstantAttrName(),
        getValueAttrName(), getLinkageAttrName(), getUnnamedAddrAttrName(),
        getTlsModeAttrName(), getVisibility_AttrName(), getComdatAttrName()});
@@ -2892,10 +2902,13 @@ void AliasOp::print(OpAsmPrinter &p) {
   printCommonGlobalAndAlias<AliasOp>(p, *this);
 
   p.printSymbolName(getSymName());
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {getSymNameAttrName(), getAliasTypeAttrName(),
-                           getLinkageAttrName(), getUnnamedAddrAttrName(),
-                           getTlsModeAttrName(), getVisibility_AttrName()});
+  p.printOptionalAttrDict(
+      getAttrsForPrinting(*this,
+                          {getDsoLocalAttrName(), getSymVisibilityAttrName()})
+          .getAttrs(),
+      {getSymNameAttrName(), getAliasTypeAttrName(), getLinkageAttrName(),
+       getUnnamedAddrAttrName(), getTlsModeAttrName(),
+       getVisibility_AttrName()});
 
   // Print the trailing type.
   p << " : " << getType() << ' ';
@@ -4084,6 +4097,10 @@ OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
   GEPIndicesAdaptor<ArrayRef<Attribute>> indices(getRawConstantIndicesAttr(),
                                                  adaptor.getDynamicIndices());
 
+  // Avoid losing inrange information.
+  if (getInrangeAttr())
+    return {};
+
   // gep %x:T, 0 -> %x
   if (getBase().getType() == getType() && indices.size() == 1)
     if (auto integer = llvm::dyn_cast_or_null<IntegerAttr>(indices[0]))
@@ -4478,22 +4495,33 @@ void mlir::LLVM::printIndirectBrOpSucessors(
 }
 
 //===----------------------------------------------------------------------===//
-// SincosOp (intrinsic)
+// SincosOp and ModfOp (intrinsics)
 //===----------------------------------------------------------------------===//
 
-LogicalResult LLVM::SincosOp::verify() {
-  auto operandType = getOperand().getType();
-  auto resultType = getResult().getType();
+static LogicalResult verifyHomogeneousStructResult(Operation *op,
+                                                   Type operandType,
+                                                   Type resultType) {
   auto resultStructType =
       mlir::dyn_cast<mlir::LLVM::LLVMStructType>(resultType);
   if (!resultStructType || resultStructType.getBody().size() != 2 ||
       resultStructType.getBody()[0] != operandType ||
       resultStructType.getBody()[1] != operandType) {
-    return emitOpError("expected result type to be an homogeneous struct with "
-                       "two elements matching the operand type, but got ")
+    return op->emitOpError(
+               "expected result type to be a homogeneous struct with "
+               "two elements matching the operand type, but got ")
            << resultType;
   }
   return success();
+}
+
+LogicalResult LLVM::SincosOp::verify() {
+  return verifyHomogeneousStructResult(getOperation(), getVal().getType(),
+                                       getResult().getType());
+}
+
+LogicalResult LLVM::ModfOp::verify() {
+  return verifyHomogeneousStructResult(getOperation(), getVal().getType(),
+                                       getResult().getType());
 }
 
 //===----------------------------------------------------------------------===//

@@ -135,7 +135,9 @@ static mlir::Value linalgBroadcastAndMaybeExt(PatternRewriter &rewriter,
                if (resType != biasVal.getType()) {
                  biasVal =
                      resultTy.getElementType().isFloat()
-                         ? arith::ExtFOp::create(builder, loc, resType, biasVal)
+                         ? arith::ExtFOp::create(
+                               builder, loc, TypeRange{resType},
+                               ValueRange{biasVal}, arith::ExtFOp::Properties{})
                                .getResult()
                          : arith::ExtSIOp::create(builder, loc, resType,
                                                   biasVal)

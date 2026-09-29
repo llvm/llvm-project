@@ -285,7 +285,7 @@ TEST_F(InterpreterTest, FindMangledNameSymbol) {
 
   // FIXME: Re-enable when we investigate the way we handle dllimports on Win.
 #ifndef _WIN32
-  EXPECT_EQ((uintptr_t)&printf, Addr->getValue());
+  EXPECT_EQ(llvm::orc::ExecutorAddr::fromPtr(&printf), *Addr);
 #endif // _WIN32
 }
 

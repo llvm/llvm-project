@@ -15,11 +15,18 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-queue::queue(const device &syclDevice, const async_handler &asyncHandler,
-             const property_list &propList) {
-  impl = detail::QueueImpl::create(*detail::getSyclObjImpl(syclDevice),
+queue::queue(const context &syclContext, const device &syclDevice,
+             const async_handler &asyncHandler, const property_list &propList) {
+  impl = detail::QueueImpl::create(detail::getSyclObjImpl(syclContext),
+                                   *detail::getSyclObjImpl(syclDevice),
                                    asyncHandler, propList);
 }
+
+queue::queue(const context &syclContext, const device &syclDevice,
+             const property_list &propList)
+    : queue(syclContext, syclDevice,
+            detail::getSyclObjImpl(syclContext)->get_async_handler(),
+            propList) {}
 
 backend queue::get_backend() const noexcept { return impl->getBackend(); }
 
@@ -67,6 +74,14 @@ void queue::setKernelLaunchParams(const std::vector<event> &Events,
 void queue::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
                              void *ArgData, size_t ArgSize) {
   impl->submitKernelImpl(KernelInfo, ArgData, ArgSize);
+}
+
+event queue::fillImpl(void *Ptr, const void *Pattern, std::size_t PatternSize,
+                      std::size_t Count, const std::vector<event> &DepEvents) {
+  std::shared_ptr<detail::EventImpl> EventImplPtr = impl->fill(
+      Ptr, Pattern, PatternSize, Count, detail::getSyclObjImpls(DepEvents));
+  assert(EventImplPtr);
+  return detail::createSyclObjFromImpl<event>(EventImplPtr);
 }
 
 event queue::submitWithHandler(const TypelessCGF &CGF) {

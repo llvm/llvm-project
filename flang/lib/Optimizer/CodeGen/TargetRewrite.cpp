@@ -567,7 +567,8 @@ public:
         newOpers[0].setType(mlir::FunctionType::get(
             callOp.getContext(),
             mlir::TypeRange{newInTypes}.drop_front(dropFront), newResTys));
-        newCall = fir::CallOp::create(*rewriter, loc, newResTys, newOpers);
+        newCall = fir::CallOp::create(*rewriter, loc, newResTys, newOpers,
+                                      fir::CallOp::Properties{});
       }
       newCall.setFastmathAttr(callOp.getFastmathAttr());
       // Always set ABI argument attributes on call operations, even when

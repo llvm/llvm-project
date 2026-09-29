@@ -1527,13 +1527,12 @@ compilation on systems with very large system headers (e.g., macOS).
 
 #### Generating a PCH File
 
-To generate a PCH file using Clang, one invokes Clang with the
-`-x <language>-header` option. This mirrors the interface in GCC
-for generating PCH files:
+To generate a PCH file, compile the header with `-c`, using `-x <language>-header` if the file extension does not identify it as a header.
+This mirrors the interface in GCC for generating PCH files:
 
 ```console
-$ gcc -x c-header test.h -o test.h.gch
-$ clang -x c-header test.h -o test.h.pch
+$ gcc -c -x c-header test.h -o test.h.gch
+$ clang -c -x c-header test.h -o test.h.pch
 ```
 
 #### Using a PCH File
@@ -1555,7 +1554,7 @@ included within a source file or indirectly via {option}`-include`.
 For example:
 
 ```console
-$ clang -x c-header test.h -o test.h.pch
+$ clang -c -x c-header test.h -o test.h.pch
 $ cat test.c
 #include "test.h"
 $ clang test.c -o test
@@ -1568,11 +1567,11 @@ specified on the command line using `-include-pch`.
 
 #### Ignoring a PCH File
 
-To ignore PCH options, a `-ignore-pch` option is passed to `clang`:
+To ignore PCH options, pass `-ignore-pch` to `clang`:
 
 ```console
-$ clang -x c-header test.h -Xclang -ignore-pch -o test.h.pch
-$ clang -include-pch test.h.pch -Xclang -ignore-pch test.c -o test
+$ clang -c -x c-header test.h -ignore-pch -o test.h.pch
+$ clang -include-pch test.h.pch -ignore-pch test.c -o test
 ```
 
 This option disables precompiled headers, overrides -emit-pch and -include-pch.
@@ -1604,7 +1603,7 @@ the resulting PCH file should be relocatable. Second, pass
 relative to the build directory. For example:
 
 ```console
-# clang -x c-header --relocatable-pch -isysroot /path/to/build /path/to/build/mylib.h mylib.h.pch
+# clang -c -x c-header --relocatable-pch -isysroot /path/to/build /path/to/build/mylib.h -o mylib.h.pch
 ```
 
 When loading the relocatable PCH file, the various headers used in the
@@ -2829,6 +2828,37 @@ $ cd $P/foo && clang -c -funique-internal-linkage-names name_conflict.c
 $ cd $P/bar && clang -c -funique-internal-linkage-names name_conflict.c
 $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 ```
+:::
+
+:::{option} -f[no-]keep-inline-functions
+
+Force inline functions to be emitted into the object file, even when they
+have been inlined into all callers or are otherwise unused.
+
+Except as noted below, the option keeps definitions of inline functions that
+are available in the current translation unit. LTO observes the kept
+definitions as being marked as used.
+
+In C, functions declared with inline are kept, except where they are
+C99 inline definitions or GNU C89/C90 extern inline functions. This
+includes __attribute__((gnu_inline)) extern inline functions.
+
+In C++, the option applies to functions declared inline (explicitly
+or implicitly via constexpr or an in-class member-function definition),
+including template specializations whose definitions are generated in this
+translation unit. Inline functions with the gnu_inline attribute and
+specializations subject to C++ explicit instantiation declarations
+(extern template) are not kept. C++20 immediate functions (e.g., consteval)
+are never emitted.
+
+With C++20 named modules, the option applies to inline functions defined
+in the current module unit, including functions that are not exported.
+Imported definitions are affected when their definition is available in the
+current translation unit.
+
+-fno-keep-inline-functions (the default) restores normal inlining
+behaviour.
+
 :::
 
 :::{option} -f[no-]basic-block-address-map:

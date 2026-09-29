@@ -12,16 +12,16 @@
 ; CHECK-LABEL: @masked_load_store_metadata
 define void @masked_load_store_metadata(ptr %ptr, <7 x i1> %mask, <7 x float> %val) {
   ; CHECK: llvm.intr.masked.load
+  ; CHECK-SAME: alignment(4)
   ; CHECK-SAME: access_groups = [#[[$AG]]]
   ; CHECK-SAME: alias_scopes = [#[[$SCOPE]]]
-  ; CHECK-SAME: alignment = 4 : i64
   ; CHECK-SAME: noalias_scopes = [#[[$NOALIAS]]]
   ; CHECK-SAME: tbaa = [#[[$TBAA_TAG]]]
   %1 = call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 4 %ptr, <7 x i1> %mask, <7 x float> poison), !tbaa !0, !llvm.access.group !4, !alias.scope !5, !noalias !7
   ; CHECK: llvm.intr.masked.store
+  ; CHECK-SAME: alignment(4)
   ; CHECK-SAME: access_groups = [#[[$AG]]]
   ; CHECK-SAME: alias_scopes = [#[[$SCOPE]]]
-  ; CHECK-SAME: alignment = 4 : i64
   ; CHECK-SAME: noalias_scopes = [#[[$NOALIAS]]]
   ; CHECK-SAME: tbaa = [#[[$TBAA_TAG]]]
   call void @llvm.masked.store.v7f32.p0(<7 x float> %val, ptr align 4 %ptr, <7 x i1> %mask), !tbaa !0, !llvm.access.group !4, !alias.scope !5, !noalias !7
@@ -31,16 +31,16 @@ define void @masked_load_store_metadata(ptr %ptr, <7 x i1> %mask, <7 x float> %v
 ; CHECK-LABEL: @masked_gather_scatter_metadata
 define void @masked_gather_scatter_metadata(<7 x ptr> %ptrs, <7 x i1> %mask, <7 x float> %val) {
   ; CHECK: llvm.intr.masked.gather
+  ; CHECK-SAME: alignment(4)
   ; CHECK-SAME: access_groups = [#[[$AG]]]
   ; CHECK-SAME: alias_scopes = [#[[$SCOPE]]]
-  ; CHECK-SAME: alignment = 4 : i64
   ; CHECK-SAME: noalias_scopes = [#[[$NOALIAS]]]
   ; CHECK-SAME: tbaa = [#[[$TBAA_TAG]]]
   %1 = call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> align 4 %ptrs, <7 x i1> %mask, <7 x float> poison), !tbaa !0, !llvm.access.group !4, !alias.scope !5, !noalias !7
   ; CHECK: llvm.intr.masked.scatter
+  ; CHECK-SAME: alignment(4)
   ; CHECK-SAME: access_groups = [#[[$AG]]]
   ; CHECK-SAME: alias_scopes = [#[[$SCOPE]]]
-  ; CHECK-SAME: alignment = 4 : i64
   ; CHECK-SAME: noalias_scopes = [#[[$NOALIAS]]]
   ; CHECK-SAME: tbaa = [#[[$TBAA_TAG]]]
   call void @llvm.masked.scatter.v7f32.v7p0(<7 x float> %val, <7 x ptr> align 4 %ptrs, <7 x i1> %mask), !tbaa !0, !llvm.access.group !4, !alias.scope !5, !noalias !7
