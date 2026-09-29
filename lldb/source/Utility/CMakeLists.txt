@@ -31,6 +31,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   Baton.cpp
   Broadcaster.cpp
   Checksum.cpp
+  ColorSetting.cpp
   CompletionRequest.cpp
   Connection.cpp
   ConstString.cpp

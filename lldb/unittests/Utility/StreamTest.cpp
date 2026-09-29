@@ -729,19 +729,19 @@ TEST_F(StreamTest, PutSLEB128) {
 }
 
 TEST_F(StreamTest, PutCStringColorHighlightedCaseInsensitive) {
-  Stream::HighlightSettings settings("hello", "[", "]", true);
+  Stream::HighlightSettings settings("hello", {"[", "]"}, true);
   s.PutCStringColorHighlighted("Say Hello World", settings);
   EXPECT_EQ("Say [Hello] World", TakeValue());
 }
 
 TEST_F(StreamTest, PutCStringColorHighlightedCaseSensitive) {
-  Stream::HighlightSettings settings("hello", "[", "]", false);
+  Stream::HighlightSettings settings("hello", {"[", "]"}, false);
   s.PutCStringColorHighlighted("Say Hello World", settings);
   EXPECT_EQ("Say Hello World", TakeValue());
 }
 
 TEST_F(StreamTest, PutCStringColorHighlightedMultipleMatches) {
-  Stream::HighlightSettings settings("o", "[", "]", false);
+  Stream::HighlightSettings settings("o", {"[", "]"}, false);
   s.PutCStringColorHighlighted("foo bar boo", settings);
   EXPECT_EQ("f[o][o] bar b[o][o]", TakeValue());
 }

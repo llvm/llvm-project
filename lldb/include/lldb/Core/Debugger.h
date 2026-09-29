@@ -31,6 +31,7 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Broadcaster.h"
+#include "lldb/Utility/ColorSetting.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
@@ -310,9 +311,7 @@ public:
 
   llvm::StringRef GetPrompt() const;
 
-  llvm::StringRef GetPromptAnsiPrefix() const;
-
-  llvm::StringRef GetPromptAnsiSuffix() const;
+  ColorSetting GetPromptColor() const;
 
   void SetPrompt(llvm::StringRef p);
   void SetPrompt(const char *) = delete;
@@ -340,23 +339,15 @@ public:
   llvm::StringRef GetSeparator() const;
   bool SetSeparator(llvm::StringRef s);
 
-  llvm::StringRef GetShowProgressAnsiPrefix() const;
+  ColorSetting GetShowProgressColor() const;
 
-  llvm::StringRef GetShowProgressAnsiSuffix() const;
-
-  llvm::StringRef GetDisabledAnsiPrefix() const;
-
-  llvm::StringRef GetDisabledAnsiSuffix() const;
+  ColorSetting GetDisabledColor() const;
 
   AutosuggestionMode GetAutosuggestionMode() const;
 
-  llvm::StringRef GetAutosuggestionAnsiPrefix() const;
+  ColorSetting GetAutosuggestionColor() const;
 
-  llvm::StringRef GetAutosuggestionAnsiSuffix() const;
-
-  llvm::StringRef GetRegexMatchAnsiPrefix() const;
-
-  llvm::StringRef GetRegexMatchAnsiSuffix() const;
+  ColorSetting GetRegexMatchColor() const;
 
   bool GetShowDontUsePoHint() const;
 
@@ -370,9 +361,7 @@ public:
 
   lldb::StopShowColumn GetStopShowColumn() const;
 
-  llvm::StringRef GetStopShowColumnAnsiPrefix() const;
-
-  llvm::StringRef GetStopShowColumnAnsiSuffix() const;
+  ColorSetting GetStopShowColumnColor() const;
 
   uint64_t GetStopSourceLineCount(bool before) const;
 
@@ -380,9 +369,7 @@ public:
 
   uint64_t GetDisassemblyLineCount() const;
 
-  llvm::StringRef GetStopShowLineMarkerAnsiPrefix() const;
-
-  llvm::StringRef GetStopShowLineMarkerAnsiSuffix() const;
+  ColorSetting GetStopShowLineMarkerColor() const;
 
   bool GetAutoOneLineSummaries() const;
 
@@ -668,6 +655,10 @@ protected:
   friend class Progress;
   friend class ProgressManager;
   friend class Statusline;
+
+  /// Read the pair of ANSI color-code settings at the given property indices
+  /// and return them as a single ColorSetting.
+  ColorSetting GetColorProperty(uint32_t prefix_idx, uint32_t suffix_idx) const;
 
   /// Report progress events.
   ///
