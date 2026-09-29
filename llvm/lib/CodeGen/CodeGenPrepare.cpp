@@ -8837,6 +8837,11 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   if (!match(LoopStride, m_Splat(m_Shl(m_VScale(), m_APInt(ShiftAmt)))))
     return false;
 
+  // Make sure the shift amount matches the minimum element count.
+  auto EltCnt = cast<VectorType>(Phi->getType())->getElementCount();
+  if (1 << ShiftAmt->getZExtValue() != EltCnt.getKnownMinValue())
+    return false;
+
   // Check that the elements are integers equal in size to pointers.
   DataLayout DL = Phi->getFunction()->getDataLayout();
   VectorType *VTy = cast<VectorType>(Start->getType());
