@@ -11,6 +11,17 @@
 // The register value is reordered to col0=[1,4], col1=[2,5], col2=[3,6] =
 // <1,4,2,5,3,6>. Row-major memory layout transposes that value at the store.
 
+constexpr float2x3 make_matrix() {
+  return float2x3(1, 2, 3, 4, 5, 6);
+}
+
+export float2x3 return_constexpr_matrix() {
+// CHECK-LABEL: define {{.*}} <6 x float> @_Z23return_constexpr_matrixv
+// CHECK: ret <6 x float> <float 1.000000e+00, float 4.000000e+00, float 2.000000e+00, float 5.000000e+00, float 3.000000e+00, float 6.000000e+00>
+  constexpr float2x3 value = make_matrix();
+  return value;
+}
+
 export float test_row0_col2() {
 // CHECK-LABEL: define {{.*}} float @_Z14test_row0_col2v
 // COL-CHECK: store <6 x float> <float 1.000000e+00, float 4.000000e+00, float 2.000000e+00, float 5.000000e+00, float 3.000000e+00, float 6.000000e+00>
