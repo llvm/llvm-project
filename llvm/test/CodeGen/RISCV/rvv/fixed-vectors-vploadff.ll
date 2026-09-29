@@ -584,3 +584,17 @@ define { <7 x i8>, i32 } @vploadff_v7i8(ptr %ptr, <7 x i1> %m, i32 zeroext %evl)
   %load = call { <7 x i8>, i32 } @llvm.vp.load.ff.v7i8.p0(ptr %ptr, <7 x i1> %m, i32 %evl)
   ret { <7 x i8>, i32 } %load
 }
+
+define i32 @vploadff_new_evl_knownbits(ptr %p, i32 zeroext %evl) {
+; CHECK-LABEL: vploadff_new_evl_knownbits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
+; CHECK-NEXT:    vle8ff.v v8, (a0)
+; CHECK-NEXT:    csrr a0, vl
+; CHECK-NEXT:    ret
+  %load = call {<8 x i8>, i32} @llvm.vp.load.ff(ptr %p, <8 x i1> splat (i1 true), i32 %evl)
+  %new.evl = extractvalue {<8 x i8>, i32} %load, 1
+  %shl = shl i32 %new.evl, 24
+  %lshr = lshr i32 %shl, 24
+  ret i32 %lshr
+}

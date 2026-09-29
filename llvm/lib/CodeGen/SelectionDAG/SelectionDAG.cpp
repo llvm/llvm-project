@@ -4550,12 +4550,11 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         computeKnownBits(Op.getOperand(3), DemandedElts, Depth + 1);
     // The new VL is also bounded by the largest vector length.
     EVT ResVT = Op->getValueType(0);
-    assert(ResVT.isVector());
-    auto ResKB =
-        KnownBits::makeConstant(APInt(32, ResVT.getVectorMinNumElements()));
+    auto ResKB = KnownBits::makeConstant(
+        APInt(BitWidth, ResVT.getVectorMinNumElements()));
     if (ResVT.isScalableVector()) {
       const Function &F = getMachineFunction().getFunction();
-      ResKB = KnownBits::mul(getVScaleRange(&F, 32).toKnownBits(), ResKB);
+      ResKB = KnownBits::mul(getVScaleRange(&F, BitWidth).toKnownBits(), ResKB);
     }
     Known.Zero.setHighBits(
         std::max(VLKB.countMinLeadingZeros(), ResKB.countMinLeadingZeros()));
