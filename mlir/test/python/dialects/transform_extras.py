@@ -19,6 +19,7 @@ from mlir.dialects.transform.extras import (
     insert_transform_script,
     sequence,
     apply_patterns,
+    NormalForm,
 )
 from mlir.extras import types as T
 
@@ -53,6 +54,12 @@ def build_transform_script_at_insertion_point(script: Callable[[OpHandle], None]
             dump_script=True,
         )
         module.operation.verify()
+
+
+def run(f: Callable[[], None]):
+    print("\nTEST:", f.__name__)
+    with ir.Context(), ir.Location.unknown():
+        f()
 
 
 # CHECK-LABEL: TEST: test_build_script_at_insertion_point
@@ -173,6 +180,88 @@ def test_match_ops_mixed(op: OpHandle):
     # CHECK-NEXT: %[[VAL_1:.*]] = transform.structured.match
     # CHECK-SAME:   ops{["scf.for", "linalg.matmul", "scf.forall"]} in %[[VAL_0]]
     # CHECK-SAME:     -> !transform.any_op
+
+
+# CHECK-LABEL: TEST: test_normalform_base
+@build_transform_script
+def test_normalform_base(op: OpHandle):
+    # Normalform is the weakest normalform so op should already be in that form.
+    # Normalization to Normalform should be a no-op.
+    assert op._normalForm is NormalForm
+    op.normalize(NormalForm)
+    assert op._normalForm is NormalForm
+    # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK-NEXT: transform.yield
+
+
+class DummyNormalform(NormalForm):
+    propagate_up: bool = True
+    propagate_down: bool = True
+
+    @classmethod
+    def _impl(cls, handle: OpHandle) -> OpHandle:
+        return handle.print("dummy normalization")
+
+
+# CHECK-LABEL: test_normalform_no_instantiation
+@run
+def test_normalform_no_instantiation():
+    try:
+        DummyNormalform()
+    except TypeError as e:
+        print(e)
+    else:
+        print("Exception not produced")
+
+    # CHECK: NormalForm cannot be instantiated directly
+
+
+# CHECK-LABEL: TEST: test_normalform_dummyform
+@build_transform_script
+def test_normalform_dummyform(op: OpHandle):
+    op.normalize(DummyNormalform)
+    assert op._normalForm is DummyNormalform
+    # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK-NEXT: transform.print %[[VAL_0]] {name = "dummy normalization"}
+
+
+# CHECK-LABEL: TEST: test_normalform_propagate_up
+@build_transform_script
+def test_normalform_propagate_up(op: OpHandle):
+    nested_handle = op.match_ops("dummy.op")
+    nested_handle.normalize(DummyNormalform)
+    assert nested_handle._normalForm is DummyNormalform
+    assert op._normalForm is DummyNormalform
+    # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK-NEXT: %[[VAL_1:.*]] = transform.structured.match ops{["dummy.op"]}
+    # CHECK-NEXT: transform.print %[[VAL_1]] {name = "dummy normalization"}
+
+
+# CHECK-LABEL: TEST: test_normalform_propagate_down
+@build_transform_script
+def test_normalform_propagate_down(op: OpHandle):
+    nested_handle = op.match_ops("dummy.op")
+    op.normalize(DummyNormalform)
+    assert nested_handle._normalForm is DummyNormalform
+    assert op._normalForm is DummyNormalform
+    # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK-NEXT: %[[VAL_1:.*]] = transform.structured.match ops{["dummy.op"]}
+    # CHECK-NEXT: transform.print %[[VAL_0]] {name = "dummy normalization"}
+
+
+# CHECK-LABEL: TEST: test_normalform_propagate_up_and_down
+@build_transform_script
+def test_normalform_propagate_up_and_down(op: OpHandle):
+    nested_handle = op.match_ops("dummy.op1")
+    nested_nested_handle = nested_handle.match_ops("dummy.op2")
+    nested_handle.normalize(DummyNormalform)
+    assert nested_handle._normalForm is DummyNormalform
+    assert op._normalForm is DummyNormalform
+    assert nested_nested_handle._normalForm is DummyNormalform
+    # CHECK: transform.named_sequence {{.*}}(%[[VAL_0:.*]]: !transform.any_op) {
+    # CHECK-NEXT: %[[VAL_1:.*]] = transform.structured.match ops{["dummy.op1"]}
+    # CHECK-NEXT: %[[VAL_2:.*]] = transform.structured.match ops{["dummy.op2"]}
+    # CHECK-NEXT: transform.print %[[VAL_1]] {name = "dummy normalization"}
 
 
 # CHECK-LABEL: TEST: test_print_message
