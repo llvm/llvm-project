@@ -20,6 +20,7 @@
 #include "llvm/Support/Alignment.h"
 #include <cstdint>
 #include <optional>
+#include <string>
 
 namespace llvm {
 
@@ -58,6 +59,16 @@ std::optional<unsigned> getMaxNReg(const Function &);
 bool hasBlocksAreClusters(const Function &);
 
 bool isParamGridConstant(const Argument &);
+
+/// Extract the PTX abi_preserve directive string implied by
+/// the NVVM preserve_n_* attributes, e.g. ".abi_preserve 8". Returns an empty
+/// string when none are present. Entries are separated by '\n' when
+/// \p Multiline is set, and by ' ' otherwise.
+///
+/// On a function, the attributes are looked up on the function definition or
+/// declaration. On a callsite, the attributes are looked up on the call.
+std::string getABIPreserveDirectives(const Function &, bool Multiline);
+std::string getABIPreserveDirectives(const CallBase &, bool Multiline);
 
 inline MaybeAlign getStackAlign(const Function &F, unsigned Index) {
   return F.getAttributes().getAttributes(Index).getStackAlignment();

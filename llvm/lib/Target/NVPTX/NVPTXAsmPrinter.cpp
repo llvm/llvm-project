@@ -248,6 +248,7 @@ private:
   void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
   void emitHeader(Module &M, const NVPTXSubtarget &STI);
   void emitKernelFunctionDirectives(const Function &F, raw_ostream &O) const;
+  void emitFunctionDirectives(const Function &F, raw_ostream &O) const;
   void emitFunctionParamList(const Function *, raw_ostream &O);
   void setAndEmitFunctionVirtualRegisters(const MachineFunction &MF);
   void encodeDebugInfoRegisterNumbers(const MachineFunction &MF);
@@ -756,6 +757,13 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   O << ")";
   if (shouldEmitPTXNoReturn(CB))
     O << " .noreturn";
+  // Print the abi_preserve directives carried by the callsite. A prototype sits
+  // in the caller's body, so only the target gate applies here.
+  if (STI.hasABIPreserve())
+    if (const std::string ABI =
+            getABIPreserveDirectives(CB, /*Multiline=*/false);
+        !ABI.empty())
+      O << " " << ABI;
   O << ";\n";
 
   OutStreamer->emitRawText(O.str());
@@ -844,6 +852,8 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   if (isKernelFunction(*F))
     emitKernelFunctionDirectives(*F, O);
 
+  emitFunctionDirectives(*F, O);
+
   if (shouldEmitPTXNoReturn(*F))
     O << ".noreturn";
 
@@ -886,6 +896,17 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
 
 void NVPTXAsmPrinter::emitFunctionBodyEnd() {
   VRegMapping.clear();
+}
+
+void NVPTXAsmPrinter::emitFunctionDirectives(const Function &F,
+                                             raw_ostream &O) const {
+  // A parse error on a .entry, and unassemblable on targets that cannot
+  // express them, so the attributes are ignored in both cases.
+  if (!isKernelFunction(F) &&
+      TM.getSubtarget<NVPTXSubtarget>(F).hasABIPreserve())
+    if (const std::string ABI = getABIPreserveDirectives(F, /*Multiline=*/true);
+        !ABI.empty())
+      O << ABI << "\n";
 }
 
 const MCSymbol *NVPTXAsmPrinter::getFunctionFrameSymbol() const {
@@ -1013,6 +1034,14 @@ void NVPTXAsmPrinter::emitDeclarationWithName(const Function *F, MCSymbol *S,
   O << "\n";
   if (shouldEmitPTXNoReturn(*F))
     O << ".noreturn";
+  // Print abi_preserve directives regardless of whether F is a definition or a
+  // declaration, subject to the same restrictions as above.
+  if (!isKernelFunction(*F) &&
+      TM.getSubtarget<NVPTXSubtarget>(*F).hasABIPreserve())
+    if (const std::string ABI =
+            getABIPreserveDirectives(*F, /*Multiline=*/false);
+        !ABI.empty())
+      O << ABI;
   O << ";\n";
 }
 

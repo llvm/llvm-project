@@ -25,6 +25,7 @@
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/NVVMAttributes.h"
+#include <array>
 #include <functional>
 #include <map>
 #include <mutex>
@@ -293,6 +294,59 @@ std::optional<unsigned> llvm::getMaxNReg(const Function &F) {
 
 bool llvm::hasBlocksAreClusters(const Function &F) {
   return F.hasFnAttribute(NVVMAttr::BlocksAreClusters);
+}
+
+// PTX register-preservation ("custom ABI") directives. Each entry maps an NVVM
+// function attribute to the prototype directive it selects. This table is the
+// single point of extension for further preservation directives.
+static constexpr auto PreserveRegABIDirectives = std::array{
+    std::pair{NVVMAttr::PreserveNData, StringLiteral(".abi_preserve")},
+    std::pair{NVVMAttr::PreserveNControl,
+              StringLiteral(".abi_preserve_control")},
+};
+
+// Look the attribute up on the callsite only.
+static std::optional<unsigned> getFnAttrParsedInt(const CallBase &CB,
+                                                  StringRef Attr) {
+  const Attribute A = CB.getAttributes().getFnAttr(Attr);
+  if (!A.isValid())
+    return std::nullopt;
+
+  unsigned Value;
+  if (A.getValueAsString().getAsInteger(10, Value)) {
+    CB.getContext().emitError("can't parse integer attribute " +
+                              A.getValueAsString() + " in " + Attr);
+    return std::nullopt;
+  }
+  return Value;
+}
+
+static std::string formatABIPreserveDirectives(
+    bool Multiline, function_ref<std::optional<unsigned>(StringRef)> GetValue) {
+  std::string PrototypeAttributes;
+  for (const auto &[Attr, Directive] : PreserveRegABIDirectives) {
+    const std::optional<unsigned> Count = GetValue(Attr);
+    if (!Count)
+      continue;
+
+    if (!PrototypeAttributes.empty())
+      PrototypeAttributes += Multiline ? '\n' : ' ';
+    PrototypeAttributes += Directive;
+    PrototypeAttributes += " ";
+    PrototypeAttributes += std::to_string(*Count);
+  }
+  return PrototypeAttributes;
+}
+
+std::string llvm::getABIPreserveDirectives(const Function &F, bool Multiline) {
+  return formatABIPreserveDirectives(
+      Multiline, [&F](StringRef Attr) { return getFnAttrParsedInt(F, Attr); });
+}
+
+std::string llvm::getABIPreserveDirectives(const CallBase &CB, bool Multiline) {
+  return formatABIPreserveDirectives(Multiline, [&CB](StringRef Attr) {
+    return getFnAttrParsedInt(CB, Attr);
+  });
 }
 
 bool llvm::isParamGridConstant(const Argument &Arg) {
