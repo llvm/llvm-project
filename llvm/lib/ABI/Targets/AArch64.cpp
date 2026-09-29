@@ -76,6 +76,7 @@ private:
 
   void flattenType(const Type *Ty,
                    SmallVectorImpl<const Type *> &Flattened) const;
+  bool containsOnlyPointers(const Type *Ty) const;
 
   bool isHomogeneousAggregateBaseType(const Type *Ty) const override;
   bool isHomogeneousAggregateSmallEnough(const Type *Base,
@@ -87,6 +88,13 @@ private:
 std::unique_ptr<TargetInfo>
 createAArch64TargetInfo(TypeBuilder &TB, const AArch64ABIOptions &Opts) {
   return std::make_unique<AArch64TargetInfo>(TB, Opts);
+}
+
+// Alignment of an integer coercion of \p BitWidth bits. The width is
+// rounded up to a whole number of bytes, then to a power of two.
+static llvm::Align alignForIntegerBits(uint64_t BitWidth) {
+  uint64_t Bytes = llvm::divideCeil(BitWidth, 8);
+  return llvm::Align(llvm::PowerOf2Ceil(std::max<uint64_t>(Bytes, 1)));
 }
 
 static void reportNYI(StringRef Feature) {
@@ -151,8 +159,31 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
           NPRN);
   }
 
-  reportNYI("Aggregate return type handling");
-  return ArgInfo::getIgnore();
+  // Aggregates of at most 16 bytes are returned directly in registers or on
+  // the stack.
+  if (Size <= 128) {
+    if (Size <= 64 && !Opts.IsBigEndian) {
+      // A little-endian aggregate of at most 8 bytes is an integer of its
+      // exact width. A big-endian aggregate is widened to a multiple of 8
+      // bytes so that it occupies the high bits of the register.
+      return ArgInfo::getDirect(
+          TB.getIntegerType(Size, alignForIntegerBits(Size), /*Signed=*/false));
+    }
+
+    uint64_t AlignBits = RetTy->getAlignment().value() * 8;
+    Size = llvm::alignTo(Size, 64); // round up to multiple of 8 bytes
+
+    // A 16-byte value whose ABI alignment is below 16 bytes is a pair of
+    // i64. A 16-byte-aligned value is an i128.
+    if (AlignBits < 128 && Size == 128) {
+      const Type *I64 = TB.getIntegerType(64, llvm::Align(8), /*Signed=*/false);
+      return ArgInfo::getDirect(TB.getArrayType(I64, Size / 64, Size));
+    }
+    return ArgInfo::getDirect(
+        TB.getIntegerType(Size, alignForIntegerBits(Size), /*Signed=*/false));
+  }
+
+  return getNaturalAlignIndirect(RetTy, getAllocaAddrSpace());
 }
 
 ArgInfo AArch64TargetInfo::classifyArgumentType(
@@ -263,8 +294,77 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
           Ty, IsNamedArg, NVec, NPred, UnpaddedCoerceToSeq, NSRN, NPRN);
   }
 
-  reportNYI("Aggregate argument type handling");
-  return ArgInfo::getIgnore();
+  // Aggregates of at most 16 bytes are passed directly in registers or on
+  // the stack.
+  if (Size <= 128) {
+    uint64_t AlignBits;
+    if (Opts.Kind == AArch64ABIKind::AAPCS) {
+      // An 8-byte slot when the unadjusted alignment is below 16 bytes, and
+      // a 16-byte slot otherwise.
+      AlignBits = Ty->getUnadjustedAlignment().value() * 8;
+      AlignBits = AlignBits < 128 ? 64 : 128;
+    } else {
+      // The larger of the ABI alignment and the pointer width.
+      uint64_t PointerWidth = Opts.IsILP32 ? 32 : 64;
+      AlignBits = std::max(Ty->getAlignment().value() * 8, PointerWidth);
+    }
+    Size = llvm::alignTo(Size, AlignBits);
+
+    const Type *BaseTy;
+    if ((Size == 64 || Size == 128) && AlignBits == 64 &&
+        containsOnlyPointers(Ty)) {
+      // A record of 64-bit pointers in an 8-byte slot is coerced to a pointer
+      // or an array of pointers.
+      BaseTy = TB.getPointerType(64, llvm::Align(8));
+    } else {
+      // Every other aggregate is coerced to an integer of the slot width, or
+      // an array of those integers.
+      BaseTy = TB.getIntegerType(AlignBits, llvm::Align(AlignBits / 8),
+                                 /*Signed=*/false);
+    }
+
+    if (Size == AlignBits)
+      return ArgInfo::getDirect(BaseTy);
+    return ArgInfo::getDirect(TB.getArrayType(BaseTy, Size / AlignBits, Size));
+  }
+
+  return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(), /*ByVal=*/false);
+}
+
+// True for a record whose bases and fields are 64-bit pointers in address
+// space 0, or records of such pointers. An array field is inspected through
+// its base element. False for an empty record and for a type that is not a
+// record.
+bool AArch64TargetInfo::containsOnlyPointers(const Type *Ty) const {
+  if (Ty->isEmptyRecord())
+    return false;
+
+  const auto *RT = dyn_cast<RecordType>(Ty);
+  if (!RT)
+    return false;
+
+  for (const FieldInfo &Base : RT->getBaseClasses())
+    if (!containsOnlyPointers(Base.FieldType))
+      return false;
+
+  for (const FieldInfo &Field : RT->getFields()) {
+    const Type *FT = Field.FieldType;
+    while (const auto *AT = dyn_cast<ArrayType>(FT)) {
+      // TODO: Consider whether this should accept matrix types. Clang
+      // doesn't, but that's probably an error.
+      if (AT->isMatrixType())
+        break;
+      FT = AT->getElementType();
+    }
+
+    bool IsPlainPointer = false;
+    if (const auto *PT = dyn_cast<PointerType>(FT))
+      IsPlainPointer =
+          PT->getSizeInBits().getFixedValue() == 64 && PT->getAddrSpace() == 0;
+    if (!IsPlainPointer && !containsOnlyPointers(FT))
+      return false;
+  }
+  return true;
 }
 
 bool AArch64TargetInfo::passAsAggregateType(const Type *Ty) const {

@@ -1,17 +1,17 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64,NOHFAALIGN,NOHUGEVEC,NOANDROID
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64,NOHFAALIGN,NOHUGEVEC,NOANDROID --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32,NOHFAALIGN,HUGEVEC,NOANDROID
-// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32,NOHFAALIGN,HUGEVEC,NOANDROID --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,NOANDROID
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,NOANDROID --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,NOANDROID
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,NOANDROID --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-linux-android -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,ANDROID
-// RUN: %clang_cc1 -triple aarch64-linux-android -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,ANDROID --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,NOHFAALIGN,NOHUGEVEC,NOANDROID
-// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,NOHFAALIGN,NOHUGEVEC,NOANDROID --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,NOHFAALIGN,NOHUGEVEC,NOANDROID
-// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,NOHFAALIGN,NOHUGEVEC,NOANDROID --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64,NOHFAALIGN,NOHUGEVEC,NOANDROID,GPR64
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64,NOHFAALIGN,NOHUGEVEC,NOANDROID,GPR64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32,NOHFAALIGN,HUGEVEC,NOANDROID,ILP32
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32,NOHFAALIGN,HUGEVEC,NOANDROID,ILP32 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,NOANDROID,GPR64
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,NOANDROID,GPR64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,NOANDROID,GPR64
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,NOANDROID,GPR64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-linux-android -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,ANDROID,GPR64
+// RUN: %clang_cc1 -triple aarch64-linux-android -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,AAPCS64,NOHUGEVEC,ANDROID,GPR64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,NOHFAALIGN,NOHUGEVEC,NOANDROID,GPR64,WIN64
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,NOHFAALIGN,NOHUGEVEC,NOANDROID,GPR64,WIN64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,NOHFAALIGN,NOHUGEVEC,NOANDROID,GPR64,WIN64
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,NOHFAALIGN,NOHUGEVEC,NOANDROID,GPR64,WIN64 --implicit-check-not="not yet implemented"
 
 // This test is verifying that the LLVM ABI library classifies argument types in
 // the same way that Clang does without the library.
@@ -344,3 +344,149 @@ void arg_b4v16(b4v16 v) {}
 typedef _BitInt(32) b32v2 __attribute__((ext_vector_type(2)));
 void arg_b32v2(b32v2 v) {}
 // CHECK: define{{.*}} void @arg_b32v2(<2 x i32> noundef %{{.*}})
+
+// Aggregates of at most 16 bytes are passed directly. The slot is 8 bytes
+// (GPR64) when the controlling alignment is below 16, and 16 bytes otherwise.
+// AAPCS uses the unadjusted alignment. Other ABIs use the larger of the ABI
+// alignment and the pointer width, so ILP32 uses 4-byte slots. A record of
+// 64-bit pointers in an 8-byte slot is coerced to a pointer or an array of
+// pointers. Larger aggregates are passed indirectly.
+
+typedef struct {
+  int a, b;
+} TwoInts;
+void arg_two_ints(TwoInts s) {}
+// GPR64: define{{.*}} void @arg_two_ints(i64 %{{.*}})
+// ILP32: define{{.*}} void @arg_two_ints([2 x i32] %{{.*}})
+
+typedef struct {
+  char c;
+} OneChar;
+void arg_one_char(OneChar s) {}
+// GPR64: define{{.*}} void @arg_one_char(i64 %{{.*}})
+// ILP32: define{{.*}} void @arg_one_char(i32 %{{.*}})
+
+typedef struct {
+  int a, b, c;
+} ThreeInts;
+void arg_three_ints(ThreeInts s) {}
+// GPR64: define{{.*}} void @arg_three_ints([2 x i64] %{{.*}})
+// ILP32: define{{.*}} void @arg_three_ints([3 x i32] %{{.*}})
+
+typedef struct {
+  int a[3];
+} IntArray3;
+void arg_int_array3(IntArray3 s) {}
+// GPR64: define{{.*}} void @arg_int_array3([2 x i64] %{{.*}})
+// ILP32: define{{.*}} void @arg_int_array3([3 x i32] %{{.*}})
+
+typedef struct {
+  int a, b, c, d;
+} FourInts;
+void arg_four_ints(FourInts s) {}
+// GPR64: define{{.*}} void @arg_four_ints([2 x i64] %{{.*}})
+// ILP32: define{{.*}} void @arg_four_ints([4 x i32] %{{.*}})
+
+typedef struct {
+  __int128 x;
+} OneI128;
+void arg_i128(OneI128 s) {}
+// CHECK: define{{.*}} void @arg_i128(i128 %{{.*}})
+
+// alignas(16) raises the ABI alignment and leaves the unadjusted alignment
+// unchanged, so AAPCS still uses 8-byte slots. Other ABIs use an i128 slot.
+typedef struct __attribute__((aligned(16))) {
+  int a;
+} OveralignedInt;
+void arg_overaligned_int(OveralignedInt s) {}
+// AAPCS64: define{{.*}} void @arg_overaligned_int([2 x i64] %{{.*}})
+// NOHFAALIGN: define{{.*}} void @arg_overaligned_int(i128 %{{.*}})
+
+typedef struct {
+  void *p;
+} OnePtr;
+void arg_one_ptr(OnePtr s) {}
+// GPR64: define{{.*}} void @arg_one_ptr(ptr %{{.*}})
+// ILP32: define{{.*}} void @arg_one_ptr(i32 %{{.*}})
+
+typedef struct {
+  void *p, *q;
+} TwoPtrs;
+void arg_two_ptrs(TwoPtrs s) {}
+// GPR64: define{{.*}} void @arg_two_ptrs([2 x ptr] %{{.*}})
+// ILP32: define{{.*}} void @arg_two_ptrs([2 x i32] %{{.*}})
+
+typedef struct {
+  void *p;
+  int i;
+} PtrAndInt;
+void arg_ptr_and_int(PtrAndInt s) {}
+// GPR64: define{{.*}} void @arg_ptr_and_int([2 x i64] %{{.*}})
+// ILP32: define{{.*}} void @arg_ptr_and_int([2 x i32] %{{.*}})
+
+typedef struct {
+  void *a[2];
+} PtrArrayField;
+void arg_ptr_array_field(PtrArrayField s) {}
+// GPR64: define{{.*}} void @arg_ptr_array_field([2 x ptr] %{{.*}})
+// ILP32: define{{.*}} void @arg_ptr_array_field([2 x i32] %{{.*}})
+
+typedef struct {
+  OnePtr inner;
+} NestedPtr;
+void arg_nested_ptr(NestedPtr s) {}
+// GPR64: define{{.*}} void @arg_nested_ptr(ptr %{{.*}})
+// ILP32: define{{.*}} void @arg_nested_ptr(i32 %{{.*}})
+
+typedef struct {
+  OnePtr a[2];
+} PtrArray;
+void arg_ptr_array(PtrArray s) {}
+// GPR64: define{{.*}} void @arg_ptr_array([2 x ptr] %{{.*}})
+// ILP32: define{{.*}} void @arg_ptr_array([2 x i32] %{{.*}})
+
+typedef union {
+  void *p;
+  void *q;
+} PtrUnion;
+void arg_ptr_union(PtrUnion u) {}
+// GPR64: define{{.*}} void @arg_ptr_union(ptr %{{.*}})
+// ILP32: define{{.*}} void @arg_ptr_union(i32 %{{.*}})
+
+typedef union {
+  void *p;
+  int i;
+} MixedUnion;
+void arg_mixed_union(MixedUnion u) {}
+// GPR64: define{{.*}} void @arg_mixed_union(i64 %{{.*}})
+// ILP32: define{{.*}} void @arg_mixed_union(i32 %{{.*}})
+
+typedef struct __attribute__((aligned(16))) {
+  void *p;
+} OveralignedPtr;
+void arg_overaligned_ptr(OveralignedPtr s) {}
+// AAPCS64: define{{.*}} void @arg_overaligned_ptr([2 x ptr] %{{.*}})
+// NOHFAALIGN: define{{.*}} void @arg_overaligned_ptr(i128 %{{.*}})
+
+// A pointer to an address-space-qualified type is coerced to an integer.
+typedef int __attribute__((address_space(1))) *ASPtr;
+typedef struct {
+  ASPtr p;
+} ASPtrRecord;
+void arg_as_ptr(ASPtrRecord s) {}
+// GPR64: define{{.*}} void @arg_as_ptr(i64 %{{.*}})
+// ILP32: define{{.*}} void @arg_as_ptr(i32 %{{.*}})
+
+typedef struct {
+  long a, b, c;
+} ThreeLongs;
+void arg_three_longs(ThreeLongs s) {}
+// LONG64: define{{.*}} void @arg_three_longs(ptr nofreeobj noundef align 8 dead_on_return dereferenceable(24) %{{.*}})
+// WIN64: define{{.*}} void @arg_three_longs([2 x i64] %{{.*}})
+// ILP32: define{{.*}} void @arg_three_longs([3 x i32] %{{.*}})
+
+typedef struct {
+  int a[5];
+} FiveInts;
+void arg_five_ints(FiveInts s) {}
+// CHECK: define{{.*}} void @arg_five_ints(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(20) %{{.*}})
