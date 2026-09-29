@@ -7335,7 +7335,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned ReturnAddrReg = TII->getRegisterInfo().getReturnAddressReg(*MF);
 
     MachineInstrBuilder MIB;
-    MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg);
+    MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL))
+              .addDef(ReturnAddrReg, RegState::Dead);
 
     for (const MachineOperand &MO : MI.operands())
       MIB.add(MO);
