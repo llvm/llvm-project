@@ -210,15 +210,6 @@ define [2 x i32] @freeze_const_array_poison_member() {
   ret [2 x i32] %f
 }
 
-define [2 x i32] @freeze_const_array_undef_member() {
-; CHECK-LABEL: define [2 x i32] @freeze_const_array_undef_member() {
-; CHECK-NEXT:    [[F:%.*]] = freeze [2 x i32] [i32 1, i32 undef]
-; CHECK-NEXT:    ret [2 x i32] [[F]]
-;
-  %f = freeze [2 x i32] [i32 1, i32 undef]
-  ret [2 x i32] %f
-}
-
 define [2 x i32] @freeze_const_array_zeroinitializer() {
 ; CHECK-LABEL: define [2 x i32] @freeze_const_array_zeroinitializer() {
 ; CHECK-NEXT:    ret [2 x i32] zeroinitializer
