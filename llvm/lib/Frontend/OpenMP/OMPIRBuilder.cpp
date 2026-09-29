@@ -563,6 +563,14 @@ protected:
                                      Type *VarType) override {
     return OMPBuilder.createOMPFreeShared({DeallocIP, DL}, Var, VarType);
   }
+
+  // Allocate the aggregate at the call site rather than the outer alloca block
+  // so the shared-memory alloc/free pair stays balanced when the region is
+  // nested in a loop.
+  virtual IRBuilder<>::InsertPoint
+  getAggregateArgsAllocaIP(BasicBlock *, BasicBlock *CodeReplacer) override {
+    return CodeReplacer->getFirstInsertionPt();
+  }
 };
 
 /// Helper storing information about regions to outline using device shared
