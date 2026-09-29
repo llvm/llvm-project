@@ -1,8 +1,5 @@
 # Clang Compiler User's Manual
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -278,7 +275,7 @@ specific parts of the diagnostic, e.g.,
 
 ::::{raw} html
 <pre>
-  <b><span style="color:black">test.c:28:8: <span style="color:magenta">warning</span>: extra tokens at end of #endif directive [-Wextra-tokens]</span></b>
+  <b>test.c:28:8: <span style="color:magenta">warning</span>: extra tokens at end of #endif directive [-Wextra-tokens]</b>
   #endif bad
          <span style="color:green">^</span>
          <span style="color:green">//</span>
@@ -2832,6 +2829,37 @@ $ cd $P/foo && clang -c -funique-internal-linkage-names name_conflict.c
 $ cd $P/bar && clang -c -funique-internal-linkage-names name_conflict.c
 $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 ```
+:::
+
+:::{option} -f[no-]keep-inline-functions
+
+Force inline functions to be emitted into the object file, even when they
+have been inlined into all callers or are otherwise unused.
+
+Except as noted below, the option keeps definitions of inline functions that
+are available in the current translation unit. LTO observes the kept
+definitions as being marked as used.
+
+In C, functions declared with inline are kept, except where they are
+C99 inline definitions or GNU C89/C90 extern inline functions. This
+includes __attribute__((gnu_inline)) extern inline functions.
+
+In C++, the option applies to functions declared inline (explicitly
+or implicitly via constexpr or an in-class member-function definition),
+including template specializations whose definitions are generated in this
+translation unit. Inline functions with the gnu_inline attribute and
+specializations subject to C++ explicit instantiation declarations
+(extern template) are not kept. C++20 immediate functions (e.g., consteval)
+are never emitted.
+
+With C++20 named modules, the option applies to inline functions defined
+in the current module unit, including functions that are not exported.
+Imported definitions are affected when their definition is available in the
+current translation unit.
+
+-fno-keep-inline-functions (the default) restores normal inlining
+behaviour.
+
 :::
 
 :::{option} -f[no-]basic-block-address-map:

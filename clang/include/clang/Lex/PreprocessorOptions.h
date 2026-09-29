@@ -176,6 +176,10 @@ public:
   /// be skipped so that the client can get a strict subset of the contents.
   bool SingleModuleParseMode = false;
 
+  /// When enabled, we don't try to load the corresponding module required by
+  /// the module map. This is used generally by the scanner.
+  bool DependencyScanningModuleMapImports = false;
+
   /// When enabled, the preprocessor will construct editor placeholder tokens.
   bool LexEditorPlaceholders = true;
 
@@ -262,6 +266,7 @@ public:
     DumpDeserializedPCHDecls = false;
     ImplicitPCHInclude.clear();
     SingleFileParseMode = false;
+    DependencyScanningModuleMapImports = false;
     LexEditorPlaceholders = true;
     RetainRemappedFileBuffers = true;
     PrecompiledPreambleBytes.first = 0;

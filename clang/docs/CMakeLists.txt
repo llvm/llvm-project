@@ -104,7 +104,7 @@ if (LLVM_ENABLE_SPHINX)
     # directory before we run sphinx.
     set(clang_generated_docs
       AttributeReference.md
-      DiagnosticsReference.rst
+      DiagnosticsReference.md
       AMDGPUBuiltinReference.rst
       ClangCommandLineReference.md
       analyzer/user-docs/Options.rst)
@@ -146,7 +146,7 @@ if (LLVM_ENABLE_SPHINX)
 
     # Generated files
     gen_sphinx_file_from_td(AttributeReference.md -gen-attr-docs ../include/clang/Basic/Attr.td "${docs_targets}")
-    gen_sphinx_file_from_td(DiagnosticsReference.rst -gen-diag-docs ../include/clang/Basic/Diagnostic.td "${docs_targets}")
+    gen_sphinx_file_from_td(DiagnosticsReference.md -gen-diag-docs ../include/clang/Basic/Diagnostic.td "${docs_targets}")
     gen_sphinx_file_from_td(AMDGPUBuiltinReference.rst -gen-builtin-docs ../include/clang/Basic/BuiltinsAMDGPU.td "${docs_targets}")
     gen_sphinx_file_from_td(ClangCommandLineReference.md -gen-opt-docs ../include/clang/Options/ClangOptionDocs.td "${docs_targets}")
 

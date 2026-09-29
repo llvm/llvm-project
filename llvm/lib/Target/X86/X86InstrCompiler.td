@@ -1207,6 +1207,37 @@ def : Pat<(i16 (atomic_load_nonext_16 addr:$src)), (MOV16rm addr:$src)>;
 def : Pat<(i32 (atomic_load_nonext_32 addr:$src)), (MOV32rm addr:$src)>;
 def : Pat<(i64 (atomic_load_nonext_64 addr:$src)), (MOV64rm addr:$src)>;
 
+// Flag-setting compares of an atomic load can fold the load into the
+// compare's memory operand like compares of a regular load: the folded form
+// still performs a single full-width load, which on x86 already provides
+// every ordering up to seq_cst.
+def : Pat<(X86cmp (i8 (atomic_load_nonext_8 addr:$src1)), imm:$src2),
+          (CMP8mi addr:$src1, imm:$src2)>;
+def : Pat<(X86cmp (i16 (atomic_load_nonext_16 addr:$src1)), imm:$src2),
+          (CMP16mi addr:$src1, imm:$src2)>;
+def : Pat<(X86cmp (i32 (atomic_load_nonext_32 addr:$src1)), imm:$src2),
+          (CMP32mi addr:$src1, imm:$src2)>;
+def : Pat<(X86cmp (i64 (atomic_load_nonext_64 addr:$src1)), i64immSExt32:$src2),
+          (CMP64mi32 addr:$src1, i64immSExt32:$src2)>;
+
+def : Pat<(X86cmp (i8 (atomic_load_nonext_8 addr:$src1)), GR8:$src2),
+          (CMP8mr addr:$src1, GR8:$src2)>;
+def : Pat<(X86cmp (i16 (atomic_load_nonext_16 addr:$src1)), GR16:$src2),
+          (CMP16mr addr:$src1, GR16:$src2)>;
+def : Pat<(X86cmp (i32 (atomic_load_nonext_32 addr:$src1)), GR32:$src2),
+          (CMP32mr addr:$src1, GR32:$src2)>;
+def : Pat<(X86cmp (i64 (atomic_load_nonext_64 addr:$src1)), GR64:$src2),
+          (CMP64mr addr:$src1, GR64:$src2)>;
+
+def : Pat<(X86cmp GR8:$src1, (i8 (atomic_load_nonext_8 addr:$src2))),
+          (CMP8rm GR8:$src1, addr:$src2)>;
+def : Pat<(X86cmp GR16:$src1, (i16 (atomic_load_nonext_16 addr:$src2))),
+          (CMP16rm GR16:$src1, addr:$src2)>;
+def : Pat<(X86cmp GR32:$src1, (i32 (atomic_load_nonext_32 addr:$src2))),
+          (CMP32rm GR32:$src1, addr:$src2)>;
+def : Pat<(X86cmp GR64:$src1, (i64 (atomic_load_nonext_64 addr:$src2))),
+          (CMP64rm GR64:$src1, addr:$src2)>;
+
 // load atomic <2 x i16>
 def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
   (MOVDI2PDIrm addr:$src)>, Requires<[UseSSE2]>;

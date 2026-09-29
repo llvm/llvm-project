@@ -102,6 +102,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsSEHFinallyCleanup : 1;
 
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsStackRestore : 1;
+
     /// The amount of extra storage needed by the Cleanup.
     /// Always a multiple of the scope-stack alignment.
     unsigned CleanupSize : 12;
@@ -361,6 +364,7 @@ public:
     CleanupBits.IsLifetimeMarker = false;
     CleanupBits.IsFakeUse = false;
     CleanupBits.IsSEHFinallyCleanup = false;
+    CleanupBits.IsStackRestore = false;
     CleanupBits.TestFlagInNormalCleanup = false;
     CleanupBits.TestFlagInEHCleanup = false;
     CleanupBits.CleanupSize = cleanupSize;
@@ -392,6 +396,13 @@ public:
 
   bool isLifetimeMarker() const { return CleanupBits.IsLifetimeMarker; }
   void setLifetimeMarker() { CleanupBits.IsLifetimeMarker = true; }
+
+  bool isStackRestore() const { return CleanupBits.IsStackRestore; }
+  void setStackRestore() { CleanupBits.IsStackRestore = true; }
+
+  bool isRedundantBeforeReturn() const {
+    return isLifetimeMarker() || isStackRestore();
+  }
 
   bool isFakeUse() const { return CleanupBits.IsFakeUse; }
   void setFakeUse() { CleanupBits.IsFakeUse = true; }

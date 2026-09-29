@@ -2573,18 +2573,18 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    andl $127, %r15d
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; AVX512-NEXT:    andl $127, %ebx
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm1
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rcx
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rdx
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rsi
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rdi
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r8
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; AVX512-NEXT:    cmpq %r8, %r11
@@ -2593,7 +2593,7 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    setb %r9b
 ; AVX512-NEXT:    cmpq %r11, %r8
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %r8
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; AVX512-NEXT:    sbbq %rdi, %rsi
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
@@ -2603,11 +2603,11 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    movq %r8, %rdi
 ; AVX512-NEXT:    sbbq %rdx, %rdi
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rdi
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    setb %r9b
 ; AVX512-NEXT:    cmpq %rsi, %r11
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rsi
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r14
 ; AVX512-NEXT:    sbbq %r8, %rdx
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
@@ -2619,7 +2619,7 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    setb %r9b
 ; AVX512-NEXT:    cmpq %rdx, %r14
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rdx
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r8
 ; AVX512-NEXT:    sbbq %rsi, %rdi
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
@@ -2629,11 +2629,11 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    movq %rdx, %rdi
 ; AVX512-NEXT:    sbbq %rcx, %rdi
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rdi
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    setb %r9b
 ; AVX512-NEXT:    cmpq %rsi, %r8
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rsi
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r8
 ; AVX512-NEXT:    sbbq %rdx, %rcx
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
@@ -2645,7 +2645,7 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    setb %r9b
 ; AVX512-NEXT:    cmpq %rcx, %r8
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rcx
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-NEXT:    sbbq %rsi, %rdi
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
@@ -2655,7 +2655,7 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    movq %rcx, %rdi
 ; AVX512-NEXT:    sbbq %rax, %rdi
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rdi
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    setb %r8b
 ; AVX512-NEXT:    cmpq %rsi, %rdx
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rdx
@@ -2670,7 +2670,7 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    setb %r14b
 ; AVX512-NEXT:    cmpq %rax, %rsi
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rcx
 ; AVX512-NEXT:    sbbq %rdx, %rdi
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
@@ -2679,11 +2679,11 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    cmpq %rdx, %rsi
 ; AVX512-NEXT:    movq %rcx, %rdi
 ; AVX512-NEXT:    sbbq %rax, %rdi
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX512-NEXT:    setb %r13b
 ; AVX512-NEXT:    cmpq %rsi, %rdx
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rdx
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rsi
 ; AVX512-NEXT:    sbbq %rcx, %rax
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
@@ -2696,7 +2696,7 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    cmpq %rcx, %rax
 ; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX512-NEXT:    sbbq %rsi, %rdx
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rcx
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
@@ -2709,7 +2709,7 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    cmpq %rsi, %rdx
 ; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rdx
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX512-NEXT:    sbbq %rcx, %rax
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
@@ -2723,7 +2723,7 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rcx
 ; AVX512-NEXT:    sbbq %rax, %rdx
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-NEXT:    sbbb $0, %r10b
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
@@ -2734,7 +2734,7 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    setb %r9b
 ; AVX512-NEXT:    cmpq %rsi, %rdx
 ; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm2
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm2
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rdx
 ; AVX512-NEXT:    sbbq %rax, %rcx
 ; AVX512-NEXT:    vpextrq $1, %xmm2, %rax
@@ -2746,7 +2746,7 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    sbbq %rdx, %rdi
 ; AVX512-NEXT:    setb %r8b
 ; AVX512-NEXT:    cmpq %rcx, %rsi
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX512-NEXT:    sbbq %rax, %rdx
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; AVX512-NEXT:    sbbb $0, %r8b
@@ -2755,7 +2755,7 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rdx
 ; AVX512-NEXT:    movq %rdx, %rax
 ; AVX512-NEXT:    sbbq %rbx, %rax
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX512-NEXT:    setb %al
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rsi
 ; AVX512-NEXT:    cmpq %rcx, %rdi
@@ -2768,9 +2768,9 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    sbbq %r15, %rdx
 ; AVX512-NEXT:    setb %bl
 ; AVX512-NEXT:    cmpq %rcx, %rdi
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rcx
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm1
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm1
 ; AVX512-NEXT:    sbbq %rsi, %r15
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-NEXT:    sbbb $0, %bl
@@ -2779,7 +2779,7 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    movq %rcx, %rsi
 ; AVX512-NEXT:    sbbq %r12, %rsi
 ; AVX512-NEXT:    vpextrq $1, %xmm1, %rsi
-; AVX512-NEXT:    vpand {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX512-NEXT:    vpandq {{[0-9]+}}(%rsp), %xmm0, %xmm0
 ; AVX512-NEXT:    setb %r15b
 ; AVX512-NEXT:    cmpq %rdx, %rdi
 ; AVX512-NEXT:    vpextrq $1, %xmm0, %rdx
