@@ -17501,10 +17501,10 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   bool Frozen = N0.getOpcode() == ISD::FREEZE;
 
   // fold (sext_inreg (extload x)) -> (sextload x)
-  // fold (sext_inreg (freeze (extload x))) -> (assertsext (freeze (sextload x)))
-  // If sextload is not supported by target, we can only do the combine when
-  // load has one use. Doing otherwise can block folding the extload with other
-  // extends that the target does support.
+  // fold (sext_inreg (freeze (extload x))) -> (assertsext (freeze (sextload
+  // x))) If sextload is not supported by target, we can only do the combine
+  // when load has one use. Doing otherwise can block folding the extload with
+  // other extends that the target does support.
   SDValue LoadOp = Frozen ? N0.getOperand(0) : N0;
   if (ISD::isEXTLoad(LoadOp.getNode()) &&
       ISD::isUNINDEXEDLoad(LoadOp.getNode())) {
