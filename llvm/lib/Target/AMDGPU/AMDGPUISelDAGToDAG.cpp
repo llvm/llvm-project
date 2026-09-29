@@ -15,8 +15,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUSubtarget.h"
-#include "AMDGPUTargetMachine.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600RegisterInfo.h"
 #include "SIISelLowering.h"
@@ -2017,8 +2015,8 @@ static SDValue matchExtFromI32orI32(SDValue Op, bool IsSigned,
 
   if (Op.getOpcode() != (IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND) &&
       Op.getOpcode() != ISD::ANY_EXTEND &&
-      !(DAG->SignBitIsZero(Op) &&
-        Op.getOpcode() == (IsSigned ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND)))
+      !(Op.getOpcode() == (IsSigned ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND) &&
+        DAG->SignBitIsZero(Op.getOperand(0))))
     return SDValue();
 
   SDValue ExtSrc = Op.getOperand(0);
@@ -4289,7 +4287,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
   SelectVOP3ModsImpl(In, Src, Mods);
 
   bool IsExtractHigh = false;
-  if (Src.getOpcode() == ISD::FP_EXTEND) {
+  if (Src.getOpcode() == ISD::FP_EXTEND &&
+      Src.getOperand(0).getValueType() == VT) {
     Src = Src.getOperand(0);
   } else if (VT == MVT::bf16) {
     SDValue B16 = matchBF16FPExtendLike(Src, IsExtractHigh);

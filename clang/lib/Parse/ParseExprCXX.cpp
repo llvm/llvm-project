@@ -153,7 +153,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     }
   }
 
-  if (Tok.is(tok::kw___super)) {
+  if (!HasScopeSpecifier && Tok.is(tok::kw___super)) {
     SourceLocation SuperLoc = ConsumeToken();
     if (!Tok.is(tok::coloncolon)) {
       Diag(Tok.getLocation(), diag::err_expected_coloncolon_after_super);
@@ -1141,9 +1141,7 @@ static void tryConsumeLambdaSpecifierToken(Parser &P,
 static void addStaticToLambdaDeclSpecifier(Parser &P, SourceLocation StaticLoc,
                                            DeclSpec &DS) {
   if (StaticLoc.isValid()) {
-    P.Diag(StaticLoc, !P.getLangOpts().CPlusPlus23
-                          ? diag::err_static_lambda
-                          : diag::warn_cxx20_compat_static_lambda);
+    P.DiagCompat(StaticLoc, diag_compat::static_lambda);
     const char *PrevSpec = nullptr;
     unsigned DiagID = 0;
     DS.SetStorageClassSpec(P.getActions(), DeclSpec::SCS_static, StaticLoc,
@@ -1158,9 +1156,7 @@ static void
 addConstexprToLambdaDeclSpecifier(Parser &P, SourceLocation ConstexprLoc,
                                   DeclSpec &DS) {
   if (ConstexprLoc.isValid()) {
-    P.Diag(ConstexprLoc, !P.getLangOpts().CPlusPlus17
-                             ? diag::ext_constexpr_on_lambda_cxx17
-                             : diag::warn_cxx14_compat_constexpr_on_lambda);
+    P.DiagCompat(ConstexprLoc, diag_compat::constexpr_on_lambda);
     const char *PrevSpec = nullptr;
     unsigned DiagID = 0;
     DS.SetConstexprSpec(ConstexprSpecKind::Constexpr, ConstexprLoc, PrevSpec,
@@ -1200,6 +1196,16 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
   if (Intro.hasLambdaCapture()) {
     P.Diag(StaticLoc, diag::err_static_lambda_captures);
   }
+}
+
+bool Parser::isLambdaSpecifier() {
+  return Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
+                     tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
+                     tok::kw___private, tok::kw___global, tok::kw___local,
+                     tok::kw___constant, tok::kw___generic, tok::kw_groupshared,
+                     tok::kw_requires, tok::kw_noexcept) ||
+         Tok.isRegularKeywordAttribute() ||
+         (Tok.is(tok::l_square) && NextToken().is(tok::l_square));
 }
 
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
@@ -1255,9 +1261,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
   MultiParseScope TemplateParamScope(*this);
   if (Tok.is(tok::less)) {
-    Diag(Tok, getLangOpts().CPlusPlus20
-                  ? diag::warn_cxx17_compat_lambda_template_parameter_list
-                  : diag::ext_lambda_template_parameter_list);
+    DiagCompat(Tok, diag_compat::lambda_template_parameter_list);
 
     SmallVector<NamedDecl*, 4> TemplateParams;
     SourceLocation LAngleLoc, RAngleLoc;
@@ -1349,14 +1353,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     HasParentheses = true;
   }
 
-  HasSpecifiers =
-      Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
-                  tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
-                  tok::kw___private, tok::kw___global, tok::kw___local,
-                  tok::kw___constant, tok::kw___generic, tok::kw_groupshared,
-                  tok::kw_requires, tok::kw_noexcept) ||
-      Tok.isRegularKeywordAttribute() ||
-      (Tok.is(tok::l_square) && NextToken().is(tok::l_square));
+  HasSpecifiers = isLambdaSpecifier();
 
   if (HasSpecifiers && !HasParentheses && !getLangOpts().CPlusPlus23) {
     // It's common to forget that one needs '()' before 'mutable', an
@@ -1868,10 +1865,7 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
   if (!DG)
     return DG;
 
-  Diag(DeclStart, !getLangOpts().CPlusPlus23
-                      ? diag::ext_alias_in_init_statement
-                      : diag::warn_cxx20_alias_in_init_statement)
-      << SourceRange(DeclStart, DeclEnd);
+  DiagCompat(DeclStart, diag_compat::alias_in_init_statement);
 
   return DG;
 }
@@ -1914,9 +1908,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
 
   const auto WarnOnInit = [this, &CK] {
     if (getLangOpts().CPlusPlus)
-      Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
-                                  ? diag::warn_cxx14_compat_init_statement
-                                  : diag::ext_init_statement)
+      DiagCompat(Tok.getLocation(), diag_compat::init_statement)
           << (CK == Sema::ConditionKind::Switch);
     else
       DiagCompat(Tok.getLocation(), diag_compat::decl_statement)
@@ -2073,8 +2065,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
 
   ExprResult InitExpr = ExprError();
   if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-    Diag(Tok.getLocation(),
-         diag::warn_cxx98_compat_generalized_initializer_lists);
+    Diag(Tok.getLocation(), diag::compat_cxx11_generalized_initializer_lists);
     InitExpr = ParseBraceInitializer();
   } else if (CopyInitialization) {
     PreferredType.enterVariableInit(Tok.getLocation(), DeclOut);
@@ -2495,6 +2486,36 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
       // Code completion for the operator name.
       Actions.CodeCompletion().CodeCompleteOperatorName(getCurScope());
       return true;
+    }
+    case tok::lesslessless: {
+      // For CUDA, the Lexer will greedily merge all three <<< in operator<<<
+      // which, in fact, can be a valid template specialization of operator<<,
+      // and will never be a valid kernel launch expression, so split.
+
+      SourceLocation TokLoc = Tok.getLocation();
+      unsigned LessLessLength = Lexer::getTokenPrefixLength(
+          TokLoc, /*CharNo=*/2, PP.getSourceManager(), getLangOpts());
+
+      SourceLocation LessLessLoc = PP.SplitToken(TokLoc, LessLessLength);
+      Token LessLess = Tok;
+      LessLess.setLocation(LessLessLoc);
+      LessLess.setKind(tok::lessless);
+      LessLess.setLength(LessLessLength);
+
+      unsigned OldLength = Tok.getLength();
+
+      bool CachingTokens = PP.IsPreviousCachedToken(Tok);
+      Tok.setKind(tok::less);
+      Tok.setLength(OldLength - LessLessLength);
+      Tok.setLocation(TokLoc.getLocWithOffset(LessLessLength));
+
+      // Update the cache if there is any.
+      if (CachingTokens)
+        PP.ReplacePreviousCachedToken({LessLess, Tok});
+
+      SymbolLocations[SymbolIdx++] = LessLessLoc;
+      Op = OO_LessLess;
+      break;
     }
 
     default:
@@ -3026,8 +3047,7 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
                                              ConstructorRParen,
                                              ConstructorArgs);
   } else if (Tok.is(tok::l_brace) && getLangOpts().CPlusPlus11) {
-    Diag(Tok.getLocation(),
-         diag::warn_cxx98_compat_generalized_initializer_lists);
+    Diag(Tok.getLocation(), diag::compat_cxx11_generalized_initializer_lists);
     Initializer = ParseBraceInitializer();
   }
   if (Initializer.isInvalid())

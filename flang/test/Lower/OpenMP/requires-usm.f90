@@ -17,7 +17,7 @@
 ! RUN: bbc -fopenmp -fopenmp-is-target-device -emit-hlfir %t/requires-usm-program-after.f90 -o - | FileCheck %s
 
 ! CHECK:      module attributes {
-! CHECK-SAME: omp.requires = #omp<clause_requires unified_shared_memory>
+! CHECK-SAME: omp.requires = #omp.clause_requires<unified_shared_memory>
 
 !--- requires-usm.f90
 module declare_mod

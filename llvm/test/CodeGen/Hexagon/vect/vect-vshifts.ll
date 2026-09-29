@@ -465,6 +465,7 @@ declare i64 @llvm.hexagon.S2.asl.r.vw(i64, i32) #1
 attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
-!0 = !{!"int", !1}
+!0 = !{!3, !3, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
+!3 = !{!"int", !1}

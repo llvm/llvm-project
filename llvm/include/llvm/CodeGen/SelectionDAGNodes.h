@@ -424,13 +424,17 @@ public:
     // Call does not require convergence guarantees.
     NoConvergent = 1 << 16,
 
+    // ISD::ADDRSPACECAST where the source is known not to be the null value of
+    // the source address space, so the result is poison if the source is null.
+    NonNull = 1 << 17,
+
     // NOTE: Please update LargestValue in LLVM_DECLARE_ENUM_AS_BITMASK below
     // the class definition when adding new flags.
 
     PoisonGeneratingFlags = NoUnsignedWrap | NoSignedWrap | Exact | Disjoint |
-                            NonNeg | NoNaNs | NoInfs | SameSign | InBounds,
+        NonNeg | NoNaNs | NoInfs | SameSign | InBounds | NonNull,
     FastMathFlags = NoNaNs | NoInfs | NoSignedZeros | AllowReciprocal |
-                    AllowContract | ApproximateFuncs | AllowReassociation,
+        AllowContract | ApproximateFuncs | AllowReassociation,
   };
 
   /// Default constructor turns off all optimization flags.
@@ -465,6 +469,7 @@ public:
   void setUnpredictable(bool b) { setFlag<Unpredictable>(b); }
   void setInBounds(bool b) { setFlag<InBounds>(b); }
   void setNoConvergent(bool b) { setFlag<NoConvergent>(b); }
+  void setNonNull(bool b) { setFlag<NonNull>(b); }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return Flags & NoUnsignedWrap; }
@@ -484,6 +489,7 @@ public:
   bool hasUnpredictable() const { return Flags & Unpredictable; }
   bool hasInBounds() const { return Flags & InBounds; }
   bool hasNoConvergent() const { return Flags & NoConvergent; }
+  bool hasNonNull() const { return Flags & NonNull; }
 
   bool operator==(const SDNodeFlags &Other) const {
     return Flags == Other.Flags;
@@ -492,8 +498,7 @@ public:
   void operator|=(const SDNodeFlags &OtherFlags) { Flags |= OtherFlags.Flags; }
 };
 
-LLVM_DECLARE_ENUM_AS_BITMASK(decltype(SDNodeFlags::None),
-                             SDNodeFlags::NoConvergent);
+LLVM_DECLARE_ENUM_AS_BITMASK(decltype(SDNodeFlags::None), SDNodeFlags::NonNull);
 
 inline SDNodeFlags operator|(SDNodeFlags LHS, SDNodeFlags RHS) {
   LHS |= RHS;
@@ -756,6 +761,11 @@ public:
   /// Test if this node has a post-isel opcode, directly
   /// corresponding to a MachineInstr opcode.
   bool isMachineOpcode() const { return NodeType < 0; }
+
+  /// As above, for an opcode not held by a node.
+  static bool isMachineOpcode(unsigned Opc) {
+    return static_cast<int32_t>(Opc) < 0;
+  }
 
   /// This may only be called if isMachineOpcode returns
   /// true. It returns the MachineInstr opcode value that the node's opcode
@@ -1205,9 +1215,6 @@ public:
   LLVM_ABI void dumprWithDepth(const SelectionDAG *G = nullptr,
                                unsigned depth = 100) const;
 
-  /// Gather unique data for the node.
-  LLVM_ABI void Profile(FoldingSetNodeID &ID) const;
-
   /// This method should only be used by the SDUse class.
   void addUse(SDUse &U) { U.addToList(&UseList); }
 
@@ -1639,6 +1646,8 @@ public:
     case ISD::ATOMIC_LOAD_FMIN:
     case ISD::ATOMIC_LOAD_FMAXIMUM:
     case ISD::ATOMIC_LOAD_FMINIMUM:
+    case ISD::ATOMIC_LOAD_FMAXIMUMNUM:
+    case ISD::ATOMIC_LOAD_FMINIMUMNUM:
     case ISD::ATOMIC_LOAD_UINC_WRAP:
     case ISD::ATOMIC_LOAD_UDEC_WRAP:
     case ISD::ATOMIC_LOAD_USUB_COND:
@@ -1727,6 +1736,8 @@ public:
            N->getOpcode() == ISD::ATOMIC_LOAD_FMIN ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMAXIMUM ||
            N->getOpcode() == ISD::ATOMIC_LOAD_FMINIMUM ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMAXIMUMNUM ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMINIMUMNUM ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UINC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UDEC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_USUB_COND ||

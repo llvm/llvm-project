@@ -1121,7 +1121,7 @@ void CompilerInstance::LoadRequestedPlugins() {
 
   // Load and store pass plugins for the back-end.
   for (const std::string &Path : getCodeGenOpts().PassPlugins) {
-    if (auto PassPlugin = llvm::PassPlugin::Load(Path)) {
+    if (auto PassPlugin = llvm::PassPlugin::load(Path)) {
       PassPlugins.emplace_back(std::make_unique<llvm::PassPlugin>(*PassPlugin));
     } else {
       getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)

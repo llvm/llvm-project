@@ -222,8 +222,8 @@ public:
     // Points to (Y - X) that will be used to rewrite this candidate.
     Value *Delta = nullptr;
 
-    // List of instructions we need to drop poison generating annotations from.
-    // This is used so we can defer dropping until the candidate is evaluated.
+    // List of instructions whose poison-generating annotations must be dropped
+    // if this candidate is used as the basis of an executed rewrite.
     SmallVector<Instruction *> DropList;
 
     /// Cost model: Evaluate the computational efficiency of the candidate.
@@ -808,11 +808,6 @@ bool StraightLineStrengthReduce::candidatePredicate(Candidate *Basis,
       !C.isProfitableRewrite(*Delta, Candidate::IndexDelta))
     return false;
 
-  // If there is a Delta that we can reuse Basis to rewrite C, clean up
-  // previously collected poison generating instructions.
-  for (Instruction *I : Basis->DropList)
-    I->dropPoisonGeneratingAnnotations();
-
   // Record delta if none has been found yet, or the new delta is
   // a constant that is better than the existing delta.
   if (!C.Delta || isa<ConstantInt>(Delta)) {
@@ -1101,8 +1096,8 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasis(
   RewriteCandidates[C.Ins].push_back(&Candidates.back());
   // Only add to the dict if this instruction is safe to reuse as a basis. By
   // doing this early we avoid calling canReuseInstruction repeatedly for the
-  // same instruction. The DropList is stored on the Candidate so
-  // candidatePredicate can drop the flags when a rewrite is being done.
+  // same instruction. The DropList is stored on the Candidate so the flags can
+  // be dropped only if this candidate is used by an executed rewrite.
   if (!EnablePoisonReuseGuard ||
       SE->canReuseInstruction(SE->getSCEV(I), I, Candidates.back().DropList)) {
     CandidateDict.add(Candidates.back());
@@ -1354,6 +1349,9 @@ void StraightLineStrengthReduce::rewriteCandidate(const Candidate &C) {
   const Candidate &Basis = *C.Basis;
   assert(C.Delta && C.CandidateKind == Basis.CandidateKind &&
          C.hasValidDelta(Basis));
+
+  for (Instruction *I : Basis.DropList)
+    I->dropPoisonGeneratingAnnotations();
 
   IRBuilder<> Builder(C.Ins);
   Value *Bump = emitBump(Basis, C, Builder, DL);

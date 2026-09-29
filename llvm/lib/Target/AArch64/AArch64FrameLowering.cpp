@@ -255,7 +255,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -586,7 +585,7 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   }
 
   // Retain behavior of always omitting the FP for leaf functions when possible.
-  if (MF.getTarget().Options.DisableFramePointerElim(MF))
+  if (MF.disableFramePointerElim())
     return true;
   if (MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
       MFI.hasStackMap() || MFI.hasPatchPoint() ||
@@ -645,7 +644,7 @@ bool AArch64FrameLowering::isFPReserved(const MachineFunction &MF) const {
     return true;
 
   // Frontend has requested to preserve the frame pointer.
-  if (TM.Options.FramePointerIsReserved(MF))
+  if (MF.framePointerIsReserved())
     return true;
 
   return false;
@@ -949,7 +948,7 @@ AArch64FrameLowering::findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
     if (LiveRegs.available(MRI, Reg))
       return Reg;
   }
-  return AArch64::NoRegister;
+  return Register();
 }
 
 bool AArch64FrameLowering::canUseAsPrologue(
@@ -980,14 +979,14 @@ bool AArch64FrameLowering::canUseAsPrologue(
     return false;
 
   if (RegInfo->hasStackRealignment(*MF) || TLI->hasInlineStackProbe(*MF))
-    if (findScratchNonCalleeSaveRegister(TmpMBB) == AArch64::NoRegister)
+    if (!findScratchNonCalleeSaveRegister(TmpMBB).isValid())
       return false;
 
   // May need a scratch register (for return value) if require making a special
   // call
   if (requiresSaveVG(*MF) ||
       windowsRequiresStackProbe(*MF, std::numeric_limits<uint64_t>::max()))
-    if (findScratchNonCalleeSaveRegister(TmpMBB, true) == AArch64::NoRegister)
+    if (!findScratchNonCalleeSaveRegister(TmpMBB, true).isValid())
       return false;
 
   return true;
@@ -1828,7 +1827,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
       case RegPairInfo::PPR:
         break;
       case RegPairInfo::ZPR:
-        if (AFI->getPredicateRegForFillSpill() != 0 &&
+        if (!NeedsWinCFI && AFI->getPredicateRegForFillSpill() != 0 &&
             ((RPI.Reg1 - AArch64::Z0) & 1) == 0 && (NextReg == RPI.Reg1 + 1)) {
           // Calculate offset of register pair to see if pair instruction can be
           // used.
@@ -2047,7 +2046,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
 
     Register X0Scratch;
     llvm::scope_exit RestoreX0([&] {
-      if (X0Scratch != AArch64::NoRegister)
+      if (X0Scratch.isValid())
         BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), AArch64::X0)
             .addReg(X0Scratch)
             .setMIFlag(MachineInstr::FrameSetup);
@@ -2056,7 +2055,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     if (Reg1 == AArch64::VG) {
       // Find an available register to store value of VG to.
       Reg1 = findScratchNonCalleeSaveRegister(&MBB, true);
-      assert(Reg1 != AArch64::NoRegister);
+      assert(Reg1.isValid());
       if (MF.getSubtarget<AArch64Subtarget>().hasSVE()) {
         BuildMI(MBB, MI, DL, TII.get(AArch64::CNTD_XPiI), Reg1)
             .addImm(31)
@@ -2531,8 +2530,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  unsigned UnspilledCSGPR = AArch64::NoRegister;
-  unsigned UnspilledCSGPRPaired = AArch64::NoRegister;
+  Register UnspilledCSGPR;
+  Register UnspilledCSGPRPaired;
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
@@ -2540,7 +2539,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   MCRegister BasePointerReg =
       RegInfo->hasBasePointer(MF) ? RegInfo->getBaseRegister() : MCRegister();
 
-  unsigned ExtraCSSpill = 0;
+  Register ExtraCSSpill;
   bool HasUnpairedGPR64 = false;
   bool HasPairZReg = false;
   BitVector UserReservedRegs = RegInfo->getUserReservedRegs(MF);
@@ -2579,10 +2578,10 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     // PairedReg could be in a different register class from Reg, which would
     // lead to a FPR (usually D8) accidentally being marked saved.
     if (RegIsGPR64 && !AArch64::GPR64RegClass.contains(PairedReg)) {
-      PairedReg = AArch64::NoRegister;
+      PairedReg = Register();
       HasUnpairedGPR64 = true;
     }
-    assert(PairedReg == AArch64::NoRegister ||
+    assert(!PairedReg.isValid() ||
            AArch64::GPR64RegClass.contains(Reg, PairedReg) ||
            AArch64::FPR64RegClass.contains(Reg, PairedReg) ||
            AArch64::FPR128RegClass.contains(Reg, PairedReg));
@@ -2598,7 +2597,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     // MachO's compact unwind format relies on all registers being stored in
     // pairs.
     // FIXME: the usual format is actually better if unwinding isn't needed.
-    if (producePairRegisters(MF) && PairedReg != AArch64::NoRegister &&
+    if (producePairRegisters(MF) && PairedReg.isValid() &&
         !SavedRegs.test(PairedReg)) {
       SavedRegs.set(PairedReg);
       if (AArch64::GPR64RegClass.contains(PairedReg) &&
@@ -2739,7 +2738,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // above to keep the number of spills even, we don't need to do anything else
   // here.
   if (BigStack) {
-    if (!ExtraCSSpill && UnspilledCSGPR != AArch64::NoRegister) {
+    if (!ExtraCSSpill.isValid() && UnspilledCSGPR.isValid()) {
       LLVM_DEBUG(dbgs() << "Spilling " << printReg(UnspilledCSGPR, RegInfo)
                         << " to get a scratch register.\n");
       SavedRegs.set(UnspilledCSGPR);
@@ -2749,11 +2748,11 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       // pairs, so if we need to spill one extra for BigStack, then we need to
       // store the pair.
       if (producePairRegisters(MF)) {
-        if (UnspilledCSGPRPaired == AArch64::NoRegister) {
+        if (!UnspilledCSGPRPaired.isValid()) {
           // Failed to make a pair for compact unwind format, revert spilling.
           if (produceCompactUnwindFrame(*this, MF)) {
             SavedRegs.reset(UnspilledCSGPR);
-            ExtraCSSpill = AArch64::NoRegister;
+            ExtraCSSpill = Register();
           }
         } else
           SavedRegs.set(UnspilledCSGPRPaired);
@@ -2762,7 +2761,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
     // If we didn't find an extra callee-saved register to spill, create
     // an emergency spill slot.
-    if (!ExtraCSSpill || MF.getRegInfo().isPhysRegUsed(ExtraCSSpill)) {
+    if (!ExtraCSSpill.isValid() ||
+        MF.getRegInfo().isPhysRegUsed(ExtraCSSpill)) {
       const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
       const TargetRegisterClass &RC = AArch64::GPR64RegClass;
       unsigned Size = TRI->getSpillSize(RC);
@@ -2797,6 +2797,94 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   AFI->setSVECalleeSavedStackSize(ZPRCSStackSize, alignTo(PPRCSStackSize, 16));
 }
 
+static void orderZPRCalleeSavesForPairs(MachineFunction &MF,
+                                        const TargetRegisterInfo *RegInfo,
+                                        std::vector<CalleeSavedInfo> &CSI) {
+  // Reorder callee-saved ZPRs to maximize pairing which requires
+  // consecutive even/odd registers at even scaled stack offsets.
+  // Additional requirements are checked when the register pairs are formed.
+  assert(!isTargetWindows(MF) &&
+         "ZPR callee-save reordering not supported on Windows");
+
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (!AFI->getPredicateRegForFillSpill())
+    return;
+
+  SmallVector<CalleeSavedInfo> ZPRSaves;
+  SmallVector<size_t> ZPRPositions;
+
+  for (auto [Index, CS] : llvm::enumerate(CSI)) {
+    if (AArch64::ZPRRegClass.contains(CS.getReg())) {
+      ZPRSaves.push_back(CS);
+      ZPRPositions.push_back(Index);
+    }
+  }
+
+  if (ZPRSaves.size() < 2)
+    return;
+
+  llvm::sort(ZPRSaves, [](const auto &A, const auto &B) {
+    return A.getReg() < B.getReg();
+  });
+
+  SmallVector<std::pair<CalleeSavedInfo, CalleeSavedInfo>> Pairs;
+  SmallVector<CalleeSavedInfo> Singles;
+  for (size_t i = 0; i < ZPRSaves.size();) {
+    if (i + 1 < ZPRSaves.size() &&
+        (ZPRSaves[i].getReg() + 1 == ZPRSaves[i + 1].getReg()) &&
+        (ZPRSaves[i].getReg() - AArch64::Z0) % 2 == 0) {
+      Pairs.emplace_back(ZPRSaves[i], ZPRSaves[i + 1]);
+      i += 2;
+    } else {
+      Singles.push_back(ZPRSaves[i++]);
+    }
+  }
+
+  // If the lowest offset is odd, select one register to spill here
+  // so subsequent pairs begin at an even offset.
+  int ZPRByteOffset = AFI->getZPRCalleeSavedStackSize();
+  if (!AFI->hasSplitSVEObjects())
+    ZPRByteOffset += AFI->getPPRCalleeSavedStackSize();
+
+  const int Scale = RegInfo->getSpillSize(AArch64::ZPRRegClass);
+  const int LowestOffset =
+      (ZPRByteOffset / Scale) - static_cast<int>(ZPRSaves.size());
+
+  // Prefer the highest single otherwise split the highest pair.
+  std::optional<CalleeSavedInfo> AlignmentSingle;
+  if (LowestOffset % 2 != 0) {
+    if (!Singles.empty()) {
+      AlignmentSingle = Singles.pop_back_val();
+    } else {
+      assert(!Pairs.empty() && "Expected a ZPR pair to split");
+      auto [Even, Odd] = Pairs.pop_back_val();
+      AlignmentSingle = Odd;
+      Singles.push_back(Even);
+    }
+  }
+
+  if (Pairs.empty())
+    return;
+
+  // Build ZPRs so reverse spill emission processes the leading single first,
+  // followed by the candidate even/odd pairs and remaining singles.
+  SmallVector<CalleeSavedInfo> ZPRSavesInCSIOrder;
+  llvm::append_range(ZPRSavesInCSIOrder, Singles);
+
+  for (const auto &[Even, Odd] : Pairs) {
+    ZPRSavesInCSIOrder.push_back(Even);
+    ZPRSavesInCSIOrder.push_back(Odd);
+  }
+
+  if (AlignmentSingle)
+    ZPRSavesInCSIOrder.push_back(*AlignmentSingle);
+
+  assert(ZPRSavesInCSIOrder.size() == ZPRPositions.size() &&
+         "Reordering should not change the number of ZPR spills");
+  for (auto [Position, CS] : llvm::zip(ZPRPositions, ZPRSavesInCSIOrder))
+    CSI[Position] = CS;
+}
+
 bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *RegInfo,
     std::vector<CalleeSavedInfo> &CSI) const {
@@ -2828,6 +2916,12 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     else
       CSI.push_back(VGInfo);
   }
+
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  if (!IsWindows && enableMultiVectorSpillFill(Subtarget, MF))
+    // The Windows stack layout is not supported by this reordering function
+    // yet.
+    orderZPRCalleeSavesForPairs(MF, RegInfo, CSI);
 
   Register LastReg = 0;
   int HazardSlotIndex = std::numeric_limits<int>::max();
