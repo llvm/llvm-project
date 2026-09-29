@@ -15,6 +15,7 @@
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
@@ -40,7 +41,7 @@ enum class AntiHintRule {
   All,
 };
 
-static cl::bits<AntiHintRule> AntiHintRuleSelection(
+static cl::list<AntiHintRule> AntiHintRuleSelection(
     "amdgpu-anti-hints-rules", cl::Hidden, cl::CommaSeparated,
     cl::desc("Anti-hints rules to select."),
     cl::values(clEnumValN(AntiHintRule::None, "none", "Select no rules"),
@@ -356,10 +357,10 @@ bool hasGFX1250Insts(const HazardContext &Ctx) {
 
 bool ruleSelected(AntiHintRule Rule) {
   // No -amdgpu-anti-hints-rules on the command line selects every rule.
-  if (!AntiHintRuleSelection.getNumOccurrences() ||
-      AntiHintRuleSelection.isSet(AntiHintRule::All))
+  if (AntiHintRuleSelection.empty() ||
+      is_contained(AntiHintRuleSelection, AntiHintRule::All))
     return true;
-  return AntiHintRuleSelection.isSet(Rule);
+  return is_contained(AntiHintRuleSelection, Rule);
 }
 
 bool isMFMAWAWRuleEnabled(const HazardContext &Ctx) {
