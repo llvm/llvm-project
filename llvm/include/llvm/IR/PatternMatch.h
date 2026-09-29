@@ -234,7 +234,6 @@ template <typename SubPattern_t> struct Splat_match {
       return false;
 
     return SubPattern.match(SplatElt);
-    // TODO: Handle other splat patterns.
   }
 };
 
