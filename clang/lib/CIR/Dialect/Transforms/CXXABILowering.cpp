@@ -647,7 +647,10 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   mlir::Location loc = op->getLoc();
   mlir::Value loweredAddress = adaptor.getAddress();
 
-  cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParams();
+  cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParamsAttr();
+  if (!deleteParams)
+    deleteParams = cir::UsualDeleteParamsAttr::get(op.getContext(), false,
+                                                   std::nullopt, false, false);
   bool cookieRequired = deleteParams.getSize() || op.getElementDtorAttr();
 
   assert(!deleteParams.getDestroyingDelete() &&
@@ -675,8 +678,10 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
 
   if (cookieRequired) {
     ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
-    cxxABI.readArrayCookie(loc, loweredAddress, dl, cirBuilder, numElements,
-                           deletePtr, cookieSize);
+    clang::CharUnits elementAlign =
+        clang::CharUnits::fromQuantity(op.getElementAlign());
+    cxxABI.readArrayCookie(loc, loweredAddress, elementAlign, dl, cirBuilder,
+                           numElements, deletePtr, cookieSize);
   } else {
     deletePtr = cir::CastOp::create(rewriter, loc, cirBuilder.getVoidPtrTy(),
                                     cir::CastKind::bitcast, loweredAddress);
