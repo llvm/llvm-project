@@ -35,6 +35,14 @@ enum class AllocTokenMode {
   /// reserved for types that contain pointers and the bottom half for types
   /// that do not contain pointers.
   TypeHashPointerSplit,
+
+  /// Token ID based on allocated type hash (upper bits) and the hash of the
+  /// name of the function containing the allocation (lower bits).
+  TypeFuncHash,
+
+  /// Like TypeFuncHash, but the most significant bit of the token ID is set for
+  /// types that contain pointers.
+  TypeFuncHashPointerSplit,
 };
 
 /// The default allocation token mode.
@@ -53,10 +61,14 @@ LLVM_ABI StringRef getAllocTokenModeAsString(AllocTokenMode Mode);
 struct AllocTokenMetadata {
   SmallString<64> TypeName;
   bool ContainsPointer;
+  /// Name of the function containing the allocation. Only provided for modes
+  /// that use it (TypeFuncHash and TypeFuncHashPointerSplit).
+  std::optional<SmallString<64>> FunctionName = std::nullopt;
 };
 
-/// Calculates stable allocation token ID. Returns std::nullopt for stateful
-/// modes that are only available in the AllocToken pass.
+/// Calculates stable allocation token ID. Returns std::nullopt for modes that
+/// are only available in the AllocToken pass: stateful modes, and modes that
+/// depend on the function containing the allocation.
 ///
 /// \param Mode The token generation mode.
 /// \param Metadata The metadata about the allocation.
