@@ -416,7 +416,7 @@ def note_constexpr_infer_alloc_token_type_inference_failed : Note<
 def note_constexpr_infer_alloc_token_no_metadata : Note<
   "could not get token metadata for inferred type">;
 def note_constexpr_infer_alloc_token_stateful_mode
-    : Note<"stateful alloc token mode not supported in constexpr">;
+    : Note<"alloc token mode not supported in constexpr">;
 
 def warn_attribute_needs_aggregate : Warning<
   "%0 attribute is ignored in non-aggregate type %1">,

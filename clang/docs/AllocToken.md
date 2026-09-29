@@ -34,6 +34,11 @@ change or removal. These may (experimentally) be selected with `-Xclang
 
 - `typehash`: This mode assigns a token ID based on the hash of the allocated
   type's name.
+- `typefunchash`: This mode assigns a token ID based on the hash of the
+  allocated type's name (upper half of the token ID bits) and the hash of the
+  name of the function containing the allocation (lower half).
+- `typefunchashpointersplit`: Like `typefunchash`, but the most significant bit
+  of the token ID is set for types that contain pointers.
 - `random`: This mode assigns a statically-determined random token ID to each
   allocation site.
 - `increment`: This mode assigns a simple, incrementally increasing token ID
@@ -43,7 +48,9 @@ The following command-line options affect generated token IDs:
 
 - `-falloc-token-max=<N>`
   : Configures the maximum number of token IDs. By default the number of tokens
-    is bounded by `SIZE_MAX`.
+    is bounded by `SIZE_MAX`. In the `typefunchash` and
+    `typefunchashpointersplit` modes, `N` must be at least 8, and is rounded
+    down to a power of two.
 
 ## Querying Token IDs with `__builtin_infer_alloc_token`
 
@@ -57,7 +64,9 @@ size_t __builtin_infer_alloc_token(<args>, ...);
 This builtin returns the token ID inferred from its argument expressions, which
 mirror arguments normally passed to any allocation function. The argument
 expressions are **unevaluated**, so it can be used with expressions that would
-have side effects without any runtime impact.
+have side effects without any runtime impact. The builtin cannot be used in
+constant expressions in the `increment`, `random`, `typefunchash`, and
+`typefunchashpointersplit` modes.
 
 For example, it can be used as follows:
 
