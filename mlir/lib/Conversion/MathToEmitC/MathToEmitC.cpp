@@ -79,7 +79,7 @@ void mlir::registerConvertMathToEmitCInterface(DialectRegistry &registry) {
 }
 
 // Populates patterns to replace `math` operations with `emitc.call_opaque`,
-// using function names consistent with those in <math.h>.
+// using function names consistent with those in <math.h> or a builtin.
 void mlir::populateConvertMathToEmitCPatterns(
     RewritePatternSet &patterns, emitc::LanguageTarget languageTarget) {
   auto *context = patterns.getContext();
@@ -88,7 +88,7 @@ void mlir::populateConvertMathToEmitCPatterns(
   patterns.insert<LowerToEmitCCallOpaque<math::RoundOp>>(context, "round",
                                                          languageTarget);
   patterns.insert<LowerToEmitCCallOpaque<math::RoundEvenOp>>(
-      context, "roundeven", languageTarget);
+      context, "__builtin_roundeven", emitc::LanguageTarget::c99);
   patterns.insert<LowerToEmitCCallOpaque<math::ExpOp>>(context, "exp",
                                                        languageTarget);
   patterns.insert<LowerToEmitCCallOpaque<math::CosOp>>(context, "cos",
