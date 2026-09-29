@@ -642,16 +642,41 @@ static constexpr IntrinsicHandler cudaHandlers[]{
 };
 static_assert(fir::isSorted(cudaHandlers) && "map must be sorted");
 
-const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
-                                                 bool isBindcCall) {
-  if (isBindcCall)
-    return nullptr;
+// BIND(C) CUDA Fortran procedures. Kept separate because the other handlers
+// are not BIND(C) and must not match a user procedure with the same name.
+static constexpr IntrinsicHandler cudaBindcHandlers[]{
+    {"on_device",
+     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(&CI::genOnDevice),
+     {},
+     /*isElemental=*/false},
+};
+static_assert(fir::isSorted(cudaBindcHandlers) && "map must be sorted");
+
+static const IntrinsicHandler *
+lookupCUDAHandler(llvm::ArrayRef<IntrinsicHandler> handlers,
+                  llvm::StringRef name) {
   auto compare = [](const IntrinsicHandler &cudaHandler, llvm::StringRef name) {
     return name.compare(cudaHandler.name) > 0;
   };
-  auto result = llvm::lower_bound(cudaHandlers, name, compare);
-  return result != std::end(cudaHandlers) && result->name == name ? result
-                                                                  : nullptr;
+  auto result = llvm::lower_bound(handlers, name, compare);
+  return result != handlers.end() && result->name == name ? &*result : nullptr;
+}
+
+const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
+                                                 bool isBindcCall) {
+  // The tables have different lengths, so they cannot share a ternary: that
+  // would decay both arrays to a pointer.
+  if (isBindcCall)
+    return lookupCUDAHandler(cudaBindcHandlers, name);
+  return lookupCUDAHandler(cudaHandlers, name);
+}
+
+mlir::Value
+CUDAIntrinsicLibrary::genOnDevice(mlir::Type resultType,
+                                  llvm::ArrayRef<mlir::Value> args) {
+  assert(args.empty() && "on_device takes no arguments");
+  mlir::Value onDevice = cuf::OnDeviceOp::create(builder, loc);
+  return builder.createConvert(loc, resultType, onDevice);
 }
 
 static mlir::Value convertPtrToNVVMSpace(fir::FirOpBuilder &builder,

@@ -59,6 +59,36 @@ static bool inDeviceContext(mlir::Operation *op) {
   return false;
 }
 
+static bool keepOnDeviceOp(cuf::OnDeviceOp op, bool deferAccRoutines) {
+  // Leave the host copy of an OpenACC routine alone until it has been cloned
+  // for the device. Folding it to false here would bake the host value into
+  // that clone.
+  if (!deferAccRoutines || cuf::isExecutingOnDevice(op))
+    return false;
+  if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>())
+    return mlir::acc::isAccRoutine(funcOp);
+  return false;
+}
+
+struct CUFOnDeviceOpConversion
+    : public mlir::OpRewritePattern<cuf::OnDeviceOp> {
+  CUFOnDeviceOpConversion(mlir::MLIRContext *context, bool deferAccRoutines)
+      : OpRewritePattern(context), deferAccRoutines(deferAccRoutines) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cuf::OnDeviceOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (keepOnDeviceOp(op, deferAccRoutines))
+      return mlir::failure();
+    rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+        op, rewriter.getBoolAttr(cuf::isExecutingOnDevice(op)));
+    return mlir::success();
+  }
+
+private:
+  bool deferAccRoutines;
+};
+
 static mlir::Value createConvertOp(mlir::PatternRewriter &rewriter,
                                    mlir::Location loc, mlir::Type toTy,
                                    mlir::Value val) {
@@ -663,6 +693,10 @@ public:
           return funcOp && mlir::acc::isAccRoutine(funcOp);
         });
     target.addLegalOp<cuf::DeviceIsActiveOp>();
+    target.addDynamicallyLegalOp<cuf::OnDeviceOp>([&](cuf::OnDeviceOp op) {
+      return keepOnDeviceOp(op, deferAccRoutineDataTransfers);
+    });
+    patterns.insert<CUFOnDeviceOpConversion>(ctx, deferAccRoutineDataTransfers);
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
                                             patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
