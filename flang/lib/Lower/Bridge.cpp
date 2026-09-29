@@ -310,9 +310,27 @@ emitModuleDebugImports(Fortran::lower::AbstractConverter &converter,
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
 
+  // A submodule is named after its ancestor module in the debug info, and has
+  // access to everything in the submodule directly above it, so record both.
+  mlir::StringAttr ancestorNameAttr;
+  mlir::StringAttr parentNameAttr;
+  if (const auto *details{
+          modSym->detailsIf<Fortran::semantics::ModuleDetails>()};
+      details && details->isSubmodule()) {
+    if (const Fortran::semantics::Scope *ancestor{details->ancestor()};
+        ancestor && ancestor->symbol())
+      ancestorNameAttr = mlir::StringAttr::get(
+          builder.getContext(), ancestor->symbol()->name().ToString());
+    if (const Fortran::semantics::Scope *parent{details->parent()};
+        parent && parent->symbol())
+      parentNameAttr = mlir::StringAttr::get(
+          builder.getContext(), parent->symbol()->name().ToString());
+  }
+
   auto op = fir::ModuleDebugImportsOp::create(
       builder, loc,
-      mlir::StringAttr::get(builder.getContext(), modSym->name().ToString()));
+      mlir::StringAttr::get(builder.getContext(), modSym->name().ToString()),
+      ancestorNameAttr, parentNameAttr);
   mlir::Region &region = op.getUses();
   mlir::Block *block = new mlir::Block();
   region.push_back(block);
@@ -331,6 +349,32 @@ emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
   const Fortran::semantics::Scope &scope = funit.getScope();
   for (const auto &preservedStmt : funit.preservedUseStmts)
     emitUseStmtOp(converter, builder, loc, preservedStmt, scope);
+}
+
+/// Record the submodule that defines a separate module procedure. Its name is
+/// mangled with the module that declares its interface, so the submodule would
+/// otherwise be lost and its debug info would point at the module instead.
+static void setDefiningSubmoduleForDebug(
+    Fortran::lower::AbstractConverter &converter, mlir::func::FuncOp func,
+    const Fortran::lower::pft::FunctionLikeUnit &funit) {
+  // This option is set whenever more than line tables are asked for, which is
+  // also when a module is described, so it stands in for full debug info here.
+  if (!converter.getLoweringOptions().getPreserveUseDebugInfo())
+    return;
+
+  const Fortran::semantics::Scope &scope = funit.getScope();
+  if (!scope.parent().IsSubmodule())
+    return;
+  const Fortran::semantics::Symbol *sym = scope.symbol();
+  if (!sym || !sym->attrs().test(Fortran::semantics::Attr::MODULE))
+    return;
+  const Fortran::semantics::Symbol *submodule = scope.parent().symbol();
+  if (!submodule)
+    return;
+
+  func->setAttr(
+      fir::getDefiningSubmoduleAttrName(),
+      mlir::StringAttr::get(func.getContext(), submodule->name().ToString()));
 }
 
 /// Helper class to generate the runtime type info global data and the
@@ -1239,9 +1283,15 @@ public:
   }
   std::string
   mangleName(const Fortran::semantics::Symbol &symbol) override final {
-    return Fortran::lower::mangle::mangleName(
+    std::string mangledName = Fortran::lower::mangle::mangleName(
         symbol, scopeBlockIdMap, /*keepExternalInScope=*/false,
         getLoweringOptions().getUnderscoring());
+    const std::string &hash = bridge.getModuleNameHash();
+    if (!hash.empty() &&
+        Fortran::semantics::ClassifyProcedure(symbol) ==
+            Fortran::semantics::ProcedureDefinitionClass::Internal)
+      mangledName += hash;
+    return mangledName;
   }
   std::string mangleName(
       const Fortran::semantics::DerivedTypeSpec &derivedType) override final {
@@ -1336,6 +1386,11 @@ public:
   const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const override final {
     return currentFunctionUnit;
+  }
+
+  bool isVisibleCrayPointerTarget(
+      const Fortran::semantics::Symbol &sym) const override final {
+    return visibleCrayPointerTargets.contains(&sym.GetUltimate());
   }
 
   void checkCoarrayEnabled() override final {
@@ -2009,8 +2064,7 @@ private:
       bridge.openAccCtx().finalizeAndKeep();
       if (bridge.cudaCleanupCtx().hasCode()) {
         mlir::Location loc = toLocation();
-        mlir::Value active =
-            fir::runtime::cuda::genDeviceIsActive(*builder, loc);
+        mlir::Value active = cuf::DeviceIsActiveOp::create(*builder, loc);
         builder->genIfThen(loc, active)
             .genThen([&]() {
               fir::runtime::cuda::genCUDADeviceSynchronize(*builder, loc);
@@ -6288,6 +6342,7 @@ private:
 
     // Emit USE statement operations for debug info generation
     emitUseStatementsFromFunit(*this, *builder, toLocation(), funit);
+    setDefiningSubmoduleForDebug(*this, func, funit);
 
     // Map host associated symbols from parent procedure if any.
     if (funit.parentHasHostAssoc())
@@ -6653,10 +6708,66 @@ private:
     }
   }
 
+  /// Collect entities used in visible Cray pointer associations.
+  void collectVisibleCrayPointerTargets(
+      Fortran::lower::pft::EvaluationList &evaluationList) {
+    for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
+      eval.visit(Fortran::common::visitors{
+          [&](const Fortran::parser::AssignmentStmt &stmt) {
+            if (!stmt.typedAssignment || !stmt.typedAssignment->v)
+              return;
+            const Fortran::evaluate::Assignment &assignment =
+                *stmt.typedAssignment->v;
+            const Fortran::semantics::Symbol *pointer =
+                Fortran::evaluate::GetLastSymbol(assignment.lhs);
+            if (!pointer || !pointer->GetUltimate().test(
+                                Fortran::semantics::Symbol::Flag::CrayPointer))
+              return;
+
+            const Fortran::evaluate::ProcedureRef *procedure =
+                Fortran::evaluate::UnwrapProcedureRef(assignment.rhs);
+            const Fortran::evaluate::SpecificIntrinsic *intrinsic =
+                procedure ? procedure->proc().GetSpecificIntrinsic() : nullptr;
+            if (!intrinsic || intrinsic->name != "loc" ||
+                procedure->arguments().size() != 1 ||
+                !procedure->arguments()[0])
+              return;
+
+            const Fortran::lower::SomeExpr *targetExpr =
+                procedure->arguments()[0]->UnwrapExpr();
+            const Fortran::semantics::Symbol *target =
+                targetExpr ? Fortran::evaluate::GetFirstSymbol(*targetExpr)
+                           : nullptr;
+            if (!target)
+              return;
+
+            visibleCrayPointerTargets.insert(&target->GetUltimate());
+          },
+          [](const auto &) {}});
+      if (eval.hasNestedEvaluations())
+        collectVisibleCrayPointerTargets(eval.getNestedEvaluations());
+    }
+  }
+
+  /// Return whether \p scope declares or imports a Cray pointer.
+  bool hasCrayPointer(const Fortran::semantics::Scope &scope) {
+    if (!scope.crayPointers().empty())
+      return true;
+    for (Fortran::semantics::SymbolRef symbol : scope.GetSymbols())
+      if (symbol->GetUltimate().test(
+              Fortran::semantics::Symbol::Flag::CrayPointer))
+        return true;
+    return false;
+  }
+
   /// Lower a procedure (nest).
   void lowerFunc(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(funit.getStartingSourceLoc());
     setCurrentFunctionUnit(&funit);
+    assert(visibleCrayPointerTargets.empty() &&
+           "Cray pointer targets must not outlive a procedure");
+    if (hasCrayPointer(funit.getScope()))
+      collectVisibleCrayPointerTargets(funit.evaluationList);
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
@@ -6680,6 +6791,7 @@ private:
     }
     funit.setActiveEntry(0);
     setCurrentFunctionUnit(nullptr);
+    visibleCrayPointerTargets.clear();
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         lowerFunc(*f); // internal procedure
@@ -6867,6 +6979,10 @@ private:
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
   TypeInfoConverter typeInfoConverter;
+
+  /// Symbols associated with Cray pointers in the current procedure.
+  llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4>
+      visibleCrayPointerTargets;
 
   /// Counter of `scf.execute_region` ops created when
   /// `--wrap-unstructured-constructs-in-execute-region` is enabled for the
@@ -7070,6 +7186,13 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   else if (languageFeatures.IsEnabled(
                Fortran::common::LanguageFeature::CudaManaged))
     fir::setCudaHeapAllocMode(*module, fir::CudaHeapAllocMode::Managed);
+
+  if (cgOpts.UniqueInternalLinkageNames) {
+    if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(module->getLoc())) {
+      moduleNameHash =
+          llvm::getUniqueInternalLinkagePostfix(fileLoc.getFilename());
+    }
+  }
 }
 
 Fortran::lower::LoweringBridge::~LoweringBridge() {

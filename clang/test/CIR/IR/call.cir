@@ -8,17 +8,33 @@ cir.func private @f1()
 
 cir.func @f2() {
   cir.call @f1() : () -> ()
-  cir.call @f1() side_effect(pure) : () -> ()
-  cir.call @f1() side_effect(const) : () -> ()
+  cir.call @f1() nounwind : () -> ()
+  cir.call @f1() willreturn : () -> ()
+  cir.call @f1() {memory_effects = #cir.memory_effects<other = read, arg_mem = read, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>} : () -> ()
+  cir.call @f1() nothrow nounwind willreturn {memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : () -> ()
+  cir.call @f1() {memory_effects = #cir.memory_effects<other = read, arg_mem = readwrite, inaccessible_mem = write, errno_mem = read, target_mem0 = read, target_mem1 = none>} : () -> ()
   cir.return
 }
 
 // CHECK:      cir.func{{.*}} @f2() {
 // CHECK-NEXT:   cir.call @f1() : () -> ()
-// CHECK-NEXT:   cir.call @f1() side_effect(pure) : () -> ()
-// CHECK-NEXT:   cir.call @f1() side_effect(const) : () -> ()
+// CHECK-NEXT:   cir.call @f1() nounwind : () -> ()
+// CHECK-NEXT:   cir.call @f1() willreturn : () -> ()
+// CHECK-NEXT:   cir.call @f1() {memory_effects = #cir.memory_effects<other = read, arg_mem = read, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>} : () -> ()
+// CHECK-NEXT:   cir.call @f1() nothrow nounwind willreturn {memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : () -> ()
+// CHECK-NEXT:   cir.call @f1() {memory_effects = #cir.memory_effects<other = read, arg_mem = readwrite, inaccessible_mem = write, errno_mem = read, target_mem0 = read, target_mem1 = none>} : () -> ()
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
+
+// CHECK: cir.func private @f8() attributes {memory_effects = #cir.memory_effects<other = read, arg_mem = readwrite, inaccessible_mem = write, errno_mem = read, target_mem0 = read, target_mem1 = none>}
+cir.func private @f8() attributes {memory_effects = #cir.memory_effects<other = read, arg_mem = readwrite, inaccessible_mem = write, errno_mem = read, target_mem0 = read, target_mem1 = none>}
+
+// CHECK:      cir.func{{.*}} @f9() attributes {nothrow, nounwind, willreturn, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} {
+// CHECK-NEXT:   cir.return
+// CHECK-NEXT: }
+cir.func @f9() attributes {nothrow, nounwind, willreturn, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} {
+  cir.return
+}
 
 cir.func private @f3() -> !s32i
 

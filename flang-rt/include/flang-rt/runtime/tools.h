@@ -537,9 +537,8 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
 // from 'to' by ShallowCopy() (as CopyInAssign() and the copy-in emitted
 // inline by the compiler do): unmodified elements compare equal even for
 // NaNs and padding bytes, which a value comparison would misjudge.
-// (Host-only: the sole caller is CopyOutAssignDirect, outside the offload
-// group.)
-void ShallowCopyModifiedSuffix(const Descriptor &to, const Descriptor &from);
+RT_API_ATTRS void ShallowCopyModifiedSuffix(
+    const Descriptor &to, const Descriptor &from);
 
 // Ensures that a character string is null-terminated, allocating a /p length +1
 // size memory for null-terminator if necessary. Returns the original or a newly

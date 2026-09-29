@@ -611,6 +611,15 @@ Scope &SemanticsContext::FindScope(parser::CharBlock source) {
   }
 }
 
+const Scope *SemanticsContext::FindScopeIfAny(parser::CharBlock source) const {
+  auto &mutableThis{const_cast<SemanticsContext &>(*this)};
+  if (auto iter{mutableThis.SearchScopeIndex(source)};
+      iter != mutableThis.scopeIndex_.end()) {
+    return &iter->second;
+  }
+  return nullptr;
+}
+
 void SemanticsContext::UpdateScopeIndex(
     Scope &scope, parser::CharBlock newSource) {
   if (scope.sourceRange().empty()) {

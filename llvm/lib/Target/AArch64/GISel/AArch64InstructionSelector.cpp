@@ -230,7 +230,6 @@ private:
   bool selectTLSGlobalValue(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectPtrAuthGlobalValue(MachineInstr &I,
                                 MachineRegisterInfo &MRI) const;
-  bool selectReduction(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectMOPS(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectUSMovFromExtend(MachineInstr &I, MachineRegisterInfo &MRI);
   void SelectTable(MachineInstr &I, MachineRegisterInfo &MRI, unsigned NumVecs,
@@ -487,6 +486,8 @@ private:
   ComplexRendererFns selectExtractHigh(MachineOperand &Root) const;
   template <unsigned Width>
   ComplexRendererFns selectCVTFixedPoint(MachineOperand &Root) const;
+  template <unsigned Width>
+  ComplexRendererFns selectCVTFixedPosRecipOperand(MachineOperand &Root) const;
   ComplexRendererFns selectCVTFixedPointBase(const MachineOperand &Root,
                                              unsigned width,
                                              bool isReciprocal = false) const;
@@ -3919,6 +3920,7 @@ bool AArch64InstructionSelector::selectTLSGlobalValueMachO(
   }
 
   MIB.buildInstr(Opcode, {}, {Load})
+      .setOperandDead(1) // implicit-def $lr
       .addUse(AArch64::X0, RegState::Implicit)
       .addDef(AArch64::X0, RegState::Implicit)
       .addRegMask(TRI.getTLSCallPreservedMask());
@@ -4888,7 +4890,9 @@ bool AArch64InstructionSelector::selectOverflowOp(MachineInstr &I,
   Register CarryOutReg = CarryMI.getCarryOutReg();
 
   // Don't convert carry-out to VReg if it is never used
-  if (!MRI.use_nodbg_empty(CarryOutReg)) {
+  if (MRI.use_nodbg_empty(CarryOutReg)) {
+    OpAndCC.first->addRegisterDead(AArch64::NZCV, &TRI);
+  } else {
     // Now, put the overflow result in the register given by the first operand
     // to the overflow op. CSINC increments the result when the predicate is
     // false, so to get the increment when it's true, we need to use the
@@ -8209,6 +8213,13 @@ template <unsigned Width>
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPoint(MachineOperand &Root) const {
   return selectCVTFixedPointBase(Root, Width, /*isReciprocal*/ false);
+}
+
+template <unsigned Width>
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectCVTFixedPosRecipOperand(
+    MachineOperand &Root) const {
+  return selectCVTFixedPointBase(Root, Width, /*isReciprocal*/ true);
 }
 
 InstructionSelector::ComplexRendererFns
