@@ -51,7 +51,9 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=concurrency -shared-libsan %s -### 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck %s --check-prefix=CHECK-SANC-SHARED
-// CHECK-SANC-SHARED: libclang_rt.csan.a
+// CHECK-SANC-SHARED-NOT: libclang_rt.csan.a
+// CHECK-SANC-SHARED: libclang_rt.csan.so
+// CHECK-SANC-SHARED-NOT: libclang_rt.csan.a
 
 // RUN: not %clang --target=x86_64-linux-android -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-ANDROID
 // CHECK-SANC-ANDROID: unsupported option '-fsanitize=concurrency' for target 'x86_64-unknown-linux-android'

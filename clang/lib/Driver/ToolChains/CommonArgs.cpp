@@ -1736,6 +1736,8 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
     }
     if (SanArgs.needsTsanRt())
       SharedRuntimes.push_back("tsan");
+    if (NeedsCsanRt)
+      SharedRuntimes.push_back("csan");
     if (SanArgs.needsTysanRt())
       SharedRuntimes.push_back("tysan");
     if (SanArgs.needsHwasanRt()) {
@@ -1759,17 +1761,19 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
     HelperStaticRuntimes.push_back("asan_static");
 
   // Offloading images can live in DSOs, the host interceptors must follow. The
-  // shared UBSan runtime already contains them.
+  // shared runtimes already contain them.
   if (NeedsUbsanOffloadRt && !SanArgs.needsSharedRt()) {
     NonWholeStaticRuntimes.push_back("ubsan_offload");
     RequiredSymbols.push_back("__ubsan_offload_init");
   }
   if (NeedsUbsanOffloadRt && !Args.hasArg(options::OPT_shared))
     HelperStaticRuntimes.push_back("ubsan_offload-preinit");
-  if (NeedsCsanOffloadRt) {
+  if (NeedsCsanOffloadRt && !SanArgs.needsSharedRt()) {
     NonWholeStaticRuntimes.push_back("csan_offload");
     RequiredSymbols.push_back("__csan_offload_init");
   }
+  if (NeedsCsanOffloadRt && !Args.hasArg(options::OPT_shared))
+    HelperStaticRuntimes.push_back("csan_offload-preinit");
 
   // Collect static runtimes.
   if (Args.hasArg(options::OPT_shared)) {
@@ -1777,7 +1781,8 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
     if (NeedsUbsanOffloadRt && !SanArgs.needsSharedRt() &&
         !SanArgs.needsUbsanRt())
       StaticRuntimes.push_back("ubsan_standalone");
-    if (NeedsCsanOffloadRt && !SanArgs.needsCsanRt())
+    if (NeedsCsanOffloadRt && !SanArgs.needsSharedRt() &&
+        !SanArgs.needsCsanRt())
       StaticRuntimes.push_back("csan");
     return;
   }
@@ -1839,7 +1844,7 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
       StaticRuntimes.push_back("ubsan_standalone");
     }
   }
-  if (NeedsCsanRt)
+  if (!SanArgs.needsSharedRt() && NeedsCsanRt)
     StaticRuntimes.push_back("csan");
   if (SanArgs.needsSafeStackRt()) {
     NonWholeStaticRuntimes.push_back("safestack");
