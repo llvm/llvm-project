@@ -32,9 +32,9 @@ if.else:
 ; GEN: if.else:
 ; GEN: call void @llvm.instrprof.increment(ptr @__profn_test_br_2, i64 {{[0-9]+}}, i32 2, i32 1)
 ; GENA: if.else:
-; GENA:  %pgocount = load i64, ptr getelementptr inbounds ([2 x i64], ptr @__profc_test_br_2, i32 0, i32 1), align 8
+; GENA:  %pgocount = load i64, ptr getelementptr inbounds (i8, ptr @__profc_test_br_2, i64 8), align 8
 ; GENA:  [[V:%[0-9]*]] = add i64 %pgocount, 1
-; GENA:  store i64 [[V]], ptr getelementptr inbounds ([2 x i64], ptr @__profc_test_br_2, i32 0, i32 1), align 8
+; GENA:  store i64 [[V]], ptr getelementptr inbounds (i8, ptr @__profc_test_br_2, i64 8), align 8
   %sub = sub nsw i32 %i, 2
   br label %if.end
 
