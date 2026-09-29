@@ -168,6 +168,7 @@ public:
 
   LLVM_PREFERRED_TYPE(bool)
   uint8_t bss : 1;
+  uint8_t lbss : 1;
 
   // Whether this section is SHT_CREL and has been decoded to RELA by
   // relsOrRelas.
