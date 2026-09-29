@@ -125,6 +125,55 @@ constexpr bool test() {
     }
   }
 
+  // LWG4249
+  {
+    SplitViewInput v("abc def", ' ');
+
+    auto i = v.begin();
+    assert(i != v.end());
+    assert(std::ranges::equal(*i, "abc"s));
+    assert(i != v.end());
+
+    ++i;
+    assert(i != v.end());
+    assert(std::ranges::equal(*i, "def"s));
+    assert(i != v.end());
+
+    ++i;
+    assert(i == v.end());
+  }
+  {
+    SplitViewInput v("abc ", ' ');
+
+    auto i = v.begin();
+    assert(std::ranges::equal(*i, "abc"s));
+    assert(i != v.end());
+
+    ++i;
+    assert(i != v.end());
+    assert(std::ranges::equal(*i, ""s));
+    assert(i != v.end());
+
+    ++i;
+    assert(i == v.end());
+  }
+#if TEST_STD_VER >= 23
+  { 
+    std::ranges::stride_view r(SplitViewInput("a b c", ' '), 2);
+
+    auto i = r.begin();
+    assert(i != r.end());
+    assert(std::ranges::equal(*i, "a"s));
+
+    ++i;
+    assert(i != r.end());
+    assert(std::ranges::equal(*i, "c"s));
+
+    ++i;
+    assert(i == r.end());
+  }
+#endif
+
   return true;
 }
 
