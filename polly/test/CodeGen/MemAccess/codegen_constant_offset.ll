@@ -39,4 +39,4 @@ for.inc:                                          ; preds = %for.body
 for.end:                                          ; preds = %for.cond
   ret i32 0
 }
-; CHECK: load i32, ptr getelementptr (i32, ptr @A, i{{(32|64)}} 10)
+; CHECK: load i32, ptr getelementptr (i8, ptr @A, i{{(32|64)}} 40)
