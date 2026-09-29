@@ -2362,6 +2362,25 @@ static RawAddress MaybeConvertMatrixAddress(RawAddress Addr,
   return Addr;
 }
 
+// Emit a store of a matrix LValue. This may require casting the original
+// pointer to memory address (ArrayType) to a pointer to the value type
+// (VectorType).
+static void EmitStoreOfMatrixScalar(llvm::Value *value, LValue lvalue,
+                                    bool isInit, CodeGenFunction &CGF) {
+  if (CGF.getLangOpts().HLSL &&
+      isMatrixRowMajor(CGF.getLangOpts(), lvalue.getType())) {
+    const auto *MatrixTy = lvalue.getType()->castAs<ConstantMatrixType>();
+    llvm::MatrixBuilder MB(CGF.Builder);
+    value = MB.CreateColumnMajorToRowMajorTransform(
+        value, MatrixTy->getNumRows(), MatrixTy->getNumColumns());
+  }
+  Address Addr = MaybeConvertMatrixAddress(lvalue.getAddress(), CGF,
+                                           value->getType()->isVectorTy());
+  CGF.EmitStoreOfScalar(value, Addr, lvalue.isVolatile(), lvalue.getType(),
+                        lvalue.getBaseInfo(), lvalue.getTBAAInfo(), isInit,
+                        lvalue.isNontemporal());
+}
+
 LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
   LValue Base;
   if (E->getBase()->isGLValue())
@@ -2373,7 +2392,7 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
     Address MatMem = CreateMemTemp(E->getBase()->getType());
     QualType Ty = E->getBase()->getType();
     Base = MakeAddrLValue(MatMem, Ty, AlignmentSource::Decl);
-    EmitStoreOfScalar(Mat, Base, /*isInit=*/true);
+    EmitStoreOfMatrixScalar(Mat, Base, /*isInit=*/true, *this);
   }
   QualType ResultType =
       E->getType().withCVRQualifiers(Base.getQuals().getCVRQualifiers());
@@ -2423,25 +2442,6 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
   return LValue::MakeExtVectorElt(
       MaybeConvertMatrixAddress(Base.getExtVectorAddress(), *this), CV,
       ResultType, Base.getBaseInfo(), TBAAAccessInfo());
-}
-
-// Emit a store of a matrix LValue. This may require casting the original
-// pointer to memory address (ArrayType) to a pointer to the value type
-// (VectorType).
-static void EmitStoreOfMatrixScalar(llvm::Value *value, LValue lvalue,
-                                    bool isInit, CodeGenFunction &CGF) {
-  if (CGF.getLangOpts().HLSL &&
-      isMatrixRowMajor(CGF.getLangOpts(), lvalue.getType())) {
-    const auto *MatrixTy = lvalue.getType()->castAs<ConstantMatrixType>();
-    llvm::MatrixBuilder MB(CGF.Builder);
-    value = MB.CreateColumnMajorToRowMajorTransform(
-        value, MatrixTy->getNumRows(), MatrixTy->getNumColumns());
-  }
-  Address Addr = MaybeConvertMatrixAddress(lvalue.getAddress(), CGF,
-                                           value->getType()->isVectorTy());
-  CGF.EmitStoreOfScalar(value, Addr, lvalue.isVolatile(), lvalue.getType(),
-                        lvalue.getBaseInfo(), lvalue.getTBAAInfo(), isInit,
-                        lvalue.isNontemporal());
 }
 
 void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
