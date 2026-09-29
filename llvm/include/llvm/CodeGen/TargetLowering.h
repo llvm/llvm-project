@@ -5736,12 +5736,28 @@ public:
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand parallel bit extract (compress).
+  /// Expand PEXT or PDEP by Hacker's Delight 7-4 or 7-5, with each parallel
+  /// prefix as a carry-less multiply.
+  SDValue expandPEXTWithCLMUL(SDNode *N, SelectionDAG &DAG) const;
+  SDValue expandPDEPWithCLMUL(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand PEXT or PDEP with one shift-and-XOR network over the whole word.
+  SDValue expandPEXTWholeWord(SDNode *N, SelectionDAG &DAG) const;
+  SDValue expandPDEPWholeWord(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand scalar PEXT or PDEP of 16 to 64 bits with a network within each
+  /// byte, then one variable shift per byte.
+  SDValue expandPEXTBytewise(SDNode *N, SelectionDAG &DAG) const;
+  SDValue expandPDEPBytewise(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand parallel bit extract (compress): with carry-less multiplies where
+  /// CLMUL is legal, bytewise for scalars of 16 to 64 bits, and with the
+  /// whole-word network otherwise.
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandPEXT(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand parallel bit deposit (expand).
+  /// Expand parallel bit deposit (expand), choosing as expandPEXT does.
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandPDEP(SDNode *N, SelectionDAG &DAG) const;

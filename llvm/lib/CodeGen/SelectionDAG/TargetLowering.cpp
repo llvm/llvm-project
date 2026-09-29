@@ -9204,18 +9204,24 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   llvm_unreachable("Expected CLMUL, CLMULR, or CLMULH");
 }
 
-SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
-  SDLoc DL(Node);
-  EVT VT = Node->getValueType(0);
-  SDValue Val = Node->getOperand(0);
-  SDValue Msk = Node->getOperand(1);
+// A carry-less multiply that is one plain instruction, for a scalar after it
+// is promoted to a legal type, or one the target handles for a vector.
+static bool hasCheapCLMUL(const TargetLowering &TLI, EVT VT,
+                          SelectionDAG &DAG) {
+  if (VT.isVector())
+    return TLI.isOperationLegalOrCustom(ISD::CLMUL, VT);
+  if (TLI.getTypeAction(*DAG.getContext(), VT) ==
+      TargetLowering::TypePromoteInteger)
+    VT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  return TLI.isOperationLegal(ISD::CLMUL, VT);
+}
+
+// Hacker's Delight §7-4 with each parallel prefix as clmul(Mk, ~0). Used where
+// carry-less multiplies are cheap (RISC-V Zbkc, PMULL on the Apple cores) and
+// for vectors that have them: six of them beat the shift-and-XOR prefixes.
+static SDValue buildPEXTWithCLMUL(SDValue Val, SDValue Msk, EVT VT,
+                                  SelectionDAG &DAG, const SDLoc &DL) {
   unsigned BW = VT.getScalarSizeInBits();
-
-  // Just scalarize if scalar PEXT is legal
-  if (VT.isVector() && isOperationLegal(ISD::PEXT, VT.getVectorElementType()))
-    return DAG.UnrollVectorOp(Node);
-
-  // Hacker's Delight §7-4: Compress, or Generalized Extract
   SDValue X = DAG.getNode(ISD::AND, DL, VT, Val, Msk);
   SDValue M = Msk;
   SDValue One = DAG.getShiftAmountConstant(1, VT, DL);
@@ -9243,18 +9249,10 @@ SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
   return X;
 }
 
-SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
-  SDLoc DL(Node);
-  EVT VT = Node->getValueType(0);
-  SDValue Val = Node->getOperand(0);
-  SDValue Msk = Node->getOperand(1);
+// Hacker's Delight §7-5, the PDEP counterpart of buildPEXTWithCLMUL.
+static SDValue buildPDEPWithCLMUL(SDValue Val, SDValue Msk, EVT VT,
+                                  SelectionDAG &DAG, const SDLoc &DL) {
   unsigned BW = VT.getScalarSizeInBits();
-
-  // Just scalarize if scalar PDEP is legal
-  if (VT.isVector() && isOperationLegal(ISD::PDEP, VT.getVectorElementType()))
-    return DAG.UnrollVectorOp(Node);
-
-  // Hacker's Delight §7-5: Expand, or Generalized Insert.
   unsigned LogBW = Log2_32_Ceil(BW);
   SmallVector<SDValue, 8> MvArray(LogBW);
   SDValue One = DAG.getShiftAmountConstant(1, VT, DL);
@@ -9293,6 +9291,251 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
   }
 
   return DAG.getNode(ISD::AND, DL, VT, X, Msk);
+}
+
+// A shift that stays within fields of Width bits. The mask goes before the
+// shift, so a target that folds a shift into the next logical operation can.
+static SDValue shiftInFields(unsigned Opc, SDValue V, unsigned Sh,
+                             unsigned Width, EVT VT, SelectionDAG &DAG,
+                             const SDLoc &DL) {
+  unsigned BW = VT.getScalarSizeInBits();
+  if (Width < BW) {
+    APInt Keep = Opc == ISD::SHL ? APInt::getLowBitsSet(Width, Width - Sh)
+                                 : APInt::getHighBitsSet(Width, Width - Sh);
+    V = DAG.getNode(ISD::AND, DL, VT, V,
+                    DAG.getConstant(APInt::getSplat(BW, Keep), DL, VT));
+  }
+  return DAG.getNode(Opc, DL, VT, V, DAG.getShiftAmountConstant(Sh, VT, DL));
+}
+
+// Each kept bit of PEXT moves down by the number of mask zeros below it. Stage
+// S moves by N = 2^S the bits for which that count has bit S set. Before stage
+// S the zeros stand in aligned groups of N, so the parity of the groups below
+// each bit is a prefix XOR that can start at a shift of N: 6+5+...+1 = 21
+// shift-XOR steps for 64 bits instead of 6 full prefixes of 6. The mask of a
+// stage covers the bits to move and the zeros they move into.
+// This is the scheme of uN::extract_bits in the Rust core library.
+static SmallVector<SDValue, 8> getPEXTStageMasks(SDValue Msk, EVT VT,
+                                                 unsigned Width,
+                                                 SelectionDAG &DAG,
+                                                 const SDLoc &DL) {
+  SmallVector<SDValue, 8> Masks;
+  SDValue Zeros = DAG.getNOT(DL, Msk, VT);
+  for (unsigned N = 1; N < Width; N *= 2) {
+    SDValue Parity = Zeros;
+    for (unsigned Len = N; Len < Width; Len *= 2) {
+      Parity =
+          DAG.getNode(ISD::XOR, DL, VT, Parity,
+                      shiftInFields(ISD::SHL, Parity, Len, Width, VT, DAG, DL));
+    }
+    Masks.push_back(Parity);
+    if (N * 2 < Width) {
+      Zeros = DAG.getNode(ISD::AND, DL, VT, Zeros, DAG.getNOT(DL, Parity, VT));
+      Zeros =
+          DAG.getNode(ISD::XOR, DL, VT, Zeros,
+                      shiftInFields(ISD::SRL, Zeros, N, Width, VT, DAG, DL));
+    }
+  }
+  return Masks;
+}
+
+// PEXT and PDEP on each byte by the stages above, then every byte of the
+// packed side moved by the count of bits kept below it. The byte stages take
+// 3+2+1 steps, the join one variable shift per byte.
+static bool canExpandPEXTBytewise(const TargetLowering &TLI, EVT VT) {
+  unsigned BW = VT.getSizeInBits();
+  return !VT.isVector() && BW >= 16 && BW <= 64 && isPowerOf2_32(BW) &&
+         TLI.isOperationLegal(ISD::SHL, VT) &&
+         TLI.isOperationLegal(ISD::SRL, VT);
+}
+
+// Kept count of each byte of Msk, summed up the bytes and moved up one byte:
+// byte J holds the number of kept bits in bytes below J. The sums stay below
+// 64, so no byte carries into the next. One multiply by 0x0101..01 does the
+// sum, or without a multiply log2(BW / 8) shifts and adds.
+static SDValue getBytePrefixCounts(const TargetLowering &TLI, SDValue Msk,
+                                   EVT VT, SelectionDAG &DAG, const SDLoc &DL) {
+  unsigned BW = VT.getSizeInBits();
+  auto Splat = [&](uint8_t B) {
+    return DAG.getConstant(APInt::getSplat(BW, APInt(8, B)), DL, VT);
+  };
+  auto Srl = [&](SDValue V, unsigned Sh) {
+    return DAG.getNode(ISD::SRL, DL, VT, V,
+                       DAG.getShiftAmountConstant(Sh, VT, DL));
+  };
+  SDValue Mask55 = Splat(0x55);
+  SDValue Mask33 = Splat(0x33);
+  SDValue Mask0F = Splat(0x0F);
+  SDValue Odd = Srl(Msk, 1);
+  Odd = DAG.getNode(ISD::AND, DL, VT, Odd, Mask55);
+  SDValue C = DAG.getNode(ISD::SUB, DL, VT, Msk, Odd);
+  SDValue High = Srl(C, 2);
+  High = DAG.getNode(ISD::AND, DL, VT, High, Mask33);
+  C = DAG.getNode(ISD::AND, DL, VT, C, Mask33);
+  C = DAG.getNode(ISD::ADD, DL, VT, C, High);
+  High = Srl(C, 4);
+  C = DAG.getNode(ISD::ADD, DL, VT, C, High);
+  C = DAG.getNode(ISD::AND, DL, VT, C, Mask0F);
+  if (TLI.isOperationLegal(ISD::MUL, VT))
+    C = DAG.getNode(ISD::MUL, DL, VT, C, Splat(0x01));
+  else
+    for (unsigned Sh = 8; Sh < BW; Sh *= 2)
+      C = DAG.getNode(ISD::ADD, DL, VT, C,
+                      DAG.getNode(ISD::SHL, DL, VT, C,
+                                  DAG.getShiftAmountConstant(Sh, VT, DL)));
+  return DAG.getNode(ISD::SHL, DL, VT, C,
+                     DAG.getShiftAmountConstant(8, VT, DL));
+}
+
+// The whole-word network, or with Bytewise the one within each byte and the
+// join after it.
+static SDValue buildPEXTNetwork(const TargetLowering &TLI, SDValue Val,
+                                SDValue Msk, EVT VT, bool Bytewise,
+                                SelectionDAG &DAG, const SDLoc &DL) {
+  unsigned BW = VT.getScalarSizeInBits();
+  unsigned Width = Bytewise ? 8 : BW;
+  SmallVector<SDValue, 8> Masks = getPEXTStageMasks(Msk, VT, Width, DAG, DL);
+
+  // Stage S swaps each moving run with the N zeros below it; the zeros it
+  // moves into are covered by the mask, so they come back as zeros.
+  SDValue X = DAG.getNode(ISD::AND, DL, VT, Val, Msk);
+  for (unsigned S = 0, N = 1; N < Width; ++S, N *= 2) {
+    SDValue Q = DAG.getNode(ISD::AND, DL, VT, X, Masks[S]);
+    SDValue Down = shiftInFields(ISD::SRL, Q, N, Width, VT, DAG, DL);
+    X = DAG.getNode(ISD::XOR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, X, Q),
+                    Down);
+  }
+  if (!Bytewise)
+    return X;
+
+  // Byte J of X, packed at its low end, goes to the count of bits kept below.
+  SDValue Below = getBytePrefixCounts(TLI, Msk, VT, DAG, DL);
+  SDValue ByteMask = DAG.getConstant(0xFF, DL, VT);
+  SDValue Res = DAG.getNode(ISD::AND, DL, VT, X, ByteMask);
+  for (unsigned J = 1; J < BW / 8; ++J) {
+    SDValue Sh = DAG.getShiftAmountConstant(8 * J, VT, DL);
+    SDValue Byte = DAG.getNode(ISD::SRL, DL, VT, X, Sh);
+    SDValue Amt = DAG.getNode(ISD::SRL, DL, VT, Below, Sh);
+    if (J + 1 < BW / 8) {
+      Byte = DAG.getNode(ISD::AND, DL, VT, Byte, ByteMask);
+      Amt = DAG.getNode(ISD::AND, DL, VT, Amt, ByteMask);
+    }
+    Res = DAG.getNode(ISD::OR, DL, VT, Res,
+                      DAG.getNode(ISD::SHL, DL, VT, Byte,
+                                  DAG.getShiftAmountOperand(VT, Amt)));
+  }
+  return Res;
+}
+
+static SDValue buildPDEPNetwork(const TargetLowering &TLI, SDValue Val,
+                                SDValue Msk, EVT VT, bool Bytewise,
+                                SelectionDAG &DAG, const SDLoc &DL) {
+  unsigned BW = VT.getScalarSizeInBits();
+  unsigned Width = Bytewise ? 8 : BW;
+  SmallVector<SDValue, 8> Masks = getPEXTStageMasks(Msk, VT, Width, DAG, DL);
+
+  SDValue X = Val;
+  if (Bytewise) {
+    // Byte J takes the bits of Val from the count kept below it; bits above
+    // its own count are dropped by the final AND with Msk.
+    SDValue Below = getBytePrefixCounts(TLI, Msk, VT, DAG, DL);
+    SDValue ByteMask = DAG.getConstant(0xFF, DL, VT);
+    X = DAG.getNode(ISD::AND, DL, VT, Val, ByteMask);
+    for (unsigned J = 1; J < BW / 8; ++J) {
+      SDValue Sh = DAG.getShiftAmountConstant(8 * J, VT, DL);
+      SDValue Amt = DAG.getNode(ISD::SRL, DL, VT, Below, Sh);
+      if (J + 1 < BW / 8)
+        Amt = DAG.getNode(ISD::AND, DL, VT, Amt, ByteMask);
+      SDValue Byte = DAG.getNode(ISD::SRL, DL, VT, Val,
+                                 DAG.getShiftAmountOperand(VT, Amt));
+      Byte = DAG.getNode(ISD::AND, DL, VT, Byte, ByteMask);
+      X = DAG.getNode(ISD::OR, DL, VT, X,
+                      DAG.getNode(ISD::SHL, DL, VT, Byte, Sh));
+    }
+  }
+
+  // The stages of PEXT backwards: each run is split by inserting N zeros,
+  // and whatever is above it is shifted out or cleared by the final AND.
+  for (int S = (int)Masks.size() - 1; S >= 0; --S) {
+    unsigned N = 1u << S;
+    SDValue Q = DAG.getNode(ISD::AND, DL, VT, X, Masks[S]);
+    SDValue Up = shiftInFields(ISD::SHL, Q, N, Width, VT, DAG, DL);
+    X = DAG.getNode(ISD::XOR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, X, Q), Up);
+  }
+
+  return DAG.getNode(ISD::AND, DL, VT, X, Msk);
+}
+
+SDValue TargetLowering::expandPEXTWithCLMUL(SDNode *Node,
+                                            SelectionDAG &DAG) const {
+  return buildPEXTWithCLMUL(Node->getOperand(0), Node->getOperand(1),
+                            Node->getValueType(0), DAG, SDLoc(Node));
+}
+
+SDValue TargetLowering::expandPDEPWithCLMUL(SDNode *Node,
+                                            SelectionDAG &DAG) const {
+  return buildPDEPWithCLMUL(Node->getOperand(0), Node->getOperand(1),
+                            Node->getValueType(0), DAG, SDLoc(Node));
+}
+
+SDValue TargetLowering::expandPEXTWholeWord(SDNode *Node,
+                                            SelectionDAG &DAG) const {
+  return buildPEXTNetwork(*this, Node->getOperand(0), Node->getOperand(1),
+                          Node->getValueType(0), /*Bytewise=*/false, DAG,
+                          SDLoc(Node));
+}
+
+SDValue TargetLowering::expandPDEPWholeWord(SDNode *Node,
+                                            SelectionDAG &DAG) const {
+  return buildPDEPNetwork(*this, Node->getOperand(0), Node->getOperand(1),
+                          Node->getValueType(0), /*Bytewise=*/false, DAG,
+                          SDLoc(Node));
+}
+
+SDValue TargetLowering::expandPEXTBytewise(SDNode *Node,
+                                           SelectionDAG &DAG) const {
+  assert(canExpandPEXTBytewise(*this, Node->getValueType(0)) &&
+         "Expected a scalar of 16 to 64 bits with legal shifts");
+  return buildPEXTNetwork(*this, Node->getOperand(0), Node->getOperand(1),
+                          Node->getValueType(0), /*Bytewise=*/true, DAG,
+                          SDLoc(Node));
+}
+
+SDValue TargetLowering::expandPDEPBytewise(SDNode *Node,
+                                           SelectionDAG &DAG) const {
+  assert(canExpandPEXTBytewise(*this, Node->getValueType(0)) &&
+         "Expected a scalar of 16 to 64 bits with legal shifts");
+  return buildPDEPNetwork(*this, Node->getOperand(0), Node->getOperand(1),
+                          Node->getValueType(0), /*Bytewise=*/true, DAG,
+                          SDLoc(Node));
+}
+
+SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
+  EVT VT = Node->getValueType(0);
+
+  // Just scalarize if scalar PEXT is legal
+  if (VT.isVector() && isOperationLegal(ISD::PEXT, VT.getVectorElementType()))
+    return DAG.UnrollVectorOp(Node);
+
+  if (hasCheapCLMUL(*this, VT, DAG))
+    return expandPEXTWithCLMUL(Node, DAG);
+  if (canExpandPEXTBytewise(*this, VT))
+    return expandPEXTBytewise(Node, DAG);
+  return expandPEXTWholeWord(Node, DAG);
+}
+
+SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
+  EVT VT = Node->getValueType(0);
+
+  // Just scalarize if scalar PDEP is legal
+  if (VT.isVector() && isOperationLegal(ISD::PDEP, VT.getVectorElementType()))
+    return DAG.UnrollVectorOp(Node);
+
+  if (hasCheapCLMUL(*this, VT, DAG))
+    return expandPDEPWithCLMUL(Node, DAG);
+  if (canExpandPEXTBytewise(*this, VT))
+    return expandPDEPBytewise(Node, DAG);
+  return expandPDEPWholeWord(Node, DAG);
 }
 
 void TargetLowering::expandShiftParts(SDNode *Node, SDValue &Lo, SDValue &Hi,
