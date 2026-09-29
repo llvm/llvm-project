@@ -8988,8 +8988,30 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   if (!match(Step, m_c_Add(m_Specific(Phi), m_Value(LoopStride))))
     return false;
 
+  unsigned AddCount = 0;
+  Value *ShiftedVScale = LoopStride;
+  const int DepthLimit = 4;
+  // We're looking for updates by a multiple of the number of elements in
+  // the vector.
+  // TODO: Support cases where the total stride is created directly by a
+  //       shifted vscale where we have interleaving.
+  if (match(LoopStride, m_c_Add(m_Value(LoopStride),
+                                m_Value(ShiftedVScale, m_Splat(m_Value())))))
+    for (int I = 0; I < DepthLimit; ++I) {
+      AddCount++;
+      if (!match(LoopStride,
+                 m_c_Add(m_Value(LoopStride), m_Specific(ShiftedVScale))))
+        break;
+    }
+
   const APInt *ShiftAmt = nullptr;
-  if (!match(LoopStride, m_Splat(m_Shl(m_VScale(), m_APInt(ShiftAmt)))))
+  if (!match(LoopStride, m_Splat(m_Shl(m_VScale(), m_APInt(ShiftAmt)))) ||
+      LoopStride != ShiftedVScale)
+    return false;
+
+  // Make sure the shift amount matches the minimum element count.
+  auto EltCnt = cast<VectorType>(Phi->getType())->getElementCount();
+  if (1 << ShiftAmt->getZExtValue() != EltCnt.getKnownMinValue())
     return false;
 
   // Record users of interest.
@@ -9057,11 +9079,15 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   // iteration.
   Value *StructStride = ConstantInt::get(ITy, ShiftAmt->getZExtValue());
   StructStride = PHBuilder.CreateMul(StructStride, PHBuilder.CreateVScale(ITy));
+  Value *TotalStride =
+      PHBuilder.CreateMul(StructStride, ConstantInt::get(ITy, AddCount + 1));
   StructStride =
       PHBuilder.CreateVectorSplat(VTy->getElementCount(), StructStride);
+  TotalStride =
+      PHBuilder.CreateVectorSplat(VTy->getElementCount(), TotalStride);
 
   IRBuilder<> LBuilder(cast<Instruction>(Step));
-  Value *NewStep = LBuilder.CreateAdd(Phi, StructStride);
+  Value *NewStep = LBuilder.CreateAdd(Phi, TotalStride);
 
   // Update the phi to the new start and step.
   Phi->setIncomingValueForBlock(PreHeader, NewStart);
