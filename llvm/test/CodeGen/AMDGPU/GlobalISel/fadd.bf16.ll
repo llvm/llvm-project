@@ -593,6 +593,7 @@ define amdgpu_ps <4 x bfloat> @fadd_v4bf16_vv(<4 x bfloat> %a, <4 x bfloat> %b) 
   %result = fadd <4 x bfloat> %a, %b
   ret <4 x bfloat> %result
 }
+
 define amdgpu_ps <5 x bfloat> @fadd_v5bf16_vv(<5 x bfloat> %a, <5 x bfloat> %b) {
 ; GFX9-LABEL: fadd_v5bf16_vv:
 ; GFX9:       ; %bb.0:

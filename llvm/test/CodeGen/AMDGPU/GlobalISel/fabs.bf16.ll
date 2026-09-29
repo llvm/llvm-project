@@ -100,6 +100,7 @@ define amdgpu_ps <2 x bfloat> @fabs_v2bf16_ss(<2 x bfloat> inreg %a) {
   %result = call <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat> %a)
   ret <2 x bfloat> %result
 }
+
 define amdgpu_ps <3 x bfloat> @fabs_v3bf16_vv(<3 x bfloat> %a) {
 ; GFX9-LABEL: fabs_v3bf16_vv:
 ; GFX9:       ; %bb.0:
