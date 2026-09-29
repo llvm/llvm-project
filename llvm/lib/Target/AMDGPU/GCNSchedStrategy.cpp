@@ -234,8 +234,9 @@ static bool canUsePressureDiffs(const SUnit &SU) {
     return false;
 
   // Cannot use pressure diffs for subregister defs or with physregs, it's
-  // imprecise in both cases.
-  for (const auto &Op : SU.getInstr()->operands()) {
+  // imprecise in both cases. For a bundle, check the instructions inside it:
+  // the BUNDLE header only has implicit operands.
+  for (const auto &Op : const_mi_bundle_ops(*SU.getInstr())) {
     if (!Op.isReg() || Op.isImplicit())
       continue;
     if (Op.getReg().isPhysical() ||
