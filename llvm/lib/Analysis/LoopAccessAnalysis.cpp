@@ -764,7 +764,6 @@ void RuntimePointerChecking::groupChecks(
     }
 
     SmallVector<RuntimeCheckingPtrGroup, 2> Groups;
-    SmallPtrSet<Value *, 2> SeenPointers;
 
     // Because DepCands is constructed by visiting accesses in the order in
     // which they appear in alias sets (which is deterministic) and the
@@ -773,15 +772,12 @@ void RuntimePointerChecking::groupChecks(
     // equivalence class, the iteration order is deterministic.
     for (auto M : DepCands.members(Access)) {
       Value *Pointer = M.getPointer();
-      // A read-modify-write access appears in DepCands in both access modes.
-      if (!SeenPointers.insert(Pointer).second)
-        continue;
-
       for (unsigned PointerIndex : PointerToIndices.lookup(Pointer)) {
-        bool Merged = false;
+        // A read-modify-write access appears in DepCands in both access modes.
+        if (!SeenIndices.insert(PointerIndex).second)
+          continue;
 
-        // Mark this pointer as seen.
-        SeenIndices.insert(PointerIndex);
+        bool Merged = false;
 
         // Go through all the existing sets and see if we can find one
         // which can include this pointer.
