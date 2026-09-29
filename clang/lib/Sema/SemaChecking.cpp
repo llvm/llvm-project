@@ -1479,6 +1479,48 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BIpoll:
+  case Builtin::BIppoll:
+  case Builtin::BIppoll64: {
+    unsigned ExpectedArgs = BuiltinID == Builtin::BIpoll ? 3 : 4;
+    if (TheCall->getNumArgs() != ExpectedArgs ||
+        !TheCall->getArg(1)->getType()->isIntegerType())
+      return;
+    QualType PointeeTy = TheCall->getArg(0)->getType()->getPointeeType();
+    if (PointeeTy.isNull())
+      return;
+    const RecordDecl *RD = PointeeTy->getAsRecordDecl();
+    if (!RD || !RD->getIdentifier() || RD->getName() != "pollfd")
+      return;
+    if (BuiltinID == Builtin::BIpoll) {
+      if (!TheCall->getArg(2)->getType()->isIntegerType())
+        return;
+    } else {
+      QualType TmoPointeeTy = TheCall->getArg(2)->getType()->getPointeeType();
+      if (TmoPointeeTy.isNull())
+        return;
+      const RecordDecl *TmoRD = TmoPointeeTy->getAsRecordDecl();
+      if (!TmoRD || !TmoRD->getIdentifier() || TmoRD->getName() != "timespec" ||
+          !TheCall->getArg(3)->getType()->isPointerType())
+        return;
+    }
+    std::optional<CharUnits> ElemSize =
+        Context.getTypeSizeInCharsIfKnown(PointeeTy);
+    if (!ElemSize)
+      return;
+    std::optional<llvm::APSInt> Count =
+        Checker.ComputeExplicitObjectSizeArgument(1);
+    if (!Count)
+      return;
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    unsigned WideWidth = SizeTypeWidth * 2;
+    SourceSize = Count->extOrTrunc(WideWidth) *
+                 llvm::APSInt(llvm::APInt(WideWidth, ElemSize->getQuantity()),
+                              /*isUnsigned=*/true);
+    DestinationSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+
   case Builtin::BIbzero:
   case Builtin::BI__builtin_bzero:
   case Builtin::BImemcpy:
