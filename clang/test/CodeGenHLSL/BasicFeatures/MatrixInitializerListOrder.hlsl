@@ -15,6 +15,19 @@ constexpr float2x3 make_matrix() {
   return float2x3(1, 2, 3, 4, 5, 6);
 }
 
+// Bool matrices use i1 elements in registers and i32 elements in memory.
+// CHECK: @_ZL1B = internal global <6 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>
+static row_major bool2x3 B =
+    bool2x3(true, false, true, false, true, false);
+
+export bool read_bool_matrix() {
+// CHECK-LABEL: define {{.*}} i1 @_Z16read_bool_matrixv
+// CHECK: [[FROM_MEMORY:%.*]] = load <6 x i32>, ptr @_ZL1B
+// CHECK: [[IN_REGISTER:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[FROM_MEMORY]], i32 3, i32 2)
+// CHECK: extractelement <6 x i32> [[IN_REGISTER]], i32 3
+  return B[1][1];
+}
+
 export float2x3 return_constexpr_matrix() {
 // CHECK-LABEL: define {{.*}} <6 x float> @_Z23return_constexpr_matrixv
 // CHECK: ret <6 x float> <float 1.000000e+00, float 4.000000e+00, float 2.000000e+00, float 5.000000e+00, float 3.000000e+00, float 6.000000e+00>

@@ -2095,7 +2095,11 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
       for (unsigned Col = 0; Col != MT->getNumColumns(); ++Col)
         Inits[MT->getRowMajorFlattenedIndex(Row, Col)] =
             C->getAggregateElement(MT->getColumnMajorFlattenedIndex(Row, Col));
-    return llvm::ConstantVector::get(Inits);
+    llvm::Constant *MemoryValue = llvm::ConstantVector::get(Inits);
+    if (CGM.getLangOpts().HLSL && destType->isConstantMatrixBoolType())
+      return llvm::ConstantExpr::getZExt(
+          MemoryValue, CGM.getTypes().convertTypeForLoadStore(destType));
+    return MemoryValue;
   }
 
   return C;
