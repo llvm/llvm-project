@@ -346,7 +346,7 @@ public:
   }
 
 private:
-#if !defined(RT_CUDA_THIN_IO)
+#if !defined(RT_THIN_IO)
   std::variant<common::reference_wrapper<OpenStatementState>,
       common::reference_wrapper<CloseStatementState>,
       common::reference_wrapper<NoopStatementState>,
@@ -386,7 +386,7 @@ private:
       common::reference_wrapper<ErroneousIoStatementState>>
       u_;
 #else
-  // Use a thinner I/O API for CUDA runtime.
+  // Use a thinner I/O API for the GPU runtimes.
   std::variant<common::reference_wrapper<NoopStatementState>,
       common::reference_wrapper<
           ExternalListIoStatementState<Direction::Output>>,

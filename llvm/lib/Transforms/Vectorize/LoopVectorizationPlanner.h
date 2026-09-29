@@ -636,14 +636,6 @@ struct VectorizationFactor {
   static VectorizationFactor Disabled() {
     return {ElementCount::getFixed(1), 0, 0};
   }
-
-  bool operator==(const VectorizationFactor &rhs) const {
-    return Width == rhs.Width && Cost == rhs.Cost;
-  }
-
-  bool operator!=(const VectorizationFactor &rhs) const {
-    return !(*this == rhs);
-  }
 };
 
 /// A class that represents two vectorization factors (initialized with 0 by

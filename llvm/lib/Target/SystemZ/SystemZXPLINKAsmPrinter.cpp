@@ -36,8 +36,7 @@ using namespace llvm;
 
 SystemZXPLINKAsmPrinter::SystemZXPLINKAsmPrinter(
     TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-    : SystemZAsmPrinter(TM, std::move(Streamer)),
-      ADATable(TM.getPointerSize(0)) {}
+    : SystemZAsmPrinter(TM, std::move(Streamer)), ADATable(8) {}
 
 bool SystemZXPLINKAsmPrinter::doInitialization(Module &M) {
   SM.reset();
@@ -341,6 +340,10 @@ void SystemZXPLINKAsmPrinter::emitADASection() {
       OutStreamer->emitSymbolAttribute(Alias, MCSA_Extern);
       MCSymbolGOFF *GOFFSym =
           static_cast<llvm::MCSymbolGOFF *>(const_cast<llvm::MCSymbol *>(Sym));
+      // A weak reference (extern_weak) stays weak through the indirect
+      // symbol, otherwise the binder fails on the unresolved reference.
+      if (GOFFSym->isWeak())
+        OutStreamer->emitSymbolAttribute(Alias, MCSA_WeakReference);
       ZOS->emitExternalName(Alias, GOFFSym->getExternalName());
       EMIT_COMMENT("pointer to function descriptor");
       OutStreamer->emitValue(
