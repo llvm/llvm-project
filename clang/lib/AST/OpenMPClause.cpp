@@ -31,10 +31,11 @@ using namespace clang;
 using namespace llvm;
 using namespace omp;
 
-OMPAdjustArgsClause *OMPAdjustArgsClause::Create(
-    const ASTContext &C, OpenMPAdjustArgsOpKind AdjustOp,
-    OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
-    ArrayRef<OMPAdjustArgsItem> Items) {
+OMPAdjustArgsClause *
+OMPAdjustArgsClause::Create(const ASTContext &C,
+                            OpenMPAdjustArgsOpKind AdjustOp,
+                            OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+                            ArrayRef<OMPAdjustArgsItem> Items) {
   void *Mem = C.Allocate(totalSizeToAlloc<OMPAdjustArgsItem>(Items.size()));
   auto *Clause = new (Mem)
       OMPAdjustArgsClause(AdjustOp, NeedDevicePtrModifier, Items.size());

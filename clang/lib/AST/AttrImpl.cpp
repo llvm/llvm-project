@@ -566,9 +566,9 @@ static void profileOMPAdjustArgsItem(llvm::FoldingSetNodeID &ID,
 }
 
 template <>
-inline void profileAttrArg<OMPAdjustArgsClause *>(
-    llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
-    OMPAdjustArgsClause *Clause) {
+inline void profileAttrArg<OMPAdjustArgsClause *>(llvm::FoldingSetNodeID &ID,
+                                                  const ASTContext &Ctx,
+                                                  OMPAdjustArgsClause *Clause) {
   ID.AddInteger(Clause->AdjustOp);
   ID.AddInteger(Clause->NeedDevicePtrModifier);
   ID.AddInteger(Clause->items().size());

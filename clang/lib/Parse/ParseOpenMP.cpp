@@ -1416,9 +1416,8 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
           OpenMPNeedDevicePtrModifier NeedDevicePtrModifier =
               OMPC_NEED_DEVICE_PTR_unknown;
           if (Data.NeedDevicePtrModifierLoc.isValid())
-            NeedDevicePtrModifier =
-                static_cast<OpenMPNeedDevicePtrModifier>(
-                    Data.NeedDevicePtrModifier);
+            NeedDevicePtrModifier = static_cast<OpenMPNeedDevicePtrModifier>(
+                Data.NeedDevicePtrModifier);
           AdjustArgs.push_back(OMPAdjustArgsClause::Create(
               ASTCtx, AdjustOp, NeedDevicePtrModifier, Items));
         }
