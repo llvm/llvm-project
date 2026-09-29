@@ -482,6 +482,11 @@ protected:
   SmallVector<FunctionCallGraphInfo, 16>
   processCallGraphSection(const Elf_Shdr *CGSection,
                           const Elf_Shdr *CGRelSection);
+  // In a relocatable object file, attach to each address field of FuncCGInfos,
+  // parsed from CGSection, the relocation from CGRelSection that applies to it.
+  void resolveCallGraphRelocations(
+      const Elf_Shdr &CGSection, const Elf_Shdr *CGRelSection,
+      MutableArrayRef<FunctionCallGraphInfo> FuncCGInfos);
 
   std::string getProgramHeadersNumString();
 
@@ -5509,16 +5514,21 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection,
         "SHT_LLVM_CALL_GRAPH type section has unknown type ID for " +
         Twine(UnknownCount) + " indirect targets");
 
-  if (!IsRelocatable)
-    return FuncCGInfos;
+  if (IsRelocatable)
+    resolveCallGraphRelocations(*CGSection, CGRelSection, FuncCGInfos);
+  return FuncCGInfos;
+}
 
-  // In a relocatable object file, report the relocation that applies to each
-  // address field. Entries whose relocation cannot be determined are still
-  // returned, so that they can be identified by their offsets.
+template <class ELFT>
+void ELFDumper<ELFT>::resolveCallGraphRelocations(
+    const Elf_Shdr &CGSection, const Elf_Shdr *CGRelSection,
+    MutableArrayRef<FunctionCallGraphInfo> FuncCGInfos) {
+  // Entries whose relocation cannot be determined are left unresolved, so that
+  // they can still be identified by their offsets.
   if (!CGRelSection) {
     reportUniqueWarning("unable to get relocation section for " +
-                        describe(*CGSection));
-    return FuncCGInfos;
+                        describe(CGSection));
+    return;
   }
 
   std::vector<Relocation<ELFT>> Relocations;
@@ -5532,7 +5542,7 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection,
   // Without relocations there is nothing to resolve. If they could not be read,
   // forEachRelocationDo has already reported a warning.
   if (Relocations.empty())
-    return FuncCGInfos;
+    return;
   llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
     return LHS.Offset < RHS.Offset;
   });
@@ -5553,13 +5563,13 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection,
         [](const Relocation<ELFT> &R, uint64_t O) { return R.Offset < O; });
     if (It == Relocations.end() || It->Offset != Offset) {
       reportUniqueWarning(formatv("no relocation at offset {0:x+} in {1}",
-                                  Offset, describe(*CGSection)));
+                                  Offset, describe(CGSection)));
       return;
     }
     if (std::next(It) != Relocations.end() && std::next(It)->Offset == Offset) {
       reportUniqueWarning(
           formatv("more than one relocation at offset {0:x+} in {1}", Offset,
-                  describe(*CGSection)));
+                  describe(CGSection)));
       return;
     }
     Expected<RelSymbol<ELFT>> RelSymOrErr =
@@ -5588,7 +5598,6 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection,
     for (CallGraphFunc &Callee : CGInfo.DirectCallees)
       ResolveReloc(Callee);
   }
-  return FuncCGInfos;
 }
 
 template <class ELFT>
