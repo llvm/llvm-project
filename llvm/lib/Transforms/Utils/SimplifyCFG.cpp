@@ -3380,11 +3380,6 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   Value *BrCond = BI->getCondition();
   // Insert a select of the value of the speculated store.
   if (SpeculatedStoreValue) {
-    assert(PreviousStoreAccess && "Missing previous store access");
-    // The store will execute on both paths, so retain only AA metadata that is
-    // valid for both the original store and the access on the other path.
-    combineAAMetadata(SpeculatedStore, PreviousStoreAccess);
-
     IRBuilder<NoFolder> Builder(BI);
     Value *OrigV = SpeculatedStore->getValueOperand();
     Value *TrueV = SpeculatedStore->getValueOperand();
@@ -3439,18 +3434,11 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
       I.dropLocation();
       I.dropUBImplyingAttrsAndMetadata();
     } else {
-      // combineAAMetadata() made these safe on both paths above. Keep the
-      // resulting intersection while dropping all other UB-implying metadata.
-      static constexpr unsigned AAMetadata[] = {
-          LLVMContext::MD_tbaa,
-          LLVMContext::MD_tbaa_struct,
-          LLVMContext::MD_alias_scope,
-          LLVMContext::MD_noalias,
-          LLVMContext::MD_mem_parallel_loop_access,
-          LLVMContext::MD_access_group,
-          LLVMContext::MD_noalias_addrspace,
-      };
-      I.dropUBImplyingAttrsAndMetadata(AAMetadata);
+      assert(PreviousStoreAccess && "Missing previous store access");
+      AAMDNodes MergedAA = SpeculatedStore->getAAMetadata().merge(
+          PreviousStoreAccess->getAAMetadata());
+      I.dropUBImplyingAttrsAndMetadata();
+      I.setAAMetadata(MergedAA);
     }
 
     // Drop ephemeral values.
