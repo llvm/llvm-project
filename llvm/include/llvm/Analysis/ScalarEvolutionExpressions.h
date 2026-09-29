@@ -210,11 +210,8 @@ public:
 
   ArrayRef<SCEVUse> operands() const { return ArrayRef(Operands, NumOperands); }
 
-  SCEVFlags getFlags(SCEVFlags Mask = FlagsMask) const {
-    return static_cast<SCEVFlags>(SubclassData) & Mask;
-  }
   SCEVFlags getNoWrapFlags(SCEVFlags Mask = FlagsNoWrapMask) const {
-    return getFlags(Mask & SCEV::FlagsNoWrapMask);
+    return static_cast<SCEVFlags>(SubclassData) & Mask & SCEV::FlagsNoWrapMask;
   }
 
   bool hasNoUnsignedWrap() const { return getNoWrapFlags(FlagNUW) != FlagNone; }
@@ -1020,16 +1017,11 @@ inline SCEVUseT<SCEVPtrT>::SCEVUseT(SCEVPtrT S, SCEVFlags Flags) : Base(S, 0) {
 }
 
 template <typename SCEVPtrT>
-inline SCEVFlags SCEVUseT<SCEVPtrT>::getFlags(SCEVFlags Mask) const {
+inline SCEVFlags SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVFlags Mask) const {
   SCEVFlags Flags = SCEVFlags::FlagNone;
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Base::getPointer()))
-    Flags = NAry->getFlags();
+    Flags = NAry->getNoWrapFlags();
   return (Flags | getUseNoWrapFlags()) & Mask;
-}
-
-template <typename SCEVPtrT>
-inline SCEVFlags SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVFlags Mask) const {
-  return getFlags(Mask & SCEVFlags::FlagsNoWrapMask);
 }
 
 } // end namespace llvm

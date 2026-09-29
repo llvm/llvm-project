@@ -152,7 +152,6 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
 
   /// Return the flags for this SCEVUse, which is the union of the use-specific
   /// flags and the underlying SCEV's flags, masked by \p Mask.
-  SCEVFlags getFlags(SCEVFlags Mask = SCEVFlags::FlagsMask) const;
   SCEVFlags getNoWrapFlags(SCEVFlags Mask = SCEVFlags::FlagsNoWrapMask) const;
 
   /// Return only the use-specific flags without the underlying SCEV's flags.
