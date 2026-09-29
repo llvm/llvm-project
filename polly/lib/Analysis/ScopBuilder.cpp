@@ -1472,6 +1472,11 @@ void ScopBuilder::addUserAssumptions(
     SmallVector<isl_set *, 2> ConditionSets;
     auto *TI = InScop ? CI->getParent()->getTerminator() : nullptr;
     BasicBlock *BB = InScop ? CI->getParent() : R.getEntry();
+
+    // Skip assumptions in blocks with no computed domain (e.g. unreachable blocks).
+    if (!InvalidDomainMap.count(BB))
+      continue;
+
     auto *Dom = InScop ? isl_set_copy(scop->getDomainConditions(BB).get())
                        : isl_set_copy(scop->getContext().get());
     assert(Dom && "Cannot propagate a nullptr.");
