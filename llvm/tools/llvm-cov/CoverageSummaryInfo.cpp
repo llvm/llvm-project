@@ -106,12 +106,15 @@ FunctionCoverageSummary::get(const CoverageMapping &CM,
   CoverageData CD =
       applyCoverageExclusions(Exclusions, CM.getCoverageForFunction(Function));
 
-  SmallVector<CountedRegion> CodeRegions;
-  llvm::copy_if(Function.CountedRegions, std::back_inserter(CodeRegions),
-                [&](const CountedRegion &Region) {
-                  return !Exclusions ||
-                         !Exclusions->isRegionExcluded(Function, Region);
-                });
+  ArrayRef<CountedRegion> CodeRegions = Function.CountedRegions;
+  SmallVector<CountedRegion> FilteredRegions;
+  if (Exclusions) {
+    llvm::copy_if(Function.CountedRegions, std::back_inserter(FilteredRegions),
+                  [&](const CountedRegion &Region) {
+                    return !Exclusions->isRegionExcluded(Function, Region);
+                  });
+    CodeRegions = FilteredRegions;
+  }
 
   auto Summary =
       FunctionCoverageSummary(Function.Name, Function.ExecutionCount);

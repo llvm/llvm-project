@@ -273,15 +273,18 @@ CoverageExclusions::getRanges(StringRef Filename) const {
   return It->second;
 }
 
-bool CoverageExclusions::isLineExcluded(StringRef Filename,
-                                        unsigned Line) const {
-  return findContainingRange(getRanges(Filename), Line) != nullptr;
-}
-
 bool CoverageExclusions::isRegionExcluded(
     const FunctionRecord &Function, const CounterMappingRegion &Region) const {
-  return Region.FileID < Function.Filenames.size() &&
-         isLineExcluded(Function.Filenames[Region.FileID], Region.LineStart);
+  if (Region.FileID >= Function.Filenames.size())
+    return false;
+  const LineRange *Range = findContainingRange(
+      getRanges(Function.Filenames[Region.FileID]), Region.LineStart);
+  // Region end locations are exclusive, so column 1 of the next line does
+  // not include any code on that line.
+  return Range &&
+         (Region.Kind != CounterMappingRegion::CodeRegion ||
+          Region.LineEnd <= Range->second ||
+          (Region.LineEnd - Range->second == 1 && Region.ColumnEnd == 1));
 }
 
 bool CoverageExclusions::isFunctionExcluded(const FunctionRecord &Function,
@@ -293,9 +296,7 @@ bool CoverageExclusions::isFunctionExcluded(const FunctionRecord &Function,
         (!Filename.empty() && Function.Filenames[Region.FileID] != Filename))
       continue;
     HasCodeRegion = true;
-    const LineRange *Range = findContainingRange(
-        getRanges(Function.Filenames[Region.FileID]), Region.LineStart);
-    if (!Range || Region.LineEnd > Range->second)
+    if (!isRegionExcluded(Function, Region))
       return false;
   }
   return HasCodeRegion;

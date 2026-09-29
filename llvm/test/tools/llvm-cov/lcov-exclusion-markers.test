@@ -212,8 +212,14 @@
 # RUN: llvm-cov export %t.boundaries.o --empty-profile \
 # RUN:   -path-equivalence=/src/llvm/test/tools/llvm-cov/Inputs,%S/Inputs \
 # RUN:   --respect-coverage-exclusion-markers \
+# RUN:   %S/Inputs/lcov-exclusion-boundaries.cpp > %t.boundaries.json
+# RUN: FileCheck %s --check-prefix=BOUNDARY-JSON < %t.boundaries.json
+# RUN: FileCheck %s --check-prefix=BOUNDARY-REGION < %t.boundaries.json
+# RUN: llvm-cov report %t.boundaries.o --empty-profile \
+# RUN:   -path-equivalence=/src/llvm/test/tools/llvm-cov/Inputs,%S/Inputs \
+# RUN:   --respect-coverage-exclusion-markers --show-functions \
 # RUN:   %S/Inputs/lcov-exclusion-boundaries.cpp \
-# RUN:   | FileCheck %s --check-prefix=BOUNDARY-JSON
+# RUN:   | FileCheck %s --check-prefix=BOUNDARY-FUNCTIONS
 
 # UNMATCHED: LCOV_EXCL_START at line 1 has no matching LCOV_EXCL_STOP
 # ORPHAN: LCOV_EXCL_STOP at line 1 has no matching LCOV_EXCL_START
@@ -237,6 +243,8 @@
 # BOUNDARY-LCOV: LF:9
 
 # BOUNDARY-JSON-NOT: excluded_header_function
+# BOUNDARY-REGION: "name":"_Z27partially_excluded_functionv","regions":{{\[\[}}8,
+# BOUNDARY-FUNCTIONS: _Z27partially_excluded_functionv{{ +}}1{{ +}}1{{ +}}0.00%{{ +}}2
 
 #--- unmatched/lcov-exclusion-markers.cpp
 // LCOV_EXCL_START

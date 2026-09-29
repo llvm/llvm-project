@@ -25,8 +25,6 @@ public:
 
   Error parse(StringRef Filename, StringRef Source);
 
-  bool isLineExcluded(StringRef Filename, unsigned Line) const;
-
   bool isRegionExcluded(const coverage::FunctionRecord &Function,
                         const coverage::CounterMappingRegion &Region) const;
 
