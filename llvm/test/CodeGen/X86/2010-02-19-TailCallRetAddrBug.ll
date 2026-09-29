@@ -2,18 +2,22 @@
 ; Check that lowered arguments do not overwrite the return address before it is moved.
 ; Bug 6225
 ;
+; We also now require that the return address is stored to its new stack slot
+; before any lowered argument can overwrite the original (this means the return
+; address will always be present on the stack).
+;
 ; If a call is a fastcc tail call and tail call optimization is enabled, the
 ; caller frame is replaced by the callee frame. This can require that arguments are
 ; placed on the former return address stack slot. Special care needs to be taken
 ; taken that the return address is moved / or stored in a register before
 ; lowering of arguments potentially overwrites the value.
 ;
-; Move return address (76(%esp)) to a temporary register (%ebp)
+; Move return address (76(%esp)) to a temporary register (%ebx)
 ; CHECK: movl 76(%esp), [[REGISTER:%[a-z]+]]
-; Overwrite return addresss
-; CHECK: movl [[EBX:%[a-z]+]], 76(%esp)
-; Move return address from temporary register (%ebp) to new stack location (60(%esp))
+; Move return address from the temporary register to its new stack location (60(%esp))
 ; CHECK: movl [[REGISTER]], 60(%esp)
+; Only now is it safe to overwrite the original return address slot
+; CHECK: movl {{%[a-z]+}}, 76(%esp)
 
 %tupl = type [9 x i32]
 
