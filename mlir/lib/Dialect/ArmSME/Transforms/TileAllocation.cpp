@@ -800,33 +800,25 @@ struct TestTileAllocationPass
 };
 } // namespace
 
-/// Returns true if `function` contains any SME tile values, either as block
-/// arguments (e.g., function arguments, or arguments to blocks merging values
-/// from different paths) or as results of operations.
+/// Returns true if `function` contains any SME tile values, either as
+/// function arguments or as results of operations.
+///
+/// NOTE: Block arguments of non-entry blocks do not need to be checked
+/// separately, as they are always fed by branch operands that trace back to
+/// either a function argument or an operation result.
 static bool functionHasSMETileValues(FunctionOpInterface function) {
   auto hasSMETileType = [](TypeRange types) {
     return llvm::any_of(
         types, [](Type type) { return isValidSMETileVectorType(type); });
   };
-
-  bool hasSMETileValues = false;
-  function.walk([&](Block *block) -> WalkResult {
-    if (hasSMETileType(block->getArgumentTypes())) {
-      hasSMETileValues = true;
-      return WalkResult::interrupt();
-    }
-    return WalkResult::advance();
-  });
-  if (hasSMETileValues)
+  if (hasSMETileType(function.getArgumentTypes()))
     return true;
-  function.walk([&](Operation *op) -> WalkResult {
-    if (hasSMETileType(op->getResultTypes())) {
-      hasSMETileValues = true;
-      return WalkResult::interrupt();
-    }
-    return WalkResult::advance();
-  });
-  return hasSMETileValues;
+  return function
+      .walk([&](Operation *op) {
+        return hasSMETileType(op->getResultTypes()) ? WalkResult::interrupt()
+                                                    : WalkResult::advance();
+      })
+      .wasInterrupted();
 }
 
 LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
