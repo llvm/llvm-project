@@ -2203,9 +2203,9 @@ bool ClauseProcessor::processMap(
           fir::ReferenceType::get(entity.getFortranElementType());
       mlir::Type iterTy =
           mlir::omp::IteratedType::get(&converter.getMLIRContext(), elemRefTy);
-      mlir::FlatSymbolRefAttr mapperId = resolveMapperId(
-          converter, clauseLocation, object, mapperIdName, mapTypeBits,
-          directive);
+      mlir::FlatSymbolRefAttr mapperId =
+          resolveMapperId(converter, clauseLocation, object, mapperIdName,
+                          mapTypeBits, directive);
       std::string objName = object.sym()->name().ToString();
 
       mlir::Value iterHandle = buildIteratorOp(
