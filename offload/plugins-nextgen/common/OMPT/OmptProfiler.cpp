@@ -102,8 +102,8 @@ void ompt::OmptProfilerTy::handleKernelCompletion(uint64_t StartNanos,
   if (!isProfilingEnabled())
     return;
 
-  /// Empty data means no tracing in OMPT
-  /// offload/include/OpenMP/OMPT/Interface.h line 492
+  // Null data means no trace record was assigned for this event, see
+  // TracerInterfaceRAII in OpenMP/OMPT/Interface.h.
   if (!Data)
     return;
 
@@ -128,8 +128,8 @@ void ompt::OmptProfilerTy::handleDataTransfer(uint64_t StartNanos,
   if (!isProfilingEnabled())
     return;
 
-  /// Empty data means no tracing in OMPT
-  /// offload/include/OpenMP/OMPT/Interface.h line 492
+  // Null data means no trace record was assigned for this event, see
+  // TracerInterfaceRAII in OpenMP/OMPT/Interface.h.
   if (!Data)
     return;
 

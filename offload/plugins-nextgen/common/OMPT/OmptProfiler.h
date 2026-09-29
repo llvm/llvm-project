@@ -20,7 +20,6 @@
 #include "OmptDeviceTracing.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/OmptEventInfoTy.h"
-#include "OpenMP/OMPT/OmptTracingBuffer.h"
 #include "Shared/Debug.h"
 #include "omp-tools.h"
 
@@ -115,14 +114,18 @@ public:
 
   void setTimeConversionFactorsImpl(double Slope, double Offset) override;
 
-  void *getProfilerSpecificData() override {
+  /// Allocate the event info that carries \p Record into the plugins for
+  /// asynchronous completion. The profiler owns the returned object and frees
+  /// it via freeProfilerDataEntry once the plugin completed the record.
+  OmptEventInfoTy *trackAsyncRecord(ompt_record_ompt_t *Record) {
     // TODO: This is ID is not used currently
     uint64_t Id = OmptProfDataId.fetch_add(1);
-    {
-      std::scoped_lock<std::mutex> Lock(ProfilerDataMutex);
-      ProfilerData[Id] = std::make_unique<OmptEventInfoTy>();
-      return ProfilerData[Id].get();
-    }
+    std::scoped_lock<std::mutex> Lock(ProfilerDataMutex);
+    auto &Info = ProfilerData[Id];
+    Info = std::make_unique<OmptEventInfoTy>();
+    Info->TraceRecord = Record;
+    Info->NumTeams = 0;
+    return Info.get();
   }
 
   void freeProfilerDataEntry(OmptEventInfoTy *DataPtr) {
@@ -135,17 +138,7 @@ public:
       }
   }
 
-  /// The trace records handed out here point into buffers owned by the trace
-  /// buffer manager, so the profiler owns it to bind both lifetimes.
-  OmptTracingBufferMgr *getTraceRecordManager() override {
-    return TraceRecordManager.get();
-  }
-
 private:
-  /// Trace buffer manager whose records the ProfilerData entries refer to.
-  std::unique_ptr<OmptTracingBufferMgr> TraceRecordManager =
-      std::make_unique<OmptTracingBufferMgr>();
-
   /// Holds a unique ID for each allocation of OmptEventInfoTy
   std::atomic<uint64_t> OmptProfDataId{0};
 
@@ -169,6 +162,10 @@ private:
   /// Internal representation for OMPT device (initialize & finalize)
   std::atomic<bool> OmptInitialized;
 };
+
+/// Process-wide OMPT profiler owned by libomptarget; nullptr before it has
+/// been created.
+OmptProfilerTy *getOmptProfiler();
 } // namespace ompt
 } // namespace target
 } // namespace omp
