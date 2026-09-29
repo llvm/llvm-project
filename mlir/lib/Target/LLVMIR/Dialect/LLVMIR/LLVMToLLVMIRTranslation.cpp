@@ -253,15 +253,23 @@ static LogicalResult convertGEPOp(GEPOp op, llvm::IRBuilderBase &builder,
   llvm::Type *elementType = moduleTranslation.convertType(op.getElemType());
   llvm::GEPNoWrapFlags nwFlags =
       llvm::GEPNoWrapFlags::fromRaw(static_cast<unsigned>(op.getNoWrapFlags()));
+  ConstantRangeAttr inrangeAttr = op.getInrangeAttr();
   llvm::Value *base = moduleTranslation.lookupValue(op.getBase());
   llvm::Value *res;
-  if (ConstantRangeAttr inrangeAttr = op.getInrangeAttr()) {
+  if (inrangeAttr || !builder.GetInsertPoint().isValid()) {
+    StringRef WhyConstExpr =
+        inrangeAttr ? "'inrange' GEP" : "global initializer GEP";
     auto *baseConst = dyn_cast<llvm::Constant>(base);
     if (!baseConst || !llvm::all_of(indices, [](llvm::Value *value) {
           return isa<llvm::Constant>(value);
         }))
-      return op.emitError("'inrange' requires the base and indices to "
-                          "translate to LLVM constants");
+      return op.emitError(WhyConstExpr + " requires the base and indices to "
+                                         "translate to LLVM constants");
+
+    std::optional<llvm::ConstantRange> inrangeCR;
+    if (inrangeAttr)
+      inrangeCR = llvm::ConstantRange::getNonEmpty(inrangeAttr.getLower(),
+                                                   inrangeAttr.getUpper());
 
     SmallVector<llvm::Constant *> constIndices;
     constIndices.reserve(indices.size());
@@ -270,12 +278,10 @@ static LogicalResult convertGEPOp(GEPOp op, llvm::IRBuilderBase &builder,
     const llvm::DataLayout &dataLayout =
         moduleTranslation.getLLVMModule()->getDataLayout();
     res = llvm::ConstantExpr::getGetElementPtr(
-        dataLayout, elementType, baseConst, constIndices, nwFlags,
-        llvm::ConstantRange::getNonEmpty(inrangeAttr.getLower(),
-                                         inrangeAttr.getUpper()));
+        dataLayout, elementType, baseConst, constIndices, nwFlags, inrangeCR);
     if (!res)
-      return op.emitError(
-          "failed to lower 'inrange' GEP to a constant byte offset");
+      return op.emitError("failed to lower " + WhyConstExpr +
+                          " to a constant byte offset");
   } else {
     res = builder.CreateGEP(elementType, base, indices, "", nwFlags);
   }
