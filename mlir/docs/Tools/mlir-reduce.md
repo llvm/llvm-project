@@ -92,14 +92,15 @@ mlir-reduce query-test.mlir -reduction-tree='traversal-mode=0 test=query-test.sh
 
 The output:
 
-```
+```mlir
 module {
   func.func @func2(%arg0: i1) -> f32 {
     %cst = arith.constant 2.200000e+00 : f32
-    %cst_0 = arith.constant 7.500000e+00 : f32
-    %0 = arith.select %arg0, %cst_0, %cst : f32
-    %1 = arith.addf %0, %cst : f32
-    return %1 : f32
+    %cst_0 = arith.constant 5.300000e+00 : f32
+    %0 = arith.addf %cst, %cst_0 : f32
+    %1 = arith.select %arg0, %0, %cst : f32
+    %2 = arith.addf %cst, %1 : f32
+    return %2 : f32
   }
 }
 ```
