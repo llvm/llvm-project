@@ -3121,10 +3121,10 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
 
 /// Return true for the narrow loop-carried PHI shape where converting the
 /// branch to a select would put the selected value directly on the next
-/// loop-header branch condition.  
-static bool shouldVetoLoopCarriedSelect(
-    BasicBlock *BB, BasicBlock *ThenBB, BasicBlock *EndBB,
-    ArrayRef<WeakVH> LoopHeaders) {
+/// loop-header branch condition.
+static bool shouldVetoLoopCarriedSelect(BasicBlock *BB, BasicBlock *ThenBB,
+                                        BasicBlock *EndBB,
+                                        ArrayRef<WeakVH> LoopHeaders) {
   auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
   if (!BI || !isa<ICmpInst>(BI->getCondition()))
     return false;
