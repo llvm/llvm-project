@@ -4897,17 +4897,16 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
   // TODO: Model the scalarization overhead of wide fixed-length SVE vectors
   // accurately.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
-  if (ST->useSVEForFixedLengthVectors(LT.second)) {
-    return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                           CostKind) +
-           5;
-  }
+  unsigned FixedLengthSVECost =
+      ST->useSVEForFixedLengthVectors(LT.second) ? 5 : 0;
   if (Ty->getElementType()->isFloatingPointTy())
     return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                           CostKind);
+                                           CostKind) +
+           FixedLengthSVECost;
   unsigned VecInstCost =
       CostKind == TTI::TCK_CodeSize ? 1 : ST->getVectorInsertExtractBaseCost();
-  return DemandedElts.popcount() * (Insert + Extract) * VecInstCost;
+  return DemandedElts.popcount() * (Insert + Extract) * VecInstCost +
+         FixedLengthSVECost;
 }
 
 std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
