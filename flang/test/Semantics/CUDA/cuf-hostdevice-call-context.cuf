@@ -1,0 +1,323 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+!
+! A host,device procedure has a host copy and a device copy. An unguarded
+! call must be valid in both. ON_DEVICE() selects the appropriate target for
+! calls that are only valid in one copy.
+
+module call_context
+  interface host_generic
+    module procedure host_subroutine
+  end interface
+  interface device_generic
+    module procedure device_subroutine
+  end interface
+contains
+  integer function host_only(n)
+    integer, value :: n
+    host_only = n + 1
+  end function
+
+  attributes(device) integer function device_only(n)
+    integer, value :: n
+    device_only = n + 2
+  end function
+
+  attributes(host,device) integer function both(n)
+    integer, value :: n
+    both = n + 3
+  end function
+
+  attributes(host,device) integer function unguarded_both(n)
+    integer, value :: n
+    unguarded_both = both(n)
+  end function
+
+  attributes(host,device) integer function unguarded_host(n)
+    integer, value :: n
+    !ERROR: 'host_only' may not be called in device code
+    unguarded_host = host_only(n)
+  end function
+
+  attributes(host,device) integer function unguarded_device(n)
+    integer, value :: n
+    !ERROR: 'device_only' may not be called in host code
+    unguarded_device = device_only(n)
+  end function
+
+  attributes(host,device) integer function guarded(n)
+    integer, value :: n
+    if (on_device()) then
+      guarded = device_only(n) + both(n)
+    else
+      guarded = host_only(n) + both(n)
+    end if
+  end function
+
+  attributes(host,device) integer function wrong_side(n)
+    integer, value :: n
+    if (on_device()) then
+      !ERROR: 'host_only' may not be called in device code
+      wrong_side = host_only(n)
+    else
+      !ERROR: 'device_only' may not be called in host code
+      wrong_side = device_only(n)
+    end if
+  end function
+
+  attributes(host,device) integer function guarded_negated(n)
+    integer, value :: n
+    if (.not. on_device()) then
+      guarded_negated = host_only(n)
+    else
+      guarded_negated = device_only(n)
+    end if
+  end function
+
+  attributes(host,device) integer function guarded_else_if(n, choose_first)
+    integer, value :: n
+    logical, value :: choose_first
+    if (choose_first) then
+      guarded_else_if = both(n)
+    else if (on_device()) then
+      guarded_else_if = device_only(n)
+    else
+      guarded_else_if = host_only(n)
+    end if
+  end function
+
+  attributes(host,device) integer function guarded_nested(n)
+    integer, value :: n
+    if (on_device()) then
+      if (n > 0) then
+        guarded_nested = device_only(n)
+      else
+        guarded_nested = both(n)
+      end if
+    else
+      if (n > 0) then
+        guarded_nested = host_only(n)
+      else
+        guarded_nested = both(n)
+      end if
+    end if
+  end function
+
+  attributes(host,device) integer function guarded_one_line(n)
+    integer, value :: n
+    guarded_one_line = both(n)
+    if (on_device()) guarded_one_line = device_only(n)
+    if (.not. on_device()) guarded_one_line = host_only(n)
+  end function
+
+  attributes(host,device) integer function compound_and(n)
+    integer, value :: n
+    if (on_device() .and. n > 0) then
+      compound_and = both(n)
+    else
+      ! A device copy reaches ELSE when n <= 0.
+      !ERROR: 'host_only' may not be called in device code
+      compound_and = host_only(n)
+    end if
+  end function
+
+  attributes(host,device) integer function compound_or(n)
+    integer, value :: n
+    if (on_device() .or. n > 0) then
+      ! A host copy reaches THEN when n > 0.
+      !ERROR: 'device_only' may not be called in host code
+      compound_or = device_only(n)
+    else
+      compound_or = both(n)
+    end if
+  end function
+
+  attributes(host,device) integer function safe_compound(n)
+    integer, value :: n
+    safe_compound = both(n)
+    if (on_device() .and. n > 0) safe_compound = device_only(n)
+    if (on_device() .or. n > 0) then
+      safe_compound = safe_compound + both(n)
+    else
+      safe_compound = safe_compound + host_only(n)
+    end if
+  end function
+
+  logical function host_condition(n)
+    integer, value :: n
+    host_condition = n > 0
+  end function
+
+  attributes(device) logical function device_condition(n)
+    integer, value :: n
+    device_condition = n > 0
+  end function
+
+  attributes(host,device) integer function else_if_condition(n)
+    integer, value :: n
+    if (on_device()) then
+      else_if_condition = device_only(n)
+    else if (host_condition(n)) then
+      else_if_condition = host_only(n)
+    else
+      else_if_condition = both(n)
+    end if
+  end function
+
+  attributes(host,device) integer function else_if_condition_negated(n)
+    integer, value :: n
+    if (.not. on_device()) then
+      else_if_condition_negated = host_only(n)
+    else if (device_condition(n)) then
+      else_if_condition_negated = device_only(n)
+    else
+      else_if_condition_negated = both(n)
+    end if
+  end function
+
+  attributes(host,device) integer function after_guard(n)
+    integer, value :: n
+    if (on_device()) then
+      after_guard = device_only(n)
+    else
+      after_guard = host_only(n)
+    end if
+    ! Both copies reach the statement after END IF.
+    !ERROR: 'host_only' may not be called in device code
+    after_guard = after_guard + host_only(n)
+  end function
+
+  subroutine host_subroutine(n)
+    integer, intent(inout) :: n
+    n = n + 1
+  end subroutine
+
+  attributes(device) subroutine device_subroutine(n)
+    integer, value :: n
+    integer :: scratch
+    scratch = n + 2
+  end subroutine
+
+  attributes(host,device) subroutine both_subroutine(n)
+    integer, intent(inout) :: n
+    n = n + 3
+  end subroutine
+
+  attributes(host,device) subroutine guarded_subroutine(n)
+    integer, intent(inout) :: n
+    call both_subroutine(n)
+    if (on_device()) then
+      call device_subroutine(n)
+    else
+      call host_subroutine(n)
+    end if
+  end subroutine
+
+  attributes(host,device) subroutine unguarded_subroutines(n)
+    integer, intent(inout) :: n
+    !ERROR: 'host_subroutine' may not be called in device code
+    call host_subroutine(n)
+    !ERROR: 'device_subroutine' may not be called in host code
+    call device_subroutine(n)
+  end subroutine
+
+  attributes(host,device) subroutine generic_subroutines(n)
+    integer, intent(inout) :: n
+    !ERROR: 'host_subroutine' may not be called in device code
+    call host_generic(n)
+    !ERROR: 'device_subroutine' may not be called in host code
+    call device_generic(n)
+  end subroutine
+
+  subroutine host_entry(x)
+    integer, intent(out) :: x
+    x = unguarded_both(1) + guarded(1) + guarded_negated(1) + &
+        guarded_else_if(1, .false.) + guarded_nested(1) + guarded_one_line(1)
+    call guarded_subroutine(x)
+  end subroutine
+
+  attributes(global) subroutine device_entry(x)
+    integer, device :: x(*)
+    x(1) = unguarded_both(1) + guarded(1) + guarded_negated(1) + &
+        guarded_else_if(1, .false.) + guarded_nested(1) + guarded_one_line(1)
+    call guarded_subroutine(x(1))
+  end subroutine
+end module
+
+module fake_bindc_guard
+contains
+  attributes(host,device) logical function on_device() bind(c, name="user_on_device")
+    on_device = .false.
+  end function
+
+  subroutine host_only(n)
+    integer, intent(inout) :: n
+    n = n + 1
+  end subroutine
+
+  attributes(device) subroutine device_only(n)
+    integer, intent(inout) :: n
+    n = n + 2
+  end subroutine
+
+  attributes(host,device) subroutine misleading_bindc_guard(n)
+    integer, intent(inout) :: n
+    if (on_device()) then
+      !ERROR: 'device_only' may not be called in host code
+      call device_only(n)
+    else
+      !ERROR: 'host_only' may not be called in device code
+      call host_only(n)
+    end if
+  end subroutine
+end module
+
+module aliased_guard
+  use cudadevice, only: on_gpu => on_device
+contains
+  subroutine host_only(n)
+    integer, intent(inout) :: n
+    n = n + 1
+  end subroutine
+
+  attributes(device) subroutine device_only(n)
+    integer, intent(inout) :: n
+    n = n + 2
+  end subroutine
+
+  attributes(host,device) subroutine real_aliased_guard(n)
+    integer, intent(inout) :: n
+    if (on_gpu()) then
+      call device_only(n)
+    else
+      call host_only(n)
+    end if
+  end subroutine
+end module
+
+module fake_guard
+contains
+  attributes(host,device) logical function on_device()
+    on_device = .false.
+  end function
+
+  subroutine host_only(n)
+    integer, intent(inout) :: n
+    n = n + 1
+  end subroutine
+
+  attributes(device) subroutine device_only(n)
+    integer, intent(inout) :: n
+    n = n + 2
+  end subroutine
+
+  attributes(host,device) subroutine misleading_guard(n)
+    integer, intent(inout) :: n
+    if (on_device()) then
+      !ERROR: 'device_only' may not be called in host code
+      call device_only(n)
+    else
+      !ERROR: 'host_only' may not be called in device code
+      call host_only(n)
+    end if
+  end subroutine
+end module
