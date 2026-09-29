@@ -1077,8 +1077,7 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
     // that later access lowering still sees it.
     Value *Result = GetPtr;
     if (AccessIdx.hasOffsetIdx())
-      Result =
-          Builder.CreateGEP(Builder.getInt8Ty(), GetPtr, AccessIdx.OffsetIdx);
+      Result = Builder.CreatePtrAdd(GetPtr, AccessIdx.OffsetIdx);
     Ptr->replaceAllUsesWith(Result);
   } else {
     assert(Ptr->getType()->isTargetExtTy() && !AccessIdx.hasGetPtrIdx() &&
