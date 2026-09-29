@@ -13,6 +13,13 @@
 
 // Test that AMDGPU builtins are available on AMDGCN-flavored SPIR-V.
 
+// FIXME: CIR doesn't propagate the 'contract' fast-math flag to LLVM IR yet,
+// so the LLVM check lines use call{{.*}} to tolerate the difference between
+// CIR (no flags) and classic codegen ('contract').
+
+// FIXME: CIR doesn't cast allocas to the generic address space yet, so the
+// LLVM output lacks the addrspacecast that classic codegen emits.
+
 #define __device__ __attribute__((device))
 
 __device__ int test_readfirstlane(int x) {
