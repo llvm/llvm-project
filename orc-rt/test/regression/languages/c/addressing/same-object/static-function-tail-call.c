@@ -16,9 +16,7 @@ __attribute__((noinline)) static int addOne(int X) { return X + 1; }
 
 // noinline, to prevent inlining into main, where the tail call would become a
 // plain call.
-__attribute__((noinline)) static int tailCallAddOne(int X) {
-  return addOne(X);
-}
+__attribute__((noinline)) static int tailCallAddOne(int X) { return addOne(X); }
 
 // Non-const global argument, to prevent interprocedural constant propagation.
 int Arg = 41;
