@@ -593,6 +593,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (static_cast<bool>(ProfileKind &
                         InstrProfKind::LoopEntriesInstrumentation))
     Header.Version |= VARIANT_MASK_INSTR_LOOP_ENTRIES;
+  if (static_cast<bool>(ProfileKind & InstrProfKind::DenseWaveInstrumentation))
+    Header.Version |= VARIANT_MASK_DENSE_WAVE;
   if (static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage))
     Header.Version |= VARIANT_MASK_BYTE_COVERAGE;
   if (static_cast<bool>(ProfileKind & InstrProfKind::FunctionEntryOnly))
@@ -818,6 +820,8 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
           "blocks\n:instrument_loop_entries\n";
   if (static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage))
     OS << "# Instrument block coverage\n:single_byte_coverage\n";
+  if (static_cast<bool>(ProfileKind & InstrProfKind::DenseWaveInstrumentation))
+    OS << "# Dense GPU block wave instrumentation\n:dense_wave\n";
   InstrProfSymtab Symtab;
 
   using FuncPair = detail::DenseMapPair<uint64_t, InstrProfRecord>;

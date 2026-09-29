@@ -1,0 +1,43 @@
+# RUN: split-file %s %t
+# RUN: llvm-profdata merge %t/dense.txt -o %t/dense.profdata
+# RUN: llvm-profdata show --profile-version %t/dense.profdata | FileCheck %s --check-prefix=DENSE
+# RUN: llvm-profdata merge --text %t/dense.profdata -o %t/roundtrip.txt
+# RUN: FileCheck %s --check-prefix=TEXT < %t/roundtrip.txt
+# RUN: llvm-profdata merge %t/roundtrip.txt -o %t/roundtrip.profdata
+# RUN: llvm-profdata show --profile-version %t/roundtrip.profdata | FileCheck %s --check-prefix=DENSE
+# RUN: llvm-profdata merge %t/sparse.txt -o %t/sparse.profdata
+# RUN: llvm-profdata show --profile-version %t/sparse.profdata | FileCheck %s --check-prefix=SPARSE
+# RUN: not llvm-profdata merge -j 1 %t/dense.profdata %t/sparse.profdata -o %t/mixed 2>&1 | FileCheck %s --check-prefix=ERROR
+# RUN: not llvm-profdata merge -j 1 %t/sparse.profdata %t/dense.profdata -o %t/mixed 2>&1 | FileCheck %s --check-prefix=ERROR
+# RUN: not llvm-profdata merge -j 2 %t/dense.profdata %t/sparse.profdata -o %t/mixed 2>&1 | FileCheck %s --check-prefix=ERROR
+# RUN: not llvm-profdata merge -j 2 %t/sparse.profdata %t/dense.profdata -o %t/mixed 2>&1 | FileCheck %s --check-prefix=ERROR
+# RUN: llvm-profdata merge -j 2 %t/dense.profdata %t/dense.profdata -o %t/double.profdata
+# RUN: llvm-profdata show --profile-version %t/double.profdata | FileCheck %s --check-prefix=DENSE
+
+# RUN: touch %t/empty.raw
+# RUN: llvm-profdata merge -j 2 %t/dense.profdata %t/empty.raw -o %t/empty-merge.profdata
+# RUN: llvm-profdata show --profile-version %t/empty-merge.profdata | FileCheck %s --check-prefix=DENSE
+# RUN: llvm-profdata merge -j 2 %t/empty.raw %t/dense.profdata -o %t/empty-merge.profdata
+# RUN: llvm-profdata show --profile-version %t/empty-merge.profdata | FileCheck %s --check-prefix=DENSE
+
+# Header round trips use a lane-only record; wave payload text export remains
+# unsupported. Equal-length records must still reject incompatible layouts.
+# DENSE: dense_wave = 1
+# SPARSE: dense_wave = 0
+# TEXT: :dense_wave
+# ERROR: cannot merge dense and sparse wave instrumentation layouts
+
+#--- dense.txt
+:ir
+:dense_wave
+same
+123
+1
+0
+
+#--- sparse.txt
+:ir
+same
+123
+1
+0

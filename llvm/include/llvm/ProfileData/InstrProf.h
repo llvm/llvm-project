@@ -402,7 +402,9 @@ enum class InstrProfKind {
   TemporalProfile = 0x80,
   // A profile with loop entry basic blocks instrumentation.
   LoopEntriesInstrumentation = 0x100,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/LoopEntriesInstrumentation)
+  // Append zero-step counters to measure waves in otherwise unmeasured blocks.
+  DenseWaveInstrumentation = 0x200,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/DenseWaveInstrumentation)
 };
 
 LLVM_ABI const std::error_category &instrprof_category();

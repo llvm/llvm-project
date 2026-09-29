@@ -22,8 +22,24 @@ GPU counter instrumentation always collects wave counts. Each existing
 instrumentation counter has a wave counter at the same index. The GPU runtime
 updates lane, uniformity, and wave counters in one call: the first active lane
 adds the active-lane count to the lane counter and one to the wave counter.
-Workgroup sampling controls the overhead of all three channels. No extra instrumentation
-points are inserted; blocks without a counter have no direct wave measurement.
+Workgroup sampling controls the overhead of all three channels.
+
+Ordinary AMDGPU IR-PGO instrumentation also measures waves in blocks without
+an existing counter. The sparse block counters and select counters retain
+their original indices. Additional block counters follow them in function
+block order, using a zero lane step so that lane-flow reconstruction and
+uniformity annotations retain their original inputs. Blocks without a legal
+insertion point are left unmeasured. Context-sensitive, coverage and temporal
+instrumentation do not use this extension.
+
+`VARIANT_MASK_DENSE_WAVE` (bit 54 in the raw and indexed version fields)
+identifies this layout. The device module supplies the flag to the collector;
+profile readers and writers preserve it through merging. Profile use reads
+the flag to reconstruct the extra indices automatically, including when wave
+metadata production is disabled. Older sparse profiles remain supported.
+Dense and sparse layouts cannot be merged. The hidden generation option
+`-pgo-instrument-dense-wave-counts=false` selects the legacy sparse layout for
+debugging; its value during profile use does not override the recorded layout.
 
 Wave counts observe the active groups that execute each instrumentation point.
 They do not require full waves or preserve lane grouping across compiler

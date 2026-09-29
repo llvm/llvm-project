@@ -151,6 +151,37 @@ TEST_F(InstrProfTest, WaveCountsMismatchDoesNotMutate) {
   EXPECT_THAT(A.WaveCounts, ElementsAre(1));
 }
 
+TEST_F(InstrProfTest, DenseWaveLayoutRoundTrip) {
+  ASSERT_THAT_ERROR(
+      Writer.mergeProfileKind(InstrProfKind::IRInstrumentation |
+                              InstrProfKind::DenseWaveInstrumentation),
+      Succeeded());
+  NamedInstrProfRecord R("wave", 123, {64, 0});
+  R.WaveCounts = {1, 2};
+  Writer.addRecord(std::move(R), Err);
+  readProfile(Writer.writeBuffer());
+  EXPECT_TRUE(Reader->hasDenseWaveProfile());
+  auto Record = Reader->getInstrProfRecord("wave", 123);
+  ASSERT_THAT_ERROR(Record.takeError(), Succeeded());
+  EXPECT_THAT(Record->Counts, ElementsAre(64, 0));
+  EXPECT_THAT(Record->WaveCounts, ElementsAre(1, 2));
+}
+
+TEST_F(InstrProfTest, DenseWaveLayoutMismatchDoesNotMutate) {
+  auto Sparse = InstrProfKind::IRInstrumentation;
+  auto Dense = Sparse | InstrProfKind::DenseWaveInstrumentation;
+  for (bool DenseFirst : {false, true}) {
+    InstrProfWriter W;
+    auto First = DenseFirst ? Dense : Sparse;
+    auto Second = DenseFirst ? Sparse : Dense;
+    ASSERT_THAT_ERROR(W.mergeProfileKind(First), Succeeded());
+    EXPECT_TRUE(ErrorEquals(instrprof_error::unsupported_version,
+                            W.mergeProfileKind(Second)));
+    EXPECT_EQ(W.getProfileKind(), First);
+    EXPECT_THAT_ERROR(W.mergeProfileKind(First), Succeeded());
+  }
+}
+
 TEST_F(InstrProfTest, WaveCountsScaleCopyClearAndOverflow) {
   InstrProfRecord A({64, 128});
   A.WaveCounts = {2, 4};

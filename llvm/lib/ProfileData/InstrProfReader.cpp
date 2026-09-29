@@ -56,6 +56,9 @@ static InstrProfKind getProfileKindFromVersion(uint64_t Version) {
   if (Version & VARIANT_MASK_INSTR_LOOP_ENTRIES) {
     ProfileKind |= InstrProfKind::LoopEntriesInstrumentation;
   }
+  if (Version & VARIANT_MASK_DENSE_WAVE) {
+    ProfileKind |= InstrProfKind::DenseWaveInstrumentation;
+  }
   if (Version & VARIANT_MASK_BYTE_COVERAGE) {
     ProfileKind |= InstrProfKind::SingleByteCoverage;
   }
@@ -268,6 +271,8 @@ Error TextInstrProfReader::readHeader() {
       ProfileKind &= ~InstrProfKind::FunctionEntryInstrumentation;
     else if (Str.equals_insensitive("instrument_loop_entries"))
       ProfileKind |= InstrProfKind::LoopEntriesInstrumentation;
+    else if (Str.equals_insensitive("dense_wave"))
+      ProfileKind |= InstrProfKind::DenseWaveInstrumentation;
     else if (Str.equals_insensitive("single_byte_coverage"))
       ProfileKind |= InstrProfKind::SingleByteCoverage;
     else if (Str.equals_insensitive("temporal_prof_traces")) {
@@ -546,6 +551,9 @@ Error RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
 
   // There's another profile to read, so we need to process the header.
   auto *Header = reinterpret_cast<const RawInstrProf::Header *>(CurrentPos);
+  if ((Version ^ swap(Header->Version)) & VARIANT_MASK_DENSE_WAVE)
+    return error(instrprof_error::unsupported_version,
+                 "cannot merge dense and sparse wave instrumentation layouts");
   return readHeader(*Header);
 }
 

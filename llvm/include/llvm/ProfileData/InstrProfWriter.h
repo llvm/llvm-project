@@ -201,6 +201,13 @@ public:
       return make_error<InstrProfError>(
           instrprof_error::coverage_count_mismatch);
     }
+    if (static_cast<bool>(
+            (ProfileKind & InstrProfKind::DenseWaveInstrumentation) ^
+            (Other & InstrProfKind::DenseWaveInstrumentation))) {
+      return make_error<InstrProfError>(
+          instrprof_error::unsupported_version,
+          "cannot merge dense and sparse wave instrumentation layouts");
+    }
 
     // Now we update the profile type with the bits that are set.
     ProfileKind |= Other;
