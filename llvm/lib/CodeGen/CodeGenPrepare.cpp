@@ -8999,7 +8999,10 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
     return false;
 
   const APInt *ShiftAmt = nullptr;
-  if (!match(LoopStride, m_Splat(m_Shl(m_VScale(), m_APInt(ShiftAmt)))))
+  Value *ShiftedVScale = nullptr;
+  if (!match(LoopStride,
+             m_Splat(
+                 m_Value(ShiftedVScale, m_Shl(m_VScale(), m_APInt(ShiftAmt))))))
     return false;
 
   // Make sure the shift amount matches the minimum element count.
@@ -9050,34 +9053,43 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   unsigned Size = DL.getTypeStoreSize(GEP->getResultElementType());
 
   // Multiply the start by the size of the struct, and add the base pointer.
-  IRBuilder<> PHBuilder(PreHeader->getTerminator());
+  IRBuilder<> Builder(PreHeader->getTerminator());
   Value *StructSize = ConstantInt::get(ITy, APInt(64, Size));
-  StructSize = PHBuilder.CreateVectorSplat(VTy->getElementCount(), StructSize);
-  Value *NewStart = PHBuilder.CreateMul(Start, StructSize);
-  Base = PHBuilder.CreatePtrToInt(Base, ITy);
-  Base = PHBuilder.CreateVectorSplat(VTy->getElementCount(), Base);
-  NewStart = PHBuilder.CreateAdd(NewStart, Base);
+  Value *SizeSplat =
+      Builder.CreateVectorSplat(VTy->getElementCount(), StructSize);
+  Value *NewStart = Builder.CreateMul(Start, SizeSplat);
+  Base = Builder.CreatePtrToInt(Base, ITy);
+  Base = Builder.CreateVectorSplat(VTy->getElementCount(), Base);
+  NewStart = Builder.CreateAdd(NewStart, Base);
+  NewStart = Builder.CreateIntToPtr(NewStart, GEP->getType());
 
   // Create a new step based on the total size of all struct addresses per
   // iteration.
-  Value *StructStride = ConstantInt::get(ITy, ShiftAmt->getZExtValue());
-  StructStride = PHBuilder.CreateMul(StructStride, PHBuilder.CreateVScale(ITy));
+  Value *StructStride = Builder.CreateMul(ShiftedVScale, StructSize);
   StructStride =
-      PHBuilder.CreateVectorSplat(VTy->getElementCount(), StructStride);
+      Builder.CreateVectorSplat(VTy->getElementCount(), StructStride);
 
-  IRBuilder<> LBuilder(cast<Instruction>(Step));
-  Value *NewStep = LBuilder.CreateAdd(Phi, StructStride);
+  Builder.SetInsertPoint(Phi);
+  PHINode *NewPhi = Builder.CreatePHI(GEP->getType(), 2, "vec.lsr.phi");
+  Builder.SetInsertPoint(cast<Instruction>(Step));
+  LLVMContext &Ctx = ITy->getContext();
+  StructStride =
+      Builder.CreateGEP(IntegerType::getInt8Ty(Ctx), NewPhi, {StructStride});
 
-  // Update the phi to the new start and step.
-  Phi->setIncomingValueForBlock(PreHeader, NewStart);
-  Phi->setIncomingValueForBlock(Latch, NewStep);
+  // Set up the new PHI.
+  NewPhi->addIncoming(NewStart, PreHeader);
+  NewPhi->addIncoming(StructStride, Latch);
 
-  // Replace the GEPs with casted adds to remove the multiplies from the loop.
-  // TODO: An alternative would be to order by offset, and just add from the
-  // previous term in the loop. Requires fewer registers, but does increase the
-  // critical path for each operation.
-  LBuilder.SetInsertPoint(GEP);
-  GEP->replaceAllUsesWith(LBuilder.CreateIntToPtr(Phi, GEP->getType()));
+  // Replace the GEP with the new phi.
+  Builder.SetInsertPoint(GEP);
+  GEP->replaceAllUsesWith(NewPhi);
+
+  // Remove incoming values for the old phi.
+  // TODO: It would be nice to erase it at this point, but removing the GEP
+  //       seems to cause crashes even if removeAllAssertingVHReferences is
+  //       called, so we're currently relying on the backend to remove it.
+  Phi->removeIncomingValue(1u);
+  Phi->removeIncomingValue(0u);
 
   return true;
 }

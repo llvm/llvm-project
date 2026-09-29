@@ -5,11 +5,10 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @init_array_of_ptrs_to_structs(ptr noalias %arc_ptrs, ptr %arc_new, i64 %num_arcs) #0 {
 ; CHECK-LABEL: init_array_of_ptrs_to_structs:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov w9, #72 // =0x48
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    index z0.d, x1, x9
+; CHECK-NEXT:    mov w8, #72 // =0x48
 ; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    index z0.d, x1, x8
+; CHECK-NEXT:    rdvl x8, #9
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    neg x8, x9
 ; CHECK-NEXT:    and x8, x8, x2
