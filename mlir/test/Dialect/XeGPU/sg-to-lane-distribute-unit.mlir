@@ -998,6 +998,22 @@ gpu.func @vector_extract_strided_slice_partial_offsets() {
   gpu.return
 }
 
+// Only 8 of the subgroup's lanes split dim 1, so that dim's size and offset are
+// rescaled by 8 rather than by the subgroup size.
+// CHECK-LABEL: gpu.func @vector_extract_strided_slice_lane_count_below_subgroup_size
+// CHECK: %[[ESS:.*]] = vector.extract_strided_slice %{{.*}} offsets = [2, 2], sizes = [4, 2], strides = [1, 1] : vector<8x4xf32> to vector<4x2xf32>
+gpu.func @vector_extract_strided_slice_lane_count_below_subgroup_size() {
+  %0 = "test.some_op"()
+    : () -> vector<8x32xf32>
+  %1 = vector.extract_strided_slice %0 offsets = [2, 16], sizes = [4, 16], strides = [1, 1]
+    : vector<8x32xf32> to vector<4x16xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      target_layout = #xegpu.layout<lane_layout = [1, 8], lane_data = [1, 1]>
+    }> : vector<4x16xf32>
+  gpu.return
+}
+
 // A convert_layout that only repacks lane_data along the non-distributed outer
 // dimension (from [4, 1] to [1, 1] with order = [1, 0]), keeping lane_layout
 // unchanged, folds to its source when consumed by exactly 4 (== outer
@@ -1745,18 +1761,18 @@ gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @extract_strided_slice_two_distributed_dims
 // CHECK:         %[[SRC:.*]] = "test.some_op"()
 // CHECK:         %[[DIST:.*]] = builtin.unrealized_conversion_cast %[[SRC]] : vector<16x32x32xbf16> to vector<16x16x4xbf16>
-// CHECK:         vector.extract_strided_slice %[[DIST]] offsets = [3, 1, 1], sizes = [1, 1, 1], strides = [1, 1, 1] : vector<16x16x4xbf16> to vector<1x1x1xbf16>
+// CHECK:         vector.extract_strided_slice %[[DIST]] offsets = [3, 2, 2], sizes = [1, 2, 2], strides = [1, 1, 1] : vector<16x16x4xbf16> to vector<1x2x2xbf16>
 gpu.func @extract_strided_slice_two_distributed_dims() {
   %src = "test.some_op"() : () -> vector<16x32x32xbf16>
-  %0 = vector.extract_strided_slice %src offsets = [3, 2, 8], sizes = [1, 2, 8], strides = [1, 1, 1]
-    : vector<16x32x32xbf16> to vector<1x2x8xbf16>
+  %0 = vector.extract_strided_slice %src offsets = [3, 4, 16], sizes = [1, 4, 16], strides = [1, 1, 1]
+    : vector<16x32x32xbf16> to vector<1x4x16xbf16>
   // Anchors the layout on %0; recoverTemporaryLayouts derives the operand's
   // layout from it.
   %1 = xegpu.convert_layout %0
     <{
       input_layout = #xegpu.layout<lane_layout = [1, 2, 8], lane_data = [1, 1, 1]>,
       target_layout = #xegpu.layout<lane_layout = [1, 2, 8], lane_data = [1, 1, 1]>
-    }> : vector<1x2x8xbf16>
+    }> : vector<1x4x16xbf16>
   gpu.return
 }
 }
