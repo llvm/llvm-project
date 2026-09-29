@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
-load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@build_bazel_apple_support//rules:apple_genrule.bzl", "apple_genrule")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_import", "cc_library", "objc_library")
@@ -68,20 +68,6 @@ selects.config_setting_group(
         ":libedit_enabled_setting",
         "@platforms//os:linux",
     ],
-)
-
-string_flag(
-    name = "lzma",
-    build_setting_default = "disable",
-    values = [
-        "disable",
-        "system",
-    ],
-)
-
-config_setting(
-    name = "system_lzma_enabled",
-    flag_values = {":lzma": "system"},
 )
 
 _VERSION_SUBSTITUTIONS = {
@@ -163,6 +149,7 @@ expand_template(
         "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 1",
         "#cmakedefine01 LLDB_ENABLE_PROTOCOL_SERVERS": "#define LLDB_ENABLE_PROTOCOL_SERVERS 1",
         "#cmakedefine LLDB_GLOBAL_INIT_DIRECTORY R\"(${LLDB_GLOBAL_INIT_DIRECTORY})\"": "#define LLDB_GLOBAL_INIT_DIRECTORY \"\"",
+        "#cmakedefine LLDB_DWO_DIAGNOSTIC_SUFFIX \"${LLDB_DWO_DIAGNOSTIC_SUFFIX}\"": "#define LLDB_DWO_DIAGNOSTIC_SUFFIX \"Debugging will be degraded.\"",
         "${LLDB_INSTALL_LIBDIR_BASENAME}": "lib",
         "${LLDB_BUG_REPORT_URL}": "",
     } | select({
@@ -172,7 +159,6 @@ expand_template(
             "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 0",
             "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 0",
             "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 1",
-            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 1",
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 0",
         },
         "@platforms//os:linux": {
@@ -181,7 +167,6 @@ expand_template(
             "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 1",
             "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 1",
             "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 0",
-            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 1",
         },
         "@platforms//os:windows": {
@@ -196,10 +181,16 @@ expand_template(
             "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 0",
             "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 0",
             "#cmakedefine01 LLDB_EMBED_PYTHON_HOME": "#define LLDB_EMBED_PYTHON_HOME 1",
-            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
             "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 0",
             "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 0",
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 0",
+        },
+    }) | select({
+        "//third-party:llvm_libxml2_enabled": {
+            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 1",
+        },
+        "//conditions:default": {
+            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
         },
     }) | select({
         ":curses_enabled": {
@@ -216,13 +207,6 @@ expand_template(
         "//conditions:default": {
             "#cmakedefine01 LLDB_EDITLINE_USE_WCHAR": "#define LLDB_EDITLINE_USE_WCHAR 0",
             "#cmakedefine01 LLDB_ENABLE_LIBEDIT": "#define LLDB_ENABLE_LIBEDIT 0",
-        },
-    }) | select({
-        ":system_lzma_enabled": {
-            "#cmakedefine01 LLDB_ENABLE_LZMA": "#define LLDB_ENABLE_LZMA 1",
-        },
-        "//conditions:default": {
-            "#cmakedefine01 LLDB_ENABLE_LZMA": "#define LLDB_ENABLE_LZMA 0",
         },
     }),
     template = "include/lldb/Host/Config.h.cmake",
@@ -648,6 +632,10 @@ cc_library(
             "include/lldb/Host/linux/*.h",
             "include/lldb/Host/posix/*.h",
         ]),
+        "@platforms//os:windows": glob(
+            ["include/lldb/Host/windows/*.h"],
+            exclude = ["include/lldb/Host/windows/ConPTYUtils.h"],
+        ),
     }) + select({
         ":libedit_enabled": ["include/lldb/Host/Editline.h"],
         "//conditions:default": [],
@@ -658,7 +646,6 @@ cc_library(
     linkopts = select({
         "@platforms//os:macos": [
             "-lcompression",
-            "-lxml2",
             "-Wl,-framework,CoreServices",
             "-Wl,-framework,Security",
         ],
@@ -679,11 +666,6 @@ cc_library(
             "-lbsd",
         ],
         "//conditions:default": [],
-    }) + select({
-        ":system_lzma_enabled": [
-            "-llzma",
-        ],
-        "//conditions:default": [],
     }),
     deps = [
         ":Headers",
@@ -693,6 +675,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:config",
+        "//third-party:libxml2",
     ] + select({
         "@platforms//os:macos": [
             ":HostMacOSXObjCXX",
@@ -1274,6 +1257,7 @@ cc_binary(
         "//lldb:liblldb.wrapper",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:Telemetry",
         "//llvm:config",
     ],
 )

@@ -209,3 +209,87 @@ define <vscale x 4 x i32> @test_nxv4i64_nxv4i32(<vscale x 4 x i64> %x) {
   %e = trunc <vscale x 4 x i64> %d to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %e
 }
+
+define <4 x i8> @test_v4i16_v4i8_swapped(<4 x i16> %x) {
+; CHECK-LABEL: test_v4i16_v4i8_swapped:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vmax.vx v8, v8, zero
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vnclipu.wi v8, v8, 0
+; CHECK-NEXT:    ret
+  %a = icmp sgt <4 x i16> %x, zeroinitializer
+  %b = sext <4 x i1> %a to <4 x i16>
+  %c = icmp ugt <4 x i16> %x, splat (i16 255)
+  %d = select <4 x i1> %c, <4 x i16> %b, <4 x i16> %x
+  %e = trunc <4 x i16> %d to <4 x i8>
+  ret <4 x i8> %e
+}
+
+define <4 x i8> @test_v4i32_v4i8_swapped(<4 x i32> %x) {
+; CHECK-LABEL: test_v4i32_v4i8_swapped:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmax.vx v8, v8, zero
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vnclipu.wi v8, v8, 0
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vnclipu.wi v8, v8, 0
+; CHECK-NEXT:    ret
+  %a = icmp sgt <4 x i32> %x, zeroinitializer
+  %b = sext <4 x i1> %a to <4 x i32>
+  %c = icmp ugt <4 x i32> %x, splat (i32 255)
+  %d = select <4 x i1> %c, <4 x i32> %b, <4 x i32> %x
+  %e = trunc <4 x i32> %d to <4 x i8>
+  ret <4 x i8> %e
+}
+
+define <4 x i16> @test_v4i32_v4i16_swapped(<4 x i32> %x) {
+; CHECK-LABEL: test_v4i32_v4i16_swapped:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmax.vx v8, v8, zero
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vnclipu.wi v8, v8, 0
+; CHECK-NEXT:    ret
+  %a = icmp sgt <4 x i32> %x, zeroinitializer
+  %b = sext <4 x i1> %a to <4 x i32>
+  %c = icmp ugt <4 x i32> %x, splat (i32 65535)
+  %d = select <4 x i1> %c, <4 x i32> %b, <4 x i32> %x
+  %e = trunc <4 x i32> %d to <4 x i16>
+  ret <4 x i16> %e
+}
+
+define <vscale x 4 x i8> @test_nxv4i16_nxv4i8_swapped(<vscale x 4 x i16> %x) {
+; CHECK-LABEL: test_nxv4i16_nxv4i8_swapped:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vmax.vx v8, v8, zero
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vnclipu.wi v8, v8, 0
+; CHECK-NEXT:    ret
+  %a = icmp sgt <vscale x 4 x i16> %x, zeroinitializer
+  %b = sext <vscale x 4 x i1> %a to <vscale x 4 x i16>
+  %c = icmp ugt <vscale x 4 x i16> %x, splat (i16 255)
+  %d = select <vscale x 4 x i1> %c, <vscale x 4 x i16> %b, <vscale x 4 x i16> %x
+  %e = trunc <vscale x 4 x i16> %d to <vscale x 4 x i8>
+  ret <vscale x 4 x i8> %e
+}
+
+define <vscale x 4 x i16> @test_nxv4i64_nxv4i16_swapped(<vscale x 4 x i64> %x) {
+; CHECK-LABEL: test_nxv4i64_nxv4i16_swapped:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vmax.vx v8, v8, zero
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vnclipu.wi v12, v8, 0
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vnclipu.wi v8, v12, 0
+; CHECK-NEXT:    ret
+  %a = icmp sgt <vscale x 4 x i64> %x, zeroinitializer
+  %b = sext <vscale x 4 x i1> %a to <vscale x 4 x i64>
+  %c = icmp ugt <vscale x 4 x i64> %x, splat (i64 65535)
+  %d = select <vscale x 4 x i1> %c, <vscale x 4 x i64> %b, <vscale x 4 x i64> %x
+  %e = trunc <vscale x 4 x i64> %d to <vscale x 4 x i16>
+  ret <vscale x 4 x i16> %e
+}

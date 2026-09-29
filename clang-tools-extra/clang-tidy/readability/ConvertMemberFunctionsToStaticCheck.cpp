@@ -91,8 +91,8 @@ AST_MATCHER(CXXMethodDecl, hasNonConstOverload) {
   if (LookupResult.isSingleResult())
     return false;
 
-  auto HasSameParameterTypes = [](const CXXMethodDecl &MD1,
-                                  const CXXMethodDecl &MD2) {
+  const auto HasSameParameterTypes = [](const CXXMethodDecl &MD1,
+                                        const CXXMethodDecl &MD2) {
     if (MD1.getNumParams() != MD2.getNumParams())
       return false;
     for (unsigned I = 0, E = MD1.getNumParams(); I < E; ++I)
@@ -148,7 +148,7 @@ static SourceRange getLocationOfConst(const TypeSourceInfo *TSI,
                                       const SourceManager &SourceMgr,
                                       const LangOptions &LangOpts) {
   assert(TSI);
-  const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
+  const auto FTL = TSI->getTypeLoc().getAsAdjusted<FunctionTypeLoc>();
   assert(FTL);
 
   const SourceRange Range{FTL.getRParenLoc().getLocWithOffset(1),

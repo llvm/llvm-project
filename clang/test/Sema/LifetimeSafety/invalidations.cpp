@@ -271,80 +271,82 @@ void IteratorUsedAfterPreIncrement() {
   std::vector<int> v;
   auto it = v.begin();      // expected-warning {{local variable 'v' is later invalidated}} \
                             // expected-note {{result of call to 'begin' aliases the storage of local variable 'v'}}
-  auto next = ++it;         // expected-note {{expression aliases the storage of local variable 'v'}}
+  auto next = ++it;         // expected-note {{result of call to 'operator++' aliases the storage of local variable 'v'}}
   v.push_back(1);           // expected-note {{local variable 'v' is invalidated here}}
-  (void)*next;              // expected-note {{later used here}}
+  use(*next);               // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterPostDecrement(std::vector<int> v) {
   auto it = v.rbegin();     // expected-warning {{parameter 'v' is later invalidated}} \
                             // expected-note {{result of call to 'rbegin' aliases the storage of parameter 'v'}}
-  auto prev = it--;         // expected-note {{expression aliases the storage of parameter 'v'}}
+  auto prev = it--;         // expected-note {{result of call to 'operator--' aliases the storage of parameter 'v'}}
   v.push_back(1);           // expected-note {{parameter 'v' is invalidated here}}
-  (void)*prev;              // expected-note {{later used here}}
+  use(*prev);               // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterAddition() {
   std::vector<int> v;
   auto it = v.cbegin();     // expected-warning {{local variable 'v' is later invalidated}} \
                             // expected-note {{result of call to 'cbegin' aliases the storage of local variable 'v'}}
-  auto next = it + 5;       // expected-note {{expression aliases the storage of local variable 'v'}}
+  auto next = it + 5;       // expected-note {{result of call to 'operator+' aliases the storage of local variable 'v'}}
   v.push_back(1);           // expected-note {{local variable 'v' is invalidated here}}
-  (void)*next;              // expected-note {{later used here}}
+  use(*next);               // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterReverseSubtraction(std::vector<int> v) {
   auto it = v.crbegin();    // expected-warning {{parameter 'v' is later invalidated}} \
                             // expected-note {{result of call to 'crbegin' aliases the storage of parameter 'v'}}
   auto prev = 5 - it;       // expected-note {{local variable 'it' aliases the storage of parameter 'v'}} \
-                            // expected-note {{expression aliases the storage of parameter 'v'}}
+                            // expected-note {{result of call to 'operator-<__gnu_cxx::basic_iterator<const int>>' aliases the storage of parameter 'v'}}
   v.push_back(1);           // expected-note {{parameter 'v' is invalidated here}}
-  (void)*prev;              // expected-note {{later used here}}
+  use(*prev);               // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterAddAdd(std::vector<int> v) {
   auto it = v.cbegin();     // expected-warning {{parameter 'v' is later invalidated}} \
                             // expected-note {{result of call to 'cbegin' aliases the storage of parameter 'v'}}
-  auto next = (it + 5) + 5; // expected-note 2 {{expression aliases the storage of parameter 'v'}}
+  auto next = (it + 5) + 5; // expected-note 2 {{result of call to 'operator+' aliases the storage of parameter 'v'}}
   v.push_back(1);           // expected-note {{parameter 'v' is invalidated here}}
-  (void)*next;              // expected-note {{later used here}}
+  use(*next);               // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterMixedAddition() {
   std::vector<int> v;
   auto it = v.cbegin();         // expected-warning {{local variable 'v' is later invalidated}} \
                                 // expected-note {{result of call to 'cbegin' aliases the storage of local variable 'v'}}
-  auto next = 1 + it + 2 + 3;   // expected-note 3 {{expression aliases the storage of local variable 'v'}} \
+  auto next = 1 + it + 2 + 3;   // expected-note {{result of call to 'operator+<const int>' aliases the storage of local variable 'v'}} \
+                                // expected-note 2 {{result of call to 'operator+' aliases the storage of local variable 'v'}} \
                                 // expected-note {{local variable 'it' aliases the storage of local variable 'v'}}
   v.push_back(1);               // expected-note {{local variable 'v' is invalidated here}}
-  (void)*next;                  // expected-note {{later used here}}
+  use(*next);                   // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterPreIncrementAddAssign(std::vector<int> v) {
   auto it = v.begin();          // expected-warning {{parameter 'v' is later invalidated}} \
                                 // expected-note {{result of call to 'begin' aliases the storage of parameter 'v'}}
-  it = ++it + 1 + 2;            // expected-note 3 {{expression aliases the storage of parameter 'v'}}
+  it = ++it + 1 + 2;            // expected-note {{result of call to 'operator++' aliases the storage of parameter 'v'}} \
+                                // expected-note 2 {{result of call to 'operator+' aliases the storage of parameter 'v'}}
   v.push_back(1);               // expected-note {{parameter 'v' is invalidated here}}
-  (void)*it;                    // expected-note {{later used here}}
+  use(*it);                     // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterBeginAddAssign() {
   std::vector<int> v;
   auto it = v.begin() + 1;      // expected-warning {{local variable 'v' is later invalidated}} \
-                                // expected-note {{expression aliases the storage of local variable 'v'}} \
+                                // expected-note {{result of call to 'operator+' aliases the storage of local variable 'v'}} \
                                 // expected-note {{result of call to 'begin' aliases the storage of local variable 'v'}}
   v.push_back(1);               // expected-note {{local variable 'v' is invalidated here}}
-  (void)*it;                    // expected-note {{later used here}}
+  use(*it);                     // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterStdBeginAddAssign() {
   std::vector<int> v;
   std::vector<int>::iterator it;
   it = std::begin(v) + 1;       // expected-warning {{local variable 'v' is later invalidated}} \
-                                // expected-note {{expression aliases the storage of local variable 'v'}} \
+                                // expected-note {{result of call to 'operator+' aliases the storage of local variable 'v'}} \
                                 // expected-note {{result of call to 'begin<std::vector<int>>' aliases the storage of local variable 'v'}}
   v.push_back(1);               // expected-note {{local variable 'v' is invalidated here}}
-  (void)*it;                    // expected-note {{later used here}}
+  use(*it);                     // expected-note {{later used here}}
 }
 }  // namespace SimpleInvalidIterators
 
@@ -355,13 +357,13 @@ void IteratorInvalidatedThroughLocalReferenceAlias() {
   auto it = vv.begin(); // expected-warning {{local variable 'vv' is later invalidated}} \
                         // expected-note {{result of call to 'begin' aliases the storage of local variable 'vv'}}
   v.push_back(42);      // expected-note {{local variable 'vv' is invalidated here}}
-  (void)it;             // expected-note {{later used here}}
+  use(it);              // expected-note {{later used here}}
 }
 
 void IteratorInvalidatedThroughPointerParameter(std::vector<int> *v) { // expected-warning {{parameter 'v' is later invalidated}}
   auto it = v->begin(); // expected-note {{result of call to 'begin' aliases the storage of parameter 'v'}}
   v->push_back(42); // expected-note {{parameter 'v' is invalidated here}}
-  (void)it;         // expected-note {{later used here}}
+  use(it);          // expected-note {{later used here}}
 }
 
 void ParenthesizedContainerInvalidatesIterator() {
@@ -369,7 +371,7 @@ void ParenthesizedContainerInvalidatesIterator() {
   std::vector<int> v;
   auto it = v.begin();
   (v).push_back(42);
-  (void)it;
+  use(it);
 }
 
 } // namespace InvalidatingThroughContainerAliases
@@ -378,7 +380,7 @@ namespace ContainerObjectAliases {
 // FIXME: Distinguish owner-borrow from content-borrow.
 void PointerParameterObjectUseIsOk(std::vector<int> *v) { // expected-warning {{parameter 'v' is later invalidated}}
   v->push_back(42); // expected-note {{parameter 'v' is invalidated here}}
-  (void)v;          // expected-note {{later used here}}
+  use(v);           // expected-note {{later used here}}
 }
 
 // FIXME: Distinguish owner-borrow from content-borrow.
@@ -386,7 +388,7 @@ void LocalPointerAliasObjectUseIsOk() {
   std::vector<int> vv;
   std::vector<int> *v = &vv; // expected-warning {{local variable 'vv' is later invalidated}}
   v->push_back(42);          // expected-note {{local variable 'vv' is invalidated here}}
-  (void)*v;                  // expected-note {{later used here}}
+  use(*v);                   // expected-note {{later used here}}
 }
 
 // FIXME: Distinguish owner-borrow from content-borrow.
@@ -394,7 +396,7 @@ void LocalReferenceAliasObjectUseIsOk() {
   std::vector<int> vv;
   std::vector<int> &v = vv; // expected-warning {{local variable 'vv' is later invalidated}}
   v.push_back(42);          // expected-note {{local variable 'vv' is invalidated here}}
-  (void)v;                  // expected-note {{later used here}}
+  use(v);                   // expected-note {{later used here}}
 }
 } // namespace ContainerObjectAliases
 
@@ -404,16 +406,16 @@ namespace ElementReferences {
 void ReferenceToVectorElement() {
   std::vector<int> v = {1, 2, 3};
   int& ref = v[0]; // expected-warning {{local variable 'v' is later invalidated}} \
-                   // expected-note {{expression aliases the storage of local variable 'v'}}
+                   // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'v'}}
   v.push_back(4);  // expected-note {{local variable 'v' is invalidated here}}
   ref = 10;        // expected-note {{later used here}}
-  (void)ref;
+  use(ref);
 }
 
 void PointerRefToVectorElement() {
   std::vector<int*> v = {nullptr, nullptr};
   int*& ref = v[0];     // expected-warning {{local variable 'v' is later invalidated}} \
-                        // expected-note {{expression aliases the storage of local variable 'v'}}
+                        // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'v'}}
   v.push_back(nullptr); // expected-note {{local variable 'v' is invalidated here}}
   ref = nullptr;        // expected-note {{later used here}}
 }
@@ -421,7 +423,7 @@ void PointerRefToVectorElement() {
 void PointerToVectorElement() {
   std::vector<int> v = {1, 2, 3};
   int* ptr = &v[0];  // expected-warning {{local variable 'v' is later invalidated}} \
-                     // expected-note {{expression aliases the storage of local variable 'v'}}
+                     // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'v'}}
   v.resize(100);     // expected-note {{local variable 'v' is invalidated here}}
   *ptr = 10;         // expected-note {{later used here}}
 }
@@ -445,9 +447,9 @@ void SelfInvalidatingMap() {
   mp[2] = mp[1]; // expected-warning {{local variable 'mp' is later invalidated}} \
                  // expected-warning {{local variable 'mp' is later invalidated}} \
                  // expected-note {{local variable 'mp' is invalidated here}} \
+                 // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'mp' because the implicit object parameter is inferred as lifetimebound}} \
                  // expected-note {{later used here}} \
                  // expected-note {{local variable 'mp' is invalidated here}} \
-                 // expected-note {{expression aliases the storage of local variable 'mp'}} \
                  // expected-note {{later used here}}
 }
 
@@ -467,12 +469,12 @@ namespace Strings {
 void append(std::string str) {
   std::string_view view = str;  // expected-warning {{parameter 'str' is later invalidated}}
   str += "456";                 // expected-note {{parameter 'str' is invalidated here}}
-  (void)view;                   // expected-note {{later used here}}
+  use(view);                    // expected-note {{later used here}}
 }
 void reassign(std::string str, std::string str2) {
   std::string_view view = str;  // expected-warning {{parameter 'str' is later invalidated}}
   str = str2;                   // expected-note {{parameter 'str' is invalidated here}}
-  (void)view;                   // expected-note {{later used here}}
+  use(view);                    // expected-note {{later used here}}
 }
 } // namespace Strings
 
@@ -482,7 +484,7 @@ void ReassigningAfterMove(std::string str, std::string str2) {
   std::vector<std::string> someStorage;
   someStorage.push_back(std::move(str));
   str = str2;   // expected-note {{parameter 'str' is invalidated here}}
-  (void)view;   // expected-note {{later used here}}
+  use(view);    // expected-note {{later used here}}
 }
 
 namespace ContainersAsFields {
@@ -510,7 +512,7 @@ void ConditionalContainerInvalidatesIterator(bool flag) {
     std::vector<int> v1, v2;
     auto it = v1.begin();
     (flag ? v1 : v2).push_back(42);
-    (void)it;
+    use(it);
 }
 void ConditionalFieldInvalidatesIterator(bool flag) {
     // FIXME: Support conditional invalidation through field expressions.
@@ -532,14 +534,14 @@ void Invalidate1UseSIsOk() {
   S s;
   S* p = &s;
   s.strings2.push_back("1");
-  (void)*p;
+  use(*p);
 }
 // FIXME: Distinguish owner-borrow from content-borrow.
 void PointerToContainerIsOk() {
   std::vector<std::string> s;
   std::vector<std::string>* p = &s; // expected-warning {{local variable 's' is later invalidated}}
   p->push_back("1");                // expected-note {{local variable 's' is invalidated here}}
-  (void)*p;                         // expected-note {{later used here}}
+  use(*p);                          // expected-note {{later used here}}
 }
 void IteratorFromPointerToContainerIsInvalidated() {
   std::vector<std::string> s;
@@ -796,9 +798,9 @@ void FlatMapSubscriptMultipleCallsInvalidate(std::flat_map<int, int> mp, int a, 
     PrintMax(mp[a], mp[b]); // expected-warning {{parameter 'mp' is later invalidated}} \
                             // expected-warning {{parameter 'mp' is later invalidated}} \
                             // expected-note {{parameter 'mp' is invalidated here}} \
+                            // expected-note 2 {{result of call to 'operator[]' aliases the storage of parameter 'mp' because the implicit object parameter is inferred as lifetimebound}} \
                             // expected-note {{later used here}} \
                             // expected-note {{parameter 'mp' is invalidated here}} \
-                            // expected-note 2 {{expression aliases the storage of parameter 'mp'}} \
                             // expected-note {{later used here}}
 }
 
@@ -851,7 +853,7 @@ struct S {
   void baz(){
     std::vector<std::string> vec = {"42"};
     v = vec[0];         // expected-warning {{local variable 'vec' is later invalidated}} \
-                        // expected-note {{expression aliases the storage of local variable 'vec'}}
+                        // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'vec'}}
     vec.push_back("1"); // expected-note {{local variable 'vec' is invalidated here}}
     bar();              // expected-note {{later used here}}
     v = nullptr;
@@ -865,9 +867,9 @@ void function_captured_ref_invalidated() {
   std::vector<int> v;
   v.push_back(1);
   std::function<void()> f = [&r = v[0]]() { (void)r; }; // expected-warning {{local variable 'v' is later invalidated}} \
-                                                        // expected-note {{expression aliases the storage of local variable 'v'}}
+                                                        // expected-note {{result of call to 'operator[]' aliases the storage of local variable 'v'}}
   v.push_back(2); // expected-note {{local variable 'v' is invalidated here}}
-  (void)f; // expected-note {{later used here}}
+  use(f);  // expected-note {{later used here}}
 }
 
 } // namespace callable_wrappers
@@ -880,7 +882,7 @@ void explicit_destructor_invalidates_pointer() {
   const char *p = s.data(); // expected-warning {{local variable 's' is later invalidated}} \
                             // expected-note {{result of call to 'data' aliases the storage of local variable 's'}}
   s.~basic_string();        // expected-note {{local variable 's' is invalidated here}}
-  (void)*p;                 // expected-note {{later used here}}
+  use(*p);                  // expected-note {{later used here}}
 }
 
 void pointer_destructor_invalidates_pointer() {
@@ -889,7 +891,7 @@ void pointer_destructor_invalidates_pointer() {
   const char *p = obj->data();                        // expected-note {{local variable 'obj' aliases the storage of local variable 'storage'}} \
                                                       // expected-note {{result of call to 'data' aliases the storage of local variable 'storage'}}
   obj->~basic_string();                               // expected-note {{local variable 'storage' is invalidated here}}
-  (void)*p;                                           // expected-note {{later used here}}
+  use(*p);                                            // expected-note {{later used here}}
 }
 
 void destroy_at_invalidates_pointer() {
@@ -898,7 +900,7 @@ void destroy_at_invalidates_pointer() {
   const char *p = obj->data();                        // expected-note {{local variable 'obj' aliases the storage of local variable 'storage'}} \
                                                       // expected-note {{result of call to 'data' aliases the storage of local variable 'storage'}}
   std::destroy_at(obj);                               // expected-note {{local variable 'storage' is invalidated here}}
-  (void)*p;                                           // expected-note {{later used here}}
+  use(*p);                                            // expected-note {{later used here}}
 }
 
 void destroy_at_then_placement_new_rescues_pointer() {
@@ -908,7 +910,7 @@ void destroy_at_then_placement_new_rescues_pointer() {
   std::destroy_at(obj);
   obj = new (storage) std::string("23");
   p = obj->data();
-  (void)*p;
+  use(*p);
 }
 
 void destroy_at_invalidates_array_pointer() {
@@ -917,7 +919,7 @@ void destroy_at_invalidates_array_pointer() {
   const char *p = arr[0].data(); // expected-warning {{local variable 'arr' is later invalidated}} \
                                  // expected-note {{result of call to 'data' aliases the storage of local variable 'arr'}}
   std::destroy_at(&arr_ref);     // expected-note {{local variable 'arr' is invalidated here}}
-  (void)*p;                      // expected-note {{later used here}}
+  use(*p);                       // expected-note {{later used here}}
 }
 
 void reference_destructor_invalidates_pointer() {
@@ -926,7 +928,7 @@ void reference_destructor_invalidates_pointer() {
   const char *p = ref.data(); // expected-note {{local variable 'ref' aliases the storage of local variable 's'}} \
                               // expected-note {{result of call to 'data' aliases the storage of local variable 's'}}
   std::destroy_at(&ref);      // expected-note {{local variable 's' is invalidated here}}
-  (void)*p;                   // expected-note {{later used here}}
+  use(*p);                    // expected-note {{later used here}}
 }
 
 void destroy_at_ternary_operator(bool flag) {
@@ -935,7 +937,7 @@ void destroy_at_ternary_operator(bool flag) {
   const char *p = str1->data();        // expected-note {{local variable 'str1' aliases the storage of allocated object}} \
                                        // expected-note {{result of call to 'data' aliases the storage of allocated object}}
   std::destroy_at(flag ? str1 : str2); // expected-note {{allocated object is invalidated here}}
-  (void)*p;                            // expected-note {{later used here}}
+  use(*p);                             // expected-note {{later used here}}
 }
 
 struct StringOwner {
@@ -948,7 +950,7 @@ void member_destructor_invalidates_pointer() {
   const char *p = owner.s.data(); // expected-warning {{local variable 'owner' is later invalidated}} \
                                   // expected-note {{result of call to 'data' aliases the storage of local variable 'owner'}}
   owner.t.~basic_string();        // expected-note {{local variable 'owner' is invalidated here}}
-  (void)*p;                       // expected-note {{later used here}}
+  use(*p);                        // expected-note {{later used here}}
 }
 
 } // namespace explicit_destructor
@@ -960,7 +962,7 @@ void invalid_after_reset() {
   int *p = up.get(); // expected-warning {{local variable 'up' is later invalidated}} \
                      // expected-note {{result of call to 'get' aliases the storage of local variable 'up'}}
   up.reset();        // expected-note {{local variable 'up' is invalidated here}}
-  (void)*p;          // expected-note {{later used here}}
+  use(*p);           // expected-note {{later used here}}
 }
 
 void invalid_after_move_assign() {
@@ -969,7 +971,7 @@ void invalid_after_move_assign() {
   int *p = up.get();     // expected-warning {{local variable 'up' is later invalidated}} \
                          // expected-note {{result of call to 'get' aliases the storage of local variable 'up'}}
   up = std::move(other); // expected-note {{local variable 'up' is invalidated here}}
-  (void)*p;              // expected-note {{later used here}}
+  use(*p);               // expected-note {{later used here}}
 }
 
 void invalid_after_null_assign() {
@@ -977,7 +979,7 @@ void invalid_after_null_assign() {
   int *p = up.get(); // expected-warning {{local variable 'up' is later invalidated}} \
                      // expected-note {{result of call to 'get' aliases the storage of local variable 'up'}}
   up = nullptr;      // expected-note {{local variable 'up' is invalidated here}}
-  (void)*p;          // expected-note {{later used here}}
+  use(*p);           // expected-note {{later used here}}
 }
 
 void invalid_after_ternary_reset(bool flag) {
@@ -986,7 +988,7 @@ void invalid_after_ternary_reset(bool flag) {
   int *p = flag ? up.get() : other.get(); // expected-warning {{local variable 'up' is later invalidated}} \
                                           // expected-note {{result of call to 'get' aliases the storage of local variable 'up'}}
   up.reset();                             // expected-note {{local variable 'up' is invalidated here}}
-  (void)*p;                               // expected-note {{later used here}}
+  use(*p);                                // expected-note {{later used here}}
 }
 
 } // namespace unique_ptr_invalidation

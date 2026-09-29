@@ -440,6 +440,12 @@ CMake configuration time. The available options are:
 
   ABI impact: changes the iterator type of ``std::array``, its size and its layout.
 
+- ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL`` -- changes the iterator type of ``std::optional`` to a
+  bounded iterator that keeps track of whether it's within the bounds of its container and asserts it
+  on every dereference and when performing iterator arithmetic.
+
+  ABI impact: changes the iterator type of ``std::optional``.
+
 ABI tags
 --------
 
@@ -461,7 +467,8 @@ The first character of an ABI tag encodes the hardening mode:
 - ``d`` -- [d]ebug mode;
 - ``n`` -- [n]one mode.
 
-The second character of an ABI tag encodes the assertion semantic:
+Then, a number representing the libc++ version follows. The character that follows
+encodes the assertion semantic:
 
 - ``i`` -- [i]gnore semantic;
 - ``o`` -- [o]bserve semantic;
@@ -531,7 +538,7 @@ Hardened containers status
       - ❌
     * - ``optional``
       - ✅
-      - N/A
+      - ✅
     * - ``function``
       - ❌
       - N/A

@@ -339,3 +339,114 @@ TEST(LlvmLibcStringTest, SelfAppendAtCapacityTest) {
   ASSERT_EQ(s, expected);
   ASSERT_GT(cap_after_append, cap_before_append);
 }
+
+TEST(LlvmLibcStringTest, ReplaceWithSmallerString) {
+  string s("Hello world");
+
+  s.replace(3, 7, "orl"); // Replace "lo worl" with "orl"
+
+  EXPECT_STREQ(s.c_str(), "Helorld");
+}
+
+TEST(LlvmLibcStringTest, ReplaceWithSmallerSelfReferentialString) {
+  string s("Hello world");
+  string_view view = string_view(s).substr(7, 3); // "orl"
+
+  s.replace(3, 7, view); // Replace "lo worl" with "orl"
+
+  EXPECT_STREQ(s.c_str(), "Helorld");
+}
+
+TEST(LlvmLibcStringTest, ReplaceWithEqualLengthString) {
+  string s("Hello world");
+
+  s.replace(6, 3, " wo"); // Replace "wor" with " wo"
+
+  EXPECT_STREQ(s.c_str(), "Hello  wold");
+}
+
+TEST(LlvmLibcStringTest, ReplaceWithEqualLengthSelfReferentialString) {
+  string s("Hello world");
+  string_view view = string_view(s).substr(5, 3); // " wo"
+
+  s.replace(6, 3, view); // Replace "wor" with " wo"
+
+  EXPECT_STREQ(s.c_str(), "Hello  wold");
+}
+
+TEST(LlvmLibcStringTest, ReplaceWithLongerStringNoGrowth) {
+  string s("Hello world");
+  s.reserve(32); // Reserve enough space to where replace will not grow.
+  size_t capacity_before = s.capacity();
+
+  s.replace(6, 3, " worl"); // Replace "wor" with " worl"
+
+  EXPECT_STREQ(s.c_str(), "Hello  worlld");
+  EXPECT_EQ(s.capacity(), capacity_before);
+}
+
+TEST(LlvmLibcStringTest, ReplaceWithLongerSelfReferentialStringNoGrowth) {
+  string s = "Hello world";
+  s.reserve(32); // Reserve enough space to where replace will not grow.
+  size_t capacity_before = s.capacity();
+  string_view view = string_view(s).substr(5, 5); // " worl"
+
+  s.replace(6, 3, view); // Replace "wor" with " worl"
+
+  EXPECT_STREQ(s.c_str(), "Hello  worlld");
+  EXPECT_EQ(s.capacity(), capacity_before);
+}
+
+TEST(LlvmLibcStringTest, ReplaceWithLongerStringTriggeringGrow) {
+  string s("Hello placeholder world");
+  string_view placeholder = "placeholder";
+  size_t capacity_before = s.capacity();
+  string insert(s.capacity() - s.size() + placeholder.size() + 1, 'a');
+
+  s.replace(6, placeholder.size(), insert); // Replace "placeholder"
+
+  string expected = "Hello ";
+  expected += insert;
+  expected += " world";
+  EXPECT_EQ(s, expected);
+  EXPECT_GT(s.capacity(), capacity_before);
+}
+
+TEST(LlvmLibcStringTest, ReplaceFromEndOfStringNoGrowth) {
+  string s;
+  s.reserve(32);
+  size_t capacity_before = s.capacity();
+
+  s.replace(0, 0, "Hello world");
+
+  EXPECT_STREQ(s.c_str(), "Hello world");
+  EXPECT_EQ(s.capacity(), capacity_before);
+}
+
+TEST(LlvmLibcStringTest, ReplaceFromEndOfStringTriggeringGrowth) {
+  string s;
+  size_t capacity_before = s.capacity();
+
+  s.replace(0, 0, "Hello world");
+
+  EXPECT_STREQ(s.c_str(), "Hello world");
+  EXPECT_GT(s.capacity(), capacity_before);
+}
+
+TEST(LlvmLibcStringTest, ReplaceWithEmptyString) {
+  string s = "Hello world";
+  s.replace(2, 7, "");
+  EXPECT_STREQ(s.c_str(), "Held");
+}
+
+TEST(LlvmLibcStringTest, ReplaceAtEndOfString) {
+  string s = "Hello ";
+  s.replace(6, 0, "world");
+  EXPECT_STREQ(s.c_str(), "Hello world");
+}
+
+TEST(LlvmLibcStringTest, ReplaceWithLargeCountClampsSize) {
+  string s = "Hello world";
+  s.replace(0, 100, "goodbye");
+  EXPECT_STREQ(s.c_str(), "goodbye");
+}

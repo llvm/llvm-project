@@ -1138,6 +1138,11 @@ public:
   /// object.
   LLVM_ABI ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC);
 
+  ExecutionSession(const ExecutionSession &) = delete;
+  ExecutionSession &operator=(const ExecutionSession &) = delete;
+  ExecutionSession(ExecutionSession &&) = delete;
+  ExecutionSession &operator=(ExecutionSession &&) = delete;
+
   /// Destroy an ExecutionSession. Verifies that endSession was called prior to
   /// destruction.
   LLVM_ABI ~ExecutionSession();
@@ -1393,38 +1398,6 @@ public:
                         ArrayRef<char> ArgBuffer) {
     EPC->callWrapperAsync(WrapperFnAddr, std::forward<FnT>(OnComplete),
                           ArgBuffer);
-  }
-
-  /// Run a wrapper function in the executor. The wrapper function should be
-  /// callable as:
-  ///
-  /// \code{.cpp}
-  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
-  /// \endcode{.cpp}
-  shared::WrapperFunctionBuffer callWrapper(ExecutorAddr WrapperFnAddr,
-                                            ArrayRef<char> ArgBuffer) {
-    return EPC->callWrapper(WrapperFnAddr, ArgBuffer);
-  }
-
-  /// Run a wrapper function using SPS to serialize the arguments and
-  /// deserialize the results.
-  template <typename SPSSignature, typename SendResultT, typename... ArgTs>
-  void callSPSWrapperAsync(ExecutorAddr WrapperFnAddr, SendResultT &&SendResult,
-                           const ArgTs &...Args) {
-    EPC->callSPSWrapperAsync<SPSSignature, SendResultT, ArgTs...>(
-        WrapperFnAddr, std::forward<SendResultT>(SendResult), Args...);
-  }
-
-  /// Run a wrapper function using SPS to serialize the arguments and
-  /// deserialize the results.
-  ///
-  /// If SPSSignature is a non-void function signature then the second argument
-  /// (the first in the Args list) should be a reference to a return value.
-  template <typename SPSSignature, typename... WrapperCallArgTs>
-  Error callSPSWrapper(ExecutorAddr WrapperFnAddr,
-                       WrapperCallArgTs &&...WrapperCallArgs) {
-    return EPC->callSPSWrapper<SPSSignature, WrapperCallArgTs...>(
-        WrapperFnAddr, std::forward<WrapperCallArgTs>(WrapperCallArgs)...);
   }
 
   /// Wrap a handler that takes concrete argument types (and a sender for a

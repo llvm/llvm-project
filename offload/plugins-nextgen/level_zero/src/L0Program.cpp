@@ -43,6 +43,14 @@ Error L0GlobalHandlerTy::getGlobalMetadataFromDevice(GenericDeviceTy &Device,
   return Plugin::success();
 }
 
+bool L0GlobalHandlerTy::isExportedSymbol(uint32_t Flags) {
+  // Images returned by the Level Zero runtime do not correctly expose kernel
+  // functions as global symbols. Bypass the normal ELF handling.here.
+  uint32_t Ignored = SymbolRef::SF_Undefined | SymbolRef::SF_Hidden |
+                     SymbolRef::SF_FormatSpecific;
+  return !(Flags & Ignored);
+}
+
 inline L0DeviceTy &L0ProgramTy::getL0Device() const {
   return L0DeviceTy::makeL0Device(getDevice());
 }
@@ -86,7 +94,7 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
   ModuleDesc.pBuildFlags = BuildOptions.c_str();
   ModuleDesc.pConstants = &SpecConstants;
   ze_result_t RC;
-  CALL_ZE(RC, zeModuleCreate, L0Device.getZeContext(), L0Device.getZeDevice(),
+  CALL_ZE(RC, zeModuleCreate, getZeContext(), L0Device.getZeDevice(),
           &ModuleDesc, &Module, &BuildLog);
   if (BuildLog)
     zeModuleBuildLogDestroy(BuildLog);
@@ -304,15 +312,33 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
     }
 
     // Load module into Level Zero
-    return addModule(ImageData.size(), ImgBegin, Options, ModuleFormat);
+    auto Err = addModule(ImageData.size(), ImgBegin, Options, ModuleFormat);
+    if (Err)
+      return Err;
+
+    if (RequiresModuleLink) {
+      ODBG(OLDT_Module) << "Linking modules after adding OffloadBinary image";
+      if (auto Err = linkModules())
+        return Err;
+    }
+    return Plugin::success();
   }
 
   if (identify_magic(Image.getBuffer()) == file_magic::spirv_object) {
     ODBG(OLDT_Module) << "Processing raw SPIR-V image";
     const uint8_t *ImgBegin =
         reinterpret_cast<const uint8_t *>(Image.getBufferStart());
-    return addModule(Image.getBufferSize(), ImgBegin, BuildOptions,
-                     ZE_MODULE_FORMAT_IL_SPIRV);
+    auto Err = addModule(Image.getBufferSize(), ImgBegin, BuildOptions,
+                         ZE_MODULE_FORMAT_IL_SPIRV);
+    if (Err)
+      return Err;
+
+    if (RequiresModuleLink) {
+      ODBG(OLDT_Module) << "Linking modules after adding SPIR-V image";
+      if (auto Err = linkModules())
+        return Err;
+    }
+    return Plugin::success();
   }
 
   uint64_t MajorVer, MinorVer;

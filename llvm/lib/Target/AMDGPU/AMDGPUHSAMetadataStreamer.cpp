@@ -507,7 +507,7 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
                                 ProgramInfo.DynamicCallStack);
   }
 
-  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5 && STM.supportsWGP())
+  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5 && STM.hasSupportsWGP())
     Kern[".workgroup_processor_mode"] =
         Kern.getDocument()->getNode(ProgramInfo.WgpMode);
 

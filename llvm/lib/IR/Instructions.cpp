@@ -61,9 +61,13 @@ static cl::opt<bool> DisableI2pP2iOpt(
 //                            AllocaInst Class
 //===----------------------------------------------------------------------===//
 
+TypeSize AllocaInst::getAllocationBaseSize(const DataLayout &DL) const {
+  return DL.getTypeAllocSize(getAllocatedType());
+}
+
 std::optional<TypeSize>
 AllocaInst::getAllocationSize(const DataLayout &DL) const {
-  TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
+  TypeSize Size = getAllocationBaseSize(DL);
   // Zero-sized types can return early since 0 * N = 0 for any array size N.
   if (Size.isZero())
     return Size;
@@ -132,8 +136,8 @@ const char *SelectInst::areInvalidOperands(Value *Op0, Value *Op1, Value *Op2) {
 PHINode::PHINode(const PHINode &PN)
     : Instruction(PN.getType(), Instruction::PHI, AllocMarker),
       ReservedSpace(PN.getNumOperands()) {
-  NumUserOperands = PN.getNumOperands();
   allocHungoffUses(PN.getNumOperands());
+  setNumHungOffUseOperands(PN.getNumOperands());
   std::copy(PN.op_begin(), PN.op_end(), op_begin());
   copyIncomingBlocks(make_range(PN.block_begin(), PN.block_end()));
   FMF = PN.FMF;
@@ -252,8 +256,8 @@ LandingPadInst::LandingPadInst(Type *RetTy, unsigned NumReservedValues,
 LandingPadInst::LandingPadInst(const LandingPadInst &LP)
     : Instruction(LP.getType(), Instruction::LandingPad, AllocMarker),
       ReservedSpace(LP.getNumOperands()) {
-  NumUserOperands = LP.getNumOperands();
   allocHungoffUses(LP.getNumOperands());
+  setNumHungOffUseOperands(LP.getNumOperands());
   Use *OL = getOperandList();
   const Use *InOL = LP.getOperandList();
   for (unsigned I = 0, E = ReservedSpace; I != E; ++I)
@@ -270,8 +274,8 @@ LandingPadInst *LandingPadInst::Create(Type *RetTy, unsigned NumReservedClauses,
 
 void LandingPadInst::init(unsigned NumReservedValues, const Twine &NameStr) {
   ReservedSpace = NumReservedValues;
-  setNumHungOffUseOperands(0);
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(0);
   setName(NameStr);
   setCleanup(false);
 }
@@ -1128,8 +1132,8 @@ void CatchSwitchInst::init(Value *ParentPad, BasicBlock *UnwindDest,
   assert(ParentPad && NumReservedValues);
 
   ReservedSpace = NumReservedValues;
-  setNumHungOffUseOperands(UnwindDest ? 2 : 1);
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(UnwindDest ? 2 : 1);
 
   Op<0>() = ParentPad;
   if (UnwindDest) {
@@ -1406,7 +1410,9 @@ StoreInst::StoreInst(Value *Val, Value *Ptr,
                      const LoadStoreInstProperties &Props,
                      InsertPosition InsertBefore)
     : StoreInst(Val, Ptr, Props.IsVolatile, Props.Alignment, Props.Ordering,
-                Props.SSID, InsertBefore) {}
+                Props.SSID, InsertBefore) {
+  setElementwise(Props.IsElementwise);
+}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      AtomicOrdering Order, SyncScope::ID SSID,
@@ -2624,6 +2630,59 @@ Type *ExtractValueInst::getIndexedType(Type *Agg,
     }
   }
   return Agg;
+}
+
+//===----------------------------------------------------------------------===//
+//                             BitInsert Class
+//===----------------------------------------------------------------------===//
+BitInsertInst::BitInsertInst(Value *Base, Value *Val, Value *Offset,
+                             const Twine &Name, InsertPosition InsertBef)
+    : Instruction(Base->getType(), BitInsert, AllocMarker, InsertBef) {
+  assert(!areInvalidOperands(Base, Val, Offset) &&
+         "Invalid bitinsert instruction operands!");
+  Op<0>() = Base;
+  Op<1>() = Val;
+  Op<2>() = Offset;
+  setName(Name);
+}
+
+const char *BitInsertInst::areInvalidOperands(Value *Base, Value *Val,
+                                              Value *Offset) {
+  if (!Base->getType()->isByteTy())
+    return "bitinsert base must be a byte type";
+  if (!(Val->getType()->isFloatingPointTy() || Val->getType()->isIntegerTy() ||
+        Val->getType()->isPointerTy() || Val->getType()->isByteTy()))
+    return "bitinsert value must be an integer, floating-point, pointer, or "
+           "byte type";
+  if (!Offset->getType()->isIntegerTy(32))
+    return "bitinsert offset must be i32";
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+//                             BitExtract Class
+//===----------------------------------------------------------------------===//
+BitExtractInst::BitExtractInst(Type *Ty, Value *Src, Value *Offset,
+                               const Twine &Name, InsertPosition InsertBef)
+    : Instruction(Ty, BitExtract, AllocMarker, InsertBef) {
+  assert(!areInvalidOperands(Ty, Src, Offset) &&
+         "Invalid bitextract instruction operands!");
+  Op<0>() = Src;
+  Op<1>() = Offset;
+  setName(Name);
+}
+
+const char *BitExtractInst::areInvalidOperands(const Type *Ty, Value *Src,
+                                               Value *Offset) {
+  if (!(Ty->isFloatingPointTy() || Ty->isIntegerTy() || Ty->isPointerTy() ||
+        Ty->isByteTy()))
+    return "bitextract result must be an integer, floating-point, pointer, or "
+           "byte type";
+  if (!Src->getType()->isByteTy())
+    return "bitextract source must be a byte type";
+  if (!Offset->getType()->isIntegerTy(32))
+    return "bitextract offset must be i32";
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4115,8 +4174,8 @@ CmpPredicate CmpPredicate::getSwapped(const CmpInst *Cmp) {
 void SwitchInst::init(Value *Value, BasicBlock *Default, unsigned NumReserved) {
   assert(Value && Default && NumReserved);
   ReservedSpace = NumReserved;
-  setNumHungOffUseOperands(2);
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(2);
 
   Op<0>() = Value;
   Op<1>() = Default;
@@ -4310,9 +4369,9 @@ SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
 void IndirectBrInst::init(Value *Address, unsigned NumDests) {
   assert(Address && Address->getType()->isPointerTy() &&
          "Address of indirectbr must be a pointer");
-  ReservedSpace = 1+NumDests;
-  setNumHungOffUseOperands(1);
+  ReservedSpace = 1 + NumDests;
   allocHungoffUses(ReservedSpace);
+  setNumHungOffUseOperands(1);
 
   Op<0>() = Address;
 }
@@ -4339,8 +4398,8 @@ IndirectBrInst::IndirectBrInst(Value *Address, unsigned NumCases,
 IndirectBrInst::IndirectBrInst(const IndirectBrInst &IBI)
     : Instruction(Type::getVoidTy(IBI.getContext()), Instruction::IndirectBr,
                   AllocMarker) {
-  NumUserOperands = IBI.NumUserOperands;
   allocHungoffUses(IBI.getNumOperands());
+  setNumHungOffUseOperands(IBI.NumUserOperands);
   Use *OL = getOperandList();
   const Use *InOL = IBI.getOperandList();
   for (unsigned i = 0, E = IBI.getNumOperands(); i != E; ++i)
@@ -4454,8 +4513,8 @@ LoadInst *LoadInst::cloneImpl() const {
 }
 
 StoreInst *StoreInst::cloneImpl() const {
-  return new StoreInst(getOperand(0), getOperand(1), isVolatile(), getAlign(),
-                       getOrdering(), getSyncScopeID());
+  return new StoreInst(getOperand(0), getOperand(1), getProperties(),
+                       /*InsertBefore=*/nullptr);
 }
 
 AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {
@@ -4570,6 +4629,14 @@ ExtractElementInst *ExtractElementInst::cloneImpl() const {
 
 InsertElementInst *InsertElementInst::cloneImpl() const {
   return InsertElementInst::Create(getOperand(0), getOperand(1), getOperand(2));
+}
+
+BitInsertInst *BitInsertInst::cloneImpl() const {
+  return BitInsertInst::Create(getOperand(0), getOperand(1), getOperand(2));
+}
+
+BitExtractInst *BitExtractInst::cloneImpl() const {
+  return BitExtractInst::Create(getType(), getOperand(0), getOperand(1));
 }
 
 ShuffleVectorInst *ShuffleVectorInst::cloneImpl() const {

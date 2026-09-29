@@ -11,12 +11,10 @@
 # See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
 # Maintainers.md files in the the respective subproject directories.
 
-/bolt/ @llvm/reviewers-bolt
 /libc/ @llvm/reviewers-libc
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
 /libunwind/ @llvm/reviewers-libunwind
-/runtimes/ @llvm/reviewers-libcxx
 
 /llvm/lib/Analysis/BasicAliasAnalysis.cpp @nikic
 /llvm/lib/Analysis/HashRecognize.cpp @artagnon @pfusik
@@ -178,8 +176,12 @@
 # MLIR IRDL-related
 /mlir/**/*IRDL* @moxinilian
 
+# BOLT
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu @yavtuk
+
 # Bazel build system.
 /utils/bazel/ @rupprecht @keith @aaronmondal @googlewalt
+/utils/bazel/llvm-project-overlay/libc/ @labath @kaladron
 
 # InstallAPI and TextAPI
 /llvm/**/TextAPI/ @cyndyishida

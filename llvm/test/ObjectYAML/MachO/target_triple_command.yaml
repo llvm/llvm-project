@@ -1,0 +1,26 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           1
+  sizeofcmds:      40
+  flags:           0x00218085
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_TARGET_TRIPLE
+    cmdsize:         40
+    triple:          12
+    Content:         'arm64-apple-macos27.0.0'
+...
+
+
+CHECK:     LoadCommands:
+CHECK:       - cmd:             LC_TARGET_TRIPLE
+CHECK-NEXT:    cmdsize:         40
+CHECK-NEXT:    triple:          12
+CHECK-NEXT:    Content:         arm64-apple-macos27.0.0
+CHECK-NEXT:    ZeroPadBytes:    5

@@ -1,20 +1,20 @@
 // RUN: llvm-mc -triple=amdgpu7.00-amd-amdhsa -show-encoding %s | FileCheck --check-prefix=CHECK %s
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -show-encoding %s | FileCheck --check-prefix=CHECK %s
+// RUN: llvm-mc -triple=amdgpu8.00-amd-amdhsa -show-encoding %s | FileCheck --check-prefix=CHECK %s
 // RUN: llvm-mc -triple=amdgpu9.00-amd-amdhsa -show-encoding %s | FileCheck --check-prefix=CHECK %s
 
 // CHECK:      	.amdgpu_metadata
-// CHECK:      amdhsa.kernels:  
+// CHECK:      amdhsa.kernels:
 // CHECK:        - .group_segment_fixed_size: 16
 // CHECK:          .kernarg_segment_align: 64
 // CHECK:          .kernarg_segment_size: 8
 // CHECK:          .language:       OpenCL C
-// CHECK:          .language_version: 
+// CHECK:          .language_version:
 // CHECK-NEXT:       - 2
 // CHECK-NEXT:       - 0
 // CHECK:          .max_flat_workgroup_size: 256
 // CHECK:          .name:           test_kernel
 // CHECK:          .private_segment_fixed_size: 32
-// CHECK:          .reqd_workgroup_size: 
+// CHECK:          .reqd_workgroup_size:
 // CHECK-NEXT:       - 1
 // CHECK-NEXT:       - 2
 // CHECK-NEXT:       - 4
@@ -23,14 +23,14 @@
 // CHECK:          .vec_type_hint:  int
 // CHECK:          .vgpr_count:     40
 // CHECK:          .wavefront_size: 128
-// CHECK:          .workgroup_size_hint: 
+// CHECK:          .workgroup_size_hint:
 // CHECK-NEXT:       - 8
 // CHECK-NEXT:       - 16
 // CHECK-NEXT:       - 32
-// CHECK:      amdhsa.printf:   
+// CHECK:      amdhsa.printf:
 // CHECK:        - '1:1:4:%d\n'
 // CHECK:        - '2:1:8:%g\n'
-// CHECK:      amdhsa.version:  
+// CHECK:      amdhsa.version:
 // CHECK-NEXT:   - 1
 // CHECK-NEXT:   - 0
 // CHECK:      	.end_amdgpu_metadata

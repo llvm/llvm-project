@@ -1,0 +1,35 @@
+add_entrypoint_object(
+  makedev
+  SRCS
+    makedev.cpp
+  HDRS
+    ../makedev.h
+  DEPENDS
+    libc.hdr.types.dev_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  major
+  SRCS
+    major.cpp
+  HDRS
+    ../major.h
+  DEPENDS
+    libc.hdr.types.dev_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  minor
+  SRCS
+    minor.cpp
+  HDRS
+    ../minor.h
+  DEPENDS
+    libc.hdr.types.dev_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)

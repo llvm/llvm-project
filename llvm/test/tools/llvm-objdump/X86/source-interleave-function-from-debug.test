@@ -2,14 +2,14 @@
 ;; output, getting it from the debug info.
 
 ; RUN: llc < %s -o %t.o -filetype=obj -mtriple=x86_64-unknown-linux-gnu
-; RUN: llvm-objdump --no-print-imm-hex -dl %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DEMANGLE
+; RUN: llvm-objdump --no-print-imm-hex -dl %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DEMANGLE -DSEP=%{fs-sep}
 
 ; RUN: llc < %s -o %t.o -filetype=obj -mtriple=x86_64-unknown-linux-gnu
-; RUN: llvm-objdump --no-print-imm-hex -dlC %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-DEMANGLE
+; RUN: llvm-objdump --no-print-imm-hex -dlC %t.o | FileCheck %s --check-prefixes=CHECK,CHECK-DEMANGLE -DSEP=%{fs-sep}
 
 ; CHECK:      0000000000000000 <foo>:
 ; CHECK-NEXT: ; foo():
-; CHECK-NEXT: ; /tmp{{/|\\}}src.cc:1
+; CHECK-NEXT: ; [[SEP]]tmp[[SEP]]src.cc:1
 ; CHECK-NEXT:        0: b8 05 00 00 00                movl    $5, %eax
 ; CHECK-NEXT:        5: c3                            retq
 
@@ -18,7 +18,7 @@
 ; CHECK-DEMANGLE:         0000000000000008 <xyz::bar()>:
 ; CHECK-DEMANGLE-NEXT:    ; xyz::bar():
 
-; CHECK-NEXT: ; /tmp{{/|\\}}src.cc:3
+; CHECK-NEXT: ; [[SEP]]tmp[[SEP]]src.cc:3
 ; CHECK-NEXT:        8: b8 0a 00 00 00                movl    $10, %eax
 ; CHECK-NEXT:        d: c3                            retq
 
@@ -27,7 +27,7 @@
 ; CHECK-DEMANGLE:         0000000000000010 <xyz::baz()>:
 ; CHECK-DEMANGLE-NEXT:    ; xyz::baz():
 
-; CHECK-NEXT: ; /tmp{{/|\\}}src.cc:3
+; CHECK-NEXT: ; [[SEP]]tmp[[SEP]]src.cc:3
 ; CHECK-NEXT:       10: b8 14 00 00 00                movl    $20, %eax
 ; CHECK-NEXT:       15: c3                            retq
 
@@ -35,21 +35,21 @@
 ;; info. The IR is intentionally doctored to have different names in debug info
 ;; for the test case here.
 ; RUN: llvm-strip %t.o -N foo -N _ZN3xyz3barEv -N _ZN3xyz3bazEv -o %t-stripped.o
-; RUN: llvm-objdump --no-print-imm-hex -dlC %t-stripped.o | FileCheck %s --check-prefix=STRIPPED
+; RUN: llvm-objdump --no-print-imm-hex -dlC %t-stripped.o | FileCheck %s --check-prefix=STRIPPED -DSEP=%{fs-sep}
 
 ; STRIPPED:      0000000000000000 <.text>:
 ; STRIPPED-NEXT: ; Function1():
-; STRIPPED-NEXT: ; /tmp{{/|\\}}src.cc:1
+; STRIPPED-NEXT: ; [[SEP]]tmp[[SEP]]src.cc:1
 ; STRIPPED-NEXT:        0: b8 05 00 00 00                movl    $5, %eax
 ; STRIPPED-NEXT:        5: c3                            retq
 
 ; STRIPPED:      ; xyz::bar():
-; STRIPPED-NEXT: ; /tmp{{/|\\}}src.cc:3
+; STRIPPED-NEXT: ; [[SEP]]tmp[[SEP]]src.cc:3
 ; STRIPPED-NEXT:        8: b8 0a 00 00 00                movl    $10, %eax
 ; STRIPPED-NEXT:        d: c3                            retq
 
 ; STRIPPED:      ; xyz::baz():
-; STRIPPED-NEXT: ; /tmp{{/|\\}}src.cc:3
+; STRIPPED-NEXT: ; [[SEP]]tmp[[SEP]]src.cc:3
 ; STRIPPED-NEXT:       10: b8 14 00 00 00                movl    $20, %eax
 ; STRIPPED-NEXT:       15: c3                            retq
 

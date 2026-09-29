@@ -13,6 +13,7 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
+#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -303,14 +304,21 @@ void AArch64PointerAuthImpl::authenticateLR(
   // are placed between MBBI and TI.
   MachineBasicBlock::iterator TI = MBB.getFirstInstrTerminator();
 
-  // The AUTIASP instruction assembles to a hint instruction before v8.3a so
-  // this instruction can safely used for any v8a architecture.
-  // From v8.3a onwards there are optimised authenticate LR and return
-  // instructions, namely RETA{A,B}, that can be used instead. In this case the
-  // DW_CFA_AARCH64_negate_ra_state can't be emitted.
-  bool TerminatorIsCombinable =
-      TI != MBB.end() && TI->getOpcode() == AArch64::RET;
   MCSymbol *PACSym = MFnI->getSigningInstrLabel();
+  auto &AFL = *static_cast<const AArch64FrameLowering *>(
+      MF.getSubtarget().getFrameLowering());
+  int64_t ArgumentStackToRestore = AFL.getArgumentStackToRestore(MF, MBB);
+
+  // The AUTIASP instruction assembles to a hint instruction before v8.3a so
+  // this instruction can safely be used for any v8a architecture.
+  // From v8.3a onwards there are optimised authenticate LR and return
+  // instructions, namely RETA{A,B}, that can be used instead. In this case
+  // the DW_CFA_AARCH64_negate_ra_state can't be emitted. Additionally,
+  // RET{A,B} requires the SP to match its incoming value on entry to the
+  // function.
+  bool TerminatorIsCombinable = std::next(MBBI) == TI && TI != MBB.end() &&
+                                TI->getOpcode() == AArch64::RET &&
+                                ArgumentStackToRestore == 0;
 
   if (Subtarget->hasPAuth() && TerminatorIsCombinable && !NeedsWinCFI &&
       !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
@@ -336,123 +344,115 @@ void AArch64PointerAuthImpl::authenticateLR(
     return;
   }
 
-  auto &AFL = *static_cast<const AArch64FrameLowering *>(
-      MF.getSubtarget().getFrameLowering());
-  int64_t ArgumentStackToRestore = AFL.getArgumentStackToRestore(MF, MBB);
-
-  // When ArgumentStackToRestore < 0, the tail callee pops more argument space
-  // than this function received, so after the frame teardown SP is below the
-  // entry SP used as the signing modifier. Reconstruct entry SP in x16 and
-  // authenticate using AUTI[AB]1716 (x17=LR, x16=entry_SP).
-  if (ArgumentStackToRestore < 0) {
-    emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
-                    StackOffset::getFixed(-ArgumentStackToRestore), TII,
-                    MachineInstr::FrameDestroy);
-
-    auto emitMOV = [&](Register Dst, Register Src) {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), Dst)
-          .addReg(AArch64::XZR)
-          .addReg(Src)
-          .addImm(0)
-          .setMIFlag(MachineInstr::FrameDestroy);
-    };
-
+  // If PAUTH_EPILOGUE is at insertion point with a net zero offset on SP, we
+  // can use an AUT form with a hardcoded SP discriminator.
+  if (ArgumentStackToRestore == 0) {
     if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
-      emitMOV(AArch64::X17, AArch64::LR);
-
       assert(PACSym && "No PAC instruction to refer to");
-      emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
-                                      AArch64::X15);
-
-      unsigned AutOpc = UseBKey ? AArch64::AUTIB171615 : AArch64::AUTIA171615;
-      BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
-          .setMIFlag(MachineInstr::FrameDestroy);
-      emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
-
-      emitMOV(AArch64::LR, AArch64::X17);
-    } else if (MFnI->branchProtectionPAuthLR()) {
-      emitMOV(AArch64::X17, AArch64::LR);
-
-      assert(PACSym && "No PAC instruction to refer to");
-      emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
-                                      AArch64::X15);
-
-      // The PACM hint-space instruction modifies the following AUTI[AB]1716
-      // to optionally take x15 as an extra operand depending on the
-      // presence of +pauth-lr at runtime. On machines without +pauth-lr, it
-      // behaves as a nop, and the address of the PACI[AB]SP in x15 is
-      // ignored.
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
-          .setMIFlag(MachineInstr::FrameDestroy);
-
-      unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
-      BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
-          .setMIFlag(MachineInstr::FrameDestroy);
-      emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
-
-      emitMOV(AArch64::LR, AArch64::X17);
-    } else if (Subtarget->hasPAuth()) {
       BuildMI(MBB, MBBI, DL,
-              TII->get(UseBKey ? AArch64::AUTIB : AArch64::AUTIA), AArch64::LR)
-          .addUse(AArch64::LR)
-          .addUse(AArch64::X16)
+              TII->get(UseBKey ? AArch64::AUTIBSPPCi : AArch64::AUTIASPPCi))
+          .addSym(PACSym)
           .setMIFlag(MachineInstr::FrameDestroy);
       emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
     } else {
-      emitMOV(AArch64::X17, AArch64::LR);
+      if (MFnI->branchProtectionPAuthLR()) {
+        emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
+                                        AArch64::X16);
 
-      unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
-      BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
+            .setMIFlag(MachineInstr::FrameDestroy);
+      }
+      BuildMI(MBB, MBBI, DL,
+              TII->get(UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP))
           .setMIFlag(MachineInstr::FrameDestroy);
       emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
-
-      emitMOV(AArch64::LR, AArch64::X17);
     }
+
+    if (NeedsWinCFI) {
+      assert(UseBKey &&
+             "Windows SEH PAC unwind info only supports B-key signing");
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
+          .setMIFlag(MachineInstr::FrameDestroy);
+    }
+
     return;
   }
 
   // When ArgumentStackToRestore > 0, this function received more argument
   // space than the tail callee pops. The epilogue contains an SP adjustment
-  // (e.g. "add sp, sp, #N") to discard the leftover argument space. We must
-  // authenticate *before* that adjustment so that AUTI[AB]SP sees the entry
-  // SP discriminator. Move any such SP-adjusting instructions to after the
-  // authentication instruction.
+  // (e.g. "add sp, sp, #N") to discard the leftover argument space.
+  //
+  // When ArgumentStackToRestore < 0, the tail callee pops more argument space
+  // than this function received, so after the frame teardown, SP is below the
+  // entry SP used as the signing modifier.
   //
   // We cannot simply bump SP first and then use AUTI[AB]SP with the bumped
   // value, because the live arguments would fall below SP and potentially
   // outside the red-zone.
-  SmallVector<MachineInstr *, 2> SPMods;
-  if (ArgumentStackToRestore > 0) {
-    for (auto I = MBBI; I->getFlag(MachineInstr::FrameDestroy); --I) {
-      if ((I->getOpcode() == AArch64::ADDXri ||
-           I->getOpcode() == AArch64::SUBXri) &&
-          I->getOperand(0).getReg() == AArch64::SP &&
-          I->getOperand(1).getReg() == AArch64::SP)
-        SPMods.push_back(&*I);
-    }
-  }
-  for (auto *MI : SPMods)
-    MI->removeFromParent();
+  //
+  // At this point there is an offset to the incoming SP, and we can't use the
+  // aut variants that hard-code SP. Reconstruct entry SP in x16 and
+  // authenticate using AUTI[AB]1716 (x17=LR, x16=entry_SP).
+  emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
+                  StackOffset::getFixed(-ArgumentStackToRestore), TII,
+                  MachineInstr::FrameDestroy);
+
+  auto emitMOV = [&](Register Dst, Register Src) {
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), Dst)
+        .addReg(AArch64::XZR)
+        .addReg(Src)
+        .addImm(0)
+        .setMIFlag(MachineInstr::FrameDestroy);
+  };
 
   if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+    emitMOV(AArch64::X17, AArch64::LR);
+
     assert(PACSym && "No PAC instruction to refer to");
-    BuildMI(MBB, MBBI, DL,
-            TII->get(UseBKey ? AArch64::AUTIBSPPCi : AArch64::AUTIASPPCi))
-        .addSym(PACSym)
+    emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
+
+    unsigned AutOpc = UseBKey ? AArch64::AUTIB171615 : AArch64::AUTIA171615;
+    BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
+        .setMIFlag(MachineInstr::FrameDestroy);
+    emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
+
+    emitMOV(AArch64::LR, AArch64::X17);
+  } else if (MFnI->branchProtectionPAuthLR()) {
+    emitMOV(AArch64::X17, AArch64::LR);
+
+    assert(PACSym && "No PAC instruction to refer to");
+    emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
+
+    // The PACM hint-space instruction modifies the following AUTI[AB]1716
+    // to optionally take x15 as an extra operand depending on the
+    // presence of +pauth-lr at runtime. On machines without +pauth-lr, it
+    // behaves as a nop, and the address of the PACI[AB]SP in x15 is
+    // ignored.
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
+        .setMIFlag(MachineInstr::FrameDestroy);
+
+    unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
+    BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
+        .setMIFlag(MachineInstr::FrameDestroy);
+    emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
+
+    emitMOV(AArch64::LR, AArch64::X17);
+  } else if (Subtarget->hasPAuth()) {
+    BuildMI(MBB, MBBI, DL, TII->get(UseBKey ? AArch64::AUTIB : AArch64::AUTIA),
+            AArch64::LR)
+        .addUse(AArch64::LR)
+        .addUse(AArch64::X16)
         .setMIFlag(MachineInstr::FrameDestroy);
     emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
   } else {
-    if (MFnI->branchProtectionPAuthLR()) {
-      emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
-                                      AArch64::X16);
+    emitMOV(AArch64::X17, AArch64::LR);
 
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
-          .setMIFlag(MachineInstr::FrameDestroy);
-    }
-    BuildMI(MBB, MBBI, DL,
-            TII->get(UseBKey ? AArch64::AUTIBSP : AArch64::AUTIASP))
+    unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
+    BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
         .setMIFlag(MachineInstr::FrameDestroy);
     emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
+
+    emitMOV(AArch64::LR, AArch64::X17);
   }
 
   if (NeedsWinCFI) {
@@ -461,9 +461,6 @@ void AArch64PointerAuthImpl::authenticateLR(
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
         .setMIFlag(MachineInstr::FrameDestroy);
   }
-
-  for (auto *MI : SPMods)
-    MBB.insert(MBBI, MI);
 }
 
 unsigned llvm::AArch64PAuth::getCheckerSizeInBytes(AuthCheckMethod Method) {

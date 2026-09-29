@@ -39,7 +39,7 @@ void target_map_multiple(int a, int b) {
 //
 // LLVM-LABEL: define {{.*}} void @target_map_to(
 // LLVM-SAME:  i32 noundef %[[ARG:[^,)]+]]
-// LLVM:         %[[X_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:         %[[X_ADDR:.*]] = alloca i32, align 4
 // LLVM:         store i32 %[[ARG]], ptr %[[X_ADDR]], align 4
 // LLVM:         %[[BP:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 // LLVM:         store ptr %[[X_ADDR]], ptr %[[BP]], align 8
@@ -51,7 +51,7 @@ void target_map_multiple(int a, int b) {
 
 // LLVM-LABEL: define {{.*}} void @target_map_from(
 // LLVM-SAME:  i32 noundef %[[ARG:[^,)]+]]
-// LLVM:         %[[X_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:         %[[X_ADDR:.*]] = alloca i32, align 4
 // LLVM:         store i32 %[[ARG]], ptr %[[X_ADDR]], align 4
 // LLVM:         %[[BP:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 // LLVM:         store ptr %[[X_ADDR]], ptr %[[BP]], align 8
@@ -63,7 +63,7 @@ void target_map_multiple(int a, int b) {
 
 // LLVM-LABEL: define {{.*}} void @target_map_tofrom(
 // LLVM-SAME:  i32 noundef %[[ARG:[^,)]+]]
-// LLVM:         %[[X_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:         %[[X_ADDR:.*]] = alloca i32, align 4
 // LLVM:         store i32 %[[ARG]], ptr %[[X_ADDR]], align 4
 // LLVM:         %[[BP:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 // LLVM:         store ptr %[[X_ADDR]], ptr %[[BP]], align 8
@@ -75,8 +75,8 @@ void target_map_multiple(int a, int b) {
 
 // LLVM-LABEL: define {{.*}} void @target_map_multiple(
 // LLVM-SAME:  i32 noundef %[[ARG_A:[^,)]+]], i32 noundef %[[ARG_B:[^,)]+]]
-// LLVM:         %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:         %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:         %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM:         %[[B_ADDR:.*]] = alloca i32, align 4
 // LLVM:         store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
 // LLVM:         store i32 %[[ARG_B]], ptr %[[B_ADDR]], align 4
 // LLVM:         %[[BP_A:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 0

@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXUtilities.h"
-#include "NVPTX.h"
 #include "NVVMProperties.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -30,6 +30,16 @@ static cl::opt<bool> ForceMinByValParamAlign(
 
 Function *llvm::getMaybeBitcastedCallee(const CallBase *CB) {
   return dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
+}
+
+unsigned llvm::getFromTypeWidthForLoad(const MemSDNode *Mem) {
+  auto TotalWidth = Mem->getMemoryVT().getSizeInBits();
+  auto NumElts = Mem->getNumValues() - 1;
+  auto ElementBitWidth = TotalWidth / NumElts;
+  assert(isPowerOf2_32(ElementBitWidth) && ElementBitWidth >= 8 &&
+         ElementBitWidth <= 128 && TotalWidth <= 256 &&
+         "Invalid width for load");
+  return ElementBitWidth;
 }
 
 Align llvm::getPTXParamTypeAlign(Type *ArgTy, const DataLayout &DL) {

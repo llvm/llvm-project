@@ -35,11 +35,15 @@ class FunctionPass;
 // LLVM IR passes.
 class WebAssemblyLowerEmscriptenEHSjLjPass
     : public RequiredPassInfoMixin<WebAssemblyLowerEmscriptenEHSjLjPass> {
+  bool EnableEmEH;
+
 public:
+  WebAssemblyLowerEmscriptenEHSjLjPass(bool EnableEmEH = false)
+      : EnableEmEH(EnableEmEH) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
-ModulePass *createWebAssemblyLowerEmscriptenEHSjLjLegacyPass();
+ModulePass *createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(bool EnableEmEH);
 
 class WebAssemblyAddMissingPrototypesPass
     : public RequiredPassInfoMixin<WebAssemblyAddMissingPrototypesPass> {
@@ -108,11 +112,23 @@ createWebAssemblyInstructionSelector(const WebAssemblyTargetMachine &,
                                      const WebAssemblySubtarget &,
                                      const WebAssemblyRegisterBankInfo &);
 
-FunctionPass *createWebAssemblyPostLegalizerCombiner();
-void initializeWebAssemblyPostLegalizerCombinerPass(PassRegistry &);
+class WebAssemblyPostLegalizerCombinerPass
+    : public RequiredPassInfoMixin<WebAssemblyPostLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
-FunctionPass *createWebAssemblyPreLegalizerCombiner();
-void initializeWebAssemblyPreLegalizerCombinerPass(PassRegistry &);
+FunctionPass *createWebAssemblyPostLegalizerCombinerLegacyPass();
+
+class WebAssemblyPreLegalizerCombinerPass
+    : public RequiredPassInfoMixin<WebAssemblyPreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createWebAssemblyPreLegalizerCombinerLegacyPass();
 
 // ISel and immediate followup passes.
 class WebAssemblyISelDAGToDAGPass : public SelectionDAGISelPass {
@@ -333,6 +349,8 @@ void initializeWebAssemblyMemIntrinsicResultsLegacyPass(PassRegistry &);
 void initializeWebAssemblyNullifyDebugValueListsLegacyPass(PassRegistry &);
 void initializeWebAssemblyOptimizeLiveIntervalsLegacyPass(PassRegistry &);
 void initializeWebAssemblyPeepholeLegacyPass(PassRegistry &);
+void initializeWebAssemblyPostLegalizerCombinerLegacyPass(PassRegistry &);
+void initializeWebAssemblyPreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeWebAssemblyRegColoringLegacyPass(PassRegistry &);
 void initializeWebAssemblyRegNumberingLegacyPass(PassRegistry &);
 void initializeWebAssemblyRegStackifyLegacyPass(PassRegistry &);

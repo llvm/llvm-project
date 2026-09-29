@@ -17,7 +17,7 @@ define void @asm_simple_memory_clobber() {
 define void @asm_simple_register_clobber() {
   ; CHECK-LABEL: name: asm_simple_register_clobber
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   INLINEASM &"mov x0, 7", sideeffect attdialect, clobber, implicit-def early-clobber $x0, !0
+  ; CHECK-NEXT:   INLINEASM &"mov x0, 7", sideeffect attdialect, clobber, implicit-def dead early-clobber $x0, !0
   ; CHECK-NEXT:   RET_ReallyLR
   call void asm sideeffect "mov x0, 7", "~{x0}"(), !srcloc !0
   ret void
@@ -270,7 +270,7 @@ define i64 @test_input_with_matching_constraint_to_physical_register() {
   ; CHECK-LABEL: name: test_input_with_matching_constraint_to_physical_register
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64arg = COPY [[C]](i64)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64all = COPY [[C]](i64)
   ; CHECK-NEXT:   INLINEASM &"", attdialect, regdef, implicit-def $x2, reguse tiedto:$0, [[COPY]](tied-def 3)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x2
   ; CHECK-NEXT:   $x0 = COPY [[COPY1]](i64)

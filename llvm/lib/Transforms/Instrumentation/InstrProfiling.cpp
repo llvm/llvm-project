@@ -23,7 +23,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -982,7 +981,7 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
   if (Options.UseBFIInPromotion) {
     std::unique_ptr<BranchProbabilityInfo> BPI;
     BPI.reset(new BranchProbabilityInfo(*F, CI, &GetTLI(*F)));
-    BFI.reset(new BlockFrequencyInfo(*F, *BPI, LI));
+    BFI.reset(new BlockFrequencyInfo(*F, *BPI, CI));
   }
 
   for (const auto &LoadStore : PromotionCandidates) {
@@ -1768,7 +1767,7 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
 
   // Used by INSTR_PROF_VTABLE_DATA MACRO
   Constant *VTableAddr = getVTableAddrForProfData(GV);
-  const std::string PGOVTableName = getPGOName(*GV);
+  const std::string PGOVTableName = getIRPGOObjectName(*GV);
   // Record the length of the vtable. This is needed since vtable pointers
   // loaded from C++ objects might be from the middle of a vtable definition.
   uint32_t VTableSizeVal = GV->getGlobalSize(M.getDataLayout());

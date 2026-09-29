@@ -17,6 +17,7 @@
 
 #include "clang/APINotes/Types.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VersionTuple.h"
@@ -169,6 +170,16 @@ public:
   lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
                   llvm::ArrayRef<std::string> Parameters);
 
+  /// Build the selector key for the given C++ method.
+  std::optional<APINotesFunctionSelectorKey>
+  getCXXMethodSelectorKey(ContextID CtxID, llvm::StringRef Name);
+
+  /// Build the selector key for the given C++ method with an exact parameter
+  /// selector.
+  std::optional<APINotesFunctionSelectorKey>
+  getCXXMethodSelectorKey(ContextID CtxID, llvm::StringRef Name,
+                          llvm::ArrayRef<std::string> Parameters);
+
   /// Look for information regarding the given global variable.
   ///
   /// \param Name The name of the global variable.
@@ -194,6 +205,27 @@ public:
   lookupGlobalFunction(llvm::StringRef Name,
                        llvm::ArrayRef<std::string> Parameters,
                        std::optional<Context> Ctx = std::nullopt);
+
+  /// Build the selector key for the given global function.
+  std::optional<APINotesFunctionSelectorKey>
+  getGlobalFunctionSelectorKey(llvm::StringRef Name,
+                               std::optional<Context> Ctx = std::nullopt);
+
+  /// Build the selector key for the given global function with an exact
+  /// parameter selector.
+  std::optional<APINotesFunctionSelectorKey>
+  getGlobalFunctionSelectorKey(llvm::StringRef Name,
+                               llvm::ArrayRef<std::string> Parameters,
+                               std::optional<Context> Ctx = std::nullopt);
+
+  /// Collect exact parameter selector keys stored by this reader.
+  void collectExactFunctionParameterSelectors(
+      llvm::SmallVectorImpl<APINotesFunctionSelectorKey> &Selectors);
+
+  /// Reconstruct parameter selector strings for a stored exact selector key.
+  std::optional<llvm::SmallVector<std::string, 4>>
+  getParameterSelectorSpellingsForDiagnostics(
+      const APINotesFunctionSelectorKey &Key);
 
   /// Look for information regarding the given enumerator.
   ///
