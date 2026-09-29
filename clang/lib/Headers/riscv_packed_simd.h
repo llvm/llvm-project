@@ -346,6 +346,21 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
                                    7, 15);                                     \
   }
 
+#define __packed_wunzip_ext(name, rty, ty, ext)                                \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return ext(__rs1);                                                         \
+  }
+
+#define __packed_wunzip_shift(name, rty, ty, op, shamt)                        \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return (rty)__rs1 op shamt;                                                \
+  }
+
+#define __packed_wunzip_odd_hi(name, rty, ty, zip)                             \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return (rty)zip((rty){0}, (rty)__rs1);                                     \
+  }
+
 #define __packed_abdsum(name, rty, ty, builtin)                                \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
                                                           ty __rs2) {          \
@@ -1075,6 +1090,46 @@ __packed_unary_builtin(psext_h_i32x2, int32x2_t, __builtin_riscv_psext_h_i32x2)
 __packed_unary_builtin(pzext_b_u16x4, uint16x4_t, __builtin_riscv_pzext_b_u16x4)
 __packed_unary_builtin(pzext_h_u32x2, uint32x2_t, __builtin_riscv_pzext_h_u32x2)
 
+/* Packed Widening Unzip (32-bit) */
+__packed_wunzip_ext(pwunzipe_i16x2, int16x2_t, int8x4_t,
+                    __riscv_psext_b_i16x2)
+__packed_wunzip_shift(pwunzipo_i16x2, int16x2_t, int8x4_t, >>, 8)
+__packed_wunzip_ext(pwunzipue_u16x2, uint16x2_t, uint8x4_t,
+                    __riscv_pzext_b_u16x2)
+__packed_wunzip_shift(pwunzipuo_u16x2, uint16x2_t, uint8x4_t, >>, 8)
+__packed_wunzip_shift(pwunziphe_i16x2, int16x2_t, int8x4_t, <<, 8)
+__packed_wunzip_shift(pwunziphe_u16x2, uint16x2_t, uint8x4_t, <<, 8)
+__packed_wunzip_odd_hi(pwunzipho_i16x2, int16x2_t, int8x4_t,
+                        __riscv_pnziph_i8x4)
+__packed_wunzip_odd_hi(pwunzipho_u16x2, uint16x2_t, uint8x4_t,
+                        __riscv_pnziph_u8x4)
+
+/* Packed Widening Unzip (64-bit) */
+__packed_wunzip_ext(pwunzipe_i16x4, int16x4_t, int8x8_t,
+                    __riscv_psext_b_i16x4)
+__packed_wunzip_shift(pwunzipo_i16x4, int16x4_t, int8x8_t, >>, 8)
+__packed_wunzip_ext(pwunzipue_u16x4, uint16x4_t, uint8x8_t,
+                    __riscv_pzext_b_u16x4)
+__packed_wunzip_shift(pwunzipuo_u16x4, uint16x4_t, uint8x8_t, >>, 8)
+__packed_wunzip_ext(pwunzipe_i32x2, int32x2_t, int16x4_t,
+                    __riscv_psext_h_i32x2)
+__packed_wunzip_shift(pwunzipo_i32x2, int32x2_t, int16x4_t, >>, 16)
+__packed_wunzip_ext(pwunzipue_u32x2, uint32x2_t, uint16x4_t,
+                    __riscv_pzext_h_u32x2)
+__packed_wunzip_shift(pwunzipuo_u32x2, uint32x2_t, uint16x4_t, >>, 16)
+__packed_wunzip_shift(pwunziphe_i16x4, int16x4_t, int8x8_t, <<, 8)
+__packed_wunzip_odd_hi(pwunzipho_i16x4, int16x4_t, int8x8_t,
+                        __riscv_pnziph_i8x8)
+__packed_wunzip_shift(pwunziphe_u16x4, uint16x4_t, uint8x8_t, <<, 8)
+__packed_wunzip_odd_hi(pwunzipho_u16x4, uint16x4_t, uint8x8_t,
+                        __riscv_pnziph_u8x8)
+__packed_wunzip_shift(pwunziphe_i32x2, int32x2_t, int16x4_t, <<, 16)
+__packed_wunzip_odd_hi(pwunzipho_i32x2, int32x2_t, int16x4_t,
+                        __riscv_pnziph_i16x4)
+__packed_wunzip_shift(pwunziphe_u32x2, uint32x2_t, uint16x4_t, <<, 16)
+__packed_wunzip_odd_hi(pwunzipho_u32x2, uint32x2_t, uint16x4_t,
+                        __riscv_pnziph_u16x4)
+
 /* Packed "Q-format" Multiplication (32-bit) */
 __packed_binary_builtin(pmulq_i16x2, int16x2_t, __builtin_riscv_pmulq_i16x2)
 __packed_binary_builtin(pmulqr_i16x2, int16x2_t, __builtin_riscv_pmulqr_i16x2)
@@ -1456,6 +1511,9 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_nzip4
 #undef __packed_nziph2
 #undef __packed_nziph4
+#undef __packed_wunzip_ext
+#undef __packed_wunzip_shift
+#undef __packed_wunzip_odd_hi
 #undef __packed_abdsum
 #undef __packed_ternary_builtin_cast
 #undef __packed_extract
