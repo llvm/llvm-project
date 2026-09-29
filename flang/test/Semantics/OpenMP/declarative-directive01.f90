@@ -60,7 +60,7 @@ contains
     !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive [-Wopenmp-usage]
     !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive [-Wopenmp-usage]
     !$omp declare target (foo, N, M)
-    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-kartoffel]
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
@@ -69,7 +69,7 @@ contains
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp declare target enter(Q, S) link(R)
-    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
+    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-kartoffel]
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: MAP clause is not allowed on DECLARE TARGET directive
     !$omp declare target to(Q) map(from:Q)

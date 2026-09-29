@@ -529,8 +529,8 @@ bool OmpStructureChecker::IsAllowedClause(llvm::omp::Clause clauseId) {
   if (GetDirectiveNest(ContextSelectorNest) > 0) {
     return true;
   }
-  return llvm::omp::isAllowedClauseForDirective(GetContext().directive,
-      clauseId, context_.langOptions().getOpenMPVersion());
+  return IsClauseAllowedOnDirective(clauseId, GetContext().directive,
+      context_.langOptions().getOpenMPVersion(), &context_);
 }
 
 bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
@@ -547,26 +547,27 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
 
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
-  if (!llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version)) {
+  if (!IsClauseAllowedOnDirective(clauseId, dirId, version, &context_)) {
     llvm::omp::Version allowedInVersion{[&] {
       for (llvm::omp::Version v : llvm::omp::getOpenMPVersions()) {
         if (v <= version) {
           continue;
         }
-        if (llvm::omp::isAllowedClauseForDirective(dirId, clauseId, v)) {
+        if (IsClauseAllowedOnDirective(clauseId, dirId, v, &context_)) {
           return v;
         }
       }
       return llvm::omp::Version();
     }()};
 
-    // Only report it if there is a later version that allows it.
-    // If it's not allowed at all, it will be reported by CheckAllowed.
     if (allowedInVersion) {
-      context_.Say(clauseSource,
-          "%s clause is not allowed on %s directive in %s, %s"_err_en_US,
+      context_.Warn(common::UsageWarning::OpenMPKartoffel, clauseSource,
+          "%s clause is not allowed on %s directive in %s, %s"_warn_en_US,
           GetUpperName(clauseId, version), GetUpperName(dirId, version),
           ThisVersion(version), TryVersion(allowedInVersion));
+      if (!context_.warningsAreErrors()) {
+        SetAllowedClauseOverride(clauseId, dirId);
+      }
     } else {
       context_.Say(clauseSource,
           "%s clause is not allowed on %s directive"_err_en_US,
@@ -576,6 +577,12 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
   }
 
   return true;
+}
+
+void OmpStructureChecker::SetAllowedClauseOverride(
+    llvm::omp::Clause clauseId, llvm::omp::Directive dirId) {
+  SemanticOverrides &overrides{context_.GetOmpSemanticOverrides()};
+  overrides.allowedClauses[clauseId].set(dirId);
 }
 
 void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
@@ -1209,7 +1216,8 @@ void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
   // Prepare the requiredSet relevant to the current OpenMP version.
   llvm::omp::Clauses requiredSet;
   for (llvm::omp::Clause id : directiveClausesMap_[dirId].requiredOneOf) {
-    if (IsAllowedClause(id)) {
+    // Do not report overridden clauses as required.
+    if (llvm::omp::isAllowedClauseForDirective(dirId, id, version)) {
       requiredSet.set(id);
     }
   }
@@ -2820,8 +2828,12 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetDirective &x) {
     }
     llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
     if (toClause && version >= 52) {
-      context_.Warn(common::UsageWarning::OpenMPUsage, toClause->source,
+      context_.Warn(common::UsageWarning::OpenMPKartoffel, toClause->source,
           "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
+      if (!context_.warningsAreErrors()) {
+        SetAllowedClauseOverride(llvm::omp::Clause::OMPC_to,
+            llvm::omp::Directive::OMPD_declare_target);
+      }
     }
   }
 
@@ -3236,8 +3248,8 @@ struct TaskgraphVisitor {
     }
 
     llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
-    bool allowsNogroup{llvm::omp::isAllowedClauseForDirective(
-        leafs[0], llvm::omp::Clause::OMPC_nogroup, version)};
+    bool allowsNogroup{IsClauseAllowedOnDirective(
+        llvm::omp::Clause::OMPC_nogroup, leafs[0], version, &context_)};
 
     if (allowsNogroup) {
       if (!nogroup) {
@@ -5699,15 +5711,16 @@ static bool IsPredefinedHandle(const parser::Name &name,
 }
 
 static bool ClauseHasTargetEffect(llvm::omp::Directive directive,
-    llvm::omp::Clause clause, llvm::omp::Version version) {
+    llvm::omp::Clause clause, llvm::omp::Version version,
+    SemanticsContext &semaCtx) {
   llvm::ArrayRef<llvm::omp::Directive> leafs{
       llvm::omp::getLeafConstructsOrSelf(directive)};
   if (!llvm::is_contained(leafs, llvm::omp::Directive::OMPD_target)) {
     return false;
   }
   if (leafs.size() == 1) {
-    return llvm::omp::isAllowedClauseForDirective(
-        llvm::omp::Directive::OMPD_target, clause, version);
+    return IsClauseAllowedOnDirective(
+        clause, llvm::omp::Directive::OMPD_target, version, &semaCtx);
   }
 
   // Compound distribution can override direct TARGET clause permission.
@@ -5726,8 +5739,8 @@ static bool ClauseHasTargetEffect(llvm::omp::Directive directive,
 
   return (llvm::omp::isDataSharingAttributeClause(clause, version) ||
              clause == llvm::omp::Clause::OMPC_map) &&
-      llvm::omp::isAllowedClauseForDirective(
-          llvm::omp::Directive::OMPD_target, clause, version);
+      IsClauseAllowedOnDirective(
+          clause, llvm::omp::Directive::OMPD_target, version, &semaCtx);
 }
 
 void OmpStructureChecker::CheckUsesAllocatorsSpec(
@@ -5803,7 +5816,8 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
           id != llvm::omp::Clause::OMPC_map) {
         continue;
       }
-      if (!ClauseHasTargetEffect(GetContext().directive, id, version)) {
+      if (!ClauseHasTargetEffect(
+              GetContext().directive, id, version, context_)) {
         continue;
       }
       const parser::OmpObjectList *objects{GetOmpObjectList(clause)};

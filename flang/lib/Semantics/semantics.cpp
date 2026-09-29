@@ -1005,4 +1005,11 @@ bool SemanticsContext::IsSymbolUsed(const Symbol &symbol) const {
   return isUsed_.find(symbol) != isUsed_.end();
 }
 
+omp::SemanticOverrides &SemanticsContext::GetOmpSemanticOverrides() {
+  if (!ompOverrides_) {
+    ompOverrides_ = std::make_unique<omp::SemanticOverrides>();
+  }
+  return DEREF(ompOverrides_.get());
+}
+
 } // namespace Fortran::semantics

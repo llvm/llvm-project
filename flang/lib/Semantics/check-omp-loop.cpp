@@ -573,7 +573,7 @@ void OmpStructureChecker::CheckIterationVariables(
       auto range{dsa.equal_range(host)};
       for (auto found{range.first}; found != range.second; ++found) {
         llvm::omp::Clause id{found->second.clauseId};
-        if (!llvm::omp::isAllowedClauseForDirective(dirId, id, version)) {
+        if (!IsClauseAllowedOnDirective(id, dirId, version, &context_)) {
           continue;
         }
         if (id == llvm::omp::Clause::OMPC_private ||

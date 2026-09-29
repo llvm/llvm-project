@@ -1,4 +1,4 @@
-!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=45
+!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=45 -Werror -Wno-experimental-option
 module all_mod
     integer, parameter :: N = 100
     integer(kind=4), dimension(N) :: AAA
@@ -21,7 +21,7 @@ end module
 subroutine test_omp_do()
     use all_mod
     !$omp parallel shared(AAA,BBB,CCC,DDD,val)
-    !ERROR: ALLOCATE clause is not allowed on DO directive in OpenMP v4.5, try -fopenmp-version=50
+    !ERROR: ALLOCATE clause is not allowed on DO directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-kartoffel]
     !ERROR: 'allocator-simple-modifier' modifier is not supported on ALLOCATE clause in OpenMP v4.5, try -fopenmp-version=50
     !$omp do private(CCC, val) allocate(0:CCC, val)
     do i=1,N
@@ -35,7 +35,7 @@ end subroutine test_omp_do
 
 subroutine test_omp_parallel_do()
     use all_mod
-    !ERROR: ALLOCATE clause is not allowed on PARALLEL DO directive in OpenMP v4.5, try -fopenmp-version=50
+    !ERROR: ALLOCATE clause is not allowed on PARALLEL DO directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-kartoffel]
     !ERROR: 'allocator-simple-modifier' modifier is not supported on ALLOCATE clause in OpenMP v4.5, try -fopenmp-version=50
     !$omp parallel do private(CCC, val) allocate(0:CCC, val) shared(AAA,BBB,DDD)
     do i=1,N
