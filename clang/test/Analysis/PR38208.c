@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config aggressive-binary-operation-simplification=true -verify %s
 
 // expected-no-diagnostics
 
