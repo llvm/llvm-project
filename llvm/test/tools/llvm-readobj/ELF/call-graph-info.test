@@ -481,7 +481,9 @@ Symbols:
   - Name:  caller
 ...
 
-## Check ARM 32-bit Thumb address handling.
+## Check that implicit addends of SHT_REL relocations in an EM_ARM relocatable
+## object file are reported as is: the Thumb bit is not cleared, and addends
+## are sign-extended.
 # RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: llvm-readobj --elf-output-style=GNU --call-graph-info %t3 2>&1 | count 0
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t3 2>&1 | \
@@ -494,12 +496,20 @@ Symbols:
 # LLVM-ARM-THUMB-NEXT:     Reloc {
 # LLVM-ARM-THUMB-NEXT:       SymbolIndex: 1
 # LLVM-ARM-THUMB-NEXT:       SymbolName: foo
+# LLVM-ARM-THUMB-NEXT:       Addend: 1
 # LLVM-ARM-THUMB-NEXT:     }
 # LLVM-ARM-THUMB-NEXT:     Version: 0
 # LLVM-ARM-THUMB-NEXT:     IsIndirectTarget: No
 # LLVM-ARM-THUMB-NEXT:     TypeID: 0x123456789ABCDEF0
-# LLVM-ARM-THUMB-NEXT:     NumDirectCallees: 0
+# LLVM-ARM-THUMB-NEXT:     NumDirectCallees: 1
 # LLVM-ARM-THUMB-NEXT:     DirectCallees [
+# LLVM-ARM-THUMB-NEXT:       {
+# LLVM-ARM-THUMB-NEXT:         Reloc {
+# LLVM-ARM-THUMB-NEXT:           SymbolIndex: 2
+# LLVM-ARM-THUMB-NEXT:           SymbolName: bar
+# LLVM-ARM-THUMB-NEXT:           Addend: -4
+# LLVM-ARM-THUMB-NEXT:         }
+# LLVM-ARM-THUMB-NEXT:       }
 # LLVM-ARM-THUMB-NEXT:     ]
 # LLVM-ARM-THUMB-NEXT:     NumIndirectTargetTypeIDs: 0
 # LLVM-ARM-THUMB-NEXT:     IndirectTypeIDs: []
@@ -511,13 +521,22 @@ Symbols:
 # JSON-ARM-THUMB-NEXT:      "Function": {
 # JSON-ARM-THUMB-NEXT:        "Reloc": {
 # JSON-ARM-THUMB-NEXT:          "SymbolIndex": 1,
-# JSON-ARM-THUMB-NEXT:          "SymbolName": "foo"
+# JSON-ARM-THUMB-NEXT:          "SymbolName": "foo",
+# JSON-ARM-THUMB-NEXT:          "Addend": 1
 # JSON-ARM-THUMB-NEXT:        },
 # JSON-ARM-THUMB-NEXT:        "Version": 0,
 # JSON-ARM-THUMB-NEXT:        "IsIndirectTarget": false,
 # JSON-ARM-THUMB-NEXT:        "TypeID": 1311768467463790320,
-# JSON-ARM-THUMB-NEXT:        "NumDirectCallees": 0,
-# JSON-ARM-THUMB-NEXT:        "DirectCallees": [],
+# JSON-ARM-THUMB-NEXT:        "NumDirectCallees": 1,
+# JSON-ARM-THUMB-NEXT:        "DirectCallees": [
+# JSON-ARM-THUMB-NEXT:          {
+# JSON-ARM-THUMB-NEXT:            "Reloc": {
+# JSON-ARM-THUMB-NEXT:              "SymbolIndex": 2,
+# JSON-ARM-THUMB-NEXT:              "SymbolName": "bar",
+# JSON-ARM-THUMB-NEXT:              "Addend": -4
+# JSON-ARM-THUMB-NEXT:            }
+# JSON-ARM-THUMB-NEXT:          }
+# JSON-ARM-THUMB-NEXT:        ],
 # JSON-ARM-THUMB-NEXT:        "NumIndirectTargetTypeIDs": 0,
 # JSON-ARM-THUMB-NEXT:        "IndirectTypeIDs": []
 # JSON-ARM-THUMB-NEXT:      }
@@ -539,21 +558,32 @@ Sections:
     ContentArray: [
       ## --- foo+1 (Thumb address) ---
       0x00, ## Version
-      0x00, ## Flags
-      0x01, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x1 (relative to foo)
-      0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12 ## FunctionTypeID: 0x123456789ABCDEF0
+      0x02, ## Flags (HasDirectCallees)
+      ## Offset 0x2
+      0x01, 0x00, 0x00, 0x00, ## FunctionEntryPC: implicit addend 1 (Thumb bit)
+      0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12, ## FunctionTypeID: 0x123456789ABCDEF0
+      0x01, ## NumDirectCallees
+      ## Offset 0xF
+      0xFC, 0xFF, 0xFF, 0xFF  ## Callee: implicit addend -4
     ]
-  - Type:   SHT_RELA
+  - Type:   SHT_REL
     Info:   .llvm.callgraph
     Relocations:
       - Offset:  0x2 ## Offset to FunctionEntryPC
         Symbol:  foo
         Type:    R_ARM_ABS32
+      - Offset:  0xF ## Offset to the direct callee
+        Symbol:  bar
+        Type:    R_ARM_ABS32
 Symbols:
   - Name:     foo
     Type:     STT_FUNC
     Section:  .text
-    Value:    0x0 
+    Value:    0x0
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x8
 ...
 
 ## Check multiple function names handling.
@@ -1229,4 +1259,270 @@ Symbols:
     Section:         .text
     Binding:         STB_GLOBAL
     Size:            0x14
+...
+
+## Check that SymbolName reports st_name exactly. No name is printed for a
+## symbol whose st_name is non-zero but refers to an empty string, even for an
+## STT_SECTION symbol whose section name could otherwise be substituted. Names
+## are demangled only with --demangle.
+# RUN: yaml2obj --docnum=9 %s -o %t9
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t9 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
+# RUN:     --check-prefixes=LLVM-RELNAME,LLVM-RAW
+# RUN: llvm-readobj --elf-output-style=LLVM --demangle --call-graph-info %t9 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
+# RUN:     --check-prefixes=LLVM-RELNAME,LLVM-DEMANGLE
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t9 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
+# RUN:     --check-prefix=JSON-RELNAME
+
+# LLVM-RELNAME:           Reloc {
+# LLVM-RELNAME-NEXT:        SymbolIndex: 1
+# LLVM-RELNAME-NEXT:        Addend: 16
+# LLVM-RELNAME-NEXT:      }
+# LLVM-RELNAME:           Reloc {
+# LLVM-RELNAME-NEXT:        SymbolIndex: 2
+# LLVM-RAW-NEXT:            SymbolName: _Z3foov
+# LLVM-DEMANGLE-NEXT:       SymbolName: foo()
+# LLVM-RELNAME-NEXT:      }
+
+# JSON-RELNAME:           "Reloc": {
+# JSON-RELNAME-NEXT:        "SymbolIndex": 1,
+# JSON-RELNAME-NEXT:        "Addend": 16
+# JSON-RELNAME-NEXT:      },
+# JSON-RELNAME:           "Reloc": {
+# JSON-RELNAME-NEXT:        "SymbolIndex": 2,
+# JSON-RELNAME-NEXT:        "SymbolName": "_Z3foov"
+# JSON-RELNAME-NEXT:      },
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+    Flags:  [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:   0x20
+  - Name:   .llvm.callgraph
+    Type:   SHT_LLVM_CALL_GRAPH
+    Link:   .text
+    ContentArray: [
+      ## Offset 0x0
+      0x00, ## Format Version
+      0x00, ## Flags
+      ## Offset 0x2 (Matches Reloc: section symbol + 16)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function address
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## TypeID
+      ## Offset 0x12
+      0x00, ## Format Version
+      0x00, ## Flags
+      ## Offset 0x14 (Matches Reloc: _Z3foov)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function address
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  ## TypeID
+    ]
+  - Name:   .rela.llvm.callgraph
+    Type:   SHT_RELA
+    Info:   .llvm.callgraph
+    Relocations:
+      - Offset:  0x2
+        Symbol:  1
+        Type:    R_X86_64_64
+        Addend:  16
+      - Offset:  0x14
+        Symbol:  _Z3foov
+        Type:    R_X86_64_64
+Symbols:
+  ## st_name refers to the NUL that terminates "_Z3foov" in .strtab.
+  - Type:     STT_SECTION
+    Section:  .text
+    StName:   8
+  - Name:     _Z3foov
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x10
+...
+
+## Check that a direct callee listed more than once is only reported once in a
+## non-relocatable file.
+# RUN: yaml2obj --docnum=10 %s -o %t10
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t10 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM-DUP-CALLEE
+
+# LLVM-DUP-CALLEE:      NumDirectCallees: 2
+# LLVM-DUP-CALLEE-NEXT: DirectCallees [
+# LLVM-DUP-CALLEE-NEXT:   {
+# LLVM-DUP-CALLEE-NEXT:     Names: [foo]
+# LLVM-DUP-CALLEE-NEXT:     Address: 0x1790
+# LLVM-DUP-CALLEE-NEXT:   }
+# LLVM-DUP-CALLEE-NEXT:   {
+# LLVM-DUP-CALLEE-NEXT:     Names: [bar]
+# LLVM-DUP-CALLEE-NEXT:     Address: 0x17A0
+# LLVM-DUP-CALLEE-NEXT:   }
+# LLVM-DUP-CALLEE-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+  - Type:   SHT_LLVM_CALL_GRAPH
+    Link:   .text
+    ContentArray: [
+      0x00, ## Version
+      0x02, ## Flags (HasDirectCallees)
+      0xC0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x17C0
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionTypeID: 0
+      0x03, ## NumDirectCallees
+      0x90, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 1: 0x1790 (foo)
+      0xA0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Callee 2: 0x17A0 (bar)
+      0x90, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  ## Callee 3: 0x1790 (foo again)
+    ]
+Symbols:
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1790
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x17A0
+  - Name:     main
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x17C0
+...
+
+## Check that the Thumb bit is cleared from function addresses in a
+## non-relocatable EM_ARM object file.
+# RUN: yaml2obj --docnum=11 %s -o %t11
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t11 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
+# RUN:     --check-prefix=LLVM-ARM-NONRELOC
+
+# LLVM-ARM-NONRELOC:      CallGraph [
+# LLVM-ARM-NONRELOC-NEXT:   Function {
+# LLVM-ARM-NONRELOC-NEXT:     Names: [foo]
+# LLVM-ARM-NONRELOC-NEXT:     Address: 0x1000
+# LLVM-ARM-NONRELOC-NEXT:     Version: 0
+# LLVM-ARM-NONRELOC-NEXT:     IsIndirectTarget: No
+# LLVM-ARM-NONRELOC-NEXT:     TypeID: 0x0
+# LLVM-ARM-NONRELOC-NEXT:     NumDirectCallees: 1
+# LLVM-ARM-NONRELOC-NEXT:     DirectCallees [
+# LLVM-ARM-NONRELOC-NEXT:       {
+# LLVM-ARM-NONRELOC-NEXT:         Names: [bar]
+# LLVM-ARM-NONRELOC-NEXT:         Address: 0x1010
+# LLVM-ARM-NONRELOC-NEXT:       }
+# LLVM-ARM-NONRELOC-NEXT:     ]
+# LLVM-ARM-NONRELOC-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-ARM-NONRELOC-NEXT:     IndirectTypeIDs: []
+# LLVM-ARM-NONRELOC-NEXT:   }
+# LLVM-ARM-NONRELOC-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS32
+  Data:     ELFDATA2LSB
+  Type:     ET_EXEC
+  Machine:  EM_ARM
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+  - Type:   SHT_LLVM_CALL_GRAPH
+    Link:   .text
+    ContentArray: [
+      0x00, ## Version
+      0x02, ## Flags (HasDirectCallees)
+      0x01, 0x10, 0x00, 0x00, ## FunctionEntryPC: 0x1001 (foo, Thumb)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionTypeID: 0
+      0x01, ## NumDirectCallees
+      0x11, 0x10, 0x00, 0x00  ## Callee: 0x1011 (bar, Thumb)
+    ]
+Symbols:
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1001
+  - Name:     bar
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1011
+...
+
+## Check a relocation against symbol index 0, and a relocation with both a
+## symbol name and a negative explicit addend.
+# RUN: yaml2obj --docnum=12 %s -o %t12
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t12 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
+# RUN:     --check-prefix=LLVM-SYM0-NEG
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t12 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --implicit-check-not=warning: \
+# RUN:     --check-prefix=JSON-SYM0-NEG
+
+# LLVM-SYM0-NEG:      Function {
+# LLVM-SYM0-NEG-NEXT:   Reloc {
+# LLVM-SYM0-NEG-NEXT:     SymbolIndex: 0
+# LLVM-SYM0-NEG-NEXT:     Addend: 16
+# LLVM-SYM0-NEG-NEXT:   }
+# LLVM-SYM0-NEG:        DirectCallees [
+# LLVM-SYM0-NEG-NEXT:     {
+# LLVM-SYM0-NEG-NEXT:       Reloc {
+# LLVM-SYM0-NEG-NEXT:         SymbolIndex: 1
+# LLVM-SYM0-NEG-NEXT:         SymbolName: foo
+# LLVM-SYM0-NEG-NEXT:         Addend: -8
+# LLVM-SYM0-NEG-NEXT:       }
+# LLVM-SYM0-NEG-NEXT:     }
+# LLVM-SYM0-NEG-NEXT:   ]
+
+# JSON-SYM0-NEG:      "Reloc": {
+# JSON-SYM0-NEG-NEXT:   "SymbolIndex": 0,
+# JSON-SYM0-NEG-NEXT:   "Addend": 16
+# JSON-SYM0-NEG-NEXT: },
+# JSON-SYM0-NEG:      "Reloc": {
+# JSON-SYM0-NEG-NEXT:   "SymbolIndex": 1,
+# JSON-SYM0-NEG-NEXT:   "SymbolName": "foo",
+# JSON-SYM0-NEG-NEXT:   "Addend": -8
+# JSON-SYM0-NEG-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+  - Name:   .llvm.callgraph
+    Type:   SHT_LLVM_CALL_GRAPH
+    Link:   .text
+    ContentArray: [
+      0x00, ## Format Version
+      0x02, ## Flags (HasDirectCallees)
+      ## Offset 0x2 (Matches Reloc: symbol index 0 + 16)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## Function address
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## TypeID
+      0x01, ## NumDirectCallees
+      ## Offset 0x13 (Matches Reloc: foo - 8)
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  ## Callee address
+    ]
+  - Name:   .rela.llvm.callgraph
+    Type:   SHT_RELA
+    Info:   .llvm.callgraph
+    Relocations:
+      - Offset:  0x2
+        Symbol:  0
+        Type:    R_X86_64_64
+        Addend:  16
+      - Offset:  0x13
+        Symbol:  foo
+        Type:    R_X86_64_64
+        Addend:  -8
+Symbols:
+  - Name:  foo
 ...

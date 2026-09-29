@@ -181,18 +181,28 @@ struct GroupSection {
   std::vector<GroupMember> Members;
 };
 
-// Target function or relocation entry in call graph section.
-struct CallGraphFunc {
-  uint64_t AddrOrOffset = 0;
-  int64_t InBandAddend = 0;
-  bool HasReloc = false;
+// A relocation that applies to an address field of a SHT_LLVM_CALL_GRAPH
+// section in a relocatable object file.
+struct CallGraphReloc {
   uint32_t SymbolIndex = 0;
+  // The name that st_name refers to, demangled if --demangle is specified.
+  // Empty if the symbol has no name.
   std::string SymbolName;
   int64_t Addend = 0;
+};
 
-  bool operator==(const CallGraphFunc &Other) const {
-    return AddrOrOffset == Other.AddrOrOffset;
-  }
+// A function referenced by a SHT_LLVM_CALL_GRAPH section entry, i.e. the
+// function that the entry describes or one of its direct callees.
+struct CallGraphFunc {
+  // In a relocatable object file, the offset of the address field within the
+  // section. Otherwise, the function address.
+  uint64_t AddrOrOffset = 0;
+  // In a relocatable object file, the contents of the address field, i.e. the
+  // implicit addend of a relocation without an explicit addend.
+  int64_t InBandAddend = 0;
+  // In a relocatable object file, the relocation that applies to the address
+  // field, if it could be determined.
+  std::optional<CallGraphReloc> Reloc;
 };
 
 // Per-function call graph information.
@@ -464,10 +474,10 @@ protected:
       const SFrameParser<ELFT::Endianness> &Parser,
       const typename SFrameParser<ELFT::Endianness>::FDERange::iterator FDE,
       ArrayRef<Relocation<ELFT>> Relocations, const Elf_Shdr *RelocSymTab);
-  // Read the SHT_LLVM_CALL_GRAPH type sections and process their contents to
-  // populate call graph related data structures which will be used to dump call
-  // graph info. Returns an empty vector if there are no such sections or if
-  // parsing fails.
+  // Parse the SHT_LLVM_CALL_GRAPH section CGSection into per-function call
+  // graph information, which is used to dump call graph info. In a relocatable
+  // object file, each address field is described by the relocation from
+  // CGRelSection that applies to it. Returns an empty vector if parsing fails.
   SmallVector<FunctionCallGraphInfo, 16>
   processCallGraphSection(const Elf_Shdr *CGSection,
                           const Elf_Shdr *CGRelSection);
@@ -5357,8 +5367,9 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection,
   DataExtractor Data(Contents, Obj.isLE());
   DataExtractor::Cursor C(0);
   uint64_t UnknownCount = 0;
-  bool IsETREL = this->Obj.getHeader().e_type == ELF::ET_REL;
-  using SignedAddrT = std::make_signed_t<typename ELFT::uint>;
+  bool IsRelocatable = Obj.getHeader().e_type == ELF::ET_REL;
+  // The width of an address field, used to sign-extend implicit addends.
+  constexpr unsigned AddrBits = sizeof(typename ELFT::uint) * 8;
 
   while (C && C.tell() < CGSection->sh_size) {
     uint8_t FormatVersionNumber = Data.getU8(C);
@@ -5406,9 +5417,9 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection,
 
     // Create a new entry for this function.
     FunctionCallGraphInfo CGInfo;
-    if (IsETREL) {
+    if (IsRelocatable) {
       CGInfo.Entry.AddrOrOffset = FuncAddrOffset;
-      CGInfo.Entry.InBandAddend = static_cast<SignedAddrT>(FuncAddr);
+      CGInfo.Entry.InBandAddend = SignExtend64<AddrBits>(FuncAddr);
     } else {
       CGInfo.Entry.AddrOrOffset = FuncAddr;
     }
@@ -5438,6 +5449,7 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection,
         return {};
       }
       // Read unique direct callees and populate FuncCGInfos.
+      SmallSet<uint64_t, 4> SeenCallees;
       for (uint64_t I = 0; I < NumDirectCallees; ++I) {
         uint64_t CalleeOffset = C.tell();
         uint64_t Callee = static_cast<uint64_t>(
@@ -5448,15 +5460,18 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection,
                         FileName);
           return {};
         }
+        // In a relocatable object file every callee field is at a distinct
+        // offset with its own relocation, so only deduplicate callee addresses.
+        if (!IsRelocatable && !SeenCallees.insert(Callee).second)
+          continue;
         CallGraphFunc CalleeTarget;
-        if (IsETREL) {
+        if (IsRelocatable) {
           CalleeTarget.AddrOrOffset = CalleeOffset;
-          CalleeTarget.InBandAddend = static_cast<SignedAddrT>(Callee);
+          CalleeTarget.InBandAddend = SignExtend64<AddrBits>(Callee);
         } else {
           CalleeTarget.AddrOrOffset = Callee;
         }
-        if (!llvm::is_contained(CGInfo.DirectCallees, CalleeTarget))
-          CGInfo.DirectCallees.push_back(CalleeTarget);
+        CGInfo.DirectCallees.push_back(CalleeTarget);
       }
     }
 
@@ -5483,7 +5498,7 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection,
         CGInfo.IndirectTypeIDs.insert(TargetType);
       }
     }
-    FuncCGInfos.push_back(CGInfo);
+    FuncCGInfos.push_back(std::move(CGInfo));
   }
 
   if (UnknownCount)
@@ -5491,57 +5506,84 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection,
         "SHT_LLVM_CALL_GRAPH type section has unknown type ID for " +
         Twine(UnknownCount) + " indirect targets");
 
-  if (IsETREL) {
-    std::vector<Relocation<ELFT>> Relocations;
-    const Elf_Shdr *RelocSymTab = nullptr;
-    if (CGRelSection) {
-      Expected<const typename ELFT::Shdr *> SymtabOrErr =
-          this->Obj.getSection(CGRelSection->sh_link);
-      if (!SymtabOrErr) {
-        reportWarning(createError("invalid section linked to " +
-                                  this->describe(*CGRelSection) + ": " +
-                                  toString(SymtabOrErr.takeError())),
-                      this->FileName);
-        return {};
-      }
-      RelocSymTab = *SymtabOrErr;
-      this->forEachRelocationDo(
-          *CGRelSection, [&](const auto &R, ...) { Relocations.push_back(R); });
-      llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
-        return LHS.Offset < RHS.Offset;
-      });
-    }
+  if (!IsRelocatable)
+    return FuncCGInfos;
 
-    auto ResolveReloc = [&](CallGraphFunc &Target) {
-      auto R = llvm::find_if(Relocations, [&](const Relocation<ELFT> &Rel) {
-        return Rel.Offset == Target.AddrOrOffset;
-      });
-      if (R == Relocations.end()) {
-        this->reportUniqueWarning("missing relocation for symbol at offset " +
-                                  Twine(Target.AddrOrOffset));
-        return;
-      }
-      Expected<RelSymbol<ELFT>> RelSymOrErr =
-          this->getRelocationTarget(*R, RelocSymTab);
-      if (!RelSymOrErr) {
-        this->reportUniqueWarning(RelSymOrErr.takeError());
-        return;
-      }
-      Target.HasReloc = true;
-      Target.SymbolIndex = R->Symbol;
-      const Elf_Sym *Sym = RelSymOrErr->Sym;
-      if (Sym && Sym->st_name != 0 && !RelSymOrErr->Name.empty())
-        Target.SymbolName = RelSymOrErr->Name;
-      Target.Addend = R->Addend.value_or(Target.InBandAddend);
-    };
-
-    for (FunctionCallGraphInfo &CGInfo : FuncCGInfos) {
-      ResolveReloc(CGInfo.Entry);
-      for (CallGraphFunc &Callee : CGInfo.DirectCallees)
-        ResolveReloc(Callee);
-    }
+  // In a relocatable object file, report the relocation that applies to each
+  // address field. Entries whose relocation cannot be determined are still
+  // returned, so that they can be identified by their offsets.
+  if (!CGRelSection) {
+    reportUniqueWarning("unable to get relocation section for " +
+                        describe(*CGSection));
+    return FuncCGInfos;
   }
 
+  std::vector<Relocation<ELFT>> Relocations;
+  const Elf_Shdr *RelocSymTab = nullptr;
+  forEachRelocationDo(*CGRelSection,
+                      [&](const Relocation<ELFT> &R, unsigned /*Ndx*/,
+                          const Elf_Shdr & /*Sec*/, const Elf_Shdr *SymTab) {
+                        RelocSymTab = SymTab;
+                        Relocations.push_back(R);
+                      });
+  // Without relocations there is nothing to resolve. If they could not be read,
+  // forEachRelocationDo has already reported a warning.
+  if (Relocations.empty())
+    return FuncCGInfos;
+  llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
+    return LHS.Offset < RHS.Offset;
+  });
+
+  StringRef StrTab;
+  if (Expected<StringRef> StrTabOrErr =
+          Obj.getStringTableForSymtab(*RelocSymTab))
+    StrTab = *StrTabOrErr;
+  else
+    reportUniqueWarning(StrTabOrErr.takeError());
+
+  auto ResolveReloc = [&](CallGraphFunc &Target) {
+    uint64_t Offset = Target.AddrOrOffset;
+    // Relocations are sorted by offset, so binary search for the ones that
+    // apply to this field.
+    auto It = llvm::lower_bound(
+        Relocations, Offset,
+        [](const Relocation<ELFT> &R, uint64_t O) { return R.Offset < O; });
+    if (It == Relocations.end() || It->Offset != Offset) {
+      reportUniqueWarning(formatv("no relocation at offset {0:x+} in {1}",
+                                  Offset, describe(*CGSection)));
+      return;
+    }
+    if (std::next(It) != Relocations.end() && std::next(It)->Offset == Offset) {
+      reportUniqueWarning(
+          formatv("more than one relocation at offset {0:x+} in {1}", Offset,
+                  describe(*CGSection)));
+      return;
+    }
+    Expected<RelSymbol<ELFT>> RelSymOrErr =
+        getRelocationTarget(*It, RelocSymTab);
+    if (!RelSymOrErr) {
+      reportUniqueWarning(RelSymOrErr.takeError());
+      return;
+    }
+    CallGraphReloc &Reloc = Target.Reloc.emplace();
+    Reloc.SymbolIndex = It->Symbol;
+    Reloc.Addend = It->Addend.value_or(Target.InBandAddend);
+    // Report the name exactly as recorded in st_name. RelSymbol::Name comes
+    // from getFullSymbolName(), which synthesizes a name for unnamed
+    // STT_SECTION symbols.
+    if (const Elf_Sym *Sym = RelSymOrErr->Sym) {
+      if (Expected<StringRef> NameOrErr = Sym->getName(StrTab))
+        Reloc.SymbolName = maybeDemangle(*NameOrErr);
+      else
+        reportUniqueWarning(NameOrErr.takeError());
+    }
+  };
+
+  for (FunctionCallGraphInfo &CGInfo : FuncCGInfos) {
+    ResolveReloc(CGInfo.Entry);
+    for (CallGraphFunc &Callee : CGInfo.DirectCallees)
+      ResolveReloc(Callee);
+  }
   return FuncCGInfos;
 }
 
@@ -8420,6 +8462,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     return;
   }
 
+  bool IsRelocatable = this->Obj.getHeader().e_type == ELF::ET_REL;
   std::unique_ptr<ListScope> CGI;
   for (const auto &CGMapEntry : *MapOrErr) {
     const Elf_Shdr *CGSection = CGMapEntry.first;
@@ -8441,20 +8484,24 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     };
 
     auto PrintFunc = [&](const CallGraphFunc &Target) {
-      if (this->Obj.getHeader().e_type == ELF::ET_REL) {
-        if (!Target.HasReloc)
+      if (IsRelocatable) {
+        // If the relocation could not be determined, identify the address
+        // field by its offset.
+        if (!Target.Reloc) {
+          W.printHex("Offset", Target.AddrOrOffset);
           return;
+        }
         DictScope RelocScope(W, "Reloc");
-        W.printNumber("SymbolIndex", Target.SymbolIndex);
-        if (!Target.SymbolName.empty())
-          W.printString("SymbolName", Target.SymbolName);
-        if (Target.Addend != 0)
-          W.printNumber("Addend", Target.Addend);
+        W.printNumber("SymbolIndex", Target.Reloc->SymbolIndex);
+        if (!Target.Reloc->SymbolName.empty())
+          W.printString("SymbolName", Target.Reloc->SymbolName);
+        if (Target.Reloc->Addend != 0)
+          W.printNumber("Addend", Target.Reloc->Addend);
       } else {
         uint64_t FuncEntryPC = Target.AddrOrOffset;
         // In ARM thumb mode the LSB of the function pointer is set to 1. Since
-        // this detail is unncessary in call graph reconstruction, we are
-        // clearing this bit to facilate tooling.
+        // this detail is unnecessary in call graph reconstruction, we are
+        // clearing this bit to facilitate tooling.
         if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
           FuncEntryPC &= ~1;
         SmallVector<std::string> FuncSymNames = GetFunctionNames(FuncEntryPC);
