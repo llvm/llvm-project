@@ -61,6 +61,7 @@ static constexpr unsigned DefaultGroup = 0;
 
 /// Groups are 256 registers each.
 static constexpr unsigned GroupSizeLog2 = 8;
+static constexpr unsigned GroupSize = 1 << GroupSizeLog2;
 
 /// Operand type where the MSB group is relevant, identified by an unsigned ID
 /// in [0, NumOprdTypes).
@@ -120,20 +121,6 @@ public:
     return Instructions[Idx];
   }
 
-  /// Returns the index of the first instruction with a MODE-reading operand of
-  /// type \p Oprd in the block, or \ref ModeInstr::NoIdx if none exists.
-  unsigned getFirstOprd(OprdType Oprd) const {
-    return Instructions.empty() ? ModeInstr::NoIdx : getFirstInstrFrom(0, Oprd);
-  }
-
-  /// Returns the index of the last instruction with a MODE-reading operand of
-  /// type \p Oprd in the block, or \ref ModeInstr::NoIdx if none exists.
-  unsigned getLastOprd(OprdType Oprd) const {
-    return Instructions.empty()
-               ? ModeInstr::NoIdx
-               : getLastInstrUntil(Instructions.size() - 1, Oprd);
-  }
-
   /// Returns the index of the first instruction from \p InstrIdx (included)
   /// with a MODE-reading operand of type \p Oprd in the block, or \ref
   /// ModeInstr::NoIdx if none exists.
@@ -162,7 +149,7 @@ public:
     return getInstrIdxImpl<true, true>(InstrIdx, Oprd);
   }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   Printable print(const VirtRegMap &VRM) const;
 #endif
 
@@ -298,7 +285,7 @@ public:
   /// is illegal to change the MSB group of a pinned register.
   void notifyPhysAssignmentChanged(MSBGroup NewGroup);
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   Printable print(const VirtRegMap &VRM) const;
 #endif
 
@@ -412,7 +399,7 @@ class ModeSetOptimizer {
 public:
   /// Initializes the optimizer with all optimizable registers in \p OptRegs and
   /// all blocks in \p ModeUsage. Performs a first round of register pinning and
-  /// conflict resolution on all relevant registers.
+  /// conflict resolution on all registers.
   ModeSetOptimizer(OptimizableRegs &OptRegs, ArrayRef<MBBModeUsage> ModeUsage,
                    const VirtRegMap &VRM);
 
@@ -450,6 +437,14 @@ private:
   /// MODE usage in all MBBs.
   ArrayRef<MBBModeUsage> ModeUsage;
   const VirtRegMap &VRM;
+
+  /// Around an occurence of \p Reg at \p Position, resolves any conflict with a
+  /// neighbor pinned outside MSB group \p PreferredGroup. \p PrevNeighbor
+  /// determines whether the method looks at the neighbor before or after the
+  /// position.
+  template <bool PrevNeighbor>
+  void resolveConflictWithNeighbor(OptReg &Reg, MSBGroup PreferredGroup,
+                                   const OptReg::Coordinates &Position);
 
   /// Resolves conflicts for \p Reg, if any, and returns whether the register
   /// had conflicts.
@@ -552,11 +547,11 @@ public:
   /// Creates the candidate for \p Reg.
   OptRegCandidate(OptReg &Reg) : Reg(Reg), Targets(NumMSBGroups) {
     assert(!Reg.isPinned() && "register cannot be pinned initially");
-    update();
+    recomputeTargets();
   }
 
   /// Re-computes the candidate's target groups and potential benefit.
-  void update();
+  void recomputeTargets();
 
   /// Whether the candidate has a profitable re-assignment to any MSB group
   /// i.e., a re-assigment that will strictly increase the combined score of all
@@ -574,7 +569,7 @@ public:
 
   bool operator<(const OptRegCandidate &Other) const;
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   Printable print(const VirtRegMap &VRM) const;
 #endif
 
@@ -606,7 +601,7 @@ public:
   /// Returns whether the heap is empty.
   bool empty() const { return HeapToSlot.empty(); }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   Printable print(const VirtRegMap &VRM, const LiveIntervals &LIS) const;
 #endif
 
@@ -649,15 +644,15 @@ public:
   VirtRegReMap(LiveRegMatrix &LRM, LiveIntervals &LIS,
                const MachineFunction &MF, const VirtRegMap &VRM);
 
-  /// Attempts to find an available physical register in MSB group \p Dst that
-  /// virtual register \p Reg can be assigned to. Returns the first such
-  /// register it finds, or the sentinel register if none could be found.
-  MCRegister tryAssignInGroup(Register Reg, MSBGroup Group);
-
   /// Attempts to re-assign virtual register \p Reg to an available physical
-  /// register in any of the MSB groups indicated by set bits in \p Targets.
-  /// Returns whether any re-assignment took place.
-  bool tryAssignToTargetGroups(OptReg &Reg, const SmallBitVector &Targets);
+  /// register in any of the MSB groups indicated by set bits in \p
+  /// TargetGroups. Returns whether any re-assignment took place.
+  bool tryReAssign(OptReg &Reg, const SmallBitVector &TargetGroups);
+
+  /// Determines whether register \p PhysReg in class \p RC crosses an MSB group
+  /// boundary.
+  bool regCrossesGroupBoundary(MCRegister PhysReg,
+                               const TargetRegisterClass &RC) const;
 
 private:
   LiveRegMatrix &LRM;
@@ -665,7 +660,6 @@ private:
   RegisterClassInfo RCI;
   const VirtRegMap &VRM;
   const SIRegisterInfo &TRI;
-  const BitVector &ReservedRegs;
 };
 
 class AMDGPUOptimizeVGPREncoding {
@@ -684,7 +678,7 @@ private:
 
 } // namespace
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static std::string printGroup(MSBGroup Group) {
   return "MSB#" + std::to_string(Group);
 }
@@ -961,7 +955,7 @@ OptimizableRegs::OptimizableRegs(const BitVector &OptVirtRegs,
 
     for (OprdType Oprd : seq(NumOprdTypes)) {
       OptReg *PreviousOptReg = nullptr;
-      unsigned InstrIdx = BlockUsage.getFirstOprd(Oprd);
+      unsigned InstrIdx = BlockUsage.getFirstInstrFrom(0, Oprd);
 
       while (InstrIdx != ModeInstr::NoIdx) {
         const ModeInstr &CurrentInstr = Instructions[InstrIdx];
@@ -1016,19 +1010,12 @@ ModeSetOptimizer::ModeSetOptimizer(OptimizableRegs &OptRegs,
                                    ArrayRef<MBBModeUsage> ModeUsage,
                                    const VirtRegMap &VRM)
     : OptRegs(OptRegs), CheckShouldBePinned(OptRegs.getAllOptVirtRegs()),
-      CheckResolveConflict(OptRegs.getNumVirtRegs()),
+      CheckResolveConflict(OptRegs.getAllOptVirtRegs()),
       ModeSetPlacement(ModeUsage.size()), ModeUsage(ModeUsage), VRM(VRM) {
   for (const auto &[MBB, Placement] : zip_equal(ModeUsage, ModeSetPlacement))
     Placement.resize(MBB.getInstructions().size() + 1);
 
-  // We initially check all registers for pin-eligibility, and those that are
-  // neighbors of already pinned registers for conflicting pins.
-  for (const OptReg &Reg : OptRegs) {
-    if (!Reg.isPinned())
-      continue;
-    for (const auto &[NeighborReg, _] : Reg.getNeighbors())
-      CheckResolveConflict.set(NeighborReg->getVirtIndex());
-  }
+  // We initially check all registers for conflicts and pin-eligibility.
   resolveConflictsAndPinRegs();
 }
 
@@ -1136,6 +1123,67 @@ void ModeSetOptimizer::breakNeighborRelationship(unsigned MBBIdx,
   }
 }
 
+template <bool PrevNeighbor>
+void ModeSetOptimizer::resolveConflictWithNeighbor(
+    OptReg &Reg, MSBGroup PreferredGroup, const OptReg::Coordinates &Position) {
+  const auto &[MBBIdx, InstrIdx, Oprd] = Position;
+  const MBBModeUsage &MBB = ModeUsage[MBBIdx];
+
+  // Get the neighbor's index.
+  unsigned NeighborIdx;
+  if constexpr (PrevNeighbor)
+    NeighborIdx = MBB.getLastInstrBefore(InstrIdx, Oprd);
+  else
+    NeighborIdx = MBB.getFirstInstrAfter(InstrIdx, Oprd);
+
+  // We place MODE-setting instructions between us and conflicting neighbors.
+  constexpr auto PlaceAround = PrevNeighbor ? &ModeSetOptimizer::placeJustBefore
+                                            : &ModeSetOptimizer::placeJustAfter;
+
+  if (NeighborIdx == ModeInstr::NoIdx) {
+    // This indicates that we neighbor the block's boundary which generates a
+    // pin to the default MSB group.
+    if (PreferredGroup == DefaultGroup)
+      return;
+
+    // A MODE-set between the register and the block boundary avoids a conflict.
+    constexpr auto HasModeSetBetween = PrevNeighbor
+                                           ? &ModeSetOptimizer::hasModeSetBefore
+                                           : &ModeSetOptimizer::hasModeSetAfter;
+    if ((this->*HasModeSetBetween)(MBBIdx, InstrIdx))
+      return;
+
+    LLVM_DEBUG(dbgs() << "    Resolving default pin " << printOprdType(Oprd)
+                      << " in MBB#" << MBB.MBB.getNumber() << '\n');
+    (this->*PlaceAround)(MBBIdx, InstrIdx);
+    return;
+  }
+
+  // A MODE-set between the register and its neighbor avoids a conflict.
+  const auto &[AfterIdx, BeforeIdx] =
+      PrevNeighbor ? std::pair<unsigned, unsigned>{NeighborIdx, InstrIdx}
+                   : std::pair<unsigned, unsigned>{InstrIdx, NeighborIdx};
+  if (hasModeSetBetween(MBBIdx, AfterIdx, BeforeIdx))
+    return;
+
+  // A neighbor register pinned in a non-preferred group constitutes a conflict.
+  // Physical registers are pinned by definition.
+  Register NeighborReg = MBB.getInstructions()[NeighborIdx].Oprds[Oprd];
+  MSBGroup NeighborGroup = getVGPRGroup(NeighborReg, VRM);
+  if (PreferredGroup == NeighborGroup)
+    return;
+  OptReg *NeighborOptReg = OptRegs[NeighborReg];
+  if (NeighborOptReg && !NeighborOptReg->isPinned())
+    return;
+
+  LLVM_DEBUG(dbgs() << "    Resolving conflict with neighbor "
+                    << printReg(NeighborReg, &VRM.getTargetRegInfo(), 0,
+                                &VRM.getRegInfo())
+                    << " for operand type " << printOprdType(Oprd) << " in MBB#"
+                    << MBB.MBB.getNumber() << '\n');
+  (this->*PlaceAround)(MBBIdx, InstrIdx);
+}
+
 bool ModeSetOptimizer::resolveConflictingPins(OptReg &Reg) {
   if (Reg.getPinGroups().count() <= 1)
     return false;
@@ -1145,78 +1193,14 @@ bool ModeSetOptimizer::resolveConflictingPins(OptReg &Reg) {
   // Only one MSB group with pinned neighbors must remain.
   MSBGroup PreferredGroup = selectPreferredMSBGroup(Reg);
   assert(PreferredGroup < NumMSBGroups && "invalid group");
-
   LLVM_DEBUG(dbgs() << "    Preferred group is " << printGroup(PreferredGroup)
                     << '\n');
 
-  // Conflicts with block boundary pins may need to be resolved when the default
-  // group is not the preferred one.
-  if (PreferredGroup != DefaultGroup &&
-      Reg.getGroupPinnedScore(DefaultGroup) > 0) {
-    for (const auto &[MBBIdx, InstrIdx, Oprd] : Reg.getOccurrences()) {
-      const MBBModeUsage &MBB = ModeUsage[MBBIdx];
-      if (InstrIdx == MBB.getFirstOprd(Oprd) &&
-          !hasModeSetBefore(MBBIdx, InstrIdx)) {
-        LLVM_DEBUG(dbgs() << "    Resolving default entry pin "
-                          << printOprdType(Oprd) << " in MBB#"
-                          << MBB.MBB.getNumber() << '\n');
-        placeJustBefore(MBBIdx, InstrIdx);
-      }
-      if (InstrIdx == MBB.getLastOprd(Oprd) &&
-          !hasModeSetAfter(MBBIdx, InstrIdx)) {
-        LLVM_DEBUG(dbgs() << "    Resolving default exit pin "
-                          << printOprdType(Oprd) << " in MBB#"
-                          << MBB.MBB.getNumber() << '\n');
-        placeJustAfter(MBBIdx, InstrIdx);
-      }
-    }
-  }
-
-  // Conflicts with occurrences of pinned neighbors in the non-preferred MSB
-  // group need to be resolved. Iterate over a copy of the list of neighbors
-  // because they will be modified as we simulate placement of MODE-setting
-  // instructions.
-  OptReg::WeightedNeighbors Neighbors(Reg.getNeighbors());
-  for (const auto &[NeighborReg, _] : Neighbors) {
-    // Early exit when we know we are not going to find conflicting occurrences.
-    if (!NeighborReg->isPinned() || NeighborReg->getMSB() == PreferredGroup ||
-        Reg.getGroupPinnedScore(NeighborReg->getMSB()) == 0)
-      continue;
-
-    // Look through occurrences for conflicts.
-    for (const auto &[MBBIdx, InstrIdx, Oprd] : NeighborReg->getOccurrences()) {
-      const MBBModeUsage &MBB = ModeUsage[MBBIdx];
-      ArrayRef<ModeInstr> Instructions = MBB.getInstructions();
-
-      // Look at the operand immediately before this neighbor occurrence. If it
-      // matches the register for which we are currently resolving conflicts,
-      // then it is one of the neighborhood relationships to break.
-      unsigned PrevIdx = MBB.getLastInstrBefore(InstrIdx, Oprd);
-      if (PrevIdx != ModeInstr::NoIdx &&
-          Instructions[PrevIdx].Oprds[Oprd] == Reg.getVirt() &&
-          !hasModeSetBetween(MBBIdx, PrevIdx, InstrIdx)) {
-
-        LLVM_DEBUG(dbgs() << "    Resolving with next neighbor "
-                          << NeighborReg->print(VRM) << " for operand type "
-                          << printOprdType(Oprd) << " in MBB#"
-                          << MBB.MBB.getNumber() << '\n');
-        placeJustBefore(MBBIdx, InstrIdx);
-      }
-
-      // Look at the operand immediately after this neighbor occurrence. If it
-      // matches the register for which we are currently resolving conflicts,
-      // then it is one of the neighborhood relationships to break.
-      unsigned NextIdx = MBB.getFirstInstrAfter(InstrIdx, Oprd);
-      if (NextIdx != ModeInstr::NoIdx &&
-          Instructions[NextIdx].Oprds[Oprd] == Reg.getVirt() &&
-          !hasModeSetBetween(MBBIdx, InstrIdx, NextIdx)) {
-        LLVM_DEBUG(dbgs() << "    Resolving with previous neighbor "
-                          << NeighborReg->print(VRM) << " for operand type "
-                          << printOprdType(Oprd) << " in MBB#"
-                          << MBB.MBB.getNumber() << '\n');
-        placeJustBefore(MBBIdx, NextIdx);
-      }
-    }
+  for (const OptReg::Coordinates &Position : Reg.getOccurrences()) {
+    resolveConflictWithNeighbor</*IsNeighborBefore=*/true>(Reg, PreferredGroup,
+                                                           Position);
+    resolveConflictWithNeighbor</*IsNeighborBefore=*/false>(Reg, PreferredGroup,
+                                                            Position);
   }
 
   LLVM_DEBUG(dbgs() << "  | Updated register: " << Reg.print(VRM) << '\n');
@@ -1312,14 +1296,14 @@ bool OptRegCandidate::operator<(const OptRegCandidate &Other) const {
     return NeighboringPins < Other.NeighboringPins;
 
   // Higher benefit wins.
-  if (Benefit < Other.Benefit)
+  if (Benefit != Other.Benefit)
     return Benefit < Other.Benefit;
 
   // Break ties with unique virtual register index.
   return Reg.getVirtIndex() < Other.Reg.getVirtIndex();
 }
 
-void OptRegCandidate::update() {
+void OptRegCandidate::recomputeTargets() {
   Targets.reset();
   if (Reg.isPinned())
     return;
@@ -1402,7 +1386,7 @@ void MaxHeap::reorderIfExists(const OptReg &Reg) {
   if (Cand == OptRegToSlotIdx.end())
     return;
   Slot &S = Slots[Cand->second];
-  S.Cand.update();
+  S.Cand.recomputeTargets();
 
   // Re-order the tree around the updated slot.
   if (!siftUp(S.HeapIdx))
@@ -1452,54 +1436,59 @@ bool MaxHeap::siftDown(unsigned HeapIdx) {
 VirtRegReMap::VirtRegReMap(LiveRegMatrix &LRM, LiveIntervals &LIS,
                            const MachineFunction &MF, const VirtRegMap &VRM)
     : LRM(LRM), LIS(LIS), VRM(VRM),
-      TRI(*static_cast<const SIRegisterInfo *>(&VRM.getTargetRegInfo())),
-      ReservedRegs(MF.getRegInfo().getReservedRegs()) {
+      TRI(*static_cast<const SIRegisterInfo *>(&VRM.getTargetRegInfo())) {
   RCI.runOnMachineFunction(MF);
 }
 
-static bool overflowsLastGroup(unsigned HWRegIdx, unsigned NumLanes,
-                               MSBGroup Group) {
-  if (Group != NumMSBGroups - 1)
-    return false;
-  return ((HWRegIdx + NumLanes - 1) >> GroupSizeLog2) != NumMSBGroups - 1;
-}
+bool VirtRegReMap::tryReAssign(OptReg &Reg,
+                               const SmallBitVector &TargetGroups) {
+  assert(!TargetGroups.test(Reg.getMSB()) && "target is current MSB group");
 
-MCRegister VirtRegReMap::tryAssignInGroup(Register VirtReg, MSBGroup Group) {
-  assert(VirtReg.isVirtual() && "expected virtreg");
-  const LiveInterval &RegLI = LIS.getInterval(VirtReg);
-  const MachineRegisterInfo &MRI = VRM.getRegInfo();
-  const TargetRegisterClass &RC = *MRI.getRegClass(VirtReg);
-  const unsigned NumLanes = divideCeil(TRI.getRegSizeInBits(RC), 32);
-  for (MCPhysReg CandPhysReg : RCI.getOrder(&RC)) {
-    if (ReservedRegs[CandPhysReg] || getVGPRGroup(CandPhysReg, VRM) != Group ||
-        overflowsLastGroup(TRI.getHWRegIndex(CandPhysReg), NumLanes, Group))
-      continue;
-    if (LRM.checkInterference(RegLI, CandPhysReg) == LiveRegMatrix::IK_Free)
-      return CandPhysReg;
-  }
-  return MCPhysReg();
-}
-
-bool VirtRegReMap::tryAssignToTargetGroups(OptReg &Reg,
-                                           const SmallBitVector &Targets) {
   Register VirtReg = Reg.getVirt();
   const LiveInterval &LI = LIS.getInterval(VirtReg);
-
   MCRegister OriginalPhys = VRM.getPhys(VirtReg);
-  LRM.unassign(LI);
+  const MachineRegisterInfo &MRI = VRM.getRegInfo();
+  const TargetRegisterClass *RC = MRI.getRegClass(VirtReg);
 
-  for (MSBGroup Target : Targets.set_bits()) {
-    assert(Target != Reg.getMSB() && "target is current MSB group");
-    MCRegister NewPhysReg = tryAssignInGroup(VirtReg, Target);
-    if (NewPhysReg) {
-      LRM.assign(LI, NewPhysReg);
-      Reg.notifyPhysAssignmentChanged(Target);
-      return true;
-    }
+  // When the currently assigned physical register crosses into the next MSB
+  // group and that group is a target group, we have to unassign the original
+  // interval as to not cause spurious interferences with candidate physical
+  // registers at the beginning of the next group. This avoids
+  // unassigning/re-assigning the same physical register in most failed
+  // re-assignments.
+  const bool UnassignOriginalReg = regCrossesGroupBoundary(OriginalPhys, *RC) &&
+                                   TargetGroups.test(Reg.getMSB() + 1);
+  if (UnassignOriginalReg)
+    LRM.unassign(LI);
+
+  for (MCPhysReg CandPhysReg : RCI.getOrder(RC)) {
+    MSBGroup CandGroup = getVGPRGroup(CandPhysReg, VRM);
+    if (!TargetGroups.test(CandGroup) ||
+        LRM.checkInterference(LI, CandPhysReg) != LiveRegMatrix::IK_Free)
+      continue;
+
+    if (!UnassignOriginalReg)
+      LRM.unassign(LI);
+    LRM.assign(LI, CandPhysReg);
+    Reg.notifyPhysAssignmentChanged(getVGPRGroup(CandPhysReg, VRM));
+    return true;
   }
-  // We failed to find a register, re-assign the original one.
-  LRM.assign(LI, OriginalPhys);
+
+  // We failed to find a register.
+  if (UnassignOriginalReg)
+    LRM.assign(LI, OriginalPhys);
   return false;
+}
+
+bool VirtRegReMap::regCrossesGroupBoundary(
+    MCRegister PhysReg, const TargetRegisterClass &RC) const {
+  unsigned NumLanes = divideCeil(RC.getSizeInBits(), 32);
+  if (NumLanes == 1)
+    return false;
+
+  unsigned Idx = TRI.getHWRegIndex(PhysReg);
+  MSBGroup PhysRegGroup = Idx >> GroupSizeLog2;
+  return Idx + NumLanes > (PhysRegGroup + 1) * GroupSize;
 }
 
 bool AMDGPUOptimizeVGPREncoding::run(MachineFunction &MF) {
@@ -1583,7 +1572,7 @@ bool AMDGPUOptimizeVGPREncoding::run(MachineFunction &MF) {
       ScoreChanged.set(Candidate->Reg.getVirtIndex());
 
       // Attempts re-assignment to a better MSB group.
-      if (VRRM.tryAssignToTargetGroups(Candidate->Reg, Candidate->Targets)) {
+      if (VRRM.tryReAssign(Candidate->Reg, Candidate->Targets)) {
         LLVM_DEBUG(dbgs() << "  | SUCCESS: Assigned to free physical register "
                           << printReg(VRM.getPhys(Candidate->Reg.getVirt()),
                                       ST.getRegisterInfo(), 0, &MF.getRegInfo())
@@ -1603,7 +1592,7 @@ bool AMDGPUOptimizeVGPREncoding::run(MachineFunction &MF) {
   return Changed;
 }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 Printable MBBModeUsage::print(const VirtRegMap &VRM) const {
   // 16 characters is enough for a virtual register with 9 digits, or to
