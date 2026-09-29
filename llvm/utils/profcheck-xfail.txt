@@ -1,5 +1,4 @@
 CodeGen/ARM/sjljeh-swifterror.ll
-CodeGen/DirectX/legalize-i8-alloca.ll
 CodeGen/WinEH/wineh-comdat.ll
 CodeGen/WinEH/wineh-scope-statenumbering.ll
 CodeGen/WinEH/wineh-setjmp.ll
@@ -28,9 +27,6 @@ Transforms/IndVarSimplify/eliminate-rem.ll
 Transforms/IndVarSimplify/pr45835.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/IndirectBrExpand/basic.ll
-Transforms/InstCombine/X86/x86-avx512-inseltpoison.ll
-Transforms/InstCombine/X86/x86-avx512.ll
-Transforms/InstCombine/bitreverse.ll
 Transforms/InstCombine/builtin-dynamic-object-size.ll
 Transforms/InstCombine/canonicalize-clamp-like-pattern-between-negative-and-positive-thresholds.ll
 Transforms/InstCombine/canonicalize-clamp-like-pattern-between-zero-and-positive-threshold.ll
@@ -74,6 +70,7 @@ Transforms/InstCombine/xor-and-or.ll
 Transforms/InstCombine/zext-bool-add-sub.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte.ll
+Transforms/LoopIdiom/AArch64/find-first-byte-nested.ll
 Transforms/LowerAtomic/atomic-load.ll
 Transforms/LowerAtomic/atomic-swap.ll
 Transforms/LowerConstantIntrinsics/builtin-object-size-phi.ll
@@ -96,12 +93,5 @@ Transforms/OpenMP/spmdization_indirect.ll
 Transforms/OpenMP/spmdization_no_guarding_two_reaching_kernels.ll
 Transforms/OpenMP/spmdization_remarks.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
-Transforms/TailCallElim/2010-06-26-MultipleReturnValues.ll
-Transforms/TailCallElim/accum_recursion.ll
-Transforms/TailCallElim/basic.ll
-Transforms/TailCallElim/debugloc.ll
-Transforms/TailCallElim/dropping_debugloc_acc_rec_inst_rnew.ll
-Transforms/TailCallElim/inf-recursion.ll
-Transforms/TailCallElim/shl-accumulator-opt.ll
 Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/lowerswitch.ll

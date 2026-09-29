@@ -6604,7 +6604,8 @@ lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
 static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
                                           SelectionDAG &DAG) {
   MVT VT = SVN->getSimpleValueType(0);
-  if (VT != MVT::v4i8 && VT != MVT::v8i8 && VT != MVT::v4i16)
+  if (VT != MVT::v4i8 && VT != MVT::v8i8 && VT != MVT::v2i16 &&
+      VT != MVT::v4i16)
     return SDValue();
 
   SDValue V1 = SVN->getOperand(0);
@@ -22497,8 +22498,8 @@ static SDValue performMaskedLoadToVPLoadCombine(MaskedLoadSDNode *MLoad,
 
   SDValue SetCCLHS, SetCCRHS;
   ISD::CondCode CC;
-  if (!sd_match(MLoad->getMask(), m_SetCC(m_Value(SetCCLHS), m_Value(SetCCRHS),
-                                          m_CondCode(CC))) ||
+  if (!sd_match(MLoad->getMask(),
+                m_SetCC(CC, m_Value(SetCCLHS), m_Value(SetCCRHS))) ||
       SetCCLHS->getOpcode() != ISD::BUILD_VECTOR ||
       !(CC == ISD::SETULT || CC == ISD::SETLT) ||
       !SetCCLHS.getValueType().isInteger())
@@ -23391,8 +23392,8 @@ static SDValue foldSelectToUSATI(SDNode *N, SelectionDAG &DAG,
   using namespace SDPatternMatch;
 
   SDValue Src, InnerSetCC, FalseSrc;
-  if (!sd_match(N, m_Select(m_SetCC(m_Value(Src), m_SpecificInt(MaxVal),
-                                    m_SpecificCondCode(ISD::SETUGT)),
+  if (!sd_match(N, m_Select(m_SpecificSetCC(ISD::SETUGT, m_Value(Src),
+                                            m_SpecificInt(MaxVal)),
                             m_SExt(m_Value(InnerSetCC)),
                             m_Trunc(m_Value(FalseSrc)))))
     return SDValue();
@@ -23402,9 +23403,10 @@ static SDValue foldSelectToUSATI(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Check inner setcc: src > -1 (signed comparison)
-  if (!sd_match(InnerSetCC,
-                m_SpecificVT(MVT::i1, m_SetCC(m_Specific(Src), m_AllOnes(),
-                                              m_SpecificCondCode(ISD::SETGT)))))
+  if (!sd_match(
+          InnerSetCC,
+          m_SpecificVT(MVT::i1, m_SpecificSetCC(ISD::SETGT, m_Specific(Src),
+                                                m_AllOnes()))))
     return SDValue();
 
   // It's possible that the input to the setccs is also a truncate, in that
