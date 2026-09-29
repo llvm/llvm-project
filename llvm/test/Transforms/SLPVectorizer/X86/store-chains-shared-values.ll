@@ -9,15 +9,11 @@ define void @test(ptr %p, ptr %q, ptr %r) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[R:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[R2:%.*]] = getelementptr inbounds i64, ptr [[R]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[R]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i64> [[TMP0]], <i64 1, i64 2>
-; CHECK-NEXT:    [[Q2:%.*]] = getelementptr inbounds i64, ptr [[Q]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr [[R2]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i64> [[TMP4]], <i64 3, i64 4>
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[R]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i64> [[TMP0]], <i64 1, i64 2, i64 3, i64 4>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[P]], align 8
-; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[Q]], align 8
-; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[Q2]], align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP1]], ptr [[Q]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
