@@ -536,7 +536,7 @@ public:
     RTOrigBodyOrder.clear();
   }
 
-  /// Snapshots RTChecks.BB's body (non-PHI, non-terminator) into
+  /// Snapshots RTChecks.BB's body (non-PHI, non-alloca, non-terminator) into
   /// RTOrigBodyOrder in program order, for the scalar fallback.
   void captureRuntimeCheckBodySnapshot();
 
@@ -3765,7 +3765,8 @@ private:
   /// the CFG. Used to drop CFG-analysis preservation for the run.
   bool CFGChanged = false;
 
-  /// Guarded block body (non-PHI, non-terminator) in original source order.
+  /// Guarded block body (non-PHI, non-alloca, non-terminator) in original
+  /// source order.
   SmallVector<Instruction *> RTOrigBodyOrder;
 
   using AliasCacheKey = std::pair<Instruction *, Instruction *>;
@@ -25437,8 +25438,9 @@ void BoUpSLP::captureRuntimeCheckBodySnapshot() {
   if (!TryRuntimeAliasChecks || !RTChecks.BB)
     return;
   BasicBlock *BB = RTChecks.BB;
+  // Allocas are not duplicated, keep them in the header block.
   for (Instruction &I : *BB)
-    if (!isa<PHINode>(&I) && !I.isTerminator())
+    if (!isa<PHINode, AllocaInst>(&I) && !I.isTerminator())
       RTOrigBodyOrder.push_back(&I);
 }
 
@@ -25501,6 +25503,11 @@ bool BoUpSLP::canVersionBlockForRuntimeChecks(BasicBlock *BB) const {
         auto *CB = dyn_cast<CallBase>(&I);
         return CB && (CB->cannotDuplicate() || CB->isConvergent());
       }))
+    return false;
+  // Only static allocas at the start of the entry block can stay in the header
+  // block, any other alloca would have to be duplicated with the body.
+  if (any_of(make_range(BB->getFirstNonPHIOrDbgOrAlloca(), BB->end()),
+             IsaPred<AllocaInst>))
     return false;
   return true;
 }
