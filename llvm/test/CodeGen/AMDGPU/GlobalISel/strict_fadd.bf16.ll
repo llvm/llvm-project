@@ -69,9 +69,7 @@ define amdgpu_ps <2 x bfloat> @strict_fadd_v2bf16_vl(<2 x bfloat> %a) #0 {
   ret <2 x bfloat> %result
 }
 
-attributes #0 = { strictfp }
-
-define amdgpu_ps <3 x bfloat> @strict_fadd_v3bf16_vv(<3 x bfloat> %a, <3 x bfloat> %b) {
+define amdgpu_ps <3 x bfloat> @strict_fadd_v3bf16_vv(<3 x bfloat> %a, <3 x bfloat> %b) #0 {
 ; GFX1250-LABEL: strict_fadd_v3bf16_vv:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -84,3 +82,5 @@ define amdgpu_ps <3 x bfloat> @strict_fadd_v3bf16_vv(<3 x bfloat> %a, <3 x bfloa
   %result = call <3 x bfloat> @llvm.experimental.constrained.fadd.v3bf16(<3 x bfloat> %a, <3 x bfloat> %b, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <3 x bfloat> %result
 }
+
+attributes #0 = { strictfp }

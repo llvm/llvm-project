@@ -492,6 +492,7 @@ define amdgpu_ps <3 x bfloat> @fmul_v3bf16_vv(<3 x bfloat> %a, <3 x bfloat> %b) 
   %result = fmul <3 x bfloat> %a, %b
   ret <3 x bfloat> %result
 }
+
 define amdgpu_ps <4 x bfloat> @fmul_v4bf16_vv(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; GFX9-LABEL: fmul_v4bf16_vv:
 ; GFX9:       ; %bb.0:

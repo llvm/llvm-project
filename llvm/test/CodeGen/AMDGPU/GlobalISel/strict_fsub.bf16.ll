@@ -30,9 +30,7 @@ define amdgpu_ps <2 x bfloat> @strict_fsub_v2bf16_ss(<2 x bfloat> inreg %a, <2 x
   ret <2 x bfloat> %result
 }
 
-attributes #0 = { strictfp }
-
-define amdgpu_ps <3 x bfloat> @strict_fsub_v3bf16_vv(<3 x bfloat> %a, <3 x bfloat> %b) {
+define amdgpu_ps <3 x bfloat> @strict_fsub_v3bf16_vv(<3 x bfloat> %a, <3 x bfloat> %b) #0 {
 ; GFX1250-LABEL: strict_fsub_v3bf16_vv:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -45,3 +43,5 @@ define amdgpu_ps <3 x bfloat> @strict_fsub_v3bf16_vv(<3 x bfloat> %a, <3 x bfloa
   %result = call <3 x bfloat> @llvm.experimental.constrained.fsub.v3bf16(<3 x bfloat> %a, <3 x bfloat> %b, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <3 x bfloat> %result
 }
+
+attributes #0 = { strictfp }

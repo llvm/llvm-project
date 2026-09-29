@@ -158,6 +158,7 @@ define amdgpu_ps <3 x bfloat> @fmax_v3bf16_vv(<3 x bfloat> %a, <3 x bfloat> %b) 
   %result = call <3 x bfloat> @llvm.maxnum.v3bf16(<3 x bfloat> %a, <3 x bfloat> %b)
   ret <3 x bfloat> %result
 }
+
 define amdgpu_ps <4 x bfloat> @fmin_v4bf16_vv(<4 x bfloat> %a, <4 x bfloat> %b) {
 ; GFX1250-LABEL: fmin_v4bf16_vv:
 ; GFX1250:       ; %bb.0:
