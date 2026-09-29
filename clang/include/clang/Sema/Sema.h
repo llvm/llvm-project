@@ -2518,7 +2518,7 @@ public:
   /// attribute has already been diagnosed and its node is no longer part of
   /// any type, so the completion pass must skip it rather than parse its
   /// argument and complete it.
-  llvm::SmallPtrSet<const BoundsAttributedType *, 4>
+  llvm::SmallPtrSet<const BoundsAttributedType *, 1>
       RejectedLateParsedBoundsTypes;
 
   void markLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) {
