@@ -112,7 +112,7 @@ public:
   /// lane, the constants still match.
   LLVM_ABI bool isElementWiseEqual(Value *Y) const;
 
-  /// Return true if this is a vector or struct constant that includes any
+  /// Return true if this is a vector or aggregate constant that includes any
   /// undef or poison elements. Nested aggregates (structs, arrays and fixed
   /// width vectors) are inspected recursively. Since it is impossible to
   /// inspect a scalable vector element-wise at compile time, this function

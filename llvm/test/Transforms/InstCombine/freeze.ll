@@ -185,6 +185,113 @@ define { float, ptr } @freeze_const_struct_float_ptr() {
   ret { float, ptr } %f
 }
 
+define [2 x i32] @freeze_const_array() {
+; CHECK-LABEL: define [2 x i32] @freeze_const_array() {
+; CHECK-NEXT:    ret [2 x i32] [i32 1, i32 2]
+;
+  %f = freeze [2 x i32] [i32 1, i32 2]
+  ret [2 x i32] %f
+}
+
+define [2 x float] @freeze_const_array_float() {
+; CHECK-LABEL: define [2 x float] @freeze_const_array_float() {
+; CHECK-NEXT:    ret [2 x float] [float 1.000000e+00, float 2.000000e+00]
+;
+  %f = freeze [2 x float] [float 1.0, float 2.0]
+  ret [2 x float] %f
+}
+
+define [2 x i32] @freeze_const_array_poison_member() {
+; CHECK-LABEL: define [2 x i32] @freeze_const_array_poison_member() {
+; CHECK-NEXT:    [[F:%.*]] = freeze [2 x i32] [i32 1, i32 poison]
+; CHECK-NEXT:    ret [2 x i32] [[F]]
+;
+  %f = freeze [2 x i32] [i32 1, i32 poison]
+  ret [2 x i32] %f
+}
+
+define [2 x i32] @freeze_const_array_undef_member() {
+; CHECK-LABEL: define [2 x i32] @freeze_const_array_undef_member() {
+; CHECK-NEXT:    [[F:%.*]] = freeze [2 x i32] [i32 1, i32 undef]
+; CHECK-NEXT:    ret [2 x i32] [[F]]
+;
+  %f = freeze [2 x i32] [i32 1, i32 undef]
+  ret [2 x i32] %f
+}
+
+define [2 x i32] @freeze_const_array_zeroinitializer() {
+; CHECK-LABEL: define [2 x i32] @freeze_const_array_zeroinitializer() {
+; CHECK-NEXT:    ret [2 x i32] zeroinitializer
+;
+  %f = freeze [2 x i32] zeroinitializer
+  ret [2 x i32] %f
+}
+
+; Nested arrays. The inner array is wrapped in a struct because an array-of-array
+; literal starts with "[[", which FileCheck would parse as a variable.
+define [2 x { [2 x i32] }] @freeze_const_nested_array() {
+; CHECK-LABEL: define [2 x { [2 x i32] }] @freeze_const_nested_array() {
+; CHECK-NEXT:    ret [2 x { [2 x i32] }] [{ [2 x i32] } { [2 x i32] [i32 1, i32 2] }, { [2 x i32] } { [2 x i32] [i32 3, i32 4] }]
+;
+  %f = freeze [2 x { [2 x i32] }] [{ [2 x i32] } { [2 x i32] [i32 1, i32 2] }, { [2 x i32] } { [2 x i32] [i32 3, i32 4] }]
+  ret [2 x { [2 x i32] }] %f
+}
+
+define [2 x { [2 x i32] }] @freeze_const_nested_array_poison_member() {
+; CHECK-LABEL: define [2 x { [2 x i32] }] @freeze_const_nested_array_poison_member() {
+; CHECK-NEXT:    [[F:%.*]] = freeze [2 x { [2 x i32] }] [{ [2 x i32] } { [2 x i32] [i32 1, i32 2] }, { [2 x i32] } { [2 x i32] [i32 3, i32 poison] }]
+; CHECK-NEXT:    ret [2 x { [2 x i32] }] [[F]]
+;
+  %f = freeze [2 x { [2 x i32] }] [{ [2 x i32] } { [2 x i32] [i32 1, i32 2] }, { [2 x i32] } { [2 x i32] [i32 3, i32 poison] }]
+  ret [2 x { [2 x i32] }] %f
+}
+
+; The poison is buried in a struct member, so the walk has to recurse through
+; struct types as well as arrays.
+define [2 x { i32, i32 }] @freeze_const_array_of_struct() {
+; CHECK-LABEL: define [2 x { i32, i32 }] @freeze_const_array_of_struct() {
+; CHECK-NEXT:    ret [2 x { i32, i32 }] [{ i32, i32 } { i32 1, i32 2 }, { i32, i32 } { i32 3, i32 4 }]
+;
+  %f = freeze [2 x { i32, i32 }] [{ i32, i32 } { i32 1, i32 2 }, { i32, i32 } { i32 3, i32 4 }]
+  ret [2 x { i32, i32 }] %f
+}
+
+define [2 x { i32, i32 }] @freeze_const_array_of_struct_poison_member() {
+; CHECK-LABEL: define [2 x { i32, i32 }] @freeze_const_array_of_struct_poison_member() {
+; CHECK-NEXT:    [[F:%.*]] = freeze [2 x { i32, i32 }] [{ i32, i32 } { i32 1, i32 2 }, { i32, i32 } { i32 3, i32 poison }]
+; CHECK-NEXT:    ret [2 x { i32, i32 }] [[F]]
+;
+  %f = freeze [2 x { i32, i32 }] [{ i32, i32 } { i32 1, i32 2 }, { i32, i32 } { i32 3, i32 poison }]
+  ret [2 x { i32, i32 }] %f
+}
+
+define [2 x <2 x i32>] @freeze_const_array_of_vector_poison_member() {
+; CHECK-LABEL: define [2 x <2 x i32>] @freeze_const_array_of_vector_poison_member() {
+; CHECK-NEXT:    [[F:%.*]] = freeze [2 x <2 x i32>] [<2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 poison>]
+; CHECK-NEXT:    ret [2 x <2 x i32>] [[F]]
+;
+  %f = freeze [2 x <2 x i32>] [<2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 poison>]
+  ret [2 x <2 x i32>] %f
+}
+
+; A ConstantExpr member is handled conservatively.
+define [2 x i64] @freeze_const_array_constexpr_member() {
+; CHECK-LABEL: define [2 x i64] @freeze_const_array_constexpr_member() {
+; CHECK-NEXT:    [[F:%.*]] = freeze [2 x i64] [i64 ptrtoint (ptr @gv to i64), i64 3]
+; CHECK-NEXT:    ret [2 x i64] [[F]]
+;
+  %f = freeze [2 x i64] [i64 ptrtoint (ptr @gv to i64), i64 3]
+  ret [2 x i64] %f
+}
+
+define [2 x ptr] @freeze_const_array_ptr() {
+; CHECK-LABEL: define [2 x ptr] @freeze_const_array_ptr() {
+; CHECK-NEXT:    ret [2 x ptr] [ptr null, ptr @gv]
+;
+  %f = freeze [2 x ptr] [ptr null, ptr @gv]
+  ret [2 x ptr] %f
+}
+
 ; Move the freeze forward to prevent poison from spreading.
 
 define i32 @early_freeze_test1(i32 %x, i32 %y) {
