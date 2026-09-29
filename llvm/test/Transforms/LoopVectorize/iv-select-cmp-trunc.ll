@@ -1413,13 +1413,12 @@ define i32 @not_vectorized_select_iv_icmp_no_guard(ptr %a, ptr %b, i32 %start, i
 ; CHECK-VF4IC1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-VF4IC1:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i64 0
-; CHECK-VF4IC1-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP6]], <4 x i1> [[TMP5]], i32 [[TMP8]])
+; CHECK-VF4IC1-NEXT:    [[TMP12:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP6]], <4 x i1> [[TMP5]], i32 [[START]])
 ; CHECK-VF4IC1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK-VF4IC1:       [[SCALAR_PH]]:
 ; CHECK-VF4IC1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-VF4IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]
+; CHECK-VF4IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]
 ; CHECK-VF4IC1-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[FOR_BODY]]:
 ; CHECK-VF4IC1-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
@@ -1435,7 +1434,7 @@ define i32 @not_vectorized_select_iv_icmp_no_guard(ptr %a, ptr %b, i32 %start, i
 ; CHECK-VF4IC1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[WIDE_TRIP_COUNT]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK-VF4IC1:       [[EXIT]]:
-; CHECK-VF4IC1-NEXT:    [[COND_LCSSA:%.*]] = phi i32 [ [[COND]], %[[FOR_BODY]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
+; CHECK-VF4IC1-NEXT:    [[COND_LCSSA:%.*]] = phi i32 [ [[COND]], %[[FOR_BODY]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF4IC1-NEXT:    ret i32 [[COND_LCSSA]]
 ;
 ; CHECK-VF4IC4-LABEL: define i32 @not_vectorized_select_iv_icmp_no_guard(
@@ -1505,8 +1504,7 @@ define i32 @not_vectorized_select_iv_icmp_no_guard(ptr %a, ptr %b, i32 %start, i
 ; CHECK-VF4IC4-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC4-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-VF4IC4:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC4-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i64 0
-; CHECK-VF4IC4-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP6]], <4 x i1> [[TMP5]], i32 [[TMP8]])
+; CHECK-VF4IC4-NEXT:    [[TMP9:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP6]], <4 x i1> [[TMP5]], i32 [[START]])
 ; CHECK-VF4IC4-NEXT:    [[TMP35:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP29]], <4 x i1> [[TMP25]], i32 [[TMP9]])
 ; CHECK-VF4IC4-NEXT:    [[TMP36:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP30]], <4 x i1> [[TMP26]], i32 [[TMP35]])
 ; CHECK-VF4IC4-NEXT:    [[TMP37:%.*]] = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> [[TMP31]], <4 x i1> [[TMP27]], i32 [[TMP36]])
@@ -1900,13 +1898,12 @@ define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount(ptr %a, p
 ; CHECK-VF4IC1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-VF4IC1:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[BROADCAST_SPLAT]], i64 0
-; CHECK-VF4IC1-NEXT:    [[TMP9:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP6]], <4 x i1> [[TMP5]], i16 [[TMP8]])
+; CHECK-VF4IC1-NEXT:    [[TMP12:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP6]], <4 x i1> [[TMP5]], i16 [[START]])
 ; CHECK-VF4IC1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK-VF4IC1:       [[SCALAR_PH]]:
 ; CHECK-VF4IC1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
-; CHECK-VF4IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[FOR_BODY_PREHEADER]] ]
+; CHECK-VF4IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ [[TMP12]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[FOR_BODY_PREHEADER]] ]
 ; CHECK-VF4IC1-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[FOR_BODY]]:
 ; CHECK-VF4IC1-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
@@ -1922,7 +1919,7 @@ define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount(ptr %a, p
 ; CHECK-VF4IC1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[WIDE_TRIP_COUNT]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK-VF4IC1:       [[EXIT_LOOPEXIT]]:
-; CHECK-VF4IC1-NEXT:    [[COND_LCSSA:%.*]] = phi i16 [ [[COND]], %[[FOR_BODY]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
+; CHECK-VF4IC1-NEXT:    [[COND_LCSSA:%.*]] = phi i16 [ [[COND]], %[[FOR_BODY]] ], [ [[TMP12]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-VF4IC1-NEXT:    br label %[[EXIT]]
 ; CHECK-VF4IC1:       [[EXIT]]:
 ; CHECK-VF4IC1-NEXT:    [[RDX_0_LCSSA:%.*]] = phi i16 [ [[START]], %[[ENTRY]] ], [ [[COND_LCSSA]], %[[EXIT_LOOPEXIT]] ]
@@ -1998,8 +1995,7 @@ define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount(ptr %a, p
 ; CHECK-VF4IC4-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC4-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-VF4IC4:       [[MIDDLE_BLOCK]]:
-; CHECK-VF4IC4-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[BROADCAST_SPLAT]], i64 0
-; CHECK-VF4IC4-NEXT:    [[TMP9:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP6]], <4 x i1> [[TMP5]], i16 [[TMP8]])
+; CHECK-VF4IC4-NEXT:    [[TMP9:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP6]], <4 x i1> [[TMP5]], i16 [[START]])
 ; CHECK-VF4IC4-NEXT:    [[TMP35:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP29]], <4 x i1> [[TMP25]], i16 [[TMP9]])
 ; CHECK-VF4IC4-NEXT:    [[TMP36:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP30]], <4 x i1> [[TMP26]], i16 [[TMP35]])
 ; CHECK-VF4IC4-NEXT:    [[TMP37:%.*]] = call i16 @llvm.experimental.vector.extract.last.active.v4i16(<4 x i16> [[TMP31]], <4 x i1> [[TMP27]], i16 [[TMP36]])

@@ -73,7 +73,7 @@ Result: Native vector predication in IR.
 ## References
 
 [^maskedir]: `llvm.masked.*` intrinsics,
-    <https://llvm.org/docs/LangRef.html#masked-vector-load-and-store-intrinsics>
+    [masked vector load and store intrinsics](../LangRef.md#masked-vector-load-and-store-intrinsics)
 
 [^vprfc]: RFC: Prototype & Roadmap for vector predication in LLVM,
     <https://reviews.llvm.org/D57504>
