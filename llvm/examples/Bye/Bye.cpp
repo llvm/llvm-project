@@ -14,11 +14,18 @@ static cl::opt<bool> Wave("wave-goodbye", cl::init(false),
 static cl::opt<bool> LastWords("last-words", cl::init(false),
                                cl::desc("say last words (suppress codegen)"));
 
+static cl::opt<std::string> Greeting("bye-greeting",
+                                     cl::desc("also print this greeting"));
+
 namespace {
 
 bool runBye(Function &F) {
   if (Wave) {
     errs() << "Bye: ";
+    errs().write_escaped(F.getName()) << '\n';
+  }
+  if (!Greeting.empty()) {
+    errs() << Greeting << ": ";
     errs().write_escaped(F.getName()) << '\n';
   }
   return false;
@@ -77,10 +84,15 @@ static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
                                  false /* Only looks at CFG */,
                                  false /* Analysis Pass */);
 
+static Error parseArguments(ArrayRef<const char *> Args) {
+  return parsePassPluginCommandLine("Bye", Args);
+}
+
 /* New PM Registration */
 llvm::PassPluginLibraryInfo getByePluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "Bye", LLVM_VERSION_STRING,
-          registerPassBuilderCallbacks, preCodeGenCallback};
+  return {LLVM_PLUGIN_API_VERSION, "Bye",
+          LLVM_VERSION_STRING,     registerPassBuilderCallbacks,
+          preCodeGenCallback,      parseArguments};
 }
 
 #ifndef LLVM_BYE_LINK_INTO_TOOLS
