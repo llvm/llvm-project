@@ -3640,7 +3640,6 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
 
 TEST(TargetParserTest, testAMDGPUSramEccOnOffModes) {
   using namespace AMDGPU;
-  Triple AMDHSA("amdgcn-amd-amdhsa");
 
   // Existing SRAMECC targets retain their selectable modes, including generic
   // targets and gfx12.5, where XNACK is hardwired on.
@@ -3653,40 +3652,43 @@ TEST(TargetParserTest, testAMDGPUSramEccOnOffModes) {
     EXPECT_TRUE(Features.test(FEAT_SRAMECC_SUPPORT));
     EXPECT_TRUE(Features.test(FEAT_SRAMECC_ON_OFF_MODES));
 
-    auto Default = TargetID::parse(AMDHSA, GPU);
+    // The processor is resolved from the triple subarch.
+    StringRef SubArch = getSubArchName(getSubArch(Kind));
+    Triple TT(SubArch, "amd", "amdhsa");
+    auto Default = TargetID::parse(TT, "");
     ASSERT_TRUE(Default);
+    EXPECT_EQ(Default->getGPUKind(), Kind);
     EXPECT_EQ(Default->getSramEccSetting(), TargetIDSetting::Any);
     EXPECT_EQ(Default->getCanonicalFeatureString(), GPU);
 
-    // Resolving the GPU through its triple subarch uses the same default.
-    Triple SubArchTriple(getSubArchName(getSubArch(Kind)), "amd", "amdhsa");
-    EXPECT_EQ(TargetID(SubArchTriple, "").getSramEccSetting(),
-              TargetIDSetting::Any);
-
     for (bool Enabled : {false, true}) {
-      std::string ID = (GPU + (Enabled ? ":sramecc+" : ":sramecc-")).str();
+      StringRef Mode = Enabled ? ":sramecc+" : ":sramecc-";
+      std::string ID = (GPU + Mode).str();
       TargetIDSetting Setting =
           Enabled ? TargetIDSetting::On : TargetIDSetting::Off;
-      auto Explicit = TargetID::parse(AMDHSA, ID);
+      auto Explicit = TargetID::parse(TT, Mode);
       ASSERT_TRUE(Explicit);
       EXPECT_EQ(Explicit->getSramEccSetting(), Setting);
       EXPECT_EQ(Explicit->getCanonicalFeatureString(), ID);
-      EXPECT_EQ(Explicit->toString(), "amdgcn-amd-amdhsa-unknown-" + ID);
+      EXPECT_EQ(Explicit->toString(),
+                (SubArch + "-amd-amdhsa-unknown-" + ID).str());
       EXPECT_EQ(TargetID::createFromSubtargetFeatures(
-                    AMDHSA, GPU, Enabled ? "+sramecc" : "-sramecc"),
+                    TT, GPU, Enabled ? "+sramecc" : "-sramecc"),
                 *Explicit);
     }
   }
 
   for (StringRef GPU : {"gfx600", "gfx900", "gfx1100", "gfx1200"}) {
     SCOPED_TRACE(GPU);
-    EXPECT_FALSE(
-        getFeatureBitset(parseArchAMDGCN(GPU)).test(FEAT_SRAMECC_ON_OFF_MODES));
-    EXPECT_EQ(TargetID(AMDHSA, GPU).getSramEccSetting(),
+    GPUKind Kind = parseArchAMDGCN(GPU);
+    EXPECT_FALSE(getFeatureBitset(Kind).test(FEAT_SRAMECC_ON_OFF_MODES));
+
+    Triple TT(getSubArchName(getSubArch(Kind)), "amd", "amdhsa");
+    EXPECT_EQ(TargetID(TT, "").getSramEccSetting(),
               TargetIDSetting::Unsupported);
-    EXPECT_FALSE(TargetID::parse(AMDHSA, (GPU + ":sramecc+").str()));
-    EXPECT_FALSE(TargetID::parse(AMDHSA, (GPU + ":sramecc-").str()));
-    EXPECT_EQ(TargetID::createFromSubtargetFeatures(AMDHSA, GPU, "+sramecc")
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc+"));
+    EXPECT_FALSE(TargetID::parse(TT, ":sramecc-"));
+    EXPECT_EQ(TargetID::createFromSubtargetFeatures(TT, GPU, "+sramecc")
                   .getSramEccSetting(),
               TargetIDSetting::Unsupported);
   }
