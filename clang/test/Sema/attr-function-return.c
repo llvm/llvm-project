@@ -20,4 +20,4 @@ __attribute__((function_return(5))) void a(void) {}
 __attribute__((function_return)) void b(void) {}
 
 // expected-warning@+1 {{'function_return' attribute only applies to functions}}
-__attribute__((function_return)) int c;
+__attribute__((function_return("keep"))) int c;

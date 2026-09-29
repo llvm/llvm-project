@@ -29,11 +29,11 @@ enum e1 {
 
 enum e2 {
   E2
-} __tag_no_arg; // expected-error {{'btf_decl_tag' attribute only applies to variables, functions, structs, unions, classes, non-static data members, and typedefs}}
+} __tag_no_arg; // expected-error {{'btf_decl_tag' attribute takes one argument}}
 
 enum e3 {
   E3
-} __tag_2_arg; // expected-error {{'btf_decl_tag' attribute only applies to variables, functions, structs, unions, classes, non-static data members, and typedefs}}
+} __tag_2_arg; // expected-error {{'btf_decl_tag' attribute takes one argument}}
 
 int __tag1 __tag2 foo(struct t1 *arg, struct t2 *arg2);
 int __tag2 __tag3 foo(struct t1 *arg, struct t2 *arg2);

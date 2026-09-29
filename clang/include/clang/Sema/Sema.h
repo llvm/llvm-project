@@ -2447,6 +2447,8 @@ public:
                                     bool SkipArgCountCheck = false);
   bool checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A,
                                     bool SkipArgCountCheck = false);
+  bool checkCommonAttributeFeatures(const ParsedAttr &A,
+                                    bool SkipArgCountCheck = false);
 
   ///@}
 
