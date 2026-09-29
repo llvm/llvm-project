@@ -1310,6 +1310,11 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
         }
         if (Recipe)
           CCH = ComputeCCH(Recipe);
+      } else if (isa<VPIRValue>(Operand) &&
+                 isa<LoadInst>(Operand->getLiveInIRValue())) {
+        // Live-in loads are defined outside the loop, treat them like an
+        // unmasked memory access.
+        CCH = TTI::CastContextHint::Normal;
       }
     }
     if (IsReverse && CCH != TTI::CastContextHint::None)
@@ -1399,9 +1404,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     assert(!doesGeneratePerAllLanes() &&
            "Should only generate a vector value or single scalar, not scalars "
            "for all lanes.");
+    bool OnlyFirstLaneUsed = VF.isScalar() || vputils::onlyFirstLaneUsed(this);
     return getCostForRecipeWithOpcode(
-        getOpcode(),
-        vputils::onlyFirstLaneUsed(this) ? ElementCount::getFixed(1) : VF, Ctx);
+        getOpcode(), OnlyFirstLaneUsed ? ElementCount::getFixed(1) : VF, Ctx);
   }
 
   switch (getOpcode()) {
@@ -1410,7 +1415,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue()));
     auto *CondTy = getOperand(0)->getScalarType();
     auto *VecTy = getOperand(1)->getScalarType();
-    if (!vputils::onlyFirstLaneUsed(this)) {
+    if (VF.isVector() && !vputils::onlyFirstLaneUsed(this)) {
       CondTy = toVectorTy(CondTy, VF);
       VecTy = toVectorTy(VecTy, VF);
     }
@@ -1531,7 +1536,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     if (auto *U = const_cast<VPUser *>(getSingleUser()))
       if (match(U, m_BranchOnCond(m_VPValue())))
         return 0;
-    if (!vputils::onlyFirstLaneUsed(this))
+    if (VF.isVector() && !vputils::onlyFirstLaneUsed(this))
       ValTy = toVectorTy(ValTy, VF);
     return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, ValTy,
                                           Ctx.CostKind);
@@ -1573,10 +1578,11 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     // queried.
     llvm_unreachable("Unhandled opcode");
   case Instruction::FCmp:
-  case Instruction::ICmp:
+  case Instruction::ICmp: {
+    bool OnlyFirstLaneUsed = VF.isScalar() || vputils::onlyFirstLaneUsed(this);
     return getCostForRecipeWithOpcode(
-        getOpcode(),
-        vputils::onlyFirstLaneUsed(this) ? ElementCount::getFixed(1) : VF, Ctx);
+        getOpcode(), OnlyFirstLaneUsed ? ElementCount::getFixed(1) : VF, Ctx);
+  }
   case Instruction::ExtractValue:
   case Instruction::FNeg:
   case Instruction::Freeze:
@@ -1595,18 +1601,28 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     assert(VF.isScalar() && "only scalar VF expected");
     auto *CalledFn =
         cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
-    SmallVector<const VPValue *> ArgOps(drop_end(operands()));
-    return VPReplicateRecipe::computeCallCost(CalledFn, getScalarType(), ArgOps,
-                                              /*IsSingleScalar=*/true, VF, Ctx);
+    auto *CI = cast<CallInst>(getUnderlyingInstr());
+    // Exclude operand bundle operands.
+    ArrayRef<VPValue *> ArgOps(op_begin(), CI->arg_size());
+    SmallVector<Type *, 4> Tys = map_to_vector<4>(
+        ArgOps, [](const VPValue *Op) { return Op->getScalarType(); });
+    InstructionCost Cost =
+        Ctx.TTI.getCallInstrCost(CalledFn, getScalarType(), Tys, Ctx.CostKind);
+    // For intrinsics, use the intrinsic cost computed from the actual
+    // arguments, if cheaper.
+    if (Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, /*TLI=*/nullptr))
+      Cost = std::min(Cost, VPWidenIntrinsicRecipe::computeCallCost(
+                                ID, ArgOps, *this, VF, Ctx));
+    return Cost;
   }
   case VPInstruction::BranchOnCond:
+    if (VF.isScalar())
+      return Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
+    break;
   case Instruction::PHI:
   case Instruction::Switch:
     if (VF.isScalar())
-      return Ctx.TTI.getCFInstrCost(getOpcode() == VPInstruction::BranchOnCond
-                                        ? Instruction::CondBr
-                                        : getOpcode(),
-                                    Ctx.CostKind);
+      return Ctx.TTI.getCFInstrCost(getOpcode(), Ctx.CostKind);
     break;
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))

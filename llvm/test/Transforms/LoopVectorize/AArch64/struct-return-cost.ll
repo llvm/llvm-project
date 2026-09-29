@@ -79,8 +79,8 @@ define void @struct_return_replicate(ptr noalias %in, ptr noalias writeonly %out
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP2:%.*]] = tail call { half, half } @foo(half [[TMP1:%.*]]) #[[ATTR2:[0-9]+]]
-; CHECK:    [[TMP4:%.*]] = tail call { half, half } @foo(half [[TMP3:%.*]]) #[[ATTR2]]
+; CHECK:    [[TMP3:%.*]] = tail call { half, half } @foo(half [[TMP1:%.*]]) #[[ATTR2:[0-9]+]]
+; CHECK:    [[TMP4:%.*]] = tail call { half, half } @foo(half [[TMP2:%.*]]) #[[ATTR2]]
 ; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
