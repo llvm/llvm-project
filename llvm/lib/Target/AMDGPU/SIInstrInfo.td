@@ -2737,11 +2737,11 @@ class getEquivalentAGPROperand<RegisterOperand RC> {
   defvar Size = !cast<SIRegisterClassLike>(RC.RegClass).Size;
   RegisterOperand ret =
     !cond(!eq(Size, 32)   : RegisterOperand<AGPR_32>,
-          !eq(Size, 64)   : RegisterOperand<AReg_64>,
-          !eq(Size, 96)   : RegisterOperand<AReg_96>,
-          !eq(Size, 128)  : RegisterOperand<AReg_128>,
-          !eq(Size, 160)  : RegisterOperand<AReg_160>,
-          !eq(Size, 1024) : RegisterOperand<AReg_1024>);
+          !eq(Size, 64)   : RegisterOperand<AReg_64_AlignTarget>,
+          !eq(Size, 96)   : RegisterOperand<AReg_96_AlignTarget>,
+          !eq(Size, 128)  : RegisterOperand<AReg_128_AlignTarget>,
+          !eq(Size, 160)  : RegisterOperand<AReg_160_AlignTarget>,
+          !eq(Size, 1024) : RegisterOperand<AReg_1024_AlignTarget>);
 }
 
 class getEquivalentVGPROperand<RegisterOperand RC> {
