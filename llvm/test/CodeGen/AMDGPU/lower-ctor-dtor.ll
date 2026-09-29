@@ -17,8 +17,8 @@
 ; VISIBILITY: FUNC   WEAK PROTECTED {{.*}} amdgcn.device.fini
 ; VISIBILITY: OBJECT   WEAK DEFAULT {{.*}} amdgcn.device.fini.kd
 
-; SECTION: .init_array.1     INIT_ARRAY      {{.*}} {{.*}} 000008 00  WA  0   0  8
-; SECTION: .fini_array.1     FINI_ARRAY      {{.*}} {{.*}} 000008 00  WA  0   0  8
+; SECTION: .init_array.1     INIT_ARRAY      {{.*}} {{.*}} 000008 08  WA  0   0  8
+; SECTION: .fini_array.1     FINI_ARRAY      {{.*}} {{.*}} 000008 08  WA  0   0  8
 
 ; DISABLED-NOT: FUNC   GLOBAL PROTECTED {{.*}} amdgcn.device.init
 ; DISABLED-NOT: OBJECT GLOBAL DEFAULT {{.*}} amdgcn.device.init.kd
