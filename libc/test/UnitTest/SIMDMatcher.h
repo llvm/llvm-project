@@ -25,10 +25,6 @@ template <typename T>
 inline bool within_ulp_tolerance(T expected, T actual, uint64_t tolerance) {
   fputil::FPBits<T> expected_bits(expected), actual_bits(actual);
 
-  // Handle inf and nan cases.
-  if (expected_bits.is_inf() || expected_bits.is_inf())
-    return expected_bits.is_inf() && expected_bits.is_inf();
-
   if (expected_bits.is_nan() || actual_bits.is_nan())
     return expected_bits.is_nan() && actual_bits.is_nan();
 
