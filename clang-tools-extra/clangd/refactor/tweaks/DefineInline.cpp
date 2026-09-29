@@ -400,7 +400,7 @@ public:
     if (!SelNode)
       return false;
     Source = getSelectedFunction(SelNode);
-    if (!Source || !Source->hasBody())
+    if (!Source || !Source->doesThisDeclarationHaveABody())
       return false;
     // Only the last level of template parameter locations are not kept in AST,
     // so if we are inlining a method that is in a templated class, there is no

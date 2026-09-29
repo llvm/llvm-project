@@ -48,6 +48,14 @@ TEST_F(DefineInlineTest, TriggersOnFunctionDecl) {
   // Definition with no body.
   class Bar { Bar() = def^ault; };
   )cpp");
+
+  EXPECT_UNAVAILABLE(R"cpp(
+  // Redeclaration after the definition.
+  void foo() {
+    return;
+  }
+  vo^id f^oo();
+  )cpp");
 }
 
 TEST_F(DefineInlineTest, NoForwardDecl) {
