@@ -1,4 +1,4 @@
-// REQUIRES: wasm32-target-arch, arm64e
+// REQUIRES: wasm32-target-arch || arm64ec-target-arch
 // RUN: %libomp-compile
 // RUN: %not %libomp-run 2>&1 | FileCheck %s
 
