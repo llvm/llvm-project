@@ -227,6 +227,8 @@ TEST_F(LlvmLibcInetPtonTest, InvalidIPv6Formats) {
                                          &addr));
   EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1:2:3:4:5:6::192.168.1.1",
                                          &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1::2.3.4.5:6", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "1:2.3.4.5:6", &addr));
 
   // Hex prefixes and signs
   EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET6, "0x1234::", &addr));

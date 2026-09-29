@@ -70,54 +70,44 @@ namespace net {
 }
 
 [[nodiscard]] bool str_to_ipv6(cpp::string_view src, struct in6_addr &dst) {
-  if (src.empty())
-    return false;
-
-  bool has_double_colon = false;
-  FixedVector<uint16_t, 8> parts[2];
+  constexpr size_t NUM_COMPONENTS = 8;
+  FixedVector<uint16_t, NUM_COMPONENTS> parts[2];
   size_t part_idx = 0;
 
-  if (src.starts_with("::")) {
-    has_double_colon = true;
-    part_idx = 1;
-    src.remove_prefix(2);
-    if (src.empty()) {
-      inline_bzero(&dst.s6_addr, 16);
-      return true;
-    }
-    if (src.starts_with(':'))
-      return false;
-  } else if (src.starts_with(':')) {
-    return false;
-  }
-
   while (!src.empty()) {
-    if (src.starts_with("::")) {
-      if (has_double_colon)
+    size_t non_colon = src.find_first_not_of(':');
+    if (non_colon == cpp::string_view::npos) {
+      if (src.size() == 2 && part_idx == 0) {
+        part_idx = 1;
+        break;
+      }
+      return false;
+    }
+
+    switch (non_colon) {
+    case 0:
+      if (part_idx > 0 || !parts[0].empty())
         return false;
-      has_double_colon = true;
+      break;
+    case 1:
+      if (part_idx == 0 && parts[0].empty())
+        return false;
+      src.remove_prefix(1);
+      break;
+    case 2:
+      if (part_idx > 0)
+        return false;
       part_idx = 1;
       src.remove_prefix(2);
-      if (src.empty())
-        break;
-      if (src.starts_with(':'))
-        return false;
-    } else if (src.starts_with(':')) {
-      src.remove_prefix(1);
-      if (src.empty() || src.starts_with(':'))
-        return false;
+      break;
+    default:
+      return false;
     }
 
-    // Check if the current component is an embedded IPv4 address.
-    // In IPv6, an embedded IPv4 address can only appear at the very end.
     size_t colon_pos = src.find_first_of(':');
-    cpp::string_view token =
-        (colon_pos == cpp::string_view::npos) ? src : src.substr(0, colon_pos);
+    cpp::string_view token = src.substr(0, colon_pos);
 
-    if (token.find_first_of('.') != cpp::string_view::npos) {
-      if (colon_pos != cpp::string_view::npos)
-        return false;
-
+    if (colon_pos == cpp::string_view::npos && token.contains('.')) {
       struct in_addr in4;
       if (!str_to_ipv4(src, in4))
         return false;
@@ -144,15 +134,13 @@ namespace net {
       return false;
 
     src.remove_prefix(static_cast<size_t>(result.parsed_len));
-    if (!src.empty() && src[0] != ':')
-      return false;
   }
 
-  if (has_double_colon) {
-    if (parts[0].size() + parts[1].size() >= 8)
+  if (part_idx > 0) {
+    if (parts[0].size() + parts[1].size() >= NUM_COMPONENTS)
       return false;
 
-    size_t num_zeroes = 8 - parts[0].size() - parts[1].size();
+    size_t num_zeroes = NUM_COMPONENTS - parts[0].size() - parts[1].size();
     uint16_t *ptr = dst.s6_addr16;
     if (!parts[0].empty()) {
       inline_memcpy(ptr, parts[0].begin(), parts[0].size() * sizeof(uint16_t));
@@ -164,9 +152,9 @@ namespace net {
       inline_memcpy(ptr, parts[1].begin(), parts[1].size() * sizeof(uint16_t));
     }
   } else {
-    if (parts[0].size() != 8)
+    if (parts[0].size() != NUM_COMPONENTS)
       return false;
-    inline_memcpy(dst.s6_addr16, parts[0].begin(), 8 * sizeof(uint16_t));
+    inline_memcpy(dst.s6_addr16, parts[0].begin(), sizeof(dst));
   }
 
   return true;
