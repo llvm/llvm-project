@@ -17,7 +17,8 @@
 //                         GK_<KIND>.
 //     MAJOR             - Major component of the device's GPU IP version.
 //     MINOR             - Minor component of the device's GPU IP version.
-//     IGCA_TARGET       - Numeric IGCA target.
+//     IGCA_TARGET       - Numeric IGCA target: Targets should also be defined
+//                         in the INTEL_IGCA_TARGET table.
 //     IGCA_FEATURE_SETS - Token naming the IGCA feature sets the device
 //                         implements: Core (none), Compute ("c"),
 //                         Render ("r"), ComputeExact ("ca") or
@@ -36,6 +37,15 @@
 //
 // Several devices can share a major and a minor version. The rows are ordered
 // so that the name to print for such a group comes first.
+//
+// This file also includes a list of valid IGCA targets, which can be used to
+// compile binaries with support different GPU architectures and feature sets:
+//
+//   INTEL_IGCA_TARGET(TARGET)
+//     TARGET            - Numeric IGCA target level, e.g. 60. corresponds to
+//                         "igca_60". A defined IGCA target means feature sets,
+//                         i.e. "igca_<TARGET>c", or "igca_<Target>ra" are also
+//                         accepted.
 //
 //===----------------------------------------------------------------------===//
 
@@ -92,5 +102,20 @@ INTEL_GPU_COMPAT("xe-bmg", XE_BMG, 40, Render)
 INTEL_GPU_COMPAT("xe-mtl", XE_MTL, 30, Render)
 INTEL_GPU_COMPAT("xe-dg2", XE_DG2, 15, RenderExact)
 
+// IGCA target levels. Only targets defined here are valid.
+#ifndef INTEL_IGCA_TARGET
+#define INTEL_IGCA_TARGET(TARGET)
+#endif
+
+INTEL_IGCA_TARGET(10)
+INTEL_IGCA_TARGET(15)
+INTEL_IGCA_TARGET(20)
+INTEL_IGCA_TARGET(30)
+INTEL_IGCA_TARGET(35)
+INTEL_IGCA_TARGET(40)
+INTEL_IGCA_TARGET(50)
+INTEL_IGCA_TARGET(60)
+
 #undef INTEL_GPU
 #undef INTEL_GPU_COMPAT
+#undef INTEL_IGCA_TARGET

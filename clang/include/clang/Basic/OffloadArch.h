@@ -23,7 +23,7 @@ namespace AMDGPU {
 enum GPUKind : uint8_t;
 }
 namespace IntelGPU {
-struct IGCATarget;
+class IGCATarget;
 }
 } // namespace llvm
 

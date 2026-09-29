@@ -64,62 +64,68 @@ std::string llvm::IntelGPU::getNumericArchName(uint32_t GPUIPVersion) {
       .str();
 }
 
+/// Check that Level is a known IGCA Target in IntelGPUTargetParser.def.
+bool isKnownIGCATargetLevel(uint16_t Level) {
+  switch (Level) {
+#define INTEL_IGCA_TARGET(TARGET) case TARGET:
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+    return true;
+  default:
+    return false;
+  }
+}
+
 IGCATarget llvm::IntelGPU::parseIGCATarget(StringRef MaybeTarget) {
   if (!MaybeTarget.consume_front("igca_"))
     return IGCATarget::invalid();
 
   uint16_t Target;
-  if (MaybeTarget.consumeInteger(10, Target))
+  if (MaybeTarget.consumeInteger(10, Target) || !isKnownIGCATargetLevel(Target))
     return IGCATarget::invalid();
-  // TODO check that Target contains a valid target level
   
   IGCAFeatureSet FS = IGCAFeatureSet::IGCA_CORE;
   if (MaybeTarget.consume_front("c"))
     FS = IGCAFeatureSet::IGCA_COMPUTE;
   else if (MaybeTarget.consume_front("r"))
     FS = IGCAFeatureSet::IGCA_RENDER;
-  bool IsExactFS = MaybeTarget.consume_front("a");
+  // Exact form needs to either be compute or render:
+  bool IsExactFS = (
+      FS != IGCAFeatureSet::IGCA_CORE && MaybeTarget.consume_front("a")
+  );
   if (!MaybeTarget.empty())
     return IGCATarget::invalid();
 
   return { Target, FS, IsExactFS };
 }
 
-static constexpr uint32_t IGCATargetShift     = 16;
-static constexpr uint32_t IGCAFeatureSetShift = 1;
-static constexpr uint32_t IGCAIsExactFSShift  = 0;
-static constexpr uint32_t IGCAFeatureSetMask  = 0x03;
-static constexpr uint32_t IGCAIsExactFSMask   = 0x1;
-
-// An IGCA Target is packed as follows:
-//
-//    31              16 15           3 2           1 0         0 
-//   +------------------+--------------+-------------+-----------+
-//   |      Target      |   Reserved   | Feature set | Is Exact? |
-//   +------------------+--------------+-------------+-----------+
-//          16 bits         13 bits        2 bits        1 bit
-//
-uint32_t llvm::IntelGPU::IGCATarget::pack() const {
-  // TODO add debug mode asserts here
-  return uint32_t(Target) << IGCATargetShift |
-        (uint32_t(FeatureSet) & IGCAFeatureSetMask) << IGCAFeatureSetShift |
-        (uint32_t(IsExactFeatureSet) & IGCAIsExactFSMask)
-            << IGCAIsExactFSShift;
-}
-
-IGCATarget llvm::IntelGPU::IGCATarget::unpack(uint32_t V) {
-  return {
-    uint16_t(V >> IGCATargetShift),
-    IGCAFeatureSet((V >> IGCAFeatureSetShift) & IGCAFeatureSetMask),
-    bool((V >> IGCAIsExactFSShift) & IGCAIsExactFSMask)
-  };
-}
-
-std::string llvm::IntelGPU::getIGCATargetName(IGCATarget T) {
-  if (!T)
+StringRef llvm::IntelGPU::getIGCATargetName(IGCATarget T) {
+  switch (T.pack()) {
+#define INTEL_IGCA_TARGET(TARGET)                                              \
+  case IGCATarget(TARGET, IGCAFeatureSet::IGCA_CORE, false).pack():            \
+    return "igca_" #TARGET;                                                    \
+  case IGCATarget(TARGET, IGCAFeatureSet::IGCA_COMPUTE, false).pack():         \
+    return "igca_" #TARGET "c";                                                \
+  case IGCATarget(TARGET, IGCAFeatureSet::IGCA_COMPUTE, true).pack():          \
+    return "igca_" #TARGET "ca";                                               \
+  case IGCATarget(TARGET, IGCAFeatureSet::IGCA_RENDER, false).pack():          \
+    return "igca_" #TARGET "r";                                                \
+  case IGCATarget(TARGET, IGCAFeatureSet::IGCA_RENDER, true).pack():           \
+    return "igca_" #TARGET "ra";
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+  default:
     return "";
-
-  StringRef FS = T.isCompute() ? "c" : T.isRender() ? "r" : "";
-  StringRef Exact = T.isExact() ? "a" : "";
-  return ("igca_" + Twine(T.Target) + FS + Exact).str();
+  }
 }
+
+#define INTEL_IGCA_TARGET_FEATURESETS(TARGET)                                  \
+  "igca_" #TARGET, "igca_" #TARGET "c", "igca_" #TARGET "ca",                  \
+      "igca_" #TARGET "r", "igca_" #TARGET "ra"
+
+void llvm::IntelGPU::fillValidIGCATargetList(
+    SmallVectorImpl<StringRef> &Values) {
+#define INTEL_IGCA_TARGET(TARGET)                                              \
+  Values.append({INTEL_IGCA_TARGET_FEATURESETS(TARGET)});
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+}
+
+#undef INTEL_IGCA_TARGET_FEATURESETS
