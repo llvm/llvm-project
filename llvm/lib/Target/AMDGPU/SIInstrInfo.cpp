@@ -6443,6 +6443,10 @@ unsigned SIInstrInfo::getVALUOp(unsigned Opc) const {
   case AMDGPU::V_S_SQRT_F16_e64:
     return ST.useRealTrue16Insts() ? AMDGPU::V_SQRT_F16_t16_e64
                                    : AMDGPU::V_SQRT_F16_fake16_e64;
+  case AMDGPU::FPTRUNC_ROUND_F16_F32_SALU_PSEUDO:
+    return ST.useRealTrue16Insts()
+        ? AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64
+        : AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32;
   }
   llvm_unreachable(
       "Unexpected scalar opcode without corresponding vector one!");
@@ -8801,6 +8805,31 @@ void SIInstrInfo::moveToVALUImpl(
     if (AMDGPU::hasNamedOperand(NewOpcode, AMDGPU::OpName::op_sel))
       NewInstr.addImm(0); // opsel0
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
+    legalizeOperands(*NewInstr, MDT);
+    addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
+    Inst.eraseFromParent();
+    return;
+  }
+  case AMDGPU::FPTRUNC_ROUND_F16_F32_SALU_PSEUDO: {
+    Register NewDst;
+    MachineInstr *NewInstr;
+    if (ST.useRealTrue16Insts()) {
+      NewDst = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+      NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
+                     .addImm(0) // src0_modifiers
+                     .add(Inst.getOperand(1))
+                     .addImm(0)                // clamp
+                     .addImm(0)                // omod
+                     .addImm(0)                // op_sel
+                     .add(Inst.getOperand(2)); // round
+    } else {
+      NewDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
+                     .add(Inst.getOperand(1))
+                     .add(Inst.getOperand(2));
+    }
+    MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
+
     legalizeOperands(*NewInstr, MDT);
     addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
     Inst.eraseFromParent();

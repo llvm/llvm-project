@@ -2027,10 +2027,7 @@ define amdgpu_gs half @s_sin_fptrunc_round_f32_to_f16_towardzero(float inreg %a)
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(TRANS32_DEP_1)
 ; GFX12-SDAG-NEXT:    v_sin_f32_e32 v0, s0
 ; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 1
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s0, v0/*Invalid register, operand has 'SReg_32' register class*/
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-NEXT:    v_cvt_f16_f32_e64 v0.l, v0
 ; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
