@@ -2693,7 +2693,7 @@ define <4 x i8> @test_ppairo_v4i8(<4 x i8> %a, <4 x i8> %b) {
 define <2 x i16> @test_ppaire_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; RV32-LABEL: test_ppaire_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pncvt.h a0, a0
+; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_ppaire_v2i16:
@@ -2723,15 +2723,10 @@ define <2 x i16> @test_ppairoe_v2i16(<2 x i16> %a, <2 x i16> %b) {
 }
 
 define <2 x i16> @test_ppairo_v2i16(<2 x i16> %a, <2 x i16> %b) {
-; RV32-LABEL: test_ppairo_v2i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    pncvth.h a0, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_ppairo_v2i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    ppairo.h a0, a0, a1
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_ppairo_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ppairo.h a0, a0, a1
+; CHECK-NEXT:    ret
   %res = shufflevector <2 x i16> %a, <2 x i16> %b, <2 x i32> <i32 1, i32 3>
   ret <2 x i16> %res
 }
@@ -4011,6 +4006,43 @@ define i32 @test_mulhrsu_i32(i32 %rs1, i32 %rs2) {
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.riscv.mulhrsu.i32(i32 %rs1, i32 %rs2)
   ret i32 %res
+}
+
+; Packed multiply high accumulate (v2i16 form)
+define <2 x i16> @test_pmhacc_b0_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2) {
+; CHECK-LABEL: test_pmhacc_b0_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhacc.h.b0 a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmhacc.b0.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmhacc_b1_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2) {
+; CHECK-LABEL: test_pmhacc_b1_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhacc.h.b1 a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmhacc.b1.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmhaccsu_b0_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2) {
+; CHECK-LABEL: test_pmhaccsu_b0_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhaccsu.h.b0 a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmhaccsu.b0.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmhaccsu_b1_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2) {
+; CHECK-LABEL: test_pmhaccsu_b1_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhaccsu.h.b1 a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmhaccsu.b1.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
+  ret <2 x i16> %res
 }
 
 ; Packed Multiply High Parts.
