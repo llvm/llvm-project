@@ -16,6 +16,7 @@
 #include "X86.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -43,19 +44,20 @@ static void alignToBundle(MachineBasicBlock &MBB) {
 
 // Returns true if MBB may be reached by an indirect branch (does not include
 // jump table targets).
-static bool isIndirectlyReachable(MachineFunction &MF,
-                                  const MachineBasicBlock &MBB) {
-  if (MBB.hasAddressTaken() || MBB.isEHPad())
-    return true;
+static bool isIndirectlyReachable(const MachineBasicBlock &MBB) {
+  return MBB.hasAddressTaken() || MBB.isEHPad();
+}
 
-  // With SJLJ exception handling, the dispatch block jumps indirectly to the
-  // block holding the call site's landing pad label, which is no longer marked
-  // as an EH pad by that point.
-  if (MF.getTarget().Options.ExceptionModel == ExceptionHandling::SjLj)
-    for (const MachineInstr &MI : MBB)
-      if (MI.isEHLabel() &&
-          MF.hasCallSiteLandingPad(MI.getOperand(0).getMCSymbol()))
-        return true;
+// Returns true if MBB holds the label of a call site's landing pad. With SJLJ
+// exception handling, the dispatch block jumps indirectly to that block, which
+// is no longer marked as an EH pad by that point.
+static bool holdsCallSiteLandingPadLabel(MachineFunction &MF,
+                                         const MachineBasicBlock &MBB) {
+  for (const MachineInstr &MI : MBB) {
+    if (MI.isEHLabel() &&
+        MF.hasCallSiteLandingPad(MI.getOperand(0).getMCSymbol()))
+      return true;
+  }
 
   return false;
 }
@@ -71,9 +73,16 @@ static void alignIndirectBranchTargets(MachineFunction &MF) {
       for (MachineBasicBlock *MBB : JTE.MBBs)
         alignToBundle(*MBB);
 
-  for (MachineBasicBlock &MBB : MF)
-    if (isIndirectlyReachable(MF, MBB))
+  ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
+  if (EH == ExceptionHandling::Default)
+    EH = MF.getTarget().getExceptionModel();
+  const bool IsSjLj = EH == ExceptionHandling::SjLj;
+
+  for (MachineBasicBlock &MBB : MF) {
+    if (isIndirectlyReachable(MBB) ||
+        (IsSjLj && holdsCallSiteLandingPadLabel(MF, MBB)))
       alignToBundle(MBB);
+  }
 }
 
 bool X86LFIRewriteLegacy::runOnMachineFunction(MachineFunction &MF) {
