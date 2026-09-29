@@ -18,7 +18,7 @@
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/null_check.h"
+
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/string_length.h"
@@ -26,10 +26,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-// TODO: Add support for locales.
 LIBC_INLINE int strcoll(const char *left, const char *right) {
-  LIBC_CRASH_ON_NULLPTR(left);
-  LIBC_CRASH_ON_NULLPTR(right);
   for (; *left && *left == *right; ++left, ++right)
     ;
   return static_cast<unsigned char>(*left) - static_cast<unsigned char>(*right);

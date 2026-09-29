@@ -13,7 +13,6 @@ add_header_library(
     libc.src.__support.CPP.simd
     libc.src.__support.common
     libc.src.__support.macros.attributes
-    libc.src.__support.macros.null_check
     libc.src.string.memory_utils.inline_memcpy
 )
 
@@ -156,6 +155,7 @@ add_entrypoint_object(
     .string_utils
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -168,6 +168,7 @@ add_entrypoint_object(
     .string_utils
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(

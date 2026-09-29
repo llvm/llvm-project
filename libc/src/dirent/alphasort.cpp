@@ -15,12 +15,15 @@
 
 #include "hdr/types/struct_dirent.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/null_check.h"
 #include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, alphasort,
                    (const struct dirent **a, const struct dirent **b)) {
+  LIBC_CRASH_ON_NULLPTR(a);
+  LIBC_CRASH_ON_NULLPTR(b);
   return internal::strcoll((*a)->d_name, (*b)->d_name);
 }
 
