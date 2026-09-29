@@ -1,15 +1,11 @@
-; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV --implicit-check-not=DebugTypePointer
+; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; A pointer whose pointee is a composite is dropped. Pointers are emitted before
-; composites, so the pointee has no id yet when emitDebugTypePointer runs.
-; The composite itself is still emitted. Emitting the DebugType*
-; nodes in dependency order, tracked in
-; https://github.com/llvm/llvm-project/issues/211850, would emit the
-; DebugTypePointer and change the expected output of this test
-
-; CHECK-SPIRV: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
-; CHECK-SPIRV: DebugTypeComposite
+; CHECK-SPIRV: [[ext:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+; CHECK-SPIRV-DAG: [[void:%[0-9]+]] = OpTypeVoid
+; CHECK-SPIRV-DAG: [[str_S:%[0-9]+]] = OpString "S"
+; CHECK-SPIRV: [[comp:%[0-9]+]] = OpExtInst [[void]] [[ext]] DebugTypeComposite [[str_S]]
+; CHECK-SPIRV: OpExtInst [[void]] [[ext]] DebugTypePointer [[comp]]
 
 define spir_func void @test() !dbg !11 {
 entry:
