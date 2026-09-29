@@ -182,6 +182,8 @@ Sel.  Mnemonic                         Stack Effect                             
 ====  ===============================  ====================================================================  ======================================
 ```
 
+The stack effects above are for version 1 formatters (see [Calling conventions](#calling-conventions)). In version 2 formatters, selectors that take or return an integer use `Integer` in place of `UInt` and `Int`.
+
 ### Dictionary objects
 
  `Dictionary` objects are key-value containers, with `String` value keys, and values of any data type. `Dictionary` is a reference type, mutating it through one reference is visible through any other reference to the same dictionary (e.g. one obtained earlier with `dup`). Empty `Dictionary` objects are created  with `dict`. `Dictionary` objects are populated with `dict_set`. Values are retrieved with `dict_get`. When `dict_get` is called with a key that is not present in the dictionary, an error is emitted. Use `dict_has` first to check for a key's existence. Dictionary operations consumes the `Dictionary` argument, so `dup` it first if the `Dictionary` is needed afterward. For example, to set multiple keys in a row:
@@ -220,11 +222,11 @@ Expression programs are embedded into an `.lldbformatters` section (an evolution
 - Version number (ULEB128)
 - Remaining size of the record (minus the header) (ULEB128)
 
-The version number is increased whenever an incompatible change is made. Adding new opcodes or selectors is not an incompatible change since consumers can unambiguously detect this and report an error.
+The version number is increased whenever an incompatible change is made, either to the layout of the record, or to the formatter ABI (see [Calling conventions](#calling-conventions)). Adding new opcodes or selectors is not an incompatible change since consumers can unambiguously detect this and report an error.
 
 Space between two records may be padded with NULL bytes.
 
-In version 1, a record consists of a dictionary key, which is a type name or regex.
+In versions 1 and 2, a record consists of a dictionary key, which is a type name or regex.
 
 - Length of the key in bytes (ULEB128)
 - The key (UTF-8)
@@ -241,30 +243,40 @@ This is followed by one or more dictionary values that immediately follow each o
 - Length of the program (ULEB128)
 - The program bytecode
 
+### Calling conventions
+
+A record's version number (see [Embedding](#embedding)) also determines the calling convention of its methods. This includes how `self` (`this`) is represented.
+
+In **version 1** (legacy), `self` is a combination of the data stack after `@init` and `@update` run. Nothing constrains what shape `self` ends up in, it can be zero, one, or many values.
+
+In **version 2**, the runtime owns `self`, a `Dictionary` that starts out empty. The runtime passes the same `Dictionary` as the first argument to every method except `@summary`, followed by that method's own arguments (if any). Methods may modify `self` in place, and do not return it. The runtime keeps a reference, to ensure modifications are visible to subsequent method calls.
+
 The possible function signatures are:
 
 ```{eval-rst}
-=========  ========================= ==============================
-Signature    Mnemonic                Stack Effect
----------  ------------------------- ------------------------------
-  0x00      ``@summary``              ``(Object -> String)``
-  0x01      ``@init``                 ``(Object -> Object+)``
-  0x02      ``@get_num_children``     ``(Object+ -> UInt)``
-  0x03      ``@get_child_index``      ``(Object+ String -> UInt)``
-  0x04      ``@get_child_at_index``   ``(Object+ UInt -> Object)``
-  0x05      ``@get_value``            ``(Object+ -> String)``
-  0x06      ``@update``               ``(Object+ -> Object+)``
-=========  ========================= ==============================
+=========  ========================= ==============================================  ==============================================
+Signature    Mnemonic                Stack Effect (version 1)                       Stack Effect (version 2)
+---------  ------------------------- ----------------------------------------------  ----------------------------------------------
+  0x00      ``@summary``              ``(Object -> String)``                          ``(Object -> String)``
+  0x01      ``@init``                 ``(Object -> Object+)``                         ``(Dictionary Object -> )``
+  0x02      ``@get_num_children``     ``(Object+ -> UInt)``                           ``(Dictionary -> Integer)``
+  0x03      ``@get_child_index``      ``(Object+ String -> UInt)``                    ``(Dictionary String -> Integer)``
+  0x04      ``@get_child_at_index``   ``(Object+ UInt -> Object)``                    ``(Dictionary Integer -> Object)``
+  0x05      ``@get_value``            ``(Object+ -> String)``                         ``(Dictionary -> String)``
+  0x06      ``@update``               ``(Object+ -> Object+ [Integer])``              ``(Dictionary -> Integer)``
+=========  ========================= ==============================================  ==============================================
 ```
 
-If not specified, the init function defaults to an empty function that just passes the Object along. Its results may be cached and allow common prep work to be done for an Object that can be reused by subsequent calls to the other methods. This way subsequent calls to `@get_child_at_index` can avoid recomputing shared information, for example.
+The `@init` method must only be used for one time setup work. Any computation that needs to be reperformed should happen in `@update`. If not specified, initialization will save the given Object to the `self` dictionary using the idiomatic key `"valobj"`.
+
+The `@update` method performs computation that may change over the course of a value's lifetime, such as interpreting a value's state, and (re)computing children. The return value is an `Integer`, where 1 means the previously computed children can be reused, and 0 means they must be refetched.
 
 While it is more efficient to store multiple programs per type key, this is not a requirement. LLDB will merge all entries. If there are conflicts the result is undefined.
 
 ### Execution model
 
-Execution begins at the first byte in the program. The program counter of the virtual machine starts at offset 0 of the bytecode and may never move outside the range of the program as defined in the header. The data stack starts with one Object or the result of the `@init` function (`Object+` in the table above).
+Execution begins at the first byte in the program. The program counter of the virtual machine starts at offset 0 of the bytecode and may never move outside the range of the program as defined in the header. The data stack starts with the method's arguments, as listed in the signature table in [Calling conventions](#calling-conventions).
 
 ### Error handling
 
-In version 1 errors are unrecoverable, the entire expression will fail if any kind of error is encountered.
+In versions 1 and 2, errors are unrecoverable, the entire expression will fail if any kind of error is encountered.
