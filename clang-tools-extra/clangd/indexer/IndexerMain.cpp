@@ -26,9 +26,8 @@
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/Execution.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include <memory>
 #include <utility>
@@ -192,11 +191,10 @@ int main(int argc, const char **argv) {
               const std::vector<std::string> &Args, llvm::StringRef File) {
             // FIXME: If File is relative, it's relative to the compile
             // command's "directory", not our CWD, but ToolExecutor doesn't
-            // expose "directory" here, so make_absolute can resolve it wrong
-            // and miss the .clangd file. See
+            // expose "directory" here. We don't have enough information to
+            // correctly determine the absolute path, so we don't apply the
+            // config for relative paths. See
             // indexer-clangd-config-relative-path.test.
-            llvm::SmallString<256> AbsFile(File);
-            llvm::sys::fs::make_absolute(AbsFile);
             // FIXME: WithCfg only lives for this ArgumentsAdjuster call, so
             // it's visible to Mangler below but not to the parse that follows.
             // That's harmless today since clangd-indexer doesn't consult
