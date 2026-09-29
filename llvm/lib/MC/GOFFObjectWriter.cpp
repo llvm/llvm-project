@@ -404,7 +404,8 @@ void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
                   ED->getEDAttributes(), ED->getEDAlignment(),
                   GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
                                Symbol.getBindingStrength(), Symbol.getLinkage(),
-                               GOFF::ESD_AMODE_64, Symbol.getBindingScope(), 0});
+                               GOFF::ESD_AMODE_64, Symbol.getBindingScope(),
+                               0});
     writeSymbol(PR);
   } else {
     GOFFSymbol ER(Symbol.getExternalName(), Symbol.getIndex(),
