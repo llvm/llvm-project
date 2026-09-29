@@ -481,8 +481,8 @@ private:
     Disconnected,
   };
 
-  /// Moves the queue to `state`. Only update the state if it is lesser than the
-  /// current state. Used in `Loop()` and requires `m_queue_mutex`.
+  /// Updates the queue to `state`. Only updates if state it is greater than the
+  /// current state. Used in `Loop()`. Caller must hold `m_queue_mutex`.
   void SetQueueState(QueueState state);
 
   /// Ends the session and does cleanup.
