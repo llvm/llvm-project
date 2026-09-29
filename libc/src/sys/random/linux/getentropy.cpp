@@ -36,7 +36,7 @@ LLVM_LIBC_FUNCTION(int, getentropy, (void *buffer, size_t length)) {
     if (!result.has_value()) {
       if (result.error() == EINTR)
         continue;
-      libc_errno = static_cast<int>(result.error());
+      libc_errno = result.error();
       return -1;
     }
     ssize_t bytes_read = result.value();
