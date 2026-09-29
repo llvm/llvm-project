@@ -97,3 +97,14 @@ this behavior, such as `-ffast-math`, `-fhonor-infinities`, and
 `-fhonor-nans` (etc), as well as `#pragma` directives if this diagnostic is
 generated unexpectedly.
 }];
+
+defvar FortifySourceDocs = [{
+Warns at compile time when calls to standard C library or POSIX functions have
+provably out-of-bounds destination buffers, truncated formatted output, or
+invalid constant arguments, modeled after
+[`_FORTIFY_SOURCE`](https://sourceware.org/glibc/manual/latest/html_node/Source-Fortification.html)
+compile-time checks. See {doc}`SourceFortification` for the list of supported
+functions and differences from GCC/glibc fortification, as well as related
+diagnostics {ref}`-Wformat-overflow`, {ref}`-Wformat-truncation`,
+{ref}`-Wbuiltin-memcpy-chk-size`, and {ref}`-Wstringop-overread`.
+}];

@@ -55,6 +55,7 @@ LTOVisibility
 PointerAuthentication
 SafeStack
 ShadowCallStack
+SourceFortification
 StructureProtection
 SourceBasedCodeCoverage
 StandardCPlusPlusModules
