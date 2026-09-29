@@ -951,17 +951,25 @@ static void copyCallAttributes(cir::CallOp source, cir::CallOp target) {
 
 /// For an indirect call, prepend the callee function pointer as operand 0 so
 /// CallOp::create rebuilds it as an indirect call, bitcasting it to a function
-/// pointer whose signature matches the rewritten operands and return type.
-/// No-op for direct calls.
+/// pointer that takes \p args, less the last \p numEllipsisArgs, and returns
+/// \p retTy.  Those last arguments were passed through the callee's ellipsis
+/// and stay out of the function type, as in classic CodeGen's
+/// GetFunctionType: LLVM treats operands past a call's function type as
+/// variadic, and some backends pass variadic arguments differently.  No-op
+/// for direct calls.
 static void prependIndirectCallee(cir::CallOp call,
                                   SmallVectorImpl<mlir::Value> &args,
-                                  mlir::Type retTy, mlir::OpBuilder &builder) {
+                                  mlir::Type retTy, unsigned numEllipsisArgs,
+                                  mlir::OpBuilder &builder) {
   if (!call.isIndirect())
     return;
+  assert(numEllipsisArgs <= args.size() &&
+         "more ellipsis arguments than arguments");
   mlir::Value calleePtr = call.getIndirectCall();
   SmallVector<mlir::Type> paramTypes;
-  paramTypes.reserve(args.size());
-  llvm::transform(args, std::back_inserter(paramTypes),
+  paramTypes.reserve(args.size() - numEllipsisArgs);
+  llvm::transform(ArrayRef(args).drop_back(numEllipsisArgs),
+                  std::back_inserter(paramTypes),
                   [](mlir::Value v) { return v.getType(); });
   // Lowering builds an indirect call's LLVM function type from the callee
   // pointer's pointee and takes the call's result from that type, so the
@@ -971,8 +979,9 @@ static void prependIndirectCallee(cir::CallOp call,
   // rebuilt pointee is what makes the lowered call variadic, and only a
   // variadic call gets the vector-register count that the x86_64 SysV ABI
   // passes in AL and that the callee's va_arg reads back.
-  auto calleeFnTy = cast<cir::FuncType>(
-      cast<cir::PointerType>(calleePtr.getType()).getPointee());
+  cir::FuncType calleeFnTy = getIndirectCalleeType(call);
+  assert((calleeFnTy.isVarArg() || numEllipsisArgs == 0) &&
+         "only a variadic callee takes arguments through an ellipsis");
   auto newPtrTy = cir::PointerType::get(
       cir::FuncType::get(paramTypes, retTy, calleeFnTy.isVarArg()));
   if (calleePtr.getType() != newPtrTy)
@@ -986,12 +995,13 @@ static void prependIndirectCallee(cir::CallOp call,
 /// dominating single-use store destination as the slot (so construction
 /// flows directly into it) or allocate a fresh slot and load the result
 /// back out.  \p newArgs is the already-shaped (Ignore-dropped,
-/// coercion-applied) non-sret argument list.  The caller guarantees the
-/// call has a result and an indirect-return classification.
+/// coercion-applied) non-sret argument list, the last \p numEllipsisArgs of
+/// which were passed through the callee's ellipsis.  The caller guarantees
+/// the call has a result and an indirect-return classification.
 void rewriteIndirectReturnCall(cir::CallOp call,
                                const FunctionClassification &fc,
                                ArrayRef<mlir::Value> newArgs,
-                               mlir::Type origRetTy,
+                               unsigned numEllipsisArgs, mlir::Type origRetTy,
                                ArrayRef<mlir::Type> origCallArgTypes,
                                mlir::OpBuilder &builder,
                                const mlir::DataLayout &dl) {
@@ -1035,8 +1045,10 @@ void rewriteIndirectReturnCall(cir::CallOp call,
   sretArgs.push_back(sretSlot);
   sretArgs.append(newArgs.begin(), newArgs.end());
 
+  // numEllipsisArgs counts from the end, so the sret slot prepended here stays
+  // in the retyped signature, as it does in classic CodeGen.
   mlir::Type sretVoidTy = cir::VoidType::get(ctx);
-  prependIndirectCallee(call, sretArgs, sretVoidTy, builder);
+  prependIndirectCallee(call, sretArgs, sretVoidTy, numEllipsisArgs, builder);
   auto newCall = cir::CallOp::create(
       builder, call.getLoc(), call.getCalleeAttr(), sretVoidTy, sretArgs);
   copyCallAttributes(call, newCall);
@@ -1085,6 +1097,13 @@ bool isSSERegisterClass(mlir::Type ty) {
 }
 
 } // namespace
+
+cir::FuncType cir::getIndirectCalleeType(cir::CIRCallOpInterface call) {
+  if (!call.isIndirect())
+    return {};
+  return cast<cir::FuncType>(
+      cast<cir::PointerType>(call.getIndirectCall().getType()).getPointee());
+}
 
 /// Bring \p funcOp's non-byval indirect parameter \p argNo into the shape the
 /// rest of the rewrite assumes.  \p claimedSlots carries the slots \p funcOp's
@@ -1432,15 +1451,17 @@ mlir::LogicalResult
 CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
                                       const FunctionClassification &fc,
                                       mlir::OpBuilder &builder) {
-  // The classification covers exactly the callee's declared parameters, and
-  // the rewrite below pairs it with the call's operands one for one.  Both
-  // directions of a mismatch have to be reported before the pass-through early
-  // return, or a call whose declared parameters happen to be pass-through is
-  // left as written with its surplus operands never classified.
+  // The rewrite below pairs the classification with the call's operands one
+  // for one, so a call passing arguments through an ellipsis needs a
+  // classification built from its own operands rather than from the callee's
+  // declared parameters.  Both directions of a mismatch have to be reported
+  // before the pass-through early return, or a call whose declared parameters
+  // happen to be pass-through is left as written with its surplus operands
+  // never classified.
   //
-  // A surplus operand went through an ellipsis.  A shortfall means the callee
-  // was declared no_proto, which turns off the verifier's argument-count check
-  // altogether.
+  // A surplus operand means fc was built from the callee's declared
+  // parameters alone.  A shortfall means the callee was declared no_proto,
+  // which turns off the verifier's argument-count check altogether.
   unsigned numOperands =
       mlir::cast<cir::CIRCallOpInterface>(callOp).getNumArgOperands();
   if (numOperands > fc.argInfos.size())
@@ -1479,7 +1500,23 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   // types here for use in updateArgAttrs).
   SmallVector<mlir::Type> origCallArgTypes;
   llvm::append_range(origCallArgTypes, argOperands.getTypes());
+
+  // Operands past an indirect callee's declared parameters were passed
+  // through its ellipsis.  Note where they begin in newArgs, so
+  // prependIndirectCallee can leave them out of the retyped callee type.  A
+  // direct call has no callee pointer to retype, so it records no boundary.
+  unsigned numDeclared = fc.argInfos.size();
+  if (call.isIndirect()) {
+    numDeclared = getIndirectCalleeType(call).getNumInputs();
+    assert(numDeclared <= fc.argInfos.size() &&
+           "the classification covers at least the declared parameters");
+  }
+  // Recorded before the Ignore skip below, so an ignored first ellipsis
+  // argument still marks where the ellipsis arguments begin in newArgs.
+  std::optional<unsigned> ellipsisStart;
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
+    if (idx == numDeclared)
+      ellipsisStart = newArgs.size();
     if (ac.kind == ArgKind::Ignore)
       continue;
     mlir::Value arg = argOperands[idx];
@@ -1558,6 +1595,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       newArgs.push_back(arg);
     }
   }
+  unsigned numEllipsisArgs =
+      ellipsisStart ? newArgs.size() - *ellipsisStart : 0;
 
   bool hasResult = call.getNumResults() > 0;
   mlir::Type origRetTy =
@@ -1568,8 +1607,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   // through a prepended pointer slot, not as a result), so dispatch to a
   // dedicated helper for it; everything below handles the by-value returns.
   if (fc.returnInfo.kind == ArgKind::Indirect && hasResult) {
-    rewriteIndirectReturnCall(call, fc, newArgs, origRetTy, origCallArgTypes,
-                              builder, dl);
+    rewriteIndirectReturnCall(call, fc, newArgs, numEllipsisArgs, origRetTy,
+                              origCallArgTypes, builder, dl);
     eraseDeadRecordLoads(deadRecordLoads);
     return mlir::success();
   }
@@ -1584,7 +1623,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     callRetTy = fc.returnInfo.coercedType;
 
   builder.setInsertionPoint(call);
-  prependIndirectCallee(call, newArgs, callRetTy, builder);
+  prependIndirectCallee(call, newArgs, callRetTy, numEllipsisArgs, builder);
   auto newCall = cir::CallOp::create(builder, call.getLoc(),
                                      call.getCalleeAttr(), callRetTy, newArgs);
   copyCallAttributes(call, newCall);
@@ -1658,10 +1697,8 @@ void CIRABIRewriteContext::rewriteFunctionAddress(cir::GetGlobalOp addrOp,
   if (addrOp.getAddr().use_empty())
     return;
 
-  // A later indirect call through the written type stays correct, since it
-  // reclassifies from that type and coerces to the signature funcOp was
-  // rewritten to.  Ellipsis arguments are the exception the indirect-call
-  // path reports rather than lowers.
+  // A later indirect call through the written type is classified and coerced
+  // on its own, so casting back leaves it to that rewrite.
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointAfter(addrOp);
   auto bitcast = cir::CastOp::create(builder, addrOp.getLoc(), oldPtrTy,
