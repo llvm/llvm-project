@@ -457,26 +457,47 @@ define amdgpu_kernel void @test_bswap_v4i64(ptr addrspace(1) %out, ptr addrspace
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: test_bswap_v4i64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[8:11], s[4:5], 0x24
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_load_b256 s[0:7], s[10:11], 0x0
-; GFX11-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX11-NEXT:    s_mov_b32 s10, -1
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v7, 0, s6, 0x10203
-; GFX11-NEXT:    v_perm_b32 v6, 0, s7, 0x10203
-; GFX11-NEXT:    v_perm_b32 v5, 0, s4, 0x10203
-; GFX11-NEXT:    v_perm_b32 v4, 0, s5, 0x10203
-; GFX11-NEXT:    v_perm_b32 v3, 0, s2, 0x10203
-; GFX11-NEXT:    v_perm_b32 v2, 0, s3, 0x10203
-; GFX11-NEXT:    v_perm_b32 v1, 0, s0, 0x10203
-; GFX11-NEXT:    v_perm_b32 v0, 0, s1, 0x10203
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[8:11], 0 offset:16
-; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[8:11], 0
-; GFX11-NEXT:    s_endpgm
+; GFX11-REAL16-LABEL: test_bswap_v4i64:
+; GFX11-REAL16:       ; %bb.0:
+; GFX11-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-REAL16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-REAL16-NEXT:    s_load_b256 s[4:11], s[2:3], 0x0
+; GFX11-REAL16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-REAL16-NEXT:    s_mov_b32 s2, -1
+; GFX11-REAL16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-REAL16-NEXT:    v_perm_b32 v7, 0, s10, 0x10203
+; GFX11-REAL16-NEXT:    v_perm_b32 v6, 0, s11, 0x10203
+; GFX11-REAL16-NEXT:    v_perm_b32 v5, 0, s8, 0x10203
+; GFX11-REAL16-NEXT:    v_perm_b32 v4, 0, s9, 0x10203
+; GFX11-REAL16-NEXT:    v_perm_b32 v3, 0, s6, 0x10203
+; GFX11-REAL16-NEXT:    v_perm_b32 v2, 0, s7, 0x10203
+; GFX11-REAL16-NEXT:    v_perm_b32 v1, 0, s4, 0x10203
+; GFX11-REAL16-NEXT:    v_perm_b32 v0, 0, s5, 0x10203
+; GFX11-REAL16-NEXT:    s_clause 0x1
+; GFX11-REAL16-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0 offset:16
+; GFX11-REAL16-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
+; GFX11-REAL16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: test_bswap_v4i64:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_load_b128 s[8:11], s[4:5], 0x24
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_load_b256 s[0:7], s[10:11], 0x0
+; GFX11-FAKE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX11-FAKE16-NEXT:    s_mov_b32 s10, -1
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_perm_b32 v7, 0, s6, 0x10203
+; GFX11-FAKE16-NEXT:    v_perm_b32 v6, 0, s7, 0x10203
+; GFX11-FAKE16-NEXT:    v_perm_b32 v5, 0, s4, 0x10203
+; GFX11-FAKE16-NEXT:    v_perm_b32 v4, 0, s5, 0x10203
+; GFX11-FAKE16-NEXT:    v_perm_b32 v3, 0, s2, 0x10203
+; GFX11-FAKE16-NEXT:    v_perm_b32 v2, 0, s3, 0x10203
+; GFX11-FAKE16-NEXT:    v_perm_b32 v1, 0, s0, 0x10203
+; GFX11-FAKE16-NEXT:    v_perm_b32 v0, 0, s1, 0x10203
+; GFX11-FAKE16-NEXT:    s_clause 0x1
+; GFX11-FAKE16-NEXT:    buffer_store_b128 v[4:7], off, s[8:11], 0 offset:16
+; GFX11-FAKE16-NEXT:    buffer_store_b128 v[0:3], off, s[8:11], 0
+; GFX11-FAKE16-NEXT:    s_endpgm
   %val = load <4 x i64>, ptr addrspace(1) %in, align 32
   %bswap = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> %val) nounwind readnone
   store <4 x i64> %bswap, ptr addrspace(1) %out, align 32
