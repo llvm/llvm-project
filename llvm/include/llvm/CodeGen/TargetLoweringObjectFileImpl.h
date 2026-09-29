@@ -331,12 +331,12 @@ public:
 
   void getModuleMetadata(Module &M) override;
 
-  /// Returns true if the read-only global \p GO of kind \p Kind is placed into
-  /// the code section and can therefore be addressed PC-relative. This is only
-  /// the case for local data whose initializer needs no relocations: references
-  /// from other translation units are always parts in the WSA, and function
-  /// pointers point to function descriptors in the WSA.
-  static bool isReadOnlyInCodeSection(const GlobalObject *GO, SectionKind Kind);
+  /// Returns true if the global \p GO, whose section kind is read-only, is
+  /// placed into the code section and can therefore be addressed PC-relative.
+  /// This is only the case for local data whose initializer needs no
+  /// relocations: references from other translation units are always parts in
+  /// the WSA, and function pointers point to function descriptors in the WSA.
+  static bool isReadOnlyInCodeSection(const GlobalObject *GO);
 
   bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
                                            const Function &F) const override;
