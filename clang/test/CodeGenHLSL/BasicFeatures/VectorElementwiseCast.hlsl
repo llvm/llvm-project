@@ -198,10 +198,12 @@ export void call8(int3x1 M) {
 // ROW-CHECK-NEXT:    [[TMP0:%.*]] = zext <2 x i1> [[M_ROW]] to <2 x i32>
 // CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[M_ADDR]], align 4
-// COL-CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[HLSL_EWCAST_SRC]], align 4
-// ROW-CHECK-NEXT:    [[TMP1_COL:%.*]] = call <2 x i32> @llvm.matrix.transpose.v2i32(<2 x i32> [[TMP1]], i32 2, i32 1)
-// ROW-CHECK-NEXT:    [[TMP1_ROW:%.*]] = call <2 x i32> @llvm.matrix.transpose.v2i32(<2 x i32> [[TMP1_COL]], i32 1, i32 2)
-// ROW-CHECK-NEXT:    store <2 x i32> [[TMP1_ROW]], ptr [[HLSL_EWCAST_SRC]], align 4
+// CHECK-NEXT:    [[M_LOADEDV:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+// COL-CHECK-NEXT:    [[M_EXT:%.*]] = zext <2 x i1> [[M_LOADEDV]] to <2 x i32>
+// ROW-CHECK-NEXT:    [[M_LOADEDV_COL:%.*]] = call <2 x i1> @llvm.matrix.transpose.v2i1(<2 x i1> [[M_LOADEDV]], i32 2, i32 1)
+// ROW-CHECK-NEXT:    [[M_LOADEDV_ROW:%.*]] = call <2 x i1> @llvm.matrix.transpose.v2i1(<2 x i1> [[M_LOADEDV_COL]], i32 1, i32 2)
+// ROW-CHECK-NEXT:    [[M_EXT:%.*]] = zext <2 x i1> [[M_LOADEDV_ROW]] to <2 x i32>
+// CHECK-NEXT:    store <2 x i32> [[M_EXT]], ptr [[HLSL_EWCAST_SRC]], align 4
 // CHECK-NEXT:    [[MATRIX_GEP:%.*]] = getelementptr inbounds <2 x i32>, ptr [[HLSL_EWCAST_SRC]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[MATRIX_GEP]], align 4
 // CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
