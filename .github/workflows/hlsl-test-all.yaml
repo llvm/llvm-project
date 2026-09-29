@@ -72,7 +72,7 @@ jobs:
             cd llvm-project
             mkdir build
             cd build
-            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DLLVM_USE_LINKER=lld -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -DDXC_DIR=$env:DXC_DIR -DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=${{ github.workspace }}/OffloadTest -DLLVM_EXTERNAL_PROJECTS="OffloadTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DOFFLOADTEST_WARP_ONLY=On -DGOLDENIMAGE_DIR=${{ github.workspace }}/golden-images ${{ github.workspace }}/llvm-project/llvm/
+            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DCMAKE_CXX_FLAGS=-Wno-clang-cl-pch -DLLVM_USE_LINKER=lld -C ${{ github.workspace }}/llvm-project/clang/cmake/caches/HLSL.cmake -DDXC_DIR=$env:DXC_DIR -DLLVM_EXTERNAL_OFFLOADTEST_SOURCE_DIR=${{ github.workspace }}/OffloadTest -DLLVM_EXTERNAL_PROJECTS="OffloadTest" -DLLVM_LIT_ARGS="--xunit-xml-output=testresults.xunit.xml -v" -DOFFLOADTEST_WARP_ONLY=On -DGOLDENIMAGE_DIR=${{ github.workspace }}/golden-images ${{ github.workspace }}/llvm-project/llvm/
             ninja hlsl-test-depends
       - name: Run HLSL Tests
         run: |
