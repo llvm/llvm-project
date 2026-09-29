@@ -273,7 +273,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::FCANONICALIZE, MVT::f64, Custom);
   }
 
-  if (Subtarget.hasMips32r2())
+  if (Subtarget.hasMTHC1())
     setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
 
   if (Subtarget.isGP64bit()) {
@@ -2109,9 +2109,6 @@ SDValue MipsTargetLowering::lowerConstantFP(SDValue Op,
   ConstantFPSDNode *CFP = cast<ConstantFPSDNode>(Op);
   const APFloat &FPVal = CFP->getValueAPF();
 
-  if (!isPositionIndependent())
-    return SDValue();
-
   if (FPVal.isZero())
     return SDValue();
 
@@ -2122,8 +2119,7 @@ SDValue MipsTargetLowering::lowerConstantFP(SDValue Op,
     llvm_unreachable("Unknown floating point type!");
     break;
   case MVT::f64: {
-    if (!Subtarget.hasMTHC1() || !Subtarget.hasMips32r2() ||
-        !Subtarget.isFP64bit())
+    if (!Subtarget.hasMTHC1() || !Subtarget.hasMips32r2())
       return SDValue();
     uint64_t Bits = INTVal.getZExtValue();
     uint32_t Lo = Bits & 0xFFFFFFFF;

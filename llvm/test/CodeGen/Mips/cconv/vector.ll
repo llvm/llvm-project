@@ -5630,8 +5630,8 @@ define <4 x float> @mixed_32(<4 x float> %a, i32 %b) {
 ; MIPS32R5EB-NEXT:    sw $1, 4($sp)
 ; MIPS32R5EB-NEXT:    lui $1, 17200
 ; MIPS32R5EB-NEXT:    sw $1, 0($sp)
-; MIPS32R5EB-NEXT:    lui $1, %hi($CPI41_0)
-; MIPS32R5EB-NEXT:    ldc1 $f0, %lo($CPI41_0)($1)
+; MIPS32R5EB-NEXT:    mtc1 $zero, $f0
+; MIPS32R5EB-NEXT:    mthc1 $1, $f0
 ; MIPS32R5EB-NEXT:    ldc1 $f1, 0($sp)
 ; MIPS32R5EB-NEXT:    sub.d $f0, $f1, $f0
 ; MIPS32R5EB-NEXT:    insert.w $w1[0], $6
@@ -5754,10 +5754,10 @@ define <4 x float> @mixed_32(<4 x float> %a, i32 %b) {
 ; MIPS32R5EL-NEXT:    .cfi_def_cfa_offset 8
 ; MIPS32R5EL-NEXT:    lui $1, 17200
 ; MIPS32R5EL-NEXT:    sw $1, 4($sp)
-; MIPS32R5EL-NEXT:    lw $1, 32($sp)
-; MIPS32R5EL-NEXT:    sw $1, 0($sp)
-; MIPS32R5EL-NEXT:    lui $1, %hi($CPI41_0)
-; MIPS32R5EL-NEXT:    ldc1 $f0, %lo($CPI41_0)($1)
+; MIPS32R5EL-NEXT:    lw $2, 32($sp)
+; MIPS32R5EL-NEXT:    sw $2, 0($sp)
+; MIPS32R5EL-NEXT:    mtc1 $zero, $f0
+; MIPS32R5EL-NEXT:    mthc1 $1, $f0
 ; MIPS32R5EL-NEXT:    ldc1 $f1, 0($sp)
 ; MIPS32R5EL-NEXT:    sub.d $f0, $f1, $f0
 ; MIPS32R5EL-NEXT:    insert.w $w1[0], $6
