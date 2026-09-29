@@ -89,6 +89,7 @@ LIBC_INLINE_VAR constexpr double INV_PI_LO[16] = {
 
 // Reduces non-negative large finite inputs x >= 0x1p49.
 // Decomposes x / pi into k + r, with k as an integer and |r| <= 0.5.
+// Based on a paper written by Tue Ly, see https://arxiv.org/abs/2609.35015
 template <size_t N>
 LIBC_INLINE static Reduction<N> large_reduction(cpp::simd<double, N> x) {
   constexpr cpp::simd<double, N> shift = 0x1.8p52;
