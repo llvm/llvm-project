@@ -198,7 +198,8 @@ mlir::acc::tileACCLoops(mlir::acc::LoopOp tileLoop,
 
   // Compute each element-loop upper bound by clamping the tile's far edge,
   // origIV + scaledStep, to origUB. An ascending loop takes
-  // min(origUB, edge - 1), a descending one max(origUB, edge + 1).
+  // min(origUB, edge - 1), a descending one max(origUB, edge + 1). The -1 and
+  // +1 apply in the presence of inclusive bounds and are omitted otherwise.
   rewriter.setInsertionPoint(tileLoop.getBody().getTerminator());
   llvm::SmallVector<mlir::Value, 3> elemLBs, elemUBs, elemSteps;
   llvm::SmallVector<mlir::Type, 3> elemIVTypes;
