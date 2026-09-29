@@ -102,7 +102,7 @@ def BranchOp : CF_Op<"br", [
     void eraseOperand(unsigned index);
   }];
 
-  let hasCanonicalizeMethod = 1;
+  let hasCanonicalizer = 1;
   let assemblyFormat = [{
     $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
   }];

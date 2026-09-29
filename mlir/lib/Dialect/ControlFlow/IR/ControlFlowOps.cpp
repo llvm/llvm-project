@@ -156,30 +156,35 @@ static LogicalResult collapseBranch(Block *&successor,
   return success();
 }
 
+namespace {
 /// Simplify a branch to a block that has a single predecessor. This effectively
 /// merges the two blocks.
-static LogicalResult
-simplifyBrToBlockWithSinglePred(BranchOp op, PatternRewriter &rewriter) {
-  // Check that the successor block has a single predecessor.
-  Block *succ = op.getDest();
-  Block *opParent = op->getBlock();
-  if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
-    return failure();
+struct SimplifyBranchToBlockWithSinglePred : public OpRewritePattern<BranchOp> {
+  using OpRewritePattern<BranchOp>::OpRewritePattern;
 
-  // If any branch operand is itself a block argument of the successor, merging
-  // would call replaceAllUsesWith(arg, arg) — a no-op — leaving dangling uses
-  // of that argument after the successor block is erased.
-  for (Value operand : op.getOperands())
-    if (auto ba = dyn_cast<BlockArgument>(operand))
-      if (ba.getOwner() == succ)
-        return failure();
+  LogicalResult matchAndRewrite(BranchOp op,
+                                PatternRewriter &rewriter) const override {
+    // Check that the successor block has a single predecessor.
+    Block *succ = op.getDest();
+    Block *opParent = op->getBlock();
+    if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
+      return failure();
 
-  // Merge the successor into the current block and erase the branch.
-  SmallVector<Value> brOperands(op.getOperands());
-  rewriter.eraseOp(op);
-  rewriter.mergeBlocks(succ, opParent, brOperands);
-  return success();
-}
+    // If any branch operand is itself a block argument of the successor,
+    // merging would call replaceAllUsesWith(arg, arg) — a no-op — leaving
+    // dangling uses of that argument after the successor block is erased.
+    for (Value operand : op.getOperands())
+      if (auto ba = dyn_cast<BlockArgument>(operand))
+        if (ba.getOwner() == succ)
+          return failure();
+
+    // Merge the successor into the current block and erase the branch.
+    SmallVector<Value> brOperands(op.getOperands());
+    rewriter.eraseOp(op);
+    rewriter.mergeBlocks(succ, opParent, brOperands);
+    return success();
+  }
+};
 
 ///   br ^bb1
 /// ^bb1
@@ -187,22 +192,26 @@ simplifyBrToBlockWithSinglePred(BranchOp op, PatternRewriter &rewriter) {
 ///
 ///  -> br ^bbN(...)
 ///
-static LogicalResult simplifyPassThroughBr(BranchOp op,
-                                           PatternRewriter &rewriter) {
-  Block *dest = op.getDest();
-  ValueRange destOperands = op.getOperands();
-  SmallVector<Value, 4> destOperandStorage;
+struct SimplifyPassThroughBranch : public OpRewritePattern<BranchOp> {
+  using OpRewritePattern<BranchOp>::OpRewritePattern;
 
-  // Try to collapse the successor if it points somewhere other than this
-  // block.
-  if (dest == op->getBlock() ||
-      failed(collapseBranch(dest, destOperands, destOperandStorage)))
-    return failure();
+  LogicalResult matchAndRewrite(BranchOp op,
+                                PatternRewriter &rewriter) const override {
+    Block *dest = op.getDest();
+    ValueRange destOperands = op.getOperands();
+    SmallVector<Value, 4> destOperandStorage;
 
-  // Create a new branch with the collapsed successor.
-  rewriter.replaceOpWithNewOp<BranchOp>(op, dest, destOperands);
-  return success();
-}
+    // Try to collapse the successor if it points somewhere other than this
+    // block.
+    if (dest == op->getBlock() ||
+        failed(collapseBranch(dest, destOperands, destOperandStorage)))
+      return failure();
+
+    // Create a new branch with the collapsed successor.
+    rewriter.replaceOpWithNewOp<BranchOp>(op, dest, destOperands);
+    return success();
+  }
+};
 
 /// If all incoming values for a block argument from all predecessors are the
 /// same SSA value, replace uses of the block argument with that value. This
@@ -261,7 +270,6 @@ static LogicalResult simplifyUniformBlockArgs(Block *dest,
   return success(changed);
 }
 
-namespace {
 /// Replaces block arguments with a uniform incoming value across all
 /// predecessors, for any op implementing BranchOpInterface.
 struct SimplifyUniformBlockArguments
@@ -277,10 +285,10 @@ struct SimplifyUniformBlockArguments
 };
 } // namespace
 
-LogicalResult BranchOp::canonicalize(BranchOp op, PatternRewriter &rewriter) {
-  return success(succeeded(simplifyBrToBlockWithSinglePred(op, rewriter)) ||
-                 succeeded(simplifyPassThroughBr(op, rewriter)) ||
-                 succeeded(simplifyUniformBlockArgs(op.getDest(), rewriter)));
+void BranchOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                           MLIRContext *context) {
+  results.add<SimplifyBranchToBlockWithSinglePred, SimplifyPassThroughBranch,
+              SimplifyUniformBlockArguments>(context);
 }
 
 void BranchOp::setDest(Block *block) { return setSuccessor(block); }
@@ -842,6 +850,7 @@ static LogicalResult simplifyConstSwitchValue(SwitchOp op,
   return success();
 }
 
+namespace {
 /// switch %c_42 : i32, [
 ///   default: ^bb1,
 ///   42: ^bb2,
@@ -853,42 +862,47 @@ static LogicalResult simplifyConstSwitchValue(SwitchOp op,
 ///   default: ^bb1,
 ///   42: ^bb3,
 /// ]
-static LogicalResult simplifyPassThroughSwitch(SwitchOp op,
-                                               PatternRewriter &rewriter) {
-  SmallVector<Block *> newCaseDests;
-  SmallVector<ValueRange> newCaseOperands;
-  SmallVector<SmallVector<Value>> argStorage;
-  auto caseValues = op.getCaseValues();
-  argStorage.reserve(caseValues->size() + 1);
-  auto caseDests = op.getCaseDestinations();
-  bool requiresChange = false;
-  for (int64_t i = 0, size = caseValues->size(); i < size; ++i) {
-    Block *caseDest = caseDests[i];
-    ValueRange caseOperands = op.getCaseOperands(i);
+struct SimplifyPassThroughSwitch : public OpRewritePattern<SwitchOp> {
+  using OpRewritePattern<SwitchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SwitchOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Block *> newCaseDests;
+    SmallVector<ValueRange> newCaseOperands;
+    SmallVector<SmallVector<Value>> argStorage;
+    auto caseValues = op.getCaseValues();
+    argStorage.reserve(caseValues->size() + 1);
+    auto caseDests = op.getCaseDestinations();
+    bool requiresChange = false;
+    for (int64_t i = 0, size = caseValues->size(); i < size; ++i) {
+      Block *caseDest = caseDests[i];
+      ValueRange caseOperands = op.getCaseOperands(i);
+      argStorage.emplace_back();
+      if (succeeded(collapseBranch(caseDest, caseOperands, argStorage.back())))
+        requiresChange = true;
+
+      newCaseDests.push_back(caseDest);
+      newCaseOperands.push_back(caseOperands);
+    }
+
+    Block *defaultDest = op.getDefaultDestination();
+    ValueRange defaultOperands = op.getDefaultOperands();
     argStorage.emplace_back();
-    if (succeeded(collapseBranch(caseDest, caseOperands, argStorage.back())))
+
+    if (succeeded(
+            collapseBranch(defaultDest, defaultOperands, argStorage.back())))
       requiresChange = true;
 
-    newCaseDests.push_back(caseDest);
-    newCaseOperands.push_back(caseOperands);
+    if (!requiresChange)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<SwitchOp>(op, op.getFlag(), defaultDest,
+                                          defaultOperands, *caseValues,
+                                          newCaseDests, newCaseOperands);
+    return success();
   }
-
-  Block *defaultDest = op.getDefaultDestination();
-  ValueRange defaultOperands = op.getDefaultOperands();
-  argStorage.emplace_back();
-
-  if (succeeded(
-          collapseBranch(defaultDest, defaultOperands, argStorage.back())))
-    requiresChange = true;
-
-  if (!requiresChange)
-    return failure();
-
-  rewriter.replaceOpWithNewOp<SwitchOp>(op, op.getFlag(), defaultDest,
-                                        defaultOperands, *caseValues,
-                                        newCaseDests, newCaseOperands);
-  return success();
-}
+};
+} // namespace
 
 /// switch %flag : i32, [
 ///   default: ^bb1,
@@ -1033,7 +1047,7 @@ void SwitchOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add(&simplifySwitchWithOnlyDefault)
       .add(&dropSwitchCasesThatMatchDefault)
       .add(&simplifyConstSwitchValue)
-      .add(&simplifyPassThroughSwitch)
+      .add<SimplifyPassThroughSwitch>(context)
       .add(&simplifySwitchFromSwitchOnSameCondition)
       .add(&simplifySwitchFromDefaultSwitchOnSameCondition)
       .add<SimplifyUniformBlockArguments>(context);
