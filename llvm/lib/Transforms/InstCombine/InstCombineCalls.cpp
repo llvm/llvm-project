@@ -53,6 +53,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -2563,8 +2564,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         X->getType()->isIntOrIntVectorTy(1)) {
       Type *Ty = II->getType();
       APInt SignBit = APInt::getSignMask(Ty->getScalarSizeInBits());
-      return SelectInst::Create(X, ConstantInt::get(Ty, SignBit),
-                                ConstantInt::getNullValue(Ty));
+      SelectInst *SI = SelectInst::Create(X, ConstantInt::get(Ty, SignBit),
+                                          ConstantInt::getNullValue(Ty));
+      // Mark the branch weights explicitly unknown as in the general case we
+      // cannot infer the probability of the condition without additional value
+      // profiling.
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
+      return SI;
     }
 
     if (Instruction *crossLogicOpFold =
