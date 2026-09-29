@@ -108,7 +108,16 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
 
-  // force-vector-interleave overrides DisableInterleaving.
+  // The vector width is selected in increasing order of priority:
+  //  1. -force-vector-width
+  //  2. llvm.loop.vectorize.width metadata
+
+  // The interleave count is selected in increasing order of priority:
+  //  1. InterleaveOnlyWhenForced initializes IC to 1
+  //  2. llvm.loop.interleave.count metadata
+  //  3. -force-vector-interleave
+  // Note: If no IC is set, getInterleave() returns 1 when loop unrolling is
+  // disabled.
   if (VectorizerParams::isInterleaveForced())
     Interleave.Value = VectorizerParams::VectorizationInterleave;
 
