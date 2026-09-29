@@ -335,9 +335,7 @@ bool MipsCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
                      F.getContext());
 
-  const MipsTargetMachine &TM =
-      static_cast<const MipsTargetMachine &>(MF.getTarget());
-  const MipsABIInfo &ABI = TM.getABI();
+  const MipsABIInfo &ABI = MF.getSubtarget<MipsSubtarget>().getABI();
   CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(F.getCallingConv()),
                        Align(1));
 
@@ -411,7 +409,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   const MipsTargetLowering &TLI = *getTLI<MipsTargetLowering>();
   const MipsTargetMachine &TM =
       static_cast<const MipsTargetMachine &>(MF.getTarget());
-  const MipsABIInfo &ABI = TM.getABI();
+  const MipsABIInfo &ABI = MF.getSubtarget<MipsSubtarget>().getABI();
 
   MachineInstrBuilder CallSeqStart =
       MIRBuilder.buildInstr(Mips::ADJCALLSTACKDOWN);

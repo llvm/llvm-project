@@ -29,6 +29,7 @@ unittest("ClangScalableAnalysisTests") {
     "Analyses/TypeConstrainedPointers/TypeConstrainedPointersExtractorTest.cpp",
     "Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp",
     "Analyses/UnsafeBufferUsage/UnsafeBufferUsageWPATest.cpp",
+    "Analyses/VirtualMethodFamily/VirtualMethodFamilyExtractorTest.cpp",
     "BuildNamespaceTest.cpp",
     "EntityIdTableTest.cpp",
     "EntityIdTest.cpp",
