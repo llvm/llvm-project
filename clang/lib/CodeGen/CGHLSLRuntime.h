@@ -152,7 +152,17 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveUMin, wave_reduce_umin)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveCountBits, wave_active_countbits)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveGetLaneCount, wave_get_lane_count)
+  llvm::Intrinsic::ID getWaveGetLaneCountIntrinsic() {
+    switch (getArch()) {
+    case llvm::Triple::dxil:
+      return llvm::Intrinsic::dx_wave_get_lane_count;
+    case llvm::Triple::spirv:
+      return llvm::Intrinsic::spv_subgroup_size;
+    default:
+      llvm_unreachable(
+          "WaveGetLaneCount intrinsic not supported by target architecture");
+    }
+  }
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneFirst, wave_readlane_first)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossX, quad_read_across_x)
