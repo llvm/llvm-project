@@ -40,7 +40,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/SipHash.h"
 #include <cassert>
@@ -238,16 +237,7 @@ class TypeFuncHashMode : public TypeHashMode {
 public:
   TypeFuncHashMode(const IntegerType &TokenTy, uint64_t MaxTokens,
                    TokenMode Mode)
-      : TypeHashMode(TokenTy, MaxTokens), Mode(Mode) {
-    // At least one bit each for the type and function hashes, plus one bit for
-    // the pointer flag with pointer split.
-    const unsigned MinBits =
-        Mode == TokenMode::TypeFuncHashPointerSplit ? 3 : 2;
-    if (Log2_64(this->MaxTokens) < MinBits)
-      reportFatalUsageError("alloc-token-max must be at least " +
-                            Twine(1u << MinBits) + " in mode " +
-                            getAllocTokenModeAsString(Mode));
-  }
+      : TypeHashMode(TokenTy, MaxTokens), Mode(Mode) {}
 
   uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
     MDNode *N = getAllocTokenMetadata(CB);
