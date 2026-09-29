@@ -131,6 +131,14 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:  Same,
 // CHECK-NEXT:  SizeT,
 // CHECK-NEXT:  Struct,
+// CHECK-NEXT:  UInt,
+// CHECK-NEXT:  UInt16,
+// CHECK-NEXT:  UInt32,
+// CHECK-NEXT:  UInt64,
+// CHECK-NEXT:  UIntPlus,
+// CHECK-NEXT:  UIntX,
+// CHECK-NEXT:  ULLong,
+// CHECK-NEXT:  ULong,
 // CHECK-NEXT:  Void,
 // CHECK-NEXT:};
 // CHECK-NEXT: } // End namespace RTLIB

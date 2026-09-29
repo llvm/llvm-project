@@ -74,6 +74,14 @@ def Long : FuncArgType;     // Either 32 or 64 bits.
 def IntX : FuncArgType;     // Any integer type.
 def Int64 : FuncArgType;
 def LLong : FuncArgType;    // 64 bits on all targets.
+def UInt16 : FuncArgType;
+def UInt32 : FuncArgType;
+def UInt : FuncArgType;
+def UIntPlus : FuncArgType;
+def ULong : FuncArgType;
+def UIntX : FuncArgType;
+def UInt64 : FuncArgType;
+def ULLong : FuncArgType;
 def SizeT : FuncArgType;    // size_t.
 def SSizeT : FuncArgType;   // POSIX ssize_t.
 def Flt : FuncArgType;      // IEEE float.
