@@ -185,7 +185,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
                                         *VPI, Ingredient.getDebugLoc());
         }
       } else {
-        assert(isa<VPWidenIntOrFpInductionRecipe>(&Ingredient) &&
+        assert(isa<VPWidenInductionRecipe>(&Ingredient) &&
                "inductions must be created earlier");
         continue;
       }

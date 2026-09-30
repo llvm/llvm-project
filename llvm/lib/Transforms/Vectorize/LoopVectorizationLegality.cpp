@@ -710,6 +710,19 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
   LLVM_DEBUG(dbgs() << "LV: Found an induction variable.\n");
 }
 
+/// Returns true if \p ID is a pointer induction with a non-constant step. Such
+/// inductions are rejected unless -lv-strided-pointer-ivs is set, to preserve
+/// historical vectorizer behavior after a generalization of the IVDescriptor
+/// code. The intent is to remove this check, but issues around code quality
+/// for such loops have to be fixed first.
+static bool isDisallowedStridedPointerInduction(const InductionDescriptor &ID,
+                                                const VectorizeOptions &Opts) {
+  if (Opts.lv_strided_pointer_ivs)
+    return false;
+  return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
+         ID.getConstIntStepValue() == nullptr;
+}
+
 bool LoopVectorizationLegality::setupOuterLoopInductions() {
   BasicBlock *Header = TheLoop->getHeader();
 
@@ -717,7 +730,9 @@ bool LoopVectorizationLegality::setupOuterLoopInductions() {
   auto IsSupportedPhi = [&](PHINode &Phi) -> bool {
     InductionDescriptor ID;
     if (InductionDescriptor::isInductionPHI(&Phi, TheLoop, PSE, ID) &&
-        ID.getKind() == InductionDescriptor::IK_IntInduction) {
+        (ID.getKind() == InductionDescriptor::IK_IntInduction ||
+         ID.getKind() == InductionDescriptor::IK_PtrInduction) &&
+        !isDisallowedStridedPointerInduction(ID, Opts)) {
       addInductionPhi(&Phi, ID);
       return true;
     }
@@ -849,21 +864,9 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       return true;
     }
 
-    // We prevent matching non-constant strided pointer IVS to preserve
-    // historical vectorizer behavior after a generalization of the
-    // IVDescriptor code.  The intent is to remove this check, but we
-    // have to fix issues around code quality for such loops first.
-    auto IsDisallowedStridedPointerInduction =
-        [&](const InductionDescriptor &ID) {
-          if (Opts.lv_strided_pointer_ivs)
-            return false;
-          return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
-                 ID.getConstIntStepValue() == nullptr;
-        };
-
     InductionDescriptor ID;
     if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID) &&
-        !IsDisallowedStridedPointerInduction(ID)) {
+        !isDisallowedStridedPointerInduction(ID, Opts)) {
       addInductionPhi(Phi, ID);
       Requirements->addExactFPMathInst(ID.getExactFPMathInst());
       return true;
@@ -877,7 +880,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // As a last resort, coerce the PHI to a AddRec expression
     // and re-try classifying it a an induction PHI.
     if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&
-        !IsDisallowedStridedPointerInduction(ID)) {
+        !isDisallowedStridedPointerInduction(ID, Opts)) {
       addInductionPhi(Phi, ID);
       return true;
     }
