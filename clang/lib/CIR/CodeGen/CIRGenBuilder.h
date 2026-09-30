@@ -833,6 +833,17 @@ public:
                                             std::forward<Operands>(op)...)
         .getResult();
   }
+
+  template <typename... Operands>
+  mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
+                                  const mlir::Type &resTy,
+                                  cir::FastMathFlagsAttr fastmath,
+                                  Operands &&...op) {
+    return cir::LLVMIntrinsicCallOp::create(
+               *this, loc, this->getStringAttr(str), resTy,
+               std::forward<Operands>(op)..., fastmath)
+        .getResult();
+  }
 };
 
 } // namespace clang::CIRGen
