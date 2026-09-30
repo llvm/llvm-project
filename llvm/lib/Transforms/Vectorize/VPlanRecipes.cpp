@@ -682,8 +682,9 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Select:
   case VPInstruction::WideActiveLaneMask:
   case VPInstruction::ReductionStartVector:
-  case VPInstruction::VFMultipleLoad:
     return 3;
+  case VPInstruction::VFMultipleLoad:
+    return 4;
   case Instruction::Call:
     return getCalledFnOperandIndex(operands()) + 1;
   case Instruction::GetElementPtr:
@@ -1193,7 +1194,7 @@ Value *VPInstruction::generate(VPTransformState &State,
                                          /*FMFSource=*/nullptr, getName());
   }
   case VPInstruction::VFMultipleLoad: {
-    unsigned VFMultiple = cast<VPConstantInt>(getOperand(0))->getZExtValue();
+    unsigned VFMultiple = cast<VPConstantInt>(getOperand(3))->getZExtValue();
     auto *WideDataTy = VectorType::get(getScalarType(), State.VF * VFMultiple);
 
     Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
@@ -1202,12 +1203,12 @@ Value *VPInstruction::generate(VPTransformState &State,
                                      "vf.multiple.load");
   }
   case VPInstruction::VFMultipleStore: {
-    unsigned VFMultiple = cast<VPConstantInt>(getOperand(0))->getZExtValue();
+    unsigned NumVectorOps = getNumOperands() - 3;
     Type *ScalarStoreTy = getOperand(3)->getScalarType();
-    auto *WideDataTy = VectorType::get(ScalarStoreTy, State.VF * VFMultiple);
+    auto *WideDataTy = VectorType::get(ScalarStoreTy, State.VF * NumVectorOps);
 
     Value *WideData = PoisonValue::get(WideDataTy);
-    for (unsigned I = 0; I < VFMultiple; ++I) {
+    for (unsigned I = 0; I < NumVectorOps; ++I) {
       Value *Part = State.get(getOperand(I + 3));
       WideData = Builder.CreateInsertVector(WideDataTy, WideData, Part,
                                             I * State.VF.getKnownMinValue());
