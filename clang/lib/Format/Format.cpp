@@ -1419,6 +1419,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("JavaScriptWrapImports", Style.JavaScriptWrapImports);
     IO.mapOptional("KeepEmptyLines", Style.KeepEmptyLines);
     IO.mapOptional("KeepFormFeed", Style.KeepFormFeed);
+    IO.mapOptional("KwBreakBeforeCaseLabel", Style.KwBreakBeforeCaseLabel);
     IO.mapOptional("LambdaBodyIndentation", Style.LambdaBodyIndentation);
     IO.mapOptional("LineEnding", Style.LineEnding);
     IO.mapOptional("MacroBlockBegin", Style.MacroBlockBegin);
@@ -2000,6 +2001,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
       /*AtStartOfFile=*/true,
   };
   LLVMStyle.KeepFormFeed = false;
+  LLVMStyle.KwBreakBeforeCaseLabel = false;
   LLVMStyle.LambdaBodyIndentation = FormatStyle::LBI_Signature;
   LLVMStyle.Language = Language;
   LLVMStyle.LineEnding = FormatStyle::LE_DeriveLF;

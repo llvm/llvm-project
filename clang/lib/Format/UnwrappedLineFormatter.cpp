@@ -281,6 +281,14 @@ private:
         return MergedLines;
     }
 
+    // Handle case labels preceded by a break statement
+    if (Style.KwBreakBeforeCaseLabel &&
+        NextLine.First->isOneOf(tok::kw_case, tok::kw_default) &&
+        TheLine->endsWith(tok::semi, tok::kw_break) &&
+        TheLine->Level <= NextLine.Level) {
+      return 1;
+    }
+
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;
 
     // Handle blocks where the brace has already been wrapped.

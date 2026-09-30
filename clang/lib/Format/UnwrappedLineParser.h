@@ -124,6 +124,7 @@ private:
   void reset();
   void parseFile();
   bool precededByCommentOrPPDirective() const;
+  bool linePrecededByKwBreak() const;
   bool parseLevel(const FormatToken *OpeningBrace = nullptr,
                   IfStmtKind *IfKind = nullptr,
                   FormatToken **IfLeftBrace = nullptr);
