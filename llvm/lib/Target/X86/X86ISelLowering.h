@@ -274,6 +274,8 @@ namespace llvm {
         const APInt &ShiftOrRotateAmt,
         const std::optional<APInt> &AndMask) const override;
 
+    bool preferIncOfAddToSubOfNot(EVT VT) const override;
+
     bool preferScalarizeSplat(SDNode *N) const override;
 
     CondMergingParams
@@ -731,7 +733,9 @@ namespace llvm {
     SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value, SDValue Addr,
                                    int JTI, SelectionDAG &DAG) const override;
 
-    Align getPrefLoopAlignment(MachineLoop *ML) const override;
+    Align
+    getPrefLoopAlignment(MachineLoop *ML,
+                         const MachineBasicBlock *BlockToAlign) const override;
 
     EVT getTypeToTransformTo(LLVMContext &Context, EVT VT) const override {
       if (VT == MVT::f80)

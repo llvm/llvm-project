@@ -160,7 +160,7 @@ void OmpStructureChecker::HasInvalidLoopBinding(
         "strictly nested inside a `TEAMS` region."_err_en_US);
   }
 
-  if (llvm::omp::DirectiveSet{
+  if (llvm::omp::Directives{
           llvm::omp::OMPD_teams_loop, llvm::omp::OMPD_target_teams_loop}
           .test(beginName.v)) {
     teamsBindingChecker(
@@ -366,7 +366,7 @@ void OmpStructureChecker::CheckNestedConstruct(
       }
     }
 
-  } else if (assoc == llvm::omp::Association::LoopSeq) {
+  } else if (assoc == llvm::omp::Association::LoopSequence) {
     if (haveLength.value == 0) {
       context_.Say(beginSource, MsgShouldContainDoOr, "sequence");
     } else {

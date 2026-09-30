@@ -75,24 +75,48 @@ def libc_release_copts():
     })
     return copts + platform_copts
 
-def _libc_library(name, deps = [], **kwargs):
+def _libc_library(
+        name,
+        deps = [],
+        copts = [],
+        target_compatible_with = [],
+        full_build_only = False,
+        **kwargs):
     """Internal macro to serve as a base for all other libc library rules.
 
     Args:
       name: Target name.
       deps: cc_library deps.
+      copts: copts for cc_library, only allowed if full_build_only is True.
+      target_compatible_with: target_compatible_with for the cc_library rule.
+      full_build_only: Whether this target is only used in full-build mode.
       **kwargs: All other attributes relevant for the cc_library rule.
     """
 
-    for attr in ["copts", "local_defines"]:
+    for attr in ["local_defines"]:
         if attr in kwargs:
             fail("disallowed attribute: '{}' in rule: '{}'".format(attr, name))
+
+    # Allow copts if the target is only for full-builds. Startup or threading
+    # code necessitate copts, but LLVM-libc's build rules should prefer to
+    # avoid copts when possible as per-file-copts are not compatible with
+    # libc_release_library's method of aggregating sources into one cc_library.
+    if copts and not full_build_only:
+        fail("copts disallowed in overlay-compatible rule: '{}'".format(name))
+
+    if full_build_only:
+        target_compatible_with = target_compatible_with + select({
+            Label(":full_build"): [],
+            "//conditions:default": ["@platforms//:incompatible"],
+        })
+
     cc_library(
         name = name,
-        copts = libc_common_copts(),
+        copts = libc_common_copts() + copts,
         local_defines = LIBC_CONFIGURE_OPTIONS,
         deps = deps + libc_common_deps(),
         linkstatic = 1,
+        target_compatible_with = target_compatible_with,
         **kwargs
     )
 
@@ -101,6 +125,26 @@ def _libc_library(name, deps = [], **kwargs):
 # libc_support_library.
 def libc_support_library(name, **kwargs):
     _libc_library(name = name, **kwargs)
+
+def libc_startup_library(name, **kwargs):
+    """Add target for a libc startup library.
+
+    Args:
+      name: Target name.
+      **kwargs: Other attributes relevant for a cc_library.
+    """
+
+    _libc_library(
+        name = name,
+        full_build_only = True,
+        copts = [
+            "-ffreestanding",
+            "-fno-builtin",
+            "-fno-omit-frame-pointer",
+            "-fno-stack-protector",
+        ],
+        **kwargs
+    )
 
 def libc_function(name, **kwargs):
     """Add target for a libc function.
