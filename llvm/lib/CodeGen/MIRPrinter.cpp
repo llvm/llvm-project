@@ -908,6 +908,8 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
     OS << "lr-split ";
   if (MI.getFlag(MachineInstr::NonNull))
     OS << "nonnull ";
+  if (MI.getFlag(MachineInstr::BBProlog))
+    OS << "bb-prolog ";
 
   // NOTE: Please add new MIFlags also to the MI_FLAGS_STR in
   // llvm/utils/UpdateTestChecks/mir.py.
