@@ -47,26 +47,23 @@ def FeatureFSRRA    : SubtargetFeature<"fsrra", "HasFSRRA", "true",
 // SuperH CPU Family features
 //===----------------------------------------------------------------------===//
 
-def FeatureSH2      : SubtargetFeature<"sh2", "SHArchVersion", "SH2",
+def FeatureSH2      : SubtargetFeature<"sh2", "IsSH2", "true",
                           "SH-2 ISA Support",
                           []>;
-def FeatureSH2E     : SubtargetFeature<"sh2e", "SHArchVersion", "SH2E",
-                          "SH-2E ISA Support",
-                          [FeatureSH2, FeatureFPU]>;
-def FeatureSH2A     : SubtargetFeature<"sh2a", "SHArchVersion", "SH2A",
+def FeatureSH2A     : SubtargetFeature<"sh2a", "IsSH2A", "true",
                           "SH-2A ISA Support",
                           [FeatureSH2]>;
-def FeatureSH3      : SubtargetFeature<"sh3", "SHArchVersion", "SH3",
+def FeatureSH3      : SubtargetFeature<"sh3", "IsSH3", "true",
                           "SH-3 ISA Support",
                           [FeatureSH2]>;
-def FeatureSH3E     : SubtargetFeature<"sh3e", "SHArchVersion", "SH3E",
+def FeatureSH3E     : SubtargetFeature<"sh3e", "IsSH3E", "true",
                           "SH-3E ISA Support",
                           [FeatureSH3, FeatureFPU]>;
-def FeatureSH4      : SubtargetFeature<"sh4", "SHArchVersion", "SH4",
+def FeatureSH4      : SubtargetFeature<"sh4", "IsSH4", "true",
                           "SH-4 ISA Support",
                           [FeatureSH3, FeatureFPU, FeatureFPU64,
                            FeatureGPRBanks]>;
-def FeatureSH4A     : SubtargetFeature<"sh4a", "SHArchVersion", "SH4A",
+def FeatureSH4A     : SubtargetFeature<"sh4a", "IsSH4A", "true",
                           "SH-4A ISA Support",
                           [FeatureSH4, FeatureFSCA, FeatureFSRRA]>;
 
@@ -74,19 +71,30 @@ def FeatureSH4A     : SubtargetFeature<"sh4a", "SHArchVersion", "SH4A",
 // Predicates
 //===--------------------------------------------------------------------------===//
 
-def HasFSCA     : Predicate<"Subtarget->hasFSCA()">;
-def HasFSRRA    : Predicate<"Subtarget->hasFSRRA()">;
-def HasFPU      : Predicate<"Subtarget->hasFPU()">;
-def HasDSP      : Predicate<"Subtarget->hasDSP()">;
-def HasSH2      : Predicate<"Subtarget->hasSH2Inst()">;
-def HasSH2E     : Predicate<"Subtarget->hasSH2EInst()">;
-def HasSH2A     : Predicate<"Subtarget->hasSH2AInst()">;
-def HasSH3      : Predicate<"Subtarget->hasSH3Inst()">;
-def HasSH3E     : Predicate<"Subtarget->hasSH3EInst()">;
-def HasSH4      : Predicate<"Subtarget->hasSH4Inst()">;
-def HasSH4A     : Predicate<"Subtarget->hasSH4AInst()">;
+def IsSH2      : Predicate<"Subtarget->isSH2()">,
+                  AssemblerPredicate<(all_of FeatureSH2)>;
+def IsSH2A     : Predicate<"Subtarget->isSH2A()">,
+                  AssemblerPredicate<(all_of FeatureSH2A)>;
+def IsSH3      : Predicate<"Subtarget->isSH3()">,
+                  AssemblerPredicate<(all_of FeatureSH3)>;
+def IsSH3E     : Predicate<"Subtarget->isSH3E()">,
+                  AssemblerPredicate<(all_of FeatureSH3E)>;
+def IsSH4      : Predicate<"Subtarget->isSH4()">,
+                  AssemblerPredicate<(all_of FeatureSH4)>;
+def IsSH4A     : Predicate<"Subtarget->isSH4A()">,
+                  AssemblerPredicate<(all_of FeatureSH4A)>;
+
+def HasFSCA     : Predicate<"Subtarget->hasFSCA()">,
+                  AssemblerPredicate<(all_of FeatureFPU)>;
+def HasFSRRA    : Predicate<"Subtarget->hasFSRRA()">,
+                  AssemblerPredicate<(all_of FeatureFPU)>;
+def HasFPU      : Predicate<"Subtarget->hasFPU()">,
+                  AssemblerPredicate<(all_of FeatureFPU)>;
 def HasF64      : Predicate<"Subtarget->hasFP64()">,
                   AssemblerPredicate<(all_of FeatureFPU)>;
+
+def HasDSP      : Predicate<"Subtarget->hasDSP()">,
+                  AssemblerPredicate<(all_of FeatureDSP)>;
 
 //===----------------------------------------------------------------------===//
 // SuperH Processors
@@ -103,7 +111,7 @@ class ProcModel<string Name, list<SubtargetFeature> Features>
 def : ProcModel<"generic", [FeatureSH2]>;
 def : ProcModel<"sh1", []>;
 def : ProcModel<"sh2", [FeatureSH2]>;
-def : ProcModel<"sh2e", [FeatureSH2E]>;
+def : ProcModel<"sh2e", [FeatureSH2, FeatureFPU]>;
 def : ProcModel<"sh2a", [FeatureSH2A]>;
 def : ProcModel<"sh3", [FeatureSH3]>;
 def : ProcModel<"sh3e", [FeatureSH3E]>;
