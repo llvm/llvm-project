@@ -955,8 +955,7 @@ void __tsan_go_atomic64_store(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
 #  if __TSAN_HAS_INT128
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic128_store(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
-  AtomicGo<OpStore>(thr, cpc, pc, mo_release, *(a128**)a,
-                    *(a128_u64*)(a + 8));
+  AtomicGo<OpStore>(thr, cpc, pc, mo_release, *(a128**)a, *(a128_u64*)(a + 8));
 }
 #  endif
 
