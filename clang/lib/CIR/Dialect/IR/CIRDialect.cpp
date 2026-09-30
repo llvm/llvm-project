@@ -35,6 +35,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LogicalResult.h"
 
+#include <array>
+
 using namespace mlir;
 using namespace cir;
 
@@ -4934,17 +4936,68 @@ void InlineAsmOp::getEffects(
 // ThrowOp / TryThrowOp
 //===----------------------------------------------------------------------===//
 
+using ThrowAddressSpaces = std::array<mlir::ptr::MemorySpaceAttrInterface, 3>;
+
+template <typename ThrowOpTy>
+static std::optional<ThrowAddressSpaces> getThrowAddressSpaces(ThrowOpTy op) {
+  if (!op.getExceptionPtr() || !op.getTypeInfo() || !op.getDtor())
+    return std::nullopt;
+
+  return ThrowAddressSpaces{
+      mlir::cast<cir::PointerType>(op.getExceptionPtr().getType())
+          .getAddrSpace(),
+      mlir::cast<cir::PointerType>(op.getTypeInfo().getType()).getAddrSpace(),
+      mlir::cast<cir::PointerType>(op.getDtor().getType()).getAddrSpace()};
+}
+
+static std::optional<ThrowAddressSpaces>
+getThrowAddressSpaces(mlir::Operation *op) {
+  if (auto throwOp = mlir::dyn_cast<cir::ThrowOp>(op))
+    return getThrowAddressSpaces(throwOp);
+  if (auto tryThrowOp = mlir::dyn_cast<cir::TryThrowOp>(op))
+    return getThrowAddressSpaces(tryThrowOp);
+  return std::nullopt;
+}
+
 template <typename ThrowOpTy>
 static mlir::LogicalResult verifyThrowOpImpl(ThrowOpTy op) {
-  if (op.rethrows())
+  bool hasExceptionPtr = static_cast<bool>(op.getExceptionPtr());
+  bool hasTypeInfo = static_cast<bool>(op.getTypeInfo());
+  bool hasDtor = static_cast<bool>(op.getDtor());
+
+  if (!hasExceptionPtr && !hasTypeInfo && !hasDtor)
     return mlir::success();
 
-  if (op.getNumOperands() != 0) {
-    if (op.getTypeInfo())
-      return mlir::success();
-    return op.emitOpError() << "'type_info' symbol attribute missing";
-  }
+  if (!hasExceptionPtr || !hasTypeInfo || !hasDtor)
+    return op.emitOpError()
+           << "must have either no operands for a rethrow or exception, "
+              "type_info, and destructor pointer operands for a throw";
 
+  auto module = op->template getParentOfType<mlir::ModuleOp>();
+  if (!module)
+    return op.emitOpError("expects an enclosing module");
+
+  mlir::Operation *firstThrow = nullptr;
+  std::optional<ThrowAddressSpaces> expectedAddressSpaces;
+  module.walk([&](mlir::Operation *candidate) {
+    expectedAddressSpaces = getThrowAddressSpaces(candidate);
+    if (!expectedAddressSpaces)
+      return mlir::WalkResult::advance();
+    firstThrow = candidate;
+    return mlir::WalkResult::interrupt();
+  });
+
+  assert(expectedAddressSpaces && firstThrow &&
+         "the operation being verified provides a throw signature");
+  if (*expectedAddressSpaces == *getThrowAddressSpaces(op))
+    return mlir::success();
+
+  mlir::InFlightDiagnostic diag = op.emitOpError(
+      "operand address spaces must match the first non-rethrow cir.throw or "
+      "cir.try_throw in the module");
+  diag.attachNote(firstThrow->getLoc())
+      << "the module's __cxa_throw address-space signature is established "
+         "here";
   return mlir::failure();
 }
 
