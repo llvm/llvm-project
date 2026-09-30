@@ -43,6 +43,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ScaledNumber.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 
