@@ -32825,9 +32825,9 @@ public:
         for (unsigned Cnt = 0; Cnt < NumReducedVals; ++Cnt) {
           if (Cnt >= Pos && Cnt < Pos + ReduxWidth)
             continue;
-          Value *RdxVal = Candidates[Cnt];
-          if (auto It = TrackedVals.find(RdxVal); It != TrackedVals.end())
-            RdxVal = It->second;
+          // The candidate may be replaced by the previous vectorization
+          // attempts, use the currently tracked value.
+          Value *RdxVal = TrackedVals.at(TrackedToOrig[Cnt]);
           if (!Visited.insert(RdxVal).second)
             continue;
           // Scalars not reduced by the top node may be used by the reduction
@@ -36449,8 +36449,15 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
 
   // Attempt to sort and vectorize each of the store-groups.
   DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>> Attempted;
-  for (auto &Pair : make_filter_range(
-           Stores, [](auto &Pair) { return Pair.second.size() >= 2; })) {
+  // The longer groups go first: the shorter ones sharing the scalars with them
+  // then reuse their vectors instead of splitting the longer chains.
+  SmallVector<StoreListMap::value_type *> Groups(make_pointer_range(Stores));
+  stable_sort(Groups, [](const auto *A, const auto *B) {
+    return A->second.size() > B->second.size();
+  });
+  for (auto &Pair :
+       make_filter_range(make_pointee_range(Groups),
+                         [](auto &Pair) { return Pair.second.size() >= 2; })) {
     LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length "
                       << Pair.second.size() << ".\n");
 
