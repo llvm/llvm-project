@@ -348,6 +348,106 @@ exit:
   ret void
 }
 
+; Same as above but with an unrelated store-to-load forwarding deps that do have
+; a safe VF. Make sure those aren't reported as
+; `BackwardVectorizableButPreventsForwarding`. We provide two of those (%B and
+; %C) because the order of processing matters, so we have one lexically before
+; %A and another after it.
+define void @fwd_conflict_dep_should_not_affect_another_dep(ptr %A, ptr %B, ptr %C) {
+; CHECK-LABEL: 'fwd_conflict_dep_should_not_affect_another_dep'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
+; CHECK-NEXT:            %ld = load i32, ptr %gep.ld, align 4 ->
+; CHECK-NEXT:            store i32 %ld, ptr %gep.st, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:            %ld.C = load i32, ptr %gep.C.ld, align 4 ->
+; CHECK-NEXT:            store i32 %ld.C, ptr %gep.C.st, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:            %ld.B = load i32, ptr %gep.B.ld, align 4 ->
+; CHECK-NEXT:            store i32 %ld.B, ptr %gep.B.st, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.B.ld = getelementptr i32, ptr %B, i64 %iv
+; CHECK-NEXT:          %gep.B.st = getelementptr i32, ptr %B.offset, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.ld = getelementptr i32, ptr %A, i64 %iv.x2
+; CHECK-NEXT:          %gep.st = getelementptr i32, ptr %A.offset, i64 %iv.x2
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.B.ld = getelementptr i32, ptr %B, i64 %iv
+; CHECK-NEXT:          %gep.B.st = getelementptr i32, ptr %B.offset, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.C.ld = getelementptr i32, ptr %C, i64 %iv
+; CHECK-NEXT:          %gep.C.st = getelementptr i32, ptr %C.offset, i64 %iv
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:          %gep.ld = getelementptr i32, ptr %A, i64 %iv.x2
+; CHECK-NEXT:          %gep.st = getelementptr i32, ptr %A.offset, i64 %iv.x2
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.C.ld = getelementptr i32, ptr %C, i64 %iv
+; CHECK-NEXT:          %gep.C.st = getelementptr i32, ptr %C.offset, i64 %iv
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %B High: (4132 + %B))
+; CHECK-NEXT:            Member: {%B,+,4}<nw><%loop>
+; CHECK-NEXT:            Member: {(32 + %B),+,4}<nw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %A High: (8220 + %A))
+; CHECK-NEXT:            Member: {%A,+,8}<nw><%loop>
+; CHECK-NEXT:            Member: {(24 + %A),+,8}<nw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %C High: (4132 + %C))
+; CHECK-NEXT:            Member: {%C,+,4}<nw><%loop>
+; CHECK-NEXT:            Member: {(32 + %C),+,4}<nw><%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %A.offset = getelementptr i32, ptr %A, i64 6
+  %B.offset = getelementptr i32, ptr %B, i64 8
+  %C.offset = getelementptr i32, ptr %C, i64 8
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+
+  ; VF <= 8 is safe for this dependency:
+  %gep.B.ld = getelementptr i32, ptr %B, i64 %iv
+  %ld.B = load i32, ptr %gep.B.ld, align 4
+  %gep.B.st = getelementptr i32, ptr %B.offset, i64 %iv
+  store i32 %ld.B, ptr %gep.B.st
+
+  ; Same as in `@stride2_store_load_preventing_forwarding`.
+  %iv.x2 = mul i64 %iv, 2
+  %gep.ld = getelementptr i32, ptr %A, i64 %iv.x2
+  %ld = load i32, ptr %gep.ld, align 4
+  %gep.st = getelementptr i32, ptr %A.offset, i64 %iv.x2
+  store i32 %ld, ptr %gep.st, align 4
+
+  ; VF <= 8 is safe for this dependency:
+  %gep.C.ld = getelementptr i32, ptr %C, i64 %iv
+  %ld.C = load i32, ptr %gep.C.ld, align 4
+  %gep.C.st = getelementptr i32, ptr %C.offset, i64 %iv
+  store i32 %ld.C, ptr %gep.C.st
+
+  %iv.next = add i64 %iv, 1
+  %cmp = icmp ne i64 %iv, 1024
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 ; FIXME: VF 2 is safe for store-load forwarding:
 ;                 idx |  0 |  1 |  2 |  3 |  4 |  5 |  6 |  7 |  8 |  9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 |
 ; v/iter 0 load  lane |  0 |    |    |  1 |    |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
@@ -392,6 +492,65 @@ loop:
   %iv.next = add i64 %iv, 1
   %cmp = icmp ne i64 %iv, 1024
   br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @multiple_store_load_forward_deps(ptr noalias %A, ptr noalias %B, ptr noalias %C) {
+; CHECK-LABEL: 'multiple_store_load_forward_deps'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:            %ld.C = load i32, ptr %gep.C.ld, align 4 ->
+; CHECK-NEXT:            store i32 %ld.C, ptr %gep.C.st, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
+; CHECK-NEXT:            %ld.A = load i32, ptr %gep.A.ld, align 4 ->
+; CHECK-NEXT:            store i32 %ld.A, ptr %gep.A.st, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:            %ld.B = load i32, ptr %gep.B.ld, align 4 ->
+; CHECK-NEXT:            store i32 %ld.B, ptr %gep.B.st, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+
+  %gep.C.ld = getelementptr i32, ptr %C, i64 %iv
+  %ld.C = load i32, ptr %gep.C.ld, align 4
+  %iv.C.st = add nuw nsw i64 %iv, 64
+  %gep.C.st = getelementptr i32, ptr %C, i64 %iv.C.st
+  store i32 %ld.C, ptr %gep.C.st, align 4
+
+  %iv.x2 = mul i64 %iv, 2
+  %gep.A.ld = getelementptr i32, ptr %A, i64 %iv.x2
+  %ld.A = load i32, ptr %gep.A.ld, align 4
+  %iv.A.st = add i64 %iv.x2, 6
+  %gep.A.st = getelementptr i32, ptr %A, i64 %iv.A.st
+  store i32 %ld.A, ptr %gep.A.st, align 4
+
+  %gep.B.ld = getelementptr i32, ptr %B, i64 %iv
+  %ld.B = load i32, ptr %gep.B.ld, align 4
+  %iv.B.st = add nuw nsw i64 %iv, 64
+  %gep.B.st = getelementptr i32, ptr %B, i64 %iv.B.st
+  store i32 %ld.B, ptr %gep.B.st, align 4
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
