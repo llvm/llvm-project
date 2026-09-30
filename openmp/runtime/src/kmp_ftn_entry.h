@@ -625,7 +625,7 @@ void *FTN_STDCALL FTN_GET_DYN_GPRIVATE_PTR(size_t *offset,
   return NULL;
 #else
   void *(*fptr)(size_t, omp_access_t);
-  if ((*(void **)(&fptr) = KMP_DLSYM("omp_get_dyn_gprivate_ptr"))) {
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_dyn_gprivate_ptr"))) {
     size_t off = offset ? *offset : 0;
     omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
     return (*fptr)(off, ag);
@@ -640,7 +640,7 @@ void *FTN_STDCALL FTN_GET_DYN_GPRIVATE_NOFB_PTR(size_t *offset,
   return NULL;
 #else
   void *(*fptr)(size_t, omp_access_t);
-  if ((*(void **)(&fptr) = KMP_DLSYM("omp_get_dyn_gprivate_nofb_ptr"))) {
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_dyn_gprivate_nofb_ptr"))) {
     size_t off = offset ? *offset : 0;
     omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
     return (*fptr)(off, ag);
@@ -654,7 +654,7 @@ size_t FTN_STDCALL FTN_GET_DYN_GPRIVATE_SIZE(omp_access_t *access_group) {
   return 0;
 #else
   size_t (*fptr)(omp_access_t);
-  if ((*(void **)(&fptr) = KMP_DLSYM("omp_get_dyn_gprivate_size"))) {
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_dyn_gprivate_size"))) {
     omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
     return (*fptr)(ag);
   }
@@ -668,7 +668,7 @@ FTN_GET_DYN_GPRIVATE_MEMSPACE(omp_access_t *access_group) {
   return omp_null_mem_space;
 #else
   omp_memspace_handle_t (*fptr)(omp_access_t);
-  if ((*(void **)(&fptr) = KMP_DLSYM("omp_get_dyn_gprivate_memspace"))) {
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_dyn_gprivate_memspace"))) {
     omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
     return (*fptr)(ag);
   }
@@ -686,7 +686,7 @@ size_t FTN_STDCALL FTN_GET_GPRIVATE_LIMIT(int *device_num,
   return 0;
 #else
   size_t (*fptr)(int, omp_access_t);
-  if ((*(void **)(&fptr) = KMP_DLSYM("omp_get_gprivate_limit"))) {
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_gprivate_limit"))) {
     int dev = device_num ? *device_num : 0;
     omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
     return (*fptr)(dev, ag);
