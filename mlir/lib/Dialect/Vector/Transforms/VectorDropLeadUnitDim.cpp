@@ -512,7 +512,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
     newOp = mlir::vector::maskOperation(rewriter, newOp, newMask);
   }
 
-  return restoerLeadingUnitDimViaShapeCastOrBcast(
+  return restoreLeadingUnitDimViaShapeCastOrBcast(
       rewriter, loc, newOp->getResult(0), contractOp->getResultTypes()[0]);
 }
 
