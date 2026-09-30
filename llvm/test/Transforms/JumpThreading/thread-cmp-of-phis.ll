@@ -135,3 +135,51 @@ if.eq:
 if.ne:
   ret i32 0
 }
+
+declare void @use(i64)
+
+; Negative: as @thread_cmp_of_phis, but %join contains a call. Threading the
+; %entry edge would duplicate the call, so the branch is kept.
+define i32 @no_thread_call_in_block(i64 %a, i64 %b) {
+; CHECK-LABEL: define i32 @no_thread_call_in_block(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[A]], [[B]]
+; CHECK-NEXT:    br i1 [[C]], label %[[GROW:.*]], label %[[JOIN:.*]]
+; CHECK:       [[GROW]]:
+; CHECK-NEXT:    [[A2:%.*]] = call i64 @opaque()
+; CHECK-NEXT:    [[B2:%.*]] = call i64 @opaque()
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[P1:%.*]] = phi i64 [ [[A]], %[[ENTRY]] ], [ [[A2]], %[[GROW]] ]
+; CHECK-NEXT:    [[P2:%.*]] = phi i64 [ [[B]], %[[ENTRY]] ], [ [[B2]], %[[GROW]] ]
+; CHECK-NEXT:    call void @use(i64 [[P1]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[P1]], [[P2]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_EQ:.*]], label %[[IF_NE:.*]]
+; CHECK:       [[IF_EQ]]:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       [[IF_NE]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %c = icmp eq i64 %a, %b
+  br i1 %c, label %grow, label %join
+
+grow:
+  %a2 = call i64 @opaque()
+  %b2 = call i64 @opaque()
+  br label %join
+
+join:
+  %p1 = phi i64 [ %a, %entry ], [ %a2, %grow ]
+  %p2 = phi i64 [ %b, %entry ], [ %b2, %grow ]
+  call void @use(i64 %p1)
+  %cmp = icmp eq i64 %p1, %p2
+  br i1 %cmp, label %if.eq, label %if.ne
+
+if.eq:
+  ret i32 1
+
+if.ne:
+  ret i32 0
+}
