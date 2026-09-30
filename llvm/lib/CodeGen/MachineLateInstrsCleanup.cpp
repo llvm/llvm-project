@@ -177,27 +177,31 @@ void MachineLateInstrsCleanup::removeRedundantDef(MachineInstr *MI) {
   ++NumRemoved;
 }
 
-// Return true if MI is a spill-slot reload with a single memory operand. If
-// that operand names a frame index, FI is set to it, and the function returns
-// true if that index is a spill slot.
+// Return true if MI is a spill-slot reload that does not store and has
+// exactly one memory operand. If FI is non-null and that memory operand names
+// a frame index, *FI is set to it even when the index is not a spill slot.
 static bool isSpillSlotReload(const MachineInstr &MI,
-                              const MachineFrameInfo &MFI, int &FI) {
-  if (!MI.mayLoad() || !MI.hasOneMemOperand())
+                              const MachineFrameInfo &MFI, int *FI = nullptr) {
+  if (!MI.mayLoad() || MI.mayStore() || !MI.hasOneMemOperand())
     return false;
+
   const MachineMemOperand *MMO = *MI.memoperands_begin();
   const auto *PSV =
       dyn_cast_or_null<FixedStackPseudoSourceValue>(MMO->getPseudoValue());
   if (!PSV)
     return false;
-  FI = PSV->getFrameIndex();
-  return MFI.isSpillSlotObjectIndex(FI);
+  int FrameIndex = PSV->getFrameIndex();
+  if (FI)
+    *FI = FrameIndex;
+  return MFI.isSpillSlotObjectIndex(FrameIndex);
 }
 
 // Return true if MI stores to the spill slot FI. The address of a spill slot
 // never escapes, so only an instruction that describes a store to this very
 // slot can write it. An instruction that writes memory without describing it
-// at all must be assumed to write every slot. Modeled on MachineLICM's
-// InstructionStoresToFI().
+// at all must be assumed to write every slot.
+// TODO: This is copied from MachineLICM::InstructionStoresToFI(). Factor the
+// two copies into one helper.
 static bool instructionStoresToFI(const MachineInstr *MI, int FI) {
   if (!MI->mayStore())
     return false;
@@ -228,11 +232,8 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
   // the grounds that a store may have changed what it reads. That is too blunt
   // for a spill-slot reload, where only a write to the same slot matters and
   // processBlock() already drops the reload as soon as it sees one. Clear
-  // SawStore for those reloads to defer to that finer check; every other load
-  // is left to isSafeToMove(), which admits the invariant ones and rejects the
-  // volatile and atomic accesses whatever SawStore says.
-  int FI;
-  bool SawStore = !isSpillSlotReload(*MI, MFI, FI);
+  // SawStore for those reloads to defer to that finer check.
+  bool SawStore = !isSpillSlotReload(*MI, MFI);
   if (!MI->isSafeToMove(SawStore) || MI->isImplicitDef() || MI->isInlineAsm())
     return false;
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
@@ -294,8 +295,7 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     if (IsCandidate && MBBDefs.hasIdentical(DefedReg, &MI)) {
       LLVM_DEBUG(dbgs() << "Removing redundant instruction in "
                         << printMBBReference(*MBB) << ":  " << MI);
-      int FI;
-      if (isSpillSlotReload(MI, MFI, FI))
+      if (isSpillSlotReload(MI, MFI))
         ++NumSpillSlotReloadsRemoved;
       removeRedundantDef(&MI);
       Changed = true;
@@ -303,15 +303,13 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
     }
 
     // Clear any entries in map that MI clobbers. A register redefinition
-    // invalidates every kind of tracked instruction. A store that may write a
-    // spill slot invalidates only a reload of that slot; address computations,
-    // immediates and invariant loads keep being dropped solely by
-    // modifiesRegister().
+    // invalidates every kind of tracked instruction, and a store that writes a
+    // spill slot invalidates a reload of that slot.
     MBBDefs.remove_if([&](const auto &Entry) {
       Register Reg = Entry.first;
       int FI;
       if (MI.modifiesRegister(Reg, TRI) ||
-          (isSpillSlotReload(*Entry.second, MFI, FI) &&
+          (isSpillSlotReload(*Entry.second, MFI, &FI) &&
            instructionStoresToFI(&MI, FI))) {
         MBBKills.erase(Reg);
         return true;
