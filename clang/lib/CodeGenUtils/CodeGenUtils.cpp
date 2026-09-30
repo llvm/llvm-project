@@ -116,6 +116,7 @@ bool isAAPCS(const TargetInfo &TargetInfo) {
 
 LangAS getGlobalConstantAddressSpace(const LangOptions &LangOpts,
                                      const TargetInfo &Target) {
+  // OpenCL v1.2 s6.5.3: a string literal is in the constant address space.
   if (LangOpts.OpenCL)
     return LangAS::opencl_constant;
   if (LangOpts.SYCLIsDevice)
