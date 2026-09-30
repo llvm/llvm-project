@@ -363,8 +363,8 @@ class LLVM_ABI_FOR_TEST VPSingleDefValue : public VPRecipeValue {
 
 protected:
   /// Construct a VPSingleDefValue. Must only be used by VPSingleDefRecipe.
-  LLVM_ABI_FOR_TEST VPSingleDefValue(VPSingleDefRecipe *Def,
-                                     Value *UV = nullptr, Type *Ty = nullptr);
+  VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV = nullptr,
+                   Type *Ty = nullptr);
 
 public:
   ~VPSingleDefValue() override;
