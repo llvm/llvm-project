@@ -368,15 +368,60 @@ void guarded_store_through_out_pointer(Vector<char> &vec, char **out) {
 }
 } // namespace escape_paths
 
+struct OwningBuffer : CanBorrow {
+  char *data() LIFETIME_BOUND;
+};
+OwningBuffer makeOwningBuffer(const Vector<char> &vec LIFETIME_BOUND);
+extern const Vector<char> globalVec;
+
+void owning_temporary_from_global() {
+  char *p = makeOwningBuffer(globalVec).data();
+  // expected-warning@-1{{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
+  someFunction();
+  (void)p;
+}
+
+void owning_temporary_from_borrow(Vector<char> &vec) {
+  Borrow<Vector<char>> b(vec);
+  char *p = makeOwningBuffer(b.get()).data();
+  // expected-warning@-1{{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
+  someFunction();
+  (void)p;
+}
+
+void owning_temporary_from_unguarded(Vector<char> &vec) {
+  char *p = makeOwningBuffer(vec).data();
+  // expected-warning@-1{{Local variable 'p' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  // expected-warning@-2{{temporary whose address is used as value of local variable 'p' will be destroyed at the end of the full-expression}}
+  someFunction();
+  (void)p;
+}
+
+void extended_owning_from_unguarded(Vector<char> &vec) {
+  const OwningBuffer &buf = makeOwningBuffer(vec);
+  // expected-warning@-1{{Local variable 'buf' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
+  someFunction();
+  (void)buf;
+}
+
+void extended_owning_from_borrow(Vector<char> &vec) {
+  Borrow<Vector<char>> b(vec);
+  const OwningBuffer &buf = makeOwningBuffer(b.get());
+  someFunction();
+  (void)buf;
+}
+
 namespace known_gaps {
 void unannotated_view_constructor(Vector<char> &vec) {
   CharSpan s(vec.data());
+  // expected-warning@-1{{Local variable 's' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
   (void)s;
 }
 
 void unannotated_function_parameter(Vector<char> &vec) {
   CharSpan s = makeSpanUnannotated(vec);
+  // expected-warning@-1{{Local variable 's' is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedLocalVarsChecker]}}
   someFunction();
   (void)s;
 }

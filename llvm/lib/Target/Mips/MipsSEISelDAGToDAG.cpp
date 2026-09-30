@@ -1062,8 +1062,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
     // same set/ of registers. Similarly, ldi.h isn't capable of producing {
     // 0x00000000, 0x00000001, 0x00000000, 0x00000001 } but 'ldi.d wd, 1' can.
 
-    const MipsABIInfo &ABI =
-        static_cast<const MipsTargetMachine &>(TM).getABI();
+    const MipsABIInfo &ABI = Subtarget->getABI();
 
     BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Node);
     APInt SplatValue, SplatUndef;

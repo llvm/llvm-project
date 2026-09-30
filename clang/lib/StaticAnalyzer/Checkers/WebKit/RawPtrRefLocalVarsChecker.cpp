@@ -339,12 +339,15 @@ public:
 
       bool TraverseIfStmt(IfStmt *IS) override {
         if (IS->getConditionVariable()) {
-          // This code currently does not explicitly check the "else" statement
-          // since getConditionVariable returns nullptr when there is a
-          // condition defined after ";" as in "if (auto foo = ~; !foo)". If
-          // this semantics change, we should add an explicit check for "else".
-          if (auto *Then = IS->getThen(); !Then || TFA.isTrivial(Then))
+          // This code does not check the condition variable in the "else"
+          // statement since getConditionVariable returns nullptr when there
+          // is a condition defined after ";" as in "if (auto foo = ~; !foo)".
+          // If this semantics change, we should check it in "else" as well.
+          if (auto *Then = IS->getThen(); !Then || TFA.isTrivial(Then)) {
+            if (auto *Else = IS->getElse(); Else && !TFA.isTrivial(Else))
+              return TraverseStmt(Else);
             return true;
+          }
         }
         if (!TFA.isTrivial(IS))
           return DynamicRecursiveASTVisitor::TraverseIfStmt(IS);
