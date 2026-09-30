@@ -90,6 +90,20 @@ protected:
   }
 };
 
+TEST_F(LlvmLibcScanImplTest, SuccessfulRun) {
+
+  struct dirent **namelist = nullptr;
+  auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
+      "fake/path", &namelist, nullptr, nullptr);
+  ASSERT_TRUE(res.has_value());
+  ASSERT_EQ(res.value(),
+            static_cast<int>(LIBC_NAMESPACE::MockDir::test_files_count));
+
+  for (size_t i = 0; i < LIBC_NAMESPACE::MockDir::test_files_count; ++i) {
+    ASSERT_STREQ(namelist[i]->d_name, LIBC_NAMESPACE::MockDir::test_files[i]);
+  }
+}
+
 TEST_F(LlvmLibcScanImplTest, OpenFails) {
 
   struct dirent **namelist = nullptr;
@@ -229,4 +243,19 @@ TEST_F(LlvmLibcScanImplTest, TestTotalOrderingZA) {
        ++i) {
     ASSERT_STREQ(namelist[i]->d_name, desired_order[i]);
   }
+}
+
+int skip_hidden(const struct dirent *entry) { return entry->d_name[0] != '.'; }
+
+TEST_F(LlvmLibcScanImplTest, TesetFilter) {
+  struct dirent **namelist = nullptr;
+  auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
+      "fake/path", &namelist, skip_hidden, nullptr);
+  ASSERT_TRUE(res.has_value());
+  size_t desired_count = LIBC_NAMESPACE::MockDir::test_files_count - 2;
+  ASSERT_EQ(res.value(), static_cast<int>(desired_count));
+  const char *desired_files[] = {"b.txt", "a.md", "c.pdf", nullptr};
+
+  for (size_t i = 0; i < desired_count && desired_files[i] != nullptr; ++i)
+    ASSERT_STREQ(namelist[i]->d_name, desired_files[i]);
 }
