@@ -48,6 +48,12 @@ def sev     : AArch64Builtin<"void ()">;
 def sevl    : AArch64Builtin<"void ()">;
 def chkfeat : AArch64Builtin<"uint64_t (uint64_t)">;
 
+let Attributes = [NoThrow, RequireDeclaration], Header = "arm_vector_types.h" in {
+        def __arm_set_fpm_lscale : AArch64NoPrefixTargetLibBuiltin<"uint64_t (uint64_t, uint64_t)">;
+        def __arm_set_fpm_nscale   : AArch64NoPrefixTargetLibBuiltin<"uint64_t (uint64_t, int64_t)">;
+        def __arm_set_fpm_lscale2   : AArch64NoPrefixTargetLibBuiltin<"uint64_t (uint64_t, uint64_t)">;
+}
+
 let Attributes = [RequireDeclaration], Languages = "ALL_LANGUAGES", Header = "arm_acle.h" in {
 	def __yield : AArch64NoPrefixTargetLibBuiltin<"void ()">;
 	def __wfe   : AArch64NoPrefixTargetLibBuiltin<"void ()">;
