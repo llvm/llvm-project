@@ -19842,6 +19842,12 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   MachineFunction *MF = MI.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
 
+  if (MI.getOpcode() == AMDGPU::SI_END_CF) {
+    // Exec restore at the top of the join block.
+    SIInstrInfo::setBBPrologIfAtBlockStart(MI);
+    return;
+  }
+
   if (TII->isVOP3(MI.getOpcode())) {
     // Make sure constant bus requirements are respected.
     TII->legalizeOperandsVOP3(MRI, MI);

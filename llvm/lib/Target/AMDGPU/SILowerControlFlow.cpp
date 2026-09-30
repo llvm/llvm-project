@@ -324,6 +324,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
       BuildMI(MBB, Start, DL, TII->get(LMC.OrSaveExecOpc), SaveReg)
           .add(MI.getOperand(1)); // Saved EXEC
   setImpSCCDefDead(*OrSaveExec, /*IsDead=*/true);
+  OrSaveExec->setFlag(MachineInstr::BBProlog);
   if (LV)
     LV->replaceKillInstruction(SrcReg, MI, *OrSaveExec);
 
@@ -530,6 +531,10 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
                             .addReg(LMC.ExecReg)
                             .add(MI.getOperand(0));
   copySCCDefDead(*NewMI, MI.getOperand(2));
+  if (NeedBlockSplit)
+    NewMI->clearFlag(MachineInstr::BBProlog);
+  else
+    NewMI->setFlag(MachineInstr::BBProlog);
 
   if (LV) {
     LV->replaceKillInstruction(DataReg, MI, *NewMI);

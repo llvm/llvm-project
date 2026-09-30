@@ -105,4 +105,108 @@ TEST(FindDebugLocTest, DifferentIterators) {
   DIB.finalize();
 }
 
+static MachineInstr *createMI(MachineFunction &MF, unsigned Opcode,
+                              bool BBProlog = false) {
+  MCInstrDesc Desc = {Opcode, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MachineInstr *MI = MF.CreateMachineInstr(Desc, DebugLoc());
+  if (BBProlog)
+    MI->setFlag(MachineInstr::BBProlog);
+  return MI;
+}
+
+// An instruction inserted in front of a block prolog instruction is in the
+// prolog.
+TEST(BBPrologTest, IsInBBProlog) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto &MBB = *MF->CreateMachineBasicBlock();
+
+  MachineInstr *Prolog = createMI(*MF, TargetOpcode::COPY, true);
+  MachineInstr *Body = createMI(*MF, TargetOpcode::COPY);
+  MBB.push_back(Prolog);
+  MBB.push_back(Body);
+
+  EXPECT_TRUE(MBB.isInBBProlog(Prolog->getIterator()));
+  EXPECT_FALSE(MBB.isInBBProlog(Body->getIterator()));
+  EXPECT_FALSE(MBB.isInBBProlog(MBB.end()));
+  EXPECT_EQ(MBB.getBBPrologFlag(Prolog->getIterator()), MachineInstr::BBProlog);
+  EXPECT_EQ(MBB.getBBPrologFlag(Body->getIterator()), MachineInstr::NoFlags);
+}
+
+// Debug instructions, labels and pseudo probes in front of a prolog instruction
+// are looked through.
+TEST(BBPrologTest, IsInBBPrologLooksThroughDebugLabelsAndProbes) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto &MBB = *MF->CreateMachineBasicBlock();
+
+  MachineInstr *Dbg = createMI(*MF, TargetOpcode::DBG_VALUE);
+  MachineInstr *Label = createMI(*MF, TargetOpcode::EH_LABEL);
+  MachineInstr *Probe = createMI(*MF, TargetOpcode::PSEUDO_PROBE);
+  MachineInstr *Prolog = createMI(*MF, TargetOpcode::COPY, true);
+  MachineInstr *Dbg2 = createMI(*MF, TargetOpcode::DBG_VALUE);
+  MachineInstr *Body = createMI(*MF, TargetOpcode::COPY);
+  for (MachineInstr *MI : {Dbg, Label, Probe, Prolog, Dbg2, Body})
+    MBB.push_back(MI);
+
+  EXPECT_TRUE(MBB.isInBBProlog(Dbg->getIterator()));
+  EXPECT_TRUE(MBB.isInBBProlog(Label->getIterator()));
+  EXPECT_TRUE(MBB.isInBBProlog(Probe->getIterator()));
+  EXPECT_FALSE(MBB.isInBBProlog(Dbg2->getIterator()));
+}
+
+// setBBPrologFlag marks a range, except labels, debug instructions and pseudo
+// probes.
+TEST(BBPrologTest, SetBBPrologFlag) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto &MBB = *MF->CreateMachineBasicBlock();
+
+  MachineInstr *A = createMI(*MF, TargetOpcode::COPY);
+  MachineInstr *Dbg = createMI(*MF, TargetOpcode::DBG_VALUE);
+  MachineInstr *Label = createMI(*MF, TargetOpcode::EH_LABEL);
+  MachineInstr *Probe = createMI(*MF, TargetOpcode::PSEUDO_PROBE);
+  MachineInstr *B = createMI(*MF, TargetOpcode::COPY);
+  MachineInstr *Body = createMI(*MF, TargetOpcode::COPY);
+  for (MachineInstr *MI : {A, Dbg, Label, Probe, B, Body})
+    MBB.push_back(MI);
+
+  MBB.setBBPrologFlag(A->getIterator(), Body->getIterator());
+  EXPECT_TRUE(A->getFlag(MachineInstr::BBProlog));
+  EXPECT_TRUE(B->getFlag(MachineInstr::BBProlog));
+  EXPECT_FALSE(Dbg->getFlag(MachineInstr::BBProlog));
+  EXPECT_FALSE(Label->getFlag(MachineInstr::BBProlog));
+  EXPECT_FALSE(Probe->getFlag(MachineInstr::BBProlog));
+  EXPECT_FALSE(Body->getFlag(MachineInstr::BBProlog));
+}
+
+// The block-entry walks stop after the prolog.
+TEST(BBPrologTest, SkipPHIsSkipsProlog) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto &MBB = *MF->CreateMachineBasicBlock();
+
+  MachineInstr *PHI = createMI(*MF, TargetOpcode::PHI);
+  MachineInstr *Label = createMI(*MF, TargetOpcode::EH_LABEL);
+  MachineInstr *Prolog = createMI(*MF, TargetOpcode::COPY, true);
+  MachineInstr *Dbg = createMI(*MF, TargetOpcode::DBG_VALUE);
+  MachineInstr *Prolog2 = createMI(*MF, TargetOpcode::COPY, true);
+  MachineInstr *Body = createMI(*MF, TargetOpcode::COPY);
+  for (MachineInstr *MI : {PHI, Label, Prolog, Dbg, Prolog2, Body})
+    MBB.push_back(MI);
+
+  EXPECT_EQ(&*MBB.SkipPHIsLabelsAndDebug(MBB.begin()), Body);
+  MBB.erase(Dbg);
+  EXPECT_EQ(&*MBB.SkipPHIsAndLabels(MBB.begin()), Body);
+
+  Prolog->clearFlag(MachineInstr::BBProlog);
+  Prolog2->clearFlag(MachineInstr::BBProlog);
+  EXPECT_EQ(&*MBB.SkipPHIsLabelsAndDebug(MBB.begin()), Prolog);
+  EXPECT_EQ(&*MBB.SkipPHIsAndLabels(MBB.begin()), Prolog);
+}
+
 } // end namespace

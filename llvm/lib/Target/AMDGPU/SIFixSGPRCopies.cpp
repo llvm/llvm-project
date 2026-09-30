@@ -443,10 +443,9 @@ static bool isReachable(const MachineInstr *From,
 }
 
 // Return the first non-prologue instruction in the block.
-static MachineBasicBlock::iterator
-getFirstNonPrologue(MachineBasicBlock *MBB, const TargetInstrInfo *TII) {
+static MachineBasicBlock::iterator getFirstNonPrologue(MachineBasicBlock *MBB) {
   MachineBasicBlock::iterator I = MBB->getFirstNonPHI();
-  while (I != MBB->end() && TII->isBasicBlockPrologue(*I))
+  while (I != MBB->end() && I->getFlag(MachineInstr::BBProlog))
     ++I;
 
   return I;
@@ -558,7 +557,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
             continue;
           }
 
-          MachineBasicBlock::iterator I = getFirstNonPrologue(MBB, TII);
+          MachineBasicBlock::iterator I = getFirstNonPrologue(MBB);
           if (!interferes(MI1, I) && !interferes(MI2, I)) {
             LLVM_DEBUG(dbgs()
                        << "Erasing from "
@@ -597,11 +596,11 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
     auto &Defs = Init.second;
     for (auto *MI : Defs) {
       auto *MBB = MI->getParent();
-      MachineInstr &BoundaryMI = *getFirstNonPrologue(MBB, TII);
+      MachineInstr &BoundaryMI = *getFirstNonPrologue(MBB);
       MachineBasicBlock::reverse_iterator B(BoundaryMI);
       // Check if B should actually be a boundary. If not set the previous
       // instruction as the boundary instead.
-      if (!TII->isBasicBlockPrologue(*B))
+      if (!B->getFlag(MachineInstr::BBProlog))
         B++;
 
       auto R = std::next(MI->getReverseIterator());

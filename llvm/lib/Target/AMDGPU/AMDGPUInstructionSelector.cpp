@@ -1817,8 +1817,11 @@ bool AMDGPUInstructionSelector::selectEndCfIntrinsic(MachineInstr &MI) const {
   // FIXME: Manually selecting to avoid dealing with the SReg_1 trick
   // SelectionDAG uses for wave32 vs wave64.
   MachineBasicBlock *BB = MI.getParent();
-  BuildMI(*BB, &MI, MI.getDebugLoc(), TII.get(AMDGPU::SI_END_CF))
-      .add(MI.getOperand(1));
+  MachineInstr *EndCf =
+      BuildMI(*BB, &MI, MI.getDebugLoc(), TII.get(AMDGPU::SI_END_CF))
+          .add(MI.getOperand(1));
+  // Exec restore at the top of the join block.
+  SIInstrInfo::setBBPrologIfAtBlockStart(*EndCf);
 
   Register Reg = MI.getOperand(1).getReg();
   MI.eraseFromParent();

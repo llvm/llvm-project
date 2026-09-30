@@ -91,6 +91,8 @@ SlotIndex LiveRangeEdit::rematerializeAt(
   // to false anyway in case the isDead flag of RM.OrigMI's dest register
   // is true.
   (*--MI).clearRegisterDeads(DestReg);
+  MI->clearFlag(MachineInstr::BBProlog);
+  MI->setFlag(MBB.getBBPrologFlag(std::next(MI)));
   Rematted.insert(RM.ParentVNI);
   ++NumReMaterialization;
 
