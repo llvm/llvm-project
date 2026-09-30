@@ -337,10 +337,11 @@ void test_if_jumps() {
 // CHECK:       [B6 (ENTRY)]
 // CHECK-NEXT:    Succs (1): B5
 // CHECK:       [B1]
-// CHECK-NEXT:    1: [B4.4].~A() (Implicit destructor)
-// CHECK-NEXT:    2: [B4.4] (Lifetime ends)
-// CHECK-NEXT:    3: [B5.2].~A() (Implicit destructor)
-// CHECK-NEXT:    4: [B5.2] (Lifetime ends)
+// CHECK-NEXT:    1: WhileStmt (LoopExit)
+// CHECK-NEXT:    2: [B4.4].~A() (Implicit destructor)
+// CHECK-NEXT:    3: [B4.4] (Lifetime ends)
+// CHECK-NEXT:    4: [B5.2].~A() (Implicit destructor)
+// CHECK-NEXT:    5: [B5.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (1): B4
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
@@ -385,14 +386,15 @@ void test_while_implicit_scope() {
 // CHECK:       [B12 (ENTRY)]
 // CHECK-NEXT:    Succs (1): B11
 // CHECK:       [B1]
-// CHECK-NEXT:    1: [B10.4].~A() (Implicit destructor)
-// CHECK-NEXT:    2: [B10.4] (Lifetime ends)
-// CHECK-NEXT:    3:  (CXXConstructExpr, [B1.4], A)
-// CHECK-NEXT:    4: A e;
-// CHECK-NEXT:    5: [B1.4].~A() (Implicit destructor)
-// CHECK-NEXT:    6: [B1.4] (Lifetime ends)
-// CHECK-NEXT:    7: [B11.2].~A() (Implicit destructor)
-// CHECK-NEXT:    8: [B11.2] (Lifetime ends)
+// CHECK-NEXT:    1: WhileStmt (LoopExit)
+// CHECK-NEXT:    2: [B10.4].~A() (Implicit destructor)
+// CHECK-NEXT:    3: [B10.4] (Lifetime ends)
+// CHECK-NEXT:    4:  (CXXConstructExpr, [B1.5], A)
+// CHECK-NEXT:    5: A e;
+// CHECK-NEXT:    6: [B1.5].~A() (Implicit destructor)
+// CHECK-NEXT:    7: [B1.5] (Lifetime ends)
+// CHECK-NEXT:    8: [B11.2].~A() (Implicit destructor)
+// CHECK-NEXT:    9: [B11.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (2): B8 B10
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
@@ -492,12 +494,13 @@ void test_while_jumps() {
 // CHECK:       [B12 (ENTRY)]
 // CHECK-NEXT:    Succs (1): B11
 // CHECK:       [B1]
-// CHECK-NEXT:    1:  (CXXConstructExpr, [B1.2], A)
-// CHECK-NEXT:    2: A d;
-// CHECK-NEXT:    3: [B1.2].~A() (Implicit destructor)
-// CHECK-NEXT:    4: [B1.2] (Lifetime ends)
-// CHECK-NEXT:    5: [B11.2].~A() (Implicit destructor)
-// CHECK-NEXT:    6: [B11.2] (Lifetime ends)
+// CHECK-NEXT:    1: DoStmt (LoopExit)
+// CHECK-NEXT:    2:  (CXXConstructExpr, [B1.3], A)
+// CHECK-NEXT:    3: A d;
+// CHECK-NEXT:    4: [B1.3].~A() (Implicit destructor)
+// CHECK-NEXT:    5: [B1.3] (Lifetime ends)
+// CHECK-NEXT:    6: [B11.2].~A() (Implicit destructor)
+// CHECK-NEXT:    7: [B11.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (2): B8 B2
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
@@ -583,10 +586,11 @@ void test_do_jumps() {
 // CHECK:       [B6 (ENTRY)]
 // CHECK-NEXT:    Succs (1): B5
 // CHECK:       [B1]
-// CHECK-NEXT:    1: [B4.4].~A() (Implicit destructor)
-// CHECK-NEXT:    2: [B4.4] (Lifetime ends)
-// CHECK-NEXT:    3: [B5.2].~A() (Implicit destructor)
-// CHECK-NEXT:    4: [B5.2] (Lifetime ends)
+// CHECK-NEXT:    1: ForStmt (LoopExit)
+// CHECK-NEXT:    2: [B4.4].~A() (Implicit destructor)
+// CHECK-NEXT:    3: [B4.4] (Lifetime ends)
+// CHECK-NEXT:    4: [B5.2].~A() (Implicit destructor)
+// CHECK-NEXT:    5: [B5.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (1): B4
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
@@ -632,16 +636,17 @@ void test_for_implicit_scope() {
 // CHECK:       [B12 (ENTRY)]
 // CHECK-NEXT:    Succs (1): B11
 // CHECK:       [B1]
-// CHECK-NEXT:    1: [B10.4].~A() (Implicit destructor)
-// CHECK-NEXT:    2: [B10.4] (Lifetime ends)
-// CHECK-NEXT:    3: [B11.4].~A() (Implicit destructor)
-// CHECK-NEXT:    4: [B11.4] (Lifetime ends)
-// CHECK-NEXT:    5:  (CXXConstructExpr, [B1.6], A)
-// CHECK-NEXT:    6: A f;
-// CHECK-NEXT:    7: [B1.6].~A() (Implicit destructor)
-// CHECK-NEXT:    8: [B1.6] (Lifetime ends)
-// CHECK-NEXT:    9: [B11.2].~A() (Implicit destructor)
-// CHECK-NEXT:   10: [B11.2] (Lifetime ends)
+// CHECK-NEXT:    1: ForStmt (LoopExit)
+// CHECK-NEXT:    2: [B10.4].~A() (Implicit destructor)
+// CHECK-NEXT:    3: [B10.4] (Lifetime ends)
+// CHECK-NEXT:    4: [B11.4].~A() (Implicit destructor)
+// CHECK-NEXT:    5: [B11.4] (Lifetime ends)
+// CHECK-NEXT:    6:  (CXXConstructExpr, [B1.7], A)
+// CHECK-NEXT:    7: A f;
+// CHECK-NEXT:    8: [B1.7].~A() (Implicit destructor)
+// CHECK-NEXT:    9: [B1.7] (Lifetime ends)
+// CHECK-NEXT:   10: [B11.2].~A() (Implicit destructor)
+// CHECK-NEXT:   11: [B11.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (2): B8 B10
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
@@ -740,64 +745,65 @@ void test_for_jumps() {
   A f;
 }
 
-// CHECK:      [B9 (ENTRY)]
-// CHECK-NEXT:   Succs (1): B8
-// CHECK:      [B1]
-// CHECK-NEXT:   1: [B7.4].~A() (Implicit destructor)
-// CHECK-NEXT:   2: [B7.4] (Lifetime ends)
-// CHECK-NEXT:   3: [B8.2].~A() (Implicit destructor)
-// CHECK-NEXT:   4: [B8.2] (Lifetime ends)
-// CHECK-NEXT:   Preds (1): B7
-// CHECK-NEXT:   Succs (1): B0
-// CHECK:      [B2]
-// CHECK-NEXT:   1: [B5.4] ? [B3.3] : [B4.2]
-// CHECK-NEXT:   2: [B7.4].~A() (Implicit destructor)
-// CHECK-NEXT:   3: [B7.4] (Lifetime ends)
-// CHECK-NEXT:   Preds (2): B3 B4
-// CHECK-NEXT:   Succs (1): B7
-// CHECK:      [B3]
-// CHECK-NEXT:   1: b
-// CHECK-NEXT:   2: [B3.1].p
-// CHECK-NEXT:   3: [B3.2]++
-// CHECK-NEXT:   Preds (1): B5
-// CHECK-NEXT:   Succs (1): B2
-// CHECK:      [B4]
-// CHECK-NEXT:   1: 0
-// CHECK-NEXT:   2: [B4.1] (ImplicitCastExpr, NullToPointer, int *)
-// CHECK-NEXT:   Preds (1): B5
-// CHECK-NEXT:   Succs (1): B2
-// CHECK:      [B5]
-// CHECK-NEXT:   1: b
-// CHECK-NEXT:   2: [B5.1].p
-// CHECK-NEXT:   3: [B5.2] (ImplicitCastExpr, LValueToRValue, int *)
-// CHECK-NEXT:   4: [B5.3] (ImplicitCastExpr, PointerToBoolean, _Bool)
-// CHECK-NEXT:   T: [B5.4] ? ... : ...
-// CHECK-NEXT:   Preds (1): B6
-// CHECK-NEXT:   Succs (2): B3 B4
-// CHECK:      [B6]
-// CHECK-NEXT:   1: 0
-// CHECK-NEXT:   2: (void)[B6.1] (CStyleCastExpr, ToVoid, void)
-// CHECK-NEXT:   Preds (1): B7
-// CHECK-NEXT:   Succs (1): B5
-// CHECK:      [B7]
-// CHECK-NEXT:   1: a
-// CHECK-NEXT:   2: [B7.1] (ImplicitCastExpr, NoOp, const A)
-// CHECK-NEXT:   3: [B7.2] (CXXConstructExpr, [B7.4],  A)
-// CHECK-NEXT:   4: A b = a;
-// CHECK-NEXT:   5: b
-// CHECK-NEXT:   6: [B7.5] (ImplicitCastExpr, NoOp, const class A)
-// CHECK-NEXT:   7: [B7.6].operator int
-// CHECK-NEXT:   8: [B7.6]
-// CHECK-NEXT:   9: [B7.8] (ImplicitCastExpr, UserDefinedConversion, int)
-// CHECK-NEXT:  10: [B7.9] (ImplicitCastExpr, IntegralToBoolean, _Bool)
-// CHECK-NEXT:   T: for (...; [B7.10]; ...)
-// CHECK-NEXT:   Preds (2): B2 B8
-// CHECK-NEXT:   Succs (2): B6 B1
-// CHECK:      [B8]
-// CHECK-NEXT:   1:  (CXXConstructExpr, [B8.2], A)
-// CHECK-NEXT:   2: A a;
-// CHECK-NEXT:   Preds (1): B9
-// CHECK-NEXT:   Succs (1): B7
+// CHECK:       [B9 (ENTRY)]
+// CHECK-NEXT:    Succs (1): B8
+// CHECK:       [B1]
+// CHECK-NEXT:    1: ForStmt (LoopExit)
+// CHECK-NEXT:    2: [B7.4].~A() (Implicit destructor)
+// CHECK-NEXT:    3: [B7.4] (Lifetime ends)
+// CHECK-NEXT:    4: [B8.2].~A() (Implicit destructor)
+// CHECK-NEXT:    5: [B8.2] (Lifetime ends)
+// CHECK-NEXT:    Preds (1): B7
+// CHECK-NEXT:    Succs (1): B0
+// CHECK:       [B2]
+// CHECK-NEXT:    1: [B5.4] ? [B3.3] : [B4.2]
+// CHECK-NEXT:    2: [B7.4].~A() (Implicit destructor)
+// CHECK-NEXT:    3: [B7.4] (Lifetime ends)
+// CHECK-NEXT:    Preds (2): B3 B4
+// CHECK-NEXT:    Succs (1): B7
+// CHECK:       [B3]
+// CHECK-NEXT:    1: b
+// CHECK-NEXT:    2: [B3.1].p
+// CHECK-NEXT:    3: [B3.2]++
+// CHECK-NEXT:    Preds (1): B5
+// CHECK-NEXT:    Succs (1): B2
+// CHECK:       [B4]
+// CHECK-NEXT:    1: 0
+// CHECK-NEXT:    2: [B4.1] (ImplicitCastExpr, NullToPointer, int *)
+// CHECK-NEXT:    Preds (1): B5
+// CHECK-NEXT:    Succs (1): B2
+// CHECK:       [B5]
+// CHECK-NEXT:    1: b
+// CHECK-NEXT:    2: [B5.1].p
+// CHECK-NEXT:    3: [B5.2] (ImplicitCastExpr, LValueToRValue, int *)
+// CHECK-NEXT:    4: [B5.3] (ImplicitCastExpr, PointerToBoolean, _Bool)
+// CHECK-NEXT:    T: [B5.4] ? ... : ...
+// CHECK-NEXT:    Preds (1): B6
+// CHECK-NEXT:    Succs (2): B3 B4
+// CHECK:       [B6]
+// CHECK-NEXT:    1: 0
+// CHECK-NEXT:    2: (void)[B6.1] (CStyleCastExpr, ToVoid, void)
+// CHECK-NEXT:    Preds (1): B7
+// CHECK-NEXT:    Succs (1): B5
+// CHECK:       [B7]
+// CHECK-NEXT:    1: a
+// CHECK-NEXT:    2: [B7.1] (ImplicitCastExpr, NoOp, const A)
+// CHECK-NEXT:    3: [B7.2] (CXXConstructExpr, [B7.4], A)
+// CHECK-NEXT:    4: A b = a;
+// CHECK-NEXT:    5: b
+// CHECK-NEXT:    6: [B7.5] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:    7: [B7.6].operator int
+// CHECK-NEXT:    8: [B7.6]
+// CHECK-NEXT:    9: [B7.8] (ImplicitCastExpr, UserDefinedConversion, int)
+// CHECK-NEXT:   10: [B7.9] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// CHECK-NEXT:    T: for (...; [B7.10]; ...)
+// CHECK-NEXT:    Preds (2): B2 B8
+// CHECK-NEXT:    Succs (2): B6 B1
+// CHECK:       [B8]
+// CHECK-NEXT:    1:  (CXXConstructExpr, [B8.2], A)
+// CHECK-NEXT:    2: A a;
+// CHECK-NEXT:    Preds (1): B9
+// CHECK-NEXT:    Succs (1): B7
 void test_for_inc_conditional() {
   for (A a; A b = a; b.p ? b.p++ : 0)
     (void)0;
