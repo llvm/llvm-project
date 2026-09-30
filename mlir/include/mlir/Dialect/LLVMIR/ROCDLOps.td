@@ -813,6 +813,42 @@ def ROCDL_IglpOpt : ROCDL_ConcreteNonMemIntrOp<"iglp.opt", [], 0, [0], ["variant
   }];
 }
 
+def ROCDL_ScheduleBankOp : ROCDL_IntrOp<"schedule.bank", [], [0],
+    [AllTypesMatch<["res", "value"]>], 1, 0, 0, 0, [], []>,
+  Arguments<(ins LLVM_Type:$value, I32Attr:$bank,
+             OptionalAttr<UnitAttr>:$soft)> {
+  let results = (outs LLVM_Type:$res);
+  let assemblyFormat = [{
+    $value `,` $bank (`soft` $soft^)? attr-dict `:` type($value)
+  }];
+  string llvmBuilder = [{
+    auto schedOp = cast<ROCDL::ScheduleBankOp>(opInst);
+    auto *value = moduleTranslation.lookupValue(schedOp.getValue());
+    int32_t bank = schedOp.getBank();
+    int32_t encodedBank = schedOp.getSoftAttr() ? bank : (bank | 4);
+    auto *fn = llvm::Intrinsic::getOrInsertDeclaration(
+        moduleTranslation.getLLVMModule(),
+        llvm::Intrinsic::amdgcn_schedule_bank,
+        {value->getType()});
+    auto *inst = builder.CreateCall(fn,
+        {value, builder.getInt32(encodedBank)});
+    moduleTranslation.mapValue(opInst.getResult(0), inst);
+  }];
+  let description = [{
+    VGPR bank scheduling hint (gfx1250). Identity at runtime; guides the
+    register allocator to place `value` in the requested 256-register bank.
+
+    Bank 0-3. Default is strict (allocator must obey). Pass `soft` for an
+    advisory hint that the allocator may ignore.
+
+    Example:
+    ```mlir
+    %0 = rocdl.schedule.bank %val, 2 : f32        // strict bank 2 (default)
+    %1 = rocdl.schedule.bank %val, 1 soft : f32   // soft bank 1
+    ```
+  }];
+}
+
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics
 
