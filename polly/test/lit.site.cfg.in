@@ -27,11 +27,14 @@ for arch in config.targets_to_build.split():
 # directories.
 config.excludes = ['Inputs']
 
-commonOpts = ' -polly-process-unprofitable ' \
-             + ' -polly-remarks-minimal ' \
-             + ' -polly-use-llvm-names ' \
-             + ' -polly-import-jscop-dir=%S ' \
-             + ' -polly-codegen-verify '
+# TODO: Let tests spell out -load-pass-plugin and these options, and remove
+# %loadNPMPolly.
+commonOpts = ''.join(' -plugin-arg=Polly,' + opt for opt in [
+    '-polly-process-unprofitable',
+    '-polly-remarks-minimal',
+    '-polly-use-llvm-names',
+    '-polly-import-jscop-dir=%S',
+    '-polly-codegen-verify'])
 if config.llvm_polly_link_into_tools == '' or \
    config.llvm_polly_link_into_tools.lower() == '0' or \
    config.llvm_polly_link_into_tools.lower() == 'n' or \
