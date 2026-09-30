@@ -956,8 +956,7 @@ Module Flags
 ------------
 
 AMDGPU-specific behaviour can be controlled via LLVM module flags (see
-`Module Flags Metadata
-<https://llvm.org/docs/LangRef.html#module-flags-metadata>`_ in the language
+:ref:`Module Flags Metadata <module-flags-metadata>` in the language
 reference). These flags are set by frontends and are
 consumed by the AMDGPU backend during code generation.
 
@@ -1926,6 +1925,19 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Performs no operation in wave32 mode. Currently implemented for i16, i32, float, half,
                                                    bfloat, <2 x i16>, <2 x half>, <2 x bfloat>, i64, double, pointers, multiples of the
                                                    32-bit vectors.
+
+  llvm.amdgcn.wave.match.b32                       Provides direct access to v_wave_match_b32. Returns a 32-bit mask whose bit N is
+                                                   set when lane N is active and its first operand equals the current lane's second
+                                                   operand. Passing the same value as both operands yields the mask of active lanes
+                                                   sharing that value. In wave64 mode each 32-lane half is handled independently.
+
+  llvm.amdgcn.exclusive.scan.*                     Provides direct access to the v_exclusive_scan_* instructions. Performs an
+                                                   exclusive prefix scan of the first input operand across a subgroup of lanes,
+                                                   selected by the mask in the second operand. Each lane receives the reduction of
+                                                   the earlier lanes in its subgroup, so the lowest lane gets the identity value.
+                                                   In wave64 mode the two halves of the wave are scanned independently. The operation
+                                                   is part of the name (sum, xor, or, and, min, max).
+                                                   Sum takes an extra i1 clamp operand.
 
   llvm.amdgcn.udot2                                Provides direct access to v_dot2_u32_u16 across targets which
                                                    support such instructions. This performs an unsigned dot product

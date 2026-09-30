@@ -17,6 +17,7 @@ include "mlir/IR/OpBase.td"
 
 def CIR_Dialect : Dialect {
   let name = "cir";
+  let useStrictPropertiesInAssemblyFormat = 1;
 
   // A short one-line summary of our dialect.
   let summary = "A high-level dialect for analyzing and optimizing Clang "
@@ -56,6 +57,9 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getNoRecurseAttrName() { return "norecurse"; }
     static llvm::StringRef getMustProgressAttrName() { return "mustprogress"; }
     static llvm::StringRef getSYCLModuleIdAttrName() { return "sycl-module-id"; }
+    static llvm::StringRef getDontCallErrorAttrName() { return "dontcall-error"; }
+    static llvm::StringRef getDontCallWarnAttrName() { return "dontcall-warn"; }
+    static llvm::StringRef getSrcLocAttrName() { return "cir.srcloc"; }
     static llvm::StringRef getNoUnwindAttrName() { return "nounwind"; }
     static llvm::StringRef getWillReturnAttrName() { return "willreturn"; }
     static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
@@ -93,7 +97,9 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTargetCPUAttrName() { return "cir.target-cpu"; }
     static llvm::StringRef getTuneCPUAttrName() { return "cir.tune-cpu"; }
     static llvm::StringRef getTargetFeaturesAttrName() { return "cir.target-features"; }
-    static llvm::StringRef getCUDABinaryHandleAttrName() { return "cir.cu.binary_handle"; }
+    // Raw bytes of the device-side fat binary, read by CIRGen so LoweringPrepare
+    // can build the runtime-registration globals without doing file I/O.
+    static llvm::StringRef getCUDADeviceBinaryAttrName() { return "cir.cu.device_binary"; }
     // Mangled symbol name of the C++20 named-module initializer function,
     // precomputed by CIRGen so later passes don't need a live ASTContext.
     static llvm::StringRef getCXXModuleInitFnNameAttrName() { return "cir.cxx_module_init_fn_name"; }
@@ -101,6 +107,9 @@ def CIR_Dialect : Dialect {
     // CIRGen so a reloaded .cir module is self-describing without a live
     // clang::LangOptions. See #cir.lowering_lang_options.
     static llvm::StringRef getLoweringLangOptionsAttrName() { return "cir.lowering_lang_options"; }
+    // Platform SDK version from -target-sdk-version, as printed by
+    // llvm::VersionTuple (e.g. "12.3"). Absent when none was given.
+    static llvm::StringRef getSDKVersionAttrName() { return "cir.sdk_version"; }
     static llvm::StringRef getMustTailAttrName() { return "musttail"; }
     static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
 

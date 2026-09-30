@@ -148,6 +148,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   }
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+  if (llvm::VersionTuple sdkVersion = getTarget().getSDKVersion();
+      !sdkVersion.empty())
+    theModule->setAttr(cir::CIRDialect::getSDKVersionAttrName(),
+                       builder.getStringAttr(sdkVersion.getAsString()));
   // TODO(CIR): These attributes should eventually be replaced by
   // TypeSizeInfoAttr once it is upstreamed.
   theModule->setAttr(cir::CIRDialect::getSizeTypeWidthAttrName(),
@@ -211,17 +215,6 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
     theModule->setLoc(mlir::FileLineColLoc::get(&mlirContext, path,
                                                 /*line=*/0,
                                                 /*column=*/0));
-  }
-
-  // Set CUDA GPU binary handle.
-  if (langOpts.CUDA) {
-    llvm::StringRef cudaBinaryName = codeGenOpts.OffloadBinaryToEmbedFile;
-    if (!cudaBinaryName.empty()) {
-      theModule->setAttr(cir::CIRDialect::getCUDABinaryHandleAttrName(),
-                         cir::CUDABinaryHandleAttr::get(
-                             &mlirContext, mlir::StringAttr::get(
-                                               &mlirContext, cudaBinaryName)));
-    }
   }
 }
 
@@ -2194,11 +2187,15 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
             builder.createCallOp(noProtoCallOp.getLoc(), newFn, callOperands);
       } else {
         // Build an indirect call whose function-pointer signature matches
-        // the existing call site.
+        // the existing call site.  A prototyped declaration keeps its own
+        // type, ellipsis included, so arguments passed through the ellipsis
+        // stay variadic.  A direct call to an unprototyped declaration, such
+        // as a library call CIRGen emitted by name, keeps its own operand
+        // types and stays non-variadic.
         cir::FuncType origFnType = oldFn.getFunctionType();
         cir::FuncType callFnType =
-            origFnType.isVarArg()
-                ? cir::FuncType::get(origFnType.getInputs(),
+            oldFn.getNoProto()
+                ? cir::FuncType::get(llvm::to_vector(callOperands.getTypes()),
                                      origFnType.getReturnType(),
                                      /*isVarArg=*/false)
                 : origFnType;
@@ -3318,6 +3315,19 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   if (!isIncompleteFunction && func.isDeclaration())
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
 
+  // Diagnose calls to this function at the backend level, mirroring
+  // CodeGenModule::SetFunctionAttributes's "dontcall-error"/"dontcall-warn".
+  if (const auto *errorAttr = funcDecl->getAttr<ErrorAttr>()) {
+    if (errorAttr->isError())
+      func->setAttr(cir::CIRDialect::getDontCallErrorAttrName(),
+                    mlir::StringAttr::get(&getMLIRContext(),
+                                          errorAttr->getUserDiagnostic()));
+    else if (errorAttr->isWarning())
+      func->setAttr(cir::CIRDialect::getDontCallWarnAttrName(),
+                    mlir::StringAttr::get(&getMLIRContext(),
+                                          errorAttr->getUserDiagnostic()));
+  }
+
   // Mirrors setLinkageForGV in CodeGenModule::SetFunctionAttributes.
   setLinkageForFunction(*this, func, funcDecl);
 
@@ -3980,8 +3990,19 @@ void CIRGenModule::release() {
   emitLLVMUsed();
 
   // Precompute the mangled C++20 named-module initializer function name and
-  // stash it on the ModuleOp so LoweringPrepare (which may run without a live
-  // ASTContext in split-compilation flows) can read it back as an attribute.
+  // stash it on the ModuleOp so LoweringPrepare (which runs without a live
+  // ASTContext) can read it back as an attribute.  This attribute is the only
+  // channel through which the named-module initializer reaches lowering: its
+  // presence tells LoweringPrepare both what to call the global-init function
+  // and that the function needs external linkage, and its absence selects the
+  // `_GLOBAL__sub_I_` form.  Lowering therefore never has to rediscover the
+  // module from the AST.
+  //
+  // The mangler-kind check mirrors classic codegen's `CXX20ModuleInits` (see
+  // CodeGenModule.cpp), which only enables C++20 module initializers for the
+  // Itanium mangler because no Microsoft mangling for them has been settled
+  // on yet.  Non-Itanium named modules fall back to `_GLOBAL__sub_I_` exactly
+  // as they do in classic codegen.
   if (langOpts.CPlusPlusModules &&
       getCXXABI().getMangleContext().getKind() ==
           clang::ItaniumMangleContext::MK_Itanium) {

@@ -21,6 +21,7 @@
 #include <array>
 #include <cstring>
 #include <map>
+#include <set>
 
 using namespace llvm;
 
@@ -295,16 +296,20 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
 
   // Flags and Visibility name enumerators of the including tool. An option
-  // inherits its group's.
+  // inherits its group's. Names are sorted so that equal masks share an
+  // InfoExtra row.
   auto GetMask = [](const Record &R, StringRef Field) {
+    std::set<StringRef> Names;
+    for (const Init *I : *R.getValueAsListInit(Field))
+      Names.insert(cast<DefInit>(I)->getDef()->getName());
+    if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group")))
+      for (const Init *I : *DI->getDef()->getValueAsListInit(Field))
+        Names.insert(cast<DefInit>(I)->getDef()->getName());
     std::string Mask;
     raw_string_ostream MaskOS(Mask);
     ListSeparator Sep(" | ");
-    for (const Init *I : *R.getValueAsListInit(Field))
-      MaskOS << Sep << cast<DefInit>(I)->getDef()->getName();
-    if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group")))
-      for (const Init *I : *DI->getDef()->getValueAsListInit(Field))
-        MaskOS << Sep << cast<DefInit>(I)->getDef()->getName();
+    for (StringRef Name : Names)
+      MaskOS << Sep << "static_cast<unsigned>(" << Name << ")";
     return Mask.empty() ? std::string("0") : Mask;
   };
 
@@ -343,6 +348,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       // First emit the number of prefix strings in this list of prefixes.
       OS << Sep << "    " << Prefix.size() << " /* prefixes */";
       PrefixIndex = CurIndex;
+      if (PrefixIndex > 255)
+        PrintFatalError("too many distinct prefix sets");
       assert((CurIndex == 0 || !Prefix.empty()) &&
              "Only first prefix set should be empty!");
       for (const auto &PrefixKey : Prefix)
@@ -425,19 +432,27 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
   OS << "\n  };\n\n";
 
-  // Rarely set fields, in OptTable::InfoExtra order. Options with equal values
-  // share a row; row 0 is all zero.
+  // Fields that are rarely set or take few distinct values, in
+  // OptTable::InfoExtra order. Options with equal values share a row; row 0 is
+  // all zero.
   OS << "  static constexpr llvm::opt::OptTable::InfoExtra "
-        "OptionInfoExtrasTable[] = {\n    {0, 0, 0, 0, 0},\n";
-  std::map<std::array<unsigned, 5>, unsigned> ExtraRows;
-  ExtraRows.try_emplace({}, 0);
+        "OptionInfoExtrasTable[] = {\n    {0, 0, 0, 0, 0, 0, 0, 0},\n";
+  std::map<std::array<std::string, 8>, unsigned> ExtraRows;
+  ExtraRows.try_emplace({"0", "0", "0", "0", "0", "0", "0", "0"}, 0);
   DenseMap<const Record *, unsigned> ExtraOffset;
   for (const Record &R : llvm::make_pointee_range(Opts)) {
-    std::array<unsigned, 5> Row = {
-        *Table.GetStringOffset(getOptionalString(R, "MetaVarName")),
-        *Table.GetStringOffset(getAliasArgsBlob(R)),
-        *Table.GetStringOffset(getOptionalString(R, "Values")),
-        HelpTextVariantsOffset.lookup(&R), GetSubCommandIDsOffset(R)};
+    int64_t NumArgs = R.getValueAsInt("NumArgs");
+    if (NumArgs < 0 || NumArgs > 255)
+      PrintFatalError(R.getLoc(), "NumArgs must be in [0, 255]");
+    std::array<std::string, 8> Row = {
+        utostr(*Table.GetStringOffset(getOptionalString(R, "MetaVarName"))),
+        utostr(*Table.GetStringOffset(getAliasArgsBlob(R))),
+        utostr(*Table.GetStringOffset(getOptionalString(R, "Values"))),
+        GetMask(R, "Flags"),
+        GetMask(R, "Visibility"),
+        utostr(HelpTextVariantsOffset.lookup(&R)),
+        utostr(GetSubCommandIDsOffset(R)),
+        utostr(NumArgs)};
     auto [It, Inserted] = ExtraRows.try_emplace(Row, ExtraRows.size());
     if (Inserted) {
       OS << "    {";
@@ -456,8 +471,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
                         /*EmitComment=*/true);
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
-    OS << ", 0, 0, 0, " << GetRefID(R, "Group")
-       << ", 0, 0, llvm::opt::Option::GroupClass, 0},\n";
+    OS << ", " << GetRefID(R, "Group")
+       << ", 0, 0, 0, llvm::opt::Option::GroupClass},\n";
   }
   for (const Record &R : llvm::make_pointee_range(Opts)) {
     OS << "    {";
@@ -465,13 +480,12 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
                         /*EmitComment=*/true);
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
-    OS << ", " << GetMask(R, "Flags") << ", " << GetMask(R, "Visibility");
+    OS << ", " << GetRefID(R, "Group") << ", " << GetRefID(R, "Alias");
+    OS << ", " << ExtraOffset.lookup(&R);
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     OS << ", " << Prefixes[PrefixKeyT(RPrefixes.begin(), RPrefixes.end())];
-    OS << ", " << GetRefID(R, "Group") << ", " << GetRefID(R, "Alias");
-    OS << ", " << ExtraOffset.lookup(&R) << ", llvm::opt::Option::"
-       << R.getValueAsDef("Kind")->getValueAsString("Name") << "Class, "
-       << R.getValueAsInt("NumArgs") << "},\n";
+    OS << ", llvm::opt::Option::"
+       << R.getValueAsDef("Kind")->getValueAsString("Name") << "Class},\n";
   }
   OS << "  };\n\n";
 

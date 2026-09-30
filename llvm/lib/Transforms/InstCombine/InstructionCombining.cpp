@@ -3828,7 +3828,6 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
             Users.emplace_back(I);
             continue;
           case Intrinsic::launder_invariant_group:
-          case Intrinsic::strip_invariant_group:
             Users.emplace_back(I);
             Worklist.push_back(I);
             continue;
@@ -4189,12 +4188,11 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
   Function *F = RI.getFunction();
   Type *RetTy = RetVal->getType();
   if (RetTy->isPointerTy()) {
-    bool HasDereferenceable =
-        F->getAttributes().getRetDereferenceableBytes() > 0;
-    if (F->hasRetAttribute(Attribute::NonNull) ||
-        (HasDereferenceable &&
-         !NullPointerIsDefined(F, RetTy->getPointerAddressSpace()))) {
-      if (Value *V = simplifyNonNullOperand(RetVal, HasDereferenceable))
+    bool UseProvenance =
+        F->getAttributes().getRetDereferenceableBytes() > 0 &&
+        !NullPointerIsDefined(F, RetTy->getPointerAddressSpace());
+    if (F->hasRetAttribute(Attribute::NonNull) || UseProvenance) {
+      if (Value *V = simplifyNonNullOperand(RetVal, UseProvenance))
         return replaceOperand(RI, 0, V);
     }
   }
@@ -4886,6 +4884,7 @@ static bool isCatchAll(EHPersonality Personality, Constant *TypeInfo) {
   case EHPersonality::Wasm_CXX:
   case EHPersonality::XL_CXX:
   case EHPersonality::ZOS_CXX:
+  case EHPersonality::Wasm_D:
     return isa<ConstantPointerNull>(TypeInfo);
   }
   llvm_unreachable("invalid enum");
