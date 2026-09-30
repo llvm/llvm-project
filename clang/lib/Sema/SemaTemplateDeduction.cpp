@@ -256,10 +256,10 @@ getNTTParameterFromExpr(const Expr *E, UnsignedOrNone Depth) {
   return nullptr;
 }
 
-QualType Sema::getTypeOfConstantTemplateParameter(const TemplateArgument &A,
+QualType Sema::getTypeOfConstantTemplateParameter(const TemplateArgument &Arg,
                                                   UnsignedOrNone Depth) {
   if (NonTypeOrVarTemplateParmDecl NTTP =
-          getNTTParameterFromExpr(A.getAsExpr(), Depth))
+          getNTTParameterFromExpr(Arg.getAsExpr(), Depth))
     return NTTP.getType();
   return QualType();
 }
