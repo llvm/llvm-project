@@ -1393,13 +1393,16 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   bool RMWReturnsNew;
   bool BitIntRMWLoop =
       needsBitIntRMWLoop(E, getContext(), Size, BitIntBinOp, RMWReturnsNew);
+  bool PowerOf2Size = (Size & (Size - 1)) == 0;
+  bool UseLibcall = !PowerOf2Size || (Size > 16);
   llvm::AtomicOrdering BitIntOrder = atomicOrderOrSeqCst(Order);
   llvm::SyncScope::ID DefaultScope = llvm::SyncScope::System;
   if (BitIntRMWLoop && getLangOpts().OpenCL && !E->getScopeModel())
     DefaultScope = getTargetHooks().getLLVMSyncScopeID(
         getLangOpts(), SyncScope::OpenCLDevice, BitIntOrder, getLLVMContext());
 
-  if (BitIntRMWLoop && Atomics.shouldUseLibcall()) {
+  if ((BitIntRMWLoop && Atomics.shouldUseLibcall()) ||
+      (MemTy->isBitIntType() && UseLibcall && !E->isOpenCL())) {
     bool NonSystemScope = DefaultScope != llvm::SyncScope::System;
     if (auto ScopeModel = E->getScopeModel()) {
       if (auto *ConstantScope = dyn_cast<llvm::ConstantInt>(Scope)) {
@@ -1415,6 +1418,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       CGM.Error(E->getExprLoc(),
                 "scoped _BitInt atomic operation is not supported at this "
                 "width");
+      if (RValTy->isVoidType())
+        return RValue::get(nullptr);
       return RValue::get(llvm::PoisonValue::get(ConvertType(RValTy)));
     }
   }
@@ -1442,9 +1447,6 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     if (ShouldCastToIntPtrTy)
       Dest = Atomics.castToAtomicIntPointer(Dest);
   }
-
-  bool PowerOf2Size = (Size & (Size - 1)) == 0;
-  bool UseLibcall = !PowerOf2Size || (Size > 16);
 
   // For atomics larger than 16 bytes, emit a libcall from the frontend. This
   // avoids the overhead of dealing with excessively-large value types in IR.
