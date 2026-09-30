@@ -5377,3 +5377,159 @@ uint16x4_t test_pset_u16x2_u16x4_lo(uint16x4_t v, uint16x2_t s) {
 uint16x4_t test_pset_u16x2_u16x4_hi(uint16x4_t v, uint16x2_t s) {
   return __riscv_pset_u16x2_u16x4(v, s, 1);
 }
+
+// CHECK-LABEL: test_pwunzipe_i16x2:
+// RV32:         psext.h.b{{[[:space:]]}}
+// RV64:         psext.h.b{{[[:space:]]}}
+int16x2_t test_pwunzipe_i16x2(int8x4_t a) { return __riscv_pwunzipe_i16x2(a); }
+
+// CHECK-LABEL: test_pwunzipo_i16x2:
+// RV32:         psrai.h{{[[:space:]]}}
+// RV64:         psrai.h{{[[:space:]]}}
+int16x2_t test_pwunzipo_i16x2(int8x4_t a) { return __riscv_pwunzipo_i16x2(a); }
+
+// CHECK-LABEL: test_pwunzipue_u16x2:
+// RV32:         pzext.h.b{{[[:space:]]}}
+// RV64:         pzext.h.b{{[[:space:]]}}
+uint16x2_t test_pwunzipue_u16x2(uint8x4_t a) {
+  return __riscv_pwunzipue_u16x2(a);
+}
+
+// CHECK-LABEL: test_pwunzipuo_u16x2:
+// RV32:         psrli.h{{[[:space:]]}}
+// RV64:         psrli.h{{[[:space:]]}}
+uint16x2_t test_pwunzipuo_u16x2(uint8x4_t a) {
+  return __riscv_pwunzipuo_u16x2(a);
+}
+
+// CHECK-LABEL: test_pwunziphe_i16x2:
+// RV32:         pslli.h{{[[:space:]]}}
+// RV64:         pslli.h{{[[:space:]]}}
+int16x2_t test_pwunziphe_i16x2(int8x4_t a) {
+  return __riscv_pwunziphe_i16x2(a);
+}
+
+// CHECK-LABEL: test_pwunziphe_u16x2:
+// RV32:         pslli.h{{[[:space:]]}}
+// RV64:         pslli.h{{[[:space:]]}}
+uint16x2_t test_pwunziphe_u16x2(uint8x4_t a) {
+  return __riscv_pwunziphe_u16x2(a);
+}
+
+// CHECK-LABEL: test_pwunzipho_i16x2:
+// RV32:         ppaireo.b{{[[:space:]]}}
+// RV64:         ppaireo.b{{[[:space:]]}}
+int16x2_t test_pwunzipho_i16x2(int8x4_t a) {
+  return __riscv_pwunzipho_i16x2(a);
+}
+
+// CHECK-LABEL: test_pwunzipho_u16x2:
+// RV32:         ppaireo.b{{[[:space:]]}}
+// RV64:         ppaireo.b{{[[:space:]]}}
+uint16x2_t test_pwunzipho_u16x2(uint8x4_t a) {
+  return __riscv_pwunzipho_u16x2(a);
+}
+
+// CHECK-LABEL: test_pwunzipe_i16x4:
+// RV32:         psext.dh.b{{[[:space:]]}}
+// RV64:         psext.h.b{{[[:space:]]}}
+int16x4_t test_pwunzipe_i16x4(int8x8_t a) { return __riscv_pwunzipe_i16x4(a); }
+
+// CHECK-LABEL: test_pwunzipo_i16x4:
+// RV32:         psrai.dh{{[[:space:]]}}
+// RV64:         psrai.h{{[[:space:]]}}
+int16x4_t test_pwunzipo_i16x4(int8x8_t a) { return __riscv_pwunzipo_i16x4(a); }
+
+// CHECK-LABEL: test_pwunzipue_u16x4:
+// RV32:         pzext.dh.b{{[[:space:]]}}
+// RV64:         pzext.h.b{{[[:space:]]}}
+uint16x4_t test_pwunzipue_u16x4(uint8x8_t a) {
+  return __riscv_pwunzipue_u16x4(a);
+}
+
+// CHECK-LABEL: test_pwunzipuo_u16x4:
+// RV32:         psrli.dh{{[[:space:]]}}
+// RV64:         psrli.h{{[[:space:]]}}
+uint16x4_t test_pwunzipuo_u16x4(uint8x8_t a) {
+  return __riscv_pwunzipuo_u16x4(a);
+}
+
+// CHECK-LABEL: test_pwunzipe_i32x2:
+// RV32:         psext.dw.h{{[[:space:]]}}
+// RV64:         psext.w.h{{[[:space:]]}}
+int32x2_t test_pwunzipe_i32x2(int16x4_t a) { return __riscv_pwunzipe_i32x2(a); }
+
+// CHECK-LABEL: test_pwunzipo_i32x2:
+// RV32:         psrai.dw{{[[:space:]]}}
+// RV64:         psrai.w{{[[:space:]]}}
+int32x2_t test_pwunzipo_i32x2(int16x4_t a) { return __riscv_pwunzipo_i32x2(a); }
+
+// CHECK-LABEL: test_pwunzipue_u32x2:
+// RV32:         pzext.dw.h{{[[:space:]]}}
+// RV64:         pzext.w.h{{[[:space:]]}}
+uint32x2_t test_pwunzipue_u32x2(uint16x4_t a) {
+  return __riscv_pwunzipue_u32x2(a);
+}
+
+// CHECK-LABEL: test_pwunzipuo_u32x2:
+// RV32:         psrli.dw{{[[:space:]]}}
+// RV64:         psrli.w{{[[:space:]]}}
+uint32x2_t test_pwunzipuo_u32x2(uint16x4_t a) {
+  return __riscv_pwunzipuo_u32x2(a);
+}
+
+// CHECK-LABEL: test_pwunziphe_i16x4:
+// RV32:         pslli.dh{{[[:space:]]}}
+// RV64:         pslli.h{{[[:space:]]}}
+int16x4_t test_pwunziphe_i16x4(int8x8_t a) {
+  return __riscv_pwunziphe_i16x4(a);
+}
+
+// CHECK-LABEL: test_pwunziphe_u16x4:
+// RV32:         pslli.dh{{[[:space:]]}}
+// RV64:         pslli.h{{[[:space:]]}}
+uint16x4_t test_pwunziphe_u16x4(uint8x8_t a) {
+  return __riscv_pwunziphe_u16x4(a);
+}
+
+// CHECK-LABEL: test_pwunzipho_i16x4:
+// RV32:         ppaireo.db{{[[:space:]]}}
+// RV64:         ppaireo.b{{[[:space:]]}}
+int16x4_t test_pwunzipho_i16x4(int8x8_t a) {
+  return __riscv_pwunzipho_i16x4(a);
+}
+
+// CHECK-LABEL: test_pwunzipho_u16x4:
+// RV32:         ppaireo.db{{[[:space:]]}}
+// RV64:         ppaireo.b{{[[:space:]]}}
+uint16x4_t test_pwunzipho_u16x4(uint8x8_t a) {
+  return __riscv_pwunzipho_u16x4(a);
+}
+
+// CHECK-LABEL: test_pwunziphe_i32x2:
+// RV32:         pslli.dw{{[[:space:]]}}
+// RV64:         pslli.w{{[[:space:]]}}
+int32x2_t test_pwunziphe_i32x2(int16x4_t a) {
+  return __riscv_pwunziphe_i32x2(a);
+}
+
+// CHECK-LABEL: test_pwunziphe_u32x2:
+// RV32:         pslli.dw{{[[:space:]]}}
+// RV64:         pslli.w{{[[:space:]]}}
+uint32x2_t test_pwunziphe_u32x2(uint16x4_t a) {
+  return __riscv_pwunziphe_u32x2(a);
+}
+
+// CHECK-LABEL: test_pwunzipho_i32x2:
+// RV32:         ppaireo.dh{{[[:space:]]}}
+// RV64:         ppaireo.h{{[[:space:]]}}
+int32x2_t test_pwunzipho_i32x2(int16x4_t a) {
+  return __riscv_pwunzipho_i32x2(a);
+}
+
+// CHECK-LABEL: test_pwunzipho_u32x2:
+// RV32:         ppaireo.dh{{[[:space:]]}}
+// RV64:         ppaireo.h{{[[:space:]]}}
+uint32x2_t test_pwunzipho_u32x2(uint16x4_t a) {
+  return __riscv_pwunzipho_u32x2(a);
+}
