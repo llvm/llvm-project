@@ -1086,21 +1086,20 @@ mlir::Value genAffinityLen(fir::FirOpBuilder &builder, mlir::Location loc,
       builder, loc, getTotalElements(builder, loc, entity), elemBytes);
 }
 
-bool hasIteratorIVReference(
-    const omp::Object &object,
-    const llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms) {
-  auto ref = object.ref();
-  if (!ref)
-    return false;
+llvm::SmallVector<IteratorRange>
+getIteratorRangesForObject(const omp::Object &object,
+                           llvm::ArrayRef<IteratorRange> ranges) {
+  llvm::SmallVector<IteratorRange> objectRanges;
+  if (ranges.empty())
+    return objectRanges;
 
-  Fortran::lower::SomeExpr expr = toEvExpr(*ref);
-
-  for (Fortran::evaluate::SymbolRef s : CollectSymbols(expr)) {
-    const Fortran::semantics::Symbol &ult = s->GetUltimate();
-    if (ivSyms.contains(&ult))
-      return true;
-  }
-  return false;
+  assert(object.sourceIteratorReferences &&
+         "expected source iterator references for the locator");
+  for (const IteratorRange &range : ranges)
+    if (llvm::is_contained(*object.sourceIteratorReferences,
+                           &range.ivSym->GetUltimate()))
+      objectRanges.push_back(range);
+  return objectRanges;
 }
 
 void defaultMangler(Fortran::lower::AbstractConverter &converter,
