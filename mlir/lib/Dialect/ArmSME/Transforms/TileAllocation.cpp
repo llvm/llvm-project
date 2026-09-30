@@ -800,24 +800,12 @@ struct TestTileAllocationPass
 };
 } // namespace
 
-/// Returns true if `function` contains any SME tile values, either as
-/// function arguments or as results of operations.
-///
-/// NOTE: Block arguments of non-entry blocks do not need to be checked
-/// separately, as they are always fed by branch operands that trace back to
-/// either a function argument or an operation result.
-static bool functionHasSMETileValues(FunctionOpInterface function) {
-  auto hasSMETileType = [](TypeRange types) {
-    return llvm::any_of(
-        types, [](Type type) { return isValidSMETileVectorType(type); });
-  };
-  if (hasSMETileType(function.getArgumentTypes()))
-    return true;
+/// Returns true if `function` contains any ArmSME tile ops. If it does not,
+/// there is nothing to allocate: any value not produced/consumed by such an
+/// op will never be assigned a tile ID, so tile allocation is a no-op.
+static bool functionHasArmSMETileOps(FunctionOpInterface function) {
   return function
-      .walk([&](Operation *op) {
-        return hasSMETileType(op->getResultTypes()) ? WalkResult::interrupt()
-                                                    : WalkResult::advance();
-      })
+      .walk([&](ArmSMETileOpInterface) { return WalkResult::interrupt(); })
       .wasInterrupted();
 }
 
@@ -826,10 +814,10 @@ LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
   if (function.empty())
     return success();
 
-  // Bail out early if the function has no SME tile values, this avoids
+  // Bail out early if the function has no ArmSME tile ops, this avoids
   // running the (non-trivial) preprocessing and liveness analysis below
   // for functions that have nothing to allocate.
-  if (!functionHasSMETileValues(function))
+  if (!functionHasArmSMETileOps(function))
     return success();
 
   LiveRange::Allocator liveRangeAllocator;

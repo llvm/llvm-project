@@ -241,11 +241,15 @@ func.func @non_overlapping_branches(%cond: i1) {
 // -----
 
 // Here %vecA and %vecB are not merged into the same live range (as they are unknown values).
-// This means that %vecA and %vecB are both allocated to different tiles (which is not legal).
+// This means that %vecA and %vecB are both allocated to different tiles. As `arm_sme.get_tile`
+// is trivially cloneable this is resolved by cloning it, rather than an error.
 
-// expected-note@below {{tile operand is: <block argument> of type 'vector<[4]x[4]xf32>'}}
-func.func @overlapping_branches(%cond: i1, %vecA: vector<[4]x[4]xf32>, %vecB: vector<[4]x[4]xf32>) {
-  // expected-error@below {{op tile operand allocated to different SME virtial tile (move required)}}
+// CHECK-LABEL: @overlapping_branches
+// CHECK: arm_sme.get_tile {tile_id = [[ID:.*]] : i32} : vector<[4]x[4]xf32>
+// CHECK: arm_sme.get_tile {tile_id = [[ID]] : i32} : vector<[4]x[4]xf32>
+func.func @overlapping_branches(%cond: i1) {
+  %vecA = arm_sme.get_tile : vector<[4]x[4]xf32>
+  %vecB = arm_sme.get_tile : vector<[4]x[4]xf32>
   %tile = scf.if %cond -> vector<[4]x[4]xf32> {
     scf.yield %vecA : vector<[4]x[4]xf32>
   } else {
@@ -606,23 +610,5 @@ func.func @reactivate_inactive_live_range(%cond: i1) {
   "test.some_use"(%tileA) : (vector<[4]x[4]xf32>) -> ()
   cf.br ^bb3
 ^bb3:
-  return
-}
-
-// -----
-
-// A function argument that is a valid SME tile type must be processed
-// for tile allocation, even though it is not produced by an ArmSME op.
-
-//  CHECK-LIVE-RANGE-LABEL: @tile_value_from_function_argument
-//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
-//        CHECK-LIVE-RANGE: ^bb0:
-//   CHECK-LIVE-RANGE-NEXT: E test.some_use
-
-// CHECK-LABEL: @tile_value_from_function_argument(
-// CHECK-SAME:                                     %[[TILE:.*]]: vector<[4]x[4]xf32>
-func.func @tile_value_from_function_argument(%tile: vector<[4]x[4]xf32>) {
-  // CHECK: "test.some_use"(%[[TILE]])
-  "test.some_use"(%tile) : (vector<[4]x[4]xf32>) -> ()
   return
 }
