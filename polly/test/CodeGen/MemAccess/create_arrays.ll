@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-print-scops '-passes=polly-custom<import-jscop>' -polly-print-import-jscop -polly-import-jscop-postfix=transformed -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -polly-import-jscop-postfix=transformed -S < %s 2>&1 | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-print-scops '-passes=polly-custom<import-jscop>' -plugin-arg=Polly,-polly-print-import-jscop -plugin-arg=Polly,-polly-import-jscop-postfix=transformed -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<import-jscop;codegen>' -plugin-arg=Polly,-polly-import-jscop-postfix=transformed -S < %s 2>&1 | FileCheck %s --check-prefix=CODEGEN
 ;
 ;  for (i = 0; i < _PB_NI; i++)
 ;    for (j = 0; j < _PB_NJ; j++)

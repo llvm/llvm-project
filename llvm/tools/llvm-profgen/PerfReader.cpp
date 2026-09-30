@@ -932,8 +932,8 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
           NumBogusTrace++;
           if (ShowDetailedWarning)
             WithColor::warning()
-                << "Bogus trace: stack tip = " << format("%#010x", StackLeaf)
-                << ", LBR tip = " << format("%#010x\n", LBRLeaf);
+                << "Bogus trace: stack tip = " << format_hex(StackLeaf, 10)
+                << ", LBR tip = " << format_hex(LBRLeaf, 10) << "\n";
           return;
         }
         // Canonicalize stack leaf to avoid 'random' IP from leaf frame skew LBR
