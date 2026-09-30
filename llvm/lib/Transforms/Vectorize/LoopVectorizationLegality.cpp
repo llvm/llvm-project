@@ -707,14 +707,6 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
                                                 const InductionDescriptor &ID) {
   Inductions[Phi] = ID;
 
-  // In case this induction also comes with casts that we know we can ignore
-  // in the vectorized loop body, record them here. All casts could be recorded
-  // here for ignoring, but suffices to record only the first (as it is the
-  // only one that may bw used outside the cast sequence).
-  ArrayRef<Instruction *> Casts = ID.getCastInsts();
-  if (!Casts.empty())
-    InductionCastsToIgnore.insert(*Casts.begin());
-
   Type *PhiTy = Phi->getType();
   const DataLayout &DL = Phi->getDataLayout();
 
@@ -1358,16 +1350,6 @@ bool LoopVectorizationLegality::isInductionPhi(const Value *V) const {
   return Inductions.count(PN);
 }
 
-bool LoopVectorizationLegality::isCastedInductionVariable(
-    const Value *V) const {
-  auto *Inst = dyn_cast<Instruction>(V);
-  return (Inst && InductionCastsToIgnore.count(Inst));
-}
-
-bool LoopVectorizationLegality::isInductionVariable(const Value *V) const {
-  return isInductionPhi(V) || isCastedInductionVariable(V);
-}
-
 bool LoopVectorizationLegality::isFixedOrderRecurrence(
     const PHINode *Phi) const {
   return FixedOrderRecurrences.count(Phi);
@@ -1985,7 +1967,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   }
 
   if (Result) {
-    LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
+    LLVM_DEBUG(dbgs() << "LV: Loop passed LoopVectorizationLegality checks"
                       << (LAI->getRuntimePointerChecking()->Need
                               ? " (with a runtime bound check)"
                               : "")

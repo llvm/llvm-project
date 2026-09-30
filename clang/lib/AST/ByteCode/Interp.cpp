@@ -875,6 +875,8 @@ static bool CheckLifetime(InterpState &S, CodePtr OpPC, Lifetime LT,
 }
 static bool CheckLifetime(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                           AccessKinds AK) {
+  if (!Ptr.isBlockPointer())
+    return true;
   return CheckLifetime(S, OpPC, Ptr.getLifetime(), Ptr.block(), AK);
 }
 
@@ -1052,7 +1054,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   // Block and string pointers are the only ones we can actually read from.
   if (!Ptr.isReadablePointerType())
-    return CheckDummy(S, OpPC, Ptr, AK);
+    return diagnoseDummy(S, OpPC, Ptr, AK);
 
   assert(Ptr.isStringPointer());
 
@@ -1070,7 +1072,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(!Ptr.isZero());
   if (!Ptr.isReadablePointerType())
-    return CheckDummy(S, OpPC, Ptr, AK_Read);
+    return diagnoseDummy(S, OpPC, Ptr, AK_Read);
 
   if (Ptr.isBlockPointer() && !Ptr.block()->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK_Read))
@@ -1079,6 +1081,9 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
       return false;
     return CheckWeak(S, OpPC, Ptr.block());
   }
+
+  if (Ptr.isPastEnd())
+    return false;
 
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
@@ -1096,7 +1101,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     if (!CheckMutable(S, OpPC, Ptr.view()))
       return false;
   }
-  if (Ptr.isConstexprUnknown())
+  if (!S.inConstantContext() && isConstexprUnknown(Ptr))
     return false;
   return true;
 }
@@ -1107,7 +1112,7 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
 
   if (Ptr.isOpaquePointer())
-    return CheckDummy(S, OpPC, Ptr, AK);
+    return diagnoseDummy(S, OpPC, Ptr, AK);
 
   if (!Ptr.isBlockPointer())
     return false;
@@ -1428,11 +1433,8 @@ bool InvalidDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR,
   return CheckDeclRef(S, OpPC, DR);
 }
 
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                AccessKinds AK) {
-  if (!Ptr.isDummy())
-    return true;
-
+bool diagnoseDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                   AccessKinds AK) {
   if (!S.diagnosing())
     return false;
 
@@ -1446,6 +1448,13 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (AK == AK_Destroy || S.getLangOpts().CPlusPlus14)
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_modify_global);
   return false;
+}
+
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                AccessKinds AK) {
+  if (!Ptr.isDummy())
+    return true;
+  return diagnoseDummy(S, OpPC, Ptr, AK);
 }
 
 static bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
@@ -1950,6 +1959,14 @@ bool checkDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   // destruction for.
   if (S.checkingConstantDestruction(Ptr))
     return true;
+
+  // String pointers are immutable, so can't call a destructor on them.
+  if (Ptr.isStringPointer()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_access_unreadable_object)
+        << AK_Destroy << Ptr.toDiagnosticString(S.getASTContext());
+    return false;
+  }
 
   // Can't call a dtor on a global variable.
   if (Ptr.isOpaquePointer() || Ptr.block()->isStatic()) {
@@ -2839,8 +2856,10 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     return false;
   }
 
+  if (Ptr.isDummy())
+    return diagnoseDummy(S, OpPC, Ptr, AK_Construct);
   if (!Ptr.isBlockPointer())
-    return CheckDummy(S, OpPC, Ptr, AK_Construct);
+    return false;
 
   if (!CheckRange(S, OpPC, Ptr, AK_Construct))
     return false;
@@ -2854,7 +2873,7 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
       return false;
     if (!CheckLive(S, OpPC, Ptr, AK_Construct))
       return false;
-    return CheckDummy(S, OpPC, Ptr, AK_Construct);
+    return diagnoseDummy(S, OpPC, Ptr, AK_Construct);
   }
   if (!CheckTemporary(S, OpPC, Ptr, AK_Construct))
     return false;
@@ -2876,9 +2895,6 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   if (!CheckConst(S, OpPC, Ptr))
     return false;
   if (!S.inConstantContext() && isConstexprUnknown(Ptr))
-    return false;
-
-  if (!InvalidNewDeleteExpr(S, OpPC, E))
     return false;
 
   const auto *NewExpr = cast<CXXNewExpr>(E);
@@ -2924,48 +2940,46 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
 
 bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
   assert(E);
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
 
   if (const auto *NewExpr = dyn_cast<CXXNewExpr>(E)) {
     const FunctionDecl *OperatorNew = NewExpr->getOperatorNew();
 
-    if (NewExpr->getNumPlacementArgs() > 0) {
-      // This is allowed pre-C++26, but only an std function or if
-      // [[msvc::constexpr]] was used.
-      if (S.getLangOpts().CPlusPlus26 || S.Current->isStdFunction() ||
-          S.Current->MSVCConstexprAllowed)
-        return true;
+    // The only new-placement list we support is (std::nothrow), and only for
+    // the replaceable global allocation functions.
+    bool IsNothrowForm = NewExpr->getNumPlacementArgs() == 1 &&
+                         NewExpr->getPlacementArg(0)->getType()->isNothrowT();
+    if (NewExpr->getNumPlacementArgs() > 0 && !IsNothrowForm) {
+      S.FFDiag(Loc, diag::note_constexpr_new_placement)
+          << /*Unsupported*/ 0 << E->getSourceRange();
+      return false;
+    }
 
-      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_placement)
-          << /*C++26 feature*/ 1 << E->getSourceRange();
-    } else if (
-        !OperatorNew
-             ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
-      S.FFDiag(S.Current->getSource(OpPC),
-               diag::note_constexpr_new_non_replaceable)
-          << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
-      return false;
-    } else if (!S.getLangOpts().CPlusPlus26 &&
-               NewExpr->getNumPlacementArgs() == 1 &&
-               !OperatorNew->isReservedGlobalPlacementOperator()) {
-      if (!S.getLangOpts().CPlusPlus26) {
-        S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_placement)
-            << /*Unsupported*/ 0 << E->getSourceRange();
-        return false;
-      }
-      return true;
-    }
-  } else {
-    const auto *DeleteExpr = cast<CXXDeleteExpr>(E);
-    const FunctionDecl *OperatorDelete = DeleteExpr->getOperatorDelete();
-    if (!OperatorDelete
-             ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
-      S.FFDiag(S.Current->getSource(OpPC),
-               diag::note_constexpr_new_non_replaceable)
-          << isa<CXXMethodDecl>(OperatorDelete) << OperatorDelete;
-      return false;
-    }
+    assert(
+        !OperatorNew->isUsableAsGlobalAllocationFunctionInConstantEvaluation());
+    S.FFDiag(Loc, diag::note_constexpr_new_non_replaceable)
+        << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
+    return false;
   }
 
+  const auto *DeleteExpr = cast<CXXDeleteExpr>(E);
+  const FunctionDecl *OperatorDelete = DeleteExpr->getOperatorDelete();
+  assert(!OperatorDelete
+              ->isUsableAsGlobalAllocationFunctionInConstantEvaluation());
+  S.FFDiag(Loc, diag::note_constexpr_new_non_replaceable)
+      << isa<CXXMethodDecl>(OperatorDelete) << OperatorDelete;
+  return false;
+}
+
+bool CheckPlacementNew(InterpState &S, CodePtr OpPC, const Expr *E) {
+  // Placement new is allowed in C++26. Before that, it is only allowed in a
+  // std:: function or if [[msvc::constexpr]] was used.
+  if (S.getLangOpts().CPlusPlus26 || S.Current->isStdFunction() ||
+      S.Current->MSVCConstexprAllowed)
+    return true;
+
+  S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_placement)
+      << /*C++26 feature*/ 1 << E->getSourceRange();
   return false;
 }
 
