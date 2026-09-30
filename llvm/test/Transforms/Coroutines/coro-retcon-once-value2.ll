@@ -84,6 +84,7 @@ declare fastcc void @deallocate(ptr %ptr)
 declare void @print(i32)
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CORO_RET:%.*]] = alloca { ptr, ptr }, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 12)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
@@ -111,6 +112,7 @@ declare void @print(i32)
 ;
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CORO_RET:%.*]] = alloca { ptr, ptr }, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 13)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
@@ -142,6 +144,7 @@ declare void @print(i32)
 ;
 ; CHECK-LABEL: @h(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CORO_RET:%.*]] = alloca { ptr, ptr }, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 12)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CHECK-NEXT:    [[TEMP:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8

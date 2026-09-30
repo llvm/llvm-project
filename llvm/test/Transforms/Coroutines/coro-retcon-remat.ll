@@ -11,6 +11,7 @@ define { ptr, i32 } @f(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: define { ptr, i32 } @f(
 ; CHECK-SAME: ptr [[BUFFER:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CORO_RET:%.*]] = alloca { ptr, i32 }, align 8
 ; CHECK-NEXT:    store i32 [[N]], ptr [[BUFFER]], align 4
 ; CHECK-NEXT:    call void @print(i32 [[N]])
 ; CHECK-NEXT:    [[INC1:%.*]] = add i32 [[N]], 1

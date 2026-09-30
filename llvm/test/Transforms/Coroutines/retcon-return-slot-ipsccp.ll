@@ -1,7 +1,8 @@
-; RUN: opt -verify-each -passes='thinlto<O2>' -S %s | FileCheck %s
+; RUN: opt -verify-each -passes='ipsccp' -S %s | FileCheck %s --check-prefix=PRE
+; RUN: opt -verify-each -passes='thinlto<O2>' -S %s | FileCheck %s --check-prefix=POST
 
 ; An ICP-style direct/indirect call join must retain the direct return pair.
-; The ThinLTO pipeline must materialize retcon ramp returns before IPSCCP.
+; Older six-operand Swift-style IR is upgraded to an explicit return slot.
 
 declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
@@ -33,7 +34,7 @@ entry:
 
 direct:
   %direct_pair = call swiftcc { ptr, ptr } @accessor(
-      ptr noalias %buffer, ptr swiftself %object)
+      ptr noalias %buffer, ptr swiftself %object) #1
   br label %join
 
 indirect:
@@ -51,9 +52,20 @@ join:
   ret void
 }
 
-; CHECK-LABEL: define internal swiftcc { ptr, ptr } @accessor(
-; CHECK: ret { ptr, ptr }
-; CHECK-LABEL: define void @caller(
-; CHECK: %pair = phi { ptr, ptr } [ %direct_pair, %direct ], [ %indirect_pair, %indirect ]
+; PRE-LABEL: define internal swiftcc { ptr, ptr } @accessor(
+; PRE: %coro.ret = alloca { ptr, ptr }
+; PRE: call token @llvm.coro.id.retcon.once({{.*}}ptr %coro.ret)
+; PRE: load { ptr, ptr }, ptr %coro.ret
+; PRE: ret { ptr, ptr }
+; PRE-LABEL: define void @caller(
+; PRE: %direct_pair = call swiftcc { ptr, ptr } @accessor(ptr noalias %buffer, ptr swiftself %object){{$}}
+; PRE: %pair = phi { ptr, ptr } [ %direct_pair, %direct ], [ %indirect_pair, %indirect ]
+; PRE-NOT: noreturn
 
-attributes #0 = { noinline presplitcoroutine }
+; POST-LABEL: define internal swiftcc { ptr, ptr } @accessor(
+; POST: ret { ptr, ptr }
+; POST-LABEL: define void @caller(
+; POST: %pair = phi { ptr, ptr } [ %direct_pair, %direct ], [ %indirect_pair, %indirect ]
+
+attributes #0 = { noinline noreturn presplitcoroutine }
+attributes #1 = { noreturn }

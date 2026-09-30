@@ -35,6 +35,7 @@ declare void @print(i32)
 
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CORO_RET:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 20)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[TMP0]], align 4

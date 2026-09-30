@@ -2006,15 +2006,6 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
 
     return MPM;
   }
-  // Make returned-continuation coroutine returns explicit before ICP and
-  // return-sensitive IPO inspect their ramp functions. Leave other coroutine
-  // ABIs on the existing late-split path.
-  CGSCCPassManager EarlyRetconCGPM;
-  EarlyRetconCGPM.addPass(CoroSplitPass(Level != OptimizationLevel::O0,
-                                        CoroSplitPass::Mode::RetconOnly));
-  MPM.addPass(
-      createModuleToPostOrderCGSCCPassAdaptor(std::move(EarlyRetconCGPM)));
-
   if (!UseCtxProfile.empty()) {
     MPM.addPass(
         buildModuleInlinerPipeline(Level, ThinOrFullLTOPhase::ThinLTOPostLink));

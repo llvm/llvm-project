@@ -46,7 +46,7 @@ define {ptr, i32} @g(ptr %buffer, i32 %n) {
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i8, i64 [[TMP0]], align 8
-; CHECK-NEXT:    tail call void @use(ptr nonnull [[TMP1]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, i32 } { ptr @g.resume.0, i32 poison }, i32 [[N]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP2]]
 ;

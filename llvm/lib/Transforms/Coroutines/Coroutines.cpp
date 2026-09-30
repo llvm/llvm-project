@@ -635,6 +635,13 @@ void AnyCoroIdRetconInst::checkWellFormed() const {
   checkWFRetconPrototype(this, getArgOperand(PrototypeArg));
   checkWFAlloc(this, getArgOperand(AllocArg));
   checkWFDealloc(this, getArgOperand(DeallocArg));
+  auto *ReturnSlot = dyn_cast<AllocaInst>(getReturnSlot());
+  if (!ReturnSlot || ReturnSlot->getFunction() != getFunction() ||
+      ReturnSlot->getAllocatedType() != getFunction()->getReturnType())
+    fail(this,
+         "return slot of coro.id.retcon.* must be a return-typed "
+         "alloca in the coroutine function",
+         getReturnSlot());
 }
 
 static void checkAsyncFuncPointer(const Instruction *I, Value *V) {

@@ -2279,11 +2279,6 @@ CoroSplitPass::CoroSplitPass(bool OptimizeFrame)
       }),
       OptimizeFrame(OptimizeFrame) {}
 
-CoroSplitPass::CoroSplitPass(bool OptimizeFrame, Mode SplitMode)
-    : CoroSplitPass(OptimizeFrame) {
-  this->SplitMode = SplitMode;
-}
-
 CoroSplitPass::CoroSplitPass(
     SmallVector<CoroSplitPass::BaseABITy> GenCustomABIs, bool OptimizeFrame)
     : CreateAndInitABI([=](Function &F, coro::Shape &S) {
@@ -2332,23 +2327,13 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
   // Check for uses of llvm.coro.prepare.retcon/async.
   SmallVector<Function *, 2> PrepareFns;
   addPrepareFunction(M, PrepareFns, "llvm.coro.prepare.retcon");
-  if (SplitMode == Mode::All)
-    addPrepareFunction(M, PrepareFns, "llvm.coro.prepare.async");
+  addPrepareFunction(M, PrepareFns, "llvm.coro.prepare.async");
 
   // Find coroutines for processing.
   SmallVector<LazyCallGraph::Node *> Coroutines;
-  for (LazyCallGraph::Node &N : C) {
-    Function &F = N.getFunction();
-    if (!F.isPresplitCoroutine())
-      continue;
-    if (SplitMode == Mode::RetconOnly &&
-        !any_of(instructions(F), [](Instruction &I) {
-          auto *Begin = dyn_cast<CoroBeginInst>(&I);
-          return Begin && isa<AnyCoroIdRetconInst>(Begin->getId());
-        }))
-      continue;
-    Coroutines.push_back(&N);
-  }
+  for (LazyCallGraph::Node &N : C)
+    if (N.getFunction().isPresplitCoroutine())
+      Coroutines.push_back(&N);
 
   if (Coroutines.empty() && PrepareFns.empty())
     return PreservedAnalyses::all();
@@ -2367,10 +2352,6 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
 
     coro::Shape Shape(F);
     if (!Shape.CoroBegin)
-      continue;
-
-    if (SplitMode == Mode::RetconOnly && Shape.ABI != coro::ABI::Retcon &&
-        Shape.ABI != coro::ABI::RetconOnce)
       continue;
 
     F.setSplittedCoroutine();
