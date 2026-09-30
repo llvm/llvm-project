@@ -17,12 +17,12 @@
 using namespace llvm;
 
 Expected<PassPlugin> PassPlugin::load(StringRef Filename) {
-  std::string ErrMsg;
+  std::string Error;
   auto Library =
-      sys::DynamicLibrary::getPermanentLibrary(Filename.str().c_str(), &ErrMsg);
+      sys::DynamicLibrary::getPermanentLibrary(Filename.str().c_str(), &Error);
   if (!Library.isValid())
     return make_error<StringError>(Twine("Could not load library '") +
-                                       Filename + "': " + ErrMsg,
+                                       Filename + "': " + Error,
                                    inconvertibleErrorCode());
 
   PassPlugin P{Filename.str(), Library};
