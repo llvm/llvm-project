@@ -135,6 +135,20 @@ func.func @trivial_remui_sign_bit_set_range() -> i8 {
 
 // -----
 
+// CHECK-LABEL: func @non_trivial_remui_index_sign_bit_set_modulus
+// CHECK: arith.remui
+func.func @non_trivial_remui_index_sign_bit_set_modulus(%arg: index) -> index {
+  %mask = arith.constant 255 : index
+  // This is 2^63 + 3 as an unsigned 64-bit value, but truncates to 3 when
+  // index is lowered to 32 bits.
+  %divisor = arith.constant -9223372036854775805 : index
+  %val = arith.andi %arg, %mask : index
+  %mod = arith.remui %val, %divisor : index
+  return %mod : index
+}
+
+// -----
+
 // CHECK-LABEL: func @non_const_rhs
 // CHECK: [[mod:%.+]] = arith.remui
 // CHECK: return [[mod]]

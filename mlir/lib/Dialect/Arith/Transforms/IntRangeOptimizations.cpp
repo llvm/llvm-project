@@ -210,6 +210,10 @@ struct DeleteTrivialRem : public OpRewritePattern<RemOp> {
                                 PatternRewriter &rewriter) const override {
     Value lhs = op.getOperand(0);
     Value rhs = op.getOperand(1);
+    // Index has a target-dependent bitwidth, but the inferred range does not
+    // capture every possible target-specific computation.
+    if (isa<IndexType>(getElementTypeOrSelf(lhs.getType())))
+      return failure();
     APInt modulus;
     bool isUnsigned = isa<RemUIOp>(op);
     // Any nonzero bit pattern is a valid unsigned modulus. Keep the existing
