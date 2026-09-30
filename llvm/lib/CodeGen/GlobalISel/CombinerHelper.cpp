@@ -8894,14 +8894,17 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
       std::optional<APInt> C = getConstantOrConstantSplatVector(CReg);
       if (!C || C->getBitWidth() != BW)
         return std::nullopt;
+      // As in SDAG, the mask is also a no-op on bits where X is already known
+      // to hold the mask's value; check that before recursing into X, since a
+      // rewrite below can destroy the known bits this relies on.
       if (Opcode == TargetOpcode::G_AND) {
-        if (Demanded.isSubsetOf(*C))
+        if (Demanded.isSubsetOf(*C | VT->getKnownBits(X).Zero))
           return X;
         if (Demanded.isSubsetOf(~*C))
           return CReg;
         return std::nullopt;
       }
-      if (Demanded.isSubsetOf(~*C))
+      if (Demanded.isSubsetOf(~*C | VT->getKnownBits(X).One))
         return X;
       if (Demanded.isSubsetOf(*C))
         return CReg;
@@ -9046,12 +9049,28 @@ bool CombinerHelper::matchSimplifyDemandedBits(MachineInstr &MI,
     return Probe(/*OpNo=*/1, SrcDemand, SrcKnown);
   }
 
+  if (Opcode != TargetOpcode::G_AND && Opcode != TargetOpcode::G_OR)
+    return false;
+
+  // If known bits already make the root redundant, leave it to redundant_and
+  // / redundant_or. Simplifying an operand first can reroute it past a
+  // multi-use mask and destroy exactly the known bits that fold the root.
+  {
+    KnownBits L = VT->getKnownBits(MI.getOperand(1).getReg());
+    KnownBits R = VT->getKnownBits(MI.getOperand(2).getReg());
+    bool RootRedundant = Opcode == TargetOpcode::G_AND
+                             ? RootDemand.isSubsetOf(L.Zero | R.One) ||
+                                   RootDemand.isSubsetOf(R.Zero | L.One)
+                             : RootDemand.isSubsetOf(L.One | R.Zero) ||
+                                   RootDemand.isSubsetOf(R.One | L.Zero);
+    if (RootRedundant)
+      return false;
+  }
+
   KnownBits RHSKnown(RootDemand.getBitWidth());
   if (Probe(/*OpNo=*/2, RootDemand, RHSKnown))
     return true;
 
-  if (Opcode != TargetOpcode::G_AND && Opcode != TargetOpcode::G_OR)
-    return false;
   APInt LHSDemand = getDemandedLHSForLogicalOp(Opcode, RootDemand, RHSKnown);
 
   KnownBits LHSKnown(RootDemand.getBitWidth());

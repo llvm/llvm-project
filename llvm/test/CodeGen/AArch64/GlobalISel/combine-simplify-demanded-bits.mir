@@ -145,25 +145,38 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
-# AND root with demand propagated through shl-by-4: outer mask demands [0,12),
-# which translates to src demand [0,8). Inner mask 255 covers [0,8), so the
-# inner G_AND is redundant and gets dropped.
+# The outer mask is already redundant by known bits (shl of an 8-bit value by
+# 4 has bits [12,32) clear), so the rule stays out of the way and lets
+# redundant_and fold the root instead of rerouting the inner mask.
 name:            and_root_sees_through_shl
 legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
-    ; CHECK-LABEL: name: and_root_sees_through_shl
-    ; CHECK: liveins: $w0
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: %amt:_(s32) = G_CONSTANT i32 4
-    ; CHECK-NEXT: %shl:_(s32) = G_SHL [[COPY]], %amt(s32)
-    ; CHECK-NEXT: %lowmask:_(s32) = G_CONSTANT i32 4095
-    ; CHECK-NEXT: %and2:_(s32) = G_AND %shl, %lowmask
-    ; CHECK-NEXT: $w0 = COPY %and2(s32)
-    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    ; RULE-LABEL: name: and_root_sees_through_shl
+    ; RULE: liveins: $w0
+    ; RULE-NEXT: {{  $}}
+    ; RULE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; RULE-NEXT: %mask:_(s32) = G_CONSTANT i32 255
+    ; RULE-NEXT: %and:_(s32) = G_AND [[COPY]], %mask
+    ; RULE-NEXT: %amt:_(s32) = G_CONSTANT i32 4
+    ; RULE-NEXT: %shl:_(s32) = G_SHL %and, %amt(s32)
+    ; RULE-NEXT: %lowmask:_(s32) = G_CONSTANT i32 4095
+    ; RULE-NEXT: %and2:_(s32) = G_AND %shl, %lowmask
+    ; RULE-NEXT: $w0 = COPY %and2(s32)
+    ; RULE-NEXT: RET_ReallyLR implicit $w0
+    ;
+    ; FULL-LABEL: name: and_root_sees_through_shl
+    ; FULL: liveins: $w0
+    ; FULL-NEXT: {{  $}}
+    ; FULL-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; FULL-NEXT: %mask:_(s32) = G_CONSTANT i32 255
+    ; FULL-NEXT: %and:_(s32) = G_AND [[COPY]], %mask
+    ; FULL-NEXT: %amt:_(s32) = G_CONSTANT i32 4
+    ; FULL-NEXT: %shl:_(s32) = G_SHL %and, %amt(s32)
+    ; FULL-NEXT: $w0 = COPY %shl(s32)
+    ; FULL-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %mask:_(s32) = G_CONSTANT i32 255
     %and:_(s32) = G_AND %0, %mask
@@ -235,30 +248,43 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 ---
-# %and is multi-use (feeds both the G_SHL and the G_ADD). The combiner walks
-# from %and2 through the single-use %shl, then reaches %and with partial
-# demand. Node-local const-elim on %and is allowed (reroutes only the shl's
-# operand), but the G_ADD still observes the masked value so %and must remain.
+# %and is multi-use (feeds both the G_SHL and the G_ADD). Rerouting the shl's
+# operand past it would save nothing (the mask stays live for the G_ADD) and
+# would destroy the known bits that make %and2 redundant; the root is left to
+# redundant_and and the full pipeline ends with three ops.
 name:            multiuse_shift_inner_mask_survives
 legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
-    ; CHECK-LABEL: name: multiuse_shift_inner_mask_survives
-    ; CHECK: liveins: $w0
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: %and:_(s32) = G_AND [[COPY]], %mask
-    ; CHECK-NEXT: %amt:_(s32) = G_CONSTANT i32 4
-    ; CHECK-NEXT: %shl:_(s32) = G_SHL [[COPY]], %amt(s32)
-    ; CHECK-NEXT: %lowmask:_(s32) = G_CONSTANT i32 4095
-    ; CHECK-NEXT: %and2:_(s32) = G_AND %shl, %lowmask
-    ; CHECK-NEXT: %other:_(s32) = G_ADD %and, %and
-    ; CHECK-NEXT: $w0 = COPY %and2(s32)
-    ; CHECK-NEXT: $w1 = COPY %other(s32)
-    ; CHECK-NEXT: RET_ReallyLR implicit $w0, implicit $w1
+    ; RULE-LABEL: name: multiuse_shift_inner_mask_survives
+    ; RULE: liveins: $w0
+    ; RULE-NEXT: {{  $}}
+    ; RULE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; RULE-NEXT: %mask:_(s32) = G_CONSTANT i32 255
+    ; RULE-NEXT: %and:_(s32) = G_AND [[COPY]], %mask
+    ; RULE-NEXT: %amt:_(s32) = G_CONSTANT i32 4
+    ; RULE-NEXT: %shl:_(s32) = G_SHL %and, %amt(s32)
+    ; RULE-NEXT: %lowmask:_(s32) = G_CONSTANT i32 4095
+    ; RULE-NEXT: %and2:_(s32) = G_AND %shl, %lowmask
+    ; RULE-NEXT: %other:_(s32) = G_ADD %and, %and
+    ; RULE-NEXT: $w0 = COPY %and2(s32)
+    ; RULE-NEXT: $w1 = COPY %other(s32)
+    ; RULE-NEXT: RET_ReallyLR implicit $w0, implicit $w1
+    ;
+    ; FULL-LABEL: name: multiuse_shift_inner_mask_survives
+    ; FULL: liveins: $w0
+    ; FULL-NEXT: {{  $}}
+    ; FULL-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; FULL-NEXT: %mask:_(s32) = G_CONSTANT i32 255
+    ; FULL-NEXT: %and:_(s32) = G_AND [[COPY]], %mask
+    ; FULL-NEXT: %amt:_(s32) = G_CONSTANT i32 4
+    ; FULL-NEXT: %shl:_(s32) = G_SHL %and, %amt(s32)
+    ; FULL-NEXT: %other:_(s32) = G_ADD %and, %and
+    ; FULL-NEXT: $w0 = COPY %shl(s32)
+    ; FULL-NEXT: $w1 = COPY %other(s32)
+    ; FULL-NEXT: RET_ReallyLR implicit $w0, implicit $w1
     %0:_(s32) = COPY $w0
     %mask:_(s32) = G_CONSTANT i32 255
     %and:_(s32) = G_AND %0, %mask
