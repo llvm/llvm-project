@@ -1082,6 +1082,9 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return CheckWeak(S, OpPC, Ptr.block());
   }
 
+  if (Ptr.isPastEnd())
+    return false;
+
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
 

@@ -17,7 +17,7 @@ using namespace llvm::jitlink::aarch64;
 
 TEST(AArch64, EmptyLinkGraph) {
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("arm64-apple-darwin"), SubtargetFeatures(),
+              Triple("arm64-apple-darwin"), 8, SubtargetFeatures(),
               getEdgeKindName);
   EXPECT_EQ(G.getName(), "foo");
   EXPECT_EQ(G.getTargetTriple().str(), "arm64-apple-darwin");
@@ -31,7 +31,7 @@ TEST(AArch64, EmptyLinkGraph) {
 
 TEST(AArch64, GOTAndStubs) {
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
-              Triple("arm64-apple-darwin"), SubtargetFeatures(),
+              Triple("arm64-apple-darwin"), 8, SubtargetFeatures(),
               getEdgeKindName);
 
   auto &External = G.addExternalSymbol("external", 0, false);
