@@ -576,8 +576,12 @@ public:
     // Move L's candidates out of LoopToCandidates before promoting them, as
     // promoting a counter to an enclosing loop may insert a new key into
     // LoopToCandidates and trigger DenseMap::grow().
-    SmallVector<LoadStorePair, 8> Candidates = std::move(LoopToCandidates[&L]);
+    auto &OrigCandidates = LoopToCandidates[&L];
+    SmallVector<LoadStorePair, 8> Candidates = std::move(OrigCandidates);
+    OrigCandidates.clear();
     bool RC = promoteCandidates(Candidates, NumPromoted);
+    assert(LoopToCandidates[&L].empty() &&
+           "Did not expect new candidates to be added to current loop");
     // In certain case, e.g. with -fprofile-update=atomic, we want to generate
     // atomic updates of the PGO counters, but also perform promotion of these
     // updates out of loops to reduce train time. The strategy is:
