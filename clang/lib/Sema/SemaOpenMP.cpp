@@ -23303,6 +23303,14 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
           reportOriginalDsa(SemaRef, DSAStack, D, DVar);
           continue;
         }
+        // A data member is private only if an enclosing construct captured it.
+        if (isa<FieldDecl>(D) && !SemaRef.CurContext->isDependentContext() &&
+            !isOpenMPCapturedDecl(D)) {
+          Diag(ELoc, diag::err_omp_required_access)
+              << getOpenMPClauseNameForDiag(OMPC_copyprivate)
+              << "threadprivate or private in the enclosing context";
+          continue;
+        }
       }
     }
 
@@ -23347,10 +23355,12 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
 
     // No need to mark vars as copyprivate, they are already threadprivate or
     // implicitly private.
-    assert(VD || isOpenMPCapturedDecl(D));
+    assert(VD || SemaRef.CurContext->isDependentContext() ||
+           isOpenMPCapturedDecl(D));
     Vars.push_back(
-        VD ? RefExpr->IgnoreParens()
-           : buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/false));
+        (VD || SemaRef.CurContext->isDependentContext())
+            ? RefExpr->IgnoreParens()
+            : buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/false));
     SrcExprs.push_back(PseudoSrcExpr);
     DstExprs.push_back(PseudoDstExpr);
     AssignmentOps.push_back(AssignmentOp.get());
