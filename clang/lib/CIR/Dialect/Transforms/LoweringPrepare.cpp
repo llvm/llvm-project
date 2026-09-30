@@ -89,6 +89,8 @@ struct LoweringPreparePass
   void lowerComplexConjOp(cir::ComplexConjOp op);
   void lowerComplexDivOp(cir::ComplexDivOp op);
   void lowerComplexMulOp(cir::ComplexMulOp op);
+  void lowerComplexFDivOp(cir::ComplexFDivOp op);
+  void lowerComplexFMulOp(cir::ComplexFMulOp op);
   void lowerGetGlobalOp(cir::GetGlobalOp op);
   void lowerGlobalOp(cir::GlobalOp op);
   void lowerThreeWayCmpOp(cir::CmpThreeWayOp op);
@@ -941,61 +943,81 @@ static mlir::Type higherPrecisionElementTypeForComplexArithmetic(
   return {};
 }
 
-static mlir::Value
-lowerComplexDiv(LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
-                mlir::Location loc, cir::ComplexDivOp op, mlir::Value lhsReal,
-                mlir::Value lhsImag, mlir::Value rhsReal, mlir::Value rhsImag,
-                mlir::MLIRContext &mlirCx,
-                const clang::TargetInfo &targetInfo) {
+static mlir::Value lowerComplexFDiv(LoweringPreparePass &pass,
+                                    CIRBaseBuilderTy &builder,
+                                    mlir::Location loc, cir::ComplexFDivOp op,
+                                    mlir::Value lhsReal, mlir::Value lhsImag,
+                                    mlir::Value rhsReal, mlir::Value rhsImag,
+                                    mlir::MLIRContext &mlirCx,
+                                    const clang::TargetInfo &targetInfo) {
   cir::ComplexType complexTy = op.getType();
-  if (mlir::isa<cir::FPTypeInterface>(complexTy.getElementType())) {
-    cir::ComplexRangeKind range = op.getRange();
-    if (range == cir::ComplexRangeKind::Improved)
+  cir::ComplexRangeKind range = op.getRange();
+  switch (range) {
+  case ComplexRangeKind::Full: {
+    return buildComplexBinOpLibCall(pass, builder, &getComplexDivLibCallName,
+                                    loc, complexTy, lhsReal, lhsImag, rhsReal,
+                                    rhsImag);
+  }
+  case ComplexRangeKind::Improved: {
+    return buildRangeReductionComplexDiv(builder, loc, lhsReal, lhsImag,
+                                         rhsReal, rhsImag);
+  }
+  case ComplexRangeKind::Promoted: {
+    mlir::Type originalElementType = complexTy.getElementType();
+    mlir::Type higherPrecisionElementType =
+        higherPrecisionElementTypeForComplexArithmetic(
+            mlirCx, targetInfo, pass.getLangOpts(), builder,
+            originalElementType);
+
+    if (!higherPrecisionElementType)
       return buildRangeReductionComplexDiv(builder, loc, lhsReal, lhsImag,
                                            rhsReal, rhsImag);
 
-    if (range == cir::ComplexRangeKind::Full)
-      return buildComplexBinOpLibCall(pass, builder, &getComplexDivLibCallName,
-                                      loc, complexTy, lhsReal, lhsImag, rhsReal,
-                                      rhsImag);
+    cir::CastKind floatingCastKind = cir::CastKind::floating;
+    lhsReal = builder.createCast(floatingCastKind, lhsReal,
+                                 higherPrecisionElementType);
+    lhsImag = builder.createCast(floatingCastKind, lhsImag,
+                                 higherPrecisionElementType);
+    rhsReal = builder.createCast(floatingCastKind, rhsReal,
+                                 higherPrecisionElementType);
+    rhsImag = builder.createCast(floatingCastKind, rhsImag,
+                                 higherPrecisionElementType);
 
-    if (range == cir::ComplexRangeKind::Promoted) {
-      mlir::Type originalElementType = complexTy.getElementType();
-      mlir::Type higherPrecisionElementType =
-          higherPrecisionElementTypeForComplexArithmetic(
-              mlirCx, targetInfo, pass.getLangOpts(), builder,
-              originalElementType);
+    mlir::Value algebraicResult = buildAlgebraicComplexDiv(
+        builder, loc, lhsReal, lhsImag, rhsReal, rhsImag);
 
-      if (!higherPrecisionElementType)
-        return buildRangeReductionComplexDiv(builder, loc, lhsReal, lhsImag,
-                                             rhsReal, rhsImag);
+    mlir::Value resultReal = builder.createComplexReal(loc, algebraicResult);
+    mlir::Value resultImag = builder.createComplexImag(loc, algebraicResult);
 
-      cir::CastKind floatingCastKind = cir::CastKind::floating;
-      lhsReal = builder.createCast(floatingCastKind, lhsReal,
-                                   higherPrecisionElementType);
-      lhsImag = builder.createCast(floatingCastKind, lhsImag,
-                                   higherPrecisionElementType);
-      rhsReal = builder.createCast(floatingCastKind, rhsReal,
-                                   higherPrecisionElementType);
-      rhsImag = builder.createCast(floatingCastKind, rhsImag,
-                                   higherPrecisionElementType);
-
-      mlir::Value algebraicResult = buildAlgebraicComplexDiv(
-          builder, loc, lhsReal, lhsImag, rhsReal, rhsImag);
-
-      mlir::Value resultReal = builder.createComplexReal(loc, algebraicResult);
-      mlir::Value resultImag = builder.createComplexImag(loc, algebraicResult);
-
-      mlir::Value finalReal =
-          builder.createCast(floatingCastKind, resultReal, originalElementType);
-      mlir::Value finalImag =
-          builder.createCast(floatingCastKind, resultImag, originalElementType);
-      return builder.createComplexCreate(loc, finalReal, finalImag);
-    }
+    mlir::Value finalReal =
+        builder.createCast(floatingCastKind, resultReal, originalElementType);
+    mlir::Value finalImag =
+        builder.createCast(floatingCastKind, resultImag, originalElementType);
+    return builder.createComplexCreate(loc, finalReal, finalImag);
   }
+  case ComplexRangeKind::Basic: {
+    return buildAlgebraicComplexDiv(builder, loc, lhsReal, lhsImag, rhsReal,
+                                    rhsImag);
+  }
+  }
+}
 
-  return buildAlgebraicComplexDiv(builder, loc, lhsReal, lhsImag, rhsReal,
-                                  rhsImag);
+void LoweringPreparePass::lowerComplexFDivOp(cir::ComplexFDivOp op) {
+  cir::CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op);
+  mlir::Location loc = op.getLoc();
+  mlir::TypedValue<cir::ComplexType> lhs = op.getLhs();
+  mlir::TypedValue<cir::ComplexType> rhs = op.getRhs();
+  mlir::Value lhsReal = builder.createComplexReal(loc, lhs);
+  mlir::Value lhsImag = builder.createComplexImag(loc, lhs);
+  mlir::Value rhsReal = builder.createComplexReal(loc, rhs);
+  mlir::Value rhsImag = builder.createComplexImag(loc, rhs);
+
+  mlir::Value loweredResult =
+      lowerComplexFDiv(*this, builder, loc, op, lhsReal, lhsImag, rhsReal,
+                       rhsImag, getContext(), getTargetInfo());
+  op.replaceAllUsesWith(loweredResult);
+  op.erase();
 }
 
 void LoweringPreparePass::lowerComplexDivOp(cir::ComplexDivOp op) {
@@ -1009,9 +1031,8 @@ void LoweringPreparePass::lowerComplexDivOp(cir::ComplexDivOp op) {
   mlir::Value rhsReal = builder.createComplexReal(loc, rhs);
   mlir::Value rhsImag = builder.createComplexImag(loc, rhs);
 
-  mlir::Value loweredResult =
-      lowerComplexDiv(*this, builder, loc, op, lhsReal, lhsImag, rhsReal,
-                      rhsImag, getContext(), getTargetInfo());
+  mlir::Value loweredResult = buildAlgebraicComplexDiv(
+      builder, loc, lhsReal, lhsImag, rhsReal, rhsImag);
   op.replaceAllUsesWith(loweredResult);
   op.erase();
 }
@@ -1036,36 +1057,26 @@ getComplexMulLibCallName(llvm::APFloat::Semantics semantics) {
   }
 }
 
-static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
-                                   CIRBaseBuilderTy &builder,
-                                   mlir::Location loc, cir::ComplexMulOp op,
-                                   mlir::Value lhsReal, mlir::Value lhsImag,
-                                   mlir::Value rhsReal, mlir::Value rhsImag) {
+static mlir::Value lowerComplexFMul(LoweringPreparePass &pass,
+                                    CIRBaseBuilderTy &builder,
+                                    mlir::Location loc, cir::ComplexFMulOp op,
+                                    mlir::Value lhsReal, mlir::Value lhsImag,
+                                    mlir::Value rhsReal, mlir::Value rhsImag) {
   // (a+bi) * (c+di) = (ac-bd) + (ad+bc)i
-  bool isFP = cir::isFPOrVectorOfFPType(lhsReal.getType());
-  auto mul = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
-    return isFP ? builder.createFMul(l, x, y) : builder.createMul(l, x, y);
-  };
-  auto add = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
-    return isFP ? builder.createFAdd(l, x, y) : builder.createAdd(l, x, y);
-  };
-  auto sub = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
-    return isFP ? builder.createFSub(l, x, y) : builder.createSub(l, x, y);
-  };
-
-  mlir::Value resultRealLhs = mul(loc, lhsReal, rhsReal); // ac
-  mlir::Value resultRealRhs = mul(loc, lhsImag, rhsImag); // bd
-  mlir::Value resultImagLhs = mul(loc, lhsReal, rhsImag); // ad
-  mlir::Value resultImagRhs = mul(loc, lhsImag, rhsReal); // bc
-  mlir::Value resultReal = sub(loc, resultRealLhs, resultRealRhs);
-  mlir::Value resultImag = add(loc, resultImagLhs, resultImagRhs);
+  mlir::Value resultRealLhs = builder.createFMul(loc, lhsReal, rhsReal); // ac
+  mlir::Value resultRealRhs = builder.createFMul(loc, lhsImag, rhsImag); // bd
+  mlir::Value resultImagLhs = builder.createFMul(loc, lhsReal, rhsImag); // ad
+  mlir::Value resultImagRhs = builder.createFMul(loc, lhsImag, rhsReal); // bc
+  mlir::Value resultReal =
+      builder.createFSub(loc, resultRealLhs, resultRealRhs);
+  mlir::Value resultImag =
+      builder.createFAdd(loc, resultImagLhs, resultImagRhs);
   mlir::Value algebraicResult =
       builder.createComplexCreate(loc, resultReal, resultImag);
 
   cir::ComplexType complexTy = op.getType();
   cir::ComplexRangeKind rangeKind = op.getRange();
-  if (mlir::isa<cir::IntType>(complexTy.getElementType()) ||
-      rangeKind == cir::ComplexRangeKind::Basic ||
+  if (rangeKind == cir::ComplexRangeKind::Basic ||
       rangeKind == cir::ComplexRangeKind::Improved ||
       rangeKind == cir::ComplexRangeKind::Promoted)
     return algebraicResult;
@@ -1094,6 +1105,24 @@ static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
       .getResult();
 }
 
+void LoweringPreparePass::lowerComplexFMulOp(cir::ComplexFMulOp op) {
+  cir::CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op);
+  mlir::Location loc = op.getLoc();
+  mlir::TypedValue<cir::ComplexType> lhs = op.getLhs();
+  mlir::TypedValue<cir::ComplexType> rhs = op.getRhs();
+
+  // (a+bi) * (c+di) = (ac-bd) + (ad+bc)i
+  mlir::Value lhsReal = builder.createComplexReal(loc, lhs);
+  mlir::Value lhsImag = builder.createComplexImag(loc, lhs);
+  mlir::Value rhsReal = builder.createComplexReal(loc, rhs);
+  mlir::Value rhsImag = builder.createComplexImag(loc, rhs);
+  mlir::Value loweredResult = lowerComplexFMul(*this, builder, loc, op, lhsReal,
+                                               lhsImag, rhsReal, rhsImag);
+  op.replaceAllUsesWith(loweredResult);
+  op.erase();
+}
+
 void LoweringPreparePass::lowerComplexMulOp(cir::ComplexMulOp op) {
   cir::CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
@@ -1104,8 +1133,17 @@ void LoweringPreparePass::lowerComplexMulOp(cir::ComplexMulOp op) {
   mlir::Value lhsImag = builder.createComplexImag(loc, lhs);
   mlir::Value rhsReal = builder.createComplexReal(loc, rhs);
   mlir::Value rhsImag = builder.createComplexImag(loc, rhs);
-  mlir::Value loweredResult = lowerComplexMul(*this, builder, loc, op, lhsReal,
-                                              lhsImag, rhsReal, rhsImag);
+
+  mlir::Value resultRealLhs = builder.createMul(loc, lhsReal, rhsReal); // ac
+  mlir::Value resultRealRhs = builder.createMul(loc, lhsImag, rhsImag); // bd
+  mlir::Value resultImagLhs = builder.createMul(loc, lhsReal, rhsImag); // ad
+  mlir::Value resultImagRhs = builder.createMul(loc, lhsImag, rhsReal); // bc
+  mlir::Value resultReal = builder.createSub(loc, resultRealLhs, resultRealRhs);
+  mlir::Value resultImag = builder.createAdd(loc, resultImagLhs, resultImagRhs);
+
+  mlir::Value loweredResult =
+      builder.createComplexCreate(loc, resultReal, resultImag);
+
   op.replaceAllUsesWith(loweredResult);
   op.erase();
 }
@@ -1154,9 +1192,9 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
   //   cir.call %_ZN1SD1Ev(%0) : (!cir.ptr<!rec_S>) -> ()
   //   (implicit cir.yield)
   //
-  // That is, if the second operation is a call that takes the get_global result
-  // as its only operand, and the only other operation is a yield, then we can
-  // just return the called function.
+  // That is, if the second operation is a call that takes the get_global
+  // result as its only operand, and the only other operation is a yield, then
+  // we can just return the called function.
   if (dtorBlock.getOperations().size() == 3) {
     auto callOp = mlir::dyn_cast<cir::CallOp>(&*(++opIt));
     auto yieldOp = mlir::dyn_cast<cir::YieldOp>(&*(++opIt));
@@ -2459,6 +2497,10 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerCastOp(cast);
   } else if (auto complexConj = mlir::dyn_cast<cir::ComplexConjOp>(op)) {
     lowerComplexConjOp(complexConj);
+  } else if (auto complexDiv = mlir::dyn_cast<cir::ComplexFDivOp>(op)) {
+    lowerComplexFDivOp(complexDiv);
+  } else if (auto complexMul = mlir::dyn_cast<cir::ComplexFMulOp>(op)) {
+    lowerComplexFMulOp(complexMul);
   } else if (auto complexDiv = mlir::dyn_cast<cir::ComplexDivOp>(op)) {
     lowerComplexDivOp(complexDiv);
   } else if (auto complexMul = mlir::dyn_cast<cir::ComplexMulOp>(op)) {
@@ -3084,10 +3126,10 @@ void LoweringPreparePass::runOnOperation() {
   mlirModule->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexConjOp, cir::ComplexMulOp, cir::ComplexDivOp,
-                  cir::DynamicCastOp, cir::FuncOp, cir::CallOp,
-                  cir::GetGlobalOp, cir::GlobalOp, cir::StoreOp,
-                  cir::CmpThreeWayOp, cir::LocalInitOp, cir::StdOpInterface>(
-            op))
+                  cir::ComplexFMulOp, cir::ComplexFDivOp, cir::DynamicCastOp,
+                  cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
+                  cir::StoreOp, cir::CmpThreeWayOp, cir::LocalInitOp,
+                  cir::StdOpInterface>(op))
       opsToTransform.push_back(op);
   });
 
