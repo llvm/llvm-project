@@ -2587,6 +2587,46 @@ static bool interp__builtin_scalar_fp_round_mask_binop(
   return true;
 }
 
+bool InterpretElementwiseSaturatingCast(
+    InterpState &S, CodePtr OpPC, const ElementwiseSaturatingCastExpr *Cast) {
+  QualType SourceType = Cast->getSrcExpr()->getType();
+
+  if (!SourceType->isVectorType()) {
+    APSInt Source;
+    if (!popToAPSInt(S, Cast->getSrcExpr(), Source))
+      return false;
+    int DestWidth = S.getASTContext().getIntWidth(Cast->getType());
+    bool DestUnsigned = Cast->getType()->isUnsignedIntegerOrEnumerationType();
+    pushInteger(S, Source.extOrTruncSat(DestWidth, DestUnsigned),
+                Cast->getType());
+    return true;
+  }
+
+  const auto *SourceVecTy = SourceType->castAs<VectorType>();
+  const auto *DestVecTy = Cast->getType()->castAs<VectorType>();
+  assert(SourceVecTy->getNumElements() == DestVecTy->getNumElements());
+  const Pointer &Source = S.Stk.pop<Pointer>();
+  const Pointer &Dest = S.Stk.peek<Pointer>();
+  PrimType SourceT = *S.getContext().classify(SourceVecTy->getElementType());
+  PrimType DestT = *S.getContext().classify(DestVecTy->getElementType());
+
+  for (unsigned I = 0; I != SourceVecTy->getNumElements(); ++I) {
+    APSInt Value;
+    if (SourceT == PT_Bool)
+      Value = Source.elem<Boolean>(I).toAPSInt();
+    else
+      INT_TYPE_SWITCH_NO_BOOL(SourceT,
+                              { Value = Source.elem<T>(I).toAPSInt(); });
+    QualType DestElemType = DestVecTy->getElementType();
+    int DestWidth = S.getASTContext().getIntWidth(DestElemType);
+    bool DestUnsigned = DestElemType->isUnsignedIntegerOrEnumerationType();
+    APSInt Result = Value.extOrTruncSat(DestWidth, DestUnsigned);
+    assignIntegral(S, Dest.atIndex(I), DestT, Result);
+  }
+  Dest.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_elementwise_int_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &)> Fn) {

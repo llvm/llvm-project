@@ -241,6 +241,8 @@ def CallVirt : Opcode {
 
 def CallBI : Opcode { let Args = [ArgCallExpr, ArgUint32]; }
 
+def ElementwiseSaturatingCast : Opcode { let Args = [ArgExpr]; }
+
 def CallPtr : Opcode {
   let Args = [ArgUint32, ArgCallExpr];
 }

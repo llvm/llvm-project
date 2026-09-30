@@ -183,6 +183,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::CXXThrowExprClass:
   case Expr::ShuffleVectorExprClass:
   case Expr::ConvertVectorExprClass:
+  case Expr::ElementwiseSaturatingCastExprClass:
   case Expr::IntegerLiteralClass:
   case Expr::FixedPointLiteralClass:
   case Expr::CharacterLiteralClass:

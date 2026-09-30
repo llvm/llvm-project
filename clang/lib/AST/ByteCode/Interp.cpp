@@ -2601,6 +2601,11 @@ bool CallBI(InterpState &S, CodePtr OpPC, const CallExpr *CE,
   return InterpretBuiltin(S, OpPC, CE, BuiltinID);
 }
 
+bool ElementwiseSaturatingCast(InterpState &S, CodePtr OpPC, const Expr *E) {
+  return InterpretElementwiseSaturatingCast(
+      S, OpPC, cast<ElementwiseSaturatingCastExpr>(E));
+}
+
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();

@@ -3430,3 +3430,8 @@ void TextNodeDumper::VisitConvertVectorExpr(const ConvertVectorExpr *S) {
   if (S->hasStoredFPFeatures())
     printFPOptions(S->getStoredFPFeatures());
 }
+
+void TextNodeDumper::VisitElementwiseSaturatingCastExpr(
+    const ElementwiseSaturatingCastExpr *S) {
+  VisitStmt(S);
+}

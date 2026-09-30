@@ -4880,6 +4880,65 @@ public:
   }
 };
 
+/// ElementwiseSaturatingCastExpr - Clang builtin function
+/// __builtin_elementwise_saturating_cast.
+/// This AST node provides support for saturating an integer scalar or vector
+/// conversion to the destination type.
+class ElementwiseSaturatingCastExpr final : public Expr {
+private:
+  Stmt *SrcExpr;
+  TypeSourceInfo *TInfo;
+  SourceLocation BuiltinLoc, RParenLoc;
+
+  friend class ASTReader;
+  friend class ASTStmtReader;
+  explicit ElementwiseSaturatingCastExpr(EmptyShell Empty)
+      : Expr(ElementwiseSaturatingCastExprClass, Empty) {}
+
+  ElementwiseSaturatingCastExpr(Expr *SrcExpr, TypeSourceInfo *TI,
+                                QualType DstType, ExprValueKind VK,
+                                ExprObjectKind OK, SourceLocation BuiltinLoc,
+                                SourceLocation RParenLoc)
+      : Expr(ElementwiseSaturatingCastExprClass, DstType, VK, OK),
+        SrcExpr(SrcExpr), TInfo(TI), BuiltinLoc(BuiltinLoc),
+        RParenLoc(RParenLoc) {
+    setDependence(computeDependence(this));
+  }
+
+public:
+  static ElementwiseSaturatingCastExpr *CreateEmpty(const ASTContext &C);
+
+  static ElementwiseSaturatingCastExpr *
+  Create(const ASTContext &C, Expr *SrcExpr, TypeSourceInfo *TI,
+         QualType DstType, ExprValueKind VK, ExprObjectKind OK,
+         SourceLocation BuiltinLoc, SourceLocation RParenLoc);
+
+  /// getSrcExpr - Return the expression to be converted.
+  Expr *getSrcExpr() const { return cast<Expr>(SrcExpr); }
+
+  /// getTypeSourceInfo - Return the destination type.
+  TypeSourceInfo *getTypeSourceInfo() const { return TInfo; }
+  void setTypeSourceInfo(TypeSourceInfo *TI) { TInfo = TI; }
+
+  /// getBuiltinLoc - Return the location of the builtin token.
+  SourceLocation getBuiltinLoc() const { return BuiltinLoc; }
+
+  /// getRParenLoc - Return the location of the final right parenthesis.
+  SourceLocation getRParenLoc() const { return RParenLoc; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return BuiltinLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == ElementwiseSaturatingCastExprClass;
+  }
+
+  child_range children() { return child_range(&SrcExpr, &SrcExpr + 1); }
+  const_child_range children() const {
+    return const_child_range(&SrcExpr, &SrcExpr + 1);
+  }
+};
+
 /// ChooseExpr - GNU builtin-in function __builtin_choose_expr.
 /// This AST node is similar to the conditional operator (?:) in C, with
 /// the following exceptions:

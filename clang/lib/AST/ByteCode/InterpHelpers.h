@@ -15,6 +15,7 @@
 
 namespace clang {
 class CallExpr;
+class ElementwiseSaturatingCastExpr;
 class OffsetOfExpr;
 
 namespace interp {
@@ -27,6 +28,9 @@ bool Interpret(InterpState &S);
 /// Interpret a builtin function.
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID);
+
+bool InterpretElementwiseSaturatingCast(InterpState &S, CodePtr OpPC,
+                                        const ElementwiseSaturatingCastExpr *E);
 
 /// Interpret an offsetof operation.
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,

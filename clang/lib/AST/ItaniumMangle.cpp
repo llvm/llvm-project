@@ -5098,6 +5098,7 @@ recurse:
   case Expr::PredefinedExprClass:
   case Expr::ShuffleVectorExprClass:
   case Expr::ConvertVectorExprClass:
+  case Expr::ElementwiseSaturatingCastExprClass:
   case Expr::StmtExprClass:
   case Expr::ArrayTypeTraitExprClass:
   case Expr::ExpressionTraitExprClass:

@@ -7219,6 +7219,15 @@ ExprResult Sema::ActOnConvertVectorExpr(Expr *E, ParsedType ParsedDestTy,
   return ConvertVectorExpr(E, TInfo, BuiltinLoc, RParenLoc);
 }
 
+ExprResult Sema::ActOnElementwiseSaturatingCastExpr(Expr *E,
+                                                    ParsedType ParsedDestTy,
+                                                    SourceLocation BuiltinLoc,
+                                                    SourceLocation RParenLoc) {
+  TypeSourceInfo *TInfo;
+  GetTypeFromParser(ParsedDestTy, &TInfo);
+  return ElementwiseSaturatingCastExpr(E, TInfo, BuiltinLoc, RParenLoc);
+}
+
 ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
                                        SourceLocation LParenLoc,
                                        ArrayRef<Expr *> Args,
