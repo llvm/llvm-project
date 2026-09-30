@@ -9244,8 +9244,7 @@ instrument such calls with allocation token IDs.
 
 The metadata contains: string with the type of an allocation, and a boolean
 denoting if the type contains a pointer. Optionally, it contains a string with
-the name of the function containing the allocation, in which case an empty type
-name denotes an unknown type.
+the name of the function containing the allocation.
 
 ```
 call ptr @malloc(i64 64), !alloc_token !0

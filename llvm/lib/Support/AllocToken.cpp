@@ -56,7 +56,7 @@ static uint64_t getStableHash(const AllocTokenMetadata &Metadata,
 }
 
 /// Splits the Log2(MaxTokens) bits into: [pointer flag,] type name hash,
-/// function name hash. The type name hash gets the extra bit, if any.
+/// function name hash. The function name hash gets Log2(MaxTokens) / 2 bits.
 static uint64_t getTypeFuncHash(const AllocTokenMetadata &Metadata,
                                 uint64_t MaxTokens, bool PointerSplit) {
   if (MaxTokens == 1)
