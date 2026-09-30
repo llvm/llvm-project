@@ -219,6 +219,20 @@ def FTRV               : InstFVn<0b1111000111111101,
                                 "ftrv xmtrx,$Rn",
                                 []>;
 
+// fsrra Fn
+let Predicates = [HasFSRRA] in 
+def FSRRA               : InstRn<0b1111000001111101,
+                                (outs), (ins FR32:$Rn),
+                                "fsrra $Rn",
+                                []>;
+
+// fsca FPUL,DRn
+let Defs = [FPUL], Predicates = [HasFSCA] in 
+def FSCA               : InstDRn<0b1111000011111101,
+                                (outs), (ins FR64:$Rn),
+                                "fsca fpul,$Rn",
+                                []>;
+
 
 
 
@@ -299,8 +313,6 @@ def FSCHG                 : Inst<0b1111001111111101,
                                 []>;
 
 
-
-
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
 //                              Pseudo instructions
@@ -361,7 +373,6 @@ def SelectF32   : SHSelectPseudo<(outs FR32:$dst),
                                 "! SelectF32 PSEUDO",
                                 [(set f32:$dst,
                                  (SHselectcc f32:$src, f32:$src2, timm:$cc))]>;
-}
 
 
 
@@ -392,3 +403,4 @@ def : Pat<(f32 (extloadf32  fraddr:$src)),    (MOVF32LF   fraddr:$src)>;
 def : Pat<(store           f32:$src,    GPR:$dst),  (FMOV_STORE FR32:$src,     GPR:$dst)>;
 def : Pat<(store           f32:$src,   addr:$dst),  (MOVF32SP   FR32:$src,    addr:$dst)>;
 def : Pat<(store           f32:$src, fraddr:$dst),  (MOVF32SF   FR32:$src,  fraddr:$dst)>;
+}
