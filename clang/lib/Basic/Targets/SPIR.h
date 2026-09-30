@@ -185,10 +185,15 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_C || CC == CC_DeviceKernel || CC == CC_X86RegCall ||
-            CC == CC_X86VectorCall)
-               ? CCCR_OK
-               : CCCR_Warning;
+    switch (CC) {
+    case CC_C:
+    case CC_DeviceKernel:
+    case CC_X86RegCall:
+    case CC_X86VectorCall:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
   }
 
   bool
