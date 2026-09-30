@@ -1083,9 +1083,10 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
       return ModRefResult::getModAndRef();
   }
   // 2. Check if the variable is passed via the arguments. A dummy with a
-  // declared intent is a read, a write, or both. An argument with no visible
-  // intent stays ModAndRef. The callee is resolved through the cached symbol
-  // table.
+  // declared intent is a read, a write, or both. intent(out) is a write for
+  // a trivial non-pointer, non-allocatable dummy, and a read and a write
+  // otherwise. An argument with no visible intent stays ModAndRef. The
+  // callee is resolved through the cached symbol table.
   mlir::func::FuncOp callee;
   if (std::optional<mlir::SymbolRefAttr> calleeAttr = call.getCallee()) {
     if (const mlir::SymbolTable *symTab = getNearestSymbolTable(call))
@@ -1105,9 +1106,33 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
         fir::getFortranDummyIntent(callee, idx);
     if (!intent || *intent == fir::FortranDummyIntent::InOut)
       return ModRefResult::getModAndRef();
-    modRef = modRef.merge(*intent == fir::FortranDummyIntent::In
-                              ? ModRefResult::getRef()
-                              : ModRefResult::getMod());
+    if (*intent == fir::FortranDummyIntent::In) {
+      modRef = modRef.merge(ModRefResult::getRef());
+      continue;
+    }
+    if (*intent == fir::FortranDummyIntent::Out) {
+      // A pure write only for a non-pointer, non-allocatable dummy whose
+      // element type is trivial. An allocatable is read on entry so it can
+      // be deallocated, and finalization of a derived type may read it.
+      mlir::Value dummy = callee.getArgument(idx);
+      mlir::Type ty = dummy.getType();
+      for (mlir::Operation *user : dummy.getUsers()) {
+        auto decl = mlir::dyn_cast<fir::DeclareOp>(user);
+        if (!decl || decl.getMemref() != dummy)
+          continue;
+        fir::FortranVariableOpInterface var(decl);
+        if (var.isPointer() || var.isAllocatable() || var.isCrayPointer())
+          return ModRefResult::getModAndRef();
+        ty = decl.getMemref().getType();
+        break;
+      }
+      if (fir::isPointerType(ty) || fir::isAllocatableType(ty) ||
+          !fir::isa_trivial(fir::getFortranElementType(ty)))
+        return ModRefResult::getModAndRef();
+      modRef = modRef.merge(ModRefResult::getMod());
+      continue;
+    }
+    return ModRefResult::getModAndRef();
   }
   return modRef;
 }
