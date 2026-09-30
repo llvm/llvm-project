@@ -158,9 +158,7 @@ static cl::opt<unsigned>
 // Limit for the maximum number of stack slot indexes, past which we stop
 // tracking spills altogether. MLocTracker reserves a location per subregister
 // index per tracked slot, so this cost grows sharply on targets with many
-// subregister indexes -- which are also the least likely to implement
-// is{LoadFrom,StoreTo}StackSlotPostFE, without which spills cannot be range
-// extended anyway.
+// subregister indexes.
 static cl::opt<unsigned>
     StackSlotIdxesLimit("livedebugvalues-max-stack-slot-idxes", cl::Hidden,
                         cl::desc("livedebugvalues-max-stack-slot-idxes"),
