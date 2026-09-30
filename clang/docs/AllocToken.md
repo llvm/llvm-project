@@ -38,7 +38,7 @@ change or removal. These may (experimentally) be selected with `-Xclang
   allocated type's name (upper half of the token ID bits) and the hash of the
   name of the function containing the allocation (lower half).
 - `typefunchashpointersplit`: Like `typefunchash`, but the most significant bit
-  of the token ID is set for types that contain pointers.
+  of the `log2(N)`-bit token ID is set for types that contain pointers.
 - `random`: This mode assigns a statically-determined random token ID to each
   allocation site.
 - `increment`: This mode assigns a simple, incrementally increasing token ID
@@ -49,8 +49,7 @@ The following command-line options affect generated token IDs:
 - `-falloc-token-max=<N>`
   : Configures the maximum number of token IDs. By default the number of tokens
     is bounded by `SIZE_MAX`. In the `typefunchash` and
-    `typefunchashpointersplit` modes, `N` must be at least 8, and is rounded
-    down to a power of two.
+    `typefunchashpointersplit` modes, `N` is rounded down to a power of two.
 
 ## Querying Token IDs with `__builtin_infer_alloc_token`
 
