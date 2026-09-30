@@ -22,7 +22,7 @@ const int& test_cond_throw_false(bool flag) {
 // CIR:   %[[EXCEPTION:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[EXCEPTION]] : !s32i, !cir.ptr<!s32i>
-// CIR:   cir.throw %[[EXCEPTION]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:   cir.throw %[[EXCEPTION]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:   cir.unreachable
 // CIR-NEXT: }) : (!cir.bool) -> !cir.ptr<!s32i>
 
@@ -83,7 +83,7 @@ const int& test_cond_throw_true(bool flag) {
 // CIR:   %[[EXCEPTION:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[EXCEPTION]] : !s32i, !cir.ptr<!s32i>
-// CIR:   cir.throw %[[EXCEPTION]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:   cir.throw %[[EXCEPTION]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:   cir.unreachable
 // CIR-NEXT: }, false {
 // CIR:   cir.yield %[[A]] : !cir.ptr<!s32i>
@@ -208,7 +208,7 @@ const int &test_cond_const_true_throw_true() {
 // CIR:  %[[EXCEPTION:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
 // CIR:  %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:  cir.store{{.*}} %[[CONST_0]], %[[EXCEPTION]] : !s32i, !cir.ptr<!s32i>
-// CIR:  cir.throw %[[EXCEPTION]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:  cir.throw %[[EXCEPTION]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:  cir.unreachable
 // CIR: ^[[NO_PRED_LABEL:.*]]:
 // CIR:   %[[CONST_NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
@@ -255,7 +255,7 @@ int test_agg_cond_throw_false(bool flag, struct s6 a1, struct s6 a2) {
 // CIR:   %[[EXC:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[EXC]] : !s32i, !cir.ptr<!s32i>
-// CIR:   cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:   cir.throw %[[EXC]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:   cir.unreachable
 // CIR: }) : (!cir.bool) -> !cir.ptr<!rec_s6>
 // CIR: %[[F0:.*]] = cir.get_member %[[COND_RES]][0] {name = "f0"} : !cir.ptr<!rec_s6> -> !cir.ptr<!s32i>
@@ -318,7 +318,7 @@ int test_agg_cond_throw_true(bool flag, struct s6 a1, struct s6 a2) {
 // CIR:   %[[EXC:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[EXC]] : !s32i, !cir.ptr<!s32i>
-// CIR:   cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:   cir.throw %[[EXC]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:   cir.unreachable
 // CIR: }, false {
 // CIR:   cir.yield %[[A1]] : !cir.ptr<!rec_s6>
@@ -416,7 +416,7 @@ const int test_agg_cond_const_true_throw_true(struct s6 a1, struct s6 a2) {
 // CIR: %[[EXC:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
 // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: cir.store{{.*}} %[[ZERO]], %[[EXC]] : !s32i, !cir.ptr<!s32i>
-// CIR: cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR: cir.throw %[[EXC]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR: cir.unreachable
 // CIR: ^[[NO_PRED:.*]]:
 // CIR: %[[NULL_REC:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_s6>
@@ -456,7 +456,7 @@ const int test_agg_cond_const_false_throw_false(struct s6 a1, struct s6 a2) {
 // CIR: %[[EXC:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
 // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: cir.store{{.*}} %[[ZERO]], %[[EXC]] : !s32i, !cir.ptr<!s32i>
-// CIR: cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR: cir.throw %[[EXC]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR: cir.unreachable
 // CIR: ^[[NO_PRED:.*]]:
 // CIR: %[[NULL_REC:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_s6>
@@ -539,7 +539,7 @@ void test_agg_throw_true(bool flag) {
 // CIR:     %[[EXC:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
 // CIR:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:     cir.store{{.*}} %[[ZERO]], %[[EXC]] : !s32i, !cir.ptr<!s32i>
-// CIR:     cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:     cir.throw %[[EXC]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:     cir.unreachable
 // CIR-NEXT:   } else {
 // CIR:     %[[X:.*]] = cir.get_member %[[A]][0] {name = "x"} : !cir.ptr<!rec_Agg> -> !cir.ptr<!s32i>
@@ -608,7 +608,7 @@ void test_agg_throw_false(bool flag) {
 // CIR:     %[[EXC:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
 // CIR:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:     cir.store{{.*}} %[[ZERO]], %[[EXC]] : !s32i, !cir.ptr<!s32i>
-// CIR:     cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:     cir.throw %[[EXC]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:     cir.unreachable
 // CIR-NEXT:   }
 // CIR:   cir.return
@@ -659,7 +659,7 @@ int test_scalar_throw_true(bool flag, int x) {
 // CIR:   %[[COND:.*]] = cir.load{{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:   %{{.*}} = cir.ternary(%[[COND]], true {
 // CIR:     %[[EXC:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
-// CIR:     cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:     cir.throw %[[EXC]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:     cir.unreachable
 // CIR-NEXT:   }, false {
 // CIR:     %[[X:.*]] = cir.load{{.*}} : !cir.ptr<!s32i>, !s32i
@@ -693,7 +693,7 @@ int test_scalar_throw_false(bool flag, int x) {
 // CIR:     cir.yield %[[X]] : !s32i
 // CIR:   }, false {
 // CIR:     %[[EXC:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
-// CIR:     cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:     cir.throw %[[EXC]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:     cir.unreachable
 // CIR-NEXT:   }) : (!cir.bool) -> !s32i
 
@@ -715,10 +715,10 @@ void test_both_throw(bool flag) {
 
 // CIR-LABEL: cir.func {{.*}} @_Z15test_both_throwb(
 // CIR:   cir.ternary(%{{.*}}, true {
-// CIR:     cir.throw %{{.*}} : !cir.ptr<!s32i>, @_ZTIi
+// CIR:     cir.throw %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:     cir.unreachable
 // CIR-NEXT:   }, false {
-// CIR:     cir.throw %{{.*}} : !cir.ptr<!s32i>, @_ZTIi
+// CIR:     cir.throw %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:     cir.unreachable
 // CIR-NEXT:   })
 
@@ -757,7 +757,7 @@ int &test_ref_cond_throw(bool c, int &x) {
 // CIR:     %[[X_PTR:.*]] = cir.load %[[X_REF]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR:     cir.yield %[[X_PTR]] : !cir.ptr<!s32i>
 // CIR-NEXT:   }, false {
-// CIR:     cir.throw {{.*}} @_ZTIi
+// CIR:     cir.throw %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:     cir.unreachable
 // CIR-NEXT:   }) : (!cir.bool) -> !cir.ptr<!s32i>
 // CIR:   cir.store %[[RES]], %[[RET_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
@@ -799,7 +799,7 @@ void test_assign_through_cond(bool c, int &x) {
 // CIR:     %[[X_PTR:.*]] = cir.load %[[X_REF]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR:     cir.yield %[[X_PTR]] : !cir.ptr<!s32i>
 // CIR-NEXT:   }, false {
-// CIR:     cir.throw {{.*}} @_ZTIi
+// CIR:     cir.throw %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:     cir.unreachable
 // CIR-NEXT:   }) : (!cir.bool) -> !cir.ptr<!s32i>
 // CIR:   cir.store{{.*}} %[[FIVE]], %[[RES]] : !s32i, !cir.ptr<!s32i>
@@ -841,7 +841,7 @@ int &test_member_cond_throw(bool c, struct s6 *p) {
 // CIR:     %[[F0:.*]] = cir.get_member %[[P]][0] {name = "f0"} : !cir.ptr<!rec_s6> -> !cir.ptr<!s32i>
 // CIR:     cir.yield %[[F0]] : !cir.ptr<!s32i>
 // CIR-NEXT:   }, false {
-// CIR:     cir.throw {{.*}} @_ZTIi
+// CIR:     cir.throw %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:     cir.unreachable
 // CIR-NEXT:   }) : (!cir.bool) -> !cir.ptr<!s32i>
 // CIR:   cir.store %[[RES]], %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
@@ -941,7 +941,7 @@ void test_agg_assign_throw(bool c, Agg &a) {
 // CIR:   %[[C_VAL:.*]] = cir.load{{.*}} %[[C]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:   cir.if %[[C_VAL]] {
 // CIR:     %[[EXC:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
-// CIR:     cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:     cir.throw %[[EXC]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:     cir.unreachable
 // CIR-NEXT:   } else {
 // CIR:     cir.get_member %[[TMP]][0] {name = "x"}
@@ -988,7 +988,7 @@ void test_agg_nested_throw(bool c1, bool c2) {
 // CIR:     %[[C2_VAL:.*]] = cir.load{{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     cir.if %[[C2_VAL]] {
 // CIR:       %[[EXC:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
-// CIR:       cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:       cir.throw %[[EXC]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:       cir.unreachable
 // CIR-NEXT:     } else {
 // CIR:       cir.get_member %[[A]][0] {name = "x"}
@@ -1038,7 +1038,7 @@ void test_agg_arg_throw(bool c) {
 // CIR:   %[[TMP:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Agg>
 // CIR:   cir.if %{{.*}} {
 // CIR:     %[[EXC:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
-// CIR:     cir.throw %[[EXC]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:     cir.throw %[[EXC]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:     cir.unreachable
 // CIR-NEXT:   } else {
 // CIR:     cir.get_member %[[TMP]][0] {name = "x"}

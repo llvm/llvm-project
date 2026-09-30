@@ -129,6 +129,15 @@ public:
       return {};
     return cir::TargetAddressSpaceAttr::get(ctx, allocaASAttr.getUInt());
   }
+
+  mlir::ptr::MemorySpaceAttrInterface
+  getGlobalAddrSpace(mlir::MLIRContext *ctx) const {
+    auto globalASAttr = mlir::dyn_cast_if_present<mlir::IntegerAttr>(
+        layout.getGlobalMemorySpace());
+    if (!globalASAttr || globalASAttr.getUInt() == 0)
+      return {};
+    return cir::TargetAddressSpaceAttr::get(ctx, globalASAttr.getUInt());
+  }
 };
 
 } // namespace cir

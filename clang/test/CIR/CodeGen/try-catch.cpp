@@ -1780,7 +1780,7 @@ void direct_inside_try_catch_with_exception_type() {
 // CIR:       %[[EXN:.*]] = cir.alloc.exception 4 -> !cir.ptr<!s32i>
 // CIR:       %[[FORTYTWO:.*]] = cir.const #cir.int<42> : !s32i
 // CIR:       cir.store{{.*}} %[[FORTYTWO]], %[[EXN]]
-// CIR:       cir.throw %[[EXN]] : !cir.ptr<!s32i>, @_ZTIi
+// CIR:       cir.throw %[[EXN]], %{{.*}}, %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:       cir.unreachable
 // CIR:     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%[[TOKEN:.*]]: !cir.eh_token {{.*}}) {
 // CIR:       %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %{{.*}} : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)

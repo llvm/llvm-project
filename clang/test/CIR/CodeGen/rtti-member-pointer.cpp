@@ -21,7 +21,7 @@ void throw_data_member_ptr() {
 // CIR-DAG: cir.global {{.*}} @_ZTSM1Ai = #cir.const_array<"M1Ai" : !cir.array<!s8i x 4>, trailing_zeros> : !cir.array<!s8i x 5>
 // CIR-DAG: cir.global {{.*}} @_ZTIM1Ai = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv129__pointer_to_member_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTSM1Ai> : !cir.ptr<!u8i>, #cir.int<0> : !u32i, #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1A> : !cir.ptr<!u8i>}>
 
-// CIR-DAG: cir.throw %{{.*}} : !cir.ptr<!s64i>, @_ZTIM1Ai
+// CIR-DAG: cir.throw %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!s64i>, !cir.ptr<!u8i>, !cir.ptr<!void>
 
 // LLVM-DAG: @_ZTSM1Ai = linkonce_odr constant [5 x i8] c"M1Ai\00", comdat
 // LLVM-DAG: @_ZTS1A = linkonce_odr constant [3 x i8] c"1A\00", comdat
