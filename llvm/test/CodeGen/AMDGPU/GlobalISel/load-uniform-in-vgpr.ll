@@ -674,13 +674,13 @@ define amdgpu_ps void @load_uniform_P1_v8i32(ptr addrspace(1) inreg %ptra, ptr a
 ;
 ; GFX11-LABEL: load_uniform_P1_v8i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v18, 0
+; GFX11-NEXT:    v_mov_b32_e32 v19, 0
 ; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    global_load_b128 v[2:5], v18, s[0:1]
-; GFX11-NEXT:    global_load_b128 v[6:9], v18, s[0:1] offset:16
-; GFX11-NEXT:    global_load_b128 v[10:13], v18, s[0:1] glc dlc
+; GFX11-NEXT:    global_load_b128 v[2:5], v19, s[0:1]
+; GFX11-NEXT:    global_load_b128 v[6:9], v19, s[0:1] offset:16
+; GFX11-NEXT:    global_load_b128 v[10:13], v19, s[0:1] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_load_b128 v[14:17], v18, s[0:1] offset:16 glc dlc
+; GFX11-NEXT:    global_load_b128 v[14:17], v19, s[0:1] offset:16 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
@@ -717,13 +717,13 @@ define amdgpu_ps void @load_uniform_P1_v8i32(ptr addrspace(1) inreg %ptra, ptr a
 ;
 ; GFX12-LABEL: load_uniform_P1_v8i32:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v18, 0
+; GFX12-NEXT:    v_mov_b32_e32 v19, 0
 ; GFX12-NEXT:    s_clause 0x2
-; GFX12-NEXT:    global_load_b128 v[2:5], v18, s[0:1]
-; GFX12-NEXT:    global_load_b128 v[6:9], v18, s[0:1] offset:16
-; GFX12-NEXT:    global_load_b128 v[10:13], v18, s[0:1] scope:SCOPE_SYS
+; GFX12-NEXT:    global_load_b128 v[2:5], v19, s[0:1]
+; GFX12-NEXT:    global_load_b128 v[6:9], v19, s[0:1] offset:16
+; GFX12-NEXT:    global_load_b128 v[10:13], v19, s[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_load_b128 v[14:17], v18, s[0:1] offset:16 scope:SCOPE_SYS
+; GFX12-NEXT:    global_load_b128 v[14:17], v19, s[0:1] offset:16 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
@@ -857,19 +857,19 @@ define amdgpu_ps void @load_uniform_P1_v16i32(ptr addrspace(1) inreg %ptra, ptr 
 ;
 ; GFX11-LABEL: load_uniform_P1_v16i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v34, 0
+; GFX11-NEXT:    v_mov_b32_e32 v39, 0
 ; GFX11-NEXT:    s_clause 0x4
-; GFX11-NEXT:    global_load_b128 v[2:5], v34, s[0:1]
-; GFX11-NEXT:    global_load_b128 v[6:9], v34, s[0:1] offset:16
-; GFX11-NEXT:    global_load_b128 v[10:13], v34, s[0:1] offset:32
-; GFX11-NEXT:    global_load_b128 v[14:17], v34, s[0:1] offset:48
-; GFX11-NEXT:    global_load_b128 v[18:21], v34, s[0:1] glc dlc
+; GFX11-NEXT:    global_load_b128 v[2:5], v39, s[0:1]
+; GFX11-NEXT:    global_load_b128 v[6:9], v39, s[0:1] offset:16
+; GFX11-NEXT:    global_load_b128 v[10:13], v39, s[0:1] offset:32
+; GFX11-NEXT:    global_load_b128 v[14:17], v39, s[0:1] offset:48
+; GFX11-NEXT:    global_load_b128 v[18:21], v39, s[0:1] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_load_b128 v[22:25], v34, s[0:1] offset:16 glc dlc
+; GFX11-NEXT:    global_load_b128 v[22:25], v39, s[0:1] offset:16 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_load_b128 v[26:29], v34, s[0:1] offset:32 glc dlc
+; GFX11-NEXT:    global_load_b128 v[26:29], v39, s[0:1] offset:32 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_load_b128 v[30:33], v34, s[0:1] offset:48 glc dlc
+; GFX11-NEXT:    global_load_b128 v[30:33], v39, s[0:1] offset:48 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v3
@@ -936,19 +936,19 @@ define amdgpu_ps void @load_uniform_P1_v16i32(ptr addrspace(1) inreg %ptra, ptr 
 ;
 ; GFX12-LABEL: load_uniform_P1_v16i32:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v34, 0
+; GFX12-NEXT:    v_mov_b32_e32 v39, 0
 ; GFX12-NEXT:    s_clause 0x4
-; GFX12-NEXT:    global_load_b128 v[2:5], v34, s[0:1]
-; GFX12-NEXT:    global_load_b128 v[6:9], v34, s[0:1] offset:16
-; GFX12-NEXT:    global_load_b128 v[10:13], v34, s[0:1] offset:32
-; GFX12-NEXT:    global_load_b128 v[14:17], v34, s[0:1] offset:48
-; GFX12-NEXT:    global_load_b128 v[18:21], v34, s[0:1] scope:SCOPE_SYS
+; GFX12-NEXT:    global_load_b128 v[2:5], v39, s[0:1]
+; GFX12-NEXT:    global_load_b128 v[6:9], v39, s[0:1] offset:16
+; GFX12-NEXT:    global_load_b128 v[10:13], v39, s[0:1] offset:32
+; GFX12-NEXT:    global_load_b128 v[14:17], v39, s[0:1] offset:48
+; GFX12-NEXT:    global_load_b128 v[18:21], v39, s[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_load_b128 v[22:25], v34, s[0:1] offset:16 scope:SCOPE_SYS
+; GFX12-NEXT:    global_load_b128 v[22:25], v39, s[0:1] offset:16 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_load_b128 v[26:29], v34, s[0:1] offset:32 scope:SCOPE_SYS
+; GFX12-NEXT:    global_load_b128 v[26:29], v39, s[0:1] offset:32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_load_b128 v[30:33], v34, s[0:1] offset:48 scope:SCOPE_SYS
+; GFX12-NEXT:    global_load_b128 v[30:33], v39, s[0:1] offset:48 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
@@ -1996,12 +1996,12 @@ define amdgpu_ps void @load_uniform_P4_v16i32(ptr addrspace(4) inreg %ptra, ptr 
 ;
 ; GFX11-LABEL: load_uniform_P4_v16i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_mov_b32_e32 v18, 0
+; GFX11-NEXT:    v_mov_b32_e32 v19, 0
 ; GFX11-NEXT:    s_clause 0x3
-; GFX11-NEXT:    global_load_b128 v[2:5], v18, s[0:1]
-; GFX11-NEXT:    global_load_b128 v[6:9], v18, s[0:1] offset:16
-; GFX11-NEXT:    global_load_b128 v[10:13], v18, s[0:1] offset:32
-; GFX11-NEXT:    global_load_b128 v[14:17], v18, s[0:1] offset:48
+; GFX11-NEXT:    global_load_b128 v[2:5], v19, s[0:1]
+; GFX11-NEXT:    global_load_b128 v[6:9], v19, s[0:1] offset:16
+; GFX11-NEXT:    global_load_b128 v[10:13], v19, s[0:1] offset:32
+; GFX11-NEXT:    global_load_b128 v[14:17], v19, s[0:1] offset:48
 ; GFX11-NEXT:    s_load_b512 s[0:15], s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
 ; GFX11-NEXT:    v_readfirstlane_b32 s16, v2
@@ -2057,12 +2057,12 @@ define amdgpu_ps void @load_uniform_P4_v16i32(ptr addrspace(4) inreg %ptra, ptr 
 ;
 ; GFX12-LABEL: load_uniform_P4_v16i32:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_mov_b32_e32 v18, 0
+; GFX12-NEXT:    v_mov_b32_e32 v19, 0
 ; GFX12-NEXT:    s_clause 0x3
-; GFX12-NEXT:    global_load_b128 v[2:5], v18, s[0:1]
-; GFX12-NEXT:    global_load_b128 v[6:9], v18, s[0:1] offset:16
-; GFX12-NEXT:    global_load_b128 v[10:13], v18, s[0:1] offset:32
-; GFX12-NEXT:    global_load_b128 v[14:17], v18, s[0:1] offset:48
+; GFX12-NEXT:    global_load_b128 v[2:5], v19, s[0:1]
+; GFX12-NEXT:    global_load_b128 v[6:9], v19, s[0:1] offset:16
+; GFX12-NEXT:    global_load_b128 v[10:13], v19, s[0:1] offset:32
+; GFX12-NEXT:    global_load_b128 v[14:17], v19, s[0:1] offset:48
 ; GFX12-NEXT:    s_load_b512 s[0:15], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x3
 ; GFX12-NEXT:    v_readfirstlane_b32 s16, v2

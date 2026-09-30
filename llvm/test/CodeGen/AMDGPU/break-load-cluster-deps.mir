@@ -14,9 +14,9 @@ body: |
     ; GCN: liveins: $vgpr2_vgpr3, $vgpr20, $vgpr21, $vgpr22, $vgpr23
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr10_vgpr11_vgpr12_vgpr13 = GLOBAL_LOAD_DWORDX4 $vgpr2_vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr20, $vgpr21, implicit $exec
-    ; GCN-NEXT: $vgpr1 = V_ADD_U32_e32 $vgpr22, $vgpr23, implicit $exec
-    ; GCN-NEXT: $vgpr14_vgpr15_vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX4 $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr20, $vgpr21, implicit $exec
+    ; GCN-NEXT: renamable $vgpr1 = V_ADD_U32_e32 $vgpr22, $vgpr23, implicit $exec
+    ; GCN-NEXT: $vgpr14_vgpr15_vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX4 renamable $vgpr0_vgpr1, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr10_vgpr11_vgpr12_vgpr13 = GLOBAL_LOAD_DWORDX4 $vgpr2_vgpr3, 0, 0, implicit $exec
     renamable $vgpr2 = V_ADD_U32_e32 $vgpr20, $vgpr21, implicit $exec
@@ -64,8 +64,8 @@ body: |
     ; GCN: liveins: $vgpr32_vgpr33, $vgpr40_vgpr41
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr20_vgpr21_vgpr22_vgpr23 = GLOBAL_LOAD_DWORDX4 $vgpr32_vgpr33, 0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 $vgpr40_vgpr41, 0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr48_vgpr49_vgpr50_vgpr51 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: renamable $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 $vgpr40_vgpr41, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr48_vgpr49_vgpr50_vgpr51 = COPY renamable $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr20_vgpr21_vgpr22_vgpr23 = GLOBAL_LOAD_DWORDX4 $vgpr32_vgpr33, 0, 0, implicit $exec
     renamable $vgpr32_vgpr33_vgpr34_vgpr35 = GLOBAL_LOAD_DWORDX4 $vgpr40_vgpr41, 0, 0, implicit $exec
@@ -190,10 +190,10 @@ body: |
     ; GCN: liveins: $vgpr2_vgpr3, $vgpr20, $vgpr21
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr10_vgpr11_vgpr12_vgpr13 = GLOBAL_LOAD_DWORDX4 $vgpr2_vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr20, implicit $exec
-    ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 $vgpr21, implicit $exec
-    ; GCN-NEXT: $vgpr50 = COPY $vgpr0
-    ; GCN-NEXT: $vgpr14_vgpr15_vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX4 $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $vgpr20, implicit $exec
+    ; GCN-NEXT: renamable $vgpr1 = V_MOV_B32_e32 $vgpr21, implicit $exec
+    ; GCN-NEXT: $vgpr50 = COPY renamable $vgpr0
+    ; GCN-NEXT: $vgpr14_vgpr15_vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX4 renamable $vgpr0_vgpr1, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr10_vgpr11_vgpr12_vgpr13 = GLOBAL_LOAD_DWORDX4 $vgpr2_vgpr3, 0, 0, implicit $exec
     renamable $vgpr2 = V_MOV_B32_e32 $vgpr20, implicit $exec
@@ -264,9 +264,9 @@ body: |
     ; GCN: liveins: $vgpr2_vgpr3, $vgpr20, $vgpr21, $vgpr22, $vgpr23
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr10_vgpr11_vgpr12_vgpr13 = GLOBAL_LOAD_DWORDX4 $vgpr2_vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr4 = V_ADD_U32_e32 $vgpr20, $vgpr21, implicit $exec
-    ; GCN-NEXT: $vgpr5 = V_ADD_U32_e32 $vgpr22, $vgpr23, implicit $exec
-    ; GCN-NEXT: $vgpr14_vgpr15_vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX4 $vgpr4_vgpr5, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr4 = V_ADD_U32_e32 $vgpr20, $vgpr21, implicit $exec
+    ; GCN-NEXT: renamable $vgpr5 = V_ADD_U32_e32 $vgpr22, $vgpr23, implicit $exec
+    ; GCN-NEXT: $vgpr14_vgpr15_vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX4 renamable $vgpr4_vgpr5, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr10_vgpr11_vgpr12_vgpr13 = GLOBAL_LOAD_DWORDX4 $vgpr2_vgpr3, 0, 0, implicit $exec
     renamable $vgpr2 = V_ADD_U32_e32 $vgpr20, $vgpr21, implicit $exec

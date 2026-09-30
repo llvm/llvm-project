@@ -399,22 +399,22 @@ define amdgpu_kernel void @v_ctpop_v4i64(ptr addrspace(1) noalias %out, ptr addr
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, s2, v0
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; VI-NEXT:    v_add_u32_e32 v8, vcc, 16, v4
-; VI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v5, vcc
 ; VI-NEXT:    flat_load_dwordx4 v[0:3], v[4:5]
-; VI-NEXT:    flat_load_dwordx4 v[4:7], v[8:9]
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 16, v4
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v5, vcc
+; VI-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_bcnt_u32_b32 v0, v0, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v8, v2, 0
+; VI-NEXT:    v_bcnt_u32_b32 v2, v1, v0
+; VI-NEXT:    v_bcnt_u32_b32 v3, v3, v8
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_bcnt_u32_b32 v4, v4, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v6, v6, 0
-; VI-NEXT:    v_bcnt_u32_b32 v2, v1, v0
 ; VI-NEXT:    v_bcnt_u32_b32 v4, v5, v4
 ; VI-NEXT:    v_bcnt_u32_b32 v5, v7, v6
-; VI-NEXT:    v_bcnt_u32_b32 v3, v3, v8
 ; VI-NEXT:    buffer_store_dwordx4 v[2:5], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;

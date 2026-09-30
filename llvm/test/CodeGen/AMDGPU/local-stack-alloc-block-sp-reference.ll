@@ -484,10 +484,10 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) #1 {
 ; MUBUF-NEXT:    v_lshrrev_b32_e64 v4, 6, s33
 ; MUBUF-NEXT:    v_add_u32_e32 v3, s4, v4
 ; MUBUF-NEXT:    v_mov_b32_e32 v4, 0x3000
-; MUBUF-NEXT:    v_add_u32_e32 v8, v4, v3
-; MUBUF-NEXT:    buffer_load_dword v4, v8, s[0:3], 0 offen glc
+; MUBUF-NEXT:    v_add_u32_e32 v3, v4, v3
+; MUBUF-NEXT:    buffer_load_dword v4, v3, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    buffer_load_dword v5, v8, s[0:3], 0 offen offset:4 glc
+; MUBUF-NEXT:    buffer_load_dword v5, v3, s[0:3], 0 offen offset:4 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_load_dword v6, v2, s[0:3], 0 offen glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)

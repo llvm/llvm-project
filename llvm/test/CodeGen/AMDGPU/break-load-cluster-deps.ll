@@ -100,14 +100,14 @@ define protected amdgpu_kernel void @_Z12uavReadSpeedI15HIP_vector_typeIfLj4EEEv
 ; CHECK-NEXT:    v_add_co_u32_e32 v40, vcc, s0, v36
 ; CHECK-NEXT:    v_addc_co_u32_e32 v41, vcc, v23, v37, vcc
 ; CHECK-NEXT:    v_lshlrev_b64 v[36:37], 4, v[0:1]
-; CHECK-NEXT:    v_add_co_u32_e32 v42, vcc, s0, v36
-; CHECK-NEXT:    v_addc_co_u32_e32 v43, vcc, v23, v37, vcc
+; CHECK-NEXT:    v_add_co_u32_e32 v36, vcc, s0, v36
+; CHECK-NEXT:    v_addc_co_u32_e32 v37, vcc, v23, v37, vcc
 ; CHECK-NEXT:    global_load_dwordx4 v[24:27], v[32:33], off
 ; CHECK-NEXT:    global_load_dwordx4 v[28:31], v[34:35], off
-; CHECK-NEXT:    global_load_dwordx4 v[36:39], v[42:43], off
 ; CHECK-NEXT:    s_add_i32 s12, s12, -1
 ; CHECK-NEXT:    global_load_dwordx4 v[32:35], v[40:41], off
 ; CHECK-NEXT:    v_add_u32_e32 v22, s11, v22
+; CHECK-NEXT:    global_load_dwordx4 v[36:39], v[36:37], off
 ; CHECK-NEXT:    v_add_u32_e32 v21, s11, v21
 ; CHECK-NEXT:    s_cmp_eq_u32 s12, 0
 ; CHECK-NEXT:    v_add_u32_e32 v20, s11, v20
@@ -118,9 +118,10 @@ define protected amdgpu_kernel void @_Z12uavReadSpeedI15HIP_vector_typeIfLj4EEEv
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
 ; CHECK-NEXT:    v_pk_add_f32 v[14:15], v[14:15], v[30:31]
 ; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[28:29]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_waitcnt vmcnt(1)
 ; CHECK-NEXT:    v_pk_add_f32 v[16:17], v[16:17], v[34:35]
 ; CHECK-NEXT:    v_pk_add_f32 v[10:11], v[10:11], v[32:33]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_pk_add_f32 v[18:19], v[18:19], v[38:39]
 ; CHECK-NEXT:    v_pk_add_f32 v[12:13], v[12:13], v[36:37]
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_5
