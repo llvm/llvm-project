@@ -431,7 +431,8 @@ LLVM_ABI FunctionPass *createSjLjEHPreparePass(const TargetMachine *TM);
 
 /// createWasmEHPass - This pass adapts exception handling code to use
 /// WebAssembly's exception handling scheme.
-LLVM_ABI FunctionPass *createWasmEHPass();
+LLVM_ABI FunctionPass *
+createWasmEHPass(ExceptionHandling DefaultEH = ExceptionHandling::Default);
 
 /// LocalStackSlotAllocation - This pass assigns local frame indices to stack
 /// slots relative to one another and allocates base registers to access them

@@ -22,6 +22,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -42,9 +43,11 @@ static void computeWEI(WebAssemblyExceptionInfo &WEI, MachineFunction &MF,
   LLVM_DEBUG(dbgs() << "********** Exception Info Calculation **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
-  if (!MF.getFunction().hasPersonalityFn() ||
-      MF.getFunction().getParent()->getExceptionModel() !=
-          ExceptionHandling::Wasm)
+  // Prefer the "exception-model" module flag, else the TargetOptions default.
+  ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
+  if (EH == ExceptionHandling::Default)
+    EH = MF.getTarget().getExceptionModel();
+  if (!MF.getFunction().hasPersonalityFn() || EH != ExceptionHandling::Wasm)
     return;
   MachineDominatorTree &MDT = GetMDT();
   MachineDominanceFrontier &MDF = GetMDF();

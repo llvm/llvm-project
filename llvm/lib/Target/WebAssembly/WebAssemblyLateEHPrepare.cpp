@@ -24,6 +24,7 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-late-eh-prepare"
@@ -125,8 +126,11 @@ bool WebAssemblyLateEHPrepareImpl::runOnMachineFunction(MachineFunction &MF) {
                        "********** Function: "
                     << MF.getName() << '\n');
 
-  if (MF.getFunction().getParent()->getExceptionModel() !=
-      ExceptionHandling::Wasm)
+  // Prefer the "exception-model" module flag, else the TargetOptions default.
+  ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
+  if (EH == ExceptionHandling::Default)
+    EH = MF.getTarget().getExceptionModel();
+  if (EH != ExceptionHandling::Wasm)
     return false;
 
   bool Changed = false;

@@ -150,9 +150,12 @@ bool WebAssemblyFrameLowering::needsSPForLocalFrame(
 // restoring the stack pointer after an exception is caught.
 bool WebAssemblyFrameLowering::needsPrologForEH(
     const MachineFunction &MF) const {
-  return MF.getFunction().hasPersonalityFn() && MF.getFrameInfo().hasCalls() &&
-         MF.getFunction().getParent()->getExceptionModel() ==
-             ExceptionHandling::Wasm;
+  // Prefer the "exception-model" module flag, else the TargetOptions default.
+  ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
+  if (EH == ExceptionHandling::Default)
+    EH = MF.getTarget().getExceptionModel();
+  return EH == ExceptionHandling::Wasm && MF.getFunction().hasPersonalityFn() &&
+         MF.getFrameInfo().hasCalls();
 }
 
 /// Returns true if this function needs a local user-space stack pointer.

@@ -8,6 +8,11 @@
 ; RUN: llc %t/emscripten.ll -o - | FileCheck %s --check-prefix=EM
 ; RUN: llc -wasm-use-legacy-eh=false -mattr=+exception-handling %t/noflag.ll -o - | FileCheck %s --check-prefix=NOFLAG
 
+; Without the flag, -exception-model still selects the model.
+
+; RUN: llc -wasm-use-legacy-eh=false -mattr=+exception-handling -exception-model=wasm %t/noflag.ll -o - | FileCheck %s --check-prefix=WASM
+; RUN: llc -exception-model=emscripten %t/noflag-em.ll -o - | FileCheck %s --check-prefix=EM
+
 ; WASM: .tagtype __cpp_exception i32
 ; WASM: try_table  (catch __cpp_exception 0)
 
@@ -88,6 +93,29 @@ catch.start:
   %s = call i32 @llvm.wasm.get.ehselector(token %cp)
   call void @__cxa_end_catch() [ "funclet"(token %cp) ]
   catchret from %cp to label %cont
+cont:
+  ret void
+}
+
+;--- noflag-em.ll
+target triple = "wasm32-unknown-emscripten"
+
+@_ZTIi = external constant ptr
+
+declare void @g()
+declare i32 @__gxx_personality_v0(...)
+declare ptr @__cxa_begin_catch(ptr)
+declare void @__cxa_end_catch()
+
+define void @f() personality ptr @__gxx_personality_v0 {
+entry:
+  invoke void @g() to label %cont unwind label %lpad
+lpad:
+  %p = landingpad { ptr, i32 } catch ptr @_ZTIi
+  %e = extractvalue { ptr, i32 } %p, 0
+  %q = call ptr @__cxa_begin_catch(ptr %e)
+  call void @__cxa_end_catch()
+  br label %cont
 cont:
   ret void
 }
