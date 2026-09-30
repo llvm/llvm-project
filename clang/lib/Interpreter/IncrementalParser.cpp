@@ -17,12 +17,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclContextInternals.h"
-<<<<<<< HEAD
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
-=======
-#include "clang/CodeGen/ModuleBuilder.h"
->>>>>>> 6d90b8675095 (Add Initial impl ErrorRecovery.h)
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"

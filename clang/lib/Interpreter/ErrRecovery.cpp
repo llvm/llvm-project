@@ -42,16 +42,6 @@ DeclStateReverter::createDefinitionDataFootprint(const CXXRecordDecl &RD) {
   return FP;
 }
 
-// bool DeclStateReverter::compareDefinitionDataFootprint(
-//     const DefinitionDataFootprint &FP, const CXXRecordDecl &RD) {
-//   const auto &Live = RD.data();
-// #define FIELD(Name, Width, Merge) \
-//   if (FP.Name != Live.Name) \
-//     return false;
-// #include "clang/AST/CXXRecordDeclDefinitionBits.def"
-//   return true;
-// }
-
 void DeclStateReverter::restoreDefinitionDataFootprint(
     const DefinitionDataFootprint &FP, CXXRecordDecl &RD) {
   auto &Live = RD.data();
@@ -156,9 +146,6 @@ void DeclStateReverter::detachCommonBase(const RedeclarableTemplateDecl *RT) {
     clearCommonPtr(*R);
 }
 
-void DeclStateReverter::removeFromLookupMap(NamedDecl *ND, DeclContext *DC,
-                                            PTUID ID) {}
-
 void DeclStateReverter::detachFromExternCLookup(Decl *D,
                                                 DeclContext *ExternCCtx,
                                                 PTUID ID) {
@@ -166,47 +153,46 @@ void DeclStateReverter::detachFromExternCLookup(Decl *D,
   if (!ND)
     return;
 
-  bool IsExternC = false;
-  if (const auto *FD = dyn_cast<FunctionDecl>(ND))
-    IsExternC = FD->isExternC();
-  else if (const auto *VD = dyn_cast<VarDecl>(ND))
-    IsExternC = VD->isExternC();
+  // bool IsExternC = false;
+  // if (const auto *FD = dyn_cast<FunctionDecl>(ND))
+  //   IsExternC = FD->isExternC();
+  // else if (const auto *VD = dyn_cast<VarDecl>(ND))
+  //   IsExternC = VD->isExternC();
 
-  if (IsExternC)
-    removeFromLookupMap(ND, ExternCCtx, ID);
+  // if (IsExternC)
+  //   removeFromLookupMap(ND, ExternCCtx, ID);
+
+  if (StoredDeclsMap *Map = ExternCCtx->getPrimaryContext()->getLookupPtr()) {
+    auto It = Map->find(ND->getDeclName());
+    if (It != Map->end())
+      It->second.remove(ND);
+  }
 }
 
 void DeclStateReverter::removeFromIdResolver(Sema &S, NamedDecl *D) {
+  if (D->getDeclName().isEmpty())
+    return;
   if (D->getDeclName().getFETokenInfo())
     S.IdResolver.RemoveDecl(D);
 }
 
-/// Remove D from every lookup map it became visible in, reinstating the
-/// previous declaration where D had replaced one in-place (which is what
-/// StoredDeclsList::HandleRedeclaration does on a redeclaration --
-/// erasing the slot outright would lose the older decl entirely; that is
-/// the ReopenNs failure).
+/// Remove D from its DeclContext lookup map and restore the previous
+/// declaration if it was replaced.
 void DeclStateReverter::detachFromDCLookup(Decl *D, PTUID ID) {
   NamedDecl *ND = dyn_cast<NamedDecl>(D);
   if (!ND)
-    return; // nothing nameable -- never entered a lookup map
+    return;
 
-  // Chain must still be intact to find the replacement -- that is why
-  // this runs before detachFromRedeclChain.
+  // Find any declaration from the previous PTU in the redecl chain that may
+  // have been replaced by this declaration.
   NamedDecl *Survivor = findSurvivor(ND, ID);
   DeclarationName Name = ND->getDeclName();
 
-  // A decl in a transparent context (an unnamed namespace, an unscoped
-  // enum, a linkage-spec block) is visible in the enclosing context's map
-  // as well, so every level it was inserted into needs the same repair --
-  // not just its own primary context.
   DeclContext *DC = ND->getDeclContext();
   do {
     DeclContext *Primary = DC->getPrimaryContext();
     if (StoredDeclsMap *Map = Primary->getLookupPtr()) {
       auto Pos = Map->find(Name);
-      // Not an error: the map is built lazily, so a context that was
-      // never looked up in has no entry for this name at all.
       if (Pos != Map->end()) {
         StoredDeclsList &List = Pos->second;
         List.remove(ND);
@@ -219,7 +205,7 @@ void DeclStateReverter::detachFromDCLookup(Decl *D, PTUID ID) {
   } while (DC->isTransparentContext() && (DC = DC->getParent()));
 }
 
-// Walk D's redecl chain looking for the newest decl that predates this
+// Walk D's redecl chain looking for the newest decl that is from previous
 // PTU. Returns nullptr if the entire chain was created this PTU.
 template <typename DeclT>
 DeclT *DeclStateReverter::findSurvivor(DeclT *D, PTUID ID) const {
@@ -421,15 +407,12 @@ uint32_t PTUMutationActions::DeclNeedingTracking(DeclShape S, const Decl *D) {
     // already tracked
     const RedeclarableTemplateDecl *RT =
         cast<RedeclarableTemplateDecl>(D->getCanonicalDecl());
-    if (!DeclStateReverter::isCommonPtrValid(*RT) &&
+    if (!DeclStateReverter::isCommonPtrValid(RT) &&
         !HiddenMutationTracker.isTrackedFor(
             RT, uint32_t(MutationType::TemplateCommon))) {
       // No listener reports these Common changes, so use hidden tracking.
       Kinds |= uint32_t(MutationType::TemplateCommon);
     } else if (const auto *CTD = dyn_cast<ClassTemplateDecl>(RT)) {
-      // Common exists, so calling getCommonPtr() here is safe (won't
-      // allocate) -- only ClassTemplateDecl has CanonInjectedTST in its
-      // own Common, not the Function/Var template siblings.
       if (!DeclStateReverter::isTemplateCanonInjectedTSTValid(CTD))
         Kinds |= uint32_t(MutationType::CanonInjectedTST);
     }
@@ -567,7 +550,7 @@ uint32_t PTUMutationActions::confirmMutation(const Decl *D, DeclShape S,
         Tracker.getHiddenMutationTracker().isTrackedFor(
             RT, uint32_t(MutationType::TemplateCommon))) {
       // No chain to compare against -- write-once.
-      if (DeclStateReverter::isCommonPtrValid(*RT))
+      if (DeclStateReverter::isCommonPtrValid(RT))
         Verified |= uint32_t(MutationType::TemplateCommon);
     }
     if (FlaggedKinds & uint32_t(MutationType::CanonInjectedTST) &&

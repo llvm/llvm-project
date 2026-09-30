@@ -45,6 +45,14 @@ struct DefinitionDataFootprint {
   bool operator!=(const DefinitionDataFootprint &O) const {
     return !(*this == O);
   }
+
+  // void update(const CXXRecordDecl &Live) {
+  //   DeclStateReverter::createDefinitionDataFootprint(*this, Live);
+  // }
+
+  // void restore(CXXRecordDecl &Live) const {
+  //   DeclStateReverter::restoreDefinitionDataFootprint(*this, Live);
+  // }
 };
 
 // Stores the state of a class template specialization. Tracks its
@@ -185,10 +193,6 @@ private:
     using RedeclarableTemplateDecl::Common;
   };
 
-  static const void *rawCommonPtr(const RedeclarableTemplateDecl &RT) {
-    return static_cast<const TemplateCommonAccess &>(RT).Common;
-  }
-
   // Common is `mutable`, so this is legal to call through a const
   // reference too -- no const_cast needed at any call site.
   static void clearCommonPtr(const RedeclarableTemplateDecl &RT) {
@@ -208,12 +212,6 @@ private:
   struct VarTemplateSpecAccess : VarTemplateDecl {
     using VarTemplateDecl::getSpecializations;
   };
-
-  static bool canonInjectedTSTValid(const ClassTemplateDecl &CTD) {
-    auto *Ptr =
-        static_cast<const ClassTemplateCommonAccess &>(CTD).getCommonPtr();
-    return !Ptr->CanonInjectedTST.isNull();
-  }
 
   static void clearCanonInjectedTST(ClassTemplateDecl &CTD) {
     auto *Ptr = static_cast<ClassTemplateCommonAccess &>(CTD).getCommonPtr();
@@ -266,9 +264,9 @@ protected:
   static void restoreDefinitionDataFootprint(const DefinitionDataFootprint &FP,
                                              CXXRecordDecl &RD);
 
-  // Generic across every other footprint type -- SpecializationFootprint,
-  // VarSpecializationFootprint, FunctionSpecializationFootprint,
-  // MemberSpecializationFootprint.
+  // Generic across every other footprint type exclusing DefinitionDataFootprint
+  // -- SpecializationFootprint, VarSpecializationFootprint,
+  // FunctionSpecializationFootprint, MemberSpecializationFootprint.
   template <typename FootprintT, typename OwnerT>
   static FootprintT createFootprint(const OwnerT &Owner) {
     FootprintT FP;
@@ -284,18 +282,19 @@ protected:
 
   // True if Common could still be created later -- i.e. nobody has called
   // getCommonPtr() anywhere in this template's redecl chain yet.
-  static bool isCommonPtrValid(const RedeclarableTemplateDecl &RT) {
-    return !rawCommonPtr(RT);
+  static bool isCommonPtrValid(const RedeclarableTemplateDecl *RT) {
+    return static_cast<const TemplateCommonAccess *>(RT)->Common != nullptr;
   }
 
   // True if CanonInjectedTST could still be cached later. Only valid to
   // call once Common itself is confirmed to exist (see needToTrackCommonPtr).
   static bool isTemplateCanonInjectedTSTValid(const ClassTemplateDecl *CTD) {
-    return !canonInjectedTSTValid(*CTD);
+    auto *Ptr =
+        static_cast<const ClassTemplateCommonAccess *>(CTD)->getCommonPtr();
+    return !Ptr->CanonInjectedTST.isNull();
   }
 
-  // Write-once fields, fixed null prior state (Common/CanonInjectedTST
-  // never existed before whichever PTU created them), so revert is a
+  // Write-once fields, fixed null prior state, so revert is a
   // direct reset, not a snapshot restore.
   static void resetTemplateCommonBase(RedeclarableTemplateDecl &RT) {
     clearCommonPtr(RT);
@@ -349,8 +348,6 @@ public:
 
   static void removeFromIdResolver(Sema &S, NamedDecl *D);
 
-  // Walk D's redecl chain looking for the newest decl that predates this
-  // PTU. Returns nullptr if the entire chain was created this PTU.
   template <typename DeclT> DeclT *findSurvivor(DeclT *D, PTUID ID) const;
 
   template <typename decl_type>
@@ -358,16 +355,12 @@ public:
     setLatestRedecl<decl_type>(*D->getFirstDecl(), Survivor);
   }
 
-  /// Point the canonical decl's "most recent" link back at the newest
-  /// redeclaration that predates this PTU.
   void detachFromRedeclChain(const Decl *D, PTUID ID);
 
   void repairLexicalChain(DeclContext &DC, PTUID ID);
 
 private:
   NamedDecl *tryDetachRedeclChain(Decl *D, PTUID ID);
-
-  void removeFromLookupMap(NamedDecl *ND, DeclContext *DC, PTUID ID);
 };
 
 /// Maps addresses to the PTU that allocated them, by keeping the slab
