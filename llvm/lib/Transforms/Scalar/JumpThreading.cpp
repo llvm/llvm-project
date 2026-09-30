@@ -562,6 +562,8 @@ static Constant *getKnownConstant(Value *Val, ConstantPreference Preference) {
 ///   BB: L = phi [A, PredBB], ...   ; L -> A on the PredBB edge
 ///       R = phi [B, PredBB], ...   ; R -> B on the PredBB edge
 ///       br (icmp <pred> L, R)      ; == C, false => thread past it
+///
+/// Threading the edge duplicates BB, so give up if BB contains a call.
 static std::optional<bool> isImpliedByEdgeBranch(BasicBlock *PredBB,
                                                  BasicBlock *BB,
                                                  CmpInst::Predicate Pred,
@@ -572,6 +574,10 @@ static std::optional<bool> isImpliedByEdgeBranch(BasicBlock *PredBB,
     return I && I->getParent() == BB;
   };
   if (DefinedInBB(LHS) || DefinedInBB(RHS))
+    return std::nullopt;
+  if (any_of(*BB, [](const Instruction &I) {
+        return isa<CallBase>(I) && !isAssumeLikeIntrinsic(&I);
+      }))
     return std::nullopt;
   return isImpliedByEdgeCondition(PredBB, BB, Pred, LHS, RHS, DL);
 }
