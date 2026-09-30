@@ -96,10 +96,7 @@ DEPENDENTS_TO_TEST = {
         "cross-project-tests",
         "lldb",
     },
-    "mlir": {
-        "CIR",
-        "flang"
-    },
+    "mlir": {"CIR", "flang"},
     # Test everything if ci scripts are changed.
     ".ci": {
         project_name
