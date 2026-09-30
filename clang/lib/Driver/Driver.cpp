@@ -353,7 +353,7 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
 // Determine which compilation mode we are in. We look for options which
 // affect the phase, starting with the earliest phases, and record which
 // option we used to determine the final phase.
-phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
+phases::ID Driver::getFinalPhase(const ArgList &DAL,
                                  Arg **FinalPhaseArg) const {
   Arg *PhaseArg = nullptr;
   phases::ID FinalPhase;

@@ -129,23 +129,19 @@ void SYCLToolChain::addClangTargetOptions(
     BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
 
-  // Only link device libraries when actually emitting device IR.
-  // Preprocessing (-E) and syntax-only (-fsyntax-only) actions do not produce
-  // IR so -mlink-builtin-bitcode would be unused, and requiring the builtins
-  // bitcode to exist would be a spurious fatal error on those code paths.
-  auto IsNonIRAction = [](const llvm::opt::ArgStringList &Args) {
-    for (const char *A : Args)
-      if (llvm::StringRef(A) == "-E" || llvm::StringRef(A) == "-fsyntax-only")
-        return true;
-    return false;
-  };
-  if (!IsNonIRAction(CC1Args)) {
-    for (const auto &BCFile :
-         getDeviceLibs(DriverArgs, BA, DeviceOffloadingKind)) {
-      CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
-                                                 : "-mlink-bitcode-file");
-      CC1Args.push_back(DriverArgs.MakeArgStringRef(BCFile.Path));
-    }
+  // Only link device libraries when the compilation actually reaches IR
+  // generation. Compilations that stop at or before the compile phase (e.g.
+  // -E, --precompile, -fsyntax-only) never emit IR, so -mlink-builtin-bitcode
+  // would be unused and requiring the builtins bitcode to be present would be
+  // a spurious error on those code paths.
+  if (getDriver().getFinalPhase(DriverArgs) <= phases::Compile)
+    return;
+
+  for (const auto &BCFile :
+       getDeviceLibs(DriverArgs, BA, DeviceOffloadingKind)) {
+    CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
+                                               : "-mlink-bitcode-file");
+    CC1Args.push_back(DriverArgs.MakeArgStringRef(BCFile.Path));
   }
 }
 

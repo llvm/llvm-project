@@ -341,7 +341,7 @@ public:
   // TODO: Much of what getFinalPhase returns are not actually true compiler
   //       modes. Fold this functionality into Types::getCompilationPhases and
   //       handleArguments.
-  phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
+  phases::ID getFinalPhase(const llvm::opt::ArgList &DAL,
                            llvm::opt::Arg **FinalPhaseArg = nullptr) const;
 
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
