@@ -3791,6 +3791,20 @@ struct FormatStyle {
   /// \version 20
   bool KeepFormFeed;
 
+  /// Keep the break keyword and the following case label on the same line.
+  ///
+  /// \code
+  ///    false:                         true:
+  ///    switch (foo) {                 switch (foo) {
+  ///      case 1:                        case 1:
+  ///        bar();                        bar();
+  ///        break;                        break; case 2:
+  ///      case 2:                         bar();
+  ///        bar();                       }
+  ///    }
+  /// \endcode
+  bool KwBreakBeforeCaseLabel;
+
   /// Indentation logic for lambda bodies.
   enum LambdaBodyIndentationKind : int8_t {
     /// Align lambda body relative to the lambda signature. This is the default.
@@ -6259,6 +6273,7 @@ struct FormatStyle {
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
            KeepEmptyLines == R.KeepEmptyLines &&
            KeepFormFeed == R.KeepFormFeed && Language == R.Language &&
+           KwBreakBeforeCaseLabel == R.KwBreakBeforeCaseLabel &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&

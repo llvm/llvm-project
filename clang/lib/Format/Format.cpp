@@ -1418,6 +1418,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("JavaScriptWrapImports", Style.JavaScriptWrapImports);
     IO.mapOptional("KeepEmptyLines", Style.KeepEmptyLines);
     IO.mapOptional("KeepFormFeed", Style.KeepFormFeed);
+    IO.mapOptional("KwBreakBeforeCaseLabel", Style.KwBreakBeforeCaseLabel);
     IO.mapOptional("LambdaBodyIndentation", Style.LambdaBodyIndentation);
     IO.mapOptional("LineEnding", Style.LineEnding);
     IO.mapOptional("MacroBlockBegin", Style.MacroBlockBegin);
@@ -1998,6 +1999,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
       /*AtStartOfFile=*/true,
   };
   LLVMStyle.KeepFormFeed = false;
+  LLVMStyle.KwBreakBeforeCaseLabel = false;
   LLVMStyle.LambdaBodyIndentation = FormatStyle::LBI_Signature;
   LLVMStyle.Language = Language;
   LLVMStyle.LineEnding = FormatStyle::LE_DeriveLF;
@@ -2790,6 +2792,53 @@ private:
           Next = NextLine->First;
         replaceToken(*Token, Next, SourceMgr, Result);
       }
+    }
+  }
+};
+
+class KwBreakInserter : public TokenAnalyzer {
+public:
+  KwBreakInserter(const Environment &Env, const FormatStyle &Style)
+      : TokenAnalyzer(Env, Style) {}
+
+  std::pair<tooling::Replacements, unsigned>
+  analyze(TokenAnnotator &Annotator,
+          SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
+          FormatTokenLexer &Tokens) override {
+    AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
+    tooling::Replacements Result;
+    insertKwBreak(AnnotatedLines, Result);
+    return {Result, 0};
+  }
+
+private:
+  static constexpr StringRef KwBreak = "break;";
+
+  void insertKwBreak(SmallVectorImpl<AnnotatedLine *> &Lines,
+                     tooling::Replacements &Result) {
+
+    const auto &SourceMgr = Env.getSourceManager();
+    const auto *End = Lines.end();
+    for (const auto *I = Lines.begin(); I != End; ++I) {
+      const auto &Line = *I;
+      if (!Line->Children.empty())
+        insertKwBreak(Line->Children, Result);
+      if (!Line->Affected || !Line->startsWith(tok::kw_case))
+        continue;
+
+      const AnnotatedLine *Prev = nullptr;
+      for (auto IReverse = std::make_reverse_iterator(I);
+           IReverse != Lines.rend(); ++IReverse) {
+        if (!(*IReverse)->isComment()) {
+          Prev = *IReverse;
+          break;
+        }
+      }
+      if (!Prev || Prev->getLastNonComment()->isNot(tok::l_brace))
+        continue;
+      cantFail(Result.add(tooling::Replacement(
+          SourceMgr, Line->getFirstNonComment()->Tok.getLocation(), 0,
+          KwBreak)));
     }
   }
 };
@@ -4405,6 +4454,14 @@ reformat(const FormatStyle &Style, StringRef Code,
       S.RemoveSemicolon = true;
       Passes.emplace_back([&, S = std::move(S)](const Environment &Env) {
         return SemiRemover(Env, S).process();
+      });
+    }
+
+    if (Style.KwBreakBeforeCaseLabel) {
+      FormatStyle S = Expanded;
+      S.KwBreakBeforeCaseLabel = true;
+      Passes.emplace_back([&, S = std::move(S)](const Environment &Env) {
+        return KwBreakInserter(Env, S).process(/*SkipAnnotation=*/true);
       });
     }
 

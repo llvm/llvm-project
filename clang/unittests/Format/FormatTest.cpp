@@ -2835,6 +2835,59 @@ TEST_F(FormatTest, FormatsSwitchStatement) {
                Style);
 }
 
+TEST_F(FormatTest, FormatsSwitchStatementKwBreakBeforeCase) {
+  FormatStyle Style = getLLVMStyle();
+  Style.IndentCaseLabels = true;
+  Style.KwBreakBeforeCaseLabel = true;
+
+  verifyFormat("switch (n) {\n"
+               "  break; case 0:;\n"
+               "}",
+               Style);
+
+  verifyFormat("switch (n) {\n"
+               "  break; case 0: {\n"
+               "    return false;\n"
+               "  }\n"
+               "  break; case 1:\n"
+               "  break; default: {\n"
+               "    return true;\n"
+               "  }\n"
+               "}",
+               Style);
+
+  Style.IndentCaseLabels = true;
+  Style.IndentCaseBlocks = false;
+  Style.KwBreakBeforeCaseLabel = true;
+  verifyFormat("switch (n) {\n"
+               "  break; case 0: {\n"
+               "    return false;\n"
+               "  }\n"
+               "  break; case 1:\n"
+               "    while (x)\n"
+               "      break;\n"
+               "  case 2:\n"
+               "  break; default: {\n"
+               "    return true;\n"
+               "  }\n"
+               "}",
+               "switch (n) {\n"
+               "case 0: {\n"
+               "  return false;\n"
+               "}\n"
+               "  break;\n"
+               "case 1:\n"
+               "  while (x)\n"
+               "    break;\n"
+               "case 2:\n"
+               "  break;\n"
+               "default: {\n"
+               "  return true;\n"
+               "}\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTest, CaseRanges) {
   verifyFormat("switch (x) {\n"
                "case 'A' ... 'Z':\n"

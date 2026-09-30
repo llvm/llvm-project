@@ -5431,6 +5431,23 @@ the configuration (without a prefix: `Auto`).
   newlines. (See
   www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed.)
 
+(kwbreakbeforecaselabel)=
+
+**KwBreakBeforeCaseLabel** (`Boolean`) {ref}`¶ <KwBreakBeforeCaseLabel>`
+
+: Keep the break keyword and the following case label on the same line.
+
+  ```c++
+  false:                         true:
+  switch (foo) {                 switch (foo) {
+    case 1:                        case 1:
+      bar();                        bar();
+      break;                        break; case 2:
+    case 2:                         bar();
+      bar();                       }
+  }
+  ```
+
 (lambdabodyindentation)=
 
 **LambdaBodyIndentation** (`LambdaBodyIndentationKind`) {versionbadge}`clang-format 13` {ref}`¶ <LambdaBodyIndentation>`
