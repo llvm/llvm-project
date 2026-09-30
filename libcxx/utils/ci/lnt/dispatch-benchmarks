@@ -110,7 +110,7 @@ def collapse(items: Sequence[common.WorkItem]) -> List[common.WorkItem]:
 
 def parse_run_name(title: str) -> Optional[RunName]:
     """
-    Return the information encoded in a worfklow's run-name, or None if it can't be parsed.
+    Return the information encoded in a workflow's run-name, or None if it can't be parsed.
 
     The name has to match the workflow's `run-name` exactly.
     """
@@ -291,17 +291,9 @@ def report(args: argparse.Namespace, decisions: Sequence[Decision], runs: Runs) 
                             tablefmt='plain', disable_numparse=True,
                             colalign=('left', 'left', 'left', 'right', 'left'))
           if rows else '  nothing to do', file=out)
-    print('', file=out)
 
-    counts = {'dispatch': 0, 'skip': 0, 'defer': 0}
-    for decision in decisions:
-        counts[decision.action] += 1
-    jobs = sum(d.jobs for d in decisions if d.action == 'dispatch')
-    print(f'Summary: {len(decisions)} commit/machine pairs requested by the plan, '
-          f'{counts["skip"]} already in flight or given up on, '
-          f'{counts["dispatch"]} being requested now ({jobs} runs), '
-          f'{counts["defer"]} left for later.', file=out)
     if args.dry_run:
+        print('', file=out)
         print('DRY RUN: nothing was requested.', file=out)
 
 
@@ -326,7 +318,7 @@ def main(argv: List[str]) -> int:
                     'Results are submitted to LNT unless this is a dry run. That is not optional: '
                     'results that are not recorded anywhere would be requested again on every '
                     'invocation, forever.',
-        epilog='This script depends on the modules listed in `libcxx/utils/requirements.txt`.',
+        epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.',
         formatter_class=HelpFormatter)
     parser.add_argument('--work-items', type=argparse.FileType('r'), default=sys.stdin,
         help='A file containing the plan, one JSON object per line. By default, this is read from '
@@ -371,7 +363,7 @@ def main(argv: List[str]) -> int:
 
     decisions = decide(items, runs, args.max_in_flight, args.extra_attempts)
 
-    # Warn then we give up for good on a commit/machine pair (because enough attempts have been done).
+    # Warn when we give up for good on a commit/machine pair (because enough attempts have been done).
     for decision in decisions:
         if decision.action == 'skip' and decision.reason.startswith('giving up'):
             logging.warning(f'{decision.item.commit[:12]} on {decision.item.machine}: {decision.reason}')

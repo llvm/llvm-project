@@ -22,6 +22,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
+#include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -83,6 +84,7 @@ static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {
     return AMDGPUSubtarget::GFX11;
   case Triple::AMDGPUSubArch12:
   case Triple::AMDGPUSubArch12_5:
+  case Triple::AMDGPUSubArch1250S:
     return AMDGPUSubtarget::GFX12;
   case Triple::AMDGPUSubArch13:
     return AMDGPUSubtarget::GFX13;
@@ -173,16 +175,19 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (AddressableLocalMemorySize == 0)
-    AddressableLocalMemorySize = 32768;
+  if (MaxWavesPerEU == 0)
+    MaxWavesPerEU = 10;
 
   if (FlatOffsetBitWidth == 0)
     FlatOffsetBitWidth = 13;
 
-  LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(*this);
-  // LDS Allocation Granularity calculated in bytes from dwords
+  LocalMemorySize =
+      AMDGPU::getLocalMemorySize(getTargetID().getGPUKind(), isFullSIMDMode());
+  AddressableLocalMemorySize = AMDGPU::getAddressableLocalMemorySize(
+      getTargetID().getGPUKind(), isFullSIMDMode());
+  // LDS allocation granularity is in bytes.
   LDSAllocationGranularity =
-      AMDGPU::getLdsDwGranularity(*this) * sizeof(uint32_t);
+      AMDGPU::getLDSAllocGranule(getTargetID().getGPUKind());
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
@@ -245,8 +250,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
                     << TargetID.getSramEccSetting() << '\n');
 
-  MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(*this);
-  EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(*this);
+  NumWorkGroupSIMDs = AMDGPU::getNumWorkGroupSIMDs(isFullSIMDMode());
 
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 
@@ -450,6 +454,11 @@ void GCNSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
   });
 }
 
+void GCNSubtarget::overridePipelinerPolicy(
+    MachinePipelinerPolicy &Policy) const {
+  Policy.ShouldLimitRegPressure = true;
+}
+
 void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {
   if (isWave32()) {
     // Fix implicit $vcc operands after MIParser has verified that they match
@@ -627,9 +636,18 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
 unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
   unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
   std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
-  return getBaseMaxNumVGPRs(
+
+  unsigned MaxNumVGPRs = getBaseMaxNumVGPRs(
       F, {getMinNumVGPRs(Waves.second, DynamicVGPRBlockSize),
           getMaxNumVGPRs(Waves.first, DynamicVGPRBlockSize)});
+
+  // In DVGPR mode, a wave launches with a single VGPR block allocated. Applied
+  // after getBaseMaxNumVGPRs so "amdgpu-num-vgpr" cannot raise it back up.
+  if (DynamicVGPRBlockSize != 0 &&
+      AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+    MaxNumVGPRs = std::min(MaxNumVGPRs, DynamicVGPRBlockSize);
+
+  return MaxNumVGPRs;
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {

@@ -14,21 +14,25 @@
 //
 //===----------------------------------------------------------------------===//
 
+extern "C" void (*const __asan_dso_reg_hook)();
+
 #if defined(SANITIZER_STATIC_RUNTIME_THUNK) || \
     defined(SANITIZER_DYNAMIC_RUNTIME_THUNK)
 #  include "sanitizer_common/sanitizer_win_defs.h"
 
-#  pragma section(".CRT$XIB", long, \
-                  read)  // C initializer (during C init before dyninit)
-#  pragma section(".CRT$XID", long, \
-                  read)  // First C initializer after CRT initializers
-#  pragma section(".CRT$XCAB", long, \
-                  read)  // First C++ initializer after startup initializers
+#  if !defined(__GNUC__) || defined(__clang__)
+#    pragma section(".CRT$XIB", long, \
+                    read)  // C initializer (during C init before dyninit)
+#    pragma section(".CRT$XID", long, \
+                    read)  // First C initializer after CRT initializers
+#    pragma section(".CRT$XCAB", long, \
+                    read)  // First C++ initializer after startup initializers
 
-#  pragma section(".CRT$XTW", long, read)  // First ASAN globals terminator
-#  pragma section(".CRT$XTY", long, read)  // Last ASAN globals terminator
+#    pragma section(".CRT$XTW", long, read)  // First ASAN globals terminator
+#    pragma section(".CRT$XTY", long, read)  // Last ASAN globals terminator
 
-#  pragma section(".CRT$XLAB", long, read)  // First TLS initializer
+#    pragma section(".CRT$XLAB", long, read)  // First TLS initializer
+#  endif
 
 #  ifdef SANITIZER_STATIC_RUNTIME_THUNK
 extern "C" void __asan_initialize_static_thunk();

@@ -84,6 +84,7 @@ private:
   void calculateCustomSections();
   void calculateTypes();
   void createOutputSegments();
+  void allocateCommonSymbols();
   OutputSegment *createOutputSegment(StringRef name);
   void combineActiveOutputSegments();
   void layoutMemory();
@@ -120,7 +121,8 @@ private:
   std::unique_ptr<FileOutputBuffer> buffer;
 
   std::vector<OutputSegment *> segments;
-  llvm::SmallDenseMap<StringRef, OutputSegment *> segmentMap;
+  using SegmentKey = std::pair<StringRef, uint32_t>;
+  llvm::SmallDenseMap<SegmentKey, OutputSegment *> segmentMap;
 };
 
 void writeSetTLSBase(const Ctx &ctx, raw_ostream &os) {
@@ -420,7 +422,7 @@ void Writer::layoutMemory() {
   }
 
   // In single-threaded builds we set __tls_base statically.
-  // Even in the absense of any actual TLS data, this symbol can still be
+  // Even in the absence of any actual TLS data, this symbol can still be
   // referenced (for example by __builtin_thread_pointer, which should not
   // return NULL).
   if (!ctx.arg.isMultithreaded() && ctx.sym.tlsBase) {
@@ -1071,7 +1073,63 @@ OutputSegment *Writer::createOutputSegment(StringRef name) {
   return s;
 }
 
+void Writer::allocateCommonSymbols() {
+  if (ctx.arg.relocatable)
+    return;
+
+  std::vector<CommonSymbol *> commons;
+  for (Symbol *sym : symtab->symbols())
+    if (auto *c = dyn_cast<CommonSymbol>(sym))
+      if (c->isLive())
+        commons.push_back(c);
+
+  if (commons.empty())
+    return;
+
+  log("-- allocateCommonSymbols");
+
+  uint64_t size = 0;
+  uint32_t alignLog2 = 0;
+
+  for (CommonSymbol *c : commons) {
+    assert(c->getAlignment() <= 32);
+    alignLog2 = std::max(alignLog2, c->getAlignment());
+    size = alignTo(size, 1ULL << c->getAlignment());
+    if (size > UINT32_MAX || c->getSize() > UINT32_MAX - size) {
+      error("common symbols section size overflow");
+      return;
+    }
+    size += c->getSize();
+  }
+
+  auto *commonSeg = make<SyntheticInputSegment>(".bss.common", alignLog2, 0);
+  commonSeg->setSize(size);
+  commonSeg->live = true;
+  ctx.syntheticInputSegments.push_back(commonSeg);
+
+  uint64_t offset = 0;
+  for (CommonSymbol *c : commons) {
+    uint64_t size = c->getSize();
+    uint32_t alignLog2 = c->getAlignment();
+    offset = alignTo(offset, 1ULL << alignLog2);
+    log(formatv("allocateCommonSymbol: {0} size={1} align={2} offset={3}",
+                c->getName(), size, alignLog2, offset));
+    replaceSymbol<DefinedData>(c, c->getName(), c->flags, c->getFile(),
+                               commonSeg, offset, size);
+    offset += size;
+  }
+}
+
 void Writer::createOutputSegments() {
+  // In relocatable mode, segments with differing flags must not be coalesced
+  // into the same output segment; otherwise chunks would inherit flags from
+  // other chunks sharing the same name (e.g. non-STRINGS strings inheriting
+  // STRINGS and being corrupted by splitStrings, or non-RETAIN data inheriting
+  // RETAIN and preventing dead-code elimination).
+  auto getSegmentKey = [&](StringRef name, uint32_t flags) {
+    return SegmentKey(name, ctx.arg.relocatable ? flags : 0);
+  };
+
   for (ObjFile *file : ctx.objectFiles) {
     for (InputChunk *segment : file->segments) {
       if (!segment->live)
@@ -1084,12 +1142,26 @@ void Writer::createOutputSegments() {
       if (ctx.arg.relocatable && !segment->getComdatName().empty()) {
         s = createOutputSegment(name);
       } else {
-        if (!segmentMap.contains(name))
-          segmentMap[name] = createOutputSegment(name);
-        s = segmentMap[name];
+        auto key = getSegmentKey(name, segment->flags);
+        if (!segmentMap.contains(key))
+          segmentMap[key] = createOutputSegment(name);
+        s = segmentMap[key];
       }
       s->addInputSegment(segment);
     }
+  }
+
+  // Process synthetic segments
+  for (InputChunk *segment : ctx.syntheticInputSegments) {
+    if (!segment->live)
+      continue;
+    StringRef name = getOutputDataSegmentName(*segment);
+    OutputSegment *s = nullptr;
+    auto key = getSegmentKey(name, segment->flags);
+    if (!segmentMap.contains(key))
+      segmentMap[key] = createOutputSegment(name);
+    s = segmentMap[key];
+    s->addInputSegment(segment);
   }
 
   // Sort segments by type, placing .bss last. Note that one requirement of
@@ -1804,6 +1876,8 @@ void Writer::run() {
   if (!ctx.isPic && ctx.sym.tableBase)
     setGlobalPtr(cast<DefinedGlobal>(ctx.sym.tableBase), ctx.arg.tableBase);
 
+  log("-- allocateCommonSymbols");
+  allocateCommonSymbols();
   log("-- createOutputSegments");
   createOutputSegments();
   log("-- createSyntheticSections");

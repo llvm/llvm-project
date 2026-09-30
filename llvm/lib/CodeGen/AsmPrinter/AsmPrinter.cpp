@@ -143,10 +143,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
-// This is a replication of fields of object::PGOAnalysisMap::Features. It
-// should match the order of the fields so that
-// `object::PGOAnalysisMap::Features::decode(PgoAnalysisMapFeatures.getBits())`
-// succeeds.
 enum class PGOMapFeaturesEnum {
   None,
   FuncEntryCount,
@@ -155,7 +151,7 @@ enum class PGOMapFeaturesEnum {
   PropellerCFG,
   All,
 };
-static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
+static cl::list<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     "pgo-analysis-map", cl::Hidden, cl::CommaSeparated,
     cl::values(
         clEnumValN(PGOMapFeaturesEnum::None, "none", "Disable all options"),
@@ -411,6 +407,7 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
                        char &ID)
     : MachineFunctionPass(ID), TM(tm), MAI(tm.getMCAsmInfo()),
       OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
+      PointerSize(tm.getTargetTriple().getArchPointerBitWidth() / 8),
       SM(*this) {
   VerboseAsm = OutStreamer->isVerboseAsm();
   DwarfUsesRelocationsAcrossSections =
@@ -491,12 +488,6 @@ const DataLayout &AsmPrinter::getDataLayout() const {
   return MMI->getModule()->getDataLayout();
 }
 
-// Do not use the cached DataLayout because some client use it without a Module
-// (dsymutil, llvm-dwarfdump).
-unsigned AsmPrinter::getPointerSize() const {
-  return TM.getPointerSize(0); // FIXME: Default address space
-}
-
 const MCSubtargetInfo &AsmPrinter::getSubtargetInfo() const {
   assert(MF && "getSubtargetInfo requires a valid MachineFunction!");
   return MF->getSubtarget<MCSubtargetInfo>();
@@ -528,6 +519,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool AsmPrinter::doInitialization(Module &M) {
   MMI = GetMMI();
+  PointerSize = M.getDataLayout().getPointerSize(0);
   HasSplitStack = false;
   HasNoSplitStack = false;
   DbgInfoAvailable = !M.debug_compile_units().empty();
@@ -668,7 +660,11 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   EHStreamer *ES = nullptr;
   switch (MAI.getExceptionHandlingType()) {
+  case ExceptionHandling::Default:
+    llvm_unreachable("should have resolved exception model kind");
   case ExceptionHandling::None:
+  case ExceptionHandling::Emscripten:
+    // Emscripten EH is handled in JS glue code and emits no EH tables here.
     if (!usesCFIWithoutEH())
       break;
     [[fallthrough]];
@@ -1489,25 +1485,23 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
                     bool HasCalls, const CFGProfile *FuncCFGProfile) {
   // Ensure that the user has not passed in additional options while also
   // specifying all or none.
-  if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
-       PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::All)) &&
-      popcount(PgoAnalysisMapFeatures.getBits()) != 1) {
+  auto IsSet = [](PGOMapFeaturesEnum F) {
+    return is_contained(PgoAnalysisMapFeatures, F);
+  };
+  bool NoFeatures = IsSet(PGOMapFeaturesEnum::None);
+  bool AllFeatures = IsSet(PGOMapFeaturesEnum::All);
+  if ((NoFeatures || AllFeatures) && !all_equal(PgoAnalysisMapFeatures)) {
     MF.getFunction().getContext().emitError(
         "-pgo-analysis-map can accept only all or none with no additional "
         "values.");
   }
 
-  bool NoFeatures = PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None);
-  bool AllFeatures = PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::All);
   bool FuncEntryCountEnabled =
-      AllFeatures || (!NoFeatures && PgoAnalysisMapFeatures.isSet(
-                                         PGOMapFeaturesEnum::FuncEntryCount));
+      AllFeatures || (!NoFeatures && IsSet(PGOMapFeaturesEnum::FuncEntryCount));
   bool BBFreqEnabled =
-      AllFeatures ||
-      (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BBFreq));
+      AllFeatures || (!NoFeatures && IsSet(PGOMapFeaturesEnum::BBFreq));
   bool BrProbEnabled =
-      AllFeatures ||
-      (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
+      AllFeatures || (!NoFeatures && IsSet(PGOMapFeaturesEnum::BrProb));
   bool PostLinkCfgEnabled = FuncCFGProfile && PgoAnalysisMapEmitBBSectionsCfg;
 
   if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
@@ -1733,7 +1727,9 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
   const MCSymbol *FunctionSymbol = getFunctionBegin();
   uint64_t StackSize =
       FrameInfo.getStackSize() + FrameInfo.getUnsafeStackSize();
-  OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
+  const DataLayout &DL = getDataLayout();
+  OutStreamer->emitSymbolValue(FunctionSymbol,
+                               DL.getPointerSize(DL.getProgramAddressSpace()));
   OutStreamer->emitULEB128IntValue(StackSize);
 
   OutStreamer->popSection();
@@ -1839,9 +1835,11 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   // 6) For each unique direct callee, the callee's PC.
   // 7) Number of unique indirect target type IDs, if at least one exists.
   // 8) Each unique indirect target type id.
+  const DataLayout &DL = getDataLayout();
+  unsigned ProgramPointerSize = DL.getPointerSize(DL.getProgramAddressSpace());
   OutStreamer->emitInt8(CallGraphSectionFormatVersion::V_0);
   OutStreamer->emitInt8(static_cast<uint8_t>(CGFlags));
-  OutStreamer->emitSymbolValue(getSymbol(&F), TM.getProgramPointerSize());
+  OutStreamer->emitSymbolValue(getSymbol(&F), ProgramPointerSize);
   const auto *TypeId = extractNumericCGTypeId(F);
   if (IsIndirectTarget && TypeId)
     OutStreamer->emitInt64(TypeId->getZExtValue());
@@ -1851,7 +1849,7 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   if (DirectCallees.size() > 0) {
     OutStreamer->emitULEB128IntValue(DirectCallees.size());
     for (const auto &CalleeSymbol : DirectCallees)
-      OutStreamer->emitSymbolValue(CalleeSymbol, TM.getProgramPointerSize());
+      OutStreamer->emitSymbolValue(CalleeSymbol, ProgramPointerSize);
     FuncCGInfo.DirectCallees.clear();
   }
   if (IndirectCalleeTypeIDs.size() > 0) {
@@ -2093,7 +2091,9 @@ void AsmPrinter::emitFunctionBody() {
   // Print out code for the function.
   bool HasAnyRealCode = false;
   int NumInstsInFunction = 0;
-  bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
+  // Only x86 needs this padding; the Arm unwinders back the PC up themselves.
+  bool NeedsEHaNops = MMI->getModule()->getModuleFlag("eh-asynch") &&
+                      TM.getTargetTriple().isX86();
 
   const MCSubtargetInfo *STI = nullptr;
   if (this->MF)
@@ -2186,7 +2186,7 @@ void AsmPrinter::emitFunctionBody() {
         //  an EH region as it must be led by at least a Load
         {
           auto MI2 = std::next(MI.getIterator());
-          if (IsEHa && MI2 != MBB.end() &&
+          if (NeedsEHaNops && MI2 != MBB.end() &&
               (MI2->mayLoadOrStore() || MI2->mayRaiseFPException()))
             emitNops(1);
         }
@@ -2425,6 +2425,23 @@ void AsmPrinter::emitFunctionBody() {
     << " instructions in function";
   ORE->emit(R);
 
+  if (ORE->allowExtraAnalysis("target-features")) {
+    const Function &F = MF->getFunction();
+    std::string FunctionName;
+    raw_string_ostream OS(FunctionName);
+    F.printAsOperand(OS, /*PrintType=*/false);
+
+    MachineOptimizationRemarkAnalysis Remark(
+        "target-features", "EnabledFeatures", F.getSubprogram(), &MF->front());
+    Remark << "Enabled features for " << ore::NV("Function", FunctionName)
+           << ": ";
+    // The processor feature table is sorted by feature name.
+    ListSeparator LS(",");
+    for (const auto *Feature : MF->getSubtarget().getEnabledProcessorFeatures())
+      Remark << LS << ore::NV("Feature", Feature->key());
+    ORE->emit(Remark);
+  }
+
   // If the function is empty and the object file uses .subsections_via_symbols,
   // then we need to emit *something* to the function body to prevent the
   // labels from collapsing together.  Just emit a noop.
@@ -2542,7 +2559,7 @@ void AsmPrinter::emitFunctionBody() {
   if (HasAnyRealCode) {
     if (MF->getTarget().Options.BBAddrMap)
       emitBBAddrMapSection(*MF);
-    else if (PgoAnalysisMapFeatures.getBits() != 0)
+    else if (!PgoAnalysisMapFeatures.empty())
       MF->getContext().reportWarning(
           SMLoc(), "pgo-analysis-map is enabled for function " + MF->getName() +
                        " but it does not have labels");
@@ -3147,14 +3164,13 @@ bool AsmPrinter::doFinalization(Module &M) {
           ".note.GNU-no-split-stack", ELF::SHT_PROGBITS, 0));
   }
 
-  // Emit the section that tells the linker whether stack memory has to be
-  // executable, e.g. ELF's .note.GNU-stack. It is marked executable only if
-  // the module sets the "executable-stack" flag.
-  bool ExecStack = false;
-  if (auto *Val = mdconst::dyn_extract_or_null<ConstantInt>(
-          M.getModuleFlag("executable-stack")))
-    ExecStack = !Val->isZero();
-  if (MCSection *S = MAI.getStackSection(OutContext, ExecStack))
+  // If we don't have any trampolines, then we don't require stack memory
+  // to be executable. Some targets have a directive to declare this.
+  Function *InitTrampolineIntrinsic = M.getFunction("llvm.init.trampoline");
+  bool HasTrampolineUses =
+      InitTrampolineIntrinsic && !InitTrampolineIntrinsic->use_empty();
+  MCSection *S = MAI.getStackSection(OutContext, /*Exec=*/HasTrampolineUses);
+  if (S)
     OutStreamer->switchSection(S);
 
   if (TM.Options.EmitAddrsig) {
@@ -3548,10 +3564,12 @@ void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
 
   OutStreamer->switchSection(JumpTableSizesSection);
 
+  const DataLayout &DL = getDataLayout();
+  unsigned ProgramPointerSize = DL.getPointerSize(DL.getProgramAddressSpace());
   for (unsigned JTI = 0, E = JT.size(); JTI != E; ++JTI) {
     const std::vector<MachineBasicBlock *> &JTBBs = JT[JTI].MBBs;
-    OutStreamer->emitSymbolValue(GetJTISymbol(JTI), TM.getProgramPointerSize());
-    OutStreamer->emitIntValue(JTBBs.size(), TM.getProgramPointerSize());
+    OutStreamer->emitSymbolValue(GetJTISymbol(JTI), ProgramPointerSize);
+    OutStreamer->emitIntValue(JTBBs.size(), ProgramPointerSize);
   }
 }
 
@@ -3950,14 +3968,14 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
     const Constant *Op = CE->getOperand(0);
     unsigned DstAS = CE->getType()->getPointerAddressSpace();
     unsigned SrcAS = Op->getType()->getPointerAddressSpace();
-    if (TM.isNoopAddrSpaceCast(SrcAS, DstAS))
+    if (TM.isNoopAddrSpaceCast(getDataLayout(), SrcAS, DstAS))
       return lowerConstant(Op);
 
     break; // Error
   }
   case Instruction::GetElementPtr: {
     // Generate a symbolic expression for the byte address
-    APInt OffsetAI(getDataLayout().getPointerTypeSizeInBits(CE->getType()), 0);
+    APInt OffsetAI(getDataLayout().getIndexTypeSizeInBits(CE->getType()), 0);
     cast<GEPOperator>(CE)->accumulateConstantOffset(getDataLayout(), OffsetAI);
 
     const MCExpr *Base = lowerConstant(CE->getOperand(0));

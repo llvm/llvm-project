@@ -188,6 +188,11 @@ void CompilerInstance::setPreprocessor(std::shared_ptr<Preprocessor> Value) {
   PP = std::move(Value);
 }
 
+IntrusiveRefCntPtr<ASTContext> CompilerInstance::getASTContextPtr() const {
+  assert(Context && "Compiler instance has no AST context!");
+  return Context;
+}
+
 void CompilerInstance::setASTContext(
     llvm::IntrusiveRefCntPtr<ASTContext> Value) {
   Context = std::move(Value);
@@ -1110,7 +1115,7 @@ void CompilerInstance::LoadRequestedPlugins() {
 
   // Load and store pass plugins for the back-end.
   for (const std::string &Path : getCodeGenOpts().PassPlugins) {
-    if (auto PassPlugin = llvm::PassPlugin::Load(Path)) {
+    if (auto PassPlugin = llvm::PassPlugin::load(Path)) {
       PassPlugins.emplace_back(std::make_unique<llvm::PassPlugin>(*PassPlugin));
     } else {
       getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)

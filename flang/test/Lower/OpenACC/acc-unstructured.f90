@@ -275,19 +275,18 @@ end subroutine
 ! Both induction variables (j and i) are privatized:
 ! CHECK: %[[PRIVJ:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("j") -> !fir.ref<i32>
 ! CHECK: %[[PRIVI:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
-! No control(...) on acc.loop — bounds are not on the op:
 ! CHECK: acc.loop combined(serial) private(%[[PRIVJ]], %[[PRIVI]] : !fir.ref<i32>, !fir.ref<i32>) {
-! Outer loop trip-count test (j) emitted as cf:
-! CHECK: arith.cmpi sgt
-! CHECK: cf.cond_br
-! Inner loop trip-count test (i) emitted as cf:
-! CHECK: arith.cmpi sgt
-! CHECK: cf.cond_br
-! The if/cycle is a structured cf branch in the body:
+! The IF-guarded CYCLE branches only within the body, so both loops keep their
+! bounds on the op -- control(...) rather than a cf trip-count test -- and the
+! raw blocks are confined to a wrap inside each body.
+! CHECK: acc.loop private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK: scf.execute_region no_inline {
+! CHECK: acc.loop private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK: scf.execute_region no_inline {
 ! CHECK: arith.cmpi eq
 ! CHECK: cf.cond_br
+! CHECK: scf.yield
 ! CHECK: acc.yield
-! CHECK: }
 
 ! `acc serial loop collapse(N)` with STOP in body: wrap-in-execute-region hides
 ! the unstructured if/stop and the three collapsed iterators lower as a single
@@ -536,3 +535,30 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_unstructured_parallel_loop_collapse3_stop
 ! CHECK: acc.parallel combined(loop)
 ! CHECK: acc.loop combined(parallel)
+
+! Nested DO loops inside `!$acc kernels` where the inner loop branches to its
+! own exit. Only the inner loop is unstructured, so the outer one still lowers
+! as a structured acc.loop and the inner one is wrapped.
+subroutine nested_loop_with_inner_goto()
+  integer :: ii = 0, jj = 0
+  integer, parameter :: nn = 3
+  real, dimension(nn, nn) :: aa
+
+  aa = -1
+
+  !$acc kernels
+  do ii = 1, nn
+    do jj = 1, nn
+      if (jj > 1) goto 300
+      aa(jj, ii) = 1337
+    end do
+    300 continue
+  end do
+  !$acc end kernels
+end subroutine
+
+! CHECK-LABEL: func.func @_QPnested_loop_with_inner_goto
+! CHECK: acc.kernels
+! CHECK: acc.loop private({{.*}}) control({{.*}}) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+! CHECK: scf.execute_region
+! CHECK: scf.yield

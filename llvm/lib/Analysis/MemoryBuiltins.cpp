@@ -32,6 +32,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -49,6 +50,10 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "memory-builtins"
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 static cl::opt<unsigned> ObjectSizeOffsetVisitorMaxVisitInstructions(
     "object-size-offset-visitor-max-visit-instructions",
@@ -292,14 +297,6 @@ bool llvm::isAllocationFn(
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
   return getAllocationData(V, AnyAlloc, GetTLI).has_value() ||
          checkFnAllocKind(V, AllocFnKind::Alloc | AllocFnKind::Realloc);
-}
-
-/// Tests if a value is a call or invoke to a library function that
-/// allocates memory similar to malloc or calloc.
-bool llvm::isMallocOrCallocLikeFn(const Value *V,
-                                  const TargetLibraryInfo *TLI) {
-  // TODO: Function behavior does not match name.
-  return getAllocationData(V, MallocOrOpNewLike, TLI).has_value();
 }
 
 /// Tests if a value is a call or invoke to a library function that
@@ -945,7 +942,7 @@ bool ObjectSizeOffsetVisitor::checkedZextOrTrunc(APInt &I) {
 }
 
 OffsetSpan ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
-  TypeSize ElemSize = DL.getTypeAllocSize(I.getAllocatedType());
+  TypeSize ElemSize = I.getAllocationBaseSize(DL);
   if (ElemSize.isScalable() && Options.EvalMode != ObjectSizeOpts::Mode::Min)
     return ObjectSizeOffsetVisitor::unknown();
   if (!isUIntN(IntTyBits, ElemSize.getKnownMinValue()))
@@ -1332,11 +1329,8 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::compute_(Value *V) {
 }
 
 SizeOffsetValue ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
-  if (!I.getAllocatedType()->isSized())
-    return ObjectSizeOffsetEvaluator::unknown();
-
   // must be a VLA or vscale.
-  assert(I.isArrayAllocation() || I.getAllocatedType()->isScalableTy());
+  assert(I.isArrayAllocation() || I.isScalable());
 
   // If needed, adjust the alloca's operand size to match the pointer indexing
   // size. Subsequent math operations expect the types to match.
@@ -1452,9 +1446,11 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitSelectInst(SelectInst &I) {
     return TrueSide;
 
   Value *Size =
-      Builder.CreateSelect(I.getCondition(), TrueSide.Size, FalseSide.Size);
+      Builder.CreateSelect(I.getCondition(), TrueSide.Size, FalseSide.Size, "",
+                           ProfcheckDisableMetadataFixes ? nullptr : &I);
   Value *Offset =
-      Builder.CreateSelect(I.getCondition(), TrueSide.Offset, FalseSide.Offset);
+      Builder.CreateSelect(I.getCondition(), TrueSide.Offset, FalseSide.Offset,
+                           "", ProfcheckDisableMetadataFixes ? nullptr : &I);
   return SizeOffsetValue(Size, Offset);
 }
 

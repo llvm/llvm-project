@@ -9,6 +9,18 @@ func.func @create_nd_tdesc_1(%src: memref<24xf32>) {
 
 // -----
 
+// Explicit shape/strides on a memref source is deprecated and rejected.
+func.func @create_nd_tdesc_memref_explicit_shape(%src: memref<?x?xf16>,
+    %h: index, %w: index) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{shape and strides should not be specified for a memref source}}
+  %1 = xegpu.create_nd_tdesc %src, shape: [%h, %w], strides: [%w, %c1]
+    : memref<?x?xf16> -> !xegpu.tensor_desc<8x16xf16>
+  return
+}
+
+// -----
+
 func.func @create_nd_tdesc_2(%src: memref<24x32xf32>) {
   // expected-error@+1 {{TensorDesc should have the same element type with the source if it is a memref}}
   %1 = xegpu.create_nd_tdesc %src : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf16>
@@ -75,7 +87,7 @@ func.func @create_nd_tdesc_10(%src: memref<24xindex>) {
 func.func @prefetch_nd_vc_1(%src: memref<24x32xf16>) {
   %1 = xegpu.create_nd_tdesc %src : memref<24x32xf16> -> !xegpu.tensor_desc<8x16xf16>
   // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<write_back>}}
-  xegpu.prefetch_nd %1[0, 0] <{l1_hint = #xegpu.cache_hint<write_back>}>: !xegpu.tensor_desc<8x16xf16>
+  xegpu.prefetch_nd %1[0, 0] <{l1_hint = #xegpu.cache_hint<write_back>}> : !xegpu.tensor_desc<8x16xf16>
   return
 }
 
@@ -163,7 +175,7 @@ func.func @store_nd_vc_1(%dst: memref<24x32xf16>) {
   %1 = arith.constant dense<1.0>: vector<24x32xf16>
   %2 = xegpu.create_nd_tdesc %dst : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16>
   // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<streaming>}}
-  xegpu.store_nd %1, %2[0, 0] <{l1_hint = #xegpu.cache_hint<streaming>}>: vector<24x32xf16>, !xegpu.tensor_desc<24x32xf16>
+  xegpu.store_nd %1, %2[0, 0] <{l1_hint = #xegpu.cache_hint<streaming>}> : vector<24x32xf16>, !xegpu.tensor_desc<24x32xf16>
   return
 }
 
@@ -181,7 +193,7 @@ func.func @store_nd_vc_4(%dst: memref<8x24x32xf16>) {
   %1 = arith.constant dense<1.0>: vector<8x24x16xf16>
   %2 = xegpu.create_nd_tdesc %dst : memref<8x24x32xf16> -> !xegpu.tensor_desc<8x24x32xf16>
   // expected-error@+1 {{Value shape [8, 24, 16] is not consistent with tensor descriptor}}
-  xegpu.store_nd %1, %2[0, 0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>: vector<8x24x16xf16>, !xegpu.tensor_desc<8x24x32xf16>
+  xegpu.store_nd %1, %2[0, 0, 0] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<8x24x16xf16>, !xegpu.tensor_desc<8x24x32xf16>
   return
 }
 
@@ -232,9 +244,9 @@ func.func @load_gather_vc_2(%src: memref<?xf32>) {
 func.func @load_gather_vc_3(%src: memref<?xf32>) {
   %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %mask = arith.constant dense<1>: vector<8xi1>
-  // expected-error@+1 {{Mask should match value except the chunk size dim}}
-  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}>
-      : memref<?xf32>, vector<4xindex>, vector<8xi1> -> vector<4x2xf32>
+  // expected-error@+1 {{Expecting offsets and mask to have the same shape}}
+  %2 = xegpu.load %src[%offsets], %mask
+      : memref<?xf32>, vector<4xindex>, vector<8xi1> -> vector<4xf32>
   return
 }
 
@@ -242,9 +254,31 @@ func.func @load_gather_vc_3(%src: memref<?xf32>) {
 func.func @load_gather_simt_1(%src: memref<?xf32>) {
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %1 = arith.constant dense<1>: vector<4xi1>
-  // expected-error@+1 {{value elements must match chunk size}}
-  %2 = xegpu.load %src[%0], %1 <{chunk_size = 2}>
+  // expected-error@+1 {{Value shape must match mask shape}}
+  %2 = xegpu.load %src[%0], %1
       : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<6xf32>
+  return
+}
+
+// -----
+// A scalar mask and offset stand for a single element, so they cannot carry a
+// wider value. This was the old chunk_size form.
+func.func @load_gather_simt_2(%src: memref<?xf32>) {
+  %0 = arith.constant 0 : index
+  %1 = arith.constant 1 : i1
+  // expected-error@+1 {{Value shape must match mask shape}}
+  %2 = xegpu.load %src[%0], %1 : memref<?xf32>, index, i1 -> vector<8xf32>
+  return
+}
+
+// -----
+// Same for a size-1 mask and offset.
+func.func @load_gather_simt_3(%src: memref<?xf32>) {
+  %0 = arith.constant dense<0> : vector<1xindex>
+  %1 = arith.constant dense<1>: vector<1xi1>
+  // expected-error@+1 {{Value shape must match mask shape}}
+  %2 = xegpu.load %src[%0], %1
+      : memref<?xf32>, vector<1xindex>, vector<1xi1> -> vector<8xf32>
   return
 }
 
@@ -263,10 +297,10 @@ func.func @store_scatter_vc_2(%dst: memref<?xf32>) {
 func.func @store_scatter_vc_3(%dst: memref<?xf32>) {
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %1 = arith.constant dense<1>: vector<8xi1>
-  %2 = arith.constant dense<2.9>: vector<4x2xf32>
-  // expected-error@+1 {{Mask should match value except the chunk size dim}}
-  xegpu.store %2, %dst[%0], %1 <{chunk_size = 2}>
-      : vector<4x2xf32>, memref<?xf32>, vector<4xindex>, vector<8xi1>
+  %2 = arith.constant dense<2.9>: vector<4xf32>
+  // expected-error@+1 {{Expecting offsets and mask to have the same shape}}
+  xegpu.store %2, %dst[%0], %1
+      : vector<4xf32>, memref<?xf32>, vector<4xindex>, vector<8xi1>
   return
 }
 
@@ -275,9 +309,20 @@ func.func @store_scatter_simt_1(%dst: memref<?xf32>) {
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %1 = arith.constant dense<1>: vector<4xi1>
   %2 = arith.constant dense<2.9>: vector<6xf32>
-  // expected-error@+1 {{value elements must match chunk size}}
-  xegpu.store %2, %dst[%0], %1 <{chunk_size = 2}>
+  // expected-error@+1 {{Value shape must match mask shape}}
+  xegpu.store %2, %dst[%0], %1
       : vector<6xf32>, memref<?xf32>, vector<4xindex>, vector<4xi1>
+  return
+}
+
+// -----
+// A scalar mask and offset cannot carry a wider value on the store side either.
+func.func @store_scatter_simt_2(%dst: memref<?xf32>) {
+  %0 = arith.constant 0 : index
+  %1 = arith.constant 1 : i1
+  %2 = arith.constant dense<2.9>: vector<8xf32>
+  // expected-error@+1 {{Value shape must match mask shape}}
+  xegpu.store %2, %dst[%0], %1 : vector<8xf32>, memref<?xf32>, index, i1
   return
 }
 
@@ -293,7 +338,7 @@ func.func @prefetch_offset_wi_1(%src: memref<4x4xf32>) {
 func.func @prefetch_offset_wi_4(%src: memref<16xf32>) {
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   // expected-error@+1 {{offset_align_byte only allowed with integer source.}}
-  xegpu.prefetch %src[%offsets] <{offset_align_byte = 4}>: memref<16xf32>, vector<1xindex>
+  xegpu.prefetch %src[%offsets] <{offset_align_byte = 4}> : memref<16xf32>, vector<1xindex>
   return
 }
 
@@ -309,30 +354,10 @@ func.func @prefetch_offset_wi_5(%src: i64) {
 func.func @load_gather_offset_sg(%src: memref<?xf16>) {
   %offsets = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %mask = arith.constant dense<1>: vector<8xi1>
-  // expected-error@+1 {{Mask should match value except the chunk size dim}}
+  // expected-error@+1 {{Expecting offsets and mask to have the same shape}}
   %2 = xegpu.load %src[%offsets], %mask
         : memref<?xf16>, vector<4xindex>, vector<8xi1>
-          -> vector<4x2xf16>
-  return
-}
-
-// -----
-func.func @load_gather_offset_wi(%src: ui64) {
-  %mask = arith.constant dense<1>: vector<1xi1>
-  %offsets = arith.constant dense<[0]> : vector<1xindex>
-  // expected-error@+1 {{value elements must match chunk size}}
-  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : ui64,  vector<1xindex>, vector<1xi1> -> vector<3xf32>
-  return
-}
-
-// -----
-func.func @store_scatter_offset_wi_1(%src: memref<?xf16>) {
-  %val = arith.constant dense<2.9>: vector<4xf16>
-  %offsets = arith.constant dense<[0]> : vector<1xindex>
-  %mask = arith.constant dense<1>: vector<1xi1>
-  // expected-error@+1 {{Mask should match value except the chunk size dim}}
-  xegpu.store %val, %src[%offsets], %mask
-        : vector<4xf16>, memref<?xf16>, vector<1xindex>, vector<1xi1>
+          -> vector<4xf16>
   return
 }
 
@@ -363,16 +388,7 @@ func.func @load_gather_offset_wi_4(%src: !xegpu.tensor_desc<1x2xf16>) {
   %mask = arith.constant dense<1>: vector<1xi1>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   // expected-error@+1 {{op operand #0 must be 1D memref}}
-  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : !xegpu.tensor_desc<1x2xf16>, vector<1xindex>, vector<1xi1> -> vector<2xf16>
-  return
-}
-
-// -----
-func.func @load_gather_offset_wi_2(%src: ui64) {
-  %mask = arith.constant dense<1>: vector<1xi1>
-  %offsets = arith.constant dense<[0]> : vector<1xindex>
-  // expected-error@+1 {{value elements must match chunk size}}
-  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : ui64,  vector<1xindex>, vector<1xi1> -> vector<3xf16>
+  %2 = xegpu.load %src[%offsets], %mask : !xegpu.tensor_desc<1x2xf16>, vector<1xindex>, vector<1xi1> -> vector<2xf16>
   return
 }
 
@@ -381,7 +397,7 @@ func.func @load_gather_offset_wi_1(%src: memref<4x4xf32>) {
   %mask = arith.constant dense<1>: vector<1xi1>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   // expected-error@+1 {{op operand #0 must be 1D memref}}
-  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : memref<4x4xf32>,  vector<1xindex>, vector<1xi1> -> vector<2xf32>
+  %2 = xegpu.load %src[%offsets], %mask : memref<4x4xf32>,  vector<1xindex>, vector<1xi1> -> vector<2xf32>
   return
 }
 
@@ -482,7 +498,7 @@ func.func @layout_rank_mismatch_sg_lane(%src: memref<?xf32>) {
   %mask = arith.constant dense<1>: vector<4xi1>
   %2 = xegpu.load %src[%offsets], %mask
       // expected-error@below {{expected sg_layout and lane_layout to have the same rank}}
-      {layout = #xegpu.layout<sg_layout = [1, 1, 1], sg_data = [16, 2, 1], lane_layout = [8, 1], lane_data = [1, 2]>}
+      <{layout = #xegpu.layout<sg_layout = [1, 1, 1], sg_data = [16, 2, 1], lane_layout = [8, 1], lane_data = [1, 2]>}>
       : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
   return
 }
@@ -493,7 +509,7 @@ func.func @layout_rank_mismatch_sg_inst(%src: memref<?xf32>) {
   %mask = arith.constant dense<1>: vector<4xi1>
   %2 = xegpu.load %src[%offsets], %mask
       // expected-error@below {{expected sg_layout and inst_data to have the same rank}}
-      {layout = #xegpu.layout<sg_layout = [1, 1, 1], sg_data = [16, 2, 1], inst_data = [16, 2]>}
+      <{layout = #xegpu.layout<sg_layout = [1, 1, 1], sg_data = [16, 2, 1], inst_data = [16, 2]>}>
       : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
   return
 }
@@ -504,7 +520,7 @@ func.func @layout_rank_mismatch_inst_lane(%src: memref<?xf32>) {
   %mask = arith.constant dense<1>: vector<4xi1>
   %2 = xegpu.load %src[%offsets], %mask
       // expected-error@below {{expected inst_data and lane_layout to have the same rank}}
-      {layout = #xegpu.layout<inst_data = [16, 2, 1], lane_layout = [8, 1], lane_data = [1, 2]>}
+      <{layout = #xegpu.layout<inst_data = [16, 2, 1], lane_layout = [8, 1], lane_data = [1, 2]>}>
       : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
   return
 }
@@ -515,7 +531,7 @@ func.func @layout_rank_mismatch_lane_data(%src: memref<?xf32>) {
   %mask = arith.constant dense<1>: vector<4xi1>
   %2 = xegpu.load %src[%offsets], %mask
       // expected-error@below {{expected lane_data and lane_layout to have the same rank}}
-      {layout = #xegpu.layout<inst_data = [16, 2], lane_layout = [8, 1], lane_data = [1, 2, 1]>}
+      <{layout = #xegpu.layout<inst_data = [16, 2], lane_layout = [8, 1], lane_data = [1, 2, 1]>}>
       : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
   return
 }
@@ -526,7 +542,7 @@ func.func @layout_rank_mismatch_sg_data(%src: memref<?xf32>) {
   %mask = arith.constant dense<1>: vector<4xi1>
   %2 = xegpu.load %src[%offsets], %mask
       // expected-error@below {{expected sg_data and sg_layout to have the same rank}}
-      {layout = #xegpu.layout<sg_layout = [1, 1], sg_data = [16, 2, 1], inst_data = [16, 2]>}
+      <{layout = #xegpu.layout<sg_layout = [1, 1], sg_data = [16, 2, 1], inst_data = [16, 2]>}>
       : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
   return
 }
@@ -546,7 +562,7 @@ func.func @layout_sg_data_missing(%src: memref<?xf32>) {
   %mask = arith.constant dense<1>: vector<4xi1>
   %2 = xegpu.load %src[%offsets], %mask
       // expected-error@below {{sg_layout and sg_data must be used together}}
-      {layout = #xegpu.layout<sg_layout = [2, 1], lane_layout = [8, 1], lane_data = [1, 2]>}
+      <{layout = #xegpu.layout<sg_layout = [2, 1], lane_layout = [8, 1], lane_data = [1, 2]>}>
       : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
   return
 }
@@ -557,7 +573,7 @@ func.func @layout_lane_data_missing(%src: memref<?xf32>) {
   %mask = arith.constant dense<1>: vector<4xi1>
   %2 = xegpu.load %src[%offsets], %mask
       // expected-error@below {{lane_layout and lane_data must be used together}}
-      {layout = #xegpu.layout<inst_data = [16, 2], lane_layout = [16, 1]>}
+      <{layout = #xegpu.layout<inst_data = [16, 2], lane_layout = [16, 1]>}>
       : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
   return
 }
@@ -568,7 +584,7 @@ func.func @layout_order_without_layout(%src: memref<?xf32>) {
   %mask = arith.constant dense<1>: vector<4xi1>
   %2 = xegpu.load %src[%offsets], %mask
       // expected-error@below {{expected sg_layout/lane_layout being used with order}}
-      {layout = #xegpu.layout<inst_data = [16, 2], order = [0, 1]>}
+      <{layout = #xegpu.layout<inst_data = [16, 2], order = [0, 1]>}>
       : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
   return
 }
@@ -579,7 +595,7 @@ func.func @layout_order_rank_mismatch_sg(%src: memref<?xf32>) {
   %mask = arith.constant dense<1>: vector<4xi1>
   %2 = xegpu.load %src[%offsets], %mask
       // expected-error@below {{expected order and sg_layout to have the same rank}}
-      {layout = #xegpu.layout<sg_layout = [1, 1], sg_data = [16, 2], order = [0, 1, 2]>}
+      <{layout = #xegpu.layout<sg_layout = [1, 1], sg_data = [16, 2], order = [0, 1, 2]>}>
       : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
   return
 }
@@ -590,7 +606,7 @@ func.func @layout_order_rank_mismatch_lane(%src: memref<?xf32>) {
   %mask = arith.constant dense<1>: vector<4xi1>
   %2 = xegpu.load %src[%offsets], %mask
       // expected-error@below {{expected order and lane_layout to have the same rank}}
-      {layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 2], order = [0, 1, 2]>}
+      <{layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 2], order = [0, 1, 2]>}>
       : memref<?xf32>, vector<4xindex>, vector<4xi1> -> vector<4xf32>
   return
 }
@@ -665,7 +681,7 @@ func.func @store_mem_desc_1d_exceeds_shape(%arg0: !xegpu.mem_desc<16xf16>, %arg1
 // -----
 func.func @simt_store_matrix_vector_nonlinear(%arg0: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [32, 1]>>, %arg1: vector<2x16xf32>) {
   // expected-error@+1 {{With subgroup_block_io, accessed data must be contiguous and coalesced}}
-  xegpu.store_matrix %arg1, %arg0[0, 0] {subgroup_block_io, layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} :
+  xegpu.store_matrix %arg1, %arg0[0, 0] <{subgroup_block_io, layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}> :
         vector<2x16xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [32, 1]>>
   return
 }
@@ -673,7 +689,7 @@ func.func @simt_store_matrix_vector_nonlinear(%arg0: !xegpu.mem_desc<32x32xf32, 
 // -----
 func.func @simt_store_matrix_vector_noncoalesced(%arg0: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [1, 32], block = [1, 16]>>, %arg1: vector<16x2xf32>) {
   // expected-error@+1 {{With subgroup_block_io, the distributed dimensions must be contiguous}}
-  xegpu.store_matrix %arg1, %arg0[0, 0] {subgroup_block_io, layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>} :
+  xegpu.store_matrix %arg1, %arg0[0, 0] <{subgroup_block_io, layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}> :
         vector<16x2xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [1, 32], block = [1, 16]>>
   return
 }
@@ -681,7 +697,7 @@ func.func @simt_store_matrix_vector_noncoalesced(%arg0: !xegpu.mem_desc<32x32xf3
 // -----
 func.func @simt_store_matrix_vector_noncoalesced(%arg0: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [32, 1], block = [1, 17]>>, %arg1: vector<16x2xf32>) {
   // expected-error@+1 {{With subgroup_block_io, the block shape must match the lane layout}}
-  xegpu.store_matrix %arg1, %arg0[0, 0] {subgroup_block_io, layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
+  xegpu.store_matrix %arg1, %arg0[0, 0] <{subgroup_block_io, layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> :
         vector<16x2xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [32, 1], block = [1, 17]>>
   return
 }
@@ -777,7 +793,7 @@ func.func @dpas_mx_scale_k_mismatch(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf
 #layout_cd = #xegpu.layout<sg_layout = [1, 1], sg_data = [8, 16]>
 func.func @dpas_mx_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>) {
   // expected-error@+1 {{A shape is not distributable with the layout}}
-  %1 = xegpu.dpas_mx %a, %b {layout_a = #layout_a, layout_b = #layout_b, layout_cd = #layout_cd} : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>) -> vector<8x16xf32>
+  %1 = xegpu.dpas_mx %a, %b <{layout_a = #layout_a, layout_b = #layout_b, layout_cd = #layout_cd}> : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>) -> vector<8x16xf32>
   return
 }
 
@@ -785,7 +801,7 @@ func.func @dpas_mx_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b: vector
 #layout_a_scale_invalid = #xegpu.layout<sg_layout = [1, 1], sg_data = [5, 3]>
 func.func @dpas_mx_scale_a_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xf32>, %scale_a_val: vector<8x2xf8E8M0FNU>) {
   // expected-error@+1 {{ScaleA shape is not distributable with the layout}}
-  %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a_val {layout_a_scale = #layout_a_scale_invalid} : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xf32>, vector<8x2xf8E8M0FNU>) -> vector<8x16xf32>
+  %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a_val <{layout_a_scale = #layout_a_scale_invalid}> : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xf32>, vector<8x2xf8E8M0FNU>) -> vector<8x16xf32>
   return
 }
 
@@ -793,7 +809,7 @@ func.func @dpas_mx_scale_a_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b
 #layout_b_scale_invalid = #xegpu.layout<sg_layout = [1, 1], sg_data = [3, 11]>
 func.func @dpas_mx_scale_b_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xf32>, %scale_a_val: vector<8x2xf8E8M0FNU>, %scale_b_val: vector<2x16xf8E8M0FNU>) {
   // expected-error@+1 {{ScaleB shape is not distributable with the layout}}
-  %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a_val scale_b = %scale_b_val {layout_b_scale = #layout_b_scale_invalid} : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xf32>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xf32>
+  %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a_val scale_b = %scale_b_val <{layout_b_scale = #layout_b_scale_invalid}> : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xf32>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xf32>
   return
 }
 
