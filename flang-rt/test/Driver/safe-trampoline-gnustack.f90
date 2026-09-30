@@ -2,6 +2,7 @@
 ! UNSUPPORTED: offload-cuda
 ! UNSUPPORTED: system-darwin
 ! UNSUPPORTED: target=powerpc{{.*}}
+! UNSUPPORTED: target=riscv{{.*}}
 ! UNSUPPORTED: target={{.*solaris.*}}
 
 ! Verify that -fsafe-trampoline produces an executable whose
