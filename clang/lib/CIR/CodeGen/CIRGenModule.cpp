@@ -2187,11 +2187,15 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
             builder.createCallOp(noProtoCallOp.getLoc(), newFn, callOperands);
       } else {
         // Build an indirect call whose function-pointer signature matches
-        // the existing call site.
+        // the existing call site.  A prototyped declaration keeps its own
+        // type, ellipsis included, so arguments passed through the ellipsis
+        // stay variadic.  A direct call to an unprototyped declaration, such
+        // as a library call CIRGen emitted by name, keeps its own operand
+        // types and stays non-variadic.
         cir::FuncType origFnType = oldFn.getFunctionType();
         cir::FuncType callFnType =
-            origFnType.isVarArg()
-                ? cir::FuncType::get(origFnType.getInputs(),
+            oldFn.getNoProto()
+                ? cir::FuncType::get(llvm::to_vector(callOperands.getTypes()),
                                      origFnType.getReturnType(),
                                      /*isVarArg=*/false)
                 : origFnType;
@@ -3313,6 +3317,19 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 
   if (!isIncompleteFunction && func.isDeclaration())
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
+
+  // Diagnose calls to this function at the backend level, mirroring
+  // CodeGenModule::SetFunctionAttributes's "dontcall-error"/"dontcall-warn".
+  if (const auto *errorAttr = funcDecl->getAttr<ErrorAttr>()) {
+    if (errorAttr->isError())
+      func->setAttr(cir::CIRDialect::getDontCallErrorAttrName(),
+                    mlir::StringAttr::get(&getMLIRContext(),
+                                          errorAttr->getUserDiagnostic()));
+    else if (errorAttr->isWarning())
+      func->setAttr(cir::CIRDialect::getDontCallWarnAttrName(),
+                    mlir::StringAttr::get(&getMLIRContext(),
+                                          errorAttr->getUserDiagnostic()));
+  }
 
   // Mirrors setLinkageForGV in CodeGenModule::SetFunctionAttributes.
   setLinkageForFunction(*this, func, funcDecl);
