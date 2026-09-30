@@ -22,7 +22,8 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/IR/DataLayout.h"
 
-void cir::setMLIRDataLayout(mlir::ModuleOp mod, const llvm::DataLayout &dl) {
+void cir::setMLIRDataLayout(mlir::ModuleOp mod, const llvm::DataLayout &dl,
+                            unsigned bitIntMaxAlign) {
   mlir::MLIRContext *mlirContext = mod.getContext();
   mlir::DataLayoutSpecInterface dlSpec =
       mlir::translateDataLayout(dl, mlirContext);
@@ -43,6 +44,18 @@ void cir::setMLIRDataLayout(mlir::ModuleOp mod, const llvm::DataLayout &dl) {
   llvm::SmallVector<mlir::DataLayoutEntryInterface> entries(
       dlSpec.getEntries().begin(), dlSpec.getEntries().end());
   entries.push_back(mlir::DataLayoutEntryAttr::get(ptrKey, ptrSpec));
+
+  // LLVM's data-layout string has no spelling for Clang's target-specific
+  // maximum _BitInt alignment (for example, 32 bits on i386, 64 on x86_64,
+  // and 128 on AArch64).  Record it on a sentinel CIR _BitInt entry so
+  // arbitrary-width IntTypes can recover the AST layout decision.
+  auto bitIntKey = cir::IntType::get(mlirContext, /*width=*/1,
+                                     /*is_signed=*/false,
+                                     /*is_bit_int=*/true);
+  auto bitIntMaxAlignAttr = mlir::IntegerAttr::get(
+      mlir::IntegerType::get(mlirContext, 32), bitIntMaxAlign);
+  entries.push_back(
+      mlir::DataLayoutEntryAttr::get(bitIntKey, bitIntMaxAlignAttr));
 
   mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName,
                mlir::DataLayoutSpecAttr::get(mlirContext, entries));

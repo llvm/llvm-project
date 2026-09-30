@@ -31,16 +31,17 @@ using namespace mlir::abi;
 //
 // An Indirect argument is byval or not, following its classification's
 // byVal flag.  byval is a by-value parameter the ABI passes in memory rather
-// than registers, usually for its size.  Non-byval is a by-value parameter
-// whose type cannot be copied freely, because it has a non-trivial copy
-// constructor, move constructor, or destructor, so the callee works on the
-// caller's own object rather than a copy.
+// than registers, usually for its size.  Non-byval has two forms.  A record
+// whose type cannot be copied freely (for example because it has a non-trivial
+// copy constructor) is forwarded in the caller's storage.  Some ABIs also
+// classify a trivially-copyable scalar such as a wide _BitInt as non-byval
+// indirect; that still needs a source-language value copy, just without an
+// LLVM byval attribute.
 //
-// At the call site byval copies into a fresh alloca while a non-byval
-// argument forwards the caller's storage.  At the callee, byval loads the
-// incoming pointer (a local copy), while non-byval rewires the CIRGen
-// param-slot alloca to the incoming pointer so the body mutates the caller's
-// storage in place.
+// At the call site byval and non-record indirect arguments copy into a fresh
+// alloca, while a non-byval record forwards the caller's storage.  At the
+// callee, copied arguments load the incoming pointer; a forwarded record
+// rewires the CIRGen param-slot alloca to the incoming pointer.
 //
 // For Expand, the single struct argument is replaced by N scalar arguments
 // (one per field).  At the callee, the N field block arguments are stored
@@ -241,15 +242,21 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
         attrs.set(mlir::LLVM::LLVMDialect::getByValAttrName(),
                   mlir::TypeAttr::get(pointeeTy));
       } else {
-        // Classic adds llvm.dead_on_return when the object's lifetime ends in
-        // the callee, which needs the destructor's triviality from
-        // cir.record_layout's has_trivial_dtor.
-        assert(!cir::MissingFeatures::deadOnReturnAttr());
         attrs.set(mlir::LLVM::LLVMDialect::getNoFreeObjAttrName(),
                   builder.getUnitAttr());
         attrs.set(mlir::LLVM::LLVMDialect::getDereferenceableAttrName(),
                   builder.getI64IntegerAttr(
                       dl.getTypeSize(pointeeTy).getFixedValue()));
+        // A copied scalar's temporary dies when the callee returns, exactly
+        // the lifetime represented by bare LLVM `dead_on_return` (all reachable
+        // memory, encoded as the all-ones integer form).  Records still need
+        // the destructor-triviality information called out by the existing
+        // MissingFeatures hook before this can be set generally.
+        if (!isa<cir::RecordType>(pointeeTy))
+          attrs.set(mlir::LLVM::LLVMDialect::getDeadOnReturnAttrName(),
+                    builder.getI64IntegerAttr(-1));
+        else
+          assert(!cir::MissingFeatures::deadOnReturnAttr());
       }
       newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else {
@@ -771,13 +778,14 @@ void insertArgCoercion(
       // to adapted (now of the original type != the alloca's pointee type).
       blockArg.replaceAllUsesExcept(adapted, coercionOps);
     } else if (ac.kind == ArgKind::Indirect) {
-      // byval and non-byval both lower to !cir.ptr<T>, and which it is shows
-      // up only in the attrs updateArgAttrs applies.  Body lowering differs:
-      // byval copies into the callee (load at entry), while non-byval must
-      // operate on the caller's storage in place.
+      // Every indirect argument lowers to !cir.ptr<T>.  An LLVM byval
+      // argument and a non-record argument both represent a source-language
+      // value copy, while a non-byval record must operate on the caller's
+      // storage in place.
+      bool copyIndirect = ac.byVal || !isa<cir::RecordType>(blockArg.getType());
       auto ptrTy = cir::PointerType::get(blockArg.getType());
 
-      if (!ac.byVal) {
+      if (!copyIndirect) {
         // Without byval, drop the spill store and let the slot's uses read the
         // incoming pointer, so the body operates on the caller's storage in
         // place.  A byte-copy would be wrong for non-trivially-copyable
@@ -800,8 +808,8 @@ void insertArgCoercion(
         if (destAlloca)
           pendingParamSlots.emplace_back(destAlloca, blockArg);
       } else {
-        // byval: load the incoming pointer so the body sees a T value (and
-        // any CIRGen param-slot store becomes a local copy of that value).
+        // Load the incoming pointer so the body sees a T value and any CIRGen
+        // parameter-slot store becomes a local copy of that value.
         blockArg.setType(ptrTy);
 
         builder.setInsertionPointToStart(&entry);
@@ -1524,12 +1532,11 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
                          dl, ac.directOffset);
       newArgs.push_back(arg);
     } else if (ac.kind == ArgKind::Indirect) {
-      // byval hands the callee its own copy.  Without byval the argument must
-      // name the caller's storage instead, so that the object the callee
-      // operates on is the one the caller destroys.  That means forwarding
-      // the address the operand was loaded from rather than the loaded value,
-      // so a store to that storage after the load is visible to the callee.
-      if (!ac.byVal) {
+      // byval and non-record indirect arguments hand the callee a value copy.
+      // A non-byval record must name the caller's storage instead, so that the
+      // object the callee operates on is the one the caller destroys.
+      bool copyIndirect = ac.byVal || !isa<cir::RecordType>(arg.getType());
+      if (!copyIndirect) {
         // The rewritten parameter is a pointer to the argument type in the
         // default address space, so an operand read through an address-space
         // cast cannot be handed on as it stands.  cir.load already pins the

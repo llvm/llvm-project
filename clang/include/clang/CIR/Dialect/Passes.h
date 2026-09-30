@@ -20,7 +20,7 @@ namespace cir {
 /// The ABI target whose calling-convention rules drive CallConvLowering.
 /// None is the unset state used when the pass runs in classification-attr
 /// mode instead of selecting a target.
-enum class CallConvTarget { None, Test, X86_64 };
+enum class CallConvTarget { None, Test, X86_64, X86_32, AArch64, PPC64 };
 } // namespace cir
 
 namespace clang {
@@ -40,7 +40,8 @@ std::unique_ptr<Pass>
 createCallConvLoweringPass(cir::CallConvTarget target,
                            llvm::abi::X86AVXABILevel x86AvxAbiLevel,
                            bool allowsX86TargetAttrAvx,
-                           const llvm::abi::X86ABICompatInfo &x86AbiCompat);
+                           const llvm::abi::X86ABICompatInfo &x86AbiCompat,
+                           const llvm::abi::AArch64ABIOptions &aarch64Options);
 std::unique_ptr<Pass> createHoistAllocasPass();
 std::unique_ptr<Pass> createLoweringPreparePass();
 std::unique_ptr<Pass> createLoweringPreparePass(clang::ASTContext *astCtx);

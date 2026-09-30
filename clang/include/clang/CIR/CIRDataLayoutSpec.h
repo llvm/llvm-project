@@ -26,8 +26,11 @@ namespace cir {
 /// Translate \p dl into a DLTI data-layout spec and attach it to \p mod.
 /// On top of the plain mlir::translateDataLayout entries this adds a
 /// #cir.ptr_spec entry keyed on !cir.ptr, which CIR pointer types read for
-/// their size and alignment; without it pointer widths default to 64 bits.
-void setMLIRDataLayout(mlir::ModuleOp mod, const llvm::DataLayout &dl);
+/// their size and alignment, and the target's maximum _BitInt alignment.
+/// Without the pointer entry pointer widths default to 64 bits; without the
+/// _BitInt entry its maximum alignment defaults to 64 bits.
+void setMLIRDataLayout(mlir::ModuleOp mod, const llvm::DataLayout &dl,
+                       unsigned bitIntMaxAlign = 64);
 
 } // namespace cir
 

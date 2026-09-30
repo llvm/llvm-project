@@ -58,7 +58,8 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   mlir::ModuleOp mod = cgm->getModule();
   llvm::DataLayout layout =
       llvm::DataLayout(astContext.getTargetInfo().getDataLayoutString());
-  cir::setMLIRDataLayout(mod, layout);
+  cir::setMLIRDataLayout(mod, layout,
+                         astContext.getTargetInfo().getBitIntMaxAlign());
 }
 
 bool CIRGenerator::verifyModule() const { return cgm->verifyModule(); }
