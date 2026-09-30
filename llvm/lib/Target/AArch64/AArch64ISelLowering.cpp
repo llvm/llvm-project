@@ -1678,6 +1678,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv1i1, Custom);
+    setOperationAction(ISD::VECTOR_REVERSE, MVT::nxv1i1, Custom);
 
     if (Subtarget->isSVEorStreamingSVEAvailable() &&
         (Subtarget->hasSVE2p1() || Subtarget->hasSME2()))
@@ -8889,6 +8890,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_REPEAT(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::VECTOR_REVERSE:
+    return LowerVECTOR_REVERSE(Op, DAG);
   case ISD::SPLAT_VECTOR:
     return LowerSPLAT_VECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
@@ -10600,6 +10603,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Determine whether we need any streaming mode changes.
   SMECallAttrs CallAttrs =
       getSMECallAttrs(MF.getFunction(), getRuntimeLibcallsInfo(), CLI);
+  if (CallAttrs.requiresNonLazySaveZA())
+    reportFatalUsageError(
+        "Calls that require saving ZA non-lazily is not yet implemented");
 
   std::optional<unsigned> ZAMarkerNode = getZAMarkerForCall(CallAttrs);
 
@@ -13425,6 +13431,18 @@ SDValue AArch64TargetLowering::LowerVECTOR_SPLICE(SDValue Op,
     return Op;
 
   return SDValue();
+}
+
+SDValue AArch64TargetLowering::LowerVECTOR_REVERSE(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  assert(Op.getValueType() == MVT::nxv1i1 && "Unexpected vector type!");
+
+  SDLoc DL(Op);
+  // Select nxv1i1 vector_reverse by widening to nxv2i1.
+  SDValue Widened = DAG.getInsertSubvector(DL, DAG.getPOISON(MVT::nxv2i1),
+                                           Op.getOperand(0), 0);
+  SDValue Reversed = DAG.getNode(ISD::VECTOR_REVERSE, DL, MVT::nxv2i1, Widened);
+  return DAG.getExtractSubvector(DL, MVT::nxv1i1, Reversed, 1);
 }
 
 SDValue AArch64TargetLowering::LowerSELECT_CC(SDValue Op,
@@ -30113,8 +30131,8 @@ static SDValue foldMaskedShiftToUSHL(SelectionDAG &DAG,
     return SDValue();
 
   unsigned EltSize = VT.getScalarSizeInBits();
-  if (!sd_match(Cond, m_SetCC(m_Specific(Amt), m_SpecificInt(EltSize),
-                              m_SpecificCondCode(RequiredCC))))
+  if (!sd_match(Cond, m_SpecificSetCC(RequiredCC, m_Specific(Amt),
+                                      m_SpecificInt(EltSize))))
     return SDValue();
 
   SDLoc DL(N);
@@ -31692,7 +31710,7 @@ static SDValue performCTPOPCombine(SDNode *N,
 
   EVT CmpVT;
   // Use the same VT as the SETcc if -CTPOP would not overflow.
-  if (sd_match(Mask, m_SetCC(m_VT(CmpVT), m_Value(), m_Value()))) {
+  if (sd_match(Mask, m_SetCC(m_VT(CmpVT), m_Value()))) {
     CmpVT = CmpVT.changeVectorElementTypeToInteger();
     if (Log2_64_Ceil(MaskVT.getSizeInBits()) <= CmpVT.getScalarSizeInBits() - 1)
       ReduceInVT = CmpVT;
