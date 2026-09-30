@@ -118,6 +118,7 @@ lldb::ConnectionStatus ConnectionGenericFile::Disconnect(Status *error_ptr) {
   // Set the disconnect event so that any blocking reads unblock, then cancel
   // any pending IO operations.
   ::CancelIoEx(old_file, &m_overlapped);
+  m_read_pending = false;
 
   // Close the file handle if we owned it, but don't close the event handles.
   // We could always reconnect with the same Connection instance.
@@ -138,7 +139,8 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
     error_ptr->Clear();
 
   auto finish = [&](size_t bytes, ConnectionStatus s, DWORD error_code) {
-    m_read_pending = s == eConnectionStatusInterrupted;
+    m_read_pending =
+        s == eConnectionStatusInterrupted || s == eConnectionStatusTimedOut;
     status = s;
     if (error_ptr)
       *error_ptr = Status(error_code, eErrorTypeWin32);
@@ -178,9 +180,11 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
     return finish(0, eConnectionStatusError, read_error);
   }
 
-  if (!read_result || m_read_pending) {
-    // The expected return path.  The operation is pending.  Wait for the
-    // operation to complete or be interrupted.
+  if ((!read_result || m_read_pending) &&
+      !(m_read_pending && HasOverlappedIoCompleted(&m_overlapped))) {
+    // The expected return path. The operation is pending. Wait for the
+    // operation to complete or be interrupted. A pending read that already
+    // completed skips the wait: finish() may have reset its event.
     DWORD milliseconds =
         timeout
             ? std::chrono::duration_cast<std::chrono::milliseconds>(*timeout)
