@@ -2442,7 +2442,7 @@ void cir::GlobalOp::getSuccessorRegions(
 static void printComdatName(OpAsmPrinter &p, StringAttr comdat) {
   if (!comdat)
     return;
-  p << " comdat";
+  p << "comdat";
   if (!comdat.getValue().empty())
     p << "(\"" << comdat.getValue() << "\")";
 }
@@ -3090,7 +3090,10 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getNoProto())
     p << " no_proto";
 
-  printComdatName(p, getComdatAttr());
+  if (getComdatAttr()) {
+    p << ' ';
+    printComdatName(p, getComdatAttr());
+  }
 
   if (getAlignment())
     p << " alignment(" << *getAlignment() << ')';
