@@ -10,6 +10,14 @@
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=SSE2 %s
 // RUN: %clang_cc1 -triple spirv32-unknown-unknown -aux-triple x86_64-pc-windows-msvc \
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=SSE2 %s
+/// An explicit -target-feature overrides the derived default.
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple x86_64-pc-windows-msvc \
+// RUN:   -target-feature -sse2 -fsycl-is-device -emit-llvm -o - %s \
+// RUN:   | FileCheck --check-prefix=NO-SSE2-FLAG %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple x86_64-pc-windows-msvc \
+// RUN:   -target-feature -sse -fsycl-is-device -emit-llvm -o - %s \
+// RUN:   | FileCheck --check-prefix=NO-SSE-FLAG %s
+
 /// Windows ARM64 without EC is not an x86 host and does not predefine _M_X64.
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple aarch64-pc-windows-msvc \
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=NO-SSE2 %s
@@ -35,3 +43,6 @@
 // SSE2: attributes #[[ATTR]] = {{{.*}}"target-features"="+sse,+sse2"
 
 // NO-SSE2-NOT: "target-features"
+
+// NO-SSE2-FLAG: attributes #{{[0-9]+}} = {{{.*}}"target-features"="+sse,-sse2"
+// NO-SSE-FLAG: attributes #{{[0-9]+}} = {{{.*}}"target-features"="+sse2,-sse"
