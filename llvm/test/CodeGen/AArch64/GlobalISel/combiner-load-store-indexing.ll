@@ -84,7 +84,7 @@ define ptr @test_load_pre_before(ptr %ptr) {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 42
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](i64)
   ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
-  ; CHECK-NEXT:   BL @bar, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
+  ; CHECK-NEXT:   BL @bar, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[PTR_ADD]](p0) :: (volatile load (i8) from %ir.next)
   ; CHECK-NEXT:   $x0 = COPY [[PTR_ADD]](p0)
@@ -137,7 +137,7 @@ define ptr @test_simple_load_post_gep_after(ptr %ptr) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL @get_offset, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $x0
+  ; CHECK-NEXT:   BL @get_offset, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x0
   ; CHECK-NEXT:   [[INDEXED_LOAD:%[0-9]+]]:_(i8), [[INDEXED_LOAD1:%[0-9]+]]:_(p0) = G_INDEXED_LOAD [[COPY]], [[COPY1]](i64), 0 :: (volatile load (i8) from %ir.ptr)
@@ -157,7 +157,7 @@ define ptr @test_load_post_keep_looking(ptr %ptr) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL @get_offset, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $x0
+  ; CHECK-NEXT:   BL @get_offset, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x0
   ; CHECK-NEXT:   [[INDEXED_LOAD:%[0-9]+]]:_(i8), [[INDEXED_LOAD1:%[0-9]+]]:_(p0) = G_INDEXED_LOAD [[COPY]], [[COPY1]](i64), 0 :: (volatile load (i8) from %ir.ptr)
@@ -204,7 +204,7 @@ define ptr @test_load_post_gep_offset_after(ptr %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[COPY]](p0) :: (volatile load (i8) from %ir.ptr)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   BL @get_offset, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $x0
+  ; CHECK-NEXT:   BL @get_offset, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x0
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[COPY1]](i64)
