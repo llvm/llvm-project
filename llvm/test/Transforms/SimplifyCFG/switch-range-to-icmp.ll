@@ -252,11 +252,9 @@ else:
 define i32 @wrapping_known_range_zext(i8 range(i8 0, 6) %arg) {
 ; CHECK-LABEL: @wrapping_known_range_zext(
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[ARG:%.*]] to i32
-; CHECK-NEXT:    switch i32 [[EXT]], label [[ELSE:%.*]] [
-; CHECK-NEXT:      i32 0, label [[IF:%.*]]
-; CHECK-NEXT:      i32 4, label [[IF]]
-; CHECK-NEXT:      i32 5, label [[IF]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[EXT_OFF:%.*]] = add i32 [[EXT]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[EXT_OFF]], 3
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[ELSE:%.*]], label [[IF:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
@@ -286,11 +284,9 @@ else:
 define i32 @wrapping_known_range_sext(i8 range(i8 0, 6) %arg) {
 ; CHECK-LABEL: @wrapping_known_range_sext(
 ; CHECK-NEXT:    [[EXT:%.*]] = sext i8 [[ARG:%.*]] to i32
-; CHECK-NEXT:    switch i32 [[EXT]], label [[ELSE:%.*]] [
-; CHECK-NEXT:      i32 0, label [[IF:%.*]]
-; CHECK-NEXT:      i32 4, label [[IF]]
-; CHECK-NEXT:      i32 5, label [[IF]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[EXT_OFF:%.*]] = add i32 [[EXT]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[EXT_OFF]], 3
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[ELSE:%.*]], label [[IF:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[I0:%.*]], [[IF]] ], [ [[I1:%.*]], [[ELSE]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
