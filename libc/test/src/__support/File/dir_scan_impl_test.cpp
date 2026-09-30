@@ -123,3 +123,36 @@ TEST_F(LlvmLibcScanImplTest, ReadFailsMidway) {
   ASSERT_FALSE(res.has_value());
   EXPECT_EQ(res.error(), ENOENT);
 }
+
+int partialorder(const struct dirent **a, const struct dirent **b) {
+  if ((*a)->d_name[0] == 'a' && (*b)->d_name[0] == 'b') 
+    return -1;
+
+  else if ((*a)->d_name[0] == 'b' && (*b)->d_name[0] == 'a') 
+    return 1;
+
+  return 0;
+}
+
+TEST_F(LlvmLibcScanImplTest, TestPartialOrdering) {
+
+  struct dirent **namelist = nullptr;
+
+  auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
+      "fake/path", &namelist, nullptr, partialorder);
+  ASSERT_TRUE(res.has_value());
+  ASSERT_EQ(res.value(),  static_cast<int>(LIBC_NAMESPACE::MockDir::test_files_count));
+  int a_index = -1;
+  int b_index = -1;
+  for (int i = 0; i < res.value(); ++i) {
+    if (namelist[i]->d_name[0] == 'a') 
+      a_index = i;
+
+    else if (namelist[i]->d_name[0] == 'b') {
+      b_index = i;
+    }
+  }
+  ASSERT_NE(a_index, -1);
+  ASSERT_NE(b_index, -1);
+  ASSERT_GT(b_index, a_index);
+}
