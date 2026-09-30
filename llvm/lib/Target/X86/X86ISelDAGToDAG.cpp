@@ -3779,7 +3779,11 @@ bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
   unsigned ArgGPRs = 0;
   for (unsigned I = 3, E = N->getNumOperands(); I != E; ++I) {
     if (const auto *RN = dyn_cast<RegisterSDNode>(N->getOperand(I))) {
-      if (!RI->isGeneralPurposeRegister(*MF, RN->getReg()))
+      Register Reg = RN->getReg();
+      bool IsGPR = Reg.isVirtual() ? RI->isGeneralPurposeRegisterClass(
+                                         MF->getRegInfo().getRegClass(Reg))
+                                   : RI->isGeneralPurposeRegister(*MF, Reg);
+      if (!IsGPR)
         continue;
       if (++ArgGPRs + LoadGPRs > AvailGPRs)
         return false;
