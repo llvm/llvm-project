@@ -154,6 +154,10 @@ void AllocationPlacementPass::runOnOperation() {
                                smallArrayThresholdBytes);
   fir::overrideIfExplicitlySet(basePolicy.totalStackLimitBytes,
                                totalStackLimitBytes);
+  // An acc routine is compiled for the device as well, so -fstack-arrays
+  // cannot be honored in it, as in a device procedure.
+  if (mlir::acc::isAccRoutine(func))
+    basePolicy.stackArrays = false;
 
   auto module = func->getParentOfType<mlir::ModuleOp>();
   std::optional<mlir::DataLayout> dl =
@@ -172,10 +176,6 @@ void AllocationPlacementPass::runOnOperation() {
     signalPassFailure();
     return;
   }
-
-  // An acc routine is compiled for the device as well, so it is device code
-  // for the purpose of -fstack-arrays even before it is specialized.
-  bool isAccRoutine = mlir::acc::isAccRoutine(func);
 
   // Walk allocations in deterministic program order, maintaining the running
   // per-function stack budget while collecting the conversions to perform.
@@ -213,11 +213,11 @@ void AllocationPlacementPass::runOnOperation() {
                : (allocmem.hasLenParams() || allocmem.hasShapeOperands());
     info.byteSize = getConstantByteSize(op, dl, kindMap);
 
-    // -fstack-arrays cannot be honored in an offload region or an acc routine
-    // either: like a device procedure, they run on the device stack, which is
-    // far smaller than the host one. The size based policy still applies.
+    // -fstack-arrays cannot be honored in an offload region either: like a
+    // device procedure, it runs on the device stack, which is far smaller than
+    // the host one. The size based part of the policy still applies.
     fir::AllocationPolicy policy = basePolicy;
-    if (policy.stackArrays && (isAccRoutine || cuf::isExecutingOnDevice(op)))
+    if (policy.stackArrays && cuf::isExecutingOnDevice(op))
       policy.stackArrays = false;
 
     // A hook, if provided, fully overrides the default policy; it may delegate
