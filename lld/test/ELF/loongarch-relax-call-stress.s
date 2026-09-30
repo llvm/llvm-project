@@ -11,27 +11,38 @@
 ## target address jitters between passes.
 ##
 ## The layout is deliberately fragile: the .space size below was found by
-## searching a model of lld's relaxation loop. Do not "round" it.
+## searching a model of lld's relaxation loop. Do not "round" it. The base
+## address is pinned with -Ttext, and the final addresses are checked below so
+## that a change in the .text.a/.text.b gap (which decides whether the call
+## sites sit on the +-128MiB boundary) makes the test fail instead of silently
+## no longer exercising the bug.
 
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 -mattr=+relax %s -o %t.o
-# RUN: ld.lld -e _start %t.o -o %t
+# RUN: ld.lld -e _start -Ttext=0x10000 %t.o -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYM
 
 ## The two short-range sites in .text.a are always relaxed.
 # CHECK-LABEL: <_start>:
-# CHECK-NEXT:    bl
-# CHECK-NEXT:    bl
+# CHECK-NEXT: bl {{[0-9a-f]+}} <t_d>
+# CHECK-NEXT: bl {{[0-9a-f]+}} <t_e>
+
+## .text.a is 16 bytes and .text.b starts right after it, so t_c - t_d is
+## exactly (128MiB - 4)
+# SYM-DAG: 0000000000010000 {{.*}} _start
+# SYM-DAG: 0000000000010010 {{.*}} t_d
+# SYM-DAG: 000000000801000c {{.*}} t_c
 
 .section .text.a,"ax"
 .globl _start
 _start:
   call36 t_d
   call36 t_e
+.globl t_e
+t_e:
   call36 t_c            # forward, crosses the 128MiB filler
 .globl t_d
 t_d:
-.globl t_e
-t_e:
 
 .section .text.b,"ax"
   .space 8
