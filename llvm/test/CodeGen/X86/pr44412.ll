@@ -4,21 +4,18 @@
 define void @bar(i32 %0, i32 %1) nounwind {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB0_4
-; CHECK-NEXT:  # %bb.1: # %.preheader
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    decl %ebx
+; CHECK-NEXT:    subl $1, %ebx
+; CHECK-NEXT:    jb .LBB0_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:    addl $-1, %ebx
-; CHECK-NEXT:    jb .LBB0_2
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    jb .LBB0_1
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    retq
   %3 = icmp eq i32 %0, 0
   br i1 %3, label %8, label %4
@@ -37,21 +34,18 @@ define void @bar(i32 %0, i32 %1) nounwind {
 define void @baz(i32 %0, i32 %1) nounwind {
 ; CHECK-LABEL: baz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB1_4
-; CHECK-NEXT:  # %bb.1: # %.preheader
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    decl %ebx
+; CHECK-NEXT:    subl $1, %ebx
+; CHECK-NEXT:    jb .LBB1_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_2: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:    addl $-1, %ebx
-; CHECK-NEXT:    jae .LBB1_2
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    jae .LBB1_1
+; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    retq
   %3 = icmp eq i32 %0, 0
   br i1 %3, label %8, label %4
