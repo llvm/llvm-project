@@ -12955,10 +12955,10 @@ public:
       const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
       bool PartialOrdering, bool *StrictPackMatch);
 
-  /// Determine the declared type of the constant template parameter that \p A
+  /// Determine the declared type of the constant template parameter that \p Arg
   /// names, if any.
   static QualType
-  getTypeOfConstantTemplateParameter(const TemplateArgument &A,
+  getTypeOfConstantTemplateParameter(const TemplateArgument &Arg,
                                      UnsignedOrNone Depth = std::nullopt);
 
   /// Mark which template parameters are used in a given expression.

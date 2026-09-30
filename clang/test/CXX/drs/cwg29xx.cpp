@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98 %s
 // RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
 // RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
-// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
-// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20 %s
-// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23 %s
-// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17 %s
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17,since-cxx20 %s
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17,since-cxx20,since-cxx23,since-cxx26 %s
 
 // cxx98-no-diagnostics
 
@@ -16,8 +16,8 @@ template <auto x> void f(E<x> *); // #cwg2900-f-E
 int v;
 void g(E<v> *bp) {
   f(bp);
-  // since-cxx11-error@-1 {{no matching function for call to 'f'}}
-  //   since-cxx11-note@#cwg2900-f-E {{candidate template ignored: substitution failure: non-type template argument is not a constant expression}}
+  // since-cxx17-error@-1 {{no matching function for call to 'f'}}
+  //   since-cxx17-note@#cwg2900-f-E {{candidate template ignored: substitution failure: non-type template argument is not a constant expression}}
 }
 
 template <const int &> struct F;
