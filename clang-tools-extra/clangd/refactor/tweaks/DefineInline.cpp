@@ -402,6 +402,8 @@ public:
     Source = getSelectedFunction(SelNode);
     if (!Source || !Source->doesThisDeclarationHaveABody())
       return false;
+    assert(Source->getBody() && "Expected non-null body for declaration "
+                                "satisfying doesThisDeclarationHaveABody()");
     // Only the last level of template parameter locations are not kept in AST,
     // so if we are inlining a method that is in a templated class, there is no
     // way to verify template parameter names. Therefore we bail out.
@@ -424,6 +426,9 @@ public:
       // AST.
       return false;
     }
+    // No declaration to move the body into.
+    if (Target->isThisDeclarationADefinition())
+      return false;
 
     // Check if the decls referenced in function body are visible in the
     // declaration location.

@@ -54,7 +54,27 @@ TEST_F(DefineInlineTest, TriggersOnFunctionDecl) {
   void foo() {
     return;
   }
-  vo^id f^oo();
+  void f^oo();
+  )cpp");
+
+  EXPECT_UNAVAILABLE(R"cpp(
+  // error-ok
+  // Target is already a definition.
+  void foo() {
+    return;
+  }
+  void f^oo() {
+    return;
+  }
+  )cpp");
+
+  EXPECT_UNAVAILABLE(R"cpp(
+  // error-ok
+  // Target is deleted.
+  void foo() = delete;
+  void f^oo() {
+    return;
+  }
   )cpp");
 }
 
