@@ -25739,7 +25739,10 @@ static bool canEmitConjunctionForCCMP(SelectionDAG &DAG, SDValue Val,
 ///   Negate:    true if this sub-tree should be negated by inverting the
 ///              conditions on its SETCC leaves
 ///   OutCC:     set to the condition code to test after the whole chain
-/// Returns the flags-producing node (CMP/SUB or CCMP).
+/// Returns the EFLAGS-producing node: for the leaf that starts the chain
+/// whatever EmitCmp picked as its flag source (a comparison, or an arithmetic
+/// or logic node it folded the comparison onto), and a CCMP/CTEST for every
+/// other leaf.
 static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
                                          bool Negate, SDValue CCOp,
                                          X86::CondCode Predicate,
@@ -25757,23 +25760,52 @@ static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
     assert(X86CC != X86::COND_INVALID);
     OutCC = X86CC;
 
-    SDValue Flags = EmitCmp(LHS, RHS, X86CC, DL, DAG, Subtarget);
-    // Produce a normal comparison if we are first in the chain.
+    // Produce a normal comparison if we are first in the chain. Only there may
+    // EmitCmp fold the comparison into the EFLAGS of an existing arithmetic or
+    // logic node: those flags are unconditional, which is exactly what the root
+    // of the chain needs.
     if (!CCOp)
-      return Flags;
+      return EmitCmp(LHS, RHS, X86CC, DL, DAG, Subtarget);
 
-    // Otherwise produce a CCMP. The CCMP executes (and updates EFLAGS) only
-    // when Predicate holds; when it is skipped it forces the default condition
+    // Otherwise produce a CCMP or CTEST. It executes (and updates EFLAGS)
+    // only when Predicate holds; when skipped it forces the default condition
     // flags, which must make OutCC evaluate to false. That default is encoded
     // from the opposite of X86CC.
-    SDNode *FlagsNode = Flags.getNode();
     X86::CondCode DCFCode = X86::GetOppositeBranchCondition(X86CC);
     SDValue CFlags = DAG.getTargetConstant(
         X86::getCCMPCondFlagsFromCondCode(DCFCode), DL, MVT::i8);
     SDValue SrcCC = DAG.getTargetConstant(Predicate, DL, MVT::i8);
+
+    // Compare the SETCC's own operands rather than asking EmitCmp for a flag
+    // source: CCMP is a conditional subtract, so it always reproduces the
+    // comparison, whereas a folded flag source computes something else and its
+    // operands cannot be reused. Comparing with zero is a TEST of the value,
+    // and an AND compared with zero is a TEST of the AND's operands, both of
+    // which CTEST performs conditionally.
+    if (isNullConstant(RHS)) {
+      SDValue Op0 = LHS, Op1 = LHS;
+      if (LHS.getOpcode() == ISD::AND) {
+        Op0 = LHS.getOperand(0);
+        Op1 = LHS.getOperand(1);
+      }
+      return DAG.getNode(X86ISD::CTEST, DL, MVT::i32,
+                         {Op0, Op1, CFlags, SrcCC, CCOp});
+    }
+    // An equality comparison is a test of the operands' XOR, so reuse one that
+    // is already being computed instead of keeping both operands live.
+    if (X86CC == X86::COND_E || X86CC == X86::COND_NE) {
+      SDVTList XorVTs = DAG.getVTList(LHS.getValueType());
+      SDNode *Xor = DAG.getNodeIfExists(ISD::XOR, XorVTs, {LHS, RHS});
+      if (!Xor)
+        Xor = DAG.getNodeIfExists(ISD::XOR, XorVTs, {RHS, LHS});
+      if (Xor && Xor->hasAnyUseOfValue(0)) {
+        SDValue XorVal(Xor, 0);
+        return DAG.getNode(X86ISD::CTEST, DL, MVT::i32,
+                           {XorVal, XorVal, CFlags, SrcCC, CCOp});
+      }
+    }
     return DAG.getNode(X86ISD::CCMP, DL, MVT::i32,
-                       {FlagsNode->getOperand(0), FlagsNode->getOperand(1),
-                        CFlags, SrcCC, CCOp});
+                       {LHS, RHS, CFlags, SrcCC, CCOp});
   }
   assert(Val.hasOneUse() && "Valid conjunction/disjunction tree");
 
@@ -39269,6 +39301,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::LCMPXCHG16B_NO_RBX: {
     const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
     Register BasePtr = TRI->getBaseRegister();
+    bool DeadEFLAGS = MI.getOperand(8).isDead(); // implicit-def $eflags
     if (TRI->hasBasePointer(*MF) &&
         (BasePtr == X86::RBX || BasePtr == X86::EBX)) {
       if (!BB->isLiveIn(BasePtr))
@@ -39285,6 +39318,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         MIB.add(MI.getOperand(Idx));
       MIB.add(MI.getOperand(X86::AddrNumOperands));
       MIB.addReg(SaveRBX);
+      MIB->getOperand(11).setIsDead(DeadEFLAGS); // implicit-def $eflags
     } else {
       // Simple case, just copy the virtual register to RBX.
       BuildMI(*BB, MI, MIMD, TII->get(TargetOpcode::COPY), X86::RBX)
@@ -39293,6 +39327,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
           BuildMI(*BB, MI, MIMD, TII->get(X86::LCMPXCHG16B));
       for (unsigned Idx = 0; Idx < X86::AddrNumOperands; ++Idx)
         MIB.add(MI.getOperand(Idx));
+      MIB->getOperand(7).setIsDead(DeadEFLAGS); // implicit-def $eflags
     }
     MI.eraseFromParent();
     return BB;
@@ -65603,7 +65638,8 @@ X86TargetLowering::getStackProbeSize(const MachineFunction &MF) const {
                                                         4096);
 }
 
-Align X86TargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+Align X86TargetLowering::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   if (ML && ML->isInnermost() &&
       ExperimentalPrefInnermostLoopAlignment.getNumOccurrences())
     return Align(1ULL << ExperimentalPrefInnermostLoopAlignment);
