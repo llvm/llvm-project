@@ -2227,11 +2227,33 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
     // We're rewriting the template parameter as a reference to another
     // template parameter.
     Arg = getTemplateArgumentPackPatternForRewrite(Arg);
-    assert(Arg.getKind() == TemplateArgument::Expression &&
-           "unexpected nontype template argument kind in template rewrite");
-    // FIXME: This can lead to the same subexpression appearing multiple times
-    // in a complete expression.
-    return Arg.getAsExpr();
+    if (Arg.getKind() == TemplateArgument::Expression) {
+      // FIXME: This can lead to the same subexpression appearing multiple times
+      // in a complete expression.
+      return Arg.getAsExpr();
+    }
+
+    // Otherwise try rebuilding the expression if argument has been
+    // canonicalized into a non-expression form
+    // (e.g. integral value, template parameter object, ...).
+    // Any other kind indicates a mismatch between the template argument list
+    // and the parameter being rewritten.
+    switch (Arg.getKind()) {
+    case TemplateArgument::Integral:
+    case TemplateArgument::Declaration:
+    case TemplateArgument::NullPtr:
+    case TemplateArgument::StructuralValue:
+      break;
+    default:
+      assert(false &&
+             "unexpected nontype template argument kind in template rewrite");
+      return ExprError();
+    }
+    ExprResult Rewritten = SemaRef.BuildExpressionFromNonTypeTemplateArgument(
+        Arg, E->getLocation());
+    if (Rewritten.isInvalid())
+      return ExprError();
+    return Rewritten;
   }
 
   QualType ParamType = NTTP->isExpandedParameterPack()
