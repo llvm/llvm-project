@@ -144,3 +144,47 @@ func.func @no_fold_bcast_mode_switch(%arg0: vector<2x1xf32>) -> vector<2x2xf32> 
   %1 = vector.shape_cast %0 : vector<2x2x1xf32> to vector<2x2xf32>
   return %1 : vector<2x2xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @no_fold_bcast_axis_shift
+// CHECK:         vector.broadcast %{{.*}} : vector<1x4x1xf32> to vector<1x4x4xf32>
+// CHECK-NEXT:    vector.shape_cast %{{.*}} : vector<1x4x4xf32> to vector<4x4x1xf32>
+func.func @no_fold_bcast_axis_shift(%arg0: vector<1x4x1xf32>) -> vector<4x4x1xf32> {
+  %0 = vector.broadcast %arg0 : vector<1x4x1xf32> to vector<1x4x4xf32>
+  %1 = vector.shape_cast %0 : vector<1x4x4xf32> to vector<4x4x1xf32>
+  return %1 : vector<4x4x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_bcast_leading_dims
+// CHECK:         %[[RES:.*]] = vector.broadcast %{{.*}} : vector<3xf32> to vector<8x3xf32>
+// CHECK-NEXT:    return %[[RES]] : vector<8x3xf32>
+func.func @fold_bcast_leading_dims(%arg0: vector<3xf32>) -> vector<8x3xf32> {
+  %0 = vector.broadcast %arg0 : vector<3xf32> to vector<2x4x3xf32>
+  %1 = vector.shape_cast %0 : vector<2x4x3xf32> to vector<8x3xf32>
+  return %1 : vector<8x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_bcast_src_leading_unit_dims
+// CHECK:         %[[RES:.*]] = vector.broadcast %{{.*}} : vector<1x3xf32> to vector<4x3xf32>
+// CHECK-NEXT:    return %[[RES]] : vector<4x3xf32>
+func.func @fold_bcast_src_leading_unit_dims(%arg0: vector<1x3xf32>) -> vector<4x3xf32> {
+  %0 = vector.broadcast %arg0 : vector<1x3xf32> to vector<4x1x3xf32>
+  %1 = vector.shape_cast %0 : vector<4x1x3xf32> to vector<4x3xf32>
+  return %1 : vector<4x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_bcast_consecutive_unit_dims
+// CHECK:         %[[RES:.*]] = vector.broadcast %{{.*}} : vector<2x1x1x3xf32> to vector<2x2x2x3xf32>
+// CHECK-NEXT:    return %[[RES]] : vector<2x2x2x3xf32>
+func.func @fold_bcast_consecutive_unit_dims(%arg0: vector<2x1x1x3xf32>) -> vector<2x2x2x3xf32> {
+  %0 = vector.broadcast %arg0 : vector<2x1x1x3xf32> to vector<2x1x4x3xf32>
+  %1 = vector.shape_cast %0 : vector<2x1x4x3xf32> to vector<2x2x2x3xf32>
+  return %1 : vector<2x2x2x3xf32>
+}
