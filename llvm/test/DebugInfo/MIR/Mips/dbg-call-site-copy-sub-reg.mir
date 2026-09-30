@@ -97,12 +97,12 @@ body:             |
     $a0_64 = OR64 killed $a1_64, $zero_64, debug-location !18
     DBG_VALUE $a0_64, $noreg, !17, !DIExpression(), debug-location !18
     $a1 = OR $at, $zero, implicit killed $at_64, debug-location !18
-    JAL @foo, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $a1, implicit killed $a2, implicit-def $sp, implicit-def $v0, debug-location !18 {
+    JAL @foo, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $a1, implicit killed $a2, implicit-def $sp, implicit-def $r2, debug-location !18 {
       $a2 = ADDiu $zero, 0, debug-location !18
     }
-    renamable $v0_64 = SLL64_32 killed renamable $v0, debug-location !18
+    renamable $r2_64 = SLL64_32 killed renamable $r2, debug-location !18
     $ra_64 = LD $sp_64, 8, debug-location !18 :: (load (s64) from %stack.0)
-    PseudoReturn64 undef $ra_64, implicit $v0_64, debug-location !18 {
+    PseudoReturn64 undef $ra_64, implicit $r2_64, debug-location !18 {
       $sp_64 = DADDiu $sp_64, 16
     }
 

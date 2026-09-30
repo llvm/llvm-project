@@ -120,16 +120,16 @@ body:             |
     }
     renamable $a2_64 = nsw DADDiu renamable $s0_64, 10, debug-location !20
     $a0_64 = DADDiu $zero_64, 44, debug-location !20
-    JAL @fn1, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit killed $a1_64, implicit $a2_64, implicit-def $sp, implicit-def $v0, debug-location !20 {
+    JAL @fn1, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit killed $a1_64, implicit $a2_64, implicit-def $sp, implicit-def $r2, debug-location !20 {
       $a1_64 = OR64 killed $s0_64, $zero_64, debug-location !20
     }
-    DBG_VALUE $v0, $noreg, !19, !DIExpression(), debug-location !20
-    renamable $at = SLTi renamable $v0, 11, debug-location !20
-    renamable $v1 = nsw ADDiu renamable $v0, 10, debug-location !20
-    renamable $v0 = MOVZ_I_I killed renamable $v1, killed renamable $at, killed renamable $v0, debug-location !20
-    renamable $v0_64 = SLL64_32 killed renamable $v0, debug-location !20
+    DBG_VALUE $r2, $noreg, !19, !DIExpression(), debug-location !20
+    renamable $at = SLTi renamable $r2, 11, debug-location !20
+    renamable $r3 = nsw ADDiu renamable $r2, 10, debug-location !20
+    renamable $r2 = MOVZ_I_I killed renamable $r3, killed renamable $at, killed renamable $r2, debug-location !20
+    renamable $r2_64 = SLL64_32 killed renamable $r2, debug-location !20
     $s0_64 = LD $sp_64, 0, debug-location !20 :: (load (s64) from %stack.1)
     $ra_64 = LD $sp_64, 8, debug-location !20 :: (load (s64) from %stack.0)
-    PseudoReturn64 undef $ra_64, implicit $v0_64, debug-location !20 {
+    PseudoReturn64 undef $ra_64, implicit $r2_64, debug-location !20 {
       $sp_64 = DADDiu $sp_64, 16
     }

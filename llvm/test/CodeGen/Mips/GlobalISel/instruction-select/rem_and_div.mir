@@ -24,13 +24,13 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
     ; MIPS32: [[PseudoSDIV:%[0-9]+]]:acc64 = PseudoSDIV [[COPY1]], [[COPY]]
     ; MIPS32: [[PseudoMFLO:%[0-9]+]]:gpr32 = PseudoMFLO [[PseudoSDIV]]
-    ; MIPS32: $v0 = COPY [[PseudoMFLO]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[PseudoMFLO]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(s32) = COPY $a0
     %1:gprb(s32) = COPY $a1
     %2:gprb(s32) = G_SDIV %1, %0
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -49,13 +49,13 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
     ; MIPS32: [[PseudoSDIV:%[0-9]+]]:acc64 = PseudoSDIV [[COPY1]], [[COPY]]
     ; MIPS32: [[PseudoMFHI:%[0-9]+]]:gpr32 = PseudoMFHI [[PseudoSDIV]]
-    ; MIPS32: $v0 = COPY [[PseudoMFHI]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[PseudoMFHI]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(s32) = COPY $a0
     %1:gprb(s32) = COPY $a1
     %2:gprb(s32) = G_SREM %1, %0
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -74,13 +74,13 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
     ; MIPS32: [[PseudoUDIV:%[0-9]+]]:acc64 = PseudoUDIV [[COPY1]], [[COPY]]
     ; MIPS32: [[PseudoMFLO:%[0-9]+]]:gpr32 = PseudoMFLO [[PseudoUDIV]]
-    ; MIPS32: $v0 = COPY [[PseudoMFLO]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[PseudoMFLO]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(s32) = COPY $a0
     %1:gprb(s32) = COPY $a1
     %2:gprb(s32) = G_UDIV %1, %0
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -99,12 +99,12 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
     ; MIPS32: [[PseudoUDIV:%[0-9]+]]:acc64 = PseudoUDIV [[COPY1]], [[COPY]]
     ; MIPS32: [[PseudoMFHI:%[0-9]+]]:gpr32 = PseudoMFHI [[PseudoUDIV]]
-    ; MIPS32: $v0 = COPY [[PseudoMFHI]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[PseudoMFHI]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(s32) = COPY $a0
     %1:gprb(s32) = COPY $a1
     %2:gprb(s32) = G_UREM %1, %0
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...

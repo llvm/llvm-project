@@ -26,14 +26,14 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32: [[LBu:%[0-9]+]]:gpr32 = LBu [[COPY]], 32767 :: (load (s8))
-    ; MIPS32: $v0 = COPY [[LBu]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[LBu]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(p0) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 32767
     %2:gprb(p0) = G_PTR_ADD %0, %1(s32)
     %4:gprb(s32) = G_ZEXTLOAD %2(p0) :: (load (s8))
-    $v0 = COPY %4(s32)
-    RetRA implicit $v0
+    $r2 = COPY %4(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -105,14 +105,14 @@ body:             |
     ; MIPS32: [[ORi:%[0-9]+]]:gpr32 = ORi [[LUi]], 32767
     ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu [[COPY]], [[ORi]]
     ; MIPS32: [[LB:%[0-9]+]]:gpr32 = LB [[ADDu]], 0 :: (load (s8))
-    ; MIPS32: $v0 = COPY [[LB]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[LB]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(p0) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 -32769
     %2:gprb(p0) = G_PTR_ADD %0, %1(s32)
     %4:gprb(s32) = G_SEXTLOAD %2(p0) :: (load (s8))
-    $v0 = COPY %4(s32)
-    RetRA implicit $v0
+    $r2 = COPY %4(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -177,14 +177,14 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32: [[LHu:%[0-9]+]]:gpr32 = LHu [[COPY]], -20 :: (load (s16))
-    ; MIPS32: $v0 = COPY [[LHu]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[LHu]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(p0) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 -20
     %2:gprb(p0) = G_PTR_ADD %0, %1(s32)
     %4:gprb(s32) = G_LOAD %2(p0) :: (load (s16))
-    $v0 = COPY %4(s32)
-    RetRA implicit $v0
+    $r2 = COPY %4(s32)
+    RetRA implicit $r2
 
 ...
 ---

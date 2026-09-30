@@ -51,8 +51,8 @@ body:             |
     ; MIPS32: [[SHL4:%[0-9]+]]:_(s32) = G_SHL [[OR4]], [[C7]](s32)
     ; MIPS32: [[AND7:%[0-9]+]]:_(s32) = G_AND [[SHL4]], [[C8]]
     ; MIPS32: [[OR5:%[0-9]+]]:_(s32) = G_OR [[LSHR4]], [[AND7]]
-    ; MIPS32: $v0 = COPY [[OR5]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[OR5]](s32)
+    ; MIPS32: RetRA implicit $r2
     ; MIPS32R2-LABEL: name: bitreverse_i32
     ; MIPS32R2: liveins: $a0
     ; MIPS32R2: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
@@ -78,12 +78,12 @@ body:             |
     ; MIPS32R2: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[OR1]], [[C4]](s32)
     ; MIPS32R2: [[AND5:%[0-9]+]]:_(s32) = G_AND [[SHL2]], [[C5]]
     ; MIPS32R2: [[OR2:%[0-9]+]]:_(s32) = G_OR [[LSHR2]], [[AND5]]
-    ; MIPS32R2: $v0 = COPY [[OR2]](s32)
-    ; MIPS32R2: RetRA implicit $v0
+    ; MIPS32R2: $r2 = COPY [[OR2]](s32)
+    ; MIPS32R2: RetRA implicit $r2
     %0:_(s32) = COPY $a0
     %1:_(s32) = G_BITREVERSE %0
-    $v0 = COPY %1(s32)
-    RetRA implicit $v0
+    $r2 = COPY %1(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -155,9 +155,9 @@ body:             |
     ; MIPS32: [[SHL9:%[0-9]+]]:_(s32) = G_SHL [[OR10]], [[C7]](s32)
     ; MIPS32: [[AND15:%[0-9]+]]:_(s32) = G_AND [[SHL9]], [[C8]]
     ; MIPS32: [[OR11:%[0-9]+]]:_(s32) = G_OR [[LSHR9]], [[AND15]]
-    ; MIPS32: $v0 = COPY [[OR5]](s32)
-    ; MIPS32: $v1 = COPY [[OR11]](s32)
-    ; MIPS32: RetRA implicit $v0, implicit $v1
+    ; MIPS32: $r2 = COPY [[OR5]](s32)
+    ; MIPS32: $r3 = COPY [[OR11]](s32)
+    ; MIPS32: RetRA implicit $r2, implicit $r3
     ; MIPS32R2-LABEL: name: bitreverse_i64
     ; MIPS32R2: liveins: $a0, $a1
     ; MIPS32R2: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
@@ -200,16 +200,16 @@ body:             |
     ; MIPS32R2: [[SHL5:%[0-9]+]]:_(s32) = G_SHL [[OR4]], [[C4]](s32)
     ; MIPS32R2: [[AND11:%[0-9]+]]:_(s32) = G_AND [[SHL5]], [[C5]]
     ; MIPS32R2: [[OR5:%[0-9]+]]:_(s32) = G_OR [[LSHR5]], [[AND11]]
-    ; MIPS32R2: $v0 = COPY [[OR2]](s32)
-    ; MIPS32R2: $v1 = COPY [[OR5]](s32)
-    ; MIPS32R2: RetRA implicit $v0, implicit $v1
+    ; MIPS32R2: $r2 = COPY [[OR2]](s32)
+    ; MIPS32R2: $r3 = COPY [[OR5]](s32)
+    ; MIPS32R2: RetRA implicit $r2, implicit $r3
     %1:_(s32) = COPY $a0
     %2:_(s32) = COPY $a1
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
     %3:_(s64) = G_BITREVERSE %0
     %4:_(s32), %5:_(s32) = G_UNMERGE_VALUES %3(s64)
-    $v0 = COPY %4(s32)
-    $v1 = COPY %5(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %4(s32)
+    $r3 = COPY %5(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...

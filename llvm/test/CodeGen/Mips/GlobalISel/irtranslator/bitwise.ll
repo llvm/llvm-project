@@ -8,8 +8,8 @@ define i32 @shl(i32 %a) {
   ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; MIPS32:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]]
-  ; MIPS32:   $v0 = COPY [[SHL]](s32)
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32:   $r2 = COPY [[SHL]](s32)
+  ; MIPS32:   RetRA implicit $r2
 entry:
   %shl = shl i32 %a, 1
   ret i32 %shl
@@ -22,8 +22,8 @@ define i32 @ashr(i32 %a) {
   ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; MIPS32:   [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]]
-  ; MIPS32:   $v0 = COPY [[ASHR]](s32)
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32:   $r2 = COPY [[ASHR]](s32)
+  ; MIPS32:   RetRA implicit $r2
 entry:
   %shr = ashr i32 %a, 1
   ret i32 %shr
@@ -36,8 +36,8 @@ define i32 @lshr(i32 %a) {
   ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; MIPS32:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]]
-  ; MIPS32:   $v0 = COPY [[LSHR]](s32)
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32:   $r2 = COPY [[LSHR]](s32)
+  ; MIPS32:   RetRA implicit $r2
 entry:
   %shr = lshr i32 %a, 1
   ret i32 %shr
@@ -50,8 +50,8 @@ define i32 @shlv(i32 %a, i32 %b) {
   ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
   ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
   ; MIPS32:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[COPY1]]
-  ; MIPS32:   $v0 = COPY [[SHL]](s32)
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32:   $r2 = COPY [[SHL]](s32)
+  ; MIPS32:   RetRA implicit $r2
 entry:
   %shl = shl i32 %a, %b
   ret i32 %shl
@@ -64,8 +64,8 @@ define i32 @ashrv(i32 %a, i32 %b) {
   ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
   ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
   ; MIPS32:   [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[COPY1]]
-  ; MIPS32:   $v0 = COPY [[ASHR]](s32)
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32:   $r2 = COPY [[ASHR]](s32)
+  ; MIPS32:   RetRA implicit $r2
 entry:
   %shr = ashr i32 %a, %b
   ret i32 %shr
@@ -78,8 +78,8 @@ define i32 @lshrv(i32 %a, i32 %b) {
   ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
   ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
   ; MIPS32:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[COPY1]]
-  ; MIPS32:   $v0 = COPY [[LSHR]](s32)
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32:   $r2 = COPY [[LSHR]](s32)
+  ; MIPS32:   RetRA implicit $r2
 entry:
   %shr = lshr i32 %a, %b
   ret i32 %shr

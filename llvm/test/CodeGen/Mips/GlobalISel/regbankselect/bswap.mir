@@ -18,11 +18,11 @@ body:             |
     ; MIPS32R2: liveins: $a0
     ; MIPS32R2: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
     ; MIPS32R2: [[BSWAP:%[0-9]+]]:gprb(s32) = G_BSWAP [[COPY]]
-    ; MIPS32R2: $v0 = COPY [[BSWAP]](s32)
-    ; MIPS32R2: RetRA implicit $v0
+    ; MIPS32R2: $r2 = COPY [[BSWAP]](s32)
+    ; MIPS32R2: RetRA implicit $r2
     %0:_(s32) = COPY $a0
     %1:_(s32) = G_BSWAP %0
-    $v0 = COPY %1(s32)
-    RetRA implicit $v0
+    $r2 = COPY %1(s32)
+    RetRA implicit $r2
 
 ...

@@ -99,7 +99,7 @@ body:             |
   ; CHECK:   }
   ; CHECK: bb.1.if.then:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   JAL @func_a, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0_64 {
+  ; CHECK:   JAL @func_a, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $r2_64 {
   ; CHECK:     $zero = SLL $zero, 0
   ; CHECK:   }
   ; CHECK:   J %bb.3, implicit-def dead $at {
@@ -107,12 +107,12 @@ body:             |
   ; CHECK:   }
   ; CHECK: bb.2.if.else:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   JAL @func_b, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0_64 {
+  ; CHECK:   JAL @func_b, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $r2_64 {
   ; CHECK:     $a0_64 = DADDiu $zero_64, 0
   ; CHECK:   }
   ; CHECK: bb.3.return:
   ; CHECK:   $ra_64 = LD $sp_64, 8 :: (load (s64) from %stack.0)
-  ; CHECK:   PseudoReturn64 undef $ra_64, implicit $v0_64 {
+  ; CHECK:   PseudoReturn64 undef $ra_64, implicit $r2_64 {
   ; CHECK:     $sp_64 = DADDiu $sp_64, 16
   ; CHECK:   }
   bb.0.entry:
@@ -134,20 +134,20 @@ body:             |
     successors: %bb.3(0x80000000)
     liveins: $a0_64
 
-    JAL @func_a, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0_64
+    JAL @func_a, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $r2_64
     J %bb.3, implicit-def dead $at
 
   bb.2.if.else:
     successors: %bb.3(0x80000000)
 
     $a0_64 = DADDiu $zero_64, 0
-    JAL @func_b, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0_64
+    JAL @func_b, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $r2_64
 
   bb.3.return:
-    liveins: $v0_64
+    liveins: $r2_64
 
     $ra_64 = LD $sp_64, 8 :: (load (s64) from %stack.0)
     $sp_64 = DADDiu $sp_64, 16
-    PseudoReturn64 undef $ra_64, implicit $v0_64
+    PseudoReturn64 undef $ra_64, implicit $r2_64
 
 ...

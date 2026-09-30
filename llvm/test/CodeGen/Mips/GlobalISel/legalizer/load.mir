@@ -13,12 +13,12 @@ body:             |
     ; MIPS32-NEXT: {{  $}}
     ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
-    ; MIPS32-NEXT: $v0 = COPY [[LOAD]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
+    ; MIPS32-NEXT: $r2 = COPY [[LOAD]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
     %0:_(p0) = COPY $a0
     %1:_(s32) = G_LOAD %0(p0) :: (load (s32))
-    $v0 = COPY %1(s32)
-    RetRA implicit $v0
+    $r2 = COPY %1(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -35,15 +35,15 @@ body:             |
     ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load (s64))
     ; MIPS32-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
-    ; MIPS32-NEXT: $v0 = COPY [[UV]](s32)
-    ; MIPS32-NEXT: $v1 = COPY [[UV1]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0, implicit $v1
+    ; MIPS32-NEXT: $r2 = COPY [[UV]](s32)
+    ; MIPS32-NEXT: $r3 = COPY [[UV1]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2, implicit $r3
     %0:_(p0) = COPY $a0
     %1:_(s64) = G_LOAD %0(p0) :: (load (s64))
     %2:_(s32), %3:_(s32) = G_UNMERGE_VALUES %1(s64)
-    $v0 = COPY %2(s32)
-    $v1 = COPY %3(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %2(s32)
+    $r3 = COPY %3(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...
 ---

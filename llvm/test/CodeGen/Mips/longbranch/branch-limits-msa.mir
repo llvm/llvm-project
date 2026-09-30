@@ -272,12 +272,12 @@ body:             |
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 1
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 1
   ; MSA:   }
   ; MSA: bb.3:
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 0
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 0
   ; MSA:   }
   ; PIC-LABEL: name: _Z4bz_8Dv16_a
   ; PIC: bb.0.entry:
@@ -308,12 +308,12 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.if.then:
   ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 1
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 1
   ; PIC:   }
   ; PIC: bb.4:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 0
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 0
   ; PIC:   }
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -328,12 +328,12 @@ body:             |
 
   bb.1.if.then:
     INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
-    renamable $v0 = ADDiu $zero, 1
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 1
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
   bb.2:
-    renamable $v0 = ADDiu $zero, 0
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 0
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
 ...
 ---
@@ -388,12 +388,12 @@ body:             |
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 1
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 1
   ; MSA:   }
   ; MSA: bb.3:
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 0
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 0
   ; MSA:   }
   ; PIC-LABEL: name: _Z5bz_16Dv8_s
   ; PIC: bb.0.entry:
@@ -423,12 +423,12 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.if.then:
   ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 1
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 1
   ; PIC:   }
   ; PIC: bb.4:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 0
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 0
   ; PIC:   }
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -442,12 +442,12 @@ body:             |
 
   bb.1.if.then:
     INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
-    renamable $v0 = ADDiu $zero, 1
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 1
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
   bb.2:
-    renamable $v0 = ADDiu $zero, 0
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 0
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
 ...
 ---
@@ -502,12 +502,12 @@ body:             |
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 1
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 1
   ; MSA:   }
   ; MSA: bb.3:
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 0
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 0
   ; MSA:   }
   ; PIC-LABEL: name: _Z5bz_32Dv4_i
   ; PIC: bb.0.entry:
@@ -537,12 +537,12 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.if.then:
   ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 1
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 1
   ; PIC:   }
   ; PIC: bb.4:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 0
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 0
   ; PIC:   }
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -556,12 +556,12 @@ body:             |
 
   bb.1.if.then:
     INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
-    renamable $v0 = ADDiu $zero, 1
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 1
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
   bb.2:
-    renamable $v0 = ADDiu $zero, 0
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 0
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
 ...
 ---
@@ -615,12 +615,12 @@ body:             |
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 1
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 1
   ; MSA:   }
   ; MSA: bb.3:
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 0
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 0
   ; MSA:   }
   ; PIC-LABEL: name: _Z5bz_64Dv2_x
   ; PIC: bb.0.entry:
@@ -649,12 +649,12 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.if.then:
   ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 1
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 1
   ; PIC:   }
   ; PIC: bb.4:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 0
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 0
   ; PIC:   }
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -667,12 +667,12 @@ body:             |
 
   bb.1.if.then:
     INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
-    renamable $v0 = ADDiu $zero, 1
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 1
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
   bb.2:
-    renamable $v0 = ADDiu $zero, 0
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 0
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
 ...
 ---
@@ -726,12 +726,12 @@ body:             |
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 1
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 1
   ; MSA:   }
   ; MSA: bb.3:
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 0
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 0
   ; MSA:   }
   ; PIC-LABEL: name: _Z5bz_64_vDv2_x
   ; PIC: bb.0.entry:
@@ -760,12 +760,12 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.if.then:
   ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 1
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 1
   ; PIC:   }
   ; PIC: bb.4:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 0
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 0
   ; PIC:   }
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -778,12 +778,12 @@ body:             |
 
   bb.1.if.then:
     INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
-    renamable $v0 = ADDiu $zero, 1
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 1
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
   bb.2:
-    renamable $v0 = ADDiu $zero, 0
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 0
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
 ...
 ---
@@ -839,12 +839,12 @@ body:             |
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 1
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 1
   ; MSA:   }
   ; MSA: bb.3:
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 0
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 0
   ; MSA:   }
   ; PIC-LABEL: name: _Z5bnz_8Dv16_a
   ; PIC: bb.0.entry:
@@ -875,12 +875,12 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.if.then:
   ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 1
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 1
   ; PIC:   }
   ; PIC: bb.4:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 0
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 0
   ; PIC:   }
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -895,12 +895,12 @@ body:             |
 
   bb.1.if.then:
     INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
-    renamable $v0 = ADDiu $zero, 1
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 1
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
   bb.2:
-    renamable $v0 = ADDiu $zero, 0
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 0
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
 ...
 ---
@@ -955,12 +955,12 @@ body:             |
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 1
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 1
   ; MSA:   }
   ; MSA: bb.3:
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 0
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 0
   ; MSA:   }
   ; PIC-LABEL: name: _Z6bnz_16Dv8_s
   ; PIC: bb.0.entry:
@@ -990,12 +990,12 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.if.then:
   ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 1
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 1
   ; PIC:   }
   ; PIC: bb.4:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 0
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 0
   ; PIC:   }
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -1009,12 +1009,12 @@ body:             |
 
   bb.1.if.then:
     INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
-    renamable $v0 = ADDiu $zero, 1
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 1
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
   bb.2:
-    renamable $v0 = ADDiu $zero, 0
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 0
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
 ...
 ---
@@ -1069,12 +1069,12 @@ body:             |
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 1
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 1
   ; MSA:   }
   ; MSA: bb.3:
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 0
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 0
   ; MSA:   }
   ; PIC-LABEL: name: _Z6bnz_32Dv4_i
   ; PIC: bb.0.entry:
@@ -1104,12 +1104,12 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.if.then:
   ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 1
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 1
   ; PIC:   }
   ; PIC: bb.4:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 0
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 0
   ; PIC:   }
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -1123,12 +1123,12 @@ body:             |
 
   bb.1.if.then:
     INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
-    renamable $v0 = ADDiu $zero, 1
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 1
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
   bb.2:
-    renamable $v0 = ADDiu $zero, 0
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 0
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
 ...
 ---
@@ -1182,12 +1182,12 @@ body:             |
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 1
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 1
   ; MSA:   }
   ; MSA: bb.3:
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 0
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 0
   ; MSA:   }
   ; PIC-LABEL: name: _Z6bnz_64Dv2_x
   ; PIC: bb.0.entry:
@@ -1216,12 +1216,12 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.if.then:
   ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 1
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 1
   ; PIC:   }
   ; PIC: bb.4:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 0
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 0
   ; PIC:   }
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -1234,12 +1234,12 @@ body:             |
 
   bb.1.if.then:
     INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
-    renamable $v0 = ADDiu $zero, 1
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 1
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
   bb.2:
-    renamable $v0 = ADDiu $zero, 0
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 0
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
 ...
 ---
@@ -1293,12 +1293,12 @@ body:             |
   ; MSA:   }
   ; MSA: bb.2.if.then:
   ; MSA:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 1
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 1
   ; MSA:   }
   ; MSA: bb.3:
-  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; MSA:     renamable $v0 = ADDiu $zero, 0
+  ; MSA:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; MSA:     renamable $r2 = ADDiu $zero, 0
   ; MSA:   }
   ; PIC-LABEL: name: _Z6bnz_64_vDv2_x
   ; PIC: bb.0.entry:
@@ -1327,12 +1327,12 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.if.then:
   ; PIC:   INLINEASM &".space 810680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 1
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 1
   ; PIC:   }
   ; PIC: bb.4:
-  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $v0 {
-  ; PIC:     renamable $v0 = ADDiu $zero, 0
+  ; PIC:   PseudoReturn64 undef $ra_64, implicit killed $r2 {
+  ; PIC:     renamable $r2 = ADDiu $zero, 0
   ; PIC:   }
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -1345,11 +1345,11 @@ body:             |
 
   bb.1.if.then:
     INLINEASM &".space 810680", 1, 12, implicit-def dead early-clobber $at
-    renamable $v0 = ADDiu $zero, 1
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 1
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
   bb.2:
-    renamable $v0 = ADDiu $zero, 0
-    PseudoReturn64 undef $ra_64, implicit killed $v0
+    renamable $r2 = ADDiu $zero, 0
+    PseudoReturn64 undef $ra_64, implicit killed $r2
 
 ...

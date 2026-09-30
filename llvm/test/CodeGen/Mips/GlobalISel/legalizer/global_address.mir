@@ -22,11 +22,11 @@ body:             |
     ; MIPS32: ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     ; MIPS32: $a0 = COPY [[COPY]](p0)
     ; MIPS32: $a1 = COPY [[C]](s32)
-    ; MIPS32: JAL @printf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $v0
-    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $v0
+    ; MIPS32: JAL @printf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $r2
+    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $r2
     ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-    ; MIPS32: $v0 = COPY [[C1]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[C1]](s32)
+    ; MIPS32: RetRA implicit $r2
     %2:_(p0) = G_GLOBAL_VALUE @.str
     %1:_(p0) = COPY %2(p0)
     %3:_(s32) = G_CONSTANT i32 1234567890
@@ -34,10 +34,10 @@ body:             |
     ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
     $a0 = COPY %1(p0)
     $a1 = COPY %3(s32)
-    JAL @printf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $v0
-    %0:_(s32) = COPY $v0
+    JAL @printf, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $r2
+    %0:_(s32) = COPY $r2
     ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-    $v0 = COPY %4(s32)
-    RetRA implicit $v0
+    $r2 = COPY %4(s32)
+    RetRA implicit $r2
 
 ...

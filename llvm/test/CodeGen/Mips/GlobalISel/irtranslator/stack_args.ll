@@ -23,11 +23,11 @@ define  i32 @g(i32  %x1, i32 %x2, i32 %x3, i32 %x4, i32 %x5){
   ; MIPS32-NEXT:   $a1 = COPY [[COPY1]](s32)
   ; MIPS32-NEXT:   $a2 = COPY [[COPY2]](s32)
   ; MIPS32-NEXT:   $a3 = COPY [[COPY3]](s32)
-  ; MIPS32-NEXT:   JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
-  ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $v0
+  ; MIPS32-NEXT:   JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $r2
+  ; MIPS32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $r2
   ; MIPS32-NEXT:   ADJCALLSTACKUP 24, 0, implicit-def $sp, implicit $sp
-  ; MIPS32-NEXT:   $v0 = COPY [[COPY5]](s32)
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[COPY5]](s32)
+  ; MIPS32-NEXT:   RetRA implicit $r2
 entry:
   %call = call i32 @f(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i32 %x5)
   ret i32 %call

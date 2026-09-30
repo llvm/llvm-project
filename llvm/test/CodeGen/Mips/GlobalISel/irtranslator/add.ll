@@ -8,8 +8,8 @@ define i32 @add_i32(i32 %x, i32 %y) {
   ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
   ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
   ; MIPS32:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY1]]
-  ; MIPS32:   $v0 = COPY [[ADD]](s32)
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32:   $r2 = COPY [[ADD]](s32)
+  ; MIPS32:   RetRA implicit $r2
 entry:
   %z = add i32 %x, %y
   ret i32 %z

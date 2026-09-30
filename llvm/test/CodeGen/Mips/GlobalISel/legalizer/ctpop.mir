@@ -32,12 +32,12 @@ body:             |
     ; MIPS32-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; MIPS32-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[AND3]], [[C6]]
     ; MIPS32-NEXT: [[LSHR3:%[0-9]+]]:_(s32) = G_LSHR [[MUL]], [[C7]](s32)
-    ; MIPS32-NEXT: $v0 = COPY [[LSHR3]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
+    ; MIPS32-NEXT: $r2 = COPY [[LSHR3]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
     %0:_(s32) = COPY $a0
     %1:_(s32) = G_CTPOP %0(s32)
-    $v0 = COPY %1(s32)
-    RetRA implicit $v0
+    $r2 = COPY %1(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -87,16 +87,16 @@ body:             |
     ; MIPS32-NEXT: [[LSHR7:%[0-9]+]]:_(s32) = G_LSHR [[MUL1]], [[C7]](s32)
     ; MIPS32-NEXT: [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[LSHR7]], [[LSHR3]]
     ; MIPS32-NEXT: [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; MIPS32-NEXT: $v0 = COPY [[ADD4]](s32)
-    ; MIPS32-NEXT: $v1 = COPY [[C8]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0, implicit $v1
+    ; MIPS32-NEXT: $r2 = COPY [[ADD4]](s32)
+    ; MIPS32-NEXT: $r3 = COPY [[C8]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2, implicit $r3
     %1:_(s32) = COPY $a0
     %2:_(s32) = COPY $a1
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
     %3:_(s64) = G_CTPOP %0(s64)
     %4:_(s32), %5:_(s32) = G_UNMERGE_VALUES %3(s64)
-    $v0 = COPY %4(s32)
-    $v1 = COPY %5(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %4(s32)
+    $r3 = COPY %5(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...

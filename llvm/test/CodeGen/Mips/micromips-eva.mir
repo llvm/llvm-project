@@ -189,10 +189,10 @@ body:             |
   bb.2.entry:
     SYNC 0
     %5:gpr32 = ADDiu killed %4, 42
-    $v0 = COPY %5
+    $r2 = COPY %5
     CACHEE %1, 5, 2
     PREFE %1, 5, 2
-    RetRA implicit $v0
+    RetRA implicit $r2
 
 ...
 

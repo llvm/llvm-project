@@ -13,8 +13,8 @@
 # MIPS32: Try combining %0:_(s32) = COPY $a0
 # MIPS32: Try combining %1:_(s32) = COPY $a1
 # MIPS32: Try combining %2:_(s32) = G_ADD %1:_, %0:_
-# MIPS32: Try combining $v0 = COPY %2:_(s32)
-# MIPS32: Try combining RetRA implicit $v0
+# MIPS32: Try combining $r2 = COPY %2:_(s32)
+# MIPS32: Try combining RetRA implicit $r2
 name:            f
 alignment:       4
 tracksRegLiveness: true
@@ -27,12 +27,12 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY1]], [[COPY]]
-    ; MIPS32: $v0 = COPY [[ADD]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[ADD]](s32)
+    ; MIPS32: RetRA implicit $r2
     %0:_(s32) = COPY $a0
     %1:_(s32) = COPY $a1
     %2:_(s32) = G_ADD %1, %0
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...

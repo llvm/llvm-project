@@ -102,7 +102,7 @@ define i32 @load_i32_align1() {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lui $1, %hi(i32_align1)
 ; MIPS32-NEXT:    addiu $1, $1, %lo(i32_align1)
-; MIPS32-NEXT:    # implicit-def: $v0
+; MIPS32-NEXT:    # implicit-def: $r2
 ; MIPS32-NEXT:    lwl $2, 3($1)
 ; MIPS32-NEXT:    lwr $2, 0($1)
 ; MIPS32-NEXT:    jr $ra
@@ -124,7 +124,7 @@ define i32 @load_i32_align2() {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lui $1, %hi(i32_align2)
 ; MIPS32-NEXT:    addiu $1, $1, %lo(i32_align2)
-; MIPS32-NEXT:    # implicit-def: $v0
+; MIPS32-NEXT:    # implicit-def: $r2
 ; MIPS32-NEXT:    lwl $2, 3($1)
 ; MIPS32-NEXT:    lwr $2, 0($1)
 ; MIPS32-NEXT:    jr $ra

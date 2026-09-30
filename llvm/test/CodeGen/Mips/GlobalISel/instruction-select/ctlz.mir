@@ -14,11 +14,11 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32: [[CLZ:%[0-9]+]]:gpr32 = CLZ [[COPY]]
-    ; MIPS32: $v0 = COPY [[CLZ]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[CLZ]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(s32) = COPY $a0
     %1:gprb(s32) = G_CTLZ %0(s32)
-    $v0 = COPY %1(s32)
-    RetRA implicit $v0
+    $r2 = COPY %1(s32)
+    RetRA implicit $r2
 
 ...

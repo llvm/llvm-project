@@ -81,7 +81,7 @@ define i32 @load_i24(ptr %p) {
 define i64 @load_i40(ptr %p) {
 ; BE-LABEL: load_i40:
 ; BE:       # %bb.0:
-; BE-NEXT:    # implicit-def: $v0
+; BE-NEXT:    # implicit-def: $r2
 ; BE-NEXT:    lwl $2, 1($4)
 ; BE-NEXT:    lwr $2, 4($4)
 ; BE-NEXT:    lbu $1, 0($4)
@@ -93,7 +93,7 @@ define i64 @load_i40(ptr %p) {
 ;
 ; LE-LABEL: load_i40:
 ; LE:       # %bb.0:
-; LE-NEXT:    # implicit-def: $v0
+; LE-NEXT:    # implicit-def: $r2
 ; LE-NEXT:    lwl $2, 3($4)
 ; LE-NEXT:    lwr $2, 0($4)
 ; LE-NEXT:    lbu $1, 4($4)
@@ -128,10 +128,10 @@ define i64 @load_i40(ptr %p) {
 define i64 @load_i64(ptr %p) {
 ; BE-LABEL: load_i64:
 ; BE:       # %bb.0:
-; BE-NEXT:    # implicit-def: $v1
+; BE-NEXT:    # implicit-def: $r3
 ; BE-NEXT:    lwl $3, 4($4)
 ; BE-NEXT:    lwr $3, 7($4)
-; BE-NEXT:    # implicit-def: $v0
+; BE-NEXT:    # implicit-def: $r2
 ; BE-NEXT:    lwl $2, 0($4)
 ; BE-NEXT:    lwr $2, 3($4)
 ; BE-NEXT:    jr $ra
@@ -139,10 +139,10 @@ define i64 @load_i64(ptr %p) {
 ;
 ; LE-LABEL: load_i64:
 ; LE:       # %bb.0:
-; LE-NEXT:    # implicit-def: $v0
+; LE-NEXT:    # implicit-def: $r2
 ; LE-NEXT:    lwl $2, 3($4)
 ; LE-NEXT:    lwr $2, 0($4)
-; LE-NEXT:    # implicit-def: $v1
+; LE-NEXT:    # implicit-def: $r3
 ; LE-NEXT:    lwl $3, 7($4)
 ; LE-NEXT:    lwr $3, 4($4)
 ; LE-NEXT:    jr $ra

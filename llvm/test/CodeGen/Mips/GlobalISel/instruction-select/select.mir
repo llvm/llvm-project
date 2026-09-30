@@ -26,8 +26,8 @@ body:             |
     ; MIPS32FP32: [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
     ; MIPS32FP32: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
     ; MIPS32FP32: [[MOVN_I_I:%[0-9]+]]:gpr32 = MOVN_I_I [[COPY1]], [[ANDi]], [[COPY2]]
-    ; MIPS32FP32: $v0 = COPY [[MOVN_I_I]]
-    ; MIPS32FP32: RetRA implicit $v0
+    ; MIPS32FP32: $r2 = COPY [[MOVN_I_I]]
+    ; MIPS32FP32: RetRA implicit $r2
     ; MIPS32FP64-LABEL: name: select_i32
     ; MIPS32FP64: liveins: $a0, $a1, $a2
     ; MIPS32FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
@@ -35,8 +35,8 @@ body:             |
     ; MIPS32FP64: [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
     ; MIPS32FP64: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
     ; MIPS32FP64: [[MOVN_I_I:%[0-9]+]]:gpr32 = MOVN_I_I [[COPY1]], [[ANDi]], [[COPY2]]
-    ; MIPS32FP64: $v0 = COPY [[MOVN_I_I]]
-    ; MIPS32FP64: RetRA implicit $v0
+    ; MIPS32FP64: $r2 = COPY [[MOVN_I_I]]
+    ; MIPS32FP64: RetRA implicit $r2
     %3:gprb(s32) = COPY $a0
     %1:gprb(s32) = COPY $a1
     %2:gprb(s32) = COPY $a2
@@ -44,8 +44,8 @@ body:             |
     %7:gprb(s32) = COPY %3(s32)
     %5:gprb(s32) = G_AND %7, %6
     %4:gprb(s32) = G_SELECT %5(s32), %1, %2
-    $v0 = COPY %4(s32)
-    RetRA implicit $v0
+    $r2 = COPY %4(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -65,8 +65,8 @@ body:             |
     ; MIPS32FP32: [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
     ; MIPS32FP32: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
     ; MIPS32FP32: [[MOVN_I_I:%[0-9]+]]:gpr32 = MOVN_I_I [[COPY1]], [[ANDi]], [[COPY2]]
-    ; MIPS32FP32: $v0 = COPY [[MOVN_I_I]]
-    ; MIPS32FP32: RetRA implicit $v0
+    ; MIPS32FP32: $r2 = COPY [[MOVN_I_I]]
+    ; MIPS32FP32: RetRA implicit $r2
     ; MIPS32FP64-LABEL: name: select_ptr
     ; MIPS32FP64: liveins: $a0, $a1, $a2
     ; MIPS32FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
@@ -74,8 +74,8 @@ body:             |
     ; MIPS32FP64: [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
     ; MIPS32FP64: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
     ; MIPS32FP64: [[MOVN_I_I:%[0-9]+]]:gpr32 = MOVN_I_I [[COPY1]], [[ANDi]], [[COPY2]]
-    ; MIPS32FP64: $v0 = COPY [[MOVN_I_I]]
-    ; MIPS32FP64: RetRA implicit $v0
+    ; MIPS32FP64: $r2 = COPY [[MOVN_I_I]]
+    ; MIPS32FP64: RetRA implicit $r2
     %3:gprb(s32) = COPY $a0
     %1:gprb(p0) = COPY $a1
     %2:gprb(p0) = COPY $a2
@@ -83,8 +83,8 @@ body:             |
     %7:gprb(s32) = COPY %3(s32)
     %5:gprb(s32) = G_AND %7, %6
     %4:gprb(p0) = G_SELECT %5(s32), %1, %2
-    $v0 = COPY %4(p0)
-    RetRA implicit $v0
+    $r2 = COPY %4(p0)
+    RetRA implicit $r2
 
 ...
 ---

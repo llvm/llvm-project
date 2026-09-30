@@ -62,10 +62,10 @@ body:             |
     CFI_INSTRUCTION offset $ra_64, -4
     $a0 = LI16_MM 1
     $a1 = LI16_MM 2
-    JAL_MM @callee13, csr_o32, implicit-def dead $ra, implicit killed $a0, implicit killed $a1, implicit-def $sp, implicit-def $v0
+    JAL_MM @callee13, csr_o32, implicit-def dead $ra, implicit killed $a0, implicit killed $a1, implicit-def $sp, implicit-def $r2
     $ra = LW $sp, 20 :: (load (s32) from %stack.0)
     $sp = ADDiu $sp, 24
-    PseudoReturn undef $ra, implicit $v0
+    PseudoReturn undef $ra, implicit $r2
 
 
 ...

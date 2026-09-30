@@ -14,10 +14,10 @@ define i64 @integer_regs(i64 %x) {
 ; LE-NEXT: [[HI:%[0-9]+]]:_(s32) = COPY $a1
 ; CHECK-NEXT: [[X:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LO]](s32), [[HI]](s32)
 ; CHECK-NEXT: [[RLO:%[0-9]+]]:_(s32), [[RHI:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[X]](s64)
-; BE-NEXT: $v1 = COPY [[RLO]](s32)
-; BE-NEXT: $v0 = COPY [[RHI]](s32)
-; LE-NEXT: $v0 = COPY [[RLO]](s32)
-; LE-NEXT: $v1 = COPY [[RHI]](s32)
+; BE-NEXT: $r3 = COPY [[RLO]](s32)
+; BE-NEXT: $r2 = COPY [[RHI]](s32)
+; LE-NEXT: $r2 = COPY [[RLO]](s32)
+; LE-NEXT: $r3 = COPY [[RHI]](s32)
   ret i64 %x
 }
 
@@ -33,10 +33,10 @@ define i64 @integer_call(i64 %x) {
 ; LE-NEXT: $a2 = COPY [[LO]](s32)
 ; LE-NEXT: $a3 = COPY [[HI]](s32)
 ; CHECK-NEXT: JAL @callee_integer,
-; BE-NEXT: [[RLO:%[0-9]+]]:_(s32) = COPY $v1
-; BE-NEXT: [[RHI:%[0-9]+]]:_(s32) = COPY $v0
-; LE-NEXT: [[RLO:%[0-9]+]]:_(s32) = COPY $v0
-; LE-NEXT: [[RHI:%[0-9]+]]:_(s32) = COPY $v1
+; BE-NEXT: [[RLO:%[0-9]+]]:_(s32) = COPY $r3
+; BE-NEXT: [[RHI:%[0-9]+]]:_(s32) = COPY $r2
+; LE-NEXT: [[RLO:%[0-9]+]]:_(s32) = COPY $r2
+; LE-NEXT: [[RHI:%[0-9]+]]:_(s32) = COPY $r3
 ; CHECK-NEXT: {{%[0-9]+}}:_(s64) = G_MERGE_VALUES [[RLO]](s32), [[RHI]](s32)
   %r = call i64 @callee_integer(i32 1, i64 %x)
   ret i64 %r

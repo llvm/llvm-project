@@ -81,12 +81,12 @@ body:             |
   ; MIPS:   }
   ; MIPS: bb.2.if.then:
   ; MIPS:   INLINEASM &".space 310680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MIPS:   PseudoReturn undef $ra, implicit killed $v0 {
-  ; MIPS:     $v0 = ADDiu $zero, 0
+  ; MIPS:   PseudoReturn undef $ra, implicit killed $r2 {
+  ; MIPS:     $r2 = ADDiu $zero, 0
   ; MIPS:   }
   ; MIPS: bb.3.return:
-  ; MIPS:   PseudoReturn undef $ra, implicit killed $v0 {
-  ; MIPS:     $v0 = ADDiu $zero, 1
+  ; MIPS:   PseudoReturn undef $ra, implicit killed $r2 {
+  ; MIPS:     $r2 = ADDiu $zero, 1
   ; MIPS:   }
   ; PIC-LABEL: name: a
   ; PIC: bb.0.entry:
@@ -112,12 +112,12 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.if.then:
   ; PIC:   INLINEASM &".space 310680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   PseudoReturn undef $ra, implicit killed $v0 {
-  ; PIC:     $v0 = ADDiu $zero, 0
+  ; PIC:   PseudoReturn undef $ra, implicit killed $r2 {
+  ; PIC:     $r2 = ADDiu $zero, 0
   ; PIC:   }
   ; PIC: bb.4.return:
-  ; PIC:   PseudoReturn undef $ra, implicit killed $v0 {
-  ; PIC:     $v0 = ADDiu $zero, 1
+  ; PIC:   PseudoReturn undef $ra, implicit killed $r2 {
+  ; PIC:     $r2 = ADDiu $zero, 1
   ; PIC:   }
   bb.0.entry:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
@@ -128,12 +128,12 @@ body:             |
 
   bb.1.if.then:
     INLINEASM &".space 310680", 1, 12, implicit-def dead early-clobber $at
-    $v0 = ADDiu $zero, 0
-    PseudoReturn undef $ra, implicit killed $v0
+    $r2 = ADDiu $zero, 0
+    PseudoReturn undef $ra, implicit killed $r2
 
   bb.2.return:
-    $v0 = ADDiu $zero, 1
-    PseudoReturn undef $ra, implicit killed $v0
+    $r2 = ADDiu $zero, 1
+    PseudoReturn undef $ra, implicit killed $r2
 
 ...
 ---
@@ -185,12 +185,12 @@ body:             |
   ; MIPS:   }
   ; MIPS: bb.2.if.then:
   ; MIPS:   INLINEASM &".space 310680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; MIPS:   PseudoReturn undef $ra, implicit killed $v0 {
-  ; MIPS:     $v0 = ADDiu $zero, 0
+  ; MIPS:   PseudoReturn undef $ra, implicit killed $r2 {
+  ; MIPS:     $r2 = ADDiu $zero, 0
   ; MIPS:   }
   ; MIPS: bb.3.return:
-  ; MIPS:   PseudoReturn undef $ra, implicit killed $v0 {
-  ; MIPS:     $v0 = ADDiu $zero, 1
+  ; MIPS:   PseudoReturn undef $ra, implicit killed $r2 {
+  ; MIPS:     $r2 = ADDiu $zero, 1
   ; MIPS:   }
   ; PIC-LABEL: name: b
   ; PIC: bb.0.entry:
@@ -216,12 +216,12 @@ body:             |
   ; PIC:   }
   ; PIC: bb.3.if.then:
   ; PIC:   INLINEASM &".space 310680", sideeffect attdialect, clobber, implicit-def dead early-clobber $at
-  ; PIC:   PseudoReturn undef $ra, implicit killed $v0 {
-  ; PIC:     $v0 = ADDiu $zero, 0
+  ; PIC:   PseudoReturn undef $ra, implicit killed $r2 {
+  ; PIC:     $r2 = ADDiu $zero, 0
   ; PIC:   }
   ; PIC: bb.4.return:
-  ; PIC:   PseudoReturn undef $ra, implicit killed $v0 {
-  ; PIC:     $v0 = ADDiu $zero, 1
+  ; PIC:   PseudoReturn undef $ra, implicit killed $r2 {
+  ; PIC:     $r2 = ADDiu $zero, 1
   ; PIC:   }
   bb.0.entry:
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
@@ -232,11 +232,11 @@ body:             |
 
   bb.1.if.then:
     INLINEASM &".space 310680", 1, 12, implicit-def dead early-clobber $at
-    $v0 = ADDiu $zero, 0
-    PseudoReturn undef $ra, implicit killed $v0
+    $r2 = ADDiu $zero, 0
+    PseudoReturn undef $ra, implicit killed $r2
 
   bb.2.return:
-    $v0 = ADDiu $zero, 1
-    PseudoReturn undef $ra, implicit killed $v0
+    $r2 = ADDiu $zero, 1
+    PseudoReturn undef $ra, implicit killed $r2
 
 ...

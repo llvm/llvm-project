@@ -32,7 +32,7 @@ define i8 @f1() {
 ; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32-NEXT:    lbu $2, %lo(a)($1) # <MCInst #[[#MCINST3:]] LBu
-; MIPS32-NEXT:    # <MCOperand Reg:V0>
+; MIPS32-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -44,7 +44,7 @@ define i8 @f1() {
 ; MMR3-NEXT:    jr $ra # <MCInst #[[#MCINST5:]] JR_MM
 ; MMR3-NEXT:    # <MCOperand Reg:RA>>
 ; MMR3-NEXT:    lbu $2, %lo(a)($1) # <MCInst #[[#MCINST6:]] LBu_MM
-; MMR3-NEXT:    # <MCOperand Reg:V0>
+; MMR3-NEXT:    # <MCOperand Reg:R2>
 ; MMR3-NEXT:    # <MCOperand Reg:AT>
 ; MMR3-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -57,7 +57,7 @@ define i8 @f1() {
 ; MIPS32R6-NEXT:    # <MCOperand Reg:ZERO>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R6-NEXT:    lbu $2, %lo(a)($1) # <MCInst #[[#MCINST3:]] LBu
-; MIPS32R6-NEXT:    # <MCOperand Reg:V0>
+; MIPS32R6-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R6-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -67,7 +67,7 @@ define i8 @f1() {
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%hi(a)>>
 ; MMR6-NEXT:    lbu $2, %lo(a)($1) # <MCInst #[[#MCINST6:]] LBu_MM
-; MMR6-NEXT:    # <MCOperand Reg:V0>
+; MMR6-NEXT:    # <MCOperand Reg:R2>
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%lo(a)>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST8:]] JRC16_MM
@@ -97,7 +97,7 @@ define i8 @f1() {
 ; MIPS3-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
 ; MIPS3-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS3-NEXT:    lbu $2, %lo(a)($1) # <MCInst #[[#MCINST3:]] LBu
-; MIPS3-NEXT:    # <MCOperand Reg:V0>
+; MIPS3-NEXT:    # <MCOperand Reg:R2>
 ; MIPS3-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS3-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -125,7 +125,7 @@ define i8 @f1() {
 ; MIPS64-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
 ; MIPS64-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64-NEXT:    lbu $2, %lo(a)($1) # <MCInst #[[#MCINST3:]] LBu
-; MIPS64-NEXT:    # <MCOperand Reg:V0>
+; MIPS64-NEXT:    # <MCOperand Reg:R2>
 ; MIPS64-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -154,7 +154,7 @@ define i8 @f1() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:ZERO_64>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64R6-NEXT:    lbu $2, %lo(a)($1) # <MCInst #[[#MCINST3:]] LBu
-; MIPS64R6-NEXT:    # <MCOperand Reg:V0>
+; MIPS64R6-NEXT:    # <MCOperand Reg:R2>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -166,7 +166,7 @@ define i8 @f1() {
 ; MMR5FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5:]] JR_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:RA>>
 ; MMR5FP64-NEXT:    lbu $2, %lo(a)($1) # <MCInst #[[#MCINST6:]] LBu_MM
-; MMR5FP64-NEXT:    # <MCOperand Reg:V0>
+; MMR5FP64-NEXT:    # <MCOperand Reg:R2>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:AT>
 ; MMR5FP64-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -178,7 +178,7 @@ define i8 @f1() {
 ; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R5FP643-NEXT:    lbu $2, %lo(a)($1) # <MCInst #[[#MCINST3:]] LBu
-; MIPS32R5FP643-NEXT:    # <MCOperand Reg:V0>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -188,7 +188,7 @@ define i8 @f1() {
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%hi(a)>>
 ; MIPS1-PSX-NEXT:    lbu $2, %lo(a)($1) # <MCInst #[[#MCINST3:]] LBu
-; MIPS1-PSX-NEXT:    # <MCOperand Reg:V0>
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:R2>
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%lo(a)>>
 ; MIPS1-PSX-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
@@ -211,7 +211,7 @@ define i32 @f2() {
 ; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32-NEXT:    lb $2, %lo(a)($1) # <MCInst #[[#MCINST14:]] LB
-; MIPS32-NEXT:    # <MCOperand Reg:V0>
+; MIPS32-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -223,7 +223,7 @@ define i32 @f2() {
 ; MMR3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR3-NEXT:    # <MCOperand Reg:RA>>
 ; MMR3-NEXT:    lb $2, %lo(a)($1) # <MCInst #[[#MCINST15:]] LB_MM
-; MMR3-NEXT:    # <MCOperand Reg:V0>
+; MMR3-NEXT:    # <MCOperand Reg:R2>
 ; MMR3-NEXT:    # <MCOperand Reg:AT>
 ; MMR3-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -236,7 +236,7 @@ define i32 @f2() {
 ; MIPS32R6-NEXT:    # <MCOperand Reg:ZERO>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R6-NEXT:    lb $2, %lo(a)($1) # <MCInst #[[#MCINST14:]] LB
-; MIPS32R6-NEXT:    # <MCOperand Reg:V0>
+; MIPS32R6-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R6-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -246,7 +246,7 @@ define i32 @f2() {
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%hi(a)>>
 ; MMR6-NEXT:    lb $2, %lo(a)($1) # <MCInst #[[#MCINST15:]] LB_MM
-; MMR6-NEXT:    # <MCOperand Reg:V0>
+; MMR6-NEXT:    # <MCOperand Reg:R2>
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%lo(a)>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST8]] JRC16_MM
@@ -276,7 +276,7 @@ define i32 @f2() {
 ; MIPS3-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS3-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS3-NEXT:    lb $2, %lo(a)($1) # <MCInst #[[#MCINST14:]] LB
-; MIPS3-NEXT:    # <MCOperand Reg:V0>
+; MIPS3-NEXT:    # <MCOperand Reg:R2>
 ; MIPS3-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS3-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -304,7 +304,7 @@ define i32 @f2() {
 ; MIPS64-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS64-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64-NEXT:    lb $2, %lo(a)($1) # <MCInst #[[#MCINST14:]] LB
-; MIPS64-NEXT:    # <MCOperand Reg:V0>
+; MIPS64-NEXT:    # <MCOperand Reg:R2>
 ; MIPS64-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -333,7 +333,7 @@ define i32 @f2() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:ZERO_64>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64R6-NEXT:    lb $2, %lo(a)($1) # <MCInst #[[#MCINST14:]] LB
-; MIPS64R6-NEXT:    # <MCOperand Reg:V0>
+; MIPS64R6-NEXT:    # <MCOperand Reg:R2>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -345,7 +345,7 @@ define i32 @f2() {
 ; MMR5FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:RA>>
 ; MMR5FP64-NEXT:    lb $2, %lo(a)($1) # <MCInst #[[#MCINST15:]] LB_MM
-; MMR5FP64-NEXT:    # <MCOperand Reg:V0>
+; MMR5FP64-NEXT:    # <MCOperand Reg:R2>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:AT>
 ; MMR5FP64-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -357,7 +357,7 @@ define i32 @f2() {
 ; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R5FP643-NEXT:    lb $2, %lo(a)($1) # <MCInst #[[#MCINST14:]] LB
-; MIPS32R5FP643-NEXT:    # <MCOperand Reg:V0>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:%lo(a)>>
 ;
@@ -367,7 +367,7 @@ define i32 @f2() {
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%hi(a)>>
 ; MIPS1-PSX-NEXT:    lb $2, %lo(a)($1) # <MCInst #[[#MCINST14:]] LB
-; MIPS1-PSX-NEXT:    # <MCOperand Reg:V0>
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:R2>
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%lo(a)>>
 ; MIPS1-PSX-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
@@ -391,7 +391,7 @@ define i16 @f3() {
 ; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32-NEXT:    lhu $2, %lo(b)($1) # <MCInst #[[#MCINST16:]] LHu
-; MIPS32-NEXT:    # <MCOperand Reg:V0>
+; MIPS32-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -403,7 +403,7 @@ define i16 @f3() {
 ; MMR3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR3-NEXT:    # <MCOperand Reg:RA>>
 ; MMR3-NEXT:    lhu $2, %lo(b)($1) # <MCInst #[[#MCINST17:]] LHu_MM
-; MMR3-NEXT:    # <MCOperand Reg:V0>
+; MMR3-NEXT:    # <MCOperand Reg:R2>
 ; MMR3-NEXT:    # <MCOperand Reg:AT>
 ; MMR3-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -416,7 +416,7 @@ define i16 @f3() {
 ; MIPS32R6-NEXT:    # <MCOperand Reg:ZERO>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R6-NEXT:    lhu $2, %lo(b)($1) # <MCInst #[[#MCINST16:]] LHu
-; MIPS32R6-NEXT:    # <MCOperand Reg:V0>
+; MIPS32R6-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R6-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -426,7 +426,7 @@ define i16 @f3() {
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%hi(b)>>
 ; MMR6-NEXT:    lhu $2, %lo(b)($1) # <MCInst #[[#MCINST17:]] LHu_MM
-; MMR6-NEXT:    # <MCOperand Reg:V0>
+; MMR6-NEXT:    # <MCOperand Reg:R2>
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%lo(b)>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST8]] JRC16_MM
@@ -456,7 +456,7 @@ define i16 @f3() {
 ; MIPS3-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS3-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS3-NEXT:    lhu $2, %lo(b)($1) # <MCInst #[[#MCINST16:]] LHu
-; MIPS3-NEXT:    # <MCOperand Reg:V0>
+; MIPS3-NEXT:    # <MCOperand Reg:R2>
 ; MIPS3-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS3-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -484,7 +484,7 @@ define i16 @f3() {
 ; MIPS64-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS64-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64-NEXT:    lhu $2, %lo(b)($1) # <MCInst #[[#MCINST16:]] LHu
-; MIPS64-NEXT:    # <MCOperand Reg:V0>
+; MIPS64-NEXT:    # <MCOperand Reg:R2>
 ; MIPS64-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -513,7 +513,7 @@ define i16 @f3() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:ZERO_64>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64R6-NEXT:    lhu $2, %lo(b)($1) # <MCInst #[[#MCINST16:]] LHu
-; MIPS64R6-NEXT:    # <MCOperand Reg:V0>
+; MIPS64R6-NEXT:    # <MCOperand Reg:R2>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -525,7 +525,7 @@ define i16 @f3() {
 ; MMR5FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:RA>>
 ; MMR5FP64-NEXT:    lhu $2, %lo(b)($1) # <MCInst #[[#MCINST17:]] LHu_MM
-; MMR5FP64-NEXT:    # <MCOperand Reg:V0>
+; MMR5FP64-NEXT:    # <MCOperand Reg:R2>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:AT>
 ; MMR5FP64-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -537,7 +537,7 @@ define i16 @f3() {
 ; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R5FP643-NEXT:    lhu $2, %lo(b)($1) # <MCInst #[[#MCINST16:]] LHu
-; MIPS32R5FP643-NEXT:    # <MCOperand Reg:V0>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -547,7 +547,7 @@ define i16 @f3() {
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%hi(b)>>
 ; MIPS1-PSX-NEXT:    lhu $2, %lo(b)($1) # <MCInst #[[#MCINST16:]] LHu
-; MIPS1-PSX-NEXT:    # <MCOperand Reg:V0>
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:R2>
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%lo(b)>>
 ; MIPS1-PSX-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
@@ -570,7 +570,7 @@ define i32 @f4() {
 ; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32-NEXT:    lh $2, %lo(b)($1) # <MCInst #[[#MCINST18:]] LH
-; MIPS32-NEXT:    # <MCOperand Reg:V0>
+; MIPS32-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -582,7 +582,7 @@ define i32 @f4() {
 ; MMR3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR3-NEXT:    # <MCOperand Reg:RA>>
 ; MMR3-NEXT:    lh $2, %lo(b)($1) # <MCInst #[[#MCINST19:]] LH_MM
-; MMR3-NEXT:    # <MCOperand Reg:V0>
+; MMR3-NEXT:    # <MCOperand Reg:R2>
 ; MMR3-NEXT:    # <MCOperand Reg:AT>
 ; MMR3-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -595,7 +595,7 @@ define i32 @f4() {
 ; MIPS32R6-NEXT:    # <MCOperand Reg:ZERO>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R6-NEXT:    lh $2, %lo(b)($1) # <MCInst #[[#MCINST18:]] LH
-; MIPS32R6-NEXT:    # <MCOperand Reg:V0>
+; MIPS32R6-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R6-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -605,7 +605,7 @@ define i32 @f4() {
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%hi(b)>>
 ; MMR6-NEXT:    lh $2, %lo(b)($1) # <MCInst #[[#MCINST19:]] LH_MM
-; MMR6-NEXT:    # <MCOperand Reg:V0>
+; MMR6-NEXT:    # <MCOperand Reg:R2>
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%lo(b)>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST8]] JRC16_MM
@@ -635,7 +635,7 @@ define i32 @f4() {
 ; MIPS3-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS3-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS3-NEXT:    lh $2, %lo(b)($1) # <MCInst #[[#MCINST18:]] LH
-; MIPS3-NEXT:    # <MCOperand Reg:V0>
+; MIPS3-NEXT:    # <MCOperand Reg:R2>
 ; MIPS3-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS3-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -663,7 +663,7 @@ define i32 @f4() {
 ; MIPS64-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS64-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64-NEXT:    lh $2, %lo(b)($1) # <MCInst #[[#MCINST18:]] LH
-; MIPS64-NEXT:    # <MCOperand Reg:V0>
+; MIPS64-NEXT:    # <MCOperand Reg:R2>
 ; MIPS64-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -692,7 +692,7 @@ define i32 @f4() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:ZERO_64>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64R6-NEXT:    lh $2, %lo(b)($1) # <MCInst #[[#MCINST18:]] LH
-; MIPS64R6-NEXT:    # <MCOperand Reg:V0>
+; MIPS64R6-NEXT:    # <MCOperand Reg:R2>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -704,7 +704,7 @@ define i32 @f4() {
 ; MMR5FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:RA>>
 ; MMR5FP64-NEXT:    lh $2, %lo(b)($1) # <MCInst #[[#MCINST19:]] LH_MM
-; MMR5FP64-NEXT:    # <MCOperand Reg:V0>
+; MMR5FP64-NEXT:    # <MCOperand Reg:R2>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:AT>
 ; MMR5FP64-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -716,7 +716,7 @@ define i32 @f4() {
 ; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R5FP643-NEXT:    lh $2, %lo(b)($1) # <MCInst #[[#MCINST18:]] LH
-; MIPS32R5FP643-NEXT:    # <MCOperand Reg:V0>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:%lo(b)>>
 ;
@@ -726,7 +726,7 @@ define i32 @f4() {
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%hi(b)>>
 ; MIPS1-PSX-NEXT:    lh $2, %lo(b)($1) # <MCInst #[[#MCINST18:]] LH
-; MIPS1-PSX-NEXT:    # <MCOperand Reg:V0>
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:R2>
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%lo(b)>>
 ; MIPS1-PSX-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
@@ -750,7 +750,7 @@ define i32 @f5() {
 ; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST20:]] LW
-; MIPS32-NEXT:    # <MCOperand Reg:V0>
+; MIPS32-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -762,7 +762,7 @@ define i32 @f5() {
 ; MMR3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR3-NEXT:    # <MCOperand Reg:RA>>
 ; MMR3-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST21:]] LW_MM
-; MMR3-NEXT:    # <MCOperand Reg:V0>
+; MMR3-NEXT:    # <MCOperand Reg:R2>
 ; MMR3-NEXT:    # <MCOperand Reg:AT>
 ; MMR3-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -775,7 +775,7 @@ define i32 @f5() {
 ; MIPS32R6-NEXT:    # <MCOperand Reg:ZERO>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R6-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST20:]] LW
-; MIPS32R6-NEXT:    # <MCOperand Reg:V0>
+; MIPS32R6-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R6-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -785,7 +785,7 @@ define i32 @f5() {
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MMR6-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST21:]] LW_MM
-; MMR6-NEXT:    # <MCOperand Reg:V0>
+; MMR6-NEXT:    # <MCOperand Reg:R2>
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST8]] JRC16_MM
@@ -815,7 +815,7 @@ define i32 @f5() {
 ; MIPS3-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS3-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS3-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST20:]] LW
-; MIPS3-NEXT:    # <MCOperand Reg:V0>
+; MIPS3-NEXT:    # <MCOperand Reg:R2>
 ; MIPS3-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS3-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -843,7 +843,7 @@ define i32 @f5() {
 ; MIPS64-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS64-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST20:]] LW
-; MIPS64-NEXT:    # <MCOperand Reg:V0>
+; MIPS64-NEXT:    # <MCOperand Reg:R2>
 ; MIPS64-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -872,7 +872,7 @@ define i32 @f5() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:ZERO_64>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64R6-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST20:]] LW
-; MIPS64R6-NEXT:    # <MCOperand Reg:V0>
+; MIPS64R6-NEXT:    # <MCOperand Reg:R2>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -884,7 +884,7 @@ define i32 @f5() {
 ; MMR5FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:RA>>
 ; MMR5FP64-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST21:]] LW_MM
-; MMR5FP64-NEXT:    # <MCOperand Reg:V0>
+; MMR5FP64-NEXT:    # <MCOperand Reg:R2>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:AT>
 ; MMR5FP64-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -896,7 +896,7 @@ define i32 @f5() {
 ; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R5FP643-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST20:]] LW
-; MIPS32R5FP643-NEXT:    # <MCOperand Reg:V0>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -906,7 +906,7 @@ define i32 @f5() {
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MIPS1-PSX-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST20:]] LW
-; MIPS1-PSX-NEXT:    # <MCOperand Reg:V0>
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:R2>
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MIPS1-PSX-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
@@ -927,13 +927,13 @@ define i64 @f6() {
 ; MIPS32-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MIPS32-NEXT:    lw $3, %lo(c)($1) # <MCInst #[[#MCINST20]] LW
-; MIPS32-NEXT:    # <MCOperand Reg:V1>
+; MIPS32-NEXT:    # <MCOperand Reg:R3>
 ; MIPS32-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32-NEXT:    addiu $2, $zero, 0 # <MCInst #[[#MCINST22:]] ADDiu
-; MIPS32-NEXT:    # <MCOperand Reg:V0>
+; MIPS32-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32-NEXT:    # <MCOperand Reg:ZERO>
 ; MIPS32-NEXT:    # <MCOperand Imm:0>>
 ;
@@ -943,12 +943,12 @@ define i64 @f6() {
 ; MMR3-NEXT:    # <MCOperand Reg:AT>
 ; MMR3-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MMR3-NEXT:    li16 $2, 0 # <MCInst #[[#MCINST23:]] LI16_MM
-; MMR3-NEXT:    # <MCOperand Reg:V0>
+; MMR3-NEXT:    # <MCOperand Reg:R2>
 ; MMR3-NEXT:    # <MCOperand Imm:0>>
 ; MMR3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR3-NEXT:    # <MCOperand Reg:RA>>
 ; MMR3-NEXT:    lw $3, %lo(c)($1) # <MCInst #[[#MCINST21]] LW_MM
-; MMR3-NEXT:    # <MCOperand Reg:V1>
+; MMR3-NEXT:    # <MCOperand Reg:R3>
 ; MMR3-NEXT:    # <MCOperand Reg:AT>
 ; MMR3-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -958,14 +958,14 @@ define i64 @f6() {
 ; MIPS32R6-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R6-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MIPS32R6-NEXT:    lw $3, %lo(c)($1) # <MCInst #[[#MCINST20]] LW
-; MIPS32R6-NEXT:    # <MCOperand Reg:V1>
+; MIPS32R6-NEXT:    # <MCOperand Reg:R3>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R6-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MIPS32R6-NEXT:    jr $ra # <MCInst #[[#MCINST7]] JALR
 ; MIPS32R6-NEXT:    # <MCOperand Reg:ZERO>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R6-NEXT:    addiu $2, $zero, 0 # <MCInst #[[#MCINST22:]] ADDiu
-; MIPS32R6-NEXT:    # <MCOperand Reg:V0>
+; MIPS32R6-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:ZERO>
 ; MIPS32R6-NEXT:    # <MCOperand Imm:0>>
 ;
@@ -975,11 +975,11 @@ define i64 @f6() {
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MMR6-NEXT:    lw $3, %lo(c)($1) # <MCInst #[[#MCINST21]] LW_MM
-; MMR6-NEXT:    # <MCOperand Reg:V1>
+; MMR6-NEXT:    # <MCOperand Reg:R3>
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MMR6-NEXT:    li16 $2, 0 # <MCInst #[[#MCINST23:]] LI16_MM
-; MMR6-NEXT:    # <MCOperand Reg:V0>
+; MMR6-NEXT:    # <MCOperand Reg:R2>
 ; MMR6-NEXT:    # <MCOperand Imm:0>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST8]] JRC16_MM
 ; MMR6-NEXT:    # <MCOperand Reg:RA>>
@@ -1008,7 +1008,7 @@ define i64 @f6() {
 ; MIPS3-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS3-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS3-NEXT:    lwu $2, %lo(c)($1) # <MCInst #[[#MCINST24:]] LWu
-; MIPS3-NEXT:    # <MCOperand Reg:V0_64>
+; MIPS3-NEXT:    # <MCOperand Reg:R2_64>
 ; MIPS3-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS3-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -1036,7 +1036,7 @@ define i64 @f6() {
 ; MIPS64-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS64-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64-NEXT:    lwu $2, %lo(c)($1) # <MCInst #[[#MCINST24:]] LWu
-; MIPS64-NEXT:    # <MCOperand Reg:V0_64>
+; MIPS64-NEXT:    # <MCOperand Reg:R2_64>
 ; MIPS64-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -1065,7 +1065,7 @@ define i64 @f6() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:ZERO_64>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64R6-NEXT:    lwu $2, %lo(c)($1) # <MCInst #[[#MCINST24:]] LWu
-; MIPS64R6-NEXT:    # <MCOperand Reg:V0_64>
+; MIPS64R6-NEXT:    # <MCOperand Reg:R2_64>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -1075,12 +1075,12 @@ define i64 @f6() {
 ; MMR5FP64-NEXT:    # <MCOperand Reg:AT>
 ; MMR5FP64-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MMR5FP64-NEXT:    li16 $2, 0 # <MCInst #[[#MCINST23:]] LI16_MM
-; MMR5FP64-NEXT:    # <MCOperand Reg:V0>
+; MMR5FP64-NEXT:    # <MCOperand Reg:R2>
 ; MMR5FP64-NEXT:    # <MCOperand Imm:0>>
 ; MMR5FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:RA>>
 ; MMR5FP64-NEXT:    lw $3, %lo(c)($1) # <MCInst #[[#MCINST21]] LW_MM
-; MMR5FP64-NEXT:    # <MCOperand Reg:V1>
+; MMR5FP64-NEXT:    # <MCOperand Reg:R3>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:AT>
 ; MMR5FP64-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -1090,13 +1090,13 @@ define i64 @f6() {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MIPS32R5FP643-NEXT:    lw $3, %lo(c)($1) # <MCInst #[[#MCINST20]] LW
-; MIPS32R5FP643-NEXT:    # <MCOperand Reg:V1>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:R3>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R5FP643-NEXT:    addiu $2, $zero, 0 # <MCInst #[[#MCINST22:]] ADDiu
-; MIPS32R5FP643-NEXT:    # <MCOperand Reg:V0>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:R2>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:ZERO>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Imm:0>>
 ;
@@ -1106,13 +1106,13 @@ define i64 @f6() {
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MIPS1-PSX-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST20]] LW
-; MIPS1-PSX-NEXT:    # <MCOperand Reg:V0>
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:R2>
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MIPS1-PSX-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS1-PSX-NEXT:    addiu $3, $zero, 0 # <MCInst #[[#MCINST22:]] ADDiu
-; MIPS1-PSX-NEXT:    # <MCOperand Reg:V1>
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:R3>
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:ZERO>
 ; MIPS1-PSX-NEXT:    # <MCOperand Imm:0>>
 entry:
@@ -1128,14 +1128,14 @@ define i64 @f7() {
 ; MIPS32-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MIPS32-NEXT:    lw $3, %lo(c)($1) # <MCInst #[[#MCINST20]] LW
-; MIPS32-NEXT:    # <MCOperand Reg:V1>
+; MIPS32-NEXT:    # <MCOperand Reg:R3>
 ; MIPS32-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32-NEXT:    sra $2, $3, 31 # <MCInst #[[#MCINST25:]] SRA
-; MIPS32-NEXT:    # <MCOperand Reg:V0>
-; MIPS32-NEXT:    # <MCOperand Reg:V1>
+; MIPS32-NEXT:    # <MCOperand Reg:R2>
+; MIPS32-NEXT:    # <MCOperand Reg:R3>
 ; MIPS32-NEXT:    # <MCOperand Imm:31>>
 ;
 ; MMR3-LABEL: f7:
@@ -1144,14 +1144,14 @@ define i64 @f7() {
 ; MMR3-NEXT:    # <MCOperand Reg:AT>
 ; MMR3-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MMR3-NEXT:    lw $3, %lo(c)($1) # <MCInst #[[#MCINST21]] LW_MM
-; MMR3-NEXT:    # <MCOperand Reg:V1>
+; MMR3-NEXT:    # <MCOperand Reg:R3>
 ; MMR3-NEXT:    # <MCOperand Reg:AT>
 ; MMR3-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MMR3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR3-NEXT:    # <MCOperand Reg:RA>>
 ; MMR3-NEXT:    sra $2, $3, 31 # <MCInst #[[#MCINST26:]] SRA_MM
-; MMR3-NEXT:    # <MCOperand Reg:V0>
-; MMR3-NEXT:    # <MCOperand Reg:V1>
+; MMR3-NEXT:    # <MCOperand Reg:R2>
+; MMR3-NEXT:    # <MCOperand Reg:R3>
 ; MMR3-NEXT:    # <MCOperand Imm:31>>
 ;
 ; MIPS32R6-LABEL: f7:
@@ -1160,15 +1160,15 @@ define i64 @f7() {
 ; MIPS32R6-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R6-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MIPS32R6-NEXT:    lw $3, %lo(c)($1) # <MCInst #[[#MCINST20]] LW
-; MIPS32R6-NEXT:    # <MCOperand Reg:V1>
+; MIPS32R6-NEXT:    # <MCOperand Reg:R3>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R6-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MIPS32R6-NEXT:    jr $ra # <MCInst #[[#MCINST7]] JALR
 ; MIPS32R6-NEXT:    # <MCOperand Reg:ZERO>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R6-NEXT:    sra $2, $3, 31 # <MCInst #[[#MCINST25:]] SRA
-; MIPS32R6-NEXT:    # <MCOperand Reg:V0>
-; MIPS32R6-NEXT:    # <MCOperand Reg:V1>
+; MIPS32R6-NEXT:    # <MCOperand Reg:R2>
+; MIPS32R6-NEXT:    # <MCOperand Reg:R3>
 ; MIPS32R6-NEXT:    # <MCOperand Imm:31>>
 ;
 ; MMR6-LABEL: f7:
@@ -1177,12 +1177,12 @@ define i64 @f7() {
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MMR6-NEXT:    lw $3, %lo(c)($1) # <MCInst #[[#MCINST21]] LW_MM
-; MMR6-NEXT:    # <MCOperand Reg:V1>
+; MMR6-NEXT:    # <MCOperand Reg:R3>
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MMR6-NEXT:    sra $2, $3, 31 # <MCInst #[[#MCINST26:]] SRA_MM
-; MMR6-NEXT:    # <MCOperand Reg:V0>
-; MMR6-NEXT:    # <MCOperand Reg:V1>
+; MMR6-NEXT:    # <MCOperand Reg:R2>
+; MMR6-NEXT:    # <MCOperand Reg:R3>
 ; MMR6-NEXT:    # <MCOperand Imm:31>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST8]] JRC16_MM
 ; MMR6-NEXT:    # <MCOperand Reg:RA>>
@@ -1211,7 +1211,7 @@ define i64 @f7() {
 ; MIPS3-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS3-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS3-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST27:]] LW64
-; MIPS3-NEXT:    # <MCOperand Reg:V0_64>
+; MIPS3-NEXT:    # <MCOperand Reg:R2_64>
 ; MIPS3-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS3-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -1239,7 +1239,7 @@ define i64 @f7() {
 ; MIPS64-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS64-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST27:]] LW64
-; MIPS64-NEXT:    # <MCOperand Reg:V0_64>
+; MIPS64-NEXT:    # <MCOperand Reg:R2_64>
 ; MIPS64-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -1268,7 +1268,7 @@ define i64 @f7() {
 ; MIPS64R6-NEXT:    # <MCOperand Reg:ZERO_64>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:RA_64>>
 ; MIPS64R6-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST27:]] LW64
-; MIPS64R6-NEXT:    # <MCOperand Reg:V0_64>
+; MIPS64R6-NEXT:    # <MCOperand Reg:R2_64>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:AT_64>
 ; MIPS64R6-NEXT:    # <MCOperand Expr:%lo(c)>>
 ;
@@ -1278,14 +1278,14 @@ define i64 @f7() {
 ; MMR5FP64-NEXT:    # <MCOperand Reg:AT>
 ; MMR5FP64-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MMR5FP64-NEXT:    lw $3, %lo(c)($1) # <MCInst #[[#MCINST21]] LW_MM
-; MMR5FP64-NEXT:    # <MCOperand Reg:V1>
+; MMR5FP64-NEXT:    # <MCOperand Reg:R3>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:AT>
 ; MMR5FP64-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MMR5FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:RA>>
 ; MMR5FP64-NEXT:    sra $2, $3, 31 # <MCInst #[[#MCINST26:]] SRA_MM
-; MMR5FP64-NEXT:    # <MCOperand Reg:V0>
-; MMR5FP64-NEXT:    # <MCOperand Reg:V1>
+; MMR5FP64-NEXT:    # <MCOperand Reg:R2>
+; MMR5FP64-NEXT:    # <MCOperand Reg:R3>
 ; MMR5FP64-NEXT:    # <MCOperand Imm:31>>
 ;
 ; MIPS32R5FP643-LABEL: f7:
@@ -1294,14 +1294,14 @@ define i64 @f7() {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MIPS32R5FP643-NEXT:    lw $3, %lo(c)($1) # <MCInst #[[#MCINST20]] LW
-; MIPS32R5FP643-NEXT:    # <MCOperand Reg:V1>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:R3>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:AT>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS32R5FP643-NEXT:    sra $2, $3, 31 # <MCInst #[[#MCINST25:]] SRA
-; MIPS32R5FP643-NEXT:    # <MCOperand Reg:V0>
-; MIPS32R5FP643-NEXT:    # <MCOperand Reg:V1>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:R2>
+; MIPS32R5FP643-NEXT:    # <MCOperand Reg:R3>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Imm:31>>
 ;
 ; MIPS1-PSX-LABEL: f7:
@@ -1310,14 +1310,14 @@ define i64 @f7() {
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%hi(c)>>
 ; MIPS1-PSX-NEXT:    lw $2, %lo(c)($1) # <MCInst #[[#MCINST20]] LW
-; MIPS1-PSX-NEXT:    # <MCOperand Reg:V0>
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:R2>
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:AT>
 ; MIPS1-PSX-NEXT:    # <MCOperand Expr:%lo(c)>>
 ; MIPS1-PSX-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS1-PSX-NEXT:    # <MCOperand Reg:RA>>
 ; MIPS1-PSX-NEXT:    sra $3, $2, 31 # <MCInst #[[#MCINST25:]] SRA
-; MIPS1-PSX-NEXT:    # <MCOperand Reg:V1>
-; MIPS1-PSX-NEXT:    # <MCOperand Reg:V0>
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:R3>
+; MIPS1-PSX-NEXT:    # <MCOperand Reg:R2>
 ; MIPS1-PSX-NEXT:    # <MCOperand Imm:31>>
 entry:
   %0 = load i32, ptr @c

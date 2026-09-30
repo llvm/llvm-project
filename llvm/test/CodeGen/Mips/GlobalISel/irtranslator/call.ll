@@ -15,16 +15,16 @@ define i32 @call_global(i32 %a0, i32 %a1, i32 %x, i32 %y) {
   ; MIPS32:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   $a0 = COPY [[COPY2]](s32)
   ; MIPS32:   $a1 = COPY [[COPY3]](s32)
-  ; MIPS32:   JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $v0
-  ; MIPS32:   [[COPY4:%[0-9]+]]:_(s32) = COPY $v0
+  ; MIPS32:   JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $r2
+  ; MIPS32:   [[COPY4:%[0-9]+]]:_(s32) = COPY $r2
   ; MIPS32:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY4]], [[COPY4]]
-  ; MIPS32:   $v0 = COPY [[ADD]](s32)
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32:   $r2 = COPY [[ADD]](s32)
+  ; MIPS32:   RetRA implicit $r2
   ; MIPS32_PIC-LABEL: name: call_global
   ; MIPS32_PIC: bb.1.entry:
-  ; MIPS32_PIC:   liveins: $a0, $a1, $a2, $a3, $t9, $v0
-  ; MIPS32_PIC:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $v0, $t9
+  ; MIPS32_PIC:   liveins: $a0, $a1, $a2, $a3, $r2, $t9
+  ; MIPS32_PIC:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $t9
   ; MIPS32_PIC:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
   ; MIPS32_PIC:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
   ; MIPS32_PIC:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
@@ -34,12 +34,12 @@ define i32 @call_global(i32 %a0, i32 %a1, i32 %x, i32 %y) {
   ; MIPS32_PIC:   $a0 = COPY [[COPY2]](s32)
   ; MIPS32_PIC:   $a1 = COPY [[COPY3]](s32)
   ; MIPS32_PIC:   $gp = COPY [[ADDu]]
-  ; MIPS32_PIC:   JALRPseudo [[GV]](p0), csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $gp, implicit-def $v0
-  ; MIPS32_PIC:   [[COPY4:%[0-9]+]]:_(s32) = COPY $v0
+  ; MIPS32_PIC:   JALRPseudo [[GV]](p0), csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $gp, implicit-def $r2
+  ; MIPS32_PIC:   [[COPY4:%[0-9]+]]:_(s32) = COPY $r2
   ; MIPS32_PIC:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32_PIC:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY4]], [[COPY4]]
-  ; MIPS32_PIC:   $v0 = COPY [[ADD]](s32)
-  ; MIPS32_PIC:   RetRA implicit $v0
+  ; MIPS32_PIC:   $r2 = COPY [[ADD]](s32)
+  ; MIPS32_PIC:   RetRA implicit $r2
 entry:
   %z = call i32 @f(i32 %x, i32 %y)
   %doublez = add i32 %z, %z
@@ -53,16 +53,16 @@ define internal i32 @f_with_local_linkage(i32 %x, i32 %y) {
   ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
   ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
   ; MIPS32:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY1]], [[COPY]]
-  ; MIPS32:   $v0 = COPY [[ADD]](s32)
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32:   $r2 = COPY [[ADD]](s32)
+  ; MIPS32:   RetRA implicit $r2
   ; MIPS32_PIC-LABEL: name: f_with_local_linkage
   ; MIPS32_PIC: bb.1.entry:
   ; MIPS32_PIC:   liveins: $a0, $a1
   ; MIPS32_PIC:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
   ; MIPS32_PIC:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
   ; MIPS32_PIC:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY1]], [[COPY]]
-  ; MIPS32_PIC:   $v0 = COPY [[ADD]](s32)
-  ; MIPS32_PIC:   RetRA implicit $v0
+  ; MIPS32_PIC:   $r2 = COPY [[ADD]](s32)
+  ; MIPS32_PIC:   RetRA implicit $r2
 entry:
   %add = add i32 %y, %x
   ret i32 %add
@@ -79,16 +79,16 @@ define i32 @call_global_with_local_linkage(i32 %a0, i32 %a1, i32 %x, i32 %y) {
   ; MIPS32:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   $a0 = COPY [[COPY2]](s32)
   ; MIPS32:   $a1 = COPY [[COPY3]](s32)
-  ; MIPS32:   JAL @f_with_local_linkage, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $v0
-  ; MIPS32:   [[COPY4:%[0-9]+]]:_(s32) = COPY $v0
+  ; MIPS32:   JAL @f_with_local_linkage, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $r2
+  ; MIPS32:   [[COPY4:%[0-9]+]]:_(s32) = COPY $r2
   ; MIPS32:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY4]], [[COPY4]]
-  ; MIPS32:   $v0 = COPY [[ADD]](s32)
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32:   $r2 = COPY [[ADD]](s32)
+  ; MIPS32:   RetRA implicit $r2
   ; MIPS32_PIC-LABEL: name: call_global_with_local_linkage
   ; MIPS32_PIC: bb.1.entry:
-  ; MIPS32_PIC:   liveins: $a0, $a1, $a2, $a3, $t9, $v0
-  ; MIPS32_PIC:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $v0, $t9
+  ; MIPS32_PIC:   liveins: $a0, $a1, $a2, $a3, $r2, $t9
+  ; MIPS32_PIC:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $t9
   ; MIPS32_PIC:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
   ; MIPS32_PIC:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
   ; MIPS32_PIC:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
@@ -98,12 +98,12 @@ define i32 @call_global_with_local_linkage(i32 %a0, i32 %a1, i32 %x, i32 %y) {
   ; MIPS32_PIC:   $a0 = COPY [[COPY2]](s32)
   ; MIPS32_PIC:   $a1 = COPY [[COPY3]](s32)
   ; MIPS32_PIC:   $gp = COPY [[ADDu]]
-  ; MIPS32_PIC:   JALRPseudo [[GV]](p0), csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $gp, implicit-def $v0
-  ; MIPS32_PIC:   [[COPY4:%[0-9]+]]:_(s32) = COPY $v0
+  ; MIPS32_PIC:   JALRPseudo [[GV]](p0), csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $gp, implicit-def $r2
+  ; MIPS32_PIC:   [[COPY4:%[0-9]+]]:_(s32) = COPY $r2
   ; MIPS32_PIC:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32_PIC:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY4]], [[COPY4]]
-  ; MIPS32_PIC:   $v0 = COPY [[ADD]](s32)
-  ; MIPS32_PIC:   RetRA implicit $v0
+  ; MIPS32_PIC:   $r2 = COPY [[ADD]](s32)
+  ; MIPS32_PIC:   RetRA implicit $r2
 entry:
   %z = call i32 @f_with_local_linkage(i32 %x, i32 %y)
   %doublez = add i32 %z, %z
@@ -120,11 +120,11 @@ define i32 @call_reg(ptr %f_ptr, i32 %x, i32 %y) {
   ; MIPS32:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32:   $a0 = COPY [[COPY1]](s32)
   ; MIPS32:   $a1 = COPY [[COPY2]](s32)
-  ; MIPS32:   JALRPseudo [[COPY]](p0), csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $v0
-  ; MIPS32:   [[COPY3:%[0-9]+]]:_(s32) = COPY $v0
+  ; MIPS32:   JALRPseudo [[COPY]](p0), csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $r2
+  ; MIPS32:   [[COPY3:%[0-9]+]]:_(s32) = COPY $r2
   ; MIPS32:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-  ; MIPS32:   $v0 = COPY [[COPY3]](s32)
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32:   $r2 = COPY [[COPY3]](s32)
+  ; MIPS32:   RetRA implicit $r2
   ; MIPS32_PIC-LABEL: name: call_reg
   ; MIPS32_PIC: bb.1.entry:
   ; MIPS32_PIC:   liveins: $a0, $a1, $a2
@@ -134,11 +134,11 @@ define i32 @call_reg(ptr %f_ptr, i32 %x, i32 %y) {
   ; MIPS32_PIC:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32_PIC:   $a0 = COPY [[COPY1]](s32)
   ; MIPS32_PIC:   $a1 = COPY [[COPY2]](s32)
-  ; MIPS32_PIC:   JALRPseudo [[COPY]](p0), csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $v0
-  ; MIPS32_PIC:   [[COPY3:%[0-9]+]]:_(s32) = COPY $v0
+  ; MIPS32_PIC:   JALRPseudo [[COPY]](p0), csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $r2
+  ; MIPS32_PIC:   [[COPY3:%[0-9]+]]:_(s32) = COPY $r2
   ; MIPS32_PIC:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-  ; MIPS32_PIC:   $v0 = COPY [[COPY3]](s32)
-  ; MIPS32_PIC:   RetRA implicit $v0
+  ; MIPS32_PIC:   $r2 = COPY [[COPY3]](s32)
+  ; MIPS32_PIC:   RetRA implicit $r2
 entry:
   %call = call i32 %f_ptr(i32 %x, i32 %y)
   ret i32 %call
@@ -179,8 +179,8 @@ define void @call_f_with_void_ret() {
   ; MIPS32:   RetRA
   ; MIPS32_PIC-LABEL: name: call_f_with_void_ret
   ; MIPS32_PIC: bb.1.entry:
-  ; MIPS32_PIC:   liveins: $t9, $v0
-  ; MIPS32_PIC:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $v0, $t9
+  ; MIPS32_PIC:   liveins: $r2, $t9
+  ; MIPS32_PIC:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $t9
   ; MIPS32_PIC:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32_PIC:   [[GV:%[0-9]+]]:gpr32(p0) = G_GLOBAL_VALUE target-flags(mips-got-call) @f_with_void_ret
   ; MIPS32_PIC:   $gp = COPY [[ADDu]]

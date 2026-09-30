@@ -23,12 +23,12 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; MIPS32: [[ZEXTLOAD:%[0-9]+]]:gprb(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.px)
-    ; MIPS32: $v0 = COPY [[ZEXTLOAD]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[ZEXTLOAD]](s32)
+    ; MIPS32: RetRA implicit $r2
     %0:_(p0) = COPY $a0
     %2:_(s32) = G_ZEXTLOAD %0(p0) :: (load (s8) from %ir.px)
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -44,12 +44,12 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; MIPS32: [[ZEXTLOAD:%[0-9]+]]:gprb(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16) from %ir.px)
-    ; MIPS32: $v0 = COPY [[ZEXTLOAD]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[ZEXTLOAD]](s32)
+    ; MIPS32: RetRA implicit $r2
     %0:_(p0) = COPY $a0
     %2:_(s32) = G_ZEXTLOAD %0(p0) :: (load (s16) from %ir.px)
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -66,17 +66,17 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.px)
     ; MIPS32: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 0
-    ; MIPS32: $v0 = COPY [[LOAD]](s32)
-    ; MIPS32: $v1 = COPY [[C]](s32)
-    ; MIPS32: RetRA implicit $v0, implicit $v1
+    ; MIPS32: $r2 = COPY [[LOAD]](s32)
+    ; MIPS32: $r3 = COPY [[C]](s32)
+    ; MIPS32: RetRA implicit $r2, implicit $r3
     %0:_(p0) = COPY $a0
     %5:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.px)
     %6:_(s32) = G_CONSTANT i32 0
     %2:_(s64) = G_MERGE_VALUES %5(s32), %6(s32)
     %3:_(s32), %4:_(s32) = G_UNMERGE_VALUES %2(s64)
-    $v0 = COPY %3(s32)
-    $v1 = COPY %4(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %3(s32)
+    $r3 = COPY %4(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...
 ---
@@ -92,12 +92,12 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; MIPS32: [[SEXTLOAD:%[0-9]+]]:gprb(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.px)
-    ; MIPS32: $v0 = COPY [[SEXTLOAD]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[SEXTLOAD]](s32)
+    ; MIPS32: RetRA implicit $r2
     %0:_(p0) = COPY $a0
     %2:_(s32) = G_SEXTLOAD %0(p0) :: (load (s8) from %ir.px)
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -113,12 +113,12 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; MIPS32: [[SEXTLOAD:%[0-9]+]]:gprb(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s16) from %ir.px)
-    ; MIPS32: $v0 = COPY [[SEXTLOAD]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[SEXTLOAD]](s32)
+    ; MIPS32: RetRA implicit $r2
     %0:_(p0) = COPY $a0
     %2:_(s32) = G_SEXTLOAD %0(p0) :: (load (s16) from %ir.px)
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -138,9 +138,9 @@ body:             |
     ; MIPS32: [[C1:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 0
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY [[C]](s32)
     ; MIPS32: [[ASHR:%[0-9]+]]:gprb(s32) = G_ASHR [[LOAD]], [[COPY1]](s32)
-    ; MIPS32: $v0 = COPY [[LOAD]](s32)
-    ; MIPS32: $v1 = COPY [[ASHR]](s32)
-    ; MIPS32: RetRA implicit $v0, implicit $v1
+    ; MIPS32: $r2 = COPY [[LOAD]](s32)
+    ; MIPS32: $r3 = COPY [[ASHR]](s32)
+    ; MIPS32: RetRA implicit $r2, implicit $r3
     %0:_(p0) = COPY $a0
     %5:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.px)
     %9:_(s32) = G_CONSTANT i32 31
@@ -149,9 +149,9 @@ body:             |
     %7:_(s32) = G_ASHR %5, %8(s32)
     %2:_(s64) = G_MERGE_VALUES %5(s32), %7(s32)
     %3:_(s32), %4:_(s32) = G_UNMERGE_VALUES %2(s64)
-    $v0 = COPY %3(s32)
-    $v1 = COPY %4(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %3(s32)
+    $r3 = COPY %4(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...
 
