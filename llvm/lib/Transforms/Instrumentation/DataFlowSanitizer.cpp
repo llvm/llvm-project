@@ -370,9 +370,11 @@ public:
 /// useful for updating calls of the old function to the new type.
 struct TransformedFunction {
   TransformedFunction(FunctionType *OriginalType, FunctionType *TransformedType,
-                      const std::vector<unsigned> &ArgumentIndexMapping)
+                      const std::vector<unsigned> &ArgumentIndexMapping,
+                      AttributeList &NewParamAttrs)
       : OriginalType(OriginalType), TransformedType(TransformedType),
-        ArgumentIndexMapping(ArgumentIndexMapping) {}
+        ArgumentIndexMapping(ArgumentIndexMapping),
+        NewParamAttrs(NewParamAttrs) {}
 
   // Disallow copies.
   TransformedFunction(const TransformedFunction &) = delete;
@@ -394,6 +396,10 @@ struct TransformedFunction {
   /// from F to F' made the first argument of F into the third argument of F',
   /// then ArgumentIndexMapping[0] will equal 2.
   std::vector<unsigned> ArgumentIndexMapping;
+
+  /// The (extension) attributes that new Shadow and Origin parameters in
+  /// TransformedType should have.
+  AttributeList NewParamAttrs;
 };
 
 /// Given function attributes from a call site for the original function,
@@ -538,7 +544,8 @@ class DataFlowSanitizer {
   bool isInstrumented(const Function *F);
   bool isInstrumented(const GlobalAlias *GA);
   bool isForceZeroLabels(const Function *F);
-  TransformedFunction getCustomFunctionType(FunctionType *T);
+  TransformedFunction getCustomFunctionType(FunctionType *T,
+                                            TargetLibraryInfo &TLI);
   WrapperKind getWrapperKind(Function *F);
   void addGlobalNameSuffix(GlobalValue *GV);
   void buildExternWeakCheckIfNeeded(IRBuilder<> &IRB, Function *F);
@@ -890,8 +897,15 @@ DataFlowSanitizer::DataFlowSanitizer(
   CombineTaintLookupTableNames.insert_range(ClCombineTaintLookupTables);
 }
 
-TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
+TransformedFunction
+DataFlowSanitizer::getCustomFunctionType(FunctionType *T,
+                                         TargetLibraryInfo &TLI) {
   SmallVector<Type *, 4> ArgTypes;
+  AttributeList NewParamAttrs;
+  Attribute::AttrKind ShadowParamExtAttr =
+      TLI.getExtAttrForI8Param(/*Signed=*/false);
+  Attribute::AttrKind OriginParamExtAttr =
+      TLI.getExtAttrForI32Param(/*Signed=*/false);
 
   // Some parameters of the custom function being constructed are
   // parameters of T.  Record the mapping from parameters of T to
@@ -903,8 +917,12 @@ TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
     ArgumentIndexMapping.push_back(ArgTypes.size());
     ArgTypes.push_back(ParamType);
   }
-  for (unsigned I = 0, E = T->getNumParams(); I != E; ++I)
+  for (unsigned I = 0, E = T->getNumParams(); I != E; ++I) {
+    if (ShadowParamExtAttr != Attribute::AttrKind::None)
+      NewParamAttrs = NewParamAttrs.addParamAttribute(*Ctx, ArgTypes.size(),
+                                                      ShadowParamExtAttr);
     ArgTypes.push_back(PrimitiveShadowTy);
+  }
   if (T->isVarArg())
     ArgTypes.push_back(PrimitiveShadowPtrTy);
   Type *RetType = T->getReturnType();
@@ -912,8 +930,12 @@ TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
     ArgTypes.push_back(PrimitiveShadowPtrTy);
 
   if (shouldTrackOrigins()) {
-    for (unsigned I = 0, E = T->getNumParams(); I != E; ++I)
+    for (unsigned I = 0, E = T->getNumParams(); I != E; ++I) {
+      if (OriginParamExtAttr != Attribute::AttrKind::None)
+        NewParamAttrs = NewParamAttrs.addParamAttribute(*Ctx, ArgTypes.size(),
+                                                        OriginParamExtAttr);
       ArgTypes.push_back(OriginTy);
+    }
     if (T->isVarArg())
       ArgTypes.push_back(OriginPtrTy);
     if (!RetType->isVoidTy())
@@ -922,7 +944,7 @@ TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
 
   return TransformedFunction(
       T, FunctionType::get(T->getReturnType(), ArgTypes, T->isVarArg()),
-      ArgumentIndexMapping);
+      ArgumentIndexMapping, NewParamAttrs);
 }
 
 bool DataFlowSanitizer::isZeroShadow(Value *V) {
@@ -3124,10 +3146,6 @@ void DFSanVisitor::addOriginArguments(Function &F, CallBase &CB,
 }
 
 bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
-  Attribute::AttrKind I8ParamExtAttr =
-      DFSF.TLI.getExtAttrForI8Param(/*Signed=*/false);
-  Attribute::AttrKind I32ParamExtAttr =
-      DFSF.TLI.getExtAttrForI32Param(/*Signed=*/false);
   IRBuilder<> IRB(&CB);
   switch (DFSF.DFS.getWrapperKind(&F)) {
   case DataFlowSanitizer::WK_Warning:
@@ -3159,37 +3177,27 @@ bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
 
     const bool ShouldTrackOrigins = DFSF.DFS.shouldTrackOrigins();
     FunctionType *FT = F.getFunctionType();
-    TransformedFunction CustomFn = DFSF.DFS.getCustomFunctionType(FT);
+    TransformedFunction CustomFnTy =
+        DFSF.DFS.getCustomFunctionType(FT, DFSF.TLI);
     std::string CustomFName = ShouldTrackOrigins ? "__dfso_" : "__dfsw_";
     CustomFName += F.getName();
-    FunctionCallee CustomF = DFSF.DFS.Mod->getOrInsertFunction(
-        CustomFName, CustomFn.TransformedType);
-    if (Function *CustomFn = dyn_cast<Function>(CustomF.getCallee())) {
-      CustomFn->copyAttributesFrom(&F);
-
-      // Ensure all narrow integer arguments (both original and added
-      // shadow/origin) have an extension attribute on the function
-      // declaration. If none is present, add the right attribute for zero
-      // extend as all DFSan args are unsigned. TODO: Avoid getting here with
-      // missing attributes in the first place (use TLI/emitLibFunc()?).
-      for (unsigned I = 0, E = CustomFn->arg_size(); I < E; ++I) {
-        Type *ParamTy = CustomFn->getFunctionType()->getParamType(I);
-        if (ParamTy->isIntegerTy() && ParamTy->getIntegerBitWidth() <= 32) {
-          Attribute::AttrKind IntArgAttr = ParamTy->getIntegerBitWidth() == 8
-                                               ? I8ParamExtAttr
-                                               : I32ParamExtAttr;
-          if (IntArgAttr != Attribute::AttrKind::None &&
-              !CustomFn->hasParamAttribute(I, Attribute::ZExt) &&
-              !CustomFn->hasParamAttribute(I, Attribute::SExt) &&
-              !CustomFn->hasParamAttribute(I, Attribute::NoExt)) {
-            CustomFn->addParamAttr(I, IntArgAttr);
-          }
-        }
-      }
+    FunctionCallee CustomFunCallee = DFSF.DFS.Mod->getOrInsertFunction(
+        CustomFName, CustomFnTy.TransformedType);
+    if (Function *CustomFun = dyn_cast<Function>(CustomFunCallee.getCallee())) {
+      // Strange things may occur here: F may have two i64 arguments while
+      // getOrInsertFunction() returns a preexisting Function with those
+      // (first) two args as i8:s. Make sure the extensions of those i8:s
+      // survive copyAttributesFrom() and also add the extensions for the new
+      // parameters.
+      AttributeList CustomAL = CustomFun->getAttributes();
+      CustomFun->copyAttributesFrom(&F);
+      CustomFun->setAttributes(AttributeList::get(
+          CI->getContext(),
+          {CustomFun->getAttributes(), CustomAL, CustomFnTy.NewParamAttrs}));
 
       // Custom functions returning non-void will write to the return label.
       if (!FT->getReturnType()->isVoidTy()) {
-        CustomFn->removeFnAttrs(DFSF.DFS.ReadOnlyNoneAttrs);
+        CustomFun->removeFnAttrs(DFSF.DFS.ReadOnlyNoneAttrs);
       }
     }
 
@@ -3213,35 +3221,15 @@ bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
     // Adds variable arguments.
     append_range(Args, drop_begin(CB.args(), FT->getNumParams()));
 
-    // Combine CallSite attributes with Function declaration attributes.
-    AttributeList CombinedAttrs = CI->getAttributes();
-    for (unsigned I = 0; I < FT->getNumParams(); ++I) {
-      AttrBuilder AttrB(CI->getContext(), F.getAttributes().getParamAttrs(I));
-      if (AttrB.hasAttributes())
-        CombinedAttrs =
-            CombinedAttrs.addParamAttributes(CI->getContext(), I, AttrB);
-    }
-    CallInst *CustomCI = IRB.CreateCall(CustomF, Args);
+    CallInst *CustomCI = IRB.CreateCall(CustomFunCallee, Args);
     CustomCI->setCallingConv(CI->getCallingConv());
-    CustomCI->setAttributes(
-        transformFunctionAttributes(CustomFn, CI->getContext(), CombinedAttrs));
-
-    // Update the parameter attributes of the custom call instruction to
-    // zero extend the shadow parameters. This is required for targets
-    // which consider PrimitiveShadowTy an illegal type.
-    for (unsigned N = 0; N < FT->getNumParams(); N++) {
-      const unsigned ArgNo = ShadowArgStart + N;
-      if (CustomCI->getArgOperand(ArgNo)->getType() ==
-          DFSF.DFS.PrimitiveShadowTy)
-        CustomCI->maybeAddParamAttr(ArgNo, I8ParamExtAttr);
-
-      if (ShouldTrackOrigins) {
-        const unsigned OriginArgNo = OriginArgStart + N;
-        if (CustomCI->getArgOperand(OriginArgNo)->getType() ==
-            DFSF.DFS.OriginTy)
-          CustomCI->maybeAddParamAttr(OriginArgNo, I32ParamExtAttr);
-      }
-    }
+    // Add attributes to the parameters from the original call and Function
+    // and as well those needed for the new parameters.
+    CustomCI->setAttributes(AttributeList::get(
+        CI->getContext(),
+        {transformFunctionAttributes(CustomFnTy, CI->getContext(),
+                                     CI->getAttributes()),
+         F.getAttributes(), CustomFnTy.NewParamAttrs}));
 
     // Loads the return value shadow and origin.
     if (!FT->getReturnType()->isVoidTy()) {
