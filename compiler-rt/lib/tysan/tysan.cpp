@@ -128,12 +128,27 @@ static tysan_type_descriptor *getRootTD(tysan_type_descriptor *TD) {
   return RootTD;
 }
 
+// Currently, Clang's TBAA system does not correctly describe every possible
+// type. For unhandled types, it makes the most conservative choice, emitting
+// omnipotent char. TySan needs to handle this seperately to a real omnipotent
+// char otherwise the user may get false positives. When compiling with TySan
+// enabled, clang will emit a special TBAA type to show that the conservative
+// path has been taken. When the transformation pass finds this TBAA, it will
+// set this global variable. This then allows quick comparison of TDs at
+// runtime.
+static tysan_type_descriptor *__tysan_conservative_tbaa_descriptor = nullptr;
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__tysan_set_conservative_tbaa_descriptor(
+    tysan_type_descriptor *conservativeTBAATD) {
+  __tysan_conservative_tbaa_descriptor = conservativeTBAATD;
+}
+
 // Walk up TDA to see if it reaches TDB.
 static bool walkAliasTree(tysan_type_descriptor *TDA,
                           tysan_type_descriptor *TDB, uptr OffsetA,
                           uptr OffsetB) {
   do {
-    if (TDA == TDB)
+    if (TDA == TDB || TDA == __tysan_conservative_tbaa_descriptor)
       return OffsetA == OffsetB;
 
     if (TDA->Tag == TYSAN_STRUCT_TD) {
@@ -182,7 +197,6 @@ static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
     OffsetA = TDA->Member.Offset;
     TDA = TDA->Member.Base;
   }
-
   return walkAliasTree(TDA, TDB, OffsetA, OffsetB);
 }
 
@@ -213,7 +227,9 @@ static bool isAliasingLegalWithOffset(tysan_type_descriptor *TDA,
 
 static bool isAliasingLegal(tysan_type_descriptor *TDA,
                             tysan_type_descriptor *TDB, uptr OffsetB = 0) {
-  if (TDA == TDB || !TDB || !TDA)
+  if (TDA == TDB || !TDB || !TDA ||
+      TDA == __tysan_conservative_tbaa_descriptor ||
+      TDB == __tysan_conservative_tbaa_descriptor)
     return true;
 
   // Aliasing is legal is the two types have different root nodes.
