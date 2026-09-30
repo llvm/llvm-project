@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/ParentMap.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -149,6 +150,26 @@ static const Expr *getDereferenceExpr(const Stmt *S, bool IsBind=false){
 
 bool DereferenceChecker::suppressReport(CheckerContext &C,
                                         const Expr *E) const {
+  // Intercept C90-style offsetof() macro expansion: &(((T*)0)->m)
+  // The analyzer evaluates the MemberExpr as a FieldRegion on a null base,
+  // triggering checkLocation. We suppress it if the parent operation is
+  // UO_AddrOf.
+  if (const auto *ME = dyn_cast<MemberExpr>(E->IgnoreParenCasts())) {
+    if (ME->isArrow()) {
+      const Expr *Base = ME->getBase()->IgnoreParenCasts();
+      if (const auto *CE = dyn_cast<CastExpr>(Base)) {
+        if (CE->getCastKind() == CK_NullToPointer) {
+          const Stmt *Parent =
+              C.getStackFrame()->getParentMap().getParentIgnoreParenCasts(E);
+          if (const auto *UO = dyn_cast_or_null<UnaryOperator>(Parent)) {
+            if (UO->getOpcode() == UO_AddrOf)
+              return true;
+          }
+        }
+      }
+    }
+  }
+
   // Do not report dereferences on memory that use address space #256, #257,
   // and #258. Those address spaces are used when dereferencing address spaces
   // relative to the GS, FS, and SS segments on x86/x86-64 targets.
@@ -157,7 +178,6 @@ bool DereferenceChecker::suppressReport(CheckerContext &C,
   // are defined as an error unless explicitly defined.
   // See https://clang.llvm.org/docs/LanguageExtensions.html, the section
   // "X86/X86-64 Language Extensions"
-
   QualType Ty = E->getType();
   if (!Ty.hasAddressSpace())
     return false;
