@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 using WebAssembly::SortRegionInfo;
 
@@ -2672,9 +2673,12 @@ bool WebAssemblyCFGStackifyImpl::runOnMachineFunction(MachineFunction &MF) {
                        "********** Function: "
                     << MF.getName() << '\n');
 
-  UsesWasmEH = MF.getFunction().hasPersonalityFn() &&
-               MF.getFunction().getParent()->getExceptionModel() ==
-                   ExceptionHandling::Wasm;
+  // Prefer the "exception-model" module flag, else the TargetOptions default.
+  ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
+  if (EH == ExceptionHandling::Default)
+    EH = MF.getTarget().getExceptionModel();
+  UsesWasmEH =
+      MF.getFunction().hasPersonalityFn() && EH == ExceptionHandling::Wasm;
 
   // Liveness is not tracked for VALUE_STACK physreg.
   MF.getRegInfo().invalidateLiveness();

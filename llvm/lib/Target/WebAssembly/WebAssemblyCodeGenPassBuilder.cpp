@@ -120,17 +120,20 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
   // passes and Emscripten SjLj handling expects all invokes to be lowered
   // before.
-  addFunctionPass(LowerInvokePass(), PMW);
-  // The lower invoke pass may create unreachable code. Remove it in order not
-  // to process dead blocks in setjmp/longjmp handling.
-  addFunctionPass(UnreachableBlockElimPass(), PMW);
+  ExceptionHandling EH = TM.Options.ExceptionModel;
+  if (EH != ExceptionHandling::Emscripten && EH != ExceptionHandling::Wasm) {
+    addFunctionPass(LowerInvokePass(), PMW);
+    // The lower invoke pass may create unreachable code. Remove it in order not
+    // to process dead blocks in setjmp/longjmp handling.
+    addFunctionPass(UnreachableBlockElimPass(), PMW);
+  }
 
   // Handle exceptions and setjmp/longjmp if enabled. Unlike Wasm EH preparation
   // done in WasmEHPrepare pass, Wasm SjLj preparation shares libraries and
   // transformation algorithms with Emscripten SjLj, so we run
   // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
   flushFPMsToMPM(PMW);
-  addModulePass(WebAssemblyLowerEmscriptenEHSjLjPass(), PMW);
+  addModulePass(WebAssemblyLowerEmscriptenEHSjLjPass(EH), PMW);
 
   // Expand indirectbr instructions to switches.
   addFunctionPass(IndirectBrExpandPass(TM), PMW);
@@ -142,7 +145,7 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 }
 
 void WebAssemblyCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
-  addFunctionPass(WasmEHPreparePass(), PMW);
+  addFunctionPass(WasmEHPreparePass(TM.Options.ExceptionModel), PMW);
 
   // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
   // loads and stores are promoted to local.gets/local.sets.
