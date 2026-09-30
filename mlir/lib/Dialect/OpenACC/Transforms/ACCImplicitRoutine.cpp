@@ -49,6 +49,7 @@
 
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -139,6 +140,8 @@ private:
                                           acc::OpenACCSupport &accSupport) {
     LogicalResult result = success();
     op->walk([&](CallOpInterface callOp) {
+      if (acc::isInHostBranch(callOp.getOperation()))
+        return;
       if (!callOp.getCallableForCallee())
         return;
 
@@ -196,6 +199,8 @@ private:
       auto func = symTab.lookup<FunctionOpInterface>(
           currentRoutine.getFuncName().getLeafReference());
       func.walk([&](CallOpInterface callOp) {
+        if (acc::isInHostBranch(callOp.getOperation()))
+          return;
         if (!callOp.getCallableForCallee())
           return;
 

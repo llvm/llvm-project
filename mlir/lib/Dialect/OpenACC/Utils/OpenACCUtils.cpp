@@ -8,8 +8,10 @@
 
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -251,6 +253,7 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   // Check if the defining op is a function
   if (auto func =
           mlir::dyn_cast_if_present<mlir::FunctionOpInterface>(definingOp)) {
+
     // If this symbol is actually an acc routine or a specialized acc routine -
     // then it is expected for it to be offloaded - therefore it is valid.
     if (func->hasDiscardableAttr(mlir::acc::getRoutineInfoAttrName()) ||
@@ -453,6 +456,61 @@ mlir::acc::getDominatingDataClauses(mlir::Operation *computeConstructOp,
   });
 
   return dominatingDataClauses.takeVector();
+}
+
+// OpenACC `acc_device_t` values passed to `acc.on_device`. These differ from
+// `acc::DeviceType`.
+static constexpr int64_t kAccDeviceHost = 2;
+static constexpr int64_t kAccDeviceNotHost = 3;
+
+static mlir::Value getIfCondition(mlir::Operation *op) {
+  if (auto ifOp = mlir::dyn_cast<mlir::scf::IfOp>(op))
+    return ifOp.getCondition();
+
+  if (!mlir::isa<mlir::RegionBranchOpInterface>(op) ||
+      mlir::isa<mlir::LoopLikeOpInterface>(op))
+    return {};
+  if (op->getNumOperands() != 1 || op->getNumRegions() != 2 ||
+      !op->getOperand(0).getType().isSignlessInteger(1))
+    return {};
+  return op->getOperand(0);
+}
+
+bool mlir::acc::isInHostBranch(mlir::Operation *op) {
+  for (mlir::Operation *parent = op->getParentOp();
+       parent &&
+       !mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::ComputeRegionOp,
+                  mlir::FunctionOpInterface>(parent);
+       parent = parent->getParentOp()) {
+    mlir::Value condition = getIfCondition(parent);
+    if (!condition)
+      continue;
+
+    // Include the condition's defining operation so a direct `acc.on_device`
+    // result is part of the slice.
+    mlir::BackwardSliceOptions sliceOptions;
+    sliceOptions.inclusive = true;
+    sliceOptions.omitBlockArguments = true;
+    llvm::SetVector<mlir::Operation *> slice;
+    if (failed(mlir::getBackwardSlice(condition, &slice, sliceOptions)))
+      continue;
+
+    for (mlir::Operation *sliceOp : slice) {
+      auto onDeviceOp = mlir::dyn_cast<mlir::acc::OnDeviceOp>(sliceOp);
+      if (!onDeviceOp)
+        continue;
+
+      int64_t deviceTypeValue =
+          *mlir::getConstantIntValue(onDeviceOp.getDeviceType());
+
+      bool inThen = parent->getRegion(0).isAncestor(op->getParentRegion());
+      bool inElse = parent->getRegion(1).isAncestor(op->getParentRegion());
+      if ((deviceTypeValue == kAccDeviceHost && inThen) ||
+          (deviceTypeValue == kAccDeviceNotHost && inElse))
+        return true;
+    }
+  }
+  return false;
 }
 
 mlir::remark::detail::InFlightRemark

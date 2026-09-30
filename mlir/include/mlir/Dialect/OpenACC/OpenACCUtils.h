@@ -140,6 +140,13 @@ getDominatingDataClauses(mlir::Operation *computeConstructOp,
                          mlir::DominanceInfo &domInfo,
                          mlir::PostDominanceInfo &postDomInfo);
 
+/// Returns true if `op` is nested in a branch that executes only on the host.
+///
+/// The branch is the `then` of a condition equivalent to
+/// `acc.on_device(acc_device_host)`, or the `else` of a condition equivalent
+/// to `acc.on_device(acc_device_not_host)`.
+bool isInHostBranch(mlir::Operation *op);
+
 /// Emit an OpenACC remark with lazy message generation.
 ///
 /// The messageFn is only invoked if remarks are enabled, allowing callers

@@ -299,3 +299,52 @@ module {
     return
   }
 }
+
+// -----
+
+// Calls in a host-only branch of acc.on_device do not get an implicit routine.
+// acc_device_host = 2: the then branch is host-only.
+// acc_device_not_host = 3: the else branch is host-only.
+module {
+  func.func @host_then() {
+    return
+  }
+  func.func @device_else() {
+    return
+  }
+  func.func @device_then() {
+    return
+  }
+  func.func @host_else() {
+    return
+  }
+  func.func @test_host_branch_in_compute() {
+    %host = arith.constant 2 : i32
+    %not_host = arith.constant 3 : i32
+    %on_host = acc.on_device %host : i32 -> i1
+    %on_not_host = acc.on_device %not_host : i32 -> i1
+    acc.serial {
+      scf.if %on_host {
+        func.call @host_then() : () -> ()
+      } else {
+        func.call @device_else() : () -> ()
+      }
+      scf.if %on_not_host {
+        func.call @device_then() : () -> ()
+      } else {
+        func.call @host_else() : () -> ()
+      }
+      acc.yield
+    }
+    return
+  }
+}
+
+// CHECK-NOT: acc.routine @{{.*}} func(@host_then)
+// CHECK-NOT: acc.routine @{{.*}} func(@host_else)
+// CHECK: acc.routine @acc_routine_0 func(@device_else) implicit
+// CHECK: func.func @device_else() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>}
+// CHECK: acc.routine @acc_routine_1 func(@device_then) implicit
+// CHECK: func.func @device_then() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_1]>}
+// CHECK-NOT: acc.routine @{{.*}} func(@host_then)
+// CHECK-NOT: acc.routine @{{.*}} func(@host_else)
