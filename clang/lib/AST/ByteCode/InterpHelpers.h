@@ -126,9 +126,10 @@ static inline llvm::RoundingMode getRoundingMode(FPOptions FPO) {
 }
 
 inline bool Invalid(InterpState &S, CodePtr OpPC) {
-  const SourceLocation &Loc = S.Current->getLocation(OpPC);
-  S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr)
-      << S.Current->getRange(OpPC);
+  if (S.diagnosing())
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_invalid_subexpr_in_const_expr)
+        << S.Current->getRange(OpPC);
   return false;
 }
 
