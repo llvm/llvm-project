@@ -53,6 +53,7 @@ add_libc_test(
     dir_scan_impl_test.cpp
   DEPENDS
     libc.hdr.types.struct_dirent
+    libc.src.__support.CPP.limits
     libc.src.__support.File.dir_scan_impl
     libc.src.__support.error_or
     libc.src.dirent.alphasort

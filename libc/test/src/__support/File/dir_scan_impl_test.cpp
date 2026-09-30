@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/types/struct_dirent.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/File/dir_scan_impl.h"
 #include "src/__support/error_or.h"
 #include "src/dirent/alphasort.h"
@@ -23,7 +24,8 @@ struct MockDirTestSetup {
   int read_errno_val = 0;
   int open_errno_val = 0;
   // how many successful reads until it fails.
-  size_t read_fails_at = static_cast<size_t>(-1); // Don't fail by default
+  size_t read_fails_at =
+      cpp::numeric_limits<size_t>::max(); // Don't fail by default
   const char *test_files[5] = {".", "..", "b.txt", "a.md", "c.pdf"};
   size_t test_files_count = sizeof(test_files) / sizeof(test_files[0]);
 };

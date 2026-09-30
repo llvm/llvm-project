@@ -80,7 +80,7 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
       // Overflow check
       if (new_capacity >
           cpp::numeric_limits<size_t>::max() / sizeof(struct dirent *)) {
-        error_code = EOVERFLOW;
+        error_code = ENOMEM;
         break;
       }
 
