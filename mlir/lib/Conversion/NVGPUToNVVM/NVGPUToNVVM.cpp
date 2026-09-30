@@ -847,7 +847,7 @@ struct NVGPUMBarrierInitLowering
     Value barrier = getMbarrierPtr(b, mbarrierType, adaptor.getBarriers(),
                                    adaptor.getMbarId(), rewriter);
     Value count = truncToI32(b, adaptor.getCount());
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count,
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count, 0,
                                                       adaptor.getPredicate());
     return success();
   }
@@ -864,7 +864,7 @@ struct NVGPUMBarrierArriveLowering
     Value barrier =
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, barrier);
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, barrier, Value{});
     return success();
   }
 };

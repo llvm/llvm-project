@@ -693,6 +693,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::BR_CC, VT, Expand);
   }
 
+  setOperationAction(ISD::SDIVREM, {MVT::i32, MVT::i64}, Expand);
+  setOperationAction(ISD::UDIVREM, {MVT::i32, MVT::i64}, Expand);
+
   // We don't want ops like FMINIMUM or UMAX to be lowered to SETCC+VSELECT.
   setOperationAction(ISD::VSELECT, {MVT::v2f32, MVT::v2i32}, Expand);
 
@@ -712,6 +715,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::SRA_PARTS, MVT::i64  , Custom);
   setOperationAction(ISD::SRL_PARTS, MVT::i64  , Custom);
 
+  if (STI.hasCLMAD())
+    setOperationAction({ISD::CLMUL, ISD::CLMULH}, MVT::i64, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
 
@@ -1601,10 +1606,13 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Where the label is to be used as the last arg of the call instruction.
   // We record the call site here and emit all prototypes at the
   // start of the function in the AsmPrinter.
-  if (IsIndirectCall)
-    DAG.getMachineFunction()
-        .getInfo<NVPTXMachineFunctionInfo>()
-        ->addCallPrototype(UniqueCallSite, CB);
+  SDValue Proto = GetI32(0);
+  if (IsIndirectCall) {
+    auto *ProtoSymbol = DAG.getMachineFunction()
+                            .getInfo<NVPTXMachineFunctionInfo>()
+                            ->addCallPrototype(CB, DAG.getMachineFunction());
+    Proto = DAG.getMCSymbol(ProtoSymbol, MVT::i32);
+  }
 
   const bool IsUnknownIntrinsic =
       CalleeF && CalleeF->isIntrinsic() &&
@@ -1617,7 +1625,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         dl.getDebugLoc()));
   }
 
-  const unsigned Proto = IsIndirectCall ? UniqueCallSite : 0;
   const unsigned NumArgs =
       std::min<unsigned>(CLI.NumFixedArgs + 1, Args.size());
   /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
@@ -1626,7 +1633,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const SDValue Call = DAG.getNode(
       NVPTXISD::CALL, dl, MVT::Other,
       {CallToken, GetI32(CLI.IsConvergent), GetI32(IsIndirectCall),
-       GetI32(Ins.empty() ? 0 : 1), GetI32(NumArgs), Callee, GetI32(Proto)});
+       GetI32(Ins.empty() ? 0 : 1), GetI32(NumArgs), Callee, Proto});
 
   SmallVector<SDValue, 16> LoadChains{Call};
   SmallVector<SDValue, 16> ProxyRegOps;
@@ -4419,7 +4426,8 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b4x16_p64:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b6x16_p32:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b4x16_p64:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_s8_s4: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v4i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4462,7 +4470,8 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b4x16_p64:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b6x16_p32: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_s8_s4: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4567,7 +4576,8 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b4x16_p64:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b6x16_p32:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b4x16_p64:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b6x16_p32: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_s8_s4: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v2i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4742,6 +4752,20 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
 
+  case Intrinsic::nvvm_st_bulk: {
+    Value *Dst = I.getArgOperand(0);
+    Value *Val = I.getArgOperand(2);
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::getVT(Val->getType());
+    Info.ptrVal = Dst;
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    Info.size = MemoryLocation::UnknownSize;
+    Infos.push_back(Info);
+    return;
+  }
+
   case Intrinsic::nvvm_prefetch_tensormap: {
     auto &DL = I.getDataLayout();
     Info.opc = ISD::INTRINSIC_VOID;
@@ -4751,6 +4775,28 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.flags =
         MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable;
     Info.align.reset();
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_mbarrier_init: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align = Align(8);
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_mbarrier_check_layout: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::i64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align = Align(8);
     Infos.push_back(Info);
     return;
   }
@@ -6325,37 +6371,6 @@ static SDValue PerformFMinMaxCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue PerformREMCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 CodeGenOptLevel OptLevel) {
-  assert(N->getOpcode() == ISD::SREM || N->getOpcode() == ISD::UREM);
-
-  // Don't do anything at less than -O2.
-  if (OptLevel < CodeGenOptLevel::Default)
-    return SDValue();
-
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  bool IsSigned = N->getOpcode() == ISD::SREM;
-  unsigned DivOpc = IsSigned ? ISD::SDIV : ISD::UDIV;
-
-  const SDValue &Num = N->getOperand(0);
-  const SDValue &Den = N->getOperand(1);
-
-  for (const SDNode *U : Num->users()) {
-    if (U->getOpcode() == DivOpc && U->getOperand(0) == Num &&
-        U->getOperand(1) == Den) {
-      // Num % Den -> Num - (Num / Den) * Den
-      return DAG.getNode(ISD::SUB, DL, VT, Num,
-                         DAG.getNode(ISD::MUL, DL, VT,
-                                     DAG.getNode(DivOpc, DL, VT, Num, Den),
-                                     Den));
-    }
-  }
-  return SDValue();
-}
-
 // sext (mul.iN nsw x, y)     => mul.wide.sN x, y
 // zext (mul.iN nuw x, y)     => mul.wide.uN x, y
 // sext (shl.iN nsw x, const) => mul.wide.sN x, (1 << const)
@@ -6894,24 +6909,22 @@ static SDValue PerformSELECTShiftCombine(SDNode *N,
 
   // Match logical shifts where the shift amount in the guard matches the shift
   // amount in the operation.
-  auto LogicalShift =
-      m_AllOf(m_Value(ShiftOp),
-              m_AnyOf(m_Srl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt))),
-                      m_Shl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt)))));
+  auto LogicalShift = m_Value(
+      ShiftOp, m_AnyOf(m_Srl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt))),
+                       m_Shl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt)))));
 
   // shift_amt > BitWidth-1 ? 0 : shift_op
-  bool MatchedUGT =
-      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
-                                   m_SpecificInt(APInt(BitWidth, BitWidth - 1)),
-                                   m_SpecificCondCode(ISD::SETUGT)),
-                           m_Zero(), LogicalShift));
+  bool MatchedUGT = sd_match(
+      N, m_Select(m_SpecificSetCC(ISD::SETUGT, m_Value(ShiftAmt),
+                                  m_SpecificInt(APInt(BitWidth, BitWidth - 1))),
+                  m_Zero(), LogicalShift));
   // shift_amt < BitWidth ? shift_op : 0
   bool MatchedULT =
       !MatchedUGT &&
-      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
-                                   m_SpecificInt(APInt(BitWidth, BitWidth)),
-                                   m_SpecificCondCode(ISD::SETULT)),
-                           LogicalShift, m_Zero()));
+      sd_match(
+          N, m_Select(m_SpecificSetCC(ISD::SETULT, m_Value(ShiftAmt),
+                                      m_SpecificInt(APInt(BitWidth, BitWidth))),
+                      LogicalShift, m_Zero()));
 
   if (!MatchedUGT && !MatchedULT)
     return SDValue();
@@ -7361,9 +7374,6 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformSETCCCombine(N, DCI, STI);
   case ISD::SHL:
     return PerformSHLCombine(N, DCI, OptLevel);
-  case ISD::SREM:
-  case ISD::UREM:
-    return PerformREMCombine(N, DCI, OptLevel);
   case ISD::STORE:
   case NVPTXISD::StoreV2:
   case NVPTXISD::StoreV4:

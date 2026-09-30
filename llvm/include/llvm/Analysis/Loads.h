@@ -28,11 +28,13 @@ class DataLayout;
 class DominatorTree;
 class Instruction;
 class LoadInst;
+struct LoadStoreInstProperties;
 class Loop;
 class MemoryLocation;
 class SCEV;
 class ScalarEvolution;
 class SCEVPredicate;
+class StoreInst;
 template <typename T> class SmallVectorImpl;
 class TargetLibraryInfo;
 
@@ -69,11 +71,11 @@ LLVM_ABI bool isDereferenceablePointer(const Value *V, const APInt &Size,
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///
-/// If SQ.CxtI is specified this method performs context-sensitive analysis
-/// and returns true if it is safe to load immediately before SQ.CxtI.
+/// If SQ.CtxI is specified this method performs context-sensitive analysis
+/// and returns true if it is safe to load immediately before SQ.CtxI.
 ///
 /// If it is not obviously safe to load from the specified pointer, we do a
-/// quick local scan of the basic block containing SQ.CxtI, to determine if
+/// quick local scan of the basic block containing SQ.CtxI, to determine if
 /// the address is already accessed.
 LLVM_ABI bool isSafeToLoadUnconditionally(Value *V, Align Alignment,
                                           const APInt &Size,
@@ -108,11 +110,11 @@ isReadOnlyLoop(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///
-/// If SQ.CxtI is specified this method performs context-sensitive analysis
-/// and returns true if it is safe to load immediately before SQ.CxtI.
+/// If SQ.CtxI is specified this method performs context-sensitive analysis
+/// and returns true if it is safe to load immediately before SQ.CtxI.
 ///
 /// If it is not obviously safe to load from the specified pointer, we do a
-/// quick local scan of the basic block containing SQ.CxtI, to determine if
+/// quick local scan of the basic block containing SQ.CtxI, to determine if
 /// the address is already accessed.
 LLVM_ABI bool isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
                                           const SimplifyQuery &SQ);
@@ -165,6 +167,16 @@ LLVM_ABI Value *
 FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA, bool *IsLoadCSE,
                          unsigned MaxInstsToScan = DefMaxInstsToScan);
 
+/// Check whether \p SI, which may alias \p MemLoc, can be safely skipped.
+/// This is possible when \p SI does only MustAlias or NoAlias \p MemLoc (no
+/// partial overlap possible), and it stores the value \p MemLoc currently
+/// holds (loaded before the store and not modified in between).
+LLVM_ABI bool isStorePreservingMemoryLocation(const StoreInst *SI,
+                                              const MemoryLocation &MemLoc,
+                                              Align MemLocAlign,
+                                              BatchAAResults &AA,
+                                              unsigned ScanLimit);
+
 /// Scan backwards to see if we have the value of the given pointer available
 /// locally within a small number of instructions.
 ///
@@ -174,9 +186,7 @@ FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA, bool *IsLoadCSE,
 ///
 /// \param Loc The location we want the load and store to originate from.
 /// \param AccessTy The access type of the pointer.
-/// \param AtLeastAtomic Are we looking for at-least an atomic load/store ? In
-/// case it is false, we can return an atomic or non-atomic load or store. In
-/// case it is true, we need to return an atomic load or store.
+/// \param AccessProps The properties of the load we want to replace.
 /// \param ScanBB The basic block to scan.
 /// \param [in,out] ScanFrom The location to start scanning from. When this
 /// function returns, it points at the last instruction scanned.
@@ -188,10 +198,12 @@ FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA, bool *IsLoadCSE,
 /// location in memory, as opposed to the value operand of a store.
 ///
 /// \returns The found value, or nullptr if no value is found.
-LLVM_ABI Value *findAvailablePtrLoadStore(
-    const MemoryLocation &Loc, Type *AccessTy, bool AtLeastAtomic,
-    BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom, unsigned MaxInstsToScan,
-    BatchAAResults *AA, bool *IsLoadCSE, unsigned *NumScanedInst);
+LLVM_ABI Value *
+findAvailablePtrLoadStore(const MemoryLocation &Loc, Type *AccessTy,
+                          const LoadStoreInstProperties &AccessProps,
+                          BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom,
+                          unsigned MaxInstsToScan, BatchAAResults *AA,
+                          bool *IsLoadCSE, unsigned *NumScanedInst);
 
 /// Returns true if a pointer value \p From can be replaced with another pointer
 /// value \To if they are deemed equal through some means (e.g. information from

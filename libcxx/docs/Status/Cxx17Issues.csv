@@ -177,7 +177,7 @@
 "[LWG2724](https://wg21.link/LWG2724)","The protected virtual member functions of memory_resource should be private","2016-06 (Oulu)","{{Complete}}","16","[#103427](https://github.com/llvm/llvm-project/issues/103427)",""
 "[LWG2725](https://wg21.link/LWG2725)","filesystem::exists(const path&, error_code&) error reporting","2016-06 (Oulu)","{{Complete}}","","[#103428](https://github.com/llvm/llvm-project/issues/103428)",""
 "[LWG2726](https://wg21.link/LWG2726)","`[recursive_]directory_iterator::increment(error_code&)` is underspecified","2016-06 (Oulu)","{{Complete}}","","[#103429](https://github.com/llvm/llvm-project/issues/103429)",""
-"[LWG2727](https://wg21.link/LWG2727)","Parallel algorithms with constexpr specifier","2016-06 (Oulu)","","","[#99968](https://github.com/llvm/llvm-project/issues/99968)",""
+"[LWG2727](https://wg21.link/LWG2727)","Parallel algorithms with constexpr specifier","2016-06 (Oulu)","{{Complete}}","24","[#99968](https://github.com/llvm/llvm-project/issues/99968)",""
 "[LWG2728](https://wg21.link/LWG2728)","status(p).permissions() and symlink_status(p).permissions() are not specified","2016-06 (Oulu)","{{Complete}}","","[#103430](https://github.com/llvm/llvm-project/issues/103430)",""
 "","","","","","",""
 "[LWG2062](https://wg21.link/LWG2062)","Effect contradictions w/o no-throw guarantee of std::function swaps","2016-11 (Issaquah)","{{Complete}}","","[#103431](https://github.com/llvm/llvm-project/issues/103431)",""

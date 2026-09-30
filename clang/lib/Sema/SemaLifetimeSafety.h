@@ -687,8 +687,6 @@ private:
       const auto *FD = CE->getDirectCallee();
       if (!FD)
         return "result of call";
-      if (FD->isOverloadedOperator() || isa<CXXConversionDecl>(FD))
-        return "expression";
       std::string Name;
       llvm::raw_string_ostream OS(Name);
       FD->getNameForDiagnostic(OS, S.getPrintingPolicy(),

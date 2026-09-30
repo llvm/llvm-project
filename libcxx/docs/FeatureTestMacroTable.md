@@ -257,7 +257,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_integer_sequence`                           | `202511L`       |
 | `__cpp_lib_is_sufficiently_aligned`                    | `202411L`       |
 | `__cpp_lib_is_virtual_base_of`                         | `202406L`       |
-| `__cpp_lib_is_within_lifetime`                         | `202306L`       |
+| `__cpp_lib_is_within_lifetime`                         | `202603L`       |
 | `__cpp_lib_linalg`                                     | *unimplemented* |
 | `__cpp_lib_mdspan`                                     | `202406L`       |
 | `__cpp_lib_not_fn`                                     | `202306L`       |
@@ -288,6 +288,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_type_order`                                 | `202506L`       |
 | `__cpp_lib_variant`                                    | `202306L`       |
 | **C++29**                                              |                 |
+| `__cpp_lib_bitops`                                     | `202606L`       |
 | `__cpp_lib_expected`                                   | `202606L`       |
 | `__cpp_lib_map_lookup`                                 | *unimplemented* |
 | `__cpp_lib_mdspan_copy`                                | *unimplemented* |
@@ -297,4 +298,3 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_thread_attributes`                          | *unimplemented* |
 | `__cpp_lib_view_interface`                             | `202606L`       |
 :::
-
