@@ -2337,9 +2337,18 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
 
   // Find coroutines for processing.
   SmallVector<LazyCallGraph::Node *> Coroutines;
-  for (LazyCallGraph::Node &N : C)
-    if (N.getFunction().isPresplitCoroutine())
-      Coroutines.push_back(&N);
+  for (LazyCallGraph::Node &N : C) {
+    Function &F = N.getFunction();
+    if (!F.isPresplitCoroutine())
+      continue;
+    if (SplitMode == Mode::RetconOnly &&
+        !any_of(instructions(F), [](Instruction &I) {
+          auto *Begin = dyn_cast<CoroBeginInst>(&I);
+          return Begin && isa<AnyCoroIdRetconInst>(Begin->getId());
+        }))
+      continue;
+    Coroutines.push_back(&N);
+  }
 
   if (Coroutines.empty() && PrepareFns.empty())
     return PreservedAnalyses::all();
