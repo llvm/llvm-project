@@ -98,6 +98,7 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
     return OffloadArch::getNVPTX(NV);
   if (llvm::AMDGPU::GPUKind AK = llvm::AMDGPU::parseArchAMDGCN(S))
     return OffloadArch::getAMDGPU(AK);
+  // TODO test that the operator bool causes this to fail if invalid
   if (llvm::IntelGPU::IGCATarget IT = llvm::IntelGPU::parseIGCATarget(S))
     return OffloadArch::getIntelIGCA(IT);
   return OffloadArch::getUnknown();

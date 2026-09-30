@@ -21,7 +21,6 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetOptions.h"
@@ -55,6 +54,7 @@ class DiagnosticsEngine;
 class LangOptions;
 class CodeGenOptions;
 class MacroBuilder;
+class OffloadArch;
 
 /// Contains information gathered from parsing the contents of TargetAttr.
 struct ParsedTargetAttr {
@@ -1419,9 +1419,7 @@ public:
 
   /// Returns an OffloadArch if targeting an offload device, otherwise return
   /// Unused.
-  virtual OffloadArch getOffloadArch() const {
-    return OffloadArch::getUnused();
-  }
+  virtual OffloadArch getOffloadArch() const;
 
   virtual ParsedTargetAttr parseTargetAttr(StringRef Str) const;
 
