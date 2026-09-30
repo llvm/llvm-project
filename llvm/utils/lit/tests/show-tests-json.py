@@ -16,7 +16,6 @@ from lit.main import build_test_inventory
 
 
 INPUTS = os.path.join(os.path.dirname(__file__), "Inputs")
-LIT = os.path.join(os.path.dirname(__file__), "..", "lit.py")
 SUITE = os.path.join(INPUTS, "show-tests-json")
 
 
@@ -25,7 +24,7 @@ def run_lit(*args):
     for variable in ("LIT_OPTS", "LIT_XFAIL", "LIT_XFAIL_NOT", "LIT_UNSUPPORTED"):
         env.pop(variable, None)
     return subprocess.run(
-        [sys.executable, LIT, *args],
+        [sys.executable, "-c", "from lit.main import main; main()", *args],
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
