@@ -117,13 +117,13 @@ void D::y() {}
 // CIR-COMMON-SAME: ]> : !cir.array<!cir.ptr<!u8i> x 7> align(8)
 
 // LLVM-COMMON:      @_ZTT1D = constant [7 x ptr] [
-// LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 24),
-// LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw (i8, ptr @_ZTC1D0_1B, i64 24),
-// LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw (i8, ptr @_ZTC1D0_1B, i64 56),
-// LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw (i8, ptr @_ZTC1D16_1C, i64 24),
-// LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw (i8, ptr @_ZTC1D16_1C, i64 56),
-// LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 96),
-// LLVM-COMMON-SAME:   ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 64)
+// LLVM-COMMON-SAME:   ptr getelementptr (i8, ptr @_ZTV1D, i64 24),
+// LLVM-COMMON-SAME:   ptr getelementptr (i8, ptr @_ZTC1D0_1B, i64 24),
+// LLVM-COMMON-SAME:   ptr getelementptr (i8, ptr @_ZTC1D0_1B, i64 56),
+// LLVM-COMMON-SAME:   ptr getelementptr (i8, ptr @_ZTC1D16_1C, i64 24),
+// LLVM-COMMON-SAME:   ptr getelementptr (i8, ptr @_ZTC1D16_1C, i64 56),
+// LLVM-COMMON-SAME:   ptr getelementptr (i8, ptr @_ZTV1D, i64 96),
+// LLVM-COMMON-SAME:   ptr getelementptr (i8, ptr @_ZTV1D, i64 64)
 // LLVM-COMMON-SAME: ], align 8
 
 // OGCG-COMMON:      @_ZTT1D = unnamed_addr constant [7 x ptr] [
