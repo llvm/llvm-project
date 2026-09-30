@@ -762,39 +762,50 @@ static RT_API_ATTRS const char *FindLastNewline(
 void ExternalFileUnit::BackspaceVariableFormattedRecord(
     IoErrorHandler &handler) {
   // File offset of previous record's newline
-  auto prevNL{
+  auto lastByte{
       frameOffsetInFile_ + static_cast<std::int64_t>(recordOffsetInFrame_) - 1};
-  if (prevNL < 0) {
+  if (lastByte < 0) {
     handler.SignalError(IostatBackspaceAtFirstRecord);
     return;
   }
+  if (!(lastByte >= FrameAt() &&
+          lastByte - FrameAt() < static_cast<std::int64_t>(FrameLength()))) {
+    frameOffsetInFile_ = std::max<std::int64_t>(0, lastByte + 1 - 1024);
+    auto need{static_cast<std::size_t>(lastByte + 1 - frameOffsetInFile_)};
+    if (ReadFrame(frameOffsetInFile_, need, handler) < need) {
+      handler.SignalError(IostatShortRead);
+      return;
+    }
+  }
+  bool terminated{Frame()[lastByte - FrameAt()] == '\n'};
+  if (!terminated && knownSize().value_or(lastByte + 1) != lastByte + 1) {
+    handler.SignalError(IostatMissingTerminator);
+    return;
+  }
+  auto recordEnd{terminated ? lastByte : lastByte + 1};
   while (true) {
-    if (frameOffsetInFile_ < prevNL) {
+    if (frameOffsetInFile_ < recordEnd) {
       if (const char *p{
-              FindLastNewline(Frame(), prevNL - 1 - frameOffsetInFile_)}) {
+              FindLastNewline(Frame(), recordEnd - 1 - frameOffsetInFile_)}) {
         recordOffsetInFrame_ = p - Frame() + 1;
-        recordLength = prevNL - (frameOffsetInFile_ + recordOffsetInFrame_);
+        recordLength = recordEnd - (frameOffsetInFile_ + recordOffsetInFrame_);
         break;
       }
     }
     if (frameOffsetInFile_ == 0) {
       recordOffsetInFrame_ = 0;
-      recordLength = prevNL;
+      recordLength = recordEnd;
       break;
     }
     frameOffsetInFile_ -= std::min<std::int64_t>(frameOffsetInFile_, 1024);
-    auto need{static_cast<std::size_t>(prevNL + 1 - frameOffsetInFile_)};
+    auto need{static_cast<std::size_t>(lastByte + 1 - frameOffsetInFile_)};
     auto got{ReadFrame(frameOffsetInFile_, need, handler)};
     if (got < need) {
       handler.SignalError(IostatShortRead);
       return;
     }
   }
-  if (Frame()[recordOffsetInFrame_ + *recordLength] != '\n') {
-    handler.SignalError(IostatMissingTerminator);
-    return;
-  }
-  if (*recordLength > 0 &&
+  if (terminated && *recordLength > 0 &&
       Frame()[recordOffsetInFrame_ + *recordLength - 1] == '\r') {
     --*recordLength;
   }
