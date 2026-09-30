@@ -649,33 +649,7 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
       0, Builder.createICmp(CmpInst::ICMP_EQ, AVLNext, Plan.getZero(AVLTy)));
 }
 
-static void wrapPredicateMerge(VPWidenIntrinsicRecipe *VPMerge) {
-  assert(VPMerge->getVectorIntrinsicID() == Intrinsic::vp_merge);
-  VPSingleDefRecipe *InLoopOp =
-      dyn_cast<VPSingleDefRecipe>(VPMerge->getOperand(1));
-  // TODO: Support cmp-select reductions.
-  if (!InLoopOp || !isa<VPWidenRecipe, VPWidenIntrinsicRecipe>(InLoopOp) ||
-      match(InLoopOp, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
-    return;
-
-  // Only convert the in-loop operations with tail-folding predication to
-  // expression recipe.
-  if (!all_of(VPMerge->users(), [](VPUser *U) {
-        if (auto *R = dyn_cast<VPSingleDefRecipe>(U))
-          return isa<VPReductionPHIRecipe>(R) ||
-                 match(R, m_ComputeReductionResult(m_VPValue()));
-        return false;
-      }))
-    return;
-
-  VPBasicBlock *VPBB = VPMerge->getParent();
-  auto IP = std::next(VPMerge->getIterator());
-  auto *Expr = new VPExpressionRecipe(InLoopOp, VPMerge);
-  Expr->insertBefore(*VPBB, IP);
-  VPMerge->replaceAllUsesWith(Expr);
-}
-
-void VPlanTransforms::foldPredicateMerge(VPlan &Plan) {
+void VPlanTransforms::foldPredicateMerge(VPlan &Plan, VPCostContext &CostCtx) {
   if (Plan.hasScalarVFOnly())
     return;
 
@@ -685,9 +659,45 @@ void VPlanTransforms::foldPredicateMerge(VPlan &Plan) {
       // Wrap in-loop operations and the vp.merge (cleanup tail poison) to
       // expression recipes since the vp.merge will be optmized out in the
       // backend.
-      if (match(&R, m_Intrinsic<Intrinsic::vp_merge>(m_VPValue(), m_VPValue(),
-                                                     m_VPValue(), m_VPValue())))
-        wrapPredicateMerge(cast<VPWidenIntrinsicRecipe>(&R));
+      VPValue *True;
+      if (!match(&R,
+                 m_Intrinsic<Intrinsic::vp_merge>(m_VPValue(), m_VPValue(True),
+                                                  m_VPValue(), m_VPValue())))
+        continue;
+
+      auto *VPMerge = cast<VPWidenIntrinsicRecipe>(&R);
+      VPSingleDefRecipe *InLoopOp =
+          dyn_cast<VPSingleDefRecipe>(VPMerge->getOperand(1));
+      // TODO: Support cmp-select reductions.
+      if (!InLoopOp || !isa<VPWidenRecipe, VPWidenIntrinsicRecipe>(InLoopOp) ||
+          match(InLoopOp, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
+        continue;
+
+      // Backend can only fold vp.merge to true operand when 1) vp.merge is the
+      // only user 2) vp.merge and the true operand are in the same block.
+      if (!True->hasOneUse() || VPMerge->getParent() != InLoopOp->getParent())
+        continue;
+
+      // Query TTI to check if vp.merge can be folded.
+      if (any_of(Plan.vectorFactors(), [&](ElementCount VF) {
+            return VPMerge->computeCost(VF, CostCtx) != 0;
+          }))
+        continue;
+
+      // Only convert the in-loop operations with tail-folding predication to
+      // expression recipe.
+      if (!all_of(VPMerge->users(), [](VPUser *U) {
+            if (auto *R = dyn_cast<VPSingleDefRecipe>(U))
+              return isa<VPReductionPHIRecipe>(R) ||
+                     match(R, m_ComputeReductionResult(m_VPValue()));
+            return false;
+          }))
+        continue;
+
+      auto IP = std::next(VPMerge->getIterator());
+      auto *Expr = new VPExpressionRecipe(InLoopOp, VPMerge);
+      Expr->insertBefore(IP);
+      VPMerge->replaceAllUsesWith(Expr);
     }
   }
 }
