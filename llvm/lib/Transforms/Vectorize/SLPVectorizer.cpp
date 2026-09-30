@@ -536,15 +536,15 @@ public:
     RTOrigBodyOrder.clear();
   }
 
-  /// Snapshots RTChecks.BB's body (non-PHI, non-terminator) into
+  /// Snapshots RTChecks.BB's body (non-PHI, non-alloca, non-terminator) into
   /// RTOrigBodyOrder in program order, for the scalar fallback.
   void captureRuntimeCheckBodySnapshot();
 
   /// Returns true if \p BB satisfies the block-level preconditions for runtime
-  /// alias check versioning (straight-line, outside any loop, duplicable, not a
-  /// scalar fallback, function not optimized for size). These checks do not
-  /// depend on the collected checks, so they can gate the (expensive)
-  /// optimistic retry before any tree is rebuilt.
+  /// alias check versioning (straight-line, duplicable, not a scalar fallback,
+  /// function not optimized for size). These checks do not depend on the
+  /// collected checks, so they can gate the (expensive) optimistic retry before
+  /// any tree is rebuilt.
   bool canVersionBlockForRuntimeChecks(BasicBlock *BB) const;
 
   /// Returns true if the runtime alias checks can be safely emitted to guard
@@ -1890,7 +1890,7 @@ public:
               !isCommutative(MainOp, VL[Lane], /*IsCopyable=*/true);
         } else {
           assert(I && "Expected instruction");
-          auto [SelectedOp, Ops] = convertTo(I, S);
+          Instruction *SelectedOp = convertTo(I, S).first;
           // We cannot check commutativity by the converted instruction
           // (SelectedOp) because isCommutative also examines def-use
           // relationships.
@@ -3765,7 +3765,8 @@ private:
   /// the CFG. Used to drop CFG-analysis preservation for the run.
   bool CFGChanged = false;
 
-  /// Guarded block body (non-PHI, non-terminator) in original source order.
+  /// Guarded block body (non-PHI, non-alloca, non-terminator) in original
+  /// source order.
   SmallVector<Instruction *> RTOrigBodyOrder;
 
   using AliasCacheKey = std::pair<Instruction *, Instruction *>;
@@ -6875,7 +6876,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
     SmallVector<Instruction *> UserBVHead(TE.Scalars.size());
     for (auto [I, V] :
          make_filter_range(zip(UserBVHead, TE.Scalars), [](const auto &P) {
-           auto [I, V] = P;
+           Value *V = std::get<1>(P);
            return !isa<Constant>(V) && V->hasNUsesOrMore(1);
          })) {
       auto *II = dyn_cast<InsertElementInst>(*V->user_begin());
@@ -8834,7 +8835,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
               Results.swap(UnsortedResults);
             }
           }
-          for (auto [Slice, _] : Results) {
+          for (ArrayRef<Value *> Slice : make_first_range(Results)) {
             LLVM_DEBUG(dbgs() << "SLP: Trying to vectorize gathered loads ("
                               << Slice.size() << ")\n");
             if (any_of(Slice, [&](Value *V) { return isVectorized(V); })) {
@@ -10853,7 +10854,7 @@ class InstructionsCompatibilityAnalysis {
             Ops[Idx] = PoisonValue::get(VL0->getOperand(OpIdx)->getType());
           continue;
         }
-        auto [Op, ConvertedOps] = convertTo(I, S);
+        SmallVector<Value *> ConvertedOps = convertTo(I, S).second;
         for (auto [OpIdx, Ops] : enumerate(Operands))
           Ops[Idx] = ConvertedOps[OpIdx];
       }
@@ -10877,7 +10878,7 @@ class InstructionsCompatibilityAnalysis {
           Operands[2][Idx] = ConstantInt::getNullValue(I->getType());
           continue;
         }
-        auto [Op, ConvertedOps] = convertTo(I, S);
+        SmallVector<Value *> ConvertedOps = convertTo(I, S).second;
         for (auto [OpIdx, Ops] : enumerate(Operands))
           Ops[Idx] = ConvertedOps[OpIdx];
       }
@@ -11461,11 +11462,12 @@ public:
         SmallMapVector<std::pair<unsigned, unsigned>, PairInfo, 8> PairCounts;
         SmallMapVector<unsigned, unsigned, 4> AddendIDCounts;
         unsigned MajID0 = 0, MajID1 = 0;
-        for (auto [Idx, V] :
+        for (const auto &P :
              make_filter_range(enumerate(VL), [&](const auto &P) {
-               auto [Idx, V] = P;
-               return !S.isCopyableElement(V) && !isa<PoisonValue>(V);
+               return !S.isCopyableElement(P.value()) &&
+                      !isa<PoisonValue>(P.value());
              })) {
+          size_t Idx = P.index();
           unsigned ID0 = Operands[0][Idx]->getValueID();
           unsigned ID1 = Operands[1][Idx]->getValueID();
           if (S.hasAbsorbedCopyableFMulOrFAdd())
@@ -11474,8 +11476,7 @@ public:
             continue;
           unsigned MinID = std::min(ID0, ID1);
           unsigned MaxID = std::max(ID0, ID1);
-          auto [It, Inserted] =
-              PairCounts.try_emplace(std::make_pair(MinID, MaxID));
+          auto *It = PairCounts.try_emplace(std::make_pair(MinID, MaxID)).first;
           PairInfo &Info = It->second;
           if (ID0 < ID1)
             ++Info.FwdCount;
@@ -11615,8 +11616,9 @@ void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
   }
   InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
   auto BuildSubtree = [&](const auto &GroupMap) {
-    for (const auto &[_, Group] : make_filter_range(
+    for (const auto &Entry : make_filter_range(
              GroupMap, [](const auto &P) { return P.second.size() >= 2; })) {
+      const auto &Group = Entry.second;
       // Copyable-aware check so bundles with copyable lanes are not skipped.
       if (!Analysis.buildInstructionsState(Group.getArrayRef(), *this))
         continue;
@@ -21843,8 +21845,8 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   std::iota(ConstantShuffleMask.begin(), ConstantShuffleMask.end(), 0);
   // No need to shuffle duplicates for constants.
   for (auto [I, V] : make_filter_range(enumerate(VL), [&](const auto &P) {
-         auto [I, V] = P;
-         return !(ForPoisonSrc && isConstant(V)) && !isa<UndefValue>(V);
+         return !(ForPoisonSrc && isConstant(P.value())) &&
+                !isa<UndefValue>(P.value());
        })) {
     if (isConstant(V)) {
       ConstantShuffleMask[I] = I + VF;
@@ -23062,12 +23064,13 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
         tryToGatherExtractElements(GatheredScalars, ExtractMask, NumParts);
     if (!ExtractShuffles.empty()) {
       SmallVector<const TreeEntry *> ExtractEntries;
-      for (auto [Idx, I] :
+      for (const auto &P :
            make_filter_range(enumerate(ExtractMask), [](const auto &P) {
              return P.value() != PoisonMaskElem;
            })) {
-        if (ArrayRef<TreeEntry *> TEs = getTreeEntries(
-                cast<ExtractElementInst>(StoredGS[Idx])->getVectorOperand());
+        if (ArrayRef<TreeEntry *> TEs =
+                getTreeEntries(cast<ExtractElementInst>(StoredGS[P.index()])
+                                   ->getVectorOperand());
             !TEs.empty())
           ExtractEntries.append(TEs.begin(), TEs.end());
       }
@@ -25435,8 +25438,9 @@ void BoUpSLP::captureRuntimeCheckBodySnapshot() {
   if (!TryRuntimeAliasChecks || !RTChecks.BB)
     return;
   BasicBlock *BB = RTChecks.BB;
+  // Allocas are not duplicated, keep them in the header block.
   for (Instruction &I : *BB)
-    if (!isa<PHINode>(&I) && !I.isTerminator())
+    if (!isa<PHINode, AllocaInst>(&I) && !I.isTerminator())
       RTOrigBodyOrder.push_back(&I);
 }
 
@@ -25482,10 +25486,6 @@ bool BoUpSLP::canVersionBlockForRuntimeChecks(BasicBlock *BB) const {
     return false;
   if (!DT->isReachableFromEntry(BB))
     return false;
-  // Versioning duplicates the block body; only straight-line code outside any
-  // loop is handled for now, to avoid LoopInfo and region updates.
-  if (LI->getLoopFor(BB))
-    return false;
   // Never version a scalar fallback block: it is the safe, original-order copy
   // taken when aliasing is detected and must stay scalar.
   if (ScalarFallbackBlocks.contains(BB))
@@ -25503,6 +25503,11 @@ bool BoUpSLP::canVersionBlockForRuntimeChecks(BasicBlock *BB) const {
         auto *CB = dyn_cast<CallBase>(&I);
         return CB && (CB->cannotDuplicate() || CB->isConvergent());
       }))
+    return false;
+  // Only static allocas at the start of the entry block can stay in the header
+  // block, any other alloca would have to be duplicated with the body.
+  if (any_of(make_range(BB->getFirstNonPHIOrDbgOrAlloca(), BB->end()),
+             IsaPred<AllocaInst>))
     return false;
   return true;
 }
@@ -25541,9 +25546,9 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
     Bases.insert(P.second);
   }
   // Every base object must be available in the (PHI-only) header where the
-  // guard branch is emitted.
+  // guard branch is emitted, i.e. be one of its PHIs or dominate it.
   if (any_of(make_isa_range<Instruction>(Bases), [&](const Instruction *I) {
-        return I->getParent() == BB || !DT->dominates(I, BB);
+        return I->getParent() == BB ? !isa<PHINode>(I) : !DT->dominates(I, BB);
       }))
     return false;
 
@@ -25600,40 +25605,32 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
       It->second.second = SE->getUMaxExpr(It->second.second, EndOff);
     }
   }
+  // Every involved base must contribute at least one bounded access.
+  if (OffBounds.size() != Bases.size())
+    return false;
   // Materialize the absolute [Low, High) = base + [minOff, maxEndOff). The
   // offsets are constants, so each bound is a base-plus-constant expression
   // that expands to a single add off the base address (no runtime umin/umax).
+  // The base is used as an opaque value, so the bounds only reference the base
+  // itself, available at the guard, and a loop-variant base (e.g. a header PHI)
+  // is reused rather than recomputed from its recurrence.
   for (const auto &[Base, Off] : OffBounds) {
-    const SCEV *BaseSC = SE->getPtrToAddrExpr(SE->getSCEV(Base));
+    const SCEV *BaseSC = SE->getPtrToAddrExpr(SE->getUnknown(Base));
     RTChecks.Bounds.try_emplace(Base, SE->getAddExpr(BaseSC, Off.first),
                                 SE->getAddExpr(BaseSC, Off.second));
   }
-  // Every involved base must contribute at least one bounded access, and its
-  // bounds must be expandable at the guard (so the checks only reference values
-  // available in the header).
-  SCEVExpander Exp(*SE, "slp.rtcheck");
-  // The guard is emitted after the header PHIs, so validate expandability at
-  // the first non-PHI: only values available in the header (PHIs, arguments,
-  // values defined before the block) dominate that point.
-  Instruction *GuardPt = &*BB->getFirstNonPHIIt();
-  if (any_of(Bases, [&](const Value *Base) {
-        auto *It = RTChecks.Bounds.find(Base);
-        return It == RTChecks.Bounds.end() ||
-               !Exp.isSafeToExpandAt(It->second.first, GuardPt) ||
-               !Exp.isSafeToExpandAt(It->second.second, GuardPt);
-      }))
-    return false;
 
-  // No SSA value defined in the body may escape the versioned region: that
-  // would require a merge PHI in the continuation block, which is not yet
-  // supported. A use by the terminator counts as an escape because the
-  // terminator is moved into the continuation block.
-  for (Instruction &I : make_filter_range(*BB, [](Instruction &I) {
-         return !isa<PHINode>(&I) && !I.isTerminator();
+  // SSA values defined in the body and used outside of it are merged from both
+  // paths in the continuation block, so they must stay scalar. Uses by the
+  // terminator (moved into the continuation block) and by the block's PHIs
+  // (via the loop latch) count as outside.
+  for (Instruction &I : make_filter_range(*BB, [&](Instruction &I) {
+         return !isa<PHINode>(&I) && !I.isTerminator() && isVectorized(&I);
        })) {
     if (any_of(I.users(), [&](User *U) {
           auto *UI = dyn_cast<Instruction>(U);
-          return !UI || UI->getParent() != BB || UI->isTerminator();
+          return !UI || UI->getParent() != BB || isa<PHINode>(UI) ||
+                 UI->isTerminator();
         }))
       return false;
   }
@@ -25795,6 +25792,21 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   for (BasicBlock *Succ : successors(Term))
     Succ->replacePhiUsesWith(BB, Tail);
 
+  // Merge the body values used outside of the versioned region (by the
+  // terminator, across the loop latch or in other blocks) from both paths. The
+  // SCEVs cached for the outside users refer to the body values, which no
+  // longer dominate them.
+  for (Instruction *I : RTOrigBodyOrder) {
+    if (!I->isUsedOutsideOfBlock(VecBB))
+      continue;
+    SE->forgetValue(I);
+    PHINode *Merge = PHINode::Create(I->getType(), 2, I->getName() + ".rtmerge",
+                                     Tail->getFirstNonPHIIt());
+    I->replaceUsesOutsideBlock(Merge, VecBB);
+    Merge->addIncoming(I, VecBB);
+    Merge->addIncoming(VMap.lookup(I), ScalarBB);
+  }
+
   // Keep the dominator tree valid for the remainder of the run.
   if (DT) {
     DomTreeUpdater DTU(*DT, DomTreeUpdater::UpdateStrategy::Eager);
@@ -25817,6 +25829,11 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
     // instructions across blocks for nodes emitted after versioning.
     DT->updateDFSNumbers();
   }
+  // Keep the loop info valid for the remainder of the run: the new blocks
+  // belong to the loop of the versioned block.
+  if (Loop *L = LI->getLoopFor(BB))
+    for (BasicBlock *NewBB : {VecBB, ScalarBB, Tail})
+      L->addBasicBlockToLoop(NewBB, *LI);
 
   // Record the checked base pairs for the fast-path block so that subsequent
   // vectorization there can reuse this guard instead of versioning again.
@@ -29280,7 +29297,7 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   if (R.runtimeChecksFailedForBlock(BB))
     return Res;
   // The retry rebuilds the whole tree; also skip it when the chain's block can
-  // never be versioned (e.g. it is inside a loop).
+  // never be versioned (e.g. the function is optimized for size).
   if (!R.canVersionBlockForRuntimeChecks(BB)) {
     R.markRuntimeChecksFailedForBlock(BB);
     return Res;
@@ -32808,9 +32825,9 @@ public:
         for (unsigned Cnt = 0; Cnt < NumReducedVals; ++Cnt) {
           if (Cnt >= Pos && Cnt < Pos + ReduxWidth)
             continue;
-          Value *RdxVal = Candidates[Cnt];
-          if (auto It = TrackedVals.find(RdxVal); It != TrackedVals.end())
-            RdxVal = It->second;
+          // The candidate may be replaced by the previous vectorization
+          // attempts, use the currently tracked value.
+          Value *RdxVal = TrackedVals.at(TrackedToOrig[Cnt]);
           if (!Visited.insert(RdxVal).second)
             continue;
           // Scalars not reduced by the top node may be used by the reduction
@@ -36432,8 +36449,15 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
 
   // Attempt to sort and vectorize each of the store-groups.
   DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>> Attempted;
-  for (auto &Pair : make_filter_range(
-           Stores, [](auto &Pair) { return Pair.second.size() >= 2; })) {
+  // The longer groups go first: the shorter ones sharing the scalars with them
+  // then reuse their vectors instead of splitting the longer chains.
+  SmallVector<StoreListMap::value_type *> Groups(make_pointer_range(Stores));
+  stable_sort(Groups, [](const auto *A, const auto *B) {
+    return A->second.size() > B->second.size();
+  });
+  for (auto &Pair :
+       make_filter_range(make_pointee_range(Groups),
+                         [](auto &Pair) { return Pair.second.size() >= 2; })) {
     LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length "
                       << Pair.second.size() << ".\n");
 

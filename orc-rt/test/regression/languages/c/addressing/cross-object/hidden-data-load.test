@@ -4,7 +4,6 @@
 # directly, rather than through the GOT. Hidden data must be defined in the
 # same linkage unit, so the compiler may address it directly.
 
-REQUIRES: split-file
 RUN: rm -rf %t && split-file %s %t
 RUN: %{cc} -O0 -c -o %t/def.O0.o %t/def.c
 RUN: %{cc} -O0 -c -o %t/main.O0.o %t/main.c
