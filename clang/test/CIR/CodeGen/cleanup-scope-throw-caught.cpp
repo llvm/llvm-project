@@ -31,7 +31,7 @@ int testCaughtThrowSharedDispatch() {
 // CIR:   cir.try {
 // CIR:     cir.call @_ZN1CC1Ev(%[[A]])
 // CIR:     cir.cleanup.scope {
-// CIR:       cir.throw %{{.*}} : !cir.ptr<!cir.ptr<!rec_C>>, @_ZTIP1C
+// CIR:       cir.throw %{{.*}}, %{{.*}}, %{{.*}} : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!u8i>, !cir.ptr<!void>
 // CIR:       cir.unreachable
 // CIR:     } cleanup all {
 // CIR:       cir.call @_ZN1CD1Ev(%[[A]]) nothrow
