@@ -9515,6 +9515,7 @@ cc_library(
         ":LLVMIntrinsicConversionIncGen",
         ":Support",
         ":ToLLVMIRTranslation",
+        "//llvm:Analysis",
         "//llvm:Core",
         "//llvm:Support",
     ],
