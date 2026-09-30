@@ -556,10 +556,14 @@ check_exceptional_cases(float &x, float &y, int &ex, SignType &sign) {
     return x;
   }
 
-  // Normalize denormal inputs by scaling with 2^64.
-  if (x_a < FloatBits::min_normal().uintval()) {
-    ex -= 64;
-    x *= 0x1.0p64f;
+  if (x_a == 0) {
+    bool out_is_neg = x_sign && is_odd_integer(y);
+    if (y_sign) {
+      fputil::set_errno_if_required(EDOM);
+      fputil::raise_except_if_required(FE_DIVBYZERO);
+      return FloatBits::inf(out_is_neg ? Sign::NEG : Sign::POS).get_val();
+    }
+    return out_is_neg ? -0.0f : 0.0f;
   }
 
   // Handle negative base x < 0:
@@ -589,6 +593,13 @@ check_exceptional_cases(float &x, float &y, int &ex, SignType &sign) {
                              ? -0x1.0p-50f
                              : 0x1.0p-50f;
     return one + eps;
+  }
+
+  // Normalize denormal inputs.
+  if (x_a < FloatBits::min_normal().uintval()) {
+    int shift = cpp::countl_zero(x_a) - 8;
+    ex -= shift;
+    x = cpp::bit_cast<float>(x_a << shift);
   }
 
   return cpp::nullopt;
