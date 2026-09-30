@@ -438,6 +438,7 @@ add_header_macro(
   threads.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.threads_macros
     .llvm-libc-types.__call_once_func_t
     .llvm-libc-types.once_flag
     .llvm-libc-types.cnd_t
@@ -1104,6 +1105,7 @@ add_header_macro(
   sys/xattr.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.sys_xattr_macros
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
 )
@@ -1257,6 +1259,8 @@ add_header_macro(
   DEPENDS
     .llvm-libc-types.struct_pollfd
     .llvm-libc-types.nfds_t
+    .llvm-libc-types.struct_timespec
+    .llvm-libc-types.sigset_t
     .llvm-libc-macros.poll-macros
 )
 

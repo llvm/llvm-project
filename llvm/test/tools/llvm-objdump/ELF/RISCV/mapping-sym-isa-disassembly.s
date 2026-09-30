@@ -6,10 +6,10 @@
 ##   - Second V region: verifies ISA target cache is reused correctly
 ##   - rv32 and rv64 both exercise parseNormalizedArchString
 
-# RUN: llvm-mc -triple=riscv64 -mattr=+c -filetype=obj %s -o %t.64.o
+# RUN: llvm-mc -triple=riscv64 -mattr=+c -riscv-add-build-attributes -filetype=obj %s -o %t.64.o
 # RUN: llvm-objdump -d --no-show-raw-insn %t.64.o | FileCheck %s
 #
-# RUN: llvm-mc -triple=riscv32 -mattr=+c -filetype=obj %s -o %t.32.o
+# RUN: llvm-mc -triple=riscv32 -mattr=+c -riscv-add-build-attributes -filetype=obj %s -o %t.32.o
 # RUN: llvm-objdump -d --no-show-raw-insn %t.32.o | FileCheck %s
 
 .text

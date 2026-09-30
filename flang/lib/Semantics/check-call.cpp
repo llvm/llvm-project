@@ -1159,6 +1159,24 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           }
         }
       }
+      // Variables listed in a structured !$acc data mapping clause are
+      // host-resident, but their device copies should match DEVICE dummies.
+      if (!actualDataAttr && context.AnyOpenACCDataMapping()) {
+        const Scope *effectiveScope{scope};
+        if (!effectiveScope) {
+          if (std::optional<parser::CharBlock> source{arg.sourceLocation()}) {
+            effectiveScope = context.FindScopeIfAny(*source);
+          }
+        }
+        if (effectiveScope) {
+          for (const Symbol &s : evaluate::GetSymbolVector(actual)) {
+            if (IsOpenACCMapped(s, *effectiveScope)) {
+              actualDataAttr = common::CUDADataAttr::UseDevice;
+              break;
+            }
+          }
+        }
+      }
     }
     dummyDataAttr = dummy.cudaDataAttr;
     // Treat MANAGED like DEVICE for nonallocatable nonpointer arguments to
