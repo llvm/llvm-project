@@ -195,9 +195,12 @@ public:
     return op;
   }
 
-  cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
-                             mlir::Value src, mlir::Value len) {
-    return cir::MemCpyOp::create(*this, loc, dst, src, len);
+  cir::MemCpyOp createMemCpy(mlir::Location loc, Address dst, Address src,
+                             mlir::Value len) {
+    return cir::MemCpyOp::create(
+        *this, loc, dst.getPointer(), src.getPointer(), len,
+        getI64IntegerAttr(dst.getAlignment().getQuantity()),
+        getI64IntegerAttr(src.getAlignment().getQuantity()));
   }
 
   cir::MemMoveOp createMemMove(mlir::Location loc, mlir::Value dst,
@@ -309,6 +312,8 @@ public:
 
   cir::VoidType getVoidTy() { return typeCache.voidTy; }
 
+  cir::IntType getBoolMemoryTy() { return getUInt8Ty(); }
+
   cir::IntType getSInt8Ty() { return typeCache.sInt8Ty; }
   cir::IntType getSInt16Ty() { return typeCache.sInt16Ty; }
   cir::IntType getSInt32Ty() { return typeCache.sInt32Ty; }
@@ -320,7 +325,7 @@ public:
   cir::IntType getUInt64Ty() { return typeCache.uInt64Ty; }
 
   cir::FP16Type getFp16Ty() { return typeCache.fP16Ty; }
-  cir::BF16Type getBfloat6Ty() { return typeCache.bFloat16Ty; }
+  cir::BF16Type getBfloat16Ty() { return typeCache.bFloat16Ty; }
   cir::SingleType getSingleTy() { return typeCache.floatTy; }
   cir::DoubleType getDoubleTy() { return typeCache.doubleTy; }
 
@@ -820,12 +825,31 @@ public:
     return createVecShuffle(loc, vec1, poison, mask);
   }
 
+  cir::MatrixTransposeOp createMatrixTranspose(mlir::Location loc,
+                                               mlir::Value matrix) {
+    auto inputTy = mlir::cast<cir::MatrixType>(matrix.getType());
+    auto resultTy = cir::MatrixType::get(
+        inputTy.getElementType(), inputTy.getColumnNum(), inputTy.getRowNum());
+    return cir::MatrixTransposeOp::create(*this, loc, resultTy, matrix);
+  }
+
   template <typename... Operands>
   mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
                                   const mlir::Type &resTy, Operands &&...op) {
     return cir::LLVMIntrinsicCallOp::create(*this, loc,
                                             this->getStringAttr(str), resTy,
                                             std::forward<Operands>(op)...)
+        .getResult();
+  }
+
+  template <typename... Operands>
+  mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
+                                  const mlir::Type &resTy,
+                                  cir::FastMathFlagsAttr fastmath,
+                                  Operands &&...op) {
+    return cir::LLVMIntrinsicCallOp::create(
+               *this, loc, this->getStringAttr(str), resTy,
+               std::forward<Operands>(op)..., fastmath)
         .getResult();
   }
 };

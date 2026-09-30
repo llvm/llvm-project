@@ -15,7 +15,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/IR/Builders.h"
@@ -515,7 +515,9 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   for (auto [iv, lower, upper, step] :
        llvm::zip(parallelOp.getInductionVars(), parallelOp.getLowerBound(),
                  parallelOp.getUpperBound(), parallelOp.getStep())) {
-    ForOp forOp = ForOp::create(rewriter, loc, lower, upper, step, iterArgs);
+    ForOp forOp =
+        ForOp::create(rewriter, loc, lower, upper, step, iterArgs,
+                      /*bodyBuilder=*/nullptr, parallelOp.getUnsignedCmp());
     innermostForOp = forOp;
     ivs.push_back(forOp.getInductionVar());
     auto iterRange = forOp.getRegionIterArgs();

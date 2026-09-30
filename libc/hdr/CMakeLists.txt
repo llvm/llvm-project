@@ -121,6 +121,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  poll_macros
+  HDRS
+    poll_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.poll-macros
+)
+
+add_proxy_header_library(
   pthread_macros
   HDRS
     pthread_macros.h
@@ -184,6 +192,14 @@ add_proxy_header_library(
     sys_epoll_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.sys_epoll_macros
+)
+
+add_proxy_header_library(
+  sys_file_macros
+  HDRS
+    sys_file_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_file_macros
 )
 
 add_proxy_header_library(
@@ -264,6 +280,14 @@ add_proxy_header_library(
     sys_wait_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.sys_wait_macros
+)
+
+add_proxy_header_library(
+  sys_xattr_macros
+  HDRS
+    sys_xattr_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_xattr_macros
 )
 
 add_proxy_header_library(

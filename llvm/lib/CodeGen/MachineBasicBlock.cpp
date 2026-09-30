@@ -31,6 +31,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRPrintingPasses.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -565,6 +566,8 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << (hasAttributes ? ", " : " (");
       os << "align " << getAlignment().value();
       hasAttributes = true;
+      if (getMaxBytesForAlignment())
+        os << ", max-bytes-for-alignment " << getMaxBytesForAlignment();
     }
     if (getSectionID() != MBBSectionID(0)) {
       os << (hasAttributes ? ", " : " (");
@@ -1351,8 +1354,10 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
           assert(VNI &&
                  "PHI sources should be live out of their predecessors.");
           LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-          for (auto &SR : LI.subranges())
-            SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
+          for (auto &SR : LI.subranges()) {
+            if (VNInfo *SRVNI = SR.getVNInfoAt(PrevIndex))
+              SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, SRVNI));
+          }
         }
       }
     }
@@ -1388,6 +1393,13 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     // Update all intervals for registers whose uses may have been modified by
     // updateTerminator().
     LIS->repairIntervalsInRange(this, getFirstTerminator(), end(), UsedRegs);
+
+    // repairIntervalsInRange() does not update physregs; clear their ranges
+    // since updateTerminator() may have replaced defs.
+    for (Register Reg : UsedRegs) {
+      if (Reg.isPhysical())
+        LIS->removeAllRegUnitsForPhysReg(Reg.asMCReg());
+    }
   }
 
   if (MDTU)
@@ -1829,10 +1841,12 @@ MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   MCRegister ExceptionPointer, ExceptionSelector;
   if (MF.getFunction().hasPersonalityFn()) {
     auto PersonalityFn = MF.getFunction().getPersonalityFn();
-    ExceptionPointer = TLI.getExceptionPointerRegister(
-        TLI.getTargetMachine().getExceptionModel(), PersonalityFn);
-    ExceptionSelector = TLI.getExceptionSelectorRegister(
-        TLI.getTargetMachine().getExceptionModel(), PersonalityFn);
+    // Prefer the "exception-model" module flag, else the TargetOptions default.
+    ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
+    if (EH == ExceptionHandling::Default)
+      EH = TLI.getTargetMachine().getExceptionModel();
+    ExceptionPointer = TLI.getExceptionPointerRegister(EH, PersonalityFn);
+    ExceptionSelector = TLI.getExceptionSelectorRegister(EH, PersonalityFn);
   }
 
   return liveout_iterator(*this, ExceptionPointer, ExceptionSelector, false);

@@ -112,7 +112,8 @@ public:
     // should not crash when attempting to recover the (unchanged) operation
     // result.
     Value result = rewriter.createOrFold<TestOpInPlaceFold>(
-        op->getLoc(), rewriter.getIntegerType(32), op->getOperand(0));
+        op->getLoc(), rewriter.getIntegerType(32), op->getOperand(0),
+        IntegerAttr{});
     assert(result);
     rewriter.replaceOp(op, result);
     return success();
