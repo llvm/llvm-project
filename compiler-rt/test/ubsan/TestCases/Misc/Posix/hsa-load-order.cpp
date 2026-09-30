@@ -14,6 +14,10 @@
 
 // REQUIRES: target={{.*linux.*}}, ubsan-standalone, ubsan-offload
 
+// The internal symbolizer resolves libc through RTLD_NEXT, which fails when the
+// runtime is loaded after libc as when using the internal symbolizer support.
+// UNSUPPORTED: internal_symbolizer
+
 #include <stdio.h>
 
 #if defined(BUILD_HSA)
