@@ -212,11 +212,11 @@ static LogicalResult verifyMemoryAccessAttribute(MemoryOpTy memoryOp) {
   // follows it, otherwise it applies to both operands.
   if constexpr (std::is_same_v<MemoryOpTy, StoreOp> ||
                 std::is_same_v<MemoryOpTy, CopyMemoryOp>) {
-    bool writeOnly = true;
+    bool sourceOnly = true;
     if constexpr (std::is_same_v<MemoryOpTy, CopyMemoryOp>)
-      writeOnly = memoryOp.getSourceMemoryAccess().has_value();
+      sourceOnly = memoryOp.getSourceMemoryAccess().has_value();
 
-    if (writeOnly &&
+    if (sourceOnly &&
         spirv::bitEnumContainsAll(memAccess.getValue(),
                                   spirv::MemoryAccess::MakePointerVisible)) {
       return memoryOp.emitOpError(
