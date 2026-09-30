@@ -512,6 +512,9 @@ static Instruction *
 foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
                            IntrinsicInst *FII,
                            InstCombiner::BuilderTy &Builder) {
+  if (TII->getCalledFunction() != FII->getCalledFunction())
+    return nullptr;
+
   std::optional<unsigned> DiffArgNo;
   for (unsigned I = 0, E = TII->arg_size(); I != E; ++I) {
     if (TII->getArgOperand(I) == FII->getArgOperand(I))
@@ -521,6 +524,10 @@ foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
     DiffArgNo = I;
   }
   if (!DiffArgNo)
+    return nullptr;
+
+  // A select cannot feed a parameter that requires an immediate.
+  if (TII->paramHasAttr(*DiffArgNo, Attribute::ImmArg))
     return nullptr;
 
   Value *TV = TII->getArgOperand(*DiffArgNo);
@@ -535,8 +542,6 @@ foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
   auto *NewCall = CallInst::Create(TII->getCalledFunction(), Args);
   NewCall->copyIRFlags(TII);
   NewCall->andIRFlags(FII);
-  NewCall->setDebugLoc(
-      DebugLoc::getMergedLocation(TII->getDebugLoc(), FII->getDebugLoc()));
   return NewCall;
 }
 
@@ -580,9 +585,10 @@ Instruction *InstCombinerImpl::foldSelectIntrinsic(SelectInst &SI) {
 
     return replaceInstUsesWith(SI, NewCall);
   }
-  case Intrinsic::pow:
-    return foldSelectIntoIntrinsicArg(SI, LHSIntrinsic, RHSIntrinsic, Builder);
   default:
+    if (isTriviallyVectorizable(IID))
+      return foldSelectIntoIntrinsicArg(SI, LHSIntrinsic, RHSIntrinsic,
+                                        Builder);
     return nullptr;
   }
 }
