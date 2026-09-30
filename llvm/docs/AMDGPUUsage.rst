@@ -1473,7 +1473,7 @@ Every workgroup in a cluster is the same size, and every cluster in a dispatch
 is the same size.
 
 Within a cluster, several workgroups can combine matching load requests via
-:ref:`cluster broadcast DMA operations <amdgpu-cluster-broadcast-dma>` so that
+:ref:`cluster multicast DMA operations <amdgpu-cluster-multicast-dma>` so that
 each populates its own LDS from a single shared fetch of global memory. The
 ``cluster`` memory scope (see
 :ref:`amdgpu-memory-scopes`) synchronizes operations performed by threads in
@@ -1487,11 +1487,12 @@ following intrinsics:
   cluster within the grid.
 * ``llvm.amdgcn.cluster.workgroup.id.{x,y,z}`` -- the coordinates of this
   workgroup within its cluster.
-* ``llvm.amdgcn.cluster.workgroup.flat.id`` -- the flattened index of this
-  workgroup within its cluster. The linearization treats X as the innermost
-  dimension and Z as the outermost:
-
-  ``flat_id = x + y * cluster_dim_x + z * cluster_dim_x * cluster_dim_y``.
+* ``llvm.amdgcn.cluster.workgroup.flat.id`` -- this workgroup's position within
+  its cluster: a value between ``0`` and the number of workgroups in the
+  cluster minus one, assigned to each workgroup in the cluster. Every wave in
+  the workgroup is initialized with its workgroup's value. This is the same
+  index used to select destination workgroups in the mask of a
+  :ref:`cluster multicast DMA <amdgpu-cluster-multicast-dma>`.
 * ``llvm.amdgcn.cluster.workgroup.max.id.{x,y,z}`` -- the largest workgroup
   index within the cluster in each dimension.
 * ``llvm.amdgcn.cluster.workgroup.max.flat.id`` -- the largest flattened
