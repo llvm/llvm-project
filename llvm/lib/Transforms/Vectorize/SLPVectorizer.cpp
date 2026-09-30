@@ -431,8 +431,9 @@ public:
           TargetLibraryInfo *TLi, AAResults *Aa, LoopInfo *Li,
           DominatorTree *Dt, AssumptionCache *AC, DemandedBits *DB,
           const DataLayout *DL, OptimizationRemarkEmitter *ORE)
-      : BatchAA(*Aa), F(Func), SE(Se), TTI(Tti), TLI(TLi), LI(Li), DT(Dt),
-        AC(AC), DB(DB), DL(DL), ORE(ORE), CostKind(getSLPCostKind(Func)),
+      : AA(Aa), BatchAA(std::in_place, *Aa), F(Func), SE(Se), TTI(Tti),
+        TLI(TLi), LI(Li), DT(Dt), AC(AC), DB(DB), DL(DL), ORE(ORE),
+        CostKind(getSLPCostKind(Func)),
         Builder(Se->getContext(), TargetFolder(*DL)) {
     CodeMetrics::collectEphemeralValues(F, AC, EphValues);
     // Use the vector register size specified by the target unless overridden
@@ -3689,7 +3690,7 @@ private:
     auto Res = AliasCache.try_emplace(Key);
     if (!Res.second)
       return Res.first->second;
-    bool Aliased = isModOrRefSet(BatchAA.getModRefInfo(Inst2, Loc1));
+    bool Aliased = isModOrRefSet(BatchAA->getModRefInfo(Inst2, Loc1));
     // Store the result in the cache.
     Res.first->getSecond() = Aliased;
     return Aliased;
@@ -3785,10 +3786,12 @@ private:
   /// TODO: consider moving this to the AliasAnalysis itself.
   SmallDenseMap<AliasCacheKey, bool> AliasCache;
 
-  // Cache for pointerMayBeCaptured calls inside AA.  This is preserved
-  // globally through SLP because we don't perform any action which
-  // invalidates capture results.
-  BatchAAResults BatchAA;
+  AAResults *AA;
+
+  // Cache for pointerMayBeCaptured calls inside AA. Vectorizing a tree can
+  // create new captures (e.g. a pointer inserted into a vector of pointers
+  // feeding a masked gather), so this is reset after each vectorized tree.
+  std::optional<BatchAAResults> BatchAA;
 
   /// Temporary store for deleted instructions. Instructions will be deleted
   /// eventually when the BoUpSLP is destructed.  The deferral is required to
@@ -26934,6 +26937,12 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // NOTE: removeInstructionAndOperands only marks the instruction for deletion
   // - instructions are not deleted until later.
   removeInstructionsAndOperands(ArrayRef(RemovedInsts), VectorValuesAndScales);
+
+  // The new vector code may capture pointers that were previously not captured
+  // (e.g. the pointer operands of a masked gather), so the capture results
+  // cached in BatchAA are stale. Alias queries against the new instructions
+  // would otherwise treat such pointers as inaccessible to them.
+  BatchAA.emplace(*AA);
 
   Builder.ClearInsertionPoint();
   InstrElementSize.clear();
