@@ -803,10 +803,10 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
 
         // If it doesn't fold, the compare may still be known on this edge when
         // PredBB's branch condition implies it (see isImpliedByEdgeBranch).
-        if (!Res && isa<ICmpInst>(Cmp) && !CmpType->isVectorTy())
+        if (!Res && isa<ICmpInst>(Cmp))
           if (std::optional<bool> Implied =
                   isImpliedByEdgeBranch(PredBB, BB, Pred, LHS, RHS, DL))
-            Res = ConstantInt::getBool(Cmp->getContext(), *Implied);
+            Res = ConstantInt::getBool(CmpType, *Implied);
 
         if (!Res) {
           if (!isa<Constant>(RHS))
