@@ -18,16 +18,11 @@
 // RUN:   -target-feature -sse -fsycl-is-device -emit-llvm -o - %s \
 // RUN:   | FileCheck --check-prefix=NO-SSE-FLAG %s
 
-/// Windows ARM64 without EC is not an x86 host and does not predefine _M_X64.
+/// No sse/sse2 unless the host is 64-bit x86 MSVC
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple aarch64-pc-windows-msvc \
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=NO-SSE2 %s
-
-/// 32-bit Windows hosts predefine _M_IX86 rather than _M_X64.
 // RUN: %clang_cc1 -triple spirv32-unknown-unknown -aux-triple i386-pc-windows-msvc \
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=NO-SSE2 %s
-
-/// Non-MSVC x86_64 hosts do not predefine _M_X64, whether or not they are
-/// Windows hosts.
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   -fsycl-is-device -emit-llvm -o - %s | FileCheck --check-prefix=NO-SSE2 %s
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -aux-triple x86_64-pc-windows-gnu \

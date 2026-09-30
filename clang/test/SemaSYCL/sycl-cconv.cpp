@@ -36,7 +36,7 @@ int main() {
   //expected-error@+1 {{SYCL device code does not support variadic functions}}
   sycl_entry_point<class kn>([]() { printf("world\n");
      moo();
-  //expected-error@+1 {{SYCL device code does not support variadic functions}}
+     //expected-error@+1 {{SYCL device code does not support variadic functions}}
      foo(1,2); });
   bar();
   return 0;
