@@ -20,6 +20,10 @@ class ThreadExitTestCase(TestBase):
         self.break_3 = line_number("main.cpp", "// Set third breakpoint here")
         self.break_4 = line_number("main.cpp", "// Set fourth breakpoint here")
 
+    @staticmethod
+    def thread_ids(threads):
+        return {t.GetThreadID() for t in threads}
+
     @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     def test(self):
         """Test thread exit handling."""
@@ -68,8 +72,8 @@ class ThreadExitTestCase(TestBase):
         )
         self.assertIsNotNone(stopped_thread, "Process is not stopped at breakpoint 1")
 
-        # Get the number of threads
-        num_threads = process.GetNumThreads()
+        bp1_tids = self.thread_ids(lldbutil.get_threads_in_executable(process))
+        num_threads = len(bp1_tids)
         self.assertGreaterEqual(
             num_threads,
             2,
@@ -82,14 +86,17 @@ class ThreadExitTestCase(TestBase):
             process, bp2_id
         )
         self.assertIsNotNone(stopped_thread, "Process is not stopped at breakpoint 2")
+        thread1_tid = stopped_thread.GetThreadID()
 
         # Update the number of threads
-        new_num_threads = process.GetNumThreads()
+        bp2_tids = self.thread_ids(lldbutil.get_threads_in_executable(process))
+        new_num_threads = len(bp2_tids)
         self.assertEqual(
             new_num_threads,
             num_threads + 1,
             "Number of expected threads did not increase by 1 at bp 2.",
         )
+        (thread2_tid,) = bp2_tids - bp1_tids
 
         # Run to the third breakpoint
         self.runCmd("continue")
@@ -98,8 +105,16 @@ class ThreadExitTestCase(TestBase):
         )
         self.assertIsNotNone(stopped_thread, "Process is not stopped at breakpoint 3")
 
+        # thread1 was joined. Check it is gone from the thread list, not just
+        # from the count: a stale entry must not have an a.out frame.
+        self.assertNotIn(
+            thread1_tid,
+            self.thread_ids(process),
+            "Exited thread1 is still listed at bp 3.",
+        )
+
         # Update the number of threads
-        new_num_threads = process.GetNumThreads()
+        new_num_threads = len(lldbutil.get_threads_in_executable(process))
         self.assertEqual(
             new_num_threads,
             num_threads,
@@ -113,8 +128,14 @@ class ThreadExitTestCase(TestBase):
         )
         self.assertIsNotNone(stopped_thread, "Process is not stopped at breakpoint 4")
 
+        self.assertNotIn(
+            thread2_tid,
+            self.thread_ids(process),
+            "Exited thread2 is still listed at bp 4.",
+        )
+
         # Update the number of threads
-        new_num_threads = process.GetNumThreads()
+        new_num_threads = len(lldbutil.get_threads_in_executable(process))
         self.assertEqual(
             new_num_threads,
             num_threads - 1,
