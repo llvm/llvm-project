@@ -153,6 +153,16 @@ if("${LIBOMP_ARCH}" STREQUAL "mips" OR "${LIBOMP_ARCH}" STREQUAL "mips64")
   set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -latomic")
 endif()
 
+if("${LIBOMP_ARCH}" STREQUAL "ppc" AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  # PPC (32-bit) has no 64-bit atomic instructions, so __atomic_load_8, etc.
+  # come from libatomic where the toolchain provides one.
+  include(CheckLibraryExists)
+  check_library_exists(atomic __atomic_load_8 "" LIBOMP_HAVE_LIBATOMIC_8)
+  if(LIBOMP_HAVE_LIBATOMIC_8)
+    set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -latomic")
+  endif()
+endif()
+
 # Should the libomp library and generated headers be copied into the original source exports/ directory
 # Turning this to FALSE aids parallel builds to not interfere with each other.
 # Currently, the testsuite module expects the just built OpenMP library to be located inside the exports/
