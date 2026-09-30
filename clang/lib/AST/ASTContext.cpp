@@ -15920,8 +15920,9 @@ private:
     // Oversized bit-fields (declared width larger than the field type) keep
     // only the type's width as the value container. The extra declared bits
     // are padding and follow that container (Itanium C++ ABI §2.4, II.1(b)).
-    // getIntWidth may be narrower still (bool, _BitInt); those occupied bits
-    // are the low-order bits of the value container.
+    // We use getTypeSize instead of getIntWidth
+    // because getIntWidth may be narrower still (bool, _BitInt);
+    // those occupied bits are the low-order bits of the value container.
     const uint64_t OccupiedSizeInBits =
         std::min(DeclaredSizeInBits,Ctx.getTypeSize(Field->getType()));
 
