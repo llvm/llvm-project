@@ -3278,7 +3278,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_FEATURE_XNACK_V4``               0x300 XNACK selection mask for
                                                         ``EF_AMDGPU_FEATURE_XNACK_*_V4``
                                                         values.
-     ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4``   0x000 XNACK unsupported.
+     ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4``   0x000 XNACK mode selection unsupported.
      ``EF_AMDGPU_FEATURE_XNACK_ANY_V4``           0x100 XNACK can have any value.
      ``EF_AMDGPU_FEATURE_XNACK_OFF_V4``           0x200 XNACK disabled.
      ``EF_AMDGPU_FEATURE_XNACK_ON_V4``            0x300 XNACK enabled.
@@ -3290,6 +3290,12 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_FEATURE_SRAMECC_OFF_V4``         0x800 SRAMECC disabled,
      ``EF_AMDGPU_FEATURE_SRAMECC_ON_V4``          0xc00 SRAMECC enabled.
      ============================================ ===== ===================================
+
+  For code object V4 and later, the XNACK field describes a selectable mode.
+  Processors with hardwired-on XNACK, such as ``gfx1250``, use
+  ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4`` (zero) because they do not support
+  mode selection. Their XNACK behavior is implied by ``EF_AMDGPU_MACH``; a zero
+  XNACK field does not mean replay is disabled on these processors.
 
   .. table:: AMDGPU ELF Header ``e_flags`` for Code Object V6 and After
      :name: amdgpu-elf-header-e_flags-table-v6-onwards
@@ -3305,7 +3311,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_FEATURE_XNACK_V4``               0x300      XNACK selection mask for
                                                              ``EF_AMDGPU_FEATURE_XNACK_*_V4``
                                                              values.
-     ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4``   0x000      XNACK unsupported.
+     ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4``   0x000      XNACK mode selection unsupported.
      ``EF_AMDGPU_FEATURE_XNACK_ANY_V4``           0x100      XNACK can have any value.
      ``EF_AMDGPU_FEATURE_XNACK_OFF_V4``           0x200      XNACK disabled.
      ``EF_AMDGPU_FEATURE_XNACK_ON_V4``            0x300      XNACK enabled.
