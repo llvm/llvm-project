@@ -784,13 +784,11 @@ void CodeGenFunction::EmitNullabilityCheck(LValue LHS, llvm::Value *RHS,
   auto CheckHandler = SanitizerHandler::TypeMismatch;
   SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
   llvm::Value *IsNotNull;
-  if (RHS->getType()->isAggregateType()) {
-    const MemberPointerType *MPT = LHS.getType()->getAs<MemberPointerType>();
-    assert(MPT && "Aggregate Type is not a Member Pointer Type");
+  if (auto *MPT = LHS.getType()->getAs<MemberPointerType>())
     IsNotNull = CGM.getCXXABI().EmitMemberPointerIsNotNull(*this, RHS, MPT);
-  } else {
+  else
     IsNotNull = Builder.CreateIsNotNull(RHS);
-  }
+
   llvm::Constant *StaticData[] = {
       EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(LHS.getType()),
       llvm::ConstantInt::get(Int8Ty, 0), // The LogAlignment info is unused.
