@@ -26,8 +26,6 @@ module m
       import polyAlloc
       real, save :: v1
       real :: v2 = 0.
-      real :: v3
-      data v3/0./
       real :: v4
       common /blk/ v4
       save /blk/

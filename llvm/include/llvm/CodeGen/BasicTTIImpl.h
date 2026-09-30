@@ -443,16 +443,11 @@ public:
   }
 
   bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const override {
-    return getTLI()->getTargetMachine().isNoopAddrSpaceCast(FromAS, ToAS);
+    return getTLI()->getTargetMachine().isNoopAddrSpaceCast(DL, FromAS, ToAS);
   }
 
   unsigned getAssumedAddrSpace(const Value *V) const override {
     return getTLI()->getTargetMachine().getAssumedAddrSpace(V);
-  }
-
-  bool isSingleThreaded() const override {
-    return getTLI()->getTargetMachine().Options.ThreadModel ==
-           ThreadModel::Single;
   }
 
   std::pair<const Value *, unsigned>
@@ -580,9 +575,10 @@ public:
   }
 
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
-                             ArrayRef<const Value *> Operands, Type *AccessType,
-                             TTI::TargetCostKind CostKind) const override {
-    return BaseT::getGEPCost(PointeeType, Ptr, Operands, AccessType, CostKind);
+                             ArrayRef<const Value *> Operands,
+                             TTI::TargetCostKind CostKind,
+                             Type *AccessType) const override {
+    return BaseT::getGEPCost(PointeeType, Ptr, Operands, CostKind, AccessType);
   }
 
   unsigned getEstimatedNumberOfCaseClusters(
@@ -667,10 +663,9 @@ public:
     if (!TargetTriple.isArch64Bit())
       return false;
 
-    // Disable relative lookup tables for all AArch64 targets. Even AArch64's
-    // small code model allows a 4GB span of text + data, which might not fit
-    // in the 32-bit offsets relative lookup tables generate.
-    if (TargetTriple.isAArch64())
+    // TODO: Triggers issues on aarch64 on darwin, so temporarily disable it
+    // there.
+    if (TargetTriple.getArch() == Triple::aarch64 && TargetTriple.isOSDarwin())
       return false;
 
     return true;
@@ -920,7 +915,6 @@ public:
     return TypeSize::getFixed(32);
   }
 
-  std::optional<unsigned> getMaxVScale() const override { return std::nullopt; }
   std::optional<unsigned> getVScaleForTuning() const override {
     return std::nullopt;
   }
@@ -1043,6 +1037,14 @@ public:
 
   /// Estimate the cost of type-legalization and the legalized type.
   std::pair<InstructionCost, MVT> getTypeLegalizationCost(Type *Ty) const {
+    auto [It, Inserted] = TypeLegalizationCostCache.try_emplace(Ty);
+    if (Inserted)
+      It->second = computeTypeLegalizationCost(Ty);
+    return It->second;
+  }
+
+private:
+  std::pair<InstructionCost, MVT> computeTypeLegalizationCost(Type *Ty) const {
     LLVMContext &C = Ty->getContext();
     EVT MTy = getTLI()->getValueType(DL, Ty);
 
@@ -1076,6 +1078,12 @@ public:
     }
   }
 
+  /// Memoizes type legalization cost. The mapping does not depend on the IR, so
+  /// entries stay valid for the lifetime of this object.
+  mutable DenseMap<Type *, std::pair<InstructionCost, MVT>>
+      TypeLegalizationCostCache;
+
+public:
   unsigned getMaxInterleaveFactor(ElementCount VF,
                                   bool HasUnorderedReductions) const override {
     return 1;
@@ -1086,7 +1094,7 @@ public:
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override {
+      const Instruction *CtxI = nullptr) const override {
     // Check if any of the operands are vector operands.
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1096,7 +1104,7 @@ public:
     if (CostKind != TTI::TCK_RecipThroughput)
       return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
                                            Opd1Info, Opd2Info,
-                                           Args, CxtI);
+                                           Args, CtxI);
 
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -1147,7 +1155,7 @@ public:
     if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
       InstructionCost Cost = thisT()->getArithmeticInstrCost(
           Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
-          Args, CxtI);
+          Args, CtxI);
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
       SmallVector<Type *> Tys(Args.size(), Ty);
@@ -1218,7 +1226,9 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override {
+                 const Instruction *CtxI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override {
     switch (improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp)) {
     case TTI::SK_Broadcast:
       if (auto *FVT = dyn_cast<FixedVectorType>(SrcTy))
@@ -1323,7 +1333,7 @@ public:
       }
       break;
     case Instruction::AddrSpaceCast:
-      if (TLI->isFreeAddrSpaceCast(Src->getPointerAddressSpace(),
+      if (TLI->isFreeAddrSpaceCast(DL, Src->getPointerAddressSpace(),
                                    Dst->getPointerAddressSpace()))
         return 0;
       break;
@@ -2012,6 +2022,7 @@ public:
     case Intrinsic::experimental_vp_strided_store: {
       const Value *Data = Args[0];
       const Value *Ptr = Args[1];
+      const Value *Stride = Args[2];
       const Value *Mask = Args[3];
       const Value *EVL = Args[4];
       bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
@@ -2020,11 +2031,12 @@ public:
           I->getParamAlign(1).value_or(thisT()->DL.getABITypeAlign(EltTy));
       return thisT()->getMemIntrinsicInstrCost(
           MemIntrinsicCostAttributes(IID, Data->getType(), Ptr, VarMask,
-                                     Alignment, I),
+                                     Alignment, I, Stride),
           CostKind);
     }
     case Intrinsic::experimental_vp_strided_load: {
       const Value *Ptr = Args[0];
+      const Value *Stride = Args[1];
       const Value *Mask = Args[2];
       const Value *EVL = Args[3];
       bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
@@ -2032,7 +2044,8 @@ public:
       Align Alignment =
           I->getParamAlign(0).value_or(thisT()->DL.getABITypeAlign(EltTy));
       return thisT()->getMemIntrinsicInstrCost(
-          MemIntrinsicCostAttributes(IID, RetTy, Ptr, VarMask, Alignment, I),
+          MemIntrinsicCostAttributes(IID, RetTy, Ptr, VarMask, Alignment, I,
+                                     Stride),
           CostKind);
     }
     case Intrinsic::stepvector: {
@@ -2086,6 +2099,8 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum:
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, I, 1);
@@ -2508,6 +2523,13 @@ public:
       return thisT()->getMemIntrinsicInstrCost(
           MemIntrinsicCostAttributes(IID, Ty, TyAlign, 0), CostKind);
     }
+    case Intrinsic::speculative_load: {
+      const IntrinsicInst *I = ICA.getInst();
+      Align Alignment = I ? I->getParamAlign(0).valueOrOne() : Align(1);
+      unsigned AS = Tys[0]->getPointerAddressSpace();
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, RetTy, Alignment, AS), CostKind);
+    }
     case Intrinsic::experimental_vp_strided_store: {
       auto *Ty = cast<VectorType>(ICA.getArgTypes()[0]);
       Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
@@ -2546,6 +2568,8 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum:
       return thisT()->getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID),
                                              VecOpTy, ICA.getFlags(), CostKind);
     case Intrinsic::experimental_vector_match: {
@@ -2742,6 +2766,12 @@ public:
       break;
     case Intrinsic::clmul:
       ISD = ISD::CLMUL;
+      break;
+    case Intrinsic::smulh:
+      ISD = ISD::MULHS;
+      break;
+    case Intrinsic::umulh:
+      ISD = ISD::MULHU;
       break;
     case Intrinsic::masked_udiv:
     case Intrinsic::masked_sdiv:
@@ -3111,12 +3141,28 @@ public:
       InstructionCost MulCost =
           thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
 
-      // When the multiplication with holes approach is used, that emits 16
-      // MULs, 8 + 4 ANDs, 12 XORs and 3 ORs.
-      if (BW >= 32 && BW <= 64 &&
+      // When the multiplication with holes approach is used, it splits the
+      // operands into S phases (the smallest stride with ceil(BW/S) <= 2^S) and
+      // emits S*S MULs, 3*S ANDs, S*(S-1) XORs and S-1 ORs.
+      //
+      // * BW <= 8 uses S = 2
+      // * BW <= 24 uses S = 3
+      // * BW <= 64 uses S = 4
+      // * BW <= 160 uses S = 5
+      // * BW <= 384 uses S = 6
+      unsigned S = 1;
+      while (S < 32 && divideCeil(BW, S) > (1u << S))
+        ++S;
+
+      // The naive algorithm usually uses AND+MUL+XOR per bit.
+      unsigned NaiveCost = 3 * BW;
+      unsigned HolesCost = S * S + 3 * S + S * (S - 1) + (S - 1);
+
+      if (HolesCost < NaiveCost &&
           TLI->isOperationLegalOrCustom(ISD::MUL,
                                         TLI->getValueType(DL, RetTy))) {
-        return 16 * MulCost + 12 * AndCost + 12 * XorCost + 3 * OrCost;
+        return S * S * MulCost + 3 * S * AndCost + S * (S - 1) * XorCost +
+               (S - 1) * OrCost;
       }
 
       InstructionCost PerBitCostMul = AndCost + MulCost + XorCost;
@@ -3128,6 +3174,25 @@ public:
                                       ICmpInst::ICMP_NE, CostKind);
       InstructionCost PerBitCost = std::min(PerBitCostMul, PerBitCostBittest);
       return BW * PerBitCost;
+    }
+    case Intrinsic::smulh:
+    case Intrinsic::umulh: {
+      unsigned BW = RetTy->getScalarSizeInBits();
+      Type *WideTy = RetTy->getWithNewBitWidth(BW * 2);
+      bool IsSigned = IID == Intrinsic::smulh;
+      unsigned ExtOp = IsSigned ? Instruction::SExt : Instruction::ZExt;
+      InstructionCost Cost = 0;
+      Cost +=
+          2 * thisT()->getCastInstrCost(ExtOp, WideTy, RetTy,
+                                        TTI::CastContextHint::None, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Mul, WideTy, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(
+          Instruction::LShr, WideTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
+      Cost += thisT()->getCastInstrCost(Instruction::Trunc, RetTy, WideTy,
+                                        TTI::CastContextHint::None, CostKind);
+      return Cost;
     }
     default:
       break;
@@ -3237,6 +3302,10 @@ public:
     }
     case Intrinsic::vp_load_ff:
       return InstructionCost::getInvalid();
+    case Intrinsic::speculative_load:
+      // Speculative loads are lowered to regular loads of the full type.
+      return thisT()->getMemoryOpCost(Instruction::Load, DataTy, Alignment,
+                                      MICA.getAddressSpace(), CostKind);
     default:
       llvm_unreachable("unexpected intrinsic");
     }
@@ -3266,7 +3335,7 @@ public:
     // Try to find actual number of parts for non-power-of-2 elements as
     // ceil(num-of-elements/num-of-subtype-elements).
     if (auto *FTp = dyn_cast<FixedVectorType>(Tp);
-        Tp && LT.second.isFixedLengthVector() &&
+        FTp && LT.second.isFixedLengthVector() &&
         !has_single_bit(FTp->getNumElements())) {
       if (auto *SubTp = dyn_cast_if_present<FixedVectorType>(
               EVT(LT.second).getTypeForEVT(Tp->getContext()));

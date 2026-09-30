@@ -68,9 +68,11 @@ LogicalResult EmulateFloatPattern::matchAndRewrite(
     // If you're seeing it, there's a bug.
     return op->emitOpError("type conversion failed in float emulation");
   }
-  Operation *expandedOp =
-      rewriter.create(loc, op->getName().getIdentifier(), operands, resultTypes,
-                      op->getAttrs(), op->getSuccessors(), /*regions=*/{});
+  OperationState state(loc, op->getName(), operands, resultTypes,
+                       op->getDiscardableAttrDictionary().getValue(),
+                       op->getSuccessors());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
+  Operation *expandedOp = rewriter.create(state);
   SmallVector<Value> newResults(expandedOp->getResults());
   for (auto [res, oldType, newType] : llvm::zip_equal(
            MutableArrayRef{newResults}, op->getResultTypes(), resultTypes)) {
@@ -98,7 +100,8 @@ void mlir::arith::populateEmulateUnsupportedFloatsConversions(
   });
   converter.addTargetMaterialization(
       [](OpBuilder &b, Type target, ValueRange input, Location loc) {
-        auto extFOp = arith::ExtFOp::create(b, loc, target, input);
+        auto extFOp = arith::ExtFOp::create(b, loc, target, input.front(),
+                                            arith::FastMathFlagsAttr{});
         extFOp.setFastmath(arith::FastMathFlags::contract);
         return extFOp;
       });

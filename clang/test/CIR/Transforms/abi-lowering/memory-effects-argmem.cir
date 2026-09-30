@@ -1,0 +1,143 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i}>
+
+#none = #cir.memory_effects<other = none, arg_mem = none,
+                            inaccessible_mem = none, errno_mem = none,
+                            target_mem0 = none, target_mem1 = none>
+
+#read = #cir.memory_effects<other = read, arg_mem = read,
+                            inaccessible_mem = read, errno_mem = read,
+                            target_mem0 = read, target_mem1 = read>
+
+#argmem = #cir.memory_effects<other = none, arg_mem = readwrite,
+                              inaccessible_mem = none, errno_mem = none,
+                              target_mem0 = none, target_mem1 = none>
+
+// The leading direct argument puts the byval slot at index 1.
+#byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct" },
+             { kind = "indirect", indirect_align = 8 } ]
+}
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#sret_ret = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ ]
+}
+
+#extend_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "extend",
+               coerced_type = !cir.int<s, 32>,
+               sign_extend = true } ]
+}
+
+#expand_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "expand" } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @const_sret() -> !rec_Big
+      attributes { memory_effects = #none, test_classify = #sret_ret }
+
+  // CHECK: cir.func{{.*}} @const_sret(!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+
+  cir.func private @pure_sret() -> !rec_Big
+      attributes { memory_effects = #read, test_classify = #sret_ret }
+
+  // CHECK: cir.func{{.*}} @pure_sret(!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = read, arg_mem = readwrite, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>
+
+  cir.func private @const_byval(!s32i, !rec_Big)
+      attributes { memory_effects = #none, test_classify = #byval_arg }
+
+  // CHECK: cir.func{{.*}} @const_byval(!s32i, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+
+  // An indirect argument without byval widens the same as byval.
+  cir.func private @const_non_byval(!rec_Big)
+      attributes { memory_effects = #none, test_classify = #non_byval_arg }
+
+  // CHECK: cir.func{{.*}} @const_non_byval(!cir.ptr<!rec_Big> {{{.*}}llvm.nofreeobj{{.*}}}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+
+  // Variadic with no indirect slot in the signature.
+  cir.func private @const_variadic(!s8i, ...) -> !s32i
+      attributes { memory_effects = #none, test_classify = #extend_arg }
+
+  // CHECK: cir.func{{.*}} @const_variadic(!s8i {llvm.signext}, ...) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+
+  // An Extend argument is rewritten but hands the callee no memory, so the
+  // effects stay as written.
+  cir.func private @const_extend(!s8i) -> !s32i
+      attributes { memory_effects = #none, test_classify = #extend_arg }
+
+  // CHECK: cir.func{{.*}} @const_extend(!s8i {llvm.signext}) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+
+  // Expand replaces the record with its fields, handing the callee no
+  // memory.  Only the hook reaches this, since no x86_64 classification
+  // produces Expand.
+  cir.func private @const_expand(!rec_Big) -> !s32i
+      attributes { memory_effects = #none, test_classify = #expand_arg }
+
+  // CHECK: cir.func{{.*}} @const_expand(!s64i, !s64i, !s64i) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+
+  // Already widened on the way in, so widening it again changes nothing.
+  cir.func private @prewidened_sret() -> !rec_Big
+      attributes { memory_effects = #argmem, test_classify = #sret_ret }
+
+  // CHECK: cir.func{{.*}} @prewidened_sret(!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>
+
+  // A callee with no recorded effects must still come out with none, so that
+  // forwarding the original is distinguishable from hard-coding a value.
+  cir.func private @plain_sret() -> !rec_Big
+      attributes { test_classify = #sret_ret }
+
+  // CHECK: cir.func{{.*}} @plain_sret(!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) attributes {test_classify = {args = [], return = {indirect_align = 8 : i64, kind = "indirect"}}}
+
+  cir.func @call_plain_sret() attributes { test_classify = #passthrough } {
+    %r = cir.call @plain_sret() : () -> !rec_Big
+    cir.return
+  }
+
+  // CHECK: cir.call @plain_sret(%{{[^)]+}}) : (!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) -> ()
+
+  // nothrow without any recorded effects survives the rewrite and still gets
+  // no effects.
+  cir.func @call_plain_sret_nothrow() attributes { test_classify = #passthrough } {
+    %r = cir.call @plain_sret() nothrow : () -> !rec_Big
+    cir.return
+  }
+
+  // CHECK: cir.call @plain_sret(%{{[^)]+}}) nothrow : (!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) -> ()
+
+  // The call site carries its widened effects across the rewrite that gives
+  // it the sret operand.
+  cir.func @call_const_sret() attributes { test_classify = #passthrough } {
+    %r = cir.call @const_sret() { memory_effects = #none } : () -> !rec_Big
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_const_sret()
+  // CHECK:   cir.call @const_sret(%{{[^,)]+}}) {memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) -> ()
+}

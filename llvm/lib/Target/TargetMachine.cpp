@@ -43,7 +43,8 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
     : TheTarget(T), DL(DataLayoutString), TargetTriple(TT),
       TargetCPU(std::string(CPU)), TargetFS(std::string(FS)), AsmInfo(nullptr),
       MRI(nullptr), MII(nullptr), STI(nullptr), RequireStructuredCFG(false),
-      O0WantsFastISel(false), Options(Options) {}
+      O0WantsFastISel(false), SupportsDefaultOutlining(false),
+      Options(Options) {}
 
 TargetMachine::~TargetMachine() = default;
 
@@ -319,15 +320,6 @@ TargetIRAnalysis TargetMachine::getTargetIRAnalysis() const {
   // dependency.
   return TargetIRAnalysis(
       [this](const Function &F) { return this->getTargetTransformInfo(F); });
-}
-
-std::pair<int, int> TargetMachine::parseBinutilsVersion(StringRef Version) {
-  if (Version == "none")
-    return {INT_MAX, INT_MAX}; // Make binutilsIsAtLeast() return true.
-  std::pair<int, int> Ret;
-  if (!Version.consumeInteger(10, Ret.first) && Version.consume_front("."))
-    Version.consumeInteger(10, Ret.second);
-  return Ret;
 }
 
 StringRef TargetMachine::getTargetABIName(const Module &M) const {

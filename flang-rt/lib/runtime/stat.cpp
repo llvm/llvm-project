@@ -70,6 +70,9 @@ RT_API_ATTRS const char *StatErrorString(int stat) {
     return "DEALLOCATE of a pointer that is not the whole content of a pointer "
            "ALLOCATE";
 
+  case StatEnumBoundary:
+    return "NEXT or PREVIOUS of enumeration type at boundary";
+
   default:
     return nullptr;
   }

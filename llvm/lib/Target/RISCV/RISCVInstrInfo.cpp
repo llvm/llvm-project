@@ -544,7 +544,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   if (RISCV::GPRPairRegClass.contains(DstReg, SrcReg)) {
-    if (STI.isRV32()) {
+    if (!STI.is64Bit()) {
       if (STI.hasStdExtZdinx()) {
         // On RV32_Zdinx, FMV.D will move a pair of registers to another pair of
         // registers, in one instruction.
@@ -1046,27 +1046,27 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define | DstRegState)
+          .addDef(DstReg, DstRegState)
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegX0:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define | DstRegState)
+          .addDef(DstReg, DstRegState)
           .addReg(SrcReg, SrcRegState)
           .addReg(RISCV::X0)
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegReg:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define | DstRegState)
+          .addDef(DstReg, DstRegState)
           .addReg(SrcReg, SrcRegState)
           .addReg(SrcReg, SrcRegState)
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegImm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
-          .addReg(DstReg, RegState::Define | DstRegState)
+          .addDef(DstReg, DstRegState)
           .addReg(SrcReg, SrcRegState)
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
@@ -1545,7 +1545,7 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   auto II = MBB.end();
   // We may also update the jump target to RestoreBB later.
   MachineInstr &MI = *BuildMI(MBB, II, DL, get(RISCV::PseudoJump))
-                          .addReg(ScratchReg, RegState::Define | RegState::Dead)
+                          .addDef(ScratchReg, RegState::Dead)
                           .addMBB(&DestBB, RISCVII::MO_CALL);
 
   RS->enterBasicBlockEnd(MBB);
@@ -1817,6 +1817,118 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   }
 }
 
+static bool isJumpTableLoad(const MachineInstr &MI) {
+  return any_of(MI.memoperands(), [](const MachineMemOperand *MMO) {
+    const PseudoSourceValue *PSV = MMO->getPseudoValue();
+    return PSV && PSV->isJumpTable();
+  });
+}
+
+// We want this instruction to be loading the base address of a jump table into
+// a register. This can be PseudoMovAddr/PseudoLLA/LUI(+ADDI)/QC_E_LI.
+static int getJumpTableIndexFromBase(const MachineRegisterInfo &MRI,
+                                     Register Reg) {
+  if (!Reg.isVirtual())
+    return -1;
+  const MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
+  if (!MI)
+    return -1;
+
+  for (const MachineOperand &MO : MI->operands())
+    if (MO.isJTI())
+      return MO.getIndex();
+
+  return -1;
+}
+
+// This instruction is used as the base address of a jump table load. We expect
+// it to be adding the jump table base address to an index that may be scaled.
+static int getJumpTableIndexFromLoadAddr(const MachineRegisterInfo &MRI,
+                                         Register Reg) {
+  if (!Reg.isVirtual())
+    return -1;
+  const MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
+  if (!MI)
+    return -1;
+
+  int JTI;
+  switch (MI->getOpcode()) {
+  case RISCV::SH1ADD:
+  case RISCV::SH2ADD:
+  case RISCV::SH3ADD:
+    // Only the index should be scaled so we just check the unscaled operand for
+    // the base address.
+    // TODO: Can the address be SHXADD_UW?
+    JTI = getJumpTableIndexFromBase(MRI, MI->getOperand(2).getReg());
+    if (JTI >= 0)
+      return JTI;
+    break;
+  case RISCV::ADD:
+    JTI = getJumpTableIndexFromBase(MRI, MI->getOperand(1).getReg());
+    if (JTI >= 0)
+      return JTI;
+    JTI = getJumpTableIndexFromBase(MRI, MI->getOperand(2).getReg());
+    if (JTI >= 0)
+      return JTI;
+    break;
+  }
+
+  return -1;
+}
+
+// Recursively search for %jump-table.N starting from PseudoBRIND,
+// and return the index of %jump-table.N.
+//
+// One common jump table:
+//
+//   %base   = PseudoMovAddr/PseudoLLA/LUI(+ADDI)/QC_E_LI %jump-table.N
+//   %addr   = SH2ADD %index, %base
+//   %entry  = LW %addr, 0 :: (load from jump-table)
+//   %target = ADD %entry, %base
+//   PseudoBRIND %target, 0
+//
+int RISCVInstrInfo::getJumpTableIndex(const MachineInstr &MI) const {
+  if (MI.getOpcode() != RISCV::PseudoBRIND &&
+      MI.getOpcode() != RISCV::PseudoBRINDX7)
+    return -1;
+
+  Register Reg = MI.getOperand(0).getReg();
+  if (!Reg.isVirtual())
+    return -1;
+
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  MachineInstr *Def = MRI.getUniqueVRegDef(Reg);
+  if (!Def)
+    return -1;
+
+  // The target may come directly from a load or the jump table may store
+  // relative offset that needs the table base added to it.
+  int JTI;
+  switch (Def->getOpcode()) {
+  case RISCV::LW:
+  case RISCV::LWU:
+  case RISCV::LD:
+    // TODO: Zilx
+    if (!isJumpTableLoad(*Def))
+      return -1;
+
+    JTI = getJumpTableIndexFromLoadAddr(MRI, Def->getOperand(1).getReg());
+    if (JTI >= 0)
+      return JTI;
+    break;
+  case RISCV::ADD:
+    JTI = getJumpTableIndexFromBase(MRI, Def->getOperand(1).getReg());
+    if (JTI >= 0)
+      return JTI;
+    JTI = getJumpTableIndexFromBase(MRI, Def->getOperand(2).getReg());
+    if (JTI >= 0)
+      return JTI;
+    break;
+  }
+
+  return -1;
+}
+
 // If the operation has a predicated pseudo instruction, return the pseudo
 // instruction opcode. Otherwise, return RISCV::INSTRUCTION_LIST_END.
 // TODO: Support more operations.
@@ -2003,8 +2115,8 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   if (requiresNTLHint(MI)) {
     if (STI.hasStdExtZca()) {
-      if (isCompressibleInst(MI, STI))
-        return 4; // c.ntl.all + c.load/c.store
+      if (unsigned Size = getCompressedSize(MI, STI))
+        return 2 + Size; // c.ntl.all + c.load/c.store
       return 6;   // c.ntl.all + load/store
     }
     return 8; // ntl.all + load/store
@@ -2014,8 +2126,8 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return getInstBundleSize(MI);
 
   if (MI.getParent() && MI.getParent()->getParent()) {
-    if (isCompressibleInst(MI, STI))
-      return 2;
+    if (unsigned Size = getCompressedSize(MI, STI))
+      return Size;
   }
 
   switch (Opcode) {
@@ -3046,6 +3158,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM_LSB_ZEROS(8, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(9, 000)
         // clang-format on
+        case RISCVOp::OPERAND_UIMM4_PLUS1:
+          Ok = Imm >= 1 && Imm <= 16;
+          break;
         case RISCVOp::OPERAND_UIMM5_NONZERO:
           Ok = isUInt<5>(Imm) && (Imm != 0);
           break;
@@ -3057,9 +3172,6 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           break;
         case RISCVOp::OPERAND_UIMM6_PLUS1:
           Ok = Imm >= 1 && Imm <= 64;
-          break;
-        case RISCVOp::OPERAND_UIMM7_EQ_XLEN:
-          Ok = Imm == STI.getXLen();
           break;
         case RISCVOp::OPERAND_UIMM8_GE32:
           Ok = isUInt<8>(Imm) && Imm >= 32;
@@ -3699,8 +3811,15 @@ static bool cannotInsertTailCall(const MachineBasicBlock &MBB) {
   // that can be used for expanding PseudoTAIL instruction,
   // then we cannot insert tail call.
   const TargetSubtargetInfo &STI = MBB.getParent()->getSubtarget();
+  const RISCVMachineFunctionInfo *RVFI =
+      MBB.getParent()->getInfo<RISCVMachineFunctionInfo>();
+  // When cf-protection-branch is active, the outliner will emit PseudoTAILX7
+  // which always uses X7. Otherwise, PseudoTAIL is emitted and the register
+  // is determined by Zicfilp at encode time.
   MCRegister TailExpandUseRegNo =
-      RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
+      RVFI->hasCFProtectionBranch()
+          ? RISCV::X7
+          : RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
   for (const MachineInstr &MI : MBB) {
     if (isMIReadsReg(MI, STI.getRegisterInfo(), TailExpandUseRegNo))
       return true;
@@ -3742,8 +3861,12 @@ bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
   // If the expansion register for tail calls is live across the candidate
   // outlined call site, we cannot outline that candidate as the expansion
   // would clobber the register.
+  const RISCVMachineFunctionInfo *RVFI =
+      C.getMF()->getInfo<RISCVMachineFunctionInfo>();
   MCRegister TailExpandUseReg =
-      RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
+      RVFI->hasCFProtectionBranch()
+          ? RISCV::X7
+          : RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
   if (C.back().isReturn() &&
       !C.isAvailableAcrossAndOutOfSeq(TailExpandUseReg, RegInfo)) {
     LLVM_DEBUG(dbgs() << "MBB:\n" << *C.getMBB());
@@ -3916,10 +4039,9 @@ void RISCVInstrInfo::buildOutlinedFrame(
   MBB.addLiveIn(RISCV::X5);
 
   // Add in a return instruction to the end of the outlined frame.
-  MBB.insert(MBB.end(), BuildMI(MF, DebugLoc(), get(RISCV::JALR))
-      .addReg(RISCV::X0, RegState::Define)
-      .addReg(RISCV::X5)
-      .addImm(0));
+  MBB.insert(MBB.end(), BuildMI(MF, DebugLoc(), get(RISCV::JALR), RISCV::X0)
+                            .addReg(RISCV::X5)
+                            .addImm(0));
 }
 
 MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
@@ -3927,7 +4049,11 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
     MachineFunction &MF, outliner::Candidate &C) const {
 
   if (C.CallConstructionID == MachineOutlinerTailCall) {
-    It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(RISCV::PseudoTAIL))
+    const RISCVMachineFunctionInfo *RVFI =
+        MF.getInfo<RISCVMachineFunctionInfo>();
+    unsigned TailOpc =
+        RVFI->hasCFProtectionBranch() ? RISCV::PseudoTAILX7 : RISCV::PseudoTAIL;
+    It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(TailOpc))
                             .addGlobalAddress(M.getNamedValue(MF.getName()),
                                               /*Offset=*/0, RISCVII::MO_CALL));
     return It;
@@ -5330,12 +5456,12 @@ unsigned RISCV::getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW) {
   return Scaled;
 }
 
-static std::optional<int64_t> getEffectiveImm(const MachineOperand &MO) {
+static std::optional<int64_t> getEffectiveImm(const MachineRegisterInfo &MRI,
+                                              const MachineOperand &MO) {
   assert(MO.isImm() || MO.getReg().isVirtual());
   if (MO.isImm())
     return MO.getImm();
-  const MachineInstr *Def =
-      MO.getParent()->getMF()->getRegInfo().getVRegDef(MO.getReg());
+  const MachineInstr *Def = MRI.getVRegDef(MO.getReg());
   int64_t Imm;
   if (isLoadImm(Def, Imm))
     return Imm;
@@ -5343,9 +5469,9 @@ static std::optional<int64_t> getEffectiveImm(const MachineOperand &MO) {
 }
 
 /// Given two VL operands, do we know that LHS <= RHS? Must be used in SSA form.
-bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
-  assert((LHS.isImm() || LHS.getParent()->getMF()->getRegInfo().isSSA()) &&
-         (RHS.isImm() || RHS.getParent()->getMF()->getRegInfo().isSSA()));
+bool RISCV::isVLKnownLE(const MachineRegisterInfo &MRI,
+                        const MachineOperand &LHS, const MachineOperand &RHS) {
+  assert((LHS.isImm() || MRI.isSSA()) && (RHS.isImm() || MRI.isSSA()));
   if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
       LHS.getReg() == RHS.getReg())
     return true;
@@ -5355,8 +5481,8 @@ bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
     return true;
   if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
     return false;
-  std::optional<int64_t> LHSImm = getEffectiveImm(LHS),
-                         RHSImm = getEffectiveImm(RHS);
+  std::optional<int64_t> LHSImm = getEffectiveImm(MRI, LHS),
+                         RHSImm = getEffectiveImm(MRI, RHS);
   if (!LHSImm || !RHSImm)
     return false;
   return LHSImm <= RHSImm;

@@ -882,6 +882,10 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateName(
     if (TraverseQualifier && QTN->getQualifier()) {
       TRY_TO(TraverseNestedNameSpecifier(QTN->getQualifier()));
     }
+  } else if (PackIndexingTemplateStorage *PI =
+                 Template.getAsPackIndexingTemplate()) {
+    TRY_TO(TraverseTemplateName(PI->getPattern(), TraverseQualifier));
+    TRY_TO(TraverseStmt(PI->getIndexExpr()));
   }
 
   return true;
@@ -2635,6 +2639,7 @@ DEF_TRAVERSE_STMT(CXXDependentScopeMemberExpr, {
 
 DEF_TRAVERSE_STMT(DependentTemplateIdExpr, {
   TRY_TO(TraverseDeclarationNameInfo(S->getNameInfo()));
+  TRY_TO(TraverseTemplateName(S->getTemplateName()));
   TRY_TO(TraverseTemplateArgumentLocsHelper(S->template_arguments().data(),
                                             S->getNumTemplateArgs()));
 })
@@ -2733,6 +2738,8 @@ bool RecursiveASTVisitor<Derived>::TraverseConceptReference(
     TRY_TO(VisitConceptReference(CR));
   TRY_TO(TraverseNestedNameSpecifierLoc(CR->getNestedNameSpecifierLoc()));
   TRY_TO(TraverseDeclarationNameInfo(CR->getConceptNameInfo()));
+  TRY_TO(TraverseTemplateName(CR->getNamedConcept(),
+                              /*TraverseQualifier=*/false));
   if (CR->hasExplicitTemplateArgs())
     TRY_TO(TraverseTemplateArgumentLocsHelper(
         CR->getTemplateArgsAsWritten()->getTemplateArgs(),
@@ -3240,6 +3247,9 @@ DEF_TRAVERSE_STMT(OMPFuseDirective,
 DEF_TRAVERSE_STMT(OMPInterchangeDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPFlattenDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPSplitDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -3517,8 +3527,10 @@ bool RecursiveASTVisitor<Derived>::VisitOMPFinalClause(OMPFinalClause *C) {
 template <typename Derived>
 bool
 RecursiveASTVisitor<Derived>::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
+  if (auto *E = C->getDimsModifierExpr())
+    TRY_TO(VisitStmt(E));
+  TRY_TO(VisitOMPClauseList(C));
   TRY_TO(VisitOMPClauseWithPreInit(C));
-  TRY_TO(TraverseStmt(C->getNumThreads()));
   return true;
 }
 
@@ -3578,6 +3590,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPLoopRangeClause(
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPPartialClause(OMPPartialClause *C) {
   TRY_TO(TraverseStmt(C->getFactor()));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPDepthClause(OMPDepthClause *C) {
+  TRY_TO(TraverseStmt(C->getDepth()));
   return true;
 }
 
