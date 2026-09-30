@@ -9863,6 +9863,9 @@ static bool isOpenCLSizeDependentType(ASTContext &C, QualType Ty) {
 }
 
 static OpenCLParamType getOpenCLKernelParameterType(Sema &S, QualType PT) {
+  if (PT->isCooperativeMatrixType())
+    return InvalidKernelParam;
+
   if (PT->isDependentType())
     return InvalidKernelParam;
 
@@ -14097,6 +14100,30 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
   }
 }
 
+// Return true if builtin call returns cooperative matrix.
+bool Sema::BuiltinReturnsCoopMatrix(Expr *RHSExpr) {
+  auto Call = dyn_cast<CallExpr>(RHSExpr);
+  if (!Call)
+    return false;
+  FunctionDecl *F = Call->getDirectCallee();
+  if (!F)
+    return false;
+  switch (F->getBuiltinID()) {
+  case Builtin::BIcoop_mat_load:
+  case Builtin::BIcoop_mat_mulAdd:
+  case Builtin::BIcoop_mat_binary_add:
+  case Builtin::BIcoop_mat_binary_sub:
+  case Builtin::BIcoop_mat_binary_mul:
+  case Builtin::BIcoop_mat_binary_div:
+  case Builtin::BIcoop_mat_scalar_mul:
+  case Builtin::BIcoop_mat_scalar_neg:
+  case Builtin::BIcoop_mat_init:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   llvm::scope_exit ResetDeclForInitializer([this]() {
     if (!this->ExprEvalContexts.empty())
@@ -14615,6 +14642,19 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 
   if (LangOpts.OpenACC && !InitType.isNull())
     OpenACC().ActOnVariableInit(VDecl, InitType);
+
+  // Set return type of builtin call using type of LHS variable.
+  // This is done for builtin calls that return cooperative matrix.
+  if (getLangOpts().OpenCL && BuiltinReturnsCoopMatrix(Init)) {
+    if (!VDecl->getType()->isCooperativeMatrixType()) {
+      Diag(VDecl->getLocation(), diag::err_coop_matrix_assignment);
+      return;
+    }
+
+    auto call = dyn_cast<CallExpr>(Init);
+    assert(call);
+    call->setType(VDecl->getType());
+  }
 }
 
 void Sema::ActOnInitializerError(Decl *D) {

@@ -6393,6 +6393,11 @@ bool UnnamedLocalNoLinkageFinder::VisitConstantMatrixType(
   return Visit(T->getElementType());
 }
 
+bool UnnamedLocalNoLinkageFinder::VisitCooperativeMatrixType(
+    const CooperativeMatrixType *T) {
+  return Visit(T->getElementType());
+}
+
 bool UnnamedLocalNoLinkageFinder::VisitFunctionProtoType(
                                                   const FunctionProtoType* T) {
   for (const auto &A : T->param_types()) {
