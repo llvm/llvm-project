@@ -24,6 +24,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h" // IWYU pragma: keep
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
@@ -137,6 +138,11 @@ value is '.*', i.e. diagnostics from all non-system
 headers are displayed by default. Diagnostics
 from the main file of each translation unit are
 always displayed.
+The pattern uses POSIX extended regular
+expression syntax, so lookahead such as '(?!...)'
+is not supported; use --exclude-header-filter to
+exclude headers instead. An empty pattern matches
+no headers.
 Can be used together with -line-filter.
 This option overrides the 'HeaderFilterRegex'
 option in .clang-tidy file, if any.
@@ -150,6 +156,8 @@ Regular expression matching the names of the
 headers to exclude diagnostics from. Diagnostics
 from the main file of each translation unit are
 always displayed.
+The pattern uses POSIX extended regular
+expression syntax, like --header-filter.
 Must be used together with --header-filter.
 Can be used together with -line-filter.
 This option overrides the 'ExcludeHeaderFilterRegex'
@@ -579,6 +587,20 @@ static bool verifyOptions(const llvm::StringSet<> &ValidOptions,
   return AnyInvalid;
 }
 
+static bool verifyFilterRegex(const std::optional<std::string> &Regex,
+                              StringRef OptionName, StringRef Source) {
+  // An empty filter matches nothing by design and is not an error.
+  if (!Regex || Regex->empty())
+    return false;
+  std::string Error;
+  if (llvm::Regex(*Regex).isValid(Error))
+    return false;
+  llvm::WithColor::warning(llvm::errs(), Source)
+      << "invalid " << OptionName << " '" << *Regex << "': " << Error
+      << VerifyConfigWarningEnd;
+  return true;
+}
+
 static SmallString<256> makeAbsolute(StringRef Input) {
   if (Input.empty())
     return {};
@@ -711,6 +733,15 @@ int clangTidyMain(int argc, const char **argv) {
             verifyFileExtensions(*Opts.HeaderFileExtensions,
                                  *Opts.ImplementationFileExtensions, Source);
       AnyInvalid |= verifyOptions(Valid.Options, Opts.CheckOptions, Source);
+      // The binary defaults hold the values of --header-filter and
+      // --exclude-header-filter, which are also reported as command-line
+      // overrides when set, so checking them here would report them twice.
+      if (Source != ClangTidyOptionsProvider::OptionsSourceTypeDefaultBinary) {
+        AnyInvalid |= verifyFilterRegex(Opts.HeaderFilterRegex,
+                                        "HeaderFilterRegex", Source);
+        AnyInvalid |= verifyFilterRegex(Opts.ExcludeHeaderFilterRegex,
+                                        "ExcludeHeaderFilterRegex", Source);
+      }
     }
     if (AnyInvalid)
       return 1;
