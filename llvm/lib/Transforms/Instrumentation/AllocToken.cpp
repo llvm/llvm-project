@@ -255,6 +255,8 @@ public:
     AllocTokenMetadata Metadata{cast<MDString>(N->getOperand(0))->getString(),
                                 containsPointer(N),
                                 cast<MDString>(N->getOperand(2))->getString()};
+    if (Metadata.TypeName.empty())
+      remarkNoMetadata(CB, ORE);
     return *getAllocToken(Mode, Metadata, MaxTokens);
   }
 

@@ -65,8 +65,8 @@ struct AllocTokenMetadata {
 };
 
 /// Calculates stable allocation token ID. Returns std::nullopt for stateful
-/// modes that are only available in the AllocToken pass, or if a required
-/// function name is missing.
+/// modes that are only available in the AllocToken pass, and for TypeFuncHash
+/// modes if FunctionName is not set.
 ///
 /// \param Mode The token generation mode.
 /// \param Metadata The metadata about the allocation.
