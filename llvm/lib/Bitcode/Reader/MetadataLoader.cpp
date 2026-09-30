@@ -2057,8 +2057,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                           getMDString(Record[3]);
     if (MaybeODRUnique)
       SP = Context.getDebugTypeODRUniquer()->getODRSubprogramDecl(
-          getDITypeRefOrNull(Record[1]), getMDString(Record[3])->getString(),
-          getMDOrNull(Record[6]), getMDOrNull(Record[13 + OffsetB]));
+          getDITypeRefOrNull(Record[1]), getMDString(Record[3])->getString());
 
     if (!SP)
       SP = GET_OR_DISTINCT(

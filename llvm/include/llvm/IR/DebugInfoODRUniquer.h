@@ -85,9 +85,7 @@ public:
   /// name, type, and template parameters, that has been registered with
   /// `addSubprogramDecl`, or return nullptr.
   LLVM_ABI DISubprogram *getODRSubprogramDecl(Metadata *Scope,
-                                              StringRef LinkageName,
-                                              Metadata *Type,
-                                              Metadata *TemplateParams);
+                                              StringRef LinkageName);
 
   /// Register function declaration DISubprogram, which may be reused in place
   /// of other ODR-similar DISubprograms (using `getODRSubprogramDecl`).

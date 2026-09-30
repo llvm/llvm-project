@@ -15,10 +15,8 @@
 
 using namespace llvm;
 
-DISubprogram *
-DebugInfoODRUniquer::getODRSubprogramDecl(Metadata *Scope,
-                                          StringRef LinkageName, Metadata *Type,
-                                          Metadata *TemplateParams) {
+DISubprogram *DebugInfoODRUniquer::getODRSubprogramDecl(Metadata *Scope,
+                                                        StringRef LinkageName) {
   // Only methods, which have a type scope, are eligable for ODR uniquing.
   auto *CT = dyn_cast_or_null<DICompositeType>(Scope);
   if (!CT || !CT->getRawIdentifier())

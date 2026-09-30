@@ -1072,7 +1072,7 @@ DISubprogram *DIBuilder::createFunction(
   // Look up ODR declaration if requested.
   if (!IsDefinition && VMContext.isODRUniquingDebugTypes())
     Node = VMContext.getDebugTypeODRUniquer()->getODRSubprogramDecl(
-        Context, LinkageName, Ty, TParams.get());
+        Context, LinkageName);
   // Otherwise or if unable, create it.
   if (!Node)
     Node = getSubprogram(
@@ -1119,8 +1119,8 @@ DISubprogram *DIBuilder::createMethod(
   DISubprogram *SP = nullptr;
   // Look up ODR declaration if requested.
   if (!IsDefinition && VMContext.isODRUniquingDebugTypes())
-    SP = VMContext.getDebugTypeODRUniquer()->getODRSubprogramDecl(
-        Context, LinkageName, Ty, TParams.get());
+    SP = VMContext.getDebugTypeODRUniquer()->getODRSubprogramDecl(Context,
+                                                                  LinkageName);
   // Otherwise or if unable, create it.
   if (!SP)
     SP = getSubprogram(
