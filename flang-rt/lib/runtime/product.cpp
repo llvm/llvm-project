@@ -48,8 +48,9 @@ public:
   template <typename A>
   RT_API_ATTRS bool AccumulateAt(const SubscriptValue at[]) {
     product_ *= *array_.Element<A>(at);
-    // If nsz (No Signed Zeros) flag is set, we could cut off the product early
-    // when we hit a zero.
+    // Unlike the integer case, a zero running product cannot end the
+    // reduction early: the remaining elements determine the sign of the
+    // zero, and a later NaN or infinity must still produce NaN.
     return true;
   }
 

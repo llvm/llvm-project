@@ -15,8 +15,10 @@
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/reduce.h"
+#include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -694,7 +696,6 @@ TEST(Reductions, NegZeroProduct) {
       std::vector<int>{2}, std::vector<std::int32_t>{0, -1})};
   int resultI4{RTNAME(ProductInteger4)(*intVector, __FILE__, __LINE__)};
   EXPECT_EQ(resultI4, 0);
-  EXPECT_NE(resultI4, 1 << 31); // not -0 but -2^31 in two's complement
   auto realVector{MakeArray<TypeCategory::Real, 4>(
       std::vector<int>{2}, std::vector<float>{0.0f, -1.0f})};
   float resultR4{RTNAME(ProductReal4)(*realVector, __FILE__, __LINE__)};
@@ -711,4 +712,37 @@ TEST(Reductions, NegZeroProduct) {
   RTNAME(CppProductComplex4)(resultC4, *complexVector2, __FILE__, __LINE__);
   EXPECT_EQ(resultC4.imag(), 0.0f);
   EXPECT_TRUE(std::signbit(resultC4.imag()));
+}
+
+TEST(Reductions, RealProductNoEarlyExit) {
+  // A leading -0 must not end the reduction: -0 * -3 * 1 == +0.
+  auto negZeroFirst{MakeArray<TypeCategory::Real, 8>(
+      std::vector<int>{3}, std::vector<double>{-0.0, -3.0, 1.0})};
+  double r8{RTNAME(ProductReal8)(*negZeroFirst, __FILE__, __LINE__)};
+  EXPECT_EQ(r8, 0.0);
+  EXPECT_FALSE(std::signbit(r8));
+  // A NaN after a zero must propagate.
+  auto zeroThenNaN{MakeArray<TypeCategory::Real, 4>(std::vector<int>{2},
+      std::vector<float>{0.0f, std::numeric_limits<float>::quiet_NaN()})};
+  float r4{RTNAME(ProductReal4)(*zeroThenNaN, __FILE__, __LINE__)};
+  EXPECT_NE(r4, r4) << r4;
+  // No zero element: the running product underflows to +0 before the
+  // negative factor is reached, so the result is -0.
+  auto tiny{std::numeric_limits<double>::min()};
+  auto underflow{MakeArray<TypeCategory::Real, 8>(
+      std::vector<int>{3}, std::vector<double>{tiny, tiny, -2.0})};
+  double u8{RTNAME(ProductReal8)(*underflow, __FILE__, __LINE__)};
+  EXPECT_EQ(u8, 0.0);
+  EXPECT_TRUE(std::signbit(u8));
+  // DIM= goes through ProductDim: columns [0,-1] -> -0 and [0,1] -> +0.
+  auto matrix{MakeArray<TypeCategory::Real, 4>(
+      std::vector<int>{2, 2}, std::vector<float>{0.0f, -1.0f, 0.0f, 1.0f})};
+  StaticDescriptor<maxRank, true> statDesc;
+  Descriptor &prod{statDesc.descriptor()};
+  RTNAME(ProductDim)(prod, *matrix, 1, __FILE__, __LINE__);
+  EXPECT_EQ(prod.rank(), 1);
+  EXPECT_EQ(prod.GetDimension(0).Extent(), 2);
+  EXPECT_TRUE(std::signbit(*prod.ZeroBasedIndexedElement<float>(0)));
+  EXPECT_FALSE(std::signbit(*prod.ZeroBasedIndexedElement<float>(1)));
+  prod.Destroy();
 }
