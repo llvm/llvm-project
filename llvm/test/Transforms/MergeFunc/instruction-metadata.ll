@@ -2,6 +2,9 @@
 ; RUN: opt -S -passes=mergefunc < %s | FileCheck %s \
 ; RUN:   --implicit-check-not='!nonnull' --implicit-check-not='!callees' \
 ; RUN:   --implicit-check-not='!amdgpu.no.fine.grained.memory' \
+; RUN:   --implicit-check-not='!amdgpu.no.remote.memory' \
+; RUN:   --implicit-check-not='!atomic.ignore.denormal.mode' \
+; RUN:   --implicit-check-not='!tbaa.struct' --implicit-check-not='!srcloc' \
 ; RUN:   --implicit-check-not='!alias.scope' --implicit-check-not='!noalias' \
 ; RUN:   --implicit-check-not='!memprof' --implicit-check-not='!custom.kind' \
 ; RUN:   --implicit-check-not='!llvm.loop' \
@@ -80,13 +83,13 @@ define internal void @fn_callees_b(ptr %fp) {
   ret void
 }
 
-; AMDGPU atomic metadata and !atomic.ignore.denormal.mode are kept if they are
-; the same in both functions. Other unknown metadata is dropped.
+; These kinds are dropped even if they are the same in both functions, because
+; combineMetadataForCSE() doesn't handle them.
 define float @fn_atomic(ptr %p, float %v) {
 ; CHECK-LABEL: define float @fn_atomic(
 ; CHECK-SAME: ptr [[P:%.*]], float [[V:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = atomicrmw fadd ptr [[P]], float [[V]] monotonic, align 4, !atomic.ignore.denormal.mode [[META4]], !amdgpu.no.remote.memory [[META4]]
-; CHECK-NEXT:    [[S:%.*]] = atomicrmw fadd ptr [[P]], float [[R]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+; CHECK-NEXT:    [[R:%.*]] = atomicrmw fadd ptr [[P]], float [[V]] monotonic, align 4
+; CHECK-NEXT:    [[S:%.*]] = atomicrmw fadd ptr [[P]], float [[R]] monotonic, align 4
 ; CHECK-NEXT:    ret float [[S]]
 ;
   %r = atomicrmw fadd ptr %p, float %v monotonic, !amdgpu.no.fine.grained.memory !2, !amdgpu.no.remote.memory !2, !atomic.ignore.denormal.mode !2, !custom.kind !2
@@ -100,12 +103,12 @@ define internal float @fn_atomic_b(ptr %p, float %v) {
   ret float %s
 }
 
-; !tbaa.struct and !srcloc are kept if they are the same in both functions.
+; The same goes for !tbaa.struct and !srcloc on calls.
 define void @fn_same(ptr %p, ptr %q) {
 ; CHECK-LABEL: define void @fn_same(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[Q]], i64 4, i1 false), !tbaa.struct [[TBAA_STRUCT8:![0-9]+]]
-; CHECK-NEXT:    call void asm sideeffect "", ""(), !srcloc [[META11:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[Q]], i64 4, i1 false)
+; CHECK-NEXT:    call void asm sideeffect "", ""()
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %q, i64 4, i1 false), !tbaa.struct !35
@@ -130,7 +133,7 @@ define void @fn_scope_decl(ptr %p, ptr %q, i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META12:![0-9]+]])
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META8:![0-9]+]])
 ; CHECK-NEXT:    [[PI:%.*]] = getelementptr i32, ptr [[P]], i64 [[I]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[PI]], align 4
 ; CHECK-NEXT:    [[QI:%.*]] = getelementptr i32, ptr [[Q]], i64 [[I]]
@@ -201,14 +204,14 @@ define internal i32 @fn_scopes_b(ptr %a, ptr %b) {
 ; debug locations of the loops may differ.
 define void @fn_loop(i64 %n) !dbg !29 {
 ; CHECK-LABEL: define void @fn_loop(
-; CHECK-SAME: i64 [[N:%.*]]) !dbg [[DBG15:![0-9]+]] {
+; CHECK-SAME: i64 [[N:%.*]]) !dbg [[DBG11:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -384,11 +387,11 @@ define void @fn_parallel(ptr %a, ptr %b) {
 ; CHECK-NEXT:    store i32 [[V]], ptr [[PB]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[I_DONE:%.*]] = icmp eq i64 [[I_NEXT]], 16
-; CHECK-NEXT:    br i1 [[I_DONE]], label %[[LATCH]], label %[[INNER]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK-NEXT:    br i1 [[I_DONE]], label %[[LATCH]], label %[[INNER]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[O_NEXT]] = add i64 [[O]], 16
 ; CHECK-NEXT:    [[O_DONE:%.*]] = icmp eq i64 [[O_NEXT]], 64
-; CHECK-NEXT:    br i1 [[O_DONE]], label %[[EXIT:.*]], label %[[OUTER]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK-NEXT:    br i1 [[O_DONE]], label %[[EXIT:.*]], label %[[OUTER]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -470,7 +473,7 @@ define internal void @fn_coro_b() {
 define ptr @fn_memprof(i64 %n) {
 ; CHECK-LABEL: define ptr @fn_memprof(
 ; CHECK-SAME: i64 [[N:%.*]]) {
-; CHECK-NEXT:    [[P:%.*]] = call ptr @malloc(i64 [[N]]), !callsite [[META23:![0-9]+]]
+; CHECK-NEXT:    [[P:%.*]] = call ptr @malloc(i64 [[N]]), !callsite [[META19:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   %p = call ptr @malloc(i64 %n), !callsite !20
@@ -613,20 +616,16 @@ define void @calls(ptr %p, i64 %n, float %v) {
 ; CHECK: [[CHAR_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
 ; CHECK: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
 ; CHECK: [[META7]] = !{!"Simple C/C++ TBAA"}
-; CHECK: [[TBAA_STRUCT8]] = !{i64 0, i64 4, [[META9:![0-9]+]]}
-; CHECK: [[META9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
-; CHECK: [[META10]] = !{!"int", [[META6]], i64 0}
-; CHECK: [[META11]] = !{i64 42}
-; CHECK: [[META12]] = !{[[META13:![0-9]+]]}
-; CHECK: [[META13]] = distinct !{[[META13]], [[META14:![0-9]+]], !"other scope"}
-; CHECK: [[META14]] = distinct !{[[META14]], !"domain"}
-; CHECK: [[DBG15]] = distinct !DISubprogram(name: "fn_loop", scope: [[META1]], file: [[META1]], line: 1, type: [[META16:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
-; CHECK: [[META16]] = !DISubroutineType(types: [[META4]])
-; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META18:![0-9]+]], [[META19:![0-9]+]], [[META20:![0-9]+]]}
-; CHECK: [[META18]] = !DILocation(line: 2, column: 3, scope: [[DBG15]])
-; CHECK: [[META19]] = !DILocation(line: 3, column: 3, scope: [[DBG15]])
-; CHECK: [[META20]] = !{!"llvm.loop.mustprogress"}
-; CHECK: [[LOOP21]] = distinct !{[[LOOP21]]}
-; CHECK: [[LOOP22]] = distinct !{[[LOOP22]]}
-; CHECK: [[META23]] = !{i64 111}
+; CHECK: [[META8]] = !{[[META9:![0-9]+]]}
+; CHECK: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]], !"other scope"}
+; CHECK: [[META10]] = distinct !{[[META10]], !"domain"}
+; CHECK: [[DBG11]] = distinct !DISubprogram(name: "fn_loop", scope: [[META1]], file: [[META1]], line: 1, type: [[META12:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]])
+; CHECK: [[META12]] = !DISubroutineType(types: [[META4]])
+; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META14:![0-9]+]], [[META15:![0-9]+]], [[META16:![0-9]+]]}
+; CHECK: [[META14]] = !DILocation(line: 2, column: 3, scope: [[DBG11]])
+; CHECK: [[META15]] = !DILocation(line: 3, column: 3, scope: [[DBG11]])
+; CHECK: [[META16]] = !{!"llvm.loop.mustprogress"}
+; CHECK: [[LOOP17]] = distinct !{[[LOOP17]]}
+; CHECK: [[LOOP18]] = distinct !{[[LOOP18]]}
+; CHECK: [[META19]] = !{i64 111}
 ;.

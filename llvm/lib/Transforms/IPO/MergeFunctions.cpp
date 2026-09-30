@@ -1103,11 +1103,9 @@ static bool haveSameLoopProperties(const MDNode *A, const MDNode *B) {
 }
 
 // Combine the metadata of SrcI into DstI, so that it holds for the callers of
-// both functions. Metadata of the kinds in KeepIfSame is kept if it is the
-// same on both instructions.
+// both functions.
 static void mergeMetadataOnInstructions(Instruction *DstI,
-                                        const Instruction *SrcI,
-                                        ArrayRef<unsigned> KeepIfSame) {
+                                        const Instruction *SrcI) {
   if (!DstI->hasMetadataOtherThanDebugLoc() &&
       !SrcI->hasMetadataOtherThanDebugLoc())
     return;
@@ -1126,11 +1124,6 @@ static void mergeMetadataOnInstructions(Instruction *DstI,
                         LLVMContext::MD_memprof, LLVMContext::MD_callsite,
                         LLVMContext::MD_coro_outside_frame})
     Kept.emplace_back(Kind, DstI->getMetadata(Kind));
-  for (unsigned Kind : KeepIfSame) {
-    MDNode *MD = DstI->getMetadata(Kind);
-    if (MD && MD == SrcI->getMetadata(Kind))
-      Kept.emplace_back(Kind, MD);
-  }
   MDNode *DstLoop = DstI->getMetadata(LLVMContext::MD_loop);
   if (haveSameLoopProperties(DstLoop, SrcI->getMetadata(LLVMContext::MD_loop)))
     Kept.emplace_back(LLVMContext::MD_loop, DstLoop);
@@ -1170,17 +1163,6 @@ void MergeFunctions::mergeInstrAnnotations(Function *Dst, Function *Src) {
             cast<NoAliasScopeDeclInst>(SrcI).getScopeList())
           SameScopeDecls = false;
 
-  // combineMetadataForCSE() drops these kinds, even if they are the same on
-  // both instructions. Losing them would make the merged function worse than
-  // both originals: memcpy would lose its TBAA, atomics would be expanded to
-  // compare-and-swap loops, and inline assembly diagnostics would lose their
-  // source location.
-  LLVMContext &Ctx = Dst->getContext();
-  const unsigned KeepIfSame[] = {
-      LLVMContext::MD_tbaa_struct, LLVMContext::MD_atomic_ignore_denormal_mode,
-      Ctx.getMDKindID("amdgpu.no.fine.grained.memory"),
-      Ctx.getMDKindID("amdgpu.no.remote.memory"), Ctx.getMDKindID("srcloc")};
-
   for (auto [DstBB, SrcBB] : llvm::zip_equal(DstRPOT, SrcRPOT)) {
     for (auto [DstI, SrcI] : llvm::zip_equal(*DstBB, *SrcBB)) {
       // Merge poison-generating flags.
@@ -1190,7 +1172,7 @@ void MergeFunctions::mergeInstrAnnotations(Function *Dst, Function *Src) {
         DstI.setMetadata(LLVMContext::MD_alias_scope, nullptr);
         DstI.setMetadata(LLVMContext::MD_noalias, nullptr);
       }
-      mergeMetadataOnInstructions(&DstI, &SrcI, KeepIfSame);
+      mergeMetadataOnInstructions(&DstI, &SrcI);
 
       MDNode *DstProf = DstI.getMetadata(LLVMContext::MD_prof);
       MDNode *SrcProf = SrcI.getMetadata(LLVMContext::MD_prof);
