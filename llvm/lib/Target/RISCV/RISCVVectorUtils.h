@@ -67,6 +67,6 @@ inline bool isPairOdd(const std::array<std::pair<int, int>, 2> &SrcInfo,
          Mask.size() % Factor == 0 &&
          isAlternating(SrcInfo, Mask, Factor, false);
 }
-} // end namespace llvm
+} // namespace llvm
 
 #endif // LLVM_LIB_TARGET_RISCV_RISCVVECTORUTILS_H
