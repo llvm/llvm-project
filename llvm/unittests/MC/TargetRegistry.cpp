@@ -10,12 +10,12 @@
 // LLVM targets. We keep this test with the MC tests, which already do that, to
 // keep the SupportTests target small.
 
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
