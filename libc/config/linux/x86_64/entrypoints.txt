@@ -268,6 +268,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
+    libc.src.stdlib.strfromf128
     libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
