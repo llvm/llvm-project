@@ -16,10 +16,12 @@
 // Test without debugger attached
 
 #include <cassert>
+#include <concepts>
 #include <debugging>
 
 int main(int, char**) {
   static_assert(noexcept(std::is_debugger_present()));
-  assert(!std::is_debugger_present());
+  std::same_as<bool> auto debugger_present = std::is_debugger_present();
+  assert(!debugger_present);
   return 0;
 }

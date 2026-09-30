@@ -28,7 +28,10 @@
 
 #include <debugging>
 
+#include "test_macros.h"
+
 int main(int, char**) {
+  ASSERT_SAME_TYPE(void, decltype(std::breakpoint()));
   static_assert(noexcept(std::breakpoint()));
   std::breakpoint();
   return 0;
