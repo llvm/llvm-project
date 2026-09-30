@@ -130,6 +130,9 @@ private:
       pendingParamSlots;
 };
 
+/// The signature the indirect call \p call reaches its callee through.
+cir::FuncType getIndirectCalleeType(cir::CIRCallOpInterface call);
+
 } // namespace cir
 
 #endif // CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_CIRABIREWRITECONTEXT_H
