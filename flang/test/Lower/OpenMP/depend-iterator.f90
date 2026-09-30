@@ -10,6 +10,98 @@
 ! task
 !===============================================================================
 
+! The unused j range must not suppress a(i) when m < 3.
+subroutine depend_unused_iterator(m)
+  integer :: m
+  integer :: a(4)
+
+  !$omp task depend(iterator(i = 1:2, j = 3:m), in: a(i))
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPdepend_unused_iterator(
+! CHECK: %[[A:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFdepend_unused_iteratorEa")
+! CHECK: %[[M:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFdepend_unused_iteratorEm")
+! CHECK: %[[I_LB32:.*]] = arith.constant 1 : i32
+! CHECK: %[[I_UB32:.*]] = arith.constant 2 : i32
+! CHECK: %[[I_LB:.*]] = fir.convert %[[I_LB32]] : (i32) -> index
+! CHECK: %[[I_UB:.*]] = fir.convert %[[I_UB32]] : (i32) -> index
+! CHECK: %[[I_STEP:.*]] = arith.constant 1 : index
+! CHECK: %[[IT_I:.*]] = omp.iterator(%[[IV_I:.*]]: index) =
+! CHECK-SAME: (%[[I_LB]] to %[[I_UB]] step %[[I_STEP]]) {
+! CHECK: %[[V32_I:.*]] = fir.convert %[[IV_I]] : (index) -> i32
+! CHECK: fir.store %[[V32_I]] to %[[MEM_I:.*]] : !fir.ref<i32>
+! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[MEM_I]]
+! CHECK: %[[LD_I:.*]] = fir.load %[[DECL_I]]#0 : !fir.ref<i32>
+! CHECK: %[[IDX_I:.*]] = fir.convert %[[LD_I]] : (i32) -> i64
+! CHECK: %[[COOR_I:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %[[IDX_I]]
+! CHECK: %[[PTR_I:.*]] = fir.convert %[[COOR_I]]
+! CHECK-SAME: (!fir.ref<i32>) -> !llvm.ptr
+! CHECK: omp.yield(%[[PTR_I]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK-NOT: omp.iterator
+! CHECK: omp.task depend(
+! CHECK-SAME: taskdependin -> %[[IT_I]] : !omp.iterated<!llvm.ptr>) {
+
+! Each locator uses its own iterator subset; c remains non-iterated.
+subroutine depend_per_locator(m)
+  integer :: m
+  integer :: a(4), b(4), c
+
+  !$omp task depend(iterator(i = 1:2, j = 3:m), in: a(i), b(j), c)
+  !$omp end task
+end subroutine
+
+! CHECK-LABEL: func.func @_QPdepend_per_locator(
+! CHECK: %[[A:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFdepend_per_locatorEa")
+! CHECK: %[[B:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFdepend_per_locatorEb")
+! CHECK: %[[C:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFdepend_per_locatorEc")
+! CHECK: %[[M:.*]]:2 = hlfir.declare
+! CHECK-SAME: uniq_name("_QFdepend_per_locatorEm")
+! CHECK: %[[I_LB32:.*]] = arith.constant 1 : i32
+! CHECK: %[[I_UB32:.*]] = arith.constant 2 : i32
+! CHECK: %[[I_LB:.*]] = fir.convert %[[I_LB32]] : (i32) -> index
+! CHECK: %[[I_UB:.*]] = fir.convert %[[I_UB32]] : (i32) -> index
+! CHECK: %[[I_STEP:.*]] = arith.constant 1 : index
+! CHECK: %[[J_LB32:.*]] = arith.constant 3 : i32
+! CHECK: %[[J_UB32:.*]] = fir.load %[[M]]#0 : !fir.ref<i32>
+! CHECK: %[[J_LB:.*]] = fir.convert %[[J_LB32]] : (i32) -> index
+! CHECK: %[[J_UB:.*]] = fir.convert %[[J_UB32]] : (i32) -> index
+! CHECK: %[[J_STEP:.*]] = arith.constant 1 : index
+! CHECK: %[[IT_I:.*]] = omp.iterator(%[[IV_I:.*]]: index) =
+! CHECK-SAME: (%[[I_LB]] to %[[I_UB]] step %[[I_STEP]]) {
+! CHECK: %[[V32_I:.*]] = fir.convert %[[IV_I]] : (index) -> i32
+! CHECK: fir.store %[[V32_I]] to %[[MEM_I:.*]] : !fir.ref<i32>
+! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %[[MEM_I]]
+! CHECK: %[[LD_I:.*]] = fir.load %[[DECL_I]]#0 : !fir.ref<i32>
+! CHECK: %[[IDX_I:.*]] = fir.convert %[[LD_I]] : (i32) -> i64
+! CHECK: %[[COOR_I:.*]] = fir.array_coor %[[A]]#0(%{{.*}}) %[[IDX_I]]
+! CHECK: %[[PTR_I:.*]] = fir.convert %[[COOR_I]]
+! CHECK-SAME: (!fir.ref<i32>) -> !llvm.ptr
+! CHECK: omp.yield(%[[PTR_I]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: %[[IT_J:.*]] = omp.iterator(%[[IV_J:.*]]: index) =
+! CHECK-SAME: (%[[J_LB]] to %[[J_UB]] step %[[J_STEP]]) {
+! CHECK: %[[V32_J:.*]] = fir.convert %[[IV_J]] : (index) -> i32
+! CHECK: fir.store %[[V32_J]] to %[[MEM_J:.*]] : !fir.ref<i32>
+! CHECK: %[[DECL_J:.*]]:2 = hlfir.declare %[[MEM_J]]
+! CHECK: %[[LD_J:.*]] = fir.load %[[DECL_J]]#0 : !fir.ref<i32>
+! CHECK: %[[IDX_J:.*]] = fir.convert %[[LD_J]] : (i32) -> i64
+! CHECK: %[[COOR_J:.*]] = fir.array_coor %[[B]]#0(%{{.*}}) %[[IDX_J]]
+! CHECK: %[[PTR_J:.*]] = fir.convert %[[COOR_J]]
+! CHECK-SAME: (!fir.ref<i32>) -> !llvm.ptr
+! CHECK: omp.yield(%[[PTR_J]] : !llvm.ptr)
+! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK-NOT: omp.iterator
+! CHECK: omp.task depend(taskdependin -> %[[C]]#0 : !fir.ref<i32>,
+! CHECK-SAME: taskdependin -> %[[IT_I]] : !omp.iterated<!llvm.ptr>,
+! CHECK-SAME: taskdependin -> %[[IT_J]] : !omp.iterated<!llvm.ptr>) {
+
 subroutine task_depend_iterator_simple()
   integer, parameter :: n = 16
   integer :: a(n)

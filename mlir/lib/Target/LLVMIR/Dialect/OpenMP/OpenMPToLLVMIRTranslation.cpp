@@ -2892,14 +2892,18 @@ public:
       upperBounds[d] = ub;
       steps[d] = st;
 
-      // trips = ((ub - lb) / step) + 1  (inclusive ub, assume positive step)
-      llvm::Type *i64Ty = builder.getInt64Ty();
-      llvm::Value *lb64 = builder.CreateSExtOrTrunc(lb, i64Ty);
-      llvm::Value *ub64 = builder.CreateSExtOrTrunc(ub, i64Ty);
-      llvm::Value *st64 = builder.CreateSExtOrTrunc(st, i64Ty);
-      llvm::Value *diff = builder.CreateSub(ub64, lb64);
-      llvm::Value *div = builder.CreateSDiv(diff, st64);
-      trips[d] = builder.CreateAdd(div, llvm::ConstantInt::get(i64Ty, 1));
+      // Use a direction-aware count so an empty range contributes no entries.
+      // Widen by one bit so the span between the bounds cannot overflow.
+      llvm::Type *countTy =
+          builder.getIntNTy(lb->getType()->getIntegerBitWidth() + 1);
+      llvm::Value *start = builder.CreateSExt(lb, countTy);
+      llvm::Value *stop = builder.CreateSExt(ub, countTy);
+      llvm::Value *step = builder.CreateSExt(st, countTy);
+      llvm::Value *count =
+          moduleTranslation.getOpenMPBuilder()->calculateCanonicalLoopTripCount(
+              builder, start, stop, step, /*IsSigned=*/true,
+              /*InclusiveStop=*/true);
+      trips[d] = builder.CreateZExtOrTrunc(count, builder.getInt64Ty());
     }
 
     totalTrips = llvm::ConstantInt::get(builder.getInt64Ty(), 1);
