@@ -150,7 +150,8 @@ private:
       const omp::ObjectList &objects,
       llvm::SetVector<const semantics::Symbol *> &symbolSet);
   void collectSymbolsForPrivatization();
-  void insertBarrier(mlir::omp::PrivateClauseOps *clauseOps);
+  void insertBarrier(mlir::omp::PrivateClauseOps *clauseOps,
+                     std::optional<llvm::omp::Directive> dir);
   void collectDefaultSymbols();
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
