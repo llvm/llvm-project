@@ -10,7 +10,7 @@ define <4 x float> @load_sf32_v4f32(ptr dereferenceable(16) %p) {
 ; CHECK-NEXT:  ret <4 x float> [[SH]]
   %l = load float, ptr %p, align 4
   %sp = insertelement <4 x float> poison, float %l, i64 0
-  %sh = shufflevector <4 x float> %sp, <4 x float> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  %sh = shufflevector <4 x float> %sp, <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
   ret <4 x float> %sh
 }
 
@@ -22,7 +22,7 @@ define <4 x float> @load_v1f32_v4f32(ptr dereferenceable(16) %p) {
 ; CHECK-NEXT:  [[SH:%.*]] = shufflevector <1 x float> %l, <1 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:  ret <4 x float> [[SH]]
   %l = load <1 x float>, ptr %p, align 4
-  %s = shufflevector <1 x float> %l, <1 x float> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  %s = shufflevector <1 x float> %l, <1 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
   ret <4 x float> %s
 }
 
@@ -32,6 +32,6 @@ define <4 x float> @load_v2f32_v4f32(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-NEXT:  [[SH:%.*]] = shufflevector <2 x float> [[L]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:  ret <4 x float> [[SH]]
   %l = load <2 x float>, ptr %p, align 16
-  %s = shufflevector <2 x float> %l, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %s = shufflevector <2 x float> %l, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   ret <4 x float> %s
 }
