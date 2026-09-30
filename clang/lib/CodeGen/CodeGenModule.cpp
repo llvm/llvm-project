@@ -4866,7 +4866,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     if (FD->hasAttr<AnnotateAttr>()) {
       StringRef MangledName = getMangledName(GD);
       if (GetGlobalValue(MangledName))
-        DeferredAnnotations[MangledName] = FD;
+        DeferredAnnotations[MangledName.str()] = FD;
     }
 
     // Forward declarations are emitted lazily on first use.
@@ -5787,7 +5787,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
   // Store the declaration associated with this function so it is potentially
   // updated by further declarations or definitions and emitted at the end.
   if (D && D->hasAttr<AnnotateAttr>())
-    DeferredAnnotations[MangledName] = cast<ValueDecl>(D);
+    DeferredAnnotations[MangledName.str()] = cast<ValueDecl>(D);
 
   // If we already created a function with the same mangled name (but different
   // type) before, take its name and add it to the list of functions to be
