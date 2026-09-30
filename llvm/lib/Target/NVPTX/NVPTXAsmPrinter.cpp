@@ -300,6 +300,7 @@ protected:
 
 private:
   bool GlobalsEmitted;
+  bool HasPendingNoUnroll = false;
 
   // This is specific per MachineFunction.
   const MachineRegisterInfo *MRI;
@@ -335,6 +336,7 @@ private:
   void emitDemotedVars(const Function *, raw_ostream &);
 
   bool isLoopHeaderOfNoUnroll(const MachineBasicBlock &MBB) const;
+  void emitNoUnroll(const MachineInstr *MI);
 
   // Used to control the need to emit .generic() in the initializer of
   // module scope variables.
@@ -580,6 +582,7 @@ static SmallVector<const GlobalVariable *, 4> orderDefinitionsInSCC(
 } // namespace
 
 void NVPTXAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  emitNoUnroll(MI);
   NVPTX_MC::verifyInstructionPredicates(MI->getOpcode(),
                                         getSubtargetInfo().getFeatureBits());
 
@@ -876,8 +879,17 @@ bool NVPTXAsmPrinter::isLoopHeaderOfNoUnroll(
 
 void NVPTXAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   AsmPrinter::emitBasicBlockStart(MBB);
-  if (isLoopHeaderOfNoUnroll(MBB))
-    getTargetStreamer()->emitPragmaDirective("nounroll");
+  HasPendingNoUnroll = isLoopHeaderOfNoUnroll(MBB);
+}
+
+void NVPTXAsmPrinter::emitNoUnroll(const MachineInstr *MI) {
+  if (!HasPendingNoUnroll || !MI || MI->isMetaInstruction())
+    return;
+
+  // A label between the pragma and the first instruction prevents ptxas from
+  // applying it to this loop. Wait until the header's debug labels are emitted.
+  getTargetStreamer()->emitPragmaDirective("nounroll");
+  HasPendingNoUnroll = false;
 }
 
 void NVPTXAsmPrinter::emitFunctionEntryLabel() {
@@ -2707,6 +2719,7 @@ void NVPTXAsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
                                     const MDNode *LocMDNode,
                                     InlineAsm::AsmDialect Dialect,
                                     const MachineInstr *MI) {
+  emitNoUnroll(MI);
   assert(!Str.empty() && "Can't emit empty inline asm block");
   if (Str.back() == 0)
     Str = Str.substr(0, Str.size() - 1);
