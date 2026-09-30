@@ -2916,9 +2916,10 @@ int32x2_t test_pmerge_mvmn_i32x2(int32x2_t rs2, int32x2_t rs1, uint32x2_t rd) {
 }
 
 // Scalar multiply high
-// CHECK-LABEL: test_mulh_i32:
+// CHECK-LABEL: test_mulh_i32:{{.*}}
 // RV32:        mulh
-// RV64:        pmulh.w
+// RV64:        mul
+// RV64-NEXT:   srai
 int32_t test_mulh_i32(int32_t rs1, int32_t rs2) {
   return __riscv_mulh_i32(rs1, rs2);
 }
@@ -2930,9 +2931,10 @@ int32_t test_mulhr_i32(int32_t rs1, int32_t rs2) {
   return __riscv_mulhr_i32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_mulhu_u32:
+// CHECK-LABEL: test_mulhu_u32:{{.*}}
 // RV32:        mulhu
-// RV64:        pmulhu.w
+// RV64:        mulu.w00
+// RV64-NEXT:   srai
 uint32_t test_mulhu_u32(uint32_t rs1, uint32_t rs2) {
   return __riscv_mulhu_u32(rs1, rs2);
 }
