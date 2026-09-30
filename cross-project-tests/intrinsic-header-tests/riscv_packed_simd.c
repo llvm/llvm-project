@@ -2917,8 +2917,9 @@ int32x2_t test_pmerge_mvmn_i32x2(int32x2_t rs2, int32x2_t rs1, uint32x2_t rd) {
 
 // Scalar multiply high
 // CHECK-LABEL: test_mulh_i32:
-// RV32:        mulh
-// RV64:        pmulh.w
+// RV32:        mulh{{[[:space:]]}}
+// RV64:        mul{{[[:space:]]}}
+// RV64-NEXT:   srai{{[[:space:]]}}
 int32_t test_mulh_i32(int32_t rs1, int32_t rs2) {
   return __riscv_mulh_i32(rs1, rs2);
 }
@@ -2931,8 +2932,9 @@ int32_t test_mulhr_i32(int32_t rs1, int32_t rs2) {
 }
 
 // CHECK-LABEL: test_mulhu_u32:
-// RV32:        mulhu
-// RV64:        pmulhu.w
+// RV32:        mulhu{{[[:space:]]}}
+// RV64:        mulu.w00{{[[:space:]]}}
+// RV64-NEXT:   srai{{[[:space:]]}}
 uint32_t test_mulhu_u32(uint32_t rs1, uint32_t rs2) {
   return __riscv_mulhu_u32(rs1, rs2);
 }
