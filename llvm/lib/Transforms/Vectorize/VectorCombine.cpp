@@ -6115,8 +6115,7 @@ static Value *getCommonSplatValue(ArrayRef<Value *> Values) {
 
 /// Return the common deinterleave intrinsic if \p Members are its extracts in
 /// field order.
-static IntrinsicInst *getDeinterleaveForMembers(ArrayRef<Value *> Members,
-                                                unsigned Factor) {
+static IntrinsicInst *getDeinterleaveForMembers(ArrayRef<Value *> Members) {
   IntrinsicInst *Deinterleave = nullptr;
   for (const auto &[Index, Member] : enumerate(Members)) {
     auto *Extract = dyn_cast<ExtractValueInst>(Member);
@@ -6129,6 +6128,7 @@ static IntrinsicInst *getDeinterleaveForMembers(ArrayRef<Value *> Members,
       return nullptr;
     Deinterleave = Current;
   }
+  unsigned Factor = Members.size();
   if (Deinterleave->hasOperandBundles() ||
       getDeinterleaveIntrinsicFactor(Deinterleave->getIntrinsicID()) !=
           Factor ||
@@ -6149,10 +6149,9 @@ getDeinterleavedOperands(ArrayRef<Value *> Members, unsigned OperandIndex) {
 /// Check whether the tree of elementwise operations each feeding \p Members
 /// can be rebuilt at the interleaved width.
 static bool canWidenDeinterleavedOperations(ArrayRef<Value *> Members,
-                                            unsigned Factor,
                                             unsigned &NumScanned) {
-  assert(Members.size() == Factor && "expected one member per field");
-  if (getDeinterleaveForMembers(Members, Factor))
+  unsigned Factor = Members.size();
+  if (getDeinterleaveForMembers(Members))
     return true;
   if (NumScanned + Factor > MaxInstrsToScan)
     return false;
@@ -6174,14 +6173,8 @@ static bool canWidenDeinterleavedOperations(ArrayRef<Value *> Members,
   // Vector operands should be a common splat value or can be widened.
   for (unsigned Op = 0, E = getNumDataOperands(FirstInst); Op != E; ++Op) {
     SmallVector<Value *, 8> Operands = getDeinterleavedOperands(Members, Op);
-    if (!isa<VectorType>(Operands.front()->getType())) {
-      if (!all_equal(Operands))
-        return false;
-      continue;
-    }
-
     if (!getCommonSplatValue(Operands) &&
-        !canWidenDeinterleavedOperations(Operands, Factor, NumScanned))
+        !canWidenDeinterleavedOperations(Operands, NumScanned))
       return false;
   }
   return true;
@@ -6211,10 +6204,9 @@ static Value *createWideInstruction(Instruction *NarrowInst,
 }
 
 static Value *
-widenDeinterleavedOperations(ArrayRef<Value *> Members, unsigned Factor,
-                             ElementCount WideEC,
+widenDeinterleavedOperations(ArrayRef<Value *> Members, ElementCount WideEC,
                              IRBuilder<InstSimplifyFolder> &Builder) {
-  if (auto *Deinterleave = getDeinterleaveForMembers(Members, Factor)) {
+  if (auto *Deinterleave = getDeinterleaveForMembers(Members)) {
     Value *Source = Deinterleave->getArgOperand(0);
     assert(cast<VectorType>(Source->getType())->getElementCount() == WideEC &&
            "deinterleave source must have the interleaved element count");
@@ -6227,18 +6219,18 @@ widenDeinterleavedOperations(ArrayRef<Value *> Members, unsigned Factor,
   NewOperands.reserve(NumOperands);
   for (unsigned Op = 0; Op != NumOperands; ++Op) {
     SmallVector<Value *, 8> Operands = getDeinterleavedOperands(Members, Op);
-    Value *NewOperand = Operands.front();
-    if (isa<VectorType>(NewOperand->getType())) {
-      if (Value *CommonValue = getCommonSplatValue(Operands)) {
+    Value *NewOperand = nullptr;
+    if ((NewOperand = getCommonSplatValue(Operands))) {
+      if (isa<VectorType>(Operands.front()->getType())) {
         Builder.SetCurrentDebugLocation(NarrowInst->getDebugLoc());
-        NewOperand = Builder.CreateVectorSplat(WideEC, CommonValue);
+        NewOperand = Builder.CreateVectorSplat(WideEC, NewOperand);
       } else {
-        NewOperand =
-            widenDeinterleavedOperations(Operands, Factor, WideEC, Builder);
+        assert(all_equal(Operands) && "expected all operands to be equal");
       }
     } else {
-      assert(all_equal(Operands) && "expected all operands to be equal");
+      NewOperand = widenDeinterleavedOperations(Operands, WideEC, Builder);
     }
+    NewOperand->dump();
     NewOperands.push_back(NewOperand);
   }
 
@@ -6301,13 +6293,12 @@ bool VectorCombine::foldInterleaveOfDeinterleaveChains(Instruction &I) {
 
   SmallVector<Value *, 8> RootMembers(Interleave->args());
   unsigned NumScanned = 0;
-  if (!canWidenDeinterleavedOperations(RootMembers, Factor, NumScanned))
+  if (!canWidenDeinterleavedOperations(RootMembers, NumScanned))
     return false;
 
   ElementCount WideEC = cast<VectorType>(I.getType())->getElementCount();
   Builder.SetInsertPoint(Interleave);
-  Value *WideValue =
-      widenDeinterleavedOperations(RootMembers, Factor, WideEC, Builder);
+  Value *WideValue = widenDeinterleavedOperations(RootMembers, WideEC, Builder);
   assert(WideValue->getType() == Interleave->getType());
   replaceValue(*Interleave, *WideValue);
   return true;
