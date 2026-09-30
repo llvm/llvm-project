@@ -74,6 +74,7 @@ public:
 
   /// Return whether \p Order is a complete permutation that preserves every
   /// strong dependency in the scheduling DAG.
+  /// TODO: Optimize legality check. ie. can only check a delta
   bool isLegalOrder(ArrayRef<unsigned> Order) const;
 
   /// Return the inclusive range of final positions to which \p Node may be
@@ -83,24 +84,12 @@ public:
                          MoveRange &Range) const;
 };
 
-/// Adapter for schedulers that compute a complete schedule before LLVM begins
-/// applying scheduling decisions.
-///
-/// An owned MachineSchedCompleteScheduleOptimizer receives the incoming legal
-/// order as its founder and may return a replacement. The selected order is
-/// validated before use and replayed top-down through ScheduleDAGMI's
-/// incremental MachineSchedStrategy interface. When used with
-/// ScheduleDAGMILive, instruction movement, LiveIntervals, and
-/// register-pressure accounting therefore remain owned by the existing
-/// scheduler.
-///
-/// This is not a common base for all search-based schedulers. Strategies that
-/// choose each node from the current ready set should implement
-/// MachineSchedStrategy directly or derive from another incremental strategy.
-///
-/// If the optimizer declines to provide an order or returns an invalid one, the
-/// existing order is preserved when legal. Otherwise, a stable topological
-/// order is used.
+/// Replay a complete schedule through ScheduleDAGMI's MachineSchedStrategy
+/// interface. The MachineSchedCompleteScheduleOptimizer may replace the initial
+/// legal order. After validating the replacement, pickNode() returns its nodes
+/// sequentially from the top, letting ScheduleDAGMI apply each scheduling
+/// decision. If the optimizer declines or its order is invalid, the initial
+/// order is replayed.
 class LLVM_ABI MachineSchedCompleteScheduleReplayer
     : public MachineSchedStrategy {
   std::unique_ptr<MachineSchedCompleteScheduleOptimizer> Optimizer;

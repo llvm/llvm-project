@@ -32,8 +32,6 @@ MachineSchedSearchRegion::MachineSchedSearchRegion(ArrayRef<SUnit> Nodes)
       if (Pred.isWeak() || PredSU->isBoundaryNode())
         continue;
       auto PredOrdinal = Ordinals.find(PredSU);
-      assert(PredOrdinal != Ordinals.end() &&
-             "predecessor must belong to the scheduling region");
       if (PredOrdinal == Ordinals.end())
         continue;
       Predecessors[Ordinal].push_back(PredOrdinal->second);
@@ -99,10 +97,12 @@ bool MachineSchedSearchRegion::isLegalOrder(ArrayRef<unsigned> Order) const {
     Position[Node] = Pos;
   }
 
-  for (unsigned Node = 0; Node != size(); ++Node)
-    for (unsigned Pred : predecessors(Node))
+  for (unsigned Node = 0; Node != size(); ++Node) {
+    for (unsigned Pred : predecessors(Node)) {
       if (Position[Pred] >= Position[Node])
         return false;
+    }
+  }
   return true;
 }
 
