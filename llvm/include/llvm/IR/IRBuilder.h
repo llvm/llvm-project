@@ -1745,7 +1745,7 @@ public:
   Value *CreateBinOpFMF(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
                         FMFSource FMFSource, const Twine &Name = "",
                         MDNode *FPMathTag = nullptr) {
-    if (Value *V = Folder.FoldBinOp(Opc, LHS, RHS))
+    if (Value *V = Folder.FoldBinOpFMF(Opc, LHS, RHS, FMFSource.get(FMF)))
       return V;
     Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
     if (isa<FPMathOperator>(BinOp))
