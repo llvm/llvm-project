@@ -13991,7 +13991,7 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
       return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
                           MST->getBasePtr(), MST->getPointerInfo(),
                           MST->getBaseAlign(), MST->getMemOperand()->getFlags(),
-                          MST->getNonRangeMMOMetadata());
+                          MST->getMMOMetadataForSubAccess());
 
     // Convert a masked_store with constant getactivelanemask input mask to a
     // standard store.
@@ -14011,7 +14011,7 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
           return DAG.getStore(MST->getChain(), DL, Ext, MST->getBasePtr(),
                               MST->getPointerInfo(), MST->getBaseAlign(),
                               MST->getMemOperand()->getFlags(),
-                              MST->getNonRangeMMOMetadata());
+                              MST->getMMOMetadataForSubAccess());
         }
       }
     }
@@ -15534,7 +15534,7 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
         ExtType, SDLoc(LN0), SplitDstVT, LN0->getChain(), BasePtr,
         LN0->getPointerInfo().getWithOffset(Offset), SplitSrcVT,
         LN0->getBaseAlign(), LN0->getMemOperand()->getFlags(),
-        LN0->getNonRangeMMOMetadata());
+        LN0->getMMOMetadataForSubAccess());
 
     BasePtr = DAG.getMemBasePlusOffset(BasePtr, TypeSize::getFixed(Stride), DL);
 
@@ -17367,7 +17367,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
     Load = DAG.getExtLoad(ExtType, DL, VT, LN0->getChain(), NewPtr,
                           LN0->getPointerInfo().getWithOffset(PtrOff), ExtVT,
                           LN0->getBaseAlign(), LN0->getMemOperand()->getFlags(),
-                          LN0->getNonRangeMMOMetadata());
+                          LN0->getMMOMetadataForSubAccess());
 
   // Replace the old load's chain with the new load's chain.
   WorklistRemover DeadNodes(*this);
@@ -22945,7 +22945,7 @@ ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
   }
 
   ++OpsNarrowed;
-  MMOMetadata Metadata = St->getNonRangeMMOMetadata();
+  MMOMetadata Metadata = St->getMMOMetadataForSubAccess();
   if (UseTruncStore)
     return DAG.getTruncStore(St->getChain(), SDLoc(St), IVal, Ptr,
                              St->getPointerInfo().getWithOffset(StOffset), VT,
@@ -23097,13 +23097,13 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     SDValue NewLD = DAG.getLoad(NewVT, SDLoc(N0), LD->getChain(), NewPtr,
                                 LD->getPointerInfo().getWithOffset(PtrOff),
                                 NewAlign, LD->getMemOperand()->getFlags(),
-                                LD->getNonRangeMMOMetadata());
+                                LD->getMMOMetadataForSubAccess());
     SDValue NewVal = DAG.getNode(Opc, SDLoc(Value), NewVT, NewLD,
                                  DAG.getConstant(NewImm, SDLoc(Value), NewVT));
     SDValue NewST =
         DAG.getStore(Chain, SDLoc(N), NewVal, NewPtr,
                      ST->getPointerInfo().getWithOffset(PtrOff), NewAlign,
-                     MachineMemOperand::MONone, ST->getNonRangeMMOMetadata());
+                     MachineMemOperand::MONone, ST->getMMOMetadataForSubAccess());
 
     AddToWorklist(NewPtr.getNode());
     AddToWorklist(NewLD.getNode());
@@ -24507,7 +24507,7 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
         std::swap(Lo, Hi);
 
       MachineMemOperand::Flags MMOFlags = ST->getMemOperand()->getFlags();
-      MMOMetadata Metadata = ST->getNonRangeMMOMetadata();
+      MMOMetadata Metadata = ST->getMMOMetadataForSubAccess();
 
       SDValue St0 = DAG.getStore(Chain, DL, Lo, Ptr, ST->getPointerInfo(),
                                  ST->getBaseAlign(), MMOFlags, Metadata);
@@ -24585,7 +24585,7 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
 
   return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, NewAlign,
                       ST->getMemOperand()->getFlags(),
-                      ST->getNonRangeMMOMetadata());
+                      ST->getMMOMetadataForSubAccess());
 }
 
 SDValue DAGCombiner::visitATOMIC_STORE(SDNode *N) {
@@ -24779,7 +24779,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
         SDValue NewStore = DAG.getTruncStore(
             Chain, SDLoc(N), Value, Ptr, ST->getOffset(), ST->getPointerInfo(),
             ST->getMemoryVT(), *Alignment, ST->getMemOperand()->getFlags(),
-            ST->getNonRangeMMOMetadata());
+            ST->getMMOMetadataForSubAccess());
         // NewStore will always be N as we are only refining the alignment
         assert(NewStore.getNode() == N);
         (void)NewStore;
