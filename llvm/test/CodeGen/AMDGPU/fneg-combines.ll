@@ -4521,16 +4521,16 @@ define amdgpu_kernel void @v_fneg_fmad_v4f32(ptr addrspace(1) %out, ptr addrspac
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, s2, v12
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; SI-NEXT:    v_mov_b32_e32 v2, s5
-; SI-NEXT:    v_add_i32_e32 v14, vcc, s4, v12
-; SI-NEXT:    v_addc_u32_e32 v15, vcc, 0, v2, vcc
+; SI-NEXT:    v_add_i32_e32 v4, vcc, s4, v12
+; SI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v2, s7
-; SI-NEXT:    v_add_i32_e32 v16, vcc, s6, v12
-; SI-NEXT:    v_addc_u32_e32 v17, vcc, 0, v2, vcc
+; SI-NEXT:    v_add_i32_e32 v8, vcc, s6, v12
+; SI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v2, vcc
 ; SI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    flat_load_dwordx4 v[4:7], v[14:15] glc
+; SI-NEXT:    flat_load_dwordx4 v[4:7], v[4:5] glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    flat_load_dwordx4 v[8:11], v[16:17] glc
+; SI-NEXT:    flat_load_dwordx4 v[8:11], v[8:9] glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v13, s1
 ; SI-NEXT:    v_add_i32_e32 v12, vcc, s0, v12
@@ -4555,16 +4555,16 @@ define amdgpu_kernel void @v_fneg_fmad_v4f32(ptr addrspace(1) %out, ptr addrspac
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v12
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v2, s5
-; VI-NEXT:    v_add_u32_e32 v14, vcc, s4, v12
-; VI-NEXT:    v_addc_u32_e32 v15, vcc, 0, v2, vcc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, s4, v12
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v2, vcc
 ; VI-NEXT:    v_mov_b32_e32 v2, s7
-; VI-NEXT:    v_add_u32_e32 v16, vcc, s6, v12
-; VI-NEXT:    v_addc_u32_e32 v17, vcc, 0, v2, vcc
+; VI-NEXT:    v_add_u32_e32 v8, vcc, s6, v12
+; VI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v2, vcc
 ; VI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    flat_load_dwordx4 v[4:7], v[14:15] glc
+; VI-NEXT:    flat_load_dwordx4 v[4:7], v[4:5] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    flat_load_dwordx4 v[8:11], v[16:17] glc
+; VI-NEXT:    flat_load_dwordx4 v[8:11], v[8:9] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v13, s1
 ; VI-NEXT:    v_add_u32_e32 v12, vcc, s0, v12
@@ -4604,16 +4604,16 @@ define amdgpu_kernel void @v_fneg_fmad_v4f32_nsz(ptr addrspace(1) %out, ptr addr
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, s2, v12
 ; SI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; SI-NEXT:    v_mov_b32_e32 v2, s5
-; SI-NEXT:    v_add_i32_e32 v14, vcc, s4, v12
-; SI-NEXT:    v_addc_u32_e32 v15, vcc, 0, v2, vcc
+; SI-NEXT:    v_add_i32_e32 v4, vcc, s4, v12
+; SI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v2, s7
-; SI-NEXT:    v_add_i32_e32 v16, vcc, s6, v12
-; SI-NEXT:    v_addc_u32_e32 v17, vcc, 0, v2, vcc
+; SI-NEXT:    v_add_i32_e32 v8, vcc, s6, v12
+; SI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v2, vcc
 ; SI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    flat_load_dwordx4 v[4:7], v[14:15] glc
+; SI-NEXT:    flat_load_dwordx4 v[4:7], v[4:5] glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    flat_load_dwordx4 v[8:11], v[16:17] glc
+; SI-NEXT:    flat_load_dwordx4 v[8:11], v[8:9] glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v13, s1
 ; SI-NEXT:    v_add_i32_e32 v12, vcc, s0, v12
@@ -4634,16 +4634,16 @@ define amdgpu_kernel void @v_fneg_fmad_v4f32_nsz(ptr addrspace(1) %out, ptr addr
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v12
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v2, s5
-; VI-NEXT:    v_add_u32_e32 v14, vcc, s4, v12
-; VI-NEXT:    v_addc_u32_e32 v15, vcc, 0, v2, vcc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, s4, v12
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v2, vcc
 ; VI-NEXT:    v_mov_b32_e32 v2, s7
-; VI-NEXT:    v_add_u32_e32 v16, vcc, s6, v12
-; VI-NEXT:    v_addc_u32_e32 v17, vcc, 0, v2, vcc
+; VI-NEXT:    v_add_u32_e32 v8, vcc, s6, v12
+; VI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v2, vcc
 ; VI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    flat_load_dwordx4 v[4:7], v[14:15] glc
+; VI-NEXT:    flat_load_dwordx4 v[4:7], v[4:5] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    flat_load_dwordx4 v[8:11], v[16:17] glc
+; VI-NEXT:    flat_load_dwordx4 v[8:11], v[8:9] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v13, s1
 ; VI-NEXT:    v_add_u32_e32 v12, vcc, s0, v12

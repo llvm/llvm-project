@@ -271,11 +271,11 @@ define amdgpu_kernel void @v_mul_i64_masked_src0_lo(ptr addrspace(1) %out, ptr a
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_load_b64 v[0:1], v4, s[2:3]
-; GFX11-NEXT:    global_load_b64 v[2:3], v4, s[4:5]
+; GFX11-NEXT:    global_load_b64 v[0:1], v2, s[2:3]
+; GFX11-NEXT:    global_load_b64 v[2:3], v2, s[4:5]
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -321,11 +321,11 @@ define amdgpu_kernel void @v_mul_i64_masked_src1_lo(ptr addrspace(1) %out, ptr a
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    global_load_b64 v[0:1], v3, s[2:3]
-; GFX11-NEXT:    global_load_b64 v[1:2], v3, s[4:5]
+; GFX11-NEXT:    global_load_b64 v[0:1], v2, s[2:3]
+; GFX11-NEXT:    global_load_b64 v[1:2], v2, s[4:5]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mul_lo_u32 v1, v0, v2
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
