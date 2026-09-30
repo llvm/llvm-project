@@ -15,10 +15,8 @@
 ! HOST-NOT: "-mmlir"
 ! HOST-NOT: "-use-alloc-runtime"
 
-! Check that invalid values are rejected at the driver level.
+! Check that invalid values are rejected at both the driver and frontend level.
+! The error message is identical, so a single check prefix is used for both.
 ! RUN: not %flang -fopenmp-default-allocate=invalid %s 2>&1 | FileCheck %s --check-prefix=INVALID
-! DRV-INVALID: error: invalid value 'invalid' in 'fopenmp-default-allocate=', expected one of: target host
-
-! Check that invalid values are also rejected at the frontend level.
-! RUN: not %flang_fc1 -fopenmp-default-allocate=invalid %s 2>&1 | FileCheck %s --check-prefix=FC1-INVALID
-! FC1-INVALID: error: invalid value 'invalid' in 'fopenmp-default-allocate=', expected one of: target host
+! RUN: not %flang_fc1 -fopenmp-default-allocate=invalid %s 2>&1 | FileCheck %s --check-prefix=INVALID
+! INVALID: error: invalid value 'invalid' in 'fopenmp-default-allocate=', expected one of: target host
