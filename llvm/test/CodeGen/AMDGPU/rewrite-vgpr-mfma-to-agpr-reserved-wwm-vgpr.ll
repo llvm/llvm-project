@@ -20,8 +20,8 @@ define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(i32 %arg6, i1 %a
 ; CHECK-NEXT:    s_load_dword s8, s[4:5], 0x10
 ; CHECK-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x20
 ; CHECK-NEXT:    ; implicit-def: $vgpr31 : SGPR spill to VGPR lane
-; CHECK-NEXT:    v_mov_b32_e32 v30, 0
-; CHECK-NEXT:    v_mov_b32_e32 v4, v30
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp1_b32 s1, 0
 ; CHECK-NEXT:    s_cselect_b64 s[6:7], -1, 0
@@ -30,13 +30,13 @@ define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(i32 %arg6, i1 %a
 ; CHECK-NEXT:    s_bitcmp1_b32 s1, 8
 ; CHECK-NEXT:    v_writelane_b32 v31, s13, 1
 ; CHECK-NEXT:    v_writelane_b32 v31, s14, 2
+; CHECK-NEXT:    v_writelane_b32 v31, s15, 3
 ; CHECK-NEXT:    s_cselect_b64 s[16:17], -1, 0
 ; CHECK-NEXT:    s_bitcmp1_b32 s1, 16
-; CHECK-NEXT:    v_writelane_b32 v31, s15, 3
-; CHECK-NEXT:    s_cselect_b64 vcc, -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s8, 0
 ; CHECK-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x40
 ; CHECK-NEXT:    s_load_dword s24, s[4:5], 0x90
+; CHECK-NEXT:    s_cselect_b64 vcc, -1, 0
+; CHECK-NEXT:    s_bitcmp1_b32 s8, 0
 ; CHECK-NEXT:    s_cselect_b64 s[34:35], -1, 0
 ; CHECK-NEXT:    s_bitcmp1_b32 s8, 8
 ; CHECK-NEXT:    s_load_dword s1, s[4:5], 0x50
@@ -46,37 +46,33 @@ define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(i32 %arg6, i1 %a
 ; CHECK-NEXT:    s_cselect_b64 s[36:37], -1, 0
 ; CHECK-NEXT:    s_bitcmp1_b32 s9, 0
 ; CHECK-NEXT:    v_writelane_b32 v31, s13, 5
+; CHECK-NEXT:    v_writelane_b32 v31, s14, 6
 ; CHECK-NEXT:    s_cselect_b64 s[38:39], -1, 0
 ; CHECK-NEXT:    s_bitcmp1_b32 s8, 0
-; CHECK-NEXT:    v_writelane_b32 v31, s14, 6
+; CHECK-NEXT:    v_writelane_b32 v31, s15, 7
 ; CHECK-NEXT:    s_cselect_b64 s[40:41], -1, 0
+; CHECK-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x60
 ; CHECK-NEXT:    s_bitcmp1_b32 s24, 0
 ; CHECK-NEXT:    s_mov_b32 s24, 0
-; CHECK-NEXT:    v_writelane_b32 v31, s15, 7
-; CHECK-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x60
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NEXT:    v_mov_b32_e32 v5, 0
+; CHECK-NEXT:    v_mov_b32_e32 v6, 0
+; CHECK-NEXT:    v_mov_b32_e32 v7, 0
+; CHECK-NEXT:    v_mov_b32_e32 v8, 0
+; CHECK-NEXT:    v_mov_b32_e32 v9, 0
+; CHECK-NEXT:    v_mov_b32_e32 v10, 0
+; CHECK-NEXT:    v_mov_b32_e32 v11, 0
+; CHECK-NEXT:    v_mov_b32_e32 v12, 0
+; CHECK-NEXT:    v_mov_b32_e32 v13, 0
+; CHECK-NEXT:    v_mov_b32_e32 v14, 0
+; CHECK-NEXT:    v_mov_b32_e32 v15, 0
 ; CHECK-NEXT:    s_mov_b32 s25, s24
 ; CHECK-NEXT:    s_mov_b32 s26, s24
 ; CHECK-NEXT:    s_mov_b32 s27, s24
-; CHECK-NEXT:    v_mov_b64_e32 v[0:1], s[24:25]
-; CHECK-NEXT:    v_mov_b64_e32 v[2:3], s[26:27]
 ; CHECK-NEXT:    s_cselect_b64 s[42:43], -1, 0
 ; CHECK-NEXT:    s_lshl_b32 s60, s1, 1
-; CHECK-NEXT:    scratch_store_dwordx4 off, v[0:3], off offset:64 ; 16-byte Folded Spill
-; CHECK-NEXT:    v_mov_b32_e32 v5, v30
-; CHECK-NEXT:    v_mov_b32_e32 v6, v30
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, v30
-; CHECK-NEXT:    v_mov_b32_e32 v2, v30
-; CHECK-NEXT:    v_mov_b32_e32 v3, v30
-; CHECK-NEXT:    v_mov_b32_e32 v7, v30
-; CHECK-NEXT:    v_mov_b32_e32 v8, v30
-; CHECK-NEXT:    v_mov_b32_e32 v9, v30
-; CHECK-NEXT:    v_mov_b32_e32 v10, v30
-; CHECK-NEXT:    v_mov_b32_e32 v11, v30
-; CHECK-NEXT:    v_mov_b32_e32 v12, v30
-; CHECK-NEXT:    v_mov_b32_e32 v13, v30
-; CHECK-NEXT:    v_mov_b32_e32 v14, v30
-; CHECK-NEXT:    v_mov_b32_e32 v15, v30
 ; CHECK-NEXT:    v_accvgpr_write_b32 a31, v15
 ; CHECK-NEXT:    v_accvgpr_write_b32 a30, v14
 ; CHECK-NEXT:    v_accvgpr_write_b32 a29, v13
@@ -93,11 +89,34 @@ define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(i32 %arg6, i1 %a
 ; CHECK-NEXT:    v_accvgpr_write_b32 a18, v2
 ; CHECK-NEXT:    v_accvgpr_write_b32 a17, v1
 ; CHECK-NEXT:    v_accvgpr_write_b32 a16, v0
-; CHECK-NEXT:    v_mov_b32_e32 v0, s60
+; CHECK-NEXT:    v_mov_b64_e32 v[0:1], s[24:25]
+; CHECK-NEXT:    v_mov_b64_e32 v[2:3], s[26:27]
+; CHECK-NEXT:    scratch_store_dwordx4 off, v[0:3], off offset:64 ; 16-byte Folded Spill
+; CHECK-NEXT:    v_mov_b32_e32 v30, 0
 ; CHECK-NEXT:    s_mov_b64 s[52:53], -1
+; CHECK-NEXT:    v_mov_b32_e32 v0, s60
 ; CHECK-NEXT:    s_mov_b64 s[20:21], s[4:5]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[16:17]
 ; CHECK-NEXT:    s_mov_b64 s[54:55], 0
+; CHECK-NEXT:    v_mov_b32_e32 v18, 0
+; CHECK-NEXT:    v_mov_b32_e32 v17, 0
+; CHECK-NEXT:    v_mov_b32_e32 v16, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a2, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a3, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a4, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a5, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a6, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a7, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a8, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a9, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a10, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a11, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a12, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a13, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a14, 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a15, 0
 ; CHECK-NEXT:    s_mov_b64 s[58:59], 0
 ; CHECK-NEXT:    s_mov_b64 s[56:57], 0
 ; CHECK-NEXT:    s_mov_b64 s[44:45], 0
@@ -105,26 +124,7 @@ define amdgpu_kernel void @reserved_wwm_vgpr_not_in_alloc_order(i32 %arg6, i1 %a
 ; CHECK-NEXT:    s_mov_b32 s1, s24
 ; CHECK-NEXT:    s_mov_b64 s[48:49], 0
 ; CHECK-NEXT:    s_mov_b64 s[50:51], 0
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, 0
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a2, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a3, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a4, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a5, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a6, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a7, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a8, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a9, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a10, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a11, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a12, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a13, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a14, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a15, v30
 ; CHECK-NEXT:    s_mov_b32 s33, s24
-; CHECK-NEXT:    v_mov_b32_e32 v16, 0
-; CHECK-NEXT:    v_mov_b32_e32 v17, v30
-; CHECK-NEXT:    v_mov_b32_e32 v18, v30
 ; CHECK-NEXT:    v_mov_b32_e32 v19, v30
 ; CHECK-NEXT:    s_mov_b32 s62, s24
 ; CHECK-NEXT:    s_mov_b32 s63, s24
