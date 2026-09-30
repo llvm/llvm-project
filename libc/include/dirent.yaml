@@ -72,4 +72,4 @@ functions:
       - type: const char *
       - type: struct dirent ***
       - type: int (*)(const struct dirent *)
-      - type: int (*)(const struct dirent **, const struct dirent **);
+      - type: int (*)(const struct dirent **, const struct dirent **)
