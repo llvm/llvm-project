@@ -67,6 +67,10 @@ single source of truth for all workflows that run benchmarks (PR benchmarking, r
 historical benchmarks, etc). Each entry contains variables used by the various workflows
 and the LNT machine name that the results will be reported under.
 
+The `runner` key selects the GitHub Actions runner(s) to benchmark on. When the runner set
+requires jobs to run in a container, the `container` key provides the image to use. Otherwise,
+the benchmarks run directly on the host.
+
 The `test-config` key selects the Lit testing configuration to benchmark. This is used to e.g.
 select which Standard Library is being measured. The `lit-params` key provides additional lit
 parameters to pass when running the benchmarks.

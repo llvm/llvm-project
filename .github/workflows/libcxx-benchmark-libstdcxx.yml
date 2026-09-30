@@ -101,6 +101,10 @@ jobs:
         include: ${{ fromJSON(needs.select-machine.outputs.matrix) }}
       fail-fast: false
     runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container || null }}
+    defaults:
+      run:
+        shell: bash
     env:
       COMPILER: ${{ matrix.cxx }}
       LIBSTDCXX_VERSION: ${{ inputs.libstdcxx-version }}
@@ -113,12 +117,6 @@ jobs:
           # full history to be available.
           fetch-depth: 0
           fetch-tags: true
-
-      - name: Install Python
-        if: runner.os == 'Linux' # installed via Homebrew on macOS
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: '3.14'
 
       - name: Select Xcode
         if: runner.os == 'macOS'
