@@ -481,12 +481,12 @@ public:
 
   // The functions below should NOT be modified by subclasses
   /// Updates the ValueObject's value if needed, and then returns the
-  /// current error state.  This should only be called if the stop locker is
-  /// held so the process can't resume while this is in flight.
+  /// current error state.  This function should only be called if the stop locker
+  /// is held so the process can't resume while the update is in flight.
   const Status &GetError();
 
-  /// Return the current error without updating.  Only use this when you need
-  /// the error but it is not safe to update the value.
+  /// Return the current error without updating.  Only use this function when you
+  /// need the error but it is not safe to update the value.
   const Status &PeekError();
 
   ConstString GetName() const { return m_name; }

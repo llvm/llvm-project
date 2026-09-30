@@ -3913,7 +3913,7 @@ lldb::ValueObjectSP ValueImpl::GetSP(Process::StopLocker &stop_locker,
     // look.
     error = Status::FromErrorString("process must be stopped.");
     // We still want to return a value object if it was in an error state, but
-    // we can't call GetError here, since that would call UpdateValueIfNeeded
+    // we can't call GetError here, because that would call UpdateValueIfNeeded
     // which isn't safe to do without holding the stop locker.
     if (value_sp->PeekError().Fail())
       return value_sp;
