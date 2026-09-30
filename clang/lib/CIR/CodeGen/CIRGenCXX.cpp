@@ -80,7 +80,7 @@ static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
   switch (CIRGenFunction::getEvaluationKind(type)) {
   case cir::TEK_Scalar:
     assert(!cir::MissingFeatures::objCGC());
-    cgf.emitScalarInit(init, cgf.getLoc(varDecl->getLocation()), lv, false);
+    cgf.emitScalarInit(init, lv, false);
     break;
   case cir::TEK_Complex:
     cgf.emitComplexExprIntoLValue(init, lv, /*isInit=*/true);
@@ -397,8 +397,7 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
   llvm::SaveAndRestore<CIRGenFunction *> savedCGF(curCGF, &cgf);
   curCGF->curFn = addr;
 
-  CIRGenFunction::SourceLocRAIIObject fnLoc{cgf,
-                                            getLoc(varDecl->getLocation())};
+  CIRGenFunction::SourceLocRAIIObject fnLoc{cgf, varDecl->getSourceRange()};
 
   // Set up the constrained FP environment for the dynamic initializer.
   llvm::RoundingMode rm = getLangOpts().getDefaultRoundingMode();

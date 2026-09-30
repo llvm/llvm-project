@@ -149,8 +149,10 @@ void test3(int cond) {
   // CHECK: define{{.*}} void @test3(
   // CHECK: %[[P:.*]] = alloca ptr, align 8
   // CHECK: %[[_COMPOUNDLITERAL:.*]] = alloca [2 x ptr], align 8
+  // CHECK: %[[LIFETIME_COND:.*]] = alloca i1, align 1
   // CHECK: %[[CLEANUP_COND:.*]] = alloca i1, align 1
   // CHECK: %[[_COMPOUNDLITERAL1:.*]] = alloca [2 x ptr], align 8
+  // CHECK: %[[LIFETIME_COND4:.*]] = alloca i1, align 1
   // CHECK: %[[CLEANUP_COND4:.*]] = alloca i1, align 1
 
   // CHECK: %[[V2:.*]] = load ptr, ptr @g0, align 8

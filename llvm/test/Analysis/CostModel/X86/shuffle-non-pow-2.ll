@@ -4,15 +4,15 @@
 
 define void @test(<9 x double> noundef %src) {
 ; SSE-LABEL: 'test'
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %matins.2.2 = shufflevector <9 x double> %src, <9 x double> undef, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
+; SSE-NEXT:  Cost Model: Found costs of 4 for: %matins.2.2 = shufflevector <9 x double> %src, <9 x double> poison, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX-LABEL: 'test'
-; AVX-NEXT:  Cost Model: Found costs of 6 for: %matins.2.2 = shufflevector <9 x double> %src, <9 x double> undef, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
+; AVX-NEXT:  Cost Model: Found costs of 6 for: %matins.2.2 = shufflevector <9 x double> %src, <9 x double> poison, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
 ; AVX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 entry:
-  %matins.2.2 = shufflevector <9 x double> %src, <9 x double> undef, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
+  %matins.2.2 = shufflevector <9 x double> %src, <9 x double> poison, <9 x i32> <i32 0, i32 3, i32 6, i32 1, i32 4, i32 7, i32 2, i32 5, i32 8>
   ret void
 }
 

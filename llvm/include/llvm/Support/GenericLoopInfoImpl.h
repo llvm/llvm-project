@@ -881,8 +881,8 @@ void addInnerLoopsToHeadersMap(DenseMap<BlockT *, const LoopT *> &LoopHeaders,
 
 #ifndef NDEBUG
 template <class BlockT, class LoopT>
-static void compareLoops(const LoopT *L, const LoopT *OtherL,
-                         DenseMap<BlockT *, const LoopT *> &OtherLoopHeaders) {
+void compareLoops(const LoopT *L, const LoopT *OtherL,
+                  DenseMap<BlockT *, const LoopT *> &OtherLoopHeaders) {
   BlockT *H = L->getHeader();
   BlockT *OtherH = OtherL->getHeader();
   assert(H == OtherH &&

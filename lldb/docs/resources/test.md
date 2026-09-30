@@ -159,12 +159,15 @@ decorator you pick says which:
 The `require*` decorators mirror the `skip*` ones one-for-one:
 `requireDarwin` / `requireNotDarwin`, `requireLinux` / `requireNotLinux`,
 `requireWindows` / `requireNotWindows`, plus `requirePOSIX`, `requireSignals`,
-`requireNotWasm`, `requireDarwinHost`, and the general
+`requireNotWasm`, `requireDarwinHost`, `requireClang`, and the general
 `requirePlatform(oslist)` / `requireNotPlatform(oslist)`.
 
 Reach for `require*` when the test is tied to a platform-specific file format,
-API, or OS feature. If the test is merely untested or broken somewhere, keep
-`skipIf*` so nobody mistakes a bug for a design decision.
+API, or OS feature, or to a specific compiler. If the test is merely untested
+or broken somewhere, keep `skipIf*` so nobody mistakes a bug for a design
+decision. For example, a test that only uses Clang-specific debug info
+options belongs behind `@requireClang` rather than
+`@skipIf(compiler=no_match("clang"))`.
 
 In addition to providing a lot more flexibility when it comes to writing the
 test, the API test also allow for much more complex scenarios when it comes to

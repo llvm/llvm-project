@@ -705,6 +705,38 @@ static Value addOffsetToBaseAddr(ConversionPatternRewriter &rewriter,
   return newAddr;
 }
 
+// Returns true when every element of `mask` carries the same bit, so gating a
+// whole contiguous block on element 0 is equivalent. Splat constants, an
+// all-ones or all-zeros `vector.constant_mask`, broadcasts of a scalar, and a
+// `vector.from_elements` of one repeated value qualify.
+//
+// TODO: this recognizes a fixed list of producers. A general uniformity query
+// on the vector dialect would cover more forms and would not need updating
+// every time a new producer shows up here.
+static bool isUniformMask(Value mask) {
+  if (!isa<VectorType>(mask.getType()))
+    return true;
+  DenseElementsAttr splat;
+  if (matchPattern(mask, m_Constant(&splat)) && splat.isSplat())
+    return true;
+  if (auto constantMask = mask.getDefiningOp<vector::ConstantMaskOp>()) {
+    // All-ones and all-zeros are uniform. A zero dim size is only legal when
+    // every dim is zero, so those are the only two uniform cases.
+    return constantMask.isAllOnesMask() ||
+           llvm::all_of(constantMask.getMaskDimSizes(),
+                        [](int64_t size) { return size == 0; });
+  }
+  if (auto broadcast = mask.getDefiningOp<vector::BroadcastOp>())
+    return !isa<VectorType>(broadcast.getSource().getType());
+  if (auto fromElements = mask.getDefiningOp<vector::FromElementsOp>())
+    return llvm::all_equal(fromElements.getElements());
+  // Flattening a rank > 1 operand to rank 1 inserts a shape cast. It keeps the
+  // same elements, so it keeps uniformity.
+  if (auto shapeCast = mask.getDefiningOp<vector::ShapeCastOp>())
+    return isUniformMask(shapeCast.getSource());
+  return false;
+}
+
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
               OpType, xegpu::LoadGatherOp, xegpu::StoreScatterOp>::value>>
@@ -770,6 +802,25 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
                                           basePtrI64);
     }
     Value mask = adaptor.getMask();
+
+    // Coalesce a lane's multi-element access into one block access.
+    //
+    // Distribution gives every element its own offset and mask bit, so a lane
+    // that takes D neighbouring elements arrives with `vector<D>` offsets and
+    // mask. One block access needs one base offset and one mask bit, so take
+    // both from element 0. A non-uniform mask cannot be reduced to one bit, so
+    // it stays a vector and fails to match below.
+    auto origOffsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
+    if (isa<VectorType>(offset.getType()) && origOffsetsTy && valOrResVecTy &&
+        origOffsetsTy.getNumElements() == valOrResVecTy.getNumElements() &&
+        isUniformMask(op.getMask())) {
+      offset = vector::ExtractOp::create(rewriter, loc, offset,
+                                         ArrayRef<int64_t>{0});
+      if (isa<VectorType>(mask.getType()))
+        mask = vector::ExtractOp::create(rewriter, loc, mask,
+                                         ArrayRef<int64_t>{0});
+    }
+
     if (dyn_cast<VectorType>(offset.getType())) {
       // Offset needs be scalar. Single element vector is converted to scalar
       // by type converter.
@@ -925,8 +976,8 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
           VectorType::get(valOrResVecTy.getShape(), intElemTy);
 
       if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
-        Value loadOp =
-            xevm::BlockLoadOp::create(rewriter, loc, intVecTy, basePtrLLVM);
+        Value loadOp = xevm::BlockLoadOp::create(
+            rewriter, loc, intVecTy, basePtrLLVM, /*cache_control=*/nullptr);
         if (intVecTy != valOrResVecTy) {
           loadOp =
               vector::BitCastOp::create(rewriter, loc, valOrResVecTy, loadOp);
@@ -1383,14 +1434,16 @@ static bool isXeVMExtf(arith::ExtFOp op) {
 }
 
 // Returns true if `op` is an arith.truncf that can be lowered to xevm.truncf,
-// i.e. a rank-1 truncation from a 16-element f16/bf16 vector to an MX narrow
-// float.
+// i.e. a rank-1 truncation from an f16/bf16 vector to an MX narrow float. The
+// source has to hold a whole number of the fixed-size groups xevm.truncf
+// converts at a time; wider vectors are converted in several steps.
 static bool isXeVMTruncf(arith::TruncFOp op) {
   auto srcTy = dyn_cast<VectorType>(op.getIn().getType());
   auto dstTy = dyn_cast<VectorType>(op.getType());
   if (!srcTy || !dstTy || srcTy.getRank() != 1 || dstTy.getRank() != 1)
     return false;
-  if (srcTy.getNumElements() != kXeVMExtfTruncfNumElems)
+  int64_t numElems = srcTy.getNumElements();
+  if (numElems == 0 || numElems % kXeVMExtfTruncfNumElems != 0)
     return false;
   Type srcETy = srcTy.getElementType();
   if (!srcETy.isF16() && !srcETy.isBF16())
@@ -1450,19 +1503,44 @@ class TruncfToXeVMPattern : public OpConversionPattern<arith::TruncFOp> {
                                            : xevm::TruncfSrcElemTypes::BF16;
     xevm::TruncfDstElemTypes dstEnum =
         *getTruncfNarrowType(dstVecTy.getElementType());
-    // xevm.truncf produces the narrow floats packed into an i8 vector.
-    int64_t numNarrowBits =
-        dstVecTy.getNumElements() * dstVecTy.getElementTypeBitWidth();
-    Type packedTy = VectorType::get(numNarrowBits / 8, rewriter.getI8Type());
-    Value res =
-        xevm::TruncfOp::create(rewriter, loc, packedTy, adaptor.getIn(),
-                               xevm::TruncfSrcElemTypeAttr::get(ctx, srcEnum),
-                               xevm::TruncfDstElemTypeAttr::get(ctx, dstEnum));
+    auto srcEnumAttr = xevm::TruncfSrcElemTypeAttr::get(ctx, srcEnum);
+    auto dstEnumAttr = xevm::TruncfDstElemTypeAttr::get(ctx, dstEnum);
+
+    // xevm.truncf lowers to instructions that convert a fixed number of
+    // elements at a time, so a wider source is converted one group at a time
+    // and the packed results are concatenated. Each group produces the narrow
+    // floats packed into an i8 vector.
+    int64_t numGroups = srcVecTy.getNumElements() / kXeVMExtfTruncfNumElems;
+    int64_t groupBytes =
+        kXeVMExtfTruncfNumElems * dstVecTy.getElementTypeBitWidth() / 8;
+    Type groupTy = VectorType::get(groupBytes, rewriter.getI8Type());
+
+    Value src = adaptor.getIn();
+    Value packed;
+    if (numGroups == 1) {
+      packed = xevm::TruncfOp::create(rewriter, loc, groupTy, src, srcEnumAttr,
+                                      dstEnumAttr);
+    } else {
+      auto packedTy =
+          VectorType::get(groupBytes * numGroups, rewriter.getI8Type());
+      packed = arith::ConstantOp::create(rewriter, loc, packedTy,
+                                         rewriter.getZeroAttr(packedTy));
+      for (int64_t group = 0; group < numGroups; group++) {
+        Value slice = vector::ExtractStridedSliceOp::create(
+            rewriter, loc, src, group * kXeVMExtfTruncfNumElems,
+            kXeVMExtfTruncfNumElems, /*strides=*/1);
+        Value converted = xevm::TruncfOp::create(rewriter, loc, groupTy, slice,
+                                                 srcEnumAttr, dstEnumAttr);
+        packed = vector::InsertStridedSliceOp::create(
+            rewriter, loc, converted, packed, group * groupBytes,
+            /*strides=*/1);
+      }
+    }
     // Re-shape to the type-converted result type (i4 vector for fp4).
     Type resTy = getTypeConverter()->convertType(dstVecTy);
-    if (res.getType() != resTy)
-      res = vector::BitCastOp::create(rewriter, loc, resTy, res);
-    rewriter.replaceOp(op, res);
+    if (packed.getType() != resTy)
+      packed = vector::BitCastOp::create(rewriter, loc, resTy, packed);
+    rewriter.replaceOp(op, packed);
     return success();
   }
 };

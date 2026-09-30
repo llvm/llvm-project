@@ -532,16 +532,6 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   // The following builtins require half type support
-  case NVPTX::BI__nvvm_ex2_approx_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  case NVPTX::BI__nvvm_ex2_approx_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__nvvm_ff2f16x2_rn:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented NVPTX builtin call: ") +
@@ -563,265 +553,167 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   case NVPTX::BI__nvvm_fma_rn_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fma_rn_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fma_rn_ftz_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.ftz.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fma_rn_ftz_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.ftz.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.ftz.relu.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fma_rn_ftz_relu_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr,
+                                               "nvvm.fma.rn.ftz.relu.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.ftz.sat.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fma_rn_ftz_sat_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr,
+                                               "nvvm.fma.rn.ftz.sat.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fma_rn_relu_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.relu.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fma_rn_relu_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.relu.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fma_rn_sat_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.sat.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fma_rn_sat_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.sat.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fma_rn_oob_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__nvvm_fma_rn_oob_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__nvvm_fma_rn_oob_bf16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__nvvm_fma_rn_oob_bf16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.oob")
+        .getValue();
   case NVPTX::BI__nvvm_fma_rn_oob_relu_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__nvvm_fma_rn_oob_relu_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__nvvm_fma_rn_oob_relu_bf16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
   case NVPTX::BI__nvvm_fma_rn_oob_relu_bf16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<3>(expr, "nvvm.fma.rn.oob.relu")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmax.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmax.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_ftz_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmax.ftz.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_ftz_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmax.ftz.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_ftz_nan_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmax.ftz.nan.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_ftz_nan_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmax.ftz.nan.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_ftz_nan_xorsign_abs_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "nvvm.fmax.ftz.nan.xorsign.abs.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_ftz_nan_xorsign_abs_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "nvvm.fmax.ftz.nan.xorsign.abs.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_ftz_xorsign_abs_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr,
+                                               "nvvm.fmax.ftz.xorsign.abs.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_ftz_xorsign_abs_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "nvvm.fmax.ftz.xorsign.abs.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_nan_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmax.nan.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_nan_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmax.nan.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_nan_xorsign_abs_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr,
+                                               "nvvm.fmax.nan.xorsign.abs.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_nan_xorsign_abs_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "nvvm.fmax.nan.xorsign.abs.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_xorsign_abs_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr,
+                                               "nvvm.fmax.xorsign.abs.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmax_xorsign_abs_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr,
+                                               "nvvm.fmax.xorsign.abs.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmin.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmin.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_ftz_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmin.ftz.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_ftz_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmin.ftz.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_ftz_nan_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmin.ftz.nan.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_ftz_nan_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmin.ftz.nan.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_ftz_nan_xorsign_abs_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "nvvm.fmin.ftz.nan.xorsign.abs.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_ftz_nan_xorsign_abs_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "nvvm.fmin.ftz.nan.xorsign.abs.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_ftz_xorsign_abs_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr,
+                                               "nvvm.fmin.ftz.xorsign.abs.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_ftz_xorsign_abs_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "nvvm.fmin.ftz.xorsign.abs.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_nan_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmin.nan.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_nan_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr, "nvvm.fmin.nan.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_nan_xorsign_abs_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr,
+                                               "nvvm.fmin.nan.xorsign.abs.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_nan_xorsign_abs_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(
+               expr, "nvvm.fmin.nan.xorsign.abs.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_xorsign_abs_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr,
+                                               "nvvm.fmin.xorsign.abs.f16")
+        .getValue();
   case NVPTX::BI__nvvm_fmin_xorsign_abs_f16x2:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<2>(expr,
+                                               "nvvm.fmin.xorsign.abs.f16x2")
+        .getValue();
   case NVPTX::BI__nvvm_fabs_f:
   case NVPTX::BI__nvvm_abs_bf16:
   case NVPTX::BI__nvvm_abs_bf16x2:
@@ -836,6 +728,8 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
     return emitUnaryNVVMIntrinsic(*this, expr, "fabs");
   case NVPTX::BI__nvvm_ex2_approx_d:
   case NVPTX::BI__nvvm_ex2_approx_f:
+  case NVPTX::BI__nvvm_ex2_approx_f16:
+  case NVPTX::BI__nvvm_ex2_approx_f16x2:
     return emitUnaryNVVMIntrinsic(*this, expr, "nvvm.ex2.approx");
   case NVPTX::BI__nvvm_ex2_approx_ftz_f:
     return emitUnaryNVVMIntrinsic(*this, expr, "nvvm.ex2.approx.ftz");
