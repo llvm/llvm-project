@@ -71,6 +71,9 @@ namespace net {
 
 [[nodiscard]] bool str_to_ipv6(cpp::string_view src, struct in6_addr &dst) {
   constexpr size_t NUM_COMPONENTS = 8;
+  // `parts[0]` collects 16-bit groups preceding "::", while `parts[1]` collects
+  // groups following "::". When "::" is encountered, `part_idx` switches to 1.
+  // After parsing, any omitted zero groups are filled between the two parts.
   FixedVector<uint16_t, NUM_COMPONENTS> parts[2];
   size_t part_idx = 0;
 
@@ -105,9 +108,7 @@ namespace net {
     }
 
     size_t colon_pos = src.find_first_of(':');
-    cpp::string_view token = src.substr(0, colon_pos);
-
-    if (colon_pos == cpp::string_view::npos && token.contains('.')) {
+    if (colon_pos == cpp::string_view::npos && src.contains('.')) {
       struct in_addr in4;
       if (!str_to_ipv4(src, in4))
         return false;
@@ -118,7 +119,6 @@ namespace net {
           !parts[part_idx].push_back(v4_words[1]))
         return false;
 
-      src = cpp::string_view();
       break;
     }
 
@@ -148,9 +148,8 @@ namespace net {
     }
     inline_bzero(ptr, num_zeroes * sizeof(uint16_t));
     ptr += num_zeroes;
-    if (!parts[1].empty()) {
+    if (!parts[1].empty())
       inline_memcpy(ptr, parts[1].begin(), parts[1].size() * sizeof(uint16_t));
-    }
   } else {
     if (parts[0].size() != NUM_COMPONENTS)
       return false;
