@@ -9074,6 +9074,32 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
   }
 }
 
+/// Return the number of pointer, array and function chunks before
+/// \p chunkIndex for counted_by validation.
+///
+/// Chunks are ordered from the identifier out. In
+/// `int *__counted_by(n) *pp`, the attributed pointer is chunk 1, enclosed by
+/// the pointer at chunk 0, so its nesting level is 1.
+[[maybe_unused]] static unsigned getPointerNestLevel(TypeProcessingState &state,
+                                                     unsigned chunkIndex) {
+  unsigned pointerNestLevel = 0;
+  const auto &stateDeclarator = state.getDeclarator();
+  assert(chunkIndex <= stateDeclarator.getNumTypeObjects());
+  for (unsigned i = 0; i < chunkIndex; ++i) {
+    const DeclaratorChunk &TypeObject = stateDeclarator.getTypeObject(i);
+    switch (TypeObject.Kind) {
+    case DeclaratorChunk::Function:
+    case DeclaratorChunk::Array:
+    case DeclaratorChunk::Pointer:
+      pointerNestLevel++;
+      break;
+    default:
+      break;
+    }
+  }
+  return pointerNestLevel;
+}
+
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL,
                              const ParsedAttributesView &attrs,
