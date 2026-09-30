@@ -667,18 +667,14 @@ define void @sink_through_jt(ptr %p) {
 ; RV64ZILX-SMALL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64ZILX-SMALL-NEXT:    lbu a0, -1(s1)
 ; RV64ZILX-SMALL-NEXT:    addi a0, a0, -1
-; RV64ZILX-SMALL-NEXT:    bltu s0, a0, .LBB0_13
+; RV64ZILX-SMALL-NEXT:    bltu s0, a0, .LBB0_14
 ; RV64ZILX-SMALL-NEXT:  # %bb.4: # %disp
 ; RV64ZILX-SMALL-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; RV64ZILX-SMALL-NEXT:    lw a1, 0(s1)
-; RV64ZILX-SMALL-NEXT:    lxsw a2, (s2), a0
-; RV64ZILX-SMALL-NEXT:    addiw a0, a1, 7
-; RV64ZILX-SMALL-NEXT:    jr a2
-; RV64ZILX-SMALL-NEXT:  .LBB0_5: # %other
-; RV64ZILX-SMALL-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; RV64ZILX-SMALL-NEXT:    li a0, 55
-; RV64ZILX-SMALL-NEXT:    call use
-; RV64ZILX-SMALL-NEXT:    li a0, 0
+; RV64ZILX-SMALL-NEXT:    lxsw a0, (s2), a0
+; RV64ZILX-SMALL-NEXT:    jr a0
+; RV64ZILX-SMALL-NEXT:  .LBB0_5: # in Loop: Header=BB0_3 Depth=1
+; RV64ZILX-SMALL-NEXT:    lw a0, 0(s1)
+; RV64ZILX-SMALL-NEXT:    addiw a0, a0, 7
 ; RV64ZILX-SMALL-NEXT:    j .LBB0_2
 ; RV64ZILX-SMALL-NEXT:  .LBB0_6: # %c3
 ; RV64ZILX-SMALL-NEXT:    # in Loop: Header=BB0_3 Depth=1
@@ -704,23 +700,29 @@ define void @sink_through_jt(ptr %p) {
 ; RV64ZILX-SMALL-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; RV64ZILX-SMALL-NEXT:    li a0, 106
 ; RV64ZILX-SMALL-NEXT:    j .LBB0_2
-; RV64ZILX-SMALL-NEXT:  .LBB0_12: # %c4
+; RV64ZILX-SMALL-NEXT:  .LBB0_12: # %other
+; RV64ZILX-SMALL-NEXT:    # in Loop: Header=BB0_3 Depth=1
+; RV64ZILX-SMALL-NEXT:    li a0, 55
+; RV64ZILX-SMALL-NEXT:    call use
+; RV64ZILX-SMALL-NEXT:    li a0, 0
+; RV64ZILX-SMALL-NEXT:    j .LBB0_2
+; RV64ZILX-SMALL-NEXT:  .LBB0_13: # %c4
 ; RV64ZILX-SMALL-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; RV64ZILX-SMALL-NEXT:    li a0, 104
 ; RV64ZILX-SMALL-NEXT:    j .LBB0_2
-; RV64ZILX-SMALL-NEXT:  .LBB0_13: # %c0
+; RV64ZILX-SMALL-NEXT:  .LBB0_14: # %c0
 ; RV64ZILX-SMALL-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; RV64ZILX-SMALL-NEXT:    li a0, 100
 ; RV64ZILX-SMALL-NEXT:    j .LBB0_2
-; RV64ZILX-SMALL-NEXT:  .LBB0_14: # %c5
+; RV64ZILX-SMALL-NEXT:  .LBB0_15: # %c5
 ; RV64ZILX-SMALL-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; RV64ZILX-SMALL-NEXT:    li a0, 105
 ; RV64ZILX-SMALL-NEXT:    j .LBB0_2
-; RV64ZILX-SMALL-NEXT:  .LBB0_15: # %c9
+; RV64ZILX-SMALL-NEXT:  .LBB0_16: # %c9
 ; RV64ZILX-SMALL-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; RV64ZILX-SMALL-NEXT:    li a0, 109
 ; RV64ZILX-SMALL-NEXT:    j .LBB0_2
-; RV64ZILX-SMALL-NEXT:  .LBB0_16: # %c7
+; RV64ZILX-SMALL-NEXT:  .LBB0_17: # %c7
 ; RV64ZILX-SMALL-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; RV64ZILX-SMALL-NEXT:    li a0, 107
 ; RV64ZILX-SMALL-NEXT:    j .LBB0_2
