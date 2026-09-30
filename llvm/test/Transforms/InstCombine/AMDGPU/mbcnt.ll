@@ -295,11 +295,11 @@ define i32 @known_range_mbcnt_lo_refineable_range(i32 %unknown) {
 ; A zero mask contributes no lanes, so the call is the base.
 define i32 @mbcnt_hi_zero_mask() {
 ; DEFAULT-LABEL: define i32 @mbcnt_hi_zero_mask() {
-; DEFAULT-NEXT:    ret i32 1
+; DEFAULT-NEXT:    ret i32 47667
 ;
 ; WAVE64-LABEL: define i32 @mbcnt_hi_zero_mask
 ; WAVE64-SAME: () #[[ATTR1]] {
-; WAVE64-NEXT:    ret i32 1
+; WAVE64-NEXT:    ret i32 47667
 ;
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 0, i32 47666)
   %xor = xor i32 %hi, 1
@@ -309,11 +309,15 @@ define i32 @mbcnt_hi_zero_mask() {
 ; A non-zero mask is lane-varying, so the call must not become a constant.
 define i32 @mbcnt_lo_nonzero_mask() {
 ; DEFAULT-LABEL: define i32 @mbcnt_lo_nonzero_mask() {
-; DEFAULT-NEXT:    ret i32 1
+; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 48938, 48971) i32 @llvm.amdgcn.mbcnt.lo(i32 48938, i32 48938)
+; DEFAULT-NEXT:    [[XOR:%.*]] = xor i32 [[LO]], 1
+; DEFAULT-NEXT:    ret i32 [[XOR]]
 ;
 ; WAVE64-LABEL: define i32 @mbcnt_lo_nonzero_mask
 ; WAVE64-SAME: () #[[ATTR1]] {
-; WAVE64-NEXT:    ret i32 1
+; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 48938, 48971) i32 @llvm.amdgcn.mbcnt.lo(i32 48938, i32 48938)
+; WAVE64-NEXT:    [[XOR:%.*]] = xor i32 [[LO]], 1
+; WAVE64-NEXT:    ret i32 [[XOR]]
 ;
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 48938, i32 48938)
   %xor = xor i32 %lo, 1
@@ -324,11 +328,21 @@ define i32 @mbcnt_lo_nonzero_mask() {
 define i32 @mbcnt_hi_load_mask(ptr addrspace(1) %in) {
 ; DEFAULT-LABEL: define i32 @mbcnt_hi_load_mask
 ; DEFAULT-SAME: (ptr addrspace(1) [[IN:%.*]]) {
-; DEFAULT-NEXT:    ret i32 1
+; DEFAULT-NEXT:    [[MASK:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
+; DEFAULT-NEXT:    [[HI0:%.*]] = call range(i32 793772030, 793772063) i32 @llvm.amdgcn.mbcnt.hi(i32 793772030, i32 793772030)
+; DEFAULT-NEXT:    [[HI1:%.*]] = call range(i32 793772030, 793772063) i32 @llvm.amdgcn.mbcnt.hi(i32 [[MASK]], i32 793772030)
+; DEFAULT-NEXT:    [[XOR:%.*]] = xor i32 [[HI0]], [[HI1]]
+; DEFAULT-NEXT:    [[MIX:%.*]] = xor i32 [[XOR]], 1
+; DEFAULT-NEXT:    ret i32 [[MIX]]
 ;
 ; WAVE64-LABEL: define i32 @mbcnt_hi_load_mask
 ; WAVE64-SAME: (ptr addrspace(1) [[IN:%.*]]) #[[ATTR1]] {
-; WAVE64-NEXT:    ret i32 1
+; WAVE64-NEXT:    [[MASK:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
+; WAVE64-NEXT:    [[HI0:%.*]] = call range(i32 793772030, 793772063) i32 @llvm.amdgcn.mbcnt.hi(i32 793772030, i32 793772030)
+; WAVE64-NEXT:    [[HI1:%.*]] = call range(i32 793772030, 793772063) i32 @llvm.amdgcn.mbcnt.hi(i32 [[MASK]], i32 793772030)
+; WAVE64-NEXT:    [[XOR:%.*]] = xor i32 [[HI0]], [[HI1]]
+; WAVE64-NEXT:    [[MIX:%.*]] = xor i32 [[XOR]], 1
+; WAVE64-NEXT:    ret i32 [[MIX]]
 ;
   %mask = load i32, ptr addrspace(1) %in, align 4
   %hi0 = call i32 @llvm.amdgcn.mbcnt.hi(i32 793772030, i32 793772030)
