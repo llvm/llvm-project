@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 \
 ; RUN:   -stop-after=finalize-isel %s -o - | FileCheck %s
 
+; CHECK-DAG: !6 = !{!"nvvm.l1_eviction", !"first"}
+
 define void @unaligned_f64_store(ptr addrspace(1) %p, double %v) {
   ; CHECK-LABEL: name: unaligned_f64_store
   ; CHECK: bb.0 (%ir-block.0):
