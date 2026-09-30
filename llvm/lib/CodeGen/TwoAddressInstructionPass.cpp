@@ -1530,6 +1530,14 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
             MachineBasicBlock::iterator Begin(NewMIs[0]);
             MachineBasicBlock::iterator End(NewMIs[1]);
             LIS->repairIntervalsInRange(MBB, Begin, End, OrigRegs);
+
+            // repairIntervalsInRange() does not update physregs; clear their
+            // ranges since the original instruction's defs (e.g. of EFLAGS)
+            // were replaced.
+            for (Register Reg : OrigRegs) {
+              if (Reg.isPhysical())
+                LIS->removeAllRegUnitsForPhysReg(Reg.asMCReg());
+            }
           }
 
           mi = NewMIs[1];
