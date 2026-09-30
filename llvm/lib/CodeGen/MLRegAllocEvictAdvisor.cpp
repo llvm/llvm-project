@@ -854,11 +854,9 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
        ++FeatureIndex) {
     if (DoNotNormalize.test(FeatureIndex))
       continue;
-    // Skip the columns past ValidPosLimit: never written, so still 0.
     float *Tensor = Runner->getTensor<float>(FeatureIndex);
-    for (size_t P = 0; P < ValidPosLimit; ++P)
+    for (size_t P = 0; P < NumColumns; ++P)
       Tensor[P] /= Largest[FeatureIndex];
-    Tensor[CandidateVirtRegPos] /= Largest[FeatureIndex];
   }
   *Runner->getTensor<float>(FeatureIDs::progress) =
       static_cast<float>(RA.getQueueSize()) / InitialQSize;
