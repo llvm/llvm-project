@@ -97,6 +97,7 @@ constexpr int construct_limit = default_construct<1025>(); // both-error {{const
 // both-note@#gh173728-construct {{use -fconstexpr-steps}}
 
 #if __SIZEOF_SIZE_T__ == 8
+/// FIXME: The bytecode interpreter can't create this local and rejects the call without a note.
 constexpr int construct_huge = default_construct<(1ULL << 33) - 1>(); // both-error {{constexpr variable 'construct_huge' must be initialized by a constant expression}} \
                                                                       // ref-note {{in call}}
 // ref-note@#gh173728-construct {{cannot allocate array; evaluated array bound 8589934591 is too large}}
@@ -114,4 +115,22 @@ constexpr int capture_limit = capture_copy(src_limit); // both-error {{constexpr
                                                        // both-note {{in call}}
 // both-note@#gh173728-capture {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}}
 // both-note@#gh173728-capture {{use -fconstexpr-steps}}
+
+template <auto N>
+struct Member {
+  T a[N];
+  constexpr Member() {} // #gh173728-member
+};
+
+constexpr Member<1024> member_ok;
+#if __SIZEOF_SIZE_T__ == 8
+constexpr Member<0xFFFFFFFFu> member_limit; // both-error {{constexpr variable 'member_limit' must be initialized by a constant expression}} \
+                                            // both-note {{in call}}
+// both-note@#gh173728-member {{cannot allocate array; evaluated array bound 4294967295 exceeds the limit (1024)}}
+// both-note@#gh173728-member {{use -fconstexpr-steps}}
+
+constexpr Member<(1ULL << 33) - 1> member_huge; // both-error {{constexpr variable 'member_huge' must be initialized by a constant expression}} \
+                                                // both-note {{in call}}
+// both-note@#gh173728-member {{cannot allocate array; evaluated array bound 8589934591 is too large}}
+#endif
 }
