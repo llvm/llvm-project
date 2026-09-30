@@ -310,6 +310,10 @@ public:
   /// but an ABI size of 128 bits. getSizeInBits() returns the payload width,
   /// so classification rules that compare against a Clang type size must use
   /// this instead.
+  ///
+  /// An x87 element counts at its allocation size, so a 3 x x86_fp80 vector
+  /// with 16-byte aligned elements has 240 bits of payload but an ABI size of
+  /// 512 bits.
   uint64_t getABISizeInBits() const {
     if (isScalable())
       return 0;
@@ -317,12 +321,16 @@ public:
     // A _BitInt occupies a whole number of bytes, so a sub-byte element is
     // padded out to 8 bits. Clang only permits power-of-2 _BitInt vector
     // elements, and a wider one always fills its storage exactly, so this is
-    // the only padding that can occur. A one-bit element is a bool rather
+    // the only padding a _BitInt needs. A one-bit element is a bool rather
     // than a _BitInt, and those really are packed one to a bit.
     uint64_t EltWidth = ElementType->getSizeInBits().getFixedValue();
-    if (const auto *IT = dyn_cast<IntegerType>(ElementType))
+    if (const auto *IT = dyn_cast<IntegerType>(ElementType)) {
       if (IT->isBitInt() && EltWidth < 8)
         EltWidth = 8;
+    } else if (const auto *FT = dyn_cast<FloatType>(ElementType)) {
+      if (FT->getSemantics() == &APFloat::x87DoubleExtended())
+        EltWidth = FT->getTypeAllocSize().getFixedValue() * 8;
+    }
 
     uint64_t Width = EltWidth * NumElements.getKnownMinValue();
     return bit_ceil(Width < 8 ? uint64_t(8) : Width);

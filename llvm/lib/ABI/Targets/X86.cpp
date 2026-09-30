@@ -46,25 +46,21 @@ static uint64_t getClangIntegerWidthInBits(const IntegerType *IT) {
   return llvm::alignTo(NumBits, BitAlign);
 }
 
-static uint64_t getClangVectorWidthInBits(const VectorType *VT) {
-  const Type *EltTy = VT->getElementType();
-  uint64_t EltWidth = EltTy->getSizeInBits().getFixedValue();
-  if (const auto *IT = dyn_cast<IntegerType>(EltTy))
-    EltWidth = getClangIntegerWidthInBits(IT);
-  uint64_t Width =
-      std::max<uint64_t>(8, EltWidth * VT->getNumElements().getKnownMinValue());
-  return llvm::bit_ceil(Width);
+// The size of a type, with a vector taken at its ABI size rather than its
+// payload width.
+static uint64_t getSizeInBitsWithVectorPadding(const Type *Ty) {
+  if (const auto *VT = dyn_cast<VectorType>(Ty))
+    return VT->getABISizeInBits();
+  return Ty->getSizeInBits().getFixedValue();
 }
 
 // The storage-container width of a type, mirroring Clang's getTypeSize. Used on
 // the stack path so a _BitInt or illegal vector coerces to the integer covering
 // its storage, not its raw iN width.
 static uint64_t getClangTypeWidthInBits(const Type *Ty) {
-  if (const auto *VT = dyn_cast<VectorType>(Ty))
-    return getClangVectorWidthInBits(VT);
   if (const auto *IT = dyn_cast<IntegerType>(Ty))
     return getClangIntegerWidthInBits(IT);
-  return Ty->getSizeInBits().getFixedValue();
+  return getSizeInBitsWithVectorPadding(Ty);
 }
 
 class X86_64TargetInfo : public TargetInfo {
@@ -338,7 +334,8 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
   }
 
   if (const auto *VT = dyn_cast<VectorType>(T)) {
-    auto Size = VT->getSizeInBits().getFixedValue();
+    assert(VT->isFixedLength() && "x86-64 has no scalable vectors");
+    uint64_t Size = VT->getABISizeInBits();
     const Type *ElementType = VT->getElementType();
 
     if (Size == 1 || Size == 8 || Size == 16 || Size == 32) {
@@ -474,7 +471,7 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
     // Otherwise implement simplified merge. We could be smarter about
     // this, but it isn't worth it and would be harder to verify.
     Current = NoClass;
-    uint64_t EltSize = ElementType->getSizeInBits().getFixedValue();
+    uint64_t EltSize = getSizeInBitsWithVectorPadding(ElementType);
     uint64_t ArraySize = AT->getNumElements();
 
     // The only case a 256-bit wide vector could be used is when the array
@@ -568,10 +565,9 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
                            : Field.IsUnnamedBitfield))
         continue;
 
-      if (Size > 128 &&
-          ((!IsUnion &&
-            Size != Field.FieldType->getSizeInBits().getFixedValue()) ||
-           Size > getNativeVectorSizeForAVXABI(AVXLevel))) {
+      uint64_t FieldSize = getSizeInBitsWithVectorPadding(Field.FieldType);
+      if (Size > 128 && ((!IsUnion && Size != FieldSize) ||
+                         Size > getNativeVectorSizeForAVXABI(AVXLevel))) {
         Lo = Memory;
         postMerge(Size, Lo, Hi);
         return;
@@ -936,14 +932,14 @@ const Type *X86_64TargetInfo::createPairType(const Type *Lo,
 static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
                                   unsigned EndBit) {
   // If range is completely beyond type size, it's definitely padding
-  unsigned TySize = Ty->getSizeInBits().getFixedValue();
+  unsigned TySize = getSizeInBitsWithVectorPadding(Ty);
   if (TySize <= StartBit)
     return true;
 
   // Handle arrays - check each element
   if (const ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
     const Type *EltTy = AT->getElementType();
-    unsigned EltSize = EltTy->getSizeInBits().getFixedValue();
+    unsigned EltSize = getSizeInBitsWithVectorPadding(EltTy);
 
     for (unsigned I = 0; I < AT->getNumElements(); ++I) {
       unsigned EltOffset = I * EltSize;
@@ -1099,7 +1095,7 @@ const Type *X86_64TargetInfo::getIntegerTypeAtOffset(const Type *ABIType,
   }
 
   unsigned TySizeInBytes =
-      llvm::divideCeil(SourceTy->getSizeInBits().getFixedValue(), 8);
+      llvm::divideCeil(getSizeInBitsWithVectorPadding(SourceTy), 8);
   if (auto *IT = dyn_cast<IntegerType>(SourceTy)) {
     if (IT->isBitInt())
       TySizeInBytes =
@@ -1240,7 +1236,7 @@ const Type *X86_64TargetInfo::getByteVectorType(const Type *Ty) const {
     if (getX86ABICompatInfo().PassInt128VectorsInMem &&
         VT->getElementType()->isInteger() &&
         cast<IntegerType>(VT->getElementType())->getSizeInBits() == 128) {
-      unsigned Size = VT->getSizeInBits().getFixedValue();
+      unsigned Size = VT->getABISizeInBits();
       return TB.getVectorType(TB.getIntegerType(64, Align(8), /*Signed=*/false),
                               ElementCount::getFixed(Size / 64),
                               Align(Size / 8));
@@ -1262,7 +1258,7 @@ const Type *X86_64TargetInfo::getByteVectorType(const Type *Ty) const {
 
 bool X86_64TargetInfo::isIllegalVectorType(const Type *Ty) const {
   if (const auto *VecTy = dyn_cast<VectorType>(Ty)) {
-    uint64_t Size = VecTy->getSizeInBits().getFixedValue();
+    uint64_t Size = VecTy->getABISizeInBits();
     unsigned LargestVector = getNativeVectorSizeForAVXABI(AVXLevel);
 
     // Vectors <= 64 bits or > largest supported vector size are illegal
@@ -1273,7 +1269,7 @@ bool X86_64TargetInfo::isIllegalVectorType(const Type *Ty) const {
     const Type *EltTy = VecTy->getElementType();
     if (getX86ABICompatInfo().PassInt128VectorsInMem && EltTy->isInteger()) {
       const auto *IntTy = cast<IntegerType>(EltTy);
-      if (IntTy->getSizeInBits().getFixedValue() == 128)
+      if (IntTy->getSizeInBits().getFixedValue() == 128 && !IntTy->isBitInt())
         return true;
     }
   }

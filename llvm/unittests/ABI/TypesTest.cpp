@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ABI/Types.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
@@ -158,6 +159,28 @@ TEST_F(ABITypesTest, GenericVector) {
   EXPECT_FALSE(V4I32->isTuple());
   EXPECT_EQ(V4I32->getSizeInBits(), TypeSize::getFixed(128));
   EXPECT_EQ(V4I32->getFixedSizeInBitsOrZero(), 128u);
+}
+
+// An x87 element holds 80 bits but counts at its 16-byte allocation size
+// before the vector is rounded up to a power of two. With 4-byte alignment an
+// element counts as 96 bits.
+TEST_F(ABITypesTest, X87VectorABISize) {
+  const llvm::abi::Type *F80 =
+      TB.getFloatType(llvm::APFloat::x87DoubleExtended(), Align(16));
+  auto MakeVector = [&](const llvm::abi::Type *Elt, unsigned N) {
+    return TB.getVectorType(Elt, ElementCount::getFixed(N), Align(16));
+  };
+
+  EXPECT_EQ(MakeVector(F80, 1)->getSizeInBits(), TypeSize::getFixed(80));
+  EXPECT_EQ(MakeVector(F80, 1)->getABISizeInBits(), 128u);
+  EXPECT_EQ(MakeVector(F80, 2)->getABISizeInBits(), 256u);
+  EXPECT_EQ(MakeVector(F80, 3)->getABISizeInBits(), 512u);
+  EXPECT_EQ(MakeVector(F80, 4)->getABISizeInBits(), 512u);
+
+  const llvm::abi::Type *F80Align4 =
+      TB.getFloatType(llvm::APFloat::x87DoubleExtended(), Align(4));
+  EXPECT_EQ(MakeVector(F80Align4, 5)->getABISizeInBits(), 512u);
+  EXPECT_EQ(MakeVector(F80Align4, 6)->getABISizeInBits(), 1024u);
 }
 
 // svint32_t is <vscale x 4 x i32>.

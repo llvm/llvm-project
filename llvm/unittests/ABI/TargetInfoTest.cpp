@@ -312,6 +312,28 @@ TEST_F(TargetInfoTest, SingleElementStructNestedSingleElementReduces) {
   EXPECT_EQ(singleElement(Outer), F32);
 }
 
+// A vector's padding is part of the vector, so a struct holding only a
+// three-float vector or a one-element x87 vector reduces to the vector. Padding
+// past the vector still keeps the struct from reducing.
+TEST_F(TargetInfoTest, SingleElementStructPaddedVectorReduces) {
+  const ABIType *V3F32 =
+      TB.getVectorType(F32, llvm::ElementCount::getFixed(3), llvm::Align(16));
+  EXPECT_EQ(
+      singleElement(recordOf({FieldInfo(V3F32, 0)}, 128, llvm::Align(16))),
+      V3F32);
+  EXPECT_EQ(
+      singleElement(recordOf({FieldInfo(V3F32, 0)}, 256, llvm::Align(32))),
+      nullptr);
+
+  const ABIType *F80 =
+      TB.getFloatType(llvm::APFloat::x87DoubleExtended(), llvm::Align(16));
+  const ABIType *V1F80 =
+      TB.getVectorType(F80, llvm::ElementCount::getFixed(1), llvm::Align(16));
+  EXPECT_EQ(
+      singleElement(recordOf({FieldInfo(V1F80, 0)}, 128, llvm::Align(16))),
+      V1F80);
+}
+
 // A non-record type is never a single-element struct.
 TEST_F(TargetInfoTest, SingleElementStructNonRecordReturnsNull) {
   EXPECT_EQ(singleElement(I32), nullptr);

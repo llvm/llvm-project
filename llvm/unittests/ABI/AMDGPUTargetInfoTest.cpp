@@ -258,6 +258,32 @@ TEST_F(AMDGPUTargetInfoTest, SingleElementStructUnwraps) {
   expectDirectFloat(classifyArg(Wrapper, FI, TI), llvm::APFloat::IEEEsingle());
 }
 
+// A struct holding only a <3 x float> is passed and returned as the vector
+// itself, including when it is an argument to an amdgpu_kernel function. The
+// vector's 12 bytes are padded to 16, the same size as the struct.
+TEST_F(AMDGPUTargetInfoTest, SingleElementStructOfPaddedVectorUnwraps) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *V3F32 =
+      TB.getVectorType(F32, llvm::ElementCount::getFixed(3), llvm::Align(16));
+  const ABIType *Wrapper =
+      recordOf({FieldInfo(V3F32, 0)}, 128, llvm::Align(16));
+  {
+    const ArgInfo &Info = classifyArg(Wrapper, FI, TI);
+    ASSERT_TRUE(Info.isDirect());
+    EXPECT_EQ(Info.getCoerceToType(), V3F32);
+  }
+  {
+    const ArgInfo &Info = classifyRet(Wrapper, FI, TI);
+    ASSERT_TRUE(Info.isDirect());
+    EXPECT_EQ(Info.getCoerceToType(), V3F32);
+  }
+  const ArgInfo &Info =
+      classifyArg(Wrapper, FI, TI, CallingConv::AMDGPU_KERNEL);
+  ASSERT_TRUE(Info.isDirect());
+  EXPECT_EQ(Info.getCoerceToType(), V3F32);
+}
+
 // A large aggregate that does not fit the 16-register budget is passed by
 // reference (aliased) in the private address space.
 TEST_F(AMDGPUTargetInfoTest, OversizedAggregateIsIndirectPrivate) {
