@@ -337,6 +337,15 @@ static cl::opt<unsigned> SLPRuntimeAliasChecksMaxScalarCostPercent(
              "guarded scalar region cost, before versioning is rejected to "
              "avoid pessimizing the scalar fallback path."));
 
+/// The scalar loop left by the loop vectorizer runs only a few iterations or
+/// the ranges its runtime checks found overlapping, where the checks executed
+/// on each iteration are unlikely to pay off, so they get a tighter bound.
+static cl::opt<unsigned> SLPVecLoopRTChecksCostPercent(
+    "slp-vec-loop-rt-checks-cost-percent", cl::init(10), cl::Hidden,
+    cl::desc("Maximum SLP runtime alias check cost, as a percentage of the "
+             "guarded scalar region cost, for blocks of loops already "
+             "vectorized by the loop vectorizer."));
+
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -536,7 +545,7 @@ public:
     RTOrigBodyOrder.clear();
   }
 
-  /// Snapshots RTChecks.BB's body (non-PHI, non-terminator) into
+  /// Snapshots RTChecks.BB's body (non-PHI, non-alloca, non-terminator) into
   /// RTOrigBodyOrder in program order, for the scalar fallback.
   void captureRuntimeCheckBodySnapshot();
 
@@ -3765,7 +3774,8 @@ private:
   /// the CFG. Used to drop CFG-analysis preservation for the run.
   bool CFGChanged = false;
 
-  /// Guarded block body (non-PHI, non-terminator) in original source order.
+  /// Guarded block body (non-PHI, non-alloca, non-terminator) in original
+  /// source order.
   SmallVector<Instruction *> RTOrigBodyOrder;
 
   using AliasCacheKey = std::pair<Instruction *, Instruction *>;
@@ -25437,8 +25447,9 @@ void BoUpSLP::captureRuntimeCheckBodySnapshot() {
   if (!TryRuntimeAliasChecks || !RTChecks.BB)
     return;
   BasicBlock *BB = RTChecks.BB;
+  // Allocas are not duplicated, keep them in the header block.
   for (Instruction &I : *BB)
-    if (!isa<PHINode>(&I) && !I.isTerminator())
+    if (!isa<PHINode, AllocaInst>(&I) && !I.isTerminator())
       RTOrigBodyOrder.push_back(&I);
 }
 
@@ -25501,6 +25512,11 @@ bool BoUpSLP::canVersionBlockForRuntimeChecks(BasicBlock *BB) const {
         auto *CB = dyn_cast<CallBase>(&I);
         return CB && (CB->cannotDuplicate() || CB->isConvergent());
       }))
+    return false;
+  // Only static allocas at the start of the entry block can stay in the header
+  // block, any other alloca would have to be duplicated with the body.
+  if (any_of(make_range(BB->getFirstNonPHIOrDbgOrAlloca(), BB->end()),
+             IsaPred<AllocaInst>))
     return false;
   return true;
 }
@@ -25642,8 +25658,12 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
   InstructionCost CheckCost = getRuntimeChecksCost();
   if (!ScalarCost.isValid() || !CheckCost.isValid())
     return false;
-  if (CheckCost * 100 >
-      ScalarCost * SLPRuntimeAliasChecksMaxScalarCostPercent.getValue())
+  const Loop *L = LI->getLoopFor(BB);
+  unsigned MaxPercent =
+      L && getBooleanLoopAttribute(L, "llvm.loop.isvectorized")
+          ? SLPVecLoopRTChecksCostPercent
+          : SLPRuntimeAliasChecksMaxScalarCostPercent;
+  if (CheckCost * 100 > ScalarCost * MaxPercent)
     return false;
 
   // Freeze the check set so the final scheduleBlock() keeps the same dropped
@@ -32818,9 +32838,9 @@ public:
         for (unsigned Cnt = 0; Cnt < NumReducedVals; ++Cnt) {
           if (Cnt >= Pos && Cnt < Pos + ReduxWidth)
             continue;
-          Value *RdxVal = Candidates[Cnt];
-          if (auto It = TrackedVals.find(RdxVal); It != TrackedVals.end())
-            RdxVal = It->second;
+          // The candidate may be replaced by the previous vectorization
+          // attempts, use the currently tracked value.
+          Value *RdxVal = TrackedVals.at(TrackedToOrig[Cnt]);
           if (!Visited.insert(RdxVal).second)
             continue;
           // Scalars not reduced by the top node may be used by the reduction
@@ -36442,8 +36462,15 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
 
   // Attempt to sort and vectorize each of the store-groups.
   DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>> Attempted;
-  for (auto &Pair : make_filter_range(
-           Stores, [](auto &Pair) { return Pair.second.size() >= 2; })) {
+  // The longer groups go first: the shorter ones sharing the scalars with them
+  // then reuse their vectors instead of splitting the longer chains.
+  SmallVector<StoreListMap::value_type *> Groups(make_pointer_range(Stores));
+  stable_sort(Groups, [](const auto *A, const auto *B) {
+    return A->second.size() > B->second.size();
+  });
+  for (auto &Pair :
+       make_filter_range(make_pointee_range(Groups),
+                         [](auto &Pair) { return Pair.second.size() >= 2; })) {
     LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length "
                       << Pair.second.size() << ".\n");
 
