@@ -1,7 +1,7 @@
 ; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' \
-; RUN:   -polly-annotate-metadata-vectorize -polly-process-unprofitable=false < %s | FileCheck %s --check-prefix=VECTORIZED
+; RUN:   -polly-annotate-metadata-vectorize -polly-process-unprofitable=false -plugin-arg=Polly,-polly-process-unprofitable=false < %s | FileCheck %s --check-prefix=VECTORIZED
 ; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' \
-; RUN:   -polly-process-unprofitable=false < %s | FileCheck %s --check-prefix=NO-VECTORIZE
+; RUN:   -polly-process-unprofitable=false -plugin-arg=Polly,-polly-process-unprofitable=false < %s | FileCheck %s --check-prefix=NO-VECTORIZE
 
 ; A simple single-level loop is unprofitable without -polly-annotate-metadata-vectorize
 ;
