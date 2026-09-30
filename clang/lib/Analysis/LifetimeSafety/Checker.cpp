@@ -73,9 +73,9 @@ private:
 
   static SourceLocation
   GetFactLoc(llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> F) {
-    if (const auto *UF = F.dyn_cast<const UseFact *>())
+    if (const auto *UF = dyn_cast<const UseFact *>(F))
       return UF->getUseExpr()->getExprLoc();
-    if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>()) {
+    if (const auto *OEF = dyn_cast<const OriginEscapesFact *>(F)) {
       if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
         return ReturnEsc->getReturnExpr()->getExprLoc();
       if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
@@ -433,10 +433,10 @@ public:
       return;
     llvm::TimeTraceScope TimeTrace("SuggestAnnotations");
     for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
-      if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>())
+      if (const auto *PVD = dyn_cast<const ParmVarDecl *>(Target))
         suggestWithScopeForParmVar(PVD, EscapeTarget);
-      else if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
-        if (const auto *EscapeExpr = EscapeTarget.dyn_cast<const Expr *>())
+      else if (const auto *MD = dyn_cast<const CXXMethodDecl *>(Target)) {
+        if (const auto *EscapeExpr = dyn_cast<const Expr *>(EscapeTarget))
           suggestWithScopeForImplicitThis(MD, EscapeExpr);
         else
           llvm_unreachable("Implicit this can only escape via Expr (return)");
@@ -447,11 +447,11 @@ public:
   void reportNoescapeViolations() {
     llvm::TimeTraceScope TimeTrace("ReportNoescapeViolations");
     for (auto [PVD, EscapeTarget] : NoescapeWarningsMap) {
-      if (const auto *E = EscapeTarget.dyn_cast<const Expr *>())
+      if (const auto *E = dyn_cast<const Expr *>(EscapeTarget))
         SemaHelper->reportNoescapeViolation(PVD, E);
-      else if (const auto *FD = EscapeTarget.dyn_cast<const FieldDecl *>())
+      else if (const auto *FD = dyn_cast<const FieldDecl *>(EscapeTarget))
         SemaHelper->reportNoescapeViolation(PVD, FD);
-      else if (const auto *G = EscapeTarget.dyn_cast<const VarDecl *>())
+      else if (const auto *G = dyn_cast<const VarDecl *>(EscapeTarget))
         SemaHelper->reportNoescapeViolation(PVD, G);
       else
         llvm_unreachable("Unhandled EscapingTarget type");
@@ -533,10 +533,10 @@ public:
 
   void inferAnnotations() {
     for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
-      if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
+      if (const auto *MD = dyn_cast<const CXXMethodDecl *>(Target)) {
         if (!implicitObjectParamIsLifetimeBound(MD))
           SemaHelper->addLifetimeBoundToImplicitThis(cast<CXXMethodDecl>(MD));
-      } else if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>()) {
+      } else if (const auto *PVD = dyn_cast<const ParmVarDecl *>(Target)) {
         const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
         if (!FD)
           continue;

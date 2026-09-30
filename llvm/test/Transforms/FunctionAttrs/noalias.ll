@@ -243,3 +243,195 @@ define ptr @return_unknown_noalias_call(ptr %fn) {
   %a = call noalias ptr %fn()
   ret ptr %a
 }
+
+; A null check does not capture the provenance of the result.
+define ptr @return_malloc_null_checked(i64 %size) {
+; CHECK-LABEL: define noalias ptr @return_malloc_null_checked(
+; CHECK-SAME: i64 [[SIZE:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A]], null
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    ret ptr null
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret ptr [[A]]
+;
+  %a = call ptr @malloc(i64 %size)
+  %c = icmp eq ptr %a, null
+  br i1 %c, label %then, label %else
+
+then:
+  ret ptr null
+
+else:
+  ret ptr %a
+}
+
+; A null check does not hide the capture by the store to @g.
+define ptr @return_malloc_null_checked_captured(i64 %size) {
+; CHECK-LABEL: define ptr @return_malloc_null_checked_captured(
+; CHECK-SAME: i64 [[SIZE:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A]], null
+; CHECK-NEXT:    store ptr [[A]], ptr @g, align 8
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    ret ptr null
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret ptr [[A]]
+;
+  %a = call ptr @malloc(i64 %size)
+  %c = icmp eq ptr %a, null
+  store ptr %a, ptr @g
+  br i1 %c, label %then, label %else
+
+then:
+  ret ptr null
+
+else:
+  ret ptr %a
+}
+
+declare void @capture_address_is_null(ptr captures(address_is_null))
+declare void @capture_provenance(ptr captures(provenance))
+declare void @capture_address_is_null_provenance(ptr captures(address_is_null, provenance))
+declare void @capture_read_provenance(ptr captures(read_provenance))
+
+; Only whether the result is null is captured.
+define ptr @return_malloc_capture_address_is_null(i64 %size) {
+; CHECK-LABEL: define noalias ptr @return_malloc_capture_address_is_null(
+; CHECK-SAME: i64 [[SIZE:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
+; CHECK-NEXT:    call void @capture_address_is_null(ptr [[A]])
+; CHECK-NEXT:    ret ptr [[A]]
+;
+  %a = call ptr @malloc(i64 %size)
+  call void @capture_address_is_null(ptr %a)
+  ret ptr %a
+}
+
+; The provenance of the result is captured in addition to the null check.
+define ptr @return_malloc_null_checked_capture_provenance(i64 %size) {
+; CHECK-LABEL: define ptr @return_malloc_null_checked_capture_provenance(
+; CHECK-SAME: i64 [[SIZE:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A]], null
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    ret ptr null
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    call void @capture_provenance(ptr [[A]])
+; CHECK-NEXT:    ret ptr [[A]]
+;
+  %a = call ptr @malloc(i64 %size)
+  %c = icmp eq ptr %a, null
+  br i1 %c, label %then, label %else
+
+then:
+  ret ptr null
+
+else:
+  call void @capture_provenance(ptr %a)
+  ret ptr %a
+}
+
+; The provenance of the result is captured together with the null check.
+define ptr @return_malloc_capture_address_is_null_provenance(i64 %size) {
+; CHECK-LABEL: define ptr @return_malloc_capture_address_is_null_provenance(
+; CHECK-SAME: i64 [[SIZE:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
+; CHECK-NEXT:    call void @capture_address_is_null_provenance(ptr [[A]])
+; CHECK-NEXT:    ret ptr [[A]]
+;
+  %a = call ptr @malloc(i64 %size)
+  call void @capture_address_is_null_provenance(ptr %a)
+  ret ptr %a
+}
+
+; The read provenance of the result is captured in addition to the null check.
+define ptr @return_malloc_null_checked_capture_read_provenance(i64 %size) {
+; CHECK-LABEL: define ptr @return_malloc_null_checked_capture_read_provenance(
+; CHECK-SAME: i64 [[SIZE:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A]], null
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    ret ptr null
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    call void @capture_read_provenance(ptr [[A]])
+; CHECK-NEXT:    ret ptr [[A]]
+;
+  %a = call ptr @malloc(i64 %size)
+  %c = icmp eq ptr %a, null
+  br i1 %c, label %then, label %else
+
+then:
+  ret ptr null
+
+else:
+  call void @capture_read_provenance(ptr %a)
+  ret ptr %a
+}
+
+; A null check of a GEP does not capture the provenance of the result.
+define ptr @return_malloc_gep_null_checked(i64 %size) {
+; CHECK-LABEL: define noalias ptr @return_malloc_gep_null_checked(
+; CHECK-SAME: i64 [[SIZE:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[GEP]], null
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    ret ptr null
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret ptr [[A]]
+;
+  %a = call ptr @malloc(i64 %size)
+  %gep = getelementptr i8, ptr %a, i64 8
+  %c = icmp eq ptr %gep, null
+  br i1 %c, label %then, label %else
+
+then:
+  ret ptr null
+
+else:
+  ret ptr %a
+}
+
+; Comparing the result against another pointer only captures its address.
+define ptr @return_malloc_compared(i64 %size, ptr %p) {
+; CHECK-LABEL: define noalias ptr @return_malloc_compared(
+; CHECK-SAME: i64 [[SIZE:%.*]], ptr nofree readnone captures(address) [[P:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A]], [[P]]
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    ret ptr null
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret ptr [[A]]
+;
+  %a = call ptr @malloc(i64 %size)
+  %c = icmp eq ptr %a, %p
+  br i1 %c, label %then, label %else
+
+then:
+  ret ptr null
+
+else:
+  ret ptr %a
+}
+
+declare void @capture_address(ptr captures(address))
+
+; Only the address of the result is captured.
+define ptr @return_malloc_capture_address(i64 %size) {
+; CHECK-LABEL: define noalias ptr @return_malloc_capture_address(
+; CHECK-SAME: i64 [[SIZE:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
+; CHECK-NEXT:    call void @capture_address(ptr [[A]])
+; CHECK-NEXT:    ret ptr [[A]]
+;
+  %a = call ptr @malloc(i64 %size)
+  call void @capture_address(ptr %a)
+  ret ptr %a
+}

@@ -310,9 +310,27 @@ emitModuleDebugImports(Fortran::lower::AbstractConverter &converter,
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
 
+  // A submodule is named after its ancestor module in the debug info, and has
+  // access to everything in the submodule directly above it, so record both.
+  mlir::StringAttr ancestorNameAttr;
+  mlir::StringAttr parentNameAttr;
+  if (const auto *details{
+          modSym->detailsIf<Fortran::semantics::ModuleDetails>()};
+      details && details->isSubmodule()) {
+    if (const Fortran::semantics::Scope *ancestor{details->ancestor()};
+        ancestor && ancestor->symbol())
+      ancestorNameAttr = mlir::StringAttr::get(
+          builder.getContext(), ancestor->symbol()->name().ToString());
+    if (const Fortran::semantics::Scope *parent{details->parent()};
+        parent && parent->symbol())
+      parentNameAttr = mlir::StringAttr::get(
+          builder.getContext(), parent->symbol()->name().ToString());
+  }
+
   auto op = fir::ModuleDebugImportsOp::create(
       builder, loc,
-      mlir::StringAttr::get(builder.getContext(), modSym->name().ToString()));
+      mlir::StringAttr::get(builder.getContext(), modSym->name().ToString()),
+      ancestorNameAttr, parentNameAttr);
   mlir::Region &region = op.getUses();
   mlir::Block *block = new mlir::Block();
   region.push_back(block);
@@ -331,6 +349,32 @@ emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
   const Fortran::semantics::Scope &scope = funit.getScope();
   for (const auto &preservedStmt : funit.preservedUseStmts)
     emitUseStmtOp(converter, builder, loc, preservedStmt, scope);
+}
+
+/// Record the submodule that defines a separate module procedure. Its name is
+/// mangled with the module that declares its interface, so the submodule would
+/// otherwise be lost and its debug info would point at the module instead.
+static void setDefiningSubmoduleForDebug(
+    Fortran::lower::AbstractConverter &converter, mlir::func::FuncOp func,
+    const Fortran::lower::pft::FunctionLikeUnit &funit) {
+  // This option is set whenever more than line tables are asked for, which is
+  // also when a module is described, so it stands in for full debug info here.
+  if (!converter.getLoweringOptions().getPreserveUseDebugInfo())
+    return;
+
+  const Fortran::semantics::Scope &scope = funit.getScope();
+  if (!scope.parent().IsSubmodule())
+    return;
+  const Fortran::semantics::Symbol *sym = scope.symbol();
+  if (!sym || !sym->attrs().test(Fortran::semantics::Attr::MODULE))
+    return;
+  const Fortran::semantics::Symbol *submodule = scope.parent().symbol();
+  if (!submodule)
+    return;
+
+  func->setAttr(
+      fir::getDefiningSubmoduleAttrName(),
+      mlir::StringAttr::get(func.getContext(), submodule->name().ToString()));
 }
 
 /// Helper class to generate the runtime type info global data and the
@@ -1125,6 +1169,11 @@ public:
     genFIR(eval, unstructuredContext);
   }
 
+  void genLoopBodyEvaluations(
+      Fortran::lower::pft::Evaluation &loopEval) override final {
+    genLoopBodyEvaluations(loopEval, /*unstructuredContext=*/true);
+  }
+
   //===--------------------------------------------------------------------===//
   // Utility methods
   //===--------------------------------------------------------------------===//
@@ -1239,9 +1288,15 @@ public:
   }
   std::string
   mangleName(const Fortran::semantics::Symbol &symbol) override final {
-    return Fortran::lower::mangle::mangleName(
+    std::string mangledName = Fortran::lower::mangle::mangleName(
         symbol, scopeBlockIdMap, /*keepExternalInScope=*/false,
         getLoweringOptions().getUnderscoring());
+    const std::string &hash = bridge.getModuleNameHash();
+    if (!hash.empty() &&
+        Fortran::semantics::ClassifyProcedure(symbol) ==
+            Fortran::semantics::ProcedureDefinitionClass::Internal)
+      mangledName += hash;
+    return mangledName;
   }
   std::string mangleName(
       const Fortran::semantics::DerivedTypeSpec &derivedType) override final {
@@ -1336,6 +1391,11 @@ public:
   const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const override final {
     return currentFunctionUnit;
+  }
+
+  bool isVisibleCrayPointerTarget(
+      const Fortran::semantics::Symbol &sym) const override final {
+    return visibleCrayPointerTargets.contains(&sym.GetUltimate());
   }
 
   void checkCoarrayEnabled() override final {
@@ -2009,8 +2069,7 @@ private:
       bridge.openAccCtx().finalizeAndKeep();
       if (bridge.cudaCleanupCtx().hasCode()) {
         mlir::Location loc = toLocation();
-        mlir::Value active =
-            fir::runtime::cuda::genDeviceIsActive(*builder, loc);
+        mlir::Value active = cuf::DeviceIsActiveOp::create(*builder, loc);
         builder->genIfThen(loc, active)
             .genThen([&]() {
               fir::runtime::cuda::genCUDADeviceSynchronize(*builder, loc);
@@ -2632,6 +2691,97 @@ private:
     return wrapOp;
   }
 
+  /// Wrap a loop's *body* -- not the construct, and not the loop control -- in
+  /// an scf.execute_region. A category (c) loop keeps its structured loop op
+  /// while its self-contained raw branching lives inside the region, which may
+  /// hold as many blocks as it needs.
+  ///
+  /// The builder must already be positioned inside the loop body. On return it
+  /// is inside the region. Returns null when the loop has no such internals.
+  mlir::scf::ExecuteRegionOp
+  wrapUnstructuredBody(Fortran::lower::pft::Evaluation &eval,
+                       mlir::Block *&yieldBlock,
+                       mlir::Block *&savedEndDoBlock) {
+    if (!eval.lowerBodyAsWrappedRegion())
+      return nullptr;
+
+    Fortran::lower::pft::EvaluationList &list = eval.getNestedEvaluations();
+    mlir::Location loc = toLocation();
+    auto wrapOp =
+        mlir::scf::ExecuteRegionOp::create(*builder, loc, mlir::TypeRange{},
+                                           /*noInline=*/builder->getUnitAttr());
+    ++wrapUnstructuredCount;
+    mlir::Block *entry = builder->createBlock(&wrapOp.getRegion());
+    builder->setInsertionPointToEnd(entry);
+    // Only the body: both loop control statements live in the enclosing region
+    // and may be branched to from outside the loop, so neither may take its
+    // block from this region. Dropping only the EndDoStmt leaves the DO
+    // statement to be given a block here, which any GOTO targeting the loop
+    // head would then reference across a region boundary.
+    createEmptyBlocksIn(
+        llvm::make_range(std::next(list.begin()), std::prev(list.end())));
+    yieldBlock = builder->createBlock(&wrapOp.getRegion());
+    builder->setInsertionPointToEnd(yieldBlock);
+    mlir::scf::YieldOp::create(*builder, loc);
+
+    // A CYCLE targets the EndDoStmt, which is the boundary between the loop
+    // body and the loop control. Inside the wrap that boundary is the region's
+    // yield block, so a CYCLE leaves the region rather than branching to a
+    // block the region cannot name.
+    savedEndDoBlock = list.back().block;
+    list.back().block = yieldBlock;
+
+    builder->setInsertionPointToEnd(entry);
+    return wrapOp;
+  }
+
+  /// Emit a loop's evaluations, optionally folding the body into an
+  /// scf.execute_region. The loop control statements -- the first and last
+  /// evaluations -- are emitted exactly as they are for a structured loop:
+  /// same context flag, same region, same blocks. They may be branch targets
+  /// from outside the loop, so their blocks have to stay in the enclosing
+  /// region. Only what lies strictly between them goes inside the wrap.
+  void genLoopBodyEvaluations(Fortran::lower::pft::Evaluation &eval,
+                              bool unstructuredContext) {
+    Fortran::lower::pft::EvaluationList &list = eval.getNestedEvaluations();
+    auto iter = list.begin();
+    auto end = std::prev(list.end());
+
+    // The loop control statement, outside any wrap.
+    if (iter != end) {
+      genFIR(*iter, unstructuredContext);
+      ++iter;
+    }
+
+    mlir::Block *yieldBlock = nullptr;
+    mlir::Block *savedEndDoBlock = nullptr;
+    mlir::scf::ExecuteRegionOp wrapOp =
+        wrapUnstructuredBody(eval, yieldBlock, savedEndDoBlock);
+    for (; iter != end; ++iter)
+      genFIR(*iter, unstructuredContext || wrapOp);
+    closeUnstructuredBodyWrap(wrapOp, eval, yieldBlock, savedEndDoBlock);
+  }
+
+  /// Finalize a wrap created by wrapUnstructuredBody: restore the EndDoStmt
+  /// block, fall through to the region's yield, and resume after the wrap op
+  /// so the caller emits the loop control outside it.
+  void closeUnstructuredBodyWrap(mlir::scf::ExecuteRegionOp wrapOp,
+                                 Fortran::lower::pft::Evaluation &eval,
+                                 mlir::Block *yieldBlock,
+                                 mlir::Block *savedEndDoBlock) {
+    if (!wrapOp)
+      return;
+
+    eval.getNestedEvaluations().back().block = savedEndDoBlock;
+
+    if (mlir::Block *current = builder->getBlock())
+      if (current->empty() ||
+          !current->back().hasTrait<mlir::OpTrait::IsTerminator>())
+        genBranch(yieldBlock);
+
+    builder->setInsertionPointAfter(wrapOp);
+  }
+
   /// Finalize a wrap created by wrapUnstructuredConstruct: restore the
   /// original exit block and set the insertion point after the wrap op.
   void closeUnstructuredWrap(mlir::scf::ExecuteRegionOp wrapOp,
@@ -2659,9 +2809,10 @@ private:
     // skip generating any loop — just lower the body.  The IV value is
     // already available from the parent acc.loop's block argument.
     if (Fortran::lower::isCollapsedDoConstruct(doConstruct)) {
-      auto iter = eval.getNestedEvaluations().begin();
-      for (auto end = --eval.getNestedEvaluations().end(); iter != end; ++iter)
-        genFIR(*iter, unstructuredContext);
+      // The parent acc.loop supplies the iteration, so no loop op is built
+      // here for a wrap to sit inside. The body may still hold self-contained
+      // raw branching, so wrap it directly.
+      genLoopBodyEvaluations(eval, unstructuredContext);
       return;
     }
 
@@ -2684,11 +2835,10 @@ private:
                 builder->getInsertionPoint()->getBlock()->getParent()) &&
             "builder insertion point is not inside the newly generated loop");
 
-        // Loop body code.
-        auto iter = eval.getNestedEvaluations().begin();
-        for (auto end = --eval.getNestedEvaluations().end(); iter != end;
-             ++iter)
-          genFIR(*iter, unstructuredContext);
+        // The acc.loop supplies the iteration, so the body is emitted here
+        // rather than through the increment-loop path below. Wrap it when it
+        // holds self-contained raw branching.
+        genLoopBodyEvaluations(eval, unstructuredContext);
 
         builder->setInsertionPointAfter(loopOp);
         return;
@@ -2837,10 +2987,12 @@ private:
     if (!infiniteLoop && !whileCondition)
       genFIRIncrementLoopBegin(incrementLoopNestInfo, doStmtEval.dirs);
 
+    // The loop control is structured, but the body may hold raw branching
+    // confined to it. Wrap the body, leaving the loop control outside, so the
+    // structured loop op's single-block region stays well formed.
     // Loop body code.
-    auto iter = eval.getNestedEvaluations().begin();
-    for (auto end = --eval.getNestedEvaluations().end(); iter != end; ++iter)
-      genFIR(*iter, unstructuredContext);
+    genLoopBodyEvaluations(eval, unstructuredContext);
+    auto iter = std::prev(eval.getNestedEvaluations().end());
 
     // An EndDoStmt in unstructured code may start a new block.
     Fortran::lower::pft::Evaluation &endDoEval = *iter;
@@ -6288,6 +6440,7 @@ private:
 
     // Emit USE statement operations for debug info generation
     emitUseStatementsFromFunit(*this, *builder, toLocation(), funit);
+    setDefiningSubmoduleForDebug(*this, func, funit);
 
     // Map host associated symbols from parent procedure if any.
     if (funit.parentHasHostAssoc())
@@ -6464,6 +6617,16 @@ private:
   /// boundaries.
   void createEmptyBlocks(
       std::list<Fortran::lower::pft::Evaluation> &evaluationList) {
+    createEmptyBlocksIn(
+        llvm::make_range(evaluationList.begin(), evaluationList.end()));
+  }
+
+  /// createEmptyBlocks over a sub-range of an evaluation list. A body-only wrap
+  /// must not pre-create blocks for the loop control statements, which live in
+  /// the enclosing region.
+  void createEmptyBlocksIn(
+      llvm::iterator_range<Fortran::lower::pft::EvaluationList::iterator>
+          evaluationList) {
     mlir::Region *region = &builder->getRegion();
     for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
       if (eval.isNewBlock)
@@ -6653,10 +6816,66 @@ private:
     }
   }
 
+  /// Collect entities used in visible Cray pointer associations.
+  void collectVisibleCrayPointerTargets(
+      Fortran::lower::pft::EvaluationList &evaluationList) {
+    for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
+      eval.visit(Fortran::common::visitors{
+          [&](const Fortran::parser::AssignmentStmt &stmt) {
+            if (!stmt.typedAssignment || !stmt.typedAssignment->v)
+              return;
+            const Fortran::evaluate::Assignment &assignment =
+                *stmt.typedAssignment->v;
+            const Fortran::semantics::Symbol *pointer =
+                Fortran::evaluate::GetLastSymbol(assignment.lhs);
+            if (!pointer || !pointer->GetUltimate().test(
+                                Fortran::semantics::Symbol::Flag::CrayPointer))
+              return;
+
+            const Fortran::evaluate::ProcedureRef *procedure =
+                Fortran::evaluate::UnwrapProcedureRef(assignment.rhs);
+            const Fortran::evaluate::SpecificIntrinsic *intrinsic =
+                procedure ? procedure->proc().GetSpecificIntrinsic() : nullptr;
+            if (!intrinsic || intrinsic->name != "loc" ||
+                procedure->arguments().size() != 1 ||
+                !procedure->arguments()[0])
+              return;
+
+            const Fortran::lower::SomeExpr *targetExpr =
+                procedure->arguments()[0]->UnwrapExpr();
+            const Fortran::semantics::Symbol *target =
+                targetExpr ? Fortran::evaluate::GetFirstSymbol(*targetExpr)
+                           : nullptr;
+            if (!target)
+              return;
+
+            visibleCrayPointerTargets.insert(&target->GetUltimate());
+          },
+          [](const auto &) {}});
+      if (eval.hasNestedEvaluations())
+        collectVisibleCrayPointerTargets(eval.getNestedEvaluations());
+    }
+  }
+
+  /// Return whether \p scope declares or imports a Cray pointer.
+  bool hasCrayPointer(const Fortran::semantics::Scope &scope) {
+    if (!scope.crayPointers().empty())
+      return true;
+    for (Fortran::semantics::SymbolRef symbol : scope.GetSymbols())
+      if (symbol->GetUltimate().test(
+              Fortran::semantics::Symbol::Flag::CrayPointer))
+        return true;
+    return false;
+  }
+
   /// Lower a procedure (nest).
   void lowerFunc(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(funit.getStartingSourceLoc());
     setCurrentFunctionUnit(&funit);
+    assert(visibleCrayPointerTargets.empty() &&
+           "Cray pointer targets must not outlive a procedure");
+    if (hasCrayPointer(funit.getScope()))
+      collectVisibleCrayPointerTargets(funit.evaluationList);
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
@@ -6680,6 +6899,7 @@ private:
     }
     funit.setActiveEntry(0);
     setCurrentFunctionUnit(nullptr);
+    visibleCrayPointerTargets.clear();
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         lowerFunc(*f); // internal procedure
@@ -6867,6 +7087,10 @@ private:
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
   TypeInfoConverter typeInfoConverter;
+
+  /// Symbols associated with Cray pointers in the current procedure.
+  llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4>
+      visibleCrayPointerTargets;
 
   /// Counter of `scf.execute_region` ops created when
   /// `--wrap-unstructured-constructs-in-execute-region` is enabled for the
@@ -7070,6 +7294,13 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   else if (languageFeatures.IsEnabled(
                Fortran::common::LanguageFeature::CudaManaged))
     fir::setCudaHeapAllocMode(*module, fir::CudaHeapAllocMode::Managed);
+
+  if (cgOpts.UniqueInternalLinkageNames) {
+    if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(module->getLoc())) {
+      moduleNameHash =
+          llvm::getUniqueInternalLinkagePostfix(fileLoc.getFilename());
+    }
+  }
 }
 
 Fortran::lower::LoweringBridge::~LoweringBridge() {
