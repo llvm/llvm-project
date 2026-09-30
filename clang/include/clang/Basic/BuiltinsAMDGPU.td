@@ -928,6 +928,27 @@ def __builtin_amdgcn_swmmac_f32_16x16x32_bf8_fp8_w64 : AMDGPUBuiltin<"_ExtVector
 def __builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(int, _ExtVector<2, int>, _ExtVector<4, float>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize64">;
 
 def __builtin_amdgcn_prng_b32 : AMDGPUBuiltin<"unsigned int(unsigned int)", [Const], "prng-inst">;
+
+class AMDGPUExclusiveScanBuiltin<string prototype, list<string> argNames>
+    : AMDGPUBuiltin<prototype, [Const], "exclusive-scan-insts"> {
+  let Documentation = [DocExclusiveScan];
+  let ArgNames = argNames;
+}
+
+def __builtin_amdgcn_exclusive_scan_sum_i32 : AMDGPUExclusiveScanBuiltin<"int(int, int, bool)", ["src0", "src1", "clamp"]>;
+def __builtin_amdgcn_exclusive_scan_sum_u32 : AMDGPUExclusiveScanBuiltin<"unsigned int(unsigned int, unsigned int, bool)", ["src0", "src1", "clamp"]>;
+def __builtin_amdgcn_exclusive_scan_xor_b32 : AMDGPUExclusiveScanBuiltin<"int(int, int)", ["src0", "src1"]>;
+def __builtin_amdgcn_exclusive_scan_or_b32  : AMDGPUExclusiveScanBuiltin<"int(int, int)", ["src0", "src1"]>;
+def __builtin_amdgcn_exclusive_scan_and_b32 : AMDGPUExclusiveScanBuiltin<"int(int, int)", ["src0", "src1"]>;
+def __builtin_amdgcn_exclusive_scan_min_i16 : AMDGPUExclusiveScanBuiltin<"short(short, int)", ["src0", "src1"]>;
+def __builtin_amdgcn_exclusive_scan_min_u16 : AMDGPUExclusiveScanBuiltin<"unsigned short(unsigned short, int)", ["src0", "src1"]>;
+def __builtin_amdgcn_exclusive_scan_min_i32 : AMDGPUExclusiveScanBuiltin<"int(int, int)", ["src0", "src1"]>;
+def __builtin_amdgcn_exclusive_scan_min_u32 : AMDGPUExclusiveScanBuiltin<"unsigned int(unsigned int, unsigned int)", ["src0", "src1"]>;
+def __builtin_amdgcn_exclusive_scan_max_i16 : AMDGPUExclusiveScanBuiltin<"short(short, int)", ["src0", "src1"]>;
+def __builtin_amdgcn_exclusive_scan_max_u16 : AMDGPUExclusiveScanBuiltin<"unsigned short(unsigned short, int)", ["src0", "src1"]>;
+def __builtin_amdgcn_exclusive_scan_max_i32 : AMDGPUExclusiveScanBuiltin<"int(int, int)", ["src0", "src1"]>;
+def __builtin_amdgcn_exclusive_scan_max_u32 : AMDGPUExclusiveScanBuiltin<"unsigned int(unsigned int, unsigned int)", ["src0", "src1"]>;
+
 def __builtin_amdgcn_wave_match_b32 : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned int)", [Const], "wave-match-insts"> {
   let Documentation = [DocWaveMatchB32];
   let ArgNames = ["src0", "src1"];
