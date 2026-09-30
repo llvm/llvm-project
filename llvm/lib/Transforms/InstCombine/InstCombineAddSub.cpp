@@ -1588,7 +1588,8 @@ Instruction *InstCombinerImpl::foldDivCeil(BinaryOperator &I) {
   auto DivPat = m_OneUse(m_ZExtOrSelf(UDivPat));
   auto ZExtCmpPat = m_OneUse(m_ZExt(ICmpPat));
 
-  if (!match(&I, m_c_Add(DivPat, ZExtCmpPat)) || !checkDivCeilNUW(X, Y, SQ))
+  if (!match(&I, m_c_Add(DivPat, ZExtCmpPat)) ||
+      !checkDivCeilNUW(X, Y, SQ.getWithInstruction(&I)))
     return nullptr;
 
   Value *YMinusOne =
