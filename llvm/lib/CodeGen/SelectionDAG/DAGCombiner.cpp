@@ -25073,6 +25073,17 @@ SDValue DAGCombiner::splitMergedValStore(StoreSDNode *ST) {
   if (!TLI.isMultiStoresCheaperThanBitsMerge(LowTy, HighTy))
     return SDValue();
 
+  // If both halves are loaded from adjacent memory, leave the value for load
+  // combining to turn into a single wide load.
+  auto *LoLd = dyn_cast<LoadSDNode>(Lo.getOperand(0));
+  auto *HiLd = dyn_cast<LoadSDNode>(Hi.getOperand(0));
+  if (LoLd && HiLd) {
+    bool IsLE = DAG.getDataLayout().isLittleEndian();
+    if (DAG.areNonVolatileConsecutiveLoads(
+            IsLE ? HiLd : LoLd, IsLE ? LoLd : HiLd, HalfValBitSize / 8, 1))
+      return SDValue();
+  }
+
   // Start to split store.
   MachineMemOperand::Flags MMOFlags = ST->getMemOperand()->getFlags();
   AAMDNodes AAInfo = ST->getAAInfo();

@@ -211,3 +211,59 @@ define void @float_float(ptr %p, float %x, float %y) {
   store i64 %v, ptr %p
   ret void
 }
+
+; The halves are loaded from adjacent memory, so on little-endian the merged
+; value is a single i64 load that pairs with the neighboring i64 load, and the
+; store is not split. On big-endian the halves are in the wrong order for that.
+define void @int32_int32_adjacent_loads(ptr %p, ptr %a) {
+; CHECK-LE-LABEL: int32_int32_adjacent_loads:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    ldp x8, x9, [x1]
+; CHECK-LE-NEXT:    stp x8, x9, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: int32_int32_adjacent_loads:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ldp w8, w9, [x1]
+; CHECK-BE-NEXT:    ldr x10, [x1, #8]
+; CHECK-BE-NEXT:    stp w9, w8, [x0]
+; CHECK-BE-NEXT:    str x10, [x0, #8]
+; CHECK-BE-NEXT:    ret
+  %x = load i32, ptr %a, align 4
+  %a4 = getelementptr inbounds i8, ptr %a, i64 4
+  %y = load i32, ptr %a4, align 4
+  %a8 = getelementptr inbounds i8, ptr %a, i64 8
+  %z = load i64, ptr %a8, align 8
+  %lo = zext i32 %x to i64
+  %hi.ext = zext i32 %y to i64
+  %hi = shl nuw i64 %hi.ext, 32
+  %v = or disjoint i64 %hi, %lo
+  store i64 %v, ptr %p, align 8
+  %p8 = getelementptr inbounds i8, ptr %p, i64 8
+  store i64 %z, ptr %p8, align 8
+  ret void
+}
+
+; A neighboring i64 store no longer pairs with the merged store, but the split
+; still saves the ORR.
+define void @int32_int32_adjacent_i64_store(ptr %p, i32 %x, i32 %y, i64 %z) {
+; CHECK-LE-LABEL: int32_int32_adjacent_i64_store:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    stp w1, w2, [x0]
+; CHECK-LE-NEXT:    str x3, [x0, #8]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: int32_int32_adjacent_i64_store:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    stp w2, w1, [x0]
+; CHECK-BE-NEXT:    str x3, [x0, #8]
+; CHECK-BE-NEXT:    ret
+  %lo = zext i32 %x to i64
+  %hi.ext = zext i32 %y to i64
+  %hi = shl nuw i64 %hi.ext, 32
+  %v = or disjoint i64 %hi, %lo
+  store i64 %v, ptr %p, align 8
+  %p8 = getelementptr inbounds i8, ptr %p, i64 8
+  store i64 %z, ptr %p8, align 8
+  ret void
+}
