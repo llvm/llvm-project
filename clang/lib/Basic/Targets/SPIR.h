@@ -13,8 +13,8 @@
 #ifndef LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H
 #define LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H
 
-#include "Targets.h"
 #include "OffloadTarget.h"
+#include "Targets.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
