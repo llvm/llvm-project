@@ -198,6 +198,9 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   MaxOpenCLWorkGroupSize = 1024;
 
   MaxBitIntWidth.reset();
+
+  ExecStrConverter = new llvm::TextEncodingConverter(
+      std::move(*llvm::TextEncodingConverter::createNoopConverter()));
 }
 
 // Out of line virtual dtor for TargetInfo.
