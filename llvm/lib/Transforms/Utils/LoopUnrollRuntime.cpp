@@ -542,8 +542,7 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
 
 /// Returns true if we can profitably unroll the multi-exit loop L by \p Count.
 static bool canProfitablyRuntimeUnrollMultiExitLoop(
-    Loop *L, const TargetTransformInfo *TTI,
-    SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
+    Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
     bool UseEpilogRemainder, unsigned Count) {
 
   // The main pain point with multi-exit loop unrolling is that once unrolled,
@@ -578,9 +577,11 @@ static bool canProfitablyRuntimeUnrollMultiExitLoop(
   if (UnrollRuntimeOtherExitPredictable)
     return true;
 
-  // The second heuristic is that L has one exit other than the latchexit and
-  // that exit is highly unlikely.
-  if (TTI) {
+  // Require the loop to run at least MinBodies complete unrolled bodies before
+  // leaving through the non-latch exit.
+  // If UnrollRuntimeMultiExitMinBodies is set to 0, then fall through to the
+  // deopt block check.
+  if (unsigned MinBodies = UnrollRuntimeMultiExitMinBodies) {
     BasicBlock *LatchBB = L->getLoopLatch();
     assert(LatchBB && "Expected loop to have a latch");
     BasicBlock *NonLatchExitingBlock =
@@ -590,16 +591,9 @@ static bool canProfitablyRuntimeUnrollMultiExitLoop(
     // If BranchProbability could not be extracted (returns unknown), then
     // don't return and do the check for deopt block.
     if (!BranchProb.isUnknown()) {
-      // Special case for linear scan loop with trip count < ~100, which will
-      // not pass the P < 1/100 check bellow.
-      if (unsigned MinBodies = UnrollRuntimeMultiExitMinBodies) {
-        uint64_t MinIterations = static_cast<uint64_t>(MinBodies) * Count;
-        return BranchProb <=
-               BranchProbability::getBranchProbability(1, MinIterations);
-      }
-
-      auto Threshold = TTI->getPredictableBranchThreshold().getCompl();
-      return BranchProb < Threshold;
+      uint64_t MinIterations = static_cast<uint64_t>(MinBodies) * Count;
+      return BranchProb <=
+             BranchProbability::getBranchProbability(1, MinIterations);
     }
   }
 
@@ -746,8 +740,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
       // Otherwise perform multi-exit unrolling, if either the target indicates
       // it is profitable or the general profitability heuristics apply.
       if (!RuntimeUnrollMultiExit &&
-          !canProfitablyRuntimeUnrollMultiExitLoop(
-              L, TTI, OtherExits, LatchExit, UseEpilogRemainder, Count)) {
+          !canProfitablyRuntimeUnrollMultiExitLoop(L, OtherExits, LatchExit,
+                                                   UseEpilogRemainder, Count)) {
         LLVM_DEBUG(dbgs() << "Multiple exit/exiting blocks in loop and "
                              "multi-exit unrolling not enabled!\n");
         return false;

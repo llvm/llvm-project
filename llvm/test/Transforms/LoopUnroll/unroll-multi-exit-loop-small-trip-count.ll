@@ -1,6 +1,6 @@
-; RUN: opt < %s -passes=loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -unroll-runtime-other-exit-predictable=false -predictable-branch-threshold=99 -S | FileCheck %s
-; RUN: opt < %s -passes=loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -unroll-runtime-other-exit-predictable=false -unroll-runtime-multi-exit-min-bodies=4 -predictable-branch-threshold=99 -S | FileCheck %s -check-prefix=MINBODIES4
-; RUN: opt < %s -passes=loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -unroll-runtime-other-exit-predictable=false -unroll-runtime-multi-exit-min-bodies=0 -predictable-branch-threshold=99 -S | FileCheck %s -check-prefix=MINBODIES0
+; RUN: opt < %s -passes=loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -unroll-runtime-other-exit-predictable=false -S | FileCheck %s
+; RUN: opt < %s -passes=loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -unroll-runtime-other-exit-predictable=false -unroll-runtime-multi-exit-min-bodies=4 -S | FileCheck %s -check-prefix=MINBODIES4
+; RUN: opt < %s -passes=loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -unroll-runtime-other-exit-predictable=false -unroll-runtime-multi-exit-min-bodies=0 -S | FileCheck %s -check-prefix=MINBODIES0
 
 ; Every function below is the same backward linear scan.
 
