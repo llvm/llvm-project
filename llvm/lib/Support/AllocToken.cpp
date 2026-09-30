@@ -55,8 +55,10 @@ static uint64_t getStableHash(const AllocTokenMetadata &Metadata,
   return getStableSipHash(Metadata.TypeName) % MaxTokens;
 }
 
-/// Splits the Log2(MaxTokens) bits into: [pointer flag,] type name hash,
-/// function name hash. The function name hash gets Log2(MaxTokens) / 2 bits.
+/// Rounds the ID space down to the largest power of two <= MaxTokens, then
+/// splits its floor(log2(MaxTokens)) bits into: [pointer flag,] type name hash,
+/// function name hash. The function name hash gets floor(log2(MaxTokens)) / 2
+/// bits. With pointer split, the MSB of this rounded-down space is the flag.
 static uint64_t getTypeFuncHash(const AllocTokenMetadata &Metadata,
                                 uint64_t MaxTokens, bool PointerSplit) {
   if (MaxTokens == 1)
