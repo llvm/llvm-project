@@ -28,10 +28,11 @@
 ## alignment padding would incorrectly encode a four-byte displacement.
 # RUN: llvm-bolt %t.exe -o %t.bolt --lite=0 --hugify \
 # RUN:   --runtime-hugify-lib=%t.runtime.o
-# RUN: llvm-objdump -d --section=.text.bolt.extra.1 %t.bolt | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn --no-symbolize-operands \
+# RUN:   --section=.text.bolt.extra.1 %t.bolt | FileCheck %s
 
-# CHECK: 14000004 {{.*}}b
-# CHECK: d65f03c0 {{.*}}ret
+# CHECK: b 0x[[DEST:[0-9a-f]+]]
+# CHECK: {{^ *0*}}[[DEST]]:{{.*}}ret
 
 .ifdef MAIN
   .text
