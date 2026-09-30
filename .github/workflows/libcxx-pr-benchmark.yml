@@ -28,7 +28,7 @@ jobs:
       name: main-branch-only
       deployment: false
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout: |
@@ -49,7 +49,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout the LNT configurations
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           # Disabling cone mode allows checking out exactly the single file we need.
@@ -108,6 +108,10 @@ jobs:
     permissions:
       pull-requests: write
     runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container || null }}
+    defaults:
+      run:
+        shell: bash
     needs:
       - extract-info
     env:
@@ -121,18 +125,17 @@ jobs:
       TOOLING: ${{ github.workspace }}/tooling
     steps:
       - name: Checkout the PR
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ needs.extract-info.outputs.pr_head }}
           fetch-depth: 0
-          fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
 
       # This workflow is always taken from the default branch. Check out the tooling from the corresponding
       # commit so that we're always running tooling that's in sync with the workflow's definition. Only the
       # code and the test suite (including its testing configuration) are taken from the PR head.
       - name: Checkout the tooling from ${{ github.sha }}
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
@@ -140,12 +143,6 @@ jobs:
           sparse-checkout: |
             .github/workflows/libcxx
             libcxx/utils
-
-      - name: Install Python
-        if: runner.os == 'Linux' # installed via Homebrew on macOS
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: '3.14'
 
       - name: Select Xcode
         if: runner.os == 'macOS'

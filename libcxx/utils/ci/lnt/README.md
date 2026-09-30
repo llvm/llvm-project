@@ -67,6 +67,10 @@ single source of truth for all workflows that run benchmarks (PR benchmarking, r
 historical benchmarks, etc). Each entry contains variables used by the various workflows
 and the LNT machine name that the results will be reported under.
 
+The `runner` key selects the GitHub Actions runner(s) to benchmark on. When the runner set
+requires jobs to run in a container, the `container` key provides the image to use. Otherwise,
+the benchmarks run directly on the host.
+
 The `test-config` key selects the Lit testing configuration to benchmark. This is used to e.g.
 select which Standard Library is being measured. The `lit-params` key provides additional lit
 parameters to pass when running the benchmarks.
@@ -115,7 +119,7 @@ lnt_url: "http://localhost:8000"
 database: default
 auth_token: example_token
 EOF
-lnt admin --config lnt-admin-config.yaml --testsuite libcxx test-suite add libcxx/utils/ci/lnt/schema.yaml
+lnt admin --config lnt-admin-config.yaml --testsuite libcxx test-suite add libcxx/utils/ci/lnt/schemas/libcxx.yaml
 
 # Then submit to the local instance
 submit-benchmarks --lnt-url http://localhost:8000 --test-suite libcxx result.json
