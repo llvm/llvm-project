@@ -2067,8 +2067,7 @@ static Value *EmitRangePrefetchBuiltin(CodeGenFunction &CGF, unsigned BuiltinID,
 }
 
 static void AttachAtomicHintMetadata(CodeGenFunction &CGF, const CallExpr *E,
-                                     Instruction *Atomic,
-                                     unsigned PtrOperand) {
+                                     Instruction *Atomic, unsigned PtrOperand) {
   CodeGen::CGBuilderTy &Builder = CGF.Builder;
   LLVMContext &Ctx = CGF.CGM.getLLVMContext();
   Expr::EvalResult Result;
@@ -2084,8 +2083,8 @@ static void AttachAtomicHintMetadata(CodeGenFunction &CGF, const CallExpr *E,
       Ctx, {MDString::get(Ctx, "aarch64.mem_hint"),
             llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg))});
   MDNode *HintNode = MDNode::get(
-      Ctx, {llvm::ConstantAsMetadata::get(Builder.getInt32(PtrOperand)),
-            MemHint});
+      Ctx,
+      {llvm::ConstantAsMetadata::get(Builder.getInt32(PtrOperand)), MemHint});
   Atomic->setMetadata(llvm::LLVMContext::MD_mem_cache_hint, HintNode);
 }
 
