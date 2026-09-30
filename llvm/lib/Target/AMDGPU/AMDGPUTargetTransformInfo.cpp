@@ -1098,7 +1098,23 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   };
 
   if (IsIntToFP) {
-    const unsigned ExtOps = UsesInt64 && SrcBits < 64 ? (IsSigned ? 2 : 1) : 0;
+    // A scalar load of 24, 40, 48 or 56 bits is split and its high part load
+    // extends the source. A constant or invariant load aligned to 4 bytes may
+    // be widened instead and then still needs the extension.
+    const auto *Load =
+        I && Src->isIntegerTy() && I->getOperand(0)->getType() == Src
+            ? dyn_cast<LoadInst>(I->getOperand(0))
+            : nullptr;
+    const bool LoadMayWiden =
+        Load && Load->getAlign() >= Align(4) &&
+        (AMDGPU::isConstantAddressSpace(Load->getPointerAddressSpace()) ||
+         (Load->getPointerAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
+          Load->hasMetadata(LLVMContext::MD_invariant_load)));
+    const bool LoadExtends = Load && Load->isSimple() && Load->hasOneUse() &&
+                             !LoadMayWiden && SrcBits % 8 == 0 &&
+                             (SrcBits == 24 || (UsesInt64 && SrcBits < 64));
+    const unsigned ExtOps =
+        UsesInt64 && SrcBits < 64 && !LoadExtends ? (IsSigned ? 2 : 1) : 0;
     if (FPTy->isBFloatTy()) {
       if (SrcBits < 8 || (SrcBits > 32 && !UsesInt64))
         return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
@@ -1189,11 +1205,7 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     // or sign extended first. Without 16 bit instructions a half result is
     // rounded from f32.
     if (SrcBits >= 8 && SrcBits < 32) {
-      // A 24 bit load is split and its high byte load extends the source.
-      const auto *Load = I && I->getOperand(0)->getType() == Src
-                             ? dyn_cast<LoadInst>(I->getOperand(0))
-                             : nullptr;
-      if (SrcBits == 24 && Load && Load->isSimple() && Load->hasOneUse()) {
+      if (LoadExtends) {
         if (FPTy->isDoubleTy())
           return Scale(0, 1);
         return Scale(FPTy->isHalfTy() ? 2 : 1);
