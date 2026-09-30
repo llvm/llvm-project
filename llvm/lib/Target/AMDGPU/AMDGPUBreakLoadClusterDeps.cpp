@@ -191,37 +191,11 @@ AMDGPUBreakLoadClusterDepsImpl::getUsesAndDefsFor(MachineInstr &MI) const {
 
 Register AMDGPUBreakLoadClusterDepsImpl::promoteToSuperRegister(
     MachineInstr &MI, Register SubReg, bool Defs, bool Uses) {
-  for (MachineOperand &Operand : MI.operands()) {
-    if (!Operand.isReg() || (!Defs && Operand.isDef()) ||
-        (!Uses && Operand.isUse()) ||
-        !TRI->regsOverlap(SubReg, Operand.getReg()))
-      continue;
-
-    // Grow SubReg to the smallest VGPR register whose lanes cover both SubReg
-    // and the overlapping operand.  Two registers of the same class can overlap
-    // without either containing the other (offset tuples share some lanes but
-    // not all), so we take the union of their lane ranges rather than only
-    // promoting to strict super-registers.  This makes the renamed footprint
-    // reflect every lane the value is entangled with, so the coverage guard in
-    // findReplaceRegisterOperand can reject renames that would relocate lanes
-    // lacking a producing def.
-    Register Op = Operand.getReg();
-    unsigned SubLo = TRI->getHWRegIndex(SubReg.asMCReg());
-    unsigned OpLo = TRI->getHWRegIndex(Op.asMCReg());
-    unsigned Lo = std::min(SubLo, OpLo);
-    unsigned Hi = std::max(
-        SubLo + TRI->getRegSizeInBits(*TRI->getPhysRegBaseClass(SubReg)) / 32,
-        OpLo + TRI->getRegSizeInBits(*TRI->getPhysRegBaseClass(Op)) / 32);
-
-    Register Base = AMDGPU::VGPR0 + Lo;
-    if (Hi - Lo == 1) {
-      SubReg = Base;
-      continue;
-    }
-    SubReg = TRI->getMatchingSuperReg(
-        Base.asMCReg(), AMDGPU::sub0, TRI->getVGPRClassForBitWidth((Hi - Lo) * 32));
-    assert(SubReg && "union of overlapping VGPRs is not a valid register");
-  }
+  for (MachineOperand &Operand : MI.operands())
+    if (Operand.isReg() && (Defs || Operand.isUse()) &&
+        (Uses || Operand.isDef()) &&
+        TRI->isSuperRegister(SubReg, Operand.getReg()))
+      SubReg = Operand.getReg();
 
   return SubReg;
 }
@@ -249,19 +223,13 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
   else
     KillerIns = &MI;
 
-  // Lanes of OldReg that receive a producing def inside the window, and lanes
-  // read inside the window by a real (non-undef) use.  Both are retained after
-  // the fixpoint loop for the coverage guard below.
-  BitVector DefinedSubregs(NumVGPR32), NonUndefReads(NumVGPR32);
   bool Changed = true;
   while (Changed) {
     Changed = false;
 
     // First, go forward from def to find the kill
     if (DefToRename) {
-      BitVector ClobberedSubregs(NumVGPR32);
-      DefinedSubregs.reset();
-      NonUndefReads.reset();
+      BitVector ClobberedSubregs(NumVGPR32), DefinedSubregs(NumVGPR32);
       MachineInstr *NewKiller = KillerIns ? KillerIns : nullptr;
       Register OldOldReg = OldReg;
       for (MachineBasicBlock::iterator It = DefToRename->getIterator();
@@ -271,9 +239,6 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
           continue;
 
         auto Subregs = getUsesAndDefsFor(*It);
-        for (const MachineOperand &MO : It->operands())
-          if (MO.isReg() && MO.isUse() && !MO.isUndef())
-            NonUndefReads |= getVGPR32Components(MO.getReg());
         BitVector UnclobberedSubregs = OldRegClobbers;
         UnclobberedSubregs.reset(ClobberedSubregs);
         if (Subregs.second.anyCommon(UnclobberedSubregs))
@@ -352,19 +317,6 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
 
   // Pre-mutation guards over the window [DefToRename, KillerIns].  Bail before
   // changing anything if the rename can't be done correctly.
-
-  // Coverage guard: a lane of the (possibly promoted) OldReg that is read by a
-  // real (non-undef) use inside the window but never receives a producing def
-  // there is a live-in input.  promoteToSuperRegister grows OldReg to the union
-  // of every operand overlapping the renamed value, so such a lane was pulled in
-  // by a wider tuple that entangles the value with an independent input, and a
-  // whole-operand rewrite would silently relocate it.  That rename is not
-  // representable, so reject it.  Lanes read only as undef are don't-cares and
-  // do not block the rename.
-  BitVector LiveInLanes = OldRegClobbers;
-  LiveInLanes.reset(DefinedSubregs);
-  if (LiveInLanes.anyCommon(NonUndefReads))
-    return false;
 
   // Tied guard (conservative, whole footprint): a tied def/use pair is pinned
   // to a single physical register.  If it couples something we must rename (a
