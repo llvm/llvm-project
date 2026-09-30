@@ -2310,9 +2310,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(
       {G_VECREDUCE_SMIN, G_VECREDUCE_SMAX, G_VECREDUCE_UMIN, G_VECREDUCE_UMAX,
-       G_VECREDUCE_ADD, G_VECREDUCE_MUL, G_VECREDUCE_FMUL, G_VECREDUCE_FMIN,
-       G_VECREDUCE_FMAX, G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUM,
-       G_VECREDUCE_OR, G_VECREDUCE_AND, G_VECREDUCE_XOR})
+       G_VECREDUCE_ADD, G_VECREDUCE_MUL, G_VECREDUCE_FADD, G_VECREDUCE_FMUL,
+       G_VECREDUCE_FMIN, G_VECREDUCE_FMAX, G_VECREDUCE_FMINIMUM,
+       G_VECREDUCE_FMAXIMUM, G_VECREDUCE_OR, G_VECREDUCE_AND, G_VECREDUCE_XOR})
       .legalFor(AllVectors)
       .scalarize(1)
       .lower();
@@ -8386,12 +8386,14 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         B.buildInstr(AMDGPU::SI_IF)
             .addDef(NewDef)
             .addUse(NewUse)
-            .addMBB(UncondBrTarget);
+            .addMBB(UncondBrTarget)
+            .setOperandDead(4); // implicit-def $scc
       } else {
         B.buildInstr(AMDGPU::SI_ELSE)
             .addDef(NewDef)
             .addUse(NewUse)
-            .addMBB(UncondBrTarget);
+            .addMBB(UncondBrTarget)
+            .setOperandDead(4); // implicit-def $scc
       }
 
       if (Br) {
@@ -8434,7 +8436,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
       B.setInsertPt(B.getMBB(), BrCond->getIterator());
       B.buildCopy(NewReg, Reg);
-      B.buildInstr(AMDGPU::SI_LOOP).addUse(NewReg).addMBB(UncondBrTarget);
+      B.buildInstr(AMDGPU::SI_LOOP)
+          .addUse(NewReg)
+          .addMBB(UncondBrTarget)
+          .setOperandDead(3); // implicit-def $scc
 
       if (Br)
         Br->getOperand(0).setMBB(CondBrTarget);
