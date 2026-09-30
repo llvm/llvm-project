@@ -3264,6 +3264,16 @@ llvm_target_lib_list = [lib for lib in [
     {
         "name": "RISCV",
         "short_name": "RISCV",
+        # MCTargetDesc/RISCVTargetStreamer.h does `#include "RISCV.h"` from
+        # the parent directory. From RISCVAsmPrinter.cpp, MSVC's include-stack
+        # rule finds the real file while the normal search hits a
+        # `_virtual_includes` copy first (copied, not symlinked, on Windows).
+        # clang-cl reports the mismatch under -Wmicrosoft-include, fatal with
+        # -Werror. Same header either way; CMake avoids it via -I<target dir>.
+        "codegen_copts": select({
+            ":is_windows_clang_cl": ["/clang:-Wno-microsoft-include"],
+            "//conditions:default": [],
+        }),
         "tbl_outs": [
             (
                 ["-gen-asm-matcher"],
@@ -4107,7 +4117,7 @@ gentbl_cc_library(
             ["lib/Target/" + target["name"] + "/*.def"],
             allow_empty = True,
         ),
-        copts = llvm_copts,
+        copts = llvm_copts + target.get("codegen_copts", []),
         features = [
             "-layering_check",
             "-parse_headers",
