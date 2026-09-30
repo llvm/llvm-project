@@ -8,7 +8,7 @@
 ///
 /// \file
 /// Tests the plugin-backed \c ObjectStore and \c ActionCache against the mock
-/// plugin implementation in \c llvm/tools/libCASPluginTest.
+/// plugin implementation in \c llvm/unittests/CAS/CASPluginTest.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -36,17 +36,13 @@ using namespace llvm::unittest::cas;
 extern const char *TestMainArgv0;
 static std::string TestStringArg1("castest-string-arg1");
 
-/// \returns the path of the libCASPluginTest dynamic library, which implements
+/// \returns the path of the CASPluginTest dynamic library, which implements
 /// the CAS plugin API for testing purposes.
 static std::string getCASPluginPath() {
   std::string Executable =
       sys::fs::getMainExecutable(TestMainArgv0, &TestStringArg1);
   llvm::SmallString<256> PathBuf(sys::path::parent_path(Executable));
-#if !defined(_WIN32) || defined(__MINGW32__)
-  sys::path::append(PathBuf, "libCASPluginTest" LLVM_PLUGIN_EXT);
-#else
   sys::path::append(PathBuf, "CASPluginTest" LLVM_PLUGIN_EXT);
-#endif
   return std::string(PathBuf);
 }
 
