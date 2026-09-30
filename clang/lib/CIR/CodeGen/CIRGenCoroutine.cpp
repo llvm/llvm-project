@@ -569,18 +569,29 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
         builder, openCurlyLoc,
         /*initialSuspendBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          res = initialSuspendBuilder();
+          if (initialSuspendBuilder().failed())
+            res = mlir::failure();
         },
         /*bodyBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) { res = bodyBuilder(); },
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          if (bodyBuilder().failed())
+            res = mlir::failure();
+        },
         /*finalSuspendBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          res = finalSuspendBuilder();
+          if (finalSuspendBuilder().failed())
+            res = mlir::failure();
         },
         /*destroyBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) { res = destroyBuilder(); },
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          if (destroyBuilder().failed())
+            res = mlir::failure();
+        },
         /*exitBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) { res = exitBuilder(); });
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          if (exitBuilder().failed())
+            res = mlir::failure();
+        });
 
     if (coro && !coro.getBody().empty() &&
         !coro.getBody().back().mightHaveTerminator()) {
