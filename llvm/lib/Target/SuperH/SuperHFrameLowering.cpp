@@ -14,8 +14,10 @@
 #include "SuperHFrameLowering.h"
 #include "MCTargetDesc/SuperHMCTargetDesc.h"
 #include "SuperHInstrInfo.h"
+#include "SuperHMachineFunctionInfo.h"
 #include "SuperHRegisterInfo.h"
 #include "SuperHSubtarget.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -31,6 +33,7 @@
 #include "llvm/MC/MCRegister.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Target/TargetMachine.h"
@@ -42,6 +45,10 @@ static cl::opt<bool> AccumOutgoingArgs(
     "sh-accumulate-outgoing-args", cl::Hidden, cl::init(false),
     cl::desc("Reserve space for outgoing arguments in the function prologue."));
 
+static cl::opt<int64_t> MaxSPAdd(
+    "sh-max-sp-add", cl::Hidden, cl::init(10),
+    cl::desc("How many add instructions are deemed low enough cost to generate for sp adjust."));
+
 using namespace llvm;
 
 
@@ -51,76 +58,14 @@ using namespace llvm;
 //                                    Helpers
 //===--------------------------------------------------------------------------===//
 
-// Get amount of times to shift the value in a SP adjustment
-// for it to fit.
-static unsigned getShiftAmt(uint32_t Val) {
-  unsigned R = 0;
-  for (unsigned i = 0; i < 4; i++) {
-    if (((Val >> (i * 8)) & 0xFF))
-      R = i;
-  }
-  return R;
-}
-
 // Helper to emit stack pointer adjustment.
-void SuperHFrameLowering::emitFrameAdjust(Register Base, MachineFunction &MF,
-                                          MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator MBBI,
+void SuperHFrameLowering::emitFrameAdjust(Register Base, MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator MBBI, 
                                           int32_t AdjValue) const {
-  const SuperHInstrInfo &TII = *MF.getSubtarget<SuperHSubtarget>().getInstrInfo();
-  MachineInstr::MIFlag MFlag =
-      AdjValue < 0 ? MachineInstr::FrameSetup : MachineInstr::FrameDestroy;
-  DebugLoc DL = (MBBI != MBB.end()) ? MBBI->getDebugLoc() : DebugLoc();
-
-  // No stack frame allocation neccesary.
-  if (AdjValue == 0)
-    return;
-
-  // Check if the adjustment can fit in an 8-bit immediate.
-  if (isInt<8>(AdjValue)) {
-
-    // Fast path, emit a single immediate add.
-    BuildMI(MBB, MBBI, DL, TII.get(SH::ADDI), Base)
-        .addReg(Base)
-        .addImm(AdjValue);
-    return;
-  }
-
-  // TODO: Embed a constant instead?
-
-  // Slow path, shift 8 bits at a time into r0.
-  unsigned ToShift = getShiftAmt(AdjValue);
-
-  // Empty R0 in case it had something.
-  BuildMI(MBB, MBBI, DL, TII.get(SH::XOR), SH::R0)
-      .addReg(SH::R0)
-      .setMIFlag(MFlag);
-
-  // Shift value in with the following pattern:
-  //  or #(byte), r0
-  //  shll8 r0
-  for (unsigned i = 0; i < ToShift; i++) {
-    BuildMI(MBB, MBBI, DL, TII.get(SH::ORI))
-        .addImm((AdjValue >> (i * 8)) & 0xFF)
-        .setMIFlag(MFlag);
-    BuildMI(MBB, MBBI, DL, TII.get(SH::SHLL8), SH::R0)
-        .addReg(SH::R0)
-        .setMIFlag(MFlag);
-  }
-
-  // Finally negate and add to r15.
-  //  neg r0, r0 (if negative displacement)
-  //  add r0, <base>
-  if (AdjValue < 0)
-    BuildMI(MBB, MBBI, DL, TII.get(SH::NEG), SH::R0)
-        .addReg(SH::R0)
-        .addReg(SH::R0)
-        .setMIFlag(MFlag);
-
-  BuildMI(MBB, MBBI, DL, TII.get(SH::SUB), Base)
-      .addReg(SH::R0, RegState::Kill)
-      .addReg(Base)
-      .setMIFlag(MFlag);
+  const SuperHInstrInfo &TII = *STI.getInstrInfo();
+  MachineInstr::MIFlag MFlag = AdjValue < 0 ? 
+    MachineInstr::FrameSetup : MachineInstr::FrameDestroy;
+  TII.emitAddressAdjust(Base, MBB, MBBI, AdjValue, MaxSPAdd, MFlag);
 }
 
 
@@ -201,7 +146,7 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Create new stack frame.
-  emitFrameAdjust(SP, MF, MBB, MBBI, -StackSize);
+  emitFrameAdjust(SP, MBB, MBBI, -StackSize);
   if (HasFP) {
     BuildMI(MBB, MBBI, DL, TII.get(SH::MOV), FP)
         .addReg(SP)
@@ -237,12 +182,12 @@ void SuperHFrameLowering::emitEpilogue(MachineFunction &MF,
 
   // Restore stack frame
   if (HasFP) {
-    emitFrameAdjust(FP, MF, MBB, MBBI, StackSize);
+    emitFrameAdjust(FP, MBB, MBBI, StackSize);
     BuildMI(MBB, MBBI, DL, TII.get(SH::MOV), SP)
         .addReg(FP)
         .setMIFlag(MachineInstr::FrameSetup);
   } else {
-    emitFrameAdjust(SP, MF, MBB, MBBI, StackSize);
+    emitFrameAdjust(SP, MBB, MBBI, StackSize);
   }
 
   // Restore return address from stack (if needed.)

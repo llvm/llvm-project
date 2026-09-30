@@ -100,6 +100,7 @@ static bool eraseMI(MachineInstr &MI) {
 void SuperHExpandPseudo::getStackOffset(Block &MBB, BlockIt MBBI, Register FrameReg, 
                                         int64_t &Offset, uint8_t Bits, uint8_t Scale) {
   const DebugLoc &DL = MBBI->getDebugLoc();
+  const SuperHInstrInfo *TII = STI->getInstrInfo();
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineInstr &MI = *MBBI;
@@ -131,26 +132,18 @@ void SuperHExpandPseudo::getStackOffset(Block &MBB, BlockIt MBBI, Register Frame
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
       .addReg(FrameReg);
 
-    ptrdiff_t OffsetLeft = RealOffset;
-    while(OffsetLeft != 0) {
-      int64_t V = OffsetLeft % 128;
-      BuildMI(MBB, MBBI, DL, TII->get(SH::ADDI), SH::R1)
-        .addImm(V);
-      OffsetLeft -= V;
-    }
+    TII->emitAddressAdjust(SH::R1, MBB, MBBI, RealOffset, INT_MAX);
     break;
   }
   default: {
 
     // Expand sequence to
     // mov      <frame reg>,  r1
-    // add      #-SpOffset,   r1
-    int64_t SpAdjust = AccessRange * (alignTo(RealOffset, Scale) / AccessRange);  
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1).addReg(FrameReg);
-    if (SpAdjust != 0)
-      BuildMI(MBB, MBBI, DL, TII->get(SH::ADDI), SH::R1)
-          .addReg(SH::R1)
-          .addImm(-SpAdjust);
+    // add      #-SpOffset,   r1 ! Repeats until offset is reached.
+    int64_t SpAdjust = AccessRange * (alignTo(RealOffset, Scale) / AccessRange);
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
+      .addReg(FrameReg);
+    TII->emitAddressAdjust(SH::R1, MBB, MBBI, SpAdjust, INT_MAX);
     break;
   }
   }
@@ -176,7 +169,7 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
 
   switch (MI.getOpcode()) {
   default:
-    llvm_unreachable("Expected valid MOV*SPtr opcode.");
+    llvm_unreachable("Expected valid MOV*SF opcode.");
   case SH::MOVBSF: {
 
     // mov      <src reg>,  r0
@@ -247,7 +240,7 @@ bool SuperHExpandPseudo::storeToAddress(Block &MBB, BlockIt MBBI) {
 
   switch (MI.getOpcode()) {
   default:
-    llvm_unreachable("Expected valid MOV*SPtr opcode.");
+    llvm_unreachable("Expected valid MOV*SP opcode.");
   case SH::MOVBSP: {
     if (Offset == 0)
       Opc = SH::MOVBS;
@@ -346,7 +339,7 @@ template <>
 bool SuperHExpandPseudo::expand<SH::MOVF32SP>(Block &MBB, BlockIt MBBI) {
 
   // Store to stack frame
-  return storeToFrame(MBB, MBBI, 4);
+  return storeToAddress(MBB, MBBI);
 }
 
 
@@ -369,7 +362,7 @@ bool SuperHExpandPseudo::loadFromFrame(Block &MBB, BlockIt MBBI, int Scale) {
 
   switch (MI.getOpcode()) {
   default:
-    llvm_unreachable("Expected valid MOV*LPtr opcode.");
+    llvm_unreachable("Expected valid MOV*LF opcode.");
   case SH::MOVBLF: {
 
     // mov.b    @(offset,r1), r0
@@ -439,7 +432,7 @@ bool SuperHExpandPseudo::loadFromAddress(Block &MBB, BlockIt MBBI) {
 
   switch (MI.getOpcode()) {
   default:
-    llvm_unreachable("Expected valid MOV*LPtr opcode.");
+    llvm_unreachable("Expected valid MOV*LP opcode.");
   case SH::MOVBLP: {
     if (Offset == 0)
       Opc = SH::MOVBL;

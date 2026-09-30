@@ -229,7 +229,7 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue &LHS, SDValue &RHS,
       break;
     case ISD::SETEQ: {
       if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-        if (C->getSExtValue() == 0) {
+        if (C->isZero()) {
           SHcc = SHCC::COND_Z;
           SHocc = SHCC::COND_T;
           break;
@@ -241,7 +241,10 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue &LHS, SDValue &RHS,
     }
     case ISD::SETNE: {
       if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-        if (C->getSExtValue() == 0) {
+        if (C->isZero()) {
+          
+          // Swap operands and reverse the branching condition.
+          std::swap(LHS, RHS);
           SHcc = SHCC::COND_Z;
           SHocc = SHCC::COND_F;
           break;
@@ -267,17 +270,16 @@ SDValue SuperHTargetLowering::getSHCmp(SDValue &LHS, SDValue &RHS,
     }
     case ISD::SETGT: {
       if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-        switch (C->getSExtValue()) {
-        case -1: {
+        if (C->getSExtValue() == -1) {
           SHcc = SHCC::COND_PZ;
           SHocc = SHCC::COND_T;
           break;
         }
-        case 0: {
+
+        if (C->isZero()) {
           SHcc = SHCC::COND_PL;
           SHocc = SHCC::COND_T;
           break;
-        }
         }
       }
       SHcc = SHCC::COND_GT;

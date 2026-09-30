@@ -230,4 +230,4 @@ def R_PC : RegisterClass<"SH", [ i32 ], 32, (add PC)>, Unallocatable;
 def R_GBR : RegisterClass<"SH", [ i32 ], 32, (add GBR)>, Unallocatable;
 
 // R0 Register
-def R_R0 : RegisterClass<"SH", [ i32 ], 32, (add R0)>, Unallocatable;
+def R_R0 : RegisterClass<"SH", [ i32 ], 32, (add R0)>;

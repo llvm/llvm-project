@@ -65,6 +65,9 @@ static StringRef getCondName(CondCode CC) {
 } // end of namespace SHCC
 
 class SuperHInstrInfo : public SuperHGenInstrInfo {
+  using Block = MachineBasicBlock;
+  using BlockIt = Block::iterator;
+  using MIFlag = MachineInstr::MIFlag;
   const SuperHSubtarget &STI;
   const SuperHRegisterInfo RI;
   virtual void anchor();
@@ -95,6 +98,16 @@ public:
   MCInst getNop() const override;
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
+
+  // Helpers.
+
+  /// emitAddressAdjust - Emits an adjustment to an address stored in a register,
+  /// said adjustment will, if within the MaxAdd range, be emitted as a series of
+  /// immediate add instructions, otherwise the implementation will try to store
+  /// the offset into the constant pool, load it and add it to the register, 
+  /// clobbering R1.
+  void emitAddressAdjust(Register Reg, Block &MBB, BlockIt MBBI, int32_t AdjValue, 
+                         int32_t MaxAdd, MIFlag Flag = MIFlag::NoFlags) const;
 
   // Stack Frames
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
