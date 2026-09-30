@@ -4637,7 +4637,7 @@ AArch64DAGToDAGISel::decodeMemoryHintFlags(MachineMemOperand *MMO) const {
 }
 
 bool AArch64DAGToDAGISel::isAtomicMemoryHint(SDNode *N,
-                                         AArch64MemoryHint Hint) const {
+                                             AArch64MemoryHint Hint) const {
   return decodeMemoryHintFlags(cast<MemSDNode>(N)->getMemOperand()) == Hint;
 }
 
