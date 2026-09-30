@@ -436,12 +436,9 @@ define i32 @add_select_cmp_and_mul_mismatch(i32 %in) {
 
 define i32 @and_mul_non_disjoint(i32 %in) {
 ; CHECK-LABEL: @and_mul_non_disjoint(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 2
-; CHECK-NEXT:    [[OUT:%.*]] = mul nuw nsw i32 [[TMP1]], 72
-; CHECK-NEXT:    [[MASK1:%.*]] = and i32 [[IN]], 4
+; CHECK-NEXT:    [[MASK1:%.*]] = and i32 [[IN:%.*]], 6
 ; CHECK-NEXT:    [[SEL1:%.*]] = mul nuw nsw i32 [[MASK1]], 72
-; CHECK-NEXT:    [[OUT1:%.*]] = or i32 [[OUT]], [[SEL1]]
-; CHECK-NEXT:    ret i32 [[OUT1]]
+; CHECK-NEXT:    ret i32 [[SEL1]]
 ;
   %mask0 = and i32 %in, 2
   %sel0 = mul i32 %mask0, 72

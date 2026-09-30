@@ -1002,6 +1002,15 @@ TEST(KnownBitsTest, MulExhaustive) {
         });
 
         if (!Exact.hasConflict()) {
+          // If either operand is zero or a power of two, the product is either
+          // zero or the other operand shifted left, so the result should be
+          // optimal.
+          if (Known1.getMaxValue().isPowerOf2() ||
+              Known2.getMaxValue().isPowerOf2())
+            EXPECT_TRUE(checkResult("mul by pow2 or zero", Exact, Computed,
+                                    {Known1, Known2},
+                                    /*CheckOptimality=*/true));
+
           // Check that the result is optimal for the contiguous known low order
           // bits.
           APInt Mask = APInt::getLowBitsSet(

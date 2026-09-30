@@ -256,8 +256,7 @@ define i32 @mul_pow2_or_zero_redundant_mask(i32 %x) {
 ; CHECK-LABEL: @mul_pow2_or_zero_redundant_mask(
 ; CHECK-NEXT:    [[PHASE:%.*]] = and i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[LOCAL:%.*]] = mul nuw nsw i32 [[PHASE]], 9
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[LOCAL]], 22
-; CHECK-NEXT:    ret i32 [[MASKED]]
+; CHECK-NEXT:    ret i32 [[LOCAL]]
 ;
   %phase = and i32 %x, 2
   %local = mul i32 %phase, 9
@@ -269,7 +268,7 @@ define i32 @mul_pow2_or_zero_disjoint_xor(i32 %x) {
 ; CHECK-LABEL: @mul_pow2_or_zero_disjoint_xor(
 ; CHECK-NEXT:    [[PHASE:%.*]] = and i32 [[X:%.*]], 2
 ; CHECK-NEXT:    [[LOCAL:%.*]] = mul nuw nsw i32 [[PHASE]], 9
-; CHECK-NEXT:    [[ADDR:%.*]] = xor i32 [[LOCAL]], 44
+; CHECK-NEXT:    [[ADDR:%.*]] = or disjoint i32 [[LOCAL]], 44
 ; CHECK-NEXT:    ret i32 [[ADDR]]
 ;
   %phase = and i32 %x, 2
@@ -285,8 +284,7 @@ define i8 @mul_pow2_or_zero_lhs_variable(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[O:%.*]] = and i8 [[Y:%.*]], 5
 ; CHECK-NEXT:    [[P:%.*]] = and i8 [[X:%.*]], 4
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i8 [[P]], [[O]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[M]], 20
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[M]]
 ;
   %o = and i8 %y, 5
   %p = and i8 %x, 4
@@ -299,8 +297,7 @@ define <2 x i8> @mul_pow2_or_zero_redundant_mask_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @mul_pow2_or_zero_redundant_mask_splat(
 ; CHECK-NEXT:    [[PHASE:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 2)
 ; CHECK-NEXT:    [[LOCAL:%.*]] = mul nuw nsw <2 x i8> [[PHASE]], splat (i8 9)
-; CHECK-NEXT:    [[MASKED:%.*]] = and <2 x i8> [[LOCAL]], splat (i8 22)
-; CHECK-NEXT:    ret <2 x i8> [[MASKED]]
+; CHECK-NEXT:    ret <2 x i8> [[LOCAL]]
 ;
   %phase = and <2 x i8> %x, <i8 2, i8 2>
   %local = mul <2 x i8> %phase, <i8 9, i8 9>
