@@ -1535,10 +1535,10 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       return;
     DiagID = diag::warn_fortify_source_size_mismatch;
     unsigned WideWidth = SizeTypeWidth * 2;
-    SourceSize = Count->extOrTrunc(WideWidth) *
+    AccessSize = Count->extOrTrunc(WideWidth) *
                  llvm::APSInt(llvm::APInt(WideWidth, ElemSize->getQuantity()),
                               /*isUnsigned=*/true);
-    DestinationSize = Checker.ComputeSizeArgument(0);
+    BufferSize = Checker.ComputeSizeArgument(0);
     break;
   }
 
