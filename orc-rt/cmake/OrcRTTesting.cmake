@@ -35,6 +35,19 @@ if (NOT ORC_RT_NOT_EXECUTABLE)
   set(ORC_RT_LLVM_TOOLS_AVAILABLE FALSE)
 endif()
 
+# Add dependence on split-file.
+if (TARGET split-file)
+  list(APPEND ORC_RT_TEST_DEPS split-file)
+endif()
+
+find_program(ORC_RT_SPLIT_FILE_EXECUTABLE
+  NAMES split-file
+  PATHS ${ORC_RT_LLVM_TOOLS_DIR})
+if (NOT ORC_RT_SPLIT_FILE_EXECUTABLE)
+  message(STATUS "Cannot find split-file. Please put it in your PATH, set ORC_RT_SPLIT_FILE_EXECUTABLE to its full path, or point ORC_RT_LLVM_TOOLS_DIR to its directory.")
+  set(ORC_RT_LLVM_TOOLS_AVAILABLE FALSE)
+endif()
+
 # Add dependencies on optional tools, if they're being built alongside us.
 # Tests that need these tools are gated on lit features, so they're not required.
 foreach(tool clang llvm-jitlink llvm-mc)
