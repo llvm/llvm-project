@@ -86,6 +86,12 @@ define i32 @test_load_l2_normal(ptr addrspace(1) %p) {
   ret i32 %v
 }
 
+;-----------------------------------------------------------------------------
+; TODO: Preserve cache hints across DAGCombiner-created memory rewrites.
+; This documents the current store-of-concat-trunc behavior: copied MMOs for
+; the split stores do not retain !mem.cache_hint metadata yet.
+;-----------------------------------------------------------------------------
+
 define void @test_dagcombine_store_concat_trunc_v8i32(ptr addrspace(1) %p, <4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: test_dagcombine_store_concat_trunc_v8i32(
 ; CHECK:    mov.b64 %rd10, 12345;
