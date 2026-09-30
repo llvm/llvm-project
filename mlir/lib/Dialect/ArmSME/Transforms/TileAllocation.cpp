@@ -800,10 +800,8 @@ struct TestTileAllocationPass
 };
 } // namespace
 
-/// Returns true if `function` contains any ArmSME tile ops. If it does not,
-/// there is nothing to allocate: any value not produced/consumed by such an
-/// op will never be assigned a tile ID, so tile allocation is a no-op.
-static bool functionHasArmSMETileOps(FunctionOpInterface function) {
+/// Returns true if `function` contains any ArmSME tile ops.
+static bool hasArmSMETileOps(FunctionOpInterface function) {
   return function
       .walk([&](ArmSMETileOpInterface) { return WalkResult::interrupt(); })
       .wasInterrupted();
@@ -811,13 +809,11 @@ static bool functionHasArmSMETileOps(FunctionOpInterface function) {
 
 LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
                                               bool dumpRanges) {
-  if (function.empty())
-    return success();
-
-  // Bail out early if the function has no ArmSME tile ops, this avoids
-  // running the (non-trivial) preprocessing and liveness analysis below
-  // for functions that have nothing to allocate.
-  if (!functionHasArmSMETileOps(function))
+  // Bail out early if the function has no ArmSME tile ops: there is nothing
+  // to allocate (a value not produced/consumed by such an op never gets a
+  // tile ID), so this avoids the (non-trivial) preprocessing and liveness
+  // analysis below for functions that have nothing to allocate.
+  if (!hasArmSMETileOps(function))
     return success();
 
   LiveRange::Allocator liveRangeAllocator;
