@@ -78,9 +78,7 @@ class ExitDuringStepTestCase(TestBase):
 
         # Count only the threads running a.out code: the OS can add a thread
         # between two stops (see lldbutil.get_threads_in_executable).
-        bp_tids = {
-            t.GetThreadID() for t in lldbutil.get_threads_in_executable(process)
-        }
+        bp_tids = {t.GetThreadID() for t in lldbutil.get_threads_in_executable(process)}
         num_threads = len(bp_tids)
         # Make sure we see all three threads
         self.assertGreaterEqual(

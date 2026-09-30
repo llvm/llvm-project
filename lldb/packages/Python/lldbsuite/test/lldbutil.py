@@ -970,6 +970,16 @@ def get_threads_in_executable(process):
 
     Count these rather than process.GetNumThreads() when a test checks how many
     threads it created: the OS can add threads of its own between two stops.
+    For example, on Windows, starting a std::thread also starts a thread pool
+    worker thread
+    (https://learn.microsoft.com/en-us/windows/win32/procthread/thread-pools).
+    The debugger is only told about that worker once it first runs, which can
+    be after the next stop, so the thread count changes from one stop to the
+    next.
+
+    Match on the module rather than the test's source file: a thread stopped in
+    a runtime library function without debug info may only unwind back to its
+    caller, which is still in the executable.
     """
     target = process.GetTarget()
     exe = target.FindModule(target.GetExecutable())
