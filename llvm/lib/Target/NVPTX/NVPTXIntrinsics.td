@@ -1642,6 +1642,16 @@ def PREFETCH_GLOBAL_L2_EVICT_NORMAL : PREFETCH_INTRS<"prefetch.global.L2::evict_
 def PREFETCH_GLOBAL_L2_EVICT_LAST : PREFETCH_INTRS<"prefetch.global.L2::evict_last", 
                                     int_nvvm_prefetch_global_L2_evict_last>;
 
+class PREFETCH_SIZE_INTR<string InstName, Intrinsic Intr> :
+          BasicNVPTXInst<(outs), (ins ADDR:$addr),
+            InstName, [(Intr addr:$addr)]>,
+          Requires<[PTX94, SM90]>;
+
+def PREFETCH_GLOBAL_L1_32B : PREFETCH_SIZE_INTR<"prefetch.global.L1::32B.valid_addr",
+                             int_nvvm_prefetch_global_L1_32B>;
+def PREFETCH_GENERIC_L1_32B : PREFETCH_SIZE_INTR<"prefetch.L1::32B.valid_addr",
+                             int_nvvm_prefetch_L1_32B>;
+
 //Applypriority intrinsics
 class APPLYPRIORITY_L2_INTRS<string addrspace> :
           BasicNVPTXInst<(outs), (ins ADDR:$addr, B64:$size),
