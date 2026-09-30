@@ -2,8 +2,7 @@
 #
 # Round-trip test for the 'lr-split' MIR text spelling of
 # MachineInstr::LRSplit. The flag is set by SplitKit on copies inserted for
-# live-range splitting; AMDGPU's SIInstrInfo::canAddToBBProlog uses it to
-# recognize WWM_COPY / IMPLICIT_DEF instructions as part of the BB prologue.
+# live-range splitting.
 
 ---
 name: lr_split_roundtrip

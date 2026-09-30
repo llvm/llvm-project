@@ -343,7 +343,7 @@ static bool blockPrologueInterferes(const MachineBasicBlock *BB,
   for (MachineBasicBlock::const_iterator PI = BB->getFirstNonPHI(); PI != End;
        ++PI) {
     // Only check target defined prologue instructions
-    if (!TII->isBasicBlockPrologue(*PI))
+    if (!PI->getFlag(MachineInstr::BBProlog))
       continue;
     for (auto &MO : MI.operands()) {
       if (!MO.isReg())
@@ -1776,7 +1776,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
       continue;
     }
     // We cannot sink before the prologue
-    if (MI->isPosition() || TII->isBasicBlockPrologue(*MI)) {
+    if (MI->isPosition() || MI->getFlag(MachineInstr::BBProlog)) {
       LLVM_DEBUG(dbgs() << "AggressiveCycleSink:   Use is BasicBlock prologue, "
                            "can't sink.\n");
       continue;

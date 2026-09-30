@@ -188,7 +188,10 @@ bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
   Subtarget->checkSubtargetFeatures(MF.getFunction());
   Mode = SIModeRegisterDefaults(MF.getFunction(), *Subtarget);
-  return SelectionDAGISel::runOnMachineFunction(MF);
+  bool Changed = SelectionDAGISel::runOnMachineFunction(MF);
+  // SIFixSGPRCopies runs before finalizeLowering and relies on the flag.
+  SIInstrInfo::setEndCfBBProlog(MF);
+  return Changed;
 }
 
 bool AMDGPUDAGToDAGISel::fp16SrcZerosHighBits(unsigned Opc) const {
