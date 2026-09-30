@@ -1129,6 +1129,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
        if true, or exits it if false.
      - When in the `ready` region of a `cir.await`, it branches to the `resume`
        region when true, and to the `suspend` region when false.
+     - When in the `suspend` region of a `cir.await`, it suspends (exits `cir.await`)
+       when true, or branches to the `resume` region when false (veto suspension).
 
     Example:
 
