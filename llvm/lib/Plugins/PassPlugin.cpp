@@ -52,13 +52,11 @@ Expected<PassPlugin> PassPlugin::load(StringRef Filename) {
 
 Error llvm::passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
                                 ArrayRef<std::string> Args) {
-  constexpr unsigned Ambiguous = -1u;
   DenseMap<StringRef, unsigned> Index;
-  for (auto [I, Info] : enumerate(Infos)) {
-    auto [It, Inserted] = Index.try_emplace(Info.PluginName, I);
-    if (!Inserted)
-      It->second = Ambiguous;
-  }
+  for (auto [I, Info] : enumerate(Infos))
+    if (!Index.try_emplace(Info.PluginName, I).second)
+      return createStringError("multiple pass plugins are named '" +
+                               Twine(Info.PluginName) + "'");
   // ParseArguments takes argv-style C strings. The argument is the suffix of
   // Arg after the first comma, so it is NUL-terminated and needs no copy.
   SmallVector<SmallVector<const char *, 0>, 0> PluginArgs(Infos.size());
@@ -71,9 +69,6 @@ Error llvm::passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
     if (It == Index.end())
       return createStringError("no pass plugin named '" + Name +
                                "' is loaded, in -plugin-arg=" + Arg);
-    if (It->second == Ambiguous)
-      return createStringError("multiple pass plugins are named '" + Name +
-                               "', in -plugin-arg=" + Arg);
     PluginArgs[It->second].push_back(Rest.data());
   }
   for (auto [Info, PArgs] : zip_equal(Infos, PluginArgs)) {

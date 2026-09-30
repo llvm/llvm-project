@@ -122,8 +122,8 @@ private:
 };
 
 /// Passes each "<PluginName>,<arg>" in \p Args to the \c ParseArguments
-/// callback of the extension in \p Infos with that name. An argument for a name
-/// shared by several extensions is an error.
+/// callback of the extension in \p Infos with that name. Two extensions with
+/// the same name are an error.
 LLVM_ABI Error passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
                                    ArrayRef<std::string> Args);
 } // namespace llvm
