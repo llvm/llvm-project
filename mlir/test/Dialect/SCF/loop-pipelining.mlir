@@ -316,7 +316,7 @@ func.func @long_liverange(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-NEXT:   %[[ADD0:.*]] = arith.addf %[[L0]], %{{.*}} : f32
 //  CHECK-NEXT:   %[[L1:.*]] = memref.load %[[A]][%[[C1]]] : memref<?xf32>
 //  CHECK-NEXT:   %[[ADD1:.*]] = arith.addf %[[L1]], %{{.*}} : f32
-//  CHECK-NEXT:   %[[MUL0:.*]] = arith.mulf %[[ADD0]], %[[L0]] : f32
+//  CHECK-NEXT:   %[[MUL0:.*]] = arith.mulf %[[L0]], %[[ADD0]] : f32
 //  CHECK-NEXT:   %[[L2:.*]] = memref.load %[[A]][%[[C2]]] : memref<?xf32>
 // Kernel:
 //  CHECK-NEXT:   %[[LR:.*]]:4 = scf.for %[[IV:.*]] = %[[C0]] to %[[C7]]
@@ -324,7 +324,7 @@ func.func @long_liverange(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-SAME:     %[[LA2:.*]] = %[[L2]], %[[ADDARG1:.*]] = %[[ADD1]],
 //  CHECK-SAME:     %[[MULARG0:.*]] = %[[MUL0]]) -> (f32, f32, f32, f32) {
 //  CHECK-NEXT:     %[[ADD2:.*]] = arith.addf %[[LA2]], %{{.*}} : f32
-//  CHECK-NEXT:     %[[MUL1:.*]] = arith.mulf %[[ADDARG1]], %[[LA1]] : f32
+//  CHECK-NEXT:     %[[MUL1:.*]] = arith.mulf %[[LA1]], %[[ADDARG1]] : f32
 //  CHECK-NEXT:     memref.store %[[MULARG0]], %[[R]][%[[IV]]] : memref<?xf32>
 //  CHECK-NEXT:     %[[IV3:.*]] = arith.addi %[[IV]], %[[C3]] : index
 //  CHECK-NEXT:     %[[L3:.*]] = memref.load %[[A]][%[[IV3]]] : memref<?xf32>
@@ -332,9 +332,9 @@ func.func @long_liverange(%A: memref<?xf32>, %result: memref<?xf32>) {
 //  CHECK-NEXT:   }
 // Epilogue:
 //  CHECK-NEXT:   %[[ADD3:.*]] = arith.addf %[[LR]]#1, %{{.*}} : f32
-//  CHECK-NEXT:   %[[MUL2:.*]] = arith.mulf %[[LR]]#2, %[[LR]]#0 : f32
+//  CHECK-NEXT:   %[[MUL2:.*]] = arith.mulf %[[LR]]#0, %[[LR]]#2 : f32
 //  CHECK-NEXT:   memref.store %[[LR]]#3, %[[R]][%[[C7]]] : memref<?xf32>
-//  CHECK-NEXT:   %[[MUL3:.*]] = arith.mulf %[[ADD3]], %[[LR]]#1 : f32
+//  CHECK-NEXT:   %[[MUL3:.*]] = arith.mulf %[[LR]]#1, %[[ADD3]] : f32
 //  CHECK-NEXT:   memref.store %[[MUL2]], %[[R]][%[[C8]]] : memref<?xf32>
 //  CHECK-NEXT:   memref.store %[[MUL3]], %[[R]][%[[C9]]] : memref<?xf32>
 func.func @multiple_uses(%A: memref<?xf32>, %result: memref<?xf32>) {

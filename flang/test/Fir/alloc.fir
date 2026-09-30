@@ -176,7 +176,7 @@ func.func @alloca_dynarray_of_nonchar(%e: index) -> !fir.ref<!fir.array<3x?xi32>
 // CHECK-LABEL: define ptr @alloca_dynarray_of_nonchar2(
 // CHECK-SAME: i64 %[[extent:.*]])
 // CHECK: %[[prod1:.*]] = mul i64 %[[extent]], 1
-// CHECK: %[[prod2:.*]] = mul i64 %[[prod1]], %[[extent]]
+// CHECK: %[[prod2:.*]] = mul i64 %[[extent]], %[[prod1]]
 // CHECK: alloca i32, i64 %[[prod2]]
 func.func @alloca_dynarray_of_nonchar2(%e: index) -> !fir.ref<!fir.array<?x?xi32>> {
   %1 = fir.alloca !fir.array<?x?xi32>, %e, %e
@@ -218,7 +218,7 @@ func.func @alloca_dynarray_of_char(%e : index) -> !fir.ref<!fir.array<3x?x!fir.c
 // CHECK-LABEL: define ptr @alloca_dynarray_of_char2(
 // CHECK-SAME: i64 %[[extent:.*]])
 // CHECK: %[[prod1:.*]] = mul i64 %[[extent]], 1
-// CHECK: %[[prod2:.*]] = mul i64 %[[prod1]], %[[extent]]
+// CHECK: %[[prod2:.*]] = mul i64 %[[extent]], %[[prod1]]
 // CHECK: alloca [10 x i16], i64 %[[prod2]]
 func.func @alloca_dynarray_of_char2(%e : index) -> !fir.ref<!fir.array<?x?x!fir.char<2,10>>> {
   %1 = fir.alloca !fir.array<?x?x!fir.char<2,10>>, %e, %e
@@ -263,7 +263,7 @@ func.func @alloca_dynarray_of_dynchar(%l: i32, %e : index) -> !fir.ref<!fir.arra
 // CHECK-SAME: i32 %[[len:.*]], i64 %[[extent:.*]])
 // CHECK: %[[prod1:.*]] = sext i32 %[[len]] to i64
 // CHECK: %[[prod2:.*]] = mul i64 %[[prod1]], %[[extent]]
-// CHECK: %[[prod3:.*]] = mul i64 %[[prod2]], %[[extent]]
+// CHECK: %[[prod3:.*]] = mul i64 %[[extent]], %[[prod2]]
 // CHECK: alloca i16, i64 %[[prod3]]
 func.func @alloca_dynarray_of_dynchar2(%l: i32, %e : index) -> !fir.ref<!fir.array<?x?x!fir.char<2,?>>> {
   %1 = fir.alloca !fir.array<?x?x!fir.char<2,?>>(%l : i32), %e, %e

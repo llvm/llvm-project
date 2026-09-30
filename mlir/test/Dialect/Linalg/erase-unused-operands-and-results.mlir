@@ -307,10 +307,10 @@ func.func @multiple_redundant_args(%arg0 : tensor<?x?xi32>, %arg1 : tensor<?xi32
 // CHECK-SAME:       %[[B3:[a-zA-Z0-9_]+]]: i32
 // CHECK-SAME:       %[[B4:[a-zA-Z0-9_]+]]: i32)
 //      CHECK:     %[[T0:.+]] = arith.addi %[[B0]], %[[B1]]
-//      CHECK:     %[[T1:.+]] = arith.addi %[[T0]], %[[B1]]
+//      CHECK:     %[[T1:.+]] = arith.addi %[[B1]], %[[T0]]
 //      CHECK:     %[[T2:.+]] = arith.addi %[[T1]], %[[B2]]
 //      CHECK:     %[[T3:.+]] = arith.addi %[[T2]], %[[B3]]
-//      CHECK:     %[[T4:.+]] = arith.addi %[[T3]], %[[B3]]
+//      CHECK:     %[[T4:.+]] = arith.addi %[[B3]], %[[T3]]
 //      CHECK:     %[[T5:.+]] = arith.addi %[[T4]], %[[B4]]
 //      CHECK:     linalg.yield %[[T5]]
 //      CHECK:  return %[[RETURN]]
