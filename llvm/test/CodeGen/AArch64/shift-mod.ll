@@ -36,27 +36,27 @@ define i64 @test2(i32 %x, i64 %y) {
 }
 
 define i64 @test3(i64 %x, i64 %y) {
-; CHECK-SD-LABEL: test3:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    lsl x0, x1, x0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test3:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    add x8, x0, #64
-; CHECK-GI-NEXT:    lsl x0, x1, x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl x0, x1, x0
+; CHECK-NEXT:    ret
   %add = add nsw i64 64, %x
   %shl = shl i64 %y, %add
   ret i64 %shl
 }
 
 define i64 @test4(i64 %y, i32 %s) {
-; CHECK-LABEL: test4:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    asr x0, x0, x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test4:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-SD-NEXT:    asr x0, x0, x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test4:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov w8, w1
+; CHECK-GI-NEXT:    asr x0, x0, x8
+; CHECK-GI-NEXT:    ret
 entry:
   %sh_prom = zext i32 %s to i64
   %shr = ashr i64 %y, %sh_prom
@@ -64,11 +64,18 @@ entry:
 }
 
 define i64 @test5(i64 %y, i32 %s) {
-; CHECK-LABEL: test5:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    asr x0, x0, x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test5:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-SD-NEXT:    asr x0, x0, x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test5:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-GI-NEXT:    sxtw x8, w1
+; CHECK-GI-NEXT:    asr x0, x0, x8
+; CHECK-GI-NEXT:    ret
 entry:
   %sh_prom = sext i32 %s to i64
   %shr = ashr i64 %y, %sh_prom
@@ -76,11 +83,18 @@ entry:
 }
 
 define i64 @test6(i64 %y, i32 %s) {
-; CHECK-LABEL: test6:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    lsl x0, x0, x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test6:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-SD-NEXT:    lsl x0, x0, x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test6:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-GI-NEXT:    sxtw x8, w1
+; CHECK-GI-NEXT:    lsl x0, x0, x8
+; CHECK-GI-NEXT:    ret
 entry:
   %sh_prom = sext i32 %s to i64
   %shr = shl i64 %y, %sh_prom
@@ -191,3 +205,184 @@ define i64 @ashr_add_shl_mismatch_shifts2(i64 %r) {
   %conv1 = ashr i64 %sext, 8
   ret i64 %conv1
 }
+
+; Test that narrow shift amounts (i8/i16) don't generate redundant AND.
+define i32 @shl_i32_i8(i32 %x, i8 %amt) {
+; CHECK-LABEL: shl_i32_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w0, w0, w1
+; CHECK-NEXT:    ret
+  %ext = zext i8 %amt to i32
+  %r = shl i32 %x, %ext
+  ret i32 %r
+}
+
+define i32 @lshr_i32_i8(i32 %x, i8 %amt) {
+; CHECK-LABEL: lshr_i32_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr w0, w0, w1
+; CHECK-NEXT:    ret
+  %ext = zext i8 %amt to i32
+  %r = lshr i32 %x, %ext
+  ret i32 %r
+}
+
+define i32 @ashr_i32_i8(i32 %x, i8 %amt) {
+; CHECK-LABEL: ashr_i32_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    asr w0, w0, w1
+; CHECK-NEXT:    ret
+  %ext = zext i8 %amt to i32
+  %r = ashr i32 %x, %ext
+  ret i32 %r
+}
+
+define i32 @shl_i32_i16(i32 %x, i16 %amt) {
+; CHECK-LABEL: shl_i32_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w0, w0, w1
+; CHECK-NEXT:    ret
+  %ext = zext i16 %amt to i32
+  %r = shl i32 %x, %ext
+  ret i32 %r
+}
+
+define i64 @shl_i64_i8(i64 %x, i8 %amt) {
+; CHECK-LABEL: shl_i64_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    lsl x0, x0, x1
+; CHECK-NEXT:    ret
+  %ext = zext i8 %amt to i64
+  %r = shl i64 %x, %ext
+  ret i64 %r
+}
+
+define i64 @lshr_i64_i8(i64 %x, i8 %amt) {
+; CHECK-LABEL: lshr_i64_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    lsr x0, x0, x1
+; CHECK-NEXT:    ret
+  %ext = zext i8 %amt to i64
+  %r = lshr i64 %x, %ext
+  ret i64 %r
+}
+
+define i64 @ashr_i64_i16(i64 %x, i16 %amt) {
+; CHECK-LABEL: ashr_i64_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    asr x0, x0, x1
+; CHECK-NEXT:    ret
+  %ext = zext i16 %amt to i64
+  %r = ashr i64 %x, %ext
+  ret i64 %r
+}
+
+; Test ADD/SUB by multiple of shift size is optimized away.
+define i32 @shl_i32_add64(i32 %x, i32 %amt) {
+; CHECK-LABEL: shl_i32_add64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w0, w0, w1
+; CHECK-NEXT:    ret
+  %add = add i32 %amt, 64
+  %r = shl i32 %x, %add
+  ret i32 %r
+}
+
+define i32 @lshr_i32_add32(i32 %x, i32 %amt) {
+; CHECK-LABEL: lshr_i32_add32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr w0, w0, w1
+; CHECK-NEXT:    ret
+  %add = add i32 %amt, 32
+  %r = lshr i32 %x, %add
+  ret i32 %r
+}
+
+define i64 @shl_i64_add64(i64 %x, i64 %amt) {
+; CHECK-LABEL: shl_i64_add64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl x0, x0, x1
+; CHECK-NEXT:    ret
+  %add = add i64 %amt, 64
+  %r = shl i64 %x, %add
+  ret i64 %r
+}
+
+; Test SUB N-X where N == 0 mod size generates NEG.
+define i32 @shl_i32_sub64(i32 %x, i32 %amt) {
+; CHECK-LABEL: shl_i32_sub64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    lsl w0, w0, w8
+; CHECK-NEXT:    ret
+  %sub = sub i32 64, %amt
+  %r = shl i32 %x, %sub
+  ret i32 %r
+}
+
+define i64 @lshr_i64_sub64(i64 %x, i64 %amt) {
+; CHECK-LABEL: lshr_i64_sub64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg x8, x1
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %sub = sub i64 64, %amt
+  %r = lshr i64 %x, %sub
+  ret i64 %r
+}
+
+; Test SUB N-X where N == -1 mod size generates MVN.
+define i32 @shl_i32_sub63(i32 %x, i32 %amt) {
+; CHECK-LABEL: shl_i32_sub63:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w8, w1
+; CHECK-NEXT:    lsl w0, w0, w8
+; CHECK-NEXT:    ret
+  %sub = sub i32 63, %amt
+  %r = shl i32 %x, %sub
+  ret i32 %r
+}
+
+define i64 @lshr_i64_sub63(i64 %x, i64 %amt) {
+; CHECK-LABEL: lshr_i64_sub63:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn x8, x1
+; CHECK-NEXT:    lsr x0, x0, x8
+; CHECK-NEXT:    ret
+  %sub = sub i64 63, %amt
+  %r = lshr i64 %x, %sub
+  ret i64 %r
+}
+
+; Test rotate with masked/modified shift amount.
+define i32 @rotr_i32_and(i32 %x, i32 %amt) {
+; CHECK-SD-LABEL: rotr_i32_and:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ror w0, w0, w1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: rotr_i32_and:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and w8, w1, #0x1f
+; CHECK-GI-NEXT:    ror w0, w0, w8
+; CHECK-GI-NEXT:    ret
+  %m = and i32 %amt, 31
+  %r = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %m)
+  ret i32 %r
+}
+
+define i32 @rotr_i32_sub(i32 %x, i32 %amt) {
+; CHECK-LABEL: rotr_i32_sub:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    ror w0, w0, w8
+; CHECK-NEXT:    ret
+  %s = sub i32 64, %amt
+  %r = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %s)
+  ret i32 %r
+}
+
+declare i32 @llvm.fshr.i32(i32, i32, i32)
