@@ -1144,6 +1144,19 @@ void ArchSpec::UpdateCore() {
   // AMDGPU subarchitectures have distinct architecture names (for example,
   // "amdgpu9.42"), but all share the generic LLDB AMDGPU core definition.
   if (m_triple.getArch() == llvm::Triple::amdgpu) {
+    // Preserve support for offload target strings such as
+    // "amdgpu-amd-amdhsa--gfx942". LLVM's Triple treats the target ID as an
+    // unknown environment suffix, so recover its processor using TargetParser.
+    if (m_triple.getSubArch() == llvm::Triple::NoSubArch) {
+      llvm::StringRef target_id =
+          m_triple.getEnvironmentName().split('-').second;
+      if (!target_id.empty()) {
+        llvm::Triple::SubArchType sub_arch =
+            llvm::AMDGPU::getSubArchFromGPUName(target_id.split(':').first);
+        if (sub_arch != llvm::Triple::NoSubArch)
+          m_triple.setArch(llvm::Triple::amdgpu, sub_arch);
+      }
+    }
     core_def = FindCoreDefinition(eCore_amd_gpu);
   } else {
     core_def = FindCoreDefinition(m_triple.getArchName());

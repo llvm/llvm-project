@@ -209,6 +209,31 @@ TEST_P(ArchSpecAMDGPUTest, SetTriple) {
   EXPECT_EQ(llvm::AMDGPU::getArchNameAMDGCN(kind), AS.GetClangTargetCPU());
 }
 
+// Offload target strings encode the GPU after their four-component triple.
+TEST_P(ArchSpecAMDGPUTest, SetTripleFromOffloadTarget) {
+  const AMDGPUModel &model = GetParam();
+  llvm::AMDGPU::GPUKind kind = llvm::AMDGPU::parseArchAMDGCN(model.name);
+  ASSERT_NE(llvm::AMDGPU::GK_NONE, kind);
+
+  ArchSpec AS;
+  EXPECT_TRUE(AS.SetTriple("amdgpu-amd-amdhsa--" + std::string(model.name)));
+  EXPECT_EQ(llvm::Triple::amdgpu, AS.GetTriple().getArch());
+  EXPECT_EQ(llvm::AMDGPU::getSubArch(kind), AS.GetTriple().getSubArch());
+  EXPECT_EQ(ArchSpec::eCore_amd_gpu, AS.GetCore());
+  EXPECT_EQ(llvm::AMDGPU::getArchNameAMDGCN(kind), AS.GetClangTargetCPU());
+}
+
+TEST(ArchSpecTest, SetTripleFromAMDGPUOffloadTargetWithFeatures) {
+  ArchSpec AS("amdgpu-amd-amdhsa--gfx942:sramecc+:xnack-");
+  EXPECT_EQ(llvm::Triple::AMDGPUSubArch942, AS.GetTriple().getSubArch());
+  EXPECT_EQ("gfx942", AS.GetClangTargetCPU());
+
+  ArchSpec WithEnvironment("amdgpu-amd-amdpal-unknown-gfx942");
+  EXPECT_EQ(llvm::Triple::AMDGPUSubArch942,
+            WithEnvironment.GetTriple().getSubArch());
+  EXPECT_EQ("gfx942", WithEnvironment.GetClangTargetCPU());
+}
+
 // SetArchitecture() from an ELF header must resolve every AMDGPU model to the
 // right arch, vendor, OS, subarch and core.
 TEST_P(ArchSpecAMDGPUTest, SetArchitectureFromELF) {
@@ -323,10 +348,10 @@ TEST(ArchSpecTest, MergeFrom) {
   }
   {
     ArchSpec A, B;
-    A.SetArchitecture(eArchTypeELF, llvm::ELF::EM_ARM,
-                      LLDB_INVALID_CPUTYPE, llvm::ELF::ELFOSABI_NONE);
-    B.SetArchitecture(eArchTypeELF, llvm::ELF::EM_ARM,
-                      LLDB_INVALID_CPUTYPE, llvm::ELF::ELFOSABI_LINUX);
+    A.SetArchitecture(eArchTypeELF, llvm::ELF::EM_ARM, LLDB_INVALID_CPUTYPE,
+                      llvm::ELF::ELFOSABI_NONE);
+    B.SetArchitecture(eArchTypeELF, llvm::ELF::EM_ARM, LLDB_INVALID_CPUTYPE,
+                      llvm::ELF::ELFOSABI_LINUX);
 
     EXPECT_TRUE(A.IsValid());
     EXPECT_TRUE(B.IsValid());
@@ -393,8 +418,7 @@ TEST(ArchSpecTest, MergeFrom) {
     ArchSpec B("arm-unknown-none-eabi");
 
     A.MergeFrom(B);
-    EXPECT_EQ(llvm::Triple::ARMSubArch_v7em,
-              A.GetTriple().getSubArch());
+    EXPECT_EQ(llvm::Triple::ARMSubArch_v7em, A.GetTriple().getSubArch());
   }
 }
 
