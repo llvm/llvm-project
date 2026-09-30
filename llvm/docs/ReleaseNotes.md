@@ -308,6 +308,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed the `size_of` and `align_of` functions. Create a constant based on
   the result of `DataLayout.abi_size` or `DataLayout.abi_align` instead.
 
+* `DataLayout` has been moved from `Llvm_target` to `Llvm`.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API
@@ -315,6 +317,9 @@ Makes programs 10x faster by doing Special New Thing.
 * `LLVMAlignOf()` and `LLVMSizeOf()` have been deprecated. Create a constant
   based on the result of `LLVMABIAlignmentOfType()` or `LLVMABISizeOfType()`
   instead.
+
+* Bindings operating on data layout (`LLVMTargetDataRef`) have been moved
+  from `Target.h` (`Target` library) to `Core.h` (`IR` library).
 
 ### Changes to the CodeGen infrastructure
 
