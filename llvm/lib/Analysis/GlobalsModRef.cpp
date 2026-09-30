@@ -500,7 +500,9 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
 
     Function *FirstF = SCC[0]->getFunction();
 
-    if (!FirstF || !FirstF->isDefinitionExact()) {
+    // noipa functions are handled like declarations below, using only their
+    // attributes, so they don't need an exact definition.
+    if (!FirstF || (!FirstF->isDefinitionExact() && !FirstF->isNoIPA())) {
       // Calls externally or not exact - can't say anything useful. Remove any
       // existing function records (may have been created when scanning
       // globals).
@@ -535,7 +537,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
         break;
       }
 
-      if (F->isDeclaration() || F->hasOptNone()) {
+      if (F->isDeclaration() || F->isNoIPA()) {
         // Try to get mod/ref behaviour from function attributes.
         if (F->doesNotAccessMemory()) {
           // Can't do better than that!
@@ -588,10 +590,10 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
       if (isModAndRefSet(FI.getModRefInfo()))
         break; // The mod/ref lattice saturates here.
 
-      // Don't prove any properties based on the implementation of an optnone
-      // function. Function attributes were already used as a best approximation
-      // above.
-      if (Node->getFunction()->hasOptNone())
+      // Don't prove any properties based on the implementation of a noipa
+      // (including optnone) function. Function attributes were already used as
+      // a best approximation above.
+      if (Node->getFunction()->isNoIPA())
         continue;
 
       for (Instruction &I : instructions(Node->getFunction())) {

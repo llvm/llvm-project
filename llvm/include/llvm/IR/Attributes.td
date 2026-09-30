@@ -224,6 +224,8 @@ def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
 def NoOutline : EnumAttr<"nooutline", IntersectPreserve, [FnAttr]>;
 
 /// Do not do interprocedural analysis or optimization including this function
+/// Note: optnone implies noipa. Use Function::isNoIPA() or
+/// GlobalValue::isInterposable() rather than querying this attribute directly.
 def NoIPA : EnumAttr<"noipa", IntersectPreserve, [FnAttr]>;
 
 /// Function is called early and/or often, so lazy binding isn't worthwhile.

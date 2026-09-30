@@ -18,7 +18,7 @@ declare i32 @foo_on();
 
 define i32 @main() "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" {
 entry:
-  %add = call i32 @foo_on()
+  %add = notail call i32 @foo_on()
   ret i32 %add
 }
 

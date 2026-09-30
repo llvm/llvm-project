@@ -2465,7 +2465,8 @@ define void @f() "no-sse" { ... }
     still respected (as they would be if they remained on a function declaration
     in this module). This attribute does *not* control inlining or outlining.
     Add the `noinline` and `nooutline` attributes as well in cases where
-    inlining and outlining should additionally be disabled.
+    inlining and outlining should additionally be disabled. The `optnone`
+    attribute implies `noipa`.
 
 `nomerge`
 :   This attribute indicates that calls to this function should never be merged
@@ -2590,9 +2591,9 @@ fn -> other_fn -> other_fn ; fn is norecurse
 
 `optnone`
 :   This function attribute indicates that most optimization passes will skip
-    this function, with the exception of interprocedural optimization passes.
-    Interprocedural passes may still analyze this function, transform its body,
-    and refine its attributes, but they will not rewrite its signature.
+    this function. This attribute implies `noipa`, so interprocedural
+    analysis will not inspect this function's definition, and interprocedural
+    passes will not rewrite its signature.
     Code generation defaults to the "fast" instruction selector.
     This attribute cannot be used together with the `alwaysinline`
     attribute; this attribute is also incompatible

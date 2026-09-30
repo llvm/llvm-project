@@ -222,10 +222,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to Interprocedural Optimizations
 
-- Interprocedural passes no longer rewrite the signature of functions marked
-  `optnone`, so their argument list, return type, and calling convention are
-  preserved. Interprocedural analysis and transformation of such functions is
-  otherwise unaffected.
+- The `optnone` function attribute now implies `noipa`. Interprocedural
+  analysis no longer inspects the definitions of `optnone` functions, and
+  interprocedural passes no longer rewrite their signatures. Use
+  `Function::isNoIPA()` (or `GlobalValue::isInterposable()`) to query this.
 
 - The IR Outliner has been removed, due to lack of a maintainer and the presence
   of correctness issues.

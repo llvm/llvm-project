@@ -685,11 +685,18 @@ public:
   /// Do not optimize this function (-O0).
   bool hasOptNone() const { return hasFnAttribute(Attribute::OptimizeNone); }
 
+  /// Determine if interprocedural analysis and optimization based on this
+  /// function's definition is disabled. This is the case if the function has
+  /// the noipa attribute, or the optnone attribute (which implies noipa).
+  /// Prefer this over querying Attribute::NoIPA directly.
+  bool isNoIPA() const {
+    return hasFnAttribute(Attribute::NoIPA) || hasOptNone();
+  }
+
   /// Determine whether interprocedural transforms may rewrite this function's
   /// signature.
   bool canChangeSignature() const {
-    return !hasFnAttribute(Attribute::Naked) &&
-           !hasFnAttribute(Attribute::NoIPA) && !hasOptNone();
+    return !hasFnAttribute(Attribute::Naked) && !isNoIPA();
   }
 
   /// Optimize this function for minimum size (-Oz).
