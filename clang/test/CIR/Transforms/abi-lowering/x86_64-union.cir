@@ -497,10 +497,11 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @ret_bit_array_unit(%arg0: !u32i) -> !u32i
-  // CHECK:   %[[RETSLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_UBitArrayUnit>
-  // CHECK:   %[[RETCAST:.*]] = cir.cast bitcast %[[RETSLOT]] : !cir.ptr<!rec_UBitArrayUnit> -> !cir.ptr<!u32i>
-  // CHECK:   %[[RETVAL:.*]] = cir.load %[[RETCAST]] : !cir.ptr<!u32i>, !u32i
-  // CHECK:   cir.return %[[RETVAL]] : !u32i
+  // CHECK:   %[[RETSLOT:.*]] = cir.alloca "u" align(4) : !cir.ptr<!rec_UBitArrayUnit>
+  // CHECK-NEXT:   cir.store %{{.*}}, %[[RETSLOT]] : !rec_UBitArrayUnit, !cir.ptr<!rec_UBitArrayUnit>
+  // CHECK-NEXT:   %[[RETCAST:.*]] = cir.cast bitcast %[[RETSLOT]] : !cir.ptr<!rec_UBitArrayUnit> -> !cir.ptr<!u32i>
+  // CHECK-NEXT:   %[[RETVAL:.*]] = cir.load align(4) %[[RETCAST]] : !cir.ptr<!u32i>, !u32i
+  // CHECK-NEXT:   cir.return %[[RETVAL]] : !u32i
 
   cir.func @call_bit_array_unit(%arg0: !rec_UBitArrayUnit) {
     cir.call @take_bit_array_unit(%arg0) : (!rec_UBitArrayUnit) -> ()
@@ -777,11 +778,11 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @ret_int_float(%arg0: !s32i) -> !s32i
-  // CHECK:   %[[RETSLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_UIntFloat>
-  // CHECK:   cir.store %{{.*}}, %[[RETSLOT]] : !rec_UIntFloat, !cir.ptr<!rec_UIntFloat>
-  // CHECK:   %[[RETCAST:.*]] = cir.cast bitcast %[[RETSLOT]] : !cir.ptr<!rec_UIntFloat> -> !cir.ptr<!s32i>
-  // CHECK:   %[[RET:.*]] = cir.load %[[RETCAST]] : !cir.ptr<!s32i>, !s32i
-  // CHECK:   cir.return %[[RET]] : !s32i
+  // CHECK:   %[[RETSLOT:.*]] = cir.alloca "u" align(4) : !cir.ptr<!rec_UIntFloat>
+  // CHECK-NEXT:   cir.store %{{.*}}, %[[RETSLOT]] : !rec_UIntFloat, !cir.ptr<!rec_UIntFloat>
+  // CHECK-NEXT:   %[[RETCAST:.*]] = cir.cast bitcast %[[RETSLOT]] : !cir.ptr<!rec_UIntFloat> -> !cir.ptr<!s32i>
+  // CHECK-NEXT:   %[[RET:.*]] = cir.load align(4) %[[RETCAST]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT:   cir.return %[[RET]] : !s32i
 
   // A union return too large for registers uses the caller's sret slot.
   cir.func @ret_big(%arg0: !rec_UBig) -> !rec_UBig {
