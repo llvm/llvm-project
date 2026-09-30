@@ -1941,10 +1941,7 @@ static int encodeCustomOperand(const CustomOperandVal *Opr, int Size,
 namespace DepCtr {
 
 int getDefaultDepCtrEncoding(const MCSubtargetInfo &STI) {
-  static int Default = -1;
-  if (Default == -1)
-    Default = getDefaultCustomOperandEncoding(DepCtrInfo, DEP_CTR_SIZE, STI);
-  return Default;
+  return getDefaultCustomOperandEncoding(DepCtrInfo, DEP_CTR_SIZE, STI);
 }
 
 bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
