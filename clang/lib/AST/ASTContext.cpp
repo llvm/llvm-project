@@ -15953,9 +15953,10 @@ private:
     // leading bits are not value bits. Treat the field as occupied up to the
     // storage size of _BitInt(N) so that the value bits are never cleared.
     // Bits beyond the storage size are padding.
-    const uint64_t End = Start + (FieldTy->isBitIntType()
-                 ? std::min(DeclaredSizeInBits, Ctx.getTypeSize(FieldTy))
-                 : OccupiedSizeInBits);
+    const uint64_t End =
+        Start + (FieldTy->isBitIntType()
+                     ? std::min(DeclaredSizeInBits, Ctx.getTypeSize(FieldTy))
+                     : OccupiedSizeInBits);
     const uint64_t CharWidth = Ctx.getCharWidth();
 
     // Special case: all the occupied bits are contained within a single byte.
