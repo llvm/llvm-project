@@ -57,6 +57,7 @@ tools = [
     ),
     ToolSubst("%llvm_src_root", config.llvm_src_root),
     ToolSubst("%llvm_tools_dir", config.llvm_tools_dir),
+    *config.cross_project_test_tools,
 ]
 
 
@@ -291,6 +292,15 @@ else:
 tool_dirs = [config.llvm_tools_dir]
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
+
+# Reject any unlisted llvm-* tool so tests cannot silently pick up binaries
+# from $PATH when a tool is missing from CROSS_PROJECT_TEST_TOOLS.
+config.substitutions.append(
+    (
+        r"(^|\s+|\|)\s*(llvm-[a-z0-9-]+)\b",
+        r"\1false 'missing CROSS_PROJECT_TEST_TOOLS substitution for \2'",
+    )
+)
 
 lit.util.usePlatformSdkOnDarwin(config, lit_config)
 
