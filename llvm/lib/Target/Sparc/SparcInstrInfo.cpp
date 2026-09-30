@@ -451,7 +451,8 @@ void SparcInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     }
   }
 
-  BuildMI(&MBB, DL, get(SP::CALL)).addMBB(IsO7Used ? &RestoreBB : &NewDestBB);
+  BuildMI(&MBB, DL, get(SP::CALL_LONGJUMP))
+      .addMBB(IsO7Used ? &RestoreBB : &NewDestBB);
 
   if (IsO7Used) {
     if (ScratchReg.isValid()) {
