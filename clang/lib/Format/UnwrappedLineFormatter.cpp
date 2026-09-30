@@ -8,7 +8,6 @@
 
 #include "UnwrappedLineFormatter.h"
 #include "FormatToken.h"
-#include "NamespaceEndCommentsFixer.h"
 #include "WhitespaceManager.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
@@ -1572,7 +1571,7 @@ unsigned UnwrappedLineFormatter::format(
     if (ShouldFormat && TheLine.Type != LT_Invalid) {
       if (!DryRun) {
         bool LastLine = TheLine.First->is(tok::eof);
-        formatFirstToken(TheLine, PreviousLine, PrevPrevLine, Lines, Indent,
+        formatFirstToken(TheLine, PreviousLine, PrevPrevLine, Indent,
                          LastLine ? LastStartColumn : NextStartColumn + Indent);
       }
 
@@ -1620,7 +1619,7 @@ unsigned UnwrappedLineFormatter::format(
                               TheLine.LeadingEmptyLinesAffected);
         // Format the first token.
         if (ReformatLeadingWhitespace) {
-          formatFirstToken(TheLine, PreviousLine, PrevPrevLine, Lines,
+          formatFirstToken(TheLine, PreviousLine, PrevPrevLine,
                            TheLine.First->OriginalColumn,
                            TheLine.First->OriginalColumn);
         } else {
@@ -1645,7 +1644,6 @@ unsigned UnwrappedLineFormatter::format(
 static auto computeNewlines(const AnnotatedLine &Line,
                             const AnnotatedLine *PreviousLine,
                             const AnnotatedLine *PrevPrevLine,
-                            const SmallVectorImpl<AnnotatedLine *> &Lines,
                             const FormatStyle &Style) {
   const auto &RootToken = *Line.First;
   if (isClangFormatOn(RootToken.TokenText))
@@ -1657,7 +1655,7 @@ static auto computeNewlines(const AnnotatedLine &Line,
       (!RootToken.Next ||
        (RootToken.Next->is(tok::semi) && !RootToken.Next->Next)) &&
       // Do not remove empty lines before namespace closing "}".
-      !getNamespaceToken(&Line, Lines)) {
+      (Line.InPPDirective || !Line.startsWith(TT_NamespaceRBrace))) {
     Newlines = std::min(Newlines, 1u);
   }
   // Remove empty lines at the start of nested blocks (lambdas/arrow functions)
@@ -1753,11 +1751,11 @@ static auto computeNewlines(const AnnotatedLine &Line,
   return Newlines;
 }
 
-void UnwrappedLineFormatter::formatFirstToken(
-    const AnnotatedLine &Line, const AnnotatedLine *PreviousLine,
-    const AnnotatedLine *PrevPrevLine,
-    const SmallVectorImpl<AnnotatedLine *> &Lines, unsigned Indent,
-    unsigned NewlineIndent) {
+void UnwrappedLineFormatter::formatFirstToken(const AnnotatedLine &Line,
+                                              const AnnotatedLine *PreviousLine,
+                                              const AnnotatedLine *PrevPrevLine,
+                                              unsigned Indent,
+                                              unsigned NewlineIndent) {
   FormatToken &RootToken = *Line.First;
   if (RootToken.is(tok::eof)) {
     unsigned Newlines = std::min(
@@ -1771,7 +1769,7 @@ void UnwrappedLineFormatter::formatFirstToken(
 
   if (RootToken.Newlines < 0) {
     RootToken.Newlines =
-        computeNewlines(Line, PreviousLine, PrevPrevLine, Lines, Style);
+        computeNewlines(Line, PreviousLine, PrevPrevLine, Style);
     assert(RootToken.Newlines >= 0);
   }
 
