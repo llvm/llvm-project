@@ -25927,6 +25927,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     // Need to generate insertion point for loads nodes of the bitcast/bswap
     // ops.
     if (TE->isGather() || DeletedNodes.contains(TE.get()) ||
+        TE->State == TreeEntry::SplitVectorize ||
         (TE->State == TreeEntry::CombinedVectorize &&
          (TE->CombinedOp == TreeEntry::ReducedBitcast ||
           TE->CombinedOp == TreeEntry::ReducedBitcastBSwap ||
