@@ -913,7 +913,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   // If DWARF address space value is other than None, add it.  The IR
   // verifier checks that DWARF address space only exists for pointer
   // or reference types.
-  if (auto AS = DTy->getDWARFAddressSpace())
+  if (std::optional<unsigned> AS = DTy->getDWARFAddressSpace())
     addUInt(Buffer, Asm->getTypeAddressSpaceAttribute(), dwarf::DW_FORM_data4,
             *AS);
 
