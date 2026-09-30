@@ -2154,20 +2154,7 @@ MVT RISCVTargetLowering::getVPExplicitVectorLengthTy() const {
 }
 
 // Return false to lower the fold of vscale add to RISCV.
-bool RISCVTargetLowering::isDesirableToFoldVScaleAdd(const SDNode *N) const {
-  // Fold (add (add A, (vscale C1)), (vscale C2))
-  //   -> (add A, (vscale (C1 + C2)))
-  // Optimize only when (add A, (vscale C1)) is not reused.
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
-  if (N0.getOpcode() == ISD::ADD &&
-      N0.getOperand(1).getOpcode() == ISD::VSCALE &&
-      N1.getOpcode() == ISD::VSCALE && N0.hasOneUse())
-      return true;
-
-  return false; 
-}
+bool RISCVTargetLowering::isDesirableToFoldVScaleAdd() const { return false; }
 
 // Return false if we can lower get_vector_length to a vsetvli intrinsic.
 bool RISCVTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,
