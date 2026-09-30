@@ -13492,14 +13492,12 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       return RHS;
   }
 
-  bool PositiveStride = isKnownPositive(Stride);
-  bool IVcanOverFlowOnLT = false;
   const SCEV *GuardedStride = Stride;
 
   // Whether the IV may reach the maximum value before the exit is taken.
   bool IVMayOverflow = true;
-
   bool PositiveStride = isKnownPositive(Stride);
+
   // A dominating guard may prove the stride positive.
   if (!PositiveStride) {
     const SCEV *LoopGuardedStride = applyLoopGuards(Stride, L);
@@ -13580,15 +13578,17 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         Stride = getUMaxExpr(Stride, getOne(Stride->getType()));
       }
     }
-  } else if (!NoWrap) {
+  } 
+  else if (NoWrap) {
+    IVMayOverflow = false;
+  } else {
     // Avoid proven overflow cases: this will ensure that the backedge taken
     // count will not generate any unsigned overflow.
-    IVcanOverFlowOnLT = canIVOverflowOnLT(RHS, Stride, IsSigned);
-    if (IVcanOverFlowOnLT) {
-      if (!AllowPredicates)
-        return getCouldNotCompute();
-    }
+    IVMayOverflow = canIVOverflowOnLT(RHS, Stride, IsSigned);
+    if (IVMayOverflow && !AllowPredicates)
+      return getCouldNotCompute();
   }
+  
 
   // On all paths just preceeding, we established the following invariant:
   //   IV can be assumed not to overflow up to and including the exiting
@@ -13601,7 +13601,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
 
   // Add a predicate to ensure RHS does not exceed the maximum value
   // that can be represented without overflow, given the stride.
-  if (!NoWrap && IVcanOverFlowOnLT) {
+  if (!NoWrap && IVMayOverflow) {
     unsigned BitWidth = getTypeSizeInBits(RHS->getType());
     const SCEV *One = getOne(Stride->getType());
     const SCEV *StrideMinusOne = getMinusSCEV(Stride, One);

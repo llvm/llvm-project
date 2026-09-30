@@ -14,11 +14,10 @@ define void @stride3(ptr noalias %x, i32 %l, i32 %u) {
 ; CHECK:       [[LOOP_BODY_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[L]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[U]], i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], [[L]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], -3
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -3
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], [[L]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP3]], i32 1)
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], -3
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = udiv i32 [[TMP6]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP4]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP8]], 1
@@ -43,7 +42,7 @@ define void @stride3(ptr noalias %x, i32 %l, i32 %u) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[IDENT_CHECK]], [[TMP18]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP9]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP9]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP9]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = mul i32 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP21:%.*]] = add i32 [[L]], [[TMP20]]
@@ -67,10 +66,10 @@ define void @stride3(ptr noalias %x, i32 %l, i32 %u) {
 ; CHECK-NEXT:    [[TMP32:%.*]] = load i32, ptr [[TMP26]], align 4
 ; CHECK-NEXT:    [[TMP33:%.*]] = load i32, ptr [[TMP28]], align 4
 ; CHECK-NEXT:    [[TMP34:%.*]] = load i32, ptr [[TMP30]], align 4
-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x i32> poison, i32 [[TMP31]], i32 0
-; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x i32> [[TMP35]], i32 [[TMP32]], i32 1
-; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x i32> [[TMP36]], i32 [[TMP33]], i32 2
-; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x i32> [[TMP37]], i32 [[TMP34]], i32 3
+; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x i32> poison, i32 [[TMP31]], i64 0
+; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x i32> [[TMP35]], i32 [[TMP32]], i64 1
+; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x i32> [[TMP36]], i32 [[TMP33]], i64 2
+; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x i32> [[TMP37]], i32 [[TMP34]], i64 3
 ; CHECK-NEXT:    [[TMP39:%.*]] = add nsw <4 x i32> [[TMP38]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <4 x i32> [[TMP39]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP40]], ptr [[TMP24]], align 4
