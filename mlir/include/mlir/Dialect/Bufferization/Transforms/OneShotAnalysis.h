@@ -91,8 +91,9 @@ public:
   /// the options when set; otherwise computed by walking the IR.
   bool mayHaveUnstructuredControlFlow() const { return mayHaveUnstructuredCF; }
 
-  /// True if any allowed op in the analyzed IR has a parallel region.
-  bool hasParallelRegion() const { return containsParallelRegion; }
+  /// True if the analyzed IR may contain a parallel region. Taken from the
+  /// options when set; otherwise computed by walking the IR.
+  bool mayHaveParallelRegions() const { return mayHaveParallelRegionsFlag; }
 
   /// Analyze the given op and its nested ops.
   LogicalResult analyzeOp(Operation *op, const DominanceInfo &domInfo);
@@ -270,8 +271,8 @@ private:
   /// True if any region has more than one block.
   bool mayHaveUnstructuredCF = false;
 
-  /// True if any allowed op has a parallel region.
-  bool containsParallelRegion = false;
+  /// True if the analyzed IR may contain a parallel region.
+  bool mayHaveParallelRegionsFlag = false;
 
   /// Cached CFG reachability. Defined out-of-line to keep BitVector out of
   /// this header.

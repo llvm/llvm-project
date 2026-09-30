@@ -136,6 +136,7 @@ OneShotAnalysisState::OneShotAnalysisState(
     : AnalysisState(options, TypeID::get<OneShotAnalysisState>()) {
   mayHaveUnstructuredCF = options.mayHaveUnstructuredControlFlow.value_or(
       detectUnstructuredControlFlow(op));
+  mayHaveParallelRegionsFlag = options.mayHaveParallelRegions.value_or(false);
 
   // Set up alias sets.
   op->walk([&](Operation *op) {
@@ -157,10 +158,11 @@ OneShotAnalysisState::OneShotAnalysisState(
     // Reuse this existing walk to determine whether parallel-region analysis
     // can ever find a conflict. Avoid querying the interface once a parallel
     // region was found.
-    if (options.checkParallelRegions && !containsParallelRegion) {
+    if (!options.mayHaveParallelRegions.has_value() &&
+        !mayHaveParallelRegionsFlag) {
       for (Region &region : bufferizableOp->getRegions()) {
         if (bufferizableOp.isParallelRegion(region.getRegionNumber())) {
-          containsParallelRegion = true;
+          mayHaveParallelRegionsFlag = true;
           break;
         }
       }
@@ -854,8 +856,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
   // Before going through the main RaW analysis, find cases where a buffer must
   // be privatized due to parallelism. If the result of a write is never read,
   // privatization is not necessary (and large parts of the IR are likely dead).
-  if (options.checkParallelRegions && state.hasParallelRegion() &&
-      !usesRead.empty()) {
+  if (state.mayHaveParallelRegions() && !usesRead.empty()) {
     for (OpOperand *uConflictingWrite : usesWrite) {
       // Find the allocation point or last write (definition) of the buffer.
       // Note: In contrast to `findDefinitions`, this also returns results of
