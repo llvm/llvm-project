@@ -2989,7 +2989,9 @@ static void orderZPRCalleeSavesForPairs(MachineFunction &MF,
   SmallVector<CalleeSavedInfo> ZPRSavesInCSIOrder;
   llvm::append_range(ZPRSavesInCSIOrder, Singles);
 
-  for (const auto &[Even, Odd] : Pairs) {
+  // We reverse the pairs here to allow for possible quad pairings
+  // to match
+  for (const auto &[Even, Odd] : llvm::reverse(Pairs)) {
     ZPRSavesInCSIOrder.push_back(Odd);
     ZPRSavesInCSIOrder.push_back(Even);
   }
