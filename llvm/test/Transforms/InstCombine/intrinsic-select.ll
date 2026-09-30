@@ -913,10 +913,9 @@ define float @select_of_pow_negative_not_intrinsic(i1 %cond, float %x, float %y,
 
 define <2 x float> @select_of_sqrt_vec(<2 x i1> %cond, <2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @select_of_sqrt_vec(
-; CHECK-NEXT:    [[SQRT1:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[SQRT2:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[Y:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x float> [[SQRT1]], <2 x float> [[SQRT2]]
-; CHECK-NEXT:    ret <2 x float> [[SEL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x float> [[SQRT1:%.*]], <2 x float> [[SQRT2:%.*]]
+; CHECK-NEXT:    [[SEL1:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[SEL]])
+; CHECK-NEXT:    ret <2 x float> [[SEL1]]
 ;
   %sqrt1 = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %x)
   %sqrt2 = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %y)
@@ -926,10 +925,9 @@ define <2 x float> @select_of_sqrt_vec(<2 x i1> %cond, <2 x float> %x, <2 x floa
 
 define float @select_of_fma(i1 %cond, float %x, float %y, float %z, float %w) {
 ; CHECK-LABEL: @select_of_fma(
-; CHECK-NEXT:    [[FMA1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
-; CHECK-NEXT:    [[FMA2:%.*]] = call float @llvm.fma.f32(float [[X]], float [[Y]], float [[W:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[FMA1]], float [[FMA2]]
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[FMA1:%.*]], float [[FMA2:%.*]]
+; CHECK-NEXT:    [[SEL1:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[SEL1]]
 ;
   %fma1 = call float @llvm.fma.f32(float %x, float %y, float %z)
   %fma2 = call float @llvm.fma.f32(float %x, float %y, float %w)
@@ -939,10 +937,9 @@ define float @select_of_fma(i1 %cond, float %x, float %y, float %z, float %w) {
 
 define float @select_of_copysign(i1 %cond, float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_of_copysign(
-; CHECK-NEXT:    [[COPYSIGN1:%.*]] = call float @llvm.copysign.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[COPYSIGN2:%.*]] = call float @llvm.copysign.f32(float [[X]], float [[Z:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[COPYSIGN1]], float [[COPYSIGN2]]
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[COPYSIGN1:%.*]], float [[COPYSIGN2:%.*]]
+; CHECK-NEXT:    [[SEL1:%.*]] = call float @llvm.copysign.f32(float [[X:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[SEL1]]
 ;
   %copysign1 = call float @llvm.copysign.f32(float %x, float %y)
   %copysign2 = call float @llvm.copysign.f32(float %x, float %z)
@@ -952,10 +949,9 @@ define float @select_of_copysign(i1 %cond, float %x, float %y, float %z) {
 
 define i32 @select_of_fshl(i1 %cond, i32 %x, i32 %y, i32 %a, i32 %b) {
 ; CHECK-LABEL: @select_of_fshl(
-; CHECK-NEXT:    [[FSHL1:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[A:%.*]])
-; CHECK-NEXT:    [[FSHL2:%.*]] = call i32 @llvm.fshl.i32(i32 [[X]], i32 [[Y]], i32 [[B:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[FSHL1]], i32 [[FSHL2]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[FSHL1:%.*]], i32 [[FSHL2:%.*]]
+; CHECK-NEXT:    [[SEL1:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[SEL]])
+; CHECK-NEXT:    ret i32 [[SEL1]]
 ;
   %fshl1 = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %a)
   %fshl2 = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %b)
@@ -965,10 +961,9 @@ define i32 @select_of_fshl(i1 %cond, i32 %x, i32 %y, i32 %a, i32 %b) {
 
 define <2 x float> @select_of_powi_vec_scalar_cond(i1 %cond, <2 x float> %x, i32 %n, i32 %m) {
 ; CHECK-LABEL: @select_of_powi_vec_scalar_cond(
-; CHECK-NEXT:    [[POWI1:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[X:%.*]], i32 [[N:%.*]])
-; CHECK-NEXT:    [[POWI2:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[X]], i32 [[M:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <2 x float> [[POWI1]], <2 x float> [[POWI2]]
-; CHECK-NEXT:    ret <2 x float> [[SEL]]
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[COND:%.*]], i32 [[N:%.*]], i32 [[M1:%.*]]
+; CHECK-NEXT:    [[POWI2:%.*]] = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> [[X:%.*]], i32 [[M]])
+; CHECK-NEXT:    ret <2 x float> [[POWI2]]
 ;
   %powi1 = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> %x, i32 %n)
   %powi2 = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> %x, i32 %m)
