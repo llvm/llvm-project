@@ -376,19 +376,44 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
   return Call;
 }
 
-// InterlockedCompareStore(dest, compare_value, value) stores `value` only when
-// `dest` holds `compare_value`. It reports nothing, so the `cmpxchg` result is
-// unused. DXILResourceAccess and the SPIR-V selector both match `cmpxchg`.
-static Value *handleInterlockedCompareStore(CodeGenFunction &CGF,
-                                            const CallExpr *E) {
+// Emit `cmpxchg` for InterlockedCompareStore and InterlockedCompareExchange.
+// Compare-exchange also reports the previous value.
+static Value *handleInterlockedCompareOp(CodeGenFunction &CGF,
+                                         const CallExpr *E) {
   LValue DestLV = CGF.EmitLValue(E->getArg(0));
   Address DestAddr = getHLSLAtomicDestAddr(CGF, DestLV);
   Value *Compare = CGF.EmitScalarExpr(E->getArg(1));
   Value *Val = CGF.EmitScalarExpr(E->getArg(2));
 
-  return CGF.Builder.CreateAtomicCmpXchg(
+  // `cmpxchg` takes an integer or a pointer, so the float-bitwise operations
+  // work on the bit pattern of the float. This is what those operations mean,
+  // and DXIL and SPIR-V both need the integer form.
+  llvm::Type *FloatTy = nullptr;
+  if (Compare->getType()->isFloatingPointTy()) {
+    FloatTy = Compare->getType();
+    llvm::Type *IntTy =
+        CGF.Builder.getIntNTy(FloatTy->getPrimitiveSizeInBits());
+    Compare = CGF.Builder.CreateBitCast(Compare, IntTy);
+    Val = CGF.Builder.CreateBitCast(Val, IntTy);
+    DestAddr = DestAddr.withElementType(IntTy);
+  }
+
+  Value *Pair = CGF.Builder.CreateAtomicCmpXchg(
       DestAddr, Compare, Val, llvm::AtomicOrdering::Monotonic,
       llvm::AtomicOrdering::Monotonic, getHLSLAtomicScope(CGF, DestLV));
+
+  // Compare-store reports nothing, so it leaves the `cmpxchg` result unused.
+  if (E->getNumArgs() < 4)
+    return Pair;
+
+  // `cmpxchg` yields a { previous value, success } pair. HLSL reports only the
+  // previous value, through the `original_value` reference parameter.
+  Value *Original = CGF.Builder.CreateExtractValue(Pair, 0);
+  if (FloatTy)
+    Original = CGF.Builder.CreateBitCast(Original, FloatTy);
+  LValue OrigLV = CGF.EmitLValue(E->getArg(3));
+  CGF.EmitStoreThroughLValue(RValue::get(Original), OrigLV);
+  return Original;
 }
 
 static Value *emitBufferStride(CodeGenFunction *CGF, const Expr *HandleExpr,
@@ -1361,6 +1386,18 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     auto *MatTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
     unsigned Rows = MatTy->getNumRows();
     unsigned Cols = MatTy->getNumColumns();
+    if (auto *Transpose = dyn_cast<CallInst>(Op0);
+        Transpose &&
+        Transpose->getIntrinsicID() == Intrinsic::matrix_transpose &&
+        Transpose->use_empty() &&
+        cast<ConstantInt>(Transpose->getArgOperand(1))->getZExtValue() ==
+            Cols &&
+        cast<ConstantInt>(Transpose->getArgOperand(2))->getZExtValue() ==
+            Rows) {
+      Value *Result = Transpose->getArgOperand(0);
+      Transpose->eraseFromParent();
+      return Result;
+    }
     llvm::MatrixBuilder MB(Builder);
     return MB.CreateMatrixTranspose(Op0, Rows, Cols);
   }
@@ -1496,8 +1533,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_interlocked_and: {
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::And);
   }
-  case Builtin::BI__builtin_hlsl_interlocked_compare_store: {
-    return handleInterlockedCompareStore(*this, E);
+  case Builtin::BI__builtin_hlsl_interlocked_compare_exchange:
+  case Builtin::BI__builtin_hlsl_interlocked_compare_exchange_float_bitwise:
+  case Builtin::BI__builtin_hlsl_interlocked_compare_store:
+  case Builtin::BI__builtin_hlsl_interlocked_compare_store_float_bitwise: {
+    return handleInterlockedCompareOp(*this, E);
   }
   case Builtin::BI__builtin_hlsl_interlocked_exchange: {
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Xchg);
