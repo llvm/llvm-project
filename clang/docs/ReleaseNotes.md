@@ -1056,6 +1056,15 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 #### Improvements
 
+- The `__regcall` and `__vectorcall` calling conventions are now accepted on
+  SPIR and SPIR-V targets. Previously they were diagnosed as unsupported when
+  compiling without an x86 auxiliary target.
+
+- SPIR and SPIR-V targets now enable `sse` and `sse2` by default when the host
+  target predefines `_M_X64`, as the MSVC STL headers declare `always_inline`
+  `_mm_*` intrinsics that require them. An explicit `-target-feature` still
+  overrides the default.
+
 ## Additional Information
 
 A wide variety of additional information is available on the [Clang web
