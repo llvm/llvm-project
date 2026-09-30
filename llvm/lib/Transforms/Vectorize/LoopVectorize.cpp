@@ -6296,7 +6296,7 @@ VPSingleDefRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
   if (IsUniform) {
     return VPBuilder::createSingleScalarOp(
         VPI->getOpcode(), VPI->operandsWithoutMask(), BlockInMask, *VPI, *VPI,
-        VPI->getDebugLoc(), I);
+        VPI->getDebugLoc(), VPI->getScalarType(), I);
   }
   auto *Recipe = new VPReplicateRecipe(I, VPI->operandsWithoutMask(),
                                        /*IsSingleScalar=*/false, BlockInMask,
