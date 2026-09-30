@@ -1190,16 +1190,11 @@ public:
 
   std::optional<llvm::APSInt>
   ComputeExplicitObjectSizeArgument(unsigned Index) {
-    std::optional<unsigned> IndexOptional = TranslateIndex(Index);
-    if (!IndexOptional)
+    std::optional<llvm::APSInt> Integer = EvaluateIntegerArgument(Index);
+    if (!Integer)
       return std::nullopt;
-    unsigned NewIndex = *IndexOptional;
-    Expr::EvalResult Result;
-    Expr *SizeArg = TheCall->getArg(NewIndex);
-    if (!SizeArg->EvaluateAsInt(Result, S.getASTContext()))
-      return std::nullopt;
-    llvm::APSInt Integer = Result.Val.getInt().extOrTrunc(SizeTypeWidth);
-    Integer.setIsUnsigned(true);
+    *Integer = Integer->extOrTrunc(SizeTypeWidth);
+    Integer->setIsUnsigned(true);
     return Integer;
   }
 
