@@ -3246,10 +3246,12 @@ static mlir::SymbolRefAttr getComdatAttrHelper(mlir::ModuleOp modOp,
 mlir::SymbolRefAttr
 CIRToLLVMGlobalOpLowering::getComdatAttr(cir::GlobalOp &op,
                                          mlir::OpBuilder &builder) const {
-  if (!op.getComdat())
+  std::optional<llvm::StringRef> comdat = op.getComdat();
+  if (!comdat)
     return mlir::SymbolRefAttr{};
+  llvm::StringRef comdatKey = comdat->empty() ? op.getSymName() : *comdat;
   return getComdatAttrHelper(op->getParentOfType<mlir::ModuleOp>(), builder,
-                             op.getSymName(), comdatOp);
+                             comdatKey, comdatOp);
 }
 
 mlir::SymbolRefAttr

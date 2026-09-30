@@ -48,7 +48,7 @@ static void setThunkProperties(CIRGenModule &cgm, const ThunkInfo &thunk,
   }
 
   if (cgm.supportsCOMDAT() && thunkFn.isWeakForLinker())
-    thunkFn.setComdat(true);
+    thunkFn.setSelfComdat();
 }
 
 mlir::Type CIRGenModule::getVTableComponentType() {
@@ -516,7 +516,7 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp vttOp,
       vttOp, CIRGenModule::getMLIRVisibility(vttOp));
 
   if (cgm.supportsCOMDAT() && vttOp.isWeakForLinker())
-    vttOp.setComdat(true);
+    vttOp.setSelfComdat();
 }
 
 uint64_t CIRGenVTables::getSubVTTIndex(const CXXRecordDecl *rd,
