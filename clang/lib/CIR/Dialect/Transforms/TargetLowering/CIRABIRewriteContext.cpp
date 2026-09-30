@@ -36,10 +36,11 @@ using namespace mlir::abi;
 // constructor, move constructor, or destructor, so the callee works on the
 // caller's own object rather than a copy.
 //
-// At the call site byval copies into a fresh alloca while a non-byval
-// argument forwards the caller's storage.  At the callee, byval loads the
-// incoming pointer (a local copy), while non-byval rewires the CIRGen
-// param-slot alloca to the incoming pointer so the body mutates the caller's
+// At the call site both forward the caller's storage, since byval is copied
+// on the caller's side of the call.  byval falls back to a slot of its own
+// when the operand's storage cannot be handed on.  At the callee, byval fills
+// the CIRGen param slot with a copy of the incoming object, while non-byval
+// rewires that slot to the incoming pointer so the body mutates the caller's
 // storage in place.
 //
 // For Expand, the single struct argument is replaced by N scalar arguments
@@ -220,14 +221,12 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       attrs.set(attrName, builder.getUnitAttr());
       newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else if (ac.kind == ArgKind::Indirect) {
-      // byval hands the callee its own copy.  Without byval it gets a pointer
-      // to the caller's own object.  Both state llvm.align and llvm.noundef,
-      // which constrains the pointer operand, not the pointee's contents.
-      //
-      // llvm.byval(T) records the pre-rewrite arg type because the opaque
-      // LLVM pointer cannot carry it.  llvm.nofreeobj says the object cannot
-      // be freed while the callee runs, which holds because the caller owns it
-      // across the call.
+      // Indirect lowering hands the callee a pointer.  llvm.align and
+      // llvm.noundef describe that pointer, not the bytes it points to.
+      // Without byval the pointer points to the caller's own object.  With
+      // byval the backend copies the pointee on the caller's side of the call,
+      // so the callee gets an object of its own even when the pointer points
+      // to the caller's own object.
       mlir::Type pointeeTy = origArgTypes[oldIdx];
       mlir::NamedAttrList attrs(existing);
       attrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
@@ -235,12 +234,15 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
                 builder.getUnitAttr());
       if (ac.byVal) {
-        // Classic adds llvm.noalias under -fpass-by-value-is-noalias, which
-        // CIR does not plumb through.
+        // llvm.byval(T) records the pre-rewrite arg type because the opaque
+        // LLVM pointer cannot carry it.  Classic adds llvm.noalias under
+        // -fpass-by-value-is-noalias, which CIR does not plumb through.
         assert(!cir::MissingFeatures::noaliasOnByvalAttr());
         attrs.set(mlir::LLVM::LLVMDialect::getByValAttrName(),
                   mlir::TypeAttr::get(pointeeTy));
       } else {
+        // llvm.nofreeobj says the object cannot be freed while the callee
+        // runs, which holds because the caller owns it across the call.
         // Classic adds llvm.dead_on_return when the object's lifetime ends in
         // the callee, which needs the destructor's triviality from
         // cir.record_layout's has_trivial_dtor.
@@ -496,20 +498,70 @@ static cir::LoadOp getWholeRecordLoad(mlir::Value recordVal) {
   return load;
 }
 
-/// Whether a non-byval indirect argument may name \p addr, given the callee is
-/// told the argument is \p minAlign aligned.  A slot allocated here qualifies,
-/// reached through storage-preserving casts, and so does the enclosing
-/// function's own non-byval parameter: its slot stands until
-/// finalizeParameterSlots, and states the alignment the parameter promises
-/// rather than the one CIRGen chose for a local copy.
+/// Returns \p load if the address it read from can be passed in place of the
+/// loaded value for an indirect argument that needs \p minAlign alignment,
+/// and null otherwise, including when \p load is null.  A byval argument
+/// also needs storageUnwrittenBetween.  On null the caller reports a
+/// non-byval argument or fills a byval slot of its own.
 ///
-/// The slot must already state that alignment.  Raising it here would not
-/// survive one that stands in for a parameter, since finalizeParameterSlots
-/// replaces it with the incoming pointer, which would discard the raise and
-/// leave the callee over-promised.
-static bool forwardableNonByvalStorage(mlir::Value addr, uint64_t minAlign) {
-  cir::AllocaOp slot = cir::getUnderlyingAlloca(addr);
-  return slot && slot.getAlignment() >= minAlign;
+/// The address has to be a pointer to the loaded type in the default address
+/// space, since that is what the rewritten parameter is, and a cir.load pins
+/// the pointee type without pinning the address space.  The storage it names
+/// has to be a slot allocated here, reached through storage-preserving casts,
+/// already stating at least \p minAlign.  The enclosing function's own
+/// non-byval parameter qualifies as well, since its slot stands until
+/// finalizeParameterSlots and prepareNonByvalParameters has restated it with
+/// the alignment that parameter promises rather than the one CIRGen chose
+/// for a local copy.  A byval parameter's slot keeps CIRGen's alignment, so
+/// it qualifies only where that already covers \p minAlign.
+///
+/// Raising a slot's alignment here would not hold for one that stands in
+/// for a parameter, since finalizeParameterSlots replaces it with the
+/// incoming pointer, which promises only what the caller gave it.
+static cir::LoadOp forwardableIndirectLoad(cir::LoadOp load,
+                                           uint64_t minAlign) {
+  if (!load || load.getAddr().getType() !=
+                   cir::PointerType::get(load.getResult().getType()))
+    return {};
+  cir::AllocaOp slot = cir::getUnderlyingAlloca(load.getAddr());
+  return slot && slot.getAlignment() >= minAlign ? load : cir::LoadOp();
+}
+
+/// True when \p aliasAnalysis shows that nothing between \p load and \p call
+/// can write the storage \p load read, so a byval argument may name that
+/// storage rather than a copy of it.  byval takes the callee's copy at the
+/// call, while the operand carries the value as of the load, so a write in
+/// between would reach the callee that the operand does not hold.
+/// prepareNonByvalParameters reads a parameter at its spill, which leaves the
+/// body's own stores in between.
+///
+/// A load in another block is not forwardable here, since the paths from it
+/// to the call are not walked.
+static bool storageUnwrittenBetween(cir::LoadOp load, mlir::Operation *call,
+                                    mlir::AliasAnalysis &aliasAnalysis) {
+  if (load->getBlock() != call->getBlock())
+    return false;
+  for (mlir::Operation *op = load->getNextNode(); op != call;
+       op = op->getNextNode()) {
+    assert(op && "the load must precede the call in the block they share");
+    if (op->getNumRegions() != 0 ||
+        aliasAnalysis.getModRef(op, load.getAddr()).isMod())
+      return false;
+  }
+  return true;
+}
+
+/// The alignment a copy may claim for the storage \p load read, which is the
+/// one \p load states, or the underlying slot's when it states none.  A load
+/// with neither names storage this pass cannot reason about, so the copy is
+/// left to assume nothing.
+static mlir::IntegerAttr loadSourceAlignment(cir::LoadOp load,
+                                             mlir::OpBuilder &builder) {
+  if (mlir::IntegerAttr stated = load.getAlignmentAttr())
+    return stated;
+  if (cir::AllocaOp slot = cir::getUnderlyingAlloca(load.getAddr()))
+    return builder.getI64IntegerAttr(slot.getAlignment());
+  return builder.getI64IntegerAttr(1);
 }
 
 /// Decompose a struct value into one scalar call argument per field of \p
@@ -561,6 +613,17 @@ static void eraseDeadRecordLoads(ArrayRef<cir::LoadOp> loads) {
       load->erase();
 }
 
+/// The store that spills indirect parameter \p blockArg, if the parameter's
+/// only use is that store.  Null otherwise.
+static cir::StoreOp maybeFindParamSpill(mlir::BlockArgument blockArg) {
+  if (!blockArg.hasOneUse())
+    return {};
+  auto store = dyn_cast<cir::StoreOp>(*blockArg.user_begin());
+  if (!store || store.getValue() != blockArg)
+    return {};
+  return store;
+}
+
 /// The store that spills non-byval indirect parameter \p blockArg, and the
 /// slot it spills into.  prepareNonByvalParameters has already established
 /// that the spill is the block argument's only use and that it stores into
@@ -571,25 +634,23 @@ static std::pair<cir::StoreOp, cir::AllocaOp>
 findParamSpill(mlir::BlockArgument blockArg) {
   if (blockArg.use_empty())
     return {};
-  assert(blockArg.hasOneUse() &&
-         "non-byval arg must have exactly one use (the CIRGen param spill)");
-  auto store = cast<cir::StoreOp>(*blockArg.user_begin());
-  assert(store.getValue() == blockArg &&
-         "non-byval arg's use must be the value operand of its store");
+  cir::StoreOp store = maybeFindParamSpill(blockArg);
+  assert(store && "non-byval arg's only use must be its CIRGen param spill");
   return {store, cast<cir::AllocaOp>(store.getAddr().getDefiningOp())};
 }
 
 /// For each Direct arg with a coerced type, change the block argument's type
 /// to the coerced type and insert a coercion at function entry that maps it
 /// back to the original type for body uses.  For each Indirect byval arg,
-/// change the block argument's type to a pointer and insert a load at entry
-/// so the body sees a local copy of the original value type.  For each
-/// Indirect non-byval arg, change the block argument to a pointer and queue
-/// the param-slot alloca to be replaced by it (no entry load /
-/// byte-copy) so the body operates on the caller's storage in place.  For each
-/// Expand arg, replace the single struct block argument with N scalar block
-/// arguments (one per field) and store each field directly into the parameter's
-/// own alloca (the CIRGen spill slot), erasing the original whole-struct store.
+/// change the block argument's type to a pointer, then replace a record's
+/// param spill with a copy from that pointer, or insert a load at entry for
+/// a body that reads the parameter as a value.  For each Indirect non-byval
+/// arg, change the block argument to a pointer and queue the param-slot
+/// alloca to be replaced by it (no entry load or byte-copy) so the body
+/// operates on the caller's storage in place.  For each Expand arg, replace
+/// the single struct block argument with N scalar block arguments (one per
+/// field) and store each field directly into the parameter's own alloca (the
+/// CIRGen spill slot), erasing the original whole-struct store.
 ///
 /// \p hasSRetArg is true when the function has an sret return (a hidden return
 /// pointer is prepended as block argument 0).  Expand arguments expand the
@@ -773,8 +834,10 @@ void insertArgCoercion(
     } else if (ac.kind == ArgKind::Indirect) {
       // byval and non-byval both lower to !cir.ptr<T>, and which it is shows
       // up only in the attrs updateArgAttrs applies.  Body lowering differs:
-      // byval copies into the callee (load at entry), while non-byval must
-      // operate on the caller's storage in place.
+      // the body addresses a byval parameter through the CIRGen slot it was
+      // spilled into, so that slot has to be filled from the incoming
+      // pointer, while a non-byval parameter's slot is replaced by the
+      // pointer so the body works on the caller's storage in place.
       auto ptrTy = cir::PointerType::get(blockArg.getType());
 
       if (!ac.byVal) {
@@ -800,14 +863,45 @@ void insertArgCoercion(
         if (destAlloca)
           pendingParamSlots.emplace_back(destAlloca, blockArg);
       } else {
-        // byval: load the incoming pointer so the body sees a T value (and
-        // any CIRGen param-slot store becomes a local copy of that value).
+        // A record's spill slot is filled by a byte copy of the incoming
+        // object rather than by a store of the loaded value: its padding
+        // bytes can hold another union member's live data, which a value
+        // store would leave unwritten.  A _BitInt keeps its load and spill
+        // store, which are its conversion between value and in-memory form.
+        cir::StoreOp paramStore;
+        if (mlir::isa<cir::RecordType>(blockArg.getType()))
+          paramStore = maybeFindParamSpill(blockArg);
+
+        // Erasing the spill before the block argument is retyped keeps the
+        // store from being left with a value operand of the wrong type.
+        mlir::Value destAddr;
+        mlir::IntegerAttr destAlign;
+        mlir::Operation *spillPos = nullptr;
+        if (paramStore) {
+          destAddr = paramStore.getAddr();
+          if (cir::AllocaOp destAlloca = cir::getUnderlyingAlloca(destAddr))
+            destAlign = destAlloca.getAlignmentAttr();
+          spillPos = paramStore->getNextNode();
+          assert(spillPos && "param spill must be followed by a block "
+                             "terminator");
+          paramStore->erase();
+        }
+
         blockArg.setType(ptrTy);
 
-        builder.setInsertionPointToStart(&entry);
-        auto loadOp = cir::LoadOp::create(builder, funcOp.getLoc(), blockArg);
-        SmallPtrSet<mlir::Operation *, 1> loadOps = {loadOp};
-        blockArg.replaceAllUsesExcept(loadOp.getResult(), loadOps);
+        if (destAddr) {
+          mlir::OpBuilder::InsertionGuard guard(builder);
+          builder.setInsertionPoint(spillPos);
+          cir::CopyOp::create(
+              builder, funcOp.getLoc(), destAddr, blockArg, destAlign,
+              builder.getI64IntegerAttr(ac.indirectAlign.value()));
+        } else if (!blockArg.use_empty()) {
+          // No spill to replace, so materialize the value the body reads.
+          builder.setInsertionPointToStart(&entry);
+          auto loadOp = cir::LoadOp::create(builder, funcOp.getLoc(), blockArg);
+          SmallPtrSet<mlir::Operation *, 1> loadOps = {loadOp};
+          blockArg.replaceAllUsesExcept(loadOp.getResult(), loadOps);
+        }
       }
     }
     // Ignore, Extend, and Direct-without-coerce need no block-level changes.
@@ -1312,13 +1406,12 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
         insertSRetStores(funcOp, origRetTy, builder);
       }
 
-      // In-body coercion for Direct-with-coerce / Extend args: change
-      // block-arg types to the coerced types and insert a memory roundtrip
-      // at the top of the entry block that converts each coerced value back
-      // to its original type, then route existing body uses (including
-      // in-body cir.call operands) through the recovered value.  Done before
-      // the Ignore-drop below so the entry block argument indices used here
-      // still refer to the original positions.
+      // Reshape the entry block for the classifications that change what a
+      // parameter looks like to the body: a Direct arg with a coerced type
+      // gets a memory roundtrip back to its original type, an Indirect arg
+      // becomes a pointer, and an Expand arg becomes one block argument per
+      // field.  Done before the Ignore-drop below so the entry block
+      // argument indices used here still refer to the original positions.
       insertArgCoercion(funcOp, fc, builder, dl, hasSRet, pendingParamSlots);
 
       // Direct return with coerced type: insert a coercion at every
@@ -1469,14 +1562,14 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   newArgs.reserve(argOperands.size());
 
   // Loads that the new call leaves unused: Expand and Direct+canFlatten read
-  // the fields out of the source alloca, and a non-byval argument passes the
-  // address the load read from.  The old call still uses them, so erase them
-  // only after it is gone.
+  // the fields out of the source alloca, and an Indirect argument passes or
+  // copies from the address the load read from.  The old call still uses
+  // them, so erase them only after it is gone.
   SmallVector<cir::LoadOp> deadRecordLoads;
 
-  // Capture original arg types before building newArgs (byval slots change
-  // the wire argument from T to !cir.ptr<T>, so we save the pre-rewrite
-  // types here for use in updateArgAttrs).
+  // Capture original arg types before building newArgs (an Indirect argument
+  // changes the wire argument from T to !cir.ptr<T>, so we save the
+  // pre-rewrite types here for use in updateArgAttrs).
   SmallVector<mlir::Type> origCallArgTypes;
   llvm::append_range(origCallArgTypes, argOperands.getTypes());
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
@@ -1524,35 +1617,66 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
                          dl, ac.directOffset);
       newArgs.push_back(arg);
     } else if (ac.kind == ArgKind::Indirect) {
-      // byval hands the callee its own copy.  Without byval the argument must
-      // name the caller's storage instead, so that the object the callee
-      // operates on is the one the caller destroys.  That means forwarding
-      // the address the operand was loaded from rather than the loaded value,
-      // so a store to that storage after the load is visible to the callee.
+      uint64_t minAlign = ac.indirectAlign.value();
+
+      // A record operand that names storage is passed from that storage
+      // rather than from the loaded value: a record value carries only the
+      // fields of its type, so a store leaves the type's padding bytes
+      // unwritten, and for a union those can be another member's live data.
+      // A byval _BitInt is passed from its value, since the load and the
+      // store below are its conversion between value and in-memory form.
+      cir::LoadOp srcLoad;
+      if (!ac.byVal || mlir::isa<cir::RecordType>(arg.getType()))
+        srcLoad = maybeGetSimpleLoad(arg);
+
+      // A non-byval argument must name the caller's storage, so that the
+      // object the callee operates on is the one the caller destroys.  That
+      // means passing the address the operand was loaded from rather than the
+      // loaded value, so a store to that storage after the load is visible to
+      // the callee.  byval fills a slot below, this cannot.
       if (!ac.byVal) {
-        // The rewritten parameter is a pointer to the argument type in the
-        // default address space, so an operand read through an address-space
-        // cast cannot be handed on as it stands.  cir.load already pins the
-        // pointee type, so only the address space can differ.
-        cir::LoadOp srcLoad = maybeGetSimpleLoad(arg);
-        if (!srcLoad ||
-            srcLoad.getAddr().getType() !=
-                cir::PointerType::get(arg.getType()) ||
-            !forwardableNonByvalStorage(srcLoad.getAddr(),
-                                        ac.indirectAlign.value()))
+        cir::LoadOp fwdLoad = forwardableIndirectLoad(srcLoad, minAlign);
+        if (!fwdLoad)
           return call->emitOpError()
                  << "non-byval indirect argument that does not name the "
                     "caller's storage is not yet implemented in "
                     "CallConvLowering";
-        newArgs.push_back(srcLoad.getAddr());
-        deadRecordLoads.push_back(srcLoad);
+        newArgs.push_back(fwdLoad.getAddr());
+        deadRecordLoads.push_back(fwdLoad);
         continue;
       }
+
+      // byval hands the callee a copy taken at the call, so naming the
+      // object's own storage leaves it with the same copy and saves this
+      // one.  That holds only while nothing writes that storage between the
+      // load and the call, since the operand carries the value as of the
+      // load.
+      if (cir::LoadOp fwdLoad = forwardableIndirectLoad(srcLoad, minAlign);
+          fwdLoad && storageUnwrittenBetween(fwdLoad, call.getOperation(),
+                                             aliasAnalysis)) {
+        newArgs.push_back(fwdLoad.getAddr());
+        deadRecordLoads.push_back(fwdLoad);
+        continue;
+      }
+
+      // Otherwise fill a slot, at the load's position when there is one so
+      // the copy reads the memory state the load read.
       auto ptrTy = cir::PointerType::get(arg.getType());
-      auto slot = cir::AllocaOp::create(
-          builder, call.getLoc(), ptrTy, builder.getStringAttr("byval"),
-          builder.getI64IntegerAttr(ac.indirectAlign.value()));
-      cir::StoreOp::create(builder, call.getLoc(), arg, slot);
+      mlir::IntegerAttr slotAlign = builder.getI64IntegerAttr(minAlign);
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      if (srcLoad)
+        builder.setInsertionPoint(srcLoad);
+
+      auto slot =
+          cir::AllocaOp::create(builder, call.getLoc(), ptrTy,
+                                builder.getStringAttr("byval"), slotAlign);
+      if (srcLoad) {
+        cir::CopyOp::create(builder, call.getLoc(), slot, srcLoad.getAddr(),
+                            slotAlign, loadSourceAlignment(srcLoad, builder));
+        deadRecordLoads.push_back(srcLoad);
+      } else {
+        cir::StoreOp::create(builder, call.getLoc(), arg, slot);
+      }
       newArgs.push_back(slot);
     } else {
       newArgs.push_back(arg);

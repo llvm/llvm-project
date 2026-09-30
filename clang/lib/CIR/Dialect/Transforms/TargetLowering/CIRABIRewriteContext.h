@@ -21,8 +21,10 @@
 #define CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_CIRABIREWRITECONTEXT_H
 
 #include "mlir/ABI/ABIRewriteContext.h"
+#include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "clang/CIR/Dialect/Analysis/CIRAliasAnalysis.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
@@ -41,7 +43,9 @@ namespace cir {
 class CIRABIRewriteContext : public mlir::abi::ABIRewriteContext {
 public:
   CIRABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl)
-      : module(module), dl(dl) {}
+      : module(module), dl(dl), aliasAnalysis(module) {
+    cir::registerCIRAliasAnalyses(aliasAnalysis, module);
+  }
 
   ~CIRABIRewriteContext() {
     assert(pendingParamSlots.empty() &&
@@ -110,6 +114,11 @@ public:
 private:
   mlir::ModuleOp module;
   const mlir::DataLayout &dl;
+
+  /// Alias analysis over the module with the CIR implementations registered.
+  /// rewriteCallSite asks it whether a byval operand's storage is written
+  /// between its load and the call.
+  mlir::AliasAnalysis aliasAnalysis;
 
   /// Param-slot allocas that non-byval indirect parameters will
   /// replace, paired with the incoming pointer that replaces them.  The
