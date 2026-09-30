@@ -528,6 +528,10 @@ foldSelectIntoIntrinsicArg(SelectInst &SI, IntrinsicInst *TII,
 
   Value *TV = TII->getArgOperand(*DiffArgNo);
   Value *FV = FII->getArgOperand(*DiffArgNo);
+  // powi keeps a scalar exponent even in its vector form.
+  if (SI.getCondition()->getType()->isVectorTy() &&
+      !TV->getType()->isVectorTy())
+    return nullptr;
   // Constant args may enable cheaper lowering, e.g. pow(X, 2.0) -> X * X.
   if (isa<Constant>(TV) || isa<Constant>(FV))
     return nullptr;
