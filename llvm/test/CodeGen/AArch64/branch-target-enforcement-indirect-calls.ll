@@ -66,26 +66,27 @@ entry:
   ret void
 }
 
-; PAuthLR by itself prevents x16 from being used, but any other
-; non-callee-saved register can be used.
+; Signing the return address prevents x15, x16 and x17 from being used, because
+; the epilogue may need them as scratch registers while authenticating LR. Any
+; other non-callee-saved register can be used.
 
 define void @pac_pc_enabled(ptr %p) "sign-return-address"="all" "branch-protection-pauth-lr" {
 entry:
   tail call void %p()
-; CHECK: br {{(x[0-9]|x1[0-578])$}}
+; CHECK: br {{(x[0-9]|x1[0-4])$}}
   ret void
 }
 define void @pac_pc_enabled_force_x16(ptr %p) "sign-return-address"="all" "branch-protection-pauth-lr" {
 entry:
   %p_x16 = tail call ptr asm "", "={x16},{x16},~{lr}"(ptr %p)
   tail call void %p_x16()
-; CHECK: br {{(x[0-9]|x1[0-578])$}}
+; CHECK: br {{(x[0-9]|x1[0-4])$}}
   ret void
 }
 define void @pac_pc_enabled_force_x17(ptr %p) "sign-return-address"="all" "branch-protection-pauth-lr" {
 entry:
   %p_x17 = tail call ptr asm "", "={x17},{x17},~{lr}"(ptr %p)
   tail call void %p_x17()
-; CHECK: br x17
+; CHECK: br {{(x[0-9]|x1[0-4])$}}
   ret void
 }

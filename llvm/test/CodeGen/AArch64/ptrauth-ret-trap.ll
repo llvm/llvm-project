@@ -81,11 +81,11 @@ define void @test_auth_tailcall_indirect_in_x9(ptr sret(i64) %ret, [8 x i64] %in
 
 ; CHECK-LABEL: test_auth_tailcall_indirect_bti:
 ; CHECK:         autibsp
-; CHECK:         eor     x17, x30, x30, lsl #1
-; CHECK:         tbz     x17, #62, [[GOOD:.L.*]]
+; CHECK:         eor     x16, x30, x30, lsl #1
+; CHECK:         tbz     x16, #62, [[GOOD:.L.*]]
 ; CHECK:         brk     #0xc471
 ; CHECK: [[GOOD]]:
-; CHECK:         brabz      x16
+; CHECK:         brabz      x17
 define void @test_auth_tailcall_indirect_bti(ptr sret(i64) %ret, [8 x i64] %in, ptr %fptr) #0 "branch-target-enforcement"="true" {
   %ptr = alloca i8, i32 16
   call i32 @test_tailcall()

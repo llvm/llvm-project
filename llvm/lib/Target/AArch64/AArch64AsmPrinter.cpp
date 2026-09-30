@@ -3681,7 +3681,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   // attributes (isCall, isReturn, etc.). We lower them to the real
   // instruction here.
   case AArch64::AUTH_TCRETURN:
-  case AArch64::AUTH_TCRETURN_BTI: {
+  case AArch64::AUTH_TCRETURN_BTI:
+  case AArch64::AUTH_TCRETURNnotx15x16x17:
+  case AArch64::AUTH_TCRETURN_BTIx17: {
     Register Callee = MI->getOperand(0).getReg();
     const auto Key = (AArch64PACKey::ID)MI->getOperand(2).getImm();
     const uint64_t Disc = MI->getOperand(3).getImm();
@@ -3711,7 +3713,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::TCRETURNri:
   case AArch64::TCRETURNrix16x17:
   case AArch64::TCRETURNrix17:
-  case AArch64::TCRETURNrinotx16:
+  case AArch64::TCRETURNrinotx15x16x17:
   case AArch64::TCRETURNriALL: {
     emitPtrauthTailCallHardening(MI);
 

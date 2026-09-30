@@ -1368,21 +1368,22 @@ let RecomputePerFunction = 1 in {
   // - If branch target enforcement is enabled, indirect calls must use x16 or
   //   x17, because these are the only registers which can target the BTI C
   //   instruction.
-  // - If PAuthLR is enabled, x16 is used in the epilogue to hold the address
-  //   of the signing instruction. This can't be changed because it is used by a
-  //   HINT instruction which only accepts x16. We can't load anything from the
-  //   stack after this because the authentication instruction checks that SP is
-  //   the same as it was at function entry, so we can't have anything on the
-  //   stack.
+  // - If the return address is signed (or PAuthLR is enabled), the epilogue may
+  //   clobber x15, x16 and x17 while authenticating LR. This can't be changed
+  //   because it is used by HINT instructions that hard-code those registers,
+  //   and we can't load anything from the stack after this because the
+  //   authentication instruction checks that SP is the same as it was at function
+  //   entry, so we can't have anything on the stack.
+  //   With BTI this leaves x17 as the only choice.
 
-  // BTI on, PAuthLR off: x16 or x17
-  def TailCallX16X17 : Predicate<[{  MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && !MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
-  // BTI on, PAuthLR on: x17 only
-  def TailCallX17 : Predicate<[{ MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
-  // BTI off, PAuthLR on: Any non-callee-saved register except x16
-  def TailCallNotX16 : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
-  // BTI off, PAuthLR off: Any non-callee-saved register
-  def TailCallAny : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && !MF->getInfo<AArch64FunctionInfo>()->branchProtectionPAuthLR() }]>;
+  // BTI on, LR not signed: x16 or x17
+  def TailCallX16X17 : Predicate<[{ MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && !MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF) }]>;
+  // BTI on, LR signed: x17 only
+  def TailCallX17 : Predicate<[{ MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF) }]>;
+  // BTI off, LR signed: Any non-callee-saved register except x15, x16 and x17
+  def TailCallNotX15X16X17 : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF) }]>;
+  // BTI off, LR not signed: Any non-callee-saved register
+  def TailCallAny : Predicate<[{ !MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement() && !MF->getInfo<AArch64FunctionInfo>()->mayClobberTailCallRegsInEpilogue(*MF) }]>;
 
   def SLSBLRMitigation : Predicate<[{ MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
   def NoSLSBLRMitigation : Predicate<[{ !MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
@@ -2410,6 +2411,10 @@ let Predicates = [HasPAuth] in {
   // authenticated tail call instructions have two register operands,
   // make sure at least one register is usable as a scratch one - for that
   // purpose, use tcGPRnotx16x17 register class for one of the operands.
+  //
+  // When the return address is signed, the epilogue may clobber x15, x16 and
+  // x17 before the terminator, so the *notx15x16x17 variants keep both register
+  // operands out of them.
   let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Size = 16,
       Defs = [X16,X17], Uses = [SP] in {
     def AUTH_TCRETURN
@@ -2419,6 +2424,15 @@ let Predicates = [HasPAuth] in {
     def AUTH_TCRETURN_BTI
       : Pseudo<(outs), (ins tcGPRx16x17:$dst, i32imm:$FPDiff, i32imm:$Key,
                             i64imm:$Disc, tcGPRnotx16x17:$AddrDisc),
+               []>, Sched<[WriteBrReg]>;
+    def AUTH_TCRETURNnotx15x16x17
+      : Pseudo<(outs), (ins tcGPRnotx15x16x17:$dst, i32imm:$FPDiff,
+                            i32imm:$Key, i64imm:$Disc,
+                            tcGPRnotx15x16x17:$AddrDisc),
+               []>, Sched<[WriteBrReg]>;
+    def AUTH_TCRETURN_BTIx17
+      : Pseudo<(outs), (ins tcGPRx17:$dst, i32imm:$FPDiff, i32imm:$Key,
+                            i64imm:$Disc, tcGPRnotx15x16x17:$AddrDisc),
                []>, Sched<[WriteBrReg]>;
   }
 
@@ -2434,6 +2448,21 @@ let Predicates = [HasPAuth] in {
                                 tcGPRnotx16x17:$AddrDisc),
               (AUTH_TCRETURN_BTI tcGPRx16x17:$dst, imm:$FPDiff, imm:$Key,
                                  imm:$Disc, tcGPRnotx16x17:$AddrDisc)>;
+
+  let Predicates = [TailCallNotX15X16X17] in
+    def : Pat<(AArch64authtcret tcGPRnotx15x16x17:$dst, (i32 timm:$FPDiff),
+                                (i32 timm:$Key), (i64 timm:$Disc),
+                                tcGPRnotx15x16x17:$AddrDisc),
+              (AUTH_TCRETURNnotx15x16x17 tcGPRnotx15x16x17:$dst, imm:$FPDiff,
+                                         imm:$Key, imm:$Disc,
+                                         tcGPRnotx15x16x17:$AddrDisc)>;
+
+  let Predicates = [TailCallX17] in
+    def : Pat<(AArch64authtcret tcGPRx17:$dst, (i32 timm:$FPDiff),
+                                (i32 timm:$Key), (i64 timm:$Disc),
+                                tcGPRnotx15x16x17:$AddrDisc),
+              (AUTH_TCRETURN_BTIx17 tcGPRx17:$dst, imm:$FPDiff, imm:$Key,
+                                    imm:$Disc, tcGPRnotx15x16x17:$AddrDisc)>;
 }
 
 // v9.5-A pointer authentication extensions
@@ -12020,7 +12049,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP] in {
                       Sched<[WriteBrReg]>;
   def TCRETURNrix17 : Pseudo<(outs), (ins tcGPRx17:$dst, i32imm:$FPDiff), []>,
                       Sched<[WriteBrReg]>;
-  def TCRETURNrinotx16 : Pseudo<(outs), (ins tcGPRnotx16:$dst, i32imm:$FPDiff), []>,
+  def TCRETURNrinotx15x16x17 : Pseudo<(outs), (ins tcGPRnotx15x16x17:$dst, i32imm:$FPDiff), []>,
                       Sched<[WriteBrReg]>;
 }
 
@@ -12033,9 +12062,9 @@ def : Pat<(AArch64tcret tcGPRx16x17:$dst, (i32 timm:$FPDiff)),
 def : Pat<(AArch64tcret tcGPRx17:$dst, (i32 timm:$FPDiff)),
           (TCRETURNrix17 tcGPRx17:$dst, imm:$FPDiff)>,
       Requires<[TailCallX17]>;
-def : Pat<(AArch64tcret tcGPRnotx16:$dst, (i32 timm:$FPDiff)),
-          (TCRETURNrinotx16 tcGPRnotx16:$dst, imm:$FPDiff)>,
-      Requires<[TailCallNotX16]>;
+def : Pat<(AArch64tcret tcGPRnotx15x16x17:$dst, (i32 timm:$FPDiff)),
+          (TCRETURNrinotx15x16x17 tcGPRnotx15x16x17:$dst, imm:$FPDiff)>,
+      Requires<[TailCallNotX15X16X17]>;
 
 def : Pat<(AArch64tcret tglobaladdr:$dst, (i32 timm:$FPDiff)),
           (TCRETURNdi texternalsym:$dst, imm:$FPDiff)>;

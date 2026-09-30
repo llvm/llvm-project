@@ -305,10 +305,31 @@ void AArch64PointerAuthImpl::authenticateLR(
   // are placed between MBBI and TI.
   MachineBasicBlock::iterator TI = MBB.getFirstInstrTerminator();
 
-  MCSymbol *PACSym = MFnI->getSigningInstrLabel();
+  const TargetRegisterInfo &TRI = *Subtarget->getRegisterInfo();
   auto &AFL = *static_cast<const AArch64FrameLowering *>(
       MF.getSubtarget().getFrameLowering());
   int64_t ArgumentStackToRestore = AFL.getArgumentStackToRestore(MF, MBB);
+
+  // Every scratch register the expansion below writes must be declared as an
+  // implicit-def on PAUTH_EPILOGUE (see
+  // AArch64FunctionInfo::getPauthEpilogueClobberedRegs). The expansion is
+  // inserted before MBBI, so no instruction after it may read the register.
+  // Register classes of the indirect tail call pseudos keep the call target out
+  // of these registers, this catches configurations (e.g. BTI, which forces
+  // x17) where that is not possible.
+  auto UseScratchReg = [&](MCPhysReg Scratch) {
+    assert(MBBI->definesRegister(Scratch, &TRI) &&
+           "PAUTH_EPILOGUE must declare the registers it clobbers");
+    MachineBasicBlock::iterator End = TI == MBB.end() ? TI : std::next(TI);
+    for (const MachineInstr &I : make_range(std::next(MBBI), End))
+      if (I.readsRegister(Scratch, &TRI))
+        report_fatal_error("unable to authenticate LR: the epilogue needs " +
+                           Twine(TRI.getName(Scratch)) +
+                           ", which is used by the terminator or an "
+                           "instruction before it");
+  };
+
+  MCSymbol *PACSym = MFnI->getSigningInstrLabel();
 
   // The AUTIASP instruction assembles to a hint instruction before v8.3a so
   // this instruction can safely be used for any v8a architecture.
@@ -332,6 +353,7 @@ void AArch64PointerAuthImpl::authenticateLR(
           .setMIFlag(MachineInstr::FrameDestroy);
     } else {
       if (MFnI->branchProtectionPAuthLR()) {
+        UseScratchReg(AArch64::X16);
         emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
                                         AArch64::X16);
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
@@ -357,6 +379,7 @@ void AArch64PointerAuthImpl::authenticateLR(
       emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
     } else {
       if (MFnI->branchProtectionPAuthLR()) {
+        UseScratchReg(AArch64::X16);
         emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
                                         AArch64::X16);
 
@@ -394,6 +417,7 @@ void AArch64PointerAuthImpl::authenticateLR(
   // At this point there is an offset to the incoming SP, and we can't use the
   // aut variants that hard-code SP. Reconstruct entry SP in x16 and
   // authenticate using AUTI[AB]1716 (x17=LR, x16=entry_SP).
+  UseScratchReg(AArch64::X16);
   emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
                   StackOffset::getFixed(-ArgumentStackToRestore), TII,
                   MachineInstr::FrameDestroy);
@@ -407,9 +431,11 @@ void AArch64PointerAuthImpl::authenticateLR(
   };
 
   if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+    UseScratchReg(AArch64::X17);
     emitMOV(AArch64::X17, AArch64::LR);
 
     assert(PACSym && "No PAC instruction to refer to");
+    UseScratchReg(AArch64::X15);
     emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
 
     unsigned AutOpc = UseBKey ? AArch64::AUTIB171615 : AArch64::AUTIA171615;
@@ -419,9 +445,11 @@ void AArch64PointerAuthImpl::authenticateLR(
 
     emitMOV(AArch64::LR, AArch64::X17);
   } else if (MFnI->branchProtectionPAuthLR()) {
+    UseScratchReg(AArch64::X17);
     emitMOV(AArch64::X17, AArch64::LR);
 
     assert(PACSym && "No PAC instruction to refer to");
+    UseScratchReg(AArch64::X15);
     emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
 
     // The PACM hint-space instruction modifies the following AUTI[AB]1716
@@ -446,6 +474,7 @@ void AArch64PointerAuthImpl::authenticateLR(
         .setMIFlag(MachineInstr::FrameDestroy);
     emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
   } else {
+    UseScratchReg(AArch64::X17);
     emitMOV(AArch64::X17, AArch64::LR);
 
     unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;

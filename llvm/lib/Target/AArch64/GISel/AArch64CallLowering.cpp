@@ -1156,26 +1156,20 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
   if (!IsIndirect)
     return AArch64::TCRETURNdi;
 
-  // When BTI or PAuthLR are enabled, there are restrictions on using x16 and
-  // x17 to hold the function pointer.
+  // When BTI is enabled, we need to use TCRETURNriBTI to make sure that we use
+  // x16 or x17.
+  bool MayClobber = FuncInfo->mayClobberTailCallRegsInEpilogue(CallerF);
   if (FuncInfo->branchTargetEnforcement()) {
-    if (FuncInfo->branchProtectionPAuthLR()) {
-      assert(!PAI && "ptrauth tail-calls not yet supported with PAuthLR");
-      return AArch64::TCRETURNrix17;
-    }
     if (PAI)
-      return AArch64::AUTH_TCRETURN_BTI;
-    return AArch64::TCRETURNrix16x17;
-  }
-
-  if (FuncInfo->branchProtectionPAuthLR()) {
-    assert(!PAI && "ptrauth tail-calls not yet supported with PAuthLR");
-    return AArch64::TCRETURNrinotx16;
+      return MayClobber ? AArch64::AUTH_TCRETURN_BTIx17
+                        : AArch64::AUTH_TCRETURN_BTI;
+    return MayClobber ? AArch64::TCRETURNrix17 : AArch64::TCRETURNrix16x17;
   }
 
   if (PAI)
-    return AArch64::AUTH_TCRETURN;
-  return AArch64::TCRETURNri;
+    return MayClobber ? AArch64::AUTH_TCRETURNnotx15x16x17
+                      : AArch64::AUTH_TCRETURN;
+  return MayClobber ? AArch64::TCRETURNrinotx15x16x17 : AArch64::TCRETURNri;
 }
 
 static const uint32_t *
@@ -1233,7 +1227,9 @@ bool AArch64CallLowering::lowerTailCall(
   MIB.addImm(0);
 
   // Authenticated tail calls always take key/discriminator arguments.
-  if (Opc == AArch64::AUTH_TCRETURN || Opc == AArch64::AUTH_TCRETURN_BTI) {
+  if (Opc == AArch64::AUTH_TCRETURN || Opc == AArch64::AUTH_TCRETURN_BTI ||
+      Opc == AArch64::AUTH_TCRETURNnotx15x16x17 ||
+      Opc == AArch64::AUTH_TCRETURN_BTIx17) {
     assert((Info.PAI->Key == AArch64PACKey::IA ||
             Info.PAI->Key == AArch64PACKey::IB) &&
            "Invalid auth call key");
