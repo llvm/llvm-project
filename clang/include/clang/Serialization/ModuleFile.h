@@ -75,8 +75,8 @@ struct InputFileInfo {
   bool ModuleMap;
 
   /// The first source location entry this module file wrote for the file, and
-  /// the offset that entry starts at. \c SLocIndex is zero when it wrote
-  /// none.
+  /// the offset that entry starts at. \c SLocIndex is a FileID, so it counts
+  /// from one, and is zero when it wrote none.
   unsigned SLocIndex;
   SourceLocation::UIntTy SLocOffset;
 

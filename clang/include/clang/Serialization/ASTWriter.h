@@ -567,8 +567,8 @@ private:
   SourceLocation getAffectingIncludeLoc(const SourceManager &SourceMgr,
                                         const SrcMgr::FileInfo &File);
 
-  /// Returns \p Loc in a loaded copy of its file, or an invalid location if the
-  /// file is kept locally.
+  /// Returns \p Loc in a loaded copy of its file, or an invalid location if it
+  /// cannot be redirected, which includes any macro or already loaded one.
   SourceLocation getRedirectedLocation(SourceLocation Loc) const;
 
   /// Returns the first non-affecting range whose end is not before \p Offset.

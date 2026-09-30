@@ -1791,7 +1791,8 @@ struct InputFileEntry {
   uint32_t ContentHash[2];
 
   /// The first source location entry written for the file, and the offset that
-  /// entry starts at. \c SLocIndex is zero when no entries were written.
+  /// entry starts at. \c SLocIndex is a FileID, so it counts from one, and is
+  /// zero when no entries were written.
   unsigned SLocIndex = 0;
   SourceLocation::UIntTy SLocOffset = 0;
 
@@ -6858,9 +6859,6 @@ unsigned ASTWriter::getAdjustedNumCreatedFIDs(FileID FID) const {
 }
 
 SourceLocation ASTWriter::getRedirectedLocation(SourceLocation Loc) const {
-  if (NonAffectingRedirectAdjustments.empty())
-    return SourceLocation();
-
   if (Loc.isMacroID())
     return SourceLocation();
 
@@ -7291,7 +7289,8 @@ void ASTWriter::associateDeclWithFile(const Decl *D, LocalDeclID ID) {
   if (FID.isInvalid())
     return;
   assert(SM.getSLocEntry(FID).isFile());
-  // A redirected file already has its declaration table in the loaded module.
+  // We write no declaration table for a file we leave out, and a redirected one
+  // already has its table in the module that kept its locations.
   if (!IsSLocAffecting[FID.ID])
     return;
 
