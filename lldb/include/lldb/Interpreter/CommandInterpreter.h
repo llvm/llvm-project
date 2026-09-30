@@ -683,8 +683,9 @@ public:
   Status PreprocessCommand(std::string &command);
   Status PreprocessToken(std::string &token);
 
-  void IncreaseCommandUsage(const CommandObject &cmd_obj) {
-    ++m_command_usages[cmd_obj.GetCommandName()];
+  void IncreaseCommandUsage(const CommandObject &cmd_obj,
+                            const StatsDuration &duration) {
+    m_command_stats[cmd_obj.GetCommandName()].addInvocation(duration);
   }
 
   void SetPrintCallback(CommandReturnObjectCallback callback);
@@ -815,8 +816,20 @@ private:
   bool m_allow_exit_code = false;
 
   /// Command usage statistics.
-  typedef llvm::StringMap<uint64_t> CommandUsageMap;
-  CommandUsageMap m_command_usages;
+  struct CommandStats {
+    /// How often this command was invoked.
+    uint64_t invocations = 0;
+    /// Total wall time for all invocations.
+    StatsDuration totalDuration;
+
+    void addInvocation(const StatsDuration &duration) {
+      invocations += 1;
+      totalDuration += duration.get();
+    }
+  };
+
+  typedef llvm::StringMap<CommandStats> CommandStatsMap;
+  CommandStatsMap m_command_stats;
 
   /// Turn on settings `interpreter.save-transcript` for LLDB to populate
   /// this stream. Otherwise this stream is empty.

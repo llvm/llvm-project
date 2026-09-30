@@ -120,7 +120,8 @@ class TestStatsAPI(TestBase):
         command_stats = json.loads(stream.GetData())
 
         # Verify bt command is correctly parsed into final form.
-        self.assertEqual(command_stats["thread backtrace"], 1)
+        self.assertEqual(command_stats["thread backtrace"]["invocations"], 1)
+        self.assertGreater(command_stats["thread backtrace"]["duration"], 0)
         # Verify original raw command is not duplicatedly captured.
         self.assertNotIn("bt", command_stats)
         # Verify bt's regex command is not duplicatedly captured.
