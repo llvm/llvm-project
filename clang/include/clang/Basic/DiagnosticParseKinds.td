@@ -826,7 +826,7 @@ def err_using_attribute_ns_conflict : Error<
   "attribute with scope specifier cannot follow default scope specifier">;
 def err_attributes_not_allowed : Error<"an attribute list cannot appear here">;
 def err_keyword_not_allowed : Error<"%0 cannot appear here">;
-def ext_unbalanced_attribute_args : ExtWarn<
+def ext_unbalanced_attribute_args : Extension<
   "attribute argument list is not a balanced token sequence">,
   InGroup<DiagGroup<"unbalanced-attribute-args">>;
 def ext_cxx11_attr_placement : ExtWarn<
