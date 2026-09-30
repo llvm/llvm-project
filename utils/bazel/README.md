@@ -58,6 +58,11 @@ for adding this configuration.
    ```
    bazel build --config=generic_gcc --repo_env=CC=/usr/bin/gcc --repo_env=CXX=/usr/bin/g++  @llvm-project//...
    ```
+7. To build [compile commands](https://clangd.llvm.org/design/compile-commands) for Clangd:
+   ```bash
+   bazel run //:refresh_compile_commands
+   ```
+   See [bazel-compile-commands-extractor](https://github.com/helly25/bazel-compile-commands-extractor) for more details.
 
 # Configuration
 

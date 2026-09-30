@@ -3,9 +3,18 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
 
 bzl_library(
     name = "configure",
     srcs = ["configure.bzl"],
     visibility = ["//visibility:public"],
+)
+
+refresh_compile_commands(
+    name = "refresh_compile_commands",
+    output_dir = "../..",
+    targets = [
+        "@llvm-project//...",
+    ],
 )
