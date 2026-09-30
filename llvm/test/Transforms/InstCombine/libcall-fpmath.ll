@@ -6,7 +6,7 @@
 define double @floor_fpmath(double %x) {
 ; CHECK-LABEL: define double @floor_fpmath(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call double @llvm.floor.f64(double [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.floor.f64(double [[X]]), !fpmath [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @floor(double %x), !fpmath !0
@@ -16,7 +16,7 @@ define double @floor_fpmath(double %x) {
 define double @fabs_fpmath(double %x) {
 ; CHECK-LABEL: define double @fabs_fpmath(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fabs.f64(double [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fabs.f64(double [[X]]), !fpmath [[META0]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @fabs(double %x), !fpmath !0
@@ -26,7 +26,7 @@ define double @fabs_fpmath(double %x) {
 define float @sinf_fpmath(float %x) {
 ; CHECK-LABEL: define float @sinf_fpmath(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.sin.f32(float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.sin.f32(float [[X]]), !fpmath [[META0]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @sinf(float %x) memory(none), !fpmath !0
@@ -38,3 +38,6 @@ declare double @fabs(double)
 declare float @sinf(float)
 
 !0 = !{float 2.5}
+;.
+; CHECK: [[META0]] = !{float 2.500000e+00}
+;.
