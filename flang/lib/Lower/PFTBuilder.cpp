@@ -3002,15 +3002,36 @@ static bool isStructurableWithUnstructuredInternals(
   return true;
 }
 
+/// Return true if \p construct owes its classification entirely to the
+/// evaluations it holds, none of which is Unstructured any more.
+static bool
+holdsNothingUnstructured(const Fortran::lower::pft::Evaluation &construct) {
+  if (!construct.evaluationList)
+    return false;
+  for (const Fortran::lower::pft::Evaluation &nested :
+       *construct.evaluationList)
+    if (nested.isUnstructured())
+      return false;
+  return true;
+}
+
 /// Reclassify every qualifying loop in \p unit.
 ///
 /// Runs after branch analysis, when the incoming-branch map is complete;
 /// during analysis a branch later in the function would not yet be recorded
 /// and condition 2 would read a partial map.
 ///
-/// Ancestors are deliberately left alone. A loop reclassified here lowers to a
-/// structured op, and a structured op is legal inside an unstructured parent,
-/// so leaving the parent Unstructured is conservative but correct.
+/// Ordinary ancestors are deliberately left alone. A loop reclassified here
+/// lowers to a structured op, and a structured op is legal inside an
+/// unstructured parent, so leaving the parent Unstructured is conservative but
+/// correct.
+///
+/// A directive construct is the exception, because it does not merely contain
+/// the loop: the directive owns it, and its lowering reads the construct's own
+/// classification to decide whether the loop op carries its bounds. Left
+/// Unstructured, the construct yields a bounds-free loop that nothing can
+/// partition, and the reclassified loop inside it becomes a second, nested
+/// one. Weaken such a construct once the loops it holds no longer need it.
 static void detectStructuredWithUnstructuredInternals(
     Fortran::lower::pft::FunctionLikeUnit &unit) {
   // Such a loop is lowered with its body in an scf.execute_region: its
@@ -3027,9 +3048,17 @@ static void detectStructuredWithUnstructuredInternals(
             visit(*e.evaluationList);
 
           if (e.isA<parser::DoConstruct>() &&
-              isStructurableWithUnstructuredInternals(e, unit))
+              isStructurableWithUnstructuredInternals(e, unit)) {
             // The one place the classification weakens: detection has proven
             // Unstructured unnecessary.
+            e.weakenControlFlow(Fortran::lower::pft::Evaluation::ControlFlow::
+                                    StructuredWithUnstructuredInternals);
+            continue;
+          }
+
+          // Children are visited first, so the loops this construct owns have
+          // already been reclassified by the time it is reached.
+          if (e.isExecutableDirective() && holdsNothingUnstructured(e))
             e.weakenControlFlow(Fortran::lower::pft::Evaluation::ControlFlow::
                                     StructuredWithUnstructuredInternals);
         }
