@@ -280,7 +280,18 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
   return 0;
 }
 
+bool is_linux_file(const File *f) {
+  return f->get_read_func() == &linux_file_read &&
+         f->get_write_func() == &linux_file_write &&
+         f->get_seek_func() == &linux_file_seek &&
+         f->get_close_func() == &linux_file_close;
+}
+
 int get_fileno(File *f) {
+  if (!is_linux_file(f)) {
+    libc_errno = EBADF;
+    return -1;
+  }
   auto *lf = reinterpret_cast<LinuxFile *>(f);
   return lf->get_fd();
 }

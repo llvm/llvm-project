@@ -161,6 +161,7 @@ add_libc_test(
     libc.src.stdio.ferror
     libc.src.stdio.fflush
     libc.src.stdio.fgetc
+    libc.src.stdio.fileno
     libc.src.stdio.fmemopen
     libc.src.stdio.fread
     libc.src.stdio.fseek
@@ -189,6 +190,7 @@ add_libc_test(
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush
+    libc.src.stdio.fileno
     libc.src.stdio.fopencookie
     libc.src.stdio.fread
     libc.src.stdio.fseek
