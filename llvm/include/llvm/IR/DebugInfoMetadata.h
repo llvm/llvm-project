@@ -2660,7 +2660,7 @@ public:
 
 /// A single intermediate-IR layer location.
 ///
-/// One source coordinate in an intermediate IR level (e.g. TileIR, MLIR) that
+/// One source coordinate in an intermediate IR level (e.g. MLIR) that
 /// sits between the high-level source and the final LLVM IR. It has no scope
 /// and references its \a DIFile directly. Grouped behind a \a DILayerLocList on
 /// \a DILocation's optional `irlayers` operand.

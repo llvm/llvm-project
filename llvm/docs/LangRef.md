@@ -7187,7 +7187,7 @@ defines no relationship between them.
 ##### DILayerLoc
 
 `DILayerLoc` nodes represent a source position in one intermediate IR level that
-a program was lowered through — for example a tile IR or an MLIR module produced
+a program was lowered through — for example an MLIR module produced
 part-way through compilation. The `kind:` field names the level and the `file:`
 field points at a {ref}`DIFile` for it; both are mandatory. `line:` and
 `column:` are the position within that file.
@@ -7196,7 +7196,7 @@ Unlike a {ref}`DILocation`, a `DILayerLoc` has no scope and no inlined-at
 context: it is a bare coordinate in a file, not a location in a scope tree.
 
 ```text
-!0 = !DILayerLoc(line: 100, column: 1, file: !1, kind: "tile ir")
+!0 = !DILayerLoc(line: 100, column: 1, file: !1, kind: "HighLevelIR")
 ```
 
 (DILayerLocList)=
@@ -7217,8 +7217,8 @@ requires a layer node to be shared.
 
 ```text
 !0 = !DILayerLocList(!1, !2)
-!1 = !DILayerLoc(line: 100, column: 1, file: !3, kind: "tile ir")
-!2 = !DILayerLoc(line: 7, column: 3, file: !4, kind: "gpu ir")
+!1 = !DILayerLoc(line: 100, column: 1, file: !3, kind: "HighLevelIR")
+!2 = !DILayerLoc(line: 7, column: 3, file: !4, kind: "LowLevelIR")
 ```
 
 (DILocalVariable)=

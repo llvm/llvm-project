@@ -8,7 +8,7 @@
 ## second carries both.
 
 # CHECK-DAG: ![[LIST:[0-9]+]] = !DILayerLocList(![[LAYER:[0-9]+]])
-# CHECK-DAG: ![[LAYER]] = !DILayerLoc(line: 42, column: 5, file: !{{[0-9]+}}, kind: "tile ir")
+# CHECK-DAG: ![[LAYER]] = !DILayerLoc(line: 42, column: 5, file: !{{[0-9]+}}, kind: "IntermediateIR")
 # CHECK-LABEL: name: test
 # CHECK: $eax = COPY %0, debug-location !DILocation(line: 1, scope: !{{[0-9]+}}, irlayers: ![[LIST]])
 # CHECK: RET64 $eax, debug-location !DILocation(line: 2, scope: !{{[0-9]+}}, inlinedAt: !DILocation(line: 1, scope: !{{[0-9]+}}), irlayers: ![[LIST]])
@@ -40,8 +40,8 @@
   !10 = !{i32 2, !"Debug Info Version", i32 3}
   !14 = !DILocation(line: 8, scope: !4)
   !15 = !DILocation(line: 9, scope: !4, irlayers: !22)
-  !20 = !DIFile(filename: "kernel.tileir", directory: ".")
-  !21 = !DILayerLoc(line: 42, column: 5, file: !20, kind: "tile ir")
+  !20 = !DIFile(filename: "intermediate.ir", directory: ".")
+  !21 = !DILayerLoc(line: 42, column: 5, file: !20, kind: "IntermediateIR")
   !22 = !DILayerLocList(!21)
 
 ...

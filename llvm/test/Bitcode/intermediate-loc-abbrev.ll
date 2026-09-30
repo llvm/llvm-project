@@ -38,7 +38,7 @@ define void @inlined(i32 %x) !dbg !9 {
 !llvm.module.flags = !{!2, !3}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
-!1 = !DIFile(filename: "test.cu", directory: "/test")
+!1 = !DIFile(filename: "test.cpp", directory: "/test")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !8 = distinct !DISubprogram(name: "layered", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
@@ -46,9 +46,9 @@ define void @inlined(i32 %x) !dbg !9 {
 !10 = !DISubroutineType(types: !11)
 !11 = !{null}
 
-!14 = !DIFile(filename: "intermediate.tileir", directory: ".")
+!14 = !DIFile(filename: "intermediate.ir", directory: ".")
 !30 = !DILayerLocList(!31)
-!31 = !DILayerLoc(line: 100, column: 10, file: !14, kind: "TileIR")
+!31 = !DILayerLoc(line: 100, column: 10, file: !14, kind: "IntermediateIR")
 
 !20 = !DILocation(line: 2, column: 1, scope: !8, irlayers: !30)
 !21 = !DILocation(line: 3, column: 1, scope: !9, inlinedAt: !40)

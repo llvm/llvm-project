@@ -1518,17 +1518,17 @@ TEST(DebugLocTest, IntermediateLocBasics) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule", Ctx);
   DIBuilder DIB(*M);
-  DIFile *F = DIB.createFile("source.cu", "/");
-  DIFile *IntF = DIB.createFile("intermediate.mlir", "/");
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", "/");
   DICompileUnit *CU =
       DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
   DISubprogram *SP =
       DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
                          DINode::FlagZero, DISubprogram::SPFlagDefinition);
 
-  // Build a layered DILocation: a source coordinate plus one TileIR layer that
-  // hangs off the DILocation's typed `irlayers` operand.
-  MDString *Kind = MDString::get(Ctx, "TileIR");
+  // Build a layered DILocation: a source coordinate plus one layer that hangs
+  // off the DILocation's typed `irlayers` operand.
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
   DILayerLoc *Layer = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
   DILayerLocList *Layers = DILayerLocList::get(Ctx, {Layer});
   DILocation *Loc =
@@ -1548,7 +1548,7 @@ TEST(DebugLocTest, IntermediateLocBasics) {
   ASSERT_EQ(Loc->getNumLayers(), 1u);
   DILayerLoc *L0 = Loc->getLayer(0);
   ASSERT_NE(L0, nullptr);
-  EXPECT_EQ(L0->getKind(), "TileIR");
+  EXPECT_EQ(L0->getKind(), "IntermediateIR");
   EXPECT_EQ(L0->getFile(), IntF);
   EXPECT_EQ(L0->getLine(), 100u);
   EXPECT_EQ(L0->getColumn(), 1u);
@@ -1558,8 +1558,8 @@ TEST(DebugLocTest, IntermediateLocWithAndWithout) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule", Ctx);
   DIBuilder DIB(*M);
-  DIFile *F = DIB.createFile("source.cu", "/");
-  DIFile *IntF = DIB.createFile("intermediate.mlir", "/");
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", "/");
   DICompileUnit *CU =
       DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
   DISubprogram *SP =
@@ -1576,7 +1576,7 @@ TEST(DebugLocTest, IntermediateLocWithAndWithout) {
   EXPECT_EQ(DLSourceOnly.get(), SourceLoc);
 
   // A layered DILocation returns its list.
-  MDString *Kind = MDString::get(Ctx, "TileIR");
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
   DILayerLoc *Layer = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
   DILayerLocList *Layers = DILayerLocList::get(Ctx, {Layer});
   DILocation *LayeredLoc =
@@ -1588,22 +1588,22 @@ TEST(DebugLocTest, IntermediateLocWithAndWithout) {
   EXPECT_EQ(DLWithInt.getRawIRLayers(), Layers);
   EXPECT_EQ(LayeredLoc->getIRLayers(), Layers);
   ASSERT_EQ(LayeredLoc->getNumLayers(), 1u);
-  EXPECT_EQ(LayeredLoc->getLayer(0)->getKind(), "TileIR");
+  EXPECT_EQ(LayeredLoc->getLayer(0)->getKind(), "IntermediateIR");
 }
 
 TEST(DebugLocTest, IntermediateLocEquality) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule", Ctx);
   DIBuilder DIB(*M);
-  DIFile *F = DIB.createFile("source.cu", "/");
-  DIFile *IntF = DIB.createFile("intermediate.mlir", "/");
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", "/");
   DICompileUnit *CU =
       DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
   DISubprogram *SP =
       DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
                          DINode::FlagZero, DISubprogram::SPFlagDefinition);
 
-  MDString *Kind = MDString::get(Ctx, "TileIR");
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
   DILayerLoc *LayerA = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
   // Differs from LayerA in a single field (column only) -- a minimal structural
   // change must still uniquify to a distinct node, so DL1 and DL3 differ.
@@ -1643,15 +1643,15 @@ TEST(DebugLocTest, MergedLocationWithIntermediate) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule", Ctx);
   DIBuilder DIB(*M);
-  DIFile *F = DIB.createFile("source.cu", "/");
-  DIFile *IntF = DIB.createFile("intermediate.mlir", "/");
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", "/");
   DICompileUnit *CU =
       DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
   DISubprogram *SP =
       DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
                          DINode::FlagZero, DISubprogram::SPFlagDefinition);
 
-  MDString *Kind = MDString::get(Ctx, "TileIR");
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
   // A layer shared by both locations, plus a distinct layer on each so the two
   // DILocations are different nodes.
   DILayerLoc *Shared = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
@@ -1682,15 +1682,15 @@ TEST(DebugLocTest, MergedLocationPartialIntermediate) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule", Ctx);
   DIBuilder DIB(*M);
-  DIFile *F = DIB.createFile("source.cu", "/");
-  DIFile *IntF = DIB.createFile("intermediate.mlir", "/");
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", "/");
   DICompileUnit *CU =
       DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
   DISubprogram *SP =
       DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
                          DINode::FlagZero, DISubprogram::SPFlagDefinition);
 
-  MDString *Kind = MDString::get(Ctx, "TileIR");
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
   DILayerLoc *LayerA = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
   DILayerLocList *LayersA = DILayerLocList::get(Ctx, {LayerA});
   DILayerLoc *LayerB = DILayerLoc::get(Ctx, Kind, IntF, 200, 2);
@@ -1721,51 +1721,44 @@ TEST(DebugLocTest, MergedLocationPartialIntermediate) {
   EXPECT_EQ(M13->getRawIRLayers(), nullptr);
 }
 
-// Under the outermost-frame model, two instructions inlined into the same
-// kernel share the kernel (outer) frame that carries the tile-IR snapshot,
-// while their heads (inner frames) differ. Merging them must PRESERVE that
-// shared outer-frame layer (MergeLocPair threads per-frame layers), so the
-// merged instruction still resolves to the kernel's tile-IR line.
-TEST(DebugLocTest, MergedLocationOuterFrameLayerPreserved) {
+// Two locations inlined at the same call site share its location as their
+// inlinedAt, and only that location carries layers. The merged location keeps
+// it, layers included.
+TEST(DebugLocTest, MergedLocationKeepsInlinedAtLayers) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule", Ctx);
   DIBuilder DIB(*M);
-  DIFile *SrcF = DIB.createFile("kernel.py", "/k");
-  DIFile *IntF = DIB.createFile("kernel.tileir", ".");
+  DIFile *SrcF = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", ".");
   DICompileUnit *CU =
-      DIB.createCompileUnit(dwarf::DW_LANG_C, SrcF, "tile", false, "", 0);
-  DISubprogram *KernelSP = DIB.createFunction(
-      CU, "kernel", "", SrcF, 10, DIB.createSubroutineType({}), 10,
+      DIB.createCompileUnit(dwarf::DW_LANG_C, SrcF, "test", false, "", 0);
+  DISubprogram *CallerSP = DIB.createFunction(
+      CU, "caller", "", SrcF, 10, DIB.createSubroutineType({}), 10,
       DINode::FlagZero, DISubprogram::SPFlagDefinition);
   DISubprogram *CalleeSP = DIB.createFunction(
       CU, "helper", "", SrcF, 5, DIB.createSubroutineType({}), 5,
       DINode::FlagZero, DISubprogram::SPFlagDefinition);
 
-  MDString *Kind = MDString::get(Ctx, "tile ir");
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
   DILayerLoc *Layer = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
-  DILayerLocList *KernelLayers = DILayerLocList::get(Ctx, {Layer});
+  DILayerLocList *CallSiteLayers = DILayerLocList::get(Ctx, {Layer});
 
-  // The kernel (outer) frame carries the snapshot layer.
-  DILocation *KernelFrame =
-      DILocation::get(Ctx, 50, 1, KernelSP, /*InlinedAt=*/nullptr,
+  DILocation *CallSite =
+      DILocation::get(Ctx, 50, 1, CallerSP, /*InlinedAt=*/nullptr,
                       /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0,
-                      /*IRLayers=*/KernelLayers);
+                      /*IRLayers=*/CallSiteLayers);
 
-  // Two instructions inlined into that kernel frame: same callee, different
-  // head lines, no layer of their own.
-  DILocation *LocA = DILocation::get(Ctx, 10, 3, CalleeSP, KernelFrame);
-  DILocation *LocB = DILocation::get(Ctx, 11, 5, CalleeSP, KernelFrame);
+  // Same callee, different lines, no layers of their own.
+  DILocation *LocA = DILocation::get(Ctx, 10, 3, CalleeSP, CallSite);
+  DILocation *LocB = DILocation::get(Ctx, 11, 5, CalleeSP, CallSite);
 
   DILocation *Merged = DILocation::getMergedLocation(LocA, LocB);
   ASSERT_NE(Merged, nullptr);
-  // The merged head has no layer of its own...
   EXPECT_EQ(Merged->getRawIRLayers(), nullptr);
-  // ...but the shared outer (kernel) frame, and its snapshot layer, survives so
-  // the emission walk still resolves to the kernel's tile-IR line.
-  DILocation *MergedOuter = Merged->getInlinedAt();
-  ASSERT_NE(MergedOuter, nullptr);
-  EXPECT_EQ(MergedOuter->getScope(), KernelSP);
-  EXPECT_EQ(MergedOuter->getIRLayers(), KernelLayers);
+  DILocation *MergedInlinedAt = Merged->getInlinedAt();
+  ASSERT_NE(MergedInlinedAt, nullptr);
+  EXPECT_EQ(MergedInlinedAt->getScope(), CallerSP);
+  EXPECT_EQ(MergedInlinedAt->getIRLayers(), CallSiteLayers);
 }
 
 // Rebuilding a location with a new discriminator must carry `irlayers` over:
@@ -1775,8 +1768,8 @@ TEST(DebugLocTest, CloneWithDiscriminatorPreservesLayers) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule", Ctx);
   DIBuilder DIB(*M);
-  DIFile *F = DIB.createFile("source.cu", "/");
-  DIFile *IntF = DIB.createFile("intermediate.tileir", ".");
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", ".");
   DICompileUnit *CU =
       DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
   DISubprogram *SP =
@@ -1784,7 +1777,7 @@ TEST(DebugLocTest, CloneWithDiscriminatorPreservesLayers) {
                          DINode::FlagZero, DISubprogram::SPFlagDefinition);
 
   DILayerLoc *Layer =
-      DILayerLoc::get(Ctx, MDString::get(Ctx, "tile ir"), IntF, 42, 5);
+      DILayerLoc::get(Ctx, MDString::get(Ctx, "IntermediateIR"), IntF, 42, 5);
   DILayerLocList *List = DILayerLocList::get(Ctx, {Layer});
   DILocation *Loc =
       DILocation::get(Ctx, 10, 5, SP, /*InlinedAt=*/nullptr,
@@ -1805,15 +1798,15 @@ TEST(DebugLocTest, MergedLocationDistinctLayersCompareStructurally) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule", Ctx);
   DIBuilder DIB(*M);
-  DIFile *F = DIB.createFile("source.cu", "/");
-  DIFile *IntF = DIB.createFile("intermediate.tileir", ".");
+  DIFile *F = DIB.createFile("source.c", "/");
+  DIFile *IntF = DIB.createFile("intermediate.ir", ".");
   DICompileUnit *CU =
       DIB.createCompileUnit(dwarf::DW_LANG_C, F, "test", false, "", 0);
   DISubprogram *SP =
       DIB.createFunction(CU, "foo", "", F, 1, DIB.createSubroutineType({}), 1,
                          DINode::FlagZero, DISubprogram::SPFlagDefinition);
 
-  MDString *Kind = MDString::get(Ctx, "tile ir");
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
   // Same fields, but each side holds its own `distinct` node, so the two shared
   // layers are unequal pointers.
   DILayerLoc *SharedA = DILayerLoc::getDistinct(Ctx, Kind, IntF, 100, 1);
@@ -1845,8 +1838,8 @@ TEST(DebugLocTest, IntermediateLocLayerUniquing) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule", Ctx);
   DIBuilder DIB(*M);
-  DIFile *IntF = DIB.createFile("intermediate.mlir", "/");
-  MDString *Kind = MDString::get(Ctx, "TileIR");
+  DIFile *IntF = DIB.createFile("intermediate.ir", "/");
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
 
   // Two structurally-identical DILayerLoc::get calls return the same node.
   DILayerLoc *L1 = DILayerLoc::get(Ctx, Kind, IntF, 100, 5);
@@ -1872,7 +1865,7 @@ TEST(DebugLocTest, PrintIntermediateLocWithInlinedAt) {
   DIBuilder DIB(*M);
   DIFile *SrcF = DIB.createFile("caller.py", "/src");
   DIFile *CalleeF = DIB.createFile("callee.py", "/src");
-  DIFile *IntF = DIB.createFile("callee.tileir", "/ir");
+  DIFile *IntF = DIB.createFile("callee.ir", "/ir");
   DICompileUnit *CU =
       DIB.createCompileUnit(dwarf::DW_LANG_C, SrcF, "test", false, "", 0);
   DISubprogram *CallerSP = DIB.createFunction(
@@ -1884,7 +1877,7 @@ TEST(DebugLocTest, PrintIntermediateLocWithInlinedAt) {
 
   // A DILocation carrying BOTH an inlinedAt chain and an irlayers operand.
   DILocation *CallSiteLoc = DILocation::get(Ctx, 50, 1, CallerSP);
-  MDString *Kind = MDString::get(Ctx, "TileIR");
+  MDString *Kind = MDString::get(Ctx, "IntermediateIR");
   DILayerLoc *Layer = DILayerLoc::get(Ctx, Kind, IntF, 100, 5);
   DILayerLocList *Layers = DILayerLocList::get(Ctx, {Layer});
   DILocation *Loc =
