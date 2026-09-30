@@ -8524,7 +8524,8 @@ void SIInstrInfo::moveToVALUImpl(
     const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
     BuildMI(*MBB, Inst, Inst.getDebugLoc(), get(LMC.AndOpc), LMC.VccReg)
         .addReg(LMC.ExecReg)
-        .addReg(IsSCC ? LMC.VccReg : CondReg);
+        .addReg(IsSCC ? LMC.VccReg : CondReg)
+        .setOperandDead(3); // implicit-def $scc
     Inst.removeOperand(1);
   } break;
 
