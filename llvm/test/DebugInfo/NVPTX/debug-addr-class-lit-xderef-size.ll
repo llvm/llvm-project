@@ -26,9 +26,9 @@
 ; CHECK-NEXT: .b8 3
 ; CHECK-NEXT: .b64 C
 
-@A = addrspace(3) externally_initialized global i32 undef, align 4, !dbg !0
-@B = addrspace(3) externally_initialized global i32 undef, align 4, !dbg !5
-@C = addrspace(3) externally_initialized global i32 undef, align 4, !dbg !7
+@A = addrspace(3) externally_initialized global i32 poison, align 4, !dbg !0
+@B = addrspace(3) externally_initialized global i32 poison, align 4, !dbg !5
+@C = addrspace(3) externally_initialized global i32 poison, align 4, !dbg !7
 
 define ptx_kernel void @test() !dbg !14 {
   store i32 0, ptr addrspacecast (ptr addrspace(3) @A to ptr), align 4, !dbg !17
