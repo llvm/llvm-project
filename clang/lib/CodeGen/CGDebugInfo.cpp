@@ -5277,9 +5277,8 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
     // debug info generated for a declaration here is consistent with that
     // generated for methods via other means.
     if (isa<CXXMethodDecl>(CalleeDecl->getCanonicalDecl())) {
-      auto *SP = getFunctionDeclaration(CalleeDecl);
-      assert(SP && "Couldn't create CXX method DISubprogram?");
-      Func->setSubprogram(SP);
+      if (auto *SP = getFunctionDeclaration(CalleeDecl))
+        Func->setSubprogram(SP);
     } else {
       EmitFunctionDecl(CalleeGlobalDecl, CalleeDecl->getLocation(), CalleeType,
                        Func);
