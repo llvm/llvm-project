@@ -2085,7 +2085,8 @@ The following type trait primitives are supported by Clang. Those traits marked
 - `__builtin_lt_synthesizes_from_spaceship`, `__builtin_gt_synthesizes_from_spaceship`,
   `__builtin_le_synthesizes_from_spaceship`, `__builtin_ge_synthesizes_from_spaceship` (Clang):
   These builtins can be used to determine whether the corresponding operator is synthesized from a spaceship operator.
-- [`__builtin_type_order`]{#builtin_type_order} (C++): Returns `std::strong_ordering::less` if `T` precedes `U` in an
+- {#builtin_type_order}
+  `__builtin_type_order` (C++): Returns `std::strong_ordering::less` if `T` precedes `U` in an
   implementation-defined total ordering of all types, `std::strong_ordering::greater` if `U` precedes `T`,
   and `std::strong_ordering::equal` if they are the same type.
   The order is stable across translation units for a given platform/ABI.
