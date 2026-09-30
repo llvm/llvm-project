@@ -15922,10 +15922,8 @@ private:
     // are padding and follow that container (Itanium C++ ABI §2.4, II.1(b)).
     // getIntWidth may be narrower still (bool, _BitInt); those occupied bits
     // are the low-order bits of the value container.
-    const uint64_t ValueFieldBits =
-        std::min(DeclaredSizeInBits, Ctx.getTypeSize(Field->getType()));
     const uint64_t OccupiedSizeInBits =
-        std::min(ValueFieldBits,
+        std::min(DeclaredSizeInBits,
                  static_cast<uint64_t>(Ctx.getIntWidth(Field->getType())));
 
     if (Ctx.getTargetInfo().isLittleEndian()) {
@@ -15947,7 +15945,7 @@ private:
     // Within the value container, occupied bits are its low-order bits, which
     // are allocated last. Padding from an oversized declared width follows
     // the container.
-    const uint64_t Start = StartBitOffset + ValueFieldBits - OccupiedSizeInBits;
+    const uint64_t Start = StartBitOffset;
     const uint64_t End = Start + OccupiedSizeInBits;
     const uint64_t CharWidth = Ctx.getCharWidth();
 
