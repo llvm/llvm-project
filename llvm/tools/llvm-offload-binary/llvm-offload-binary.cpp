@@ -143,10 +143,13 @@ static Error bundleImages() {
 
   SmallString<0> Buffer;
   if (Compress) {
-    if (const char *Reason =
-            compression::getReasonIfUnsupported(CompressionFormat))
+    compression::Format Format = CompressionFormat;
+    if (!CompressionFormat.getNumOccurrences() &&
+        !compression::zstd::isAvailable())
+      Format = compression::Format::Zlib;
+    if (const char *Reason = compression::getReasonIfUnsupported(Format))
       return createStringError(inconvertibleErrorCode(), Reason);
-    compression::Params Params(CompressionFormat);
+    compression::Params Params(Format);
     if (CompressionLevel.getNumOccurrences())
       Params.level = CompressionLevel;
     Expected<SmallString<0>> CompressedOrErr =
