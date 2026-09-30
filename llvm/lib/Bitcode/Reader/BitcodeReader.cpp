@@ -1765,9 +1765,11 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           break;
         }
         case Instruction::GetElementPtr:
+          LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
           C = ConstantExpr::getGetElementPtr(
               BC->SrcElemTy, ConstOps[0], ArrayRef(ConstOps).drop_front(),
               toGEPNoWrapFlags(BC->Flags), BC->getInRange());
+          LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
           break;
         case Instruction::ExtractElement:
           C = ConstantExpr::getExtractElement(ConstOps[0], ConstOps[1]);
