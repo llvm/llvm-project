@@ -2514,6 +2514,28 @@ public:
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
+  /// Late-parsed bounds types dropped while their declarator was built. The
+  /// attribute has already been diagnosed and its node is no longer part of
+  /// any type, so the completion pass must skip it rather than parse its
+  /// argument and complete it.
+  llvm::SmallPtrSet<const BoundsAttributedType *, 1>
+      RejectedLateParsedBoundsTypes;
+
+  void markLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) {
+    RejectedLateParsedBoundsTypes.insert(BATy);
+  }
+
+  bool isLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) const {
+    return RejectedLateParsedBoundsTypes.contains(BATy);
+  }
+
+  /// Supply the parsed argument of a late-parsed bounds attribute to the type
+  /// built for it by ActOnLateParsedTypeAttr, and run the checks that need the
+  /// owning declaration. \p FD is the field the type belongs to. Returns false
+  /// if the attribute was rejected.
+  bool ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
+                                       FieldDecl *FD, Expr *Arg);
+
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.
   ///
@@ -2914,6 +2936,8 @@ public:
   /// Checks that a call expression's argument count is the desired number.
   /// This is useful when doing custom type-checking.  Returns true on error.
   bool checkArgCount(CallExpr *Call, unsigned DesiredArgCount);
+
+  bool convertArgumentToType(Expr *&Value, QualType Ty);
 
   /// Returns true if the argument consists of one contiguous run of 1s with any
   /// number of 0s on either side. The 1s are allowed to wrap from LSB to MSB,
@@ -3580,7 +3604,7 @@ public:
 
   /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
-  llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
+  mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
   /// A cache of enumerator values for enums checked by -Wassign-enum.
   llvm::DenseMap<const EnumDecl *, llvm::SmallVector<llvm::APSInt>>
@@ -5549,6 +5573,10 @@ public:
       CXXConstructionKind ConstructKind, SourceRange ParenRange);
 
   ExprResult ConvertMemberDefaultInitExpression(FieldDecl *FD, Expr *InitExpr,
+                                                SourceLocation InitLoc);
+  ExprResult ConvertMemberDefaultInitExpression(FieldDecl *FD,
+                                                const InitializedEntity &Entity,
+                                                Expr *InitExpr,
                                                 SourceLocation InitLoc);
 
   /// FinalizeVarWithDestructor - Prepare for calling destructor on the
@@ -7719,7 +7747,24 @@ public:
   /// Emit a warning for all pending noderef expressions that we recorded.
   void WarnOnPendingNoDerefs(ExpressionEvaluationContextRecord &Rec);
 
-  ExprResult BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field);
+private:
+  /// Shared logic for building default member initializer which used in a
+  /// constructor or an aggregate initialization.
+  ///
+  ///
+  /// The caller enters that evaluation context and decides whether the result
+  /// is finished as a full-expression. \p NestedDefaultChecking and
+  /// \p NeedRebuild have to be sampled before entering it.
+  ExprResult BuildCXXDefaultInitInternal(SourceLocation Loc, FieldDecl *Field,
+                                         const InitializedEntity &Entity,
+                                         bool NestedDefaultChecking,
+                                         bool NeedRebuild);
+
+public:
+  ExprResult BuildCXXCtorDefaultInitExpr(SourceLocation Loc, FieldDecl *Field);
+  ExprResult
+  BuildCXXAggregateDefaultInitExpr(SourceLocation Loc, FieldDecl *Field,
+                                   const InitializedEntity &MemberEntity);
 
   /// Instantiate or parse a C++ default argument expression as necessary.
   /// Return true on error.
@@ -9233,7 +9278,8 @@ public:
                                    const sema::Capture &From);
 
   /// Build a FieldDecl suitable to hold the given capture.
-  FieldDecl *BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture);
+  FieldDecl *BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture,
+                               bool IsOpenMP = false);
 
   /// Initialize the given capture with a suitable expression.
   ExprResult BuildCaptureInit(const sema::Capture &Capture,
@@ -15156,12 +15202,12 @@ private:
   /// fact subsume the second's.
   llvm::DenseMap<std::pair<const NamedDecl *, const NamedDecl *>, bool>
       SubsumptionCache;
-  /// Caches the normalized associated constraints of declarations (concepts or
-  /// constrained declarations). If an error occurred while normalizing the
-  /// associated constraints of the template or concept, nullptr will be cached
-  /// here.
-  llvm::DenseMap<ConstrainedDeclOrNestedRequirement, NormalizedConstraint *>
-      NormalizationCache;
+  /// Caches the normal form of constraint expressions (and their pack
+  /// substitution index). These are shared by e.g. the members of all
+  /// specializations of a class template. If an error occurred while
+  /// normalizing an expression, nullptr will be cached here.
+  llvm::DenseMap<std::pair<const Expr *, unsigned>, NormalizedConstraint *>
+      NormalizedConstraintExprCache;
 
   /// Cache whether the associated constraint of a declaration
   /// is satisfied.
@@ -15170,6 +15216,23 @@ private:
 
   // The current stack of constraint satisfactions, so we can exit-early.
   llvm::SmallVector<SatisfactionStackEntryTy, 10> SatisfactionStack;
+
+  /// Used by SetupConstraintCheckingTemplateArgumentsAndScope to set up the
+  /// LocalInstantiationScope of the current non-lambda function. For lambdas,
+  /// use LambdaScopeForCallOperatorInstantiationRAII.
+  bool
+  SetupConstraintScope(FunctionDecl *FD,
+                       std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+                       const MultiLevelTemplateArgumentList &MLTAL,
+                       LocalInstantiationScope &Scope);
+
+  /// Used during constraint checking, sets up the constraint template argument
+  /// lists, and calls SetupConstraintScope to set up the
+  /// LocalInstantiationScope to have the proper set of ParVarDecls configured.
+  std::optional<MultiLevelTemplateArgumentList>
+  SetupConstraintCheckingTemplateArgumentsAndScope(
+      FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+      LocalInstantiationScope &Scope);
 
   ///@}
 

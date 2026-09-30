@@ -8,6 +8,7 @@
 
 #include <sycl/__impl/usm_functions.hpp>
 
+#include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 
@@ -56,7 +57,7 @@ static device getHostAllocDevice(const context &syclContext) {
 
   if (It == ContextDevices.end()) {
     throw sycl::exception(
-        sycl::errc::feature_not_supported,
+        syclContext, sycl::errc::feature_not_supported,
         "None of the context's devices support host USM allocations.");
   }
   return *It;
@@ -117,7 +118,8 @@ void *malloc_shared(std::size_t numBytes, const queue &syclQueue,
 
 // SYCL 2020 4.8.3.5. Parameterized allocation functions.
 
-static aspect getAspectByAllocationKind(usm::alloc kind) {
+static aspect getAspectByAllocationKind(usm::alloc kind,
+                                        const context &syclContext) {
   switch (kind) {
   case usm::alloc::host:
     return aspect::usm_host_allocations;
@@ -128,7 +130,7 @@ static aspect getAspectByAllocationKind(usm::alloc kind) {
   case usm::alloc::unknown:
     // usm::alloc::unknown can be returned to user from get_pointer_type but
     // it can't be converted to a valid backend type.
-    throw exception(sycl::make_error_code(sycl::errc::invalid),
+    throw exception(syclContext, sycl::make_error_code(sycl::errc::invalid),
                     "Invalid USM allocation kind requested");
   }
 }
@@ -140,12 +142,12 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
   auto ContextDevices = syclContext.get_devices();
   if (std::none_of(ContextDevices.begin(), ContextDevices.end(),
                    [&syclDevice](device Dev) { return Dev == syclDevice; }))
-    throw exception(make_error_code(errc::invalid),
+    throw exception(syclContext, make_error_code(errc::invalid),
                     "Specified device is not contained by specified context.");
 
-  if (!syclDevice.has(getAspectByAllocationKind(kind)))
+  if (!syclDevice.has(getAspectByAllocationKind(kind, syclContext)))
     throw sycl::exception(
-        sycl::errc::feature_not_supported,
+        syclContext, sycl::errc::feature_not_supported,
         "Device doesn't support requested kind of USM allocation");
 
   if (!numBytes)
@@ -153,19 +155,21 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
 
   void *Ptr{};
   auto OLDevice = detail::getSyclObjImpl(syclDevice)->getOLHandle();
+  auto OLContext = detail::getSyclObjImpl(syclContext)->getOLHandleRef();
 
   ol_result_t Result{};
   if (alignment == 0) {
     Result =
         kind == usm::alloc::host
-            ? detail::callNoCheck(olMemAllocHost, OLDevice, numBytes, &Ptr)
-            : detail::callNoCheck(olMemAlloc, OLDevice,
+            ? detail::callNoCheck(olMemAllocHost, OLContext, OLDevice, numBytes,
+                                  &Ptr)
+            : detail::callNoCheck(olMemAlloc, OLContext, OLDevice,
                                   detail::getOlAllocType(kind), numBytes, &Ptr);
   } else {
     Result = kind == usm::alloc::host
-                 ? detail::callNoCheck(olMemAllocAlignedHost, OLDevice,
-                                       numBytes, alignment, &Ptr)
-                 : detail::callNoCheck(olMemAllocAligned, OLDevice,
+                 ? detail::callNoCheck(olMemAllocAlignedHost, OLContext,
+                                       OLDevice, numBytes, alignment, &Ptr)
+                 : detail::callNoCheck(olMemAllocAligned, OLContext, OLDevice,
                                        detail::getOlAllocType(kind), numBytes,
                                        alignment, &Ptr);
   }
@@ -194,8 +198,8 @@ void *malloc(std::size_t numBytes, const queue &syclQueue, usm::alloc kind,
 // SYCL 2020 4.8.3.6. Memory deallocation functions.
 
 void free(void *ptr, const context &ctxt) {
-  std::ignore = ctxt;
-  detail::callAndThrow(olMemFree, ptr);
+  detail::ContextImpl &Context = *detail::getSyclObjImpl(ctxt);
+  detail::callAndThrow(Context, olMemFree, Context.getOLHandleRef(), ptr);
 }
 
 void free(void *ptr, const queue &q) { return free(ptr, q.get_context()); }

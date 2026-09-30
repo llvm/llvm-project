@@ -12,4 +12,4 @@
 
 static bfloat16 add_func(bfloat16 x, bfloat16 y) { return x + y; }
 
-LIST_ADD_TESTS(bfloat16, bfloat16, add_func)
+LIST_ADD_TESTS(Bfloat16Add, bfloat16, bfloat16, add_func)

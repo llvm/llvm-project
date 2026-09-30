@@ -48,11 +48,11 @@ static llvm::cl::list<std::string>
             llvm::cl::desc("Path to a file containing declarations to import"));
 
 static llvm::cl::opt<bool>
-    Direct("direct", llvm::cl::Optional,
+    Direct("direct",
            llvm::cl::desc("Use the parsed declarations without indirection"));
 
 static llvm::cl::opt<bool> UseOrigins(
-    "use-origins", llvm::cl::Optional,
+    "use-origins",
     llvm::cl::desc(
         "Use DeclContext origin information for more accurate lookups"));
 
@@ -62,8 +62,7 @@ static llvm::cl::list<std::string>
               llvm::cl::CommaSeparated);
 
 static llvm::cl::opt<std::string>
-    Input("x", llvm::cl::Optional,
-          llvm::cl::desc("The language to parse (default: c++)"),
+    Input("x", llvm::cl::desc("The language to parse (default: c++)"),
           llvm::cl::init("c++"));
 
 static llvm::cl::opt<bool> ObjCARC("objc-arc", llvm::cl::init(false),
