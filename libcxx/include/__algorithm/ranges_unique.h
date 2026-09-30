@@ -47,8 +47,8 @@ struct __unique {
             indirect_equivalence_relation<projected<_Iter, _Proj>> _Comp = ranges::equal_to>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter>
   operator()(_Iter __first, _Sent __last, _Comp __comp = {}, _Proj __proj = {}) const {
-    auto __ret =
-        std::__unique<_RangeAlgPolicy>(std::move(__first), std::move(__last), std::__make_projected(__comp, __proj));
+    auto __ret = std::__unique_sorted_range<_RangeAlgPolicy>(
+        std::move(__first), std::move(__last), std::__make_projected(__comp, __proj));
     return {std::move(__ret.first), std::move(__ret.second)};
   }
 
@@ -58,7 +58,7 @@ struct __unique {
     requires permutable<iterator_t<_Range>>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr borrowed_subrange_t<_Range>
   operator()(_Range&& __range, _Comp __comp = {}, _Proj __proj = {}) const {
-    auto __ret = std::__unique<_RangeAlgPolicy>(
+    auto __ret = std::__unique_sorted_range<_RangeAlgPolicy>(
         ranges::begin(__range), ranges::end(__range), std::__make_projected(__comp, __proj));
     return {std::move(__ret.first), std::move(__ret.second)};
   }
