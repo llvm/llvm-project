@@ -159,11 +159,13 @@ static MachineBasicBlock::iterator findMBBInsertionPoint(MachineBasicBlock &MBB,
       continue;
     }
     if (!SkippedInitialUnclausedVmemPrologue &&
-        InsertPt->getOpcode() == AMDGPU::GLOBAL_PREFETCH_B8_SADDR) {
-      auto Next = InsertPt;
-      ++Next;
-      if (Next != MBB.end() && Next->getOpcode() == AMDGPU::V_NOP_e32) {
-        InsertPt = ++Next;
+        InsertPt->getOpcode() == AMDGPU::S_MOV_B64) {
+      auto Vnop = std::next(InsertPt);
+      auto GlobalPrefetch = Vnop == MBB.end() ? MBB.end() : std::next(Vnop);
+      if (Vnop != MBB.end() && Vnop->getOpcode() == AMDGPU::V_NOP_e32 &&
+          GlobalPrefetch != MBB.end() &&
+          GlobalPrefetch->getOpcode() == AMDGPU::GLOBAL_PREFETCH_B8_SADDR) {
+        InsertPt = std::next(GlobalPrefetch);
         SkippedInitialUnclausedVmemPrologue = true;
         continue;
       }

@@ -68,11 +68,17 @@ define amdgpu_kernel void @between_override_thresholds() {
 }
 
 ; INITIAL-16K-LABEL: cache_size_limit:
+; INITIAL-16K:          s_mov_b64
+; INITIAL-16K-NEXT:     v_nop
+; INITIAL-16K-NEXT:     global_prefetch_b8
 ; INITIAL-16K-COUNT-12: s_prefetch_inst_pc_rel
-; INITIAL-16K-NEXT:     s_mov_b64
+; INITIAL-16K-NEXT:     ;;#ASMSTART
 ; GFX1250-LABEL:     cache_size_limit:
+; GFX1250:           s_mov_b64
+; GFX1250-NEXT:      v_nop
+; GFX1250-NEXT:      global_prefetch_b8
 ; GFX1250-COUNT-14:  s_prefetch_inst_pc_rel
-; GFX1250-NEXT:      s_mov_b64
+; GFX1250-NEXT:      ;;#ASMSTART
 define amdgpu_kernel void @cache_size_limit() {
   call void asm sideeffect ".space 65536", ""()
   ret void
