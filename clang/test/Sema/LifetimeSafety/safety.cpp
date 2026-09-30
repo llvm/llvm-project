@@ -4083,6 +4083,7 @@ struct Item {
 
 struct Container {
   const Item* saved;
+  void size();
 };
 
 struct Helper {
@@ -4094,7 +4095,7 @@ struct Helper {
       Item item;
       AddItem(item, c); // expected-warning {{local variable 'item' does not live long enough}}
     }                   // expected-note {{local variable 'item' is destroyed here}}
-    use(c);             // expected-note {{later used here}}
+    c.size();           // expected-note {{later used here}}
   }
 };
 } // namespace off_by_one_crash
