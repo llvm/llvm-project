@@ -30,6 +30,7 @@
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/windows/ConnectionConPTYWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -72,7 +73,8 @@ std::string GetProcessExecutableName(HANDLE process_handle) {
   file_name.resize(copied);
   std::string result;
   llvm::convertWideToUTF8(file_name.data(), result);
-  return result;
+  // A process launched through an extended-length path has the "\\?\" prefix.
+  return StripExtendedLengthPrefix(result);
 }
 
 std::string GetProcessExecutableName(DWORD pid) {
