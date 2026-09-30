@@ -170,7 +170,6 @@ TEST_F(FormatTest, RemovesEmptyLines) {
   CustomStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
   CustomStyle.BraceWrapping.AfterNamespace = true;
   CustomStyle.KeepEmptyLines.AtStartOfBlock = false;
-  CustomStyle.KeepEmptyLines.AtEndOfBlock = false;
   verifyFormat("namespace N\n"
                "{\n"
                "\n"
@@ -398,7 +397,6 @@ TEST_F(FormatTest, RemovesEmptyLines) {
   Style.BraceWrapping.AfterClass = true;
   Style.BraceWrapping.AfterFunction = true;
   Style.KeepEmptyLines.AtStartOfBlock = false;
-  Style.KeepEmptyLines.AtEndOfBlock = false;
 
   verifyFormat("class Foo\n"
                "{\n"
