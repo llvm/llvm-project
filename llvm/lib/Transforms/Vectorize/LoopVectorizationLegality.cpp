@@ -631,6 +631,26 @@ static bool canWidenResultType(const Instruction &I, bool AllowStructCalls) {
          all_of(I.users(), IsaPred<ExtractValueInst>);
 }
 
+/// Returns true if the types produced and stored by \p I can be widened,
+/// otherwise reports a vectorization failure for \p TheLoop and returns false.
+static bool canWidenTypes(Instruction &I, bool AllowStructCalls,
+                          OptimizationRemarkEmitter *ORE, Loop *TheLoop) {
+  if (!canWidenResultType(I, AllowStructCalls)) {
+    reportVectorizationFailure("Found unvectorizable type",
+                               "instruction return type cannot be vectorized",
+                               "CantVectorizeInstructionReturnType", ORE,
+                               TheLoop, &I);
+    return false;
+  }
+  auto *SI = dyn_cast<StoreInst>(&I);
+  if (SI && !VectorType::isValidElementType(SI->getValueOperand()->getType())) {
+    reportVectorizationFailure("Store instruction cannot be vectorized",
+                               "CantVectorizeStore", ORE, TheLoop, SI);
+    return false;
+  }
+  return true;
+}
+
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   assert(!TheLoop->isInnermost() && "We are not vectorizing an outer loop.");
   // Store the result and return it at the end instead of exiting early, in case
@@ -642,15 +662,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     // Instructions in the loop nest are widened, so the types they produce and
     // store must be widenable. Struct-returning calls are not supported yet.
     for (Instruction &I : *BB) {
-      auto *SI = dyn_cast<StoreInst>(&I);
-      if (canWidenResultType(I, /*AllowStructCalls=*/false) &&
-          (!SI ||
-           VectorType::isValidElementType(SI->getValueOperand()->getType())))
+      if (canWidenTypes(I, /*AllowStructCalls=*/false, ORE, TheLoop))
         continue;
-      reportVectorizationFailure("Found unvectorizable type",
-                                 "instruction type cannot be vectorized",
-                                 "CantVectorizeInstructionType", ORE, TheLoop,
-                                 &I);
       if (!DoExtraAnalysis)
         return false;
       Result = false;
@@ -1007,29 +1020,17 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
   if (CI && !VFDatabase::getMappings(*CI).empty())
     VecCallVariantsFound = true;
 
-  // Check that the instruction return type is vectorizable.
-  if (!canWidenResultType(I, /*AllowStructCalls=*/true)) {
-    reportVectorizationFailure("Found unvectorizable type",
-                               "instruction return type cannot be vectorized",
-                               "CantVectorizeInstructionReturnType", ORE,
-                               TheLoop, &I);
+  // Check that the instruction return and stored types are vectorizable.
+  if (!canWidenTypes(I, /*AllowStructCalls=*/true, ORE, TheLoop))
     return false;
-  }
 
-  // Check that the stored type is vectorizable.
   if (auto *ST = dyn_cast<StoreInst>(&I)) {
-    Type *T = ST->getValueOperand()->getType();
-    if (!VectorType::isValidElementType(T)) {
-      reportVectorizationFailure("Store instruction cannot be vectorized",
-                                 "CantVectorizeStore", ORE, TheLoop, ST);
-      return false;
-    }
-
     // For nontemporal stores, check that a nontemporal vector version is
     // supported on the target.
     if (ST->getMetadata(LLVMContext::MD_nontemporal)) {
       // Arbitrarily try a vector of 2 elements.
-      auto *VecTy = FixedVectorType::get(T, /*NumElts=*/2);
+      auto *VecTy =
+          FixedVectorType::get(ST->getValueOperand()->getType(), /*NumElts=*/2);
       assert(VecTy && "did not find vectorized version of stored type");
       if (!TTI->isLegalNTStore(VecTy, ST->getAlign())) {
         reportVectorizationFailure(
