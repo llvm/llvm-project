@@ -29,9 +29,7 @@ define double @test_erf(double %x) {
 define double @test_asin(double %x) {
 ; CHECK-LABEL: define double @test_asin(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG_X:%.*]] = fneg double [[X]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call reassoc double @asin(double [[NEG_X]])
-; CHECK-NEXT:    [[NEG_RES:%.*]] = fneg double [[RES]]
+; CHECK-NEXT:    [[NEG_RES:%.*]] = tail call reassoc double @asin(double [[X]])
 ; CHECK-NEXT:    ret double [[NEG_RES]]
 ;
   %neg_x = fneg double %x
@@ -44,9 +42,7 @@ define double @test_asin(double %x) {
 define double @test_asinh(double %x) {
 ; CHECK-LABEL: define double @test_asinh(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG_X:%.*]] = fneg double [[X]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call reassoc double @asinh(double [[NEG_X]])
-; CHECK-NEXT:    [[NEG_RES:%.*]] = fneg double [[RES]]
+; CHECK-NEXT:    [[NEG_RES:%.*]] = tail call reassoc double @asinh(double [[X]])
 ; CHECK-NEXT:    ret double [[NEG_RES]]
 ;
   %neg_x = fneg double %x
@@ -59,9 +55,7 @@ define double @test_asinh(double %x) {
 define double @test_atan(double %x) {
 ; CHECK-LABEL: define double @test_atan(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG_X:%.*]] = fneg double [[X]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call reassoc double @atan(double [[NEG_X]])
-; CHECK-NEXT:    [[NEG_RES:%.*]] = fneg double [[RES]]
+; CHECK-NEXT:    [[NEG_RES:%.*]] = tail call reassoc double @atan(double [[X]])
 ; CHECK-NEXT:    ret double [[NEG_RES]]
 ;
   %neg_x = fneg double %x
@@ -104,9 +98,7 @@ define double @test_atan2_neg_x_does_not_fold(double %y, double %x) {
 define double @test_cbrt(double %x) {
 ; CHECK-LABEL: define double @test_cbrt(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG_X:%.*]] = fneg double [[X]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call reassoc double @cbrt(double [[NEG_X]])
-; CHECK-NEXT:    [[NEG_RES:%.*]] = fneg double [[RES]]
+; CHECK-NEXT:    [[NEG_RES:%.*]] = tail call reassoc double @cbrt(double [[X]])
 ; CHECK-NEXT:    ret double [[NEG_RES]]
 ;
   %neg_x = fneg double %x
