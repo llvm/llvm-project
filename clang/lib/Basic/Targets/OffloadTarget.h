@@ -13,9 +13,9 @@
 #ifndef LLVM_CLANG_LIB_BASIC_TARGETS_OFFLOADTARGET_H
 #define LLVM_CLANG_LIB_BASIC_TARGETS_OFFLOADTARGET_H
 
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/Basic/OffloadArch.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -27,7 +27,7 @@ protected:
   OffloadArch DeviceArch = OffloadArch::getUnused();
 
 public:
-  OffloadTargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) { }
+  OffloadTargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) {}
 
   // Clang driver emits -target-cpu to indicate offload device architecture for
   // both CUDA and SYCL. We override setCPU to capture this offload device
