@@ -1099,9 +1099,12 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     Value *StoredVal, Instruction *TheStore,
     SmallPtrSetImpl<Instruction *> &Stores, const SCEVAddRecExpr *Ev,
     const SCEV *BECount, bool IsNegStride, bool IsLoopMemset) {
-  // The same check as in `processLoopStoreOfLoopLoad`, see the comments there.
-  if (auto *MSI = dyn_cast<MemSetInst>(TheStore); MSI && MSI->isForceInlined())
-    return false;
+  // We currently don't convert inline intrinsics into larger ones, to avoid
+  // code size increase. `processLoopMemSet` checks that the intrinsic is not
+  // inline before calling this function.
+  assert((!isa<MemIntrinsic>(TheStore) ||
+          !cast<MemIntrinsic>(TheStore)->isForceInlined()) &&
+         "inline mem intrinsics should be filtered out by callers");
 
   Module *M = TheStore->getModule();
 
@@ -1359,16 +1362,12 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     MaybeAlign StoreAlign, MaybeAlign LoadAlign, Instruction *TheStore,
     Instruction *TheLoad, const SCEVAddRecExpr *StoreEv,
     const SCEVAddRecExpr *LoadEv, const SCEV *BECount) {
-  // Avoid converting `llvm.memcpy.inline` into `llvm.memcpy`, as the inline
-  // intrinsic is guaranteed to not make a libcall.
-  //
-  // We could generate `llvm.memcpy.inline` when the store instruction is the
-  // inline version, but that can potentially generate more code. For now, do
-  // the conservative thing and bail.
-  //
-  // The same check for `llvm.memset.inline` is in `processLoopStridedStore`.
-  if (auto *MCI = dyn_cast<MemCpyInst>(TheStore); MCI && MCI->isForceInlined())
-    return false;
+  // We currently don't convert inline intrinsics into larger ones, to avoid
+  // code size increase. `processLoopMemCpy` checks that the intrinsic is not
+  // inline before calling this function.
+  assert((!isa<MemIntrinsic>(TheStore) ||
+          !cast<MemIntrinsic>(TheStore)->isForceInlined()) &&
+         "inline mem intrinsics should be filtered out by callers");
 
   // The trip count of the loop and the base pointer of the addrec SCEV is
   // guaranteed to be loop invariant, which means that it should dominate the
