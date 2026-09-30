@@ -25,8 +25,8 @@ define void @f(ptr %p) !dbg !5 {
 !4 = !DISubroutineType(types: !{null})
 !5 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
 
-!10 = !DIFile(filename: "t.tileir", directory: "/")
-!11 = !DILayerLoc(line: 1, file: !10, kind: "tile ir")
+!10 = !DIFile(filename: "t.ir", directory: "/")
+!11 = !DILayerLoc(line: 1, file: !10, kind: "IntermediateIR")
 
 ;; irlayers points at a layer rather than a list.
 !20 = !DILocation(line: 2, scope: !5, irlayers: !11)
@@ -38,7 +38,7 @@ define void @f(ptr %p) !dbg !5 {
 
 !22 = !DILocation(line: 4, scope: !5, irlayers: !32)
 !32 = !DILayerLocList(!33)
-!33 = !DILayerLoc(line: 1, file: !4, kind: "tile ir")
+!33 = !DILayerLoc(line: 1, file: !4, kind: "IntermediateIR")
 
 !23 = !DILocation(line: 5, scope: !5, irlayers: !34)
 !34 = !DILayerLocList()
