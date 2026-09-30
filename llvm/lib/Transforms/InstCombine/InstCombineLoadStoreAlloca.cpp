@@ -1044,8 +1044,7 @@ static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
   return false;
 }
 
-Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
-                                                bool UseProvenance,
+Value *InstCombinerImpl::simplifyNonNullOperand(Value *V, bool UseProvenance,
                                                 unsigned Depth) {
   if (auto *Sel = dyn_cast<SelectInst>(V)) {
     if (isa<ConstantPointerNull>(Sel->getOperand(1)))
@@ -1088,8 +1087,8 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
     bool Changed = false;
     for (Use &U : PHI->incoming_values()) {
       // We set Depth to RecursionLimit to avoid expensive recursion.
-      if (auto *Res = simplifyNonNullOperand(U.get(), UseProvenance,
-                                             RecursionLimit)) {
+      if (auto *Res =
+              simplifyNonNullOperand(U.get(), UseProvenance, RecursionLimit)) {
         replaceUse(U, Res);
         Changed = true;
       }
