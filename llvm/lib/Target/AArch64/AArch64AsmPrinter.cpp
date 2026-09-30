@@ -295,6 +295,9 @@ public:
   void emitAtomicHintPseudoExpansionRO(const MachineInstr *MI);
   void emitAtomicHintPseudoExpansionImm(const MachineInstr *MI);
 
+  // Emit expansion of atomic fetch with hint pseudo instructions
+  void emitAtomicFetchHintPseudoExpansion(const MachineInstr *MI);
+
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   void EmitToStreamer(const MCInst &Inst) {
     EmitToStreamer(*OutStreamer, Inst);
@@ -3409,6 +3412,20 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansionImm(
   EmitToStreamer(*OutStreamer, Store);
 }
 
+void AArch64AsmPrinter::emitAtomicFetchHintPseudoExpansion(
+    const MachineInstr *MI) {
+  EmitToStreamer(
+      MCInstBuilder(AArch64::HINT).addImm(MI->getOperand(4).getImm()));
+
+  MCInst Fetch;
+  Fetch.setOpcode(MI->getOperand(3).getImm());
+  Fetch.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+  Fetch.addOperand(MCOperand::createReg(MI->getOperand(1).getReg()));
+  Fetch.addOperand(MCOperand::createReg(MI->getOperand(2).getReg()));
+  Fetch.setFlags(MI->getFlags());
+  EmitToStreamer(*OutStreamer, Fetch);
+}
+
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "AArch64GenMCPseudoLowering.inc"
@@ -4131,6 +4148,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::ATOMIC_STORE_HINT_W:
   case AArch64::ATOMIC_STORE_HINT_X:
     emitAtomicHintPseudoExpansion(MI);
+    return;
+  case AArch64::ATOMIC_FETCH_HINT_W:
+  case AArch64::ATOMIC_FETCH_HINT_X:
+    emitAtomicFetchHintPseudoExpansion(MI);
     return;
   case AArch64::ATOMIC_STORE_HINT_BroW:
   case AArch64::ATOMIC_STORE_HINT_HroW:

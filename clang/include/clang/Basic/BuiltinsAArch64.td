@@ -173,6 +173,11 @@ let Attributes = [NoThrow], Features = "ls64" in {
 
 let Attributes = [NoThrow, CustomTypeChecking] in {
   def atomic_store_with_hint : AArch64Builtin<"void(...)">;
+  def atomic_fetch_add_with_hint : AArch64Builtin<"void(...)">;
+  def atomic_fetch_sub_with_hint : AArch64Builtin<"void(...)">;
+  def atomic_fetch_and_with_hint : AArch64Builtin<"void(...)">;
+  def atomic_fetch_xor_with_hint : AArch64Builtin<"void(...)">;
+  def atomic_fetch_or_with_hint : AArch64Builtin<"void(...)">;
 }
 
 // Armv9.3-A Guarded Control Stack

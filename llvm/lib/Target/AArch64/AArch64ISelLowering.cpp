@@ -34099,9 +34099,13 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
   }
 
   // The !mem.cache_hint metadata is not supported by GISel and will be dropped.
-  // TODO: Remove this and handle atomic store hints in GISel once supported.
+  // TODO: Remove this and handle atomic hints in GISel once supported.
   if (auto *Store = dyn_cast<StoreInst>(&Inst)) {
     if (Store->isAtomic() && getMemCacheHintMetadata(*Store, 1))
+      return true;
+  }
+  if (auto *RMW = dyn_cast<AtomicRMWInst>(&Inst)) {
+    if (getMemCacheHintMetadata(*RMW))
       return true;
   }
 
