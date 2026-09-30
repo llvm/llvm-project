@@ -157,8 +157,7 @@ public:
         if (DemandedElts[Idx])
           Cost += 1; // zext operand to i32
       Insert = false;
-    } else if (Insert && NVPTX::isPackedVectorTy(VT) &&
-               VT.is32BitVector()) {
+    } else if (Insert && NVPTX::isPackedVectorTy(VT) && VT.is32BitVector()) {
       // Can be built in a single 32-bit mov (64-bit regs are emulated in SASS
       // with 2x 32-bit regs)
       Cost += 1;
