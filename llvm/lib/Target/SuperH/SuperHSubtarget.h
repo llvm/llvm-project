@@ -33,16 +33,6 @@ class StringRef;
 typedef unsigned char SHRefClass;
 
 class SuperHSubtarget : public SuperHGenSubtargetInfo {
-  enum SuperHArchEnum { 
-    SHDefault,
-    SH1, 
-    SH2, SH2A, SH2E, 
-    SH3, SH3E, 
-    SH4, SH4A
-  };
-  
-  SuperHArchEnum SHArchVersion;
-
   const TargetMachine &TM;
   SuperHInstrInfo InstrInfo;
   SuperHTargetLowering TLInfo;

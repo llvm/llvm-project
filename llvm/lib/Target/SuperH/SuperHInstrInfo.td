@@ -670,14 +670,14 @@ let hasSideEffects = 0, isCommutable = 1 in {
                               []>;
 
   // mac.l @Rm+, @Rn+
-  let Defs = [MACLO, MACHI] in
+  let Defs = [MACLO, MACHI], Predicates = [IsSH2] in
   def MACL          : InstRmRn<0b0000000000001111, 
                               (outs), (ins IGPRInc:$Rm, IGPRInc:$Rn),
                               "mac.l $Rm,$Rn",
                               []>;
 
   // mul.l Rm, Rn
-  let Defs = [MACLO] in
+  let Defs = [MACLO], Predicates = [IsSH2] in
   def MULL          : InstRmRn<0b0000000000000111, 
                               (outs), (ins GPR:$Rm, GPR:$Rn),
                               "mul.l $Rm,$Rn",
@@ -698,14 +698,14 @@ let hasSideEffects = 0, isCommutable = 1 in {
                               []>;
 
   // dmuls.l Rm, Rn
-  let Defs = [MACLO, MACHI] in
+  let Defs = [MACLO, MACHI], Predicates = [IsSH2] in
   def DMULS         : InstRmRn<0b0011000000001101, 
                               (outs), (ins GPR:$Rm, GPR:$Rn),
                               "dmuls.l $Rm,$Rn",
                               []>;
 
   // dmulu.l Rm, Rn
-  let Defs = [MACLO, MACHI] in
+  let Defs = [MACLO, MACHI], Predicates = [IsSH2] in
   def DMULU         : InstRmRn<0b0011000000000101, 
                               (outs), (ins GPR:$Rm, GPR:$Rn),
                               "dmulu.l $Rm,$Rn",
@@ -848,8 +848,6 @@ def CMPSTR          : InstRmRn<0b0010000000001100,
 
 
 
-
-
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
 //                        Logic Operation Instructions
@@ -947,7 +945,6 @@ def TSTM            : InstI8<0b1100110000000000,
                             (outs), (ins imm8:$imm),
                             "tst.b $imm,@(r0,gbr)",
                             []>;
-
 
 
 
@@ -1069,22 +1066,10 @@ let isTerminator = 1 in {
                               "bf $disp",
                               []>;
 
-  let isBranch = 1, hasDelaySlot = 1 in
-  def BFS             : InstD8<0b1000111100000000, 
-                              (outs), (ins brtarget:$disp),
-                              "bf/s $disp",
-                              []>;
-
   let isBranch = 1 in
   def BT              : InstD8<0b1000100100000000, 
                               (outs), (ins brtarget:$disp),
                               "bt $disp",
-                              []>;
-
-  let isBranch = 1, hasDelaySlot = 1 in
-  def BTS             : InstD8<0b1000110100000000, 
-                              (outs), (ins brtarget:$disp),
-                              "bt/s $disp",
                               []>;
 
   let isBranch = 1, isBarrier = 1, hasDelaySlot = 1 in
@@ -1093,12 +1078,6 @@ let isTerminator = 1 in {
                               "bra $disp",
                               [(br bb:$disp)]>;
 
-  let isIndirectBranch = 1, isBarrier = 1, hasDelaySlot = 1 in
-  def BRAF            : InstRm<0b0000000000100011, 
-                              (outs), (ins GPR:$Rm),
-                              "braf $Rm",
-                              []>;
-
   let isBranch = 1, isBarrier = 1, hasDelaySlot = 1 in
   def BSR            : InstD12<0b1011000000000000, 
                               (outs), (ins brtarget:$disp),
@@ -1106,16 +1085,36 @@ let isTerminator = 1 in {
                               []>;
 
   let isBranch = 1, isBarrier = 1, hasDelaySlot = 1 in
-  def BSRF            : InstRm<0b0000000000000011, 
-                              (outs), (ins GPR:$Rm),
-                              "bsrf $Rm",
-                              []>;
-
-  let isBranch = 1, isBarrier = 1, hasDelaySlot = 1 in
   def JMP             : InstRm<0b0100000000101011, 
                               (outs), (ins IGPR:$Rm),
                               "jmp $Rm",
                               []>;
+
+  let Predicates = [IsSH2] in {
+  let isBranch = 1, hasDelaySlot = 1 in
+  def BFS             : InstD8<0b1000111100000000, 
+                              (outs), (ins brtarget:$disp),
+                              "bf/s $disp",
+                              []>;
+
+  let isBranch = 1, hasDelaySlot = 1 in
+  def BTS             : InstD8<0b1000110100000000, 
+                              (outs), (ins brtarget:$disp),
+                              "bt/s $disp",
+                              []>;
+
+  let isIndirectBranch = 1, isBarrier = 1, hasDelaySlot = 1 in
+  def BRAF            : InstRm<0b0000000000100011, 
+                              (outs), (ins GPR:$Rm),
+                              "braf $Rm",
+                              []>;
+
+  let isBranch = 1, isBarrier = 1, hasDelaySlot = 1 in
+  def BSRF            : InstRm<0b0000000000000011, 
+                              (outs), (ins GPR:$Rm),
+                              "bsrf $Rm",
+                              []>;
+  }
 }
 
 
@@ -1150,7 +1149,6 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1 in {
 
 
 
-
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
 //                          System Control Instructions
@@ -1168,84 +1166,84 @@ def CLRT                : Inst<0b0000000000001000, (outs), (ins), "clrt", []>;
 let Defs = [SR], isDelayIllegal = 1 in
 def LDCSR             : InstRm<0b0100000000001110, 
                               (outs), (ins GPR:$Rm), 
-                              "ldc $Rm,SR",
+                              "ldc $Rm,sr",
                               []>;
 
 // ldc.l @Rm+, SR
 let Defs = [SR], isDelayIllegal = 1 in
 def LDCMSR            : InstRm<0b0100000000000111, 
                               (outs), (ins IGPRInc:$Rm), 
-                              "ldc.l $Rm,SR",
+                              "ldc.l $Rm,sr",
                               []>;
 
 // ldc Rm, GBR
 let Defs = [GBR] in
 def LDCGBR            : InstRm<0b0100000000011110, 
                               (outs), (ins GPR:$Rm), 
-                              "ldc $Rm,GBR",
+                              "ldc $Rm,gbr",
                               []>;
 
 // ldc.l @Rm+, GBR
 let Defs = [GBR] in
 def LDCMGBR           : InstRm<0b0100000000010111, 
                               (outs), (ins IGPRInc:$Rm), 
-                              "ldc.l $Rm,GBR",
+                              "ldc.l $Rm,gbr",
                               []>;
 
 // ldc Rm, VBR
 let Defs = [VBR], isDelayIllegal = 1 in
 def LDCVBR            : InstRm<0b0100000000101110, 
                               (outs), (ins GPR:$Rm), 
-                              "ldc $Rm,VBR",
+                              "ldc $Rm,vbr",
                               []>;
 
 // ldc.l @Rm+, VBR
 let Defs = [VBR], isDelayIllegal = 1 in
 def LDCMVBR           : InstRm<0b0100000000100111, 
                               (outs), (ins IGPRInc:$Rm), 
-                              "ldc.l $Rm,VBR",
+                              "ldc.l $Rm,vbr",
                               []>;
 
 // lds Rm, MACH
 let Defs = [MACHI] in
 def LDSMACH           : InstRm<0b0100000000001010, 
                               (outs), (ins GPR:$Rm), 
-                              "lds $Rm,MACH",
+                              "lds $Rm,mach",
                               []>;
 
 // lds.l @Rm+, MACH
 let Defs = [MACHI] in
 def LDSMMACH           : InstRm<0b0100000000000110, 
                               (outs), (ins IGPRInc:$Rm), 
-                              "lds.l $Rm,MACH",
+                              "lds.l $Rm,mach",
                               []>;
 
 // lds Rm, MACL
 let Defs = [MACLO] in
 def LDSMACL           : InstRm<0b0100000000011010, 
                               (outs), (ins GPR:$Rm), 
-                              "lds $Rm,MACL",
+                              "lds $Rm,macl",
                               []>;
 
 // lds.l @Rm+, MACL
 let Defs = [MACLO] in
 def LDSMMACL          : InstRm<0b0100000000010110, 
                               (outs), (ins IGPRInc:$Rm), 
-                              "lds.l $Rm,MACL",
+                              "lds.l $Rm,macl",
                               []>;
 
 // lds Rm, PR
 let Defs = [PR] in
 def LDSPR             : InstRm<0b0100000000101010, 
                               (outs), (ins GPR:$Rm), 
-                              "lds $Rm,PR",
+                              "lds $Rm,pr",
                               []>;
 
 // lds.l @Rm+, PR
 let Defs = [PR] in
 def LDSMPR            : InstRm<0b0100000000100110, 
                               (outs), (ins IGPRInc:$Rm), 
-                              "lds.l $Rm,PR",
+                              "lds.l $Rm,pr",
                               []>;
 
 // nop
@@ -1268,84 +1266,84 @@ def SLEEP               : Inst<0b0000000000011011, (outs), (ins), "sleep", []>;
 let Uses = [SR], isDelayIllegal = 1 in
 def STCSR             : InstRn<0b0000000000000010, 
                               (outs GPR:$Rn), (ins), 
-                              "stc SR,$Rn",
+                              "stc sr,$Rn",
                               []>;
 
 // stc.l SR,@-Rn
 let Uses = [SR], isDelayIllegal = 1 in
 def STCMSR            : InstRn<0b0100000000000011, 
                               (outs IGPRDec:$Rn), (ins), 
-                              "stc.l SR,$Rn",
+                              "stc.l sr,$Rn",
                               []>;
 
 // stc GBR,Rn
 let Uses = [GBR] in
 def STCGBR          : InstRn<0b0000000000010010, 
                               (outs GPR:$Rn), (ins), 
-                              "stc GBR,$Rn",
+                              "stc gbr,$Rn",
                               []>;
 
 // stc.l GBR,@-Rn
 let Uses = [GBR] in
 def STCMGBR           : InstRn<0b0100000000010011, 
                               (outs IGPRDec:$Rn), (ins), 
-                              "stc.l GBR,$Rn",
+                              "stc.l gbr,$Rn",
                               []>;
 
 // stc VBR,Rn
 let Uses = [VBR], isDelayIllegal = 1 in
 def STCVBR            : InstRn<0b0000000000100010, 
                               (outs GPR:$Rn), (ins), 
-                              "stc VBR,$Rn",
+                              "stc vbr,$Rn",
                               []>;
 
 // stc.l VBR,@-Rn
 let Uses = [VBR], isDelayIllegal = 1 in
 def STCMVBR           : InstRn<0b0100000000100011, 
                               (outs IGPRDec:$Rn), (ins), 
-                              "stc.l VBR,$Rn",
+                              "stc.l vbr,$Rn",
                               []>;
 
 // sts MACH,Rn
 let Uses = [MACHI] in
 def STSMACH           : InstRn<0b0000000000001010, 
                               (outs GPR:$Rn), (ins), 
-                              "sts MACH,$Rn",
+                              "sts mach,$Rn",
                               []>;
 
 // sts.l MACH,@-Rn
 let Uses = [MACHI] in
 def STSMMACH          : InstRn<0b0100000000000010, 
                               (outs IGPRDec:$Rn), (ins), 
-                              "sts.l MACH,$Rn",
+                              "sts.l mach,$Rn",
                               []>;
 
 // sts MACL,Rn
 let Uses = [MACLO] in
 def STSMACL           : InstRn<0b0000000000011010, 
                               (outs GPR:$Rn), (ins), 
-                              "sts MACL,$Rn",
+                              "sts macl,$Rn",
                               []>;
 
 // sts.l MACL,@-Rn
 let Uses = [MACLO] in
 def STSMMACL          : InstRn<0b0100000000010010, 
                               (outs IGPRDec:$Rn), (ins), 
-                              "sts.l MACL,$Rn",
+                              "sts.l macl,$Rn",
                               []>;
 
 // sts PR,Rn
 let Uses = [PR] in
 def STSPR             : InstRn<0b0000000000101010, 
                               (outs GPR:$Rn), (ins), 
-                              "sts PR,$Rn",
+                              "sts pr,$Rn",
                               []>;
 
 // sts.l PR,@-Rn
 let Uses = [PR] in
 def STSMPR            : InstRn<0b0100000000100010, 
                               (outs IGPRDec:$Rn), (ins), 
-                              "sts.l PR,$Rn",
+                              "sts.l pr,$Rn",
                               []>;
 
 // trapa #imm
@@ -1366,6 +1364,8 @@ def TRAPA             : InstI8<0b1100001100000000,
 
 include "SuperHInstrDSP.td"
 include "SuperHInstrFPU.td"
+include "SuperHInstrSH3.td"
+include "SuperHInstrSH4.td"
 
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
