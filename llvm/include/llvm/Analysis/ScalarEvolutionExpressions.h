@@ -246,8 +246,11 @@ public:
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
+  void setFlags(SCEVFlags Flags) {
+    SubclassData |= static_cast<unsigned short>(Flags);
+  }
   void setNoWrapFlags(SCEVFlags Flags) {
-    SubclassData |= static_cast<unsigned short>(Flags & SCEV::FlagsNoWrapMask);
+    setFlags(Flags & SCEV::FlagsNoWrapMask);
   }
 };
 
@@ -310,7 +313,9 @@ public:
 
   ArrayRef<SCEVUse> operands() const { return Operands; }
 
+  /// Set the exact flag without clearing previously set flags.
   void setExactFlag(SCEVFlags Flags) {
+    assert(!(Flags & ~SCEV::FlagExact) && "Unexpected flags set");
     SubclassData |= static_cast<unsigned short>(Flags & SCEV::FlagExact);
   }
   SCEVFlags getExactFlag() const {
@@ -512,8 +517,11 @@ class SCEVSequentialMinMaxExpr : public SCEVNAryExpr {
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
+  void setFlags(SCEVFlags Flags) {
+    SubclassData |= static_cast<unsigned short>(Flags);
+  }
   void setNoWrapFlags(SCEVFlags Flags) {
-    SubclassData |= static_cast<unsigned short>(Flags & SCEV::FlagsNoWrapMask);
+    setFlags(Flags & SCEV::FlagsNoWrapMask);
   }
 
 protected:

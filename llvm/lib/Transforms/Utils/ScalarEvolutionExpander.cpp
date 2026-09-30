@@ -346,8 +346,10 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode, Value *LHS,
       BO->setHasNoUnsignedWrap();
     if (IsNSW)
       BO->setHasNoSignedWrap();
-    if (IsExact)
+    if (IsExact) {
+      assert(!IsNUW && !IsNSW && "Unexpected nuw/nsw found");
       BO->setIsExact();
+    }
     return Builder.Insert(BO);
   }
   if (IsExact)
