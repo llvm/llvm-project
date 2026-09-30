@@ -105,6 +105,13 @@ features cannot lower the translation-unit ABI level;
   This also fixes a crash when such a struct was passed or returned.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH202205)
 
+- On 32-bit x86, Clang now matches GCC when classifying arguments for the
+  `regparm` calling convention. Floating-point types other than `float` and
+  `double` no longer consume general-purpose register slots, complex values
+  are passed on the stack without consuming register slots, and unions are no
+  longer classified according to a single member. `-fclang-abi-compat=23`
+  restores the previous behavior. (#GH227130)
+
 - Clang now considers matrix types in its isHomogeneousAggregate() handling,
   which can lead to differences in how structures containing matrix types are
   classified for ABI purposes. The previous exclusion of matrix types appears

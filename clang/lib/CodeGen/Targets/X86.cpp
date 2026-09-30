@@ -690,6 +690,20 @@ static const Type *getSingleFieldType(QualType T, ASTContext &Context) {
 }
 
 X86_32ABIInfo::Class X86_32ABIInfo::classify(QualType Ty) const {
+  if (getContext().getLangOpts().isCompatibleWith(
+          LangOptions::ClangABI::Ver23)) {
+    const Type *T = isSingleElementStruct(Ty, getContext());
+    if (!T)
+      T = Ty.getTypePtr();
+
+    if (const BuiltinType *BT = T->getAs<BuiltinType>()) {
+      BuiltinType::Kind K = BT->getKind();
+      if (K == BuiltinType::Float || K == BuiltinType::Double)
+        return Float;
+    }
+    return Integer;
+  }
+
   while (const RecordDecl *RD = Ty->getAsRecordDecl()) {
     // Unions are always passed as integers.
     if (RD->isUnion())
