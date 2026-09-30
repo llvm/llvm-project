@@ -55,6 +55,7 @@
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
@@ -125,6 +126,13 @@ static cl::opt<unsigned> CSRCostScale(
     "regalloc-csr-cost-scale",
     cl::desc("Scale for the callee-saved register cost, in percentage."),
     cl::init(80), cl::Hidden);
+
+static cl::opt<unsigned> MaxVRegForCSROpt(
+    "max-vreg-number",
+    cl::desc("The maximum number of virtual registers in a function "
+             "considered for CSR optimization, in times of number of "
+             "allocatable registers."),
+    cl::init(20), cl::Hidden);
 
 static cl::opt<unsigned long> GrowRegionComplexityBudget(
     "grow-region-complexity-budget",
@@ -2530,6 +2538,20 @@ void RAGreedy::aboutToRemoveInterval(const LiveInterval &LI) {
 }
 
 void RAGreedy::initializeCSRCost() {
+  unsigned NumVirtRegs = MRI->getNumVirtRegs();
+
+  const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
+  MVT PtrVT = TLI->getPointerTy(MF->getDataLayout());
+  const TargetRegisterClass *RC = TLI->getRegClassFor(PtrVT);
+  unsigned NumAllocatable = RegClassInfo->getNumAllocatableRegs(RC);
+  unsigned MaxVRegs = NumAllocatable * MaxVRegForCSROpt;
+
+  // Skip CSR optimization for some extreme cases.
+  if (NumVirtRegs > MaxVRegs) {
+    CSRCost = BlockFrequency(0);
+    return;
+  }
+
   if (!CSRCostScale.getNumOccurrences() &&
       (CSRFirstTimeCost.getNumOccurrences() || TRI->getCSRCost())) {
     // We should deprecate the usage of CSRFirstTimeCost!
