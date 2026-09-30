@@ -462,6 +462,8 @@ private:
   bool mangleSubstitution(TemplateName Template);
   bool mangleSubstitution(uintptr_t Ptr);
 
+  TemplateName mangleExistingSubstitution(TemplateName name);
+
   bool mangleStandardSubstitution(const NamedDecl *ND);
 
   void addSubstitution(const NamedDecl *ND) {
@@ -2587,71 +2589,55 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::TemplateSpecialization: {
     const TemplateSpecializationType *TST =
         cast<TemplateSpecializationType>(Ty);
-    TemplateName TN = TST->getTemplateName();
+    TemplateName TN = mangleExistingSubstitution(TST->getTemplateName());
+    switch (TN.getKind()) {
+    case TemplateName::Template:
+    case TemplateName::QualifiedTemplate: {
+      TemplateDecl *TD = TN.getAsTemplateDecl();
 
-    // It is possible that a name doesn't mangled when reaching a substitution
-    // like alias template.
-    bool MangledAsSubstitution = false;
-    while (TN.getKind() == TemplateName::SubstTemplateTemplateParm) {
-      TemplateName Replacement =
-          TN.getAsSubstTemplateTemplateParm()->getReplacement();
-      if (mangleSubstitution(Replacement)) {
-        MangledAsSubstitution = true;
-        break;
-      }
-      TN = Replacement;
+      // If the base is a template template parameter, this is an
+      // unresolved type.
+      assert(TD && "no template for template specialization type");
+      if (isa<TemplateTemplateParmDecl>(TD))
+        goto unresolvedType;
+
+      mangleSourceNameWithAbiTags(TD);
+      break;
+    }
+    case TemplateName::DependentTemplate: {
+      const DependentTemplateStorage *S = TN.getAsDependentTemplateName();
+      mangleSourceName(S->getName().getIdentifier());
+      break;
     }
 
-    if (!MangledAsSubstitution) {
-      switch (TN.getKind()) {
-      case TemplateName::Template:
-      case TemplateName::QualifiedTemplate: {
-        TemplateDecl *TD = TN.getAsTemplateDecl();
+    case TemplateName::OverloadedTemplate:
+    case TemplateName::AssumedTemplate:
+    case TemplateName::DeducedTemplate:
+      llvm_unreachable("invalid base for a template specialization type");
 
-        // If the base is a template template parameter, this is an
-        // unresolved type.
-        assert(TD && "no template for template specialization type");
-        if (isa<TemplateTemplateParmDecl>(TD))
-          goto unresolvedType;
+    case TemplateName::SubstTemplateTemplateParm:
+      // mangleExistingSubstitution already mangled a substitution for it.
+      break;
 
-        mangleSourceNameWithAbiTags(TD);
-        break;
-      }
-      case TemplateName::DependentTemplate: {
-        const DependentTemplateStorage *S = TN.getAsDependentTemplateName();
-        mangleSourceName(S->getName().getIdentifier());
-        break;
-      }
+    case TemplateName::SubstTemplateTemplateParmPack: {
+      // FIXME: not clear how to mangle this!
+      // template <template <class U> class T...> class A {
+      //   template <class U...> void foo(decltype(T<U>::foo) x...);
+      // };
+      Out << "_SUBSTPACK_";
+      break;
+    }
 
-      case TemplateName::OverloadedTemplate:
-      case TemplateName::AssumedTemplate:
-      case TemplateName::DeducedTemplate:
-        llvm_unreachable("invalid base for a template specialization type");
+    case TemplateName::PackIndexingTemplate:
+      DiagnoseUnsupportedPackIndexTemplateName();
+      return false;
 
-      case TemplateName::SubstTemplateTemplateParm:
-        llvm_unreachable(
-            "substituted template template parameter handled above");
-
-      case TemplateName::SubstTemplateTemplateParmPack: {
-        // FIXME: not clear how to mangle this!
-        // template <template <class U> class T...> class A {
-        //   template <class U...> void foo(decltype(T<U>::foo) x...);
-        // };
-        Out << "_SUBSTPACK_";
-        break;
-      }
-
-      case TemplateName::PackIndexingTemplate:
-        DiagnoseUnsupportedPackIndexTemplateName();
-        return false;
-
-      case TemplateName::UsingTemplate: {
-        TemplateDecl *TD = TN.getAsTemplateDecl();
-        assert(TD && !isa<TemplateTemplateParmDecl>(TD));
-        mangleSourceNameWithAbiTags(TD);
-        break;
-      }
-      }
+    case TemplateName::UsingTemplate: {
+      TemplateDecl *TD = TN.getAsTemplateDecl();
+      assert(TD && !isa<TemplateTemplateParmDecl>(TD));
+      mangleSourceNameWithAbiTags(TD);
+      break;
+    }
     }
 
     // Note: we don't pass in the template name here. We are mangling the
@@ -7104,6 +7090,16 @@ void CXXNameMangler::mangleSeqID(unsigned SeqID) {
     Out.write(I.base(), I - BufferRef.rbegin());
   }
   Out << '_';
+}
+
+TemplateName CXXNameMangler::mangleExistingSubstitution(TemplateName tname) {
+  while (SubstTemplateTemplateParmStorage *subst =
+             tname.getAsSubstTemplateTemplateParm()) {
+    if (mangleSubstitution(subst->getReplacement()))
+      return tname;
+    tname = subst->getReplacement();
+  }
+  return tname;
 }
 
 // <substitution> ::= S <seq-id> _
