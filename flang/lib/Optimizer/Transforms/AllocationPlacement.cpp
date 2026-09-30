@@ -32,7 +32,6 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -154,10 +153,6 @@ void AllocationPlacementPass::runOnOperation() {
                                smallArrayThresholdBytes);
   fir::overrideIfExplicitlySet(basePolicy.totalStackLimitBytes,
                                totalStackLimitBytes);
-  // An acc routine is compiled for the device as well, so -fstack-arrays
-  // cannot be honored in it, as in a device procedure.
-  if (mlir::acc::isAccRoutine(func))
-    basePolicy.stackArrays = false;
 
   auto module = func->getParentOfType<mlir::ModuleOp>();
   std::optional<mlir::DataLayout> dl =
