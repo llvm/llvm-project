@@ -204,6 +204,23 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
   }
 }
 
+static std::optional<std::string>
+perTargetRuntimeDirForMachineType(MachineTypes mt) {
+  switch (mt) {
+  case ARM64:
+  case ARM64X:
+    return {"aarch64-pc-windows-msvc"};
+  case ARM64EC:
+    return {"arm64ec-pc-windows-msvc"};
+  case AMD64:
+    return {"x86_64-pc-windows-msvc"};
+  case I386:
+    return {"i686-pc-windows-msvc"};
+  default:
+    return std::nullopt;
+  }
+}
+
 void LinkerDriver::addFile(InputFile *file) {
   Log(ctx) << "Reading " << toString(file);
   if (file->lazy) {
@@ -783,6 +800,9 @@ void LinkerDriver::setMachine(MachineTypes machine) {
     ctx.hybridSymtab.emplace(ctx, ARM64);
   }
 
+  if (!ctx.config.mingw)
+    addClangPerTargetRuntimeDirSearchPaths();
+
   addWinSysRootLibSearchPaths();
 }
 
@@ -867,6 +887,7 @@ void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
   SmallString<128> runtimeLibDir(rootDir);
   sys::path::append(runtimeLibDir, "lib", "clang",
                     std::to_string(LLVM_VERSION_MAJOR), "lib");
+  clangRuntimeLibDir = runtimeLibDir.str();
   // Resource dir + osname, which is hardcoded to windows since we are in the
   // COFF driver.
   SmallString<128> runtimeLibDirWithOS(runtimeLibDir);
@@ -875,6 +896,16 @@ void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
   searchPaths.push_back(saver().save(runtimeLibDirWithOS.str()));
   searchPaths.push_back(saver().save(runtimeLibDir.str()));
   searchPaths.push_back(saver().save(libDir.str()));
+}
+
+void LinkerDriver::addClangPerTargetRuntimeDirSearchPaths() {
+  // Add per-target resource dir library path
+  if (std::optional<std::string> machineDir =
+          perTargetRuntimeDirForMachineType(ctx.config.machine)) {
+    SmallString<128> targetRuntimeDir(clangRuntimeLibDir);
+    sys::path::append(targetRuntimeDir, *machineDir);
+    searchPaths.push_back(saver().save(targetRuntimeDir.str()));
+  }
 }
 
 void LinkerDriver::addWinSysRootLibSearchPaths() {
