@@ -4971,10 +4971,6 @@ struct BitfieldOversizedValueTypes {
 // ARM-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 2
 // ARM-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 15
 // ARM-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 2
-// ARM-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// ARM-BE-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// ARM-BE-NEXT:    [[TMP9:%.*]] = and i8 [[TMP8]], -8
-// ARM-BE-NEXT:    store i8 [[TMP9]], ptr [[TMP7]], align 1
 // ARM-BE-NEXT:    ret void
 //
 // AARCH64-BE-LABEL: define dso_local void @testBitfieldOversizedValueTypes(
@@ -4991,10 +4987,6 @@ struct BitfieldOversizedValueTypes {
 // AARCH64-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 2
 // AARCH64-BE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 15
 // AARCH64-BE-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 2
-// AARCH64-BE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
-// AARCH64-BE-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-// AARCH64-BE-NEXT:    [[TMP9:%.*]] = and i8 [[TMP8]], -8
-// AARCH64-BE-NEXT:    store i8 [[TMP9]], ptr [[TMP7]], align 1
 // AARCH64-BE-NEXT:    ret void
 //
 extern "C" void testBitfieldOversizedValueTypes(
@@ -5003,7 +4995,9 @@ extern "C" void testBitfieldOversizedValueTypes(
 }
 
 // Within a single byte, padding follows the occupied bits: it is in the high
-// bits on little endian and in the low bits on big endian.
+// bits on little endian and in the low bits on big endian. On big endian the
+// _BitInt(5) value is stored in the low-order bits of the 6-bit field, so the
+// whole field is kept.
 struct BitfieldOversizedSubByte {
   _BitInt(5) precise : 6;
   bool flag : 6;
@@ -5049,7 +5043,7 @@ struct BitfieldOversizedSubByte {
 // ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
 // ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 // ARM-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
-// ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -8
+// ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -4
 // ARM-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
 // ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
 // ARM-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
@@ -5065,7 +5059,7 @@ struct BitfieldOversizedSubByte {
 // AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 // AARCH64-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
-// AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -8
+// AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -4
 // AARCH64-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
 // AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
 // AARCH64-BE-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1

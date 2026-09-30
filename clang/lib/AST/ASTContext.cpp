@@ -15929,13 +15929,6 @@ private:
                      ? Ctx.getTypeSize(FieldTy)
                      : static_cast<uint64_t>(Ctx.getIntWidth(FieldTy)));
 
-    uint64_t ExtForBitInt = 0;
-    if (FieldTy->isBitIntType()) {
-      if (DeclaredSizeInBits > OccupiedSizeInBits) {
-        ExtForBitInt = DeclaredSizeInBits - OccupiedSizeInBits;
-      }
-    }
-
     if (Ctx.getTargetInfo().isLittleEndian()) {
       OccuppiedIntervals.push_back(
           {StartBitOffset, StartBitOffset + OccupiedSizeInBits});
@@ -15954,12 +15947,15 @@ private:
     //
     // Occupied bits are allocated first, and any padding follows them.
     const uint64_t Start = StartBitOffset;
-    // Explain why we need a `ExtForBitInt` here:
-    // Clang supports field like _Bitint(5) a: 6
-    // on BE the bits is: 01111100
-    // The highest bit is ext, and the lowest 5 bits were used.
-    // That's why add `OccupiedSizeInBits` is not enough.
-    const uint64_t End = Start + OccupiedSizeInBits + ExtForBitInt;
+    // A _BitInt(N) bit-field may be declared wider than N, e.g.
+    // `_BitInt(5) a : 6`. CodeGen stores the value in the low-order N bits of
+    // the field, which are allocated last on big-endian (01111100), so the
+    // leading bits are not value bits. Treat the field as occupied up to the
+    // storage size of _BitInt(N) so that the value bits are never cleared.
+    // Bits beyond the storage size are padding.
+    const uint64_t End = Start + (FieldTy->isBitIntType()
+                 ? std::min(DeclaredSizeInBits, Ctx.getTypeSize(FieldTy))
+                 : OccupiedSizeInBits);
     const uint64_t CharWidth = Ctx.getCharWidth();
 
     // Special case: all the occupied bits are contained within a single byte.
