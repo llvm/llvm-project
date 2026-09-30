@@ -2425,6 +2425,8 @@ EVT SITargetLowering::getOptimalMemOpType(
 
 bool SITargetLowering::isMemOpHasNoClobberedMemOperand(const SDNode *N) const {
   const MemSDNode *MemNode = cast<MemSDNode>(N);
+  if (!MemNode->hasUniqueMemOperand())
+    return false;
   return MemNode->getMemOperand()->getFlags() & MONoClobber;
 }
 
