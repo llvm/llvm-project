@@ -1508,7 +1508,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.SYCLIsDevice) {
     Builder.defineMacro("__SYCL_DEVICE_ONLY__", "1");
     if (OffloadArch Arch = TI.getOffloadArch(); !Arch.isUnknownOrUnused()) {
-      // TODO some sort of function to process -target-cpu
       if (Arch.isIntelIGCA()) {
         llvm::IntelGPU::IGCATarget IGCA = Arch.igcaTarget();
 
