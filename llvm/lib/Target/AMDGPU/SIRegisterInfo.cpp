@@ -4348,8 +4348,6 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
       if (HWIdx >= BankStart && HWIdx < BankEnd)
         Hints.push_back(PhysReg);
     }
-    LLVM_DEBUG(dbgs() << "BankHint: " << printReg(VirtReg, this) << " bank="
-                      << Bank << " -> " << Hints.size() << " candidates\n");
     return StrictVGPRBankHints || Hint.first == AMDGPURI::StrictBankHint;
   }
   default:
