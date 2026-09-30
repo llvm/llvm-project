@@ -9266,7 +9266,7 @@ declaring it to be an SRV, UAV, CBuffer, or Sampler resource.
 
 This attribute is only valid for resource handles, and is an implementation
 detail of clang's HLSL implementation. For more information see
-[HLSL Resource Types](https://clang.llvm.org/docs/HLSL/ResourceTypes.html).
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
@@ -9279,7 +9279,7 @@ resource to have Unknown, 1D, 2D, 3D, or Cube dimension.
 
 This attribute is only valid for resource handles, and is an implementation
 detail of clang's HLSL implementation. For more information see
-[HLSL Resource Types](https://clang.llvm.org/docs/HLSL/ResourceTypes.html).
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
@@ -9291,7 +9291,7 @@ represented by a member variable of type `__hlsl_resource_t`.
 
 This attribute is only valid for resource handles, and is an implementation
 detail of clang's HLSL implementation. For more information see
-[HLSL Resource Types](https://clang.llvm.org/docs/HLSL/ResourceTypes.html).
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
@@ -9303,7 +9303,7 @@ by a member variable of type `__hlsl_resource_t` has raw buffer semantics.
 
 This attribute is only valid for resource handles, and is an implementation
 detail of clang's HLSL implementation. For more information see
-[HLSL Resource Types](https://clang.llvm.org/docs/HLSL/ResourceTypes.html).
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
@@ -9315,7 +9315,7 @@ by a member variable of type `__hlsl_resource_t` has array dimensions.
 
 This attribute is only valid for resource handles, and is an implementation
 detail of clang's HLSL implementation. For more information see
-[HLSL Resource Types](https://clang.llvm.org/docs/HLSL/ResourceTypes.html).
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
@@ -9327,7 +9327,7 @@ by a member variable of type `__hlsl_resource_t` is multisampled.
 
 This attribute is only valid for resource handles, and is an implementation
 detail of clang's HLSL implementation. For more information see
-[HLSL Resource Types](https://clang.llvm.org/docs/HLSL/ResourceTypes.html).
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
@@ -9339,7 +9339,7 @@ a member variable of type `__hlsl_resource_t` is a rasterizer ordered view.
 
 This attribute is only valid for resource handles, and is an implementation
 detail of clang's HLSL implementation. For more information see
-[HLSL Resource Types](https://clang.llvm.org/docs/HLSL/ResourceTypes.html).
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
@@ -9351,7 +9351,7 @@ by a member variable of type `__hlsl_resource_t` is a counter buffer.
 
 This attribute is only valid for resource handles, and is an implementation
 detail of clang's HLSL implementation. For more information see
-[HLSL Resource Types](https://clang.llvm.org/docs/HLSL/ResourceTypes.html).
+{doc}`HLSL Resource Types <HLSL/ResourceTypes>`.
   }];
 }
 
