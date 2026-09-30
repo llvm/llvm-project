@@ -65,7 +65,7 @@ SPIRVAuxDataHandler::SPIRVAuxDataHandler(AsmPrinter &AP, const Module &M)
 
 bool SPIRVAuxDataHandler::hasWork() const {
   return SPVPreserveAuxData ||
-      Mod.getTargetTriple().getVendor() == Triple::VendorType::AMD;
+         Mod.getTargetTriple().getVendor() == Triple::VendorType::AMD;
 }
 
 void SPIRVAuxDataHandler::prepareModuleOutput(const SPIRVSubtarget &ST,
