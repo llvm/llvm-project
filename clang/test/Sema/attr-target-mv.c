@@ -189,6 +189,10 @@ int __attribute__((target("sha"))) no_priority3(void);
 int __attribute__((target("default"))) apxf_mv(void) { return 0; }
 int __attribute__((target("apxf"))) apxf_mv(void) { return 1; }
 
+int __attribute__((target("default"))) avx10v2aux_mv(void);
+// expected-error@+1 {{function multiversioning doesn't support feature 'avx10v2aux'}}
+int __attribute__((target("avx10v2aux"))) avx10v2aux_mv(void);
+
 // expected-error@+2 {{function multiversioning doesn't support feature 'ndd'}}
 // expected-note@+2 {{function multiversioning caused by this declaration}}
 int __attribute__((target("ndd"))) apx_sub(void);

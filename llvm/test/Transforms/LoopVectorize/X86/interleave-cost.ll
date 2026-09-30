@@ -250,9 +250,8 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[SCEVGEP36]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP35]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND038:%.*]] = icmp ult ptr [[B]], [[SCEVGEP36]]
 ; CHECK-NEXT:    [[BOUND139:%.*]] = icmp ult ptr [[A]], [[SCEVGEP37]]
-; CHECK-NEXT:    [[FOUND_CONFLICT40:%.*]] = and i1 [[BOUND038]], [[BOUND139]]
+; CHECK-NEXT:    [[FOUND_CONFLICT40:%.*]] = and i1 [[BOUND0]], [[BOUND139]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT40]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

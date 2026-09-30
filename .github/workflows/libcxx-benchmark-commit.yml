@@ -18,7 +18,7 @@ on:
         required: true
         type: string
       lnt-machine:
-        description: 'The LNT machine to run the benchmarks on'
+        description: 'The LNT machine configuration to use when benchmarking and to report results as'
         required: true
         type: string
       benchmark-suite-override:
@@ -47,12 +47,12 @@ on:
 jobs:
   # Determine which configuration to run based on the `lnt-machine` input.
   select-machine:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       matrix: ${{ steps.select.outputs.matrix }}
     steps:
       - name: Checkout the machine definitions
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           # Disabling cone mode allows checking out exactly the single file we need.
@@ -105,22 +105,23 @@ jobs:
         include: ${{ fromJSON(needs.select-machine.outputs.matrix) }}
       fail-fast: false
     runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container || null }}
+    defaults:
+      run:
+        shell: bash
     env:
       COMPILER: ${{ matrix.cxx }}
+      # Where we install the library. This lives inside the workspace so that actions/checkout
+      # cleans it up between runs on self-hosted runners.
+      INSTALL_DIR: ${{ github.workspace }}/install
     steps:
       - name: Checkout the LLVM monorepo
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           # We benchmark arbitrary historical commits, which requires the full history to be available.
           fetch-depth: 0
           fetch-tags: true
-
-      - name: Install Python
-        if: runner.os == 'Linux' # installed via Homebrew on macOS
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: '3.14'
 
       - name: Select Xcode
         if: runner.os == 'macOS'
@@ -146,27 +147,55 @@ jobs:
           source .venv/bin/activate
           pip install -r libcxx/utils/ci/lnt/requirements.txt
 
+      # Build the library.
+      #
+      # A build failure is tolerated on purpose, since the library doesn't build at every historical commit.
+      # We still submit an empty run for such commits.
+      - name: Build libc++ at ${{ inputs.commit }}
+        continue-on-error: true
+        uses: ./.github/workflows/libcxx/build-at-commit
+        with:
+          git-repo: ${{ github.workspace }}
+          commit: ${{ inputs.commit }}
+          install-dir: ${{ env.INSTALL_DIR }}
+          compiler: ${{ matrix.cxx }}
+          cmake-cache: ${{ matrix.cmake-cache }}
+
       - name: Run the benchmarks
         env:
           BENCHMARK_SUITE_VERSION: ${{ matrix.benchmark-suite-version }}
-          CMAKE_CACHE: ${{ matrix.cmake-cache }}
           COMMIT: ${{ inputs.commit }}
           FILTER: ${{ inputs.filter }}
+          LIT_PARAMS: ${{ join(matrix.lit-params, ' ') }}
           LNT_MACHINE: ${{ matrix.lnt-machine }}
+          TEST_CONFIG: ${{ matrix.test-config }}
         run: |
           source .venv/bin/activate
           filter_arg=()
           if [ -n "${FILTER}" ]; then
             filter_arg=(--filter "${FILTER}")
           fi
+
+          read -ra configured_params <<< "${LIT_PARAMS}"
+          lit_params=()
+          for param in "${configured_params[@]}"; do
+            lit_params+=(--param "${param}")
+          done
+
+          # If the library build failed, still create an install directory so we
+          # run the benchmarks. The benchmarks will fail, and we'll submit an empty
+          # LNT report.
+          mkdir -p "${INSTALL_DIR}"
+
           libcxx/utils/ci/lnt/run-benchmarks                            \
             --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
             --machine "${LNT_MACHINE}"                                  \
             --compiler "${COMPILER}"                                    \
             --benchmark-commit "${COMMIT}"                              \
-            --cmake-cache "${CMAKE_CACHE}"                              \
+            --test-config "${TEST_CONFIG}"                              \
             "${filter_arg[@]}"                                          \
-            --output "${COMMIT}.json"
+            --output "${COMMIT}.json"                                   \
+            -- "${lit_params[@]}" --param "libcxx_installation=${INSTALL_DIR}"
 
           cat "${COMMIT}.json"
 
