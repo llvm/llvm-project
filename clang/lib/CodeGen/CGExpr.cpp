@@ -5914,7 +5914,7 @@ static Address emitPreserveStructAccess(CodeGenFunction &CGF, LValue base,
                                         Address addr, const FieldDecl *field) {
   const RecordDecl *rec = field->getParent();
   auto [DbgInfo, DIIndex] =
-      CGF.getDebugInfo()->getOrCreateRecordField(base.getType(), field);
+      CGF.getDebugInfo()->getOrCreatePreserveAccessInfo(base.getType(), field);
 
   unsigned idx =
       CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
@@ -5972,7 +5972,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
             Addr = Builder.CreateStructGEP(Addr, Idx, field->getName());
         }
       } else {
-        auto [DbgInfo, DIIndex] = getDebugInfo()->getOrCreateRecordField(
+        auto [DbgInfo, DIIndex] = getDebugInfo()->getOrCreatePreserveAccessInfo(
             getContext().getCanonicalTagType(rec), field);
         Addr = Builder.CreatePreserveStructAccessIndex(Addr, Idx, DIIndex,
                                                        DbgInfo);
@@ -6052,7 +6052,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
         (getDebugInfo() && rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
       // Remember the original union field index
       auto [DbgInfo, DIIndex] =
-          getDebugInfo()->getOrCreateRecordField(base.getType(), field);
+          getDebugInfo()->getOrCreatePreserveAccessInfo(base.getType(), field);
       addr = Address(Builder.CreatePreserveUnionAccessIndex(
                          addr.emitRawPointer(*this), DIIndex, DbgInfo),
                      addr.getElementType(), addr.getAlignment());

@@ -3090,7 +3090,8 @@ void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
 }
 
 std::pair<llvm::DIType *, unsigned>
-CGDebugInfo::getOrCreateRecordField(QualType Ty, const FieldDecl *Field) {
+CGDebugInfo::getOrCreatePreserveAccessInfo(QualType Ty,
+                                           const FieldDecl *Field) {
   const RecordDecl *RD = Field->getParent();
   // Preserve-access intrinsics need complete layouts, including base classes.
   if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))

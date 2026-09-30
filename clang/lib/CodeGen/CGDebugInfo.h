@@ -626,9 +626,10 @@ public:
   /// Emit C++ namespace alias.
   llvm::DIImportedEntity *EmitNamespaceAlias(const NamespaceAliasDecl &NA);
 
-  /// Emit complete record debug info and return the field's element index.
+  /// Return the complete record type and field index for preserve-access
+  /// intrinsics.
   std::pair<llvm::DIType *, unsigned>
-  getOrCreateRecordField(QualType Ty, const FieldDecl *Field);
+  getOrCreatePreserveAccessInfo(QualType Ty, const FieldDecl *Field);
 
   /// Emit an Objective-C interface type standalone debug info.
   llvm::DIType *getOrCreateInterfaceType(QualType Ty, SourceLocation Loc);

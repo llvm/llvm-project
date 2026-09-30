@@ -2,7 +2,11 @@
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm -debug-info-kind=limited -disable-llvm-passes %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple bpfel -emit-llvm -debug-info-kind=constructor -disable-llvm-passes %s -o - | FileCheck %s
 
-struct Base {
+struct GrandBase {
+  GrandBase();
+  int grandbase;
+};
+struct Base : GrandBase {
   Base();
   int base;
 };
@@ -64,5 +68,8 @@ int lambda(int a, int b) {
 // CHECK-DAG: ![[LAMBDA_ELEMENTS]] = !{!{{[0-9]+}}, ![[CAPTURE:[0-9]+]]}
 // CHECK-DAG: ![[CAPTURE]] = !DIDerivedType(tag: DW_TAG_member, name: "b"
 // CHECK-DAG: !DICompositeType({{.*}}name: "Base", {{.*}}elements: ![[BASE_ELEMENTS:[0-9]+]]
-// CHECK-DAG: ![[BASE_ELEMENTS]] = !{![[BASE_FIELD:[0-9]+]], !{{[0-9]+}}}
+// CHECK-DAG: ![[BASE_ELEMENTS]] = !{!{{[0-9]+}}, ![[BASE_FIELD:[0-9]+]], !{{[0-9]+}}}
 // CHECK-DAG: ![[BASE_FIELD]] = !DIDerivedType(tag: DW_TAG_member, name: "base"
+// CHECK-DAG: !DICompositeType({{.*}}name: "GrandBase", {{.*}}elements: ![[GRANDBASE_ELEMENTS:[0-9]+]]
+// CHECK-DAG: ![[GRANDBASE_ELEMENTS]] = !{![[GRANDBASE_FIELD:[0-9]+]], !{{[0-9]+}}}
+// CHECK-DAG: ![[GRANDBASE_FIELD]] = !DIDerivedType(tag: DW_TAG_member, name: "grandbase"
