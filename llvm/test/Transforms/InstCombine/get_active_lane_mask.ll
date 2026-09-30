@@ -151,3 +151,17 @@ define i1 @bitcast_inverted_condition_v32i1(i32 %a, i32 %b) {
   %red = icmp eq i32 %cast, 0
   ret i1 %red
 }
+
+define <2 x i1> @bitcast_not_scalar_integer(i32 %a, i32 %b) {
+; CHECK-LABEL: define <2 x i1> @bitcast_not_scalar_integer(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[MASK:%.*]] = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <32 x i1> [[MASK]] to <2 x i16>
+; CHECK-NEXT:    [[RED:%.*]] = icmp eq <2 x i16> [[CAST]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[RED]]
+;
+  %mask = call <32 x i1> @llvm.get.active.lane.mask.v32i1(i32 %a, i32 %b)
+  %cast = bitcast <32 x i1> %mask to <2 x i16>
+  %red = icmp eq <2 x i16> %cast, zeroinitializer
+  ret <2 x i1> %red
+}
