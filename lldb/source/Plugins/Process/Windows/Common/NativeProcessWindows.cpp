@@ -22,6 +22,7 @@
 #include "lldb/Host/windows/AutoHandle.h"
 #include "lldb/Host/windows/ConnectionConPTYWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -381,15 +382,19 @@ static bool GetLoadedModulePath(HANDLE process, HMODULE module,
   }
 
   std::wstring wpath(name.data(), len);
+  if (!llvm::convertWideToUTF8(wpath, path))
+    return false;
+  path = StripExtendedLengthPrefix(path);
 
-  // Canonicalize through a handle to the image file so the reported path
-  // matches the on-disk name exactly.
+  // The loader's path often differs from the on-disk one only in case (e.g.
+  // C:\windows\System32\KERNEL32.DLL). Open the image file to get its on-disk
+  // spelling, and use it if that's the only difference.
   AutoHandle file(::CreateFileW(
       wpath.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
       nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
 
   if (!file.IsValid())
-    return llvm::convertWideToUTF8(wpath, path);
+    return true;
 
   // Unlike GetModuleFileNameExW, GetFinalPathNameByHandleW reports the buffer
   // size it needs instead of truncating, so start empty and let the first call
@@ -402,29 +407,20 @@ static bool GetLoadedModulePath(HANDLE process, HMODULE module,
     if (needed == 0)
       break;
     if (needed < full.size()) {
-      std::wstring canonical(full.data(), needed);
+      std::string canonical;
+      if (!llvm::convertWideToUTF8(std::wstring_view(full.data(), needed),
+                                   canonical))
+        break;
       // GetFinalPathNameByHandleW returns an extended-length ("\\?\") path.
-      static const wchar_t kUNCPrefix[] = L"\\\\?\\UNC\\";
-      static const wchar_t kDOSPrefix[] = L"\\\\?\\";
-      if (canonical.rfind(kUNCPrefix, 0) == 0)
-        canonical.replace(0, wcslen(kUNCPrefix), L"\\\\");
-      else if (canonical.rfind(kDOSPrefix, 0) == 0)
-        canonical.erase(0, wcslen(kDOSPrefix));
-      std::wstring loader_path = wpath;
-      if (loader_path.rfind(kUNCPrefix, 0) == 0)
-        loader_path.replace(0, wcslen(kUNCPrefix), L"\\\\");
-      else if (loader_path.rfind(kDOSPrefix, 0) == 0)
-        loader_path.erase(0, wcslen(kDOSPrefix));
-      if (::_wcsicmp(canonical.c_str(), loader_path.c_str()) == 0)
-        wpath = std::move(canonical);
-      else
-        wpath = std::move(loader_path);
+      canonical = StripExtendedLengthPrefix(canonical);
+      if (llvm::StringRef(canonical).equals_insensitive(path))
+        path = std::move(canonical);
       break;
     }
     full.resize(needed);
   }
 
-  return llvm::convertWideToUTF8(wpath, path);
+  return true;
 }
 
 Status NativeProcessWindows::CacheLoadedModules() {

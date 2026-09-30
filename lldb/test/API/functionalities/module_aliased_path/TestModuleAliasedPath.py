@@ -2,8 +2,8 @@
 Test that a process launched through an aliased directory reports its modules
 under that directory, so LLDB does not duplicate the modules it already has.
 
-The target is created from a junction to the build directory. lldb-server must
-report the executable and the DLL next to it with the path the Windows loader
+The target is created from a junction to the build directory. LLDB must report
+the executable and the DLL next to it with the path the Windows loader
 recorded, which keeps the junction, rather than with the resolved path, which
 does not. Otherwise LLDB adds a second module for each file and the breakpoints
 get a location in both.
@@ -19,7 +19,6 @@ from lldbsuite.test import lldbutil
 
 
 @requireWindows
-@skipIfWindowsAndNoLLDBServer
 @skipIfRemote
 class TestModuleAliasedPath(TestBase):
     NO_DEBUG_INFO_TESTCASE = True

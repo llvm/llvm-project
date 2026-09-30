@@ -17,6 +17,7 @@
 #include "lldb/Host/windows/HostProcessWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/LazyImport.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
@@ -495,11 +496,7 @@ static std::optional<std::string> GetImagePathFromPEB(HANDLE process) {
   if (!llvm::convertWideToUTF8(wpath, path))
     return std::nullopt;
   // A process launched through an extended-length path has the "\\?\" prefix.
-  llvm::StringRef path_ref = path;
-  if (path_ref.consume_front("\\\\?\\UNC\\"))
-    return "\\\\" + path_ref.str();
-  path_ref.consume_front("\\\\?\\");
-  return path_ref.str();
+  return StripExtendedLengthPrefix(path);
 }
 
 DWORD
@@ -808,11 +805,8 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     loader_path.reset();
   if (!loader_path)
     loader_path = GetLoaderModuleName(process, info.lpBaseOfDll);
-  if (loader_path) {
-    llvm::StringRef path_ref = *loader_path;
-    path_ref.consume_front("\\\\?\\");
-    loader_path = path_ref.str();
-  }
+  if (loader_path)
+    loader_path = StripExtendedLengthPrefix(*loader_path);
 
   // The file handle gives the resolved path, with the on-disk case.
   std::optional<std::string> file_path;
@@ -826,9 +820,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
                                 VOLUME_NAME_DOS);
       std::string path_str_utf8;
       llvm::convertWideToUTF8(buffer.data(), path_str_utf8);
-      llvm::StringRef path_str = path_str_utf8;
-      path_str.consume_front("\\\\?\\");
-      file_path = path_str.str();
+      file_path = StripExtendedLengthPrefix(path_str_utf8);
     } else {
       file_path = GetFileNameFromHandleFallback(info.hFile);
     }
