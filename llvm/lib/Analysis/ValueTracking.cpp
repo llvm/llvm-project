@@ -10804,6 +10804,14 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     ConstantRange SrcCR =
         computeConstantRange(TI->getOperand(0), ForSigned, SQ, Depth + 1);
     CR = SrcCR.truncate(BitWidth);
+  } else if (auto *ZExt = dyn_cast<ZExtInst>(V)) {
+    ConstantRange SrcCR =
+        computeConstantRange(ZExt->getOperand(0), ForSigned, SQ, Depth + 1);
+    CR = SrcCR.zeroExtend(BitWidth);
+  } else if (auto *SExt = dyn_cast<SExtInst>(V)) {
+    ConstantRange SrcCR =
+        computeConstantRange(SExt->getOperand(0), ForSigned, SQ, Depth + 1);
+    CR = SrcCR.signExtend(BitWidth);
   } else if (isa<FPToUIInst>(V) || isa<FPToSIInst>(V)) {
     APInt Lower = APInt(BitWidth, 0);
     APInt Upper = APInt(BitWidth, 0);
