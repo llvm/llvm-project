@@ -131,7 +131,7 @@ static std::optional<unsigned> getSPMetadataRegisters(Type *Ty) {
   if (Ty->isIntegerTy(32))
     return 1;
   auto *VT = dyn_cast<FixedVectorType>(Ty);
-  if (!VT || !VT->getElementType()->isIntegerTy(32))
+  if (!VT || !VT->getElementType()->isIntegerTy(32) || VT->getNumElements() < 2)
     return std::nullopt;
   return VT->getNumElements();
 }
@@ -149,6 +149,9 @@ static void verifySPCompress(VerifierSupport &VS, CallBase &Call) {
 
   unsigned IdxSize = cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue();
   unsigned NumTgt = cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue();
+  // spcompress only implements the 2:4 pattern: each group of num_tgt = 4
+  // data elements keeps 2 of them in cdata. The repeat factor counts pairs of
+  // data registers, so data must occupy an even number of them.
   Check(NumTgt == 4 && Data->NumElements % NumTgt == 0 &&
             CData->NumElements == 2 * (Data->NumElements / NumTgt) &&
             Data->NumRegisters % 2 == 0,
@@ -156,6 +159,8 @@ static void verifySPCompress(VerifierSupport &VS, CallBase &Call) {
 
   unsigned RepeatFactor = Data->NumRegisters / 2;
   auto Layout = getSPCompressLayout(Data->ElemSize, IdxSize, RepeatFactor);
+  // The declared types must match the register layout PTX gives these
+  // qualifiers.
   Check(Layout && *MDataRegs == Layout->MetadataSize &&
             CData->NumRegisters == Layout->CompressedDataSize &&
             Data->NumRegisters == Layout->DataSize,
@@ -171,16 +176,20 @@ static void verifySPDecompress(VerifierSupport &VS, CallBase &Call) {
 
   unsigned IdxSize = cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue();
   unsigned NumTgt = cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue();
+  // data holds repeat_factor groups of num_tgt elements.
   Check(NumTgt != 0 && Data->NumElements % NumTgt == 0,
         "invalid llvm.nvvm.spdecompress layout", &Call);
 
   unsigned RepeatFactor = Data->NumElements / NumTgt;
+  // cdata holds num_src elements for each of those groups.
   Check(RepeatFactor != 0 && CData->NumElements % RepeatFactor == 0,
         "invalid llvm.nvvm.spdecompress layout", &Call);
 
   unsigned NumSrc = CData->NumElements / RepeatFactor;
   auto Layout = getSPDecompressLayout(NumSrc, NumTgt, Data->ElemSize, IdxSize,
                                       RepeatFactor);
+  // The declared types must match the register layout PTX gives these
+  // qualifiers.
   Check(Layout && *MDataRegs == Layout->MetadataSize &&
             CData->NumRegisters == Layout->CompressedDataSize &&
             Data->NumRegisters == Layout->DataSize,
