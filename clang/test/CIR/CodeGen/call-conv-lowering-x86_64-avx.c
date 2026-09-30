@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefixes=CIR,CIR-SSE --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-CIR-SSE --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-SSE,LLVM-CIR-SSE --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-OGCG-SSE --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVM-SSE,LLVM-OGCG-SSE --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -fclangir -emit-cir %s -o %t-avx.cir
 // RUN: FileCheck --check-prefixes=CIR,CIR-AVX --input-file=%t-avx.cir %s
@@ -153,6 +153,42 @@ void pass_swv(StructWideVector s) { variadic("x", s); }
 // LLVM-AVX: define dso_local void @pass_swv(<8 x float> %{{[^,)]+}})
 // LLVM-CIR-AVX: call i32 (ptr, ...) @variadic(ptr noundef @.str, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
 // LLVM-OGCG-AVX: call i32 (ptr, ...) @variadic(ptr noundef @.str, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
+
+// The same boundary holds for a callee reached through a pointer, where it
+// comes from the pointee's declared parameters.
+typedef int (*SwvFn)(StructWideVector, ...);
+int call_swv(SwvFn p, StructWideVector a, StructWideVector b) {
+  return p(a, b);
+}
+
+// CIR-LABEL: cir.func {{.*}}@call_swv(
+// CIR-AVX:   %[[CAST:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!cir.func<(!rec_StructWideVector, ...) -> !s32i>> -> !cir.ptr<!cir.func<(!cir.vector<8 x !cir.float>, ...) -> !s32i>>
+// CIR-AVX:   cir.call %[[CAST]](%{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.vector<8 x !cir.float>, ...) -> !s32i>>, !cir.vector<8 x !cir.float>, !cir.ptr<!rec_StructWideVector> {llvm.align = 32 : i64, llvm.byval = !rec_StructWideVector, llvm.noundef}) -> !s32i
+// LLVM-AVX-LABEL: define dso_local i32 @call_swv(ptr noundef %{{[^,)]+}}, <8 x float> %{{[^,)]+}}, <8 x float> %{{[^,)]+}})
+// LLVM-AVX: call i32 (<8 x float>, ...) %{{[^,)]+}}(<8 x float> %{{[^,)]+}}, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
+// LLVM-AVX512-LABEL: define dso_local i32 @call_swv(ptr noundef %{{[^,)]+}}, <8 x float> %{{[^,)]+}}, <8 x float> %{{[^,)]+}})
+// LLVM-AVX512: call i32 (<8 x float>, ...) %{{[^,)]+}}(<8 x float> %{{[^,)]+}}, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
+// CIR-SSE:   %[[SCAST:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!cir.func<(!rec_StructWideVector, ...) -> !s32i>> -> !cir.ptr<!cir.func<(!cir.ptr<!rec_StructWideVector>, ...) -> !s32i>>
+// CIR-SSE:   cir.call %[[SCAST]](%{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_StructWideVector>, ...) -> !s32i>>, !cir.ptr<!rec_StructWideVector> {llvm.align = 32 : i64, llvm.byval = !rec_StructWideVector, llvm.noundef}, !cir.ptr<!rec_StructWideVector> {llvm.align = 32 : i64, llvm.byval = !rec_StructWideVector, llvm.noundef}) -> !s32i
+// LLVM-SSE-LABEL: define dso_local i32 @call_swv(ptr noundef %{{[^,)]+}}, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}}, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
+// LLVM-SSE: call i32 (ptr, ...) %{{[^,)]+}}(ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}}, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
+
+// The attribute moves the declared parameter's vector into a register for
+// this call too, and the ellipsis argument still goes to memory.
+__attribute__((target("avx"))) int call_swv_tgt(SwvFn p, StructWideVector a,
+                                                 StructWideVector b) {
+  return p(a, b);
+}
+
+// CIR-LABEL: cir.func {{.*}}@call_swv_tgt(
+// CIR:   %[[TCAST:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!cir.func<(!rec_StructWideVector, ...) -> !s32i>> -> !cir.ptr<!cir.func<(!cir.vector<8 x !cir.float>, ...) -> !s32i>>
+// CIR:   cir.call %[[TCAST]](%{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.vector<8 x !cir.float>, ...) -> !s32i>>, !cir.vector<8 x !cir.float>, !cir.ptr<!rec_StructWideVector> {llvm.align = 32 : i64, llvm.byval = !rec_StructWideVector, llvm.noundef}) -> !s32i
+// LLVM-LABEL: define dso_local i32 @call_swv_tgt(ptr noundef %{{[^,)]+}}, <8 x float> %{{[^,)]+}}, <8 x float> %{{[^,)]+}})
+// LLVM: call i32 (<8 x float>, ...) %{{[^,)]+}}(<8 x float> %{{[^,)]+}}, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
+// LLVM-CIR-PINNED: define dso_local i32 @call_swv_tgt(ptr noundef %{{[^,)]+}}, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}}, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
+// LLVM-CIR-PINNED: call i32 (ptr, ...) %{{[^,)]+}}(ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}}, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
+// LLVM-OGCG-PINNED: define dso_local i32 @call_swv_tgt(ptr noundef %{{[^,)]+}}, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}}, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
+// LLVM-OGCG-PINNED: call i32 (ptr, ...) %{{[^,)]+}}(ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}}, ptr noundef byval(%struct.StructWideVector) align 32 %{{[^,)]+}})
 
 // A union whose widest member is a 256-bit vector is classified from that
 // member, so it reaches registers once the level admits the vector.
