@@ -280,11 +280,15 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
     if (cases.empty())
       return mlir::failure();
 
+    auto resetMergeState = [&]() {
+      cascadingCases.clear();
+      cascadingCaseValues.clear();
+    };
+
     auto flushMergedOps = [&]() {
       for (CaseOp &c : cascadingCases)
         rewriter.eraseOp(c);
-      cascadingCases.clear();
-      cascadingCaseValues.clear();
+      resetMergeState();
     };
 
     auto mergeCascadingInto = [&](CaseOp &target) {
@@ -295,7 +299,27 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
       changed = mlir::success();
     };
 
+    // Merge all pending cascading cases into the last one collected, which
+    // survives as a distinct `cir.case`; the rest are erased since their
+    // values have been folded into it.
+    auto mergeLastCascadingAndFlush = [&]() {
+      assert(!cir::MissingFeatures::foldRangeCase());
+      CaseOp lastCascadingCase = cascadingCases.back();
+      mergeCascadingInto(lastCascadingCase);
+      cascadingCases.pop_back();
+      flushMergedOps();
+    };
+
     for (CaseOp c : cases) {
+      if (!cascadingCases.empty() &&
+          !isa_and_nonnull<CaseOp>(c->getPrevNode())) {
+
+        if (cascadingCases.size() > 1)
+          mergeLastCascadingAndFlush();
+        else
+          resetMergeState();
+      }
+
       cir::CaseOpKind kind = c.getKind();
       if (kind == cir::CaseOpKind::Equal &&
           isa<YieldOp>(c.getCaseRegion().front().front())) {
@@ -312,24 +336,15 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
         // cascading cases, merge all of them into the last cascading case.
         // We don't currently fold case range statements with other case
         // statements.
-        assert(!cir::MissingFeatures::foldRangeCase());
-        CaseOp lastCascadingCase = cascadingCases.back();
-        mergeCascadingInto(lastCascadingCase);
-        cascadingCases.pop_back();
-        flushMergedOps();
+        mergeLastCascadingAndFlush();
       } else {
-        cascadingCases.clear();
-        cascadingCaseValues.clear();
+        resetMergeState();
       }
     }
 
     // Edge case: all cases are simple cascading cases
-    if (cascadingCases.size() == cases.size()) {
-      CaseOp lastCascadingCase = cascadingCases.back();
-      mergeCascadingInto(lastCascadingCase);
-      cascadingCases.pop_back();
-      flushMergedOps();
-    }
+    if (cascadingCases.size() == cases.size())
+      mergeLastCascadingAndFlush();
 
     return changed;
   }
