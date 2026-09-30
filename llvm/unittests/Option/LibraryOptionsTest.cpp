@@ -70,11 +70,10 @@ TEST(LibraryOptionsTest, Parser) {
   P.forEachOption([&](StringRef Spelling, StringRef MetaVar, StringRef Help) {
     Rows.push_back((Spelling + "|" + MetaVar + "|" + Help).str());
   });
-  EXPECT_THAT(Rows, testing::ElementsAre(
-                        "lib-count=|<value>|An unsigned", "lib-count||",
-                        "lib-enable=|<value>|", "lib-enable||A bool",
-                        "lib-path=|<value>|A string", "lib-path||",
-                        "lib-ratio=|<value>|A double", "lib-ratio||"));
+  EXPECT_THAT(Rows, testing::ElementsAre("lib-count|=<value>|An unsigned",
+                                         "lib-enable||A bool",
+                                         "lib-path|=<value>|A string",
+                                         "lib-ratio|=<value>|A double"));
 
   auto Parse = [&](std::initializer_list<const char *> Argv) {
     unsigned Consumed = 0;
@@ -88,6 +87,11 @@ TEST(LibraryOptionsTest, Parser) {
   EXPECT_EQ(Parse({"-lib-count"}),
             "1 option '-lib-count' requires an argument");
   EXPECT_EQ(Parse({"-lib-other"}), "1 unknown argument '-lib-other'");
+  EXPECT_EQ(Parse({"-lib-counts=1"}), "1 unknown argument '-lib-counts=1'");
+  EXPECT_EQ(Parse({"-lib-enable", "0"}), "1 ");
+  EXPECT_EQ(Parse({"-lib-count", "x"}),
+            "2 invalid value 'x' in '-lib-count=x'");
+  EXPECT_EQ(Parse({"-lib-enable=x"}), "1 invalid value 'x' in '-lib-enable=x'");
   P.reset();
   EXPECT_EQ(TestLibraryOptions::Global.count, 3u);
 }
