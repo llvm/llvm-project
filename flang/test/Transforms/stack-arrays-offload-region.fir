@@ -37,6 +37,27 @@ func.func @dynamic_temp_in_acc_parallel(%n: index) {
   return
 }
 
+// CHECK-LABEL: func.func @dynamic_temp_in_cuf_kernel
+// CHECK: cuf.kernel
+// CHECK-NEXT: fir.allocmem !fir.array<?xi32>, %{{.*}}
+// CHECK: fir.freemem
+// CHECK-NOT: fir.alloca
+func.func @dynamic_temp_in_cuf_kernel(%n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c1_i32 = arith.constant 1 : i32
+  %v = arith.constant 0 : i32
+  cuf.kernel<<<%c1_i32, %c1_i32>>> (%i : index) = (%c1 : index) to (%n : index) step (%c1 : index) {
+    %0 = fir.allocmem !fir.array<?xi32>, %n
+    %r = fir.convert %0 : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+    %e = fir.coordinate_of %r, %c0 : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+    fir.store %v to %e : !fir.ref<i32>
+    fir.freemem %0 : !fir.heap<!fir.array<?xi32>>
+    "fir.end"() : () -> ()
+  }
+  return
+}
+
 // An acc routine is compiled for the device as well: its allocations stay on
 // the heap even before it is specialized.
 // CHECK-LABEL: func.func @dynamic_temp_in_acc_routine
