@@ -1059,13 +1059,13 @@ define amdgpu_kernel void @test_div_scale_f32(ptr addrspace(1) %out, ptr addrspa
 ; GFX1032-LABEL: test_div_scale_f32:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX1032-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
-; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1032-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    global_load_dword v1, v3, s[2:3] glc dlc
+; GFX1032-NEXT:    global_load_dword v1, v0, s[2:3] glc dlc
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
-; GFX1032-NEXT:    global_load_dword v2, v3, s[2:3] offset:4 glc dlc
+; GFX1032-NEXT:    global_load_dword v2, v0, s[2:3] offset:4 glc dlc
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
+; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1032-NEXT:    v_div_scale_f32 v1, s2, v2, v2, v1
 ; GFX1032-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX1032-NEXT:    s_endpgm
@@ -1073,13 +1073,13 @@ define amdgpu_kernel void @test_div_scale_f32(ptr addrspace(1) %out, ptr addrspa
 ; GFX1064-LABEL: test_div_scale_f32:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX1064-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
-; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1064-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    global_load_dword v1, v3, s[2:3] glc dlc
+; GFX1064-NEXT:    global_load_dword v1, v0, s[2:3] glc dlc
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
-; GFX1064-NEXT:    global_load_dword v2, v3, s[2:3] offset:4 glc dlc
+; GFX1064-NEXT:    global_load_dword v2, v0, s[2:3] offset:4 glc dlc
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
+; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1064-NEXT:    v_div_scale_f32 v1, s[2:3], v2, v2, v1
 ; GFX1064-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX1064-NEXT:    s_endpgm

@@ -30,13 +30,13 @@ define amdgpu_kernel void @v_test_imax_sge_i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 1, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v1, v3, s[2:3]
-; GFX9-NEXT:    global_load_ushort v2, v3, s[6:7]
+; GFX9-NEXT:    global_load_ushort v1, v0, s[2:3]
+; GFX9-NEXT:    global_load_ushort v2, v0, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_max_i16_e32 v1, v1, v2
-; GFX9-NEXT:    global_store_short v3, v1, s[0:1]
+; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i16, ptr addrspace(1) %aptr, i32 %tid
@@ -80,13 +80,13 @@ define amdgpu_kernel void @v_test_imax_sge_v2i16(ptr addrspace(1) %out, ptr addr
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v1, v3, s[2:3]
-; GFX9-NEXT:    global_load_dword v2, v3, s[6:7]
+; GFX9-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX9-NEXT:    global_load_dword v2, v0, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_max_i16 v1, v1, v2
-; GFX9-NEXT:    global_store_dword v3, v1, s[0:1]
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr <2 x i16>, ptr addrspace(1) %aptr, i32 %tid
@@ -141,23 +141,23 @@ define amdgpu_kernel void @v_test_imax_sge_v3i16(ptr addrspace(1) %out, ptr addr
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 3, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_short_d16 v2, v5, s[2:3] offset:4
+; GFX9-NEXT:    global_load_short_d16 v2, v0, s[2:3] offset:4
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    global_load_dword v3, v5, s[6:7]
-; GFX9-NEXT:    global_load_dword v4, v5, s[2:3]
+; GFX9-NEXT:    global_load_dword v3, v0, s[6:7]
+; GFX9-NEXT:    global_load_dword v4, v0, s[2:3]
 ; GFX9-NEXT:    ; kill: killed $sgpr2_sgpr3
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    global_load_short_d16 v1, v5, s[6:7] offset:4
+; GFX9-NEXT:    global_load_short_d16 v1, v0, s[6:7] offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_pk_max_i16 v3, v4, v3
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_max_i16 v1, v2, v1
-; GFX9-NEXT:    global_store_short v5, v1, s[0:1] offset:4
-; GFX9-NEXT:    global_store_dword v5, v3, s[0:1]
+; GFX9-NEXT:    global_store_short v0, v1, s[0:1] offset:4
+; GFX9-NEXT:    global_store_dword v0, v3, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr <3 x i16>, ptr addrspace(1) %aptr, i32 %tid
@@ -180,13 +180,13 @@ define amdgpu_kernel void @v_test_imax_sge_v4i16(ptr addrspace(1) %out, ptr addr
 ; VI-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
-; VI-NEXT:    v_add_u32_e32 v6, vcc, s2, v4
-; VI-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v4
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
-; VI-NEXT:    v_add_u32_e32 v8, vcc, s4, v4
-; VI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v3, vcc
-; VI-NEXT:    flat_load_dwordx2 v[0:1], v[6:7]
-; VI-NEXT:    flat_load_dwordx2 v[2:3], v[8:9]
+; VI-NEXT:    v_add_u32_e32 v2, vcc, s4, v4
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
+; VI-NEXT:    flat_load_dwordx2 v[2:3], v[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, s0, v4
 ; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v5, vcc
@@ -253,13 +253,13 @@ define amdgpu_kernel void @v_test_imax_sgt_i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 1, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v1, v3, s[2:3]
-; GFX9-NEXT:    global_load_ushort v2, v3, s[6:7]
+; GFX9-NEXT:    global_load_ushort v1, v0, s[2:3]
+; GFX9-NEXT:    global_load_ushort v2, v0, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_max_i16_e32 v1, v1, v2
-; GFX9-NEXT:    global_store_short v3, v1, s[0:1]
+; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i16, ptr addrspace(1) %aptr, i32 %tid
@@ -301,13 +301,13 @@ define amdgpu_kernel void @v_test_umax_uge_i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 1, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v1, v3, s[2:3]
-; GFX9-NEXT:    global_load_ushort v2, v3, s[6:7]
+; GFX9-NEXT:    global_load_ushort v1, v0, s[2:3]
+; GFX9-NEXT:    global_load_ushort v2, v0, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_max_u16_e32 v1, v1, v2
-; GFX9-NEXT:    global_store_short v3, v1, s[0:1]
+; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i16, ptr addrspace(1) %aptr, i32 %tid
@@ -349,13 +349,13 @@ define amdgpu_kernel void @v_test_umax_ugt_i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 1, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v1, v3, s[2:3]
-; GFX9-NEXT:    global_load_ushort v2, v3, s[6:7]
+; GFX9-NEXT:    global_load_ushort v1, v0, s[2:3]
+; GFX9-NEXT:    global_load_ushort v2, v0, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_max_u16_e32 v1, v1, v2
-; GFX9-NEXT:    global_store_short v3, v1, s[0:1]
+; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr i16, ptr addrspace(1) %aptr, i32 %tid
@@ -398,13 +398,13 @@ define amdgpu_kernel void @v_test_umax_ugt_v2i16(ptr addrspace(1) %out, ptr addr
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v1, v3, s[2:3]
-; GFX9-NEXT:    global_load_dword v2, v3, s[6:7]
+; GFX9-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX9-NEXT:    global_load_dword v2, v0, s[6:7]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_max_u16 v1, v1, v2
-; GFX9-NEXT:    global_store_dword v3, v1, s[0:1]
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep0 = getelementptr <2 x i16>, ptr addrspace(1) %aptr, i32 %tid

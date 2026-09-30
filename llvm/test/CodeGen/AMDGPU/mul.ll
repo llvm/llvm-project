@@ -3896,12 +3896,12 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; VI-NEXT:    v_mov_b32_e32 v10, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    v_add_u32_e32 v8, vcc, s0, v2
-; VI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
+; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
+; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    v_add_u32_e32 v12, vcc, s2, v2
 ; VI-NEXT:    v_addc_u32_e32 v13, vcc, 0, v3, vcc
-; VI-NEXT:    flat_load_dwordx4 v[0:3], v[8:9]
+; VI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; VI-NEXT:    flat_load_dwordx4 v[4:7], v[12:13]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mul_lo_u32 v3, v4, v3

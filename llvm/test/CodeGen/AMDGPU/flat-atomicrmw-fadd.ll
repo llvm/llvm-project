@@ -5953,13 +5953,13 @@ define double @flat_agent_atomic_fadd_ret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX90A-NEXT:    s_cbranch_execz .LBB30_7
 ; GFX90A-NEXT:  ; %bb.6: ; %atomicrmw.private
 ; GFX90A-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
-; GFX90A-NEXT:    v_cndmask_b32_e32 v5, -1, v4, vcc
-; GFX90A-NEXT:    buffer_load_dword v0, v5, s[0:3], 0 offen
-; GFX90A-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen offset:4
+; GFX90A-NEXT:    v_cndmask_b32_e32 v4, -1, v4, vcc
+; GFX90A-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
+; GFX90A-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_add_f64 v[2:3], v[0:1], v[2:3]
-; GFX90A-NEXT:    buffer_store_dword v2, v5, s[0:3], 0 offen
-; GFX90A-NEXT:    buffer_store_dword v3, v5, s[0:3], 0 offen offset:4
+; GFX90A-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
+; GFX90A-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen offset:4
 ; GFX90A-NEXT:  .LBB30_7: ; %Flow1
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX90A-NEXT:    ; implicit-def: $vgpr4_vgpr5
@@ -6016,13 +6016,13 @@ define double @flat_agent_atomic_fadd_ret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX908-NEXT:    s_cbranch_execz .LBB30_2
 ; GFX908-NEXT:  .LBB30_6: ; %atomicrmw.private
 ; GFX908-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
-; GFX908-NEXT:    v_cndmask_b32_e32 v5, -1, v4, vcc
-; GFX908-NEXT:    buffer_load_dword v0, v5, s[0:3], 0 offen
-; GFX908-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen offset:4
+; GFX908-NEXT:    v_cndmask_b32_e32 v4, -1, v4, vcc
+; GFX908-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
+; GFX908-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_add_f64 v[2:3], v[0:1], v[2:3]
-; GFX908-NEXT:    buffer_store_dword v2, v5, s[0:3], 0 offen
-; GFX908-NEXT:    buffer_store_dword v3, v5, s[0:3], 0 offen offset:4
+; GFX908-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
+; GFX908-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen offset:4
 ; GFX908-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
@@ -6355,14 +6355,14 @@ define double @flat_agent_atomic_fadd_ret_f64__offset12b_pos__amdgpu_no_fine_gra
 ; GFX10-NEXT:    s_cbranch_execz .LBB31_2
 ; GFX10-NEXT:  .LBB31_6: ; %atomicrmw.private
 ; GFX10-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
-; GFX10-NEXT:    v_cndmask_b32_e32 v5, -1, v4, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v4, -1, v4, vcc_lo
 ; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    buffer_load_dword v0, v5, s[0:3], 0 offen
-; GFX10-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
+; GFX10-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_add_f64 v[2:3], v[0:1], v[2:3]
-; GFX10-NEXT:    buffer_store_dword v2, v5, s[0:3], 0 offen
-; GFX10-NEXT:    buffer_store_dword v3, v5, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
+; GFX10-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen offset:4
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -6403,13 +6403,13 @@ define double @flat_agent_atomic_fadd_ret_f64__offset12b_pos__amdgpu_no_fine_gra
 ; GFX90A-NEXT:    s_cbranch_execz .LBB31_7
 ; GFX90A-NEXT:  ; %bb.6: ; %atomicrmw.private
 ; GFX90A-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
-; GFX90A-NEXT:    v_cndmask_b32_e32 v5, -1, v4, vcc
-; GFX90A-NEXT:    buffer_load_dword v0, v5, s[0:3], 0 offen
-; GFX90A-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen offset:4
+; GFX90A-NEXT:    v_cndmask_b32_e32 v4, -1, v4, vcc
+; GFX90A-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
+; GFX90A-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_add_f64 v[2:3], v[0:1], v[2:3]
-; GFX90A-NEXT:    buffer_store_dword v2, v5, s[0:3], 0 offen
-; GFX90A-NEXT:    buffer_store_dword v3, v5, s[0:3], 0 offen offset:4
+; GFX90A-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
+; GFX90A-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen offset:4
 ; GFX90A-NEXT:  .LBB31_7: ; %Flow1
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX90A-NEXT:    ; implicit-def: $vgpr4_vgpr5
@@ -6466,13 +6466,13 @@ define double @flat_agent_atomic_fadd_ret_f64__offset12b_pos__amdgpu_no_fine_gra
 ; GFX908-NEXT:    s_cbranch_execz .LBB31_2
 ; GFX908-NEXT:  .LBB31_6: ; %atomicrmw.private
 ; GFX908-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
-; GFX908-NEXT:    v_cndmask_b32_e32 v5, -1, v4, vcc
-; GFX908-NEXT:    buffer_load_dword v0, v5, s[0:3], 0 offen
-; GFX908-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen offset:4
+; GFX908-NEXT:    v_cndmask_b32_e32 v4, -1, v4, vcc
+; GFX908-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
+; GFX908-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_add_f64 v[2:3], v[0:1], v[2:3]
-; GFX908-NEXT:    buffer_store_dword v2, v5, s[0:3], 0 offen
-; GFX908-NEXT:    buffer_store_dword v3, v5, s[0:3], 0 offen offset:4
+; GFX908-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
+; GFX908-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen offset:4
 ; GFX908-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
@@ -6815,14 +6815,14 @@ define double @flat_agent_atomic_fadd_ret_f64__offset12b_neg__amdgpu_no_fine_gra
 ; GFX10-NEXT:    s_cbranch_execz .LBB32_2
 ; GFX10-NEXT:  .LBB32_6: ; %atomicrmw.private
 ; GFX10-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[4:5]
-; GFX10-NEXT:    v_cndmask_b32_e32 v5, -1, v4, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v4, -1, v4, vcc_lo
 ; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    buffer_load_dword v0, v5, s[0:3], 0 offen
-; GFX10-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
+; GFX10-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_add_f64 v[2:3], v[0:1], v[2:3]
-; GFX10-NEXT:    buffer_store_dword v2, v5, s[0:3], 0 offen
-; GFX10-NEXT:    buffer_store_dword v3, v5, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
+; GFX10-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen offset:4
 ; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -6863,13 +6863,13 @@ define double @flat_agent_atomic_fadd_ret_f64__offset12b_neg__amdgpu_no_fine_gra
 ; GFX90A-NEXT:    s_cbranch_execz .LBB32_7
 ; GFX90A-NEXT:  ; %bb.6: ; %atomicrmw.private
 ; GFX90A-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
-; GFX90A-NEXT:    v_cndmask_b32_e32 v5, -1, v4, vcc
-; GFX90A-NEXT:    buffer_load_dword v0, v5, s[0:3], 0 offen
-; GFX90A-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen offset:4
+; GFX90A-NEXT:    v_cndmask_b32_e32 v4, -1, v4, vcc
+; GFX90A-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
+; GFX90A-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_add_f64 v[2:3], v[0:1], v[2:3]
-; GFX90A-NEXT:    buffer_store_dword v2, v5, s[0:3], 0 offen
-; GFX90A-NEXT:    buffer_store_dword v3, v5, s[0:3], 0 offen offset:4
+; GFX90A-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
+; GFX90A-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen offset:4
 ; GFX90A-NEXT:  .LBB32_7: ; %Flow1
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GFX90A-NEXT:    ; implicit-def: $vgpr4_vgpr5
@@ -6926,13 +6926,13 @@ define double @flat_agent_atomic_fadd_ret_f64__offset12b_neg__amdgpu_no_fine_gra
 ; GFX908-NEXT:    s_cbranch_execz .LBB32_2
 ; GFX908-NEXT:  .LBB32_6: ; %atomicrmw.private
 ; GFX908-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
-; GFX908-NEXT:    v_cndmask_b32_e32 v5, -1, v4, vcc
-; GFX908-NEXT:    buffer_load_dword v0, v5, s[0:3], 0 offen
-; GFX908-NEXT:    buffer_load_dword v1, v5, s[0:3], 0 offen offset:4
+; GFX908-NEXT:    v_cndmask_b32_e32 v4, -1, v4, vcc
+; GFX908-NEXT:    buffer_load_dword v0, v4, s[0:3], 0 offen
+; GFX908-NEXT:    buffer_load_dword v1, v4, s[0:3], 0 offen offset:4
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_add_f64 v[2:3], v[0:1], v[2:3]
-; GFX908-NEXT:    buffer_store_dword v2, v5, s[0:3], 0 offen
-; GFX908-NEXT:    buffer_store_dword v3, v5, s[0:3], 0 offen offset:4
+; GFX908-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
+; GFX908-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen offset:4
 ; GFX908-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]

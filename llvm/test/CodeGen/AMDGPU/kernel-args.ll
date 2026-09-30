@@ -5645,10 +5645,10 @@ define amdgpu_kernel void @array_3xi16(i8 %arg0, [3 x i16] %arg1) {
 ;
 ; GFX9-LABEL: array_3xi16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v4, 0
-; GFX9-NEXT:    global_load_ushort v1, v4, s[8:9] offset:6
-; GFX9-NEXT:    global_load_ushort v2, v4, s[8:9] offset:4
-; GFX9-NEXT:    global_load_ushort v3, v4, s[8:9] offset:2
+; GFX9-NEXT:    v_mov_b32_e32 v5, 0
+; GFX9-NEXT:    global_load_ushort v1, v5, s[8:9] offset:6
+; GFX9-NEXT:    global_load_ushort v2, v5, s[8:9] offset:4
+; GFX9-NEXT:    global_load_ushort v3, v5, s[8:9] offset:2
 ; GFX9-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0

@@ -4909,12 +4909,12 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-LABEL: srem_v4i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GCN-NEXT:    v_mov_b32_e32 v17, 0
+; GCN-NEXT:    v_mov_b32_e32 v19, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v17, s[2:3] offset:48
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v17, s[2:3] offset:32
-; GCN-NEXT:    global_load_dwordx4 v[8:11], v17, s[2:3] offset:16
-; GCN-NEXT:    global_load_dwordx4 v[12:15], v17, s[2:3]
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v19, s[2:3] offset:48
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v19, s[2:3] offset:32
+; GCN-NEXT:    global_load_dwordx4 v[8:11], v19, s[2:3] offset:16
+; GCN-NEXT:    global_load_dwordx4 v[12:15], v19, s[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(3)
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v3
 ; GCN-NEXT:    s_waitcnt vmcnt(2)

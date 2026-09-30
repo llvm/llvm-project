@@ -669,14 +669,14 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_or(<4 x i32> inreg %rsrc, i32
 ; GFX12-GISEL-TRUE16-NEXT:    v_or_b32_e32 v8, 12, v0
 ; GFX12-GISEL-TRUE16-NEXT:    v_or_b32_e32 v9, 16, v0
 ; GFX12-GISEL-TRUE16-NEXT:    v_or_b32_e32 v10, 28, v0
-; GFX12-GISEL-TRUE16-NEXT:    v_or_b32_e32 v11, 32, v0
+; GFX12-GISEL-TRUE16-NEXT:    v_or_b32_e32 v0, 32, v0
 ; GFX12-GISEL-TRUE16-NEXT:    s_clause 0x5
 ; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b32 v1, v6, s[0:3], null offen
 ; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b32 v2, v7, s[0:3], null offen
 ; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b32 v3, v8, s[0:3], null offen
 ; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b32 v4, v9, s[0:3], null offen
 ; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b32 v5, v10, s[0:3], null offen
-; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b32 v0, v11, s[0:3], null offen
+; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x2
 ; GFX12-GISEL-TRUE16-NEXT:    export mrt0, v1, v2, v3, v4 done
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
@@ -691,14 +691,14 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_or(<4 x i32> inreg %rsrc, i32
 ; GFX12-GISEL-FAKE16-NEXT:    v_or_b32_e32 v8, 12, v0
 ; GFX12-GISEL-FAKE16-NEXT:    v_or_b32_e32 v9, 16, v0
 ; GFX12-GISEL-FAKE16-NEXT:    v_or_b32_e32 v10, 28, v0
-; GFX12-GISEL-FAKE16-NEXT:    v_or_b32_e32 v11, 32, v0
+; GFX12-GISEL-FAKE16-NEXT:    v_or_b32_e32 v0, 32, v0
 ; GFX12-GISEL-FAKE16-NEXT:    s_clause 0x5
 ; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b32 v1, v6, s[0:3], null offen
 ; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b32 v2, v7, s[0:3], null offen
 ; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b32 v3, v8, s[0:3], null offen
 ; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b32 v4, v9, s[0:3], null offen
 ; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b32 v5, v10, s[0:3], null offen
-; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b32 v0, v11, s[0:3], null offen
+; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x2
 ; GFX12-GISEL-FAKE16-NEXT:    export mrt0, v1, v2, v3, v4 done
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
