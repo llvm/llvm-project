@@ -204,9 +204,26 @@ write_lit_config("lit_site_cfg") {
   }
 
   if (llvm_enable_ondisk_cas) {
-    extra_values += [ "LLVM_ENABLE_ONDISK_CAS=1" ]
+    # libCASPluginTest is placed next to the CASTests executable, see
+    # //llvm/tools/libCASPluginTest/BUILD.gn.
+    cas_plugin_dir = get_label_info("//llvm/unittests/CAS", "target_out_dir")
+    if (host_os == "win") {
+      cas_plugin_name = "CASPluginTest.dll"
+    } else if (host_os == "mac") {
+      cas_plugin_name = "libCASPluginTest.dylib"
+    } else {
+      cas_plugin_name = "libCASPluginTest.so"
+    }
+    extra_values += [
+      "LLVM_ENABLE_ONDISK_CAS=1",
+      "LLVM_CAS_PLUGIN_TEST_PATH=" +
+          rebase_path("$cas_plugin_dir/$cas_plugin_name"),
+    ]
   } else {
-    extra_values += [ "LLVM_ENABLE_ONDISK_CAS=0" ]  # Must be 0.
+    extra_values += [
+      "LLVM_ENABLE_ONDISK_CAS=0",  # Must be 0.
+      "LLVM_CAS_PLUGIN_TEST_PATH=",
+    ]
   }
 
   if (llvm_enable_expensive_checks) {
@@ -363,6 +380,10 @@ group("test") {
 
   if (llvm_build_AMDGPU) {
     deps += [ "//llvm/tools/llvm-calc-occupancy" ]
+  }
+
+  if (llvm_enable_ondisk_cas) {
+    deps += [ "//llvm/tools/libCASPluginTest:CASPluginTest" ]
   }
 
   # FIXME: llvm_build_examples
