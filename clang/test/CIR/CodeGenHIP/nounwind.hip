@@ -1,25 +1,25 @@
 #include "../CodeGenCUDA/Inputs/cuda.h"
 
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -fclangir -emit-cir %s -o - \
 // RUN: | FileCheck %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -fclangir -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=LLVM
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=LLVM
 
 // Device code cannot unwind even when exceptions are enabled, so calls inside
 // an EH cleanup scope must stay plain calls.
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o - \
 // RUN: | FileCheck %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -fcxx-exceptions -fexceptions -fclangir -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=LLVM
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -fcxx-exceptions -fexceptions -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=LLVM
 
