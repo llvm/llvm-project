@@ -55,9 +55,9 @@ define void @stlf_non_power_of_2(ptr noalias %A, i64 %n) {
 ; STLF-ON-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; STLF-ON-NEXT:    [[GEP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I4]]
 ; STLF-ON-NEXT:    [[GEP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I5]]
-; STLF-ON-NEXT:    [[L3:%.*]] = load i32, ptr [[P3]], align 4
-; STLF-ON-NEXT:    [[L2:%.*]] = load i32, ptr [[P2]], align 4
 ; STLF-ON-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[P0]], align 4
+; STLF-ON-NEXT:    [[L2:%.*]] = load i32, ptr [[P2]], align 4
+; STLF-ON-NEXT:    [[L3:%.*]] = load i32, ptr [[P3]], align 4
 ; STLF-ON-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; STLF-ON-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[L2]], i64 2
 ; STLF-ON-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[L3]], i64 3

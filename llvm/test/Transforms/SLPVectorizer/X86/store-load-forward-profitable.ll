@@ -64,10 +64,10 @@ define void @stlf_profitable(ptr noalias %A, i64 %n) {
 ; VETO-NEXT:    [[BG1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI1]]
 ; VETO-NEXT:    [[BG2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI2]]
 ; VETO-NEXT:    [[BG3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI3]]
-; VETO-NEXT:    [[L3:%.*]] = load i32, ptr [[BG3]], align 4
-; VETO-NEXT:    [[L2:%.*]] = load i32, ptr [[BG2]], align 4
-; VETO-NEXT:    [[L1:%.*]] = load i32, ptr [[BG1]], align 4
 ; VETO-NEXT:    [[L0:%.*]] = load i32, ptr [[BG0]], align 4
+; VETO-NEXT:    [[L1:%.*]] = load i32, ptr [[BG1]], align 4
+; VETO-NEXT:    [[L2:%.*]] = load i32, ptr [[BG2]], align 4
+; VETO-NEXT:    [[L3:%.*]] = load i32, ptr [[BG3]], align 4
 ; VETO-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[L0]], i64 0
 ; VETO-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[L1]], i64 1
 ; VETO-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[L2]], i64 2

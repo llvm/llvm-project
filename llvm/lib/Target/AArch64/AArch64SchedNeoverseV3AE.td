@@ -106,10 +106,6 @@ def V3AEWrite_3c_1M    : SchedWriteRes<[V3AEUnitM]>   { let Latency = 3; }
 def V3AEWrite_2c_1M0   : SchedWriteRes<[V3AEUnitM0]>  { let Latency = 2; }
 def V3AEWrite_3c_1M0   : SchedWriteRes<[V3AEUnitM0]>  { let Latency = 3; }
 def V3AEWrite_4c_1M0   : SchedWriteRes<[V3AEUnitM0]>  { let Latency = 4; }
-def V3AEWrite_12c_1M0  : SchedWriteRes<[V3AEUnitM0]>  { let Latency = 12;
-                                                    let ReleaseAtCycles = [12]; }
-def V3AEWrite_20c_1M0  : SchedWriteRes<[V3AEUnitM0]>  { let Latency = 20;
-                                                    let ReleaseAtCycles = [20]; }
 def V3AEWrite_4c_1L    : SchedWriteRes<[V3AEUnitL]>   { let Latency = 4; }
 def V3AEWrite_6c_1L    : SchedWriteRes<[V3AEUnitL]>   { let Latency = 6; }
 def V3AEWrite_2c_1V    : SchedWriteRes<[V3AEUnitV]>   { let Latency = 2; }
@@ -123,16 +119,11 @@ def V3AEWrite_3c_1V0   : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 3; }
 def V3AEWrite_4c_1V0   : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 4; }
 def V3AEWrite_9c_1V0   : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 9; }
 def V3AEWrite_10c_1V0  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 10; }
-def V3AEWrite_8c_1V1   : SchedWriteRes<[V3AEUnitV1]> { let Latency = 8; }
-def V3AEWrite_12c_1V0  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 12;
-                                                    let ReleaseAtCycles = [11]; }
+def V3AEWrite_8c_1V1   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 8; }
 def V3AEWrite_13c_1V0  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 13; }
 def V3AEWrite_15c_1V0  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 15; }
-def V3AEWrite_13c_1V1  : SchedWriteRes<[V3AEUnitV1]> { let Latency = 13;
-                                                   let ReleaseAtCycles = [8]; }
+def V3AEWrite_13c_1V1  : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 13; }
 def V3AEWrite_16c_1V0  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 16; }
-def V3AEWrite_20c_1V0  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 20;
-                                                    let ReleaseAtCycles = [20]; }
 def V3AEWrite_2c_1V1   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 2; }
 def V3AEWrite_3c_1V1   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 3; }
 def V3AEWrite_4c_1V1   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 4; }
@@ -165,11 +156,6 @@ def V3AEWrite_3c_1I_1M : SchedWriteRes<[V3AEUnitI, V3AEUnitM]> {
 
 def V3AEWrite_1c_2M : SchedWriteRes<[V3AEUnitM, V3AEUnitM]> {
   let Latency     = 1;
-  let NumMicroOps = 2;
-}
-
-def V3AEWrite_3c_2M : SchedWriteRes<[V3AEUnitM, V3AEUnitM]> {
-  let Latency     = 3;
   let NumMicroOps = 2;
 }
 
@@ -444,10 +430,9 @@ def V3AEWrite_8c_2M0_2V0 : SchedWriteRes<[V3AEUnitM0, V3AEUnitM0, V3AEUnitV0,
   let NumMicroOps = 4;
 }
 
-def V3AEWrite_8c_2V_2V1 : SchedWriteRes<[V3AEUnitV, V3AEUnitV, V3AEUnitV1,
-                                         V3AEUnitV1]> {
+def V3AEWrite_8c_2V_1V1 : SchedWriteRes<[V3AEUnitV, V3AEUnitV, V3AEUnitV1]> {
   let Latency     = 8;
-  let NumMicroOps = 4;
+  let NumMicroOps = 3;
 }
 
 def V3AEWrite_4c_2M0_2M : SchedWriteRes<[V3AEUnitM0, V3AEUnitM0, V3AEUnitM,
@@ -538,10 +523,10 @@ def V3AEWrite_9c_2L_2V_2I : SchedWriteRes<[V3AEUnitL, V3AEUnitL, V3AEUnitV,
   let NumMicroOps = 6;
 }
 
-def V3AEWrite_9c_2V_4V1 : SchedWriteRes<[V3AEUnitV, V3AEUnitV, V3AEUnitV1,
-                                         V3AEUnitV1, V3AEUnitV1, V3AEUnitV1]> {
+def V3AEWrite_9c_2V_2V1 : SchedWriteRes<[V3AEUnitV, V3AEUnitV, V3AEUnitV1,
+                                         V3AEUnitV1]> {
   let Latency     = 9;
-  let NumMicroOps = 6;
+  let NumMicroOps = 4;
 }
 
 def V3AEWrite_2c_3SA_3V : SchedWriteRes<[V3AEUnitSA, V3AEUnitSA, V3AEUnitSA,
@@ -942,13 +927,17 @@ def V3AERd_ZBFMAL : SchedReadAdvance<3, [V3AEWr_ZBFMAL]>;
 //===----------------------------------------------------------------------===//
 // Define types with long resource cycles (rc)
 
-def V3AEWrite_6c_1V1_5rc    : SchedWriteRes<[V3AEUnitV1]>  { let Latency =  6; let ReleaseAtCycles = [ 5]; }
-def V3AEWrite_9c_1V1_2rc    : SchedWriteRes<[V3AEUnitV1]>  { let Latency =  9; let ReleaseAtCycles = [ 2]; }
-def V3AEWrite_9c_1V1_4rc    : SchedWriteRes<[V3AEUnitV1]>  { let Latency =  9; let ReleaseAtCycles = [ 4]; }
-def V3AEWrite_10c_1V1_9rc   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 10; let ReleaseAtCycles = [ 9]; }
-def V3AEWrite_11c_1V1_4rc  : SchedWriteRes<[V3AEUnitV1]> { let Latency = 11; let ReleaseAtCycles = [ 4]; }
-def V3AEWrite_13c_1V1_8rc : SchedWriteRes<[V3AEUnitV1]> { let Latency = 13; let ReleaseAtCycles = [8]; }
-def V3AEWrite_14c_1V1_2rc : SchedWriteRes<[V3AEUnitV1]> { let Latency = 14; let ReleaseAtCycles = [2]; }
+def V3AEWrite_6c_1V1_5rc    : SchedWriteRes<[V3AEUnitV1]>  { let Latency =  6; let ReleaseAtCycles = [5]; }
+def V3AEWrite_9c_1V1_2rc    : SchedWriteRes<[V3AEUnitV1]>  { let Latency =  9; let ReleaseAtCycles = [2]; }
+def V3AEWrite_9c_1V1_4rc    : SchedWriteRes<[V3AEUnitV1]>  { let Latency =  9; let ReleaseAtCycles = [4]; }
+def V3AEWrite_10c_1V1_9rc   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 10; let ReleaseAtCycles = [9]; }
+def V3AEWrite_11c_1V1_4rc   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 11; let ReleaseAtCycles = [4]; }
+def V3AEWrite_12c_1M0_12rc  : SchedWriteRes<[V3AEUnitM0]>  { let Latency = 12; let ReleaseAtCycles = [12]; }
+def V3AEWrite_12c_1V0_11rc  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 12; let ReleaseAtCycles = [11]; }
+def V3AEWrite_13c_1V1_8rc   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 13; let ReleaseAtCycles = [8]; }
+def V3AEWrite_14c_1V1_2rc   : SchedWriteRes<[V3AEUnitV1]>  { let Latency = 14; let ReleaseAtCycles = [2]; }
+def V3AEWrite_20c_1V0_20rc  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 20; let ReleaseAtCycles = [20]; }
+def V3AEWrite_20c_1M0_20rc  : SchedWriteRes<[V3AEUnitM0]>  { let Latency = 20; let ReleaseAtCycles = [20]; }
 
 // Miscellaneous
 // -----------------------------------------------------------------------------
@@ -1029,8 +1018,8 @@ def : SchedAlias<WriteImm, V3AEWrite_1c_1I>;
 // -----------------------------------------------------------------------------
 
 // SDIV, UDIV
-def : SchedAlias<WriteID32,  V3AEWrite_12c_1M0>;
-def : SchedAlias<WriteID64,  V3AEWrite_20c_1M0>;
+def : SchedAlias<WriteID32,  V3AEWrite_12c_1M0_12rc>;
+def : SchedAlias<WriteID64,  V3AEWrite_20c_1M0_20rc>;
 
 def : SchedAlias<WriteIM32, V3AEWrite_2c_1M>;
 def : SchedAlias<WriteIM64, V3AEWrite_2c_1M>;
@@ -1438,32 +1427,24 @@ def : InstRW<[V3AEWrite_3c_1V0], (instregex "^FCVTN(v2|v4)i32",
 // ASIMD FP convert, other, D-form F32 and Q-form F64
 def : InstRW<[V3AEWrite_3c_1V0], (instregex "^FCVT[AMNPZ][SU]v2f(32|64)$",
                                             "^FCVT[AMNPZ][SU]v2i(32|64)_shift$",
-                                            "^FCVT[AMNPZ][SU]v1i64$",
-                                            "^FCVTZ[SU]d$",
+                                            "^FCVT[AMNPZ][SU]v1(f16|i32|i64)$",
+                                            "^FCVTZ[SU][dsh]$",
                                             "^[SU]CVTFv2f(32|64)$",
                                             "^[SU]CVTFv2i(32|64)_shift$",
-                                            "^[SU]CVTFv1i64$",
-                                            "^[SU]CVTFd$")>;
+                                            "^[SU]CVTFv1i(16|32|64)$",
+                                            "^[SU]CVTF[dsh]$")>;
 
 // ASIMD FP convert, other, D-form F16 and Q-form F32
 def : InstRW<[V3AEWrite_4c_2V0], (instregex "^FCVT[AMNPZ][SU]v4f(16|32)$",
                                             "^FCVT[AMNPZ][SU]v4i(16|32)_shift$",
-                                            "^FCVT[AMNPZ][SU]v1i32$",
-                                            "^FCVTZ[SU]s$",
                                             "^[SU]CVTFv4f(16|32)$",
-                                            "^[SU]CVTFv4i(16|32)_shift$",
-                                            "^[SU]CVTFv1i32$",
-                                            "^[SU]CVTFs$")>;
+                                            "^[SU]CVTFv4i(16|32)_shift$")>;
 
 // ASIMD FP convert, other, Q-form F16
 def : InstRW<[V3AEWrite_6c_4V0], (instregex "^FCVT[AMNPZ][SU]v8f16$",
                                             "^FCVT[AMNPZ][SU]v8i16_shift$",
-                                            "^FCVT[AMNPZ][SU]v1f16$",
-                                            "^FCVTZ[SU]h$",
                                             "^[SU]CVTFv8f16$",
-                                            "^[SU]CVTFv8i16_shift$",
-                                            "^[SU]CVTFv1i16$",
-                                            "^[SU]CVTFh$")>;
+                                            "^[SU]CVTFv8i16_shift$")>;
 
 // ASIMD FP divide, D-form, F16
 def : InstRW<[V3AEWrite_9c_1V1_4rc], (instrs FDIVv4f16)>;
@@ -1576,6 +1557,7 @@ def : InstRW<[V3AEWrite_4c_2V0], (instrs URECPEv4i32, URSQRTEv4i32)>;
 // ASIMD reciprocal and square root estimate, D-form F32 and scalar forms
 def : InstRW<[V3AEWrite_3c_1V0], (instrs FRECPEv1f16, FRECPEv1i32,
                                          FRECPEv1i64, FRECPEv2f32,
+                                         FRECPEv2f64, FRSQRTEv2f64,
                                          FRSQRTEv1f16, FRSQRTEv1i32,
                                          FRSQRTEv1i64, FRSQRTEv2f32)>;
 
@@ -1895,9 +1877,9 @@ def : InstRW<[V3AEWrite_2or3c_1M], (instrs BRKNS_PPzP, BRKPAS_PPzPP,
                                          BRKPBS_PPzPP)>;
 
 // Loop control, based on GPR
-def : InstRW<[V3AEWrite_3c_2M],
+def : InstRW<[V3AEWrite_2c_1M],
              (instregex "^WHILE(GE|GT|HI|HS|LE|LO|LS|LT)_P(WW|XX)_[BHSD]")>;
-def : InstRW<[V3AEWrite_3c_2M], (instregex "^WHILE(RW|WR)_PXX_[BHSD]")>;
+def : InstRW<[V3AEWrite_2c_1M], (instregex "^WHILE(RW|WR)_PXX_[BHSD]")>;
 
 // Loop terminate
 def : InstRW<[V3AEWrite_1c_2M], (instregex "^CTERM(EQ|NE)_(WW|XX)")>;
@@ -2103,12 +2085,12 @@ def : InstRW<[V3AEWrite_2c_1V], (instregex "^CPY_ZPm[IV]_[BHSD]",
                                            "^CPY_ZPzI_[BHSD]")>;
 
 // Divides, 32 bit
-def : InstRW<[V3AEWrite_12c_1V0], (instregex "^[SU]DIVR?_ZPmZ_S",
-                                             "^[SU]DIV_ZPZZ_S")>;
+def : InstRW<[V3AEWrite_12c_1V0_11rc], (instregex "^[SU]DIVR?_ZPmZ_S",
+                                                  "^[SU]DIV_ZPZZ_S")>;
 
 // Divides, 64 bit
-def : InstRW<[V3AEWrite_20c_1V0], (instregex "^[SU]DIVR?_ZPmZ_D",
-                                             "^[SU]DIV_ZPZZ_D")>;
+def : InstRW<[V3AEWrite_20c_1V0_20rc], (instregex "^[SU]DIVR?_ZPmZ_D",
+                                                  "^[SU]DIV_ZPZZ_D")>;
 
 // Dot product, 8 bit
 def : InstRW<[V3AEWr_ZDOTB, V3AERd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_BtoS")>;
@@ -2271,13 +2253,13 @@ def : InstRW<[V3AEWrite_2c_1V], (instregex "^([SU]Q)?(DEC|INC)[HWD]_ZPiI")>;
 def : InstRW<[V3AEWrite_4c_2V0], (instregex "^URECPE_ZPmZ_S", "^URSQRTE_ZPmZ_S")>;
 
 // Reduction, arithmetic, B form
-def : InstRW<[V3AEWrite_9c_2V_4V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_B")>;
+def : InstRW<[V3AEWrite_9c_2V_2V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_B")>;
 
 // Reduction, arithmetic, H form
-def : InstRW<[V3AEWrite_8c_2V_2V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_H")>;
+def : InstRW<[V3AEWrite_8c_2V_1V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_H")>;
 
 // Reduction, arithmetic, S form
-def : InstRW<[V3AEWrite_6c_2V_2V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_S")>;
+def : InstRW<[V3AEWrite_6c_1V_1V1], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_S")>;
 
 // Reduction, arithmetic, D form
 def : InstRW<[V3AEWrite_4c_2V], (instregex "^[SU](ADD|MAX|MIN)V_VPZ_D")>;

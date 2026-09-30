@@ -345,7 +345,7 @@ public:
     // Replace with the gather intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
         gather, typeConverter->convertType(vType), ptrs, adaptor.getMask(),
-        adaptor.getPassThru(), rewriter.getI32IntegerAttr(align));
+        adaptor.getPassThru(), align);
     return success();
   }
 
@@ -403,8 +403,7 @@ public:
 
     // Replace with the scatter intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_scatter>(
-        scatter, adaptor.getValueToStore(), ptrs, adaptor.getMask(),
-        rewriter.getI32IntegerAttr(align));
+        scatter, adaptor.getValueToStore(), ptrs, adaptor.getMask(), align);
     return success();
   }
 
@@ -481,8 +480,12 @@ class ReductionNeutralSIntMin {};
 class ReductionNeutralUIntMin {};
 class ReductionNeutralSIntMax {};
 class ReductionNeutralUIntMax {};
-class ReductionNeutralFPMin {};
-class ReductionNeutralFPMax {};
+class ReductionNeutralFPQNaN {};
+class ReductionNeutralFPNegQNaN {};
+class ReductionNeutralFPNegInf {};
+class ReductionNeutralFPPosInf {};
+class ReductionNeutralFPLowestFinite {};
+class ReductionNeutralFPLargestFinite {};
 
 /// Create the reduction neutral zero value.
 static Value createReductionNeutralValue(ReductionNeutralZero neutral,
@@ -558,8 +561,8 @@ static Value createReductionNeutralValue(ReductionNeutralUIntMax neutral,
                                             llvmType.getIntOrFloatBitWidth())));
 }
 
-/// Create the reduction neutral fp minimum value.
-static Value createReductionNeutralValue(ReductionNeutralFPMin neutral,
+/// Create the reduction neutral quiet NaN value.
+static Value createReductionNeutralValue(ReductionNeutralFPQNaN neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
   auto floatType = cast<FloatType>(llvmType);
@@ -570,8 +573,8 @@ static Value createReductionNeutralValue(ReductionNeutralFPMin neutral,
                                            /*Negative=*/false)));
 }
 
-/// Create the reduction neutral fp maximum value.
-static Value createReductionNeutralValue(ReductionNeutralFPMax neutral,
+/// Create the reduction neutral negative quiet NaN value.
+static Value createReductionNeutralValue(ReductionNeutralFPNegQNaN neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
   auto floatType = cast<FloatType>(llvmType);
@@ -580,6 +583,55 @@ static Value createReductionNeutralValue(ReductionNeutralFPMax neutral,
       rewriter.getFloatAttr(
           llvmType, llvm::APFloat::getQNaN(floatType.getFloatSemantics(),
                                            /*Negative=*/true)));
+}
+
+/// Create the reduction neutral negative infinity value.
+static Value createReductionNeutralValue(ReductionNeutralFPNegInf neutral,
+                                         ConversionPatternRewriter &rewriter,
+                                         Location loc, Type llvmType) {
+  auto floatType = cast<FloatType>(llvmType);
+  return LLVM::ConstantOp::create(
+      rewriter, loc, llvmType,
+      rewriter.getFloatAttr(llvmType,
+                            llvm::APFloat::getInf(floatType.getFloatSemantics(),
+                                                  /*Negative=*/true)));
+}
+
+/// Create the reduction neutral positive infinity value.
+static Value createReductionNeutralValue(ReductionNeutralFPPosInf neutral,
+                                         ConversionPatternRewriter &rewriter,
+                                         Location loc, Type llvmType) {
+  auto floatType = cast<FloatType>(llvmType);
+  return LLVM::ConstantOp::create(
+      rewriter, loc, llvmType,
+      rewriter.getFloatAttr(llvmType,
+                            llvm::APFloat::getInf(floatType.getFloatSemantics(),
+                                                  /*Negative=*/false)));
+}
+
+/// Create the reduction neutral lowest finite value.
+static Value createReductionNeutralValue(ReductionNeutralFPLowestFinite neutral,
+                                         ConversionPatternRewriter &rewriter,
+                                         Location loc, Type llvmType) {
+  auto floatType = cast<FloatType>(llvmType);
+  return LLVM::ConstantOp::create(
+      rewriter, loc, llvmType,
+      rewriter.getFloatAttr(
+          llvmType, llvm::APFloat::getLargest(floatType.getFloatSemantics(),
+                                              /*Negative=*/true)));
+}
+
+/// Create the reduction neutral largest finite value.
+static Value
+createReductionNeutralValue(ReductionNeutralFPLargestFinite neutral,
+                            ConversionPatternRewriter &rewriter, Location loc,
+                            Type llvmType) {
+  auto floatType = cast<FloatType>(llvmType);
+  return LLVM::ConstantOp::create(
+      rewriter, loc, llvmType,
+      rewriter.getFloatAttr(
+          llvmType, llvm::APFloat::getLargest(floatType.getFloatSemantics(),
+                                              /*Negative=*/false)));
 }
 
 /// Returns `accumulator` if it has a valid value. Otherwise, creates and
@@ -674,6 +726,14 @@ template <>
 struct VectorToScalarMapper<LLVM::vector_reduce_fmin> {
   using Type = LLVM::MinNumOp;
 };
+template <>
+struct VectorToScalarMapper<LLVM::vector_reduce_fmaximumnum> {
+  using Type = LLVM::MaximumNumOp;
+};
+template <>
+struct VectorToScalarMapper<LLVM::vector_reduce_fminimumnum> {
+  using Type = LLVM::MinimumNumOp;
+};
 } // namespace
 
 template <class LLVMRedIntrinOp>
@@ -691,46 +751,56 @@ static Value createFPReductionComparisonOpLowering(
   return result;
 }
 
-/// Reduction neutral classes for overloading
-class MaskNeutralFMaximum {};
-class MaskNeutralFMinimum {};
+/// Mask neutral classes for overloading.
+class MaskNeutralFMaximumNum {};
+class MaskNeutralFMinimumNum {};
 
-/// Get the mask neutral floating point maximum value
-static llvm::APFloat
-getMaskNeutralValue(MaskNeutralFMaximum,
-                    const llvm::fltSemantics &floatSemantics) {
-  return llvm::APFloat::getSmallest(floatSemantics, /*Negative=*/true);
-}
-/// Get the mask neutral floating point minimum value
-static llvm::APFloat
-getMaskNeutralValue(MaskNeutralFMinimum,
-                    const llvm::fltSemantics &floatSemantics) {
-  return llvm::APFloat::getLargest(floatSemantics, /*Negative=*/false);
-}
-
-/// Create the mask neutral floating point MLIR vector constant
-template <typename MaskNeutral>
-static Value createMaskNeutralValue(ConversionPatternRewriter &rewriter,
-                                    Location loc, Type llvmType,
-                                    Type vectorType) {
-  const auto &floatSemantics = cast<FloatType>(llvmType).getFloatSemantics();
-  auto value = getMaskNeutralValue(MaskNeutral{}, floatSemantics);
-  auto denseValue = DenseElementsAttr::get(cast<ShapedType>(vectorType), value);
-  return LLVM::ConstantOp::create(rewriter, loc, vectorType, denseValue);
+/// Get the mask neutral value for a `fmaximumnum` reduction. `maximumnum`
+/// ignores NaN operands, making a quiet NaN the identity element. When `nnan`
+/// promises no NaN reaches the reduction, fall back to the smallest
+/// representable value, which `ninf` further constrains to be finite.
+static llvm::APFloat getMaskNeutralValue(MaskNeutralFMaximumNum,
+                                         const llvm::fltSemantics &semantics,
+                                         bool noNaNs, bool noInfs) {
+  if (!noNaNs)
+    return llvm::APFloat::getQNaN(semantics);
+  if (noInfs)
+    return llvm::APFloat::getLargest(semantics, /*Negative=*/true);
+  return llvm::APFloat::getInf(semantics, /*Negative=*/true);
 }
 
-/// Lowers masked `fmaximum` and `fminimum` reductions using the non-masked
-/// intrinsics. It is a workaround to overcome the lack of masked intrinsics for
-/// `fmaximum`/`fminimum`.
-/// More information: https://github.com/llvm/llvm-project/issues/64940
+/// Get the mask neutral value for a `fminimumnum` reduction. See the
+/// `fmaximumnum` overload above for the rationale.
+static llvm::APFloat getMaskNeutralValue(MaskNeutralFMinimumNum,
+                                         const llvm::fltSemantics &semantics,
+                                         bool noNaNs, bool noInfs) {
+  if (!noNaNs)
+    return llvm::APFloat::getQNaN(semantics);
+  if (noInfs)
+    return llvm::APFloat::getLargest(semantics);
+  return llvm::APFloat::getInf(semantics);
+}
+
+/// Lowers masked `fmaximumnum` and `fminimumnum` reductions using the
+/// non-masked intrinsics, since LLVM has no predicated counterpart for them.
+/// Inactive lanes are replaced by a mask neutral value before reducing.
+/// TODO: Switch to `lowerPredicatedReductionWithStartValue` once
+/// `llvm.vp.reduce.fmaximumnum`/`fminimumnum` are added to LLVM IR.
 template <class LLVMRedIntrinOp, class MaskNeutral>
 static Value
 lowerMaskedReductionWithRegular(ConversionPatternRewriter &rewriter,
                                 Location loc, Type llvmType,
                                 Value vectorOperand, Value accumulator,
                                 Value mask, LLVM::FastmathFlagsAttr fmf) {
-  const Value vectorMaskNeutral = createMaskNeutralValue<MaskNeutral>(
-      rewriter, loc, llvmType, vectorOperand.getType());
+  const auto &floatSemantics = cast<FloatType>(llvmType).getFloatSemantics();
+  auto value = getMaskNeutralValue(
+      MaskNeutral{}, floatSemantics,
+      LLVM::bitEnumContainsAny(fmf.getValue(), LLVM::FastmathFlags::nnan),
+      LLVM::bitEnumContainsAny(fmf.getValue(), LLVM::FastmathFlags::ninf));
+  Type vectorType = vectorOperand.getType();
+  auto denseValue = DenseElementsAttr::get(cast<ShapedType>(vectorType), value);
+  const Value vectorMaskNeutral =
+      LLVM::ConstantOp::create(rewriter, loc, vectorType, denseValue);
   const Value selectedVectorByMask = LLVM::SelectOp::create(
       rewriter, loc, mask, vectorOperand, vectorMaskNeutral);
   return createFPReductionComparisonOpLowering<LLVMRedIntrinOp>(
@@ -747,20 +817,6 @@ lowerReductionWithStartValue(ConversionPatternRewriter &rewriter, Location loc,
   return LLVMRedIntrinOp::create(rewriter, loc, llvmType,
                                  /*start_value=*/accumulator, vectorOperand,
                                  fmf);
-}
-
-/// Overloaded methods to lower a *predicated* reduction to an llvm intrinsic
-/// that requires a start value. This start value format spans across fp
-/// reductions without mask and all the masked reduction intrinsics.
-template <class LLVMVPRedIntrinOp, class ReductionNeutral>
-static Value
-lowerPredicatedReductionWithStartValue(ConversionPatternRewriter &rewriter,
-                                       Location loc, Type llvmType,
-                                       Value vectorOperand, Value accumulator) {
-  accumulator = getOrCreateAccumulator<ReductionNeutral>(rewriter, loc,
-                                                         llvmType, accumulator);
-  return LLVMVPRedIntrinOp::create(rewriter, loc, llvmType,
-                                   /*startValue=*/accumulator, vectorOperand);
 }
 
 template <class LLVMVPRedIntrinOp, class ReductionNeutral>
@@ -909,6 +965,14 @@ public:
     } else if (kind == vector::CombiningKind::MAXNUMF) {
       result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmax>(
           rewriter, loc, llvmType, operand, acc, fmf);
+    } else if (kind == vector::CombiningKind::MAXIMUMNUMF) {
+      result = createFPReductionComparisonOpLowering<
+          LLVM::vector_reduce_fmaximumnum>(rewriter, loc, llvmType, operand,
+                                           acc, fmf);
+    } else if (kind == vector::CombiningKind::MINIMUMNUMF) {
+      result = createFPReductionComparisonOpLowering<
+          LLVM::vector_reduce_fminimumnum>(rewriter, loc, llvmType, operand,
+                                           acc, fmf);
     } else {
       return failure();
     }
@@ -974,6 +1038,8 @@ public:
     LLVM::FastmathFlagsAttr fmf = LLVM::FastmathFlagsAttr::get(
         reductionOp.getContext(),
         convertArithFastMathFlagsToLLVM(fMFAttr.getValue()));
+    const bool noInfs =
+        LLVM::bitEnumContainsAny(fmf.getValue(), LLVM::FastmathFlags::ninf);
 
     Value result;
     switch (kind) {
@@ -1025,23 +1091,46 @@ public:
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::MINNUMF:
-      result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceFMinOp,
-                                                      ReductionNeutralFPMax>(
-          rewriter, loc, llvmType, operand, acc, maskOp.getMask());
+      result =
+          lowerPredicatedReductionWithStartValue<LLVM::VPReduceFMinOp,
+                                                 ReductionNeutralFPNegQNaN>(
+              rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case vector::CombiningKind::MAXNUMF:
       result = lowerPredicatedReductionWithStartValue<LLVM::VPReduceFMaxOp,
-                                                      ReductionNeutralFPMin>(
+                                                      ReductionNeutralFPQNaN>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case CombiningKind::MAXIMUMF:
-      result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fmaximum,
-                                               MaskNeutralFMaximum>(
-          rewriter, loc, llvmType, operand, acc, maskOp.getMask(), fmf);
+      // `ninf` promises no infinity reaches the reduction, so the neutral start
+      // value must stay finite.
+      result =
+          noInfs
+              ? lowerPredicatedReductionWithStartValue<
+                    LLVM::VPReduceFMaximumOp, ReductionNeutralFPLowestFinite>(
+                    rewriter, loc, llvmType, operand, acc, maskOp.getMask())
+              : lowerPredicatedReductionWithStartValue<
+                    LLVM::VPReduceFMaximumOp, ReductionNeutralFPNegInf>(
+                    rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
     case CombiningKind::MINIMUMF:
-      result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fminimum,
-                                               MaskNeutralFMinimum>(
+      result =
+          noInfs
+              ? lowerPredicatedReductionWithStartValue<
+                    LLVM::VPReduceFMinimumOp, ReductionNeutralFPLargestFinite>(
+                    rewriter, loc, llvmType, operand, acc, maskOp.getMask())
+              : lowerPredicatedReductionWithStartValue<
+                    LLVM::VPReduceFMinimumOp, ReductionNeutralFPPosInf>(
+                    rewriter, loc, llvmType, operand, acc, maskOp.getMask());
+      break;
+    case CombiningKind::MAXIMUMNUMF:
+      result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fmaximumnum,
+                                               MaskNeutralFMaximumNum>(
+          rewriter, loc, llvmType, operand, acc, maskOp.getMask(), fmf);
+      break;
+    case CombiningKind::MINIMUMNUMF:
+      result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fminimumnum,
+                                               MaskNeutralFMinimumNum>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask(), fmf);
       break;
     }

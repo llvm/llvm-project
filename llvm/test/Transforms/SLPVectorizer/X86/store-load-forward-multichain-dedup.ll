@@ -40,20 +40,22 @@ target triple = "x86_64-unknown-linux-gnu"
 ; store-to-load forwarding check on each of them.
 ;
 ; The four backward loads A[i-5..i-2] feed a chain of ops (xor/mul/add/xor)
-; that still widens into one <4 x i32> load at this penalty, and that entry
-; is emitted (not trimmed), so its charge is promoted. The TRIMMED run uses
-; penalty 13, where that load entry is trimmed before vectorizeTree and must
-; not be recorded as paid; the <4 x i32> load stays unformed. Once widened, the
-; load is 16 bytes wide and
-; straddles the boundary between this iteration's two 16-byte store windows in
-; a future iteration (distance 20 bytes from chain A's base, 36 bytes from
-; chain B's base; both misaligned to the 16-byte window).
+; stored to Out[i..i+3]. The Out store group is longer than the A group, so it
+; is visited first: that tree widens the load into one <4 x i32> load, pays
+; the hazard for it, and is emitted (not trimmed), so its charge is promoted.
+; The TRIMMED run uses penalty 13, where that load entry is trimmed before
+; vectorizeTree and must not be recorded as paid; the <4 x i32> load stays
+; unformed. Once widened, the load is 16 bytes wide and straddles the boundary
+; between this iteration's two 16-byte store windows in a future iteration
+; (distance 20 bytes from chain A's base, 36 bytes from chain B's base; both
+; misaligned to the 16-byte window).
 ;
 ; A hardware load stalls once per load event, not once per conflicting store
-; (verified: Zen 5 rdtsc ubench, DIAGNOSIS.md 2026-09-07), so once chain A's
-; commit has paid the penalty for this load, chain B must NOT pay it again --
-; charging it twice would price chain B's otherwise-profitable widening out
-; for a hazard that, on real hardware, does not recur. Both chains vectorize.
+; (verified: Zen 5 rdtsc ubench, DIAGNOSIS.md 2026-09-07), so once the Out
+; tree has paid the penalty for this load, chains A and B must NOT pay it
+; again -- charging it per store would price their otherwise-profitable
+; widening out for a hazard that, on real hardware, does not recur. All chains
+; vectorize.
 ;
 define void @stlf_multichain_dedup(ptr noalias %A, ptr noalias %Out, i64 %n) {
 ; CHECK-LABEL: define void @stlf_multichain_dedup(
@@ -71,9 +73,14 @@ define void @stlf_multichain_dedup(ptr noalias %A, ptr noalias %Out, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], <i32 31, i32 37, i32 41, i32 43>
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i32> [[TMP3]], <i32 47, i32 53, i32 59, i32 61>
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[O0]], align 4
+; CHECK-NEXT:    [[I4:%.*]] = add nuw nsw i64 [[I]], 4
+; CHECK-NEXT:    [[I8:%.*]] = add nuw nsw i64 [[I]], 8
+; CHECK-NEXT:    [[O4:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[I4]]
+; CHECK-NEXT:    [[O8:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[I8]]
+; CHECK-NEXT:    store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr [[O4]], align 4
+; CHECK-NEXT:    store <4 x i32> <i32 5, i32 6, i32 7, i32 8>, ptr [[O8]], align 4
 ; CHECK-NEXT:    [[A0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; CHECK-NEXT:    store <4 x i32> <i32 111, i32 222, i32 333, i32 444>, ptr [[A0]], align 4
-; CHECK-NEXT:    [[I4:%.*]] = add nuw nsw i64 [[I]], 4
 ; CHECK-NEXT:    [[A4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I4]]
 ; CHECK-NEXT:    store <4 x i32> <i32 555, i32 666, i32 777, i32 888>, ptr [[A4]], align 4
 ; CHECK-NEXT:    [[NEXT]] = add nuw nsw i64 [[I]], 8
@@ -95,9 +102,9 @@ define void @stlf_multichain_dedup(ptr noalias %A, ptr noalias %Out, i64 %n) {
 ; TRIMMED-NEXT:    [[LP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[LM4]]
 ; TRIMMED-NEXT:    [[LP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[LM3]]
 ; TRIMMED-NEXT:    [[O0:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[I]]
-; TRIMMED-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[LP2]], align 4
-; TRIMMED-NEXT:    [[L1:%.*]] = load i32, ptr [[LP1]], align 4
 ; TRIMMED-NEXT:    [[L0:%.*]] = load i32, ptr [[LP0]], align 4
+; TRIMMED-NEXT:    [[L1:%.*]] = load i32, ptr [[LP1]], align 4
+; TRIMMED-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[LP2]], align 4
 ; TRIMMED-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[L0]], i64 0
 ; TRIMMED-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[L1]], i64 1
 ; TRIMMED-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
@@ -107,9 +114,14 @@ define void @stlf_multichain_dedup(ptr noalias %A, ptr noalias %Out, i64 %n) {
 ; TRIMMED-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[TMP6]], <i32 31, i32 37, i32 41, i32 43>
 ; TRIMMED-NEXT:    [[TMP8:%.*]] = xor <4 x i32> [[TMP7]], <i32 47, i32 53, i32 59, i32 61>
 ; TRIMMED-NEXT:    store <4 x i32> [[TMP8]], ptr [[O0]], align 4
+; TRIMMED-NEXT:    [[I4:%.*]] = add nuw nsw i64 [[I]], 4
+; TRIMMED-NEXT:    [[I8:%.*]] = add nuw nsw i64 [[I]], 8
+; TRIMMED-NEXT:    [[O4:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[I4]]
+; TRIMMED-NEXT:    [[O8:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[I8]]
+; TRIMMED-NEXT:    store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr [[O4]], align 4
+; TRIMMED-NEXT:    store <4 x i32> <i32 5, i32 6, i32 7, i32 8>, ptr [[O8]], align 4
 ; TRIMMED-NEXT:    [[A0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; TRIMMED-NEXT:    store <4 x i32> <i32 111, i32 222, i32 333, i32 444>, ptr [[A0]], align 4
-; TRIMMED-NEXT:    [[I4:%.*]] = add nuw nsw i64 [[I]], 4
 ; TRIMMED-NEXT:    [[B0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I4]]
 ; TRIMMED-NEXT:    store <4 x i32> <i32 555, i32 666, i32 777, i32 888>, ptr [[B0]], align 4
 ; TRIMMED-NEXT:    [[NEXT]] = add nuw nsw i64 [[I]], 8
@@ -168,6 +180,34 @@ loop:
   store i32 %z2, ptr %o2, align 4
   store i32 %z3, ptr %o3, align 4
 
+  ; Unrelated constants to Out[i+4..i+11]. They make the Out store group longer
+  ; than the A group, so SLP (which visits longer store groups first) commits
+  ; the widened load before it costs chains A and B.
+  %i4 = add nuw nsw i64 %i, 4
+  %i5 = add nuw nsw i64 %i, 5
+  %i6 = add nuw nsw i64 %i, 6
+  %i7 = add nuw nsw i64 %i, 7
+  %i8 = add nuw nsw i64 %i, 8
+  %i9 = add nuw nsw i64 %i, 9
+  %i10 = add nuw nsw i64 %i, 10
+  %i11 = add nuw nsw i64 %i, 11
+  %o4 = getelementptr inbounds i32, ptr %Out, i64 %i4
+  %o5 = getelementptr inbounds i32, ptr %Out, i64 %i5
+  %o6 = getelementptr inbounds i32, ptr %Out, i64 %i6
+  %o7 = getelementptr inbounds i32, ptr %Out, i64 %i7
+  %o8 = getelementptr inbounds i32, ptr %Out, i64 %i8
+  %o9 = getelementptr inbounds i32, ptr %Out, i64 %i9
+  %o10 = getelementptr inbounds i32, ptr %Out, i64 %i10
+  %o11 = getelementptr inbounds i32, ptr %Out, i64 %i11
+  store i32 1, ptr %o4, align 4
+  store i32 2, ptr %o5, align 4
+  store i32 3, ptr %o6, align 4
+  store i32 4, ptr %o7, align 4
+  store i32 5, ptr %o8, align 4
+  store i32 6, ptr %o9, align 4
+  store i32 7, ptr %o10, align 4
+  store i32 8, ptr %o11, align 4
+
   ; Chain A: A[i..i+3], constants unrelated to the loaded/computed values.
   %a0 = getelementptr inbounds i32, ptr %A, i64 %i
   %a1 = getelementptr inbounds i32, ptr %A, i64 %i1
@@ -179,10 +219,6 @@ loop:
   store i32 444, ptr %a3, align 4
 
   ; Chain B: A[i+4..i+7], also unrelated constants.
-  %i4 = add nuw nsw i64 %i, 4
-  %i5 = add nuw nsw i64 %i, 5
-  %i6 = add nuw nsw i64 %i, 6
-  %i7 = add nuw nsw i64 %i, 7
   %b0 = getelementptr inbounds i32, ptr %A, i64 %i4
   %b1 = getelementptr inbounds i32, ptr %A, i64 %i5
   %b2 = getelementptr inbounds i32, ptr %A, i64 %i6
