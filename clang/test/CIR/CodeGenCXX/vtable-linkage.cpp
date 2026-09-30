@@ -121,7 +121,7 @@ void use_F() {
 // LLVM-DAG: @_ZTV1C = linkonce_odr constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr null, ptr null, ptr @_ZTI1C, ptr @_ZN1C1fEv] }, comdat, align 8
 // LLVM-DAG: @_ZTS1C = linkonce_odr constant [{{[0-9]}} x i8] c"1C\00", comdat, align 1
 // LLVM-DAG: @_ZTI1C = linkonce_odr constant { ptr, ptr, i32, i32, ptr, i64 } { ptr getelementptr{{.*}}({{.*}}, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 {{.*}}), ptr @_ZTS1C, i32 0, i32 1, ptr @_ZTI1B, i64 -8189 }, comdat
-// LLVM-DAG: @_ZTT1C = linkonce_odr{{.*}} constant [2 x ptr] [ptr getelementptr inbounds{{.*}}({{.*}}, ptr @_ZTV1C, {{.*}}, ptr getelementptr inbounds {{.*}}({{.*}}, ptr @_ZTV1C{{.*}})]
+// LLVM-DAG: @_ZTT1C = linkonce_odr{{.*}} constant [2 x ptr] [ptr getelementptr {{.*}}(i8, ptr @_ZTV1C, i64 32), ptr getelementptr {{.*}}(i8, ptr @_ZTV1C, i64 32)]
 
 // D has a key function that is defined in this translation unit so its vtable is
 // defined in the translation unit.
