@@ -1109,7 +1109,7 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       if (SrcBits < 32)
         FloatCost = getCastInstrCost(
             Opcode, Dst->getWithNewType(Type::getFloatTy(Dst->getContext())),
-            Src, CCH, CostKind);
+            Src, CCH, CostKind, I);
 
       // Native rounding can convert a pair. With 16 bit instructions the
       // expansion extracts the low significand bit, adds the rounding bias,
@@ -1189,6 +1189,15 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     // or sign extended first. Without 16 bit instructions a half result is
     // rounded from f32.
     if (SrcBits >= 8 && SrcBits < 32) {
+      // A 24 bit load is split and its high byte load extends the source.
+      const auto *Load = I && I->getOperand(0)->getType() == Src
+                             ? dyn_cast<LoadInst>(I->getOperand(0))
+                             : nullptr;
+      if (SrcBits == 24 && Load && Load->isSimple() && Load->hasOneUse()) {
+        if (FPTy->isDoubleTy())
+          return Scale(0, 1);
+        return Scale(FPTy->isHalfTy() ? 2 : 1);
+      }
       const bool Narrow = SrcBits > 8 && SrcBits < 16;
       const bool SignExtend16 = IsSigned && Narrow && ST->has16BitInsts();
       if (FPTy->isDoubleTy())
