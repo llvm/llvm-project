@@ -1203,8 +1203,10 @@ void Prescanner::Hollerith(
   inCharLiteral_ = false;
 }
 
-// In fixed form, source card images must be processed as if they were at
-// least 72 columns wide, at least in character literal contexts.
+// In fixed form with a column limit, source card images must be processed as
+// if they were at least that many columns wide, at least in character literal
+// contexts. With no limit (-ffixed-line-length=none or =0), no padding is
+// done, which matches gfortran.
 bool Prescanner::PadOutCharacterLiteral(TokenSequence &tokens) {
   while (inFixedForm_ && fixedFormColumnLimit_ && !tabInCurrentLine_ &&
       at_[1] == '\n') {

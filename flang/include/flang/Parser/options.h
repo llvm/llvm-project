@@ -24,6 +24,7 @@ struct Options {
   using Predefinition = std::pair<std::string, std::optional<std::string>>;
 
   bool isFixedForm{false};
+  // Fixed-form column limit; std::nullopt means no limit.
   std::optional<int> fixedFormColumns{72};
   common::LanguageFeatureControl features;
   std::vector<std::string> searchDirectories;
