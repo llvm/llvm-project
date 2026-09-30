@@ -415,6 +415,13 @@ TEST(RISCVISAInfoTest, CanonicalExtensionOrderVP) {
       Info.toString(),
       "rv64i2p1_f2p2_d2p2_v1p0_p0p21_zicsr2p0_zmmul1p0_zba1p0_zbb1p0_zve32f1p0_"
       "zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0");
+
+  auto MaybeRVY = RISCVISAInfo::parseArchString("rv64y0p910_m_a_f_d_c", true);
+  ASSERT_THAT_EXPECTED(MaybeRVY, Succeeded());
+  // The canonical string should place 'y' immediately after 'i' (before 'm').
+  EXPECT_EQ((*MaybeRVY)->toString(),
+            "rv64i2p1_y0p910_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zmmul1p0_"
+            "zaamo1p0_zalrsc1p0_zca1p0");
 }
 
 TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
@@ -1004,10 +1011,10 @@ TEST(OrderedExtensionMap, ExtensionsAreCorrectlyOrdered) {
   for (const auto &Ext : Exts)
     ExtNames.push_back(Ext.first);
 
-  // FIXME: 'l' and 'y' should be ordered after 'i', 'm', 'c'.
+  // FIXME: 'l' should be ordered after 'i', 'm', 'c'.
   EXPECT_THAT(ExtNames,
-              ElementsAre("i", "m", "l", "c", "y", "zicsr", "zmfoo", "zfinx",
-                           "zzfoo", "sbar", "sfoo", "xbar", "xfoo"));
+              ElementsAre("i", "y", "m", "l", "c", "zicsr", "zmfoo", "zfinx",
+                          "zzfoo", "sbar", "sfoo", "xbar", "xfoo"));
 }
 
 TEST(ParseArchString, ZceImplication) {
@@ -1673,8 +1680,8 @@ R"(All available -march extensions for RISC-V
     xwchc                2.2
 
 Experimental extensions
-    p                    0.21
     y                    0.910
+    p                    0.21
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zilx                 0.1
