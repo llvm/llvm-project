@@ -271,6 +271,11 @@ features cannot lower the translation-unit ABI level;
   path share one module cache, and is only sound when no module needs the path
   -- a lookup that would have resolved through an ignored path simply fails.
 
+- Added support for `-fkeep-inline-functions` in Clang. This option forces
+  inline function definitions that are available in the current translation
+  unit to be emitted into the object file, even when they are inlined into all
+  callers or are otherwise unused.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -778,6 +783,13 @@ features cannot lower the translation-unit ABI level;
   user-declared allocation function that takes std::nothrow_t by value. Such
   a new-expression is now correctly rejected in a constant expression because
   it does not select a replaceable global allocation function. (#GH212211)
+
+- Fixed `__attribute__((used))` and `-fkeep-inline-functions` being
+  incorrectly ignored for complete constructors and destructors (C1/D1 variants)
+  when `-mconstructor-aliases` is active. C1/D1 variants were previously
+  replaced with their base variants (C2/D2) in the IR before retention could
+  take effect, causing them to be dropped from llvm.used and omitted from
+  the object file. (#GH226572)
 
 #### Bug Fixes to AST Handling
 
