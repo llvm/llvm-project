@@ -6421,7 +6421,7 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
 
   if (MaybeODRUnique)
     Result = Context.getDebugTypeODRUniquer()->getODRSubprogramDecl(
-        scope.Val, linkageName.Val->getString());
+        cast<DIScope>(scope.Val), linkageName.Val->getString());
 
   if (!Result)
     Result = GET_OR_DISTINCT(

@@ -84,7 +84,7 @@ public:
   /// Get an existing DISubprogram declaration with matching scope, linkage
   /// name, type, and template parameters, that has been registered with
   /// `addSubprogramDecl`, or return nullptr.
-  LLVM_ABI DISubprogram *getODRSubprogramDecl(Metadata *Scope,
+  LLVM_ABI DISubprogram *getODRSubprogramDecl(DIScope *Scope,
                                               StringRef LinkageName);
 
   /// Register function declaration DISubprogram, which may be reused in place
