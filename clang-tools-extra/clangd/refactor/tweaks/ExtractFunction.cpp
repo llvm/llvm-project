@@ -797,6 +797,8 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
     }
 
     bool VisitUnaryOperator(UnaryOperator *UO) {
+      // FIXME: Try to track where the result of the address operator
+      // ends up. If it's a const pointer, this is not a mutating access.
       if (UO->isIncrementDecrementOp() || UO->getOpcode() == UO_AddrOf)
         markPossiblyMutated(UO->getSubExpr());
       return true;
