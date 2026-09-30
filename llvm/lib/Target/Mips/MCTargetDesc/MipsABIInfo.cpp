@@ -29,11 +29,11 @@ namespace {
 static constexpr MCPhysReg O32IntRegs[] = {Mips::A0, Mips::A1, Mips::A2,
                                            Mips::A3};
 static constexpr MCPhysReg NABIIntRegs[] = {Mips::A0, Mips::A1, Mips::A2,
-                                            Mips::A3, Mips::T0, Mips::T1,
-                                            Mips::T2, Mips::T3};
+                                            Mips::A3, Mips::A4_N, Mips::A5_N,
+                                            Mips::A6_N, Mips::A7_N};
 static constexpr MCPhysReg Mips64IntRegs[] = {
     Mips::A0_64, Mips::A1_64, Mips::A2_64, Mips::A3_64,
-    Mips::T0_64, Mips::T1_64, Mips::T2_64, Mips::T3_64};
+    Mips::A4_N_64, Mips::A5_N_64, Mips::A6_N_64, Mips::A7_N_64};
 
 struct GPR {
   MCPhysReg Reg32;
@@ -48,10 +48,10 @@ static constexpr GPR OABITempRegs[] = {
 };
 
 static constexpr GPR NABITempRegs[] = {
-    {Mips::T4, Mips::T4_64},
-    {Mips::T5, Mips::T5_64},
-    {Mips::T6, Mips::T6_64},
-    {Mips::T7, Mips::T7_64},
+    {Mips::T0_N, Mips::T0_N_64},
+    {Mips::T1_N, Mips::T1_N_64},
+    {Mips::T2_N, Mips::T2_N_64},
+    {Mips::T3_N, Mips::T3_N_64},
     {Mips::NoRegister, Mips::NoRegister},
     {Mips::NoRegister, Mips::NoRegister},
     {Mips::NoRegister, Mips::NoRegister},
@@ -61,12 +61,12 @@ static constexpr GPR NABITempRegs[] = {
 };
 
 static constexpr GPR PABITempRegs[] = {
-    {Mips::T4, Mips::T4_64},
-    {Mips::T5, Mips::T5_64},
-    {Mips::T6, Mips::T6_64},
-    {Mips::T7, Mips::T7_64},
-    {Mips::V0, Mips::V0_64},
-    {Mips::V1, Mips::V1_64},
+    {Mips::T0_P, Mips::T0_P_64},
+    {Mips::T1_P, Mips::T1_P_64},
+    {Mips::T2_P, Mips::T2_P_64},
+    {Mips::T3_P, Mips::T3_P_64},
+    {Mips::T4_P, Mips::T4_P_64},
+    {Mips::T5_P, Mips::T5_P_64},
     {Mips::NoRegister, Mips::NoRegister},
     {Mips::NoRegister, Mips::NoRegister},
     {Mips::T8, Mips::T8_64},

@@ -37,7 +37,7 @@ class CCIfSpecialCallingConv<string CC, CCAction A>
 
 // For soft-float, f128 values are returned in A0_64 rather than V1_64.
 def RetCC_F128SoftFloat : CallingConv<[
-  CCAssignToReg<[V0_64, A0_64]>
+  CCAssignToReg<[V0_N_64, A0_64]>
 ]>;
 
 // For hard-float, f128 values are returned as a pair of f64's rather than a
@@ -113,7 +113,7 @@ def CC_MipsO32_FP : CallingConv<[
 
 def CC_MipsN_SoftFloat : CallingConv<[
   CCAssignToRegWithShadow<[A0, A1, A2, A3,
-                           T0, T1, T2, T3],
+                           A4_N, A5_N, A6_N, A7_N],
                           [D12_64, D13_64, D14_64, D15_64,
                            D16_64, D17_64, D18_64, D19_64]>,
   CCAssignToStack<4, 8>
@@ -134,7 +134,8 @@ def CC_MipsN : CallingConv<[
 
   // Integer arguments are passed in integer registers.
   CCIfType<[i64], CCAssignToRegWithShadow<[A0_64, A1_64, A2_64, A3_64,
-                                           T0_64, T1_64, T2_64, T3_64],
+                                           A4_N_64, A5_N_64, A6_N_64,
+                                           A7_N_64],
                                           [D12_64, D13_64, D14_64, D15_64,
                                            D16_64, D17_64, D18_64, D19_64]>>,
 
@@ -142,13 +143,15 @@ def CC_MipsN : CallingConv<[
   CCIfType<[f32], CCAssignToRegWithShadow<[F12, F13, F14, F15,
                                            F16, F17, F18, F19],
                                           [A0_64, A1_64, A2_64, A3_64,
-                                           T0_64, T1_64, T2_64, T3_64]>>,
+                                           A4_N_64, A5_N_64, A6_N_64,
+                                           A7_N_64]>>,
 
   // f64 arguments are passed in double precision FP registers.
   CCIfType<[f64], CCAssignToRegWithShadow<[D12_64, D13_64, D14_64, D15_64,
                                            D16_64, D17_64, D18_64, D19_64],
                                           [A0_64, A1_64, A2_64, A3_64,
-                                           T0_64, T1_64, T2_64, T3_64]>>,
+                                           A4_N_64, A5_N_64, A6_N_64,
+                                           A7_N_64]>>,
 
   // All stack parameter slots become 64-bit doublewords and are 8-byte aligned.
   CCIfType<[f32], CCAssignToStack<4, 8>>,
@@ -165,10 +168,10 @@ def CC_MipsN_VarArg : CallingConv<[
   // All integers are promoted to 64-bit.
   CCIfType<[i8, i16, i32], CCPromoteToType<i64>>,
 
-  CCIfType<[f32], CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3]>>,
+  CCIfType<[f32], CCAssignToReg<[A0, A1, A2, A3, A4_N, A5_N, A6_N, A7_N]>>,
 
   CCIfType<[i64, f64], CCAssignToReg<[A0_64, A1_64, A2_64, A3_64,
-                                      T0_64, T1_64, T2_64, T3_64]>>,
+                                      A4_N_64, A5_N_64, A6_N_64, A7_N_64]>>,
 
   // All stack parameter slots become 64-bit doublewords and are 8-byte aligned.
   CCIfType<[f32], CCAssignToStack<4, 8>>,
@@ -198,8 +201,8 @@ def RetCC_MipsN : CallingConv<[
       CCIfType<[i8, i16, i32, i64],
           CCIfInReg<CCPromoteToUpperBitsInType<i64>>>>,
 
-  // i64 are returned in registers V0_64, V1_64
-  CCIfType<[i64], CCAssignToReg<[V0_64, V1_64]>>,
+  // i64 are returned in registers V0_N_64, V1_N_64
+  CCIfType<[i64], CCAssignToReg<[V0_N_64, V1_N_64]>>,
 
   // f32 are returned in registers F0, F2
   CCIfType<[f32], CCAssignToReg<[F0, F2]>>,
@@ -234,9 +237,9 @@ def CC_MipsO32_FastCC : CallingConv<[
 
 def CC_MipsN_FastCC : CallingConv<[
   // Integer arguments are passed in integer registers.
-  CCIfType<[i64], CCAssignToReg<[A0_64, A1_64, A2_64, A3_64, T0_64, T1_64,
-                                 T2_64, T3_64, T4_64, T5_64, T6_64, T7_64,
-                                 T8_64, V1_64]>>,
+  CCIfType<[i64], CCAssignToReg<[A0_64, A1_64, A2_64, A3_64, A4_N_64,
+                                 A5_N_64, A6_N_64, A7_N_64, T0_N_64, T1_N_64,
+                                 T2_N_64, T3_N_64, T8_64, V1_N_64]>>,
 
   // f64 arguments are passed in double-precision floating pointer registers.
   CCIfType<[f64], CCAssignToReg<[D0_64, D1_64, D2_64, D3_64, D4_64, D5_64,
@@ -392,25 +395,29 @@ def CSR_Mips16RetHelper :
 
 def CSR_Interrupt_32R6 : CalleeSavedRegs<(add (sequence "A%u", 3, 0),
                                               (sequence "S%u", 7, 0),
-                                              (sequence "V%u", 1, 0),
-                                              (sequence "T%u", 9, 0),
+                                              (sequence "R%u", 3, 2),
+                                              T9, T8,
+                                              (sequence "R%u", 15, 8),
                                               RA, FP, GP, AT)>;
 
 def CSR_Interrupt_32 : CalleeSavedRegs<(add (sequence "A%u", 3, 0),
                                             (sequence "S%u", 7, 0),
-                                            (sequence "V%u", 1, 0),
-                                            (sequence "T%u", 9, 0),
+                                            (sequence "R%u", 3, 2),
+                                            T9, T8,
+                                            (sequence "R%u", 15, 8),
                                             RA, FP, GP, AT, LO0, HI0)>;
 
 def CSR_Interrupt_64R6 : CalleeSavedRegs<(add (sequence "A%u_64", 3, 0),
-                                              (sequence "V%u_64", 1, 0),
+                                              (sequence "R%u_64", 3, 2),
                                               (sequence "S%u_64", 7, 0),
-                                              (sequence "T%u_64", 9, 0),
+                                              T9_64, T8_64,
+                                              (sequence "R%u_64", 15, 8),
                                               RA_64, FP_64, GP_64, AT_64)>;
 
 def CSR_Interrupt_64 : CalleeSavedRegs<(add (sequence "A%u_64", 3, 0),
                                             (sequence "S%u_64", 7, 0),
-                                            (sequence "T%u_64", 9, 0),
-                                            (sequence "V%u_64", 1, 0),
+                                            T9_64, T8_64,
+                                            (sequence "R%u_64", 15, 8),
+                                            (sequence "R%u_64", 3, 2),
                                             RA_64, FP_64, GP_64, AT_64,
                                             LO0_64, HI0_64)>;

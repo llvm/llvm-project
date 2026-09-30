@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCTARGETDESC_H
 #define LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCTARGETDESC_H
 
+#include "llvm/MC/MCRegister.h"
 #include "llvm/Support/DataTypes.h"
 
 #include <memory>
@@ -77,6 +78,80 @@ int getCPURegisterIndex(StringRef Name, const MCRegisterInfo &MRI,
 // register name to register number.
 #define GET_REGINFO_ENUM
 #include "MipsGenRegisterInfo.inc"
+
+namespace llvm {
+namespace Mips {
+// R2-R3 and R8-R15 have different names in the O32 (O), N32/N64 (N) and
+// P32/P64 (P) ABIs. These aliases match the ones in MipsRegisterInfo.td; the
+// unsuffixed O names are kept for compatibility.
+
+// O32 names.
+inline constexpr MCPhysReg V0 = R2;
+inline constexpr MCPhysReg V1 = R3;
+inline constexpr MCPhysReg T0 = R8;
+inline constexpr MCPhysReg T1 = R9;
+inline constexpr MCPhysReg T2 = R10;
+inline constexpr MCPhysReg T3 = R11;
+inline constexpr MCPhysReg T4 = R12;
+inline constexpr MCPhysReg T5 = R13;
+inline constexpr MCPhysReg T6 = R14;
+inline constexpr MCPhysReg T7 = R15;
+inline constexpr MCPhysReg V0_64 = R2_64;
+inline constexpr MCPhysReg V1_64 = R3_64;
+inline constexpr MCPhysReg T0_64 = R8_64;
+inline constexpr MCPhysReg T1_64 = R9_64;
+inline constexpr MCPhysReg T2_64 = R10_64;
+inline constexpr MCPhysReg T3_64 = R11_64;
+inline constexpr MCPhysReg T4_64 = R12_64;
+inline constexpr MCPhysReg T5_64 = R13_64;
+inline constexpr MCPhysReg T6_64 = R14_64;
+inline constexpr MCPhysReg T7_64 = R15_64;
+
+// N32/N64 names.
+inline constexpr MCPhysReg V0_N = R2;
+inline constexpr MCPhysReg V1_N = R3;
+inline constexpr MCPhysReg A4_N = R8;
+inline constexpr MCPhysReg A5_N = R9;
+inline constexpr MCPhysReg A6_N = R10;
+inline constexpr MCPhysReg A7_N = R11;
+inline constexpr MCPhysReg T0_N = R12;
+inline constexpr MCPhysReg T1_N = R13;
+inline constexpr MCPhysReg T2_N = R14;
+inline constexpr MCPhysReg T3_N = R15;
+inline constexpr MCPhysReg V0_N_64 = R2_64;
+inline constexpr MCPhysReg V1_N_64 = R3_64;
+inline constexpr MCPhysReg A4_N_64 = R8_64;
+inline constexpr MCPhysReg A5_N_64 = R9_64;
+inline constexpr MCPhysReg A6_N_64 = R10_64;
+inline constexpr MCPhysReg A7_N_64 = R11_64;
+inline constexpr MCPhysReg T0_N_64 = R12_64;
+inline constexpr MCPhysReg T1_N_64 = R13_64;
+inline constexpr MCPhysReg T2_N_64 = R14_64;
+inline constexpr MCPhysReg T3_N_64 = R15_64;
+
+// P32/P64 names.
+inline constexpr MCPhysReg T4_P = R2;
+inline constexpr MCPhysReg T5_P = R3;
+inline constexpr MCPhysReg A4_P = R8;
+inline constexpr MCPhysReg A5_P = R9;
+inline constexpr MCPhysReg A6_P = R10;
+inline constexpr MCPhysReg A7_P = R11;
+inline constexpr MCPhysReg T0_P = R12;
+inline constexpr MCPhysReg T1_P = R13;
+inline constexpr MCPhysReg T2_P = R14;
+inline constexpr MCPhysReg T3_P = R15;
+inline constexpr MCPhysReg T4_P_64 = R2_64;
+inline constexpr MCPhysReg T5_P_64 = R3_64;
+inline constexpr MCPhysReg A4_P_64 = R8_64;
+inline constexpr MCPhysReg A5_P_64 = R9_64;
+inline constexpr MCPhysReg A6_P_64 = R10_64;
+inline constexpr MCPhysReg A7_P_64 = R11_64;
+inline constexpr MCPhysReg T0_P_64 = R12_64;
+inline constexpr MCPhysReg T1_P_64 = R13_64;
+inline constexpr MCPhysReg T2_P_64 = R14_64;
+inline constexpr MCPhysReg T3_P_64 = R15_64;
+} // namespace Mips
+} // namespace llvm
 
 // Defines symbolic names for the Mips instructions.
 #define GET_INSTRINFO_ENUM
