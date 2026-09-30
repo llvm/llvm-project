@@ -103,25 +103,27 @@ class HWR<bits<16> Enc, string n> : MipsReg<Enc, n>;
 
 let Namespace = "Mips" in {
   // General Purpose Registers
-  // TODO: Use R0-R31/R0_64-R31_64 record names without changing MIR names.
+  // Registers whose ABI names differ between the O, N and P ABIs use
+  // ABI-independent R<n> record names; see the ABI aliases below.
+  // TODO: Use R0-R31/R0_64-R31_64 record names for the remaining registers.
   // Use MipsABIInfo accessors for ABI roles.
   let isConstant = true in
   def ZERO : MipsGPRReg< 0, "zero", "zero">,              DwarfRegNum<[0]>;
   def AT   : MipsGPRReg< 1, "1", "at">,                   DwarfRegNum<[1]>;
-  def V0   : MipsGPRReg< 2, "2", "v0", "v0", "t4">,       DwarfRegNum<[2]>;
-  def V1   : MipsGPRReg< 3, "3", "v1", "v1", "t5">,       DwarfRegNum<[3]>;
+  def R2   : MipsGPRReg< 2, "2", "v0", "v0", "t4">,       DwarfRegNum<[2]>;
+  def R3   : MipsGPRReg< 3, "3", "v1", "v1", "t5">,       DwarfRegNum<[3]>;
   def A0   : MipsGPRReg< 4, "4", "a0">,                   DwarfRegNum<[4]>;
   def A1   : MipsGPRReg< 5, "5", "a1">,                   DwarfRegNum<[5]>;
   def A2   : MipsGPRReg< 6, "6", "a2">,                   DwarfRegNum<[6]>;
   def A3   : MipsGPRReg< 7, "7", "a3">,                   DwarfRegNum<[7]>;
-  def T0   : MipsGPRReg< 8, "8", "t0", "a4">,             DwarfRegNum<[8]>;
-  def T1   : MipsGPRReg< 9, "9", "t1", "a5">,             DwarfRegNum<[9]>;
-  def T2   : MipsGPRReg<10, "10", "t2", "a6">,            DwarfRegNum<[10]>;
-  def T3   : MipsGPRReg<11, "11", "t3", "a7">,            DwarfRegNum<[11]>;
-  def T4   : MipsGPRReg<12, "12", "t4", "t0">,            DwarfRegNum<[12]>;
-  def T5   : MipsGPRReg<13, "13", "t5", "t1">,            DwarfRegNum<[13]>;
-  def T6   : MipsGPRReg<14, "14", "t6", "t2">,            DwarfRegNum<[14]>;
-  def T7   : MipsGPRReg<15, "15", "t7", "t3">,            DwarfRegNum<[15]>;
+  def R8   : MipsGPRReg< 8, "8", "t0", "a4">,             DwarfRegNum<[8]>;
+  def R9   : MipsGPRReg< 9, "9", "t1", "a5">,             DwarfRegNum<[9]>;
+  def R10  : MipsGPRReg<10, "10", "t2", "a6">,            DwarfRegNum<[10]>;
+  def R11  : MipsGPRReg<11, "11", "t3", "a7">,            DwarfRegNum<[11]>;
+  def R12  : MipsGPRReg<12, "12", "t4", "t0">,            DwarfRegNum<[12]>;
+  def R13  : MipsGPRReg<13, "13", "t5", "t1">,            DwarfRegNum<[13]>;
+  def R14  : MipsGPRReg<14, "14", "t6", "t2">,            DwarfRegNum<[14]>;
+  def R15  : MipsGPRReg<15, "15", "t7", "t3">,            DwarfRegNum<[15]>;
   def S0   : MipsGPRReg<16, "16", "s0">,                  DwarfRegNum<[16]>;
   def S1   : MipsGPRReg<17, "17", "s1">,                  DwarfRegNum<[17]>;
   def S2   : MipsGPRReg<18, "18", "s2">,                  DwarfRegNum<[18]>;
@@ -143,20 +145,20 @@ let Namespace = "Mips" in {
   let isConstant = true in
   def ZERO_64 : Mips64GPRReg<ZERO>, DwarfRegNum<[0]>;
   def AT_64   : Mips64GPRReg<AT>, DwarfRegNum<[1]>;
-  def V0_64   : Mips64GPRReg<V0>, DwarfRegNum<[2]>;
-  def V1_64   : Mips64GPRReg<V1>, DwarfRegNum<[3]>;
+  def R2_64   : Mips64GPRReg<R2>, DwarfRegNum<[2]>;
+  def R3_64   : Mips64GPRReg<R3>, DwarfRegNum<[3]>;
   def A0_64   : Mips64GPRReg<A0>, DwarfRegNum<[4]>;
   def A1_64   : Mips64GPRReg<A1>, DwarfRegNum<[5]>;
   def A2_64   : Mips64GPRReg<A2>, DwarfRegNum<[6]>;
   def A3_64   : Mips64GPRReg<A3>, DwarfRegNum<[7]>;
-  def T0_64   : Mips64GPRReg<T0>, DwarfRegNum<[8]>;
-  def T1_64   : Mips64GPRReg<T1>, DwarfRegNum<[9]>;
-  def T2_64   : Mips64GPRReg<T2>, DwarfRegNum<[10]>;
-  def T3_64   : Mips64GPRReg<T3>, DwarfRegNum<[11]>;
-  def T4_64   : Mips64GPRReg<T4>, DwarfRegNum<[12]>;
-  def T5_64   : Mips64GPRReg<T5>, DwarfRegNum<[13]>;
-  def T6_64   : Mips64GPRReg<T6>, DwarfRegNum<[14]>;
-  def T7_64   : Mips64GPRReg<T7>, DwarfRegNum<[15]>;
+  def R8_64   : Mips64GPRReg<R8>, DwarfRegNum<[8]>;
+  def R9_64   : Mips64GPRReg<R9>, DwarfRegNum<[9]>;
+  def R10_64  : Mips64GPRReg<R10>, DwarfRegNum<[10]>;
+  def R11_64  : Mips64GPRReg<R11>, DwarfRegNum<[11]>;
+  def R12_64  : Mips64GPRReg<R12>, DwarfRegNum<[12]>;
+  def R13_64  : Mips64GPRReg<R13>, DwarfRegNum<[13]>;
+  def R14_64  : Mips64GPRReg<R14>, DwarfRegNum<[14]>;
+  def R15_64  : Mips64GPRReg<R15>, DwarfRegNum<[15]>;
   def S0_64   : Mips64GPRReg<S0>, DwarfRegNum<[16]>;
   def S1_64   : Mips64GPRReg<S1>, DwarfRegNum<[17]>;
   def S2_64   : Mips64GPRReg<S2>, DwarfRegNum<[18]>;
@@ -298,6 +300,80 @@ let Namespace = "Mips" in {
   def P2 : MipsReg<2, "p2">;
 
 }
+
+//===----------------------------------------------------------------------===//
+//  ABI register aliases
+//===----------------------------------------------------------------------===//
+
+// R2-R3 and R8-R15 have different names in the O32 (O), N32/N64 (N) and
+// P32/P64 (P) ABIs. Provide aliases for each ABI; the unsuffixed O names are
+// kept for compatibility. MipsMCTargetDesc.h has the matching C++ aliases.
+
+// O32 names.
+defvar V0 = R2;
+defvar V1 = R3;
+defvar T0 = R8;
+defvar T1 = R9;
+defvar T2 = R10;
+defvar T3 = R11;
+defvar T4 = R12;
+defvar T5 = R13;
+defvar T6 = R14;
+defvar T7 = R15;
+defvar V0_64 = R2_64;
+defvar V1_64 = R3_64;
+defvar T0_64 = R8_64;
+defvar T1_64 = R9_64;
+defvar T2_64 = R10_64;
+defvar T3_64 = R11_64;
+defvar T4_64 = R12_64;
+defvar T5_64 = R13_64;
+defvar T6_64 = R14_64;
+defvar T7_64 = R15_64;
+
+// N32/N64 names.
+defvar V0_N = R2;
+defvar V1_N = R3;
+defvar A4_N = R8;
+defvar A5_N = R9;
+defvar A6_N = R10;
+defvar A7_N = R11;
+defvar T0_N = R12;
+defvar T1_N = R13;
+defvar T2_N = R14;
+defvar T3_N = R15;
+defvar V0_N_64 = R2_64;
+defvar V1_N_64 = R3_64;
+defvar A4_N_64 = R8_64;
+defvar A5_N_64 = R9_64;
+defvar A6_N_64 = R10_64;
+defvar A7_N_64 = R11_64;
+defvar T0_N_64 = R12_64;
+defvar T1_N_64 = R13_64;
+defvar T2_N_64 = R14_64;
+defvar T3_N_64 = R15_64;
+
+// P32/P64 names.
+defvar T4_P = R2;
+defvar T5_P = R3;
+defvar A4_P = R8;
+defvar A5_P = R9;
+defvar A6_P = R10;
+defvar A7_P = R11;
+defvar T0_P = R12;
+defvar T1_P = R13;
+defvar T2_P = R14;
+defvar T3_P = R15;
+defvar T4_P_64 = R2_64;
+defvar T5_P_64 = R3_64;
+defvar A4_P_64 = R8_64;
+defvar A5_P_64 = R9_64;
+defvar A6_P_64 = R10_64;
+defvar A7_P_64 = R11_64;
+defvar T0_P_64 = R12_64;
+defvar T1_P_64 = R13_64;
+defvar T2_P_64 = R14_64;
+defvar T3_P_64 = R15_64;
 
 //===----------------------------------------------------------------------===//
 // Register Classes

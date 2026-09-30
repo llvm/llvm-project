@@ -1034,7 +1034,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       DestReg = Mips::V1;
     } else {
       RdhwrOpc = Mips::RDHWR64;
-      DestReg = Mips::V1_64;
+      DestReg = Mips::V1_N_64;
     }
 
     SDNode *Rdhwr =
