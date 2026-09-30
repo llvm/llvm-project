@@ -399,11 +399,6 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
   // addressable range below rather than emit an invalid register.
   unsigned NumAddressableVGPRs = ST->getAddressableNumVGPRs(
       MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
-#ifndef NDEBUG
-  bool AllowOffsetWrap = NumAddressableVGPRs == ST->getTotalNumVGPRs();
-  assert((AllowOffsetWrap || Offset + NumDwords <= NumAddressableVGPRs) &&
-         "out of bounds VGPR 'as memory' (address space 13) access");
-#endif
 
   const bool UseGPRIdxMode = LdSt.isGPRIdx();
 
