@@ -90,8 +90,16 @@ DEPENDENTS_TO_TEST = {
         "cross-project-tests",
     },
     "lld": {"bolt", "cross-project-tests"},
-    "clang": {"clang-tools-extra", "cross-project-tests", "lldb"},
-    "mlir": {"flang"},
+    "clang": {
+        "CIR",
+        "clang-tools-extra",
+        "cross-project-tests",
+        "lldb",
+    },
+    "mlir": {
+        "CIR",
+        "flang"
+    },
     # Test everything if ci scripts are changed.
     ".ci": {
         project_name
@@ -272,6 +280,9 @@ def _compute_project_check_targets(
             continue
         if project_to_test in PROJECT_CHECK_TARGETS:
             check_targets.add(PROJECT_CHECK_TARGETS[project_to_test])
+    # The clang suite includes the CIR tests when CIR is enabled.
+    if "clang" in projects_to_test:
+        check_targets.discard("check-clang-cir")
     return check_targets
 
 
