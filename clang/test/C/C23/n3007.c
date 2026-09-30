@@ -209,3 +209,15 @@ void test_macros(int in_int) {
   _Static_assert(_Generic(c, int : 1));
   _Static_assert(_Generic(result, int : 1));
 }
+
+// Type inference when the initializer is a bit-field
+void gh226280()
+{
+  struct S { unsigned i : 1; };
+  struct S s;
+  auto si = s.i;
+  _Static_assert(_Generic(si, unsigned int : 1, default : 0),
+                "the underlying type of the bit-field is 'unsigned int'");
+
+  __auto_type si2 = s.i; // expected-error {{cannot pass bit-field as __auto_type initializer in C}} expected-warning {{'__auto_type' is a GNU extension}}
+}
