@@ -170,13 +170,19 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 // CHECK: fir.call @_FortranACUFGetDeviceAddress
 // CHECK-NOT: fir.load %{{.*}} : !fir.ref<i32>
 // CHECK: fir.call @_QPuse_index
+// A host read of a scalar CUDA constant is copied from the device symbol. The
+// host shadow is never read: the source is resolved to the device address and
+// the value is brought in with a device to host copy (mode 1).
 // CHECK-LABEL: func.func @_QQconstant_scalar_device_to_host()
 // CHECK: %[[ADDR:.*]] = fir.address_of(@_QMcon3Ezzz) : !fir.ref<i32>
 // CHECK: %[[DECL:.*]] = fir.declare %[[ADDR]] {data_attr = #cuf.cuda<constant>, uniq_name = "_QMcon3Ezzz"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK: %[[DST:.*]] = fir.alloca i32
-// CHECK: %[[VALUE:.*]] = fir.load %[[DECL]] : !fir.ref<i32>
-// CHECK: fir.store %[[VALUE]] to %[[DST]] : !fir.ref<i32>
-// CHECK-NOT: fir.call @_FortranACUFDataTransferPtrPtr
+// CHECK-NOT: fir.load %[[DECL]] : !fir.ref<i32>
+// CHECK: fir.call @_FortranACUFGetDeviceAddress
+// CHECK: %[[DEVADDR:.*]] = fir.convert %{{.*}} : (!fir.llvm_ptr<i8>) -> !fir.ref<i32>
+// CHECK: %[[DSTCONV:.*]] = fir.convert %[[DST]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+// CHECK: %[[SRCCONV:.*]] = fir.convert %[[DEVADDR]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DSTCONV]], %[[SRCCONV]], %{{[^,]*}}, %c1_i32
 
 // -----
 

@@ -233,6 +233,50 @@ func.func @_QPsub9() {
 // CHECK: %[[SRC:.*]] = fir.convert %[[LOCAL]] : (!fir.ref<!fir.array<5xi32>>) -> !fir.llvm_ptr<i8>
 // CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DST]], %[[SRC]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> ()
 
+fir.global @_QMmscalEc0 {data_attr = #cuf.cuda<constant>} : i32 {
+  %0 = arith.constant 2 : i32
+  fir.has_value %0 : i32
+}
+func.func @_QPsub_cst_read() {
+  %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsub_cst_readEi"}
+  %1 = fir.declare %0 {uniq_name = "_QFsub_cst_readEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %2 = fir.address_of(@_QMmscalEc0) : !fir.ref<i32>
+  %3 = fir.declare %2 {data_attr = #cuf.cuda<constant>, uniq_name = "_QMmscalEc0"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  cuf.data_transfer %3 to %1 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<i32>, !fir.ref<i32>
+  return
+}
+
+// A host read of a scalar constant resolves to the device copy: the source is
+// routed through _FortranACUFGetDeviceAddress rather than loaded from the host
+// shadow.
+// CHECK-LABEL: func.func @_QPsub_cst_read()
+// CHECK: fir.address_of(@_QMmscalEc0) : !fir.ref<i32>
+// CHECK: %[[GBL:.*]] = fir.address_of(@_QMmscalEc0) : !fir.ref<i32>
+// CHECK: %[[GBL_CONV:.*]] = fir.convert %[[GBL]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFGetDeviceAddress(%[[GBL_CONV]], %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(
+
+func.func @_QPsub_cst_bcast() {
+  %c10 = arith.constant 10 : index
+  %0 = fir.alloca !fir.array<10xi32> {bindc_name = "e", uniq_name = "_QFsub_cst_bcastEe"}
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %2 = fir.declare %0(%1) {uniq_name = "_QFsub_cst_bcastEe"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>>
+  %3 = fir.address_of(@_QMmscalEc0) : !fir.ref<i32>
+  %4 = fir.declare %3 {data_attr = #cuf.cuda<constant>, uniq_name = "_QMmscalEc0"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  cuf.data_transfer %4 to %2 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<i32>, !fir.ref<!fir.array<10xi32>>
+  return
+}
+
+// A scalar constant broadcast into a host array is also read from the device
+// copy: the source is routed through _FortranACUFGetDeviceAddress and then
+// broadcast by _FortranACUFDataTransferCstDesc.
+// CHECK-LABEL: func.func @_QPsub_cst_bcast()
+// CHECK: fir.address_of(@_QMmscalEc0) : !fir.ref<i32>
+// CHECK: %[[GBL:.*]] = fir.address_of(@_QMmscalEc0) : !fir.ref<i32>
+// CHECK: %[[GBL_CONV:.*]] = fir.convert %[[GBL]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFGetDeviceAddress(%[[GBL_CONV]], %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFDataTransferCstDesc(
+
 fir.global @_QMmod1Ea {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xi32>>> {
   %c0 = arith.constant 0 : index
   %0 = fir.zero_bits !fir.heap<!fir.array<?xi32>>

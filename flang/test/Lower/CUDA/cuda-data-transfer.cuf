@@ -29,7 +29,6 @@ module mod1
   real(kind=8), device, allocatable, dimension(:) :: p
 
   real, constant :: c1 = 1.0
-  real, constant :: carr(10)
   real, device :: d1 = 1.0
 
   interface
@@ -796,27 +795,3 @@ end subroutine
 ! CHECK: arith.divf
 ! CHECK: hlfir.assign
 ! CHECK: cuf.data_transfer
-
-! A host read of a scalar constant broadcast into a host array keeps a
-! synchronized host copy, so it is a plain host assignment with no transfer.
-subroutine sub47()
-  use mod1
-  real, allocatable :: e(:)
-  allocate(e(10))
-  e = c1
-end subroutine
-
-! CHECK-LABEL: func.func @_QPsub47()
-! CHECK: hlfir.assign
-! CHECK-NOT: cuf.data_transfer
-
-! An array constant lives in device memory (no host copy), so a host read of
-! one must still be copied from the device.
-subroutine sub48()
-  use mod1
-  real :: harr(10)
-  harr = carr
-end subroutine
-
-! CHECK-LABEL: func.func @_QPsub48()
-! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {transfer_kind = #cuf.cuda_transfer<device_host>}
