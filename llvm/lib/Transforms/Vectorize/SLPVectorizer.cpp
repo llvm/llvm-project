@@ -17667,9 +17667,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (E->State == TreeEntry::CompressVectorize) {
         auto CompressIt = CompressEntryToData.find(E);
         if (CompressIt != CompressEntryToData.end())
-          HazardCheckVF =
-              cast<FixedVectorType>(std::get<1>(CompressIt->second))
-                  ->getNumElements();
+          HazardCheckVF = cast<FixedVectorType>(std::get<1>(CompressIt->second))
+                              ->getNumElements();
         for (Value *V : E->Scalars) {
           auto *OtherLd = dyn_cast<LoadInst>(V);
           if (!OtherLd || OtherLd == STLFBaseLoad)
@@ -29647,7 +29646,8 @@ bool BoUpSLP::findStoreLoadForwardingConflict(
       // set of scalars actually kept by the compress mask.
       auto CompressIt = CompressEntryToData.find(WidenedLoadEntry);
       if (CompressIt != CompressEntryToData.end()) {
-        auto *CompressVecTy = cast<FixedVectorType>(std::get<1>(CompressIt->second));
+        auto *CompressVecTy =
+            cast<FixedVectorType>(std::get<1>(CompressIt->second));
         LoadElementSize *= CompressVecTy->getNumElements();
       } else {
         LoadElementSize *= WidenedLoadEntry->Scalars.size();
