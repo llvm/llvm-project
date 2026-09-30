@@ -52,5 +52,6 @@ cc_library(
         "//mlir:OpenACCUtils",
         "//mlir:Pass",
         "//mlir:TransformUtils",
+        "//mlir:ViewLikeInterface",
     ],
 )
