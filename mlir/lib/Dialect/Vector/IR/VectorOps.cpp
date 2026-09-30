@@ -7183,12 +7183,40 @@ public:
       // the exact same elements as `broadcast(src, dstShape)` if and only if
       // every non-unit dimension of `src` has the same linear stride in both
       // `broadcastShape` and `dstShape`.
-      int64_t bcastStride = 1, dstStride = 1;
+      //
+      // In physical memory, a scalable dimension of static size D has runtime
+      // size D * vscale. A linear stride through trailing dimensions is thus:
+      //   stride = staticStride * (vscale ^ numScalableDims)
+      // Since vscale is an unknown runtime quantity (vscale >= 1), both
+      // staticStride and numScalableDims must match to guarantee stride
+      // equivalence across all targets.
+      struct Stride {
+        int64_t staticStride = 1;
+        int numScalableDims = 0;
+
+        bool operator==(const Stride &other) const {
+          return staticStride == other.staticStride &&
+                 numScalableDims == other.numScalableDims;
+        }
+        bool operator!=(const Stride &other) const { return !(*this == other); }
+      };
+
+      Stride bcastStride, dstStride;
+      VectorType broadcastVectorType = broadcastOp.getResultVectorType();
+      ArrayRef<bool> bcastScalable = broadcastVectorType.getScalableDims();
+      ArrayRef<bool> dstScalable = dstVectorType.getScalableDims();
+      ArrayRef<bool> srcScalable = srcVectorType.getScalableDims();
+
       for (size_t i = 1, e = srcShape.size(); i <= e; ++i) {
-        if (srcShape[e - i] != 1 && bcastStride != dstStride)
+        bool isUnitDim = srcShape[e - i] == 1 && !srcScalable[e - i];
+        if (!isUnitDim && bcastStride != dstStride)
           return failure();
-        bcastStride *= broadcastShape.take_back(i).front();
-        dstStride *= dstShape.take_back(i).front();
+        bcastStride.staticStride *= broadcastShape[broadcastShape.size() - i];
+        if (bcastScalable[broadcastShape.size() - i])
+          bcastStride.numScalableDims++;
+        dstStride.staticStride *= dstShape[dstShape.size() - i];
+        if (dstScalable[dstShape.size() - i])
+          dstStride.numScalableDims++;
       }
     }
 

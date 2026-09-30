@@ -130,12 +130,6 @@ func.func @extract_from_broadcast(%src: vector<1x1x1xf32>) -> vector<1xf32> {
 
 // -----
 
-// https://github.com/llvm/llvm-project/issues/190614 — ShapeCastBroadcastFolder
-// must not rewrite shape_cast(broadcast) into a lower-rank broadcast when that
-// changes duplication (new leading dims) vs stretching (source unit dim).
-// For %arg0 = [[1], [2]]: broadcast to 2x2x1 then shape_cast to 2x2 yields
-// [[1, 2], [1, 2]]; folding to broadcast 2x1 -> 2x2 would incorrectly yield
-// [[1, 1], [2, 2]].
 // CHECK-LABEL: @no_fold_bcast_mode_switch
 // CHECK:         vector.broadcast %{{.*}} : vector<2x1xf32> to vector<2x2x1xf32>
 // CHECK-NEXT:    vector.shape_cast %{{.*}} : vector<2x2x1xf32> to vector<2x2xf32>
@@ -187,4 +181,92 @@ func.func @fold_bcast_consecutive_unit_dims(%arg0: vector<2x1x1x3xf32>) -> vecto
   %0 = vector.broadcast %arg0 : vector<2x1x1x3xf32> to vector<2x1x4x3xf32>
   %1 = vector.shape_cast %0 : vector<2x1x4x3xf32> to vector<2x2x2x3xf32>
   return %1 : vector<2x2x2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_bcast_scalable_vs_fixed
+// CHECK:         vector.broadcast %{{.*}} : vector<2x1x1xf32> to vector<2x[4]x2xf32>
+// CHECK-NEXT:    vector.shape_cast %{{.*}} : vector<2x[4]x2xf32> to vector<[1]x2x4x2xf32>
+func.func @no_fold_bcast_scalable_vs_fixed(%arg0: vector<2x1x1xf32>) -> vector<[1]x2x4x2xf32> {
+  %0 = vector.broadcast %arg0 : vector<2x1x1xf32> to vector<2x[4]x2xf32>
+  %1 = vector.shape_cast %0 : vector<2x[4]x2xf32> to vector<[1]x2x4x2xf32>
+  return %1 : vector<[1]x2x4x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_bcast_scalable_axis_shift
+// CHECK:         vector.broadcast %{{.*}} : vector<1x[4]x1xf32> to vector<1x[4]x4xf32>
+// CHECK-NEXT:    vector.shape_cast %{{.*}} : vector<1x[4]x4xf32> to vector<4x[4]x1xf32>
+func.func @no_fold_bcast_scalable_axis_shift(%arg0: vector<1x[4]x1xf32>) -> vector<4x[4]x1xf32> {
+  %0 = vector.broadcast %arg0 : vector<1x[4]x1xf32> to vector<1x[4]x4xf32>
+  %1 = vector.shape_cast %0 : vector<1x[4]x4xf32> to vector<4x[4]x1xf32>
+  return %1 : vector<4x[4]x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_bcast_leading_scalable_dims
+// CHECK:         %[[RES:.*]] = vector.broadcast %{{.*}} : vector<[4]xf32> to vector<8x[4]xf32>
+// CHECK-NEXT:    return %[[RES]] : vector<8x[4]xf32>
+func.func @fold_bcast_leading_scalable_dims(%arg0: vector<[4]xf32>) -> vector<8x[4]xf32> {
+  %0 = vector.broadcast %arg0 : vector<[4]xf32> to vector<2x4x[4]xf32>
+  %1 = vector.shape_cast %0 : vector<2x4x[4]xf32> to vector<8x[4]xf32>
+  return %1 : vector<8x[4]xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_bcast_leading_scalable_dim_fixed_src
+// CHECK:         %[[RES:.*]] = vector.broadcast %{{.*}} : vector<4xf32> to vector<[8]x4xf32>
+// CHECK-NEXT:    return %[[RES]] : vector<[8]x4xf32>
+func.func @fold_bcast_leading_scalable_dim_fixed_src(%arg0: vector<4xf32>) -> vector<[8]x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4xf32> to vector<2x[4]x4xf32>
+  %1 = vector.shape_cast %0 : vector<2x[4]x4xf32> to vector<[8]x4xf32>
+  return %1 : vector<[8]x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_bcast_scalable_consecutive_unit_dims
+// CHECK:         %[[RES:.*]] = vector.broadcast %{{.*}} : vector<[2]x1x1x3xf32> to vector<[2]x2x2x3xf32>
+// CHECK-NEXT:    return %[[RES]] : vector<[2]x2x2x3xf32>
+func.func @fold_bcast_scalable_consecutive_unit_dims(%arg0: vector<[2]x1x1x3xf32>) -> vector<[2]x2x2x3xf32> {
+  %0 = vector.broadcast %arg0 : vector<[2]x1x1x3xf32> to vector<[2]x1x4x3xf32>
+  %1 = vector.shape_cast %0 : vector<[2]x1x4x3xf32> to vector<[2]x2x2x3xf32>
+  return %1 : vector<[2]x2x2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_bcast_scalable_unit_dim_axis_shift
+// CHECK:         vector.broadcast %{{.*}} : vector<[1]x1xf32> to vector<[1]x4xf32>
+// CHECK-NEXT:    vector.shape_cast %{{.*}} : vector<[1]x4xf32> to vector<4x[1]xf32>
+func.func @no_fold_bcast_scalable_unit_dim_axis_shift(%arg0: vector<[1]x1xf32>) -> vector<4x[1]xf32> {
+  %0 = vector.broadcast %arg0 : vector<[1]x1xf32> to vector<[1]x4xf32>
+  %1 = vector.shape_cast %0 : vector<[1]x4xf32> to vector<4x[1]xf32>
+  return %1 : vector<4x[1]xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_bcast_scalar
+// CHECK:         %[[RES:.*]] = vector.broadcast %{{.*}} : f32 to vector<2x4xf32>
+// CHECK-NEXT:    return %[[RES]] : vector<2x4xf32>
+func.func @fold_bcast_scalar(%arg0: f32) -> vector<2x4xf32> {
+  %0 = vector.broadcast %arg0 : f32 to vector<8xf32>
+  %1 = vector.shape_cast %0 : vector<8xf32> to vector<2x4xf32>
+  return %1 : vector<2x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_bcast_scalar_scalable
+// CHECK:         %[[RES:.*]] = vector.broadcast %{{.*}} : f32 to vector<2x[4]xf32>
+// CHECK-NEXT:    return %[[RES]] : vector<2x[4]xf32>
+func.func @fold_bcast_scalar_scalable(%arg0: f32) -> vector<2x[4]xf32> {
+  %0 = vector.broadcast %arg0 : f32 to vector<[8]xf32>
+  %1 = vector.shape_cast %0 : vector<[8]xf32> to vector<2x[4]xf32>
+  return %1 : vector<2x[4]xf32>
 }
