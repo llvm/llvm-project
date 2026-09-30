@@ -32,6 +32,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -49,6 +50,10 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "memory-builtins"
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 static cl::opt<unsigned> ObjectSizeOffsetVisitorMaxVisitInstructions(
     "object-size-offset-visitor-max-visit-instructions",
@@ -1441,9 +1446,11 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitSelectInst(SelectInst &I) {
     return TrueSide;
 
   Value *Size =
-      Builder.CreateSelect(I.getCondition(), TrueSide.Size, FalseSide.Size);
+      Builder.CreateSelect(I.getCondition(), TrueSide.Size, FalseSide.Size, "",
+                           ProfcheckDisableMetadataFixes ? nullptr : &I);
   Value *Offset =
-      Builder.CreateSelect(I.getCondition(), TrueSide.Offset, FalseSide.Offset);
+      Builder.CreateSelect(I.getCondition(), TrueSide.Offset, FalseSide.Offset,
+                           "", ProfcheckDisableMetadataFixes ? nullptr : &I);
   return SizeOffsetValue(Size, Offset);
 }
 

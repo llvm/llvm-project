@@ -12,8 +12,10 @@ shared_binary_target_configs = [
 ]
 
 # Apply that default list to the binary target types.
+executable_target_configs = shared_binary_target_configs +
+                            [ "//llvm/utils/gn/build:no_exported_symbols" ]
 set_defaults("executable") {
-  configs = shared_binary_target_configs
+  configs = executable_target_configs
 }
 set_defaults("loadable_module") {
   configs = shared_binary_target_configs
