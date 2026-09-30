@@ -8,6 +8,7 @@
 ; RUN: not llvm-as -disable-output < %t/bad-ratio.ll 2>&1 | FileCheck %s --check-prefix=BAD-RATIO
 ; RUN: not llvm-as -disable-output < %t/bad-result-type.ll 2>&1 | FileCheck %s --check-prefix=BAD-RESULT-TY
 ; RUN: not llvm-as -disable-output < %t/bad-data-type.ll 2>&1 | FileCheck %s --check-prefix=BAD-DATA-TY
+; RUN: not llvm-as -disable-output < %t/bad-mdata-v1.ll 2>&1 | FileCheck %s --check-prefix=BAD-MDATA-V1
 
 ;--- bad-elem-type.ll
 
@@ -91,4 +92,13 @@ define { i32, <2 x i16> } @bad_spcompress_data_type(i32 %spdesc,
 ; BAD-DATA-TY: invalid llvm.nvvm.spcompress operand or result type
   %res = call { i32, <2 x i16> } @llvm.nvvm.spcompress.i32.v2i16.v8i8(<8 x i8> %data, i32 %spdesc, i32 2, i32 4)
   ret { i32, <2 x i16> } %res
+}
+
+;--- bad-mdata-v1.ll
+
+define <1 x i32> @bad_spcompress_metadata_v1i32(i32 %spdesc, <8 x i8> %data) {
+; BAD-MDATA-V1: invalid llvm.nvvm.spcompress operand or result type
+  %res = call { <1 x i32>, <4 x i8> } @llvm.nvvm.spcompress.v1i32.v4i8.v8i8(<8 x i8> %data, i32 %spdesc, i32 2, i32 4)
+  %mdata = extractvalue { <1 x i32>, <4 x i8> } %res, 0
+  ret <1 x i32> %mdata
 }
