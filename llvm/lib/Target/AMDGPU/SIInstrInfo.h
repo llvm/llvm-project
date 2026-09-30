@@ -938,6 +938,28 @@ public:
 
   static bool isSpill(const MachineInstr &MI) { return isSpill(MI.getDesc()); }
 
+  /// Mark \p MI as a block prolog instruction if it is at the block start,
+  /// moving it ahead of any debug instructions and pseudo probes there.
+  static void setBBPrologIfAtBlockStart(MachineInstr &MI) {
+    MachineBasicBlock &MBB = *MI.getParent();
+    if (MI.isTerminator() ||
+        MBB.SkipPHIsLabelsAndDebug(MBB.begin()) != MI.getIterator())
+      return;
+    MachineBasicBlock::iterator Start = MBB.SkipPHIsAndLabels(MBB.begin());
+    if (Start != MI.getIterator())
+      MBB.splice(Start, &MBB, MI.getIterator());
+    MI.setFlag(MachineInstr::BBProlog);
+  }
+
+  /// Mark an SI_END_CF that starts its block as a block prolog instruction.
+  static void setEndCfBBProlog(MachineFunction &MF) {
+    for (MachineBasicBlock &MBB : MF) {
+      MachineBasicBlock::iterator I = MBB.SkipPHIsLabelsAndDebug(MBB.begin());
+      if (I != MBB.end() && I->getOpcode() == AMDGPU::SI_END_CF)
+        setBBPrologIfAtBlockStart(*I);
+    }
+  }
+
   static bool isWWMRegSpillOpcode(uint32_t Opcode) {
     return Opcode == AMDGPU::SI_SPILL_WWM_V32_SAVE ||
            Opcode == AMDGPU::SI_SPILL_WWM_AV32_SAVE ||
@@ -1739,11 +1761,6 @@ public:
 
   unsigned getLiveRangeSplitOpcode(Register Reg,
                                    const MachineFunction &MF) const override;
-
-  bool isBasicBlockPrologue(const MachineInstr &MI,
-                            Register Reg = Register()) const override;
-
-  bool canAddToBBProlog(const MachineInstr &MI) const;
 
   MachineInstr *createPHIDestinationCopy(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator InsPt,
