@@ -648,7 +648,8 @@ static_assert(fir::isSorted(cudaHandlers) && "map must be sorted");
 
 const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
                                                  bool isBindcCall) {
-  if (isBindcCall)
+  // cudadevice declares on_device() with bind(c).
+  if (isBindcCall && name != "on_device")
     return nullptr;
   auto compare = [](const IntrinsicHandler &cudaHandler, llvm::StringRef name) {
     return name.compare(cudaHandler.name) > 0;

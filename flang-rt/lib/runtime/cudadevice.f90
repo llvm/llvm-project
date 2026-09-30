@@ -2059,7 +2059,7 @@ implicit none
   end interface
 
   interface
-    attributes(device,host) logical function on_device()
+    attributes(device,host) logical function on_device() bind(c)
     end function
   end interface
 
