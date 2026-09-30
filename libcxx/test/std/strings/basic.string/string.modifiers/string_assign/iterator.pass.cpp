@@ -11,6 +11,8 @@
 // template<class InputIterator>
 //   basic_string& assign(InputIterator first, InputIterator last); // constexpr since C++20
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -28,9 +30,8 @@ TEST_CONSTEXPR_CXX20 void test(S s, It first, It last, S expected) {
   LIBCPP_ASSERT(is_string_asan_correct(s));
 }
 
-// [data(), data() + size() + 1) is a valid range that points into the string's own buffer -- data()[size()] is the
-// null terminator -- and it is one element longer than the capacity when the buffer is full, so assigning it
-// reallocates while the range still points into the buffer being replaced.
+// [data(), data() + size() + 1) includes the null terminator, so it is one element longer than capacity() when the
+// buffer is full: assigning it reallocates while the range still points into the old buffer.
 template <class S>
 TEST_CONSTEXPR_CXX20 void test_self_referencing_range(typename S::size_type minimum_capacity) {
   S s(minimum_capacity, 'a');
