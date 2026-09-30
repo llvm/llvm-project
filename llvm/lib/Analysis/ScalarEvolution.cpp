@@ -12250,30 +12250,13 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     // using one of the following ways:
     // 1.  LHS Pred      RHS  <-   FoundRHS Pred      FoundLHS
     // 2.  RHS SwapPred  LHS  <-   FoundLHS SwapPred  FoundRHS
-    // 3.  LHS Pred      RHS  <-  ~FoundLHS Pred     ~FoundRHS
-    // 4. ~LHS SwapPred ~RHS  <-   FoundLHS SwapPred  FoundRHS
-    // Forms 1. and 2. require swapping the operands of one condition. Don't
-    // do this if it would break canonical constant/addrec ordering.
+    // Both require swapping the operands of one condition. Don't do this if it
+    // would break canonical constant/addrec ordering.
     if (!isa<SCEVConstant>(RHS) && !isa<SCEVAddRecExpr>(LHS))
       return isImpliedCondOperands(ICmpInst::getSwappedCmpPredicate(*P), RHS,
                                    LHS, FoundLHS, FoundRHS, CtxI);
     if (!isa<SCEVConstant>(FoundRHS) && !isa<SCEVAddRecExpr>(FoundLHS))
       return isImpliedCondOperands(*P, LHS, RHS, FoundRHS, FoundLHS, CtxI);
-
-    // There's no clear preference between forms 3. and 4., try both.  Avoid
-    // forming getNotSCEV of pointer values as the resulting subtract is
-    // not legal.
-    if (!LHS->getType()->isPointerTy() && !RHS->getType()->isPointerTy() &&
-        isImpliedCondOperands(ICmpInst::getSwappedCmpPredicate(*P),
-                              getNotSCEV(LHS), getNotSCEV(RHS), FoundLHS,
-                              FoundRHS, CtxI))
-      return true;
-
-    if (!FoundLHS->getType()->isPointerTy() &&
-        !FoundRHS->getType()->isPointerTy() &&
-        isImpliedCondOperands(*P, LHS, RHS, getNotSCEV(FoundLHS),
-                              getNotSCEV(FoundRHS), CtxI))
-      return true;
 
     return false;
   }
