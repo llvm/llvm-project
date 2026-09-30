@@ -688,10 +688,9 @@ define i32 @select_of_abs(i1 %cond, i32 %x, i32 %y) {
 
 define float @select_of_pow_diff_exp(i1 %cond, float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_of_pow_diff_exp(
-; CHECK-NEXT:    [[POW1:%.*]] = call float @llvm.pow.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[POW2:%.*]] = call float @llvm.pow.f32(float [[X]], float [[Z:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[POW1]], float [[POW2]]
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[POW1:%.*]], float [[POW2:%.*]]
+; CHECK-NEXT:    [[SEL1:%.*]] = call float @llvm.pow.f32(float [[X:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[SEL1]]
 ;
   %pow1 = call float @llvm.pow.f32(float %x, float %y)
   %pow2 = call float @llvm.pow.f32(float %x, float %z)
@@ -701,10 +700,9 @@ define float @select_of_pow_diff_exp(i1 %cond, float %x, float %y, float %z) {
 
 define float @select_of_pow_diff_base(i1 %cond, float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_of_pow_diff_base(
-; CHECK-NEXT:    [[POW1:%.*]] = call float @llvm.pow.f32(float [[X:%.*]], float [[Z:%.*]])
-; CHECK-NEXT:    [[POW2:%.*]] = call float @llvm.pow.f32(float [[Y:%.*]], float [[Z]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[POW1]], float [[POW2]]
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[POW1:%.*]], float [[POW2:%.*]]
+; CHECK-NEXT:    [[SEL1:%.*]] = call float @llvm.pow.f32(float [[SEL]], float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[SEL1]]
 ;
   %pow1 = call float @llvm.pow.f32(float %x, float %z)
   %pow2 = call float @llvm.pow.f32(float %y, float %z)
@@ -714,10 +712,9 @@ define float @select_of_pow_diff_base(i1 %cond, float %x, float %y, float %z) {
 
 define double @select_of_pow_f64(i1 %cond, double %x, double %y, double %z) {
 ; CHECK-LABEL: @select_of_pow_f64(
-; CHECK-NEXT:    [[POW1:%.*]] = call double @llvm.pow.f64(double [[X:%.*]], double [[Y:%.*]])
-; CHECK-NEXT:    [[POW2:%.*]] = call double @llvm.pow.f64(double [[X]], double [[Z:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], double [[POW1]], double [[POW2]]
-; CHECK-NEXT:    ret double [[SEL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], double [[POW1:%.*]], double [[POW2:%.*]]
+; CHECK-NEXT:    [[SEL1:%.*]] = call double @llvm.pow.f64(double [[X:%.*]], double [[SEL]])
+; CHECK-NEXT:    ret double [[SEL1]]
 ;
   %pow1 = call double @llvm.pow.f64(double %x, double %y)
   %pow2 = call double @llvm.pow.f64(double %x, double %z)
@@ -727,10 +724,9 @@ define double @select_of_pow_f64(i1 %cond, double %x, double %y, double %z) {
 
 define <2 x float> @select_of_pow_vec(<2 x i1> %cond, <2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @select_of_pow_vec(
-; CHECK-NEXT:    [[POW1:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]])
-; CHECK-NEXT:    [[POW2:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> [[X]], <2 x float> [[Z:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x float> [[POW1]], <2 x float> [[POW2]]
-; CHECK-NEXT:    ret <2 x float> [[SEL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND:%.*]], <2 x float> [[POW1:%.*]], <2 x float> [[POW2:%.*]]
+; CHECK-NEXT:    [[SEL1:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> [[X:%.*]], <2 x float> [[SEL]])
+; CHECK-NEXT:    ret <2 x float> [[SEL1]]
 ;
   %pow1 = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> %y)
   %pow2 = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> %z)
@@ -740,10 +736,9 @@ define <2 x float> @select_of_pow_vec(<2 x i1> %cond, <2 x float> %x, <2 x float
 
 define <2 x float> @select_of_pow_vec_scalar_cond(i1 %cond, <2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @select_of_pow_vec_scalar_cond(
-; CHECK-NEXT:    [[POW1:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]])
-; CHECK-NEXT:    [[POW2:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> [[X]], <2 x float> [[Z:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <2 x float> [[POW1]], <2 x float> [[POW2]]
-; CHECK-NEXT:    ret <2 x float> [[SEL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <2 x float> [[POW1:%.*]], <2 x float> [[POW2:%.*]]
+; CHECK-NEXT:    [[SEL1:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> [[X:%.*]], <2 x float> [[SEL]])
+; CHECK-NEXT:    ret <2 x float> [[SEL1]]
 ;
   %pow1 = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> %y)
   %pow2 = call <2 x float> @llvm.pow.v2f32(<2 x float> %x, <2 x float> %z)
@@ -754,10 +749,9 @@ define <2 x float> @select_of_pow_vec_scalar_cond(i1 %cond, <2 x float> %x, <2 x
 ; Only FMF common to both calls are kept.
 define float @select_of_pow_fmf_intersect(i1 %cond, float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_of_pow_fmf_intersect(
-; CHECK-NEXT:    [[POW1:%.*]] = call nnan ninf float @llvm.pow.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[POW2:%.*]] = call ninf nsz float @llvm.pow.f32(float [[X]], float [[Z:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[POW1]], float [[POW2]]
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[POW1:%.*]], float [[POW2:%.*]]
+; CHECK-NEXT:    [[SEL1:%.*]] = call ninf float @llvm.pow.f32(float [[X:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[SEL1]]
 ;
   %pow1 = call nnan ninf float @llvm.pow.f32(float %x, float %y)
   %pow2 = call ninf nsz float @llvm.pow.f32(float %x, float %z)
@@ -767,10 +761,9 @@ define float @select_of_pow_fmf_intersect(i1 %cond, float %x, float %y, float %z
 
 define float @select_of_pow_select_fmf(i1 %cond, float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_of_pow_select_fmf(
-; CHECK-NEXT:    [[POW1:%.*]] = call float @llvm.pow.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[POW2:%.*]] = call float @llvm.pow.f32(float [[X]], float [[Z:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = select nnan i1 [[COND:%.*]], float [[POW1]], float [[POW2]]
-; CHECK-NEXT:    ret float [[SEL]]
+; CHECK-NEXT:    [[Z:%.*]] = select i1 [[COND:%.*]], float [[Y:%.*]], float [[Z1:%.*]]
+; CHECK-NEXT:    [[POW2:%.*]] = call float @llvm.pow.f32(float [[X:%.*]], float [[Z]])
+; CHECK-NEXT:    ret float [[POW2]]
 ;
   %pow1 = call float @llvm.pow.f32(float %x, float %y)
   %pow2 = call float @llvm.pow.f32(float %x, float %z)
@@ -780,9 +773,8 @@ define float @select_of_pow_select_fmf(i1 %cond, float %x, float %y, float %z) {
 
 define float @select_of_pow_prof(i1 %cond, float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_of_pow_prof(
-; CHECK-NEXT:    [[POW1:%.*]] = call float @llvm.pow.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[POW2:%.*]] = call float @llvm.pow.f32(float [[X]], float [[Z:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], float [[POW1]], float [[POW2]], !prof [[PROF1]]
+; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[COND:%.*]], float [[Y:%.*]], float [[Z:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    [[SEL:%.*]] = call float @llvm.pow.f32(float [[X:%.*]], float [[SEL_V]])
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %pow1 = call float @llvm.pow.f32(float %x, float %y)
