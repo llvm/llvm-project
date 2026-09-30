@@ -656,7 +656,8 @@ Register SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
 
   DebugLoc dl;
 
-  BuildMI(FirstMBB, MBBI, dl, get(SP::GETPCX), GlobalBaseReg);
+  BuildMI(FirstMBB, MBBI, dl, get(SP::GETPCX), GlobalBaseReg)
+      .setOperandDead(1); // implicit-def $o7
   SparcFI->setGlobalBaseReg(GlobalBaseReg);
   return GlobalBaseReg;
 }
