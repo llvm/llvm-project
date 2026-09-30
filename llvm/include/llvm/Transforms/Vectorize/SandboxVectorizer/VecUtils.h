@@ -505,7 +505,7 @@ public:
 
 extern template LLVM_TEMPLATE_ABI void
     VecUtils::DeadInstructionMorgue::collectPotentiallyDeadInstrs<Instruction>(
-          BndlRef<Instruction *>);
+        BndlRef<Instruction *>);
 
 } // namespace sandboxir
 
