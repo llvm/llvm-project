@@ -293,3 +293,34 @@ exit.fail:
   ret i8 0
 }
 
+
+declare void @use(i1)
+
+; The result is only used on the no-overflow edge, so it is %a - %b there.
+define void @usub_result_guarded(i8 %a, i8 %b) {
+; CHECK-LABEL: @usub_result_guarded(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[WO:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[WO]], 1
+; CHECK-NEXT:    br i1 [[OV]], label [[EXIT:%.*]], label [[NO_OV:%.*]]
+; CHECK:       no.ov:
+; CHECK-NEXT:    [[S:%.*]] = extractvalue { i8, i1 } [[WO]], 0
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %wo = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 %a, i8 %b)
+  %ov = extractvalue { i8, i1 } %wo, 1
+  br i1 %ov, label %exit, label %no.ov
+
+no.ov:
+  %s = extractvalue { i8, i1 } %wo, 0
+  %t = icmp ule i8 %s, %a
+  call void @use(i1 %t)
+  ret void
+
+exit:
+  ret void
+}
