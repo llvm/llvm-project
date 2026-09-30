@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=x86_64_lfi -exception-model=sjlj < %t/sjlj.ll | FileCheck -check-prefix=SJLJ %s
 ; RUN: llc -mtriple=x86_64_lfi < %t/dwarf.ll | FileCheck -check-prefix=DWARF %s
 
-; The SJLJ dispatch block jumps indirectly to the landing pad, so the
-; landing pad and the dispatch block both need bundle alignment. Other
+; The SJLJ dispatch block jumps indirectly to the landing pad through a jump
+; table, so the landing pad is bundle aligned as a jump table target. Other
 ; exception models have no dispatch block, and the landing pad is only
 ; aligned because it is an EH pad.
 
