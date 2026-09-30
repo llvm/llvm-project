@@ -6619,9 +6619,9 @@ static void workshareLoopTargetCallback(
   CLI->invalidate();
 }
 
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoopTarget(
     DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-    WorksharingLoopType LoopType, bool NoLoop) {
+    WorksharingLoopType LoopType, bool NeedsBarrier, bool NoLoop) {
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
   IdentFlag Flag = IdentFlag(0);
@@ -6720,6 +6720,17 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
                                 LoopType, NoLoop);
   };
   addOutlineInfo(std::move(OI));
+
+  // Keep the barrier outside the outlined loop body so that every thread
+  // encounters it, including threads that execute no iterations.
+  if (NeedsBarrier) {
+    Builder.SetInsertPoint(CLI->getExit()->getTerminator());
+    InsertPointOrErrorTy BarrierIP =
+        createBarrier(LocationDescription(Builder.saveIP(), DL), OMPD_for,
+                      /*ForceSimpleCall=*/false, /*CheckCancelFlag=*/false);
+    if (!BarrierIP)
+      return BarrierIP.takeError();
+  }
   return CLI->getAfterIP();
 }
 
@@ -6731,7 +6742,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
     WorksharingLoopType LoopType, bool NoLoop, bool HasDistSchedule,
     Value *DistScheduleChunkSize) {
   if (Config.isTargetDevice())
-    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType, NoLoop);
+    return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType, NeedsBarrier,
+                                    NoLoop);
   OMPScheduleType EffectiveScheduleType = computeOpenMPScheduleType(
       SchedKind, ChunkSize, HasSimdModifier, HasMonotonicModifier,
       HasNonmonotonicModifier, HasOrderedClause, DistScheduleChunkSize);
