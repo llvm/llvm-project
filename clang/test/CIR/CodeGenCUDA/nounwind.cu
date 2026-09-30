@@ -1,6 +1,6 @@
 #include "Inputs/cuda.h"
 
-// REQUIRES: nvptx-registered-target
+// Device code is nounwind for both CUDA and HIP, independent of the target.
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -x cuda -fcuda-is-device \
 // RUN:   -fclangir -emit-cir %s -o - \
 // RUN: | FileCheck %s --check-prefix=CIR
@@ -8,6 +8,15 @@
 // RUN:   -fclangir -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -x cuda -fcuda-is-device \
+// RUN:   -emit-llvm %s -o - \
+// RUN: | FileCheck %s --check-prefix=LLVM
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device \
+// RUN:   -fclangir -emit-cir %s -o - \
+// RUN: | FileCheck %s --check-prefix=CIR
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device \
+// RUN:   -fclangir -emit-llvm %s -o - \
+// RUN: | FileCheck %s --check-prefix=LLVM
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=LLVM
 
@@ -20,6 +29,15 @@
 // RUN:   -fcxx-exceptions -fexceptions -fclangir -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -x cuda -fcuda-is-device \
+// RUN:   -fcxx-exceptions -fexceptions -emit-llvm %s -o - \
+// RUN: | FileCheck %s --check-prefix=LLVM
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device \
+// RUN:   -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o - \
+// RUN: | FileCheck %s --check-prefix=CIR
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device \
+// RUN:   -fcxx-exceptions -fexceptions -fclangir -emit-llvm %s -o - \
+// RUN: | FileCheck %s --check-prefix=LLVM
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -fcxx-exceptions -fexceptions -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=LLVM
 
@@ -63,6 +81,6 @@ __global__ void kernel(int *p) { *p = caller(*p); }
 // LLVM: ; Function Attrs: {{.*}}nounwind
 // LLVM-NEXT: declare {{.*}}@_ZN1DD1Ev(
 // LLVM: ; Function Attrs: {{.*}}nounwind
-// LLVM-NEXT: define {{.*}}ptx_kernel void @kernel({{.*}}){{.*}} #{{[0-9]+}} {
+// LLVM-NEXT: define {{.*}}void @kernel({{.*}}){{.*}} #{{[0-9]+}} {
 // LLVM: call {{.*}}@caller({{.*}}) #[[CALL_ATTR]]
 // LLVM: attributes #[[CALL_ATTR]] = {{{.*}}nounwind
