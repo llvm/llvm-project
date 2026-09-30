@@ -2974,11 +2974,11 @@ def : Pat<(int_nvvm_ui2f_rp i32:$a), (CVT_f32_u32 $a, CvtRP)>;
 
 // Utility to look up base and satfinite variants of a conversion intrinsic.
 // Missing variants are left unset so this can be used when only one exists.
-class ToCvtIntrinsics<string suffix> {
-  Intrinsic base = !if(!exists<Intrinsic>("int_nvvm_" # suffix),
-                       !cast<Intrinsic>("int_nvvm_" # suffix), ?);
-  Intrinsic sf = !if(!exists<Intrinsic>("int_nvvm_" # suffix # "_satfinite"),
-                     !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite"), ?);
+class ToCvtIntrinsics<string suffix, string tail = ""> {
+  Intrinsic base = !if(!exists<Intrinsic>("int_nvvm_" # suffix # tail),
+                       !cast<Intrinsic>("int_nvvm_" # suffix # tail), ?);
+  Intrinsic sf = !if(!exists<Intrinsic>("int_nvvm_" # suffix # "_satfinite" # tail),
+                     !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite" # tail), ?);
 }
 
 foreach rnd = ["rn", "rz"] in {
@@ -3105,9 +3105,9 @@ foreach dst = ["e4m3x2", "e5m2x2"] in {
       defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
       defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
       defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
-      defvar F32Scale = !cast<Intrinsic>("int_nvvm_ff_to_" # Suffix # "_scale_n1_ue8m0");
-      defvar F16Scale = !cast<Intrinsic>("int_nvvm_f16x2_to_" # Suffix # "_scale_n1_ue8m0");
-      defvar BF16Scale = !cast<Intrinsic>("int_nvvm_bf16x2_to_" # Suffix # "_satfinite_scale_n1_ue8m0");
+      defvar F32Scale = ToCvtIntrinsics<"ff_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar F16Scale = ToCvtIntrinsics<"f16x2_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar BF16Scale = ToCvtIntrinsics<"bf16x2_to_" # Suffix, "_scale_n1_ue8m0">;
 
       foreach pzo = [0, 1] in {
         defvar PZO = !if(pzo, -1, 0);
@@ -3125,13 +3125,13 @@ foreach dst = ["e4m3x2", "e5m2x2"] in {
         def : Pat<(BF16X2.sf v2bf16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2") $a, Mode)>,
               Requires<BF16X2Preds>;
 
-        def : Pat<(F32Scale f32:$a, f32:$b, i16:$s, PZO),
+        def : Pat<(F32Scale.base f32:$a, f32:$b, i16:$s, PZO),
                   (!cast<NVPTXInst>("CVT_" # dst # "_f32_scale_n1") $a, $b, $s, Mode)>,
               Requires<[hasRubinFamilySupport]>;
-        def : Pat<(F16Scale v2f16:$a, i16:$s, PZO),
+        def : Pat<(F16Scale.base v2f16:$a, i16:$s, PZO),
                   (!cast<NVPTXInst>("CVT_" # dst # "_f16x2_scale_n1") $a, $s, Mode)>,
               Requires<[hasRubinFamilySupport]>;
-        def : Pat<(BF16Scale v2bf16:$a, i16:$s, PZO),
+        def : Pat<(BF16Scale.sf v2bf16:$a, i16:$s, PZO),
                   (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_scale_n1") $a, $s, Mode)>,
               Requires<[hasRubinFamilySupport]>;
       }
@@ -3195,9 +3195,9 @@ foreach dst = ["e2m3x2", "e3m2x2"] in {
       defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
       defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
       defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
-      defvar F32Scale = !cast<Intrinsic>("int_nvvm_ff_to_" # Suffix # "_satfinite_scale_n1_ue8m0");
-      defvar F16Scale = !cast<Intrinsic>("int_nvvm_f16x2_to_" # Suffix # "_satfinite_scale_n1_ue8m0");
-      defvar BF16Scale = !cast<Intrinsic>("int_nvvm_bf16x2_to_" # Suffix # "_satfinite_scale_n1_ue8m0");
+      defvar F32Scale = ToCvtIntrinsics<"ff_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar F16Scale = ToCvtIntrinsics<"f16x2_to_" # Suffix, "_scale_n1_ue8m0">;
+      defvar BF16Scale = ToCvtIntrinsics<"bf16x2_to_" # Suffix, "_scale_n1_ue8m0">;
 
       foreach pzo = [0, 1] in {
         defvar PZO = !if(pzo, -1, 0);
@@ -3215,13 +3215,13 @@ foreach dst = ["e2m3x2", "e3m2x2"] in {
         def : Pat<(BF16X2.sf v2bf16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_sf") $a, Mode)>,
               Requires<FPX2Preds>;
 
-        def : Pat<(F32Scale f32:$a, f32:$b, i16:$s, PZO),
+        def : Pat<(F32Scale.sf f32:$a, f32:$b, i16:$s, PZO),
                   (!cast<NVPTXInst>("CVT_" # dst # "_f32_sf_scale_n1") $a, $b, $s, Mode)>,
               Requires<[hasRubinFamilySupport]>;
-        def : Pat<(F16Scale v2f16:$a, i16:$s, PZO),
+        def : Pat<(F16Scale.sf v2f16:$a, i16:$s, PZO),
                   (!cast<NVPTXInst>("CVT_" # dst # "_f16x2_sf_scale_n1") $a, $s, Mode)>,
               Requires<[hasRubinFamilySupport]>;
-        def : Pat<(BF16Scale v2bf16:$a, i16:$s, PZO),
+        def : Pat<(BF16Scale.sf v2bf16:$a, i16:$s, PZO),
                   (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_sf_scale_n1") $a, $s, Mode)>,
               Requires<[hasRubinFamilySupport]>;
       }
@@ -3261,9 +3261,9 @@ foreach relu = ["", "relu"] in {
     defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
     defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
     defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
-    defvar F32Scale = !cast<Intrinsic>("int_nvvm_ff_to_" # Suffix # "_satfinite_scale_n1_ue8m0");
-    defvar F16Scale = !cast<Intrinsic>("int_nvvm_f16x2_to_" # Suffix # "_satfinite_scale_n1_ue8m0");
-    defvar BF16Scale = !cast<Intrinsic>("int_nvvm_bf16x2_to_" # Suffix # "_satfinite_scale_n1_ue8m0");
+    defvar F32Scale = ToCvtIntrinsics<"ff_to_" # Suffix, "_scale_n1_ue8m0">;
+    defvar F16Scale = ToCvtIntrinsics<"f16x2_to_" # Suffix, "_scale_n1_ue8m0">;
+    defvar BF16Scale = ToCvtIntrinsics<"bf16x2_to_" # Suffix, "_scale_n1_ue8m0">;
 
     foreach pzo = [0, 1] in {
       defvar PZO = !if(pzo, -1, 0);
@@ -3281,11 +3281,11 @@ foreach relu = ["", "relu"] in {
       def : Pat<(BF16X2.sf v2bf16:$a, PZO), (CVT_e2m1x2_bf16x2_sf $a, Mode)>,
             Requires<FPX2Preds>;
 
-      def : Pat<(F32Scale f32:$a, f32:$b, i16:$s, PZO), (CVT_e2m1x2_f32_sf_scale_n1 $a, $b, $s, Mode)>,
+      def : Pat<(F32Scale.sf f32:$a, f32:$b, i16:$s, PZO), (CVT_e2m1x2_f32_sf_scale_n1 $a, $b, $s, Mode)>,
             Requires<[hasRubinFamilySupport]>;
-      def : Pat<(F16Scale v2f16:$a, i16:$s, PZO), (CVT_e2m1x2_f16x2_sf_scale_n1 $a, $s, Mode)>,
+      def : Pat<(F16Scale.sf v2f16:$a, i16:$s, PZO), (CVT_e2m1x2_f16x2_sf_scale_n1 $a, $s, Mode)>,
             Requires<[hasRubinFamilySupport]>;
-      def : Pat<(BF16Scale v2bf16:$a, i16:$s, PZO), (CVT_e2m1x2_bf16x2_sf_scale_n1 $a, $s, Mode)>,
+      def : Pat<(BF16Scale.sf v2bf16:$a, i16:$s, PZO), (CVT_e2m1x2_bf16x2_sf_scale_n1 $a, $s, Mode)>,
             Requires<[hasRubinFamilySupport]>;
     }
   }
