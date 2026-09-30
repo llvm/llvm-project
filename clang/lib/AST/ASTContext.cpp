@@ -15923,8 +15923,7 @@ private:
     // getIntWidth may be narrower still (bool, _BitInt); those occupied bits
     // are the low-order bits of the value container.
     const uint64_t OccupiedSizeInBits =
-        std::min(DeclaredSizeInBits,
-                 static_cast<uint64_t>(Ctx.getTypeSize(Field->getType())));
+        std::min(DeclaredSizeInBits,Ctx.getTypeSize(Field->getType()));
 
     if (Ctx.getTargetInfo().isLittleEndian()) {
       OccuppiedIntervals.push_back(
