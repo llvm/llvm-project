@@ -4,7 +4,8 @@
 !CHECK: not yet implemented: DEPOBJ dependence-type
 
 subroutine f00(x)
-  integer :: x
+  use iso_c_binding, only: c_intptr_t
+  integer(c_intptr_t) :: x
   !$omp task depend(depobj: x)
   !$omp end task
 end
