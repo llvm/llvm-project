@@ -27,6 +27,10 @@
 ; RUN: echo 'c 1 3' >> %t4
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t3 | FileCheck %s -check-prefix=LINUX-SECTIONS2
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t4 | FileCheck %s -check-prefix=LINUX-SECTIONS2
+;
+; Test3: With -function-splitting=none, the Test1 profile still decides the
+; layout, but all basic blocks are placed in the function's section.
+; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2 -function-splitting=none | FileCheck %s -check-prefix=LINUX-NOSPLIT
 
 define void @foo(i1 zeroext) nounwind {
   %2 = alloca i8, align 1
@@ -90,3 +94,14 @@ declare i32 @baz() #1
 ; LINUX-SECTIONS2-NOT:  	.LBB_END0_{{0-9}}+
 ; LINUX-SECTIONS2-LABEL:	.Lfunc_end0:
 ; LINUX-SECTIONS2-NEXT:		.size foo, .Lfunc_end0-foo
+
+; LINUX-NOSPLIT:       .section .text.foo,"ax",@progbits
+; LINUX-NOSPLIT-LABEL: foo:
+; LINUX-NOSPLIT-NOT:   .section
+; LINUX-NOSPLIT:       # %bb.2:
+; LINUX-NOSPLIT-NOT:   .section
+; LINUX-NOSPLIT:       .LBB0_1:
+; LINUX-NOSPLIT-NOT:   .section
+; LINUX-NOSPLIT:       .LBB0_3:
+; LINUX-NOSPLIT-NOT:   .section
+; LINUX-NOSPLIT-LABEL: .Lfunc_end0:
