@@ -14,7 +14,7 @@
 
 ; OFF-NOT: amdgpu.no.fine.grained.memory
 ; OFF-NOT: amdgpu.no.remote.memory
-; OFF-NOT: amdgpu.ignore.denormal.mode
+; OFF-NOT: atomic.ignore.denormal.mode
 
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - -filetype=obj \
@@ -29,7 +29,7 @@
 ; CHECK-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"
 ; CHECK-DAG: %[[#md_nfg:]] = OpString "amdgpu.no.fine.grained.memory"
 ; CHECK-DAG: %[[#md_nrm:]] = OpString "amdgpu.no.remote.memory"
-; CHECK-DAG: %[[#md_idn:]] = OpString "amdgpu.ignore.denormal.mode"
+; CHECK-DAG: %[[#md_idn:]] = OpString "atomic.ignore.denormal.mode"
 ; CHECK-DAG: %[[#void:]] = OpTypeVoid
 
 ; Integer atomic (add) with two metadata kinds.
@@ -56,7 +56,7 @@ define amdgpu_kernel void @test_iadd(ptr addrspace(1) %ptr) {
 }
 
 define amdgpu_kernel void @test_fadd(ptr addrspace(1) %ptr) {
-  %val = atomicrmw fadd ptr addrspace(1) %ptr, float 1.0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %val = atomicrmw fadd ptr addrspace(1) %ptr, float 1.0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
   ret void
 }
 

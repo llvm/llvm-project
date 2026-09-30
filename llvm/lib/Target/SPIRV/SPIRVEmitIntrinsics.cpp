@@ -3119,9 +3119,9 @@ void SPIRVEmitIntrinsicsImpl::insertSpirvDecorations(Instruction *I,
     if (I->hasMetadata("amdgpu.no.remote.memory"))
       MDs.push_back(MDNode::get(
           Ctx, {AuxMD, MDString::get(Ctx, "amdgpu.no.remote.memory")}));
-    if (I->hasMetadata("amdgpu.ignore.denormal.mode"))
+    if (I->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode))
       MDs.push_back(MDNode::get(
-          Ctx, {AuxMD, MDString::get(Ctx, "amdgpu.ignore.denormal.mode")}));
+          Ctx, {AuxMD, MDString::get(Ctx, "atomic.ignore.denormal.mode")}));
     if (!MDs.empty()) {
       setInsertPointAfterDef(B, I);
       B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},

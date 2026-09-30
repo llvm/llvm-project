@@ -232,7 +232,7 @@ struct ModuleAnalysisInfo {
     case AMDGPUAtomicMDKind::NoRemoteMemory:
       return "amdgpu.no.remote.memory";
     case AMDGPUAtomicMDKind::IgnoreDenormalMode:
-      return "amdgpu.ignore.denormal.mode";
+      return "atomic.ignore.denormal.mode";
     }
     llvm_unreachable("unknown AMDGPUAtomicMDKind");
   }

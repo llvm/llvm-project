@@ -762,7 +762,7 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
                     .Case("amdgpu.no.fine.grained.memory",
                           AMDMD::NoFineGrainedMemory)
                     .Case("amdgpu.no.remote.memory", AMDMD::NoRemoteMemory)
-                    .Case("amdgpu.ignore.denormal.mode",
+                    .Case("atomic.ignore.denormal.mode",
                           AMDMD::IgnoreDenormalMode)
                     .Default(std::nullopt);
             if (MaybeKind)
