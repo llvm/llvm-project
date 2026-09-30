@@ -414,12 +414,7 @@ public:
 
   static bool HasStaticStorageDuration(const Symbol &symbol) {
     auto &ultSym = symbol.GetUltimate();
-    // Module-scope variable
-    return ultSym.owner().kind() == Scope::Kind::Module ||
-        // Data statement variable
-        ultSym.flags().test(Symbol::Flag::InDataStmt) ||
-        // Save attribute variable
-        ultSym.attrs().test(Attr::SAVE) ||
+    return IsSaved(ultSym) ||
         // Referenced in a common block
         ultSym.flags().test(Symbol::Flag::InCommonBlock);
   }
@@ -2769,9 +2764,6 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     bool targetDir = llvm::omp::allTargetSet.test(dirContext.directive);
     bool parallelDir = llvm::omp::topParallelSet.test(dirContext.directive);
     bool teamsDir = llvm::omp::allTeamsSet.test(dirContext.directive);
-    bool isStaticStorageDuration = HasStaticStorageDuration(*symbol);
-    LLVM_DEBUG(llvm::dbgs()
-        << "HasStaticStorageDuration(" << symbol->name() << "):\n");
 
     const Symbol *crayPtr = nullptr;
     Symbol::Flags crayPtrDSA;
@@ -2898,7 +2890,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     } else if (taskGenDir) {
       // TODO 5) dummy arg in orphaned taskgen construct -> firstprivate
       if (prevDSA.test(Symbol::Flag::OmpShared) ||
-          (isStaticStorageDuration &&
+          (HasStaticStorageDuration(*symbol) &&
               (prevDSA & dataSharingAttributeFlags).none())) {
         // 6) shared in enclosing context -> shared
         dsa = {Symbol::Flag::OmpShared};
