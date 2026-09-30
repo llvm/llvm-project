@@ -2752,6 +2752,44 @@ xegpu::DistributeLayoutAttr xegpu::setupInterleaveResultLayout(
                                            resShape[innerMostDim], uArch);
 }
 
+xegpu::DistributeLayoutAttr xegpu::setupShapeCastResultLayout(
+    xegpu::LayoutKind layoutKind, VectorType srcVecTy, VectorType resVecTy,
+    DistributeLayoutAttr consumerLayout) {
+  // TODO: work out the subgroup-level rule; leave such layouts alone for now.
+  if (!consumerLayout || layoutKind == xegpu::LayoutKind::Subgroup)
+    return consumerLayout;
+
+  ArrayRef<int64_t> resShape = resVecTy.getShape();
+  SmallVector<SmallVector<int64_t>> splitDimGroups;
+  if (!xegpu::matchSplitDimExpansion(srcVecTy.getShape(), resShape,
+                                     splitDimGroups))
+    return consumerLayout;
+
+  SmallVector<int64_t> laneLayout = consumerLayout.getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
+  if (laneLayout.empty())
+    return consumerLayout;
+
+  xegpu::DistributeLayoutAttr resLayout = consumerLayout;
+  for (const SmallVector<int64_t> &dimGroup : splitDimGroups) {
+    size_t i = 0;
+    while (i < dimGroup.size() && laneLayout[dimGroup[i]] == 1)
+      ++i;
+
+    for (++i; i < dimGroup.size(); ++i) {
+      int64_t dim = dimGroup[i];
+      int64_t dimSize = resShape[dim];
+      int64_t lanes = laneLayout[dim];
+      if (lanes <= 0 || dimSize % lanes != 0)
+        return consumerLayout;
+      resLayout = resLayout.setDimData(dim, /*sgData=*/-1,
+                                       instData.empty() ? -1 : dimSize,
+                                       dimSize / lanes);
+    }
+  }
+  return resLayout;
+}
+
 /// Sets up the result layout for an insert strided slice operation.
 /// Creates a result layout based on the specified layout kind (InstData or
 /// Lane).

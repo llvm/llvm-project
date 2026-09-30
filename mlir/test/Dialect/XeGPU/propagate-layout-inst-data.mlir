@@ -700,3 +700,33 @@ gpu.module @test {
     gpu.return
   }
 }
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @shape_cast_split_fills_strided_inner_dim(
+// CHECK: %[[CAST:.*]] = vector.shape_cast %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 2, 32], lane_layout = [1, 2, 8], lane_data = [1, 1, 4]>} : vector<16x1024xbf16> to vector<16x32x32xbf16>
+func.func @shape_cast_split_fills_strided_inner_dim(%arg0: memref<16x1024xbf16>) {
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<16x1024xbf16> -> !xegpu.tensor_desc<16x1024xbf16>
+  %1 = xegpu.load_nd %0[0, 0] : !xegpu.tensor_desc<16x1024xbf16> -> vector<16x1024xbf16>
+  %2 = vector.shape_cast %1 : vector<16x1024xbf16> to vector<16x32x32xbf16>
+  %3 = xegpu.convert_layout %2
+     <{target_layout = #xegpu.layout<inst_data = [1, 2, 8], lane_layout = [1, 2, 8], lane_data = [1, 1, 1]>}>
+     : vector<16x32x32xbf16>
+  return
+}
+}
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @shape_cast_split_fills_middle_dim(
+// CHECK: %[[CAST:.*]] = vector.shape_cast %{{.*}} {layout_result_0 = #xegpu.layout<inst_data = [1, 2, 4, 16], lane_layout = [1, 2, 2, 4], lane_data = [1, 1, 2, 4]>} : vector<16x128xbf16> to vector<16x2x4x16xbf16>
+func.func @shape_cast_split_fills_middle_dim(%arg0: memref<16x128xbf16>) {
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<16x128xbf16> -> !xegpu.tensor_desc<16x128xbf16>
+  %1 = xegpu.load_nd %0[0, 0] : !xegpu.tensor_desc<16x128xbf16> -> vector<16x128xbf16>
+  %2 = vector.shape_cast %1 : vector<16x128xbf16> to vector<16x2x4x16xbf16>
+  %3 = xegpu.convert_layout %2
+     <{target_layout = #xegpu.layout<inst_data = [1, 2, 2, 4], lane_layout = [1, 2, 2, 4], lane_data = [1, 1, 1, 1]>}>
+     : vector<16x2x4x16xbf16>
+  return
+}
+}

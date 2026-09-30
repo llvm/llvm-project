@@ -672,8 +672,13 @@ void LayoutInfoPropagation::visitShapeCastOp(
   auto resultLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
-  xegpu::DistributeLayoutAttr srcLayoutAttr =
-      xegpu::inferShapeCastSourceLayout(resultLayoutAttr, resShape, srcShape);
+  auto requiredResLayoutAttr = xegpu::setupShapeCastResultLayout(
+      layoutKind, shapeCast.getSourceVectorType(),
+      shapeCast.getResultVectorType(), resultLayoutAttr);
+  xegpu::setTemporaryLayout(shapeCast->getResult(0), requiredResLayoutAttr);
+
+  xegpu::DistributeLayoutAttr srcLayoutAttr = xegpu::inferShapeCastSourceLayout(
+      requiredResLayoutAttr, resShape, srcShape);
   // shape_cast is not an anchor op: another consumer of the source value may
   // still supply a valid layout, so warn instead of stopping the propagation.
   if (!srcLayoutAttr) {
