@@ -2225,7 +2225,7 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
     MB.CreateIndexAssumption(RowIdx, NumRows);
 
   Value *FlatMatrix = Visit(E->getBase());
-  llvm::Type *ElemTy = CGF.ConvertTypeForMem(MatrixTy->getElementType());
+  llvm::Type *ElemTy = CGF.ConvertType(MatrixTy->getElementType());
   auto *ResultTy = llvm::FixedVectorType::get(ElemTy, NumColumns);
   Value *RowVec = llvm::PoisonValue::get(ResultTy);
 
@@ -2239,7 +2239,7 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
     RowVec = Builder.CreateInsertElement(RowVec, Elt, Lane, "matrix_row_ins");
   }
 
-  return CGF.EmitFromMemory(RowVec, E->getType());
+  return RowVec;
 }
 
 Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
@@ -2548,30 +2548,42 @@ bool CodeGenFunction::ShouldNullCheckClassCastValue(const CastExpr *CE) {
   return true;
 }
 
+template <typename GetElementTy>
+static Value *
+EmitHLSLElementwiseCastToVector(CodeGenFunction &CGF, QualType DestTy,
+                                unsigned NumSrcElements,
+                                GetElementTy GetElement, SourceLocation Loc) {
+  const auto *VecTy = DestTy->castAs<VectorType>();
+  assert(NumSrcElements >= VecTy->getNumElements() &&
+         "Flattened type on RHS must have the same number or more elements "
+         "than vector on LHS.");
+  Value *V = llvm::PoisonValue::get(CGF.ConvertType(DestTy));
+  for (unsigned I = 0, E = VecTy->getNumElements(); I < E; ++I) {
+    auto [Element, ElementTy] = GetElement(I);
+    Value *Cast = CGF.EmitScalarConversion(Element, ElementTy,
+                                           VecTy->getElementType(), Loc);
+    V = CGF.Builder.CreateInsertElement(V, Cast, I);
+  }
+  return V;
+}
+
 // RHS is an aggregate type
 static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
                                       QualType DestTy, SourceLocation Loc) {
   SmallVector<LValue, 16> LoadList;
   CGF.FlattenAccessAndTypeLValue(SrcVal, LoadList);
   // Dest is either a vector, constant matrix, or a builtin
-  // if its a vector create a temp alloca to store into and return that
-  if (auto *VecTy = DestTy->getAs<VectorType>()) {
-    assert(LoadList.size() >= VecTy->getNumElements() &&
-           "Flattened type on RHS must have the same number or more elements "
-           "than vector on LHS.");
-    llvm::Value *V = llvm::PoisonValue::get(CGF.ConvertType(DestTy));
-    // write to V.
-    for (unsigned I = 0, E = VecTy->getNumElements(); I < E; I++) {
-      RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
-      assert(RVal.isScalar() &&
-             "All flattened source values should be scalars.");
-      llvm::Value *Cast =
-          CGF.EmitScalarConversion(RVal.getScalarVal(), LoadList[I].getType(),
-                                   VecTy->getElementType(), Loc);
-      V = CGF.Builder.CreateInsertElement(V, Cast, I);
-    }
-    return V;
-  }
+  if (DestTy->isVectorType())
+    return EmitHLSLElementwiseCastToVector(
+        CGF, DestTy, LoadList.size(),
+        [&](unsigned I) {
+          RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
+          assert(RVal.isScalar() &&
+                 "All flattened source values should be scalars.");
+          return std::pair(RVal.getScalarVal(), LoadList[I].getType());
+        },
+        Loc);
+
   if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
     assert(LoadList.size() >= MatTy->getNumElementsFlattened() &&
            "Flattened type on RHS must have the same number or more elements "
@@ -3187,6 +3199,24 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_HLSLElementwiseCast: {
     RValue RV = CGF.EmitAnyExpr(E);
     SourceLocation Loc = CE->getExprLoc();
+
+    if (const auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>()) {
+      assert(DestTy->isVectorType() &&
+             "Matrix elementwise cast destination must be a vector");
+      assert(RV.isScalar() && "Matrix rvalue must have scalar representation");
+      Value *SrcVal = RV.getScalarVal();
+      return EmitHLSLElementwiseCastToVector(
+          CGF, DestTy, SrcMatTy->getNumElementsFlattened(),
+          [&](unsigned I) {
+            unsigned Row = I / SrcMatTy->getNumColumns();
+            unsigned Col = I % SrcMatTy->getNumColumns();
+            unsigned Idx = SrcMatTy->getColumnMajorFlattenedIndex(Row, Col);
+            Value *Element =
+                Builder.CreateExtractElement(SrcVal, Idx, "matrixext");
+            return std::pair(Element, SrcMatTy->getElementType());
+          },
+          Loc);
+    }
 
     Address SrcAddr = Address::invalid();
 

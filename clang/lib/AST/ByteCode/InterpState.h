@@ -46,9 +46,6 @@ enum class EvaluationKind : uint8_t {
 /// Interpreter context.
 class InterpState final : public State {
 public:
-  InterpState(const State &Parent, Program &P, InterpStack &Stk,
-              FrameAllocator &FrameAlloc, Context &Ctx,
-              SourceMapper *M = nullptr);
   InterpState(const EvalSettings &Settings, Program &P, InterpStack &Stk,
               FrameAllocator &FrameAlloc, Context &Ctx,
               SourceMapper *M = nullptr);

@@ -53,7 +53,8 @@ public:
   virtual Value *FoldCmp(CmpInst::Predicate P, Value *LHS,
                          Value *RHS) const = 0;
 
-  virtual Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+  virtual Value *FoldGEP(const DataLayout &DL, Type *Ty, Value *Ptr,
+                         ArrayRef<Value *> IdxList,
                          GEPNoWrapFlags NW) const = 0;
 
   virtual Value *FoldSelect(Value *C, Value *True, Value *False,
