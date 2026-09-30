@@ -8386,12 +8386,14 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         B.buildInstr(AMDGPU::SI_IF)
             .addDef(NewDef)
             .addUse(NewUse)
-            .addMBB(UncondBrTarget);
+            .addMBB(UncondBrTarget)
+            .setOperandDead(4); // implicit-def $scc
       } else {
         B.buildInstr(AMDGPU::SI_ELSE)
             .addDef(NewDef)
             .addUse(NewUse)
-            .addMBB(UncondBrTarget);
+            .addMBB(UncondBrTarget)
+            .setOperandDead(4); // implicit-def $scc
       }
 
       if (Br) {
@@ -8434,7 +8436,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
       B.setInsertPt(B.getMBB(), BrCond->getIterator());
       B.buildCopy(NewReg, Reg);
-      B.buildInstr(AMDGPU::SI_LOOP).addUse(NewReg).addMBB(UncondBrTarget);
+      B.buildInstr(AMDGPU::SI_LOOP)
+          .addUse(NewReg)
+          .addMBB(UncondBrTarget)
+          .setOperandDead(3); // implicit-def $scc
 
       if (Br)
         Br->getOperand(0).setMBB(CondBrTarget);
