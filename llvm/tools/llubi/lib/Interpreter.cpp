@@ -1358,6 +1358,14 @@ public:
             }
           });
     }
+    case Intrinsic::smulh:
+    case Intrinsic::umulh:
+      return visitIntBinOpWithResult(
+          RetTy, Args[0], Args[1],
+          [IID](const APInt &LHS, const APInt &RHS) -> AnyValue {
+            return IID == Intrinsic::smulh ? APIntOps::mulhs(LHS, RHS)
+                                           : APIntOps::mulhu(LHS, RHS);
+          });
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
     case Intrinsic::vector_reduce_and:
