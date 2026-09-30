@@ -5917,7 +5917,15 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       if (!Unreachable)
         continue;
       auto *End = dyn_cast_or_null<CallBase>(Unreachable->getPrevNode());
-      if (!End || End->getIntrinsicID() != Intrinsic::coro_end)
+      if (!End)
+        continue;
+      Function *EndFn = End->getCalledFunction();
+      // The legacy i1-returning coro.end emitted by older frontends may be
+      // upgraded later in the same module read. Recognize it before its own
+      // auto-upgrade has run as well as after it has been renamed to .old.
+      if (End->getIntrinsicID() != Intrinsic::coro_end &&
+          (!EndFn || (EndFn->getName() != "llvm.coro.end" &&
+                      !EndFn->getName().starts_with("llvm.coro.end.old"))))
         continue;
       auto *Unwind = dyn_cast<ConstantInt>(End->getArgOperand(1));
       if (!Unwind || !Unwind->isZero())
