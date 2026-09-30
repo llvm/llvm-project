@@ -30,7 +30,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
@@ -155,48 +154,47 @@ class UnsafeBufferReachableAnalysis
           TypeConstrainedPointersAnalysisResult,
           UnsafeBufferUsageAnalysisResult, VirtualMethodFamilyAnalysisResult> {
 
-  struct BoundsPropagationGraph {
-    EdgeSet PointerFlows;
+  /// The pointer flow graph, partitioned by contributor.
+  const std::map<EntityId, EdgeSet> *PointerFlows = nullptr;
 
-    /// Returns the EntityPointerLevelSet that are reachable from \p Src by
-    /// one edge in the BoundsPropagationGraph.
-    EntityPointerLevelSet getDestNodes(const EntityPointerLevel &Src) const {
-      auto I = PointerFlows.find(Src);
-      if (I == PointerFlows.end())
-        return {};
-      return I->second;
-    }
-  };
+  /// The type-constrained entities, which are never unsafe.
+  const TypeConstrainedPointersAnalysisResult *TypeConstraints = nullptr;
 
-  std::map<EntityId, BoundsPropagationGraph> BPG;
+  /// The C1 unsafe pointers, partitioned by contributor.
+  const UnsafeBufferUsageAnalysisResult *UnsafePtrs = nullptr;
 
   /// Maps each virtual method slot to the ID of its override family.
   const llvm::DenseMap<EntityId, EntityId> *FamilyOf = nullptr;
 
-  /// The slots of each override family, excluding type-constrained ones.
+  /// The slots of each override family.
   llvm::DenseMap<EntityId, llvm::SmallVector<EntityId, 2>> FamilyMembers;
 
   // Use pointers for efficiency. EPLs are in tree-based containers that only
   // grow. So pointers to them are stable.
   using EPLPtr = const EntityPointerLevel *;
 
-  // Insert `EPL` into `Reachables`, and add it to `Worklist` if it is new:
+  // Insert `EPL` into `Reachables`, and add it to `Worklist` if it is new.
+  // Type-constrained pointers are never inserted, so the search never passes
+  // through them (C3):
   void insertReachable(const EntityPointerLevel &EPL,
                        std::vector<EPLPtr> &WorkList) {
+    if (TypeConstraints->contains(EPL.getEntity()))
+      return;
     auto [It, Inserted] = getResult().Reachables.insert(EPL);
     if (Inserted)
       WorkList.push_back(&*It);
   }
 
-  // Find all outgoing edges from `EPL` in the `Graph`, insert their
+  // Find all outgoing edges from `EPL` in the pointer flow graph, insert their
   // destination nodes into `Reachables`, and add newly discovered nodes to
   // `Worklist`:
   void updateReachablesWithOutgoings(EPLPtr EPL,
                                      std::vector<EPLPtr> &WorkList) {
-    for (auto &[Id, SubGraph] : BPG) {
-      auto R = SubGraph.getDestNodes(*EPL);
-
-      for (const auto &Dst : R)
+    for (const EdgeSet &SubGraph : llvm::make_second_range(*PointerFlows)) {
+      auto I = SubGraph.find(*EPL);
+      if (I == SubGraph.end())
+        continue;
+      for (const auto &Dst : I->second)
         insertReachable(Dst, WorkList);
     }
   }
@@ -215,15 +213,15 @@ class UnsafeBufferReachableAnalysis
                       WorkList);
   }
 
-  // Expand the initial set of C1 pointers in `getResult().Reachables` by
-  // computing and appending all reachable pointers, satisfying C1, C2 and C4.
+  // Compute all pointers reachable from the C1 pointers into
+  // `getResult().Reachables`, satisfying C1, C2, C3 and C4.
   void computeReachableUnsafePointers() {
-    auto &Reachables = getResult().Reachables;
     // Simple DFS:
     std::vector<EPLPtr> Worklist;
 
-    for (auto &EPL : Reachables)
-      Worklist.push_back(&EPL);
+    for (const auto &EPLs : llvm::make_second_range(*UnsafePtrs))
+      for (const auto &EPL : EPLs)
+        insertReachable(EPL, Worklist);
 
     while (!Worklist.empty()) {
       EPLPtr Node = Worklist.back();
@@ -240,50 +238,19 @@ public:
              const TypeConstrainedPointersAnalysisResult &TypeConstraints,
              const UnsafeBufferUsageAnalysisResult &UnsafePtrs,
              const VirtualMethodFamilyAnalysisResult &Families) override {
-    auto HasNoTypeConstraint =
-        [&TypeConstraints](const EntityPointerLevel &EPL) {
-          return !TypeConstraints.contains(EPL.getEntity());
-        };
-
-    // Filter out edges involving type-constrained pointers from `PtrFlowGraph`:
-    for (auto &[Id, SubGraph] : PtrFlowGraph.Edges) {
-      EdgeSet FilteredSubGraph;
-
-      for (const auto &[Src, Dsts] : SubGraph) {
-        if (TypeConstraints.contains(Src.getEntity()))
-          continue;
-
-        auto FilteredDstRange =
-            llvm::make_filter_range(Dsts, HasNoTypeConstraint);
-
-        if (!FilteredDstRange.empty())
-          FilteredSubGraph[Src].insert(FilteredDstRange.begin(),
-                                       FilteredDstRange.end());
-      }
-      if (!FilteredSubGraph.empty())
-        BPG.try_emplace(Id,
-                        BoundsPropagationGraph{std::move(FilteredSubGraph)});
-    }
-
-    // Filter out type-constrained pointers from `UnsafePtrs`:
-    for (auto &[Contributor, EPLs] : UnsafePtrs) {
-      auto FilteredRange = llvm::make_filter_range(EPLs, HasNoTypeConstraint);
-
-      getResult().Reachables.insert(FilteredRange.begin(), FilteredRange.end());
-    }
-
-    // Filter out type-constrained slots from the override families:
+    this->PointerFlows = &PtrFlowGraph.Edges;
+    this->TypeConstraints = &TypeConstraints;
+    this->UnsafePtrs = &UnsafePtrs;
     FamilyOf = &Families.RetAndParamData;
     for (auto [Slot, FamilyId] : Families.RetAndParamData)
-      if (!TypeConstraints.contains(Slot))
-        FamilyMembers[FamilyId].push_back(Slot);
+      FamilyMembers[FamilyId].push_back(Slot);
     return llvm::Error::success();
   }
 
   llvm::Expected<bool> step() override {
     // Compute the reachable EPLs from the C1 unsafe pointers over the
-    // pointer-flow graph and the override families; all three are already
-    // C3-filtered, so the result satisfies C1, C2, C3, and C4.
+    // pointer-flow graph and the override families, skipping type-constrained
+    // pointers, so the result satisfies C1, C2, C3, and C4.
     computeReachableUnsafePointers();
     // This is not an iterative algorithm so stop iteration by retruning false:
     return false;
