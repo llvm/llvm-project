@@ -36,7 +36,6 @@ class AssumptionCache;
 class BasicBlock;
 class CallBase;
 class CallInst;
-class CmpPredicate;
 class CondBrInst;
 class DIBuilder;
 class DomTreeUpdater;
@@ -566,14 +565,6 @@ LLVM_ABI bool canReplaceOperandWithVariable(const Instruction *I,
 
 /// Invert the given true/false value, possibly reusing an existing copy.
 LLVM_ABI Value *invertCondition(Value *Condition);
-
-/// If PredBB's conditional branch implies `icmp Pred, LHS, RHS` on the
-/// PredBB->SuccBB edge, return that compare's value on the edge, else
-/// std::nullopt.
-LLVM_ABI std::optional<bool>
-isImpliedByEdgeCondition(const BasicBlock *PredBB, const BasicBlock *SuccBB,
-                         CmpPredicate Pred, const Value *LHS, const Value *RHS,
-                         const DataLayout &DL);
 
 //===----------------------------------------------------------------------===//
 //  Assorted
