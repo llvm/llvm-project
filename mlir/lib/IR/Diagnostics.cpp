@@ -21,6 +21,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/SourceMgrDiagnosticVerifier.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -637,122 +638,17 @@ SMLoc SourceMgrDiagnosticHandler::convertLocToSMLoc(FileLineColLoc loc) {
 
 namespace mlir {
 namespace detail {
-/// This class represents an expected output diagnostic.
-struct ExpectedDiag {
-  ExpectedDiag(DiagnosticSeverity kind, unsigned lineNo, SMLoc fileLoc,
-               StringRef substring)
-      : kind(kind), lineNo(lineNo), fileLoc(fileLoc), substring(substring) {}
-
-  /// Emit an error at the location referenced by this diagnostic.
-  LogicalResult emitError(raw_ostream &os, llvm::SourceMgr &mgr,
-                          const Twine &msg) {
-    // fileLoc may be invalid when the expected diagnostic used an unknown
-    // location specifier (e.g. `// expected-error @unknown {{...}}`). In that
-    // case, skip the source range to avoid a null-pointer dereference and an
-    // assertion in SMRange that both endpoints must have the same validity.
-    if (fileLoc.isValid()) {
-      SMRange range(fileLoc, SMLoc::getFromPointer(fileLoc.getPointer() +
-                                                   substring.size()));
-      mgr.PrintMessage(os, fileLoc, llvm::SourceMgr::DK_Error, msg, range);
-    } else {
-      mgr.PrintMessage(os, fileLoc, llvm::SourceMgr::DK_Error, msg);
-    }
-    return failure();
-  }
-
-  /// Returns true if this diagnostic matches the given string.
-  bool match(StringRef str) const {
-    // If this isn't a regex diagnostic, we simply check if the string was
-    // contained.
-    if (substringRegex)
-      return substringRegex->match(str);
-    return str.contains(substring);
-  }
-
-  /// Compute the regex matcher for this diagnostic, using the provided stream
-  /// and manager to emit diagnostics as necessary.
-  LogicalResult computeRegex(raw_ostream &os, llvm::SourceMgr &mgr) {
-    std::string regexStr;
-    llvm::raw_string_ostream regexOS(regexStr);
-    StringRef strToProcess = substring;
-    while (!strToProcess.empty()) {
-      // Find the next regex block.
-      size_t regexIt = strToProcess.find("{{");
-      if (regexIt == StringRef::npos) {
-        regexOS << llvm::Regex::escape(strToProcess);
-        break;
-      }
-      regexOS << llvm::Regex::escape(strToProcess.take_front(regexIt));
-      strToProcess = strToProcess.drop_front(regexIt + 2);
-
-      // Find the end of the regex block.
-      size_t regexEndIt = strToProcess.find("}}");
-      if (regexEndIt == StringRef::npos)
-        return emitError(os, mgr, "found start of regex with no end '}}'");
-      StringRef regexStr = strToProcess.take_front(regexEndIt);
-
-      // Validate that the regex is actually valid.
-      std::string regexError;
-      if (!llvm::Regex(regexStr).isValid(regexError))
-        return emitError(os, mgr, "invalid regex: " + regexError);
-
-      regexOS << '(' << regexStr << ')';
-      strToProcess = strToProcess.drop_front(regexEndIt + 2);
-    }
-    substringRegex = llvm::Regex(regexStr);
-    return success();
-  }
-
-  /// The severity of the diagnosic expected.
-  DiagnosticSeverity kind;
-  /// The line number the expected diagnostic should be on.
-  unsigned lineNo;
-  /// The location of the expected diagnostic within the input file.
-  SMLoc fileLoc;
-  /// A flag indicating if the expected diagnostic has been matched yet.
-  bool matched = false;
-  /// The substring that is expected to be within the diagnostic.
-  StringRef substring;
-  /// An optional regex matcher, if the expected diagnostic sub-string was a
-  /// regex string.
-  std::optional<llvm::Regex> substringRegex;
-};
-
 struct SourceMgrDiagnosticVerifierHandlerImpl {
   SourceMgrDiagnosticVerifierHandlerImpl(
       SourceMgrDiagnosticVerifierHandler::Level level)
-      : status(success()), level(level) {}
+      : level(level) {}
 
-  /// Returns the expected diagnostics for the given source file.
-  std::optional<MutableArrayRef<ExpectedDiag>>
-  getExpectedDiags(StringRef bufName);
-
-  /// Computes the expected diagnostics for the given source buffer.
-  MutableArrayRef<ExpectedDiag>
-  computeExpectedDiags(raw_ostream &os, llvm::SourceMgr &mgr,
-                       const llvm::MemoryBuffer *buf);
-
-  SourceMgrDiagnosticVerifierHandler::Level getVerifyLevel() const {
-    return level;
-  }
-
-  /// The current status of the verifier.
-  LogicalResult status;
-
-  /// A list of expected diagnostics for each buffer of the source manager.
-  llvm::StringMap<SmallVector<ExpectedDiag, 2>> expectedDiagsPerFile;
-
-  /// A list of expected diagnostics with unknown locations.
-  SmallVector<ExpectedDiag, 2> expectedUnknownLocDiags;
-
-  /// Regex to match the expected diagnostics format.
-  llvm::Regex expected =
-      llvm::Regex("expected-(error|note|remark|warning)(-re)? "
-                  "*(@([+-][0-9]+|above|below|unknown))? *{{(.*)}}$");
+  /// The generic SourceMgr-based verifier core that this handler delegates
+  /// scanning and matching of 'expected-*' diagnostics to.
+  llvm::SourceMgrDiagnosticVerifier verifier;
 
   /// Verification level.
-  SourceMgrDiagnosticVerifierHandler::Level level =
-      SourceMgrDiagnosticVerifierHandler::Level::All;
+  SourceMgrDiagnosticVerifierHandler::Level level;
 };
 } // namespace detail
 } // namespace mlir
@@ -772,104 +668,6 @@ static StringRef getDiagKindStr(DiagnosticSeverity kind) {
   llvm_unreachable("Unknown DiagnosticSeverity");
 }
 
-std::optional<MutableArrayRef<ExpectedDiag>>
-SourceMgrDiagnosticVerifierHandlerImpl::getExpectedDiags(StringRef bufName) {
-  auto expectedDiags = expectedDiagsPerFile.find(bufName);
-  if (expectedDiags != expectedDiagsPerFile.end())
-    return MutableArrayRef<ExpectedDiag>(expectedDiags->second);
-  return std::nullopt;
-}
-
-MutableArrayRef<ExpectedDiag>
-SourceMgrDiagnosticVerifierHandlerImpl::computeExpectedDiags(
-    raw_ostream &os, llvm::SourceMgr &mgr, const llvm::MemoryBuffer *buf) {
-  // If the buffer is invalid, return an empty list.
-  if (!buf)
-    return {};
-  auto &expectedDiags = expectedDiagsPerFile[buf->getBufferIdentifier()];
-
-  // The number of the last line that did not correlate to a designator.
-  unsigned lastNonDesignatorLine = 0;
-
-  // The indices of designators that apply to the next non designator line.
-  SmallVector<unsigned, 1> designatorsForNextLine;
-
-  // Scan the file for expected-* designators.
-  SmallVector<StringRef, 100> lines;
-  buf->getBuffer().split(lines, '\n');
-  for (unsigned lineNo = 0, e = lines.size(); lineNo < e; ++lineNo) {
-    SmallVector<StringRef, 4> matches;
-    if (!expected.match(lines[lineNo].rtrim(), &matches)) {
-      // Check for designators that apply to this line.
-      if (!designatorsForNextLine.empty()) {
-        for (unsigned diagIndex : designatorsForNextLine)
-          expectedDiags[diagIndex].lineNo = lineNo + 1;
-        designatorsForNextLine.clear();
-      }
-      lastNonDesignatorLine = lineNo;
-      continue;
-    }
-
-    // Point to the start of expected-*.
-    SMLoc expectedStart = SMLoc::getFromPointer(matches[0].data());
-
-    DiagnosticSeverity kind;
-    if (matches[1] == "error")
-      kind = DiagnosticSeverity::Error;
-    else if (matches[1] == "warning")
-      kind = DiagnosticSeverity::Warning;
-    else if (matches[1] == "remark")
-      kind = DiagnosticSeverity::Remark;
-    else {
-      assert(matches[1] == "note");
-      kind = DiagnosticSeverity::Note;
-    }
-    ExpectedDiag record(kind, lineNo + 1, expectedStart, matches[5]);
-
-    // Check to see if this is a regex match, i.e. it includes the `-re`.
-    if (!matches[2].empty() && failed(record.computeRegex(os, mgr))) {
-      status = failure();
-      continue;
-    }
-
-    StringRef offsetMatch = matches[3];
-    if (!offsetMatch.empty()) {
-      offsetMatch = offsetMatch.drop_front(1);
-
-      // Get the integer value without the @ and +/- prefix.
-      if (offsetMatch[0] == '+' || offsetMatch[0] == '-') {
-        int offset;
-        offsetMatch.drop_front().getAsInteger(0, offset);
-
-        if (offsetMatch.front() == '+')
-          record.lineNo += offset;
-        else
-          record.lineNo -= offset;
-      } else if (offsetMatch.consume_front("unknown")) {
-        // This is matching unknown locations.
-        record.fileLoc = SMLoc();
-        expectedUnknownLocDiags.emplace_back(std::move(record));
-        continue;
-      } else if (offsetMatch.consume_front("above")) {
-        // If the designator applies 'above' we add it to the last non
-        // designator line.
-        record.lineNo = lastNonDesignatorLine + 1;
-      } else {
-        // Otherwise, this is a 'below' designator and applies to the next
-        // non-designator line.
-        assert(offsetMatch.consume_front("below"));
-        designatorsForNextLine.push_back(expectedDiags.size());
-
-        // Set the line number to the last in the case that this designator ends
-        // up dangling.
-        record.lineNo = e;
-      }
-    }
-    expectedDiags.emplace_back(std::move(record));
-  }
-  return expectedDiags;
-}
-
 SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
     llvm::SourceMgr &srcMgr, MLIRContext *ctx, raw_ostream &out, Level level)
     : SourceMgrDiagnosticHandler(srcMgr, ctx, out),
@@ -877,7 +675,8 @@ SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
   // Compute the expected diagnostics for each of the current files in the
   // source manager.
   for (unsigned i = 0, e = mgr.getNumBuffers(); i != e; ++i)
-    (void)impl->computeExpectedDiags(out, mgr, mgr.getMemoryBuffer(i + 1));
+    (void)impl->verifier.computeExpectedDiags(out, mgr,
+                                              mgr.getMemoryBuffer(i + 1));
 
   // The base class registered a handler that prints every diagnostic. The
   // verifier takes its place: it consumes diagnostics and reports unexpected
@@ -898,21 +697,7 @@ SourceMgrDiagnosticVerifierHandler::~SourceMgrDiagnosticVerifierHandler() {
 /// diagnostics were emitted. This return success if all diagnostics were
 /// verified correctly, failure otherwise.
 LogicalResult SourceMgrDiagnosticVerifierHandler::verify() {
-  // Verify that all expected errors were seen.
-  auto checkExpectedDiags = [&](ExpectedDiag &err) {
-    if (!err.matched)
-      impl->status =
-          err.emitError(os, mgr,
-                        "expected " + getDiagKindStr(err.kind) + " \"" +
-                            err.substring + "\" was not produced");
-  };
-  for (auto &expectedDiagsPair : impl->expectedDiagsPerFile)
-    for (auto &err : expectedDiagsPair.second)
-      checkExpectedDiags(err);
-  for (auto &err : impl->expectedUnknownLocDiags)
-    checkExpectedDiags(err);
-  impl->expectedDiagsPerFile.clear();
-  return impl->status;
+  return success(impl->verifier.verify(os, mgr));
 }
 
 std::unique_ptr<ScopedDiagnosticHandler>
@@ -934,55 +719,17 @@ void SourceMgrDiagnosticVerifierHandler::process(LocationAttr loc,
                                                  StringRef msg,
                                                  DiagnosticSeverity kind) {
   FileLineColLoc fileLoc = loc.findInstanceOf<FileLineColLoc>();
-  MutableArrayRef<ExpectedDiag> diags;
+  const llvm::MemoryBuffer *buf =
+      fileLoc ? getBufferForFile(fileLoc.getFilename()) : nullptr;
+  bool reportUnexpected = impl->level != Level::OnlyExpected;
 
-  if (fileLoc) {
-    // Get the expected diagnostics for this file.
-    if (auto maybeDiags = impl->getExpectedDiags(fileLoc.getFilename())) {
-      diags = *maybeDiags;
-    } else {
-      diags = impl->computeExpectedDiags(
-          os, mgr, getBufferForFile(fileLoc.getFilename()));
-    }
-  } else {
-    // Get all expected diagnostics at unknown locations.
-    diags = impl->expectedUnknownLocDiags;
-  }
-
-  // Search for a matching expected diagnostic.
-  // If we find something that is close then emit a more specific error.
-  ExpectedDiag *nearMiss = nullptr;
-
-  // If this was an expected error, remember that we saw it and return.
-  for (auto &e : diags) {
-    // File line must match (unless it's an unknown location).
-    if (fileLoc && fileLoc.getLine() != e.lineNo)
-      continue;
-    if (e.match(msg)) {
-      if (e.kind == kind) {
-        e.matched = true;
-        return;
-      }
-
-      // If this only differs based on the diagnostic kind, then consider it
-      // to be a near miss.
-      nearMiss = &e;
-    }
-  }
-
-  if (impl->getVerifyLevel() == Level::OnlyExpected)
-    return;
-
-  // Otherwise, emit an error for the near miss.
-  if (nearMiss)
-    mgr.PrintMessage(os, nearMiss->fileLoc, llvm::SourceMgr::DK_Error,
-                     "'" + getDiagKindStr(kind) +
-                         "' diagnostic emitted when expecting a '" +
-                         getDiagKindStr(nearMiss->kind) + "'");
-  else
+  using MatchResult = llvm::SourceMgrDiagnosticVerifier::MatchResult;
+  MatchResult result = impl->verifier.process(
+      os, mgr, getDiagKind(kind), /*hasLoc=*/static_cast<bool>(fileLoc), buf,
+      fileLoc ? fileLoc.getLine() : 0, msg, reportUnexpected);
+  if (result == MatchResult::Unexpected)
     emitDiagnostic(loc, "unexpected " + getDiagKindStr(kind) + ": " + msg,
                    DiagnosticSeverity::Error);
-  impl->status = failure();
 }
 
 //===----------------------------------------------------------------------===//
