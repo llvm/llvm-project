@@ -1068,7 +1068,7 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V, bool UseProvenance,
     // valid provenance. We assume ConstantPointerNull does not have provenance.
     // (The address could be equal to zero, but that doesn't matter.)
     //
-    // If HasDeferenceable is false, we know that the address is some non-zero
+    // If UseProvenance is false, we know that the address is some non-zero
     // value. If the GEP is inbounds, and null pointers can't point to valid
     // objects, the operand must also have a non-zero value.
     if (UseProvenance ||
