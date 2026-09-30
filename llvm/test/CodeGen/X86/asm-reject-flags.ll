@@ -1,4 +1,4 @@
-; RUN: not llc -o /dev/null %s -mtriple=x86_64-unknown-unknown 2>&1 | FileCheck %s
+; RUN: not llc -filetype=null -mtriple=x86_64-unknown-unknown %s 2>&1 | FileCheck %s
 
 ; GH225033: {flags} is only valid as a clobber.
 
