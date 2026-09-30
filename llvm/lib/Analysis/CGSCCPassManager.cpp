@@ -18,6 +18,7 @@
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassManagerImpl.h"
@@ -450,6 +451,18 @@ PreservedAnalyses DevirtSCCRepeatedPass::run(LazyCallGraph::SCC &InitialC,
             LLVM_DEBUG(dbgs() << "Found devirtualized call: " << *CB << "\n");
             return true;
           }
+        } else if (!isa<PoisonValue>(P.second)) {
+          // If a return value of an indirect call is replaced by some non-call,
+          // non-poison value, it means the indirect call was replaced by a
+          // direct call, and we can infer the return value straightforwardly
+          // through the callee.
+          // --> Devirtualization happened.
+          //
+          // Note: If the indirect call were unreachable, it would be replaced
+          // by `poison`, which is excluded by the condition above.
+          LLVM_DEBUG(dbgs() << "Found ind call -> non-call value: " << *P.second
+                            << "\n");
+          return true;
         }
       }
       return false;
