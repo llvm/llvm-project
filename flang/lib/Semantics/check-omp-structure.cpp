@@ -533,6 +533,20 @@ bool OmpStructureChecker::IsAllowedClause(llvm::omp::Clause clauseId) {
       context_.langOptions().getOpenMPVersion(), &context_);
 }
 
+static llvm::omp::Version AllowedInFutureVersion(llvm::omp::Clause clauseId,
+    llvm::omp::Directive dirId, llvm::omp::Version version,
+    SemanticsContext *semaCtx) {
+  for (llvm::omp::Version v : llvm::omp::getOpenMPVersions()) {
+    if (v <= version) {
+      continue;
+    }
+    if (IsClauseAllowedOnDirective(clauseId, dirId, v, semaCtx)) {
+      return v;
+    }
+  }
+  return llvm::omp::Version();
+}
+
 bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
     parser::CharBlock clauseSource, llvm::omp::Directive dirId) {
   // Do not do clause checks while processing METADIRECTIVE.
@@ -548,19 +562,8 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   if (!IsClauseAllowedOnDirective(clauseId, dirId, version, &context_)) {
-    llvm::omp::Version allowedInVersion{[&] {
-      for (llvm::omp::Version v : llvm::omp::getOpenMPVersions()) {
-        if (v <= version) {
-          continue;
-        }
-        if (IsClauseAllowedOnDirective(clauseId, dirId, v, &context_)) {
-          return v;
-        }
-      }
-      return llvm::omp::Version();
-    }()};
-
-    if (allowedInVersion) {
+    if (auto allowedInVersion{
+            AllowedInFutureVersion(clauseId, dirId, version, &context_)}) {
       context_.Warn(common::UsageWarning::OpenMPKartoffel, clauseSource,
           "%s clause is not allowed on %s directive in %s, %s"_warn_en_US,
           GetUpperName(clauseId, version), GetUpperName(dirId, version),
@@ -583,6 +586,16 @@ void OmpStructureChecker::SetAllowedClauseOverride(
     llvm::omp::Clause clauseId, llvm::omp::Directive dirId) {
   SemanticOverrides &overrides{context_.GetOmpSemanticOverrides()};
   overrides.allowedClauses[clauseId].set(dirId);
+
+  auto leafs{llvm::omp::getLeafConstructsOrSelf(dirId)};
+  if (leafs.size() > 1) {
+    llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+    for (llvm::omp::Directive leaf : leafs) {
+      if (AllowedInFutureVersion(clauseId, leaf, version, &context_)) {
+        overrides.allowedClauses[clauseId].set(leaf);
+      }
+    }
+  }
 }
 
 void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {

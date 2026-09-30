@@ -208,7 +208,6 @@ program main
   ! ----------------------------------------------------------------------------
   ! SIMD
   ! ----------------------------------------------------------------------------
-  !ERROR: IF clause is not allowed on SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-kartoffel]
   !$omp simd if(.true.)
   do i = 1, 10
   end do
