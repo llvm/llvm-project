@@ -3237,7 +3237,10 @@ genProcedureRef(CallContext &callContext) {
       callContext.converter.getFoldingContext().languageFeatures();
   if (features.IsEnabled(Fortran::common::LanguageFeature::CUDA) ||
       features.IsEnabled(Fortran::common::LanguageFeature::OpenACC)) {
-    if (isDeclaredOnlyExternalCall(callContext))
+    // Only on_device() is recognized this way: other handler names, such as
+    // clock, are common names for user procedures defined in other files.
+    if (callContext.getProcedureName() == "on_device" &&
+        isDeclaredOnlyExternalCall(callContext))
       if (const fir::IntrinsicHandler *handler =
               fir::findCUDAIntrinsicHandler(callContext.getProcedureName()))
         return genIntrinsicRef(nullptr, fir::IntrinsicHandlerEntry{handler},
