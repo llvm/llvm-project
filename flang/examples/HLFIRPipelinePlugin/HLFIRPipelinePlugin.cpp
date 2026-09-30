@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 //
 // Example plugin adding an out-of-tree MLIR pass to flang's HLFIR-to-FIR pass
-// pipeline, at the points where the HLFIR intrinsic operations (hlfir.sum,
-// hlfir.matmul, ...) are still present. The pass prints those operations,
-// tagged with the pipeline position it was inserted at.
+// pipeline, at the points where the module is still in HLFIR, including the
+// intrinsic operations (hlfir.sum, hlfir.matmul, ...). The pass prints the
+// HLFIR operations it finds, tagged with the pipeline position it was inserted
+// at.
 //
 // It is exposed through both plugin entry points. For `flang -fc1 -load`, a
 // static initializer calls fir::registerPassPipelineConfigCallback and hooks
@@ -17,7 +18,7 @@
 // fir-opt, mlirGetPassPluginInfo makes it available to --load-pass-plugin:
 //
 //   fir-opt --load-pass-plugin=./flangHLFIRPipelinePlugin.so \
-//           --pass-pipeline='builtin.module(print-hlfir-intrinsics)'
+//           --pass-pipeline='builtin.module(print-hlfir-ops)'
 //
 //===----------------------------------------------------------------------===//
 
@@ -40,24 +41,20 @@ namespace {
 /// caller-supplied label. Matches on the `hlfir` dialect namespace rather than
 /// a hard-coded op list, so the example does not need to link the HLFIR dialect
 /// library.
-struct PrintHLFIRIntrinsicsPass
-    : public mlir::PassWrapper<PrintHLFIRIntrinsicsPass,
-          mlir::OperationPass<mlir::ModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(PrintHLFIRIntrinsicsPass)
+struct PrintHLFIROpsPass : public mlir::PassWrapper<PrintHLFIROpsPass,
+                               mlir::OperationPass<mlir::ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(PrintHLFIROpsPass)
 
-  PrintHLFIRIntrinsicsPass() = default;
-  explicit PrintHLFIRIntrinsicsPass(llvm::StringRef labelValue) {
+  PrintHLFIROpsPass() = default;
+  explicit PrintHLFIROpsPass(llvm::StringRef labelValue) {
     label = labelValue.str();
   }
-  PrintHLFIRIntrinsicsPass(const PrintHLFIRIntrinsicsPass &other)
-      : mlir::PassWrapper<PrintHLFIRIntrinsicsPass,
-            mlir::OperationPass<mlir::ModuleOp>>(other) {
-    label = other.label;
-  }
+  // Options are not copyable; Pass::clone copies their values afterwards.
+  PrintHLFIROpsPass(const PrintHLFIROpsPass &other)
+      : mlir::PassWrapper<PrintHLFIROpsPass,
+            mlir::OperationPass<mlir::ModuleOp>>(other) {}
 
-  llvm::StringRef getArgument() const override {
-    return "print-hlfir-intrinsics";
-  }
+  llvm::StringRef getArgument() const override { return "print-hlfir-ops"; }
   llvm::StringRef getDescription() const override {
     return "Print the HLFIR operations that are still present in the module";
   }
@@ -85,13 +82,11 @@ struct FlangPipelineRegistration {
         [](MLIRToLLVMPassPipelineConfig &config) {
           config.registerHLFIROptEarlyEPCallbacks(
               [](mlir::PassManager &pm, llvm::OptimizationLevel) {
-                pm.addPass(
-                    std::make_unique<PrintHLFIRIntrinsicsPass>("hlfir-early"));
+                pm.addPass(std::make_unique<PrintHLFIROpsPass>("hlfir-early"));
               });
           config.registerHLFIROptLastEPCallbacks(
               [](mlir::PassManager &pm, llvm::OptimizationLevel) {
-                pm.addPass(
-                    std::make_unique<PrintHLFIRIntrinsicsPass>("hlfir-last"));
+                pm.addPass(std::make_unique<PrintHLFIROpsPass>("hlfir-last"));
               });
         });
   }
@@ -107,5 +102,5 @@ static FlangPipelineRegistration flangPipelineRegistration;
 extern "C" LLVM_ATTRIBUTE_WEAK mlir::PassPluginLibraryInfo
 mlirGetPassPluginInfo() {
   return {MLIR_PLUGIN_API_VERSION, "HLFIRPipelinePlugin", LLVM_VERSION_STRING,
-      []() { mlir::PassRegistration<PrintHLFIRIntrinsicsPass>(); }};
+      []() { mlir::PassRegistration<PrintHLFIROpsPass>(); }};
 }

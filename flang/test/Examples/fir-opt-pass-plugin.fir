@@ -7,7 +7,7 @@
 // XFAIL: system-aix
 
 // RUN: fir-opt --load-pass-plugin=%llvmshlibdir/flangHLFIRPipelinePlugin%pluginext \
-// RUN:   --pass-pipeline='builtin.module(print-hlfir-intrinsics{label=fir-opt})' \
+// RUN:   --pass-pipeline='builtin.module(print-hlfir-ops{label=fir-opt})' \
 // RUN:   -o /dev/null %s | FileCheck %s
 
 // The plugin's pass must also show up in fir-opt's pass registry.
@@ -19,7 +19,7 @@
 // CHECK:      [fir-opt] hlfir.sum
 // CHECK:      [fir-opt] end
 
-// HELP: --print-hlfir-intrinsics
+// HELP: --print-hlfir-ops
 
 func.func @test_hlfir_intrinsics(%a: !fir.ref<!fir.array<3x3xf32>>,
                                  %b: !fir.ref<!fir.array<3x3xf32>>,

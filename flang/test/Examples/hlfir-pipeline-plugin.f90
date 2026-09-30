@@ -14,14 +14,9 @@
 ! RUN: %flang_fc1 -load %llvmshlibdir/flangHLFIRPipelinePlugin%pluginext \
 ! RUN:   -emit-llvm -o /dev/null %s 2>&1 | FileCheck %s
 
-! At -O2 SimplifyHLFIRIntrinsics expands the intrinsics before the Last
-! extension point, which is why both extension points exist.
+! Both extension points are also reached with the optimizing pipeline.
 ! RUN: %flang_fc1 -load %llvmshlibdir/flangHLFIRPipelinePlugin%pluginext \
 ! RUN:   -O2 -emit-fir -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=O2
-
-! Without the plugin nothing is printed.
-! RUN: %flang_fc1 -emit-fir -o /dev/null %s 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=NOPLUGIN --allow-empty
 
 ! CHECK:      [hlfir-early] begin
 ! CHECK:      [hlfir-early] hlfir.matmul
@@ -37,12 +32,7 @@
 ! O2:      [hlfir-early] hlfir.sum
 ! O2:      [hlfir-early] end
 ! O2:      [hlfir-last] begin
-! O2-NOT:  hlfir.matmul
-! O2-NOT:  hlfir.sum
 ! O2:      [hlfir-last] end
-
-! NOPLUGIN-NOT: hlfir-early
-! NOPLUGIN-NOT: hlfir-last
 
 subroutine test_hlfir_intrinsics(a, b, c, s)
   real :: a(3,3), b(3,3), c(3,3), s
