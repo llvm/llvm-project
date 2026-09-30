@@ -358,17 +358,12 @@ void CIRGenNVCUDARuntime::emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
     globalOp->setAttr("alignment", builder.getI64IntegerAttr(
                                        cgm.getPointerAlign().getQuantity()));
 
-    // The handle must track the kernel stub's linkage/visibility, not the
-    // global-op default (external).
+    // The stub's linkage is only final once it is defined, so the handle
+    // takes it over here.
     globalOp.setLinkage(fn.getLinkage());
     mlir::SymbolTable::setSymbolVisibility(
         globalOp, cgm.getMLIRVisibilityFromCIRLinkage(fn.getLinkage()));
-    globalOp.setDSOLocal(fn.isDSOLocal());
-    globalOp.setGlobalVisibility(fn.getGlobalVisibility());
-    auto *fd = cast<FunctionDecl>(cgf.curGD.getDecl());
-    FunctionTemplateDecl *ft = fd->getPrimaryTemplate();
-    if (!ft || ft->isThisDeclarationADefinition())
-      cgm.maybeSetTrivialComdat(*fd, globalOp);
+    cgm.setDSOLocal(static_cast<mlir::Operation *>(globalOp));
   }
 
   // CUDA 9.0 changed the way to launch kernels.
@@ -428,6 +423,13 @@ mlir::Operation *CIRGenNVCUDARuntime::getKernelHandle(cir::FuncOp fn,
 
   globalOp->setAttr("alignment", builder.getI64IntegerAttr(
                                      cgm.getPointerAlign().getQuantity()));
+
+  // Inherit visibility and comdat from the kernel's declaration.
+  auto *fd = cast<FunctionDecl>(gd.getDecl());
+  cgm.setGVProperties(globalOp, fd);
+  FunctionTemplateDecl *ft = fd->getPrimaryTemplate();
+  if (!ft || ft->isThisDeclarationADefinition())
+    cgm.maybeSetTrivialComdat(*fd, globalOp);
 
   // Store references
   kernelHandles[fn.getSymName()] = globalOp;

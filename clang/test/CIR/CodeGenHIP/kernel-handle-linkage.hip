@@ -10,10 +10,10 @@
 // RUN:            -I%S/../CodeGenCUDA/Inputs/ -emit-llvm %s -o - \
 // RUN:   | FileCheck --check-prefix=LLVM %s
 
-// The host-side kernel handle takes the linkage and visibility of the kernel's
-// device stub. Kernels with internal linkage must get an internal handle in
-// every TU that uses them; an external one causes multiple-definition link
-// errors.
+// The host-side kernel handle takes the linkage of the kernel's device stub and
+// the visibility of the kernel's declaration. Kernels with internal linkage
+// must get an internal handle in every TU that uses them as an external one
+// causes multiple-definition link errors.
 
 template <class T> static __global__ void static_tmpl(T *p) {}
 template <class T> __global__ void tmpl(T *p) {}
@@ -37,6 +37,14 @@ template <> __global__ void decl_only<int>(int *p) {}
 // stub's linkage is known.
 static __global__ void fwd_kernel(int *p);
 
+// Defined in another TU, so the stub is never emitted here; the visibility
+// must come from the declaration.
+__attribute__((visibility("hidden"))) __global__ void hidden_ext_kernel(int *p);
+
+// Internal linkage wins over the explicit visibility.
+static __attribute__((visibility("hidden"))) __global__ void
+static_hidden_kernel(int *p) {}
+
 void launch(int *p) {
   static_tmpl<int><<<1, 1>>>(p);
   tmpl<int><<<1, 1>>>(p);
@@ -46,6 +54,8 @@ void launch(int *p) {
   hidden_kernel<<<1, 1>>>(p);
   decl_only<int><<<1, 1>>>(p);
   fwd_kernel<<<1, 1>>>(p);
+  hidden_ext_kernel<<<1, 1>>>(p);
+  static_hidden_kernel<<<1, 1>>>(p);
 }
 
 static __global__ void fwd_kernel(int *p) {}
@@ -59,6 +69,8 @@ static __global__ void fwd_kernel(int *p) {}
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZL10fwd_kernelPi = #cir.global_view<@_ZL25__device_stub__fwd_kernelPi>
 // CIR-DAG: cir.global constant weak_odr comdat @_Z4instIfEvPT_ = #cir.global_view<@_Z19__device_stub__instIfEvPT_>
 // CIR-DAG: cir.global constant external @_Z9decl_onlyIiEvPT_ = #cir.global_view<@_Z24__device_stub__decl_onlyIiEvPT_>
+// CIR-DAG: cir.global "private" hidden constant external @_Z17hidden_ext_kernelPi :
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL20static_hidden_kernelPi = #cir.global_view<@_ZL35__device_stub__static_hidden_kernelPi>
 
 // LLVM-DAG: @_Z10ext_kernelPi = constant ptr @_Z25__device_stub__ext_kernelPi, align 8
 // LLVM-DAG: @_Z13hidden_kernelPi = hidden constant ptr @_Z28__device_stub__hidden_kernelPi, align 8
@@ -69,3 +81,5 @@ static __global__ void fwd_kernel(int *p) {}
 // LLVM-DAG: @_Z4tmplIiEvPT_ = linkonce_odr constant ptr @_Z19__device_stub__tmplIiEvPT_, comdat, align 8
 // LLVM-DAG: @_Z4instIfEvPT_ = weak_odr constant ptr @_Z19__device_stub__instIfEvPT_, comdat, align 8
 // LLVM-DAG: @_Z9decl_onlyIiEvPT_ = constant ptr @_Z24__device_stub__decl_onlyIiEvPT_, align 8
+// LLVM-DAG: @_Z17hidden_ext_kernelPi = external hidden constant ptr, align 8
+// LLVM-DAG: @_ZL20static_hidden_kernelPi = internal constant ptr @_ZL35__device_stub__static_hidden_kernelPi, align 8
