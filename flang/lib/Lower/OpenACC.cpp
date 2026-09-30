@@ -2694,8 +2694,7 @@ static mlir::acc::LoopOp createLoopOp(
   // Determine the loop's default par mode - either seq, independent, or auto.
   const bool kernelsDoConcurrentIsIndependent =
       outerDoConstruct.IsDoConcurrent() &&
-      converter.getLoweringOptions()
-          .getOpenACCKernelsDoConcurrentIndependent();
+      converter.getLoweringOptions().getOpenACCKernelsDoConcurrentIndependent();
   determineDefaultLoopParMode(converter, loopOp, seqDeviceTypes,
                               independentDeviceTypes, autoDeviceTypes,
                               kernelsDoConcurrentIsIndependent);

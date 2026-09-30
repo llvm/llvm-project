@@ -1859,13 +1859,10 @@ bool CompilerInvocation::createFromArgs(
                    /*default=*/true));
 
   // -f[no-]openacc-acc-kernels-do-concurrent-independent
-  invoc.loweringOpts.setOpenACCKernelsDoConcurrentIndependent(
-      args.hasFlag(
-          clang::options::
-              OPT_fopenacc_acc_kernels_do_concurrent_independent,
-          clang::options::
-              OPT_fno_openacc_acc_kernels_do_concurrent_independent,
-          /*default=*/true));
+  invoc.loweringOpts.setOpenACCKernelsDoConcurrentIndependent(args.hasFlag(
+      clang::options::OPT_fopenacc_acc_kernels_do_concurrent_independent,
+      clang::options::OPT_fno_openacc_acc_kernels_do_concurrent_independent,
+      /*default=*/true));
 
   if (auto *arg = args.getLastArg(clang::options::OPT_ffp_maxmin_behavior_EQ)) {
     auto value = Fortran::common::parseFPMaxminBehavior(arg->getValue());
