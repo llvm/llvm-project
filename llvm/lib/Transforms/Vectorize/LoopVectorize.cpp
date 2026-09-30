@@ -5504,7 +5504,7 @@ bool VPCostContext::executesAtMostOnce(const VPlan &Plan, ElementCount VF) {
 InstructionCost
 LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                                           VPCostContext &CostCtx) const {
-  InstructionCost Cost = 0;
+  InstructionCost Cost;
 
   // If the vector loop gets executed exactly once with the given VF, ignore the
   // costs of comparison and induction instructions, as they'll get simplified
@@ -5600,15 +5600,18 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
   VPCostContext CostCtx(*TLI, Plan, *CM, Config,
                         /*ReusePrintingSlotTracker=*/true);
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
-  LLVM_DEBUG(dbgs() << "Precomputed costs for VF " << VF << ": " << Cost << '\n');
+  LLVM_DEBUG(dbgs() << "Precomputed costs for VF " << VF << ": " << Cost
+                    << '\n');
 
   // Now compute and add the VPlan-based cost.
   Cost += Plan.cost(VF, CostCtx);
 
   // Add the cost of spills due to excess register usage
   if (RU && Config.shouldConsiderRegPressureForVF(VF)) {
-    InstructionCost SpillCost = RU->spillCost(TTI, Config.CostKind, ForceTargetNumVectorRegs);
-    LLVM_DEBUG(dbgs() << "Spill costs for VF " << VF << ": " << SpillCost << '\n');
+    InstructionCost SpillCost =
+        RU->spillCost(TTI, Config.CostKind, ForceTargetNumVectorRegs);
+    LLVM_DEBUG(dbgs() << "Spill costs for VF " << VF << ": " << SpillCost
+                      << '\n');
     Cost += SpillCost;
   }
 
