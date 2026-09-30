@@ -16,7 +16,7 @@
 ! HOST-NOT: "-use-alloc-runtime"
 
 ! Check that invalid values are rejected at the driver level.
-! RUN: not %flang -fopenmp-default-allocate=invalid %s 2>&1 | FileCheck %s --check-prefix=DRV-INVALID
+! RUN: not %flang -fopenmp-default-allocate=invalid %s 2>&1 | FileCheck %s --check-prefix=INVALID
 ! DRV-INVALID: error: invalid value 'invalid' in 'fopenmp-default-allocate=', expected one of: target host
 
 ! Check that invalid values are also rejected at the frontend level.
