@@ -17,6 +17,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "llvm/Support/CommandLine.h"
+#include <vector>
 
 /// Force setting the no-alias attribute on fuction arguments when possible.
 static llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
@@ -165,20 +166,18 @@ void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config) {
       });
 }
 
-static std::vector<std::function<void(MLIRToLLVMPassPipelineConfig &)>> &
+static std::vector<PassPipelineConfigCallback> &
 getPassPipelineConfigCallbacks() {
-  static std::vector<std::function<void(MLIRToLLVMPassPipelineConfig &)>>
-      callbacks;
+  static std::vector<PassPipelineConfigCallback> callbacks;
   return callbacks;
 }
 
-void registerPassPipelineConfigCallback(
-    std::function<void(MLIRToLLVMPassPipelineConfig &)> callback) {
+void registerPassPipelineConfigCallback(PassPipelineConfigCallback callback) {
   getPassPipelineConfigCallbacks().push_back(std::move(callback));
 }
 
 void invokePassPipelineConfigCallbacks(MLIRToLLVMPassPipelineConfig &config) {
-  for (auto &callback : getPassPipelineConfigCallbacks())
+  for (PassPipelineConfigCallback &callback : getPassPipelineConfigCallbacks())
     callback(config);
 }
 

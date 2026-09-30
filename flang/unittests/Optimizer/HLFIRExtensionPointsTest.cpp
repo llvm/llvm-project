@@ -135,12 +135,10 @@ TEST(HLFIRExtensionPoint, MarkersAreAtTheDocumentedPositions) {
 struct ConfigCallbackRecorder {
   std::vector<std::string> order;
   MLIRToLLVMPassPipelineConfig *seenConfig = nullptr;
-  bool epRan = false;
 
   void reset() {
     order.clear();
     seenConfig = nullptr;
-    epRan = false;
   }
   /// Index of \p marker in `order`, or npos.
   size_t indexOf(llvm::StringRef marker) const {
@@ -151,31 +149,30 @@ struct ConfigCallbackRecorder {
   }
 };
 
-ConfigCallbackRecorder &recorder() {
-  static ConfigCallbackRecorder r;
-  return r;
-}
+// Callbacks are registered and run from test bodies, never during static
+// initialization, so a plain global is safe.
+ConfigCallbackRecorder recorder;
 
 TEST(PassPipelineConfigCallback, CallbacksRunInRegistrationOrderOnTheConfig) {
   fir::registerPassPipelineConfigCallback(
       [](MLIRToLLVMPassPipelineConfig &config) {
-        recorder().order.push_back("order-first");
-        recorder().seenConfig = &config;
+        recorder.order.push_back("order-first");
+        recorder.seenConfig = &config;
       });
   fir::registerPassPipelineConfigCallback([](MLIRToLLVMPassPipelineConfig &) {
-    recorder().order.push_back("order-second");
+    recorder.order.push_back("order-second");
   });
 
-  recorder().reset();
+  recorder.reset();
   MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
   fir::invokePassPipelineConfigCallbacks(config);
 
-  size_t first = recorder().indexOf("order-first");
-  size_t second = recorder().indexOf("order-second");
+  size_t first = recorder.indexOf("order-first");
+  size_t second = recorder.indexOf("order-second");
   ASSERT_NE(first, std::string::npos);
   ASSERT_NE(second, std::string::npos);
   EXPECT_LT(first, second);
-  EXPECT_EQ(recorder().seenConfig, &config);
+  EXPECT_EQ(recorder.seenConfig, &config);
 }
 
 // The plugin shape: the config callback registers an extension point
@@ -185,12 +182,11 @@ TEST(PassPipelineConfigCallback, CanRegisterHLFIRExtensionPoints) {
       [](MLIRToLLVMPassPipelineConfig &config) {
         config.registerHLFIROptEarlyEPCallbacks(
             [](mlir::PassManager &pm, llvm::OptimizationLevel) {
-              recorder().epRan = true;
               pm.addPass(std::make_unique<MarkerPass>());
             });
       });
 
-  recorder().reset();
+  recorder.reset();
   mlir::MLIRContext context;
   mlir::PassManager pm(&context, mlir::ModuleOp::getOperationName());
   MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
@@ -201,7 +197,6 @@ TEST(PassPipelineConfigCallback, CanRegisterHLFIRExtensionPoints) {
   llvm::raw_string_ostream os(pipeline);
   pm.printAsTextualPipeline(os);
 
-  EXPECT_TRUE(recorder().epRan);
   EXPECT_NE(pipeline.find("ep-marker"), std::string::npos) << pipeline;
 }
 
