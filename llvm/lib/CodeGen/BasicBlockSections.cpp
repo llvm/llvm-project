@@ -284,7 +284,8 @@ assignSections(MachineFunction &MF,
 
         if (TII.isMBBSafeToSplitToCold(MBB)) {
           // BB goes into the special cold section if it is not specified in the
-          // cluster info map.
+          // cluster info map. If it is not safe to split, it is kept in the
+          // default section.
           MBB.setSectionID(MBBSectionID::ColdSectionID);
         }
       }
@@ -441,11 +442,20 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
     // Make sure that the entry block is placed at the beginning.
     if (&X == &EntryBB || &Y == &EntryBB)
       return &X == &EntryBB;
-    // If the two basic block are in the same section, the order is decided by
-    // their position within the section.
-    if (XSectionID.Type == MBBSectionID::SectionType::Default)
-      return FuncClusterInfo.lookup(*X.getBBID()).PositionInCluster <
-             FuncClusterInfo.lookup(*Y.getBBID()).PositionInCluster;
+    // If the two basic blocks are in the same section, the order is decided by
+    // their position within the section. Basic blocks which are not in any
+    // cluster (those which are not safe to split) come after all the profiled
+    // basic blocks of the section, in their original order.
+    if (XSectionID.Type == MBBSectionID::SectionType::Default) {
+      auto XI = FuncClusterInfo.find(*X.getBBID());
+      auto YI = FuncClusterInfo.find(*Y.getBBID());
+      bool XInCluster = XI != FuncClusterInfo.end();
+      bool YInCluster = YI != FuncClusterInfo.end();
+      if (XInCluster != YInCluster)
+        return XInCluster;
+      if (XInCluster)
+        return XI->second.PositionInCluster < YI->second.PositionInCluster;
+    }
     return X.getNumber() < Y.getNumber();
   };
 
