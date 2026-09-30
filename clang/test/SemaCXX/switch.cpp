@@ -14,6 +14,15 @@ void test() {
   }
 }
 
+void test2(int z) {
+  switch(z) {
+    default:   // expected-note {{previous case defined here}}
+    case 1:
+    case 2:
+    default: break; // expected-error {{multiple default labels in one switch}}
+  }
+}
+
 // PR5518
 struct A { 
   operator int(); // expected-note{{conversion to integral type}}
