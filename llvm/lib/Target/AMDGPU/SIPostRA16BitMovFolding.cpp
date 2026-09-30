@@ -156,14 +156,17 @@ bool SIPostRA16BitMovFolding::mergeSingleMovB16Pair(MachineInstr &Lo,
   MCRegister FirstDst16 = IsHiFirst ? HiDst : LoDst;
   MCRegister SecondSrc16 = IsHiFirst ? LoSrc16 : HiSrc16;
   MCRegister SecondDst16 = IsHiFirst ? LoDst : HiDst;
+
+  if (SecondSrc16 && TRI->regsOverlap(SecondSrc16, FirstDst16))
+    return false;
+
   for (MachineInstr &Scan :
        drop_begin(make_range(FirstMI.getIterator(), SecondMI.getIterator()))) {
     if (Scan.isDebugInstr())
       continue;
-    if (Scan.modifiesRegister(Dst32, TRI))
+    if (Scan.modifiesRegister(Dst32, TRI) ||
+        Scan.modifiesRegister(AMDGPU::EXEC, TRI))
       return false;
-    assert(!Scan.modifiesRegister(AMDGPU::EXEC, TRI) &&
-           "Expect no write on EXEC!");
     LoopCnt++;
     if (LoopCnt < UpperBoundCnt &&
         ((FirstSrc16 && Scan.modifiesRegister(FirstSrc16, TRI)) ||
