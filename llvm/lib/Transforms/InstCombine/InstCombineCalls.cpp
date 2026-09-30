@@ -5048,12 +5048,12 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     if (V->getType()->isPointerTy()) {
       // Simplify the nonnull operand if the parameter is known to be nonnull.
       // Otherwise, try to infer nonnull for it.
-      bool HasDereferenceable =
+      bool UseProvenance =
           Call.getParamDereferenceableBytes(ArgNo) > 0 &&
           !NullPointerIsDefined(Call.getFunction(),
                                 V->getType()->getPointerAddressSpace());
-      if (Call.paramHasAttr(ArgNo, Attribute::NonNull) || HasDereferenceable) {
-        if (Value *Res = simplifyNonNullOperand(V, HasDereferenceable)) {
+      if (Call.paramHasAttr(ArgNo, Attribute::NonNull) || UseProvenance) {
+        if (Value *Res = simplifyNonNullOperand(V, UseProvenance)) {
           replaceOperand(Call, ArgNo, Res);
           Changed = true;
         }

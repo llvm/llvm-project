@@ -4171,11 +4171,11 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
   Function *F = RI.getFunction();
   Type *RetTy = RetVal->getType();
   if (RetTy->isPointerTy()) {
-    bool HasDereferenceable =
+    bool UseProvenance =
         F->getAttributes().getRetDereferenceableBytes() > 0 &&
         !NullPointerIsDefined(F, RetTy->getPointerAddressSpace());
-    if (F->hasRetAttribute(Attribute::NonNull) || HasDereferenceable) {
-      if (Value *V = simplifyNonNullOperand(RetVal, HasDereferenceable))
+    if (F->hasRetAttribute(Attribute::NonNull) || UseProvenance) {
+      if (Value *V = simplifyNonNullOperand(RetVal, UseProvenance))
         return replaceOperand(RI, 0, V);
     }
   }
