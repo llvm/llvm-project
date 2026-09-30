@@ -636,6 +636,31 @@ exit:
   ret void
 }
 
+; Some simple multi-BB situations can still be handled.
+
+declare dso_local fastcc void @use32(i32)
+define void @Issue156015(i32 %a) {
+; CHECK-LABEL: @Issue156015(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[A:%.*]], i32 10)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i32, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
+; CHECK-NEXT:    br i1 [[OV]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    tail call fastcc void @use32(i32 [[MATH]])
+; CHECK-NEXT:    ret void
+;
+  %c = icmp ult i32 %a, 10
+  br i1 %c, label %then, label %else
+then:
+  ret void
+else:
+  %l = sub i32 %a, 10
+  tail call fastcc void @use32(i32 %l)
+  ret void
+}
+
 ; Check that every instruction inserted by -passes='require<profile-summary>,function(codegenprepare)' has a debug location.
 ; DEBUG: CheckModuleDebugify: PASS
 
