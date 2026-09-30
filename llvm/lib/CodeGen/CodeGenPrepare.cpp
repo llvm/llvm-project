@@ -8411,16 +8411,13 @@ public:
   /// Check if it is profitable to promote \p ToBePromoted
   /// by moving downward the transition through.
   bool shouldPromote(const Instruction *ToBePromoted) const {
+    if (!isSafeToSpeculativelyExecuteWithVariableReplaced(ToBePromoted))
+      return false;
     // Promote only if all the operands can be statically expanded.
     // Indeed, we do not want to introduce any new kind of transitions.
     for (const Use &U : ToBePromoted->operands()) {
       const Value *Val = U.get();
       if (Val == getEndOfTransition()) {
-        // If the use is a division and the transition is on the rhs,
-        // we cannot promote the operation, otherwise we may create a
-        // division by zero.
-        if (canCauseUndefinedBehavior(ToBePromoted, U.getOperandNo()))
-          return false;
         continue;
       }
       if (!isa<ConstantInt>(Val) && !isa<UndefValue>(Val) &&
