@@ -9,8 +9,8 @@ define  double @foo(double %self) {
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0.start:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $d12_64, $t9, $v0
-  ; CHECK:   renamable $at = ADDu killed $v0, killed $t9
+  ; CHECK:   liveins: $d12_64, $t9, $r2
+  ; CHECK:   renamable $at = ADDu killed $r2, killed $t9
   ; CHECK:   renamable $d6_64 = COPY killed $d12_64
   ; CHECK:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; CHECK:   renamable $t9 = LW killed renamable $at, target-flags(mips-got) @bar

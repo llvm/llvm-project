@@ -68,8 +68,8 @@ body:             |
     CFI_INSTRUCTION def_cfa_offset 24
     SW killed $ra, $sp, 20 :: (store (s32) into %stack.0)
     CFI_INSTRUCTION offset $ra_64, -4
-    JAL @k, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit-def $v0
-    BLEZ $v0, %bb.4.if.end, implicit-def $at
+    JAL @k, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit-def $r2
+    BLEZ $r2, %bb.4.if.end, implicit-def $at
 
   bb.1.if.then:
     successors: %bb.2.if.then(0x80000000)

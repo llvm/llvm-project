@@ -11,8 +11,8 @@ define i32 @mul(i32 %a, i32 %b) {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY]]
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:gpr32 = MUL [[COPY2]], [[COPY3]], implicit-def dead $hi0, implicit-def dead $lo0
-  ; CHECK-NEXT:   $v0 = COPY [[MUL]]
-  ; CHECK-NEXT:   RetRA implicit $v0
+  ; CHECK-NEXT:   $r2 = COPY [[MUL]]
+  ; CHECK-NEXT:   RetRA implicit $r2
 entry:
   %0 = mul i32 %a, %b
   ret i32 %0

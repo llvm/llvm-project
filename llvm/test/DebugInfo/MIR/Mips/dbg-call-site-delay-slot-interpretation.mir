@@ -110,10 +110,10 @@ body:             |
     renamable $s1 = nsw ADDiu killed renamable $a1, 1, debug-location !19
     DBG_VALUE $s1, $noreg, !18, !DIExpression(), debug-location !19
     $a0 = OR $s1, $zero, debug-location !19
-    JAL @sum, csr_o32, implicit-def dead $ra, implicit $a0, implicit $a1, implicit-def $sp, implicit-def $v0, debug-location !19 {
+    JAL @sum, csr_o32, implicit-def dead $ra, implicit $a0, implicit $a1, implicit-def $sp, implicit-def $r2, debug-location !19 {
       $a1 = OR $s1, $zero, debug-location !19
     }
-    renamable $at = nsw ADDu killed renamable $v0, killed renamable $s1, debug-location !19
+    renamable $at = nsw ADDu killed renamable $r2, killed renamable $s1, debug-location !19
     SW killed renamable $at, killed renamable $s0, 0, debug-location !19 :: (store (s32) into %ir.adr)
     $s0 = LW $sp, 20
     DBG_VALUE $a0, $noreg, !17, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !19

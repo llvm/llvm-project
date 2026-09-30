@@ -454,12 +454,12 @@ define void @f4(i64 %a) {
 ; MMR3-NEXT:    # <MCOperand Reg:AT>
 ; MMR3-NEXT:    # <MCOperand Expr:%lo(d)>>
 ; MMR3-NEXT:    addiu $2, $1, %lo(d) # <MCInst #[[#MCINST21:]] ADDiu_MM
-; MMR3-NEXT:    # <MCOperand Reg:V0>
+; MMR3-NEXT:    # <MCOperand Reg:R2>
 ; MMR3-NEXT:    # <MCOperand Reg:AT>
 ; MMR3-NEXT:    # <MCOperand Expr:%lo(d)>>
 ; MMR3-NEXT:    sw16 $5, 4($2) # <MCInst #[[#MCINST22:]] SW16_MM
 ; MMR3-NEXT:    # <MCOperand Reg:A1>
-; MMR3-NEXT:    # <MCOperand Reg:V0>
+; MMR3-NEXT:    # <MCOperand Reg:R2>
 ; MMR3-NEXT:    # <MCOperand Imm:4>>
 ; MMR3-NEXT:    jrc $ra # <MCInst #[[#MCINST8:]] JRC16_MM
 ; MMR3-NEXT:    # <MCOperand Reg:RA>>
@@ -495,12 +495,12 @@ define void @f4(i64 %a) {
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%lo(d)>>
 ; MMR6-NEXT:    addiu $2, $1, %lo(d) # <MCInst #[[#MCINST21:]] ADDiu_MM
-; MMR6-NEXT:    # <MCOperand Reg:V0>
+; MMR6-NEXT:    # <MCOperand Reg:R2>
 ; MMR6-NEXT:    # <MCOperand Reg:AT>
 ; MMR6-NEXT:    # <MCOperand Expr:%lo(d)>>
 ; MMR6-NEXT:    sw16 $5, 4($2) # <MCInst #[[#MCINST22:]] SW16_MM
 ; MMR6-NEXT:    # <MCOperand Reg:A1>
-; MMR6-NEXT:    # <MCOperand Reg:V0>
+; MMR6-NEXT:    # <MCOperand Reg:R2>
 ; MMR6-NEXT:    # <MCOperand Imm:4>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST8]] JRC16_MM
 ; MMR6-NEXT:    # <MCOperand Reg:RA>>
@@ -572,12 +572,12 @@ define void @f4(i64 %a) {
 ; MMR5FP64-NEXT:    # <MCOperand Reg:AT>
 ; MMR5FP64-NEXT:    # <MCOperand Expr:%lo(d)>>
 ; MMR5FP64-NEXT:    addiu $2, $1, %lo(d) # <MCInst #[[#MCINST21:]] ADDiu_MM
-; MMR5FP64-NEXT:    # <MCOperand Reg:V0>
+; MMR5FP64-NEXT:    # <MCOperand Reg:R2>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:AT>
 ; MMR5FP64-NEXT:    # <MCOperand Expr:%lo(d)>>
 ; MMR5FP64-NEXT:    sw16 $5, 4($2) # <MCInst #[[#MCINST22:]] SW16_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:A1>
-; MMR5FP64-NEXT:    # <MCOperand Reg:V0>
+; MMR5FP64-NEXT:    # <MCOperand Reg:R2>
 ; MMR5FP64-NEXT:    # <MCOperand Imm:4>>
 ; MMR5FP64-NEXT:    jrc $ra # <MCInst #[[#MCINST8:]] JRC16_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:RA>>

@@ -22,13 +22,13 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
     ; MIPS32: [[SDIV:%[0-9]+]]:gprb(s32) = G_SDIV [[COPY1]], [[COPY]]
-    ; MIPS32: $v0 = COPY [[SDIV]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[SDIV]](s32)
+    ; MIPS32: RetRA implicit $r2
     %0:_(s32) = COPY $a0
     %1:_(s32) = COPY $a1
     %2:_(s32) = G_SDIV %1, %0
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -45,13 +45,13 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
     ; MIPS32: [[SREM:%[0-9]+]]:gprb(s32) = G_SREM [[COPY1]], [[COPY]]
-    ; MIPS32: $v0 = COPY [[SREM]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[SREM]](s32)
+    ; MIPS32: RetRA implicit $r2
     %0:_(s32) = COPY $a0
     %1:_(s32) = COPY $a1
     %2:_(s32) = G_SREM %1, %0
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -68,13 +68,13 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
     ; MIPS32: [[UDIV:%[0-9]+]]:gprb(s32) = G_UDIV [[COPY1]], [[COPY]]
-    ; MIPS32: $v0 = COPY [[UDIV]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[UDIV]](s32)
+    ; MIPS32: RetRA implicit $r2
     %0:_(s32) = COPY $a0
     %1:_(s32) = COPY $a1
     %2:_(s32) = G_UDIV %1, %0
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -91,12 +91,12 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
     ; MIPS32: [[UREM:%[0-9]+]]:gprb(s32) = G_UREM [[COPY1]], [[COPY]]
-    ; MIPS32: $v0 = COPY [[UREM]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[UREM]](s32)
+    ; MIPS32: RetRA implicit $r2
     %0:_(s32) = COPY $a0
     %1:_(s32) = COPY $a1
     %2:_(s32) = G_UREM %1, %0
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...

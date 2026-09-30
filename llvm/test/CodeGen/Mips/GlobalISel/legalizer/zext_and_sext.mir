@@ -18,15 +18,15 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; MIPS32: $v0 = COPY [[COPY]](s32)
-    ; MIPS32: $v1 = COPY [[C]](s32)
-    ; MIPS32: RetRA implicit $v0, implicit $v1
+    ; MIPS32: $r2 = COPY [[COPY]](s32)
+    ; MIPS32: $r3 = COPY [[C]](s32)
+    ; MIPS32: RetRA implicit $r2, implicit $r3
     %0:_(s32) = COPY $a0
     %1:_(s64) = G_ZEXT %0(s32)
     %2:_(s32), %3:_(s32) = G_UNMERGE_VALUES %1(s64)
-    $v0 = COPY %2(s32)
-    $v1 = COPY %3(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %2(s32)
+    $r3 = COPY %3(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...
 ---
@@ -42,14 +42,14 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]](s32)
-    ; MIPS32: $v0 = COPY [[COPY]](s32)
-    ; MIPS32: $v1 = COPY [[ASHR]](s32)
-    ; MIPS32: RetRA implicit $v0, implicit $v1
+    ; MIPS32: $r2 = COPY [[COPY]](s32)
+    ; MIPS32: $r3 = COPY [[ASHR]](s32)
+    ; MIPS32: RetRA implicit $r2, implicit $r3
     %0:_(s32) = COPY $a0
     %1:_(s64) = G_SEXT %0(s32)
     %2:_(s32), %3:_(s32) = G_UNMERGE_VALUES %1(s64)
-    $v0 = COPY %2(s32)
-    $v1 = COPY %3(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %2(s32)
+    $r3 = COPY %3(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...

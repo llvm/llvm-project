@@ -43,7 +43,7 @@ body:             |
 
     %0 = COPY $a0
     %1 = EXT %0, 0, 33
-    $v0 = COPY %1
-    RetRA implicit $v0
+    $r2 = COPY %1
+    RetRA implicit $r2
 
 ...

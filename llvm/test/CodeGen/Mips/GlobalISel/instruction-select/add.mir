@@ -23,13 +23,13 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
     ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu [[COPY]], [[COPY1]]
-    ; MIPS32: $v0 = COPY [[ADDu]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[ADDu]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(s32) = COPY $a0
     %1:gprb(s32) = COPY $a1
     %2:gprb(s32) = G_ADD %0, %1
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -46,13 +46,13 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[COPY]], 3
-    ; MIPS32: $v0 = COPY [[ADDiu]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[ADDiu]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(s32) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 3
     %2:gprb(s32) = G_ADD %0, %1
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -69,13 +69,13 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu [[COPY]], -3
-    ; MIPS32: $v0 = COPY [[ADDiu]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[ADDiu]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(s32) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 -3
     %2:gprb(s32) = G_ADD %0, %1
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -93,12 +93,12 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 65535
     ; MIPS32: [[ADDu:%[0-9]+]]:gpr32 = ADDu [[COPY]], [[ORi]]
-    ; MIPS32: $v0 = COPY [[ADDu]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[ADDu]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(s32) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 65535
     %2:gprb(s32) = G_ADD %0, %1
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...

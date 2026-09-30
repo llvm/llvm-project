@@ -13,12 +13,12 @@ body:             |
     ; MIPS32-NEXT: {{  $}}
     ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; MIPS32-NEXT: [[CTLZ:%[0-9]+]]:_(s32) = G_CTLZ [[COPY]](s32)
-    ; MIPS32-NEXT: $v0 = COPY [[CTLZ]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
+    ; MIPS32-NEXT: $r2 = COPY [[CTLZ]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
     %0:_(s32) = COPY $a0
     %1:_(s32) = G_CTLZ %0(s32)
-    $v0 = COPY %1(s32)
-    RetRA implicit $v0
+    $r2 = COPY %1(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -41,16 +41,16 @@ body:             |
     ; MIPS32-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTLZ]], [[C1]]
     ; MIPS32-NEXT: [[CTLZ1:%[0-9]+]]:_(s32) = G_CTLZ [[COPY1]](s32)
     ; MIPS32-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[ADD]], [[CTLZ1]]
-    ; MIPS32-NEXT: $v0 = COPY [[SELECT]](s32)
-    ; MIPS32-NEXT: $v1 = COPY [[C]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0, implicit $v1
+    ; MIPS32-NEXT: $r2 = COPY [[SELECT]](s32)
+    ; MIPS32-NEXT: $r3 = COPY [[C]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2, implicit $r3
     %1:_(s32) = COPY $a0
     %2:_(s32) = COPY $a1
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
     %3:_(s64) = G_CTLZ %0(s64)
     %4:_(s32), %5:_(s32) = G_UNMERGE_VALUES %3(s64)
-    $v0 = COPY %4(s32)
-    $v1 = COPY %5(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %4(s32)
+    $r3 = COPY %5(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...

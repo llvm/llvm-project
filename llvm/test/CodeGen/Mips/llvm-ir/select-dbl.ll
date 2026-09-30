@@ -111,7 +111,7 @@ define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ; MM32R3-NEXT:    # <MCOperand Reg:D1>
 ; MM32R3-NEXT:    # <MCOperand Reg:A2>>
 ; MM32R3-NEXT:    andi16 $2, $4, 1 # <MCInst #[[#MCINST3:]] ANDI16_MM
-; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Reg:R2>
 ; MM32R3-NEXT:    # <MCOperand Reg:A0>
 ; MM32R3-NEXT:    # <MCOperand Imm:1>>
 ; MM32R3-NEXT:    ldc1 $f0, 16($sp) # <MCInst #[[#MCINST4:]] LDC1_MM_D32
@@ -123,7 +123,7 @@ define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 ; MM32R3-NEXT:    movn.d $f0, $f2, $2 # <MCInst #[[#MCINST6:]] MOVN_I_D32_MM
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>
 ; MM32R3-NEXT:    # <MCOperand Reg:D1>
-; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Reg:R2>
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>>
 ;
 ; MM32R6-LABEL: tst_select_i1_double:
@@ -222,19 +222,19 @@ define double @tst_select_i1_double_reordered(double %x, double %y,
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>
 ; MM32R3-NEXT:    # <MCOperand Reg:D7>>
 ; MM32R3-NEXT:    lw $2, 16($sp) # <MCInst #[[#MCINST8:]] LWSP_MM
-; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Reg:R2>
 ; MM32R3-NEXT:    # <MCOperand Reg:SP>
 ; MM32R3-NEXT:    # <MCOperand Imm:16>>
 ; MM32R3-NEXT:    andi16 $2, $2, 1 # <MCInst #[[#MCINST3]] ANDI16_MM
-; MM32R3-NEXT:    # <MCOperand Reg:V0>
-; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Reg:R2>
+; MM32R3-NEXT:    # <MCOperand Reg:R2>
 ; MM32R3-NEXT:    # <MCOperand Imm:1>>
 ; MM32R3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MM32R3-NEXT:    # <MCOperand Reg:RA>>
 ; MM32R3-NEXT:    movn.d $f0, $f12, $2 # <MCInst #[[#MCINST6]] MOVN_I_D32_MM
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>
 ; MM32R3-NEXT:    # <MCOperand Reg:D6>
-; MM32R3-NEXT:    # <MCOperand Reg:V0>
+; MM32R3-NEXT:    # <MCOperand Reg:R2>
 ; MM32R3-NEXT:    # <MCOperand Reg:D0>>
 ;
 ; MM32R6-LABEL: tst_select_i1_double_reordered:

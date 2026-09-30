@@ -199,8 +199,8 @@ body:             |
 
     JAL @externFunc, csr_n64, implicit-def dead $ra, implicit $f12, implicit-def $sp, implicit-def dead $f0, debug-location !19
     renamable $a0_64 = SLL64_32 renamable $s0, implicit $s0_64, debug-location !19
-    JAL @externFunc3, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0, debug-location !19
-    renamable $f0 = PseudoCVT_S_W killed renamable $v0, debug-location !19
+    JAL @externFunc3, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $r2, debug-location !19
+    renamable $f0 = PseudoCVT_S_W killed renamable $r2, debug-location !19
     ; This instruction is inserted additionally in order to test moving from one register to another
     $s1_64 = OR64 killed $s0_64, $zero_64, debug-location !19
     renamable $at_64 = LUi64 target-flags(mips-highest) %const.2
@@ -228,8 +228,8 @@ body:             |
     JAL @externFunc2, csr_n64, implicit-def dead $ra, implicit $f12, implicit-def $sp, implicit-def $f0, debug-location !19
     renamable $f25 = COPY $f0, debug-location !19
     renamable $a0_64 = SLL64_32 renamable $s0, implicit killed $s0_64, debug-location !19
-    JAL @externFunc4, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0, debug-location !19
-    renamable $s0 = COPY $v0, debug-location !19
+    JAL @externFunc4, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $r2, debug-location !19
+    renamable $s0 = COPY $r2, debug-location !19
     $f12 = COPY renamable $f24, debug-location !19
     JAL @externFunc, csr_n64, implicit-def dead $ra, implicit $f12, implicit-def $sp, implicit-def dead $f0, debug-location !19
     renamable $f0 = PseudoCVT_S_W killed renamable $s0, debug-location !19

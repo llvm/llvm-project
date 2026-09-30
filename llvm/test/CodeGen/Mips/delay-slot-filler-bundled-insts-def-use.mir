@@ -65,17 +65,17 @@ body:             |
   ; CHECK:   successors: %bb.2(0x00000001), %bb.1(0x7fffffff)
   ; CHECK:   renamable $at = SLL renamable $a0, 0, implicit killed $a0_64
   ; CHECK:   renamable $at = ANDi killed renamable $at, 1
-  ; CHECK:   $v0_64 = DADDiu $zero_64, 1
-  ; CHECK:   $v0_64 = DADDiu $v0_64, 1
-  ; CHECK:   BUNDLE implicit-def $v0_64 {
-  ; CHECK:     $v0_64 = DADDiu $zero_64, 1
-  ; CHECK:     $v0_64 = DADDiu $v0_64, 1
+  ; CHECK:   $r2_64 = DADDiu $zero_64, 1
+  ; CHECK:   $r2_64 = DADDiu $r2_64, 1
+  ; CHECK:   BUNDLE implicit-def $r2_64 {
+  ; CHECK:     $r2_64 = DADDiu $zero_64, 1
+  ; CHECK:     $r2_64 = DADDiu $r2_64, 1
   ; CHECK:   }
   ; CHECK:   BNE killed renamable $at, $zero, %bb.2, implicit-def $at {
   ; CHECK:     $zero = SLL $zero, 0
   ; CHECK:   }
   ; CHECK: bb.1.return:
-  ; CHECK:   PseudoReturn64 undef $ra_64, implicit killed $v0_64 {
+  ; CHECK:   PseudoReturn64 undef $ra_64, implicit killed $r2_64 {
   ; CHECK:     $zero = SLL $zero, 0
   ; CHECK:   }
   ; CHECK: bb.2.err:
@@ -87,17 +87,17 @@ body:             |
     renamable $at = ANDi killed renamable $at, 1
     ; Check that none of these instructions are hoisted after the BUNDLE to avoid
     ; incorrect values from being
-    $v0_64 = DADDiu $zero_64, 1
-    $v0_64 = DADDiu $v0_64, 1
-    BUNDLE implicit-def $v0_64 {
-      $v0_64 = DADDiu $zero_64, 1
-      $v0_64 = DADDiu $v0_64, 1
+    $r2_64 = DADDiu $zero_64, 1
+    $r2_64 = DADDiu $r2_64, 1
+    BUNDLE implicit-def $r2_64 {
+      $r2_64 = DADDiu $zero_64, 1
+      $r2_64 = DADDiu $r2_64, 1
     }
     BNE killed renamable $at, $zero, %bb.1, implicit-def $at
 
   bb.2.return:
-    liveins: $v0_64
-    PseudoReturn64 undef $ra_64, implicit killed $v0_64
+    liveins: $r2_64
+    PseudoReturn64 undef $ra_64, implicit killed $r2_64
 
   bb.1.err:
 

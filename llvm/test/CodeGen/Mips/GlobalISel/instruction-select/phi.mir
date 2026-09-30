@@ -93,8 +93,8 @@ body:             |
   ; MIPS32FP32-NEXT: {{  $}}
   ; MIPS32FP32-NEXT: bb.3.cond.end:
   ; MIPS32FP32-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
-  ; MIPS32FP32-NEXT:   $v0 = COPY [[PHI]]
-  ; MIPS32FP32-NEXT:   RetRA implicit $v0
+  ; MIPS32FP32-NEXT:   $r2 = COPY [[PHI]]
+  ; MIPS32FP32-NEXT:   RetRA implicit $r2
   ;
   ; MIPS32FP64-LABEL: name: phi_i32
   ; MIPS32FP64: bb.0.entry:
@@ -118,8 +118,8 @@ body:             |
   ; MIPS32FP64-NEXT: {{  $}}
   ; MIPS32FP64-NEXT: bb.3.cond.end:
   ; MIPS32FP64-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
-  ; MIPS32FP64-NEXT:   $v0 = COPY [[PHI]]
-  ; MIPS32FP64-NEXT:   RetRA implicit $v0
+  ; MIPS32FP64-NEXT:   $r2 = COPY [[PHI]]
+  ; MIPS32FP64-NEXT:   RetRA implicit $r2
   bb.1.entry:
     liveins: $a0, $a1, $a2
 
@@ -139,8 +139,8 @@ body:             |
 
   bb.4.cond.end:
     %4:gprb(s32) = G_PHI %1(s32), %bb.2, %2(s32), %bb.3
-    $v0 = COPY %4(s32)
-    RetRA implicit $v0
+    $r2 = COPY %4(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -180,9 +180,9 @@ body:             |
   ; MIPS32FP32-NEXT: bb.3.cond.end:
   ; MIPS32FP32-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[LW]], %bb.2
   ; MIPS32FP32-NEXT:   [[PHI1:%[0-9]+]]:gpr32 = PHI [[COPY2]], %bb.1, [[LW1]], %bb.2
-  ; MIPS32FP32-NEXT:   $v0 = COPY [[PHI]]
-  ; MIPS32FP32-NEXT:   $v1 = COPY [[PHI1]]
-  ; MIPS32FP32-NEXT:   RetRA implicit $v0, implicit $v1
+  ; MIPS32FP32-NEXT:   $r2 = COPY [[PHI]]
+  ; MIPS32FP32-NEXT:   $r3 = COPY [[PHI1]]
+  ; MIPS32FP32-NEXT:   RetRA implicit $r2, implicit $r3
   ;
   ; MIPS32FP64-LABEL: name: phi_i64
   ; MIPS32FP64: bb.0.entry:
@@ -211,9 +211,9 @@ body:             |
   ; MIPS32FP64-NEXT: bb.3.cond.end:
   ; MIPS32FP64-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[LW]], %bb.2
   ; MIPS32FP64-NEXT:   [[PHI1:%[0-9]+]]:gpr32 = PHI [[COPY2]], %bb.1, [[LW1]], %bb.2
-  ; MIPS32FP64-NEXT:   $v0 = COPY [[PHI]]
-  ; MIPS32FP64-NEXT:   $v1 = COPY [[PHI1]]
-  ; MIPS32FP64-NEXT:   RetRA implicit $v0, implicit $v1
+  ; MIPS32FP64-NEXT:   $r2 = COPY [[PHI]]
+  ; MIPS32FP64-NEXT:   $r3 = COPY [[PHI1]]
+  ; MIPS32FP64-NEXT:   RetRA implicit $r2, implicit $r3
   bb.1.entry:
     liveins: $a0, $a2, $a3
 
@@ -238,9 +238,9 @@ body:             |
   bb.4.cond.end:
     %20:gprb(s32) = G_PHI %4(s32), %bb.2, %6(s32), %bb.3
     %21:gprb(s32) = G_PHI %5(s32), %bb.2, %7(s32), %bb.3
-    $v0 = COPY %20(s32)
-    $v1 = COPY %21(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %20(s32)
+    $r3 = COPY %21(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...
 ---

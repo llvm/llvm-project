@@ -29,8 +29,8 @@ body:             |
     ; MIPS32: [[COPY3:%[0-9]+]]:gprb(s32) = COPY [[COPY]](s32)
     ; MIPS32: [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY3]], [[C]]
     ; MIPS32: [[SELECT:%[0-9]+]]:gprb(s32) = G_SELECT [[AND]](s32), [[COPY1]], [[COPY2]]
-    ; MIPS32: $v0 = COPY [[SELECT]](s32)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[SELECT]](s32)
+    ; MIPS32: RetRA implicit $r2
     %3:_(s32) = COPY $a0
     %1:_(s32) = COPY $a1
     %2:_(s32) = COPY $a2
@@ -38,8 +38,8 @@ body:             |
     %7:_(s32) = COPY %3(s32)
     %5:_(s32) = G_AND %7, %6
     %4:_(s32) = G_SELECT %5(s32), %1, %2
-    $v0 = COPY %4(s32)
-    RetRA implicit $v0
+    $r2 = COPY %4(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -60,8 +60,8 @@ body:             |
     ; MIPS32: [[COPY3:%[0-9]+]]:gprb(s32) = COPY [[COPY]](s32)
     ; MIPS32: [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY3]], [[C]]
     ; MIPS32: [[SELECT:%[0-9]+]]:gprb(p0) = G_SELECT [[AND]](s32), [[COPY1]], [[COPY2]]
-    ; MIPS32: $v0 = COPY [[SELECT]](p0)
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[SELECT]](p0)
+    ; MIPS32: RetRA implicit $r2
     %3:_(s32) = COPY $a0
     %1:_(p0) = COPY $a1
     %2:_(p0) = COPY $a2
@@ -69,8 +69,8 @@ body:             |
     %7:_(s32) = COPY %3(s32)
     %5:_(s32) = G_AND %7, %6
     %4:_(p0) = G_SELECT %5(s32), %1, %2
-    $v0 = COPY %4(p0)
-    RetRA implicit $v0
+    $r2 = COPY %4(p0)
+    RetRA implicit $r2
 
 ...
 ---
@@ -99,9 +99,9 @@ body:             |
     ; MIPS32: [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY3]], [[C]]
     ; MIPS32: [[SELECT:%[0-9]+]]:gprb(s32) = G_SELECT [[AND]](s32), [[COPY1]], [[LOAD]]
     ; MIPS32: [[SELECT1:%[0-9]+]]:gprb(s32) = G_SELECT [[AND]](s32), [[COPY2]], [[LOAD1]]
-    ; MIPS32: $v0 = COPY [[SELECT]](s32)
-    ; MIPS32: $v1 = COPY [[SELECT1]](s32)
-    ; MIPS32: RetRA implicit $v0, implicit $v1
+    ; MIPS32: $r2 = COPY [[SELECT]](s32)
+    ; MIPS32: $r3 = COPY [[SELECT1]](s32)
+    ; MIPS32: RetRA implicit $r2, implicit $r3
     %3:_(s32) = COPY $a0
     %4:_(s32) = COPY $a2
     %5:_(s32) = COPY $a3
@@ -116,9 +116,9 @@ body:             |
     %13:_(s32) = G_AND %15, %14
     %10:_(s64) = G_SELECT %13(s32), %1, %2
     %11:_(s32), %12:_(s32) = G_UNMERGE_VALUES %10(s64)
-    $v0 = COPY %11(s32)
-    $v1 = COPY %12(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %11(s32)
+    $r3 = COPY %12(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...
 ---

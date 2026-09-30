@@ -118,15 +118,15 @@ body:             |
     }
     renamable $a2 = nsw ADDiu renamable $s0, 10, debug-location !18
     $a0 = ADDiu $zero, 44, debug-location !18
-    JAL @fn1, csr_o32, implicit-def dead $ra, implicit $a0, implicit killed $a1, implicit $a2, implicit-def $sp, implicit-def $v0, debug-location !18 {
+    JAL @fn1, csr_o32, implicit-def dead $ra, implicit $a0, implicit killed $a1, implicit $a2, implicit-def $sp, implicit-def $r2, debug-location !18 {
       $a1 = OR killed $s0, $zero, debug-location !18
     }
-    DBG_VALUE $v0, $noreg, !17, !DIExpression(), debug-location !18
-    renamable $at = SLTi renamable $v0, 11, debug-location !18
-    renamable $v1 = nsw ADDiu renamable $v0, 10, debug-location !18
-    renamable $v0 = MOVZ_I_I killed renamable $v1, killed renamable $at, killed renamable $v0, debug-location !18
+    DBG_VALUE $r2, $noreg, !17, !DIExpression(), debug-location !18
+    renamable $at = SLTi renamable $r2, 11, debug-location !18
+    renamable $r3 = nsw ADDiu renamable $r2, 10, debug-location !18
+    renamable $r2 = MOVZ_I_I killed renamable $r3, killed renamable $at, killed renamable $r2, debug-location !18
     $s0 = LW $sp, 16, debug-location !18 :: (load (s32) from %stack.1)
     $ra = LW $sp, 20, debug-location !18 :: (load (s32) from %stack.0)
-    PseudoReturn undef $ra, implicit $v0, debug-location !18 {
+    PseudoReturn undef $ra, implicit $r2, debug-location !18 {
       $sp = ADDiu $sp, 24
     }

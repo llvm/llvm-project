@@ -72,14 +72,14 @@ body:             |
     CFI_INSTRUCTION offset $s0_64, -12
     $s1 = MOVE16_MM $a1
     $s0 = MOVE16_MM $a0
-    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $v0
+    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $r2
     SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store (s32) into %ir.adr)
-    $v0 = LI16_MM 0
+    $r2 = LI16_MM 0
     $s0 = LW $sp, 20 :: (load (s32) from %stack.2)
     $s1 = LW $sp, 24 :: (load (s32) from %stack.1)
     $ra = LW $sp, 28 :: (load (s32) from %stack.0)
     $sp = ADDiu $sp, 32
-    PseudoReturn undef $ra, implicit killed $v0
+    PseudoReturn undef $ra, implicit killed $r2
 
 ...
 ---
@@ -140,14 +140,14 @@ body:             |
     CFI_INSTRUCTION offset $s0_64, -12
     $s1 = MOVE16_MM $a1
     $s0 = MOVE16_MM $a0
-    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $v0
+    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $r2
     SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store (s32) into %ir.adr)
-    $v0 = LI16_MM 0
+    $r2 = LI16_MM 0
     $s0 = LW_MM $sp, 20 :: (load (s32) from %stack.2)
     $s1 = LW_MM $sp, 24 :: (load (s32) from %stack.1)
     $ra = LW $sp, 28 :: (load (s32) from %stack.0)
     $sp = ADDiu $sp, 32
-    PseudoReturn undef $ra, implicit killed $v0
+    PseudoReturn undef $ra, implicit killed $r2
 
 ...
 ---
@@ -208,14 +208,14 @@ body:             |
     CFI_INSTRUCTION offset $s0_64, -12
     $s1 = MOVE16_MM $a1
     $s0 = MOVE16_MM $a0
-    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $v0
+    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $r2
     SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store (s32) into %ir.adr)
-    $v0 = LI16_MM 0
+    $r2 = LI16_MM 0
     $s0 = LW_MM $sp, 20 :: (load (s32) from %stack.2)
     $s1 = LW $sp, 24 :: (load (s32) from %stack.1)
     $ra = LW $sp, 28 :: (load (s32) from %stack.0)
     $sp = ADDiu $sp, 32
-    PseudoReturn undef $ra, implicit killed $v0
+    PseudoReturn undef $ra, implicit killed $r2
 
 ...
 ---
@@ -276,14 +276,14 @@ body:             |
     CFI_INSTRUCTION offset $s0_64, -12
     $s1 = MOVE16_MM $a1
     $s0 = MOVE16_MM $a0
-    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $v0
+    JAL @f, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit-def dead $r2
     SW16_MM killed renamable $s1, killed renamable $s0, 0 :: (store (s32) into %ir.adr)
-    $v0 = LI16_MM 0
+    $r2 = LI16_MM 0
     $s0 = LW $sp, 20 :: (load (s32) from %stack.2)
     $s1 = LW_MM $sp, 24 :: (load (s32) from %stack.1)
     $ra = LW $sp, 28 :: (load (s32) from %stack.0)
     $sp = ADDiu $sp, 32
-    PseudoReturn undef $ra, implicit killed $v0
+    PseudoReturn undef $ra, implicit killed $r2
 
 ...
 

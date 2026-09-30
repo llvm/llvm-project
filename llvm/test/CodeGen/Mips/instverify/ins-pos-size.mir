@@ -48,7 +48,7 @@ body:             |
     %0 = COPY $a0
     %2 = ANDi %1, 15
     %3 = INS killed %2, 17, 17, %0
-    $v0 = COPY %3
-    RetRA implicit $v0
+    $r2 = COPY %3
+    RetRA implicit $r2
 
 ...

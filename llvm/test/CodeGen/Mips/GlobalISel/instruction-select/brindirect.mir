@@ -30,11 +30,11 @@ body:             |
   ; MIPS32:   [[ORi1:%[0-9]+]]:gpr32 = ORi $zero, 0
   ; MIPS32:   PseudoIndirectBranch [[COPY]]
   ; MIPS32: bb.1.L1:
-  ; MIPS32:   $v0 = COPY [[ORi1]]
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32:   $r2 = COPY [[ORi1]]
+  ; MIPS32:   RetRA implicit $r2
   ; MIPS32: bb.2.L2:
-  ; MIPS32:   $v0 = COPY [[ORi]]
-  ; MIPS32:   RetRA implicit $v0
+  ; MIPS32:   $r2 = COPY [[ORi]]
+  ; MIPS32:   RetRA implicit $r2
   bb.1.entry:
     successors: %bb.2, %bb.3
     liveins: $a0
@@ -45,12 +45,12 @@ body:             |
     G_BRINDIRECT %0(p0)
 
   bb.2.L1:
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
   bb.3.L2:
-    $v0 = COPY %1(s32)
-    RetRA implicit $v0
+    $r2 = COPY %1(s32)
+    RetRA implicit $r2
 
 ...
 

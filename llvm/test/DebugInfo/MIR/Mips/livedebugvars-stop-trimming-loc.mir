@@ -110,14 +110,14 @@ body:             |
     $a1 = COPY %2, debug-location !19
     DBG_VALUE $a1, $noreg, !14, !DIExpression(), debug-location !16
     $a2 = COPY %4, debug-location !19
-    JAL @fn1, csr_o32, implicit-def dead $ra, implicit $a0, implicit $a1, implicit $a2, implicit-def $sp, implicit-def $v0, debug-location !19
+    JAL @fn1, csr_o32, implicit-def dead $ra, implicit $a0, implicit $a1, implicit $a2, implicit-def $sp, implicit-def $r2, debug-location !19
     ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp, debug-location !19
-    %5:gpr32 = COPY killed $v0, debug-location !19
+    %5:gpr32 = COPY killed $r2, debug-location !19
     DBG_VALUE %5, $noreg, !15, !DIExpression(), debug-location !16
     %6:gpr32 = SLTi %5, 11, debug-location !22
     %7:gpr32 = nsw ADDiu %5, 10, debug-location !22
     %8:gpr32 = MOVZ_I_I %7, %6, %8, debug-location !22
-    $v0 = COPY %8, debug-location !23
-    RetRA implicit killed $v0, debug-location !23
+    $r2 = COPY %8, debug-location !23
+    RetRA implicit killed $r2, debug-location !23
 
 ...

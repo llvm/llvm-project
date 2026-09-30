@@ -483,7 +483,7 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-64-NEXT:    sll $5, $2, 0
 ; SOFT-FLOAT-64-NEXT:    jal __addsf3
 ; SOFT-FLOAT-64-NEXT:    dsrl $19, $1, 32
-; SOFT-FLOAT-64-NEXT:    # kill: def $v0 killed $v0 def $v0_64
+; SOFT-FLOAT-64-NEXT:    # kill: def $r2 killed $r2 def $r2_64
 ; SOFT-FLOAT-64-NEXT:    dsll $1, $2, 32
 ; SOFT-FLOAT-64-NEXT:    sll $5, $16, 0
 ; SOFT-FLOAT-64-NEXT:    or $19, $19, $1
@@ -501,7 +501,7 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-64-NEXT:    dsrl $1, $16, 32
 ; SOFT-FLOAT-64-NEXT:    jal __addsf3
 ; SOFT-FLOAT-64-NEXT:    sll $5, $1, 0
-; SOFT-FLOAT-64-NEXT:    # kill: def $v0 killed $v0 def $v0_64
+; SOFT-FLOAT-64-NEXT:    # kill: def $r2 killed $r2 def $r2_64
 ; SOFT-FLOAT-64-NEXT:    dsll $1, $2, 32
 ; SOFT-FLOAT-64-NEXT:    or $3, $17, $1
 ; SOFT-FLOAT-64-NEXT:    move $2, $19
@@ -566,7 +566,7 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-64R2-NEXT:    sll $5, $1, 0
 ; SOFT-FLOAT-64R2-NEXT:    jal __addsf3
 ; SOFT-FLOAT-64R2-NEXT:    dext $19, $22, 0, 32
-; SOFT-FLOAT-64R2-NEXT:    # kill: def $v0 killed $v0 def $v0_64
+; SOFT-FLOAT-64R2-NEXT:    # kill: def $r2 killed $r2 def $r2_64
 ; SOFT-FLOAT-64R2-NEXT:    dsll $1, $2, 32
 ; SOFT-FLOAT-64R2-NEXT:    sll $5, $16, 0
 ; SOFT-FLOAT-64R2-NEXT:    or $19, $19, $1
@@ -583,7 +583,7 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-64R2-NEXT:    dsrl $1, $16, 32
 ; SOFT-FLOAT-64R2-NEXT:    jal __addsf3
 ; SOFT-FLOAT-64R2-NEXT:    sll $5, $1, 0
-; SOFT-FLOAT-64R2-NEXT:    # kill: def $v0 killed $v0 def $v0_64
+; SOFT-FLOAT-64R2-NEXT:    # kill: def $r2 killed $r2 def $r2_64
 ; SOFT-FLOAT-64R2-NEXT:    dsll $1, $2, 32
 ; SOFT-FLOAT-64R2-NEXT:    or $3, $17, $1
 ; SOFT-FLOAT-64R2-NEXT:    move $2, $19

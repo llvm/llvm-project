@@ -27,12 +27,12 @@ body:             |
     ; MIPS32-NEXT: {{  $}}
     ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.px)
-    ; MIPS32-NEXT: $v0 = COPY [[ZEXTLOAD]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
+    ; MIPS32-NEXT: $r2 = COPY [[ZEXTLOAD]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
     %0:_(p0) = COPY $a0
     %2:_(s32) = G_ZEXTLOAD %0(p0) :: (load (s8) from %ir.px)
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -48,12 +48,12 @@ body:             |
     ; MIPS32-NEXT: {{  $}}
     ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16) from %ir.px)
-    ; MIPS32-NEXT: $v0 = COPY [[ZEXTLOAD]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
+    ; MIPS32-NEXT: $r2 = COPY [[ZEXTLOAD]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
     %0:_(p0) = COPY $a0
     %2:_(s32) = G_ZEXTLOAD %0(p0) :: (load (s16) from %ir.px)
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -69,13 +69,13 @@ body:             |
     ; MIPS32-NEXT: {{  $}}
     ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.px)
-    ; MIPS32-NEXT: $v0 = COPY [[ZEXTLOAD]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
+    ; MIPS32-NEXT: $r2 = COPY [[ZEXTLOAD]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
     %0:_(p0) = COPY $a0
     %2:_(s16) = G_ZEXTLOAD %0(p0) :: (load (s8) from %ir.px)
     %3:_(s32) = G_ANYEXT %2(s16)
-    $v0 = COPY %3(s32)
-    RetRA implicit $v0
+    $r2 = COPY %3(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -91,12 +91,12 @@ body:             |
     ; MIPS32-NEXT: {{  $}}
     ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.px)
-    ; MIPS32-NEXT: $v0 = COPY [[ZEXTLOAD]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
+    ; MIPS32-NEXT: $r2 = COPY [[ZEXTLOAD]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
     %0:_(p0) = COPY $a0
     %3:_(s32) = G_ZEXTLOAD %0(p0) :: (load (s8) from %ir.px)
-    $v0 = COPY %3(s32)
-    RetRA implicit $v0
+    $r2 = COPY %3(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -113,15 +113,15 @@ body:             |
     ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.px)
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; MIPS32-NEXT: $v0 = COPY [[LOAD]](s32)
-    ; MIPS32-NEXT: $v1 = COPY [[C]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0, implicit $v1
+    ; MIPS32-NEXT: $r2 = COPY [[LOAD]](s32)
+    ; MIPS32-NEXT: $r3 = COPY [[C]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2, implicit $r3
     %0:_(p0) = COPY $a0
     %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load (s32) from %ir.px)
     %3:_(s32), %4:_(s32) = G_UNMERGE_VALUES %2(s64)
-    $v0 = COPY %3(s32)
-    $v1 = COPY %4(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %3(s32)
+    $r3 = COPY %4(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...
 ---
@@ -137,12 +137,12 @@ body:             |
     ; MIPS32-NEXT: {{  $}}
     ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.px)
-    ; MIPS32-NEXT: $v0 = COPY [[SEXTLOAD]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
+    ; MIPS32-NEXT: $r2 = COPY [[SEXTLOAD]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
     %0:_(p0) = COPY $a0
     %2:_(s32) = G_SEXTLOAD %0(p0) :: (load (s8) from %ir.px)
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -158,12 +158,12 @@ body:             |
     ; MIPS32-NEXT: {{  $}}
     ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s16) from %ir.px)
-    ; MIPS32-NEXT: $v0 = COPY [[SEXTLOAD]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
+    ; MIPS32-NEXT: $r2 = COPY [[SEXTLOAD]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
     %0:_(p0) = COPY $a0
     %2:_(s32) = G_SEXTLOAD %0(p0) :: (load (s16) from %ir.px)
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -179,13 +179,13 @@ body:             |
     ; MIPS32-NEXT: {{  $}}
     ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.px)
-    ; MIPS32-NEXT: $v0 = COPY [[SEXTLOAD]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
+    ; MIPS32-NEXT: $r2 = COPY [[SEXTLOAD]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
     %0:_(p0) = COPY $a0
     %2:_(s16) = G_SEXTLOAD %0(p0) :: (load (s8) from %ir.px)
     %3:_(s32) = G_ANYEXT %2(s16)
-    $v0 = COPY %3(s32)
-    RetRA implicit $v0
+    $r2 = COPY %3(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -201,12 +201,12 @@ body:             |
     ; MIPS32-NEXT: {{  $}}
     ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.px)
-    ; MIPS32-NEXT: $v0 = COPY [[SEXTLOAD]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0
+    ; MIPS32-NEXT: $r2 = COPY [[SEXTLOAD]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2
     %0:_(p0) = COPY $a0
     %3:_(s32) = G_SEXTLOAD %0(p0) :: (load (s8) from %ir.px)
-    $v0 = COPY %3(s32)
-    RetRA implicit $v0
+    $r2 = COPY %3(s32)
+    RetRA implicit $r2
 
 ...
 ---
@@ -224,14 +224,14 @@ body:             |
     ; MIPS32-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.px)
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; MIPS32-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[LOAD]], [[C]](s32)
-    ; MIPS32-NEXT: $v0 = COPY [[LOAD]](s32)
-    ; MIPS32-NEXT: $v1 = COPY [[ASHR]](s32)
-    ; MIPS32-NEXT: RetRA implicit $v0, implicit $v1
+    ; MIPS32-NEXT: $r2 = COPY [[LOAD]](s32)
+    ; MIPS32-NEXT: $r3 = COPY [[ASHR]](s32)
+    ; MIPS32-NEXT: RetRA implicit $r2, implicit $r3
     %0:_(p0) = COPY $a0
     %2:_(s64) = G_SEXTLOAD %0(p0) :: (load (s32) from %ir.px)
     %3:_(s32), %4:_(s32) = G_UNMERGE_VALUES %2(s64)
-    $v0 = COPY %3(s32)
-    $v1 = COPY %4(s32)
-    RetRA implicit $v0, implicit $v1
+    $r2 = COPY %3(s32)
+    $r3 = COPY %4(s32)
+    RetRA implicit $r2, implicit $r3
 
 ...

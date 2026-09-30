@@ -40,8 +40,8 @@ body:             |
   ; MIPS32-NEXT:   J %bb.2, implicit-def dead $at
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.1.end:
-  ; MIPS32-NEXT:   $v0 = COPY [[COPY]]
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[COPY]]
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.2.block:
   ; MIPS32-NEXT:   successors: %bb.1(0x80000000)
@@ -54,8 +54,8 @@ body:             |
     G_BR %bb.3
 
   bb.2.end:
-    $v0 = COPY %0(s32)
-    RetRA implicit $v0
+    $r2 = COPY %0(s32)
+    RetRA implicit $r2
 
   bb.3.block:
     G_BR %bb.2
@@ -81,12 +81,12 @@ body:             |
   ; MIPS32-NEXT:   J %bb.2, implicit-def dead $at
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.1.if.then:
-  ; MIPS32-NEXT:   $v0 = COPY [[COPY1]]
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[COPY1]]
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.2.if.else:
-  ; MIPS32-NEXT:   $v0 = COPY [[COPY2]]
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[COPY2]]
+  ; MIPS32-NEXT:   RetRA implicit $r2
   bb.1 (%ir-block.0):
     liveins: $a0, $a1, $a2
 
@@ -100,11 +100,11 @@ body:             |
     G_BR %bb.3
 
   bb.2.if.then:
-    $v0 = COPY %1(s32)
-    RetRA implicit $v0
+    $r2 = COPY %1(s32)
+    RetRA implicit $r2
 
   bb.3.if.else:
-    $v0 = COPY %2(s32)
-    RetRA implicit $v0
+    $r2 = COPY %2(s32)
+    RetRA implicit $r2
 
 ...

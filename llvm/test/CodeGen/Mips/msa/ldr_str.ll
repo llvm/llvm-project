@@ -11,7 +11,7 @@
 define void @llvm_mips_ldr_d_test(ptr %val, ptr %ptr) nounwind {
 ; MIPS32R5-EB-LABEL: llvm_mips_ldr_d_test:
 ; MIPS32R5-EB:       # %bb.0: # %entry
-; MIPS32R5-EB-NEXT:    # implicit-def: $v0
+; MIPS32R5-EB-NEXT:    # implicit-def: $r2
 ; MIPS32R5-EB-NEXT:    lwr $2, 23($5)
 ; MIPS32R5-EB-NEXT:    lwl $2, 20($5)
 ; MIPS32R5-EB-NEXT:    # implicit-def: $at
@@ -25,7 +25,7 @@ define void @llvm_mips_ldr_d_test(ptr %val, ptr %ptr) nounwind {
 ;
 ; MIPS32R5-EL-LABEL: llvm_mips_ldr_d_test:
 ; MIPS32R5-EL:       # %bb.0: # %entry
-; MIPS32R5-EL-NEXT:    # implicit-def: $v0
+; MIPS32R5-EL-NEXT:    # implicit-def: $r2
 ; MIPS32R5-EL-NEXT:    lwr $2, 16($5)
 ; MIPS32R5-EL-NEXT:    lwl $2, 19($5)
 ; MIPS32R5-EL-NEXT:    # implicit-def: $at

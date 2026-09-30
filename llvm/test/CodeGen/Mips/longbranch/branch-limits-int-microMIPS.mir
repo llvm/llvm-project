@@ -694,8 +694,8 @@ body:             |
   ; MM-LABEL: name: expand_BEQZ16_MM
   ; MM: bb.0 (%ir-block.0):
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MM:   renamable $v0 = ANDi killed renamable $a0, 1
-  ; MM:   BNEZ16_MM $v0, %bb.2, implicit-def $at {
+  ; MM:   renamable $r2 = ANDi killed renamable $a0, 1
+  ; MM:   BNEZ16_MM $r2, %bb.2, implicit-def $at {
   ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
@@ -711,8 +711,8 @@ body:             |
   ; PIC-LABEL: name: expand_BEQZ16_MM
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   renamable $v0 = ANDi killed renamable $a0, 1
-  ; PIC:   BNEZ16_MM $v0, %bb.3, implicit-def $at {
+  ; PIC:   renamable $r2 = ANDi killed renamable $a0, 1
+  ; PIC:   BNEZ16_MM $r2, %bb.3, implicit-def $at {
   ; PIC:     $zero = SLL_MM $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
@@ -739,8 +739,8 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $a0
 
-    renamable $v0 = ANDi killed renamable $a0, 1
-    BEQZ16_MM killed renamable $v0, %bb.2, implicit-def $at
+    renamable $r2 = ANDi killed renamable $a0, 1
+    BEQZ16_MM killed renamable $r2, %bb.2, implicit-def $at
 
   bb.1.iftrue:
     successors: %bb.2(0x80000000)
@@ -789,8 +789,8 @@ body:             |
   ; MM-LABEL: name: expand_BNEZ16_MM
   ; MM: bb.0 (%ir-block.0):
   ; MM:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; MM:   renamable $v0 = ANDi killed renamable $a0, 1
-  ; MM:   BEQZ16_MM $v0, %bb.2, implicit-def $at {
+  ; MM:   renamable $r2 = ANDi killed renamable $a0, 1
+  ; MM:   BEQZ16_MM $r2, %bb.2, implicit-def $at {
   ; MM:     $zero = SLL_MM $zero, 0
   ; MM:   }
   ; MM: bb.1 (%ir-block.0):
@@ -806,8 +806,8 @@ body:             |
   ; PIC-LABEL: name: expand_BNEZ16_MM
   ; PIC: bb.0 (%ir-block.0):
   ; PIC:   successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  ; PIC:   renamable $v0 = ANDi killed renamable $a0, 1
-  ; PIC:   BEQZ16_MM $v0, %bb.3, implicit-def $at {
+  ; PIC:   renamable $r2 = ANDi killed renamable $a0, 1
+  ; PIC:   BEQZ16_MM $r2, %bb.3, implicit-def $at {
   ; PIC:     $zero = SLL_MM $zero, 0
   ; PIC:   }
   ; PIC: bb.1 (%ir-block.0):
@@ -834,8 +834,8 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $a0
 
-    renamable $v0 = ANDi killed renamable $a0, 1
-    BNEZ16_MM killed renamable $v0, %bb.2, implicit-def $at
+    renamable $r2 = ANDi killed renamable $a0, 1
+    BNEZ16_MM killed renamable $r2, %bb.2, implicit-def $at
 
   bb.1.iftrue:
     successors: %bb.2(0x80000000)

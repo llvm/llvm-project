@@ -20,12 +20,12 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32: [[LW:%[0-9]+]]:gpr32 = LW [[COPY]], 0 :: (load monotonic (s32) from %ir.ptr)
     ; MIPS32: SYNC 0
-    ; MIPS32: $v0 = COPY [[LW]]
-    ; MIPS32: RetRA implicit $v0
+    ; MIPS32: $r2 = COPY [[LW]]
+    ; MIPS32: RetRA implicit $r2
     %0:gprb(p0) = COPY $a0
     %1:gprb(s32) = G_LOAD %0(p0) :: (load monotonic (s32) from %ir.ptr)
     G_FENCE 4, 1
-    $v0 = COPY %1(s32)
-    RetRA implicit $v0
+    $r2 = COPY %1(s32)
+    RetRA implicit $r2
 
 ...

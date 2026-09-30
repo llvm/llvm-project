@@ -21,12 +21,12 @@ body:             |
     BEQ %3:gpr32, $zero, %bb.2, implicit-def dead $at
 
   bb.1:
-    $v0 = ADDiu %4:gpr32, 1
-    RetRA implicit $v0
+    $r2 = ADDiu %4:gpr32, 1
+    RetRA implicit $r2
 
   bb.2:
     %5:gpr32 = COPY renamable %1.sub_lo:fgr64
     ; CHECK: mfc1
-    $v0 = ADDiu %5:gpr32, 2
-    RetRA implicit $v0
+    $r2 = ADDiu %5:gpr32, 2
+    RetRA implicit $r2
 ...

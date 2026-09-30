@@ -99,20 +99,20 @@ body:             |
   ; MIPS32-NEXT:   PseudoIndirectBranch [[LW]]
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.2.sw.bb:
-  ; MIPS32-NEXT:   $v0 = COPY [[ORi4]]
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[ORi4]]
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.3.sw.bb1:
-  ; MIPS32-NEXT:   $v0 = COPY [[ORi3]]
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[ORi3]]
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.4.sw.bb2:
-  ; MIPS32-NEXT:   $v0 = COPY [[ORi2]]
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[ORi2]]
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.5.sw.bb3:
-  ; MIPS32-NEXT:   $v0 = COPY [[ORi1]]
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[ORi1]]
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.6.sw.default:
   ; MIPS32-NEXT:   successors: %bb.7(0x80000000)
@@ -136,31 +136,31 @@ body:             |
   ; MIPS32-NEXT:   PseudoIndirectBranch [[LW1]]
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.9.sw.bb4:
-  ; MIPS32-NEXT:   $v0 = COPY [[ORi4]]
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[ORi4]]
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.10.sw.bb5:
-  ; MIPS32-NEXT:   $v0 = COPY [[ORi3]]
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[ORi3]]
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.11.sw.bb6:
-  ; MIPS32-NEXT:   $v0 = COPY [[ORi2]]
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[ORi2]]
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.12.sw.bb7:
-  ; MIPS32-NEXT:   $v0 = COPY [[ORi1]]
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[ORi1]]
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.13.sw.default8:
-  ; MIPS32-NEXT:   $v0 = COPY [[ADDiu]]
-  ; MIPS32-NEXT:   RetRA implicit $v0
+  ; MIPS32-NEXT:   $r2 = COPY [[ADDiu]]
+  ; MIPS32-NEXT:   RetRA implicit $r2
   ;
   ; MIPS32_PIC-LABEL: name: mod4_0_to_11
   ; MIPS32_PIC: bb.0.entry:
   ; MIPS32_PIC-NEXT:   successors: %bb.6(0x40000000), %bb.1(0x40000000)
-  ; MIPS32_PIC-NEXT:   liveins: $a0, $t9, $v0
+  ; MIPS32_PIC-NEXT:   liveins: $a0, $t9, $r2
   ; MIPS32_PIC-NEXT: {{  $}}
-  ; MIPS32_PIC-NEXT:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $v0, $t9
+  ; MIPS32_PIC-NEXT:   [[ADDu:%[0-9]+]]:gpr32 = ADDu $r2, $t9
   ; MIPS32_PIC-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
   ; MIPS32_PIC-NEXT:   [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 7
   ; MIPS32_PIC-NEXT:   [[ORi1:%[0-9]+]]:gpr32 = ORi $zero, 3
@@ -185,20 +185,20 @@ body:             |
   ; MIPS32_PIC-NEXT:   PseudoIndirectBranch [[ADDu2]]
   ; MIPS32_PIC-NEXT: {{  $}}
   ; MIPS32_PIC-NEXT: bb.2.sw.bb:
-  ; MIPS32_PIC-NEXT:   $v0 = COPY [[ORi4]]
-  ; MIPS32_PIC-NEXT:   RetRA implicit $v0
+  ; MIPS32_PIC-NEXT:   $r2 = COPY [[ORi4]]
+  ; MIPS32_PIC-NEXT:   RetRA implicit $r2
   ; MIPS32_PIC-NEXT: {{  $}}
   ; MIPS32_PIC-NEXT: bb.3.sw.bb1:
-  ; MIPS32_PIC-NEXT:   $v0 = COPY [[ORi3]]
-  ; MIPS32_PIC-NEXT:   RetRA implicit $v0
+  ; MIPS32_PIC-NEXT:   $r2 = COPY [[ORi3]]
+  ; MIPS32_PIC-NEXT:   RetRA implicit $r2
   ; MIPS32_PIC-NEXT: {{  $}}
   ; MIPS32_PIC-NEXT: bb.4.sw.bb2:
-  ; MIPS32_PIC-NEXT:   $v0 = COPY [[ORi2]]
-  ; MIPS32_PIC-NEXT:   RetRA implicit $v0
+  ; MIPS32_PIC-NEXT:   $r2 = COPY [[ORi2]]
+  ; MIPS32_PIC-NEXT:   RetRA implicit $r2
   ; MIPS32_PIC-NEXT: {{  $}}
   ; MIPS32_PIC-NEXT: bb.5.sw.bb3:
-  ; MIPS32_PIC-NEXT:   $v0 = COPY [[ORi1]]
-  ; MIPS32_PIC-NEXT:   RetRA implicit $v0
+  ; MIPS32_PIC-NEXT:   $r2 = COPY [[ORi1]]
+  ; MIPS32_PIC-NEXT:   RetRA implicit $r2
   ; MIPS32_PIC-NEXT: {{  $}}
   ; MIPS32_PIC-NEXT: bb.6.sw.default:
   ; MIPS32_PIC-NEXT:   successors: %bb.7(0x80000000)
@@ -223,24 +223,24 @@ body:             |
   ; MIPS32_PIC-NEXT:   PseudoIndirectBranch [[ADDu4]]
   ; MIPS32_PIC-NEXT: {{  $}}
   ; MIPS32_PIC-NEXT: bb.9.sw.bb4:
-  ; MIPS32_PIC-NEXT:   $v0 = COPY [[ORi4]]
-  ; MIPS32_PIC-NEXT:   RetRA implicit $v0
+  ; MIPS32_PIC-NEXT:   $r2 = COPY [[ORi4]]
+  ; MIPS32_PIC-NEXT:   RetRA implicit $r2
   ; MIPS32_PIC-NEXT: {{  $}}
   ; MIPS32_PIC-NEXT: bb.10.sw.bb5:
-  ; MIPS32_PIC-NEXT:   $v0 = COPY [[ORi3]]
-  ; MIPS32_PIC-NEXT:   RetRA implicit $v0
+  ; MIPS32_PIC-NEXT:   $r2 = COPY [[ORi3]]
+  ; MIPS32_PIC-NEXT:   RetRA implicit $r2
   ; MIPS32_PIC-NEXT: {{  $}}
   ; MIPS32_PIC-NEXT: bb.11.sw.bb6:
-  ; MIPS32_PIC-NEXT:   $v0 = COPY [[ORi2]]
-  ; MIPS32_PIC-NEXT:   RetRA implicit $v0
+  ; MIPS32_PIC-NEXT:   $r2 = COPY [[ORi2]]
+  ; MIPS32_PIC-NEXT:   RetRA implicit $r2
   ; MIPS32_PIC-NEXT: {{  $}}
   ; MIPS32_PIC-NEXT: bb.12.sw.bb7:
-  ; MIPS32_PIC-NEXT:   $v0 = COPY [[ORi1]]
-  ; MIPS32_PIC-NEXT:   RetRA implicit $v0
+  ; MIPS32_PIC-NEXT:   $r2 = COPY [[ORi1]]
+  ; MIPS32_PIC-NEXT:   RetRA implicit $r2
   ; MIPS32_PIC-NEXT: {{  $}}
   ; MIPS32_PIC-NEXT: bb.13.sw.default8:
-  ; MIPS32_PIC-NEXT:   $v0 = COPY [[ADDiu]]
-  ; MIPS32_PIC-NEXT:   RetRA implicit $v0
+  ; MIPS32_PIC-NEXT:   $r2 = COPY [[ADDiu]]
+  ; MIPS32_PIC-NEXT:   RetRA implicit $r2
   bb.1.entry:
     liveins: $a0
 
@@ -267,20 +267,20 @@ body:             |
     G_BRJT %7(p0), %jump-table.0, %3(s32)
 
   bb.2.sw.bb:
-    $v0 = COPY %11(s32)
-    RetRA implicit $v0
+    $r2 = COPY %11(s32)
+    RetRA implicit $r2
 
   bb.3.sw.bb1:
-    $v0 = COPY %10(s32)
-    RetRA implicit $v0
+    $r2 = COPY %10(s32)
+    RetRA implicit $r2
 
   bb.4.sw.bb2:
-    $v0 = COPY %9(s32)
-    RetRA implicit $v0
+    $r2 = COPY %9(s32)
+    RetRA implicit $r2
 
   bb.5.sw.bb3:
-    $v0 = COPY %8(s32)
-    RetRA implicit $v0
+    $r2 = COPY %8(s32)
+    RetRA implicit $r2
 
   bb.6.sw.default:
 
@@ -302,23 +302,23 @@ body:             |
     G_BRJT %17(p0), %jump-table.1, %14(s32)
 
   bb.8.sw.bb4:
-    $v0 = COPY %11(s32)
-    RetRA implicit $v0
+    $r2 = COPY %11(s32)
+    RetRA implicit $r2
 
   bb.9.sw.bb5:
-    $v0 = COPY %10(s32)
-    RetRA implicit $v0
+    $r2 = COPY %10(s32)
+    RetRA implicit $r2
 
   bb.10.sw.bb6:
-    $v0 = COPY %9(s32)
-    RetRA implicit $v0
+    $r2 = COPY %9(s32)
+    RetRA implicit $r2
 
   bb.11.sw.bb7:
-    $v0 = COPY %8(s32)
-    RetRA implicit $v0
+    $r2 = COPY %8(s32)
+    RetRA implicit $r2
 
   bb.12.sw.default8:
-    $v0 = COPY %18(s32)
-    RetRA implicit $v0
+    $r2 = COPY %18(s32)
+    RetRA implicit $r2
 
 ...

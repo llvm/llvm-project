@@ -29,15 +29,15 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: $a0_64 = COPY $zero_64
-    ; CHECK-NEXT: JALR64Pseudo $t9_64, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0
+    ; CHECK-NEXT: JALR64Pseudo $t9_64, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $r2
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: $a0_64 = COPY $zero_64
-    ; CHECK-NEXT: PseudoReturn64 undef $ra_64, implicit $v0_64, implicit killed $a0_64
+    ; CHECK-NEXT: PseudoReturn64 undef $ra_64, implicit $r2_64, implicit killed $a0_64
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     renamable $s0_64 = COPY $zero_64
     $a0_64 = COPY renamable $s0_64
-    JALR64Pseudo $t9_64, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0
+    JALR64Pseudo $t9_64, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $r2
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     $a0_64 = COPY killed renamable $s0_64
-    PseudoReturn64 undef $ra_64, implicit $v0_64, implicit killed $a0_64
+    PseudoReturn64 undef $ra_64, implicit $r2_64, implicit killed $a0_64
 ...

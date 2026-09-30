@@ -8,9 +8,9 @@ define i64 @i64_reg(i64 %a) {
   ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
   ; MIPS32:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; MIPS32:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
-  ; MIPS32:   $v0 = COPY [[UV]](s32)
-  ; MIPS32:   $v1 = COPY [[UV1]](s32)
-  ; MIPS32:   RetRA implicit $v0, implicit $v1
+  ; MIPS32:   $r2 = COPY [[UV]](s32)
+  ; MIPS32:   $r3 = COPY [[UV1]](s32)
+  ; MIPS32:   RetRA implicit $r2, implicit $r3
 entry:
   ret i64 %a
 }
@@ -32,9 +32,9 @@ define i64 @i64_stack(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i64 %a) {
   ; MIPS32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s32) from %fixed-stack.[[STACK0]])
   ; MIPS32:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32)
   ; MIPS32:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
-  ; MIPS32:   $v0 = COPY [[UV]](s32)
-  ; MIPS32:   $v1 = COPY [[UV1]](s32)
-  ; MIPS32:   RetRA implicit $v0, implicit $v1
+  ; MIPS32:   $r2 = COPY [[UV]](s32)
+  ; MIPS32:   $r3 = COPY [[UV1]](s32)
+  ; MIPS32:   RetRA implicit $r2, implicit $r3
 entry:
   ret i64 %a
 }
@@ -48,9 +48,9 @@ define i64 @i64_reg_allign(i32 %a0, i64 %a) {
   ; MIPS32:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
   ; MIPS32:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
   ; MIPS32:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
-  ; MIPS32:   $v0 = COPY [[UV]](s32)
-  ; MIPS32:   $v1 = COPY [[UV1]](s32)
-  ; MIPS32:   RetRA implicit $v0, implicit $v1
+  ; MIPS32:   $r2 = COPY [[UV]](s32)
+  ; MIPS32:   $r3 = COPY [[UV1]](s32)
+  ; MIPS32:   RetRA implicit $r2, implicit $r3
 entry:
   ret i64 %a
 }
@@ -75,9 +75,9 @@ define i64 @i64_stack_allign(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %s16, i64 %
   ; MIPS32:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (s32) from %fixed-stack.[[STACK0]])
   ; MIPS32:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD1]](s32), [[LOAD2]](s32)
   ; MIPS32:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
-  ; MIPS32:   $v0 = COPY [[UV]](s32)
-  ; MIPS32:   $v1 = COPY [[UV1]](s32)
-  ; MIPS32:   RetRA implicit $v0, implicit $v1
+  ; MIPS32:   $r2 = COPY [[UV]](s32)
+  ; MIPS32:   $r3 = COPY [[UV1]](s32)
+  ; MIPS32:   RetRA implicit $r2, implicit $r3
 entry:
   ret i64 %a
 }
@@ -98,9 +98,9 @@ define i64 @i64_reg_stack(i32 %a0, i32 %a1, i32 %a2, i64 %a) {
   ; MIPS32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s32) from %fixed-stack.[[STACK0]])
   ; MIPS32:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32)
   ; MIPS32:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
-  ; MIPS32:   $v0 = COPY [[UV]](s32)
-  ; MIPS32:   $v1 = COPY [[UV1]](s32)
-  ; MIPS32:   RetRA implicit $v0, implicit $v1
+  ; MIPS32:   $r2 = COPY [[UV]](s32)
+  ; MIPS32:   $r3 = COPY [[UV1]](s32)
+  ; MIPS32:   RetRA implicit $r2, implicit $r3
 entry:
   ret i64 %a
 }

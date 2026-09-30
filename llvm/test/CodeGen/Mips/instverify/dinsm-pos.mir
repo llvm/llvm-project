@@ -43,7 +43,7 @@ body:             |
 
     %0 = COPY $a0_64
     %1 = DINSM %0, 65, 5
-    $v0_64 = COPY %1
-    RetRA implicit $v0_64
+    $r2_64 = COPY %1
+    RetRA implicit $r2_64
 
 ...

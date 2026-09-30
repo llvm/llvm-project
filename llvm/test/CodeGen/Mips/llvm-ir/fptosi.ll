@@ -44,7 +44,7 @@ define i32 @test1(float %t) {
 ; M32-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
 ; M32-NEXT:    # <MCOperand Reg:RA>>
 ; M32-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
-; M32-NEXT:    # <MCOperand Reg:V0>
+; M32-NEXT:    # <MCOperand Reg:R2>
 ; M32-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; M32R2-FP64-LABEL: test1:
@@ -55,7 +55,7 @@ define i32 @test1(float %t) {
 ; M32R2-FP64-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
 ; M32R2-FP64-NEXT:    # <MCOperand Reg:RA>>
 ; M32R2-FP64-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
-; M32R2-FP64-NEXT:    # <MCOperand Reg:V0>
+; M32R2-FP64-NEXT:    # <MCOperand Reg:R2>
 ; M32R2-FP64-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; M32R2-SF-LABEL: test1:
@@ -97,7 +97,7 @@ define i32 @test1(float %t) {
 ; M32R3R5-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
 ; M32R3R5-NEXT:    # <MCOperand Reg:RA>>
 ; M32R3R5-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
-; M32R3R5-NEXT:    # <MCOperand Reg:V0>
+; M32R3R5-NEXT:    # <MCOperand Reg:R2>
 ; M32R3R5-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; M32R6-LABEL: test1:
@@ -109,7 +109,7 @@ define i32 @test1(float %t) {
 ; M32R6-NEXT:    # <MCOperand Reg:ZERO>
 ; M32R6-NEXT:    # <MCOperand Reg:RA>>
 ; M32R6-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
-; M32R6-NEXT:    # <MCOperand Reg:V0>
+; M32R6-NEXT:    # <MCOperand Reg:R2>
 ; M32R6-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; M3-LABEL: test1:
@@ -118,7 +118,7 @@ define i32 @test1(float %t) {
 ; M3-NEXT:    # <MCOperand Reg:F0>
 ; M3-NEXT:    # <MCOperand Reg:F12>>
 ; M3-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
-; M3-NEXT:    # <MCOperand Reg:V0>
+; M3-NEXT:    # <MCOperand Reg:R2>
 ; M3-NEXT:    # <MCOperand Reg:F0>>
 ; M3-NEXT:    nop # <MCInst #[[#MCINST7:]] SLL
 ; M3-NEXT:    # <MCOperand Reg:ZERO>
@@ -139,7 +139,7 @@ define i32 @test1(float %t) {
 ; M64-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
 ; M64-NEXT:    # <MCOperand Reg:RA_64>>
 ; M64-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
-; M64-NEXT:    # <MCOperand Reg:V0>
+; M64-NEXT:    # <MCOperand Reg:R2>
 ; M64-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; M64R6-LABEL: test1:
@@ -151,7 +151,7 @@ define i32 @test1(float %t) {
 ; M64R6-NEXT:    # <MCOperand Reg:ZERO_64>
 ; M64R6-NEXT:    # <MCOperand Reg:RA_64>>
 ; M64R6-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3:]] MFC1
-; M64R6-NEXT:    # <MCOperand Reg:V0>
+; M64R6-NEXT:    # <MCOperand Reg:R2>
 ; M64R6-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; MMR2-FP32-LABEL: test1:
@@ -162,7 +162,7 @@ define i32 @test1(float %t) {
 ; MMR2-FP32-NEXT:    jr $ra # <MCInst #[[#MCINST12:]] JR_MM
 ; MMR2-FP32-NEXT:    # <MCOperand Reg:RA>>
 ; MMR2-FP32-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST13:]] MFC1_MM
-; MMR2-FP32-NEXT:    # <MCOperand Reg:V0>
+; MMR2-FP32-NEXT:    # <MCOperand Reg:R2>
 ; MMR2-FP32-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; MMR2-FP64-LABEL: test1:
@@ -173,7 +173,7 @@ define i32 @test1(float %t) {
 ; MMR2-FP64-NEXT:    jr $ra # <MCInst #[[#MCINST12:]] JR_MM
 ; MMR2-FP64-NEXT:    # <MCOperand Reg:RA>>
 ; MMR2-FP64-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST13:]] MFC1_MM
-; MMR2-FP64-NEXT:    # <MCOperand Reg:V0>
+; MMR2-FP64-NEXT:    # <MCOperand Reg:R2>
 ; MMR2-FP64-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; MMR2-SF-LABEL: test1:
@@ -209,7 +209,7 @@ define i32 @test1(float %t) {
 ; MMR6-NEXT:    # <MCOperand Reg:F0>
 ; MMR6-NEXT:    # <MCOperand Reg:F12>>
 ; MMR6-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST13:]] MFC1_MM
-; MMR6-NEXT:    # <MCOperand Reg:V0>
+; MMR6-NEXT:    # <MCOperand Reg:R2>
 ; MMR6-NEXT:    # <MCOperand Reg:F0>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST19:]] JRC16_MM
 ; MMR6-NEXT:    # <MCOperand Reg:RA>>
@@ -254,7 +254,7 @@ define i32 @test2(double %t) {
 ; M32-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; M32-NEXT:    # <MCOperand Reg:RA>>
 ; M32-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
-; M32-NEXT:    # <MCOperand Reg:V0>
+; M32-NEXT:    # <MCOperand Reg:R2>
 ; M32-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; M32R2-FP64-LABEL: test2:
@@ -265,7 +265,7 @@ define i32 @test2(double %t) {
 ; M32R2-FP64-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; M32R2-FP64-NEXT:    # <MCOperand Reg:RA>>
 ; M32R2-FP64-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
-; M32R2-FP64-NEXT:    # <MCOperand Reg:V0>
+; M32R2-FP64-NEXT:    # <MCOperand Reg:R2>
 ; M32R2-FP64-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; M32R2-SF-LABEL: test2:
@@ -307,7 +307,7 @@ define i32 @test2(double %t) {
 ; M32R3R5-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; M32R3R5-NEXT:    # <MCOperand Reg:RA>>
 ; M32R3R5-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
-; M32R3R5-NEXT:    # <MCOperand Reg:V0>
+; M32R3R5-NEXT:    # <MCOperand Reg:R2>
 ; M32R3R5-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; M32R6-LABEL: test2:
@@ -319,7 +319,7 @@ define i32 @test2(double %t) {
 ; M32R6-NEXT:    # <MCOperand Reg:ZERO>
 ; M32R6-NEXT:    # <MCOperand Reg:RA>>
 ; M32R6-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
-; M32R6-NEXT:    # <MCOperand Reg:V0>
+; M32R6-NEXT:    # <MCOperand Reg:R2>
 ; M32R6-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; M3-LABEL: test2:
@@ -328,7 +328,7 @@ define i32 @test2(double %t) {
 ; M3-NEXT:    # <MCOperand Reg:F0>
 ; M3-NEXT:    # <MCOperand Reg:D12_64>>
 ; M3-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
-; M3-NEXT:    # <MCOperand Reg:V0>
+; M3-NEXT:    # <MCOperand Reg:R2>
 ; M3-NEXT:    # <MCOperand Reg:F0>>
 ; M3-NEXT:    nop # <MCInst #[[#MCINST7]] SLL
 ; M3-NEXT:    # <MCOperand Reg:ZERO>
@@ -349,7 +349,7 @@ define i32 @test2(double %t) {
 ; M64-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; M64-NEXT:    # <MCOperand Reg:RA_64>>
 ; M64-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
-; M64-NEXT:    # <MCOperand Reg:V0>
+; M64-NEXT:    # <MCOperand Reg:R2>
 ; M64-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; M64R6-LABEL: test2:
@@ -361,7 +361,7 @@ define i32 @test2(double %t) {
 ; M64R6-NEXT:    # <MCOperand Reg:ZERO_64>
 ; M64R6-NEXT:    # <MCOperand Reg:RA_64>>
 ; M64R6-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST3]] MFC1
-; M64R6-NEXT:    # <MCOperand Reg:V0>
+; M64R6-NEXT:    # <MCOperand Reg:R2>
 ; M64R6-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; MMR2-FP32-LABEL: test2:
@@ -372,7 +372,7 @@ define i32 @test2(double %t) {
 ; MMR2-FP32-NEXT:    jr $ra # <MCInst #[[#MCINST12]] JR_MM
 ; MMR2-FP32-NEXT:    # <MCOperand Reg:RA>>
 ; MMR2-FP32-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST13]] MFC1_MM
-; MMR2-FP32-NEXT:    # <MCOperand Reg:V0>
+; MMR2-FP32-NEXT:    # <MCOperand Reg:R2>
 ; MMR2-FP32-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; MMR2-FP64-LABEL: test2:
@@ -383,7 +383,7 @@ define i32 @test2(double %t) {
 ; MMR2-FP64-NEXT:    jr $ra # <MCInst #[[#MCINST12]] JR_MM
 ; MMR2-FP64-NEXT:    # <MCOperand Reg:RA>>
 ; MMR2-FP64-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST13]] MFC1_MM
-; MMR2-FP64-NEXT:    # <MCOperand Reg:V0>
+; MMR2-FP64-NEXT:    # <MCOperand Reg:R2>
 ; MMR2-FP64-NEXT:    # <MCOperand Reg:F0>>
 ;
 ; MMR2-SF-LABEL: test2:
@@ -419,7 +419,7 @@ define i32 @test2(double %t) {
 ; MMR6-NEXT:    # <MCOperand Reg:F0>
 ; MMR6-NEXT:    # <MCOperand Reg:D12_64>>
 ; MMR6-NEXT:    mfc1 $2, $f0 # <MCInst #[[#MCINST13]] MFC1_MM
-; MMR6-NEXT:    # <MCOperand Reg:V0>
+; MMR6-NEXT:    # <MCOperand Reg:R2>
 ; MMR6-NEXT:    # <MCOperand Reg:F0>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST19]] JRC16_MM
 ; MMR6-NEXT:    # <MCOperand Reg:RA>>

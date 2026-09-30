@@ -156,9 +156,9 @@ body:             |
     %9 = LD killed %8, target-flags(mips-call-lo16) @_Z1gi :: (load (s64) from call-entry @_Z1gi)
     $a0_64 = COPY %5
     $gp_64 = COPY %6
-    JALR64Pseudo killed %9, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0
+    JALR64Pseudo killed %9, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $r2
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    %10 = COPY $v0
+    %10 = COPY $r2
     %11 = COPY %5.sub_32
     %12 = ADDu %10, killed %11
     %13 = LUi64 target-flags(mips-got-hi16) @v
@@ -173,9 +173,9 @@ body:             |
     %20 = DADDiu %6, target-flags(mips-tlsldm) @__tls_guard
     $a0_64 = COPY %20
     $gp_64 = COPY %6
-    JALR64Pseudo killed %19, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0_64
+    JALR64Pseudo killed %19, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $r2_64
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    %21 = COPY $v0_64
+    %21 = COPY $r2_64
     %22 = DADDiu %21, target-flags(mips-dtprel-hi) @__tls_guard
     %23 = LBu killed %22, target-flags(mips-dtprel-lo) @__tls_guard :: (dereferenceable load (s8) from @__tls_guard)
     BEQ killed %23, $zero, %bb.2.init.i.i, implicit-def dead $at
@@ -191,9 +191,9 @@ body:             |
     %42 = DADDiu %6, target-flags(mips-tlsgd) @k
     $a0_64 = COPY %42
     $gp_64 = COPY %6
-    JALR64Pseudo killed %41, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0_64
+    JALR64Pseudo killed %41, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $r2_64
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    %43 = COPY $v0_64
+    %43 = COPY $r2_64
     %1 = LW %43, 0 :: (dereferenceable load (s32) from @k)
     B %bb.3._ZTW1k.exit, implicit-def dead $at
 
@@ -207,9 +207,9 @@ body:             |
     %27 = DADDiu %6, target-flags(mips-tlsldm) @__tls_guard
     $a0_64 = COPY %27
     $gp_64 = COPY %6
-    JALR64Pseudo killed %26, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0_64
+    JALR64Pseudo killed %26, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $r2_64
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    %28 = COPY $v0_64
+    %28 = COPY $r2_64
     %29 = DADDiu %28, target-flags(mips-dtprel-hi) @__tls_guard
     %30 = ADDiu $zero, 1
     SB killed %30, killed %29, target-flags(mips-dtprel-lo) @__tls_guard :: (store (s8) into @__tls_guard)
@@ -220,17 +220,17 @@ body:             |
     %34 = LD killed %32, target-flags(mips-call-lo16) @_Z1gi :: (load (s64) from call-entry @_Z1gi)
     $a0_64 = COPY %33
     $gp_64 = COPY %6
-    JALR64Pseudo killed %34, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0
+    JALR64Pseudo killed %34, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $r2
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    %35 = COPY $v0
+    %35 = COPY $r2
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     %36 = LD %25, target-flags(mips-call-lo16) &__tls_get_addr :: (load (s64) from call-entry &__tls_get_addr)
     %37 = DADDiu %6, target-flags(mips-tlsgd) @k
     $a0_64 = COPY %37
     $gp_64 = COPY %6
-    JALR64Pseudo killed %36, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0_64
+    JALR64Pseudo killed %36, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $r2_64
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    %38 = COPY $v0_64
+    %38 = COPY $r2_64
     SW %35, %38, 0 :: (store (s32) into @k)
     %2 = COPY %35
 
@@ -264,13 +264,13 @@ body:             |
     %53 = DADDiu %6, target-flags(mips-tlsgd) @j
     $a0_64 = COPY %53
     $gp_64 = COPY %6
-    JALR64Pseudo killed %52, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $v0_64
+    JALR64Pseudo killed %52, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit $gp_64, implicit-def $sp, implicit-def $r2_64
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    %54 = COPY $v0_64
+    %54 = COPY $r2_64
     %55 = LW %54, 0 :: (dereferenceable load (s32) from @j)
     %56 = ADDu %4, killed %55
-    $v0 = COPY %56
-    RetRA implicit $v0
+    $r2 = COPY %56
+    RetRA implicit $r2
 
 ...
 
