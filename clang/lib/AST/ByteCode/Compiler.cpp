@@ -139,7 +139,9 @@ public:
     if (!Idx) {
       Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
       this->Ctx->Descriptors.emplace_back();
-      this->Ctx->emitInitScope(*Idx, {});
+
+      if constexpr (!std::is_same_v<Emitter, EvalEmitter>)
+        this->Ctx->emitInitScope(*Idx, {});
     }
 
     Local.EnabledByDefault = this->LocalsAlwaysEnabled;
@@ -155,7 +157,8 @@ public:
     if (!Idx) {
       Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
       this->Ctx->Descriptors.emplace_back();
-      this->Ctx->emitInitScope(*Idx, {});
+      if constexpr (!std::is_same_v<Emitter, EvalEmitter>)
+        this->Ctx->emitInitScope(*Idx, {});
     }
   }
 
