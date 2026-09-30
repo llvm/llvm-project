@@ -61,7 +61,7 @@ CODEGENOPT(XCOFFReadOnlyPointers, 1, 0, Benign) ///< Set for -mxcoff-roptr.
 CODEGENOPT(AllTocData, 1, 0, Benign) ///< AIX -mtocdata
 ENUM_CODEGENOPT(FramePointer, FramePointerKind, 3, FramePointerKind::None, Benign) /// frame-pointer: all,non-leaf,non-leaf-no-reserve,reserved,none
 
-ENUM_CODEGENOPT(ExceptionHandling, ExceptionHandlingKind, 3, ExceptionHandlingKind::None, NotCompatible)
+ENUM_CODEGENOPT(ExceptionHandling, ExceptionHandlingKind, 3, ExceptionHandlingKind::Default, NotCompatible)
 
 CODEGENOPT(ClearASTBeforeBackend , 1, 0, Benign) ///< Free the AST before running backend code generation.
 CODEGENOPT(DisableFree       , 1, 0, Benign) ///< Don't free memory.
@@ -298,6 +298,8 @@ CODEGENOPT(SanitizeCfiICallNormalizeIntegers, 1, 0, Benign) ///< Normalize integ
 CODEGENOPT(SanitizeCfiCanonicalJumpTables, 1, 0, Benign) ///< Make jump table symbols canonical
                                                          ///< instead of creating a local jump table.
 CODEGENOPT(SanitizeKcfiArity, 1, 0, Benign) ///< Embed arity in KCFI patchable function prefix
+CODEGENOPT(CopyProf, 1, 0, Benign) ///< Enable CopyProf instrumentation
+VALUE_CODEGENOPT(CopyProfStaticSizeThreshold, 32, 16, Benign) ///< Set threshold for CopyProf instrumentation
 CODEGENOPT(SanitizeCoverageType, 2, 0, Benign) ///< Type of sanitizer coverage
                                                ///< instrumentation.
 CODEGENOPT(SanitizeCoverageIndirectCalls, 1, 0, Benign) ///< Enable sanitizer coverage

@@ -90,7 +90,8 @@ public:
 
   unsigned getID() const {
     assert(Info && "Must have a valid info!");
-    return Info->ID;
+    assert(Owner && "Must have a valid owner!");
+    return Owner->getOptionID(*Info);
   }
 
   OptionClass getKind() const {
@@ -99,11 +100,7 @@ public:
   }
 
   /// Get the name of this option without any prefix.
-  StringRef getName() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionName(Info->ID);
-  }
+  StringRef getName() const { return Owner->getOptionName(getID()); }
 
   const Option getGroup() const {
     assert(Info && "Must have a valid info!");
@@ -120,52 +117,33 @@ public:
   /// Get the alias arguments as a \0 separated list.
   /// E.g. ["foo", "bar"] would be returned as "foo\0bar\0".
   const char *getAliasArgs() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getStrTable().getCString(Info->AliasArgsOffset);
+    return Owner->getOptionAliasArgs(getID());
   }
 
-  bool hasAliasArgs() const {
-    assert(Info && "Must have a valid info!");
-    return Info->hasAliasArgs();
-  }
+  bool hasAliasArgs() const { return *getAliasArgs() != '\0'; }
 
   /// Get the default prefix for this option.
-  StringRef getPrefix() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionPrefix(Info->ID);
-  }
+  StringRef getPrefix() const { return Owner->getOptionPrefix(getID()); }
 
   /// Get the name of this option with the default prefix.
   StringRef getPrefixedName() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionPrefixedName(Info->ID);
+    return Owner->getOptionPrefixedName(getID());
   }
 
   /// Get the help text for this option.
-  StringRef getHelpText() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionHelpText(Info->ID);
-  }
+  StringRef getHelpText() const { return Owner->getOptionHelpText(getID()); }
 
   /// Get the meta-variable list for this option.
-  StringRef getMetaVar() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionMetaVar(Info->ID);
-  }
+  StringRef getMetaVar() const { return Owner->getOptionMetaVar(getID()); }
 
-  unsigned getNumArgs() const { return Info->Param; }
+  unsigned getNumArgs() const { return Owner->getExtra(*Info).Param; }
 
-  bool hasNoOptAsInput() const { return Info->Flags & RenderAsInput;}
+  bool hasNoOptAsInput() const { return hasFlag(RenderAsInput); }
 
   RenderStyleKind getRenderStyle() const {
-    if (Info->Flags & RenderJoined)
+    if (hasFlag(RenderJoined))
       return RenderJoinedStyle;
-    if (Info->Flags & RenderSeparate)
+    if (hasFlag(RenderSeparate))
       return RenderSeparateStyle;
     switch (getKind()) {
     case GroupClass:
@@ -191,12 +169,12 @@ public:
 
   /// Test if this option has the flag \a Val.
   bool hasFlag(unsigned Val) const {
-    return Info->Flags & Val;
+    return Owner->getExtra(*Info).Flags & Val;
   }
 
   /// Test if this option has the visibility flag \a Val.
   bool hasVisibilityFlag(unsigned Val) const {
-    return Info->Visibility & Val;
+    return Owner->getExtra(*Info).Visibility & Val;
   }
 
   /// getUnaliasedOption - Return the final option this option

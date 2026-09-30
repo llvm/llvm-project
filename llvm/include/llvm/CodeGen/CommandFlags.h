@@ -44,8 +44,6 @@ LLVM_ABI std::vector<std::string> getMAttrs();
 LLVM_ABI Reloc::Model getRelocModel();
 LLVM_ABI std::optional<Reloc::Model> getExplicitRelocModel();
 
-LLVM_ABI ThreadModel getThreadModel();
-
 LLVM_ABI CodeModel::Model getCodeModel();
 LLVM_ABI std::optional<CodeModel::Model> getExplicitCodeModel();
 
@@ -106,8 +104,6 @@ LLVM_ABI bool getUniqueSectionNames();
 LLVM_ABI bool getUniqueBasicBlockSectionNames();
 
 LLVM_ABI bool getSeparateNamedSections();
-
-LLVM_ABI llvm::EABI getEABIVersion();
 
 LLVM_ABI llvm::DebuggerKind getDebuggerTuningOpt();
 
