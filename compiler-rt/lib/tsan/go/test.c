@@ -121,8 +121,8 @@ int main(void) {
   current_proc = proc0;
 #if defined(__SIZEOF_INT128__)
   {
-    // Align `a` to 16 bytes, matching the alignment Go's runtime guarantees for
-    // the buffer it passes to these functions.
+    // Align `a` to 16 bytes so `a + 8` and `a + 24` are 8-byte aligned
+    // (8 mod 16), matching the 8-byte alignment Go's runtime guarantees.
     __attribute__((aligned(16))) char a[64];
     __tsan_malloc(thr0, (char*)&barfoo + 1, buf, 16);
     *(void**)(a + 0) = buf;
