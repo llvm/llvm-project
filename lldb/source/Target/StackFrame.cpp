@@ -1404,8 +1404,8 @@ GetBaseExplainingValue(const Instruction::Operand &operand,
     return base_and_offset;
   }
   case Instruction::Operand::Type::Register: {
-    const RegisterInfo *info = register_context.GetRegisterInfoByName(
-        operand.m_register.AsCString(nullptr));
+    const RegisterInfo *info =
+        register_context.GetRegisterInfoByName(operand.m_register);
     if (!info) {
       return std::make_pair(nullptr, 0);
     }
@@ -1617,7 +1617,7 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
 ///   A string describing the base for the ExpressionPath.  This could be a
 ///     variable, a register value, an argument, or a function return value.
 ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
-lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
+lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, llvm::StringRef reg,
                                    int64_t offset, Disassembler &disassembler,
                                    VariableList &variables, const Address &pc) {
   // Example of operation for Intel:
@@ -1647,7 +1647,7 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
   using namespace OperandMatchers;
 
   const RegisterInfo *reg_info =
-      frame.GetRegisterContext()->GetRegisterInfoByName(reg.AsCString(nullptr));
+      frame.GetRegisterContext()->GetRegisterInfoByName(reg);
   if (!reg_info) {
     return ValueObjectSP();
   }
@@ -1773,7 +1773,7 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
 
     // We have an origin operand.  Can we track its value down?
     ValueObjectSP source_path;
-    ConstString origin_register;
+    std::string origin_register;
     int64_t origin_offset = 0;
 
     if (FetchRegOp(origin_register)(*origin_operand)) {
@@ -1805,8 +1805,9 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
 }
 } // namespace
 
-lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
-                                                               int64_t offset) {
+lldb::ValueObjectSP
+StackFrame::GuessValueForRegisterAndOffset(llvm::StringRef reg,
+                                           int64_t offset) {
   TargetSP target_sp = CalculateTarget();
 
   const ArchSpec &target_arch = target_sp->GetArchitecture();

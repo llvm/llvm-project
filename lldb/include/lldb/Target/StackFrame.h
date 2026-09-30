@@ -534,8 +534,8 @@ public:
   ///
   /// \return
   ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
-  virtual lldb::ValueObjectSP GuessValueForRegisterAndOffset(ConstString reg,
-                                                             int64_t offset);
+  virtual lldb::ValueObjectSP
+  GuessValueForRegisterAndOffset(llvm::StringRef reg, int64_t offset);
 
   /// Attempt to reconstruct the ValueObject for a variable with a given \a name
   /// from within the current StackFrame, within the current block. The search
