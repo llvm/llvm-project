@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=mipsel-linux-gnu -O0 -global-isel -global-isel-abort=1 \
 ; RUN:   -stop-after=legalizer -verify-machineinstrs %s -o - | FileCheck %s
 
+; CHECK-DAG: !1 = !{!"test.cache", !"hint"}
+
 define void @split_load_store(ptr %src, ptr %dst) {
   ; CHECK-LABEL: name: split_load_store
   ; CHECK: bb.1 (%ir-block.0):

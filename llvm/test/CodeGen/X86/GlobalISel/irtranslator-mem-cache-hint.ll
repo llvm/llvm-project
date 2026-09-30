@@ -2,6 +2,9 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -O0 -global-isel \
 ; RUN:   -stop-after=irtranslator %s -o - | FileCheck %s
 
+; CHECK-DAG: !1 = !{!"test.cache", !"load"}
+; CHECK-DAG: !3 = !{!"test.cache", !"store"}
+
 define i32 @load_store(ptr %p, i32 %v) {
   ; CHECK-LABEL: name: load_store
   ; CHECK: bb.1 (%ir-block.0):
