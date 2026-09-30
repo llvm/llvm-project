@@ -63,6 +63,7 @@ struct TypeSanitizer {
   TypeSanitizer(const InstrumentationOptions &Opts, Module &M);
   bool sanitizeFunction(Function &F, const TargetLibraryInfo &TLI);
   void instrumentGlobals(Module &M);
+  void setConservativeTBAA(Module &M);
 
   const InstrumentationOptions &Opts;
   bool OutlineInstrumentation;
@@ -113,6 +114,9 @@ private:
   FunctionCallee TysanInstrumentWithShadowUpdate;
   FunctionCallee TysanSetShadowType;
 
+  FunctionCallee TysanSetConservativeTBAADescriptor;
+  GlobalVariable *ConservativeTBAADescriptor;
+
   /// Callback to set types for gloabls.
   Function *TysanGlobalsSetTypeFunction;
 };
@@ -121,7 +125,8 @@ private:
 TypeSanitizer::TypeSanitizer(const InstrumentationOptions &Opts, Module &M)
     : Opts(Opts), OutlineInstrumentation(Opts.tysan_outline_instrumentation),
       TargetTriple(M.getTargetTriple()),
-      AnonNameRegex("^_ZTS.*N[1-9][0-9]*_GLOBAL__N") {
+      AnonNameRegex("^_ZTS.*N[1-9][0-9]*_GLOBAL__N"),
+      ConservativeTBAADescriptor(nullptr) {
   const DataLayout &DL = M.getDataLayout();
   IntptrTy = DL.getIntPtrType(M.getContext());
   PtrShift = countr_zero(IntptrTy->getPrimitiveSizeInBits() / 8);
@@ -186,6 +191,12 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
       IRB.getPtrTy(), // Pointer to the new type descriptor
       U64Ty           // Size of data we access in bytes
   );
+
+  TysanSetConservativeTBAADescriptor = M.getOrInsertFunction(
+      "__tysan_set_conservative_tbaa_descriptor", Attr, IRB.getVoidTy(),
+      IRB.getPtrTy() // Pointer to the type descriptor that describes the TBAA
+                     // clang generates under the conservative TBAA path
+  );
 }
 
 void TypeSanitizer::instrumentGlobals(Module &M) {
@@ -231,6 +242,16 @@ void TypeSanitizer::instrumentGlobals(Module &M) {
                         ->getEntryBlock()
                         .getTerminator());
     IRB.CreateCall(TysanGlobalsSetTypeFunction, {});
+  }
+}
+
+void TypeSanitizer::setConservativeTBAA(Module &M) {
+  if (ConservativeTBAADescriptor) {
+    IRBuilder<> IRB(cast<Function>(TysanCtorFunction.getCallee())
+                        ->getEntryBlock()
+                        .getTerminator());
+    IRB.CreateCall(TysanSetConservativeTBAADescriptor,
+                   {ConservativeTBAADescriptor});
   }
 }
 
@@ -399,6 +420,9 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
                          TD, EncodedName);
   M.insertGlobalVariable(TDGV);
 
+  if (Name == "TysanConservativeTBAA") {
+    ConservativeTBAADescriptor = TDGV;
+  }
   if (ShouldBeComdat) {
     if (TargetTriple.isOSBinFormatELF()) {
       Comdat *TDComdat = M.getOrInsertComdat(EncodedName);
@@ -987,6 +1011,8 @@ PreservedAnalyses TypeSanitizerPass::run(Module &M,
       TySan.OutlineInstrumentation = true;
     }
   }
+
+  TySan.setConservativeTBAA(M);
 
   return PreservedAnalyses::none();
 }
