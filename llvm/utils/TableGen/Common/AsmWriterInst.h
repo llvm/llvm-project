@@ -16,7 +16,6 @@
 #ifndef LLVM_UTILS_TABLEGEN_COMMON_ASMWRITERINST_H
 #define LLVM_UTILS_TABLEGEN_COMMON_ASMWRITERINST_H
 
-#include "llvm/ADT/StringRef.h"
 #include <string>
 #include <vector>
 
