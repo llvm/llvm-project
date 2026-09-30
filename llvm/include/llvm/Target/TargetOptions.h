@@ -114,14 +114,14 @@ public:
         EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
         EmitStackSizeSection(false), EnableMachineOutliner(false),
         EnableMachineFunctionSplitter(false),
-        EnableStaticDataPartitioning(false), SupportsDefaultOutlining(false),
-        EnableDefaultMachineVerifier(true), EmitAddrsig(false),
-        BBAddrMap(false), EmitCallGraphSection(false), EmitCallSiteInfo(false),
-        SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
-        ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
-        XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
-        JMCInstrument(false), EnableCFIFixup(false), MisExpect(false),
-        XCOFFReadOnlyPointers(false), VerifyArgABICompliance(true) {}
+        EnableStaticDataPartitioning(false), EnableDefaultMachineVerifier(true),
+        EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
+        EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
+        EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
+        ForceDwarfFrameSection(false), XRayFunctionIndex(true),
+        DebugStrictDwarf(false), Hotpatch(false), JMCInstrument(false),
+        EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
+        VerifyArgABICompliance(true) {}
 
   /// NoZerosInBSS - By default some codegens place zero-initialized data to
   /// .bss section. This flag disables such behaviour (necessary, e.g. for
@@ -214,9 +214,6 @@ public:
 
   /// Enables the StaticDataSplitter pass.
   unsigned EnableStaticDataPartitioning : 1;
-
-  /// Set if the target supports default outlining behaviour.
-  unsigned SupportsDefaultOutlining : 1;
 
   /// Enable Machine verifier at the end of default codegen pipelines. (Only
   /// used with NPM)

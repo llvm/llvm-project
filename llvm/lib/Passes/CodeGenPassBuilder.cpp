@@ -711,7 +711,7 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
       getOptLevel() != CodeGenOptLevel::None &&
       Opt.EnableMachineOutliner != RunOutliner::NeverOutline) {
     if (Opt.EnableMachineOutliner != RunOutliner::TargetDefault ||
-        TM.Options.SupportsDefaultOutlining) {
+        TM.supportsDefaultOutlining()) {
       flushFPMsToMPM(PMW);
       addModulePass(MachineOutlinerPass(Opt.EnableMachineOutliner), PMW);
     }
