@@ -1567,9 +1567,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
   //   one such matching entity, the program is ill-formed. Otherwise,
   //   if no matching entity is found, the block scope entity receives
   //   external linkage.
-  if (D->getDeclContext()
-          ->getEnclosingNonExpansionStatementContext()
-          ->isFunctionOrMethod())
+  if (D->getDeclContext()->isFunctionOrMethod())
     return getLVForLocalDecl(D, computation);
 
   // C++ [basic.link]p6:
@@ -4924,7 +4922,13 @@ const FieldDecl *FieldDecl::findCountedByField() const {
   if (!CAT)
     return nullptr;
 
-  const auto *CountDRE = cast<DeclRefExpr>(CAT->getCountExpr());
+  // A late-parsed attribute whose argument was rejected keeps the node with the
+  // raw argument as its count (see Sema::ActOnLateParsedTypeAttrArgument). That
+  // argument may not be a simple declaration reference (e.g. it may be an error
+  // expression or a `sizeof`), in which case it refers to no field.
+  const auto *CountDRE = dyn_cast<DeclRefExpr>(CAT->getCountExpr());
+  if (!CountDRE)
+    return nullptr;
   const auto *CountDecl = CountDRE->getDecl();
   if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl))
     CountDecl = IFD->getAnonField();

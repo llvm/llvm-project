@@ -383,6 +383,29 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   return false;
 }
 
+static void initializeCommonABICompatInfo(llvm::abi::ABICompatInfo &CompatInfo,
+                                          const LangOptions::ClangABI Compat) {
+  CompatInfo.IsMatrixHA = Compat > LangOptions::ClangABI::Ver23;
+}
+
+static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
+                                       const llvm::Triple &T,
+                                       const LangOptions::ClangABI Compat) {
+  initializeCommonABICompatInfo(CompatInfo, Compat);
+  CompatInfo.ClassifyIntegerMMXAsSSE = Compat > LangOptions::ClangABI::Ver3_8 &&
+                                       !T.isOSDarwin() && !T.isPS() &&
+                                       !T.isOSFreeBSD();
+  CompatInfo.HonorsRevision98 = !T.isOSDarwin();
+  CompatInfo.PassInt128VectorsInMem =
+      Compat > LangOptions::ClangABI::Ver9 && (T.isOSLinux() || T.isOSNetBSD());
+  // Clang <= 20.0 did not do this, and PlayStation does not do this.
+  CompatInfo.ReturnCXXRecordGreaterThan128InMem =
+      Compat > LangOptions::ClangABI::Ver20 && !T.isPS();
+  CompatInfo.Clang11Compat = Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
+  CompatInfo.ClassifyUnnamedBitFields =
+      Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
+}
+
 const llvm::abi::TargetInfo &
 CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
   if (TheLLVMABITargetInfo)
@@ -409,7 +432,14 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
       Opts.Kind = llvm::abi::AArch64ABIKind::AAPCS;
 
     Opts.IsILP32 = T.getArch() == llvm::Triple::aarch64_32;
+    Opts.IsCXX = getLangOpts().CPlusPlus;
+    Opts.IsMachO = T.isOSBinFormatMachO();
+    Opts.IsAndroidOrOHOS = T.isAndroid() || T.isOHOSFamily();
+    Opts.IsWindowsArm64EC = T.isWindowsArm64EC();
     Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
+
+    initializeCommonABICompatInfo(Opts.CompatInfo,
+                                  getLangOpts().getClangABICompat());
 
     TheLLVMABITargetInfo = llvm::abi::createAArch64TargetInfo(TB, Opts);
     return *TheLLVMABITargetInfo;
@@ -417,6 +447,7 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
 
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
+    // BPF targets do not require any ABI compatibility information.
     TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
     return *TheLLVMABITargetInfo;
 
@@ -427,21 +458,9 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
         : ABI == "avx"  ? llvm::abi::X86AVXABILevel::AVX
                         : llvm::abi::X86AVXABILevel::None;
 
-    llvm::abi::ABICompatInfo CompatInfo;
-    LangOptions::ClangABI Compat = getLangOpts().getClangABICompat();
-    CompatInfo.ClassifyIntegerMMXAsSSE =
-        Compat > LangOptions::ClangABI::Ver3_8 && !T.isOSDarwin() &&
-        !T.isPS() && !T.isOSFreeBSD();
-    CompatInfo.HonorsRevision98 = !T.isOSDarwin();
-    CompatInfo.PassInt128VectorsInMem = Compat > LangOptions::ClangABI::Ver9 &&
-                                        (T.isOSLinux() || T.isOSNetBSD());
-    // Clang <= 20.0 did not do this, and PlayStation does not do this.
-    CompatInfo.ReturnCXXRecordGreaterThan128InMem =
-        Compat > LangOptions::ClangABI::Ver20 && !T.isPS();
-    CompatInfo.Clang11Compat =
-        Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
-    CompatInfo.ClassifyUnnamedBitFields =
-        Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
+    llvm::abi::X86ABICompatInfo CompatInfo;
+    initializeX86ABICompatInfo(CompatInfo, T,
+                               getLangOpts().getClangABICompat());
 
     bool Has64BitPointers = getTarget().getPointerWidth(LangAS::Default) == 64;
 
@@ -1518,7 +1537,7 @@ void CodeGenModule::Release() {
   // non-empty value.
   if (StringRef ABIStr = Target.getABI();
       !ABIStr.empty() && (T.isARM() || T.isThumb() || T.isRISCV() ||
-                          T.isPPC() || T.isLoongArch())) {
+                          T.isPPC() || T.isLoongArch() || T.isWasm())) {
     getModule().addModuleFlag(llvm::Module::Error, "target-abi",
                               llvm::MDString::get(VMContext, ABIStr));
   }
@@ -4847,7 +4866,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     if (FD->hasAttr<AnnotateAttr>()) {
       StringRef MangledName = getMangledName(GD);
       if (GetGlobalValue(MangledName))
-        DeferredAnnotations[MangledName] = FD;
+        DeferredAnnotations[MangledName.str()] = FD;
     }
 
     // Forward declarations are emitted lazily on first use.
@@ -5768,7 +5787,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
   // Store the declaration associated with this function so it is potentially
   // updated by further declarations or definitions and emitted at the end.
   if (D && D->hasAttr<AnnotateAttr>())
-    DeferredAnnotations[MangledName] = cast<ValueDecl>(D);
+    DeferredAnnotations[MangledName.str()] = cast<ValueDecl>(D);
 
   // If we already created a function with the same mangled name (but different
   // type) before, take its name and add it to the list of functions to be

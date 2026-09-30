@@ -115,38 +115,96 @@ bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
   return true;
 }
 
+static bool paramHasAttr(const CallBase &Call, unsigned ArgIdx,
+                         Attribute::AttrKind Kind) {
+  return Call.paramHasAttr(ArgIdx, Kind);
+}
+
+static bool paramHasAttr(const AttributeList &Attrs, unsigned ArgIdx,
+                         Attribute::AttrKind Kind) {
+  return Attrs.hasParamAttr(ArgIdx, Kind);
+}
+
+static MaybeAlign getParamStackAlign(const CallBase &Call, unsigned ArgIdx) {
+  return Call.getParamStackAlign(ArgIdx);
+}
+
+static MaybeAlign getParamStackAlign(const AttributeList &Attrs,
+                                     unsigned ArgIdx) {
+  return Attrs.getParamStackAlignment(ArgIdx);
+}
+
+static MaybeAlign getParamAlign(const CallBase &Call, unsigned ArgIdx) {
+  return Call.getParamAlign(ArgIdx);
+}
+
+static MaybeAlign getParamAlign(const AttributeList &Attrs, unsigned ArgIdx) {
+  return Attrs.getParamAlignment(ArgIdx);
+}
+
 /// Set CallLoweringInfo attribute flags based on a call instruction
 /// and called function attributes.
+template <typename SourceT>
+static void setArgListEntryAttributes(TargetLoweringBase::ArgListEntry &Entry,
+                                      const SourceT &Src, unsigned ArgIdx) {
+  Entry.IsSExt = paramHasAttr(Src, ArgIdx, Attribute::SExt);
+  Entry.IsZExt = paramHasAttr(Src, ArgIdx, Attribute::ZExt);
+  Entry.IsNoExt = paramHasAttr(Src, ArgIdx, Attribute::NoExt);
+  Entry.IsInReg = paramHasAttr(Src, ArgIdx, Attribute::InReg);
+  Entry.IsSRet = paramHasAttr(Src, ArgIdx, Attribute::StructRet);
+  Entry.IsNest = paramHasAttr(Src, ArgIdx, Attribute::Nest);
+  Entry.IsByVal = paramHasAttr(Src, ArgIdx, Attribute::ByVal);
+  Entry.IsPreallocated = paramHasAttr(Src, ArgIdx, Attribute::Preallocated);
+  Entry.IsInAlloca = paramHasAttr(Src, ArgIdx, Attribute::InAlloca);
+  Entry.IsReturned = paramHasAttr(Src, ArgIdx, Attribute::Returned);
+  Entry.IsSwiftSelf = paramHasAttr(Src, ArgIdx, Attribute::SwiftSelf);
+  Entry.IsSwiftAsync = paramHasAttr(Src, ArgIdx, Attribute::SwiftAsync);
+  Entry.IsSwiftError = paramHasAttr(Src, ArgIdx, Attribute::SwiftError);
+  Entry.Alignment = getParamStackAlign(Src, ArgIdx);
+  Entry.IndirectType = nullptr;
+  assert(Entry.IsByVal + Entry.IsPreallocated + Entry.IsInAlloca +
+                 Entry.IsSRet <=
+             1 &&
+         "multiple ABI attributes?");
+  if (Entry.IsByVal) {
+    Entry.IndirectType = Src.getParamByValType(ArgIdx);
+    if (!Entry.Alignment)
+      Entry.Alignment = getParamAlign(Src, ArgIdx);
+  }
+  if (Entry.IsPreallocated)
+    Entry.IndirectType = Src.getParamPreallocatedType(ArgIdx);
+  if (Entry.IsInAlloca)
+    Entry.IndirectType = Src.getParamInAllocaType(ArgIdx);
+  if (Entry.IsSRet)
+    Entry.IndirectType = Src.getParamStructRetType(ArgIdx);
+}
+
 void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
-  IsSExt = Call->paramHasAttr(ArgIdx, Attribute::SExt);
-  IsZExt = Call->paramHasAttr(ArgIdx, Attribute::ZExt);
-  IsNoExt = Call->paramHasAttr(ArgIdx, Attribute::NoExt);
-  IsInReg = Call->paramHasAttr(ArgIdx, Attribute::InReg);
-  IsSRet = Call->paramHasAttr(ArgIdx, Attribute::StructRet);
-  IsNest = Call->paramHasAttr(ArgIdx, Attribute::Nest);
-  IsByVal = Call->paramHasAttr(ArgIdx, Attribute::ByVal);
-  IsPreallocated = Call->paramHasAttr(ArgIdx, Attribute::Preallocated);
-  IsInAlloca = Call->paramHasAttr(ArgIdx, Attribute::InAlloca);
-  IsReturned = Call->paramHasAttr(ArgIdx, Attribute::Returned);
-  IsSwiftSelf = Call->paramHasAttr(ArgIdx, Attribute::SwiftSelf);
-  IsSwiftAsync = Call->paramHasAttr(ArgIdx, Attribute::SwiftAsync);
-  IsSwiftError = Call->paramHasAttr(ArgIdx, Attribute::SwiftError);
-  Alignment = Call->getParamStackAlign(ArgIdx);
-  IndirectType = nullptr;
-  assert(IsByVal + IsPreallocated + IsInAlloca + IsSRet <= 1 &&
-         "multiple ABI attributes?");
-  if (IsByVal) {
-    IndirectType = Call->getParamByValType(ArgIdx);
-    if (!Alignment)
-      Alignment = Call->getParamAlign(ArgIdx);
+  setArgListEntryAttributes(*this, *Call, ArgIdx);
+}
+
+void TargetLoweringBase::ArgListEntry::setAttributes(const AttributeList &Attrs,
+                                                     unsigned ArgIdx) {
+  setArgListEntryAttributes(*this, Attrs, ArgIdx);
+}
+
+TargetLowering::ArgListTy
+TargetLowering::getArgListForFunctionType(FunctionType *FuncTy,
+                                          const AttributeList &FuncAttrs,
+                                          ArrayRef<SDValue> Ops) {
+  // TODO: This assumes each parameter maps to exactly one operand node, which
+  // does not hold when an argument requires type splitting.
+  assert(Ops.size() == FuncTy->getNumParams() &&
+         "argument count does not match the function type");
+  ArgListTy Args;
+  Args.reserve(Ops.size());
+  for (unsigned I = 0, E = FuncTy->getNumParams(); I != E; ++I) {
+    ArgListEntry Entry(Ops[I], FuncTy->getParamType(I));
+    Entry.setAttributes(FuncAttrs, I);
+    Args.push_back(Entry);
   }
-  if (IsPreallocated)
-    IndirectType = Call->getParamPreallocatedType(ArgIdx);
-  if (IsInAlloca)
-    IndirectType = Call->getParamInAllocaType(ArgIdx);
-  if (IsSRet)
-    IndirectType = Call->getParamStructRetType(ArgIdx);
+  return Args;
 }
 
 /// Generate a libcall taking the given operands as arguments and returning a
@@ -822,6 +880,11 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
     break;
   }
+  case ISD::SCALAR_TO_VECTOR: {
+    if (!VT.isScalableVector() && !DemandedElts[0])
+      return DAG.getPOISON(VT);
+    break;
+  }
   case ISD::AND: {
     LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
@@ -1265,7 +1328,7 @@ bool TargetLowering::SimplifyDemandedBits(
     if (VT.isScalableVector())
       return false;
     if (!DemandedElts[0])
-      return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
+      return TLO.CombineTo(Op, TLO.DAG.getPOISON(VT));
 
     KnownBits SrcKnown;
     SDValue Src = Op.getOperand(0);
@@ -1274,7 +1337,7 @@ bool TargetLowering::SimplifyDemandedBits(
     if (SimplifyDemandedBits(Src, SrcDemandedBits, SrcKnown, TLO, Depth + 1))
       return true;
 
-    // Upper elements are undef, so only get the knownbits if we just demand
+    // Upper elements are poison, so only get the knownbits if we just demand
     // the bottom element.
     if (DemandedElts == 1)
       Known = SrcKnown.anyextOrTrunc(BitWidth);
@@ -3352,11 +3415,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
   switch (Opcode) {
   case ISD::SCALAR_TO_VECTOR: {
-    if (!DemandedElts[0]) {
-      KnownUndef.setAllBits();
-      return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
-    }
-    KnownUndef.setHighBits(NumElts - 1);
+    if (!DemandedElts[0])
+      return TLO.CombineTo(Op, TLO.DAG.getPOISON(VT));
+    // Upper elements are poison, not undef - don't mark them as KnownUndef.
     break;
   }
   case ISD::BITCAST: {
@@ -3476,10 +3537,21 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
     // TODO: Replace this with the general fold from DAGCombiner::visitFREEZE
     // freeze(op(x, ...)) -> op(freeze(x), ...).
-    if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && DemandedElts == 1)
-      return TLO.CombineTo(
-          Op, TLO.DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT,
-                              TLO.DAG.getFreeze(N0.getOperand(0))));
+    // Don't sink the freeze below SCALAR_TO_VECTOR when the scalar is a load
+    // of a promoted (wider than the element) type: freeze(load) can never be
+    // folded away (the loaded value may be poison in memory), and the extra
+    // freeze node then blocks ISel patterns matching scalar_to_vector of a
+    // load, e.g. the AArch64 scalar_to_vector(extload) -> ldr b/h forms.
+    // freeze(scalar_to_vector(load)) is equivalent for the demanded element
+    // zero, and ISel selects the freeze as a plain copy.
+    if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && DemandedElts == 1) {
+      SDValue Scalar = N0.getOperand(0);
+      bool IsPromotedLoad = Scalar.getOpcode() == ISD::LOAD &&
+                            Scalar.getValueType() != VT.getVectorElementType();
+      if (!IsPromotedLoad)
+        return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT,
+                                                 TLO.DAG.getFreeze(Scalar)));
+    }
     break;
   }
   case ISD::BUILD_VECTOR: {
@@ -5874,7 +5946,18 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
        (!ISD::isUnsignedIntSetCC(Cond) && N0->getFlags().hasNoSignedWrap() &&
         N1->getFlags().hasNoSignedWrap())) &&
       isTypeDesirableForOp(ISD::SETCC, N0.getOperand(0).getValueType())) {
-    return DAG.getSetCC(dl, VT, N0.getOperand(0), N1.getOperand(0), Cond);
+    if (VT.getScalarType() == MVT::i1)
+      return DAG.getSetCC(dl, VT, N0.getOperand(0), N1.getOperand(0), Cond);
+    // For (legal) non vXi1 cases - ensure we adjust the cmp and result types.
+    EVT OldCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                     N0.getValueType());
+    if (VT == OldCCVT) {
+      EVT NewCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                       N0.getOperand(0).getValueType());
+      return DAG.getBoolExtOrTrunc(
+          DAG.getSetCC(dl, NewCCVT, N0.getOperand(0), N1.getOperand(0), Cond),
+          dl, VT, N0.getOperand(0).getValueType());
+    }
   }
 
   // Fold (setcc (sub nsw a, b), zero, s??) -> (setcc a, b, s??)
@@ -8998,37 +9081,115 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
     // do occur, they wind up in a "hole" and are subsequently masked out of the
     // result.
     //
-    // A hole of 3 bits is optimal for 32-bit and 64-bit inputs. 128-bit
-    // integers need a larger hole, and for smaller integers the fallback below
-    // is more efficient.
+    // https://www.bearssl.org/constanttime.html#ghash-for-gcm describes this
+    // approach.
+
+    // Stride S handles operands up to S·2^S bits using S² multiplies.
     //
-    // Based on bmul64 in bearssl and bmul in the rust polyval crate.
-    if (BW >= 32 && BW <= 64 &&
+    // * BW <= 8 uses S = 2  (holes of 1 bit)
+    // * BW <= 24 uses S = 3 (holes of 2 bits)
+    // * BW <= 64 uses S = 4 (holes of 3 bits)
+    // * BW <= 160 uses S = 5 (holes of 4 bits)
+    // * BW <= 384 uses S = 6 (holes of 5 bits)
+    //
+    // We distribute the BW bits over S phases:
+    //
+    //   phase 0 keeps bits: 0, S, 2S, ...
+    //   phase 1 keeps bits: 1, S + 1, 2S + 1, ...
+    //   ...
+    //
+    // Each phase has up to n = ceil(BW / S) bits set, and the holes are S-1
+    // bits wide.
+    //
+    // Take BW = 4, S = 2, n = 2. The worst case is a fully populated phase (all
+    // non-hole bits are set to 1) multiplied by itself, 0b0101 * 0b0101. Each
+    // set bit of one operand shifts a copy of the other, and we add the copies:
+    //
+    //              col: 4 3 2 1 0
+    //     0b0101 << 0:  0 0 1 0 1
+    //     0b0101 << 2:  1 0 1 0 0
+    //            ----------------- +
+    //     count:        1 0 2 0 1
+    //
+    // Counting the number of one-bits in each column gives a triangle: the
+    // counts climb 1, 2, ..., n and back down (here 1, 2, 1 across the data
+    // columns). So a column holds at most n one-bits, and that maximum n is
+    // reached in only one column: the peak. Every other column holds at most n
+    // - 1 one-bits.
+    //
+    // A stack of one-bits in a column turns into carries: column 2 above really
+    // stores the value 1 + 1 = 2 = n. A column spans S bits, its kept bit
+    // plus S-1 hole bits, and the count is written from the kept bit upward,
+    // so any count <= 2^S - 1 stays within the column and never interferes with
+    // the next data bit S positions up. Every non-peak column holds at most n -
+    // 1, so they all fit as soon as n - 1 <= 2^S - 1.
+    //
+    // That leaves only the peak column. Because both operands set all data
+    // bits, the triangle peaks at the top of the word at the highest data bit
+    // still inside BW. Here the count reaches exactly n = 2^S and overflows.
+    // But its carry lands at bit n*S >= BW, off the top, where it (and the
+    // whole descending half of the triangle) is truncated.
+    //
+    // Hence the holes suffice exactly when n = ceil(BW / S) <= 2^S, i.e. BW <=
+    // S*2^S.
+    //
+    // Here we find the smallest S that satisfies this inequality.
+    unsigned S = 1;
+    while (S < 32 && divideCeil(BW, S) > (1u << S))
+      ++S;
+
+    // The "multiplication with holes" expansion emits S*S MULs, 3*S ANDs,
+    // S*(S-1) XORs and S-1 ORs.
+    unsigned HolesCost = S * S + 3 * S + S * (S - 1) + (S - 1);
+
+    // Estimate the cost of the naive algorithm.
+    KnownBits KnownY = DAG.computeKnownBits(Y);
+    unsigned NaiveCost = 0;
+    for (unsigned I = 0; I < BW; ++I) {
+      // The iteration folds away entirely and is free.
+      if (KnownY.Zero[I])
+        continue;
+
+      // On targets with a fast bit test instruction more instructions are used
+      // to not need a (potentially expensive) multiplication. See also below.
+      if (hasBitTest(Y, DAG.getShiftAmountConstant(I, VT, DL))) {
+        // AND + SETCC + SHL + SELECT + XOR.
+        NaiveCost += 5;
+      } else {
+        // AND + MUL + XOR.
+        NaiveCost += 3;
+      }
+    }
+
+    // Only use multiplication with holes when it is cheaper, else use the naive
+    // fallback below.
+    if (HolesCost < NaiveCost &&
         isOperationLegalOrCustom(ISD::MUL, getTypeToTransformTo(Ctx, VT))) {
 
-      // Set every fourth bit of each nibble, equivalent to 0b00010001...0001.
-      APInt MaskVal = APInt::getSplat(BW, APInt(4, 0b0001));
+      // Set a bit every S positions, e.g. for S = 4 this is equivalent to
+      // 0b...00010001...0001.
+      APInt MaskVal = APInt::getSplat(BW, APInt(S, 1));
 
-      // Create versions of X and Y that keep only the I-th bit of
-      // each nibble.
-      SDValue M[4], Xp[4], Yp[4];
-      for (unsigned I = 0; I < 4; ++I) {
+      // Create versions of X and Y that keep only the I-th bit of each S-bit
+      // slice.
+      SmallVector<SDValue, 4> M(S), Xp(S), Yp(S);
+      for (unsigned I = 0; I < S; ++I) {
         M[I] = DAG.getConstant(MaskVal.shl(I), DL, VT);
         Xp[I] = DAG.getNode(ISD::AND, DL, VT, X, M[I]);
         Yp[I] = DAG.getNode(ISD::AND, DL, VT, Y, M[I]);
       }
 
-      // Codegens these expressions (16 multiplications):
+      // Codegens these expressions (S*S multiplications), e.g. for S=4:
       //
       // z0 = (x0 * y0) ^ (x1 * y3) ^ (x2 * y2) ^ (x3 * y1);
       // z1 = (x0 * y1) ^ (x1 * y0) ^ (x2 * y3) ^ (x3 * y2);
       // z2 = (x0 * y2) ^ (x1 * y1) ^ (x2 * y0) ^ (x3 * y3);
       // z3 = (x0 * y3) ^ (x1 * y2) ^ (x2 * y1) ^ (x3 * y0);
       SDValue Res = DAG.getConstant(0, DL, VT);
-      for (unsigned I = 0; I < 4; ++I) {
+      for (unsigned I = 0; I < S; ++I) {
         SDValue Zi = DAG.getConstant(0, DL, VT);
-        for (unsigned J = 0; J < 4; ++J) {
-          unsigned K = (I + 4 - J) % 4;
+        for (unsigned J = 0; J < S; ++J) {
+          unsigned K = (I + S - J) % S;
           SDValue P = DAG.getNode(ISD::MUL, DL, VT, Xp[J], Yp[K]);
           Zi = DAG.getNode(ISD::XOR, DL, VT, Zi, P);
         }
@@ -9871,9 +10032,10 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
                   DAG.getNode(ISD::OR, dl, IntVT, SignShifted, NormExpShifted),
                   NormDstMant);
 
-  // Denormal value conversion.
-  SDValue DenormResult;
-  {
+  // With identical exponent biases, denormal values remain denormal and the
+  // normal conversion's mantissa shift is sufficient.
+  SDValue DenormResult = NormResult;
+  if (BiasAdjust != 0) {
     const unsigned IntVTBits = IntVT.getScalarSizeInBits();
     SDValue LeadingZeros =
         DAG.getNode(ISD::CTLZ_ZERO_POISON, dl, IntVT, MantField);
@@ -9916,6 +10078,18 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
   SDValue InfResult =
       DAG.getNode(ISD::OR, dl, IntVT, SignShifted,
                   DAG.getConstant(DstExpAllOnes << DstMant, dl, IntVT));
+
+  // A source format may have a larger finite exponent range despite having
+  // fewer bits, as with Float8E5M3FNU converted to half. Its overflowing finite
+  // values become infinity. The NaN selection below still takes precedence.
+  if (APFloat::semanticsMaxExponent(SrcSem) >
+      APFloat::semanticsMaxExponent(DstSem)) {
+    SDValue IsOverflow =
+        DAG.getSetCC(dl, SetCCVT, NormDstExp,
+                     DAG.getConstant(DstExpAllOnes, dl, IntVT), ISD::SETUGE);
+    FiniteResult =
+        DAG.getSelect(dl, IntVT, IsOverflow, InfResult, FiniteResult);
+  }
 
   SDValue ZeroResult = SignShifted;
 
