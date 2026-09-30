@@ -2095,14 +2095,14 @@ public:
 
     LLVM_DEBUG(dbgs() << "pointer load scev: " << *LoadEv << "\n");
 
-    unsigned StepSize = Step->getZExtValue();
+    uint64_t StepSize = Step->getZExtValue();
 
     // Verify that StepSize is consistent with platform char width.
     OpWidth = OperandType->getIntegerBitWidth();
     unsigned WcharSize = TLI->getWCharSize(*LoopLoad->getModule());
-    if (OpWidth != StepSize * 8)
-      return false;
     if (OpWidth != 8 && OpWidth != 16 && OpWidth != 32)
+      return false;
+    if (StepSize != OpWidth / 8)
       return false;
     if (OpWidth >= 16)
       if (OpWidth != WcharSize * 8)
