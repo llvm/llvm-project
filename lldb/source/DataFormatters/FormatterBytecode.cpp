@@ -203,7 +203,7 @@ static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
                              DataType type1, DataType type2, DataType type3) {
   if (auto error = TypeCheck(data, type3))
     return error;
-  return TypeCheck(data.drop_back(1), type2, type1);
+  return TypeCheck(data.drop_back(), type1, type2);
 }
 
 /// Wrap the result of a binary operator applied to two APSInts back into a
