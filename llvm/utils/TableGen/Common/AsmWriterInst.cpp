@@ -20,8 +20,7 @@ using namespace llvm;
 
 static bool isIdentChar(char C) { return isAlnum(C) || C == '_'; }
 
-std::string AsmWriterOperand::getCode(bool PassSubtarget,
-                                      StringRef Receiver) const {
+std::string AsmWriterOperand::getCode(bool PassSubtarget) const {
   if (OperandType == isLiteralTextOperand) {
     if (Str.size() == 1)
       return "O << '" + Str + "';";
@@ -31,7 +30,7 @@ std::string AsmWriterOperand::getCode(bool PassSubtarget,
   if (OperandType == isLiteralStatementOperand)
     return Str;
 
-  std::string Result = Receiver.str() + Str + "(MI";
+  std::string Result = Str + "(MI";
   if (PCRel)
     Result += ", Address";
   if (MIOpNo != ~0U)

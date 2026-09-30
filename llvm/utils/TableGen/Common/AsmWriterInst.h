@@ -75,9 +75,7 @@ struct AsmWriterOperand {
   }
 
   /// getCode - Return the code that prints this operand.
-  /// Receiver, if non-empty, is prepended to member-function calls (e.g.
-  /// "P->" turns "printOperand(...)" into "P->printOperand(...)").
-  std::string getCode(bool PassSubtarget, StringRef Receiver = "") const;
+  std::string getCode(bool PassSubtarget) const;
 };
 
 class AsmWriterInst {
