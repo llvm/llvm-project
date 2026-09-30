@@ -157,6 +157,55 @@ prints in Intel/MASM syntax.
 Choose DWARF debug sections compression.
 :::
 
+:::{option} --verify=<prefixes>
+
+Instead of just printing diagnostics, check them against `<prefix>-error`,
+`<prefix>-warning`, `<prefix>-note` and `<prefix>-remark` comments in
+the input, similar to Clang's `-verify` flag. `<prefixes>` is a
+comma-separated list of prefixes to recognize; a bare `--verify` (with no
+`=<prefixes>`) is equivalent to `--verify=expected`.
+
+A directive has the form:
+```asm
+<prefix>-<kind>[-re][@<offset>] {{<text>}}
+```
+
+`<kind>` is one of `error`, `warning`, `note` or `remark`. Without
+an `@<offset>`, the directive applies to its own line; `@+N`/`@-N`
+apply to the line `N` lines below/above, and `@above`/`@below` apply to
+the nearest non-directive line above/below. By default `<text>` is matched
+as a substring of the diagnostic's message; with the `-re` suffix, any
+`{{...}}` block nested inside `<text>` is matched as a regular
+expression instead (the rest of `<text>` is matched literally), for
+example:
+
+```asm
+## Matches only diagnostics containing this exact text.
+.foo
+# expected-error@-1 {{unknown directive}}
+
+## Matches any diagnostic starting with "unknown" and ending with
+## "directive"; only the nested {{.*}} is a regex, the surrounding text
+## is literal.
+.foo
+# expected-error-re@-1 {{unknown {{.*}} directive}}
+```
+
+A directive must appear within a comment recognized by the target being
+assembled for (its own comment string, plus `//` and `#` if the target
+allows additional comment forms); text that merely resembles a directive
+elsewhere on the line is ignored. Directives are matched line-based, so they
+are not recognized inside multi-line `/* ... */` block comments. Use a
+single-line comment form instead.
+
+Under `--verify`, the process exit code reflects whether the diagnostics
+matched what was expected, not whether assembling/disassembling itself
+produced an error: a fully expected error is a successful (exit code 0) run.
+`--verify` is not supported together with `--as-lex`, since `--as-lex`
+does not report its errors as diagnostics with a message or location.
+
+:::
+
 ## EXIT STATUS
 
 If {program}`llvm-mc` succeeds, it will exit with 0. Otherwise, if an error
