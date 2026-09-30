@@ -71,11 +71,10 @@ jobs:
             const match = context.payload.comment.body.match(/\/libcxx-bot benchmark (.+)/);
             core.setOutput('benchmarks', match ? match[1] : '');
 
-            // Benchmark the configurations defined in machines.json. We only consider configurations that
-            // build something, since there's nothing to do an A/B comparison with for other configurations.
+            // Benchmark the configurations defined in machines.json that opt into PR benchmarking.
             const config = JSON.parse(require('fs').readFileSync('libcxx/utils/ci/lnt/machines.json', 'utf8'));
-            const buildable = config.filter(cfg => cfg.build);
-            core.setOutput('matrix', JSON.stringify(buildable.map(({coverage, ...machine}) => machine)));
+            const selected = config.filter(cfg => cfg['pr-benchmarks']);
+            core.setOutput('matrix', JSON.stringify(selected.map(({coverage, ...machine}) => machine)));
 
       - name: Update comment with link to the run
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -178,7 +177,7 @@ jobs:
 
       - name: Build the baseline
         env:
-          CMAKE_CACHE: ${{ matrix.build.cmake-cache }}
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
           COMMIT: ${{ steps.baseline.outputs.commit }}
           INSTALL_DIR: ${{ github.workspace }}/install/baseline
         run: |
@@ -194,7 +193,7 @@ jobs:
 
       - name: Build the candidate
         env:
-          CMAKE_CACHE: ${{ matrix.build.cmake-cache }}
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
           COMMIT: ${{ needs.extract-info.outputs.pr_head }}
           INSTALL_DIR: ${{ github.workspace }}/install/candidate
         run: |

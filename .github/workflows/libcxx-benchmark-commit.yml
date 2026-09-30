@@ -111,8 +111,8 @@ jobs:
         shell: bash
     env:
       COMPILER: ${{ matrix.cxx }}
-      # Where the library is installed when we build it. This lives inside the workspace
-      # so that actions/checkout cleans it up between runs on self-hosted runners.
+      # Where we install the library. This lives inside the workspace so that actions/checkout
+      # cleans it up between runs on self-hosted runners.
       INSTALL_DIR: ${{ github.workspace }}/install
     steps:
       - name: Checkout the LLVM monorepo
@@ -152,17 +152,14 @@ jobs:
           source .venv/bin/activate
           pip install -r libcxx/utils/ci/lnt/requirements.txt
 
-      # Build the library. This is only done when the machine configuration provides a 'build' key,
-      # otherwise we assume that the configuration does not require building anything (e.g. a system
-      # standard library).
+      # Build the library.
       #
       # A build failure is tolerated on purpose, since the library doesn't build at every historical commit.
       # We still submit an empty run for such commits.
       - name: Build libc++ at ${{ inputs.commit }}
-        if: ${{ matrix.build != '' }}
         continue-on-error: true
         env:
-          CMAKE_CACHE: ${{ matrix.build.cmake-cache }}
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
           COMMIT: ${{ inputs.commit }}
         run: |
           # Clean up any stale install directory
@@ -179,7 +176,6 @@ jobs:
       - name: Run the benchmarks
         env:
           BENCHMARK_SUITE_VERSION: ${{ matrix.benchmark-suite-version }}
-          BUILT_LIBCXX: ${{ matrix.build != '' }}
           COMMIT: ${{ inputs.commit }}
           FILTER: ${{ inputs.filter }}
           LIT_PARAMS: ${{ join(matrix.lit-params, ' ') }}
@@ -198,15 +194,10 @@ jobs:
             lit_params+=(--param "${param}")
           done
 
-          # When the library is built in this workflow, point the testing configuration at the installation.
-          # Everything else needed by the configuration comes from machines.json.
-          if [ "${BUILT_LIBCXX}" = "true" ]; then
-            # If the library build failed, still create an install directory so we
-            # run the benchmarks. The benchmarks will fail, and we'll submit an empty
-            # LNT report.
-            mkdir -p "${INSTALL_DIR}"
-            lit_params+=(--param "libcxx_installation=${INSTALL_DIR}")
-          fi
+          # If the library build failed, still create an install directory so we
+          # run the benchmarks. The benchmarks will fail, and we'll submit an empty
+          # LNT report.
+          mkdir -p "${INSTALL_DIR}"
 
           libcxx/utils/ci/lnt/run-benchmarks                            \
             --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
@@ -216,7 +207,7 @@ jobs:
             --test-config "${TEST_CONFIG}"                              \
             "${filter_arg[@]}"                                          \
             --output "${COMMIT}.json"                                   \
-            -- "${lit_params[@]}"
+            -- "${lit_params[@]}" --param "libcxx_installation=${INSTALL_DIR}"
 
           cat "${COMMIT}.json"
 
