@@ -188,7 +188,12 @@ bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
   Subtarget->checkSubtargetFeatures(MF.getFunction());
   Mode = SIModeRegisterDefaults(MF.getFunction(), *Subtarget);
-  return SelectionDAGISel::runOnMachineFunction(MF);
+  bool Changed = SelectionDAGISel::runOnMachineFunction(MF);
+  // SelectionDAG can insert debug values before SI_END_CF after emitting it.
+  // Move a leading SI_END_CF ahead of them and mark it before SIFixSGPRCopies
+  // uses the flag. Waiting until finalizeLowering would be too late.
+  SIInstrInfo::setEndCfBBProlog(MF);
+  return Changed;
 }
 
 bool AMDGPUDAGToDAGISel::fp16SrcZerosHighBits(unsigned Opc) const {

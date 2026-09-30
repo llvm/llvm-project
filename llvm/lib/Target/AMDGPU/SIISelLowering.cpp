@@ -5458,7 +5458,8 @@ loadM0FromVGPR(const SIInstrInfo *TII, MachineBasicBlock &MBB, MachineInstr &MI,
   MachineBasicBlock::iterator First = LandingPad->begin();
   // clang-format off
   BuildMI(*LandingPad, First, DL, TII->get(LMC.MovOpc), LMC.ExecReg)
-      .addReg(SaveExec);
+      .addReg(SaveExec)
+      .setMIFlag(MachineInstr::BBProlog);
   // clang-format on
 
   return InsPt;
@@ -20566,6 +20567,9 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
         MRI.setRegClass(Reg, TRI->getRegClass(NewClassID));
     }
   }
+
+  // GlobalISel only leaves SI_END_CF at the block start once selection is done.
+  SIInstrInfo::setEndCfBBProlog(MF);
 
   TargetLoweringBase::finalizeLowering(MF);
 }

@@ -455,8 +455,7 @@ public:
                         << RegToSlotIdx[Reg] << " after statepoint\n");
 
       if (EHPad && RC.tryRecordReload(Reg, RegToSlotIdx[Reg], EHPad)) {
-        auto EHPadInsertPoint =
-            EHPad->SkipPHIsLabelsAndDebug(EHPad->begin(), Reg);
+        auto EHPadInsertPoint = EHPad->SkipPHIsLabelsAndDebug(EHPad->begin());
         insertReloadBefore(Reg, EHPadInsertPoint, EHPad);
         LLVM_DEBUG(dbgs() << "...also reload at EHPad "
                           << printMBBReference(*EHPad) << "\n");
