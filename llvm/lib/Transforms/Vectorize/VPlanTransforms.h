@@ -650,9 +650,9 @@ struct VPlanTransforms {
                                        const TargetTransformInfo &TTI,
                                        PredicatedScalarEvolution &PSE);
 
-  /// Wrap recipes in \p Plan into expression recipes that can help
-  /// cost/register pressure estimation.
-  static void foldPredicateMerge(VPlan &Plan);
+  /// Wrap recipes in \p Plan into expression recipes based on \p CostCtx to
+  /// reduce cost/register pressure.
+  static void foldPredicateMerge(VPlan &Plan, VPCostContext &CostCtx);
 };
 
 } // namespace llvm

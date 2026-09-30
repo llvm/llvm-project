@@ -2409,12 +2409,19 @@ InstructionCost VPWidenIntrinsicRecipe::computeCallCost(
       });
 
   VectorInstrContext VIC = VectorInstrContext::None;
-  for (const VPValue *Op : Operands)
+  for (const VPValue *Op : Operands) {
     if (isa<VPWidenRecipe>(Op) &&
         Instruction::isBinaryOp(cast<VPWidenRecipe>(Op)->getOpcode())) {
       VIC = VectorInstrContext::BinaryOp;
       break;
     }
+    if (isa<VPWidenIntrinsicRecipe>(Op) &&
+        isa_and_nonnull<MinMaxIntrinsic>(
+            cast<VPWidenIntrinsicRecipe>(Op)->getUnderlyingValue())) {
+      VIC = VectorInstrContext::BinaryOp;
+      break;
+    }
+  }
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
   IntrinsicCostAttributes CostAttrs(
@@ -3807,8 +3814,8 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
             Instruction::ZExt,
         Opcode, RedTy, SrcVecTy, Ctx.CostKind);
   }
-  default:
-    llvm_unreachable("Unsupported VPExpressionRecipe::ExpressionTypes enum");
+  case ExpressionTypes::FoldedOp:
+    llvm_unreachable("Folded expression should be handled eariler");
   }
   llvm_unreachable("Unknown VPExpressionRecipe::ExpressionTypes enum");
 }
