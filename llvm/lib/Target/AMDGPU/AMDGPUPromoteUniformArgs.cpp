@@ -49,6 +49,18 @@ static bool canPromoteArgToInReg(const Argument &A) {
   return !A.hasAttribute("amdgpu-hidden-argument");
 }
 
+// A call site's parameter attributes need not agree with the callee's, so the
+// exclusions in canPromoteArgToInReg are rechecked here. paramHasAttr would
+// fall back to the declaration, which has already been found clean.
+static bool callSiteBlocksInReg(const CallBase &CB, unsigned ArgNo) {
+  AttributeSet PA = CB.getParamAttributes(ArgNo);
+  return PA.hasAttribute(Attribute::ByVal) ||
+         PA.hasAttribute(Attribute::StructRet) ||
+         PA.hasAttribute(Attribute::InAlloca) ||
+         PA.hasAttribute(Attribute::Preallocated) ||
+         PA.hasAttribute(Attribute::ByRef) || PA.hasAttribute(Attribute::Nest);
+}
+
 static bool collectDirectCallSites(Function &F,
                                    SmallVectorImpl<CallBase *> &Calls) {
   if (F.isDeclaration() || !F.canChangeSignature())
@@ -102,9 +114,11 @@ static bool promoteUniformArgsToInReg(
       if (!canPromoteArgToInReg(A))
         continue;
 
+      unsigned ArgNo = A.getArgNo();
       bool AllUniform = true;
       for (CallBase *CB : Calls) {
-        if (!isTriviallyUniform(CB->getArgOperandUse(A.getArgNo()),
+        if (callSiteBlocksInReg(*CB, ArgNo) ||
+            !isTriviallyUniform(CB->getArgOperandUse(ArgNo),
                                 GetTTI(*CB->getFunction()))) {
           AllUniform = false;
           break;
@@ -115,7 +129,7 @@ static bool promoteUniformArgsToInReg(
 
       A.addAttr(Attribute::InReg);
       for (CallBase *CB : Calls)
-        CB->addParamAttr(A.getArgNo(), Attribute::InReg);
+        CB->addParamAttr(ArgNo, Attribute::InReg);
       ++NumPromotedInRegArgs;
       FuncChanged = Changed = true;
     }

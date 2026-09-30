@@ -872,6 +872,63 @@ define amdgpu_kernel void @k_assume_operand(ptr %p) {
   ret void
 }
 
+; A call site may carry parameter attributes the callee's declaration does not.
+; inreg is mutually exclusive with them
+
+define internal fastcc void @callee_cs_byval(ptr %p) {
+; CHECK-LABEL: define internal fastcc void @callee_cs_byval(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define amdgpu_kernel void @k_cs_byval(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_cs_byval(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call fastcc void @callee_cs_byval(ptr byval(i32) [[P]])
+; CHECK-NEXT:    ret void
+;
+  call fastcc void @callee_cs_byval(ptr byval(i32) %p)
+  ret void
+}
+
+define internal fastcc void @callee_cs_sret(ptr %p) {
+; CHECK-LABEL: define internal fastcc void @callee_cs_sret(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define amdgpu_kernel void @k_cs_sret(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_cs_sret(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call fastcc void @callee_cs_sret(ptr sret(i32) [[P]])
+; CHECK-NEXT:    ret void
+;
+  call fastcc void @callee_cs_sret(ptr sret(i32) %p)
+  ret void
+}
+
+define internal fastcc void @callee_cs_nest(ptr %p) {
+; CHECK-LABEL: define internal fastcc void @callee_cs_nest(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define amdgpu_kernel void @k_cs_nest(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_cs_nest(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call fastcc void @callee_cs_nest(ptr nest [[P]])
+; CHECK-NEXT:    ret void
+;
+  call fastcc void @callee_cs_nest(ptr nest %p)
+  ret void
+}
+
 attributes #0 = { noinline optnone }
 attributes #1 = { naked }
 attributes #2 = { noipa }
