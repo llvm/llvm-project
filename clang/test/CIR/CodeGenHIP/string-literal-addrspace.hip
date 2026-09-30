@@ -6,11 +6,11 @@
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -fcuda-is-device -emit-llvm %s -o - \
 // RUN: | FileCheck --check-prefix=OGCG-SPV %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device -fclangir -emit-cir %s -o - \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device -fclangir -emit-cir %s -o - \
 // RUN: | FileCheck --check-prefix=CIR-GCN %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device -fclangir -emit-llvm %s -o - \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device -fclangir -emit-llvm %s -o - \
 // RUN: | FileCheck --check-prefix=LLVM-GCN %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device -emit-llvm %s -o - \
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -x hip -fcuda-is-device -emit-llvm %s -o - \
 // RUN: | FileCheck --check-prefix=OGCG-GCN %s
 
 // String literals are emitted in the target's constant address space for

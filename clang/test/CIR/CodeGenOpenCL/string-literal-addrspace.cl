@@ -7,12 +7,12 @@
 // RUN: %clang_cc1 -x cl -triple spirv64-unknown-unknown -cl-std=CL2.0 -O0 -emit-llvm %s -o - \
 // RUN: | FileCheck --check-prefix=OGCG-SPV %s
 
-// RUN: %clang_cc1 -x cl -triple amdgcn-amd-amdhsa -cl-std=CL2.0 -O0 -fclangir -emit-cir %s -o - \
+// RUN: %clang_cc1 -x cl -triple amdgpu9.00-amd-amdhsa -cl-std=CL2.0 -O0 -fclangir -emit-cir %s -o - \
 // RUN: | FileCheck --check-prefix=CIR-GCN %s \
 // RUN:   --implicit-check-not='cir.cast address_space'
-// RUN: %clang_cc1 -x cl -triple amdgcn-amd-amdhsa -cl-std=CL2.0 -O0 -fclangir -emit-llvm %s -o - \
+// RUN: %clang_cc1 -x cl -triple amdgpu9.00-amd-amdhsa -cl-std=CL2.0 -O0 -fclangir -emit-llvm %s -o - \
 // RUN: | FileCheck --check-prefix=LLVM-GCN %s
-// RUN: %clang_cc1 -x cl -triple amdgcn-amd-amdhsa -cl-std=CL2.0 -O0 -emit-llvm %s -o - \
+// RUN: %clang_cc1 -x cl -triple amdgpu9.00-amd-amdhsa -cl-std=CL2.0 -O0 -emit-llvm %s -o - \
 // RUN: | FileCheck --check-prefix=OGCG-GCN %s
 
 // OpenCL string literals are __constant in the AST already, so the global is
