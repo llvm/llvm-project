@@ -652,6 +652,7 @@ cc_library(
     hdrs = glob(["include/llvm/DebugInfo/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":BinaryFormatELF",
         ":Object",
         ":Support",
