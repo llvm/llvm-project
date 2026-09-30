@@ -39,7 +39,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:be628f333947bf070839e6706f6701099e0c83eb
+      image: ghcr.io/llvm/libcxx-linux-builder:d79f222aea61926e7c81fa8908b12f52ea70111f
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -70,7 +70,7 @@ jobs:
         run: |
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
-          pip install -r libcxx/test/requirements.txt
+          pip install --ignored-installed -r libcxx/test/requirements.txt
           libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: ${{ matrix.cc }}
@@ -90,7 +90,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:be628f333947bf070839e6706f6701099e0c83eb
+      image: ghcr.io/llvm/libcxx-linux-builder:d79f222aea61926e7c81fa8908b12f52ea70111f
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -125,7 +125,7 @@ jobs:
         run: |
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
-          pip install -r libcxx/test/requirements.txt
+          pip install --ignore-installed -r libcxx/test/requirements.txt
           libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: ${{ matrix.cc }}
@@ -145,7 +145,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-32-runners
     container:
-      image: ghcr.io/llvm/libcxx-linux-builder:be628f333947bf070839e6706f6701099e0c83eb
+      image: ghcr.io/llvm/libcxx-linux-builder:d79f222aea61926e7c81fa8908b12f52ea70111f
     needs: [ stage2 ]
     continue-on-error: false
     strategy:
@@ -190,7 +190,7 @@ jobs:
         run: |
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
-          pip install -r libcxx/test/requirements.txt
+          pip install --ignore-installed -r libcxx/test/requirements.txt
           libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: clang-23
