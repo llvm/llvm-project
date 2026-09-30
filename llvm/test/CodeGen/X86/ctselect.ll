@@ -13,7 +13,6 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) #0 {
 ; X64-NEXT:    xorl %edx, %esi
 ; X64-NEXT:    negb %al
 ; X64-NEXT:    andb %sil, %al
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorb %dl, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
@@ -27,7 +26,6 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) #0 {
 ; X32-NEXT:    xorb %cl, %dl
 ; X32-NEXT:    negb %al
 ; X32-NEXT:    andb %dl, %al
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorb %cl, %al
 ; X32-NEXT:    retl
 ;
@@ -40,7 +38,6 @@ define i8 @test_ctselect_i8(i1 %cond, i8 %a, i8 %b) #0 {
 ; X32-NOCMOV-NEXT:    xorb %cl, %dl
 ; X32-NOCMOV-NEXT:    negb %al
 ; X32-NOCMOV-NEXT:    andb %dl, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorb %cl, %al
 ; X32-NOCMOV-NEXT:    retl
   %result = call i8 @llvm.ct.select.i8(i1 %cond, i8 %a, i8 %b)
@@ -55,7 +52,6 @@ define b8 @test_ctselect_b8(i1 %cond, b8 %a, b8 %b) #0 {
 ; X64-NEXT:    xorl %edx, %esi
 ; X64-NEXT:    negb %al
 ; X64-NEXT:    andb %sil, %al
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorb %dl, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
@@ -69,7 +65,6 @@ define b8 @test_ctselect_b8(i1 %cond, b8 %a, b8 %b) #0 {
 ; X32-NEXT:    xorb %cl, %dl
 ; X32-NEXT:    negb %al
 ; X32-NEXT:    andb %dl, %al
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorb %cl, %al
 ; X32-NEXT:    retl
 ;
@@ -82,7 +77,6 @@ define b8 @test_ctselect_b8(i1 %cond, b8 %a, b8 %b) #0 {
 ; X32-NOCMOV-NEXT:    xorb %cl, %dl
 ; X32-NOCMOV-NEXT:    negb %al
 ; X32-NOCMOV-NEXT:    andb %dl, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorb %cl, %al
 ; X32-NOCMOV-NEXT:    retl
   %result = call b8 @llvm.ct.select.b8(i1 %cond, b8 %a, b8 %b)
@@ -97,7 +91,6 @@ define i32 @test_ctselect_i32(i1 %cond, i32 %a, i32 %b) #0 {
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    andl %esi, %eax
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %edx, %eax
 ; X64-NEXT:    retq
 ;
@@ -111,7 +104,6 @@ define i32 @test_ctselect_i32(i1 %cond, i32 %a, i32 %b) #0 {
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    negl %eax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    retl
 ;
@@ -125,7 +117,6 @@ define i32 @test_ctselect_i32(i1 %cond, i32 %a, i32 %b) #0 {
 ; X32-NOCMOV-NEXT:    movzbl %al, %eax
 ; X32-NOCMOV-NEXT:    negl %eax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
 ; X32-NOCMOV-NEXT:    retl
   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 %a, i32 %b)
@@ -140,7 +131,6 @@ define i64 @test_ctselect_i64(i1 %cond, i64 %a, i64 %b) #0 {
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    negq %rax
 ; X64-NEXT:    andq %rsi, %rax
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorq %rdx, %rax
 ; X64-NEXT:    retq
 ;
@@ -157,12 +147,10 @@ define i64 @test_ctselect_i64(i1 %cond, i64 %a, i64 %b) #0 {
 ; X32-NEXT:    movzbl %dl, %edi
 ; X32-NEXT:    negl %edi
 ; X32-NEXT:    andl %edi, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %esi, %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    andl %edi, %edx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
@@ -181,12 +169,10 @@ define i64 @test_ctselect_i64(i1 %cond, i64 %a, i64 %b) #0 {
 ; X32-NOCMOV-NEXT:    movzbl %dl, %edi
 ; X32-NOCMOV-NEXT:    negl %edi
 ; X32-NOCMOV-NEXT:    andl %edi, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %esi, %eax
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    andl %edi, %edx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    popl %esi
 ; X32-NOCMOV-NEXT:    popl %edi
@@ -204,7 +190,6 @@ define float @test_ctselect_f32(i1 %cond, float %a, float %b) #0 {
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    negl %edi
 ; X64-NEXT:    andl %ecx, %edi
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %eax, %edi
 ; X64-NEXT:    movd %edi, %xmm0
 ; X64-NEXT:    retq
@@ -224,7 +209,6 @@ define float @test_ctselect_f32(i1 %cond, float %a, float %b) #0 {
 ; X32-NEXT:    movl (%esp), %edx
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    andl %eax, %edx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -246,7 +230,6 @@ define float @test_ctselect_f32(i1 %cond, float %a, float %b) #0 {
 ; X32-NOCMOV-NEXT:    movl (%esp), %edx
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    andl %eax, %edx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
@@ -266,7 +249,6 @@ define double @test_ctselect_f64(i1 %cond, double %a, double %b) #0 {
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    negq %rdi
 ; X64-NEXT:    andq %rcx, %rdi
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorq %rax, %rdi
 ; X64-NEXT:    movq %rdi, %xmm0
 ; X64-NEXT:    retq
@@ -288,13 +270,11 @@ define double @test_ctselect_f64(i1 %cond, double %a, double %b) #0 {
 ; X32-NEXT:    movl (%esp), %esi
 ; X32-NEXT:    xorl %edx, %esi
 ; X32-NEXT:    andl %eax, %esi
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %edx, %esi
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    andl %eax, %edx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    fldl (%esp)
@@ -319,13 +299,11 @@ define double @test_ctselect_f64(i1 %cond, double %a, double %b) #0 {
 ; X32-NOCMOV-NEXT:    movl (%esp), %esi
 ; X32-NOCMOV-NEXT:    xorl %edx, %esi
 ; X32-NOCMOV-NEXT:    andl %eax, %esi
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %edx, %esi
 ; X32-NOCMOV-NEXT:    movl %esi, (%esp)
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    andl %eax, %edx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    fldl (%esp)
@@ -345,7 +323,6 @@ define half @test_ctselect_f16(i1 %cond, half %a, half %b) #0 {
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    negl %edi
 ; X64-NEXT:    andl %ecx, %edi
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %eax, %edi
 ; X64-NEXT:    pinsrw $0, %edi, %xmm0
 ; X64-NEXT:    retq
@@ -360,7 +337,6 @@ define half @test_ctselect_f16(i1 %cond, half %a, half %b) #0 {
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    negl %eax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X32-NEXT:    retl
@@ -375,7 +351,6 @@ define half @test_ctselect_f16(i1 %cond, half %a, half %b) #0 {
 ; X32-NOCMOV-NEXT:    movzbl %al, %eax
 ; X32-NOCMOV-NEXT:    negl %eax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
 ; X32-NOCMOV-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X32-NOCMOV-NEXT:    retl
@@ -392,7 +367,6 @@ define bfloat @test_ctselect_bf16(i1 %cond, bfloat %a, bfloat %b) #0 {
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    negl %edi
 ; X64-NEXT:    andl %ecx, %edi
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %eax, %edi
 ; X64-NEXT:    pinsrw $0, %edi, %xmm0
 ; X64-NEXT:    retq
@@ -415,7 +389,6 @@ define bfloat @test_ctselect_bf16(i1 %cond, bfloat %a, bfloat %b) #0 {
 ; X32-NEXT:    movzbl %cl, %ecx
 ; X32-NEXT:    negl %ecx
 ; X32-NEXT:    andl %eax, %ecx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %esi, %ecx
 ; X32-NEXT:    shll $16, %ecx
 ; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
@@ -442,7 +415,6 @@ define bfloat @test_ctselect_bf16(i1 %cond, bfloat %a, bfloat %b) #0 {
 ; X32-NOCMOV-NEXT:    movzbl %cl, %ecx
 ; X32-NOCMOV-NEXT:    negl %ecx
 ; X32-NOCMOV-NEXT:    andl %eax, %ecx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %esi, %ecx
 ; X32-NOCMOV-NEXT:    shll $16, %ecx
 ; X32-NOCMOV-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
@@ -467,13 +439,11 @@ define fp128 @test_ctselect_f128(i1 %cond, fp128 %a, fp128 %b) #0 {
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
 ; X64-NEXT:    xorq %rax, %rdx
 ; X64-NEXT:    andq %rdi, %rdx
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorq %rax, %rdx
 ; X64-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    xorq %rcx, %rax
 ; X64-NEXT:    andq %rdi, %rax
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorq %rcx, %rax
 ; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
@@ -497,22 +467,18 @@ define fp128 @test_ctselect_f128(i1 %cond, fp128 %a, fp128 %b) #0 {
 ; X32-NEXT:    movzbl %bl, %edi
 ; X32-NEXT:    negl %edi
 ; X32-NEXT:    andl %edi, %edx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-NEXT:    xorl %ebp, %ebx
 ; X32-NEXT:    andl %edi, %ebx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ebp, %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X32-NEXT:    xorl %esi, %ebp
 ; X32-NEXT:    andl %edi, %ebp
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %esi, %ebp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    andl %edi, %ecx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl %ecx, 12(%eax)
 ; X32-NEXT:    movl %ebp, 8(%eax)
@@ -543,22 +509,18 @@ define fp128 @test_ctselect_f128(i1 %cond, fp128 %a, fp128 %b) #0 {
 ; X32-NOCMOV-NEXT:    movzbl %bl, %edi
 ; X32-NOCMOV-NEXT:    negl %edi
 ; X32-NOCMOV-NEXT:    andl %edi, %edx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-NOCMOV-NEXT:    xorl %ebp, %ebx
 ; X32-NOCMOV-NEXT:    andl %edi, %ebx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ebp, %ebx
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X32-NOCMOV-NEXT:    xorl %esi, %ebp
 ; X32-NOCMOV-NEXT:    andl %edi, %ebp
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %esi, %ebp
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    andl %edi, %ecx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    movl %ecx, 12(%eax)
 ; X32-NOCMOV-NEXT:    movl %ebp, 8(%eax)
@@ -588,14 +550,12 @@ define x86_fp80 @test_ctselect_f80(i1 %cond, x86_fp80 %a, x86_fp80 %b) #0 {
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
 ; X64-NEXT:    xorq %rax, %rcx
 ; X64-NEXT:    andq %rdi, %rcx
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorq %rax, %rcx
 ; X64-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
 ; X64-NEXT:    xorl %eax, %ecx
 ; X64-NEXT:    andl %ecx, %edi
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %eax, %edi
 ; X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fldt -{{[0-9]+}}(%rsp)
@@ -618,20 +578,17 @@ define x86_fp80 @test_ctselect_f80(i1 %cond, x86_fp80 %a, x86_fp80 %b) #0 {
 ; X32-NEXT:    movl (%esp), %esi
 ; X32-NEXT:    xorl %edx, %esi
 ; X32-NEXT:    andl %eax, %esi
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %edx, %esi
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    andl %eax, %edx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    andl %eax, %edx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    movw %dx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    fldt (%esp)
@@ -656,20 +613,17 @@ define x86_fp80 @test_ctselect_f80(i1 %cond, x86_fp80 %a, x86_fp80 %b) #0 {
 ; X32-NOCMOV-NEXT:    movl (%esp), %esi
 ; X32-NOCMOV-NEXT:    xorl %edx, %esi
 ; X32-NOCMOV-NEXT:    andl %eax, %esi
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %edx, %esi
 ; X32-NOCMOV-NEXT:    movl %esi, (%esp)
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    andl %eax, %edx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    andl %eax, %edx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    movw %dx, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    fldt (%esp)
@@ -688,7 +642,6 @@ define ptr @test_ctselect_ptr(i1 %cond, ptr %a, ptr %b) #0 {
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    negq %rax
 ; X64-NEXT:    andq %rsi, %rax
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorq %rdx, %rax
 ; X64-NEXT:    retq
 ;
@@ -702,7 +655,6 @@ define ptr @test_ctselect_ptr(i1 %cond, ptr %a, ptr %b) #0 {
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    negl %eax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    retl
 ;
@@ -716,7 +668,6 @@ define ptr @test_ctselect_ptr(i1 %cond, ptr %a, ptr %b) #0 {
 ; X32-NOCMOV-NEXT:    movzbl %al, %eax
 ; X32-NOCMOV-NEXT:    negl %eax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
 ; X32-NOCMOV-NEXT:    retl
   %result = call ptr @llvm.ct.select.p0(i1 %cond, ptr %a, ptr %b)
@@ -728,27 +679,16 @@ define i32 @test_ctselect_const_true(i32 %a, i32 %b) #0 {
 ; X64-LABEL: test_ctselect_const_true:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    xorl %esi, %eax
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    xorl %esi, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_const_true:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    xorl %ecx, %eax
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    retl
 ;
 ; X32-NOCMOV-LABEL: test_ctselect_const_true:
 ; X32-NOCMOV:       # %bb.0:
-; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NOCMOV-NEXT:    xorl %ecx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorl %ecx, %eax
 ; X32-NOCMOV-NEXT:    retl
   %result = call i32 @llvm.ct.select.i32(i1 true, i32 %a, i32 %b)
   ret i32 %result
@@ -757,23 +697,17 @@ define i32 @test_ctselect_const_true(i32 %a, i32 %b) #0 {
 define i32 @test_ctselect_const_false(i32 %a, i32 %b) #0 {
 ; X64-LABEL: test_ctselect_const_false:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    xorl %esi, %eax
+; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_const_false:
 ; X32:       # %bb.0:
-; X32-NEXT:    xorl %eax, %eax
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X32-NOCMOV-LABEL: test_ctselect_const_false:
 ; X32-NOCMOV:       # %bb.0:
-; X32-NOCMOV-NEXT:    xorl %eax, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    retl
   %result = call i32 @llvm.ct.select.i32(i1 false, i32 %a, i32 %b)
   ret i32 %result
@@ -789,7 +723,6 @@ define i32 @test_ctselect_icmp_eq(i32 %x, i32 %y, i32 %a, i32 %b) #0 {
 ; X64-NEXT:    xorl %ecx, %edx
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    andl %edx, %eax
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %ecx, %eax
 ; X64-NEXT:    retq
 ;
@@ -804,7 +737,6 @@ define i32 @test_ctselect_icmp_eq(i32 %x, i32 %y, i32 %a, i32 %b) #0 {
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    negl %eax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    retl
 ;
@@ -819,7 +751,6 @@ define i32 @test_ctselect_icmp_eq(i32 %x, i32 %y, i32 %a, i32 %b) #0 {
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    negl %eax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
 ; X32-NOCMOV-NEXT:    retl
   %cond = icmp eq i32 %x, %y
@@ -835,7 +766,6 @@ define i32 @test_ctselect_icmp_ult(i32 %x, i32 %y, i32 %a, i32 %b) #0 {
 ; X64-NEXT:    cmpl %esi, %edi
 ; X64-NEXT:    sbbl %eax, %eax
 ; X64-NEXT:    andl %edx, %eax
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %ecx, %eax
 ; X64-NEXT:    retq
 ;
@@ -849,7 +779,6 @@ define i32 @test_ctselect_icmp_ult(i32 %x, i32 %y, i32 %a, i32 %b) #0 {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    retl
 ;
@@ -863,7 +792,6 @@ define i32 @test_ctselect_icmp_ult(i32 %x, i32 %y, i32 %a, i32 %b) #0 {
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
 ; X32-NOCMOV-NEXT:    retl
   %cond = icmp ult i32 %x, %y
@@ -874,14 +802,10 @@ define i32 @test_ctselect_icmp_ult(i32 %x, i32 %y, i32 %a, i32 %b) #0 {
 define float @test_ctselect_fcmp_oeq(float %x, float %y, float %a, float %b) #0 {
 ; X64-LABEL: test_ctselect_fcmp_oeq:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %xmm3, %eax
 ; X64-NEXT:    cmpeqss %xmm1, %xmm0
-; X64-NEXT:    pxor %xmm3, %xmm2
-; X64-NEXT:    pand %xmm0, %xmm2
-; X64-NEXT:    movd %xmm2, %ecx
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    xorl %eax, %ecx
-; X64-NEXT:    movd %ecx, %xmm0
+; X64-NEXT:    xorps %xmm3, %xmm2
+; X64-NEXT:    andps %xmm2, %xmm0
+; X64-NEXT:    xorps %xmm3, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_fcmp_oeq:
@@ -904,7 +828,6 @@ define float @test_ctselect_fcmp_oeq(float %x, float %y, float %a, float %b) #0 
 ; X32-NEXT:    movl (%esp), %edx
 ; X32-NEXT:    xorl %eax, %edx
 ; X32-NEXT:    andl %ecx, %edx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %eax, %edx
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -933,7 +856,6 @@ define float @test_ctselect_fcmp_oeq(float %x, float %y, float %a, float %b) #0 
 ; X32-NOCMOV-NEXT:    movl (%esp), %edx
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    andl %eax, %edx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
@@ -954,7 +876,6 @@ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) #0 {
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    negl %edi
 ; X64-NEXT:    andl %edi, %eax
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %ecx, %eax
 ; X64-NEXT:    retq
 ;
@@ -970,7 +891,6 @@ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) #0 {
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    negl %eax
 ; X32-NEXT:    andl %ecx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %edx, %eax
 ; X32-NEXT:    retl
 ;
@@ -986,7 +906,6 @@ define i32 @test_ctselect_load(i1 %cond, ptr %p1, ptr %p2) #0 {
 ; X32-NOCMOV-NEXT:    movzbl %al, %eax
 ; X32-NOCMOV-NEXT:    negl %eax
 ; X32-NOCMOV-NEXT:    andl %ecx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %edx, %eax
 ; X32-NOCMOV-NEXT:    retl
   %a = load i32, ptr %p1
@@ -1004,13 +923,11 @@ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) #
 ; X64-NEXT:    andl $1, %esi
 ; X64-NEXT:    negl %esi
 ; X64-NEXT:    andl %edx, %esi
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %r8d, %ecx
 ; X64-NEXT:    xorl %esi, %ecx
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    andl %ecx, %eax
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %r8d, %eax
 ; X64-NEXT:    retq
 ;
@@ -1029,13 +946,11 @@ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) #
 ; X32-NEXT:    movzbl %ah, %edi
 ; X32-NEXT:    negl %edi
 ; X32-NEXT:    andl %esi, %edi
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    xorl %edi, %edx
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    negl %eax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
@@ -1056,13 +971,11 @@ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) #
 ; X32-NOCMOV-NEXT:    movzbl %ah, %edi
 ; X32-NOCMOV-NEXT:    negl %edi
 ; X32-NOCMOV-NEXT:    andl %esi, %edi
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    xorl %edi, %edx
 ; X32-NOCMOV-NEXT:    movzbl %al, %eax
 ; X32-NOCMOV-NEXT:    negl %eax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
 ; X32-NOCMOV-NEXT:    popl %esi
 ; X32-NOCMOV-NEXT:    popl %edi
@@ -1078,15 +991,12 @@ define i32 @test_ctselect_nested(i1 %cond1, i1 %cond2, i32 %a, i32 %b, i32 %c) #
 define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) #0 {
 ; X64-LABEL: test_ctselect_nested_and_i1_to_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl %esi, %edi
-; X64-NEXT:    andb $1, %dil
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    andb $1, %dil
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    xorl %ecx, %edx
-; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    andl %edx, %eax
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %ecx, %eax
 ; X64-NEXT:    retq
 ;
@@ -1096,14 +1006,11 @@ define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) #
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $1, %al
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    negl %eax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    retl
 ;
@@ -1113,14 +1020,11 @@ define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) #
 ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    andb $1, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    andb $1, %al
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    movzbl %al, %eax
 ; X32-NOCMOV-NEXT:    negl %eax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
 ; X32-NOCMOV-NEXT:    retl
   %inner = call i1 @llvm.ct.select.i1(i1 %c1, i1 true, i1 false)
@@ -1135,15 +1039,12 @@ define i32 @test_ctselect_nested_and_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) #
 define i32 @test_ctselect_nested_or_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) #0 {
 ; X64-LABEL: test_ctselect_nested_or_i1_to_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    orl %esi, %edi
-; X64-NEXT:    andb $1, %dil
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    andb $1, %dil
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    orl %esi, %eax
 ; X64-NEXT:    xorl %ecx, %edx
-; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    andl %edx, %eax
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %ecx, %eax
 ; X64-NEXT:    retq
 ;
@@ -1153,14 +1054,11 @@ define i32 @test_ctselect_nested_or_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) #0
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    orb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $1, %al
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    negl %eax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    retl
 ;
@@ -1170,14 +1068,11 @@ define i32 @test_ctselect_nested_or_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) #0
 ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    orb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    andb $1, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    andb $1, %al
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    movzbl %al, %eax
 ; X32-NOCMOV-NEXT:    negl %eax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
 ; X32-NOCMOV-NEXT:    retl
   %inner = call i1 @llvm.ct.select.i1(i1 %c1, i1 true, i1 false)
@@ -1194,16 +1089,13 @@ define i32 @test_ctselect_nested_or_i1_to_i32(i1 %c0, i1 %c1, i32 %x, i32 %y) #0
 define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i32 %y) #0 {
 ; X64-LABEL: test_ctselect_double_nested_and_i1:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl %esi, %edi
-; X64-NEXT:    andl %edx, %edi
-; X64-NEXT:    andb $1, %dil
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    andb $1, %dil
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl %esi, %eax
+; X64-NEXT:    andl %edx, %eax
 ; X64-NEXT:    xorl %r8d, %ecx
-; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    andl %ecx, %eax
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %r8d, %eax
 ; X64-NEXT:    retq
 ;
@@ -1214,14 +1106,11 @@ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i
 ; X32-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    andb $1, %al
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    andb $1, %al
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    negl %eax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    retl
 ;
@@ -1232,14 +1121,11 @@ define i32 @test_ctselect_double_nested_and_i1(i1 %c0, i1 %c1, i1 %c2, i32 %x, i
 ; X32-NOCMOV-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    andb $1, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    andb $1, %al
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    movzbl %al, %eax
 ; X32-NOCMOV-NEXT:    negl %eax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
 ; X32-NOCMOV-NEXT:    retl
   %inner2 = call i1 @llvm.ct.select.i1(i1 %c2, i1 true, i1 false)
@@ -1260,7 +1146,6 @@ define i32 @test_ctselect_negated_cond(i1 %c, i32 %a, i32 %b) #0 {
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    andl %edx, %eax
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %esi, %eax
 ; X64-NEXT:    retq
 ;
@@ -1274,7 +1159,6 @@ define i32 @test_ctselect_negated_cond(i1 %c, i32 %a, i32 %b) #0 {
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    negl %eax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    retl
 ;
@@ -1288,7 +1172,6 @@ define i32 @test_ctselect_negated_cond(i1 %c, i32 %a, i32 %b) #0 {
 ; X32-NOCMOV-NEXT:    movzbl %al, %eax
 ; X32-NOCMOV-NEXT:    negl %eax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
 ; X32-NOCMOV-NEXT:    retl
   %not = xor i1 %c, true
@@ -1304,7 +1187,6 @@ define <16 x b8> @test_ctselect_v16b8(i1 %cond, <16 x b8> %a, <16 x b8> %b) #0 {
 ; X64-LABEL: test_ctselect_v16b8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    andb $1, %dil
-; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    negb %dil
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    movd %eax, %xmm2
@@ -1312,8 +1194,8 @@ define <16 x b8> @test_ctselect_v16b8(i1 %cond, <16 x b8> %a, <16 x b8> %b) #0 {
 ; X64-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,0,0,0,4,5,6,7]
 ; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
 ; X64-NEXT:    pand %xmm2, %xmm0
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    pandn %xmm1, %xmm2
+; X64-NEXT:    por %xmm2, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_v16b8:
@@ -1321,120 +1203,104 @@ define <16 x b8> @test_ctselect_v16b8(i1 %cond, <16 x b8> %a, <16 x b8> %b) #0 {
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    subl $12, %esp
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    andb $1, %bl
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %ah
+; X32-NEXT:    andb $1, %ah
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %dh
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %ah
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %bh
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    xorb %cl, %al
-; X32-NEXT:    negb %bl
-; X32-NEXT:    andb %bl, %al
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    negb %ah
+; X32-NEXT:    andb %ah, %al
 ; X32-NEXT:    xorb %cl, %al
 ; X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    xorb %bh, %al
-; X32-NEXT:    andb %bl, %al
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    andb %ah, %al
 ; X32-NEXT:    xorb %bh, %al
 ; X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    xorb %ah, %al
-; X32-NEXT:    andb %bl, %al
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorb %ah, %al
+; X32-NEXT:    xorb %bl, %al
+; X32-NEXT:    andb %ah, %al
+; X32-NEXT:    xorb %bl, %al
 ; X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    xorb %dh, %al
-; X32-NEXT:    andb %bl, %al
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    andb %ah, %al
 ; X32-NEXT:    xorb %dh, %al
 ; X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    xorb %ch, %al
-; X32-NEXT:    andb %bl, %al
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    andb %ah, %al
 ; X32-NEXT:    xorb %ch, %al
 ; X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    xorb %dl, %al
-; X32-NEXT:    andb %bl, %al
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    andb %ah, %al
 ; X32-NEXT:    xorb %dl, %al
 ; X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    xorb %cl, %al
-; X32-NEXT:    andb %bl, %al
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    andb %ah, %al
 ; X32-NEXT:    xorb %cl, %al
 ; X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    xorb %cl, %al
-; X32-NEXT:    andb %bl, %al
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    andb %ah, %al
 ; X32-NEXT:    xorb %cl, %al
 ; X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    xorb %al, %cl
-; X32-NEXT:    andb %bl, %cl
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorb %al, %cl
-; X32-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    xorb %cl, %al
+; X32-NEXT:    andb %ah, %al
+; X32-NEXT:    xorb %cl, %al
+; X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %bh
-; X32-NEXT:    xorb %al, %bh
-; X32-NEXT:    andb %bl, %bh
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorb %al, %bh
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    xorb %cl, %bh
+; X32-NEXT:    andb %ah, %bh
+; X32-NEXT:    xorb %cl, %bh
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %bl
+; X32-NEXT:    xorb %cl, %bl
+; X32-NEXT:    andb %ah, %bl
+; X32-NEXT:    xorb %cl, %bl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %dh
-; X32-NEXT:    xorb %al, %dh
-; X32-NEXT:    andb %bl, %dh
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorb %al, %dh
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    xorb %cl, %dh
+; X32-NEXT:    andb %ah, %dh
+; X32-NEXT:    xorb %cl, %dh
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; X32-NEXT:    xorb %al, %ch
-; X32-NEXT:    andb %bl, %ch
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorb %al, %ch
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %ah
-; X32-NEXT:    xorb %al, %ah
-; X32-NEXT:    andb %bl, %ah
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorb %al, %ah
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    xorb %cl, %ch
+; X32-NEXT:    andb %ah, %ch
+; X32-NEXT:    xorb %cl, %ch
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %dl
-; X32-NEXT:    xorb %al, %dl
-; X32-NEXT:    andb %bl, %dl
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorb %al, %dl
+; X32-NEXT:    xorb %cl, %dl
+; X32-NEXT:    andb %ah, %dl
+; X32-NEXT:    xorb %cl, %dl
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    xorb %al, %cl
-; X32-NEXT:    andb %bl, %cl
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    andb %ah, %cl
 ; X32-NEXT:    xorb %al, %cl
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    xorb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    andb %bl, %al
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    andb %ah, %al
 ; X32-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movb %al, 15(%esi)
 ; X32-NEXT:    movb %cl, 14(%esi)
 ; X32-NEXT:    movb %dl, 13(%esi)
-; X32-NEXT:    movb %ah, 12(%esi)
-; X32-NEXT:    movb %ch, 11(%esi)
-; X32-NEXT:    movb %dh, 10(%esi)
+; X32-NEXT:    movb %ch, 12(%esi)
+; X32-NEXT:    movb %dh, 11(%esi)
+; X32-NEXT:    movb %bl, 10(%esi)
 ; X32-NEXT:    movb %bh, 9(%esi)
 ; X32-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; X32-NEXT:    movb %al, 8(%esi)
@@ -1465,120 +1331,104 @@ define <16 x b8> @test_ctselect_v16b8(i1 %cond, <16 x b8> %a, <16 x b8> %b) #0 {
 ; X32-NOCMOV-NEXT:    pushl %ebx
 ; X32-NOCMOV-NEXT:    pushl %esi
 ; X32-NOCMOV-NEXT:    subl $12, %esp
-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
-; X32-NOCMOV-NEXT:    andb $1, %bl
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %ah
+; X32-NOCMOV-NEXT:    andb $1, %ah
 ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %dh
-; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %ah
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %bh
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    xorb %cl, %al
-; X32-NOCMOV-NEXT:    negb %bl
-; X32-NOCMOV-NEXT:    andb %bl, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    negb %ah
+; X32-NOCMOV-NEXT:    andb %ah, %al
 ; X32-NOCMOV-NEXT:    xorb %cl, %al
 ; X32-NOCMOV-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    xorb %bh, %al
-; X32-NOCMOV-NEXT:    andb %bl, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    andb %ah, %al
 ; X32-NOCMOV-NEXT:    xorb %bh, %al
 ; X32-NOCMOV-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NOCMOV-NEXT:    xorb %ah, %al
-; X32-NOCMOV-NEXT:    andb %bl, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorb %ah, %al
+; X32-NOCMOV-NEXT:    xorb %bl, %al
+; X32-NOCMOV-NEXT:    andb %ah, %al
+; X32-NOCMOV-NEXT:    xorb %bl, %al
 ; X32-NOCMOV-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    xorb %dh, %al
-; X32-NOCMOV-NEXT:    andb %bl, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    andb %ah, %al
 ; X32-NOCMOV-NEXT:    xorb %dh, %al
 ; X32-NOCMOV-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    xorb %ch, %al
-; X32-NOCMOV-NEXT:    andb %bl, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    andb %ah, %al
 ; X32-NOCMOV-NEXT:    xorb %ch, %al
 ; X32-NOCMOV-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    xorb %dl, %al
-; X32-NOCMOV-NEXT:    andb %bl, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    andb %ah, %al
 ; X32-NOCMOV-NEXT:    xorb %dl, %al
 ; X32-NOCMOV-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    xorb %cl, %al
-; X32-NOCMOV-NEXT:    andb %bl, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    andb %ah, %al
 ; X32-NOCMOV-NEXT:    xorb %cl, %al
 ; X32-NOCMOV-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    xorb %cl, %al
-; X32-NOCMOV-NEXT:    andb %bl, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    andb %ah, %al
 ; X32-NOCMOV-NEXT:    xorb %cl, %al
 ; X32-NOCMOV-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X32-NOCMOV-NEXT:    xorb %al, %cl
-; X32-NOCMOV-NEXT:    andb %bl, %cl
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorb %al, %cl
-; X32-NOCMOV-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NOCMOV-NEXT:    xorb %cl, %al
+; X32-NOCMOV-NEXT:    andb %ah, %al
+; X32-NOCMOV-NEXT:    xorb %cl, %al
+; X32-NOCMOV-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %bh
-; X32-NOCMOV-NEXT:    xorb %al, %bh
-; X32-NOCMOV-NEXT:    andb %bl, %bh
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorb %al, %bh
-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    xorb %cl, %bh
+; X32-NOCMOV-NEXT:    andb %ah, %bh
+; X32-NOCMOV-NEXT:    xorb %cl, %bh
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %bl
+; X32-NOCMOV-NEXT:    xorb %cl, %bl
+; X32-NOCMOV-NEXT:    andb %ah, %bl
+; X32-NOCMOV-NEXT:    xorb %cl, %bl
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %dh
-; X32-NOCMOV-NEXT:    xorb %al, %dh
-; X32-NOCMOV-NEXT:    andb %bl, %dh
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorb %al, %dh
-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    xorb %cl, %dh
+; X32-NOCMOV-NEXT:    andb %ah, %dh
+; X32-NOCMOV-NEXT:    xorb %cl, %dh
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; X32-NOCMOV-NEXT:    xorb %al, %ch
-; X32-NOCMOV-NEXT:    andb %bl, %ch
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorb %al, %ch
-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %ah
-; X32-NOCMOV-NEXT:    xorb %al, %ah
-; X32-NOCMOV-NEXT:    andb %bl, %ah
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorb %al, %ah
-; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NOCMOV-NEXT:    xorb %cl, %ch
+; X32-NOCMOV-NEXT:    andb %ah, %ch
+; X32-NOCMOV-NEXT:    xorb %cl, %ch
+; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %dl
-; X32-NOCMOV-NEXT:    xorb %al, %dl
-; X32-NOCMOV-NEXT:    andb %bl, %dl
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorb %al, %dl
+; X32-NOCMOV-NEXT:    xorb %cl, %dl
+; X32-NOCMOV-NEXT:    andb %ah, %dl
+; X32-NOCMOV-NEXT:    xorb %cl, %dl
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NOCMOV-NEXT:    xorb %al, %cl
-; X32-NOCMOV-NEXT:    andb %bl, %cl
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    andb %ah, %cl
 ; X32-NOCMOV-NEXT:    xorb %al, %cl
 ; X32-NOCMOV-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %al
-; X32-NOCMOV-NEXT:    andb %bl, %al
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    andb %ah, %al
 ; X32-NOCMOV-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NOCMOV-NEXT:    movb %al, 15(%esi)
 ; X32-NOCMOV-NEXT:    movb %cl, 14(%esi)
 ; X32-NOCMOV-NEXT:    movb %dl, 13(%esi)
-; X32-NOCMOV-NEXT:    movb %ah, 12(%esi)
-; X32-NOCMOV-NEXT:    movb %ch, 11(%esi)
-; X32-NOCMOV-NEXT:    movb %dh, 10(%esi)
+; X32-NOCMOV-NEXT:    movb %ch, 12(%esi)
+; X32-NOCMOV-NEXT:    movb %dh, 11(%esi)
+; X32-NOCMOV-NEXT:    movb %bl, 10(%esi)
 ; X32-NOCMOV-NEXT:    movb %bh, 9(%esi)
 ; X32-NOCMOV-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; X32-NOCMOV-NEXT:    movb %al, 8(%esi)
@@ -1612,14 +1462,13 @@ define <16 x b8> @test_ctselect_v16b8(i1 %cond, <16 x b8> %a, <16 x b8> %b) #0 {
 define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) #0 {
 ; X64-LABEL: test_ctselect_v4i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    negl %edi
 ; X64-NEXT:    movd %edi, %xmm2
 ; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; X64-NEXT:    pand %xmm2, %xmm0
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    pandn %xmm1, %xmm2
+; X64-NEXT:    por %xmm2, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_v4i32:
@@ -1630,36 +1479,33 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) #0 {
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; X32-NEXT:    andb $1, %bl
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    xorl %ecx, %edx
+; X32-NEXT:    xorl %eax, %edx
 ; X32-NEXT:    movzbl %bl, %edi
 ; X32-NEXT:    negl %edi
 ; X32-NEXT:    andl %edi, %edx
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorl %ecx, %edx
+; X32-NEXT:    xorl %eax, %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-NEXT:    xorl %ebp, %ebx
 ; X32-NEXT:    andl %edi, %ebx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ebp, %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X32-NEXT:    xorl %esi, %ebp
 ; X32-NEXT:    andl %edi, %ebp
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %esi, %ebp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    andl %edi, %ecx
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl %ecx, 12(%eax)
-; X32-NEXT:    movl %ebp, 8(%eax)
-; X32-NEXT:    movl %ebx, 4(%eax)
-; X32-NEXT:    movl %edx, (%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    andl %edi, %eax
+; X32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl %eax, 12(%ecx)
+; X32-NEXT:    movl %ebp, 8(%ecx)
+; X32-NEXT:    movl %ebx, 4(%ecx)
+; X32-NEXT:    movl %edx, (%ecx)
+; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx
@@ -1674,36 +1520,33 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) #0 {
 ; X32-NOCMOV-NEXT:    pushl %esi
 ; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; X32-NOCMOV-NEXT:    andb $1, %bl
-; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NOCMOV-NEXT:    xorl %ecx, %edx
+; X32-NOCMOV-NEXT:    xorl %eax, %edx
 ; X32-NOCMOV-NEXT:    movzbl %bl, %edi
 ; X32-NOCMOV-NEXT:    negl %edi
 ; X32-NOCMOV-NEXT:    andl %edi, %edx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorl %ecx, %edx
+; X32-NOCMOV-NEXT:    xorl %eax, %edx
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-NOCMOV-NEXT:    xorl %ebp, %ebx
 ; X32-NOCMOV-NEXT:    andl %edi, %ebx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ebp, %ebx
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X32-NOCMOV-NEXT:    xorl %esi, %ebp
 ; X32-NOCMOV-NEXT:    andl %edi, %ebp
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %esi, %ebp
-; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NOCMOV-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; X32-NOCMOV-NEXT:    andl %edi, %ecx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; X32-NOCMOV-NEXT:    movl %ecx, 12(%eax)
-; X32-NOCMOV-NEXT:    movl %ebp, 8(%eax)
-; X32-NOCMOV-NEXT:    movl %ebx, 4(%eax)
-; X32-NOCMOV-NEXT:    movl %edx, (%eax)
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    andl %edi, %eax
+; X32-NOCMOV-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X32-NOCMOV-NEXT:    movl %eax, 12(%ecx)
+; X32-NOCMOV-NEXT:    movl %ebp, 8(%ecx)
+; X32-NOCMOV-NEXT:    movl %ebx, 4(%ecx)
+; X32-NOCMOV-NEXT:    movl %edx, (%ecx)
+; X32-NOCMOV-NEXT:    movl %ecx, %eax
 ; X32-NOCMOV-NEXT:    popl %esi
 ; X32-NOCMOV-NEXT:    popl %edi
 ; X32-NOCMOV-NEXT:    popl %ebx
@@ -1715,14 +1558,13 @@ define <4 x i32> @test_ctselect_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) #0 {
 define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b) #0 {
 ; X64-LABEL: test_ctselect_v4f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    negl %edi
 ; X64-NEXT:    movd %edi, %xmm2
 ; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; X64-NEXT:    pand %xmm2, %xmm0
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    pandn %xmm1, %xmm2
+; X64-NEXT:    por %xmm2, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_v4f32:
@@ -1760,25 +1602,21 @@ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X32-NEXT:    xorl %ebx, %ebp
 ; X32-NEXT:    andl %edx, %ebp
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ebx, %ebp
 ; X32-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-NEXT:    xorl %edi, %ebx
 ; X32-NEXT:    andl %edx, %ebx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %edi, %ebx
 ; X32-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    xorl %esi, %edi
 ; X32-NEXT:    andl %edx, %edi
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %esi, %edi
 ; X32-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl (%esp), %esi
 ; X32-NEXT:    xorl %ecx, %esi
 ; X32-NEXT:    andl %edx, %esi
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %esi
 ; X32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -1831,25 +1669,21 @@ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X32-NOCMOV-NEXT:    xorl %ebx, %ebp
 ; X32-NOCMOV-NEXT:    andl %edx, %ebp
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ebx, %ebp
 ; X32-NOCMOV-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-NOCMOV-NEXT:    xorl %edi, %ebx
 ; X32-NOCMOV-NEXT:    andl %edx, %ebx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %edi, %ebx
 ; X32-NOCMOV-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NOCMOV-NEXT:    xorl %esi, %edi
 ; X32-NOCMOV-NEXT:    andl %edx, %edi
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %esi, %edi
 ; X32-NOCMOV-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    movl (%esp), %esi
 ; X32-NOCMOV-NEXT:    xorl %ecx, %esi
 ; X32-NOCMOV-NEXT:    andl %edx, %esi
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %esi
 ; X32-NOCMOV-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
@@ -1873,18 +1707,17 @@ define <4 x float> @test_ctselect_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b
 define <8 x i32> @test_ctselect_v8i32_avx(i1 %cond, <8 x i32> %a, <8 x i32> %b) #0 {
 ; X64-LABEL: test_ctselect_v8i32_avx:
 ; X64:       # %bb.0:
-; X64-NEXT:    pxor %xmm2, %xmm0
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    negl %edi
 ; X64-NEXT:    movd %edi, %xmm4
 ; X64-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
+; X64-NEXT:    movdqa %xmm4, %xmm5
+; X64-NEXT:    pandn %xmm2, %xmm5
 ; X64-NEXT:    pand %xmm4, %xmm0
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    pxor %xmm2, %xmm0
-; X64-NEXT:    pxor %xmm3, %xmm1
+; X64-NEXT:    por %xmm5, %xmm0
 ; X64-NEXT:    pand %xmm4, %xmm1
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    pxor %xmm3, %xmm1
+; X64-NEXT:    pandn %xmm3, %xmm4
+; X64-NEXT:    por %xmm4, %xmm1
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_v8i32_avx:
@@ -1906,46 +1739,38 @@ define <8 x i32> @test_ctselect_v8i32_avx(i1 %cond, <8 x i32> %a, <8 x i32> %b) 
 ; X32-NEXT:    movzbl %dl, %edx
 ; X32-NEXT:    negl %edx
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl %esi, %eax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %esi, %eax
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    xorl %edi, %esi
 ; X32-NEXT:    andl %edx, %esi
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %edi, %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    xorl %ebp, %edi
 ; X32-NEXT:    andl %edx, %edi
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ebp, %edi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X32-NEXT:    xorl %ebx, %ebp
 ; X32-NEXT:    andl %edx, %ebp
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ebx, %ebp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-NEXT:    xorl %eax, %ebx
 ; X32-NEXT:    andl %edx, %ebx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %eax, %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    xorl %eax, %ecx
 ; X32-NEXT:    andl %edx, %ecx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %eax, %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl %eax, 28(%edx)
@@ -1985,46 +1810,38 @@ define <8 x i32> @test_ctselect_v8i32_avx(i1 %cond, <8 x i32> %a, <8 x i32> %b) 
 ; X32-NOCMOV-NEXT:    movzbl %dl, %edx
 ; X32-NOCMOV-NEXT:    negl %edx
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %eax
 ; X32-NOCMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    xorl %esi, %eax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %esi, %eax
 ; X32-NOCMOV-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NOCMOV-NEXT:    xorl %edi, %esi
 ; X32-NOCMOV-NEXT:    andl %edx, %esi
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %edi, %esi
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NOCMOV-NEXT:    xorl %ebp, %edi
 ; X32-NOCMOV-NEXT:    andl %edx, %edi
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ebp, %edi
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X32-NOCMOV-NEXT:    xorl %ebx, %ebp
 ; X32-NOCMOV-NEXT:    andl %edx, %ebp
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ebx, %ebp
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-NOCMOV-NEXT:    xorl %eax, %ebx
 ; X32-NOCMOV-NEXT:    andl %edx, %ebx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %eax, %ebx
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    xorl %eax, %ecx
 ; X32-NOCMOV-NEXT:    andl %edx, %ecx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %eax, %ecx
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NOCMOV-NEXT:    movl %eax, 28(%edx)
@@ -2051,18 +1868,17 @@ define <8 x i32> @test_ctselect_v8i32_avx(i1 %cond, <8 x i32> %a, <8 x i32> %b) 
 define <8 x float> @test_ctselect_v8f32(i1 %cond, <8 x float> %a, <8 x float> %b) #0 {
 ; X64-LABEL: test_ctselect_v8f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    pxor %xmm2, %xmm0
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    negl %edi
 ; X64-NEXT:    movd %edi, %xmm4
 ; X64-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
+; X64-NEXT:    movdqa %xmm4, %xmm5
+; X64-NEXT:    pandn %xmm2, %xmm5
 ; X64-NEXT:    pand %xmm4, %xmm0
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    pxor %xmm2, %xmm0
-; X64-NEXT:    pxor %xmm3, %xmm1
+; X64-NEXT:    por %xmm5, %xmm0
 ; X64-NEXT:    pand %xmm4, %xmm1
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    pxor %xmm3, %xmm1
+; X64-NEXT:    pandn %xmm3, %xmm4
+; X64-NEXT:    por %xmm4, %xmm1
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_v8f32:
@@ -2104,8 +1920,8 @@ define <8 x float> @test_ctselect_v8f32(i1 %cond, <8 x float> %a, <8 x float> %b
 ; X32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X32-NEXT:    flds {{[0-9]+}}(%esp)
 ; X32-NEXT:    fstps {{[0-9]+}}(%esp)
-; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    andb $1, %dl
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    andb $1, %cl
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2113,60 +1929,52 @@ define <8 x float> @test_ctselect_v8f32(i1 %cond, <8 x float> %a, <8 x float> %b
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movzbl %dl, %edx
-; X32-NEXT:    negl %edx
+; X32-NEXT:    movzbl %cl, %ecx
+; X32-NEXT:    negl %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl %ebx, %eax
-; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    andl %ecx, %eax
 ; X32-NEXT:    xorl %ebx, %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    xorl %ecx, %eax
-; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorl %ecx, %eax
+; X32-NEXT:    xorl %edx, %eax
+; X32-NEXT:    andl %ecx, %eax
+; X32-NEXT:    xorl %edx, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl %ebp, %eax
-; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    andl %ecx, %eax
 ; X32-NEXT:    xorl %ebp, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl %ebx, %eax
-; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    andl %ecx, %eax
 ; X32-NEXT:    xorl %ebx, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl %edi, %eax
-; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    andl %ecx, %eax
 ; X32-NEXT:    xorl %edi, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl %esi, %eax
-; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
+; X32-NEXT:    andl %ecx, %eax
 ; X32-NEXT:    xorl %esi, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X32-NEXT:    xorl %ecx, %eax
-; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorl %ecx, %eax
+; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X32-NEXT:    xorl %edx, %eax
+; X32-NEXT:    andl %ecx, %eax
+; X32-NEXT:    xorl %edx, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X32-NEXT:    xorl %ecx, %eax
-; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorl %ecx, %eax
+; X32-NEXT:    movl (%esp), %edx # 4-byte Reload
+; X32-NEXT:    xorl %edx, %eax
+; X32-NEXT:    andl %ecx, %eax
+; X32-NEXT:    xorl %edx, %eax
 ; X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -2233,8 +2041,8 @@ define <8 x float> @test_ctselect_v8f32(i1 %cond, <8 x float> %a, <8 x float> %b
 ; X32-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    fstps {{[0-9]+}}(%esp)
-; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X32-NOCMOV-NEXT:    andb $1, %dl
+; X32-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    andb $1, %cl
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -2242,60 +2050,52 @@ define <8 x float> @test_ctselect_v8f32(i1 %cond, <8 x float> %a, <8 x float> %b
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NOCMOV-NEXT:    movzbl %dl, %edx
-; X32-NOCMOV-NEXT:    negl %edx
+; X32-NOCMOV-NEXT:    movzbl %cl, %ecx
+; X32-NOCMOV-NEXT:    negl %ecx
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    xorl %ebx, %eax
-; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    andl %ecx, %eax
 ; X32-NOCMOV-NEXT:    xorl %ebx, %eax
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NOCMOV-NEXT:    xorl %ecx, %eax
-; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorl %ecx, %eax
+; X32-NOCMOV-NEXT:    xorl %edx, %eax
+; X32-NOCMOV-NEXT:    andl %ecx, %eax
+; X32-NOCMOV-NEXT:    xorl %edx, %eax
 ; X32-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    xorl %ebp, %eax
-; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    andl %ecx, %eax
 ; X32-NOCMOV-NEXT:    xorl %ebp, %eax
 ; X32-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    xorl %ebx, %eax
-; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    andl %ecx, %eax
 ; X32-NOCMOV-NEXT:    xorl %ebx, %eax
 ; X32-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    xorl %edi, %eax
-; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    andl %ecx, %eax
 ; X32-NOCMOV-NEXT:    xorl %edi, %eax
 ; X32-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    xorl %esi, %eax
-; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
+; X32-NOCMOV-NEXT:    andl %ecx, %eax
 ; X32-NOCMOV-NEXT:    xorl %esi, %eax
 ; X32-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X32-NOCMOV-NEXT:    xorl %ecx, %eax
-; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorl %ecx, %eax
+; X32-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X32-NOCMOV-NEXT:    xorl %edx, %eax
+; X32-NOCMOV-NEXT:    andl %ecx, %eax
+; X32-NOCMOV-NEXT:    xorl %edx, %eax
 ; X32-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NOCMOV-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; X32-NOCMOV-NEXT:    xorl %ecx, %eax
-; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorl %ecx, %eax
+; X32-NOCMOV-NEXT:    movl (%esp), %edx # 4-byte Reload
+; X32-NOCMOV-NEXT:    xorl %edx, %eax
+; X32-NOCMOV-NEXT:    andl %ecx, %eax
+; X32-NOCMOV-NEXT:    xorl %edx, %eax
 ; X32-NOCMOV-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    flds {{[0-9]+}}(%esp)
@@ -2329,15 +2129,14 @@ define <8 x float> @test_ctselect_v8f32(i1 %cond, <8 x float> %a, <8 x float> %b
 define <8 x half> @test_ctselect_v8f16(i1 %cond, <8 x half> %a, <8 x half> %b) #0 {
 ; X64-LABEL: test_ctselect_v8f16:
 ; X64:       # %bb.0:
-; X64-NEXT:    pxor %xmm1, %xmm0
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    negl %edi
 ; X64-NEXT:    movd %edi, %xmm2
 ; X64-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,0,0,0,4,5,6,7]
 ; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
 ; X64-NEXT:    pand %xmm2, %xmm0
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    pxor %xmm1, %xmm0
+; X64-NEXT:    pandn %xmm1, %xmm2
+; X64-NEXT:    por %xmm2, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_v8f16:
@@ -2358,49 +2157,41 @@ define <8 x half> @test_ctselect_v8f16(i1 %cond, <8 x half> %a, <8 x half> %b) #
 ; X32-NEXT:    movzbl %cl, %edx
 ; X32-NEXT:    negl %edx
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %esi, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorw %di, %ax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %edi, %eax
 ; X32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorw %bx, %ax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ebx, %eax
 ; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
 ; X32-NEXT:    xorw %bp, %bx
 ; X32-NEXT:    andl %edx, %ebx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ebp, %ebx
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ebp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorw %ax, %bp
 ; X32-NEXT:    andl %edx, %ebp
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %eax, %ebp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    xorw %ax, %di
 ; X32-NEXT:    andl %edx, %edi
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %eax, %edi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    xorw %ax, %cx
 ; X32-NEXT:    andl %edx, %ecx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %eax, %ecx
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    xorw %si, %ax
 ; X32-NEXT:    andl %edx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movw %ax, 14(%edx)
@@ -2440,49 +2231,41 @@ define <8 x half> @test_ctselect_v8f16(i1 %cond, <8 x half> %a, <8 x half> %b) #
 ; X32-NOCMOV-NEXT:    movzbl %cl, %edx
 ; X32-NOCMOV-NEXT:    negl %edx
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %esi, %eax
 ; X32-NOCMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    xorw %di, %ax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %edi, %eax
 ; X32-NOCMOV-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    xorw %bx, %ax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ebx, %eax
 ; X32-NOCMOV-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X32-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
 ; X32-NOCMOV-NEXT:    xorw %bp, %bx
 ; X32-NOCMOV-NEXT:    andl %edx, %ebx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ebp, %ebx
 ; X32-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %ebp
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    xorw %ax, %bp
 ; X32-NOCMOV-NEXT:    andl %edx, %ebp
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %eax, %ebp
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
 ; X32-NOCMOV-NEXT:    xorw %ax, %di
 ; X32-NOCMOV-NEXT:    andl %edx, %edi
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %eax, %edi
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    xorw %ax, %cx
 ; X32-NOCMOV-NEXT:    andl %edx, %ecx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %eax, %ecx
 ; X32-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NOCMOV-NEXT:    xorw %si, %ax
 ; X32-NOCMOV-NEXT:    andl %edx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NOCMOV-NEXT:    movw %ax, 14(%edx)
@@ -2525,13 +2308,11 @@ define <8 x bfloat> @test_ctselect_v8bf16(i1 %cond, <8 x bfloat> %a, <8 x bfloat
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    negl %edi
 ; X64-NEXT:    andl %edi, %r10d
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %r8d, %r10d
 ; X64-NEXT:    movq %r9, %r8
 ; X64-NEXT:    shll $16, %r10d
 ; X64-NEXT:    xorl %esi, %r9d
 ; X64-NEXT:    andl %edi, %r9d
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %esi, %r9d
 ; X64-NEXT:    movzwl %r9w, %r9d
 ; X64-NEXT:    orl %r10d, %r9d
@@ -2540,13 +2321,11 @@ define <8 x bfloat> @test_ctselect_v8bf16(i1 %cond, <8 x bfloat> %a, <8 x bfloat
 ; X64-NEXT:    shrq $48, %r8
 ; X64-NEXT:    xorl %r10d, %r8d
 ; X64-NEXT:    andl %edi, %r8d
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %r10d, %r8d
 ; X64-NEXT:    shrq $32, %rsi
 ; X64-NEXT:    shrq $32, %rdx
 ; X64-NEXT:    xorl %esi, %edx
 ; X64-NEXT:    andl %edi, %edx
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %esi, %edx
 ; X64-NEXT:    movq %rcx, %rsi
 ; X64-NEXT:    shll $16, %r8d
@@ -2560,13 +2339,11 @@ define <8 x bfloat> @test_ctselect_v8bf16(i1 %cond, <8 x bfloat> %a, <8 x bfloat
 ; X64-NEXT:    shrl $16, %r9d
 ; X64-NEXT:    xorl %r8d, %r9d
 ; X64-NEXT:    andl %edi, %r9d
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %r8d, %r9d
 ; X64-NEXT:    movq %rcx, %r8
 ; X64-NEXT:    shll $16, %r9d
 ; X64-NEXT:    xorl %eax, %ecx
 ; X64-NEXT:    andl %edi, %ecx
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %eax, %ecx
 ; X64-NEXT:    movzwl %cx, %ecx
 ; X64-NEXT:    orl %r9d, %ecx
@@ -2575,13 +2352,11 @@ define <8 x bfloat> @test_ctselect_v8bf16(i1 %cond, <8 x bfloat> %a, <8 x bfloat
 ; X64-NEXT:    shrq $48, %r8
 ; X64-NEXT:    xorl %r9d, %r8d
 ; X64-NEXT:    andl %edi, %r8d
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %r9d, %r8d
 ; X64-NEXT:    shrq $32, %rax
 ; X64-NEXT:    shrq $32, %rsi
 ; X64-NEXT:    xorl %eax, %esi
 ; X64-NEXT:    andl %edi, %esi
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    xorl %eax, %esi
 ; X64-NEXT:    shll $16, %r8d
 ; X64-NEXT:    movzwl %si, %eax
@@ -2683,49 +2458,41 @@ define <8 x bfloat> @test_ctselect_v8bf16(i1 %cond, <8 x bfloat> %a, <8 x bfloat
 ; X32-NEXT:    movzbl %cl, %ecx
 ; X32-NEXT:    negl %ecx
 ; X32-NEXT:    andl %ecx, %esi
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %edx, %esi
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NEXT:    xorl %eax, %edx
 ; X32-NEXT:    andl %ecx, %edx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %eax, %edx
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NEXT:    xorl %eax, %edx
 ; X32-NEXT:    andl %ecx, %edx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %eax, %edx
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NEXT:    xorl %eax, %edx
 ; X32-NEXT:    andl %ecx, %edx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %eax, %edx
 ; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NEXT:    xorl %edx, %eax
 ; X32-NEXT:    andl %ecx, %eax
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %edx, %eax
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NEXT:    xorl %edx, %ebp
 ; X32-NEXT:    andl %ecx, %ebp
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %edx, %ebp
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NEXT:    xorl %edx, %edi
 ; X32-NEXT:    andl %ecx, %edi
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %edx, %edi
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NEXT:    xorl %edx, %ebx
 ; X32-NEXT:    andl %ecx, %ebx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %edx, %ebx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movw %bx, 14(%ecx)
@@ -2837,49 +2604,41 @@ define <8 x bfloat> @test_ctselect_v8bf16(i1 %cond, <8 x bfloat> %a, <8 x bfloat
 ; X32-NOCMOV-NEXT:    movzbl %cl, %ecx
 ; X32-NOCMOV-NEXT:    negl %ecx
 ; X32-NOCMOV-NEXT:    andl %ecx, %esi
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %edx, %esi
 ; X32-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NOCMOV-NEXT:    xorl %eax, %edx
 ; X32-NOCMOV-NEXT:    andl %ecx, %edx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %eax, %edx
 ; X32-NOCMOV-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NOCMOV-NEXT:    xorl %eax, %edx
 ; X32-NOCMOV-NEXT:    andl %ecx, %edx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %eax, %edx
 ; X32-NOCMOV-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NOCMOV-NEXT:    xorl %eax, %edx
 ; X32-NOCMOV-NEXT:    andl %ecx, %edx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %eax, %edx
 ; X32-NOCMOV-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NOCMOV-NEXT:    xorl %edx, %eax
 ; X32-NOCMOV-NEXT:    andl %ecx, %eax
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %edx, %eax
 ; X32-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NOCMOV-NEXT:    xorl %edx, %ebp
 ; X32-NOCMOV-NEXT:    andl %ecx, %ebp
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %edx, %ebp
 ; X32-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NOCMOV-NEXT:    xorl %edx, %edi
 ; X32-NOCMOV-NEXT:    andl %ecx, %edi
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %edx, %edi
 ; X32-NOCMOV-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X32-NOCMOV-NEXT:    xorl %edx, %ebx
 ; X32-NOCMOV-NEXT:    andl %ecx, %ebx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %edx, %ebx
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NOCMOV-NEXT:    movw %bx, 14(%ecx)
@@ -2910,8 +2669,7 @@ define float @test_ctselect_f32_nan_inf(i1 %cond) #0 {
 ; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    negl %edi
 ; X64-NEXT:    andl $4194304, %edi # imm = 0x400000
-; X64-NEXT:    #ARITH_FENCE
-; X64-NEXT:    xorl $2139095040, %edi # imm = 0x7F800000
+; X64-NEXT:    orl $2139095040, %edi # imm = 0x7F800000
 ; X64-NEXT:    movd %edi, %xmm0
 ; X64-NEXT:    retq
 ;
@@ -2923,8 +2681,7 @@ define float @test_ctselect_f32_nan_inf(i1 %cond) #0 {
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    negl %eax
 ; X32-NEXT:    andl $4194304, %eax # imm = 0x400000
-; X32-NEXT:    #ARITH_FENCE
-; X32-NEXT:    xorl $2139095040, %eax # imm = 0x7F800000
+; X32-NEXT:    orl $2139095040, %eax # imm = 0x7F800000
 ; X32-NEXT:    movl %eax, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax
@@ -2938,8 +2695,7 @@ define float @test_ctselect_f32_nan_inf(i1 %cond) #0 {
 ; X32-NOCMOV-NEXT:    movzbl %al, %eax
 ; X32-NOCMOV-NEXT:    negl %eax
 ; X32-NOCMOV-NEXT:    andl $4194304, %eax # imm = 0x400000
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
-; X32-NOCMOV-NEXT:    xorl $2139095040, %eax # imm = 0x7F800000
+; X32-NOCMOV-NEXT:    orl $2139095040, %eax # imm = 0x7F800000
 ; X32-NOCMOV-NEXT:    movl %eax, (%esp)
 ; X32-NOCMOV-NEXT:    flds (%esp)
 ; X32-NOCMOV-NEXT:    popl %eax
@@ -2956,9 +2712,8 @@ define double @test_ctselect_f64_nan_inf(i1 %cond) #0 {
 ; X64-NEXT:    negq %rdi
 ; X64-NEXT:    movabsq $2251799813685248, %rax # imm = 0x8000000000000
 ; X64-NEXT:    andq %rdi, %rax
-; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    movabsq $9218868437227405312, %rcx # imm = 0x7FF0000000000000
-; X64-NEXT:    xorq %rax, %rcx
+; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    movq %rcx, %xmm0
 ; X64-NEXT:    retq
 ;
@@ -2979,13 +2734,11 @@ define double @test_ctselect_f64_nan_inf(i1 %cond) #0 {
 ; X32-NEXT:    movl (%esp), %esi
 ; X32-NEXT:    xorl %edx, %esi
 ; X32-NEXT:    andl %eax, %esi
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %edx, %esi
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    andl %eax, %edx
-; X32-NEXT:    #ARITH_FENCE
 ; X32-NEXT:    xorl %ecx, %edx
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X32-NEXT:    fldl (%esp)
@@ -3010,13 +2763,11 @@ define double @test_ctselect_f64_nan_inf(i1 %cond) #0 {
 ; X32-NOCMOV-NEXT:    movl (%esp), %esi
 ; X32-NOCMOV-NEXT:    xorl %edx, %esi
 ; X32-NOCMOV-NEXT:    andl %eax, %esi
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %edx, %esi
 ; X32-NOCMOV-NEXT:    movl %esi, (%esp)
 ; X32-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    andl %eax, %edx
-; X32-NOCMOV-NEXT:    #ARITH_FENCE
 ; X32-NOCMOV-NEXT:    xorl %ecx, %edx
 ; X32-NOCMOV-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X32-NOCMOV-NEXT:    fldl (%esp)

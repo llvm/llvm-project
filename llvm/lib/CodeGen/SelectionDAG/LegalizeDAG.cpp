@@ -3221,9 +3221,8 @@ SDValue SelectionDAGLegalize::ExpandCTSELECT(SDNode *Node) {
   // on the same-size integer; vectors build the mask as a scalar then splat
   // (avoids illegal vNi1).
   //
-  // The masked-diff passes through an ARITH_FENCE so no future combine can
-  // fold the XOR/AND/XOR sequence back into a SELECT. No in-tree combine does
-  // that today; the fence is defense-in-depth and emits no code.
+  // No in-tree combine folds the XOR/AND/XOR sequence back into a SELECT.
+  // A dedicated combine barrier is left to a follow-up.
   SDValue Cond = Node->getOperand(0);
   SDValue T = Node->getOperand(1);
   SDValue F = Node->getOperand(2);
@@ -3362,10 +3361,6 @@ SDValue SelectionDAGLegalize::ExpandCTSELECT(SDNode *Node) {
   // F ^ ((T ^ F) & Mask)
   SDValue XorTF = DAG.getNode(ISD::XOR, dl, WorkingVT, WorkingT, WorkingF);
   SDValue TM = DAG.getNode(ISD::AND, dl, WorkingVT, XorTF, Mask);
-
-  // DAGCombine barrier (see above).
-  TM = DAG.getNode(ISD::ARITH_FENCE, dl, WorkingVT, TM);
-
   SDValue Res = DAG.getNode(ISD::XOR, dl, WorkingVT, WorkingF, TM);
 
   if (WorkingVT != VT)
