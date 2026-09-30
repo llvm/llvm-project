@@ -15,6 +15,7 @@
 
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -61,11 +62,31 @@ static bool callSiteBlocksInReg(const CallBase &CB, unsigned ArgNo) {
          PA.hasAttribute(Attribute::ByRef) || PA.hasAttribute(Attribute::Nest);
 }
 
+// A musttail call in F's body requires F's ABI-impacting parameter attributes
+// to agree positionally with its callee's, so F cannot be promoted on its own.
+// TODO: Promote both in lockstep.
+static bool hasMustTailCallInBody(const Function &F) {
+  // A musttail call must immediately precede a ret, so no other slot needs
+  // checking.
+  for (const BasicBlock &BB : F) {
+    const Instruction *Term = BB.getTerminator();
+    if (!isa<ReturnInst>(Term))
+      continue;
+    const auto *CI = dyn_cast_or_null<CallInst>(Term->getPrevNode());
+    if (CI && CI->isMustTailCall())
+      return true;
+  }
+  return false;
+}
+
 static bool collectDirectCallSites(Function &F,
                                    SmallVectorImpl<CallBase *> &Calls) {
   if (F.isDeclaration() || !F.canChangeSignature())
     return false;
   if (!F.hasLocalLinkage())
+    return false;
+
+  if (!any_of(F.args(), canPromoteArgToInReg))
     return false;
 
   // IgnoreAssumeLikeCalls must be off. An assume-like intrinsic taking F as an
@@ -81,7 +102,12 @@ static bool collectDirectCallSites(Function &F,
       return false;
     Calls.push_back(CB);
   }
-  return !Calls.empty();
+  if (Calls.empty())
+    return false;
+
+  // Checked last: only gate here that is linear in the size of F's
+  // body.
+  return !hasMustTailCallInBody(F);
 }
 
 static bool isTriviallyUniform(const Use &U, const TargetTransformInfo &TTI) {

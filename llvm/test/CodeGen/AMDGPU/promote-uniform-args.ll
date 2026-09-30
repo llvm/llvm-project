@@ -929,6 +929,56 @@ define amdgpu_kernel void @k_cs_nest(ptr %p) {
   ret void
 }
 
+; A musttail call in the body requires the ABI-impacting parameter attributes of
+; the enclosing function and of the musttail callee to agree positionally. The
+; existing isMustTailCall() check only sees musttail calls *to* a function, not
+; ones inside it.
+
+declare fastcc void @musttail_target(ptr, ptr)
+
+define internal fastcc void @callee_musttail_forward(ptr %p, ptr %q) {
+; CHECK-LABEL: define internal fastcc void @callee_musttail_forward(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    musttail call fastcc void @musttail_target(ptr [[P]], ptr [[Q]])
+; CHECK-NEXT:    ret void
+;
+  musttail call fastcc void @musttail_target(ptr %p, ptr %q)
+  ret void
+}
+
+define amdgpu_kernel void @k_musttail_forward(ptr %p, ptr %q) {
+; CHECK-LABEL: define amdgpu_kernel void @k_musttail_forward(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    call fastcc void @callee_musttail_forward(ptr [[P]], ptr [[Q]])
+; CHECK-NEXT:    ret void
+;
+  call fastcc void @callee_musttail_forward(ptr %p, ptr %q)
+  ret void
+}
+
+; %p is not forwarded to the musttail call, but the attributes are compared by
+; position rather than by what is forwarded, so promoting %p alone still breaks.
+
+define internal fastcc void @callee_musttail_abi(ptr %p, ptr %q) {
+; CHECK-LABEL: define internal fastcc void @callee_musttail_abi(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    musttail call fastcc void @musttail_target(ptr [[Q]], ptr [[Q]])
+; CHECK-NEXT:    ret void
+;
+  musttail call fastcc void @musttail_target(ptr %q, ptr %q)
+  ret void
+}
+
+define amdgpu_kernel void @k_musttail_abi(ptr %p, ptr %q) {
+; CHECK-LABEL: define amdgpu_kernel void @k_musttail_abi(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    call fastcc void @callee_musttail_abi(ptr [[P]], ptr [[Q]])
+; CHECK-NEXT:    ret void
+;
+  call fastcc void @callee_musttail_abi(ptr %p, ptr %q)
+  ret void
+}
+
 attributes #0 = { noinline optnone }
 attributes #1 = { naked }
 attributes #2 = { noipa }
