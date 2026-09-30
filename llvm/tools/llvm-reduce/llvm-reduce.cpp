@@ -15,6 +15,7 @@
 #include "DeltaManager.h"
 #include "ReducerWorkItem.h"
 #include "TestRunner.h"
+#include "deltas/Delta.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Support/CommandLine.h"
@@ -173,6 +174,14 @@ int main(int Argc, char **Argv) {
 
   if (TestFilename.empty()) {
     WithColor::error(errs(), ToolName) << "--test option must be specified\n";
+    return 1;
+  }
+
+  // Chunks are handed to worker threads by round tripping the program through
+  // bitcode, which cannot represent MachineFunctions.
+  if (ReduceModeMIR && getNumChunkProcessingJobs() > 1) {
+    WithColor::error(errs(), ToolName)
+        << "-j is not supported for MIR reduction\n";
     return 1;
   }
 

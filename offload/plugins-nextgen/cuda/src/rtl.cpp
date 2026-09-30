@@ -22,7 +22,6 @@
 
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
-#include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
 #include "Utils/ELF.h"
 
@@ -288,7 +287,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
     Res = cuDeviceGetUuid(&UUID, Device);
     if (auto Err = Plugin::check(Res, "error in cuDeviceGetUuid: %s"))
       return Err;
-    setDeviceUidFromVendorUid(toHex(UUID.bytes, true));
+    setDeviceUidFromVendorUid(
+        toHex(StringRef(UUID.bytes, sizeof(UUID.bytes)), true));
 
     // Query the current flags of the primary context and set its flags if
     // it is inactive.

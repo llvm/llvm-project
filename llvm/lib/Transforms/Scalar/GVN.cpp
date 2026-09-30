@@ -151,7 +151,7 @@ static cl::opt<uint32_t> MaxNumInsnsPerBlock(
     cl::desc("Max number of instructions to scan in each basic block in GVN "
              "(default = 100)"));
 
-struct llvm::GVNPass::Expression {
+struct llvm::GVNValueTable::Expression {
   uint32_t Opcode;
   bool Commutative = false;
   // The type is not necessarily the result type of the expression, it may be
@@ -184,15 +184,15 @@ struct llvm::GVNPass::Expression {
   }
 };
 
-template <> struct llvm::DenseMapInfo<GVNPass::Expression> {
-  static unsigned getHashValue(const GVNPass::Expression &E) {
+template <> struct llvm::DenseMapInfo<GVNValueTable::Expression> {
+  static unsigned getHashValue(const GVNValueTable::Expression &E) {
     using llvm::hash_value;
 
     return static_cast<unsigned>(hash_value(E));
   }
 
-  static bool isEqual(const GVNPass::Expression &LHS,
-                      const GVNPass::Expression &RHS) {
+  static bool isEqual(const GVNValueTable::Expression &LHS,
+                      const GVNValueTable::Expression &RHS) {
     return LHS == RHS;
   }
 };
@@ -331,7 +331,7 @@ struct llvm::GVNPass::AvailableValueInBlock {
 //                     ValueTable Internal Functions
 //===----------------------------------------------------------------------===//
 
-GVNPass::Expression GVNPass::ValueTable::createExpr(Instruction *I) {
+GVNValueTable::Expression GVNValueTable::createExpr(Instruction *I) {
   Expression E;
   E.Ty = I->getType();
   E.Opcode = I->getOpcode();
@@ -369,8 +369,9 @@ GVNPass::Expression GVNPass::ValueTable::createExpr(Instruction *I) {
   return E;
 }
 
-GVNPass::Expression GVNPass::ValueTable::createCmpExpr(
-    unsigned Opcode, CmpInst::Predicate Predicate, Value *LHS, Value *RHS) {
+GVNValueTable::Expression
+GVNValueTable::createCmpExpr(unsigned Opcode, CmpInst::Predicate Predicate,
+                             Value *LHS, Value *RHS) {
   assert((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
          "Not a comparison!");
   Expression E;
@@ -388,8 +389,8 @@ GVNPass::Expression GVNPass::ValueTable::createCmpExpr(
   return E;
 }
 
-GVNPass::Expression
-GVNPass::ValueTable::createExtractValueExpr(ExtractValueInst *EI) {
+GVNValueTable::Expression
+GVNValueTable::createExtractValueExpr(ExtractValueInst *EI) {
   assert(EI && "Not an ExtractValueInst?");
   Expression E;
   E.Ty = EI->getType();
@@ -417,7 +418,7 @@ GVNPass::ValueTable::createExtractValueExpr(ExtractValueInst *EI) {
   return E;
 }
 
-GVNPass::Expression GVNPass::ValueTable::createGEPExpr(GetElementPtrInst *GEP) {
+GVNValueTable::Expression GVNValueTable::createGEPExpr(GetElementPtrInst *GEP) {
   Expression E;
   Type *PtrTy = GEP->getType()->getScalarType();
   const DataLayout &DL = GEP->getDataLayout();
@@ -453,15 +454,14 @@ GVNPass::Expression GVNPass::ValueTable::createGEPExpr(GetElementPtrInst *GEP) {
 //                     ValueTable External Functions
 //===----------------------------------------------------------------------===//
 
-GVNPass::ValueTable::ValueTable() = default;
-GVNPass::ValueTable::ValueTable(const ValueTable &) = default;
-GVNPass::ValueTable::ValueTable(ValueTable &&) = default;
-GVNPass::ValueTable::~ValueTable() = default;
-GVNPass::ValueTable &
-GVNPass::ValueTable::operator=(const GVNPass::ValueTable &Arg) = default;
+GVNValueTable::GVNValueTable() = default;
+GVNValueTable::GVNValueTable(const GVNValueTable &) = default;
+GVNValueTable::GVNValueTable(GVNValueTable &&) = default;
+GVNValueTable::~GVNValueTable() = default;
+GVNValueTable &GVNValueTable::operator=(const GVNValueTable &Arg) = default;
 
 /// add - Insert a value into the table with a specified value number.
-void GVNPass::ValueTable::add(Value *V, uint32_t Num) {
+void GVNValueTable::add(Value *V, uint32_t Num) {
   ValueNumbering.insert(std::make_pair(V, Num));
   if (PHINode *PN = dyn_cast<PHINode>(V))
     NumberingPhi[Num] = PN;
@@ -473,14 +473,14 @@ void GVNPass::ValueTable::add(Value *V, uint32_t Num) {
 /// * a MemoryPhi, add the value number of the basic block corresponding to that
 /// MemoryPhi,
 /// * a MemoryDef, add the value number of the memory setting instruction.
-void GVNPass::ValueTable::addMemoryStateToExp(Instruction *I, Expression &Exp) {
+void GVNValueTable::addMemoryStateToExp(Instruction *I, Expression &Exp) {
   assert(MSSA && "addMemoryStateToExp should not be called without MemorySSA");
   assert(MSSA->getMemoryAccess(I) && "Instruction does not access memory");
   MemoryAccess *MA = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(I);
   Exp.VarArgs.push_back(lookupOrAdd(MA));
 }
 
-uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
+uint32_t GVNValueTable::lookupOrAddCall(CallInst *C) {
   // FIXME: Currently the calls which may access the thread id may
   // be considered as not accessing the memory. But this is
   // problematic for coroutines, since coroutines may resume in a
@@ -621,7 +621,7 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
 }
 
 /// Returns the value number for the specified load or store instruction.
-uint32_t GVNPass::ValueTable::computeLoadStoreVN(Instruction *I) {
+uint32_t GVNValueTable::computeLoadStoreVN(Instruction *I) {
   if (!MSSA || !IsMSSAEnabled) {
     ValueNumbering[I] = NextValueNumber;
     return NextValueNumber++;
@@ -640,11 +640,11 @@ uint32_t GVNPass::ValueTable::computeLoadStoreVN(Instruction *I) {
 }
 
 /// Returns true if a value number exists for the specified value.
-bool GVNPass::ValueTable::exists(Value *V) const {
+bool GVNValueTable::exists(Value *V) const {
   return ValueNumbering.contains(V);
 }
 
-uint32_t GVNPass::ValueTable::lookupOrAdd(MemoryAccess *MA) {
+uint32_t GVNValueTable::lookupOrAdd(MemoryAccess *MA) {
   return MSSA->isLiveOnEntryDef(MA) || isa<MemoryPhi>(MA)
              ? lookupOrAdd(MA->getBlock())
              : lookupOrAdd(cast<MemoryUseOrDef>(MA)->getMemoryInst());
@@ -652,7 +652,7 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(MemoryAccess *MA) {
 
 /// lookupOrAdd - Returns the value number for the specified value, assigning
 /// it a new number if it did not have one before.
-uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
+uint32_t GVNValueTable::lookupOrAdd(Value *V) {
   auto VI = ValueNumbering.find(V);
   if (VI != ValueNumbering.end())
     return VI->second;
@@ -740,7 +740,7 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
 
 /// Returns the value number of the specified value. Fails if
 /// the value has not yet been numbered.
-uint32_t GVNPass::ValueTable::lookup(Value *V, bool Verify) const {
+uint32_t GVNValueTable::lookup(Value *V, bool Verify) const {
   auto VI = ValueNumbering.find(V);
   if (Verify) {
     assert(VI != ValueNumbering.end() && "Value not numbered?");
@@ -753,15 +753,15 @@ uint32_t GVNPass::ValueTable::lookup(Value *V, bool Verify) const {
 /// assigning it a new number if it did not have one before.  Useful when
 /// we deduced the result of a comparison, but don't immediately have an
 /// instruction realizing that comparison to hand.
-uint32_t GVNPass::ValueTable::lookupOrAddCmp(unsigned Opcode,
-                                             CmpInst::Predicate Predicate,
-                                             Value *LHS, Value *RHS) {
+uint32_t GVNValueTable::lookupOrAddCmp(unsigned Opcode,
+                                       CmpInst::Predicate Predicate, Value *LHS,
+                                       Value *RHS) {
   Expression Exp = createCmpExpr(Opcode, Predicate, LHS, RHS);
   return assignExpNewValueNum(Exp).first;
 }
 
 /// Returns the value number of ptrtoint \p Ptr to \Ty.
-uint32_t GVNPass::ValueTable::lookupPtrToInt(Value *Ptr, Type *Ty) {
+uint32_t GVNValueTable::lookupPtrToInt(Value *Ptr, Type *Ty) {
   Expression Exp(Instruction::PtrToInt);
   Exp.Ty = Ty;
   Exp.VarArgs.push_back(lookupOrAdd(Ptr));
@@ -769,7 +769,7 @@ uint32_t GVNPass::ValueTable::lookupPtrToInt(Value *Ptr, Type *Ty) {
 }
 
 /// Remove all entries from the ValueTable.
-void GVNPass::ValueTable::clear() {
+void GVNValueTable::clear() {
   ValueNumbering.clear();
   ExpressionNumbering.clear();
   NumberingPhi.clear();
@@ -782,7 +782,7 @@ void GVNPass::ValueTable::clear() {
 }
 
 /// Remove a value from the value numbering.
-void GVNPass::ValueTable::erase(Value *V) {
+void GVNValueTable::erase(Value *V) {
   uint32_t Num = ValueNumbering.lookup(V);
   ValueNumbering.erase(V);
   // If V is PHINode, V <--> value number is an one-to-one mapping.
@@ -794,7 +794,7 @@ void GVNPass::ValueTable::erase(Value *V) {
 
 /// verifyRemoved - Verify that the value is removed from all internal data
 /// structures.
-void GVNPass::ValueTable::verifyRemoved(const Value *V) const {
+void GVNValueTable::verifyRemoved(const Value *V) const {
   assert(!ValueNumbering.contains(V) &&
          "Inst still occurs in value numbering map!");
 }
@@ -804,7 +804,7 @@ void GVNPass::ValueTable::verifyRemoved(const Value *V) const {
 //===----------------------------------------------------------------------===//
 
 /// Push a new Value to the LeaderTable onto the list for its value number.
-void GVNPass::LeaderMap::insert(uint32_t N, Value *V, const BasicBlock *BB) {
+void GVNLeaderMap::insert(uint32_t N, Value *V, const BasicBlock *BB) {
   const auto &[It, Inserted] = NumToLeaders.try_emplace(N, V, BB, nullptr);
   if (!Inserted) {
     // Key already exists: insert new node after the head.
@@ -816,8 +816,7 @@ void GVNPass::LeaderMap::insert(uint32_t N, Value *V, const BasicBlock *BB) {
 
 /// Scan the list of values corresponding to a given
 /// value number, and remove the given instruction if encountered.
-void GVNPass::LeaderMap::erase(uint32_t N, Instruction *I,
-                               const BasicBlock *BB) {
+void GVNLeaderMap::erase(uint32_t N, Instruction *I, const BasicBlock *BB) {
   auto It = NumToLeaders.find(N);
   if (It == NumToLeaders.end())
     return;
@@ -2904,8 +2903,7 @@ bool GVNPass::processMaskedLoad(IntrinsicInst *I) {
 
 /// Return a pair the first field showing the value number of \p Exp and the
 /// second field showing whether it is a value number newly created.
-std::pair<uint32_t, bool>
-GVNPass::ValueTable::assignExpNewValueNum(Expression &Exp) {
+std::pair<uint32_t, bool> GVNValueTable::assignExpNewValueNum(Expression &Exp) {
   uint32_t &E = ExpressionNumbering[Exp];
   bool CreateNewValNum = !E;
   if (CreateNewValNum) {
@@ -2920,33 +2918,33 @@ GVNPass::ValueTable::assignExpNewValueNum(Expression &Exp) {
 
 /// Return whether all the values related with the same \p num are
 /// defined in \p BB.
-bool GVNPass::ValueTable::areAllValsInBB(uint32_t Num, const BasicBlock *BB,
-                                         GVNPass &GVN) {
+bool GVNValueTable::areAllValsInBB(uint32_t Num, const BasicBlock *BB,
+                                   GVNLeaderMap &LeaderTable) {
   return all_of(
-      GVN.LeaderTable.getLeaders(Num),
-      [=](const LeaderMap::LeaderTableEntry &L) { return L.BB == BB; });
+      LeaderTable.getLeaders(Num),
+      [=](const GVNLeaderMap::LeaderTableEntry &L) { return L.BB == BB; });
 }
 
 /// Wrap phiTranslateImpl to provide caching functionality.
-uint32_t GVNPass::ValueTable::phiTranslate(const BasicBlock *Pred,
-                                           const BasicBlock *PhiBlock,
-                                           uint32_t Num, GVNPass &GVN) {
+uint32_t GVNValueTable::phiTranslate(const BasicBlock *Pred,
+                                     const BasicBlock *PhiBlock, uint32_t Num,
+                                     GVNLeaderMap &LeaderTable) {
   auto FindRes = PhiTranslateTable.find({Num, Pred});
   if (FindRes != PhiTranslateTable.end())
     return FindRes->second;
-  uint32_t NewNum = phiTranslateImpl(Pred, PhiBlock, Num, GVN);
+  uint32_t NewNum = phiTranslateImpl(Pred, PhiBlock, Num, LeaderTable);
   PhiTranslateTable.insert({{Num, Pred}, NewNum});
   return NewNum;
 }
 
 // Return true if the value number \p Num and NewNum have equal value.
 // Return false if the result is unknown.
-bool GVNPass::ValueTable::areCallValsEqual(uint32_t Num, uint32_t NewNum,
-                                           const BasicBlock *Pred,
-                                           const BasicBlock *PhiBlock,
-                                           GVNPass &GVN) {
+bool GVNValueTable::areCallValsEqual(uint32_t Num, uint32_t NewNum,
+                                     const BasicBlock *Pred,
+                                     const BasicBlock *PhiBlock,
+                                     GVNLeaderMap &LeaderTable) {
   CallInst *Call = nullptr;
-  auto Leaders = GVN.LeaderTable.getLeaders(Num);
+  auto Leaders = LeaderTable.getLeaders(Num);
   for (const auto &Entry : Leaders) {
     Call = dyn_cast<CallInst>(&*Entry.Val);
     if (Call && Call->getParent() == PhiBlock)
@@ -2976,9 +2974,10 @@ bool GVNPass::ValueTable::areCallValsEqual(uint32_t Num, uint32_t NewNum,
 
 /// Translate value number \p Num using phis, so that it has the values of
 /// the phis in BB.
-uint32_t GVNPass::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
-                                               const BasicBlock *PhiBlock,
-                                               uint32_t Num, GVNPass &GVN) {
+uint32_t GVNValueTable::phiTranslateImpl(const BasicBlock *Pred,
+                                         const BasicBlock *PhiBlock,
+                                         uint32_t Num,
+                                         GVNLeaderMap &LeaderTable) {
   // See if we can refine the value number by looking at the PN incoming value
   // for the given predecessor.
   if (PHINode *PN = NumberingPhi[Num]) {
@@ -3018,7 +3017,7 @@ uint32_t GVNPass::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
   // If there is any value related with Num is defined in a BB other than
   // PhiBlock, it cannot depend on a phi in PhiBlock without going through
   // a backedge. We can do an early exit in that case to save compile time.
-  if (!areAllValsInBB(Num, PhiBlock, GVN))
+  if (!areAllValsInBB(Num, PhiBlock, LeaderTable))
     return Num;
 
   if (Num >= ExprIdx.size() || ExprIdx[Num] == 0)
@@ -3033,7 +3032,7 @@ uint32_t GVNPass::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
         (I > 0 && Exp.Opcode == Instruction::ExtractValue) ||
         (I > 1 && Exp.Opcode == Instruction::ShuffleVector))
       continue;
-    Exp.VarArgs[I] = phiTranslate(Pred, PhiBlock, Exp.VarArgs[I], GVN);
+    Exp.VarArgs[I] = phiTranslate(Pred, PhiBlock, Exp.VarArgs[I], LeaderTable);
   }
 
   if (Exp.Commutative) {
@@ -3050,7 +3049,8 @@ uint32_t GVNPass::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
 
   if (uint32_t NewNum = ExpressionNumbering[Exp]) {
     if (Exp.Opcode == Instruction::Call && NewNum != Num)
-      return areCallValsEqual(Num, NewNum, Pred, PhiBlock, GVN) ? NewNum : Num;
+      return areCallValsEqual(Num, NewNum, Pred, PhiBlock, LeaderTable) ? NewNum
+                                                                        : Num;
     return NewNum;
   }
   return Num;
@@ -3058,8 +3058,8 @@ uint32_t GVNPass::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
 
 /// Erase stale entry from phiTranslate cache so phiTranslate can be computed
 /// again.
-void GVNPass::ValueTable::eraseTranslateCacheEntry(
-    uint32_t Num, const BasicBlock &CurrBlock) {
+void GVNValueTable::eraseTranslateCacheEntry(uint32_t Num,
+                                             const BasicBlock &CurrBlock) {
   for (const BasicBlock *Pred : predecessors(&CurrBlock))
     PhiTranslateTable.erase({Num, Pred});
 }
@@ -3604,8 +3604,7 @@ bool GVNPass::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
       Success = false;
       break;
     }
-    uint32_t TValNo =
-        VN.phiTranslate(Pred, Curr, VN.lookup(Op), *this);
+    uint32_t TValNo = VN.phiTranslate(Pred, Curr, VN.lookup(Op), LeaderTable);
     if (Value *V = findLeader(Pred, TValNo)) {
       Instr->setOperand(I, V);
     } else {
@@ -3697,7 +3696,7 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
       break;
     }
 
-    uint32_t TValNo = VN.phiTranslate(P, CurrentBlock, ValNo, *this);
+    uint32_t TValNo = VN.phiTranslate(P, CurrentBlock, ValNo, LeaderTable);
     Value *PredV = findLeader(P, TValNo);
     if (!PredV) {
       PredMap.push_back(std::make_pair(static_cast<Value *>(nullptr), P));

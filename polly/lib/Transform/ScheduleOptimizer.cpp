@@ -655,6 +655,48 @@ static void printSchedule(llvm::raw_ostream &OS, const isl::schedule &Schedule,
 }
 #endif
 
+/// Return whether the dependence distances of @p Map, which relates instances
+/// of the same statement, are bounded.
+static bool hasBoundedDistances(const isl::map &Map) {
+  isl::set Deltas = Map.deltas();
+  return !Deltas.is_null() && Deltas.is_bounded().is_true();
+}
+
+/// Undo the simplification of the proximity dependences of a statement on
+/// itself where it made their distances unbounded.
+///
+/// The scheduler looks for schedule rows that bound the distance of every
+/// proximity dependence. If the simplification drops the constraints of the
+/// domain that bound the distance of a dependence, such as a value that is
+/// read by all later iterations of a loop, then every row that advances along
+/// that loop has an unbounded distance, and the scheduler falls back to
+/// carrying dependences one row at a time instead of forming a permutable
+/// band.
+///
+/// @param Simplified The simplified proximity dependences.
+/// @param Exact      The proximity dependences before simplification.
+static isl::union_map keepBoundedDistances(const isl::union_map &Simplified,
+                                           const isl::union_map &Exact) {
+  isl::union_map Result = isl::union_map::empty(Simplified.ctx());
+  for (isl::map Map : Simplified.get_map_list()) {
+    isl::space Space = Map.get_space();
+    if (Space.domain().is_equal(Space.range()) && !hasBoundedDistances(Map)) {
+      // Only add the constraints that bound the distances before the
+      // simplification rather than restoring all constraints of the exact
+      // dependence: preferably the hull of the exact distances, which is a
+      // single convex set, otherwise the exact distances themselves.
+      isl::set ExactDeltas = Exact.extract_map(Space).deltas();
+      isl::map Bounded = Map.intersect(ExactDeltas.simple_hull().translation());
+      if (!hasBoundedDistances(Bounded))
+        Bounded = Map.intersect(ExactDeltas.translation());
+      if (hasBoundedDistances(Bounded))
+        Map = Bounded;
+    }
+    Result = Result.unite(isl::union_map(Map));
+  }
+  return Result;
+}
+
 /// Collect statistics for the schedule tree.
 ///
 /// @param Schedule The schedule tree to analyze. If not a schedule tree it is
@@ -813,10 +855,12 @@ static void runIslScheduleOptimizerImpl(
     // interesting anyway. In some cases this option may stop the scheduler to
     // find any schedule.
     if (SimplifyDeps == "yes") {
+      isl::union_map ExactProximity = Proximity;
       Validity = Validity.gist_domain(Domain);
       Validity = Validity.gist_range(Domain);
       Proximity = Proximity.gist_domain(Domain);
       Proximity = Proximity.gist_range(Domain);
+      Proximity = keepBoundedDistances(Proximity, ExactProximity);
     } else if (SimplifyDeps != "no") {
       errs()
           << "warning: Option -polly-opt-simplify-deps should either be 'yes' "

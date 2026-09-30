@@ -2108,7 +2108,7 @@ ExpectedType clang::ASTNodeImporter::VisitConstantMatrixType(
     return ToElementTypeOrErr.takeError();
 
   return Importer.getToContext().getConstantMatrixType(
-      *ToElementTypeOrErr, T->getNumRows(), T->getNumColumns());
+      *ToElementTypeOrErr, T->getNumRows(), T->getNumColumns(), T->getLayout());
 }
 
 ExpectedType clang::ASTNodeImporter::VisitDependentAddressSpaceType(
@@ -9544,7 +9544,7 @@ void ASTImporter::RegisterImportedDecl(Decl *FromD, Decl *ToD) {
 
 llvm::Expected<ExprWithCleanups::CleanupObject>
 ASTImporter::Import(ExprWithCleanups::CleanupObject From) {
-  if (auto *CLE = From.dyn_cast<CompoundLiteralExpr *>()) {
+  if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(From)) {
     if (Expected<Expr *> R = Import(CLE))
       return ExprWithCleanups::CleanupObject(cast<CompoundLiteralExpr>(*R));
   }
