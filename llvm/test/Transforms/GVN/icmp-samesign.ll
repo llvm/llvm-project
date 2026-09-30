@@ -8,8 +8,7 @@ define void @icmp_sgt_ugt_samesign(i32 %x,i32 %y) {
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[SGT]])
-; CHECK-NEXT:    [[UGT:%.*]] = icmp samesign ugt i32 [[X]], [[Y]]
-; CHECK-NEXT:    call void @use(i1 [[UGT]])
+; CHECK-NEXT:    call void @use(i1 [[SGT]])
 ; CHECK-NEXT:    ret void
 ;
   %sgt = icmp sgt i32 %x, %y

@@ -3477,6 +3477,21 @@ bool GVNPass::processInstruction(Instruction *I) {
           return true;
         }
       }
+      auto *ICmp = dyn_cast<ICmpInst>(Cmp);
+      if (ICmp && ICmp->hasSameSign()) {
+        uint32_t SameSignNum = VN.lookupCmp(
+            ICmp->getOpcode(),
+            ICmpInst::getFlippedSignednessPredicate(ICmp->getPredicate()),
+            ICmp->getOperand(0), ICmp->getOperand(1));
+        if (SameSignNum != 0) {
+          Repl = findLeader(I->getParent(), SameSignNum);
+          if (Repl) {
+            patchAndReplaceAllUsesWith(I, Repl);
+            salvageAndRemoveInstruction(I);
+            return true;
+          }
+        }
+      }
     }
     // Failure, just remember this instance for future use.
     LeaderTable.insert(Num, I, I->getParent());
