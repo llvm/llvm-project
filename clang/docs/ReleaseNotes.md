@@ -933,6 +933,10 @@ features cannot lower the translation-unit ABI level;
 - Added `__builtin_wasm_memory_copy` and `__builtin_wasm_memory_fill` builtins
   for the WebAssembly `memory.copy` and `memory.fill` bulk memory instructions.
 
+- Fixed a "function signature mismatch" trap at program exit when destroying a
+  temporary that is bound to a reference with static or thread storage
+  duration. (#GH45221)
+
 #### AVR Support
 
 #### SystemZ Support
