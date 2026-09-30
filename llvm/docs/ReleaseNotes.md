@@ -314,6 +314,12 @@ Makes programs 10x faster by doing Special New Thing.
   `set_data_layout` now accepts a `DataLayout` instead of a `string`. You can
   use `DataLayout.of_string` and `DataLayout.as_string` to convert between them.
 
+* `const_gep` and `const_inbounds_gep` have been removed in favor of
+  `const_ptradd` and `const_ptradd_from_indices`. Both create `getelementptr i8`
+  constant expressions, the former using an integero ffset, and the latter using
+  a data layout, base type and index sequence. The latter API returns an option,
+  as it may fail if the indices cannot be converted into ptradd representation.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API
@@ -324,6 +330,13 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Bindings operating on data layout (`LLVMTargetDataRef`) have been moved
   from `Target.h` (`Target` library) to `Core.h` (`IR` library).
+
+* `LLVMConstGEP2()` and `LLVMConstInBoundsGEP2()` have been deprecated.
+  `LLVMConstPtrAdd()` and `LLVMConstPtrAddFromIndices()` can be used instead.
+  Both create `getelementptr i8` constant expressions, the former using an
+  integer offset, and the latter using a data layout, base type and index
+  sequence. The latter API may fail if the indices cannot be converted into
+  ptradd representation.
 
 ### Changes to the CodeGen infrastructure
 
