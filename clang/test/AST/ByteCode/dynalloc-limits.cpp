@@ -97,7 +97,7 @@ constexpr int construct_limit = default_construct<1025>(); // both-error {{const
 // both-note@#gh173728-construct {{use -fconstexpr-steps}}
 
 #if __SIZEOF_SIZE_T__ == 8
-/// FIXME: The bytecode interpreter can't create this local and rejects the call without a note.
+/// The bytecode interpreter can't allocate this array as it is too big, so it rejects the call without a note.
 constexpr int construct_huge = default_construct<(1ULL << 33) - 1>(); // both-error {{constexpr variable 'construct_huge' must be initialized by a constant expression}} \
                                                                       // ref-note {{in call}}
 // ref-note@#gh173728-construct {{cannot allocate array; evaluated array bound 8589934591 is too large}}
