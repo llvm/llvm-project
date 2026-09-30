@@ -4926,6 +4926,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
       return lldb::eEncodingUint;
 
     case clang::BuiltinType::MetaInfo:
+      // HLSL -- Packed Types
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
       return lldb::eEncodingUint;
 
     case clang::BuiltinType::Kind::ARCUnbridgedCast:

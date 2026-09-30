@@ -2073,12 +2073,14 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
       MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
   BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_AND_B32), DoorbellRegMasked)
       .addUse(DoorbellReg)
-      .addImm(DoorbellIDMask);
+      .addImm(DoorbellIDMask)
+      .setOperandDead(3); // implicit-def $scc
   Register SetWaveAbortBit =
       MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
   BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_OR_B32), SetWaveAbortBit)
       .addUse(DoorbellRegMasked)
-      .addImm(ECQueueWaveAbort);
+      .addImm(ECQueueWaveAbort)
+      .setOperandDead(3); // implicit-def $scc
   BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
       .addUse(SetWaveAbortBit);
   BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_SENDMSG))
@@ -4859,6 +4861,12 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
 
   if (MI.isCall() || MI.isInlineAsm())
     return true; // conservative assumption
+
+  // V_PERM_PK16 must issue with EXEC != 0 so its follower (or an inserted
+  // V_NOP) actually runs on the VALU pipe. Returning true here keeps the
+  // s_cbranch_execz that skips this region when EXEC is empty.
+  if (ST.hasVPermPk16Hazard() && isVPermPk16(Opcode))
+    return true;
 
   // Assume that barrier interactions are only intended with active lanes.
   if (isBarrier(Opcode))
@@ -8518,7 +8526,8 @@ void SIInstrInfo::moveToVALUImpl(
     const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
     BuildMI(*MBB, Inst, Inst.getDebugLoc(), get(LMC.AndOpc), LMC.VccReg)
         .addReg(LMC.ExecReg)
-        .addReg(IsSCC ? LMC.VccReg : CondReg);
+        .addReg(IsSCC ? LMC.VccReg : CondReg)
+        .setOperandDead(3); // implicit-def $scc
     Inst.removeOperand(1);
   } break;
 
@@ -11277,11 +11286,13 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
 unsigned SIInstrInfo::getBlockingCycles(const MachineInstr &MI) const {
   if (!ST.hasGFX1250VALUBlockingCycles())
     return 0;
+  return getGFX1250BlockingCyclesTable(MI);
+}
 
-  // Use processor-specific lookup table
+unsigned
+SIInstrInfo::getGFX1250BlockingCyclesTable(const MachineInstr &MI) const {
   if (const auto *Entry = AMDGPU::getGFX1250BlockingCyclesInfo(MI.getOpcode()))
     return Entry->GFX1250BlockingCycles;
-
   return 0;
 }
 

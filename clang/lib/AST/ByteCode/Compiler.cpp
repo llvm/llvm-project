@@ -458,6 +458,11 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   switch (E->getCastKind()) {
   case CK_LValueToRValue: {
+    // This *could* work I guess, but the current interpreter rejects (via
+    // checkLiteralType).
+    if (!Ctx.getLangOpts().HLSL && E->getType()->isConstantMatrixType())
+      return false;
+
     if (ToLValue && E->getType()->isPointerType()) {
       assert(!DiscardResult);
       if (!this->visit(SubExpr))
@@ -4928,8 +4933,16 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
   const ConstantArrayType *ArrayType =
       Ctx.getASTContext().getAsConstantArrayType(SubExpr->getType());
   const Record *R = getRecord(E->getType());
-  assert(Initializing);
   assert(SubExpr->isGLValue());
+  assert(!canClassify(E->getType()));
+
+  if (!Initializing) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
 
   if (!this->visit(SubExpr))
     return false;
@@ -4944,7 +4957,11 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
   if (isIntegerOrBoolType(SecondFieldT)) {
     if (!this->emitConst(ArrayType->getSize(), SecondFieldT, E))
       return false;
-    return this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E);
+    if (!this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
   }
   assert(SecondFieldT == PT_Ptr);
 
@@ -4956,7 +4973,12 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
     return false;
   if (!this->emitArrayElemPtrPop(PT_Uint64, E))
     return false;
-  return this->emitInitFieldPtr(R->getField(1u)->Offset, E);
+
+  if (!this->emitInitFieldPtr(R->getField(1u)->Offset, E))
+    return false;
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+  return true;
 }
 
 template <class Emitter>
@@ -6168,6 +6190,21 @@ bool Compiler<Emitter>::registerRedecl(const VarDecl *VD, const APValue &Val) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
                                              unsigned BuiltinID) {
+  const ASTContext &ASTCtx = Ctx.getASTContext();
+
+  // BuiltinID is the raw ID baked into the bytecode. The "is constant
+  // evaluated" gate needs the raw ID so that auxiliary-target IDs resolve into
+  // the correct (aux-target) builtin records.
+  if (!Ctx.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
+    return this->emitInvalid(E);
+
+  // Convert an auxiliary x86 target builtin ID to its canonical X86::BI* value
+  // so the target-specific cases below (and the handlers they call) match. This
+  // is a cheap integer operation (a single comparison for the common,
+  // target-independent case); we deliberately avoid re-deriving the ID from the
+  // call expression, which is comparatively slow.
+  BuiltinID = ConvertBuiltinIDToX86BuiltinID(ASTCtx, BuiltinID);
+
   if (BuiltinID == Builtin::BI__builtin_constant_p) {
     // Void argument is always invalid and harder to handle later.
     if (E->getArg(0)->getType()->isVoidType()) {

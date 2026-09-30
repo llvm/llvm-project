@@ -471,14 +471,6 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
   return getType();
 }
 
-SourceLocation Descriptor::getLocation() const {
-  if (auto *D = Source.asDecl())
-    return D->getLocation();
-  if (auto *E = Source.asExpr())
-    return E->getExprLoc();
-  llvm_unreachable("Invalid descriptor type");
-}
-
 SourceInfo Descriptor::getLoc() const {
   if (const auto *D = Source.asDecl())
     return SourceInfo(D);
