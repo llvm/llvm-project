@@ -2,8 +2,7 @@
 
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE:   -transform-interpreter -test-transform-dialect-erase-schedule \
-// DEFINE:   -one-shot-bufferize="bufferize-function-boundaries" -buffer-deallocation-pipeline \
-// DEFINE:   -convert-bufferization-to-memref -cse -canonicalize -convert-vector-to-scf \
+// DEFINE:   -cse -canonicalize -convert-vector-to-scf \
 // DEFINE:   -convert-vector-to-llvm="enable-arm-neon" -test-lower-to-llvm \
 // DEFINE:   -o %t
 
@@ -28,21 +27,23 @@
 ///
 ///  linalg.matmul(A, B, C)
 ///
-/// (implemented in both @matmul, static shapes, and @matmul_dynamic, dynamic
-/// shapes).
+/// (implemented in @matmul).
 ///
 /// NOTES ON IMPLEMENTATION
-/// 1. NEON has no f32 matrix-multiply instruction (`fmmla` is SVE-only,
-///    `bfmmla` takes bf16 operands). The inner tile is therefore
-///    (M0, N0, K0) = (4, 4, 1): every vector.contract is a rank-1 update,
-///    lowered to outer products, i.e., one `fmla` per row of the 4x4
-///    accumulator tile.
+/// 1. @matmul is only lowered via `-test-lower-to-llvm`, with no tiling or
+///    vectorization -- it's there to provide a reference check, not to
+///    demonstrate a lowering path.
 ///
-/// 2. Packing is still worthwhile without a dedicated instruction: it gives
+/// 2. NEON has no instruction that multiplies two f32 matrices in one go, so
+///    the inner tile is (M0, N0, K0) = (4, 4, 1): every vector.contract is a
+///    rank-1 update, lowered to outer products, i.e. one `fmla` per row of
+///    the 4x4 accumulator tile.
+///
+/// 3. Packing is still worthwhile without a dedicated instruction: it gives
 ///    the tiles a statically-known shape (no masking in the mmt4d loop) and
 ///    makes them contiguous in memory.
 ///
-/// 3. The MMT4D and Pack/Unpack Ops are kept in separate functions to isolate
+/// 4. The MMT4D and Pack/Unpack Ops are kept in separate functions to isolate
 ///    the corresponding lowering and lowering configs.
 //===----------------------------------------------------------------------===//
 
@@ -50,8 +51,8 @@
 // @main
 //
 // The main entry point that computes matrix multiplication via
-// linalg.mmt4d and linalg.matmul (static and dynamic shapes). The output
-// should be independent of the Linalg Op used.
+// linalg.mmt4d and linalg.matmul. The output should be independent of the
+// Linalg Op used.
 //===----------------------------------------------------------------------===//
 func.func @main() {
   %A = arith.constant dense<[
@@ -86,7 +87,7 @@ func.func @main() {
   vector.print str "RESULT FROM linalg.mmt4d:\n"
   call @printMemrefF32(%C_mmt4d_cast) : (tensor<*xf32>) -> ()
 
-  // VARIANT: Matrix multiplication via linalg.matmul (cross-check)
+  // VARIANT: Matrix multiplication via linalg.matmul (reference check)
   // CHECK: Unranked Memref
   // CHECK:  [23,   55,   87,   119,   151,   183,   215,   247,   279,   311,   343,   375,   407,   439,   471]
   // CHECK:  [30,   71,   112,   153,   194,   235,   276,   317,   358,   399,   440,   481,   522,   563,   604]
@@ -98,45 +99,20 @@ func.func @main() {
   vector.print str "RESULT FROM linalg.matmul:\n"
   call @printMemrefF32(%C_matmul_cast) : (tensor<*xf32>) -> ()
 
-  // VARIANT: Matrix multiplication via linalg.matmul on dynamic shapes
-  // CHECK: Unranked Memref
-  // CHECK:  [23,   55,   87,   119,   151,   183,   215,   247,   279,   311,   343,   375,   407,   439,   471]
-  // CHECK:  [30,   71,   112,   153,   194,   235,   276,   317,   358,   399,   440,   481,   522,   563,   604]
-  // CHECK:  [37,   87,   137,   187,   237,   287,   337,   387,   437,   487,   537,   587,   637,   687,   737]
-  // CHECK:  [44,   103,   162,   221,   280,   339,   398,   457,   516,   575,   634,   693,   752,   811,   870]
-  // CHECK:  [51,   119,   187,   255,   323,   391,   459,   527,   595,   663,   731,   799,   867,   935,   1003]
-  %A_dyn = tensor.cast %A : tensor<5x3xf32> to tensor<?x?xf32>
-  %B_dyn = tensor.cast %B : tensor<3x15xf32> to tensor<?x?xf32>
-  %C_dyn = tensor.cast %C : tensor<5x15xf32> to tensor<?x?xf32>
-  %C_matmul_dyn = func.call @matmul_dynamic(%A_dyn, %B_dyn, %C_dyn) : (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
-  %C_matmul_dyn_cast = tensor.cast %C_matmul_dyn : tensor<?x?xf32> to tensor<*xf32>
-  vector.print str "RESULT FROM linalg.matmul (dynamic):\n"
-  call @printMemrefF32(%C_matmul_dyn_cast) : (tensor<*xf32>) -> ()
   return
 }
 
 //===----------------------------------------------------------------------===//
 // @matmul
 //
-// Implements matrix-multiplication via linalg.matmul, static shapes.
+// Implements matrix-multiplication via linalg.matmul. Lowered only via
+// `-test-lower-to-llvm` (no tiling, no vectorization): this is a reference
+// check for @matmul_via_mmt4d, not a lowering path under test.
 //===----------------------------------------------------------------------===//
 func.func private @matmul(%A: tensor<5x3xf32>, %B: tensor<3x15xf32>, %C: tensor<5x15xf32>) -> tensor<5x15xf32> {
   %C_matmul = linalg.matmul ins(%A, %B: tensor<5x3xf32>, tensor<3x15xf32>)
                             outs(%C: tensor<5x15xf32>) -> tensor<5x15xf32>
   return %C_matmul : tensor<5x15xf32>
-}
-
-//===----------------------------------------------------------------------===//
-// @matmul_dynamic
-//
-// Implements matrix-multiplication via linalg.matmul, dynamic shapes. Unlike
-// the other variants, this is the one that exercises masked vectorization
-// (masks computed from runtime dimensions).
-//===----------------------------------------------------------------------===//
-func.func private @matmul_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
-  %C_matmul = linalg.matmul ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>)
-                            outs(%C: tensor<?x?xf32>) -> tensor<?x?xf32>
-  return %C_matmul : tensor<?x?xf32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -233,53 +209,7 @@ func.func private @matmul_via_mmt4d(%A: tensor<5x3xf32>, %B: tensor<3x15xf32>, %
 // TD Sequence
 //===----------------------------------------------------------------------===//
 module @transforms attributes { transform.with_named_sequence } {
-  //===--------------------------------------------------------------------===//
-  // @tile_and_vectorize_matmul
-  //
-  // Tile and vectorize a plain `linalg.matmul` (shared by @matmul and
-  // @matmul_dynamic).
-  //===--------------------------------------------------------------------===//
-  transform.named_sequence @tile_and_vectorize_matmul(%func
-    : !transform.op<"func.func"> {transform.readonly}) {
-
-    %matmul = transform.structured.match ops{["linalg.matmul"]} in %func
-      : (!transform.op<"func.func">) -> !transform.any_op
-
-    // NEON has no scalable vectors: N = 4 matches a full 128-bit register.
-    %tiled_matmul, %loops:3 = transform.structured.tile_using_for %matmul tile_sizes [2, 4, 1]
-      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-
-    transform.structured.vectorize %tiled_matmul vector_sizes [2, 4, 1] : !transform.any_op
-
-    transform.apply_patterns to %func {
-      transform.apply_patterns.vector.reduction_to_contract
-      transform.apply_patterns.vector.transfer_permutation_patterns
-      transform.apply_patterns.vector.lower_masked_transfers
-      transform.apply_patterns.vector.sink_ops
-    } : !transform.op<"func.func">
-
-    transform.apply_patterns to %func {
-      transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
-      transform.apply_patterns.vector.lower_outerproduct
-    } : !transform.op<"func.func">
-
-    transform.yield
-  }
-
-  transform.named_sequence @__transform_main(%module: !transform.any_op {transform.readonly}) {
-    //==========================================================================
-    // HANDLE PLAIN MATMUL (static + dynamic)
-    //==========================================================================
-    %matmul_func = transform.structured.match ops{["func.func"]} attributes{sym_name = "matmul"} in %module
-      : (!transform.any_op) -> !transform.op<"func.func">
-    transform.include @tile_and_vectorize_matmul failures(propagate)
-      (%matmul_func) : (!transform.op<"func.func">) -> ()
-
-    %matmul_dynamic_func = transform.structured.match ops{["func.func"]} attributes{sym_name = "matmul_dynamic"} in %module
-      : (!transform.any_op) -> !transform.op<"func.func">
-    transform.include @tile_and_vectorize_matmul failures(propagate)
-      (%matmul_dynamic_func) : (!transform.op<"func.func">) -> ()
-
+  transform.named_sequence @__transform_main(%module: !transform.any_op {transform.consumed}) {
     //==========================================================================
     // HANDLE MMT4D
     //==========================================================================
@@ -361,6 +291,12 @@ module @transforms attributes { transform.with_named_sequence } {
       transform.apply_patterns.tensor.fold_tensor_subset_ops
       transform.apply_patterns.canonicalization
     } : !transform.op<"func.func">
+
+    //==========================================================================
+    // BUFFERIZATION
+    //==========================================================================
+    %bufferize = transform.bufferization.one_shot_bufferize %module
+      <bufferize_function_boundaries = true> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 
