@@ -1262,37 +1262,37 @@ define void @zext_v16i4_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ldr x9, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    ubfx x12, x9, #48, #4
+; CHECK-NEXT:    ubfx x11, x9, #48, #4
 ; CHECK-NEXT:    ubfx x10, x9, #52, #4
 ; CHECK-NEXT:    ubfx x13, x9, #32, #4
 ; CHECK-NEXT:    ubfx w15, w9, #16, #4
-; CHECK-NEXT:    ubfx x11, x9, #36, #4
+; CHECK-NEXT:    ubfx x12, x9, #36, #4
 ; CHECK-NEXT:    ubfx w14, w9, #20, #4
-; CHECK-NEXT:    fmov s0, w12
+; CHECK-NEXT:    fmov s0, w11
 ; CHECK-NEXT:    fmov s1, w13
-; CHECK-NEXT:    ubfx w12, w9, #4, #4
+; CHECK-NEXT:    ubfx w11, w9, #4, #4
 ; CHECK-NEXT:    fmov s2, w15
 ; CHECK-NEXT:    mov.h v0[1], w10
 ; CHECK-NEXT:    and w10, w9, #0xf
-; CHECK-NEXT:    mov.h v1[1], w11
+; CHECK-NEXT:    mov.h v1[1], w12
 ; CHECK-NEXT:    fmov s3, w10
-; CHECK-NEXT:    ubfx x11, x9, #56, #4
+; CHECK-NEXT:    ubfx x12, x9, #56, #4
 ; CHECK-NEXT:    mov.h v2[1], w14
 ; CHECK-NEXT:    ubfx x10, x9, #40, #4
-; CHECK-NEXT:    mov.h v3[1], w12
-; CHECK-NEXT:    ubfx w12, w9, #24, #4
-; CHECK-NEXT:    mov.h v0[2], w11
-; CHECK-NEXT:    ubfx w11, w9, #8, #4
+; CHECK-NEXT:    mov.h v3[1], w11
+; CHECK-NEXT:    ubfx w11, w9, #24, #4
+; CHECK-NEXT:    mov.h v0[2], w12
+; CHECK-NEXT:    ubfx w12, w9, #8, #4
 ; CHECK-NEXT:    mov.h v1[2], w10
 ; CHECK-NEXT:    lsr x10, x9, #60
-; CHECK-NEXT:    mov.h v2[2], w12
-; CHECK-NEXT:    ubfx x12, x9, #44, #4
-; CHECK-NEXT:    mov.h v3[2], w11
-; CHECK-NEXT:    lsr w11, w9, #28
+; CHECK-NEXT:    mov.h v2[2], w11
+; CHECK-NEXT:    ubfx x11, x9, #44, #4
+; CHECK-NEXT:    mov.h v3[2], w12
+; CHECK-NEXT:    lsr w12, w9, #28
 ; CHECK-NEXT:    ubfx w9, w9, #12, #4
 ; CHECK-NEXT:    mov.h v0[3], w10
-; CHECK-NEXT:    mov.h v1[3], w12
-; CHECK-NEXT:    mov.h v2[3], w11
+; CHECK-NEXT:    mov.h v1[3], w11
+; CHECK-NEXT:    mov.h v2[3], w12
 ; CHECK-NEXT:    mov.h v3[3], w9
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    ushll.4s v1, v1, #0

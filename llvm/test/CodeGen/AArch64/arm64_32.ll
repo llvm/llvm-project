@@ -146,7 +146,7 @@ define i32 @test_unsafe_nsw_unscaled_add() {
 define i32 @test_unsafe_negative_unscaled_add() {
 ; CHECK-LABEL: test_unsafe_negative_unscaled_add:
 ; CHECK: add x[[VAR32:[0-9]+]], {{x[0-9]+}}, _var32@PAGEOFF
-; CHECK: sub w[[ADDR:[0-9]+]], w[[VAR32]], #3
+; CHECK: subs w[[ADDR:[0-9]+]], w[[VAR32]], #3
 ; CHECK: ldr w0, [x[[ADDR]]]
   %addr_int = ptrtoint ptr @var32 to i32
   %addr_minus_3 = add i32 %addr_int, -3

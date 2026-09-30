@@ -710,17 +710,18 @@ define dso_local i32 @test_atomic_load_min_i32(i32 %offset) nounwind {
 ;
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w8, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:  .LBB20_1: // %atomicrmw.start
 ; MSVC-OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
-; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w8, w0
-; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, le
+; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w0, [x9]
+; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, le
 ; MSVC-OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC-OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB20_1
 ; MSVC-OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw min ptr @var32, i32 %offset seq_cst
@@ -972,17 +973,18 @@ define dso_local i32 @test_atomic_load_umin_i32(i32 %offset) nounwind {
 ;
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w8, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:  .LBB26_1: // %atomicrmw.start
 ; MSVC-OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
-; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w8, w0
-; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w0, [x9]
+; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; MSVC-OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC-OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB26_1
 ; MSVC-OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var32, i32 %offset seq_cst
@@ -1234,17 +1236,18 @@ define dso_local i32 @test_atomic_load_max_i32(i32 %offset) nounwind {
 ;
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w8, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:  .LBB32_1: // %atomicrmw.start
 ; MSVC-OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
-; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w8, w0
-; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, gt
+; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w0, [x9]
+; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, gt
 ; MSVC-OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC-OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB32_1
 ; MSVC-OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw max ptr @var32, i32 %offset seq_cst
@@ -1496,17 +1499,18 @@ define dso_local i32 @test_atomic_load_umax_i32(i32 %offset) nounwind {
 ;
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w8, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:  .LBB38_1: // %atomicrmw.start
 ; MSVC-OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
-; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w8, w0
-; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w0, [x9]
+; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; MSVC-OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC-OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB38_1
 ; MSVC-OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var32, i32 %offset seq_cst
@@ -6773,17 +6777,18 @@ define dso_local i32 @test_atomic_load_max_i32_seq_cst(i32 %offset) nounwind {
 ;
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32_seq_cst:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w8, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:  .LBB189_1: // %atomicrmw.start
 ; MSVC-OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
-; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w8, w0
-; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, gt
+; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w0, [x9]
+; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, gt
 ; MSVC-OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC-OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB189_1
 ; MSVC-OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw max ptr @var32, i32 %offset seq_cst
@@ -8059,17 +8064,18 @@ define dso_local i32 @test_atomic_load_min_i32_seq_cst(i32 %offset) nounwind {
 ;
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32_seq_cst:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w8, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:  .LBB219_1: // %atomicrmw.start
 ; MSVC-OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
-; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w8, w0
-; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, le
+; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w0, [x9]
+; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, le
 ; MSVC-OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC-OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB219_1
 ; MSVC-OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw min ptr @var32, i32 %offset seq_cst
@@ -12233,17 +12239,18 @@ define dso_local i32 @test_atomic_load_umax_i32_seq_cst(i32 %offset) nounwind {
 ;
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32_seq_cst:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w8, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:  .LBB339_1: // %atomicrmw.start
 ; MSVC-OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
-; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w8, w0
-; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, hi
+; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w0, [x9]
+; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, hi
 ; MSVC-OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC-OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB339_1
 ; MSVC-OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umax ptr @var32, i32 %offset seq_cst
@@ -13519,17 +13526,18 @@ define dso_local i32 @test_atomic_load_umin_i32_seq_cst(i32 %offset) nounwind {
 ;
 ; MSVC-OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32_seq_cst:
 ; MSVC-OUTLINE-ATOMICS:       // %bb.0:
+; MSVC-OUTLINE-ATOMICS-NEXT:    mov w8, w0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    adrp x9, var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:    add x9, x9, :lo12:var32
 ; MSVC-OUTLINE-ATOMICS-NEXT:  .LBB369_1: // %atomicrmw.start
 ; MSVC-OUTLINE-ATOMICS-NEXT:    // =>This Inner Loop Header: Depth=1
-; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w8, [x9]
-; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w8, w0
-; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w8, w0, ls
+; MSVC-OUTLINE-ATOMICS-NEXT:    ldaxr w0, [x9]
+; MSVC-OUTLINE-ATOMICS-NEXT:    cmp w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    csel w10, w0, w8, ls
 ; MSVC-OUTLINE-ATOMICS-NEXT:    stlxr w11, w10, [x9]
 ; MSVC-OUTLINE-ATOMICS-NEXT:    cbnz w11, .LBB369_1
 ; MSVC-OUTLINE-ATOMICS-NEXT:  // %bb.2: // %atomicrmw.end
-; MSVC-OUTLINE-ATOMICS-NEXT:    mov w0, w8
+; MSVC-OUTLINE-ATOMICS-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; MSVC-OUTLINE-ATOMICS-NEXT:    dmb ish
 ; MSVC-OUTLINE-ATOMICS-NEXT:    ret
    %old = atomicrmw umin ptr @var32, i32 %offset seq_cst

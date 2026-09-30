@@ -759,37 +759,37 @@ define <16 x i32> @extrause_shuffle(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp s17, s0, [x0, #8]
 ; CHECK-NEXT:    add x8, x3, #8
-; CHECK-NEXT:    ldr s3, [x1, #12]
+; CHECK-NEXT:    ldr s1, [x1, #12]
 ; CHECK-NEXT:    ldp s2, s16, [x2]
-; CHECK-NEXT:    ldr s5, [x2, #12]
+; CHECK-NEXT:    ldr s3, [x2, #12]
 ; CHECK-NEXT:    add x9, x1, #8
-; CHECK-NEXT:    ldr s1, [x3, #12]
+; CHECK-NEXT:    ldr s5, [x3, #12]
 ; CHECK-NEXT:    mov v4.16b, v0.16b
-; CHECK-NEXT:    mov v0.s[1], v3.s[0]
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    ld1 { v2.s }[1], [x3], #4
 ; CHECK-NEXT:    ldp s6, s7, [x0]
-; CHECK-NEXT:    mov v4.s[1], v3.s[0]
+; CHECK-NEXT:    mov v4.s[1], v1.s[0]
 ; CHECK-NEXT:    ld1 { v6.s }[1], [x1], #4
 ; CHECK-NEXT:    ld1 { v7.s }[1], [x1]
 ; CHECK-NEXT:    ld1 { v16.s }[1], [x3]
-; CHECK-NEXT:    ldr s3, [x2, #8]
+; CHECK-NEXT:    ldr s1, [x2, #8]
 ; CHECK-NEXT:    ld1 { v17.s }[1], [x9]
-; CHECK-NEXT:    mov v4.s[2], v5.s[0]
-; CHECK-NEXT:    mov v5.s[1], v1.s[0]
-; CHECK-NEXT:    ld1 { v3.s }[1], [x8]
+; CHECK-NEXT:    mov v4.s[2], v3.s[0]
+; CHECK-NEXT:    mov v3.s[1], v5.s[0]
+; CHECK-NEXT:    ld1 { v1.s }[1], [x8]
 ; CHECK-NEXT:    uaddl v0.8h, v7.8b, v0.8b
 ; CHECK-NEXT:    uaddl v6.8h, v6.8b, v17.8b
-; CHECK-NEXT:    uaddl v5.8h, v16.8b, v5.8b
-; CHECK-NEXT:    uaddl v2.8h, v2.8b, v3.8b
-; CHECK-NEXT:    ushll v3.4s, v0.4h, #3
+; CHECK-NEXT:    uaddl v3.8h, v16.8b, v3.8b
+; CHECK-NEXT:    uaddl v2.8h, v2.8b, v1.8b
+; CHECK-NEXT:    ushll v1.4s, v0.4h, #3
 ; CHECK-NEXT:    ushll2 v16.4s, v0.8h, #3
-; CHECK-NEXT:    mov v4.s[3], v1.s[0]
-; CHECK-NEXT:    ushll v7.4s, v5.4h, #3
-; CHECK-NEXT:    ushll2 v5.4s, v5.8h, #3
-; CHECK-NEXT:    uaddw v0.4s, v3.4s, v6.4h
+; CHECK-NEXT:    mov v4.s[3], v5.s[0]
+; CHECK-NEXT:    ushll v7.4s, v3.4h, #3
+; CHECK-NEXT:    ushll2 v3.4s, v3.8h, #3
+; CHECK-NEXT:    uaddw v0.4s, v1.4s, v6.4h
 ; CHECK-NEXT:    uaddw2 v1.4s, v16.4s, v6.8h
 ; CHECK-NEXT:    str q4, [x4]
-; CHECK-NEXT:    uaddw2 v3.4s, v5.4s, v2.8h
+; CHECK-NEXT:    uaddw2 v3.4s, v3.4s, v2.8h
 ; CHECK-NEXT:    uaddw v2.4s, v7.4s, v2.4h
 ; CHECK-NEXT:    ret
   %lp1 = load <4 x i8>, ptr %p

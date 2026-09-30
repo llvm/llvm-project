@@ -11,21 +11,22 @@
 define i32 @val_compare_and_swap(ptr %p, i32 %cmp, i32 %new) #0 {
 ; CHECK-NOLSE-O1-LABEL: val_compare_and_swap:
 ; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    mov x8, x0
 ; CHECK-NOLSE-O1-NEXT:  LBB0_1: ; %cmpxchg.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NOLSE-O1-NEXT:    ldaxr w8, [x0]
-; CHECK-NOLSE-O1-NEXT:    cmp w8, w1
+; CHECK-NOLSE-O1-NEXT:    ldaxr w0, [x8]
+; CHECK-NOLSE-O1-NEXT:    cmp w0, w1
 ; CHECK-NOLSE-O1-NEXT:    b.ne LBB0_4
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
 ; CHECK-NOLSE-O1-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; CHECK-NOLSE-O1-NEXT:    stxr w9, w2, [x0]
+; CHECK-NOLSE-O1-NEXT:    stxr w9, w2, [x8]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB0_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
-; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB0_4: ; %cmpxchg.nostore
 ; CHECK-NOLSE-O1-NEXT:    clrex
-; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: val_compare_and_swap:
@@ -166,21 +167,22 @@ define i32 @val_compare_and_swap_from_load(ptr %p, i32 %cmp, ptr %pnew) #0 {
 define i32 @val_compare_and_swap_rel(ptr %p, i32 %cmp, i32 %new) #0 {
 ; CHECK-NOLSE-O1-LABEL: val_compare_and_swap_rel:
 ; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    mov x8, x0
 ; CHECK-NOLSE-O1-NEXT:  LBB2_1: ; %cmpxchg.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NOLSE-O1-NEXT:    ldaxr w8, [x0]
-; CHECK-NOLSE-O1-NEXT:    cmp w8, w1
+; CHECK-NOLSE-O1-NEXT:    ldaxr w0, [x8]
+; CHECK-NOLSE-O1-NEXT:    cmp w0, w1
 ; CHECK-NOLSE-O1-NEXT:    b.ne LBB2_4
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
 ; CHECK-NOLSE-O1-NEXT:    ; in Loop: Header=BB2_1 Depth=1
-; CHECK-NOLSE-O1-NEXT:    stlxr w9, w2, [x0]
+; CHECK-NOLSE-O1-NEXT:    stlxr w9, w2, [x8]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB2_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
-; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB2_4: ; %cmpxchg.nostore
 ; CHECK-NOLSE-O1-NEXT:    clrex
-; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: val_compare_and_swap_rel:
@@ -462,28 +464,30 @@ define i64 @val_compare_and_swap_64_release_acquire(ptr %p, i64 %cmp, i64 %new) 
 define i32 @fetch_and_nand(ptr %p) #0 {
 ; CHECK-NOLSE-O1-LABEL: fetch_and_nand:
 ; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    mov x8, x0
 ; CHECK-NOLSE-O1-NEXT:  LBB6_1: ; %atomicrmw.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NOLSE-O1-NEXT:    ldxr w8, [x0]
-; CHECK-NOLSE-O1-NEXT:    and w9, w8, #0x7
+; CHECK-NOLSE-O1-NEXT:    ldxr w0, [x8]
+; CHECK-NOLSE-O1-NEXT:    and w9, w0, #0x7
 ; CHECK-NOLSE-O1-NEXT:    mvn w9, w9
-; CHECK-NOLSE-O1-NEXT:    stlxr w10, w9, [x0]
+; CHECK-NOLSE-O1-NEXT:    stlxr w10, w9, [x8]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB6_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-NOLSE-O1-NEXT:    mov w0, w8
+; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: fetch_and_nand:
 ; CHECK-OUTLINE-O1:       ; %bb.0:
+; CHECK-OUTLINE-O1-NEXT:    mov x8, x0
 ; CHECK-OUTLINE-O1-NEXT:  LBB6_1: ; %atomicrmw.start
 ; CHECK-OUTLINE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-OUTLINE-O1-NEXT:    ldxr w8, [x0]
-; CHECK-OUTLINE-O1-NEXT:    and w9, w8, #0x7
+; CHECK-OUTLINE-O1-NEXT:    ldxr w0, [x8]
+; CHECK-OUTLINE-O1-NEXT:    and w9, w0, #0x7
 ; CHECK-OUTLINE-O1-NEXT:    mvn w9, w9
-; CHECK-OUTLINE-O1-NEXT:    stlxr w10, w9, [x0]
+; CHECK-OUTLINE-O1-NEXT:    stlxr w10, w9, [x8]
 ; CHECK-OUTLINE-O1-NEXT:    cbnz w10, LBB6_1
 ; CHECK-OUTLINE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-OUTLINE-O1-NEXT:    mov w0, w8
+; CHECK-OUTLINE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-OUTLINE-O1-NEXT:    ret
 ;
 ; CHECK-NOLSE-O0-LABEL: fetch_and_nand:

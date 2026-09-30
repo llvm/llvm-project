@@ -181,37 +181,47 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
     Register SrcReg = DefMI->getOperand(1).getReg();
     if (!SrcReg.isVirtual())
       continue;
-    // FIXME: We should trivially coalesce subregister copies to expose CSE
-    // opportunities on instructions with truncated operands (see
-    // cse-add-with-overflow.ll). This can be done here as follows:
-    // if (SrcSubReg)
-    //  RC = TRI->getMatchingSuperRegClass(MRI->getRegClass(SrcReg), RC,
-    //                                     SrcSubReg);
-    // MO.substVirtReg(SrcReg, SrcSubReg, *TRI);
-    //
-    // The 2-addr pass has been updated to handle coalesced subregs. However,
-    // some machine-specific code still can't handle it.
-    // To handle it properly we also need a way find a constrained subregister
-    // class given a super-reg class and subreg index.
-    if (DefMI->getOperand(1).getSubReg())
+    // Coalesce a subregister copy (%a = COPY %b:subN) by rewriting the use of
+    // %a to %b:subN, exposing CSE on instructions with truncated operands.
+    unsigned SrcSubReg = DefMI->getOperand(1).getSubReg();
+    if (SrcSubReg) {
+      // Opt-in per target: a propagated subregister index reaches target
+      // peephole and post-RA code that may not expect one.
+      if (!TII->shouldPropagateSubRegCopiesInCSE())
+        continue;
+      // Only handle a use without its own subregister, and only for concrete
+      // register classes. Constrain %b's class so its subN lane is a valid
+      // register in %a's class. constrainRegAttrs is unsuitable here because
+      // the sub- and super-register classes (and their LLTs) differ by design.
+      const TargetRegisterClass *SrcRC = MRI->getRegClassOrNull(SrcReg);
+      const TargetRegisterClass *DstRC = MRI->getRegClassOrNull(Reg);
+      if (!SrcRC || !DstRC || MO.getSubReg())
+        continue;
+      const TargetRegisterClass *NewRC =
+          TRI->getMatchingSuperRegClass(SrcRC, DstRC, SrcSubReg);
+      if (!NewRC || !MRI->constrainRegClass(SrcReg, NewRC))
+        continue;
+    } else if (!MRI->constrainRegAttrs(SrcReg, Reg)) {
       continue;
-    if (!MRI->constrainRegAttrs(SrcReg, Reg))
-      continue;
+    }
     LLVM_DEBUG(dbgs() << "Coalescing: " << *DefMI);
     LLVM_DEBUG(dbgs() << "***     to: " << *MI);
 
-    // Propagate SrcReg of copies to MI.
-    MO.setReg(SrcReg);
+    // Propagate SrcReg of copies to MI, composing any subregister index.
+    MO.substVirtReg(SrcReg, SrcSubReg, *TRI);
     MRI->clearKillFlags(SrcReg);
     // Coalesce single use copies.
     if (OnlyOneUse) {
       // If (and only if) we've eliminated all uses of the copy, also
       // copy-propagate to any debug-users of MI, or they'll be left using
-      // an undefined value.
-      DefMI->changeDebugValuesDefReg(SrcReg);
-
-      DefMI->eraseFromParent();
-      ++NumCoalesces;
+      // an undefined value. For a subregister copy, redirecting debug users
+      // to the full super-register would drop the lane, so only erase when no
+      // (debug) users remain; otherwise leave the dead copy for later DCE.
+      if (!SrcSubReg || MRI->use_empty(Reg)) {
+        DefMI->changeDebugValuesDefReg(SrcReg);
+        DefMI->eraseFromParent();
+        ++NumCoalesces;
+      }
     }
     Changed = true;
   }
