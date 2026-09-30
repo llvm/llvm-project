@@ -1,0 +1,19 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
+
+# Refresh compilation database for all LLVM targets
+refresh_compile_commands(
+    name = "compile_commands",
+    output_dir = "../..",
+    targets = [
+        "@llvm-project//...",
+    ],
+)
+
+alias(
+    name = "refresh_all",
+    actual = ":compile_commands",
+)

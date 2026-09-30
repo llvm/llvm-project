@@ -60,7 +60,7 @@ for adding this configuration.
    ```
 7. To build [compile commands](https://clangd.llvm.org/design/compile-commands) for Clangd:
    ```bash
-   bazel run //:refresh_compile_commands
+   bazel run //tools/compile_commands
    ```
    See [bazel-compile-commands-extractor](https://github.com/helly25/bazel-compile-commands-extractor) for more details.
 
