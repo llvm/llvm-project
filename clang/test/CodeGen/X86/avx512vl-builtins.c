@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %stest_mm256_cmpge_epi64_mask
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s
 
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512f -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -Wsign-conversion -fexperimental-new-constant-interpreter | FileCheck %s
@@ -345,10 +345,10 @@ TEST_CONSTEXPR(_mm_cmple_epu64_mask(
 ) == (__mmask8)0x03u);
 
 __mmask8 test_mm_mask_cmpgt_epi32_mask(__mmask8 __u, __m128i __a, __m128i __b) {
-  // CHECK-LABEL: test_mm_mask_cmple_epu32_mask
+  // CHECK-LABEL: test_mm_mask_cmpgt_epi32_mask
   // CHECK: icmp sgt <4 x i32> %{{.*}}, %{{.*}}
   // CHECK: and <4 x i1> %{{.*}}, %{{.*}}
-  return (__mmask8)_mm_mask_cmple_epu32_mask(__u, __a, __b);
+  return (__mmask8)_mm_mask_cmpgt_epi32_mask(__u, __a, __b);
 }
 
 __mmask8 test_mm_cmpgt_epi32_mask(__m128i __a, __m128i __b) {
@@ -11384,13 +11384,6 @@ TEST_CONSTEXPR(_mm_cmpeq_epi64_mask(
     ((__m128i)(__v2di){ 0x7fffffffffffffffll, -9223372036854775807ll })
 ) == (__mmask8)0x01u);
 
-
-__mmask8 test_mm_mask_cmpgt_epi32_mask(__mmask8 __u, __m128i __a, __m128i __b) {
-  // CHECK-LABEL: test_mm_mask_cmpgt_epi32_mask
-  // CHECK: icmp sgt <4 x i32> %{{.*}}, %{{.*}}
-  // CHECK: and <4 x i1> %{{.*}}, %{{.*}}
-  return (__mmask8)_mm_mask_cmpgt_epi32_mask(__u, __a, __b);
-}
 
 __mmask8 test_mm_mask_cmpgt_epi64_mask(__mmask8 __u, __m128i __a, __m128i __b) {
   // CHECK-LABEL: test_mm_mask_cmpgt_epi64_mask
