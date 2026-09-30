@@ -108,6 +108,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
   if (state == eStateStopped || state == eStateCrashed) {
     LLDB_LOG(log, "process {0} is in state {1}.  Resuming...",
              GetDebuggedProcessId(), state);
+    std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
     LLDB_LOG(log, "resuming {0} threads.", m_threads.size());
 
     m_pending_library_events = false;
@@ -301,6 +302,7 @@ void NativeProcessWindows::StopThread(lldb::tid_t thread_id,
     return;
 
   Log *log = GetLog(WindowsLog::Thread);
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   for (uint32_t i = 0; i < m_threads.size(); ++i) {
     auto t = static_cast<NativeThreadWindows *>(m_threads[i].get());
     if (Status error = t->DoStop(); error.Fail())
@@ -309,7 +311,10 @@ void NativeProcessWindows::StopThread(lldb::tid_t thread_id,
   SetStopReasonForThread(*thread, reason, description);
 }
 
-size_t NativeProcessWindows::UpdateThreads() { return m_threads.size(); }
+size_t NativeProcessWindows::UpdateThreads() {
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
+  return m_threads.size();
+}
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 NativeProcessWindows::GetAuxvData() const {
@@ -558,6 +563,7 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
   }
 
   // The very first one shall always be the main thread.
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   assert(m_threads.empty());
   m_threads.push_back(std::make_unique<NativeThreadWindows>(
       *this, m_session_data->m_debugger->GetMainThread()));
@@ -675,12 +681,15 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
     signal_info.signo = 19; // SIGSTOP on POSIX
 
     // Halt all threads at the kernel level.
-    for (uint32_t i = 0; i < m_threads.size(); ++i) {
-      auto t = static_cast<NativeThreadWindows *>(m_threads[i].get());
-      if (Status err = t->DoStop(); err.Fail()) {
-        LLDB_LOG(log, "Failed to stop thread {1:x}: {0}", t->GetID(),
-                 err.GetError());
-        exit(1);
+    {
+      std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
+      for (uint32_t i = 0; i < m_threads.size(); ++i) {
+        auto t = static_cast<NativeThreadWindows *>(m_threads[i].get());
+        if (Status err = t->DoStop(); err.Fail()) {
+          LLDB_LOG(log, "Failed to stop thread {1:x}: {0}", t->GetID(),
+                   err.GetError());
+          exit(1);
+        }
       }
     }
     SetCurrentThreadID(thread_id);
@@ -783,6 +792,7 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
     thread->SetStopReason(stop_info, "");
   }
 
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   m_threads.push_back(std::move(thread));
 }
 
@@ -814,21 +824,25 @@ DllEventAction NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
   if (!resolved || ProcessDebugger::IsSystemDLL(resolved.GetPath()))
     return DllEventAction::ContinueDebugLoop;
 
-  NativeThreadWindows *loader_thread = GetThreadByID(thread_id);
-  if (!loader_thread && !m_threads.empty()) {
-    LLDB_LOG(log, "LOAD_DLL on unknown tid {0:x}. Falling back to main thread.",
-             thread_id);
-    loader_thread = static_cast<NativeThreadWindows *>(m_threads[0].get());
-  }
-  if (loader_thread) {
-    SetCurrentThreadID(loader_thread->GetID());
-    if (loader_thread->DoStop().Fail())
-      LLDB_LOG(log, "Failed to suspend thread {0} on LOAD_DLL.",
-               loader_thread->GetID());
-    ThreadStopInfo info;
-    info.reason = lldb::eStopReasonNone;
-    info.signo = 0;
-    loader_thread->SetStopReason(info, "");
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
+    NativeThreadWindows *loader_thread = GetThreadByID(thread_id);
+    if (!loader_thread && !m_threads.empty()) {
+      LLDB_LOG(log,
+               "LOAD_DLL on unknown tid {0:x}. Falling back to main thread.",
+               thread_id);
+      loader_thread = static_cast<NativeThreadWindows *>(m_threads[0].get());
+    }
+    if (loader_thread) {
+      SetCurrentThreadID(loader_thread->GetID());
+      if (loader_thread->DoStop().Fail())
+        LLDB_LOG(log, "Failed to suspend thread {0} on LOAD_DLL.",
+                 loader_thread->GetID());
+      ThreadStopInfo info;
+      info.reason = lldb::eStopReasonNone;
+      info.signo = 0;
+      loader_thread->SetStopReason(info, "");
+    }
   }
   SetState(eStateStopped, true);
 
@@ -849,22 +863,25 @@ DllEventAction NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
   if (!unloaded_spec || ProcessDebugger::IsSystemDLL(unloaded_spec.GetPath()))
     return DllEventAction::ContinueDebugLoop;
 
-  NativeThreadWindows *unloader_thread = GetThreadByID(thread_id);
-  if (!unloader_thread && !m_threads.empty()) {
-    LLDB_LOG(log,
-             "UNLOAD_DLL on unknown tid {0:x}. Falling back to main thread.",
-             thread_id);
-    unloader_thread = static_cast<NativeThreadWindows *>(m_threads[0].get());
-  }
-  if (unloader_thread) {
-    SetCurrentThreadID(unloader_thread->GetID());
-    if (unloader_thread->DoStop().Fail())
-      LLDB_LOG(log, "Failed to suspend thread {0} on UNLOAD_DLL.",
-               unloader_thread->GetID());
-    ThreadStopInfo info;
-    info.reason = lldb::eStopReasonNone;
-    info.signo = 0;
-    unloader_thread->SetStopReason(info, "");
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
+    NativeThreadWindows *unloader_thread = GetThreadByID(thread_id);
+    if (!unloader_thread && !m_threads.empty()) {
+      LLDB_LOG(log,
+               "UNLOAD_DLL on unknown tid {0:x}. Falling back to main thread.",
+               thread_id);
+      unloader_thread = static_cast<NativeThreadWindows *>(m_threads[0].get());
+    }
+    if (unloader_thread) {
+      SetCurrentThreadID(unloader_thread->GetID());
+      if (unloader_thread->DoStop().Fail())
+        LLDB_LOG(log, "Failed to suspend thread {0} on UNLOAD_DLL.",
+                 unloader_thread->GetID());
+      ThreadStopInfo info;
+      info.reason = lldb::eStopReasonNone;
+      info.signo = 0;
+      unloader_thread->SetStopReason(info, "");
+    }
   }
   SetState(eStateStopped, true);
   return DllEventAction::ParkDebugLoop;
