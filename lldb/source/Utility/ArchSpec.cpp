@@ -850,13 +850,19 @@ void ArchSpec::MergeFrom(const ArchSpec &other) {
     if (other.GetCore() != eCore_uknownMach64)
       UpdateCore();
   }
-  // Use this triple as the right-hand operand so an incompatible merge leaves
-  // it unchanged.
-  llvm::Triple other_arch = GetTriple();
-  other_arch.setArch(other.GetTriple().getArch(),
-                     other.GetTriple().getSubArch());
-  llvm::Triple merged(other_arch.merge(GetTriple()));
-  GetTriple().setArch(merged.getArch(), merged.getSubArch());
+  // AMDGPU models share one LLDB core, so merge their triple subarchitectures
+  // explicitly. Keep this ArchSpec's platform fields in the comparison triple
+  // because they are handled separately in this function.
+  if (GetTriple().getArch() == llvm::Triple::amdgpu &&
+      other.GetTriple().getArch() == llvm::Triple::amdgpu) {
+    llvm::Triple other_arch = GetTriple();
+    other_arch.setArch(other.GetTriple().getArch(),
+                       other.GetTriple().getSubArch());
+    // Use this triple as the right-hand operand so an incompatible merge
+    // leaves it unchanged.
+    llvm::Triple merged(other_arch.merge(GetTriple()));
+    GetTriple().setArch(merged.getArch(), merged.getSubArch());
+  }
   if (!TripleEnvironmentWasSpecified() &&
       other.TripleEnvironmentWasSpecified()) {
     GetTriple().setEnvironment(other.GetTriple().getEnvironment());

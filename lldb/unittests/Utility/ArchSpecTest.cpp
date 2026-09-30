@@ -381,6 +381,21 @@ TEST(ArchSpecTest, MergeFrom) {
     EXPECT_EQ(llvm::Triple::EnvironmentType::EABIHF,
               A.GetTriple().getEnvironment());
   }
+  {
+    ArchSpec A("arm64-apple-macosx");
+    ArchSpec B("arm64e-apple-macosx");
+
+    A.MergeFrom(B);
+    EXPECT_EQ("arm64", A.GetTriple().getArchName());
+  }
+  {
+    ArchSpec A("armv7em-unknown-none-eabi");
+    ArchSpec B("arm-unknown-none-eabi");
+
+    A.MergeFrom(B);
+    EXPECT_EQ(llvm::Triple::ARMSubArch_v7em,
+              A.GetTriple().getSubArch());
+  }
 }
 
 TEST(ArchSpecTest, MergeFromMachOUnknown) {
