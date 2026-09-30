@@ -610,6 +610,9 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
         .moreElementsToNextPow2(0);
   // clang-format on
 
+  getActionDefinitionsBuilder(G_FCANONICALIZE)
+      .legalFor(allFloatScalarsAndVectors);
+
   getActionDefinitionsBuilder(G_FCOPYSIGN)
       .legalForCartesianProduct(allFloatScalarsAndVectors,
                                 allFloatScalarsAndVectors);
