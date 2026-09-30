@@ -30,8 +30,9 @@ struct MockDirent {
   MockDirent(const char *name) {
     auto *d = reinterpret_cast<struct dirent *>(buf);
     size_t len = LIBC_NAMESPACE::internal::string_length(name);
+    EXPECT_LE(len, EXTRA_NAME_LEN);
     if (len > EXTRA_NAME_LEN)
-      len = EXTRA_NAME_LEN;
+      return;
     LIBC_NAMESPACE::inline_memcpy(d->d_name, name, len);
     d->d_name[len] = '\0';
   }
