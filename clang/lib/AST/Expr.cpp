@@ -34,6 +34,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -3460,12 +3461,11 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
       return ILE->getInit(0)->isConstantInitializer(Ctx, false, Culprit);
 
     if (ILE->getType()->isArrayType()) {
-      unsigned numInits = ILE->getNumInits();
-      for (unsigned i = 0; i < numInits; i++) {
-        if (!ILE->getInit(i)->isConstantInitializer(Ctx, false, Culprit))
-          return false;
-      }
-      return true;
+      // Implicit zero initializers are constant without further evaluation.
+      return llvm::all_of(ILE->inits(), [&](const Expr *Init) {
+        return isa<ImplicitValueInitExpr>(Init) ||
+               Init->isConstantInitializer(Ctx, false, Culprit);
+      });
     }
 
     if (ILE->getType()->isRecordType()) {
@@ -3885,12 +3885,18 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
       return true;
     break;
 
-  case InitListExprClass:
-    // FIXME: The children for an InitListExpr doesn't include the array filler.
-    if (const Expr *E = cast<InitListExpr>(this)->getArrayFiller())
-      if (E->HasSideEffects(Ctx, IncludePossibleEffects))
-        return true;
-    break;
+  case InitListExprClass: {
+    const auto *ILE = cast<InitListExpr>(this);
+    // The filler also occupies every hole in a sparse initializer. Checking
+    // its side effects once suffices, even when it occurs many times.
+    const Expr *Filler = ILE->getArrayFiller();
+    if (Filler && Filler->HasSideEffects(Ctx, IncludePossibleEffects))
+      return true;
+    return llvm::any_of(ILE->inits(), [&](const Expr *Init) {
+      return Init && Init != Filler &&
+             Init->HasSideEffects(Ctx, IncludePossibleEffects);
+    });
+  }
 
   case GenericSelectionExprClass:
     return cast<GenericSelectionExpr>(this)->getResultExpr()->HasSideEffects(

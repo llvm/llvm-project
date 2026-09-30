@@ -375,3 +375,23 @@ void gh154046(void) {
     [1] = ""  // expected-error {{incompatible pointer to integer conversion initializing 'const char' with an expression of type 'char[1]'}}
   }[1];
 }
+
+// Implicit zero elements must not hide diagnostics for explicit initializers.
+void sparse_diagnostics(int i) {
+  unsigned char conversion[128] = {
+    [127] = 256 // expected-warning {{implicit conversion from 'int' to 'unsigned char' changes value from 256 to 0}}
+  };
+  int overflow[128] = {
+    [127] = 2147483647 + 1 // expected-warning {{overflow in expression; result is -2'147'483'648 with type 'int'}}
+  };
+  int unsequenced[128] = {
+    [127] = i++ + i // expected-warning {{unsequenced modification and access to 'i'}}
+  };
+  static int nonconstant[128] = {
+    [127] = i // expected-error {{initializer element is not a compile-time constant}}
+  };
+  struct { int row[128]; } overridden = {
+    .row = {[127] = i++}, // expected-note {{previous initialization with side effects is here (side effects will not occur at run time)}}
+    .row = {[1] = 1} // expected-warning {{initializer overrides prior initialization of this subobject}}
+  };
+}
