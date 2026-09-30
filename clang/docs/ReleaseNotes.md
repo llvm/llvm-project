@@ -965,7 +965,8 @@ features cannot lower the translation-unit ABI level;
 - Add `AfterRequiresExpression` sub-option of `BraceWrapping` to wrap the
   body of requires expressions. It is enabled by the `Allman`, `Whitesmiths`,
   and `GNU` styles of `BreakBeforeBraces`.
-
+- Add `AtEndOfBlock` sub-option of `KeepEmptyLines` to control the number of
+  empty lines kept at end of blocks.
 - `QualifierOrder` now supports `typedef`, `consteval`, `constinit`,
   `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,
   and `explicit` declaration specifiers.
