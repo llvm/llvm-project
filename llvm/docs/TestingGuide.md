@@ -561,6 +561,17 @@ This test will fail if placed into a `download` directory.
 To make your tests robust, always use `opt ... < %s` in the `RUN` line.
 {program}`opt` does not output a `ModuleID` when input comes from stdin.
 
+Another common source of fragile tests is checking assembler diagnostics with
+plain `FileCheck`, e.g. `RUN: not llvm-mc ... | FileCheck %s` with unanchored
+`CHECK: error:` lines. `FileCheck` only asserts that the listed diagnostics
+appear somewhere, in order; it does not notice an unrelated *extra*
+diagnostic that a later change starts emitting next to the one under test.
+For `llvm-mc` tests, prefer `--verify` (see the
+{doc}`llvm-mc <CommandGuide/llvm-mc>` documentation), which checks that every
+diagnostic produced matches an `expected-error`/`expected-warning`/
+`expected-note`/`expected-remark` comment in the input and vice versa,
+similar to Clang's `-verify` flag.
+
 ### Platform-Specific Tests
 
 Whenever adding tests that require the knowledge of a specific platform,

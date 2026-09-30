@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Disassembler.h"
+#include "Verifier.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameAnalyzer.h"
 #include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameStreamer.h"
@@ -223,6 +224,15 @@ static cl::opt<bool> ValidateCFI("validate-cfi",
                                  cl::desc("Validate the CFI directives"),
                                  cl::cat(MCCategory));
 
+static cl::list<std::string> Verify(
+    "verify", cl::CommaSeparated, cl::ValueOptional,
+    cl::desc(
+        "Check the diagnostics produced against '<prefix>-error'/"
+        "'-warning'/'-note'/'-remark' comments in the input instead of just "
+        "printing them, using a comma-separated list of <prefixes> "
+        "(default: 'expected') as the recognized directive prefixes"),
+    cl::value_desc("prefixes"), cl::cat(MCCategory));
+
 enum ActionType {
   AC_AsLex,
   AC_Assemble,
@@ -420,6 +430,14 @@ int main(int argc, char **argv) {
   setDwarfDebugProducer();
 
   const char *ProgName = argv[0];
+
+  bool VerifyEnabled = Verify.getNumOccurrences() > 0;
+  if (VerifyEnabled && Action == AC_AsLex) {
+    WithColor::error(errs(), ProgName)
+        << "-verify is not supported with -as-lex\n";
+    return 1;
+  }
+
   const Target *TheTarget = GetTarget(ProgName);
   if (!TheTarget)
     return 1;
@@ -464,6 +482,37 @@ int main(int argc, char **argv) {
   MAI->setPreserveAsmComments(PreserveComments);
   MAI->setCommentColumn(CommentColumn);
 
+  std::unique_ptr<MCVerifier> Verifier;
+  if (VerifyEnabled) {
+    std::vector<std::string> Prefixes;
+    for (StringRef Prefix : Verify)
+      if (!Prefix.empty())
+        Prefixes.push_back(Prefix.str());
+    // A bare '-verify' (no '=value'), an explicit empty prefix list, and a
+    // list that parses to only empty strings (e.g. a stray comma) all mean
+    // "use the default prefix".
+    if (Prefixes.empty())
+      Prefixes = {"expected"};
+
+    // Only text at or after a recognized comment marker is scanned for
+    // directives, since the comment character varies by target and .s
+    // source is more likely than e.g. MLIR IR to contain incidental text
+    // that happens to match a directive. Deliberately excludes '/*': the
+    // scan is line-based, so it cannot correctly recognize a directive on a
+    // continuation line of a multi-line block comment (nor correctly stop
+    // treating text as commented once a block comment closes with '*/' on
+    // the same line). Directives must use a single-line comment form.
+    std::vector<std::string> CommentPrefixes = {
+        std::string(MAI->getCommentString())};
+    if (MAI->shouldAllowAdditionalComments()) {
+      CommentPrefixes.push_back("//");
+      CommentPrefixes.push_back("#");
+    }
+
+    Verifier =
+        std::make_unique<MCVerifier>(SrcMgr, Prefixes, CommentPrefixes);
+  }
+
   // Package up features to be passed to target/subtarget
   SubtargetFeatures Features;
   std::string FeaturesStr;
@@ -495,6 +544,9 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, PIC, LargeCodeModel));
   Ctx.setObjectFileInfo(MOFI.get());
+
+  if (Verifier)
+    Verifier->installHandlers(Ctx);
 
   Ctx.setGenDwarfForAssembly(GenDwarfForAssembly);
   // Default to 4 for dwarf version.
@@ -673,6 +725,12 @@ int main(int argc, char **argv) {
   if (disassemble)
     Res = Disassembler::disassemble(*TheTarget, *STI, *Str, *Buffer, SrcMgr,
                                     Ctx, HexBytes, NumBenchmarkRuns);
+
+  // Under -verify, the exit code reflects whether the diagnostics matched
+  // what was expected, not whether assembling/disassembling itself hit an
+  // error: an expected error is a successful run.
+  if (Verifier)
+    Res = Verifier->verify() ? 0 : 1;
 
   // Keep output if no errors.
   if (Res == 0) {
