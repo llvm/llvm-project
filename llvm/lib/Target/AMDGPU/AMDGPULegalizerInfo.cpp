@@ -961,6 +961,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder({G_GET_ROUNDING, G_SET_ROUNDING}).legalFor({S32});
 
+  getActionDefinitionsBuilder(G_GET_FPMODE).customFor({S32});
+
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
     .customIf(typeIsNot(0, PrivatePtr));
 
@@ -2424,6 +2426,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeGetFPEnv(MI, MRI, B);
   case TargetOpcode::G_SET_FPENV:
     return legalizeSetFPEnv(MI, MRI, B);
+  case TargetOpcode::G_GET_FPMODE:
+    return legalizeGetFPMode(MI, B);
   case TargetOpcode::G_TRAP:
     return legalizeTrap(Helper, MI);
   case TargetOpcode::G_DEBUGTRAP:
@@ -8327,6 +8331,29 @@ bool AMDGPULegalizerInfo::legalizeSetFPEnv(MachineInstr &MI,
                    /*HasSideEffects=*/true, /*isConvergent=*/false)
       .addImm(static_cast<int16_t>(FPEnvTrapBitField))
       .addReg(Unmerge.getReg(1));
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeGetFPMode(MachineInstr &MI,
+                                            MachineIRBuilder &B) const {
+  const LLT I32 = LLT::integer(32);
+  Register DstReg = MI.getOperand(0).getReg();
+
+  bool IsGFX9Plus = ST.getGeneration() >= AMDGPUSubtarget::GFX9;
+  unsigned Mask = IsGFX9Plus ? 0x87f3ff : 0x7f3ff;
+  unsigned Width = IsGFX9Plus ? 24 : 19;
+
+  unsigned ModeBitField =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, Width);
+
+  auto ModeReg =
+      B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {I32},
+                       /*HasSideEffects=*/true, /*isConvergent=*/false)
+          .addImm(ModeBitField);
+
+  B.buildAnd(DstReg, B.buildConstant(I32, Mask), ModeReg.getReg(0));
+
   MI.eraseFromParent();
   return true;
 }
