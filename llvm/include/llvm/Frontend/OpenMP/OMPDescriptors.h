@@ -109,7 +109,7 @@ template <typename DetailsTy> struct Descriptor {
 
   SmallVector<Version> getVersions() const {
     SmallVector<Version> Vs;
-    for (Version V : llvm::omp::getOpenMPVersions()) {
+    for (Version V : getOpenMPVersions()) {
       if (auto F = Details.find(V); F != Details.end())
         Vs.push_back(V);
     }
@@ -151,9 +151,9 @@ struct ModifierSet : public Descriptor<details::ModifierSet> {
 template <typename Enum, typename DescriptorTy>
 using DescriptorMap = DenseMap<Enum, DescriptorTy>;
 
-LLVM_ABI const descriptor::Clause &getDescriptor(llvm::omp::Clause C);
-LLVM_ABI const descriptor::Modifier &getDescriptor(llvm::omp::Modifier M);
-LLVM_ABI const descriptor::ModifierSet &getDescriptor(llvm::omp::ModifierSet S);
+LLVM_ABI const descriptor::Clause &getDescriptor(Clause C);
+LLVM_ABI const descriptor::Modifier &getDescriptor(Modifier M);
+LLVM_ABI const descriptor::ModifierSet &getDescriptor(ModifierSet S);
 
 LLVM_ABI Properties getProperties(Clause C, Version V);
 } // namespace llvm::omp

@@ -489,6 +489,16 @@ Error olPlatformRegisterRPCCallback_impl(ol_platform_handle_t Platform,
   return Error::success();
 }
 
+Error olIteratePlatforms_impl(ol_platform_iterate_cb_t Callback,
+                              void *UserData) {
+  for (auto &Platform : OffloadContext::get().Platforms) {
+    if (!Callback(Platform.get(), UserData))
+      return Error::success();
+  }
+
+  return Error::success();
+}
+
 Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
                                 ol_device_info_t PropName, size_t PropSize,
                                 void *PropValue, size_t *PropSizeRet) {
@@ -1490,6 +1500,13 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
   }
   return Error::success();
 }
+
+namespace tmp {
+// Temporary helpers to help transition of libomptarget to liboffload
+GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform) {
+  return Platform->Plugin.get();
+}
+} // namespace tmp
 
 } // namespace offload
 } // namespace llvm
