@@ -1114,18 +1114,7 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
       // A pure write only for a non-pointer, non-allocatable dummy whose
       // element type is trivial. An allocatable is read on entry so it can
       // be deallocated, and finalization of a derived type may read it.
-      mlir::Value dummy = callee.getArgument(idx);
-      mlir::Type ty = dummy.getType();
-      for (mlir::Operation *user : dummy.getUsers()) {
-        auto decl = mlir::dyn_cast<fir::DeclareOp>(user);
-        if (!decl || decl.getMemref() != dummy)
-          continue;
-        fir::FortranVariableOpInterface var(decl);
-        if (var.isPointer() || var.isAllocatable() || var.isCrayPointer())
-          return ModRefResult::getModAndRef();
-        ty = decl.getMemref().getType();
-        break;
-      }
+      mlir::Type ty = callee.getArgument(idx).getType();
       if (fir::isPointerType(ty) || fir::isAllocatableType(ty) ||
           !fir::isa_trivial(fir::getFortranElementType(ty)))
         return ModRefResult::getModAndRef();
