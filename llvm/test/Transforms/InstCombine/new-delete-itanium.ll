@@ -187,7 +187,6 @@ define void @test11() {
 }
 
 declare ptr @llvm.launder.invariant.group(ptr)
-declare ptr @llvm.strip.invariant.group(ptr)
 
 define void @test17() {
 ; CHECK-LABEL: @test17(
@@ -195,8 +194,7 @@ define void @test17() {
 ;
   %nw1 = call ptr @_Znwm(i64 32) builtin
   %nw2 = call ptr @llvm.launder.invariant.group(ptr %nw1)
-  %nw3 = call ptr @llvm.strip.invariant.group(ptr %nw2)
-  store i8 1, ptr %nw3
+  store i8 1, ptr %nw2
   call void @_ZdlPv(ptr %nw2) builtin
   ret void
 }

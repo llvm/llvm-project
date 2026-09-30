@@ -18,6 +18,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Target/TargetMachine.h>
+#include <llvm/TargetParser/Triple.h>
 
 #include <clang/Interpreter/Interpreter.h>
 
@@ -89,7 +90,6 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   llvm::TargetOptions TO = llvm::TargetOptions();
   llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
       PTU.TheModule->getTargetTriple(), "", "", TO, llvm::Reloc::Model::PIC_);
-  PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
 
   llvm::SmallString<256> ObjectFileName(TempDir);
   llvm::sys::path::append(ObjectFileName, PTU.TheModule->getName() + ".o");
@@ -118,7 +118,11 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
 
   ObjectFileOutput.close();
 
+  std::string Emulation = "-m";
+  Emulation +=
+      llvm::Triple(PTU.TheModule->getTargetTriple()).getArchName().str();
   std::vector<const char *> LinkerArgs = {"wasm-ld",
+                                          Emulation.c_str(),
                                           "-shared",
                                           "--import-memory",
                                           "--stack-first",

@@ -1044,8 +1044,7 @@ static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
   return false;
 }
 
-Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
-                                                bool HasDereferenceable,
+Value *InstCombinerImpl::simplifyNonNullOperand(Value *V, bool UseProvenance,
                                                 unsigned Depth) {
   if (auto *Sel = dyn_cast<SelectInst>(V)) {
     if (isa<ConstantPointerNull>(Sel->getOperand(1)))
@@ -1063,9 +1062,20 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
     return nullptr;
 
   if (auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
-    if (HasDereferenceable || GEP->isInBounds()) {
+    // If UseProvenance is true, we know by precondition that null pointers are
+    // not defined in this address-space. And we know that the GEP has
+    // provenance for a valid object. Therefore, the operand must also have
+    // valid provenance. We assume ConstantPointerNull does not have provenance.
+    // (The address could be equal to zero, but that doesn't matter.)
+    //
+    // If UseProvenance is false, we know that the address is some non-zero
+    // value. If the GEP is inbounds, and null pointers can't point to valid
+    // objects, the operand must also have a non-zero value.
+    if (UseProvenance ||
+        (GEP->isInBounds() &&
+         !NullPointerIsDefined(GEP->getFunction(), GEP->getAddressSpace()))) {
       if (auto *Res = simplifyNonNullOperand(GEP->getPointerOperand(),
-                                             HasDereferenceable, Depth + 1)) {
+                                             UseProvenance, Depth + 1)) {
         replaceOperand(*GEP, 0, Res);
         addToWorklist(GEP);
         return nullptr;
@@ -1077,8 +1087,8 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
     bool Changed = false;
     for (Use &U : PHI->incoming_values()) {
       // We set Depth to RecursionLimit to avoid expensive recursion.
-      if (auto *Res = simplifyNonNullOperand(U.get(), HasDereferenceable,
-                                             RecursionLimit)) {
+      if (auto *Res =
+              simplifyNonNullOperand(U.get(), UseProvenance, RecursionLimit)) {
         replaceUse(U, Res);
         Changed = true;
       }
@@ -1186,7 +1196,7 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   }
 
   if (!NullPointerIsDefined(LI.getFunction(), LI.getPointerAddressSpace()))
-    if (Value *V = simplifyNonNullOperand(Op, /*HasDereferenceable=*/true))
+    if (Value *V = simplifyNonNullOperand(Op, /*UseProvenance=*/true))
       return replaceOperand(LI, 0, V);
 
   // load(llvm.protected.field.ptr(ptr)) -> llvm.ptrauth.auth(load(ptr))
@@ -1594,7 +1604,7 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
         ConstantExpr::getBitCast(C, Type::getIntFromByteType(C->getType())));
 
   if (!NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()))
-    if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))
+    if (Value *V = simplifyNonNullOperand(Ptr, /*UseProvenance=*/true))
       return replaceOperand(SI, 1, V);
 
   // store(ptr1, llvm.protected.field.ptr(ptr2)) ->
@@ -1669,8 +1679,16 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
 
     auto *SIVTy = SI.getValueOperand()->getType();
     auto *OSVTy = OtherStore->getValueOperand()->getType();
-    return CastInst::isBitOrNoopPointerCastable(OSVTy, SIVTy, DL) &&
-           SI.hasSameSpecialState(OtherStore);
+    if (!CastInst::isBitOrNoopPointerCastable(OSVTy, SIVTy, DL) ||
+        !SI.hasSameSpecialState(OtherStore))
+      return false;
+
+    // Elementwise atomic stores behave as one atomic store per vector
+    // element. Do not split or merge those atomic accesses by changing the
+    // element size.
+    return !SI.isElementwise() ||
+           DL.getTypeStoreSize(SIVTy->getScalarType()) ==
+               DL.getTypeStoreSize(OSVTy->getScalarType());
   };
 
   // If the other block ends in an unconditional branch, check for the 'if then

@@ -1322,8 +1322,7 @@ define i64 @reg64_lshr_by_masked_negated_unfolded(i64 %val, i64 %shamt) nounwind
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    subb %dl, %cl
+; X86-NEXT:    subb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    shrl %cl, %edx
 ; X86-NEXT:    shrdl %cl, %esi, %eax

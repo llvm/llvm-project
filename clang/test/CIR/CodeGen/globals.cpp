@@ -30,15 +30,13 @@ int *constArrAddr = &arr[2][1];
 
 // CIR: cir.global external @constArrAddr = #cir.global_view<@arr, [2 : i32, 1 : i32]> : !cir.ptr<!s32i>
 
-// The 'inbounds' and 'nuw' flags are inferred by LLVM's constant folder. The
-// same flags show up at -O1 in OGCG.
-// LLVM: @constArrAddr = global ptr getelementptr inbounds nuw (i8, ptr @arr, i64 132), align 8
+// LLVM: @constArrAddr = global ptr getelementptr (i8, ptr @arr, i64 132), align 8
 
 // OGCG: @constArrAddr = global ptr getelementptr (i8, ptr @arr, i64 132), align 8
 
 bool bool_global = true;
 
-// CIR: cir.global external @bool_global = #true {alignment = 1 : i64}
+// CIR: cir.global external @bool_global = #true align(1)
 // LLVM: @bool_global = global i8 1, align 1
 // OGCG: @bool_global = global i8 1, align 1
 

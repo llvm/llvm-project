@@ -37,9 +37,9 @@
 
 // CHECK-LABEL: func.func @fnt4(
 // The copy-store must use the dummy-arg base tag, not "allocated data".
-// CHECK: fir.store %arg0 {{.*}} {tbaa = [#[[COPY_TAG]]]}
+// CHECK: fir.store %arg0 {{.*}} <{tbaa = [#[[COPY_TAG]]]}>
 // The loop read must use the dummy-arg leaf tag.
-// CHECK: fir.load {{.*}} {tbaa = [#[[LEAF_TAG]]]}
+// CHECK: fir.load {{.*}} <{tbaa = [#[[LEAF_TAG]]]}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
