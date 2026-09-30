@@ -425,18 +425,31 @@ define amdgpu_kernel void @global_load_v8i32(ptr addrspace(1) %out, ptr addrspac
 ; EG-NEXT:     ADD_INT * T3.X, PV.X, literal.x,
 ; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
 ;
-; GCN-HSA-LABEL: global_load_v8i32:
-; GCN-HSA:       ; %bb.0: ; %entry
-; GCN-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GCN-HSA-NEXT:    v_mov_b32_e32 v8, 0
-; GCN-HSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-HSA-NEXT:    global_load_dwordx4 v[0:3], v8, s[2:3] offset:16
-; GCN-HSA-NEXT:    global_load_dwordx4 v[4:7], v8, s[2:3]
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(1)
-; GCN-HSA-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1] offset:16
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(1)
-; GCN-HSA-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1]
-; GCN-HSA-NEXT:    s_endpgm
+; GCN-GFX900-HSA-LABEL: global_load_v8i32:
+; GCN-GFX900-HSA:       ; %bb.0: ; %entry
+; GCN-GFX900-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v9, 0
+; GCN-GFX900-HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[0:3], v9, s[2:3] offset:16
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[4:7], v9, s[2:3]
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(1)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v9, v[0:3], s[0:1] offset:16
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(1)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v9, v[4:7], s[0:1]
+; GCN-GFX900-HSA-NEXT:    s_endpgm
+;
+; GCN-GFX908-HSA-LABEL: global_load_v8i32:
+; GCN-GFX908-HSA:       ; %bb.0: ; %entry
+; GCN-GFX908-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-GFX908-HSA-NEXT:    v_mov_b32_e32 v10, 0
+; GCN-GFX908-HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[0:3], v10, s[2:3] offset:16
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[4:7], v10, s[2:3]
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(1)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v10, v[0:3], s[0:1] offset:16
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(1)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v10, v[4:7], s[0:1]
+; GCN-GFX908-HSA-NEXT:    s_endpgm
 entry:
   %ld = load <8 x i32>, ptr addrspace(1) %in
   store <8 x i32> %ld, ptr addrspace(1) %out
@@ -553,21 +566,37 @@ define amdgpu_kernel void @global_load_v9i32(ptr addrspace(1) %out, ptr addrspac
 ; EG-NEXT:     ADD_INT * T5.X, T0.X, literal.x,
 ; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
 ;
-; GCN-HSA-LABEL: global_load_v9i32:
-; GCN-HSA:       ; %bb.0: ; %entry
-; GCN-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GCN-HSA-NEXT:    v_mov_b32_e32 v8, 0
-; GCN-HSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-HSA-NEXT:    global_load_dwordx4 v[0:3], v8, s[2:3]
-; GCN-HSA-NEXT:    global_load_dwordx4 v[4:7], v8, s[2:3] offset:16
-; GCN-HSA-NEXT:    global_load_dword v9, v8, s[2:3] offset:32
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
-; GCN-HSA-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
-; GCN-HSA-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
-; GCN-HSA-NEXT:    global_store_dword v8, v9, s[0:1] offset:32
-; GCN-HSA-NEXT:    s_endpgm
+; GCN-GFX900-HSA-LABEL: global_load_v9i32:
+; GCN-GFX900-HSA:       ; %bb.0: ; %entry
+; GCN-GFX900-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v11, 0
+; GCN-GFX900-HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[0:3], v11, s[2:3]
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[4:7], v11, s[2:3] offset:16
+; GCN-GFX900-HSA-NEXT:    global_load_dword v9, v11, s[2:3] offset:32
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v11, v[0:3], s[0:1]
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v11, v[4:7], s[0:1] offset:16
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX900-HSA-NEXT:    global_store_dword v11, v9, s[0:1] offset:32
+; GCN-GFX900-HSA-NEXT:    s_endpgm
+;
+; GCN-GFX908-HSA-LABEL: global_load_v9i32:
+; GCN-GFX908-HSA:       ; %bb.0: ; %entry
+; GCN-GFX908-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-GFX908-HSA-NEXT:    v_mov_b32_e32 v12, 0
+; GCN-GFX908-HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[0:3], v12, s[2:3]
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[4:7], v12, s[2:3] offset:16
+; GCN-GFX908-HSA-NEXT:    global_load_dword v9, v12, s[2:3] offset:32
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v12, v[0:3], s[0:1]
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v12, v[4:7], s[0:1] offset:16
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX908-HSA-NEXT:    global_store_dword v12, v9, s[0:1] offset:32
+; GCN-GFX908-HSA-NEXT:    s_endpgm
 entry:
   %ld = load <9 x i32>, ptr addrspace(1) %in
   store <9 x i32> %ld, ptr addrspace(1) %out
@@ -682,21 +711,37 @@ define amdgpu_kernel void @global_load_v10i32(ptr addrspace(1) %out, ptr addrspa
 ; EG-NEXT:     ADD_INT * T5.X, T0.X, literal.y,
 ; EG-NEXT:    8(1.121039e-44), 4(5.605194e-45)
 ;
-; GCN-HSA-LABEL: global_load_v10i32:
-; GCN-HSA:       ; %bb.0: ; %entry
-; GCN-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GCN-HSA-NEXT:    v_mov_b32_e32 v10, 0
-; GCN-HSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-HSA-NEXT:    global_load_dwordx4 v[0:3], v10, s[2:3]
-; GCN-HSA-NEXT:    global_load_dwordx4 v[4:7], v10, s[2:3] offset:16
-; GCN-HSA-NEXT:    global_load_dwordx2 v[8:9], v10, s[2:3] offset:32
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
-; GCN-HSA-NEXT:    global_store_dwordx4 v10, v[0:3], s[0:1]
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
-; GCN-HSA-NEXT:    global_store_dwordx4 v10, v[4:7], s[0:1] offset:16
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
-; GCN-HSA-NEXT:    global_store_dwordx2 v10, v[8:9], s[0:1] offset:32
-; GCN-HSA-NEXT:    s_endpgm
+; GCN-GFX900-HSA-LABEL: global_load_v10i32:
+; GCN-GFX900-HSA:       ; %bb.0: ; %entry
+; GCN-GFX900-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v12, 0
+; GCN-GFX900-HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[0:3], v12, s[2:3]
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[4:7], v12, s[2:3] offset:16
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx2 v[8:9], v12, s[2:3] offset:32
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v12, v[0:3], s[0:1]
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v12, v[4:7], s[0:1] offset:16
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx2 v12, v[8:9], s[0:1] offset:32
+; GCN-GFX900-HSA-NEXT:    s_endpgm
+;
+; GCN-GFX908-HSA-LABEL: global_load_v10i32:
+; GCN-GFX908-HSA:       ; %bb.0: ; %entry
+; GCN-GFX908-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-GFX908-HSA-NEXT:    v_mov_b32_e32 v13, 0
+; GCN-GFX908-HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[0:3], v13, s[2:3]
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[4:7], v13, s[2:3] offset:16
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx2 v[8:9], v13, s[2:3] offset:32
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v13, v[0:3], s[0:1]
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v13, v[4:7], s[0:1] offset:16
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx2 v13, v[8:9], s[0:1] offset:32
+; GCN-GFX908-HSA-NEXT:    s_endpgm
 entry:
   %ld = load <10 x i32>, ptr addrspace(1) %in
   store <10 x i32> %ld, ptr addrspace(1) %out
@@ -815,21 +860,37 @@ define amdgpu_kernel void @global_load_v11i32(ptr addrspace(1) %out, ptr addrspa
 ; EG-NEXT:     ADD_INT * T7.X, T3.X, literal.y,
 ; EG-NEXT:    10(1.401298e-44), 4(5.605194e-45)
 ;
-; GCN-HSA-LABEL: global_load_v11i32:
-; GCN-HSA:       ; %bb.0: ; %entry
-; GCN-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GCN-HSA-NEXT:    v_mov_b32_e32 v11, 0
-; GCN-HSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-HSA-NEXT:    global_load_dwordx4 v[0:3], v11, s[2:3]
-; GCN-HSA-NEXT:    global_load_dwordx4 v[4:7], v11, s[2:3] offset:16
-; GCN-HSA-NEXT:    global_load_dwordx3 v[8:10], v11, s[2:3] offset:32
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
-; GCN-HSA-NEXT:    global_store_dwordx4 v11, v[0:3], s[0:1]
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
-; GCN-HSA-NEXT:    global_store_dwordx4 v11, v[4:7], s[0:1] offset:16
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
-; GCN-HSA-NEXT:    global_store_dwordx3 v11, v[8:10], s[0:1] offset:32
-; GCN-HSA-NEXT:    s_endpgm
+; GCN-GFX900-HSA-LABEL: global_load_v11i32:
+; GCN-GFX900-HSA:       ; %bb.0: ; %entry
+; GCN-GFX900-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v13, 0
+; GCN-GFX900-HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[0:3], v13, s[2:3]
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[4:7], v13, s[2:3] offset:16
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx3 v[8:10], v13, s[2:3] offset:32
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v13, v[0:3], s[0:1]
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v13, v[4:7], s[0:1] offset:16
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx3 v13, v[8:10], s[0:1] offset:32
+; GCN-GFX900-HSA-NEXT:    s_endpgm
+;
+; GCN-GFX908-HSA-LABEL: global_load_v11i32:
+; GCN-GFX908-HSA:       ; %bb.0: ; %entry
+; GCN-GFX908-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-GFX908-HSA-NEXT:    v_mov_b32_e32 v14, 0
+; GCN-GFX908-HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[0:3], v14, s[2:3]
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[4:7], v14, s[2:3] offset:16
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx3 v[8:10], v14, s[2:3] offset:32
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v14, v[0:3], s[0:1]
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v14, v[4:7], s[0:1] offset:16
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx3 v14, v[8:10], s[0:1] offset:32
+; GCN-GFX908-HSA-NEXT:    s_endpgm
 entry:
   %ld = load <11 x i32>, ptr addrspace(1) %in
   store <11 x i32> %ld, ptr addrspace(1) %out
@@ -946,21 +1007,37 @@ define amdgpu_kernel void @global_load_v12i32(ptr addrspace(1) %out, ptr addrspa
 ; EG-NEXT:     ADD_INT * T5.X, T0.X, literal.x,
 ; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
 ;
-; GCN-HSA-LABEL: global_load_v12i32:
-; GCN-HSA:       ; %bb.0: ; %entry
-; GCN-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GCN-HSA-NEXT:    v_mov_b32_e32 v12, 0
-; GCN-HSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-HSA-NEXT:    global_load_dwordx4 v[0:3], v12, s[2:3]
-; GCN-HSA-NEXT:    global_load_dwordx4 v[4:7], v12, s[2:3] offset:16
-; GCN-HSA-NEXT:    global_load_dwordx4 v[8:11], v12, s[2:3] offset:32
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
-; GCN-HSA-NEXT:    global_store_dwordx4 v12, v[0:3], s[0:1]
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
-; GCN-HSA-NEXT:    global_store_dwordx4 v12, v[4:7], s[0:1] offset:16
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
-; GCN-HSA-NEXT:    global_store_dwordx4 v12, v[8:11], s[0:1] offset:32
-; GCN-HSA-NEXT:    s_endpgm
+; GCN-GFX900-HSA-LABEL: global_load_v12i32:
+; GCN-GFX900-HSA:       ; %bb.0: ; %entry
+; GCN-GFX900-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v14, 0
+; GCN-GFX900-HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[0:3], v14, s[2:3]
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[4:7], v14, s[2:3] offset:16
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[8:11], v14, s[2:3] offset:32
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v14, v[0:3], s[0:1]
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v14, v[4:7], s[0:1] offset:16
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v14, v[8:11], s[0:1] offset:32
+; GCN-GFX900-HSA-NEXT:    s_endpgm
+;
+; GCN-GFX908-HSA-LABEL: global_load_v12i32:
+; GCN-GFX908-HSA:       ; %bb.0: ; %entry
+; GCN-GFX908-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-GFX908-HSA-NEXT:    v_mov_b32_e32 v15, 0
+; GCN-GFX908-HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[0:3], v15, s[2:3]
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[4:7], v15, s[2:3] offset:16
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[8:11], v15, s[2:3] offset:32
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v15, v[0:3], s[0:1]
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v15, v[4:7], s[0:1] offset:16
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v15, v[8:11], s[0:1] offset:32
+; GCN-GFX908-HSA-NEXT:    s_endpgm
 entry:
   %ld = load <12 x i32>, ptr addrspace(1) %in
   store <12 x i32> %ld, ptr addrspace(1) %out
@@ -1095,24 +1172,43 @@ define amdgpu_kernel void @global_load_v16i32(ptr addrspace(1) %out, ptr addrspa
 ; EG-NEXT:     ADD_INT * T7.X, T0.X, literal.x,
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ;
-; GCN-HSA-LABEL: global_load_v16i32:
-; GCN-HSA:       ; %bb.0: ; %entry
-; GCN-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GCN-HSA-NEXT:    v_mov_b32_e32 v16, 0
-; GCN-HSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-HSA-NEXT:    global_load_dwordx4 v[0:3], v16, s[2:3] offset:32
-; GCN-HSA-NEXT:    global_load_dwordx4 v[4:7], v16, s[2:3] offset:48
-; GCN-HSA-NEXT:    global_load_dwordx4 v[8:11], v16, s[2:3]
-; GCN-HSA-NEXT:    global_load_dwordx4 v[12:15], v16, s[2:3] offset:16
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(3)
-; GCN-HSA-NEXT:    global_store_dwordx4 v16, v[0:3], s[0:1] offset:32
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(3)
-; GCN-HSA-NEXT:    global_store_dwordx4 v16, v[4:7], s[0:1] offset:48
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(3)
-; GCN-HSA-NEXT:    global_store_dwordx4 v16, v[8:11], s[0:1]
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(3)
-; GCN-HSA-NEXT:    global_store_dwordx4 v16, v[12:15], s[0:1] offset:16
-; GCN-HSA-NEXT:    s_endpgm
+; GCN-GFX900-HSA-LABEL: global_load_v16i32:
+; GCN-GFX900-HSA:       ; %bb.0: ; %entry
+; GCN-GFX900-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v19, 0
+; GCN-GFX900-HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[0:3], v19, s[2:3] offset:32
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[4:7], v19, s[2:3] offset:48
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[8:11], v19, s[2:3]
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[12:15], v19, s[2:3] offset:16
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(3)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v19, v[0:3], s[0:1] offset:32
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(3)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v19, v[4:7], s[0:1] offset:48
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(3)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v19, v[8:11], s[0:1]
+; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(3)
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v19, v[12:15], s[0:1] offset:16
+; GCN-GFX900-HSA-NEXT:    s_endpgm
+;
+; GCN-GFX908-HSA-LABEL: global_load_v16i32:
+; GCN-GFX908-HSA:       ; %bb.0: ; %entry
+; GCN-GFX908-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GCN-GFX908-HSA-NEXT:    v_mov_b32_e32 v20, 0
+; GCN-GFX908-HSA-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[0:3], v20, s[2:3] offset:32
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[4:7], v20, s[2:3] offset:48
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[8:11], v20, s[2:3]
+; GCN-GFX908-HSA-NEXT:    global_load_dwordx4 v[12:15], v20, s[2:3] offset:16
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(3)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v20, v[0:3], s[0:1] offset:32
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(3)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v20, v[4:7], s[0:1] offset:48
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(3)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v20, v[8:11], s[0:1]
+; GCN-GFX908-HSA-NEXT:    s_waitcnt vmcnt(3)
+; GCN-GFX908-HSA-NEXT:    global_store_dwordx4 v20, v[12:15], s[0:1] offset:16
+; GCN-GFX908-HSA-NEXT:    s_endpgm
 entry:
   %ld = load <16 x i32>, ptr addrspace(1) %in
   store <16 x i32> %ld, ptr addrspace(1) %out
@@ -2637,12 +2733,12 @@ define amdgpu_kernel void @global_sextload_v16i32_to_v16i64(ptr addrspace(1) %ou
 ; GCN-HSA-LABEL: global_sextload_v16i32_to_v16i64:
 ; GCN-HSA:       ; %bb.0:
 ; GCN-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GCN-HSA-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v39, 0
 ; GCN-HSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-HSA-NEXT:    global_load_dwordx4 v[1:4], v0, s[2:3] offset:32
-; GCN-HSA-NEXT:    global_load_dwordx4 v[5:8], v0, s[2:3] offset:48
-; GCN-HSA-NEXT:    global_load_dwordx4 v[9:12], v0, s[2:3] offset:16
-; GCN-HSA-NEXT:    global_load_dwordx4 v[13:16], v0, s[2:3]
+; GCN-HSA-NEXT:    global_load_dwordx4 v[1:4], v39, s[2:3] offset:32
+; GCN-HSA-NEXT:    global_load_dwordx4 v[5:8], v39, s[2:3] offset:48
+; GCN-HSA-NEXT:    global_load_dwordx4 v[9:12], v39, s[2:3] offset:16
+; GCN-HSA-NEXT:    global_load_dwordx4 v[13:16], v39, s[2:3]
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(3)
 ; GCN-HSA-NEXT:    v_ashrrev_i32_e32 v20, 31, v4
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
@@ -2679,14 +2775,14 @@ define amdgpu_kernel void @global_sextload_v16i32_to_v16i64(ptr addrspace(1) %ou
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v35, v14
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v9, v15
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v11, v16
-; GCN-HSA-NEXT:    global_store_dwordx4 v0, v[25:28], s[0:1] offset:96
-; GCN-HSA-NEXT:    global_store_dwordx4 v0, v[21:24], s[0:1] offset:112
-; GCN-HSA-NEXT:    global_store_dwordx4 v0, v[5:8], s[0:1] offset:64
-; GCN-HSA-NEXT:    global_store_dwordx4 v0, v[17:20], s[0:1] offset:80
-; GCN-HSA-NEXT:    global_store_dwordx4 v0, v[29:32], s[0:1] offset:32
-; GCN-HSA-NEXT:    global_store_dwordx4 v0, v[1:4], s[0:1] offset:48
-; GCN-HSA-NEXT:    global_store_dwordx4 v0, v[33:36], s[0:1]
-; GCN-HSA-NEXT:    global_store_dwordx4 v0, v[9:12], s[0:1] offset:16
+; GCN-HSA-NEXT:    global_store_dwordx4 v39, v[25:28], s[0:1] offset:96
+; GCN-HSA-NEXT:    global_store_dwordx4 v39, v[21:24], s[0:1] offset:112
+; GCN-HSA-NEXT:    global_store_dwordx4 v39, v[5:8], s[0:1] offset:64
+; GCN-HSA-NEXT:    global_store_dwordx4 v39, v[17:20], s[0:1] offset:80
+; GCN-HSA-NEXT:    global_store_dwordx4 v39, v[29:32], s[0:1] offset:32
+; GCN-HSA-NEXT:    global_store_dwordx4 v39, v[1:4], s[0:1] offset:48
+; GCN-HSA-NEXT:    global_store_dwordx4 v39, v[33:36], s[0:1]
+; GCN-HSA-NEXT:    global_store_dwordx4 v39, v[9:12], s[0:1] offset:16
 ; GCN-HSA-NEXT:    s_endpgm
   %ld = load <16 x i32>, ptr addrspace(1) %in
   %ext = sext <16 x i32> %ld to <16 x i64>
@@ -3569,16 +3665,16 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    s_mov_b64 s[22:23], s[2:3]
 ; GCN-GFX900-HSA-NEXT:    s_mov_b64 s[20:21], s[0:1]
 ; GCN-GFX900-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v16, 0
+; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v63, 0
 ; GCN-GFX900-HSA-NEXT:    s_add_u32 s20, s20, s17
 ; GCN-GFX900-HSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[4:7], v16, s[2:3] offset:96
-; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[8:11], v16, s[2:3] offset:112
-; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[25:28], v16, s[2:3] offset:80
-; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[12:15], v16, s[2:3] offset:64
-; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[17:20], v16, s[2:3] offset:48
-; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[21:24], v16, s[2:3] offset:32
-; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[0:3], v16, s[2:3] offset:16
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[4:7], v63, s[2:3] offset:96
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[8:11], v63, s[2:3] offset:112
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[25:28], v63, s[2:3] offset:80
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[12:15], v63, s[2:3] offset:64
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[17:20], v63, s[2:3] offset:48
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[21:24], v63, s[2:3] offset:32
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[0:3], v63, s[2:3] offset:16
 ; GCN-GFX900-HSA-NEXT:    s_addc_u32 s21, s21, 0
 ; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(6)
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v32, 31, v7
@@ -3630,10 +3726,10 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v55, v22
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v17, v23
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v19, v24
-; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[21:24], v16, s[2:3]
+; GCN-GFX900-HSA-NEXT:    global_load_dwordx4 v[21:24], v63, s[2:3]
 ; GCN-GFX900-HSA-NEXT:    s_nop 0
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[37:40], s[0:1] offset:224
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[33:36], s[0:1] offset:240
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[37:40], s[0:1] offset:224
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[33:36], s[0:1] offset:240
 ; GCN-GFX900-HSA-NEXT:    buffer_load_dword v33, off, s[20:23], 0 ; 4-byte Folded Reload
 ; GCN-GFX900-HSA-NEXT:    s_nop 0
 ; GCN-GFX900-HSA-NEXT:    buffer_load_dword v34, off, s[20:23], 0 offset:4 ; 4-byte Folded Reload
@@ -3656,7 +3752,7 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v27, v1
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v57, v2
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v59, v3
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[8:11], s[0:1] offset:192
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[8:11], s[0:1] offset:192
 ; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(7)
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v3, 31, v24
 ; GCN-GFX900-HSA-NEXT:    v_ashrrev_i32_e32 v1, 31, v23
@@ -3667,19 +3763,19 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v8, v21
 ; GCN-GFX900-HSA-NEXT:    v_mov_b32_e32 v10, v22
 ; GCN-GFX900-HSA-NEXT:    s_waitcnt vmcnt(1)
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[33:36], s[0:1] offset:208
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[41:44], s[0:1] offset:160
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[29:32], s[0:1] offset:176
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[45:48], s[0:1] offset:128
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[4:7], s[0:1] offset:144
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[49:52], s[0:1] offset:96
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[12:15], s[0:1] offset:112
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[53:56], s[0:1] offset:64
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[17:20], s[0:1] offset:80
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[25:28], s[0:1] offset:32
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[57:60], s[0:1] offset:48
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[8:11], s[0:1]
-; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v16, v[0:3], s[0:1] offset:16
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[33:36], s[0:1] offset:208
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[41:44], s[0:1] offset:160
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[29:32], s[0:1] offset:176
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[45:48], s[0:1] offset:128
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[4:7], s[0:1] offset:144
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[49:52], s[0:1] offset:96
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[12:15], s[0:1] offset:112
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[53:56], s[0:1] offset:64
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[17:20], s[0:1] offset:80
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[25:28], s[0:1] offset:32
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[57:60], s[0:1] offset:48
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[8:11], s[0:1]
+; GCN-GFX900-HSA-NEXT:    global_store_dwordx4 v63, v[0:3], s[0:1] offset:16
 ; GCN-GFX900-HSA-NEXT:    s_endpgm
 ;
 ; GCN-GFX908-HSA-LABEL: global_sextload_v32i32_to_v32i64:
@@ -4561,32 +4657,32 @@ define amdgpu_kernel void @global_load_v32i32(ptr addrspace(1) %out, ptr addrspa
 ; GCN-HSA-LABEL: global_load_v32i32:
 ; GCN-HSA:       ; %bb.0:
 ; GCN-HSA-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; GCN-HSA-NEXT:    v_mov_b32_e32 v32, 0
+; GCN-HSA-NEXT:    v_mov_b32_e32 v35, 0
 ; GCN-HSA-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-HSA-NEXT:    global_load_dwordx4 v[0:3], v32, s[2:3] offset:96
-; GCN-HSA-NEXT:    global_load_dwordx4 v[4:7], v32, s[2:3] offset:112
-; GCN-HSA-NEXT:    global_load_dwordx4 v[8:11], v32, s[2:3] offset:64
-; GCN-HSA-NEXT:    global_load_dwordx4 v[12:15], v32, s[2:3] offset:80
-; GCN-HSA-NEXT:    global_load_dwordx4 v[16:19], v32, s[2:3] offset:32
-; GCN-HSA-NEXT:    global_load_dwordx4 v[20:23], v32, s[2:3] offset:48
-; GCN-HSA-NEXT:    global_load_dwordx4 v[24:27], v32, s[2:3]
-; GCN-HSA-NEXT:    global_load_dwordx4 v[28:31], v32, s[2:3] offset:16
+; GCN-HSA-NEXT:    global_load_dwordx4 v[0:3], v35, s[2:3] offset:96
+; GCN-HSA-NEXT:    global_load_dwordx4 v[4:7], v35, s[2:3] offset:112
+; GCN-HSA-NEXT:    global_load_dwordx4 v[8:11], v35, s[2:3] offset:64
+; GCN-HSA-NEXT:    global_load_dwordx4 v[12:15], v35, s[2:3] offset:80
+; GCN-HSA-NEXT:    global_load_dwordx4 v[16:19], v35, s[2:3] offset:32
+; GCN-HSA-NEXT:    global_load_dwordx4 v[20:23], v35, s[2:3] offset:48
+; GCN-HSA-NEXT:    global_load_dwordx4 v[24:27], v35, s[2:3]
+; GCN-HSA-NEXT:    global_load_dwordx4 v[28:31], v35, s[2:3] offset:16
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(7)
-; GCN-HSA-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:96
+; GCN-HSA-NEXT:    global_store_dwordx4 v35, v[0:3], s[0:1] offset:96
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(7)
-; GCN-HSA-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:112
+; GCN-HSA-NEXT:    global_store_dwordx4 v35, v[4:7], s[0:1] offset:112
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(7)
-; GCN-HSA-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:64
+; GCN-HSA-NEXT:    global_store_dwordx4 v35, v[8:11], s[0:1] offset:64
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(7)
-; GCN-HSA-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:80
+; GCN-HSA-NEXT:    global_store_dwordx4 v35, v[12:15], s[0:1] offset:80
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(7)
-; GCN-HSA-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:32
+; GCN-HSA-NEXT:    global_store_dwordx4 v35, v[16:19], s[0:1] offset:32
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(7)
-; GCN-HSA-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:48
+; GCN-HSA-NEXT:    global_store_dwordx4 v35, v[20:23], s[0:1] offset:48
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(7)
-; GCN-HSA-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1]
+; GCN-HSA-NEXT:    global_store_dwordx4 v35, v[24:27], s[0:1]
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(7)
-; GCN-HSA-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:16
+; GCN-HSA-NEXT:    global_store_dwordx4 v35, v[28:31], s[0:1] offset:16
 ; GCN-HSA-NEXT:    s_endpgm
   %ld = load <32 x i32>, ptr addrspace(1) %in
   store <32 x i32> %ld, ptr addrspace(1) %out

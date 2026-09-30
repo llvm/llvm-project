@@ -541,15 +541,15 @@ define <32 x bfloat> @v_load_global_v32bf16(ptr addrspace(1) %ptr) #0 {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v12, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v13, v1
-; GFX8-NEXT:    v_add_u32_e32 v16, vcc, 16, v12
-; GFX8-NEXT:    v_addc_u32_e32 v17, vcc, 0, v13, vcc
-; GFX8-NEXT:    v_add_u32_e32 v18, vcc, 32, v12
-; GFX8-NEXT:    v_addc_u32_e32 v19, vcc, 0, v13, vcc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 16, v12
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v13, vcc
+; GFX8-NEXT:    v_add_u32_e32 v8, vcc, 32, v12
+; GFX8-NEXT:    v_addc_u32_e32 v9, vcc, 0, v13, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[0:3], v[12:13]
-; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[16:17]
 ; GFX8-NEXT:    v_add_u32_e32 v12, vcc, 48, v12
 ; GFX8-NEXT:    v_addc_u32_e32 v13, vcc, 0, v13, vcc
-; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[18:19]
+; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
 ; GFX8-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -2210,10 +2210,10 @@ define void @test_load_store_v16bf16(ptr addrspace(1) %in, ptr addrspace(1) %out
 ; GFX8-LABEL: test_load_store_v16bf16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v12, vcc, 16, v0
-; GFX8-NEXT:    v_addc_u32_e32 v13, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v8, vcc, 16, v0
+; GFX8-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
-; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[12:13]
+; GFX8-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 16, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-NEXT:    s_waitcnt vmcnt(1)
@@ -13441,7 +13441,7 @@ define bfloat @v_fadd_bf16_fpimm_0(bfloat %arg0) #0 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, 1.0
+; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, 1.0 op_sel:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %add = fadd bfloat %arg0, 1.0
   ret bfloat %add

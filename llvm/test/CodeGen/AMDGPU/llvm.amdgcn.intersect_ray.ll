@@ -689,12 +689,12 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
 ; GFX1030-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX1030-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX1030-GISEL-NEXT:    flat_load_dword v0, v[0:1]
-; GFX1030-GISEL-NEXT:    flat_load_dword v11, v[2:3]
+; GFX1030-GISEL-NEXT:    flat_load_dword v1, v[2:3]
 ; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v3, 1.0
 ; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v4, 2.0
 ; GFX1030-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1030-GISEL-NEXT:    image_bvh_intersect_ray v[0:3], [v0, v11, v2, v3, v4, v5, v6, v7, v8, v9, v10], s[4:7]
+; GFX1030-GISEL-NEXT:    image_bvh_intersect_ray v[0:3], v[0:10], s[4:7]
 ; GFX1030-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1030-GISEL-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; GFX1030-GISEL-NEXT:    s_endpgm
@@ -939,12 +939,12 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_
 ; GFX1030-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX1030-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX1030-GISEL-NEXT:    flat_load_dword v0, v[0:1]
-; GFX1030-GISEL-NEXT:    flat_load_dword v8, v[2:3]
+; GFX1030-GISEL-NEXT:    flat_load_dword v1, v[2:3]
 ; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v3, 1.0
 ; GFX1030-GISEL-NEXT:    v_mov_b32_e32 v4, 2.0
 ; GFX1030-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1030-GISEL-NEXT:    image_bvh_intersect_ray v[0:3], [v0, v8, v2, v3, v4, v5, v6, v7], s[4:7] a16
+; GFX1030-GISEL-NEXT:    image_bvh_intersect_ray v[0:3], v[0:7], s[4:7] a16
 ; GFX1030-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1030-GISEL-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; GFX1030-GISEL-NEXT:    s_endpgm

@@ -435,9 +435,9 @@ define amdgpu_kernel void @v_insertelement_v4f16_dynamic_vgpr(ptr addrspace(1) %
 ; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    buffer_load_b32 v3, off, s[4:7], 0 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v2
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_b64 v[0:1], v4, s[2:3]
+; GFX11-NEXT:    global_load_b64 v[0:1], v0, s[2:3]
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 4, v3
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -899,11 +899,11 @@ define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1)
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v9, 5, v8
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 5, v8
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v9, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_b128 v[4:7], v9, s[2:3] offset:16
+; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v4, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_b128 v[4:7], v4, s[2:3] offset:16
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 1
 ; GFX11-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11-TRUE16-NEXT:    s_cmp_eq_u32 s4, 2
@@ -969,11 +969,11 @@ define amdgpu_kernel void @v_extractelement_v16f16_dynamic_sgpr(ptr addrspace(1)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v8, 0x3ff, v0
 ; GFX11-FAKE16-NEXT:    s_load_b32 s4, s[4:5], 0x34
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v9, 5, v8
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v4, 5, v8
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_clause 0x1
-; GFX11-FAKE16-NEXT:    global_load_b128 v[0:3], v9, s[2:3]
-; GFX11-FAKE16-NEXT:    global_load_b128 v[4:7], v9, s[2:3] offset:16
+; GFX11-FAKE16-NEXT:    global_load_b128 v[0:3], v4, s[2:3]
+; GFX11-FAKE16-NEXT:    global_load_b128 v[4:7], v4, s[2:3] offset:16
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 1
 ; GFX11-FAKE16-NEXT:    s_cselect_b32 vcc_lo, -1, 0
 ; GFX11-FAKE16-NEXT:    s_cmp_eq_u32 s4, 2

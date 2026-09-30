@@ -492,10 +492,10 @@ define amdgpu_kernel void @mul_v8i16(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; NOSDWA-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
 ; NOSDWA-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; NOSDWA-NEXT:    v_mov_b32_e32 v3, s5
-; NOSDWA-NEXT:    v_add_u32_e32 v8, vcc, s4, v2
-; NOSDWA-NEXT:    v_addc_u32_e32 v9, vcc, 0, v3, vcc
+; NOSDWA-NEXT:    v_add_u32_e32 v4, vcc, s4, v2
+; NOSDWA-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; NOSDWA-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
-; NOSDWA-NEXT:    flat_load_dwordx4 v[4:7], v[8:9]
+; NOSDWA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; NOSDWA-NEXT:    v_mov_b32_e32 v8, s0
 ; NOSDWA-NEXT:    v_mov_b32_e32 v9, s1
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(0)
@@ -536,10 +536,10 @@ define amdgpu_kernel void @mul_v8i16(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; GFX89-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
 ; GFX89-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX89-NEXT:    v_mov_b32_e32 v3, s5
-; GFX89-NEXT:    v_add_u32_e32 v8, vcc, s4, v2
-; GFX89-NEXT:    v_addc_u32_e32 v9, vcc, 0, v3, vcc
+; GFX89-NEXT:    v_add_u32_e32 v4, vcc, s4, v2
+; GFX89-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX89-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
-; GFX89-NEXT:    flat_load_dwordx4 v[4:7], v[8:9]
+; GFX89-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; GFX89-NEXT:    v_mov_b32_e32 v8, s0
 ; GFX89-NEXT:    v_mov_b32_e32 v9, s1
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
