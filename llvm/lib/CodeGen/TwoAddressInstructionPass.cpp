@@ -220,6 +220,7 @@ public:
     AU.setPreservesCFG();
     AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -236,7 +237,8 @@ TwoAddressInstructionPass::run(MachineFunction &MF,
   LiveIntervals *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
 
   TwoAddressInstructionImpl Impl(MF, MFAM, LIS);
-  if (MF.getFunction().hasOptNone())
+  if (MF.getFunction().hasOptNone() ||
+      shouldSkipOptimizationForOptBisect(MF.getFunction()))
     Impl.setOptLevel(CodeGenOptLevel::None);
 
   MFPropsModifier _(*this, MF);
@@ -398,7 +400,8 @@ bool TwoAddressInstructionImpl::isPlainlyKilled(const MachineInstr *MI,
 
   SlotIndex useIdx = LIS->getInstructionIndex(*MI);
   LiveInterval::const_iterator I = LR.find(useIdx);
-  assert(I != LR.end() && "Reg must be live-in to use.");
+  if (I == LR.end())
+    return false;
   return !I->end.isBlock() && SlotIndex::isSameInstr(I->end, useIdx);
 }
 
@@ -1063,12 +1066,14 @@ bool TwoAddressInstructionImpl::rescheduleMIBelowKill(
   if (LIS) {
     // We have to move the copies (and any interleaved debug instructions)
     // first so that the MBB is still well-formed when calling handleMove().
-    for (MachineBasicBlock::iterator MBBI = AfterMI; MBBI != End;) {
-      auto CopyMI = MBBI++;
-      MBB->splice(InsertPos, MBB, CopyMI);
-      if (!CopyMI->isDebugOrPseudoInstr())
-        LIS->handleMove(*CopyMI);
-      InsertPos = CopyMI;
+    // Move them back to front, so a copy never ends up above its source def.
+    auto Copies = make_range(MachineBasicBlock::reverse_iterator(End),
+                             MachineBasicBlock::reverse_iterator(AfterMI));
+    for (MachineInstr &CopyMI : make_early_inc_range(Copies)) {
+      MBB->splice(InsertPos, MBB, &CopyMI);
+      if (!CopyMI.isDebugOrPseudoInstr())
+        LIS->handleMove(CopyMI);
+      InsertPos = &CopyMI;
     }
     End = std::next(MachineBasicBlock::iterator(MI));
   }
@@ -1526,6 +1531,14 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
             MachineBasicBlock::iterator Begin(NewMIs[0]);
             MachineBasicBlock::iterator End(NewMIs[1]);
             LIS->repairIntervalsInRange(MBB, Begin, End, OrigRegs);
+
+            // repairIntervalsInRange() does not update physregs; clear their
+            // ranges since the original instruction's defs (e.g. of EFLAGS)
+            // were replaced.
+            for (Register Reg : OrigRegs) {
+              if (Reg.isPhysical())
+                LIS->removeAllRegUnitsForPhysReg(Reg.asMCReg());
+            }
           }
 
           mi = NewMIs[1];
@@ -1665,7 +1678,7 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
       LastCopyIdx = LIS->InsertMachineInstrInMaps(*PrevMI).getRegSlot();
 
       SlotIndex endIdx =
-          LIS->getInstructionIndex(*MI).getRegSlot(IsEarlyClobber);
+          LIS->getInstructionIndex(*MI).getRegSlot(DstMO.isEarlyClobber());
       if (RegA.isVirtual()) {
         LiveInterval &LI = LIS->getInterval(RegA);
         VNInfo *VNI = LI.getNextValue(LastCopyIdx, LIS->getVNInfoAllocator());
@@ -1969,6 +1982,19 @@ bool TwoAddressInstructionImpl::run() {
         // From %reg = INSERT_SUBREG %reg, %subreg, subidx
         // To   %reg:subidx = COPY %subreg
         unsigned SubIdx = mi->getOperand(3).getImm();
+        Register Reg = mi->getOperand(0).getReg();
+        LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubIdx);
+        LiveInterval *LI = LIS ? &LIS->getInterval(Reg) : nullptr;
+
+        // The fixup below keeps or discards a subrange's value as a whole, so
+        // split the ones straddling SubIdx. This must precede narrowing the
+        // def, or refineSubRanges drops the value for the untouched lanes.
+        if (LI && LI->hasSubRanges()) {
+          LI->refineSubRanges(
+              LIS->getVNInfoAllocator(), LaneMask,
+              [](LiveInterval::SubRange &) {}, *LIS->getSlotIndexes(), *TRI);
+        }
+
         mi->removeOperand(3);
         assert(mi->getOperand(0).getSubReg() == 0 && "Unexpected subreg idx");
         mi->getOperand(0).setSubReg(SubIdx);
@@ -1978,16 +2004,12 @@ bool TwoAddressInstructionImpl::run() {
         LLVM_DEBUG(dbgs() << "\t\tconvert to:\t" << *mi);
 
         // Update LiveIntervals.
-        if (LIS) {
-          Register Reg = mi->getOperand(0).getReg();
-          LiveInterval &LI = LIS->getInterval(Reg);
-          if (LI.hasSubRanges()) {
+        if (LI) {
+          if (LI->hasSubRanges()) {
             // The COPY no longer defines subregs of %reg except for
             // %reg.subidx.
-            LaneBitmask LaneMask =
-                TRI->getSubRegIndexLaneMask(mi->getOperand(0).getSubReg());
             SlotIndex Idx = LIS->getInstructionIndex(*mi).getRegSlot();
-            for (auto &S : LI.subranges()) {
+            for (auto &S : LI->subranges()) {
               if ((S.LaneMask & LaneMask).none()) {
                 LiveRange::iterator DefSeg = S.FindSegmentContaining(Idx);
                 if (mi->getOperand(0).isUndef()) {
@@ -2000,7 +2022,7 @@ bool TwoAddressInstructionImpl::run() {
             }
 
             // The COPY no longer has a use of %reg.
-            LIS->shrinkToUses(&LI);
+            LIS->shrinkToUses(LI);
           } else {
             // The live interval for Reg did not have subranges but now it needs
             // them because we have introduced a subreg def. Recompute it.

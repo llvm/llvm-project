@@ -41,6 +41,7 @@
 #include <__memory/swap_allocator.h>
 #include <__memory/temp_value.h>
 #include <__memory/uninitialized_algorithms.h>
+#include <__numeric/saturation_arithmetic.h>
 #include <__ranges/access.h>
 #include <__ranges/as_rvalue_view.h>
 #include <__ranges/concepts.h>
@@ -60,12 +61,14 @@
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/remove_const_ref.h>
 #include <__type_traits/type_identity.h>
+#include <__utility/assume.h>
 #include <__utility/declval.h>
 #include <__utility/exception_guard.h>
 #include <__utility/forward.h>
 #include <__utility/is_pointer_in_range.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
+#include <__utility/scope_guard.h>
 #include <__utility/swap.h>
 #include <initializer_list>
 #include <limits>
@@ -882,9 +885,9 @@ vector<_Tp, _Allocator>::__recommend(size_type __new_size) const {
   if (__new_size > __ms)
     this->__throw_length_error();
   const size_type __cap = capacity();
-  if (__cap >= __ms / 2)
-    return __ms;
-  return std::max<size_type>(2 * __cap, __new_size);
+  std::__assume(__cap <= __ms);
+  auto __doubled = std::__saturating_add(__cap, __cap);
+  return std::min(std::max(__new_size, __doubled), __ms);
 }
 
 //  Default constructs __n objects starting at __layout_.__end_ptr()
@@ -1059,13 +1062,26 @@ vector<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
         __self.__emplace_back_assume_capacity(std::forward<_Args>(__largs)...);
       },
       [](vector& __self, _Args&&... __largs) static {
-        _SplitBuffer __v(__self.__recommend(__self.size() + 1), __self.size(), __self.__layout_.__alloc());
-        //    __v.emplace_back(std::forward<_Args>(__args)...);
-        pointer __end = __v.end();
-        __alloc_traits::construct(
-            __self.__layout_.__alloc(), std::__to_address(__end), std::forward<_Args>(__largs)...);
-        __v.__set_sentinel(++__end);
-        __self.__layout_.__relocate(__v);
+        __self.__annotate_delete();
+        auto __asan_guard  = std::__make_scope_guard([&] { __self.__annotate_new(__self.size()); });
+        auto& __alloc      = __self.__layout_.__alloc();
+        auto __size        = __self.size();
+        auto __allocation  = std::__allocate_at_least(__alloc, __self.__recommend(__size + 1));
+        auto __alloc_guard = std::__make_exception_guard([&] {
+          __alloc_traits::deallocate(__alloc, __allocation.ptr, __allocation.count);
+        });
+        auto __ptr         = std::__to_address(__allocation.ptr);
+        auto __old_begin   = __self.__layout_.__begin_ptr();
+        __alloc_traits::construct(__alloc, __ptr + __size, std::forward<_Args>(__largs)...);
+        auto __guard = std::__make_exception_guard([&] { __alloc_traits::destroy(__alloc, __ptr + __size); });
+        std::__uninitialized_allocator_relocate(
+            __alloc, std::__to_address(__old_begin), std::__to_address(__self.__layout_.__end_ptr()), __ptr);
+        __guard.__complete();
+        auto __old_cap = __self.capacity();
+        __self.__layout_.__set_layout(__allocation.ptr, __size + 1, __allocation.count);
+        __alloc_guard.__complete();
+        if ((__is_std_allocator_v<allocator_type> && !__libcpp_is_constant_evaluated()) || __old_begin)
+          __alloc_traits::deallocate(__alloc, __old_begin, __old_cap);
       },
       *this,
       std::forward<_Args>(__args)...);

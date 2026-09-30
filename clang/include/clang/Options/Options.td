@@ -2121,12 +2121,11 @@ defm debug_run_lifetime_safety : BoolFOption<
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option], " lifetime safety analysis for C++. Warnings are still controlled by -Wlifetime-safety. Primarily used to surface crashes or compile-time regressions without showing analysis findings.">>;
 
-defm experimental_lifetime_safety_c : BoolFOption<
-    "experimental-lifetime-safety-c",
-    LangOpts<"EnableLifetimeSafetyInC">, DefaultFalse,
-    PosFlag<SetTrue, [], [CC1Option], "Enable">,
-    NegFlag<SetFalse, [], [CC1Option], "Disable">,
-    BothFlags<[], [CC1Option], " experimental lifetime safety analysis for C">>;
+defm lifetime_safety_c : BoolFOption<
+    "lifetime-safety-c",
+    LangOpts<"EnableLifetimeSafetyInC">, DefaultTrue,
+    NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
+    PosFlag<SetTrue, [], [ClangOption], "Enable lifetime safety analysis for C">>;
 
 def lifetime_safety_max_cfg_blocks
     : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,
@@ -2661,6 +2660,18 @@ def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
     MetaVarName<"<pathname>">,
     HelpText<"Use memory profile for profile-guided memory optimization">,
     MarshallingInfoString<CodeGenOpts<"MemoryProfileUsePath">>;
+
+defm copyprof : BoolFOption<"copyprof",
+  CodeGenOpts<"CopyProf">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption], " copy profiling">>;
+def fcopyprof_static_size_threshold_EQ
+    : Joined<["-"], "fcopyprof-static-size-threshold=">,
+      Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+      MetaVarName<"<N>">,
+      HelpText<"Minimum C++ object size in bytes to enable CopyProf instrumentation (default: 16).">,
+      MarshallingInfoInt<CodeGenOpts<"CopyProfStaticSizeThreshold">, "16">;
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.
@@ -5089,10 +5100,10 @@ defm unique_basic_block_section_names : BoolFOption<"unique-basic-block-section-
   NegFlag<SetFalse>>;
 defm unique_internal_linkage_names : BoolFOption<"unique-internal-linkage-names",
   CodeGenOpts<"UniqueInternalLinkageNames">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Uniqueify Internal Linkage Symbol Names by appending"
             " the MD5 hash of the module path">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [ClangOption, CC1Option, FlangOption]>>;
 defm unique_section_names : BoolFOption<"unique-section-names",
   CodeGenOpts<"UniqueSectionNames">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
@@ -7410,6 +7421,8 @@ def mavx10_1 : Flag<["-"], "mavx10.1">, Group<m_x86_Features_Group>;
 def mno_avx10_1 : Flag<["-"], "mno-avx10.1">, Group<m_x86_Features_Group>;
 def mavx10_2 : Flag<["-"], "mavx10.2">, Group<m_x86_Features_Group>;
 def mno_avx10_2 : Flag<["-"], "mno-avx10.2">, Group<m_x86_Features_Group>;
+def mavx10v2aux : Flag<["-"], "mavx10v2aux">, Group<m_x86_Features_Group>;
+def mno_avx10v2aux : Flag<["-"], "mno-avx10v2aux">, Group<m_x86_Features_Group>;
 def mavx2 : Flag<["-"], "mavx2">, Group<m_x86_Features_Group>;
 def mno_avx2 : Flag<["-"], "mno-avx2">, Group<m_x86_Features_Group>;
 def mavx512f : Flag<["-"], "mavx512f">, Group<m_x86_Features_Group>;

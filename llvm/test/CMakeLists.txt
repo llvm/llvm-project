@@ -46,6 +46,14 @@ llvm_canonicalize_cmake_booleans(
   LLVM_HAVE_OPENCSD
   )
 
+# libCASPluginTest is placed next to the CASTests executable, see
+# unittests/CAS/CMakeLists.txt.
+if (TARGET CASPluginTest)
+  set_llvm_build_mode()
+  set(LLVM_CAS_PLUGIN_TEST_PATH
+    "${LLVM_BINARY_DIR}/unittests/CAS/${LLVM_BUILD_MODE}/${CMAKE_SHARED_LIBRARY_PREFIX}CASPluginTest${LLVM_PLUGIN_EXT}")
+endif()
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
@@ -202,6 +210,14 @@ endif ()
 if (TARGET llvm-calc-occupancy)
   list(APPEND LLVM_TEST_DEPENDS llvm-calc-occupancy)
 endif ()
+
+if (TARGET CGTestPlugin)
+  list(APPEND LLVM_TEST_DEPENDS CGTestPlugin)
+endif()
+
+if (TARGET CASPluginTest)
+  list(APPEND LLVM_TEST_DEPENDS CASPluginTest)
+endif()
 
 if(LLVM_INCLUDE_EXAMPLES)
   list(APPEND LLVM_TEST_DEPENDS
