@@ -1811,6 +1811,21 @@ def read_file_from_process_wd(test, name):
     return read_file_on_target(test, path)
 
 
+def create_file_on_target(test, remote):
+    """Create an empty file at remote, a path on the target."""
+    if lldb.remote_platform:
+        local = test.getBuildArtifact("file_to_target")
+        open(local, "w").close()
+        error = lldb.remote_platform.Put(
+            lldb.SBFileSpec(local, True), lldb.SBFileSpec(remote, False)
+        )
+        test.assertTrue(
+            error.Success(), "Creating file {0} failed: {1}".format(remote, error)
+        )
+    else:
+        open(remote, "w").close()
+
+
 def wait_for_file_on_target(testcase, file_path: str):
     timeout_seconds = 600 if "ASAN_OPTIONS" in os.environ else 120
     sleep_interval_seconds = 0.5
