@@ -2020,7 +2020,7 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
   MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
 
   const DILocation *DL = MI->getDebugLoc().get();
-  if (!DL) {
+  if (!DL || DL->getLine() == 0) {
     // No location for the current instruction
     if (LastLineMI) {
       // Close the current DebugLine region.
@@ -2384,6 +2384,8 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   });
 
   for (const DILocation *DL : UniqueDebugLocations) {
+    if (DL->getLine() == 0)
+      continue;
     emitOpConstantI32(DL->getLine(), I32TypeReg, MAI);
     emitOpConstantI32(DL->getColumn(), I32TypeReg, MAI);
     emitOpConstantI32(DL->getColumn() + 1, I32TypeReg, MAI);

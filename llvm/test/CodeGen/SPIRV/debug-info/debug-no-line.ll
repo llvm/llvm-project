@@ -36,6 +36,18 @@
 ; CHECK-NEXT: OpReturnValue [[T1]]
 ; CHECK-NEXT: OpFunctionEnd
 
+; CHECK:      OpFunction
+; CHECK-NEXT: OpFunctionParameter
+; CHECK-NEXT: OpFunctionParameter
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V3]] [[V3]] [[V10]] [[V11]]
+; CHECK-NEXT: [[U0:%[0-9]+]] = OpIAdd [[I32]]
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugNoLine
+; CHECK-NEXT: OpReturnValue [[U0]]
+; CHECK-NEXT: OpFunctionEnd
+
 target triple = "spirv64-unknown-unknown"
 
 define spir_func i32 @maybe_line(i32 %a, i32 %b) !dbg !5 {
@@ -43,6 +55,12 @@ entry:
   %t0 = add i32 %a, %b, !dbg !8   ; line 3, col 10
   %t1 = mul i32 %t0, %a           ; no debug location
   ret i32 %t1, !dbg !10           ; line 5, col 3
+}
+
+define spir_func i32 @line_zero(i32 %a, i32 %b) !dbg !11 {
+entry:
+  %u0 = add i32 %a, %b, !dbg !12   ; line 3, col 10
+  ret i32 %u0, !dbg !13           ; line 0
 }
 
 !llvm.dbg.cu = !{!0}
@@ -60,3 +78,7 @@ entry:
 !5 = distinct !DISubprogram(name: "maybe_line", linkageName: "maybe_line", scope: !1, file: !1, line: 1, type: !4, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
 !8 = !DILocation(line: 3, column: 10, scope: !5)
 !10 = !DILocation(line: 5, column: 3, scope: !5)
+
+!11 = distinct !DISubprogram(name: "line_zero", linkageName: "line_zero", scope: !1, file: !1, line: 7, type: !4, scopeLine: 7, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
+!12 = !DILocation(line: 3, column: 10, scope: !11)
+!13 = !DILocation(line: 0, column: 0, scope: !11)
