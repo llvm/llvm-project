@@ -1476,7 +1476,7 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_pmulh_i16x2:
     case RISCV::BI__builtin_riscv_pmulh_i16x4:
     case RISCV::BI__builtin_riscv_pmulh_i32x2:
-      ID = Intrinsic::riscv_pmulh;
+      ID = Intrinsic::smulh;
       break;
     case RISCV::BI__builtin_riscv_pmulhr_i16x2:
     case RISCV::BI__builtin_riscv_pmulhr_i16x4:
@@ -1486,7 +1486,7 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_pmulhu_u16x2:
     case RISCV::BI__builtin_riscv_pmulhu_u16x4:
     case RISCV::BI__builtin_riscv_pmulhu_u32x2:
-      ID = Intrinsic::riscv_pmulhu;
+      ID = Intrinsic::umulh;
       break;
     case RISCV::BI__builtin_riscv_pmulhru_u16x2:
     case RISCV::BI__builtin_riscv_pmulhru_u16x4:
