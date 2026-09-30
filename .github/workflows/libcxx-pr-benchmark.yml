@@ -74,7 +74,7 @@ jobs:
             // Benchmark the configurations defined in machines.json that opt into PR benchmarking.
             const config = JSON.parse(require('fs').readFileSync('libcxx/utils/ci/lnt/machines.json', 'utf8'));
             const selected = config.filter(cfg => cfg['pr-benchmarks']);
-            core.setOutput('matrix', JSON.stringify(selected.map(({coverage, 'pr-benchmarks': _, ...machine}) => machine)));
+            core.setOutput('matrix', JSON.stringify(selected.map(({coverage, ...machine}) => machine)));
 
       - name: Update comment with link to the run
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
