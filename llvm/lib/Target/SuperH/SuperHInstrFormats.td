@@ -320,7 +320,7 @@ class InstFVn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> patte
   
   // Opcode
   let Opcode = opcode;
-  let Inst{15-8} = Opcode{15-8};
+  let Inst{15-11} = Opcode{15-11};
   let Inst{10-0} = Opcode{10-0};
 
   // Operands
@@ -337,7 +337,7 @@ class InstFVmFVn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pa
   
   // Opcode
   let Opcode = opcode;
-  let Inst{15-8} = Opcode{15-8};
+  let Inst{15-11} = Opcode{15-11};
   let Inst{7-0} = Opcode{7-0};
 
   // Operands
@@ -345,4 +345,21 @@ class InstFVmFVn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pa
   bits<2> Rn;
   let Inst{11-10} = Rn{1-0};
   let Inst{9-8} = Rm{1-0};
+}
+
+//===----------------------------------------------------------------------===//
+// FP -> Register Instruction
+// <opop|rnr|opopopopo>
+//===----------------------------------------------------------------------===//
+class InstDRn<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pattern = []> 
+    : SHInst16<outs, ins, asmstr, pattern> {
+  
+  // Opcode
+  let Opcode = opcode;
+  let Inst{15-11} = Opcode{15-11};
+  let Inst{9-0} = Opcode{9-0};
+
+  // Operands
+  bits<3> Rn;
+  let Inst{11-9} = Rn;
 }
