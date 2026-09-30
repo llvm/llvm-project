@@ -736,13 +736,14 @@ void RuntimePointerChecking::groupChecks(
 
   unsigned TotalComparisons = 0;
 
-  DenseMap<Value *, SmallVector<unsigned>> PointerToIndices;
-  for (unsigned I = 0; I < Pointers.size(); ++I)
-    PointerToIndices[Pointers[I].PointerValue].push_back(I);
+  DenseMap<MemoryDepChecker::MemAccessInfo, SmallVector<unsigned>> PositionMap;
+  for (unsigned Index = 0; Index < Pointers.size(); ++Index)
+    PositionMap[{Pointers[Index].PointerValue, Pointers[Index].IsWritePtr}]
+        .push_back(Index);
 
   // We need to keep track of what pointers we've already seen so we
   // don't process them twice.
-  SmallSet<unsigned, 2> SeenIndices;
+  SmallSet<unsigned, 2> Seen;
 
   // Go through all equivalence classes, get the "pointer check groups"
   // and add them to the overall solution. We use the order in which accesses
@@ -750,7 +751,7 @@ void RuntimePointerChecking::groupChecks(
   for (unsigned I = 0; I < Pointers.size(); ++I) {
     // We've seen this pointer before, and therefore already processed
     // its equivalence class.
-    if (SeenIndices.contains(I))
+    if (Seen.contains(I))
       continue;
 
     MemoryDepChecker::MemAccessInfo Access(Pointers[I].PointerValue,
@@ -771,12 +772,8 @@ void RuntimePointerChecking::groupChecks(
     // the order in which unions and insertions are performed on the
     // equivalence class, the iteration order is deterministic.
     for (auto M : DepCands.members(Access)) {
-      Value *Pointer = M.getPointer();
-      for (unsigned PointerIndex : PointerToIndices.lookup(Pointer)) {
-        // A read-modify-write access appears in DepCands in both access modes.
-        if (!SeenIndices.insert(PointerIndex).second)
-          continue;
-
+      for (unsigned Pointer : PositionMap.lookup(M)) {
+        assert(Seen.insert(Pointer).second && "pointer already processed");
         bool Merged = false;
 
         // Go through all the existing sets and see if we can find one
@@ -791,7 +788,7 @@ void RuntimePointerChecking::groupChecks(
 
           TotalComparisons++;
 
-          if (Group.addPointer(PointerIndex, *this)) {
+          if (Group.addPointer(Pointer, *this)) {
             Merged = true;
             break;
           }
@@ -801,7 +798,7 @@ void RuntimePointerChecking::groupChecks(
           // We couldn't add this pointer to any existing set or the threshold
           // for the number of comparisons has been reached. Create a new group
           // to hold the current pointer.
-          Groups.emplace_back(PointerIndex, *this);
+          Groups.emplace_back(Pointer, *this);
       }
     }
 
