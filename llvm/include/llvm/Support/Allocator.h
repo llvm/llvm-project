@@ -43,9 +43,9 @@ LLVM_ABI void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t TotalMemory);
 } // end namespace detail
 
 struct SlabCheckPoint {
-  unsigned ActiveSlabIdx;
-  char *CurPtr;
-  uintptr_t EndSentinel;
+  unsigned SlabIdx;
+  const char *CurPtr;
+  unsigned CustomSlabCount;
 };
 
 /// Allocate memory in an ever growing pool, as if by bump-pointer.
@@ -216,16 +216,8 @@ public:
       return AlignedPtr;
     }
 
-    if (!Slabs.empty() && Slabs.size() > 1 &&
-        (ActiveSlabIdx < Slabs.size() - 1)) {
-      ActiveSlabIdx++;
-      void *NewSlab = Slabs[ActiveSlabIdx];
-      size_t AllocatedSlabSize = computeSlabSize(ActiveSlabIdx);
-      CurPtr = (char *)(NewSlab);
-      EndSentinel = uintptr_t(NewSlab) + AllocatedSlabSize + 1;
-    } else
-      // Otherwise, start a new slab and try again.
-      StartNewSlab();
+    // Otherwise, start a new slab and try again.
+    StartNewSlab();
     uintptr_t AlignedAddr = alignAddr(CurPtr, Alignment);
     assert(AlignedAddr + SizeToAllocate < EndSentinel &&
            "Unable to allocate memory!");
@@ -257,62 +249,44 @@ public:
 
   size_t GetNumSlabs() const { return Slabs.size() + CustomSizedSlabs.size(); }
 
-  SlabCheckPoint checkPoint() const {
-    return {ActiveSlabIdx, CurPtr, EndSentinel};
-  }
-
-  static void poisonMemory(void *Ptr, size_t Size) {
-#if LLVM_ADDRESS_SANITIZER_BUILD
-    __asan_poison_memory_region(Ptr, Size);
-#else
-    // In non-ASAN builds, overwrite with a known poison pattern
-    // so use-after-rewind crashes deterministically in debug builds
-// #ifndef NDEBUG
-    memset(Ptr, 0xCD, Size); // 0xCD = classic "dead memory" pattern
-// #endif
-#endif
+  SlabCheckPoint CheckPoint() const {
+    return {static_cast<unsigned int>(Slabs.empty() ? 0u : (Slabs.size() - 1)),
+            CurPtr, static_cast<unsigned int>(CustomSizedSlabs.size())};
   }
 
   bool isAfterCheckpoint(const void *Ptr, const SlabCheckPoint &CP) const {
     const char *P = static_cast<const char *>(Ptr);
 
-    // Check active slab — past the checkpoint CurPtr
-    if (CP.ActiveSlabIdx < Slabs.size()) {
-      const char *Start = static_cast<const char *>(Slabs[CP.ActiveSlabIdx]);
-      if (P >= CP.CurPtr && P < (Start + computeSlabSize(CP.ActiveSlabIdx)))
-        return true;
+    // Regular (shared, bump-allocated) slabs.
+    if (!CP.CurPtr) {
+      // Checkpoint predates this allocator's first regular slab -- every
+      // regular slab that exists now was allocated after it.
+      for (unsigned I = 0; I < Slabs.size(); ++I) {
+        const char *Start = static_cast<const char *>(Slabs[I]);
+        if (P >= Start && P < Start + computeSlabSize(I))
+          return true;
+      }
+    } else {
+      if (CP.SlabIdx < Slabs.size()) {
+        const char *Start = static_cast<const char *>(Slabs[CP.SlabIdx]);
+        if (P >= CP.CurPtr && P < Start + computeSlabSize(CP.SlabIdx))
+          return true;
+      }
+      for (unsigned I = CP.SlabIdx + 1; I < Slabs.size(); ++I) {
+        const char *Start = static_cast<const char *>(Slabs[I]);
+        if (P >= Start && P < (Start + computeSlabSize(I)))
+          return true;
+      }
     }
 
-    // Check slabs allocated entirely after checkpoint
-    for (unsigned I = CP.ActiveSlabIdx + 1; I < Slabs.size(); ++I) {
-      const char *Start = static_cast<const char *>(Slabs[I]);
-      const char *End = Start + computeSlabSize(I);
-      if (P >= Start && P < End)
+    for (unsigned I = CP.CustomSlabCount; I < CustomSizedSlabs.size(); ++I) {
+      const char *Start = static_cast<const char *>(CustomSizedSlabs[I].first);
+      size_t Size = CustomSizedSlabs[I].second;
+      if (P >= Start && P < Start + Size)
         return true;
     }
 
     return false;
-  }
-
-  void restoreToCheckPoint(SlabCheckPoint CP) {
-    assert(CP.ActiveSlabIdx >= 0 && CP.ActiveSlabIdx < Slabs.size());
-    assert(CP.CurPtr >= (const char *)Slabs[CP.ActiveSlabIdx] &&
-           CP.EndSentinel == uintptr_t(Slabs[CP.ActiveSlabIdx]) +
-                      computeSlabSize(CP.ActiveSlabIdx) + 1);
-    ActiveSlabIdx = CP.ActiveSlabIdx;
-    CurPtr = CP.CurPtr;
-    EndSentinel = CP.EndSentinel;
-
-    uintptr_t EndRange =
-        uintptr_t(Slabs[CP.ActiveSlabIdx]) + computeSlabSize(CP.ActiveSlabIdx);
-
-    llvm::outs() << "Poisoned range = [" << (void *)CurPtr << ", " << (void *)(EndSentinel - 1) << "]\n";
-    llvm::outs() << "Poisoned End Size = [" << (void *)CurPtr << ", " << (void *)(CurPtr + ((EndSentinel - 1) - (uintptr_t)CurPtr)) << "]\n";
-    llvm::outs().flush();
-    poisonMemory((void *)CurPtr, (size_t)(EndRange - uintptr_t(CurPtr)));
-    for (unsigned I = ActiveSlabIdx + 1; I < Slabs.size(); ++I)
-      // Should we deallocate any extra slabs?
-      poisonMemory(Slabs[I], computeSlabSize(I));
   }
 
   /// \return An index uniquely and reproducibly identifying
@@ -398,8 +372,6 @@ private:
   /// path condition also rejects a empty allocator with a 0-size allocation.
   uintptr_t EndSentinel = 0;
 
-  unsigned ActiveSlabIdx = 0;
-
   /// The slabs allocated so far.
   SmallVector<void *, 4> Slabs;
 
@@ -424,8 +396,7 @@ private:
   /// Allocate a new slab and move the bump pointers over into the new
   /// slab, modifying CurPtr and EndSentinel.
   void StartNewSlab() {
-    ActiveSlabIdx = Slabs.size();
-    size_t AllocatedSlabSize = computeSlabSize(ActiveSlabIdx);
+    size_t AllocatedSlabSize = computeSlabSize(Slabs.size());
 
     void *NewSlab = this->getAllocator().Allocate(AllocatedSlabSize,
                                                   alignof(std::max_align_t));

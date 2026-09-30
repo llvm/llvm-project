@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// This header provides the main error-recovery component for supporting
+// error recovery in clang-repl.
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,16 +29,8 @@ class Sema;
 /// Index of a per PTU State.
 using PTUID = unsigned;
 
-// A snapshot of the handful of DefinitionData bits/bitfields that can
-// change after a class (or class template specialization -- the two are
-// handled identically here since a specialization is non-dependent by the
-// time it's instantiated) is otherwise "done" being defined.
-//
-// These fields only move when the compiler generates implicit special
-// members.
-//
-// This footprint exists purely to undo the effects of implicit special
-// member generation.
+/// A snapshot of the DefinitionData bits and bitfields that can change
+/// after a class gets a special implicit member added.
 struct DefinitionDataFootprint {
 #define FIELD(Name, Width, Merge) unsigned Name : Width;
 #include "clang/AST/CXXRecordDeclDefinitionBits.def"
@@ -286,9 +280,7 @@ protected:
     FP.restore(Owner);
   }
 
-  static void restoreDefinitionAndRevertDC(CXXRecordDecl &RD);
-
-  static void revertDefinitionArrival(Decl &D);
+  static void revertDefinitionArrival(Decl *D);
 
   // True if Common could still be created later -- i.e. nobody has called
   // getCommonPtr() anywhere in this template's redecl chain yet.
@@ -314,10 +306,7 @@ protected:
   }
 
   // Specializations are appended in commit order, and rollback is strictly
-  // LIFO (only the most recently committed PTU is ever rolled back). So all
-  // specializations added by a given PTU form a trailing run at the back of
-  // the FoldingSetVector. Popping entries while the back entry belongs to
-  // this PTU is therefore sufficient.
+  // LIFO (only the most recently committed PTU is ever rolled back).
   static void removeSpecializations(PTUCheckpointLedger &Ledger,
                                     const RedeclarableTemplateDecl *TD,
                                     PTUID ID);
@@ -441,7 +430,7 @@ public:
 struct MutationRecord {
   enum class DeclShape : uint16_t {
     None = 0,
-    // Base shapes -- what the decl fundamentally IS. Exactly one is set.
+    // Base shapes -- what the decl fundamentally is. Exactly one is set.
     Class = 1 << 0,    // CXXRecordDecl/TagDecl: DefinitionData, TypeForDecl
     Function = 1 << 1, // FunctionDecl: exception spec, deduced return, body
     Var = 1 << 2,      // VarDecl: cached constant-eval result
@@ -538,14 +527,7 @@ struct PTUStateInfo {
 
   llvm::SmallPtrSet<const Decl *, 4> ImplicitDecls;
 
-  /// Set exactly when AddedCXXImplicitMember fires this PTU -- narrower
-  /// than ImplicitDecls above, which is a shared superset populated by
-  /// many unrelated listener paths too (template instantiation, etc.).
-  /// This is the one listener whose firing can leave a stale
-  /// Sema::SpecialMemberCache entry behind, so it's what
-  /// purgeStaleSpecialMemberCache actually needs to gate on -- gating on
-  /// ImplicitDecls instead would trigger that scan on almost every PTU,
-  /// defeating the point of the gate.
+  /// Set exactly when AddedCXXImplicitMember fires this PTU.
   bool HadImplicitCXXMember = false;
 
   /// here touched info mean other this belongs to other PTUs;
@@ -609,13 +591,23 @@ public:
     return It != Active.end() && (It->second & Flag);
   }
 
-  void settle(const Decl *D, uint32_t Flag) {
+  void untrack(const Decl *D, uint32_t Flag) {
     auto It = Active.find(D);
     if (It == Active.end())
       return;
     It->second &= ~Flag;
     if (!It->second)
       Active.erase(It);
+  }
+
+  // removes every Active entry whose decl matches Predicate.
+  template <typename PredicateFn> void untrackIf(PredicateFn Predicate) {
+    llvm::SmallVector<const Decl *, 8> Stale;
+    for (auto &Entry : Active)
+      if (Predicate(Entry.getFirst()))
+        Stale.push_back(Entry.getFirst());
+    for (const Decl *D : Stale)
+      Active.erase(D);
   }
 
   // Call at commit/restore time. OnConfirmed is invoked as
@@ -640,8 +632,7 @@ public:
 // - For the current PTU, collect newly added declarations that are
 //   modifiable/visible to other PTUs. Local-only declarations are not exposed.
 //
-// In short, this keeps the shared declaration state in sync across PTUs while
-// keeping declarations that are local to the current PTU private.
+// In short, this keeps the shared declaration state in sync across PTUs.
 class IncrementalStateTracker {
 private:
   ASTContext &Ctx;
@@ -666,10 +657,9 @@ public:
   IncrementalStateTracker(ASTContext &Ctx, Sema &S)
       : Ctx(Ctx), SemaRef(S), PTUSlabCheckpoints(Ctx) {}
 
-  // Writes a new value and records that this PTU touched (Owner, K), so
-  // undoLastEntries() knows what to remove if the PTU is rolled back
-  // without committing. mostRecent() doesn't need any bookkeeping, so it
-  // reads directly from Footprints via Tracker.Footprints.mostRecent<T>(...).
+  // Writes a new value to FootprintStore and records that this PTU touched
+  // (Owner, K), so undoLastEntries() knows what to remove if the PTU is rolled
+  // back without committing.
   template <typename T>
   void commitFootprint(const Decl *Owner, MutationType K, PTUID ID,
                        const T &Fresh) {
@@ -728,15 +718,18 @@ public:
         Reverter(Tracker.getPTUSlabCheckpoints()) {}
 
   template <typename DeclStatePolicyT>
-  void walkDecls(const DeclContext *DC, DeclStatePolicyT &Proxy);
+  void walkDecls(const DeclContext *DC, DeclStatePolicyT &Policy);
 
   uint32_t DeclNeedingTracking(DeclShape S, const Decl *D);
 
   uint32_t confirmMutation(const Decl *D, DeclShape S, uint32_t FlaggedKinds);
 
-  void registerLiveVerification(const Decl *D, uint32_t Kinds);
+  void trackForSweep(const Decl *D, uint32_t Kinds);
 
-  void settleIfClosed(const Decl *D, DeclShape S, uint32_t Confirmed);
+  void untrackIfClosed(const Decl *D, DeclShape S, uint32_t Confirmed);
+
+  void syncSweepTracking(const Decl *D, DeclShape S, uint32_t Kinds,
+                         bool IsNew);
 
 private:
   void commitMembers(PTUID ID, const DeclContext *Members);
@@ -783,10 +776,9 @@ public:
   void restore(TranslationUnitDecl *MostRecentTU);
 
 private:
-  // Sema::SpecialMemberCache, per (RD,
-  // kind+qualifiers), the CXXMethodDecl* a prior LookupSpecialMember()
-  // call resolved to, with no re-validation on a cache hit. remove every
-  // entry whose cached method belongs to the PTU being rolled back.
+  // Sema::SpecialMemberCache stores the CXXMethodDecl* resolved by a previous
+  // LookupSpecialMember() call for each (RD, kind+qualifiers). Remove entries
+  // whose cached method belongs to the PTU being rolled back.
   void restoreSpecialMemberCache(PTUID ID);
 };
 

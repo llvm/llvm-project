@@ -571,9 +571,7 @@ Interpreter::Parse(llvm::StringRef Code) {
   class PTURollbackGuard {
   public:
     explicit PTURollbackGuard(Sema &S)
-        : Ctx(S.getASTContext()),
-          CheckPoint(Ctx.getAllocator().checkPoint()) {
-          }
+        : Ctx(S.getASTContext()), CheckPoint(Ctx.getAllocator().CheckPoint()) {}
 
     ~PTURollbackGuard() {
       if (!Committed) {
