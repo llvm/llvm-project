@@ -19,11 +19,11 @@ set(LLVM_OPTIONAL_SOURCES
   ${PLUGIN_CAS_TEST_SOURCES}
   )
 
+add_subdirectory(CASPluginTest)
+
 if (NOT LLVM_ENABLE_ONDISK_CAS)
   unset(ONDISK_CAS_TEST_SOURCES)
 endif()
-
-add_subdirectory(CASPluginTest)
 
 if (NOT TARGET CASPluginTest)
   unset(PLUGIN_CAS_TEST_SOURCES)
@@ -50,12 +50,6 @@ target_link_libraries(CASTests PRIVATE LLVMTestingSupport)
 
 if (TARGET CASPluginTest)
   add_dependencies(CASTests CASPluginTest)
-  # Symlink the plugin library next to the test executable so getCASPluginPath()
-  # can locate it with a single parent_path regardless of the generator type.
-  add_custom_command(TARGET CASTests POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-            $<TARGET_FILE:CASPluginTest>
-            $<TARGET_FILE_DIR:CASTests>/$<TARGET_FILE_NAME:CASPluginTest>
-    VERBATIM
-  )
+  target_compile_definitions(CASTests PRIVATE
+    CAS_PLUGIN_PATH="$<TARGET_FILE:CASPluginTest>")
 endif()

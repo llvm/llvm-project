@@ -16,7 +16,6 @@
 #include "OnDiskCommonUtils.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/Config/config.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
@@ -33,18 +32,9 @@ using namespace llvm::unittest::cas;
 // fixed.
 #if !LLVM_HWADDRESS_SANITIZER_BUILD
 
-extern const char *TestMainArgv0;
-static std::string TestStringArg1("castest-string-arg1");
-
 /// \returns the path of the CASPluginTest dynamic library, which implements
 /// the CAS plugin API for testing purposes.
-static std::string getCASPluginPath() {
-  std::string Executable =
-      sys::fs::getMainExecutable(TestMainArgv0, &TestStringArg1);
-  llvm::SmallString<256> PathBuf(sys::path::parent_path(Executable));
-  sys::path::append(PathBuf, "CASPluginTest" LLVM_PLUGIN_EXT);
-  return std::string(PathBuf);
-}
+static std::string getCASPluginPath() { return CAS_PLUGIN_PATH; }
 
 static CASTestingEnv createPlugin(int I) {
   unittest::TempDir Temp("plugin-cas", /*Unique=*/true);
