@@ -7322,9 +7322,7 @@ AArch64InstructionSelector::selectShiftMask(MachineOperand &Root) const {
       ShAmtReg = ZExtSrcReg;
   }
 
-  // Remove redundant AND mask that exactly covers a narrow type (byte,
-  // halfword, word) and whose result type matches the shift width. This
-  // avoids removing intentional masks used in fshl/fshr computations.
+  // Remove AND if the mask covers at least the low log2(ShiftWidth) bits.
   APInt AndMask;
   Register AndSrcReg;
   if (mi_match(ShAmtReg, MRI, m_GAnd(m_Reg(AndSrcReg), m_ICst(AndMask))) &&
