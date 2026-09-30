@@ -15917,14 +15917,17 @@ private:
 
     const uint64_t DeclaredSizeInBits = Field->getBitWidthValue();
 
-    // Oversized bit-fields (declared width larger than the field type) keep
-    // only the type's width as the value container. The extra declared bits
-    // are padding and follow that container (Itanium C++ ABI §2.4, II.1(b)).
-    // We use getTypeSize instead of getIntWidth
-    // because getIntWidth may be narrower still (bool, _BitInt);
-    // those occupied bits are the low-order bits of the value container.
+    // Oversized bit-fields (declared width larger than the field type) occupy
+    // only the type's width. The extra declared bits are padding and follow
+    // the occupied bits (Itanium C++ ABI §2.4, II.1(b)).
+    // A bool bit-field occupies its whole declared width up to the size of
+    // bool, like GCC. _BitInt(N) occupies only its N value bits.
+    const QualType FieldTy = Field->getType();
     const uint64_t OccupiedSizeInBits =
-        std::min(DeclaredSizeInBits,Ctx.getTypeSize(Field->getType()));
+        std::min(DeclaredSizeInBits,
+                 FieldTy->isBooleanType()
+                     ? Ctx.getTypeSize(FieldTy)
+                     : static_cast<uint64_t>(Ctx.getIntWidth(FieldTy)));
 
     if (Ctx.getTargetInfo().isLittleEndian()) {
       OccuppiedIntervals.push_back(
@@ -15942,9 +15945,7 @@ private:
     // the partially occupied bytes in either end, if present, their bit
     // intervals need to be adjusted so that they count from the MSB instead.
     //
-    // Within the value container, occupied bits are its low-order bits, which
-    // are allocated last. Padding from an oversized declared width follows
-    // the container.
+    // Occupied bits are allocated first, and any padding follows them.
     const uint64_t Start = StartBitOffset;
     const uint64_t End = Start + OccupiedSizeInBits;
     const uint64_t CharWidth = Ctx.getCharWidth();
