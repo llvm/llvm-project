@@ -4630,6 +4630,37 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, Origin);
   }
 
+  // e.g., <4 x i32> @llvm.masked.udiv.v4i32(<4 x i32> %dividend,
+  //                                         <4 x i32> %divisor,
+  //                                         <4 x i1>  %mask)
+  //
+  // As handleIntegerDiv(), but per-lane: strict on the divisor and propagating
+  // the dividend, both only on the enabled lanes. Disabled lanes cannot cause
+  // undefined behaviour, and their result is poison.
+  void handleMaskedIntegerDivRem(IntrinsicInst &I) {
+    assert(I.arg_size() == 3);
+    IRBuilder<> IRB(&I);
+    Value *Dividend = I.getArgOperand(0);
+    Value *Divisor = I.getArgOperand(1);
+    Value *Mask = I.getArgOperand(2);
+
+    insertCheckShadowOf(Mask, &I);
+
+    Value *MaskedDivisorShadow = IRB.CreateSelect(
+        Mask, getShadow(Divisor), getCleanShadow(Divisor), "_msmaskeddivisor");
+    insertCheckShadow(MaskedDivisorShadow, getOrigin(Divisor), &I);
+
+    if (!PropagateShadow) {
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      return;
+    }
+
+    setShadow(&I, IRB.CreateSelect(Mask, getShadow(Dividend),
+                                   getPoisonedShadow(&I), "_msmaskeddiv"));
+    setOrigin(&I, getOrigin(Dividend));
+  }
+
   // e.g., void @llvm.x86.avx.maskstore.ps.256(ptr, <8 x i32>, <8 x float>)
   //                                           dst  mask       src
   //
@@ -5909,7 +5940,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleLifetimeStart(I);
       break;
     case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group:
       handleInvariantGroup(I);
       break;
     case Intrinsic::bswap:
@@ -5936,6 +5966,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     case Intrinsic::masked_load:
       handleMaskedLoad(I);
+      break;
+    case Intrinsic::masked_udiv:
+    case Intrinsic::masked_sdiv:
+    case Intrinsic::masked_urem:
+    case Intrinsic::masked_srem:
+      handleMaskedIntegerDivRem(I);
       break;
     case Intrinsic::vector_reduce_and:
       handleVectorReduceAndIntrinsic(I);

@@ -511,10 +511,14 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(MachineInstr *MI, unsigned UseOpNo,
   int OpNo = MI->getOperandNo(&Old);
   uint8_t OpType = TII->get(Opcode).operands()[OpNo].OperandType;
 
+  bool BF16FromUpperFP32 = ST->hasBF16InlineConstFromUpperFP32() &&
+                           (OpType == AMDGPU::OPERAND_REG_IMM_V2BF16 ||
+                            OpType == AMDGPU::OPERAND_REG_INLINE_C_V2BF16);
+
   // If the literal can be inlined as-is, apply it and short-circuit the
   // tests below. The main motivation for this is to avoid unintuitive
   // uses of opsel.
-  if (AMDGPU::isInlinableLiteralV216(ImmVal, OpType)) {
+  if (!BF16FromUpperFP32 && AMDGPU::isInlinableLiteralV216(ImmVal, OpType)) {
     Old.ChangeToImmediate(ImmVal);
     return true;
   }
@@ -548,7 +552,7 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(MachineInstr *MI, unsigned UseOpNo,
   // Helper function that attempts to inline the given value with a newly
   // chosen opsel pattern.
   auto tryFoldToInline = [&](uint32_t Imm) -> bool {
-    if (AMDGPU::isInlinableLiteralV216(Imm, OpType)) {
+    if (!BF16FromUpperFP32 && AMDGPU::isInlinableLiteralV216(Imm, OpType)) {
       Mod.setImm(NewModVal | SISrcMods::OP_SEL_1);
       Old.ChangeToImmediate(Imm);
       return true;
@@ -563,16 +567,14 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(MachineInstr *MI, unsigned UseOpNo,
         // If the target has feature 'BF16InlineConstFromUpperFP32', packed BF16
         // instructions using inline constant must use OPSEL to select the upper
         // 16-bits from FP32.
-        if (ST->hasBF16InlineConstFromUpperFP32() &&
-            (OpType == AMDGPU::OPERAND_REG_INLINE_C_V2BF16 ||
-             OpType == AMDGPU::OPERAND_REG_IMM_V2BF16))
+        if (BF16FromUpperFP32)
           NewModVal |= (SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1);
         Mod.setImm(NewModVal);
         Old.ChangeToImmediate(Lo);
         return true;
       }
 
-      if (static_cast<int16_t>(Lo) < 0) {
+      if (!BF16FromUpperFP32 && static_cast<int16_t>(Lo) < 0) {
         int32_t SExt = static_cast<int16_t>(Lo);
         if (AMDGPU::isInlinableLiteralV216(SExt, OpType)) {
           Mod.setImm(NewModVal);
@@ -591,7 +593,8 @@ bool SIFoldOperandsImpl::tryFoldImmWithOpSel(MachineInstr *MI, unsigned UseOpNo,
       }
     } else {
       uint32_t Swapped = (static_cast<uint32_t>(Lo) << 16) | Hi;
-      if (AMDGPU::isInlinableLiteralV216(Swapped, OpType)) {
+      if (!BF16FromUpperFP32 &&
+          AMDGPU::isInlinableLiteralV216(Swapped, OpType)) {
         Mod.setImm(NewModVal | SISrcMods::OP_SEL_0);
         Old.ChangeToImmediate(Swapped);
         return true;
@@ -653,6 +656,7 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
     int OpNo = MI->getOperandNo(&Old);
     if (!TII->isOperandLegal(*MI, OpNo, &New))
       return false;
+
     Old.ChangeToImmediate(*ImmVal);
     return true;
   }
@@ -681,6 +685,10 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
       BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::COPY),
               Dst1.getReg())
         .addReg(AMDGPU::VCC, RegState::Kill);
+    } else {
+      // We only reach here when the carry-out vcc is dead so propagate the dead
+      // flag.
+      Inst32->getOperand(3).setIsDead();
     }
 
     // Keep the old instruction around to avoid breaking iterators, but
@@ -919,6 +927,20 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
     if (Opc == AMDGPU::S_FMAC_F32 && OpNo == 3) {
       if (tryToFoldAsFMAAKorMK())
         return true;
+    }
+
+    // Inlineable constant might have been folded into Imm operand of fmaak or
+    // fmamk and we are trying to fold a non-inlinable constant.
+    if ((Opc == AMDGPU::S_FMAAK_F32 || Opc == AMDGPU::S_FMAMK_F32) &&
+        OpToFold.isImm()) {
+      std::optional<int64_t> ImmVal = OpToFold.getEffectiveImmVal();
+      if (ImmVal && !TII->isInlineConstant(*MI, OpNo, *ImmVal)) {
+        unsigned ImmIdx = Opc == AMDGPU::S_FMAAK_F32 ? 3 : 2;
+        MachineOperand &OpImm = MI->getOperand(ImmIdx);
+        if (!OpImm.isReg() &&
+            TII->isInlineConstant(*MI, MI->getOperand(OpNo), OpImm))
+          return tryToFoldAsFMAAKorMK();
+      }
     }
 
     // Special case for s_setreg_b32
@@ -1497,34 +1519,15 @@ bool SIFoldOperandsImpl::foldOperand(
       // Hack to allow 32-bit SGPRs to be folded into True16 instructions
       // Remove this if 16-bit SGPRs (i.e. SGPR_LO16) are added to the
       // VS_16RegClass
-      //
-      // Excerpt from AMDGPUGenRegisterInfoEnums.inc
-      // NoSubRegister, //0
-      // hi16, // 1
-      // lo16, // 2
-      // sub0, // 3
-      // ...
-      // sub1, // 11
-      // sub1_hi16, // 12
-      // sub1_lo16, // 13
-      static_assert(AMDGPU::sub1_hi16 == 12, "Subregister layout has changed");
       if (Size == 2 && TRI->isVGPR(*MRI, UseMI->getOperand(0).getReg()) &&
-          TRI->isSGPRReg(*MRI, UseReg)) {
-        // Produce the 32 bit subregister index to which the 16-bit subregister
-        // is aligned.
-        if (SubRegIdx > AMDGPU::sub1) {
-          LaneBitmask M = TRI->getSubRegIndexLaneMask(SubRegIdx);
-          M |= M.getLane(M.getHighestLane() - 1);
-          SmallVector<unsigned, 4> Indexes;
-          TRI->getCoveringSubRegIndexes(TRI->getRegClassForReg(*MRI, UseReg), M,
-                                        Indexes);
-          assert(Indexes.size() == 1 && "Expected one 32-bit subreg to cover");
-          SubRegIdx = Indexes[0];
-          // 32-bit registers do not have a sub0 index
-        } else if (TII->getOpSize(*UseMI, 1) == 4)
-          SubRegIdx = 0;
-        else
-          SubRegIdx = AMDGPU::sub0;
+          TRI->isSGPRReg(*MRI, UseReg) && SubRegIdx != AMDGPU::NoSubRegister) {
+        // SGPRs only have lo16 subregisters, so the value is in the low half
+        // of a 32-bit SGPR. Use that whole 32-bit SGPR instead.
+        unsigned Channel = TRI->getChannelFromSubReg(SubRegIdx);
+        const TargetRegisterClass *UseRC = TRI->getRegClassForReg(*MRI, UseReg);
+        SubRegIdx = TRI->getRegSizeInBits(*UseRC) == 32
+                        ? AMDGPU::NoSubRegister
+                        : SIRegisterInfo::getSubRegFromChannel(Channel);
       }
       UseMI->getOperand(1).setSubReg(SubRegIdx);
       UseMI->getOperand(1).setIsKill(false);
@@ -2312,7 +2315,7 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
         (Op == AMDGPU::V_PK_MAX_F16 || Op == AMDGPU::V_PK_MAX_NUM_BF16)
             ? SISrcMods::OP_SEL_1
             : 0u;
-    if (Src0Mods != UnsetMods && Src1Mods != UnsetMods)
+    if (Src0Mods != UnsetMods || Src1Mods != UnsetMods)
       return nullptr;
     return Src0;
   }
@@ -2522,13 +2525,15 @@ SIFoldOperandsImpl::isOMod(const MachineInstr &MI) const {
     if (OMod == SIOutMods::NONE)
       return {nullptr, SIOutMods::NONE};
 
-    // Modifiers other than op_sel_hi block OMOD folding
+    // Modifiers other than op_sel_hi block OMOD folding. Per getOModValue
+    // above, Src1 is an inline constant (0.5/2.0/4.0), which may carry
+    // op_sel_lo to read it from the upper FP32 half, so allow that on src1.
     const MachineOperand *Src0Mods =
         TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers);
     const MachineOperand *Src1Mods =
         TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
     if ((Src0Mods->getImm() & ~SISrcMods::OP_SEL_1) ||
-        (Src1Mods->getImm() & ~SISrcMods::OP_SEL_1) ||
+        (Src1Mods->getImm() & ~(SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1)) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::omod) ||
         TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
       return {nullptr, SIOutMods::NONE};

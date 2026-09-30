@@ -956,8 +956,7 @@ Module Flags
 ------------
 
 AMDGPU-specific behaviour can be controlled via LLVM module flags (see
-`Module Flags Metadata
-<https://llvm.org/docs/LangRef.html#module-flags-metadata>`_ in the language
+:ref:`Module Flags Metadata <module-flags-metadata>` in the language
 reference). These flags are set by frontends and are
 consumed by the AMDGPU backend during code generation.
 
@@ -1927,6 +1926,19 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    bfloat, <2 x i16>, <2 x half>, <2 x bfloat>, i64, double, pointers, multiples of the
                                                    32-bit vectors.
 
+  llvm.amdgcn.wave.match.b32                       Provides direct access to v_wave_match_b32. Returns a 32-bit mask whose bit N is
+                                                   set when lane N is active and its first operand equals the current lane's second
+                                                   operand. Passing the same value as both operands yields the mask of active lanes
+                                                   sharing that value. In wave64 mode each 32-lane half is handled independently.
+
+  llvm.amdgcn.exclusive.scan.*                     Provides direct access to the v_exclusive_scan_* instructions. Performs an
+                                                   exclusive prefix scan of the first input operand across a subgroup of lanes,
+                                                   selected by the mask in the second operand. Each lane receives the reduction of
+                                                   the earlier lanes in its subgroup, so the lowest lane gets the identity value.
+                                                   In wave64 mode the two halves of the wave are scanned independently. The operation
+                                                   is part of the name (sum, xor, or, and, min, max).
+                                                   Sum takes an extra i1 clamp operand.
+
   llvm.amdgcn.udot2                                Provides direct access to v_dot2_u32_u16 across targets which
                                                    support such instructions. This performs an unsigned dot product
                                                    with two v2i16 operands, summed with the third i32 operand. The
@@ -2536,24 +2548,27 @@ cases. This will typically be used in conjunction with
 
 .. _amdgpu_no_remote_memory_access:
 
-'``amdgpu.ignore.denormal.mode``' Metadata
+'``atomic.ignore.denormal.mode``' Metadata
 ------------------------------------------
 
-For use with :ref:`atomicrmw <i_atomicrmw>` floating-point
-operations. Indicates the handling of denormal inputs and results is
-insignificant and may be inconsistent with the expected floating-point
-mode. This is necessary to emit a native atomic instruction on some
-targets for some address spaces where float denormals are
-unconditionally flushed. This is typically used in conjunction with
+This is generic IR metadata for floating-point :ref:`atomicrmw
+<i_atomicrmw>` operations; see `'atomic.ignore.denormal.mode' Metadata
+<https://llvm.org/docs/LangRef.html#atomic-ignore-denormal-mode-metadata>`_
+in the language reference for its definition. It is required to emit a
+native atomic instruction for AMDGPU global memory, which
+unconditionally flushes float denormals.
+
+On AMDGPU this is typically used in conjunction with
 :ref:`\!amdgpu.no.remote.memory.access<amdgpu_no_remote_memory_access>`
 and
-:ref:`\!amdgpu.no.fine.grained.memory<amdgpu_no_fine_grained_memory>`
+:ref:`\!amdgpu.no.fine.grained.memory<amdgpu_no_fine_grained_memory>`.
 
+This metadata was previously named ``amdgpu.ignore.denormal.mode``.
 
 .. code-block:: llvm
 
-  %res0 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
-  %res1 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res0 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !atomic.ignore.denormal.mode !0
+  %res1 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !atomic.ignore.denormal.mode !0, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
 
   !0 = !{}
 
@@ -2755,6 +2770,11 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-unroll-threshold"                        Set base cost threshold preference for loop unrolling within this function,
                                                       default is 300. Actual threshold may be varied by per-loop metadata or
                                                       reduced by heuristics.
+
+     "amdgpu-partial-unroll-threshold"                Set base cost threshold preference for partial and runtime loop unrolling
+                                                      within this function, default is 150. This is independent of
+                                                      ``amdgpu-unroll-threshold``, which controls the threshold used for full
+                                                      unrolling.
 
      "amdgpu-max-num-workgroups"="x,y,z"              Specify the maximum number of work groups for the kernel dispatch in the
                                                       X, Y, and Z dimensions. Each number must be >= 1. Generated by the

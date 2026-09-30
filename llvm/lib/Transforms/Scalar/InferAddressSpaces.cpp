@@ -70,7 +70,7 @@
 // The monotone transfer function moves the address space of a pointer down a
 // lattice path from uninitialized to specific and then to generic. A join
 // operation of two different specific address spaces pushes the expression down
-// to the generic address space. The analysis completes once it reaches a fixed
+// to their common address space. The analysis completes once it reaches a fixed
 // point.
 //
 // Second, IR rewriting in Step 2 also needs to be circular. For example,
@@ -121,7 +121,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -140,11 +139,6 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-static cl::opt<bool> AssumeDefaultIsFlatAddressSpace(
-    "assume-default-is-flat-addrspace", cl::init(false), cl::ReallyHidden,
-    cl::desc("The default address space is assumed as the flat address space. "
-             "This is mainly for test purpose."));
 
 static const unsigned UninitializedAddressSpace =
     std::numeric_limits<unsigned>::max();
@@ -195,6 +189,11 @@ class InferAddressSpacesImpl {
   /// Target specific address space which uses of should be replaced if
   /// possible.
   unsigned FlatAddrSpace = 0;
+
+  /// The default address space is assumed as the flat address space. This is
+  /// mainly for test purpose.
+  const bool AssumeDefaultIsFlatAddressSpace = false;
+
   DenseMap<const Value *, Value *> PtrIntCastPairs;
 
   // Tries to find if the inttoptr instruction is derived from an pointer have
@@ -294,8 +293,10 @@ class InferAddressSpacesImpl {
 
 public:
   InferAddressSpacesImpl(AssumptionCache &AC, const DominatorTree *DT,
-                         const TargetTransformInfo *TTI, unsigned FlatAddrSpace)
-      : AC(AC), DT(DT), TTI(TTI), FlatAddrSpace(FlatAddrSpace) {}
+                         const TargetTransformInfo *TTI, unsigned FlatAddrSpace,
+                         bool AssumeDefaultIsFlatAddressSpace)
+      : AC(AC), DT(DT), TTI(TTI), FlatAddrSpace(FlatAddrSpace),
+        AssumeDefaultIsFlatAddressSpace(AssumeDefaultIsFlatAddressSpace) {}
   bool run(Function &F);
 };
 
@@ -790,27 +791,32 @@ static Value *operandWithNewAddressSpaceOrCreatePoison(
   if (Constant *C = dyn_cast<Constant>(Operand))
     return ConstantExpr::getAddrSpaceCast(C, NewPtrTy);
 
-  if (Value *NewOperand = ValueWithNewAddrSpace.lookup(Operand))
-    return NewOperand;
-
   Instruction *Inst = cast<Instruction>(OperandUse.getUser());
-  auto I = PredicatedAS.find(std::make_pair(Inst, Operand));
-  if (I != PredicatedAS.end()) {
-    // Insert an addrspacecast on that operand before the user.
-    unsigned NewAS = I->second;
-    Type *NewPtrTy = getPtrOrVecOfPtrsWithNewAS(Operand->getType(), NewAS);
-    auto *NewI = new AddrSpaceCastInst(Operand, NewPtrTy);
-
-    if (LLVM_UNLIKELY(Inst->getOpcode() == Instruction::PHI))
-      return phiNodeOperandWithNewAddressSpace(NewI, Operand);
-
-    NewI->insertBefore(Inst->getIterator());
-    NewI->setDebugLoc(Inst->getDebugLoc());
-    return NewI;
+  if (Value *NewOperand = ValueWithNewAddrSpace.lookup(Operand)) {
+    Operand = NewOperand;
+  } else if (!PredicatedAS.contains(std::make_pair(Inst, Operand))) {
+    assert(PoisonUsesToFix && "missing inferred operand replacement");
+    PoisonUsesToFix->push_back(&OperandUse);
+    return PoisonValue::get(NewPtrTy);
   }
 
-  PoisonUsesToFix->push_back(&OperandUse);
-  return PoisonValue::get(NewPtrTy);
+  if (Operand->getType() == NewPtrTy)
+    return Operand;
+
+  auto *NewI = new AddrSpaceCastInst(Operand, NewPtrTy);
+  if (LLVM_UNLIKELY(Inst->getOpcode() == Instruction::PHI))
+    return phiNodeOperandWithNewAddressSpace(NewI, OperandUse.get());
+
+  // During cloning phase, the cast is placed before the original flat
+  // instruction, as its clone in the new address space has not been inserted
+  // yet. During poison fixup phase, the clone already exists, thus make sure
+  // the cast is inserted before it.
+  Instruction *InsertPt = Inst;
+  if (Value *NewUser = ValueWithNewAddrSpace.lookup(Inst))
+    InsertPt = cast<Instruction>(NewUser);
+  NewI->insertBefore(InsertPt->getIterator());
+  NewI->setDebugLoc(Inst->getDebugLoc());
+  return NewI;
 }
 
 // A helper function for cloneInstructionWithNewAddressSpace. Handles the
@@ -1100,6 +1106,9 @@ Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
 // comments).
 unsigned InferAddressSpacesImpl::joinAddressSpaces(unsigned AS1,
                                                    unsigned AS2) const {
+  if (AS1 == AS2)
+    return AS1;
+
   if (AS1 == FlatAddrSpace || AS2 == FlatAddrSpace)
     return FlatAddrSpace;
 
@@ -1108,8 +1117,7 @@ unsigned InferAddressSpacesImpl::joinAddressSpaces(unsigned AS1,
   if (AS2 == UninitializedAddressSpace)
     return AS1;
 
-  // The join of two different specific address spaces is flat.
-  return (AS1 == AS2) ? AS1 : FlatAddrSpace;
+  return TTI->getAddressSpaceJoin(AS1, AS2);
 }
 
 bool InferAddressSpacesImpl::run(Function &CurFn) {
@@ -1332,8 +1340,9 @@ static bool replaceOperandIfSame(Instruction *Inst, unsigned OpIdx,
 
 template <typename InstrType>
 static bool replaceSimplePointerUse(const TargetTransformInfo &TTI,
-                                    InstrType *MemInstr, unsigned AddrSpace,
-                                    Value *OldV, Value *NewV) {
+                                    InstrType *MemInstr, Value *OldV,
+                                    Value *NewV) {
+  unsigned AddrSpace = NewV->getType()->getPointerAddressSpace();
   if (!MemInstr->isVolatile() || TTI.hasVolatileVariant(MemInstr, AddrSpace)) {
     return replaceOperandIfSame(MemInstr, InstrType::getPointerOperandIndex(),
                                 OldV, NewV);
@@ -1350,19 +1359,18 @@ static bool replaceSimplePointerUse(const TargetTransformInfo &TTI,
 ///
 /// \p returns true the user replacement was made.
 static bool replaceIfSimplePointerUse(const TargetTransformInfo &TTI,
-                                      User *Inst, unsigned AddrSpace,
-                                      Value *OldV, Value *NewV) {
+                                      User *Inst, Value *OldV, Value *NewV) {
   if (auto *LI = dyn_cast<LoadInst>(Inst))
-    return replaceSimplePointerUse(TTI, LI, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, LI, OldV, NewV);
 
   if (auto *SI = dyn_cast<StoreInst>(Inst))
-    return replaceSimplePointerUse(TTI, SI, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, SI, OldV, NewV);
 
   if (auto *RMW = dyn_cast<AtomicRMWInst>(Inst))
-    return replaceSimplePointerUse(TTI, RMW, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, RMW, OldV, NewV);
 
   if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(Inst))
-    return replaceSimplePointerUse(TTI, CmpX, AddrSpace, OldV, NewV);
+    return replaceSimplePointerUse(TTI, CmpX, OldV, NewV);
 
   return false;
 }
@@ -1462,8 +1470,7 @@ void InferAddressSpacesImpl::performPointerReplacement(
 
   User *CurUser = U.getUser();
 
-  unsigned AddrSpace = V->getType()->getPointerAddressSpace();
-  if (replaceIfSimplePointerUse(*TTI, CurUser, AddrSpace, V, NewV))
+  if (replaceIfSimplePointerUse(*TTI, CurUser, V, NewV))
     return;
 
   // Skip if the current user is the new value itself.
@@ -1588,9 +1595,10 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
 
     unsigned OperandNo = PoisonUse->getOperandNo();
     assert(isa<PoisonValue>(NewV->getOperand(OperandNo)));
-    WeakTrackingVH NewOp = ValueWithNewAddrSpace.lookup(PoisonUse->get());
-    assert(NewOp &&
-           "poison replacements in ValueWithNewAddrSpace shouldn't be null");
+    unsigned NewAS =
+        NewV->getOperand(OperandNo)->getType()->getPointerAddressSpace();
+    Value *NewOp = operandWithNewAddressSpaceOrCreatePoison(
+        *PoisonUse, NewAS, ValueWithNewAddrSpace, PredicatedAS, nullptr);
     NewV->setOperand(OperandNo, NewOp);
   }
 
@@ -1680,7 +1688,7 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
   return InferAddressSpacesImpl(
              getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F), DT,
              &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
-             FlatAddrSpace)
+             FlatAddrSpace, /*AssumeDefaultIsFlatAddressSpace=*/false)
       .run(F);
 }
 
@@ -1688,17 +1696,22 @@ FunctionPass *llvm::createInferAddressSpacesPass(unsigned AddressSpace) {
   return new InferAddressSpaces(AddressSpace);
 }
 
-InferAddressSpacesPass::InferAddressSpacesPass()
-    : FlatAddrSpace(UninitializedAddressSpace) {}
-InferAddressSpacesPass::InferAddressSpacesPass(unsigned AddressSpace)
-    : FlatAddrSpace(AddressSpace) {}
+InferAddressSpacesPass::InferAddressSpacesPass(
+    bool AssumeDefaultIsFlatAddressSpace)
+    : FlatAddrSpace(UninitializedAddressSpace),
+      AssumeDefaultIsFlatAddressSpace(AssumeDefaultIsFlatAddressSpace) {}
+InferAddressSpacesPass::InferAddressSpacesPass(
+    unsigned AddressSpace, bool AssumeDefaultIsFlatAddressSpace)
+    : FlatAddrSpace(AddressSpace),
+      AssumeDefaultIsFlatAddressSpace(AssumeDefaultIsFlatAddressSpace) {}
 
 PreservedAnalyses InferAddressSpacesPass::run(Function &F,
                                               FunctionAnalysisManager &AM) {
   bool Changed =
       InferAddressSpacesImpl(AM.getResult<AssumptionAnalysis>(F),
                              AM.getCachedResult<DominatorTreeAnalysis>(F),
-                             &AM.getResult<TargetIRAnalysis>(F), FlatAddrSpace)
+                             &AM.getResult<TargetIRAnalysis>(F), FlatAddrSpace,
+                             AssumeDefaultIsFlatAddressSpace)
           .run(F);
   if (Changed) {
     PreservedAnalyses PA;
@@ -1706,4 +1719,12 @@ PreservedAnalyses InferAddressSpacesPass::run(Function &F,
     return PA;
   }
   return PreservedAnalyses::all();
+}
+
+void InferAddressSpacesPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<InferAddressSpacesPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (AssumeDefaultIsFlatAddressSpace)
+    OS << "<assume-default-is-flat-addrspace>";
 }

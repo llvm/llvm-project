@@ -19,3 +19,24 @@ body:             |
     %0:vreg_64_align2 = REG_SEQUENCE undef %1:vgpr_32, %subreg.sub0, undef %2:vgpr_32, %subreg.sub1
     SI_RETURN_TO_EPILOG
 ...
+
+# The undef lane is read three times by one instruction, once through a
+# tie, so its reads may not be marked undef; keep the lane's COPY instead.
+
+---
+name:            tied_read_of_undef_lane
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GFX90A-LABEL: name: tied_read_of_undef_lane
+    ; GFX90A: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 7, implicit $exec
+    ; GFX90A-NEXT: undef [[COPY:%[0-9]+]].sub0:vreg_64_align2 = COPY [[V_MOV_B32_e32_]]
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]].sub1:vreg_64_align2 = COPY undef %2:vgpr_32
+    ; GFX90A-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
+    ; GFX90A-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = nofpexcept V_FMAC_F32_e32 [[COPY1]], [[COPY1]], [[COPY1]], implicit $mode, implicit $exec
+    ; GFX90A-NEXT: SI_RETURN_TO_EPILOG implicit [[COPY1]]
+    %0:vgpr_32 = V_MOV_B32_e32 7, implicit $exec
+    %1:vreg_64_align2 = REG_SEQUENCE %0, %subreg.sub0, undef %2:vgpr_32, %subreg.sub1
+    %3:vgpr_32 = nofpexcept V_FMAC_F32_e32 %1.sub1, %1.sub1, %1.sub1, implicit $mode, implicit $exec
+    SI_RETURN_TO_EPILOG implicit %3
+...

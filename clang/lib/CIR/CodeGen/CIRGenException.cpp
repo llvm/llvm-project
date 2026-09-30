@@ -15,6 +15,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Location.h"
 
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -196,6 +197,160 @@ static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
       funcTy, personality.personalityFn, {}, /*isLocal=*/true);
 
   return personalityFn.getSymName();
+}
+
+void CIRGenFunction::emitStartEHSpec(const Decl *d) {
+  if (!cgm.getLangOpts().CXXExceptions)
+    return;
+
+  const FunctionDecl *fd = dyn_cast_or_null<FunctionDecl>(d);
+  if (!fd) {
+    // This can't currently happen in CIR, but if we do get here, we need to
+    // handle the cd->isNoThrow() case.
+    if (const CapturedDecl *cd = dyn_cast_or_null<CapturedDecl>(d)) {
+      if (cd->isNothrow())
+        cgm.errorNYI(cd->getSourceRange(),
+                     "emitStartEHSpec CapturedDecl nothrow");
+    }
+    return;
+  }
+
+  const FunctionProtoType *proto = fd->getType()->getAs<FunctionProtoType>();
+  if (!proto)
+    return;
+
+  ExceptionSpecificationType est = proto->getExceptionSpecType();
+  // In C++17 and later, and in Wasm EH in any standard, 'throw()' aka
+  // EST_DynamicNone is treated the same way as noexcept. In earlier standards
+  // it is handled with 'throw(X...)'.
+  bool isDynamicSpec = est == EST_Dynamic ||
+                       (est == EST_DynamicNone && !getLangOpts().CPlusPlus17 &&
+                        !cgm.getCodeGenOpts().hasWasmExceptions());
+
+  // A specification that permits nothing to escape is a terminate scope: any
+  // exception that tries to leave the function calls std::terminate. Under
+  // -EHa a hardware exception can still occur, so there is no scope.
+  bool needsTerminate = !isDynamicSpec && proto->canThrow() == CT_Cannot &&
+                        !getLangOpts().EHAsynch;
+
+  if (isDynamicSpec) {
+    // TODO: Revisit exception specifications for the MS ABI. There is a way
+    // to encode these in an object file but MSVC doesn't do anything with it.
+    if (getTarget().getCXXABI().isMicrosoft())
+      return;
+
+    // In Wasm EH, a specification with types is ignored with a warning for
+    // now. 'throw()' is a terminate scope, which the classification above
+    // takes care of.
+    // TODO Correctly handle exception specification in Wasm EH
+    if (cgm.getCodeGenOpts().hasWasmExceptions()) {
+      cgm.getDiags().Report(d->getLocation(),
+                            diag::warn_wasm_dynamic_exception_spec_ignored)
+          << fd->getExceptionSpecSourceRange();
+      return;
+    }
+
+    // Currently Emscripten EH only handles 'throw()' but not 'throw' with
+    // types. 'throw()' handling will be done in JS glue code so we don't need
+    // to do anything in that case. Just print a warning message in case of
+    // throw with types.
+    // TODO Correctly handle exception specification in Emscripten EH
+    if (getTarget().getCXXABI() == TargetCXXABI::WebAssembly &&
+        (cgm.getCodeGenOpts().getExceptionHandling() ==
+             clang::CodeGenOptions::ExceptionHandlingKind::None ||
+         cgm.getCodeGenOpts().getExceptionHandling() ==
+             clang::CodeGenOptions::ExceptionHandlingKind::Default) &&
+        est == EST_Dynamic)
+      cgm.getDiags().Report(d->getLocation(),
+                            diag::warn_wasm_dynamic_exception_spec_ignored)
+          << fd->getExceptionSpecSourceRange();
+  } else if (!needsTerminate) {
+    return;
+  }
+
+  mlir::Location loc = getLoc(fd->getSourceRange());
+
+  SmallVector<mlir::Attribute, 4> permittedTypes;
+  if (isDynamicSpec) {
+    for (QualType ty : proto->exceptions()) {
+      QualType exceptType = ty.getNonReferenceType().getUnqualifiedType();
+      permittedTypes.push_back(
+          cgm.getAddrOfRTTIDescriptor(loc, exceptType, /*forEh=*/true));
+    }
+  }
+
+  cir::FuncOp funcOp = mlir::cast<cir::FuncOp>(curFn);
+  if (!funcOp.getPersonality())
+    funcOp.setPersonality(getPersonalityFn(cgm, EHPersonality::get(*this)));
+
+  bool emptyFilter = permittedTypes.empty();
+  ehSpecTryOp = cir::TryOp::create(
+      builder, loc,
+      // The try body holds the function body, which the caller emits after
+      // this function returns and emitEndEHSpec terminates.
+      /*tryBuilder=*/[](mlir::OpBuilder &, mlir::Location) {},
+      /*handlersBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc,
+          mlir::OperationState &result) {
+        mlir::OpBuilder::InsertionGuard guard(b);
+        mlir::Type ehTokenTy = cir::EhTokenType::get(&getMLIRContext());
+
+        if (needsTerminate) {
+          mlir::Block *terminateBlock = b.createBlock(
+              result.addRegion(), /*insertPt=*/{}, {ehTokenTy}, {loc});
+          cir::EhTerminateOp::create(b, loc, terminateBlock->getArgument(0));
+          return;
+        }
+
+        mlir::Block *filterBlock = b.createBlock(
+            result.addRegion(), /*insertPt=*/{}, {ehTokenTy}, {loc});
+        if (emptyFilter)
+          cir::UnreachableOp::create(b, loc);
+        else
+          cir::ResumeOp::create(b, loc, filterBlock->getArgument(0));
+
+        mlir::Block *unexpectedBlock = b.createBlock(
+            result.addRegion(), /*insertPt=*/{}, {ehTokenTy}, {loc});
+        cir::EhUnexpectedOp::create(b, loc, unexpectedBlock->getArgument(0));
+      });
+
+  SmallVector<mlir::Attribute, 2> handlerAttrs;
+  if (needsTerminate) {
+    // Any exception reaching the handler terminates the program, so it catches
+    // everything. The catch itself is performed by the runtime helper that
+    // cir.eh.terminate lowers to.
+    handlerAttrs.push_back(cir::CatchAllAttr::get(&getMLIRContext()));
+  } else {
+    handlerAttrs.push_back(cir::EhFilterAttr::get(
+        &getMLIRContext(), builder.getArrayAttr(permittedTypes)));
+    handlerAttrs.push_back(cir::EhUnexpectedAttr::get(&getMLIRContext()));
+  }
+  ehSpecTryOp.setHandlerTypesAttr(
+      mlir::ArrayAttr::get(&getMLIRContext(), handlerAttrs));
+
+  // Continue emitting into the try body.
+  builder.setInsertionPointToEnd(&ehSpecTryOp.getTryRegion().front());
+}
+
+void CIRGenFunction::emitEndEHSpec(const Decl *) {
+  if (!ehSpecTryOp)
+    return;
+
+  cir::TryOp tryOp = ehSpecTryOp;
+  ehSpecTryOp = cir::TryOp();
+
+  // Terminate the try body. Emitting the function body may have left the last
+  // block without a terminator, for instance when control falls off the end.
+  mlir::Block *bodyExit = &tryOp.getTryRegion().back();
+  if (bodyExit->empty() ||
+      !bodyExit->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(bodyExit);
+    builder.createYield(tryOp.getLoc());
+  }
+
+  // Continue emitting the function epilogue outside the try.
+  builder.setInsertionPointAfter(tryOp);
 }
 
 void CIRGenFunction::emitCXXThrowExpr(const CXXThrowExpr *e) {

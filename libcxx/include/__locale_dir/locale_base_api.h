@@ -54,9 +54,8 @@
 // ------------------
 // namespace __locale {
 //  // required by the headers
-//  float               __strtof(const char*, char**, __locale_t);
-//  double              __strtod(const char*, char**, __locale_t);
-//  long double         __strtold(const char*, char**, __locale_t);
+//  template <class FloatT>
+//  FloatT __str_to_float_c_locale(const char*, char**);
 // }
 //
 // Character manipulation functions
@@ -166,6 +165,9 @@ namespace __locale {
 
 using __locale_t _LIBCPP_NODEBUG = locale_t;
 
+// Forward declared for use below.
+inline __locale_t __get_c_locale();
+
 #    if defined(_LIBCPP_BUILDING_LIBRARY)
 using __lconv_t _LIBCPP_NODEBUG = lconv;
 
@@ -185,16 +187,22 @@ inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) { return
 //
 // Strtonum functions
 //
-inline _LIBCPP_HIDE_FROM_ABI float __strtof(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return strtof_l(__nptr, __endptr, __loc);
+template <class _FloatT>
+_LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
+
+template <>
+inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr) {
+  return strtof_l(__nptr, __endptr, __get_c_locale());
 }
 
-inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return strtod_l(__nptr, __endptr, __loc);
+template <>
+inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
+  return strtod_l(__nptr, __endptr, __get_c_locale());
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return strtold_l(__nptr, __endptr, __loc);
+template <>
+inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
+  return strtold_l(__nptr, __endptr, __get_c_locale());
 }
 
 //
@@ -305,6 +313,8 @@ _LIBCPP_DIAGNOSTIC_POP
 
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
+
+#    include <__locale_dir/support/default/get_c_locale.h>
 
 #  endif // Compatibility definition of locale base APIs
 

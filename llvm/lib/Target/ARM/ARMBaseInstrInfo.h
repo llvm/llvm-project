@@ -119,6 +119,8 @@ protected:
   describeLoadedValue(const MachineInstr &MI, Register Reg) const override;
 
 public:
+  const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
+
   // Return whether the target has an explicit NOP encoding.
   bool hasNOP() const;
 
@@ -129,6 +131,11 @@ public:
   const ARMBaseRegisterInfo &getRegisterInfo() const {
     return static_cast<const ARMBaseRegisterInfo &>(
         TargetInstrInfo::getRegisterInfo());
+  }
+
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &ARM::GPRRegClass;
   }
 
   const ARMSubtarget &getSubtarget() const { return Subtarget; }

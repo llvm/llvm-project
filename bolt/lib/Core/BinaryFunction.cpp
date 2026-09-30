@@ -21,6 +21,7 @@
 #include "bolt/Utils/NameShortener.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -102,7 +103,6 @@ JumpTables("jump-tables",
       clEnumValN(JTS_AGGRESSIVE, "aggressive",
                  "aggressively split jump tables section based on usage "
                  "of the tables")),
-  cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
 static cl::opt<bool> NoScan(
@@ -140,7 +140,7 @@ static cl::opt<bool> TrapOnAVX512(
     "trap-avx512",
     cl::desc("in relocation mode trap upon entry to any function that uses "
              "AVX-512 instructions"),
-    cl::init(false), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+    cl::init(false), cl::Hidden, cl::cat(BoltCategory));
 
 bool shouldPrint(const BinaryFunction &Function) {
   // PLT stubs are disassembled for BTI binaries, therefore they should be
@@ -1571,6 +1571,7 @@ void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
 bool BinaryFunction::scanExternalRefs() {
   bool Success = true;
   bool DisassemblyFailed = false;
+  SmallPtrSet<BinaryFunction *, 4> InvalidTargets;
 
   // Ignore pseudo functions.
   if (isPseudo())
@@ -1679,8 +1680,10 @@ bool BinaryFunction::scanExternalRefs() {
       // reference.
       BranchTargetSymbol =
           BC.handleExternalBranchTarget(TargetAddress, *this, *TargetFunction);
-      if (!BranchTargetSymbol)
+      if (!BranchTargetSymbol) {
+        InvalidTargets.insert(TargetFunction);
         continue;
+      }
     }
 
     // Can't find more references. Not creating relocations since we are not
@@ -1882,6 +1885,12 @@ bool BinaryFunction::scanExternalRefs() {
 
   if (opts::Verbosity >= 1 && !Success)
     BC.outs() << "BOLT-INFO: failed to scan refs for  " << *this << '\n';
+
+  // Apply target state only after the complete source has been scanned. The
+  // source is either already ignored or is marked ignored by the caller.
+  for (BinaryFunction *Target : InvalidTargets)
+    if (!Target->isIgnored())
+      Target->setIgnored();
 
   return Success;
 }

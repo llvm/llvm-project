@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
+#include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
@@ -41,15 +42,11 @@ using namespace llvm;
 
 namespace WebAssembly {
 extern cl::opt<bool> WasmDisableExplicitLocals;
-extern cl::opt<bool> WasmEnableEH;
-extern cl::opt<bool> WasmEnableEmEH;
 extern cl::opt<bool> WasmEnableEmSjLj;
 extern cl::opt<bool> WasmEnableSjLj;
 } // namespace WebAssembly
 
 using llvm::WebAssembly::WasmDisableExplicitLocals;
-using llvm::WebAssembly::WasmEnableEH;
-using llvm::WebAssembly::WasmEnableEmEH;
 using llvm::WebAssembly::WasmEnableEmSjLj;
 using llvm::WebAssembly::WasmEnableSjLj;
 
@@ -127,10 +124,9 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
   // passes and Emscripten SjLj handling expects all invokes to be lowered
   // before.
-  bool EnableEmEH =
-      TM.Options.ExceptionModel == ExceptionHandling::Emscripten ||
-      WasmEnableEmEH;
-  if (!EnableEmEH && !WasmEnableEH) {
+  bool EnableEmEH = TM.Options.ExceptionModel == ExceptionHandling::Emscripten;
+  bool EnableWasmEH = TM.Options.ExceptionModel == ExceptionHandling::Wasm;
+  if (!EnableEmEH && !EnableWasmEH) {
     addFunctionPass(LowerInvokePass(), PMW);
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.
@@ -156,6 +152,9 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 }
 
 void WebAssemblyCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
+  if (TM.Options.ExceptionModel == ExceptionHandling::Wasm)
+    addFunctionPass(WasmEHPreparePass(), PMW);
+
   // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
   // loads and stores are promoted to local.gets/local.sets.
   addFunctionPass(WebAssemblyRefTypeMem2LocalPass(), PMW);

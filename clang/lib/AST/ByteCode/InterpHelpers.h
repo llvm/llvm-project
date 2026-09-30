@@ -40,23 +40,33 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK);
 
 /// Checks if a pointer is a dummy pointer.
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Block *B, AccessKinds AK);
 bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 AccessKinds AK);
+bool diagnoseDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                   AccessKinds AK);
 
 bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                         APSInt &&Index, bool AllowReplace = true);
 
 /// Checks if a pointer is in range.
-template <typename T>
-bool CheckRange(InterpState &S, CodePtr OpPC, T Ptr, AccessKinds AK) {
+inline bool CheckRange(InterpState &S, CodePtr OpPC, PtrView Ptr,
+                       AccessKinds AK) {
   if (!Ptr.isOnePastEnd() && !Ptr.isZeroSizeArray())
     return true;
-  if (S.getLangOpts().CPlusPlus) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_access_past_end)
+  if (S.getLangOpts().CPlusPlus)
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
         << AK << S.Current->getRange(OpPC);
-  }
+
+  return false;
+}
+inline bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                       AccessKinds AK) {
+  if (!Ptr.isOnePastEnd() && !Ptr.isZeroSizeArray())
+    return true;
+  if (S.getLangOpts().CPlusPlus)
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
+        << AK << S.Current->getRange(OpPC);
+
   return false;
 }
 
@@ -77,6 +87,8 @@ inline bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 /// Checks if a value can be loaded from a block.
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK = AK_Read);
+bool CheckLoad(InterpState &S, CodePtr OpPC, PtrView Ptr,
+               AccessKinds AK = AK_Read);
 
 /// Diagnose mismatched new[]/delete or new/delete[] pairs.
 bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
@@ -85,11 +97,16 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
                          const Expr *NewExpr);
 
 /// Copy the contents of Src into Dest.
-bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest);
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest,
+              bool Activate = true, bool Diagnose = false);
 
 UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
                                          unsigned Kind, Pointer &Ptr,
                                          const Expr *E, bool IsDynamic = false);
+
+bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
+                           const Block *B, Lifetime LT = Lifetime::Started,
+                           AccessKinds AK = AK_Read);
 
 template <typename T>
 bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
@@ -118,9 +135,10 @@ static inline llvm::RoundingMode getRoundingMode(FPOptions FPO) {
 }
 
 inline bool Invalid(InterpState &S, CodePtr OpPC) {
-  const SourceLocation &Loc = S.Current->getLocation(OpPC);
-  S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr)
-      << S.Current->getRange(OpPC);
+  if (S.diagnosing())
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_invalid_subexpr_in_const_expr)
+        << S.Current->getRange(OpPC);
   return false;
 }
 

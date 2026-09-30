@@ -5398,6 +5398,12 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                              From->getValueKind()).get();
     break;
 
+  case ICK_HLSL_Packed_Type_Conversion: {
+    From = ImpCastExprToType(From, ToType, CK_IntegralCast,
+                             From->getValueKind(), nullptr, CCK)
+               .get();
+    break;
+  }
   case ICK_Lvalue_To_Rvalue:
   case ICK_Array_To_Pointer:
   case ICK_Function_To_Pointer:
@@ -8178,6 +8184,15 @@ Sema::BuildNestedRequirement(Expr *Constraint) {
                                   /*TemplateArgs=*/{},
                                   Constraint->getSourceRange(), Satisfaction))
     return nullptr;
+
+  if (Satisfaction.HasSubstitutionFailure()) {
+    SmallString<128> Entity;
+    llvm::raw_svector_ostream OS(Entity);
+    Constraint->printPretty(OS, nullptr, SemaRef.getPrintingPolicy());
+    return new (Context) concepts::NestedRequirement(
+        Context, Context.backupStr(Entity), std::move(Satisfaction));
+  }
+
   return new (Context) concepts::NestedRequirement(Context, Constraint,
                                                    Satisfaction);
 }

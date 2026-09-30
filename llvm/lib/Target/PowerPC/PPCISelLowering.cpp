@@ -18855,7 +18855,8 @@ void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   }
 }
 
-Align PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+Align PPCTargetLowering::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   switch (Subtarget.getCPUDirective()) {
   default: break;
   case PPC::DIR_970:
@@ -19116,8 +19117,7 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     R.second = &PPC::CRRCRegClass;
   }
   // FIXME: This warning should ideally be emitted in the front end.
-  const auto &TM = getTargetMachine();
-  if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI()) {
+  if (Subtarget.isAIXABI() && !Subtarget.isAIXExtendedAltivecABI()) {
     if (((R.first >= PPC::V20 && R.first <= PPC::V31) ||
          (R.first >= PPC::VF20 && R.first <= PPC::VF31)) &&
         (R.second == &PPC::VSRCRegClass || R.second == &PPC::VSFRCRegClass))
