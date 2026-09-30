@@ -820,10 +820,10 @@ KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
   }
 
   // Sign bit of a nan isn't guaranteed.
-  if (Known.KnownFPMask & kfcSNan)
-    Known.KnownFPMask |= kfcSNan;
-  if (Known.KnownFPMask & kfcQNan)
-    Known.KnownFPMask |= kfcQNan;
+  if (!Known.isKnownNever(fcSNan))
+    Known.setKnownFPClasses(Known.getKnownFPClasses() | fcSNan);
+  if (!Known.isKnownNever(fcQNan))
+    Known.setKnownFPClasses(Known.getKnownFPClasses() | fcQNan);
 
   return Known;
 }

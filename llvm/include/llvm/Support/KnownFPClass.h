@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_KNOWNFPCLASS_H
 #define LLVM_SUPPORT_KNOWNFPCLASS_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
@@ -24,7 +25,7 @@ class APInt;
 struct fltSemantics;
 struct KnownBits;
 
-enum FPClassMask : unsigned {
+enum class FPClassMask : unsigned {
   kfcNone = 0,
 
   kfcNegQNan = 0x0001,
@@ -58,103 +59,104 @@ enum FPClassMask : unsigned {
   kfcNegSignBit = kfcNegative | kfcNegNan,
 
   kfcAllFlags = kfcNan | kfcInf | kfcFinite,
+
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ kfcPosQNan)
 };
 
-LLVM_DECLARE_ENUM_AS_BITMASK(FPClassMask, /* LargestValue */ kfcPosQNan);
+class KnownFPClass {
+  FPClassMask KnownFPMask = FPClassMask::kfcAllFlags;
 
-constexpr FPClassMask toFPClassMask(FPClassTest Classes) {
-  FPClassMask Mask = kfcNone;
+  static constexpr FPClassMask toFPClassMask(FPClassTest Classes) {
+    FPClassMask Mask = FPClassMask::kfcNone;
 
-  if (Classes & fcQNan)
-    Mask |= kfcQNan;
-  if (Classes & fcSNan)
-    Mask |= kfcSNan;
-  if (Classes & fcNegInf)
-    Mask |= kfcNegInf;
-  if (Classes & fcNegNormal)
-    Mask |= kfcNegNormal;
-  if (Classes & fcNegSubnormal)
-    Mask |= kfcNegSubnormal;
-  if (Classes & fcNegZero)
-    Mask |= kfcNegZero;
-  if (Classes & fcPosZero)
-    Mask |= kfcPosZero;
-  if (Classes & fcPosSubnormal)
-    Mask |= kfcPosSubnormal;
-  if (Classes & fcPosNormal)
-    Mask |= kfcPosNormal;
-  if (Classes & fcPosInf)
-    Mask |= kfcPosInf;
+    if (Classes & fcQNan)
+      Mask |= FPClassMask::kfcQNan;
+    if (Classes & fcSNan)
+      Mask |= FPClassMask::kfcSNan;
+    if (Classes & fcNegInf)
+      Mask |= FPClassMask::kfcNegInf;
+    if (Classes & fcNegNormal)
+      Mask |= FPClassMask::kfcNegNormal;
+    if (Classes & fcNegSubnormal)
+      Mask |= FPClassMask::kfcNegSubnormal;
+    if (Classes & fcNegZero)
+      Mask |= FPClassMask::kfcNegZero;
+    if (Classes & fcPosZero)
+      Mask |= FPClassMask::kfcPosZero;
+    if (Classes & fcPosSubnormal)
+      Mask |= FPClassMask::kfcPosSubnormal;
+    if (Classes & fcPosNormal)
+      Mask |= FPClassMask::kfcPosNormal;
+    if (Classes & fcPosInf)
+      Mask |= FPClassMask::kfcPosInf;
 
-  return Mask;
-}
-
-constexpr FPClassMask toFPClassMask(FPClassTest Classes, bool SignBit) {
-  FPClassMask Mask = toFPClassMask(Classes);
-
-  // This is the only way to generate a NaN with a specific sign from
-  // FPClassTest. SignBit must agree with the input classes.
-  if (!SignBit) {
-    Mask &= ~kfcNegNan;
-    // If the SignBit is false, then we should not have any negative classes.
-    if (!(Mask & kfcNegSignBit))
-      return Mask;
-  } else {
-    Mask &= ~kfcPosNan;
-    // If the SignBit is true, then we should not have any positive classes.
-    if (!(Mask & kfcPosSignBit))
-      return Mask;
+    return Mask;
   }
 
-  // SignBit is unknown or inconsistent with the input classes. Expand the
-  // possible set to its opposite sign pair.
-  if (Classes & fcQNan)
-    Mask |= kfcQNan;
-  if (Classes & fcSNan)
-    Mask |= kfcSNan;
-  if (Classes & fcInf)
-    Mask |= kfcInf;
-  if (Classes & fcNormal)
-    Mask |= kfcNormal;
-  if (Classes & fcSubnormal)
-    Mask |= kfcSubnormal;
-  if (Classes & fcZero)
-    Mask |= kfcZero;
+  static constexpr FPClassMask toFPClassMask(FPClassTest Classes,
+                                             bool SignBit) {
+    FPClassMask Mask = toFPClassMask(Classes);
 
-  return Mask;
-}
+    // This is the only way to generate a NaN with a specific sign from
+    // FPClassTest. SignBit must agree with the input classes.
+    if (!SignBit) {
+      Mask &= ~FPClassMask::kfcNegNan;
+      // If the SignBit is false, then we should not have any negative classes.
+      if ((Mask & FPClassMask::kfcNegSignBit) == FPClassMask::kfcNone)
+        return Mask;
+    } else {
+      Mask &= ~FPClassMask::kfcPosNan;
+      // If the SignBit is true, then we should not have any positive classes.
+      if ((Mask & FPClassMask::kfcPosSignBit) == FPClassMask::kfcNone)
+        return Mask;
+    }
 
-constexpr FPClassTest toFPClassTest(FPClassMask Mask) {
-  FPClassTest Classes = fcNone;
+    // SignBit is unknown or inconsistent with the input classes. Expand the
+    // possible set to its opposite sign pair.
+    if (Classes & fcQNan)
+      Mask |= FPClassMask::kfcQNan;
+    if (Classes & fcSNan)
+      Mask |= FPClassMask::kfcSNan;
+    if (Classes & fcInf)
+      Mask |= FPClassMask::kfcInf;
+    if (Classes & fcNormal)
+      Mask |= FPClassMask::kfcNormal;
+    if (Classes & fcSubnormal)
+      Mask |= FPClassMask::kfcSubnormal;
+    if (Classes & fcZero)
+      Mask |= FPClassMask::kfcZero;
 
-  // Sign of qNaN and sNaN are lost in the conversion.
-  if (Mask & kfcQNan)
-    Classes |= fcQNan;
-  if (Mask & kfcSNan)
-    Classes |= fcSNan;
+    return Mask;
+  }
 
-  if (Mask & kfcNegInf)
-    Classes |= fcNegInf;
-  if (Mask & kfcNegNormal)
-    Classes |= fcNegNormal;
-  if (Mask & kfcNegSubnormal)
-    Classes |= fcNegSubnormal;
-  if (Mask & kfcNegZero)
-    Classes |= fcNegZero;
-  if (Mask & kfcPosZero)
-    Classes |= fcPosZero;
-  if (Mask & kfcPosSubnormal)
-    Classes |= fcPosSubnormal;
-  if (Mask & kfcPosNormal)
-    Classes |= fcPosNormal;
-  if (Mask & kfcPosInf)
-    Classes |= fcPosInf;
+  static constexpr FPClassTest toFPClassTest(FPClassMask Mask) {
+    FPClassTest Classes = fcNone;
 
-  return Classes;
-}
+    // Sign of qNaN and sNaN are lost in the conversion.
+    if ((Mask & FPClassMask::kfcQNan) != FPClassMask::kfcNone)
+      Classes |= fcQNan;
+    if ((Mask & FPClassMask::kfcSNan) != FPClassMask::kfcNone)
+      Classes |= fcSNan;
 
-class KnownFPClass {
-  FPClassMask KnownFPMask = kfcAllFlags;
+    if ((Mask & FPClassMask::kfcNegInf) != FPClassMask::kfcNone)
+      Classes |= fcNegInf;
+    if ((Mask & FPClassMask::kfcNegNormal) != FPClassMask::kfcNone)
+      Classes |= fcNegNormal;
+    if ((Mask & FPClassMask::kfcNegSubnormal) != FPClassMask::kfcNone)
+      Classes |= fcNegSubnormal;
+    if ((Mask & FPClassMask::kfcNegZero) != FPClassMask::kfcNone)
+      Classes |= fcNegZero;
+    if ((Mask & FPClassMask::kfcPosZero) != FPClassMask::kfcNone)
+      Classes |= fcPosZero;
+    if ((Mask & FPClassMask::kfcPosSubnormal) != FPClassMask::kfcNone)
+      Classes |= fcPosSubnormal;
+    if ((Mask & FPClassMask::kfcPosNormal) != FPClassMask::kfcNone)
+      Classes |= fcPosNormal;
+    if ((Mask & FPClassMask::kfcPosInf) != FPClassMask::kfcNone)
+      Classes |= fcPosInf;
+
+    return Classes;
+  }
 
 public:
   /// Floating-point classes the value could be one of.
@@ -168,12 +170,12 @@ public:
   /// definitely set or false if the sign bit is definitely unset.
   /// By convention, returns false for kfcNone/poison.
   std::optional<bool> getSignBit() const {
-    if (KnownFPMask == kfcNone)
+    if (KnownFPMask == FPClassMask::kfcNone)
       return false;
 
-    if ((KnownFPMask & kfcPosSignBit) == KnownFPMask)
+    if ((KnownFPMask & FPClassMask::kfcPosSignBit) == KnownFPMask)
       return false;
-    if ((KnownFPMask & kfcNegSignBit) == KnownFPMask)
+    if ((KnownFPMask & FPClassMask::kfcNegSignBit) == KnownFPMask)
       return true;
 
     return std::nullopt;
@@ -181,29 +183,30 @@ public:
 
   void setSignBit(std::optional<bool> Sign) {
     if (Sign && !*Sign) {
-      KnownFPMask &= kfcPosSignBit;
+      KnownFPMask &= FPClassMask::kfcPosSignBit;
       return;
     }
     if (Sign && *Sign) {
-      KnownFPMask &= kfcNegSignBit;
+      KnownFPMask &= FPClassMask::kfcNegSignBit;
       return;
     }
     // Set sign to unknown.
-    if (KnownFPMask & kfcQNan)
-      KnownFPMask |= kfcQNan;
-    if (KnownFPMask & kfcSNan)
-      KnownFPMask |= kfcSNan;
-    if (KnownFPMask & kfcInf)
-      KnownFPMask |= kfcInf;
-    if (KnownFPMask & kfcNormal)
-      KnownFPMask |= kfcNormal;
-    if (KnownFPMask & kfcSubnormal)
-      KnownFPMask |= kfcSubnormal;
-    if (KnownFPMask & kfcZero)
-      KnownFPMask |= kfcZero;
+    if ((KnownFPMask & FPClassMask::kfcQNan) != FPClassMask::kfcNone)
+      KnownFPMask |= FPClassMask::kfcQNan;
+    if ((KnownFPMask & FPClassMask::kfcSNan) != FPClassMask::kfcNone)
+      KnownFPMask |= FPClassMask::kfcSNan;
+    if ((KnownFPMask & FPClassMask::kfcInf) != FPClassMask::kfcNone)
+      KnownFPMask |= FPClassMask::kfcInf;
+    if ((KnownFPMask & FPClassMask::kfcNormal) != FPClassMask::kfcNone)
+      KnownFPMask |= FPClassMask::kfcNormal;
+    if ((KnownFPMask & FPClassMask::kfcSubnormal) != FPClassMask::kfcNone)
+      KnownFPMask |= FPClassMask::kfcSubnormal;
+    if ((KnownFPMask & FPClassMask::kfcZero) != FPClassMask::kfcNone)
+      KnownFPMask |= FPClassMask::kfcZero;
   }
 
-  KnownFPClass(FPClassMask Known = kfcAllFlags) : KnownFPMask(Known) {}
+  KnownFPClass(FPClassMask Known = FPClassMask::kfcAllFlags)
+      : KnownFPMask(Known) {}
   KnownFPClass(FPClassTest Known) : KnownFPMask(toFPClassMask(Known)) {}
   KnownFPClass(FPClassTest Known, bool Sign)
       : KnownFPMask(toFPClassMask(Known, Sign)) {}
@@ -215,7 +218,7 @@ public:
 
   /// Return true if it's known this can never be one of the mask entries.
   bool isKnownNever(FPClassMask Mask) const {
-    return (KnownFPMask & Mask) == kfcNone;
+    return (KnownFPMask & Mask) == FPClassMask::kfcNone;
   }
 
   /// Return true if it's known this can never be one of the mask entries.
@@ -229,7 +232,7 @@ public:
     return isKnownAlways(toFPClassMask(Mask));
   }
 
-  bool isUnknown() const { return KnownFPMask == kfcAllFlags; }
+  bool isUnknown() const { return KnownFPMask == FPClassMask::kfcAllFlags; }
 
   /// Return true if it's known this can never be a nan.
   bool isKnownNeverNaN() const { return isKnownNever(fcNan); }
@@ -350,32 +353,32 @@ public:
   void knownNot(FPClassTest RuleOut) { knownNot(toFPClassMask(RuleOut)); }
 
   void fneg() {
-    FPClassMask Known = kfcNone;
+    FPClassMask Known = FPClassMask::kfcNone;
 
-    if (KnownFPMask & kfcNegQNan)
-      Known |= kfcPosQNan;
-    if (KnownFPMask & kfcNegSNan)
-      Known |= kfcPosSNan;
-    if (KnownFPMask & kfcNegInf)
-      Known |= kfcPosInf;
-    if (KnownFPMask & kfcNegNormal)
-      Known |= kfcPosNormal;
-    if (KnownFPMask & kfcNegSubnormal)
-      Known |= kfcPosSubnormal;
-    if (KnownFPMask & kfcNegZero)
-      Known |= kfcPosZero;
-    if (KnownFPMask & kfcPosZero)
-      Known |= kfcNegZero;
-    if (KnownFPMask & kfcPosSubnormal)
-      Known |= kfcNegSubnormal;
-    if (KnownFPMask & kfcPosNormal)
-      Known |= kfcNegNormal;
-    if (KnownFPMask & kfcPosInf)
-      Known |= kfcNegInf;
-    if (KnownFPMask & kfcPosSNan)
-      Known |= kfcNegSNan;
-    if (KnownFPMask & kfcPosQNan)
-      Known |= kfcNegQNan;
+    if ((KnownFPMask & FPClassMask::kfcNegQNan) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcPosQNan;
+    if ((KnownFPMask & FPClassMask::kfcNegSNan) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcPosSNan;
+    if ((KnownFPMask & FPClassMask::kfcNegInf) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcPosInf;
+    if ((KnownFPMask & FPClassMask::kfcNegNormal) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcPosNormal;
+    if ((KnownFPMask & FPClassMask::kfcNegSubnormal) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcPosSubnormal;
+    if ((KnownFPMask & FPClassMask::kfcNegZero) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcPosZero;
+    if ((KnownFPMask & FPClassMask::kfcPosZero) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcNegZero;
+    if ((KnownFPMask & FPClassMask::kfcPosSubnormal) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcNegSubnormal;
+    if ((KnownFPMask & FPClassMask::kfcPosNormal) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcNegNormal;
+    if ((KnownFPMask & FPClassMask::kfcPosInf) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcNegInf;
+    if ((KnownFPMask & FPClassMask::kfcPosSNan) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcNegSNan;
+    if ((KnownFPMask & FPClassMask::kfcPosQNan) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcNegQNan;
 
     KnownFPMask = Known;
   }
@@ -387,20 +390,20 @@ public:
   }
 
   void fabs() {
-    FPClassMask Known = kfcNone;
+    FPClassMask Known = FPClassMask::kfcNone;
 
-    if (KnownFPMask & kfcQNan)
-      Known |= kfcPosQNan;
-    if (KnownFPMask & kfcSNan)
-      Known |= kfcPosSNan;
-    if (KnownFPMask & kfcInf)
-      Known |= kfcPosInf;
-    if (KnownFPMask & kfcNormal)
-      Known |= kfcPosNormal;
-    if (KnownFPMask & kfcSubnormal)
-      Known |= kfcPosSubnormal;
-    if (KnownFPMask & kfcZero)
-      Known |= kfcPosZero;
+    if ((KnownFPMask & FPClassMask::kfcQNan) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcPosQNan;
+    if ((KnownFPMask & FPClassMask::kfcSNan) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcPosSNan;
+    if ((KnownFPMask & FPClassMask::kfcInf) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcPosInf;
+    if ((KnownFPMask & FPClassMask::kfcNormal) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcPosNormal;
+    if ((KnownFPMask & FPClassMask::kfcSubnormal) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcPosSubnormal;
+    if ((KnownFPMask & FPClassMask::kfcZero) != FPClassMask::kfcNone)
+      Known |= FPClassMask::kfcPosZero;
 
     KnownFPMask = Known;
   }
@@ -551,32 +554,32 @@ public:
   bool signBitIsZeroOrNaN() const { return isKnownNever(fcNegative); }
 
   /// Assume the sign bit is zero.
-  void signBitMustBeZero() { KnownFPMask &= kfcPosSignBit; }
+  void signBitMustBeZero() { KnownFPMask &= FPClassMask::kfcPosSignBit; }
 
   /// Assume the sign bit is one.
-  void signBitMustBeOne() { KnownFPMask &= kfcNegSignBit; }
+  void signBitMustBeOne() { KnownFPMask &= FPClassMask::kfcNegSignBit; }
 
   void copysign(const KnownFPClass &Sign) {
     // Don't know anything about the sign of the source. Expand the possible set
     // to its opposite sign pair.
 
-    if (KnownFPMask & kfcQNan)
-      KnownFPMask |= kfcQNan;
-    if (KnownFPMask & kfcSNan)
-      KnownFPMask |= kfcSNan;
-    if (KnownFPMask & kfcInf)
-      KnownFPMask |= kfcInf;
-    if (KnownFPMask & kfcNormal)
-      KnownFPMask |= kfcNormal;
-    if (KnownFPMask & kfcSubnormal)
-      KnownFPMask |= kfcSubnormal;
-    if (KnownFPMask & kfcZero)
-      KnownFPMask |= kfcZero;
+    if ((KnownFPMask & FPClassMask::kfcQNan) != FPClassMask::kfcNone)
+      KnownFPMask |= FPClassMask::kfcQNan;
+    if ((KnownFPMask & FPClassMask::kfcSNan) != FPClassMask::kfcNone)
+      KnownFPMask |= FPClassMask::kfcSNan;
+    if ((KnownFPMask & FPClassMask::kfcInf) != FPClassMask::kfcNone)
+      KnownFPMask |= FPClassMask::kfcInf;
+    if ((KnownFPMask & FPClassMask::kfcNormal) != FPClassMask::kfcNone)
+      KnownFPMask |= FPClassMask::kfcNormal;
+    if ((KnownFPMask & FPClassMask::kfcSubnormal) != FPClassMask::kfcNone)
+      KnownFPMask |= FPClassMask::kfcSubnormal;
+    if ((KnownFPMask & FPClassMask::kfcZero) != FPClassMask::kfcNone)
+      KnownFPMask |= FPClassMask::kfcZero;
 
     if (Sign.getSignBit() && !*Sign.getSignBit())
-      KnownFPMask &= kfcPosSignBit;
+      KnownFPMask &= FPClassMask::kfcPosSignBit;
     if (Sign.getSignBit() && *Sign.getSignBit())
-      KnownFPMask &= kfcNegSignBit;
+      KnownFPMask &= FPClassMask::kfcNegSignBit;
   }
 
   static KnownFPClass copysign(const KnownFPClass &KnownMag,
