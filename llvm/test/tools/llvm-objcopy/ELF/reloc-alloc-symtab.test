@@ -11,9 +11,9 @@
 
 # CHECK:      [ 2] .klp.rela.vmlinux.text {{RELA|CREL}} {{.*}} AI  3   1
 # CHECK-NEXT: [ 3] .symtab
-# CHECK:      R_X86_64_PC32 {{.*}} b + 0
+# CHECK:      R_X86_64_PC32 {{.*}} referenced + 0
 # CHECK:      Symbol table '.symtab' contains 2 entries:
-# CHECK:      1: {{.*}} UND b
+# CHECK:      1: {{.*}} UND referenced
 
 !ELF
 FileHeader:
@@ -33,10 +33,10 @@ Sections:
     Info:    .text
     Relocations:
       - Offset: 1
-        Symbol: b
+        Symbol: referenced
         Type:   R_X86_64_PC32
 Symbols:
-  - Name:    l
+  - Name:    unreferenced
     Section: .text
-  - Name:    b
+  - Name:    referenced
     Binding: STB_GLOBAL
