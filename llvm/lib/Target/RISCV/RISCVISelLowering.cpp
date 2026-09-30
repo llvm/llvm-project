@@ -2153,8 +2153,14 @@ MVT RISCVTargetLowering::getVPExplicitVectorLengthTy() const {
   return Subtarget.getXLenVT();
 }
 
-// Return false to lower the fold of vscale add to RISCV.
-bool RISCVTargetLowering::isDesirableToFoldVScaleAdd() const { return false; }
+// In RISCV architecture, if N0.hasOneUse() is true, returns true. Otherwise,
+// returns false. When the return value is true, the fold of vscale add can be
+// performed.
+bool RISCVTargetLowering::isProfitableToFoldVScaleAdd(const SDValue N) const {
+  if (N.hasOneUse())
+    return true;
+  return false;
+}
 
 // Return false if we can lower get_vector_length to a vsetvli intrinsic.
 bool RISCVTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,

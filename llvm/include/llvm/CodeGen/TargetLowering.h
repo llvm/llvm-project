@@ -4772,9 +4772,11 @@ public:
   }
 
   /// Always returns true on the AArch64 architecture.
-  /// Always return false on the RISC-V architecture.
-  /// Lower the fold of Vscale Add to RISCV.
-  virtual bool isDesirableToFoldVScaleAdd() const { return true; }
+  /// In RISCV architecture, if N0.hasOneUse() is true, returns true. Otherwise,
+  /// returns false.
+  virtual bool isProfitableToFoldVScaleAdd(const SDValue N) const {
+    return true;
+  }
 
   /// GlobalISel - return true if it is profitable to move this shift by a
   /// constant amount through its operand, adjusting any immediate operands as
