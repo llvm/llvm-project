@@ -20,4 +20,5 @@ void test(global int* out, global short2 *s2out, global ushort2 *us2out,
   *us2out = __builtin_amdgcn_pk_add_max_u16(us2a, us2b, us2c, true); // expected-error {{'__builtin_amdgcn_pk_add_max_u16' needs target feature pk-add-min-max-insts}}
   *s2out = __builtin_amdgcn_pk_add_min_i16(s2a, s2b, s2c, false); // expected-error {{'__builtin_amdgcn_pk_add_min_i16' needs target feature pk-add-min-max-insts}}
   *us2out = __builtin_amdgcn_pk_add_min_u16(us2a, us2b, us2c, true); // expected-error {{'__builtin_amdgcn_pk_add_min_u16' needs target feature pk-add-min-max-insts}}
+  *out = __builtin_amdgcn_schedule_bank(a, 2, false); // expected-error {{'__builtin_amdgcn_schedule_bank' needs target feature gfx1250-insts}}
 }
