@@ -292,8 +292,7 @@ define i32 @known_range_mbcnt_lo_refineable_range(i32 %unknown) {
   ret i32 %lo
 }
 
-; A zero mask contributes no lanes, so the call is the base. add and shl of that
-; base, including a variable shift amount, are the same replacement.
+; A zero mask contributes no lanes, so the call is the base.
 define i32 @mbcnt_hi_zero_mask() {
 ; DEFAULT-LABEL: define i32 @mbcnt_hi_zero_mask() {
 ; DEFAULT-NEXT:    ret i32 1
@@ -308,8 +307,6 @@ define i32 @mbcnt_hi_zero_mask() {
 }
 
 ; A non-zero mask is lane-varying, so the call must not become a constant.
-; mbcnt.hi is the same known-bits path; on wave32 it is separately a copy of
-; the base. shl is the same consumer as xor once the call is not known zero.
 define i32 @mbcnt_lo_nonzero_mask() {
 ; DEFAULT-LABEL: define i32 @mbcnt_lo_nonzero_mask() {
 ; DEFAULT-NEXT:    ret i32 1
