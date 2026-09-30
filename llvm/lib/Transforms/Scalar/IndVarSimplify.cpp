@@ -673,7 +673,9 @@ static void visitIVCast(CastInst *Cast, WideIVInfo &WI,
 /// Before:
 ///   loop:
 ///     %iv     = phi iN [ %init, ph ], [ %sel, latch ]
+///     %wide   = phi iM [ %wide.init, ph ], [ %wide.next, latch ]
 ///     %ext    = sext iN %iv to iM                  ; %iv's only wide-cast use
+///     %wide.next = add iM %wide, 1
 ///     %narrow = trunc nsw iM %wide.next to iN      ; one-use
 ///     %sel    = select i1 %c, iN %iv, iN %narrow   ; %iv's other use;
 ///                                                  ;   arms in any order
@@ -683,6 +685,8 @@ static void visitIVCast(CastInst *Cast, WideIVInfo &WI,
 ///     %init.wide = sext iN %init to iM             ; one-time widen of init
 ///   loop:
 ///     %iv.wide   = phi iM [ %init.wide, ph ], [ %sel.wide, latch ]
+///     %wide      = phi iM [ %wide.init, ph ], [ %wide.next, latch ]
+///     %wide.next = add iM %wide, 1
 ///     %sel.wide  = select i1 %c, iM %iv.wide, iM %wide.next  ; now in iM
 ///     %sel.trunc = trunc nsw iM %sel.wide to iN    ; for narrow consumers
 ///
@@ -691,16 +695,16 @@ static void visitIVCast(CastInst *Cast, WideIVInfo &WI,
 ///     %iv.wide, eliminating the per-iteration sign-extend on the wide use.
 ///   - %narrow (trunc feeding the select) is gone; the select consumes
 ///     %wide.next directly. %sel.trunc replaces it on the output side, so
-///     any narrow consumer of the recurrence still gets an iN value. Net
-///     trunc count per iteration is unchanged, but the recurrence itself
-///     is now wide.
+///     narrow consumers get the selected value in iN. Truncating %wide.next
+///     directly would be wrong when the select retains %iv.wide. Net trunc
+///     count per iteration is unchanged, but the recurrence itself is now wide.
 ///   - %init is sign-extended once in the preheader, never inside the loop.
 ///
 /// SCEV does not classify select-controlled phis as induction variables, so
 /// simplifyUsersOfIV's IV walker never visits them and createWideIV never
 /// runs. The structural preconditions are therefore checked here directly.
 static PHINode *
-widenSelectRecurrence(PHINode *PN, LoopInfo *LI,
+widenSelectRecurrence(PHINode *PN, Loop *L,
                       SmallVectorImpl<WeakTrackingVH> &DeadInsts,
                       unsigned &NumWidened) {
   Type *SrcTy = PN->getType();
@@ -708,13 +712,11 @@ widenSelectRecurrence(PHINode *PN, LoopInfo *LI,
       !PN->hasNUses(2))
     return nullptr;
 
-  Loop *L = LI->getLoopFor(PN->getParent());
-  if (!L || PN->getParent() != L->getHeader())
-    return nullptr;
+  assert(PN->getParent() == L->getHeader() &&
+         "recurrence must be in the loop header");
   BasicBlock *PH = L->getLoopPreheader();
   BasicBlock *Latch = L->getLoopLatch();
-  if (!PH || !Latch)
-    return nullptr;
+  assert(PH && Latch && "loop must be in simplify form");
 
   auto *Sel = dyn_cast<SelectInst>(PN->getIncomingValueForBlock(Latch));
   if (!Sel)
@@ -741,8 +743,6 @@ widenSelectRecurrence(PHINode *PN, LoopInfo *LI,
     if (!Ext || Ext->getType() != DestTy)
       return nullptr;
   }
-  if (!Ext)
-    return nullptr;
 
   auto *WidePN =
       PHINode::Create(DestTy, 2, PN->getName() + ".wide", PN->getIterator());
@@ -757,6 +757,9 @@ widenSelectRecurrence(PHINode *PN, LoopInfo *LI,
   auto *WideSel =
       SelectInst::Create(Sel->getCondition(), TVal, FVal,
                          Sel->getName() + ".wide", Sel->getIterator());
+  WideSel->copyMetadata(*Sel);
+  if (Sel->getTrueValue() != PN)
+    WideSel->swapProfMetadata();
   WidePN->addIncoming(WideSel, Latch);
 
   auto *Trunc =
@@ -864,7 +867,7 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
         Changed = true;
         LoopPhis.push_back(WidePhi);
       } else if (PHINode *WidePhi = widenSelectRecurrence(
-                     WideIVs.back().NarrowIV, LI, DeadInsts, Widened)) {
+                     WideIVs.back().NarrowIV, L, DeadInsts, Widened)) {
         // createWideIV did not fire (the phi is not an AddRec). Try the
         // structural select-recurrence widener.
         NumWidened += Widened;

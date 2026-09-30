@@ -12,6 +12,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; on a structural match. Once the scan induction is widened, the select's arm
 ; becomes a one-use `trunc nsw` of the wide counter; the min-index recurrence
 ; should then be widened to i64 and the truncation sunk onto the narrow exit use.
+; Profile weights must follow the select arms when widening swaps them.
 define i32 @fp_argmin_decreasing(ptr %a, i32 %start, i64 %tc0) {
 ; CHECK-LABEL: @fp_argmin_decreasing(
 ; CHECK-NEXT:  entry:
@@ -30,7 +31,7 @@ define i32 @fp_argmin_decreasing(ptr %a, i32 %start, i64 %tc0) {
 ; CHECK-NEXT:    [[MIN_P:%.*]] = getelementptr i8, ptr [[MIN_P0]], i64 -4
 ; CHECK-NEXT:    [[MIN_V:%.*]] = load float, ptr [[MIN_P]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = fcmp fast olt float [[SCAN_V]], [[MIN_V]]
-; CHECK-NEXT:    [[MIN_NEXT_WIDE]] = select i1 [[C]], i64 [[INDVARS_IV_NEXT]], i64 [[MIN_WIDE]]
+; CHECK-NEXT:    [[MIN_NEXT_WIDE]] = select i1 [[C]], i64 [[INDVARS_IV_NEXT]], i64 [[MIN_WIDE]], !prof [[PROF0:![0-9]+]], !unpredictable [[META1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc nsw i64 [[MIN_NEXT_WIDE]] to i32
 ; CHECK-NEXT:    [[CNT_NEXT]] = add nsw i64 [[CNT]], -1
 ; CHECK-NEXT:    [[AGAIN:%.*]] = icmp sgt i64 [[CNT]], 1
@@ -56,7 +57,8 @@ loop:
   %min.p = getelementptr i8, ptr %min.p0, i64 -4
   %min.v = load float, ptr %min.p, align 4
   %c = fcmp fast olt float %scan.v, %min.v
-  %min.next = select i1 %c, i32 %scan.next, i32 %min
+  %min.next = select i1 %c, i32 %scan.next, i32 %min, !prof !0,
+  !unpredictable !1
   %cnt.next = add nsw i64 %cnt, -1
   %again = icmp sgt i64 %cnt, 1
   br i1 %again, label %loop, label %exit
@@ -150,3 +152,9 @@ loop:
 exit:
   ret i32 %min.idx.next
 }
+
+!0 = !{!"branch_weights", i32 13, i32 42}
+!1 = !{}
+
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 42, i32 13}
+; CHECK: [[META1]] = !{}
