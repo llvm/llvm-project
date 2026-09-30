@@ -271,14 +271,14 @@ static void emitOptionsStruct(const Record &Struct,
   std::vector<const Record *> Fields;
   for (const Record *R : Opts) {
     StringRef Kind = R->getValueAsDef("Kind")->getValueAsString("Name");
-    if (isa<UnsetInit>(R->getValueInit("FieldName"))) {
+    if (!R->getValue("FieldName")) {
       if (Kind != "Input" && Kind != "Unknown" &&
           isa<UnsetInit>(R->getValueInit("Alias")))
         PrintFatalError(R->getLoc(), "an option of an OptionsStruct must be "
                                      "declared with BoolField or ValueField");
       continue;
     }
-    bool HasValue = !isa<UnsetInit>(R->getValueInit("FieldValue"));
+    bool HasValue = R->getValue("FieldValue");
     if ((Kind == "Flag") != HasValue ||
         (Kind != "Flag" && Kind != "Joined" && Kind != "Separate"))
       PrintFatalError(R->getLoc(), "a member is set by a Flag with a "
@@ -346,7 +346,7 @@ static void emitOptionsStruct(const Record &Struct,
   for (const Record *R : Fields) {
     OS << "  case OPT_" << getStructOptionID(*R) << ":\n";
     std::string Member = getMemberName(*R);
-    if (isa<UnsetInit>(R->getValueInit("FieldValue")))
+    if (!R->getValue("FieldValue"))
       OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
          << ");\n";
     else
@@ -371,7 +371,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       Records.getAllDerivedDefinitions("SubCommand");
 
   ArrayRef<const Record *> Structs =
-      Records.getAllDerivedDefinitions("OptionsStruct");
+      Records.getAllDerivedDefinitionsIfDefined("OptionsStruct");
   if (Structs.size() > 1)
     PrintFatalError(Structs[1]->getLoc(), "only one OptionsStruct is allowed");
 

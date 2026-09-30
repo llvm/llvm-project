@@ -253,7 +253,10 @@ exports_files([
 
 td_library(
     name = "OptParserTdFiles",
-    srcs = ["include/llvm/Option/OptParser.td"],
+    srcs = [
+        "include/llvm/Option/LibraryOptions.td",
+        "include/llvm/Option/OptParser.td",
+    ],
     includes = ["include"],
 )
 

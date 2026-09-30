@@ -1571,7 +1571,7 @@ A library can declare its options in a `.td` file instead of as `cl::opt` global
 `llvm-tblgen -gen-opt-parser-defs` generates a struct with a member per option, the table that parses them, and the hooks through which `cl::ParseCommandLineOptions` parses them and `-help-hidden` lists them.
 
 ```text
-include "llvm/Option/OptParser.td"
+include "llvm/Option/LibraryOptions.td"
 
 def FooOptions : OptionsStruct;
 

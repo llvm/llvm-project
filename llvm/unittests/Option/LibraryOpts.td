@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-include "llvm/Option/OptParser.td"
+include "llvm/Option/LibraryOptions.td"
 
 def TestLibraryOptions : OptionsStruct<"test">;
 
