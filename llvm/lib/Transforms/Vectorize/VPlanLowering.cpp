@@ -76,15 +76,8 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
       auto *It = find_if(UI->users(), IsaPred<VPWidenCanonicalIVRecipe>);
       if (It != UI->user_end()) {
         WideCanIV = cast<VPWidenCanonicalIVRecipe>(*It);
-        if (!match(UI, m_c_Add(m_Specific(IV), m_VPIRValue(StartValue))) ||
-            !StartValue) {
-          assert(StartValue &&
-                 "WIDEN-CANONICAL-INDUCTION is only expected to be reached "
-                 "through the canonical IV directly, or through a single 'add "
-                 "CanonicalIV, StartValue' introduced for epilogue-loop resume "
-                 "values; found a different pattern here");
-          return;
-        }
+        if (match(UI, m_c_Add(m_Specific(IV), m_VPIRValue(StartValue))))
+          break;
       }
     }
   }
@@ -596,7 +589,10 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       }
 
       if (auto *WideCanIV = dyn_cast<VPWidenCanonicalIVRecipe>(&R)) {
-        VPValue *CanIV = WideCanIV->getCanonicalIV();
+        // Operand 0 is either the canonical IV or, for tail-folded epilogue,
+        // 'add CanonicalIV, ResumeValue'.
+        VPValue *CanIV = WideCanIV->getOperand(0);
+
         Type *CanIVTy = CanIV->getScalarType();
         VPValue *Step = WideCanIV->getStepValue();
         if (!Step) {

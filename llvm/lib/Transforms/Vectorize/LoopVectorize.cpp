@@ -3171,7 +3171,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
   for (const auto &Plan : VPlans) {
     // Skip cost remarks when Plan is not compatible with the CM.
     // Specifically for the case of epilogue tail-folded Plans.
-    if (Plan->hasTailFolded() != CM->preferTailFoldedLoop())
+    if (Plan->hasTailFolded() != CM->foldTailByMasking())
       continue;
     for (ElementCount VF : Plan->vectorFactors()) {
       // The VPlan-based cost model is designed for computing vector cost.
@@ -5414,9 +5414,6 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       // Collect the instructions (and their associated costs) that will be more
       // profitable to scalarize.
       CM->collectNonVectorizedAndSetWideningDecisions(UserVF);
-      // Build the main-loop VPlan firstly because if epilogue tail-folding is
-      // enabled, it will be built later, so we keep the epilogue vplans at the
-      // end.
       buildVPlans(*VPlan1, UserVF, UserVF, *CM);
 
       // For scalar VF, skip VPlan cost check as VPlan cost is designed for
@@ -5424,9 +5421,10 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       if (!VPlans.empty() && (VPlans.front()->getSingleVF() == UserVF) &&
           (UserVF.isScalar() ||
            cost(*VPlans.front(), UserVF, /*RU=*/nullptr, *CM).isValid())) {
-        // Plan for epilogue only if we succeeded in building main loop Vplan.
-        // Try to plan for tail-folded epilogue if it's enabled/doable,
-        // otherwise plan for unpredicated epilogue:
+        // Plan for epilogue only if we succeeded in building the Vplan for the
+        // main loop.
+        // Try to build a tail-folded epilogue Vplan. Otherwise build a regular
+        // plan for the epilogue:
         if (!planForEpilogueTF()) {
           ElementCount EpilogueUserVF = EpilogueVectorizationForceVF;
           if (EpilogueUserVF.isVector() &&
@@ -5505,7 +5503,7 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
     reportVectorizationInfo(
         "Failed to build initial tail-folded epilogue VPlan",
         "InvalidTailFoldedEpilogue", ORE, OrigLoop);
-    llvm_unreachable("Failed to build initial tail-folded epilogue VPlan");
+    assert(VPlan1 && "Failed to build initial tail-folded epilogue VPlan");
     return false;
   }
 
