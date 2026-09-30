@@ -337,6 +337,15 @@ static cl::opt<unsigned> SLPRuntimeAliasChecksMaxScalarCostPercent(
              "guarded scalar region cost, before versioning is rejected to "
              "avoid pessimizing the scalar fallback path."));
 
+/// The scalar loop left by the loop vectorizer runs only a few iterations or
+/// the ranges its runtime checks found overlapping, where the checks executed
+/// on each iteration are unlikely to pay off, so they get a tighter bound.
+static cl::opt<unsigned> SLPVecLoopRTChecksCostPercent(
+    "slp-vec-loop-rt-checks-cost-percent", cl::init(10), cl::Hidden,
+    cl::desc("Maximum SLP runtime alias check cost, as a percentage of the "
+             "guarded scalar region cost, for blocks of loops already "
+             "vectorized by the loop vectorizer."));
+
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -25649,8 +25658,12 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
   InstructionCost CheckCost = getRuntimeChecksCost();
   if (!ScalarCost.isValid() || !CheckCost.isValid())
     return false;
-  if (CheckCost * 100 >
-      ScalarCost * SLPRuntimeAliasChecksMaxScalarCostPercent.getValue())
+  const Loop *L = LI->getLoopFor(BB);
+  unsigned MaxPercent =
+      L && getBooleanLoopAttribute(L, "llvm.loop.isvectorized")
+          ? SLPVecLoopRTChecksCostPercent
+          : SLPRuntimeAliasChecksMaxScalarCostPercent;
+  if (CheckCost * 100 > ScalarCost * MaxPercent)
     return false;
 
   // Freeze the check set so the final scheduleBlock() keeps the same dropped
