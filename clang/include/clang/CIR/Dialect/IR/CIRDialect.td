@@ -115,6 +115,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getAMDGPUXnackAttrName() { return "cir.amdgpu_xnack"; }
     static llvm::StringRef getAMDGPUSramEccAttrName() { return "cir.amdgpu_sramecc"; }
     static llvm::StringRef getOpenCLKernelArgMetadataAttrName() { return "cir.cl.kernel_arg_metadata"; }
+    static llvm::StringRef getMaxWorkGroupSizeAttrName() { return "cir.max_work_group_size"; }
     static llvm::StringRef getOpenCLVersionAttrName() { return "cir.cl.version"; }
     static llvm::StringRef getOpenCLCXXVersionAttrName() { return "cir.cl.cxx.version"; }
     static llvm::StringRef getDefaultTlsModelAttrName() { return "cir.default_tls_model"; }
