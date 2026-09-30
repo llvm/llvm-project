@@ -19,6 +19,7 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
@@ -282,6 +283,9 @@ static LogicalResult convertGEPOp(GEPOp op, llvm::IRBuilderBase &builder,
     if (!res)
       return op.emitError("failed to lower " + WhyConstExpr +
                           " to a constant byte offset");
+    // Fold the constant as CreateGEP did through the TargetFolder. This also
+    // infers inbounds and nuw when the offset stays within the global.
+    res = llvm::ConstantFoldConstant(cast<llvm::Constant>(res), dataLayout);
   } else {
     res = builder.CreateGEP(elementType, base, indices, "", nwFlags);
   }
