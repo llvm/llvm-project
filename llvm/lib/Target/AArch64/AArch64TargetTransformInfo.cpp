@@ -5568,7 +5568,7 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
     // whilelo  p1.s, xzr, x8
     // ld1w     { z1.s }, p1/z, [x0]
     // expand   z1.s, p0, z1.s
-    MemOpCost += 3;
+    MemOpCost *= 4;
   }
 
   if (MICA.getID() == Intrinsic::masked_compressstore) {
@@ -5580,7 +5580,7 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
     //  cntp     x8, p1, p0.s
     //  whilelo  p0.s, xzr, x8
     //  st1w     { z0.s }, p0, [x0]
-    MemOpCost += 3;
+    MemOpCost *= 4;
   }
 
   // If we need to split the memory operation, we will also need to split the
