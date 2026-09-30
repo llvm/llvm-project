@@ -15,6 +15,7 @@
 #include "MCTargetDesc/SuperHInstPrinter.h"
 #include "MCTargetDesc/SuperHMCTargetDesc.h"
 #include "SuperH.h"
+#include "SuperHMachineFunctionInfo.h"
 #include "SuperHRegisterInfo.h"
 #include "SuperHSubtarget.h"
 #include "SuperHTargetMachine.h"
@@ -70,6 +71,65 @@ MCInst SuperHInstrInfo::getNop() const {
 void SuperHInstrInfo::insertNoop(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI) const {
   BuildMI(&MBB, MI->getDebugLoc(), get(SH::NOP));
+}
+
+// emitAddressAdjust - Emits an adjustment to an address stored in a register,
+// said adjustment will, if within the MaxAdd range, be emitted as a series of
+// immediate add instructions, otherwise the implementation will try to store
+// the offset into the constant pool, load it and add it to the register, 
+// clobbering R1.
+void SuperHInstrInfo::emitAddressAdjust(Register Reg, Block &MBB, BlockIt MBBI, 
+                                        int32_t AdjValue, int32_t MaxAdd, MIFlag Flag) const {
+  const MachineFunction &MF = *MBB.getParent();
+  const SuperHInstrInfo &TII = *STI.getInstrInfo();
+  const SuperHMachineFunctionInfo *MFI = MF.getInfo<SuperHMachineFunctionInfo>();
+  DebugLoc DL = (MBBI != MBB.end()) ? MBBI->getDebugLoc() : DebugLoc();
+  bool Sign = AdjValue < 0;
+
+  // No stack frame allocation neccesary.
+  if (AdjValue == 0)
+    return;
+
+  int32_t AbsAdj = std::abs(AdjValue);
+
+  // If adjustment is below the maximum, generate a series of add
+  // instructions, AbsAdj is the adjustment made absolute (positive)
+  // as such, the sign is reapplied when the add instruction is generated.
+  if ((AbsAdj / 128) < MaxAdd) {
+    while(AbsAdj != 0) {
+      int32_t Adj = std::min<int32_t>(127, AbsAdj);
+
+      BuildMI(MBB, MBBI, DL, TII.get(SH::ADDI), Reg)
+          .addReg(Reg)
+          .addImm(Sign ? -Adj : Adj)
+          .setMIFlag(Flag);
+
+      AbsAdj -= Adj;
+    }
+    return;
+  }
+
+  // If the input register is R1, clobber R2 instead.
+  Register TmpReg = SH::R1;
+  if (Reg == TmpReg)
+    TmpReg = SH::R2;
+
+  // Try promoting the value to the constant pool and load from that.
+  auto *CV = ConstantInt::get(MF.getFunction().getContext(), 
+      APInt(32, AdjValue, true, true));
+  if (CV) {
+    if (auto *C = MFI->getOrCreate(CV, MF)) {
+      BuildMI(MBB, MBBI, DL, TII.get(SH::MOVLI), TmpReg)
+          .addConstantPoolIndex(C->getLabelId())
+          .setMIFlag(Flag);
+      BuildMI(MBB, MBBI, DL, TII.get(SH::ADD), Reg)
+          .addReg(TmpReg, RegState::Kill)
+          .setMIFlag(Flag);
+      return;
+    }
+  }
+
+  llvm_unreachable("Failed to emit address adjustment!");
 }
 
 SHCC::CondCode SuperHInstrInfo::getCondFromBranchOp(unsigned Op) const {

@@ -77,6 +77,10 @@ public:
   SuperHConstantPoolConstant *tryGetConstant(const GlobalValue *G,
                                              const MachineFunction &MF) const;
 
+  // Helpers for lower level passes to create constants.
+  SuperHConstantPoolConstant *getOrCreate(const ConstantInt *G,
+                                          const MachineFunction &MF) const;
+
 private:
   virtual void anchor();
 };

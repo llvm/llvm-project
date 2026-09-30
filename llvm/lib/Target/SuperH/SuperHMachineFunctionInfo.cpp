@@ -73,6 +73,30 @@ SuperHMachineFunctionInfo::tryGetConstant(const GlobalValue *G,
   return nullptr;
 }
 
+SuperHConstantPoolConstant *
+SuperHMachineFunctionInfo::getOrCreate(const ConstantInt *G,
+                                       const MachineFunction &MF) const {
+  // Run though the constant pool that is tied to the DAG and search for
+  // the constant there.
+  const MachineConstantPool *MCP = MF.getConstantPool();
+  for (auto &MC : MCP->getConstants()) {
+    if (MC.isMachineConstantPoolEntry()) {
+      if (auto *CPV = (SuperHConstantPoolConstant *)MC.Val.MachineCPVal) {
+        if (CPV->getPromotedGlobalInit() == G)
+          return CPV;
+      }
+    }
+  }
+
+  // If not found, create a new one and add it.
+  SuperHMachineFunctionInfo *SFI = 
+    const_cast<SuperHMachineFunctionInfo *>(MF.getInfo<SuperHMachineFunctionInfo>());
+  unsigned LabelIndex = SFI->createConstIndex();
+  return SuperHConstantPoolConstant::Create(
+      G, LabelIndex, SHCP::SHCPKind::CPPromotedGlobal,
+      SHCP::SHCPModifier::DIR);
+}
+
 SuperHConstantPoolConstant *SuperHMachineFunctionInfo::tryGetConstant(
     BlockAddressSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier) {
 
