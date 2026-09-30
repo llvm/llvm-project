@@ -36,5 +36,12 @@ DebugInfoODRUniquer::getODRSubprogramDecl(Metadata *Scope,
 void DebugInfoODRUniquer::addSubprogramDecl(DISubprogram *SP) {
   assert(!SP->isDefinition() &&
          "only expect declarations DISubprogram ODR uniquing");
+  if (SP->getLinkageName().empty())
+    return;
+  // Only methods, which have a type scope, are eligable for ODR uniquing.
+  auto *CT = dyn_cast_or_null<DICompositeType>(SP->getScope());
+  if (!CT || !CT->getRawIdentifier())
+    return;
+
   FnDecls.insert(SP);
 }

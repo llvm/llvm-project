@@ -1,5 +1,8 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
+; RUN: opt < %s -S | FileCheck %s
 ; RUN: verify-uselistorder %s
+
+;; This test also runs opt to check opt applies the same odr type debug uniquing.
 
 ; Anchor the order of the nodes.
 !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17}
