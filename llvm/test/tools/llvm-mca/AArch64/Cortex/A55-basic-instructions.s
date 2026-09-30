@@ -2535,10 +2535,10 @@ drps
 # CHECK-NEXT:  1      1     1.00                        b	#134217724
 # CHECK-NEXT:  1      1     1.00                        br	x20
 # CHECK-NEXT:  1      1     1.00                        blr	xzr
-# CHECK-NEXT:  1      1     1.00                  U     ret	x10
-# CHECK-NEXT:  1      1     1.00                  U     ret
-# CHECK-NEXT:  1      1     1.00                  U     eret
-# CHECK-NEXT:  1      1     1.00                  U     drps
+# CHECK-NEXT:  1      1     1.00                        ret	x10
+# CHECK-NEXT:  1      1     1.00                        ret
+# CHECK-NEXT:  1      1     1.00                        eret
+# CHECK-NEXT:  1      1     1.00                        drps
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - CortexA55UnitALU
