@@ -55,7 +55,6 @@ struct CoroSplitPass : RequiredPassInfoMixin<CoroSplitPass> {
 
   // Would be true if the Optimization level isn't O0.
   bool OptimizeFrame;
-
 };
 } // end namespace llvm
 
