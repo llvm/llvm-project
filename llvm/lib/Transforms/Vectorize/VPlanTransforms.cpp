@@ -4240,23 +4240,21 @@ void VPlanTransforms::widenMemoryAccessesToVFMultiple(
         continue;
 
       VPValue *Ptr = MemOp->getAddr();
-      VPValue *PreferredVFMultipleVPV = Plan.getConstantInt(I64Ty, VFMultiple);
+      VPValue *VFMultipleVPV = Plan.getConstantInt(I64Ty, VFMultiple);
       VPValue *Align = Plan.getConstantInt(I64Ty, MemOp->getAlign().value());
 
       VPBuilder Builder(VPBB, R.getIterator());
       if (Opcode == Instruction::Load) {
         VPValue *OldLoad = R.getVPSingleValue();
         VPValue *Load = Builder.createNaryOp(
-            VPInstruction::VFMultipleLoad,
-            {PreferredVFMultipleVPV, Ptr, Align,
-             /*VFMultiple=*/Plan.getConstantInt(I64Ty, 1)},
-            nullptr, {}, *MemOp, R.getDebugLoc(), "", OldLoad->getScalarType());
+            VPInstruction::VFMultipleLoad, {VFMultipleVPV, Ptr, Align}, nullptr,
+            {}, *MemOp, R.getDebugLoc(), "", OldLoad->getScalarType());
         OldLoad->replaceAllUsesWith(Load);
       } else {
         assert(Opcode == Instruction::Store);
         Builder.createNaryOp(VPInstruction::VFMultipleStore,
-                             {PreferredVFMultipleVPV, Ptr, Align, StoredValue},
-                             nullptr, {}, *MemOp, R.getDebugLoc());
+                             {VFMultipleVPV, Ptr, Align, StoredValue}, nullptr,
+                             {}, *MemOp, R.getDebugLoc());
       }
 
       R.eraseFromParent();

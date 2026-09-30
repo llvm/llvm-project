@@ -298,13 +298,10 @@ void UnrollState::unrollMemOpWithVFMultiple(VPInstruction *VPI) {
           VPI->getOpcode() == VPInstruction::VFMultipleStore) &&
          "expected a vf-multiple load/store");
 
-  unsigned PreferredVFMultiple =
-      cast<VPConstantInt>(VPI->getOperand(0))->getZExtValue();
-  assert(PreferredVFMultiple > 1 && UF % PreferredVFMultiple == 0 &&
-         "expected PreferredVFMultiple to divide UF");
+  unsigned VFMultiple = cast<VPConstantInt>(VPI->getOperand(0))->getZExtValue();
+  assert(VFMultiple > 1 && UF % VFMultiple == 0 &&
+         "expected VFMultiple to divide UF");
 
-  // For now simply follow the preferred VFMultiple.
-  unsigned VFMultiple = PreferredVFMultiple;
   SmallVector<VPInstruction *, 4> Groups(UF / VFMultiple, nullptr);
   Groups[0] = VPI;
 
@@ -334,10 +331,6 @@ void UnrollState::unrollMemOpWithVFMultiple(VPInstruction *VPI) {
     }
     return;
   }
-
-  // Set the VFMultiple to match the PreferredVFMultiple.
-  for (VPInstruction *Load : Groups)
-    Load->setOperand(3, VPI->getOperand(0));
 
   // We need to extract each unroll part as a subvector.
   auto *ExtractPart0 = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
