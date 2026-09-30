@@ -20,7 +20,8 @@ bool TargetInfo::isAggregateTypeForABI(const Type *Ty) const {
     return isAggregateTypeForABI(AT->getValueType());
 
   // Check for fundamental scalar types.
-  if (Ty->isInteger() || Ty->isFloat() || Ty->isPointer() || Ty->isVector())
+  if (Ty->isInteger() || Ty->isFloat() || Ty->isPointer() || Ty->isVector() ||
+      Ty->isTuple())
     return false;
 
   // A matrix type is modeled as an array but lowers to a single flattened
@@ -41,8 +42,9 @@ bool TargetInfo::isPromotableInteger(const IntegerType *IT) const {
   return BitWidth < 32;
 }
 
-ArgInfo TargetInfo::getNaturalAlignIndirect(const Type *Ty, bool ByVal) const {
-  return ArgInfo::getIndirect(Ty->getAlignment(), ByVal);
+ArgInfo TargetInfo::getNaturalAlignIndirect(const Type *Ty, unsigned AddrSpace,
+                                            bool ByVal) const {
+  return ArgInfo::getIndirect(Ty->getAlignment(), ByVal, AddrSpace);
 }
 
 RecordArgABI TargetInfo::getRecordArgABI(const RecordType *RT) const {

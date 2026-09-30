@@ -57,11 +57,11 @@ func.func @_QPlocalizer_with_init_region() {
 // CHECK:           %[[VAL_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant 42 : i32
-// CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {bindc_name = "i"}
+// CHECK:           %[[VAL_3:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 // CHECK:           %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QFlocalizer_with_init_regionEn"}
+// CHECK:           %[[VAL_6:.*]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QFlocalizer_with_init_regionEn"}>
 // CHECK:           %[[VAL_7:.*]] = fir.declare %[[VAL_6]] {uniq_name = "_QFlocalizer_with_init_regionEn"} : (!fir.ref<i32>) -> !fir.ref<i32>
-// CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> {bindc_name = "p", uniq_name = "_QFlocalizer_with_init_regionEp"}
+// CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> <{bindc_name = "p", uniq_name = "_QFlocalizer_with_init_regionEp"}>
 // CHECK:           %[[VAL_9:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
 // CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_9]](%[[VAL_10]]) : (!fir.ptr<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
