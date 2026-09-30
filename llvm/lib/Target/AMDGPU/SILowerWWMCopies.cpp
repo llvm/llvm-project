@@ -155,10 +155,15 @@ bool SILowerWWMCopies::run(MachineFunction &MF) {
       // instruction.
       const DebugLoc &DL = MI.getDebugLoc();
       MachineBasicBlock::iterator InsertPt = MI.getIterator();
+      MachineInstrSpan MIS(InsertPt, &MBB);
       Register RegForExecCopy = MFI->getSGPRForEXECCopy();
       TII->insertScratchExecCopy(MF, MBB, InsertPt, DL, RegForExecCopy,
                                  isSCCLiveAtMI(MI), Indexes);
       TII->restoreExec(MF, MBB, ++InsertPt, DL, RegForExecCopy, Indexes);
+      // The exec save and restore are part of the copy.
+      if (MI.getFlag(MachineInstr::BBProlog))
+        for (MachineInstr &I : make_range(MIS.begin(), MIS.end()))
+          I.setFlag(MachineInstr::BBProlog);
       addToWWMSpills(MF, MI.getOperand(0).getReg());
       LLVM_DEBUG(dbgs() << "WWM copy manipulation for " << MI);
 
