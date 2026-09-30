@@ -288,25 +288,9 @@ struct KnownFPClass {
   }
 
   // Special cases of fmul -x, x and fmul x, -x.
-  static KnownFPClass
+  LLVM_ABI static KnownFPClass
   neg_square(const KnownFPClass &Src,
-             DenormalMode Mode = DenormalMode::getDynamic()) {
-    KnownFPClass Known = fmul(fneg(Src), Src, Mode);
-
-    // -X * X is always negative, zero, or a NaN.
-    Known.knownNot(fcPosSubnormal | fcPosNormal | fcPosInf);
-
-    // Zero results are -0 unless a denormal is flushed to +0.
-    if ((Mode.Input == DenormalMode::IEEE ||
-         Mode.Input == DenormalMode::PreserveSign) &&
-        (Mode.Output == DenormalMode::IEEE ||
-         Mode.Output == DenormalMode::PreserveSign)) {
-      Known.knownNot(fcPosZero);
-    }
-
-    Known.propagateNonNaN(Src);
-    return Known;
-  }
+             DenormalMode Mode = DenormalMode::getDynamic());
 
   LLVM_ABI static KnownFPClass
   fmul(const KnownFPClass &LHS, const APFloat &RHS,
