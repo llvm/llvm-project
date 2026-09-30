@@ -5319,9 +5319,12 @@ void CGDebugInfo::CreateLexicalBlock(SourceLocation Loc) {
   llvm::MDNode *Back = nullptr;
   if (!LexicalBlockStack.empty())
     Back = LexicalBlockStack.back().get();
+  // A #line 0 macro carried no line information but still take column
+  // information. This will finally be rejected by the lexer but is legal.
+  unsigned Line = getLineNumber(CurLoc);
+  unsigned Column = Line ? getColumnNumber(CurLoc) : 0;
   LexicalBlockStack.emplace_back(DBuilder.createLexicalBlock(
-      cast<llvm::DIScope>(Back), getOrCreateFile(CurLoc), getLineNumber(CurLoc),
-      getColumnNumber(CurLoc)));
+      cast<llvm::DIScope>(Back), getOrCreateFile(CurLoc), Line, Column));
 }
 
 void CGDebugInfo::AppendAddressSpaceXDeref(
