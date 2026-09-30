@@ -4266,7 +4266,60 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
       continue;
     LLVM_DEBUG(dbgs() << "  Rescheduling physreg copy ";
                DAG->dumpNode(*Dep.getSUnit()));
+    // Moving an already-scheduled copy can invalidate read-undef flags: lanes
+    // that were dead when the flags were set may now be live across the
+    // subregister defs the copy moves past (or after the copy itself). A stale
+    // read-undef makes a later DAG build drop true data dependencies, which
+    // can orphan the moved copy and crash LiveIntervals. Recompute the affected
+    // flags from LiveIntervals after the move.
+    LiveIntervals *LIS = DAG->getLIS();
+    bool FixUndef = LIS && DAG->hasVRegLiveness() && shouldTrackLaneMasks();
+    MachineBasicBlock::iterator OldNext = Copy->getParent()->end();
+    SlotIndex OldIdx;
+    SmallVector<Register, 8> CopyVRegs;
+    if (FixUndef) {
+      OldIdx = LIS->getInstructionIndex(*Copy);
+      OldNext = std::next(Copy->getIterator());
+      for (const MachineOperand &MO : Copy->operands())
+        if (MO.isReg() && MO.getReg().isVirtual())
+          CopyVRegs.push_back(MO.getReg());
+    }
     DAG->moveInstruction(Copy, InsertPos);
+    if (!FixUndef || CopyVRegs.empty())
+      continue;
+
+    auto FixVRegUndef = [&](MachineInstr &MI) {
+      bool HasAffectedDef = false;
+      for (MachineOperand &MO : MI.all_defs()) {
+        if (!MO.getReg().isVirtual() || MO.getSubReg() == 0 ||
+            !llvm::is_contained(CopyVRegs, MO.getReg()))
+          continue;
+        MO.setIsUndef(false);
+        HasAffectedDef = true;
+      }
+      if (!HasAffectedDef)
+        return;
+
+      // adjustLaneLiveness only adds read-undef flags, so clear them first.
+      // Re-add the valid flags to avoid introducing reads of undefined lanes.
+      const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+      RegisterOperands RegOpers;
+      RegOpers.collect(MI, *TRI, MRI, /*TrackLaneMasks=*/true,
+                       /*IgnoreDead=*/false);
+      RegOpers.adjustLaneLiveness(*LIS, MRI, MI);
+    };
+    FixVRegUndef(*Copy);
+    MachineBasicBlock::iterator NewIt = Copy->getIterator();
+    SlotIndex NewIdx = LIS->getInstructionIndex(*Copy);
+    if (NewIdx < OldIdx) {
+      for (auto I = std::next(NewIt); I != OldNext; ++I)
+        if (!I->isDebugInstr())
+          FixVRegUndef(*I);
+    } else if (OldIdx < NewIdx) {
+      for (auto I = OldNext; I != NewIt; ++I)
+        if (!I->isDebugInstr())
+          FixVRegUndef(*I);
+    }
   }
 }
 
