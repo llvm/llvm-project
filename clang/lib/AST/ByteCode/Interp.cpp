@@ -1957,6 +1957,14 @@ bool checkDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (S.checkingConstantDestruction(Ptr))
     return true;
 
+  // String pointers are immutable, so can't call a destructor on them.
+  if (Ptr.isStringPointer()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_access_unreadable_object)
+        << AK_Destroy << Ptr.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
   // Can't call a dtor on a global variable.
   if (Ptr.isOpaquePointer() || Ptr.block()->isStatic()) {
     const SourceInfo &E = S.Current->getSource(OpPC);
