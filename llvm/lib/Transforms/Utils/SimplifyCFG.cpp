@@ -3128,6 +3128,8 @@ static bool shouldVetoLoopCarriedSelect(BasicBlock *BB, BasicBlock *ThenBB,
   auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
   if (!BI || !isa<ICmpInst>(BI->getCondition()))
     return false;
+  if (BB == EndBB)
+    return false;
 
   // Only handle the empty-arm diamond that speculativelyExecuteBB would
   // otherwise flatten.
