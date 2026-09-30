@@ -766,8 +766,9 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       case sel_get_byte_size: {
         TYPE_CHECK(Type);
         auto type = data.Pop<CompilerType>();
-        data.Push(
-            llvm::expectedToOptional(type.GetByteSize(nullptr)).value_or(0));
+        uint64_t size =
+            llvm::expectedToOptional(type.GetByteSize(nullptr)).value_or(0);
+        data.Push(llvm::APSInt::get(size));
         break;
       }
       case sel_create_child_at_offset: {
