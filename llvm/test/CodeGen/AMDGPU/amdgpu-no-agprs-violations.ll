@@ -47,4 +47,4 @@ define amdgpu_kernel void @kernel_calls_mfma.f32.32x32x1f32(ptr addrspace(1) %ou
   ret void
 }
 
-attributes #0 = { "amdgpu-agpr-alloc"="0" }
+attributes #0 = { "amdgpu-agpr-alloc"="0" "amdgpu-accum-offset"="256" }

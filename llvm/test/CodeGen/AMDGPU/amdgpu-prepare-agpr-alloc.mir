@@ -9,7 +9,7 @@
   }
 
   ; Attribute is ignored for gfx90a
-  define void @no_agprs() "amdgpu-agpr-alloc"="0,0" {
+  define void @no_agprs() "amdgpu-agpr-alloc"="0,0" "amdgpu-accum-offset"="256" {
     ret void
   }
 
@@ -17,7 +17,7 @@
     ret void
   }
 
-  define void @func64_no_agprs() "amdgpu-agpr-alloc"="0,0" {
+  define void @func64_no_agprs() "amdgpu-agpr-alloc"="0,0" "amdgpu-accum-offset"="256"  {
     ret void
   }
 
