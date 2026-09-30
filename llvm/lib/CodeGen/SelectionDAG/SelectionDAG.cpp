@@ -4541,6 +4541,24 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         Known, MF, MF.getFrameInfo().getObjectAlign(FrameIdx));
     break;
   }
+  case ISD::VP_LOAD_FF: {
+    if (Op.getResNo() != 1)
+      break;
+    // The second result of vp.load.ff is an unsigned value that is less than or
+    // equal to the EVL operand.
+    KnownBits VLKB =
+        computeKnownBits(Op.getOperand(3), DemandedElts, Depth + 1);
+    // The new VL is also bounded by the largest vector length.
+    EVT ResVT = Op->getValueType(0);
+    auto ResKB = KnownBits::makeConstant(
+        APInt(BitWidth, ResVT.getVectorMinNumElements()));
+    if (ResVT.isScalableVector()) {
+      const Function &F = getMachineFunction().getFunction();
+      ResKB = KnownBits::mul(getVScaleRange(&F, BitWidth).toKnownBits(), ResKB);
+    }
+    Known.Zero.setHighBits(KnownBits::umin(VLKB, ResKB).countMinLeadingZeros());
+    break;
+  }
 
   default:
     if (Opcode < ISD::BUILTIN_OP_END)

@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Plugins/PassPlugin.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdint>
@@ -46,4 +49,44 @@ Expected<PassPlugin> PassPlugin::load(StringRef Filename) {
         inconvertibleErrorCode());
 
   return P;
+}
+
+Error llvm::passPluginArguments(ArrayRef<PassPluginLibraryInfo> Infos,
+                                ArrayRef<std::string> Args) {
+  DenseMap<StringRef, unsigned> Index;
+  for (auto [I, Info] : enumerate(Infos))
+    Index[Info.PluginName] = I;
+  // The argument follows the first comma, so it is NUL-terminated.
+  SmallVector<SmallVector<const char *, 0>, 0> PluginArgs(Infos.size());
+  for (const std::string &Arg : Args) {
+    auto [Name, Rest] = StringRef(Arg).split(',');
+    if (Rest.empty())
+      return createStringError("expected <plugin>,<arg> in -plugin-arg=" + Arg);
+    auto It = Index.find(Name);
+    if (It == Index.end())
+      return createStringError("no pass plugin named '" + Name +
+                               "' is loaded, in -plugin-arg=" + Arg);
+    PluginArgs[It->second].push_back(Rest.data());
+  }
+  for (auto [Info, PArgs] : zip_equal(Infos, PluginArgs)) {
+    if (PArgs.empty())
+      continue;
+    if (!Info.ParseArguments)
+      return createStringError("pass plugin '" + Twine(Info.PluginName) +
+                               "' does not accept arguments");
+    if (Error E = Info.ParseArguments(PArgs))
+      return E;
+  }
+  return Error::success();
+}
+
+Error llvm::parsePassPluginCommandLine(const char *PluginName,
+                                       ArrayRef<const char *> Args) {
+  SmallVector<const char *, 0> Argv = {PluginName};
+  append_range(Argv, Args);
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+  if (!cl::ParseCommandLineOptions(Argv.size(), Argv.data(), "", &OS))
+    return createStringError(StringRef(Msg).trim());
+  return Error::success();
 }
