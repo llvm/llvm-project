@@ -1254,7 +1254,7 @@ void TargetPassConfig::addMachinePasses() {
       getOptLevel() != CodeGenOptLevel::None &&
       EnableMachineOutliner != RunOutliner::NeverOutline) {
     if (EnableMachineOutliner != RunOutliner::TargetDefault ||
-        TM->Options.SupportsDefaultOutlining)
+        TM->supportsDefaultOutlining())
       addPass(createMachineOutlinerPass(EnableMachineOutliner));
   }
 
