@@ -54,8 +54,10 @@ void listener_func() {
         for (int j = 0; j < num_frames; ++j) {
           const char *function_name =
               thread.GetFrameAtIndex(j).GetSymbol().GetName();
-          if (function_name)
-            g_frame_functions.push(string(function_name));
+          // The function name is allowed to be null, all we care about here
+          // is that some function was found.
+          g_frame_functions.push(function_name ? string(function_name)
+                                               : string());
         }
       }
     }
@@ -63,10 +65,9 @@ void listener_func() {
 }
 
 void check_listener(SBDebugger &dbg) {
-  // check thread description
-  bool got_description = false;
+  bool got_function_name = false;
   string func_name = g_frame_functions.pop(got_description);
 
-  if (got_description == false)
+  if (got_function_name == false)
     throw Exception("Expected at least one frame function");
 }
