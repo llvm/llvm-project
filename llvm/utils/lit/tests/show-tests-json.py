@@ -157,7 +157,8 @@ class ShowTestsJsonTest(unittest.TestCase):
         result = run_lit("--show-tests-json", suite)
         self.assertEqual(result.returncode, 0, result.stderr)
         record = next(
-            suite for suite in json.loads(result.stdout)["suites"]
+            suite
+            for suite in json.loads(result.stdout)["suites"]
             if suite["name"] == "top-level-suite"
         )
         self.assertIn(
@@ -165,8 +166,7 @@ class ShowTestsJsonTest(unittest.TestCase):
             [test["path_in_suite"] for test in record["tests"]],
         )
         test = next(
-            test for test in record["tests"]
-            if test["path_in_suite"] == "test-one.txt"
+            test for test in record["tests"] if test["path_in_suite"] == "test-one.txt"
         )
         self.assertEqual(test["requires"], {})
         self.assertEqual(
@@ -337,7 +337,9 @@ class ShowTestsJsonTest(unittest.TestCase):
             "--time-trace-output",
             "--wtt-output",
         ):
-            with self.subTest(option=option), tempfile.TemporaryDirectory() as directory:
+            with self.subTest(
+                option=option
+            ), tempfile.TemporaryDirectory() as directory:
                 report_path = os.path.join(directory, "unused-report.json")
                 args = [option]
                 if option in (

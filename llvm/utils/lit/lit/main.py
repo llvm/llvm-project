@@ -415,7 +415,9 @@ def build_test_inventory(tests):
                 "tests": [],
             }
             suites.append(suite_entries[suite_key])
-        requirements_hook = getattr(test.config.test_format, "getTestRequirements", None)
+        requirements_hook = getattr(
+            test.config.test_format, "getTestRequirements", None
+        )
         try:
             raw = requirements_hook(test) if requirements_hook else None
             if raw is None:
