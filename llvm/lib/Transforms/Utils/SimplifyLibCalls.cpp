@@ -2658,7 +2658,7 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
 
   // exp2(sitofp(x)) -> ldexp(1.0, sext(x))  if sizeof(x) <= IntSize
   // exp2(uitofp(x)) -> ldexp(1.0, zext(x))  if sizeof(x) < IntSize
-  // exp2(uitofp(x)) -> ldexp(1.0, umin(x, C)) if sizeof(x) == IntSize
+  // exp2(uitofp(x)) -> ldexp(1.0, trunc(umin(x, C))) if sizeof(x) >= IntSize
   Value *Op = CI->getArgOperand(0);
   if (!isa<SIToFPInst, UIToFPInst>(Op) ||
       (!UseIntrinsic &&
@@ -2668,9 +2668,9 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
   unsigned IntSize = TLI->getIntSize();
   Value *Exp = getIntToFPVal(Op, B, IntSize);
   Value *UIntOp = nullptr;
-  // A uitofp source as wide as int may exceed INT_MAX, so clamp it for ldexp.
+  // A uitofp source at least as wide as int may exceed INT_MAX, so clamp it.
   if (!Exp && UseIntrinsic && match(Op, m_UIToFP(m_Value(UIntOp))) &&
-      UIntOp->getType()->getScalarSizeInBits() == IntSize) {
+      UIntOp->getType()->getScalarSizeInBits() >= IntSize) {
     const fltSemantics &Sem = Ty->getScalarType()->getFltSemantics();
     // exp2(x) and ldexp(1.0, Clamp) both overflow for every x >= Clamp.
     int Clamp = llvm::ilogb(APFloat::getLargest(Sem)) + 1;
@@ -2679,6 +2679,7 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
     if (!CI->hasNoInfs())
       Exp = B.CreateBinaryIntrinsic(Intrinsic::umin, UIntOp,
                                     ConstantInt::get(UIntOp->getType(), Clamp));
+    Exp = B.CreateTrunc(Exp, UIntOp->getType()->getWithNewBitWidth(IntSize));
   }
 
   if (!Exp)

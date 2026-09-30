@@ -180,8 +180,8 @@ define fp128 @exp2_fp128_uitofp_i32_ninf(i32 %x) {
 define float @exp2_f32_uitofp_i64_ninf(i64 %x) {
 ; CHECK-LABEL: define float @exp2_f32_uitofp_i64_ninf(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i64 [[X]] to float
-; CHECK-NEXT:    [[EXP2:%.*]] = call ninf float @llvm.exp2.f32(float [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X]] to i32
+; CHECK-NEXT:    [[EXP2:%.*]] = call ninf float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[EXP2]]
 ;
   %itofp = uitofp i64 %x to float
@@ -290,8 +290,9 @@ define ppc_fp128 @exp2_ppcf128_uitofp_i32(i32 %x) {
 define float @exp2_f32_uitofp_i64(i64 %x) {
 ; CHECK-LABEL: define float @exp2_f32_uitofp_i64(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i64 [[X]] to float
-; CHECK-NEXT:    [[EXP2:%.*]] = call float @llvm.exp2.f32(float [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umin.i64(i64 [[X]], i64 128)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[EXP2:%.*]] = call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[TMP2]])
 ; CHECK-NEXT:    ret float [[EXP2]]
 ;
   %itofp = uitofp i64 %x to float
@@ -302,8 +303,9 @@ define float @exp2_f32_uitofp_i64(i64 %x) {
 define <2 x float> @exp2_v2f32_uitofp_v2i64(<2 x i64> %x) {
 ; CHECK-LABEL: define <2 x float> @exp2_v2f32_uitofp_v2i64(
 ; CHECK-SAME: <2 x i64> [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp <2 x i64> [[X]] to <2 x float>
-; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.exp2.v2f32(<2 x float> [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.umin.v2i64(<2 x i64> [[X]], <2 x i64> splat (i64 128))
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw nsw <2 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.000000e+00), <2 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret <2 x float> [[EXP2]]
 ;
   %itofp = uitofp <2 x i64> %x to <2 x float>
