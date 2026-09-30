@@ -129,6 +129,11 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.extract-info.outputs.pr_head }}
           fetch-depth: 0
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
 
       # This workflow is always taken from the default branch. Check out the tooling from the corresponding
       # commit so that we're always running tooling that's in sync with the workflow's definition. Only the
@@ -140,7 +145,6 @@ jobs:
           ref: ${{ github.sha }}
           path: tooling
           sparse-checkout: |
-            .github/workflows/libcxx
             libcxx/utils
 
       - name: Select Xcode
@@ -172,22 +176,36 @@ jobs:
         run: echo "commit=$(git merge-base "${PR_BASE}" "${PR_HEAD}")" >> "${GITHUB_OUTPUT}"
 
       - name: Build the baseline
-        uses: ./tooling/.github/workflows/libcxx/build-at-commit
-        with:
-          git-repo: ${{ github.workspace }}
-          commit: ${{ steps.baseline.outputs.commit }}
-          install-dir: ${{ github.workspace }}/install/baseline
-          compiler: ${{ matrix.cxx }}
-          cmake-cache: ${{ matrix.cmake-cache }}
+        env:
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
+          COMMIT: ${{ steps.baseline.outputs.commit }}
+          INSTALL_DIR: ${{ github.workspace }}/install/baseline
+        run: |
+          cd "${TOOLING}" # use the tooling checkout for scripts
+          rm -rf "${INSTALL_DIR}"
+          libcxx/utils/build-at-commit                       \
+            --git-repo "${GITHUB_WORKSPACE}"                 \
+            --commit "${COMMIT}"                             \
+            --install-dir "${INSTALL_DIR}"                   \
+            --                                               \
+            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
+            -C "${CMAKE_CACHE}"
 
       - name: Build the candidate
-        uses: ./tooling/.github/workflows/libcxx/build-at-commit
-        with:
-          git-repo: ${{ github.workspace }}
-          commit: ${{ needs.extract-info.outputs.pr_head }}
-          install-dir: ${{ github.workspace }}/install/candidate
-          compiler: ${{ matrix.cxx }}
-          cmake-cache: ${{ matrix.cmake-cache }}
+        env:
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
+          COMMIT: ${{ needs.extract-info.outputs.pr_head }}
+          INSTALL_DIR: ${{ github.workspace }}/install/candidate
+        run: |
+          cd "${TOOLING}" # use the tooling checkout for scripts
+          rm -rf "${INSTALL_DIR}"
+          libcxx/utils/build-at-commit                       \
+            --git-repo "${GITHUB_WORKSPACE}"                 \
+            --commit "${COMMIT}"                             \
+            --install-dir "${INSTALL_DIR}"                   \
+            --                                               \
+            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
+            -C "${CMAKE_CACHE}"
 
       - name: Run baseline and candidate interleaved
         run: |
