@@ -11671,6 +11671,29 @@ static bool foldableSelect(const MachineInstr &Def) {
   return Op1IsNonZeroImm && Op2IsZeroImm;
 }
 
+/// If \p Sel is an S_CSELECT* of two different constants A and B, return them,
+/// truncated to the width of the select.
+static std::optional<std::pair<int64_t, int64_t>>
+getSelectConstants(const SIInstrInfo &TII, const MachineRegisterInfo &MRI,
+                   const MachineInstr &Sel) {
+  unsigned Opc = Sel.getOpcode();
+  if (Opc != AMDGPU::S_CSELECT_B32 && Opc != AMDGPU::S_CSELECT_B64)
+    return {};
+  std::optional<int64_t> A =
+      TII.getImmOrMaterializedImm(MRI, Sel.getOperand(1));
+  std::optional<int64_t> B =
+      TII.getImmOrMaterializedImm(MRI, Sel.getOperand(2));
+  if (!A || !B)
+    return {};
+  if (Opc == AMDGPU::S_CSELECT_B32) {
+    A = Lo_32(*A);
+    B = Lo_32(*B);
+  }
+  if (*A == *B)
+    return {};
+  return std::pair(*A, *B);
+}
+
 static bool setsSCCIfResultIsZero(const MachineInstr &Def, bool &NeedInversion,
                                   unsigned &NewDefOpc) {
   // S_ADD_U32 X, 1 sets SCC on carryout which can only happen if result==0.
@@ -11716,34 +11739,38 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
   const auto optimizeCmpSelect = [&CmpInstr, SrcReg, CmpValue, MRI,
                                   this](bool NeedInversion) -> bool {
-    if (CmpValue != 0)
-      return false;
-
     MachineInstr *Def = MRI->getVRegDef(SrcReg);
     if (!Def)
       return false;
 
-    // For S_OP that set SCC = DST!=0, do the transformation
-    //
-    //   s_cmp_[lg|eq]_* (S_OP ...), 0 => (S_OP ...)
-    //
-    // For (S_OP ...) that set SCC = DST==0, invert NeedInversion and
-    // do the transformation:
-    //
-    //   s_cmp_[lg|eq]_* (S_OP ...), 0 => (S_OP ...)
-    //
-    // If foldableSelect, s_cmp_lg_* is redundant because the SCC input value
-    // for S_CSELECT* already has the same value that will be calculated by
-    // s_cmp_lg_*
-    //
-    //   s_cmp_[lg|eq]_* (S_CSELECT* (non-zero imm), 0), 0 => (S_CSELECT*
-    //   (non-zero imm), 0)
-
     unsigned NewDefOpc = Def->getOpcode();
-    if (!setsSCCIfResultIsNonZero(*Def) &&
-        !setsSCCIfResultIsZero(*Def, NeedInversion, NewDefOpc) &&
-        !foldableSelect(*Def))
-      return false;
+    if (auto Consts = getSelectConstants(*this, *MRI, *Def)) {
+      // sX = S_CSELECT* A, B with A != B, so sX == A exactly when SCC was set.
+      // Comparing sX with A or B recomputes SCC or its inverse:
+      //
+      //   s_cmp_eq_* sX, A => SCC      s_cmp_lg_* sX, A => !SCC
+      //   s_cmp_eq_* sX, B => !SCC     s_cmp_lg_* sX, B => SCC
+      auto [A, B] = *Consts;
+      int64_t C = Def->getOpcode() == AMDGPU::S_CSELECT_B32 ? Lo_32(CmpValue)
+                                                            : CmpValue;
+      if (C == A)
+        NeedInversion = !NeedInversion;
+      else if (C != B)
+        return false;
+    } else {
+      // For S_OP that set SCC = DST!=0, do the transformation
+      //
+      //   s_cmp_[lg|eq]_* (S_OP ...), 0 => (S_OP ...)
+      //
+      // For (S_OP ...) that set SCC = DST==0, invert NeedInversion and
+      // do the transformation:
+      //
+      //   s_cmp_[lg|eq]_* (S_OP ...), 0 => (S_OP ...)
+      if (CmpValue != 0 ||
+          (!setsSCCIfResultIsNonZero(*Def) &&
+           !setsSCCIfResultIsZero(*Def, NeedInversion, NewDefOpc)))
+        return false;
+    }
 
     if (!optimizeSCC(Def, &CmpInstr, NeedInversion))
       return false;
@@ -11895,7 +11922,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMPK_GE_I32:
     return optimizeCmpAnd(1, 32, false, true);
   case AMDGPU::S_CMP_EQ_U64:
-    return optimizeCmpAnd(1, 64, true, false);
+    return optimizeCmpAnd(1, 64, true, false) ||
+           optimizeCmpSelect(/*NeedInversion=*/true);
   case AMDGPU::S_CMP_LG_U32:
   case AMDGPU::S_CMP_LG_I32:
   case AMDGPU::S_CMPK_LG_U32:
