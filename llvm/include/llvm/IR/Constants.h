@@ -144,7 +144,7 @@ public:
   /// type is the integer type that corresponds to the bit width of the value.
   LLVM_ABI static ConstantInt *get(LLVMContext &Context, const APInt &V);
 
-  /// Return a ConstantInt constructed from the string strStart with the given
+  /// Return a ConstantInt constructed from the string Str with the given
   /// radix.
   LLVM_ABI static ConstantInt *get(IntegerType *Ty, StringRef Str,
                                    uint8_t Radix);
@@ -1492,6 +1492,18 @@ public:
   }
   LLVM_ABI static Constant *
   getGetElementPtr(Type *Ty, Constant *C, ArrayRef<Value *> IdxList,
+                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
+                   std::optional<ConstantRange> InRange = std::nullopt,
+                   Type *OnlyIfReducedTy = nullptr);
+
+  /// Create a getelementptr constant expression in canonical ptradd form
+  /// (getelementptr i8) by converting GEP indices to offsets using the
+  /// provided data layout.
+  ///
+  /// Returns nullptr if the indices cannot be converted to ptradd form.
+  LLVM_ABI static Constant *
+  getGetElementPtr(const DataLayout &DL, Type *Ty, Constant *C,
+                   ArrayRef<Constant *> IdxList,
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr);

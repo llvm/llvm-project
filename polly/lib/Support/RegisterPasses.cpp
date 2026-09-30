@@ -50,6 +50,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 
 using namespace llvm;
@@ -690,7 +691,14 @@ void registerPollyPasses(PassBuilder &PB) {
 }
 } // namespace polly
 
+static Error parseArguments(ArrayRef<const char *> Args) {
+  return parsePassPluginCommandLine("Polly", Args);
+}
+
 llvm::PassPluginLibraryInfo getPollyPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "Polly", LLVM_VERSION_STRING,
-          polly::registerPollyPasses};
+  llvm::PassPluginLibraryInfo Info = {LLVM_PLUGIN_API_VERSION, "Polly",
+                                      LLVM_VERSION_STRING,
+                                      polly::registerPollyPasses};
+  Info.ParseArguments = parseArguments;
+  return Info;
 }

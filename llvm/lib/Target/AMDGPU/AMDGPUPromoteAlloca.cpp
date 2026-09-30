@@ -218,6 +218,11 @@ static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
       ST.getWavesPerEU(ST.getFlatWorkGroupSizes(F), LDSBytes, F).first,
       DynamicVGPRBlockSize);
 
+  // A DVGPR wave launches with a single VGPR block allocated.
+  if (DynamicVGPRBlockSize != 0 &&
+      AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+    MaxVGPRs = std::min(MaxVGPRs, DynamicVGPRBlockSize);
+
   // A non-entry function has only 32 caller preserved registers.
   // Do not promote alloca which will force spilling unless we know the function
   // will be inlined.
@@ -1342,7 +1347,6 @@ static bool isCallPromotable(CallInst *CI) {
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::objectsize:
     return true;
   default:
@@ -1749,8 +1753,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
     }
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
-    case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group: {
+    case Intrinsic::launder_invariant_group: {
       assert(Intr->getArgOperand(Intr->arg_size() - 1)->getType() == NewPtrTy &&
              "pointer operand should already have been promoted");
       Function *NewF = Intrinsic::getOrInsertDeclaration(

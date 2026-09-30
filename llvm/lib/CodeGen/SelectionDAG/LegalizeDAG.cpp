@@ -3286,7 +3286,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Node->getOperand(0));
     break;
   case ISD::EH_RETURN:
-  case ISD::EH_LABEL:
   case ISD::PREFETCH:
   case ISD::VAEND:
   case ISD::EH_SJLJ_LONGJMP:

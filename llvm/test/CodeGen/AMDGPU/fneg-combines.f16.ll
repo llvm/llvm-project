@@ -4087,9 +4087,8 @@ define half @v_fneg_fp_round_fneg_f64_to_f16(double %a) #0 {
 ; SI-NEXT:    v_lshrrev_b32_e32 v5, v4, v2
 ; SI-NEXT:    v_lshlrev_b32_e32 v4, v4, v5
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, v4, v2
-; SI-NEXT:    s_movk_i32 s4, 0xfc10
 ; SI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-NEXT:    v_add_i32_e32 v3, vcc, s4, v3
+; SI-NEXT:    v_add_i32_e32 v3, vcc, 0xfffffc10, v3
 ; SI-NEXT:    v_lshlrev_b32_e32 v4, 12, v3
 ; SI-NEXT:    v_or_b32_e32 v2, v5, v2
 ; SI-NEXT:    v_or_b32_e32 v4, v0, v4
@@ -4134,9 +4133,8 @@ define half @v_fneg_fp_round_fneg_f64_to_f16(double %a) #0 {
 ; VI-NEXT:    v_lshrrev_b32_e32 v5, v4, v2
 ; VI-NEXT:    v_lshlrev_b32_e32 v4, v4, v5
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, v4, v2
-; VI-NEXT:    s_movk_i32 s4, 0xfc10
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v3
+; VI-NEXT:    v_add_u32_e32 v3, vcc, 0xfffffc10, v3
 ; VI-NEXT:    v_lshlrev_b32_e32 v4, 12, v3
 ; VI-NEXT:    v_or_b32_e32 v2, v5, v2
 ; VI-NEXT:    v_or_b32_e32 v4, v0, v4
@@ -4557,9 +4555,8 @@ define { half, half } @v_fneg_multi_use_fp_round_fneg_f64_to_f16(double %a) #0 {
 ; SI-NEXT:    v_lshrrev_b32_e32 v5, v4, v2
 ; SI-NEXT:    v_lshlrev_b32_e32 v4, v4, v5
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, v4, v2
-; SI-NEXT:    s_movk_i32 s4, 0xfc10
 ; SI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-NEXT:    v_add_i32_e32 v3, vcc, s4, v3
+; SI-NEXT:    v_add_i32_e32 v3, vcc, 0xfffffc10, v3
 ; SI-NEXT:    v_lshlrev_b32_e32 v4, 12, v3
 ; SI-NEXT:    v_or_b32_e32 v2, v5, v2
 ; SI-NEXT:    v_or_b32_e32 v4, v0, v4
@@ -4605,9 +4602,8 @@ define { half, half } @v_fneg_multi_use_fp_round_fneg_f64_to_f16(double %a) #0 {
 ; VI-NEXT:    v_lshrrev_b32_e32 v5, v4, v2
 ; VI-NEXT:    v_lshlrev_b32_e32 v4, v4, v5
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, v4, v2
-; VI-NEXT:    s_movk_i32 s4, 0xfc10
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-NEXT:    v_add_u32_e32 v3, vcc, s4, v3
+; VI-NEXT:    v_add_u32_e32 v3, vcc, 0xfffffc10, v3
 ; VI-NEXT:    v_lshlrev_b32_e32 v4, 12, v3
 ; VI-NEXT:    v_or_b32_e32 v2, v5, v2
 ; VI-NEXT:    v_or_b32_e32 v4, v0, v4

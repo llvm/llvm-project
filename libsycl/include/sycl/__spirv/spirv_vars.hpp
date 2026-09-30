@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains SPIRV builtins needed for kernel invocations
+/// This file contains SPIRV builtin helpers needed for kernel invocations
 /// (parallel_for).
 ///
 //===----------------------------------------------------------------------===//
@@ -15,24 +15,9 @@
 #ifndef _LIBSYCL___SPIRV_SPIRV_VARS
 #define _LIBSYCL___SPIRV_SPIRV_VARS
 
+#include <__clang_spirv_builtins.h>
+
 #include <cstddef>
-#include <cstdint>
-
-// SPIR-V built-in variables mapped to function call.
-
-__attribute__((const)) size_t __spirv_BuiltInGlobalInvocationId(int);
-__attribute__((const)) size_t __spirv_BuiltInGlobalSize(int);
-__attribute__((const)) size_t __spirv_BuiltInGlobalOffset(int);
-__attribute__((const)) size_t __spirv_BuiltInWorkgroupId(int);
-__attribute__((const)) size_t __spirv_BuiltInLocalInvocationId(int);
-__attribute__((const)) size_t __spirv_BuiltInWorkgroupSize(int);
-__attribute__((const)) size_t __spirv_BuiltInNumWorkgroups(int);
-
-__attribute__((const)) uint32_t __spirv_BuiltInSubgroupSize();
-__attribute__((const)) uint32_t __spirv_BuiltInSubgroupMaxSize();
-__attribute__((const)) uint32_t __spirv_BuiltInNumSubgroups();
-__attribute__((const)) uint32_t __spirv_BuiltInSubgroupId();
-__attribute__((const)) uint32_t __spirv_BuiltInSubgroupLocalInvocationId();
 
 namespace __spirv {
 
