@@ -6288,6 +6288,38 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
 }
 
 //===----------------------------------------------------------------------===//
+// MatrixTransposeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixTransposeOp : CIR_Op<"matrix.transpose", [
+  Pure,
+]> {
+  let summary = "Matrix transpose";
+  let description = [{
+    The `cir.matrix.transpose` operation provides a representation for the
+    `__builtin_matrix_transpose` builtin and corresponds to the
+    `llvm.matrix.transpose` intrinsic in LLVM IR.
+
+    This operation performs transposition to switch the row and column
+    indices of the matrix and returns the transposed matrix,
+
+    ```
+    %result = cir.matrix.transpose %value : <3 x 2 x !cir.float>, 
+        !cir.matrix<2 x 3 x !cir.float>
+    ```
+  }];
+
+  let arguments = (ins CIR_MatrixType:$value);
+  let results = (outs CIR_MatrixType:$result);
+
+  let assemblyFormat = [{
+    $value `:` type($value) `,` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // BaseClassAddrOp
 //===----------------------------------------------------------------------===//
 
