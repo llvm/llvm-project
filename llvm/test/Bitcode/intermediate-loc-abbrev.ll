@@ -8,15 +8,14 @@
 ;; just zero. A VBR field costs its full width even for zero, so always using
 ;; the wide abbrev would still round-trip while growing every record.
 
-;; Layers sit on the location with no inlinedAt -- the root of the inline chain.
-;; Not inlined here, so that is the instruction's own location.
+;; Not inlined: the instruction's own location carries the layers.
 define void @layered() !dbg !8 {
   ret void, !dbg !20
 }
 
-;; Inlined, so the layers move to the chain root: !21 and !22 carry none and
-;; their inlinedAt targets do. Those targets are enumerated as nodes, which is
-;; what puts a layered location into the metadata block.
+;; Inlined: the instruction locations carry no layers. Their inlinedAt targets
+;; are written to the metadata block as LOCATION records, one with layers (!40)
+;; and one without (!41).
 define void @inlined(i32 %x) !dbg !9 {
   %a = add i32 %x, 1, !dbg !21
   ret void, !dbg !22
@@ -54,7 +53,7 @@ define void @inlined(i32 %x) !dbg !9 {
 !21 = !DILocation(line: 3, column: 1, scope: !9, inlinedAt: !40)
 !22 = !DILocation(line: 4, column: 1, scope: !9, inlinedAt: !41)
 
-;; Chain roots. !40 carries the layers for the instruction inlined at it; !41
-;; has none, to cover the narrow LOCATION.
+;; The inlinedAt targets. !40 carries layers; !41 has none, to cover the narrow
+;; LOCATION.
 !40 = !DILocation(line: 10, column: 1, scope: !9, irlayers: !30)
 !41 = !DILocation(line: 11, column: 1, scope: !9)
