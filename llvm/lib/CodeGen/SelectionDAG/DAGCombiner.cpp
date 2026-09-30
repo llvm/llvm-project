@@ -23097,10 +23097,10 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
                                 LD->getMMOMetadataForSubAccess());
     SDValue NewVal = DAG.getNode(Opc, SDLoc(Value), NewVT, NewLD,
                                  DAG.getConstant(NewImm, SDLoc(Value), NewVT));
-    SDValue NewST =
-        DAG.getStore(Chain, SDLoc(N), NewVal, NewPtr,
-                     ST->getPointerInfo().getWithOffset(PtrOff), NewAlign,
-                     MachineMemOperand::MONone, ST->getMMOMetadataForSubAccess());
+    SDValue NewST = DAG.getStore(Chain, SDLoc(N), NewVal, NewPtr,
+                                 ST->getPointerInfo().getWithOffset(PtrOff),
+                                 NewAlign, MachineMemOperand::MONone,
+                                 ST->getMMOMetadataForSubAccess());
 
     AddToWorklist(NewPtr.getNode());
     AddToWorklist(NewLD.getNode());
