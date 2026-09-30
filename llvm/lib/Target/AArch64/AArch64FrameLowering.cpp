@@ -1861,28 +1861,26 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
       case RegGroupInfo::PPR:
         break;
       case RegGroupInfo::ZPR:
-        if (NeedsWinCFI || AFI->getPredicateRegForFillSpill() == 0)
+        if (isTargetWindows(MF) || AFI->getPredicateRegForFillSpill() == 0)
           break;
-        if (unsigned(i + 2 * RegInc) < Count &&
-            unsigned(i + 3 * RegInc) < Count &&
-            (RGI.Reg1 - AArch64::Z0) % 4 == 0) {
+
+        if (unsigned(i + 3 * RegInc) < Count) {
           MCRegister Reg3 = CSI[i + RegInc * 2].getReg();
           MCRegister Reg4 = CSI[i + RegInc * 3].getReg();
-          bool Consecutive = (RGI.Reg1 + 1 == NextReg) &&
-                             (NextReg + 1 == Reg3) && (Reg3 + 1 == Reg4);
-
+          bool Consecutive = (Reg4 + 1 == Reg3) && (Reg3 + 1 == NextReg) &&
+                             (NextReg + 1 == RGI.Reg1);
           const int NumRegs = 4;
           int Offset = (ScalableByteOffset + StackFillDir * NumRegs * Scale);
 
-          if (Consecutive &&
+          if ((Reg4 - AArch64::Z0) % 4 == 0 && Consecutive &&
               isValidMemOpOffset(TII, AArch64::LD1B_4Z_IMM, Offset)) {
             RGI.Reg2 = NextReg;
             RGI.Reg3 = Reg3;
             RGI.Reg4 = Reg4;
           }
         }
-        if (!RGI.isQuad() && ((RGI.Reg1 - AArch64::Z0) & 1) == 0 &&
-            (NextReg == RGI.Reg1 + 1)) {
+        if (!RGI.isQuad() && ((NextReg - AArch64::Z0) & 1) == 0 &&
+            (RGI.Reg1 == NextReg + 1)) {
           // Calculate offset of register pair to see if pair instruction can
           // be used.
           const int NumRegs = 2;
@@ -2179,7 +2177,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     unsigned FrameIdxReg4 = RGI.FrameIdx + 3;
 
     if (RGI.isGrouped() && RGI.isScalable()) {
-      assert(!NeedsWinCFI &&
+      assert(!isTargetWindows(MF) &&
              "Scalable register groups are not supported by Windows WinCFI");
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
                               MF.getSubtarget<AArch64Subtarget>();
@@ -2216,10 +2214,10 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
           MBB.addLiveIn(Reg4);
       }
       if (RGI.isPaired()) {
-        MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RGI.Reg1 - AArch64::Z0));
+        MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RGI.Reg2 - AArch64::Z0));
       } else if (RGI.isQuad()) {
         MIB.addReg(/*QuadRegs*/ AArch64::Z0_Z1_Z2_Z3 +
-                   (RGI.Reg1 - AArch64::Z0));
+                   (RGI.Reg4 - AArch64::Z0));
         MIB.addMemOperand(MF.getMachineMemOperand(
             MachinePointerInfo::getFixedStack(MF, FrameIdxReg4),
             MachineMemOperand::MOStore, Size, Alignment));
@@ -2383,8 +2381,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
 
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     if (RGI.isGrouped() && RGI.isScalable()) {
-      assert(!NeedsWinCFI &&
-             "Scalable register groups are not supported by Windows WinCFI");
+      assert(!isTargetWindows(MF) &&
+             "Scalable register groups are not supported by Windows yet");
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
                               MF.getSubtarget<AArch64Subtarget>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
@@ -2401,10 +2399,10 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       }
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
       if (RGI.isPaired()) {
-        MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RGI.Reg1 - AArch64::Z0),
+        MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RGI.Reg2 - AArch64::Z0),
                    getDefRegState(true));
       } else if (RGI.isQuad()) {
-        MIB.addReg(/*QuadRegs*/ AArch64::Z0_Z1_Z2_Z3 + (RGI.Reg1 - AArch64::Z0),
+        MIB.addReg(/*QuadRegs*/ AArch64::Z0_Z1_Z2_Z3 + (RGI.Reg4 - AArch64::Z0),
                    getDefRegState(true));
         MIB.addMemOperand(MF.getMachineMemOperand(
             MachinePointerInfo::getFixedStack(MF, FrameIdxReg4),
@@ -2992,8 +2990,8 @@ static void orderZPRCalleeSavesForPairs(MachineFunction &MF,
   llvm::append_range(ZPRSavesInCSIOrder, Singles);
 
   for (const auto &[Even, Odd] : Pairs) {
-    ZPRSavesInCSIOrder.push_back(Even);
     ZPRSavesInCSIOrder.push_back(Odd);
+    ZPRSavesInCSIOrder.push_back(Even);
   }
 
   if (AlignmentSingle)
