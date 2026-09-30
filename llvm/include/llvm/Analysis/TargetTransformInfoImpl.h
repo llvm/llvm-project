@@ -694,7 +694,7 @@ public:
   /// MCSchedModel::DefaultStoreLoadForwardingPenalty).
   virtual InstructionCost getStoreLoadForwardingConflictCost(
       Type *VecTy, TargetTransformInfo::TargetCostKind CostKind) const {
-    return 0;
+    return TTI::TCC_Free;
   }
   virtual std::optional<unsigned>
   getCacheSize(TargetTransformInfo::CacheLevel Level) const {
