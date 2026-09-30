@@ -135,7 +135,7 @@ define float @call_float_in_fpr(float %a, float %b) {
   ; FP32-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; FP32-NEXT:   $f12 = COPY [[COPY]](s32)
   ; FP32-NEXT:   $f14 = COPY [[COPY1]](s32)
-  ; FP32-NEXT:   JAL @float_in_fpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $f12, implicit $f14, implicit-def $f0
+  ; FP32-NEXT:   JAL @float_in_fpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $f12, implicit $f14, implicit-def $f0
   ; FP32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f0
   ; FP32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP32-NEXT:   $f0 = COPY [[COPY2]](s32)
@@ -150,7 +150,7 @@ define float @call_float_in_fpr(float %a, float %b) {
   ; FP64-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; FP64-NEXT:   $f12 = COPY [[COPY]](s32)
   ; FP64-NEXT:   $f14 = COPY [[COPY1]](s32)
-  ; FP64-NEXT:   JAL @float_in_fpr, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $f12, implicit $f14, implicit-def $f0
+  ; FP64-NEXT:   JAL @float_in_fpr, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $f12, implicit $f14, implicit-def $f0
   ; FP64-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f0
   ; FP64-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP64-NEXT:   $f0 = COPY [[COPY2]](s32)
@@ -170,7 +170,7 @@ define double @call_double_in_fpr(double %a, double %b) {
   ; FP32-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; FP32-NEXT:   $d6 = COPY [[COPY]](s64)
   ; FP32-NEXT:   $d7 = COPY [[COPY1]](s64)
-  ; FP32-NEXT:   JAL @double_in_fpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $d6, implicit $d7, implicit-def $d0
+  ; FP32-NEXT:   JAL @double_in_fpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $d6, implicit $d7, implicit-def $d0
   ; FP32-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $d0
   ; FP32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP32-NEXT:   $d0 = COPY [[COPY2]](s64)
@@ -185,7 +185,7 @@ define double @call_double_in_fpr(double %a, double %b) {
   ; FP64-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; FP64-NEXT:   $d12_64 = COPY [[COPY]](s64)
   ; FP64-NEXT:   $d14_64 = COPY [[COPY1]](s64)
-  ; FP64-NEXT:   JAL @double_in_fpr, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $d12_64, implicit $d14_64, implicit-def $d0_64
+  ; FP64-NEXT:   JAL @double_in_fpr, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $d12_64, implicit $d14_64, implicit-def $d0_64
   ; FP64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $d0_64
   ; FP64-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP64-NEXT:   $d0_64 = COPY [[COPY2]](s64)
@@ -205,7 +205,7 @@ define float @call_float_in_gpr(i32 %a, float %b) {
   ; FP32-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; FP32-NEXT:   $a0 = COPY [[COPY]](s32)
   ; FP32-NEXT:   $a1 = COPY [[COPY1]](s32)
-  ; FP32-NEXT:   JAL @float_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
+  ; FP32-NEXT:   JAL @float_in_gpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
   ; FP32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f0
   ; FP32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP32-NEXT:   $f0 = COPY [[COPY2]](s32)
@@ -220,7 +220,7 @@ define float @call_float_in_gpr(i32 %a, float %b) {
   ; FP64-NEXT:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
   ; FP64-NEXT:   $a0 = COPY [[COPY]](s32)
   ; FP64-NEXT:   $a1 = COPY [[COPY1]](s32)
-  ; FP64-NEXT:   JAL @float_in_gpr, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
+  ; FP64-NEXT:   JAL @float_in_gpr, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit-def $f0
   ; FP64-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f0
   ; FP64-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP64-NEXT:   $f0 = COPY [[COPY2]](s32)
@@ -245,7 +245,7 @@ define double @call_double_in_gpr(i32 %a, double %b) {
   ; FP32-NEXT:   $a0 = COPY [[COPY]](s32)
   ; FP32-NEXT:   $a2 = COPY [[UV]](s32)
   ; FP32-NEXT:   $a3 = COPY [[UV1]](s32)
-  ; FP32-NEXT:   JAL @double_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a2, implicit $a3, implicit $a0, implicit-def $d0
+  ; FP32-NEXT:   JAL @double_in_gpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a2, implicit $a3, implicit $a0, implicit-def $d0
   ; FP32-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $d0
   ; FP32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP32-NEXT:   $d0 = COPY [[COPY3]](s64)
@@ -264,7 +264,7 @@ define double @call_double_in_gpr(i32 %a, double %b) {
   ; FP64-NEXT:   $a0 = COPY [[COPY]](s32)
   ; FP64-NEXT:   $a2 = COPY [[UV]](s32)
   ; FP64-NEXT:   $a3 = COPY [[UV1]](s32)
-  ; FP64-NEXT:   JAL @double_in_gpr, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $a2, implicit $a3, implicit $a0, implicit-def $d0_64
+  ; FP64-NEXT:   JAL @double_in_gpr, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $a2, implicit $a3, implicit $a0, implicit-def $d0_64
   ; FP64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $d0_64
   ; FP64-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP64-NEXT:   $d0_64 = COPY [[COPY3]](s64)
@@ -288,7 +288,7 @@ define double @call_double_fpr_to_gpr(double %a) {
   ; FP32-NEXT:   $a0 = COPY [[C]](s32)
   ; FP32-NEXT:   $a2 = COPY [[UV]](s32)
   ; FP32-NEXT:   $a3 = COPY [[UV1]](s32)
-  ; FP32-NEXT:   JAL @double_in_gpr, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a2, implicit $a3, implicit $a0, implicit-def $d0
+  ; FP32-NEXT:   JAL @double_in_gpr, csr_o32, implicit-def dead $ra, implicit-def $sp, implicit $a2, implicit $a3, implicit $a0, implicit-def $d0
   ; FP32-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $d0
   ; FP32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP32-NEXT:   $d0 = COPY [[COPY1]](s64)
@@ -305,7 +305,7 @@ define double @call_double_fpr_to_gpr(double %a) {
   ; FP64-NEXT:   $a0 = COPY [[C]](s32)
   ; FP64-NEXT:   $a2 = COPY [[UV]](s32)
   ; FP64-NEXT:   $a3 = COPY [[UV1]](s32)
-  ; FP64-NEXT:   JAL @double_in_gpr, csr_o32_fp64, implicit-def $ra, implicit-def $sp, implicit $a2, implicit $a3, implicit $a0, implicit-def $d0_64
+  ; FP64-NEXT:   JAL @double_in_gpr, csr_o32_fp64, implicit-def dead $ra, implicit-def $sp, implicit $a2, implicit $a3, implicit $a0, implicit-def $d0_64
   ; FP64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $d0_64
   ; FP64-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; FP64-NEXT:   $d0_64 = COPY [[COPY1]](s64)

@@ -216,17 +216,6 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                                                 /*line=*/0,
                                                 /*column=*/0));
   }
-
-  // Set CUDA GPU binary handle.
-  if (langOpts.CUDA) {
-    llvm::StringRef cudaBinaryName = codeGenOpts.OffloadBinaryToEmbedFile;
-    if (!cudaBinaryName.empty()) {
-      theModule->setAttr(cir::CIRDialect::getCUDABinaryHandleAttrName(),
-                         cir::CUDABinaryHandleAttr::get(
-                             &mlirContext, mlir::StringAttr::get(
-                                               &mlirContext, cudaBinaryName)));
-    }
-  }
 }
 
 CIRGenModule::~CIRGenModule() = default;
@@ -3321,6 +3310,19 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 
   if (!isIncompleteFunction && func.isDeclaration())
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
+
+  // Diagnose calls to this function at the backend level, mirroring
+  // CodeGenModule::SetFunctionAttributes's "dontcall-error"/"dontcall-warn".
+  if (const auto *errorAttr = funcDecl->getAttr<ErrorAttr>()) {
+    if (errorAttr->isError())
+      func->setAttr(cir::CIRDialect::getDontCallErrorAttrName(),
+                    mlir::StringAttr::get(&getMLIRContext(),
+                                          errorAttr->getUserDiagnostic()));
+    else if (errorAttr->isWarning())
+      func->setAttr(cir::CIRDialect::getDontCallWarnAttrName(),
+                    mlir::StringAttr::get(&getMLIRContext(),
+                                          errorAttr->getUserDiagnostic()));
+  }
 
   // Mirrors setLinkageForGV in CodeGenModule::SetFunctionAttributes.
   setLinkageForFunction(*this, func, funcDecl);

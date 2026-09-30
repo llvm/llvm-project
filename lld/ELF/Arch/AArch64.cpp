@@ -335,6 +335,7 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 
     // TLS LE relocations:
     case R_AARCH64_TLSLE_ADD_TPREL_HI12:
+    case R_AARCH64_TLSLE_ADD_TPREL_LO12:
     case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
     case R_AARCH64_TLSLE_LDST8_TPREL_LO12_NC:
     case R_AARCH64_TLSLE_LDST16_TPREL_LO12_NC:
@@ -829,6 +830,10 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
       }
     }
     write32Imm12(loc, val >> 12);
+    break;
+  case R_AARCH64_TLSLE_ADD_TPREL_LO12:
+    checkUInt(ctx, loc, val, 12, rel);
+    write32Imm12(loc, val);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_ADD_LO12:

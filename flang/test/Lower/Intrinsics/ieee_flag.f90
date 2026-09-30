@@ -10,14 +10,14 @@
   ! CHECK:     %[[V_55:[0-9]+]] = fir.declare %[[V_53]](%[[V_54]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QM__fortran_ieee_exceptionsECieee_usual"} : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<3x!fir.type<_QM__fortran_builtinsT__builtin_ieee_flag_type{_QM__fortran_builtinsT__builtin_ieee_flag_type.flag:i8}>>>
   use ieee_arithmetic
 
-  ! CHECK:     %[[V_56:[0-9]+]] = fir.alloca !fir.logical<4> {bindc_name = "v", uniq_name = "_QFEv"}
+  ! CHECK:     %[[V_56:[0-9]+]] = fir.alloca !fir.logical<4> <{bindc_name = "v", uniq_name = "_QFEv"}>
   ! CHECK:     %[[V_57:[0-9]+]] = fir.declare %[[V_56]] {uniq_name = "_QFEv"} : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>>
-  ! CHECK:     %[[V_58:[0-9]+]] = fir.alloca !fir.array<2x!fir.logical<4>> {bindc_name = "v2", uniq_name = "_QFEv2"}
+  ! CHECK:     %[[V_58:[0-9]+]] = fir.alloca !fir.array<2x!fir.logical<4>> <{bindc_name = "v2", uniq_name = "_QFEv2"}>
   ! CHECK:     %[[V_59:[0-9]+]] = fir.shape %c2{{.*}} : (index) -> !fir.shape<1>
   ! CHECK:     %[[V_60:[0-9]+]] = fir.declare %[[V_58]](%[[V_59]]) {uniq_name = "_QFEv2"} : (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.logical<4>>>
-  ! CHECK:     %[[V_61:[0-9]+]] = fir.alloca !fir.array<5x!fir.logical<4>> {bindc_name = "v_all", uniq_name = "_QFEv_all"}
+  ! CHECK:     %[[V_61:[0-9]+]] = fir.alloca !fir.array<5x!fir.logical<4>> <{bindc_name = "v_all", uniq_name = "_QFEv_all"}>
   ! CHECK:     %[[V_62:[0-9]+]] = fir.declare %[[V_61]](%[[V_1]]) {uniq_name = "_QFEv_all"} : (!fir.ref<!fir.array<5x!fir.logical<4>>>, !fir.shape<1>) -> !fir.ref<!fir.array<5x!fir.logical<4>>>
-  ! CHECK:     %[[V_63:[0-9]+]] = fir.alloca !fir.array<3x!fir.logical<4>> {bindc_name = "v_usual", uniq_name = "_QFEv_usual"}
+  ! CHECK:     %[[V_63:[0-9]+]] = fir.alloca !fir.array<3x!fir.logical<4>> <{bindc_name = "v_usual", uniq_name = "_QFEv_usual"}>
   ! CHECK:     %[[V_64:[0-9]+]] = fir.declare %[[V_63]](%[[V_54]]) {uniq_name = "_QFEv_usual"} : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> !fir.ref<!fir.array<3x!fir.logical<4>>>
   logical :: v, v2(2), v_usual(size(ieee_usual)), v_all(size(ieee_all))
   real :: x(100,20,10)
