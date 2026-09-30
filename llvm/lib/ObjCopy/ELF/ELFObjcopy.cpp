@@ -685,21 +685,26 @@ static Error removeNotes(Object &Obj, endianness Endianness,
       }
     }
   }
+  // updateSectionData below can reallocate the object sections, invalidating
+  // range-for iterators.
+  SmallVector<SectionBase *, 8> NoteSections;
   for (auto &Sec : Obj.sections()) {
-    if (Sec.Type != SHT_NOTE || !Sec.hasContents())
-      continue;
+    if (Sec.Type == SHT_NOTE && Sec.hasContents())
+      NoteSections.push_back(&Sec);
+  }
+  for (SectionBase *Sec : NoteSections) {
     // TODO: Support note sections in segments.
-    if (Sec.ParentSegment) {
+    if (Sec->ParentSegment) {
       if (ErrorCallback)
         if (Error E = ErrorCallback(createStringError(
                 errc::not_supported,
-                "cannot remove note(s) from " + Sec.Name +
+                "cannot remove note(s) from " + Sec->Name +
                     ": sections in segments are not supported")))
           return E;
       continue;
     }
-    ArrayRef<uint8_t> OldData = Sec.getContents();
-    size_t Align = std::max<size_t>(4, Sec.Align);
+    ArrayRef<uint8_t> OldData = Sec->getContents();
+    size_t Align = std::max<size_t>(4, Sec->Align);
     // Note: notes for both 32-bit and 64-bit ELF files use 4-byte words in the
     // header, so the parsers are the same.
     auto ToRemove = (Endianness == endianness::little)
@@ -709,7 +714,7 @@ static Error removeNotes(Object &Obj, endianness Endianness,
                               OldData, Align, NotesToRemove);
     if (!ToRemove.empty()) {
       if (Error E = Obj.updateSectionData(
-              Sec, RemoveNoteDetail::updateData(OldData, ToRemove)))
+              *Sec, RemoveNoteDetail::updateData(OldData, ToRemove)))
         return E;
     }
   }
