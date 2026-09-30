@@ -358,7 +358,7 @@ public:
   ArrayRef<int16_t> getRegSplitParts(const TargetRegisterClass *RC,
                                      unsigned EltSize) const;
 
-  bool shouldEnableSubRegReload(unsigned SubReg) const override;
+  bool isReloadableSubRegIdx(unsigned SubReg) const override;
 
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
@@ -385,7 +385,7 @@ public:
 
   const TargetRegisterClass *
   getConstrainedRegClassForReg(Register Reg,
-                                 const MachineRegisterInfo &MRI) const override;
+                               const MachineRegisterInfo &MRI) const override;
 
   const TargetRegisterClass *getBoolRC() const {
     return isWave32 ? &AMDGPU::SReg_32RegClass

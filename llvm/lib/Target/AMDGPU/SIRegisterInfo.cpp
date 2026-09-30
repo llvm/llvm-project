@@ -3997,7 +3997,7 @@ bool SIRegisterInfo::isAGPR(const MachineRegisterInfo &MRI,
   return RC && isAGPRClass(RC);
 }
 
-bool SIRegisterInfo::shouldEnableSubRegReload(unsigned SubReg) const {
+bool SIRegisterInfo::isReloadableSubRegIdx(unsigned SubReg) const {
   // Disable lo16 and hi16 (16-bit) accesses as they are subreg views of the
   // same 32-bit register and don't represent independent storage. If the number
   // of bits set in the mask is odd, it indicates the presence of a 16-bit
