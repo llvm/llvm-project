@@ -72,9 +72,9 @@ define <8 x i16> @haddu_const_zero(<8 x i16> %src1) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    uaddw v2.4s, v1.4s, v0.4h
-; CHECK-GI-NEXT:    uaddw2 v1.4s, v1.4s, v0.8h
-; CHECK-GI-NEXT:    shrn v0.4h, v2.4s, #1
-; CHECK-GI-NEXT:    shrn2 v0.8h, v1.4s, #1
+; CHECK-GI-NEXT:    uaddw2 v0.4s, v1.4s, v0.8h
+; CHECK-GI-NEXT:    uzp1 v0.8h, v2.8h, v0.8h
+; CHECK-GI-NEXT:    ushr v0.8h, v0.8h, #1
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %add = add <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, %zextsrc1
