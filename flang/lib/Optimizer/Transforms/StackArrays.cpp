@@ -25,6 +25,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Diagnostics.h"
@@ -778,11 +779,14 @@ void StackArraysPass::runOnOperation() {
 
   // This pass only runs under -fstack-arrays, so honor a function that opted
   // out in its own policy (device code, where the stack is tiny). Functions
-  // without a policy of their own are left to the module setting.
+  // without a policy of their own are left to the module setting. An acc
+  // routine is compiled for the device as well and is treated the same way.
   if (std::optional<fir::AllocationPolicy> policy =
           fir::getLocalAllocationPolicy(func))
     if (!policy->stackArrays)
       return;
+  if (mlir::acc::isAccRoutine(func))
+    return;
 
   auto &analysis = getAnalysis<fir::StackArraysAnalysisWrapper>();
   const fir::StackArraysAnalysisWrapper::AllocMemMap *candidateOps =

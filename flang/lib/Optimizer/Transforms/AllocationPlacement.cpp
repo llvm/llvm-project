@@ -32,6 +32,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -172,6 +173,10 @@ void AllocationPlacementPass::runOnOperation() {
     return;
   }
 
+  // An acc routine is compiled for the device as well, so it is device code
+  // for the purpose of -fstack-arrays even before it is specialized.
+  bool isAccRoutine = mlir::acc::isAccRoutine(func);
+
   // Walk allocations in deterministic program order, maintaining the running
   // per-function stack budget while collecting the conversions to perform.
   std::size_t stackBytesUsed = 0;
@@ -208,11 +213,11 @@ void AllocationPlacementPass::runOnOperation() {
                : (allocmem.hasLenParams() || allocmem.hasShapeOperands());
     info.byteSize = getConstantByteSize(op, dl, kindMap);
 
-    // -fstack-arrays cannot be honored in an offload region either: like a
-    // device procedure, it runs on the device stack, which is far smaller than
-    // the host one. The size based part of the policy still applies.
+    // -fstack-arrays cannot be honored in an offload region or an acc routine
+    // either: like a device procedure, they run on the device stack, which is
+    // far smaller than the host one. The size based policy still applies.
     fir::AllocationPolicy policy = basePolicy;
-    if (policy.stackArrays && cuf::isExecutingOnDevice(op))
+    if (policy.stackArrays && (isAccRoutine || cuf::isExecutingOnDevice(op)))
       policy.stackArrays = false;
 
     // A hook, if provided, fully overrides the default policy; it may delegate
