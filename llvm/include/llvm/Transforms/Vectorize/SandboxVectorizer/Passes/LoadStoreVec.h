@@ -33,6 +33,7 @@ class Function;
 class Value;
 class Instruction;
 class Type;
+class Constant;
 
 class LLVM_ABI LoadStoreVec final : public RegionPass {
   const DataLayout *DL = nullptr;
@@ -63,7 +64,7 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
 
   /// Builds a ConstantVector from per-lane constant store operands in \p
   /// Constants. \returns the packed ConstantVector.
-  Value *createConstantVector(BndlRef<Value *> Constants);
+  Constant *createConstantVector(BndlRef<Constant *> Constants);
 
   /// Vectorizes \p Stores and their operands if constants or consecutive
   /// loads. \returns true on success.

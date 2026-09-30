@@ -1087,10 +1087,26 @@ elementwiseMatchAndRewriteHelper(Operation *operation, ValueRange operands,
                                     targetShape, converter);
 }
 
+// Returns the identity value to seed a float min/max reduction with. TOSA seeds
+// REDUCE_MIN with maximum_s<in_out_t>() and REDUCE_MAX/ARGMAX with
+// minimum_s<in_out_t>(), and for floating-point types those bounds are
+// +/-infinity rather than the largest finite value. Only use them when the
+// caller opted in *and* the format can represent them: APFloat::getInf() is
+// unreachable for FiniteOnly semantics and silently returns a NaN for NanOnly
+// semantics such as f8E4M3FN, which would poison the whole reduction through
+// NaN-propagating arith.minimumf/arith.maximumf.
+static APFloat getFloatMinMaxIdentity(const llvm::fltSemantics &semantics,
+                                      bool negative, bool allowNonFinites) {
+  if (allowNonFinites && APFloat::semanticsHasInf(semantics))
+    return APFloat::getInf(semantics, negative);
+  return APFloat::getLargest(semantics, negative);
+}
+
 // Returns the constant initial value for a given reduction operation. The
 // attribute type varies depending on the element type required.
 static TypedAttr createInitialValueForReduceOp(Operation *op, Type elementTy,
-                                               PatternRewriter &rewriter) {
+                                               PatternRewriter &rewriter,
+                                               bool allowNonFinites) {
   if (isa<tosa::ReduceSumOp>(op) && isa<FloatType>(elementTy))
     return rewriter.getFloatAttr(elementTy, 0.0);
 
@@ -1105,8 +1121,9 @@ static TypedAttr createInitialValueForReduceOp(Operation *op, Type elementTy,
 
   if (isa<tosa::ReduceMinOp>(op) && isa<FloatType>(elementTy))
     return rewriter.getFloatAttr(
-        elementTy, APFloat::getLargest(
-                       cast<FloatType>(elementTy).getFloatSemantics(), false));
+        elementTy,
+        getFloatMinMaxIdentity(cast<FloatType>(elementTy).getFloatSemantics(),
+                               /*negative=*/false, allowNonFinites));
 
   if (isa<tosa::ReduceMinOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.getIntegerAttr(
@@ -1114,8 +1131,9 @@ static TypedAttr createInitialValueForReduceOp(Operation *op, Type elementTy,
 
   if (isa<tosa::ReduceMaxOp>(op) && isa<FloatType>(elementTy))
     return rewriter.getFloatAttr(
-        elementTy, APFloat::getLargest(
-                       cast<FloatType>(elementTy).getFloatSemantics(), true));
+        elementTy,
+        getFloatMinMaxIdentity(cast<FloatType>(elementTy).getFloatSemantics(),
+                               /*negative=*/true, allowNonFinites));
 
   if (isa<tosa::ReduceMaxOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.getIntegerAttr(
@@ -1129,8 +1147,9 @@ static TypedAttr createInitialValueForReduceOp(Operation *op, Type elementTy,
 
   if (isa<tosa::ArgMaxOp>(op) && isa<FloatType>(elementTy))
     return rewriter.getFloatAttr(
-        elementTy, APFloat::getLargest(
-                       cast<FloatType>(elementTy).getFloatSemantics(), true));
+        elementTy,
+        getFloatMinMaxIdentity(cast<FloatType>(elementTy).getFloatSemantics(),
+                               /*negative=*/true, allowNonFinites));
 
   if (isa<tosa::ArgMaxOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.getIntegerAttr(
@@ -1196,7 +1215,8 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
 // that reduces across the specified axis.
 template <typename OpTy>
 static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
-                                                 PatternRewriter &rewriter) {
+                                                 PatternRewriter &rewriter,
+                                                 bool allowNonFinites) {
   auto loc = op->getLoc();
   auto inputTy = dyn_cast<RankedTensorType>(op->getOperand(0).getType());
   auto resultTy = dyn_cast<RankedTensorType>(op->getResult(0).getType());
@@ -1230,7 +1250,8 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
       tensor::EmptyOp::create(rewriter, loc, reduceShape, accTy, dynDims)
           .getResult();
 
-  auto fillValueAttr = createInitialValueForReduceOp(op, accTy, rewriter);
+  auto fillValueAttr =
+      createInitialValueForReduceOp(op, accTy, rewriter, allowNonFinites);
   if (!fillValueAttr)
     return rewriter.notifyMatchFailure(
         op, "No initial value found for reduction operation");
@@ -2275,12 +2296,17 @@ public:
 template <typename SrcOp>
 class ReduceConverter : public OpRewritePattern<SrcOp> {
 public:
-  using OpRewritePattern<SrcOp>::OpRewritePattern;
+  ReduceConverter(MLIRContext *context, bool allowNonFinites)
+      : OpRewritePattern<SrcOp>(context), allowNonFinites(allowNonFinites) {}
 
   LogicalResult matchAndRewrite(SrcOp reduceOp,
                                 PatternRewriter &rewriter) const final {
-    return reduceMatchAndRewriteHelper(reduceOp, reduceOp.getAxis(), rewriter);
+    return reduceMatchAndRewriteHelper(reduceOp, reduceOp.getAxis(), rewriter,
+                                       allowNonFinites);
   }
+
+private:
+  bool allowNonFinites;
 };
 
 class ReverseConverter : public OpRewritePattern<tosa::ReverseOp> {
@@ -2424,7 +2450,9 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
 // current value exceeds the running max.
 class ArgMaxConverter : public OpRewritePattern<tosa::ArgMaxOp> {
 public:
-  using OpRewritePattern<tosa::ArgMaxOp>::OpRewritePattern;
+  ArgMaxConverter(MLIRContext *context, bool allowNonFinites)
+      : OpRewritePattern<tosa::ArgMaxOp>(context),
+        allowNonFinites(allowNonFinites) {}
 
   LogicalResult matchAndRewrite(tosa::ArgMaxOp argmaxOp,
                                 PatternRewriter &rewriter) const final {
@@ -2466,8 +2494,8 @@ public:
         tensor::EmptyOp::create(rewriter, loc, resultTy.getShape(), inElementTy,
                                 dynDims)
             .getResult();
-    auto fillValueMaxAttr =
-        createInitialValueForReduceOp(argmaxOp, inElementTy, rewriter);
+    auto fillValueMaxAttr = createInitialValueForReduceOp(
+        argmaxOp, inElementTy, rewriter, allowNonFinites);
 
     if (!fillValueMaxAttr)
       return rewriter.notifyMatchFailure(
@@ -2555,6 +2583,9 @@ public:
     rewriter.replaceOp(argmaxOp, linalgOp.getResult(0));
     return success();
   }
+
+private:
+  bool allowNonFinites;
 };
 
 class GatherConverter : public OpConversionPattern<tosa::GatherOp> {
@@ -3098,7 +3129,8 @@ struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgConversionPatterns(
-    const TypeConverter &converter, RewritePatternSet *patterns) {
+    const TypeConverter &converter, RewritePatternSet *patterns,
+    const TosaToLinalgOptions &options) {
 
   // We have multiple resize coverters to handle degenerate cases.
   patterns->add<GenericResizeConverter>(patterns->getContext(),
@@ -3152,13 +3184,6 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
 
   patterns->add<
       IdentityNConverter<tosa::IdentityOp>,
-      ReduceConverter<tosa::ReduceAllOp>,
-      ReduceConverter<tosa::ReduceAnyOp>,
-      ReduceConverter<tosa::ReduceMinOp>,
-      ReduceConverter<tosa::ReduceMaxOp>,
-      ReduceConverter<tosa::ReduceSumOp>,
-      ReduceConverter<tosa::ReduceProductOp>,
-      ArgMaxConverter,
       GatherConverter,
       RescaleConverter,
       ReverseConverter,
@@ -3166,5 +3191,16 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       FFT2dConverter,
       TableConverter,
       TileConverter>(patterns->getContext());
+
+  // Reductions seeded with a float min/max identity need to know whether
+  // non-finite values are available on the target.
+  patterns->add<
+      ReduceConverter<tosa::ReduceAllOp>,
+      ReduceConverter<tosa::ReduceAnyOp>,
+      ReduceConverter<tosa::ReduceMinOp>,
+      ReduceConverter<tosa::ReduceMaxOp>,
+      ReduceConverter<tosa::ReduceSumOp>,
+      ReduceConverter<tosa::ReduceProductOp>,
+      ArgMaxConverter>(patterns->getContext(), options.allowNonFinites);
   // clang-format on
 }

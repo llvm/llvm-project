@@ -199,9 +199,6 @@ public:
   /// concrete subclass.
   Type *getScalarType() const;
 
-  /// Returns true if this VPValue is defined by a recipe.
-  bool hasDefiningRecipe() const { return getDefiningRecipe(); }
-
   /// Returns true if the VPValue is defined outside any loop.
   bool isDefinedOutsideLoopRegions() const;
 
@@ -366,8 +363,8 @@ class LLVM_ABI_FOR_TEST VPSingleDefValue : public VPRecipeValue {
 
 protected:
   /// Construct a VPSingleDefValue. Must only be used by VPSingleDefRecipe.
-  LLVM_ABI_FOR_TEST VPSingleDefValue(VPSingleDefRecipe *Def,
-                                     Value *UV = nullptr, Type *Ty = nullptr);
+  VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV = nullptr,
+                   Type *Ty = nullptr);
 
 public:
   ~VPSingleDefValue() override;
