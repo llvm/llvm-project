@@ -9081,9 +9081,10 @@ bool CombinerHelper::matchNarrowTruncShrConst(MachineInstr &MI,
   Register AmtReg = ShrMI->getOperand(2).getReg();
   LLT SrcTy = MRI.getType(X);
   LLT DstTy = MRI.getType(Dst);
-  if (SrcTy.isVector() != DstTy.isVector())
-    return false;
-  if (SrcTy.isVector() && SrcTy.getElementCount() != DstTy.getElementCount())
+  // Scalars only: for vectors, (trunc (shr x, K)) is a single shift-right-
+  // narrow instruction on some targets (e.g. AArch64 SHRN), and splitting it
+  // into a truncate plus a narrow shift makes the code worse.
+  if (DstTy.isVector())
     return false;
 
   unsigned SrcBW = SrcTy.getScalarSizeInBits();
