@@ -29,10 +29,13 @@ struct Shape;
 } // namespace coro
 
 struct CoroSplitPass : RequiredPassInfoMixin<CoroSplitPass> {
+  enum class Mode { All, RetconOnly };
+
   using BaseABITy =
       std::function<std::unique_ptr<coro::BaseABI>(Function &, coro::Shape &)>;
 
   LLVM_ABI CoroSplitPass(bool OptimizeFrame = false);
+  LLVM_ABI CoroSplitPass(bool OptimizeFrame, Mode SplitMode);
 
   LLVM_ABI CoroSplitPass(SmallVector<BaseABITy> GenCustomABIs,
                          bool OptimizeFrame = false);
@@ -55,6 +58,8 @@ struct CoroSplitPass : RequiredPassInfoMixin<CoroSplitPass> {
 
   // Would be true if the Optimization level isn't O0.
   bool OptimizeFrame;
+
+  Mode SplitMode = Mode::All;
 };
 } // end namespace llvm
 

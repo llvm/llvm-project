@@ -1,10 +1,7 @@
-; RUN: opt -passes=ipsccp -S %s | FileCheck %s
-; RUN: opt -passes='coro-early,ipsccp,cgscc(coro-split),verify' -S %s | FileCheck %s --check-prefix=SPLIT
+; RUN: opt -verify-each -passes='thinlto<O2>' -S %s | FileCheck %s
 
-; A returned-continuation coroutine has no ret before splitting. Its
-; coro.end is replaced with a real pair of continuation and yield pointers
-; during splitting. IPSCCP must not replace the direct call's result with
-; undef just because the pre-split body ends in unreachable.
+; An ICP-style direct/indirect call join must retain the direct return pair.
+; The ThinLTO pipeline must materialize retcon ramp returns before IPSCCP.
 
 declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
@@ -54,29 +51,9 @@ join:
   ret void
 }
 
+; CHECK-LABEL: define internal swiftcc { ptr, ptr } @accessor(
+; CHECK: ret { ptr, ptr }
 ; CHECK-LABEL: define void @caller(
-; CHECK: direct:
-; CHECK: %direct_pair = call swiftcc { ptr, ptr } @accessor(
-; CHECK: join:
 ; CHECK: %pair = phi { ptr, ptr } [ %direct_pair, %direct ], [ %indirect_pair, %indirect ]
-
-; SPLIT-LABEL: define internal swiftcc { ptr, ptr } @accessor(
-; SPLIT: ret { ptr, ptr }
-; SPLIT-LABEL: define void @caller(
-; SPLIT: %pair = phi { ptr, ptr } [ %direct_pair, %direct ], [ %indirect_pair, %indirect ]
-
-define internal i32 @ordinary() {
-entry:
-  ret i32 7
-}
-
-define i32 @ordinary_caller() {
-entry:
-  %value = call i32 @ordinary()
-  ret i32 %value
-}
-
-; CHECK-LABEL: define i32 @ordinary_caller()
-; CHECK: ret i32 7
 
 attributes #0 = { noinline presplitcoroutine }

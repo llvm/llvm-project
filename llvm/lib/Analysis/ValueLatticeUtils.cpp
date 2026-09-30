@@ -22,13 +22,7 @@ bool llvm::canTrackArgumentsInterprocedurally(Function *F) {
 }
 
 bool llvm::canTrackReturnsInterprocedurally(Function *F) {
-  // Before coroutine splitting, the returns from a coroutine may not be
-  // represented by ret instructions. In particular, returned-continuation
-  // coroutines end in coro.end followed by unreachable, but splitting later
-  // creates a concrete return value. Do not infer undef from the absence of
-  // a ret in the pre-split body.
-  return F->hasExactDefinition() && !F->hasFnAttribute(Attribute::Naked) &&
-         !F->hasFnAttribute(Attribute::PresplitCoroutine);
+  return F->hasExactDefinition() && !F->hasFnAttribute(Attribute::Naked);
 }
 
 bool llvm::canTrackGlobalVariableInterprocedurally(GlobalVariable *GV) {
