@@ -83,32 +83,24 @@ NonTrivial test_nrvo() {
 //            artifact of us falling through to emitImplicitReturn().
 // CIR:   cir.trap
 
-// LLVMCIR: define {{.*}} void @_Z9test_nrvov(ptr dead_on_unwind noalias writable sret(%struct.NonTrivial) align 1 %[[RESULT:.*]])
+// LLVM: define {{.*}} void @_Z9test_nrvov(ptr dead_on_unwind noalias writable sret(%struct.NonTrivial) align 1 %[[RESULT:.*]])
+// OGCG:   %[[RESULT_ADDR:.*]] = alloca ptr
 // LLVMCIR:   %[[NRVO_FLAG:.*]] = alloca i8
+// OGCG:   %[[NRVO_FLAG:.*]] = alloca i1, align 1
+// OGCG:   store ptr %[[RESULT]], ptr %[[RESULT_ADDR]]
 // LLVMCIR:   store i8 0, ptr %[[NRVO_FLAG]]
-// LLVMCIR:   call void @_Z10maybeThrowv()
+// OGCG:   store i1 false, ptr %[[NRVO_FLAG]]
+// LLVM:   call void @_Z10maybeThrowv()
 // LLVMCIR:   store i8 1, ptr %[[NRVO_FLAG]]
+// OGCG:   store i1 true, ptr %[[NRVO_FLAG]]
 // LLVMCIR:   %[[NRVO_VAL:.*]] = load i8, ptr %[[NRVO_FLAG]]
 // LLVMCIR:   %[[NRVO_VAL_TRUNC:.*]] = trunc i8 %[[NRVO_VAL]] to i1
 // LLVMCIR:   %[[NOT_NRVO_VAL:.*]] = xor i1 %[[NRVO_VAL_TRUNC]], true
-// LLVMCIR:   br i1 %[[NOT_NRVO_VAL]], label %[[NRVO_UNUSED:.*]], label %[[NRVO_USED:.*]]
-// LLVMCIR: [[NRVO_UNUSED]]:
-// LLVMCIR:   call void @_ZN10NonTrivialD1Ev(ptr {{.*}} %[[RESULT]])
-// LLVMCIR:   br label %[[NRVO_USED]]
-// LLVMCIR: [[NRVO_USED]]:
-// LLVMCIR:   ret void
-
-// OGCG: define {{.*}} void @_Z9test_nrvov(ptr {{.*}} sret(%struct.NonTrivial) {{.*}} %[[RESULT:.*]])
-// OGCG:   %[[RESULT_ADDR:.*]] = alloca ptr
-// OGCG:   %[[NRVO_FLAG:.*]] = alloca i1, align 1
-// OGCG:   store ptr %[[RESULT]], ptr %[[RESULT_ADDR]]
-// OGCG:   store i1 false, ptr %[[NRVO_FLAG]]
-// OGCG:   call void @_Z10maybeThrowv()
-// OGCG:   store i1 true, ptr %[[NRVO_FLAG]]
+// LLVMCIR:   br i1 %[[NOT_NRVO_VAL]], label %[[NRVO_UNUSED:.*]], label %[[NRVO_DONE:.*]]
 // OGCG:   %[[NRVO_VAL:.*]] = load i1, ptr %[[NRVO_FLAG]]
-// OGCG:   br i1 %[[NRVO_VAL]], label %[[SKIPDTOR:.*]], label %[[NRVO_UNUSED:.*]]
-// OGCG: [[NRVO_UNUSED]]:
-// OGCG:   call void @_ZN10NonTrivialD1Ev(ptr {{.*}} %[[RESULT]])
-// OGCG:   br label %[[SKIPDTOR]]
-// OGCG: [[SKIPDTOR]]:
-// OGCG:   ret void
+// OGCG:   br i1 %[[NRVO_VAL]], label %[[NRVO_DONE:.*]], label %[[NRVO_UNUSED:.*]]
+// LLVM: [[NRVO_UNUSED]]:
+// LLVM-NEXT:   call void @_ZN10NonTrivialD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[RESULT]])
+// LLVM-NEXT:   br label %[[NRVO_DONE]]
+// LLVM: [[NRVO_DONE]]:
+// LLVM:   ret void

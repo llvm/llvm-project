@@ -12,6 +12,7 @@
 #include "mlir/IR/Dominance.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -295,14 +296,9 @@ static uint64_t coercionByteSize(mlir::Type ty, const mlir::DataLayout &dl) {
   return dl.getTypeSize(ty);
 }
 
-/// \p ty's size rounded up to its ABI alignment.
-static uint64_t getAllocSize(mlir::Type ty, const mlir::DataLayout &dl) {
-  return llvm::alignTo(dl.getTypeSize(ty), dl.getTypeABIAlignment(ty));
-}
-
 /// A \p wantTy-typed view of the storage \p base points at.  When \p wantTy is
-/// \p base's own pointee type, \p base is returned unchanged and \p offset is
-/// ignored.  Any other type is reached by a bitcast, preceded by a byte stride
+/// \p base's own pointee type, \p base is returned unchanged and \p offset must
+/// be 0.  Any other type is reached by a bitcast, preceded by a byte stride
 /// of \p offset bytes when \p offset is nonzero.  The view keeps \p base's
 /// address space.  Any operations created are added to \p createdOps.
 static mlir::Value
@@ -311,8 +307,10 @@ emitViewAtOffset(mlir::OpBuilder &builder, mlir::Location loc,
                  SmallPtrSetImpl<mlir::Operation *> &createdOps,
                  unsigned offset) {
   auto basePtrTy = mlir::cast<cir::PointerType>(base.getType());
-  if (wantTy == basePtrTy.getPointee())
+  if (wantTy == basePtrTy.getPointee()) {
+    assert(offset == 0 && "a view of the storage's own type has no offset");
     return base;
+  }
   mlir::ptr::MemorySpaceAttrInterface addrSpace = basePtrTy.getAddrSpace();
   mlir::Value view = base;
   if (offset != 0) {
@@ -415,15 +413,17 @@ mlir::Value emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
   mlir::Type srcTy = src.getType();
   cir::AllocaOp alloca = createCoercionSlot(builder, loc, srcTy, dstTy,
                                             slotBlock, dl, createdOps, offset);
+  mlir::Type slotTy = alloca.getAllocaType();
 
   // Store through a source-typed view of the slot.
-  mlir::Value srcSlot =
-      emitViewAtOffset(builder, loc, srcTy, alloca, createdOps, offset);
+  mlir::Value srcSlot = emitViewAtOffset(
+      builder, loc, srcTy, alloca, createdOps, srcTy == slotTy ? 0 : offset);
   auto store = cir::StoreOp::create(builder, loc, src, srcSlot);
   createdOps.insert(store);
 
   // Return a destination-typed view of the slot.
-  return emitViewAtOffset(builder, loc, dstTy, alloca, createdOps, offset);
+  return emitViewAtOffset(builder, loc, dstTy, alloca, createdOps,
+                          dstTy == slotTy ? 0 : offset);
 }
 
 /// Coerce \p src to type \p dstTy by going through memory and load the whole
@@ -489,12 +489,13 @@ static cir::LoadOp maybeGetSimpleLoad(mlir::Value val) {
 /// has to fit in the record's.  At an offset, the coerced value has to end
 /// within the record's alloc size.
 static bool canReadInPlace(cir::LoadOp load, mlir::Type coercedTy,
-                           const mlir::DataLayout &dl, unsigned offset) {
+                           const cir::CIRDataLayout &dl, unsigned offset) {
   if (!cir::getUnderlyingAlloca(load.getAddr()))
     return false;
-  uint64_t readEnd = offset == 0 ? getAllocSize(coercedTy, dl)
-                                 : offset + dl.getTypeSize(coercedTy);
-  return readEnd <= getAllocSize(load.getType(), dl);
+  uint64_t readEnd =
+      offset == 0 ? dl.getTypeAllocSize(coercedTy).getFixedValue()
+                  : offset + dl.getTypeStoreSize(coercedTy).getFixedValue();
+  return readEnd <= dl.getTypeAllocSize(load.getType()).getFixedValue();
 }
 
 /// Read \p coercedTy at \p offset straight out of the storage the record load
@@ -564,6 +565,7 @@ void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
                           mlir::Type origRetTy, mlir::Type coercedRetTy,
                           mlir::OpBuilder &builder, const mlir::DataLayout &dl,
                           unsigned offset) {
+  cir::CIRDataLayout cirDataLayout(funcOp->getParentOfType<mlir::ModuleOp>());
   SmallVector<cir::ReturnOp> returns;
   funcOp.walk([&](cir::ReturnOp r) { returns.push_back(r); });
   for (cir::ReturnOp r : returns) {
@@ -576,7 +578,7 @@ void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
     cir::LoadOp recLoad = maybeGetSimpleLoad(origVal);
     if (recLoad && mlir::isa<cir::RecordType>(recLoad.getType())) {
       mlir::Value coerced =
-          canReadInPlace(recLoad, coercedRetTy, dl, offset)
+          canReadInPlace(recLoad, coercedRetTy, cirDataLayout, offset)
               ? emitInPlaceCoercedLoad(builder, r.getLoc(), recLoad,
                                        coercedRetTy, offset)
               : emitCopiedCoercedLoad(
