@@ -282,7 +282,6 @@ class GVNPassImpl {
   llvm::GVNOptions Options;
 
 public:
-  struct Expression;
   struct AvailableValue;
   struct AvailableValueInBlock;
 
@@ -290,23 +289,22 @@ public:
 
   /// This removes the specified instruction from
   /// our various maps and marks it for deletion.
-  LLVM_ABI void salvageAndRemoveInstruction(Instruction *I);
+  void salvageAndRemoveInstruction(Instruction *I);
 
   DominatorTree &getDominatorTree() const { return *DT; }
   AAResults *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
   MemoryDependenceResults &getMemDep() const { return *MD; }
 
-  LLVM_ABI bool isScalarPREEnabled() const;
-  LLVM_ABI bool isLoadPREEnabled() const;
-  LLVM_ABI bool isLoadInLoopPREEnabled() const;
-  LLVM_ABI bool isLoadPRESplitBackedgeEnabled() const;
-  LLVM_ABI bool isMemDepEnabled() const;
-  LLVM_ABI bool isMemorySSAEnabled() const;
+  bool isScalarPREEnabled() const;
+  bool isLoadPREEnabled() const;
+  bool isLoadInLoopPREEnabled() const;
+  bool isLoadPRESplitBackedgeEnabled() const;
+  bool isMemDepEnabled() const;
+  bool isMemorySSAEnabled() const;
 
 private:
   friend class llvm::GVNPass;
   friend class GVNLegacyPass;
-  friend struct DenseMapInfo<Expression>;
 
   MemoryDependenceResults *MD = nullptr;
   DominatorTree *DT = nullptr;
