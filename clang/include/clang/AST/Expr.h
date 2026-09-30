@@ -584,7 +584,7 @@ public:
   /// If \p AllowRelaxedEval is \c true, this will allow certain constructs that
   /// are not valid per the specification.
   // FIXME: Add proper documentation about the constructs we allow.
-  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result = nullptr,
+  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue &Result,
                            bool AllowRelaxedEval = false) const;
 
   /// isPotentialConstantExpr - Return true if this function's definition

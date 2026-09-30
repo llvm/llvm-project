@@ -4541,6 +4541,24 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         Known, MF, MF.getFrameInfo().getObjectAlign(FrameIdx));
     break;
   }
+  case ISD::VP_LOAD_FF: {
+    if (Op.getResNo() != 1)
+      break;
+    // The second result of vp.load.ff is an unsigned value that is less than or
+    // equal to the EVL operand.
+    KnownBits VLKB =
+        computeKnownBits(Op.getOperand(3), DemandedElts, Depth + 1);
+    // The new VL is also bounded by the largest vector length.
+    EVT ResVT = Op->getValueType(0);
+    auto ResKB = KnownBits::makeConstant(
+        APInt(BitWidth, ResVT.getVectorMinNumElements()));
+    if (ResVT.isScalableVector()) {
+      const Function &F = getMachineFunction().getFunction();
+      ResKB = KnownBits::mul(getVScaleRange(&F, BitWidth).toKnownBits(), ResKB);
+    }
+    Known.Zero.setHighBits(KnownBits::umin(VLKB, ResKB).countMinLeadingZeros());
+    break;
+  }
 
   default:
     if (Opcode < ISD::BUILTIN_OP_END)
@@ -10005,10 +10023,10 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
 }
 
 static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
-                                            unsigned AS) {
+                                            const DataLayout &DL, unsigned AS) {
   // Lowering memcpy / memset / memmove intrinsics to calls is only valid if all
   // pointer operands can be losslessly bitcasted to pointers of address space 0
-  if (AS != 0 && !TLI->getTargetMachine().isNoopAddrSpaceCast(AS, 0)) {
+  if (AS != 0 && !TLI->getTargetMachine().isNoopAddrSpaceCast(DL, AS, 0)) {
     report_fatal_error("cannot lower memory intrinsic in address space " +
                        Twine(AS));
   }
@@ -10176,8 +10194,10 @@ SDValue SelectionDAG::getMemcpy(
         DstMemCacheHint, SrcMemCacheHint);
   }
 
-  checkAddrSpaceIsValidForLibcall(TLI, DstPtrInfo.getAddrSpace());
-  checkAddrSpaceIsValidForLibcall(TLI, SrcPtrInfo.getAddrSpace());
+  checkAddrSpaceIsValidForLibcall(TLI, getDataLayout(),
+                                  DstPtrInfo.getAddrSpace());
+  checkAddrSpaceIsValidForLibcall(TLI, getDataLayout(),
+                                  SrcPtrInfo.getAddrSpace());
 
   // FIXME: If the memcpy is volatile (isVol), lowering it to a plain libc
   // memcpy is not guaranteed to be safe. libc memcpys aren't required to
@@ -10291,8 +10311,10 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
       return Result;
   }
 
-  checkAddrSpaceIsValidForLibcall(TLI, DstPtrInfo.getAddrSpace());
-  checkAddrSpaceIsValidForLibcall(TLI, SrcPtrInfo.getAddrSpace());
+  checkAddrSpaceIsValidForLibcall(TLI, getDataLayout(),
+                                  DstPtrInfo.getAddrSpace());
+  checkAddrSpaceIsValidForLibcall(TLI, getDataLayout(),
+                                  SrcPtrInfo.getAddrSpace());
 
   // FIXME: If the memmove is volatile, lowering it to plain libc memmove may
   // not be safe.  See memcpy above for more details.
@@ -10414,7 +10436,8 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
     return Result;
   }
 
-  checkAddrSpaceIsValidForLibcall(TLI, DstPtrInfo.getAddrSpace());
+  checkAddrSpaceIsValidForLibcall(TLI, getDataLayout(),
+                                  DstPtrInfo.getAddrSpace());
 
   // Emit a library call.
   auto &Ctx = *getContext();

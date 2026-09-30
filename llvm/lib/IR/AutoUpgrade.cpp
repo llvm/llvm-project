@@ -2068,6 +2068,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                 .Cases({"min.s", "min.i", "min.ll"}, Intrinsic::smin)
                 .Cases({"max.us", "max.ui", "max.ull"}, Intrinsic::umax)
                 .Cases({"min.us", "min.ui", "min.ull"}, Intrinsic::umin)
+                .Cases({"mulhi.s", "mulhi.i", "mulhi.ll"}, Intrinsic::smulh)
+                .Cases({"mulhi.us", "mulhi.ui", "mulhi.ull"}, Intrinsic::umulh)
                 .Default(Intrinsic::not_intrinsic);
         if (IID != Intrinsic::not_intrinsic) {
           NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
@@ -7910,6 +7912,15 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     if (Pos == StringRef::npos)
       Pos = Res.size();
     Res.insert(Pos, "-f64:32:64");
+  }
+
+  // ARM data layout upgrades.
+  // Add -Fi8 if a -F has not already been specified.
+  if (T.isARM() && !DL.empty() && !DL.contains("Fi") && !DL.contains("Fn")) {
+    const StringRef p3232 = "p:32:32";
+    size_t Pos = Res.find(p3232);
+    if (Pos != StringRef::npos)
+      Res.insert(Pos + p3232.size(), "-Fi8");
   }
 
   if (!T.isX86())
