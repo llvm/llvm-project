@@ -20,6 +20,7 @@ bazel_dep(name = "rules_shell", version = "0.8.0")
 # whatever version LLVM's own build needs; downstream consumers get whatever
 # resolves in their module graph.
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
+bazel_dep(name = "libxml2", version = "2.15.3")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "zlib-ng", version = "2.3.3", repo_name = "llvm_zlib")
 bazel_dep(name = "zstd", version = "1.5.7.bcr.1", repo_name = "llvm_zstd")

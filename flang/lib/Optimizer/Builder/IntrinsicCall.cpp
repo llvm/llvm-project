@@ -7106,7 +7106,8 @@ void IntrinsicLibrary::genMvbits(llvm::ArrayRef<fir::ExtendedValue> args) {
   mlir::Type toType{fir::dyn_cast_ptrEleTy(toAddr.getType())};
   assert(toType.getIntOrFloatBitWidth() == fromType.getIntOrFloatBitWidth() &&
          "mismatched mvbits types");
-  auto to = fir::LoadOp::create(builder, loc, signlessType, toAddr);
+  mlir::Value to = fir::LoadOp::create(builder, loc, toAddr);
+  to = builder.createConvert(loc, signlessType, to);
   mlir::Value topos = builder.createConvert(loc, signlessType, unbox(args[4]));
   mlir::Value zero = builder.createIntegerConstant(loc, signlessType, 0);
   mlir::Value ones = builder.createAllOnesInteger(loc, signlessType);

@@ -116,6 +116,7 @@ math_mpfr_test(
     hdrs = ["sdcomp26094.h"],
     deps = [
         "//libc:__support_cpp_array",
+        "//libc:__support_math_cosf",
     ],
 )
 
@@ -772,6 +773,7 @@ math_mpfr_test(
     hdrs = ["sdcomp26094.h"],
     deps = [
         "//libc:__support_cpp_array",
+        "//libc:__support_math_sinf",
     ],
 )
 
