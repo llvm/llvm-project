@@ -29,7 +29,7 @@ func.func @_QPfoo() {
 
       // CHECK: omp.parallel
       omp.parallel {
-        // CHECK: %[[TO_BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.array<1xi32>> {pinned}
+        // CHECK: %[[TO_BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.array<1xi32>> <{pinned}>
         // CHECK: omp.distribute
         omp.distribute {
           // CHECK: omp.wsloop

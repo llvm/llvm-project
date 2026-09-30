@@ -265,12 +265,8 @@ struct alignas(8) NamespaceAndPrefixStorage : NamespaceAndPrefix,
   NamespaceAndPrefixStorage(const NamespaceBaseDecl *Namespace,
                             NestedNameSpecifier Prefix)
       : NamespaceAndPrefix{Namespace, Prefix} {}
-  void Profile(llvm::FoldingSetNodeID &ID) { Profile(ID, Namespace, Prefix); }
-  static void Profile(llvm::FoldingSetNodeID &ID,
-                      const NamespaceBaseDecl *Namespace,
-                      NestedNameSpecifier Prefix) {
-    ID.AddPointer(Namespace);
-    Prefix.Profile(ID);
+  std::pair<const NamespaceBaseDecl *, NestedNameSpecifier> getKey() const {
+    return {Namespace, Prefix};
   }
 };
 

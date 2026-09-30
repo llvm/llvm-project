@@ -1145,6 +1145,36 @@ tryOptimizeShufflePattern(InstCombiner &IC, IntrinsicInst &II,
 
   return IC.replaceInstUsesWith(II, Result);
 }
+
+/// Try to fold a constant addition into the accumulator when saturation is
+/// disabled.
+static Instruction *foldConstantIntoDotAccumulator(IntrinsicInst &II,
+                                                   unsigned AccIdx,
+                                                   unsigned ClampIdx,
+                                                   InstCombiner &IC) {
+  // Reassociating across a saturating accumulation is not valid.
+  if (!match(II.getArgOperand(ClampIdx), m_Zero()) || !II.hasOneUse())
+    return nullptr;
+
+  const APInt *Acc = nullptr;
+  if (!match(II.getArgOperand(AccIdx), m_APInt(Acc)))
+    return nullptr;
+
+  auto *AccumUser = dyn_cast<BinaryOperator>(II.user_back());
+  if (!AccumUser)
+    return nullptr;
+
+  const APInt *AccumDelta = nullptr;
+  if (!match(AccumUser, m_c_Add(m_Specific(&II), m_APInt(AccumDelta))))
+    return nullptr;
+
+  Constant *NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDelta);
+
+  IC.replaceInstUsesWith(*AccumUser, &II);
+  IC.eraseInstFromFunction(*AccumUser);
+  return IC.replaceOperand(II, AccIdx, NewAcc);
+}
+
 std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
@@ -1885,6 +1915,18 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     return std::nullopt;
   }
+  case Intrinsic::amdgcn_wave_match_b32: {
+    const Use &Src0 = II.getArgOperandUse(0);
+    const Use &Src1 = II.getArgOperandUse(1);
+    if (Src0.get() == Src1.get() && isTriviallyUniform(Src0)) {
+      Function *NewF = Intrinsic::getOrInsertDeclaration(
+          II.getModule(), Intrinsic::amdgcn_ballot, II.getType());
+      CallInst *NewCall =
+          IC.Builder.CreateCall(NewF, {IC.Builder.getInt1(true)});
+      return IC.replaceInstUsesWith(II, NewCall);
+    }
+    break;
+  }
   case Intrinsic::amdgcn_writelane: {
     // TODO: Fold bitcast like readlane.
     if (simplifyDemandedLaneMaskArg(IC, II, 1))
@@ -1974,27 +2016,48 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_udot4:
   case Intrinsic::amdgcn_sdot8:
   case Intrinsic::amdgcn_udot8: {
-    if (!match(II.getArgOperand(3), m_Zero()) || !II.hasOneUse())
-      break;
+    Value *Src0 = II.getArgOperand(0);
+    Value *Src1 = II.getArgOperand(1);
 
-    const APInt *Acc;
-    if (!match(II.getArgOperand(2), m_APInt(Acc)))
-      break;
+    // Canonicalize the constant multiplicand to Src1.
+    if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
+      II.setArgOperand(0, Src1);
+      II.setArgOperand(1, Src0);
+      return &II;
+    }
 
-    auto *AccumUser = dyn_cast<BinaryOperator>(II.user_back());
-    if (!AccumUser)
-      break;
+    if (match(Src1, m_Zero()))
+      return IC.replaceInstUsesWith(II, II.getArgOperand(2));
 
-    const APInt *AccumDelta;
-    Constant *NewAcc;
-    if (!match(AccumUser, m_c_Add(m_Specific(&II), m_APInt(AccumDelta))))
-      break;
+    if (Instruction *I = foldConstantIntoDotAccumulator(II, 2, 3, IC))
+      return I;
 
-    NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDelta);
+    break;
+  }
+  case Intrinsic::amdgcn_sudot4:
+  case Intrinsic::amdgcn_sudot8: {
+    Value *Src0 = II.getArgOperand(1);
+    Value *Src1 = II.getArgOperand(3);
 
-    IC.replaceInstUsesWith(*AccumUser, &II);
-    IC.eraseInstFromFunction(*AccumUser);
-    return IC.replaceOperand(II, 2, NewAcc);
+    // Canonicalize the constant multiplicand to Src1, moving its sign flag with
+    // it.
+    if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
+      Value *Sign0 = II.getArgOperand(0);
+      Value *Sign1 = II.getArgOperand(2);
+      II.setArgOperand(0, Sign1);
+      II.setArgOperand(1, Src1);
+      II.setArgOperand(2, Sign0);
+      II.setArgOperand(3, Src0);
+      return &II;
+    }
+
+    if (match(Src1, m_Zero()))
+      return IC.replaceInstUsesWith(II, II.getArgOperand(4));
+
+    if (Instruction *I = foldConstantIntoDotAccumulator(II, 4, 5, IC))
+      return I;
+
+    break;
   }
   case Intrinsic::amdgcn_fmul_legacy: {
     Value *Op0 = II.getArgOperand(0);

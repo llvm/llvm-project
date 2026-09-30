@@ -169,7 +169,7 @@ let cppNamespace = "::cir" in {
       InterfaceMethod<"",
       "bool", "hasComdat", (ins), [{}],
       /*defaultImplementation=*/[{
-        return $_op.getComdat();
+        return static_cast<bool>($_op.getComdat());
       }]
       >,
       InterfaceMethod<"",

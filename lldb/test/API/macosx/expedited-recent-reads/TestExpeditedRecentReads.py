@@ -161,7 +161,7 @@ class TestExpeditedRecentReads(TestBase):
     def heap_range(thread):
         """The (address, size) of the buffer the 'heap' local points at."""
         heap = thread.GetFrameAtIndex(0).FindVariable("heap")
-        return heap.GetValueAsUnsigned(0), heap.GetType().GetPointeeType().GetByteSize()
+        return heap.GetValueAsAddress(), heap.GetType().GetPointeeType().GetByteSize()
 
     def examine_heap(self, logfile, thread, marker):
         """Read every element of the heap buffer the way a variables view would,
