@@ -97,7 +97,7 @@ struct OneShotBufferizePass
       opt.bufferAlignment = bufferAlignment;
       opt.testAnalysisOnly = testAnalysisOnly;
       opt.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
-      if (!checkParallelRegions)
+      if (!mayHaveParallelRegions)
         opt.mayHaveParallelRegions = false;
       opt.noAnalysisFuncFilter = noAnalysisFuncFilter;
 

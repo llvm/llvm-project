@@ -131,12 +131,32 @@ static bool detectUnstructuredControlFlow(Operation *op) {
   return walkRes.wasInterrupted();
 }
 
+/// Return "true" if any allowed op has a parallel region.
+static bool detectParallelRegions(Operation *op,
+                                  const BufferizationOptions &options) {
+  WalkResult walkRes =
+      op->walk([&](BufferizableOpInterface bufferizableOp) -> WalkResult {
+        if (!options.isOpAllowed(bufferizableOp))
+          return WalkResult::skip();
+        for (Region &region : bufferizableOp->getRegions()) {
+          if (bufferizableOp.isParallelRegion(region.getRegionNumber()))
+            return WalkResult::interrupt();
+        }
+        return WalkResult::advance();
+      });
+  return walkRes.wasInterrupted();
+}
+
 OneShotAnalysisState::OneShotAnalysisState(
     Operation *op, const OneShotBufferizationOptions &options)
     : AnalysisState(options, TypeID::get<OneShotAnalysisState>()) {
   mayHaveUnstructuredCF = options.mayHaveUnstructuredControlFlow.value_or(
       detectUnstructuredControlFlow(op));
-  mayHaveParallelRegionsFlag = options.mayHaveParallelRegions.value_or(false);
+  if (!options.mayHaveParallelRegions.has_value()) {
+    mayHaveParallelRegionsFlag = detectParallelRegions(op, options);
+  } else {
+    mayHaveParallelRegionsFlag = *options.mayHaveParallelRegions;
+  }
 
   // Set up alias sets.
   op->walk([&](Operation *op) {
@@ -154,19 +174,6 @@ OneShotAnalysisState::OneShotAnalysisState(
   op->walk([&](BufferizableOpInterface bufferizableOp) {
     if (!options.isOpAllowed(bufferizableOp))
       return WalkResult::skip();
-
-    // Reuse this existing walk to determine whether parallel-region analysis
-    // can ever find a conflict. Avoid querying the interface once a parallel
-    // region was found.
-    if (!options.mayHaveParallelRegions.has_value() &&
-        !mayHaveParallelRegionsFlag) {
-      for (Region &region : bufferizableOp->getRegions()) {
-        if (bufferizableOp.isParallelRegion(region.getRegionNumber())) {
-          mayHaveParallelRegionsFlag = true;
-          break;
-        }
-      }
-    }
 
     for (OpOperand &opOperand : bufferizableOp->getOpOperands())
       if (isa<TensorLikeType>(opOperand.get().getType()))
