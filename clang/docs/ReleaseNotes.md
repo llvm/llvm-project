@@ -247,6 +247,9 @@ features cannot lower the translation-unit ABI level;
 
 - Added support for the `__builtin_strlcat` and `__builtin_strlcpy` builtins.
 
+- Added `__builtin_sort_pack` to sort a pack of types using the same
+  order as `__builtin_type_order`.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
@@ -289,6 +292,9 @@ features cannot lower the translation-unit ABI level;
 
 - `-Wfortify-source` now diagnoses when `recv` or `recvfrom` is called with a
   size argument larger than the destination buffer.
+
+- `-Wfortify-source` now diagnoses when `poll`, `ppoll`, or `ppoll64` is called
+  with a descriptor count whose total size exceeds the `fds` array size.
 
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
@@ -514,15 +520,15 @@ features cannot lower the translation-unit ABI level;
   inline-defined friend function shares the name of a non-static class
   member variable. (#GH221190)
 
-- Clang now diagnoses matrix logical operations are only supported for HLSL. (GH222381)
+- Clang now diagnoses matrix logical operations are only supported for HLSL. (#GH222381)
 
 - Improve the input size mismatch diagnostic when calling `__builtin_shufflevector` with valid
-  vector element types but different sizes. (GH221791)
+  vector element types but different sizes. (#GH221791)
 
 - Suggests the correct location for an attribute written before the `using`
   keyword of an alias-declaration. (#GH155787)
 
-- Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (GH222383)
+- Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (#GH222383)
 
 ### Improvements to Clang's time-trace
 
@@ -922,6 +928,10 @@ features cannot lower the translation-unit ABI level;
 
 - Added `__builtin_wasm_memory_copy` and `__builtin_wasm_memory_fill` builtins
   for the WebAssembly `memory.copy` and `memory.fill` bulk memory instructions.
+
+- Fixed a "function signature mismatch" trap at program exit when destroying a
+  temporary that is bound to a reference with static or thread storage
+  duration. (#GH45221)
 
 #### AVR Support
 
