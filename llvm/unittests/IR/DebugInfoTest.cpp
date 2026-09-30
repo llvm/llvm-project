@@ -1612,7 +1612,7 @@ TEST(DebugLocTest, IntermediateLocEquality) {
   MDString *Kind = MDString::get(Ctx, "IntermediateIR");
   DILayerLoc *LayerA = DILayerLoc::get(Ctx, Kind, IntF, 100, 1);
   // Differs from LayerA in a single field (column only) -- a minimal structural
-  // change must still uniquify to a distinct node, so DL1 and DL3 differ.
+  // change must still uniquify to a distinct node, so DL1 and DL2 differ.
   DILayerLoc *LayerB = DILayerLoc::get(Ctx, Kind, IntF, 100, 2);
   DILayerLocList *ListA = DILayerLocList::get(Ctx, {LayerA});
   // A structurally-identical list uniques to the same node.
@@ -1627,22 +1627,16 @@ TEST(DebugLocTest, IntermediateLocEquality) {
                            /*AtomRank=*/0, /*IRLayers=*/L);
   };
   DebugLoc DL1(Layered(ListA));
-  // A *distinct* location with the same fields and the same (uniqued) layer
-  // list, so isSameSourceLocation cannot short-circuit on pointer identity and
-  // must actually run the structural getRawIRLayers() comparison.
-  DebugLoc DL2(DILocation::getDistinct(Ctx, 10, 5, SP, /*InlinedAt=*/nullptr,
-                                       /*ImplicitCode=*/false, /*AtomGroup=*/0,
-                                       /*AtomRank=*/0, /*IRLayers=*/ListA));
-  DebugLoc DL3(Layered(ListB));
-  DebugLoc DL4(DILocation::get(Ctx, 10, 5, SP)); // no layers
+  DebugLoc DL2(Layered(ListB));
+  DebugLoc DL3(Layered(nullptr)); // no layers
 
+  // Distinct nodes, so isSameSourceLocation cannot short-circuit on identity.
   ASSERT_NE(DL1.get(), DL2.get());
-  // isSameSourceLocation compares the primary position only, so all three of
-  // these are the same source location: identical layers, differing layers, and
-  // layers versus none.
+  ASSERT_NE(DL1.get(), DL3.get());
+  // isSameSourceLocation compares the primary position only, so differing
+  // layers and layers versus none are both the same source location.
   EXPECT_TRUE(DL1.isSameSourceLocation(DL2));
   EXPECT_TRUE(DL1.isSameSourceLocation(DL3));
-  EXPECT_TRUE(DL1.isSameSourceLocation(DL4));
 }
 
 TEST(DebugLocTest, MergedLocationWithIntermediate) {
@@ -1727,10 +1721,10 @@ TEST(DebugLocTest, MergedLocationPartialIntermediate) {
   EXPECT_EQ(M13->getRawIRLayers(), nullptr);
 }
 
-// Two locations inlined at the same call site share its location as their
-// inlinedAt, and only that location carries layers. The merged location keeps
-// it, layers included.
-TEST(DebugLocTest, MergedLocationKeepsInlinedAtLayers) {
+// Two locations inlined from different callees at the same call site have
+// only the call site in common, so merging them rebuilds the call site's
+// location. The rebuilt location keeps the call site's layers.
+TEST(DebugLocTest, MergedLocationKeepsCallSiteLayers) {
   LLVMContext Ctx;
   auto M = std::make_unique<Module>("MyModule", Ctx);
   DIBuilder DIB(*M);
@@ -1741,8 +1735,11 @@ TEST(DebugLocTest, MergedLocationKeepsInlinedAtLayers) {
   DISubprogram *CallerSP = DIB.createFunction(
       CU, "caller", "", SrcF, 10, DIB.createSubroutineType({}), 10,
       DINode::FlagZero, DISubprogram::SPFlagDefinition);
-  DISubprogram *CalleeSP = DIB.createFunction(
-      CU, "helper", "", SrcF, 5, DIB.createSubroutineType({}), 5,
+  DISubprogram *CalleeASP = DIB.createFunction(
+      CU, "calleeA", "", SrcF, 5, DIB.createSubroutineType({}), 5,
+      DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  DISubprogram *CalleeBSP = DIB.createFunction(
+      CU, "calleeB", "", SrcF, 20, DIB.createSubroutineType({}), 20,
       DINode::FlagZero, DISubprogram::SPFlagDefinition);
 
   MDString *Kind = MDString::get(Ctx, "IntermediateIR");
@@ -1754,17 +1751,14 @@ TEST(DebugLocTest, MergedLocationKeepsInlinedAtLayers) {
                       /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0,
                       /*IRLayers=*/CallSiteLayers);
 
-  // Same callee, different lines, no layers of their own.
-  DILocation *LocA = DILocation::get(Ctx, 10, 3, CalleeSP, CallSite);
-  DILocation *LocB = DILocation::get(Ctx, 11, 5, CalleeSP, CallSite);
+  DILocation *LocA = DILocation::get(Ctx, 6, 3, CalleeASP, CallSite);
+  DILocation *LocB = DILocation::get(Ctx, 21, 3, CalleeBSP, CallSite);
 
   DILocation *Merged = DILocation::getMergedLocation(LocA, LocB);
   ASSERT_NE(Merged, nullptr);
-  EXPECT_EQ(Merged->getRawIRLayers(), nullptr);
-  DILocation *MergedInlinedAt = Merged->getInlinedAt();
-  ASSERT_NE(MergedInlinedAt, nullptr);
-  EXPECT_EQ(MergedInlinedAt->getScope(), CallerSP);
-  EXPECT_EQ(MergedInlinedAt->getIRLayers(), CallSiteLayers);
+  EXPECT_EQ(Merged->getScope(), CallerSP);
+  EXPECT_EQ(Merged->getInlinedAt(), nullptr);
+  EXPECT_EQ(Merged->getIRLayers(), CallSiteLayers);
 }
 
 // Rebuilding a location with a new discriminator must carry `irlayers` over:

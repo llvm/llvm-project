@@ -33,9 +33,8 @@ entry:
 ; CHECK-DAG: ![[DBG2]] = !DILocation(line: 3, column: 5, scope: ![[SP]], irlayers: ![[LIST]])
 ; CHECK-DAG: ![[DBG3]] = !DILocation(line: 4, column: 1, scope: ![[SP]], irlayers: ![[LIST]])
 
-;; The unlayered location must come back with no irlayers operand. The closing
-;; paren is the assertion -- it is what distinguishes "absent" from "present but
-;; empty".
+;; The unlayered location must come back with no irlayers operand; the closing
+;; paren is the assertion.
 ; CHECK-DAG: ![[DBG4]] = !DILocation(line: 5, column: 5, scope: ![[SP]])
 
 ;; The shared layer list holds one DILayerLoc with the kind string and the
