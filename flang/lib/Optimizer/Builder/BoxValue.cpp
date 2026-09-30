@@ -43,6 +43,35 @@ fir::ExtendedValue fir::substBase(const fir::ExtendedValue &exv,
       [=](const auto &x) { return fir::ExtendedValue(x.clone(base)); });
 }
 
+fir::ExtendedValue
+fir::updateRuntimeLBounds(const fir::ExtendedValue &exv,
+                           llvm::ArrayRef<mlir::Value> lbounds) {
+  if (lbounds.empty())
+    return exv;
+  return exv.match(
+      [&](const fir::ArrayBoxValue &v) -> fir::ExtendedValue {
+        return fir::ArrayBoxValue(v.getAddr(), v.getExtents(), lbounds,
+                                  v.getSourceBox());
+      },
+      [&](const fir::CharArrayBoxValue &v) -> fir::ExtendedValue {
+        return fir::CharArrayBoxValue(v.getAddr(), v.getLen(), v.getExtents(),
+                                      lbounds);
+      },
+      [&](const fir::BoxValue &v) -> fir::ExtendedValue {
+        return fir::BoxValue(v.getAddr(), lbounds, v.getExplicitParameters(),
+                             v.getExplicitExtents());
+      },
+      [&](const fir::MutableBoxValue &v) -> fir::ExtendedValue {
+        // MutableBoxValue stores lower bounds in the runtime descriptor
+        // (or in mutableProperties when isDescribedByVariables). The caller
+        // is responsible for extracting them (e.g. via genDimInfoFromBox)
+        // before calling this helper. We represent the result as a BoxValue
+        // with explicit lbounds so that genDeclare can emit fir.shape_shift.
+        return fir::BoxValue(v.getAddr(), lbounds, v.nonDeferredLenParams());
+      },
+      [&](const auto &v) -> fir::ExtendedValue { return exv; });
+}
+
 llvm::SmallVector<mlir::Value>
 fir::getTypeParams(const fir::ExtendedValue &exv) {
   using RT = llvm::SmallVector<mlir::Value>;

@@ -433,6 +433,15 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ExtendedValue &);
 /// substituted.
 ExtendedValue substBase(const ExtendedValue &exv, mlir::Value base);
 
+/// Return a clone of the extended value `exv` with the lower bounds replaced
+/// by \p lbounds, preserving the storage, extents, character length, and other
+/// properties. If \p lbounds is empty the original value is returned unchanged.
+/// For fir::MutableBoxValue, which stores lower bounds only at runtime inside
+/// the descriptor, the caller is responsible for supplying the lbound values
+/// extracted from the descriptor before calling this helper.
+ExtendedValue updateRuntimeLBounds(const ExtendedValue &exv,
+                                   llvm::ArrayRef<mlir::Value> lbounds);
+
 /// Is the extended value `exv` an array? Note that this returns true for
 /// assumed-ranks that could actually be scalars at runtime.
 bool isArray(const ExtendedValue &exv);

@@ -1,0 +1,198 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test that CUDA implicit device-to-host transfers preserve array lower bounds
+! and do not incorrectly inherit CUDA device attributes on the host temporary.
+
+! Test 1: Explicit-shape array with non-default lower bound
+subroutine test_explicit_shape_nondefault_lb(h, a)
+  implicit none
+  double precision :: h
+  double precision :: a(-2:7)
+  attributes(device) :: a
+  h = h + a(3)*2.0d0
+end subroutine test_explicit_shape_nondefault_lb
+
+! CHECK-LABEL: func.func @_QPtest_explicit_shape_nondefault_lb(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "h"},
+! CHECK-SAME: %[[ARG1:.*]]: !fir.ref<!fir.array<10xf64>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"})
+
+! Original device array declaration with lower bound -2
+! CHECK: %[[SHAPE_SHIFT:.*]] = fir.shape_shift %c-2{{.*}}, %c10{{.*}} : (index, index) -> !fir.shapeshift<1>
+! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[ARG1]](%[[SHAPE_SHIFT]]) {{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_explicit_shape_nondefault_lbEa"}
+
+! Host temporary created
+! CHECK: %[[TEMP_ALLOC:.*]] = fir.allocmem !fir.array<10xf64>
+! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP_ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
+
+! Rebound symbol declaration WITH shape_shift preserving lower bound -2 and WITHOUT data_attr
+! CHECK: %[[REBOUND_SHAPE_SHIFT:.*]] = fir.shape_shift %c-2{{.*}}, %c10{{.*}} : (index, index) -> !fir.shapeshift<1>
+! CHECK: %[[A_REBOUND:.*]]:2 = hlfir.declare %[[TEMP_DECL]]#0(%[[REBOUND_SHAPE_SHIFT]]) {uniq_name = "_QFtest_explicit_shape_nondefault_lbEa"}
+
+! Verify NO CUDA device attribute on rebound symbol
+! CHECK-NOT: data_attr = #cuf.cuda<device>{{.*}}_QFtest_explicit_shape_nondefault_lbEa"} : (!fir.heap
+
+! Data transfer from device to host temporary
+! CHECK: cuf.data_transfer %[[A_DECL]]#1 to %[[TEMP_DECL]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>}
+
+! Designate a(3) using the rebound symbol with correct lower bound
+! CHECK: hlfir.designate %[[A_REBOUND]]#0 (%c3{{.*}})
+
+
+! Test 2: Assumed-shape array with non-default lower bound
+subroutine test_assumed_shape(h, a)
+  implicit none
+  double precision :: h
+  double precision :: a(0:)
+  attributes(device) :: a
+  h = h + a(3)*2.0d0
+end subroutine test_assumed_shape
+
+! CHECK-LABEL: func.func @_QPtest_assumed_shape(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "h"},
+! CHECK-SAME: %[[ARG1:.*]]: !fir.box<!fir.array<?xf64>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"})
+
+! Original device array with lower bound from box - uses fir.shift for the lower bound
+! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[ARG1]](%{{.*}}) {{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_assumed_shapeEa"}
+
+! Host temporary created
+! CHECK: %[[TEMP_ALLOC:.*]] = fir.allocmem !fir.array<?xf64>
+
+! Verify the rebound declaration does NOT have CUDA device attribute
+! lb=0 is preserved as fir.shape_shift on the rebound declare
+! CHECK: %[[REBOUND_SHIFT:.*]] = fir.shape_shift %{{.*}}, %{{.*}} : (index, index) -> !fir.shapeshift<1>
+! CHECK: %[[A_REBOUND:.*]]:2 = hlfir.declare %{{.*}}(%[[REBOUND_SHIFT]]) {uniq_name = "_QFtest_assumed_shapeEa"}
+! CHECK-NOT: data_attr = #cuf.cuda<device>{{.*}}_QFtest_assumed_shapeEa"} : (!fir.heap
+
+! Data transfer device to host
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {transfer_kind = #cuf.cuda_transfer<device_host>}
+
+
+! Test 3: Scalar (control - should remain unchanged)
+subroutine test_scalar(h, s)
+  implicit none
+  double precision :: h
+  double precision :: s
+  attributes(device) :: s
+  h = h + s*2.0d0
+end subroutine test_scalar
+
+! CHECK-LABEL: func.func @_QPtest_scalar(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "h"},
+! CHECK-SAME: %[[ARG1:.*]]: !fir.ref<f64> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "s"})
+
+! For scalar, original device symbol has data_attr
+! CHECK: %[[S_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_scalarEs"}
+
+! Temp and rebound scalar declared without data_attr
+! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp"}
+! CHECK: %[[S_REBOUND:.*]]:2 = hlfir.declare %[[TEMP_DECL]]#0 {uniq_name = "_QFtest_scalarEs"}
+
+! Verify NO CUDA device attribute on rebound
+! CHECK-NOT: data_attr = #cuf.cuda<device>{{.*}}_QFtest_scalarEs"} : (!fir.ref<f64>) -> (!fir.ref<f64>
+
+! Data transfer
+! CHECK: cuf.data_transfer %[[S_DECL]]#0 to %[[TEMP_DECL]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>}
+
+
+! Test 4: Default lower bound (control - should remain unchanged)
+subroutine test_default_lb(h, a)
+  implicit none
+  double precision :: h
+  double precision :: a(10)
+  attributes(device) :: a
+  h = h + a(3)*2.0d0
+end subroutine test_default_lb
+
+! CHECK-LABEL: func.func @_QPtest_default_lb(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "h"},
+! CHECK-SAME: %[[ARG1:.*]]: !fir.ref<!fir.array<10xf64>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"})
+
+! Original device array with default lower bound (just fir.shape, no shift)
+! CHECK: %[[SHAPE:.*]] = fir.shape %c10{{.*}} : (index) -> !fir.shape<1>
+! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[ARG1]](%[[SHAPE]]) {{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_default_lbEa"}
+
+! Host temporary
+! CHECK: %[[TEMP_ALLOC:.*]] = fir.allocmem !fir.array<10xf64>
+! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP_ALLOC]](%[[SHAPE]]) {uniq_name = ".tmp"}
+
+! For default lower bound, rebound symbol uses fir.shape (no shift needed)
+! CHECK: %[[REBOUND_SHAPE:.*]] = fir.shape %c10{{.*}} : (index) -> !fir.shape<1>
+! CHECK: %[[A_REBOUND:.*]]:2 = hlfir.declare %[[TEMP_DECL]]#0(%[[REBOUND_SHAPE]]) {uniq_name = "_QFtest_default_lbEa"}
+
+! Verify NO CUDA device attribute on rebound
+! CHECK-NOT: data_attr = #cuf.cuda<device>{{.*}}_QFtest_default_lbEa"} : (!fir.heap
+
+! Data transfer
+! CHECK: cuf.data_transfer %[[A_DECL]]#0 to %[[TEMP_DECL]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>}
+
+
+! Test 5: Multi-dimensional array with non-default lower bounds
+subroutine test_multidim(h, a)
+  implicit none
+  double precision :: h
+  double precision :: a(-1:5, 0:9)
+  attributes(device) :: a
+  h = h + a(2, 3)*2.0d0
+end subroutine test_multidim
+
+! CHECK-LABEL: func.func @_QPtest_multidim(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "h"},
+! CHECK-SAME: %[[ARG1:.*]]: !fir.ref<!fir.array<7x10xf64>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"})
+
+! Original device array with lower bounds (-1, 0)
+! CHECK: %[[SHAPE_SHIFT:.*]] = fir.shape_shift %c-1{{.*}}, %c7{{.*}}, %c0{{.*}}, %c10{{.*}} : (index, index, index, index) -> !fir.shapeshift<2>
+! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[ARG1]](%[[SHAPE_SHIFT]]) {{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_multidimEa"}
+
+! Host temporary
+! CHECK: %[[TEMP_ALLOC:.*]] = fir.allocmem !fir.array<7x10xf64>
+! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP_ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
+
+! Rebound symbol with original lower bounds preserved
+! CHECK: %[[REBOUND_SHAPE_SHIFT:.*]] = fir.shape_shift %c-1{{.*}}, %c7{{.*}}, %c0{{.*}}, %c10{{.*}} : (index, index, index, index) -> !fir.shapeshift<2>
+! CHECK: %[[A_REBOUND:.*]]:2 = hlfir.declare %[[TEMP_DECL]]#0(%[[REBOUND_SHAPE_SHIFT]]) {uniq_name = "_QFtest_multidimEa"}
+
+! Verify NO CUDA device attribute on rebound
+! CHECK-NOT: data_attr = #cuf.cuda<device>{{.*}}_QFtest_multidimEa"} : (!fir.heap
+
+! Data transfer device to host
+! CHECK: cuf.data_transfer %[[A_DECL]]#1 to %[[TEMP_DECL]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>}
+
+! Designate a(2, 3) using the rebound symbol with correct lower bounds
+! CHECK: hlfir.designate %[[A_REBOUND]]#0 (%c2{{.*}}, %c3{{.*}})
+
+
+! Test 6: Device allocatable array (MutableBoxValue) - lower bounds live in
+! the runtime descriptor, not in the static ExtendedValue.
+! getNonDefaultLowerBounds generates fir.box_dims to read them at runtime
+! so the rebound host temporary carries the correct fir.shape_shift.
+subroutine test_device_allocatable(h, a)
+  implicit none
+  double precision :: h
+  double precision, allocatable, device :: a(:)
+  h = h + a(3)*2.0d0
+end subroutine test_device_allocatable
+
+! CHECK-LABEL: func.func @_QPtest_device_allocatable(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<f64> {fir.bindc_name = "h"},
+! CHECK-SAME: %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"})
+
+! Original device allocatable declared with data_attr and fortran_attrs<allocatable>
+! CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %[[ARG1]] {{.*}} {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_device_allocatableEa"}
+
+! Runtime lower bound read from descriptor via fir.box_dims
+! CHECK: fir.load %[[A_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
+! CHECK: %[[DIMS:.*]]:3 = fir.box_dims %{{.*}}, %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xf64>>>, index) -> (index, index, index)
+
+! Host temporary created without CUDA device attribute
+! CHECK: %[[TEMP_ALLOC:.*]] = fir.allocmem !fir.array<?xf64>,
+! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP_ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
+
+! Rebound symbol uses fir.shape_shift with runtime lower bound - NOT just fir.shape
+! CHECK: %[[REBOUND_SS:.*]] = fir.shape_shift %[[DIMS]]#0, %{{.*}} : (index, index) -> !fir.shapeshift<1>
+! CHECK: %[[A_REBOUND:.*]]:2 = hlfir.declare %[[TEMP_DECL]]#1(%[[REBOUND_SS]]) {uniq_name = "_QFtest_device_allocatableEa"}
+
+! Verify NO CUDA device attribute on rebound host temporary
+! CHECK-NOT: data_attr = #cuf.cuda<device>{{.*}}_QFtest_device_allocatableEa"} : (!fir.heap
+
+! Data transfer device to host
+! CHECK: cuf.data_transfer %[[A_DECL]]#0 to %[[TEMP_DECL]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>}

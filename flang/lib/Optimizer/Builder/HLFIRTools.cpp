@@ -25,6 +25,11 @@
 #include <mlir/Dialect/OpenMP/OpenMPDialect.h>
 #include <optional>
 
+// Bring hlfir::getNonDefaultLowerBounds into file scope so internal callers
+// (which predate the promotion to a public API) continue to compile without
+// explicit qualification.
+using hlfir::getNonDefaultLowerBounds;
+
 // Return explicit extents. If the base is a fir.box, this won't read it to
 // return the extents and will instead return an empty vector.
 llvm::SmallVector<mlir::Value>
@@ -101,9 +106,9 @@ getExplicitLbounds(fir::FortranVariableOpInterface var) {
   return {};
 }
 
-static llvm::SmallVector<mlir::Value>
-getNonDefaultLowerBounds(mlir::Location loc, fir::FirOpBuilder &builder,
-                         hlfir::Entity entity) {
+llvm::SmallVector<mlir::Value>
+hlfir::getNonDefaultLowerBounds(mlir::Location loc, fir::FirOpBuilder &builder,
+                                hlfir::Entity entity) {
   assert(!entity.isAssumedRank() &&
          "cannot compute assumed rank bounds statically");
   if (!entity.mayHaveNonDefaultLowerBounds())

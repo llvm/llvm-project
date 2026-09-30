@@ -5539,6 +5539,15 @@ private:
             baseValue = addr;
 
           hlfir::Entity entity{baseValue};
+
+          // Obtain the original lower bounds before creating the temporary.
+          // getNonDefaultLowerBounds handles all cases including
+          // MutableBoxValue (allocatable device arrays), for which bounds
+          // live in the runtime descriptor and are read by generating
+          // fir.box_dims IR.
+          llvm::SmallVector<mlir::Value> origLbounds =
+              hlfir::getNonDefaultLowerBounds(loc, builder, entity);
+
           auto [temp, cleanup] =
               hlfir::createTempFromMold(loc, builder, entity);
           if (cleanup) {
@@ -5548,9 +5557,32 @@ private:
             else
               temps.push_back(temp);
           }
-          addSymbol(sym,
-                    hlfir::translateToExtendedValue(loc, builder, temp).first,
-                    /*forced=*/true);
+
+          // Translate the temporary to an ExtendedValue and rebind it with
+          // the original lower bounds.  fir::updateRuntimeLBounds covers all
+          // array representations (ArrayBoxValue, BoxValue, MutableBoxValue,
+          // CharArrayBoxValue) while preserving the temp's storage/extents and
+          // dropping the CUDA device data attribute.
+          auto [tempExv, tempCleanup] =
+              hlfir::translateToExtendedValue(loc, builder, temp);
+          assert(!tempCleanup && "temp should not yield cleanup");
+          fir::ExtendedValue reboundExv =
+              fir::updateRuntimeLBounds(tempExv, origLbounds);
+
+          // Declare the host temporary under the symbol's name but without
+          // any CUDA data attribute (empty dataAttr = host storage).
+          auto symName = mangleName(sym);
+          fir::FortranVariableFlagsAttr hostAttrs = {};
+          cuf::DataAttributeAttr noDataAttr = {};
+          auto reboundDecl =
+              hlfir::genDeclare(loc, builder, reboundExv, symName, hostAttrs,
+                                /*dummyScope=*/mlir::Value{},
+                                /*storage=*/mlir::Value{},
+                                /*storageOffset=*/0, noDataAttr,
+                                /*argNo=*/0);
+          localSymbols.addVariableDefinition(sym, reboundDecl,
+                                             /*force=*/true);
+
           cuf::DataTransferOp::create(builder, loc, addr, temp,
                                       /*shape=*/mlir::Value{},
                                       transferKindAttr);
