@@ -464,7 +464,7 @@ define i32 @find_last_reduction(ptr %a, ptr noalias %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[CLAMPED_HEADER_MASK]], <4 x i1> [[TMP13]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = freeze <4 x i1> [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP15]])
-; CHECK-NEXT:    [[TMP17]] = select i1 [[TMP16]], <4 x i1> [[TMP14]], <4 x i1> [[TMP6]]
+; CHECK-NEXT:    [[TMP17]] = select i1 [[TMP16]], <4 x i1> [[TMP15]], <4 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP18]] = select i1 [[TMP16]], <4 x i32> [[WIDE_MASKED_LOAD]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[NUM_ACTIVE_LANES]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]

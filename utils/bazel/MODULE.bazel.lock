@@ -334,7 +334,7 @@
   "moduleExtensions": {
     "//:extensions.bzl%llvm_repos_extension": {
       "general": {
-        "bzlTransitiveDigest": "9GsOS6+zNAQam7hiO44NfnT7MQsd1QbAqkfqojQ0pWc=",
+        "bzlTransitiveDigest": "WRH8TXJA/9+bdJ2N+h0EcRGjV/fPZ0z8DZBJAHox+6U=",
         "usagesDigest": "X0yUkkWyxQ2Y5oZVDkRSE/K4YkDWo1IjhHsL+1weKyU=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"

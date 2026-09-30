@@ -4860,6 +4860,12 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   if (MI.isCall() || MI.isInlineAsm())
     return true; // conservative assumption
 
+  // V_PERM_PK16 must issue with EXEC != 0 so its follower (or an inserted
+  // V_NOP) actually runs on the VALU pipe. Returning true here keeps the
+  // s_cbranch_execz that skips this region when EXEC is empty.
+  if (ST.hasVPermPk16Hazard() && isVPermPk16(Opcode))
+    return true;
+
   // Assume that barrier interactions are only intended with active lanes.
   if (isBarrier(Opcode))
     return true;
@@ -5132,6 +5138,67 @@ bool SIInstrInfo::hasVALU32BitEncoding(unsigned Opcode) const {
     return false;
 
   return pseudoToMCOpcode(Op32) != -1;
+}
+
+/// Return true if \p MI is a VALU comparison, i.e. an instruction that writes
+/// a lane mask with one bit per lane, and zeroes the bits of lanes that were
+/// inactive when it executed.
+///
+/// TODO: Also handle the sdst result of V_ADD_CO_U32 and V_SUB_CO_U32 and
+/// V_DIV_SCALE_F32.
+static bool isVCmp(const SIInstrInfo &TII, const MachineInstr &MI) {
+  if (TII.isVOPC(MI))
+    return true;
+  int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
+  return Op32 != -1 && TII.isVOPC(Op32);
+}
+
+bool SIInstrInfo::isMaskedByExec(Register Reg, const MachineInstr &Use,
+                                 const MachineRegisterInfo &MRI,
+                                 unsigned Depth) const {
+  assert(MRI.isSSA() && "isMaskedByExec requires SSA form");
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
+  const MachineBasicBlock *MBB = Use.getParent();
+
+  // EXEC itself is trivially masked by EXEC.
+  if (Reg == LMC.ExecReg)
+    return true;
+
+  // Maximum depth of the def-use walk.
+  constexpr unsigned MaxDepth = 6;
+  if (Depth >= MaxDepth || !Reg.isVirtual())
+    return false;
+
+  // Only look at definitions that can execute under the same EXEC mask as the
+  // use.
+  const MachineInstr *Def = MRI.getVRegDef(Reg);
+  if (!Def || Def->getParent() != MBB)
+    return false;
+
+  if (isVCmp(*this, *Def))
+    return true;
+
+  // Recurse into an operand, which must be a whole register to say anything
+  // about the whole lane mask.
+  auto Recurse = [&](unsigned OpIdx) {
+    const MachineOperand &MO = Def->getOperand(OpIdx);
+    return MO.isReg() && !MO.getSubReg() &&
+           isMaskedByExec(MO.getReg(), Use, MRI, Depth + 1);
+  };
+
+  unsigned Opc = Def->getOpcode();
+  if (Opc == AMDGPU::COPY && Recurse(1))
+    return true;
+  if (Opc == LMC.AndOpc && (Recurse(1) || Recurse(2)))
+    return true;
+  if (Opc == LMC.AndN2Opc && Recurse(1))
+    return true;
+  if ((Opc == LMC.OrOpc || Opc == LMC.XorOpc) && Recurse(1) && Recurse(2))
+    return true;
+  // TODO: Sometimes we encounter "reg = S_CSELECT -1, 0". If Reg has no other
+  // uses this could be optimized to "reg = S_CSELECT $exec, 0".
+
+  return false;
 }
 
 bool SIInstrInfo::hasModifiers(unsigned Opcode) const {
@@ -7423,7 +7490,8 @@ static void emitLoadScalarOpsFromVGPRLoop(
           Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
           BuildMI(LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
               .addReg(CondReg)
-              .addReg(NewCondReg);
+              .addReg(NewCondReg)
+              .setOperandDead(3);
           CondReg = AndReg;
         }
       }
@@ -7494,7 +7562,8 @@ static void emitLoadScalarOpsFromVGPRLoop(
             Register AndReg = MRI.createVirtualRegister(BoolXExecRC);
             BuildMI(LoopBB, I, DL, TII.get(LMC.AndOpc), AndReg)
                 .addReg(CondReg)
-                .addReg(NewCondReg);
+                .addReg(NewCondReg)
+                .setOperandDead(3);
             CondReg = AndReg;
           }
         }
@@ -7534,7 +7603,8 @@ static void emitLoadScalarOpsFromVGPRLoop(
 
     // Update EXEC to matching lanes, saving original to SaveExec.
     BuildMI(LoopBB, I, DL, TII.get(LMC.AndSaveExecOpc), SaveExec)
-        .addReg(CondReg, RegState::Kill);
+        .addReg(CondReg, RegState::Kill)
+        .setOperandDead(3);
   }
 
   // The original instruction is here; we insert the terminators after it.
@@ -7548,14 +7618,16 @@ static void emitLoadScalarOpsFromVGPRLoop(
     MRI.setSimpleHint(NewExec, PhiExec);
     BuildMI(BodyBB, I, DL, TII.get(LMC.AndN2Opc), NewExec)
         .addReg(PhiExec)
-        .addReg(LMC.ExecReg);
+        .addReg(LMC.ExecReg)
+        .setOperandDead(3);
     BuildMI(BodyBB, I, DL, TII.get(LMC.MovTermOpc), LMC.ExecReg)
         .addReg(NewExec);
   } else {
     // Update EXEC, switch all done bits to 0 and all todo bits to 1.
     BuildMI(BodyBB, I, DL, TII.get(LMC.XorTermOpc), LMC.ExecReg)
         .addReg(LMC.ExecReg)
-        .addReg(SaveExec);
+        .addReg(SaveExec)
+        .setOperandDead(3);
   }
 
   BuildMI(BodyBB, I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP)).addMBB(&LoopBB);
@@ -11211,11 +11283,13 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
 unsigned SIInstrInfo::getBlockingCycles(const MachineInstr &MI) const {
   if (!ST.hasGFX1250VALUBlockingCycles())
     return 0;
+  return getGFX1250BlockingCyclesTable(MI);
+}
 
-  // Use processor-specific lookup table
+unsigned
+SIInstrInfo::getGFX1250BlockingCyclesTable(const MachineInstr &MI) const {
   if (const auto *Entry = AMDGPU::getGFX1250BlockingCyclesInfo(MI.getOpcode()))
     return Entry->GFX1250BlockingCycles;
-
   return 0;
 }
 

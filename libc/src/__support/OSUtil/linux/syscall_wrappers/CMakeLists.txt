@@ -880,6 +880,20 @@ add_header_library(
 )
 
 add_header_library(
+  setgroups
+  HDRS
+    setgroups.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.hdr.types.size_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
   setpgid
   HDRS
     setpgid.h
@@ -1511,5 +1525,22 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  pselect6
+  HDRS
+    pselect6.h
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.types.fd_set
+    libc.hdr.types.sigset_t
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_timespec
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
 )
 
