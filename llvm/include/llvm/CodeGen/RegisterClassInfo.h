@@ -136,13 +136,19 @@ public:
     return get(RC).ProperSubClass;
   }
 
+  /// Return the callee-saved register containing \p Unit, or NoRegister if
+  /// there is none.
+  MCRegister getCalleeSavedAlias(MCRegUnit Unit) const {
+    return CalleeSavedAliases[static_cast<unsigned>(Unit)];
+  }
+
   /// getLastCalleeSavedAlias - Returns the last callee saved register that
   /// overlaps PhysReg, or NoRegister if PhysReg doesn't overlap a
   /// CalleeSavedAliases.
   MCRegister getLastCalleeSavedAlias(MCRegister PhysReg) const {
     MCRegister CSR;
     for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
-      CSR = CalleeSavedAliases[static_cast<unsigned>(Unit)];
+      CSR = getCalleeSavedAlias(Unit);
       if (CSR)
         break;
     }
