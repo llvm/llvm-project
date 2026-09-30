@@ -335,18 +335,20 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
         return false;
 
   // Partial-overlap guard: registers of the same class can overlap OldReg
-  // without either containing the other -- e.g. $vgpr12_vgpr13_vgpr14_vgpr15 and
-  // $vgpr14_vgpr15_vgpr16_vgpr17 share two lanes but neither is a sub-register
-  // of the other.  A whole-operand rewrite can only remap an operand that is
-  // contained in OldReg (a sub-register of it) or equals it; an operand that
-  // overlaps OldReg yet has lanes beyond it cannot be renamed correctly.  Bail.
+  // without either containing the other -- e.g. $vgpr12_vgpr13_vgpr14_vgpr15
+  // and $vgpr14_vgpr15_vgpr16_vgpr17 share two lanes but neither is a
+  // sub-register of the other.  A whole-operand rewrite can only remap an
+  // operand that is contained in OldReg (a sub-register of it) or equals it; an
+  // operand that overlaps OldReg yet has lanes beyond it cannot be renamed
+  // correctly.  Bail.
   for (MachineBasicBlock::iterator It = DefToRename->getIterator(),
                                    End = std::next(MachineBasicBlock::iterator(
                                        KillerIns->getIterator()));
        It != End; ++It)
     for (const MachineOperand &Operand : It->operands())
       if (Operand.isReg() && TRI->regsOverlap(Operand.getReg(), OldReg) &&
-          anyLanesOutside(getVGPR32Components(Operand.getReg()), OldRegClobbers))
+          anyLanesOutside(getVGPR32Components(Operand.getReg()),
+                          OldRegClobbers))
         return false;
 
   // Now, perform the rename between (DefToRename, KillerIns)
