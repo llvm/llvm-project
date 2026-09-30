@@ -193,6 +193,7 @@ static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
     case TargetOpcode::G_FPOW:
     case TargetOpcode::G_FMINNUM:
     case TargetOpcode::G_FMAXNUM:
+    case TargetOpcode::G_FABS:
     case TargetOpcode::G_FSQRT:
     case TargetOpcode::COPY:
     case TargetOpcode::G_STRICT_FMA:
