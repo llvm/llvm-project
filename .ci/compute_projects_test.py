@@ -146,7 +146,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "clang;clang-tools-extra;cross-project-tests;lld;lldb;llvm",
+            "clang;clang-tools-extra;cross-project-tests;lld;lldb;llvm;mlir",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
@@ -171,7 +171,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "clang;clang-tools-extra;lld;llvm",
+            "clang;clang-tools-extra;lld;llvm;mlir",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
@@ -245,7 +245,8 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(env_variables["projects_to_build"], "clang;flang;llvm;mlir")
         self.assertEqual(
-            env_variables["project_check_targets"], "check-flang check-mlir"
+            env_variables["project_check_targets"],
+            "check-clang-cir check-flang check-mlir",
         )
         self.assertEqual(env_variables["runtimes_to_build"], "")
         self.assertEqual(env_variables["runtimes_check_targets"], "")
