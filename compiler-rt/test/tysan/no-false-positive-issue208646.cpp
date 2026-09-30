@@ -1,11 +1,11 @@
 // RUN: %clangxx_tysan -O0 %s -o %t && %run %t
 
-#include <string>
 #include <optional>
+#include <string>
 
 static std::optional<std::string> optional_var = std::nullopt;
 
-int main() { 
+int main() {
   optional_var = "this is a random long string (short one does not reproduce)";
   return 0;
 }
