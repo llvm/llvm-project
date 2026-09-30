@@ -1473,8 +1473,11 @@ void ScopBuilder::addUserAssumptions(
     auto *TI = InScop ? CI->getParent()->getTerminator() : nullptr;
     BasicBlock *BB = InScop ? CI->getParent() : R.getEntry();
 
-    // Skip assumptions in blocks with no computed domain (e.g. unreachable
-    // blocks).
+    // Skip assumptions in blocks with no computed domain. This includes
+    // interior blocks of non-affine subregions (only the entry block has a
+    // domain) and unreachable blocks. We cannot use getDomainConditions here
+    // as it would return the region's domain for any block in a non-affine
+    // subregion, but the assumption may not actually execute.
     if (!InvalidDomainMap.count(BB))
       continue;
 
