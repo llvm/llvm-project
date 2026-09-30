@@ -1445,18 +1445,34 @@ struct VectorContractToAMXDotProduct
     Value srcBuffAcc;
     SmallVector<Value> indicesAcc;
 
-    llvm::TypeSwitch<Operation *>(accWrite)
-        .Case<vector::TransferWriteOp, vector::StoreOp>([&](auto writeOp) {
-          srcBuffAcc = writeOp->getOperand(1);
+    if (isAccZeroVectorConstant) {
+      llvm::TypeSwitch<Operation *>(accWrite)
+          .Case<vector::TransferWriteOp, vector::StoreOp>([&](auto writeOp) {
+            srcBuffAcc = writeOp->getOperand(1);
 
-          auto indices = writeOp.getIndices();
-          indicesAcc.reserve(indices.size());
+            auto indices = writeOp.getIndices();
+            indicesAcc.reserve(indices.size());
 
-          llvm::transform(
-              indices, std::back_inserter(indicesAcc), [&](OpFoldResult ofr) {
-                return getValueOrCreateConstantIndexOp(rewriter, loc, ofr);
-              });
-        });
+            llvm::transform(
+                indices, std::back_inserter(indicesAcc), [&](OpFoldResult ofr) {
+                  return getValueOrCreateConstantIndexOp(rewriter, loc, ofr);
+                });
+          });
+    } else {
+      llvm::TypeSwitch<Operation *>(accReadOp).Case<TransferReadOp, LoadOp>(
+          [&](auto readOp) {
+            srcBuffAcc = readOp.getOperand(0);
+
+            auto indices = readOp.getIndices();
+            indicesAcc.reserve(indices.size());
+
+            llvm::transform(indices, std::back_inserter(indicesAcc),
+                            [&](OpFoldResult ofr) {
+                              return mlir::getValueOrCreateConstantIndexOp(
+                                  rewriter, loc, ofr);
+                            });
+          });
+    }
 
     auto outputShapes = cast<MemRefType>(srcBuffAcc.getType()).getShape();
     unsigned int M = outputShapes[outputShapes.size() - 2];
