@@ -25617,6 +25617,39 @@ TEST_F(FormatTest, KeepEmptyLinesAtEOF) {
   verifyFormat(Code, "int i;\n\n\n", Style);
 }
 
+TEST_F(FormatTest, KeepEmptyLinesAtEndOfBlock) {
+  FormatStyle Style = getLLVMStyle();
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle::setEmptyAndInline();
+  Style.KeepEmptyLines.AtEndOfBlock = true;
+  Style.MaxEmptyLinesToKeep = 2;
+
+  verifyFormat("void foo() {\n"
+               "  int i;\n"
+               "\n"
+               "\n"
+               "}",
+               "void foo() {\n"
+               "  int i;\n"
+               "\n"
+               "\n"
+               "\n"
+               "}",
+               Style);
+  verifyFormat("foo([]() {\n"
+               "  int i;\n"
+               "\n"
+               "\n"
+               "});",
+               "foo([]() {\n"
+               "  int i;\n"
+               "\n"
+               "\n"
+               "\n"
+               "});",
+               Style);
+}
+
 TEST_F(FormatTest, SpaceAfterUDL) {
   verifyFormat("auto c = (4s).count();");
   verifyFormat("auto x = 5s .count() == 5;");
