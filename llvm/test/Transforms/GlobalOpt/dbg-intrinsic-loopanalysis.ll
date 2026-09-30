@@ -1,5 +1,5 @@
-; RUN: opt -passes="globalopt" < %s -o /dev/null -debug-pass-manager 2>&1 | FileCheck %s
-; RUN: opt -strip-debug -S < %s | opt -passes="globalopt" -o /dev/null -debug-pass-manager 2>&1 | FileCheck %s
+; RUN: opt -passes="globalopt" -enable-coldcc-stress-test < %s -o /dev/null -debug-pass-manager 2>&1 | FileCheck %s
+; RUN: opt -strip-debug -S < %s | opt -passes="globalopt" -enable-coldcc-stress-test -o /dev/null -debug-pass-manager 2>&1 | FileCheck %s
 
 ; Make sure that the call to dbg.declare does not prevent running BlockFrequency
 ; and (especially) CycleAnalysis.

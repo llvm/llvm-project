@@ -69,6 +69,7 @@
 ; CHECK-O1-NEXT: Running pass: LowerConstantIntrinsicsPass on foo
 ; CHECK-O1-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O23-NEXT: Running pass: GlobalOptPass
+; CHECK-O23-NEXT: Running analysis: TargetIRAnalysis on bar
 ; CHECK-O23-NEXT: Running pass: PromotePass
 ; CHECK-O23-NEXT: Running pass: ConstantMergePass
 ; CHECK-O23-NEXT: Running pass: DeadArgumentEliminationPass
