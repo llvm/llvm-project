@@ -1447,6 +1447,9 @@ bool Module::SetArchitecture(const ArchSpec &new_arch) {
 
 bool Module::SetLoadAddress(Target &target, lldb::addr_t value,
                             bool value_is_offset, bool &changed) {
+  // Acquire the module mutex so that any re-entrant calls in
+  // ObjectFile::SetLoadAddress already own the recurisve mutex before
+  // acquiring a second lock.
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   ObjectFile *object_file = GetObjectFile();
   if (object_file != nullptr) {
