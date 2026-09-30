@@ -63,8 +63,9 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
 
 TEST_F(ExtractFunctionTest, FileTest) {
   // Check all parameters are in order. `a` and `ptr` are mutated in the
-  // zone (`+=` and postfix `++` respectively), so stay non-const; `b` and
-  // `foo` are only read, so become const references.
+  // zone (`+=` and postfix `++` respectively), so stay non-const; `b` is
+  // an unmutated scalar, so becomes a by-value parameter; `foo` is an
+  // unmutated class type, so becomes a const reference.
   std::string ParameterCheckInput = R"cpp(
 struct Foo {
   int x;
@@ -80,7 +81,7 @@ void f(int a) {
 struct Foo {
   int x;
 };
-void extracted(int &a, const int &b, int * &ptr, const Foo &foo) {
+void extracted(int &a, int b, int * &ptr, const Foo &foo) {
 a += foo.x + b;
   *ptr++;
 }
@@ -92,13 +93,13 @@ void f(int a) {
 })cpp";
   EXPECT_EQ(apply(ParameterCheckInput), ParameterCheckOutput);
 
-  // Check const qualifier
+  // Check const qualifier: dropped for a by-value scalar.
   std::string ConstCheckInput = R"cpp(
 void f(const int c) {
   [[while(c) {}]]
 })cpp";
   std::string ConstCheckOutput = R"cpp(
-void extracted(const int &c) {
+void extracted(int c) {
 while(c) {}
 }
 void f(const int c) {
@@ -106,7 +107,7 @@ void f(const int c) {
 })cpp";
   EXPECT_EQ(apply(ConstCheckInput), ConstCheckOutput);
 
-  // Check const qualifier with namespace
+  // Check const qualifier: kept for a by-reference non-scalar.
   std::string ConstNamespaceCheckInput = R"cpp(
 namespace X { struct Y { int z; }; }
 int f(const X::Y &y) {
@@ -573,11 +574,10 @@ TEST_F(ExtractFunctionTest, ExistingReturnStatement) {
       }
     }
   )cpp";
-  // FIXME: min/max should be by value.
   // FIXME: avoid emitting redundant braces
   const char *After = R"cpp(
     bool lucky(int N);
-    int extracted(const int &Min, const int &Max) {
+    int extracted(int Min, int Max) {
 {
         for (int I = Min; I <= Max; ++I)
           if (lucky(I))
@@ -782,12 +782,14 @@ TEST_F(ExtractFunctionTest, VarDeclInitializer) {
 
 TEST_F(ExtractFunctionTest, ConstParameters) {
   Context = File;
-  // A captured variable that's only read becomes a const reference.
+  // A captured scalar that's only read becomes a by-value parameter;
+  // non-scalars instead become a const reference (see the `S` cases
+  // below).
   EXPECT_THAT(apply(R"cpp(
     void use(int);
     void f(int x) { [[use(x);]] }
   )cpp"),
-              HasSubstr("void extracted(const int &x)"));
+              HasSubstr("void extracted(int x)"));
   // Direct assignment: stays non-const.
   EXPECT_THAT(apply("void f(int x) { [[x = 1;]] }"),
               HasSubstr("void extracted(int &x)"));
@@ -817,21 +819,29 @@ TEST_F(ExtractFunctionTest, ConstParameters) {
   )cpp"),
               HasSubstr("void extracted(int &x)"));
   // Passed to a parameter taking a const reference or by value: becomes
-  // const, since neither can mutate the caller's variable.
+  // an unmutated scalar, so by value.
   EXPECT_THAT(apply(R"cpp(
     void readOnly(const int &);
     void f(int x) { [[readOnly(x);]] }
   )cpp"),
-              HasSubstr("void extracted(const int &x)"));
+              HasSubstr("void extracted(int x)"));
   EXPECT_THAT(apply(R"cpp(
     void byValue(int);
     void f(int x) { [[byValue(x);]] }
   )cpp"),
-              HasSubstr("void extracted(const int &x)"));
-  // A parameter that's already declared const stays as-is (no double
-  // const).
+              HasSubstr("void extracted(int x)"));
+  // A scalar parameter that's already declared const drops that
+  // qualifier when passed by value: it'd be a no-op there.
   EXPECT_THAT(apply("void use(int); void f(const int x) { [[use(x);]] }"),
-              HasSubstr("void extracted(const int &x)"));
+              HasSubstr("void extracted(int x)"));
+  // A non-scalar parameter that's already declared const keeps that
+  // qualifier, since it's still passed by reference.
+  EXPECT_THAT(apply(R"cpp(
+    struct S {};
+    void use(const S &);
+    void f(const S s) { [[use(s);]] }
+  )cpp"),
+              HasSubstr("void extracted(const S &s)"));
 }
 
 TEST_F(ExtractFunctionTest, ConstParametersReferenceAliasing) {
@@ -864,9 +874,10 @@ TEST_F(ExtractFunctionTest, ConstParametersConservativeAliasing) {
   // whether the lambda actually mutates it.
   EXPECT_THAT(apply("void f(int x) { [[auto l = [&x]() { int y = x; };]] }"),
               HasSubstr("int &x"));
-  // Captured by value in a lambda: doesn't alias x, so becomes const.
+  // Captured by value in a lambda: doesn't alias x, so it's unmutated and
+  // (being a scalar) passed by value.
   EXPECT_THAT(apply("void f(int x) { [[auto l = [x]() { int y = x; };]] }"),
-              HasSubstr("const int &x"));
+              HasSubstr("void extracted(int x)"));
   // Returning a captured variable is conservatively treated as a possible
   // mutation, regardless of whether the return is actually by value (safe)
   // or by non-const reference (not safe) -- telling these apart isn't
@@ -909,19 +920,20 @@ TEST_F(ExtractFunctionTest, ConstParametersMemberCallArguments) {
 TEST_F(ExtractFunctionTest, ConstParametersPointerIndirection) {
   Context = File;
   // Mutating a member/element through a pointer only mutates the pointee,
-  // never the pointer's own binding, so the pointer stays const-eligible --
+  // never the pointer's own binding, so the pointer itself is unmutated --
   // unlike the same access through a value or reference (already covered
   // by ConstParameters' `ptr` case, which is mutated directly instead).
+  // Being an unmutated scalar, it's then passed by value.
   EXPECT_THAT(apply(R"cpp(
     struct S { int x; };
     void f(S *ptr) { [[ptr->x = 1;]] }
   )cpp"),
-              HasSubstr("extracted(S *const &ptr)"));
+              HasSubstr("extracted(S * ptr)"));
   EXPECT_THAT(apply("void f(int *p) { [[p[0] = 1;]] }"),
-              HasSubstr("extracted(int *const &p)"));
+              HasSubstr("extracted(int * p)"));
   // Same for a plain dereference.
   EXPECT_THAT(apply("void f(int *p) { [[*p = 1;]] }"),
-              HasSubstr("extracted(int *const &p)"));
+              HasSubstr("extracted(int * p)"));
 }
 
 TEST_F(ExtractFunctionTest, ConstParametersConditionalReferenceBinding) {
@@ -936,7 +948,7 @@ TEST_F(ExtractFunctionTest, ConstParametersConditionalReferenceBinding) {
       a = 5;]]
     }
   )cpp"),
-              HasSubstr("extracted(const bool &cond, int &c, int &d)"));
+              HasSubstr("extracted(bool cond, int &c, int &d)"));
 }
 
 TEST_F(ExtractFunctionTest, ConstParametersConditionalMutatingAccess) {
@@ -948,7 +960,7 @@ TEST_F(ExtractFunctionTest, ConstParametersConditionalMutatingAccess) {
       [[(cond ? s1 : s2).n = 0;]]
     }
   )cpp"),
-              HasSubstr("extracted(const bool &cond, S &s1, S &s2)"));
+              HasSubstr("extracted(bool cond, S &s1, S &s2)"));
 }
 
 TEST_F(ExtractFunctionTest, ConstParametersStaticOperatorCall) {
@@ -961,7 +973,33 @@ TEST_F(ExtractFunctionTest, ConstParametersStaticOperatorCall) {
     struct S { static void operator()(int); };
     void f(S s, int x) { [[s(x);]] }
   )cpp"),
-              HasSubstr("extracted(const S &s, const int &x)"));
+              HasSubstr("extracted(const S &s, int x)"));
+}
+
+TEST_F(ExtractFunctionTest, ConstParametersScalarsByValue) {
+  Context = File;
+  // An unmutated pointer is a scalar too: passed by value.
+  EXPECT_THAT(apply("void use(int *); void f(int *p) { [[use(p);]] }"),
+              HasSubstr("extracted(int * p)"));
+  // An unmutated enum: passed by value.
+  EXPECT_THAT(apply(R"cpp(
+    enum E { A, B };
+    void use(E);
+    void f(E e) { [[use(e);]] }
+  )cpp"),
+              HasSubstr("extracted(E e)"));
+  // A class type, even one that's small and trivially copyable, is never
+  // passed by value: that's deliberately out of scope for now.
+  EXPECT_THAT(apply(R"cpp(
+    struct Point { int x, y; };
+    void use(Point);
+    void f(Point p) { [[use(p);]] }
+  )cpp"),
+              HasSubstr("extracted(const Point &p)"));
+  // An unmutated array is not a scalar (even though its element type is):
+  // stays a non-const reference, per the existing array carve-out.
+  EXPECT_THAT(apply("void f() { int arr[5]; [[int x = arr[0];]] }"),
+              HasSubstr("extracted(int[5] &arr)"));
 }
 
 } // namespace
