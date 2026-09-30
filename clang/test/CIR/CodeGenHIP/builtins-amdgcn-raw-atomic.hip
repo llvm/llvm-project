@@ -1,12 +1,9 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx942 -x hip \
-// RUN: -std=c++11 -fclangir -fcuda-is-device -emit-cir %s -o - \
+// RUN: %clang_cc1 -triple amdgpu9.42-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-cir %s -o - \
 // RUN: | FileCheck --check-prefix=CIR %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx942 -x hip \
-// RUN: -std=c++11 -fclangir -fcuda-is-device -emit-llvm %s -o - \
+// RUN: %clang_cc1 -triple amdgpu9.42-amd-amdhsa -x hip -fclangir -fcuda-is-device -emit-llvm %s -o - \
 // RUN: | FileCheck --check-prefix=LLVM %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx942 -x hip \
-// RUN: -std=c++11 -fcuda-is-device -emit-llvm %s -o - \
+// RUN: %clang_cc1 -triple amdgpu9.42-amd-amdhsa -x hip -fcuda-is-device -emit-llvm %s -o - \
 // RUN: | FileCheck --check-prefix=LLVM %s
 
 #define __device__ __attribute__((device))
