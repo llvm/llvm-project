@@ -21,6 +21,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -487,6 +488,189 @@ int LoongArchInstrInfo::getJumpTableIndex(const MachineInstr &MI) const {
   }
 
   return getJumpTableIndexFromReg(MRI, Reg);
+}
+
+bool LoongArchInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
+                                                     bool Invert) const {
+  unsigned Opc = Inst.getOpcode();
+  if (Invert) {
+    auto InverseOpcode = getInverseOpcode(Opc);
+    if (!InverseOpcode)
+      return false;
+    Opc = *InverseOpcode;
+  }
+
+  switch (Opc) {
+  default:
+    return false;
+  case LoongArch::FADD_S:
+  case LoongArch::FADD_D:
+  case LoongArch::FMUL_S:
+  case LoongArch::FMUL_D:
+  case LoongArch::VFADD_S:
+  case LoongArch::VFADD_D:
+  case LoongArch::VFMUL_S:
+  case LoongArch::VFMUL_D:
+  case LoongArch::XVFADD_S:
+  case LoongArch::XVFADD_D:
+  case LoongArch::XVFMUL_S:
+  case LoongArch::XVFMUL_D:
+    return Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
+           Inst.getFlag(MachineInstr::MIFlag::FmNsz);
+  // IEEE 754-2008 minNum/maxNum: an sNaN operand yields qNaN, which breaks
+  // associativity (min(min(3,sNaN),1) = 1 but min(3,min(sNaN,1)) = 3).
+  // Signed zeros are ordered (-0 < +0) and the result is exact, so no
+  // reassoc/nsz requirement.
+  case LoongArch::FMIN_S:
+  case LoongArch::FMIN_D:
+  case LoongArch::FMAX_S:
+  case LoongArch::FMAX_D:
+  case LoongArch::VFMIN_S:
+  case LoongArch::VFMIN_D:
+  case LoongArch::VFMAX_S:
+  case LoongArch::VFMAX_D:
+  case LoongArch::XVFMIN_S:
+  case LoongArch::XVFMIN_D:
+  case LoongArch::XVFMAX_S:
+  case LoongArch::XVFMAX_D:
+    return Inst.getFlag(MachineInstr::MIFlag::FmNoNans);
+  case LoongArch::ADD_D:
+  case LoongArch::ADD_W:
+  case LoongArch::AND:
+  case LoongArch::OR:
+  case LoongArch::XOR:
+  case LoongArch::MUL_D:
+  case LoongArch::MUL_W:
+  case LoongArch::VADD_B:
+  case LoongArch::VADD_H:
+  case LoongArch::VADD_W:
+  case LoongArch::VADD_D:
+  case LoongArch::VMUL_B:
+  case LoongArch::VMUL_H:
+  case LoongArch::VMUL_W:
+  case LoongArch::VMUL_D:
+  case LoongArch::VAND_V:
+  case LoongArch::VOR_V:
+  case LoongArch::VXOR_V:
+  case LoongArch::VMIN_B:
+  case LoongArch::VMIN_H:
+  case LoongArch::VMIN_W:
+  case LoongArch::VMIN_D:
+  case LoongArch::VMIN_BU:
+  case LoongArch::VMIN_HU:
+  case LoongArch::VMIN_WU:
+  case LoongArch::VMIN_DU:
+  case LoongArch::VMAX_B:
+  case LoongArch::VMAX_H:
+  case LoongArch::VMAX_W:
+  case LoongArch::VMAX_D:
+  case LoongArch::VMAX_BU:
+  case LoongArch::VMAX_HU:
+  case LoongArch::VMAX_WU:
+  case LoongArch::VMAX_DU:
+  case LoongArch::XVADD_B:
+  case LoongArch::XVADD_H:
+  case LoongArch::XVADD_W:
+  case LoongArch::XVADD_D:
+  case LoongArch::XVMUL_B:
+  case LoongArch::XVMUL_H:
+  case LoongArch::XVMUL_W:
+  case LoongArch::XVMUL_D:
+  case LoongArch::XVAND_V:
+  case LoongArch::XVOR_V:
+  case LoongArch::XVXOR_V:
+  case LoongArch::XVMIN_B:
+  case LoongArch::XVMIN_H:
+  case LoongArch::XVMIN_W:
+  case LoongArch::XVMIN_D:
+  case LoongArch::XVMIN_BU:
+  case LoongArch::XVMIN_HU:
+  case LoongArch::XVMIN_WU:
+  case LoongArch::XVMIN_DU:
+  case LoongArch::XVMAX_B:
+  case LoongArch::XVMAX_H:
+  case LoongArch::XVMAX_W:
+  case LoongArch::XVMAX_D:
+  case LoongArch::XVMAX_BU:
+  case LoongArch::XVMAX_HU:
+  case LoongArch::XVMAX_WU:
+  case LoongArch::XVMAX_DU:
+    return true;
+  }
+
+  return false;
+}
+
+std::optional<unsigned>
+LoongArchInstrInfo::getInverseOpcode(unsigned Opcode) const {
+  switch (Opcode) {
+  default:
+    return std::nullopt;
+  case LoongArch::ADD_W:
+    return LoongArch::SUB_W;
+  case LoongArch::ADD_D:
+    return LoongArch::SUB_D;
+  case LoongArch::SUB_W:
+    return LoongArch::ADD_W;
+  case LoongArch::SUB_D:
+    return LoongArch::ADD_D;
+  case LoongArch::FADD_S:
+    return LoongArch::FSUB_S;
+  case LoongArch::FADD_D:
+    return LoongArch::FSUB_D;
+  case LoongArch::FSUB_S:
+    return LoongArch::FADD_S;
+  case LoongArch::FSUB_D:
+    return LoongArch::FADD_D;
+  case LoongArch::VADD_B:
+    return LoongArch::VSUB_B;
+  case LoongArch::VADD_H:
+    return LoongArch::VSUB_H;
+  case LoongArch::VADD_W:
+    return LoongArch::VSUB_W;
+  case LoongArch::VADD_D:
+    return LoongArch::VSUB_D;
+  case LoongArch::VSUB_B:
+    return LoongArch::VADD_B;
+  case LoongArch::VSUB_H:
+    return LoongArch::VADD_H;
+  case LoongArch::VSUB_W:
+    return LoongArch::VADD_W;
+  case LoongArch::VSUB_D:
+    return LoongArch::VADD_D;
+  case LoongArch::VFADD_S:
+    return LoongArch::VFSUB_S;
+  case LoongArch::VFADD_D:
+    return LoongArch::VFSUB_D;
+  case LoongArch::VFSUB_S:
+    return LoongArch::VFADD_S;
+  case LoongArch::VFSUB_D:
+    return LoongArch::VFADD_D;
+  case LoongArch::XVADD_B:
+    return LoongArch::XVSUB_B;
+  case LoongArch::XVADD_H:
+    return LoongArch::XVSUB_H;
+  case LoongArch::XVADD_W:
+    return LoongArch::XVSUB_W;
+  case LoongArch::XVADD_D:
+    return LoongArch::XVSUB_D;
+  case LoongArch::XVSUB_B:
+    return LoongArch::XVADD_B;
+  case LoongArch::XVSUB_H:
+    return LoongArch::XVADD_H;
+  case LoongArch::XVSUB_W:
+    return LoongArch::XVADD_W;
+  case LoongArch::XVSUB_D:
+    return LoongArch::XVADD_D;
+  case LoongArch::XVFADD_S:
+    return LoongArch::XVFSUB_S;
+  case LoongArch::XVFADD_D:
+    return LoongArch::XVFSUB_D;
+  case LoongArch::XVFSUB_S:
+    return LoongArch::XVFADD_S;
+  case LoongArch::XVFSUB_D:
+    return LoongArch::XVFADD_D;
+  }
 }
 
 MachineBasicBlock *
