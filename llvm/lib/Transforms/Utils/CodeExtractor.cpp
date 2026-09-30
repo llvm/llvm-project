@@ -1270,13 +1270,77 @@ static void eraseDebugIntrinsicsWithNonLocalRefs(Function &F) {
   }
 }
 
+/// Does \p DVR describe its variable for the whole function, rather than from
+/// its position until the next record for the same variable?
+static bool isFunctionWideDbgRecord(const DbgVariableRecord &DVR) {
+  return DVR.isDbgDeclare() || DVR.isDbgDeclareValue();
+}
+
+/// Collect the debug records in the parent function that describe variables
+/// on entry to the extracted region, whose place is now taken by \p TheCall.
+///
+/// A #dbg_declare or #dbg_declare_value holds for the whole function, so one
+/// that uses any of \p Inputs is live on entry wherever it is. A #dbg_value or
+/// #dbg_assign holds only until the next record for the same variable, so only
+/// the last one before the region matters. Those are found by walking back from
+/// the call along the chain of unique predecessors, keeping the first record
+/// found for each variable. At a merge point the incoming paths may disagree,
+/// so the walk stops there: a variable it has not resolved gets no location in
+/// the new function, which is better than a wrong one.
+static void
+collectLiveInDbgRecords(CallInst &TheCall, const SetVector<Value *> &Inputs,
+                        SmallSetVector<DbgVariableRecord *, 8> &LiveIn) {
+  Function *OldFunc = TheCall.getFunction();
+  for (Value *Input : Inputs) {
+    SmallVector<DbgVariableRecord *, 1> Users;
+    findDbgUsers(Input, Users);
+    for (DbgVariableRecord *DVR : Users)
+      if (isFunctionWideDbgRecord(*DVR) && DVR->getFunction() == OldFunc)
+        LiveIn.insert(DVR);
+  }
+
+  // Fragments of each variable already described closer to the call. A record
+  // is superseded if a later one covers an overlapping fragment.
+  DenseMap<std::pair<const DILocalVariable *, const DILocation *>,
+           SmallVector<DIExpression::FragmentInfo, 1>>
+      Described;
+  SmallVector<DbgVariableRecord *, 8> Values;
+  auto Visit = [&](DbgVariableRecord &DVR) {
+    DebugVariable Var(&DVR);
+    DIExpression::FragmentInfo Frag = Var.getFragmentOrDefault();
+    auto &Frags = Described[{Var.getVariable(), Var.getInlinedAt()}];
+    bool Superseded = any_of(Frags, [&](const DIExpression::FragmentInfo &F) {
+      return DIExpression::fragmentsOverlap(F, Frag);
+    });
+    Frags.push_back(Frag);
+    if (!Superseded)
+      Values.push_back(&DVR);
+  };
+
+  BasicBlock *BB = TheCall.getParent();
+  Instruction *From = &TheCall;
+  SmallPtrSet<BasicBlock *, 8> Visited{BB};
+  while (true) {
+    for (Instruction *I = From; I; I = I->getPrevNode())
+      for (DbgRecord &DR : reverse(I->getDbgRecordRange()))
+        if (auto *DVR = dyn_cast<DbgVariableRecord>(&DR))
+          if (!isFunctionWideDbgRecord(*DVR))
+            Visit(*DVR);
+    BB = BB->getUniquePredecessor();
+    if (!BB || !Visited.insert(BB).second)
+      break;
+    From = BB->getTerminator();
+  }
+  // Found nearest first; keep them in program order.
+  LiveIn.insert_range(reverse(Values));
+}
+
 /// Fix up the debug info in the old and new functions. Following changes are
 /// done.
-/// 1. If a debug record points to a value that has been replaced, update the
-///    record to use the new value.
-/// 2. If an Input value that has been replaced was used as a location of a
-///    debug record in the Parent function, then materealize a similar record in
-///    the new function.
+/// 1. Copy into the new function the records that describe variables on entry
+///    to the region, as they are.
+/// 2. Point every record in the new function, whether it came with the region
+///    or was copied in, at the new function's values.
 /// 3. Point line locations and debug intrinsics to the new subprogram scope
 /// 4. Remove intrinsics which point to values outside of the new function.
 static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
@@ -1309,33 +1373,30 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       /*LineNo=*/0, SPType, /*ScopeLine=*/0, DINode::FlagZero, SPFlags);
   NewFunc.setSubprogram(NewSP);
 
-  auto UpdateOrInsertDebugRecord = [&](auto *DR, Value *OldLoc, Value *NewLoc,
-                                       DIExpression *Expr, bool Declare) {
-    if (DR->getParent()->getParent() == &NewFunc) {
-      DR->replaceVariableLocationOp(OldLoc, NewLoc);
-      return;
-    }
-    if (Declare) {
-      DIB.insertDeclare(NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
-                        &NewFunc.getEntryBlock());
-      return;
-    }
-    DIB.insertDbgValue(NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
-                       NewFunc.getEntryBlock().getTerminator()->getIterator());
-  };
+  // Records are copied whole and only ever have their operands substituted, so
+  // a location list and the expression that indexes into it stay consistent.
+  SmallSetVector<DbgVariableRecord *, 8> LiveIn;
+  collectLiveInDbgRecords(TheCall, Inputs, LiveIn);
+  BasicBlock &NewEntry = NewFunc.getEntryBlock();
+  for (DbgVariableRecord *DVR : LiveIn) {
+    // The stores an assignment ID links to stay in the parent, so a copied
+    // #dbg_assign keeps only the value it describes.
+    DbgVariableRecord *Copy =
+        DVR->isDbgAssign()
+            ? new DbgVariableRecord(DVR->getRawLocation(), DVR->getVariable(),
+                                    DVR->getExpression(),
+                                    DVR->getDebugLoc().get())
+            : DVR->clone();
+    NewEntry.insertDbgRecordBefore(Copy,
+                                   NewEntry.getTerminator()->getIterator());
+  }
+
   for (auto [Input, NewVal] : zip_equal(Inputs, NewValues)) {
     SmallVector<DbgVariableRecord *, 1> DPUsers;
     findDbgUsers(Input, DPUsers);
-
-    // Iterate the debug users of the Input values. If they are in the extracted
-    // function then update their location with the new value. If they are in
-    // the parent function then create a similar debug record.
-    for (auto *DVR : DPUsers) {
-      DIExpression *Expr = DVR->getNumVariableLocationOps() == 1
-                               ? DVR->getExpression()
-                               : DIB.createExpression();
-      UpdateOrInsertDebugRecord(DVR, Input, NewVal, Expr, DVR->isDbgDeclare());
-    }
+    for (DbgVariableRecord *DVR : DPUsers)
+      if (DVR->getFunction() == &NewFunc)
+        DVR->replaceVariableLocationOp(Input, NewVal);
   }
 
   auto IsInvalidLocation = [&NewFunc](Value *Location) {
