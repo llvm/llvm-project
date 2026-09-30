@@ -15,6 +15,10 @@ void bar() {
   printf("hello\n");
 }
 
+// Accepted by the SPIR-V target itself, with no host to fall back on.
+void __attribute__((regcall)) rcall(int a, int b) {}
+void __attribute__((vectorcall)) vcall(float a, float b) {}
+
 // Check some weird calling convention that is not supported even by x86_64 aux.
 // no-aux-warning@+1 {{'__swiftasynccall__' calling convention is not supported for this target}}
 void __attribute__((__swiftasynccall__)) g(void) {}
