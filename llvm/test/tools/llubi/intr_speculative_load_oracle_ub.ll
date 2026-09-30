@@ -1,7 +1,6 @@
 ; RUN: not llubi --verbose --entry-function=oracle_out_of_bounds < %s 2>&1 | FileCheck %s --check-prefix=ORACLE-OOB
 ; RUN: not llubi --verbose --entry-function=oracle_poison_noundef_ret < %s 2>&1 | FileCheck %s --check-prefix=NOUNDEF-RET
 ; RUN: not llubi --verbose --entry-function=oracle_poison_noundef_arg < %s 2>&1 | FileCheck %s --check-prefix=NOUNDEF-ARG
-; RUN: not llubi --verbose --entry-function=oracle_declaration < %s 2>&1 | FileCheck %s --check-prefix=ORACLE-DECL
 
 @a = global [6 x i32] [i32 0, i32 1, i32 2, i32 3, i32 4, i32 5]
 
@@ -21,8 +20,6 @@ define noundef i64 @oracle_noundef_ret(i64 %n) memory(none) nounwind nosync will
 define i64 @oracle_noundef_arg(i64 noundef %n) memory(none) nounwind nosync willreturn {
   ret i64 %n
 }
-
-declare i64 @oracle_decl(i64) memory(none) nounwind nosync willreturn
 
 define void @oracle_out_of_bounds() {
 ; ORACLE-OOB: Entering function: oracle_out_of_bounds
@@ -68,15 +65,5 @@ define void @oracle_poison_noundef_arg() {
 ; NOUNDEF-ARG-NEXT: Immediate UB detected: The value poison violates noundef attribute.
 ; NOUNDEF-ARG-NEXT: error: Execution of function 'oracle_poison_noundef_arg' failed.
   %r = call <4 x i32> (ptr, i1, ...) @llvm.speculative.load.v4i32.p0(ptr @a, i1 false, ptr @oracle_noundef_arg, i64 poison)
-  ret void
-}
-
-define void @oracle_declaration() {
-; ORACLE-DECL: Entering function: oracle_declaration
-; ORACLE-DECL-NEXT: Stacktrace:
-; ORACLE-DECL-NEXT: #0   %r = call <4 x i32> (ptr, i1, ...) @llvm.speculative.load.v4i32.p0(ptr @a, i1 false, ptr @oracle_decl, i64 4) at @oracle_declaration <stdin>:{{[0-9]+}}
-; ORACLE-DECL-NEXT: Error: Unsupported llvm.speculative.load oracle declaration: oracle_decl.
-; ORACLE-DECL-NEXT: error: Execution of function 'oracle_declaration' failed.
-  %r = call <4 x i32> (ptr, i1, ...) @llvm.speculative.load.v4i32.p0(ptr @a, i1 false, ptr @oracle_decl, i64 4)
   ret void
 }

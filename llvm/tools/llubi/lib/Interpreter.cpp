@@ -1058,6 +1058,8 @@ public:
                        Oracle->getAttributes().getRetAttrs());
       RetVal =
           callSpeculativeLoadIntrinsic(CB, CurrentFrame->CalleeArgs[0], RetVal);
+      if (hasProgramExited())
+        return;
     }
     CurrentFrame->CalleeArgs.clear();
     if (Type *RetTy = CB.getType(); !RetTy->isVoidTy()) {
@@ -1807,6 +1809,8 @@ public:
     case Intrinsic::memset_inline:
       return callMemSetIntrinsic(CB, Args);
     case Intrinsic::speculative_load:
+      assert(!getSpeculativeLoadOracle(CB) &&
+             "oracle form must be handled earlier");
       return callSpeculativeLoadIntrinsic(CB, Args[0], Args[2]);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
@@ -2230,15 +2234,7 @@ public:
 
     CurrentFrame->ResolvedCallee = Callee;
     ArrayRef<AnyValue> Args = CalleeArgs;
-    // Call the oracle of an llvm.speculative.load with the trailing arguments.
-    // The load is completed in returnFromCallee.
     if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
-      if (Oracle->isDeclaration()) {
-        reportError()
-            << "Unsupported llvm.speculative.load oracle declaration: "
-            << Oracle->getName() << ".";
-        return;
-      }
       Args = Args.drop_front(3);
       for (auto [Arg, ArgVal] :
            zip_equal(Oracle->args(), MutableArrayRef(CalleeArgs).drop_front(3)))
