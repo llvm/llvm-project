@@ -20,6 +20,7 @@
 #include "Common/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -92,11 +93,6 @@ private:
                                  std::vector<unsigned> &InstOpsUsed,
                                  bool PassSubtarget) const;
 
-  // Bytecode interpreter state for overflow instructions.
-  std::vector<std::string> BytecodeStmts;
-  void EmitOverflowBytecodeTables(raw_ostream &O, StringRef ClassName,
-                                  bool PassSubtarget);
-  void EmitOverflowBytecodeInterpreter(raw_ostream &O, bool PassSubtarget);
 };
 
 } // end anonymous namespace
@@ -121,9 +117,10 @@ PrintCases(std::vector<std::pair<std::string, AsmWriterOperand>> &OpsToPrint,
   O << "\n      break;\n";
 }
 
-/// Group instructions by similarity.
+/// Group instructions by similarity.  When ExactMatch is true, only group
+/// instructions with identical operand sequences (for the bytecode path).
 static std::vector<InstructionGroup>
-groupInstructions(std::vector<AsmWriterInst> &Insts) {
+groupInstructions(std::vector<AsmWriterInst> &Insts, bool ExactMatch = false) {
   std::vector<InstructionGroup> Groups;
   while (!Insts.empty()) {
     InstructionGroup &G = Groups.emplace_back(std::move(Insts.back()));
@@ -131,7 +128,7 @@ groupInstructions(std::vector<AsmWriterInst> &Insts) {
 
     for (unsigned I = Insts.size(); I != 0; --I) {
       unsigned DiffOp = Insts[I - 1].MatchesAllButOneOp(G.FirstInst);
-      if (DiffOp != ~1U) {
+      if (DiffOp == ~0U || (!ExactMatch && DiffOp != ~1U)) {
         if (G.DifferingOperand == ~0U) // First match!
           G.DifferingOperand = DiffOp;
 
@@ -506,6 +503,11 @@ void AsmWriterEmitter::EmitGetMnemonic(
   O << "}\n";
 }
 
+static void EmitOverflowBytecodeSection(raw_ostream &O, StringRef TargetName,
+                                        const std::vector<InstructionGroup> &,
+                                        ArrayRef<const CodeGenInstruction *>,
+                                        bool PassSubtarget);
+
 /// EmitPrintInstruction - Generate the code for the "printInstruction" method
 /// implementation. Destroys all instances of AsmWriterInst information, by
 /// clearing the Instructions vector.
@@ -517,18 +519,12 @@ void AsmWriterEmitter::EmitPrintInstruction(
   const Record *AsmWriter = Target.getAsmWriter();
   StringRef ClassName = AsmWriter->getValueAsString("AsmWriterClassName");
   bool PassSubtarget = AsmWriter->getValueAsInt("PassSubtarget");
-  bool UseFnPtrTable = AsmWriter->getValueAsBit("UseFunctionPointerTable");
+  bool UseBytecode = AsmWriter->getValueAsBit("UseBytecode");
 
   // Delete instructions with no operand info left so that the emptiness check
   // below only considers overflow instructions.
   llvm::erase_if(Instructions,
                  [](AsmWriterInst &Inst) { return Inst.Operands.empty(); });
-
-  // When opt-in: emit two plain-integer tables before printInstruction() and
-  // replace the overflow switch with a small bytecode interpreter loop, keeping
-  // the function body small and avoiding MSVC C1001/C1053 ICEs.
-  if (UseFnPtrTable && !Instructions.empty())
-    EmitOverflowBytecodeTables(O, ClassName, PassSubtarget);
 
   // This function has some huge switch statements that causing excessive
   // compile time in LLVM profile instrumenation build. This print function
@@ -599,15 +595,16 @@ void AsmWriterEmitter::EmitPrintInstruction(
   // encoding, but we expect the main 64-bit table to handle the majority of
   // instructions.
   if (!Instructions.empty()) {
-    if (UseFnPtrTable && BytecodeStmts.size() > 2) {
-      EmitOverflowBytecodeInterpreter(O, PassSubtarget);
+    // Because this is a vector, we want to emit from the end.  Reverse all
+    // of the elements in the vector.
+    std::reverse(Instructions.begin(), Instructions.end());
+
+    std::vector<InstructionGroup> Groups =
+        groupInstructions(Instructions, UseBytecode);
+    if (UseBytecode) {
+      EmitOverflowBytecodeSection(O, Target.getName(), Groups,
+                                  NumberedInstructions, PassSubtarget);
     } else {
-      // Because this is a vector, we want to emit from the end.  Reverse all
-      // of the elements in the vector.
-      std::reverse(Instructions.begin(), Instructions.end());
-
-      std::vector<InstructionGroup> Groups = groupInstructions(Instructions);
-
       O << "  switch (MI->getOpcode()) {\n";
       O << "  default: llvm_unreachable(\"Unexpected opcode.\");\n";
       for (const InstructionGroup &G : Groups)
@@ -620,100 +617,72 @@ void AsmWriterEmitter::EmitPrintInstruction(
   O << "}\n";
 }
 
-void AsmWriterEmitter::EmitOverflowBytecodeTables(raw_ostream &O,
-                                                  StringRef ClassName,
-                                                  bool PassSubtarget) {
-  if (Instructions.empty())
-    return;
+/// Emit the bytecode tables and interpreter loop for overflow instructions.
+/// Instructions with identical operand sequences share the same offset (via
+/// groupInstructions with ExactMatch=true).  Tables are emitted as static const
+/// arrays inside printInstruction() so that local variables remain in scope.
+static void
+EmitOverflowBytecodeSection(raw_ostream &O, StringRef TargetName,
+                             const std::vector<InstructionGroup> &Groups,
+                             ArrayRef<const CodeGenInstruction *> NumberedInsts,
+                             bool PassSubtarget) {
+  // Index 0 = unexpected-opcode sentinel, 1 = return terminator (already the
+  // last operand of every AsmWriterInst), 2+ = real print statements.
+  // Pre-seeding ensures AWI.Operands' trailing "return;" maps to index 1.
+  MapVector<std::string, unsigned, StringMap<unsigned>> Commands;
+  Commands.insert({"llvm_unreachable(\"Unexpected opcode.\");", 0});
+  Commands.insert({"return;", 1});
 
-  StringRef TargetName = Target.getName();
+  // OpcodeToOffset[opcode] = starting index in OverflowProgram.
+  // Offset 0 is the unreachable sentinel for non-overflow opcodes.
+  // Offset 1 is a "return;" guard: in NDEBUG builds llvm_unreachable() is a
+  // no-op and the for-loop would increment past the sentinel to Program[1];
+  // having index 1 ("return;") there ensures a safe exit instead of
+  // accidentally executing the first real sequence's bytecodes.
+  std::vector<unsigned> OpcodeToOffset(NumberedInsts.size(), 0);
+  std::vector<unsigned> Program = {0, 1}; // sentinel + NDEBUG return guard
 
-  // Assign uint16_t indices to unique atomic operand-print statements.
-  // Index 0 = unexpected-opcode sentinel, 1 = return terminator, 2+ = real.
-  BytecodeStmts.clear();
-  BytecodeStmts.push_back("llvm_unreachable(\"Unexpected opcode.\");");
-  BytecodeStmts.push_back("return;");
-  std::map<std::string, uint16_t> StmtMap;
-
-  auto GetStmtIdx = [&](const std::string &Code) -> uint16_t {
-    auto [It, Inserted] = StmtMap.emplace(Code, (uint16_t)BytecodeStmts.size());
-    if (Inserted)
-      BytecodeStmts.push_back(Code);
-    return It->second;
-  };
-
-  // Build bytecode sequences and concatenate into OverflowProgram.
-  // Offset 0 holds the unexpected-opcode sentinel; non-overflow opcodes map
-  // there so the interpreter fires llvm_unreachable if ever reached.
-  using Sequence = std::vector<uint16_t>;
-  std::map<Sequence, uint32_t> SeqToOffset;
-  std::vector<uint16_t> Program = {0}; // sentinel at offset 0
-  std::vector<uint32_t> OpcodeToOffset(NumberedInstructions.size(), 0);
-
-  for (const AsmWriterInst &AWI : Instructions) {
-    Sequence Seq;
-    for (const AsmWriterOperand &Op : AWI.Operands)
-      Seq.push_back(GetStmtIdx(Op.getCode(PassSubtarget)));
-    Seq.push_back(1); // terminator
-
-    auto [It, Inserted] = SeqToOffset.emplace(Seq, (uint32_t)Program.size());
-    if (Inserted)
-      Program.insert(Program.end(), Seq.begin(), Seq.end());
-    OpcodeToOffset[AWI.CGIIndex] = It->second;
+  for (const InstructionGroup &G : Groups) {
+    unsigned Offset = Program.size();
+    OpcodeToOffset[G.FirstInst.CGIIndex] = Offset;
+    for (const AsmWriterInst &AWI : G.SimilarInsts)
+      OpcodeToOffset[AWI.CGIIndex] = Offset;
+    for (const AsmWriterOperand &Op : G.FirstInst.Operands) {
+      auto [It, _] = Commands.try_emplace(Op.getCode(PassSubtarget),
+                                          Commands.size());
+      Program.push_back(It->second);
+    }
   }
 
-  // Emit OpcodeToOffset table.
-  O << "// Maps each opcode to its starting index in " << TargetName
-    << "OverflowProgram.\n"
-    << "// " << NumberedInstructions.size() << " entries ("
-    << Instructions.size() << " overflow instructions, " << SeqToOffset.size()
-    << " unique sequences).\n"
-    << "static const uint32_t " << TargetName << "OpcodeToOffset[] = {\n";
-  for (unsigned I = 0; I < NumberedInstructions.size(); ++I)
-    O << "  " << OpcodeToOffset[I] << ",\t// "
-      << NumberedInstructions[I]->getName() << "\n";
-  O << "};\n\n";
+  StringRef OffsetType = getMinimalTypeForRange(Program.size() - 1);
+  StringRef StmtType = getMinimalTypeForRange(Commands.size() - 1);
 
-  // Emit OverflowProgram bytecode table with offset annotations at sequence
-  // boundaries.
-  std::set<uint32_t> Boundaries;
-  for (auto &[Seq, Off] : SeqToOffset)
-    Boundaries.insert(Off);
-  O << "// Concatenated operand-printing bytecode sequences (terminated by "
-       "1).\n"
-    << "// " << SeqToOffset.size() << " unique sequences, " << Program.size()
-    << " uint16_t entries total.\n"
-    << "static const uint16_t " << TargetName << "OverflowProgram[] = {\n";
-  for (unsigned I = 0; I < Program.size(); ++I) {
-    if (Boundaries.count(I))
-      O << "  /* " << I << " */ " << (unsigned)Program[I] << ",\n";
-    else
-      O << "  " << (unsigned)Program[I] << ",\n";
-  }
-  O << "};\n\n";
+  O << "  static const " << OffsetType << " " << TargetName
+    << "OpcodeToOffset[] = {\n";
+  for (unsigned I = 0; I < NumberedInsts.size(); ++I)
+    O << "    " << OpcodeToOffset[I] << ",\n";
+  O << "  };\n";
 
-  LLVM_DEBUG(dbgs() << "[AsmWriter] " << TargetName << ": "
-                    << Instructions.size() << " overflow instructions -> "
-                    << SeqToOffset.size() << " unique sequences, "
-                    << BytecodeStmts.size() << " unique statements\n");
-}
+  O << "  static const " << StmtType << " " << TargetName
+    << "OverflowProgram[] = {\n";
+  for (unsigned Val : Program)
+    O << "    " << Val << ",\n";
+  O << "  };\n";
 
-void AsmWriterEmitter::EmitOverflowBytecodeInterpreter(raw_ostream &O,
-                                                       bool PassSubtarget) {
-  StringRef TargetName = Target.getName();
-  // Execute the bytecode sequence for this opcode until the return terminator.
-  O << "  for (uint32_t Idx = " << TargetName
+  O << "  for (" << OffsetType << " Idx = " << TargetName
     << "OpcodeToOffset[MI->getOpcode()];; ++Idx) {\n"
     << "    switch (" << TargetName << "OverflowProgram[Idx]) {\n"
     << "    default: llvm_unreachable(\"Unexpected bytecode command.\");\n";
-  for (unsigned I = 0; I < BytecodeStmts.size(); ++I) {
-    O << "    case " << I << ":\n"
-      << "      " << BytecodeStmts[I] << "\n";
-    // "return;" exits printInstruction(); no break needed.
-    if (BytecodeStmts[I] != "return;")
+  for (auto &[Stmt, Idx] : Commands) {
+    O << "    case " << Idx << ":\n      " << Stmt << "\n";
+    if (Idx != 1) // index 1 is the reserved "return;" terminator
       O << "      break;\n";
   }
   O << "    }\n  }\n";
+
+  LLVM_DEBUG(dbgs() << "[AsmWriter] " << TargetName << ": " << Groups.size()
+                    << " unique sequences, " << Commands.size()
+                    << " unique statements\n");
 }
 
 static void

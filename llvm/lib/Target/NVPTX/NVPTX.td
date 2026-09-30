@@ -140,7 +140,7 @@ def NVPTXInstrInfo : InstrInfo {
 
 def NVPTXAsmWriter : AsmWriter {
   int PassSubtarget = 1;
-  bit UseFunctionPointerTable = 1;
+  bit UseBytecode = 1;
 }
 
 def NVPTX : Target {
