@@ -1490,6 +1490,14 @@ semantics::omp::OmpVariantMatchContext makeVariantMatchContext(
 void collectEnclosingConstructTraits(
     AbstractConverter &converter, const pft::Evaluation *evaluation,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
+  const auto *loopControl =
+      converter.getStateStack().getStackTop<LoopControlContext>();
+  // Lastprivate can re-evaluate bounds after lowering the loop body, leaving
+  // a body evaluation current. Use the owning directive's ancestors so the
+  // loop itself is not added before filtering its entered constituents below.
+  if (loopControl)
+    evaluation = &loopControl->evaluation;
+
   llvm::SmallVector<const OpenMPContextFrame *, 4> frames;
   converter.getStateStack().stackWalk<OpenMPContextFrame>(
       [&](OpenMPContextFrame &frame) {
@@ -1536,8 +1544,6 @@ void collectEnclosingConstructTraits(
   // PARALLEL when lowering the bounds of PARALLEL DO. A selected directive
   // contributes here only through its entered constituents, so its own clause
   // expressions have the same context as a directly written directive's.
-  const auto *loopControl =
-      converter.getStateStack().getStackTop<LoopControlContext>();
   bool insideLoop = false;
   for (auto [index, frame] : llvm::enumerate(frames)) {
     if (usedFrames[index] || frame->isReplacement)
