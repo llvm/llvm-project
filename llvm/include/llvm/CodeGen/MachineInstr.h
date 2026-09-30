@@ -129,8 +129,10 @@ public:
     InBounds = 1 << 22,      // Pointer arithmetic remains inbounds.
                              // Implies NoUSWrap.
     LRSplit = 1 << 23,       // Instruction for live range split.
-    NonNull = 1 << 24        // Address space cast source is not the null
+    NonNull = 1 << 24,       // Address space cast source is not the null
                              // value of the source address space.
+    BBProlog = 1 << 25       // Part of the basic block prolog: must stay
+                             // ahead of everything inserted at block entry.
   };
 
   static constexpr uint32_t getPoisonGeneratingFlags() {
