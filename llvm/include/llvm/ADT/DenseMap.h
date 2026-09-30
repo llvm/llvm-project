@@ -531,10 +531,6 @@ public:
 
 } // namespace densemap::detail
 
-// Befriended below so DenseMapBase can expose its bucket-relocation callback
-// erase to ValueHandleBase, the only caller that caches bucket pointers.
-class ValueHandleBase;
-
 template <typename KeyT, typename ValueT,
           typename KeyInfoT = DenseMapInfo<KeyT>,
           typename Bucket = llvm::detail::DenseMapPair<KeyT, ValueT>,
@@ -947,10 +943,6 @@ public:
     return Ret;
   }
 
-  void eraseFromFilledBucket(BucketT *TheBucket) {
-    eraseFromFilledBucket(TheBucket, [](BucketT &) {});
-  }
-
   bool erase(const KeyT &Val) {
     BucketT *TheBucket = doFind(Val);
     if (!TheBucket)
@@ -1186,17 +1178,9 @@ protected:
   }
 
 private:
-  // ValueHandleBase caches pointers into the bucket array, so it needs the
-  // callback erase below to fix them up as entries shift. It is the only
-  // intended caller; do not add new ones.
-  friend class ValueHandleBase;
-
   /// Erase the entry at \p TheBucket and close the resulting hole via Knuth
-  /// TAOCP 6.4 Algorithm R. For callers that cache pointers into the bucket
-  /// array, call \p OnMoved per shifted bucket.
-  template <typename OnMovedT>
-  LLVM_ATTRIBUTE_NOINLINE void eraseFromFilledBucket(BucketT *TheBucket,
-                                                     OnMovedT &&OnMoved) {
+  /// TAOCP 6.4 Algorithm R.
+  LLVM_ATTRIBUTE_NOINLINE void eraseFromFilledBucket(BucketT *TheBucket) {
     incrementEpoch();
     TheBucket->getSecond().~ValueT();
     TheBucket->getFirst().~KeyT();
@@ -1221,22 +1205,10 @@ private:
         ::new (&BI.getSecond()) ValueT(std::move(BJ.getSecond()));
         BJ.getSecond().~ValueT();
         BJ.getFirst().~KeyT();
-        OnMoved(BI);
         I = J;
       }
     }
     llvm::densemap::detail::unsetUsed(U, I);
-  }
-
-  /// Erase \p Val and close the resulting hole by potentially shifting other
-  /// entries into it. For callers that cache pointers into the bucket array,
-  /// call \p OnMoved per shifted bucket.
-  template <typename OnMovedT> bool erase(const KeyT &Val, OnMovedT &&OnMoved) {
-    BucketT *TheBucket = doFind(Val);
-    if (!TheBucket)
-      return false;
-    eraseFromFilledBucket(TheBucket, std::forward<OnMovedT>(OnMoved));
-    return true;
   }
 
   template <typename KeyArgT, typename... Ts>
