@@ -2370,12 +2370,12 @@ private:
       size_type __n_add,
       const value_type* __p_new_stuff);
 
-  // __assign_no_alias is invoked for assignment operations where we
-  // have proof that the input does not alias the current instance.
-  // For example, operator=(basic_string) performs a 'self' check.
-  // The string has to be null terminated at __n.
+  // This function can be called if it is known that
+  // - __n <= max_size() or __s is from an allocator of the same family, and
+  // - __s is null terminated at __n.
+  // __s may point into *this.
   template <bool __is_short>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE void __assign_no_alias(const value_type* __s, size_type __n);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE void __assign_ntcts(const value_type* __s, size_type __n);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __erase_to_end(size_type __pos) {
     _LIBCPP_ASSERT_INTERNAL(__pos <= capacity(), "Trying to erase at position outside the strings capacity!");
@@ -2437,7 +2437,6 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __move_assign_alloc(basic_string&, false_type) _NOEXCEPT {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string& __assign_external(const value_type* __s);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string& __assign_external(const value_type* __s, size_type __n);
 
   // Assigns the value in __s, guaranteed to be __n < __min_cap in length.
@@ -2729,7 +2728,7 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by_without_replace(
 template <class _CharT, class _Traits, class _Allocator>
 template <bool __is_short>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE void
-basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(const value_type* __s, size_type __n) {
+basic_string<_CharT, _Traits, _Allocator>::__assign_ntcts(const value_type* __s, size_type __n) {
   _LIBCPP_ASSERT_INTERNAL(_Traits::eq(__s[__n], value_type()), "`__s` should be null-terminated at __s[__n]");
 
   const auto __cap = __is_short ? static_cast<size_type>(__min_cap) : __get_long_cap();
@@ -2764,7 +2763,7 @@ basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(const value_type* _
     __p = __get_long_pointer();
     __set_long_size(__n);
   }
-  traits_type::copy(std::__to_address(__p), __s, __n + 1);
+  traits_type::move(std::__to_address(__p), __s, __n + 1);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2843,12 +2842,12 @@ basic_string<_CharT, _Traits, _Allocator>::operator=(const basic_string& __str) 
   __copy_assign_alloc(__str);
 
   if (__is_long()) {
-    __assign_no_alias<false>(__str.data(), __str.size());
-    return *this;
+     __assign_ntcts<false>(__str.data(), __str.size());
+     return *this;
   }
 
   if (__str.__is_long()) {
-    __assign_no_alias<true>(__str.data(), __str.size());
+    __assign_ntcts<true>(__str.data(), __str.size());
     return *this;
   }
 
@@ -2967,18 +2966,21 @@ basic_string<_CharT, _Traits, _Allocator>::assign(const basic_string& __str, siz
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::__assign_external(const value_type* __s) {
-  return __assign_external(__s, traits_type::length(__s));
-}
-
-template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s) {
   _LIBCPP_ASSERT_NON_NULL(__s != nullptr, "string::assign received nullptr");
-  if (auto __len = traits_type::length(__s); __builtin_constant_p(__len) && __fits_in_sso(__len))
+  auto __len = traits_type::length(__s);
+  if (__fits_in_sso(__len))
     return __assign_short(__s, __len);
-  return __assign_external(__s);
+
+  if (__len > max_size())
+    __throw_length_error();
+  if (__is_long())
+    __assign_ntcts<false>(__s, __len);
+  else
+    __assign_ntcts<true>(__s, __len);
+
+  return *this;
 }
 // append
 
