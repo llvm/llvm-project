@@ -55,6 +55,7 @@ add_libc_test(
     libc.hdr.types.struct_dirent
     libc.src.__support.File.dir_scan_impl
     libc.src.__support.error_or
+    libc.src.dirent.alphasort
 )
 
 set(platform_stream_targets "platform_stdout;platform_stdin;platform_stderr")

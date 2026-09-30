@@ -14,6 +14,7 @@
 #include "hdr/types/struct_dirent.h"
 #include "src/__support/File/dir_scan_impl.h"
 #include "src/__support/error_or.h"
+#include "src/dirent/alphasort.h"
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -125,19 +126,30 @@ TEST_F(LlvmLibcScanImplTest, ReadFailsMidway) {
 }
 
 int partialorder(const struct dirent **a, const struct dirent **b) {
-  if ((*a)->d_name[0] == 'a' && (*b)->d_name[0] == 'b')
+  char char_a = (*a)->d_name[0];
+  char char_b = (*b)->d_name[0];
+
+  auto get_weight = [](char c) {
+    if (c == 'a')
+      return 1;
+    if (c == 'b')
+      return 2;
+    return 3;
+  };
+
+  int weight_a = get_weight(char_a);
+  int weight_b = get_weight(char_b);
+
+  if (weight_a < weight_b)
     return -1;
-
-  else if ((*a)->d_name[0] == 'b' && (*b)->d_name[0] == 'a')
+  if (weight_a > weight_b)
     return 1;
-
   return 0;
 }
 
 TEST_F(LlvmLibcScanImplTest, TestPartialOrdering) {
 
   struct dirent **namelist = nullptr;
-
   auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
       "fake/path", &namelist, nullptr, partialorder);
   ASSERT_TRUE(res.has_value());
@@ -156,4 +168,65 @@ TEST_F(LlvmLibcScanImplTest, TestPartialOrdering) {
   ASSERT_NE(a_index, -1);
   ASSERT_NE(b_index, -1);
   ASSERT_GT(b_index, a_index);
+}
+
+int partialorder_reverse(const struct dirent **a, const struct dirent **b) {
+  return -partialorder(a, b);
+}
+
+TEST_F(LlvmLibcScanImplTest, TestPartialOrderingReverse) {
+
+  struct dirent **namelist = nullptr;
+  auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
+      "fake/path", &namelist, nullptr, partialorder_reverse);
+  ASSERT_TRUE(res.has_value());
+  ASSERT_EQ(res.value(),
+            static_cast<int>(LIBC_NAMESPACE::MockDir::test_files_count));
+  int a_index = -1;
+  int b_index = -1;
+  for (int i = 0; i < res.value(); ++i) {
+    if (namelist[i]->d_name[0] == 'a')
+      a_index = i;
+
+    else if (namelist[i]->d_name[0] == 'b') {
+      b_index = i;
+    }
+  }
+  ASSERT_NE(a_index, -1);
+  ASSERT_NE(b_index, -1);
+  ASSERT_GT(a_index, b_index);
+}
+
+TEST_F(LlvmLibcScanImplTest, TestTotalOrderingAZ) {
+  struct dirent **namelist = nullptr;
+  auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
+      "fake/path", &namelist, nullptr, LIBC_NAMESPACE::alphasort);
+  ASSERT_TRUE(res.has_value());
+  ASSERT_EQ(res.value(),
+            static_cast<int>(LIBC_NAMESPACE::MockDir::test_files_count));
+  const char *desired_order[] = {".", "..", "a.md", "b.txt", "c.pdf", nullptr};
+  for (size_t i = 0; i < LIBC_NAMESPACE::MockDir::test_files_count &&
+                     desired_order[i] != nullptr;
+       ++i) {
+    ASSERT_STREQ(namelist[i]->d_name, desired_order[i]);
+  }
+}
+
+int omegasort(const struct dirent **a, const struct dirent **b) {
+  return -LIBC_NAMESPACE::alphasort(a, b);
+}
+
+TEST_F(LlvmLibcScanImplTest, TestTotalOrderingZA) {
+  struct dirent **namelist = nullptr;
+  auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
+      "fake/path", &namelist, nullptr, omegasort);
+  ASSERT_TRUE(res.has_value());
+  ASSERT_EQ(res.value(),
+            static_cast<int>(LIBC_NAMESPACE::MockDir::test_files_count));
+  const char *desired_order[] = {"c.pdf", "b.txt", "a.md", "..", ".", nullptr};
+  for (size_t i = 0; i < LIBC_NAMESPACE::MockDir::test_files_count &&
+                     desired_order[i] != nullptr;
+       ++i) {
+    ASSERT_STREQ(namelist[i]->d_name, desired_order[i]);
+  }
 }
