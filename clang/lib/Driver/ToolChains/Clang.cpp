@@ -9647,6 +9647,8 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(TCArgs.MakeArgString(UB));
   }
   addOffloadCompressArgs(TCArgs, CmdArgs);
+  if (TCArgs.hasArg(options::OPT_v))
+    CmdArgs.push_back("--verbose");
   // All the inputs are encoded as commands.
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::None(),
@@ -9703,6 +9705,8 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
 
     CmdArgs.push_back(Args.MakeArgString("--image=" + llvm::join(Parts, ",")));
   }
+
+  addOffloadCompressArgs(Args, CmdArgs);
 
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileUTF8(),
