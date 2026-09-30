@@ -342,20 +342,6 @@ static DecodeStatus decodeUImmLog2XLenOperand(MCInst &Inst, uint32_t Imm,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeUImm7EqXLenOperand(MCInst &Inst, uint32_t Imm,
-                                             int64_t Address,
-                                             const MCDisassembler *Decoder) {
-  assert(isUInt<7>(Imm) && "Invalid immediate");
-
-  uint32_t ExpectedValue =
-      Decoder->getSubtargetInfo().hasFeature(RISCV::Feature64Bit) ? 64 : 32;
-  if (Imm != ExpectedValue)
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createImm(Imm));
-  return MCDisassembler::Success;
-}
-
 template <unsigned N>
 static DecodeStatus decodeUImmNonZeroOperand(MCInst &Inst, uint32_t Imm,
                                              int64_t Address,

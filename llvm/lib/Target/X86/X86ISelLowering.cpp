@@ -25739,7 +25739,10 @@ static bool canEmitConjunctionForCCMP(SelectionDAG &DAG, SDValue Val,
 ///   Negate:    true if this sub-tree should be negated by inverting the
 ///              conditions on its SETCC leaves
 ///   OutCC:     set to the condition code to test after the whole chain
-/// Returns the flags-producing node (CMP/SUB or CCMP).
+/// Returns the EFLAGS-producing node: for the leaf that starts the chain
+/// whatever EmitCmp picked as its flag source (a comparison, or an arithmetic
+/// or logic node it folded the comparison onto), and a CCMP/CTEST for every
+/// other leaf.
 static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
                                          bool Negate, SDValue CCOp,
                                          X86::CondCode Predicate,
@@ -25757,23 +25760,52 @@ static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
     assert(X86CC != X86::COND_INVALID);
     OutCC = X86CC;
 
-    SDValue Flags = EmitCmp(LHS, RHS, X86CC, DL, DAG, Subtarget);
-    // Produce a normal comparison if we are first in the chain.
+    // Produce a normal comparison if we are first in the chain. Only there may
+    // EmitCmp fold the comparison into the EFLAGS of an existing arithmetic or
+    // logic node: those flags are unconditional, which is exactly what the root
+    // of the chain needs.
     if (!CCOp)
-      return Flags;
+      return EmitCmp(LHS, RHS, X86CC, DL, DAG, Subtarget);
 
-    // Otherwise produce a CCMP. The CCMP executes (and updates EFLAGS) only
-    // when Predicate holds; when it is skipped it forces the default condition
+    // Otherwise produce a CCMP or CTEST. It executes (and updates EFLAGS)
+    // only when Predicate holds; when skipped it forces the default condition
     // flags, which must make OutCC evaluate to false. That default is encoded
     // from the opposite of X86CC.
-    SDNode *FlagsNode = Flags.getNode();
     X86::CondCode DCFCode = X86::GetOppositeBranchCondition(X86CC);
     SDValue CFlags = DAG.getTargetConstant(
         X86::getCCMPCondFlagsFromCondCode(DCFCode), DL, MVT::i8);
     SDValue SrcCC = DAG.getTargetConstant(Predicate, DL, MVT::i8);
+
+    // Compare the SETCC's own operands rather than asking EmitCmp for a flag
+    // source: CCMP is a conditional subtract, so it always reproduces the
+    // comparison, whereas a folded flag source computes something else and its
+    // operands cannot be reused. Comparing with zero is a TEST of the value,
+    // and an AND compared with zero is a TEST of the AND's operands, both of
+    // which CTEST performs conditionally.
+    if (isNullConstant(RHS)) {
+      SDValue Op0 = LHS, Op1 = LHS;
+      if (LHS.getOpcode() == ISD::AND) {
+        Op0 = LHS.getOperand(0);
+        Op1 = LHS.getOperand(1);
+      }
+      return DAG.getNode(X86ISD::CTEST, DL, MVT::i32,
+                         {Op0, Op1, CFlags, SrcCC, CCOp});
+    }
+    // An equality comparison is a test of the operands' XOR, so reuse one that
+    // is already being computed instead of keeping both operands live.
+    if (X86CC == X86::COND_E || X86CC == X86::COND_NE) {
+      SDVTList XorVTs = DAG.getVTList(LHS.getValueType());
+      SDNode *Xor = DAG.getNodeIfExists(ISD::XOR, XorVTs, {LHS, RHS});
+      if (!Xor)
+        Xor = DAG.getNodeIfExists(ISD::XOR, XorVTs, {RHS, LHS});
+      if (Xor && Xor->hasAnyUseOfValue(0)) {
+        SDValue XorVal(Xor, 0);
+        return DAG.getNode(X86ISD::CTEST, DL, MVT::i32,
+                           {XorVal, XorVal, CFlags, SrcCC, CCOp});
+      }
+    }
     return DAG.getNode(X86ISD::CCMP, DL, MVT::i32,
-                       {FlagsNode->getOperand(0), FlagsNode->getOperand(1),
-                        CFlags, SrcCC, CCOp});
+                       {LHS, RHS, CFlags, SrcCC, CCOp});
   }
   assert(Val.hasOneUse() && "Valid conjunction/disjunction tree");
 
@@ -26481,7 +26513,8 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
   // split the op into halves anyway, so the concat is purely an extra op.
   MVT StoreVT = StoredVal.getSimpleValueType();
   if (StoreVT.is256BitVector() || StoreVT.is512BitVector()) {
-    if (StoredVal.hasOneUse() && isFreeToSplitVector(StoredVal, DAG))
+    if (StoredVal.hasOneUse() &&
+        isFreeToSplitVector(peekThroughOneUseBitcasts(StoredVal), DAG))
       return splitVectorStore(St, DAG);
     return SDValue();
   }
@@ -37214,19 +37247,22 @@ X86TargetLowering::EmitVAARGWithCustomInserter(MachineInstr &MI,
       // Add the offset to the reg_save_area to get the final address.
       BuildMI(offsetMBB, MIMD, TII->get(X86::ADD64rr), OffsetDestReg)
           .addReg(OffsetReg64)
-          .addReg(RegSaveReg);
+          .addReg(RegSaveReg)
+          .setOperandDead(3); // implicit-def $eflags
     } else {
       // Add the offset to the reg_save_area to get the final address.
       BuildMI(offsetMBB, MIMD, TII->get(X86::ADD32rr), OffsetDestReg)
           .addReg(OffsetReg)
-          .addReg(RegSaveReg);
+          .addReg(RegSaveReg)
+          .setOperandDead(3); // implicit-def $eflags
     }
 
     // Compute the offset for the next argument
     Register NextOffsetReg = MRI.createVirtualRegister(OffsetRegClass);
     BuildMI(offsetMBB, MIMD, TII->get(X86::ADD32ri), NextOffsetReg)
-      .addReg(OffsetReg)
-      .addImm(UseFPOffset ? 16 : 8);
+        .addReg(OffsetReg)
+        .addImm(UseFPOffset ? 16 : 8)
+        .setOperandDead(3); // implicit-def $eflags
 
     // Store it back into the va_list.
     BuildMI(offsetMBB, MIMD, TII->get(X86::MOV32mr))
@@ -37271,14 +37307,16 @@ X86TargetLowering::EmitVAARGWithCustomInserter(MachineInstr &MI,
         TII->get(Subtarget.isTarget64BitLP64() ? X86::ADD64ri32 : X86::ADD32ri),
         TmpReg)
         .addReg(OverflowAddrReg)
-        .addImm(Alignment.value() - 1);
+        .addImm(Alignment.value() - 1)
+        .setOperandDead(3); // implicit-def $eflags
 
     BuildMI(
         overflowMBB, MIMD,
         TII->get(Subtarget.isTarget64BitLP64() ? X86::AND64ri32 : X86::AND32ri),
         OverflowDestReg)
         .addReg(TmpReg)
-        .addImm(~(uint64_t)(Alignment.value() - 1));
+        .addImm(~(uint64_t)(Alignment.value() - 1))
+        .setOperandDead(3); // implicit-def $eflags
   } else {
     BuildMI(overflowMBB, MIMD, TII->get(TargetOpcode::COPY), OverflowDestReg)
       .addReg(OverflowAddrReg);
@@ -37292,7 +37330,8 @@ X86TargetLowering::EmitVAARGWithCustomInserter(MachineInstr &MI,
       TII->get(Subtarget.isTarget64BitLP64() ? X86::ADD64ri32 : X86::ADD32ri),
       NextAddrReg)
       .addReg(OverflowDestReg)
-      .addImm(ArgSizeA8);
+      .addImm(ArgSizeA8)
+      .setOperandDead(3); // implicit-def $eflags
 
   // Store the new overflow address.
   BuildMI(overflowMBB, MIMD,
@@ -39262,6 +39301,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::LCMPXCHG16B_NO_RBX: {
     const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
     Register BasePtr = TRI->getBaseRegister();
+    bool DeadEFLAGS = MI.getOperand(8).isDead(); // implicit-def $eflags
     if (TRI->hasBasePointer(*MF) &&
         (BasePtr == X86::RBX || BasePtr == X86::EBX)) {
       if (!BB->isLiveIn(BasePtr))
@@ -39278,6 +39318,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         MIB.add(MI.getOperand(Idx));
       MIB.add(MI.getOperand(X86::AddrNumOperands));
       MIB.addReg(SaveRBX);
+      MIB->getOperand(11).setIsDead(DeadEFLAGS); // implicit-def $eflags
     } else {
       // Simple case, just copy the virtual register to RBX.
       BuildMI(*BB, MI, MIMD, TII->get(TargetOpcode::COPY), X86::RBX)
@@ -39286,6 +39327,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
           BuildMI(*BB, MI, MIMD, TII->get(X86::LCMPXCHG16B));
       for (unsigned Idx = 0; Idx < X86::AddrNumOperands; ++Idx)
         MIB.add(MI.getOperand(Idx));
+      MIB->getOperand(7).setIsDead(DeadEFLAGS); // implicit-def $eflags
     }
     MI.eraseFromParent();
     return BB;
@@ -48928,8 +48970,7 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
 
   ISD::CondCode CC;
   SDValue Cond, X, Y, LHS, RHS;
-  if (!sd_match(N, m_VSelect(m_Value(Cond, m_SetCC(m_Value(X), m_Value(Y),
-                                                   m_CondCode(CC))),
+  if (!sd_match(N, m_VSelect(m_Value(Cond, m_SetCC(CC, m_Value(X), m_Value(Y))),
                              m_Value(LHS), m_Value(RHS))))
     return SDValue();
 
@@ -49260,9 +49301,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     if ((LHS.getOpcode() == ISD::SRL || LHS.getOpcode() == ISD::SHL) &&
         supportedVectorVarShift(VT, Subtarget, LHS.getOpcode()) &&
         ISD::isConstantSplatVectorAllZeros(RHS.getNode()) &&
-        sd_match(Cond, m_SetCC(m_Specific(LHS.getOperand(1)),
-                               m_SpecificInt(VT.getScalarSizeInBits()),
-                               m_SpecificCondCode(ISD::SETULT)))) {
+        sd_match(Cond,
+                 m_SpecificSetCC(ISD::SETULT, m_Specific(LHS.getOperand(1)),
+                                 m_SpecificInt(VT.getScalarSizeInBits())))) {
       return DAG.getNode(LHS.getOpcode() == ISD::SRL ? X86ISD::VSRLV
                                                      : X86ISD::VSHLV,
                          DL, VT, LHS.getOperand(0), LHS.getOperand(1));
@@ -49272,9 +49313,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     if ((RHS.getOpcode() == ISD::SRL || RHS.getOpcode() == ISD::SHL) &&
         supportedVectorVarShift(VT, Subtarget, RHS.getOpcode()) &&
         ISD::isConstantSplatVectorAllZeros(LHS.getNode()) &&
-        sd_match(Cond, m_SetCC(m_Specific(RHS.getOperand(1)),
-                               m_SpecificInt(VT.getScalarSizeInBits()),
-                               m_SpecificCondCode(ISD::SETUGE)))) {
+        sd_match(Cond,
+                 m_SpecificSetCC(ISD::SETUGE, m_Specific(RHS.getOperand(1)),
+                                 m_SpecificInt(VT.getScalarSizeInBits())))) {
       return DAG.getNode(RHS.getOpcode() == ISD::SRL ? X86ISD::VSRLV
                                                      : X86ISD::VSHLV,
                          DL, VT, RHS.getOperand(0), RHS.getOperand(1));
@@ -51456,14 +51497,14 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG,
     SDValue N01 = N0.getOperand(2);
     // fold shl(select(icmp_ult(amt,BW),x,0),amt) -> avx2 psllv(x,amt)
     if (ISD::isConstantSplatVectorAllZeros(N01.getNode()) &&
-        sd_match(Cond, m_SetCC(m_Specific(N1), m_SpecificInt(EltSizeInBits),
-                               m_SpecificCondCode(ISD::SETULT)))) {
+        sd_match(Cond, m_SpecificSetCC(ISD::SETULT, m_Specific(N1),
+                                       m_SpecificInt(EltSizeInBits)))) {
       return DAG.getNode(X86ISD::VSHLV, DL, VT, N00, N1);
     }
     // fold shl(select(icmp_uge(amt,BW),0,x),amt) -> avx2 psllv(x,amt)
     if (ISD::isConstantSplatVectorAllZeros(N00.getNode()) &&
-        sd_match(Cond, m_SetCC(m_Specific(N1), m_SpecificInt(EltSizeInBits),
-                               m_SpecificCondCode(ISD::SETUGE)))) {
+        sd_match(Cond, m_SpecificSetCC(ISD::SETUGE, m_Specific(N1),
+                                       m_SpecificInt(EltSizeInBits)))) {
       return DAG.getNode(X86ISD::VSHLV, DL, VT, N01, N1);
     }
   }
@@ -51595,14 +51636,14 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
     SDValue N01 = N0.getOperand(2);
     // fold srl(select(icmp_ult(amt,BW),x,0),amt) -> avx2 psrlv(x,amt)
     if (ISD::isConstantSplatVectorAllZeros(N01.getNode()) &&
-        sd_match(Cond, m_SetCC(m_Specific(N1), m_SpecificInt(EltSizeInBits),
-                               m_SpecificCondCode(ISD::SETULT)))) {
+        sd_match(Cond, m_SpecificSetCC(ISD::SETULT, m_Specific(N1),
+                                       m_SpecificInt(EltSizeInBits)))) {
       return DAG.getNode(X86ISD::VSRLV, DL, VT, N00, N1);
     }
     // fold srl(select(icmp_uge(amt,BW),0,x),amt) -> avx2 psrlv(x,amt)
     if (ISD::isConstantSplatVectorAllZeros(N00.getNode()) &&
-        sd_match(Cond, m_SetCC(m_Specific(N1), m_SpecificInt(EltSizeInBits),
-                               m_SpecificCondCode(ISD::SETUGE)))) {
+        sd_match(Cond, m_SpecificSetCC(ISD::SETUGE, m_Specific(N1),
+                                       m_SpecificInt(EltSizeInBits)))) {
       return DAG.getNode(X86ISD::VSRLV, DL, VT, N01, N1);
     }
   }
@@ -53417,11 +53458,11 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(CondVT) &&
         (VT.is512BitVector() || Subtarget.hasVLX()) &&
         (VT.getScalarSizeInBits() >= 32 || Subtarget.hasBWI()) &&
-        sd_match(N,
-                 m_And(m_Value(X),
-                       m_OneUse(m_SExt(m_Value(
-                           Y, m_SpecificVT(CondVT, m_SetCC(m_Value(), m_Value(),
-                                                           m_Value())))))))) {
+        sd_match(
+            N,
+            m_And(m_Value(X),
+                  m_OneUse(m_SExt(m_Value(
+                      Y, m_SpecificVT(CondVT, m_SpecificOpc(ISD::SETCC)))))))) {
       return DAG.getSelect(dl, VT, Y, X,
                            getZeroVector(VT.getSimpleVT(), Subtarget, DAG, dl));
     }
@@ -65597,7 +65638,8 @@ X86TargetLowering::getStackProbeSize(const MachineFunction &MF) const {
                                                         4096);
 }
 
-Align X86TargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
+Align X86TargetLowering::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   if (ML && ML->isInnermost() &&
       ExperimentalPrefInnermostLoopAlignment.getNumOccurrences())
     return Align(1ULL << ExperimentalPrefInnermostLoopAlignment);
