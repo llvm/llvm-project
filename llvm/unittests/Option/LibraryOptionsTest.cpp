@@ -67,16 +67,14 @@ TEST(LibraryOptionsTest, Parser) {
       [] { TestLibraryOptions::Global = TestLibraryOptions(); });
 
   std::vector<std::string> Rows;
-  P.forEachOption([&](StringRef Spelling, StringRef MetaVar, StringRef Help,
-                      bool Hidden) {
-    Rows.push_back(
-        (Spelling + "|" + MetaVar + "|" + Help + (Hidden ? "|h" : "")).str());
+  P.forEachOption([&](StringRef Spelling, StringRef MetaVar, StringRef Help) {
+    Rows.push_back((Spelling + "|" + MetaVar + "|" + Help).str());
   });
   EXPECT_THAT(Rows, testing::ElementsAre(
                         "lib-count=|<value>|An unsigned", "lib-count||",
-                        "lib-enable=|<value>|", "lib-enable||A bool|h",
-                        "lib-path=|<value>|A string|h", "lib-path||",
-                        "lib-ratio=|<value>|A double|h", "lib-ratio||"));
+                        "lib-enable=|<value>|", "lib-enable||A bool",
+                        "lib-path=|<value>|A string", "lib-path||",
+                        "lib-ratio=|<value>|A double", "lib-ratio||"));
 
   auto Parse = [&](std::initializer_list<const char *> Argv) {
     unsigned Consumed = 0;

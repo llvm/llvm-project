@@ -335,7 +335,7 @@ public:
     bool HadErrors = false;
     for (; NumIndexedLibraries != Libraries.size(); ++NumIndexedLibraries) {
       LibraryOptions *L = Libraries[NumIndexedLibraries];
-      L->forEachOption([&](StringRef Spelling, StringRef, StringRef, bool) {
+      L->forEachOption([&](StringRef Spelling, StringRef, StringRef) {
         StringRef Name = Spelling.rtrim('=');
         auto [It, Inserted] = LibraryIndex.try_emplace(Name, L);
         if (Inserted ? none_of(RegisteredSubCommands,
@@ -2434,12 +2434,13 @@ public:
       MaxArgLen = std::max(MaxArgLen, Opt.second->getOptionWidth());
 
     SmallVector<std::pair<std::string, StringRef>, 0> LibraryOpts;
-    for (LibraryOptions *L : globalParser().Libraries)
-      L->forEachOption([&](StringRef Spelling, StringRef MetaVar,
-                           StringRef Help, bool Hidden) {
-        if (!Help.empty() && (ShowHidden || !Hidden))
-          LibraryOpts.emplace_back((Spelling + MetaVar).str(), Help);
-      });
+    if (ShowHidden)
+      for (LibraryOptions *L : globalParser().Libraries)
+        L->forEachOption(
+            [&](StringRef Spelling, StringRef MetaVar, StringRef Help) {
+              if (!Help.empty())
+                LibraryOpts.emplace_back((Spelling + MetaVar).str(), Help);
+            });
     llvm::sort(LibraryOpts);
     for (const auto &[Name, Help] : LibraryOpts)
       MaxArgLen = std::max(MaxArgLen, argPlusPrefixesSize(Name));
