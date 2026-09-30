@@ -66,7 +66,7 @@ void listener_func() {
 
 void check_listener(SBDebugger &dbg) {
   bool got_function_name = false;
-  string func_name = g_frame_functions.pop(got_description);
+  string func_name = g_frame_functions.pop(got_function_name);
 
   if (got_function_name == false)
     throw Exception("Expected at least one frame function");
