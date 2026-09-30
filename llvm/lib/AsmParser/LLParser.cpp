@@ -530,6 +530,9 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                  "use of undefined value '@" +
                      Twine(ForwardRefValIDs.begin()->first) + "'");
 
+  if (Context.isODRUniquingDebugTypes())
+    Context.getDebugTypeODRUniquer()->finalizeUnresolvedSubprogramDecls();
+
   // Resolve metadata cycles.
   for (auto &N : NumberedMetadata) {
     if (N.second && !N.second->isResolved())
@@ -6419,9 +6422,26 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
                         !(SPFlags & DISubprogram::SPFlagDefinition) &&
                         linkageName.Val;
 
-  if (MaybeODRUnique)
-    Result = Context.getDebugTypeODRUniquer()->getODRSubprogramDecl(
-        cast<DIScope>(scope.Val), linkageName.Val->getString());
+  if (MaybeODRUnique) {
+    if (DIScope *Scope = dyn_cast<DIScope>(scope.Val)) {
+      Result = Context.getDebugTypeODRUniquer()->getODRSubprogramDecl(
+          Scope, linkageName.Val->getString());
+    } else {
+      // The scope is a temporary forward reference, meaning we can't perform
+      // ODR-uniquing yet. In order to perform ODR uniquing later the SP must
+      // be replacable, so create a temporary one.
+      TempDISubprogram Tmp = DISubprogram::getTemporary(
+          Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
+          type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
+          thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
+          declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
+          targetFuncName.Val, keyInstructions.Val);
+      Result = Tmp.get();
+      Context.getDebugTypeODRUniquer()->addUnresolvedODRSubprogramDecl(
+          std::move(Tmp));
+      return false;
+    }
+  }
 
   if (!Result)
     Result = GET_OR_DISTINCT(

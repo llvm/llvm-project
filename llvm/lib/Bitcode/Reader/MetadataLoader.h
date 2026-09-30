@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_BITCODE_READER_METADATALOADER_H
 #define LLVM_LIB_BITCODE_READER_METADATALOADER_H
 
+#include "llvm/IR/TrackingMDRef.h"
 #include "llvm/Support/Error.h"
 
 #include <functional>
@@ -78,7 +79,7 @@ public:
   Metadata *getMetadataFwdRefOrLoad(unsigned Idx);
 
   /// Return the DISubprogram metadata for a Function if any, null otherwise.
-  DISubprogram *lookupSubprogramForFunction(Function *F);
+  TrackingMDNodeRef lookupSubprogramForFunction(Function *F);
 
   /// Parse a `METADATA_ATTACHMENT` block for a function.
   Error parseMetadataAttachment(Function &F,

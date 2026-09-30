@@ -77,7 +77,16 @@ class DebugInfoODRUniquer {
   /// full structural equality.
   DenseSet<DISubprogram *, DISubprogramODRInfo> FnDecls;
 
+  /// Function declarations that cannot be ODR-uniqued yet due to a temporary
+  /// scope operand.
+  SmallVector<TempDISubprogram> PendingFnDecls;
+
 public:
+  ~DebugInfoODRUniquer() {
+    assert(PendingFnDecls.empty() &&
+           "Unexpected unresolved maybe-ODR-unqiue DISubprograms");
+  }
+
   // FIXME: Improve the interface for types.
   DenseMap<const MDString *, DICompositeType *> DITypeMap;
 
@@ -90,6 +99,14 @@ public:
   /// Register function declaration DISubprogram, which may be reused in place
   /// of other ODR-similar DISubprograms (using `getODRSubprogramDecl`).
   LLVM_ABI void addSubprogramDecl(DISubprogram *SP);
+
+  /// Add a DISubprogram that has a forward declared scope to evaluate later,
+  /// once finalizeUnresolvedSubprogramDecls is called.
+  LLVM_ABI void addUnresolvedODRSubprogramDecl(TempDISubprogram SP);
+
+  /// Replace temporaries added with `addUnresolvedODRSubprogramDecl` by
+  /// attempting to ODR-unique them else making them permanent.
+  LLVM_ABI void finalizeUnresolvedSubprogramDecls();
 };
 
 } // namespace llvm
