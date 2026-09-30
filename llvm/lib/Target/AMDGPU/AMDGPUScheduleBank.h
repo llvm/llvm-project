@@ -13,7 +13,7 @@
 
 namespace llvm {
 class AMDGPUScheduleBankPass
-    : public PassInfoMixin<AMDGPUScheduleBankPass> {
+    : public OptionalPassInfoMixin<AMDGPUScheduleBankPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
