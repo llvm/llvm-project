@@ -72,7 +72,7 @@ enum ID {
 
 class NmOptTable : public opt::OptTable {
 public:
-  NmOptTable() : opt::OptTable(OptionTables) { setGroupedShortOptions(true); }
+  NmOptTable() : opt::OptTable(optionTables()) { setGroupedShortOptions(true); }
 };
 
 enum OutputFormatTy { bsd, sysv, posix, darwin, just_symbols };

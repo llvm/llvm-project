@@ -64,7 +64,7 @@ enum {
 namespace {
 class MinGWOptTable : public opt::OptTable {
 public:
-  MinGWOptTable() : opt::OptTable(OptionTables, false) {}
+  MinGWOptTable() : opt::OptTable(optionTables(), false) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace

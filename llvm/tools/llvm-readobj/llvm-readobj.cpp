@@ -64,7 +64,7 @@ enum ID {
 
 class ReadobjOptTable : public opt::OptTable {
 public:
-  ReadobjOptTable() : opt::OptTable(OptionTables) {
+  ReadobjOptTable() : opt::OptTable(optionTables()) {
     setGroupedShortOptions(true);
   }
 };

@@ -1280,7 +1280,16 @@ bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
     return true;
   }
 
-  // Can't do vectors.
+  // No single conditional move for a 128-bit vector, but we can emit a sequence
+  // of csetm (~1), dup (~5, cross domain), bsl (~2).
+  if (AArch64::FPR128RegClass.hasSubClassEq(RC) &&
+      Subtarget.isNeonAvailable() &&
+      !MBB.getParent()->getFunction().hasMinSize()) {
+    CondCycles = 8 + ExtraCondLat;
+    TrueCycles = FalseCycles = 2;
+    return true;
+  }
+
   return false;
 }
 
@@ -1292,6 +1301,26 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
 
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   AArch64CC::CondCode CC = insertCmpForCondBr(MBB, I, DL, Cond);
+
+  // A 128-bit vector has no conditional move so blend the operands with a mask
+  // built from the flags.
+  if (MRI.constrainRegClass(DstReg, &AArch64::FPR128RegClass)) {
+    assert(Subtarget.isNeonAvailable() && "Expected NEON for a vector select");
+    MRI.constrainRegClass(TrueReg, &AArch64::FPR128RegClass);
+    MRI.constrainRegClass(FalseReg, &AArch64::FPR128RegClass);
+    Register CondSet = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    BuildMI(MBB, I, DL, get(AArch64::CSINVXr), CondSet)
+        .addReg(AArch64::XZR)
+        .addReg(AArch64::XZR)
+        .addImm(AArch64CC::getInvertedCondCode(CC));
+    Register Mask = MRI.createVirtualRegister(&AArch64::FPR128RegClass);
+    BuildMI(MBB, I, DL, get(AArch64::DUPv2i64gpr), Mask).addReg(CondSet);
+    BuildMI(MBB, I, DL, get(AArch64::BSPv16i8), DstReg)
+        .addReg(Mask)
+        .addReg(TrueReg)
+        .addReg(FalseReg);
+    return;
+  }
 
   unsigned Opc = 0;
   const TargetRegisterClass *RC = nullptr;
@@ -3122,6 +3151,18 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STZ2Gi:
   case AArch64::STZGi:
   case AArch64::TAGPstack:
+  case AArch64::ATOMIC_STORE_HINT_Bi:
+  case AArch64::ATOMIC_STORE_HINT_Hi:
+  case AArch64::ATOMIC_STORE_HINT_Wi:
+  case AArch64::ATOMIC_STORE_HINT_Si:
+  case AArch64::ATOMIC_STORE_HINT_Xi:
+  case AArch64::ATOMIC_STORE_HINT_Di:
+  case AArch64::ATOMIC_STORE_HINT_Bui:
+  case AArch64::ATOMIC_STORE_HINT_Hui:
+  case AArch64::ATOMIC_STORE_HINT_Wui:
+  case AArch64::ATOMIC_STORE_HINT_Sui:
+  case AArch64::ATOMIC_STORE_HINT_Xui:
+  case AArch64::ATOMIC_STORE_HINT_Dui:
     return 2;
   case AArch64::LD1B_D_IMM:
   case AArch64::LD1B_H_IMM:
@@ -4732,6 +4773,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STRXui:
   case AArch64::STRDui:
   case AArch64::PRFMui:
+  case AArch64::ATOMIC_STORE_HINT_Xui:
+  case AArch64::ATOMIC_STORE_HINT_Dui:
     Scale = Width = TypeSize::getFixed(8);
     MinOffset = 0;
     MaxOffset = 4095;
@@ -4741,6 +4784,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDRSWui:
   case AArch64::STRWui:
   case AArch64::STRSui:
+  case AArch64::ATOMIC_STORE_HINT_Wui:
+  case AArch64::ATOMIC_STORE_HINT_Sui:
     Scale = Width = TypeSize::getFixed(4);
     MinOffset = 0;
     MaxOffset = 4095;
@@ -4751,6 +4796,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDRSHXui:
   case AArch64::STRHui:
   case AArch64::STRHHui:
+  case AArch64::ATOMIC_STORE_HINT_Hui:
     Scale = Width = TypeSize::getFixed(2);
     MinOffset = 0;
     MaxOffset = 4095;
@@ -4761,6 +4807,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDRSBXui:
   case AArch64::STRBui:
   case AArch64::STRBBui:
+  case AArch64::ATOMIC_STORE_HINT_Bui:
     Scale = Width = TypeSize::getFixed(1);
     MinOffset = 0;
     MaxOffset = 4095;
@@ -4839,6 +4886,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURDi:
   case AArch64::STLURXi:
   case AArch64::PRFUMi:
+  case AArch64::ATOMIC_STORE_HINT_Xi:
+  case AArch64::ATOMIC_STORE_HINT_Di:
     Scale = TypeSize::getFixed(1);
     Width = TypeSize::getFixed(8);
     MinOffset = -256;
@@ -4852,6 +4901,8 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURWi:
   case AArch64::STURSi:
   case AArch64::STLURWi:
+  case AArch64::ATOMIC_STORE_HINT_Wi:
+  case AArch64::ATOMIC_STORE_HINT_Si:
     Scale = TypeSize::getFixed(1);
     Width = TypeSize::getFixed(4);
     MinOffset = -256;
@@ -4867,6 +4918,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURHi:
   case AArch64::STURHHi:
   case AArch64::STLURHi:
+  case AArch64::ATOMIC_STORE_HINT_Hi:
     Scale = TypeSize::getFixed(1);
     Width = TypeSize::getFixed(2);
     MinOffset = -256;
@@ -4882,6 +4934,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURBi:
   case AArch64::STURBBi:
   case AArch64::STLURBi:
+  case AArch64::ATOMIC_STORE_HINT_Bi:
     Scale = Width = TypeSize::getFixed(1);
     MinOffset = -256;
     MaxOffset = 255;
@@ -7999,7 +8052,7 @@ unsigned AArch64InstrInfo::getAccumulationStartOpcode(
   case AArch64::SABAv16i8:
     return AArch64::SABDv16i8;
   case AArch64::SABAv2i32:
-    return AArch64::SABAv2i32;
+    return AArch64::SABDv2i32;
   case AArch64::SABAv4i16:
     return AArch64::SABDv4i16;
   case AArch64::SABAv4i32:

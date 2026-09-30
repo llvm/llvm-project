@@ -63,7 +63,7 @@ namespace rc_opt {
 
 class RcOptTable : public opt::OptTable {
 public:
-  RcOptTable() : OptTable(rc_opt::OptionTables, /* IgnoreCase = */ true) {}
+  RcOptTable() : OptTable(rc_opt::optionTables(), /* IgnoreCase = */ true) {}
 };
 
 enum Windres_ID {
@@ -81,7 +81,7 @@ namespace windres_opt {
 class WindresOptTable : public opt::OptTable {
 public:
   WindresOptTable()
-      : OptTable(windres_opt::OptionTables, /* IgnoreCase = */ false) {}
+      : OptTable(windres_opt::optionTables(), /* IgnoreCase = */ false) {}
 };
 
 static ExitOnError ExitOnErr;

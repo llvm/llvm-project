@@ -63,7 +63,9 @@ enum ID {
 
 class IFSOptTable : public opt::OptTable {
 public:
-  IFSOptTable() : opt::OptTable(OptionTables) { setGroupedShortOptions(true); }
+  IFSOptTable() : opt::OptTable(optionTables()) {
+    setGroupedShortOptions(true);
+  }
 };
 
 struct DriverConfig {

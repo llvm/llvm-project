@@ -35,7 +35,7 @@ using namespace lld::macho;
 #define OPTTABLE_CODE
 #include "Options.inc"
 
-MachOOptTable::MachOOptTable() : OptTable(OptionTables) {}
+MachOOptTable::MachOOptTable() : OptTable(optionTables()) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.

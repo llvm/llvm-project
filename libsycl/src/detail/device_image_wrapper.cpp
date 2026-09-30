@@ -8,20 +8,21 @@
 
 #include <detail/device_image_wrapper.hpp>
 
+#include <detail/context_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
-ProgramWrapper::ProgramWrapper(ol_context_handle_t Context,
-                               ol_device_handle_t Device,
-                               const DeviceImageManager &DevImage) {
-  assert(Context);
-  assert(Device);
+ProgramWrapper::ProgramWrapper(ContextImpl &Context, ol_device_handle_t Device,
+                               const DeviceImageManager &DevImage)
+    : MContext(Context) {
+  assert(MContext.getOLHandleRef() && "Context handle can't be nullptr");
+  assert(Device && "Device handle can't be nullptr");
 
   llvm::StringRef Image = DevImage.getOffloadBinary().getImage();
-  callAndThrow(olCreateProgram, Context, Device, Image.data(), Image.size(),
-               &MProgram);
+  callAndThrow(MContext, olCreateProgram, MContext.getOLHandleRef(), Device,
+               Image.data(), Image.size(), &MProgram);
 }
 
 ProgramWrapper::~ProgramWrapper() {
@@ -37,8 +38,8 @@ ProgramWrapper::getOrCreateKernel(std::string_view KernelName) {
     return It->second;
 
   ol_symbol_handle_t Kernel{};
-  callAndThrow(olGetSymbol, MProgram, KernelName.data(), OL_SYMBOL_KIND_KERNEL,
-               &Kernel);
+  callAndThrow(MContext, olGetSymbol, MProgram, KernelName.data(),
+               OL_SYMBOL_KIND_KERNEL, &Kernel);
   MKernels.emplace(KernelName, Kernel);
   return Kernel;
 }

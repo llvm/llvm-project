@@ -37,7 +37,7 @@ enum ID {
 class TestOptSubCommandTable : public OptTable {
 public:
   TestOptSubCommandTable(bool IgnoreCase = false)
-      : OptTable(OptionTables, IgnoreCase) {}
+      : OptTable(optionTables(), IgnoreCase) {}
 };
 
 // Test fixture

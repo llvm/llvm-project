@@ -39,7 +39,7 @@ using namespace llvm::opt;
 
 class TLICheckerOptTable : public opt::OptTable {
 public:
-  TLICheckerOptTable() : OptTable(OptionTables) {}
+  TLICheckerOptTable() : OptTable(optionTables()) {}
 };
 } // end anonymous namespace
 

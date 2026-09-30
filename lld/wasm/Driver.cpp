@@ -151,7 +151,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 namespace {
 class WasmOptTable : public opt::OptTable {
 public:
-  WasmOptTable() : opt::OptTable(OptionTables) {}
+  WasmOptTable() : opt::OptTable(optionTables()) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace

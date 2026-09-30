@@ -73,7 +73,7 @@ enum ID {
 
 class SancovOptTable : public opt::OptTable {
 public:
-  SancovOptTable() : OptTable(OptionTables) {}
+  SancovOptTable() : OptTable(optionTables()) {}
 };
 } // namespace
 

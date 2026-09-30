@@ -24,7 +24,7 @@ enum ID {
 
 class HelloSubOptTable : public OptTable {
 public:
-  HelloSubOptTable() : OptTable(OptionTables) {};
+  HelloSubOptTable() : OptTable(optionTables()) {};
 };
 } // namespace
 
