@@ -16,6 +16,7 @@
 #ifndef LLVM_SUPPORT_SOURCEMGRDIAGNOSTICVERIFIER_H
 #define LLVM_SUPPORT_SOURCEMGRDIAGNOSTICVERIFIER_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
@@ -35,36 +36,35 @@ class LLVM_ABI SourceMgrDiagnosticVerifier {
 public:
   /// A single diagnostic expected via an 'expected-<kind>' comment.
   struct ExpectedDiag {
-    ExpectedDiag(SourceMgr::DiagKind kind, unsigned lineNo, SMLoc fileLoc,
-                 StringRef substring)
-        : kind(kind), lineNo(lineNo), fileLoc(fileLoc), substring(substring) {
-    }
+    ExpectedDiag(SourceMgr::DiagKind Kind, unsigned LineNo, SMLoc FileLoc,
+                 StringRef Substring)
+        : Kind(Kind), LineNo(LineNo), FileLoc(FileLoc), Substring(Substring) {}
 
     /// Returns true if this diagnostic matches the given message.
-    bool match(StringRef str) const;
+    bool match(StringRef Str) const;
 
     /// Computes the regex matcher for a '-re' diagnostic's substring.
-    /// Returns false and prints a message through \p mgr on error.
-    bool computeRegex(raw_ostream &os, SourceMgr &mgr);
+    /// Returns false and prints a message through \p Mgr on error.
+    bool computeRegex(raw_ostream &OS, SourceMgr &Mgr);
 
-    /// Prints \p msg at this diagnostic's location and returns false, for
+    /// Prints \p Msg at this diagnostic's location and returns false, for
     /// use as `return emitError(...);` in functions that report failure via
     /// a bool return.
-    bool emitError(raw_ostream &os, SourceMgr &mgr, const Twine &msg) const;
+    bool emitError(raw_ostream &OS, SourceMgr &Mgr, const Twine &Msg) const;
 
     /// The severity of the diagnostic expected.
-    SourceMgr::DiagKind kind;
+    SourceMgr::DiagKind Kind;
     /// The line number the expected diagnostic should be on.
-    unsigned lineNo;
+    unsigned LineNo;
     /// The location of the expected diagnostic within the input file.
-    SMLoc fileLoc;
+    SMLoc FileLoc;
     /// A flag indicating if the expected diagnostic has been matched yet.
-    bool matched = false;
+    bool Matched = false;
     /// The substring that is expected to be within the diagnostic.
-    StringRef substring;
+    StringRef Substring;
     /// An optional regex matcher, if the expected diagnostic substring was a
     /// regex string.
-    std::optional<Regex> substringRegex;
+    std::optional<Regex> SubstringRegex;
   };
 
   /// The result of matching a single actual diagnostic against the expected
@@ -78,63 +78,62 @@ public:
     /// The diagnostic did not match any expected diagnostic. The caller is
     /// responsible for reporting it, if desired.
     Unexpected,
-    /// The diagnostic did not match, but \p reportUnexpected was false, so
+    /// The diagnostic did not match, but \p ReportUnexpected was false, so
     /// nothing was printed and nothing needs to be done.
     Ignored,
   };
 
-  SourceMgrDiagnosticVerifier() = default;
-
-  /// Computes and caches the list of expected diagnostics for \p buf, if not
+  /// Computes and caches the list of expected diagnostics for \p Buf, if not
   /// already cached. Returns the (mutable) cached list.
-  MutableArrayRef<ExpectedDiag> computeExpectedDiags(raw_ostream &os,
-                                                      SourceMgr &mgr,
-                                                      const MemoryBuffer *buf);
+  MutableArrayRef<ExpectedDiag> computeExpectedDiags(raw_ostream &OS,
+                                                     SourceMgr &Mgr,
+                                                     const MemoryBuffer *Buf);
 
-  /// Returns the cached expected diagnostics for the buffer named \p bufName,
+  /// Returns the cached expected diagnostics for the buffer named \p BufName,
   /// or std::nullopt if \p computeExpectedDiags hasn't been called for it.
   std::optional<MutableArrayRef<ExpectedDiag>>
-  getExpectedDiags(StringRef bufName);
+  getExpectedDiags(StringRef BufName);
 
   /// Returns the expected diagnostics with an '@unknown' location.
   MutableArrayRef<ExpectedDiag> getExpectedUnknownLocDiags() {
-    return expectedUnknownLocDiags;
+    return ExpectedUnknownLocDiags;
   }
 
   /// Matches a single actual diagnostic against the expected diagnostics
-  /// recorded for \p buf / \p lineNo, computing them first via \p
-  /// computeExpectedDiags if they haven't been already. If \p hasLoc is
+  /// recorded for \p Buf / \p LineNo, computing them first via \p
+  /// computeExpectedDiags if they haven't been already. If \p HasLoc is
   /// false, the diagnostic has no location and is matched against the
-  /// '@unknown' list instead (\p buf / \p lineNo are ignored). If \p hasLoc
-  /// is true but \p buf is null (e.g. the diagnostic's file isn't a known
+  /// '@unknown' list instead (\p Buf / \p LineNo are ignored). If \p HasLoc
+  /// is true but \p Buf is null (e.g. the diagnostic's file isn't a known
   /// buffer), the diagnostic is matched against an empty list, i.e. it can
   /// never match and is always unexpected. On a near miss, prints a message
-  /// through \p mgr. \p reportUnexpected controls whether near misses /
+  /// through \p Mgr. \p ReportUnexpected controls whether near misses /
   /// unexpected diagnostics are reported at all.
-  MatchResult process(raw_ostream &os, SourceMgr &mgr, SourceMgr::DiagKind kind,
-                       bool hasLoc, const MemoryBuffer *buf, unsigned lineNo,
-                       StringRef message, bool reportUnexpected = true);
+  MatchResult process(raw_ostream &OS, SourceMgr &Mgr, SourceMgr::DiagKind Kind,
+                      bool HasLoc, const MemoryBuffer *Buf, unsigned LineNo,
+                      StringRef Message, bool ReportUnexpected = true);
 
-  /// Reports (through \p mgr) any expected diagnostic that was never matched
+  /// Reports (through \p Mgr) any expected diagnostic that was never matched
   /// by a call to \p process. Returns whether verification succeeded overall,
   /// i.e. no diagnostic mismatches were recorded either here or by \p
   /// process.
-  bool verify(raw_ostream &os, SourceMgr &mgr);
+  bool verify(raw_ostream &OS, SourceMgr &Mgr);
 
 private:
-  /// Regex used to recognize 'expected-<kind>' comments.
-  Regex expected{"expected-(error|note|remark|warning)(-re)? "
-                 "*(@([+-][0-9]+|above|below|unknown))? *{{(.*)}}$"};
-
   /// The expected diagnostics for each buffer that has been scanned so far,
   /// keyed by buffer identifier (i.e. file name).
-  StringMap<SmallVector<ExpectedDiag, 2>> expectedDiagsPerFile;
+  StringMap<SmallVector<ExpectedDiag, 2>> ExpectedDiagsPerFile;
 
   /// The expected diagnostics with an '@unknown' location.
-  SmallVector<ExpectedDiag, 2> expectedUnknownLocDiags;
+  SmallVector<ExpectedDiag, 2> ExpectedUnknownLocDiags;
+
+  /// Regex used to recognize 'expected-<kind>' comments.
+  Regex Expected =
+      Regex("expected-(error|note|remark|warning)(-re)? "
+            "*(@([+-][0-9]+|above|below|unknown))? *{{(.*)}}$");
 
   /// Whether any diagnostic mismatch has been recorded so far.
-  bool ok = true;
+  bool OK = true;
 };
 
 } // namespace llvm
