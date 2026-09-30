@@ -174,6 +174,12 @@ public:
   MCSubtargetInfo &operator=(MCSubtargetInfo &&) = delete;
   virtual ~MCSubtargetInfo() = default;
 
+  /// Placement-construct a copy of this MCSubtargetInfo in \p Mem, preserving
+  /// the target's MCSubtargetInfo subclass vtable.
+  virtual MCSubtargetInfo *copyTo(MCSubtargetInfo *Mem) const {
+    return new (Mem) MCSubtargetInfo(*this);
+  }
+
   const Triple &getTargetTriple() const { return TargetTriple; }
   StringRef getCPU() const { return CPU; }
   StringRef getTuneCPU() const { return TuneCPU; }

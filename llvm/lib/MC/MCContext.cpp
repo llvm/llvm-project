@@ -949,7 +949,7 @@ MCSectionDXContainer *MCContext::getDXContainerSection(StringRef Section,
 }
 
 MCSubtargetInfo &MCContext::getSubtargetCopy(const MCSubtargetInfo &STI) {
-  return *new (MCSubtargetAllocator.Allocate()) MCSubtargetInfo(STI);
+  return *STI.copyTo(MCSubtargetAllocator.Allocate());
 }
 
 void MCContext::addDebugPrefixMapEntry(const std::string &From,

@@ -129,7 +129,13 @@ def foo : Instruction {
 }
 
 // CHECK-SUBTARGET-LABEL: struct TestTargetGenMCSubtargetInfo : public MCSubtargetInfo {
-// CHECK-SUBTARGET:         unsigned resolveVariantSchedClass(unsigned SchedClass,
+// CHECK-SUBTARGET:         MCSubtargetInfo *copyTo(MCSubtargetInfo *Mem) const final {
+// CHECK-SUBTARGET-NEXT:      static_assert(sizeof(TestTargetGenMCSubtargetInfo) == sizeof(MCSubtargetInfo) &&
+// CHECK-SUBTARGET-NEXT:                    alignof(TestTargetGenMCSubtargetInfo) == alignof(MCSubtargetInfo));
+// CHECK-SUBTARGET-NEXT:      return new (Mem) TestTargetGenMCSubtargetInfo(*this);
+// CHECK-SUBTARGET-NEXT:    }
+// CHECK-SUBTARGET-EMPTY:
+// CHECK-SUBTARGET-NEXT:    unsigned resolveVariantSchedClass(unsigned SchedClass,
 // CHECK-SUBTARGET-NEXT:        const MCInst *MI, const MCInstrInfo *MCII,
 // CHECK-SUBTARGET-NEXT:        unsigned CPUID) const final {
 // CHECK-SUBTARGET-NEXT:      return TestTarget_MC::resolveVariantSchedClassImpl(SchedClass, MI, MCII, *this, CPUID);
