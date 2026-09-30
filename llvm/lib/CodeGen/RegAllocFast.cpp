@@ -422,9 +422,11 @@ private:
   bool shouldAllocateRegister(const Register Reg) const;
   int getStackSpaceFor(Register VirtReg);
   void spill(MachineBasicBlock::iterator Before, Register VirtReg,
-             MCRegister AssignedReg, bool Kill, bool LiveOut);
+             MCRegister AssignedReg, bool Kill, bool LiveOut,
+             MachineInstr::MIFlag Flags);
   void reload(MachineBasicBlock::iterator Before, Register VirtReg,
-              MCRegister PhysReg);
+              MCRegister PhysReg,
+              MachineInstr::MIFlag Flags = MachineInstr::NoFlags);
 
   bool mayLiveOut(Register VirtReg);
   bool mayLiveIn(Register VirtReg);
@@ -634,14 +636,16 @@ bool RegAllocFastImpl::mayLiveIn(Register VirtReg) {
 /// DBG_VALUEs with \p VirtReg operands with the stack slot.
 void RegAllocFastImpl::spill(MachineBasicBlock::iterator Before,
                              Register VirtReg, MCRegister AssignedReg,
-                             bool Kill, bool LiveOut) {
+                             bool Kill, bool LiveOut,
+                             MachineInstr::MIFlag Flags) {
   LLVM_DEBUG(dbgs() << "Spilling " << printReg(VirtReg, TRI) << " in "
                     << printReg(AssignedReg, TRI));
   int FI = getStackSpaceFor(VirtReg);
   LLVM_DEBUG(dbgs() << " to stack slot #" << FI << '\n');
 
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
-  TII->storeRegToStackSlot(*MBB, Before, AssignedReg, Kill, FI, &RC, VirtReg);
+  TII->storeRegToStackSlot(*MBB, Before, AssignedReg, Kill, FI, &RC, VirtReg,
+                           Flags);
   ++NumStores;
 
   MachineBasicBlock::iterator FirstTerm = MBB->getFirstTerminator();
@@ -693,12 +697,14 @@ void RegAllocFastImpl::spill(MachineBasicBlock::iterator Before,
 
 /// Insert reload instruction for \p PhysReg before \p Before.
 void RegAllocFastImpl::reload(MachineBasicBlock::iterator Before,
-                              Register VirtReg, MCRegister PhysReg) {
+                              Register VirtReg, MCRegister PhysReg,
+                              MachineInstr::MIFlag Flags) {
   LLVM_DEBUG(dbgs() << "Reloading " << printReg(VirtReg, TRI) << " into "
                     << printReg(PhysReg, TRI) << '\n');
   int FI = getStackSpaceFor(VirtReg);
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
-  TII->loadRegFromStackSlot(*MBB, Before, PhysReg, FI, &RC, VirtReg);
+  TII->loadRegFromStackSlot(*MBB, Before, PhysReg, FI, &RC, VirtReg,
+                            /*SubReg=*/0, Flags);
   ++NumLoads;
 }
 
@@ -716,7 +722,7 @@ MachineBasicBlock::iterator RegAllocFastImpl::getMBBBeginInsertionPoint(
     }
 
     // Skip prologues and inlineasm_br spills to place reloads afterwards.
-    if (!TII->isBasicBlockPrologue(*I) && !mayBeSpillFromInlineAsmBr(*I))
+    if (!I->getFlag(MachineInstr::BBProlog) && !mayBeSpillFromInlineAsmBr(*I))
       break;
 
     // However if a prolog instruction reads a register that needs to be
@@ -764,7 +770,7 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
       // FIXME: Theoretically this should use an insert point skipping labels
       // but I'm not sure how labels should interact with prolog instruction
       // that need reloads.
-      reload(MBB.begin(), LR.VirtReg, PhysReg);
+      reload(MBB.begin(), LR.VirtReg, PhysReg, MachineInstr::BBProlog);
     } else
       reload(InsertBefore, LR.VirtReg, PhysReg);
   }
@@ -809,7 +815,9 @@ bool RegAllocFastImpl::displacePhysReg(MachineInstr &MI, MCRegister PhysReg) {
           std::next((MachineBasicBlock::iterator)MI.getIterator());
       while (mayBeSpillFromInlineAsmBr(*ReloadBefore))
         ++ReloadBefore;
-      reload(ReloadBefore, VirtReg, LRI->PhysReg);
+      reload(ReloadBefore, VirtReg, LRI->PhysReg,
+             MI.getFlag(MachineInstr::BBProlog) ? MachineInstr::BBProlog
+                                                : MachineInstr::NoFlags);
 
       setPhysRegState(LRI->PhysReg, regFree);
       LRI->PhysReg = MCRegister();
@@ -1159,7 +1167,8 @@ bool RegAllocFastImpl::defineLiveThroughVirtReg(MachineInstr &MI,
                         << printReg(PrevReg, TRI) << '\n');
       BuildMI(*MBB, InsertBefore, MI.getDebugLoc(),
               TII->get(TargetOpcode::COPY), PrevReg)
-          .addReg(LRI->PhysReg, llvm::RegState::Kill);
+          .addReg(LRI->PhysReg, llvm::RegState::Kill)
+          .setMIFlags(MI.getFlags() & MachineInstr::BBProlog);
     }
     MachineOperand &MO = MI.getOperand(OpNum);
     if (MO.getSubReg() && !MO.isUndef()) {
@@ -1214,7 +1223,9 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
       LLVM_DEBUG(dbgs() << "Spill Reason: LO: " << LRI->LiveOut
                         << " RL: " << LRI->Reloaded << '\n');
       bool Kill = LRI->LastUse == nullptr;
-      spill(SpillBefore, VirtReg, PhysReg, Kill, LRI->LiveOut);
+      spill(SpillBefore, VirtReg, PhysReg, Kill, LRI->LiveOut,
+            MI.getFlag(MachineInstr::BBProlog) ? MachineInstr::BBProlog
+                                               : MachineInstr::NoFlags);
 
       // We need to place additional spills for each indirect destination of an
       // INLINEASM_BR.
@@ -1224,8 +1235,10 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
         for (MachineOperand &MO : MI.operands()) {
           if (MO.isMBB()) {
             MachineBasicBlock *Succ = MO.getMBB();
-            TII->storeRegToStackSlot(*Succ, Succ->begin(), PhysReg, Kill, FI,
-                                     &RC, VirtReg);
+            TII->storeRegToStackSlot(
+                *Succ, Succ->begin(), PhysReg, Kill, FI, &RC, VirtReg,
+                Succ->isInBBProlog(Succ->begin()) ? MachineInstr::BBProlog
+                                                  : MachineInstr::NoFlags);
             ++NumStores;
             Succ->addLiveIn(PhysReg);
           }

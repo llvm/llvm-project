@@ -456,30 +456,24 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
 
   MachineBasicBlock *MBB = DefMBB;
   MachineBasicBlock::iterator MII;
-  if (SrcVNI->isPHIDef())
-    MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), SrcReg);
-  else {
-    MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
-    assert(DefMI && "Defining instruction disappeared");
-    MII = DefMI;
-    ++MII;
-  }
-
-  // When the def is a PHI, the store may be inserted after the prologue
-  // instructions. In that case, the segment may need to be extended to the
-  // store (see below). Do not hoist if there is an interference between the end
-  // of the segment and the insertion point.
-  if (SrcVNI->isPHIDef() && Matrix && VRM.hasPhys(SrcReg)) {
-    // Here, MII points to the instruction before which the store will be
-    // inserted. Using that instruction's base index is a safe upper bound for
-    // the interference check.
+  MachineInstr::MIFlag PrologFlag = MachineInstr::NoFlags;
+  if (SrcVNI->isPHIDef()) {
+    MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin());
+    // The store must not move past the copy, which precedes every reload. It
+    // would if the copy is in the block prolog.
     SlotIndex InsertIdx = MII == MBB->end()
                               ? LIS.getMBBEndIdx(MBB)
                               : LIS.getInstructionIndex(*MII).getBaseIndex();
-    if (SrcQ.endPoint() < InsertIdx &&
-        Matrix->checkInterference(SrcQ.endPoint(), InsertIdx,
-                                  VRM.getPhys(SrcReg)))
+    if (Idx < InsertIdx)
       return false;
+  } else {
+    MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
+    assert(DefMI && "Defining instruction disappeared");
+    // The spill of a prolog def stays in the prolog: a reload may follow it.
+    if (DefMI->getFlag(MachineInstr::BBProlog))
+      PrologFlag = MachineInstr::BBProlog;
+    MII = DefMI;
+    ++MII;
   }
 
   // Conservatively extend the stack slot range to the range of the original
@@ -499,20 +493,12 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   MachineInstrSpan MIS(MII, MBB);
   // Insert spill without kill flag immediately after def.
   TII.storeRegToStackSlot(*MBB, MII, SrcReg, false, StackSlot,
-                          MRI.getRegClass(SrcReg), Register());
+                          MRI.getRegClass(SrcReg), Register(), PrologFlag);
   LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
   for (const MachineInstr &MI : make_range(MIS.begin(), MII))
     getVDefInterval(MI, LIS);
   --MII; // Point to store instruction.
   LLVM_DEBUG(dbgs() << "\thoisted: " << SrcVNI->def << '\t' << *MII);
-
-  // When the def is a PHI, SkipPHIsLabelsAndDebug may place the store past
-  // prologue instructions. Therefore if that copy was the end of a segment
-  // we need to extend it to the store.
-  if (SrcVNI->isPHIDef()) {
-    SlotIndex StoreUseIdx = LIS.getInstructionIndex(*MII).getRegSlot(true);
-    SrcLI.extendInBlock(LIS.getMBBStartIdx(MBB), StoreUseIdx);
-  }
 
   // If there is only 1 store instruction is required for spill, add it
   // to mergeable list. In X86 AMX, 2 intructions are required to store.
@@ -1250,8 +1236,12 @@ void InlineSpiller::insertReload(Register NewVReg,
   MachineBasicBlock &MBB = *MI->getParent();
 
   MachineInstrSpan MIS(MI, &MBB);
-  TII.loadRegFromStackSlot(MBB, MI, NewVReg, StackSlot,
-                           MRI.getRegClass(NewVReg), Register());
+  // A reload feeding a prolog instruction is part of the prolog.
+  TII.loadRegFromStackSlot(
+      MBB, MI, NewVReg, StackSlot, MRI.getRegClass(NewVReg), Register(),
+      /*SubReg=*/0,
+      MI->getFlag(MachineInstr::BBProlog) ? MachineInstr::BBProlog
+                                          : MachineInstr::NoFlags);
 
   LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MI);
 
@@ -1285,16 +1275,22 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
   MachineBasicBlock::iterator SpillBefore = std::next(MI);
   bool IsRealSpill = isRealSpill(*MI);
 
+  // The spill of a prolog def is part of the prolog.
+  MachineInstr::MIFlag PrologFlag = MI->getFlag(MachineInstr::BBProlog)
+                                        ? MachineInstr::BBProlog
+                                        : MachineInstr::NoFlags;
+
   if (IsRealSpill)
     TII.storeRegToStackSlot(MBB, SpillBefore, NewVReg, isKill, StackSlot,
-                            MRI.getRegClass(NewVReg), Register());
+                            MRI.getRegClass(NewVReg), Register(), PrologFlag);
   else
     // Don't spill undef value.
     // Anything works for undef, in particular keeping the memory
     // uninitialized is a viable option and it saves code size and
     // run time.
     BuildMI(MBB, SpillBefore, MI->getDebugLoc(), TII.get(TargetOpcode::KILL))
-        .addReg(NewVReg, getKillRegState(isKill));
+        .addReg(NewVReg, getKillRegState(isKill))
+        .setMIFlag(PrologFlag);
 
   MachineBasicBlock::iterator Spill = std::next(MI);
   LIS.InsertMachineInstrRangeInMaps(Spill, MIS.end());
