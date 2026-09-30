@@ -113,6 +113,17 @@ bool LoongArchTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   }
 }
 
+bool LoongArchTTIImpl::isLegalSpeculativeLoad(Type *DataType,
+                                              unsigned AddressSpace) const {
+  // Matches LoongArchTargetLowering::emitCanLoadSpeculatively: only address
+  // space 0 and power-of-2 sizes up to the 4096-byte size page boundary.
+  if (AddressSpace != 0)
+    return false;
+  TypeSize Size = DL.getTypeStoreSize(DataType);
+  return !Size.isScalable() && isPowerOf2_64(Size.getFixedValue()) &&
+         Size.getFixedValue() <= 4096;
+}
+
 LoongArchTTIImpl::TTI::MemCmpExpansionOptions
 LoongArchTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
