@@ -2987,6 +2987,18 @@ static bool isStructurableWithUnstructuredInternals(
     if (!check(e))
       return false;
 
+  // Condition 2 reaches the EndDoStmt too, with a wider notion of "outside". A
+  // branch from the body to it is CYCLE-like and lands on the wrap's boundary,
+  // which the structured form expresses. A branch from outside the loop is a
+  // different matter: the EndDoStmt is emitted as the structured loop's
+  // terminator, so no block is created for it and lowering has nothing to
+  // branch to.
+  if (auto it = unit.incomingBranches.find(&loop.evaluationList->back());
+      it != unit.incomingBranches.end())
+    for (const Fortran::lower::pft::Evaluation *src : it->second)
+      if (!isInLoopBody(src, loop))
+        return false;
+
   return true;
 }
 

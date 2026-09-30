@@ -394,7 +394,8 @@ static bool sinkScalarOperands(VPlan &Plan) {
         Clone = VPBuilder::createSingleScalarOp(
             SinkCandidateRepR->getOpcode(), SinkCandidate->operands(),
             /*Mask=*/nullptr, *SinkCandidateRepR, *SinkCandidateRepR,
-            SinkCandidate->getDebugLoc(), SinkCandidate->getUnderlyingInstr());
+            SinkCandidate->getDebugLoc(), SinkCandidate->getScalarType(),
+            SinkCandidate->getUnderlyingInstr());
         // TODO: add ".cloned" suffix to name of Clone's VPValue.
       } else {
         Clone = SinkCandidate->clone();
@@ -808,7 +809,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       auto *Clone = VPBuilder::createSingleScalarOp(
           Def->getUnderlyingInstr()->getOpcode(), Def->operands(),
           /*Mask=*/nullptr, *Def, getMetadataOf(Def), DebugLoc::getUnknown(),
-          Def->getUnderlyingInstr());
+          Def->getScalarType(), Def->getUnderlyingInstr());
       Clone->insertAfter(Def);
       Def->replaceAllUsesWith(Clone);
       Def->eraseFromParent();
@@ -1897,7 +1898,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       auto *Clone = VPBuilder::createSingleScalarOp(
           vputils::getOpcode(RepOrWidenR), RepOrWidenR->operands(),
           /*Mask=*/nullptr, *RepOrWidenR, getMetadataOf(RepOrWidenR),
-          DebugLoc::getUnknown(), RepOrWidenR->getUnderlyingInstr());
+          DebugLoc::getUnknown(), RepOrWidenR->getScalarType(),
+          RepOrWidenR->getUnderlyingInstr());
       Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
       if (vputils::isDeadRecipe(*RepOrWidenR))
@@ -5768,7 +5770,7 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
 
       auto *Recipe = VPBuilder::createSingleScalarOp(
           VPI.getOpcode(), VPI.operandsWithoutMask(), /*Mask=*/nullptr, VPI,
-          VPI, VPI.getDebugLoc(), I);
+          VPI, VPI.getDebugLoc(), VPI.getScalarType(), I);
       Recipe->insertBefore(&VPI);
       VPI.replaceAllUsesWith(Recipe);
       VPI.eraseFromParent();
