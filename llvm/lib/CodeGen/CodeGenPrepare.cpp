@@ -1657,7 +1657,7 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     return BO->hasOneUse() && DT.dominates(Cmp->getParent(), L->getLoopLatch());
   };
 
-  auto QuickDomAndPressureCheck = [=]{
+  auto QuickDomAndPressureCheck = [=] {
     // A cheap dominance check.
     if (BO->getParent()->getUniquePredecessor() != Cmp->getParent())
       return false;
