@@ -22,7 +22,9 @@ using namespace llvm::orc::shared;
 namespace llvm {
 namespace orc {
 
-#if !defined(_WIN32) && !defined(__CYGWIN__)
+// Reference __unw_* only if __attribute__((weak)) is available to avoid force
+// pulling them.
+#if LLVM_HAS_ATTRIBUTE_WEAK
 extern "C" void
 __unw_add_dynamic_eh_frame_section(const void *) LLVM_ATTRIBUTE_WEAK;
 extern "C" void
@@ -130,7 +132,7 @@ Error walkLibunwindEHFrameSection(const char *const SectionStart,
 Error registerEHFrameSection(const void *EHFrameSectionAddr,
                              size_t EHFrameSectionSize) {
   // For libunwind after D111863.
-#if !defined(_WIN32) && !defined(__CYGWIN__)
+#if LLVM_HAS_ATTRIBUTE_WEAK
   if (__unw_add_dynamic_eh_frame_section &&
       __unw_remove_dynamic_eh_frame_section) {
     __unw_add_dynamic_eh_frame_section(EHFrameSectionAddr);
@@ -157,7 +159,7 @@ Error registerEHFrameSection(const void *EHFrameSectionAddr,
 
 Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
                                size_t EHFrameSectionSize) {
-#if !defined(_WIN32) && !defined(__CYGWIN__)
+#if LLVM_HAS_ATTRIBUTE_WEAK
   if (__unw_add_dynamic_eh_frame_section &&
       __unw_remove_dynamic_eh_frame_section) {
     __unw_remove_dynamic_eh_frame_section(EHFrameSectionAddr);
