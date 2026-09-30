@@ -514,6 +514,8 @@ Fortran::lower::genCallOpAndResult(
   // arguments which can happen in legal program if it was passed as a dummy
   // procedure argument earlier with no further type information.
   mlir::SymbolRefAttr funcSymbolAttr;
+  mlir::FunctionType funcType = callSiteType;
+  bool mustCastFunc = false;
   bool addHostAssociations = false;
   if (!funcPointer) {
     mlir::FunctionType funcOpType = caller.getFuncOp().getFunctionType();
@@ -534,12 +536,11 @@ Fortran::lower::genCallOpAndResult(
     // mismatch due to the extra argument, but the interface is otherwise
     // explicit and safe), handle interface mismatch due to F77 implicit
     // interface "abuse" with a function address cast if needed.
-    if (!addHostAssociations &&
-        mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
-            loc, converter, callSiteType, funcOpType))
-      funcPointer = fir::AddrOfOp::create(builder, loc, funcOpType, symbolAttr);
-    else
-      funcSymbolAttr = symbolAttr;
+    mustCastFunc = !addHostAssociations &&
+                   mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
+                       loc, converter, callSiteType, funcOpType);
+    funcType = mustCastFunc ? callSiteType : funcOpType;
+    funcSymbolAttr = symbolAttr;
 
     // Issue a warning if the procedure name conflicts with
     // a runtime function name a call to which has been already
@@ -555,29 +556,12 @@ Fortran::lower::genCallOpAndResult(
                           "Flang - this may lead to undefined behavior")));
   }
 
-  mlir::FunctionType funcType =
-      funcPointer ? callSiteType : caller.getFuncOp().getFunctionType();
-
   // If we have any ignore_tkr(c) dummy args, adjust the function type to
   // have these args match the caller.
   if (auto modifiedFuncType =
           getTypeWithIgnoreTkrC(funcType, caller, builder.getContext())) {
-    // Note: funcPointer would only be non-null here, if we are already
-    // processing indirect function call. In such case we can re-use the same
-    // funcPointer and we'll cast it below the the modified funcType.
-    if (!funcPointer) {
-      // We want to cast the function to a different type, in order to avoid
-      // changing/casting some of the args. The cast will generate a new
-      // function pointer, so that we would make a function call not through
-      // the original function symbol, but through the new function pointer
-      // (an indirect function call).
-      mlir::SymbolRefAttr symbolAttr =
-          builder.getSymbolRefAttr(caller.getMangledName());
-      // Create pointer to original function. This pointer will be cast later.
-      funcPointer = fir::AddrOfOp::create(builder, loc, funcType, symbolAttr);
-      funcSymbolAttr = {}; // This marks it as indirect call
-    }
     funcType = *modifiedFuncType;
+    mustCastFunc = true;
   }
 
   // OpenMP dispatch `novariants`/`nocontext`: at runtime pick the right target
@@ -613,8 +597,7 @@ Fortran::lower::genCallOpAndResult(
       };
 
       // Start from the variant selected with the dispatch construct in context.
-      mlir::Value target =
-          fir::AddrOfOp::create(builder, loc, funcType, funcSymbolAttr);
+        mlir::Value target = addrOfSym(selectedUlt);
 
       // `nocontext(true)`: re-select the variant with the dispatch construct
       // removed from the OpenMP context. That may resolve to a different
@@ -637,9 +620,14 @@ Fortran::lower::genCallOpAndResult(
                                                addrOfSym(baseUlt), target);
 
       funcPointer = target;
-      funcSymbolAttr = {}; // Mark as an indirect call.
     }
   }
+
+  if (!funcPointer && mustCastFunc)
+    funcPointer = fir::AddrOfOp::create(
+        builder, loc, caller.getFuncOp().getFunctionType(), funcSymbolAttr);
+  if (funcPointer)
+    funcSymbolAttr = {};
 
   llvm::SmallVector<mlir::Value> operands;
   // First operand of indirect call is the function pointer. Cast it to

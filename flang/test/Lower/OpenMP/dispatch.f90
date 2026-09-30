@@ -278,6 +278,76 @@ subroutine test_dispatch_argument(c1, c2)
   real_result = argument_base(argument_base(3))
 end subroutine
 
+! IGNORE_TKR(C) with an allocatable actual requires a function-pointer cast.
+! Dispatch clauses must still select addresses with the adjusted signature.
+!HLFIR-LABEL: func @_QPtest_dispatch_ignore_tkr(
+!HLFIR-SAME: %[[CAST_C1_ARG:[^:]+]]: !fir.ref<!fir.logical<4>> {{.*}}, %[[CAST_C2_ARG:[^:]+]]: !fir.ref<!fir.logical<4>> {{.*}}, %[[VALUES_ARG:[^:]+]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+subroutine test_dispatch_ignore_tkr(c1, c2, values)
+  implicit none
+  logical :: c1, c2
+  real, allocatable :: values(:)
+  interface
+    subroutine cast_dispatch(values)
+      real, intent(in) :: values(:)
+      !dir$ ignore_tkr(c) values
+    end subroutine
+    subroutine cast_host(values)
+      real, intent(in) :: values(:)
+      !dir$ ignore_tkr(c) values
+    end subroutine
+    subroutine cast_base(values)
+      import :: cast_dispatch, cast_host
+      real, intent(in) :: values(:)
+      !dir$ ignore_tkr(c) values
+      !$omp declare variant(cast_base:cast_dispatch) match(construct={dispatch})
+      !$omp declare variant(cast_base:cast_host) match(device={kind(host)})
+    end subroutine
+  end interface
+
+  !HLFIR: %[[CAST_C1:.*]]:2 = hlfir.declare %[[CAST_C1_ARG]]
+  !HLFIR: %[[CAST_C2:.*]]:2 = hlfir.declare %[[CAST_C2_ARG]]
+  !HLFIR: %[[VALUES:.*]]:2 = hlfir.declare %[[VALUES_ARG]]
+  !HLFIR: omp.dispatch novariants(%[[CAST_NV:.*]]) {
+  !$omp dispatch novariants(c1)
+  !HLFIR: %[[NV_DISPATCH_ADDR:.*]] = fir.address_of(@_QPcast_dispatch) : (!fir.box<!fir.array<?xf32>>) -> ()
+  !HLFIR-NEXT: %[[NV_DISPATCH:.*]] = fir.convert %[[NV_DISPATCH_ADDR]] : ((!fir.box<!fir.array<?xf32>>) -> ()) -> ((!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ())
+  !HLFIR-NEXT: %[[NV_BASE_ADDR:.*]] = fir.address_of(@_QPcast_base) : (!fir.box<!fir.array<?xf32>>) -> ()
+  !HLFIR-NEXT: %[[NV_BASE:.*]] = fir.convert %[[NV_BASE_ADDR]] : ((!fir.box<!fir.array<?xf32>>) -> ()) -> ((!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ())
+  !HLFIR-NEXT: %[[NV_TARGET:.*]] = arith.select %[[CAST_NV]], %[[NV_BASE]], %[[NV_DISPATCH]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
+  !HLFIR-NEXT: fir.call %[[NV_TARGET]](%[[VALUES]]#0) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
+  !HLFIR-NEXT: omp.terminator
+  call cast_base(values)
+
+  !HLFIR: omp.dispatch nocontext(%[[CAST_NC:.*]]) {
+  !$omp dispatch nocontext(c2)
+  !HLFIR: %[[NC_DISPATCH_ADDR:.*]] = fir.address_of(@_QPcast_dispatch) : (!fir.box<!fir.array<?xf32>>) -> ()
+  !HLFIR-NEXT: %[[NC_DISPATCH:.*]] = fir.convert %[[NC_DISPATCH_ADDR]] : ((!fir.box<!fir.array<?xf32>>) -> ()) -> ((!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ())
+  !HLFIR-NEXT: %[[NC_HOST_ADDR:.*]] = fir.address_of(@_QPcast_host) : (!fir.box<!fir.array<?xf32>>) -> ()
+  !HLFIR-NEXT: %[[NC_HOST:.*]] = fir.convert %[[NC_HOST_ADDR]] : ((!fir.box<!fir.array<?xf32>>) -> ()) -> ((!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ())
+  !HLFIR-NEXT: %[[NC_TARGET:.*]] = arith.select %[[CAST_NC]], %[[NC_HOST]], %[[NC_DISPATCH]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
+  !HLFIR-NEXT: fir.call %[[NC_TARGET]](%[[VALUES]]#0) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
+  !HLFIR-NEXT: omp.terminator
+  call cast_base(values)
+
+  !HLFIR: %[[CAST_C2_LOAD:.*]] = fir.load %[[CAST_C2]]#0 : !fir.ref<!fir.logical<4>>
+  !HLFIR: %[[CAST_C2_I1:.*]] = fir.convert %[[CAST_C2_LOAD]] : (!fir.logical<4>) -> i1
+  !HLFIR: %[[CAST_C1_LOAD:.*]] = fir.load %[[CAST_C1]]#0 : !fir.ref<!fir.logical<4>>
+  !HLFIR: %[[CAST_C1_I1:.*]] = fir.convert %[[CAST_C1_LOAD]] : (!fir.logical<4>) -> i1
+  !HLFIR: omp.dispatch nocontext(%[[CAST_C2_I1]]) novariants(%[[CAST_C1_I1]]) {
+  !$omp dispatch novariants(c1) nocontext(c2)
+  !HLFIR: %[[BOTH_DISPATCH_ADDR:.*]] = fir.address_of(@_QPcast_dispatch) : (!fir.box<!fir.array<?xf32>>) -> ()
+  !HLFIR-NEXT: %[[CAST_DISPATCH:.*]] = fir.convert %[[BOTH_DISPATCH_ADDR]] : ((!fir.box<!fir.array<?xf32>>) -> ()) -> ((!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ())
+  !HLFIR-NEXT: %[[BOTH_HOST_ADDR:.*]] = fir.address_of(@_QPcast_host) : (!fir.box<!fir.array<?xf32>>) -> ()
+  !HLFIR-NEXT: %[[CAST_HOST:.*]] = fir.convert %[[BOTH_HOST_ADDR]] : ((!fir.box<!fir.array<?xf32>>) -> ()) -> ((!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ())
+  !HLFIR-NEXT: %[[CAST_CONTEXT:.*]] = arith.select %[[CAST_C2_I1]], %[[CAST_HOST]], %[[CAST_DISPATCH]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
+  !HLFIR-NEXT: %[[BOTH_BASE_ADDR:.*]] = fir.address_of(@_QPcast_base) : (!fir.box<!fir.array<?xf32>>) -> ()
+  !HLFIR-NEXT: %[[CAST_BASE:.*]] = fir.convert %[[BOTH_BASE_ADDR]] : ((!fir.box<!fir.array<?xf32>>) -> ()) -> ((!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ())
+  !HLFIR-NEXT: %[[CAST_TARGET:.*]] = arith.select %[[CAST_C1_I1]], %[[CAST_BASE]], %[[CAST_CONTEXT]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
+  !HLFIR-NEXT: fir.call %[[CAST_TARGET]](%[[VALUES]]#0) {{.*}}: (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> ()
+  !HLFIR-NEXT: omp.terminator
+  call cast_base(values)
+end subroutine
+
 !HLFIR-DAG: func.func private @_QPexternal_variant()
 !HLFIR-DAG: func.func private @_QPexternal_base()
 !HLFIR-DAG: func.func private @_QPexternal_dispatch_func(i32) -> i32
