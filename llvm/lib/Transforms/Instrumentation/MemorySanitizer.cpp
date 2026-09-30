@@ -7500,6 +7500,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                       /*Lanes=*/kBothLanes);
       break;
 
+    // <4 x half > @llvm.aarch64.neon.fp8.fdot2
+    //               (<4 x half >, < 8 x i8>, < 8 x i8>)
+    // <8 x half > @llvm.aarch64.neon.fp8.fdot2
+    //               (<8 x half >, <16 x i8>, <16 x i8>)
+    case Intrinsic::aarch64_neon_fp8_fdot2:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
+    // <2 x float> @llvm.aarch64.neon.fp8.fdot4
+    //               (<2 x float>, < 8 x i8>, < 8 x i8>)
+    // <4 x float> @llvm.aarch64.neon.fp8.fdot4
+    //               (<4 x float>, <16 x i8>, <16 x i8>)
+    case Intrinsic::aarch64_neon_fp8_fdot4:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
     // Floating-Point Absolute Compare Greater Than/Equal
     case Intrinsic::aarch64_neon_facge:
     case Intrinsic::aarch64_neon_facgt:
