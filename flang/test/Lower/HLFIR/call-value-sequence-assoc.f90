@@ -7,7 +7,10 @@
 ! the element is viewed as an array of the dummy's shape and that array is
 ! copied.  Otherwise the whole remaining storage sequence of the base array
 ! is viewed and copied, mirroring the copy of the whole actual argument that
-! is made when the actual argument is an array.
+! is made when the actual argument is an array.  When the dummy extents are
+! static but the remaining length is only known at run time, the copy is
+! bounded by the remaining length, so that a nonconforming call with a
+! shorter sequence (F'2023 15.5.2.12 p6) does not read past the actual.
 
 module m
   implicit none
@@ -67,10 +70,15 @@ contains
     integer, intent(in) :: n
     class(*), value, optional :: x(2, n)
   end subroutine
+  subroutine byref3(x)
+    integer :: x(3)
+  end subroutine
 end module
 
 ! Static dummy shape: the sequence view has the dummy's shape.
+! The remaining length (3) is a constant, so no run-time bound is needed.
 ! CHECK-LABEL: func.func @_QPvalue_seq_static
+! CHECK-NOT: arith.minsi
 ! CHECK: %[[SELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
 ! CHECK: %[[SSEQ:.*]] = fir.convert %[[SELT]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<3xi32>>
 ! CHECK: %[[SVIEW:.*]]:2 = hlfir.declare %[[SSEQ]](%{{.*}}) {uniq_name = ".sequence.assoc"}
@@ -331,9 +339,11 @@ subroutine value_seq_assumed_size(a, n)
 end subroutine
 
 ! Positive guard control: an assumed-size base array does not block the
-! sequence view when the dummy extents are static.
+! sequence view when the dummy extents are static. Its remaining length is
+! unknown, so the copy of the dummy's shape is not bounded.
 ! CHECK-LABEL: func.func @_QPvalue_seq_assumed_size_static
 ! CHECK: %[[GELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! CHECK-NOT: arith.minsi
 ! CHECK: %[[GSEQ:.*]] = fir.convert %[[GELT]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<3xi32>>
 ! CHECK: %[[GVIEW:.*]]:2 = hlfir.declare %[[GSEQ]](%{{.*}}) {uniq_name = ".sequence.assoc"}
 ! CHECK: fir.call @_QMmPbyval3
@@ -361,4 +371,128 @@ subroutine value_seq_assumed_size_class(a, n)
   type(tt) :: a(*)
   integer :: n
   call byval_classn(n, a(2))
+end subroutine
+
+! Static dummy shape, base array with a run-time extent: the copy is bounded
+! by the remaining length of the base array. The full computation is bound:
+! length = min(base size minus the column-major offset, dummy size).
+! CHECK-LABEL: func.func @_QPvalue_seq_static_runtime_base
+! CHECK: %[[RBEXT:.*]] = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
+! CHECK: %[[RBBSHP:.*]] = fir.shape %[[RBEXT]] : (index) -> !fir.shape<1>
+! CHECK: %[[RBV:.*]]:2 = hlfir.declare %{{.*}}(%[[RBBSHP]]) dummy_scope %{{.*}} {uniq_name = "_QFvalue_seq_static_runtime_baseEv"}
+! CHECK: %[[RBELT:.*]] = hlfir.designate %[[RBV]]#0 (%[[RBIDX:.*]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! CHECK: %[[RBSUB:.*]] = arith.subi %[[RBIDX]], %[[RBONE:.*]] : index
+! CHECK: %[[RBMUL:.*]] = arith.muli %[[RBSUB]], %[[RBSTRIDE:.*]] : index
+! CHECK: %[[RBOFF:.*]] = arith.addi %{{.*}}, %[[RBMUL]] : index
+! CHECK: %[[RBUBM1:.*]] = arith.subi %[[RBEXT]], %[[RBONE]] : index
+! CHECK: %[[RBUB:.*]] = arith.addi %[[RBUBM1]], %[[RBSTRIDE]] : index
+! CHECK: %[[RBTOT:.*]] = arith.muli %[[RBSTRIDE]], %[[RBUB]] : index
+! CHECK: %[[RBREM:.*]] = arith.subi %[[RBTOT]], %[[RBOFF]] : index
+! CHECK: %[[RBSIZE:.*]] = arith.constant 3 : index
+! CHECK: %[[RBLEN:.*]] = arith.minsi %[[RBREM]], %[[RBSIZE]] : index
+! CHECK: %[[RBSEQ:.*]] = fir.convert %[[RBELT]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<?xi32>>
+! CHECK: %[[RBSHAPE:.*]] = fir.shape %[[RBLEN]] : (index) -> !fir.shape<1>
+! CHECK: %[[RBVIEW:.*]]:2 = hlfir.declare %[[RBSEQ]](%[[RBSHAPE]]) {uniq_name = ".sequence.assoc"}
+! CHECK: %[[RBCOPY:.*]] = hlfir.as_expr %[[RBVIEW]]#0 : (!fir.box<!fir.array<?xi32>>) -> !hlfir.expr<?xi32>
+! CHECK: %[[RBTMP:.*]]:3 = hlfir.associate %[[RBCOPY]](%[[RBSHAPE]]) {adapt.valuebyref}
+! CHECK: %[[RBARG:.*]] = fir.convert %[[RBTMP]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<3xi32>>
+! CHECK: fir.call @_QMmPbyval3(%[[RBARG]])
+! CHECK: hlfir.end_associate %[[RBTMP]]#1, %[[RBTMP]]#2
+subroutine value_seq_static_runtime_base(m, v)
+  use m
+  integer :: m
+  integer :: v(m)
+  call byval3(v(2))
+end subroutine
+
+! Static dummy shape, constant base array, run-time element index: the
+! remaining length depends on the index, so the copy is bounded.
+! CHECK-LABEL: func.func @_QPvalue_seq_static_runtime_index
+! CHECK: %[[RIIDX:.*]] = fir.convert %{{.*}} : (i32) -> i64
+! CHECK: %[[RIELT:.*]] = hlfir.designate %{{.*}} (%[[RIIDX]])  : (!fir.ref<!fir.array<4xi32>>, i64) -> !fir.ref<i32>
+! CHECK: %[[RIIDXC:.*]] = fir.convert %[[RIIDX]] : (i64) -> index
+! CHECK: %[[RISUB:.*]] = arith.subi %[[RIIDXC]], %{{.*}} : index
+! CHECK: %[[RIMUL:.*]] = arith.muli %[[RISUB]], %{{.*}} : index
+! CHECK: %[[RIOFF:.*]] = arith.addi %{{.*}}, %[[RIMUL]] : index
+! CHECK: %[[RIREM:.*]] = arith.subi %{{.*}}, %[[RIOFF]] : index
+! CHECK: %[[RISIZE:.*]] = arith.constant 3 : index
+! CHECK: %[[RILEN:.*]] = arith.minsi %[[RIREM]], %[[RISIZE]] : index
+! CHECK: %[[RISEQ:.*]] = fir.convert %[[RIELT]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<?xi32>>
+! CHECK: %[[RISHAPE:.*]] = fir.shape %[[RILEN]] : (index) -> !fir.shape<1>
+! CHECK: %[[RIVIEW:.*]]:2 = hlfir.declare %[[RISEQ]](%[[RISHAPE]]) {uniq_name = ".sequence.assoc"}
+! CHECK: %[[RICOPY:.*]] = hlfir.as_expr %[[RIVIEW]]#0
+! CHECK: %[[RITMP:.*]]:3 = hlfir.associate %[[RICOPY]](%[[RISHAPE]]) {adapt.valuebyref}
+! CHECK: %[[RIARG:.*]] = fir.convert %[[RITMP]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<3xi32>>
+! CHECK: fir.call @_QMmPbyval3(%[[RIARG]])
+subroutine value_seq_static_runtime_index(i)
+  use m
+  integer :: i
+  integer :: v(4)
+  v = [1, 2, 3, 4]
+  call byval3(v(i))
+end subroutine
+
+! Rank-two static dummy with a run-time element index: the bound is the
+! dummy size (2*2), and the bounded copy is passed as the dummy's shape.
+! CHECK-LABEL: func.func @_QPvalue_seq_rank2_runtime_index
+! CHECK: %[[R2ELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.ref<!fir.array<5x!fir.type<_QMmTtt{id:i32}>>>, i64) -> !fir.ref<!fir.type<_QMmTtt{id:i32}>>
+! CHECK: %[[R2OFF:.*]] = arith.addi %{{.*}}, %{{.*}} : index
+! CHECK: %[[R2REM:.*]] = arith.subi %{{.*}}, %[[R2OFF]] : index
+! CHECK: %[[R2SIZE:.*]] = arith.constant 4 : index
+! CHECK: %[[R2LEN:.*]] = arith.minsi %[[R2REM]], %[[R2SIZE]] : index
+! CHECK: %[[R2SEQ:.*]] = fir.convert %[[R2ELT]] : (!fir.ref<!fir.type<_QMmTtt{id:i32}>>) -> !fir.ref<!fir.array<?x!fir.type<_QMmTtt{id:i32}>>>
+! CHECK: %[[R2SHAPE:.*]] = fir.shape %[[R2LEN]] : (index) -> !fir.shape<1>
+! CHECK: %[[R2VIEW:.*]]:2 = hlfir.declare %[[R2SEQ]](%[[R2SHAPE]]) {uniq_name = ".sequence.assoc"}
+! CHECK: %[[R2COPY:.*]] = hlfir.as_expr %[[R2VIEW]]#0
+! CHECK: %[[R2TMP:.*]]:3 = hlfir.associate %[[R2COPY]](%[[R2SHAPE]]) {adapt.valuebyref}
+! CHECK: %[[R2ARG:.*]] = fir.convert %[[R2TMP]]#1 : (!fir.ref<!fir.array<?x!fir.type<_QMmTtt{id:i32}>>>) -> !fir.ref<!fir.array<2x2x!fir.type<_QMmTtt{id:i32}>>>
+! CHECK: fir.call @_QMmPbyval22(%[[R2ARG]])
+subroutine value_seq_rank2_runtime_index(i)
+  use m
+  integer :: i
+  type(tt) :: w(5)
+  call byval22(w(i))
+end subroutine
+
+! Static CLASS dummy with a run-time element index: the bounded copy is
+! packaged with a rank-one descriptor that is then remapped to the dummy.
+! CHECK-LABEL: func.func @_QPvalue_seq_class_runtime_index
+! CHECK: %[[CROFF:.*]] = arith.addi %{{.*}}, %{{.*}} : index
+! CHECK: %[[CRREM:.*]] = arith.subi %{{.*}}, %[[CROFF]] : index
+! CHECK: %[[CRSIZE:.*]] = arith.constant 2 : index
+! CHECK: %[[CRLEN:.*]] = arith.minsi %[[CRREM]], %[[CRSIZE]] : index
+! CHECK: %[[CRSHAPE:.*]] = fir.shape %[[CRLEN]] : (index) -> !fir.shape<1>
+! CHECK: %[[CRVIEW:.*]]:2 = hlfir.declare %{{.*}}(%[[CRSHAPE]]) {uniq_name = ".sequence.assoc"}
+! CHECK: %[[CRCOPY:.*]] = hlfir.as_expr %[[CRVIEW]]#0
+! CHECK: %[[CRTMP:.*]]:3 = hlfir.associate %[[CRCOPY]](%[[CRSHAPE]]) {adapt.valuebyref}
+! CHECK: %[[CRCLASS:.*]] = fir.convert %[[CRTMP]]#0 : (!fir.box<!fir.array<?x!fir.type<_QMmTtt{id:i32}>>>) -> !fir.class<!fir.array<?x!fir.type<_QMmTtt{id:i32}>>>
+! CHECK: %[[CRARG:.*]] = fir.embox %{{.*}}(%{{.*}}) source_box %[[CRCLASS]] : (!fir.ref<!fir.array<2x!fir.type<_QMmTtt{id:i32}>>>, !fir.shape<1>, !fir.class<!fir.array<?x!fir.type<_QMmTtt{id:i32}>>>) -> !fir.class<!fir.array<2x!fir.type<_QMmTtt{id:i32}>>>
+! CHECK: fir.call @_QMmPbyval_parent2(%[[CRARG]])
+subroutine value_seq_class_runtime_index(i)
+  use m
+  integer :: i
+  type(tt) :: w(5)
+  call byval_parent2(w(i))
+end subroutine
+
+! The same bound applies to the copy of an element of a named constant
+! passed to a non-VALUE dummy.
+! CHECK-LABEL: func.func @_QPparam_seq_runtime_index
+! CHECK: %[[PRELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.ref<!fir.array<4xi32>>, i64) -> !fir.ref<i32>
+! CHECK: %[[PROFF:.*]] = arith.addi %{{.*}}, %{{.*}} : index
+! CHECK: %[[PRREM:.*]] = arith.subi %{{.*}}, %[[PROFF]] : index
+! CHECK: %[[PRSIZE:.*]] = arith.constant 3 : index
+! CHECK: %[[PRLEN:.*]] = arith.minsi %[[PRREM]], %[[PRSIZE]] : index
+! CHECK: %[[PRSEQ:.*]] = fir.convert %[[PRELT]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<?xi32>>
+! CHECK: %[[PRSHAPE:.*]] = fir.shape %[[PRLEN]] : (index) -> !fir.shape<1>
+! CHECK: %[[PRVIEW:.*]]:2 = hlfir.declare %[[PRSEQ]](%[[PRSHAPE]]) {uniq_name = ".sequence.assoc"}
+! CHECK: %[[PRCOPY:.*]] = hlfir.as_expr %[[PRVIEW]]#0
+! CHECK: %[[PRTMP:.*]]:3 = hlfir.associate %[[PRCOPY]](%[[PRSHAPE]]) {adapt.valuebyref}
+! CHECK: %[[PRARG:.*]] = fir.convert %[[PRTMP]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<3xi32>>
+! CHECK: fir.call @_QMmPbyref3(%[[PRARG]])
+subroutine param_seq_runtime_index(i)
+  use m
+  integer :: i
+  integer, parameter :: p(4) = [1, 2, 3, 4]
+  call byref3(p(i))
 end subroutine
