@@ -81,8 +81,9 @@ public:
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
     auto G = std::make_unique<jitlink::LinkGraph>(
         "<COFFHeaderMU>", CP.getExecutionSession().getSymbolStringPool(),
-        CP.getExecutionSession().getTargetTriple(), SubtargetFeatures(),
-        jitlink::getGenericEdgeKindName);
+        CP.getExecutionSession().getTargetTriple(),
+        CP.getExecutionSession().getTargetTriple().getArchPointerBitWidth() / 8,
+        SubtargetFeatures(), jitlink::getGenericEdgeKindName);
     auto &HeaderSection = G->createSection("__header", MemProt::Read);
     auto &HeaderBlock = createHeaderBlock(*G, HeaderSection);
 
