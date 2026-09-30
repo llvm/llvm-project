@@ -3049,8 +3049,7 @@ static void detectStructuredWithUnstructuredInternals(
 
           if (e.isA<parser::DoConstruct>() &&
               isStructurableWithUnstructuredInternals(e, unit)) {
-            // The one place the classification weakens: detection has proven
-            // Unstructured unnecessary.
+            // Detection has proven Unstructured unnecessary for this loop.
             e.weakenControlFlow(Fortran::lower::pft::Evaluation::ControlFlow::
                                     StructuredWithUnstructuredInternals);
             continue;
