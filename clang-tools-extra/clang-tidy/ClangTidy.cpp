@@ -219,12 +219,10 @@ public:
   CharSourceRange getNoteRange(const tooling::DiagnosticMessage &Note) {
     if (!Note.Ranges.empty())
       return getRange(Note.Ranges.front());
-
-    tooling::FileByteRange FBR;
-    FBR.FilePath = Note.FilePath;
-    FBR.FileOffset = Note.FileOffset;
-    FBR.Length = 1;
-    return getRange(FBR);
+    const SourceLocation Loc = getLocation(Note.FilePath, Note.FileOffset);
+    if (Loc.isInvalid())
+      return {};
+    return getOffsetRange(SourceMgr, Loc);
   }
 
   SmallVector<ThreadFlow, 8> createThreadFlows(const ClangTidyError &Error) {
@@ -282,6 +280,14 @@ public:
       SarifWriter->appendResult(Result);
   }
 
+  CharSourceRange getOffsetRange(SourceManager &SM, SourceLocation Loc) {
+    const std::pair<FileID, unsigned> &DecomposedLoc = SM.getDecomposedLoc(Loc);
+    const FileID FileId = DecomposedLoc.first;
+    const unsigned Offset = DecomposedLoc.second;
+    return CharSourceRange::getCharRange(
+        Loc, Loc.getLocWithOffset(Offset < SM.getFileIDSize(FileId) ? 1 : 0));
+  }
+
   SmallVector<CharSourceRange, 4> getResultRanges(const ClangTidyError &Error,
                                                   SourceLocation Loc) {
     SmallVector<CharSourceRange, 4> Ranges;
@@ -293,9 +299,8 @@ public:
       // Some Clang-Tidy diagnostics are issued with a single location (not a
       // range). For these, we create a range of length 1 at the diagnostic
       // location. As, SARIF results require a character range for each
-      // location.
-      Ranges.push_back(
-          CharSourceRange::getCharRange(Loc, Loc.getLocWithOffset(1)));
+      // location, for EOF we create a zero-length range.
+      Ranges.push_back(getOffsetRange(SourceMgr, Loc));
     }
     return Ranges;
   }

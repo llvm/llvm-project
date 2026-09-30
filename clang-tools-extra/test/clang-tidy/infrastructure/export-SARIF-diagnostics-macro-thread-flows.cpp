@@ -1,15 +1,16 @@
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t-input.cpp
-// RUN: clang-tidy %t-input.cpp -checks='-*,clang-analyzer*' -sarif-export=%t.sarif > %t.msg 2>&1
+// RUN: clang-tidy %t-input.cpp -checks='-*,clang-analyzer-*' -sarif-export=%t.sarif > %t.msg 2>&1
 // RUN: FileCheck -input-file=%t.msg -check-prefix=CHECK-MESSAGES %s -implicit-check-not='{{warning|error|note}}:'
 // RUN: FileCheck -input-file=%t.sarif -check-prefix=CHECK-SARIF %s
-void f() {
-  int *ptr = nullptr;
-  *ptr = 1;
-}
+#define DEREF(p) (*(p))
+#define NUL nullptr
+int g() { int *ptr = NUL; return DEREF(ptr); }
 
-//CHECK-MESSAGES: -input.cpp:3:8: warning: Dereference of null pointer (loaded from variable 'ptr') [clang-analyzer-core.NullDereference]
-//CHECK-MESSAGES: -input.cpp:2:3: note: 'ptr' initialized to a null pointer value
-//CHECK-MESSAGES: -input.cpp:3:8: note: Dereference of null pointer (loaded from variable 'ptr')
+//CHECK-MESSAGES: -input.cpp:3:34: warning: Dereference of null pointer (loaded from variable 'ptr') [clang-analyzer-core.NullDereference]
+//CHECK-MESSAGES: -input.cpp:1:18: note: expanded from macro 'DEREF'
+//CHECK-MESSAGES: -input.cpp:3:11: note: 'ptr' initialized to a null pointer value
+//CHECK-MESSAGES: -input.cpp:3:34: note: Dereference of null pointer (loaded from variable 'ptr')
+//CHECK-MESSAGES: -input.cpp:1:18: note: expanded from macro 'DEREF'
 
 //CHECK-SARIF: {
 //CHECK-SARIF-NEXT:   "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json",
@@ -40,6 +41,26 @@ void f() {
 //CHECK-SARIF-NEXT:                       "importance": "important",
 //CHECK-SARIF-NEXT:                       "location": {
 //CHECK-SARIF-NEXT:                         "message": {
+//CHECK-SARIF-NEXT:                           "text": "expanded from macro 'DEREF'"
+//CHECK-SARIF-NEXT:                         },
+//CHECK-SARIF-NEXT:                         "physicalLocation": {
+//CHECK-SARIF-NEXT:                           "artifactLocation": {
+//CHECK-SARIF-NEXT:                             "index": 0,
+//CHECK-SARIF-NEXT:                             "uri": "file://{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:                           },
+//CHECK-SARIF-NEXT:                           "region": {
+//CHECK-SARIF-NEXT:                             "endColumn": 22,
+//CHECK-SARIF-NEXT:                             "endLine": 1,
+//CHECK-SARIF-NEXT:                             "startColumn": 21,
+//CHECK-SARIF-NEXT:                             "startLine": 1
+//CHECK-SARIF-NEXT:                           }
+//CHECK-SARIF-NEXT:                         }
+//CHECK-SARIF-NEXT:                       }
+//CHECK-SARIF-NEXT:                     },
+//CHECK-SARIF-NEXT:                     {
+//CHECK-SARIF-NEXT:                       "importance": "important",
+//CHECK-SARIF-NEXT:                       "location": {
+//CHECK-SARIF-NEXT:                         "message": {
 //CHECK-SARIF-NEXT:                           "text": "'ptr' initialized to a null pointer value"
 //CHECK-SARIF-NEXT:                         },
 //CHECK-SARIF-NEXT:                         "physicalLocation": {
@@ -48,10 +69,10 @@ void f() {
 //CHECK-SARIF-NEXT:                             "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                           },
 //CHECK-SARIF-NEXT:                           "region": {
-//CHECK-SARIF-NEXT:                             "endColumn": 11,
-//CHECK-SARIF-NEXT:                             "endLine": 2,
-//CHECK-SARIF-NEXT:                             "startColumn": 3,
-//CHECK-SARIF-NEXT:                             "startLine": 2
+//CHECK-SARIF-NEXT:                             "endColumn": 19,
+//CHECK-SARIF-NEXT:                             "endLine": 3,
+//CHECK-SARIF-NEXT:                             "startColumn": 11,
+//CHECK-SARIF-NEXT:                             "startLine": 3
 //CHECK-SARIF-NEXT:                           }
 //CHECK-SARIF-NEXT:                         }
 //CHECK-SARIF-NEXT:                       }
@@ -68,10 +89,30 @@ void f() {
 //CHECK-SARIF-NEXT:                             "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                           },
 //CHECK-SARIF-NEXT:                           "region": {
-//CHECK-SARIF-NEXT:                             "endColumn": 7,
+//CHECK-SARIF-NEXT:                             "endColumn": 43,
 //CHECK-SARIF-NEXT:                             "endLine": 3,
-//CHECK-SARIF-NEXT:                             "startColumn": 4,
+//CHECK-SARIF-NEXT:                             "startColumn": 40,
 //CHECK-SARIF-NEXT:                             "startLine": 3
+//CHECK-SARIF-NEXT:                           }
+//CHECK-SARIF-NEXT:                         }
+//CHECK-SARIF-NEXT:                       }
+//CHECK-SARIF-NEXT:                     },
+//CHECK-SARIF-NEXT:                     {
+//CHECK-SARIF-NEXT:                       "importance": "important",
+//CHECK-SARIF-NEXT:                       "location": {
+//CHECK-SARIF-NEXT:                         "message": {
+//CHECK-SARIF-NEXT:                           "text": "expanded from macro 'DEREF'"
+//CHECK-SARIF-NEXT:                         },
+//CHECK-SARIF-NEXT:                         "physicalLocation": {
+//CHECK-SARIF-NEXT:                           "artifactLocation": {
+//CHECK-SARIF-NEXT:                             "index": 0,
+//CHECK-SARIF-NEXT:                             "uri": "file://{{.*}}-input.cpp"
+//CHECK-SARIF-NEXT:                           },
+//CHECK-SARIF-NEXT:                           "region": {
+//CHECK-SARIF-NEXT:                             "endColumn": 22,
+//CHECK-SARIF-NEXT:                             "endLine": 1,
+//CHECK-SARIF-NEXT:                             "startColumn": 21,
+//CHECK-SARIF-NEXT:                             "startLine": 1
 //CHECK-SARIF-NEXT:                           }
 //CHECK-SARIF-NEXT:                         }
 //CHECK-SARIF-NEXT:                       }
@@ -90,9 +131,9 @@ void f() {
 //CHECK-SARIF-NEXT:                   "uri": "file://{{.*}}-input.cpp"
 //CHECK-SARIF-NEXT:                 },
 //CHECK-SARIF-NEXT:                 "region": {
-//CHECK-SARIF-NEXT:                   "endColumn": 7,
+//CHECK-SARIF-NEXT:                   "endColumn": 43,
 //CHECK-SARIF-NEXT:                   "endLine": 3,
-//CHECK-SARIF-NEXT:                   "startColumn": 4,
+//CHECK-SARIF-NEXT:                   "startColumn": 40,
 //CHECK-SARIF-NEXT:                   "startLine": 3
 //CHECK-SARIF-NEXT:                 }
 //CHECK-SARIF-NEXT:               }
@@ -125,10 +166,10 @@ void f() {
 //CHECK-SARIF-NEXT:               "name": "clang-analyzer-core.NullDereference"
 //CHECK-SARIF-NEXT:             }
 //CHECK-SARIF-NEXT:           ],
-//CHECK-SARIF-NEXT:           "version": "{{.*}}"
+//CHECK-SARIF-NEXT:           "version": "24.0.0git"
 //CHECK-SARIF-NEXT:         }
 //CHECK-SARIF-NEXT:       }
 //CHECK-SARIF-NEXT:     }
 //CHECK-SARIF-NEXT:   ],
-//CHECK-SARIF-NEXT:   "version": "{{.*}}"
+//CHECK-SARIF-NEXT:   "version": "2.1.0"
 //CHECK-SARIF-NEXT: }
