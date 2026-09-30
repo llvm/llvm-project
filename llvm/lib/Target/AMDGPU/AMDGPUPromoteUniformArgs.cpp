@@ -11,6 +11,12 @@
 // argument passed in an SGPR, or an always-uniform value in the same block as
 // the call. Vectors are not promoted.
 //
+// FIXME: Promotion is monotone -- marking an argument \c inreg can make a
+// call-site operand that forwards it uniform in turn -- but the module is
+// visited once, so how much is promoted along a call chain depends on the
+// order functions appear in the module. Iterating to a fixpoint would remove
+// that dependence.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
@@ -36,8 +42,6 @@ STATISTIC(NumPromotedInRegArgs,
           "Number of uniform arguments promoted to inreg");
 STATISTIC(NumPromotedInRegFuncs,
           "Number of functions with a promoted uniform argument");
-
-namespace {
 
 static bool canPromoteArgToInReg(const Argument &A) {
   Type *Ty = A.getType();
@@ -166,8 +170,6 @@ static bool promoteUniformArgsToInReg(
 
   return Changed;
 }
-
-} // namespace
 
 PreservedAnalyses AMDGPUPromoteUniformArgsPass::run(Module &M,
                                                     ModuleAnalysisManager &AM) {

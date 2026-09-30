@@ -488,8 +488,9 @@ define amdgpu_kernel void @k_mixed_i32_divergent(ptr %p) {
   ret void
 }
 
-; The operand at @chain_leaf is an internal-function argument without inreg, so
-; it is not trivially uniform. @chain_top's operand is a kernel argument.
+; @chain_top's operand is a kernel argument, so it is promoted. @chain_leaf's is
+; @chain_top's %p, not yet inreg when @chain_leaf is examined. This reflects
+; visit order, not a rule: a second run promotes @chain_leaf too. See the FIXME.
 
 define internal fastcc void @chain_leaf(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @chain_leaf(
@@ -829,9 +830,9 @@ define amdgpu_kernel void @k_vararg(ptr %p) {
   ret void
 }
 
-; A direct call whose signature disagrees with the callee. The operand is a
-; constant, but it does not correspond to the parameter it would be matched
-; against positionally, so nothing is promoted.
+; A direct call whose signature disagrees with the callee. hasAddressTaken is
+; queried with IgnoreCastedDirectCall left off, so it reports such a call as an
+; address-taken use and the callee is rejected outright.
 
 define internal fastcc void @callee_sig_mismatch(ptr %p) {
 ; CHECK-LABEL: define internal fastcc void @callee_sig_mismatch(
