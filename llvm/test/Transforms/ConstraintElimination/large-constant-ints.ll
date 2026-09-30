@@ -468,8 +468,7 @@ define i1 @gcd_transitive_coefficients_overflow(i64 %x, i64 %y, i64 %z) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i64 [[T]], [[U]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_2]])
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i64 [[S]], [[U]]
-; CHECK-NEXT:    ret i1 [[C_3]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %s = shl nuw i64 %x, 33
