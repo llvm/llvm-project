@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fsyntax-only -verify -DITANIUM %s
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -std=c++20 -fsyntax-only -verify -DMICROSOFT %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 -fsyntax-only -verify -DITANIUM %s
+// RUN: %clang_cc1 -triple %ms_abi_triple -std=c++20 -fsyntax-only -verify -DMICROSOFT %s
 
 template <class...> struct TypeList;
 
