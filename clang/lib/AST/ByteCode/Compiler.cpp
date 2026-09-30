@@ -4908,8 +4908,16 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
   const ConstantArrayType *ArrayType =
       Ctx.getASTContext().getAsConstantArrayType(SubExpr->getType());
   const Record *R = getRecord(E->getType());
-  assert(Initializing);
   assert(SubExpr->isGLValue());
+  assert(!canClassify(E->getType()));
+
+  if (!Initializing) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
 
   if (!this->visit(SubExpr))
     return false;
@@ -4924,7 +4932,11 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
   if (isIntegerOrBoolType(SecondFieldT)) {
     if (!this->emitConst(ArrayType->getSize(), SecondFieldT, E))
       return false;
-    return this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E);
+    if (!this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
   }
   assert(SecondFieldT == PT_Ptr);
 
@@ -4936,7 +4948,12 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
     return false;
   if (!this->emitArrayElemPtrPop(PT_Uint64, E))
     return false;
-  return this->emitInitFieldPtr(R->getField(1u)->Offset, E);
+
+  if (!this->emitInitFieldPtr(R->getField(1u)->Offset, E))
+    return false;
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+  return true;
 }
 
 template <class Emitter>
