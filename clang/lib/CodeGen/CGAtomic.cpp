@@ -39,10 +39,16 @@ namespace {
     bool UseLibcall;
     LValue LVal;
     CGBitFieldInfo BFI;
+    llvm::SyncScope::ID Scope;
+    const AtomicExpr *AtomicExpression;
+
   public:
-    AtomicInfo(CodeGenFunction &CGF, LValue &lvalue)
+    AtomicInfo(CodeGenFunction &CGF, LValue &lvalue,
+               llvm::SyncScope::ID Scope = llvm::SyncScope::System,
+               const AtomicExpr *AtomicExpression = nullptr)
         : CGF(CGF), AtomicSizeInBits(0), ValueSizeInBits(0),
-          EvaluationKind(TEK_Scalar), UseLibcall(true) {
+          EvaluationKind(TEK_Scalar), UseLibcall(true), Scope(Scope),
+          AtomicExpression(AtomicExpression) {
       assert(!lvalue.isGlobalReg());
       ASTContext &C = CGF.getContext();
       if (lvalue.isSimple()) {
@@ -707,8 +713,22 @@ static bool hasBitIntPadding(QualType T, const ASTContext &C) {
   return false;
 }
 
-/// Map a constant C ABI memory order to an llvm ordering. A non-constant order
-/// is handled conservatively with the strongest ordering.
+static bool needsBitIntRMWLoop(AtomicExpr *E, const ASTContext &C,
+                               uint64_t Size, llvm::AtomicRMWInst::BinOp &BinOp,
+                               bool &ReturnsNew) {
+  QualType MemTy = E->getValueType();
+  if (!MemTy->isBitIntType() ||
+      !classifyBitIntRMW(E->getOp(), MemTy->isSignedIntegerType(), BinOp,
+                         ReturnsNew))
+    return false;
+
+  bool WideOrNonPow2 = (Size & (Size - 1)) != 0 || Size > 16;
+  bool Bitwise = BinOp == llvm::AtomicRMWInst::And ||
+                 BinOp == llvm::AtomicRMWInst::Or ||
+                 BinOp == llvm::AtomicRMWInst::Xor;
+  return WideOrNonPow2 || (hasBitIntPadding(MemTy, C) && !Bitwise);
+}
+
 static llvm::AtomicOrdering atomicOrderOrSeqCst(llvm::Value *Order) {
   auto *C = dyn_cast<llvm::ConstantInt>(Order);
   if (!C || !llvm::isValidAtomicOrderingCABI(C->getZExtValue()))
@@ -739,23 +759,22 @@ static llvm::AtomicOrdering atomicOrderOrSeqCst(llvm::Value *Order) {
 /// representation as the cmpxchg expected, so an object with non-canonical
 /// padding (e.g. written through a union) still converges instead of spinning
 /// forever; the desired it writes back is canonical. See P0528.
-static RValue emitBitIntAtomicRMWLoop(CodeGenFunction &CGF, AtomicExpr *E,
-                                      Address Ptr, Address Val1,
-                                      QualType AtomicTy,
-                                      llvm::AtomicRMWInst::BinOp BinOp,
-                                      bool ReturnsNew, llvm::Value *Order) {
+static RValue
+emitBitIntAtomicRMWLoop(CodeGenFunction &CGF, AtomicExpr *E, Address Ptr,
+                        Address Val1, QualType AtomicTy,
+                        llvm::AtomicRMWInst::BinOp BinOp, bool ReturnsNew,
+                        llvm::AtomicOrdering Order, llvm::SyncScope::ID Scope) {
   QualType ValTy = E->getValueType();
-  llvm::AtomicOrdering AO = atomicOrderOrSeqCst(Order);
 
   LValue AtomicLVal = CGF.MakeAddrLValue(Ptr, AtomicTy);
-  AtomicInfo Atomics(CGF, AtomicLVal);
+  AtomicInfo Atomics(CGF, AtomicLVal, Scope, E);
 
   llvm::Value *RHS =
       CGF.EmitLoadOfScalar(CGF.MakeAddrLValue(Val1, ValTy), E->getExprLoc());
 
   llvm::Value *Old = nullptr, *New = nullptr;
   Atomics.EmitAtomicUpdate(
-      AO,
+      Order,
       [&](RValue OldRV) {
         Old = OldRV.getScalarVal();
         New = llvm::buildAtomicRMWValue(BinOp, CGF.Builder, Old, RHS);
@@ -772,6 +791,20 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
                          llvm::Value *FailureOrder, uint64_t Size,
                          llvm::AtomicOrdering Order,
                          llvm::SyncScope::ID Scope) {
+  llvm::AtomicRMWInst::BinOp BitIntBinOp;
+  bool RMWReturnsNew;
+  if (needsBitIntRMWLoop(E, CGF.getContext(), Size, BitIntBinOp,
+                         RMWReturnsNew)) {
+    QualType AtomicTy = E->getPtr()->getType()->getPointeeType();
+    RValue Result = emitBitIntAtomicRMWLoop(
+        CGF, E, Ptr, Val1, AtomicTy, BitIntBinOp, RMWReturnsNew, Order, Scope);
+    llvm::Value *Stored =
+        CGF.EmitToMemory(Result.getScalarVal(), E->getValueType());
+    auto *I = CGF.Builder.CreateStore(Stored, Dest);
+    CGF.addInstToCurrentSourceAtom(I, Stored);
+    return;
+  }
+
   llvm::AtomicRMWInst::BinOp Op = llvm::AtomicRMWInst::Add;
   bool PostOpMinMax = false;
   unsigned PostOp = 0;
@@ -1356,25 +1389,39 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   LValue AtomicVal = MakeAddrLValue(Ptr, AtomicTy);
   AtomicInfo Atomics(*this, AtomicVal);
 
-  // A `_BitInt(N)` read-modify-write whose value width has padding bits, or
-  // whose size forces a libcall, cannot use a single atomicrmw: the op would
-  // carry into / compare the padding bits, and no arbitrary-width
-  // __atomic_fetch_* libcall exists. Emit a compare-exchange loop instead.
-  // Bitwise and/or/xor are exact even with padding, so only the wide case needs
-  // the loop for them. load/store/exchange/compare_exchange keep their paths.
-  if (MemTy->isBitIntType()) {
-    llvm::AtomicRMWInst::BinOp BinOp;
-    bool RMWReturnsNew;
-    if (classifyBitIntRMW(E->getOp(), MemTy->isSignedIntegerType(), BinOp,
-                          RMWReturnsNew)) {
-      bool WideOrNonPow2 = (Size & (Size - 1)) != 0 || Size > 16;
-      bool Bitwise = BinOp == llvm::AtomicRMWInst::And ||
-                     BinOp == llvm::AtomicRMWInst::Or ||
-                     BinOp == llvm::AtomicRMWInst::Xor;
-      if (WideOrNonPow2 || (hasBitIntPadding(MemTy, getContext()) && !Bitwise))
-        return emitBitIntAtomicRMWLoop(*this, E, Ptr, Val1, AtomicTy, BinOp,
-                                       RMWReturnsNew, Order);
+  llvm::AtomicRMWInst::BinOp BitIntBinOp;
+  bool RMWReturnsNew;
+  bool BitIntRMWLoop =
+      needsBitIntRMWLoop(E, getContext(), Size, BitIntBinOp, RMWReturnsNew);
+  llvm::AtomicOrdering BitIntOrder = atomicOrderOrSeqCst(Order);
+  llvm::SyncScope::ID DefaultScope = llvm::SyncScope::System;
+  if (BitIntRMWLoop && getLangOpts().OpenCL && !E->getScopeModel())
+    DefaultScope = getTargetHooks().getLLVMSyncScopeID(
+        getLangOpts(), SyncScope::OpenCLDevice, BitIntOrder, getLLVMContext());
+
+  if (BitIntRMWLoop && Atomics.shouldUseLibcall()) {
+    bool NonSystemScope = DefaultScope != llvm::SyncScope::System;
+    if (auto ScopeModel = E->getScopeModel()) {
+      if (auto *ConstantScope = dyn_cast<llvm::ConstantInt>(Scope)) {
+        auto ScopeID = getTargetHooks().getLLVMSyncScopeID(
+            getLangOpts(), ScopeModel->map(ConstantScope->getZExtValue()),
+            BitIntOrder, getLLVMContext());
+        NonSystemScope = ScopeID != llvm::SyncScope::System;
+      } else {
+        NonSystemScope = true;
+      }
     }
+    if (NonSystemScope) {
+      CGM.Error(E->getExprLoc(),
+                "scoped _BitInt atomic operation is not supported at this "
+                "width");
+      return RValue::get(llvm::PoisonValue::get(ConvertType(RValTy)));
+    }
+  }
+
+  if (BitIntRMWLoop && !E->getScopeModel()) {
+    return emitBitIntAtomicRMWLoop(*this, E, Ptr, Val1, AtomicTy, BitIntBinOp,
+                                   RMWReturnsNew, BitIntOrder, DefaultScope);
   }
 
   Address OriginalVal1 = Val1;
@@ -1408,7 +1455,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   // the size-optimized libcall variants, which are only valid up to 16 bytes.)
   //
   // See: https://llvm.org/docs/Atomics.html#libcalls-atomic
-  if (UseLibcall) {
+  if (UseLibcall && !BitIntRMWLoop) {
     Address UserExpected = Val1;
     llvm::Value *ExpectedBits = nullptr;
     llvm::BasicBlock *RetryBB = nullptr;
@@ -1901,8 +1948,8 @@ llvm::Value *AtomicInfo::EmitAtomicLoadOp(llvm::AtomicOrdering AO,
   if (shouldCastToInt(Addr.getElementType(), CmpXchg))
     Addr = castToAtomicIntPointer(Addr);
   llvm::LoadInst *Load = CGF.Builder.CreateLoad(Addr, "atomic-load");
-  Load->setAtomic(AO);
-  CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Load);
+  Load->setAtomic(AO, Scope);
+  CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Load, AtomicExpression);
 
   // Other decoration.
   if (IsVolatile)
@@ -2084,11 +2131,11 @@ std::pair<llvm::Value *, llvm::Value *> AtomicInfo::EmitAtomicCompareExchangeOp(
   // Do the atomic store.
   Address Addr = getAtomicAddressAsAtomicIntPointer();
   auto *Inst = CGF.Builder.CreateAtomicCmpXchg(Addr, ExpectedVal, DesiredVal,
-                                               Success, Failure);
+                                               Success, Failure, Scope);
   // Other decoration.
   Inst->setVolatile(LVal.isVolatileQualified());
   Inst->setWeak(IsWeak);
-  CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Inst);
+  CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Inst, AtomicExpression);
 
   // Okay, turn that back into the original value type.
   auto *PreviousVal = CGF.Builder.CreateExtractValue(Inst, /*Idxs=*/0);
@@ -2274,7 +2321,7 @@ void AtomicInfo::EmitAtomicUpdateLibcall(
 
   Address ExpectedAddr = CreateTempAlloca();
 
-  EmitAtomicLoadLibcall(ExpectedAddr.emitRawPointer(CGF), AO, IsVolatile);
+  EmitAtomicLoadLibcall(ExpectedAddr.emitRawPointer(CGF), Failure, IsVolatile);
   auto *ContBB = CGF.createBasicBlock("atomic_cont");
   auto *ExitBB = CGF.createBasicBlock("atomic_exit");
   CGF.EmitBlock(ContBB);
@@ -2365,7 +2412,7 @@ void AtomicInfo::EmitAtomicUpdateLibcall(llvm::AtomicOrdering AO,
 
   Address ExpectedAddr = CreateTempAlloca();
 
-  EmitAtomicLoadLibcall(ExpectedAddr.emitRawPointer(CGF), AO, IsVolatile);
+  EmitAtomicLoadLibcall(ExpectedAddr.emitRawPointer(CGF), Failure, IsVolatile);
   auto *ContBB = CGF.createBasicBlock("atomic_cont");
   auto *ExitBB = CGF.createBasicBlock("atomic_exit");
   CGF.EmitBlock(ContBB);

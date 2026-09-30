@@ -611,3 +611,17 @@ _Bool cas65(_Atomic(S65) *p, S65 *expected, S65 desired) {
                                                __ATOMIC_SEQ_CST,
                                                __ATOMIC_SEQ_CST);
 }
+
+// CHECK-LABEL: define dso_local void @release_add256(
+// CHECK: call void @__atomic_load(i64 noundef 32, ptr {{.*}}, ptr {{.*}}, i32 noundef 0)
+// CHECK: call zeroext i1 @__atomic_compare_exchange(i64 noundef 32, ptr {{.*}}, ptr {{.*}}, ptr {{.*}}, i32 noundef 3, i32 noundef 0)
+S256 release_add256(_Atomic(S256) *p) {
+  return __c11_atomic_fetch_add(p, (S256)1, __ATOMIC_RELEASE);
+}
+
+// CHECK-LABEL: define dso_local void @acqrel_add256(
+// CHECK: call void @__atomic_load(i64 noundef 32, ptr {{.*}}, ptr {{.*}}, i32 noundef 2)
+// CHECK: call zeroext i1 @__atomic_compare_exchange(i64 noundef 32, ptr {{.*}}, ptr {{.*}}, ptr {{.*}}, i32 noundef 4, i32 noundef 2)
+S256 acqrel_add256(_Atomic(S256) *p) {
+  return __c11_atomic_fetch_add(p, (S256)1, __ATOMIC_ACQ_REL);
+}
