@@ -45,6 +45,60 @@ define i1 @fmul_neg_pzero(float %x) #0 {
   ret i1 %r
 }
 
+; with IEEE denormals this must fold
+define i1 @fmul_neg_pzero_ieee(float %x) #1 {
+; CHECK-LABEL: define i1 @fmul_neg_pzero_ieee(
+; CHECK-SAME: float [[X:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    ret i1 false
+;
+  %neg = fneg float %x
+  %res = fmul float %neg, %x
+  %r = call i1 @llvm.is.fpclass.f32(float %res, i32 64)
+  ret i1 %r
+}
+
+; should still fold with preservesign
+define i1 @fmul_neg_pzero_preservesign(float %x) #2 {
+; CHECK-LABEL: define i1 @fmul_neg_pzero_preservesign(
+; CHECK-SAME: float [[X:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    ret i1 false
+;
+  %neg = fneg float %x
+  %res = fmul float %neg, %x
+  %r = call i1 @llvm.is.fpclass.f32(float %res, i32 64)
+  ret i1 %r
+}
+
+; shouldn't fold
+define i1 @fmul_neg_pzero_dynamic(float %x) #3 {
+; CHECK-LABEL: define i1 @fmul_neg_pzero_dynamic(
+; CHECK-SAME: float [[X:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = fmul float [[X]], [[NEG]]
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.is.fpclass.f32(float [[RES]], /* (pzero) */ i32 64)
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %neg = fneg float %x
+  %res = fmul float %neg, %x
+  %r = call i1 @llvm.is.fpclass.f32(float %res, i32 64)
+  ret i1 %r
+}
+
+; only output side can flush to +0 so it must not fold
+define i1 @fmul_neg_pzero_out_pzero(float %x) #4 {
+; CHECK-LABEL: define i1 @fmul_neg_pzero_out_pzero(
+; CHECK-SAME: float [[X:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = fmul float [[X]], [[NEG]]
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.is.fpclass.f32(float [[RES]], /* (pzero) */ i32 64)
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %neg = fneg float %x
+  %res = fmul float %neg, %x
+  %r = call i1 @llvm.is.fpclass.f32(float %res, i32 64)
+  ret i1 %r
+}
+
 ; fma of the form -x, x, -y
 define i1 @fma_negx_x_negy(float %x, float %y) {
 ; CHECK-LABEL: define i1 @fma_negx_x_negy(
@@ -76,4 +130,38 @@ define i1 @fma_y_minus_neg_x_squared(float %x, float %y) {
   ret i1 %r
 }
 
+; must not fold due to possibility of nan
+define i1 @fma_neg_x_x_pinf_y(float nofpclass(nan) %x, float nofpclass(nan) %y) {
+; CHECK-LABEL: define i1 @fma_neg_x_x_pinf_y(
+; CHECK-SAME: float nofpclass(nan) [[X:%.*]], float nofpclass(nan) [[Y:%.*]]) {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.fma.f32(float [[NEG]], float [[X]], float [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp uno float [[RES]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %neg = fneg float %x
+  %res = call float @llvm.fma.f32(float %neg, float %x, float %y)
+  %r = call i1 @llvm.is.fpclass.f32(float %res, i32 3)
+  ret i1 %r
+}
+
+; must not fold since the addend may be of any class
+define i1 @fma_neg_x_x_unknown_y(float %x, float %y) {
+; CHECK-LABEL: define i1 @fma_neg_x_x_unknown_y(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.fma.f32(float [[NEG]], float [[X]], float [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp ogt float [[RES]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %neg = fneg float %x
+  %res = call float @llvm.fma.f32(float %neg, float %x, float %y)
+  %r = call i1 @llvm.is.fpclass.f32(float %res, i32 896)
+  ret i1 %r
+}
+
 attributes #0 = { denormal_fpenv(positivezero) }
+attributes #1 = { denormal_fpenv(ieee) }
+attributes #2 = { denormal_fpenv(preservesign) }
+attributes #3 = { denormal_fpenv(dynamic) }
+attributes #4 = { denormal_fpenv(positivezero|ieee) }
