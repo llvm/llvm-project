@@ -1156,6 +1156,26 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(const TargetInfo &TI,
   return false;
 }
 
+static bool checkFPMScaleIfConstant(Sema &S, CallExpr *Call, unsigned ArgNum,
+                                    int64_t Low, int64_t High) {
+  Expr *Arg = Call->getArg(ArgNum);
+
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  std::optional<llvm::APSInt> Value = Arg->getIntegerConstantExpr(S.Context);
+
+  // Runtime value: accept it.
+  if (!Value)
+    return false;
+
+  if (*Value < Low || *Value > High)
+    return S.Diag(Call->getBeginLoc(), diag::warn_argument_invalid_range)
+           << toString(*Value, 10) << Low << High << Arg->getSourceRange();
+
+  return false;
+}
+
 bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
                                           unsigned BuiltinID,
                                           CallExpr *TheCall) {
@@ -1189,7 +1209,6 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
     return true;
   if (CheckCDEBuiltinFunctionCall(TI, BuiltinID, TheCall))
     return true;
-
   // For intrinsics which take an immediate value as part of the instruction,
   // range check them here.
   // FIXME: VFP Intrinsics should error if VFP not present.
@@ -1344,6 +1363,15 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
 
   if (CheckSMEBuiltinFunctionCall(BuiltinID, TheCall))
     return true;
+
+  if (BuiltinID == AArch64::BI__arm_set_fpm_lscale)
+    return checkFPMScaleIfConstant(SemaRef, TheCall, 1, 0, 127);
+
+  if (BuiltinID == AArch64::BI__arm_set_fpm_nscale)
+    return checkFPMScaleIfConstant(SemaRef, TheCall, 1, -128, 127);
+
+  if (BuiltinID == AArch64::BI__arm_set_fpm_lscale2)
+    return checkFPMScaleIfConstant(SemaRef, TheCall, 1, 0, 63);
 
   // For intrinsics which take an immediate value as part of the instruction,
   // range check them here.
