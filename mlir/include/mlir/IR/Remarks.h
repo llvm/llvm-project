@@ -472,7 +472,8 @@ using ReportFn = llvm::unique_function<void(const Remark &)>;
 /// Base class for MLIR remark emitting policies that is used to emit
 /// optimization remarks to the underlying remark streamer. The derived classes
 /// should implement the `reportRemark` method to provide the actual emitting
-/// implementation.
+/// implementation. `reportRemark` owns the remark it receives; a policy that
+/// keeps it past the call must move it into its own storage.
 ///
 /// Through the RemarkEngine, `reportRemark` and `finalize` run under the
 /// engine's lock and are never entered concurrently, even when passes report
@@ -487,7 +488,7 @@ public:
 
   void initialize(ReportFn fn) { reportImpl = std::move(fn); }
 
-  virtual void reportRemark(const Remark &remark) = 0;
+  virtual void reportRemark(Remark &&remark) = 0;
   virtual void finalize() = 0;
 
   /// Find previously reported remarks matching the given criteria.
@@ -629,7 +630,7 @@ public:
 
   /// Report a remark. Thread-safe: reports from several threads are handed to
   /// the policy one at a time.
-  void report(const Remark &&remark);
+  void report(Remark &&remark);
 
   /// Report a successful remark, this will create an InFlightRemark
   /// that can be used to build the remark using the << operator.
@@ -679,7 +680,7 @@ class RemarkEmittingPolicyAll : public detail::RemarkEmittingPolicyBase {
 public:
   RemarkEmittingPolicyAll();
 
-  void reportRemark(const detail::Remark &remark) override {
+  void reportRemark(detail::Remark &&remark) override {
     assert(reportImpl && "reportImpl is not set");
     reportImpl(remark);
   }
@@ -697,9 +698,9 @@ private:
 public:
   RemarkEmittingPolicyFinal();
 
-  void reportRemark(const detail::Remark &remark) override {
+  void reportRemark(detail::Remark &&remark) override {
     postponedRemarks.erase(remark);
-    postponedRemarks.insert(remark);
+    postponedRemarks.insert(std::move(remark));
   }
 
   /// Emits and drains all stored remarks. Root remarks come out sorted by the

@@ -262,11 +262,11 @@ void RemarkEngine::reportImpl(const Remark &remark) {
     emitRemark(remark.getLocation(), remark.getMsg());
 }
 
-void RemarkEngine::report(const Remark &&remark) {
+void RemarkEngine::report(Remark &&remark) {
   if (!remarkEmittingPolicy)
     return;
   llvm::sys::SmartScopedLock<true> lock(mutex);
-  remarkEmittingPolicy->reportRemark(remark);
+  remarkEmittingPolicy->reportRemark(std::move(remark));
 }
 
 void RemarkEngine::finalizePolicy() {
