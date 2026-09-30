@@ -10,12 +10,12 @@
 // LLVM targets. We keep this test with the MC tests, which already do that, to
 // keep the SupportTests target small.
 
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
@@ -116,8 +116,9 @@ TEST(TargetRegistry, SubtargetCopyPreservesHwMode) {
     EXPECT_NE(STI->getHwModeSet(), 0u);
     MCContext Ctx(TT, *MAI, *MRI, *STI);
     MCSubtargetInfo &Copy = Ctx.getSubtargetCopy(*STI);
-    // FIXME: MCContext::getSubtargetCopy slices MCSubtargetInfo to the base
-    // class, losing the target's getHwMode() and getHwModeSet() overrides.
+    // FIXME: MCContext::getSubtargetCopy invokes the base MCSubtargetInfo copy
+    // constructor, resetting the vtable to MCSubtargetInfo and losing the
+    // <Target>GenMCSubtargetInfo overrides for getHwMode() and getHwModeSet().
     EXPECT_EQ(Copy.getHwMode(), 0u);
     EXPECT_EQ(Copy.getHwModeSet(), 0u);
   }
