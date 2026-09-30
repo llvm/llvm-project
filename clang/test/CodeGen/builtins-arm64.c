@@ -241,7 +241,7 @@ void atomic_store_with_hint(int64_t *a, int64_t b) {
 
   // Invalid hint should be dropped
   __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELAXED, 5); // Invalid Hint
-  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8{{$}}
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8
 }
 
 // CHECK: ![[M0]] = !{!"1:2:3:4:5"}

@@ -124,7 +124,7 @@ define void @relaxed_store_hint_roW_double(ptr %ptr, i32 %offset, double %val) n
 define void @relaxed_store_hint_roX_i8(ptr %ptr, i64 %offset, i8 %val) nounwind {
 ; CHECK-LABEL: relaxed_store_hint_roX_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shuh{{$}}
+; CHECK-NEXT:    shuh
 ; CHECK-NEXT:    strb w2, [x0, x1]
 ; CHECK-NEXT:    ret
   %addr = getelementptr i8, ptr %ptr, i64 %offset

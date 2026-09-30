@@ -342,6 +342,16 @@ define void @test_atomic_store_stcph_release_i64(ptr %ptr, i64 %val) nounwind {
   ret void
 }
 
+define void @test_atomic_store_stcph_seqcst_i64(ptr %ptr, i64 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_stcph_seqcst_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stcph
+; CHECK-NEXT:    stlr x1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i64 %val, ptr %ptr seq_cst, align 8, !mem.cache_hint !4
+  ret void
+}
+
 ;
 ; SHUH
 ;
@@ -366,6 +376,16 @@ define void @test_atomic_store_shuh_release_i64(ptr %ptr, i64 %val) nounwind {
   ret void
 }
 
+define void @test_atomic_store_shuh_seqcst_i64(ptr %ptr, i64 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_seqcst_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh
+; CHECK-NEXT:    stlr x1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i64 %val, ptr %ptr seq_cst, align 8, !mem.cache_hint !6
+  ret void
+}
+
 ;
 ; SHUH PH
 ;
@@ -387,6 +407,16 @@ define void @test_atomic_store_shuh_ph_release_i64(ptr %ptr, i64 %val) nounwind 
 ; CHECK-NEXT:    stlr x1, [x0]
 ; CHECK-NEXT:    ret
   store atomic i64 %val, ptr %ptr release, align 8, !mem.cache_hint !8
+  ret void
+}
+
+define void @test_atomic_store_shuh_ph_seqcst_i64(ptr %ptr, i64 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_ph_seqcst_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh ph
+; CHECK-NEXT:    stlr x1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i64 %val, ptr %ptr seq_cst, align 8, !mem.cache_hint !8
   ret void
 }
 
