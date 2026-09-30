@@ -3,7 +3,7 @@
 ; RUN: opt -S -mtriple=mips64el -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck %s --implicit-check-not='{{^[ \t]+fence[ \t]}}'
 ; RUN: opt -S -mtriple=mips64 -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck %s --implicit-check-not='{{^[ \t]+fence[ \t]}}'
 
-; Acquire needs only a trailing fence; release needs only a leading fence.
+;; Acquire needs only a trailing fence; release needs only a leading fence.
 
 define { i8, i1 } @cmpxchg_acquire_i8(ptr %ptr, i8 %cmp, i8 %val) {
 ; CHECK-LABEL: @cmpxchg_acquire_i8(

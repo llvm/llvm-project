@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=mipsel -mcpu=mips32r2 -O0 -debug-pass=Structure -o /dev/null %s 2>&1 | FileCheck %s
 ; RUN: llc -mtriple=mipsel -mcpu=mips32r2 -O2 -debug-pass=Structure -o /dev/null %s 2>&1 | FileCheck %s
 
-; Expand LL/SC loops after generic machine passes and before MIPS finalization.
+;; Expand LL/SC loops after generic machine passes and before MIPS finalization.
 ; CHECK:      Live DEBUG_VALUE analysis
 ; CHECK:      Stack Frame Layout Analysis
 ; CHECK-NEXT: Mips pseudo instruction expansion pass

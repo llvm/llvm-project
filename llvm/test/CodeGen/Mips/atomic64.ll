@@ -10,13 +10,13 @@
 ; RUN: llc -mtriple=mips64-unknown-linux-gnu -O0 -mcpu=mips64r6 -relocation-model=pic -verify-machineinstrs -verify-machineinstrs < %s | \
 ; RUN:   FileCheck %s -check-prefix=MIPS64R6O0
 
-; We want to verify the produced code is well formed all optimization levels, the rest of the test which ensure correctness.
+;; We want to verify the produced code is well formed all optimization levels, the rest of the test which ensure correctness.
 ; RUN: llc -mtriple=mips64el-unknown-linux-gnu -O1 --disable-machine-licm -mcpu=mips64 -relocation-model=pic -verify-machineinstrs < %s | FileCheck %s --check-prefix=O1
 ; RUN: llc -mtriple=mips64el-unknown-linux-gnu -O2 --disable-machine-licm -mcpu=mips64 -relocation-model=pic -verify-machineinstrs < %s | FileCheck %s --check-prefix=O2
 ; RUN: llc -mtriple=mips64el-unknown-linux-gnu -O3 --disable-machine-licm -mcpu=mips64 -relocation-model=pic -verify-machineinstrs < %s | FileCheck %s --check-prefix=O3
 
-; Keep one big-endian check so that we don't reduce testing, but don't add more
-; since endianness doesn't affect the body of the atomic operations.
+;; Keep one big-endian check so that we don't reduce testing, but don't add more
+;; since endianness doesn't affect the body of the atomic operations.
 ; RUN: llc -mtriple=mips64-unknown-linux-gnu --disable-machine-licm -mcpu=mips64 -relocation-model=pic -verify-machineinstrs < %s | \
 ; RUN:   FileCheck %s -check-prefix=MIPS64EB
 

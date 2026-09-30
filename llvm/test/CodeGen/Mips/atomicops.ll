@@ -48,7 +48,7 @@ entry:
 
 declare i32 @printf(ptr nocapture, ...) nounwind
 
-; MIPS16 uses byte and halfword libcalls.
+;; MIPS16 uses byte and halfword libcalls.
 define i8 @add_i8(ptr %ptr, i8 %value) {
 ; 16-LABEL: add_i8:
 ; 16: %call16(__sync_fetch_and_add_1)

@@ -4,7 +4,7 @@
 ; RUN: opt -S -mtriple=mips64el-unknown-linux-gnu -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck %s --check-prefix=LE64
 ; RUN: opt -S -mtriple=mips64-unknown-linux-gnu -passes='require<libcall-lowering-info>,atomic-expand' %s | FileCheck %s --check-prefix=BE64
 
-; Bitwise RMWs widen to i32; other supported RMWs use masked intrinsics.
+;; Bitwise RMWs widen to i32; other supported RMWs use masked intrinsics.
 
 define i8 @add_i8(ptr %ptr, i8 %val) {
 ; LE32-LABEL: @add_i8(

@@ -22,13 +22,13 @@
 ; RUN: llc -mtriple=mipsel-unknown-linux-gnu --disable-machine-licm -mcpu=mips32r2 -mattr=micromips -relocation-model=pic -verify-machineinstrs < %s | \
 ; RUN:   FileCheck %s -check-prefix=MM32
 
-; We want to verify the produced code is well formed all optimization levels, the rest of the tests which ensure correctness.
+;; We want to verify the produced code is well formed all optimization levels, the rest of the tests which ensure correctness.
 ; RUN: llc -mtriple=mipsel-unknown-linux-gnu -O1 --disable-machine-licm -mcpu=mips32 -relocation-model=pic -verify-machineinstrs < %s | FileCheck %s --check-prefix=O1
 ; RUN: llc -mtriple=mipsel-unknown-linux-gnu -O2 --disable-machine-licm -mcpu=mips32 -relocation-model=pic -verify-machineinstrs < %s | FileCheck %s --check-prefix=O2
 ; RUN: llc -mtriple=mipsel-unknown-linux-gnu -O3 --disable-machine-licm -mcpu=mips32 -relocation-model=pic -verify-machineinstrs < %s | FileCheck %s --check-prefix=O3
 
-; Keep one big-endian check so that we don't reduce testing, but don't add more
-; since endianness doesn't affect the body of the atomic operations.
+;; Keep one big-endian check so that we don't reduce testing, but don't add more
+;; since endianness doesn't affect the body of the atomic operations.
 ; RUN: llc -mtriple=mips-unknown-linux-gnu   --disable-machine-licm -mcpu=mips32 -relocation-model=pic -verify-machineinstrs < %s | \
 ; RUN:   FileCheck %s -check-prefix=MIPS32EB
 
@@ -5062,12 +5062,12 @@ entry:
   %0 = cmpxchg ptr %ptr, i8 %oldval, i8 %newval monotonic monotonic
   %1 = extractvalue { i8, i1 } %0, 1
   ret i1 %1
-; FIXME: -march=mips produces a redundant sign extension here...
-; FIXME: ...Leading to this split check.
+;; FIXME: -march=mips produces a redundant sign extension here...
+;; FIXME: ...Leading to this split check.
 
 }
 
-; Check one i16 so that we cover the seh sign extend
+;; Check one i16 so that we cover the seh sign extend
 @z = common global i16 0, align 1
 
 define signext i16 @AtomicLoadAdd16(i16 signext %incr) nounwind {
@@ -5528,11 +5528,11 @@ entry:
 
 }
 
-; Test that the i16 return value from cmpxchg is recognised as signed,
-; so that setCC doesn't end up comparing an unsigned value to a signed
-; value.
-; The rest of the functions here are testing the atomic expansion, so
-; we just match the end of the function.
+;; Test that the i16 return value from cmpxchg is recognised as signed,
+;; so that setCC doesn't end up comparing an unsigned value to a signed
+;; value.
+;; The rest of the functions here are testing the atomic expansion, so
+;; we just match the end of the function.
 define {i16, i1} @foo(ptr %addr, i16 %l, i16 %r, i16 %new) {
 ; MIPS32-LABEL: foo:
 ; MIPS32:       # %bb.0:
@@ -6334,13 +6334,13 @@ entry:
   ret i32 %0
 }
 
-; make sure that this assertion in
-; TwoAddressInstructionPass::TryInstructionTransform does not fail:
+;; make sure that this assertion in
+;; TwoAddressInstructionPass::TryInstructionTransform does not fail:
 ;
-; line 1203: assert(TargetRegisterInfo::isVirtualRegister(regB) &&
+;; line 1203: assert(TargetRegisterInfo::isVirtualRegister(regB) &&
 ;
-; it failed when MipsDAGToDAGISel::ReplaceUsesWithZeroReg replaced an
-; operand of an atomic instruction with register $zero.
+;; it failed when MipsDAGToDAGISel::ReplaceUsesWithZeroReg replaced an
+;; operand of an atomic instruction with register $zero.
 @a = external global i32
 
 define i32 @zeroreg() nounwind {
@@ -6745,8 +6745,8 @@ entry:
   ret i32 %conv
 }
 
-; Check that MIPS32R6 has the correct offset range.
-; FIXME: At the moment, we don't seem to do addr+offset for any atomic load/store.
+;; Check that MIPS32R6 has the correct offset range.
+;; FIXME: At the moment, we don't seem to do addr+offset for any atomic load/store.
 define i32 @AtomicLoadAdd32_OffGt9Bit(i32 signext %incr) nounwind {
 ; MIPS32-LABEL: AtomicLoadAdd32_OffGt9Bit:
 ; MIPS32:       # %bb.0: # %entry

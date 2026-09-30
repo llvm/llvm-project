@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=mips64el -target-abi=n32 -mcpu=mips64r6 -O0 -verify-machineinstrs < %s | FileCheck %s --check-prefix=LE-R6
 ; RUN: llc -mtriple=mips64 -target-abi=n32 -mcpu=mips64r6 -O0 -verify-machineinstrs < %s | FileCheck %s --check-prefix=BE-R6
 
-; N32 masked atomics use 32-bit addresses and aligned i32 memory accesses.
+;; N32 masked atomics use 32-bit addresses and aligned i32 memory accesses.
 define signext i8 @signed_min(ptr %ptr, i8 signext %val) {
 ; LE-LABEL: signed_min:
 ; LE:       # %bb.0:
@@ -287,7 +287,7 @@ define i32 @cmpxchg_result(ptr %ptr, i16 zeroext %cmp, i16 zeroext %val) {
   ret i32 %result
 }
 
-; Known alignment folds the address preparation and endian-dependent shifts.
+;; Known alignment folds the address preparation and endian-dependent shifts.
 define zeroext i16 @aligned_xchg(ptr %ptr, i16 zeroext %val) {
 ; LE-LABEL: aligned_xchg:
 ; LE:       # %bb.0:
