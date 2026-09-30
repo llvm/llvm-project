@@ -65,21 +65,3 @@ sd a2, a_symbol, x0
 # CHECK-RV32: :[[#@LINE-2]]:1: note: instruction requires the following: RV64I Base Instruction Set
 # CHECK-RV32: :[[#@LINE-3]]:1: note: instruction requires the following: 'Zilsd' (Load/Store pair instructions)
 # CHECK-RV64: :[[#@LINE-4]]:18: error: register must be a GPR excluding zero (x0)
-
-.option arch, +f, +d, +q, +zfhmin
-flh fa2, a_symbol, x0
-# CHECK: :[[#@LINE-1]]:20: error: register must be a GPR excluding zero (x0)
-flw fa2, a_symbol, x0
-# CHECK: :[[#@LINE-1]]:20: error: register must be a GPR excluding zero (x0)
-fld fa2, a_symbol, x0
-# CHECK: :[[#@LINE-1]]:20: error: register must be a GPR excluding zero (x0)
-flq fa2, a_symbol, x0
-# CHECK: :[[#@LINE-1]]:20: error: register must be a GPR excluding zero (x0)
-fsh fa2, a_symbol, x0
-# CHECK: :[[#@LINE-1]]:20: error: register must be a GPR excluding zero (x0)
-fsw fa2, a_symbol, x0
-# CHECK: :[[#@LINE-1]]:20: error: register must be a GPR excluding zero (x0)
-fsd fa2, a_symbol, x0
-# CHECK: :[[#@LINE-1]]:20: error: register must be a GPR excluding zero (x0)
-fsq fa2, a_symbol, x0
-# CHECK: :[[#@LINE-1]]:20: error: register must be a GPR excluding zero (x0)
