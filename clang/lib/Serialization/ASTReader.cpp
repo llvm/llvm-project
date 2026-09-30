@@ -1869,18 +1869,6 @@ void ASTReader::buildLoadedInputFiles() {
   }
 }
 
-InputFileLoc ASTReader::getInputFileLoc(ModuleFile &F, unsigned InputID) {
-  InputFileInfo FI = getInputFileInfo(F, InputID);
-  // A module file records no entry index for an input file it redirected
-  // elsewhere, so it has no copy to offer.
-  if (!FI.SLocIndex)
-    return InputFileLoc();
-  // \c SLocIndex is a FileID, which counts from one, and a module file's
-  // entries are indexed from zero.
-  return {FileID::get(F.SLocEntryBaseID + FI.SLocIndex - 1),
-          F.SLocEntryBaseOffset + FI.SLocOffset};
-}
-
 InputFileLoc ASTReader::getLoadedFileLoc(StringRef Path, off_t Size) {
   if (!LoadedInputFiles)
     buildLoadedInputFiles();
@@ -1914,11 +1902,15 @@ InputFileLoc ASTReader::getLoadedFileLoc(StringRef Path, off_t Size) {
     if (StringRef(Candidate) != StringRef(Wanted))
       continue;
 
-    // An input file may have no source location entries, leaving no copy to
-    // redirect to.
-    InputFileLoc Loc = getInputFileLoc(*In.F, In.InputID);
-    if (Loc.isValid())
-      return Loc;
+    // A module file records no entry index for an input file it redirected
+    // elsewhere, so it has no copy to offer and the search goes on.
+    if (!FI.SLocIndex)
+      continue;
+
+    // \c SLocIndex is a FileID, which counts from one, and a module file's
+    // entries are indexed from zero.
+    return {FileID::get(In.F->SLocEntryBaseID + FI.SLocIndex - 1),
+            In.F->SLocEntryBaseOffset + FI.SLocOffset};
   }
   return InputFileLoc();
 }

@@ -1466,7 +1466,6 @@ private:
       LoadedInputFiles;
 
   void buildLoadedInputFiles();
-  serialization::InputFileLoc getInputFileLoc(ModuleFile &F, unsigned InputID);
 
 public:
   /// Get the buffer for resolving paths.
