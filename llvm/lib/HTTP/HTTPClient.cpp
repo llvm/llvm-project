@@ -443,8 +443,12 @@ Error HTTPClient::perform(const HTTPRequest &Request,
     std::vector<char> Buffer(BytesAvailable);
     DWORD BytesRead = 0;
     if (!WinHttpReadData(Session->RequestHandle, Buffer.data(), BytesAvailable,
-                         &BytesRead))
-      return createStringError(errc::io_error, "Failed to read HTTP response");
+                         &BytesRead)) {
+      bool TimedOut = GetLastError() == ERROR_WINHTTP_TIMEOUT;
+      return createStringError(errc::io_error,
+                               TimedOut ? "Timeout was reached"
+                                        : "Failed to read HTTP response");
+    }
 
     if (BytesRead > 0) {
       if (Error Err =
