@@ -194,7 +194,7 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // The same applies to code above where it is calling getAddrOfGlobalVar.
     mlir::Value globalVal = builder.createGetGlobal(addr);
     globalVal.getDefiningOp<cir::GetGlobalOp>().setStaticLocal(
-        addr.getStaticLocalGuard().has_value());
+        addr.getDynamicInitGuard().has_value());
     CharUnits alignment = cgf.getContext().getDeclAlign(vd);
     Address globalAddr{globalVal, cgf.convertTypeForMem(type), alignment};
     cgf.emitDestroy(globalAddr, type, cgf.getDestroyer(dtorKind));
@@ -304,12 +304,12 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
   // Attach the AST handle for consumers that need arbitrary AST properties.
   addr.setAstAttr(cir::ASTVarDeclAttr::get(&getMLIRContext(), varDecl));
 
-  // For static-local guarded globals, also materialize the specific facts
+  // For dynamic-init-guarded globals, also materialize the specific facts
   // LoweringPrepare needs into a serializable attribute, so that lowering can
   // run without a live ASTContext (e.g. on serialized CIR in split-compilation
   // flows). This is orthogonal to the AST handle above.
-  if (addr.getStaticLocalGuard().has_value())
-    addr.setStaticLocalInfoAttr(cir::StaticLocalInfoAttr::get(
+  if (addr.getDynamicInitGuard().has_value())
+    addr.setDynamicInitInfoAttr(cir::DynamicInitInfoAttr::get(
         &getMLIRContext(), varDecl->isLocalVarDecl(),
         getCIRTLSKind(varDecl->getTLSKind()), varDecl->isInline(),
         getCIRTemplateSpecializationKind(
@@ -357,10 +357,10 @@ void CIRGenModule::emitCXXSpecialVarDeclInit(const VarDecl *varDecl,
   scope.setAsGlobalInit();
   builder.setInsertionPointToStart(block);
   mlir::Value getGlobal = builder.createGetGlobal(addr, varDecl->getTLSKind());
-  // If we're initializing a static local with a guard variable, set the flag
-  // that indicates that.
+  // If we're initializing a guarded variable, set the flag that indicates
+  // that.
   getGlobal.getDefiningOp<cir::GetGlobalOp>().setStaticLocal(
-      addr.getStaticLocalGuard().has_value());
+      addr.getDynamicInitGuard().has_value());
 
   Address declAddr(getGlobal, getASTContext().getDeclAlign(varDecl));
   assert(performInit && "cannot have a constant initializer which needs "

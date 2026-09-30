@@ -3410,10 +3410,11 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
     and verified to be in accordance to `linkage`.
 
-    The `static_local_guard` attribute indicates that this global represents a
-    function-local static variable that requires guarded initialization
-    (e.g., C++ static local variables with non-constant initializers).
-    It contains the mangled name of the guard variable.
+    The `dynamic_init_guard` attribute indicates that this global requires
+    guarded dynamic initialization via the Itanium `__cxa_guard_*` protocol
+    (e.g., C++ static local variables with non-constant initializers, or
+    namespace-scope variables with vague linkage such as weak/linkonce_odr
+    inline variables). It contains the mangled name of the guard variable.
 
     The `strictfp` attribute indicates that the dynamic initialization emitted
     into the `ctorRegion`/`dtorRegion` runs under a constrained floating-point
@@ -3445,10 +3446,10 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<StrAttr>:$comdat,
                        UnitProp:$constant,
                        UnitProp:$dso_local,
-                       OptionalAttr<CIR_StaticLocalGuardAttr>:$static_local_guard,
+                       OptionalAttr<CIR_DynamicInitGuardAttr>:$dynamic_init_guard,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
-                       OptionalAttr<CIR_StaticLocalInfoAttr>:$static_local_info,
+                       OptionalAttr<CIR_DynamicInitInfoAttr>:$dynamic_init_info,
                        OptionalAttr<StrAttr>:$section,
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
@@ -3468,7 +3469,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     (`tls_model` `=` enum($tls_model)^)?
     (`tls_refs` `=` $tls_refs^)?
     (`dso_local` $dso_local^)?
-    (`static_local_guard` `` $static_local_guard^)?
+    (`dynamic_init_guard` `` $dynamic_init_guard^)?
     (` ` custom<GlobalMemorySpace>($addr_space)^ )?
     $sym_name
     (`alias` `(` $aliasee^ `)`)?
@@ -3477,7 +3478,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     ($annotations^)?
     (`align` `(` $alignment^ `)`)?
     (`ast` `(` $ast^ `)`)?
-    (`static_local_info` `` $static_local_info^)?
+    (`dynamic_init_info` `` $dynamic_init_info^)?
     (`section` `(` $section^ `)`)?
     (`strictfp` $strictfp^)?
     (`init_priority` `(` $init_priority^ `)`)?

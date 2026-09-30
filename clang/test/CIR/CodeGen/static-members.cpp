@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck %s -check-prefix=LLVM --input-file=%t-cir.ll
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck %s -check-prefix=OGCG --input-file=%t.ll
+// RUN: FileCheck %s -check-prefix=LLVM --input-file=%t.ll
 
 struct HasDtor {
   ~HasDtor();
@@ -12,87 +12,161 @@ struct S {
   static inline HasDtor hd;
 };
 
-// CIR: cir.global linkonce_odr comdat @_ZN1S2hdE = #cir.zero : !rec_HasDtor
+// CIR: module @
+// CIR-SAME: cir.global_ctors = [#cir.global_ctor<"__cxx_global_var_init", 65535, @_ZN1S2hdE>, #cir.global_ctor<"__cxx_global_var_init.1", 65535, @_ZN5Outer5Inner2hdE>, #cir.global_ctor<"__cxx_global_var_init.2", 65535, @_ZN13NonThreadSafeIiE1fE>]
 
-// CIR: cir.func internal private @__cxx_global_var_init() {
-// CIR:   %[[HD:.*]] = cir.get_global @_ZN1S2hdE : !cir.ptr<!rec_HasDtor>
-// CIR:   %[[DTOR:.*]] = cir.get_global @_ZN7HasDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>>
-// CIR:   %[[DTOR_CAST:.*]] = cir.cast bitcast %[[DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
-// CIR:   %[[HD_CAST:.*]] = cir.cast bitcast %[[HD]] : !cir.ptr<!rec_HasDtor> -> !cir.ptr<!void>
-// CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
-// CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[HD_CAST]], %[[HANDLE]])
+// Guard variables.
+// CIR-DAG: cir.global "private" linkonce_odr comdat("_ZN1S2hdE") @_ZGVN1S2hdE = #cir.int<0> : !s64i
+// LLVM-DAG: @_ZGVN1S2hdE = linkonce_odr global i64 0, comdat($_ZN1S2hdE), align 8
+// CIR-DAG: cir.global "private" linkonce_odr comdat("_ZN5Outer5Inner2hdE") @_ZGVN5Outer5Inner2hdE = #cir.int<0> : !s64i
+// LLVM-DAG: @_ZGVN5Outer5Inner2hdE = linkonce_odr global i64 0, comdat($_ZN5Outer5Inner2hdE), align 8
+// CIR-DAG: cir.global "private" linkonce_odr comdat("_ZN13NonThreadSafeIiE1fE") @_ZGVN13NonThreadSafeIiE1fE = #cir.int<0> : !s64i
+// LLVM-DAG: @_ZGVN13NonThreadSafeIiE1fE = linkonce_odr global i64 0, comdat($_ZN13NonThreadSafeIiE1fE), align 8
 
-// LLVM: @_ZN1S2hdE = linkonce_odr global %struct.HasDtor zeroinitializer, comdat
-// LLVM: @_ZN5Outer5Inner2hdE = linkonce_odr global %struct.HasDtor zeroinitializer, comdat
+// LLVM-DAG: @_ZN1S2hdE = linkonce_odr global %struct.HasDtor zeroinitializer, comdat, align 1
+// LLVM-DAG: @_ZN5Outer5Inner2hdE = linkonce_odr global %struct.HasDtor zeroinitializer, comdat, align 1
+// LLVM-DAG: @_ZN13NonThreadSafeIiE1fE = linkonce_odr global i32 0, comdat, align 4
+// LLVM: @llvm.global_ctors = appending global [3 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @_ZN1S2hdE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.1, ptr @_ZN5Outer5Inner2hdE }, { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.2, ptr @_ZN13NonThreadSafeIiE1fE }]
 
-// LLVM: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_static_members.cpp, ptr null }]
-// LLVM: define internal void @__cxx_global_var_init()
-// LLVM:   call i32 @__cxa_atexit(ptr @_ZN7HasDtorD1Ev, ptr @_ZN1S2hdE, ptr @__dso_handle)
 
-// FIXME(cir): OGCG has a guard variable for this case that we don't generate in CIR.
-//             This is needed because the variable linkonce_odr linkage.
+// CIR: cir.global linkonce_odr comdat dynamic_init_guard<"_ZGVN1S2hdE"> @_ZN1S2hdE = #cir.zero : !rec_HasDtor align(1) ast(#cir.var.decl.ast) dynamic_init_info<local = false, tls = none, is_inline = true, tsk = undeclared>
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init() {
+// CIR: %[[GET_GUARD:.*]] = cir.get_global @_ZGVN1S2hdE : !cir.ptr<!s64i>
+// CIR: %[[TO_CHAR:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
+// CIR: %[[LOAD_GUARD:.*]] = cir.load align(8) syncscope(system) atomic(acquire) %[[TO_CHAR]] : !cir.ptr<!s8i>, !s8i
+// CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
+// CIR: %[[CMP:.*]] = cir.cmp eq %[[LOAD_GUARD]], %[[ZERO]] : !s8i
+// CIR: cir.if %[[CMP]] {
+// CIR:   %[[ACQUIRE_GUARD:.*]] = cir.call @__cxa_guard_acquire(%[[GET_GUARD]]) : (!cir.ptr<!s64i>) -> !s32i
+// CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR:   %[[CMP:.*]] = cir.cmp ne %[[ACQUIRE_GUARD]], %[[ZERO]] : !s32i
+// CIR:   cir.if %[[CMP]] {
+// CIR:     %[[GET_HD:.*]] = cir.get_global @_ZN1S2hdE : !cir.ptr<!rec_HasDtor>
+// CIR:     %[[GET_DTOR:.*]] = cir.get_global @_ZN7HasDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>>
+// CIR:     %[[CAST_DTOR:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
+// CIR:     %[[CAST_HD:.*]] = cir.cast bitcast %[[GET_HD]] : !cir.ptr<!rec_HasDtor> -> !cir.ptr<!void>
+// CIR:     %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:     %[[AT_EXIT:.*]] = cir.call @__cxa_atexit(%[[CAST_DTOR]], %[[CAST_HD]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
+// CIR:     cir.call @__cxa_guard_release(%[[GET_GUARD]]) : (!cir.ptr<!s64i>) -> ()
+// CIR:   }
+// CIR: }
+// CIR: cir.return
 
-// OGCG: @_ZN1S2hdE = linkonce_odr global %struct.HasDtor zeroinitializer, comdat
-// OGCG: @_ZGVN1S2hdE = linkonce_odr global i64 0, comdat($_ZN1S2hdE)
-// OGCG: @_ZN5Outer5Inner2hdE = linkonce_odr global %struct.HasDtor zeroinitializer, comdat
-// OGCG: @_ZGVN5Outer5Inner2hdE = linkonce_odr global i64 0, comdat($_ZN5Outer5Inner2hdE)
-// OGCG: @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [
-// OGCG-SAME:      { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @_ZN1S2hdE },
-// OGCG-SAME:      { i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init.1, ptr @_ZN5Outer5Inner2hdE }]
+// LLVM-LABEL: define internal void @__cxx_global_var_init()
+// LLVM: %[[LOAD_GUARD:.*]] = load atomic i8, ptr @_ZGVN1S2hdE acquire, align 8
+// LLVM: %[[CMP:.*]] = icmp eq i8 %[[LOAD_GUARD]], 0
+// LLVM: br i1 %[[CMP]], label %[[UNINIT:.*]], label %[[RET:.*]]
 
-// OGCG: define internal void @__cxx_global_var_init() {{.*}} section ".text.startup" comdat($_ZN1S2hdE) {
-// OGCG:   %[[GUARD:.*]] = load atomic i8, ptr @_ZGVN1S2hdE acquire
-// OGCG:   %[[UNINIT:.*]] = icmp eq i8 %[[GUARD]], 0
-// OGCG:   br i1 %[[UNINIT]], label %[[INIT_CHECK:.*]], label %[[INIT_END:.*]]
-// OGCG: [[INIT_CHECK:.*]]:
-// OGCG:   %[[GUARD_ACQUIRE:.*]] = call i32 @__cxa_guard_acquire(ptr @_ZGVN1S2hdE)
-// OGCG:   %[[TOBOOL:.*]] = icmp ne i32 %[[GUARD_ACQUIRE]], 0
-// OGCG:   br i1 %[[TOBOOL]], label %[[INIT:.*]], label %[[INIT_END]]
-// OGCG: [[INIT:.*]]:
-// OGCG:   %[[ATEXIT:.*]] = call i32 @__cxa_atexit(ptr @_ZN7HasDtorD1Ev, ptr @_ZN1S2hdE, ptr @__dso_handle)
-// OGCG:   call void @__cxa_guard_release(ptr @_ZGVN1S2hdE)
-// OGCG:   br label %[[INIT_END]]
-// OGCG: [[INIT_END]]:
+// LLVM: [[UNINIT]]:
+// LLVM:   %[[ACQUIRE_GUARD:.*]] = call i32 @__cxa_guard_acquire(ptr @_ZGVN1S2hdE)
+// LLVM:   %[[CMP:.*]] = icmp ne i32 %[[ACQUIRE_GUARD]], 0
+// CIR leaves an extra 'block' for this target, but both go to 'ret' via only
+// empty blocks.
+// LLVM:   br i1 %[[CMP]], label %[[DO_INIT:.*]], label %{{.*}}
+
+// LLVM: [[DO_INIT]]:
+// LLVM:   %[[AT_EXIT:.*]] = call i32 @__cxa_atexit(ptr @_ZN7HasDtorD1Ev, ptr @_ZN1S2hdE, ptr @__dso_handle)
+// LLVM:   call void @__cxa_guard_release(ptr @_ZGVN1S2hdE)
+// CIR leaves an extra 'block' for this target, but both go to 'ret' via only
+// empty blocks.
+// LLVM:   br label %{{.*}}
+
+// LLVM: [[RET]]:
+// LLVM:   ret void
 
 struct Outer {
   struct Inner {
     static inline HasDtor hd;
   };
 };
+// CIR: cir.global linkonce_odr comdat dynamic_init_guard<"_ZGVN5Outer5Inner2hdE"> @_ZN5Outer5Inner2hdE = #cir.zero : !rec_HasDtor align(1) ast(#cir.var.decl.ast) dynamic_init_info<local = false, tls = none, is_inline = true, tsk = undeclared>
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init.1() {
+// CIR: %[[GET_GUARD:.*]] = cir.get_global @_ZGVN5Outer5Inner2hdE : !cir.ptr<!s64i>
+// CIR: %[[TO_CHAR:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
+// CIR: %[[LOAD_GUARD:.*]] = cir.load align(8) syncscope(system) atomic(acquire) %[[TO_CHAR]] : !cir.ptr<!s8i>, !s8i
+// CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
+// CIR: %[[CMP:.*]] = cir.cmp eq %[[LOAD_GUARD]], %[[ZERO]] : !s8i
+// CIR: cir.if %[[CMP]] {
+// CIR:   %[[ACQUIRE_GUARD:.*]] = cir.call @__cxa_guard_acquire(%[[GET_GUARD]]) : (!cir.ptr<!s64i>) -> !s32i
+// CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR:   %[[CMP:.*]] = cir.cmp ne %[[ACQUIRE_GUARD]], %[[ZERO]] : !s32i
+// CIR:   cir.if %[[CMP]] {
+// CIR:     %[[GET_HD:.*]] = cir.get_global @_ZN5Outer5Inner2hdE : !cir.ptr<!rec_HasDtor>
+// CIR:     %[[GET_DTOR:.*]] = cir.get_global @_ZN7HasDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>>
+// CIR:     %[[CAST_DTOR:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
+// CIR:     %[[CAST_HD:.*]] = cir.cast bitcast %[[GET_HD]] : !cir.ptr<!rec_HasDtor> -> !cir.ptr<!void>
+// CIR:     %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
+// CIR:     %[[AT_EXIT:.*]] = cir.call @__cxa_atexit(%[[CAST_DTOR]], %[[CAST_HD]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
+// CIR:     cir.call @__cxa_guard_release(%[[GET_GUARD]]) : (!cir.ptr<!s64i>) -> ()
+// CIR:   }
+// CIR: }
+// CIR: cir.return
 
-// CIR: cir.global linkonce_odr comdat @_ZN5Outer5Inner2hdE = #cir.zero : !rec_HasDtor
-// CIR: cir.func internal private @__cxx_global_var_init.1()
-// CIR:   %[[HD:.*]] = cir.get_global @_ZN5Outer5Inner2hdE : !cir.ptr<!rec_HasDtor>
-// CIR:   %[[DTOR:.*]] = cir.get_global @_ZN7HasDtorD1Ev : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>>
-// CIR:   %[[DTOR_CAST:.*]] = cir.cast bitcast %[[DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_HasDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
-// CIR:   %[[HD_CAST:.*]] = cir.cast bitcast %[[HD]] : !cir.ptr<!rec_HasDtor> -> !cir.ptr<!void>
-// CIR:   %[[HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<!u8i>
-// CIR:   cir.call @__cxa_atexit(%[[DTOR_CAST]], %[[HD_CAST]], %[[HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
+// LLVM-LABEL: define internal void @__cxx_global_var_init.1()
+// LLVM: %[[LOAD_GUARD:.*]] = load atomic i8, ptr @_ZGVN5Outer5Inner2hdE acquire, align 8
+// LLVM: %[[CMP:.*]] = icmp eq i8 %[[LOAD_GUARD]], 0
+// LLVM: br i1 %[[CMP]], label %[[UNINIT:.*]], label %[[RET:.*]]
 
-// LLVM: define internal void @__cxx_global_var_init.1()
-// LLVM:   call i32 @__cxa_atexit(ptr @_ZN7HasDtorD1Ev, ptr @_ZN5Outer5Inner2hdE, ptr @__dso_handle)
+// LLVM: [[UNINIT]]:
+// LLVM:   %[[ACQUIRE_GUARD:.*]] = call i32 @__cxa_guard_acquire(ptr @_ZGVN5Outer5Inner2hdE)
+// LLVM:   %[[CMP:.*]] = icmp ne i32 %[[ACQUIRE_GUARD]], 0
+// CIR leaves an extra 'block' for this target, but both go to 'ret' via only
+// empty blocks.
+// LLVM:   br i1 %[[CMP]], label %[[DO_INIT:.*]], label %{{.*}}
 
-// OGCG: define internal void @__cxx_global_var_init.1() {{.*}} section ".text.startup" comdat($_ZN5Outer5Inner2hdE) {
-// OGCG:   %[[GUARD:.*]] = load atomic i8, ptr @_ZGVN5Outer5Inner2hdE acquire
-// OGCG:   %[[UNINIT:.*]] = icmp eq i8 %[[GUARD]], 0
-// OGCG:   br i1 %[[UNINIT]], label %[[INIT_CHECK:.*]], label %[[INIT_END:.*]]
-// OGCG: [[INIT_CHECK:.*]]:
-// OGCG:   %[[GUARD_ACQUIRE:.*]] = call i32 @__cxa_guard_acquire(ptr @_ZGVN5Outer5Inner2hdE)
-// OGCG:   %[[TOBOOL:.*]] = icmp ne i32 %[[GUARD_ACQUIRE]], 0
-// OGCG:   br i1 %[[TOBOOL]], label %[[INIT:.*]], label %[[INIT_END]]
-// OGCG: [[INIT:.*]]:
-// OGCG:   %[[ATEXIT:.*]] = call i32 @__cxa_atexit(ptr @_ZN7HasDtorD1Ev, ptr @_ZN5Outer5Inner2hdE, ptr @__dso_handle)
-// OGCG:   call void @__cxa_guard_release(ptr @_ZGVN5Outer5Inner2hdE)
-// OGCG:   br label %[[INIT_END]]
-// OGCG: [[INIT_END]]:
+// LLVM: [[DO_INIT]]:
+// LLVM:   %[[AT_EXIT:.*]] = call i32 @__cxa_atexit(ptr @_ZN7HasDtorD1Ev, ptr @_ZN5Outer5Inner2hdE, ptr @__dso_handle)
+// LLVM:   call void @__cxa_guard_release(ptr @_ZGVN5Outer5Inner2hdE)
+// CIR leaves an extra 'block' for this target, but both go to 'ret' via only
+// empty blocks.
+// LLVM:   br label %{{.*}}
 
+// LLVM: [[RET]]:
+// LLVM:   ret void
 
-// CIR: cir.func internal private @_GLOBAL__sub_I_static_members.cpp()
-// CIR:   cir.call @__cxx_global_var_init()
+// Not thread-safe example(because not inline), so doesn't have guard/release.
+int get_i();
+template <typename T> struct NonThreadSafe {
+  static T f;
+};
 
-// LLVM: define internal void @_GLOBAL__sub_I_static_members.cpp()
-// LLVM:   call void @__cxx_global_var_init()
+template <typename T> T NonThreadSafe<T>::f = get_i();
 
-// Note: OGCG doesn't actually generate this function, and just adds these to
-// the `llvm.global_ctors` instead. It isn't clear whether that is meaningful
-// or important.
+int useNonThreadSafe() {
+  return NonThreadSafe<int>::f;
+}
+
+// CIR: cir.global linkonce_odr comdat dynamic_init_guard<"_ZGVN13NonThreadSafeIiE1fE"> @_ZN13NonThreadSafeIiE1fE = #cir.int<0> : !s32i align(4) ast(#cir.var.decl.ast) dynamic_init_info<local = false, tls = none, is_inline = false, tsk = implicit_instantiation>
+
+// CIR-LABEL: cir.func internal private @__cxx_global_var_init.2() {
+// CIR:   %[[GET_GUARD:.*]] = cir.get_global @_ZGVN13NonThreadSafeIiE1fE : !cir.ptr<!s64i>
+// CIR:   %[[TO_CHAR:.*]] = cir.cast bitcast %[[GET_GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>
+// CIR:   %[[LOAD_GUARD:.*]] = cir.load align(8) %[[TO_CHAR]] : !cir.ptr<!s8i>, !s8i
+// CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
+// CIR:   %[[CMP:.*]] = cir.cmp eq %[[LOAD_GUARD]], %[[ZERO]] : !s8i
+// CIR:   cir.if %[[CMP]] {
+// CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
+// CIR:     cir.store %[[ONE]], %[[GET_GUARD]] : !s64i, !cir.ptr<!s64i>
+// CIR:     %[[GET_F:.*]] = cir.get_global @_ZN13NonThreadSafeIiE1fE : !cir.ptr<!s32i>
+// CIR:     %[[CALL:.*]] = cir.call @_Z5get_iv() : () -> (!s32i {llvm.noundef})
+// CIR:     cir.store align(4) %[[CALL]], %[[GET_F]] : !s32i, !cir.ptr<!s32i>
+// CIR:   }
+// CIR:   cir.return
+// CIR: }
+
+// LLVM-LABEL: define internal void @__cxx_global_var_init.2()
+// LLVM: %[[LOAD_GUARD:.*]] = load i8, ptr @_ZGVN13NonThreadSafeIiE1fE, align 8
+// LLVM: %[[CMP:.*]] = icmp eq i8 %[[LOAD_GUARD]], 0
+// LLVM: br i1 %[[CMP]], label %[[UNINIT:.*]], label %[[RET2:.*]]
+
+// LLVM: [[UNINIT]]:
+// LLVM-NOT: call {{.*}}@__cxa_guard_acquire
+// LLVM:   store i{{.*}} 1, ptr @_ZGVN13NonThreadSafeIiE1fE
+// LLVM:   %[[CALL:.*]] = call noundef i32 @_Z5get_iv()
+// LLVM:   store i32 %[[CALL]], ptr @_ZN13NonThreadSafeIiE1fE
+// LLVM-NOT: call {{.*}}@__cxa_guard_release
+// LLVM:   br label %{{.*}}
+
+// LLVM: [[RET2]]:
+// LLVM:   ret void
+
