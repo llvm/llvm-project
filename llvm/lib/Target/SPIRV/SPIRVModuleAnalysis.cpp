@@ -36,7 +36,7 @@ using namespace llvm;
 static cl::opt<bool>
     SPVDumpDeps("spv-dump-deps",
                 cl::desc("Dump MIR with SPIR-V dependencies info"),
-                cl::Optional, cl::init(false));
+                cl::init(false));
 
 static cl::list<SPIRV::Capability::Capability>
     AvoidCapabilities("avoid-spirv-capabilities",
@@ -1051,6 +1051,11 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageImageExtendedFormats,
                     Capability::StorageImageMultisample,
                     Capability::ImageMSArray});
+
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)) ||
+      ST.canUseExtension(Extension::SPV_KHR_variable_pointers))
+    addAvailableCaps({Capability::VariablePointersStorageBuffer,
+                      Capability::VariablePointers});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {

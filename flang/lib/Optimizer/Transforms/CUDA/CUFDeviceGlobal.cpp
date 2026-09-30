@@ -91,9 +91,7 @@ static void processEmboxOp(fir::EmboxOp emboxOp, mlir::SymbolTable &symbolTable,
 static void prepareImplicitDeviceGlobals(
     mlir::func::FuncOp funcOp, mlir::SymbolTable &symbolTable,
     llvm::DenseSet<fir::GlobalOp> &candidates, bool skipDeadDeclares) {
-  auto cudaProcAttr{
-      funcOp->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName())};
-  if (cudaProcAttr && cudaProcAttr.getValue() != cuf::ProcAttribute::Host) {
+  if (cuf::isDeviceProcedure(funcOp)) {
     funcOp.walk([&](fir::AddrOfOp op) {
       processAddrOfOp(op, symbolTable, candidates, /*recurseInGlobal=*/false,
                       skipDeadDeclares);
@@ -259,7 +257,9 @@ public:
       // cuf.register_variable_static so the CUDA
       // runtime maps the device extern to the host pointer at module-load
       // time, and HMM/ATS handles migration.
-      if (cudaUnified && !globalOp.getConstant() &&
+      bool isCompilerGenerated =
+          fir::NameUniquer::isCompilerGenerated(globalOp.getSymName());
+      if (cudaUnified && (!globalOp.getConstant() || isCompilerGenerated) &&
           !globalOp.getDataAttrAttr()) {
         clonedGlobal.getRegion().getBlocks().clear();
         clonedGlobal.removeInitValAttr();

@@ -538,18 +538,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   DISubprogram::cleanupRetainedNodes(NewDistinctSPs);
   NewDistinctSPs.clear();
 
-  for (auto *Inst : InstsWithTBAATag) {
-    MDNode *MD = Inst->getMetadata(LLVMContext::MD_tbaa);
-    // With incomplete IR, the tbaa metadata may have been dropped.
-    if (!AllowIncompleteIR)
-      assert(MD && "UpgradeInstWithTBAATag should have a TBAA tag");
-    if (MD) {
-      auto *UpgradedMD = UpgradeTBAANode(*MD);
-      if (MD != UpgradedMD)
-        Inst->setMetadata(LLVMContext::MD_tbaa, UpgradedMD);
-    }
-  }
-
   // Look for intrinsic functions and CallInst that need to be upgraded.  We use
   // make_early_inc_range here because we may remove some functions.
   for (Function &F : llvm::make_early_inc_range(*M))
@@ -2551,9 +2539,6 @@ bool LLParser::parseInstructionMetadata(Instruction &Inst) {
       PendingDbgInsts.emplace_back(Loc, &Inst, N);
     else
       Inst.setMetadata(MDK, N);
-
-    if (MDK == LLVMContext::MD_tbaa)
-      InstsWithTBAATag.push_back(&Inst);
 
     // If this is the end of the list, we're done.
   } while (EatIfPresent(lltok::comma));
@@ -4916,8 +4901,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
         }
       }
 
-      SmallPtrSet<Type*, 4> Visited;
-      if (!Indices.empty() && !Ty->isSized(&Visited))
+      if (!Indices.empty() && !Ty->isSized())
         return error(ID.Loc, "base element of getelementptr must be sized");
 
       if (!ConstantExpr::isSupportedGetElementPtr(Ty))
@@ -4926,8 +4910,10 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       if (!GetElementPtrInst::getIndexedType(Ty, Indices))
         return error(ID.Loc, "invalid getelementptr indices");
 
+      LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
       ID.ConstantVal =
           ConstantExpr::getGetElementPtr(Ty, Elts[0], Indices, NW, InRange);
+      LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
     } else if (Opc == Instruction::ShuffleVector) {
       if (Elts.size() != 3)
         return error(ID.Loc, "expected three operands to shufflevector");
@@ -7870,9 +7856,16 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
       cast<TruncInst>(Inst)->setHasNoSignedWrap(true);
     return false;
   }
+  case lltok::kw_addrspacecast: {
+    bool NonNull = EatIfPresent(lltok::kw_nonnull);
+    if (parseCast(Inst, PFS, KeywordVal))
+      return true;
+    if (NonNull)
+      cast<AddrSpaceCastInst>(Inst)->setNonNull();
+    return false;
+  }
   case lltok::kw_sext:
   case lltok::kw_bitcast:
-  case lltok::kw_addrspacecast:
   case lltok::kw_fptoui:
   case lltok::kw_fptosi:
   case lltok::kw_inttoptr:
@@ -7933,6 +7926,10 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
     return parseLandingPad(Inst, PFS);
   case lltok::kw_freeze:
     return parseFreeze(Inst, PFS);
+  case lltok::kw_bitinsert:
+    return parseBitInsert(Inst, PFS);
+  case lltok::kw_bitextract:
+    return parseBitExtract(Inst, PFS);
   // Call.
   case lltok::kw_call:
     return parseCall(Inst, PFS, CallInst::TCK_None);
@@ -8750,6 +8747,45 @@ bool LLParser::parseInsertElement(Instruction *&Inst, PerFunctionState &PFS) {
   return false;
 }
 
+// parseBitExtract
+// ::= 'bitextract' Type ',' TypeAndValue ',' TypeAndValue
+bool LLParser::parseBitExtract(Instruction *&Inst, PerFunctionState &PFS) {
+  LocTy Loc;
+  Type *Ty = nullptr;
+  Value *Op0, *Op1;
+  if (parseType(Ty, Loc) ||
+      parseToken(lltok::comma, "expected ',' after bitextract type") ||
+      parseTypeAndValue(Op0, Loc, PFS) ||
+      parseToken(lltok::comma, "expected ',' after bitextract source value") ||
+      parseTypeAndValue(Op1, PFS))
+    return true;
+
+  if (const char *Reason = BitExtractInst::areInvalidOperands(Ty, Op0, Op1))
+    return error(Loc, Reason);
+
+  Inst = BitExtractInst::Create(Ty, Op0, Op1);
+  return false;
+}
+
+// parseBitInsert
+// ::= 'bitinsert' TypeAndValue ',' TypeAndValue ',' TypeAndValue
+bool LLParser::parseBitInsert(Instruction *&Inst, PerFunctionState &PFS) {
+  LocTy Loc;
+  Value *Op0, *Op1, *Op2;
+  if (parseTypeAndValue(Op0, Loc, PFS) ||
+      parseToken(lltok::comma, "expected ',' after bitinsert source value") ||
+      parseTypeAndValue(Op1, PFS) ||
+      parseToken(lltok::comma, "expected ',' after bitinsert insert value") ||
+      parseTypeAndValue(Op2, PFS))
+    return true;
+
+  if (const char *Reason = BitInsertInst::areInvalidOperands(Op0, Op1, Op2))
+    return error(Loc, Reason);
+
+  Inst = BitInsertInst::Create(Op0, Op1, Op2);
+  return false;
+}
+
 /// parseShuffleVector
 ///   ::= 'shufflevector' TypeAndValue ',' TypeAndValue ',' TypeAndValue
 bool LLParser::parseShuffleVector(Instruction *&Inst, PerFunctionState &PFS) {
@@ -9049,8 +9085,7 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
   if (Size && !Size->getType()->isIntegerTy())
     return error(SizeLoc, "element count must have integer type");
 
-  SmallPtrSet<Type *, 4> Visited;
-  if (!Alignment && !Ty->isSized(&Visited))
+  if (!Alignment && !Ty->isSized())
     return error(TyLoc, "Cannot allocate unsized type");
   if (!Alignment)
     Alignment = M->getDataLayout().getPrefTypeAlign(Ty);
@@ -9119,8 +9154,7 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
     return error(Loc,
                  "atomic elementwise load cannot be sequentially consistent");
 
-  SmallPtrSet<Type *, 4> Visited;
-  if (!Alignment && !Ty->isSized(&Visited))
+  if (!Alignment && !Ty->isSized())
     return error(ExplicitTypeLoc, "loading unsized types is not allowed");
   if (!Alignment)
     Alignment = M->getDataLayout().getABITypeAlign(Ty);
@@ -9190,8 +9224,7 @@ int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
     return error(Loc,
                  "atomic elementwise store cannot be sequentially consistent");
 
-  SmallPtrSet<Type *, 4> Visited;
-  if (!Alignment && !Val->getType()->isSized(&Visited))
+  if (!Alignment && !Val->getType()->isSized())
     return error(Loc, "storing unsized types is not allowed");
   if (!Alignment)
     Alignment = M->getDataLayout().getABITypeAlign(Val->getType());
@@ -9478,8 +9511,7 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
     Indices.push_back(Val);
   }
 
-  SmallPtrSet<Type*, 4> Visited;
-  if (!Indices.empty() && !Ty->isSized(&Visited))
+  if (!Indices.empty() && !Ty->isSized())
     return error(Loc, "base element of getelementptr must be sized");
 
   auto *STy = dyn_cast<StructType>(Ty);

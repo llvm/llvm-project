@@ -966,29 +966,34 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
             dyn_cast<ReqdWorkGroupSizeAttr>(TmplAttr)) {
       instantiateDependentReqdWorkGroupSizeAttr(*this, TemplateArgs,
                                                 *ReqdWorkGroupSize, New);
+      continue;
     }
 
     if (const auto *AMDGPUFlatWorkGroupSize =
             dyn_cast<AMDGPUFlatWorkGroupSizeAttr>(TmplAttr)) {
       instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
           *this, TemplateArgs, *AMDGPUFlatWorkGroupSize, New);
+      continue;
     }
 
     if (const auto *AMDGPUFlatWorkGroupSize =
             dyn_cast<AMDGPUWavesPerEUAttr>(TmplAttr)) {
       instantiateDependentAMDGPUWavesPerEUAttr(*this, TemplateArgs,
                                                *AMDGPUFlatWorkGroupSize, New);
+      continue;
     }
 
     if (const auto *AMDGPUMaxNumWorkGroups =
             dyn_cast<AMDGPUMaxNumWorkGroupsAttr>(TmplAttr)) {
       instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
           *this, TemplateArgs, *AMDGPUMaxNumWorkGroups, New);
+      continue;
     }
 
     if (const auto *CUDAClusterDims = dyn_cast<CUDAClusterDimsAttr>(TmplAttr)) {
       instantiateDependentCUDAClusterDimsAttr(*this, TemplateArgs,
                                               *CUDAClusterDims, New);
+      continue;
     }
 
     if (const auto *ParamAttr = dyn_cast<HLSLParamModifierAttr>(TmplAttr)) {
@@ -6821,7 +6826,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
                          VarTemplatePartialSpecializationDecl *> PatternPtr =
           VarSpec->getSpecializedTemplateOrPartial();
       if (VarTemplatePartialSpecializationDecl *Partial =
-          PatternPtr.dyn_cast<VarTemplatePartialSpecializationDecl *>())
+              dyn_cast<VarTemplatePartialSpecializationDecl *>(PatternPtr))
         cast<VarTemplateSpecializationDecl>(Var)->setInstantiationOf(
             Partial, &VarSpec->getTemplateInstantiationArgs());
 
@@ -7259,7 +7264,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     // declarations to their instantiations.
     if (CurrentInstantiationScope) {
       if (auto Found = CurrentInstantiationScope->findInstantiationOf(D)) {
-        if (Decl *FD = Found->dyn_cast<Decl *>()) {
+        if (Decl *FD = dyn_cast<Decl *>(*Found)) {
           if (auto *BD = dyn_cast<BindingDecl>(FD);
               BD && BD->isParameterPack() && ArgPackSubstIndex) {
             return BD->getBindingPackDecls()[*ArgPackSubstIndex];

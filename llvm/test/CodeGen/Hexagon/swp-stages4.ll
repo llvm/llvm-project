@@ -90,5 +90,6 @@ for.end104:
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
 
-!0 = !{!"omnipotent char", !1}
+!0 = !{!2, !2, i64 0}
 !1 = !{!"Simple C/C++ TBAA"}
+!2 = !{!"omnipotent char", !1}

@@ -850,17 +850,20 @@ template <> struct MappingTraits<FormatStyle::SortIncludesOptions> {
                 FormatStyle::SortIncludesOptions{/*Enabled=*/true,
                                                  /*IgnoreCase=*/true,
                                                  /*IgnoreExtension=*/false,
-                                                 /*Natural=*/false});
+                                                 /*Natural=*/false,
+                                                 /*FilesBeforeFolders=*/false});
     IO.enumCase(Value, "CaseSensitive",
                 FormatStyle::SortIncludesOptions{/*Enabled=*/true,
                                                  /*IgnoreCase=*/false,
                                                  /*IgnoreExtension=*/false,
-                                                 /*Natural=*/false});
+                                                 /*Natural=*/false,
+                                                 /*FilesBeforeFolders=*/false});
     IO.enumCase(Value, "Natural",
                 FormatStyle::SortIncludesOptions{/*Enabled=*/true,
                                                  /*IgnoreCase=*/false,
                                                  /*IgnoreExtension=*/false,
-                                                 /*Natural=*/true});
+                                                 /*Natural=*/true,
+                                                 /*FilesBeforeFolders=*/false});
 
     // For backward compatibility.
     IO.enumCase(Value, "false", FormatStyle::SortIncludesOptions{});
@@ -868,14 +871,15 @@ template <> struct MappingTraits<FormatStyle::SortIncludesOptions> {
                 FormatStyle::SortIncludesOptions{/*Enabled=*/true,
                                                  /*IgnoreCase=*/false,
                                                  /*IgnoreExtension=*/false,
-                                                 /*Natural=*/false});
+                                                 /*Natural=*/false,
+                                                 /*FilesBeforeFolders=*/false});
   }
-
   static void mapping(IO &IO, FormatStyle::SortIncludesOptions &Value) {
     IO.mapOptional("Enabled", Value.Enabled);
     IO.mapOptional("IgnoreCase", Value.IgnoreCase);
     IO.mapOptional("IgnoreExtension", Value.IgnoreExtension);
     IO.mapOptional("Natural", Value.Natural);
+    IO.mapOptional("FilesBeforeFolders", Value.FilesBeforeFolders);
   }
 };
 
@@ -2029,7 +2033,8 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ShortNamespaceLines = 1;
   LLVMStyle.SkipMacroDefinitionBody = false;
   LLVMStyle.SortIncludes = {/*Enabled=*/true, /*IgnoreCase=*/false,
-                            /*IgnoreExtension=*/false, /*Natural=*/false};
+                            /*IgnoreExtension=*/false, /*Natural=*/false,
+                            /*FilesBeforeFolders=*/false};
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
   LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
   LLVMStyle.SpaceAfterCStyleCast = false;
@@ -3696,6 +3701,37 @@ static void sortCppIncludes(const FormatStyle &Style,
       const auto Compare = Style.SortIncludes.Natural
                                ? &StringRef::compare_numeric
                                : &StringRef::compare;
+
+      while (Style.SortIncludes.FilesBeforeFolders) {
+        auto [LHead, LTail] = LHSStem.split('/');
+        auto [RHead, RTail] = RHSStem.split('/');
+
+        bool LIsFile = LTail.empty();
+        bool RIsFile = RTail.empty();
+
+        // A file at this level sorts before a subdirectory at this level.
+        if (LIsFile != RIsFile)
+          return LIsFile;
+
+        // Both are leaf filenames — they are equal at this level, so we
+        // can break out of the loop and compare the full filenames later.
+        if (LIsFile)
+          break;
+
+        // Both are directory components at this level — compare them.
+        if (Style.SortIncludes.IgnoreCase) {
+          int Cmp = std::invoke(Compare, StringRef(LHead.lower()),
+                                StringRef(RHead.lower()));
+          if (Cmp != 0)
+            return Cmp < 0;
+        }
+        if (int Cmp = std::invoke(Compare, LHead, RHead); Cmp != 0)
+          return Cmp < 0;
+
+        // Directory components are equal; descend into the next level.
+        LHSStem = LTail;
+        RHSStem = RTail;
+      }
 
       if (Style.SortIncludes.IgnoreCase) {
         int Cmp = std::invoke(Compare, StringRef(LHSStemLower), RHSStemLower);

@@ -59,6 +59,11 @@ private:
   /// Get barrier to synchronize all threads in a block.
   void syncCTAThreads(CodeGenFunction &CGF);
 
+  /// Helper to emit the kernel environment global for an `ompx_bare` kernel,
+  /// which does not go through emitKernelInit/emitKernelDeinit.
+  void emitBareKernelEnvironment(const OMPExecutableDirective &D,
+                                 CodeGenFunction &CGF);
+
   /// Helper for target directive initialization.
   void emitKernelInit(const OMPExecutableDirective &D, CodeGenFunction &CGF,
                       EntryFunctionState &EST, bool IsSPMD);

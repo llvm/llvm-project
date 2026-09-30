@@ -683,7 +683,8 @@ struct GPUInitializeNamedBarrierOpLowering final
 
     auto targetTy = LLVM::LLVMTargetExtType::get(
         rewriter.getContext(), "amdgcn.named.barrier", {}, {0});
-    auto ptrTy = LLVM::LLVMPointerType::get(rewriter.getContext(), 3);
+    auto ptrTy = LLVM::LLVMPointerType::get(
+        rewriter.getContext(), ROCDL::ROCDLDialect::kBarrierAddressSpace);
 
     // Build the global detached so SymbolTable::insert can both place it and
     // rename it as needed without creating a transient name conflict in IR.
@@ -691,7 +692,8 @@ struct GPUInitializeNamedBarrierOpLowering final
     auto globalOp = LLVM::GlobalOp::create(
         detachedBuilder, loc, targetTy, /*isConstant=*/false,
         LLVM::Linkage::Internal, "__named_barrier", /*value=*/Attribute(),
-        /*alignment=*/0, /*addrSpace=*/3);
+        /*alignment=*/0,
+        /*addrSpace=*/ROCDL::ROCDLDialect::kBarrierAddressSpace);
     // Initialize with poison.
     {
       Region &region = globalOp.getInitializerRegion();
@@ -744,8 +746,13 @@ struct LowerGpuOpsToROCDLOpsPass final
       m->setDiscardableAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
                             llvmDataLayout);
     }
-    // Request C wrapper emission.
+    // Request C wrapper emission for externally visible functions only. A
+    // private function cannot be called from outside its module, so its C
+    // interface wrapper is unreachable and would only anchor the wrapped
+    // function against dead-code elimination.
     for (auto func : m.getOps<func::FuncOp>()) {
+      if (func.isPrivate())
+        continue;
       func->setDiscardableAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
                                UnitAttr::get(ctx));
     }
