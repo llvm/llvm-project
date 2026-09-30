@@ -219,7 +219,6 @@ public:
 
   ZeDispatcher<zeCommandListAppendLaunchKernelWithArguments>
       LaunchKernelWithArguments;
-  ZeDispatcher<zexKernelGetArgumentSize> KernelGetArgumentSize;
   ZeDispatcher<zeCommandListAppendHostFunction> CommandListAppendHostFunction;
   ZeDispatcher<zeDriverGetDefaultContext, nullptr> DriverGetDefaultContext;
   ZeDispatcher<zeIntelGetDriverVersionString> IntelGetDriverVersionString;
