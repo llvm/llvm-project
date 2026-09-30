@@ -1291,6 +1291,11 @@ defm GFX1250VALUBlockingCycles : AMDGPUSubtargetFeature<"gfx1250-valu-blocking-c
   /*GenPredicate=*/0
 >;
 
+defm VPermPk16Hazard : AMDGPUSubtargetFeature<"vperm-pk16-hazard",
+  "V_PERM_PK16 must be immediately followed by a safe VALU (or an inserted V_NOP)",
+  /*GenPredicate=*/0
+>;
+
 defm WMMACoexecutionHazards : AMDGPUSubtargetFeature<"wmma-coexecution-hazards",
   "Hazards when WMMA co-executes with other WMMA/VALU instruction",
   /*GenPredicate=*/0
@@ -2492,6 +2497,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureTanhInsts,
    FeatureTensorCvtLutInsts,
    FeatureTDMInsts,
+   FeatureVPermPk16Hazard,
    FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
@@ -3364,8 +3370,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSadInsts, FeatureSetPrioIncWgInst, FeatureSmemPrefetchInsts,
   FeatureTDMInsts, FeatureTanhInsts, FeatureTensorCvtLutInsts,
   FeatureTransposeLoadF4F6Insts, FeatureVMemToLDSLoad, FeatureVmemPrefInsts,
-  FeatureWMMA128bInsts, FeatureWMMA256bInsts, FeatureWMMAN16Insts,
-  FeatureWMMAF4Insts, FeatureXF32Insts,
+  FeatureWaveMatchInsts, FeatureWMMA128bInsts, FeatureWMMA256bInsts,
+  FeatureWMMAN16Insts, FeatureWMMAF4Insts, FeatureXF32Insts,
   FeatureWavefrontSize32, FeatureWavefrontSize64, FeatureSupportsWGP,
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
