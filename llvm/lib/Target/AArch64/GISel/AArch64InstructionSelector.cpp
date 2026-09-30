@@ -7329,8 +7329,7 @@ AArch64InstructionSelector::selectShiftMask(MachineOperand &Root) const {
   Register AndSrcReg;
   if (mi_match(ShAmtReg, MRI, m_GAnd(m_Reg(AndSrcReg), m_ICst(AndMask))) &&
       MRI.getType(ShAmtReg).getSizeInBits() == ShiftWidth) {
-    uint64_t UMask = AndMask.getZExtValue();
-    if (UMask == 0xff || UMask == 0xffff || UMask == 0xffffffff)
+    if (AndMask.countr_one() >= Log2_32(ShiftWidth))
       ShAmtReg = AndSrcReg;
   }
 

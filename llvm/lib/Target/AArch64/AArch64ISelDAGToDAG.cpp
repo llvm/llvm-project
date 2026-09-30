@@ -778,8 +778,8 @@ bool AArch64DAGToDAGISel::SelectShiftMask(SDValue N, SDValue &ShAmt) {
   if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1)) &&
       N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
     uint64_t Mask = N.getConstantOperandVal(1);
-    // Remove AND if the mask covers the low log2(ShiftWidth) bits.
-    if ((Mask & (ShiftWidth - 1)) == (ShiftWidth - 1)) {
+    // Remove AND if the mask covers at least the low log2(ShiftWidth) bits.
+    if ((unsigned)llvm::countr_one(Mask) >= Log2_32(ShiftWidth)) {
       ShAmt = N.getOperand(0);
       return true;
     }
