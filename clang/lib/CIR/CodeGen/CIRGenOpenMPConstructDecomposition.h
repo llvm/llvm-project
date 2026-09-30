@@ -278,6 +278,13 @@ struct DecompositionHelper {
   }
   /// CIR does not lower loop directives yet, so there is no iteration variable.
   std::optional<Object> getLoopIterVar() const { return std::nullopt; }
+  /// Defer to the spec table; CIR does not override allowed clauses per
+  /// directive.
+  bool isClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+                                  llvm::omp::Directive dirId,
+                                  llvm::omp::Version version) const {
+    return llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+  }
 };
 
 struct LeafWithClauses {
