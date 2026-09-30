@@ -1,4 +1,4 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s --check-prefix=HLFIR
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s --check-prefix=HLFIR
 
 ! Variant selection is provided by DECLARE VARIANT with a `construct={dispatch}`
 ! match: inside a dispatch region the call to the base procedure `foo_dispatch`
