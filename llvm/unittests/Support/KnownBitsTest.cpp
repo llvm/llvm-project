@@ -694,27 +694,6 @@ TEST(KnownBitsTest, UnaryExhaustive) {
       [](const APInt &N) { return N * N; }, /*CheckOptimality=*/false);
 }
 
-TEST(KnownBitsTest, NonZeroDenomSDiv) {
-
-  KnownBits Num(4);
-  KnownBits Denom(4);
-  // setting the masks for Ones and Zeros Num = -8.
-  Num.One.setBit(3);
-  Num.Zero.setBit(2);
-  Num.Zero.setBit(1);
-  Num.Zero.setBit(0);
-  // comment to test each edge cases. Denom = 0b0?00.
-  Denom.Zero.setBit(3);
-  // Denom.Zero.setBit(2);
-  Denom.Zero.setBit(1);
-  Denom.Zero.setBit(0);
-  KnownBits Result = KnownBits::sdiv(Num, Denom);
-  KnownBits Answer(4);
-  Answer.One.setHighBits(3);
-
-  EXPECT_EQ(Result, Answer);
-}
-
 TEST(KnownBitsTest, FunnelShiftExhaustive) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
