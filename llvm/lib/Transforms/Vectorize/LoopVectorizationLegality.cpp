@@ -631,9 +631,10 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
           "Unsupported volatile or atomic memory operation",
           "instruction cannot be vectorized", "CantVectorizeInstruction", ORE,
           TheLoop, &I);
-      if (!DoExtraAnalysis)
+      if (DoExtraAnalysis)
+        Result = false;
+      else
         return false;
-      Result = false;
     }
 
     // Check whether the BB terminator is a branch. Any other terminator is
