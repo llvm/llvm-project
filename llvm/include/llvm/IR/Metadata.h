@@ -225,6 +225,8 @@ protected:
   // restructure the DbgVariableRecord class then we can template parameterize
   // this array size.
   std::array<Metadata *, 3> DebugValues;
+  // The slot holding the DIAssignID of a dbg_assign record.
+  static constexpr size_t AssignIDIdx = 2;
 
   ArrayRef<Metadata *> getDebugValues() const { return DebugValues; }
 
@@ -395,8 +397,18 @@ public:
   using OwnerTy = MetadataTracking::OwnerTy;
 
 private:
-  uint64_t NextIndex = 0;
-  SmallDenseMap<void *, std::pair<OwnerTy, uint64_t>, 4> UseMap;
+  struct UseEntry {
+    void *Ref = nullptr;
+    OwnerTy Owner = nullptr;
+  };
+
+  static constexpr unsigned IndexThreshold = 32;
+  // Tracked uses of this. Dropping one moves the last entry into its slot, so
+  // the order is deterministic but not the order they were added in.
+  SmallVector<UseEntry, 4> UseMap;
+  // Lazily allocated map from Ref to its index in UseMap for large use lists.
+  using IndexMapTy = DenseMap<void *, unsigned>;
+  std::unique_ptr<IndexMapTy> IndexMap;
 
 protected:
   ~ReplaceableUses() {
@@ -427,6 +439,7 @@ public:
   unsigned getNumUses() const { return UseMap.size(); }
 
 private:
+  UseEntry *findRef(void *Ref);
   void addRef(void *Ref, OwnerTy Owner);
   void dropRef(void *Ref);
   void moveRef(void *Ref, void *New, const Metadata &MD);
@@ -1262,8 +1275,7 @@ public:
   bool isDistinct() const { return Storage == Distinct; }
   bool isTemporary() const { return Storage == Temporary; }
 
-  bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
-  bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
+  bool isReplaceable() const { return isTemporary(); }
 
   unsigned getNumTemporaryUses() const {
     assert(isTemporary() && "Only for temporaries");
@@ -1476,6 +1488,7 @@ public:
   LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(const MDNode *A,
                                                       const MDNode *B);
+  LLVM_ABI static MDNode *getMergedCalleesMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedAllocTokenMetadata(const MDNode *A,
                                                       const MDNode *B);
 

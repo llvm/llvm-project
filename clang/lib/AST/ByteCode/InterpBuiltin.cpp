@@ -861,11 +861,9 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
   if (NumArgs == 3)
     S.Stk.discard<Floating>();
   discard(S.Stk, ArgT);
+  // Top of the stack is now the first paramter. Leave it there as the return
+  // value.
 
-  APSInt Val;
-  if (!popToAPSInt(S.Stk, ArgT, Val))
-    return false;
-  pushInteger(S, Val, Call->getType());
   return true;
 }
 
@@ -4602,21 +4600,6 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
-  const ASTContext &ASTCtx = S.getASTContext();
-
-  // BuiltinID is the raw ID baked into the bytecode. The "is constant
-  // evaluated" gate needs the raw ID so that auxiliary-target IDs resolve into
-  // the correct (aux-target) builtin records.
-  if (!ASTCtx.BuiltinInfo.isConstantEvaluated(BuiltinID))
-    return Invalid(S, OpPC);
-
-  // Convert an auxiliary x86 target builtin ID to its canonical X86::BI* value
-  // so the target-specific cases below (and the handlers they call) match. This
-  // is a cheap integer operation (a single comparison for the common,
-  // target-independent case); we deliberately avoid re-deriving the ID from the
-  // call expression, which is comparatively slow.
-  BuiltinID = ConvertBuiltinIDToX86BuiltinID(ASTCtx, BuiltinID);
-
   const InterpFrame *Frame = S.Current;
   switch (BuiltinID) {
   case Builtin::BI__builtin_is_constant_evaluated:
@@ -6725,11 +6708,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cvttps2dq256:
     return interp_builtin_ia32_cvt_vector_to_int(S, OpPC, Call);
   default:
-    S.FFDiag(S.Current->getLocation(OpPC),
-             diag::note_invalid_subexpr_in_const_expr)
-        << S.Current->getRange(OpPC);
-
-    return false;
+    return Invalid(S, OpPC);
   }
 
   llvm_unreachable("Unhandled builtin ID");
@@ -6877,26 +6856,34 @@ static void zeroAll(PtrView Dest) {
 }
 
 static bool copyComposite(InterpState &S, CodePtr OpPC, PtrView Src,
-                          PtrView Dest, bool Activate);
+                          PtrView Dest, bool Activate, bool Diagnose);
 static bool copyRecord(InterpState &S, CodePtr OpPC, PtrView Src, PtrView Dest,
-                       bool Activate = false) {
+                       bool Activate = false, bool Diagnose = true) {
   [[maybe_unused]] const Descriptor *SrcDesc = Src.getFieldDesc();
   const Descriptor *DestDesc = Dest.getFieldDesc();
 
   auto copyField = [&](const Record::Field &F, bool Activate) -> bool {
     PtrView DestField = Dest.atField(F.Offset);
+    PtrView SrcField = Src.atField(F.Offset);
+
     if (OptPrimType FT = F.T) {
-      TYPE_SWITCH(*FT, {
-        DestField.deref<T>() = Src.atField(F.Offset).deref<T>();
-        if (Src.atField(F.Offset).isInitialized())
-          DestField.initialize();
-        if (Activate)
-          DestField.activate();
-      });
+      if (!SrcField.isInitialized()) {
+        if (Diagnose)
+          return diagnoseUninitialized(S, OpPC, false, SrcField.block(),
+                                       SrcField.getLifetime(), AK_Read);
+        // Just skip.
+        return true;
+      }
+
+      TYPE_SWITCH(*FT, DestField.deref<T>() = SrcField.deref<T>(););
+      if (DestField.canBeInitialized())
+        DestField.initialize();
+      if (Activate)
+        DestField.activate();
       return true;
     }
-    // Composite field.
-    return copyComposite(S, OpPC, Src.atField(F.Offset), DestField, Activate);
+
+    return copyComposite(S, OpPC, SrcField, DestField, Activate, Diagnose);
   };
 
   assert(SrcDesc->isRecord());
@@ -6925,16 +6912,20 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, PtrView Src, PtrView Dest,
 
   for (const Record::Base &B : R->bases()) {
     PtrView DestBase = Dest.atField(B.Offset);
-    if (!copyRecord(S, OpPC, Src.atField(B.Offset), DestBase, Activate))
+    if (!copyRecord(S, OpPC, Src.atField(B.Offset), DestBase, Activate,
+                    Diagnose))
       return false;
   }
 
   Dest.initialize();
+  if (Activate)
+    Dest.activate();
   return true;
 }
 
 static bool copyComposite(InterpState &S, CodePtr OpPC, PtrView Src,
-                          PtrView Dest, bool Activate = false) {
+                          PtrView Dest, bool Activate = false,
+                          bool Diagnose = false) {
   assert(Src.isLive() && Dest.isLive());
 
   [[maybe_unused]] const Descriptor *SrcDesc = Src.getFieldDesc();
@@ -6982,18 +6973,19 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, PtrView Src,
   if (DestDesc->isRecord()) {
     if (!SrcDesc->isRecord())
       return false;
-    return copyRecord(S, OpPC, Src, Dest, Activate);
+    return copyRecord(S, OpPC, Src, Dest, Activate, Diagnose);
   }
   return Invalid(S, OpPC);
 }
 
-bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest) {
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest,
+              bool Activate, bool Diagnose) {
   if (!Src.isBlockPointer() || Src.getFieldDesc()->isPrimitive())
     return false;
   if (!Dest.isBlockPointer() || Dest.getFieldDesc()->isPrimitive())
     return false;
 
-  return copyComposite(S, OpPC, Src.view(), Dest.view());
+  return copyComposite(S, OpPC, Src.view(), Dest.view(), Activate, Diagnose);
 }
 
 } // namespace interp

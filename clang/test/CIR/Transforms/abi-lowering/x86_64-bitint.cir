@@ -14,12 +14,18 @@
 !ub65i = !cir.int<u, 65, bitint>
 !b127i = !cir.int<s, 127, bitint>
 !b128i = !cir.int<s, 128, bitint>
+!b200i = !cir.int<s, 200, bitint>
+!ub200i = !cir.int<u, 200, bitint>
+!b201i = !cir.int<s, 201, bitint>
 !s8i = !cir.int<s, 8>
 !rec_S = !cir.struct<"S" {data !b17i}>
 !rec_P = !cir.struct<"P" {data !b65i}>
 !rec_W = !cir.struct<"W" {data !b128i}>
 !rec_O = !cir.struct<"O" {data !b128i, data !s8i}>
 !rec_Arr = !cir.struct<"Arr" {data !cir.array<!b65i x 2>}>
+!rec_D = !cir.struct<"D" {data !b200i}>
+!rec_UD = !cir.union<"UD" {data !b200i}>
+!rec_AD = !cir.struct<"AD" {data !cir.array<!b200i x 2>}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -811,5 +817,200 @@ module attributes {
   // LLVM-LABEL: define void @take_arr(
   // LLVM-SAME:    ptr noundef byval(%struct.Arr) align 8 %[[ARG:[0-9]+]])
   // LLVM-NEXT:    %{{[0-9]+}} = load %struct.Arr, ptr %[[ARG]]
+  // LLVM-NEXT:    ret void
+
+  // A _BitInt wider than 128 bits classifies Indirect: byval on the argument
+  // side.  The rewriter attaches llvm.noundef to a byval argument, so where
+  // CIRGen already attached one the merged dictionary keeps a single entry.
+  cir.func @take_b200(%arg0: !b200i {llvm.noundef}) {
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @take_b200(
+  // CHECK-SAME:    %arg0: !cir.ptr<!cir.int<s, 200, bitint>> {llvm.align = 8 : i64
+  // CHECK-SAME:    , llvm.byval = !cir.int<s, 200, bitint>, llvm.noundef})
+  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0
+  // CHECK-SAME:      : !cir.ptr<!cir.int<s, 200, bitint>>, !cir.int<s, 200, bitint>
+  // CHECK-NEXT:    cir.return
+
+  // The byval pointee names the padded storage type (i256), not the literal
+  // i200, since that is what the copy is sized from and what the load below
+  // reads: a byval(i200) would tell the backend to reserve a 25-byte copy
+  // while the body reads 32 bytes through it.
+  // LLVM-LABEL: define void @take_b200(
+  // LLVM-SAME:    ptr noundef byval(i256) align 8 %[[ARG:[0-9]+]])
+  // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i256, ptr %[[ARG]]
+  // LLVM-NEXT:    %{{[0-9]+}} = trunc i256 %[[WIDE]] to i200
+  // LLVM-NEXT:    ret void
+
+  // A call site builds the byval copy itself, and the call operand's own
+  // byval attribute is widened the same way as the callee's.
+  cir.func @call_b200(%arg0: !b200i) {
+    cir.call @take_b200(%arg0) : (!b200i) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @call_b200(
+  // CHECK-SAME:    %arg0: !cir.ptr<!cir.int<s, 200, bitint>> {llvm.align = 8 : i64
+  // CHECK-SAME:    , llvm.byval = !cir.int<s, 200, bitint>, llvm.noundef})
+  // CHECK:          %[[SLOT:[0-9]+]] = cir.alloca "byval" align(8)
+  // CHECK-SAME:       : !cir.ptr<!cir.int<s, 200, bitint>>
+  // CHECK-NEXT:     cir.store %{{[0-9]+}}, %[[SLOT]]
+  // CHECK-SAME:       : !cir.int<s, 200, bitint>, !cir.ptr<!cir.int<s, 200, bitint>>
+  // CHECK-NEXT:     cir.call @take_b200(%[[SLOT]])
+  // CHECK-SAME:       : (!cir.ptr<!cir.int<s, 200, bitint>> {llvm.align = 8 : i64
+  // CHECK-SAME:       , llvm.byval = !cir.int<s, 200, bitint>, llvm.noundef}) -> ()
+
+  // LLVM-LABEL: define void @call_b200(
+  // LLVM-SAME:    ptr noundef byval(i256) align 8 %[[ARG:[0-9]+]])
+  // LLVM:         %[[SLOT:[0-9]+]] = alloca i256, align 8
+  // LLVM:         store i256 %{{[0-9]+}}, ptr %[[SLOT]], align 8
+  // LLVM-NEXT:    call void @take_b200(ptr noundef byval(i256) align 8 %[[SLOT]])
+  // LLVM-NEXT:    ret void
+
+  // A non-multiple-of-8 width past 128 still classifies Indirect at the same
+  // 8-byte alignment: the byval alignment is the target's clamped _BitInt
+  // maximum, not derived from the width's own byte count.
+  cir.func @take_b201(%arg0: !b201i) {
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @take_b201(
+  // CHECK-SAME:    %arg0: !cir.ptr<!cir.int<s, 201, bitint>> {llvm.align = 8 : i64
+  // CHECK-SAME:    , llvm.byval = !cir.int<s, 201, bitint>, llvm.noundef})
+  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0
+  // CHECK-SAME:      : !cir.ptr<!cir.int<s, 201, bitint>>, !cir.int<s, 201, bitint>
+  // CHECK-NEXT:    cir.return
+
+  // LLVM-LABEL: define void @take_b201(
+  // LLVM-SAME:    ptr noundef byval(i256) align 8 %[[ARG:[0-9]+]])
+  // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i256, ptr %[[ARG]]
+  // LLVM-NEXT:    %{{[0-9]+}} = trunc i256 %[[WIDE]] to i201
+  // LLVM-NEXT:    ret void
+
+  // Signedness only affects the extend direction on the memory round trip,
+  // not the classification.
+  cir.func @take_ub200(%arg0: !ub200i) {
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @take_ub200(
+  // CHECK-SAME:    %arg0: !cir.ptr<!cir.int<u, 200, bitint>> {llvm.align = 8 : i64
+  // CHECK-SAME:    , llvm.byval = !cir.int<u, 200, bitint>, llvm.noundef})
+  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0
+  // CHECK-SAME:      : !cir.ptr<!cir.int<u, 200, bitint>>, !cir.int<u, 200, bitint>
+  // CHECK-NEXT:    cir.return
+
+  // LLVM-LABEL: define void @take_ub200(
+  // LLVM-SAME:    ptr noundef byval(i256) align 8 %[[ARG:[0-9]+]])
+  // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i256, ptr %[[ARG]]
+  // LLVM-NEXT:    %{{[0-9]+}} = trunc i256 %[[WIDE]] to i200
+  // LLVM-NEXT:    ret void
+
+  // Returning a _BitInt wider than 128 bits takes the sret path, the same as
+  // an oversized aggregate.  The pre-existing llvm.noundef (as CIRGen would
+  // attach to any scalar return) must be dropped along with the result
+  // itself rather than surviving as a stale one-element res_attrs on a
+  // function that now returns void.
+  cir.func @ret_b200() -> (!b200i {llvm.noundef}) {
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!b200i>
+    %1 = cir.const #cir.int<5> : !b200i
+    cir.store %1, %0 : !b200i, !cir.ptr<!b200i>
+    %2 = cir.load %0 : !cir.ptr<!b200i>, !b200i
+    cir.return %2 : !b200i
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @ret_b200(
+  // CHECK-SAME:    %arg0: !cir.ptr<!cir.int<s, 200, bitint>> {llvm.align = 8 : i64
+  // CHECK-SAME:    , llvm.dead_on_unwind, llvm.noalias, llvm.sret = !cir.int<s, 200, bitint>
+  // CHECK-SAME:    , llvm.writable})
+  // CHECK-NEXT:    %[[C:[0-9]+]] = cir.const #cir.int<5> : !cir.int<s, 200, bitint>
+  // CHECK-NEXT:    cir.store %[[C]], %arg0
+  // CHECK-SAME:      : !cir.int<s, 200, bitint>, !cir.ptr<!cir.int<s, 200, bitint>>
+  // CHECK-NEXT:    cir.return
+
+  // Likewise the sret pointee is the padded storage type.
+  // LLVM-LABEL: define void @ret_b200(
+  // LLVM-SAME:    ptr dead_on_unwind noalias writable sret(i256) align 8
+  // LLVM-SAME:    %[[ARG:[0-9]+]])
+  // LLVM-NEXT:    store i256 5, ptr %[[ARG]]
+  // LLVM-NEXT:    ret void
+
+  // A call site rewriting to the sret shape drops the pre-existing
+  // llvm.noundef the same way the callee's own definition does.
+  cir.func @call_ret_b200() -> (!b200i {llvm.noundef}) {
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!b200i>
+    %1 = cir.call @ret_b200() : () -> !b200i
+    cir.store %1, %0 : !b200i, !cir.ptr<!b200i>
+    %2 = cir.load %0 : !cir.ptr<!b200i>, !b200i
+    cir.return %2 : !b200i
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @call_ret_b200(
+  // CHECK-SAME:    %arg0: !cir.ptr<!cir.int<s, 200, bitint>> {llvm.align = 8 : i64
+  // CHECK-SAME:    , llvm.dead_on_unwind, llvm.noalias, llvm.sret = !cir.int<s, 200, bitint>
+  // CHECK-SAME:    , llvm.writable})
+  // CHECK-NEXT:    cir.call @ret_b200(%arg0)
+  // CHECK-SAME:      : (!cir.ptr<!cir.int<s, 200, bitint>> {llvm.align = 8 : i64
+  // CHECK-SAME:      , llvm.dead_on_unwind, llvm.sret = !cir.int<s, 200, bitint>, llvm.writable}) -> ()
+  // CHECK-NEXT:    cir.return
+
+  // LLVM-LABEL: define void @call_ret_b200(
+  // LLVM-SAME:    ptr dead_on_unwind noalias writable sret(i256) align 8
+  // LLVM-SAME:    %[[ARG:[0-9]+]])
+  // LLVM-NEXT:    call void @ret_b200(ptr dead_on_unwind writable sret(i256) align 8 %[[ARG]])
+  // LLVM-NEXT:    ret void
+
+  // A struct member wider than 128 bits recurses through the same rule as a
+  // scalar of that width; the struct as a whole still passes byval since it
+  // spans more than two eightbytes.
+  cir.func @take_d(%arg0: !rec_D) {
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @take_d(
+  // CHECK-SAME:    %arg0: !cir.ptr<!rec_D> {llvm.align = 8 : i64
+  // CHECK-SAME:    , llvm.byval = !rec_D, llvm.noundef})
+  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_D>, !rec_D
+  // CHECK-NEXT:    cir.return
+
+  // LLVM-LABEL: define void @take_d(
+  // LLVM-SAME:    ptr noundef byval(%struct.D) align 8 %[[ARG:[0-9]+]])
+  // LLVM-NEXT:    %{{[0-9]+}} = load %struct.D, ptr %[[ARG]]
+  // LLVM-NEXT:    ret void
+
+  // A union member wider than 128 bits recurses through the same rule via
+  // the union's own member-recursion check, a separate code path from a
+  // struct's.
+  cir.func @take_ud(%arg0: !rec_UD) {
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @take_ud(
+  // CHECK-SAME:    %arg0: !cir.ptr<!rec_UD> {llvm.align = 8 : i64
+  // CHECK-SAME:    , llvm.byval = !rec_UD, llvm.noundef})
+  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_UD>, !rec_UD
+  // CHECK-NEXT:    cir.return
+
+  // LLVM-LABEL: define void @take_ud(
+  // LLVM-SAME:    ptr noundef byval(%union.UD) align 8 %[[ARG:[0-9]+]])
+  // LLVM-NEXT:    %{{[0-9]+}} = load %union.UD, ptr %[[ARG]]
+  // LLVM-NEXT:    ret void
+
+  // An array of a width wider than 128 bits recurses through the element type,
+  // a third member-recursion path distinct from a struct's and a union's.
+  cir.func @take_ad(%arg0: !rec_AD) {
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @take_ad(
+  // CHECK-SAME:    %arg0: !cir.ptr<!rec_AD> {llvm.align = 8 : i64
+  // CHECK-SAME:    , llvm.byval = !rec_AD, llvm.noundef})
+  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_AD>, !rec_AD
+  // CHECK-NEXT:    cir.return
+
+  // LLVM-LABEL: define void @take_ad(
+  // LLVM-SAME:    ptr noundef byval(%struct.AD) align 8 %[[ARG:[0-9]+]])
+  // LLVM-NEXT:    %{{[0-9]+}} = load %struct.AD, ptr %[[ARG]]
   // LLVM-NEXT:    ret void
 }

@@ -458,11 +458,11 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       ScStart = Start;
       // The highest address for the type saturates; adding EltSize to it would
       // wrap to the start of the address space.
-      ScEnd =
-          LastAddr
-              ? SE->getAddExpr(LastAddr, EltSizeSCEV)
-              : SE->getSCEV(ConstantExpr::getIntToPtr(
-                    Constant::getAllOnesValue(DL.getIndexType(PtrTy)), PtrTy));
+      if (LastAddr)
+        ScEnd = SE->getAddExpr(LastAddr, EltSizeSCEV);
+      else
+        ScEnd = SE->getSCEV(ConstantExpr::getIntToPtr(
+            Constant::getAllOnesValue(DL.getIndexType(PtrTy)), PtrTy));
     } else {
       if (!LastAddr)
         return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
@@ -1105,10 +1105,7 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
          std::optional<int64_t> Stride = std::nullopt,
          SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr) {
   // FIXME: This should probably only return true for NUW.
-  if (any(AR->getNoWrapFlags(SCEV::NoWrapMask)))
-    return true;
-
-  if (Ptr && PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW))
+  if (any(AR->getNoWrapFlags()))
     return true;
 
   // An nusw getelementptr that is an AddRec cannot wrap. If it would wrap,
@@ -1144,12 +1141,11 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
       return true;
   }
 
+  ScalarEvolution &SE = *PSE.getSE();
+  const SCEVPredicate *WrapPred =
+      SE.getWrapPredicate(AR, SCEVWrapPredicate::IncrementNUSW);
   if (Ptr && Predicates) {
-    ScalarEvolution &SE = *PSE.getSE();
-    SCEVWrapPredicate::IncrementWrapFlags Flags = SCEVWrapPredicate::clearFlags(
-        SCEVWrapPredicate::IncrementNUSW,
-        SCEVWrapPredicate::getImpliedFlags(AR, SE));
-    Predicates->push_back(SE.getWrapPredicate(AR, Flags));
+    Predicates->push_back(WrapPred);
     LLVM_DEBUG(dbgs() << "LAA: Pointer may wrap:\n"
                       << "LAA:   Pointer: " << *Ptr << "\n"
                       << "LAA:   SCEV: " << *AR << "\n"
@@ -1157,7 +1153,10 @@ isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR, Value *Ptr,
     return true;
   }
 
-  return false;
+  // Without adding a new predicate, AR may still be known not to wrap if the
+  // predicates of PSE already imply it, e.g. because a wrap predicate for AR
+  // was added while analyzing the dependences of the loop.
+  return PSE.getPredicate().implies(WrapPred, SE);
 }
 
 static void visitPointers(Value *StartPtr, const Loop &InnermostLoop,
@@ -1220,7 +1219,8 @@ static void findForkedSCEVs(
     return get<1>(S);
   };
 
-  auto GetBinOpExpr = [&SE](unsigned Opcode, const SCEV *L, const SCEV *R) {
+  auto GetBinOpExpr = [&SE](unsigned Opcode, const SCEV *L,
+                            const SCEV *R) -> const SCEV * {
     switch (Opcode) {
     case Instruction::Add:
       return SE->getAddExpr(L, R);
@@ -2393,8 +2393,20 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
     if (SE.isKnownNonNegative(Dist)) {
-      if (HasSameSize) {
-        // Write to the same location with the same size.
+      // Equal-sized accesses to the same location are forward.
+      if (HasSameSize)
+        return Dependence::Forward;
+
+      if (CommonStride) {
+        // For mixed sizes, CommonStride is asserted to cover both accesses when
+        // computed in getDependenceDistanceStrideAndSize, so different
+        // iterations cannot overlap.
+        [[maybe_unused]] uint64_t ASz =
+            DL.getTypeAllocSize(getLoadStoreType(InstMap[AIdx]));
+        [[maybe_unused]] uint64_t BSz =
+            DL.getTypeAllocSize(getLoadStoreType(InstMap[BIdx]));
+        assert(*CommonStride >= std::max(ASz, BSz) &&
+               "Invariant from getDependenceDistanceStrideAndSize broken!");
         return Dependence::Forward;
       }
       LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "
@@ -2780,7 +2792,6 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
           HasComplexMemInst = true;
           continue;
         }
-        NumLoads++;
         Loads.push_back(Ld);
         DepChecker->addAccess(Ld);
         if (EnableMemAccessVersioningOfLoop)
@@ -2804,7 +2815,6 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
           HasComplexMemInst = true;
           continue;
         }
-        NumStores++;
         Stores.push_back(St);
         DepChecker->addAccess(St);
         if (EnableMemAccessVersioningOfLoop)

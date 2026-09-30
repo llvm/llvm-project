@@ -303,11 +303,6 @@ public:
     return getGeneration() <= SEA_ISLANDS ? 1 : 2;
   }
 
-  /// Return the amount of LDS that can be used that will not restrict the
-  /// occupancy lower than WaveCount.
-  unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
-                                           const Function &) const;
-
   bool supportsMinMaxDenormModes() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
@@ -363,6 +358,11 @@ public:
   }
 
   bool isCuModeEnabled() const { return EnableCuMode; }
+
+  /// \returns Whether a work-group runs on all of the block's SIMDs.
+  bool isFullSIMDMode() const {
+    return (HasGFX1250Insts && getGeneration() < GFX13) || !EnableCuMode;
+  }
 
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
