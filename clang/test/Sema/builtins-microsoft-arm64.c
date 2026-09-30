@@ -26,10 +26,16 @@ void check_ReadWriteStatusReg(int v) {
 }
 
 void check_ReadWriteStatusReg_range(int v) {
-  _ReadStatusReg(0x3fff);      // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  // Bit 14 is o0 (op0 - 2), so op0 == 2 registers encode below 0x4000 and are
+  // valid. 0x3fff is S2_7_C15_C15_7; 18 is MDSCR_EL1 (S2_0_C0_C2_2).
+  _ReadStatusReg(0x3fff);      // no-error
+  _ReadStatusReg(18);          // no-error
+  _ReadStatusReg(-1);     // expected-error-re {{argument value {{.*}} is outside the valid range}}
   _ReadStatusReg(0x8000); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
-  _WriteStatusReg(0x3fff, v);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  _WriteStatusReg(0x3fff, v);  // no-error
+  _WriteStatusReg(18, v);      // no-error
+  _WriteStatusReg(-1, v);     // expected-error-re {{argument value {{.*}} is outside the valid range}}
   _WriteStatusReg(0x8000, v); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
