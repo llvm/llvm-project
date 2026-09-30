@@ -92,7 +92,6 @@ private:
                                  std::vector<std::vector<unsigned>> &InstIdxs,
                                  std::vector<unsigned> &InstOpsUsed,
                                  bool PassSubtarget) const;
-
 };
 
 } // end anonymous namespace
@@ -623,9 +622,9 @@ void AsmWriterEmitter::EmitPrintInstruction(
 /// arrays inside printInstruction() so that local variables remain in scope.
 static void
 EmitOverflowBytecodeSection(raw_ostream &O, StringRef TargetName,
-                             const std::vector<InstructionGroup> &Groups,
-                             ArrayRef<const CodeGenInstruction *> NumberedInsts,
-                             bool PassSubtarget) {
+                            const std::vector<InstructionGroup> &Groups,
+                            ArrayRef<const CodeGenInstruction *> NumberedInsts,
+                            bool PassSubtarget) {
   // Index 0 = unexpected-opcode sentinel, 1 = return terminator (already the
   // last operand of every AsmWriterInst), 2+ = real print statements.
   // Pre-seeding ensures AWI.Operands' trailing "return;" maps to index 1.
@@ -639,22 +638,19 @@ EmitOverflowBytecodeSection(raw_ostream &O, StringRef TargetName,
   // no-op and the for-loop would increment past the sentinel to Program[1];
   // having index 1 ("return;") there ensures a safe exit instead of
   // accidentally executing the first real sequence's bytecodes.
+  // Real sequences start at offset 2.
   std::vector<unsigned> OpcodeToOffset(NumberedInsts.size(), 0);
-  std::vector<unsigned> Program = {0, 1}; // sentinel + NDEBUG return guard
-
+  unsigned TotalSize = 2; // slot 0 = sentinel, slot 1 = NDEBUG return guard
   for (const InstructionGroup &G : Groups) {
-    unsigned Offset = Program.size();
-    OpcodeToOffset[G.FirstInst.CGIIndex] = Offset;
+    OpcodeToOffset[G.FirstInst.CGIIndex] = TotalSize;
     for (const AsmWriterInst &AWI : G.SimilarInsts)
-      OpcodeToOffset[AWI.CGIIndex] = Offset;
-    for (const AsmWriterOperand &Op : G.FirstInst.Operands) {
-      auto [It, _] = Commands.try_emplace(Op.getCode(PassSubtarget),
-                                          Commands.size());
-      Program.push_back(It->second);
-    }
+      OpcodeToOffset[AWI.CGIIndex] = TotalSize;
+    TotalSize += G.FirstInst.Operands.size();
+    for (const AsmWriterOperand &Op : G.FirstInst.Operands)
+      Commands.try_emplace(Op.getCode(PassSubtarget), Commands.size());
   }
 
-  StringRef OffsetType = getMinimalTypeForRange(Program.size() - 1);
+  StringRef OffsetType = getMinimalTypeForRange(TotalSize - 1);
   StringRef StmtType = getMinimalTypeForRange(Commands.size() - 1);
 
   O << "  static const " << OffsetType << " " << TargetName
@@ -664,9 +660,11 @@ EmitOverflowBytecodeSection(raw_ostream &O, StringRef TargetName,
   O << "  };\n";
 
   O << "  static const " << StmtType << " " << TargetName
-    << "OverflowProgram[] = {\n";
-  for (unsigned Val : Program)
-    O << "    " << Val << ",\n";
+    << "OverflowProgram[] = {\n"
+    << "    0, 1,\n"; // sentinel + NDEBUG return guard
+  for (const InstructionGroup &G : Groups)
+    for (const AsmWriterOperand &Op : G.FirstInst.Operands)
+      O << "    " << Commands.lookup(Op.getCode(PassSubtarget)) << ",\n";
   O << "  };\n";
 
   O << "  for (" << OffsetType << " Idx = " << TargetName
