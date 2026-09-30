@@ -1248,6 +1248,13 @@ public:
     return true;
   }
 
+  /// Returns whether the register RegName (a canonical GCC register name) can
+  /// hold a local register variable, i.e. it is not a status or pseudo register
+  /// that is only valid in a clobber list.
+  virtual bool validateLocalRegisterVariable(StringRef RegName) const {
+    return true;
+  }
+
   // validateOutputConstraint, validateInputConstraint - Checks that
   // a constraint is valid and provides information about it.
   // FIXME: These should return a real error instead of just true/false.

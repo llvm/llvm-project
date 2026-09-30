@@ -404,3 +404,26 @@ void test20(char x) {
   asm ("fabs" : "=t" (d): "0" (v)); // expected-error {{unsupported inline asm: input with type 'int2' (vector of 2 'int' values) matching output with type 'double'}}
   asm ("fabs" : "=t" (v): "0" (d)); // expected-error {{unsupported inline asm: input with type 'double' matching output with type 'int2' (vector of 2 'int' values)}}
 }
+
+// GH225033
+void test21(long double x, int y) {
+  register long double t __asm("17"); // expected-error {{register '17' unsuitable for register variables}}
+  asm ("fabs" : "=t" (t) : "0" (x));
+  register int r __asm("17"); // expected-error {{register '17' unsuitable for register variables}}
+  asm ("mov %1, %0" : "=r" (r) : "r" (y));
+
+  register int flags __asm("flags"); // expected-error {{register 'flags' unsuitable for register variables}}
+  register int flags_prefixed __asm("%flags"); // expected-error {{register '%flags' unsuitable for register variables}}
+  register int argp __asm("argp"); // expected-error {{register 'argp' unsuitable for register variables}}
+  register int fpcr __asm("fpcr"); // expected-error {{register 'fpcr' unsuitable for register variables}}
+  register int fpsr __asm("19"); // expected-error {{register '19' unsuitable for register variables}}
+  register int dirflag __asm("dirflag"); // expected-error {{register 'dirflag' unsuitable for register variables}}
+  register int frame __asm("frame"); // expected-error {{register 'frame' unsuitable for register variables}}
+
+  // Still valid: real registers by number or name, and clobbers.
+  register int ax __asm("0");
+  register int ymm29 __asm("99");
+  register long double st __asm("st");
+  asm ("fabs" : "=t" (st) : "0" (x));
+  asm ("nop" : : : "17", "flags", "fpsr", "dirflag");
+}
