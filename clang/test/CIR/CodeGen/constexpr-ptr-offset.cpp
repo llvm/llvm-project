@@ -20,7 +20,7 @@ void test() {
 
 // CIR: cir.global "private" constant cir_private @__const._Z4testv.v = #cir.const_record<{#cir.global_view<@"[[STR_NAME:.*]]", [2 : i32]> : !cir.ptr<!s8i>, #cir.int<3> : !s32i, #cir.zero : !cir.array<!u8i x 4>}> : !rec_View
 // CIR: cir.global "private" constant cir_private dso_local @"[[STR_NAME]]" = #cir.const_array<"hello" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6>
-// LLVMCIR: @__const._Z4testv.v = private constant %struct.View <{ ptr getelementptr (i8, ptr @[[STR_NAME:.*]], i64 2), i32 3, [4 x i8] zeroinitializer }>
+// LLVMCIR: @__const._Z4testv.v = private constant %struct.View <{ ptr getelementptr inbounds nuw (i8, ptr @[[STR_NAME:.*]], i64 2), i32 3, [4 x i8] zeroinitializer }>
 // LLVMCIR: @[[STR_NAME]] = private {{.*}}constant [6 x i8] c"hello\00"
 
 // OGCG: @[[STR_NAME:.*]] = private {{.*}}constant [6 x i8] c"hello\00"
