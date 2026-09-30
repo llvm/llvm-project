@@ -49,15 +49,24 @@ bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                         APSInt &&Index, bool AllowReplace = true);
 
 /// Checks if a pointer is in range.
-template <typename T>
-bool CheckRange(InterpState &S, CodePtr OpPC, T Ptr, AccessKinds AK) {
+inline bool CheckRange(InterpState &S, CodePtr OpPC, PtrView Ptr,
+                       AccessKinds AK) {
   if (!Ptr.isOnePastEnd() && !Ptr.isZeroSizeArray())
     return true;
-  if (S.getLangOpts().CPlusPlus) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_access_past_end)
+  if (S.getLangOpts().CPlusPlus)
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
         << AK << S.Current->getRange(OpPC);
-  }
+
+  return false;
+}
+inline bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                       AccessKinds AK) {
+  if (!Ptr.isOnePastEnd() && !Ptr.isZeroSizeArray())
+    return true;
+  if (S.getLangOpts().CPlusPlus)
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
+        << AK << S.Current->getRange(OpPC);
+
   return false;
 }
 
