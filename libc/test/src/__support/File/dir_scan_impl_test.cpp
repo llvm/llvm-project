@@ -19,51 +19,44 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-struct MockDirState {
+struct MockDirTestSetup {
   int read_errno_val = 0;
   int open_errno_val = 0;
   // how many successful reads until it fails.
   size_t read_fails_at = static_cast<size_t>(-1); // Don't fail by default
-  size_t current_read_index = 0;
+  const char *test_files[5] = {".", "..", "b.txt", "a.md", "c.pdf"};
+  size_t test_files_count = sizeof(test_files) / sizeof(test_files[0]);
 };
 
-struct MockDir {
-  inline static MockDirState state;
+MockDirTestSetup test_setup;
 
-  inline static const char *test_files[] = {".", "..", "b.txt", "a.md",
-                                            "c.pdf"};
-  inline static size_t test_files_count =
-      sizeof(MockDir::test_files) / sizeof(MockDir::test_files[0]);
-  alignas(
-      struct dirent) inline static char dirent_buffer[sizeof(struct dirent) +
-                                                      256] = {};
+struct MockDir {
+  alignas(struct dirent) char dirent_buffer[sizeof(struct dirent) + 256] = {};
+  size_t current_read_index = 0;
+  struct dirent *entry = reinterpret_cast<struct dirent *>(dirent_buffer);
 
   static LIBC_NAMESPACE::ErrorOr<MockDir *> open(const char *) {
-    if (state.open_errno_val != 0)
-      return LIBC_NAMESPACE::Error(state.open_errno_val);
-    state.current_read_index = 0;
+    if (test_setup.open_errno_val != 0)
+      return LIBC_NAMESPACE::Error(test_setup.open_errno_val);
     return new MockDir();
   }
 
   LIBC_NAMESPACE::ErrorOr<struct dirent *> read() {
-    if (state.current_read_index == state.read_fails_at) {
-      return LIBC_NAMESPACE::Error(state.read_errno_val);
-    }
+    if (current_read_index == test_setup.read_fails_at)
+      return LIBC_NAMESPACE::Error(test_setup.read_errno_val);
 
-    if (state.current_read_index >= test_files_count) {
+    if (current_read_index >= test_setup.test_files_count)
       return nullptr;
-    }
 
-    struct dirent *entry = reinterpret_cast<struct dirent *>(dirent_buffer);
-    entry->d_ino = state.current_read_index + 1;
-    const char *name = test_files[state.current_read_index];
+    entry->d_ino = current_read_index + 1;
+    const char *name = test_setup.test_files[current_read_index];
     size_t i = 0;
     while (name[i] != '\0') {
       entry->d_name[i] = name[i];
       ++i;
     }
     entry->d_name[i] = '\0';
-    state.current_read_index++;
+    current_read_index++;
     return entry;
   }
 
@@ -85,8 +78,8 @@ struct MockDir {
 class LlvmLibcScanImplTest : public LIBC_NAMESPACE::testing::Test {
 protected:
   void SetUp() override {
-    LIBC_NAMESPACE::MockDir::state = LIBC_NAMESPACE::MockDir::state =
-        LIBC_NAMESPACE::MockDirState{};
+    LIBC_NAMESPACE::testing::Test::SetUp();
+    LIBC_NAMESPACE::test_setup = LIBC_NAMESPACE::MockDirTestSetup{};
   }
 };
 
@@ -97,17 +90,17 @@ TEST_F(LlvmLibcScanImplTest, SuccessfulRun) {
       "fake/path", &namelist, nullptr, nullptr);
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(res.value(),
-            static_cast<int>(LIBC_NAMESPACE::MockDir::test_files_count));
+            static_cast<int>(LIBC_NAMESPACE::test_setup.test_files_count));
 
-  for (size_t i = 0; i < LIBC_NAMESPACE::MockDir::test_files_count; ++i) {
-    ASSERT_STREQ(namelist[i]->d_name, LIBC_NAMESPACE::MockDir::test_files[i]);
+  for (size_t i = 0; i < LIBC_NAMESPACE::test_setup.test_files_count; ++i) {
+    ASSERT_STREQ(namelist[i]->d_name, LIBC_NAMESPACE::test_setup.test_files[i]);
   }
 }
 
 TEST_F(LlvmLibcScanImplTest, OpenFails) {
 
   struct dirent **namelist = nullptr;
-  LIBC_NAMESPACE::MockDir::state.open_errno_val = EACCES;
+  LIBC_NAMESPACE::test_setup.open_errno_val = EACCES;
 
   auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
       "fake/path", &namelist, nullptr, nullptr);
@@ -118,8 +111,8 @@ TEST_F(LlvmLibcScanImplTest, OpenFails) {
 TEST_F(LlvmLibcScanImplTest, ReadFailsAtStart) {
 
   struct dirent **namelist = nullptr;
-  LIBC_NAMESPACE::MockDir::state.read_errno_val = ENOENT;
-  LIBC_NAMESPACE::MockDir::state.read_fails_at = 1;
+  LIBC_NAMESPACE::test_setup.read_errno_val = ENOENT;
+  LIBC_NAMESPACE::test_setup.read_fails_at = 0;
 
   auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
       "fake/path", &namelist, nullptr, nullptr);
@@ -130,8 +123,8 @@ TEST_F(LlvmLibcScanImplTest, ReadFailsAtStart) {
 TEST_F(LlvmLibcScanImplTest, ReadFailsMidway) {
 
   struct dirent **namelist = nullptr;
-  LIBC_NAMESPACE::MockDir::state.read_errno_val = ENOENT;
-  LIBC_NAMESPACE::MockDir::state.read_fails_at = 3;
+  LIBC_NAMESPACE::test_setup.read_errno_val = ENOENT;
+  LIBC_NAMESPACE::test_setup.read_fails_at = 3;
 
   auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
       "fake/path", &namelist, nullptr, nullptr);
@@ -154,11 +147,7 @@ int partialorder(const struct dirent **a, const struct dirent **b) {
   int weight_a = get_weight(char_a);
   int weight_b = get_weight(char_b);
 
-  if (weight_a < weight_b)
-    return -1;
-  if (weight_a > weight_b)
-    return 1;
-  return 0;
+  return weight_a - weight_b;
 }
 
 TEST_F(LlvmLibcScanImplTest, TestPartialOrdering) {
@@ -168,7 +157,7 @@ TEST_F(LlvmLibcScanImplTest, TestPartialOrdering) {
       "fake/path", &namelist, nullptr, partialorder);
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(res.value(),
-            static_cast<int>(LIBC_NAMESPACE::MockDir::test_files_count));
+            static_cast<int>(LIBC_NAMESPACE::test_setup.test_files_count));
   int a_index = -1;
   int b_index = -1;
   for (int i = 0; i < res.value(); ++i) {
@@ -195,7 +184,7 @@ TEST_F(LlvmLibcScanImplTest, TestPartialOrderingReverse) {
       "fake/path", &namelist, nullptr, partialorder_reverse);
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(res.value(),
-            static_cast<int>(LIBC_NAMESPACE::MockDir::test_files_count));
+            static_cast<int>(LIBC_NAMESPACE::test_setup.test_files_count));
   int a_index = -1;
   int b_index = -1;
   for (int i = 0; i < res.value(); ++i) {
@@ -217,9 +206,9 @@ TEST_F(LlvmLibcScanImplTest, TestTotalOrderingAZ) {
       "fake/path", &namelist, nullptr, LIBC_NAMESPACE::alphasort);
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(res.value(),
-            static_cast<int>(LIBC_NAMESPACE::MockDir::test_files_count));
+            static_cast<int>(LIBC_NAMESPACE::test_setup.test_files_count));
   const char *desired_order[] = {".", "..", "a.md", "b.txt", "c.pdf", nullptr};
-  for (size_t i = 0; i < LIBC_NAMESPACE::MockDir::test_files_count &&
+  for (size_t i = 0; i < LIBC_NAMESPACE::test_setup.test_files_count &&
                      desired_order[i] != nullptr;
        ++i) {
     ASSERT_STREQ(namelist[i]->d_name, desired_order[i]);
@@ -236,9 +225,9 @@ TEST_F(LlvmLibcScanImplTest, TestTotalOrderingZA) {
       "fake/path", &namelist, nullptr, omegasort);
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(res.value(),
-            static_cast<int>(LIBC_NAMESPACE::MockDir::test_files_count));
+            static_cast<int>(LIBC_NAMESPACE::test_setup.test_files_count));
   const char *desired_order[] = {"c.pdf", "b.txt", "a.md", "..", ".", nullptr};
-  for (size_t i = 0; i < LIBC_NAMESPACE::MockDir::test_files_count &&
+  for (size_t i = 0; i < LIBC_NAMESPACE::test_setup.test_files_count &&
                      desired_order[i] != nullptr;
        ++i) {
     ASSERT_STREQ(namelist[i]->d_name, desired_order[i]);
@@ -252,7 +241,7 @@ TEST_F(LlvmLibcScanImplTest, TesetFilter) {
   auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
       "fake/path", &namelist, skip_hidden, nullptr);
   ASSERT_TRUE(res.has_value());
-  size_t desired_count = LIBC_NAMESPACE::MockDir::test_files_count - 2;
+  size_t desired_count = LIBC_NAMESPACE::test_setup.test_files_count - 2;
   ASSERT_EQ(res.value(), static_cast<int>(desired_count));
   const char *desired_files[] = {"b.txt", "a.md", "c.pdf", nullptr};
 

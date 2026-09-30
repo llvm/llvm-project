@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/types/struct_dirent.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/path.h"
 #include "src/dirent/scandir.h"
 #include "src/stdio/asprintf.h"
@@ -21,7 +22,6 @@
 #include "src/stdlib/mkdtemp.h"
 #include "src/string/strcoll.h"
 #include "src/string/strdup.h"
-#include "src/string/strncmp.h"
 #include "src/unistd/rmdir.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
@@ -38,38 +38,35 @@ constexpr int ENTRIES_MIN = 2;
 char *join_path(char *dir, const char *filename) {
   char *path = nullptr;
   if (LIBC_NAMESPACE::asprintf(&path, "%s%c%s", dir,
-                               LIBC_NAMESPACE::path::SEPARATOR,
-                               filename) == -1) {
+                               LIBC_NAMESPACE::path::SEPARATOR, filename) == -1)
     return nullptr;
-  }
   return path;
 }
 
 bool create_empty_file(char *path) {
   FILE *file = LIBC_NAMESPACE::fopen(path, "w");
-  if (file == nullptr) {
+  if (file == nullptr)
     return false;
-  }
 
-  if (LIBC_NAMESPACE::fclose(file) == -1) {
+  if (LIBC_NAMESPACE::fclose(file) == -1)
     return false;
-  }
+
   return true;
 }
 
 char *create_temp_dir() {
   char *tmpl = LIBC_NAMESPACE::strdup(libc_make_test_file_path(TEMPLATE));
-  if (tmpl == nullptr) {
+  if (tmpl == nullptr)
     return nullptr;
-  }
+
   return LIBC_NAMESPACE::mkdtemp(tmpl);
 }
 
 bool remove_temp_dir(char *dirpath) {
-  if (LIBC_NAMESPACE::rmdir(dirpath) == -1) {
+  if (LIBC_NAMESPACE::rmdir(dirpath) == -1)
     return false;
-  }
-  free(dirpath);
+
+  ::free(dirpath);
   return true;
 }
 
@@ -86,13 +83,11 @@ int skip_hidden(const struct dirent *entry) { return entry->d_name[0] != '.'; }
 int skip_as(const struct dirent *entry) { return entry->d_name[0] != 'a'; }
 
 void free_namelist(struct dirent **namelist, int size) {
-  if (namelist == nullptr) {
+  if (namelist == nullptr)
     return;
-  }
 
-  for (int i = 0; i < size; ++i) {
+  for (int i = 0; i < size; ++i)
     ::free(namelist[i]);
-  }
   ::free(namelist);
 }
 
@@ -104,16 +99,15 @@ TEST_F(LlvmLibcScandirTest, TestEmptyDir) {
   ASSERT_THAT(LIBC_NAMESPACE::scandir(dirpath, &namelist, nullptr, nullptr),
               Succeeds(ENTRIES_MIN));
   // Order of namelist is not guaranteed so we can't easily use ASSERT_STREQ
-  ASSERT_TRUE((LIBC_NAMESPACE::strncmp(namelist[0]->d_name, ".", 1) == 0 &&
-               LIBC_NAMESPACE::strncmp(namelist[1]->d_name, "..", 2) == 0) ||
-              (LIBC_NAMESPACE::strncmp(namelist[0]->d_name, "..", 2) == 0 &&
-               LIBC_NAMESPACE::strncmp(namelist[1]->d_name, ".", 1) == 0));
+  LIBC_NAMESPACE::cpp::string_view first(namelist[0]->d_name);
+  LIBC_NAMESPACE::cpp::string_view second(namelist[1]->d_name);
+
+  ASSERT_TRUE((first == "." && second == "..") ||
+              (first == ".." && second == "."));
 
   // We also test that both orderings can't be true at the same time.
-  ASSERT_FALSE((LIBC_NAMESPACE::strncmp(namelist[0]->d_name, ".", 1) == 0 &&
-                LIBC_NAMESPACE::strncmp(namelist[1]->d_name, "..", 2) == 0) &&
-               (LIBC_NAMESPACE::strncmp(namelist[0]->d_name, "..", 2) == 0 &&
-                LIBC_NAMESPACE::strncmp(namelist[1]->d_name, ".", 1) == 0));
+  ASSERT_FALSE((first == "." && second == "..") &&
+               (first == ".." && second == "."));
 
   free_namelist(namelist, ENTRIES_MIN);
   ASSERT_TRUE(remove_temp_dir(dirpath));

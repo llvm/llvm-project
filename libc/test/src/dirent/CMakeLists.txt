@@ -58,6 +58,7 @@ add_libc_test(
     scandir_test.cpp
   DEPENDS
     libc.hdr.types.struct_dirent
+    libc.src.__support.CPP.string_view
     libc.src.__support.OSUtil.path
     libc.src.__support.error_or
     libc.src.dirent.scandir
@@ -68,7 +69,6 @@ add_libc_test(
     libc.src.stdlib.mkdtemp
     libc.src.string.strcoll
     libc.src.string.strdup
-    libc.src.string.strncmp
     libc.src.unistd.rmdir
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
