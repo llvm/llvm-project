@@ -37,6 +37,7 @@
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedHookInterface.h"
@@ -81,6 +82,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <sstream>
 
 using namespace lldb;
@@ -2753,7 +2755,14 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
   // Some TypeSystem instances are associated with several LanguageTypes so
   // they will show up several times in the loop below. The SetVector filters
   // out all duplicates as they serve no use for the caller.
-  std::vector<lldb::TypeSystemSP> scratch_type_systems;
+  //
+  // The insertion order matters: callers such as SBTarget::GetBasicType query
+  // the TypeSystems in order and use the first one that can answer, so the
+  // result has to be a function of the languages and not of where the
+  // instances happen to live in memory.
+  llvm::SetVector<lldb::TypeSystemSP, std::vector<lldb::TypeSystemSP>,
+                  std::set<lldb::TypeSystemSP>>
+      scratch_type_systems;
 
   LanguageSet languages_for_expressions =
       Language::GetLanguagesSupportingTypeSystemsForExpressions();
@@ -2768,15 +2777,11 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
           "Language '{1}' has expression support but no scratch type "
           "system available: {0}",
           Language::GetNameForLanguageType(language));
-    else
-      if (auto ts = *type_system_or_err)
-        scratch_type_systems.push_back(ts);
+    else if (auto ts = *type_system_or_err)
+      scratch_type_systems.insert(ts);
   }
 
-  std::sort(scratch_type_systems.begin(), scratch_type_systems.end());
-  scratch_type_systems.erase(llvm::unique(scratch_type_systems),
-                             scratch_type_systems.end());
-  return scratch_type_systems;
+  return scratch_type_systems.takeVector();
 }
 
 PersistentExpressionState *
@@ -2999,19 +3004,9 @@ ExpressionResults Target::EvaluateExpression(
     result_valobj_sp = persistent_var_sp->GetValueObject();
     execution_results = eExpressionCompleted;
   } else {
-    // If this expression is being evaluated from inside a frame provider,
-    // force single-thread execution. Resuming all threads while a provider
-    // is mid-construction could cause unwanted process state changes.
-    EvaluateExpressionOptions effective_options = options;
-    if (ThreadSP thread_sp = exe_ctx.GetThreadSP()) {
-      if (thread_sp->IsAnyProviderActive()) {
-        effective_options.SetStopOthers(true);
-        effective_options.SetTryAllThreads(false);
-      }
-    }
     llvm::StringRef prefix = GetExpressionPrefixContents();
     execution_results =
-        UserExpression::Evaluate(exe_ctx, effective_options, expr, prefix,
+        UserExpression::Evaluate(exe_ctx, options, expr, prefix,
                                  result_valobj_sp, fixed_expression, ctx_obj);
   }
 
@@ -4360,6 +4355,19 @@ Status Target::StopHookScripted::SetScriptCallback(
   return {};
 }
 
+/// Hook callbacks have no caller to return an error to, so report a failure
+/// as a debugger diagnostic. \a what names the hook, e.g. "stop hook 1".
+static void ReportScriptedHookError(llvm::Error error, llvm::StringRef what,
+                                    Debugger &debugger) {
+  if (!error)
+    return;
+
+  Debugger::ReportError(
+      llvm::formatv("{0} failed: {1}", what, llvm::toString(std::move(error)))
+          .str(),
+      debugger.GetID());
+}
+
 Target::StopHook::StopHookResult
 Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
                                      StreamSP output_sp) {
@@ -4374,8 +4382,9 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
   output_sp->PutCString(
       reinterpret_cast<StreamString *>(stream.get())->GetData());
   if (!should_stop_or_err) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Target), should_stop_or_err.takeError(),
-                   "scripted stop hook HandleStop failed: {0}");
+    ReportScriptedHookError(should_stop_or_err.takeError(),
+                            llvm::formatv("stop hook {0}", GetID()).str(),
+                            exc_ctx.GetTargetPtr()->GetDebugger());
     return StopHookResult::KeepStopped;
   }
 
@@ -4685,18 +4694,32 @@ void Target::HookScripted::HandleModuleLoaded(StreamSP output_sp) {
   if (!m_interface_sp)
     return;
 
+  TargetSP target_sp = GetTarget();
+  if (!target_sp)
+    return;
+
   StreamSP stream = std::make_shared<StreamString>();
-  m_interface_sp->HandleModuleLoaded(stream);
+  llvm::Error error = m_interface_sp->HandleModuleLoaded(stream);
   output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
+  ReportScriptedHookError(std::move(error),
+                          llvm::formatv("hook {0}", GetID()).str(),
+                          target_sp->GetDebugger());
 }
 
 void Target::HookScripted::HandleModuleUnloaded(StreamSP output_sp) {
   if (!m_interface_sp)
     return;
 
+  TargetSP target_sp = GetTarget();
+  if (!target_sp)
+    return;
+
   StreamSP stream = std::make_shared<StreamString>();
-  m_interface_sp->HandleModuleUnloaded(stream);
+  llvm::Error error = m_interface_sp->HandleModuleUnloaded(stream);
   output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
+  ReportScriptedHookError(std::move(error),
+                          llvm::formatv("hook {0}", GetID()).str(),
+                          target_sp->GetDebugger());
 }
 
 Target::StopHook::StopHookResult
@@ -4711,8 +4734,12 @@ Target::HookScripted::HandleStop(ExecutionContext &exc_ctx,
   lldb::StreamSP stream = std::make_shared<lldb_private::StreamString>();
   auto should_stop_or_err = m_interface_sp->HandleStop(exc_ctx, stream);
   output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
-  if (!should_stop_or_err)
+  if (!should_stop_or_err) {
+    ReportScriptedHookError(should_stop_or_err.takeError(),
+                            llvm::formatv("hook {0}", GetID()).str(),
+                            exc_ctx.GetTargetPtr()->GetDebugger());
     return StopHook::StopHookResult::KeepStopped;
+  }
 
   return *should_stop_or_err ? StopHook::StopHookResult::KeepStopped
                              : StopHook::StopHookResult::RequestContinue;
@@ -5219,6 +5246,28 @@ void TargetProperties::SetUseDIL(ExecutionContext *exe_ctx, bool b) {
     exp_values->SetPropertyAtIndex(ePropertyUseDIL, true, exe_ctx);
 }
 
+bool TargetProperties::GetUseDILForCreatingValues() const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values
+        ->GetPropertyAtIndexAs<bool>(ePropertyUseDILForCreatingValues)
+        .value_or(false);
+  else
+    return true;
+}
+
+void TargetProperties::SetUseDILForCreatingValues(bool b) {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    exp_values->SetPropertyAtIndex(ePropertyUseDILForCreatingValues, b);
+}
+
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
   const uint32_t idx = ePropertyDefaultArch;
   return GetPropertyAtIndexAs<ArchSpec>(idx, {});
@@ -5713,6 +5762,13 @@ bool TargetProperties::GetBreakpointsConsultPlatformAvoidList() {
   const uint32_t idx = ePropertyBreakpointUseAvoidList;
   return GetPropertyAtIndexAs<bool>(
       idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+BreakpointConditionMode TargetProperties::GetBreakpointsConditionMode() const {
+  const uint32_t idx = ePropertyBreakpointsConditionMode;
+  return GetPropertyAtIndexAs<BreakpointConditionMode>(
+      idx, static_cast<BreakpointConditionMode>(
+               g_target_properties[idx].default_uint_value));
 }
 
 bool TargetProperties::GetUseHexImmediates() const {

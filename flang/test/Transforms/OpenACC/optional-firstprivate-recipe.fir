@@ -15,10 +15,10 @@ func.func @test_optional_firstprivate_f32(%arg0: !fir.ref<f32> {fir.bindc_name =
 
 // CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_optional_ref_f32 : !fir.ref<f32> init {
 // CHECK: ^bb0(%{{.*}}: !fir.ref<f32>):
+// CHECK:   %[[TEMP:.*]] = fir.alloca f32
 // CHECK:   %{{.*}} = fir.is_present %{{.*}} : (!fir.ref<f32>) -> i1
 // CHECK:   fir.if %{{.*}} -> (!fir.ref<f32>) {
-// CHECK:     %{{.*}} = fir.alloca f32
-// CHECK:     fir.result %{{.*}} : !fir.ref<f32>
+// CHECK:     fir.result %[[TEMP]] : !fir.ref<f32>
 // CHECK:   } else {
 // CHECK:     %{{.*}} = fir.absent !fir.ref<f32>
 // CHECK:     fir.result %{{.*}} : !fir.ref<f32>
@@ -35,5 +35,5 @@ func.func @test_optional_firstprivate_f32(%arg0: !fir.ref<f32> {fir.bindc_name =
 // CHECK: }
 
 // bindc_name on the arg does not always flow into acc.firstprivate's name=; minimal FIR gets name = "".
-// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) recipe(@firstprivatization_optional_ref_f32) -> !fir.ref<f32> {implicit = true, name = ""}
+// CHECK: acc.firstprivate varPtr({{.*}} : !fir.ref<f32>) recipe(@firstprivatization_optional_ref_f32) implicit(true) name("") -> !fir.ref<f32>
 // CHECK: acc.parallel firstprivate(

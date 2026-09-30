@@ -100,6 +100,9 @@ struct CASPluginOptions {
   std::string SecondPrefix;
   bool SimulateMissingObjects = false;
   bool Logging = true;
+  /// If true, \c llcas_cas_validate_if_needed crashes while checking hashes,
+  /// for testing recovery from a crashed validation.
+  bool CrashOnValidate = false;
 
   Error setOption(StringRef Name, StringRef Value);
 };
@@ -119,6 +122,8 @@ Error CASPluginOptions::setOption(StringRef Name, StringRef Value) {
     SimulateMissingObjects = true;
   else if (Name == "no-logging")
     Logging = false;
+  else if (Name == "crash-on-validate")
+    CrashOnValidate = true;
   else
     return createStringError(errc::invalid_argument,
                              Twine("unknown option: ") + Name);
@@ -449,6 +454,60 @@ bool llcas_cas_prune_ondisk_data(llcas_cas_t c_cas, char **error) {
   return false;
 }
 
+static void hashObject(ArrayRef<ArrayRef<uint8_t>> Refs, ArrayRef<char> Data,
+                       SmallVectorImpl<uint8_t> &Result) {
+  HashType Digest = BuiltinObjectHasher<HasherT>::hashObject(Refs, Data);
+  Result.assign(Digest.begin(), Digest.end());
+}
+
+bool llcas_cas_validate(llcas_cas_t c_cas, bool check_hash, char **error) {
+  if (Error E =
+          unwrap(c_cas)->DB->getGraphDB().validate(check_hash, hashObject))
+    return reportError(std::move(E), error, true);
+  return false;
+}
+
+static llcas_validation_result_t
+toValidationResult(Expected<ValidationResult> Result, char **error) {
+  if (!Result)
+    return reportError(Result.takeError(), error,
+                       LLCAS_VALIDATION_RESULT_ERROR);
+  switch (*Result) {
+  case ValidationResult::Valid:
+    return LLCAS_VALIDATION_RESULT_VALID;
+  case ValidationResult::Recovered:
+    return LLCAS_VALIDATION_RESULT_RECOVERED;
+  case ValidationResult::Skipped:
+    return LLCAS_VALIDATION_RESULT_SKIPPED;
+  }
+  llvm_unreachable("unknown ValidationResult value");
+}
+
+llcas_validation_result_t
+llcas_cas_validate_if_needed(llcas_cas_options_t c_opts, bool check_hash,
+                             bool force, char **error) {
+  auto &Opts = *unwrap(c_opts);
+  setSmallMaxMappingSize();
+  auto HashFn = [&](ArrayRef<ArrayRef<uint8_t>> Refs, ArrayRef<char> Data,
+                    SmallVectorImpl<uint8_t> &Result) {
+    if (Opts.CrashOnValidate)
+      abort();
+    hashObject(Refs, Data, Result);
+  };
+  return toValidationResult(UnifiedOnDiskCache::validateIfNeeded(
+                                Opts.OnDiskPath,
+                                PluginCASContext::getHashName(),
+                                sizeof(HashType), check_hash, HashFn, force),
+                            error);
+}
+
+llcas_validation_result_t
+llcas_cas_recover_ondisk_data(llcas_cas_options_t c_opts, char **error) {
+  auto &Opts = *unwrap(c_opts);
+  return toValidationResult(UnifiedOnDiskCache::recover(Opts.OnDiskPath),
+                            error);
+}
+
 void llcas_cas_options_set_client_version(llcas_cas_options_t, unsigned major,
                                           unsigned minor) {
   // Ignore for now.
@@ -590,8 +649,10 @@ void llcas_cas_load_object_async(llcas_cas_t c_cas, llcas_objectid_t c_id,
     OS << "load_object_async downstream begin: " << PrintedDigest << '\n';
   });
   unwrap(c_cas)->Pool.async([=] {
+#if LLVM_ENABLE_THREADS
     // Wait a bit for the caller to proceed.
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+#endif
     auto &Wrap = *unwrap(c_cas);
     if (CancelState->Cancelled) {
       Wrap.syncErrs([&](raw_ostream &OS) {
@@ -739,8 +800,10 @@ void llcas_actioncache_get_for_digest_async(
 
   unwrap(c_cas)->Pool.async([=] {
     if (IsCancellable) {
+#if LLVM_ENABLE_THREADS
       // Wait a bit for the caller to have a chance to cancel.
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
+#endif
     }
     auto &Wrap = *unwrap(c_cas);
     if (CancelState->Cancelled) {
@@ -797,8 +860,10 @@ void llcas_actioncache_put_for_digest_async(
 
   unwrap(c_cas)->Pool.async([=] {
     if (IsCancellable) {
+#if LLVM_ENABLE_THREADS
       // Wait a bit for the caller to have a chance to cancel.
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
+#endif
     }
     auto &Wrap = *unwrap(c_cas);
     if (CancelState->Cancelled) {
@@ -813,4 +878,10 @@ void llcas_actioncache_put_for_digest_async(
         &c_err);
     cb(ctx_cb, failed, c_err);
   });
+}
+
+bool llcas_actioncache_validate(llcas_cas_t c_cas, char **error) {
+  if (Error E = unwrap(c_cas)->DB->validateActionCache())
+    return reportError(std::move(E), error, true);
+  return false;
 }

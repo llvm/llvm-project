@@ -309,19 +309,47 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   return CmpEq && (isa<PoisonValue>(CmpEq) || match(CmpEq, m_One()));
 }
 
+static std::optional<unsigned> getNumWalkableElements(Type *Ty) {
+  if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
+    return FVTy->getNumElements();
+  if (auto *STy = dyn_cast<StructType>(Ty))
+    return STy->getNumElements();
+  if (auto *ATy = dyn_cast<ArrayType>(Ty))
+    return ATy->getNumElements();
+  return std::nullopt;
+}
+
+static bool
+containsMatchingElement(const Constant *C,
+                        function_ref<bool(const Constant *)> PredFn) {
+  // Simple pruning for large size array. UndefValue is fine as it is filtered
+  // out by PredFn already.
+  if (isa<ConstantData>(C))
+    return false;
+
+  std::optional<unsigned> NumElts = getNumWalkableElements(C->getType());
+  if (!NumElts)
+    return false;
+
+  for (unsigned I = 0; I != *NumElts; ++I) {
+    Constant *Elt = C->getAggregateElement(I);
+    if (Elt && (PredFn(Elt) || containsMatchingElement(Elt, PredFn)))
+      return true;
+  }
+  return false;
+}
+
 static bool
 containsUndefinedElement(const Constant *C,
                          function_ref<bool(const Constant *)> HasFn) {
-  if (C->getType()->isVectorTy()) {
-    if (HasFn(C))
-      return true;
-    if (isa<ConstantAggregateZero>(C))
-      return false;
+  Type *Ty = C->getType();
+  if (!Ty->isVectorTy() && !Ty->isAggregateType())
+    return false;
 
-    return C->containsMatchingVectorElement(HasFn);
-  }
+  if (HasFn(C))
+    return true;
 
-  return false;
+  return containsMatchingElement(C, HasFn);
 }
 
 bool Constant::containsUndefOrPoisonElement() const {
@@ -344,7 +372,7 @@ bool Constant::containsConstantExpression() const {
   if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
     return false;
 
-  return containsMatchingVectorElement(IsaPred<ConstantExpr>);
+  return containsMatchingElement(this, IsaPred<ConstantExpr>);
 }
 
 bool Constant::containsMatchingVectorElement(
@@ -760,7 +788,7 @@ static bool constantIsDead(const Constant *C, bool RemoveDeadUsers) {
   if (RemoveDeadUsers) {
     // If C is only used by metadata, it should not be preserved but should
     // have its uses replaced.
-    ReplaceableMetadataImpl::SalvageDebugInfo(*C);
+    ReplaceableUses::SalvageDebugInfo(*C);
     const_cast<Constant *>(C)->destroyConstant();
   }
 
@@ -1717,9 +1745,11 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   case Instruction::GetElementPtr: {
     auto *GEPO = cast<GEPOperator>(this);
     assert(SrcTy || (Ops[0]->getType() == getOperand(0)->getType()));
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
     return ConstantExpr::getGetElementPtr(
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
         GEPO->getNoWrapFlags(), GEPO->getInRange(), OnlyIfReducedTy);
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   }
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
@@ -2130,34 +2160,27 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
   assert(From == getGlobalValue() && "Changing value does not match operand.");
   assert(isa<Constant>(To) && "Can only replace the operands with a constant");
 
-  // The replacement is with another global value.
-  if (const auto *ToObj = dyn_cast<GlobalValue>(To)) {
-    if (DSOLocalEquivalent *NewEquiv =
-            getContext().pImpl->DSOLocalEquivalents.lookup(ToObj))
-      return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
-  }
-
   // If the argument is replaced with a null value, just replace this constant
   // with a null value.
   if (isa<ConstantPointerNull>(To))
     return To;
 
-  // The replacement could be a bitcast or an alias to another function. We can
-  // replace it with a bitcast to the dso_local_equivalent of that function.
-  auto *Func = cast<Function>(To->stripPointerCastsAndAliases());
+  // The replacement could be a bitcast to another GlobalValue. We can
+  // replace it with a bitcast to the dso_local_equivalent of that GV.
+  GlobalValue *GV = cast<GlobalValue>(To->stripPointerCasts());
   if (DSOLocalEquivalent *NewEquiv =
-          getContext().pImpl->DSOLocalEquivalents.lookup(Func))
+          getContext().pImpl->DSOLocalEquivalents.lookup(GV))
     return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
 
-  // erase invalidates iterators/references, hence the duplicate Func lookup.
+  // erase invalidates iterators/references, hence the duplicate GV lookup.
   getContext().pImpl->DSOLocalEquivalents.erase(getGlobalValue());
-  getContext().pImpl->DSOLocalEquivalents[Func] = this;
-  setOperand(0, Func);
+  getContext().pImpl->DSOLocalEquivalents[GV] = this;
+  setOperand(0, GV);
 
-  if (Func->getType() != getType()) {
+  if (GV->getType() != getType()) {
     // It is ok to mutate the type here because this constant should always
     // reflect the type of the function it's holding.
-    mutateType(Func->getType());
+    mutateType(GV->getType());
   }
   return nullptr;
 }
@@ -2715,6 +2738,84 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
+}
+
+Constant *ConstantExpr::getGetElementPtr(const DataLayout &DL, Type *Ty,
+                                         Constant *C, ArrayRef<Constant *> Idxs,
+                                         GEPNoWrapFlags NW,
+                                         std::optional<ConstantRange> InRange,
+                                         Type *OnlyIfReducedTy) {
+  // Handle already canonical GEP.
+  if (Ty->isIntegerTy(8) && Idxs[0]->getType() == DL.getIndexType(C->getType()))
+    return getPtrAdd(C, Idxs[0], NW, InRange, OnlyIfReducedTy);
+
+  // Some API require an ArrayRef of Value * instead of Constant *.
+  ArrayRef<Value *> ValIdxs =
+      ArrayRef((Value *const *)Idxs.data(), Idxs.size());
+  assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");
+
+  if (!isSupportedGetElementPtr(Ty))
+    return nullptr;
+
+  Type *RetTy = GetElementPtrInst::getGEPReturnType(C, ValIdxs);
+  Type *IdxTy = DL.getIndexType(RetTy);
+
+  Constant *Offset = Constant::getNullValue(IdxTy);
+  auto GTI = gep_type_begin(Ty, ValIdxs), GTE = gep_type_end(Ty, ValIdxs);
+  for (; GTI != GTE; ++GTI) {
+    auto *Idx = cast<Constant>(GTI.getOperand());
+    if (Idx->isNullValue())
+      continue;
+
+    if (StructType *STy = GTI.getStructTypeOrNull()) {
+      uint64_t OpValue = Idx->getUniqueInteger().getZExtValue();
+      uint64_t Size = DL.getStructLayout(STy)->getElementOffset(OpValue);
+      if (!Size)
+        continue;
+
+      Offset = ConstantFoldBinaryInstruction(Instruction::Add, Offset,
+                                             ConstantInt::get(IdxTy, Size));
+      if (!Offset)
+        return nullptr;
+
+      continue;
+    }
+
+    // Splat the index if needed.
+    if (IdxTy->isVectorTy() && !Idx->getType()->isVectorTy())
+      Idx = ConstantVector::getSplat(cast<VectorType>(IdxTy)->getElementCount(),
+                                     Idx);
+
+    // Convert to correct type.
+    if (Idx->getType() != IdxTy) {
+      Idx = ConstantFoldCastInstruction(Idx->getType()->getScalarSizeInBits() <
+                                                IdxTy->getScalarSizeInBits()
+                                            ? Instruction::SExt
+                                            : Instruction::Trunc,
+                                        Idx, IdxTy);
+      if (!Idx)
+        return nullptr;
+    }
+
+    TypeSize TySize = GTI.getSequentialElementStride(DL);
+    if (TySize.isScalable())
+      return nullptr;
+
+    // Multiply by scale.
+    if (TySize != TypeSize::getFixed(1)) {
+      Constant *Scale = ConstantInt::getSigned(IdxTy, TySize.getFixedValue(),
+                                               /*ImplicitTrunc=*/true);
+      Idx = ConstantFoldBinaryInstruction(Instruction::Mul, Idx, Scale);
+      if (!Idx)
+        return nullptr;
+    }
+
+    Offset = ConstantFoldBinaryInstruction(Instruction::Add, Offset, Idx);
+    if (!Offset)
+      return nullptr;
+  }
+
+  return getPtrAdd(C, Offset, NW, InRange, OnlyIfReducedTy);
 }
 
 Constant *ConstantExpr::getExtractElement(Constant *Val, Constant *Idx,

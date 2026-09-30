@@ -2331,40 +2331,17 @@ define void @store_factor3_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 
 }
 
 define void @store_factor3_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2) {
-; NEON-IAENABLED-LABEL: store_factor3_wide_intrinsic:
-; NEON-IAENABLED:       // %bb.0:
-; NEON-IAENABLED-NEXT:    mov v18.16b, v4.16b
-; NEON-IAENABLED-NEXT:    // kill: def $q5 killed $q5 killed $q3_q4_q5 def $q3_q4_q5
-; NEON-IAENABLED-NEXT:    mov v17.16b, v2.16b
-; NEON-IAENABLED-NEXT:    mov v4.16b, v3.16b
-; NEON-IAENABLED-NEXT:    mov v16.16b, v0.16b
-; NEON-IAENABLED-NEXT:    mov v3.16b, v1.16b
-; NEON-IAENABLED-NEXT:    st3 { v16.4s, v17.4s, v18.4s }, [x0], #48
-; NEON-IAENABLED-NEXT:    st3 { v3.4s, v4.4s, v5.4s }, [x0]
-; NEON-IAENABLED-NEXT:    ret
-;
-; NEON-IADISABLED-LABEL: store_factor3_wide_intrinsic:
-; NEON-IADISABLED:       // %bb.0:
-; NEON-IADISABLED-NEXT:    sub sp, sp, #96
-; NEON-IADISABLED-NEXT:    .cfi_def_cfa_offset 96
-; NEON-IADISABLED-NEXT:    // kill: def $q5 killed $q5 killed $q3_q4_q5 def $q3_q4_q5
-; NEON-IADISABLED-NEXT:    mov v18.16b, v4.16b
-; NEON-IADISABLED-NEXT:    mov x8, sp
-; NEON-IADISABLED-NEXT:    mov v17.16b, v2.16b
-; NEON-IADISABLED-NEXT:    mov v4.16b, v3.16b
-; NEON-IADISABLED-NEXT:    mov v16.16b, v0.16b
-; NEON-IADISABLED-NEXT:    mov v3.16b, v1.16b
-; NEON-IADISABLED-NEXT:    st3 { v16.4s, v17.4s, v18.4s }, [x8]
-; NEON-IADISABLED-NEXT:    add x8, sp, #48
-; NEON-IADISABLED-NEXT:    st3 { v3.4s, v4.4s, v5.4s }, [x8]
-; NEON-IADISABLED-NEXT:    ldp q2, q0, [sp, #64]
-; NEON-IADISABLED-NEXT:    ldp q5, q1, [sp, #32]
-; NEON-IADISABLED-NEXT:    ldp q3, q4, [sp]
-; NEON-IADISABLED-NEXT:    stp q2, q0, [x0, #64]
-; NEON-IADISABLED-NEXT:    stp q5, q1, [x0, #32]
-; NEON-IADISABLED-NEXT:    stp q3, q4, [x0]
-; NEON-IADISABLED-NEXT:    add sp, sp, #96
-; NEON-IADISABLED-NEXT:    ret
+; NEON-LABEL: store_factor3_wide_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    mov v18.16b, v4.16b
+; NEON-NEXT:    // kill: def $q5 killed $q5 killed $q3_q4_q5 def $q3_q4_q5
+; NEON-NEXT:    mov v17.16b, v2.16b
+; NEON-NEXT:    mov v4.16b, v3.16b
+; NEON-NEXT:    mov v16.16b, v0.16b
+; NEON-NEXT:    mov v3.16b, v1.16b
+; NEON-NEXT:    st3 { v16.4s, v17.4s, v18.4s }, [x0], #48
+; NEON-NEXT:    st3 { v3.4s, v4.4s, v5.4s }, [x0]
+; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_factor3_wide_intrinsic:
 ; NO_NEON:       // %bb.0:
@@ -2458,43 +2435,19 @@ define void @store_factor4_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 
 }
 
 define void @store_factor4_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2, <8 x i32> %v3) {
-; NEON-IAENABLED-LABEL: store_factor4_wide_intrinsic:
-; NEON-IAENABLED:       // %bb.0:
-; NEON-IAENABLED-NEXT:    // kill: def $q7 killed $q7 killed $q4_q5_q6_q7 def $q4_q5_q6_q7
-; NEON-IAENABLED-NEXT:    mov v19.16b, v6.16b
-; NEON-IAENABLED-NEXT:    mov v18.16b, v4.16b
-; NEON-IAENABLED-NEXT:    mov v6.16b, v5.16b
-; NEON-IAENABLED-NEXT:    mov v17.16b, v2.16b
-; NEON-IAENABLED-NEXT:    mov v5.16b, v3.16b
-; NEON-IAENABLED-NEXT:    mov v16.16b, v0.16b
-; NEON-IAENABLED-NEXT:    mov v4.16b, v1.16b
-; NEON-IAENABLED-NEXT:    st4 { v16.4s, v17.4s, v18.4s, v19.4s }, [x0], #64
-; NEON-IAENABLED-NEXT:    st4 { v4.4s, v5.4s, v6.4s, v7.4s }, [x0]
-; NEON-IAENABLED-NEXT:    ret
-;
-; NEON-IADISABLED-LABEL: store_factor4_wide_intrinsic:
-; NEON-IADISABLED:       // %bb.0:
-; NEON-IADISABLED-NEXT:    zip2 v16.4s, v3.4s, v7.4s
-; NEON-IADISABLED-NEXT:    zip2 v17.4s, v1.4s, v5.4s
-; NEON-IADISABLED-NEXT:    zip1 v3.4s, v3.4s, v7.4s
-; NEON-IADISABLED-NEXT:    zip1 v1.4s, v1.4s, v5.4s
-; NEON-IADISABLED-NEXT:    zip2 v5.4s, v2.4s, v6.4s
-; NEON-IADISABLED-NEXT:    zip2 v7.4s, v0.4s, v4.4s
-; NEON-IADISABLED-NEXT:    zip1 v2.4s, v2.4s, v6.4s
-; NEON-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v4.4s
-; NEON-IADISABLED-NEXT:    zip2 v18.4s, v17.4s, v16.4s
-; NEON-IADISABLED-NEXT:    zip1 v16.4s, v17.4s, v16.4s
-; NEON-IADISABLED-NEXT:    zip2 v4.4s, v1.4s, v3.4s
-; NEON-IADISABLED-NEXT:    zip1 v1.4s, v1.4s, v3.4s
-; NEON-IADISABLED-NEXT:    zip2 v3.4s, v7.4s, v5.4s
-; NEON-IADISABLED-NEXT:    zip1 v5.4s, v7.4s, v5.4s
-; NEON-IADISABLED-NEXT:    zip2 v6.4s, v0.4s, v2.4s
-; NEON-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v2.4s
-; NEON-IADISABLED-NEXT:    stp q16, q18, [x0, #96]
-; NEON-IADISABLED-NEXT:    stp q1, q4, [x0, #64]
-; NEON-IADISABLED-NEXT:    stp q0, q6, [x0]
-; NEON-IADISABLED-NEXT:    stp q5, q3, [x0, #32]
-; NEON-IADISABLED-NEXT:    ret
+; NEON-LABEL: store_factor4_wide_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q7 killed $q7 killed $q4_q5_q6_q7 def $q4_q5_q6_q7
+; NEON-NEXT:    mov v19.16b, v6.16b
+; NEON-NEXT:    mov v18.16b, v4.16b
+; NEON-NEXT:    mov v6.16b, v5.16b
+; NEON-NEXT:    mov v17.16b, v2.16b
+; NEON-NEXT:    mov v5.16b, v3.16b
+; NEON-NEXT:    mov v16.16b, v0.16b
+; NEON-NEXT:    mov v4.16b, v1.16b
+; NEON-NEXT:    st4 { v16.4s, v17.4s, v18.4s, v19.4s }, [x0], #64
+; NEON-NEXT:    st4 { v4.4s, v5.4s, v6.4s, v7.4s }, [x0]
+; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_factor4_wide_intrinsic:
 ; NO_NEON:       // %bb.0:

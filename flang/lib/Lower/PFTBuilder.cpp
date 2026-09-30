@@ -11,12 +11,14 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree-visitor.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <algorithm>
 #include <limits>
 
 #define DEBUG_TYPE "flang-pft"
@@ -26,11 +28,14 @@ static llvm::cl::opt<bool> clDisableStructuredFir(
     llvm::cl::init(false), llvm::cl::Hidden);
 
 llvm::cl::opt<bool> wrapUnstructuredConstructsInExecuteRegion(
-    "wrap-unstructured-constructs-in-execute-region", llvm::cl::init(false),
+    "wrap-unstructured-constructs-in-execute-region", llvm::cl::init(true),
     llvm::cl::desc("try to wrap unstructured constructs' CFGs in "
                    "self-contained MLIR regions"));
 
 using namespace Fortran;
+
+static void detectStructuredWithUnstructuredInternals(
+    Fortran::lower::pft::FunctionLikeUnit &unit);
 
 namespace {
 static llvm::cl::opt<bool> lowerDoWhileToSCFWhile(
@@ -511,6 +516,7 @@ private:
         addContainedUnit(lower::pft::FunctionLikeUnit{
             func, pftParentStack.back(), semanticsContext});
     labelEvaluationMap = &unit.labelEvaluationMap;
+    incomingBranches = &unit.incomingBranches;
     assignSymbolLabelMap = &unit.assignSymbolLabelMap;
     containsStmtStack.push_back(false);
     containedUnitList = &unit.containedUnitList;
@@ -521,15 +527,50 @@ private:
     return true;
   }
 
+  /// Record every label ASSIGNed in the unit, before branches are analyzed.
+  ///
+  /// An assigned GO TO reaches the labels ASSIGNed to its variable anywhere in
+  /// the unit, including in statements that follow it. Collecting them up front
+  /// lets analyzeBranches mark all of those targets rather than only the ones
+  /// the walk has already passed.
+  void collectAssignedLabels(lower::pft::EvaluationList &evaluationList) {
+    for (lower::pft::Evaluation &eval : evaluationList) {
+      if (const auto *s = eval.getIf<parser::AssignStmt>()) {
+        parser::Label label = std::get<parser::Label>(s->t);
+        if (const semantics::Symbol *sym =
+                std::get<parser::Name>(s->t).symbol) {
+          auto iter = assignSymbolLabelMap->find(*sym);
+          if (iter == assignSymbolLabelMap->end()) {
+            lower::pft::LabelSet labelSet{};
+            labelSet.insert(label);
+            assignSymbolLabelMap->try_emplace(*sym, labelSet);
+          } else {
+            iter->second.insert(label);
+          }
+        }
+      }
+      if (eval.evaluationList)
+        collectAssignedLabels(*eval.evaluationList);
+    }
+  }
+
   void exitFunction() {
+    lower::pft::FunctionLikeUnit *exitingUnit = currentFunctionUnit;
     currentFunctionUnit = nullptr; // Clear when exiting function
     rewriteIfGotos();
     endFunctionBody();
+    collectAssignedLabels(*evaluationListStack.back());
     analyzeBranches(nullptr, *evaluationListStack.back()); // add branch links
+
+    // Branch analysis is complete, so the incoming-branch map is too.
+    if (exitingUnit)
+      detectStructuredWithUnstructuredInternals(*exitingUnit);
+
     processEntryPoints();
     containsStmtStack.pop_back();
     popEvaluationList();
     labelEvaluationMap = nullptr;
+    incomingBranches = nullptr;
     assignSymbolLabelMap = nullptr;
     pftParentStack.pop_back();
     resetFunctionState();
@@ -557,6 +598,7 @@ private:
     };
 
     rewriteIfGotos();
+    rewriteTrailingCycle();
     auto *eval = constructAndDirectiveStack.back();
     if (eval->isExecutableDirective() && !isOpenMPLoopConstruct(eval)) {
       // A construct at the end of an (unstructured) OpenACC or OpenMP
@@ -585,6 +627,7 @@ private:
           [&](lower::pft::FunctionLikeUnit &p) {
             containedUnitList = &p.containedUnitList;
             labelEvaluationMap = &p.labelEvaluationMap;
+            incomingBranches = &p.incomingBranches;
             assignSymbolLabelMap = &p.assignSymbolLabelMap;
           },
           [&](auto &) { containedUnitList = nullptr; },
@@ -673,6 +716,59 @@ private:
     assert(!evaluationListStack.empty() &&
            "trying to pop an empty evaluationListStack");
     evaluationListStack.pop_back();
+  }
+
+  /// Delete a CycleStmt that is the last statement of the body of its own
+  /// DoConstruct, where it is a no-op. The pre-branch-analysis code:
+  ///
+  ///       <<DoConstruct>>
+  ///         1 NonLabelDoStmt: do n = 1, nb
+  ///         2 Statement: ...
+  ///         3 CycleStmt: cycle
+  ///         4 EndDoStmt
+  ///       <<End DoConstruct>>
+  ///
+  /// becomes:
+  ///
+  ///       <<DoConstruct>>
+  ///         1 NonLabelDoStmt: do n = 1, nb
+  ///         2 Statement: ...
+  ///         4 EndDoStmt
+  ///       <<End DoConstruct>>
+  ///
+  /// Branching to the EndDoStmt and falling through to it are the same thing,
+  /// so the CycleStmt has no effect. Deleting it matters because branch
+  /// analysis otherwise marks the DoConstruct unstructured, which costs the
+  /// structured form of the loop -- and with it the induction variable
+  /// semantics that later passes rely on.
+  void rewriteTrailingCycle() {
+    auto &evaluationList = *evaluationListStack.back();
+    if (evaluationList.size() < 3)
+      return;
+    const auto *doStmt =
+        evaluationList.begin()->getIf<parser::NonLabelDoStmt>();
+    if (!doStmt)
+      return;
+    lower::pft::EvaluationList::iterator endDoStmtIt =
+        std::prev(evaluationList.end());
+    if (!endDoStmtIt->isA<parser::EndDoStmt>())
+      return;
+    lower::pft::EvaluationList::iterator cycleStmtIt = std::prev(endDoStmtIt);
+    const auto *cycleStmt = cycleStmtIt->getIf<parser::CycleStmt>();
+    if (!cycleStmt || cycleStmtIt->label)
+      return;
+    std::string cycleName = getConstructName(*cycleStmt);
+    if (!cycleName.empty() && cycleName != getConstructName(*doStmt))
+      return; // cycle for an outer construct
+    // Relink the lexical predecessor of the CycleStmt to the EndDoStmt. That
+    // predecessor is the last statement reachable from the preceding
+    // evaluation, so descend through nested evaluation lists to find it.
+    lower::pft::Evaluation *predecessor = &*std::prev(cycleStmtIt);
+    while (predecessor->evaluationList && !predecessor->evaluationList->empty())
+      predecessor = &predecessor->evaluationList->back();
+    assert(predecessor->lexicalSuccessor == &*cycleStmtIt);
+    predecessor->lexicalSuccessor = cycleStmtIt->lexicalSuccessor;
+    evaluationList.erase(cycleStmtIt);
   }
 
   /// Rewrite IfConstructs containing a GotoStmt or CycleStmt to eliminate an
@@ -802,7 +898,7 @@ private:
       if (const auto *expr = std::get_if<parser::Expr>(&format.u)) {
         if (semantics::ExprHasTypeCategory(*semantics::GetExpr(*expr),
                                            common::TypeCategory::Integer))
-          eval.isUnstructured = true;
+          eval.markUnstructured();
       }
     };
     auto analyzeSpecs{[&](const auto &specList) {
@@ -856,7 +952,7 @@ private:
   /// Mark the target of a branch as a new block.
   void markBranchTarget(lower::pft::Evaluation &sourceEvaluation,
                         lower::pft::Evaluation &targetEvaluation) {
-    sourceEvaluation.isUnstructured = true;
+    sourceEvaluation.markUnstructured();
     if (!sourceEvaluation.controlSuccessor)
       sourceEvaluation.controlSuccessor = &targetEvaluation;
     else if (sourceEvaluation.controlSuccessor != &targetEvaluation &&
@@ -864,6 +960,8 @@ private:
                         &targetEvaluation) ==
                  sourceEvaluation.extraControlSuccessors.end())
       sourceEvaluation.extraControlSuccessors.push_back(&targetEvaluation);
+    // Record the reverse edge beside the forward one.
+    (*incomingBranches)[&targetEvaluation].insert(&sourceEvaluation);
     targetEvaluation.isNewBlock = true;
     // If this is a branch into the body of a construct (usually illegal,
     // but allowed in some legacy cases), then the targetEvaluation and its
@@ -880,11 +978,11 @@ private:
       if (sourceConstruct != targetConstruct) // branch into a construct body
         for (lower::pft::Evaluation *eval = &targetEvaluation; eval;
              eval = eval->parentConstruct) {
-          eval->isUnstructured = true;
+          eval->markUnstructured();
           // If the branch is a backward branch into an already analyzed
           // DO or IF construct, mark the construct exit as a new block.
-          // For a forward branch, the isUnstructured flag will cause this
-          // to be done when the construct is analyzed.
+          // For a forward branch, the Unstructured classification will cause
+          // this to be done when the construct is analyzed.
           if (eval->constructExit && (eval->isA<parser::DoConstruct>() ||
                                       eval->isA<parser::IfConstruct>()))
             eval->constructExit->isNewBlock = true;
@@ -989,7 +1087,7 @@ private:
             markBranchTarget(eval, *construct->constructExit);
           },
           [&](const parser::FailImageStmt &) {
-            eval.isUnstructured = true;
+            eval.markUnstructured();
             if (eval.lexicalSuccessor->lexicalSuccessor)
               markSuccessorAsNewBlock(eval);
           },
@@ -999,12 +1097,12 @@ private:
             lastConstructStmtEvaluation = &eval;
           },
           [&](const parser::ReturnStmt &) {
-            eval.isUnstructured = true;
+            eval.markUnstructured();
             if (eval.lexicalSuccessor->lexicalSuccessor)
               markSuccessorAsNewBlock(eval);
           },
           [&](const parser::StopStmt &) {
-            eval.isUnstructured = true;
+            eval.markUnstructured();
             if (eval.lexicalSuccessor->lexicalSuccessor)
               markSuccessorAsNewBlock(eval);
           },
@@ -1021,14 +1119,18 @@ private:
             auto &label = std::get<parser::Label>(s.t);
             const auto *sym = std::get<parser::Name>(s.t).symbol;
             assert(sym && "missing AssignStmt symbol");
-            lower::pft::Evaluation *target{
-                labelEvaluationMap->find(label)->second};
+            auto labelIter{labelEvaluationMap->find(label)};
+            assert(labelIter != labelEvaluationMap->end() &&
+                   "assigned label has no evaluation");
+            lower::pft::Evaluation *target{labelIter->second};
             assert(target && "missing branch target evaluation");
-            if (!target->isA<parser::FormatStmt>()) {
+            // Consult the same classification the assigned GO TO uses, so the
+            // two agree on which statements may be branched to.
+            if (semanticsContext.IsRecordedBranchTarget(target->position)) {
               target->isNewBlock = true;
               for (lower::pft::Evaluation *parent = target->parentConstruct;
                    parent; parent = parent->parentConstruct) {
-                parent->isUnstructured = true;
+                parent->markUnstructured();
                 // The exit of an enclosing DO or IF construct is a new block.
                 if (parent->constructExit &&
                     (parent->isA<parser::DoConstruct>() ||
@@ -1036,39 +1138,37 @@ private:
                   parent->constructExit->isNewBlock = true;
               }
             }
-            auto iter = assignSymbolLabelMap->find(*sym);
-            if (iter == assignSymbolLabelMap->end()) {
-              lower::pft::LabelSet labelSet{};
-              labelSet.insert(label);
-              assignSymbolLabelMap->try_emplace(*sym, labelSet);
-            } else {
-              iter->second.insert(label);
-            }
           },
           [&](const parser::AssignedGotoStmt &s) {
-            // Mark every possible target of the assigned GO TO so that
-            // wrappability analyses can see any escape from an enclosing
-            // construct.
-            const auto &labelList = std::get<std::list<parser::Label>>(s.t);
-            if (!labelList.empty()) {
-              // Explicit target list: `go to v, (l1, l2, ...)`.
-              for (const auto &label : labelList)
-                markBranchTarget(eval, label);
-            } else {
-              // No explicit list (`go to v`): fall back to the set of labels
-              // that have been previously ASSIGN'd to v.
-              // TODO: This may miss assignments that appear later in program
-              // order, but it matches the information available at this point
-              // in the walk.
-              const auto *sym = std::get<parser::Name>(s.t).symbol;
-              if (sym) {
-                auto iter = assignSymbolLabelMap->find(*sym);
-                if (iter != assignSymbolLabelMap->end())
-                  for (auto label : iter->second)
-                    markBranchTarget(eval, label);
-              }
+            // See Fortran 90 Clause 8.2.4.
+            // Relax the requirement that the GOTO variable must have a value in
+            // the label list when a list is present, and allow a branch to any
+            // non-format target that has an ASSIGN statement for the variable.
+            //
+            // (Both PFT builder and MLIR lowering bridge apply the same
+            // relaxation)
+            auto markIfBranchTarget = [&](parser::Label label) {
+              assert(label && "missing branch target label");
+              auto iter{labelEvaluationMap->find(label)};
+              assert(iter != labelEvaluationMap->end() &&
+                     "branch target label has no evaluation");
+              lower::pft::Evaluation *target{iter->second};
+              assert(target && "missing branch target evaluation");
+              if (semanticsContext.IsRecordedBranchTarget(target->position))
+                markBranchTarget(eval, *target);
+            };
+            for (const auto &label : std::get<std::list<parser::Label>>(s.t))
+              markIfBranchTarget(label);
+            // collectAssignedLabels filled this map before the walk started,
+            // so it names every label ASSIGNed to the variable, including by
+            // statements this GO TO has not reached yet.
+            if (const auto *sym = std::get<parser::Name>(s.t).symbol) {
+              auto iter = assignSymbolLabelMap->find(*sym);
+              if (iter != assignSymbolLabelMap->end())
+                for (auto label : iter->second)
+                  markIfBranchTarget(label);
             }
-            eval.isUnstructured = true;
+            eval.markUnstructured();
             markSuccessorAsNewBlock(eval);
           },
 
@@ -1109,7 +1209,7 @@ private:
             const auto &loopControl =
                 std::get<std::optional<parser::LoopControl>>(s.t);
             if (!loopControl.has_value()) {
-              eval.isUnstructured = true; // infinite loop
+              eval.markUnstructured(); // infinite loop
               return;
             }
             eval.nonNopSuccessor().isNewBlock = true;
@@ -1118,13 +1218,13 @@ private:
                     std::get_if<parser::LoopControl::Bounds>(&loopControl->u)) {
               if (bounds->Name().thing.symbol->GetType()->IsNumeric(
                       common::TypeCategory::Real))
-                eval.isUnstructured = true; // real-valued loop control
+                eval.markUnstructured(); // real-valued loop control
             } else if (std::get_if<parser::ScalarLogicalExpr>(
                            &loopControl->u)) {
               // Leave DO WHILE structured when -lower-do-while-to-scf-while is
               // enabled; branch analysis will mark unstructured cases.
               if (!lowerDoWhileToSCFWhile)
-                eval.isUnstructured = true; // while loop
+                eval.markUnstructured(); // while loop
             }
           },
           [&](const parser::EndDoStmt &) {
@@ -1205,7 +1305,7 @@ private:
           },
           [&](const parser::CaseConstruct &) {
             eval.constructExit = &eval.evaluationList->back();
-            eval.isUnstructured = true;
+            eval.markUnstructured();
           },
           [&](const parser::ChangeTeamConstruct &) {
             eval.constructExit = &eval.evaluationList->back();
@@ -1218,11 +1318,11 @@ private:
           [&](const parser::IfConstruct &) { setConstructExit(eval); },
           [&](const parser::SelectRankConstruct &) {
             eval.constructExit = &eval.evaluationList->back();
-            eval.isUnstructured = true;
+            eval.markUnstructured();
           },
           [&](const parser::SelectTypeConstruct &) {
             eval.constructExit = &eval.evaluationList->back();
-            eval.isUnstructured = true;
+            eval.markUnstructured();
           },
           [&](const parser::WhereConstruct &) { setConstructExit(eval); },
 
@@ -1243,12 +1343,12 @@ private:
       if (eval.evaluationList)
         analyzeBranches(&eval, *eval.evaluationList);
 
-      // Propagate isUnstructured flag to enclosing construct -- unless the
-      // wrap pass will fold this construct into a self-contained
+      // Propagate the Unstructured classification to the enclosing construct --
+      // unless the wrap pass will fold this construct into a self-contained
       // scf.execute_region, in which case the parent sees only a single op.
-      if (parentConstruct && eval.isUnstructured &&
-          !lower::pft::isWrappableConstruct(eval))
-        parentConstruct->isUnstructured = true;
+      if (parentConstruct && eval.isUnstructured() &&
+          !lower::pft::isWrappableConstruct(eval, semanticsContext))
+        parentConstruct->markUnstructured();
 
       // The successor of a branch starts a new block.
       if (eval.controlSuccessor && eval.isActionStmt() &&
@@ -1305,6 +1405,7 @@ private:
   std::vector<lower::pft::EvaluationList *> evaluationListStack{};
   llvm::DenseMap<parser::Label, lower::pft::Evaluation *> *labelEvaluationMap{};
   lower::pft::SymbolLabelMap *assignSymbolLabelMap{};
+  lower::pft::IncomingBranchMap *incomingBranches{};
   std::map<std::string, lower::pft::Evaluation *> constructNameMap{};
   int specificationPartLevel{};
   int interfaceBodyLevel{};
@@ -1399,7 +1500,11 @@ public:
                       const std::string &indentString, int indent = 1) {
     llvm::StringRef name = evaluationName(eval);
     llvm::StringRef newBlock = eval.isNewBlock ? "^" : "";
-    llvm::StringRef bang = eval.isUnstructured ? "!" : "";
+    // "!" marks an unstructured evaluation. "~" marks one that is structured
+    // on the outside but has unstructured internals.
+    llvm::StringRef bang = eval.hasUnstructuredInternals()
+                               ? "~"
+                               : (eval.isUnstructured() ? "!" : "");
     outputStream << indentString;
     if (eval.printIndex)
       outputStream << eval.printIndex << ' ';
@@ -1422,6 +1527,19 @@ public:
     } else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor) {
       outputStream << " -> " << eval.lexicalSuccessor->printIndex;
     }
+
+    // Incoming branches, the inverse of the "-> N" edges above.
+    if (const lower::pft::FunctionLikeUnit *unit = eval.getOwningProcedure()) {
+      auto it = unit->incomingBranches.find(&eval);
+      if (it != unit->incomingBranches.end() && !it->second.empty()) {
+        outputStream << " <- ";
+        llvm::interleaveComma(it->second, outputStream,
+                              [&](const lower::pft::Evaluation *src) {
+                                outputStream << src->printIndex;
+                              });
+      }
+    }
+
     bool extraNewline = false;
     if (!eval.position.empty())
       outputStream << ": " << eval.position.ToString();
@@ -1634,7 +1752,11 @@ bool Fortran::lower::pft::Evaluation::lowerAsStructured() const {
 }
 
 bool Fortran::lower::pft::Evaluation::lowerAsUnstructured() const {
-  return isUnstructured || clDisableStructuredFir;
+  return isUnstructured() || clDisableStructuredFir;
+}
+
+bool Fortran::lower::pft::Evaluation::lowerBodyAsWrappedRegion() const {
+  return hasUnstructuredInternals() && !lowerAsUnstructured();
 }
 
 bool Fortran::lower::pft::Evaluation::forceAsUnstructured() const {
@@ -2027,7 +2149,16 @@ parser::CharBlock
 Fortran::lower::pft::FunctionLikeUnit::getStartingSourceLoc() const {
   if (beginStmt)
     return stmtSourceLoc(*beginStmt);
-  return scope->sourceRange();
+  // Without a begin statement, e.g. for a main program with no program-stmt,
+  // the position comes from the scope. The scope source range may span an
+  // INCLUDE boundary, and such a range has no single provenance, so it maps to
+  // no source position at all. Narrow it to its first character, which does
+  // have a single provenance, so that the unit does not end up with an unknown
+  // location.
+  parser::CharBlock range{scope->sourceRange()};
+  if (range.empty())
+    return range;
+  return parser::CharBlock{range.begin(), 1};
 }
 
 //===----------------------------------------------------------------------===//
@@ -2497,82 +2628,410 @@ hasIncomingBranch(const Fortran::lower::pft::Evaluation &construct) {
   return walk(funit->evaluationList);
 }
 
-/// True if \p eval is a DoConstruct driven directly into an enclosing acc.loop
-/// by the OpenACCLoopConstruct / OpenACCCombinedConstruct lowering — the
-/// immediate body DO, or one of the N collapsed iterator DOs reached by
-/// walking down from the body DO under a `collapse(N)` clause.
-static bool isAccLoopBody(const Fortran::lower::pft::Evaluation &eval) {
+/// The DoConstructs enclosing (and including) a DO evaluation; index k holds
+/// the one at depth k, so index 0 is the evaluation's own DO.
+using DoConstructChain = llvm::SmallVector<const parser::DoConstruct *, 4>;
+
+/// Value of \p intExpr, or INT64_MAX if it isn't a compile-time constant.
+///
+/// This is used for the loop count of the OpenACC `collapse(N)` clause, which
+/// requires N to be a positive scalar integer constant expression. A constant
+/// too large to be represented in an int64_t would be truncated by ToInt64
+/// rather than reported, so a value that is not positive is treated like a
+/// non-constant one rather than being used. INT64_MAX makes every enclosing
+/// loop count as associated with the directive, which is the safe answer here
+/// because it only prevents wrapping.
+///
+/// OpenMP uses semantics::omp::GetAffectedNestDepthWithReason instead, which
+/// covers the loop transforming directives as well as the clauses.
+static int64_t
+constantValueOrMax(const parser::ScalarIntConstantExpr &intExpr) {
+  if (const auto *expr = semantics::GetExpr(intExpr))
+    if (auto v = evaluate::ToInt64(*expr))
+      if (*v > 0)
+        return *v;
+  return std::numeric_limits<int64_t>::max();
+}
+
+/// Fill \p chain with the DoConstruct at each depth above (and including)
+/// \p eval, and return the innermost enclosing evaluation that is not a
+/// DoConstruct — the one a directive would be attached to. Returns null if
+/// \p eval is not a DoConstruct or has no such enclosing evaluation.
+static const Fortran::lower::pft::Evaluation *
+collectEnclosingDoChain(const Fortran::lower::pft::Evaluation &eval,
+                        DoConstructChain &chain) {
   const auto *doConstruct = eval.getIf<parser::DoConstruct>();
   if (!doConstruct)
-    return false;
-  // N from `collapse(N)`, or 1 if no clause. eval at depth d from the body
-  // (d == 0 means eval IS the body) is a collapsed iterator iff d < N. If the
-  // Collapse value isn't a compile-time constant, be conservative and treat
-  // every DO in the chain as collapsed (INT64_MAX) — wrapping is opt-in and
-  // a false "is collapsed" is safer than a false "is not".
-  auto collapseN = [](const parser::AccClauseList &cl) -> int64_t {
-    for (const parser::AccClause &c : cl.v)
-      if (const auto *cc = std::get_if<parser::AccClause::Collapse>(&c.u)) {
-        const auto &intExpr = std::get<parser::ScalarIntConstantExpr>(cc->v.t);
-        if (const auto *expr = semantics::GetExpr(intExpr))
-          if (auto v = evaluate::ToInt64(*expr))
-            return *v;
-        return std::numeric_limits<int64_t>::max();
-      }
-    return 1;
-  };
-
-  // candidates[k] is the DoConstruct at depth k above (and including) eval.
-  llvm::SmallVector<const parser::DoConstruct *, 4> candidates{doConstruct};
+    return nullptr;
+  chain.push_back(doConstruct);
 
   for (const Fortran::lower::pft::Evaluation *p = eval.parentConstruct; p;
        p = p->parentConstruct) {
     if (const auto *d = p->getIf<parser::DoConstruct>()) {
-      candidates.push_back(d);
+      chain.push_back(d);
       continue;
     }
+    return p;
+  }
+  return nullptr;
+}
 
-    if (const auto *acc = p->getIf<parser::OpenACCConstruct>()) {
-      const parser::DoConstruct *body = nullptr;
-      int64_t n = 1;
-      if (const auto *loop =
-              std::get_if<parser::OpenACCLoopConstruct>(&acc->u)) {
-        if (const auto &b =
-                std::get<std::optional<parser::DoConstruct>>(loop->t))
-          body = &b.value();
-        n = collapseN(std::get<parser::AccClauseList>(std::get<0>(loop->t).t));
-      } else if (const auto *comb =
-                     std::get_if<parser::OpenACCCombinedConstruct>(&acc->u)) {
-        if (const auto &b =
-                std::get<std::optional<parser::DoConstruct>>(comb->t))
-          body = &b.value();
-        n = collapseN(std::get<parser::AccClauseList>(std::get<0>(comb->t).t));
-      }
+/// True if the DO at depth 0 of \p chain is one of the \p n loops a directive
+/// associates with itself, given that the directive's body DO is \p body.
+///
+/// \p body is the outermost candidate, so the evaluation sits at depth
+/// `index of body in chain` below it and is associated iff that depth < \p n.
+/// A \p body outside \p chain is not an error: OpenMPLoopConstruct's body is
+/// found by searching the construct's block (looking through a BLOCK
+/// construct), so it can name a DO that is not on this ancestor chain.
+static bool isAssociatedLoop(const DoConstructChain &chain,
+                             const parser::DoConstruct *body, int64_t n) {
+  if (!body)
+    return false;
+  auto it = llvm::find(chain, body);
+  if (it == chain.end())
+    return false;
+  return std::distance(chain.begin(), it) < n;
+}
 
-      if (body) {
-        // body is at index `candidates.size()-1` (the outermost candidate);
-        // eval at depth (candidates.size()-1) from body. Collapsed iff < N.
-        auto it = llvm::find(candidates, body);
-        if (it != candidates.end()) {
-          int64_t depth = std::distance(candidates.begin(), it);
-          if (depth < n)
-            return true;
-        }
-      }
-    }
+/// True if \p eval is a DoConstruct sitting directly in the body of an
+/// `!$acc kernels` region, i.e. attached to the directive itself rather than
+/// nested inside another loop.
+///
+/// Such a loop is the one the directive parallelizes, so it must keep its
+/// Fortran loop structure: wrapping its CFG in an scf.execute_region would
+/// leave the kernels region with nothing to partition. Loops nested deeper in
+/// the region are unaffected — hiding an inner loop's CFG still leaves the
+/// enclosing loop available to the directive.
+static bool isAccKernelsBody(const Fortran::lower::pft::Evaluation &eval) {
+  if (!eval.isA<parser::DoConstruct>())
+    return false;
 
-    break;
+  const Fortran::lower::pft::Evaluation *p = eval.parentConstruct;
+  if (!p)
+    return false;
+
+  const auto *acc = p->getIf<parser::OpenACCConstruct>();
+  if (!acc)
+    return false;
+
+  const auto *block = std::get_if<parser::OpenACCBlockConstruct>(&acc->u);
+  if (!block)
+    return false;
+
+  const auto &beginDir = std::get<parser::AccBeginBlockDirective>(block->t);
+  return std::get<parser::AccBlockDirective>(beginDir.t).v ==
+         llvm::acc::Directive::ACCD_kernels;
+}
+
+/// True if \p eval is a DoConstruct attached to an enclosing OpenACC loop.
+static bool isAccLoopBody(const Fortran::lower::pft::Evaluation &eval) {
+  DoConstructChain chain;
+  const Fortran::lower::pft::Evaluation *p =
+      collectEnclosingDoChain(eval, chain);
+  if (!p)
+    return false;
+
+  const auto *acc = p->getIf<parser::OpenACCConstruct>();
+  if (!acc)
+    return false;
+
+  // N from `collapse(N)`, or 1 if no clause.
+  auto collapseValue = [](const parser::AccClauseList &cl) -> int64_t {
+    for (const parser::AccClause &c : cl.v)
+      if (const auto *cc = std::get_if<parser::AccClause::Collapse>(&c.u))
+        return constantValueOrMax(
+            std::get<parser::ScalarIntConstantExpr>(cc->v.t));
+    return 1;
+  };
+
+  const parser::DoConstruct *body = nullptr;
+  int64_t n = 1;
+  if (const auto *loop = std::get_if<parser::OpenACCLoopConstruct>(&acc->u)) {
+    if (const auto &b = std::get<std::optional<parser::DoConstruct>>(loop->t))
+      body = &b.value();
+    n = collapseValue(std::get<parser::AccClauseList>(std::get<0>(loop->t).t));
+  } else if (const auto *comb =
+                 std::get_if<parser::OpenACCCombinedConstruct>(&acc->u)) {
+    if (const auto &b = std::get<std::optional<parser::DoConstruct>>(comb->t))
+      body = &b.value();
+    n = collapseValue(std::get<parser::AccClauseList>(std::get<0>(comb->t).t));
   }
 
+  return isAssociatedLoop(chain, body, n);
+}
+
+/// True if \p eval is a DoConstruct attached to an enclosing OpenMP loop.
+static bool isOmpLoopBody(const Fortran::lower::pft::Evaluation &eval,
+                          const semantics::SemanticsContext &semaCtx) {
+  DoConstructChain chain;
+  const Fortran::lower::pft::Evaluation *p =
+      collectEnclosingDoChain(eval, chain);
+  if (!p)
+    return false;
+
+  const auto *omp = p->getIf<parser::OpenMPConstruct>();
+  if (!omp)
+    return false;
+
+  const auto *loop = std::get_if<parser::OpenMPLoopConstruct>(&omp->u);
+  if (!loop)
+    return false;
+
+  llvm::omp::Version version = semaCtx.langOptions().getOpenMPVersion();
+  auto [depth, _] =
+      semantics::omp::GetAffectedNestDepthWithReason(loop->BeginDir(), version);
+  int64_t n = depth.value.value_or(1);
+
+  return isAssociatedLoop(chain, loop->GetNestedLoop(), n);
+}
+
+/// The evaluations forming a loop's body: everything between the loop control
+/// statements, which bracket it and are lowered outside any body wrap.
+static llvm::iterator_range<Fortran::lower::pft::EvaluationList::const_iterator>
+loopBodyRange(const Fortran::lower::pft::Evaluation &loop) {
+  const auto &list = *loop.evaluationList;
+  return llvm::make_range(std::next(list.begin()), std::prev(list.end()));
+}
+
+/// True when \p eval lies in \p loop's body rather than in its loop control.
+static bool isInLoopBody(const Fortran::lower::pft::Evaluation *eval,
+                         const Fortran::lower::pft::Evaluation &loop) {
+  if (!eval || !loop.evaluationList || loop.evaluationList->empty())
+    return false;
+  const Fortran::lower::pft::Evaluation *first = &loop.evaluationList->front();
+  const Fortran::lower::pft::Evaluation *last = &loop.evaluationList->back();
+  for (const Fortran::lower::pft::Evaluation *p = eval; p;
+       p = p->parentConstruct)
+    if (p->parentConstruct == &loop)
+      return p != first && p != last;
   return false;
 }
 
+/// A loop that can be lowered structurally even though its body holds
+/// unstructured control flow, because that control flow is confined to the body
+/// and can be folded into an SESE region.
+///
+/// The loop qualifies when:
+///   1. every branch leaving its body lands back inside that body, and
+///   2. every branch into its body comes from inside that body,
+/// and the body holds nothing a region cannot accommodate: an infinite DO
+/// never reaches the region's yield so RegionDCE would drop it, a ReturnStmt
+/// builds the function's final block in the current region, and a listless
+/// assigned GO TO has targets that cannot be enumerated -- so condition 1
+/// cannot be decided at all rather than merely failing.
+///
+/// A CYCLE is not an escape: its target is the EndDoStmt, which is where the
+/// wrap's yield sits, so it lands on the boundary. An EXIT targets the
+/// construct exit, beyond the loop entirely, and does escape.
+/// Return true if control can get from where \p start branches back to \p
+/// start itself, without leaving \p loop's body.
+///
+/// A branch closes a cycle with whatever carries control back to it, and that
+/// return path is made of ordinary statements: the one branched to simply runs
+/// on, through the constructs it meets, until it reaches the branch again.
+/// Following a single path would lose the way back wherever control could go
+/// more than one way, so every successor is followed.
+///
+/// A cycle may run forever, which disqualifies the loop holding it: its
+/// structured form puts the body in an scf.execute_region carrying no memory
+/// effects, and DCE deletes such a region outright. Whether the cycle can be
+/// left is not checked, so a loop that does terminate is rejected as well.
+///
+/// The search stays inside the body. Beyond it lies the loop's own iteration
+/// edge, from the EndDoStmt back to the DO statement, which would carry the
+/// search back into the body and make every branch look like a cycle.
+static bool startsBranchCycle(const Fortran::lower::pft::Evaluation &start,
+                              const Fortran::lower::pft::Evaluation &loop) {
+  // Only a GO TO starts the search. A loop reaches its own DO statement from
+  // its EndDoStmt on every iteration, and asking of either would find that
+  // edge and call the loop holding it non-terminating.
+  if (!start.getIf<parser::GotoStmt>() &&
+      !start.getIf<parser::AssignedGotoStmt>())
+    return false;
+
+  // Every way control may leave \p e: where it branches, and the statement
+  // after it.
+  // A loop reaches its own DO statement from its EndDoStmt on every iteration.
+  // That edge would lead the search back through the loop's body and make any
+  // branch inside it look like a cycle, so it is skipped: the loop terminates
+  // through its own control.
+  auto isOwnIterationEdge = [](const Fortran::lower::pft::Evaluation &e,
+                               const Fortran::lower::pft::Evaluation *target) {
+    const Fortran::lower::pft::Evaluation *parent = e.parentConstruct;
+    return parent && parent->getIf<parser::DoConstruct>() &&
+           parent->evaluationList && &parent->evaluationList->back() == &e &&
+           &parent->evaluationList->front() == target;
+  };
+
+  auto successors =
+      [&](const Fortran::lower::pft::Evaluation &e,
+          llvm::SmallVectorImpl<const Fortran::lower::pft::Evaluation *> &out) {
+        if (e.controlSuccessor && !isOwnIterationEdge(e, e.controlSuccessor))
+          out.push_back(e.controlSuccessor);
+        for (const Fortran::lower::pft::Evaluation *extra :
+             e.extraControlSuccessors)
+          out.push_back(extra);
+        // A GO TO reaches only its target; the statement it precedes is not a
+        // successor of it. An assigned GO TO reaches every label ASSIGNed to
+        // its variable, which the successors already name.
+        if (!e.getIf<parser::GotoStmt>() &&
+            !e.getIf<parser::AssignedGotoStmt>() && e.lexicalSuccessor)
+          out.push_back(e.lexicalSuccessor);
+      };
+
+  llvm::SmallVector<const Fortran::lower::pft::Evaluation *> worklist;
+  successors(start, worklist);
+
+  llvm::SmallPtrSet<const Fortran::lower::pft::Evaluation *, 16> seen;
+  while (!worklist.empty()) {
+    const Fortran::lower::pft::Evaluation *e = worklist.pop_back_val();
+    if (e == &start)
+      return true;
+    if (!isInLoopBody(e, loop) || !seen.insert(e).second)
+      continue;
+    successors(*e, worklist);
+  }
+  return false;
+}
+
+static bool isStructurableWithUnstructuredInternals(
+    const Fortran::lower::pft::Evaluation &loop,
+    const Fortran::lower::pft::FunctionLikeUnit &unit) {
+
+  if (!loop.isUnstructured() || !loop.evaluationList ||
+      loop.evaluationList->size() < 3)
+    return false;
+
+  // Only an increment loop keeps all of its control outside the body. A DO
+  // WHILE or an infinite DO lowers through a header block and a back edge, and
+  // a do concurrent has no plain bounds triple either, so in each case the
+  // loop's own control flow runs through the body a wrap would cover.
+  const auto *doConstruct = loop.getIf<parser::DoConstruct>();
+  if (!doConstruct)
+    return false;
+
+  const auto &loopControl = doConstruct->GetLoopControl();
+  if (!loopControl)
+    return false;
+
+  const auto *bounds =
+      std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
+  if (!bounds)
+    return false;
+
+  // A REAL control variable does not lower to fir.do_loop, whose induction
+  // variable must be a signless integer or index, so such a loop is lowered as
+  // unstructured whatever its body looks like.
+  const semantics::Symbol *ctrlVar = bounds->Name().thing.symbol;
+  if (!ctrlVar)
+    return false;
+
+  const semantics::DeclTypeSpec *ctrlType = ctrlVar->GetType();
+  if (!ctrlType || ctrlType->category() != semantics::DeclTypeSpec::Numeric ||
+      ctrlType->numericTypeSpec().category() != common::TypeCategory::Integer)
+    return false;
+
+  const Fortran::lower::pft::Evaluation *endDoStmt =
+      &loop.evaluationList->back();
+
+  auto isInfiniteDo = [](const parser::DoConstruct *d) {
+    return d && !d->GetLoopControl().has_value();
+  };
+
+  auto targetEscapes = [&](const Fortran::lower::pft::Evaluation *target) {
+    return target != endDoStmt && !isInLoopBody(target, loop);
+  };
+
+  std::function<bool(const Fortran::lower::pft::Evaluation &)> check =
+      [&](const Fortran::lower::pft::Evaluation &e) -> bool {
+    // A body that cannot run to completion must stay unstructured. Its
+    // structured form puts the body in an scf.execute_region carrying no
+    // memory effects, and DCE deletes such a region outright -- discarding the
+    // non-termination and letting execution fall past the loop. Branches
+    // survive that, being terminators, so leave the loop unstructured.
+    //
+    // An infinite DO says so in its own syntax; a GO TO cycle has to be
+    // followed to be recognized.
+    if (e.isA<parser::ReturnStmt>() ||
+        isInfiniteDo(e.getIf<parser::DoConstruct>()) ||
+        startsBranchCycle(e, loop))
+      return false;
+
+    // Condition 1: nothing leaves the body, CYCLE excepted.
+    if (e.controlSuccessor && targetEscapes(e.controlSuccessor))
+      return false;
+
+    for (const Fortran::lower::pft::Evaluation *extra :
+         e.extraControlSuccessors)
+      if (targetEscapes(extra))
+        return false;
+
+    // Condition 2: nothing enters the body from outside it. This is the
+    // lookup the incoming-branch map exists for.
+    auto it = unit.incomingBranches.find(&e);
+    if (it != unit.incomingBranches.end())
+      for (const Fortran::lower::pft::Evaluation *src : it->second)
+        if (!isInLoopBody(src, loop))
+          return false;
+
+    if (e.evaluationList)
+      for (const Fortran::lower::pft::Evaluation &nested : *e.evaluationList)
+        if (!check(nested))
+          return false;
+
+    return true;
+  };
+
+  for (const Fortran::lower::pft::Evaluation &e : loopBodyRange(loop))
+    if (!check(e))
+      return false;
+
+  return true;
+}
+
+/// Reclassify every qualifying loop in \p unit.
+///
+/// Runs after branch analysis, when the incoming-branch map is complete;
+/// during analysis a branch later in the function would not yet be recorded
+/// and condition 2 would read a partial map.
+///
+/// Ancestors are deliberately left alone. A loop reclassified here lowers to a
+/// structured op, and a structured op is legal inside an unstructured parent,
+/// so leaving the parent Unstructured is conservative but correct.
+static void detectStructuredWithUnstructuredInternals(
+    Fortran::lower::pft::FunctionLikeUnit &unit) {
+  // Such a loop is lowered with its body in an scf.execute_region: its
+  // branching needs more than the one block fir.do_loop's region admits. With
+  // the wrap disabled there is nowhere to put that CFG, so leave the loop
+  // Unstructured and lower its branches as they are.
+  if (!wrapUnstructuredConstructsInExecuteRegion)
+    return;
+
+  std::function<void(Fortran::lower::pft::EvaluationList &)> visit =
+      [&](Fortran::lower::pft::EvaluationList &list) {
+        for (Fortran::lower::pft::Evaluation &e : list) {
+          if (e.evaluationList)
+            visit(*e.evaluationList);
+
+          if (e.isA<parser::DoConstruct>() &&
+              isStructurableWithUnstructuredInternals(e, unit))
+            // The one place the classification weakens: detection has proven
+            // Unstructured unnecessary.
+            e.weakenControlFlow(Fortran::lower::pft::Evaluation::ControlFlow::
+                                    StructuredWithUnstructuredInternals);
+        }
+      };
+  visit(unit.evaluationList);
+}
+
 bool Fortran::lower::pft::isWrappableConstruct(
-    const Fortran::lower::pft::Evaluation &eval) {
+    const Fortran::lower::pft::Evaluation &eval,
+    const Fortran::semantics::SemanticsContext &semaCtx) {
   if (!wrapUnstructuredConstructsInExecuteRegion)
     return false;
 
-  if (!eval.isUnstructured)
+  if (!eval.isUnstructured())
     return false;
 
   if (!(eval.isA<Fortran::parser::DoConstruct>() ||
@@ -2581,10 +3040,13 @@ bool Fortran::lower::pft::isWrappableConstruct(
 
   // Wrapping requires self-contained CFG.
   //
-  // Note: Loops attached to OpenACC constructs are not wrappable since
-  // genOpenACCLoopFromDoConstruct takes over code-gen when a DoConstruct is
-  // attached to an OpenACC directive. We might extend wrapping to such
-  // unstructured loops later on if needed.
+  // Note: Loops attached to OpenACC/OpenMP constructs are not wrappable since
+  // the directive lowering (e.g. genOpenACCLoopFromDoConstruct) takes over
+  // code-gen when a DoConstruct is attached to such a directive. The same
+  // applies to a loop directly in an `!$acc kernels` body: it is the loop the
+  // directive parallelizes. We might extend wrapping to such unstructured
+  // loops later on if needed.
   return !hasUnwrappableInternals(eval) && !hasIncomingBranch(eval) &&
-         !isAccLoopBody(eval);
+         !isAccLoopBody(eval) && !isAccKernelsBody(eval) &&
+         !isOmpLoopBody(eval, semaCtx);
 }

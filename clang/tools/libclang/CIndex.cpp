@@ -1344,9 +1344,8 @@ bool CursorVisitor::VisitTypeConstraint(const TypeConstraint &TC) {
     if (VisitNestedNameSpecifierLoc(TC.getNestedNameSpecifierLoc()))
       return true;
   }
-  if (TC.getNamedConcept()) {
-    if (Visit(MakeCursorTemplateRef(TC.getNamedConcept(),
-                                    TC.getConceptNameLoc(), TU)))
+  if (TemplateDecl *TD = TC.getNamedConcept().getAsTemplateDecl()) {
+    if (Visit(MakeCursorTemplateRef(TD, TC.getConceptNameLoc(), TU)))
       return true;
   }
   if (auto Args = TC.getTemplateArgsAsWritten()) {
@@ -1503,6 +1502,10 @@ bool CursorVisitor::VisitTemplateName(TemplateName Name, SourceLocation NameLoc,
     return Visit(MakeCursorTemplateRef(
         Name.getAsSubstTemplateTemplateParmPack()->getParameterPack(), NameLoc,
         TU));
+
+  case TemplateName::PackIndexingTemplate:
+    return VisitTemplateName(Name.getAsPackIndexingTemplate()->getPattern(),
+                             NameLoc, NNS);
 
   case TemplateName::DeducedTemplate:
     llvm_unreachable("DeducedTemplate shouldn't appear in source");
@@ -1805,9 +1808,8 @@ bool CursorVisitor::VisitAutoTypeLoc(AutoTypeLoc TL) {
 
   if (TL.isConstrained()) {
     if (auto *CR = TL.getConceptReference()) {
-      if (CR->getNamedConcept()) {
-        return Visit(MakeCursorTemplateRef(CR->getNamedConcept(),
-                                           CR->getConceptNameLoc(), TU));
+      if (TemplateDecl *TD = CR->getNamedConcept().getAsTemplateDecl()) {
+        return Visit(MakeCursorTemplateRef(TD, CR->getConceptNameLoc(), TU));
       }
     }
   }
@@ -2174,6 +2176,7 @@ public:
   void VisitOMPUnrollDirective(const OMPUnrollDirective *D);
   void VisitOMPReverseDirective(const OMPReverseDirective *D);
   void VisitOMPInterchangeDirective(const OMPInterchangeDirective *D);
+  void VisitOMPFlattenDirective(const OMPFlattenDirective *D);
   void VisitOMPCanonicalLoopSequenceTransformationDirective(
       const OMPCanonicalLoopSequenceTransformationDirective *D);
   void VisitOMPFuseDirective(const OMPFuseDirective *D);
@@ -2356,8 +2359,10 @@ void OMPClauseEnqueue::VisitOMPFinalClause(const OMPFinalClause *C) {
 }
 
 void OMPClauseEnqueue::VisitOMPNumThreadsClause(const OMPNumThreadsClause *C) {
+  if (const Expr *Modifier = C->getDimsModifierExpr())
+    Visitor->AddStmt(Modifier);
+  VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
-  Visitor->AddStmt(C->getNumThreads());
 }
 
 void OMPClauseEnqueue::VisitOMPSafelenClause(const OMPSafelenClause *C) {
@@ -2393,6 +2398,10 @@ void OMPClauseEnqueue::VisitOMPPartialClause(const OMPPartialClause *C) {
 void OMPClauseEnqueue::VisitOMPLoopRangeClause(const OMPLoopRangeClause *C) {
   Visitor->AddStmt(C->getFirst());
   Visitor->AddStmt(C->getCount());
+}
+
+void OMPClauseEnqueue::VisitOMPDepthClause(const OMPDepthClause *C) {
+  Visitor->AddStmt(C->getDepth());
 }
 
 void OMPClauseEnqueue::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
@@ -3378,6 +3387,10 @@ void EnqueueVisitor::VisitOMPInterchangeDirective(
   VisitOMPCanonicalLoopNestTransformationDirective(D);
 }
 
+void EnqueueVisitor::VisitOMPFlattenDirective(const OMPFlattenDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+}
+
 void EnqueueVisitor::VisitOMPCanonicalLoopSequenceTransformationDirective(
     const OMPCanonicalLoopSequenceTransformationDirective *D) {
   VisitOMPExecutableDirective(D);
@@ -3993,8 +4006,8 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
           return true;
       }
 
-      if (E->getNamedConcept() &&
-          Visit(MakeCursorTemplateRef(E->getNamedConcept(),
+      if (E->getNamedConcept().getAsTemplateDecl() &&
+          Visit(MakeCursorTemplateRef(E->getConceptDecl(),
                                       E->getConceptNameLoc(), TU)))
         return true;
 
@@ -6356,6 +6369,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPReverseDirective");
   case CXCursor_OMPInterchangeDirective:
     return cxstring::createRef("OMPInterchangeDirective");
+  case CXCursor_OMPFlattenDirective:
+    return cxstring::createRef("OMPFlattenDirective");
   case CXCursor_OMPFuseDirective:
     return cxstring::createRef("OMPFuseDirective");
   case CXCursor_OMPSplitDirective:

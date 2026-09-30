@@ -496,6 +496,11 @@ public:
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                                      bool can_create = true);
 
+  /// Return the index of the child named \c name.
+  ///
+  /// The error is for LLDB developers, not for the user: a missing child is the
+  /// ordinary negative answer to a lookup. Callers that cannot propagate it
+  /// should log it rather than call \c llvm::consumeError.
   virtual llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name);
 
   llvm::Expected<uint32_t> GetNumChildren(uint32_t max = UINT32_MAX);
@@ -851,13 +856,15 @@ public:
 
   virtual bool GetIsConstant() const { return m_update_point.IsConstant(); }
 
-  /// Returns false when this value cannot be modified through
-  /// SetValueFromCString() or SetData() because it exists in the
-  /// target but has no writable storage, e.g., a constant or a
-  /// computed variable value.  A true result does not guarantee a
+  /// Check if the value may be writable. Returns an error describing
+  /// why this value cannot be modified. Success does not guarantee a
   /// write will succeed; other runtime conditions can still cause
   /// SetValue* to fail.
-  virtual bool CanSetValue() { return !GetIsConstant(); }
+  virtual llvm::Error CanSetValue() {
+    if (GetIsConstant())
+      return llvm::createStringError("value is not in a writable location");
+    return llvm::Error::success();
+  }
 
   bool NeedsUpdating() {
     const bool accept_invalid_exe_ctx =

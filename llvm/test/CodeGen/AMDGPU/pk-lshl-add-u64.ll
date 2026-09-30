@@ -261,10 +261,8 @@ define <2 x i64> @pk_lshl_add_u64_v1_sgpr_splat(<2 x i64> %v, i64 inreg %a) {
 ; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    s_mov_b32 s2, 1
-; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1251-NEXT:    v_dual_mov_b32 v4, s2 :: v_dual_mov_b32 v5, s2
-; GFX1251-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1251-NEXT:    v_pk_lshl_add_u64 v[0:3], v[0:3], v[4:5], s[0:3]
 ; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
   %s1 = insertelement <2 x i64> poison, i64 %a, i32 0
@@ -298,8 +296,7 @@ define <2 x i64> @pk_lshl_add_u64_sgpr_splat_v1(i64 inreg %v, <2 x i64> %a) {
 ; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    s_lshl_b64 s[0:1], s[0:1], 1
-; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1251-NEXT:    s_mov_b64 s[2:3], s[0:1]
+; GFX1251-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], s[0:3], v[0:3]
 ; GFX1251-NEXT:    s_set_pc_i64 s[30:31]
   %s1 = insertelement <2 x i64> poison, i64 %v, i32 0

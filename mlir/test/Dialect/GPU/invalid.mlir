@@ -379,14 +379,14 @@ func.func @reduce_op_and_body(%arg0 : f32) {
   %res = "gpu.all_reduce"(%arg0) ({
   ^bb(%lhs : f32, %rhs : f32):
     "gpu.yield"(%lhs) : (f32) -> ()
-  }) {op = #gpu<all_reduce_op add>} : (f32) -> (f32)
+  }) {op = #gpu.all_reduce_op<add>} : (f32) -> (f32)
   return
 }
 
 // -----
 
 func.func @reduce_invalid_op(%arg0 : f32) {
-  // expected-error@+1 {{invalid op kind}}
+  // expected-error@+1 {{expected SSA operand}}
   %res = gpu.all_reduce foo %arg0 {} : (f32) -> (f32)
   return
 }
@@ -604,7 +604,7 @@ func.func @reduce_incorrect_yield(%arg0 : f32) {
 
 func.func @shuffle_mismatching_type(%arg0 : f32, %arg1 : i32, %arg2 : i32) {
   // expected-error@+1 {{op failed to verify that all of {value, shuffleResult} have same type}}
-  %shfl, %pred = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = #gpu<shuffle_mode xor> } : (f32, i32, i32) -> (i32, i1)
+  %shfl, %pred = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = #gpu.shuffle_mode<xor> } : (f32, i32, i32) -> (i32, i1)
   return
 }
 
@@ -814,7 +814,7 @@ func.func @memset_incompatible_shape(%dst : memref<?xf32>, %value : i32) {
 // -----
 
 func.func @mmamatrix_invalid_shape(){
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
     // expected-error @+1 {{MMAMatrixType must have exactly two dimensions}}
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] leadDimension 32 : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16x16xf16, "AOp">
@@ -824,7 +824,7 @@ func.func @mmamatrix_invalid_shape(){
 // -----
 
 func.func @mmamatrix_operand_type(){
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
     // expected-error @+1 {{operand expected to be one of AOp, BOp or COp}}
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] leadDimension 32 : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "EOp">
@@ -834,7 +834,7 @@ func.func @mmamatrix_operand_type(){
 // -----
 
 func.func @mmamatrix_invalid_element_type(){
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
     // expected-error @+1 {{MMAMatrixType elements must be SI8, UI8, I32, F16, F32, or F64}}
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] leadDimension 32 : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xbf16, "AOp">
@@ -846,7 +846,7 @@ func.func @mmamatrix_invalid_element_type(){
 #layout_map_col_major = affine_map<(i, j) -> (j, i)>
 
 func.func @mmaLoadOp_identity_layout(){
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, #layout_map_col_major, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xf16, #layout_map_col_major, 3>
     %i = arith.constant 16 : index
     // expected-error @+1 {{expected source memref most minor dim must have unit stride}}
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] leadDimension 32 : memref<32x32xf16, #layout_map_col_major, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
@@ -866,7 +866,7 @@ func.func @mma_invalid_memref_type(%src: memref<32x4xvector<4x8xf32>>, %i: index
 #layout_map_col_major = affine_map<(i, j) -> (j, i)>
 
 func.func @wmmaStoreOp_invalid_map(%arg0 : !gpu.mma_matrix<16x16xf16, "COp">) -> () {
-    %sg = memref.alloca(){alignment = 32} : memref<32x32xf16, #layout_map_col_major, 3>
+    %sg = memref.alloca() alignment = 32 : memref<32x32xf16, #layout_map_col_major, 3>
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
     // expected-error @+1 {{expected destination memref most minor dim must have unit stride}}
@@ -877,7 +877,7 @@ func.func @wmmaStoreOp_invalid_map(%arg0 : !gpu.mma_matrix<16x16xf16, "COp">) ->
 // -----
 
 func.func @wmmaStoreOp_invalid_store_operand(%arg0 : !gpu.mma_matrix<16x16xf16, "AOp">) -> () {
-    %sg = memref.alloca(){alignment = 32} : memref<32x32xf16, 3>
+    %sg = memref.alloca() alignment = 32 : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
     // expected-error @+1 {{expected the operand matrix being stored to have 'COp' operand type}}

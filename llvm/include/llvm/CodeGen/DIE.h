@@ -194,7 +194,6 @@ public:
   }
 
   uint64_t getValue() const { return Integer; }
-  void setValue(uint64_t Val) { Integer = Val; }
 
   LLVM_ABI void emitValue(const AsmPrinter *Asm, dwarf::Form Form) const;
   LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
@@ -211,9 +210,6 @@ class DIEExpr {
 public:
   explicit DIEExpr(const MCExpr *E) : Expr(E) {}
 
-  /// Get MCExpr.
-  const MCExpr *getValue() const { return Expr; }
-
   LLVM_ABI void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
                            dwarf::Form Form) const;
@@ -228,9 +224,6 @@ class DIELabel {
 
 public:
   explicit DIELabel(const MCSymbol *L) : Label(L) {}
-
-  /// Get MCSymbol.
-  const MCSymbol *getValue() const { return Label; }
 
   LLVM_ABI void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
@@ -547,7 +540,8 @@ struct IntrusiveBackListBase {
 
   void push_back(Node &N) {
     assert(N.Next.getPointer() == &N && "Expected unlinked node");
-    assert(N.Next.getInt() == true && "Expected unlinked node");
+    assert(static_cast<bool>(N.Next.getInt()) == true &&
+           "Expected unlinked node");
 
     if (Last) {
       N.Next = Last->Next;
@@ -558,7 +552,8 @@ struct IntrusiveBackListBase {
 
   void push_front(Node &N) {
     assert(N.Next.getPointer() == &N && "Expected unlinked node");
-    assert(N.Next.getInt() == true && "Expected unlinked node");
+    assert(static_cast<bool>(N.Next.getInt()) == true &&
+           "Expected unlinked node");
 
     if (Last) {
       N.Next.setPointerAndInt(Last->Next.getPointer(), false);
@@ -848,9 +843,6 @@ class DIE : IntrusiveBackListNode, public DIEValueList {
   unsigned AbbrevNumber = ~0u;
   /// Dwarf tag code.
   dwarf::Tag Tag = (dwarf::Tag)0;
-  /// Set to true to force a DIE to emit an abbreviation that says it has
-  /// children even when it doesn't. This is used for unit testing purposes.
-  bool ForceChildren = false;
   /// Children DIEs.
   IntrusiveBackList<DIE> Children;
 
@@ -885,8 +877,7 @@ public:
     assert(Size && "Size being queried before it's been ocmputed.");
     return Size;
   }
-  bool hasChildren() const { return ForceChildren || !Children.empty(); }
-  void setForceChildren(bool B) { ForceChildren = B; }
+  bool hasChildren() const { return !Children.empty(); }
 
   using child_iterator = IntrusiveBackList<DIE>::iterator;
   using const_child_iterator = IntrusiveBackList<DIE>::const_iterator;

@@ -89,24 +89,23 @@ void CodeGenModule::EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
   CGF.FinishFunction();
 }
 
-std::pair<llvm::Function *, llvm::Function *>
-CodeGenModule::embedSYCLDeviceBinary() {
+llvm::Function *CodeGenModule::embedSYCLDeviceBinary() {
   StringRef FileName = getCodeGenOpts().OffloadBinaryToEmbedFile;
   auto BufferOrErr = getFileSystem()->getBufferForFile(FileName);
   if (std::error_code EC = BufferOrErr.getError()) {
     getDiags().Report(diag::err_cannot_open_file) << FileName << EC.message();
-    return {nullptr, nullptr};
+    return nullptr;
   }
   std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(BufferOrErr.get());
-  std::pair<llvm::Function *, llvm::Function *> RegistrationFuncs;
+  llvm::Function *RegistrationFunc = nullptr;
   if (llvm::Error Err = llvm::offloading::wrapSYCLBinaries(
           getModule(),
           ArrayRef<char>(Buffer->getBufferStart(), Buffer->getBufferSize()),
           llvm::offloading::SYCLJITOptions(), /*IsFinalizedImage=*/true,
-          &RegistrationFuncs)) {
+          &RegistrationFunc)) {
     getDiags().Report(diag::err_fe_error_backend)
         << llvm::toString(std::move(Err));
-    return {nullptr, nullptr};
+    return nullptr;
   }
-  return RegistrationFuncs;
+  return RegistrationFunc;
 }

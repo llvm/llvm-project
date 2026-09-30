@@ -2,7 +2,7 @@
 
 module attributes {omp.is_gpu = true, omp.is_target_device = true} {
   // expected-error @below {{not yet implemented: Reduction of dynamically-shaped arrays on the GPU.}}
-  omp.declare_reduction @red1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> attributes {byref_element_type = !fir.array<?xi32>} alloc {
+  omp.declare_reduction @red1 byref_element_type(!fir.array<?xi32>) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> alloc {
     %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
     omp.yield(%0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   } init {
@@ -14,7 +14,7 @@ module attributes {omp.is_gpu = true, omp.is_target_device = true} {
   }
 
   func.func @f1(%ia : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
-    %ia.map = omp.map.info var_ptr(%ia : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, implicit, to) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "ia"}
+    %ia.map = omp.map.info var_ptr(%ia : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, implicit, to) capture(ByRef) name("ia") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 
     omp.target kernel_type(spmd) map_entries(%ia.map -> %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
       omp.parallel {
@@ -33,7 +33,7 @@ module attributes {omp.is_gpu = true, omp.is_target_device = true} {
   }
 
   // expected-error @below {{not yet implemented: Reduction of dynamically-shaped arrays on the GPU.}}
-  omp.declare_reduction @red2 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> attributes {byref_element_type = !fir.array<?xi32>} alloc {
+  omp.declare_reduction @red2 byref_element_type(!fir.array<?xi32>) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> alloc {
     %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
     omp.yield(%0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   } init {
@@ -45,7 +45,7 @@ module attributes {omp.is_gpu = true, omp.is_target_device = true} {
   }
 
   // expected-error @below {{not yet implemented: Reduction of dynamically-shaped arrays on the GPU.}}
-  omp.declare_reduction @red3 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> attributes {byref_element_type = !fir.array<?xi32>} alloc {
+  omp.declare_reduction @red3 byref_element_type(!fir.array<?xi32>) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> alloc {
     %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
     omp.yield(%0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   } init {
@@ -56,7 +56,7 @@ module attributes {omp.is_gpu = true, omp.is_target_device = true} {
     omp.yield(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   }
 
-  func.func @f2(%ia : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false>} {
+  func.func @f2(%ia : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter, automap = false>} {
     %c1_i32 = arith.constant 1 : i32
     omp.wsloop reduction(byref @red2 %ia -> %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
       omp.loop_nest (%arg1) : i32 = (%c1_i32) to (%c1_i32) inclusive step (%c1_i32) {
@@ -72,7 +72,7 @@ module attributes {omp.is_gpu = true, omp.is_target_device = true} {
   }
 
   // This emits no errors, as it's not accessed from target device code.
-  omp.declare_reduction @red4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> attributes {byref_element_type = !fir.array<?xi32>} alloc {
+  omp.declare_reduction @red4 byref_element_type(!fir.array<?xi32>) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> alloc {
     %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
     omp.yield(%0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   } init {

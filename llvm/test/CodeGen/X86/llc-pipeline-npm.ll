@@ -66,7 +66,7 @@
 ; O0-NEXT:     x86-insert-vzeroupper
 ; O0-NEXT:     x86-compress-evex
 ; O0-NEXT:     x86-insert-x87-wait
-; O0-NEXT:     FuncletLayoutPass
+; O0-NEXT:     funclet-layout
 ; O0-NEXT:     remove-loads-into-fake-uses
 ; O0-NEXT:     StackMapLivenessPass
 ; O0-NEXT:     live-debug-values<emit-debug-entry-values>
@@ -74,6 +74,7 @@
 ; O0-NEXT:     stack-frame-layout
 ; O0-NEXT:     x86-seses
 ; O0-NEXT:     x86-return-thunks
+; O0-NEXT:     cfi-instr-inserter
 ; O0-NEXT:     x86-lvi-ret
 ; O0-NEXT:     verify
 ; O0-NEXT:     x86-asm-printer
@@ -131,6 +132,7 @@
 ; O2-NEXT:     localstackalloc
 ; O2-NEXT:     dead-mi-elimination
 ; O2-NEXT:     early-ifcvt
+; O2-NEXT:     machine-combiner
 ; O2-NEXT:     x86-cmov-conversion
 ; O2-NEXT:     early-machinelicm
 ; O2-NEXT:     machine-cse
@@ -153,6 +155,7 @@
 ; O2-NEXT:     require<live-vars>
 ; O2-NEXT:     require<machine-loops>
 ; O2-NEXT:     phi-node-elimination
+; O2-NEXT:     require<live-intervals>
 ; O2-NEXT:     two-address-instruction
 ; O2-NEXT:     register-coalescer
 ; O2-NEXT:     rename-independent-subregs
@@ -191,7 +194,7 @@
 ; O2-NEXT:     x86-fixup-inst-tuning
 ; O2-NEXT:     x86-compress-evex
 ; O2-NEXT:     x86-insert-x87-wait
-; O2-NEXT:     FuncletLayoutPass
+; O2-NEXT:     funclet-layout
 ; O2-NEXT:     remove-loads-into-fake-uses
 ; O2-NEXT:     StackMapLivenessPass
 ; O2-NEXT:     live-debug-values<emit-debug-entry-values>
@@ -199,6 +202,7 @@
 ; O2-NEXT:     stack-frame-layout
 ; O2-NEXT:     x86-seses
 ; O2-NEXT:     x86-return-thunks
+; O2-NEXT:     cfi-instr-inserter
 ; O2-NEXT:     x86-lvi-ret
 ; O2-NEXT:     verify
 ; O2-NEXT:     x86-asm-printer
@@ -263,7 +267,7 @@
 ; O0-WINDOWS-NEXT:     x86-insert-vzeroupper
 ; O0-WINDOWS-NEXT:     x86-compress-evex
 ; O0-WINDOWS-NEXT:     x86-insert-x87-wait
-; O0-WINDOWS-NEXT:     FuncletLayoutPass
+; O0-WINDOWS-NEXT:     funclet-layout
 ; O0-WINDOWS-NEXT:     remove-loads-into-fake-uses
 ; O0-WINDOWS-NEXT:     StackMapLivenessPass
 ; O0-WINDOWS-NEXT:     live-debug-values<emit-debug-entry-values>
@@ -272,6 +276,7 @@
 ; O0-WINDOWS-NEXT:     x86-seses
 ; O0-WINDOWS-NEXT:     x86-return-thunks
 ; O0-WINDOWS-NEXT:     x86-avoid-trailing-call
+; O0-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O0-WINDOWS-NEXT:     x86-lvi-ret
 ; O0-WINDOWS-NEXT:     x86-wineh-unwindv2
 ; O0-WINDOWS-NEXT:     verify
@@ -331,6 +336,7 @@
 ; O3-WINDOWS-NEXT:     localstackalloc
 ; O3-WINDOWS-NEXT:     dead-mi-elimination
 ; O3-WINDOWS-NEXT:     early-ifcvt
+; O3-WINDOWS-NEXT:     machine-combiner
 ; O3-WINDOWS-NEXT:     x86-cmov-conversion
 ; O3-WINDOWS-NEXT:     early-machinelicm
 ; O3-WINDOWS-NEXT:     machine-cse
@@ -353,6 +359,7 @@
 ; O3-WINDOWS-NEXT:     require<live-vars>
 ; O3-WINDOWS-NEXT:     require<machine-loops>
 ; O3-WINDOWS-NEXT:     phi-node-elimination
+; O3-WINDOWS-NEXT:     require<live-intervals>
 ; O3-WINDOWS-NEXT:     two-address-instruction
 ; O3-WINDOWS-NEXT:     register-coalescer
 ; O3-WINDOWS-NEXT:     rename-independent-subregs
@@ -391,7 +398,7 @@
 ; O3-WINDOWS-NEXT:     x86-fixup-inst-tuning
 ; O3-WINDOWS-NEXT:     x86-compress-evex
 ; O3-WINDOWS-NEXT:     x86-insert-x87-wait
-; O3-WINDOWS-NEXT:     FuncletLayoutPass
+; O3-WINDOWS-NEXT:     funclet-layout
 ; O3-WINDOWS-NEXT:     remove-loads-into-fake-uses
 ; O3-WINDOWS-NEXT:     StackMapLivenessPass
 ; O3-WINDOWS-NEXT:     live-debug-values<emit-debug-entry-values>
@@ -400,6 +407,7 @@
 ; O3-WINDOWS-NEXT:     x86-seses
 ; O3-WINDOWS-NEXT:     x86-return-thunks
 ; O3-WINDOWS-NEXT:     x86-avoid-trailing-call
+; O3-WINDOWS-NEXT:     eh-cont-guard-targets
 ; O3-WINDOWS-NEXT:     x86-lvi-ret
 ; O3-WINDOWS-NEXT:     x86-wineh-unwindv2
 ; O3-WINDOWS-NEXT:     verify

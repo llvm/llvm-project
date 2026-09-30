@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // REQUIRES: any-device
 // RUN: %clangxx -fsycl %s -o %t.out
 // RUN: %t.out
@@ -74,13 +82,7 @@ void runTestsForMemCpyFunc(MemCpyFuncT MemCpyFunc) {
   // TODO: Pass a default-constructed event as a dependency in these cases
   // instead when those are implemented.
   if constexpr (!ExplicitDeps) {
-    // TODO: Remove try-catch once host-to-host copies are supported.
-    try {
-      RunTest(HostAllocF, HostAllocF);
-      assert(false);
-    } catch (const sycl::exception &e) {
-      assert(e.code() == make_error_code(errc::feature_not_supported));
-    }
+    RunTest(HostAllocF, HostAllocF);
     RunTest(HostAllocF, HostUSMAllocF);
     RunTest(HostAllocF, SharedUSMAllocF);
 

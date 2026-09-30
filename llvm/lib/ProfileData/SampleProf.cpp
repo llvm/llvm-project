@@ -143,6 +143,7 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
                                      uint64_t Weight) {
   sampleprof_error Result;
   Result = addSamples(Other.getSamples(), Weight);
+  CallTargets.reserve(CallTargets.size() + Other.getCallTargets().size());
   for (const auto &I : Other.getCallTargets()) {
     mergeSampleProfErrors(Result, addCalledTarget(I.first, I.second, Weight));
   }
