@@ -155,6 +155,7 @@ struct MIToken {
     kw_noconvergent,
     kw_mmra,
     kw_lr_split,
+    kw_bb_prolog,
 
     // Metadata types.
     kw_distinct,

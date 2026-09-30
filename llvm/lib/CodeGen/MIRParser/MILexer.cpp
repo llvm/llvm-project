@@ -303,6 +303,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("noconvergent", MIToken::kw_noconvergent)
       .Case("mmra", MIToken::kw_mmra)
       .Case("lr-split", MIToken::kw_lr_split)
+      .Case("bb-prolog", MIToken::kw_bb_prolog)
       .Default(MIToken::Identifier);
 }
 
