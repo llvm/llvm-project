@@ -1168,6 +1168,99 @@ TEST_P(UncheckedOptionalAccessTest, SwapUnmodeledValueRightUnset) {
   )");
 }
 
+TEST_P(UncheckedOptionalAccessTest, StdExchange) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = 3;
+
+      $ns::$optional<int> opt2 = std::exchange(opt1, $ns::nullopt);
+
+      opt1.value(); // [[unsafe]]
+
+      opt2.value();
+    }
+  )");
+
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = $ns::nullopt;
+
+      $ns::$optional<int> opt2 = std::exchange(opt1, 3);
+
+      opt1.value();
+
+      opt2.value(); // [[unsafe]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {};
+
+    struct Bar {
+      Bar(const Foo&);
+    };
+
+    void target() {
+      $ns::$optional<Foo> opt1 = Foo();
+      $ns::$optional<Bar> opt2 = $ns::nullopt;
+
+      std::exchange(opt2, opt1);
+
+      opt2.value();
+    }
+  )");
+
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {};
+
+    struct Bar {
+      Bar(const Foo&);
+    };
+
+    void target() {
+      $ns::$optional<Foo> opt1 = $ns::nullopt;
+      $ns::$optional<Bar> opt2 = Foo();
+
+      std::exchange(opt2, opt1);
+
+      opt2.value(); // [[unsafe]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct L { $ns::$optional<int> hd; L* tl; };
+
+    void target() {
+      $ns::$optional<int> opt1 = 3;
+      L bar;
+
+      // Any `tl` beyond the first is not modeled.
+      std::exchange(opt1, bar.tl->tl->hd);
+
+      opt1.value(); // [[unsafe]]
+
+      $ns::$optional<int> opt2 = std::exchange(bar.tl->tl->hd, $ns::nullopt);
+
+      opt2.value(); // [[unsafe]]
+    }
+  )");
+}
+
 TEST_P(UncheckedOptionalAccessTest, UniquePtrToOptional) {
   // We suppress diagnostics for optionals in smart pointers (other than
   // `optional` itself).
@@ -1268,7 +1361,6 @@ TEST_P(UncheckedOptionalAccessTest, CallReturningOptional) {
     }
   )");
 }
-
 
 TEST_P(UncheckedOptionalAccessTest, EqualityCheckLeftSet) {
   ExpectDiagnosticsFor(

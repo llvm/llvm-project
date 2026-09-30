@@ -307,6 +307,12 @@ auto isStdSwapCall() {
                   hasArgument(1, hasOptionalOrDerivedType()));
 }
 
+auto isStdExchangeCall(ast_matchers::internal::Matcher<Expr> NewValue) {
+  return callExpr(
+      callee(functionDecl(hasName("std::exchange"))), argumentCountIs(2),
+      hasArgument(0, hasOptionalOrDerivedType()), hasArgument(1, NewValue));
+}
+
 auto isStdForwardCall() {
   return callExpr(callee(functionDecl(hasName("std::forward"))),
                   argumentCountIs(1),
@@ -848,6 +854,42 @@ void transferStdSwapCall(const CallExpr *E, const MatchFinder::MatchResult &,
   transferSwap(Arg0Loc, Arg1Loc, State.Env);
 }
 
+/// Models `std::exchange(Obj, NewValue)`, which initializes its result from the
+/// old value of `Obj` and then assigns `NewValue` to `Obj`. `NewHasValueVal` is
+/// the "has_value" property of `Obj` after the assignment.
+void transferStdExchange(const CallExpr *E, BoolValue &NewHasValueVal,
+                         LatticeTransferState &State) {
+  assert(E->getNumArgs() == 2);
+  // `ObjLoc` is null if the first argument is not modeled.
+  auto *ObjLoc = State.Env.get<RecordStorageLocation>(*E->getArg(0));
+
+  BoolValue *OldHasValueVal = getHasValue(State.Env, ObjLoc);
+  if (OldHasValueVal == nullptr)
+    OldHasValueVal = &State.Env.makeAtomicBoolValue();
+  setHasValue(State.Env.getResultObjectLocation(*E), *OldHasValueVal,
+              State.Env);
+
+  if (ObjLoc != nullptr)
+    setHasValue(*ObjLoc, NewHasValueVal, State.Env);
+}
+
+void transferStdExchangeNulloptCall(const CallExpr *E,
+                                    const MatchFinder::MatchResult &,
+                                    LatticeTransferState &State) {
+  transferStdExchange(E, State.Env.getBoolLiteralValue(false), State);
+}
+
+void transferStdExchangeValueOrConversionCall(
+    const CallExpr *E, const MatchFinder::MatchResult &MatchRes,
+    LatticeTransferState &State) {
+  assert(E->getNumArgs() == 2);
+  transferStdExchange(
+      E,
+      valueOrConversionHasValue(E->getArg(0)->getType().getNonReferenceType(),
+                                *E->getArg(1), MatchRes, State),
+      State);
+}
+
 void transferStdForwardCall(const CallExpr *E, const MatchFinder::MatchResult &,
                             LatticeTransferState &State) {
   assert(E->getNumArgs() == 1);
@@ -1110,6 +1152,12 @@ auto buildTransferMatchSwitch() {
 
       // std::swap
       .CaseOfCFGStmt<CallExpr>(isStdSwapCall(), transferStdSwapCall)
+
+      // std::exchange
+      .CaseOfCFGStmt<CallExpr>(isStdExchangeCall(hasNulloptType()),
+                               transferStdExchangeNulloptCall)
+      .CaseOfCFGStmt<CallExpr>(isStdExchangeCall(unless(hasNulloptType())),
+                               transferStdExchangeValueOrConversionCall)
 
       // std::forward
       .CaseOfCFGStmt<CallExpr>(isStdForwardCall(), transferStdForwardCall)
