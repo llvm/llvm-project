@@ -39,9 +39,14 @@ static cl::opt<bool>
                          cl::desc("Insert ICache prefetch instructions"),
                          cl::init(true), cl::Hidden);
 
-static cl::opt<unsigned> ICachePrefetchSize(
-    "amdgpu-icache-prefetch-size",
-    cl::desc("Override the preferred instruction prefetch size in bytes"),
+static cl::opt<unsigned> ICachePrefetchInitialSize(
+    "amdgpu-icache-prefetch-initial-size",
+    cl::desc("Override the initial instruction prefetch size in bytes"),
+    cl::init(0), cl::Hidden);
+
+static cl::opt<unsigned> ICachePrefetchThreshold(
+    "amdgpu-icache-prefetch-threshold",
+    cl::desc("Override the explicit instruction prefetch threshold in bytes"),
     cl::init(0), cl::Hidden);
 
 namespace {
@@ -89,24 +94,48 @@ public:
 
 } // end anonymous namespace
 
-static uint64_t getPreferredICachePrefetchSize(const GCNSubtarget &ST) {
-  assert(ST.hasInstPrefSize());
+struct ICachePrefetchConfig {
+  uint64_t InitialSize;
+  uint64_t Threshold;
+};
 
-  uint64_t PreferredSize = ST.getPreferredInstPrefSize();
-  if (!ICachePrefetchSize.getNumOccurrences())
-    return PreferredSize;
+static ICachePrefetchConfig getICachePrefetchConfig(const GCNSubtarget &ST) {
+  assert(ST.hasInstPrefSize());
 
   uint32_t Mask, Shift, Width, CacheLineSize;
   ST.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
-  uint64_t MaxPrefetchSize = (uint64_t{1} << Width) * CacheLineSize;
-  if (ICachePrefetchSize == 0 || ICachePrefetchSize % CacheLineSize != 0 ||
-      ICachePrefetchSize > MaxPrefetchSize)
-    report_fatal_error(
-        Twine("-amdgpu-icache-prefetch-size must be a non-zero multiple of ") +
-        Twine(CacheLineSize) + " bytes not exceeding " +
-        Twine(MaxPrefetchSize) + " bytes for " + ST.getCPU());
+  uint64_t DescriptorPrefetchCapacity = (uint64_t{1} << Width) * CacheLineSize;
+  uint64_t InitialSize = ICachePrefetchInitialSize.getNumOccurrences()
+                             ? ICachePrefetchInitialSize
+                             : ST.getInitialInstPrefSize();
+  uint64_t Threshold = ICachePrefetchThreshold.getNumOccurrences()
+                           ? ICachePrefetchThreshold
+                           : DescriptorPrefetchCapacity;
 
-  return ICachePrefetchSize;
+  if (InitialSize == 0 || InitialSize % CacheLineSize != 0 ||
+      InitialSize > DescriptorPrefetchCapacity)
+    report_fatal_error(
+        Twine("-amdgpu-icache-prefetch-initial-size must be a non-zero "
+              "multiple of ") +
+        Twine(CacheLineSize) + " bytes not exceeding " +
+        Twine(DescriptorPrefetchCapacity) + " bytes for " + ST.getCPU());
+
+  uint64_t ICacheSize = ST.getInstCacheSize();
+  if (Threshold == 0 || Threshold % CacheLineSize != 0 ||
+      Threshold > ICacheSize)
+    report_fatal_error(
+        Twine("-amdgpu-icache-prefetch-threshold must be a non-zero multiple "
+              "of ") +
+        Twine(CacheLineSize) + " bytes not exceeding " + Twine(ICacheSize) +
+        " bytes for " + ST.getCPU());
+
+  if (InitialSize > Threshold)
+    report_fatal_error(
+        Twine("-amdgpu-icache-prefetch-initial-size must not exceed "
+              "-amdgpu-icache-prefetch-threshold for ") +
+        ST.getCPU());
+
+  return {InitialSize, Threshold};
 }
 
 static MachineBasicBlock::iterator findMBBInsertionPoint(MachineBasicBlock &MBB,
@@ -169,17 +198,17 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
     return false;
 
   uint64_t ICacheSize = ST.getInstCacheSize();
-  uint64_t PreferredPrefetchSize = getPreferredICachePrefetchSize(ST);
-  if (ICacheSize == 0 || PreferredPrefetchSize == 0)
+  if (ICacheSize == 0)
     return false;
+  const ICachePrefetchConfig Config = getICachePrefetchConfig(ST);
 
   unsigned CacheLineSize = ST.getInstCacheLineSize();
   unsigned ICacheLines = ICacheSize / CacheLineSize;
-  unsigned DescriptorPrefetchLines = PreferredPrefetchSize / CacheLineSize;
+  unsigned DescriptorPrefetchLines = Config.InitialSize / CacheLineSize;
 
   SIProgramInfo PI;
   uint64_t ProgramSize = PI.getFunctionCodeSize(MF);
-  if (ProgramSize <= PreferredPrefetchSize)
+  if (ProgramSize <= Config.Threshold)
     return false;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -227,7 +256,7 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
   MFI->setICachePrefetchLines(DescriptorPrefetchLines);
   uint64_t ProgramPrefetchSize = ProgramSize + PrefetchSlack;
   unsigned NumPrefetches = llvm::divideCeil(
-      ProgramPrefetchSize - PreferredPrefetchSize, BytesPerPrefetch);
+      ProgramPrefetchSize - Config.InitialSize, BytesPerPrefetch);
   NumPrefetches = std::min(MaxNumPrefetchInsts, NumPrefetches);
 
   size_t NumCandidates = Candidates.size();
@@ -247,11 +276,11 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
           CandidateOffsets.lookup(Candidates[NextCand]) + PrefetchSlack +
           BytesPerPrefetch;
 
-      if (CandidatePrefetchSize <= PreferredPrefetchSize)
+      if (CandidatePrefetchSize <= Config.InitialSize)
         continue;
 
       unsigned PrefetchesBeforeNext = llvm::divideCeil(
-          CandidatePrefetchSize - PreferredPrefetchSize, BytesPerPrefetch);
+          CandidatePrefetchSize - Config.InitialSize, BytesPerPrefetch);
       TargetPrefetchCount = std::min(PrefetchesBeforeNext, TargetPrefetchCount);
     }
     MachineBasicBlock *CandBB = Candidates[Cand];

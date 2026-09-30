@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -amdgpu-icache-prefetch=false -o - %s | \
 ; RUN:   FileCheck -check-prefix=NO-PREFETCH %s
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -amdgpu-icache-prefetch=true -amdgpu-icache-prefetch-size=16384 -o - %s | \
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -amdgpu-icache-prefetch=true -amdgpu-icache-prefetch-initial-size=16384 -o - %s | \
 ; RUN:   FileCheck -check-prefix=GFX1250-DIST %s
 
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -amdgpu-icache-prefetch=true -filetype=obj -o %t.o %s
@@ -14,7 +14,7 @@
 ; Use .space to make the estimated MachineFunction size and final assembled
 ; size large without spelling out thousands of instructions.
 
-; A function below the 32 KiB kernel-descriptor prefetch limit must not use
+; A function below the 32 KiB explicit-prefetch threshold must not use
 ; explicit prefetch instructions.
 ; GFX1250-OBJ-LABEL: <below_threshold>:
 ; GFX1250-OBJ-NOT:   s_prefetch_inst_pc_rel
@@ -40,26 +40,55 @@ define amdgpu_kernel void @below_threshold() {
 ; NO-PREFETCH-NEXT:    .space 30000
 ; NO-PREFETCH-NEXT:    ;;#ASMEND
 ; NO-PREFETCH-NEXT:    s_endpgm
+;
+; GFX1250-DIST-LABEL: below_threshold:
+; GFX1250-DIST:       ; %bb.0:
+; GFX1250-DIST-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-DIST-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-DIST-NEXT:    v_nop
+; GFX1250-DIST-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-DIST-NEXT:    ;;#ASMSTART
+; GFX1250-DIST-NEXT:    .space 30000
+; GFX1250-DIST-NEXT:    ;;#ASMEND
+; GFX1250-DIST-NEXT:    s_endpgm
   call void asm sideeffect ".space 30000", ""()
   ret void
 }
 
-; The descriptor prefetches the first 32KiB; explicit requests cover the
+; The descriptor prefetches the first 8KiB; explicit requests cover the
 ; remaining code in the 64KiB I-cache window.
 ; GFX1250-OBJ-LABEL:      <partial_final_slot>:
-; GFX1250-OBJ:            s_prefetch_inst_pc_rel 0x7ff8, null, 31
-; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x8ff0, null, 25
+; GFX1250-OBJ:            s_prefetch_inst_pc_rel 0x1ff8, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x2ff0, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x3fe8, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x4fe0, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x5fd8, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x6fd0, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x7fc8, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x8fc0, null, 25
 ; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x0, null, 0
 define amdgpu_kernel void @partial_final_slot(ptr addrspace(1) %out) {
 ; GFX1250-LABEL: partial_final_slot:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:  .Lpref_inst_offset0:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(256, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset0-partial_final_slot), null, prefetchcachelines(256, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset0-partial_final_slot)
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(64, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset0-partial_final_slot), null, prefetchcachelines(64, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset0-partial_final_slot)
 ; GFX1250-NEXT:  .Lpref_inst_offset1:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(288, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset1-partial_final_slot), null, prefetchcachelines(288, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset1-partial_final_slot)
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(96, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset1-partial_final_slot), null, prefetchcachelines(96, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset1-partial_final_slot)
 ; GFX1250-NEXT:  .Lpref_inst_offset2:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(320, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset2-partial_final_slot), null, prefetchcachelines(320, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset2-partial_final_slot)
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(128, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset2-partial_final_slot), null, prefetchcachelines(128, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset2-partial_final_slot)
+; GFX1250-NEXT:  .Lpref_inst_offset3:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(160, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset3-partial_final_slot), null, prefetchcachelines(160, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset3-partial_final_slot)
+; GFX1250-NEXT:  .Lpref_inst_offset4:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(192, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset4-partial_final_slot), null, prefetchcachelines(192, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset4-partial_final_slot)
+; GFX1250-NEXT:  .Lpref_inst_offset5:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(224, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset5-partial_final_slot), null, prefetchcachelines(224, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset5-partial_final_slot)
+; GFX1250-NEXT:  .Lpref_inst_offset6:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(256, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset6-partial_final_slot), null, prefetchcachelines(256, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset6-partial_final_slot)
+; GFX1250-NEXT:  .Lpref_inst_offset7:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(288, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset7-partial_final_slot), null, prefetchcachelines(288, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset7-partial_final_slot)
+; GFX1250-NEXT:  .Lpref_inst_offset8:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(320, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset8-partial_final_slot), null, prefetchcachelines(320, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset8-partial_final_slot)
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
@@ -87,42 +116,90 @@ define amdgpu_kernel void @partial_final_slot(ptr addrspace(1) %out) {
 ; NO-PREFETCH-NEXT:    s_wait_kmcnt 0x0
 ; NO-PREFETCH-NEXT:    global_store_b32 v0, v0, s[0:1]
 ; NO-PREFETCH-NEXT:    s_endpgm
+;
+; GFX1250-DIST-LABEL: partial_final_slot:
+; GFX1250-DIST:       ; %bb.0:
+; GFX1250-DIST-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset0:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(128, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset0-partial_final_slot), null, prefetchcachelines(128, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset0-partial_final_slot)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset1:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(160, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset1-partial_final_slot), null, prefetchcachelines(160, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset1-partial_final_slot)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset2:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(192, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset2-partial_final_slot), null, prefetchcachelines(192, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset2-partial_final_slot)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset3:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(224, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset3-partial_final_slot), null, prefetchcachelines(224, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset3-partial_final_slot)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset4:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(256, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset4-partial_final_slot), null, prefetchcachelines(256, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset4-partial_final_slot)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset5:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(288, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset5-partial_final_slot), null, prefetchcachelines(288, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset5-partial_final_slot)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset6:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(320, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset6-partial_final_slot), null, prefetchcachelines(320, .Lpref_func_end0-partial_final_slot, .Lpref_inst_offset6-partial_final_slot)
+; GFX1250-DIST-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-DIST-NEXT:    v_nop
+; GFX1250-DIST-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-DIST-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-DIST-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-DIST-NEXT:    ;;#ASMSTART
+; GFX1250-DIST-NEXT:    .space 40000
+; GFX1250-DIST-NEXT:    ;;#ASMEND
+; GFX1250-DIST-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-DIST-NEXT:    global_store_b32 v0, v0, s[0:1]
+; GFX1250-DIST-NEXT:    s_endpgm
+; GFX1250-DIST-NEXT:  .Lpref_func_end0:
   call void asm sideeffect ".space 40000", ""()
   store i32 0, ptr addrspace(1) %out
   ret void
 }
 
-; The 32KiB descriptor prefix leaves eight explicit requests for the complete
+; The 8KiB descriptor prefix leaves fourteen explicit requests for the complete
 ; 64KiB I-cache range.
 ; GFX1250-OBJ-LABEL:      <cache_size_limit>:
-; GFX1250-OBJ:            s_prefetch_inst_pc_rel 0x7ff8, null, 31
-; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x8ff0, null, 31
-; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x9fe8, null, 31
-; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0xafe0, null, 31
-; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0xbfd8, null, 31
-; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0xcfd0, null, 31
-; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0xdfc8, null, 31
-; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0xefc0, null, 31
+; GFX1250-OBJ:            s_prefetch_inst_pc_rel 0x1ff8, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x2ff0, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x3fe8, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x4fe0, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x5fd8, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x6fd0, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x7fc8, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x8fc0, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0x9fb8, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0xafb0, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0xbfa8, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0xcfa0, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0xdf98, null, 31
+; GFX1250-OBJ-NEXT:       s_prefetch_inst_pc_rel 0xef90, null, 31
 define amdgpu_kernel void @cache_size_limit() {
 ; GFX1250-LABEL: cache_size_limit:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:  .Lpref_inst_offset3:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(256, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset3-cache_size_limit), null, prefetchcachelines(256, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset3-cache_size_limit)
-; GFX1250-NEXT:  .Lpref_inst_offset4:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(288, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset4-cache_size_limit), null, prefetchcachelines(288, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset4-cache_size_limit)
-; GFX1250-NEXT:  .Lpref_inst_offset5:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(320, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset5-cache_size_limit), null, prefetchcachelines(320, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset5-cache_size_limit)
-; GFX1250-NEXT:  .Lpref_inst_offset6:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(352, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset6-cache_size_limit), null, prefetchcachelines(352, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset6-cache_size_limit)
-; GFX1250-NEXT:  .Lpref_inst_offset7:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(384, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset7-cache_size_limit), null, prefetchcachelines(384, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset7-cache_size_limit)
-; GFX1250-NEXT:  .Lpref_inst_offset8:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(416, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset8-cache_size_limit), null, prefetchcachelines(416, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset8-cache_size_limit)
 ; GFX1250-NEXT:  .Lpref_inst_offset9:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(448, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset9-cache_size_limit), null, prefetchcachelines(448, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset9-cache_size_limit)
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(64, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset9-cache_size_limit), null, prefetchcachelines(64, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset9-cache_size_limit)
 ; GFX1250-NEXT:  .Lpref_inst_offset10:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(480, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset10-cache_size_limit), null, prefetchcachelines(480, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset10-cache_size_limit)
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(96, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset10-cache_size_limit), null, prefetchcachelines(96, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset10-cache_size_limit)
+; GFX1250-NEXT:  .Lpref_inst_offset11:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(128, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset11-cache_size_limit), null, prefetchcachelines(128, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset11-cache_size_limit)
+; GFX1250-NEXT:  .Lpref_inst_offset12:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(160, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset12-cache_size_limit), null, prefetchcachelines(160, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset12-cache_size_limit)
+; GFX1250-NEXT:  .Lpref_inst_offset13:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(192, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset13-cache_size_limit), null, prefetchcachelines(192, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset13-cache_size_limit)
+; GFX1250-NEXT:  .Lpref_inst_offset14:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(224, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset14-cache_size_limit), null, prefetchcachelines(224, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset14-cache_size_limit)
+; GFX1250-NEXT:  .Lpref_inst_offset15:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(256, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset15-cache_size_limit), null, prefetchcachelines(256, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset15-cache_size_limit)
+; GFX1250-NEXT:  .Lpref_inst_offset16:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(288, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset16-cache_size_limit), null, prefetchcachelines(288, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset16-cache_size_limit)
+; GFX1250-NEXT:  .Lpref_inst_offset17:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(320, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset17-cache_size_limit), null, prefetchcachelines(320, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset17-cache_size_limit)
+; GFX1250-NEXT:  .Lpref_inst_offset18:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(352, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset18-cache_size_limit), null, prefetchcachelines(352, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset18-cache_size_limit)
+; GFX1250-NEXT:  .Lpref_inst_offset19:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(384, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset19-cache_size_limit), null, prefetchcachelines(384, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset19-cache_size_limit)
+; GFX1250-NEXT:  .Lpref_inst_offset20:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(416, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset20-cache_size_limit), null, prefetchcachelines(416, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset20-cache_size_limit)
+; GFX1250-NEXT:  .Lpref_inst_offset21:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(448, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset21-cache_size_limit), null, prefetchcachelines(448, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset21-cache_size_limit)
+; GFX1250-NEXT:  .Lpref_inst_offset22:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(480, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset22-cache_size_limit), null, prefetchcachelines(480, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset22-cache_size_limit)
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
@@ -142,26 +219,58 @@ define amdgpu_kernel void @cache_size_limit() {
 ; NO-PREFETCH-NEXT:    .space 65536
 ; NO-PREFETCH-NEXT:    ;;#ASMEND
 ; NO-PREFETCH-NEXT:    s_endpgm
+;
+; GFX1250-DIST-LABEL: cache_size_limit:
+; GFX1250-DIST:       ; %bb.0:
+; GFX1250-DIST-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset7:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(128, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset7-cache_size_limit), null, prefetchcachelines(128, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset7-cache_size_limit)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset8:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(160, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset8-cache_size_limit), null, prefetchcachelines(160, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset8-cache_size_limit)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset9:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(192, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset9-cache_size_limit), null, prefetchcachelines(192, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset9-cache_size_limit)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset10:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(224, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset10-cache_size_limit), null, prefetchcachelines(224, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset10-cache_size_limit)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset11:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(256, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset11-cache_size_limit), null, prefetchcachelines(256, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset11-cache_size_limit)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset12:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(288, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset12-cache_size_limit), null, prefetchcachelines(288, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset12-cache_size_limit)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset13:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(320, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset13-cache_size_limit), null, prefetchcachelines(320, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset13-cache_size_limit)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset14:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(352, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset14-cache_size_limit), null, prefetchcachelines(352, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset14-cache_size_limit)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset15:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(384, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset15-cache_size_limit), null, prefetchcachelines(384, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset15-cache_size_limit)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset16:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(416, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset16-cache_size_limit), null, prefetchcachelines(416, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset16-cache_size_limit)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset17:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(448, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset17-cache_size_limit), null, prefetchcachelines(448, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset17-cache_size_limit)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset18:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(480, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset18-cache_size_limit), null, prefetchcachelines(480, .Lpref_func_end1-cache_size_limit, .Lpref_inst_offset18-cache_size_limit)
+; GFX1250-DIST-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-DIST-NEXT:    v_nop
+; GFX1250-DIST-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-DIST-NEXT:    ;;#ASMSTART
+; GFX1250-DIST-NEXT:    .space 65536
+; GFX1250-DIST-NEXT:    ;;#ASMEND
+; GFX1250-DIST-NEXT:    s_endpgm
+; GFX1250-DIST-NEXT:  .Lpref_func_end1:
   call void asm sideeffect ".space 65536", ""()
   ret void
 }
 
-; With the default 32KiB descriptor prefix, explicit prefetches are deferred
-; to the shared exit block.
+; With a 16KiB descriptor prefix override, explicit prefetches are deferred to
+; the shared exit block.
 declare i32 @llvm.amdgcn.workgroup.id.x()
 
 define amdgpu_kernel void @postdominated_prefetch() {
-; GFX1250-DIST-LABEL: postdominated_prefetch:
-; GFX1250-DIST-NOT:   s_prefetch_inst_pc_rel
-; GFX1250-DIST:       .LBB3_3: ; %Flow
-; GFX1250-DIST-NEXT:  .Lpref_inst_offset
-; GFX1250-DIST-NEXT:  s_prefetch_inst_pc_rel prefetchoffset(128,
-; GFX1250-DIST:       .LBB3_5: ; %join
-; GFX1250-DIST-NEXT:  .Lpref_inst_offset
-; GFX1250-DIST-NEXT:  s_prefetch_inst_pc_rel prefetchoffset(192,
 ; GFX1250-LABEL: postdominated_prefetch:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:  .Lpref_inst_offset23:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(64, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset23-postdominated_prefetch), null, prefetchcachelines(64, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset23-postdominated_prefetch)
+; GFX1250-NEXT:  .Lpref_inst_offset24:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(96, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset24-postdominated_prefetch), null, prefetchcachelines(96, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset24-postdominated_prefetch)
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
@@ -185,6 +294,10 @@ define amdgpu_kernel void @postdominated_prefetch() {
 ; GFX1250-NEXT:  .LBB3_2:
 ; GFX1250-NEXT:    s_mov_b32 s0, -1
 ; GFX1250-NEXT:  .LBB3_3: ; %Flow
+; GFX1250-NEXT:  .Lpref_inst_offset25:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(128, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset25-postdominated_prefetch), null, prefetchcachelines(128, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset25-postdominated_prefetch)
+; GFX1250-NEXT:  .Lpref_inst_offset26:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(160, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset26-postdominated_prefetch), null, prefetchcachelines(160, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset26-postdominated_prefetch)
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX1250-NEXT:    s_cselect_b32 s0, 1, 0
@@ -195,16 +308,20 @@ define amdgpu_kernel void @postdominated_prefetch() {
 ; GFX1250-NEXT:    .space 8000
 ; GFX1250-NEXT:    ;;#ASMEND
 ; GFX1250-NEXT:  .LBB3_5: ; %join
-; GFX1250-NEXT:  .Lpref_inst_offset11:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(256, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset11-postdominated_prefetch), null, prefetchcachelines(256, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset11-postdominated_prefetch)
-; GFX1250-NEXT:  .Lpref_inst_offset12:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(288, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset12-postdominated_prefetch), null, prefetchcachelines(288, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset12-postdominated_prefetch)
-; GFX1250-NEXT:  .Lpref_inst_offset13:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(320, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset13-postdominated_prefetch), null, prefetchcachelines(320, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset13-postdominated_prefetch)
-; GFX1250-NEXT:  .Lpref_inst_offset14:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(352, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset14-postdominated_prefetch), null, prefetchcachelines(352, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset14-postdominated_prefetch)
-; GFX1250-NEXT:  .Lpref_inst_offset15:
-; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(384, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset15-postdominated_prefetch), null, prefetchcachelines(384, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset15-postdominated_prefetch)
+; GFX1250-NEXT:  .Lpref_inst_offset27:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(192, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset27-postdominated_prefetch), null, prefetchcachelines(192, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset27-postdominated_prefetch)
+; GFX1250-NEXT:  .Lpref_inst_offset28:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(224, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset28-postdominated_prefetch), null, prefetchcachelines(224, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset28-postdominated_prefetch)
+; GFX1250-NEXT:  .Lpref_inst_offset29:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(256, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset29-postdominated_prefetch), null, prefetchcachelines(256, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset29-postdominated_prefetch)
+; GFX1250-NEXT:  .Lpref_inst_offset30:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(288, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset30-postdominated_prefetch), null, prefetchcachelines(288, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset30-postdominated_prefetch)
+; GFX1250-NEXT:  .Lpref_inst_offset31:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(320, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset31-postdominated_prefetch), null, prefetchcachelines(320, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset31-postdominated_prefetch)
+; GFX1250-NEXT:  .Lpref_inst_offset32:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(352, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset32-postdominated_prefetch), null, prefetchcachelines(352, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset32-postdominated_prefetch)
+; GFX1250-NEXT:  .Lpref_inst_offset33:
+; GFX1250-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(384, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset33-postdominated_prefetch), null, prefetchcachelines(384, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset33-postdominated_prefetch)
 ; GFX1250-NEXT:    ;;#ASMSTART
 ; GFX1250-NEXT:    .space 32000
 ; GFX1250-NEXT:    ;;#ASMEND
@@ -251,6 +368,66 @@ define amdgpu_kernel void @postdominated_prefetch() {
 ; NO-PREFETCH-NEXT:    .space 32000
 ; NO-PREFETCH-NEXT:    ;;#ASMEND
 ; NO-PREFETCH-NEXT:    s_endpgm
+;
+; GFX1250-DIST-LABEL: postdominated_prefetch:
+; GFX1250-DIST:       ; %bb.0: ; %entry
+; GFX1250-DIST-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-DIST-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-DIST-NEXT:    v_nop
+; GFX1250-DIST-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-DIST-NEXT:    s_bfe_u32 s0, ttmp6, 0x4000c
+; GFX1250-DIST-NEXT:    s_and_b32 s1, ttmp6, 15
+; GFX1250-DIST-NEXT:    s_add_co_i32 s0, s0, 1
+; GFX1250-DIST-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_IB_STS2, 6, 4)
+; GFX1250-DIST-NEXT:    s_mul_i32 s0, ttmp9, s0
+; GFX1250-DIST-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX1250-DIST-NEXT:    s_add_co_i32 s1, s1, s0
+; GFX1250-DIST-NEXT:    s_cmp_eq_u32 s2, 0
+; GFX1250-DIST-NEXT:    s_cselect_b32 s0, ttmp9, s1
+; GFX1250-DIST-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX1250-DIST-NEXT:    s_mov_b32 s0, 0
+; GFX1250-DIST-NEXT:    s_cbranch_scc0 .LBB3_2
+; GFX1250-DIST-NEXT:  ; %bb.1: ; %else
+; GFX1250-DIST-NEXT:    ;;#ASMSTART
+; GFX1250-DIST-NEXT:    .space 8000
+; GFX1250-DIST-NEXT:    ;;#ASMEND
+; GFX1250-DIST-NEXT:    s_branch .LBB3_3
+; GFX1250-DIST-NEXT:  .LBB3_2:
+; GFX1250-DIST-NEXT:    s_mov_b32 s0, -1
+; GFX1250-DIST-NEXT:  .LBB3_3: ; %Flow
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset19:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(128, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset19-postdominated_prefetch), null, prefetchcachelines(128, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset19-postdominated_prefetch)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset20:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(160, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset20-postdominated_prefetch), null, prefetchcachelines(160, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset20-postdominated_prefetch)
+; GFX1250-DIST-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-DIST-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX1250-DIST-NEXT:    s_cselect_b32 s0, 1, 0
+; GFX1250-DIST-NEXT:    s_cmp_lg_u32 s0, 1
+; GFX1250-DIST-NEXT:    s_cbranch_scc1 .LBB3_5
+; GFX1250-DIST-NEXT:  ; %bb.4: ; %then
+; GFX1250-DIST-NEXT:    ;;#ASMSTART
+; GFX1250-DIST-NEXT:    .space 8000
+; GFX1250-DIST-NEXT:    ;;#ASMEND
+; GFX1250-DIST-NEXT:  .LBB3_5: ; %join
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset21:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(192, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset21-postdominated_prefetch), null, prefetchcachelines(192, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset21-postdominated_prefetch)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset22:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(224, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset22-postdominated_prefetch), null, prefetchcachelines(224, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset22-postdominated_prefetch)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset23:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(256, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset23-postdominated_prefetch), null, prefetchcachelines(256, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset23-postdominated_prefetch)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset24:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(288, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset24-postdominated_prefetch), null, prefetchcachelines(288, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset24-postdominated_prefetch)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset25:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(320, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset25-postdominated_prefetch), null, prefetchcachelines(320, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset25-postdominated_prefetch)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset26:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(352, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset26-postdominated_prefetch), null, prefetchcachelines(352, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset26-postdominated_prefetch)
+; GFX1250-DIST-NEXT:  .Lpref_inst_offset27:
+; GFX1250-DIST-NEXT:    s_prefetch_inst_pc_rel prefetchoffset(384, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset27-postdominated_prefetch), null, prefetchcachelines(384, .Lpref_func_end2-postdominated_prefetch, .Lpref_inst_offset27-postdominated_prefetch)
+; GFX1250-DIST-NEXT:    ;;#ASMSTART
+; GFX1250-DIST-NEXT:    .space 32000
+; GFX1250-DIST-NEXT:    ;;#ASMEND
+; GFX1250-DIST-NEXT:    s_endpgm
+; GFX1250-DIST-NEXT:  .Lpref_func_end2:
 entry:
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
   %cond = icmp eq i32 %id, 0
@@ -289,6 +466,15 @@ define void @called_function() {
 ; NO-PREFETCH-NEXT:    .space 40000
 ; NO-PREFETCH-NEXT:    ;;#ASMEND
 ; NO-PREFETCH-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-DIST-LABEL: called_function:
+; GFX1250-DIST:       ; %bb.0:
+; GFX1250-DIST-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-DIST-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-DIST-NEXT:    ;;#ASMSTART
+; GFX1250-DIST-NEXT:    .space 40000
+; GFX1250-DIST-NEXT:    ;;#ASMEND
+; GFX1250-DIST-NEXT:    s_set_pc_i64 s[30:31]
   call void asm sideeffect ".space 40000", ""()
   ret void
 }
