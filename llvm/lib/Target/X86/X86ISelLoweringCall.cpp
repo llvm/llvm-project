@@ -2178,6 +2178,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
 
+  // Unwinding through a callee that tail-calls with a different stack-arg size
+  // only works on Win64 if this frame is found via a frame pointer.
+  if (!isTailCall && Subtarget.isTargetWin64() && ShouldGuaranteeTCO &&
+      canGuaranteeTCO(CallConv))
+    X86Info->setForceFramePointer(true);
+
   assert(!(isVarArg && canGuaranteeTCO(CallConv)) &&
          "Var args not supported with calling convention fastcc, ghc or hipe");
 
