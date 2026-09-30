@@ -1615,7 +1615,8 @@ StringRef sys::getHostCPUName() {
               (PrimaryPartKeyNameSize == SubKeySize &&
                ::memcmp(SubKeyName, PrimaryPartKeyName, SubKeySize) > 0)) {
             PrimaryCpuInfo = RegValue;
-            ::memcpy(PrimaryPartKeyName, SubKeyName, SubKeySize + 1);
+            llvm::copy(ArrayRef<char>(SubKeyName, SubKeySize + 1),
+                       PrimaryPartKeyName);
             PrimaryPartKeyNameSize = SubKeySize;
           }
           if (!llvm::is_contained(Values, RegValue)) {

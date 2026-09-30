@@ -210,7 +210,7 @@ unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
     if (F->getChecksum()) {
       std::string Checksum = fromHex(F->getChecksum()->Value);
       void *CKMem = OS.getContext().allocate(Checksum.size(), 1);
-      memcpy(CKMem, Checksum.data(), Checksum.size());
+      llvm::copy(Checksum, static_cast<char *>(CKMem));
       ChecksumAsBytes = ArrayRef<uint8_t>(
           reinterpret_cast<const uint8_t *>(CKMem), Checksum.size());
       switch (F->getChecksum()->Kind) {
