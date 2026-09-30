@@ -5894,9 +5894,16 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Call->removeRetAttr(Attribute::NoAlias);
       Call->removeRetAttr(Attribute::NonNull);
     }
-    IRBuilder<> EntryBuilder(&*Coro->getEntryBlock().getFirstInsertionPt());
-    AllocaInst *ReturnSlot =
-        EntryBuilder.CreateAlloca(Coro->getReturnType(), nullptr, "coro.ret");
+    Value *ReturnSlot;
+    if (Coro->getReturnType()->isVoidTy()) {
+      // Legacy IR can use retcon in a void function. There is no result to
+      // store in that case, but it still needs the new operand.
+      ReturnSlot = ConstantPointerNull::get(Builder.getPtrTy());
+    } else {
+      IRBuilder<> EntryBuilder(&*Coro->getEntryBlock().getFirstInsertionPt());
+      ReturnSlot =
+          EntryBuilder.CreateAlloca(Coro->getReturnType(), nullptr, "coro.ret");
+    }
 
     SmallVector<Value *, 7> Args(CI->args());
     Args.push_back(ReturnSlot);
@@ -5917,9 +5924,11 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         continue;
 
       IRBuilder<> ReturnBuilder(Unreachable);
-      Value *Result =
-          ReturnBuilder.CreateLoad(Coro->getReturnType(), ReturnSlot);
-      ReturnBuilder.CreateRet(Result);
+      if (Coro->getReturnType()->isVoidTy())
+        ReturnBuilder.CreateRetVoid();
+      else
+        ReturnBuilder.CreateRet(
+            ReturnBuilder.CreateLoad(Coro->getReturnType(), ReturnSlot));
       Unreachable->eraseFromParent();
     }
     break;

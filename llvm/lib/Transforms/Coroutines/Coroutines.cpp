@@ -635,6 +635,12 @@ void AnyCoroIdRetconInst::checkWellFormed() const {
   checkWFRetconPrototype(this, getArgOperand(PrototypeArg));
   checkWFAlloc(this, getArgOperand(AllocArg));
   checkWFDealloc(this, getArgOperand(DeallocArg));
+  if (getFunction()->getReturnType()->isVoidTy()) {
+    if (!isa<ConstantPointerNull>(getReturnSlot()))
+      fail(this, "return slot of a void retcon coroutine must be null",
+           getReturnSlot());
+    return;
+  }
   auto *ReturnSlot = dyn_cast<AllocaInst>(getReturnSlot());
   if (!ReturnSlot || ReturnSlot->getFunction() != getFunction() ||
       ReturnSlot->getAllocatedType() != getFunction()->getReturnType())

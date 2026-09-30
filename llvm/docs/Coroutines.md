@@ -1379,6 +1379,8 @@ from this alloca and an explicit return.  This makes the return visible to
 interprocedural optimizations before the coroutine is split.  The alloca
 is not stored in the coroutine frame; `coro-split` replaces the load with
 the ABI-specific return value.
+For a void-returning function, the seventh argument is null and a non-unwind
+`coro.end` is followed by `ret void` instead.
 
 Bitcode and assembly using the older six-argument form, with an implicit
 return and `unreachable` after a non-unwind `coro.end`, are upgraded when
