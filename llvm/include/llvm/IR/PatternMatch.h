@@ -230,7 +230,7 @@ template <typename SubPattern_t> struct Splat_match {
 
     Value *SplatElt = Insert->getOperand(1);
     ConstantInt *Idx = dyn_cast<ConstantInt>(Insert->getOperand(2));
-    if (!Idx || Idx->getZExtValue() != 0)
+    if (!Idx || !Idx->isZero())
       return false;
 
     return SubPattern.match(SplatElt);
