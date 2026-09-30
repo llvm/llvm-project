@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFEXPRESSION_H
 #define LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFEXPRESSION_H
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -119,16 +120,16 @@ public:
     uint64_t getEndOffset() const { return EndOffset; }
     bool isError() const { return Errors != ErrorKind::None; }
     bool hasError(ErrorKind Kind) const {
-      return (static_cast<uint8_t>(Errors) & static_cast<uint8_t>(Kind)) != 0;
+      return (llvm::to_underlying(Errors) & llvm::to_underlying(Kind)) != 0;
     }
 
   private:
     void addError(ErrorKind Kind) {
-      Errors = static_cast<ErrorKind>(static_cast<uint8_t>(Errors) |
-                                      static_cast<uint8_t>(Kind));
+      Errors = static_cast<ErrorKind>(llvm::to_underlying(Errors) |
+                                      llvm::to_underlying(Kind));
     }
 
-    LLVM_ABI bool extract(DataExtractor Data, uint8_t AddressSize,
+    LLVM_ABI void extract(DataExtractor Data, uint8_t AddressSize,
                           uint64_t Offset,
                           std::optional<dwarf::DwarfFormat> Format);
   };
@@ -143,8 +144,7 @@ public:
     Operation Op;
     iterator(const DWARFExpression *Expr, uint64_t Offset)
         : Expr(Expr), Offset(Offset) {
-      if (Offset < Expr->Data.getData().size())
-        Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
+      Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
     }
 
   public:
@@ -153,9 +153,7 @@ public:
 
     iterator &operator++() {
       Offset = Op.isError() ? Expr->Data.getData().size() : Op.EndOffset;
-      Op.Errors = Operation::ErrorKind::None;
-      if (Offset < Expr->Data.getData().size())
-        Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
+      Op.extract(Expr->Data, Expr->AddressSize, Offset, Expr->Format);
       return *this;
     }
 

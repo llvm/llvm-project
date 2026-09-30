@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstdint>
@@ -160,10 +161,11 @@ static Desc getSubOpDesc(unsigned Opcode, unsigned SubOpcode) {
   return getDescImpl(Descriptions, SubOpcode);
 }
 
-static std::optional<uint64_t> extractULEB128(const DataExtractor &Data,
-                                              uint64_t &Offset) {
+static std::optional<uint64_t>
+extractLEB128(uint64_t &Offset,
+              function_ref<uint64_t(DataExtractor::Cursor &)> Getter) {
   DataExtractor::Cursor Cursor(Offset);
-  uint64_t Value = Data.getULEB128(Cursor);
+  uint64_t Value = Getter(Cursor);
   if (!Cursor) {
     consumeError(Cursor.takeError());
     return std::nullopt;
@@ -172,16 +174,17 @@ static std::optional<uint64_t> extractULEB128(const DataExtractor &Data,
   return Value;
 }
 
+static std::optional<uint64_t> extractULEB128(const DataExtractor &Data,
+                                              uint64_t &Offset) {
+  return extractLEB128(
+      Offset, [&Data](auto &Cursor) { return Data.getULEB128(Cursor); });
+}
+
 static std::optional<uint64_t> extractSLEB128(const DataExtractor &Data,
                                               uint64_t &Offset) {
-  DataExtractor::Cursor Cursor(Offset);
-  uint64_t Value = static_cast<uint64_t>(Data.getSLEB128(Cursor));
-  if (!Cursor) {
-    consumeError(Cursor.takeError());
-    return std::nullopt;
-  }
-  Offset = Cursor.tell();
-  return Value;
+  return extractLEB128(Offset, [&Data](auto &Cursor) {
+    return static_cast<uint64_t>(Data.getSLEB128(Cursor));
+  });
 }
 
 static std::optional<uint64_t>
@@ -211,17 +214,19 @@ extractTruncatedGenericConstant(const DataExtractor &Data, uint64_t &Offset,
   return std::nullopt;
 }
 
-bool DWARFExpression::Operation::extract(DataExtractor Data,
+void DWARFExpression::Operation::extract(DataExtractor Data,
                                          uint8_t AddressSize, uint64_t Offset,
                                          std::optional<DwarfFormat> Format) {
   Errors = ErrorKind::None;
+  if (Offset >= Data.getData().size())
+    return;
   EndOffset = Offset;
   Opcode = Data.getU8(&Offset);
 
   Desc = getOpDesc(Opcode);
   if (Desc.Version == Operation::DwarfNA) {
     addError(ErrorKind::UnknownOperation);
-    return false;
+    return;
   }
 
   Operands.resize(Desc.Op.size());
@@ -242,11 +247,11 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
     case Operation::SizeSubOpLEB:
       assert(Operand == 0 && "SubOp operand must be the first operand");
       if (!extractLEBOperand(extractULEB128(Data, Offset)))
-        return false;
+        return;
       Desc = getSubOpDesc(Opcode, Operands[Operand]);
       if (Desc.Version == Operation::DwarfNA) {
         addError(ErrorKind::UnknownOperation);
-        return false;
+        return;
       }
       assert(Desc.Op[Operand] == Operation::SizeSubOpLEB &&
              "SizeSubOpLEB Description must begin with SizeSubOpLEB operand");
@@ -277,7 +282,7 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
     case Operation::SizeRefAddr:
       if (!Format) {
         addError(ErrorKind::UnknownOperation);
-        return false;
+        return;
       }
       Operands[Operand] =
           Data.getUnsigned(&Offset, dwarf::getDwarfOffsetByteSize(*Format));
@@ -288,25 +293,25 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
       if (!Value && (Opcode == DW_OP_constu || Opcode == DW_OP_consts))
         Value = extractTruncatedGenericConstant(Data, Offset, AddressSize);
       if (!extractLEBOperand(Value))
-        return false;
+        return;
       break;
     }
     case Operation::BaseTypeRef:
       if (!extractLEBOperand(extractULEB128(Data, Offset)))
-        return false;
+        return;
       break;
     case Operation::NvidiaMuxArg:
       assert(Operand == 1);
       addError(ErrorKind::UnknownOperation);
       if (!extractLEBOperand(extractULEB128(Data, Offset)))
-        return false;
+        return;
       // The selector names an NVIDIA specific operation, and the number and
       // type of the operands that follow it are implied by that operation.
       // No NVIDIA operation is known here, so where this operation ends is
       // unknown and anything after it would be parsed from the wrong offset.
       // Refuse to decode rather than mis-parse the rest of the expression.
       // A build that knows a selector can decode its operands here.
-      return false;
+      return;
     case Operation::WasmLocationArg:
       assert(Operand == 1);
       switch (Operands[0]) {
@@ -315,21 +320,21 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
       case 2:
       case 4:
         if (!extractLEBOperand(extractULEB128(Data, Offset)))
-          return false;
+          return;
         break;
       case 3: // global as uint32
         Operands[Operand] = Data.getU32(&Offset);
         break;
       default:
         addError(ErrorKind::UnknownOperation);
-        return false; // Unknown Wasm location
+        return; // Unknown Wasm location
       }
       break;
     case Operation::SizeBlock:
       // We need a size, so this cannot be the first operand
       if (Operand == 0) {
         addError(ErrorKind::UnknownOperation);
-        return false;
+        return;
       }
       // Store the offset of the block as the value.
       Operands[Operand] = Offset;
@@ -343,7 +348,6 @@ bool DWARFExpression::Operation::extract(DataExtractor Data,
   }
 
   EndOffset = Offset;
-  return true;
 }
 
 std::optional<unsigned> DWARFExpression::Operation::getSubCode() const {
