@@ -130,6 +130,11 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.extract-info.outputs.pr_head }}
           fetch-depth: 0
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
 
       # This workflow is always taken from the default branch. Check out the tooling from the corresponding
       # commit so that we're always running tooling that's in sync with the workflow's definition. Only the
