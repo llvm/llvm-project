@@ -71,5 +71,5 @@ functions:
     arguments:
       - type: const char *
       - type: struct dirent ***
-      - type: __scandir_filter_t
-      - type: __scandir_compare_t
+      - type: int (*)(const struct dirent *)
+      - type: int (*)(const struct dirent **, const struct dirent **);
