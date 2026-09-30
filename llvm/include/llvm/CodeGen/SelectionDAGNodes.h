@@ -1493,10 +1493,9 @@ public:
     return getMemOperand()->getMemCacheHint();
   }
 
-  /// Returns LLVM IR metadata carried by this memory access, except for range
-  /// metadata. Range metadata describes a loaded value and cannot be blindly
-  /// transferred when an access is split or its type changes.
-  MMOMetadata getNonRangeMMOMetadata() const {
+  /// Returns metadata that can be copied unchanged to an access covering
+  /// all or part of this access's bytes, even if the value type changes.
+  MMOMetadata getMMOMetadataForSubAccess() const {
     return MMOMetadata(getAAInfo(), /*Ranges=*/nullptr, getMemCacheHint());
   }
 

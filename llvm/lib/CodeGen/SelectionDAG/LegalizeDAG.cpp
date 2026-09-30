@@ -496,7 +496,7 @@ void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
   SDLoc dl(Node);
 
   MachineMemOperand::Flags MMOFlags = ST->getMemOperand()->getFlags();
-  MMOMetadata Metadata = ST->getNonRangeMMOMetadata();
+  MMOMetadata Metadata = ST->getMMOMetadataForSubAccess();
 
   if (!ST->isTruncatingStore()) {
     LLVM_DEBUG(dbgs() << "Legalizing store operation\n");
@@ -737,7 +737,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
   EVT SrcVT = LD->getMemoryVT();
   TypeSize SrcWidth = SrcVT.getSizeInBits();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
-  MMOMetadata Metadata = LD->getNonRangeMMOMetadata();
+  MMOMetadata Metadata = LD->getMMOMetadataForSubAccess();
 
   if (SrcWidth != SrcVT.getStoreSizeInBits() &&
       // Some targets pretend to have an i1 loading operation, and actually

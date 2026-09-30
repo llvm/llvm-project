@@ -254,7 +254,7 @@ void DAGTypeLegalizer::ExpandRes_NormalLoad(SDNode *N, SDValue &Lo,
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), ValueVT);
   SDValue Chain = LD->getChain();
   SDValue Ptr = LD->getBasePtr();
-  MMOMetadata Metadata = LD->getNonRangeMMOMetadata();
+  MMOMetadata Metadata = LD->getMMOMetadataForSubAccess();
 
   assert(NVT.isByteSized() && "Expanded type not byte sized!");
 
@@ -483,7 +483,7 @@ SDValue DAGTypeLegalizer::ExpandOp_NormalStore(SDNode *N, unsigned OpNo) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), ValueVT);
   SDValue Chain = St->getChain();
   SDValue Ptr = St->getBasePtr();
-  MMOMetadata Metadata = St->getNonRangeMMOMetadata();
+  MMOMetadata Metadata = St->getMMOMetadataForSubAccess();
 
   assert(NVT.isByteSized() && "Expanded type not byte sized!");
   unsigned IncrementSize = NVT.getSizeInBits() / 8;

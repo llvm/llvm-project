@@ -602,7 +602,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOAD(LoadSDNode *N) {
       N->getBasePtr(), DAG.getPOISON(N->getBasePtr().getValueType()),
       N->getPointerInfo(), N->getMemoryVT().getVectorElementType(),
       N->getBaseAlign(), N->getMemOperand()->getFlags(),
-      N->getNonRangeMMOMetadata());
+      N->getMMOMetadataForSubAccess());
 
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
@@ -1228,12 +1228,12 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo){
         N->getChain(), dl, GetScalarizedVector(N->getOperand(1)),
         N->getBasePtr(), N->getPointerInfo(),
         N->getMemoryVT().getVectorElementType(), N->getBaseAlign(),
-        N->getMemOperand()->getFlags(), N->getNonRangeMMOMetadata());
+        N->getMemOperand()->getFlags(), N->getMMOMetadataForSubAccess());
 
   return DAG.getStore(N->getChain(), dl, GetScalarizedVector(N->getOperand(1)),
                       N->getBasePtr(), N->getPointerInfo(), N->getBaseAlign(),
                       N->getMemOperand()->getFlags(),
-                      N->getNonRangeMMOMetadata());
+                      N->getMMOMetadataForSubAccess());
 }
 
 /// If the value to store is a vector that needs to be scalarized, it must be
@@ -2458,7 +2458,7 @@ void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
   SDValue Offset = DAG.getPOISON(Ptr.getValueType());
   EVT MemoryVT = LD->getMemoryVT();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
-  MMOMetadata Metadata = LD->getNonRangeMMOMetadata();
+  MMOMetadata Metadata = LD->getMMOMetadataForSubAccess();
 
   EVT LoMemVT, HiMemVT;
   std::tie(LoMemVT, HiMemVT) = DAG.GetSplitDestVTs(MemoryVT);
@@ -4797,7 +4797,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
   EVT MemoryVT = N->getMemoryVT();
   Align Alignment = N->getBaseAlign();
   MachineMemOperand::Flags MMOFlags = N->getMemOperand()->getFlags();
-  MMOMetadata Metadata = N->getNonRangeMMOMetadata();
+  MMOMetadata Metadata = N->getMMOMetadataForSubAccess();
   SDValue Lo, Hi;
   GetSplitVector(N->getOperand(1), Lo, Hi);
 
@@ -9232,7 +9232,7 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
   SDValue Chain = LD->getChain();
   SDValue BasePtr = LD->getBasePtr();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
-  MMOMetadata Metadata = LD->getNonRangeMMOMetadata();
+  MMOMetadata Metadata = LD->getMMOMetadataForSubAccess();
 
   TypeSize LdWidth = LdVT.getSizeInBits();
   TypeSize WidenWidth = WidenVT.getSizeInBits();
@@ -9389,7 +9389,7 @@ DAGTypeLegalizer::GenWidenVectorExtLoads(SmallVectorImpl<SDValue> &LdChain,
   SDValue Chain = LD->getChain();
   SDValue BasePtr = LD->getBasePtr();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
-  MMOMetadata Metadata = LD->getNonRangeMMOMetadata();
+  MMOMetadata Metadata = LD->getMMOMetadataForSubAccess();
 
   if (LdVT.isScalableVector())
     return SDValue();
@@ -9432,7 +9432,7 @@ bool DAGTypeLegalizer::GenWidenVectorStores(SmallVectorImpl<SDValue> &StChain,
   SDValue  Chain = ST->getChain();
   SDValue  BasePtr = ST->getBasePtr();
   MachineMemOperand::Flags MMOFlags = ST->getMemOperand()->getFlags();
-  MMOMetadata Metadata = ST->getNonRangeMMOMetadata();
+  MMOMetadata Metadata = ST->getMMOMetadataForSubAccess();
   SDValue  ValOp = GetWidenedVector(ST->getValue());
   SDLoc dl(ST);
 
