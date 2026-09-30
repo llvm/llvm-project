@@ -17,19 +17,19 @@ subroutine allocate_pre50(n, a, b)
   real :: a(n), b(n)
   real :: t
 
-  !ERROR: ALLOCATE clause is not allowed on PARALLEL directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-kartoffel]
+  !ERROR: ALLOCATE clause is not allowed on PARALLEL directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !$omp parallel private(t) allocate(t)
   t = a(1)
   b(1) = t
   !$omp end parallel
 
-  !ERROR: ALLOCATE clause is not allowed on SINGLE directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-kartoffel]
+  !ERROR: ALLOCATE clause is not allowed on SINGLE directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !$omp single private(t) allocate(t)
   t = a(1)
   b(1) = t
   !$omp end single
 
-  !ERROR: ALLOCATE clause is not allowed on TASK directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-kartoffel]
+  !ERROR: ALLOCATE clause is not allowed on TASK directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !$omp task private(t) allocate(t)
   t = a(1)
   b(1) = t
@@ -37,7 +37,7 @@ subroutine allocate_pre50(n, a, b)
 
   ! The form reported in llvm-project#211430, where the ungated clause reached
   ! lowering and crashed it.
-  !ERROR: ALLOCATE clause is not allowed on TARGET TEAMS DISTRIBUTE PARALLEL DO directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-kartoffel]
+  !ERROR: ALLOCATE clause is not allowed on TARGET TEAMS DISTRIBUTE PARALLEL DO directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !$omp target teams distribute parallel do private(t) allocate(t)
   do i = 1, n
      t = a(i)

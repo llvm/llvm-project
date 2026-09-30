@@ -5,12 +5,12 @@ subroutine f
   !$omp parallel if(.false.)
   !$omp end parallel
 
-  !ERROR: IF clause is not allowed on SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-kartoffel]
+  !ERROR: IF clause is not allowed on SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !$omp simd if(.true.)
   do i = 1, 10
   end do
 
-  !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v4.5, try -fopenmp-version=52 [-Wopenmp-kartoffel]
+  !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v4.5, try -fopenmp-version=52 [-Wopenmp-future]
   !$omp teams if(.true.)
   !$omp end teams
 

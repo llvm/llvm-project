@@ -564,7 +564,7 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
   if (!IsClauseAllowedOnDirective(clauseId, dirId, version, &context_)) {
     if (auto allowedInVersion{
             AllowedInFutureVersion(clauseId, dirId, version, &context_)}) {
-      context_.Warn(common::UsageWarning::OpenMPKartoffel, clauseSource,
+      context_.Warn(common::UsageWarning::OpenMPFuture, clauseSource,
           "%s clause is not allowed on %s directive in %s, %s"_warn_en_US,
           GetUpperName(clauseId, version), GetUpperName(dirId, version),
           ThisVersion(version), TryVersion(allowedInVersion));
@@ -2841,7 +2841,7 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetDirective &x) {
     }
     llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
     if (toClause && version >= 52) {
-      context_.Warn(common::UsageWarning::OpenMPKartoffel, toClause->source,
+      context_.Warn(common::UsageWarning::OpenMPDeprecated, toClause->source,
           "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
       if (!context_.warningsAreErrors()) {
         SetAllowedClauseOverride(llvm::omp::Clause::OMPC_to,
