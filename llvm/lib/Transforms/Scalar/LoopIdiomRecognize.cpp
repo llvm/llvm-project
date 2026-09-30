@@ -837,8 +837,10 @@ bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
   if (MCI->isVolatile() || !isa<ConstantInt>(MCI->getLength()))
     return false;
 
-  // If we're not allowed to hack on memcpy, we fail.
-  if ((!HasMemcpy && !MCI->isForceInlined()) || DisableLIRP::Memcpy)
+  // If we're not allowed to hack on memcpy, we fail. We don't mess with the
+  // inlined version as generating a larger inline mempcy could affect code
+  // size.
+  if (!HasMemcpy || MCI->isForceInlined() || DisableLIRP::Memcpy)
     return false;
 
   Value *Dest = MCI->getDest();
@@ -900,8 +902,9 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
   if (MSI->isVolatile())
     return false;
 
-  // If we're not allowed to hack on memset, we fail.
-  if (!HasMemset || DisableLIRP::Memset)
+  // If we're not allowed to hack on memset, we fail. We don't mess with the
+  // inlined version as generating a larger memset could affect code size.
+  if (!HasMemset || MSI->isForceInlined() || DisableLIRP::Memset)
     return false;
 
   Value *Pointer = MSI->getDest();
@@ -1096,6 +1099,10 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     Value *StoredVal, Instruction *TheStore,
     SmallPtrSetImpl<Instruction *> &Stores, const SCEVAddRecExpr *Ev,
     const SCEV *BECount, bool IsNegStride, bool IsLoopMemset) {
+  // The same check as in `processLoopStoreOfLoopLoad`, see the comments there.
+  if (auto *MSI = dyn_cast<MemSetInst>(TheStore); MSI && MSI->isForceInlined())
+    return false;
+
   Module *M = TheStore->getModule();
 
   // The trip count of the loop and the base pointer of the addrec SCEV is
@@ -1352,10 +1359,14 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     MaybeAlign StoreAlign, MaybeAlign LoadAlign, Instruction *TheStore,
     Instruction *TheLoad, const SCEVAddRecExpr *StoreEv,
     const SCEVAddRecExpr *LoadEv, const SCEV *BECount) {
-
-  // FIXME: until llvm.memcpy.inline supports dynamic sizes, we need to
-  // conservatively bail here, since otherwise we may have to transform
-  // llvm.memcpy.inline into llvm.memcpy which is illegal.
+  // Avoid converting `llvm.memcpy.inline` into `llvm.memcpy`, as the inline
+  // intrinsic is guaranteed to not make a libcall.
+  //
+  // We could generate `llvm.memcpy.inline` when the store instruction is the
+  // inline version, but that can potentially generate more code. For now, do
+  // the conservative thing and bail.
+  //
+  // The same check for `llvm.memset.inline` is in `processLoopStridedStore`.
   if (auto *MCI = dyn_cast<MemCpyInst>(TheStore); MCI && MCI->isForceInlined())
     return false;
 

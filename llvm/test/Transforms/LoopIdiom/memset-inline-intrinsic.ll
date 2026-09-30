@@ -4,15 +4,13 @@
 define void @f(ptr %a, i64 %n) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[UMAX]], 4
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[A:%.*]], i8 0, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [16 x i8], ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [16 x i8], ptr [[A:%.*]], i64 [[I]]
+; CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr [[P]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[INC]], [[N]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[INC]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
