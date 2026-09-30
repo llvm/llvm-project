@@ -758,7 +758,8 @@ std::optional<MVT> RISCVTTIImpl::getZvzipVZIPCostVT(MVT InterleavedVT) const {
   unsigned MinSize = CostVT.getSizeInBits().getKnownMinValue();
   unsigned LMULOctuple = MinSize / (RISCV::RVVBitsPerBlock / 8);
   // Perform the 2 * SEW <= LMUL * min(ELEN, VLEN) check.
-  if (EltBits * 16 > LMULOctuple * std::min(ST->getELen(), ST->getRealMinVLen()))
+  if (EltBits * 16 >
+      LMULOctuple * std::min(ST->getELen(), ST->getRealMinVLen()))
     return std::nullopt;
   return CostVT;
 }
