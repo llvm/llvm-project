@@ -1744,6 +1744,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, II.getArgOperand(1));
     [[fallthrough]];
   case Intrinsic::amdgcn_mbcnt_lo: {
+    // No lanes contribute when the mask is zero.
+    if (match(II.getArgOperand(0), m_Zero()))
+      return IC.replaceInstUsesWith(II, II.getArgOperand(1));
+
     ConstantRange AccRange =
         computeConstantRange(II.getArgOperand(1),
                              /*ForSigned=*/false, IC.getSimplifyQuery());
