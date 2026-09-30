@@ -23,6 +23,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUDAIntrinsicCall.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -36,6 +37,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Semantics/tools.h"
 #include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -3180,6 +3182,38 @@ static bool mapOpenACCDeviceBindings(const Fortran::lower::SomeExpr &expr,
   return found;
 }
 
+/// Is this a reference, in a CUDA Fortran or OpenACC compilation, to an
+/// external procedure that is only declared by an interface body or an
+/// EXTERNAL statement, and not defined in this compilation unit?
+static bool isDeclaredOnlyExternalCall(CallContext &callContext) {
+  const Fortran::semantics::Symbol *symbol =
+      callContext.procRef.proc().GetSymbol();
+  if (!symbol)
+    return false;
+  const auto &features =
+      callContext.converter.getFoldingContext().languageFeatures();
+  if (!features.IsEnabled(Fortran::common::LanguageFeature::CUDA) &&
+      !features.IsEnabled(Fortran::common::LanguageFeature::OpenACC))
+    return false;
+  const Fortran::semantics::Symbol &ultimate = symbol->GetUltimate();
+  if (Fortran::semantics::IsDummy(ultimate) ||
+      Fortran::semantics::IsPointer(ultimate) || ultimate.GetBindName())
+    return false;
+  if (const auto *subp =
+          ultimate.detailsIf<Fortran::semantics::SubprogramDetails>()) {
+    if (!subp->isInterface())
+      return false;
+  } else if (!Fortran::semantics::IsExternal(ultimate)) {
+    return false;
+  }
+  if (const Fortran::semantics::Symbol *global =
+          Fortran::semantics::FindGlobal(ultimate))
+    if (const auto *details =
+            global->detailsIf<Fortran::semantics::SubprogramDetails>())
+      return details->isInterface();
+  return true;
+}
+
 /// Main entry point to lower procedure references, regardless of what they are.
 static std::optional<hlfir::EntityWithAttributes>
 genProcedureRef(CallContext &callContext) {
@@ -3197,6 +3231,20 @@ genProcedureRef(CallContext &callContext) {
             fir::lookupIntrinsicHandler(builder, callContext.getProcedureName(),
                                         callContext.resultType, isBindcCall))
       return genIntrinsicRef(nullptr, *intrinsicEntry, callContext);
+  }
+
+  const auto &features =
+      callContext.converter.getFoldingContext().languageFeatures();
+  if (features.IsEnabled(Fortran::common::LanguageFeature::CUDA) ||
+      features.IsEnabled(Fortran::common::LanguageFeature::OpenACC)) {
+    // Only on_device() is recognized this way: other handler names, such as
+    // clock, are common names for user procedures defined in other files.
+    if (callContext.getProcedureName() == "on_device" &&
+        isDeclaredOnlyExternalCall(callContext))
+      if (const fir::IntrinsicHandler *handler =
+              fir::findCUDAIntrinsicHandler(callContext.getProcedureName()))
+        return genIntrinsicRef(nullptr, fir::IntrinsicHandlerEntry{handler},
+                               callContext);
   }
 
   if (callContext.isStatementFunctionCall())
