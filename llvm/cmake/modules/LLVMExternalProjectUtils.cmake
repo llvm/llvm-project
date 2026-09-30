@@ -174,26 +174,34 @@ function(llvm_ExternalProject_Add name source_dir)
     set_target_properties(${name}-clear PROPERTIES FOLDER "${ARG_FOLDER}")
   endif ()
 
-  set(DEFAULT_PASSTHROUGH_VARIABLES
-    LibEdit_INCLUDE_DIRS
-    LibEdit_LIBRARIES
-    ZLIB_INCLUDE_DIR
-    ZLIB_LIBRARY
-    ZLIB_LIBRARY_RELEASE
-    ZLIB_LIBRARY_DEBUG
-    zstd_INCLUDE_DIR
-    zstd_LIBRARY
-    LIBXML2_LIBRARY
-    LIBXML2_INCLUDE_DIR
-    CURL_INCLUDE_DIR
-    CURL_LIBRARY
-    HTTPLIB_INCLUDE_DIR
-    HTTPLIB_HEADER_PATH
-    Python3_EXECUTABLE
-    Python3_LIBRARIES
-    Python3_INCLUDE_DIRS
-    Python3_RPATH
-    )
+  # Add only if the target matches.
+  # Otherwise LLVMConfig.cmake dependency finding will short-circuit to almost
+  # certainly incompatible host system libraries.
+  # LLVM target triple and the passed triple are assumed to be of the same form
+  # as semantically comparing triples in CMake would be an ordeal.
+  if("${ARG_TARGET_TRIPLE}" STREQUAL "${LLVM_TARGET_TRIPLE}")
+    set(DEFAULT_PASSTHROUGH_VARIABLES
+      LibEdit_INCLUDE_DIRS
+      LibEdit_LIBRARIES
+      ZLIB_INCLUDE_DIR
+      ZLIB_LIBRARY
+      ZLIB_LIBRARY_RELEASE
+      ZLIB_LIBRARY_DEBUG
+      zstd_INCLUDE_DIR
+      zstd_LIBRARY
+      LIBXML2_LIBRARY
+      LIBXML2_INCLUDE_DIR
+      CURL_INCLUDE_DIR
+      CURL_LIBRARY
+      HTTPLIB_INCLUDE_DIR
+      HTTPLIB_HEADER_PATH
+      Python3_EXECUTABLE
+      Python3_LIBRARIES
+      Python3_INCLUDE_DIRS
+      Python3_RPATH
+      )
+  endif()
+
   foreach(variable ${DEFAULT_PASSTHROUGH_VARIABLES})
     get_property(is_value_set CACHE ${variable} PROPERTY VALUE SET)
     if(${is_value_set})
