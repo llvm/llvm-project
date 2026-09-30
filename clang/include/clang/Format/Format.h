@@ -3187,9 +3187,10 @@ struct FormatStyle {
   /// the record members, respecting the `AccessModifierOffset`. Record
   /// members are indented one level below the record.
   /// When `true`, access modifiers get their own indentation level. As a
-  /// consequence, record members are always indented 2 levels below the record,
-  /// regardless of the access modifier presence. Value of the
-  /// `AccessModifierOffset` is ignored.
+  /// consequence, record members are by default indented 2 levels below the
+  /// record, regardless of the access modifier presence. Value of the
+  /// `AccessModifierOffset` is ignored. `IndentImplicitAccessModifiers` can
+  /// change the indentation before the first explicit access modifier.
   /// \code
   ///    false:                                 true:
   ///    class C {                      vs.     class C {
@@ -3207,6 +3208,14 @@ struct FormatStyle {
   /// \endcode
   /// \version 13
   bool IndentAccessModifiers;
+
+  /// When `IndentAccessModifiers` is `true`, indent members before the first
+  /// explicit access modifier by two levels. Set this option to `false` to
+  /// indent those members by one level. Members after an explicit access
+  /// modifier still use two levels. This option has no effect if
+  /// `IndentAccessModifiers` is false.
+  /// \version 24
+  bool IndentImplicitAccessModifiers;
 
   /// Indent case label blocks one level from the case label.
   ///
@@ -6242,6 +6251,7 @@ struct FormatStyle {
                R.IncludeStyle.IncludeIsMainSourceRegex &&
            IncludeStyle.MainIncludeChar == R.IncludeStyle.MainIncludeChar &&
            IndentAccessModifiers == R.IndentAccessModifiers &&
+           IndentImplicitAccessModifiers == R.IndentImplicitAccessModifiers &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentCaseLabels == R.IndentCaseLabels &&
            IndentExportBlock == R.IndentExportBlock &&

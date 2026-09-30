@@ -944,6 +944,10 @@ features cannot lower the translation-unit ABI level;
 
 ### clang-format
 
+- Add `IndentImplicitAccessModifiers` to allow members before the first
+  explicit access modifier to use one indentation level when
+  `IndentAccessModifiers` is enabled. The default preserves existing formatting.
+
 - Add `SpacesInBlockComments` option to control spacing after `/*` and
   before `*/` in ordinary block comments.
 - Add `AfterRequiresExpression` sub-option of `BraceWrapping` to wrap the

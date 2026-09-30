@@ -352,7 +352,8 @@ bool UnwrappedLineParser::precededByCommentOrPPDirective() const {
 /// (A simple block has a single statement.)
 bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
                                      IfStmtKind *IfKind,
-                                     FormatToken **IfLeftBrace) {
+                                     FormatToken **IfLeftBrace,
+                                     bool *SeenExplicitAccessModifier) {
   const bool InRequiresExpression =
       OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
   const bool IsPrecededByCommentOrPPDirective =
@@ -377,7 +378,18 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       Kind = tok::r_brace;
 
     auto ParseDefault = [this, OpeningBrace, IfKind, &IfLBrace, &HasDoWhile,
-                         &HasLabel, &StatementCount] {
+                         &HasLabel, &StatementCount,
+                         SeenExplicitAccessModifier] {
+      const bool IsQtAccessLabel =
+          SeenExplicitAccessModifier && !*SeenExplicitAccessModifier &&
+          FormatTok->isOneOf(Keywords.kw_signals, Keywords.kw_qsignals,
+                             Keywords.kw_slots, Keywords.kw_qslots) &&
+          Tokens->peekNextToken(/*SkipComment=*/true)->is(tok::colon);
+      if (SeenExplicitAccessModifier && !*SeenExplicitAccessModifier &&
+          (FormatTok->isAccessSpecifierKeyword() || IsQtAccessLabel)) {
+        ++Line->Level;
+        *SeenExplicitAccessModifier = true;
+      }
       parseStructuralElement(OpeningBrace, IfKind, &IfLBrace,
                              HasDoWhile ? nullptr : &HasDoWhile,
                              HasLabel ? nullptr : &HasLabel);
@@ -744,11 +756,10 @@ bool UnwrappedLineParser::mightFitOnOneLine(
   return Line.Level * Style.IndentWidth + Length <= ColumnLimit;
 }
 
-FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
-                                             unsigned AddLevels, bool MunchSemi,
-                                             bool KeepBraces,
-                                             IfStmtKind *IfKind,
-                                             bool UnindentWhitesmithsBraces) {
+FormatToken *UnwrappedLineParser::parseBlock(
+    bool MustBeDeclaration, unsigned AddLevels, bool MunchSemi, bool KeepBraces,
+    IfStmtKind *IfKind, bool UnindentWhitesmithsBraces,
+    bool IndentAfterExplicitAccessModifier) {
   auto HandleVerilogBlockLabel = [this]() {
     // ":" name
     if (Style.isVerilog() && FormatTok->is(tok::colon)) {
@@ -820,7 +831,11 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
     Line->Level += AddLevels - (IsWhitesmiths ? 1 : 0);
 
   FormatToken *IfLBrace = nullptr;
-  const bool SimpleBlock = parseLevel(Tok, IfKind, &IfLBrace);
+  bool SeenExplicitAccessModifier = false;
+  const bool SimpleBlock =
+      parseLevel(Tok, IfKind, &IfLBrace,
+                 IndentAfterExplicitAccessModifier ? &SeenExplicitAccessModifier
+                                                   : nullptr);
 
   if (eof())
     return IfLBrace;
@@ -879,7 +894,8 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
   size_t PPEndHash = computePPHash();
 
   // Munch the closing brace.
-  nextToken(/*LevelDifference=*/-AddLevels);
+  nextToken(/*LevelDifference=*/
+            -static_cast<int>(AddLevels + SeenExplicitAccessModifier));
 
   // When this is a function block and there is an unnecessary semicolon
   // afterwards then mark it as optional (so the RemoveSemi pass can get rid of
@@ -4298,8 +4314,17 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
         addUnwrappedLine();
       }
 
-      unsigned AddLevels = Style.IndentAccessModifiers ? 2u : 1u;
-      parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/false);
+      const bool IndentAfterExplicitAccessModifier =
+          Style.isCpp() && Style.IndentAccessModifiers &&
+          !Style.IndentImplicitAccessModifiers;
+      unsigned AddLevels =
+          Style.IndentAccessModifiers && !IndentAfterExplicitAccessModifier
+              ? 2u
+              : 1u;
+      parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/false,
+                 /*KeepBraces=*/true, /*IfKind=*/nullptr,
+                 /*UnindentWhitesmithsBraces=*/false,
+                 IndentAfterExplicitAccessModifier);
     }
     setPreviousRBraceType(ClosingBraceType);
   }

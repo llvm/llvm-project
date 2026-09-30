@@ -1399,6 +1399,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IncludeIsMainSourceRegex",
                    Style.IncludeStyle.IncludeIsMainSourceRegex);
     IO.mapOptional("IndentAccessModifiers", Style.IndentAccessModifiers);
+    IO.mapOptional("IndentImplicitAccessModifiers",
+                   Style.IndentImplicitAccessModifiers);
     IO.mapOptional("IndentCaseBlocks", Style.IndentCaseBlocks);
     IO.mapOptional("IndentCaseLabels", Style.IndentCaseLabels);
     IO.mapOptional("IndentExportBlock", Style.IndentExportBlock);
@@ -1977,6 +1979,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IncludeStyle.IncludeIsMainRegex = "(Test)?$";
   LLVMStyle.IncludeStyle.MainIncludeChar = tooling::IncludeStyle::MICD_Quote;
   LLVMStyle.IndentAccessModifiers = false;
+  LLVMStyle.IndentImplicitAccessModifiers = true;
   LLVMStyle.IndentCaseBlocks = false;
   LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentExportBlock = true;

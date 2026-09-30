@@ -24920,6 +24920,59 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                Style);
 }
 
+TEST_F(FormatTest, IndentImplicitAccessModifiers) {
+  FormatStyle Style = getLLVMStyle();
+  Style.IndentAccessModifiers = true;
+  Style.IndentImplicitAccessModifiers = false;
+  Style.IndentWidth = 4;
+  Style.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_Never;
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+
+  verifyFormat("class Outer\n"
+               "{\n"
+               "    public:\n"
+               "        struct Inner\n"
+               "        {\n"
+               "            bool first;\n"
+               "            bool second;\n"
+               "        };\n"
+               "};",
+               Style);
+  verifyFormat("struct S\n"
+               "{\n"
+               "    int before;\n"
+               "    private:\n"
+               "        int after;\n"
+               "};",
+               Style);
+  verifyFormat("union U\n"
+               "{\n"
+               "    int first;\n"
+               "    class Inner\n"
+               "    {\n"
+               "        public:\n"
+               "            int member;\n"
+               "    };\n"
+               "    int last;\n"
+               "};",
+               Style);
+  verifyFormat("class QtObject\n"
+               "{\n"
+               "    signals:\n"
+               "        void changed();\n"
+               "};",
+               Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
+  verifyFormat("struct S\n"
+               "    {\n"
+               "    int before;\n"
+               "    public:\n"
+               "        int after;\n"
+               "    };",
+               Style);
+}
+
 TEST_F(FormatTest, LimitlessStringsAndComments) {
   auto Style = getLLVMStyleWithColumns(0);
   constexpr StringRef Code(

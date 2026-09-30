@@ -28,6 +28,18 @@ protected:
   }
 };
 
+TEST_F(FormatTestJava, IndentImplicitAccessModifiersDoesNotAffectJava) {
+  FormatStyle Style = getDefaultStyle();
+  Style.IndentWidth = 4;
+  Style.IndentAccessModifiers = true;
+  Style.IndentImplicitAccessModifiers = false;
+  verifyFormat("class C {\n"
+               "        int before;\n"
+               "        public int after;\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTestJava, NoAlternativeOperatorNames) {
   verifyFormat("someObject.and();");
 }

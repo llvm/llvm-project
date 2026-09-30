@@ -4752,9 +4752,10 @@ the configuration (without a prefix: `Auto`).
   the record members, respecting the `AccessModifierOffset`. Record
   members are indented one level below the record.
   When `true`, access modifiers get their own indentation level. As a
-  consequence, record members are always indented 2 levels below the record,
-  regardless of the access modifier presence. Value of the
-  `AccessModifierOffset` is ignored.
+  consequence, record members are by default indented 2 levels below the
+  record, regardless of the access modifier presence. Value of the
+  `AccessModifierOffset` is ignored. `IndentImplicitAccessModifiers` can
+  change the indentation before the first explicit access modifier.
 
   ```c++
   false:                                 true:
@@ -4951,6 +4952,16 @@ the configuration (without a prefix: `Auto`).
     ```
 
 
+
+(indentimplicitaccessmodifiers)=
+
+**IndentImplicitAccessModifiers** (`Boolean`) {versionbadge}`clang-format 24` {ref}`¶ <IndentImplicitAccessModifiers>`
+
+: When `IndentAccessModifiers` is `true`, indent members before the first
+  explicit access modifier by two levels. Set this option to `false` to
+  indent those members by one level. Members after an explicit access
+  modifier still use two levels. This option has no effect if
+  `IndentAccessModifiers` is false.
 
 (indentppdirectives)=
 
