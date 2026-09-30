@@ -363,4 +363,47 @@ contains
       x = i
     end do
   end subroutine
+
+  ! Keep the entered PARALLEL constituent when re-evaluating the bound.
+  ! CHECK-LABEL: func.func @_QMloop_contextPlastprivate_combined(
+  ! CHECK: omp.parallel
+  ! CHECK: fir.call @_QMloop_contextPparallel_bound(
+  ! CHECK: omp.wsloop
+  ! CHECK-NOT: fir.call @_QMloop_contextPdo_bound(
+  ! CHECK: %[[PAR_UB:.*]] = fir.call @_QMloop_contextPparallel_bound(
+  ! CHECK: arith.cmpi sgt, %{{[^,]+}}, %[[PAR_UB]]
+  ! CHECK: fir.if
+  ! CHECK: {{hlfir.assign|fir.store}}
+  ! CHECK-NOT: fir.call @_QMloop_contextPdo_bound(
+  ! CHECK: return
+  subroutine lastprivate_combined(n, x)
+    integer :: n, x, i
+    !$omp parallel do lastprivate(x)
+    do i = 1, bound(n)
+      x = i
+    end do
+  end subroutine
+
+  ! A separately enclosing PARALLEL must also remain in the bound context.
+  ! CHECK-LABEL: func.func @_QMloop_contextPlastprivate_nested(
+  ! CHECK: omp.parallel
+  ! CHECK: fir.call @_QMloop_contextPparallel_bound(
+  ! CHECK: omp.wsloop
+  ! CHECK-NOT: fir.call @_QMloop_contextPdo_bound(
+  ! CHECK: %[[NESTED_UB:.*]] = fir.call @_QMloop_contextPparallel_bound(
+  ! CHECK: arith.cmpi sgt, %{{[^,]+}}, %[[NESTED_UB]]
+  ! CHECK: fir.if
+  ! CHECK: {{hlfir.assign|fir.store}}
+  ! CHECK-NOT: fir.call @_QMloop_contextPdo_bound(
+  ! CHECK: return
+  subroutine lastprivate_nested(n, x)
+    integer :: n, x, i
+    !$omp parallel
+    !$omp do lastprivate(x)
+    do i = 1, bound(n)
+      x = i
+    end do
+    !$omp end parallel
+  end subroutine
+
 end module
