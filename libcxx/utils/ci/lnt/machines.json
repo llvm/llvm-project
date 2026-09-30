@@ -38,7 +38,7 @@
   {
     "lnt-machine": "linux-x86_64-2026-09-29",
     "runner": "llvm-premerge-linux-32-runners",
-    "container": "ghcr.io/llvm/libcxx-linux-builder:d79f222aea61926e7c81fa8908b12f52ea70111f",
+    "container": "ghcr.io/llvm/libcxx-linux-builder:be628f333947bf070839e6706f6701099e0c83eb",
     "pr-benchmarks": true,
     "cxx": "clang++-22",
     "benchmark-suite-version": "a0e3ae753ad39cd8f2b1b9b3e2f1ad7da3c088d2",
