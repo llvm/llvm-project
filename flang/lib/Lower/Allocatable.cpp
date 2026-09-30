@@ -173,7 +173,7 @@ static bool isRegionNestedInOmpTarget(mlir::Region &region) {
   while (parentOp) {
     if (auto declareTargetOp =
             llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(parentOp)) {
-      if (declareTargetOp.isDeclareTarget())
+      if (declareTargetOp.getDeclareTarget())
         return true;
     }
     if (llvm::isa<mlir::omp::TargetOp>(parentOp))
