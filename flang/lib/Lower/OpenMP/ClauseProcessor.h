@@ -100,10 +100,10 @@ public:
       const parser::OmpStylizedInstance *parserInitInstance = nullptr,
       unsigned instanceIdx = 0) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
-  bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
-  bool processNotinbranch(mlir::omp::NotinbranchClauseOps &result) const;
   bool processNocontext(lower::StatementContext &stmtCtx,
                         mlir::omp::NocontextClauseOps &result) const;
+  bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
+  bool processNotinbranch(mlir::omp::NotinbranchClauseOps &result) const;
   bool processNovariants(lower::StatementContext &stmtCtx,
                          mlir::omp::NovariantsClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
