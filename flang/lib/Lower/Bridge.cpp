@@ -5484,6 +5484,7 @@ private:
                            hlfir::Entity &lhs, hlfir::Entity &rhs,
                            bool isWholeAllocatableAssignment,
                            bool keepLhsLengthInAllocatableAssignment) {
+
     bool lhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs);
     // A managed/unified/device function result is not visible to the symbol
     // collection used by HasCUDADeviceAttrs (a ProcedureRef contributes no
@@ -5587,10 +5588,41 @@ private:
                                 keepLhsLengthInAllocatableAssignment);
         return;
       }
+      // True iff every CUDA symbol the RHS references is a scalar constant (or
+      // host-resident pinned). A scalar constant keeps a synchronized host
+      // copy, so such a read can be done on the host with no device->host copy
+      // (issuing one would pass the host copy's address as a bogus "device"
+      // source). Array constants live in real device memory with no host copy,
+      // so a read of one still needs the copy.
+      auto rhsIsScalarConstantOnly = [&]() {
+        bool sawConstant = false;
+        for (const Fortran::semantics::Symbol &sym :
+             Fortran::evaluate::CollectCudaSymbols(assign.rhs)) {
+          const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+          std::optional<Fortran::common::CUDADataAttr> attr =
+              Fortran::semantics::GetCUDADataAttr(&ultimate);
+          if (!attr || *attr == Fortran::common::CUDADataAttr::Pinned)
+            continue; // host-resident
+          if (*attr == Fortran::common::CUDADataAttr::Constant &&
+              ultimate.Rank() == 0) {
+            sawConstant = true;
+            continue;
+          }
+          return false; // device/managed/unified/array constant -> keep copy
+        }
+        return sawConstant;
+      };
+
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
       if (fir::isa_trivial(rhsVal.getType())) {
         fir::StoreOp::create(builder, loc, rhsVal, lhsVal);
+      } else if (rhsIsScalarConstantOnly()) {
+        // Assign on the host: the RHS's only device residence is scalar
+        // constant data, which has a synchronized host copy.
+        hlfir::AssignOp::create(builder, loc, rhs, lhs,
+                                isWholeAllocatableAssignment,
+                                keepLhsLengthInAllocatableAssignment);
       } else {
         cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
                                     transferKindAttr,
