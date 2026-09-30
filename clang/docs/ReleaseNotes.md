@@ -247,6 +247,9 @@ features cannot lower the translation-unit ABI level;
 
 - Added support for the `__builtin_strlcat` and `__builtin_strlcpy` builtins.
 
+- Added `__builtin_sort_pack` to sort a pack of types using the same
+  order as `__builtin_type_order`.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
@@ -267,6 +270,11 @@ features cannot lower the translation-unit ABI level;
   the translation unit itself. This lets builds that differ only in a search
   path share one module cache, and is only sound when no module needs the path
   -- a lookup that would have resolved through an ignored path simply fails.
+
+- Added support for `-fkeep-inline-functions` in Clang. This option forces
+  inline function definitions that are available in the current translation
+  unit to be emitted into the object file, even when they are inlined into all
+  callers or are otherwise unused.
 
 ### Deprecated Compiler Flags
 
@@ -289,6 +297,9 @@ features cannot lower the translation-unit ABI level;
 
 - `-Wfortify-source` now diagnoses when `recv` or `recvfrom` is called with a
   size argument larger than the destination buffer.
+
+- `-Wfortify-source` now diagnoses when `poll`, `ppoll`, or `ppoll64` is called
+  with a descriptor count whose total size exceeds the `fds` array size.
 
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
@@ -514,15 +525,15 @@ features cannot lower the translation-unit ABI level;
   inline-defined friend function shares the name of a non-static class
   member variable. (#GH221190)
 
-- Clang now diagnoses matrix logical operations are only supported for HLSL. (GH222381)
+- Clang now diagnoses matrix logical operations are only supported for HLSL. (#GH222381)
 
 - Improve the input size mismatch diagnostic when calling `__builtin_shufflevector` with valid
-  vector element types but different sizes. (GH221791)
+  vector element types but different sizes. (#GH221791)
 
 - Suggests the correct location for an attribute written before the `using`
   keyword of an alias-declaration. (#GH155787)
 
-- Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (GH222383)
+- Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (#GH222383)
 
 ### Improvements to Clang's time-trace
 
@@ -536,7 +547,6 @@ features cannot lower the translation-unit ABI level;
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
 - Fixed an assertion on omp taskloop transparent (#GH197162)
-- Fixed an assertion failure and a garbled diagnostic when the `message` clause of `#pragma omp error` was given a string literal that is not of `char` type, such as a wide string literal. Such literals are now diagnosed and ignored. (#GH140338)
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
@@ -555,6 +565,7 @@ features cannot lower the translation-unit ABI level;
   (such as `std::map`) whose mapper lookup instantiates a class template specialization. (#GH154704)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
+- Fixed crashes on an OpenMP `target` region inside a lambda or block at namespace scope, including when the region used a global reference. (#GH223397)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
@@ -582,6 +593,10 @@ features cannot lower the translation-unit ABI level;
 #### Bug Fixes to Attribute Support
 
 - Fixed crash (assertion) when the `alloc_align` attribute was applied to a declaration whose type has a `FunctionProtoType` but which is not itself a `FunctionDecl`, such as a function-pointer variable. (#GH122058)
+
+- Fixed a crash on `bool` vectors declared with `ext_vector_type` and more than
+  2^23 elements; `ext_vector_type` and `vector_size` now both reject vectors
+  with more than 2^23 elements or larger than 2^28 bytes. (#GH165458)
 
 - The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
   pointee is a struct with a flexible array member (e.g.
@@ -686,6 +701,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when an invalid statement appeared in a ``switch``
   statement nested inside a C++26 expansion statement. (#GH210575)
 
+- Fixed an assertion when a ``matrix_type`` with constant dimensions and a
+  dependent element type was instantiated with an invalid element type.
+  (#GH202744)
+
 - Fixed friend declarations sometimes making non-visible default arguments
   incorrectly visible to default argument redefinition checks across modules.
 
@@ -760,6 +779,18 @@ features cannot lower the translation-unit ABI level;
   lookup before asserting that the name is not dependent, avoiding an assertion 
   after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
 
+- Fixed a crash in constant evaluation when a new-expression selects a
+  user-declared allocation function that takes std::nothrow_t by value. Such
+  a new-expression is now correctly rejected in a constant expression because
+  it does not select a replaceable global allocation function. (#GH212211)
+
+- Fixed `__attribute__((used))` and `-fkeep-inline-functions` being
+  incorrectly ignored for complete constructors and destructors (C1/D1 variants)
+  when `-mconstructor-aliases` is active. C1/D1 variants were previously
+  replaced with their base variants (C2/D2) in the IR before retention could
+  take effect, causing them to be dropped from llvm.used and omitted from
+  the object file. (#GH226572)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -799,6 +830,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when a method or function definition follows an
   Objective-C `@implementation` that was ended by a nested `@interface`,
   `@protocol` or `@implementation` before its `@end`. (#GH209503)
+- Fixed use-after-free with annotate attribute on a C++ class method with a this-adjusting thunk.
 
 ### OpenACC Specific Changes
 
@@ -909,6 +941,10 @@ features cannot lower the translation-unit ABI level;
 
 - Added `__builtin_wasm_memory_copy` and `__builtin_wasm_memory_fill` builtins
   for the WebAssembly `memory.copy` and `memory.fill` bulk memory instructions.
+
+- Fixed a "function signature mismatch" trap at program exit when destroying a
+  temporary that is bound to a reference with static or thread storage
+  duration. (#GH45221)
 
 #### AVR Support
 

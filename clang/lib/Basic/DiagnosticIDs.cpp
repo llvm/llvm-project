@@ -961,7 +961,8 @@ bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
   // because sending a message with an unknown selector could lead to crashes
   // within CodeGen if the resulting expression is used to initialize a C++
   // auto variable, where type deduction is required.
-  if (isARCDiagnostic(DiagID) && DiagID != diag::err_arc_may_not_respond)
+  if (isARCDiagnostic(DiagID) && DiagID != diag::err_arc_may_not_respond &&
+      DiagID != diag::err_arc_atomic_ownership)
     return false;
 
   if (isCodegenABICheckDiagnostic(DiagID))
