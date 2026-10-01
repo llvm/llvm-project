@@ -3821,34 +3821,6 @@ static bool ShouldUseExternalRTTIDescriptor(CodeGenModule &CGM,
   return false;
 }
 
-// CanUseSingleInheritance - Return whether the given record decl has a "single,
-// public, non-virtual base at offset zero (i.e. the derived class is dynamic
-// iff the base is)", according to Itanium C++ ABI, 2.95p6b.
-static bool CanUseSingleInheritance(const CXXRecordDecl *RD) {
-  // Check the number of bases.
-  if (RD->getNumBases() != 1)
-    return false;
-
-  // Get the base.
-  CXXRecordDecl::base_class_const_iterator Base = RD->bases_begin();
-
-  // Check that the base is not virtual.
-  if (Base->isVirtual())
-    return false;
-
-  // Check that the base is public.
-  if (Base->getAccessSpecifier() != AS_public)
-    return false;
-
-  // Check that the class is dynamic iff the base is.
-  auto *BaseDecl = Base->getType()->castAsCXXRecordDecl();
-  if (!BaseDecl->isEmpty() &&
-      BaseDecl->isDynamicClass() != RD->isDynamicClass())
-    return false;
-
-  return true;
-}
-
 void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
                                             llvm::Constant *StorageAddress) {
   // abi::__class_type_info.
@@ -3925,7 +3897,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
 
     if (!RD->hasDefinition() || !RD->getNumBases()) {
       VTableName = ClassTypeInfo;
-    } else if (CanUseSingleInheritance(RD)) {
+    } else if (CodeGenUtils::canUseSingleInheritance(RD)) {
       VTableName = SIClassTypeInfo;
     } else {
       VTableName = VMIClassTypeInfo;
@@ -4243,7 +4215,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
       break;
     }
 
-    if (CanUseSingleInheritance(RD))
+    if (CodeGenUtils::canUseSingleInheritance(RD))
       BuildSIClassTypeInfo(RD);
     else
       BuildVMIClassTypeInfo(RD);
