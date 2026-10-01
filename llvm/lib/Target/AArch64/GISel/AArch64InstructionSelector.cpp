@@ -903,6 +903,11 @@ static bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI,
     const TargetRegisterClass *RC =
         dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
     if (!RC) {
+      // Debug instructions are selected before the defs of their operands.
+      // Leave vregs with non-debug uses to their defs and users, so that
+      // debug info does not change the class they get.
+      if (!MRI.use_nodbg_empty(Reg))
+        continue;
       const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
       RC = getRegClassForTypeOnBank(Ty, RB);
       if (!RC) {
