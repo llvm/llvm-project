@@ -10,13 +10,14 @@ define void @slt_stride2_guard(i64 %n) {
 ; CHECK-NEXT:    %g = and i1 %g1, %g2
 ; CHECK-NEXT:    --> (%g1 umin %g2) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,9223372036854775805) S: [0,9223372036854775805) Exits: (2 * ((-1 + %n) /u 2))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 2
-; CHECK-NEXT:    --> {2,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {2,+,2}<nuw><nsw><%loop> U: [2,9223372036854775807) S: [2,9223372036854775807) Exits: (2 + (2 * ((-1 + %n) /u 2))<nuw>)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_stride2_guard
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 + %n) /u 2)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387902
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + %n) /u 2)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %g1 = icmp slt i64 %n, 9223372036854775807
@@ -70,9 +71,9 @@ define void @slt_stride2_guard_multi_exit(i64 %n, i64 %m) {
 ; CHECK-NEXT:    %g = and i1 %g1, %g2
 ; CHECK-NEXT:    --> (%g1 umin %g2) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
-; CHECK-NEXT:    --> {0,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,2}<nuw><nsw><%loop> U: [0,9223372036854775805) S: [0,9223372036854775805) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 2
-; CHECK-NEXT:    --> {2,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {2,+,2}<nuw><nsw><%loop> U: [2,9223372036854775807) S: [2,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_stride2_guard_multi_exit
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
@@ -80,19 +81,19 @@ define void @slt_stride2_guard_multi_exit(i64 %n, i64 %m) {
 ; CHECK-NEXT:     Predicates:
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %m to i1) to i64) == 0
 ; CHECK-EMPTY:
-; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:    exit count for latch: ((-1 + %n) /u 2)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387902
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + %n) /u 2)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    predicated symbolic max exit count for loop: (%m /u 2)
 ; CHECK-NEXT:     Predicates:
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %m to i1) to i64) == 0
 ; CHECK-EMPTY:
-; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:    symbolic max exit count for latch: ((-1 + %n) /u 2)
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (((-1 + %n) /u 2) umin (%m /u 2))
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %m to i1) to i64) == 0
-; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (%m /u 2)
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (((-1 + %n) /u 2) umin (%m /u 2))
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %m to i1) to i64) == 0
 ;
@@ -122,13 +123,14 @@ define void @slt_stride3_guard_smax_minus_1(i64 %n) {
 ; CHECK-LABEL: 'slt_stride3_guard_smax_minus_1'
 ; CHECK-NEXT:  Classifying expressions for: @slt_stride3_guard_smax_minus_1
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,3}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,3}<nuw><nsw><%loop> U: [0,9223372036854775804) S: [0,9223372036854775804) Exits: (3 * ((-1 + (3 smax %n))<nsw> /u 3))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 3
-; CHECK-NEXT:    --> {3,+,3}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {3,+,3}<nuw><nsw><%loop> U: [3,9223372036854775807) S: [3,9223372036854775807) Exits: (3 + (3 * ((-1 + (3 smax %n))<nsw> /u 3))<nuw><nsw>)<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_stride3_guard_smax_minus_1
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 + (3 smax %n))<nsw> /u 3)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3074457345618258601
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + (3 smax %n))<nsw> /u 3)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %g = icmp slt i64 %n, 9223372036854775806
@@ -211,13 +213,14 @@ define void @ult_stride2_guard(i64 %n) {
 ; CHECK-LABEL: 'ult_stride2_guard'
 ; CHECK-NEXT:  Classifying expressions for: @ult_stride2_guard
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,2}<nuw><%loop> U: [0,-3) S: [-9223372036854775808,9223372036854775807) Exits: (2 * ((-1 + (2 umax %n)) /u 2))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 2
-; CHECK-NEXT:    --> {2,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {2,+,2}<nuw><%loop> U: [2,-1) S: [-9223372036854775808,9223372036854775807) Exits: (2 + (2 * ((-1 + (2 umax %n)) /u 2))<nuw>)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @ult_stride2_guard
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 + (2 umax %n)) /u 2)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 9223372036854775806
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + (2 umax %n)) /u 2)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %g = icmp ult i64 %n, -1
@@ -267,13 +270,14 @@ define void @sgt_stride2_guard(i64 %n, i64 %start) {
 ; CHECK-LABEL: 'sgt_stride2_guard'
 ; CHECK-NEXT:  Classifying expressions for: @sgt_stride2_guard
 ; CHECK-NEXT:    %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,-2}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,-2}<%loop> U: full-set S: full-set Exits: ((-2 * ((-1 + (-1 * ((-2 + %start) smin %n)) + %start) /u 2)) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, -2
-; CHECK-NEXT:    --> {(-2 + %start),+,-2}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(-2 + %start),+,-2}<%loop> U: full-set S: full-set Exits: (-2 + (-2 * ((-1 + (-1 * ((-2 + %start) smin %n)) + %start) /u 2)) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @sgt_stride2_guard
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 + (-1 * ((-2 + %start) smin %n)) + %start) /u 2)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + (-1 * ((-2 + %start) smin %n)) + %start) /u 2)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %g = icmp sgt i64 %n, -9223372036854775808
@@ -323,13 +327,14 @@ define void @sgt_stride3_guard_smin_plus_1(i64 %n, i64 %start) {
 ; CHECK-LABEL: 'sgt_stride3_guard_smin_plus_1'
 ; CHECK-NEXT:  Classifying expressions for: @sgt_stride3_guard_smin_plus_1
 ; CHECK-NEXT:    %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,-3}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,-3}<%loop> U: full-set S: full-set Exits: ((-3 * ((-1 + (-1 * ((-3 + %start) smin %n)) + %start) /u 3)) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, -3
-; CHECK-NEXT:    --> {(-3 + %start),+,-3}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(-3 + %start),+,-3}<%loop> U: full-set S: full-set Exits: (-3 + (-3 * ((-1 + (-1 * ((-3 + %start) smin %n)) + %start) /u 3)) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @sgt_stride3_guard_smin_plus_1
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 + (-1 * ((-3 + %start) smin %n)) + %start) /u 3)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 6148914691236517205
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + (-1 * ((-3 + %start) smin %n)) + %start) /u 3)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %g = icmp sgt i64 %n, -9223372036854775807
@@ -351,13 +356,14 @@ define void @ugt_stride3_guard(i64 %n, i64 %start) {
 ; CHECK-LABEL: 'ugt_stride3_guard'
 ; CHECK-NEXT:  Classifying expressions for: @ugt_stride3_guard
 ; CHECK-NEXT:    %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,-3}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,-3}<%loop> U: full-set S: full-set Exits: ((-3 * ((-1 + (-1 * ((-3 + %start) umin %n)) + %start) /u 3)) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, -3
-; CHECK-NEXT:    --> {(-3 + %start),+,-3}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(-3 + %start),+,-3}<%loop> U: full-set S: full-set Exits: (-3 + (-3 * ((-1 + (-1 * ((-3 + %start) umin %n)) + %start) /u 3)) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @ugt_stride3_guard
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 + (-1 * ((-3 + %start) umin %n)) + %start) /u 3)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 6148914691236517205
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + (-1 * ((-3 + %start) umin %n)) + %start) /u 3)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %g = icmp ugt i64 %n, 1
