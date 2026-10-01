@@ -89,6 +89,7 @@
 
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
@@ -499,6 +500,9 @@ private:
   void processExecuteRegion(scf::ExecuteRegionOp op);
   /// Lower `acc.reduction_accumulate`.
   void processAccumulateOp(acc::ReductionAccumulateOp op);
+  /// Store a reduction identity from a 1x1x1 launch ahead of `launch`.
+  LogicalResult initBeforeLaunch(Location loc, Value memref, ValueRange indices,
+                                 arith::AtomicRMWKind kind);
   /// Lower `acc.reduction_accumulate_array`.
   void processAccumulateArrayOp(acc::ReductionAccumulateArrayOp op);
   /// Lower `acc.reduction_init`.
@@ -2459,138 +2463,84 @@ void ACCCGToGPULowering::processPredicateRegion(
     }
   }
 
-  if (Value predicate = emitPredicate(loc, parDimsPair.second)) {
-    LLVM_DEBUG(llvm::dbgs() << "predicate: " << predicate << "\n");
-    bool isInsideThreadXLoop = false;
-    bool isInsideThreadYLoop = false;
-    for (auto parDim : parDimsPair.first) {
-      if (parDim.isThreadX())
-        isInsideThreadXLoop = true;
-      if (parDim.isThreadY())
-        isInsideThreadYLoop = true;
-    }
-    // Emits the reconvergence barrier matching this region's predication level,
-    // at the current insertion point. Called for both before and after the
-    // predicated store. Below is the pre-predicate barrier; the post-predicate
-    // barrier is emitted after the ifOp.
-    auto emitReconvergenceBarrier = [&]() {
-      if (isInsideThreadXLoop) {
-        // Inside ThreadX loop - skip barrier
-      } else if (isInsideThreadYLoop) {
-        // Inside ThreadY loop
-        if (!isInsideACCSpecializedRoutine(computeRegion)) {
-          // Add barrier if ThreadX is predicated (lane 0 writes must be
-          // visible to all lanes before they read).
-          bool predicatesThreadX = llvm::any_of(
-              parDimsPair.second,
-              [](mlir::acc::GPUParallelDimAttr pd) { return pd.isThreadX(); });
-          if (predicatesThreadX)
-            createPerRowBarrier(loc);
-        }
-        // For acc routine ThreadY routines, skip barrier
-      } else if (!parDimsPair.first.empty()) {
-        // Inside block loop
-        createBarrier(loc, mlir::acc::GPUParallelDimsAttr::get(
-                               interOp->getContext(), parDimsPair.first));
-      } else {
-        // Top level
-        createBarrier(loc, mlir::acc::GPUParallelDimsAttr::get(
-                               interOp->getContext(), parDimsPair.second));
-      }
-    };
-
-    // A gang-level (block, no thread) shared slot written here and reused on
-    // the next iteration of an enclosing sequential loop must not be
-    // overwritten before all threads read the current value. Emit the
-    // reconvergence barrier before the store too (the post-store barrier below
-    // only orders this iteration's store->read). Restricted to the block-level
-    // case: such loops are run uniformly by every workgroup thread, so the
-    // workgroup barrier cannot deadlock; worker/vector (thread_y/thread_x)
-    // loops may have divergent trip counts.
-    PrivateMemScope scope = needsPreStoreReuseBarrier(interOp);
-    if (scope == PrivateMemScope::Gang)
-      emitGPUBarrierWorkgroup(rewriter, loc);
-    else if (scope == PrivateMemScope::Worker)
-      createPerRowBarrier(loc);
-
-    auto ifOp = scf::IfOp::create(rewriter, loc, predicate,
-                                  /*withElseRegion=*/false);
-    Region &thenRegion = ifOp.getThenRegion();
-    Block &thenBlock = thenRegion.back();
-    rewriter.setInsertionPoint(thenBlock.getTerminator());
-    // Ops in a predicate region may need to be further processed, recurse
-    for (auto &bodyOp : interOp.getRegion().front().getOperations()) {
-      // If the store's value loads from a block-level reduction
-      // memref, convert to atomic for cross-block correctness.
-      // Only at kernel top level (no active thread dims).
-      if (memref::StoreOp storeOp = dyn_cast<memref::StoreOp>(&bodyOp)) {
-        std::optional<arith::AtomicRMWKind> blockReduceKind;
-        bool failedReductionKind = false;
-        Value storeVal = storeOp.getValueToStore();
-        if (storeVal.getDefiningOp()) {
-          // Walk the epilogue def-chain within the enclosing block to find
-          // the block-level accumulate load feeding this store.  Epilogue ops
-          // (type conversions, arithmetic, etc.) are traversed transparently.
-          // Non-acc loads and values defined outside the block are treated as
-          // loop-invariant and return nullopt, bounding the search naturally.
-          Block *epilogueBlock = interOp->getBlock();
-          auto findBlockAccLoad =
-              [&](auto &self,
-                  Value val) -> std::optional<arith::AtomicRMWKind> {
-            Operation *def = val.getDefiningOp();
-            if (!def || def->getBlock() != epilogueBlock)
-              return std::nullopt;
-            if (memref::LoadOp loadOp = dyn_cast<memref::LoadOp>(def)) {
-              for (auto *user : loadOp.getMemRef().getUsers()) {
-                if (acc::ReductionAccumulateOp accOp =
-                        dyn_cast<acc::ReductionAccumulateOp>(user)) {
-                  if (llvm::any_of(accOp.getParDims().getArray(),
-                                   [](mlir::acc::GPUParallelDimAttr pd) {
-                                     return pd.isAnyBlock();
-                                   })) {
-                    FailureOr<arith::AtomicRMWKind> kind = getReductionKind(
-                        accOp.getReductionOperator(),
-                        accOp.getValue().getType(), accOp.getLoc());
-                    if (failed(kind)) {
-                      failedReductionKind = true;
-                      return std::nullopt;
-                    }
-                    return *kind;
+  // A block-level reduction result stored once per block (\p oncePerBlock)
+  // needs a cross-block atomic, whether or not the region is predicated.
+  auto processBodyOp = [&](Operation &bodyOp,
+                           bool oncePerBlock) -> LogicalResult {
+    // If the store's value loads from a block-level reduction
+    // memref, convert to atomic for cross-block correctness.
+    memref::StoreOp storeOp = dyn_cast<memref::StoreOp>(&bodyOp);
+    if (storeOp && oncePerBlock) {
+      std::optional<arith::AtomicRMWKind> blockReduceKind;
+      bool failedReductionKind = false;
+      Value storeVal = storeOp.getValueToStore();
+      if (storeVal.getDefiningOp()) {
+        // Walk the epilogue def-chain within the enclosing block to find
+        // the block-level accumulate load feeding this store.  Epilogue ops
+        // (type conversions, arithmetic, etc.) are traversed transparently.
+        // Non-acc loads and values defined outside the block are treated as
+        // loop-invariant and return nullopt, bounding the search naturally.
+        Block *epilogueBlock = interOp->getBlock();
+        auto findBlockAccLoad =
+            [&](auto &self, Value val) -> std::optional<arith::AtomicRMWKind> {
+          Operation *def = val.getDefiningOp();
+          if (!def || def->getBlock() != epilogueBlock)
+            return std::nullopt;
+          if (memref::LoadOp loadOp = dyn_cast<memref::LoadOp>(def)) {
+            for (auto *user : loadOp.getMemRef().getUsers()) {
+              if (acc::ReductionAccumulateOp accOp =
+                      dyn_cast<acc::ReductionAccumulateOp>(user)) {
+                if (llvm::any_of(accOp.getParDims().getArray(),
+                                 [](mlir::acc::GPUParallelDimAttr pd) {
+                                   return pd.isAnyBlock();
+                                 })) {
+                  FailureOr<arith::AtomicRMWKind> kind = getReductionKind(
+                      accOp.getReductionOperator(), accOp.getValue().getType(),
+                      accOp.getLoc());
+                  if (failed(kind)) {
+                    failedReductionKind = true;
+                    return std::nullopt;
                   }
+                  return *kind;
                 }
               }
-              return std::nullopt;
             }
-            for (Value operand : def->getOperands())
-              if (auto kind = self(self, operand))
-                return kind;
             return std::nullopt;
-          };
-          blockReduceKind = findBlockAccLoad(findBlockAccLoad, storeVal);
-        }
-        if (failedReductionKind)
-          return;
-        if (blockReduceKind) {
-          Value input = mapping.lookupOrDefault(storeOp.getValueToStore());
-          Value memref = mapping.lookupOrDefault(storeOp.getMemref());
-          bool threadIsActive = llvm::any_of(
-              parDimsPair.first, [](mlir::acc::GPUParallelDimAttr pd) {
-                return !pd.isAnyBlock();
-              });
-          if (!threadIsActive &&
-              !isa_and_nonnull<memref::AllocaOp>(
-                  unwrapMemRefConversion(memref).getDefiningOp())) {
-            // Initialize the destination to the reduction identity before
-            // cross-block atomics so that the final result reflects pure
-            // assignment semantics (e.g. r = sum(a)), not accumulation
-            // on top of the pre-kernel value.
-            if (launch) {
-              MemRefType memrefTy = cast<MemRefType>(memref.getType());
-              // Map the store indices for ranked memrefs.
-              SmallVector<Value> initIndices;
-              for (Value idx : storeOp.getIndices())
-                initIndices.push_back(mapping.lookupOrDefault(idx));
+          }
+          for (Value operand : def->getOperands())
+            if (auto kind = self(self, operand))
+              return kind;
+          return std::nullopt;
+        };
+        blockReduceKind = findBlockAccLoad(findBlockAccLoad, storeVal);
+      }
+      if (failedReductionKind)
+        return failure();
+      if (blockReduceKind) {
+        Value input = mapping.lookupOrDefault(storeOp.getValueToStore());
+        Value memref = mapping.lookupOrDefault(storeOp.getMemref());
+        bool threadIsActive = llvm::any_of(
+            parDimsPair.first,
+            [](mlir::acc::GPUParallelDimAttr pd) { return !pd.isAnyBlock(); });
+        if (!threadIsActive &&
+            !isa_and_nonnull<memref::AllocaOp>(
+                unwrapMemRefConversion(memref).getDefiningOp())) {
+          // Initialize the destination to the reduction identity before
+          // cross-block atomics so that the final result reflects pure
+          // assignment semantics (e.g. r = sum(a)), not accumulation
+          // on top of the pre-kernel value.
+          if (launch) {
+            MemRefType memrefTy = cast<MemRefType>(memref.getType());
+            // Map the store indices for ranked memrefs.
+            SmallVector<Value> initIndices;
+            for (Value idx : storeOp.getIndices())
+              initIndices.push_back(mapping.lookupOrDefault(idx));
 
+            // Initialize from a single-thread launch ordered before this one:
+            // a store from inside the kernel is not ordered against the
+            // atomics of the other blocks, which may already have run.
+            if (failed(initBeforeLaunch(loc, memref, initIndices,
+                                        *blockReduceKind))) {
               OpBuilder::InsertionGuard guard(rewriter);
               Block &launchBody = launch.getBody().front();
               Operation *insertBefore = nullptr;
@@ -2665,23 +2615,94 @@ void ACCCGToGPULowering::processPredicateRegion(
               rewriter.setInsertionPointAfter(initIf);
               gpu::BarrierOp::create(rewriter, loc);
             }
-            SmallVector<Value> atomicIndices;
-            for (Value idx : storeOp.getIndices())
-              atomicIndices.push_back(mapping.lookupOrDefault(idx));
-            constructAtomicAccumulation(loc, memref, atomicIndices, input,
-                                        *blockReduceKind);
-            continue;
           }
+          SmallVector<Value> atomicIndices;
+          for (Value idx : storeOp.getIndices())
+            atomicIndices.push_back(mapping.lookupOrDefault(idx));
+          constructAtomicAccumulation(loc, memref, atomicIndices, input,
+                                      *blockReduceKind);
+          return success();
         }
       }
-      processOp(&bodyOp);
     }
+    processOp(&bodyOp);
+    return success();
+  };
+
+  if (Value predicate = emitPredicate(loc, parDimsPair.second)) {
+    LLVM_DEBUG(llvm::dbgs() << "predicate: " << predicate << "\n");
+    bool isInsideThreadXLoop = false;
+    bool isInsideThreadYLoop = false;
+    for (auto parDim : parDimsPair.first) {
+      if (parDim.isThreadX())
+        isInsideThreadXLoop = true;
+      if (parDim.isThreadY())
+        isInsideThreadYLoop = true;
+    }
+    // Emits the reconvergence barrier matching this region's predication level,
+    // at the current insertion point. Called for both before and after the
+    // predicated store. Below is the pre-predicate barrier; the post-predicate
+    // barrier is emitted after the ifOp.
+    auto emitReconvergenceBarrier = [&]() {
+      if (isInsideThreadXLoop) {
+        // Inside ThreadX loop - skip barrier
+      } else if (isInsideThreadYLoop) {
+        // Inside ThreadY loop
+        if (!isInsideACCSpecializedRoutine(computeRegion)) {
+          // Add barrier if ThreadX is predicated (lane 0 writes must be
+          // visible to all lanes before they read).
+          bool predicatesThreadX = llvm::any_of(
+              parDimsPair.second,
+              [](mlir::acc::GPUParallelDimAttr pd) { return pd.isThreadX(); });
+          if (predicatesThreadX)
+            createPerRowBarrier(loc);
+        }
+        // For acc routine ThreadY routines, skip barrier
+      } else if (!parDimsPair.first.empty()) {
+        // Inside block loop
+        createBarrier(loc, mlir::acc::GPUParallelDimsAttr::get(
+                               interOp->getContext(), parDimsPair.first));
+      } else {
+        // Top level
+        createBarrier(loc, mlir::acc::GPUParallelDimsAttr::get(
+                               interOp->getContext(), parDimsPair.second));
+      }
+    };
+
+    // A gang-level (block, no thread) shared slot written here and reused on
+    // the next iteration of an enclosing sequential loop must not be
+    // overwritten before all threads read the current value. Emit the
+    // reconvergence barrier before the store too (the post-store barrier below
+    // only orders this iteration's store->read). Restricted to the block-level
+    // case: such loops are run uniformly by every workgroup thread, so the
+    // workgroup barrier cannot deadlock; worker/vector (thread_y/thread_x)
+    // loops may have divergent trip counts.
+    PrivateMemScope scope = needsPreStoreReuseBarrier(interOp);
+    if (scope == PrivateMemScope::Gang)
+      emitGPUBarrierWorkgroup(rewriter, loc);
+    else if (scope == PrivateMemScope::Worker)
+      createPerRowBarrier(loc);
+
+    auto ifOp = scf::IfOp::create(rewriter, loc, predicate,
+                                  /*withElseRegion=*/false);
+    Region &thenRegion = ifOp.getThenRegion();
+    Block &thenBlock = thenRegion.back();
+    rewriter.setInsertionPoint(thenBlock.getTerminator());
+    // Ops in a predicate region may need to be further processed, recurse
+    for (auto &bodyOp : interOp.getRegion().front().getOperations())
+      if (failed(processBodyOp(bodyOp, /*oncePerBlock=*/true)))
+        return;
     rewriter.setInsertionPointAfter(ifOp);
     emitReconvergenceBarrier();
   } else {
+    // Only a launch without thread dims runs the store once per block.
+    bool oncePerBlock = llvm::all_of(
+        computeRegion.getLaunchParDims(),
+        [](mlir::acc::GPUParallelDimAttr pd) { return pd.isAnyBlock(); });
     // Ops in a predicate region may need to be further processed, recurse
     for (auto &bodyOp : interOp.getRegion().front().getOperations())
-      processOp(&bodyOp);
+      if (failed(processBodyOp(bodyOp, oncePerBlock)))
+        return;
   }
 }
 
@@ -3498,6 +3519,21 @@ void ACCCGToGPULowering::constructAtomicAccumulation(
   assert(!memref.getDefiningOp<memref::AllocaOp>() &&
          "cannot lower atomic accumulation on an stack variable");
 
+  // An i1 has no atomic form, but or/and onto it are idempotent: every writer
+  // stores the same absorbing value, so a guarded plain store suffices.
+  if (input.getType().isInteger(1) && (kind == arith::AtomicRMWKind::ori ||
+                                       kind == arith::AtomicRMWKind::andi)) {
+    Value absorbing = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getBoolAttr(kind == arith::AtomicRMWKind::ori));
+    Value hit = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
+                                      input, absorbing);
+    auto ifOp = scf::IfOp::create(rewriter, loc, hit, /*withElseRegion=*/false);
+    rewriter.setInsertionPoint(ifOp.thenBlock()->getTerminator());
+    memref::StoreOp::create(rewriter, loc, absorbing, memref, indices);
+    rewriter.setInsertionPointAfter(ifOp);
+    return;
+  }
+
   // acc.atomic.update derives the element address from the memref descriptor's
   // base pointer and offset field; it has no subscript operand. When the store
   // being lowered targets a specific array element (e.g. result(idx) =
@@ -3737,6 +3773,69 @@ void ACCCGToGPULowering::processExecuteRegion(scf::ExecuteRegionOp op) {
   }
   mapping.map(op->getResults(), executeRegionOp->getResults());
   rewriter.setInsertionPointAfter(executeRegionOp);
+}
+
+/// Stores the identity of \p kind to \p memref from a single-thread launch
+/// ahead of the current one, ordering it before every block's atomic. Fails
+/// when the address cannot be rebuilt outside the launch.
+LogicalResult ACCCGToGPULowering::initBeforeLaunch(Location loc, Value memref,
+                                                   ValueRange indices,
+                                                   arith::AtomicRMWKind kind) {
+  SmallVector<Value> address{memref};
+  llvm::append_range(address, indices);
+
+  // The address may be computed inside the launch, but only from values
+  // defined outside of it.
+  SetVector<Operation *> slice;
+  SmallVector<Value> worklist(address);
+  while (!worklist.empty()) {
+    Value v = worklist.pop_back_val();
+    if (auto arg = dyn_cast<BlockArgument>(v)) {
+      if (launch->isAncestor(arg.getOwner()->getParentOp()))
+        return failure();
+      continue;
+    }
+    Operation *def = v.getDefiningOp();
+    if (!launch->isAncestor(def) || slice.contains(def))
+      continue;
+    if (def->getNumRegions() || !isMemoryEffectFree(def))
+      return failure();
+    slice.insert(def);
+    llvm::append_range(worklist, def->getOperands());
+  }
+
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(launch);
+  Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  gpu::LaunchOp initLaunch;
+  if (launch.getAsyncToken()) {
+    initLaunch =
+        gpu::LaunchOp::create(rewriter, loc, one, one, one, one, one, one,
+                              /*dynamicSharedMemorySize=*/Value{},
+                              gpu::AsyncTokenType::get(rewriter.getContext()));
+    initLaunch.getAsyncDependenciesMutable().append(
+        launch.getAsyncDependencies());
+  } else {
+    initLaunch =
+        gpu::LaunchOp::create(rewriter, loc, one, one, one, one, one, one);
+  }
+  Block &body = initLaunch.getBody().front();
+  rewriter.setInsertionPointToEnd(&body);
+  gpu::TerminatorOp::create(rewriter, loc);
+  rewriter.setInsertionPointToStart(&body);
+
+  IRMapping initMapping;
+  for (Operation *op : topologicalSort(slice))
+    rewriter.clone(*op, initMapping);
+  SmallVector<Value> initAddress = llvm::map_to_vector(
+      address, [&](Value v) { return initMapping.lookupOrDefault(v); });
+  Value initMemref = initAddress.front();
+  Value identity = createIdentityValue(
+      rewriter, loc, cast<MemRefType>(initMemref.getType()).getElementType(),
+      kind, /*useOnlyFiniteValue=*/true);
+  memref::StoreOp::create(rewriter, loc, identity, initMemref,
+                          ArrayRef(initAddress).drop_front());
+  return success();
 }
 
 void ACCCGToGPULowering::processAccumulateOp(acc::ReductionAccumulateOp op) {
