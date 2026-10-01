@@ -600,7 +600,7 @@ Fortran::lower::genCallOpAndResult(
       };
 
       // Start from the variant selected with the dispatch construct in context.
-        mlir::Value target = addrOfSym(selectedUlt);
+      mlir::Value target = addrOfSym(selectedUlt);
 
       // `nocontext(true)`: re-select the variant with the dispatch construct
       // removed from the OpenMP context. That may resolve to a different
