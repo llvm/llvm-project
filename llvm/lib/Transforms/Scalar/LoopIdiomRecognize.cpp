@@ -1102,7 +1102,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // We currently don't convert inline intrinsics into larger ones, to avoid
   // code size increase. `processLoopMemSet` checks that the intrinsic is not
   // inline before calling this function.
-  assert((!isa<MemIntrinsic>(TheStore) ||
+  assert((isa<StoreInst>(TheStore) ||
           !cast<MemIntrinsic>(TheStore)->isForceInlined()) &&
          "inline mem intrinsics should be filtered out by callers");
 
@@ -1365,7 +1365,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   // We currently don't convert inline intrinsics into larger ones, to avoid
   // code size increase. `processLoopMemCpy` checks that the intrinsic is not
   // inline before calling this function.
-  assert((!isa<MemIntrinsic>(TheStore) ||
+  assert((isa<StoreInst>(TheStore) ||
           !cast<MemIntrinsic>(TheStore)->isForceInlined()) &&
          "inline mem intrinsics should be filtered out by callers");
 
