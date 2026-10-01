@@ -992,7 +992,8 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
 // needed.
 // FIXME: Check if the declaration has a local/anonymous type
 bool createParameters(NewFunction &ExtractedFunc,
-                      const CapturedZoneInfo &CapturedInfo) {
+                      const CapturedZoneInfo &CapturedInfo,
+                      const ASTContext &Context) {
   for (const auto &KeyVal : CapturedInfo.DeclInfoMap) {
     const auto &DeclInfo = KeyVal.second;
     // If a Decl was Declared in zone and referenced in post zone, it
@@ -1018,9 +1019,12 @@ bool createParameters(NewFunction &ExtractedFunc,
     // FIXME: check if parameter will be a non l-value reference.
     bool IsPassedByReference = true;
     if (!DeclInfo.IsPossiblyMutated) {
+      auto WordSize = Context.getTypeSizeInChars(Context.VoidPtrTy);
+      auto TypeSize = Context.getTypeSizeInChars(TypeInfo);
       // A scalar (arithmetic, pointer, enumeration, ...) is at least as
       // cheap to copy as to pass by reference, and less noisy.
-      if (TypeInfo->isScalarType() && !FullTypeInfo->isReferenceType()) {
+      if (TypeInfo->isScalarType() && !FullTypeInfo->isReferenceType() &&
+          TypeSize <= 2 * WordSize) {
         IsPassedByReference = false;
       } else if (!TypeInfo->isArrayType()) {
         // Still passed by reference to avoid a copy, but the reference
@@ -1129,7 +1133,8 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   ExtractedFunc.DefinitionPoint = ExtZone.getInsertionPoint();
 
   ExtractedFunc.CallerReturnsValue = CapturedInfo.AlwaysReturns;
-  if (!createParameters(ExtractedFunc, CapturedInfo) ||
+  if (!createParameters(ExtractedFunc, CapturedInfo,
+                        ExtZone.EnclosingFunction->getASTContext()) ||
       !generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
                                 CapturedInfo))
     return error("Too complex to extract.");
