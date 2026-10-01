@@ -193,8 +193,13 @@ build:msvc --linkopt=/IGNORE:4001 --host_linkopt=/IGNORE:4001 # no object files
 # some of the generic Clang flags.
 build:clang-cl --config=windows
 
-# Switch from MSVC to the `clang-cl` compiler.
+# Switch from MSVC to the `clang-cl` compiler. `--compiler` picks an entry out
+# of a `cc_toolchain_suite`, which platform-based toolchain resolution -- the
+# only kind since Bazel 7 -- ignores; rules_cc's Windows toolchain switches on
+# the USE_CLANG_CL repository environment variable instead. Keep both so the
+# config also works under legacy resolution.
 build:clang-cl --compiler=clang-cl
+build:clang-cl --repo_env=USE_CLANG_CL=1
 
 # Match the conformance flags CMake applies to clang-cl. /Zc:preprocessor is
 # intentionally only part of the MSVC configuration above.

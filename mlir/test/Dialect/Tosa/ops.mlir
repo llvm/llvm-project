@@ -1336,7 +1336,7 @@ func.func @test_rescale_i16_rounding_mode(%arg0 : tensor<2xi8>) -> tensor<2xi16>
 // -----
 // CHECK-LABEL: const
 func.func @test_const(%arg0 : index) -> tensor<4xi32> {
-    %0 = "tosa.const"() <{values = dense<[3, 0, 1, 2]> : tensor<4xi32>}> : () -> tensor<4xi32>
+    %0 = tosa.const values(dense<[3, 0, 1, 2]> : tensor<4xi32>) : () -> tensor<4xi32>
     return %0 : tensor<4xi32>
 }
 
@@ -1747,6 +1747,13 @@ func.func @test_transpose_f8E4M3FN(%arg0: tensor<13x21x3xf8E4M3FN>) -> tensor<3x
 func.func @test_gather_f8E4M3FN(%arg0: tensor<13x21x3xf8E4M3FN>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xf8E4M3FN> {
   %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xf8E4M3FN>, tensor<13x26xi32>) -> tensor<13x26x3xf8E4M3FN>
   return %0 : tensor<13x26x3xf8E4M3FN>
+}
+
+// -----
+// CHECK-LABEL: test_block_scaled_gather
+func.func @test_block_scaled_gather(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg1: tensor<13x26xi32>) -> tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<13x26xi32>) -> tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %0 : tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
 }
 
 // -----

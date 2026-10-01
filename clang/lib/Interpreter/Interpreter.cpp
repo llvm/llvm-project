@@ -514,6 +514,9 @@ Interpreter::createWithDevice(OffloadType Type,
   if (llvm::Error E = ExecuteIncrementalAction(*DCI, *Interp->DeviceAct))
     return std::move(E);
 
+  // Set the finalized initial device module aside, as the host path does.
+  Interp->DeviceAct->CacheCodeGenModule();
+
   Interp->DeviceCI = std::move(DCI);
 
   if (Type == OffloadType::HIP) {

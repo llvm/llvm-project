@@ -2975,6 +2975,23 @@ ObjectFileELF::ParseTrampolineSymbols(Symtab *symbol_table, user_id_t start_id,
                              rel_data, symtab_data, strtab_data);
 }
 
+/// Returns the \p size bytes at \p offset in \p debug_data for a relocation to
+/// patch, or reports an error and returns null if they overrun the section.
+static uint8_t *GetRelocationTarget(DataExtractor &debug_data,
+                                    Section *rel_section, uint64_t offset,
+                                    size_t size) {
+  if (!debug_data.ValidOffsetForDataOfSize(offset, size)) {
+    rel_section->GetModule()->ReportError("relocation outside of section {0}",
+                                          rel_section->GetName());
+    return nullptr;
+  }
+  DataBufferSP data_buffer_sp = debug_data.GetSharedDataBuffer();
+  // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
+  WritableDataBuffer *data_buffer =
+      llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
+  return data_buffer->GetBytes() + debug_data.GetSharedDataOffset() + offset;
+}
+
 static void ApplyELF64ABS64Relocation(Symtab *symtab, ELFRelocation &rel,
                                       DataExtractor &debug_data,
                                       Section *rel_section) {
@@ -2982,12 +2999,11 @@ static void ApplyELF64ABS64Relocation(Symtab *symtab, ELFRelocation &rel,
       symtab->FindSymbolByID(ELFRelocation::RelocSymbol64(rel));
   if (symbol) {
     addr_t value = symbol->GetAddressRef().GetFileAddress();
-    DataBufferSP data_buffer_sp = debug_data.GetSharedDataBuffer();
-    // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
-    WritableDataBuffer *data_buffer =
-        llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-    void *const dst = data_buffer->GetBytes() + rel_section->GetFileOffset() +
-                      ELFRelocation::RelocOffset64(rel);
+    uint8_t *dst = GetRelocationTarget(debug_data, rel_section,
+                                       ELFRelocation::RelocOffset64(rel),
+                                       sizeof(uint64_t));
+    if (!dst)
+      return;
     uint64_t val_offset = value + ELFRelocation::RelocAddend64(rel);
     memcpy(dst, &val_offset, sizeof(uint64_t));
   }
@@ -3009,12 +3025,11 @@ static void ApplyELF64ABS32Relocation(Symtab *symtab, ELFRelocation &rel,
       return;
     }
     uint32_t truncated_addr = (value & 0xFFFFFFFF);
-    DataBufferSP data_buffer_sp = debug_data.GetSharedDataBuffer();
-    // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
-    WritableDataBuffer *data_buffer =
-        llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-    void *const dst = data_buffer->GetBytes() + rel_section->GetFileOffset() +
-                      ELFRelocation::RelocOffset32(rel);
+    uint8_t *dst = GetRelocationTarget(debug_data, rel_section,
+                                       ELFRelocation::RelocOffset32(rel),
+                                       sizeof(uint32_t));
+    if (!dst)
+      return;
     memcpy(dst, &truncated_addr, sizeof(uint32_t));
   }
 }
@@ -3033,12 +3048,11 @@ static void ApplyELF32ABS32RelRelocation(Symtab *symtab, ELFRelocation &rel,
       return;
     }
     assert(llvm::isUInt<32>(value) && "Valid addresses are 32-bit");
-    DataBufferSP data_buffer_sp = debug_data.GetSharedDataBuffer();
-    // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
-    WritableDataBuffer *data_buffer =
-        llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-    uint8_t *dst = data_buffer->GetBytes() + rel_section->GetFileOffset() +
-                   ELFRelocation::RelocOffset32(rel);
+    uint8_t *dst = GetRelocationTarget(debug_data, rel_section,
+                                       ELFRelocation::RelocOffset32(rel),
+                                       sizeof(uint32_t));
+    if (!dst)
+      return;
     // Implicit addend is stored inline as a signed value.
     int32_t addend;
     memcpy(&addend, dst, sizeof(int32_t));
@@ -3107,14 +3121,11 @@ unsigned ObjectFileELF::ApplyRelocations(
         case R_386_32:
           symbol = symtab->FindSymbolByID(reloc_symbol(rel));
           if (symbol) {
-            addr_t f_offset =
-                rel_section->GetFileOffset() + ELFRelocation::RelocOffset32(rel);
-            DataBufferSP data_buffer_sp = debug_data.GetSharedDataBuffer();
-            // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
-            WritableDataBuffer *data_buffer =
-                llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-            uint32_t *dst = reinterpret_cast<uint32_t *>(
-                data_buffer->GetBytes() + f_offset);
+            uint32_t *dst = reinterpret_cast<uint32_t *>(GetRelocationTarget(
+                debug_data, rel_section, ELFRelocation::RelocOffset32(rel),
+                sizeof(uint32_t)));
+            if (!dst)
+              break;
 
             addr_t value = symbol->GetAddressRef().GetFileAddress();
             if (rel.IsRela()) {

@@ -1176,13 +1176,14 @@ private:
   ///                 preheader of the loop.
   /// \param LoopType Information about type of loop worksharing.
   ///                 It corresponds to type of loop workshare OpenMP pragma.
+  /// \param NeedsBarrier Indicates whether a barrier must be inserted after
+  ///                     the loop.
   /// \param NoLoop   If true, no-loop code is generated.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                         InsertPointTy AllocaIP,
-                                         omp::WorksharingLoopType LoopType,
-                                         bool NoLoop);
+  InsertPointOrErrorTy applyWorkshareLoopTarget(
+      DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+      omp::WorksharingLoopType LoopType, bool NeedsBarrier, bool NoLoop);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
@@ -1576,8 +1577,10 @@ public:
   ///
   /// \param Loc The location where the taskwait directive was encountered.
   /// \param Dependencies dependencies as specified by the 'depend' clause.
+  /// \param IsNowait True when a 'nowait' clause is present
   LLVM_ABI void createTaskwait(const LocationDescription &Loc,
-                               DependenciesInfo Dependencies = {});
+                               DependenciesInfo Dependencies = {},
+                               bool IsNowait = false);
 
   ///  Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
   /// `{ kmp_intptr_t base_addr; size_t len; flags (bitfield storage as i32) }`
