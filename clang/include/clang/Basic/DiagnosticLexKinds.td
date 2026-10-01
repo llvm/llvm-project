@@ -269,16 +269,16 @@ def err_hex_constant_requires : Error<
 def ext_hex_constant_invalid : Extension<
   "hexadecimal floating constants are a C99 feature">, InGroup<C99>;
 def ext_octal_literal : Extension<
-  "octal integer literals are a C2y extension">, InGroup<C2y>;
+  "octal integer literals are a C2y extension">, InGroup<C2y>, SuppressInSystemMacro;
 def ext_cpp_octal_literal : Extension<
   "octal integer literals are a Clang extension">,
-  InGroup<DiagGroup<"octal-prefix-extension">>;
+  InGroup<DiagGroup<"octal-prefix-extension">>, SuppressInSystemMacro;
 def warn_c2y_compat_octal_literal : Warning<
   "octal integer literals are incompatible with standards before C2y">,
-  InGroup<CPre2yCompat>, DefaultIgnore;
+  InGroup<CPre2yCompat>, DefaultIgnore, SuppressInSystemMacro;
 def warn_unprefixed_octal_deprecated : Warning<
   "octal literals without a '0o' prefix are deprecated">,
-  InGroup<DeprecatedOctalLiterals>;
+  InGroup<DeprecatedOctalLiterals>, SuppressInSystemMacro;
 def ext_binary_literal : Extension<
   "binary integer literals are a C23 extension">, InGroup<C23>;
 def warn_c23_compat_binary_literal : Warning<
