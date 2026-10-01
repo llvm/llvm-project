@@ -14,6 +14,9 @@
 # RUN:   --function-order=%t.order --print-cfg --print-only=nonsimple \
 # RUN:   | FileCheck %s --check-prefix=CHECK-CFG
 # RUN: llvm-objdump -d --disassemble-symbols=nonsimple %t.bolt | FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t.relax-exp.bolt --relax-exp --keep-nops \
+# RUN:   --function-order=%t.order --skip-funcs=cold_target \
+# RUN:   | FileCheck %s --check-prefix=CHECK-RELAX-EXP
 
   .text
   .globl _start
@@ -85,3 +88,9 @@ cold_target:
 # CHECK-NEXT: br x16
 # CHECK-NEXT: [[TRAMP]]: {{.*}} b 0x{{[0-9a-f]+}} <cold_target>
 # CHECK-NOT: b 0x{{[0-9a-f]+}} <cold_target>
+
+## Since cold_target is skipped, it is outside the clustered output layout.
+## The transfer trampoline must retain its tail-call annotation so clustered
+## relaxation handles it as a call and creates a long thunk.
+# CHECK-RELAX-EXP: BOLT-INFO: relaxed 1 calls with long thunks
+# CHECK-RELAX-EXP: BOLT-INFO: 1 long thunks created
