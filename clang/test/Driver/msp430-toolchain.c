@@ -126,6 +126,34 @@
 // LIBS-EXC-NEG-NOT: "{{.*}}/430"
 // LIBS-EXC-NEG-NOT: "{{.*}}430/crt{{.*}}"
 
+// The MSP430X multilibs are in the root, not in /430.
+// RUN: %clang -### %s --target=msp430 -mcpu=msp430x -rtlib=libgcc \
+// RUN:   --sysroot="%S/Inputs/basic_msp430_tree" > %t 2>&1
+// RUN: FileCheck -check-prefix=LIBS-430X-POS %s < %t
+// RUN: FileCheck -check-prefix=LIBS-430X-NEG %s < %t
+// RUN: %clang -### %s --target=msp430 -mmcu=msp430f5529 -rtlib=libgcc \
+// RUN:   --sysroot="%S/Inputs/basic_msp430_tree" > %t 2>&1
+// RUN: FileCheck -check-prefix=LIBS-430X-POS %s < %t
+// RUN: FileCheck -check-prefix=LIBS-430X-NEG %s < %t
+// LIBS-430X-POS: "{{.*}}/Inputs/basic_msp430_tree{{/|\\\\}}msp430-elf{{/|\\\\}}lib{{/|\\\\}}crt0.o"
+// LIBS-430X-POS: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1{{/|\\\\}}crtbegin_no_eh.o"
+// LIBS-430X-POS: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1{{/|\\\\}}"
+// LIBS-430X-POS: "-L{{.*}}/Inputs/basic_msp430_tree{{/|\\\\}}msp430-elf{{/|\\\\}}lib{{/|\\\\}}"
+// LIBS-430X-POS: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1{{/|\\\\}}crtend_no_eh.o"
+// LIBS-430X-NEG-NOT: /430
+// LIBS-430X-NEG-NOT: /exceptions
+
+// RUN: %clang -### %s --target=msp430 -mcpu=msp430x -rtlib=libgcc -fexceptions \
+// RUN:   --sysroot="%S/Inputs/basic_msp430_tree" > %t 2>&1
+// RUN: FileCheck -check-prefix=LIBS-430X-EXC-POS %s < %t
+// RUN: FileCheck -check-prefix=LIBS-430X-EXC-NEG %s < %t
+// LIBS-430X-EXC-POS: "{{.*}}/Inputs/basic_msp430_tree{{/|\\\\}}msp430-elf{{/|\\\\}}lib/exceptions{{/|\\\\}}crt0.o"
+// LIBS-430X-EXC-POS: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/exceptions{{/|\\\\}}crtbegin.o"
+// LIBS-430X-EXC-POS: "-L{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/exceptions"
+// LIBS-430X-EXC-POS: "-L{{.*}}/Inputs/basic_msp430_tree{{/|\\\\}}msp430-elf{{/|\\\\}}lib/exceptions"
+// LIBS-430X-EXC-POS: "{{.*}}/Inputs/basic_msp430_tree/lib/gcc/msp430-elf/8.3.1/exceptions{{/|\\\\}}crtend.o"
+// LIBS-430X-EXC-NEG-NOT: /430
+
 // RUN: %clang -### %s --target=msp430 -rtlib=libgcc \
 // RUN:   -fstack-protector  --sysroot="%S/Inputs/basic_msp430_tree" 2>&1 \
 // RUN:   | FileCheck -check-prefix=LIBS-SSP %s
