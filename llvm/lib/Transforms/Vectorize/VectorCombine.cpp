@@ -6924,23 +6924,13 @@ bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
                                                 SmallVectorImpl<int> &NewMask) {
     Value *SVOp0 = SV->getOperand(0);
     Value *SVOp1 = SV->getOperand(1);
-    ArrayRef<int> OldMask = SV->getShuffleMask();
     assert(((SVOp0 == LowLoad && SVOp1 == HighLoad) ||
             (SVOp0 == HighLoad && SVOp1 == LowLoad)) &&
            "Shuffle operands must be exactly {LowLoad, HighLoad} or {HighLoad, "
            "LowLoad}");
-    unsigned Off0 = SVOp0 == LowLoad ? 0 : NumElts;
-    unsigned Off1 = SVOp1 == LowLoad ? 0 : NumElts;
-
-    NewMask.clear();
-    for (int M : OldMask) {
-      if (M < 0)
-        NewMask.push_back(M);
-      else if (M < NumElts)
-        NewMask.push_back(Off0 + M);
-      else
-        NewMask.push_back(Off1 + (M - NumElts));
-    }
+    NewMask.assign(SV->getShuffleMask().begin(), SV->getShuffleMask().end());
+    if (SVOp0 == HighLoad)
+      ShuffleVectorInst::commuteShuffleMask(NewMask, NumElts);
   };
 
   // Cost model checks
