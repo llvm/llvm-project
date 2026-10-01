@@ -282,6 +282,12 @@ features cannot lower the translation-unit ABI level;
 
 - All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
 
+- `-ftrivial-auto-var-init=` now initializes variables whose declaration is
+  bypassed by a `goto` or `switch`, which were previously left uninitialized.
+  The initialization is emitted at each bypassing jump. See the
+  `-ftrivial-auto-var-init=` entry in the User's Manual for the details,
+  including where C deliberately departs from C 6.2.4p6.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
@@ -610,6 +616,9 @@ features cannot lower the translation-unit ABI level;
   rather than to a declarator chunk. (#GH196982, #GH111463)
 
 #### Bug Fixes to C++ Support
+
+- Fixed a stack overflow crash when evaluating deeply recursive `constexpr`
+  function calls. (#GH201418, #GH200673)
 
 - Fixed lambdas with specifiers or attributes after the capture list being
   misparsed as function declarations in direct-initialization contexts under
