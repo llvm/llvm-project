@@ -2182,9 +2182,10 @@ void UnwrappedLineParser::parseStructuralElement(
       parseSquare();
       break;
     case tok::kw_new:
-      if (Style.isCSharp() &&
-          (Tokens->peekNextToken()->isAccessSpecifierKeyword() ||
-           (Previous && Previous->isAccessSpecifierKeyword()))) {
+      if ((Style.isCSharp() &&
+           (Tokens->peekNextToken()->isAccessSpecifierKeyword() ||
+            (Previous && Previous->isAccessSpecifierKeyword()))) ||
+          FormatTok->endsSequence(tok::kw_new, tok::kw_operator)) {
         nextToken();
       } else {
         parseNew();
@@ -2473,25 +2474,7 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
   nextToken();
   if (Previous) {
     const auto *PrevPrev = Previous->getPreviousNonComment();
-    // The star may be part of the type in a trailing return type or new
-    // expression. Then the square brackets will mean array instead of capture.
-    auto StarIsType = [&]() {
-      if (!PrevPrev)
-        return false;
-      if (PrevPrev->isTypeName(LangOpts))
-        return true;
-      if (PrevPrev->isNot(tok::identifier))
-        return false;
-      const auto *Tok = PrevPrev->getPreviousNonComment();
-      // Skip the placement part of the new expression.
-      if (Tok && Tok->is(tok::r_paren)) {
-        Tok = Tok->MatchingParen;
-        if (Tok)
-          Tok = Tok->getPreviousNonComment();
-      }
-      return Tok && Tok->is(tok::kw_new);
-    };
-    if (Previous->is(tok::star) && StarIsType())
+    if (Previous->is(tok::star) && PrevPrev && PrevPrev->isTypeName(LangOpts))
       return false;
     if (Previous->closesScope()) {
       // Not a potential C-style cast.
@@ -2517,7 +2500,7 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
     if (Next->is(tok::greater))
       return false;
   }
-  parseSquare(/*LambdaIntroducer=*/true);
+  parseSquare(/*SkipLambda=*/true);
   return true;
 }
 
@@ -2771,8 +2754,6 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
           FormatTok->setBlockKind(BK_BracedInit);
         }
       }
-      RParen->MatchingParen = LParen;
-      LParen->MatchingParen = RParen;
       return SeenEqual;
     }
     case tok::r_brace:
@@ -2853,8 +2834,8 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
   return SeenEqual;
 }
 
-void UnwrappedLineParser::parseSquare(bool LambdaIntroducer) {
-  if (!LambdaIntroducer) {
+void UnwrappedLineParser::parseSquare(bool SkipLambda) {
+  if (!SkipLambda) {
     assert(FormatTok->is(tok::l_square) && "'[' expected.");
     if (tryToParseLambda())
       return;
@@ -3363,28 +3344,62 @@ void UnwrappedLineParser::parseNew() {
 
       nextToken();
     } while (!eof());
-  }
+  } else if (Style.isJava()) {
+    // In Java, we can parse everything up to the parens, which aren't optional.
+    do {
+      // There should not be a ;, { or } before the new's open paren.
+      if (FormatTok->isOneOf(tok::semi, tok::l_brace, tok::r_brace))
+        return;
 
-  if (!Style.isJava())
-    return;
+      // Consume the parens.
+      if (FormatTok->is(tok::l_paren)) {
+        parseParens();
 
-  // In Java, we can parse everything up to the parens, which aren't optional.
-  do {
-    // There should not be a ;, { or } before the new's open paren.
-    if (FormatTok->isOneOf(tok::semi, tok::l_brace, tok::r_brace))
+        // If there is a class body of an anonymous class, consume that as
+        // child.
+        if (FormatTok->is(tok::l_brace))
+          parseChildBlock();
+        return;
+      }
+      nextToken();
+    } while (!eof());
+  } else if (Style.isCpp()) {
+    // The brace should not appear here in a new expression. It likely means
+    // that the line is incomplete or that new is not a keyword such as in
+    // Objective-C.
+    if (FormatTok->is(tok::l_brace))
       return;
-
-    // Consume the parens.
+    if (FormatTok->is(tok::l_paren))
+      parseParens();
     if (FormatTok->is(tok::l_paren)) {
       parseParens();
-
-      // If there is a class body of an anonymous class, consume that as child.
-      if (FormatTok->is(tok::l_brace))
-        parseChildBlock();
-      return;
+    } else {
+      // When there are 2 pairs of parentheses, the second will be the type.
+      // Otherwise, the type may be outside parentheses. It is handled here.
+      while (!eof()) {
+        if (FormatTok->isOneOf(tok::kw_alignas, tok::kw_decltype)) {
+          nextToken();
+          if (FormatTok->is(tok::l_paren))
+            parseParens();
+        } else if (FormatTok->is(tok::l_square)) {
+          nextToken();
+          parseSquare(/*SkipLambda=*/true);
+        } else if (FormatTok->is(tok::less)) {
+          nextToken();
+          parseBracedList(/*IsAngleBracket=*/true);
+        } else if (FormatTok->Tok.getIdentifierInfo() ||
+                   FormatTok->isOneOf(tok::coloncolon, tok::star)) {
+          nextToken();
+        } else {
+          break;
+        }
+      }
     }
-    nextToken();
-  } while (!eof());
+    if (FormatTok->is(tok::l_brace))
+      parseBracedList();
+    else if (FormatTok->is(tok::l_paren))
+      parseParens();
+  }
 }
 
 void UnwrappedLineParser::parseLoopBody(bool KeepBraces, bool WrapRightBrace) {
