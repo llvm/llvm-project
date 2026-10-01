@@ -6,7 +6,7 @@
 ! are separate program units, each with its own specification part, so the
 ! REQUIRES directive in the program's specification part is not "lexically
 ! after" a device construct that appears in the module. This must compile
-! without diagnostics (LCOMPILER-1575).
+! without diagnostics.
 
 module m
   !$omp requires unified_shared_memory
