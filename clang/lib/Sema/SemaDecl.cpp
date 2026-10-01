@@ -18247,7 +18247,6 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
         // The "template<>" header is extraneous.
         Diag(TemplateParams->getTemplateLoc(), diag::err_template_tag_noparams)
           << TypeWithKeyword::getTagTypeKindName(Kind) << Name;
-        isMemberSpecialization = true;
       }
     }
 
@@ -18844,12 +18843,12 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                 if (isMemberSpecialization) {
                   if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Def))
                     IsExplicitSpecializationAfterInstantiation =
-                        isTemplateInstantiation(
-                            RD->getTemplateSpecializationKind());
+                        RD->getTemplateSpecializationKind() !=
+                        TSK_ExplicitSpecialization;
                   else if (EnumDecl *ED = dyn_cast<EnumDecl>(Def))
                     IsExplicitSpecializationAfterInstantiation =
-                        isTemplateInstantiation(
-                            ED->getTemplateSpecializationKind());
+                        ED->getTemplateSpecializationKind() !=
+                        TSK_ExplicitSpecialization;
                 }
 
                 // Note that clang allows ODR-like semantics for ObjC/C, i.e.,
