@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbenchmark_main.a CMakeFiles/benchmark_main.dir/benchmark_main.cc.o
+/usr/bin/ranlib libbenchmark_main.a

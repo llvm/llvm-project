@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/PolymorphismBM.dir/PolymorphismBM.cpp.o -o PolymorphismBM  third-party/benchmark/src/libbenchmark.a -lrt 
