@@ -3261,37 +3261,6 @@ bool SIInsertWaitcnts::mayStoreIncrementingDSCNT(const MachineInstr &MI) const {
   return MI.mayStore() && SIInstrInfo::isDS(MI);
 }
 
-// Issue order when the body has no in-loop branch: header, then each block's
-// one in-loop successor. Returns false if that walk is not the whole loop.
-static bool
-appendSinglePathLoopBlocks(const MachineLoop &ML,
-                           SmallVectorImpl<MachineBasicBlock *> &Order) {
-  MachineBasicBlock *Header = ML.getHeader();
-  if (!Header)
-    return false;
-
-  MachineBasicBlock *BB = Header;
-  SmallPtrSet<MachineBasicBlock *, 8> Seen;
-  do {
-    if (!Seen.insert(BB).second)
-      return false;
-    Order.push_back(BB);
-    MachineBasicBlock *Next = nullptr;
-    for (MachineBasicBlock *Succ : BB->successors()) {
-      if (!ML.contains(Succ) || Succ == Header)
-        continue;
-      if (Next)
-        return false;
-      Next = Succ;
-    }
-    if (!Next)
-      break;
-    BB = Next;
-  } while (true);
-
-  return Order.size() == ML.getNumBlocks();
-}
-
 // Return flags indicating which counters should be flushed in the preheader of
 // the given loop. We currently decide to flush in the following situations:
 // For VMEM (FlushVmCnt):
@@ -3340,7 +3309,7 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   DenseMap<MCRegUnit, unsigned> LastDSReadPositionMap;
   unsigned DSReadPosition = 0;
   SmallVector<MachineBasicBlock *, 8> BlockOrder;
-  bool SinglePath = appendSinglePathLoopBlocks(*ML, BlockOrder);
+  bool SinglePath = ML->getSinglePathBlocks(BlockOrder);
   if (!SinglePath)
     append_range(BlockOrder, ML->blocks());
   bool TrackDSFlushPoint = ST.hasExtendedWaitCounts() && SinglePath;

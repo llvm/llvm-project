@@ -1787,3 +1787,65 @@ TEST(LoopInfoTest, RecomputeHoistsChild) {
   LI.verify();
   LI.destroy(OuterL);
 }
+
+TEST(LoopInfoTest, SinglePathBlocks) {
+  const char *ModuleStr = "define void @single(i1 %c) {\n"
+                          "entry:\n"
+                          "  br label %loop\n"
+                          "loop:\n"
+                          "  br i1 %c, label %loop, label %exit\n"
+                          "exit:\n"
+                          "  ret void\n"
+                          "}\n"
+                          "define void @chain(i1 %c) {\n"
+                          "entry:\n"
+                          "  br label %header\n"
+                          "header:\n"
+                          "  br label %latch\n"
+                          "latch:\n"
+                          "  br i1 %c, label %header, label %exit\n"
+                          "exit:\n"
+                          "  ret void\n"
+                          "}\n"
+                          "define void @diamond(i1 %c) {\n"
+                          "entry:\n"
+                          "  br label %header\n"
+                          "header:\n"
+                          "  br i1 %c, label %left, label %right\n"
+                          "left:\n"
+                          "  br label %latch\n"
+                          "right:\n"
+                          "  br label %latch\n"
+                          "latch:\n"
+                          "  br i1 %c, label %header, label %exit\n"
+                          "exit:\n"
+                          "  ret void\n"
+                          "}\n";
+
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+
+  runWithLoopInfo(*M, "single", [&](Function &F, LoopInfo &LI) {
+    Loop *L = LI.getLoopFor(getBlockByName(&F, "loop"));
+    SmallVector<BasicBlock *, 4> Order;
+    EXPECT_TRUE(L->getSinglePathBlocks(Order));
+    ASSERT_EQ(Order.size(), 1u);
+    EXPECT_EQ(Order[0], getBlockByName(&F, "loop"));
+  });
+
+  runWithLoopInfo(*M, "chain", [&](Function &F, LoopInfo &LI) {
+    Loop *L = LI.getLoopFor(getBlockByName(&F, "header"));
+    SmallVector<BasicBlock *, 4> Order;
+    EXPECT_TRUE(L->getSinglePathBlocks(Order));
+    ASSERT_EQ(Order.size(), 2u);
+    EXPECT_EQ(Order[0], getBlockByName(&F, "header"));
+    EXPECT_EQ(Order[1], getBlockByName(&F, "latch"));
+  });
+
+  runWithLoopInfo(*M, "diamond", [&](Function &F, LoopInfo &LI) {
+    Loop *L = LI.getLoopFor(getBlockByName(&F, "header"));
+    SmallVector<BasicBlock *, 4> Order;
+    EXPECT_FALSE(L->getSinglePathBlocks(Order));
+    EXPECT_TRUE(Order.empty());
+  });
+}
