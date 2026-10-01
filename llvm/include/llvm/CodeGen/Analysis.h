@@ -138,6 +138,11 @@ LLVM_ABI const GlobalValue *
 getDescribableGlobalAddress(const Constant *C, int64_t &Offset,
                             const MachineFunction &MF);
 
+/// Test if the debug info for \p MF can name a describable global address in a
+/// location list too, rather than only in a variable's single location. Where
+/// it cannot, a register holding the address is the more robust description.
+LLVM_ABI bool canDescribeGlobalAddressInLocationList(const MachineFunction &MF);
+
 /// Test if the given instruction is in a position to be optimized
 /// with a tail-call. This roughly means that it's in a block with
 /// a return and there's nothing that needs to be scheduled

@@ -1,6 +1,8 @@
 ;; Check that a dbg_value naming the address of a global describes the variable
 ;; directly, for the whole of its scope, rather than waiting for the address to
-;; be materialized into a register.
+;; be materialized into a register. Where a location list could not name the
+;; global, a register holding the address is still preferred, and the global is
+;; only named when no such register exists.
 
 ; RUN: llc -O2 -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel < %s \
 ; RUN:   | FileCheck %s --check-prefix=MIR
@@ -9,6 +11,10 @@
 ; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF5
 ; RUN: llc -O2 -mtriple=x86_64-unknown-linux-gnu -dwarf-version=4 -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF4
+;; Before DWARF 5 there is no address pool outside of split DWARF, which leaves
+;; a location list no way to name the global.
+; RUN: llc -O2 -mtriple=x86_64-unknown-linux-gnu -dwarf-version=4 \
+; RUN:   -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=DWARF4-MIR
 ;; Describing the address as the variable's value needs DW_OP_stack_value, so
 ;; neither the module flag nor the -dwarf-version override may pick this
 ;; representation below DWARF 4. A bare DW_OP_addr would read as the address the
@@ -27,12 +33,17 @@
 ; RUN:       --implicit-check-not='DW_OP_addr 0x'
 
 @g = global i64 0, align 8
+@h = global i64 1, align 8
 @tls = thread_local global i64 0, align 8
 
 ;; Nothing in the function materializes the address, so before this was
 ;; described the variable was dropped entirely.
 ; MIR-LABEL: name: global_only
 ; MIR: DBG_VALUE @g, $noreg, ![[#]], !DIExpression()
+;; With no register to wait for, the global is named even where a location list
+;; could not spell it.
+; DWARF4-MIR-LABEL: name: global_only
+; DWARF4-MIR: DBG_VALUE @g, $noreg, ![[#]], !DIExpression()
 ;
 ;; DW_OP_addrx indexes .debug_addr, which is relocated to @g.
 ; DWARF5-LABEL: DW_AT_name ("global_only")
@@ -58,6 +69,9 @@ entry:
 ; MIR-LABEL: name: global_stored
 ; MIR: DBG_VALUE @g, $noreg, ![[#]], !DIExpression()
 ; MIR-NOT: DBG_VALUE
+; DWARF4-MIR-LABEL: name: global_stored
+; DWARF4-MIR-NOT: DBG_VALUE @g
+; DWARF4-MIR: DBG_INSTR_REF ![[#]], !DIExpression(DW_OP_LLVM_arg, 0)
 ;
 ; DWARF5-LABEL: DW_AT_name ("global_stored")
 ; DWARF5: DW_TAG_variable
@@ -103,6 +117,41 @@ entry:
   ret void, !dbg !17
 }
 
+;; Holding two values, the variable needs a location list.
+; MIR-LABEL: name: reassigned
+; MIR: DBG_VALUE @g, $noreg, ![[#]], !DIExpression()
+; MIR: DBG_VALUE @h, $noreg, ![[#]], !DIExpression()
+;
+; DWARF5-LABEL: DW_AT_name ("reassigned")
+; DWARF5: DW_TAG_variable
+; DWARF5-NEXT: DW_AT_location (indexed (0x{{[0-9a-f]+}}) loclist = 0x{{[0-9a-f]+}}:
+; DWARF5-NEXT: [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}}): DW_OP_addrx 0x{{[0-9a-f]+}}, DW_OP_stack_value
+; DWARF5-NEXT: [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}}): DW_OP_addrx 0x{{[0-9a-f]+}}, DW_OP_stack_value)
+; DWARF5-NEXT: DW_AT_name ("p")
+;
+;; Where the location list cannot name the globals, the registers holding their
+;; addresses still describe the variable.
+; DWARF4-MIR-LABEL: name: reassigned
+; DWARF4-MIR-NOT: DBG_VALUE @
+; DWARF4-MIR: DBG_INSTR_REF ![[#]], !DIExpression(DW_OP_LLVM_arg, 0)
+; DWARF4-MIR-NOT: DBG_VALUE @
+; DWARF4-MIR: DBG_INSTR_REF ![[#]], !DIExpression(DW_OP_LLVM_arg, 0)
+;
+; DWARF4-LABEL: DW_AT_name ("reassigned")
+; DWARF4: DW_TAG_variable
+; DWARF4-NEXT: DW_AT_location (0x{{[0-9a-f]+}}:
+; DWARF4-NEXT: [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}}): DW_OP_reg5 RDI
+; DWARF4-NEXT: [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}}): DW_OP_reg5 RDI)
+; DWARF4-NEXT: DW_AT_name ("p")
+define void @reassigned() !dbg !20 {
+entry:
+    #dbg_value(ptr @g, !21, !DIExpression(), !23)
+  tail call void @sink(ptr @g), !dbg !23
+    #dbg_value(ptr @h, !21, !DIExpression(), !23)
+  tail call void @sink(ptr @h), !dbg !23
+  ret void, !dbg !23
+}
+
 declare void @sink(ptr)
 declare ptr @alloc()
 
@@ -129,3 +178,7 @@ declare ptr @alloc()
 !16 = !DILocalVariable(name: "z", scope: !19, file: !3, line: 11, type: !7)
 !19 = distinct !DILexicalBlock(scope: !15, file: !3, line: 11, column: 1)
 !17 = !DILocation(line: 11, column: 1, scope: !19)
+!20 = distinct !DISubprogram(name: "reassigned", scope: !3, file: !3, line: 14, type: !4, scopeLine: 14, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2)
+!21 = !DILocalVariable(name: "p", scope: !22, file: !3, line: 15, type: !7)
+!22 = distinct !DILexicalBlock(scope: !20, file: !3, line: 15, column: 1)
+!23 = !DILocation(line: 15, column: 1, scope: !22)

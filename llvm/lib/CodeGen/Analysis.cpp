@@ -531,6 +531,17 @@ static bool nextRealType(SmallVectorImpl<Type *> &SubTypes,
   return true;
 }
 
+/// Resolve the DWARF version the way DwarfDebug does.
+/// FIXME: Share this resolution with DwarfDebug's, which has to match.
+static unsigned getDwarfVersion(const MachineFunction &MF) {
+  unsigned DwarfVersion = MF.getTarget().Options.MCOptions.DwarfVersion;
+  if (!DwarfVersion)
+    DwarfVersion = MF.getFunction().getParent()->getDwarfVersion();
+  if (!DwarfVersion)
+    DwarfVersion = dwarf::DWARF_VERSION;
+  return DwarfVersion;
+}
+
 bool llvm::canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV,
                                                const MachineFunction &MF) {
   // Only definitions have an address a symbol reference can name.
@@ -576,13 +587,7 @@ bool llvm::canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV,
   // wherever the address is materialized instead. DwarfExpression refuses the
   // same versions; deciding here only picks the better of the two fallbacks,
   // while a materialized location is still available to fall back on.
-  // FIXME: Share this resolution with DwarfDebug's, which has to match.
-  unsigned DwarfVersion = TM.Options.MCOptions.DwarfVersion;
-  if (!DwarfVersion)
-    DwarfVersion = M.getDwarfVersion();
-  if (!DwarfVersion)
-    DwarfVersion = dwarf::DWARF_VERSION;
-  if (DwarfVersion < 4)
+  if (getDwarfVersion(MF) < 4)
     return false;
 
   // On some targets a global does not live at its symbol's address; a base
@@ -623,6 +628,14 @@ llvm::getDescribableGlobalAddress(const Constant *C, int64_t &Offset,
 
   Offset = GVOffset;
   return GV;
+}
+
+bool llvm::canDescribeGlobalAddressInLocationList(const MachineFunction &MF) {
+  // A location list is emitted as plain bytes, which cannot carry the
+  // relocation a DW_OP_addr needs, so there the address has to be an index into
+  // the address pool. Before DWARF 5 that pool only exists under split DWARF.
+  return getDwarfVersion(MF) >= 5 ||
+         !MF.getTarget().Options.MCOptions.SplitDwarfFile.empty();
 }
 
 /// Test if the given instruction is in a position to be optimized

@@ -1112,6 +1112,8 @@ void SelectionDAGBuilder::init(GCFunctionInfo *gfi, BatchAAResults *aa,
   SL->init(DAG.getTargetLoweringInfo(), TM, DAG.getDataLayout());
   AssignmentTrackingEnabled = isAssignmentTrackingEnabled(
       *DAG.getMachineFunction().getFunction().getParent());
+  CanDescribeGlobalAddressInLocationList =
+      canDescribeGlobalAddressInLocationList(DAG.getMachineFunction());
 }
 
 void SelectionDAGBuilder::clear() {
@@ -1551,6 +1553,26 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
   DDIV.clear();
 }
 
+/// If \p V is the address of a describable global, possibly displaced by a
+/// constant, return the global and fold the displacement into location operand
+/// \p OpIdx of \p Expr. The displacement rides along in the expression rather
+/// than in the operand, so that it survives into a DBG_INSTR_REF.
+static const GlobalValue *
+getGlobalAddressDbgOperand(const Value *V, DIExpression *&Expr, unsigned OpIdx,
+                           const MachineFunction &MF) {
+  const auto *C = dyn_cast<Constant>(V);
+  if (!C)
+    return nullptr;
+  int64_t Offset;
+  const GlobalValue *GV = getDescribableGlobalAddress(C, Offset, MF);
+  if (GV && Offset) {
+    SmallVector<uint64_t, 3> Ops;
+    DIExpression::appendOffset(Ops, Offset);
+    Expr = DIExpression::appendOpsToArg(Expr, Ops, OpIdx, /*StackValue=*/false);
+  }
+  return GV;
+}
+
 void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
                                                     DanglingDebugInfo &DDI) {
   // TODO: For the variadic implementation, instead of only checking the fail
@@ -1567,8 +1589,25 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
   // that DW_OP_stack_value is desired.
   bool StackValue = true;
 
+  // handleDebugValue holds out for a register with the address of a global
+  // that a location list could not name. With no such register forthcoming,
+  // naming the global still beats dropping the location.
+  auto HandleGlobalAddress = [&] {
+    DIExpression *GVExpr = Expr;
+    const GlobalValue *GV =
+        getGlobalAddressDbgOperand(V, GVExpr, 0, DAG.getMachineFunction());
+    if (!GV)
+      return false;
+    SDDbgValue *SDV = DAG.getDbgValueList(
+        Var, GVExpr, SDDbgOperand::fromGlobalAddr(GV), /*Dependencies=*/{},
+        /*IsIndirect=*/false, DL, SDOrder, /*IsVariadic=*/false);
+    DAG.AddDbgValue(SDV, /*isParameter=*/false);
+    return true;
+  };
+
   // Can this Value can be encoded without any further work?
-  if (handleDebugValue(V, Var, Expr, DL, SDOrder, /*IsVariadic=*/false))
+  if (handleDebugValue(V, Var, Expr, DL, SDOrder, /*IsVariadic=*/false) ||
+      HandleGlobalAddress())
     return;
 
   // Attempt to salvage back through as many instructions as possible. Bail if
@@ -1598,7 +1637,8 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
 
     // Some kind of simplification occurred: check whether the operand of the
     // salvaged debug expression can be encoded in this DAG.
-    if (handleDebugValue(V, Var, Expr, DL, SDOrder, /*IsVariadic=*/false)) {
+    if (handleDebugValue(V, Var, Expr, DL, SDOrder, /*IsVariadic=*/false) ||
+        HandleGlobalAddress()) {
       LLVM_DEBUG(
           dbgs() << "Salvaged debug location info for:\n  " << *Var << "\n"
                  << *OrigV << "\nBy stripping back to:\n  " << *V << "\n");
@@ -1657,24 +1697,16 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
       }
 
     // The address of a global is a link-time constant, and so is a constant
-    // displacement from one. The displacement rides along in the expression
-    // rather than in the operand, so that it survives into a DBG_INSTR_REF.
-    // A global whose address cannot be described this way falls through to be
-    // described by whatever materializes it instead.
-    if (const auto *C = dyn_cast<Constant>(V)) {
-      int64_t Offset;
-      if (const GlobalValue *GV = getDescribableGlobalAddress(
-              C, Offset, DAG.getMachineFunction())) {
-        if (Offset) {
-          SmallVector<uint64_t, 3> Ops;
-          DIExpression::appendOffset(Ops, Offset);
-          Expr = DIExpression::appendOpsToArg(Expr, Ops, OpIdx,
-                                              /*StackValue=*/false);
-        }
+    // displacement from one. A global whose address cannot be described this
+    // way falls through to be described by whatever materializes it instead.
+    // So does one that a location list could not name, should the variable
+    // need one; salvageUnresolvedDbgValue names it if nothing materializes it.
+    if (CanDescribeGlobalAddressInLocationList)
+      if (const GlobalValue *GV = getGlobalAddressDbgOperand(
+              V, Expr, OpIdx, DAG.getMachineFunction())) {
         LocationOps.emplace_back(SDDbgOperand::fromGlobalAddr(GV));
         continue;
       }
-    }
 
     // If the Value is a frame index, we can create a FrameIndex debug value
     // without relying on the DAG at all.
