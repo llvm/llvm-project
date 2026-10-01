@@ -51,7 +51,7 @@ end function
 ! CHECK-LABEL: func.func @_QPfun(%arg0: !fir.ref<i32> {fir.bindc_name = "a"}) -> i32 {
 ! CHECK:         %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:         %[[A:.*]]:2 = hlfir.declare %arg0 dummy_scope %[[SCOPE]] arg 1 {uniq_name = "_QFfunEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         %[[FUN_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "fun", uniq_name = "_QFfunEfun"}
+! CHECK:         %[[FUN_ALLOCA:.*]] = fir.alloca i32 <{bindc_name = "fun", uniq_name = "_QFfunEfun"}>
 ! CHECK:         %[[FUN:.*]]:2 = hlfir.declare %[[FUN_ALLOCA]] {uniq_name = "_QFfunEfun"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         %[[C2:.*]] = arith.constant 2 : i32
 ! CHECK:         %[[LOAD_A:.*]] = fir.load %[[A]]#0 : !fir.ref<i32>

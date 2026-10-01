@@ -1606,10 +1606,13 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Where the label is to be used as the last arg of the call instruction.
   // We record the call site here and emit all prototypes at the
   // start of the function in the AsmPrinter.
-  if (IsIndirectCall)
-    DAG.getMachineFunction()
-        .getInfo<NVPTXMachineFunctionInfo>()
-        ->addCallPrototype(UniqueCallSite, CB);
+  SDValue Proto = GetI32(0);
+  if (IsIndirectCall) {
+    auto *ProtoSymbol = DAG.getMachineFunction()
+                            .getInfo<NVPTXMachineFunctionInfo>()
+                            ->addCallPrototype(CB, DAG.getMachineFunction());
+    Proto = DAG.getMCSymbol(ProtoSymbol, MVT::i32);
+  }
 
   const bool IsUnknownIntrinsic =
       CalleeF && CalleeF->isIntrinsic() &&
@@ -1622,7 +1625,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         dl.getDebugLoc()));
   }
 
-  const unsigned Proto = IsIndirectCall ? UniqueCallSite : 0;
   const unsigned NumArgs =
       std::min<unsigned>(CLI.NumFixedArgs + 1, Args.size());
   /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
@@ -1631,7 +1633,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const SDValue Call = DAG.getNode(
       NVPTXISD::CALL, dl, MVT::Other,
       {CallToken, GetI32(CLI.IsConvergent), GetI32(IsIndirectCall),
-       GetI32(Ins.empty() ? 0 : 1), GetI32(NumArgs), Callee, GetI32(Proto)});
+       GetI32(Ins.empty() ? 0 : 1), GetI32(NumArgs), Callee, Proto});
 
   SmallVector<SDValue, 16> LoadChains{Call};
   SmallVector<SDValue, 16> ProxyRegOps;
@@ -4424,7 +4426,8 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b4x16_p64:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b6x16_p32:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b4x16_p64:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_s8_s4: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v4i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4467,7 +4470,8 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b4x16_p64:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b6x16_p32: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_s8_s4: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4572,7 +4576,8 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b4x16_p64:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b6x16_p32:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b4x16_p64:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b6x16_p32: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_s8_s4: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v2i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -4743,6 +4748,20 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
     Info.align = Align(16);
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_st_bulk: {
+    Value *Dst = I.getArgOperand(0);
+    Value *Val = I.getArgOperand(2);
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::getVT(Val->getType());
+    Info.ptrVal = Dst;
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    Info.size = MemoryLocation::UnknownSize;
     Infos.push_back(Info);
     return;
   }
@@ -6890,24 +6909,22 @@ static SDValue PerformSELECTShiftCombine(SDNode *N,
 
   // Match logical shifts where the shift amount in the guard matches the shift
   // amount in the operation.
-  auto LogicalShift =
-      m_AllOf(m_Value(ShiftOp),
-              m_AnyOf(m_Srl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt))),
-                      m_Shl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt)))));
+  auto LogicalShift = m_Value(
+      ShiftOp, m_AnyOf(m_Srl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt))),
+                       m_Shl(m_Value(), m_TruncOrSelf(m_Deferred(ShiftAmt)))));
 
   // shift_amt > BitWidth-1 ? 0 : shift_op
-  bool MatchedUGT =
-      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
-                                   m_SpecificInt(APInt(BitWidth, BitWidth - 1)),
-                                   m_SpecificCondCode(ISD::SETUGT)),
-                           m_Zero(), LogicalShift));
+  bool MatchedUGT = sd_match(
+      N, m_Select(m_SpecificSetCC(ISD::SETUGT, m_Value(ShiftAmt),
+                                  m_SpecificInt(APInt(BitWidth, BitWidth - 1))),
+                  m_Zero(), LogicalShift));
   // shift_amt < BitWidth ? shift_op : 0
   bool MatchedULT =
       !MatchedUGT &&
-      sd_match(N, m_Select(m_SetCC(m_Value(ShiftAmt),
-                                   m_SpecificInt(APInt(BitWidth, BitWidth)),
-                                   m_SpecificCondCode(ISD::SETULT)),
-                           LogicalShift, m_Zero()));
+      sd_match(
+          N, m_Select(m_SpecificSetCC(ISD::SETULT, m_Value(ShiftAmt),
+                                      m_SpecificInt(APInt(BitWidth, BitWidth))),
+                      LogicalShift, m_Zero()));
 
   if (!MatchedUGT && !MatchedULT)
     return SDValue();
@@ -7760,26 +7777,23 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     if (BitWidth == 128)
       return AtomicExpansionKind::None;
     [[fallthrough]];
-  case AtomicRMWInst::BinOp::And:
-  case AtomicRMWInst::BinOp::Or:
-  case AtomicRMWInst::BinOp::Xor:
+  case AtomicRMWInst::BinOp::Add:
+  case AtomicRMWInst::BinOp::Sub:
     switch (BitWidth) {
     case 8:
     case 16:
       return AtomicExpansionKind::CmpXChg;
     case 32:
-      return AtomicExpansionKind::None;
     case 64:
-      if (STI.hasAtomBitwise64())
-        return AtomicExpansionKind::None;
-      return AtomicExpansionKind::CmpXChg;
+      return AtomicExpansionKind::None;
     case 128:
       return AtomicExpansionKind::CmpXChg;
     default:
       llvm_unreachable("unsupported width encountered");
     }
-  case AtomicRMWInst::BinOp::Add:
-  case AtomicRMWInst::BinOp::Sub:
+  case AtomicRMWInst::BinOp::And:
+  case AtomicRMWInst::BinOp::Or:
+  case AtomicRMWInst::BinOp::Xor:
   case AtomicRMWInst::BinOp::Max:
   case AtomicRMWInst::BinOp::Min:
   case AtomicRMWInst::BinOp::UMax:
@@ -7791,7 +7805,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     case 32:
       return AtomicExpansionKind::None;
     case 64:
-      if (STI.hasAtomMinMax64())
+      if (STI.hasAtomMinMaxAndOrXor())
         return AtomicExpansionKind::None;
       return AtomicExpansionKind::CmpXChg;
     case 128:
@@ -7820,8 +7834,9 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
   // This function returns true iff the operation is emulated using a CAS-loop,
-  // or if it has the memory order seq_cst (which is not natively supported in
-  // the PTX `atom` instruction).
+  // the target does not support memory-order qualifiers, or the operation has
+  // the memory order seq_cst (which is not natively supported in the PTX
+  // `atom` instruction).
   //
   // atomicrmw and cmpxchg instructions not efficiently supported by PTX
   // are lowered to CAS emulation loops that preserve their memory order,
@@ -7829,26 +7844,29 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
   // atom.cas.relaxed.sco instructions within the loop, and fences before and
   // after the loop to restore order.
   //
-  // Atomic instructions efficiently supported by PTX are lowered to
-  // `atom.<op>.<sem>.<scope` instruction with their corresponding memory order
-  // and scope. Since PTX does not support seq_cst, we emulate it by lowering to
-  // a fence.sc followed by an atom according to the PTX atomics ABI
+  // On targets with memory-order qualifiers, atomic instructions efficiently
+  // supported by PTX are lowered to `atom.<op>.<sem>.<scope>` instructions with
+  // their corresponding memory order and scope. Since PTX does not support
+  // seq_cst, we emulate it by lowering to a fence.sc followed by an atom
+  // according to the PTX atomics ABI.
   // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
   if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I))
     return (cast<IntegerType>(CI->getCompareOperand()->getType())
                 ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
+           !STI.hasMemoryOrdering() ||
            CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
   if (auto *RI = dyn_cast<AtomicRMWInst>(I))
     return shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg ||
+           !STI.hasMemoryOrdering() ||
            RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
   return false;
 }
 
 AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
     const Instruction *I) const {
-  // If the operation is emulated by a CAS-loop, we lower the instruction to
-  // atom.<op>.relaxed, since AtomicExpandPass will insert fences for enforcing
-  // the correct memory ordering around the CAS loop.
+  // If the operation is emulated by a CAS-loop, or the target does not support
+  // memory-order qualifiers, we set its IR ordering to monotonic.
+  // AtomicExpandPass inserts fences to enforce the original memory ordering.
   //
   // When the operation is not emulated, but the memory order is seq_cst,
   // we must lower to "fence.sc.<scope>; atom.<op>.acquire.<scope>;" to conform
@@ -7864,6 +7882,9 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
   // will NOT be called.
   // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
   // I before its memory order was modified.
+  if (!STI.hasMemoryOrdering())
+    return AtomicOrdering::Monotonic;
+
   if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
       CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
       cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
@@ -7917,9 +7938,10 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   assert(SSID.has_value() && "Expected an atomic operation");
 
   bool IsEmulated =
-      CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
-                   ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
-         : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
+      !STI.hasMemoryOrdering() ||
+      (CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
+                    ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
+          : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg);
 
   if (isAcquireOrStronger(Ord) && IsEmulated)
     return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());

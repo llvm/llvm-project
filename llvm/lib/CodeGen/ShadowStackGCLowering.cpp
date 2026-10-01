@@ -136,8 +136,6 @@ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(ShadowStackGCLowering, DEBUG_TYPE,
                     "Shadow Stack GC Lowering", false, false)
 
-FunctionPass *llvm::createShadowStackGCLoweringPass() { return new ShadowStackGCLowering(); }
-
 ShadowStackGCLowering::ShadowStackGCLowering() : FunctionPass(ID) {}
 
 Constant *ShadowStackGCLoweringImpl::GetFrameMap(Function &F,

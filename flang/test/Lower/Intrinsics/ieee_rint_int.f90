@@ -6,29 +6,29 @@ program p
   use ieee_arithmetic, only: ieee_value, ieee_positive_inf
   use ieee_arithmetic, only: ieee_to_zero, ieee_nearest, ieee_up, ieee_away
 
-  ! CHECK:     %[[V_10:[0-9]+]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QFEn"}
+  ! CHECK:     %[[V_10:[0-9]+]] = fir.alloca i32 <{bindc_name = "n", uniq_name = "_QFEn"}>
   ! CHECK:     %[[V_11:[0-9]+]]:2 = hlfir.declare %[[V_10]] {uniq_name = "_QFEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! CHECK:     %[[V_12:[0-9]+]] = fir.alloca i128 {bindc_name = "n16", uniq_name = "_QFEn16"}
+  ! CHECK:     %[[V_12:[0-9]+]] = fir.alloca i128 <{bindc_name = "n16", uniq_name = "_QFEn16"}>
   ! CHECK:     %[[V_13:[0-9]+]]:2 = hlfir.declare %[[V_12]] {uniq_name = "_QFEn16"} : (!fir.ref<i128>) -> (!fir.ref<i128>, !fir.ref<i128>)
-  ! CHECK:     %[[V_14:[0-9]+]] = fir.alloca i16 {bindc_name = "n2", uniq_name = "_QFEn2"}
+  ! CHECK:     %[[V_14:[0-9]+]] = fir.alloca i16 <{bindc_name = "n2", uniq_name = "_QFEn2"}>
   ! CHECK:     %[[V_15:[0-9]+]]:2 = hlfir.declare %[[V_14]] {uniq_name = "_QFEn2"} : (!fir.ref<i16>) -> (!fir.ref<i16>, !fir.ref<i16>)
-  ! CHECK:     %[[V_16:[0-9]+]] = fir.alloca i64 {bindc_name = "n8", uniq_name = "_QFEn8"}
+  ! CHECK:     %[[V_16:[0-9]+]] = fir.alloca i64 <{bindc_name = "n8", uniq_name = "_QFEn8"}>
   ! CHECK:     %[[V_17:[0-9]+]]:2 = hlfir.declare %[[V_16]] {uniq_name = "_QFEn8"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-  ! CHECK:     %[[V_18:[0-9]+]] = fir.alloca f32 {bindc_name = "x", uniq_name = "_QFEx"}
+  ! CHECK:     %[[V_18:[0-9]+]] = fir.alloca f32 <{bindc_name = "x", uniq_name = "_QFEx"}>
   ! CHECK:     %[[V_19:[0-9]+]]:2 = hlfir.declare %[[V_18]] {uniq_name = "_QFEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-  ! CHECK:     %[[V_20:[0-9]+]] = fir.alloca f16 {bindc_name = "x2", uniq_name = "_QFEx2"}
+  ! CHECK:     %[[V_20:[0-9]+]] = fir.alloca f16 <{bindc_name = "x2", uniq_name = "_QFEx2"}>
   ! CHECK:     %[[V_21:[0-9]+]]:2 = hlfir.declare %[[V_20]] {uniq_name = "_QFEx2"} : (!fir.ref<f16>) -> (!fir.ref<f16>, !fir.ref<f16>)
-  ! CHECK:     %[[V_22:[0-9]+]] = fir.alloca bf16 {bindc_name = "x3", uniq_name = "_QFEx3"}
+  ! CHECK:     %[[V_22:[0-9]+]] = fir.alloca bf16 <{bindc_name = "x3", uniq_name = "_QFEx3"}>
   ! CHECK:     %[[V_23:[0-9]+]]:2 = hlfir.declare %[[V_22]] {uniq_name = "_QFEx3"} : (!fir.ref<bf16>) -> (!fir.ref<bf16>, !fir.ref<bf16>)
-  ! CHECK:     %[[V_24:[0-9]+]] = fir.alloca f32 {bindc_name = "x8", uniq_name = "_QFEx8"}
+  ! CHECK:     %[[V_24:[0-9]+]] = fir.alloca f32 <{bindc_name = "x8", uniq_name = "_QFEx8"}>
   ! CHECK:     %[[V_25:[0-9]+]]:2 = hlfir.declare %[[V_24]] {uniq_name = "_QFEx8"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-  ! CHECK:     %[[V_26:[0-9]+]] = fir.alloca f32 {bindc_name = "y", uniq_name = "_QFEy"}
+  ! CHECK:     %[[V_26:[0-9]+]] = fir.alloca f32 <{bindc_name = "y", uniq_name = "_QFEy"}>
   ! CHECK:     %[[V_27:[0-9]+]]:2 = hlfir.declare %[[V_26]] {uniq_name = "_QFEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-  ! CHECK:     %[[V_28:[0-9]+]] = fir.alloca f16 {bindc_name = "y2", uniq_name = "_QFEy2"}
+  ! CHECK:     %[[V_28:[0-9]+]] = fir.alloca f16 <{bindc_name = "y2", uniq_name = "_QFEy2"}>
   ! CHECK:     %[[V_29:[0-9]+]]:2 = hlfir.declare %[[V_28]] {uniq_name = "_QFEy2"} : (!fir.ref<f16>) -> (!fir.ref<f16>, !fir.ref<f16>)
-  ! CHECK:     %[[V_30:[0-9]+]] = fir.alloca bf16 {bindc_name = "y3", uniq_name = "_QFEy3"}
+  ! CHECK:     %[[V_30:[0-9]+]] = fir.alloca bf16 <{bindc_name = "y3", uniq_name = "_QFEy3"}>
   ! CHECK:     %[[V_31:[0-9]+]]:2 = hlfir.declare %[[V_30]] {uniq_name = "_QFEy3"} : (!fir.ref<bf16>) -> (!fir.ref<bf16>, !fir.ref<bf16>)
-  ! CHECK:     %[[V_32:[0-9]+]] = fir.alloca f32 {bindc_name = "y8", uniq_name = "_QFEy8"}
+  ! CHECK:     %[[V_32:[0-9]+]] = fir.alloca f32 <{bindc_name = "y8", uniq_name = "_QFEy8"}>
   ! CHECK:     %[[V_33:[0-9]+]]:2 = hlfir.declare %[[V_32]] {uniq_name = "_QFEy8"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   integer(2) n2
   integer(8) n8

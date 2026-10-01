@@ -59,6 +59,19 @@ static NamedAttrList getAttrsForPrinting(Operation *op) {
   return attrs;
 }
 
+// TODO: Split inherent attributes from discardable attributes in the assembly
+// syntax of GlobalOp and AliasOp. For now, print the selected inherent
+// attributes in the regular attribute dictionary.
+static NamedAttrList
+getAttrsForPrinting(Operation *op, ArrayRef<StringAttr> inherentAttrNames) {
+  NamedAttrList attrs(op->getRawDictionaryAttrs());
+  for (StringAttr name : inherentAttrNames)
+    if (std::optional<Attribute> attr = op->getInherentAttr(name);
+        attr && *attr)
+      attrs.set(name, *attr);
+  return attrs;
+}
+
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute, 8> filteredAttrs(
       llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
@@ -565,8 +578,7 @@ ParseResult mlir::LLVM::parseSwitchOpCases(
     if (parser.parseColon() || parser.parseSuccessor(destination))
       return failure();
     if (!parser.parseOptionalLParen()) {
-      if (parser.parseOperandList(operands, OpAsmParser::Delimiter::None,
-                                  /*allowResultNumber=*/false) ||
+      if (parser.parseOperandList(operands, OpAsmParser::Delimiter::None) ||
           parser.parseColonTypeList(operandTypes) || parser.parseRParen())
         return failure();
     }
@@ -698,7 +710,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Type elementType, Value basePtr, ArrayRef<GEPArg> indices,
-                  GEPNoWrapFlags noWrapFlags,
+                  GEPNoWrapFlags noWrapFlags, ConstantRangeAttr inrange,
                   ArrayRef<NamedAttribute> attributes) {
   SmallVector<int32_t> rawConstantIndices;
   SmallVector<Value> dynamicIndices;
@@ -711,16 +723,17 @@ void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
   result.getOrAddProperties<Properties>().noWrapFlags = noWrapFlags;
   result.getOrAddProperties<Properties>().elem_type =
       TypeAttr::get(elementType);
+  result.getOrAddProperties<Properties>().inrange = inrange;
   result.addOperands(basePtr);
   result.addOperands(dynamicIndices);
 }
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Type elementType, Value basePtr, ValueRange indices,
-                  GEPNoWrapFlags noWrapFlags,
+                  GEPNoWrapFlags noWrapFlags, ConstantRangeAttr inrange,
                   ArrayRef<NamedAttribute> attributes) {
   build(builder, result, resultType, elementType, basePtr,
-        SmallVector<GEPArg>(indices), noWrapFlags, attributes);
+        SmallVector<GEPArg>(indices), noWrapFlags, inrange, attributes);
 }
 
 ParseResult mlir::LLVM::parseGEPIndices(
@@ -821,6 +834,27 @@ LogicalResult LLVM::GEPOp::verify() {
 
   if (getNoWrapFlags() == GEPNoWrapFlags::inboundsFlag)
     return emitOpError("'inbounds_flag' cannot be used directly.");
+
+  // LLVM stores `inrange` only on GetElementPtrConstantExpr, whose operands
+  // are already Constants. This dialect has one GEP operation, so proving the
+  // base and indices are constant expressions means walking SSA. A local check
+  // rejects valid cases such as a nested constant GEP base or a `ptrtoint`
+  // index.
+  if (auto inrange = getInrangeAttr()) {
+    auto pointerType =
+        cast<LLVMPointerType>(extractVectorElementType(getBase().getType()));
+    DataLayout dataLayout = DataLayout::closest(*this);
+    std::optional<uint64_t> indexWidth =
+        dataLayout.getTypeIndexBitwidth(pointerType);
+    assert(indexWidth && "pointers always return an index bitwidth");
+    if (inrange.getLower().getBitWidth() != *indexWidth)
+      return emitOpError("'inrange' bitwidth ")
+             << inrange.getLower().getBitWidth()
+             << " must match the pointer index bitwidth (" << *indexWidth
+             << ") specified in the datalayout";
+    if (inrange.getLower().sge(inrange.getUpper()))
+      return emitOpError("expected 'inrange' end to be larger than start");
+  }
 
   return verifyStructIndices(getElemType(), getIndices(),
                              [&] { return emitOpError(); });
@@ -1161,8 +1195,10 @@ Operation::operand_range CallOp::getArgOperands() {
 }
 
 MutableOperandRange CallOp::getArgOperandsMutable() {
-  return MutableOperandRange(*this, getNumConsumedCalleeOperands(*this),
-                             getArgOperandsImpl(*this).size());
+  // Slice the generated range to retain its segment-size metadata. A raw
+  // range would not update operandSegmentSizes when arguments are erased.
+  return getCalleeOperandsMutable().slice(getNumConsumedCalleeOperands(*this),
+                                          getArgOperandsImpl(*this).size());
 }
 
 /// Verify that an inlinable callsite of a debug-info-bearing function in a
@@ -1650,8 +1686,10 @@ Operation::operand_range InvokeOp::getArgOperands() {
 }
 
 MutableOperandRange InvokeOp::getArgOperandsMutable() {
-  return MutableOperandRange(*this, getNumConsumedCalleeOperands(*this),
-                             getArgOperandsImpl(*this).size());
+  // Slice the generated range to retain its segment-size metadata. A raw
+  // range would not update operandSegmentSizes when arguments are erased.
+  return getCalleeOperandsMutable().slice(getNumConsumedCalleeOperands(*this),
+                                          getArgOperandsImpl(*this).size());
 }
 
 LogicalResult InvokeOp::verify() {
@@ -1799,14 +1837,14 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.getBuilder(), result, argAttrs, resultAttrs,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 
+  result.addSuccessors({normalDest, unwindDest});
+  result.addOperands(normalOperands);
+  result.addOperands(unwindOperands);
+
   if (resolveOpBundleOperands(parser, opBundlesLoc, result, opBundleOperands,
                               opBundleOperandTypes,
                               getOpBundleSizesAttrName(result.name)))
     return failure();
-
-  result.addSuccessors({normalDest, unwindDest});
-  result.addOperands(normalOperands);
-  result.addOperands(unwindOperands);
 
   int32_t numOpBundleOperands = 0;
   for (const auto &operands : opBundleOperands)
@@ -2477,7 +2515,13 @@ void GlobalOp::print(OpAsmPrinter &p) {
   // default syntax here, even though it is an inherent attribute
   // (as defined in https://mlir.llvm.org/docs/LangRef/#attributes)
   p.printOptionalAttrDict(
-      (*this)->getAttrs(),
+      getAttrsForPrinting(
+          *this, {getDsoLocalAttrName(), getExternallyInitializedAttrName(),
+                  getAlignmentAttrName(), getAddrSpaceAttrName(),
+                  getSectionAttrName(), getAssociatedAttrName(),
+                  getAbsoluteSymbolAttrName(), getDbgExprsAttrName(),
+                  getTargetSpecificAttrsAttrName(), getSymVisibilityAttrName()})
+          .getAttrs(),
       {getSymNameAttrName(), getGlobalTypeAttrName(), getConstantAttrName(),
        getValueAttrName(), getLinkageAttrName(), getUnnamedAddrAttrName(),
        getTlsModeAttrName(), getVisibility_AttrName(), getComdatAttrName()});
@@ -2858,10 +2902,13 @@ void AliasOp::print(OpAsmPrinter &p) {
   printCommonGlobalAndAlias<AliasOp>(p, *this);
 
   p.printSymbolName(getSymName());
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {getSymNameAttrName(), getAliasTypeAttrName(),
-                           getLinkageAttrName(), getUnnamedAddrAttrName(),
-                           getTlsModeAttrName(), getVisibility_AttrName()});
+  p.printOptionalAttrDict(
+      getAttrsForPrinting(*this,
+                          {getDsoLocalAttrName(), getSymVisibilityAttrName()})
+          .getAttrs(),
+      {getSymNameAttrName(), getAliasTypeAttrName(), getLinkageAttrName(),
+       getUnnamedAddrAttrName(), getTlsModeAttrName(),
+       getVisibility_AttrName()});
 
   // Print the trailing type.
   p << " : " << getType() << ' ';
@@ -4049,6 +4096,10 @@ Value LLVM::AddrSpaceCastOp::getViewSource() { return getArg(); }
 OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
   GEPIndicesAdaptor<ArrayRef<Attribute>> indices(getRawConstantIndicesAttr(),
                                                  adaptor.getDynamicIndices());
+
+  // Avoid losing inrange information.
+  if (getInrangeAttr())
+    return {};
 
   // gep %x:T, 0 -> %x
   if (getBase().getType() == getType() && indices.size() == 1)

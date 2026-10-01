@@ -387,11 +387,11 @@ subroutine test_cache_nonunit_lb()
 
 ! For arr(10:20), startIdx = 10, element 15 has lowerbound = 15 - 10 = 5
 ! CHECK: %[[C10:.*]] = arith.constant 10 : index
-! Unstructured loop with SELECT CASE: acc.loop becomes unstructured
-! CHECK: acc.loop private({{.*}}) {
-! CHECK: cf.br ^[[HEADER:.*]]
-! CHECK: ^[[HEADER]]:
-! CHECK: cf.cond_br %{{.*}}, ^[[BODY:.*]], ^[[EXIT:.*]]
+! The SELECT CASE branches only within the loop body, so acc.loop keeps its
+! structured control and the raw blocks live in a wrap inside it.
+! CHECK: acc.loop private({{.*}})
+! CHECK: scf.execute_region no_inline {
+! CHECK: cf.br ^[[BODY:.*]]
 ! CHECK: ^[[BODY]]:
 ! Compute lowerbound = 15 - startIdx = 15 - 10 = 5
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
@@ -420,13 +420,12 @@ subroutine test_cache_nonunit_lb()
 ! CHECK: hlfir.designate %[[DECL]]#0
 ! CHECK: hlfir.assign
 ! CHECK: cf.br ^[[MERGE]]
-! All SELECT CASE branches converge, then loop back or exit
+! All SELECT CASE branches converge, then leave the wrap. The loop control is
+! acc.loop's own, so the region ends at its yield rather than a back edge.
 ! CHECK: ^[[MERGE]]:
-! CHECK: cf.br ^[[HEADER]]
+! CHECK: cf.br ^[[EXIT:.*]]
 ! CHECK: ^[[EXIT]]:
-! Scope termination: acc.yield marks end of cache scope
-! CHECK: acc.yield
-! CHECK-NEXT: } {{.*}}unstructured{{.*}}
+! CHECK: scf.yield
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_cache_use_after_region()

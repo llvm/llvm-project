@@ -87,7 +87,7 @@ template <int KIND> struct FitsInIntegerKind {
     if constexpr (KIND >= 8) {
       return true;
     } else {
-      return value <= std::numeric_limits<Fortran::runtime::CppTypeFor<
+      return value <= common::numeric_limits<Fortran::runtime::CppTypeFor<
                           Fortran::common::TypeCategory::Integer, KIND>>::max();
     }
   }

@@ -75,42 +75,40 @@ def libc_release_copts():
     })
     return copts + platform_copts
 
-# Allowlisted sets of copts that may be used for a single libc library target.
-# Adding copts here is discouraged, as it complicates the build.
-_LIBC_LIBRARY_COPT_SETS = {
-    "startup_object": [
-        "-ffreestanding",
-        "-fno-builtin",
-        "-fno-omit-frame-pointer",
-        "-fno-stack-protector",
-    ],
-    "threading": [
-        "-fno-omit-frame-pointer",
-        "-Wno-frame-address",
-    ],
-}
-
 def _libc_library(
         name,
         deps = [],
-        copt_sets = [],
+        copts = [],
+        target_compatible_with = [],
+        full_build_only = False,
         **kwargs):
     """Internal macro to serve as a base for all other libc library rules.
 
     Args:
       name: Target name.
       deps: cc_library deps.
-      copt_sets: Which sets of allow-listed copts to include.
+      copts: copts for cc_library, only allowed if full_build_only is True.
+      target_compatible_with: target_compatible_with for the cc_library rule.
+      full_build_only: Whether this target is only used in full-build mode.
       **kwargs: All other attributes relevant for the cc_library rule.
     """
 
-    for attr in ["copts", "local_defines"]:
+    for attr in ["local_defines"]:
         if attr in kwargs:
             fail("disallowed attribute: '{}' in rule: '{}'".format(attr, name))
 
-    copts = []
-    for feature in copt_sets:
-        copts.extend(_LIBC_LIBRARY_COPT_SETS[feature])
+    # Allow copts if the target is only for full-builds. Startup or threading
+    # code necessitate copts, but LLVM-libc's build rules should prefer to
+    # avoid copts when possible as per-file-copts are not compatible with
+    # libc_release_library's method of aggregating sources into one cc_library.
+    if copts and not full_build_only:
+        fail("copts disallowed in overlay-compatible rule: '{}'".format(name))
+
+    if full_build_only:
+        target_compatible_with = target_compatible_with + select({
+            Label(":full_build"): [],
+            "//conditions:default": ["@platforms//:incompatible"],
+        })
 
     cc_library(
         name = name,
@@ -118,6 +116,7 @@ def _libc_library(
         local_defines = LIBC_CONFIGURE_OPTIONS,
         deps = deps + libc_common_deps(),
         linkstatic = 1,
+        target_compatible_with = target_compatible_with,
         **kwargs
     )
 
@@ -137,7 +136,13 @@ def libc_startup_library(name, **kwargs):
 
     _libc_library(
         name = name,
-        copt_sets = ["startup_object"],
+        full_build_only = True,
+        copts = [
+            "-ffreestanding",
+            "-fno-builtin",
+            "-fno-omit-frame-pointer",
+            "-fno-stack-protector",
+        ],
         **kwargs
     )
 

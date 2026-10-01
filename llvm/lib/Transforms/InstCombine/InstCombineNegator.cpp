@@ -571,13 +571,6 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
                     << "\n         NEW: " << *Res->second << "\n");
   ++NegatorNumTreesNegated;
 
-  // We must temporarily unset the 'current' insertion point and DebugLoc of the
-  // InstCombine's IRBuilder so that it won't interfere with the ones we have
-  // already specified when producing negated instructions.
-  InstCombiner::BuilderTy::InsertPointGuard Guard(IC.Builder);
-  IC.Builder.ClearInsertionPoint();
-  IC.Builder.SetCurrentDebugLocation(DebugLoc());
-
   // And finally, we must add newly-created instructions into the InstCombine's
   // worklist (in a proper order!) so it can attempt to combine them.
   LLVM_DEBUG(dbgs() << "Negator: Propagating " << Res->first.size()
@@ -585,9 +578,8 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   NegatorMaxInstructionsCreated.updateMax(Res->first.size());
   NegatorNumInstructionsNegatedSuccess += Res->first.size();
 
-  // They are in def-use order, so nothing fancy, just insert them in order.
   for (Instruction *I : Res->first)
-    IC.Builder.Insert(I, I->getName());
+    IC.addToWorklist(I);
 
   // And return the new root.
   return Res->second;

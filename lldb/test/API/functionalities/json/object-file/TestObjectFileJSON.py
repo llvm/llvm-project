@@ -46,7 +46,7 @@ class TestObjectFileJSON(TestBase):
     @no_debug_info_test
     def test_page_multiple(self):
         """A file whose size is a multiple of the page size is mmapped without
-        a NULL terminator."""
+        a null terminator."""
         triple = "arm64-apple-macosx13.0.0"
         data = {
             "triple": triple,

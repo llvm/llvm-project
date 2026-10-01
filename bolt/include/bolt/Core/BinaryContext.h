@@ -1212,6 +1212,9 @@ public:
     return ".text.injected.cold";
   }
 
+  /// Return true if \p A should be emitted before \p B in code section order.
+  bool compareSectionNames(StringRef A, StringRef B) const;
+
   ErrorOr<BinarySection &> getGdbIndexSection() const {
     return getUniqueSectionByName(".gdb_index");
   }

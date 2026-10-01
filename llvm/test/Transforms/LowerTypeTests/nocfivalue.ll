@@ -3,7 +3,7 @@
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: @a = global [6 x ptr] [ptr no_cfi @f1, ptr @.cfi.jumptable, ptr getelementptr inbounds ([3 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 1), ptr no_cfi @f2, ptr @f3, ptr no_cfi @f3.cfi]
+; CHECK: @a = global [6 x ptr] [ptr no_cfi @f1, ptr @.cfi.jumptable, ptr getelementptr inbounds (i8, ptr @.cfi.jumptable, i64 8), ptr no_cfi @f2, ptr @f3, ptr no_cfi @f3.cfi]
 @a = global [6 x ptr] [ptr no_cfi @f1, ptr @f1, ptr @f2, ptr no_cfi @f2, ptr @f3, ptr no_cfi @f3]
 
 ; CHECK: define void @f1()
