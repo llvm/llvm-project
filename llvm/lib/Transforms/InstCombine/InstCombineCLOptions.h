@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-include "llvm/Option/LibraryOptions.td"
+#ifndef LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINECLOPTIONS_H
+#define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINECLOPTIONS_H
 
-def TestLibraryOptions : OptionsStruct<"test", prefix = "lib-">;
+#define OPTIONS_STRUCT_DECL
+#include "InstCombineCLOptions.inc"
 
-defm : BoolField<"lib-enable", "0", "A bool">;
-defm : ValueField<"lib-count", "unsigned", "3", "An unsigned">;
-defm : ValueField<"lib-ratio", "double", "0.5", "A double">;
-defm Path : ValueField<"lib-path", "StringRef", "\"p\"", "A string">;
+#endif // LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINECLOPTIONS_H

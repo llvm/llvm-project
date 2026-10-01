@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-include "llvm/Option/LibraryOptions.td"
+#include "InstCombineCLOptions.h"
+#include "llvm/Option/LibraryOptions.h"
 
-def TestLibraryOptions : OptionsStruct<"test", prefix = "lib-">;
+#define OPTIONS_STRUCT_DEFS
+#include "InstCombineCLOptions.inc"
 
-defm : BoolField<"lib-enable", "0", "A bool">;
-defm : ValueField<"lib-count", "unsigned", "3", "An unsigned">;
-defm : ValueField<"lib-ratio", "double", "0.5", "A double">;
-defm Path : ValueField<"lib-path", "StringRef", "\"p\"", "A string">;
+static llvm::opt::RegisterLibraryOptions<llvm::InstCombineCLOptions>
+    Registration;

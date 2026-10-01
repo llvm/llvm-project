@@ -61,7 +61,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -88,12 +87,6 @@ using namespace llvm;
 using namespace PatternMatch;
 
 STATISTIC(NumSimplified, "Number of library calls simplified");
-
-static cl::opt<unsigned> GuardWideningWindow(
-    "instcombine-guard-widening-window",
-    cl::init(3),
-    cl::desc("How wide an instruction window to bypass looking for "
-             "another guard"));
 
 /// Return the specified type promoted as it would be to pass though a va_arg
 /// area.
@@ -4080,7 +4073,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // fixed window of instructions to handle common cases with conditions
     // computed between guards.
     Instruction *NextInst = II->getNextNode();
-    for (unsigned i = 0; i < GuardWideningWindow; i++) {
+    for (unsigned i = 0; i < CLOpts.guard_widening_window; i++) {
       // Note: Using context-free form to avoid compile time blow up
       if (!isSafeToSpeculativelyExecute(NextInst))
         break;
