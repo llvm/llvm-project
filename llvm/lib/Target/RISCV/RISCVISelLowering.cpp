@@ -13071,10 +13071,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Rs2 = Op.getOperand(3);
     MVT XLenVT = Subtarget.getXLenVT();
 
-    bool IsScalarHalfword = VT == MVT::i32;
-    if (Subtarget.is64Bit() && IsScalarHalfword)
-      return SDValue();
-
     if (VT == MVT::v2i32 && Rs1.getSimpleValueType() == MVT::v4i16) {
       if (Subtarget.is64Bit()) {
         unsigned Opc = getRVPQFormatAccOpcode(IntNo);
