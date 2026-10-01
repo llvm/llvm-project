@@ -1359,52 +1359,34 @@ struct SgToLaneVectorExtractStridedSlice
       updatedStrides.push_back(rewriter.getI64IntegerAttr(1));
     }
 
-    // If the result is distributed, adjust offsets and sizes in the
-    // distributed dimension.
+    // Each distributed dim shrinks by its own lane count, so its size and
+    // offset are rescaled by that count.
     if (!distributedDims.empty()) {
-      if (distributedDims.size() != 1)
-        return rewriter.notifyMatchFailure(
-            op, "only single dimension distribution is supported");
-      int64_t distDim = distributedDims[0];
-      const auto *uArch =
-          xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
-      if (!uArch)
-        return rewriter.notifyMatchFailure(
-            op, "target attribute required to determine subgroup size");
-      int subgroupSize = uArch->getSubgroupSize();
       auto sourceLayout = xegpu::getTemporaryLayout(op->getOpOperand(0));
       if (!sourceLayout || sourceLayout.getEffectiveLaneLayoutAsInt().empty())
         return rewriter.notifyMatchFailure(
             op, "source of extract_strided_slice lacks distribution layout");
-      int sourceDistrDimSize = op.getSourceVectorType().getShape()[distDim];
-      auto laneLayout = sourceLayout.getEffectiveLaneLayoutAsInt();
-      // Effective subgroup size needs to be adjusted if laneLayout along
-      // the distributed dimension is smaller than subgroup size.
-      if (laneLayout[distDim] < subgroupSize &&
-          subgroupSize % laneLayout[distDim] == 0)
-        subgroupSize = laneLayout[distDim];
-      if (sourceDistrDimSize % subgroupSize != 0)
-        return rewriter.notifyMatchFailure(
-            op, "source size along distributed dim is not a multiple of "
-                "subgroup size");
-      auto sourceLaneData = sourceLayout.getEffectiveLaneDataAsInt();
-      // Only check lane_data for the distributed dimension. Non-distributed
-      // dimensions may have non-unit lane_data (e.g., packed layouts).
-      if (distDim < static_cast<int64_t>(sourceLaneData.size()) &&
-          sourceLaneData[distDim] != 1)
-        return rewriter.notifyMatchFailure(
-            op, "expecting unit lane data along the distributed dimension");
-      int64_t distrDimOffset =
-          cast<IntegerAttr>(updatedOffsets[distDim]).getInt();
-      if (distrDimOffset % subgroupSize != 0)
-        return rewriter.notifyMatchFailure(
-            op, "offset along distributed dim is not a multiple of "
-                "subgroup size");
-      // Adjust sizes and offsets for the distributed dimension.
-      updatedSizes[distDim] =
-          rewriter.getI64IntegerAttr(distResultTy.getDimSize(distDim));
-      updatedOffsets[distDim] =
-          rewriter.getI64IntegerAttr(distrDimOffset / subgroupSize);
+      SmallVector<int64_t> laneLayout =
+          sourceLayout.getEffectiveLaneLayoutAsInt();
+      SmallVector<int64_t> laneData = sourceLayout.getEffectiveLaneDataAsInt();
+      ArrayRef<int64_t> sourceShape = op.getSourceVectorType().getShape();
+      for (int64_t distDim : distributedDims) {
+        int64_t lanes = laneLayout[distDim];
+        if (lanes == 0 || sourceShape[distDim] % lanes != 0)
+          return rewriter.notifyMatchFailure(
+              op, "source size along a distributed dim is not a multiple of "
+                  "its lane count");
+        int64_t distrDimOffset =
+            cast<IntegerAttr>(updatedOffsets[distDim]).getInt();
+        if (distrDimOffset % (lanes * laneData[distDim]) != 0)
+          return rewriter.notifyMatchFailure(
+              op, "offset along a distributed dim is not a multiple of its "
+                  "lane tile");
+        updatedSizes[distDim] =
+            rewriter.getI64IntegerAttr(distResultTy.getDimSize(distDim));
+        updatedOffsets[distDim] =
+            rewriter.getI64IntegerAttr(distrDimOffset / lanes);
+      }
     }
 
     auto newOp = vector::ExtractStridedSliceOp::create(
