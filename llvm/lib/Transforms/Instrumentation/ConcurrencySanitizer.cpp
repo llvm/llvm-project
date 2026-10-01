@@ -61,7 +61,8 @@ static cl::opt<bool> ClInstrumentMemIntrinsics(
     cl::desc("Instrument memintrinsics (memset/memcpy/memmove)"), cl::Hidden);
 static cl::opt<bool> ClDistinguishVolatile(
     "csan-distinguish-volatile", cl::init(false),
-    cl::desc("Mark volatile accesses in the access flags"), cl::Hidden);
+    cl::desc("Treat aligned volatile accesses up to 8 bytes as atomic"),
+    cl::Hidden);
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
 STATISTIC(NumOmittedReadsBeforeWrite,
@@ -77,8 +78,6 @@ enum AccessFlags : unsigned {
   AF_None = 0,
   AF_Atomic = 1u << 0,
   AF_Compound = 1u << 1,
-  // 1u << 2 is reserved for the runtime's CSAN_ACCESS_WRITE.
-  AF_Volatile = 1u << 3,
 };
 
 static bool isAtomicMemoryAccess(const Instruction *I) {
@@ -553,8 +552,6 @@ bool ConcurrencySanitizer::insertAccessProbe(Instruction *I, Value *Addr,
   uint32_t TypeSize = DL.getTypeStoreSizeInBits(AccessTy);
   bool Unaligned =
       Alignment < Align(8) && Alignment.value() % (TypeSize / 8) != 0;
-  if (ClDistinguishVolatile && IsVolatile)
-    Flags |= AF_Volatile;
   FunctionCallee Callback;
   if (IsCompound)
     Callback = Unaligned ? CsanUnalignedCompoundRW[Idx] : CsanCompoundRW[Idx];
@@ -564,8 +561,18 @@ bool ConcurrencySanitizer::insertAccessProbe(Instruction *I, Value *Addr,
     Callback = IsWrite ? CsanWrite[Idx] : CsanRead[Idx];
 
   InstrumentationIRBuilder IRB(I);
-  IRB.CreateCall(Callback, {getCallbackAddress(IRB, Addr),
-                            ConstantInt::get(FlagsTy, Flags)});
+  Value *CallbackAddr = getCallbackAddress(IRB, Addr);
+  Value *FlagsVal = ConstantInt::get(FlagsTy, Flags);
+  if (ClDistinguishVolatile && IsVolatile && TypeSize <= 64) {
+    // The declared alignment may understate the pointer's real alignment.
+    Value *IsAligned = IRB.getTrue();
+    if (Unaligned)
+      IsAligned = IRB.CreateIsNull(IRB.CreateAnd(
+          IRB.CreatePtrToInt(CallbackAddr, IntptrTy), TypeSize / 8 - 1));
+    FlagsVal = IRB.CreateSelect(
+        IsAligned, ConstantInt::get(FlagsTy, Flags | AF_Atomic), FlagsVal);
+  }
+  IRB.CreateCall(Callback, {CallbackAddr, FlagsVal});
   return true;
 }
 
