@@ -1503,14 +1503,15 @@ TEST_F(CloneModule, ODRUniqueTypeMethodVerifier) {
 ;; DICompositeType (!8).
 ;;
 ;; The old debug ODR-uniquing infrastructure was implemented such that
-;; DISubprograms that meet certain conditions (such as !4) are uniqued is a
+;; DISubprograms that meet certain conditions (such as !4) are uniqued if a
 ;; subset of fields are equal (`scope`, `linkageName`, `templateParams`) rather
 ;; than all fields being equal which is how uniquing usually works.
 ;;
 ;; CloneModule clones and remaps the operands. With the old scheme described
 ;; above, the two cloned DISubprogram are collapsed down to one because
 ;; the scope, linkageName and templateParams are equal between the two
-;; instances (importantly the scope is not distinct).
+;; instances (importantly this is enabled due to the `scope` (!5) not being
+;; distinct).
 ;;
 ;; The distinct DICompositeType (!8) thus becomes reachable from the new
 ;; module, which is an error. A symptom of this is that the original module's
