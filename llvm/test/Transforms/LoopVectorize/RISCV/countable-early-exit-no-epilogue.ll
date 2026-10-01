@@ -87,12 +87,8 @@ define i32 @countable_early_exit_tc_vf_plus_one(ptr noalias %b) {
 ; NO-EPILOGUE:       [[VECTOR_PH]]:
 ; NO-EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-EPILOGUE:       [[VECTOR_BODY]]:
-; NO-EPILOGUE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; NO-EPILOGUE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
-; NO-EPILOGUE-NEXT:    store <4 x i32> splat (i32 1), ptr [[TMP0]], align 4
-; NO-EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; NO-EPILOGUE-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4
-; NO-EPILOGUE-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; NO-EPILOGUE-NEXT:    store <4 x i32> splat (i32 1), ptr [[B]], align 4
+; NO-EPILOGUE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; NO-EPILOGUE:       [[MIDDLE_BLOCK]]:
 ; NO-EPILOGUE-NEXT:    br label %[[SCALAR_PH:.*]]
 ; NO-EPILOGUE:       [[SCALAR_PH]]:
@@ -106,7 +102,7 @@ define i32 @countable_early_exit_tc_vf_plus_one(ptr noalias %b) {
 ; NO-EPILOGUE-NEXT:    store i32 1, ptr [[GEP]], align 4
 ; NO-EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; NO-EPILOGUE-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; NO-EPILOGUE-NEXT:    br i1 [[EC]], label %[[EXIT2:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; NO-EPILOGUE-NEXT:    br i1 [[EC]], label %[[EXIT2:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-EPILOGUE:       [[EXIT1]]:
 ; NO-EPILOGUE-NEXT:    ret i32 1
 ; NO-EPILOGUE:       [[EXIT2]]:
