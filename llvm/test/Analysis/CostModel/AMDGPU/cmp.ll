@@ -146,6 +146,300 @@ define void @fcmp_f16(half %a, half %b) {
   %cmp_olt = fcmp olt half %a, %b
   ret void
 }
+
+define void @icmp_v2i32(<2 x i32> %a, <2 x i32> %b) {
+; ALL-LABEL: 'icmp_v2i32'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cmp_eq = icmp eq <2 x i32> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cmp_slt = icmp slt <2 x i32> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'icmp_v2i32'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cmp_eq = icmp eq <2 x i32> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cmp_slt = icmp slt <2 x i32> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'icmp_v2i32'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_eq = icmp eq <2 x i32> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_slt = icmp slt <2 x i32> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_eq = icmp eq <2 x i32> %a, %b
+  %cmp_slt = icmp slt <2 x i32> %a, %b
+  ret void
+}
+
+define void @icmp_v3i32(<3 x i32> %a, <3 x i32> %b) {
+; ALL-LABEL: 'icmp_v3i32'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_eq = icmp eq <3 x i32> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_slt = icmp slt <3 x i32> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'icmp_v3i32'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_eq = icmp eq <3 x i32> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_slt = icmp slt <3 x i32> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'icmp_v3i32'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_eq = icmp eq <3 x i32> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_slt = icmp slt <3 x i32> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_eq = icmp eq <3 x i32> %a, %b
+  %cmp_slt = icmp slt <3 x i32> %a, %b
+  ret void
+}
+
+define void @icmp_v4i32(<4 x i32> %a, <4 x i32> %b) {
+; ALL-LABEL: 'icmp_v4i32'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cmp_eq = icmp eq <4 x i32> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cmp_slt = icmp slt <4 x i32> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'icmp_v4i32'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cmp_eq = icmp eq <4 x i32> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cmp_slt = icmp slt <4 x i32> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'icmp_v4i32'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_eq = icmp eq <4 x i32> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_slt = icmp slt <4 x i32> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_eq = icmp eq <4 x i32> %a, %b
+  %cmp_slt = icmp slt <4 x i32> %a, %b
+  ret void
+}
+
+define void @icmp_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; ALL-LABEL: 'icmp_v2i16'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_eq = icmp eq <2 x i16> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_slt = icmp slt <2 x i16> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'icmp_v2i16'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_eq = icmp eq <2 x i16> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_slt = icmp slt <2 x i16> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'icmp_v2i16'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_eq = icmp eq <2 x i16> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_slt = icmp slt <2 x i16> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_eq = icmp eq <2 x i16> %a, %b
+  %cmp_slt = icmp slt <2 x i16> %a, %b
+  ret void
+}
+
+define void @icmp_v3i16(<3 x i16> %a, <3 x i16> %b) {
+; ALL-LABEL: 'icmp_v3i16'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %cmp_eq = icmp eq <3 x i16> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %cmp_slt = icmp slt <3 x i16> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'icmp_v3i16'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %cmp_eq = icmp eq <3 x i16> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %cmp_slt = icmp slt <3 x i16> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'icmp_v3i16'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_eq = icmp eq <3 x i16> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_slt = icmp slt <3 x i16> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_eq = icmp eq <3 x i16> %a, %b
+  %cmp_slt = icmp slt <3 x i16> %a, %b
+  ret void
+}
+
+define void @icmp_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; ALL-LABEL: 'icmp_v4i16'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %cmp_eq = icmp eq <4 x i16> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %cmp_slt = icmp slt <4 x i16> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'icmp_v4i16'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %cmp_eq = icmp eq <4 x i16> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %cmp_slt = icmp slt <4 x i16> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'icmp_v4i16'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_eq = icmp eq <4 x i16> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_slt = icmp slt <4 x i16> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_eq = icmp eq <4 x i16> %a, %b
+  %cmp_slt = icmp slt <4 x i16> %a, %b
+  ret void
+}
+
+define void @fcmp_v2f32(<2 x float> %a, <2 x float> %b) {
+; ALL-LABEL: 'fcmp_v2f32'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cmp_oeq = fcmp oeq <2 x float> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cmp_olt = fcmp olt <2 x float> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'fcmp_v2f32'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cmp_oeq = fcmp oeq <2 x float> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cmp_olt = fcmp olt <2 x float> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'fcmp_v2f32'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_oeq = fcmp oeq <2 x float> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_olt = fcmp olt <2 x float> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_oeq = fcmp oeq <2 x float> %a, %b
+  %cmp_olt = fcmp olt <2 x float> %a, %b
+  ret void
+}
+
+define void @fcmp_v3f32(<3 x float> %a, <3 x float> %b) {
+; ALL-LABEL: 'fcmp_v3f32'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_oeq = fcmp oeq <3 x float> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_olt = fcmp olt <3 x float> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'fcmp_v3f32'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_oeq = fcmp oeq <3 x float> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_olt = fcmp olt <3 x float> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'fcmp_v3f32'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_oeq = fcmp oeq <3 x float> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_olt = fcmp olt <3 x float> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_oeq = fcmp oeq <3 x float> %a, %b
+  %cmp_olt = fcmp olt <3 x float> %a, %b
+  ret void
+}
+
+define void @fcmp_v4f32(<4 x float> %a, <4 x float> %b) {
+; ALL-LABEL: 'fcmp_v4f32'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cmp_oeq = fcmp oeq <4 x float> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cmp_olt = fcmp olt <4 x float> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'fcmp_v4f32'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cmp_oeq = fcmp oeq <4 x float> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cmp_olt = fcmp olt <4 x float> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'fcmp_v4f32'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_oeq = fcmp oeq <4 x float> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_olt = fcmp olt <4 x float> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_oeq = fcmp oeq <4 x float> %a, %b
+  %cmp_olt = fcmp olt <4 x float> %a, %b
+  ret void
+}
+
+define void @fcmp_v2f16(<2 x half> %a, <2 x half> %b) {
+; ALL-LABEL: 'fcmp_v2f16'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_oeq = fcmp oeq <2 x half> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_olt = fcmp olt <2 x half> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'fcmp_v2f16'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_oeq = fcmp oeq <2 x half> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %cmp_olt = fcmp olt <2 x half> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'fcmp_v2f16'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_oeq = fcmp oeq <2 x half> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_olt = fcmp olt <2 x half> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_oeq = fcmp oeq <2 x half> %a, %b
+  %cmp_olt = fcmp olt <2 x half> %a, %b
+  ret void
+}
+
+define void @fcmp_v3f16(<3 x half> %a, <3 x half> %b) {
+; ALL-LABEL: 'fcmp_v3f16'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %cmp_oeq = fcmp oeq <3 x half> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %cmp_olt = fcmp olt <3 x half> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'fcmp_v3f16'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %cmp_oeq = fcmp oeq <3 x half> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %cmp_olt = fcmp olt <3 x half> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'fcmp_v3f16'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_oeq = fcmp oeq <3 x half> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_olt = fcmp olt <3 x half> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_oeq = fcmp oeq <3 x half> %a, %b
+  %cmp_olt = fcmp olt <3 x half> %a, %b
+  ret void
+}
+
+define void @fcmp_v4f16(<4 x half> %a, <4 x half> %b) {
+; ALL-LABEL: 'fcmp_v4f16'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %cmp_oeq = fcmp oeq <4 x half> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %cmp_olt = fcmp olt <4 x half> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'fcmp_v4f16'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %cmp_oeq = fcmp oeq <4 x half> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %cmp_olt = fcmp olt <4 x half> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'fcmp_v4f16'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_oeq = fcmp oeq <4 x half> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_olt = fcmp olt <4 x half> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_oeq = fcmp oeq <4 x half> %a, %b
+  %cmp_olt = fcmp olt <4 x half> %a, %b
+  ret void
+}
+
+define void @icmp_v2ptr(<2 x ptr> %a, <2 x ptr> %b) {
+; ALL-LABEL: 'icmp_v2ptr'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cmp_eq = icmp eq <2 x ptr> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cmp_ugt = icmp ugt <2 x ptr> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'icmp_v2ptr'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cmp_eq = icmp eq <2 x ptr> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cmp_ugt = icmp ugt <2 x ptr> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'icmp_v2ptr'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_eq = icmp eq <2 x ptr> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_ugt = icmp ugt <2 x ptr> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_eq = icmp eq <2 x ptr> %a, %b
+  %cmp_ugt = icmp ugt <2 x ptr> %a, %b
+  ret void
+}
+
+define void @icmp_v4ptr(<4 x ptr> %a, <4 x ptr> %b) {
+; ALL-LABEL: 'icmp_v4ptr'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cmp_eq = icmp eq <4 x ptr> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cmp_ugt = icmp ugt <4 x ptr> %a, %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; ALL-SIZE-LABEL: 'icmp_v4ptr'
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cmp_eq = icmp eq <4 x ptr> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %cmp_ugt = icmp ugt <4 x ptr> %a, %b
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; ALL-SIZE-LATENCY-LABEL: 'icmp_v4ptr'
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_eq = icmp eq <4 x ptr> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cmp_ugt = icmp ugt <4 x ptr> %a, %b
+; ALL-SIZE-LATENCY-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %cmp_eq = icmp eq <4 x ptr> %a, %b
+  %cmp_ugt = icmp ugt <4 x ptr> %a, %b
+  ret void
+}
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GFX11: {{.*}}
 ; GFX8: {{.*}}
