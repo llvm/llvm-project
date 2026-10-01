@@ -2262,14 +2262,14 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   if (R.empty() || R.isNe())
     return;
 
-  LLVM_DEBUG(dbgs() << "Adding '"; dumpUnpackedICmp(dbgs(), Pred, A, B);
-             dbgs() << "'\n");
   auto &CSToUse = getCS(R.IsSigned);
   // A row implied by a single existing row adds no information. Rows in the
   // system are removed in reverse order, so the existing row outlives R.
   if (!R.isEq() && NewVariables.empty() &&
       CSToUse.isImpliedBySingleRow(R.Coefficients))
     return;
+  LLVM_DEBUG(dbgs() << "Adding '"; dumpUnpackedICmp(dbgs(), Pred, A, B);
+             dbgs() << "'\n");
   bool Added = CSToUse.addRow(R.Coefficients, R.NumVars);
   if (!Added)
     return;
