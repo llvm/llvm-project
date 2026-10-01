@@ -3230,9 +3230,45 @@ static bool matchOpWithOpEqZero(Value *Op0, Value *Op1) {
                                                 m_Specific(Op0), m_Zero())));
 }
 
+/// Return true if "addr(P) + Off" cannot be zero. The object P points to
+/// cannot cross the unsigned address space boundary, including the address one
+/// past its end, so an offset that stays within the object can neither be zero
+/// nor wrap around to zero.
+static bool isNonZeroAddrPlusOffset(const APInt &DemandedElts,
+                                    const SimplifyQuery &Q, Value *X, Value *Y,
+                                    unsigned Depth) {
+  const APInt *Off;
+  if (!match(Y, m_APInt(Off)))
+    return false;
+
+  // ptrtoaddr always produces the address. ptrtoint only does so when its
+  // result type is the address type; a narrower result is truncated and a
+  // wider one is not an address computation.
+  Value *P;
+  if (!match(X, m_PtrToAddr(m_Value(P))) &&
+      !(match(X, m_PtrToInt(m_Value(P))) &&
+        X->getType() == Q.DL.getAddressType(P->getType())))
+    return false;
+
+  bool CanBeNull;
+  uint64_t DerefBytes = P->getPointerDereferenceableBytes(
+      Q.DL, CanBeNull, /*CanBeFreed=*/nullptr);
+  if (CanBeNull || DerefBytes == 0 || !Off->ule(DerefBytes))
+    return false;
+
+  // A non-zero offset would be enough on its own in address space zero, but
+  // require a non-null base so that this also holds where null is a valid
+  // address.
+  return isKnownNonZero(P, DemandedElts, Q, Depth);
+}
+
 static bool isNonZeroAdd(const APInt &DemandedElts, const SimplifyQuery &Q,
                          unsigned BitWidth, Value *X, Value *Y, bool NSW,
                          bool NUW, unsigned Depth) {
+  if (isNonZeroAddrPlusOffset(DemandedElts, Q, X, Y, Depth) ||
+      isNonZeroAddrPlusOffset(DemandedElts, Q, Y, X, Depth))
+    return true;
+
   // (X + (X != 0)) is non zero
   if (matchOpWithOpEqZero(X, Y))
     return true;
