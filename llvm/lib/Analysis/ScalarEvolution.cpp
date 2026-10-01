@@ -1444,15 +1444,8 @@ bool ScalarEvolution::proveNoWrapByVaryingStart(const SCEV *Start,
 
   for (unsigned Delta : {-2, -1, 1, 2}) {
     const SCEV *PreStart = getConstant(StartAI - Delta);
-
-    FoldingSetNodeID ID;
-    ID.AddInteger(scAddRecExpr);
-    ID.AddPointer(PreStart);
-    ID.AddPointer(Step);
-    ID.AddPointer(L);
-    FoldingSetInsertToken Token;
-    const auto *PreAR =
-        static_cast<SCEVAddRecExpr *>(UniqueSCEVs.lookup(ID, Token));
+    const auto *PreAR = static_cast<SCEVAddRecExpr *>(
+        findExistingSCEVInCache(scAddRecExpr, {PreStart, Step}, L));
 
     // Give up if we don't already have the add recurrence we need because
     // actually constructing an add recurrence is relatively expensive.
@@ -3867,11 +3860,16 @@ const SCEV *ScalarEvolution::getGEPExpr(SCEVUse BaseExpr,
 }
 
 SCEV *ScalarEvolution::findExistingSCEVInCache(SCEVTypes SCEVType,
-                                               ArrayRef<SCEVUse> Ops) {
+                                               ArrayRef<SCEVUse> Ops,
+                                               const Loop *L) {
+  assert((SCEVType != scAddRecExpr || L) &&
+         "L must be passed to find existing AddRecs");
   FoldingSetNodeID ID;
   ID.AddInteger(SCEVType);
   for (SCEVUse Op : Ops)
     ID.AddPointer(Op.getOpaqueValue());
+  if (L)
+    ID.AddPointer(L);
   FoldingSetInsertToken Token;
   return UniqueSCEVs.lookup(ID, Token);
 }
@@ -12250,30 +12248,13 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     // using one of the following ways:
     // 1.  LHS Pred      RHS  <-   FoundRHS Pred      FoundLHS
     // 2.  RHS SwapPred  LHS  <-   FoundLHS SwapPred  FoundRHS
-    // 3.  LHS Pred      RHS  <-  ~FoundLHS Pred     ~FoundRHS
-    // 4. ~LHS SwapPred ~RHS  <-   FoundLHS SwapPred  FoundRHS
-    // Forms 1. and 2. require swapping the operands of one condition. Don't
-    // do this if it would break canonical constant/addrec ordering.
+    // Both require swapping the operands of one condition. Don't do this if it
+    // would break canonical constant/addrec ordering.
     if (!isa<SCEVConstant>(RHS) && !isa<SCEVAddRecExpr>(LHS))
       return isImpliedCondOperands(ICmpInst::getSwappedCmpPredicate(*P), RHS,
                                    LHS, FoundLHS, FoundRHS, CtxI);
     if (!isa<SCEVConstant>(FoundRHS) && !isa<SCEVAddRecExpr>(FoundLHS))
       return isImpliedCondOperands(*P, LHS, RHS, FoundRHS, FoundLHS, CtxI);
-
-    // There's no clear preference between forms 3. and 4., try both.  Avoid
-    // forming getNotSCEV of pointer values as the resulting subtract is
-    // not legal.
-    if (!LHS->getType()->isPointerTy() && !RHS->getType()->isPointerTy() &&
-        isImpliedCondOperands(ICmpInst::getSwappedCmpPredicate(*P),
-                              getNotSCEV(LHS), getNotSCEV(RHS), FoundLHS,
-                              FoundRHS, CtxI))
-      return true;
-
-    if (!FoundLHS->getType()->isPointerTy() &&
-        !FoundRHS->getType()->isPointerTy() &&
-        isImpliedCondOperands(*P, LHS, RHS, getNotSCEV(FoundLHS),
-                              getNotSCEV(FoundRHS), CtxI))
-      return true;
 
     return false;
   }

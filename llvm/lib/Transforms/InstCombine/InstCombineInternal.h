@@ -468,9 +468,10 @@ private:
 
   /// Simplify \p V given that it is known to be non-null.
   /// Returns the simplified value if possible, otherwise returns nullptr.
-  /// If \p HasDereferenceable is true, the simplification will not perform
-  /// same object checks.
-  Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
+  /// If \p UseProvenance is true, the simplification will use provenance-based
+  /// reasoning (if the pointer is known to be dereferenceable in an
+  /// address-space where null is not defined).
+  Value *simplifyNonNullOperand(Value *V, bool UseProvenance,
                                 unsigned Depth = 0);
 
   /// Create `select C, S1, S2`. Use only when the profile cannot be calculated
