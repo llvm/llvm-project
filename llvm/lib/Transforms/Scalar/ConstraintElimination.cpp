@@ -1415,8 +1415,25 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
                                           CmpPredicate &Pred, Value *&A,
                                           Value *&B, const DataLayout &DL,
                                           const TargetLibraryInfo &TLI) {
+  if (!GEP.hasNoUnsignedWrap())
+    return false;
+
+  Value *Base = GEP.getPointerOperand();
+  if (auto *InnerGEP = dyn_cast<GetElementPtrInst>(Base))
+    Base = InnerGEP->getPointerOperand();
+
+  ObjectSizeOpts Opts;
+  // Workaround for gep inbounds, ptr null, idx.
+  Opts.NullIsUnknownSize = true;
+  // Be conservative since we are not clear on whether an out of bounds access
+  // to the padding is UB or not.
+  Opts.RoundToAlign = true;
+  std::optional<TypeSize> Size = getBaseObjectSize(Base, DL, &TLI, Opts);
+  if (!Size || Size->isScalable())
+    return false;
+
   auto Offset = collectOffsets(cast<GEPOperator>(GEP), DL);
-  if (!Offset.NW.hasNoUnsignedWrap())
+  if (Offset.BasePtr != Base || !Offset.NW.hasNoUnsignedWrap())
     return false;
 
   if (Offset.VariableOffsets.size() != 1)
@@ -1426,17 +1443,6 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
   auto &[Index, Scale] = Offset.VariableOffsets.front();
   // Bail out on non-canonical GEPs.
   if (Index->getType()->getScalarSizeInBits() != BitWidth)
-    return false;
-
-  ObjectSizeOpts Opts;
-  // Workaround for gep inbounds, ptr null, idx.
-  Opts.NullIsUnknownSize = true;
-  // Be conservative since we are not clear on whether an out of bounds access
-  // to the padding is UB or not.
-  Opts.RoundToAlign = true;
-  std::optional<TypeSize> Size =
-      getBaseObjectSize(Offset.BasePtr, DL, &TLI, Opts);
-  if (!Size || Size->isScalable())
     return false;
 
   // Index * Scale + ConstOffset + AccessSize <= AllocSize
