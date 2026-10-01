@@ -1605,7 +1605,7 @@ class MapInfoFinalizationPass
     // Make sure that updateUseDeviceDescriptorArgs was launched earlier
     auto arg = getUseDeviceAddrBlockArg(mapOp, *targetDataOp.getOperation());
     bool isArgBoxType = mlir::isa<fir::BaseBoxType>(arg.getType());
-    bool useArgLoad =
+    [[maybe_unused]] bool useArgLoad =
         arg.hasOneUse() && mlir::isa<fir::LoadOp>(*arg.use_begin()->getOwner());
     assert((isArgBoxType || useArgLoad) &&
            "Expected either BaseBox item or Load operation");
