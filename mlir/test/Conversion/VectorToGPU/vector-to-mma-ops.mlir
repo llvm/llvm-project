@@ -789,3 +789,54 @@ func.func @masked_matmul_km_nk_nm(%arg0: vector<16x16xf16>, %arg1: vector<16x16x
   %D = vector.mask %mask { vector.contract {indexing_maps = [#map1, #map4, #map5], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf16> } : vector<16x16x16xi1> -> vector<16x16xf16>
   return %D : vector<16x16xf16>
 }
+
+// -----
+
+// A rejected elementwise candidate may populate the backward-slice cache
+// for a contraction through the loop induction variable. The contraction
+// must still be considered for MMA conversion, even though its backward
+// slice has already been computed.
+// CHECK-LABEL: func.func @mma_after_rejected_elementwise_slice
+// CHECK: gpu.subgroup_mma_constant_matrix
+// CHECK: scf.for
+// CHECK: vector.gather
+// CHECK-NOT: vector.contract
+// CHECK: gpu.subgroup_mma_compute
+// CHECK: gpu.subgroup_mma_store_matrix
+func.func @mma_after_rejected_elementwise_slice(%0: memref<32x32xf32>, %1: memref<32x32xf32>, %2: memref<32x32xf32>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant dense<0.000000e+00> : vector<16x16xf32>
+  %cst_mask = arith.constant dense<true> : vector<4x4xi1>
+  %cst_pt = arith.constant dense<0.000000e+00> : vector<4x4xf32>
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  %cst_0 = arith.constant 0.000000e+00 : f32
+  %cst_1 = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
+  %cst_2 = arith.constant dense<1> : vector<4x4xindex>
+  %alloc = memref.alloc() alignment = 64 : memref<32x32xf32>
+  %3 = gpu.thread_id x
+  %4 = gpu.thread_id y
+  %5 = affine.apply affine_map<()[s0] -> (s0 * 16)>()[%4]
+  %6 = affine.apply affine_map<()[s0] -> ((s0 floordiv 32) * 16)>()[%3]
+  %7 = scf.for %arg0 = %c0 to %c32 step %c16 iter_args(%arg1 = %cst) -> (vector<16x16xf32>) {
+    %10 = vector.broadcast %arg0 : index to vector<4xindex>
+    %11 = arith.addi %10, %cst_1 : vector<4xindex>
+    %12 = vector.broadcast %11 : vector<4xindex> to vector<4x4xindex>
+    %13 = arith.addi %12, %cst_2 : vector<4x4xindex>
+    %14 = vector.gather %0[%c0, %c0] [%13], %cst_mask, %cst_pt : memref<32x32xf32>, vector<4x4xindex>, vector<4x4xi1>, vector<4x4xf32> into vector<4x4xf32>
+    vector.transfer_write %14, %alloc[%c0, %c0] {in_bounds = [true, true]} : vector<4x4xf32>, memref<32x32xf32>
+    gpu.barrier memfence [#gpu.address_space<workgroup>]
+    %15 = affine.apply affine_map<(d0)[s0] -> (d0 + s0)>(%c0)[%5]
+    %16 = affine.apply affine_map<(d0)[s0] -> (d0 + s0)>(%c0)[%arg0]
+    %17 = vector.transfer_read %alloc[%15, %16], %cst_0 {in_bounds = [true, true]} : memref<32x32xf32>, vector<16x16xf32>
+    %18 = affine.apply affine_map<(d0)[s0] -> (d0 + s0)>(%c0)[%6]
+    %19 = affine.apply affine_map<(d0)[s0] -> (d0 + s0)>(%c0)[%arg0]
+    %20 = vector.transfer_read %1[%19, %18], %cst_0 {in_bounds = [true, true]} : memref<32x32xf32>, vector<16x16xf32>
+    %21 = vector.contract {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d2, d1)>, affine_map<(d0, d1, d2) -> (d0, d1)>], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %17, %20, %arg1 : vector<16x16xf32>, vector<16x16xf32> into vector<16x16xf32>
+    scf.yield %21 : vector<16x16xf32>
+  }
+  %8 = affine.apply affine_map<(d0)[s0] -> (d0 + s0)>(%c0)[%5]
+  %9 = affine.apply affine_map<(d0)[s0] -> (d0 + s0)>(%c0)[%6]
+  vector.transfer_write %7, %2[%8, %9] {in_bounds = [true, true]} : vector<16x16xf32>, memref<32x32xf32>
+  return
+}

@@ -401,7 +401,7 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
     if (!isa<vector::ContractionOp>(nestedOp) &&
         !elementwiseSupportsMMAMatrixType(nestedOp))
       return;
-    if (backwardSliceCache.contains(nestedOp))
+    if (opToConvert.contains(nestedOp))
       return;
 
     SetVector<Operation *> dependentOps;
