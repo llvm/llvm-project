@@ -293,7 +293,7 @@ public:
 
   /// NOTE: There are targets that still do not support the debug entry values
   /// production.
-  bool shouldEmitDebugEntryValues() const;
+  bool shouldEmitDebugEntryValues(DebuggerKind Tuning) const;
 
   /// Whether the fast register allocator lowers tied operands itself instead
   /// of running TwoAddressInstructionPass. AMDGPU anchors passes on
