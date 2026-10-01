@@ -356,8 +356,6 @@ def ExtraSemiStmt : DiagGroup<"extra-semi-stmt", [EmptyInitStatement]>;
 def ExtraSemi : DiagGroup<"extra-semi", [CXX98CompatExtraSemi,
                                          CXX11ExtraSemi]>;
 
-def RedundantDefer : DiagGroup<"redundant-defer">;
-
 def GNUFlexibleArrayInitializer : DiagGroup<"gnu-flexible-array-initializer">;
 def GNUFlexibleArrayUnionMember : DiagGroup<"gnu-flexible-array-union-member">;
 def GNUFoldingConstant : DiagGroup<"gnu-folding-constant">;

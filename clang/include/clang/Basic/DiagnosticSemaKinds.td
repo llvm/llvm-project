@@ -11357,11 +11357,10 @@ def warn_empty_defer_body : Warning<
 def note_empty_body_on_separate_line : Note<
   "put the semicolon on a separate line to silence this warning">;
 
-def warn_redundant_defer: Warning<
+def warn_redundant_defer : Warning<
   "redundant use of '%0'; the deferred statement is executed immediately">,
-  InGroup<RedundantDefer>;
-def note_redundant_defer_if : Note<
-  "did you mean to use '%0 if'?">, InGroup<RedundantDefer>;
+  InGroup<DiagGroup<"redundant-defer">>;
+def note_redundant_defer_if : Note<"did you mean to use '%0 if'?">;
 
 def err_va_start_captured_stmt : Error<
   "'va_start' cannot be used in a captured statement">;
