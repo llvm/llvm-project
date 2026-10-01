@@ -928,6 +928,8 @@ features cannot lower the translation-unit ABI level;
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
 
+- Fixed CUDA built-in variables such as `threadIdx` and `blockDim` being incorrectly treated as having side effects in assumptions. (#GH181340)
+
 - Clang now provides device-side definitions of `__cxa_pure_virtual()` and
   `__cxa_deleted_virtual()`; previously, any (potential) call to a pure/deleted
   virtual function that could not be optimised out would cause the program to
