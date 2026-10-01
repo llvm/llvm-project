@@ -2260,7 +2260,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__builtin_reduce_maximum:
   case Builtin::BI__builtin_reduce_minimum:
-  case Builtin::BI__builtin_matrix_transpose:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_matrix_transpose: {
+    mlir::Value matrix = emitScalarExpr(e->getArg(0));
+    mlir::Value result = builder.createMatrixTranspose(loc, matrix);
+    return RValue::get(result);
+  }
   case Builtin::BI__builtin_matrix_column_major_load:
   case Builtin::BI__builtin_matrix_column_major_store:
   case Builtin::BI__builtin_masked_load:
@@ -2430,7 +2435,24 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BImemcpy:
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImempcpy:
-  case Builtin::BI__builtin_mempcpy:
+  case Builtin::BI__builtin_mempcpy: {
+    mlir::Location loc = getLoc(e->getSourceRange());
+    Address dest = emitPointerWithAlignment(e->getArg(0));
+    Address src = emitPointerWithAlignment(e->getArg(1));
+    mlir::Value sizeVal = emitScalarExpr(e->getArg(2));
+    Address destCast = dest.withElementType(builder, cgm.voidTy);
+    Address srcCast = src.withElementType(builder, cgm.voidTy);
+    assert(!cir::MissingFeatures::sanitizers());
+    builder.createMemCpy(loc, destCast, srcCast, sizeVal);
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    if (builtinID == Builtin::BImempcpy ||
+        builtinID == Builtin::BI__builtin_mempcpy) {
+      mlir::Value destPtr = destCast.getPointer();
+      mlir::Value end = builder.createPtrStride(loc, destPtr, sizeVal);
+      return RValue::get(end);
+    }
+    return RValue::get(dest.getPointer());
+  }
   case Builtin::BI__builtin_memcpy_inline:
   case Builtin::BI__builtin___memcpy_chk:
   case Builtin::BI__builtin_objc_memmove_collectable:

@@ -324,9 +324,25 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
     cir::MemCpyOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::ArrayAttr argAttrs;
+  if (op.getDstAlignment() || op.getSrcAlignment()) {
+    mlir::NamedAttribute dstAlignAttr = rewriter.getNamedAttr(
+        mlir::LLVM::LLVMDialect::getAlignAttrName(),
+        rewriter.getI64IntegerAttr(op.getDstAlignment().value_or(1)));
+    mlir::NamedAttribute srcAlignAttr = rewriter.getNamedAttr(
+        mlir::LLVM::LLVMDialect::getAlignAttrName(),
+        rewriter.getI64IntegerAttr(op.getSrcAlignment().value_or(1)));
+    argAttrs = rewriter.getArrayAttr({
+        /*dst_attrs=*/rewriter.getDictionaryAttr({dstAlignAttr}),
+        /*src_attrs=*/rewriter.getDictionaryAttr({srcAlignAttr}),
+    });
+  }
   rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
       op, adaptor.getDst(), adaptor.getSrc(), adaptor.getLen(),
-      /*isVolatile=*/false);
+      /*isVolatile=*/false,
+      /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
+      /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr, /*arg_attrs=*/argAttrs,
+      /*res_attrs=*/nullptr);
   return mlir::success();
 }
 
@@ -582,6 +598,27 @@ mlir::LogicalResult lowerConstrainableFPOp(
                                        constrainedMnemonic, hasRoundingMode);
 }
 
+static mlir::LLVM::FastmathFlags
+convertFastMathFlags(cir::FastMathFlags cirFlags) {
+  mlir::LLVM::FastmathFlags llvmFlags{};
+  const std::pair<cir::FastMathFlags, mlir::LLVM::FastmathFlags> flags[] = {
+      {cir::FastMathFlags::nnan, mlir::LLVM::FastmathFlags::nnan},
+      {cir::FastMathFlags::ninf, mlir::LLVM::FastmathFlags::ninf},
+      {cir::FastMathFlags::nsz, mlir::LLVM::FastmathFlags::nsz},
+      {cir::FastMathFlags::arcp, mlir::LLVM::FastmathFlags::arcp},
+      {cir::FastMathFlags::contract, mlir::LLVM::FastmathFlags::contract},
+      {cir::FastMathFlags::afn, mlir::LLVM::FastmathFlags::afn},
+      {cir::FastMathFlags::reassoc, mlir::LLVM::FastmathFlags::reassoc},
+  };
+
+  for (auto [cirFlag, llvmFlag] : flags) {
+    if (bitEnumContainsAny(cirFlags, cirFlag))
+      llvmFlags = llvmFlags | llvmFlag;
+  }
+
+  return llvmFlags;
+}
+
 mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
     cir::LLVMIntrinsicCallOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -594,6 +631,9 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
       return op.emitError("expected LLVM result type");
   }
   StringRef name = op.getIntrinsicName();
+  mlir::LLVM::FastmathFlags fastmathFlags = {};
+  if (std::optional<cir::FastMathFlags> fastmath = op.getFastmathFlags())
+    fastmathFlags = convertFastMathFlags(*fastmath);
 
   // Some LLVM intrinsics require ElementType attribute to be attached to
   // the argument of pointer type. That prevents us from generating LLVM IR
@@ -606,7 +646,7 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
   // to set LLVM IR attribute.
   assert(!cir::MissingFeatures::intrinsicElementTypeSupport());
   replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm." + name, llvmResTy,
-                                   adaptor.getOperands());
+                                   adaptor.getOperands(), fastmathFlags);
   return mlir::success();
 }
 
@@ -2715,7 +2755,9 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
          attr.getName() == CIRDialect::getNoRecurseAttrName() ||
          attr.getName() == CIRDialect::getMustProgressAttrName() ||
          attr.getName() == CIRDialect::getNoBuiltinAttrName() ||
-         attr.getName() == CIRDialect::getSYCLModuleIdAttrName();
+         attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
+         attr.getName() == CIRDialect::getDontCallErrorAttrName() ||
+         attr.getName() == CIRDialect::getDontCallWarnAttrName();
 }
 
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
@@ -2866,6 +2908,12 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     passthrough.push_back(rewriter.getArrayAttr(
         {rewriter.getStringAttr(CIRDialect::getSYCLModuleIdAttrName()),
          moduleId}));
+
+  for (llvm::StringRef dontCallAttr : {CIRDialect::getDontCallErrorAttrName(),
+                                       CIRDialect::getDontCallWarnAttrName()})
+    if (auto diagnostic = op->getAttrOfType<mlir::StringAttr>(dontCallAttr))
+      passthrough.push_back(rewriter.getArrayAttr(
+          {rewriter.getStringAttr(dontCallAttr), diagnostic}));
 
   if (!passthrough.empty())
     fn.setPassthroughAttr(rewriter.getArrayAttr(passthrough));
@@ -3966,6 +4014,11 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       return {};
     const mlir::Type ty = converter.convertType(type.getElementType());
     return mlir::VectorType::get(type.getSize(), ty, {type.getIsScalable()});
+  });
+  converter.addConversion([&](cir::MatrixType type) -> mlir::Type {
+    const uint64_t size = type.getRowNum() * type.getColumnNum();
+    const mlir::Type elemTy = converter.convertType(type.getElementType());
+    return mlir::VectorType::get(size, elemTy);
   });
   converter.addConversion([&](cir::BoolType type) -> mlir::Type {
     return mlir::IntegerType::get(type.getContext(), 1,
@@ -5176,6 +5229,18 @@ mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
 
   rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
       op, bitVec, adaptor.getLhs(), adaptor.getRhs());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMMatrixTransposeOpLowering::matchAndRewrite(
+    cir::MatrixTransposeOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::MatrixType matrixTy = op.getValue().getType();
+  mlir::Type resultTy =
+      typeConverter->convertType(op->getResultTypes().front());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MatrixTransposeOp>(
+      +op, resultTy, adaptor.getValue(), matrixTy.getRowNum(),
+      matrixTy.getColumnNum());
   return mlir::success();
 }
 
