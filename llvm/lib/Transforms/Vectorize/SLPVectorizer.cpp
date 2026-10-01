@@ -24154,8 +24154,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             if (!Ins->hasOneUse())
               break;
             Op = Ins;
-            Ins =
-                dyn_cast_if_present<Instruction>(Ins->getUniqueUndroppableUser());
+            Ins = dyn_cast_if_present<Instruction>(
+                Ins->getUniqueUndroppableUser());
           } while (Ins && Ins->getOperand(0) == Op);
           SmallBitVector UseMask =
               buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask);
