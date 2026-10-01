@@ -115,6 +115,10 @@ public:
   // to sign-preserving zero.
   bool useF32FTZ(const MachineFunction &MF) const;
 
+  // Get whether we should use the default atom.add.f32 instruction even when
+  // atom.add.noftz.f32 is available, to preserve old numerical results
+  bool useLegacyF32AtomAdd() const;
+
   SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                           int &ExtraSteps, bool &UseOneConst,
                           bool Reciprocal) const override;
