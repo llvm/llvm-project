@@ -1,0 +1,28 @@
+# A .gnu_debuglink section whose file name is not NUL-terminated is not a debug
+# link.
+
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK: Plugin name: elf
+# CHECK: Name: .gnu_debuglink
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x00000000004003D0
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x00000000004003D0
+    AddressAlign:    0x0000000000000010
+    Content:         DEADBEEFBAADF00D
+  - Name:            .gnu_debuglink
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000004
+    Content:         '616263'
+...
