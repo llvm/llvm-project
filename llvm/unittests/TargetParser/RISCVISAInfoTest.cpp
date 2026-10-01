@@ -214,9 +214,9 @@ TEST(ParseArchString, RejectsInvalidBaseISA) {
 TEST(ParseArchString, RejectsInvalidYPosition) {
   // 'y' is only allowed as a singular base ISA ('rv32y'/'rv64y') or immediately
   // after 'i' or 'e' ('rv32iy'/'rv32ey'). Anything else should be rejected.
-  for (StringRef Input : {"rv32gy0p910", "rv64gy0p910", "rv32imy0p910",
-                          "rv64imy0p910", "rv32i_m_y0p910", "rv64y0p910_y0p910",
-                          "rv64iy0p910_y0p910"}) {
+  for (StringRef Input :
+       {"rv32gy0p910", "rv64gy0p910", "rv32imy0p910", "rv64imy0p910",
+        "rv32i_m_y0p910", "rv64y0p910_y0p910", "rv64iy0p910_y0p910"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "invalid standard user-level extension 'y'");
   }
@@ -251,7 +251,8 @@ TEST(ParseArchString, AcceptsRVYBaseISA) {
     const auto &ExtsRV32EY = InfoRV32EY.getExtensions();
     EXPECT_EQ(ExtsRV32EY.size(), 2UL); // e, y
     EXPECT_TRUE(ExtsRV32EY.at("e") == (RISCVISAUtils::ExtensionVersion{2, 0}));
-    EXPECT_TRUE(ExtsRV32EY.at("y") == (RISCVISAUtils::ExtensionVersion{0, 910}));
+    EXPECT_TRUE(ExtsRV32EY.at("y") ==
+                (RISCVISAUtils::ExtensionVersion{0, 910}));
     EXPECT_EQ(InfoRV32EY.getXLen(), 32U);
     EXPECT_EQ(InfoRV32EY.toString(), "rv32e2p0_y0p910");
   }
