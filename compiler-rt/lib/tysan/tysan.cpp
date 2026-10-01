@@ -184,6 +184,7 @@ static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
     OffsetA = TDA->Member.Offset;
     TDA = TDA->Member.Base;
   }
+
   return walkAliasTree(TDA, TDB, OffsetA, OffsetB);
 }
 
