@@ -2393,7 +2393,8 @@ void AccAttributeVisitor::FinalizeAccClauseObjects() {
   // before those sections are compared with one another.
   for (std::size_t i{0}; i < count; ++i) {
     const auto &entry{*(clauseObjects.begin() + i)};
-    if (!dataSharingAttributeFlags.test(entry.value.flag) ||
+    if (!entry.value.occurrence ||
+        !dataSharingAttributeFlags.test(entry.value.flag) ||
         entry.value.flag == Symbol::Flag::AccReduction) {
       continue;
     }

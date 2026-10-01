@@ -68,6 +68,26 @@ public:
         semantics::UnknownDetails{});
   }
 
+  semantics::Symbol &MakeCommonBlock(const char *name) {
+    return scope_.MakeSymbol(parser::CharBlock{name}, semantics::Attrs{},
+        semantics::CommonBlockDetails{parser::CharBlock{name}});
+  }
+
+  const semantics::Symbol &MakeCommonMember(
+      const char *name, semantics::Symbol &block) {
+    auto &symbol{scope_.MakeSymbol(parser::CharBlock{name}, semantics::Attrs{},
+        semantics::ObjectEntityDetails{})};
+    symbol.get<semantics::ObjectEntityDetails>().set_commonBlock(block);
+    block.get<semantics::CommonBlockDetails>().add_object(symbol);
+    return symbol;
+  }
+
+  const semantics::Symbol &MakeHostAssociated(
+      const char *name, const semantics::Symbol &symbol) {
+    return scope_.MakeSymbol(parser::CharBlock{name}, semantics::Attrs{},
+        semantics::HostAssocDetails{symbol});
+  }
+
 private:
   parser::AllSources allSources_;
   parser::AllCookedSources allCookedSources_{allSources_};
@@ -373,6 +393,58 @@ void TestAsFortran() {
   TEST(path.AsFortran() == "a(1_8,2_8:4_8:1_8)%x(::1_8)%y");
 }
 
+void TestCommonBlockPaths() {
+  SymbolFixture symbols;
+  auto &block{symbols.MakeCommonBlock("blk")};
+  auto &otherBlock{symbols.MakeCommonBlock("other")};
+  const auto &a{symbols.MakeCommonMember("a", block)};
+  const auto &b{symbols.MakeCommonMember("b", block)};
+  const auto &c{symbols.MakeCommonMember("c", otherBlock)};
+  const auto &component{symbols.MakeSymbol("component")};
+  const auto &unrelated{symbols.MakeSymbol("unrelated")};
+  const auto &alias{symbols.MakeHostAssociated("alias", a)};
+
+  DesignatorPath wholeBlock, member, sibling, other, outside, hostAssociated;
+  wholeBlock.SetBase(NamedEntity{block});
+  member.SetBase(NamedEntity{a});
+  sibling.SetBase(NamedEntity{b});
+  other.SetBase(NamedEntity{c});
+  outside.SetBase(NamedEntity{unrelated});
+  hostAssociated.SetBase(NamedEntity{alias});
+  TEST(wholeBlock.CommonBlock() == &block);
+  TEST(member.CommonBlock() == &block);
+  TEST(hostAssociated.CommonBlock() == &block);
+  TEST(!outside.CommonBlock());
+
+  CheckRelation(wholeBlock, member, DesignatorRelation::Contains);
+  CheckRelation(member, wholeBlock, DesignatorRelation::ContainedBy);
+  CheckRelation(wholeBlock, hostAssociated, DesignatorRelation::Contains);
+  CheckRelation(member, sibling, DesignatorRelation::Disjoint);
+  CheckRelation(wholeBlock, other, DesignatorRelation::Disjoint);
+  CheckRelation(wholeBlock, outside, DesignatorRelation::Disjoint);
+  TEST(wholeBlock.MayContain(member));
+  TEST(!member.MayContain(wholeBlock));
+  TEST(!wholeBlock.MayContain(other));
+  TEST(!member.MayContain(sibling));
+
+  auto section{member};
+  section.AddSubscripts({Section(1, 5)});
+  auto subobject{member};
+  subobject.AddComponent(component);
+  CheckRelation(wholeBlock, section, DesignatorRelation::Contains);
+  CheckRelation(section, wholeBlock, DesignatorRelation::ContainedBy);
+  CheckRelation(wholeBlock, subobject, DesignatorRelation::Contains);
+  TEST(wholeBlock.MayContain(section));
+  TEST(wholeBlock.MayContain(subobject));
+  TEST(section.CommonBlock() == &block);
+
+  auto copied{wholeBlock};
+  TEST(copied == wholeBlock);
+  copied.SetBase(NamedEntity{unrelated});
+  TEST(!copied.CommonBlock());
+  CheckRelation(copied, member, DesignatorRelation::Disjoint);
+}
+
 } // namespace
 
 int main() {
@@ -388,5 +460,6 @@ int main() {
   TestAddFunctionsAndMap();
   TestSubscriptsPrecedeComponentWithinPart();
   TestAsFortran();
+  TestCommonBlockPaths();
   return testing::Complete();
 }

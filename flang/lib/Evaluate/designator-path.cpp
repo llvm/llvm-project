@@ -9,6 +9,7 @@
 #include "flang/Evaluate/designator-path.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Semantics/symbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -274,6 +275,15 @@ DesignatorRelation DesignatorPath::Compare(const DesignatorPath &that) const {
   if (empty() || that.empty()) {
     return DesignatorRelation::Disjoint;
   }
+  if (commonBlock && commonBlock == that.commonBlock) {
+    if (IsWholeCommonBlock()) {
+      return that.IsWholeCommonBlock() ? DesignatorRelation::Equal
+                                       : DesignatorRelation::Contains;
+    }
+    if (that.IsWholeCommonBlock()) {
+      return DesignatorRelation::ContainedBy;
+    }
+  }
   if (base || that.base) {
     if (!base || !that.base || !(*base == *that.base)) {
       return DesignatorRelation::Disjoint;
@@ -323,6 +333,9 @@ DesignatorRelation DesignatorPath::Compare(const DesignatorPath &that) const {
 
 bool DesignatorPath::MayContain(const DesignatorPath &that) const {
   if (*this == that || empty()) {
+    return true;
+  }
+  if (commonBlock && commonBlock == that.commonBlock && IsWholeCommonBlock()) {
     return true;
   }
   if (base || that.base) {
@@ -379,7 +392,24 @@ llvm::raw_ostream &DesignatorPath::AsFortran(llvm::raw_ostream &o) const {
   return o;
 }
 
-void DesignatorPath::SetBase(NamedEntity entity) { base = std::move(entity); }
+bool DesignatorPath::IsWholeCommonBlock() const {
+  return commonBlock && HasBaseOnly() && base->IsSymbol() &&
+      &base->GetFirstSymbol().GetUltimate() == commonBlock;
+}
+
+void DesignatorPath::SetBase(NamedEntity entity) {
+  base = std::move(entity);
+  commonBlock = nullptr;
+  const Symbol &symbol{base->GetFirstSymbol().GetUltimate()};
+  if (symbol.has<semantics::CommonBlockDetails>()) {
+    commonBlock = &symbol;
+  } else if (const auto *details{
+                 symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
+    if (const Symbol *block{details->commonBlock()}) {
+      commonBlock = &block->GetUltimate();
+    }
+  }
+}
 
 void DesignatorPath::AddComponent(const Symbol &symbol) {
   if (!parts.empty() && !parts.back().symbol) {
