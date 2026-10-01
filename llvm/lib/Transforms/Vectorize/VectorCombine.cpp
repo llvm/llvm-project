@@ -2345,7 +2345,8 @@ bool VectorCombine::foldFDivToUDiv(Instruction &I) {
 
   auto MatchConstOrInst = [&](Value *V) -> Value * {
     Value *Src;
-    // match uitofp
+    // Match uitofp with the same integer type as the fptoui result.
+    // Exact representability is checked separately below.
     if (match(V, m_OneUse(m_UIToFP(m_Value(Src))))) {
       if (Src->getType() != IntTy)
         return nullptr;
