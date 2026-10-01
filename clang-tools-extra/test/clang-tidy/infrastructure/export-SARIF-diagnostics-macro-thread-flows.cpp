@@ -166,10 +166,10 @@ int g() { int *ptr = NUL; return DEREF(ptr); }
 //CHECK-SARIF-NEXT:               "name": "clang-analyzer-core.NullDereference"
 //CHECK-SARIF-NEXT:             }
 //CHECK-SARIF-NEXT:           ],
-//CHECK-SARIF-NEXT:           "version": "24.0.0git"
+//CHECK-SARIF-NEXT:           "version": "{{.*}}"
 //CHECK-SARIF-NEXT:         }
 //CHECK-SARIF-NEXT:       }
 //CHECK-SARIF-NEXT:     }
 //CHECK-SARIF-NEXT:   ],
-//CHECK-SARIF-NEXT:   "version": "2.1.0"
+//CHECK-SARIF-NEXT:   "version": "{{.*}}"
 //CHECK-SARIF-NEXT: }

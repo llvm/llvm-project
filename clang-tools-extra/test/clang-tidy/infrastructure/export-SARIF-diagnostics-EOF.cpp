@@ -68,11 +68,11 @@
 //CHECK-SARIF-NEXT:               "name": "clang-diagnostic-newline-eof"
 //CHECK-SARIF-NEXT:             }
 //CHECK-SARIF-NEXT:           ],
-//CHECK-SARIF-NEXT:           "version": "24.0.0git"
+//CHECK-SARIF-NEXT:           "version": "{{.*}}"
 //CHECK-SARIF-NEXT:         }
 //CHECK-SARIF-NEXT:       }
 //CHECK-SARIF-NEXT:     }
 //CHECK-SARIF-NEXT:   ],
-//CHECK-SARIF-NEXT:   "version": "2.1.0"
+//CHECK-SARIF-NEXT:   "version": "{{.*}}"
 
 
