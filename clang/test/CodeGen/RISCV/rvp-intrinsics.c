@@ -137,13 +137,13 @@ uint64_t test_abs_u64(int64_t a) {
 // RV32-LABEL: define dso_local i32 @test_mulh_i32(
 // RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mulh.i32(i32 [[A]], i32 [[B]])
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smulh.i32(i32 [[A]], i32 [[B]])
 // RV32-NEXT:    ret i32 [[TMP0]]
 //
 // RV64-LABEL: define dso_local signext i32 @test_mulh_i32(
 // RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mulh.i32(i32 [[A]], i32 [[B]])
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smulh.i32(i32 [[A]], i32 [[B]])
 // RV64-NEXT:    ret i32 [[TMP0]]
 //
 int32_t test_mulh_i32(int32_t a, int32_t b) {
@@ -169,13 +169,13 @@ int32_t test_mulhr_i32(int32_t a, int32_t b) {
 // RV32-LABEL: define dso_local i32 @test_mulhu_u32(
 // RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mulhu.u32(i32 [[A]], i32 [[B]])
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.umulh.i32(i32 [[A]], i32 [[B]])
 // RV32-NEXT:    ret i32 [[TMP0]]
 //
 // RV64-LABEL: define dso_local signext i32 @test_mulhu_u32(
 // RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.mulhu.u32(i32 [[A]], i32 [[B]])
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.umulh.i32(i32 [[A]], i32 [[B]])
 // RV64-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t test_mulhu_u32(uint32_t a, uint32_t b) {
