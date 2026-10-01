@@ -3142,7 +3142,7 @@ define <2 x i16> @test_pmulh_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmulh.h a0, a0, a1
 ; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pmulh.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  %res = call <2 x i16> @llvm.smulh.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
   ret <2 x i16> %res
 }
 
@@ -3160,7 +3160,7 @@ define <2 x i16> @test_pmulhu_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmulhu.h a0, a0, a1
 ; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pmulhu.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  %res = call <2 x i16> @llvm.umulh.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
   ret <2 x i16> %res
 }
 
@@ -3932,9 +3932,10 @@ define i32 @test_mulh_i32(i32 %rs1, i32 %rs2) {
 ;
 ; RV64-LABEL: test_mulh_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pmulh.w a0, a0, a1
+; RV64-NEXT:    mul.w00 a0, a0, a1
+; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    ret
-  %res = call i32 @llvm.riscv.mulh.i32(i32 %rs1, i32 %rs2)
+  %res = call i32 @llvm.smulh.i32(i32 %rs1, i32 %rs2)
   ret i32 %res
 }
 
@@ -3960,9 +3961,10 @@ define i32 @test_mulhu_u32(i32 %rs1, i32 %rs2) {
 ;
 ; RV64-LABEL: test_mulhu_u32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pmulhu.w a0, a0, a1
+; RV64-NEXT:    mulu.w00 a0, a0, a1
+; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    ret
-  %res = call i32 @llvm.riscv.mulhu.u32(i32 %rs1, i32 %rs2)
+  %res = call i32 @llvm.umulh.i32(i32 %rs1, i32 %rs2)
   ret i32 %res
 }
 
