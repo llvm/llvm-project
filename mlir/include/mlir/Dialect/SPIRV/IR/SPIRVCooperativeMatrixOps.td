@@ -122,11 +122,6 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
     Capability<[SPIRV_C_CooperativeMatrixKHR]>
   ];
 
-  // The auto-generated (de)serialization cannot handle an optional operand
-  // (stride) followed by a mandatory attribute (matrix_layout), so it is
-  // hand-written. See Serializer/Deserializer::processOp<KHRCooperativeMatrixLoadOp>.
-  let autogenSerialization = 0;
-
   // TODO: Add scope operand for MakePointer*. See #145485.
   let arguments = (ins
     SPIRV_AnyPtr:$pointer,
@@ -207,11 +202,6 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
     Extension<[SPV_KHR_cooperative_matrix]>,
     Capability<[SPIRV_C_CooperativeMatrixKHR]>
   ];
-
-  // The auto-generated (de)serialization cannot handle an optional operand
-  // (stride) followed by a mandatory attribute (matrix_layout), so it is
-  // hand-written. See Serializer/Deserializer::processOp<KHRCooperativeMatrixStoreOp>.
-  let autogenSerialization = 0;
 
   // TODO: Add scope operand for MakePointer*. See #145485.
   let arguments = (ins
