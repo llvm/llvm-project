@@ -1926,10 +1926,10 @@ static int merge_main(StringRef ProgName) {
 }
 
 /// Computer the overlap b/w profile BaseFilename and profile TestFilename.
-static void overlapInstrProfile(const std::string &BaseFilename,
-                                const std::string &TestFilename,
-                                const OverlapFuncFilters &FuncFilter,
-                                raw_fd_ostream &OS, bool IsCS) {
+static Error overlapInstrProfile(const std::string &BaseFilename,
+                                 const std::string &TestFilename,
+                                 const OverlapFuncFilters &FuncFilter,
+                                 raw_fd_ostream &OS, bool IsCS) {
   std::mutex ErrorLock;
   SmallSet<instrprof_error, 4> WriterErrorCodes;
   WriterContext Context(false, ErrorLock, WriterErrorCodes);
@@ -1937,19 +1937,20 @@ static void overlapInstrProfile(const std::string &BaseFilename,
   OverlapStats Overlap;
   Error E = Overlap.accumulateCounts(BaseFilename, TestFilename, IsCS);
   if (E)
-    exitWithError(std::move(E), "error in getting profile count sums");
+    return makeError(std::move(E), "error in getting profile count sums");
   if (Overlap.Base.CountSum < 1.0f) {
     OS << "Sum of edge counts for profile " << BaseFilename << " is 0.\n";
-    exit(0);
+    return Error::success();
   }
   if (Overlap.Test.CountSum < 1.0f) {
     OS << "Sum of edge counts for profile " << TestFilename << " is 0.\n";
-    exit(0);
+    return Error::success();
   }
   loadInput(WeightedInput, nullptr, nullptr, /*ProfiledBinary=*/"", &Context);
   overlapInput(BaseFilename, TestFilename, &Context, Overlap, FuncFilter, OS,
                IsCS);
   Overlap.dump(OS);
+  return Error::success();
 }
 
 namespace {
@@ -2152,7 +2153,7 @@ public:
   void initializeSampleProfileOverlap();
 
   /// Load profiles specified by BaseFilename and TestFilename.
-  std::error_code loadProfiles();
+  Error loadProfiles();
 
   using FuncSampleStatsMap = DenseMap<SampleContext, FuncSampleStats>;
 
@@ -2811,7 +2812,7 @@ void SampleOverlapAggregator::dumpHotFuncAndBlockOverlap(
      << HotBlockOverlap.TestCount - HotBlockOverlap.OverlapCount << "\n";
 }
 
-std::error_code SampleOverlapAggregator::loadProfiles() {
+Error SampleOverlapAggregator::loadProfiles() {
   using namespace sampleprof;
 
   LLVMContext Context;
@@ -2819,25 +2820,25 @@ std::error_code SampleOverlapAggregator::loadProfiles() {
   auto BaseReaderOrErr = SampleProfileReader::create(BaseFilename, Context, *FS,
                                                      FSDiscriminatorPassOption);
   if (std::error_code EC = BaseReaderOrErr.getError())
-    exitWithErrorCode(EC, BaseFilename);
+    return makeError(EC, BaseFilename);
 
   auto TestReaderOrErr = SampleProfileReader::create(TestFilename, Context, *FS,
                                                      FSDiscriminatorPassOption);
   if (std::error_code EC = TestReaderOrErr.getError())
-    exitWithErrorCode(EC, TestFilename);
+    return makeError(EC, TestFilename);
 
   BaseReader = std::move(BaseReaderOrErr.get());
   TestReader = std::move(TestReaderOrErr.get());
 
   if (std::error_code EC = BaseReader->read())
-    exitWithErrorCode(EC, BaseFilename);
+    return makeError(EC, BaseFilename);
   if (std::error_code EC = TestReader->read())
-    exitWithErrorCode(EC, TestFilename);
+    return makeError(EC, TestFilename);
   if (BaseReader->profileIsProbeBased() != TestReader->profileIsProbeBased())
-    exitWithError(
+    return makeError(
         "cannot compare probe-based profile with non-probe-based profile");
   if (BaseReader->profileIsCS() != TestReader->profileIsCS())
-    exitWithError("cannot compare CS profile with non-CS profile");
+    return makeError("cannot compare CS profile with non-CS profile");
 
   // Load BaseHotThreshold and TestHotThreshold as 99-percentile threshold in
   // profile summary.
@@ -2848,13 +2849,14 @@ std::error_code SampleOverlapAggregator::loadProfiles() {
   TestHotThreshold =
       ProfileSummaryBuilder::getHotCountThreshold(TestPS.getDetailedSummary());
 
-  return std::error_code();
+  return Error::success();
 }
 
-void overlapSampleProfile(const std::string &BaseFilename,
-                          const std::string &TestFilename,
-                          const OverlapFuncFilters &FuncFilter,
-                          uint64_t SimilarityCutoff, raw_fd_ostream &OS) {
+static Error overlapSampleProfile(const std::string &BaseFilename,
+                                  const std::string &TestFilename,
+                                  const OverlapFuncFilters &FuncFilter,
+                                  uint64_t SimilarityCutoff,
+                                  raw_fd_ostream &OS) {
   using namespace sampleprof;
 
   // We use 0.000005 to initialize OverlapAggr.Epsilon because the final metrics
@@ -2862,36 +2864,36 @@ void overlapSampleProfile(const std::string &BaseFilename,
   SampleOverlapAggregator OverlapAggr(
       BaseFilename, TestFilename,
       static_cast<double>(SimilarityCutoff) / 1000000, 0.000005, FuncFilter);
-  if (std::error_code EC = OverlapAggr.loadProfiles())
-    exitWithErrorCode(EC);
+  if (Error E = OverlapAggr.loadProfiles())
+    return E;
 
   OverlapAggr.initializeSampleProfileOverlap();
   if (OverlapAggr.detectZeroSampleProfile(OS))
-    return;
+    return Error::success();
 
   OverlapAggr.computeSampleProfileOverlap(OS);
 
   OverlapAggr.dumpProgramSummary(OS);
   OverlapAggr.dumpHotFuncAndBlockOverlap(OS);
   OverlapAggr.dumpFuncSimilarity(OS);
+  return Error::success();
 }
 
-static int overlap_main() {
+static Error overlap_main() {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
-    exitWithErrorCode(EC, OutputFilename);
+    return makeError(EC, OutputFilename);
 
   if (ProfileKind == instr)
-    overlapInstrProfile(BaseFilename, TestFilename,
-                        OverlapFuncFilters{OverlapValueCutoff, FuncNameFilter},
-                        OS, IsCS);
-  else
-    overlapSampleProfile(BaseFilename, TestFilename,
-                         OverlapFuncFilters{OverlapValueCutoff, FuncNameFilter},
-                         SimilarityCutoff, OS);
+    return overlapInstrProfile(
+        BaseFilename, TestFilename,
+        OverlapFuncFilters{OverlapValueCutoff, FuncNameFilter}, OS, IsCS);
 
-  return 0;
+  return overlapSampleProfile(
+      BaseFilename, TestFilename,
+      OverlapFuncFilters{OverlapValueCutoff, FuncNameFilter}, SimilarityCutoff,
+      OS);
 }
 
 namespace {
@@ -3621,7 +3623,7 @@ int main(int argc, const char *argv[]) {
     return reportError(order_main());
 
   if (OverlapSubcommand)
-    return overlap_main();
+    return reportError(overlap_main());
 
   if (MergeSubcommand)
     return merge_main(ProgName);
