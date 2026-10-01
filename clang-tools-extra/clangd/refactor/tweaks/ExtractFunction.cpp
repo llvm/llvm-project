@@ -1013,7 +1013,8 @@ bool createParameters(NewFunction &ExtractedFunc,
     if (!VD || isa<FunctionDecl>(DeclInfo.TheDecl))
       return false;
     // Parameter qualifiers are same as the Decl's qualifiers.
-    QualType TypeInfo = VD->getType().getNonReferenceType();
+    QualType FullTypeInfo = VD->getType();
+    QualType TypeInfo = FullTypeInfo.getNonReferenceType();
     // FIXME: check if parameter will be a non l-value reference.
     bool IsPassedByReference = true;
     if (!DeclInfo.IsPossiblyMutated) {
@@ -1021,7 +1022,7 @@ bool createParameters(NewFunction &ExtractedFunc,
       // cheap to copy as to pass by reference, and less noisy. Any
       // pre-existing const is dropped: it's a no-op on a by-value
       // parameter, not a signal worth keeping.
-      if (TypeInfo->isScalarType()) {
+      if (TypeInfo->isScalarType() && !FullTypeInfo->isReferenceType()) {
         IsPassedByReference = false;
         TypeInfo.removeLocalConst();
       } else if (!TypeInfo->isArrayType()) {

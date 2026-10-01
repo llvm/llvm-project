@@ -1002,6 +1002,34 @@ TEST_F(ExtractFunctionTest, ConstParametersScalarsByValue) {
               HasSubstr("extracted(int[5] &arr)"));
 }
 
+// Variables of reference type, const or non-const, must stay references,
+// otherwise they'd stop tracking their target.
+TEST_F(ExtractFunctionTest, ReferenceToScalar) {
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void bar(int) {}
+      void foo() {
+      int A = 0;
+      int &B = A;
+      [[
+        A = 1;
+        bar(B);
+      ]]
+    })cpp"),
+              HasSubstr("extracted(int &A, const int &B)"));
+  EXPECT_THAT(apply(R"cpp(
+      void bar(int) {}
+      void foo() {
+      int A = 0;
+      const int &B = A;
+      [[
+        A = 1;
+        bar(B);
+      ]]
+    })cpp"),
+              HasSubstr("extracted(int &A, const int &B)"));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
