@@ -123,6 +123,7 @@ MDNode *getAllocTokenMetadata(const CallBase &CB) {
          "bad !alloc_token");
   assert(isa<MDString>(Ret->getOperand(0)));
   assert(isa<ConstantAsMetadata>(Ret->getOperand(1)));
+  assert(Ret->getNumOperands() == 2 || isa<MDString>(Ret->getOperand(2)));
   return Ret;
 }
 
