@@ -89,7 +89,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
@@ -132,33 +131,6 @@ STATISTIC(NumFactor   , "Number of factorizations");
 STATISTIC(NumReassoc  , "Number of reassociations");
 DEBUG_COUNTER(VisitCounter, "instcombine-visit",
               "Controls which instructions are visited");
-
-static cl::opt<bool> EnableCodeSinking("instcombine-code-sinking",
-                                       cl::desc("Enable code sinking"),
-                                       cl::init(true));
-
-static cl::opt<unsigned> MaxSinkNumUsers(
-    "instcombine-max-sink-users", cl::init(32),
-    cl::desc("Maximum number of undroppable users for instruction sinking"));
-
-static cl::opt<unsigned>
-MaxArraySize("instcombine-maxarray-size", cl::init(1024),
-             cl::desc("Maximum array size considered when doing a combine"));
-
-static cl::opt<unsigned> MaxAllocSiteRemovableUsers(
-    "instcombine-max-allocsite-removable-users", cl::Hidden, cl::init(2048),
-    cl::desc("Maximum number of users to visit in alloc-site "
-             "removability analysis"));
-
-// FIXME: Remove this flag when it is no longer necessary to convert
-// llvm.dbg.declare to avoid inaccurate debug info. Setting this to false
-// increases variable availability at the cost of accuracy. Variables that
-// cannot be promoted by mem2reg or SROA will be described as living in memory
-// for their entire lifetime. However, passes like DSE and instcombine can
-// delete stores to the alloca, leading to misleading and inaccurate debug
-// information. This flag can be removed when those passes are fixed.
-static cl::opt<unsigned> ShouldLowerDbgDeclare("instcombine-lower-dbg-declare",
-                                               cl::Hidden, cl::init(true));
 
 InstCombiner::IRBuilderInstCombineInserter::~IRBuilderInstCombineInserter() =
     default;
@@ -3740,7 +3712,8 @@ static bool isRemovableWrite(CallBase &CB, Value *UsedV,
 
 static std::optional<ModRefInfo>
 isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
-                     const TargetLibraryInfo &TLI, bool KnowInit) {
+                     const TargetLibraryInfo &TLI, bool KnowInit,
+                     unsigned MaxUsers) {
   SmallVector<Instruction*, 4> Worklist;
   const std::optional<StringRef> Family = getAllocationFamily(AI, &TLI);
   Worklist.push_back(AI);
@@ -3750,7 +3723,7 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
     Instruction *PI = Worklist.pop_back_val();
     for (User *U : PI->users()) {
       Instruction *I = cast<Instruction>(U);
-      if (Users.size() >= MaxAllocSiteRemovableUsers)
+      if (Users.size() >= MaxUsers)
         return std::nullopt;
       switch (I->getOpcode()) {
       default:
@@ -3934,7 +3907,8 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     KnowInitUndef = false;
 
   auto Removable =
-      isAllocSiteRemovable(&MI, RawUsers, TLI, KnowInitZero | KnowInitUndef);
+      isAllocSiteRemovable(&MI, RawUsers, TLI, KnowInitZero | KnowInitUndef,
+                           CLOpts.max_allocsite_removable_users);
   if (Removable) {
     SmallVector<WeakTrackingVH, 64> Users(RawUsers.begin(), RawUsers.end());
     for (WeakTrackingVH &User : Users) {
@@ -5813,7 +5787,7 @@ bool InstCombinerImpl::run() {
     // Return the UserBlock if successful.
     auto getOptionalSinkBlockForInst =
         [this](Instruction *I) -> std::optional<BasicBlock *> {
-      if (!EnableCodeSinking)
+      if (!CLOpts.code_sinking)
         return std::nullopt;
 
       BasicBlock *BB = I->getParent();
@@ -5831,7 +5805,7 @@ bool InstCombinerImpl::run() {
             continue;
         }
 
-        if (NumUsers > MaxSinkNumUsers)
+        if (NumUsers > CLOpts.max_sink_users)
           return std::nullopt;
 
         Instruction *UserInst = cast<Instruction>(User);
@@ -6191,8 +6165,9 @@ static bool combineInstructionsOverFunction(
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
   // by instcombiner.
+  const InstCombineCLOptions &CLOpts = InstCombineCLOptions::Global;
   bool MadeIRChange = false;
-  if (ShouldLowerDbgDeclare)
+  if (CLOpts.lower_dbg_declare)
     MadeIRChange = LowerDbgDeclare(F);
 
   // Iterate while there is work to do.
@@ -6211,8 +6186,7 @@ static bool combineInstructionsOverFunction(
                       << F.getName() << "\n");
 
     InstCombinerImpl IC(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI,
-                        DL, RPOT);
-    IC.MaxArraySizeForCombine = MaxArraySize;
+                        DL, RPOT, CLOpts);
     bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();
     if (!MadeChangeInThisIteration)
