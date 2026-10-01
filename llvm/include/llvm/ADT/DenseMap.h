@@ -95,6 +95,16 @@ inline constexpr bool isRelocatableBucket =
     std::is_trivially_copy_constructible_v<BucketT> &&
     std::is_trivially_destructible_v<BucketT>;
 
+// Move-construct *Dst from *Src, then destroy *Src. Dst is raw storage.
+template <typename BucketT> void relocateBucket(BucketT *Dst, BucketT *Src) {
+  using KeyT = std::remove_reference_t<decltype(Dst->getFirst())>;
+  using ValueT = std::remove_reference_t<decltype(Dst->getSecond())>;
+  ::new (&Dst->getFirst()) KeyT(std::move(Src->getFirst()));
+  ::new (&Dst->getSecond()) ValueT(std::move(Src->getSecond()));
+  Src->getSecond().~ValueT();
+  Src->getFirst().~KeyT();
+}
+
 using UsedT = uint32_t;
 
 // Number of used words backing N buckets where N is zero or a power of two.
@@ -312,16 +322,6 @@ class SmallDenseMapStorage {
     InlineRep Inline;
     LargeRep Large;
   } storage;
-
-  // Move-construct *Dst from *Src, then destroy *Src. Dst is raw storage.
-  static void relocateBucket(BucketT *Dst, BucketT *Src) {
-    using KeyT = std::remove_reference_t<decltype(Dst->getFirst())>;
-    using ValueT = std::remove_reference_t<decltype(Dst->getSecond())>;
-    ::new (&Dst->getFirst()) KeyT(std::move(Src->getFirst()));
-    ::new (&Dst->getSecond()) ValueT(std::move(Src->getSecond()));
-    Src->getSecond().~ValueT();
-    Src->getFirst().~KeyT();
-  }
 
   const BucketT *getInlineBuckets() const {
     assert(Small);
@@ -1132,14 +1132,8 @@ protected:
       unsigned BucketNo = KeyInfoT::getHashValue(OtherB[I].getFirst()) & Mask;
       while (llvm::densemap::detail::used(U, BucketNo))
         BucketNo = (BucketNo + 1) & Mask;
-      BucketT *DestBucket = B + BucketNo;
-      ::new (&DestBucket->getFirst()) KeyT(std::move(OtherB[I].getFirst()));
-      ::new (&DestBucket->getSecond()) ValueT(std::move(OtherB[I].getSecond()));
+      llvm::densemap::detail::relocateBucket(B + BucketNo, &OtherB[I]);
       llvm::densemap::detail::setUsed(U, BucketNo);
-
-      // Free the moved-out key/value.
-      OtherB[I].getSecond().~ValueT();
-      OtherB[I].getFirst().~KeyT();
     });
     setNumEntries(Other.getNumEntries());
     Other.Storage.kill();
@@ -1200,11 +1194,7 @@ private:
       // If the hole (I) lies on the linear-probe chain from the home bucket
       // (Ideal) to J, shift J into the hole and make J the new hole.
       if (((I - Ideal) & Mask) < ((J - Ideal) & Mask)) {
-        BucketT &BI = BucketsPtr[I];
-        ::new (&BI.getFirst()) KeyT(std::move(BJ.getFirst()));
-        ::new (&BI.getSecond()) ValueT(std::move(BJ.getSecond()));
-        BJ.getSecond().~ValueT();
-        BJ.getFirst().~KeyT();
+        llvm::densemap::detail::relocateBucket(&BucketsPtr[I], &BJ);
         I = J;
       }
     }
