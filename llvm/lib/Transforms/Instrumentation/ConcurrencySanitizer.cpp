@@ -61,8 +61,7 @@ static cl::opt<bool> ClInstrumentMemIntrinsics(
     cl::desc("Instrument memintrinsics (memset/memcpy/memmove)"), cl::Hidden);
 static cl::opt<bool> ClDistinguishVolatile(
     "csan-distinguish-volatile", cl::init(false),
-    cl::desc("Emit special instrumentation for accesses to volatiles"),
-    cl::Hidden);
+    cl::desc("Mark volatile accesses in the access flags"), cl::Hidden);
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
 STATISTIC(NumOmittedReadsBeforeWrite,
@@ -78,6 +77,8 @@ enum AccessFlags : unsigned {
   AF_None = 0,
   AF_Atomic = 1u << 0,
   AF_Compound = 1u << 1,
+  // 1u << 2 is reserved for the runtime's CSAN_ACCESS_WRITE.
+  AF_Volatile = 1u << 3,
 };
 
 static bool isAtomicMemoryAccess(const Instruction *I) {
@@ -184,14 +185,6 @@ private:
   FunctionCallee CsanUnalignedRead[kNumAccessSizes];
   // void __csan_unaligned_writeN(ptr, i32);
   FunctionCallee CsanUnalignedWrite[kNumAccessSizes];
-  // void __csan_volatile_readN(ptr, i32);
-  FunctionCallee CsanVolatileRead[kNumAccessSizes];
-  // void __csan_volatile_writeN(ptr, i32);
-  FunctionCallee CsanVolatileWrite[kNumAccessSizes];
-  // void __csan_unaligned_volatile_readN(ptr, i32);
-  FunctionCallee CsanUnalignedVolatileRead[kNumAccessSizes];
-  // void __csan_unaligned_volatile_writeN(ptr, i32);
-  FunctionCallee CsanUnalignedVolatileWrite[kNumAccessSizes];
   // void __csan_read_writeN(ptr, i32);
   FunctionCallee CsanCompoundRW[kNumAccessSizes];
   // void __csan_unaligned_read_writeN(ptr, i32);
@@ -266,12 +259,6 @@ void ConcurrencySanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
     CsanWrite[I] = AccessFn("write" + ByteSize);
     CsanUnalignedRead[I] = AccessFn("unaligned_read" + ByteSize);
     CsanUnalignedWrite[I] = AccessFn("unaligned_write" + ByteSize);
-    CsanVolatileRead[I] = AccessFn("volatile_read" + ByteSize);
-    CsanVolatileWrite[I] = AccessFn("volatile_write" + ByteSize);
-    CsanUnalignedVolatileRead[I] =
-        AccessFn("unaligned_volatile_read" + ByteSize);
-    CsanUnalignedVolatileWrite[I] =
-        AccessFn("unaligned_volatile_write" + ByteSize);
     CsanCompoundRW[I] = AccessFn("read_write" + ByteSize);
     CsanUnalignedCompoundRW[I] = AccessFn("unaligned_read_write" + ByteSize);
   }
@@ -474,6 +461,7 @@ bool ConcurrencySanitizer::instrumentAtomic(Instruction *I,
     AccessTy = RMW->getValOperand()->getType();
     IsCompound = true;
   } else if (auto *CAS = dyn_cast<AtomicCmpXchgInst>(I)) {
+    // A failed CAS is still considered a write as the output is unkonwn.
     Addr = CAS->getPointerOperand();
     AccessTy = CAS->getNewValOperand()->getType();
     IsCompound = true;
@@ -561,19 +549,15 @@ bool ConcurrencySanitizer::insertAccessProbe(Instruction *I, Value *Addr,
     Alignment = CAS->getAlign();
     IsVolatile = CAS->isVolatile();
   }
-  IsVolatile &= ClDistinguishVolatile;
 
   uint32_t TypeSize = DL.getTypeStoreSizeInBits(AccessTy);
   bool Unaligned =
       Alignment < Align(8) && Alignment.value() % (TypeSize / 8) != 0;
+  if (ClDistinguishVolatile && IsVolatile)
+    Flags |= AF_Volatile;
   FunctionCallee Callback;
   if (IsCompound)
     Callback = Unaligned ? CsanUnalignedCompoundRW[Idx] : CsanCompoundRW[Idx];
-  else if (IsVolatile && Unaligned)
-    Callback = IsWrite ? CsanUnalignedVolatileWrite[Idx]
-                       : CsanUnalignedVolatileRead[Idx];
-  else if (IsVolatile)
-    Callback = IsWrite ? CsanVolatileWrite[Idx] : CsanVolatileRead[Idx];
   else if (Unaligned)
     Callback = IsWrite ? CsanUnalignedWrite[Idx] : CsanUnalignedRead[Idx];
   else

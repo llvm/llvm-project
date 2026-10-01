@@ -43,7 +43,7 @@ entry:
   ret i32 %v
 }
 ; CHECK-LABEL: @volatile_read(
-; CHECK: call void @__csan_volatile_read4(ptr %p, i32 0)
+; CHECK: call void @__csan_read4(ptr %p, i32 8)
 
 define void @unaligned_volatile_write(ptr %p) sanitize_concurrency {
 entry:
@@ -51,7 +51,28 @@ entry:
   ret void
 }
 ; CHECK-LABEL: @unaligned_volatile_write(
-; CHECK: call void @__csan_unaligned_volatile_write8(ptr %p, i32 0)
+; CHECK: call void @__csan_unaligned_write8(ptr %p, i32 8)
+
+define i128 @large_volatile_read(ptr %p) sanitize_concurrency {
+entry:
+  %v = load volatile i128, ptr %p, align 16
+  ret i128 %v
+}
+; CHECK-LABEL: @large_volatile_read(
+; CHECK: call void @__csan_read16(ptr %p, i32 8)
+
+define void @volatile_range(ptr %src, ptr %dst, i64 %n) sanitize_concurrency {
+entry:
+  %v = load volatile i24, ptr %src, align 4
+  store volatile i24 %v, ptr %dst, align 4
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %src, i64 8, i1 true)
+  ret void
+}
+; CHECK-LABEL: @volatile_range(
+; CHECK: call void @__csan_read_range(ptr %src, i64 3, i32 0)
+; CHECK: call void @__csan_write_range(ptr %dst, i64 3, i32 0)
+; CHECK: call void @__csan_read_range(ptr %src, i64 8, i32 0)
+; CHECK: call void @__csan_write_range(ptr %dst, i64 8, i32 0)
 
 define i32 @unaligned_atomic_rmw(ptr %p) sanitize_concurrency {
 entry:

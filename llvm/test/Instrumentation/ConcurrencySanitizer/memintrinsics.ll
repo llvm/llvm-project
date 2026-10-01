@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='function(csan)' -csan-instrument-func-entry-exit=0 -S -mtriple=amdgcn-amd-amdhsa | FileCheck %s
+; RUN: opt < %s -passes='function(csan)' -csan-instrument-func-entry-exit=0 -S -mtriple=amdgpu-amd-amdhsa | FileCheck %s
 
 define void @instrument_source(ptr addrspace(5) %dst, ptr addrspace(1) %src, i32 %n) sanitize_concurrency {
 entry:
