@@ -312,6 +312,8 @@ private:
   void SelectINTRINSIC_VOID(SDNode *N);
   void SelectWAVE_ADDRESS(SDNode *N);
   void SelectSTACKRESTORE(SDNode *N);
+  bool Legalize16BitExtractSubReg(SDNode *N);
+  bool Legalize16BitCrossBank(SDNode *N);
   bool Legalize16BitRegClass(SDNode *N);
   const TargetRegisterClass *inferNodeRegClass(SDNode *N) const;
 

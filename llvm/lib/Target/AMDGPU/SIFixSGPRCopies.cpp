@@ -247,11 +247,12 @@ static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
   auto &Src = MI.getOperand(1);
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = Src.getReg();
-  const GCNSubtarget &ST = MI.getMF()->getSubtarget<GCNSubtarget>();
 
-  SmallVector<MachineOperand *, 4> UserLo16;
   if (!SrcReg.isVirtual() || !DstReg.isVirtual())
     return false;
+
+  const GCNSubtarget &ST = MI.getMF()->getSubtarget<GCNSubtarget>();
+  SmallVector<MachineOperand *, 4> Lo16Users;
 
   for (auto &MO : MRI.reg_nodbg_operands(DstReg)) {
     const auto *UseMI = MO.getParent();
@@ -270,10 +271,9 @@ static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
     // lo/hi16:vgprXX which get transformed to illegal lo/hi16:sgprXX.
     // Reject hi16, and collect lo16 MO
     unsigned SubRegIdx = MO.getSubReg();
-    if (ST.useRealTrue16Insts() && SubRegIdx != AMDGPU::NoSubRegister &&
-        TRI->getSubRegIdxSize(SubRegIdx) == 16) {
+    if (ST.useRealTrue16Insts()) {
       if (SubRegIdx == AMDGPU::lo16)
-        UserLo16.push_back(&MO);
+        Lo16Users.push_back(&MO);
       else if (SubRegIdx == AMDGPU::hi16)
         return false;
     }
@@ -283,8 +283,8 @@ static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
 
   // Replace lo16 to nosubreg/sub0 for sgpr
   const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
-  bool HasSub0 = (TRI->getSubClassWithSubReg(RC, AMDGPU::sub0) != nullptr);
-  for (auto &MO : UserLo16)
+  bool HasSub0 = TRI->getSubClassWithSubReg(RC, AMDGPU::sub0);
+  for (auto &MO : Lo16Users)
     MO->setSubReg(HasSub0 ? AMDGPU::sub0 : AMDGPU::NoSubRegister);
 
   return true;
