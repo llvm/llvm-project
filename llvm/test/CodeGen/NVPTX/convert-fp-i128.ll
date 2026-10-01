@@ -434,16 +434,16 @@ define i128 @cvt_s128_f32(float %x) {
 ; CHECK-LABEL: cvt_s128_f32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<4>;
-; CHECK-NEXT:    .reg .b32 %r<12>;
-; CHECK-NEXT:    .reg .b64 %rd<14>;
+; CHECK-NEXT:    .reg .b32 %r<13>;
+; CHECK-NEXT:    .reg .b64 %rd<15>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %fp-to-i-entry
 ; CHECK-NEXT:    ld.param.b32 %r3, [cvt_s128_f32_param_0];
 ; CHECK-NEXT:    shr.u32 %r5, %r3, 23;
 ; CHECK-NEXT:    and.b32 %r1, %r5, 255;
 ; CHECK-NEXT:    setp.lt.u32 %p1, %r1, 127;
-; CHECK-NEXT:    mov.b64 %rd12, 0;
-; CHECK-NEXT:    mov.b64 %rd13, %rd12;
+; CHECK-NEXT:    mov.b64 %rd13, 0;
+; CHECK-NEXT:    mov.b64 %rd14, %rd13;
 ; CHECK-NEXT:    @%p1 bra $L__BB7_4;
 ; CHECK-NEXT:  // %bb.1: // %fp-to-i-if-check.exp.size
 ; CHECK-NEXT:    shr.s32 %r4, %r3, 31;
@@ -457,9 +457,11 @@ define i128 @cvt_s128_f32(float %x) {
 ; CHECK-NEXT:    sub.s32 %r10, 150, %r1;
 ; CHECK-NEXT:    shr.u32 %r11, %r2, %r10;
 ; CHECK-NEXT:    cvt.u64.u32 %rd10, %r11;
-; CHECK-NEXT:    mul.hi.u64 %rd11, %rd10, %rd1;
-; CHECK-NEXT:    mad.lo.s64 %rd13, %rd10, %rd2, %rd11;
-; CHECK-NEXT:    mul.lo.s64 %rd12, %rd10, %rd1;
+; CHECK-NEXT:    cvt.u32.u64 %r12, %rd2;
+; CHECK-NEXT:    mul.wide.s32 %rd11, %r11, %r12;
+; CHECK-NEXT:    mul.hi.u64 %rd12, %rd10, %rd1;
+; CHECK-NEXT:    add.s64 %rd14, %rd12, %rd11;
+; CHECK-NEXT:    mul.lo.s64 %rd13, %rd10, %rd1;
 ; CHECK-NEXT:    bra.uni $L__BB7_4;
 ; CHECK-NEXT:  $L__BB7_3: // %fp-to-i-if-exp.large
 ; CHECK-NEXT:    add.s32 %r7, %r1, -150;
@@ -473,10 +475,10 @@ define i128 @cvt_s128_f32(float %x) {
 ; CHECK-NEXT:    shl.b64 %rd7, %rd3, %r7;
 ; CHECK-NEXT:    mul.hi.u64 %rd8, %rd7, %rd1;
 ; CHECK-NEXT:    mad.lo.s64 %rd9, %rd7, %rd2, %rd8;
-; CHECK-NEXT:    mad.lo.s64 %rd13, %rd6, %rd1, %rd9;
-; CHECK-NEXT:    mul.lo.s64 %rd12, %rd7, %rd1;
+; CHECK-NEXT:    mad.lo.s64 %rd14, %rd6, %rd1, %rd9;
+; CHECK-NEXT:    mul.lo.s64 %rd13, %rd7, %rd1;
 ; CHECK-NEXT:  $L__BB7_4: // %fp-to-i-cleanup
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd12, %rd13};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd13, %rd14};
 ; CHECK-NEXT:    ret;
   %a = fptosi float %x to i128
   ret i128 %a
