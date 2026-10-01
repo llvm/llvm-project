@@ -308,6 +308,12 @@ public:
   void VisitVarDecl(VarDecl *D) { VisitRedeclarable(D); }
 
   void VisitTagDecl(TagDecl *D) {
+    // The enumerators of an unscoped enumeration are visible in the enclosing
+    // context.
+    if (auto *ED = dyn_cast<EnumDecl>(D);
+        ED && ED->isThisDeclarationADefinition())
+      VisitDeclContext(ED);
+
     NamedDecl *Prev = VisitRedeclarable(D);
 
     // A class definition is kept in DefinitionData outside the
