@@ -15,7 +15,9 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -25,6 +27,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
@@ -995,11 +998,9 @@ class SPIRVStructurizer : public FunctionPass {
   // of a parent construct. The fix inserts a new intermediate merge block that
   // collects all edges from inside the construct that go to the exit target,
   // and reassigns the header's merge to this new block.
-  bool fixInvalidMergeDominance(Function &F) {
-    DomTreeBuilder::BBDomTree DT;
-    DomTreeBuilder::BBPostDomTree PDT;
-    DT.recalculate(F);
-    PDT.recalculate(F);
+  bool fixInvalidMergeDominance(Function &F, DominatorTree &DT,
+                                PostDominatorTree &PDT, DomTreeUpdater &DTU) {
+    bool Modified = false;
 
     for (BasicBlock &BB : F) {
       auto MIS = getMergeInstructions(BB);
@@ -1011,39 +1012,34 @@ class SPIRVStructurizer : public FunctionPass {
         if (!Merge)
           continue;
 
-        // Find the target block that needs a new intermediate merge.
-        BasicBlock *Target = nullptr;
-
         // Header must dominate its merge block.
-        if (!DT.dominates(&BB, Merge)) {
-          // Find the convergence point of all successors.
-          BasicBlock *Convergence = nullptr;
-          for (BasicBlock *Succ : successors(&BB)) {
-            if (!Convergence)
-              Convergence = Succ;
-            else
-              Convergence = PDT.findNearestCommonDominator(Convergence, Succ);
-          }
-          if (!Convergence || Convergence == &BB)
-            continue;
+        if (DT.dominates(&BB, Merge))
+          continue;
 
-          // Target is not used directly as the merge. The downstream code
-          // creates a new intermediate block (NewMerge) intercepting only the
-          // BB-dominated predecessors of Target. This works regardless of
-          // whether BB dominates Convergence: if it does, all predecessors
-          // get redirected; if not, only the dominated subset does, while
-          // sibling paths continue directly to Convergence.
-          Target = Convergence;
+        // Find the convergence point of all successors.
+        BasicBlock *Convergence = nullptr;
+        for (BasicBlock *Succ : successors(&BB)) {
+          if (!Convergence)
+            Convergence = Succ;
+          else
+            Convergence = PDT.findNearestCommonDominator(Convergence, Succ);
         }
+        if (!Convergence || Convergence == &BB)
+          continue;
+
+        // Target is not used directly as the merge. The downstream code
+        // creates a new intermediate block (NewMerge) intercepting only the
+        // BB-dominated predecessors of Target. This works regardless of
+        // whether BB dominates Convergence: if it does, all predecessors
+        // get redirected; if not, only the dominated subset does, while
+        // sibling paths continue directly to Convergence.
+        BasicBlock *Target = Convergence;
 
         // Note: We do NOT check whether a successor escapes this construct
         // by branching to the merge of an enclosing selection/loop. That is a
         // valid structured exit in SPIR-V. The actual invalid patterns are
         // caught above (header not dominating merge) on the deeper headers
         // that lose dominance after routing blocks are created.
-
-        if (!Target)
-          continue;
 
         // Collect predecessors of Target that are dominated by BB (these
         // are "inside" the construct and will be redirected).
@@ -1056,61 +1052,33 @@ class SPIRVStructurizer : public FunctionPass {
         if (RedirectedPreds.empty())
           continue;
 
-        // Create new merge block.
-        BasicBlock *NewMerge = BasicBlock::Create(
-            F.getContext(), Target->getName() + ".inner_merge", &F, Target);
+        // SplitBlockPredecessors creates the new intermediate block, moves
+        // the redirected edges to it, splits Target's PHI nodes to collect a
+        // single merged incoming value from it, and updates both dom trees.
+        BasicBlock *NewMerge = SplitBlockPredecessors(Target, RedirectedPreds,
+                                                      ".inner_merge", &DTU);
 
-        // For each phi in Target, create a phi in NewMerge collecting the
-        // values from redirected predecessors, then replace those incoming
-        // entries in Target's phi with a single entry from NewMerge.
-        for (PHINode &Phi : Target->phis()) {
-          PHINode *NewPhi =
-              PHINode::Create(Phi.getType(), RedirectedPreds.size(),
-                              Phi.getName() + ".inner", NewMerge);
-          for (BasicBlock *Pred : RedirectedPreds) {
-            int Idx = Phi.getBasicBlockIndex(Pred);
-            assert(Idx >= 0 &&
-                   "redirected predecessor missing PHI incoming value");
-            NewPhi->addIncoming(Phi.getIncomingValue(Idx), Pred);
-            Phi.removeIncomingValue(Idx, /*DeletePHIIfEmpty=*/false);
-          }
-          Phi.addIncoming(NewPhi, NewMerge);
-        }
-
-        // Add terminator (branch to Target).
-        IRBuilder<> Builder(NewMerge);
-        Builder.CreateBr(Target);
-
-        // Redirect edges.
-        for (BasicBlock *Pred : RedirectedPreds) {
-          Pred->getTerminator()->replaceSuccessorWith(Target, NewMerge);
-        }
-
-        // Verify the new merge is dominated by the header.
-        DT.recalculate(F);
+        assert(NewMerge && "failed to split merge predecessors");
         assert(DT.dominates(&BB, NewMerge) &&
                "new merge must be dominated by header");
 
         // Reassign merge.
         auto *NewMergeAddr = BlockAddress::get(NewMerge->getParent(), NewMerge);
         MI->setOperand(0, NewMergeAddr);
-        return true;
+        Modified = true;
       }
     }
-    return false;
+    return Modified;
   }
 
-  bool addHeaderToRemainingDivergentDAG(Function &F) {
+  bool addHeaderToRemainingDivergentDAG(Function &F, DominatorTree &DT,
+                                        PostDominatorTree &PDT,
+                                        DomTreeUpdater &DTU) {
     bool Modified = false;
 
     auto MergeBlocks = getMergeBlocks(F);
     auto ContinueBlocks = getContinueBlocks(F);
     auto HeaderBlocks = getHeaderBlocks(F);
-
-    DomTreeBuilder::BBDomTree DT;
-    DomTreeBuilder::BBPostDomTree PDT;
-    PDT.recalculate(F);
-    DT.recalculate(F);
 
     for (BasicBlock &BB : F) {
       if (HeaderBlocks.count(&BB) != 0)
@@ -1174,7 +1142,9 @@ class SPIRVStructurizer : public FunctionPass {
         Instruction *SplitInstruction = Merge->getTerminator();
         if (isMergeInstruction(SplitInstruction->getPrevNode()))
           SplitInstruction = SplitInstruction->getPrevNode();
-        NewMerge = Merge->splitBasicBlockBefore(SplitInstruction, "new.merge");
+        NewMerge =
+            splitBlockBefore(Merge, SplitInstruction, &DTU,
+                             /*LI=*/nullptr, /*MSSAU=*/nullptr, "new.merge");
       }
 
       IRBuilder<> Builder(Header);
@@ -1397,14 +1367,17 @@ public:
     // header, and adding headers may reveal new dominance violations. Run both
     // in a loop until convergence.
     {
+      DominatorTree DT(F);
+      PostDominatorTree PDT(F);
+      DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Eager);
       bool Changed;
       do {
         Changed = false;
-        while (addHeaderToRemainingDivergentDAG(F)) {
+        while (addHeaderToRemainingDivergentDAG(F, DT, PDT, DTU)) {
           Changed = true;
           Modified = true;
         }
-        while (fixInvalidMergeDominance(F)) {
+        if (fixInvalidMergeDominance(F, DT, PDT, DTU)) {
           Changed = true;
           Modified = true;
         }
