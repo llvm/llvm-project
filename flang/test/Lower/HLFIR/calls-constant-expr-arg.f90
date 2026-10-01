@@ -37,10 +37,10 @@ end subroutine sub
 ! CHECK:           %[[VAL_18:.*]] = arith.select %[[VAL_17]], %[[VAL_16]], %[[VAL_13]] : index
 ! CHECK:           %[[VAL_19:.*]] = fir.shape %[[VAL_18]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_20:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_11]]:%[[VAL_8]]:%[[VAL_12]])  shape %[[VAL_19]] : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:           %[[VAL_21:.*]]:2 = hlfir.copy_in %[[VAL_20]] to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.box<!fir.array<?xi32>>, i1)
+! CHECK:           %[[VAL_21:.*]]:3 = hlfir.copy_in %[[VAL_20]] to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.box<!fir.array<?xi32>>>) -> (!fir.box<!fir.array<?xi32>>, i1, i1)
 ! CHECK:           %[[VAL_22:.*]] = fir.box_addr %[[VAL_21]]#0 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK:           fir.call @_QPsub2(%[[VAL_22]]) fastmath<contract> : (!fir.ref<!fir.array<?xi32>>) -> ()
-! CHECK:           hlfir.copy_out %[[TMP_BOX]], %[[VAL_21]]#1 to %[[VAL_20]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, i1, !fir.box<!fir.array<?xi32>>) -> ()
+! CHECK:           hlfir.copy_out %[[TMP_BOX]], %[[VAL_21]]#1, %[[VAL_21]]#2 to %[[VAL_20]] : (!fir.ref<!fir.box<!fir.array<?xi32>>>, i1, i1, !fir.box<!fir.array<?xi32>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
 
@@ -84,9 +84,10 @@ end subroutine
 ! CHECK:           %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_18]] {{.*}}
 ! CHECK:           %[[VAL_25:.*]] = hlfir.designate %[[VAL_19]]#0 {{.*}}
 ! CHECK:           %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_25]] {uniq_name = "_QFtest_associateEb"} : (!fir.box<!fir.array<1xf32>>) -> (!fir.box<!fir.array<1xf32>>, !fir.box<!fir.array<1xf32>>)
-! CHECK:           %[[VAL_27:.*]] = hlfir.as_expr %[[VAL_26]]#0 : (!fir.box<!fir.array<1xf32>>) -> !hlfir.expr<1xf32>
-! CHECK:           %[[VAL_30:.*]]:3 = hlfir.associate %[[VAL_27]]({{.*}}) {adapt.valuebyref} : (!hlfir.expr<1xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<1xf32>>, !fir.ref<!fir.array<1xf32>>, i1)
-! CHECK:           %[[VAL_31:.*]] = fir.embox %[[VAL_30]]
-! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (!fir.box<!fir.array<1xf32>>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:           fir.call @_QPfoo(%[[VAL_32]]) {{.*}} : (!fir.box<!fir.array<?xf32>>) -> ()
-! CHECK:           hlfir.end_associate %[[VAL_30]]#1, %[[VAL_30]]#2 : !fir.ref<!fir.array<1xf32>>, i1
+! No copy: the dummy argument is assumed shape, so the (possibly discontiguous)
+! descriptor over the named constant's storage is passed directly, and there is
+! no copy-out because the actual argument is not definable.
+! CHECK-NOT:       hlfir.as_expr
+! CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_26]]#0 : (!fir.box<!fir.array<1xf32>>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:           fir.call @_QPfoo(%[[VAL_27]]) {{.*}} : (!fir.box<!fir.array<?xf32>>) -> ()
+! CHECK-NOT:       hlfir.copy_out

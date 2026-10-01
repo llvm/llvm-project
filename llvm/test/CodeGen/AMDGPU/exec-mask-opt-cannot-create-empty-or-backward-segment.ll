@@ -35,9 +35,7 @@ define amdgpu_kernel void @cannot_create_empty_or_backwards_segment(i1 %arg, i1 
 ; CHECK-NEXT:    ; Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    s_and_b64 s[14:15], s[10:11], exec
-; CHECK-NEXT:    s_cselect_b32 s14, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s14, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_9
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_9
 ; CHECK-NEXT:  ; %bb.3: ; %bb8
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=2
 ; CHECK-NEXT:    s_mov_b64 vcc, s[0:1]
@@ -82,9 +80,7 @@ define amdgpu_kernel void @cannot_create_empty_or_backwards_segment(i1 %arg, i1 
 ; CHECK-NEXT:  .LBB0_12: ; %bb14
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    s_and_b64 s[12:13], s[8:9], exec
-; CHECK-NEXT:    s_cselect_b32 s12, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s12, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_1
 ; CHECK-NEXT:  ; %bb.13: ; %bb15
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:4
@@ -101,9 +97,7 @@ define amdgpu_kernel void @cannot_create_empty_or_backwards_segment(i1 %arg, i1 
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_18
 ; CHECK-NEXT:  ; %bb.17: ; %bb19
 ; CHECK-NEXT:    s_and_b64 s[0:1], s[8:9], exec
-; CHECK-NEXT:    s_cselect_b32 s0, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 1
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_19
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_19
 ; CHECK-NEXT:  .LBB0_18: ; %bb18
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB0_19: ; %bb20

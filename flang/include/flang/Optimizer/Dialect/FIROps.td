@@ -298,6 +298,7 @@ def fir_FreeMemOp : fir_Op<"freemem", []> {
 
 def fir_LoadOp : fir_OneResultOp<"load", [
   FirAliasTagOpInterface,
+  fir_FortranObjectLoadOpInterface,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
   DeclareOpInterfaceMethods<PromotableMemOpInterface>
 ]> {
@@ -332,6 +333,9 @@ def fir_LoadOp : fir_OneResultOp<"load", [
 
   let extraClassDeclaration = [{
     static mlir::ParseResult getElementOf(mlir::Type &ele, mlir::Type ref);
+
+    // FortranObjectLoadOpInterface methods:
+    mlir::Value getLoadSource(mlir::OpResult) { return getMemref(); }
   }];
 }
 
@@ -2750,6 +2754,10 @@ def fir_VolatileCastOp
 def fir_ConvertOp
     : fir_SimpleOneResultOp<"convert", [NoMemoryEffect, ViewLikeOpInterface,
                                         ConditionallySpeculatable,
+                                        DeclareOpInterfaceMethods<
+                                            PromotableOpInterface>,
+                                        DeclareOpInterfaceMethods<
+                                            PromotableAliaserInterface>,
                                         fir_FortranObjectViewOpInterface]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
@@ -2920,9 +2928,10 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, SymbolName,
     OptionalAttr<AnyAttr>:$initVal,
     OptionalAttr<UnitAttr>:$constant,
     OptionalAttr<UnitAttr>:$target,
-    OptionalAttr<StrAttr>:$linkName,
+    OptionalAttr<fir_Linkage>:$linkage,
     OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
     OptionalAttr<I64Attr>:$alignment,
+    OptionalAttr<StrAttr>:$section,
     OptionalAttr<StrAttr>:$sym_visibility
   );
 
@@ -2938,18 +2947,18 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, SymbolName,
       "bool":$isTarget, "mlir::Type":$type,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "mlir::Type":$type,
-      CArg<"mlir::StringAttr", "{}">:$linkage,
+      CArg<"fir::LinkageAttr", "{}">:$linkage,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "bool":$isConstant,
       "bool":$isTarget,
-      "mlir::Type":$type, CArg<"mlir::StringAttr", "{}">:$linkage,
+      "mlir::Type":$type, CArg<"fir::LinkageAttr", "{}">:$linkage,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "mlir::Type":$type,
-      "mlir::Attribute":$initVal, CArg<"mlir::StringAttr", "{}">:$linkage,
+      "mlir::Attribute":$initVal, CArg<"fir::LinkageAttr", "{}">:$linkage,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "bool":$isConstant,
       "bool":$isTarget, "mlir::Type":$type, "mlir::Attribute":$initVal,
-      CArg<"mlir::StringAttr", "{}">:$linkage,
+      CArg<"fir::LinkageAttr", "{}">:$linkage,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
   ];
 
@@ -3084,13 +3093,23 @@ def fir_ModuleDebugImportsOp : fir_Op<"module_debug_imports", [
     The region holds one `fir.use_stmt` per `USE`, in program order. This
     operation has no runtime effect. It is emitted only when full debug
     information is requested.
+
+    A submodule is not a first class entity in FIR, and its name is not
+    qualified, so its ancestry is recorded here. `ancestor_module` names the
+    module at the root of it, which is also what tells a submodule and a module
+    apart. `parent_module` names the one directly above, which is that same
+    module for a first level submodule and a submodule of it otherwise.
+    Semantics keeps the two apart in the same way.
   }];
 
-  let arguments = (ins StrAttr:$module_name);
+  let arguments = (ins StrAttr:$module_name,
+                       OptionalAttr<StrAttr>:$ancestor_module,
+                       OptionalAttr<StrAttr>:$parent_module);
   let regions = (region SizedRegion<1>:$uses);
 
   let assemblyFormat = [{
-    $module_name attr-dict-with-keyword $uses
+    $module_name (`in` $ancestor_module^)? (`parent` $parent_module^)?
+    attr-dict-with-keyword $uses
   }];
 }
 
@@ -3283,6 +3302,8 @@ def fir_DeclareOp
                          DeclareOpInterfaceMethods<PromotableOpInterface,
                                                    ["requiresReplacedValues",
                                                     "visitReplacedValues"]>,
+                         DeclareOpInterfaceMethods<
+                             PromotableAliaserInterface>,
                          fir_FortranObjectViewOpInterface]> {
   let summary = "declare a variable";
 
@@ -3769,7 +3790,8 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove,
                         AnyRegion:$dealloc_region);
 
   let assemblyFormat = [{
-    $locality_specifier_type ($sym_visibility^)? $sym_name `:` $type
+    ` ` `{` `type` `=` enum($locality_specifier_type) `}`
+      ($sym_visibility^)? $sym_name `:` $type
       (`init` $init_region^)?
       (`copy` $copy_region^)?
       (`dealloc` $dealloc_region^)?

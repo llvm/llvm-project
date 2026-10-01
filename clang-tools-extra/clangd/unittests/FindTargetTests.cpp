@@ -659,6 +659,27 @@ TEST_F(TargetDeclTest, Concept) {
                {"template <typename T, typename U> concept Fooable = true"});
 }
 
+TEST_F(TargetDeclTest, PackIndexedConcept) {
+  Flags.push_back("-std=c++2d");
+
+  // constrained-parameter
+  Code = R"cpp(
+    template <template <class> concept... CC>
+    struct S {
+      template <[[CC]]...[0] T>
+      void bar(T t);
+    };
+  )cpp";
+  EXPECT_DECLS("ConceptReference", {"template <class> concept ...CC"});
+
+  // constrained placeholder type
+  Code = R"cpp(
+    template <template <class> concept... CC>
+    void bar([[CC]]...[0] auto t);
+  )cpp";
+  EXPECT_DECLS("ConceptReference", {"template <class> concept ...CC"});
+}
+
 TEST_F(TargetDeclTest, Coroutine) {
   Flags.push_back("-std=c++20");
 
@@ -820,6 +841,12 @@ TEST_F(TargetDeclTest, BuiltinTemplates) {
   Code = R"cpp(
     template <template <class...> class Templ, class... Types>
     using dedup_types = Templ<[[__builtin_dedup_pack]]<Types...>...>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", );
+
+  Code = R"cpp(
+    template <template <class...> class Templ, class... Types>
+    using sort_types = Templ<[[__builtin_sort_pack]]<Types...>...>;
   )cpp";
   EXPECT_DECLS("TemplateSpecializationTypeLoc", );
 }

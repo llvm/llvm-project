@@ -1486,7 +1486,6 @@ define void @flat_atomic_xchg_i64_noret_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
 ; GFX950-NEXT:    scratch_store_dwordx2 v0, a[0:1], off
 ; GFX950-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=a"()
@@ -1563,7 +1562,6 @@ define void @flat_atomic_xchg_i64_noret_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc
 ; GFX950-NEXT:    scratch_store_dwordx2 v0, v[2:3], off
 ; GFX950-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=^VA"()
@@ -2669,7 +2667,6 @@ define void @flat_atomic_xor_expansion_i64_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=a"()
@@ -2792,7 +2789,6 @@ define void @flat_atomic_xor_expansion_i64_ret_a_v(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=a"()
@@ -2919,7 +2915,6 @@ define void @flat_atomic_xor_expansion_i64_ret_v_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=v"()
@@ -3038,7 +3033,6 @@ define void @flat_atomic_xor_expansion_i64_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=^VA"()
@@ -3157,7 +3151,6 @@ define void @flat_atomic_xor_expansion_i64_ret_av_v(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=^VA"()
@@ -3284,7 +3277,6 @@ define void @flat_atomic_xor_expansion_i64_ret_av_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=^VA"()
@@ -3407,7 +3399,6 @@ define void @flat_atomic_xor_expansion_i64_ret_a_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=a"()
@@ -3526,7 +3517,6 @@ define void @flat_atomic_xor_expansion_i64_ret_v_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=v"()
@@ -4485,7 +4475,6 @@ define void @flat_atomic_xor_i64_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=a"()
@@ -4577,7 +4566,6 @@ define void @flat_atomic_xor_i64_ret_a_v(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=a"()
@@ -4673,7 +4661,6 @@ define void @flat_atomic_xor_i64_ret_v_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=v"()
@@ -4761,7 +4748,6 @@ define void @flat_atomic_xor_i64_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=^VA"()
@@ -4849,7 +4835,6 @@ define void @flat_atomic_xor_i64_ret_av_v(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=^VA"()
@@ -4945,7 +4930,6 @@ define void @flat_atomic_xor_i64_ret_av_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=^VA"()
@@ -5037,7 +5021,6 @@ define void @flat_atomic_xor_i64_ret_a_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=a"()
@@ -5125,7 +5108,6 @@ define void @flat_atomic_xor_i64_ret_v_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
   %data = call i64 asm "; def $0", "=v"()
@@ -9191,7 +9173,7 @@ define void @flat_atomic_fadd_f32_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -9267,7 +9249,7 @@ define void @flat_atomic_fadd_f32_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -9330,7 +9312,7 @@ define void @flat_atomic_fsub_f32_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -9389,7 +9371,7 @@ define void @flat_atomic_fsub_f32_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -9456,7 +9438,7 @@ define void @flat_atomic_fmax_f32_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -9519,7 +9501,7 @@ define void @flat_atomic_fmax_f32_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -9586,7 +9568,7 @@ define void @flat_atomic_fmin_f32_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -9649,7 +9631,7 @@ define void @flat_atomic_fmin_f32_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -9716,7 +9698,7 @@ define void @flat_atomic_fmaximum_f32_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -9779,7 +9761,7 @@ define void @flat_atomic_fmaximum_f32_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -9846,7 +9828,7 @@ define void @flat_atomic_fminimum_f32_ret_a_a(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -9909,7 +9891,7 @@ define void @flat_atomic_fminimum_f32_ret_av_av(ptr %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -14484,12 +14466,10 @@ define void @flat_atomic_xchg_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB193_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB193_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -14525,33 +14505,31 @@ define void @flat_atomic_xchg_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; def a[0:1]
+; GFX950-NEXT:    ; def a[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB193_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB193_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
-; GFX950-NEXT:    scratch_load_dwordx2 a[2:3], off, s0
+; GFX950-NEXT:    scratch_load_dwordx2 a[0:1], off, s0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; use a[2:3]
+; GFX950-NEXT:    ; use a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    scratch_store_dwordx2 off, a[0:1], s0
+; GFX950-NEXT:    scratch_store_dwordx2 off, a[2:3], s0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ; GFX950-NEXT:  .LBB193_2: ; %atomicrmw.global
-; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
-; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
+; GFX950-NEXT:    v_accvgpr_read_b32 v0, a2
+; GFX950-NEXT:    v_accvgpr_read_b32 v1, a3
 ; GFX950-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX950-NEXT:    flat_atomic_swap_x2 v[0:1], v[2:3], v[0:1] sc0
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_accvgpr_write_b32 a3, v1
-; GFX950-NEXT:    v_accvgpr_write_b32 a2, v0
+; GFX950-NEXT:    v_accvgpr_write_b32 a0, v0
+; GFX950-NEXT:    v_accvgpr_write_b32 a1, v1
 ; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; use a[2:3]
+; GFX950-NEXT:    ; use a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i64], ptr %ptr, i64 0, i64 10
@@ -14569,12 +14547,10 @@ define void @flat_atomic_xchg_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB194_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB194_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -14606,12 +14582,10 @@ define void @flat_atomic_xchg_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB194_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB194_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -14645,15 +14619,13 @@ define void @flat_atomic_add_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB195_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB195_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -14690,15 +14662,13 @@ define void @flat_atomic_add_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB195_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB195_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -14738,12 +14708,10 @@ define void @flat_atomic_add_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB196_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB196_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -14776,12 +14744,10 @@ define void @flat_atomic_add_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB196_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB196_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -14816,15 +14782,13 @@ define void @flat_atomic_sub_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB197_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB197_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -14861,15 +14825,13 @@ define void @flat_atomic_sub_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB197_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB197_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -14911,12 +14873,10 @@ define void @flat_atomic_sub_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB198_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB198_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -14949,12 +14909,10 @@ define void @flat_atomic_sub_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB198_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB198_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -14991,15 +14949,13 @@ define void @flat_atomic_and_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB199_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB199_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -15036,15 +14992,13 @@ define void @flat_atomic_and_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB199_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB199_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -15085,12 +15039,10 @@ define void @flat_atomic_and_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB200_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB200_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -15123,12 +15075,10 @@ define void @flat_atomic_and_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB200_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB200_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -15164,15 +15114,13 @@ define void @flat_atomic_nand_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v5, a1
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v4, a0
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB201_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB201_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -15227,15 +15175,13 @@ define void @flat_atomic_nand_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v5, a1
 ; GFX950-NEXT:    v_accvgpr_read_b32 v4, a0
-; GFX950-NEXT:    s_cbranch_scc1 .LBB201_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB201_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -15290,12 +15236,10 @@ define void @flat_atomic_nand_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB202_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB202_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -15346,12 +15290,10 @@ define void @flat_atomic_nand_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[4:5]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB202_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB202_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -15405,15 +15347,13 @@ define void @flat_atomic_or_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB203_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB203_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -15450,15 +15390,13 @@ define void @flat_atomic_or_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB203_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB203_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -15499,12 +15437,10 @@ define void @flat_atomic_or_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB204_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB204_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -15537,12 +15473,10 @@ define void @flat_atomic_or_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB204_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB204_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -15578,15 +15512,13 @@ define void @flat_atomic_xor_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB205_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB205_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -15623,15 +15555,13 @@ define void @flat_atomic_xor_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB205_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB205_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -15672,12 +15602,10 @@ define void @flat_atomic_xor_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB206_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB206_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -15710,12 +15638,10 @@ define void @flat_atomic_xor_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB206_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB206_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -15751,15 +15677,13 @@ define void @flat_atomic_max_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB207_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB207_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -15797,15 +15721,13 @@ define void @flat_atomic_max_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB207_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB207_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -15847,12 +15769,10 @@ define void @flat_atomic_max_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB208_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB208_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -15886,12 +15806,10 @@ define void @flat_atomic_max_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB208_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB208_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -15929,15 +15847,13 @@ define void @flat_atomic_min_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB209_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB209_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -15975,15 +15891,13 @@ define void @flat_atomic_min_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB209_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB209_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -16025,12 +15939,10 @@ define void @flat_atomic_min_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB210_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB210_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -16064,12 +15976,10 @@ define void @flat_atomic_min_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB210_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB210_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -16107,15 +16017,13 @@ define void @flat_atomic_umax_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB211_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB211_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -16153,15 +16061,13 @@ define void @flat_atomic_umax_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB211_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB211_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -16203,12 +16109,10 @@ define void @flat_atomic_umax_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB212_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB212_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -16242,12 +16146,10 @@ define void @flat_atomic_umax_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB212_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB212_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -16285,15 +16187,13 @@ define void @flat_atomic_umin_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB213_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB213_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -16331,15 +16231,13 @@ define void @flat_atomic_umin_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB213_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB213_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -16381,12 +16279,10 @@ define void @flat_atomic_umin_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB214_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB214_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -16420,12 +16316,10 @@ define void @flat_atomic_umin_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB214_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB214_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -16463,15 +16357,13 @@ define void @flat_atomic_uinc_wrap_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB215_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB215_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -16511,15 +16403,13 @@ define void @flat_atomic_uinc_wrap_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB215_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB215_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -16562,12 +16452,10 @@ define void @flat_atomic_uinc_wrap_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB216_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB216_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -16603,12 +16491,10 @@ define void @flat_atomic_uinc_wrap_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB216_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB216_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -16647,15 +16533,13 @@ define void @flat_atomic_udec_wrap_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB217_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB217_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -16696,15 +16580,13 @@ define void @flat_atomic_udec_wrap_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB217_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB217_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s2, s0, -1
@@ -16751,12 +16633,10 @@ define void @flat_atomic_udec_wrap_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB218_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB218_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -16793,12 +16673,10 @@ define void @flat_atomic_udec_wrap_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB218_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB218_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s2, s0, -1
@@ -16840,15 +16718,13 @@ define void @flat_atomic_usub_cond_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v5, a1
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v4, a0
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB219_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB219_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -16905,15 +16781,13 @@ define void @flat_atomic_usub_cond_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v5, a1
 ; GFX950-NEXT:    v_accvgpr_read_b32 v4, a0
-; GFX950-NEXT:    s_cbranch_scc1 .LBB219_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB219_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -16974,12 +16848,10 @@ define void @flat_atomic_usub_cond_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB220_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB220_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -17032,12 +16904,10 @@ define void @flat_atomic_usub_cond_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[4:5]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB220_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB220_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -17097,15 +16967,13 @@ define void @flat_atomic_usub_sat_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v5, a1
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v4, a0
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB221_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB221_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -17160,15 +17028,13 @@ define void @flat_atomic_usub_sat_i64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v5, a1
 ; GFX950-NEXT:    v_accvgpr_read_b32 v4, a0
-; GFX950-NEXT:    s_cbranch_scc1 .LBB221_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB221_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -17227,12 +17093,10 @@ define void @flat_atomic_usub_sat_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB222_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB222_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -17283,12 +17147,10 @@ define void @flat_atomic_usub_sat_i64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[4:5]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB222_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB222_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -17350,14 +17212,12 @@ define void @flat_atomic_fadd_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 40
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_shared_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a0
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB223_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB223_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -17368,9 +17228,7 @@ define void @flat_atomic_fadd_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:  .LBB223_2: ; %atomicrmw.check.private
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB223_4
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB223_4
 ; GFX90A-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -17415,7 +17273,7 @@ define void @flat_atomic_fadd_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -17428,12 +17286,10 @@ define void @flat_atomic_fadd_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_shared_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v0
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB224_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB224_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -17447,9 +17303,7 @@ define void @flat_atomic_fadd_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:  .LBB224_2: ; %atomicrmw.check.private
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB224_4
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB224_4
 ; GFX90A-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -17488,7 +17342,7 @@ define void @flat_atomic_fadd_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fadd ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -17555,7 +17409,7 @@ define void @flat_atomic_fsub_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -17618,7 +17472,7 @@ define void @flat_atomic_fsub_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fsub ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -17689,7 +17543,7 @@ define void @flat_atomic_fmax_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -17756,7 +17610,7 @@ define void @flat_atomic_fmax_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmax ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -17827,7 +17681,7 @@ define void @flat_atomic_fmin_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -17894,7 +17748,7 @@ define void @flat_atomic_fmin_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmin ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -17965,7 +17819,7 @@ define void @flat_atomic_fmaximum_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -18032,7 +17886,7 @@ define void @flat_atomic_fmaximum_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fmaximum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -18103,7 +17957,7 @@ define void @flat_atomic_fminimum_f32_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=a"()
-  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "a"(float %result)
   ret void
 }
@@ -18170,7 +18024,7 @@ define void @flat_atomic_fminimum_f32_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x float], ptr %ptr, i64 0, i64 10
   %data = call float asm "; def $0", "=^VA"()
-  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fminimum ptr %gep.0, float %data syncscope("workgroup") seq_cst, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   call void asm "; use $0", "^VA"(float %result)
   ret void
 }
@@ -18186,15 +18040,13 @@ define void @flat_atomic_fadd_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_shared_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB235_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB235_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -18205,9 +18057,7 @@ define void @flat_atomic_fadd_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:  .LBB235_2: ; %atomicrmw.check.private
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB235_4
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB235_4
 ; GFX90A-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -18243,15 +18093,13 @@ define void @flat_atomic_fadd_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB235_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB235_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -18262,9 +18110,7 @@ define void @flat_atomic_fadd_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:  .LBB235_2: ; %atomicrmw.check.private
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB235_4
+; GFX950-NEXT:    s_cbranch_scc0 .LBB235_4
 ; GFX950-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -18305,12 +18151,10 @@ define void @flat_atomic_fadd_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_shared_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB236_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB236_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -18324,9 +18168,7 @@ define void @flat_atomic_fadd_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:  .LBB236_2: ; %atomicrmw.check.private
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB236_4
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB236_4
 ; GFX90A-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -18358,12 +18200,10 @@ define void @flat_atomic_fadd_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB236_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB236_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -18377,9 +18217,7 @@ define void @flat_atomic_fadd_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:  .LBB236_2: ; %atomicrmw.check.private
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB236_4
+; GFX950-NEXT:    s_cbranch_scc0 .LBB236_4
 ; GFX950-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -18414,15 +18252,13 @@ define void @flat_atomic_fsub_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v5, a1
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v4, a0
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB237_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB237_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -18466,15 +18302,13 @@ define void @flat_atomic_fsub_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v5, a1
 ; GFX950-NEXT:    v_accvgpr_read_b32 v4, a0
-; GFX950-NEXT:    s_cbranch_scc1 .LBB237_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB237_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -18524,12 +18358,10 @@ define void @flat_atomic_fsub_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB238_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB238_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -18574,12 +18406,10 @@ define void @flat_atomic_fsub_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[4:5]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB238_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB238_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -18628,15 +18458,13 @@ define void @flat_atomic_fmax_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB239_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB239_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -18673,15 +18501,13 @@ define void @flat_atomic_fmax_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB239_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB239_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -18723,12 +18549,10 @@ define void @flat_atomic_fmax_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB240_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB240_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -18762,12 +18586,10 @@ define void @flat_atomic_fmax_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB240_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB240_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -18804,15 +18626,13 @@ define void @flat_atomic_fmin_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB241_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB241_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -18849,15 +18669,13 @@ define void @flat_atomic_fmin_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX950-NEXT:    v_accvgpr_read_b32 v1, a1
-; GFX950-NEXT:    s_cbranch_scc1 .LBB241_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB241_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -18899,12 +18717,10 @@ define void @flat_atomic_fmin_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[2:3]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB242_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB242_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -18938,12 +18754,10 @@ define void @flat_atomic_fmin_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[2:3]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB242_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB242_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -18980,15 +18794,13 @@ define void @flat_atomic_fmaximum_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v5, a1
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v4, a0
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB243_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB243_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -19040,15 +18852,13 @@ define void @flat_atomic_fmaximum_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v5, a1
 ; GFX950-NEXT:    v_accvgpr_read_b32 v4, a0
-; GFX950-NEXT:    s_cbranch_scc1 .LBB243_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB243_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -19108,12 +18918,10 @@ define void @flat_atomic_fmaximum_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB244_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB244_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -19166,12 +18974,10 @@ define void @flat_atomic_fmaximum_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[4:5]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB244_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB244_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -19230,15 +19036,13 @@ define void @flat_atomic_fminimum_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_add_u32 s4, s16, 0x50
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
-; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def a[0:1]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
+; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v5, a1
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v4, a0
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB245_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB245_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -19290,15 +19094,13 @@ define void @flat_atomic_fminimum_f64_saddr_ret_a_a(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_add_u32 s0, s0, 0x50
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
-; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def a[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
+; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
 ; GFX950-NEXT:    v_accvgpr_read_b32 v5, a1
 ; GFX950-NEXT:    v_accvgpr_read_b32 v4, a0
-; GFX950-NEXT:    s_cbranch_scc1 .LBB245_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB245_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1
@@ -19358,12 +19160,10 @@ define void @flat_atomic_fminimum_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], src_private_base
 ; GFX90A-NEXT:    s_addc_u32 s5, s17, 0
 ; GFX90A-NEXT:    s_cmp_eq_u32 s5, s7
-; GFX90A-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX90A-NEXT:    s_cmp_lg_u32 s6, 1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_cbranch_scc1 .LBB246_2
+; GFX90A-NEXT:    s_cbranch_scc0 .LBB246_2
 ; GFX90A-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX90A-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX90A-NEXT:    s_cselect_b32 s4, s4, -1
@@ -19416,12 +19216,10 @@ define void @flat_atomic_fminimum_f64_saddr_ret_av_av(ptr inreg %ptr) #0 {
 ; GFX950-NEXT:    s_mov_b64 s[2:3], src_private_base
 ; GFX950-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX950-NEXT:    s_cmp_eq_u32 s1, s3
-; GFX950-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX950-NEXT:    s_cmp_lg_u32 s2, 1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[4:5]
 ; GFX950-NEXT:    ;;#ASMEND
-; GFX950-NEXT:    s_cbranch_scc1 .LBB246_2
+; GFX950-NEXT:    s_cbranch_scc0 .LBB246_2
 ; GFX950-NEXT:  ; %bb.1: ; %atomicrmw.private
 ; GFX950-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX950-NEXT:    s_cselect_b32 s0, s0, -1

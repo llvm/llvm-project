@@ -25,5 +25,5 @@ end program
 ! CHECK-DAG: fir.type_desc
 ! CHECK-DAG: @_QMmmE{{.+}}n{{.+}}field {acc.declare
 ! CHECK-DAG: @_QMmmE{{.+}}n{{.+}}p1
-! CHECK-DAG: @_QMmmE{{.+}}c{{.+}}p1 {acc.declare
+! CHECK-DAG: @_QMmmE{{.+}}c{{.+}}p1 <{alignment = 64 : i64}> {acc.declare
 ! CHECK-DAG: @_QMmmE{{.+}}dt{{.+}}p1 {acc.declare

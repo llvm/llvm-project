@@ -40,9 +40,7 @@ define amdgpu_kernel void @negated_cond(ptr addrspace(1) %arg1) {
 ; GCN-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GCN-NEXT:    s_lshl_b32 s12, s12, 5
 ; GCN-NEXT:    s_and_b64 s[14:15], s[2:3], exec
-; GCN-NEXT:    s_cselect_b32 s13, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s13, 1
-; GCN-NEXT:    s_cbranch_scc1 .LBB0_3
+; GCN-NEXT:    s_cbranch_scc0 .LBB0_3
 ; GCN-NEXT:  ; %bb.5: ; %bb3
 ; GCN-NEXT:    ; in Loop: Header=BB0_4 Depth=2
 ; GCN-NEXT:    s_mov_b64 vcc, s[0:1]
@@ -108,9 +106,7 @@ define amdgpu_kernel void @negated_cond_dominated_blocks(ptr addrspace(1) %arg1)
 ; GCN-NEXT:  .LBB1_3: ; %bb4
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_and_b64 s[8:9], s[4:5], exec
-; GCN-NEXT:    s_cselect_b32 s7, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s7, 1
-; GCN-NEXT:    s_cbranch_scc1 .LBB1_1
+; GCN-NEXT:    s_cbranch_scc0 .LBB1_1
 ; GCN-NEXT:  ; %bb.4: ; %bb5
 ; GCN-NEXT:    ; in Loop: Header=BB1_3 Depth=1
 ; GCN-NEXT:    s_lshl_b32 s6, s6, 5

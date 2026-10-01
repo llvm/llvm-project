@@ -21,9 +21,7 @@ define protected amdgpu_kernel void @IllegalGEPConst(i32 %a, ptr addrspace(1) %b
 ; CHECK-NEXT:    s_mov_b64 s[6:7], src_shared_base
 ; CHECK-NEXT:    s_addc_u32 s1, s1, -1
 ; CHECK-NEXT:    s_cmp_eq_u32 s1, s7
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %atomicrmw.shared
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b32 s0, s0, -1
@@ -35,9 +33,7 @@ define protected amdgpu_kernel void @IllegalGEPConst(i32 %a, ptr addrspace(1) %b
 ; CHECK-NEXT:  .LBB0_2: ; %atomicrmw.check.private
 ; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    s_cmp_eq_u32 s1, s5
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_4
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_4
 ; CHECK-NEXT:  ; %bb.3: ; %atomicrmw.private
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b32 s0, s0, -1

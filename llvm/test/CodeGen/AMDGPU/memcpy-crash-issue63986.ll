@@ -69,9 +69,7 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:  .LBB0_7: ; %Flow16
 ; CHECK-NEXT:    ; in Loop: Header=BB0_8 Depth=1
 ; CHECK-NEXT:    s_and_b64 s[8:9], s[8:9], exec
-; CHECK-NEXT:    s_cselect_b32 s8, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s8, 1
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_15
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_15
 ; CHECK-NEXT:  .LBB0_8: ; %while.cond
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ; Child Loop BB0_10 Depth 2

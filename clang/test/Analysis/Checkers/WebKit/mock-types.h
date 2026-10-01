@@ -318,6 +318,7 @@ template <typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTra
   T *operator->() const { return PtrTraits::unwrap(t); }
   operator T &() const { return *PtrTraits::unwrap(t); }
   T* leakRef() { return PtrTraits::exchange(t, nullptr); }
+  [[nodiscard]] Ref copyRef() const { return Ref(*t); }
 };
 
 template <typename T> Ref<T> adoptRef(T& t) {
@@ -435,7 +436,8 @@ private:
   unsigned m_refCount { 0 };
 };
 
-template <typename T> T *downcast(T *t) { return t; }
+template <typename U, typename T> U [[clang::annotate_type("webkit.pointerconversion")]] *downcast(T *t) { return static_cast<U*>(t); }
+template <typename U, typename T> U [[clang::annotate_type("webkit.pointerconversion")]] &downcast(T &t) { return static_cast<U&>(t); }
 
 template <typename T> struct CheckedRef {
 private:

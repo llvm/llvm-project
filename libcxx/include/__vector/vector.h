@@ -41,6 +41,7 @@
 #include <__memory/swap_allocator.h>
 #include <__memory/temp_value.h>
 #include <__memory/uninitialized_algorithms.h>
+#include <__numeric/saturation_arithmetic.h>
 #include <__ranges/access.h>
 #include <__ranges/as_rvalue_view.h>
 #include <__ranges/concepts.h>
@@ -60,12 +61,14 @@
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/remove_const_ref.h>
 #include <__type_traits/type_identity.h>
+#include <__utility/assume.h>
 #include <__utility/declval.h>
 #include <__utility/exception_guard.h>
 #include <__utility/forward.h>
 #include <__utility/is_pointer_in_range.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
+#include <__utility/scope_guard.h>
 #include <__utility/swap.h>
 #include <initializer_list>
 #include <limits>
@@ -209,8 +212,7 @@ public:
                         is_constructible<value_type, typename iterator_traits<_ForwardIterator>::reference>::value,
                     int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(_ForwardIterator __first, _ForwardIterator __last) {
-    size_type __n = static_cast<size_type>(std::distance(__first, __last));
-    __init_with_size(__first, __last, __n);
+    __init_with_size(__first, std::distance(__first, __last));
   }
 
   template <
@@ -221,8 +223,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
   vector(_ForwardIterator __first, _ForwardIterator __last, const allocator_type& __a)
       : __layout_(__a) {
-    size_type __n = static_cast<size_type>(std::distance(__first, __last));
-    __init_with_size(__first, __last, __n);
+    __init_with_size(__first, std::distance(__first, __last));
   }
 
 #if _LIBCPP_STD_VER >= 23
@@ -230,9 +231,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr vector(from_range_t, _Range&& __range, const allocator_type& __a = allocator_type())
       : __layout_(__a) {
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
-      auto __n = static_cast<size_type>(ranges::distance(__range));
-      __init_with_size(ranges::begin(__range), ranges::end(__range), __n);
-
+      __init_with_size(ranges::begin(__range), ranges::distance(__range));
     } else {
       __init_with_sentinel(ranges::begin(__range), ranges::end(__range));
     }
@@ -263,24 +262,41 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(const vector& __x)
       : __layout_(__alloc_traits::select_on_container_copy_construction(__x.__layout_.__alloc())) {
-    __init_with_size(__x.__layout_.__begin_ptr(), __x.__layout_.__end_ptr(), __x.size());
+    __init_with_size(__x.__layout_.__begin_ptr(), __x.size());
   }
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
   vector(const vector& __x, const __type_identity_t<allocator_type>& __a)
       : __layout_(__a) {
-    __init_with_size(__x.__layout_.__begin_ptr(), __x.__layout_.__end_ptr(), __x.size());
+    __init_with_size(__x.__layout_.__begin_ptr(), __x.size());
   }
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector& operator=(const vector& __x);
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector& operator=(const vector& __other) {
+    if (this == std::addressof(__other))
+      return *this;
+
+    if _LIBCPP_CONSTEXPR (__alloc_traits::propagate_on_container_copy_assignment::value) {
+      if (this->__layout_.__alloc() != __other.__layout_.__alloc()) {
+        clear();
+        __annotate_delete();
+        __alloc_traits::deallocate(this->__layout_.__alloc(), this->__layout_.__begin_ptr(), capacity());
+        __layout_.__reset_without_allocator();
+      }
+      this->__layout_.__alloc() = __other.__layout_.__alloc();
+    }
+
+    assign(__other.__layout_.__begin_ptr(), __other.__layout_.__end_ptr());
+    return *this;
+  }
 
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(initializer_list<value_type> __il) {
-    __init_with_size(__il.begin(), __il.end(), __il.size());
+    __init_with_size(__il.begin(), __il.size());
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
   vector(initializer_list<value_type> __il, const allocator_type& __a)
       : __layout_(__a) {
-    __init_with_size(__il.begin(), __il.end(), __il.size());
+    __init_with_size(__il.begin(), __il.size());
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector& operator=(initializer_list<value_type> __il) {
@@ -298,9 +314,22 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20
   _LIBCPP_HIDE_FROM_ABI vector(vector&& __x, const __type_identity_t<allocator_type>& __a);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector& operator=(vector&& __x)
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector& operator=(vector&& __other)
       _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
-    __move_assign(__x, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
+    if _LIBCPP_CONSTEXPR (__alloc_traits::propagate_on_container_move_assignment::value) {
+      __vdeallocate();
+      __layout_.__alloc() = std::move(__other.__layout_.__alloc());
+    } else {
+      if (__layout_.__alloc() != __other.__layout_.__alloc()) {
+        typedef move_iterator<iterator> _Ip;
+        assign(_Ip(__other.begin()), _Ip(__other.end()));
+        return *this;
+      }
+      __vdeallocate();
+    }
+
+    __layout_.__move_assign_without_allocator(__other.__layout_);
     return *this;
   }
 
@@ -485,7 +514,7 @@ public:
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __len = ranges::distance(__range);
       if (__len <= static_cast<difference_type>(__layout_.__remaining_capacity())) {
-        __construct_at_end(ranges::begin(__range), ranges::end(__range), __len);
+        __construct_at_end(ranges::begin(__range), __len);
       } else {
         _SplitBuffer __buffer(__recommend(size() + __len), size(), __layout_.__alloc());
         __buffer.__construct_at_end_with_size(ranges::begin(__range), __len);
@@ -535,7 +564,7 @@ public:
                     int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator
   insert(const_iterator __position, _ForwardIterator __first, _ForwardIterator __last) {
-    return __insert_with_size<_ClassicAlgPolicy>(__position, __first, __last, std::distance(__first, __last));
+    return __insert_with_size<_ClassicAlgPolicy>(__position, __first, std::distance(__first, __last));
   }
 
 #if _LIBCPP_STD_VER >= 23
@@ -543,8 +572,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr iterator insert_range(const_iterator __position, _Range&& __range) {
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
-      return __insert_with_size<_RangeAlgPolicy>(__position, ranges::begin(__range), ranges::end(__range), __n);
-
+      return __insert_with_size<_RangeAlgPolicy>(__position, ranges::begin(__range), __n);
     } else {
       return __insert_with_sentinel(__position, ranges::begin(__range), ranges::end(__range));
     }
@@ -649,14 +677,13 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __construct_at_end(size_type __n);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __construct_at_end(size_type __n, const_reference __x);
 
-  template <class _InputIterator, class _Sentinel>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __init_with_size(_InputIterator __first, _Sentinel __last, size_type __n) {
+  template <class _InputIterator>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __init_with_size(_InputIterator __first, size_type __n) {
     auto __guard = std::__make_exception_guard(__destroy_vector(*this));
 
     if (__n > 0) {
       __vallocate(__n);
-      __construct_at_end(std::move(__first), std::move(__last), __n);
+      __construct_at_end(std::move(__first), __n);
     }
 
     __guard.__complete();
@@ -706,13 +733,12 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator
   __insert_with_sentinel(const_iterator __position, _InputIterator __first, _Sentinel __last);
 
-  template <class _AlgPolicy, class _Iterator, class _Sentinel>
+  template <class _AlgPolicy, class _Iterator>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator
-  __insert_with_size(const_iterator __position, _Iterator __first, _Sentinel __last, difference_type __n);
+  __insert_with_size(const_iterator __position, _Iterator __first, difference_type __n);
 
-  template <class _InputIterator, class _Sentinel>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n);
+  template <class _InputIterator>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __construct_at_end(_InputIterator __first, size_type __n);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator __make_iter(pointer __p) _NOEXCEPT {
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
@@ -742,10 +768,6 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __move_range(pointer __from_s, pointer __from_e, pointer __to);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign(vector& __c, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign(vector& __c, false_type)
-      _NOEXCEPT_(__alloc_traits::is_always_equal::value);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __destruct_at_end(pointer __new_last) _NOEXCEPT {
     size_type __old_size = size();
@@ -753,9 +775,6 @@ private:
     __layout_.__set_bound_using_pointer(__new_last);
     __annotate_shrink(__old_size);
   }
-
-  template <class... _Args>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI inline pointer __emplace_back_slow_path(_Args&&... __args);
 
   // The following functions are no-ops outside of AddressSanitizer mode.
   // We call annotations for every allocator, unless explicitly disabled.
@@ -807,38 +826,9 @@ private:
     _ConstructTransaction& operator=(_ConstructTransaction const&) = delete;
   };
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const vector& __c) {
-    __copy_assign_alloc(__c, integral_constant<bool, __alloc_traits::propagate_on_container_copy_assignment::value>());
-  }
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector& __c)
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_move_assignment::value ||
-                 is_nothrow_move_assignable<allocator_type>::value) {
-    __move_assign_alloc(__c, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
-  }
-
   [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_length_error() { std::__throw_length_error("vector"); }
 
   [[__noreturn__]] _LIBCPP_HIDE_FROM_ABI static void __throw_out_of_range() { std::__throw_out_of_range("vector"); }
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const vector& __c, true_type) {
-    if (this->__layout_.__alloc() != __c.__layout_.__alloc()) {
-      clear();
-      __annotate_delete();
-      __alloc_traits::deallocate(this->__layout_.__alloc(), this->__layout_.__begin_ptr(), capacity());
-      __layout_.__reset_without_allocator();
-    }
-    this->__layout_.__alloc() = __c.__layout_.__alloc();
-  }
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const vector&, false_type) {}
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector& __c, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
-    this->__layout_.__alloc() = std::move(__c.__layout_.__alloc());
-  }
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
 
   template <class _Ptr = pointer, __enable_if_t<is_pointer<_Ptr>::value, int> = 0>
   static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _Ptr
@@ -895,9 +885,9 @@ vector<_Tp, _Allocator>::__recommend(size_type __new_size) const {
   if (__new_size > __ms)
     this->__throw_length_error();
   const size_type __cap = capacity();
-  if (__cap >= __ms / 2)
-    return __ms;
-  return std::max<size_type>(2 * __cap, __new_size);
+  std::__assume(__cap <= __ms);
+  auto __doubled = std::__saturating_add(__cap, __cap);
+  return std::min(std::max(__new_size, __doubled), __ms);
 }
 
 //  Default constructs __n objects starting at __layout_.__end_ptr()
@@ -931,12 +921,10 @@ vector<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x) 
 }
 
 template <class _Tp, class _Allocator>
-template <class _InputIterator, class _Sentinel>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void
-vector<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n) {
+template <class _InputIterator>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, size_type __n) {
   _ConstructTransaction __tx(*this, __n);
-  __tx.__pos_ = std::__uninitialized_allocator_copy(
-      this->__layout_.__alloc(), std::move(__first), std::move(__last), __tx.__pos_);
+  __tx.__pos_ = std::__uninitialized_allocator_copy_n(this->__layout_.__alloc(), std::move(__first), __n, __tx.__pos_);
 }
 
 template <class _Tp, class _Allocator>
@@ -956,37 +944,8 @@ vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_
   if (__a == __x.__layout_.__alloc()) {
     __layout_.__move_assign_without_allocator(__x.__layout_);
   } else {
-    typedef move_iterator<iterator> _Ip;
-    __init_with_size(_Ip(__x.begin()), _Ip(__x.end()), __x.size());
+    __init_with_size(move_iterator<iterator>(__x.begin()), __x.size());
   }
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__move_assign(vector& __c, false_type)
-    _NOEXCEPT_(__alloc_traits::is_always_equal::value) {
-  if (this->__layout_.__alloc() != __c.__layout_.__alloc()) {
-    typedef move_iterator<iterator> _Ip;
-    assign(_Ip(__c.begin()), _Ip(__c.end()));
-  } else
-    __move_assign(__c, true_type());
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__move_assign(vector& __c, true_type)
-    _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
-  __vdeallocate();
-  __move_assign_alloc(__c); // this can throw
-  __layout_.__move_assign_without_allocator(__c.__layout_);
-}
-
-template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocator>&
-vector<_Tp, _Allocator>::operator=(const vector& __x) {
-  if (this != std::addressof(__x)) {
-    __copy_assign_alloc(__x);
-    assign(__x.__layout_.__begin_ptr(), __x.__layout_.__end_ptr());
-  }
-  return *this;
 }
 
 template <class _Tp, class _Allocator>
@@ -1008,21 +967,21 @@ vector<_Tp, _Allocator>::__assign_with_sentinel(_Iterator __first, _Sentinel __l
 template <class _Tp, class _Allocator>
 template <class _AlgPolicy, class _Iterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last, difference_type __n) {
+vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel, difference_type __n) {
   size_type __new_size = static_cast<size_type>(__n);
   if (__new_size <= capacity()) {
     auto const __size = size();
     if (__new_size > __size) {
       auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), __size, this->__layout_.__begin_ptr()).__in_;
-      __construct_at_end(std::move(__mid), std::move(__last), __new_size - __size);
+      __construct_at_end(std::move(__mid), __new_size - __size);
     } else {
-      pointer __m = std::__copy(std::move(__first), __last, this->__layout_.__begin_ptr()).__out_;
+      pointer __m = std::__copy_n<_AlgPolicy>(std::move(__first), __n, this->__layout_.__begin_ptr()).__out_;
       this->__destruct_at_end(__m);
     }
   } else {
     __vdeallocate();
     __vallocate(__recommend(__new_size));
-    __construct_at_end(std::move(__first), std::move(__last), __new_size);
+    __construct_at_end(std::move(__first), __new_size);
   }
 }
 
@@ -1071,34 +1030,25 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOE
   }
 }
 
-template <class _Tp, class _Allocator>
-template <class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::pointer
-vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
-  _SplitBuffer __v(__recommend(size() + 1), size(), this->__layout_.__alloc());
-  //    __v.emplace_back(std::forward<_Args>(__args)...);
-  pointer __end = __v.end();
-  __alloc_traits::construct(this->__layout_.__alloc(), std::__to_address(__end), std::forward<_Args>(__args)...);
-  __v.__set_sentinel(++__end);
-  __layout_.__relocate(__v);
-  return __end;
-}
-
 // This makes the compiler inline `__else()` if `__cond` is known to be false. Currently LLVM doesn't do that without
 // the `__builtin_constant_p`, since it considers `__else` unlikely even through it's known to be run.
 // See https://llvm.org/PR154292
-template <class _If, class _Else>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __if_likely_else(bool __cond, _If __if, _Else __else) {
+template <class _If, class _Else, class... _Args>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 decltype(std::declval<_If>()(std::declval<_Args&&>()...))
+__if_likely_else(bool __cond, _If __if, _Else __else, _Args&&... __args) {
+  static_assert(
+      is_same<decltype(__if(std::forward<_Args>(__args)...)), decltype(__else(std::forward<_Args>(__args)...))>::value,
+      "Return type of if and else branch have to be the same type");
   if (__builtin_constant_p(__cond)) {
     if (__cond)
-      __if();
+      return __if(std::forward<_Args>(__args)...);
     else
-      __else();
+      return __else(std::forward<_Args>(__args)...);
   } else {
     if (__cond) [[__likely__]]
-      __if();
+      return __if(std::forward<_Args>(__args)...);
     else
-      __else();
+      return __else(std::forward<_Args>(__args)...);
   }
 }
 
@@ -1106,16 +1056,36 @@ template <class _Tp, class _Alloc>
 template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Alloc>::__emplace_back_result_t
 vector<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
-  pointer __end = __layout_.__end_ptr();
   std::__if_likely_else(
       size() != capacity(),
-      [&] {
-        __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
-        ++__end;
+      [](vector& __self, _Args&&... __largs) static {
+        __self.__emplace_back_assume_capacity(std::forward<_Args>(__largs)...);
       },
-      [&] { __end = __emplace_back_slow_path(std::forward<_Args>(__args)...); });
+      [](vector& __self, _Args&&... __largs) static {
+        __self.__annotate_delete();
+        auto __asan_guard  = std::__make_scope_guard([&] { __self.__annotate_new(__self.size()); });
+        auto& __alloc      = __self.__layout_.__alloc();
+        auto __size        = __self.size();
+        auto __allocation  = std::__allocate_at_least(__alloc, __self.__recommend(__size + 1));
+        auto __alloc_guard = std::__make_exception_guard([&] {
+          __alloc_traits::deallocate(__alloc, __allocation.ptr, __allocation.count);
+        });
+        auto __ptr         = std::__to_address(__allocation.ptr);
+        auto __old_begin   = __self.__layout_.__begin_ptr();
+        __alloc_traits::construct(__alloc, __ptr + __size, std::forward<_Args>(__largs)...);
+        auto __guard = std::__make_exception_guard([&] { __alloc_traits::destroy(__alloc, __ptr + __size); });
+        std::__uninitialized_allocator_relocate(
+            __alloc, std::__to_address(__old_begin), std::__to_address(__self.__layout_.__end_ptr()), __ptr);
+        __guard.__complete();
+        auto __old_cap = __self.capacity();
+        __self.__layout_.__set_layout(__allocation.ptr, __size + 1, __allocation.count);
+        __alloc_guard.__complete();
+        if ((__is_std_allocator_v<allocator_type> && !__libcpp_is_constant_evaluated()) || __old_begin)
+          __alloc_traits::deallocate(__alloc, __old_begin, __old_cap);
+      },
+      *this,
+      std::forward<_Args>(__args)...);
 
-  __layout_.__set_bound_using_pointer(__end);
 #if _LIBCPP_STD_VER >= 17
   return back();
 #endif
@@ -1230,10 +1200,9 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
 }
 
 template <class _Tp, class _Allocator>
-template <class _AlgPolicy, class _Iterator, class _Sentinel>
+template <class _AlgPolicy, class _Iterator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
-vector<_Tp, _Allocator>::__insert_with_size(
-    const_iterator __position, _Iterator __first, _Sentinel __last, difference_type __n) {
+vector<_Tp, _Allocator>::__insert_with_size(const_iterator __position, _Iterator __first, difference_type __n) {
   pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
   if (__n > 0) {
     if (__n <= static_cast<difference_type>(__layout_.__remaining_capacity())) {
@@ -1243,13 +1212,13 @@ vector<_Tp, _Allocator>::__insert_with_size(
       if (__n > __dx) {
 #if _LIBCPP_STD_VER >= 23
         if constexpr (!forward_iterator<_Iterator>) {
-          __construct_at_end(std::move(__first), std::move(__last), __n);
+          __construct_at_end(std::move(__first), __n);
           std::rotate(__p, __old_last, __end);
         } else
 #endif
         {
           _Iterator __m = std::next(__first, __dx);
-          __construct_at_end(__m, __last, __n - __dx);
+          __construct_at_end(__m, __n - __dx);
           if (__dx > 0) {
             __move_range(__p, __old_last, __p + __n);
             __insert_assign_n_unchecked<_AlgPolicy>(__first, __dx, __p);

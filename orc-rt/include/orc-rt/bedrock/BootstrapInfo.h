@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_BOOTSTRAPINFO_H
-#define ORC_RT_BOOTSTRAPINFO_H
+#ifndef ORC_RT_BEDROCK_BOOTSTRAPINFO_H
+#define ORC_RT_BEDROCK_BOOTSTRAPINFO_H
 
-#include "orc-rt/bedrock/Error.h"
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
-#include "orc-rt/bedrock/move_only_function.h"
-#include "orc-rt/bedrock/sps-ci/AllSPSCI.h"
+#include "orc-rt/bedrock/sps/AllSPSCI.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/move_only_function.h"
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -38,7 +38,7 @@ public:
   /// Construct a BootstrapInfo object from the given Session, Symbols, and
   /// Values.
   BootstrapInfo(Session &S, SimpleSymbolTable Symbols = {},
-                ValueMap Values = {});
+                ValueMap Values = {}) noexcept;
 
   /// Construct with a default initial symbols and values.
   ///
@@ -49,7 +49,7 @@ public:
   static Expected<BootstrapInfo>
   CreateDefault(Session &S,
                 InitialSymbolsBuilder AddInitialSymbols = sps_ci::addAll,
-                InitialValuesBuilder AddInitialValues = {});
+                InitialValuesBuilder AddInitialValues = {}) noexcept;
 
   const Session &session() const noexcept { return S; }
 
@@ -69,4 +69,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_BOOTSTRAPINFO_H
+#endif // ORC_RT_BEDROCK_BOOTSTRAPINFO_H

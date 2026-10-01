@@ -15,6 +15,10 @@
 
 #include "cuda_runtime.h"
 
+namespace Fortran::runtime {
+class Lock;
+}
+
 namespace Fortran::runtime::cuda {
 
 extern "C" {
@@ -24,6 +28,14 @@ void RTDECL(CUFRegisterAllocator)();
 }
 
 void CUFResetStream(cudaStream_t stream);
+
+extern Lock asyncDeviceAllocationTableLock;
+
+int findAsyncDeviceAllocation(void *ptr);
+void insertAsyncDeviceAllocation(
+    void *ptr, std::size_t size, cudaStream_t stream);
+cudaStream_t getAsyncDeviceAllocationStream(int pos);
+void eraseAsyncDeviceAllocation(int pos);
 
 void *CUFAllocPinned(std::size_t, std::size_t, std::int64_t *);
 void CUFFreePinned(void *);

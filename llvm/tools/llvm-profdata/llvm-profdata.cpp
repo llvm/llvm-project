@@ -365,14 +365,20 @@ static cl::opt<bool> MemProfFullSchema(
     "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Use the full schema for serialization"), cl::init(false));
 
-static cl::opt<bool>
-    MemprofGenerateRandomHotness("memprof-random-hotness", cl::init(false),
-                                 cl::Hidden, cl::sub(MergeSubcommand),
-                                 cl::desc("Generate random hotness values"));
-static cl::opt<unsigned> MemprofGenerateRandomHotnessSeed(
-    "memprof-random-hotness-seed", cl::init(0), cl::Hidden,
+static cl::opt<bool> MemprofGenerateRandomHotness(
+    "memprof-random-hotness", cl::init(false), cl::Hidden,
     cl::sub(MergeSubcommand),
-    cl::desc("Random hotness seed to use (0 to generate new seed)"));
+    cl::desc("Generate random hotness values. Use -random-seed to set the seed "
+             "value, otherwise the constant default seed is used"));
+static cl::opt<unsigned>
+    RandomSeed("random-seed", cl::init(0), cl::Hidden, cl::sub(MergeSubcommand),
+               cl::desc("Seed for the random number generator used by "
+                        "-memprof-random-hotness and temporal profile "
+                        "reservoir sampling"));
+static cl::alias MemprofGenerateRandomHotnessSeed(
+    "memprof-random-hotness-seed", cl::Hidden,
+    cl::desc("Alias for -random-seed. Deprecated, please use -random-seed"),
+    cl::aliasopt(RandomSeed));
 
 // Options specific to overlap subcommand.
 static cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
@@ -487,6 +493,10 @@ static cl::opt<bool> ShowSectionInfoOnly(
     cl::desc("Show the information of each section in the sample profile. "
              "The flag is only usable when the sample profile is in "
              "extbinary format"),
+    cl::sub(ShowSubcommand));
+static cl::opt<bool> ShowCompositeInfoOnly(
+    "show-composite-info-only", cl::init(false),
+    cl::desc("Show type IDs and payload sizes in a composite sample profile"),
     cl::sub(ShowSubcommand));
 static cl::opt<bool> ShowBinaryIds("binary-ids", cl::init(false),
                                    cl::desc("Show binary ids in the profile. "),
@@ -682,7 +692,7 @@ struct WriterContext {
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
       : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
                MemProfVersionRequested, MemProfFullSchema,
-               MemprofGenerateRandomHotness, MemprofGenerateRandomHotnessSeed),
+               MemprofGenerateRandomHotness, RandomSeed),
         ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
@@ -1656,6 +1666,13 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
       Readers.pop_back();
       continue;
     }
+
+    // Merging cannot preserve payloads that this reader does not understand,
+    // so make the otherwise intentional forward-compatible skip visible.
+    if (Reader->hasUnknownProfileTypes())
+      warn("unknown composite profile blocks were ignored and will not be "
+           "preserved",
+           Input.Filename);
 
     SampleProfileMap &Profiles = Reader->getProfiles();
     if (ProfileIsProbeBased &&
@@ -3274,6 +3291,10 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
 static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Yaml)
     exitWithError("YAML output is not supported for sample profiles");
+  if (ShowSectionInfoOnly && ShowCompositeInfoOnly)
+    exitWithError("-show-sec-info-only and "
+                  "-show-composite-info-only cannot be used together");
+
   using namespace sampleprof;
   LLVMContext Context;
   auto FS = vfs::getRealFileSystem();
@@ -3285,6 +3306,18 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   auto Reader = std::move(ReaderOrErr.get());
   if (ShowSectionInfoOnly) {
     showSectionInfo(Reader.get(), OS);
+    return 0;
+  }
+
+  if (ShowCompositeInfoOnly) {
+    if (!Reader->hasCompositeProfileSection()) {
+      WithColor::warning() << "no composite profile section; nothing to show\n";
+      return 0;
+    }
+    if (std::error_code EC = Reader->dumpProfileTypeInfo(OS)) {
+      OS.flush();
+      exitWithErrorCode(EC, Filename);
+    }
     return 0;
   }
 

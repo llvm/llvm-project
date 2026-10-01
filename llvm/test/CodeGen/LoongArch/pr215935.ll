@@ -4,11 +4,6 @@
 define i64 @brcond_const_1(i64 %0) nounwind {
 ; CHECK-LABEL: brcond_const_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    beqz $zero, .LBB0_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    move $a0, $zero
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    ret
 entry:
@@ -28,12 +23,7 @@ entry:
 define i64 @brcond_const_0(i64 %0) nounwind {
 ; CHECK-LABEL: brcond_const_0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bnez $zero, .LBB1_2
-; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    move $a0, $zero
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    ret
 entry:
   %2 = trunc i64 %0 to i32

@@ -149,45 +149,45 @@ define amdgpu_kernel void @srem_i32(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ;
 ; TAHITI-LABEL: srem_i32:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; TAHITI-NEXT:    s_mov_b32 s7, 0xf000
-; TAHITI-NEXT:    s_mov_b32 s6, -1
-; TAHITI-NEXT:    s_mov_b32 s10, s6
-; TAHITI-NEXT:    s_mov_b32 s11, s7
+; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
+; TAHITI-NEXT:    s_mov_b32 s3, 0xf000
+; TAHITI-NEXT:    s_mov_b32 s2, -1
+; TAHITI-NEXT:    s_mov_b32 s10, s2
+; TAHITI-NEXT:    s_mov_b32 s11, s3
 ; TAHITI-NEXT:    s_waitcnt lgkmcnt(0)
-; TAHITI-NEXT:    s_mov_b32 s8, s2
-; TAHITI-NEXT:    s_mov_b32 s9, s3
+; TAHITI-NEXT:    s_mov_b32 s8, s6
+; TAHITI-NEXT:    s_mov_b32 s9, s7
 ; TAHITI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
-; TAHITI-NEXT:    s_mov_b32 s5, s1
-; TAHITI-NEXT:    s_mov_b32 s4, s0
+; TAHITI-NEXT:    s_mov_b32 s1, s5
 ; TAHITI-NEXT:    s_waitcnt vmcnt(0)
-; TAHITI-NEXT:    v_readfirstlane_b32 s2, v1
-; TAHITI-NEXT:    s_abs_i32 s2, s2
-; TAHITI-NEXT:    v_cvt_f32_u32_e32 v1, s2
-; TAHITI-NEXT:    s_sub_i32 s3, 0, s2
+; TAHITI-NEXT:    v_readfirstlane_b32 s0, v1
+; TAHITI-NEXT:    s_abs_i32 s6, s0
+; TAHITI-NEXT:    v_cvt_f32_u32_e32 v1, s6
+; TAHITI-NEXT:    s_sub_i32 s0, 0, s6
+; TAHITI-NEXT:    v_readfirstlane_b32 s7, v0
+; TAHITI-NEXT:    s_abs_i32 s8, s7
 ; TAHITI-NEXT:    v_rcp_f32_e32 v1, v1
 ; TAHITI-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; TAHITI-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; TAHITI-NEXT:    v_mul_lo_u32 v2, s3, v1
-; TAHITI-NEXT:    v_readfirstlane_b32 s3, v0
-; TAHITI-NEXT:    s_abs_i32 s8, s3
-; TAHITI-NEXT:    s_ashr_i32 s0, s3, 31
+; TAHITI-NEXT:    v_mul_lo_u32 v2, s0, v1
+; TAHITI-NEXT:    s_mov_b32 s0, s4
+; TAHITI-NEXT:    s_ashr_i32 s4, s7, 31
 ; TAHITI-NEXT:    v_mul_hi_u32 v2, v1, v2
 ; TAHITI-NEXT:    v_add_i32_e32 v0, vcc, v1, v2
 ; TAHITI-NEXT:    v_mul_hi_u32 v0, s8, v0
-; TAHITI-NEXT:    v_readfirstlane_b32 s1, v0
-; TAHITI-NEXT:    s_mul_i32 s1, s1, s2
-; TAHITI-NEXT:    s_sub_i32 s1, s8, s1
-; TAHITI-NEXT:    s_sub_i32 s3, s1, s2
-; TAHITI-NEXT:    s_cmp_ge_u32 s1, s2
-; TAHITI-NEXT:    s_cselect_b32 s1, s3, s1
-; TAHITI-NEXT:    s_sub_i32 s3, s1, s2
-; TAHITI-NEXT:    s_cmp_ge_u32 s1, s2
-; TAHITI-NEXT:    s_cselect_b32 s1, s3, s1
-; TAHITI-NEXT:    s_xor_b32 s1, s1, s0
-; TAHITI-NEXT:    s_sub_i32 s0, s1, s0
-; TAHITI-NEXT:    v_mov_b32_e32 v0, s0
-; TAHITI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; TAHITI-NEXT:    v_readfirstlane_b32 s5, v0
+; TAHITI-NEXT:    s_mul_i32 s5, s5, s6
+; TAHITI-NEXT:    s_sub_i32 s5, s8, s5
+; TAHITI-NEXT:    s_sub_i32 s7, s5, s6
+; TAHITI-NEXT:    s_cmp_ge_u32 s5, s6
+; TAHITI-NEXT:    s_cselect_b32 s5, s7, s5
+; TAHITI-NEXT:    s_sub_i32 s7, s5, s6
+; TAHITI-NEXT:    s_cmp_ge_u32 s5, s6
+; TAHITI-NEXT:    s_cselect_b32 s5, s7, s5
+; TAHITI-NEXT:    s_xor_b32 s5, s5, s4
+; TAHITI-NEXT:    s_sub_i32 s4, s5, s4
+; TAHITI-NEXT:    v_mov_b32_e32 v0, s4
+; TAHITI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; TAHITI-NEXT:    s_endpgm
 ;
 ; TONGA-LABEL: srem_i32:
@@ -747,33 +747,33 @@ define amdgpu_kernel void @srem_v2i32_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ;
 ; TAHITI-LABEL: srem_v2i32_4:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; TAHITI-NEXT:    s_mov_b32 s7, 0xf000
-; TAHITI-NEXT:    s_mov_b32 s6, -1
-; TAHITI-NEXT:    s_mov_b32 s10, s6
-; TAHITI-NEXT:    s_mov_b32 s11, s7
+; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
+; TAHITI-NEXT:    s_mov_b32 s3, 0xf000
+; TAHITI-NEXT:    s_mov_b32 s2, -1
+; TAHITI-NEXT:    s_mov_b32 s10, s2
+; TAHITI-NEXT:    s_mov_b32 s11, s3
 ; TAHITI-NEXT:    s_waitcnt lgkmcnt(0)
-; TAHITI-NEXT:    s_mov_b32 s8, s2
-; TAHITI-NEXT:    s_mov_b32 s9, s3
+; TAHITI-NEXT:    s_mov_b32 s8, s6
+; TAHITI-NEXT:    s_mov_b32 s9, s7
 ; TAHITI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
-; TAHITI-NEXT:    s_mov_b32 s4, s0
-; TAHITI-NEXT:    s_mov_b32 s5, s1
+; TAHITI-NEXT:    s_mov_b32 s0, s4
+; TAHITI-NEXT:    s_mov_b32 s1, s5
 ; TAHITI-NEXT:    s_waitcnt vmcnt(0)
-; TAHITI-NEXT:    v_readfirstlane_b32 s0, v0
-; TAHITI-NEXT:    v_readfirstlane_b32 s1, v1
-; TAHITI-NEXT:    s_ashr_i32 s2, s0, 31
-; TAHITI-NEXT:    s_ashr_i32 s3, s1, 31
-; TAHITI-NEXT:    s_lshr_b32 s2, s2, 30
-; TAHITI-NEXT:    s_lshr_b32 s3, s3, 30
-; TAHITI-NEXT:    s_add_i32 s2, s0, s2
-; TAHITI-NEXT:    s_add_i32 s3, s1, s3
-; TAHITI-NEXT:    s_and_b32 s2, s2, -4
-; TAHITI-NEXT:    s_and_b32 s3, s3, -4
-; TAHITI-NEXT:    s_sub_i32 s0, s0, s2
-; TAHITI-NEXT:    s_sub_i32 s1, s1, s3
-; TAHITI-NEXT:    v_mov_b32_e32 v0, s0
-; TAHITI-NEXT:    v_mov_b32_e32 v1, s1
-; TAHITI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; TAHITI-NEXT:    v_readfirstlane_b32 s4, v0
+; TAHITI-NEXT:    v_readfirstlane_b32 s5, v1
+; TAHITI-NEXT:    s_ashr_i32 s6, s4, 31
+; TAHITI-NEXT:    s_ashr_i32 s7, s5, 31
+; TAHITI-NEXT:    s_lshr_b32 s6, s6, 30
+; TAHITI-NEXT:    s_lshr_b32 s7, s7, 30
+; TAHITI-NEXT:    s_add_i32 s6, s4, s6
+; TAHITI-NEXT:    s_add_i32 s7, s5, s7
+; TAHITI-NEXT:    s_and_b32 s6, s6, -4
+; TAHITI-NEXT:    s_and_b32 s7, s7, -4
+; TAHITI-NEXT:    s_sub_i32 s4, s4, s6
+; TAHITI-NEXT:    s_sub_i32 s5, s5, s7
+; TAHITI-NEXT:    v_mov_b32_e32 v0, s4
+; TAHITI-NEXT:    v_mov_b32_e32 v1, s5
+; TAHITI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; TAHITI-NEXT:    s_endpgm
 ;
 ; TONGA-LABEL: srem_v2i32_4:
@@ -4720,17 +4720,17 @@ define amdgpu_kernel void @srem_v2i64_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ;
 ; TAHITI-LABEL: srem_v2i64_4:
 ; TAHITI:       ; %bb.0:
-; TAHITI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; TAHITI-NEXT:    s_mov_b32 s7, 0xf000
-; TAHITI-NEXT:    s_mov_b32 s6, -1
-; TAHITI-NEXT:    s_mov_b32 s10, s6
-; TAHITI-NEXT:    s_mov_b32 s11, s7
+; TAHITI-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
+; TAHITI-NEXT:    s_mov_b32 s3, 0xf000
+; TAHITI-NEXT:    s_mov_b32 s2, -1
+; TAHITI-NEXT:    s_mov_b32 s10, s2
+; TAHITI-NEXT:    s_mov_b32 s11, s3
 ; TAHITI-NEXT:    s_waitcnt lgkmcnt(0)
-; TAHITI-NEXT:    s_mov_b32 s8, s2
-; TAHITI-NEXT:    s_mov_b32 s9, s3
+; TAHITI-NEXT:    s_mov_b32 s8, s6
+; TAHITI-NEXT:    s_mov_b32 s9, s7
 ; TAHITI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
-; TAHITI-NEXT:    s_mov_b32 s4, s0
-; TAHITI-NEXT:    s_mov_b32 s5, s1
+; TAHITI-NEXT:    s_mov_b32 s0, s4
+; TAHITI-NEXT:    s_mov_b32 s1, s5
 ; TAHITI-NEXT:    s_waitcnt vmcnt(0)
 ; TAHITI-NEXT:    v_ashrrev_i32_e32 v4, 31, v1
 ; TAHITI-NEXT:    v_lshrrev_b32_e32 v4, 30, v4
@@ -4746,7 +4746,7 @@ define amdgpu_kernel void @srem_v2i64_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ; TAHITI-NEXT:    v_subb_u32_e32 v1, vcc, v1, v6, vcc
 ; TAHITI-NEXT:    v_sub_i32_e32 v2, vcc, v2, v5
 ; TAHITI-NEXT:    v_subb_u32_e32 v3, vcc, v3, v7, vcc
-; TAHITI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
+; TAHITI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; TAHITI-NEXT:    s_endpgm
 ;
 ; TONGA-LABEL: srem_v2i64_4:

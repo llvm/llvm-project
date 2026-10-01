@@ -228,8 +228,8 @@ void pass_large_BitInt(_BitInt(127) e) {
 // CIR-LABEL: cir.func {{.*}} @_ZN12check_exotic17pass_large_BitIntEDB127_
 
 // LLVM: define {{.*}} i3 @_ZN12check_exotic10ret_BitIntEv(
-// LLVM: define {{.*}} void @_ZN12check_exotic11pass_BitIntEDB3_(i3 %
-// LLVM: define {{.*}} void @_ZN12check_exotic17pass_large_BitIntEDB127_(i127 %
+// LLVM: define {{.*}} void @_ZN12check_exotic11pass_BitIntEDB3_(i3 noundef %
+// LLVM: define {{.*}} void @_ZN12check_exotic17pass_large_BitIntEDB127_(i127 noundef %
 
 // OGCG: define {{.*}} noundef signext i3 @_ZN12check_exotic10ret_BitIntEv(
 // OGCG: define {{.*}} void @_ZN12check_exotic11pass_BitIntEDB3_(i3 noundef signext %

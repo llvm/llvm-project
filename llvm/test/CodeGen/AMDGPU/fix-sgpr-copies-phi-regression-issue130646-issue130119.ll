@@ -100,21 +100,17 @@ define amdgpu_cs void @issue130119(i1 %arg) {
 ; CHECK-NEXT:    ; Parent Loop BB1_2 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    s_and_b64 s[10:11], s[6:7], exec
-; CHECK-NEXT:    s_cselect_b32 s10, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s10, 1
 ; CHECK-NEXT:    s_mov_b64 s[12:13], s[4:5]
-; CHECK-NEXT:    s_cbranch_scc1 .LBB1_6
+; CHECK-NEXT:    s_cbranch_scc0 .LBB1_6
 ; CHECK-NEXT:  ; %bb.5: ; %bb7
 ; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=2
 ; CHECK-NEXT:    s_mov_b64 s[12:13], -1
 ; CHECK-NEXT:  .LBB1_6: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=2
 ; CHECK-NEXT:    s_and_b64 s[12:13], s[12:13], exec
-; CHECK-NEXT:    s_cselect_b32 s12, 1, 0
 ; CHECK-NEXT:    s_mov_b64 s[10:11], -1
-; CHECK-NEXT:    s_cmp_lg_u32 s12, 1
 ; CHECK-NEXT:    s_mov_b64 s[12:13], -1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB1_3
+; CHECK-NEXT:    s_cbranch_scc0 .LBB1_3
 ; CHECK-NEXT:  ; %bb.7: ; %bb8
 ; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=2
 ; CHECK-NEXT:    s_mov_b64 s[12:13], 0

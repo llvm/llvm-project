@@ -188,8 +188,8 @@ define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_and_b64 vcc, exec, s[18:19]
 ; GCN-NEXT:    s_cbranch_vccz .LBB4_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_branch .LBB4_3
 ; GCN-NEXT:  .LBB4_2: ; %if.else
 ; GCN-NEXT:    s_add_u32 s8, s8, 8
@@ -240,8 +240,8 @@ define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_and_b64 vcc, exec, s[18:19]
 ; GCN-NEXT:    s_cbranch_vccz .LBB5_2
 ; GCN-NEXT:  ; %bb.1:
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_branch .LBB5_3
 ; GCN-NEXT:  .LBB5_2: ; %if.else
 ; GCN-NEXT:    s_add_u32 s8, s8, 8
