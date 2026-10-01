@@ -1053,12 +1053,13 @@ std::string RISCVISAInfo::toString() const {
 
   Arch << "rv" << XLen;
 
+  bool HasY = Exts.count("y") != 0;
   ListSeparator LS("_");
   for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
     // Plain 'y' always implies 'i' (which is omitted in the normalized arch
     // string). Y+E requires a long base name arch string.
-    if (ExtName == "i" && Exts.count("y"))
+    if (HasY && ExtName == "i")
       continue;
     auto ExtInfo = Ext.second;
     Arch << LS << ExtName;
