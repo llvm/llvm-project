@@ -1,16 +1,16 @@
-// RUN: mlir-opt  --allow-unregistered-dialect \
+// RUN: mlir-opt \
 // RUN:   --test-gpu-subgroup-reduce-lowering %s \
 // RUN:   | FileCheck %s --check-prefix=CHECK-SUB
 
-// RUN: mlir-opt --allow-unregistered-dialect \
+// RUN: mlir-opt \
 // RUN:   --test-gpu-subgroup-reduce-lowering="expand-to-shuffles" %s \
 // RUN:   | FileCheck %s --check-prefix=CHECK-SHFL
 
-// RUN: mlir-opt --allow-unregistered-dialect \
+// RUN: mlir-opt \
 // RUN:   --test-gpu-subgroup-reduce-lowering="expand-to-shuffles target=gfx942" %s \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-GFX,CHECK-GFX9
 
-// RUN: mlir-opt --allow-unregistered-dialect \
+// RUN: mlir-opt \
 // RUN:   --test-gpu-subgroup-reduce-lowering="expand-to-shuffles target=gfx1030" %s \
 // RUN:   | FileCheck %s --check-prefixes=CHECK-GFX,CHECK-GFX10
 
@@ -442,4 +442,3 @@ gpu.module @kernels {
     gpu.return
   }
 }
-

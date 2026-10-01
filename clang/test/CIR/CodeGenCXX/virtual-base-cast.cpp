@@ -15,24 +15,36 @@ D* x;
 
 // This uses the vtable to get the offset to the base object. The offset from
 // the vptr to the base object offset in the vtable is a compile-time constant.
+// Since computing that offset requires dereferencing the vtable pointer, the
+// whole computation is guarded by a null check on the source pointer.
 // CIR: %[[X_ADDR:.*]] = cir.get_global @x : !cir.ptr<!cir.ptr<!rec_D>>
 // CIR: %[[X:.*]] = cir.load{{.*}} %[[X_ADDR]]
-// CIR: %[[X_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[X]] : !cir.ptr<!rec_D> -> !cir.ptr<!cir.vptr>
-// CIR: %[[X_VPTR_BASE:.*]] = cir.load{{.*}} %[[X_VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR: %[[X_BASE_I8PTR:.*]] = cir.cast bitcast %[[X_VPTR_BASE]] : !cir.vptr -> !cir.ptr<!u8i>
-// CIR:  %[[OFFSET_OFFSET:.*]] = cir.const #cir.int<-32> : !s64i
-// CIR:  %[[OFFSET_PTR:.*]] = cir.ptr_stride %[[X_BASE_I8PTR]], %[[OFFSET_OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
-// CIR:  %[[OFFSET_PTR_CAST:.*]] = cir.cast bitcast %[[OFFSET_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
-// CIR:  %[[OFFSET:.*]] = cir.load{{.*}} %[[OFFSET_PTR_CAST]] : !cir.ptr<!s64i>, !s64i
-// CIR:  %[[VBASE_ADDR:.*]] = cir.ptr_stride {{.*}}, %[[OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
-// CIR:  cir.cast bitcast %[[VBASE_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_D>
+// CIR: %[[IS_NULL:.*]] = cir.cmp eq %[[X]], {{.*}} : !cir.ptr<!rec_D>
+// CIR: cir.ternary(%[[IS_NULL]], true {
+// CIR:   cir.const #cir.ptr<null> : !cir.ptr<!rec_A>
+// CIR:   cir.yield {{.*}} : !cir.ptr<!rec_A>
+// CIR: }, false {
+// CIR:   %[[X_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[X]] : !cir.ptr<!rec_D> -> !cir.ptr<!cir.vptr>
+// CIR:   %[[X_VPTR_BASE:.*]] = cir.load{{.*}} %[[X_VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR:   %[[X_BASE_I8PTR:.*]] = cir.cast bitcast %[[X_VPTR_BASE]] : !cir.vptr -> !cir.ptr<!u8i>
+// CIR:   %[[OFFSET_OFFSET:.*]] = cir.const #cir.int<-32> : !s64i
+// CIR:   %[[OFFSET_PTR:.*]] = cir.ptr_stride %[[X_BASE_I8PTR]], %[[OFFSET_OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+// CIR:   %[[OFFSET_PTR_CAST:.*]] = cir.cast bitcast %[[OFFSET_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+// CIR:   %[[OFFSET:.*]] = cir.load{{.*}} %[[OFFSET_PTR_CAST]] : !cir.ptr<!s64i>, !s64i
+// CIR:   %[[VBASE_ADDR:.*]] = cir.ptr_stride {{.*}}, %[[OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+// CIR:   cir.cast bitcast %[[VBASE_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_D>
+// CIR: })
 
 // LLVM-LABEL: @_Z1av(
 // LLVM:       [[OBJ:%.*]] = load ptr, ptr @x
+// LLVM-NEXT:  [[IS_NULL:%.*]] = icmp eq ptr [[OBJ]], null
+// LLVM-NEXT:  br i1 [[IS_NULL]], label %[[NULL_BB:.*]], label %[[NOTNULL_BB:.*]]
+// LLVM:       [[NOTNULL_BB]]:
 // LLVM-NEXT:  [[VTABLE:%.*]] = load ptr, ptr [[OBJ]]
 // LLVM-NEXT:  [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -32
 // LLVM-NEXT:  [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]]
 // LLVM-NEXT:  [[ADD_PTR:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[VBASE_OFFSET]]
+// LLVM:       phi ptr
 // LLVM:       ret ptr
 
 // OGCG-LABEL:  @_Z1av(
@@ -53,10 +65,14 @@ A* a() { return x; }
 
 // LLVM-LABEL: @_Z1bv(
 // LLVM:       [[OBJ:%.*]] = load ptr, ptr @x
+// LLVM-NEXT:  [[IS_NULL:%.*]] = icmp eq ptr [[OBJ]], null
+// LLVM-NEXT:  br i1 [[IS_NULL]], label %[[NULL_BB:.*]], label %[[NOTNULL_BB:.*]]
+// LLVM:       [[NOTNULL_BB]]:
 // LLVM-NEXT:  [[VTABLE:%.*]] = load ptr, ptr [[OBJ]]
 // LLVM-NEXT:  [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -40
 // LLVM-NEXT:  [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]]
 // LLVM-NEXT:  [[ADD_PTR:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[VBASE_OFFSET]]
+// LLVM:       phi ptr
 // LLVM:       ret ptr
 
 // OGCG-LABEL:  @_Z1bv(
@@ -78,11 +94,15 @@ B* b() { return x; }
 
 // LLVM-LABEL: @_Z1cv(
 // LLVM:       [[OBJ:%.*]] = load ptr, ptr @x
+// LLVM-NEXT:  [[IS_NULL:%.*]] = icmp eq ptr [[OBJ]], null
+// LLVM-NEXT:  br i1 [[IS_NULL]], label %[[NULL_BB:.*]], label %[[NOTNULL_BB:.*]]
+// LLVM:       [[NOTNULL_BB]]:
 // LLVM-NEXT:  [[VTABLE:%.*]] = load ptr, ptr [[OBJ]]
 // LLVM-NEXT:  [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -48
 // LLVM-NEXT:  [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]]
 // LLVM-NEXT:  [[OFFSET:%.*]] = add i64 [[VBASE_OFFSET]], 16
 // LLVM-NEXT:  [[ADD_PTR:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[OFFSET]]
+// LLVM:       phi ptr
 // LLVM:       ret ptr
 
 // OGCG-LABEL:  @_Z1cv(
@@ -116,11 +136,15 @@ F* y;
 
 // LLVM-LABEL: @_Z1dv(
 // LLVM:       [[OBJ:%.*]] = load ptr, ptr @y
+// LLVM-NEXT:  [[IS_NULL:%.*]] = icmp eq ptr [[OBJ]], null
+// LLVM-NEXT:  br i1 [[IS_NULL]], label %[[NULL_BB:.*]], label %[[NOTNULL_BB:.*]]
+// LLVM:       [[NOTNULL_BB]]:
 // LLVM-NEXT:  [[VTABLE:%.*]] = load ptr, ptr [[OBJ]]
 // LLVM-NEXT:  [[VBASE_OFFSET_PTR:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 -48
 // LLVM-NEXT:  [[VBASE_OFFSET:%.*]] = load i64, ptr [[VBASE_OFFSET_PTR]]
 // LLVM-NEXT:  [[OFFSET:%.*]] = add i64 [[VBASE_OFFSET]], 16
 // LLVM-NEXT:  [[ADD_PTR:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[OFFSET]]
+// LLVM:       phi ptr
 // LLVM:       ret ptr
 
 // OGCG-LABEL:  @_Z1dv(

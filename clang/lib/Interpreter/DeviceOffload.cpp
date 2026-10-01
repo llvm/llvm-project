@@ -56,7 +56,6 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
   llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
       PTU.TheModule->getTargetTriple(), TargetOpts.CPU, "", TO,
       llvm::Reloc::Model::PIC_);
-  PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
 
   PTXCode.clear();
   llvm::raw_svector_ostream dest(PTXCode);

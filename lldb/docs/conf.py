@@ -16,7 +16,7 @@ from pathlib import Path
 
 from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
 
-globals().update(common_conf(tags, markdown=Markdown.EXCEPT_MAN))
+globals().update(common_conf(tags))
 
 building_man_page = tags.has("builder-man")
 

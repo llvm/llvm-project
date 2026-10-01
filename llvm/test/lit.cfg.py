@@ -56,11 +56,19 @@ if config.enable_profcheck:
     config.excludes.extend(["UpdateTestChecks", "Bitcode"])
     # TODO(#166655): Reenable Instrumentation tests
     config.excludes.append("Instrumentation")
-    # profiling doesn't work quite well on GPU, excluding
-    config.excludes.append("AMDGPU")
-    # TODO targets where profiling may make sense but will be addressed later
+    # TODO targets that will be addressed later
     config.excludes.extend(
-        ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "SPIRV", "WebAssembly"]
+        [
+            "Hexagon",
+            "NVPTX",
+            "PowerPC",
+            "RISCV",
+            "SPARC",
+            "SPIRV",
+            "WebAssembly",
+            "AMDGPU",
+            "DirectX",
+        ]
     )
     # these passes aren't hooked up to the pass pipeline:
     config.excludes.extend(["IRCE", "LoopBoundSplit", "LoopInterchange", "Scalarizer"])
@@ -534,9 +542,9 @@ if config.include_examples:
     config.available_features.add("examples")
 
 if config.linked_bye_extension:
+    config.available_features.add("linked-bye")
     config.substitutions.append(("%llvmcheckext", "CHECK-EXT"))
     config.substitutions.append(("%loadbye", ""))
-    config.substitutions.append(("%loadnewpmbye", ""))
 else:
     config.substitutions.append(("%llvmcheckext", "CHECK-NOEXT"))
     config.substitutions.append(
@@ -545,26 +553,22 @@ else:
             "-load={}/Bye{}".format(config.llvm_shlib_dir, config.llvm_shlib_ext),
         )
     )
-    config.substitutions.append(
-        (
-            "%loadnewpmbye",
-            "-load-pass-plugin={}/Bye{}".format(
-                config.llvm_shlib_dir, config.llvm_shlib_ext
-            ),
-        )
-    )
 
-if config.linked_exampleirtransforms_extension:
-    config.substitutions.append(("%loadexampleirtransforms", ""))
-else:
-    config.substitutions.append(
-        (
-            "%loadexampleirtransforms",
-            "-load-pass-plugin={}/ExampleIRTransforms{}".format(
-                config.llvm_shlib_dir, config.llvm_shlib_ext
-            ),
+# %loadX loads the extension as a pass plugin unless it is linked into tools.
+for name, lib, linked in [
+    ("%loadnewpmbye", "Bye", config.linked_bye_extension),
+    (
+        "%loadexampleirtransforms",
+        "ExampleIRTransforms",
+        config.linked_exampleirtransforms_extension,
+    ),
+]:
+    load = ""
+    if not linked:
+        load = "-load-pass-plugin={}/{}{}".format(
+            config.llvm_shlib_dir, lib, config.llvm_shlib_ext
         )
-    )
+    config.substitutions.append((name, load))
 
 # Static libraries are not built if BUILD_SHARED_LIBS is ON.
 if not config.build_shared_libs and not config.link_llvm_dylib:
@@ -587,6 +591,12 @@ if config.have_tf_aot:
 
 if getattr(config, "have_mlir_lowering", False):
     config.available_features.add("have_mlir_lowering")
+
+if getattr(config, "have_mlir_lowering_inliner", False):
+    config.available_features.add("have_mlir_lowering_inliner")
+
+if getattr(config, "have_mlir_lowering_regalloc", False):
+    config.available_features.add("have_mlir_lowering_regalloc")
 
 if getattr(config, "have_opencsd", False):
     config.available_features.add("opencsd")
@@ -759,6 +769,25 @@ def host_unwind_supports_jit():
 
 if host_unwind_supports_jit():
     config.available_features.add("host-unwind-supports-jit")
+
+
+# The triple that lli's JIT will target. This can be more specific than either
+# the host or the default target triple: e.g. an arm64e build of lli reports
+# arm64e-apple-darwin, while both CMake triples describe the machine as arm64.
+def host_jit_triple():
+    lli = lit.util.which("lli", config.llvm_tools_dir)
+    if not lli:
+        return None
+    try:
+        return subprocess.check_output([lli, "-host-jit-triple"], text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        lit_config.warning("could not determine host JIT triple from lli")
+        return None
+
+
+config.host_jit_triple = host_jit_triple()
+if config.host_jit_triple:
+    config.available_features.add("host-jit-triple=" + config.host_jit_triple)
 
 # Ask llvm-config about asserts
 llvm_config.feature_config(

@@ -223,6 +223,9 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     ::operator new[](0, std::align_val_t{1}, std::nothrow);
 #endif // _LIBCPP_HAS_ALIGNED_ALLOCATION
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::get_new_handler();
   }
 
 #if TEST_STD_VER >= 17

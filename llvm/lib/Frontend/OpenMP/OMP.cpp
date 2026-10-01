@@ -78,16 +78,16 @@ getFirstCompositeRange(iterator_range<ArrayRef<Directive>::iterator> Leafs) {
 
 static void
 collectPrivatizingConstructs(llvm::SmallSet<Directive, 16> &Constructs,
-                             unsigned Version) {
+                             Version V) {
   llvm::SmallSet<Clause, 16> Privatizing;
   for (auto C : clauses()) {
-    if (isPrivatizingClause(C, Version))
+    if (isPrivatizingClause(C, V))
       Privatizing.insert(C);
   }
 
   for (auto D : directives()) {
     bool AllowsPrivatizing = llvm::any_of(Privatizing, [&](Clause C) {
-      return isAllowedClauseForDirective(D, C, Version);
+      return isAllowedClauseForDirective(D, C, V);
     });
     if (AllowsPrivatizing)
       Constructs.insert(D);
@@ -208,15 +208,16 @@ bool isCombinedConstruct(Directive D) {
   return !getLeafConstructs(D).empty() && !isCompositeConstruct(D);
 }
 
-ArrayRef<unsigned> getOpenMPVersions() {
-  static unsigned Versions[]{31, 40, 45, 50, 51, 52, 60, 61};
+ArrayRef<Version> getOpenMPVersions() {
+  static Version Versions[]{Version(31), Version(40), Version(45), Version(50),
+                            Version(51), Version(52), Version(60), Version(61)};
   return Versions;
 }
 
-bool isPrivatizingConstruct(Directive D, unsigned Version) {
+bool isPrivatizingConstruct(Directive D, Version V) {
   static llvm::SmallSet<Directive, 16> Privatizing;
   [[maybe_unused]] static bool Init =
-      (collectPrivatizingConstructs(Privatizing, Version), true);
+      (collectPrivatizingConstructs(Privatizing, V), true);
 
   // As of OpenMP 6.0, privatizing constructs (with the test being if they
   // allow a privatizing clause) are: dispatch, distribute, do, for, loop,

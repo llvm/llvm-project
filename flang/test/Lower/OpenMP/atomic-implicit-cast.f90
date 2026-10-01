@@ -11,15 +11,15 @@ subroutine atomic_implicit_cast_read
 ! CHECK: %[[ALLOCA1:.*]] = fir.alloca i32
 ! CHECK: %[[ALLOCA0:.*]] = fir.alloca f32
 
-! CHECK: %[[M:.*]] = fir.alloca complex<f64> {bindc_name = "m", uniq_name = "_QFatomic_implicit_cast_readEm"}
+! CHECK: %[[M:.*]] = fir.alloca complex<f64> <{bindc_name = "m", uniq_name = "_QFatomic_implicit_cast_readEm"}>
 ! CHECK: %[[M_DECL:.*]]:2 = hlfir.declare %[[M]] {uniq_name = "_QFatomic_implicit_cast_readEm"} : (!fir.ref<complex<f64>>) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
-! CHECK: %[[W:.*]] = fir.alloca complex<f32> {bindc_name = "w", uniq_name = "_QFatomic_implicit_cast_readEw"}
+! CHECK: %[[W:.*]] = fir.alloca complex<f32> <{bindc_name = "w", uniq_name = "_QFatomic_implicit_cast_readEw"}>
 ! CHECK: %[[W_DECL:.*]]:2 = hlfir.declare %[[W]] {uniq_name = "_QFatomic_implicit_cast_readEw"} : (!fir.ref<complex<f32>>) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
-! CHECK: %[[X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFatomic_implicit_cast_readEx"}
+! CHECK: %[[X:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFatomic_implicit_cast_readEx"}>
 ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFatomic_implicit_cast_readEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: %[[Y:.*]] = fir.alloca f32 {bindc_name = "y", uniq_name = "_QFatomic_implicit_cast_readEy"}
+! CHECK: %[[Y:.*]] = fir.alloca f32 <{bindc_name = "y", uniq_name = "_QFatomic_implicit_cast_readEy"}>
 ! CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFatomic_implicit_cast_readEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK: %[[Z:.*]] = fir.alloca f64 {bindc_name = "z", uniq_name = "_QFatomic_implicit_cast_readEz"}
+! CHECK: %[[Z:.*]] = fir.alloca f64 <{bindc_name = "z", uniq_name = "_QFatomic_implicit_cast_readEz"}>
 ! CHECK: %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z]] {uniq_name = "_QFatomic_implicit_cast_readEz"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
     integer :: x
     real :: y

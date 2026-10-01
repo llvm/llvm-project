@@ -583,7 +583,7 @@ define i32 @extract_last_active_v16i32(<16 x i32> %a, <16 x i1> %c) nounwind {
 ; AVX512-NEXT:    pushq %rbp
 ; AVX512-NEXT:    movq %rsp, %rbp
 ; AVX512-NEXT:    andq $-64, %rsp
-; AVX512-NEXT:    subq $128, %rsp
+; AVX512-NEXT:    addq $-128, %rsp
 ; AVX512-NEXT:    vpsllw $7, %xmm1, %xmm1
 ; AVX512-NEXT:    vpmovb2m %xmm1, %k1
 ; AVX512-NEXT:    vmovdqa64 %zmm0, (%rsp)

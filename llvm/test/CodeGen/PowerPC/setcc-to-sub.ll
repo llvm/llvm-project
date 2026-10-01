@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN: -mcpu=pwr8 < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff -mcpu=pwr8 \
-; RUN: < %s -vec-extabi | FileCheck %s
+; RUN: < %s -target-abi=vec-extabi | FileCheck %s
 
 %class.PB2 = type { [1 x i32], ptr }
 %class.PB1 = type { [1 x i32], i64, i64, i32 }

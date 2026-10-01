@@ -180,6 +180,78 @@ loop:
   %cmp = icmp eq i32 %primary, 128
   br i1 %cmp, label %exit, label %loop
 }
+
+; Removing the dead min reduction cycle also removes the induction.
+define void @dead_reduction_removes_unvisited_induction(ptr %a) {
+; CHECK-LABEL: define void @dead_reduction_removes_unvisited_induction(
+; CHECK-SAME: ptr [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i32 [ 0, %entry ], [ %red.next, %loop ]
+  %gep = getelementptr inbounds i32, ptr %a, i64 %iv
+  %load = load i32, ptr %gep, align 4
+  %red.next = call i32 @llvm.smin.i32(i32 %load, i32 %red)
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 15
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Both reduction cycles are dead.
+define void @two_dead_reduction_cycles(ptr %a) {
+; CHECK-LABEL: define void @two_dead_reduction_cycles(
+; CHECK-SAME: ptr [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red.min = phi i32 [ 0, %entry ], [ %red.min.next, %loop ]
+  %red.max = phi i32 [ 0, %entry ], [ %red.max.next, %loop ]
+  %gep = getelementptr inbounds i32, ptr %a, i64 %iv
+  %load = load i32, ptr %gep, align 4
+  %red.min.next = call i32 @llvm.smin.i32(i32 %load, i32 %red.min)
+  %red.max.next = call i32 @llvm.smax.i32(i32 %load, i32 %red.max)
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 15
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -193,4 +265,6 @@ loop:
 ; CHECK: [[META9]] = distinct !{[[META9]], [[META7]]}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]]}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
+; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META2]]}
 ;.

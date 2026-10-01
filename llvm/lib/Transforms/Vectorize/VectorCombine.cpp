@@ -1337,19 +1337,46 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
           cast<Constant>(VecC), Builder.getInt64(*Index));
 
   Value *Scalar;
-  if (CI)
-    Scalar = Builder.CreateCmp(CI->getPredicate(), ScalarOps[0], ScalarOps[1]);
-  else if (UO || BO)
-    Scalar = Builder.CreateNAryOp(Opcode, ScalarOps);
-  else
+  // We need to pass the flags during the creation of instrucitons. Constant
+  // folding might remove the instructions, so post setting the flags might
+  // pollute the later instructions.
+  if (CI) {
+    if (FPMathOperator *FPMO = dyn_cast<FPMathOperator>(&I)) {
+      Scalar = Builder.CreateFCmpFMF(CI->getPredicate(), ScalarOps[0],
+                                     ScalarOps[1], FPMO->getFastMathFlags(),
+                                     CI->getName() + ".scalar");
+    } else {
+      Scalar = Builder.CreateICmp(CI->getPredicate(), ScalarOps[0],
+                                  ScalarOps[1], CI->getName() + ".scalar");
+    }
+  } else if (UO) {
+    Scalar = Builder.CreateUnOpFMF(UO->getOpcode(), ScalarOps[0], UO,
+                                   UO->getName() + ".scalar");
+  } else if (BO) {
+    if (OverflowingBinaryOperator *OBO =
+            dyn_cast<OverflowingBinaryOperator>(&I)) {
+      Scalar = Builder.CreateNoWrapBinOp(
+          BO->getOpcode(), ScalarOps[0], ScalarOps[1], OBO->hasNoUnsignedWrap(),
+          OBO->hasNoSignedWrap(), BO->getName() + ".scalar");
+    } else if (PossiblyDisjointInst *PDI = dyn_cast<PossiblyDisjointInst>(&I)) {
+      Scalar = Builder.CreateOr(ScalarOps[0], ScalarOps[1],
+                                BO->getName() + ".scalar", PDI->isDisjoint());
+    } else if (PossiblyExactOperator *PEO =
+                   dyn_cast<PossiblyExactOperator>(&I)) {
+      Scalar =
+          Builder.CreateExactBinOp(BO->getOpcode(), ScalarOps[0], ScalarOps[1],
+                                   PEO->isExact(), BO->getName() + ".scalar");
+    } else if (FPMathOperator *FPMO = dyn_cast<FPMathOperator>(&I)) {
+      Scalar = Builder.CreateBinOpFMF(BO->getOpcode(), ScalarOps[0],
+                                      ScalarOps[1], FPMO->getFastMathFlags(),
+                                      BO->getName() + ".scalar");
+    } else {
+      Scalar = Builder.CreateBinOp(BO->getOpcode(), ScalarOps[0], ScalarOps[1],
+                                   BO->getName() + ".scalar");
+    }
+  } else {
     Scalar = Builder.CreateIntrinsic(ScalarTy, II->getIntrinsicID(), ScalarOps);
-
-  Scalar->setName(I.getName() + ".scalar");
-
-  // All IR flags are safe to back-propagate. There is no potential for extra
-  // poison to be created by the scalar instruction.
-  if (auto *ScalarInst = dyn_cast<Instruction>(Scalar))
-    ScalarInst->copyIRFlags(&I);
+  }
 
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, *Index);
   replaceValue(I, *Insert);
@@ -1812,7 +1839,7 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
   ConstantRange ValidIndices(Zero, MaxElts);
   ConstantRange IdxRange(IntWidth, true);
 
-  if (isGuaranteedNotToBePoison(Idx, SQ.AC, SQ.CxtI, SQ.DT)) {
+  if (isGuaranteedNotToBePoison(Idx, SQ.AC, SQ.CtxI, SQ.DT)) {
     if (ValidIndices.contains(
             computeConstantRange(Idx, /*ForSigned=*/false, SQ)))
       return ScalarizationResult::safe();
@@ -2299,6 +2326,9 @@ bool VectorCombine::scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy,
   InstructionCost OriginalCost =
       TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
                           LI->getPointerAddressSpace(), CostKind);
+
+  if (!isa<FixedVectorType>(VecTy))
+    return false;
 
   Type *TargetScalarType = nullptr;
   unsigned VecBitWidth = DL->getTypeSizeInBits(VecTy);
@@ -3453,10 +3483,10 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   if (!isTriviallyVectorizable(IID))
     return false;
 
-  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I) {
-    Value *Arg0 = II0->getArgOperand(I);
-    Value *Arg1 = II1->getArgOperand(I);
-    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
+  for (unsigned Idx = 0, E = II0->arg_size(); Idx != E; ++Idx) {
+    Value *Arg0 = II0->getArgOperand(Idx);
+    Value *Arg1 = II1->getArgOperand(Idx);
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, Idx, &TTI)) {
       // Scalar operands must be identical.
       if (Arg0 != Arg1)
         return false;
@@ -3477,23 +3507,24 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   SmallVector<Type *> NewArgsTy;
   InstructionCost NewCost = 0;
   SmallDenseSet<std::pair<Value *, Value *>> SeenOperandPairs;
-  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I) {
-    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
-      NewArgsTy.push_back(II0->getArgOperand(I)->getType());
+  for (unsigned Idx = 0, E = II0->arg_size(); Idx != E; ++Idx) {
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, Idx, &TTI)) {
+      NewArgsTy.push_back(II0->getArgOperand(Idx)->getType());
     } else {
-      auto *VecTy = cast<FixedVectorType>(II0->getArgOperand(I)->getType());
+      auto *VecTy = cast<FixedVectorType>(II0->getArgOperand(Idx)->getType());
       auto *ArgTy = FixedVectorType::get(VecTy->getElementType(),
                                          ShuffleDstTy->getNumElements());
       NewArgsTy.push_back(ArgTy);
       std::pair<Value *, Value *> OperandPair =
-          std::make_pair(II0->getArgOperand(I), II1->getArgOperand(I));
+          std::make_pair(II0->getArgOperand(Idx), II1->getArgOperand(Idx));
       if (!SeenOperandPairs.insert(OperandPair).second) {
         // We've already computed the cost for this operand pair.
         continue;
       }
       NewCost += TTI.getShuffleCost(
           TargetTransformInfo::SK_PermuteTwoSrc, ArgTy, VecTy, CostKind,
-          OldMask, 0, nullptr, {II0->getArgOperand(I), II1->getArgOperand(I)});
+          OldMask, 0, nullptr,
+          {II0->getArgOperand(Idx), II1->getArgOperand(Idx)});
     }
   }
   IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy, NewArgsTy);
@@ -3513,24 +3544,25 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
 
   SmallVector<Value *> NewArgs;
   SmallDenseMap<std::pair<Value *, Value *>, Value *> ShuffleCache;
-  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I)
-    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
-      NewArgs.push_back(II0->getArgOperand(I));
+  for (unsigned Idx = 0, E = II0->arg_size(); Idx != E; ++Idx) {
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, Idx, &TTI)) {
+      NewArgs.push_back(II0->getArgOperand(Idx));
     } else {
       std::pair<Value *, Value *> OperandPair =
-          std::make_pair(II0->getArgOperand(I), II1->getArgOperand(I));
+          std::make_pair(II0->getArgOperand(Idx), II1->getArgOperand(Idx));
       auto It = ShuffleCache.find(OperandPair);
       if (It != ShuffleCache.end()) {
         // Reuse previously created shuffle for this operand pair.
         NewArgs.push_back(It->second);
         continue;
       }
-      Value *Shuf = Builder.CreateShuffleVector(II0->getArgOperand(I),
-                                                II1->getArgOperand(I), OldMask);
+      Value *Shuf = Builder.CreateShuffleVector(
+          II0->getArgOperand(Idx), II1->getArgOperand(Idx), OldMask);
       ShuffleCache[OperandPair] = Shuf;
       NewArgs.push_back(Shuf);
       Worklist.pushValue(Shuf);
     }
+  }
   Value *NewIntrinsic = Builder.CreateIntrinsic(ShuffleDstTy, IID, NewArgs);
 
   // Intersect flags from the old intrinsics.
@@ -5297,7 +5329,7 @@ static bool isKnownNonPositive(const Value *V, const SimplifyQuery &SQ,
     return false;
 
   auto NumSignBits = [&](const Value *X) {
-    return ComputeNumSignBits(X, SQ.DL, SQ.AC, SQ.CxtI, SQ.DT);
+    return ComputeNumSignBits(X, SQ.DL, SQ.AC, SQ.CtxI, SQ.DT);
   };
   if (NumSignBits(V) == V->getType()->getScalarSizeInBits())
     return true;
@@ -5925,8 +5957,10 @@ bool VectorCombine::shrinkType(Instruction &I) {
     std::swap(Op0, Op1);
   Value *NewBinOp =
       Builder.CreateBinOp((Instruction::BinaryOps)I.getOpcode(), Op0, Op1);
-  cast<Instruction>(NewBinOp)->copyIRFlags(&I);
-  cast<Instruction>(NewBinOp)->copyMetadata(I);
+  if (auto *NewBinOpI = dyn_cast<Instruction>(NewBinOp)) {
+    NewBinOpI->copyIRFlags(&I);
+    NewBinOpI->copyMetadata(I);
+  }
   Value *NewZExtr = Builder.CreateZExt(NewBinOp, BigTy);
   replaceValue(I, *NewZExtr);
   return true;
@@ -6153,11 +6187,13 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
       return false;
 
     unsigned ChainOperand = CurrentUses.front()->getOperandNo();
-    if (any_of(CurrentUses, [&](Use *U) {
-          auto *Inst = cast<Instruction>(U->getUser());
-          return Inst != FirstInst && (U->getOperandNo() != ChainOperand ||
-                                       !FirstInst->isSameOperationAs(Inst));
-        }))
+    bool MismatchedUse = any_of(CurrentUses, [&](Use *U) {
+      auto *Inst = cast<Instruction>(U->getUser());
+      return Inst != FirstInst && (U->getOperandNo() != ChainOperand ||
+                                   !FirstInst->isSameOperationAs(
+                                       Inst, Instruction::CompareCallTargets));
+    });
+    if (MismatchedUse)
       return false;
 
     auto GetSplatOrScalar = [](Value *V) {

@@ -20,7 +20,7 @@ subroutine pointer_forall_degenerated_assignment()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPlogical_forall_degenerated_assignment() {
-! CHECK:         %[[L_ALLOCA:.*]] = fir.alloca !fir.logical<4> {bindc_name = "l", uniq_name = "_QFlogical_forall_degenerated_assignmentEl"}
+! CHECK:         %[[L_ALLOCA:.*]] = fir.alloca !fir.logical<4> <{bindc_name = "l", uniq_name = "_QFlogical_forall_degenerated_assignmentEl"}>
 ! CHECK:         %[[L:.*]]:2 = hlfir.declare %[[L_ALLOCA]] {uniq_name = "_QFlogical_forall_degenerated_assignmentEl"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:         hlfir.forall lb {
 ! CHECK:           hlfir.yield %{{.*}} : i32

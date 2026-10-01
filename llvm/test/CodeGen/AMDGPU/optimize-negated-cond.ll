@@ -33,17 +33,13 @@ define amdgpu_kernel void @negated_cond(ptr addrspace(1) %arg1) {
 ; GCN-NEXT:  .LBB0_3: ; %Flow1
 ; GCN-NEXT:    ; in Loop: Header=BB0_4 Depth=2
 ; GCN-NEXT:    s_and_b64 s[16:17], s[16:17], exec
-; GCN-NEXT:    s_cselect_b32 s13, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s13, 1
-; GCN-NEXT:    s_cbranch_scc0 .LBB0_1
+; GCN-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GCN-NEXT:  .LBB0_4: ; %bb2
 ; GCN-NEXT:    ; Parent Loop BB0_2 Depth=1
 ; GCN-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GCN-NEXT:    s_lshl_b32 s12, s12, 5
 ; GCN-NEXT:    s_and_b64 s[14:15], s[8:9], exec
-; GCN-NEXT:    s_cselect_b32 s13, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s13, 1
-; GCN-NEXT:    s_cbranch_scc0 .LBB0_6
+; GCN-NEXT:    s_cbranch_scc1 .LBB0_6
 ; GCN-NEXT:  ; %bb.5: ; in Loop: Header=BB0_4 Depth=2
 ; GCN-NEXT:    s_mov_b64 s[16:17], s[10:11]
 ; GCN-NEXT:    s_branch .LBB0_7
@@ -54,11 +50,9 @@ define amdgpu_kernel void @negated_cond(ptr addrspace(1) %arg1) {
 ; GCN-NEXT:  .LBB0_7: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB0_4 Depth=2
 ; GCN-NEXT:    s_and_b64 s[16:17], s[16:17], exec
-; GCN-NEXT:    s_cselect_b32 s13, 1, 0
 ; GCN-NEXT:    s_mov_b64 s[14:15], -1
-; GCN-NEXT:    s_cmp_lg_u32 s13, 1
 ; GCN-NEXT:    s_mov_b64 s[16:17], -1
-; GCN-NEXT:    s_cbranch_scc1 .LBB0_3
+; GCN-NEXT:    s_cbranch_scc0 .LBB0_3
 ; GCN-NEXT:  ; %bb.8: ; %bb4
 ; GCN-NEXT:    ; in Loop: Header=BB0_4 Depth=2
 ; GCN-NEXT:    s_ashr_i32 s13, s12, 31
@@ -121,7 +115,7 @@ define amdgpu_kernel void @negated_cond_dominated_blocks(ptr addrspace(1) %arg1)
 ; GCN-NEXT:    s_cmp_eq_u32 s4, 32
 ; GCN-NEXT:    s_mov_b32 s5, s4
 ; GCN-NEXT:    buffer_store_dword v0, v[1:2], s[0:3], 0 addr64
-; GCN-NEXT:    s_cbranch_scc1 .LBB1_7
+; GCN-NEXT:    s_cbranch_scc1 .LBB1_6
 ; GCN-NEXT:  .LBB1_2: ; %bb4
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_mov_b64 vcc, vcc
@@ -130,22 +124,20 @@ define amdgpu_kernel void @negated_cond_dominated_blocks(ptr addrspace(1) %arg1)
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_add_i32 s4, s5, 1
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0
+; GCN-NEXT:    s_and_b64 s[6:7], s[6:7], exec
+; GCN-NEXT:    s_cbranch_scc0 .LBB1_1
 ; GCN-NEXT:    s_branch .LBB1_5
 ; GCN-NEXT:  .LBB1_4: ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_mov_b64 s[6:7], -1
 ; GCN-NEXT:    ; implicit-def: $sgpr4
-; GCN-NEXT:  .LBB1_5: ; %Flow
-; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_and_b64 s[6:7], s[6:7], exec
-; GCN-NEXT:    s_cselect_b32 s6, 1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s6, 1
-; GCN-NEXT:    s_cbranch_scc1 .LBB1_1
-; GCN-NEXT:  ; %bb.6: ; %bb5
+; GCN-NEXT:    s_cbranch_scc0 .LBB1_1
+; GCN-NEXT:  .LBB1_5: ; %bb5
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_lshl_b32 s4, s5, 5
 ; GCN-NEXT:    s_or_b32 s4, s4, 1
 ; GCN-NEXT:    s_branch .LBB1_1
-; GCN-NEXT:  .LBB1_7: ; %bb3
+; GCN-NEXT:  .LBB1_6: ; %bb3
 ; GCN-NEXT:    s_endpgm
 bb:
   br label %bb2

@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
 // BSS:         Name: .data
 // BSS-NEXT:    VirtualSize: 0x4
 // BSS-NEXT:    VirtualAddress:
-// BSS-NEXT:    RawDataSize: 0
+// BSS-NEXT:    RawDataSize: 0x0
 // BSS-NEXT:    PointerToRawData: 0x0
 // BSS-NEXT:    PointerToRelocations: 0x0
 // BSS-NEXT:    PointerToLineNumbers: 0x0

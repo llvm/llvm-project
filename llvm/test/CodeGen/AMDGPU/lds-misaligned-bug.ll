@@ -6,7 +6,6 @@
 ; RUN: llc -mtriple=amdgpu10.10 -mattr=+cumode,+unaligned-access-mode < %s | FileCheck -check-prefix=UNALIGNED-GFX10 %s
 ; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck -check-prefix=ALIGNED-GFX11 %s
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=+cumode < %s | FileCheck -check-prefix=ALIGNED-GFX11 %s
-; RUN: llc -mtriple=amdgpu11.00 -mattr=+cumode -early-live-intervals < %s | FileCheck -check-prefix=ALIGNED-GFX11 %s
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=+cumode,+unaligned-access-mode < %s | FileCheck -check-prefix=UNALIGNED-GFX11 %s
 
 define amdgpu_kernel void @test_local_misaligned_v2(ptr addrspace(3) %arg) {

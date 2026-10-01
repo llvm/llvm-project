@@ -36,9 +36,9 @@ using namespace ompx;
     KernelEnvironmentPtr;
 
 /// The kernel launch environment passed as argument to the kernel by the
-/// runtime.
-[[clang::loader_uninitialized]] static Local<KernelLaunchEnvironmentTy *>
-    KernelLaunchEnvironmentPtr;
+/// runtime. (The runtime allocates it in device global memory.)
+[[clang::loader_uninitialized]] static Local<
+    Global<KernelLaunchEnvironmentTy> *> KernelLaunchEnvironmentPtr;
 
 /// The pointer type for dynamic shared memory. This is important to keep
 /// the alignment and address space information.
@@ -295,7 +295,7 @@ void state::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
     TeamState.init(IsSPMD);
     ThreadStates = nullptr;
     KernelEnvironmentPtr = &KernelEnvironment;
-    KernelLaunchEnvironmentPtr = KLE;
+    KernelLaunchEnvironmentPtr = (Global<KernelLaunchEnvironmentTy> *)KLE;
   }
 }
 
@@ -303,7 +303,7 @@ KernelEnvironmentTy &state::getKernelEnvironment() {
   return *KernelEnvironmentPtr;
 }
 
-KernelLaunchEnvironmentTy &state::getKernelLaunchEnvironment() {
+Global<KernelLaunchEnvironmentTy> &state::getKernelLaunchEnvironment() {
   return *KernelLaunchEnvironmentPtr;
 }
 
@@ -382,6 +382,14 @@ void omp_set_dynamic(int V) {}
 int omp_get_dynamic(void) { return 0; }
 
 void omp_set_num_threads(int V) { icv::NThreads = V; }
+
+void kmp_set_num_threads_8(int64_t V) {
+  if (V > INT32_MAX)
+    V = INT32_MAX;
+  else if (V < INT32_MIN)
+    V = INT32_MIN;
+  omp_set_num_threads((int)V);
+}
 
 int omp_get_max_threads(void) {
   int NT = icv::NThreads;

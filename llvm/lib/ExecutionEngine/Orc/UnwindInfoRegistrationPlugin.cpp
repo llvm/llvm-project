@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MachOObjectFormat.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/IR/Module.h"
@@ -24,10 +25,10 @@ UnwindInfoRegistrationPlugin::Create(
 
   ExecutorAddr RegisterSections, DeregisterSections;
 
-  auto &EPC = ES.getExecutorProcessControl();
-  if (auto Err = EPC.getBootstrapSymbols(
-          {{RegisterSections, SNs.RegisterSectionsName},
-           {DeregisterSections, SNs.DeregisterSectionsName}}))
+  if (auto Err = lookupAndApply(
+          ES.getBootstrapJITDylib(),
+          {recordAddr(SNs.RegisterSectionsName, &RegisterSections),
+           recordAddr(SNs.DeregisterSectionsName, &DeregisterSections)}))
     return std::move(Err);
 
   return std::make_shared<UnwindInfoRegistrationPlugin>(ES, RegisterSections,

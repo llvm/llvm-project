@@ -76,6 +76,17 @@ scf::ExecuteRegionOp
 convertUnstructuredACCLoopToSCFExecuteRegion(LoopOp loopOp,
                                              RewriterBase &rewriter);
 
+/// Calculate trip count for a loop: (ub - lb + step) / step.
+/// If \p inclusiveUpperbound is false, subtracts 1 from \p ub first.
+/// Operands are cast to index type.
+Value calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
+                         Value step, bool inclusiveUpperbound);
+
+/// Normalize IV uses after converting to normalized loop form (lb=0, step=1).
+/// Replaces uses of \p iv with `iv * origStep + origLB`.
+void normalizeIVUses(OpBuilder &b, Location loc, Value iv, Value origLB,
+                     Value origStep);
+
 /// Record on a collapsed loop how many original loops were folded into it.
 void setCollapseCountAttr(Operation *op, uint64_t count);
 
