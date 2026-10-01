@@ -994,12 +994,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.hasBF16PackedInsts()) {
     // Promote scalar bf16 operations to v2bf16 (packed) operations
-    FPOpActions.customFor({BF16}).legalFor({V2BF16}).clampMaxNumElementsStrict(
-        0, BF16, 2);
-    FCanonicalizeActions.customFor({BF16})
+    FPOpActions.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
         .legalFor({V2BF16})
         .clampMaxNumElementsStrict(0, BF16, 2);
-    StrictFPOpActions.customFor({BF16})
+    FCanonicalizeActions.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+        .legalFor({V2BF16})
+        .clampMaxNumElementsStrict(0, BF16, 2);
+    StrictFPOpActions.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
         .legalFor({V2BF16})
         .clampMaxNumElementsStrict(0, BF16, 2);
   } else {
@@ -1062,7 +1063,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // V2BF16
   if (ST.hasBF16PackedInsts()) {
     MinNumMaxNumIeee.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
-    MinNumMaxNum.customFor({BF16})
+    MinNumMaxNum.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
         .customFor({V2BF16})
         .clampMaxNumElementsStrict(0, BF16, 2);
   } else {
@@ -1205,8 +1206,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   if (ST.hasBF16PackedInsts()) {
-    FSubActions.customFor({BF16}).lowerFor({V2BF16}).clampMaxNumElementsStrict(
-        0, BF16, 2);
+    FSubActions.moreElementsIf(typeIs(0, BF16), changeTo(0, V2BF16))
+        .lowerFor({V2BF16})
+        .clampMaxNumElementsStrict(0, BF16, 2);
   } else {
     FSubActions.widenScalarFor({BF16}, changeElementTo(0, F32));
   }
@@ -2440,23 +2442,6 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeTrap(Helper, MI);
   case TargetOpcode::G_DEBUGTRAP:
     return legalizeDebugTrap(MI, MRI, B);
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FMA:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_FCANONICALIZE:
-  case TargetOpcode::G_STRICT_FADD:
-  case TargetOpcode::G_STRICT_FMUL:
-  case TargetOpcode::G_STRICT_FMA:
-  case TargetOpcode::G_STRICT_FSUB: {
-    Register Dst = MI.getOperand(0).getReg();
-    if (ST.hasBF16PackedInsts() && MRI.getType(Dst) == BF16) {
-      // Use LegalizerHelper to promote to v2bf16
-      return Helper.moreElementsVector(MI, 0, V2BF16) ==
-             LegalizerHelper::Legalized;
-    }
-    return false;
-  }
   default:
     return false;
   }
@@ -3031,14 +3016,7 @@ bool AMDGPULegalizerInfo::legalizeFPTOI(MachineInstr &MI,
 bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(LegalizerHelper &Helper,
                                                MachineInstr &MI) const {
   MachineFunction &MF = Helper.MIRBuilder.getMF();
-  MachineRegisterInfo &MRI = *Helper.MIRBuilder.getMRI();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-
-  Register Dst = MI.getOperand(0).getReg();
-  if (ST.hasBF16PackedInsts() && MRI.getType(Dst) == BF16) {
-    return Helper.moreElementsVector(MI, 0, V2BF16) ==
-           LegalizerHelper::Legalized;
-  }
 
   // With ieee_mode disabled, the instructions have the correct behavior.
   if (!MFI->getMode().IEEE)
