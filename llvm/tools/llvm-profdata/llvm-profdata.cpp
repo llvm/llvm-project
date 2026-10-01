@@ -3536,15 +3536,15 @@ static int show_main(StringRef ProgName) {
   return showMemProfProfile(SFormat, OS);
 }
 
-static int order_main() {
+static Error order_main() {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
-    exitWithErrorCode(EC, OutputFilename);
+    return makeError(EC, OutputFilename);
   auto FS = vfs::getRealFileSystem();
   auto ReaderOrErr = InstrProfReader::create(Filename, *FS);
   if (Error E = ReaderOrErr.takeError())
-    exitWithError(std::move(E), Filename);
+    return makeError(std::move(E), Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
   for (auto &I : *Reader) {
@@ -3553,7 +3553,7 @@ static int order_main() {
   }
   ArrayRef Traces = Reader->getTemporalProfTraces();
   if (NumTestTraces && NumTestTraces >= Traces.size())
-    exitWithError(
+    return makeError(
         "--" + NumTestTraces.ArgStr +
         " must be smaller than the total number of traces: expected: < " +
         Twine(Traces.size()) + ", actual: " + Twine(NumTestTraces));
@@ -3598,7 +3598,7 @@ static int order_main() {
       OS << "# " << Filename << "\n";
     OS << ParsedFuncName << "\n";
   }
-  return 0;
+  return Error::success();
 }
 
 int main(int argc, const char *argv[]) {
@@ -3618,7 +3618,7 @@ int main(int argc, const char *argv[]) {
     return show_main(ProgName);
 
   if (OrderSubcommand)
-    return order_main();
+    return reportError(order_main());
 
   if (OverlapSubcommand)
     return overlap_main();
