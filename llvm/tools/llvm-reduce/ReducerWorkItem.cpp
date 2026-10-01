@@ -32,6 +32,7 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -835,7 +836,8 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
   auto MMM = std::make_unique<ReducerWorkItem>();
 
   if (IsMIR) {
-    auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
+    auto FileOrErr =
+        MemoryBuffer::getFileOrSTDIN(Filename, sys::fs::OF_TextWithCRLF);
     if (std::error_code EC = FileOrErr.getError()) {
       WithColor::error(errs(), ToolName) << EC.message() << '\n';
       return {nullptr, false};

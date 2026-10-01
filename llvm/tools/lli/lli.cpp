@@ -333,7 +333,7 @@ public:
       return nullptr;
     // Load the object from the cache filename
     ErrorOr<std::unique_ptr<MemoryBuffer>> IRObjectBuffer =
-        MemoryBuffer::getFile(CacheName, /*IsText=*/false,
+        MemoryBuffer::getFile(CacheName, sys::fs::OF_None,
                               /*RequiresNullTerminator=*/false);
     // If the file isn't there, that's OK.
     if (!IRObjectBuffer)

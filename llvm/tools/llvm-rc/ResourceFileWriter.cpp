@@ -1567,7 +1567,7 @@ ResourceFileWriter::loadFile(StringRef File) const {
   SmallString<128> Cwd;
 
   auto Open = [&](StringRef Resolved) {
-    auto Buffer = MemoryBuffer::getFile(Resolved, /*IsText=*/false,
+    auto Buffer = MemoryBuffer::getFile(Resolved, sys::fs::OF_None,
                                         /*RequiresNullTerminator=*/false);
     if (Buffer && Params.ShowIncludes)
       errs() << "Note: including file: " << Resolved << "\n";

@@ -2327,7 +2327,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
     ExitOnError ExitOnErr("-lowertypetests-read-summary: " + ClReadSummary +
                           ": ");
     auto ReadSummaryFile = ExitOnErr(errorOrToExpected(
-        MemoryBuffer::getFile(ClReadSummary, /*IsText=*/true)));
+        MemoryBuffer::getFile(ClReadSummary, sys::fs::OF_TextWithCRLF)));
     // TODO: Convert the rest of tests (some YAML features are missing from
     // textual summary assembly) and remove YAML from this file.
     if (ReadSummaryFile->getBuffer().starts_with("---")) {

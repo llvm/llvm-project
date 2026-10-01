@@ -63,7 +63,7 @@ static Error dumpObject(const ObjectFile &Obj, raw_ostream &OS) {
 
 static Error dumpInput(StringRef File, unsigned RawSegment, raw_ostream &OS) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(File, /*IsText=*/false,
+      MemoryBuffer::getFileOrSTDIN(File, sys::fs::OF_None,
                                    /*RequiresNullTerminator=*/false);
   if (std::error_code EC = FileOrErr.getError())
     return errorCodeToError(EC);
