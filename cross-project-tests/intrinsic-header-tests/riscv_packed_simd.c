@@ -2632,6 +2632,22 @@ int32x2_t test_pwmul_i32x2(int16x2_t rs1, int16x2_t rs2) {
   return __riscv_pwmul_i32x2(rs1, rs2);
 }
 
+// CHECK-LABEL: test_pmqwacc_i32x2:
+// RV32:        pmqwacc.h{{[[:space:]]}}
+// RV64:        zip16p{{[[:space:]]}}
+// RV64:        pmqacc.w.h01{{[[:space:]]}}
+int32x2_t test_pmqwacc_i32x2(int32x2_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pmqwacc_i32x2(rd, rs1, rs2);
+}
+
+// CHECK-LABEL: test_pmqrwacc_i32x2:
+// RV32:        pmqrwacc.h{{[[:space:]]}}
+// RV64:        zip16p{{[[:space:]]}}
+// RV64:        pmqracc.w.h01{{[[:space:]]}}
+int32x2_t test_pmqrwacc_i32x2(int32x2_t rd, int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pmqrwacc_i32x2(rd, rs1, rs2);
+}
+
 // CHECK-LABEL: test_pwmulu_u16x4:
 // RV32:        pwmulu.b
 // RV64:        zip8p
