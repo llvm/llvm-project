@@ -60,9 +60,10 @@
 //
 // Replacement of non-kernel LDS accesses:
 //    Multiple kernels can access the same non-kernel function.
-//    All the kernels accessing LDS through non-kernels are sorted and
-//    assigned a kernel-id. All the LDS globals accessed by non-kernels
-//    are sorted. This information is used to build two tables:
+//    All the kernels accessing LDS through non-kernels, or reaching
+//    non-kernels with LDS instructions, are sorted and assigned a kernel-id.
+//    All the LDS globals accessed by non-kernels are sorted. This
+//    information is used to build two tables:
 //    - Base table:
 //        Base table will have single row, with elements of the row
 //        placed as per kernel ID. Each element in the row corresponds
@@ -95,6 +96,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
@@ -160,7 +162,7 @@ struct AsanInstrumentInfo {
 struct FunctionsAndLDSAccess {
   MapVector<Function *, KernelLDSParameters> KernelToLDSParametersMap;
   SetVector<Function *> KernelsWithIndirectLDSAccess;
-  SetVector<Function *> NonKernelsWithLDSArgument;
+  SetVector<Function *> NonKernelsWithLDSInstructions;
   SetVector<GlobalVariable *> AllNonKernelLDSAccess;
   FunctionVariableMap NonKernelToLDSAccessMap;
 };
@@ -171,7 +173,7 @@ public:
       : M(Mod), IRB(M.getContext()), DTCallback(Callback) {}
   bool run();
   void getUsesOfLDSByNonKernels();
-  void getNonKernelsWithLDSArguments(const CallGraph &CG);
+  void getNonKernelsWithLDSInstructions(const CallGraph &CG);
   SetVector<Function *>
   getOrderedIndirectLDSAccessingKernels(SetVector<Function *> &Kernels);
   SetVector<GlobalVariable *>
@@ -251,35 +253,92 @@ SetVector<Function *> AMDGPUSwLowerLDS::getOrderedIndirectLDSAccessingKernels(
   return OrderedKernels;
 }
 
-void AMDGPUSwLowerLDS::getNonKernelsWithLDSArguments(const CallGraph &CG) {
-  // Among the kernels accessing LDS, get list of
-  // Non-kernels to which a call is made and a ptr
-  // to addrspace(3) is passed as argument.
-  for (auto &K : FuncLDSAccessInfo.KernelToLDSParametersMap) {
-    Function *Func = K.first;
-    const CallGraphNode *CGN = CG[Func];
-    if (!CGN)
+// LDS memory operations and casts between flat and LDS.
+static bool isLDSMemoryInstruction(const Instruction &Inst) {
+  if (auto *LI = dyn_cast<LoadInst>(&Inst))
+    return LI->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+  if (auto *SI = dyn_cast<StoreInst>(&Inst))
+    return SI->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+  if (auto *RMW = dyn_cast<AtomicRMWInst>(&Inst))
+    return RMW->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+  if (auto *XCHG = dyn_cast<AtomicCmpXchgInst>(&Inst))
+    return XCHG->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+  if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&Inst)) {
+    unsigned SrcAS = ASC->getSrcAddressSpace();
+    unsigned DstAS = ASC->getDestAddressSpace();
+    return (SrcAS == AMDGPUAS::LOCAL_ADDRESS &&
+            DstAS == AMDGPUAS::FLAT_ADDRESS) ||
+           (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
+            DstAS == AMDGPUAS::LOCAL_ADDRESS);
+  }
+  if (auto *MI = dyn_cast<AnyMemIntrinsic>(&Inst)) {
+    if (MI->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+      return true;
+    if (auto *MTI = dyn_cast<AnyMemTransferInst>(MI))
+      return MTI->getSourceAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+  }
+  return false;
+}
+
+void AMDGPUSwLowerLDS::getNonKernelsWithLDSInstructions(const CallGraph &CG) {
+  // Non-kernels with LDS instructions find the malloc buffer through the base
+  // table, so every kernel reaching them needs a kernel ID, even one without
+  // LDS.
+  DenseMap<Function *, bool> HasLDSInstructionsCache;
+  auto HasLDSInstructions = [&](Function *F) {
+    auto [It, Inserted] = HasLDSInstructionsCache.try_emplace(F, false);
+    if (Inserted) {
+      It->second = any_of(instructions(*F), isLDSMemoryInstruction);
+      if (It->second)
+        FuncLDSAccessInfo.NonKernelsWithLDSInstructions.insert(F);
+    }
+    return It->second;
+  };
+
+  // Indirect calls may reach any address taken non-kernel.
+  SmallVector<Function *> AddressTakenFuncs;
+  for (Function &F : M)
+    if (!F.isDeclaration() && !isKernel(F) &&
+        F.hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/false,
+                          /*IgnoreAssumeLikeCalls=*/false,
+                          /*IgnoreLLVMUsed=*/true))
+      AddressTakenFuncs.push_back(&F);
+
+  for (Function &Kernel : M) {
+    if (Kernel.isDeclaration() || !isKernel(Kernel))
       continue;
-    for (auto &I : *CGN) {
-      CallGraphNode *CallerCGN = I.second;
-      Function *CalledFunc = CallerCGN->getFunction();
-      if (!CalledFunc || CalledFunc->isDeclaration())
-        continue;
-      if (AMDGPU::isKernel(*CalledFunc))
-        continue;
-      for (auto AI = CalledFunc->arg_begin(), E = CalledFunc->arg_end();
-           AI != E; ++AI) {
-        Type *ArgTy = (*AI).getType();
-        if (!ArgTy->isPointerTy())
+
+    bool ReachesLDSInstructions = false;
+    bool SeenUnknownCall = false;
+    SmallVector<Function *> WorkList = {&Kernel};
+    SmallPtrSet<Function *, 8> Visited;
+    auto Visit = [&](Function *Callee) {
+      if (Callee->isDeclaration() || isKernel(*Callee) ||
+          !Visited.insert(Callee).second)
+        return;
+      ReachesLDSInstructions |= HasLDSInstructions(Callee);
+      WorkList.push_back(Callee);
+    };
+
+    while (!WorkList.empty()) {
+      Function *F = WorkList.pop_back_val();
+      for (const CallGraphNode::CallRecord &CallRecord : *CG[F]) {
+        if (!CallRecord.second)
           continue;
-        if (ArgTy->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
+        if (Function *Callee = CallRecord.second->getFunction()) {
+          Visit(Callee);
           continue;
-        FuncLDSAccessInfo.NonKernelsWithLDSArgument.insert(CalledFunc);
-        // Also add the Calling function to KernelsWithIndirectLDSAccess list
-        // so that base table of LDS is generated.
-        FuncLDSAccessInfo.KernelsWithIndirectLDSAccess.insert(Func);
+        }
+        if (SeenUnknownCall)
+          continue;
+        SeenUnknownCall = true;
+        for (Function *PotentialCallee : AddressTakenFuncs)
+          Visit(PotentialCallee);
       }
     }
+
+    if (ReachesLDSInstructions)
+      FuncLDSAccessInfo.KernelsWithIndirectLDSAccess.insert(&Kernel);
   }
 }
 
@@ -633,39 +692,9 @@ static DebugLoc getOrCreateDebugLoc(const Instruction *InsertBefore,
 
 void AMDGPUSwLowerLDS::getLDSMemoryInstructions(
     Function *Func, SetVector<Instruction *> &LDSInstructions) {
-  for (BasicBlock &BB : *Func) {
-    for (Instruction &Inst : BB) {
-      if (LoadInst *LI = dyn_cast<LoadInst>(&Inst)) {
-        if (LI->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
-          LDSInstructions.insert(&Inst);
-      } else if (StoreInst *SI = dyn_cast<StoreInst>(&Inst)) {
-        if (SI->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
-          LDSInstructions.insert(&Inst);
-      } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(&Inst)) {
-        if (RMW->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
-          LDSInstructions.insert(&Inst);
-      } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(&Inst)) {
-        if (XCHG->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
-          LDSInstructions.insert(&Inst);
-      } else if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(&Inst)) {
-        unsigned SrcAS = ASC->getSrcAddressSpace();
-        unsigned DstAS = ASC->getDestAddressSpace();
-        if ((SrcAS == AMDGPUAS::LOCAL_ADDRESS &&
-             DstAS == AMDGPUAS::FLAT_ADDRESS) ||
-            (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
-             DstAS == AMDGPUAS::LOCAL_ADDRESS))
-          LDSInstructions.insert(&Inst);
-      } else if (AnyMemIntrinsic *MI = dyn_cast<AnyMemIntrinsic>(&Inst)) {
-        if (MI->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-          LDSInstructions.insert(&Inst);
-        } else if (auto *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
-          if (MTI->getSourceAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
-            LDSInstructions.insert(&Inst);
-        }
-      } else
-        continue;
-    }
-  }
+  for (Instruction &Inst : instructions(Func))
+    if (isLDSMemoryInstruction(Inst))
+      LDSInstructions.insert(&Inst);
 }
 
 Value *AMDGPUSwLowerLDS::getTranslatedGlobalMemoryPtrOfLDS(Value *LoadMallocPtr,
@@ -1035,14 +1064,19 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
 Constant *AMDGPUSwLowerLDS::getAddressesOfVariablesInKernel(
     Function *Func, SetVector<GlobalVariable *> &Variables) {
   Type *Int32Ty = IRB.getInt32Ty();
-  auto &LDSParams = FuncLDSAccessInfo.KernelToLDSParametersMap[Func];
-
-  GlobalVariable *SwLDSMetadata = LDSParams.SwLDSMetadata;
-  assert(SwLDSMetadata);
-  auto *SwLDSMetadataStructType =
-      cast<StructType>(SwLDSMetadata->getValueType());
   ArrayType *KernelOffsetsType =
       ArrayType::get(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS), Variables.size());
+
+  // Kernels with no direct or indirect LDS uses never read their offset row.
+  auto KernelIt = FuncLDSAccessInfo.KernelToLDSParametersMap.find(Func);
+  if (KernelIt == FuncLDSAccessInfo.KernelToLDSParametersMap.end() ||
+      !KernelIt->second.SwLDSMetadata)
+    return PoisonValue::get(KernelOffsetsType);
+
+  auto &LDSParams = KernelIt->second;
+  GlobalVariable *SwLDSMetadata = LDSParams.SwLDSMetadata;
+  auto *SwLDSMetadataStructType =
+      cast<StructType>(SwLDSMetadata->getValueType());
 
   SmallVector<Constant *> Elements;
   for (auto *GV : Variables) {
@@ -1073,13 +1107,18 @@ void AMDGPUSwLowerLDS::buildNonKernelLDSBaseTable(
   if (Kernels.empty())
     return;
   const size_t NumberKernels = Kernels.size();
-  ArrayType *AllKernelsOffsetsType =
-      ArrayType::get(IRB.getPtrTy(AMDGPUAS::LOCAL_ADDRESS), NumberKernels);
+  PointerType *LDSPtrTy = IRB.getPtrTy(AMDGPUAS::LOCAL_ADDRESS);
+  ArrayType *AllKernelsOffsetsType = ArrayType::get(LDSPtrTy, NumberKernels);
   std::vector<Constant *> OverallConstantExprElts(NumberKernels);
   for (size_t i = 0; i < NumberKernels; i++) {
-    Function *Func = Kernels[i];
-    auto &LDSParams = FuncLDSAccessInfo.KernelToLDSParametersMap[Func];
-    OverallConstantExprElts[i] = LDSParams.SwLDS;
+    // Null for kernels without LDS, they reach LDS instructions only on
+    // invalid paths.
+    Constant *SwLDS = ConstantPointerNull::get(LDSPtrTy);
+    auto It = FuncLDSAccessInfo.KernelToLDSParametersMap.find(Kernels[i]);
+    if (It != FuncLDSAccessInfo.KernelToLDSParametersMap.end() &&
+        It->second.SwLDS)
+      SwLDS = It->second.SwLDS;
+    OverallConstantExprElts[i] = SwLDS;
   }
   Constant *init =
       ConstantArray::get(AllKernelsOffsetsType, OverallConstantExprElts);
@@ -1291,9 +1330,6 @@ bool AMDGPUSwLowerLDS::run() {
         CG, Func,
         {"amdgpu-no-workitem-id-x", "amdgpu-no-workitem-id-y",
          "amdgpu-no-workitem-id-z", "amdgpu-no-heap-ptr"});
-    if (!LDSParams.IndirectAccess.StaticLDSGlobals.empty() ||
-        !LDSParams.IndirectAccess.DynamicLDSGlobals.empty())
-      removeFnAttrFromReachable(CG, Func, {"amdgpu-no-lds-kernel-id"});
     reorderStaticDynamicIndirectLDSSet(LDSParams);
     buildSwLDSGlobal(Func);
     buildSwDynLDSGlobal(Func);
@@ -1308,12 +1344,15 @@ bool AMDGPUSwLowerLDS::run() {
   // Get the Uses of LDS from non-kernels.
   getUsesOfLDSByNonKernels();
 
-  // Get non-kernels with LDS ptr as argument and called by kernels.
-  getNonKernelsWithLDSArguments(CG);
+  // Get non-kernels with LDS instructions and the kernels reaching them.
+  getNonKernelsWithLDSInstructions(CG);
+
+  for (Function *Func : FuncLDSAccessInfo.KernelsWithIndirectLDSAccess)
+    removeFnAttrFromReachable(CG, Func, {"amdgpu-no-lds-kernel-id"});
 
   // Lower LDS accesses in non-kernels.
   if (!FuncLDSAccessInfo.NonKernelToLDSAccessMap.empty() ||
-      !FuncLDSAccessInfo.NonKernelsWithLDSArgument.empty()) {
+      !FuncLDSAccessInfo.NonKernelsWithLDSInstructions.empty()) {
     NonKernelLDSParameters NKLDSParams;
     NKLDSParams.OrderedKernels = getOrderedIndirectLDSAccessingKernels(
         FuncLDSAccessInfo.KernelsWithIndirectLDSAccess);
@@ -1328,12 +1367,11 @@ bool AMDGPUSwLowerLDS::run() {
           std::vector<GlobalVariable *>(LDSGlobals.begin(), LDSGlobals.end()));
       lowerNonKernelLDSAccesses(Func, OrderedLDSGlobals, NKLDSParams);
     }
-    for (Function *Func : FuncLDSAccessInfo.NonKernelsWithLDSArgument) {
-      auto &K = FuncLDSAccessInfo.NonKernelToLDSAccessMap;
-      if (K.contains(Func))
+    for (Function *Func : FuncLDSAccessInfo.NonKernelsWithLDSInstructions) {
+      if (FuncLDSAccessInfo.NonKernelToLDSAccessMap.contains(Func))
         continue;
-      SetVector<llvm::GlobalVariable *> Vec;
-      lowerNonKernelLDSAccesses(Func, Vec, NKLDSParams);
+      SetVector<GlobalVariable *> NoLDSGlobals;
+      lowerNonKernelLDSAccesses(Func, NoLDSGlobals, NKLDSParams);
     }
     Changed = true;
   }
