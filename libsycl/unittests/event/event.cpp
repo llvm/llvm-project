@@ -88,10 +88,15 @@ TEST(Event, WaitAPIsForDefaultConstructedEvent) {
   EXPECT_NO_THROW(event::wait_and_throw(EventList));
 }
 
+struct TestKernelWithDeps;
+struct TestKernelWithDepsKernelInfo {
+  using kernel_name = TestKernelWithDeps;
+  static constexpr char kernel_entry_point_name[] = "TestKernelWithDeps";
+};
+
 TEST(Event, GetWaitListWithSetKernelParametersAndLaunch) {
-  static constexpr char TestKernelWithDeps[] = "TestKernelWithDeps";
   mock::MockWrapper Mock;
-  sycl::unittests::ScopedKernelRegistration Registration{TestKernelWithDeps};
+  sycl::unittests::ScopedKernelRegistration Registration{"TestKernelWithDeps"};
 
   platform P = device(default_selector_v).get_platform();
   auto &PlatformImpl = *detail::getSyclObjImpl(P);
@@ -122,7 +127,7 @@ TEST(Event, GetWaitListWithSetKernelParametersAndLaunch) {
   std::vector<event> DepEvents = {Dep1, Dep2};
 
   Q.setKernelLaunchParams(DepEvents, {});
-  Q.sycl_kernel_launch<class TestKernelWithDeps>(TestKernelWithDeps, Data);
+  Q.sycl_kernel_launch<TestKernelWithDepsKernelInfo>(Data);
   event KernelEvent = Q.getLastEvent();
 
   std::vector<event> WaitList = KernelEvent.get_wait_list();
