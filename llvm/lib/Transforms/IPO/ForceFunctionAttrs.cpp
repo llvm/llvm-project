@@ -47,15 +47,13 @@ static cl::opt<std::string> CSVFilePath(
 static bool hasConflictingFnAttr(Attribute::AttrKind Kind, Function &F) {
   switch (Kind) {
   case Attribute::AlwaysInline:
-    return F.hasFnAttribute(Attribute::NoInline) ||
-           F.hasFnAttribute(Attribute::OptimizeNone);
+    return F.hasFnAttribute(Attribute::NoInline);
 
   case Attribute::NoInline:
     return F.hasFnAttribute(Attribute::AlwaysInline);
 
   case Attribute::OptimizeNone:
-    return F.hasFnAttribute(Attribute::AlwaysInline) ||
-           F.hasFnAttribute(Attribute::MinSize) ||
+    return F.hasFnAttribute(Attribute::MinSize) ||
            F.hasFnAttribute(Attribute::OptimizeForSize) ||
            F.hasFnAttribute(Attribute::OptimizeForDebugging);
 
