@@ -454,8 +454,8 @@ static WebKitAnnotation annotationType(StringRef Annotation) {
 }
 
 static WebKitAnnotation annotationForFunction(const FunctionDecl *FD) {
-  if (isa<CXXRecordDecl>(FD->getParent())) { // FIXME: Add support for annotate
-                                             // on non-C++ functions.
+  // FIXME: Add support for annotate on non-C++ functions.
+  if (isa<CXXMethodDecl>(FD)) {
     for (auto *Attr : FD->attrs()) {
       auto *AnnoAttr = dyn_cast_or_null<AnnotateAttr>(Attr);
       if (!AnnoAttr)
