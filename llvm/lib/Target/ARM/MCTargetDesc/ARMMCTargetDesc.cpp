@@ -16,7 +16,6 @@
 #include "ARMInstPrinter.h"
 #include "ARMMCAsmInfo.h"
 #include "TargetInfo/ARMTargetInfo.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -145,8 +144,7 @@ std::string ARM_MC::ParseARMTriple(const Triple &TT, StringRef CPU) {
 
   ARM::ArchKind ArchID = ARM::parseArch(TT.getArchName());
   if (ArchID != ARM::ArchKind::INVALID &&  (CPU.empty() || CPU == "generic"))
-    ARMArchFeature =
-        (Twine(ARMArchFeature) + "+" + ARM::getArchName(ArchID)).str();
+    ARMArchFeature = (ARMArchFeature + "+" + ARM::getArchName(ArchID)).str();
 
   if (TT.isThumb()) {
     if (!ARMArchFeature.empty())

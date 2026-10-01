@@ -17,7 +17,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/GraphWriter.h"
 
 using namespace llvm;
@@ -39,7 +38,7 @@ static cl::opt<bool>
 
 static void writeMCFGToDotFile(MachineFunction &MF) {
   std::string Filename =
-      (Twine(MCFGDotFilenamePrefix) + "." + MF.getName() + ".dot").str();
+      (MCFGDotFilenamePrefix + "." + MF.getName() + ".dot").str();
   errs() << "Writing '" << Filename << "'...";
 
   std::error_code EC;

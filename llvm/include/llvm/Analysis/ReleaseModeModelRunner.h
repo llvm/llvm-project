@@ -15,7 +15,6 @@
 #define LLVM_ANALYSIS_RELEASEMODEMODELRUNNER_H
 
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -120,7 +119,7 @@ private:
   void populateTensor(size_t Pos, const TensorSpec &Spec, StringRef Prefix,
                       bool &InputIsPresent) {
     const int Index =
-        CompiledModel->LookupArgIndex((Twine(Prefix) + Spec.name()).str());
+        CompiledModel->LookupArgIndex((Prefix + Spec.name()).str());
     void *Buffer = nullptr;
     InputIsPresent = Index >= 0;
     if (InputIsPresent)

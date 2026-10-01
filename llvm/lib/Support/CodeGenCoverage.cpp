@@ -83,8 +83,9 @@ bool CodeGenCoverage::emit(StringRef CoveragePrefix,
     // We can handle locking within a process easily enough but we don't want to
     // manage it between multiple processes. Use the process ID to ensure no
     // more than one process is ever writing to the same file at the same time.
-    std::string CoverageFilename =
-        (CoveragePrefix + Twine(sys::Process::getProcessId())).str();
+    std::string Pid = llvm::to_string(sys::Process::getProcessId());
+
+    std::string CoverageFilename = (CoveragePrefix + Pid).str();
 
     std::error_code EC;
     sys::fs::OpenFlags OpenFlags = sys::fs::OF_Append;
