@@ -485,23 +485,21 @@ TEST(YAMLRemarks, Contents) {
   EXPECT_TRUE(errorToBool(std::move(E))); // Check for parsing errors.
 }
 
-TEST(YAMLRemarks, ContentsQuoted) {
+TEST(YAMLRemarks, ContentsBlockScalar) {
   StringRef Buf = "--- !Missed\n"
                   "Pass: pass\n"
                   "Name: name\n"
                   "Function: func\n"
                   "Args:\n"
-                  "  - Single: 'it''s'\n"
-                  "  - Double: \"abc\\ndef\\n\\x01ghi\"\n"
-                  "  - Block: |\n"
-                  "      'abc'\n"
+                  "  - String: |\n"
+                  "      abc\n"
                   "      def\n"
                   "--- !Missed\n"
                   "Pass: pass\n"
                   "Name: name\n"
                   "Function: func\n"
                   "Args:\n"
-                  "  - Block: |\n"
+                  "  - String: |\n"
                   "      xxxxxxxxxx\n"
                   "      xxxxxxxxxx\n"
                   "\n";
@@ -515,9 +513,37 @@ TEST(YAMLRemarks, ContentsQuoted) {
   Expected<std::unique_ptr<remarks::Remark>> MaybeRemark = Parser.next();
   EXPECT_FALSE(errorToBool(MaybeRemark.takeError()));
   EXPECT_TRUE(*MaybeRemark != nullptr);
-  // The values must outlive the YAML document they were parsed from.
+  // The value must outlive the YAML document it was parsed from.
   Expected<std::unique_ptr<remarks::Remark>> MaybeNext = Parser.next();
   EXPECT_FALSE(errorToBool(MaybeNext.takeError()));
+
+  const remarks::Remark &Remark = **MaybeRemark;
+  ASSERT_EQ(Remark.Args.size(), 1U);
+  EXPECT_EQ(checkStr(Remark.Args[0].Val, 8), "abc\ndef\n");
+}
+
+TEST(YAMLRemarks, ContentsQuoted) {
+  StringRef Buf = "--- !Missed\n"
+                  "Pass: pass\n"
+                  "Name: name\n"
+                  "Function: func\n"
+                  "Args:\n"
+                  "  - Single: 'it''s'\n"
+                  "  - Double: \"abc\\ndef\\n\\x01ghi\"\n"
+                  "  - Block: |\n"
+                  "      'abc'\n"
+                  "      def\n"
+                  "\n";
+
+  Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
+      remarks::createRemarkParser(remarks::Format::YAML, Buf);
+  EXPECT_FALSE(errorToBool(MaybeParser.takeError()));
+  EXPECT_TRUE(*MaybeParser != nullptr);
+
+  remarks::RemarkParser &Parser = **MaybeParser;
+  Expected<std::unique_ptr<remarks::Remark>> MaybeRemark = Parser.next();
+  EXPECT_FALSE(errorToBool(MaybeRemark.takeError()));
+  EXPECT_TRUE(*MaybeRemark != nullptr);
 
   const remarks::Remark &Remark = **MaybeRemark;
   ASSERT_EQ(Remark.Args.size(), 3U);
