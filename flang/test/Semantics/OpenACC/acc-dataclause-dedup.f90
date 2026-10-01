@@ -3,9 +3,10 @@
 ! Same-kind data-sharing duplicates on an OpenACC directive (e.g.
 ! private(x, x), private(x) private(x), copyin(x, x) ...) are not errors:
 ! resolve-directives warns and rewrite-parse-tree drops the duplicate
-! occurrences from the clause object lists. Cross-kind duplicates
-! (e.g. private(x) firstprivate(x)) and reduction duplicates remain
-! hard errors.
+! occurrences from the clause object lists. When one same-kind object contains
+! another, the contained occurrence is likewise dropped. Cross-kind
+! duplicates (e.g. private(x) firstprivate(x)), partial overlaps, disjoint
+! parts of one array, and reduction duplicates remain hard errors.
 
 program test_dataclause_dedup
   implicit none
@@ -213,14 +214,14 @@ program test_dataclause_dedup
     do i = 1, 10
     end do
 
-    ! A section and its contained element are likewise rejected in either
-    ! order until precise containment support is implemented.
-    !ERROR: 'arr(3)' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive
+    ! A contained object is redundant in the same data-sharing kind. Keep the
+    ! containing object and ignore the contained occurrence in either order.
+    !WARNING: 'arr(3)' is contained in another object in the same kind of data-sharing clause on an OpenACC directive; contained object ignored [-Wopenacc-usage]
     !$acc parallel loop private(arr(1:5), arr(3))
     do i = 1, 10
     end do
 
-    !ERROR: 'arr(1:5)' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive
+    !WARNING: 'arr(3)' is contained in another object in the same kind of data-sharing clause on an OpenACC directive; contained object ignored [-Wopenacc-usage]
     !$acc parallel loop private(arr(3), arr(1:5))
     do i = 1, 10
     end do
@@ -279,11 +280,43 @@ program test_dataclause_dedup
     do i = 1, 10
     end do
 
-    ! A whole array and an element are not distinct data-sharing objects.
-    !ERROR: 'arr(1)' overlaps another object in the same kind of data-sharing clause on the same OpenACC directive
+    ! A whole array contains an element, so only the whole-array occurrence is
+    ! retained.
+    !WARNING: 'arr(1)' is contained in another object in the same kind of data-sharing clause on an OpenACC directive; contained object ignored [-Wopenacc-usage]
     !$acc parallel loop private(arr, arr(1))
     do i = 1, 10
     end do
+
+    ! Eugene's whole-array/proper-subset example, in both source orders.
+    !WARNING: 'arr(1:5)' is contained in another object in the same kind of data-sharing clause on an OpenACC directive; contained object ignored [-Wopenacc-usage]
+    !$acc parallel private(arr) private(arr(1:5))
+    arr(9) = 1
+    !$acc end parallel
+
+    !WARNING: 'arr(1:5)' is contained in another object in the same kind of data-sharing clause on an OpenACC directive; contained object ignored [-Wopenacc-usage]
+    !$acc parallel private(arr(1:5)) private(arr)
+    arr(9) = 1
+    !$acc end parallel
+
+    ! All contained occurrences are removed before the remaining paths are
+    ! compared, so unknown selectors behave uniformly in every source order.
+    !WARNING: 'arr(idx)' is contained in another object in the same kind of data-sharing clause on an OpenACC directive; contained object ignored [-Wopenacc-usage]
+    !WARNING: 'arr(mid)' is contained in another object in the same kind of data-sharing clause on an OpenACC directive; contained object ignored [-Wopenacc-usage]
+    !$acc parallel private(arr(idx), arr(mid)) private(arr)
+    arr(9) = 1
+    !$acc end parallel
+
+    !WARNING: 'arr(idx)' is contained in another object in the same kind of data-sharing clause on an OpenACC directive; contained object ignored [-Wopenacc-usage]
+    !WARNING: 'arr(mid)' is contained in another object in the same kind of data-sharing clause on an OpenACC directive; contained object ignored [-Wopenacc-usage]
+    !$acc parallel private(arr(idx)) private(arr) private(arr(mid))
+    arr(9) = 1
+    !$acc end parallel
+
+    !WARNING: 'arr(idx)' is contained in another object in the same kind of data-sharing clause on an OpenACC directive; contained object ignored [-Wopenacc-usage]
+    !WARNING: 'arr(mid)' is contained in another object in the same kind of data-sharing clause on an OpenACC directive; contained object ignored [-Wopenacc-usage]
+    !$acc parallel private(arr) private(arr(idx), arr(mid))
+    arr(9) = 1
+    !$acc end parallel
   end block
 
 end program
