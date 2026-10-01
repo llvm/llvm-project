@@ -374,6 +374,7 @@ define <2 x i32> @v_and_or_v2i32_inline_const_x4(<2 x i32> %a) {
 ; GFX10-DAG:     s_movk_i32 [[SR1:s[0-9]+]], 0x809
 ; GFX10-DAG:     v_and_or_b32 v0, v0, [[SR0]], 0x81
 ; GFX10-DAG:     v_and_or_b32 v1, v1, [[SR1]], 0x101
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %x = and <2 x i32> %a, <i32 2056, i32 2057>
   %result = or <2 x i32> %x, <i32 129, i32 257>
   ret <2 x i32> %result
