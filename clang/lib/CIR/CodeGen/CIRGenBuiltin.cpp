@@ -2291,7 +2291,23 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value result = builder.createMatrixTranspose(loc, matrix);
     return RValue::get(result);
   }
-  case Builtin::BI__builtin_matrix_column_major_load:
+  case Builtin::BI__builtin_matrix_column_major_load: {
+    // Emit everything that isn't dependent on the first parameter type
+    mlir::Value stride = emitScalarExpr(e->getArg(3));
+    const QualType resultTy = e->getType();
+    mlir::Type resultType = convertType(resultTy);
+    auto *ptrTy = e->getArg(0)->getType()->getAs<PointerType>();
+    assert(ptrTy && "arg0 must be of pointer type");
+    bool isVolatile = ptrTy->getPointeeType().isVolatileQualified();
+    Address src = emitPointerWithAlignment(e->getArg(0));
+    emitNonNullArgCheck(RValue::get(src.emitRawPointer()),
+                        e->getArg(0)->getType(), e->getArg(0)->getExprLoc(), fd,
+                        0);
+    mlir::Value dataPtr = src.emitRawPointer();
+    mlir::Value result = builder.createMatrixColumnMajorLoad(
+        loc, resultType, dataPtr, stride, isVolatile);
+    return RValue::get(result);
+  }
   case Builtin::BI__builtin_matrix_column_major_store:
   case Builtin::BI__builtin_masked_load:
   case Builtin::BI__builtin_masked_expand_load:

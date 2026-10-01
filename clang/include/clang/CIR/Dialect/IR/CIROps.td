@@ -6376,6 +6376,47 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
 }
 
 //===----------------------------------------------------------------------===//
+// MatrixColumnMajorLoadOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixColumnMajorLoadOp : CIR_Op<"matrix.column_major_load", [
+  Pure,
+]> {
+  let summary = "Matrix column major load";
+  let description = [{
+  The `cir.matrix.column_major_load` operation provides a representation for
+  the `__builtin_matrix_column_major_load` builtin and corresponds to the
+  `llvm.matrix.column.major.load` intrinsic in LLVM IR.
+
+  This operation performs load any matrix type with a stride to compute
+  the start address of the different columns.
+
+  ```
+  %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i,
+     !cir.matrix<5 x 5 x !cir.double>
+
+  %result = cir.matrix.column_major_load %ptr : <!cir.double>, %stride : !u64i
+     volatile, !cir.matrix<5 x 5 x !cir.double>
+  ```
+  }];
+
+  let arguments = (ins
+    CIR_PointerType:$value,
+    CIR_IntType:$stride,
+    UnitAttr:$is_volatile
+  );
+
+  let results = (outs CIR_MatrixType:$result);
+
+  let assemblyFormat = [{
+    $value `:` type($value) `,`
+    $stride `:` type($stride)
+    (`volatile` $is_volatile^)?
+    `,` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // MatrixTransposeOp
 //===----------------------------------------------------------------------===//
 
