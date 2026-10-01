@@ -508,13 +508,12 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
     auto Iter = vp_depth_first_deep(Plan.getEntry());
     // Remove recipes that are redundant after unrolling.
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
-      for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-        auto *VPI = dyn_cast<VPInstruction>(&R);
-        if (VPI &&
-            VPI->getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
-            VPI->getOperand(1) == &Plan.getVF()) {
-          VPI->replaceAllUsesWith(VPI->getOperand(0));
-          VPI->eraseFromParent();
+      for (VPInstruction &VPI :
+           make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
+        if (VPI.getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
+            VPI.getOperand(1) == &Plan.getVF()) {
+          VPI.replaceAllUsesWith(VPI.getOperand(0));
+          VPI.eraseFromParent();
         }
       }
     }
@@ -658,7 +657,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     // Mask from the operands?)
     New = VPBuilder::createSingleScalarOp(
         RepR->getOpcode(), NewOps, /*Mask=*/nullptr, *RepR, *RepR,
-        RepR->getDebugLoc(), RepR->getUnderlyingInstr());
+        RepR->getDebugLoc(), RepR->getScalarType(), RepR->getUnderlyingInstr());
   } else {
     New = DefR->clone();
     for (const auto &[Idx, Op] : enumerate(NewOps)) {
@@ -676,13 +675,14 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
 }
 
 /// Converts the frequency \p Freq with which a block is entered to branch
-/// weights for the branch guarding it, or nullptr if \p Freq is unknown.
+/// weights for the branch guarding it, or nullptr if \p Freq is unknown or
+/// estimated.
 static MDNode *
-convertFrequencyToBranchWeights(std::optional<BlockFrequency> Freq,
+convertFrequencyToBranchWeights(std::optional<VPExecutionFrequency> Freq,
                                 LLVMContext &Ctx) {
-  if (!Freq)
+  if (!Freq || Freq->IsEstimated)
     return nullptr;
-  BranchProbability P = vputils::getExecutionProbability(*Freq);
+  BranchProbability P = vputils::getExecutionProbability(Freq->Freq);
 
   // Use the numerators of P and its complement as weights and reduce them via
   // gcd to keep them small. Neither is zero, as P is neither zero nor one.
@@ -736,7 +736,8 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
       if (auto *RepR = dyn_cast<VPReplicateRecipe>(&OldR)) {
         auto *NewR = VPBuilder::createSingleScalarOp(
             RepR->getOpcode(), to_vector(RepR->operands()), /*Mask=*/nullptr,
-            *RepR, *RepR, OldDL, RepR->getUnderlyingInstr());
+            *RepR, *RepR, OldDL, RepR->getScalarType(),
+            RepR->getUnderlyingInstr());
         NewR->insertBefore(RepR);
         RepR->replaceAllUsesWith(NewR);
         RepR->eraseFromParent();
@@ -993,7 +994,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
         if (U.usesFirstLaneOnly(DefR))
           return true;
-        auto *VPI = dyn_cast<VPInstructionWithType>(&U);
+        auto *VPI = dyn_cast<VPInstruction>(&U);
         return VPI && Instruction::isCast(VPI->getOpcode());
       });
 

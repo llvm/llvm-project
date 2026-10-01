@@ -218,6 +218,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("disjoint", MIToken::kw_disjoint)
       .Case("samesign", MIToken::kw_samesign)
       .Case("inbounds", MIToken::kw_inbounds)
+      .Case("nonnull", MIToken::kw_nonnull)
       .Case("nofpexcept", MIToken::kw_nofpexcept)
       .Case("unpredictable", MIToken::kw_unpredictable)
       .Case("debug-location", MIToken::kw_debug_location)
@@ -299,6 +300,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("machine-block-address-taken",
             MIToken::kw_machine_block_address_taken)
       .Case("call-frame-size", MIToken::kw_call_frame_size)
+      .Case("max-bytes-for-alignment", MIToken::kw_max_bytes_for_alignment)
       .Case("noconvergent", MIToken::kw_noconvergent)
       .Case("mmra", MIToken::kw_mmra)
       .Case("lr-split", MIToken::kw_lr_split)

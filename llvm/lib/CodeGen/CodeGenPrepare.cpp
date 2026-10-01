@@ -1129,7 +1129,8 @@ static void replaceAllUsesWith(Value *Old, Value *New,
                                bool IsHuge) {
   auto *OldI = dyn_cast<Instruction>(Old);
   if (OldI) {
-    for (Value::user_iterator UI = OldI->user_begin(), E = OldI->user_end();
+    for (Instruction::user_iterator UI = OldI->user_begin(),
+                                    E = OldI->user_end();
          UI != E; ++UI) {
       Instruction *User = cast<Instruction>(*UI);
       if (IsHuge)
@@ -1435,7 +1436,7 @@ static bool SinkCast(CastInst *CI) {
   DenseMap<BasicBlock *, CastInst *> InsertedCasts;
 
   bool MadeChange = false;
-  for (Value::user_iterator UI = CI->user_begin(), E = CI->user_end();
+  for (Instruction::user_iterator UI = CI->user_begin(), E = CI->user_end();
        UI != E;) {
     Use &TheUse = UI.getUse();
     Instruction *User = cast<Instruction>(*UI);
@@ -1544,7 +1545,7 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   // Sink only "cheap" (or nop) address-space casts.  This is a weaker condition
   // than sinking only nop casts, but is helpful on some platforms.
   if (auto *ASC = dyn_cast<AddrSpaceCastInst>(CI)) {
-    if (!TLI.isFreeAddrSpaceCast(ASC->getSrcAddressSpace(),
+    if (!TLI.isFreeAddrSpaceCast(DL, ASC->getSrcAddressSpace(),
                                  ASC->getDestAddressSpace()))
       return false;
   }
@@ -1945,7 +1946,7 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI,
   DenseMap<BasicBlock *, CmpInst *> InsertedCmps;
 
   bool MadeChange = false;
-  for (Value::user_iterator UI = Cmp->user_begin(), E = Cmp->user_end();
+  for (Instruction::user_iterator UI = Cmp->user_begin(), E = Cmp->user_end();
        UI != E;) {
     Use &TheUse = UI.getUse();
     Instruction *User = cast<Instruction>(*UI);
@@ -2378,7 +2379,7 @@ static bool sinkAndCmp0Expression(Instruction *AndI, const TargetLowering &TLI,
   // Push the 'and' into the same block as the icmp 0.  There should only be
   // one (icmp (and, 0)) in each block, since CSE/GVN should have removed any
   // others, so we don't need to keep track of which BBs we insert into.
-  for (Value::user_iterator UI = AndI->user_begin(), E = AndI->user_end();
+  for (Instruction::user_iterator UI = AndI->user_begin(), E = AndI->user_end();
        UI != E;) {
     Use &TheUse = UI.getUse();
     Instruction *User = cast<Instruction>(*UI);
@@ -2437,8 +2438,8 @@ SinkShiftAndTruncate(BinaryOperator *ShiftI, Instruction *User, ConstantInt *CI,
   auto *TruncI = cast<TruncInst>(User);
   bool MadeChange = false;
 
-  for (Value::user_iterator TruncUI = TruncI->user_begin(),
-                            TruncE = TruncI->user_end();
+  for (Instruction::user_iterator TruncUI = TruncI->user_begin(),
+                                  TruncE = TruncI->user_end();
        TruncUI != TruncE;) {
 
     Use &TruncTheUse = TruncUI.getUse();
@@ -2533,7 +2534,8 @@ static bool OptimizeExtractBits(BinaryOperator *ShiftI, ConstantInt *CI,
   bool shiftIsLegal = TLI.isTypeLegal(TLI.getValueType(DL, ShiftI->getType()));
 
   bool MadeChange = false;
-  for (Value::user_iterator UI = ShiftI->user_begin(), E = ShiftI->user_end();
+  for (Instruction::user_iterator UI = ShiftI->user_begin(),
+                                  E = ShiftI->user_end();
        UI != E;) {
     Use &TheUse = UI.getUse();
     Instruction *User = cast<Instruction>(*UI);
@@ -2815,8 +2817,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       return true;
     }
 
-    case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group: {
+    case Intrinsic::launder_invariant_group: {
       Value *ArgVal = II->getArgOperand(0);
       auto it = LargeOffsetGEPMap.find(II);
       if (it != LargeOffsetGEPMap.end()) {
@@ -3455,27 +3456,6 @@ class TypePromotionTransaction {
       }
 
       Inst->getParent()->reinsertInstInDbgRecords(Inst, BeforeDbgRecord);
-    }
-  };
-
-  /// Move an instruction before another.
-  class InstructionMoveBefore : public TypePromotionAction {
-    /// Original position of the instruction.
-    InsertionHandler Position;
-
-  public:
-    /// Move \p Inst before \p Before.
-    InstructionMoveBefore(Instruction *Inst, BasicBlock::iterator Before)
-        : TypePromotionAction(Inst), Position(Inst) {
-      LLVM_DEBUG(dbgs() << "Do: move: " << *Inst << "\nbefore: " << *Before
-                        << "\n");
-      Inst->moveBefore(Before);
-    }
-
-    /// Move the instruction back to its original position.
-    void undo() override {
-      LLVM_DEBUG(dbgs() << "Undo: moveBefore: " << *Inst << "\n");
-      Position.insert(Inst);
     }
   };
 
@@ -5244,7 +5224,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     unsigned SrcAS =
         AddrInst->getOperand(0)->getType()->getPointerAddressSpace();
     unsigned DestAS = AddrInst->getType()->getPointerAddressSpace();
-    if (TLI.getTargetMachine().isNoopAddrSpaceCast(SrcAS, DestAS))
+    if (TLI.getTargetMachine().isNoopAddrSpaceCast(DL, SrcAS, DestAS))
       return matchAddr(AddrInst->getOperand(0), Depth);
     return false;
   }
@@ -8410,16 +8390,13 @@ public:
   /// Check if it is profitable to promote \p ToBePromoted
   /// by moving downward the transition through.
   bool shouldPromote(const Instruction *ToBePromoted) const {
+    if (!isSafeToSpeculativelyExecuteWithVariableReplaced(ToBePromoted))
+      return false;
     // Promote only if all the operands can be statically expanded.
     // Indeed, we do not want to introduce any new kind of transitions.
     for (const Use &U : ToBePromoted->operands()) {
       const Value *Val = U.get();
       if (Val == getEndOfTransition()) {
-        // If the use is a division and the transition is on the rhs,
-        // we cannot promote the operation, otherwise we may create a
-        // division by zero.
-        if (canCauseUndefinedBehavior(ToBePromoted, U.getOperandNo()))
-          return false;
         continue;
       }
       if (!isa<ConstantInt>(Val) && !isa<UndefValue>(Val) &&
@@ -9086,12 +9063,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
     // freeze(icmp a, const)) -> icmp (freeze a), const
     // This helps generate efficient conditional jumps.
-    Instruction *CmpI = nullptr;
-    if (ICmpInst *II = dyn_cast<ICmpInst>(FI->getOperand(0)))
-      CmpI = II;
-    else if (FCmpInst *F = dyn_cast<FCmpInst>(FI->getOperand(0)))
-      CmpI = F->getFastMathFlags().none() ? F : nullptr;
-
+    CmpInst *CmpI = dyn_cast<CmpInst>(FI->getOperand(0));
     if (CmpI && CmpI->hasOneUse()) {
       auto Op0 = CmpI->getOperand(0), Op1 = CmpI->getOperand(1);
       bool Const0 = isa<ConstantInt>(Op0) || isa<ConstantFP>(Op0) ||
@@ -9104,6 +9076,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
           F->takeName(FI);
           CmpI->setOperand(Const0 ? 1 : 0, F);
         }
+        CmpI->dropPoisonGeneratingFlags();
         replaceAllUsesWith(FI, CmpI, FreshBBs, IsHugeFunc);
         FI->eraseFromParent();
         return true;

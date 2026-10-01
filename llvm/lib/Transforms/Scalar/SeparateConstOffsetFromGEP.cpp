@@ -167,6 +167,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -741,6 +742,8 @@ APInt ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP,
     else if (BO->getOpcode() == Instruction::Xor)
       ConstantOffset = extractDisjointBitsFromXor(BO);
   } else if (isa<TruncInst>(V)) {
+    if (SignExtended || ZeroExtended)
+      return ConstantOffset;
     ConstantOffset =
         find(U->getOperand(0), GEP, Idx, SignExtended, ZeroExtended)
             .trunc(BitWidth);
@@ -973,10 +976,18 @@ static bool allowsPreservingNUW(const User *U) {
   return true;
 }
 
+static BasicBlock::iterator getIndexInsertionPoint(Value *Idx,
+                                                   GetElementPtrInst *GEP) {
+  if (auto *I = dyn_cast<Instruction>(Idx))
+    if (auto IP = I->getInsertionPointAfterDef())
+      return *IP;
+  return GEP->getIterator();
+}
+
 Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
                                         User *&UserChainTail,
                                         bool &PreservesNUW) {
-  ConstantOffsetExtractor Extractor(GEP->getIterator());
+  ConstantOffsetExtractor Extractor(getIndexInsertionPoint(Idx, GEP));
   // Find a non-zero constant offset first.
   APInt ConstantOffset = Extractor.find(Idx, GEP, Idx, /* SignExtended */ false,
                                         /* ZeroExtended */ false);
@@ -1010,7 +1021,7 @@ bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
     if (GTI.isSequential()) {
       if ((*I)->getType() != PtrIdxTy) {
         *I = CastInst::CreateIntegerCast(*I, PtrIdxTy, true, "idxprom",
-                                         GEP->getIterator());
+                                         getIndexInsertionPoint(*I, GEP));
         Changed = true;
       }
     }

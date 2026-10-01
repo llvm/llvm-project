@@ -59,7 +59,10 @@ bool GIMatchTableExecutor::executeMatchTable(
   // Bypass the flag check on the instruction, and only look at the MCInstrDesc.
   bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
 
-  const uint32_t Flags = State.MIs[0]->getFlags();
+  const uint32_t RootFlags = State.MIs[0]->getFlags();
+  const uint32_t RootFlagsToDrop = getRootFlagsToDrop();
+  // Flags to drop from the final (root flags | output flags).
+  SmallVector<uint32_t, 4> OutMIFlagsToDrop;
   bool BuilderInitialized = false;
   const auto initializeBuilder = [&]() {
     if (BuilderInitialized)
@@ -68,6 +71,10 @@ bool GIMatchTableExecutor::executeMatchTable(
     // action needs the builder.
     Builder.setInstrAndDebugLoc(*State.MIs[0]);
     BuilderInitialized = true;
+  };
+  const auto initializeOutMIFlagState = [&](unsigned NumOutMIs) {
+    if (NumOutMIs > OutMIFlagsToDrop.size())
+      OutMIFlagsToDrop.resize(NumOutMIs, RootFlagsToDrop);
   };
 
   enum RejectAction { RejectAndGiveUp, RejectAndResume };
@@ -84,10 +91,13 @@ bool GIMatchTableExecutor::executeMatchTable(
   };
 
   const auto propagateFlags = [&]() {
-    for (auto MIB : OutMIs) {
+    initializeOutMIFlagState(OutMIs.size());
+    for (unsigned I = 0, E = OutMIs.size(); I != E; ++I) {
+      MachineInstrBuilder MIB = OutMIs[I];
       // Set the NoFPExcept flag when no original matched instruction could
       // raise an FP exception, but the new instruction potentially might.
-      uint32_t MIBFlags = Flags | MIB.getInstr()->getFlags();
+      uint32_t MIBFlags =
+          (RootFlags | MIB.getInstr()->getFlags()) & ~OutMIFlagsToDrop[I];
       if (NoFPException && MIB->mayRaiseFPException())
         MIBFlags |= MachineInstr::NoFPExcept;
       if (Observer)
@@ -1083,6 +1093,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint32_t NewOpcode = readU16();
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
+      initializeOutMIFlagState(NewInsnID + 1);
 
       MachineInstr *OldMI = State.MIs[OldInsnID];
       if (Observer)
@@ -1104,6 +1115,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint32_t Opcode = readU16();
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
+      initializeOutMIFlagState(NewInsnID + 1);
 
       initializeBuilder();
       OutMIs[NewInsnID] = Builder.buildInstr(Opcode);
@@ -1255,7 +1267,10 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIR_SetMIFlags(OutMIs["
                              << InsnID << "], " << Flags << ")\n");
       MachineInstr *MI = OutMIs[InsnID];
+      assert(MI && "Modifying undefined instruction");
       MI->setFlags(MI->getFlags() | Flags);
+      initializeOutMIFlagState(OutMIs.size());
+      OutMIFlagsToDrop[InsnID] &= ~Flags;
       break;
     }
     case GIR_UnsetMIFlags: {
@@ -1266,7 +1281,10 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIR_UnsetMIFlags(OutMIs["
                              << InsnID << "], " << Flags << ")\n");
       MachineInstr *MI = OutMIs[InsnID];
+      assert(MI && "Modifying undefined instruction");
       MI->setFlags(MI->getFlags() & ~Flags);
+      initializeOutMIFlagState(OutMIs.size());
+      OutMIFlagsToDrop[InsnID] |= Flags;
       break;
     }
     case GIR_CopyMIFlags: {
@@ -1277,7 +1295,11 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIR_CopyMIFlags(OutMIs["
                              << InsnID << "], MIs[" << OldInsnID << "])\n");
       MachineInstr *MI = OutMIs[InsnID];
-      MI->setFlags(MI->getFlags() | State.MIs[OldInsnID]->getFlags());
+      assert(MI && "Modifying undefined instruction");
+      uint32_t Flags = State.MIs[OldInsnID]->getFlags();
+      MI->setFlags(MI->getFlags() | Flags);
+      initializeOutMIFlagState(OutMIs.size());
+      OutMIFlagsToDrop[InsnID] &= ~Flags;
       break;
     }
     case GIR_AddSimpleTempRegister:
@@ -1453,6 +1475,9 @@ bool GIMatchTableExecutor::executeMatchTable(
                              << FnID << ")\n");
       assert(FnID > GICXXCustomAction_Invalid && "Expected a valid FnID");
       if (runCustomAction(FnID, State, OutMIs)) {
+        initializeOutMIFlagState(OutMIs.size());
+        for (unsigned I = 0, E = OutMIs.size(); I != E; ++I)
+          OutMIFlagsToDrop[I] &= ~OutMIs[I]->getFlags();
         propagateFlags();
         return true;
       }

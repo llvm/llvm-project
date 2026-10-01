@@ -190,7 +190,7 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(TT, JIT, RM),
                                getEffectiveX86CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), IsJIT(JIT) {
@@ -317,10 +317,10 @@ bool X86TargetMachine::parseMachineFunctionInfo(
   return false;
 }
 
-bool X86TargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
+bool X86TargetMachine::isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
                                            unsigned DestAS) const {
   assert(SrcAS != DestAS && "Expected different address spaces!");
-  if (getPointerSize(SrcAS) != getPointerSize(DestAS))
+  if (DL.getPointerSize(SrcAS) != DL.getPointerSize(DestAS))
     return false;
   return SrcAS < 256 && DestAS < 256;
 }
@@ -573,6 +573,9 @@ void X86PassConfig::addPreEmitPass() {
   }
   addPass(createX86CompressEVEXLegacyPass());
   addPass(createX86InsertX87WaitLegacyPass());
+
+  if (TM->getTargetTriple().isLFI())
+    addPass(createX86LFIRewritePass());
 }
 
 void X86PassConfig::addPreEmitPass2() {
