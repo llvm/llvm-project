@@ -2,6 +2,8 @@
 ; REQUIRES: asserts
 ; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/stale-profile-lcs-anchor-overwrite.prof -o %t.prof
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl 2>&1 | FileCheck %s
+; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/stale-profile-lcs-anchor-overwrite-cross-stage.prof -o %t.cross-stage.prof
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.cross-stage.prof --salvage-stale-profile --salvage-unused-profile --min-func-count-for-cg-matching=0 -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl 2>&1 | FileCheck %s --check-prefix=CROSS-STAGE
 
 ; CHECK: Function _Z6calleePv is not in profile or profile symbol list.
 ; CHECK: Function _Z3barv is not in profile or profile symbol list.
@@ -23,16 +25,29 @@
 ; CHECK: Callsite with callee:unknown.indirect.callee is matched from 4 to 349
 ; CHECK: Callsite with callee:_Z3barPv is matched from 5 to 380
 ; CHECK: Run stale profile matching for _Z3barPv
-; CHECK: Function:_Z6calleePv matches profile:_Z6calleei
 ; CHECK: Location is matched from 1 to 1
 ; CHECK: Callsite with callee:_Z6calleePv is matched from 2 to 3
 ; CHECK: Run stale profile matching for _Z3barv
 ; CHECK: Run stale profile matching for _Z6calleePv
-; CHECK: Function processing order:
-; CHECK: _Z3foov
-; CHECK: _Z3barPv
-; CHECK: _Z6calleePv
-; CHECK: _Z3barv
+
+; Test the conflict between the two stages of stale profile matching.
+; CROSS-STAGE: Function _Z6calleePv is not in profile or profile symbol list.
+; CROSS-STAGE: Function _Z3barv is not in profile or profile symbol list.
+; CROSS-STAGE: Function _Z3barPv is not in profile or profile symbol list.
+; CROSS-STAGE: Run stale profile matching for _Z3foov
+; CROSS-STAGE: The functions _Z3barv(IR) and _Z3bari(Profile) share the same base name: bar.
+; CROSS-STAGE: The checksums for _Z3barPv(IR) and _Z6calleei(Profile) match.
+; CROSS-STAGE: Function:_Z3barv matches profile:_Z3bari
+; CROSS-STAGE: Function:_Z3barPv matches profile:_Z6calleei
+; CROSS-STAGE: Callsite with callee:_Z3barv is matched from 3 to 6
+; CROSS-STAGE: Callsite with callee:unknown.indirect.callee is matched from 4 to 349
+; CROSS-STAGE: Callsite with callee:_Z3barPv is matched from 5 to 380
+; CROSS-STAGE: Run stale profile matching for _Z3barPv
+; CROSS-STAGE: Run stale profile matching for _Z3barv
+; CROSS-STAGE: Function:_Z6calleePv encounters conflicting profile matchings, remapping to new profile:_Z6calleePv
+; CROSS-STAGE: Direct basename match: _Z6calleePv (IR) -> _Z6calleePv (Profile) [basename: callee]
+; CROSS-STAGE: Direct basename matching found 1 matches
+; CROSS-STAGE: Run stale profile matching for _Z6calleePv
 
 
 target triple = "x86_64-linux-gnu"
