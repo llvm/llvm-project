@@ -655,25 +655,31 @@ void SILowerControlFlow::combineMasks(MachineInstr &MI,
   MI.addOperand(*KeepOp);
 
   // The fold moves the last use of Reg and of the Def sources onto MI.
-  SmallSet<Register, 4> RecomputeLV;
-  if (LV) {
-    RecomputeLV.insert(Reg);
+  SmallSet<Register, 4> Recompute;
+  if (LV || LIS) {
+    Recompute.insert(Reg);
     for (const MachineOperand &Op : Def->all_uses())
       if (Op.getReg().isVirtual())
-        RecomputeLV.insert(Op.getReg());
+        Recompute.insert(Op.getReg());
   }
 
   if (MRI->use_empty(Reg)) {
     if (OuterNext == Def->getIterator())
       ++OuterNext;
+    if (LIS) {
+      LIS->RemoveMachineInstrFromMaps(*Def);
+      LIS->removeInterval(Reg);
+    }
     Def->eraseFromParent();
   }
 
-  if (LV) {
-    for (Register R : RecomputeLV) {
-      if (!MRI->def_empty(R)) // Skip Reg if its def was just erased.
-        LV->recomputeForSingleDefVirtReg(R);
-    }
+  for (Register R : Recompute) {
+    if (MRI->def_empty(R)) // Skip Reg if its def was just erased.
+      continue;
+    if (LV)
+      LV->recomputeForSingleDefVirtReg(R);
+    if (LIS)
+      RecomputeRegs.insert(R);
   }
 }
 
