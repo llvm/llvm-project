@@ -38,11 +38,10 @@ void DeviceKernelInfo::removeCachedKernelsFor(ContextImpl *Context) {
   std::lock_guard<std::mutex> Guard(MCacheMutex);
   for (auto It = MCache.begin(); It != MCache.end();) {
     CacheKeyT Key = It->first;
-    if (Key.first == Context) {
+    if (Key.first == Context)
       It = MCache.erase(It);
-    } else {
+    else
       ++It;
-    }
   }
 }
 } // namespace detail
