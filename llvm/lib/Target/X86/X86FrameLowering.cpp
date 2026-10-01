@@ -20,11 +20,13 @@
 #include "X86TargetMachine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -2655,6 +2657,374 @@ static bool isTailCallOpcode(unsigned Opc) {
          Opc == X86::TCRETURNmi64 || Opc == X86::TCRETURN_WINmi64;
 }
 
+// The stack adjustment (FPDiff) operand of a TCRETURN* instruction.
+static MachineOperand &getTCReturnStackAdjust(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case X86::TCRETURNmi:
+  case X86::TCRETURNmi64:
+  case X86::TCRETURN_WINmi64:
+    return MI.getOperand(X86::AddrNumOperands);
+  default:
+    return MI.getOperand(1);
+  }
+}
+
+// Exits that the Win64 reserve handling in emitWin64ReserveExit applies to.
+static bool isWin64ReserveExitTerminator(const MachineInstr &MI) {
+  return isTailCallOpcode(MI.getOpcode()) || MI.getOpcode() == X86::RET ||
+         MI.getOpcode() == X86::RET64 || MI.getOpcode() == X86::RETI64;
+}
+
+// Whether MI is a volatile store (as emitted for a tail call) that writes the
+// caller's return address slot, which is [-SlotSize, 0) in fixed-object
+// coordinates.
+static bool storesToOldReturnAddress(const MachineInstr &MI,
+                                     const MachineFrameInfo &MFI,
+                                     unsigned SlotSize) {
+  if (!MI.mayStore())
+    return false;
+  for (const MachineMemOperand *MMO : MI.memoperands()) {
+    if (!MMO->isStore() || !MMO->isVolatile() || !MMO->getSize().hasValue())
+      continue;
+    const auto *PSV =
+        dyn_cast_or_null<FixedStackPseudoSourceValue>(MMO->getPseudoValue());
+    if (!PSV || !MFI.isFixedObjectIndex(PSV->getFrameIndex()))
+      continue;
+    int64_t Lo = MFI.getObjectOffset(PSV->getFrameIndex()) + MMO->getOffset();
+    int64_t Hi = Lo + (int64_t)MMO->getSize().getValue();
+    if (Lo < 0 && Hi > -(int64_t)SlotSize)
+      return true;
+  }
+  return false;
+}
+
+static MCRegister getStoreSourceReg(const MachineInstr &MI) {
+  if (MI.getNumExplicitOperands() > X86::AddrNumOperands) {
+    const MachineOperand &MO = MI.getOperand(X86::AddrNumOperands);
+    if (MO.isReg())
+      return MO.getReg();
+  }
+  return MCRegister();
+}
+
+// Find a register of class RC that is dead before Terminator, caller-saved, and
+// not in ExtraLive.
+static MCRegister findDeadScratchReg(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator Terminator,
+                                     const TargetRegisterInfo *TRI,
+                                     const TargetRegisterClass &RC,
+                                     ArrayRef<MCRegister> ExtraLive) {
+  MachineFunction &MF = *MBB.getParent();
+  LiveRegUnits LRU(*TRI);
+  LRU.addLiveOuts(MBB);
+  LRU.stepBackward(*Terminator);
+  for (MCRegister R : ExtraLive)
+    LRU.addReg(R);
+  for (MCRegister R : RC)
+    if (LRU.available(R) && !MF.getRegInfo().isReserved(R) &&
+        !TRI->isCalleeSavedPhysReg(R, MF))
+      return R;
+  return MCRegister();
+}
+
+// The first of the callee-saved restores (XMM reloads and GPR pops) that
+// restoreCalleeSavedRegisters left just before Terminator.
+static MachineBasicBlock::iterator
+findCalleeSavedRestoreBegin(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator Terminator) {
+  MachineBasicBlock::iterator RestoreBegin = Terminator;
+  for (MachineBasicBlock::iterator I = Terminator; I != MBB.begin();) {
+    MachineBasicBlock::iterator PI = std::prev(I);
+    if (PI->isDebugInstr()) {
+      I = PI;
+      continue;
+    }
+    if (!PI->getFlag(MachineInstr::FrameDestroy) || PI->isTerminator())
+      break;
+    RestoreBegin = I = PI;
+  }
+  return RestoreBegin;
+}
+
+namespace {
+/// The stores that write the caller's return address slot in a tail call exit
+/// block, detached from the block so they can be re-inserted as the last body
+/// instructions before the epilogue.
+struct OldReturnAddressStores {
+  SmallVector<MachineInstr *, 2> Stores;
+  // Callee-saved GPRs (as 64-bit registers) that are sources of the stores.
+  SmallVector<MCRegister, 2> CSRSources;
+  // Registers that must stay live until the stores are re-inserted.
+  SmallVector<MCRegister, 4> LiveSources;
+};
+} // namespace
+
+// Collect and detach the stores that write the caller's return address slot.
+// If a store's value is in a callee-saved XMM register (xmm6-xmm15 on Win64),
+// which the epilogue restores before the store can be re-inserted, copy the
+// value to a dead caller-saved XMM register first and store from the copy.
+static OldReturnAddressStores detachOldReturnAddressStores(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator Terminator,
+    const MachineFrameInfo &MFI, const TargetRegisterInfo *TRI,
+    const TargetInstrInfo &TII, unsigned SlotSize) {
+  OldReturnAddressStores Result;
+  for (MachineInstr &MI : make_range(MBB.begin(), Terminator))
+    if (storesToOldReturnAddress(MI, MFI, SlotSize))
+      Result.Stores.push_back(&MI);
+  if (Result.Stores.empty())
+    return Result;
+
+  MachineBasicBlock::iterator RestoreBegin =
+      findCalleeSavedRestoreBegin(MBB, Terminator);
+
+  MachineFunction &MF = *MBB.getParent();
+  for (MachineInstr *MI : Result.Stores) {
+    MCRegister Src = getStoreSourceReg(*MI);
+    if (!Src)
+      continue;
+
+    // The source must still hold the stored value where the store will go. The
+    // callee-saved restores are not a problem: the epilogue is arranged so that
+    // they happen after the store.
+    for (MachineInstr &Later :
+         make_range(std::next(MachineBasicBlock::iterator(MI)), Terminator))
+      if (!Later.getFlag(MachineInstr::FrameDestroy) &&
+          Later.modifiesRegister(Src, TRI))
+        report_fatal_error("Can't move the store of a tail call argument that "
+                           "overwrites the return address under win64");
+
+    if (TRI->isCalleeSavedPhysReg(Src, MF)) {
+      if (X86::VR128RegClass.contains(Src)) {
+        // The restore of Src comes first, so keep the value in a scratch.
+        MCRegister Tmp = findDeadScratchReg(
+            MBB, Terminator, TRI, X86::VR128RegClass, Result.LiveSources);
+        if (!Tmp)
+          report_fatal_error("Can't find a scratch register to preserve a tail "
+                             "call argument under win64");
+        TII.copyPhysReg(MBB, RestoreBegin, Terminator->getDebugLoc(), Tmp, Src,
+                        /*KillSrc=*/false);
+        MI->getOperand(X86::AddrNumOperands).setReg(Tmp);
+        MI->getOperand(X86::AddrNumOperands).setIsKill(false);
+        Src = Tmp;
+      } else if (X86::GR64RegClass.contains(Src) ||
+                 X86::GR32RegClass.contains(Src) ||
+                 X86::GR16RegClass.contains(Src) ||
+                 X86::GR8RegClass.contains(Src)) {
+        MCRegister Super = getX86SubSuperRegister(Src, 64);
+        if (!llvm::is_contained(Result.CSRSources, Super))
+          Result.CSRSources.push_back(Super);
+      } else {
+        report_fatal_error("Can't preserve a tail call argument that "
+                           "overwrites the return address under win64");
+      }
+    }
+    Result.LiveSources.push_back(Src);
+  }
+  for (MachineInstr *MI : Result.Stores)
+    MI->removeFromParent();
+  return Result;
+}
+
+// A tail call through a stack slot (jmp [slot]) would read the slot after the
+// epilogue has moved RSP, and Win64 has no red zone. Load the target into a
+// register in the body instead, and jump through that.
+static MachineBasicBlock::iterator
+loadFrameIndexTailCallTarget(MachineFunction &MF, MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator Terminator,
+                             const TargetRegisterInfo *TRI,
+                             const TargetInstrInfo &TII) {
+  MachineInstr &Old = *Terminator;
+  if (Old.getOpcode() != X86::TCRETURNmi64 &&
+      Old.getOpcode() != X86::TCRETURN_WINmi64)
+    return Terminator;
+  bool HasFrameIndex = false;
+  for (unsigned I = 0; I != X86::AddrNumOperands; ++I)
+    HasFrameIndex |= Old.getOperand(I).isFI();
+  if (!HasFrameIndex)
+    return Terminator;
+
+  MCRegister Scratch =
+      findDeadScratchReg(MBB, Terminator, TRI, X86::GR64_TCW64RegClass, {});
+  if (!Scratch)
+    report_fatal_error("Can't find a scratch register for a tail call target "
+                       "under win64");
+  const DebugLoc &DL = Old.getDebugLoc();
+  MachineInstrBuilder Load =
+      BuildMI(MBB, findCalleeSavedRestoreBegin(MBB, Terminator), DL,
+              TII.get(X86::MOV64rm), Scratch);
+  for (unsigned I = 0; I != X86::AddrNumOperands; ++I)
+    Load.add(Old.getOperand(I));
+  Load.setMemRefs(Old.memoperands());
+
+  MachineInstr &New =
+      *BuildMI(MBB, Terminator, DL, TII.get(X86::TCRETURN_WIN64ri))
+           .addReg(Scratch, RegState::Kill)
+           .add(Old.getOperand(X86::AddrNumOperands));
+  New.copyImplicitOps(MF, Old);
+  New.setCFIType(MF, Old.getCFIType());
+  if (Old.isCandidateForAdditionalCallInfo())
+    MF.moveAdditionalCallInfo(&Old, &New);
+  Old.eraseFromParent();
+  return New.getIterator();
+}
+
+void X86FrameLowering::emitWin64ReserveExit(
+    MachineFunction &MF, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator Terminator, int64_t FPDiff,
+    unsigned SEHFrameOffset) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+  const bool HasFP = hasFP(MF);
+  const int64_t R = -X86FI->getTCReturnAddrDelta();
+  const int64_t Off = FPDiff + R;
+  const int64_t StackSize = MFI.getStackSize();
+  const DebugLoc DL = Terminator->getDebugLoc();
+  const Register FramePtr = TRI->getFrameRegister(MF);
+  const Register Base = HasFP ? FramePtr : StackPtr;
+  assert(!X86FI->hasSwiftAsyncContext() && "unsupported on win64");
+
+  // Stores that overwrite the return address are re-inserted just before the
+  // epilogue so that the unwinder sees the original return address until then.
+  OldReturnAddressStores Deferred =
+      detachOldReturnAddressStores(MBB, Terminator, MFI, TRI, TII, SlotSize);
+
+  // The callee-saved GPR pops that restoreCalleeSavedRegisters emitted.
+  SmallVector<MachineInstr *, 8> Pops;
+  for (MachineBasicBlock::iterator I = Terminator; I != MBB.begin();) {
+    MachineBasicBlock::iterator PI = std::prev(I);
+    if (PI->isDebugInstr()) {
+      I = PI;
+      continue;
+    }
+    unsigned Opc = PI->getOpcode();
+    if (!PI->getFlag(MachineInstr::FrameDestroy) ||
+        (Opc != X86::POP64r && Opc != X86::POPP64r && Opc != X86::POP2 &&
+         Opc != X86::POP2P))
+      break;
+    Pops.push_back(&*PI);
+    I = PI;
+  }
+
+  // Registers that the final epilogue pops from a copy placed just below the
+  // new return address, which is how RSP ends up at an arbitrary offset while
+  // the epilogue stays in a form the unwinder recognises.
+  SmallVector<MCRegister, 4> Popped(Deferred.CSRSources.begin(),
+                                    Deferred.CSRSources.end());
+  if (HasFP)
+    Popped.push_back(FramePtr.asMCReg());
+  const int64_t NumPopped = Popped.size();
+
+  // The copies of the popped registers go in the NumPopped slots just below the
+  // new return address. They must all be in the unused part of the reserve, so
+  // that no saved register is overwritten before it is read, which needs
+  // Off >= NumPopped * SlotSize. Off is a multiple of 16 and is not zero here,
+  // so this can only fail with at least three popped registers, which needs
+  // more than one store over the return address slot. Each Win64 argument has
+  // its own slot, so we don't think this can happen in practice. The standard
+  // epilogue followed by Off / SlotSize extra pops would handle it, but that is
+  // not implemented.
+  const bool NoRoomForCopies =
+      NumPopped != 0 && Off < NumPopped * (int64_t)SlotSize;
+
+  auto EmitEpilogueStart = [&](MachineBasicBlock::iterator At) {
+    for (MachineInstr *MI : Deferred.Stores)
+      MBB.insert(At, MI);
+    if (MF.hasWinCFI())
+      BuildMI(MBB, At, DL, TII.get(X86::SEH_BeginEpilogue));
+  };
+
+  if (NoRoomForCopies)
+    report_fatal_error(
+        Twine("Can't handle a tail call exit under win64 that needs ") +
+        Twine(NumPopped) +
+        " slots below the new return address for saved registers, but only " +
+        Twine(Off) + " bytes are free");
+
+  {
+    for (MachineInstr *Pop : Pops)
+      Pop->eraseFromParent();
+
+    // Restore the callee-saved GPRs that are not popped in the epilogue.
+    for (const CalleeSavedInfo &CSI : MFI.getCalleeSavedInfo()) {
+      MCRegister Reg = CSI.getReg();
+      if (!X86::GR64RegClass.contains(Reg) || llvm::is_contained(Popped, Reg))
+        continue;
+      addFrameReference(
+          BuildMI(MBB, Terminator, DL, TII.get(X86::MOV64rm), Reg),
+          CSI.getFrameIdx())
+          .setMIFlag(MachineInstr::FrameDestroy);
+    }
+
+    if (NumPopped != 0) {
+      MCRegister Scratch = findDeadScratchReg(
+          MBB, Terminator, TRI, X86::GR64_NOSPRegClass, Deferred.LiveSources);
+      if (!Scratch)
+        report_fatal_error("Can't find a scratch register for a tail call "
+                           "exit under win64");
+      // Displacement from the base register of an offset from the entry RSP.
+      auto Disp = [&](int64_t EntryOff) {
+        return EntryOff + StackSize - (HasFP ? (int64_t)SEHFrameOffset : 0);
+      };
+      // Copy each popped register to where the epilogue will pop it from. The
+      // copy that lands on the return address slot goes last, so that slot is
+      // overwritten by the final instruction before the epilogue.
+      SmallVector<std::pair<int64_t, MCRegister>, 4> Copies;
+      for (int64_t J = 0; J != NumPopped; ++J)
+        Copies.emplace_back(FPDiff - (NumPopped - J) * (int64_t)SlotSize,
+                            Popped[J]);
+      std::stable_partition(Copies.begin(), Copies.end(),
+                            [](const auto &C) { return C.first != 0; });
+      for (const auto &[DstOff, Reg] : Copies) {
+        MachineInstrBuilder Load =
+            BuildMI(MBB, Terminator, DL, TII.get(X86::MOV64rm), Scratch);
+        if (HasFP && Reg == FramePtr.asMCReg()) {
+          addRegOffset(Load, Base, false, Disp(-R - (int64_t)SlotSize));
+        } else {
+          int FI = 0;
+          for (const CalleeSavedInfo &CSI : MFI.getCalleeSavedInfo())
+            if (CSI.getReg() == Reg)
+              FI = CSI.getFrameIdx();
+          addFrameReference(Load, FI);
+        }
+        Load.setMIFlag(MachineInstr::FrameDestroy);
+        addRegOffset(BuildMI(MBB, Terminator, DL, TII.get(X86::MOV64mr)), Base,
+                     false, Disp(DstOff))
+            .addReg(Scratch, RegState::Kill)
+            .setMIFlag(MachineInstr::FrameDestroy);
+      }
+    }
+
+    EmitEpilogueStart(Terminator);
+
+    int64_t K = StackSize + FPDiff - NumPopped * (int64_t)SlotSize;
+    if (HasFP) {
+      addRegOffset(BuildMI(MBB, Terminator, DL, TII.get(X86::LEA64r), StackPtr),
+                   FramePtr, false, K - SEHFrameOffset)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    } else if (K != 0) {
+      if (!isInt<32>(K))
+        report_fatal_error("Stack frame too large for a tail call exit under "
+                           "win64");
+      BuildMI(MBB, Terminator, DL, TII.get(X86::ADD64ri32), StackPtr)
+          .addReg(StackPtr)
+          .addImm(K)
+          .setMIFlag(MachineInstr::FrameDestroy)
+          ->getOperand(3)
+          .setIsDead();
+    }
+    for (MCRegister Reg : Popped)
+      BuildMI(MBB, Terminator, DL, TII.get(getPOPOpcode(STI)), Reg)
+          .setMIFlag(MachineInstr::FrameDestroy);
+  }
+
+  if (MF.hasWinCFI())
+    BuildMI(MBB, Terminator, DL, TII.get(X86::SEH_EndEpilogue));
+
+  // The adjustment is done here, so expanding the tail call must add nothing.
+  if (isTailCallOpcode(Terminator->getOpcode()))
+    getTCReturnStackAdjust(*Terminator).setImm(-R);
+}
+
 void X86FrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -2678,6 +3048,12 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   bool IsWin64UnwindV3 =
       NeedsWin64CFI && MF.hasWinCFI() && requireWinX64UnwindV3(MF);
   bool IsFunclet = MBBI == MBB.end() ? false : isFuncletReturnInstr(*MBBI);
+
+  if (NeedsWin64CFI && !IsFunclet && Terminator != MBB.end()) {
+    Terminator = loadFrameIndexTailCallTarget(MF, MBB, Terminator, TRI, TII);
+    MBBI = Terminator;
+    DL = MBBI->getDebugLoc();
+  }
 
   // Get the number of bytes to allocate from the FrameInfo.
   uint64_t StackSize = MFI.getStackSize();
@@ -2740,6 +3116,32 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   unsigned SEHFrameOffset = 0;
   if (IsWin64Prologue && HasFP)
     SEHFrameOffset = calculateSetFPREG(SEHStackAllocAmt);
+
+  // Win64 exits whose RSP adjustment is not simply the frame size (returns from
+  // functions with a tail-call reserve, and tail calls that change the stack
+  // argument size) get their own epilogue, so that unwinding is correct at
+  // every instruction.
+  OldReturnAddressStores SunkStores;
+  bool SinkStores = false;
+  if (NeedsWin64CFI && !IsFunclet && Terminator != MBB.end() &&
+      isWin64ReserveExitTerminator(*Terminator)) {
+    int64_t FPDiff = isTailCallOpcode(Terminator->getOpcode())
+                         ? getTCReturnStackAdjust(*Terminator).getImm()
+                         : 0;
+    if (FPDiff + (int64_t)TailCallArgReserveSize != 0) {
+      if (IsWin64UnwindV3 ||
+          MF.getFunction().getParent()->getWinX64EHUnwindMode() ==
+              WinX64EHUnwindMode::V2Required)
+        report_fatal_error("Can't handle guaranteed tail calls that change the "
+                           "stack argument size with Windows x64 unwind v2 or "
+                           "v3 yet");
+      emitWin64ReserveExit(MF, MBB, Terminator, FPDiff, SEHFrameOffset);
+      return;
+    }
+    SunkStores =
+        detachOldReturnAddressStores(MBB, Terminator, MFI, TRI, TII, SlotSize);
+    SinkStores = !SunkStores.Stores.empty();
+  }
 
   // AfterPop is the position to insert .cfi_restore.
   MachineBasicBlock::iterator AfterPop = MBBI;
@@ -2973,6 +3375,21 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   // Emit tilerelease for AMX kernel.
   if (X86FI->getAMXProgModel() == AMXProgModelEnum::ManagedRA)
     BuildMI(MBB, Terminator, DL, TII.get(X86::TILERELEASE));
+
+  if (SinkStores) {
+    // The stores that overwrite the return address go right before the
+    // epilogue.
+    MachineBasicBlock::iterator Begin = Terminator;
+    while (Begin != MBB.begin() &&
+           std::prev(Begin)->getOpcode() != X86::SEH_BeginEpilogue)
+      --Begin;
+    if (Begin == MBB.begin())
+      report_fatal_error("Can't find the start of the epilogue of a tail call "
+                         "under win64");
+    --Begin;
+    for (MachineInstr *MI : SunkStores.Stores)
+      MBB.insert(Begin, MI);
+  }
 
   if (NeedsWin64CFI && MF.hasWinCFI())
     BuildMI(MBB, Terminator, DL, TII.get(X86::SEH_EndEpilogue))
