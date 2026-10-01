@@ -22,7 +22,7 @@
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #include "src/string/memory_utils/utils.h"
 
-#if defined(LIBC_TARGET_CPU_HAS_MVE)
+#if defined(LIBC_TARGET_CPU_HAS_MVE) && LIBC_HAS_VECTOR_TYPE
 #include "src/__support/CPP/simd.h"
 #endif
 
