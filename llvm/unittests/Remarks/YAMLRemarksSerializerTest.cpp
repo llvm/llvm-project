@@ -225,8 +225,7 @@ TEST(YAMLRemarks, SerializerRemarkMultiLineArg) {
 TEST(YAMLRemarks, SerializerRemarkRoundTrip) {
   // Values that the literal block form cannot hold must survive a round trip.
   StringRef Vals[] = {"abc\ndef\n\x01ghi", "abc\r\ndef\r\nghi",
-                      StringRef("abc\ndef\n\0ghi", 12), "  abc\ndef\nghi",
-                      "abc\ndef\nghi\n"};
+                      "  abc\ndef\nghi", "abc\ndef\nghi\n"};
   remarks::Remark R;
   R.RemarkType = remarks::Type::Missed;
   R.PassName = "pass";

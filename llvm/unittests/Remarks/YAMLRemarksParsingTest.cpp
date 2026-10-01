@@ -394,6 +394,17 @@ TEST(YAMLRemarks, ParsingWrongArgs) {
                                "  - Str: \"a\\qb\"\n"
                                "",
                                "Unrecognized escape code"));
+  // Null character in a value.
+  EXPECT_TRUE(
+      parseExpectError("\n"
+                       "--- !Missed\n"
+                       "Pass: inline\n"
+                       "Name: NoDefinition\n"
+                       "Function: foo\n"
+                       "Args:\n"
+                       "  - Str: \"a\\0b\"\n"
+                       "",
+                       "remark strings cannot contain null characters."));
 }
 
 static inline StringRef checkStr(StringRef Str, unsigned ExpectedLen) {

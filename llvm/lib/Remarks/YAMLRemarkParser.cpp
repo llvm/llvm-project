@@ -278,6 +278,9 @@ Expected<StringRef> YAMLRemarkParser::parseStr(yaml::KeyValueNode &Node) {
   StringRef Result = Scalar->getValue(Storage);
   if (Error E = error())
     return std::move(E);
+  // The bitstream format cannot hold a null character in a string.
+  if (Result.contains('\0'))
+    return error("remark strings cannot contain null characters.", *Scalar);
   // getValue only fills Storage when it had to rewrite the value.
   return Storage.empty() ? Result : Result.copy(Alloc);
 }
