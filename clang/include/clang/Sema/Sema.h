@@ -7931,7 +7931,7 @@ public:
   QualType CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
                                SourceLocation Loc, bool IsCompAssign,
                                bool AllowBothBool, bool AllowBoolConversion,
-                               bool AllowBoolOperation, bool ReportInvalid);
+                               bool AllowBoolOperation);
 
   /// Return a signed ext_vector_type that is of identical size and number of
   /// elements. For floating point vectors, return an integer type of identical
