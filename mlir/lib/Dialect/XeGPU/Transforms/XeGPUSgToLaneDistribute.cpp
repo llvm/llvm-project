@@ -1368,8 +1368,7 @@ struct SgToLaneVectorExtractStridedSlice
             op, "source of extract_strided_slice lacks distribution layout");
       SmallVector<int64_t> laneLayout =
           sourceLayout.getEffectiveLaneLayoutAsInt();
-      SmallVector<int64_t> sourceLaneData =
-          sourceLayout.getEffectiveLaneDataAsInt();
+      SmallVector<int64_t> laneData = sourceLayout.getEffectiveLaneDataAsInt();
       ArrayRef<int64_t> sourceShape = op.getSourceVectorType().getShape();
       for (int64_t distDim : distributedDims) {
         int64_t lanes = laneLayout[distDim];
@@ -1377,16 +1376,9 @@ struct SgToLaneVectorExtractStridedSlice
           return rewriter.notifyMatchFailure(
               op, "source size along a distributed dim is not a multiple of "
                   "its lane count");
-        // A lane owns lane_data contiguous elements along this dim, so the slice
-        // has to start on a lane-tile boundary or it would cut one of those
-        // runs. Packing changes only that alignment requirement, not the
-        // divisor: offset / (lanes * laneData) * laneData == offset / lanes.
-        int64_t laneData = distDim < static_cast<int64_t>(sourceLaneData.size())
-                               ? sourceLaneData[distDim]
-                               : 1;
         int64_t distrDimOffset =
             cast<IntegerAttr>(updatedOffsets[distDim]).getInt();
-        if (laneData == 0 || distrDimOffset % (lanes * laneData) != 0)
+        if (distrDimOffset % (lanes * laneData[distDim]) != 0)
           return rewriter.notifyMatchFailure(
               op, "offset along a distributed dim is not a multiple of its "
                   "lane tile");
