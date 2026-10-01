@@ -229,12 +229,9 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
 
   Type *EltTy = VecType->getElementType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
+  IRBuilder<> Builder(InsertPt);
   BasicBlock *IfBlock = CI->getParent();
-
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
   // Short-cut if the mask is all-true.
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
@@ -417,10 +414,8 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
 
   Type *EltTy = VecType->getElementType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+  IRBuilder<> Builder(InsertPt);
 
   // Short-cut if the mask is all-true.
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
@@ -589,13 +584,10 @@ static void scalarizeMaskedGather(const DataLayout &DL,
   auto *VecType = cast<FixedVectorType>(CI->getType());
   Type *EltTy = VecType->getElementType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
+  IRBuilder<> Builder(InsertPt);
   BasicBlock *IfBlock = CI->getParent();
-  Builder.SetInsertPoint(InsertPt);
   Align AlignVal = CI->getParamAlign(0).valueOrOne();
-
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
   // The result vector
   Value *VResult = Src0;
@@ -735,10 +727,8 @@ static void scalarizeMaskedScatter(const DataLayout &DL,
       isa<PointerType>(cast<VectorType>(Ptrs->getType())->getElementType()) &&
       "Vector of pointers is expected in masked scatter intrinsic");
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+  IRBuilder<> Builder(InsertPt);
 
   Align AlignVal = CI->getParamAlign(1).valueOrOne();
   unsigned VectorWidth = SrcFVTy->getNumElements();
@@ -836,12 +826,9 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL,
 
   Type *EltTy = VecType->getElementType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
+  IRBuilder<> Builder(InsertPt);
   BasicBlock *IfBlock = CI->getParent();
-
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
   unsigned VectorWidth = VecType->getNumElements();
 
@@ -982,12 +969,9 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL,
 
   auto *VecType = cast<FixedVectorType>(Src->getType());
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
+  IRBuilder<> Builder(InsertPt);
   BasicBlock *IfBlock = CI->getParent();
-
-  Builder.SetInsertPoint(InsertPt);
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
   Type *EltTy = VecType->getElementType();
 
@@ -1108,11 +1092,8 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
   auto *AddrType = cast<FixedVectorType>(Ptrs->getType());
   Type *EltTy = Inc->getType();
 
-  IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
-  Builder.SetInsertPoint(InsertPt);
-
-  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+  IRBuilder<> Builder(InsertPt);
 
   // FIXME: Do we need to add an alignment parameter to the intrinsic?
   unsigned VectorWidth = AddrType->getNumElements();
