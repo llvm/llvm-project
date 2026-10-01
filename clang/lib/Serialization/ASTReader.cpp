@@ -525,13 +525,18 @@ static bool checkTargetOptions(const TargetOptions &TargetOpts,
 
   // We compute the set difference in both directions explicitly so that we can
   // diagnose the differences differently.
+  auto FeatureLess = [](StringRef A, StringRef B) {
+    return A.substr(1) < B.substr(1);
+  };
+
   SmallVector<StringRef, 4> UnmatchedExistingFeatures, UnmatchedReadFeatures;
-  std::set_difference(
-      ExistingFeatures.begin(), ExistingFeatures.end(), ReadFeatures.begin(),
-      ReadFeatures.end(), std::back_inserter(UnmatchedExistingFeatures));
+  std::set_difference(ExistingFeatures.begin(), ExistingFeatures.end(),
+                      ReadFeatures.begin(), ReadFeatures.end(),
+                      std::back_inserter(UnmatchedExistingFeatures),
+                      FeatureLess);
   std::set_difference(ReadFeatures.begin(), ReadFeatures.end(),
                       ExistingFeatures.begin(), ExistingFeatures.end(),
-                      std::back_inserter(UnmatchedReadFeatures));
+                      std::back_inserter(UnmatchedReadFeatures), FeatureLess);
 
   // If we are allowing compatible differences and the read feature set is
   // a strict subset of the existing feature set, there is nothing to diagnose.
@@ -924,6 +929,16 @@ static bool checkPreprocessorOptions(
   }
 
   // Compute the #include and #include_macros lines we need.
+  for (unsigned I = 0, N = ExistingPPOpts.MacroIncludes.size(); I != N; ++I) {
+    StringRef File = ExistingPPOpts.MacroIncludes[I];
+    if (llvm::is_contained(PPOpts.MacroIncludes, File))
+      continue;
+
+    SuggestedPredefines += "#__include_macros \"";
+    SuggestedPredefines += File;
+    SuggestedPredefines += "\"\n##\n";
+  }
+
   for (unsigned I = 0, N = ExistingPPOpts.Includes.size(); I != N; ++I) {
     StringRef File = ExistingPPOpts.Includes[I];
 
@@ -946,16 +961,6 @@ static bool checkPreprocessorOptions(
     SuggestedPredefines += "#include \"";
     SuggestedPredefines += File;
     SuggestedPredefines += "\"\n";
-  }
-
-  for (unsigned I = 0, N = ExistingPPOpts.MacroIncludes.size(); I != N; ++I) {
-    StringRef File = ExistingPPOpts.MacroIncludes[I];
-    if (llvm::is_contained(PPOpts.MacroIncludes, File))
-      continue;
-
-    SuggestedPredefines += "#__include_macros \"";
-    SuggestedPredefines += File;
-    SuggestedPredefines += "\"\n##\n";
   }
 
   return false;
@@ -1922,19 +1927,9 @@ bool ASTReader::ReadSLocEntry(int ID) {
     unsigned RecCode = MaybeRecCode.get();
 
     if (RecCode == SM_SLOC_BUFFER_BLOB_COMPRESSED) {
-      // Inspect the first byte to differentiate zlib (\x78) and zstd
-      // (little-endian 0xFD2FB528).
-      const llvm::compression::Format F =
-          Blob.size() > 0 && Blob.data()[0] == 0x78
-              ? llvm::compression::Format::Zlib
-              : llvm::compression::Format::Zstd;
-      if (const char *Reason = llvm::compression::getReasonIfUnsupported(F)) {
-        Error(Reason);
-        return nullptr;
-      }
       SmallVector<uint8_t, 0> Decompressed;
       if (llvm::Error E = llvm::compression::decompress(
-              F, llvm::arrayRefFromStringRef(Blob), Decompressed, Record[0])) {
+              llvm::arrayRefFromStringRef(Blob), Decompressed, Record[0])) {
         Error("could not decompress embedded file contents: " +
               llvm::toString(std::move(E)));
         return nullptr;
@@ -3060,6 +3055,10 @@ ASTReader::ResolveImportedPath(SmallString<0> &Buf, StringRef Path,
       Path == "<built-in>" || Path == "<command line>")
     return {Path, Buf};
 
+  // The writer makes the base directory itself relative as ".".
+  if (Path == ".")
+    return {Prefix, Buf};
+
   Buf.clear();
   llvm::sys::path::append(Buf, Prefix, Path);
   StringRef ResolvedPath{Buf.data(), Buf.size()};
@@ -3225,10 +3224,13 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // session.
   auto [EnablesBSValidation, WasValidated] =
       wasValidatedInBuildSession(F, HSOpts);
-  if (WasValidated)
-    return {std::nullopt, IgnoreError};
-  if (EnablesBSValidation &&
-      static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
+  const bool SkipModuleLookup =
+      !PP.getPreprocessorOpts().ModulesForceRedundantLookup &&
+      (WasValidated ||
+       (EnablesBSValidation &&
+        static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp));
+
+  if (SkipModuleLookup)
     return {std::nullopt, IgnoreError};
 
   Diag(diag::remark_module_check_relocation) << F.ModuleName << F.FileName;
@@ -3238,7 +3240,7 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // check).
   Module *M = PP.getHeaderSearchInfo().lookupModule(
       F.ModuleName, DirectoryCheck ? SourceLocation() : F.ImportLoc,
-      /*AllowSearch=*/DirectoryCheck,
+      /*AllowSearch=*/true,
       /*AllowExtraModuleMapSearch=*/DirectoryCheck);
 
   return {M, IgnoreError};
@@ -8163,6 +8165,11 @@ QualType ASTReader::GetType(TypeID ID) {
     T = Context.SingletonId;                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case PREDEF_TYPE_##Id##_ID:                                                  \
+    T = Context.SingletonId;                                                   \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case PREDEF_TYPE_##Id##_ID:                                                  \
     T = Context.SingletonId;                                                   \
@@ -11471,7 +11478,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPFinalClause();
     break;
   case llvm::omp::OMPC_num_threads:
-    C = new (Context) OMPNumThreadsClause();
+    C = OMPNumThreadsClause::CreateEmpty(Context, Record.readInt());
     break;
   case llvm::omp::OMPC_safelen:
     C = new (Context) OMPSafelenClause();
@@ -11495,13 +11502,16 @@ OMPClause *OMPClauseReader::readClause() {
     break;
   }
   case llvm::omp::OMPC_full:
-    C = OMPFullClause::CreateEmpty(Context);
+    C = new (Context) OMPFullClause();
     break;
   case llvm::omp::OMPC_partial:
-    C = OMPPartialClause::CreateEmpty(Context);
+    C = new (Context) OMPPartialClause();
+    break;
+  case llvm::omp::OMPC_depth:
+    C = new (Context) OMPDepthClause();
     break;
   case llvm::omp::OMPC_looprange:
-    C = OMPLoopRangeClause::CreateEmpty(Context);
+    C = new (Context) OMPLoopRangeClause();
     break;
   case llvm::omp::OMPC_allocator:
     C = new (Context) OMPAllocatorClause();
@@ -11676,7 +11686,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPFlushClause::CreateEmpty(Context, Record.readInt());
     break;
   case llvm::omp::OMPC_depobj:
-    C = OMPDepobjClause::CreateEmpty(Context);
+    C = new (Context) OMPDepobjClause();
     break;
   case llvm::omp::OMPC_depend: {
     unsigned NumVars = Record.readInt();
@@ -11821,7 +11831,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPFilterClause();
     break;
   case llvm::omp::OMPC_bind:
-    C = OMPBindClause::CreateEmpty(Context);
+    C = new (Context) OMPBindClause();
     break;
   case llvm::omp::OMPC_align:
     C = new (Context) OMPAlignClause();
@@ -11886,11 +11896,20 @@ void OMPClauseReader::VisitOMPFinalClause(OMPFinalClause *C) {
 }
 
 void OMPClauseReader::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
+  C->setPrescriptivenessModifier(
+      Record.readEnum<OpenMPNumThreadsClauseModifier>());
+  C->setPrescriptivenessModifierLoc(Record.readSourceLocation());
+  C->setDimsModifier(Record.readEnum<OpenMPNumThreadsClauseModifier>());
+  C->setDimsModifierLoc(Record.readSourceLocation());
+  C->setDimsModifierExpr(Record.readSubExpr());
   VisitOMPClauseWithPreInit(C);
-  C->setModifier(Record.readEnum<OpenMPNumThreadsClauseModifier>());
-  C->setNumThreads(Record.readSubExpr());
-  C->setModifierLoc(Record.readSourceLocation());
   C->setLParenLoc(Record.readSourceLocation());
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Record.readSubExpr());
+  C->setVarRefs(Vars);
 }
 
 void OMPClauseReader::VisitOMPSafelenClause(OMPSafelenClause *C) {
@@ -11929,6 +11948,11 @@ void OMPClauseReader::VisitOMPFullClause(OMPFullClause *C) {}
 
 void OMPClauseReader::VisitOMPPartialClause(OMPPartialClause *C) {
   C->setFactor(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPDepthClause(OMPDepthClause *C) {
+  C->setDepth(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }
 

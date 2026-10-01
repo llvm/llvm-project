@@ -506,6 +506,9 @@ Error WasmObjectFile::parseDylink0Section(ReadContext &Ctx) {
       }
       break;
     }
+    case wasm::WASM_DYLINK_TARGET_ARCH:
+      DylinkInfo.TargetArch = readString(Ctx);
+      break;
     default:
       LLVM_DEBUG(dbgs() << "unknown dylink.0 sub-section: " << Type << "\n");
       Ctx.Ptr += Size;
@@ -665,6 +668,12 @@ Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
       for (uint32_t I = 0; I < Count; I++) {
         DataSegments[I].Data.Name = readString(Ctx);
         DataSegments[I].Data.Alignment = readVaruint32(Ctx);
+        if (DataSegments[I].Data.Alignment > 32)
+          return make_error<GenericBinaryError>(
+              "invalid data segment alignment: `" + DataSegments[I].Data.Name +
+                  "` (alignment: " + Twine(DataSegments[I].Data.Alignment) +
+                  ")",
+              object_error::parse_failed);
         DataSegments[I].Data.LinkingFlags = readVaruint32(Ctx);
       }
       break;
@@ -687,6 +696,9 @@ Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
     case wasm::WASM_COMDAT_INFO:
       if (Error Err = parseLinkingSectionComdat(Ctx))
         return Err;
+      break;
+    case wasm::WASM_TARGET_ARCH:
+      LinkingData.TargetArch = readString(Ctx);
       break;
     default:
       Ctx.Ptr += Size;
@@ -837,6 +849,11 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
                 object_error::parse_failed);
           auto Size = readVaruint64(Ctx);
           auto Alignment = readUint8(Ctx);
+          if (Alignment > 32)
+            return make_error<GenericBinaryError>(
+                "invalid common symbol alignment: `" + Info.Name +
+                    "` (alignment: " + Twine(unsigned(Alignment)) + ")",
+                object_error::parse_failed);
           Info.CommonRef = wasm::WasmCommonReference{Size, Alignment};
         } else {
           auto Index = readVaruint32(Ctx);
@@ -2180,12 +2197,19 @@ section_iterator WasmObjectFile::section_end() const {
 }
 
 uint8_t WasmObjectFile::getBytesInAddress() const {
-  return HasMemory64 ? 8 : 4;
+  return getArch() == Triple::wasm64 ? 8 : 4;
 }
 
 StringRef WasmObjectFile::getFileFormatName() const { return "WASM"; }
 
 Triple::ArchType WasmObjectFile::getArch() const {
+  if (!LinkingData.TargetArch.empty())
+    return Triple(LinkingData.TargetArch).getArch();
+  if (!DylinkInfo.TargetArch.empty())
+    return Triple(DylinkInfo.TargetArch).getArch();
+  // Fall back to the HasMemory64 heuristic for backwards compatibility with
+  // older object files/shared libraries that lack target architecture metadata,
+  // as well as final executables that lack custom linking/dylink sections.
   return HasMemory64 ? Triple::wasm64 : Triple::wasm32;
 }
 

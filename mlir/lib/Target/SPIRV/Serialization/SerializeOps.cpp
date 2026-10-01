@@ -712,7 +712,7 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
 
   // Encode the name.
   auto varName = varOp.getSymName();
-  elidedAttrs.push_back(SymbolTable::getSymbolAttrName());
+  elidedAttrs.push_back(varOp.getSymNameAttrName());
   if (failed(processName(resultID, varName))) {
     return failure();
   }

@@ -242,22 +242,22 @@
 // Check --offload-compress --offload-jobs=N does not cause warning.
 // RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   --offload-arch=gfx1100 --offload-compress --offload-host-only -M %s \
-// RUN:   --offload-jobs=4 --offload-new-driver
+// RUN:   --offload-jobs=4
 
 // Check --offload-jobs=N option.
 
 // RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --offload-arch=gfx1100 --offload-new-driver --offload-jobs=4 %s 2>&1 | \
+// RUN:   --offload-arch=gfx1100 --offload-jobs=4 %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=JOBS %s
 // JOBS: clang-linker-wrapper{{.*}} "--wrapper-jobs=4"
 
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --offload-arch=gfx1100 --offload-new-driver --offload-jobs=0x4 %s 2>&1 | \
+// RUN:   --offload-arch=gfx1100 --offload-jobs=0x4 %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=INVJOBS %s
 // INVJOBS: clang: error: invalid integral value '0x4' in '--offload-jobs=0x4'
 
 // RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --offload-arch=gfx1100 --offload-new-driver --offload-jobs=jobserver %s 2>&1 | \
+// RUN:   --offload-arch=gfx1100 --offload-jobs=jobserver %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=JOBSV %s
 // JOBSV: clang-linker-wrapper{{.*}} "--wrapper-jobs=jobserver"
 
@@ -265,14 +265,14 @@
 
 // RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:   --offload-arch=gfx1100 --offload-new-driver \
+// RUN:   --offload-arch=gfx1100 \
 // RUN:   -fprofile-instr-generate -fcoverage-mapping %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=COV %s
 // COV: clang-linker-wrapper{{.*}} "--device-compiler=amdgpu-amd-amdhsa=-fprofile-instr-generate" "--device-compiler=amdgpu-amd-amdhsa=-fcoverage-mapping"
 
 // RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:   --offload-arch=gfx1100 --offload-new-driver \
+// RUN:   --offload-arch=gfx1100 \
 // RUN:   -fprofile-instr-generate -fcoverage-mapping \
 // RUN:   -fcoverage-compilation-dir=/src %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=COV-DIR %s
@@ -280,7 +280,7 @@
 
 // RUN: %clang -### -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   -resource-dir=%S/Inputs/resource_dir \
-// RUN:   --offload-arch=gfx1100 --offload-new-driver \
+// RUN:   --offload-arch=gfx1100 \
 // RUN:   -fprofile-instr-generate -fcoverage-mapping %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=NO-COV %s
 // NO-COV-NOT: --device-compiler=amdgcn-amd-amdhsa=-fprofile-instr-generate

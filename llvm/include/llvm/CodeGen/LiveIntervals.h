@@ -130,6 +130,17 @@ public:
                                        const MachineBasicBlock *MBB,
                                        ProfileSummaryInfo *PSI = nullptr);
 
+  /// Variants taking a precomputed \p OptForSize rather than deriving it from a
+  /// ProfileSummaryInfo.
+  LLVM_ABI static float getSpillWeight(bool isDef, bool isUse,
+                                       const MachineBlockFrequencyInfo *MBFI,
+                                       const MachineInstr &MI, bool OptForSize);
+
+  LLVM_ABI static float getSpillWeight(bool isDef, bool isUse,
+                                       const MachineBlockFrequencyInfo *MBFI,
+                                       const MachineBasicBlock *MBB,
+                                       bool OptForSize);
+
   LiveInterval &getInterval(Register Reg) {
     if (hasInterval(Reg))
       return *VirtRegIntervals[Reg.id()];
@@ -490,12 +501,13 @@ private:
 
   /// Implementation of insertMBBInMaps(). \p MBB must contain no regmask
   /// operands when \p AssumeRegMaskEmpty is true.
-  void insertMBBInMapsImpl(MachineBasicBlock *MBB, bool AssumeRegMaskEmpty);
+  LLVM_ABI void insertMBBInMapsImpl(MachineBasicBlock *MBB,
+                                    bool AssumeRegMaskEmpty);
 
   /// Updates the regmask table for \p Orig's instructions that are moved into
   /// \p SplitBB, so that the table is sliced across both blocks.
-  void reassignRegMaskSlots(MachineBasicBlock &Orig,
-                            MachineBasicBlock &SplitBB);
+  LLVM_ABI void reassignRegMaskSlots(MachineBasicBlock &Orig,
+                                     MachineBasicBlock &SplitBB);
 
   /// Walk the values in \p LI and check for dead values:
   /// - Dead PHIDef values are marked as unused.

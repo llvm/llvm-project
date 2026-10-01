@@ -15,6 +15,7 @@
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/windows/AutoHandle.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Host/windows/PosixApi.h"
 
 #include "llvm/Support/ConvertUTF.h"
@@ -66,7 +67,7 @@ Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
 
   std::vector<wchar_t> buf(PATH_MAX + 1);
   // Subtract 1 from the path length since this function does not add a null
-  // terminator.
+  // terminator. The result is an extended-length ("\\?\") path.
   DWORD result = ::GetFinalPathNameByHandleW(
       h, buf.data(), buf.size() - 1, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
   std::string path;
@@ -75,7 +76,7 @@ Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
   else if (!llvm::convertWideToUTF8(buf.data(), path))
     error = Status::FromErrorString(PATH_CONVERSION_ERROR);
   else
-    dst.SetFile(path, FileSpec::Style::native);
+    dst.SetFile(StripExtendedLengthPrefix(path), FileSpec::Style::native);
 
   ::CloseHandle(h);
   return error;

@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+class BranchProbabilityInfo;
 class InductionDescriptor;
 class Instruction;
 class Loop;
@@ -34,7 +35,6 @@ class ScalarEvolution;
 class PredicatedScalarEvolution;
 class TargetLibraryInfo;
 class TargetTransformInfo;
-class VPBuilder;
 class VPRecipeBuilder;
 struct VFRange;
 
@@ -156,7 +156,12 @@ struct VPlanTransforms {
   ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
   LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
-              PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
+              PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr,
+              function_ref<const BranchProbabilityInfo &()> GetBPI = nullptr);
+
+  /// Add execution frequencies to each recipe in the loop body of \p Plan.
+  /// Frequencies are computed from the branch weights in \p Plan.
+  static void recordExecutionFrequencies(VPlan &Plan);
 
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
@@ -165,7 +170,7 @@ struct VPlanTransforms {
   /// recurrences, also creates FirstOrderRecurrenceSplice instructions and
   /// sinks/hoists users as needed. Returns false if any fixed-order
   /// recurrence cannot be handled.
-  static bool createHeaderPhiRecipes(
+  LLVM_ABI_FOR_TEST static bool createHeaderPhiRecipes(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
       const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
@@ -212,8 +217,8 @@ struct VPlanTransforms {
   /// executed.
   static void addMinimumVectorEpilogueIterationCheck(
       VPlan &Plan, Value *VectorTripCount, bool RequiresScalarEpilogue,
-      ElementCount EpilogueVF, unsigned EpilogueUF, unsigned MainLoopStep,
-      unsigned EpilogueLoopStep, ScalarEvolution &SE);
+      ElementCount EpilogueVF, unsigned MainLoopStep, unsigned EpilogueLoopStep,
+      ScalarEvolution &SE);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG. For the outermost loop, also create the
@@ -221,14 +226,26 @@ struct VPlanTransforms {
   /// BranchOnCond with BranchOnCount, using \p DL for the canonical IV.
   LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan, DebugLoc DL);
 
-  /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
-  /// VPValue and connect the block to \p Plan, using the VPValue as branch
-  /// condition.
+  /// Connect \p CheckBlock to \p Plan, branching on \p Cond.
   static void attachVPCheckBlock(VPlan &Plan, VPValue *Cond,
                                  VPBasicBlock *CheckBlock,
                                  bool AddBranchWeights);
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
+
+  /// Generate \p Checks as recipes and attach the check block to \p Plan.
+  static void attachMemoryChecks(VPlan &Plan,
+                                 ArrayRef<RuntimePointerCheck> Checks,
+                                 ScalarEvolution &SE, DebugLoc DL,
+                                 bool AddBranchWeights);
+
+  /// Model the blocks the executed \p MainPlan generated for the main vector
+  /// loop in \p EpiPlan during epilogue vectorization, wrapping each in a
+  /// VPIRBasicBlock, with \p EnteredFrom the block \p EpiPlan is entered from.
+  /// Edges from blocks bypassing both vector loops are redirected to \p
+  /// EpiPlan's scalar preheader, all others are mirrored.
+  static void modelGeneratedMainLoopBlocks(VPlan &EpiPlan, VPlan &MainPlan,
+                                           VPIRBasicBlock *EnteredFrom);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
@@ -317,10 +334,10 @@ struct VPlanTransforms {
 
   /// Replace symbolic strides from \p StridesMap in \p Plan with constants when
   /// possible.
-  static void
-  replaceSymbolicStrides(VPlan &Plan, PredicatedScalarEvolution &PSE,
-                         const DenseMap<Value *, const SCEV *> &StridesMap,
-                         const VPDominatorTree &VPDT);
+  static void replaceSymbolicStrides(VPlan &Plan,
+                                     PredicatedScalarEvolution &PSE,
+                                     const SymbolicStrideMap &StridesMap,
+                                     const VPDominatorTree &VPDT);
 
   /// Drop poison flags from recipes that may generate a poison value that is
   /// used after vectorization, even when their operands are not poison. Those
@@ -376,14 +393,21 @@ struct VPlanTransforms {
                                          DominatorTree &DT,
                                          AssumptionCache *AC);
 
+  /// If a single exit has multiple conditions combined together, split them
+  /// and create new exiting blocks. Currently limited to a single exit in the
+  /// latch block.
+  static bool splitCombinedExits(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                                 Loop *TheLoop);
+
   /// Update \p Plan to account for uncountable early exits by introducing
   /// appropriate branching logic in the latch that handles early exits and the
   /// latch exit condition. Multiple exits are handled with a dispatch block
   /// that determines which exit to take based on lane-by-lane semantics.
   LLVM_ABI_FOR_TEST static bool
-  handleUncountableEarlyExits(VPlan &Plan, Loop *TheLoop,
-                              PredicatedScalarEvolution &PSE, DominatorTree &DT,
-                              AssumptionCache *AC, UncountableExitStyle Style);
+  handleUncountableEarlyExits(VPlan &Plan, OptimizationRemarkEmitter *ORE,
+                              Loop *TheLoop, PredicatedScalarEvolution &PSE,
+                              DominatorTree &DT, AssumptionCache *AC,
+                              UncountableExitStyle Style);
 
   /// Disconnect countable early exits from the loop.
   LLVM_ABI_FOR_TEST static void handleCountableEarlyExits(VPlan &Plan);
@@ -421,7 +445,7 @@ struct VPlanTransforms {
                                        VFRange &Range);
 
   /// Perform instcombine-like simplifications on recipes in \p Plan.
-  static void simplifyRecipes(VPlan &Plan);
+  static void combineRecipes(VPlan &Plan);
 
   /// Cancel out redundant reverses in \p Plan, e.g. reverse(reverse(x)) -> x.
   static void simplifyReverses(VPlan &Plan);
@@ -504,9 +528,8 @@ struct VPlanTransforms {
   static void materializeAliasMaskCheckBlock(
       VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, bool HasBranchWeights);
 
-  /// Try to expand VPExpandSCEVRecipes in \p Plan's entry block to
-  /// VPInstructions. Recipes that cannot be expanded (like casts, min/max) are
-  /// kept for later IR-level expansion.
+  /// Expand VPExpandSCEVRecipes in \p Plan's entry block to VPInstructions.
+  /// Recipes wrapping a SCEVAddRecExpr are kept for later IR-level expansion.
   static void expandSCEVsToVPInstructions(VPlan &Plan, ScalarEvolution &SE);
 
   /// Expand remaining VPExpandSCEVRecipes in \p Plan's entry block using
@@ -600,9 +623,10 @@ struct VPlanTransforms {
   static void optimizeFindIVReductions(VPlan &Plan,
                                        PredicatedScalarEvolution &PSE, Loop &L);
 
-  /// Detect and create partial reduction recipes for scaled reductions in
-  /// \p Plan. Must be called after recipe construction. If partial reductions
-  /// are only valid for a subset of VFs in Range, Range.End is updated.
+  /// Detect and create partial reduction recipes for scaled or unordered
+  /// reductions in \p Plan. Must be called after recipe construction. If
+  /// partial reductions are only valid for a subset of VFs in Range, Range.End
+  /// is updated.
   static void createPartialReductions(VPlan &Plan, VPCostContext &CostCtx,
                                       VFRange &Range);
 
@@ -622,6 +646,15 @@ struct VPlanTransforms {
   static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
+
+  /// Replace truncates of a wide induction, or of that induction's increment,
+  /// by a VPWidenIntOrFpInductionRecipe producing the truncated type directly.
+  /// The canonical induction is narrowed even when the target reports the
+  /// truncate as free. If narrowing is only profitable for a subset of VFs in
+  /// \p Range, Range.End is updated.
+  static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
+                                       const TargetTransformInfo &TTI,
+                                       PredicatedScalarEvolution &PSE);
 };
 
 } // namespace llvm

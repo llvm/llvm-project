@@ -17,7 +17,9 @@ class TestDAP_asan(DAPTestCaseBase):
         session = self.build_and_create_session()
         process_event = session.launch(LaunchArgs(program))
         stop_event = session.verify_stopped_on_exception(
-            after=process_event, expected_description="Use of deallocated memory"
+            after=process_event,
+            expected_description="Use of deallocated memory",
+            expected_text=r"^AddressSanitizer$",
         )
 
         thread_id = self.expect_not_none(stop_event.body.threadId)

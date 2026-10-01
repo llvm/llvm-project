@@ -816,6 +816,8 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
     return FPType::BFloat16;
   else if constexpr (cpp::is_same_v<UnqualT, Float128>)
     return FPType::IEEE754_Binary128;
+  else if constexpr (cpp::is_same_v<UnqualT, Float80>)
+    return FPType::X86_Binary80;
   else
     static_assert(cpp::always_false<UnqualT>, "Unsupported type");
 }

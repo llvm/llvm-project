@@ -253,7 +253,6 @@ add_llvm_component_library(LLVMCodeGen
   TargetInstrInfo.cpp
   TargetLoweringBase.cpp
   TargetLoweringObjectFileImpl.cpp
-  TargetOptionsImpl.cpp
   TargetPassConfig.cpp
   TargetRegisterInfo.cpp
   TargetSchedule.cpp

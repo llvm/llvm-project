@@ -540,34 +540,17 @@ define i32 @abd_minmax_i32(i32 %a, i32 %b) nounwind {
 define i64 @abd_minmax_i64(i64 %a, i64 %b) nounwind {
 ; PPC32-LABEL: abd_minmax_i64:
 ; PPC32:       # %bb.0:
-; PPC32-NEXT:    cmplw 3, 5
-; PPC32-NEXT:    cmplw 1, 4, 6
-; PPC32-NEXT:    crandc 20, 0, 2
-; PPC32-NEXT:    crand 21, 2, 4
-; PPC32-NEXT:    cror 20, 21, 20
-; PPC32-NEXT:    mr 7, 3
-; PPC32-NEXT:    bc 12, 20, .LBB19_2
-; PPC32-NEXT:  # %bb.1:
-; PPC32-NEXT:    mr 7, 5
-; PPC32-NEXT:  .LBB19_2:
-; PPC32-NEXT:    mr 8, 4
-; PPC32-NEXT:    bc 12, 20, .LBB19_4
-; PPC32-NEXT:  # %bb.3:
-; PPC32-NEXT:    mr 8, 6
-; PPC32-NEXT:  .LBB19_4:
-; PPC32-NEXT:    crandc 20, 1, 2
-; PPC32-NEXT:    crand 21, 2, 5
-; PPC32-NEXT:    cror 20, 21, 20
-; PPC32-NEXT:    bc 12, 20, .LBB19_6
-; PPC32-NEXT:  # %bb.5:
-; PPC32-NEXT:    mr 3, 5
-; PPC32-NEXT:  .LBB19_6:
-; PPC32-NEXT:    bc 12, 20, .LBB19_8
-; PPC32-NEXT:  # %bb.7:
-; PPC32-NEXT:    mr 4, 6
-; PPC32-NEXT:  .LBB19_8:
-; PPC32-NEXT:    subc 4, 8, 4
-; PPC32-NEXT:    subfe 3, 3, 7
+; PPC32-NEXT:    subc 4, 4, 6
+; PPC32-NEXT:    li 7, 0
+; PPC32-NEXT:    subfe 3, 5, 3
+; PPC32-NEXT:    addze 5, 7
+; PPC32-NEXT:    addic 5, 5, -1
+; PPC32-NEXT:    xor 4, 4, 5
+; PPC32-NEXT:    xor 3, 3, 5
+; PPC32-NEXT:    subc 4, 4, 5
+; PPC32-NEXT:    subfe 3, 5, 3
+; PPC32-NEXT:    subfic 4, 4, 0
+; PPC32-NEXT:    subfze 3, 3
 ; PPC32-NEXT:    blr
 ;
 ; PPC64-LABEL: abd_minmax_i64:
@@ -586,119 +569,40 @@ define i64 @abd_minmax_i64(i64 %a, i64 %b) nounwind {
 define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; PPC32-LABEL: abd_minmax_i128:
 ; PPC32:       # %bb.0:
-; PPC32-NEXT:    stwu 1, -16(1)
-; PPC32-NEXT:    cmplw 3, 7
-; PPC32-NEXT:    cmplw 1, 4, 8
-; PPC32-NEXT:    xor 11, 3, 7
-; PPC32-NEXT:    xor 12, 4, 8
-; PPC32-NEXT:    cmplw 5, 5, 9
-; PPC32-NEXT:    cmplw 6, 6, 10
-; PPC32-NEXT:    crandc 23, 0, 2
-; PPC32-NEXT:    crand 26, 2, 4
-; PPC32-NEXT:    or 11, 12, 11
-; PPC32-NEXT:    crandc 20, 20, 22
-; PPC32-NEXT:    crand 24, 22, 24
-; PPC32-NEXT:    cror 23, 26, 23
-; PPC32-NEXT:    cmplwi 7, 11, 0
-; PPC32-NEXT:    cror 20, 24, 20
-; PPC32-NEXT:    crandc 23, 23, 30
-; PPC32-NEXT:    crand 20, 30, 20
-; PPC32-NEXT:    cror 20, 20, 23
-; PPC32-NEXT:    mr 11, 3
-; PPC32-NEXT:    stw 30, 8(1) # 4-byte Folded Spill
-; PPC32-NEXT:    bc 4, 20, .LBB20_11
-; PPC32-NEXT:  # %bb.1:
-; PPC32-NEXT:    mr 12, 4
-; PPC32-NEXT:    bc 4, 20, .LBB20_12
-; PPC32-NEXT:  .LBB20_2:
-; PPC32-NEXT:    mr 0, 5
-; PPC32-NEXT:    bc 4, 20, .LBB20_13
-; PPC32-NEXT:  .LBB20_3:
-; PPC32-NEXT:    mr 30, 6
-; PPC32-NEXT:    bc 12, 20, .LBB20_5
-; PPC32-NEXT:  .LBB20_4:
-; PPC32-NEXT:    mr 30, 10
-; PPC32-NEXT:  .LBB20_5:
-; PPC32-NEXT:    crandc 20, 1, 2
-; PPC32-NEXT:    crand 23, 2, 5
-; PPC32-NEXT:    crandc 21, 21, 22
-; PPC32-NEXT:    crand 22, 22, 25
-; PPC32-NEXT:    cror 20, 23, 20
-; PPC32-NEXT:    cror 21, 22, 21
-; PPC32-NEXT:    crandc 20, 20, 30
-; PPC32-NEXT:    crand 21, 30, 21
-; PPC32-NEXT:    cror 20, 21, 20
-; PPC32-NEXT:    bc 4, 20, .LBB20_14
-; PPC32-NEXT:  # %bb.6:
-; PPC32-NEXT:    bc 4, 20, .LBB20_15
-; PPC32-NEXT:  .LBB20_7:
-; PPC32-NEXT:    bc 4, 20, .LBB20_16
-; PPC32-NEXT:  .LBB20_8:
-; PPC32-NEXT:    bc 12, 20, .LBB20_10
-; PPC32-NEXT:  .LBB20_9:
-; PPC32-NEXT:    mr 6, 10
-; PPC32-NEXT:  .LBB20_10:
-; PPC32-NEXT:    subc 6, 30, 6
-; PPC32-NEXT:    subfe 5, 5, 0
-; PPC32-NEXT:    subfe 4, 4, 12
-; PPC32-NEXT:    subfe 3, 3, 11
-; PPC32-NEXT:    lwz 30, 8(1) # 4-byte Folded Reload
-; PPC32-NEXT:    addi 1, 1, 16
+; PPC32-NEXT:    subc 6, 6, 10
+; PPC32-NEXT:    subfe 5, 9, 5
+; PPC32-NEXT:    subfe 4, 8, 4
+; PPC32-NEXT:    li 11, 0
+; PPC32-NEXT:    subfe 3, 7, 3
+; PPC32-NEXT:    addze 7, 11
+; PPC32-NEXT:    addic 7, 7, -1
+; PPC32-NEXT:    xor 6, 6, 7
+; PPC32-NEXT:    xor 5, 5, 7
+; PPC32-NEXT:    subc 6, 6, 7
+; PPC32-NEXT:    xor 4, 4, 7
+; PPC32-NEXT:    subfe 5, 7, 5
+; PPC32-NEXT:    xor 3, 3, 7
+; PPC32-NEXT:    subfe 4, 7, 4
+; PPC32-NEXT:    subfe 3, 7, 3
+; PPC32-NEXT:    subfic 6, 6, 0
+; PPC32-NEXT:    subfze 5, 5
+; PPC32-NEXT:    subfze 4, 4
+; PPC32-NEXT:    subfze 3, 3
 ; PPC32-NEXT:    blr
-; PPC32-NEXT:  .LBB20_11:
-; PPC32-NEXT:    mr 11, 7
-; PPC32-NEXT:    mr 12, 4
-; PPC32-NEXT:    bc 12, 20, .LBB20_2
-; PPC32-NEXT:  .LBB20_12:
-; PPC32-NEXT:    mr 12, 8
-; PPC32-NEXT:    mr 0, 5
-; PPC32-NEXT:    bc 12, 20, .LBB20_3
-; PPC32-NEXT:  .LBB20_13:
-; PPC32-NEXT:    mr 0, 9
-; PPC32-NEXT:    mr 30, 6
-; PPC32-NEXT:    bc 4, 20, .LBB20_4
-; PPC32-NEXT:    b .LBB20_5
-; PPC32-NEXT:  .LBB20_14:
-; PPC32-NEXT:    mr 3, 7
-; PPC32-NEXT:    bc 12, 20, .LBB20_7
-; PPC32-NEXT:  .LBB20_15:
-; PPC32-NEXT:    mr 4, 8
-; PPC32-NEXT:    bc 12, 20, .LBB20_8
-; PPC32-NEXT:  .LBB20_16:
-; PPC32-NEXT:    mr 5, 9
-; PPC32-NEXT:    bc 4, 20, .LBB20_9
-; PPC32-NEXT:    b .LBB20_10
 ;
 ; PPC64-LABEL: abd_minmax_i128:
 ; PPC64:       # %bb.0:
-; PPC64-NEXT:    cmpld 3, 5
-; PPC64-NEXT:    cmpld 1, 4, 6
-; PPC64-NEXT:    crandc 20, 0, 2
-; PPC64-NEXT:    mr 7, 3
-; PPC64-NEXT:    crand 21, 2, 4
-; PPC64-NEXT:    cror 20, 21, 20
-; PPC64-NEXT:    bc 12, 20, .LBB20_2
-; PPC64-NEXT:  # %bb.1:
-; PPC64-NEXT:    mr 7, 5
-; PPC64-NEXT:  .LBB20_2:
-; PPC64-NEXT:    mr 8, 4
-; PPC64-NEXT:    bc 12, 20, .LBB20_4
-; PPC64-NEXT:  # %bb.3:
-; PPC64-NEXT:    mr 8, 6
-; PPC64-NEXT:  .LBB20_4:
-; PPC64-NEXT:    crandc 20, 1, 2
-; PPC64-NEXT:    crand 21, 2, 5
-; PPC64-NEXT:    cror 20, 21, 20
-; PPC64-NEXT:    bc 12, 20, .LBB20_6
-; PPC64-NEXT:  # %bb.5:
-; PPC64-NEXT:    mr 3, 5
-; PPC64-NEXT:  .LBB20_6:
-; PPC64-NEXT:    bc 12, 20, .LBB20_8
-; PPC64-NEXT:  # %bb.7:
-; PPC64-NEXT:    mr 4, 6
-; PPC64-NEXT:  .LBB20_8:
-; PPC64-NEXT:    subc 4, 8, 4
-; PPC64-NEXT:    subfe 3, 3, 7
+; PPC64-NEXT:    subc 4, 4, 6
+; PPC64-NEXT:    li 7, 0
+; PPC64-NEXT:    subfe 3, 5, 3
+; PPC64-NEXT:    addze 5, 7
+; PPC64-NEXT:    addic 5, 5, -1
+; PPC64-NEXT:    xor 4, 4, 5
+; PPC64-NEXT:    xor 3, 3, 5
+; PPC64-NEXT:    subc 4, 4, 5
+; PPC64-NEXT:    subfe 3, 5, 3
+; PPC64-NEXT:    subfic 4, 4, 0
+; PPC64-NEXT:    subfze 3, 3
 ; PPC64-NEXT:    blr
   %min = call i128 @llvm.umin.i128(i128 %a, i128 %b)
   %max = call i128 @llvm.umax.i128(i128 %a, i128 %b)

@@ -58,6 +58,7 @@ LLVM_C_EXTERN_C_BEGIN
 
 /// External users depend on the following values being stable. It is not safe
 /// to reorder them.
+// clang-format off
 typedef enum {
   /* Terminator Instructions */
   LLVMRet            = 1,
@@ -133,6 +134,8 @@ typedef enum {
   LLVMExtractValue   = 53,
   LLVMInsertValue    = 54,
   LLVMFreeze         = 68,
+  LLVMBitInsert      = 72,
+  LLVMBitExtract     = 73,
 
   /* Atomic operators */
   LLVMFence          = 55,
@@ -148,6 +151,7 @@ typedef enum {
   LLVMCleanupPad     = 64,
   LLVMCatchSwitch    = 65
 } LLVMOpcode;
+// clang-format on
 
 typedef enum {
   LLVMVoidTypeKind = 0,     /**< type with no size */
@@ -2747,8 +2751,12 @@ LLVM_C_ABI LLVMValueRef LLVMConstantPtrAuth(LLVMValueRef Ptr, LLVMValueRef Key,
  * @{
  */
 LLVM_C_ABI LLVMOpcode LLVMGetConstOpcode(LLVMValueRef ConstantVal);
-LLVM_C_ABI LLVMValueRef LLVMAlignOf(LLVMTypeRef Ty);
-LLVM_C_ABI LLVMValueRef LLVMSizeOf(LLVMTypeRef Ty);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMAlignOf(LLVMTypeRef Ty),
+    "Create a constant based on LLVMABIAlignmentOfType() instead");
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMSizeOf(LLVMTypeRef Ty),
+    "Create a constant based on LLVMABISizeOfType() instead");
 LLVM_C_ABI LLVMValueRef LLVMConstNeg(LLVMValueRef ConstantVal);
 LLVM_C_ABI LLVMValueRef LLVMConstNSWNeg(LLVMValueRef ConstantVal);
 LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
@@ -5141,6 +5149,14 @@ LLVM_C_ABI LLVMValueRef LLVMBuildInsertValue(LLVMBuilderRef,
                                              unsigned Index, const char *Name);
 LLVM_C_ABI LLVMValueRef LLVMBuildFreeze(LLVMBuilderRef, LLVMValueRef Val,
                                         const char *Name);
+LLVM_C_ABI LLVMValueRef LLVMBuildBitExtract(LLVMBuilderRef, LLVMTypeRef Type,
+                                            LLVMValueRef Src,
+                                            LLVMValueRef Offset,
+                                            const char *Name);
+LLVM_C_ABI LLVMValueRef LLVMBuildBitInsert(LLVMBuilderRef, LLVMValueRef Base,
+                                           LLVMValueRef Val,
+                                           LLVMValueRef Offset,
+                                           const char *Name);
 
 LLVM_C_ABI LLVMValueRef LLVMBuildIsNull(LLVMBuilderRef, LLVMValueRef Val,
                                         const char *Name);

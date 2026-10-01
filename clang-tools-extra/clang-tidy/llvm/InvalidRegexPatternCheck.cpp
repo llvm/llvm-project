@@ -30,18 +30,18 @@ void InvalidRegexPatternCheck::registerMatchers(MatchFinder *Finder) {
       hasUnqualifiedDesugaredType(arrayType(hasElementType(builtinType()))));
   auto IsStdStringView = qualType(hasUnqualifiedDesugaredType(recordType(
       hasDeclaration(cxxRecordDecl(hasName("::std::basic_string_view"))))));
-  auto HasStringContainerType =
+  const auto HasStringContainerType =
       hasType(qualType(anyOf(IsConstStdString, IsConstllvmStringRef,
                              IsStdStringView, IsConstCharPtr, IsCharArray)));
-  auto GetString = anyOf(GetStringLiteralFromObject, GetStringLiteral);
-  auto AnyCastedToStringRef = ignoringImplicit(
+  const auto GetString = anyOf(GetStringLiteralFromObject, GetStringLiteral);
+  const auto AnyCastedToStringRef = ignoringImplicit(
       anyOf(stringLiteral().bind("stringLiteral"),
             declRefExpr(
                 to(varDecl(HasStringContainerType, hasInitializer(GetString)))),
             memberExpr(member(fieldDecl(HasStringContainerType,
                                         hasInClassInitializer(GetString))))));
 
-  auto IsRegexFlagsType = ignoringParenImpCasts(
+  const auto IsRegexFlagsType = ignoringParenImpCasts(
       anyOf(integerLiteral().bind("regexFlagsInt"),
             declRefExpr(to(enumConstantDecl().bind("regexFlagEnum")))));
   Finder->addMatcher(

@@ -50,6 +50,15 @@
 #include <cmath>
 #include <optional>
 
+#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
+#include <sanitizer/lsan_interface.h>
+static int SkipLeakCheck;
+LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return SkipLeakCheck; }
+static void skipLeakCheck() { SkipLeakCheck = 1; }
+#else
+static void skipLeakCheck() {}
+#endif
+
 using namespace llvm;
 using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
 
@@ -356,14 +365,20 @@ static cl::opt<bool> MemProfFullSchema(
     "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Use the full schema for serialization"), cl::init(false));
 
-static cl::opt<bool>
-    MemprofGenerateRandomHotness("memprof-random-hotness", cl::init(false),
-                                 cl::Hidden, cl::sub(MergeSubcommand),
-                                 cl::desc("Generate random hotness values"));
-static cl::opt<unsigned> MemprofGenerateRandomHotnessSeed(
-    "memprof-random-hotness-seed", cl::init(0), cl::Hidden,
+static cl::opt<bool> MemprofGenerateRandomHotness(
+    "memprof-random-hotness", cl::init(false), cl::Hidden,
     cl::sub(MergeSubcommand),
-    cl::desc("Random hotness seed to use (0 to generate new seed)"));
+    cl::desc("Generate random hotness values. Use -random-seed to set the seed "
+             "value, otherwise the constant default seed is used"));
+static cl::opt<unsigned>
+    RandomSeed("random-seed", cl::init(0), cl::Hidden, cl::sub(MergeSubcommand),
+               cl::desc("Seed for the random number generator used by "
+                        "-memprof-random-hotness and temporal profile "
+                        "reservoir sampling"));
+static cl::alias MemprofGenerateRandomHotnessSeed(
+    "memprof-random-hotness-seed", cl::Hidden,
+    cl::desc("Alias for -random-seed. Deprecated, please use -random-seed"),
+    cl::aliasopt(RandomSeed));
 
 // Options specific to overlap subcommand.
 static cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
@@ -479,6 +494,10 @@ static cl::opt<bool> ShowSectionInfoOnly(
              "The flag is only usable when the sample profile is in "
              "extbinary format"),
     cl::sub(ShowSubcommand));
+static cl::opt<bool> ShowCompositeInfoOnly(
+    "show-composite-info-only", cl::init(false),
+    cl::desc("Show type IDs and payload sizes in a composite sample profile"),
+    cl::sub(ShowSubcommand));
 static cl::opt<bool> ShowBinaryIds("binary-ids", cl::init(false),
                                    cl::desc("Show binary ids in the profile. "),
                                    cl::sub(ShowSubcommand));
@@ -525,36 +544,99 @@ static void warn(Error E, StringRef Whence = "") {
   }
 }
 
-static void exitWithError(Twine Message, StringRef Whence = "",
-                          StringRef Hint = "") {
-  WithColor::error();
-  if (!Whence.empty())
-    errs() << Whence << ": ";
-  errs() << Message << "\n";
-  if (!Hint.empty())
-    WithColor::note() << Hint << "\n";
-  ::exit(1);
+namespace {
+class ProfdataError : public ErrorInfo<ProfdataError> {
+public:
+  static char ID;
+
+  ProfdataError(Twine Message, Twine Whence = "", Twine Hint = "")
+      : Message(Message.str()), Whence(Whence.str()), Hint(Hint.str()) {}
+
+  void log(raw_ostream &OS) const override {
+    if (!Whence.empty())
+      OS << Whence << ": ";
+    OS << Message;
+  }
+
+  void print() const {
+    WithColor::error();
+    log(errs());
+    errs() << "\n";
+    if (!Hint.empty())
+      WithColor::note() << Hint << "\n";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return inconvertibleErrorCode();
+  }
+
+private:
+  std::string Message;
+  std::string Whence;
+  std::string Hint;
+};
+
+char ProfdataError::ID = 0;
+} // namespace
+
+static Error makeError(Twine Message, StringRef Whence = "",
+                       StringRef Hint = "") {
+  return make_error<ProfdataError>(Message, Whence, Hint);
 }
 
-static void exitWithError(Error E, StringRef Whence = "") {
+static Error makeError(Error E, StringRef Whence = "") {
   if (E.isA<InstrProfError>()) {
+    std::string Msg;
+    std::string Hint;
     handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
       instrprof_error instrError = IPE.get();
-      StringRef Hint = "";
       if (instrError == instrprof_error::unrecognized_format) {
         // Hint in case user missed specifying the profile type.
         Hint = "Perhaps you forgot to use the --sample or --memory option?";
       }
-      exitWithError(IPE.message(), Whence, Hint);
+      Msg = IPE.message();
     });
-    return;
+    return makeError(Msg, Whence, Hint);
   }
 
-  exitWithError(toString(std::move(E)), Whence);
+  return makeError(toString(std::move(E)), Whence);
+}
+
+static Error makeError(std::error_code EC, StringRef Whence = "") {
+  return makeError(EC.message(), Whence);
+}
+
+static int reportError(Error E) {
+  if (!E)
+    return 0;
+  handleAllErrors(
+      std::move(E), [](const ProfdataError &PE) { PE.print(); },
+      [](const ErrorInfoBase &EIB) {
+        WithColor::error() << EIB.message() << "\n";
+      });
+  return 1;
+}
+
+static void exitWithError(Twine Message, StringRef Whence = "",
+                          StringRef Hint = "") {
+  reportError(makeError(Message, Whence, Hint));
+  // exit() terminates without unwinding the stack or running destructors, and
+  // there is no guaranty that pointers to allocations will be preserved, so
+  // LSan reports in-flight heap allocations as leaks at atexit.
+  skipLeakCheck();
+  ::exit(1);
+}
+
+static void exitWithError(Error E, StringRef Whence = "") {
+  reportError(makeError(std::move(E), Whence));
+  skipLeakCheck();
+  ::exit(1);
 }
 
 static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
-  exitWithError(EC.message(), Whence);
+  reportError(makeError(EC, Whence));
+  skipLeakCheck();
+  ::exit(1);
 }
 
 static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
@@ -669,7 +751,7 @@ struct WriterContext {
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
       : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
                MemProfVersionRequested, MemProfFullSchema,
-               MemprofGenerateRandomHotness, MemprofGenerateRandomHotnessSeed),
+               MemprofGenerateRandomHotness, RandomSeed),
         ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
@@ -1643,6 +1725,13 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
       Readers.pop_back();
       continue;
     }
+
+    // Merging cannot preserve payloads that this reader does not understand,
+    // so make the otherwise intentional forward-compatible skip visible.
+    if (Reader->hasUnknownProfileTypes())
+      warn("unknown composite profile blocks were ignored and will not be "
+           "preserved",
+           Input.Filename);
 
     SampleProfileMap &Profiles = Reader->getProfiles();
     if (ProfileIsProbeBased &&
@@ -3261,6 +3350,10 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
 static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Yaml)
     exitWithError("YAML output is not supported for sample profiles");
+  if (ShowSectionInfoOnly && ShowCompositeInfoOnly)
+    exitWithError("-show-sec-info-only and "
+                  "-show-composite-info-only cannot be used together");
+
   using namespace sampleprof;
   LLVMContext Context;
   auto FS = vfs::getRealFileSystem();
@@ -3272,6 +3365,18 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   auto Reader = std::move(ReaderOrErr.get());
   if (ShowSectionInfoOnly) {
     showSectionInfo(Reader.get(), OS);
+    return 0;
+  }
+
+  if (ShowCompositeInfoOnly) {
+    if (!Reader->hasCompositeProfileSection()) {
+      WithColor::warning() << "no composite profile section; nothing to show\n";
+      return 0;
+    }
+    if (std::error_code EC = Reader->dumpProfileTypeInfo(OS)) {
+      OS.flush();
+      exitWithErrorCode(EC, Filename);
+    }
     return 0;
   }
 

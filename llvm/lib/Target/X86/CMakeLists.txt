@@ -69,6 +69,7 @@ set(sources
   X86InstrFoldTables.cpp
   X86InstrInfo.cpp
   X86CompressEVEX.cpp
+  X86LFIRewritePass.cpp
   X86LoadValueInjectionLoadHardening.cpp
   X86LoadValueInjectionRetHardening.cpp
   X86MCInstLower.cpp
@@ -108,13 +109,11 @@ add_llvm_target(X86CodeGen ${sources}
   CodeGenTypes
   Core
   GlobalISel
-  IRPrinter
   Instrumentation
   MC
   ObjCARC
   Passes
   ProfileData
-  Scalar
   SelectionDAG
   Support
   Target

@@ -780,6 +780,12 @@ class Thread:
 
 
 @dataclass(frozen=True)
+class CompileUnit:
+    id: int
+    compileUnitPath: str
+
+
+@dataclass(frozen=True)
 class StackFrame:
     id: int
     name: str
@@ -791,6 +797,7 @@ class StackFrame:
     canRestart: Optional[bool] = None
     instructionPointerReference: Optional[str] = None
     moduleId: Optional[Union[int, str]] = None
+    compileUnitId: Optional[int] = None
     presentationHint: Optional[StackFramePresentationHint] = None
 
 
@@ -1080,7 +1087,7 @@ class InitializeArgs:
     supportsStartDebuggingRequest: Optional[bool] = None
     supportsANSIStyling: Optional[bool] = None
     sourceInitFile: bool = field(
-        metadata={"alias": "$__lldbSourceInitFile"}, default=False
+        metadata={"alias": "$__lldb_sourceInitFile"}, default=False
     )
 
     command_ = "initialize"
@@ -1118,9 +1125,9 @@ class LaunchArgs:
     env: Optional[Union[Dict[str, str], List[str]]] = None
     detachOnError: Optional[bool] = None
     disableASLR: bool = False
-    disableSTDIO: bool = False
+    disableSTDIO: Optional[bool] = None
     shellExpandArguments: bool = False
-    console: Console = Console.INTERNAL
+    console: Optional[Console] = None
     stdio: Optional[List[Optional[str]]] = None
 
     # Configurations.
@@ -1128,7 +1135,7 @@ class LaunchArgs:
     enableAutoVariableSummaries: bool = False
     enableSyntheticChildDebugging: bool = False
     displayExtendedBacktrace: bool = False
-    stopOnEntry: bool = False
+    stopOnEntry: Optional[bool] = None
     timeout: Optional[float] = None
     commandEscapePrefix: Optional[str] = None
     customFrameFormat: Optional[str] = None
@@ -1350,11 +1357,6 @@ class SetInstructionBreakpointsArgs:
 
 
 @dataclass(frozen=True)
-class CompileUnit:
-    compileUnitPath: str
-
-
-@dataclass(frozen=True)
 class CompileUnitsResponse(Response):
     @dataclass(frozen=True)
     class Body:
@@ -1367,6 +1369,7 @@ class CompileUnitsResponse(Response):
 @args_protocol
 class CompileUnitsArgs:
     moduleId: str
+    compileUnitIds: Optional[List[int]] = None
 
     command_ = "compileUnits"
     response_class_ = CompileUnitsResponse

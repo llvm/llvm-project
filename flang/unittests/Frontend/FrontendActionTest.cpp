@@ -38,7 +38,6 @@ protected:
   std::error_code ec;
 
   CompilerInstance compInst;
-  std::shared_ptr<CompilerInvocation> invoc;
 
   void SetUp() override {
     // Generate a unique test file name.
@@ -60,18 +59,14 @@ protected:
     inputFilePath = cwd.c_str();
     inputFilePath += "/" + inputFileName;
 
-    // Prepare the compiler (CompilerInvocation + CompilerInstance)
-    compInst.createDiagnostics();
-    invoc = std::make_shared<CompilerInvocation>();
-
     // Set-up default target triple and initialize LLVM Targets so that the
     // target data layout can be passed to the frontend.
-    invoc->getTargetOpts().triple =
+    compInst.getInvocation().getTargetOpts().triple =
         llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
     llvm::InitializeAllTargets();
     llvm::InitializeAllTargetMCs();
 
-    compInst.setInvocation(std::move(invoc));
+    compInst.createDiagnostics();
     compInst.getFrontendOpts().inputs.push_back(
         FrontendInputFile(inputFilePath, Language::Fortran));
   }

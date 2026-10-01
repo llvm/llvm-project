@@ -45,6 +45,12 @@ void NVPTXSubtarget::anchor() {}
 // Note: LLVM's minimum supported PTX version is 3.2 (see FeaturePTX in
 // NVPTX.td), so older SMs that supported earlier PTX versions instead use 3.2
 // as their effective minimum.
+//
+// Note: sm_110* is the PTX ISA 9.0 spelling of sm_101*, which was introduced in
+// PTX ISA 8.6 (sm_101f in 8.8) and renamed in 9.0. Since getTargetName()
+// rewrites the new spelling back to the old one when emitting older PTX, the
+// sm_110* names work with any PTX version that supported sm_101*, so they take
+// sm_101*'s minimum PTX version rather than the 9.0 of the rename.
 static unsigned minPTXVersion(NVPTX::GPUKind Arch) {
   switch (Arch) {
   case NVPTX::GK_NONE:
@@ -87,6 +93,8 @@ static unsigned minPTXVersion(NVPTX::GPUKind Arch) {
   case NVPTX::GK_SM_100a:
   case NVPTX::GK_SM_101:
   case NVPTX::GK_SM_101a:
+  case NVPTX::GK_SM_110:
+  case NVPTX::GK_SM_110a:
     return 86;
   case NVPTX::GK_SM_120:
   case NVPTX::GK_SM_120a:
@@ -96,15 +104,13 @@ static unsigned minPTXVersion(NVPTX::GPUKind Arch) {
   case NVPTX::GK_SM_103:
   case NVPTX::GK_SM_103f:
   case NVPTX::GK_SM_103a:
+  case NVPTX::GK_SM_110f:
   case NVPTX::GK_SM_120f:
   case NVPTX::GK_SM_121:
   case NVPTX::GK_SM_121f:
   case NVPTX::GK_SM_121a:
     return 88;
   case NVPTX::GK_SM_88:
-  case NVPTX::GK_SM_110:
-  case NVPTX::GK_SM_110f:
-  case NVPTX::GK_SM_110a:
     return 90;
   case NVPTX::GK_SM_107:
   case NVPTX::GK_SM_107f:
@@ -112,6 +118,24 @@ static unsigned minPTXVersion(NVPTX::GPUKind Arch) {
     return 94;
   }
   llvm_unreachable("invalid NVPTX GPUKind");
+}
+
+StringRef NVPTXSubtarget::getTargetName() const {
+  // Spell sm_110* as sm_101* when emitting PTX older than 9.0, which does not
+  // know the new names. See the note above minPTXVersion().
+  if (!hasFeature(NVPTX::PTX90))
+    switch (Arch) {
+    case NVPTX::GK_SM_110:
+      return "sm_101";
+    case NVPTX::GK_SM_110f:
+      return "sm_101f";
+    case NVPTX::GK_SM_110a:
+      return "sm_101a";
+    default:
+      break;
+    }
+
+  return NVPTX::getArchName(Arch);
 }
 
 NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,

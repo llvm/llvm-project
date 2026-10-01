@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64-unknown-linux-gnu"
 
-define void @test_pr98413_zext_removed(ptr %src, ptr noalias %dst, i64 %x) {
+define void @test_pr98413_zext_removed(ptr %src, ptr noalias %dst, i64 %x) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @test_pr98413_zext_removed(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]], i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -54,7 +54,7 @@ exit:
   ret void
 }
 
-define void @test_pr98413_sext_removed(ptr %src, ptr noalias %dst, i64 %x) {
+define void @test_pr98413_sext_removed(ptr %src, ptr noalias %dst, i64 %x) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @test_pr98413_sext_removed(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -247,7 +247,7 @@ exit:
 }
 
 ; Test for https://github.com/llvm/llvm-project/issues/162688.
-define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) {
+define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @test_minbws_for_trunc(
 ; CHECK-SAME: i32 [[N:%.*]], ptr noalias [[P1:%.*]], ptr noalias [[P2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -264,12 +264,9 @@ define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    [[BOUND06:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP5]]
-; CHECK-NEXT:    [[BOUND17:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP]]
-; CHECK-NEXT:    [[FOUND_CONFLICT8:%.*]] = and i1 [[BOUND06]], [[BOUND17]]
+; CHECK-NEXT:    [[FOUND_CONFLICT8:%.*]] = and i1 [[BOUND06]], [[BOUND1]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT8]]
-; CHECK-NEXT:    [[BOUND09:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP5]]
-; CHECK-NEXT:    [[BOUND110:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP4]]
-; CHECK-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
+; CHECK-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND06]], [[BOUND0]]
 ; CHECK-NEXT:    [[CONFLICT_RDX12:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT11]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX12]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

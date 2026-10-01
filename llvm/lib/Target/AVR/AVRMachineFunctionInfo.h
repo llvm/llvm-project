@@ -14,6 +14,7 @@
 #define LLVM_AVR_MACHINE_FUNCTION_INFO_H
 
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/Register.h"
 
 namespace llvm {
 
@@ -45,6 +46,9 @@ class AVRMachineFunctionInfo : public MachineFunctionInfo {
   int VarArgsFrameIndex;
 
 public:
+  Register AlignedStackReg;
+  unsigned AlignedStackObjectIdx;
+
   AVRMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI)
       : HasSpills(false), HasAllocas(false), HasStackArgs(false),
         CalleeSavedFrameSize(0), VarArgsFrameIndex(0) {
@@ -52,8 +56,12 @@ public:
 
     this->IsInterruptHandler =
         CallConv == CallingConv::AVR_INTR || F.hasFnAttribute("interrupt");
+
     this->IsSignalHandler =
         CallConv == CallingConv::AVR_SIGNAL || F.hasFnAttribute("signal");
+
+    this->AlignedStackReg = 0;
+    this->AlignedStackObjectIdx = 0;
   }
 
   MachineFunctionInfo *

@@ -8,17 +8,21 @@
 
 #include <detail/device_image_wrapper.hpp>
 
+#include <detail/context_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
-ProgramWrapper::ProgramWrapper(ol_device_handle_t Device,
-                               DeviceImageManager &DevImage) {
-  assert(Device);
+ProgramWrapper::ProgramWrapper(ContextImpl &Context, ol_device_handle_t Device,
+                               const DeviceImageManager &DevImage)
+    : MContext(Context) {
+  assert(MContext.getOLHandleRef() && "Context handle can't be nullptr");
+  assert(Device && "Device handle can't be nullptr");
 
   llvm::StringRef Image = DevImage.getOffloadBinary().getImage();
-  callAndThrow(olCreateProgram, Device, Image.data(), Image.size(), &MProgram);
+  callAndThrow(MContext, olCreateProgram, MContext.getOLHandleRef(), Device,
+               Image.data(), Image.size(), &MProgram);
 }
 
 ProgramWrapper::~ProgramWrapper() {
@@ -27,12 +31,17 @@ ProgramWrapper::~ProgramWrapper() {
   // TODO: define a way to report errors from dtors.
 }
 
-ol_program_handle_t
-DeviceImageManager::getOrCreateProgram(ol_device_handle_t DeviceHandle) {
-  const auto &[Iterator, Flag] = MPrograms.emplace(
-      std::piecewise_construct, std::forward_as_tuple(DeviceHandle),
-      std::forward_as_tuple(DeviceHandle, *this));
-  return Iterator->second.getOLHandle();
+ol_symbol_handle_t
+ProgramWrapper::getOrCreateKernel(std::string_view KernelName) {
+  auto It = MKernels.find(KernelName);
+  if (It != MKernels.end())
+    return It->second;
+
+  ol_symbol_handle_t Kernel{};
+  callAndThrow(MContext, olGetSymbol, MProgram, KernelName.data(),
+               OL_SYMBOL_KIND_KERNEL, &Kernel);
+  MKernels.emplace(KernelName, Kernel);
+  return Kernel;
 }
 
 } // namespace detail

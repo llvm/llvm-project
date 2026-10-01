@@ -46,14 +46,14 @@ body:             |
     %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
-    %25 = REG_SEQUENCE %3, 1, %24, 2
+    %25 = REG_SEQUENCE %3, %subreg.sub0, %24, %subreg.sub1
     %10 = S_MOV_B32 61440
     %11 = S_MOV_B32 0
-    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
-    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %12 = REG_SEQUENCE killed %11, %subreg.sub0, killed %10, %subreg.sub1
+    %13 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %14 = S_MOV_B32 2
     %26 = V_LSHL_B64_e64 killed %25, 2, implicit $exec
-    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %16 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %18 = COPY %26
     %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, implicit $exec
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
@@ -108,14 +108,14 @@ body:             |
     %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
-    %25 = REG_SEQUENCE %3, 1, %24, 2
+    %25 = REG_SEQUENCE %3, %subreg.sub0, %24, %subreg.sub1
     %10 = S_MOV_B32 61440
     %11 = S_MOV_B32 0
-    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
-    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %12 = REG_SEQUENCE killed %11, %subreg.sub0, killed %10, %subreg.sub1
+    %13 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %14 = S_MOV_B32 2
     %26 = V_LSHL_B64_e64 killed %25, 2, implicit $exec
-    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %16 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %18 = COPY %26
     %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, implicit $exec
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
@@ -171,14 +171,14 @@ body:             |
     %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
-    %25 = REG_SEQUENCE %3, 1, %24, 2
+    %25 = REG_SEQUENCE %3, %subreg.sub0, %24, %subreg.sub1
     %10 = S_MOV_B32 61440
     %11 = S_MOV_B32 0
-    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
-    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %12 = REG_SEQUENCE killed %11, %subreg.sub0, killed %10, %subreg.sub1
+    %13 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %14 = S_MOV_B32 2
     %26 = V_LSHL_B64_e64 killed %25, 2, implicit $exec
-    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %16 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %18 = COPY %26
     %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, implicit $exec
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
@@ -236,14 +236,14 @@ body:             |
     %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
-    %25 = REG_SEQUENCE %3, 1, %24, 2
+    %25 = REG_SEQUENCE %3, %subreg.sub0, %24, %subreg.sub1
     %10 = S_MOV_B32 61440
     %11 = S_MOV_B32 0
-    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
-    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %12 = REG_SEQUENCE killed %11, %subreg.sub0, killed %10, %subreg.sub1
+    %13 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %14 = S_MOV_B32 2
     %26 = V_LSHL_B64_e64 killed %25, 2, implicit $exec
-    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %16 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %18 = COPY %26
     %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, implicit $exec
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
@@ -313,14 +313,14 @@ body:             |
     %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
-    %25 = REG_SEQUENCE %3, 1, %24, 2
+    %25 = REG_SEQUENCE %3, %subreg.sub0, %24, %subreg.sub1
     %10 = S_MOV_B32 61440
     %11 = S_MOV_B32 0
-    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
-    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %12 = REG_SEQUENCE killed %11, %subreg.sub0, killed %10, %subreg.sub1
+    %13 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %14 = S_MOV_B32 2
     %26 = V_LSHL_B64_e64 killed %25, 2, implicit $exec
-    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %16 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %18 = COPY %26
     %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, implicit $exec
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
@@ -378,14 +378,14 @@ body:             |
     %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
-    %25 = REG_SEQUENCE %3, 1, %24, 2
+    %25 = REG_SEQUENCE %3, %subreg.sub0, %24, %subreg.sub1
     %10 = S_MOV_B32 61440
     %11 = S_MOV_B32 0
-    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
-    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %12 = REG_SEQUENCE killed %11, %subreg.sub0, killed %10, %subreg.sub1
+    %13 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %14 = S_MOV_B32 2
     %26 = V_LSHL_B64_e64 killed %25, 2, implicit $exec
-    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %16 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %18 = COPY %26
     %17 = BUFFER_LOAD_DWORD_ADDR64 %26, killed %13, 0, 0, 0, 0, implicit $exec
     %20 = V_ADD_F32_e64 0, killed %17, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
@@ -497,4 +497,56 @@ body:             |
     %2:vgpr_32 = V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
     %3:vgpr_32 = nsz nofpexcept V_MUL_F32_e64 0, killed %2, 0, 1056964608, 0, 0, implicit $mode, implicit $exec
 
+...
+
+---
+# GCN-LABEL: name: clamp_no_src_mods
+# GCN: %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 1, 0, implicit $mode, implicit $exec
+# GCN-NEXT: S_ENDPGM 0, implicit %2
+name:            clamp_no_src_mods
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = nofpexcept V_MAX_F32_e64 0, killed %2, 0, killed %2, 1, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %3
+...
+
+---
+# max(x, |x|) is not x, so the clamp cannot be folded into the def of x.
+# GCN-LABEL: name: clamp_abs_src1_only
+# GCN: %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GCN-NEXT: %3:vgpr_32 = nofpexcept V_MAX_F32_e64 0, killed %2, 2, killed %2, 1, 0, implicit $mode, implicit $exec
+name:            clamp_abs_src1_only
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = nofpexcept V_MAX_F32_e64 0, killed %2, 2, killed %2, 1, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %3
+...
+
+---
+# GCN-LABEL: name: clamp_abs_src0_only
+# GCN: %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GCN-NEXT: %3:vgpr_32 = nofpexcept V_MAX_F32_e64 2, killed %2, 0, killed %2, 1, 0, implicit $mode, implicit $exec
+name:            clamp_abs_src0_only
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = nofpexcept V_MAX_F32_e64 2, killed %2, 0, killed %2, 1, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %3
 ...

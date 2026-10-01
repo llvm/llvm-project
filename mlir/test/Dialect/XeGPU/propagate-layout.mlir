@@ -10,7 +10,7 @@ gpu.module @test {
 // CHECK-SAME: !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<8x16xf16>
 // CHECK: %[[T3:.*]] = xegpu.load_nd %[[T1]][0, 0]  <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}> :
 // CHECK-SAME: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
-// CHECK: %[[T4:.*]] = xegpu.dpas %[[T2]], %[[T3]], %[[CST]] {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
+// CHECK: %[[T4:.*]] = xegpu.dpas %[[T2]], %[[T3]], %[[CST]] <{layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> :
 // CHECK-SAME: vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
 // CHECK: %[[T5:.*]] = xegpu.create_nd_tdesc %[[ARG2]] : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 // CHECK: xegpu.store_nd %[[T4]], %[[T5]][0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
@@ -40,7 +40,7 @@ gpu.module @test {
 // CHECK-SAME: !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<8x16xf16>
 // CHECK: %[[T3:.*]] = xegpu.load_nd %[[T1]][0, 0]  <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}> :
 // CHECK-SAME: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
-// CHECK: %[[T4:.*]] = xegpu.dpas %[[T2]], %[[T3]], %[[CST]] {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
+// CHECK: %[[T4:.*]] = xegpu.dpas %[[T2]], %[[T3]], %[[CST]] <{layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> :
 // CHECK-SAME: vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf16> -> vector<8x16xf16>
 // CHECK: %[[T5:.*]] = xegpu.create_nd_tdesc %[[ARG2]] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 // CHECK: xegpu.store_nd %[[T4]], %[[T5]][0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
@@ -63,7 +63,7 @@ func.func @dpas_f16_result_f16(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>
 gpu.module @test {
 // CHECK-LABEL: func.func @dpas_i8(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: vector<8x32xi8>, %[[ARG1:[0-9a-zA-Z]+]]: vector<32x16xi8>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xi32>) {
-// CHECK: %[[T0:.*]] = xegpu.dpas %[[ARG0]], %[[ARG1]] {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+// CHECK: %[[T0:.*]] = xegpu.dpas %[[ARG0]], %[[ARG1]] <{layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [4, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>
 
 func.func @dpas_i8(%arg0: vector<8x32xi8>, %arg1: vector<32x16xi8>, %arg2: memref<8x16xi32>) {
   %c0 = arith.constant 0 : index
@@ -194,6 +194,64 @@ func.func @scatter_ops(%src: memref<256xf16>) {
   return
 }
 }
+
+// -----
+// `contiguity` is what turns into `lane_data`. Compare with `@scatter_ops`
+// above, which has no `contiguity` and gets `lane_data = [1]`.
+gpu.module @test {
+// CHECK-LABEL: func.func @scatter_ops_contiguity_2(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<512xf16>) {
+// CHECK: %[[MASK:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [2]>} dense<true> : vector<32xi1>
+// CHECK: %[[OFFSETS:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [2]>} dense<12> : vector<32xindex>
+// CHECK: %[[LOAD_VEC:.*]] = xegpu.load %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{contiguity = 2 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}> : memref<512xf16>, vector<32xindex>, vector<32xi1> -> vector<32xf16>
+// CHECK: xegpu.store %[[LOAD_VEC]], %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{contiguity = 2 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}> : vector<32xf16>, memref<512xf16>, vector<32xindex>, vector<32xi1>
+func.func @scatter_ops_contiguity_2(%src: memref<512xf16>) {
+  %1 = arith.constant dense<1>: vector<32xi1>
+  %offset = arith.constant dense<12> : vector<32xindex>
+  %3 = xegpu.load %src[%offset], %1 <{contiguity = 2}> : memref<512xf16>, vector<32xindex>, vector<32xi1> -> vector<32xf16>
+  xegpu.store %3, %src[%offset], %1 <{contiguity = 2}> : vector<32xf16>, memref<512xf16>, vector<32xindex>, vector<32xi1>
+  return
+}
+}
+
+// -----
+// A different `contiguity` gives a different `lane_data`.
+gpu.module @test {
+// CHECK-LABEL: func.func @scatter_ops_contiguity_4(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<512xf16>) {
+// CHECK: %[[MASK:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [4]>} dense<true> : vector<64xi1>
+// CHECK: %[[OFFSETS:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [4]>} dense<12> : vector<64xindex>
+// CHECK: %[[LOAD_VEC:.*]] = xegpu.load %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{contiguity = 4 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [4]>}> : memref<512xf16>, vector<64xindex>, vector<64xi1> -> vector<64xf16>
+// CHECK: xegpu.store %[[LOAD_VEC]], %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{contiguity = 4 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [4]>}> : vector<64xf16>, memref<512xf16>, vector<64xindex>, vector<64xi1>
+func.func @scatter_ops_contiguity_4(%src: memref<512xf16>) {
+  %1 = arith.constant dense<1>: vector<64xi1>
+  %offset = arith.constant dense<12> : vector<64xindex>
+  %3 = xegpu.load %src[%offset], %1 <{contiguity = 4}> : memref<512xf16>, vector<64xindex>, vector<64xi1> -> vector<64xf16>
+  xegpu.store %3, %src[%offset], %1 <{contiguity = 4}> : vector<64xf16>, memref<512xf16>, vector<64xindex>, vector<64xi1>
+  return
+}
+}
+
+// -----
+// `contiguity` is an upper bound, not the final per-lane width. Here 32 is
+// capped to what one lane can access in one instruction, so `lane_data` is
+// [16] and not [32]. The `contiguity` attribute itself is left alone.
+gpu.module @test {
+// CHECK-LABEL: func.func @scatter_ops_contiguity_capped(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<512xi8>) {
+// CHECK: %[[MASK:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [16]>} dense<true> : vector<512xi1>
+// CHECK: %[[OFFSETS:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [16]>} dense<12> : vector<512xindex>
+// CHECK: %[[LOAD_VEC:.*]] = xegpu.load %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{contiguity = 32 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [16]>}> : memref<512xi8>, vector<512xindex>, vector<512xi1> -> vector<512xi8>
+// CHECK: xegpu.store %[[LOAD_VEC]], %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{contiguity = 32 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [16]>}> : vector<512xi8>, memref<512xi8>, vector<512xindex>, vector<512xi1>
+func.func @scatter_ops_contiguity_capped(%src: memref<512xi8>) {
+  %1 = arith.constant dense<1>: vector<512xi1>
+  %offset = arith.constant dense<12> : vector<512xindex>
+  %3 = xegpu.load %src[%offset], %1 <{contiguity = 32}> : memref<512xi8>, vector<512xindex>, vector<512xi1> -> vector<512xi8>
+  xegpu.store %3, %src[%offset], %1 <{contiguity = 32}> : vector<512xi8>, memref<512xi8>, vector<512xindex>, vector<512xi1>
+  return
+}
+}
+
 // -----
 gpu.module @test {
 // CHECK-LABEL: func.func @scatter_ops_custom_perm_layout(
@@ -344,7 +402,7 @@ gpu.module @test {
 // CHECK-SAME: %[[ARG2:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>,
 // CHECK-SAME: %[[ARG3:[0-9a-zA-Z]+]]: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>) {
 // CHECK: %[[T2:.*]] = arith.addf %{{.*}}, %{{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>} : vector<16x16xf16>
-// CHECK: %[[T3:.*]] = xegpu.dpas %{{.*}}, %[[T2]] {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
+// CHECK: %[[T3:.*]] = xegpu.dpas %{{.*}}, %[[T2]] <{layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
 // CHECK-NEXT: xegpu.store_nd %[[T3]], %[[ARG2]][0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 // CHECK-NEXT: xegpu.store_nd %[[T2]], %[[ARG3]][0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<16x16xf16>, !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 func.func @binary_op_multiple_uses(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor_desc<16x16xf16>, %arg2: !xegpu.tensor_desc<8x16xf32>, %arg3: !xegpu.tensor_desc<16x16xf16>) {
@@ -371,7 +429,7 @@ gpu.module @test {
 // CHECK-SAME: !xegpu.tensor_desc<8x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<8x16xf16>
 // CHECK-NEXT:   %[[T5:.*]] = xegpu.load_nd %[[T1]][%[[ARG3]], 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}> :
 // CHECK-SAME: !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
-// CHECK-NEXT:   %[[T6:.*]] = xegpu.dpas %[[T4]], %[[T5]], %[[ARG6]] {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
+// CHECK-NEXT:   %[[T6:.*]] = xegpu.dpas %[[T4]], %[[T5]], %[[ARG6]] <{layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> :
 // CHECK-SAME: vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
 // CHECK-NEXT:   scf.yield %[[T6]] : vector<8x16xf32>
 // CHECK-NEXT: } {layout_operand_3 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
@@ -641,8 +699,8 @@ gpu.module @test{
     %5 = vector.broadcast %3 : index to vector<1xindex>
     %6 = arith.addi %4, %5 : vector<1xindex>
     %7 = vector.broadcast %6 : vector<1xindex> to vector<1x1x1x16xindex>
-    xegpu.store %cst, %0[%7], %cst_0 <{chunk_size = 1 : i64}> : vector<1x1x1x16xf32>, i64, vector<1x1x1x16xindex>, vector<1x1x1x16xi1>
-    xegpu.store %cst, %0[%7], %cst_0 <{chunk_size = 1 : i64}> : vector<1x1x1x16xf32>, i64, vector<1x1x1x16xindex>, vector<1x1x1x16xi1>
+    xegpu.store %cst, %0[%7], %cst_0 : vector<1x1x1x16xf32>, i64, vector<1x1x1x16xindex>, vector<1x1x1x16xi1>
+    xegpu.store %cst, %0[%7], %cst_0 : vector<1x1x1x16xf32>, i64, vector<1x1x1x16xindex>, vector<1x1x1x16xi1>
     gpu.return
   }
 }
@@ -1010,7 +1068,7 @@ gpu.module @test {
 // CHECK: %[[T7:.*]] = xegpu.load_nd %[[T6]][0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> :
 // CHECK-SAME: !xegpu.tensor_desc<2x16xf8E8M0FNU, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<2x16xf8E8M0FNU>
 // CHECK: %[[T8:.*]] = xegpu.dpas_mx %[[T2]], %[[T3]], %[[CST]] scale_a = %[[T5]] scale_b = %[[T7]]
-// CHECK-SAME: {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>, layout_a_scale = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [8, 1]>, layout_b_scale = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
+// CHECK-SAME: <{layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>, layout_a_scale = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [8, 1]>, layout_b_scale = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> :
 // CHECK-SAME: (vector<8x64xf4E2M1FN>, vector<64x16xf4E2M1FN>, vector<8x16xbf16>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xbf16>
 // CHECK: %[[T9:.*]] = xegpu.create_nd_tdesc %[[ARG2]] : memref<8x16xbf16> -> !xegpu.tensor_desc<8x16xbf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 // CHECK: xegpu.store_nd %[[T8]], %[[T9]][0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x16xbf16>, !xegpu.tensor_desc<8x16xbf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
@@ -1052,7 +1110,7 @@ gpu.module @test {
 // CHECK: %[[T7:.*]] = xegpu.load_nd %[[T6]][0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> :
 // CHECK-SAME: !xegpu.tensor_desc<2x16xf8E8M0FNU, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<2x16xf8E8M0FNU>
 // CHECK: %[[T8:.*]] = xegpu.dpas_mx %[[T2]], %[[T3]], %[[CST]] scale_a = %[[T5]] scale_b = %[[T7]]
-// CHECK-SAME: {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>, layout_a_scale = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [8, 1]>, layout_b_scale = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
+// CHECK-SAME: <{layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>, layout_a_scale = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>, layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [8, 1]>, layout_b_scale = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> :
 // CHECK-SAME: (vector<8x64xf4E2M1FN>, vector<64x16xf4E2M1FN>, vector<8x16xbf16>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xbf16>
 // CHECK: %[[T9:.*]] = xegpu.create_nd_tdesc %[[ARG2]] : memref<8x16xbf16> -> !xegpu.tensor_desc<8x16xbf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
 // CHECK: xegpu.store_nd %[[T8]], %[[T9]][0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x16xbf16>, !xegpu.tensor_desc<8x16xbf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>

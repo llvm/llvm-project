@@ -520,14 +520,17 @@ static bool potentiallyWritesIntoIvar(const Decl *Parent,
                                       const ObjCIvarDecl *Ivar) {
   using namespace ast_matchers;
   const char *IvarBind = "Ivar";
-  if (!Parent || !Parent->hasBody())
+  if (!Parent)
+    return false;
+  Stmt *Body = Parent->getBody();
+  if (!Body)
     return false;
   StatementMatcher WriteIntoIvarM = binaryOperator(
       hasOperatorName("="),
       hasLHS(ignoringParenImpCasts(
           objcIvarRefExpr(hasDeclaration(equalsNode(Ivar))).bind(IvarBind))));
   StatementMatcher ParentM = stmt(hasDescendant(WriteIntoIvarM));
-  auto Matches = match(ParentM, *Parent->getBody(), Parent->getASTContext());
+  auto Matches = match(ParentM, *Body, Parent->getASTContext());
   for (BoundNodes &Match : Matches) {
     auto IvarRef = Match.getNodeAs<ObjCIvarRefExpr>(IvarBind);
     if (IvarRef->isFreeIvar())
@@ -2899,13 +2902,15 @@ ConditionBRVisitor::VisitTrueTest(const Expr *Cond, BugReporterContext &BRC,
 }
 
 bool ConditionBRVisitor::patternMatch(const Expr *Ex, const Expr *ParentEx,
-                                      raw_ostream &Out, BugReporterContext &BRC,
-                                      PathSensitiveBugReport &report,
+                                      const Expr *OtherEx, raw_ostream &Out,
+                                      BugReporterContext &BRC,
+                                      PathSensitiveBugReport &Report,
                                       const ExplodedNode *N,
-                                      std::optional<bool> &prunable,
+                                      std::optional<bool> &Prunable,
                                       bool IsSameFieldName) {
   const Expr *OriginalExpr = Ex;
   Ex = Ex->IgnoreParenCasts();
+  OtherEx = OtherEx->IgnoreParenCasts();
 
   if (isa<GNUNullExpr, ObjCBoolLiteralExpr, CXXBoolLiteralExpr, IntegerLiteral,
           FloatingLiteral>(Ex)) {
@@ -2933,13 +2938,13 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex, const Expr *ParentEx,
       if (const MemRegion *R =
               state->getLValue(cast<VarDecl>(DR->getDecl()), N->getStackFrame())
                   .getAsRegion()) {
-        if (report.isInteresting(R))
-          prunable = false;
+        if (Report.isInteresting(R))
+          Prunable = false;
         else {
           const ProgramState *state = N->getState().get();
           SVal V = state->getSVal(R);
-          if (report.isInteresting(V))
-            prunable = false;
+          if (Report.isInteresting(V))
+            Prunable = false;
         }
       }
     }
@@ -2964,7 +2969,9 @@ bool ConditionBRVisitor::patternMatch(const Expr *Ex, const Expr *ParentEx,
       }
     }
 
-    Out << IL->getValue();
+    bool IsAnySigned = Ex->getType()->isSignedIntegerOrEnumerationType() ||
+                       OtherEx->getType()->isSignedIntegerOrEnumerationType();
+    IL->getValue().print(Out, /*isSigned=*/IsAnySigned);
     return false;
   }
 
@@ -3003,10 +3010,12 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTrueTest(
   SmallString<128> LhsString, RhsString;
   {
     llvm::raw_svector_ostream OutLHS(LhsString), OutRHS(RhsString);
-    const bool isVarLHS = patternMatch(BExpr->getLHS(), BExpr, OutLHS, BRC, R,
-                                       N, shouldPrune, IsSameFieldName);
-    const bool isVarRHS = patternMatch(BExpr->getRHS(), BExpr, OutRHS, BRC, R,
-                                       N, shouldPrune, IsSameFieldName);
+    const bool isVarLHS =
+        patternMatch(BExpr->getLHS(), BExpr, BExpr->getRHS(), OutLHS, BRC, R, N,
+                     shouldPrune, IsSameFieldName);
+    const bool isVarRHS =
+        patternMatch(BExpr->getRHS(), BExpr, BExpr->getLHS(), OutRHS, BRC, R, N,
+                     shouldPrune, IsSameFieldName);
 
     shouldInvert = !isVarLHS && isVarRHS;
   }

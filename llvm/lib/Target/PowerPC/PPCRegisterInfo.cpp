@@ -38,7 +38,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include <cstdlib>
 
 using namespace llvm;
 
@@ -161,23 +160,6 @@ PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
   ImmToIdxMap[PPC::PSTXVP] = PPC::STXVPX;
 }
 
-/// getPointerRegClass - Return the register class to use to hold pointers.
-/// This is used for addressing modes.
-const TargetRegisterClass *
-PPCRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  // Note that PPCInstrInfo::foldImmediate also directly uses this Kind value
-  // when it checks for ZERO folding.
-  if (Kind == 1) {
-    if (TM.isPPC64())
-      return &PPC::G8RC_NOX0RegClass;
-    return &PPC::GPRC_NOR0RegClass;
-  }
-
-  if (TM.isPPC64())
-    return &PPC::G8RCRegClass;
-  return &PPC::GPRCRegClass;
-}
-
 const MCPhysReg*
 PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
@@ -187,12 +169,12 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (Subtarget.hasVSX()) {
       if (Subtarget.pairedVectorMemops())
         return CSR_64_AllRegs_VSRP_SaveList;
-      if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
+      if (Subtarget.isAIXABI() && !Subtarget.isAIXExtendedAltivecABI())
         return CSR_64_AllRegs_AIX_Dflt_VSX_SaveList;
       return CSR_64_AllRegs_VSX_SaveList;
     }
     if (Subtarget.hasAltivec()) {
-      if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
+      if (Subtarget.isAIXABI() && !Subtarget.isAIXExtendedAltivecABI())
         return CSR_64_AllRegs_AIX_Dflt_Altivec_SaveList;
       return CSR_64_AllRegs_Altivec_SaveList;
     }
@@ -236,14 +218,14 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (TM.isPPC64()) {
     if (Subtarget.pairedVectorMemops()) {
       if (Subtarget.isAIXABI()) {
-        if (!TM.getAIXExtendedAltivecABI())
+        if (!Subtarget.isAIXExtendedAltivecABI())
           return SaveR2 ? CSR_PPC64_R2_SaveList : CSR_PPC64_SaveList;
         return SaveR2 ? CSR_AIX64_R2_VSRP_SaveList : CSR_AIX64_VSRP_SaveList;
       }
       return SaveR2 ? CSR_SVR464_R2_VSRP_SaveList : CSR_SVR464_VSRP_SaveList;
     }
     if (Subtarget.hasAltivec() &&
-        (!Subtarget.isAIXABI() || TM.getAIXExtendedAltivecABI())) {
+        (!Subtarget.isAIXABI() || Subtarget.isAIXExtendedAltivecABI())) {
       return SaveR2 ? CSR_PPC64_R2_Altivec_SaveList
                     : CSR_PPC64_Altivec_SaveList;
     }
@@ -252,11 +234,11 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   // 32-bit targets.
   if (Subtarget.isAIXABI()) {
     if (Subtarget.pairedVectorMemops())
-      return TM.getAIXExtendedAltivecABI() ? CSR_AIX32_VSRP_SaveList
-                                           : CSR_AIX32_SaveList;
+      return Subtarget.isAIXExtendedAltivecABI() ? CSR_AIX32_VSRP_SaveList
+                                                 : CSR_AIX32_SaveList;
     if (Subtarget.hasAltivec())
-      return TM.getAIXExtendedAltivecABI() ? CSR_AIX32_Altivec_SaveList
-                                           : CSR_AIX32_SaveList;
+      return Subtarget.isAIXExtendedAltivecABI() ? CSR_AIX32_Altivec_SaveList
+                                                 : CSR_AIX32_SaveList;
     return CSR_AIX32_SaveList;
   }
   if (Subtarget.pairedVectorMemops())
@@ -279,12 +261,12 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     if (Subtarget.hasVSX()) {
       if (Subtarget.pairedVectorMemops())
         return CSR_64_AllRegs_VSRP_RegMask;
-      if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
+      if (Subtarget.isAIXABI() && !Subtarget.isAIXExtendedAltivecABI())
         return CSR_64_AllRegs_AIX_Dflt_VSX_RegMask;
       return CSR_64_AllRegs_VSX_RegMask;
     }
     if (Subtarget.hasAltivec()) {
-      if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
+      if (Subtarget.isAIXABI() && !Subtarget.isAIXExtendedAltivecABI())
         return CSR_64_AllRegs_AIX_Dflt_Altivec_RegMask;
       return CSR_64_AllRegs_Altivec_RegMask;
     }
@@ -293,17 +275,18 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
 
   if (Subtarget.isAIXABI()) {
     if (Subtarget.pairedVectorMemops()) {
-      if (!TM.getAIXExtendedAltivecABI())
+      if (!Subtarget.isAIXExtendedAltivecABI())
         return TM.isPPC64() ? CSR_PPC64_RegMask : CSR_AIX32_RegMask;
       return TM.isPPC64() ? CSR_AIX64_VSRP_RegMask : CSR_AIX32_VSRP_RegMask;
     }
-    return TM.isPPC64()
-               ? ((Subtarget.hasAltivec() && TM.getAIXExtendedAltivecABI())
-                      ? CSR_PPC64_Altivec_RegMask
-                      : CSR_PPC64_RegMask)
-               : ((Subtarget.hasAltivec() && TM.getAIXExtendedAltivecABI())
-                      ? CSR_AIX32_Altivec_RegMask
-                      : CSR_AIX32_RegMask);
+    return TM.isPPC64() ? ((Subtarget.hasAltivec() &&
+                            Subtarget.isAIXExtendedAltivecABI())
+                               ? CSR_PPC64_Altivec_RegMask
+                               : CSR_PPC64_RegMask)
+                        : ((Subtarget.hasAltivec() &&
+                            Subtarget.isAIXExtendedAltivecABI())
+                               ? CSR_AIX32_Altivec_RegMask
+                               : CSR_AIX32_RegMask);
   }
 
   if (CC == CallingConv::Cold) {
@@ -417,7 +400,7 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       markSuperRegs(Reserved, Reg);
 
   if (Subtarget.isAIXABI() && Subtarget.hasAltivec() &&
-      !TM.getAIXExtendedAltivecABI()) {
+      !Subtarget.isAIXExtendedAltivecABI()) {
     //  In the AIX default Altivec ABI, vector registers VR20-VR31 are reserved
     //  and cannot be used.
     for (auto Reg : CSR_Altivec_SaveList) {
@@ -656,7 +639,7 @@ unsigned PPCRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
     const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
     // Vector registers VR20-VR31 are reserved and cannot be used in the default
     // Altivec ABI on AIX.
-    if (!TM.getAIXExtendedAltivecABI() && Subtarget.isAIXABI())
+    if (!Subtarget.isAIXExtendedAltivecABI() && Subtarget.isAIXABI())
       return 20 - DefaultSafety;
   }
     return 32 - DefaultSafety;
@@ -664,7 +647,7 @@ unsigned PPCRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   case PPC::VSSRCRegClassID:
   case PPC::VSRCRegClassID: {
     const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
-    if (!TM.getAIXExtendedAltivecABI() && Subtarget.isAIXABI())
+    if (!Subtarget.isAIXExtendedAltivecABI() && Subtarget.isAIXABI())
       // Vector registers VR20-VR31 are reserved and cannot be used in the
       // default Altivec ABI on AIX.
       return 52 - DefaultSafety;
@@ -688,7 +671,7 @@ PPCRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     // For Power9 we allow the user to enable GPR to vector spills.
     // FIXME: Currently limited to spilling GP8RC. A follow on patch will add
     // support to spill GPRC.
-    if (TM.isELFv2ABI() || Subtarget.isAIXABI()) {
+    if (Subtarget.isELFv2ABI() || Subtarget.isAIXABI()) {
       if (Subtarget.hasP9Vector() && EnableGPRToVecSpills &&
           RC == &PPC::G8RCRegClass) {
         InflateGP8RC++;
@@ -2021,9 +2004,7 @@ Register PPCRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   const MCInstrDesc &MCID = TII.get(ADDriOpc);
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
-  const TargetRegisterClass *RC = getPointerRegClass();
-  Register BaseReg = MRI.createVirtualRegister(RC);
-  MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0));
+  Register BaseReg = MRI.createVirtualRegister(TII.getRegClass(MCID, 0));
 
   BuildMI(*MBB, Ins, DL, MCID, BaseReg)
     .addFrameIndex(FrameIdx).addImm(Offset);

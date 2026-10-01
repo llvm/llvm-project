@@ -3507,12 +3507,14 @@ public:
   TemplateName getTemplateName() const { return Name; }
 
   TemplateTemplateParmDecl *getParameter() const {
-    return cast<TemplateTemplateParmDecl>(Name.getAsTemplateDecl());
+    TemplateTemplateParmDecl *P = Name.getAsTemplateTemplateParmDecl();
+    assert(
+        P &&
+        "A dependent template-id always names a template template parameter");
+    return P;
   }
 
-  bool isConceptReference() const {
-    return getParameter()->templateParameterKind() == TNK_Concept_template;
-  }
+  bool isConceptReference() const { return Name.isConceptName(); }
 
   SourceLocation getLAngleLoc() const { return KWAndArgs.LAngleLoc; }
   SourceLocation getRAngleLoc() const { return KWAndArgs.RAngleLoc; }

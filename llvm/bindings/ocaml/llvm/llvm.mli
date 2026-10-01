@@ -1075,18 +1075,6 @@ val aggregate_element : llvalue -> int -> llvalue option
 
 (** {7 Constant expressions} *)
 
-(** [align_of ty] returns the alignof constant for the type [ty]. This is
-    equivalent to [const_ptrtoint (const_gep (const_null (pointer_type {i8,ty}))
-    (const_int i32_type 0) (const_int i32_type 1)) i32_type], but considerably
-    more readable.  See the method [llvm::ConstantExpr::getAlignOf]. *)
-val align_of : lltype -> llvalue
-
-(** [size_of ty] returns the sizeof constant for the type [ty]. This is
-    equivalent to [const_ptrtoint (const_gep (const_null (pointer_type ty))
-    (const_int i32_type 1)) i64_type], but considerably more readable.
-    See the method [llvm::ConstantExpr::getSizeOf]. *)
-val size_of : lltype -> llvalue
-
 (** [const_neg c] returns the arithmetic negation of the constant [c].
     See the method [llvm::ConstantExpr::getNeg]. *)
 val const_neg : llvalue -> llvalue

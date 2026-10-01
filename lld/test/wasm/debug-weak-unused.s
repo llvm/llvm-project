@@ -12,7 +12,7 @@
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 # ret32 is weakly defined here, but strongly defined in the shared library.
-# So we expect the tombstone to be written for relocations refering to it in
+# So we expect the tombstone to be written for relocations referring to it in
 # the debug section.
 .globl ret32
 .weak ret32

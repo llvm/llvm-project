@@ -99,8 +99,6 @@ void addCfgConversionPass(mlir::PassManager &pm,
 
 void addMemoryAllocationOpt(mlir::PassManager &pm);
 
-void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays);
-
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare);
 
 void addTargetRewritePass(mlir::PassManager &pm);
@@ -136,6 +134,16 @@ void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config);
 /// e.g. --mlir-print-ir-before=<pass> and similar.
 void registerFlangPipelinePasses();
 
+/// Create a pass pipeline for default FIR optimizations that run before CFG
+/// conversion.
+void createDefaultFIRPreCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc);
+
+/// Create a pass pipeline for default FIR optimizations that run after CFG
+/// conversion.
+void createDefaultFIRPostCFGOptimizerPassPipeline(
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc);
+
 /// Create a pass pipeline for running default optimization passes for
 /// incremental conversion of FIR.
 ///
@@ -156,6 +164,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   const MLIRToLLVMPassPipelineConfig &config);
 
 struct OpenMPFIRPassPipelineOpts {
+  /// Whether only OpenMP simd constructs are being honored.
+  bool isSimdOnly;
+
   /// Whether code is being generated for a target device rather than the host
   /// device
   bool isTargetDevice;

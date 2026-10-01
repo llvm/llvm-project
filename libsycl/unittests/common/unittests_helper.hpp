@@ -29,16 +29,22 @@ namespace unittests {
 // allows to call global state reset and platforms initialization methods to be
 // able to set expectations on devices enumeration calls in a proper way.
 struct UnittestsHelper {
-  UnittestsHelper() { detail::PlatformImpl::rediscoverIfEmpty = true; }
-
-  ~UnittestsHelper() {
-    if (!detail::getPlatformCache().empty()) {
-      detail::getPlatformCache().clear();
-      detail::getOffloadTopologies() = {};
-    }
+  // Platforms cached by earlier tests would hide the device enumeration mocked
+  // by the fixture, so the global state is reset on both ends.
+  UnittestsHelper() {
+    detail::PlatformImpl::rediscoverIfEmpty = true;
+    resetGlobalState();
   }
 
+  ~UnittestsHelper() { resetGlobalState(); }
+
   mock::MockWrapper Mock;
+
+private:
+  static void resetGlobalState() {
+    detail::getPlatformCache().clear();
+    detail::getOffloadTopologies() = {};
+  }
 };
 
 } // namespace unittests

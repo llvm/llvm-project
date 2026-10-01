@@ -6,10 +6,10 @@ declare extern_weak void @extern_weak_fn()
 define void @test_extern_weak() {
   ; DARWIN-LABEL: name: test_extern_weak
   ; DARWIN: bb.1 (%ir-block.0):
-  ; DARWIN:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; DARWIN:   BL @extern_weak_fn, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
-  ; DARWIN:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; DARWIN:   RET_ReallyLR
+  ; DARWIN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; DARWIN-NEXT:   BL @extern_weak_fn, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp
+  ; DARWIN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; DARWIN-NEXT:   RET_ReallyLR
   tail call void @extern_weak_fn()
   ret void
 }

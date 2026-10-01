@@ -203,7 +203,7 @@
 #define LLVM_TEMPLATE_ABI LLVM_ABI
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT LLVM_ABI
-#elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
+#elif defined(__MACH__) || defined(__wasm__) || defined(__EMSCRIPTEN__)
 #define LLVM_ABI __attribute__((visibility("default")))
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
@@ -309,6 +309,11 @@
 // FIXME: Provide this for PE/COFF targets.
 #if __has_attribute(weak) && !defined(__MINGW32__) && !defined(__CYGWIN__) &&  \
     !defined(_WIN32)
+#define LLVM_HAS_ATTRIBUTE_WEAK 1
+#else
+#define LLVM_HAS_ATTRIBUTE_WEAK 0
+#endif
+#if LLVM_HAS_ATTRIBUTE_WEAK
 #define LLVM_ATTRIBUTE_WEAK __attribute__((__weak__))
 #else
 #define LLVM_ATTRIBUTE_WEAK
