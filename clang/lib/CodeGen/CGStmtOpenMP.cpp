@@ -56,6 +56,15 @@ getEffectiveDirectiveKind(const OMPExecutableDirective &S);
 static bool canEmitGPUFusedDistSchedule(const CodeGenModule &CGM,
                                         const OMPLoopDirective &S,
                                         OpenMPDirectiveKind DKind) {
+  // 'teams loop' is always emitted as 'distribute', and 'target teams loop'
+  // only becomes 'distribute parallel for' if canBeParallelFor() holds.
+  // Without the inner worksharing loop, there is nothing that would schedule
+  // the iteration space if the outer distribute loop is omitted.
+  if (DKind == OMPD_teams_loop)
+    return false;
+  if (const auto *TTLD = dyn_cast<OMPTargetTeamsGenericLoopDirective>(&S);
+      TTLD && !TTLD->canBeParallelFor())
+    return false;
   // Reduction-only for now. Non-reduction cases might follow in the future, but
   // need more analysis for maximum profit.
   return CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU() &&
