@@ -138,24 +138,19 @@ for.end19:
 
 define void @uniform_triangular_inner_loop(ptr nocapture %a, ptr nocapture readonly %b, i64 %M, i64 %N) {
 entry:
-  %cmp.m = icmp eq i64 %M, 0
-  br i1 %cmp.m, label %exit, label %outer.ph
+  br label %outer.header
 
-outer.ph:
-  %cmp.n = icmp eq i64 %N, 0
-  br label %outer.body
+outer.header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  br label %middle.header
 
-outer.body:
-  %i = phi i64 [ 0, %outer.ph ], [ %i.next, %outer.inc ]
-  br i1 %cmp.n, label %outer.inc, label %middle.body
-
-middle.body:
-  %j = phi i64 [ 0, %outer.body ], [ %j.next, %middle.inc ]
+middle.header:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %middle.latch ]
   %cmp.k = icmp eq i64 %j, 0
-  br i1 %cmp.k, label %middle.inc, label %inner.body
+  br i1 %cmp.k, label %middle.latch, label %inner.body
 
 inner.body:
-  %k = phi i64 [ 0, %middle.body ], [ %k.next, %inner.body ]
+  %k = phi i64 [ 0, %middle.header ], [ %k.next, %inner.body ]
   %mul.n.n = mul nuw i64 %N, %N
   %mul.i = mul nuw i64 %i, %mul.n.n
   %mul.j = mul nuw i64 %j, %N
@@ -167,17 +162,17 @@ inner.body:
   store i32 %0, ptr %arrayidx.a, align 4
   %k.next = add nuw i64 %k, 1
   %exitcond.k = icmp eq i64 %k.next, %j
-  br i1 %exitcond.k, label %middle.inc, label %inner.body
+  br i1 %exitcond.k, label %middle.latch, label %inner.body
 
-middle.inc:
+middle.latch:
   %j.next = add nuw i64 %j, 1
   %exitcond.j = icmp eq i64 %j.next, %N
-  br i1 %exitcond.j, label %outer.inc, label %middle.body
+  br i1 %exitcond.j, label %outer.latch, label %middle.header
 
-outer.inc:
+outer.latch:
   %i.next = add nuw i64 %i, 1
   %exitcond.i = icmp eq i64 %i.next, %M
-  br i1 %exitcond.i, label %exit, label %outer.body, !llvm.loop !6
+  br i1 %exitcond.i, label %exit, label %outer.header, !llvm.loop !6
 
 exit:
   ret void

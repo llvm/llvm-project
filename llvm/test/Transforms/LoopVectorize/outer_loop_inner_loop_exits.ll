@@ -100,29 +100,28 @@ define void @inner_loop_divergence_exit(ptr %a, i64 %N) {
 ; CHECK: LV: Not vectorizing: Unsupported outer loop.
 ; CHECK: LV: Not vectorizing: Cannot prove legality.
 entry:
-  %cmp16.not = icmp eq i64 %N, 0
-  br i1 %cmp16.not, label %exit, label %outer.body
+  br label %outer.header
 
-outer.body:                              ; preds = %entry, %outer.latch
-  %i.017 = phi i64 [ %inc6, %outer.latch ], [ 0, %entry ]
-  %invariant.gep = getelementptr [4 x i8], ptr %a, i64 %i.017
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %inc6, %outer.latch ]
+  %invariant.gep = getelementptr [4 x i8], ptr %a, i64 %outer.iv
   br label %inner.body
 
-inner.body:                                        ; preds = %outer.body, %inner.body
-  %j.015 = phi i64 [ %i.017, %outer.body ], [ %inc, %inner.body ]
-  %mul = mul i64 %j.015, %N
+inner.body:
+  %inner.iv = phi i64 [ %outer.iv, %outer.header ], [ %inc, %inner.body ]
+  %mul = mul i64 %inner.iv, %N
   %gep = getelementptr [4 x i8], ptr %invariant.gep, i64 %mul
   store i32 0, ptr %gep
-  %inc = add nuw i64 %j.015, 1
+  %inc = add nuw i64 %inner.iv, 1
   %exitcond.not = icmp eq i64 %inc, %N
   br i1 %exitcond.not, label %outer.latch, label %inner.body
 
-outer.latch:                                ; preds = %inner.body
-  %inc6 = add nuw i64 %i.017, 1
+outer.latch:
+  %inc6 = add nuw i64 %outer.iv, 1
   %exitcond18.not = icmp eq i64 %inc6, %N
-  br i1 %exitcond18.not, label %exit, label %outer.body, !llvm.loop !0
+  br i1 %exitcond18.not, label %exit, label %outer.header, !llvm.loop !0
 
-exit:                                 ; preds = %outer.latch, %entry
+exit:
   ret void
 }
 
