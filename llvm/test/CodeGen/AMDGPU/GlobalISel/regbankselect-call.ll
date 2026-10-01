@@ -41,7 +41,7 @@ define amdgpu_ps void @test_divergent_indirect_call_p0(ptr %fptr) {
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:sgpr(p0) = G_MERGE_VALUES [[INTRINSIC_CONVERGENT]](i32), [[INTRINSIC_CONVERGENT1]](i32)
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[MV1]](p0), [[MV]]
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT2:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[ICMP]](s1)
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT2]](i64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT2]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -51,7 +51,7 @@ define amdgpu_ps void @test_divergent_indirect_call_p0(ptr %fptr) {
   ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY2]](<4 x s32>)
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[MV1]](p0), 0, csr_amdgpu_si_gfx_gfx90ainsts, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
@@ -87,7 +87,7 @@ define amdgpu_ps i32 @test_divergent_indirect_call_p0_with_args(ptr %fptr, i32 %
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:sgpr(p0) = G_MERGE_VALUES [[INTRINSIC_CONVERGENT]](i32), [[INTRINSIC_CONVERGENT1]](i32)
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[MV1]](p0), [[MV]]
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT2:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[ICMP]](s1)
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT2]](i64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT2]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -99,7 +99,7 @@ define amdgpu_ps i32 @test_divergent_indirect_call_p0_with_args(ptr %fptr, i32 %
   ; CHECK-NEXT:   dead $sgpr30_sgpr31 = noconvergent G_SI_CALL [[MV1]](p0), 0, csr_amdgpu_si_gfx_gfx90ainsts, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
