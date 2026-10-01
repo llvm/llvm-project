@@ -21,7 +21,7 @@ define void @sub_udiv_exit_value(i64 %start, i64 %step, i64 %n) {
 ; CHECK-NEXT:    %iv.div = udiv i64 %iv, 3
 ; CHECK-NEXT:    --> ({%start,+,%step}<nuw><%loop> /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: (((%step * %n)<u nuw> + %start)<u nuw> /u 3) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %diff = sub i64 %iv.div, %end.div
-; CHECK-NEXT:    --> ((-1 * (((%step * %n) + %start) /u 3))<nsw> + ({%start,+,%step}<nuw><%loop> /u 3)) U: [-6148914691236517205,6148914691236517206) S: [-6148914691236517205,6148914691236517206) Exits: ((-1 * (((%step * %n) + %start) /u 3))<nsw> + (((%step * %n)<u nuw> + %start)<u nuw> /u 3)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((-1 * (((%step * %n) + %start) /u 3))<nsw> + ({%start,+,%step}<nuw><%loop> /u 3)) U: [-6148914691236517205,6148914691236517206) S: [-6148914691236517205,6148914691236517206) Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, %step
 ; CHECK-NEXT:    --> {(%start + %step),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i64 %i, 1
@@ -69,7 +69,7 @@ define void @add_udiv_exit_value(i64 %start, i64 %step, i64 %n) {
 ; CHECK-NEXT:    %iv.div = udiv i64 %iv, 3
 ; CHECK-NEXT:    --> ({%start,+,%step}<nuw><%loop> /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: (((%step * %n)<u nuw> + %start)<u nuw> /u 3) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %a = add i64 %iv.div, %end.div
-; CHECK-NEXT:    --> ((((%step * %n) + %start) /u 3) + ({%start,+,%step}<nuw><%loop> /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205) Exits: ((((%step * %n) + %start) /u 3) + (((%step * %n)<u nuw> + %start)<u nuw> /u 3)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((((%step * %n) + %start) /u 3) + ({%start,+,%step}<nuw><%loop> /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205) Exits: (2 * (((%step * %n) + %start) /u 3))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, %step
 ; CHECK-NEXT:    --> {(%start + %step),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i64 %i, 1
@@ -121,7 +121,7 @@ define void @add_mul_udiv_exit_value_common_factor(i64 %start, i64 %step, i64 %n
 ; CHECK-NEXT:    %iv.div.x = mul i64 %iv.div, %x
 ; CHECK-NEXT:    --> (({%start,+,%step}<nuw><%loop> /u 3) * %x) U: full-set S: full-set Exits: ((((%step * %n)<u nuw> + %start)<u nuw> /u 3) * %x) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %a = add i64 %iv.div.x, %end.div.y
-; CHECK-NEXT:    --> (((((%step * %n) + %start) /u 3) * %y) + (({%start,+,%step}<nuw><%loop> /u 3) * %x)) U: full-set S: full-set Exits: (((((%step * %n)<u nuw> + %start)<u nuw> /u 3) * %x) + ((((%step * %n) + %start) /u 3) * %y)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (((((%step * %n) + %start) /u 3) * %y) + (({%start,+,%step}<nuw><%loop> /u 3) * %x)) U: full-set S: full-set Exits: ((%x + %y) * (((%step * %n) + %start) /u 3)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, %step
 ; CHECK-NEXT:    --> {(%start + %step),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i64 %i, 1
@@ -171,7 +171,7 @@ define void @smax_udiv_exit_value(i64 %start, i64 %step, i64 %n) {
 ; CHECK-NEXT:    %iv.div = udiv i64 %iv, 3
 ; CHECK-NEXT:    --> ({%start,+,%step}<nuw><%loop> /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: (((%step * %n)<u nuw> + %start)<u nuw> /u 3) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.smax = call i64 @llvm.smax.i64(i64 %iv.div, i64 %end.div)
-; CHECK-NEXT:    --> ((((%step * %n) + %start) /u 3) smax ({%start,+,%step}<nuw><%loop> /u 3)) U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: ((((%step * %n) + %start) /u 3) smax (((%step * %n)<u nuw> + %start)<u nuw> /u 3)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((((%step * %n) + %start) /u 3) smax ({%start,+,%step}<nuw><%loop> /u 3)) U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: (((%step * %n) + %start) /u 3) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, %step
 ; CHECK-NEXT:    --> {(%start + %step),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i64 %i, 1
@@ -221,11 +221,11 @@ define void @sub_sext_smax_exit_value(i32 %start, i32 %step, i32 %n, i32 %x) {
 ; CHECK-NEXT:    %iv.sext = sext i32 %iv to i64
 ; CHECK-NEXT:    --> (sext i32 {%start,+,%step}<nuw><%loop> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: (sext i32 ((%step * %n)<u nuw> + %start)<u nuw> to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %diff.sext = sub i64 %iv.sext, %end.sext
-; CHECK-NEXT:    --> ((sext i32 {%start,+,%step}<nuw><%loop> to i64) + (-1 * (sext i32 ((%step * %n) + %start) to i64))<nsw>) U: [-4294967295,4294967296) S: [-4294967295,4294967296) Exits: ((sext i32 ((%step * %n)<u nuw> + %start)<u nuw> to i64) + (-1 * (sext i32 ((%step * %n) + %start) to i64))<nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((sext i32 {%start,+,%step}<nuw><%loop> to i64) + (-1 * (sext i32 ((%step * %n) + %start) to i64))<nsw>) U: [-4294967295,4294967296) S: [-4294967295,4294967296) Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.smax = call i32 @llvm.smax.i32(i32 %iv, i32 %x)
 ; CHECK-NEXT:    --> ({%start,+,%step}<nuw><%loop> smax %x) U: full-set S: full-set Exits: (((%step * %n)<u nuw> + %start)<u nuw> smax %x) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %diff.smax = sub i32 %iv.smax, %end.smax
-; CHECK-NEXT:    --> ((-1 * (((%step * %n) + %start) smax %x)) + ({%start,+,%step}<nuw><%loop> smax %x)) U: full-set S: full-set Exits: ((-1 * (((%step * %n) + %start) smax %x)) + (((%step * %n)<u nuw> + %start)<u nuw> smax %x)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((-1 * (((%step * %n) + %start) smax %x)) + ({%start,+,%step}<nuw><%loop> smax %x)) U: full-set S: full-set Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i32 %iv, %step
 ; CHECK-NEXT:    --> {(%start + %step),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
@@ -332,14 +332,14 @@ define void @trip_count_from_udiv_exit_value(i64 %start, i64 %step, i64 %n) {
 ; CHECK-NEXT:    %limit = add i64 %iv.div, 4
 ; CHECK-NEXT:    --> (4 + ({%start,+,%step}<nuw><%loop.1> /u 3))<nuw><nsw> U: [4,6148914691236517210) S: [4,6148914691236517210) --> (4 + (((%step * %n)<u nuw> + %start)<u nuw> /u 3))<nuw><nsw> U: [4,6148914691236517210) S: [4,6148914691236517210)
 ; CHECK-NEXT:    %j = phi i64 [ %end.div, %loop.1.exit ], [ %j.next, %loop.2 ]
-; CHECK-NEXT:    --> {(((%step * %n) + %start) /u 3),+,1}<%loop.2> U: full-set S: full-set Exits: (3 + (((%step * %n)<u nuw> + %start)<u nuw> /u 3))<nuw><nsw> LoopDispositions: { %loop.2: Computable }
+; CHECK-NEXT:    --> {(((%step * %n) + %start) /u 3),+,1}<nuw><nsw><%loop.2> U: [0,6148914691236517209) S: [0,6148914691236517209) Exits: (3 + (((%step * %n) + %start) /u 3))<nuw><nsw> LoopDispositions: { %loop.2: Computable }
 ; CHECK-NEXT:    %j.next = add i64 %j, 1
-; CHECK-NEXT:    --> {(1 + (((%step * %n) + %start) /u 3))<nuw><nsw>,+,1}<%loop.2> U: full-set S: full-set Exits: (4 + (((%step * %n)<u nuw> + %start)<u nuw> /u 3))<nuw><nsw> LoopDispositions: { %loop.2: Computable }
+; CHECK-NEXT:    --> {(1 + (((%step * %n) + %start) /u 3))<nuw><nsw>,+,1}<nuw><nsw><%loop.2> U: [1,6148914691236517210) S: [1,6148914691236517210) Exits: (4 + (((%step * %n) + %start) /u 3))<nuw><nsw> LoopDispositions: { %loop.2: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @trip_count_from_udiv_exit_value
-; CHECK-NEXT:  Loop %loop.2: backedge-taken count is (3 + (-1 * (((%step * %n) + %start) /u 3))<nsw> + (((%step * %n)<u nuw> + %start)<u nuw> /u 3))
-; CHECK-NEXT:  Loop %loop.2: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop.2: symbolic max backedge-taken count is (3 + (-1 * (((%step * %n) + %start) /u 3))<nsw> + (((%step * %n)<u nuw> + %start)<u nuw> /u 3))
-; CHECK-NEXT:  Loop %loop.2: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop.2: backedge-taken count is i64 3
+; CHECK-NEXT:  Loop %loop.2: constant max backedge-taken count is i64 3
+; CHECK-NEXT:  Loop %loop.2: symbolic max backedge-taken count is i64 3
+; CHECK-NEXT:  Loop %loop.2: Trip multiple is 4
 ; CHECK-NEXT:  Loop %loop.1: backedge-taken count is %n
 ; CHECK-NEXT:  Loop %loop.1: constant max backedge-taken count is i64 -1
 ; CHECK-NEXT:  Loop %loop.1: symbolic max backedge-taken count is %n
@@ -397,15 +397,15 @@ define void @umin_exit_count_udiv_exit_value(i64 %start, i64 %step, i64 %n) {
 ; CHECK-NEXT:    %iv.div = udiv i64 %iv, 3
 ; CHECK-NEXT:    --> ({%start,+,%step}<nuw><%loop.1> /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206) --> (((%step * %n)<u nuw> + %start)<u nuw> /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206)
 ; CHECK-NEXT:    %j = phi i64 [ 0, %loop.1.exit ], [ %j.next, %loop.2 ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop.2> U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: ((((%step * %n)<u nuw> + %start)<u nuw> /u 3) umin (((%step * %n) + %start) /u 3)) LoopDispositions: { %loop.2: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop.2> U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: (((%step * %n) + %start) /u 3) LoopDispositions: { %loop.2: Computable }
 ; CHECK-NEXT:    %j.next = add i64 %j, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop.2> U: [1,6148914691236517207) S: [1,6148914691236517207) Exits: (1 + ((((%step * %n)<u nuw> + %start)<u nuw> /u 3) umin (((%step * %n) + %start) /u 3)))<nuw><nsw> LoopDispositions: { %loop.2: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop.2> U: [1,6148914691236517207) S: [1,6148914691236517207) Exits: (1 + (((%step * %n) + %start) /u 3))<nuw><nsw> LoopDispositions: { %loop.2: Computable }
 ; CHECK-NEXT:    %or = select i1 %c.1, i1 true, i1 %c.2
 ; CHECK-NEXT:    --> (true + ((true + %c.1) umin_seq (true + %c.2))) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.2: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_exit_count_udiv_exit_value
-; CHECK-NEXT:  Loop %loop.2: backedge-taken count is ((((%step * %n)<u nuw> + %start)<u nuw> /u 3) umin (((%step * %n) + %start) /u 3))
+; CHECK-NEXT:  Loop %loop.2: backedge-taken count is (((%step * %n) + %start) /u 3)
 ; CHECK-NEXT:  Loop %loop.2: constant max backedge-taken count is i64 6148914691236517205
-; CHECK-NEXT:  Loop %loop.2: symbolic max backedge-taken count is ((((%step * %n)<u nuw> + %start)<u nuw> /u 3) umin (((%step * %n) + %start) /u 3))
+; CHECK-NEXT:  Loop %loop.2: symbolic max backedge-taken count is (((%step * %n) + %start) /u 3)
 ; CHECK-NEXT:  Loop %loop.2: Trip multiple is 1
 ; CHECK-NEXT:  Loop %loop.1: backedge-taken count is %n
 ; CHECK-NEXT:  Loop %loop.1: constant max backedge-taken count is i64 -1
@@ -466,9 +466,9 @@ define void @add_mul_udiv_exit_value_different_scales(i64 %start, i64 %step, i64
 ; CHECK-NEXT:    %iv.div.2 = mul i64 %iv.div, 2
 ; CHECK-NEXT:    --> (2 * ({%start,+,%step}<nuw><%loop> /u 3))<nuw> U: [0,-6148914691236517205) S: [-9223372036854775808,9223372036854775807) Exits: (2 * (((%step * %n)<u nuw> + %start)<u nuw> /u 3))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %a = add i64 %iv.div.2, %end.div.3
-; CHECK-NEXT:    --> ((2 * ({%start,+,%step}<nuw><%loop> /u 3))<nuw> + (3 * (((%step * %n) + %start) /u 3))<nuw>) U: full-set S: full-set Exits: ((2 * (((%step * %n)<u nuw> + %start)<u nuw> /u 3))<nuw> + (3 * (((%step * %n) + %start) /u 3))<nuw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((2 * ({%start,+,%step}<nuw><%loop> /u 3))<nuw> + (3 * (((%step * %n) + %start) /u 3))<nuw>) U: full-set S: full-set Exits: (5 * (((%step * %n) + %start) /u 3)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %b = add i64 %a, %y.5
-; CHECK-NEXT:    --> ((2 * ({%start,+,%step}<nuw><%loop> /u 3))<nuw> + (3 * (((%step * %n) + %start) /u 3))<nuw> + (5 * %y)) U: full-set S: full-set Exits: ((2 * (((%step * %n)<u nuw> + %start)<u nuw> /u 3))<nuw> + (3 * (((%step * %n) + %start) /u 3))<nuw> + (5 * %y)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((2 * ({%start,+,%step}<nuw><%loop> /u 3))<nuw> + (3 * (((%step * %n) + %start) /u 3))<nuw> + (5 * %y)) U: full-set S: full-set Exits: (5 * ((((%step * %n) + %start) /u 3) + %y)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, %step
 ; CHECK-NEXT:    --> {(%start + %step),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i64 %i, 1
@@ -524,9 +524,9 @@ define void @add_udiv_exit_value_scaled_end_div(i64 %start, i64 %step, i64 %n, i
 ; CHECK-NEXT:    %iv.div = udiv i64 %iv, 3
 ; CHECK-NEXT:    --> ({%start,+,%step}<nuw><%loop> /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: (((%step * %n)<u nuw> + %start)<u nuw> /u 3) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %a = add i64 %iv.div, %end.div.4
-; CHECK-NEXT:    --> ((4 * (((%step * %n) + %start) /u 3)) + ({%start,+,%step}<nuw><%loop> /u 3)) U: full-set S: full-set Exits: ((4 * (((%step * %n) + %start) /u 3)) + (((%step * %n)<u nuw> + %start)<u nuw> /u 3)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((4 * (((%step * %n) + %start) /u 3)) + ({%start,+,%step}<nuw><%loop> /u 3)) U: full-set S: full-set Exits: (5 * (((%step * %n) + %start) /u 3)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %b = add i64 %a, %y.5
-; CHECK-NEXT:    --> ((4 * (((%step * %n) + %start) /u 3)) + (5 * %y) + ({%start,+,%step}<nuw><%loop> /u 3)) U: full-set S: full-set Exits: ((4 * (((%step * %n) + %start) /u 3)) + (5 * %y) + (((%step * %n)<u nuw> + %start)<u nuw> /u 3)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((4 * (((%step * %n) + %start) /u 3)) + (5 * %y) + ({%start,+,%step}<nuw><%loop> /u 3)) U: full-set S: full-set Exits: (5 * ((((%step * %n) + %start) /u 3) + %y)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, %step
 ; CHECK-NEXT:    --> {(%start + %step),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i64 %i, 1
@@ -579,7 +579,7 @@ define void @add_udiv_exit_value_mul_by_y(i64 %start, i64 %step, i64 %n, i64 %y)
 ; CHECK-NEXT:    %iv.div = udiv i64 %iv, 3
 ; CHECK-NEXT:    --> ({%start,+,%step}<nuw><%loop> /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: (((%step * %n)<u nuw> + %start)<u nuw> /u 3) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %a = add i64 %iv.div, %end.div.y
-; CHECK-NEXT:    --> (((((%step * %n) + %start) /u 3) * %y) + ({%start,+,%step}<nuw><%loop> /u 3)) U: full-set S: full-set Exits: (((((%step * %n) + %start) /u 3) * %y) + (((%step * %n)<u nuw> + %start)<u nuw> /u 3)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (((((%step * %n) + %start) /u 3) * %y) + ({%start,+,%step}<nuw><%loop> /u 3)) U: full-set S: full-set Exits: ((1 + %y) * (((%step * %n) + %start) /u 3)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, %step
 ; CHECK-NEXT:    --> {(%start + %step),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i64 %i, 1
@@ -632,7 +632,7 @@ define void @add_mul_udiv_exit_value_different_factors(i64 %start, i64 %step, i6
 ; CHECK-NEXT:    %iv.div.y = mul i64 %iv.div, %y
 ; CHECK-NEXT:    --> (({%start,+,%step}<nuw><%loop> /u 3) * %y) U: full-set S: full-set Exits: ((((%step * %n)<u nuw> + %start)<u nuw> /u 3) * %y) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %a = add i64 %iv.div.y, %end.div.x
-; CHECK-NEXT:    --> (((((%step * %n) + %start) /u 3) * %x) + (({%start,+,%step}<nuw><%loop> /u 3) * %y)) U: full-set S: full-set Exits: (((((%step * %n) + %start) /u 3) * %x) + ((((%step * %n)<u nuw> + %start)<u nuw> /u 3) * %y)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (((((%step * %n) + %start) /u 3) * %x) + (({%start,+,%step}<nuw><%loop> /u 3) * %y)) U: full-set S: full-set Exits: ((%x + %y) * (((%step * %n) + %start) /u 3)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, %step
 ; CHECK-NEXT:    --> {(%start + %step),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i64 %i, 1
@@ -693,7 +693,7 @@ define void @udiv_group_non_adjacent(i64 %step, i64 %n) {
 ; CHECK-NEXT:    %iv.div = udiv i64 %iv, 3
 ; CHECK-NEXT:    --> ({%start,+,%step}<nuw><%loop> /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: (((%step * %n)<u nuw> + %start)<u nuw> /u 3) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %a = add i64 %py, %iv.div
-; CHECK-NEXT:    --> ((((%step * %n) + %start) /u 3) + (((%step * %n) + %start2) /u 3) + ({%start,+,%step}<nuw><%loop> /u 3)) U: full-set S: full-set Exits: ((((%step * %n) + %start) /u 3) + (((%step * %n) + %start2) /u 3) + (((%step * %n)<u nuw> + %start)<u nuw> /u 3)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((((%step * %n) + %start) /u 3) + (((%step * %n) + %start2) /u 3) + ({%start,+,%step}<nuw><%loop> /u 3)) U: full-set S: full-set Exits: ((2 * (((%step * %n) + %start) /u 3))<nuw> + (((%step * %n) + %start2) /u 3)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, %step
 ; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i64 %i, 1
@@ -755,7 +755,7 @@ define void @udiv_dup_flagged_first(i64 %start, i64 %step, i64 %n) {
 ; CHECK-NEXT:    %i.2.next = add i64 %i.2, 1
 ; CHECK-NEXT:    --> {1,+,1}<nw><%loop.2> U: full-set S: full-set Exits: (1 + %n) LoopDispositions: { %loop.2: Computable }
 ; CHECK-NEXT:    %a = add i64 %q1, %q2
-; CHECK-NEXT:    --> (({%start,+,%step}<nuw><%loop.2> /u 3) + ({%start,+,%step}<%loop.1> /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205) --> ((((%step * %n)<u nuw> + %start)<u nuw> /u 3) + (((%step * %n) + %start) /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205)
+; CHECK-NEXT:    --> (({%start,+,%step}<nuw><%loop.2> /u 3) + ({%start,+,%step}<%loop.1> /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205) --> (2 * (((%step * %n) + %start) /u 3))<nuw> U: [0,-6148914691236517205) S: [-9223372036854775808,9223372036854775807)
 ; CHECK-NEXT:  Determining loop execution counts for: @udiv_dup_flagged_first
 ; CHECK-NEXT:  Loop %loop.2: backedge-taken count is %n
 ; CHECK-NEXT:  Loop %loop.2: constant max backedge-taken count is i64 -1

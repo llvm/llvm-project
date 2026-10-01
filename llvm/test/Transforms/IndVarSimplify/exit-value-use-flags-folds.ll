@@ -10,13 +10,7 @@ define i64 @sub_udiv_exit_value(i64 %start, i64 %step, i64 %n) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[OFFSET:%.*]] = mul i64 [[N]], [[STEP]]
-; CHECK-NEXT:    [[END:%.*]] = add i64 [[START]], [[OFFSET]]
-; CHECK-NEXT:    [[END_DIV:%.*]] = udiv i64 [[END]], 3
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[START]], [[OFFSET]]
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[END_DIV]]
-; CHECK-NEXT:    ret i64 [[TMP2]]
+; CHECK-NEXT:    ret i64 0
 ;
 entry:
   %offset = mul i64 %n, %step
