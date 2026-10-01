@@ -3089,6 +3089,11 @@ bool SIInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   // because its dest block is unanalyzable.
   assert(isSOPP(BranchOp) || isSOPK(BranchOp));
 
+  // With s_add_pc_i64, out of range branches are relaxed by the assembler
+  // without needing any registers.
+  if (ST.useAddPC64Inst())
+    return true;
+
   // Convert to dwords.
   BrOffset /= 4;
 
@@ -3125,28 +3130,15 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   assert(RestoreBB.empty() &&
          "restore block should be inserted for restoring clobbered registers");
 
+  assert(!ST.useAddPC64Inst() &&
+         "long branches should be relaxed by the assembler");
+  assert(RS && "RegScavenger required for long branching");
+
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   auto I = MBB.end();
   auto &MCCtx = MF->getContext();
-
-  if (ST.useAddPC64Inst()) {
-    MCSymbol *Offset =
-        MCCtx.createTempSymbol("offset", /*AlwaysAddSuffix=*/true);
-    auto AddPC = BuildMI(MBB, I, DL, get(AMDGPU::S_ADD_PC_I64))
-                     .addSym(Offset, MO_FAR_BRANCH_OFFSET);
-    MCSymbol *PostAddPCLabel =
-        MCCtx.createTempSymbol("post_addpc", /*AlwaysAddSuffix=*/true);
-    AddPC->setPostInstrSymbol(*MF, PostAddPCLabel);
-    auto *OffsetExpr = MCBinaryExpr::createSub(
-        MCSymbolRefExpr::create(DestBB.getSymbol(), MCCtx),
-        MCSymbolRefExpr::create(PostAddPCLabel, MCCtx), MCCtx);
-    Offset->setVariableValue(OffsetExpr);
-    return;
-  }
-
-  assert(RS && "RegScavenger required for long branching");
 
   // FIXME: Virtual register workaround for RegScavenger not working with empty
   // blocks.
@@ -10437,7 +10429,11 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
 TargetInstrInfo::InstSizeVerifyMode
 SIInstrInfo::getInstSizeVerifyMode(const MachineInstr &MI) const {
-  if (MI.isBranch() && ST.hasOffset3fBug())
+  // Branches may be relaxed by the assembler. The final layout is not known
+  // until then, so getInstSizeInBytes reports the size of the short form, which
+  // is the common case, and size-based heuristics may undercount code that has
+  // long branches.
+  if (MI.isBranch() && (ST.hasOffset3fBug() || ST.useAddPC64Inst()))
     return InstSizeVerifyMode::NoVerify;
   return InstSizeVerifyMode::ExactSize;
 }

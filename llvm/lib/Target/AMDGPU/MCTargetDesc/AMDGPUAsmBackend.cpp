@@ -51,10 +51,83 @@ public:
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 };
 
-} //End anonymous namespace
+struct LongBranchInfo {
+  // MC opcode of the short branch with the inverted condition, or 0 if the
+  // branch is unconditional.
+  unsigned SkipOpc;
+  // MC opcode of s_add_pc_i64.
+  unsigned AddPCOpc;
+};
+
+} // End anonymous namespace
+
+// Get the information needed to relax a short branch into S_BRANCH_LONG or
+// S_CBRANCH_LONG on subtargets with FeatureUseAddPC64Inst.
+static std::optional<LongBranchInfo> getLongBranchInfo(unsigned Opcode) {
+  switch (Opcode) {
+  case AMDGPU::S_BRANCH_gfx12:
+    return LongBranchInfo{0, AMDGPU::S_ADD_PC_I64_gfx12};
+  case AMDGPU::S_CBRANCH_SCC0_gfx12:
+    return LongBranchInfo{AMDGPU::S_CBRANCH_SCC1_gfx12,
+                          AMDGPU::S_ADD_PC_I64_gfx12};
+  case AMDGPU::S_CBRANCH_SCC1_gfx12:
+    return LongBranchInfo{AMDGPU::S_CBRANCH_SCC0_gfx12,
+                          AMDGPU::S_ADD_PC_I64_gfx12};
+  case AMDGPU::S_CBRANCH_VCCZ_gfx12:
+    return LongBranchInfo{AMDGPU::S_CBRANCH_VCCNZ_gfx12,
+                          AMDGPU::S_ADD_PC_I64_gfx12};
+  case AMDGPU::S_CBRANCH_VCCNZ_gfx12:
+    return LongBranchInfo{AMDGPU::S_CBRANCH_VCCZ_gfx12,
+                          AMDGPU::S_ADD_PC_I64_gfx12};
+  case AMDGPU::S_CBRANCH_EXECZ_gfx12:
+    return LongBranchInfo{AMDGPU::S_CBRANCH_EXECNZ_gfx12,
+                          AMDGPU::S_ADD_PC_I64_gfx12};
+  case AMDGPU::S_CBRANCH_EXECNZ_gfx12:
+    return LongBranchInfo{AMDGPU::S_CBRANCH_EXECZ_gfx12,
+                          AMDGPU::S_ADD_PC_I64_gfx12};
+  case AMDGPU::S_BRANCH_gfx13:
+    return LongBranchInfo{0, AMDGPU::S_ADD_PC_I64_gfx13};
+  case AMDGPU::S_CBRANCH_SCC0_gfx13:
+    return LongBranchInfo{AMDGPU::S_CBRANCH_SCC1_gfx13,
+                          AMDGPU::S_ADD_PC_I64_gfx13};
+  case AMDGPU::S_CBRANCH_SCC1_gfx13:
+    return LongBranchInfo{AMDGPU::S_CBRANCH_SCC0_gfx13,
+                          AMDGPU::S_ADD_PC_I64_gfx13};
+  case AMDGPU::S_CBRANCH_VCCZ_gfx13:
+    return LongBranchInfo{AMDGPU::S_CBRANCH_VCCNZ_gfx13,
+                          AMDGPU::S_ADD_PC_I64_gfx13};
+  case AMDGPU::S_CBRANCH_VCCNZ_gfx13:
+    return LongBranchInfo{AMDGPU::S_CBRANCH_VCCZ_gfx13,
+                          AMDGPU::S_ADD_PC_I64_gfx13};
+  case AMDGPU::S_CBRANCH_EXECZ_gfx13:
+    return LongBranchInfo{AMDGPU::S_CBRANCH_EXECNZ_gfx13,
+                          AMDGPU::S_ADD_PC_I64_gfx13};
+  case AMDGPU::S_CBRANCH_EXECNZ_gfx13:
+    return LongBranchInfo{AMDGPU::S_CBRANCH_EXECZ_gfx13,
+                          AMDGPU::S_ADD_PC_I64_gfx13};
+  default:
+    return std::nullopt;
+  }
+}
 
 void AMDGPUAsmBackend::relaxInstruction(MCInst &Inst,
                                         const MCSubtargetInfo &STI) const {
+  if (STI.hasFeature(AMDGPU::FeatureUseAddPC64Inst)) {
+    std::optional<LongBranchInfo> Info = getLongBranchInfo(Inst.getOpcode());
+    assert(Info && "unexpected instruction to relax");
+    MCInst Res;
+    if (Info->SkipOpc) {
+      Res.setOpcode(AMDGPU::S_CBRANCH_LONG);
+      Res.addOperand(MCOperand::createImm(Info->SkipOpc));
+    } else {
+      Res.setOpcode(AMDGPU::S_BRANCH_LONG);
+    }
+    Res.addOperand(MCOperand::createImm(Info->AddPCOpc));
+    Res.addOperand(Inst.getOperand(0));
+    Inst = std::move(Res);
+    return;
+  }
+
   MCInst Res;
   unsigned RelaxedOpcode = AMDGPU::getSOPPWithRelaxation(Inst.getOpcode());
   Res.setOpcode(RelaxedOpcode);
@@ -62,13 +135,26 @@ void AMDGPUAsmBackend::relaxInstruction(MCInst &Inst,
   Inst = std::move(Res);
 }
 
-bool AMDGPUAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
+bool AMDGPUAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &F,
                                                     const MCFixup &Fixup,
-                                                    const MCValue &,
+                                                    const MCValue &Target,
                                                     uint64_t Value,
                                                     bool Resolved) const {
+  if (F.getSubtargetInfo()->hasFeature(AMDGPU::FeatureUseAddPC64Inst)) {
+    if (!Resolved) {
+      // Do not relax branches to undefined symbols, so that the object writer
+      // still reports them as undefined labels, which are most likely typos.
+      const MCSymbol *Sym = Target.getAddSym();
+      return !Sym || !Sym->isUndefined();
+    }
+
+    // Relax short branches that are out of range into long branches.
+    return !isInt<16>((int64_t(Value) - 4) / 4);
+  }
+
   if (!Resolved)
     return true;
+
   // if the branch target has an offset of x3f this needs to be relaxed to
   // add a s_nop 0 immediately after branch to effectively increment offset
   // for hardware workaround in gfx1010
@@ -78,6 +164,13 @@ bool AMDGPUAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
 bool AMDGPUAsmBackend::mayNeedRelaxation(unsigned Opcode,
                                          ArrayRef<MCOperand> Operands,
                                          const MCSubtargetInfo &STI) const {
+  if (STI.hasFeature(AMDGPU::FeatureUseAddPC64Inst)) {
+    // Branches with a symbolic target can be relaxed into long branches.
+    int64_t Imm;
+    return getLongBranchInfo(Opcode) && Operands[0].isExpr() &&
+           !Operands[0].getExpr()->evaluateAsAbsolute(Imm);
+  }
+
   if (!STI.hasFeature(AMDGPU::FeatureOffset3fBug))
     return false;
 
@@ -91,6 +184,8 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   switch (Kind) {
   case AMDGPU::fixup_si_sopp_br:
     return 2;
+  case AMDGPU::fixup_si_add_pc_lit32:
+    return 4;
   case FK_SecRel_1:
   case FK_Data_1:
     return 1;
@@ -121,6 +216,11 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 
     return BrImm;
   }
+  case AMDGPU::fixup_si_add_pc_lit32:
+    // The literal is sign-extended to 64 bits.
+    if (Ctx && !isInt<32>(SignedValue))
+      Ctx->reportError(Fixup.getLoc(), "branch size exceeds 32 bits");
+    return Value;
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
@@ -179,6 +279,7 @@ MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[AMDGPU::NumTargetFixupKinds] = {
       // name                   offset bits  flags
       {"fixup_si_sopp_br", 0, 16, 0},
+      {"fixup_si_add_pc_lit32", 0, 32, 0},
   };
 
   if (mc::isRelocation(Kind))

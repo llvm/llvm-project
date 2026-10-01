@@ -229,6 +229,8 @@ uint64_t SIProgramInfo::getFunctionCodeSize(const MachineFunction &MF) {
 
     for (const MachineInstr &MI : MBB) {
       // TODO: CodeSize should account for multiple functions.
+      // FIXME: This undercounts branches that are relaxed by the assembler. See
+      // SIInstrInfo::getInstSizeVerifyMode.
 
       if (MI.isMetaInstruction())
         continue;
