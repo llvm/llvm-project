@@ -14778,7 +14778,6 @@ static SDValue widenVectorOpsToi8(SDValue N, const SDLoc &DL,
   return TruncVals.front();
 }
 
-namespace {
 /// Spill fixed-length VECTOR_DEINTERLEAVE operands contiguously to a stack
 /// temporary. Operands are consecutive slices of the interleaved input, so
 /// storing them in order reconstructs that layout for a following vlseg.
@@ -14855,7 +14854,6 @@ static SDValue vlsegDeinterleaveFields(
   }
   return Load.getValue(1);
 }
-} // namespace
 
 SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
                                                       SelectionDAG &DAG) const {
@@ -14887,8 +14885,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       unsigned ChunkElts = 0;
       for (unsigned K = 1u << Log2_32(NumElts); K >= 1; K /= 2) {
         MVT ChunkVT = MVT::getVectorVT(ElemVT, K);
-        if (!ChunkVT.isValid() || !ChunkVT.isFixedLengthVector() ||
-            !useRVVForFixedLengthVectorVT(ChunkVT))
+        if (!ChunkVT.isValid() || !useRVVForFixedLengthVectorVT(ChunkVT))
           continue;
         MVT ChunkContainer = getContainerForFixedLengthVector(ChunkVT);
         if (ChunkContainer.getSizeInBits().getKnownMinValue() * Factor <=
@@ -14919,8 +14916,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
             DAG.getObjectPtrOffset(DL, StackPtr, TypeSize::getFixed(ByteOff));
         MachinePointerInfo ChunkPI = PtrInfo.getWithOffset(ByteOff);
 
-        SDValue Mask, VL;
-        std::tie(Mask, VL) =
+        auto [Mask, VL] =
             getDefaultVLOps(ChunkVT, ChunkContainer, DL, DAG, Subtarget);
         if (ThisChunkElts != ChunkElts)
           VL = DAG.getConstant(ThisChunkElts, DL, XLenVT);
@@ -14934,8 +14930,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
           if (ThisChunkElts != ChunkElts) {
             EVT NarrowVT =
                 EVT::getVectorVT(*DAG.getContext(), ElemVT, ThisChunkElts);
-            Fixed = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowVT, Fixed,
-                                DAG.getVectorIdxConstant(0, DL));
+            Fixed = DAG.getExtractSubvector(DL, NarrowVT, Fixed, 0);
           }
           Parts[i].push_back(Fixed);
         }
