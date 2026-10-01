@@ -4775,8 +4775,7 @@ public:
   /// If (A + vscale(C1)) is used multiple times, the fold results in a
   /// redundant addition instruction on the RISC-V architecture, whereas it
   /// does not have this effect on other architectures (e.g. AArch64).
-  /// By default, it returns true. In RISC-V architecture, returns
-  /// N.hasOneUse().
+  /// By default, it returns true.
   virtual bool isProfitableToFoldVScaleAdd(SDValue N) const { return true; }
 
   /// GlobalISel - return true if it is profitable to move this shift by a
