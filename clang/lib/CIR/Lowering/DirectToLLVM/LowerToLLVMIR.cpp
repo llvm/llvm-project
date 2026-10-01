@@ -99,7 +99,7 @@ private:
       inst->setMetadata("srcloc", node);
     return mlir::success();
   }
-  
+
   /// Attach the AMDGPU atomic metadata that lets the backend select a native
   /// atomic instruction instead of expanding to a cmpxchg loop.
   void amendAMDGPUAtomicMetadata(
