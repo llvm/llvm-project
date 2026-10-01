@@ -274,8 +274,8 @@ Error CodeGenPassBuilder::buildPipeline(
   if (auto Err = addMachinePasses(PMW))
     return Err;
 
-  if (!PrintAsm ? !Opt.DisableMIROutputVerify
-                : !Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier)
+  if (PrintAsm ? !Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier
+               : !Opt.DisableMIROutputVerify)
     addMachineFunctionPass(MachineVerifierPass(), PMW, /*Force=*/!PrintAsm);
 
   // We add AsmPrinter regardless if we are emitting MIR or Assembly as the
