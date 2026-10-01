@@ -113,7 +113,7 @@ void SPIRV64TargetInfo::getTargetDefines(const LangOptions &Opts,
 bool BaseSPIRTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
-  // When the host predefines _M_X64, MSVC STL headers use always_inline _mm_*
+  // On x86-64 and ARM64EC MSVC hosts, the STL headers use always_inline _mm_*
   // intrinsics, which require sse/sse2 in the device feature set.
   if (const TargetInfo *Host = getHostTarget()) {
     const llvm::Triple &HT = Host->getTriple();

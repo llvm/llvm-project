@@ -188,8 +188,6 @@ public:
     switch (CC) {
     case CC_C:
     case CC_DeviceKernel:
-    case CC_X86RegCall:
-    case CC_X86VectorCall:
       return CCCR_OK;
     default:
       return CCCR_Warning;

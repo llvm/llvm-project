@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -isystem %S/Inputs/ -fsycl-is-device -triple spirv64 -aux-triple x86_64-pc-windows-msvc -fsyntax-only -verify %s
-// RUN: %clang_cc1 -isystem %S/Inputs/ -fsycl-is-device -triple spirv64 -fsyntax-only -verify=expected,no-aux %s
+// RUN: %clang_cc1 -isystem %S/Inputs/ -fsycl-is-device -triple spirv64 -aux-triple x86_64-unknown-linux-gnu -fsyntax-only -verify %s
+// RUN: %clang_cc1 -isystem %S/Inputs/ -fsycl-is-device -triple spirv64 -aux-triple aarch64-unknown-linux-gnu -fsyntax-only -verify=expected,no-x86-host %s
+// RUN: %clang_cc1 -isystem %S/Inputs/ -fsycl-is-device -triple spirv64 -fsyntax-only -verify=expected,no-aux,no-x86-host %s
 
 // Check that there is no error/warning emitted for cdecl functions compiled for
 // SYCL device. Make sure variadic calls from within device code are diagnosed.
@@ -15,8 +17,11 @@ void bar() {
   printf("hello\n");
 }
 
-// Accepted by the SPIR-V target itself, with no host to fall back on.
+// Accepted when the auxiliary host target supports the calling convention and
+// diagnosed when neither the device nor the host does.
+// no-x86-host-warning@+1 {{'regcall' calling convention is not supported for this target}}
 void __attribute__((regcall)) rcall(int a, int b) {}
+// no-x86-host-warning@+1 {{'vectorcall' calling convention is not supported for this target}}
 void __attribute__((vectorcall)) vcall(float a, float b) {}
 
 // Check some weird calling convention that is not supported even by x86_64 aux.
@@ -37,7 +42,12 @@ int main() {
   sycl_entry_point<class kn>([]() { printf("world\n");
      moo();
      //expected-error@+1 {{SYCL device code does not support variadic functions}}
-     foo(1,2); });
+     foo(1,2);
+     // Calls are not diagnosed; an unsupported calling convention is diagnosed
+     // on the declaration instead.
+     rcall(1, 2);
+     vcall(1.0f, 2.0f);
+     g(); });
   bar();
   return 0;
 }
