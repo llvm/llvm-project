@@ -26,6 +26,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace chrono {
 
+namespace __parser {
+
 // Fields supplied by the parsed format directives.
 enum class __fields_set : uint32_t {
   __none    = 0,
@@ -55,21 +57,25 @@ enum class __fields_set : uint32_t {
   __iso_year_of_century = 1 << 17,
 };
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr __fields_set operator|(__fields_set __lhs, __fields_set __rhs) {
+_LIBCPP_HIDE_FROM_ABI constexpr __fields_set operator|(__fields_set __lhs, __fields_set __rhs) {
   return static_cast<__fields_set>(static_cast<uint32_t>(__lhs) | static_cast<uint32_t>(__rhs));
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr __fields_set operator&(__fields_set __lhs, __fields_set __rhs) {
+_LIBCPP_HIDE_FROM_ABI constexpr __fields_set operator&(__fields_set __lhs, __fields_set __rhs) {
   return static_cast<__fields_set>(static_cast<uint32_t>(__lhs) & static_cast<uint32_t>(__rhs));
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr __fields_set operator~(__fields_set __fields) {
+_LIBCPP_HIDE_FROM_ABI constexpr __fields_set operator~(__fields_set __fields) {
   return static_cast<__fields_set>(~static_cast<uint32_t>(__fields));
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr __fields_set& operator|=(__fields_set& __lhs, __fields_set __rhs) {
+_LIBCPP_HIDE_FROM_ABI constexpr __fields_set& operator|=(__fields_set& __lhs, __fields_set __rhs) {
   return __lhs = __lhs | __rhs;
 }
+
+} // namespace __parser
+
+using __parser::__fields_set;
 
 // Fields collected while parsing. Date/time construction and validation do not
 // modify these values or their presence flags.

@@ -21,6 +21,7 @@
 #  include <__chrono/file_clock.h>
 #  include <__chrono/gps_clock.h>
 #  include <__chrono/hh_mm_ss.h>
+#  include <__chrono/leap_second.h>
 #  include <__chrono/month.h>
 #  include <__chrono/monthday.h>
 #  include <__chrono/parser_data.h>
@@ -458,6 +459,9 @@ public:
   }
 
   // Parses '__fmt' into '__f', setting failbit on a mismatch.
+  // Keep the handling of all format specifiers together in a single switch.
+  // This makes the function longer and increases its cognitive complexity.
+  // NOLINTNEXTLINE(readability-function-size, readability-function-cognitive-complexity)
   _LIBCPP_HIDE_FROM_ABI void __parse(
       const _CharT* __fmt, __fields_storage& __f, basic_string<_CharT, _Traits>& __abbrev, __parse_options __options) {
     const auto& __ctype = std::use_facet<ctype<_CharT> >(__is_.getloc());
