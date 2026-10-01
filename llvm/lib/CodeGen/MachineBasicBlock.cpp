@@ -566,6 +566,8 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << (hasAttributes ? ", " : " (");
       os << "align " << getAlignment().value();
       hasAttributes = true;
+      if (getMaxBytesForAlignment())
+        os << ", max-bytes-for-alignment " << getMaxBytesForAlignment();
     }
     if (getSectionID() != MBBSectionID(0)) {
       os << (hasAttributes ? ", " : " (");
