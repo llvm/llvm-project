@@ -438,23 +438,33 @@ func.func @insert_prefetch_dynamic(%arg0: memref<128x?xf16>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c16 = arith.constant 16 : index
-  // CHECK: %[[K:.*]] = memref.dim %arg0
+  // CHECK:    %[[K:.*]] = memref.dim %arg0
   %k = memref.dim %arg0, %c1 : memref<128x?xf16>
-  // CHECK: %[[PREFETCH_DESC:.*]] = xegpu.create_nd_tdesc %arg0
-  // CHECK-SAME: !xegpu.tensor_desc<128x16xf16>
-  // CHECK: xegpu.prefetch_nd %[[PREFETCH_DESC]]
-  // CHECK: xegpu.prefetch_nd %[[PREFETCH_DESC]]
-  // CHECK: scf.for %[[IV:.*]] = %{{.*}} to %[[K]] step %{{.*}} {
-  // CHECK: %[[FUTURE:.*]] = arith.addi %[[IV]]
-  // CHECK-NOT: scf.if
-  // CHECK: xegpu.prefetch_nd %[[PREFETCH_DESC]][{{.*}}, %[[FUTURE]]]
-  // CHECK: memref.subview %arg0[0, %[[IV]]]
-  // CHECK: xegpu.load_nd
+  // CHECK:    %[[OUTER:.*]] = memref.subview %arg0[0, 0]
+  %outer = memref.subview %arg0[0, 0] [128, %k] [1, 1]
+      : memref<128x?xf16> to memref<128x?xf16, strided<[?, 1]>>
+  // CHECK:    %[[INIT_END:.*]] = arith.minsi {{.*}}, %[[K]]
+  // CHECK:    scf.for %[[INIT_IV:.*]] = %{{.*}} to %[[INIT_END]] step %{{.*}} {
+  // CHECK:      %[[INIT_SUB:.*]] = memref.subview %[[OUTER]][0, %[[INIT_IV]]]
+  // CHECK:      %[[INIT_DESC:.*]] = xegpu.create_nd_tdesc %[[INIT_SUB]]
+  // CHECK:      xegpu.prefetch_nd %[[INIT_DESC]][0, 0]
+  // CHECK:    }
+  // CHECK:    scf.for %[[IV:.*]] = %{{.*}} to %[[K]] step %{{.*}} {
+  // CHECK:      %[[FUTURE:.*]] = arith.addi %[[IV]]
+  // CHECK:      %[[IN_BOUNDS:.*]] = arith.cmpi slt, %[[FUTURE]], %[[K]]
+  // CHECK:      scf.if %[[IN_BOUNDS]] {
+  // CHECK:        %[[MAIN_SUB:.*]] = memref.subview %[[OUTER]][0, %[[FUTURE]]]
+  // CHECK:        %[[MAIN_DESC:.*]] = xegpu.create_nd_tdesc %[[MAIN_SUB]]
+  // CHECK:        xegpu.prefetch_nd %[[MAIN_DESC]][0, 0]
+  // CHECK:      }
+  // CHECK:      xegpu.load_nd
+  // CHECK:    }
   scf.for %iv = %c0 to %k step %c16 {
     %remaining = arith.subi %k, %iv : index
     %size = arith.minsi %remaining, %c16 : index
-    %tile = memref.subview %arg0[0, %iv] [128, %size] [1, 1]
-        : memref<128x?xf16> to memref<128x?xf16, strided<[?, 1], offset: ?>>
+    %tile = memref.subview %outer[0, %iv] [128, %size] [1, 1]
+        : memref<128x?xf16, strided<[?, 1]>>
+          to memref<128x?xf16, strided<[?, 1], offset: ?>>
     %desc = xegpu.create_nd_tdesc %tile
         : memref<128x?xf16, strided<[?, 1], offset: ?>>
           -> !xegpu.tensor_desc<128x16xf16>
@@ -469,7 +479,10 @@ module attributes {transform.with_named_sequence} {
     %func = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %load = transform.structured.match ops{["xegpu.load_nd"]} in %func : (!transform.any_op) -> !transform.any_op
     %desc = transform.xegpu.insert_prefetch %load nb_prefetch = 2 : (!transform.any_op) -> !transform.any_op
-    %prefetch = transform.get_consumers_of_result %desc[0] : (!transform.any_op) -> !transform.any_op
+    transform.foreach %desc : !transform.any_op {
+    ^bb0(%one_desc: !transform.any_op):
+      %prefetch = transform.get_consumers_of_result %one_desc[0] : (!transform.any_op) -> !transform.any_op
+    }
     transform.yield
   }
 }

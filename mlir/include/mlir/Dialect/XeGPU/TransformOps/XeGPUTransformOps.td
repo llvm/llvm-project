@@ -154,14 +154,7 @@ def InsertPrefetchOp : Op<Transform_Dialect, "xegpu.insert_prefetch", [
     The load op must reside within the `scf.for` loop. Number of prefetch steps
     is set by the `nb_prefetch` argument (default value is 1).
 
-    For a descriptor made from loop-local, rank-preserving, unit-stride
-    `memref.subview` ops, the prefetch uses a descriptor of the full source
-    memref instead. Subview offsets are added to the prefetch offsets. This
-    allows future offsets past the source bounds, as in the static case; the
-    descriptor must have `boundary_check = true`. Loop-local offsets may only
-    use the loop induction variable directly.
-
-    Returns a handle to the created `xegpu.create_nd_tdesc` op.
+    Returns a handle to the created `xegpu.create_nd_tdesc` ops.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
