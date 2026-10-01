@@ -82,7 +82,7 @@ public:
 
   ~InstCombinerImpl() override = default;
 
-  const InstCombineCLOptions CLOpts;
+  const InstCombineCLOptions &CLOpts;
 
   /// Perform early cleanup and prepare the InstCombine worklist.
   bool prepareWorklist(Function &F);

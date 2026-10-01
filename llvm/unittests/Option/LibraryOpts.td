@@ -10,7 +10,7 @@ include "llvm/Option/LibraryOptions.td"
 
 def TestLibraryOptions : OptionsStruct<"test", prefix = "lib-">;
 
-defm : BoolField<"lib-enable", "0", "A bool">;
+defm : BoolField<"lib-enable", "false", "A bool">;
 defm : ValueField<"lib-count", "unsigned", "3", "An unsigned">;
 defm : ValueField<"lib-ratio", "double", "0.5", "A double">;
 defm Path : ValueField<"lib-path", "StringRef", "\"p\"", "A string">;
