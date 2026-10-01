@@ -3478,7 +3478,7 @@ bool GVNPass::processInstruction(Instruction *I) {
         }
       }
       auto *ICmp = dyn_cast<ICmpInst>(Cmp);
-      if (ICmp && ICmp->hasSameSign()) {
+      if (ICmp && ICmp->hasSameSign() && !ICmp->isEquality()) {
         uint32_t SameSignNum = VN.lookupCmp(
             ICmp->getOpcode(),
             ICmpInst::getFlippedSignednessPredicate(ICmp->getPredicate()),
