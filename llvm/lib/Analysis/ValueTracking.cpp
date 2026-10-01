@@ -277,6 +277,40 @@ bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
   return Result == NoCommonBitsSetResult::Known;
 }
 
+bool llvm::haveCommonLowBits(const Value *V1, const Value *V2,
+                             unsigned CommonBitLength,
+                             const SimplifyQuery &SQ) {
+  // Let's not support vectors for now.
+  if (V1->getType()->isVectorTy() || V2->getType()->isVectorTy())
+    return false;
+  if (V1 == V2)
+    return true;
+
+  TypeSize V1Size = V1->getType()->getPrimitiveSizeInBits();
+  TypeSize V2Size = V2->getType()->getPrimitiveSizeInBits();
+  assert(CommonBitLength <= V1Size);
+  assert(CommonBitLength <= V2Size);
+
+  // If A is an extension of B, they certainly share the same lower bits.
+  auto IsExtensionOf = [&SQ](const Value *A, const Value *B) {
+    if (match(A, m_NNegZExt(m_Specific(B))))
+      return isKnownNonNegative(B, SQ);
+    if (match(A, m_ZExtOrSExt(m_Specific(B))))
+      return true;
+    return false;
+  };
+
+  if (IsExtensionOf(V2, V1) || IsExtensionOf(V1, V2)) {
+    return true;
+  }
+
+  // We couldn't find a special case to prove this, so fallback to
+  // KnownBit analysis.
+  KnownBits V1Known = computeKnownBits(V1, SQ).trunc(CommonBitLength);
+  KnownBits V2Known = computeKnownBits(V2, SQ).trunc(CommonBitLength);
+  return (V1Known ^ V2Known).isZero();
+}
+
 bool llvm::isOnlyUsedInZeroComparison(const Instruction *I) {
   return !I->user_empty() &&
          all_of(I->users(), match_fn(m_ICmp(m_Value(), m_Zero())));
