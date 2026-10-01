@@ -4,7 +4,7 @@
 
 ! CHECK: acc.routine @[[ACLEAR_SEQ_ROUTINE:.*]] func(@_QPaclear_seq) seq
 ! CHECK: acc.routine @{{.*}} func(@_QPaclear) bind(@_QPaclear_seq) seq
-! CHECK: func.func private @_QPaclear_seq({{.*}}) attributes {acc.routine_info = #acc.routine_info<[@[[ACLEAR_SEQ_ROUTINE]]]>}
+! CHECK: func.func private @_QPaclear_seq({{.*}}) attributes {acc.routine_info = #acc.routine_info<[@[[ACLEAR_SEQ_ROUTINE]]]>{{.*}}}
 ! CHECK-SAME: loc("{{.*}}acc-routine-bind-undeclared.f90":{{[0-9]+}}:{{[0-9]+}})
 ! CHECK-NOT: func.func private @_QPaclear_seq{{.*}}loc(unknown)
 

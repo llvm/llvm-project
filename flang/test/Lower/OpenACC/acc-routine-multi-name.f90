@@ -23,30 +23,30 @@ contains
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_multi_routinesPseq1()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r_seq1]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r_seq1]]]>{{.*}}}
 
   subroutine seq2()
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_multi_routinesPseq2()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r_seq2]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r_seq2]]]>{{.*}}}
 
   subroutine gang1()
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_multi_routinesPgang1()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r_gang1]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r_gang1]]]>{{.*}}}
 
   subroutine gang2()
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_multi_routinesPgang2()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r_gang2]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r_gang2]]]>{{.*}}}
 
   subroutine gang3()
   end subroutine
 
 ! CHECK-LABEL: func.func @_QMacc_multi_routinesPgang3()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r_gang3]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r_gang3]]]>{{.*}}}
 
 end module
