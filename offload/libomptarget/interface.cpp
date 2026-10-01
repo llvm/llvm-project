@@ -848,6 +848,44 @@ EXTERN void __tgt_taskgraph_emit_target_update(
       ArgMappers);
 }
 
+/// Answer a recorded `target data` region's use_device_ptr / use_device_addr
+/// list items, as the begin mapper would, when the region's body starts on a
+/// replay.  \p Out receives one device base per entry.
+EXTERN void __tgt_taskgraph_lookup_use_device(int64_t DeviceId, int32_t ArgNum,
+                                              void **ArgsBase, void **Args,
+                                              int64_t *ArgTypes, void **Out) {
+  assert(PM && "Runtime not initialized");
+  auto DeviceOrErr = PM->getDevice(resolveGraphDevice(DeviceId));
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
+  MappingInfoTy &MappingInfo = DeviceOrErr->getMappingInfo();
+
+  for (int32_t I = 0; I < ArgNum; ++I) {
+    if (!(ArgTypes[I] & OMP_TGT_MAPTYPE_RETURN_PARAM))
+      continue;
+    const uintptr_t Delta = reinterpret_cast<uintptr_t>(Args[I]) -
+                            reinterpret_cast<uintptr_t>(ArgsBase[I]);
+    // Deliberately no reference-count movement and no hold: this is the
+    // question `where is it`, asked of a mapping some map is already
+    // responsible for.  A graph asks it once per replay, so answering it with
+    // a reference would leak one per replay.
+    TargetPointerResultTy TPR = MappingInfo.getTgtPtrBegin(
+        Args[I], /*Size=*/0, /*UpdateRefCount=*/false,
+        /*UseHoldRefCount=*/false);
+    uintptr_t Begin = reinterpret_cast<uintptr_t>(TPR.TargetPointer);
+    // An absent entry comes back as the host address, so it is told apart by
+    // the flags rather than by a null.  It takes the same two fallbacks as in
+    // the mapper: nullify when the clause asked for it, and otherwise hand back
+    // the host address, which OpenMP makes the program's responsibility to
+    // have made device-accessible.  Host-resident memory under unified shared
+    // memory is found, not absent.
+    if (!TPR.isPresent() && !TPR.isHostPointer() &&
+        (ArgTypes[I] & OMP_TGT_MAPTYPE_FB_NULLIFY))
+      Begin = 0;
+    Out[I] = reinterpret_cast<void *>(Begin - Delta);
+  }
+}
+
 EXTERN size_t __tgt_taskgraph_end(void *Graph) {
   auto *G = static_cast<TaskGraphTy *>(Graph);
   TaskGraphBuilder B(*G);

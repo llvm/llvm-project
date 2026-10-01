@@ -2972,7 +2972,8 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned tasking_ser : 1;
   unsigned task_serial : 1;
   unsigned tasktype : 1;
-  unsigned reserved : 6;
+  unsigned reserved : 5;
+  unsigned taskgraph_body : 1;
   unsigned taskgraph_destructors : 1;
   unsigned transparent : 1;
   unsigned free_agent_eligible : 1;
@@ -3003,7 +3004,8 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
                                          argument, which of the task's initial
                                          values to destroy (a task that may be
                                          recorded into a taskgraph) */
-  unsigned reserved : 6; /* reserved for compiler use */
+  unsigned taskgraph_body : 1; /* structured block of a recorded target data */
+  unsigned reserved : 5; /* reserved for compiler use */
 
   /* Library flags */ /* Total library flags must be 16 bits */
   unsigned tasktype : 1; /* task is either explicit(1) or implicit (0) */

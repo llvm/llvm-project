@@ -634,6 +634,19 @@ void __tgt_taskgraph_emit_target_update(void *Graph, int64_t DeviceId,
                                         int64_t *ArgTypes, void **ArgNames,
                                         void **ArgMappers);
 
+/// Answer, for every `RETURN_PARAM` entry of \p ArgTypes, where the entry's
+/// memory currently is on \p DeviceId, writing the answers into \p Out.
+///
+/// This is the `use_device_ptr` / `use_device_addr` rule of `targetDataBegin`
+/// with none of the mapping: the device address is offset back by the entry's
+/// own `HstPtrBegin - HstPtrBase` delta so that the list item's base is what
+/// comes out, no reference count moves, and an absent entry falls back exactly
+/// as the mapper's does.  A recorded `target data` region's body asks it on
+/// every replay, after the region's enter-data node has done the mapping.
+void __tgt_taskgraph_lookup_use_device(int64_t DeviceId, int32_t ArgNum,
+                                       void **ArgsBase, void **Args,
+                                       int64_t *ArgTypes, void **Out);
+
 /// Finish transmitting a subgraph.  Returns the number of bytes the subgraph
 /// occupies (the single-block size): meaningful on the first (measuring) pass,
 /// where its return value is fed back to __tgt_taskgraph_start as

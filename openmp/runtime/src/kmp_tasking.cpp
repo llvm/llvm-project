@@ -6872,6 +6872,10 @@ kmp_uint32 __kmpc_taskgraph_task(ident_t *loc_ref, kmp_int32 gtid,
       kmp_task_t *cloned_task = __kmp_taskgraph_clone_task(
           thread, rec, new_task, sizeof_kmp_task_t, sizeof_shareds, task_dup);
       kmp_taskgraph_node_t *node = __kmp_taskgraph_node_alloc(rec, cloned_task);
+      // The body of a 'target data' is ordered between its enter-data and
+      // exit-data nodes, which have no dependences on it to express that.
+      node->undeferred =
+          KMP_TASK_TO_TASKDATA(new_task)->td_flags.taskgraph_body;
       if (taskgroup->taskgraph.reduce_input) {
         node->reduce_input = taskgroup->taskgraph.reduce_input;
         taskgroup->taskgraph.reduce_input = nullptr;
@@ -6909,6 +6913,16 @@ kmp_uint32 __kmpc_taskgraph_task(ident_t *loc_ref, kmp_int32 gtid,
     while (parent) {
       parent = parent->td_parent;
     }
+  }
+
+  // The body of a 'target data' finishes before the construct does: the
+  // exit-data action that follows it must see everything the body did.
+  if (KMP_TASK_TO_TASKDATA(new_task)->td_flags.taskgraph_body) {
+    KMP_DEBUG_ASSERT(ndeps == 0);
+    __kmpc_omp_task_begin_if0(loc_ref, gtid, new_task);
+    new_task->routine(gtid, new_task);
+    __kmpc_omp_task_complete_if0(loc_ref, gtid, new_task);
+    return 0;
   }
 
   kmp_int32 res;
