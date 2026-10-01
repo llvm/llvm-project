@@ -918,7 +918,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // In "AlwaysBreak" or "BlockIndent" mode, enforce wrapping directly after the
   // parenthesis by disallowing any further line breaks if there is no line
   // break after the opening parenthesis. Don't break if it doesn't conserve
-  // columns.
+  // columns, unless the style option applies and a break is allowed.
   auto IsOpeningBracket = [&](const FormatToken &Tok) {
     auto IsStartOfBracedList = [&]() {
       return Tok.is(tok::l_brace) && Tok.isNot(BK_Block) &&
@@ -996,7 +996,13 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
            Next->is(TT_FunctionDeclarationLParen) || IsFunctionCallParen(*Next);
   };
   if (IsOpeningBracket(Previous) &&
-      State.Column > getNewLineColumn(State).Total &&
+      (State.Column > getNewLineColumn(State).Total ||
+       // IsOpeningBracket checks BreakAfterOpenBracketBracedList before its
+       // (!Tok.Previous) shortcut. All other true returns with a preceding
+       // token require a BreakAfterOpenBracket* option.
+       // Only forbid later breaks if a break here is possible to prevent
+       // alternatives from being blocked.
+       ((Previous.Previous || Previous.is(tok::l_brace)) && canBreak(State))) &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //

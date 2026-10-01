@@ -867,7 +867,8 @@ TEST_F(AlignBracketsTest, BreakAfterOpenBracketIfStatement) {
   Style.BreakAfterOpenBracketIf = true;
 
   verifyFormat("void f() {\n"
-               "  if (call(aaaaaaaaaaaaaaaaaaaa,\n"
+               "  if (\n"
+               "      call(aaaaaaaaaaaaaaaaaaaa,\n"
                "           bbbbbbbbbbbbbbbbbbbb,\n"
                "           cccccccccccccccccccc) < 0)\n"
                "    return;\n"
@@ -885,9 +886,10 @@ TEST_F(AlignBracketsTest, BreakAfterOpenBracketFunctionCall) {
   Style.BreakAfterOpenBracketFunction = true;
 
   verifyFormat("void f() {\n"
-               "  g(aaaaaaaaaaaaaaaaaaaa,\n"
-               "    bbbbbbbbbbbbbbbbbbbb,\n"
-               "    cccccccccccccccccccc);\n"
+               "  g(\n"
+               "      aaaaaaaaaaaaaaaaaaaa,\n"
+               "      bbbbbbbbbbbbbbbbbbbb,\n"
+               "      cccccccccccccccccccc);\n"
                "}",
                "void f() {\n"
                "  g(aaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbb, "
@@ -903,7 +905,8 @@ TEST_F(AlignBracketsTest, BreakAfterOpenBracketLoopStatement) {
   Style.BreakAfterOpenBracketLoop = true;
 
   verifyFormat("void f() {\n"
-               "  while (call(aaaaaaaaaaaaaaaaaaaa,\n"
+               "  while (\n"
+               "         call(aaaaaaaaaaaaaaaaaaaa,\n"
                "              bbbbbbbbbbbbbbbbbbbb,\n"
                "              cccccccccccccccccccc) < 0)\n"
                "    return;\n"
@@ -922,7 +925,8 @@ TEST_F(AlignBracketsTest, BreakAfterOpenBracketSwitchStatement) {
   Style.BreakAfterOpenBracketSwitch = true;
 
   verifyFormat("void f() {\n"
-               "  switch (call(aaaaaaaaaaaaaaaaaaaa,\n"
+               "  switch (\n"
+               "          call(aaaaaaaaaaaaaaaaaaaa,\n"
                "               bbbbbbbbbbbbbbbbbbbb,\n"
                "               cccccccccccccccccccc)) {\n"
                "  default:\n"
@@ -942,7 +946,8 @@ TEST_F(AlignBracketsTest, BreakAfterOpenBracketBracedList) {
   Style.BreakAfterOpenBracketBracedList = true;
 
   verifyFormat("void f() {\n"
-               "  int a[] = {111111111111111111, 222222222222222222, "
+               "  int a[] = {\n"
+               "             111111111111111111, 222222222222222222, "
                "333333333333333333,\n"
                "             444444444444444444};\n"
                "}",

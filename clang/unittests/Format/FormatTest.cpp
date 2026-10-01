@@ -21724,7 +21724,8 @@ TEST_F(FormatTest, FormatsLambdas) {
   Style.BraceWrapping.BeforeLambdaBody = true;
   verifyFormat("void foo() {\n"
                "  aFunction(\n"
-               "      1, b(c(foo, Bar{}, baz, [](d) -> Foo\n"
+               "      1, b(c(\n"
+               "             foo, Bar{}, baz, [](d) -> Foo\n"
                "  {\n"
                "    auto f = e(\n"
                "        [&]\n"
