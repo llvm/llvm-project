@@ -540,7 +540,7 @@ static llvm::omp::Version AllowedInFutureVersion(llvm::omp::Clause clauseId,
     if (v <= version) {
       continue;
     }
-    if (IsClauseAllowedOnDirective(clauseId, dirId, v, semaCtx)) {
+    if (llvm::omp::isAllowedClauseForDirective(dirId, clauseId, v)) {
       return v;
     }
   }
@@ -561,16 +561,18 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
 
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
-  if (!IsClauseAllowedOnDirective(clauseId, dirId, version, &context_)) {
+  // Don't consult the overrides here. Checking the overrides would suppress
+  // repeated warnings for multiple occurrences of the same scenario (which
+  // may be desirable), but it would also suppress repeated errors with
+  // -Werror (which is undesirable).
+  if (!llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version)) {
     if (auto allowedInVersion{
             AllowedInFutureVersion(clauseId, dirId, version, &context_)}) {
       context_.Warn(common::UsageWarning::OpenMPFuture, clauseSource,
           "%s clause is not allowed on %s directive in %s, %s"_warn_en_US,
           GetUpperName(clauseId, version), GetUpperName(dirId, version),
           ThisVersion(version), TryVersion(allowedInVersion));
-      if (!context_.warningsAreErrors()) {
-        SetAllowedClauseOverride(clauseId, dirId);
-      }
+      SetAllowedClauseOverride(clauseId, dirId);
     } else {
       context_.Say(clauseSource,
           "%s clause is not allowed on %s directive"_err_en_US,
@@ -2843,10 +2845,8 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetDirective &x) {
     if (toClause && version >= 52) {
       context_.Warn(common::UsageWarning::OpenMPDeprecated, toClause->source,
           "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
-      if (!context_.warningsAreErrors()) {
-        SetAllowedClauseOverride(llvm::omp::Clause::OMPC_to,
-            llvm::omp::Directive::OMPD_declare_target);
-      }
+      SetAllowedClauseOverride(llvm::omp::Clause::OMPC_to,
+          llvm::omp::Directive::OMPD_declare_target);
     }
   }
 

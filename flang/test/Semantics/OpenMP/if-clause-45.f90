@@ -63,18 +63,22 @@ program main
   end do
   !$omp end distribute simd
 
+  !ERROR: IF clause is not allowed on DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp distribute simd if(simd: .true.)
   do i = 1, 10
   end do
   !$omp end distribute simd
 
+  !ERROR: IF clause is not allowed on DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !ERROR: TARGET is not a constituent of the DISTRIBUTE SIMD directive
   !$omp distribute simd if(target: .true.)
   do i = 1, 10
   end do
   !$omp end distribute simd
 
+  !ERROR: IF clause is not allowed on DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
+  !ERROR: IF clause is not allowed on DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp distribute simd if(.true.) if(simd: .false.)
   do i = 1, 10
@@ -91,18 +95,22 @@ program main
   end do
   !$omp end do simd
 
+  !ERROR: IF clause is not allowed on DO SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp do simd if(simd: .true.)
   do i = 1, 10
   end do
   !$omp end do simd
 
+  !ERROR: IF clause is not allowed on DO SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !ERROR: TARGET is not a constituent of the DO SIMD directive
   !$omp do simd if(target: .true.)
   do i = 1, 10
   end do
   !$omp end do simd
 
+  !ERROR: IF clause is not allowed on DO SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
+  !ERROR: IF clause is not allowed on DO SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp do simd if(.true.) if(simd: .false.)
   do i = 1, 10
@@ -208,23 +216,28 @@ program main
   ! ----------------------------------------------------------------------------
   ! SIMD
   ! ----------------------------------------------------------------------------
+  !ERROR: IF clause is not allowed on SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !$omp simd if(.true.)
   do i = 1, 10
   end do
   !$omp end simd
 
+  !ERROR: IF clause is not allowed on SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp simd if(simd: .true.)
   do i = 1, 10
   end do
   !$omp end simd
 
+  !ERROR: IF clause is not allowed on SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !ERROR: TARGET is not a constituent of the SIMD directive
   !$omp simd if(target: .true.)
   do i = 1, 10
   end do
   !$omp end simd
 
+  !ERROR: IF clause is not allowed on SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
+  !ERROR: IF clause is not allowed on SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp simd if(.true.) if(simd: .false.)
   do i = 1, 10
@@ -546,14 +559,18 @@ program main
   !$omp teams if(.true.)
   !$omp end teams
 
+  !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v4.5, try -fopenmp-version=52 [-Wopenmp-future]
   !ERROR: TEAMS is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=52
   !$omp teams if(teams: .true.)
   !$omp end teams
 
+  !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v4.5, try -fopenmp-version=52 [-Wopenmp-future]
   !ERROR: TARGET is not a constituent of the TEAMS directive
   !$omp teams if(target: .true.)
   !$omp end teams
 
+  !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v4.5, try -fopenmp-version=52 [-Wopenmp-future]
+  !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v4.5, try -fopenmp-version=52 [-Wopenmp-future]
   !ERROR: TEAMS is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=52
   !$omp teams if(.true.) if(teams: .false.)
   !$omp end teams
@@ -635,6 +652,8 @@ program main
   end do
   !$omp end teams distribute simd
 
+  !ERROR: IF clause is not allowed on TEAMS DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
+  !ERROR: IF clause is not allowed on TEAMS DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !ERROR: TEAMS is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=52
   !ERROR: SIMD is not allowed as 'directive-name-modifier' in OpenMP v4.5, try -fopenmp-version=50
   !$omp teams distribute simd if(teams: .true.) if(simd: .true.)
@@ -642,6 +661,7 @@ program main
   end do
   !$omp end teams distribute simd
 
+  !ERROR: IF clause is not allowed on TEAMS DISTRIBUTE SIMD directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !ERROR: TARGET is not a constituent of the TEAMS DISTRIBUTE SIMD directive
   !$omp teams distribute simd if(target: .true.)
   do i = 1, 10
