@@ -123,7 +123,7 @@ protected:
   const IRBuilderFolder &Folder;
   const IRBuilderDefaultInserter &Inserter;
 
-  MDNode *DefaultFPMathTag;
+  MDNode *DefaultFPMathTag = nullptr;
   FastMathFlags FMF;
 
   bool IsFPConstrained = false;
@@ -134,9 +134,8 @@ protected:
 
 public:
   IRBuilderBase(LLVMContext &context, const IRBuilderFolder &Folder,
-                const IRBuilderDefaultInserter &Inserter, MDNode *FPMathTag)
-      : Context(context), Folder(Folder), Inserter(Inserter),
-        DefaultFPMathTag(FPMathTag) {
+                const IRBuilderDefaultInserter &Inserter)
+      : Context(context), Folder(Folder), Inserter(Inserter) {
     ClearInsertionPoint();
   }
 
@@ -2924,50 +2923,40 @@ private:
   InserterTy Inserter;
 
 public:
-  IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter,
-            MDNode *FPMathTag = nullptr)
-      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag),
-        Folder(Folder), Inserter(Inserter) {}
+  IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter)
+      : IRBuilderBase(C, this->Folder, this->Inserter), Folder(Folder),
+        Inserter(Inserter) {}
 
-  IRBuilder(LLVMContext &C, FolderTy Folder, MDNode *FPMathTag = nullptr)
-      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag),
-        Folder(Folder) {}
+  IRBuilder(LLVMContext &C, FolderTy Folder)
+      : IRBuilderBase(C, this->Folder, this->Inserter), Folder(Folder) {}
 
-  explicit IRBuilder(LLVMContext &C, MDNode *FPMathTag = nullptr)
-      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag) {}
+  explicit IRBuilder(LLVMContext &C)
+      : IRBuilderBase(C, this->Folder, this->Inserter) {}
 
-  explicit IRBuilder(BasicBlock *TheBB, FolderTy Folder,
-                     MDNode *FPMathTag = nullptr)
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag),
+  explicit IRBuilder(BasicBlock *TheBB, FolderTy Folder)
+      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter),
         Folder(Folder) {
     SetInsertPoint(TheBB);
   }
 
-  explicit IRBuilder(BasicBlock *TheBB, MDNode *FPMathTag = nullptr)
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag) {
+  explicit IRBuilder(BasicBlock *TheBB)
+      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter) {
     SetInsertPoint(TheBB);
   }
 
-  explicit IRBuilder(Instruction *IP, MDNode *FPMathTag = nullptr)
-      : IRBuilderBase(IP->getContext(), this->Folder, this->Inserter,
-                      FPMathTag) {
+  explicit IRBuilder(Instruction *IP)
+      : IRBuilderBase(IP->getContext(), this->Folder, this->Inserter) {
     SetInsertPoint(IP);
   }
 
-  IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP, FolderTy Folder,
-            MDNode *FPMathTag = nullptr)
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag),
+  IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP, FolderTy Folder)
+      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter),
         Folder(Folder) {
     SetInsertPoint(TheBB, IP);
   }
 
-  IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP,
-            MDNode *FPMathTag = nullptr)
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter,
-                      FPMathTag) {
+  IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP)
+      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter) {
     SetInsertPoint(TheBB, IP);
   }
 
@@ -2980,17 +2969,16 @@ public:
 };
 
 template <typename FolderTy, typename InserterTy>
-IRBuilder(LLVMContext &, FolderTy, InserterTy, MDNode *)
+IRBuilder(LLVMContext &, FolderTy, InserterTy)
     -> IRBuilder<FolderTy, InserterTy>;
-IRBuilder(LLVMContext &, MDNode *) -> IRBuilder<>;
+IRBuilder(LLVMContext &) -> IRBuilder<>;
 template <typename FolderTy>
-IRBuilder(BasicBlock *, FolderTy, MDNode *) -> IRBuilder<FolderTy>;
-IRBuilder(BasicBlock *, MDNode *) -> IRBuilder<>;
-IRBuilder(Instruction *, MDNode *) -> IRBuilder<>;
+IRBuilder(BasicBlock *, FolderTy) -> IRBuilder<FolderTy>;
+IRBuilder(BasicBlock *) -> IRBuilder<>;
+IRBuilder(Instruction *) -> IRBuilder<>;
 template <typename FolderTy>
-IRBuilder(BasicBlock *, BasicBlock::iterator, FolderTy, MDNode *)
-    -> IRBuilder<FolderTy>;
-IRBuilder(BasicBlock *, BasicBlock::iterator, MDNode *) -> IRBuilder<>;
+IRBuilder(BasicBlock *, BasicBlock::iterator, FolderTy) -> IRBuilder<FolderTy>;
+IRBuilder(BasicBlock *, BasicBlock::iterator) -> IRBuilder<>;
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(IRBuilder<>, LLVMBuilderRef)
