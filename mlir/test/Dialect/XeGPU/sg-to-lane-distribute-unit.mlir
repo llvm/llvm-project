@@ -1776,3 +1776,24 @@ gpu.func @extract_strided_slice_two_distributed_dims() {
   gpu.return
 }
 }
+
+// -----
+// A distributed dim that is also packed: lane_data 4 on dim 1, so a lane owns 4
+// contiguous columns. The slice covers the whole dim, so only its size rescales.
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @extract_strided_slice_packed_distributed_dim
+// CHECK:         %[[SRC:.*]] = "test.some_op"()
+// CHECK:         %[[DIST:.*]] = builtin.unrealized_conversion_cast %[[SRC]] : vector<8x64xbf16> to vector<8x4xbf16>
+// CHECK:         vector.extract_strided_slice %[[DIST]] offsets = [0, 0], sizes = [1, 4], strides = [1, 1] : vector<8x4xbf16> to vector<1x4xbf16>
+gpu.func @extract_strided_slice_packed_distributed_dim() {
+  %src = "test.some_op"() : () -> vector<8x64xbf16>
+  %0 = vector.extract_strided_slice %src offsets = [0, 0], sizes = [1, 64], strides = [1, 1]
+    : vector<8x64xbf16> to vector<1x64xbf16>
+  %1 = xegpu.convert_layout %0
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>
+    }> : vector<1x64xbf16>
+  gpu.return
+}
+}

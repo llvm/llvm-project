@@ -1373,21 +1373,23 @@ struct SgToLaneVectorExtractStridedSlice
       ArrayRef<int64_t> sourceShape = op.getSourceVectorType().getShape();
       for (int64_t distDim : distributedDims) {
         int64_t lanes = laneLayout[distDim];
-        // A packed dim would need the offset scaled by lane_data as well.
-        if (distDim < static_cast<int64_t>(sourceLaneData.size()) &&
-            sourceLaneData[distDim] != 1)
-          return rewriter.notifyMatchFailure(
-              op, "expecting unit lane data along a distributed dimension");
         if (lanes == 0 || sourceShape[distDim] % lanes != 0)
           return rewriter.notifyMatchFailure(
               op, "source size along a distributed dim is not a multiple of "
                   "its lane count");
+        // A lane owns lane_data contiguous elements along this dim, so the slice
+        // has to start on a lane-tile boundary or it would cut one of those
+        // runs. Packing changes only that alignment requirement, not the
+        // divisor: offset / (lanes * laneData) * laneData == offset / lanes.
+        int64_t laneData = distDim < static_cast<int64_t>(sourceLaneData.size())
+                               ? sourceLaneData[distDim]
+                               : 1;
         int64_t distrDimOffset =
             cast<IntegerAttr>(updatedOffsets[distDim]).getInt();
-        if (distrDimOffset % lanes != 0)
+        if (laneData == 0 || distrDimOffset % (lanes * laneData) != 0)
           return rewriter.notifyMatchFailure(
               op, "offset along a distributed dim is not a multiple of its "
-                  "lane count");
+                  "lane tile");
         updatedSizes[distDim] =
             rewriter.getI64IntegerAttr(distResultTy.getDimSize(distDim));
         updatedOffsets[distDim] =
