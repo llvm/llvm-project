@@ -615,9 +615,10 @@ static bool hasSafeEffectsForUnrollAndJam(scf::ForOp forOp) {
   if (!effects)
     return false;
 
-  return llvm::all_of(*effects, [](const MemoryEffects::EffectInstance &effect) {
-    return isa<MemoryEffects::Read>(effect.getEffect());
-  });
+  return llvm::all_of(*effects,
+                      [](const MemoryEffects::EffectInstance &effect) {
+                        return isa<MemoryEffects::Read>(effect.getEffect());
+                      });
 }
 
 /// Unrolls and jams this loop by the specified factor.
