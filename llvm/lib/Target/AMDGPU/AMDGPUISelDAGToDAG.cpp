@@ -4949,6 +4949,7 @@ static bool isVGPR32FromRegSeqLo16Hi16Undef(SDNode *N) {
          HiVal->getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
+// Legalize 16bit ExtractSubreg in true16
 // EXTRACT_SUBREG Src, Lo16/Hi16
 // Extract lo/hi16 from sgpr requires legalization
 // 1. Src is SGPR:
@@ -5091,6 +5092,14 @@ bool AMDGPUDAGToDAGISel::Legalize16BitExtractSubReg(SDNode *N) {
   return true;
 }
 
+// Legalize 16bit Cross bank (SGPR/VGPR) def-use chain in true16
+// Scan 16bit def-use chain and fix user:
+// 1. Def is SGPR32, Use is VGPR16:
+// t0 = COPY_TO_REGCLASS Def, VGPR32
+// Use = EXTRACT_SUBREG t0, Lo16/Hi16
+// 2. Def is VGPR16, Use is SGPR32:
+// t0 = REG_SEQUENCE Def, lo16, undef, hi16
+// Use = COPY_TO_REGCLASS t0, SGPR32
 bool AMDGPUDAGToDAGISel::Legalize16BitCrossBank(SDNode *N) {
   // Check def register class
   const TargetRegisterClass *DstRC = inferNodeRegClass(N);
@@ -5107,13 +5116,6 @@ bool AMDGPUDAGToDAGISel::Legalize16BitCrossBank(SDNode *N) {
   bool IsSGPR32 = TRI->getCommonSubClass(DstRC, &AMDGPU::SGPR_32RegClass);
   bool IsVGPR16 = TRI->getCommonSubClass(DstRC, &AMDGPU::VGPR_16RegClass);
 
-  // Fix user:
-  // 1. Def is SGPR32, Use is VGPR16:
-  // t0 = COPY_TO_REGCLASS Def, VGPR32
-  // Use = EXTRACT_SUBREG t0, Lo16/Hi16
-  // 2. Def is VGPR16, Use is SGPR32:
-  // t0 = REG_SEQUENCE Def, lo16, undef, hi16
-  // Use = COPY_TO_REGCLASS t0, SGPR32
   for (SDUse &U : N->uses()) {
     SDNode *User = U.getUser();
     unsigned OperandNo = U.getOperandNo();
