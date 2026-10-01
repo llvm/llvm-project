@@ -566,6 +566,8 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << (hasAttributes ? ", " : " (");
       os << "align " << getAlignment().value();
       hasAttributes = true;
+      if (getMaxBytesForAlignment())
+        os << ", max-bytes-for-alignment " << getMaxBytesForAlignment();
     }
     if (getSectionID() != MBBSectionID(0)) {
       os << (hasAttributes ? ", " : " (");
@@ -1352,8 +1354,10 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
           assert(VNI &&
                  "PHI sources should be live out of their predecessors.");
           LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-          for (auto &SR : LI.subranges())
-            SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
+          for (auto &SR : LI.subranges()) {
+            if (VNInfo *SRVNI = SR.getVNInfoAt(PrevIndex))
+              SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, SRVNI));
+          }
         }
       }
     }

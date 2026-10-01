@@ -629,15 +629,11 @@ struct EpilogueLoopVectorizationInfo {
   ElementCount MainLoopVF = ElementCount::getFixed(0);
   unsigned MainLoopUF = 0;
   ElementCount EpilogueVF = ElementCount::getFixed(0);
-  unsigned EpilogueUF = 0;
   Value *VectorTripCount = nullptr;
 
   EpilogueLoopVectorizationInfo(ElementCount MVF, unsigned MUF,
-                                ElementCount EVF, unsigned EUF)
-      : MainLoopVF(MVF), MainLoopUF(MUF), EpilogueVF(EVF), EpilogueUF(EUF) {
-    assert(EUF == 1 &&
-           "A high UF for the epilogue loop is likely not beneficial.");
-  }
+                                ElementCount EVF)
+      : MainLoopVF(MVF), MainLoopUF(MUF), EpilogueVF(EVF) {}
 };
 
 /// An extension of the inner loop vectorizer that creates a skeleton for a
@@ -707,7 +703,7 @@ public:
                                  VPlan &MainPlan)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI,
                                        Checks, Plan, EPI.EpilogueVF,
-                                       EPI.EpilogueUF),
+                                       /*UnrollFactor=*/1),
         MainPlan(MainPlan) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *epilogue loop* strategy (i.e., the second pass of VPlan execution).
@@ -1527,8 +1523,8 @@ namespace {
 ///
 /// The runtime checks are created up-front in temporary blocks to allow better
 /// estimating the cost and un-linked from the existing IR. After deciding to
-/// vectorize, the checks are moved back. If deciding not to vectorize, the
-/// temporary blocks are completely removed.
+/// vectorize, the checks are attached to VPlan as IR or recipes. If deciding
+/// not to vectorize, the temporary blocks are completely removed.
 class GeneratedRTChecks {
   /// Basic block which contains the generated SCEV checks, if any.
   BasicBlock *SCEVCheckBlock = nullptr;
@@ -1543,6 +1539,10 @@ class GeneratedRTChecks {
   /// The value representing the result of the generated memory runtime checks.
   /// If it is nullptr no memory runtime checks have been generated.
   Value *MemRuntimeCheckCond = nullptr;
+
+  /// Whether checks were generated, retained after their IR is replaced or
+  /// removed during VPlan execution.
+  bool HasChecks = false;
 
   DominatorTree *DT;
   LoopInfo *LI;
@@ -1576,9 +1576,8 @@ public:
 
   /// Generate runtime checks in SCEVCheckBlock and MemCheckBlock, so we can
   /// accurately estimate the cost of the runtime checks. The blocks are
-  /// un-linked from the IR and are added back during vector code generation. If
-  /// there is no vector code generation, the check blocks are removed
-  /// completely.
+  /// un-linked from the IR and attached to VPlan as IR or recipes if
+  /// profitable. Otherwise, the check blocks are removed completely.
   void create(Loop *L, const LoopAccessInfo &LAI,
               const SCEVPredicate &UnionPred, ElementCount VF, unsigned IC,
               OptimizationRemarkEmitter &ORE) {
@@ -1648,6 +1647,7 @@ public:
     }
 
     SCEVExp.eraseDeadInstructions(SCEVCheckCond);
+    HasChecks = getSCEVChecks().first || getMemRuntimeChecks().first;
 
     if (!MemCheckBlock && !SCEVCheckBlock)
       return;
@@ -1771,32 +1771,17 @@ public:
   /// unused.
   ~GeneratedRTChecks() {
     SCEVExpanderCleaner SCEVCleaner(SCEVExp);
-    SCEVExpanderCleaner MemCheckCleaner(MemCheckExp);
     bool SCEVChecksUsed = !SCEVCheckBlock || !pred_empty(SCEVCheckBlock);
-    bool MemChecksUsed = !MemCheckBlock || !pred_empty(MemCheckBlock);
     if (SCEVChecksUsed)
       SCEVCleaner.markResultUsed();
 
-    if (MemChecksUsed) {
-      MemCheckCleaner.markResultUsed();
-    } else {
-      auto &SE = *MemCheckExp.getSE();
-      // Memory runtime check generation creates compares that use expanded
-      // values. Remove them before running the SCEVExpanderCleaners.
-      for (auto &I : make_early_inc_range(reverse(*MemCheckBlock))) {
-        if (MemCheckExp.isInsertedInstruction(&I))
-          continue;
-        SE.forgetValue(&I);
-        I.eraseFromParent();
-      }
-    }
-    MemCheckCleaner.cleanup();
+    if (MemCheckBlock && pred_empty(MemCheckBlock))
+      eraseMemCheckBlock();
+
     SCEVCleaner.cleanup();
 
     if (!SCEVChecksUsed)
       SCEVCheckBlock->eraseFromParent();
-    if (!MemChecksUsed)
-      MemCheckBlock->eraseFromParent();
   }
 
   /// Retrieves the SCEVCheckCond and SCEVCheckBlock that were generated as IR
@@ -1819,8 +1804,24 @@ public:
   }
 
   /// Return true if any runtime checks have been added
-  bool hasChecks() const {
-    return getSCEVChecks().first || getMemRuntimeChecks().first;
+  bool hasChecks() const { return HasChecks; }
+
+  /// Erase the memory check block, its instructions and their SCEV expansions.
+  void eraseMemCheckBlock() {
+    SCEVExpanderCleaner MemCheckCleaner(MemCheckExp);
+    auto &SE = *MemCheckExp.getSE();
+    // Memory runtime check generation creates compares that use expanded
+    // values. Remove them before running the SCEVExpanderCleaner.
+    for (auto &I : make_early_inc_range(reverse(*MemCheckBlock))) {
+      if (MemCheckExp.isInsertedInstruction(&I))
+        continue;
+      SE.forgetValue(&I);
+      I.eraseFromParent();
+    }
+    MemCheckCleaner.cleanup();
+    MemCheckBlock->eraseFromParent();
+    MemCheckBlock = nullptr;
+    MemRuntimeCheckCond = nullptr;
   }
 };
 } // namespace
@@ -5361,6 +5362,9 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (!VPlan1)
     return;
 
+  LLVM_DEBUG(dbgs() << "LV: VPlan created successfully. Loop can be "
+                       "vectorized.\n");
+
   if (!OrigLoop->isInnermost()) {
     // For outer loops, computeMaxVF returns a single non-scalar VF; build a
     // plan for that VF only.
@@ -5982,7 +5986,7 @@ void EpilogueVectorizerMainLoop::printDebugTracesAtStart() {
            << "Main Loop VF:" << EPI.MainLoopVF
            << ", Main Loop UF:" << EPI.MainLoopUF
            << ", Epilogue Loop VF:" << EPI.EpilogueVF
-           << ", Epilogue Loop UF:" << EPI.EpilogueUF << "\n";
+           << ", Epilogue Loop UF:1\n";
   });
 }
 
@@ -6028,8 +6032,7 @@ BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
 void EpilogueVectorizerEpilogueLoop::printDebugTracesAtStart() {
   LLVM_DEBUG({
     dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"
-           << "Epilogue Loop VF:" << EPI.EpilogueVF
-           << ", Epilogue Loop UF:" << EPI.EpilogueUF << "\n";
+           << "Epilogue Loop VF:" << EPI.EpilogueVF << ", Epilogue Loop UF:1\n";
   });
 }
 
@@ -6293,7 +6296,7 @@ VPSingleDefRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
   if (IsUniform) {
     return VPBuilder::createSingleScalarOp(
         VPI->getOpcode(), VPI->operandsWithoutMask(), BlockInMask, *VPI, *VPI,
-        VPI->getDebugLoc(), I);
+        VPI->getDebugLoc(), VPI->getScalarType(), I);
   }
   auto *Recipe = new VPReplicateRecipe(I, VPI->operandsWithoutMask(),
                                        /*IsSingleScalar=*/false, BlockInMask,
@@ -7032,8 +7035,29 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
-    RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan, MemCheckCond,
-                   MemCheckBlock, HasBranchWeights);
+    // VPSCEVExpander expands AddRecs in the plan's entry, not the check block,
+    // and does not support pointer-typed min/max yet.
+    auto IsUnsupported = [](const SCEV *S) {
+      return isa<SCEVAddRecExpr>(S) ||
+             (isa<SCEVMinMaxExpr>(S) && S->getType()->isPointerTy());
+    };
+    // Diff checks are not modelled in VPlan yet, and the VPlan expander cannot
+    // hoist bounds out of an enclosing loop.
+    const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
+    if (RtPtrChecking.getDiffChecks() || OrigLoop->getParentLoop() ||
+        any_of(RtPtrChecking.CheckingGroups,
+               [&](const RuntimeCheckingPtrGroup &CG) {
+                 return SCEVExprContains(CG.Low, IsUnsupported) ||
+                        SCEVExprContains(CG.High, IsUnsupported);
+               }))
+      return RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan,
+                            MemCheckCond, MemCheckBlock, HasBranchWeights);
+
+    // Erase the temporary IR before recipe expansion can reuse its values.
+    RTChecks.eraseMemCheckBlock();
+    RUN_VPLAN_PASS(VPlanTransforms::attachMemoryChecks, Plan,
+                   RtPtrChecking.getChecks(), *PSE.getSE(),
+                   OrigLoop->getStartLoc(), HasBranchWeights);
   }
 }
 
@@ -7594,12 +7618,10 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   auto VScale = Config.getVScaleForTuning();
   unsigned MainLoopStep =
       estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);
-  unsigned EpilogueLoopStep =
-      estimateElementCount(EPI.EpilogueVF * EPI.EpilogueUF, VScale);
+  unsigned EpilogueLoopStep = estimateElementCount(EPI.EpilogueVF, VScale);
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumVectorEpilogueIterationCheck, Plan,
                  EPI.VectorTripCount, Plan.requiresScalarEpilogue(),
-                 EPI.EpilogueVF, EPI.EpilogueUF, MainLoopStep, EpilogueLoopStep,
-                 SE);
+                 EPI.EpilogueVF, MainLoopStep, EpilogueLoopStep, SE);
 
   return InstsToMove;
 }
@@ -8128,11 +8150,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     BestEpiPlan.getVectorPreheader()->setName("vec.epilog.ph");
     SmallVector<VPInstruction *> ResumeValues =
         preparePlanForMainVectorLoop(BestMainPlan, BestEpiPlan);
-    EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF, 1);
+    EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF);
 
     // Add minimum iteration check for the epilogue plan, followed by runtime
     // checks for the main plan.
-    LVP.addMinimumIterationCheck(BestMainPlan, EPI.EpilogueVF, EPI.EpilogueUF,
+    LVP.addMinimumIterationCheck(BestMainPlan, EPI.EpilogueVF, /*UF=*/1,
                                  ElementCount::getFixed(0));
     LVP.attachRuntimeChecks(BestMainPlan, Checks, HasBranchWeights);
     RUN_VPLAN_PASS(
@@ -8161,7 +8183,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         *PSE.getSE(), ResumeValues);
     RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
     LVP.executePlan(
-        EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV, DT,
+        EPI.EpilogueVF, /*BestUF=*/1, BestEpiPlan, EpilogILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::Epilogue);
     connectEpilogueVectorLoop(BestEpiPlan, DT,
                               EpilogILV.VecEpilogueIterationCountCheck,

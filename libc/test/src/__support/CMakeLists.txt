@@ -166,6 +166,7 @@ add_libc_test(
   HDRS
     str_to_fp_test.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.integer_literals
     libc.src.__support.str_to_float
     libc.src.__support.uint128
