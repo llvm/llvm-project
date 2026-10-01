@@ -1,23 +1,17 @@
 // RUN: %clang_cc1 -triple=x86_64-linux-gnu -verify -emit-llvm-only %s
 // RUN: %clang_cc1 -triple=riscv64-linux-gnu -verify -emit-llvm-only %s
 
-// A musttail Indirect argument is forwarded through the matching incoming
-// parameter, which requires an in-memory source. A wide _BitInt has scalar
-// evaluation kind, so the argument is a scalar value with no source storage
-// to forward, regardless of value category. Such a call is rejected rather
-// than routed through a caller-frame temp that dangles past the tail call.
-// This is an implementation limit, not a fundamental one: it could be lifted
-// by storing the value through the incoming parameter's own slot.
+// A wide _BitInt has no addressable source for indirect forwarding.
+// Storing it into the incoming slot could support this case.
 
 typedef _BitInt(256) BI;
 BI cee(BI x);
 BI pee(BI a) {
-  // expected-error@+1 {{'musttail' call requires passing an argument by reference, but the source does not have an addressable storage and would alias the caller's frame}}
+  // expected-error@+1 {{'musttail' call cannot safely forward this indirect argument}}
   __attribute__((musttail)) return cee(a);
 }
 
-// An aggregate lvalue has addressable storage to forward, so it is accepted.
-// Confirms the diagnostic is specific to the no-source case.
+// An aggregate lvalue has addressable storage to forward.
 struct Big {
   unsigned long long a, b, c, d;
 };

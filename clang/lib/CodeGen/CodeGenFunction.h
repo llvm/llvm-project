@@ -5507,11 +5507,10 @@ public:
   /// EmitWriteback - Emit callbacks for function.
   void EmitWritebacks(const CallArgList &Args);
 
-  /// EmitCallArg - Emit a single call argument. \p PrescribedOrder is set when
-  /// the language fixes this call's argument evaluation order, which forbids
-  /// deferring an argument's evaluation past the other arguments'.
+  /// \p DisallowDeferredRead prevents moving an aggregate read past later
+  /// arguments.
   void EmitCallArg(CallArgList &args, const Expr *E, QualType ArgType,
-                   bool PrescribedOrder);
+                   bool DisallowDeferredRead);
 
   /// EmitDelegateCallArg - We are performing a delegate call; that
   /// is, the current function is delegating to another one.  Produce
@@ -5648,14 +5647,14 @@ public:
     PrototypeWrapper(const ObjCMethodDecl *MD) : P(MD) {}
   };
 
-  /// \p OperandOrderFixed marks a language-fixed argument order that
-  /// \p Order alone does not capture.
+  /// An operator call disables deferred argument reads even when \p Order is
+  /// Default.
   void EmitCallArgs(CallArgList &Args, PrototypeWrapper Prototype,
                     llvm::iterator_range<CallExpr::const_arg_iterator> ArgRange,
                     AbstractCallee AC = AbstractCallee(),
                     unsigned ParamsToSkip = 0,
                     EvaluationOrder Order = EvaluationOrder::Default,
-                    bool OperandOrderFixed = false);
+                    bool IsOperatorCall = false);
 
   /// EmitPointerWithAlignment - Given an expression with a pointer type,
   /// emit the value and compute our best estimate of the alignment of the

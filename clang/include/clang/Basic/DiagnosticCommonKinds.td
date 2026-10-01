@@ -386,8 +386,7 @@ def err_aix_musttail_unsupported: Error<
 def err_musttail_noexcept_mismatch: Error<
   "'musttail' in a noexcept function requires a noexcept callee">;
 def err_musttail_unsupported_indirect_arg: Error<
-  "'musttail' call requires passing an argument by reference, but the source "
-  "does not have an addressable storage and would alias the caller's frame">;
+  "'musttail' call cannot safely forward this indirect argument">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;

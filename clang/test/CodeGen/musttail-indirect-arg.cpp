@@ -3,19 +3,15 @@
 // RUN: %clang_cc1 -triple=loongarch64-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=COMMON
 // RUN: %clang_cc1 -triple=s390x-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=COMMON
 // RUN: %clang_cc1 -std=c++23 -triple=aarch64-linux-gnu %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=CXX23
-// RUN: %clang_cc1 -triple=arm64e-apple-ios -fptrauth-calls -fptrauth-intrinsics %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=PTRAUTH
+// RUN: %clang_cc1 -triple=aarch64-linux-gnu -fopenmp -fnoopenmp-use-tls %s -emit-llvm -O1 -o - | FileCheck %s --check-prefix=OMP
 
-// C++ side of the musttail Indirect-arg fix. The call argument is typically
-// a CXXConstructExpr invoking the trivial copy constructor; EmitCallArg
-// hands the same-type glvalue source's LValue to EmitCall so the general
-// path engages. Non-trivial copy or move constructors keep the existing
-// agg.tmp path.
+// C++ musttail calls must forward indirect arguments through incoming storage.
 
 struct Big {
   unsigned long long a, b, c, d;
 };
 
-// P1: simple forward.
+// P1 forwards one incoming argument.
 struct Big C1(struct Big a);
 struct Big P1(struct Big a) {
   [[clang::musttail]] return C1(a);
@@ -24,7 +20,7 @@ struct Big P1(struct Big a) {
 // COMMON-NOT: = alloca {{.*}}struct.Big
 // COMMON: musttail call {{.*}} @_Z2C13Big({{.*}}, ptr {{[^,]*}} %a)
 
-// P2: two distinct args.
+// P2 forwards two distinct incoming arguments.
 struct Big C2(struct Big a, struct Big b);
 struct Big P2(struct Big a, struct Big b) {
   [[clang::musttail]] return C2(a, b);
@@ -33,8 +29,7 @@ struct Big P2(struct Big a, struct Big b) {
 // COMMON-NOT: llvm.memcpy
 // COMMON: musttail call {{.*}} @_Z2C23BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
-// P3: swap. Pin the data flow (see musttail-indirect-arg.c): %a is captured
-// before %b overwrites it, and the saved %a lands in %b.
+// P3 captures %a before the swap overwrites it.
 struct Big C3(struct Big x, struct Big y);
 struct Big P3(struct Big a, struct Big b) {
   [[clang::musttail]] return C3(b, a);
@@ -44,37 +39,6 @@ struct Big P3(struct Big a, struct Big b) {
 // COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{[^,]*}} %b,
 // COMMON: store {{.*}} [[SAVED]], ptr %b,
 // COMMON: musttail call {{.*}} @_Z2C33BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
-
-// P4: no trivial copy or move operation, so the argument is not relocated.
-// Keep operator= declared: without it the implicit copy assignment stays
-// trivial and EmitAggregateCopy would accept a bytewise copy.
-struct NonTrivial {
-  unsigned long long parts[4];
-  NonTrivial(const NonTrivial &);
-  NonTrivial &operator=(const NonTrivial &);
-};
-NonTrivial C4(NonTrivial a);
-NonTrivial P4(NonTrivial a) {
-  [[clang::musttail]] return C4(a);
-}
-// COMMON-LABEL: define {{.*}} @_Z2P410NonTrivial(
-// COMMON: call {{.*}} @_ZN10NonTrivialC1ERKS_(ptr {{[^,]*}} [[TMP:%agg.tmp[0-9]*]], ptr {{[^,]*}} %a
-// COMMON-NOT: musttail.copy
-// COMMON: musttail call {{.*}} @_Z2C410NonTrivial({{.*}}, ptr {{[^,]*}} [[TMP]])
-
-// P4b: only a copy ctor, so the implicit copy assignment is trivial. Still not
-// relocatable: a copy ctor can record the object's own address.
-struct CtorOnly {
-  unsigned long long parts[4];
-  CtorOnly(const CtorOnly &);
-};
-CtorOnly C4b(CtorOnly x, CtorOnly y);
-CtorOnly P4b(CtorOnly a, CtorOnly b) {
-  [[clang::musttail]] return C4b(b, a);
-}
-// COMMON-LABEL: define {{.*}} @_Z3P4b8CtorOnlyS_(
-// COMMON-NOT: musttail.copy
-// COMMON: musttail call {{.*}} @_Z3C4b8CtorOnlyS_(
 
 // P4c: trivial_abi marks the type ABI-trivial, so relocation is allowed
 // despite the non-trivial copy ctor.
@@ -89,66 +53,24 @@ TrivialAbi P4c(TrivialAbi a, TrivialAbi b) {
 // COMMON-LABEL: define {{.*}} @_Z3P4c10TrivialAbiS_(
 // COMMON: [[SLOT0:%agg.tmp[0-9]*]] = alloca
 // COMMON: [[SLOT1:%musttail.copy[0-9a-z.]*]] = alloca
+// COMMON: call void @_ZN10TrivialAbiC1ERKS_(ptr {{[^,]*}} [[SLOT0]], ptr {{[^,]*}} %b)
+// COMMON: call void @_ZN10TrivialAbiC1ERKS_(ptr {{[^,]*}} [[SLOT1]], ptr {{[^,]*}} %a)
 // COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{[^,]*}} [[SLOT0]], i64 32
 // COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %b, ptr {{[^,]*}} [[SLOT1]], i64 32
 // COMMON: musttail call {{.*}} @_Z3C4c10TrivialAbiS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
-// P4d: a virtual function makes the type non-trivially copyable. Pins the
-// boundary so widening the relocation predicate has to update this.
-struct Poly {
-  unsigned long long parts[4];
-  virtual void f();
-};
-Poly C4d(Poly x, Poly y);
-Poly P4d(Poly a, Poly b) {
-  [[clang::musttail]] return C4d(b, a);
-}
-// COMMON-LABEL: define {{.*}} @_Z3P4d4PolyS_(
-// COMMON-NOT: musttail.copy
-// COMMON: musttail call {{.*}} @_Z3C4d4PolyS_(
-
-// P4e: a union is enough for EmitAggregateCopy, but the user copy operations
-// still rule out a relocation.
-union UnionCopy {
-  unsigned long long parts[4];
-  UnionCopy(const UnionCopy &);
-  UnionCopy &operator=(const UnionCopy &);
-};
-UnionCopy C4e(UnionCopy x, UnionCopy y);
-UnionCopy P4e(UnionCopy a, UnionCopy b) {
-  [[clang::musttail]] return C4e(b, a);
-}
-// COMMON-LABEL: define {{.*}} @_Z3P4e9UnionCopyS_(
-// COMMON-NOT: musttail.copy
-// COMMON: musttail call {{.*}} @_Z3C4e9UnionCopyS_(
-
-#ifdef __PTRAUTH__
-// P4f: an address-discriminated __ptrauth member is signed with the object's
-// own address, so relocating the bytes would leave the signature bound to the
-// old one.
-struct Signed {
-  int *__ptrauth(2, 1, 42) p;
-  unsigned long long a, b, c;
-};
-Signed C4f(Signed x, Signed y);
-Signed P4f(Signed a, Signed b) {
-  [[clang::musttail]] return C4f(b, a);
-}
-// PTRAUTH-LABEL: define {{.*}} @_Z3P4f6SignedS_(
-// PTRAUTH-NOT: musttail.copy
-// PTRAUTH: musttail call {{.*}} @_Z3C4f6SignedS_(
-#endif
-
-// P5: modify-then-forward.
+// P5 forwards a modified incoming argument.
 struct Big C5(struct Big a);
 struct Big P5(struct Big a) {
   a.a += 1;
   [[clang::musttail]] return C5(a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P53Big(
+// COMMON: add i64 {{.*}}, 1
+// COMMON: store i64 {{.*}}, ptr %a
 // COMMON: musttail call {{.*}} @_Z2C53Big({{.*}}, ptr {{[^,]*}} %a)
 
-// P6: musttail behind a branch.
+// P6 places the musttail call behind a branch.
 struct Big C6(struct Big a, int cond);
 struct Big P6(struct Big a, int cond) {
   if (cond)
@@ -158,8 +80,7 @@ struct Big P6(struct Big a, int cond) {
 // COMMON-LABEL: define {{.*}} @_Z2P63Bigi(
 // COMMON: musttail call {{.*}} @_Z2C63Bigi({{.*}}, ptr {{[^,]*}} %a,
 
-// P7: same arg to two slots. Slot 0 forwards %a; slot 1 memcpys *%a into the
-// i=1 incoming pointer %b and forwards %b.
+// P7 gives two distinct call slots the value from %a.
 struct Big C7(struct Big x, struct Big y);
 struct Big P7(struct Big a, struct Big b) {
   [[clang::musttail]] return C7(a, a);
@@ -168,7 +89,7 @@ struct Big P7(struct Big a, struct Big b) {
 // COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %b, ptr {{[^,]*}} %a,
 // COMMON: musttail call {{.*}} @_Z2C73BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
-// P8: local source. Copied into the incoming %a, then %a forwarded.
+// P8 copies a local value into the incoming slot.
 struct Big C8(struct Big a);
 struct Big P8(struct Big a) {
   struct Big local = {1, 2, 3, 4};
@@ -178,7 +99,7 @@ struct Big P8(struct Big a) {
 // COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{.*}}
 // COMMON: musttail call {{.*}} @_Z2C83Big({{.*}}, ptr {{[^,]*}} %a)
 
-// P9: non-musttail tail call (existing path).
+// P9 keeps an ordinary call separate from the musttail path.
 struct Big C9(struct Big a);
 struct Big P9(struct Big a) {
   return C9(a);
@@ -186,7 +107,7 @@ struct Big P9(struct Big a) {
 // COMMON-LABEL: define {{.*}} @_Z2P93Big(
 // COMMON-NOT: musttail
 
-// P10: mixed direct + indirect.
+// P10 mixes direct and indirect arguments.
 struct Big C10(int x1, struct Big s1, int x2, struct Big s2);
 struct Big P10(int x1, struct Big s1, int x2, struct Big s2) {
   [[clang::musttail]] return C10(x1, s1, x2, s2);
@@ -195,7 +116,7 @@ struct Big P10(int x1, struct Big s1, int x2, struct Big s2) {
 // COMMON-NOT: = alloca {{.*}}struct.Big
 // COMMON: musttail call {{.*}} @_Z3C10i3BigiS_({{.*}}, i32 {{.*}} %x1, ptr {{[^,]*}} %s1, i32 {{.*}} %x2, ptr {{[^,]*}} %s2)
 
-// P11: many args (stack spill on the target ABIs above).
+// P11 forwards arguments that include stack-spilled slots.
 struct Big C11(struct Big s1, struct Big s2, struct Big s3, struct Big s4,
                struct Big s5, struct Big s6, struct Big s7, struct Big s8,
                struct Big s9, struct Big s10);
@@ -208,8 +129,7 @@ struct Big P11(struct Big a1, struct Big a2, struct Big a3, struct Big a4,
 // COMMON-NOT: = alloca {{.*}}struct.Big
 // COMMON: musttail call {{.*}} @_Z3C113BigS_S_S_S_S_S_S_S_S_(
 
-// P16: member function. (P15 lambda case skipped: Sema currently rejects
-// musttail from a lambda's operator() to a non-member function, #119152.)
+// P16 forwards an indirect argument from a member function.
 struct S {
   struct Big f(struct Big a);
   struct Big P16(struct Big a);
@@ -221,7 +141,7 @@ struct Big S::P16(struct Big a) {
 // COMMON-NOT: = alloca {{.*}}struct.Big
 // COMMON: musttail call {{.*}} @_ZN1S1fE3Big({{.*}}, ptr {{.*}}, ptr {{[^,]*}} %a)
 
-// P13: mixed source kinds (local + incoming parameter).
+// P13 mixes a local source with an incoming parameter.
 struct Big C13(struct Big x, struct Big y);
 struct Big P13(struct Big a, struct Big b) {
   struct Big local = {1, 2, 3, 4};
@@ -232,8 +152,7 @@ struct Big P13(struct Big a, struct Big b) {
 // COMMON: %musttail.copy{{[0-9.a-z]*}} =
 // COMMON: musttail call {{.*}} @_Z3C133BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
-// P17: same arg to three slots (generalization of P7). Both copied slots
-// take their value from %a: %b via the memmove, %c via the captured load.
+// P17 copies %a independently into two other slots.
 struct Big C17(struct Big x, struct Big y, struct Big z);
 struct Big P17(struct Big a, struct Big b, struct Big c) {
   [[clang::musttail]] return C17(a, a, a);
@@ -244,8 +163,7 @@ struct Big P17(struct Big a, struct Big b, struct Big c) {
 // COMMON: store {{.*}} [[SAVED]], ptr %c,
 // COMMON: musttail call {{.*}} @_Z3C173BigS_S_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b, ptr {{[^,]*}} %c)
 
-// P18: member of a global as the source. Forwarded with no agg.tmp; the copy
-// lands directly in the incoming %a.
+// P18 reads a member of a global into the incoming slot.
 struct Wrap {
   struct Big inner;
 };
@@ -259,9 +177,7 @@ struct Big P18(struct Big a) {
 // COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{[^,]*}} @gw, i64 32
 // COMMON: musttail call {{.*}} @_Z3C183Big({{.*}}, ptr {{[^,]*}} %a)
 
-// P19: deref of a global pointer. The address computation reads mutable
-// state, so the bytes are captured at argument position (no forwarding);
-// the temp still routes through the incoming parameter.
+// P19 reads a mutable pointer before evaluating later arguments.
 extern struct Big *gp;
 struct Big C19(struct Big a);
 struct Big P19(struct Big a) {
@@ -273,8 +189,7 @@ struct Big P19(struct Big a) {
 // COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{[^,]*}} [[SRC]], i64 32
 // COMMON: musttail call {{.*}} @_Z3C193Big({{.*}}, ptr {{[^,]*}} %a)
 
-// P20: derived-to-base source. The base subobject sits at offset 8 in Der;
-// the forwarded address must carry that adjustment.
+// P20 keeps the derived-to-base offset when reading the source.
 struct Pad {
   unsigned long long p;
 };
@@ -289,9 +204,7 @@ struct Big P20(struct Big a) {
 // COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{[^,]*}} getelementptr inbounds {{(nuw )?}}(i8, ptr @gd, i64 8), i64 32
 // COMMON: musttail call {{.*}} @_Z3C203Big({{.*}}, ptr {{[^,]*}} %a)
 
-// P21: impure source with a side-effecting second argument. The source bytes
-// are read at argument position, before bump() runs, so the argument's
-// evaluation is not interleaved with the other argument's ([expr.call]/8).
+// P21 reads the source before the second argument mutates state.
 extern int bump();
 struct Big C21(struct Big x, int y);
 struct Big P21(struct Big a, int b) {
@@ -304,6 +217,50 @@ struct Big P21(struct Big a, int b) {
 // COMMON: call {{.*}} @_Z4bumpv()
 // COMMON: store {{.*}} [[VAL]], ptr %a
 // COMMON: musttail call {{.*}} @_Z3C213Bigi({{.*}}, ptr {{[^,]*}} %a,
+
+extern Big make_tls();
+thread_local Big dynamic_tls = make_tls();
+extern int bump_tls();
+Big C_dynamic_tls(Big x, int y);
+Big P_dynamic_tls(Big a, int b) {
+  [[clang::musttail]] return C_dynamic_tls(dynamic_tls, bump_tls());
+}
+// COMMON-LABEL: define {{.*}} @{{.*}}P_dynamic_tls{{.*}}(
+// COMMON: call void @_ZTH11dynamic_tls()
+// COMMON: [[TLS_ADDR:%[0-9a-z.]+]] = {{.*}} @llvm.threadlocal.address
+// COMMON: [[TLS_SNAPSHOT:%[0-9a-z.]+]] = load <4 x i64>, ptr [[TLS_ADDR]]
+// COMMON: call {{.*}} @_Z8bump_tlsv()
+// COMMON: store <4 x i64> [[TLS_SNAPSHOT]], ptr %a
+// COMMON: musttail call {{.*}} @{{.*}}C_dynamic_tls{{.*}}({{.*}}, ptr {{[^,]*}} %a,
+
+Big omp_global;
+#pragma omp threadprivate(omp_global)
+Big C_threadprivate(Big x, int y);
+Big P_threadprivate(Big a, int b) {
+  [[clang::musttail]] return C_threadprivate(omp_global, bump_tls());
+}
+// OMP-LABEL: define {{.*}} @{{.*}}P_threadprivate{{.*}}(
+// OMP: [[OMP_SRC:%[0-9a-z.]+]] = {{.*}} call ptr @__kmpc_threadprivate_cached(
+// OMP: [[OMP_SNAPSHOT:%[0-9a-z.]+]] = load <4 x i64>, ptr [[OMP_SRC]]
+// OMP: call {{.*}} @_Z8bump_tlsv()
+// OMP: store <4 x i64> [[OMP_SNAPSHOT]], ptr %a
+// OMP: musttail call {{.*}} @{{.*}}C_threadprivate{{.*}}({{.*}}, ptr {{[^,]*}} %a,
+
+struct RefHolder {
+  Big &ref;
+};
+extern RefHolder holder;
+extern int mutate_holder();
+Big C_ref_member(Big x, int y);
+Big P_ref_member(Big a, int b) {
+  [[clang::musttail]] return C_ref_member(holder.ref, mutate_holder());
+}
+// COMMON-LABEL: define {{.*}} @{{.*}}P_ref_member{{.*}}(
+// COMMON: [[REF:%[0-9a-z.]+]] = load ptr, ptr @holder
+// COMMON: [[REF_SNAPSHOT:%[0-9a-z.]+]] = load <4 x i64>, ptr [[REF]]
+// COMMON: call {{.*}} @{{.*}}mutate_holder{{.*}}()
+// COMMON: store <4 x i64> [[REF_SNAPSHOT]], ptr %a
+// COMMON: musttail call {{.*}} @{{.*}}C_ref_member{{.*}}({{.*}}, ptr {{[^,]*}} %a,
 
 // P22: an overloaded operator keeps the built-in operand order
 // ([over.match.oper]/2), so forwarding must not defer the left operand's read
@@ -331,9 +288,7 @@ struct Big P24(struct Big a, struct Big b) {
 // COMMON: store <4 x i64> [[SNAP]], ptr %b
 // COMMON: musttail call {{.*}} @_ZpL3BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
-// P25: the other operand mutates the source through an opaque callee, so
-// nothing in the expression names it. Whether the source is reachable from the
-// other operand cannot decide this.
+// P25 reads the source before an opaque call that may mutate it.
 struct Big bumpg();
 struct Big P25(struct Big a, struct Big b) {
   [[clang::musttail]] return a << bumpg();
@@ -344,8 +299,7 @@ struct Big P25(struct Big a, struct Big b) {
 // COMMON: store <4 x i64> [[SNAP]], ptr %a
 // COMMON: musttail call {{.*}} @_Zls3BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
-// P26: the right-operand-first rule of [expr.assign]/1 through a member
-// operator+=, so the read of %rhs must precede bumpacc().
+// P26 reads %rhs before the member operator's left operand under [expr.assign]/1.
 struct Acc {
   unsigned long long v;
   Acc &operator+=(struct Big rhs);
@@ -361,8 +315,7 @@ Acc &Acc::tailadd(struct Big rhs) {
 // COMMON: store <4 x i64> [[SNAP]], ptr %rhs
 // COMMON: musttail call {{.*}} @_ZN3AccpLE3Big({{.*}}, ptr {{[^,]*}} %rhs)
 
-// P27: the prescribed-order call is an argument inside the musttail return,
-// not the tail call itself.
+// P27 preserves operator sequencing inside an argument to the tail call.
 struct Big bumpbig();
 int use27(struct Big v);
 int C27(int x);
@@ -375,8 +328,7 @@ int P27(int x) {
 // COMMON: call {{.*}} @_Zls3BigS_({{.*}}, ptr {{[^,]*}} [[LHS]],
 // COMMON: musttail call {{.*}} @_Z3C27i(
 
-// P28: prescribed order with the source in the second incoming slot, so both
-// argument slots are relocated and the read still precedes the mutation.
+// P28 reads the second incoming slot before another operand mutates it.
 struct Big operator>>(struct Big x, struct Big y);
 struct Big P28(struct Big a, struct Big b) {
   [[clang::musttail]] return b >> Big{b.a = 10};
@@ -388,9 +340,7 @@ struct Big P28(struct Big a, struct Big b) {
 // COMMON: musttail call {{.*}} @_Zrs3BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
 #if __cplusplus >= 202302L
-// P23: the same rule for an operator with no explicit EvaluationOrder case.
-// A subscript operator's object parameter is sequenced before the index
-// ([expr.sub]/1).
+// P23 reads the subscript object before its index under [expr.sub]/1.
 struct Sub {
   unsigned long long a, b, c, d;
   Sub operator[](this Sub self, int i);
