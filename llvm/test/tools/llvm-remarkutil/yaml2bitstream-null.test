@@ -1,0 +1,12 @@
+# The bitstream string table cannot hold a null character, so reject one in
+# YAML input instead of writing a corrupt string table.
+# RUN: not llvm-remarkutil yaml2bitstream %s -o /dev/null 2>&1 | FileCheck %s
+# CHECK: error: {{.*}}remark strings cannot contain null characters.
+
+--- !Missed
+Pass:            pass
+Name:            name
+Function:        func
+Args:
+  - String:          "abc\0def"
+...
