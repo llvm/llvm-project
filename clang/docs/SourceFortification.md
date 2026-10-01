@@ -17,8 +17,8 @@ builtins and attributes used by fortified C library headers.
 
 `-Wfortify-source` is enabled by default in Clang and warns at compile time in
 the frontend when calls to supported C library or POSIX functions have provably
-out-of-bounds destination buffers, truncated formatted output, or invalid
-constant arguments:
+out-of-bounds buffer arguments, truncated formatted output, or invalid constant
+arguments:
 
 1. **Destination buffer overflows and format truncation**: Diagnoses when a
    write operation will always overflow the destination buffer, when an
@@ -29,10 +29,15 @@ constant arguments:
      `strncat`, `strlcpy`, `strlcat` (and their `__builtin_` variants).
    - `<stdio.h>`: `sprintf`, `snprintf`, `vsnprintf` (format overflow and
      truncation are also controlled by {ref}`-Wformat-overflow` and
-     {ref}`-Wformat-truncation`), and `scanf`, `fscanf`, `sscanf`.
+     {ref}`-Wformat-truncation`), `scanf`, `fscanf`, `sscanf`, `fgets`, `fread`.
+   - `<poll.h>`: `poll`, `ppoll`, `ppoll64`.
    - `<sys/socket.h>`: `recv`, `recvfrom`.
 
-2. **Invalid constant arguments**:
+2. **Source buffer overreads**: Diagnoses when an explicit size argument exceeds
+   the known size of the source buffer:
+   - `<stdio.h>`: `fwrite`.
+
+3. **Invalid constant arguments**:
    - `<sys/stat.h>`: `umask` when called with constant mode bits outside `0777`
      that are silently ignored.
 
@@ -78,7 +83,7 @@ important ways:
    C libraries such as glibc and Bionic fortify a broader set of libc and POSIX
    functions under `_FORTIFY_SOURCE` than Clang's `-Wfortify-source` currently
    diagnoses on unfortified calls (for example, additional functions in
-   `<unistd.h>`, `<stdio.h>`, `<poll.h>`, `<sys/socket.h>`, and `<wchar.h>`;
+   `<unistd.h>`, `<stdio.h>`, `<sys/socket.h>`, and `<wchar.h>`;
    see [tracking issue #142230](https://github.com/llvm/llvm-project/issues/142230)).
 
 3. **Fortified wrapper functions and attributes**:

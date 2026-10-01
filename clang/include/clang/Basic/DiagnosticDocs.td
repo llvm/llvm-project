@@ -100,7 +100,7 @@ generated unexpectedly.
 
 defvar FortifySourceDocs = [{
 Warns at compile time when calls to standard C library or POSIX functions have
-provably out-of-bounds destination buffers, truncated formatted output, or
+provably out-of-bounds buffer arguments, truncated formatted output, or
 invalid constant arguments, modeled after
 [`_FORTIFY_SOURCE`](https://sourceware.org/glibc/manual/latest/html_node/Source-Fortification.html)
 compile-time checks. See {doc}`SourceFortification` for the list of supported
