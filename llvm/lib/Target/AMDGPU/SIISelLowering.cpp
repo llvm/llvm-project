@@ -7342,6 +7342,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       MIB.add(MO);
 
     MIB.cloneMemRefs(MI);
+    if (MI.shouldUpdateAdditionalCallInfo())
+      MF->moveAdditionalCallInfo(&MI, MIB.getInstr());
     MI.eraseFromParent();
     return BB;
   }
