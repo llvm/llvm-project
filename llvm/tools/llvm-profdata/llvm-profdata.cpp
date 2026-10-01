@@ -639,12 +639,12 @@ static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
   ::exit(1);
 }
 
-static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
-                                 StringRef Whence = "") {
+static Error warnOrErrorGivenError(FailureMode FailMode, std::error_code EC,
+                                   StringRef Whence = "") {
   if (FailMode == failIfAnyAreInvalid)
-    exitWithErrorCode(EC, Whence);
-  else
-    warn(EC.message(), Whence);
+    return makeError(EC, Whence);
+  warn(EC.message(), Whence);
+  return Error::success();
 }
 
 static void handleMergeWriterError(Error E, StringRef WhenceFile = "",
@@ -692,10 +692,10 @@ class SymbolRemapper {
 
 public:
   /// Build a SymbolRemapper from a file containing a list of old/new symbols.
-  static std::unique_ptr<SymbolRemapper> create(StringRef InputFile) {
+  static Expected<std::unique_ptr<SymbolRemapper>> create(StringRef InputFile) {
     auto BufOrError = MemoryBuffer::getFileOrSTDIN(InputFile);
     if (!BufOrError)
-      exitWithErrorCode(BufOrError.getError(), InputFile);
+      return makeError(BufOrError.getError(), InputFile);
 
     auto Remapper = std::make_unique<SymbolRemapper>();
     Remapper->File = std::move(BufOrError.get());
@@ -705,13 +705,13 @@ public:
       std::pair<StringRef, StringRef> Parts = LineIt->split(' ');
       if (Parts.first.empty() || Parts.second.empty() ||
           Parts.second.count(' ')) {
-        exitWithError("unexpected line in remapping file",
-                      (InputFile + ":" + Twine(LineIt.line_number())).str(),
-                      "expected 'old_symbol new_symbol'");
+        return makeError("unexpected line in remapping file",
+                         (InputFile + ":" + Twine(LineIt.line_number())).str(),
+                         "expected 'old_symbol new_symbol'");
       }
       Remapper->RemappingTable.insert(Parts);
     }
-    return Remapper;
+    return std::move(Remapper);
   }
 
   /// Attempt to map the given old symbol into a new symbol.
@@ -991,12 +991,11 @@ getFuncName(const SampleProfileMap::value_type &Val) {
   return Val.second.getContext().toString();
 }
 
-template <typename T>
-static void filterFunctions(T &ProfileMap) {
+template <typename T> static Error filterFunctions(T &ProfileMap) {
   bool hasFilter = !FuncNameFilter.empty();
   bool hasNegativeFilter = !FuncNameNegativeFilter.empty();
   if (!hasFilter && !hasNegativeFilter)
-    return;
+    return Error::success();
 
   // If filter starts with '?' it is MSVC mangled name, not a regex.
   llvm::Regex ProbablyMSVCMangledName("[?@$_0-9A-Za-z]+");
@@ -1010,11 +1009,11 @@ static void filterFunctions(T &ProfileMap) {
   size_t Count = ProfileMap.size();
   llvm::Regex Pattern(FuncNameFilter);
   llvm::Regex NegativePattern(FuncNameNegativeFilter);
-  std::string Error;
-  if (hasFilter && !Pattern.isValid(Error))
-    exitWithError(Error);
-  if (hasNegativeFilter && !NegativePattern.isValid(Error))
-    exitWithError(Error);
+  std::string RegexError;
+  if (hasFilter && !Pattern.isValid(RegexError))
+    return makeError(RegexError);
+  if (hasNegativeFilter && !NegativePattern.isValid(RegexError))
+    return makeError(RegexError);
 
   // Handle MD5 profile, so it is still able to match using the original name.
   std::string MD5Name = std::to_string(llvm::MD5Hash(FuncNameFilter));
@@ -1033,51 +1032,55 @@ static void filterFunctions(T &ProfileMap) {
 
   llvm::dbgs() << Count - ProfileMap.size() << " of " << Count << " functions "
                << "in the original profile are filtered.\n";
+  return Error::success();
 }
 
-static void writeInstrProfile(StringRef OutputFilename,
-                              ProfileFormat OutputFormat,
-                              InstrProfWriter &Writer) {
+static Error writeInstrProfile(StringRef OutputFilename,
+                               ProfileFormat OutputFormat,
+                               InstrProfWriter &Writer) {
   std::error_code EC;
   raw_fd_ostream Output(OutputFilename.data(), EC,
                         OutputFormat == PF_Text ? sys::fs::OF_TextWithCRLF
                                                 : sys::fs::OF_None);
   if (EC)
-    exitWithErrorCode(EC, OutputFilename);
+    return makeError(EC, OutputFilename);
 
   if (OutputFormat == PF_Text) {
     if (Error E = Writer.writeText(Output))
       warn(std::move(E));
   } else {
     if (Output.is_displayed())
-      exitWithError("cannot write a non-text format profile to the terminal");
+      return makeError(
+          "cannot write a non-text format profile to the terminal");
     if (Error E = Writer.write(Output))
       warn(std::move(E));
   }
+  return Error::success();
 }
 
-static void mergeInstrProfile(const WeightedFileVector &Inputs,
-                              SymbolRemapper *Remapper,
-                              int MaxDbgCorrelationWarnings,
-                              const StringRef ProfiledBinary) {
+static Error mergeInstrProfile(const WeightedFileVector &Inputs,
+                               SymbolRemapper *Remapper,
+                               int MaxDbgCorrelationWarnings,
+                               const StringRef ProfiledBinary) {
   const uint64_t TraceReservoirSize = TemporalProfTraceReservoirSize.getValue();
   const uint64_t MaxTraceLength = TemporalProfMaxTraceLength.getValue();
   if (OutputFormat == PF_Compact_Binary)
-    exitWithError("Compact Binary is deprecated");
+    return makeError("Compact Binary is deprecated");
   if (OutputFormat != PF_Binary && OutputFormat != PF_Ext_Binary &&
       OutputFormat != PF_Text)
-    exitWithError("unknown format is specified");
+    return makeError("unknown format is specified");
 
   // TODO: Maybe we should support correlation with mixture of different
   // correlation modes(w/wo debug-info/object correlation).
   if (DebugInfoFilename.empty()) {
     if (!BinaryFilename.empty() && (DebugInfod || !DebugFileDirectory.empty()))
-      exitWithError("Expected only one of -binary-file, -debuginfod or "
-                    "-debug-file-directory");
+      return makeError("Expected only one of -binary-file, -debuginfod or "
+                       "-debug-file-directory");
   } else if (!BinaryFilename.empty() || DebugInfod ||
              !DebugFileDirectory.empty()) {
-    exitWithError("Expected only one of -debug-info, -binary-file, -debuginfod "
-                  "or -debug-file-directory");
+    return makeError(
+        "Expected only one of -debug-info, -binary-file, -debuginfod "
+        "or -debug-file-directory");
   }
   std::string CorrelateFilename;
   ProfCorrelatorKind CorrelateKind = ProfCorrelatorKind::NONE;
@@ -1093,9 +1096,9 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   if (CorrelateKind != InstrProfCorrelator::NONE) {
     if (auto Err = InstrProfCorrelator::get(CorrelateFilename, CorrelateKind)
                        .moveInto(Correlator))
-      exitWithError(std::move(Err), CorrelateFilename);
+      return makeError(std::move(Err), CorrelateFilename);
     if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
-      exitWithError(std::move(Err), CorrelateFilename);
+      return makeError(std::move(Err), CorrelateFilename);
   }
 
   ProfCorrelatorKind BIDFetcherCorrelateKind = ProfCorrelatorKind::NONE;
@@ -1104,17 +1107,17 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
     llvm::HTTPClient::initialize();
     BIDFetcher = std::make_unique<DebuginfodFetcher>(DebugFileDirectory);
     if (!BIDFetcherProfileCorrelate)
-      exitWithError("Expected --correlate when --debuginfod is provided");
+      return makeError("Expected --correlate when --debuginfod is provided");
     BIDFetcherCorrelateKind = BIDFetcherProfileCorrelate;
   } else if (!DebugFileDirectory.empty()) {
     BIDFetcher = std::make_unique<object::BuildIDFetcher>(DebugFileDirectory);
     if (!BIDFetcherProfileCorrelate)
-      exitWithError("Expected --correlate when --debug-file-directory "
-                    "is provided");
+      return makeError("Expected --correlate when --debug-file-directory "
+                       "is provided");
     BIDFetcherCorrelateKind = BIDFetcherProfileCorrelate;
   } else if (BIDFetcherProfileCorrelate) {
-    exitWithError("Expected --debuginfod or --debug-file-directory when "
-                  "--correlate is provided");
+    return makeError("Expected --debuginfod or --debug-file-directory when "
+                     "--correlate is provided");
   }
 
   std::mutex ErrorLock;
@@ -1179,11 +1182,12 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   }
   if ((NumErrors == Inputs.size() && FailMode == failIfAllAreInvalid) ||
       (NumErrors > 0 && FailMode == failIfAnyAreInvalid))
-    exitWithError("no profile can be merged");
+    return makeError("no profile can be merged");
 
-  filterFunctions(Contexts[0]->Writer.getProfileData());
+  if (Error E = filterFunctions(Contexts[0]->Writer.getProfileData()))
+    return E;
 
-  writeInstrProfile(OutputFilename, OutputFormat, Contexts[0]->Writer);
+  return writeInstrProfile(OutputFilename, OutputFormat, Contexts[0]->Writer);
 }
 
 /// The profile entry for a function in instrumentation profile.
@@ -1536,17 +1540,17 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 /// should be dropped. \p InstrProfColdThreshold is the user specified
 /// cold threshold which will override the cold threshold got from the
 /// instr profile summary.
-static void supplementInstrProfile(const WeightedFileVector &Inputs,
-                                   StringRef SampleFilename, bool OutputSparse,
-                                   unsigned SupplMinSizeThreshold,
-                                   float ZeroCounterThreshold,
-                                   unsigned InstrProfColdThreshold) {
+static Error supplementInstrProfile(const WeightedFileVector &Inputs,
+                                    StringRef SampleFilename, bool OutputSparse,
+                                    unsigned SupplMinSizeThreshold,
+                                    float ZeroCounterThreshold,
+                                    unsigned InstrProfColdThreshold) {
   if (OutputFilename == "-")
-    exitWithError("cannot write indexed profdata format to stdout");
+    return makeError("cannot write indexed profdata format to stdout");
   if (Inputs.size() != 1)
-    exitWithError("expect one input to be an instr profile");
+    return makeError("expect one input to be an instr profile");
   if (Inputs[0].Weight != 1)
-    exitWithError("expect instr profile doesn't have weight");
+    return makeError("expect instr profile doesn't have weight");
 
   StringRef InstrFilename = Inputs[0].Filename;
 
@@ -1556,10 +1560,10 @@ static void supplementInstrProfile(const WeightedFileVector &Inputs,
   auto ReaderOrErr = sampleprof::SampleProfileReader::create(
       SampleFilename.str(), Context, *FS, FSDiscriminatorPassOption);
   if (std::error_code EC = ReaderOrErr.getError())
-    exitWithErrorCode(EC, SampleFilename);
+    return makeError(EC, SampleFilename);
   auto Reader = std::move(ReaderOrErr.get());
   if (std::error_code EC = Reader->read())
-    exitWithErrorCode(EC, SampleFilename);
+    return makeError(EC, SampleFilename);
 
   // Read instr profile.
   std::mutex ErrorLock;
@@ -1567,12 +1571,12 @@ static void supplementInstrProfile(const WeightedFileVector &Inputs,
   auto WC = std::make_unique<WriterContext>(OutputSparse, ErrorLock,
                                             WriterErrorCodes);
   loadInput(Inputs[0], nullptr, nullptr, /*ProfiledBinary=*/"", WC.get());
-  if (WC->Errors.size() > 0)
-    exitWithError(std::move(WC->Errors[0].first), InstrFilename);
+  if (!WC->Errors.empty())
+    return makeError(std::move(WC->Errors[0].first), InstrFilename);
 
   adjustInstrProfile(WC, Reader, SupplMinSizeThreshold, ZeroCounterThreshold,
                      InstrProfColdThreshold);
-  writeInstrProfile(OutputFilename, OutputFormat, WC->Writer);
+  return writeInstrProfile(OutputFilename, OutputFormat, WC->Writer);
 }
 
 /// Make a copy of the given function samples with all symbol names remapped
@@ -1617,14 +1621,14 @@ static sampleprof::SampleProfileFormat FormatMap[] = {
     sampleprof::SPF_GCC,
     sampleprof::SPF_Binary};
 
-static std::unique_ptr<MemoryBuffer>
+static Expected<std::unique_ptr<MemoryBuffer>>
 getInputFileBuf(const StringRef &InputFile) {
   if (InputFile == "")
-    return {};
+    return {nullptr};
 
   auto BufOrError = MemoryBuffer::getFileOrSTDIN(InputFile);
   if (!BufOrError)
-    exitWithErrorCode(BufOrError.getError(), InputFile);
+    return makeError(BufOrError.getError(), InputFile);
 
   return std::move(*BufOrError);
 }
@@ -1694,10 +1698,10 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
   }
 }
 
-static void mergeSampleProfile(const WeightedFileVector &Inputs,
-                               SymbolRemapper *Remapper,
-                               StringRef ProfileSymbolListFile,
-                               size_t OutputSizeLimit) {
+static Error mergeSampleProfile(const WeightedFileVector &Inputs,
+                                SymbolRemapper *Remapper,
+                                StringRef ProfileSymbolListFile,
+                                size_t OutputSizeLimit) {
   using namespace sampleprof;
   SampleProfileMap ProfileMap;
   SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
@@ -1710,7 +1714,8 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
     auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context, *FS,
                                                    FSDiscriminatorPassOption);
     if (std::error_code EC = ReaderOrErr.getError()) {
-      warnOrExitGivenError(FailMode, EC, Input.Filename);
+      if (Error E = warnOrErrorGivenError(FailMode, EC, Input.Filename))
+        return E;
       continue;
     }
 
@@ -1721,7 +1726,8 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
     Readers.push_back(std::move(ReaderOrErr.get()));
     const auto Reader = Readers.back().get();
     if (std::error_code EC = Reader->read()) {
-      warnOrExitGivenError(FailMode, EC, Input.Filename);
+      if (Error E = warnOrErrorGivenError(FailMode, EC, Input.Filename))
+        return E;
       Readers.pop_back();
       continue;
     }
@@ -1736,11 +1742,11 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
     SampleProfileMap &Profiles = Reader->getProfiles();
     if (ProfileIsProbeBased &&
         ProfileIsProbeBased != FunctionSamples::ProfileIsProbeBased)
-      exitWithError(
+      return makeError(
           "cannot merge probe-based profile with non-probe-based profile");
     ProfileIsProbeBased = FunctionSamples::ProfileIsProbeBased;
     if (ProfileIsCS && ProfileIsCS != FunctionSamples::ProfileIsCS)
-      exitWithError("cannot merge CS profile with non-CS profile");
+      return makeError("cannot merge CS profile with non-CS profile");
     ProfileIsCS = FunctionSamples::ProfileIsCS;
     for (SampleProfileMap::iterator I = Profiles.begin(), E = Profiles.end();
          I != E; ++I) {
@@ -1791,59 +1797,66 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
     ProfileIsCS = FunctionSamples::ProfileIsCS = false;
   }
 
-  filterFunctions(ProfileMap);
+  if (Error E = filterFunctions(ProfileMap))
+    return E;
 
   auto WriterOrErr =
       SampleProfileWriter::create(OutputFilename, FormatMap[OutputFormat]);
   if (std::error_code EC = WriterOrErr.getError())
-    exitWithErrorCode(EC, OutputFilename);
+    return makeError(EC, OutputFilename);
 
   auto Writer = std::move(WriterOrErr.get());
   // WriterList will have StringRef refering to string in Buffer.
   // Make sure Buffer lives as long as WriterList.
-  auto Buffer = getInputFileBuf(ProfileSymbolListFile);
+  auto BufferOrErr = getInputFileBuf(ProfileSymbolListFile);
+  if (!BufferOrErr)
+    return BufferOrErr.takeError();
+  auto Buffer = std::move(*BufferOrErr);
   handleExtBinaryWriter(*Writer, OutputFormat, Buffer.get(), WriterList,
                         CompressAllSections, UseMD5, GenPartialProfile);
 
   // If OutputSizeLimit is 0 (default), it is the same as write().
   if (std::error_code EC =
           Writer->writeWithSizeLimit(ProfileMap, OutputSizeLimit))
-    exitWithErrorCode(EC);
+    return makeError(EC);
+
+  return Error::success();
 }
 
-static WeightedFile parseWeightedFile(const StringRef &WeightedFilename) {
+static Expected<WeightedFile>
+parseWeightedFile(const StringRef &WeightedFilename) {
   StringRef WeightStr, FileName;
   std::tie(WeightStr, FileName) = WeightedFilename.split(',');
 
   uint64_t Weight;
   if (WeightStr.getAsInteger(10, Weight) || Weight < 1)
-    exitWithError("input weight must be a positive integer");
+    return makeError("input weight must be a positive integer");
 
   llvm::SmallString<128> ResolvedFileName;
   llvm::sys::fs::expand_tilde(FileName, ResolvedFileName);
 
-  return {std::string(ResolvedFileName), Weight};
+  return WeightedFile{std::string(ResolvedFileName), Weight};
 }
 
-static void addWeightedInput(WeightedFileVector &WNI, const WeightedFile &WF) {
+static Error addWeightedInput(WeightedFileVector &WNI, const WeightedFile &WF) {
   StringRef Filename = WF.Filename;
   uint64_t Weight = WF.Weight;
 
   // If it's STDIN just pass it on.
   if (Filename == "-") {
     WNI.push_back({std::string(Filename), Weight});
-    return;
+    return Error::success();
   }
 
   llvm::sys::fs::file_status Status;
   llvm::sys::fs::status(Filename, Status);
   if (!llvm::sys::fs::exists(Status))
-    exitWithErrorCode(make_error_code(errc::no_such_file_or_directory),
-                      Filename);
+    return makeError(make_error_code(errc::no_such_file_or_directory),
+                     Filename);
   // If it's a source file, collect it.
   if (llvm::sys::fs::is_regular_file(Status)) {
     WNI.push_back({std::string(Filename), Weight});
-    return;
+    return Error::success();
   }
 
   if (llvm::sys::fs::is_directory(Status)) {
@@ -1851,18 +1864,20 @@ static void addWeightedInput(WeightedFileVector &WNI, const WeightedFile &WF) {
     for (llvm::sys::fs::recursive_directory_iterator F(Filename, EC), E;
          F != E && !EC; F.increment(EC)) {
       if (llvm::sys::fs::is_regular_file(F->path())) {
-        addWeightedInput(WNI, {F->path(), Weight});
+        if (Error E = addWeightedInput(WNI, {F->path(), Weight}))
+          return E;
       }
     }
     if (EC)
-      exitWithErrorCode(EC, Filename);
+      return makeError(EC, Filename);
   }
+  return Error::success();
 }
 
-static void parseInputFilenamesFile(MemoryBuffer *Buffer,
-                                    WeightedFileVector &WFV) {
+static Error parseInputFilenamesFile(MemoryBuffer *Buffer,
+                                     WeightedFileVector &WFV) {
   if (!Buffer)
-    return;
+    return Error::success();
 
   SmallVector<StringRef, 8> Entries;
   StringRef Data = Buffer->getBuffer();
@@ -1873,56 +1888,76 @@ static void parseInputFilenamesFile(MemoryBuffer *Buffer,
     if (SanitizedEntry.starts_with("#"))
       continue;
     // If there's no comma, it's an unweighted profile.
-    else if (!SanitizedEntry.contains(','))
-      addWeightedInput(WFV, {std::string(SanitizedEntry), 1});
-    else
-      addWeightedInput(WFV, parseWeightedFile(SanitizedEntry));
+    else if (!SanitizedEntry.contains(',')) {
+      if (Error E = addWeightedInput(WFV, {std::string(SanitizedEntry), 1}))
+        return E;
+    } else {
+      auto WFOrErr = parseWeightedFile(SanitizedEntry);
+      if (!WFOrErr)
+        return WFOrErr.takeError();
+      if (Error E = addWeightedInput(WFV, *WFOrErr))
+        return E;
+    }
   }
+  return Error::success();
 }
 
-static int merge_main(StringRef ProgName) {
+static Error merge_main(StringRef ProgName) {
   WeightedFileVector WeightedInputs;
   for (StringRef Filename : InputFilenames)
-    addWeightedInput(WeightedInputs, {std::string(Filename), 1});
-  for (StringRef WeightedFilename : WeightedInputFilenames)
-    addWeightedInput(WeightedInputs, parseWeightedFile(WeightedFilename));
+    if (Error E = addWeightedInput(WeightedInputs, {std::string(Filename), 1}))
+      return E;
+  for (StringRef WeightedFilename : WeightedInputFilenames) {
+    auto WFOrErr = parseWeightedFile(WeightedFilename);
+    if (!WFOrErr)
+      return WFOrErr.takeError();
+    if (Error E = addWeightedInput(WeightedInputs, *WFOrErr))
+      return E;
+  }
 
   // Make sure that the file buffer stays alive for the duration of the
   // weighted input vector's lifetime.
-  auto Buffer = getInputFileBuf(InputFilenamesFile);
-  parseInputFilenamesFile(Buffer.get(), WeightedInputs);
+  auto BufferOrErr = getInputFileBuf(InputFilenamesFile);
+  if (!BufferOrErr)
+    return BufferOrErr.takeError();
+  auto Buffer = std::move(*BufferOrErr);
+  if (Error E = parseInputFilenamesFile(Buffer.get(), WeightedInputs))
+    return E;
 
   if (WeightedInputs.empty())
-    exitWithError("no input files specified. See " + ProgName + " merge -help");
+    return makeError("no input files specified. See " + ProgName +
+                     " merge -help");
 
   if (DumpInputFileList) {
     for (auto &WF : WeightedInputs)
       outs() << WF.Weight << "," << WF.Filename << "\n";
-    return 0;
+    return Error::success();
   }
 
   std::unique_ptr<SymbolRemapper> Remapper;
-  if (!RemappingFile.empty())
-    Remapper = SymbolRemapper::create(RemappingFile);
+  if (!RemappingFile.empty()) {
+    auto RemapperOrErr = SymbolRemapper::create(RemappingFile);
+    if (!RemapperOrErr)
+      return RemapperOrErr.takeError();
+    Remapper = std::move(*RemapperOrErr);
+  }
 
   if (!SupplInstrWithSample.empty()) {
     if (ProfileKind != instr)
-      exitWithError(
+      return makeError(
           "-supplement-instr-with-sample can only work with -instr. ");
 
-    supplementInstrProfile(WeightedInputs, SupplInstrWithSample, OutputSparse,
-                           SupplMinSizeThreshold, ZeroCounterThreshold,
-                           InstrProfColdThreshold);
-    return 0;
+    return supplementInstrProfile(WeightedInputs, SupplInstrWithSample,
+                                  OutputSparse, SupplMinSizeThreshold,
+                                  ZeroCounterThreshold, InstrProfColdThreshold);
   }
 
   if (ProfileKind == instr)
-    mergeInstrProfile(WeightedInputs, Remapper.get(), MaxDbgCorrelationWarnings,
-                      ProfiledBinary);
-  else
-    mergeSampleProfile(WeightedInputs, Remapper.get(), ProfileSymbolListFile,
-                       OutputSizeLimit);
-  return 0;
+    return mergeInstrProfile(WeightedInputs, Remapper.get(),
+                             MaxDbgCorrelationWarnings, ProfiledBinary);
+
+  return mergeSampleProfile(WeightedInputs, Remapper.get(),
+                            ProfileSymbolListFile, OutputSizeLimit);
 }
 
 /// Computer the overlap b/w profile BaseFilename and profile TestFilename.
@@ -3624,7 +3659,7 @@ int main(int argc, const char *argv[]) {
     return reportError(overlap_main());
 
   if (MergeSubcommand)
-    return merge_main(ProgName);
+    return reportError(merge_main(ProgName));
 
   errs() << ProgName
          << ": Unknown command. Run llvm-profdata --help for usage.\n";
