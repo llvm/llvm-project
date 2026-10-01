@@ -36,6 +36,7 @@ struct CallLifetimeEnd final : EHScopeStack::Cleanup {
   // than an Address.
   mlir::Value addr;
   CallLifetimeEnd(mlir::Value addr) : addr(addr) {}
+  bool isRedundantBeforeReturn() override { return true; }
   void emit(CIRGenFunction &cgf, Flags flags) override {
     cgf.emitLifetimeEndOp(addr.getLoc(), addr);
   }
@@ -527,7 +528,6 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   std::string name = getStaticDeclName(*this, d);
 
   mlir::Type lty = getTypes().convertTypeForMem(ty);
-  assert(!cir::MissingFeatures::addressSpace());
 
   // OpenCL variables in local address space and CUDA shared
   // variables cannot have an initializer.
@@ -538,8 +538,12 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   else
     init = builder.getZeroInitAttr(convertType(ty));
 
-  cir::GlobalOp gv = builder.createVersionedGlobal(
-      getModule(), getLoc(d.getLocation()), name, lty, false, linkage);
+  mlir::ptr::MemorySpaceAttrInterface addrSpace = cir::toCIRAddressSpaceAttr(
+      getMLIRContext(), getGlobalVarAddressSpace(&d));
+
+  cir::GlobalOp gv =
+      builder.createVersionedGlobal(getModule(), getLoc(d.getLocation()), name,
+                                    lty, false, linkage, addrSpace);
   insertGlobalSymbol(gv);
   // TODO(cir): infer visibility from linkage in global op builder.
   gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
@@ -810,11 +814,11 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   assert(!cir::MissingFeatures::generateDebugInfo());
 }
 
-void CIRGenFunction::emitScalarInit(const Expr *init, mlir::Location loc,
-                                    LValue lvalue, bool capturedByInit) {
+void CIRGenFunction::emitScalarInit(const Expr *init, LValue lvalue,
+                                    bool capturedByInit) {
   assert(!cir::MissingFeatures::objCLifetime());
 
-  SourceLocRAIIObject locRAII{*this, loc};
+  SourceLocRAIIObject locRAII{*this, init->getSourceRange()};
   mlir::Value value = emitScalarExpr(init);
   if (capturedByInit) {
     cgm.errorNYI(init->getSourceRange(), "emitScalarInit: captured by init");
@@ -826,7 +830,7 @@ void CIRGenFunction::emitScalarInit(const Expr *init, mlir::Location loc,
 
 void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
                                     LValue lvalue, bool capturedByInit) {
-  SourceLocRAIIObject loc{*this, getLoc(init->getSourceRange())};
+  SourceLocRAIIObject loc{*this, init->getSourceRange()};
   if (capturedByInit) {
     cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: captured by init");
     return;
@@ -843,7 +847,7 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
   }
   switch (CIRGenFunction::getEvaluationKind(type)) {
   case cir::TEK_Scalar:
-    emitScalarInit(init, getLoc(d->getSourceRange()), lvalue);
+    emitScalarInit(init, lvalue);
     return;
   case cir::TEK_Complex: {
     mlir::Value complex = emitComplexExpr(init);
@@ -1084,6 +1088,7 @@ struct DestroyNRVOVariableCXX final
 struct CallStackRestore final : EHScopeStack::Cleanup {
   Address stack;
   CallStackRestore(Address stack) : stack(stack) {}
+  bool isRedundantBeforeReturn() override { return true; }
   void emit(CIRGenFunction &cgf, Flags flags) override {
     mlir::Location loc = stack.getPointer().getLoc();
     mlir::Value v = cgf.getBuilder().createLoad(loc, stack);
@@ -1165,8 +1170,8 @@ struct IrregularPartialArrayDestroy final : EHScopeStack::Cleanup {
 } // namespace
 
 /// Push an EH cleanup to destroy already-constructed elements of the given
-/// array.  The cleanup may be popped with deactivateCleanupBlock or
-/// popCleanupBlock.
+/// array. The cleanup is deactivated when the enclosing
+/// CleanupDeactivationScope exits.
 ///
 /// \param elementType - the immediate element type of the array;
 ///   possibly still an array type
@@ -1175,7 +1180,7 @@ void CIRGenFunction::pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
                                                       QualType elementType,
                                                       CharUnits elementAlign,
                                                       Destroyer *destroyer) {
-  ehStack.pushCleanup<IrregularPartialArrayDestroy>(
+  pushCleanupAndDeferDeactivation<IrregularPartialArrayDestroy>(
       EHCleanup, arrayBegin, arrayEndPointer, elementType, elementAlign,
       destroyer);
 }
@@ -1292,13 +1297,14 @@ void CIRGenFunction::emitArrayDestroy(mlir::Value begin,
       size = constIntAttr.getUInt();
     auto arrayTy = cir::ArrayType::get(cirElementType, size);
     mlir::Value arrayOp = builder.createPtrBitcast(begin, arrayTy);
-    cir::ArrayDtor::create(builder, *currSrcLoc, arrayOp, regionBuilder);
+    cir::ArrayDtor::create(builder, getLoc(*currSrcLoc), arrayOp,
+                           regionBuilder);
     return;
   }
 
   // For a dynamic array size (VLA), use the dynamic form of ArrayDtor.
   mlir::Value elemBegin = builder.createPtrBitcast(begin, cirElementType);
-  cir::ArrayDtor::create(builder, *currSrcLoc, elemBegin, numElements,
+  cir::ArrayDtor::create(builder, getLoc(*currSrcLoc), elemBegin, numElements,
                          regionBuilder);
 }
 

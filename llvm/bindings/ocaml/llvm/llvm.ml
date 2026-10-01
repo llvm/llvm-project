@@ -647,8 +647,6 @@ external aggregate_element : llvalue -> int -> llvalue option
                            = "llvm_aggregate_element"
 
 (*--... Constant expressions ...............................................--*)
-external align_of : lltype -> llvalue = "llvm_align_of"
-external size_of : lltype -> llvalue = "llvm_size_of"
 external const_neg : llvalue -> llvalue = "llvm_const_neg"
 external const_nsw_neg : llvalue -> llvalue = "llvm_const_nsw_neg"
 external const_not : llvalue -> llvalue = "llvm_const_not"

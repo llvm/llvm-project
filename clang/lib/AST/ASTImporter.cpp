@@ -1079,19 +1079,18 @@ Error ASTNodeImporter::ImportConstraintSatisfaction(
   ToSat.ContainsErrors = FromSat.ContainsErrors;
   if (!ToSat.IsSatisfied) {
     for (auto Record = FromSat.begin(); Record != FromSat.end(); ++Record) {
-      if (const Expr *E = Record->dyn_cast<const Expr *>()) {
+      if (const Expr *E = dyn_cast<const Expr *>(*Record)) {
         ExpectedExpr ToSecondExpr = import(E);
         if (!ToSecondExpr)
           return ToSecondExpr.takeError();
         ToSat.Details.emplace_back(ToSecondExpr.get());
-      } else if (auto CR = Record->dyn_cast<const ConceptReference *>()) {
+      } else if (auto CR = dyn_cast<const ConceptReference *>(*Record)) {
         Expected<ConceptReference *> ToCROrErr = import(CR);
         if (!ToCROrErr)
           return ToCROrErr.takeError();
         ToSat.Details.emplace_back(ToCROrErr.get());
       } else {
-        auto Pair =
-            Record->dyn_cast<const ConstraintSubstitutionDiagnostic *>();
+        auto Pair = dyn_cast<const ConstraintSubstitutionDiagnostic *>(*Record);
 
         ExpectedSLoc ToPairFirst = import(Pair->first);
         if (!ToPairFirst)
@@ -1370,6 +1369,10 @@ ExpectedType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
   case BuiltinType::Id:                                                        \
     return Importer.getToContext().SingletonId;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case BuiltinType::Id:                                                        \
+    return Importer.getToContext().SingletonId;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case BuiltinType::Id:                                                        \
     return Importer.getToContext().SingletonId;
@@ -2109,7 +2112,7 @@ ExpectedType clang::ASTNodeImporter::VisitConstantMatrixType(
     return ToElementTypeOrErr.takeError();
 
   return Importer.getToContext().getConstantMatrixType(
-      *ToElementTypeOrErr, T->getNumRows(), T->getNumColumns());
+      *ToElementTypeOrErr, T->getNumRows(), T->getNumColumns(), T->getLayout());
 }
 
 ExpectedType clang::ASTNodeImporter::VisitDependentAddressSpaceType(
@@ -9545,7 +9548,7 @@ void ASTImporter::RegisterImportedDecl(Decl *FromD, Decl *ToD) {
 
 llvm::Expected<ExprWithCleanups::CleanupObject>
 ASTImporter::Import(ExprWithCleanups::CleanupObject From) {
-  if (auto *CLE = From.dyn_cast<CompoundLiteralExpr *>()) {
+  if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(From)) {
     if (Expected<Expr *> R = Import(CLE))
       return ExprWithCleanups::CleanupObject(cast<CompoundLiteralExpr>(*R));
   }

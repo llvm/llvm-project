@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <sycl/__impl/context.hpp>
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/exception.hpp>
 
@@ -25,15 +26,17 @@ const std::error_category &sycl_category() noexcept {
   return SYCLCategoryObj;
 }
 
-std::error_code make_error_code(sycl::errc Err) noexcept {
-  return std::error_code(static_cast<int>(Err), sycl_category());
+std::error_code make_error_code(sycl::errc e) noexcept {
+  return std::error_code(static_cast<int>(e), sycl_category());
 }
 
 // Exception methods implementation
-exception::exception(std::error_code EC, const char *Msg)
-    : MMessage(std::make_shared<std::string>(Msg)), MErrC(EC) {}
+exception::exception(std::error_code EC, std::shared_ptr<context> SharedPtrCtx,
+                     const char *WhatArg)
+    : MMessage(std::make_shared<std::string>(WhatArg)), MContext(SharedPtrCtx),
+      MErrC(EC) {}
 
-exception::~exception() {}
+exception::~exception() = default;
 
 const std::error_code &exception::code() const noexcept { return MErrC; }
 
@@ -43,6 +46,13 @@ const std::error_category &exception::category() const noexcept {
 
 const char *exception::what() const noexcept { return MMessage->c_str(); }
 
-bool exception::has_context() const noexcept { return false; }
+bool exception::has_context() const noexcept { return MContext != nullptr; }
+
+context exception::get_context() const {
+  if (!has_context())
+    throw exception(make_error_code(sycl::errc::invalid),
+                    "Exception does not have an associated context.");
+  return *MContext;
+}
 
 _LIBSYCL_END_NAMESPACE_SYCL

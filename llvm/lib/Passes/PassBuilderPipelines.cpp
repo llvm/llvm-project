@@ -100,6 +100,8 @@
 #include "llvm/Transforms/Scalar/ExpandMemCmp.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/GVNHoist.h"
+#include "llvm/Transforms/Scalar/GVNSink.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "llvm/Transforms/Scalar/InferAlignment.h"
 #include "llvm/Transforms/Scalar/InstSimplifyPass.h"
@@ -406,6 +408,16 @@ void PassBuilder::invokeFullLinkTimeOptimizationEarlyEPCallbacks(
 void PassBuilder::invokeFullLinkTimeOptimizationLastEPCallbacks(
     ModulePassManager &MPM, OptimizationLevel Level) {
   for (auto &C : FullLinkTimeOptimizationLastEPCallbacks)
+    C(MPM, Level);
+}
+void PassBuilder::invokeThinLinkTimeOptimizationEarlyEPCallbacks(
+    ModulePassManager &MPM, OptimizationLevel Level) {
+  for (auto &C : ThinLinkTimeOptimizationEarlyEPCallbacks)
+    C(MPM, Level);
+}
+void PassBuilder::invokeThinLinkTimeOptimizationLastEPCallbacks(
+    ModulePassManager &MPM, OptimizationLevel Level) {
+  for (auto &C : ThinLinkTimeOptimizationLastEPCallbacks)
     C(MPM, Level);
 }
 void PassBuilder::invokePipelineStartEPCallbacks(ModulePassManager &MPM,
@@ -1582,7 +1594,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   }
 
   OptimizePM.addPass(Float2IntPass());
-  OptimizePM.addPass(LowerConstantIntrinsicsPass());
+  // Defer until LTO post-link where some constants may become known.
+  if (!isLTOPreLink(LTOPhase))
+    OptimizePM.addPass(LowerConstantIntrinsicsPass());
 
   if (EnableMatrix) {
     OptimizePM.addPass(LowerMatrixIntrinsicsPass());
@@ -1938,6 +1952,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
 
   instructionCountersPass(MPM, /* IsPreOptimization */ true);
 
+  invokeThinLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
+
   // If we are invoking this without a summary index noting that we are linking
   // with a library containing the necessary APIs, remove any MemProf related
   // attributes and metadata.
@@ -1985,6 +2001,9 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // globals in the object file.
     MPM.addPass(EliminateAvailableExternallyPass());
     MPM.addPass(GlobalDCEPass());
+
+    invokeThinLinkTimeOptimizationLastEPCallbacks(MPM, Level);
+
     return MPM;
   }
   if (!UseCtxProfile.empty()) {
@@ -1998,6 +2017,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   // Now add the optimization pipeline.
   MPM.addPass(buildModuleOptimizationPipeline(
       Level, ThinOrFullLTOPhase::ThinLTOPostLink));
+
+  invokeThinLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
@@ -2122,6 +2143,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(NoRecurseLTOInferencePass());
   // Stop here at -O1.
   if (Level == OptimizationLevel::O1) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        LowerConstantIntrinsicsPass(), PTO.EagerlyInvalidateAnalyses));
+
     // The LowerTypeTestsPass needs to run to lower type metadata and the
     // type.test intrinsics. The pass does nothing if CFI is disabled.
     MPM.addPass(LowerTypeTestsPass(ExportSummary, nullptr));
@@ -2287,6 +2311,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MainFPM.addPass(DSEPass());
   MainFPM.addPass(MoveAutoInitPass());
   MainFPM.addPass(MergedLoadStoreMotionPass());
+
+  MainFPM.addPass(LowerConstantIntrinsicsPass());
 
   invokeVectorizerStartEPCallbacks(MainFPM, Level);
 

@@ -28,6 +28,46 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
+
+#include <string>
+#include <utility>
+
+namespace llvm::cl {
+template <>
+class parser<std::pair<std::string, bool>>
+    : public basic_parser<std::pair<std::string, bool>> {
+public:
+  parser(Option &option) : basic_parser(option) {}
+
+  bool parse(Option &option, StringRef argName, StringRef arg,
+             std::pair<std::string, bool> &value) {
+    auto [name, flagStr] = arg.rsplit(':');
+    if (name.empty() || flagStr.empty())
+      return option.error("expected <name>:<bool>", argName);
+
+    bool ifMain = false;
+    if (flagStr.equals_insensitive("true") || flagStr == "1")
+      ifMain = true;
+    else if (flagStr.equals_insensitive("false") || flagStr == "0")
+      ifMain = false;
+    else
+      return option.error("invalid boolean in extra constructor mapping",
+                          argName);
+
+    value = {name.str(), ifMain};
+    return false;
+  }
+
+  StringRef getValueName() const override { return "name:bool"; }
+
+  static void print(raw_ostream &os,
+                    const std::pair<std::string, bool> &value) {
+    os << value.first << ':' << (value.second ? "true" : "false");
+  }
+};
+} // namespace llvm::cl
 
 namespace fir {
 #define GEN_PASS_DEF_CUFADDCONSTRUCTOR
@@ -41,13 +81,25 @@ namespace {
 static constexpr llvm::StringRef cudaFortranCtorName{
     "__cudaFortranConstructor"};
 static constexpr llvm::StringRef managedPtrSuffix{".managed.ptr"};
+static constexpr llvm::StringRef cudaCompiledSymbolName{"Mcuda_compiled"};
 
-/// Create an 8-byte pointer global in the __nv_managed_data__ section.
-/// The CUDA runtime populates this pointer with the unified memory address
-/// when the module is initialized via __cudaInitModule.
+/// Create the 8-byte companion pointer global holding the unified memory
+/// address of \p globalOp, which the CUDA runtime populates when the module is
+/// initialized via __cudaInitModule.
+///
+/// The pointer has external linkage so that the whole program shares a single
+/// one. Only the translation unit that defines the variable emits a definition
+/// (zero-initialized, in the __nv_managed_data__ section, and registered);
+/// every other translation unit emits a declaration and resolves to that same
+/// definition at link time.
+///
+/// A pointer per translation unit does not work: the runtime populates only
+/// the registration it performs first for a given variable name, so any other
+/// unit would be left loading through a null pointer.
 static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
                                                 mlir::ModuleOp mod,
-                                                fir::GlobalOp globalOp) {
+                                                fir::GlobalOp globalOp,
+                                                bool isDefinition) {
   mlir::MLIRContext *ctx = mod.getContext();
   std::string ptrGlobalName = (globalOp.getSymName() + managedPtrSuffix).str();
   auto ptrTy = fir::LLVMPointerType::get(ctx, mlir::IntegerType::get(ctx, 8));
@@ -55,16 +107,18 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointAfter(globalOp);
 
-  llvm::SmallVector<mlir::NamedAttribute> attrs;
-  attrs.push_back(
-      mlir::NamedAttribute(mlir::StringAttr::get(ctx, "section"),
-                           mlir::StringAttr::get(ctx, "__nv_managed_data__")));
-
   mlir::DenseElementsAttr initAttr = {};
   auto ptrGlobal = fir::GlobalOp::create(
       builder, globalOp.getLoc(), ptrGlobalName, /*isConstant=*/false,
       /*isTarget=*/false, ptrTy, initAttr,
-      /*linkage=*/builder.createInternalLinkage(), attrs);
+      /*linkage=*/builder.createExternalLinkage());
+
+  // Leaving the region empty makes this a declaration of the definition
+  // emitted by the defining translation unit.
+  if (!isDefinition)
+    return ptrGlobal;
+
+  ptrGlobal.setSectionAttr(builder.getStringAttr("__nv_managed_data__"));
 
   mlir::Region &region = ptrGlobal.getRegion();
   mlir::Block *block = builder.createBlock(&region);
@@ -225,8 +279,8 @@ static bool hasRegisteredGlobals(mlir::ModuleOp mod,
     }
     if (!gpuSymTable.lookup(globalOp.getSymName()))
       continue;
-    // Non-allocatable managed globals register a companion pointer local to
-    // this translation unit, so they register even when defined elsewhere.
+    // Non-allocatable managed globals still need a companion pointer
+    // declaration when defined elsewhere, so they count here too.
     if (attr.getValue() == cuf::DataAttribute::Managed &&
         !mlir::isa<fir::BaseBoxType>(globalOp.getType()))
       return true;
@@ -319,6 +373,20 @@ struct CUFAddConstructor
 
     // Create the constructor function that call CUFRegisterAllocator.
     builder.setInsertionPointToEnd(mod.getBody());
+    mlir::LLVM::GlobalOp cudaCompiledGlobal;
+    bool hasProgramEntry =
+        symTab.lookup<mlir::func::FuncOp>(fir::NameUniquer::doProgramEntry());
+    // Only the program unit needs the link-time CUDA Fortran runtime check.
+    bool emitCudaCompiledMarker = emitCudaCompiled && hasProgramEntry;
+    if (emitCudaCompiledMarker) {
+      // Undefined sentinel: objects compiled as CUDA Fortran reference this
+      // symbol so linking without the CUDA Fortran runtime produces
+      // "undefined reference to `Mcuda_compiled'".
+      cudaCompiledGlobal = mlir::LLVM::GlobalOp::create(
+          builder, loc, mlir::IntegerType::get(ctx, 8), /*isConstant=*/false,
+          mlir::LLVM::Linkage::External, cudaCompiledSymbolName,
+          mlir::Attribute{});
+    }
     auto func = mlir::LLVM::LLVMFuncOp::create(builder, loc,
                                                cudaFortranCtorName, funcTy);
     func.setLinkage(mlir::LLVM::Linkage::Internal);
@@ -380,9 +448,9 @@ struct CUFAddConstructor
               attr.getValue() == cuf::DataAttribute::Managed &&
               !mlir::isa<fir::BaseBoxType>(globalOp.getType());
 
-          // Non-allocatable managed globals register a companion pointer local
-          // to this translation unit, so they register even when defined
-          // elsewhere.
+          // Non-allocatable managed globals are still visited when defined
+          // elsewhere: such a unit emits no registration, but it does need a
+          // declaration of the companion pointer to load through.
           if (!definesGlobal(globalOp) && !isNonAllocManagedGlobal)
             continue;
 
@@ -391,12 +459,18 @@ struct CUFAddConstructor
           case cuf::DataAttribute::Constant:
           case cuf::DataAttribute::Managed: {
             if (isNonAllocManagedGlobal) {
-              hasNonAllocManagedGlobal = true;
               // Non-allocatable managed globals use pointer indirection:
               // a companion pointer in __nv_managed_data__ holds the unified
               // memory address, registered via __cudaRegisterManagedVar.
-              fir::GlobalOp ptrGlobal =
-                  createManagedPointerGlobal(builder, mod, globalOp);
+              // The pointer is shared across the program, so it is defined and
+              // registered only by the unit that defines the variable; other
+              // units just declare it.
+              bool definesVariable = definesGlobal(globalOp);
+              fir::GlobalOp ptrGlobal = createManagedPointerGlobal(
+                  builder, mod, globalOp, definesVariable);
+              if (!definesVariable)
+                break;
+              hasNonAllocManagedGlobal = true;
               auto func = fir::runtime::getRuntimeFunc<mkRTKey(
                   CUFRegisterManagedVariable)>(loc, builder);
               emitCUFRegistrationCall(builder, loc, idxTy, *dl, kindMap,
@@ -467,6 +541,34 @@ struct CUFAddConstructor
         }
       }
     }
+    if (emitCudaCompiledMarker) {
+      // Keep the sentinel reference alive: an unused non-volatile load would
+      // be folded away before it reaches the object file.
+      auto addr =
+          mlir::LLVM::AddressOfOp::create(builder, loc, cudaCompiledGlobal);
+      mlir::LLVM::LoadOp::create(builder, loc, mlir::IntegerType::get(ctx, 8),
+                                 addr, /*alignment=*/0, /*isVolatile=*/true);
+    }
+
+    // The extra constructors are defined in a runtime library, so they are
+    // only declared here and called from the constructor: an entry in
+    // llvm.mlir.global_ctors requires a function with a definition.
+    auto addExtraConstructor = [&](const std::string &funcName) {
+      if (!mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(funcName)) {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToEnd(mod.getBody());
+        mlir::LLVM::LLVMFuncOp::create(builder, loc, funcName, funcTy);
+      }
+      mlir::LLVM::CallOp::create(builder, loc, funcTy,
+                                 mlir::SymbolRefAttr::get(ctx, funcName));
+    };
+    for (const auto &funcName : extraConstructors)
+      addExtraConstructor(funcName);
+    for (const auto &funcName : entryOnlyConstructors) {
+      if (hasProgramEntry)
+        addExtraConstructor(funcName);
+    }
+
     mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
 
     // Create the llvm.global_ctor with the function.

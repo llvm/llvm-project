@@ -321,6 +321,25 @@ CIRGenFunction::emitCoroPromiseBuiltinCall(const CallExpr *e) {
   return coroPromise;
 }
 
+cir::CoroDoneOp CIRGenFunction::emitCoroDoneBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroDoneOp::create(cgm.getBuilder(), loc,
+                                 emitScalarExpr(e->getArg(0)));
+}
+
+cir::CoroResumeOp CIRGenFunction::emitCoroResumeBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroResumeOp::create(cgm.getBuilder(), loc,
+                                   emitScalarExpr(e->getArg(0)));
+}
+
+cir::CoroDestroyOp
+CIRGenFunction::emitCoroDestroyBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroDestroyOp::create(cgm.getBuilder(), loc,
+                                    emitScalarExpr(e->getArg(0)));
+}
+
 static mlir::LogicalResult
 coroutineBodyExceptionHelper(CIRGenFunction &cgf, const CoroutineBodyStmt &s) {
 
@@ -688,25 +707,20 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
           awaitRes.rv =
               cgf.emitAnyExpr(s.getResumeExpr(), aggSlot, ignoreResult);
           if (!awaitRes.rv.isIgnored()) {
-            // Create the alloca in the block before the scope wrapping
-            // cir.await.
-            mlir::Value value;
             RValue rv = awaitRes.rv;
-            if (rv.isScalar()) {
-              value = rv.getValue();
-            } else if (rv.isComplex()) {
-              value = rv.getComplexValue();
+            if (rv.isScalar() || rv.isComplex()) {
+              mlir::Value value =
+                  rv.isScalar() ? rv.getValue() : rv.getComplexValue();
+              tmpResumeRValAddr = cgf.emitAlloca(
+                  "__coawait_resume_rval", value.getType(), loc,
+                  CharUnits::One(),
+                  builder.getBestAllocaInsertPoint(scopeParentBlock));
+              // Store the rvalue so we can reload it before the promise call.
+              builder.CIRBaseBuilderTy::createStore(loc, value,
+                                                    tmpResumeRValAddr);
             } else {
-              cgf.cgm.errorNYI("emitSuspendExpression: Aggregate value");
-              return;
+              assert(rv.isAggregate() && "unexpected rvalue kind");
             }
-
-            tmpResumeRValAddr = cgf.emitAlloca(
-                "__coawait_resume_rval", value.getType(), loc, CharUnits::One(),
-                builder.getBestAllocaInsertPoint(scopeParentBlock));
-            // Store the rvalue so we can reload it before the promise call.
-            builder.CIRBaseBuilderTy::createStore(loc, value,
-                                                  tmpResumeRValAddr);
           }
         }
 
@@ -749,9 +763,7 @@ static RValue emitSuspendExpr(CIRGenFunction &cgf,
                                            rval.getValue().getType(),
                                            tmpResumeRValAddr));
   } else if (rval.isAggregate()) {
-    // This is probably already handled via AggSlot, remove this assertion
-    // once we have a testcase and prove all pieces work.
-    cgf.cgm.errorNYI("emitSuspendExpr Aggregate");
+    return rval;
   } else { // complex
     rval = RValue::getComplex(cir::LoadOp::create(
         cgf.getBuilder(), scopeLoc, rval.getComplexValue().getType(),

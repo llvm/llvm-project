@@ -13,3 +13,8 @@ int decltype = 0;
 int *decltype = 0;
 // expected-error@-1 {{expected '(' after 'decltype'}}
 // expected-error@-2 {{expected unqualified-id}}
+
+// GH165246
+int decltype {};
+// expected-error@-1 {{expected '(' after 'decltype'}}
+// expected-error@-2 {{expected unqualified-id}}

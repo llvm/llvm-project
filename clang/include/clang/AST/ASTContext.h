@@ -315,7 +315,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
-  mutable llvm::FoldingSet<OverflowBehaviorType> OverflowBehaviorTypes;
+  mutable llvm::UniquingSet<OverflowBehaviorType> OverflowBehaviorTypes;
   mutable llvm::ContextualFoldingSet<HLSLAttributedResourceType, ASTContext &>
       HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
@@ -345,7 +345,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Internal storage for NestedNameSpecifiers.
   ///
   /// This set is managed by the NestedNameSpecifier class.
-  mutable llvm::FoldingSet<NamespaceAndPrefixStorage>
+  mutable llvm::UniquingSet<NamespaceAndPrefixStorage>
       NamespaceAndPrefixStorages;
 
   /// A cache mapping from RecordDecls to ASTRecordLayouts.
@@ -548,6 +548,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Since so few decls have attrs, we keep them in a hash map instead of
   /// wasting space in the Decl class.
   llvm::DenseMap<const Decl*, AttrVec*> DeclAttrs;
+
+  /// One-entry cache for getDeclAttrs().
+  const Decl *LastDeclAttrsDecl = nullptr;
+  AttrVec *LastDeclAttrs = nullptr;
 
   /// A mapping from non-redeclarable declarations in modules that were
   /// merged with other declarations to the canonical declaration that they were
@@ -1422,6 +1426,8 @@ public:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/SPIRVTypes.def"
 
@@ -1681,6 +1687,22 @@ public:
                          bool OrNull,
                          ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
 
+  /// Return a `CountAttributedType` whose count expression has not been parsed
+  /// yet, for use by a late-parsed bounds attribute. The result is *not*
+  /// uniqued, and must be completed with `completeCountAttributedType` once the
+  /// argument becomes parseable. Returns the node rather than a `QualType` so
+  /// the caller can retain it for completion.
+  CountAttributedType *getIncompleteCountAttributedType(QualType WrappedTy,
+                                                        bool CountInBytes,
+                                                        bool OrNull) const;
+
+  /// Supply the count expression and coupled declarations for a type created by
+  /// `getIncompleteCountAttributedType`. Enclosing types keep pointing at the
+  /// same node, so nothing above it needs rebuilding.
+  void completeCountAttributedType(
+      CountAttributedType *CATy, Expr *CountExpr,
+      ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
+
   /// Return a placeholder type for a late-parsed type attribute.
   /// This type wraps another type and holds the LateParsedAttribute
   /// that will be parsed later.
@@ -1890,14 +1912,18 @@ public:
   ///
   /// \pre \p ElementType must be a valid matrix element type (see
   /// MatrixType::isValidElementType).
-  QualType getConstantMatrixType(QualType ElementType, unsigned NumRows,
-                                 unsigned NumColumns) const;
+  QualType getConstantMatrixType(
+      QualType ElementType, unsigned NumRows, unsigned NumColumns,
+      std::optional<MatrixType::LayoutKind> Layout = std::nullopt) const;
 
   /// Return the unique reference to the matrix type of the specified element
   /// type and size
   QualType getDependentSizedMatrixType(QualType ElementType, Expr *RowExpr,
                                        Expr *ColumnExpr,
                                        SourceLocation AttrLoc) const;
+
+  QualType getMatrixTypeWithLayout(QualType T,
+                                   MatrixType::LayoutKind Layout) const;
 
   QualType getDependentAddressSpaceType(QualType PointeeType,
                                         Expr *AddrSpaceExpr,
@@ -3658,6 +3684,9 @@ public:
   void setStaticLocalNumber(const VarDecl *VD, unsigned Number);
   unsigned getStaticLocalNumber(const VarDecl *VD) const;
 
+  /// Ordinal for the next TopLevelStmtDecl; counts created and loaded ones.
+  unsigned NumTopLevelStmtDecls = 0;
+
   bool hasSeenTypeAwareOperatorNewOrDelete() const {
     return !TypeAwareOperatorNewAndDeletes.empty();
   }
@@ -3967,7 +3996,7 @@ public:
   std::vector<PFPField> findPFPFields(QualType Ty) const;
 
   bool hasPFPFields(QualType Ty) const;
-  bool isPFPField(const FieldDecl *Field) const;
+  static bool isPFPField(const FieldDecl *Field);
 
   /// Returns whether this record's PFP fields (if any) are trivially
   /// copyable (i.e. may be memcpy'd). This may also return true if the

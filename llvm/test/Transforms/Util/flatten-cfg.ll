@@ -448,4 +448,70 @@ if.end2:
   ret i32 0
 }
 
+; %add is poison at %y == INT_MAX and the source only branches on %cmp.y when
+; %cmp.x has not decided the branch, so a bitwise merge would branch on poison.
+define void @test_parallel_or(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define void @test_parallel_or
+; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:  entry.x:
+; CHECK-NEXT:    [[CMP_X:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[Y]], 1
+; CHECK-NEXT:    [[CMP_Y:%.*]] = icmp sgt i32 [[ADD]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP_X]], i1 true, i1 [[CMP_Y]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    store i32 [[Z]], ptr @g, align 4
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry.x:
+  %cmp.x = icmp sgt i32 %x, 0
+  br i1 %cmp.x, label %if.then, label %entry.y
+
+entry.y:
+  %add = add nsw i32 %y, 1
+  %cmp.y = icmp sgt i32 %add, 0
+  br i1 %cmp.y, label %if.then, label %exit
+
+if.then:
+  store i32 %z, ptr @g, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
+define void @test_parallel_and(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define void @test_parallel_and
+; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:  entry.x:
+; CHECK-NEXT:    [[CMP_X:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[Y]], 1
+; CHECK-NEXT:    [[CMP_Y:%.*]] = icmp sgt i32 [[ADD]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP_X]], i1 [[CMP_Y]], i1 false
+; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    store i32 [[Z]], ptr @g, align 4
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry.x:
+  %cmp.x = icmp sgt i32 %x, 0
+  br i1 %cmp.x, label %entry.y, label %exit
+
+entry.y:
+  %add = add nsw i32 %y, 1
+  %cmp.y = icmp sgt i32 %add, 0
+  br i1 %cmp.y, label %if.then, label %exit
+
+if.then:
+  store i32 %z, ptr @g, align 4
+  br label %exit
+
+exit:
+  ret void
+}
+
 attributes #1 = { readnone willreturn nounwind }

@@ -13,23 +13,9 @@ from lldbsuite.test.gdbclientutils import *
 from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
-class MultiDocResponder(MockGDBServerResponder):
-    # docs is a dictionary of filename -> file content.
-    def __init__(self, docs):
-        super().__init__()
-        self.docs = docs
-
-    def qXferRead(self, obj, annex, offset, length):
-        try:
-            return self.docs[annex], False
-        except KeyError:
-            return (None,)
-
-    def readRegister(self, regnum):
-        return "E01"
-
-    def readRegisters(self):
-        return "".join(
+class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
+    def setup_multidoc_test(self, docs):
+        register_data = "".join(
             [
                 # Data for all registers requested by the tests below.
                 # 0x7 and 0xE are used because their lsb and msb are opposites, which
@@ -39,11 +25,7 @@ class MultiDocResponder(MockGDBServerResponder):
                 "0000000000000000",  # 64 bit pc/pswa
             ]
         )
-
-
-class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
-    def setup_multidoc_test(self, docs):
-        self.server.responder = MultiDocResponder(docs)
+        self.server.responder = MockGDBServerXMLResponder(docs, register_data)
         target = self.dbg.CreateTarget("")
 
         if self.TraceOn():
@@ -95,6 +77,21 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
     def test_no_flags(self):
         self.setup_flags_test("")
         self.expect("register read cpsr", substrs=["= 0xeeee7777"])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_unsupported_flags_size_stays_raw(self):
+        self.setup_register_test(
+            """\
+          <flags id="flags24" size="3">
+            <field name="field" start="0" end="0"/>
+          </flags>
+          <reg name="flags24" regnum="0" bitsize="24" type="flags24"/>
+          <reg name="pc" bitsize="64"/>"""
+        )
+
+        self.expect("register read flags24", substrs=["flags24 = 0x777777"])
+        self.expect("register read flags24", matching=False, substrs=["field ="])
 
     @skipIfXmlSupportMissing
     @skipIfRemote

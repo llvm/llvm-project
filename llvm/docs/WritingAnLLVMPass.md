@@ -424,12 +424,16 @@ RegisterTargetPassConfigCallback X{[](auto &TM, auto &PM, auto *TPC) {
 }};
 ```
 
-Note that passes still have to be registered:
+Note that passes still have to be registered. This can be done using a
+static object whose constructor runs when the plugin is loaded:
 
 ```cpp
-__attribute__((constructor)) static void initCodeGenPlugin() {
-  initializeExamplePass(*PassRegistry::getPassRegistry());
-}
+struct InitCodeGenPlugin {
+  InitCodeGenPlugin() {
+    initializeExamplePass(*PassRegistry::getPassRegistry());
+  }
+};
+static InitCodeGenPlugin InitCodeGenPluginInstance;
 ```
 
 (writing-an-llvm-pass-interaction)=

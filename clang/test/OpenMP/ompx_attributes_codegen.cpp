@@ -34,6 +34,7 @@ void func() {
   {}
 }
 
+// SPIRV keeps the unwidened bound: the generic-mode warp is not reserved there.
 // SPIRV: attributes #0
 // SPIRV-SAME: "nvvm.maxntid"="20"
 // SPIRV-SAME: "omp_target_thread_limit"="20" 
@@ -43,9 +44,9 @@ void func() {
 // SPIRV-SAME: "omp_target_thread_limit"="17"
 
 // AMD: attributes #0
-// AMD-SAME: "amdgpu-flat-work-group-size"="10,20"
-// AMD-SAME: "omp_target_thread_limit"="20"
-// AMD: "omp_target_thread_limit"="45"
+// AMD-SAME: "amdgpu-flat-work-group-size"="10,84"
+// AMD-SAME: "omp_target_thread_limit"="84"
+// AMD: "omp_target_thread_limit"="109"
 // AMD: attributes #4
 // AMD-SAME: "amdgpu-flat-work-group-size"="3,17"
 // AMD-SAME: "amdgpu-waves-per-eu"="3,7"
@@ -53,11 +54,11 @@ void func() {
 
 // It is unclear if we should use the AMD annotations for other targets, we do for now.
 // NVIDIA: attributes #[[ATTR0]]
-// NVIDIA-SAME: "nvvm.maxntid"="20"
-// NVIDIA-SAME: "omp_target_thread_limit"="20"
+// NVIDIA-SAME: "nvvm.maxntid"="84"
+// NVIDIA-SAME: "omp_target_thread_limit"="84"
 // NVIDIA: attributes #[[ATTR1]]
-// NVIDIA-SAME: "nvvm.maxntid"="45"
-// NVIDIA-SAME: "omp_target_thread_limit"="45"
+// NVIDIA-SAME: "nvvm.maxntid"="109"
+// NVIDIA-SAME: "omp_target_thread_limit"="109"
 // NVIDIA: attributes #[[ATTR2]]
 // NVIDIA-SAME: "nvvm.maxntid"="17"
 // NVIDIA-SAME: "omp_target_thread_limit"="17"

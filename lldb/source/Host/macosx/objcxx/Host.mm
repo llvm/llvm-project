@@ -1538,7 +1538,8 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   return error;
 }
 
-Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info,
+                                  const Timeout<std::micro> &timeout) {
   Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
     FileSpec expand_tool_spec;
@@ -1594,9 +1595,8 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     bool run_in_shell = true;
     std::string error_output; // Pass stderr string arg so it is not mixed with
                               // stdout.
-    Status e =
-        RunShellCommand(expand_command, cwd, &status, nullptr, &output,
-                        &error_output, std::chrono::seconds(10), run_in_shell);
+    Status e = RunShellCommand(expand_command, cwd, &status, nullptr, &output,
+                               &error_output, timeout, run_in_shell);
 
     if (e.Fail())
       return e;

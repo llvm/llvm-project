@@ -1,6 +1,6 @@
 ; RUN: mlir-translate --import-llvm %s --split-input-file | FileCheck %s
 
-; CHECK: llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo {dso_local}
+; CHECK: llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo dso_local
 @foo = dso_local ifunc void (ptr, i32), ptr @resolve_foo
 
 define dso_local void @call_foo(ptr noundef %0, i32 noundef %1) {
@@ -50,7 +50,7 @@ define ptr @resolver() {
   ret ptr inttoptr (i64 333 to ptr)
 }
 
-; CHECK: llvm.mlir.ifunc private @ifunc {{.*}} {dso_local}
+; CHECK: llvm.mlir.ifunc private @ifunc {{.*}} dso_local
 @ifunc = private dso_local ifunc float (i64), ptr @resolver
 
 ; // -----

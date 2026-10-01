@@ -130,7 +130,7 @@ def ReplaceFuncSignatureOp
     $function_name
     `args_interchange` `=` $args_interchange
     `results_interchange` `=` $results_interchange
-    `at` $module attr-dict `:` functional-type(operands, results)
+    `at` $module oilist(`adjust_func_calls` $adjust_func_calls) attr-dict `:` functional-type(operands, results)
   }];
 }
 

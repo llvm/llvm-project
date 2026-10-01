@@ -1,6 +1,6 @@
 ; Test targets without xnack on/off mode support ignore module flags
-; Targets with only FEATURE_XNACK (but not FEATURE_XNACK_ON_OFF_MODES)
-; have xnack always on and ignore module flag settings.
+; Targets that support xnack but not xnack on/off modes have xnack always on
+; and ignore module flag settings.
 ; The target ID should not contain the xnack specifier.
 
 ; RUN: split-file %s %t

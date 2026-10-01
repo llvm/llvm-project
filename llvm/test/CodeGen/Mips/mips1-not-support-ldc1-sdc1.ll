@@ -27,21 +27,17 @@ entry:
 define void @test_swc1(double %a) #0 {
 ; MIPS1-LE-LABEL: test_swc1:
 ; MIPS1-LE:       # %bb.0: # %entry
-; MIPS1-LE-NEXT:    mfc1 $f0, $f13
 ; MIPS1-LE-NEXT:    lui	$1, %hi(test)
-; MIPS1-LE-NEXT:    swc1 $f0, %lo(test+4)($1)
-; MIPS1-LE-NEXT:    mfc1 $f0, $f12
+; MIPS1-LE-NEXT:    swc1 $f13, %lo(test+4)($1)
 ; MIPS1-LE-NEXT:    jr $ra
-; MIPS1-LE-NEXT:    swc1 $f0, %lo(test)($1)
+; MIPS1-LE-NEXT:    swc1 $f12, %lo(test)($1)
 
 ; MIPS1-BE-LABEL: test_swc1:
 ; MIPS1-BE:       # %bb.0: # %entry
-; MIPS1-BE-NEXT:    mfc1 $f0, $f12
 ; MIPS1-BE-NEXT:    lui	$1, %hi(test)
-; MIPS1-BE-NEXT:    swc1 $f0, %lo(test+4)($1)
-; MIPS1-BE-NEXT:    mfc1 $f0, $f13
+; MIPS1-BE-NEXT:    swc1 $f12, %lo(test+4)($1)
 ; MIPS1-BE-NEXT:    jr $ra
-; MIPS1-BE-NEXT:    swc1 $f0, %lo(test)($1)
+; MIPS1-BE-NEXT:    swc1 $f13, %lo(test)($1)
 entry:
   store double %a, ptr @test, align 8
   ret void
