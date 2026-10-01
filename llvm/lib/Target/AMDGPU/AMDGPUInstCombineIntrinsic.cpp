@@ -1222,6 +1222,7 @@ static bool isRawBufferAccessDefinitelyOOB(const GCNSubtarget *ST, Value *Rsrc,
     if (AddTid || Swizzle)
       return false;
 
+    // Saturating uint64 subtract: clamp at 0 if SOffset >= NumRecords.
     uint64_t Bound = NumRecords > SOffset ? NumRecords - SOffset : 0;
     if (*Model == OOBModel::Gfx10) {
       unsigned OOBSelect = (Flags >> 28) & 3;

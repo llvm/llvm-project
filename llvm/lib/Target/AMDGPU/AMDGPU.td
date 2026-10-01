@@ -1612,7 +1612,10 @@ class FeatureNumRecordsBufferResource<int width> : SubtargetFeature<
 def Feature32BitNumRecordsBufferResource : FeatureNumRecordsBufferResource<32>;
 def Feature45BitNumRecordsBufferResource : FeatureNumRecordsBufferResource<45>;
 
-// The out-of-bounds range-check model.
+// The out-of-bounds range-check model. The buffer resource (V#) has no
+// OOB_SELECT field on Gfx9, a 2-bit OOB_SELECT on Gfx10 (gfx10-gfx12),
+// and a 1-bit OOB_SELECT on Gfx1250 (gfx1250+). The OOB range-check
+// equations differ per model.
 class FeatureBufferOOBModel<string model, int value> : SubtargetFeature<
   model#"-buffer-oob-model",
   "BufferOOBModel",
