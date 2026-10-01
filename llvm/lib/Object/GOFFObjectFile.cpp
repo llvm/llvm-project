@@ -424,6 +424,13 @@ bool GOFFObjectFile::isSymbolUnresolved(DataRefImpl Symb) const {
   return false;
 }
 
+bool GOFFObjectFile::isEDSymbol(DataRefImpl Symb) const {
+  const uint8_t *Record = getSymbolEsdRecord(Symb);
+  GOFF::ESDSymbolType SymbolType;
+  ESDRecord::getSymbolType(Record, SymbolType);
+  return (SymbolType == GOFF::ESD_ST_ElementDefinition);
+}
+
 bool GOFFObjectFile::isSymbolIndirect(DataRefImpl Symb) const {
   const uint8_t *Record = getSymbolEsdRecord(Symb);
   bool Indirect;
@@ -523,6 +530,20 @@ GOFFObjectFile::getSymbolSection(DataRefImpl Symb) const {
     return section_iterator(SectionRef(Sec, this));
 
   const uint8_t *SymEsdRecord = EsdPtrs[Symb.d.a];
+  // check if this is a ED symbol.
+  if (!SkipEDSymbols && isEDSymbol(Symb)) {
+    for (size_t I = 0, E = SectionList.size(); I < E; ++I) {
+      const uint8_t *SectionEdRecord = getSectionEdEsdRecord(I);
+      if (SymEsdRecord == SectionEdRecord) {
+        Sec.d.a = I;
+        return section_iterator(SectionRef(Sec, this));
+      }
+    }
+    return createStringError(llvm::errc::invalid_argument,
+                             "No section found for ED symbol with id " +
+                                 std::to_string(Symb.d.a));
+  }
+
   uint32_t SymEdId;
   ESDRecord::getParentEsdId(SymEsdRecord, SymEdId);
   const uint8_t *SymEdRecord = EsdPtrs[SymEdId];
@@ -828,11 +849,10 @@ void GOFFObjectFile::moveSymbolNext(DataRefImpl &Symb) const {
     if (const uint8_t *EsdRecord = EsdPtrs[I]) {
       GOFF::ESDSymbolType SymbolType;
       ESDRecord::getSymbolType(EsdRecord, SymbolType);
-      // Skip EDs - i.e. section symbols.
-      bool IgnoreSpecialGOFFSymbols = true;
-      bool SkipSymbol = ((SymbolType == GOFF::ESD_ST_ElementDefinition) ||
-                         (SymbolType == GOFF::ESD_ST_SectionDefinition)) &&
-                        IgnoreSpecialGOFFSymbols;
+      // Skip section symbols, including SDs and, if flagged, EDs.
+      bool SkipSymbol =
+          ((SymbolType == GOFF::ESD_ST_SectionDefinition) ||
+           (SymbolType == GOFF::ESD_ST_ElementDefinition && SkipEDSymbols));
       if (!SkipSymbol) {
         Symb.d.a = I;
         return;

@@ -86,6 +86,9 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromGOFFObject_systemz(
     (*Features).print(dbgs());
   });
 
+  // Set the flag to preserve GOFF ED symbols for creating JITLink symbols.
+  cast<object::GOFFObjectFile>(**GOFFObj).setSkipEDSymbols(false);
+
   return GOFFLinkGraphBuilder_systemz(cast<object::GOFFObjectFile>(**GOFFObj),
                                       std::move(SSP), (*GOFFObj)->makeTriple(),
                                       std::move(*Features))
