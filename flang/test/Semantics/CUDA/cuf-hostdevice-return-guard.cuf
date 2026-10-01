@@ -1,5 +1,6 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1
-! The remainder of a block is guarded when an ON_DEVICE branch returns.
+! The remainder of a block is guarded when an ON_DEVICE branch has a RETURN.
+! Only direct RETURNs and RETURNs in unconditional BLOCKs qualify.
 ! As for explicit branch arms, checking the appropriate target is deferred.
 module return_guard
   use cudadevice, only: on_device, on_gpu => on_device
@@ -21,6 +22,90 @@ contains
     if (on_device()) then
       return
     end if
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine unconditional_block()
+    block
+      if (on_device()) return
+    end block
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine nested_block_return()
+    if (on_device()) then
+      block
+        block
+          return
+        end block
+      end block
+    end if
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine return_with_else_if(choose)
+    logical, intent(in) :: choose
+    if (on_device()) then
+      return
+    else if (choose) then
+      call host_only()
+    end if
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine else_if_guard_return(choose)
+    logical, intent(in) :: choose
+    if (choose) then
+      call both()
+    else if (on_device()) then
+      return
+    end if
+    ! Accept this permissively; the first arm can bypass the guard.
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine nested_else_if_return(choose)
+    logical, intent(in) :: choose
+    if (on_device()) then
+      if (choose) then
+        call device_only()
+      else if (.not. choose) then
+        return
+      end if
+    end if
+    ! The nested IF does not unconditionally return.
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine nested_else_return(choose)
+    logical, intent(in) :: choose
+    if (on_device()) then
+      if (choose) then
+        call device_only()
+      else
+        return
+      end if
+    end if
+    ! The nested ELSE does not make the enclosing arm return unconditionally.
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine guarded_loop_return(choose)
+    logical, intent(in) :: choose
+    if (on_device()) then
+      do while (choose)
+        return
+      end do
+    end if
+    ! Loops may not execute and are not traversed by the return scan.
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine conditional_block_guard(choose)
+    logical, intent(in) :: choose
+    if (choose) then
+      block
+        if (on_device()) return
+      end block
+      call host_only()
+    end if
+    ! The enclosing conditional can bypass the whole BLOCK.
+    !ERROR: 'host_only' may not be called in device code
     call host_only()
   end subroutine
   attributes(host,device) subroutine return_before_last_statement()
@@ -122,8 +207,7 @@ contains
     else if (on_device()) then
       return
     end if
-    ! The first branch can bypass the ON_DEVICE condition.
-    !ERROR: 'host_only' may not be called in device code
+    ! The continuation is accepted even if the first arm bypasses the guard.
     call host_only()
   end subroutine
   attributes(host,device) subroutine select_dispatch(result)
