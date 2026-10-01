@@ -269,6 +269,10 @@ option(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS
   "Enable entrypoints with known-incomplete implementations (off by default)" OFF)
 option(LLVM_LIBC_ENABLE_MINOR_VARIANT
   "Build LLVM libc minor variant archive" OFF)
+set(LLVM_LIBC_SUBARCHIVE_NAME "" CACHE STRING
+  "Target and archive name for the LLVM libc minor variant")
+set(LLVM_LIBC_SUBARCHIVE_ENTRYPOINTS "" CACHE STRING
+  "Semicolon-separated entrypoint targets for the LLVM libc minor variant")
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 

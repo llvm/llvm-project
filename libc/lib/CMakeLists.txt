@@ -2,7 +2,12 @@ set(libc_subarchive_entrypoints "")
 if(LLVM_LIBC_ENABLE_MINOR_VARIANT)
   if(NOT LLVM_LIBC_SUBARCHIVE_NAME)
     message(FATAL_ERROR
-            "LLVM_LIBC_ENABLE_MINOR_VARIANT requires LLVM_LIBC_SUBARCHIVE_NAME to be set.")
+      "LLVM_LIBC_ENABLE_MINOR_VARIANT requires LLVM_LIBC_SUBARCHIVE_NAME to be set.")
+  endif()
+  if(NOT LLVM_LIBC_SUBARCHIVE_ENTRYPOINTS)
+    message(FATAL_ERROR
+      "LLVM_LIBC_ENABLE_MINOR_VARIANT requires "
+      "LLVM_LIBC_SUBARCHIVE_ENTRYPOINTS to be set.")
   endif()
 endif()
 
@@ -10,18 +15,15 @@ set(libc_archive_targets "")
 set(libc_archive_names "")
 set(libc_archive_entrypoint_lists "")
 if(LLVM_LIBC_ENABLE_MINOR_VARIANT)
-  foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
-    if(entrypoint MATCHES "^libc\\.src\\.${LLVM_LIBC_SUBARCHIVE_NAME}\\.")
-      list(APPEND libc_subarchive_entrypoints ${entrypoint})
+  foreach(entrypoint IN LISTS LLVM_LIBC_SUBARCHIVE_ENTRYPOINTS)
+    if(NOT entrypoint IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
+      message(FATAL_ERROR
+        "LLVM_LIBC_SUBARCHIVE_ENTRYPOINTS contains '${entrypoint}', which is "
+        "not enabled by the target's entrypoints.txt configuration.")
     endif()
+    list(APPEND libc_subarchive_entrypoints "${entrypoint}")
   endforeach()
-  if(NOT libc_subarchive_entrypoints)
-    message(FATAL_ERROR
-            "LLVM_LIBC_ENABLE_MINOR_VARIANT requires matching entrypoints for "
-            "'${LLVM_LIBC_SUBARCHIVE_NAME}'.")
-  endif()
-else()
-  if(LLVM_LIBC_FULL_BUILD)
+elseif(LLVM_LIBC_FULL_BUILD)
     list(APPEND libc_archive_names c m mvec)
     list(APPEND libc_archive_targets libc libm libmvec)
     list(APPEND libc_archive_entrypoint_lists
@@ -31,7 +33,6 @@ else()
     list(APPEND libc_archive_targets libc)
     list(APPEND libc_archive_entrypoint_lists TARGET_LLVMLIBC_ENTRYPOINTS)
   endif()
-endif()
 
 set(added_archive_targets "")
 set(added_bitcode_targets "")
@@ -86,7 +87,6 @@ if(libc_subarchive_entrypoints)
   set_target_properties(
     ${LLVM_LIBC_SUBARCHIVE_NAME}
     PROPERTIES
-      PREFIX ""
       ARCHIVE_OUTPUT_NAME llvm${LLVM_LIBC_SUBARCHIVE_NAME}
   )
   if(LLVM_LIBC_FULL_BUILD)
