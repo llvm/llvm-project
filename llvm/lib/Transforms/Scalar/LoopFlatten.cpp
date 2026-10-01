@@ -346,7 +346,8 @@ static bool verifyTripCount(
       const SCEV *SCEVTripCountExt;
       // Find the extended backedge taken count and extended trip count using
       // SCEV. One of these should now match the RHS of the compare.
-      BackedgeTCExt = SE->getZeroExtendExpr(BackedgeTakenCount, RHS->getType());
+      BackedgeTCExt =
+          SE->getNoopOrZeroExtend(BackedgeTakenCount, RHS->getType());
       SCEVTripCountExt = SE->getTripCountFromExitCount(BackedgeTCExt,
                                                        RHS->getType(), L);
       if (SCEVRHS != BackedgeTCExt && SCEVRHS != SCEVTripCountExt) {
