@@ -241,7 +241,10 @@ void createDefaultFIRPostCFGOptimizerPassPipeline(
 
   pm.addPass(mlir::createSCFToControlFlowPass());
 
-  pm.addPass(mlir::createCanonicalizerPass(config));
+  if (pc.OptLevel == llvm::OptimizationLevel::O0)
+    pm.addPass(fir::createO0CanonicalizerPass());
+  else
+    pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
   if (!pc.SkipConvertComplexPow)
     pm.addPass(fir::createConvertComplexPow());

@@ -1745,9 +1745,11 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   case Instruction::GetElementPtr: {
     auto *GEPO = cast<GEPOperator>(this);
     assert(SrcTy || (Ops[0]->getType() == getOperand(0)->getType()));
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
     return ConstantExpr::getGetElementPtr(
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
         GEPO->getNoWrapFlags(), GEPO->getInRange(), OnlyIfReducedTy);
+    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   }
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
