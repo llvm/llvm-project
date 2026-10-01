@@ -24,4 +24,28 @@ def MLProgramPipelineGlobalsPass
   }];
 }
 
+def MLProgramExternalizeConstantsPass
+    : Pass<"mlprogram-externalize-constants", "ModuleOp"> {
+  let summary = "Externalize large constants to a separate weights module";
+  let options = [
+    Option<"minSize", "min-size", "int64_t", /*default=*/"1024",
+           "Minimum size of ElementsAttr to externalize">,
+    Option<"outputFilename", "output-filename", "std::string", /*default=*/"",
+           "Output filename for the weights module">,
+    Option<"dropLocations", "drop-locations", "bool", /*default=*/"false",
+           "Drop locations (use UnknownLoc) for the externalized constants">,
+  ];
+  let dependentDialects = ["mlir::ml_program::MLProgramDialect"];
+}
+
+def MLProgramRepopulateConstantsPass
+    : Pass<"mlprogram-repopulate-constants", "ModuleOp"> {
+  let summary = "Repopulate externalized constants from a weights module";
+  let options = [
+    Option<"inputFilename", "input-filename", "std::string", /*default=*/"",
+           "Input filename for the weights module">,
+  ];
+  let dependentDialects = ["mlir::ml_program::MLProgramDialect"];
+}
+
 #endif // MLIR_DIALECT_MLPROGRAM_TRANSFORMS_PASSES
