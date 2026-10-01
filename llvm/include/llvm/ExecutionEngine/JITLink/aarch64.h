@@ -139,6 +139,10 @@ enum EdgeKind_aarch64 : Edge::Kind {
   ///     out-of-range error will be returned.
   Branch26PCRel,
 
+  /// Branch26PCRel, but relaxable if the GOT entry target is in range of the
+  /// fixup.
+  Branch26PCRelRelaxable,
+
   /// A 14-bit PC-relative test and branch.
   ///
   /// Represents a PC-relative test and branch to a target within +/-32Kb. The
@@ -248,6 +252,9 @@ enum EdgeKind_aarch64 : Edge::Kind {
   ///     out-of-range error will be returned.
   Page21,
 
+  /// Page21, but relaxable if the GOT entry target is in range of the fixup.
+  Page21Relaxable,
+
   /// The 12-bit (potentially shifted) offset of the target within its page.
   ///
   /// Typically used to fix up LDR immediates.
@@ -264,6 +271,10 @@ enum EdgeKind_aarch64 : Edge::Kind {
   ///   - The result of the fixup expression must fit into a uint12 otherwise an
   ///     out-of-range error will be returned.
   PageOffset12,
+
+  /// PageOffset12, but relaxable if the GOT entry target is in range of the
+  /// fixup.
+  PageOffset12Relaxable,
 
   /// The 15-bit offset of the GOT entry from the GOT table.
   ///
@@ -539,7 +550,8 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
       endian::write64<Endianness>(FixupPtr, static_cast<uint64_t>(Value));
     break;
   }
-  case Branch26PCRel: {
+  case Branch26PCRel:
+  case Branch26PCRelRelaxable: {
     assert((FixupAddress.getValue() & 0x3) == 0 &&
            "Branch-inst is not 32-bit aligned");
 
@@ -638,7 +650,8 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     *(ulittle32_t *)FixupPtr = FixedInstr;
     break;
   }
-  case Page21: {
+  case Page21:
+  case Page21Relaxable: {
     uint64_t TargetPage =
         (E.getTarget().getAddress().getValue() + E.getAddend()) &
         ~static_cast<uint64_t>(4096 - 1);
@@ -658,7 +671,8 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     *(ulittle32_t *)FixupPtr = FixedInstr;
     break;
   }
-  case PageOffset12: {
+  case PageOffset12:
+  case PageOffset12Relaxable: {
     uint64_t TargetOffset =
         (E.getTarget().getAddress() + E.getAddend()).getValue() & 0xfff;
 
@@ -806,12 +820,12 @@ public:
     switch (E.getKind()) {
     case aarch64::RequestGOTAndTransformToPage21:
     case aarch64::RequestTLVPAndTransformToPage21: {
-      KindToSet = aarch64::Page21;
+      KindToSet = aarch64::Page21Relaxable;
       break;
     }
     case aarch64::RequestGOTAndTransformToPageOffset12:
     case aarch64::RequestTLVPAndTransformToPageOffset12: {
-      KindToSet = aarch64::PageOffset12;
+      KindToSet = aarch64::PageOffset12Relaxable;
       uint32_t RawInstr = *(const support::ulittle32_t *)FixupPtr;
       (void)RawInstr;
       assert(E.getAddend() == 0 &&
@@ -882,6 +896,7 @@ public:
                << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
                << formatv("{0:x}", E.getOffset()) << ")\n";
       });
+      E.setKind(aarch64::Branch26PCRelRelaxable);
       E.setTarget(getEntryForTarget(G, E.getTarget()));
       return true;
     }
@@ -929,6 +944,15 @@ LLVM_ABI Error createEmptyPointerSigningFunction(LinkGraph &G);
 /// containing an anonymous function that will sign all pointers in the graph.
 /// An allocation action will be added to run this function during finalization.
 LLVM_ABI Error lowerPointer64AuthEdgesToSigningFunction(LinkGraph &G);
+
+/// Optimize GOT and stub relocations when the target edge address is in range.
+/// 1. bl instructions with an Branch26PCRelRelaxable edge to a PLT thunk become
+/// direct jumps to the target, if in range.
+/// 2. adrp/ldr pairs, of the form described in the "Large GOT indirection"
+/// optimization from the "ELF for the Arm 64-bit Architecture" document
+/// (section "Relocation optimization"), may be optimized to either a nop/adr or
+/// a adrp/add if the address in the GOT entry is in range.
+LLVM_ABI Error optimizeGOTAndStubAccesses(LinkGraph &G);
 
 } // namespace aarch64
 } // namespace jitlink
