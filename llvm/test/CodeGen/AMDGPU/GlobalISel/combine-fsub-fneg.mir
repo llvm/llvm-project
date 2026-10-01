@@ -385,3 +385,33 @@ body:             |
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %sub
 ...
 
+---
+name:            test_f32_negzero_const_rhs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_f32_negzero_const_rhs
+    ; CHECK: %res:_(s32) = G_FCONSTANT float -1.000000e+00
+    ; CHECK-NEXT: $vgpr0 = COPY %res(s32)
+    %lhs:_(s32) = G_FCONSTANT float -0.0
+    %rhs:_(s32) = G_FCONSTANT float 1.0
+    %res:_(s32) = G_FSUB %lhs, %rhs
+    $vgpr0 = COPY %res
+
+...
+
+---
+name:            test_f32_poszero_nsz_const_rhs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test_f32_poszero_nsz_const_rhs
+    ; CHECK: %res:_(s32) = G_FCONSTANT float 2.500000e+00
+    ; CHECK-NEXT: $vgpr0 = COPY %res(s32)
+    %lhs:_(s32) = G_FCONSTANT float 0.0
+    %rhs:_(s32) = G_FCONSTANT float -2.5
+    %res:_(s32) = nsz G_FSUB %lhs, %rhs
+    $vgpr0 = COPY %res
+
+...
+
