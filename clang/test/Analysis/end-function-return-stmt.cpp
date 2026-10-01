@@ -27,7 +27,7 @@ S endsWithReturnStmt() {
 // dtorAfterReturnStmt()
 // CHECK:      EndFunction
 // CHECK-NEXT: ReturnStmt: yes
-// CHECK-NEXT: CFGElement: CFGAutomaticObjDtor
+// CHECK-NEXT: CFGElement: CFGLifetimeEnds
 
 // noReturnStmt()
 // CHECK:      EndFunction

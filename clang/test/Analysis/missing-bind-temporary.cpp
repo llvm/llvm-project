@@ -28,8 +28,10 @@ class B {
 // CHECK-NEXT:    7: [B1.6]
 // CHECK-NEXT:    8: i
 // CHECK-NEXT:    9: [B1.8] = [B1.7] (OperatorCall)
-// CHECK-NEXT:   10: ~B() (Temporary object destructor)
-// CHECK-NEXT:   11: [B1.2].~B() (Implicit destructor)
+// CHECK-NEXT:    10: (FullExprCleanup collected 1 MTE: [B1.6])
+// CHECK-NEXT:   11: ~B() (Temporary object destructor)
+// CHECK-NEXT:   12: [B1.2].~B() (Implicit destructor)
+// CHECK-NEXT:   13: [B1.2] (Lifetime ends)
 void foo(int) {
   B i;
   i = {};
@@ -65,8 +67,10 @@ class B {
 // CHECK-NEXT:    7: [B1.6]
 // CHECK-NEXT:    8: i
 // CHECK-NEXT:    9: [B1.8] = [B1.7] (OperatorCall)
-// CHECK-NEXT:   10: ~B() (Temporary object destructor)
-// CHECK-NEXT:   11: [B1.2].~B() (Implicit destructor)
+// CHECK-NEXT:   10: (FullExprCleanup collected 1 MTE: [B1.6])
+// CHECK-NEXT:   11: ~B() (Temporary object destructor)
+// CHECK-NEXT:   12: [B1.2].~B() (Implicit destructor)
+// CHECK-NEXT:   13: [B1.2] (Lifetime ends)
 template <typename T> void foo(T) {
   B i;
   i = {};
@@ -107,8 +111,10 @@ public:
 // CHECK-NEXT:    8: [B1.7]
 // CHECK-NEXT:    9: i
 // CHECK-NEXT:   10: [B1.9] = [B1.8] (OperatorCall)
-// CHECK-NEXT:   11: ~B() (Temporary object destructor)
-// CHECK-NEXT:   12: [B1.2].~B() (Implicit destructor)
+// CHECK-NEXT:   11: (FullExprCleanup collected 1 MTE: [B1.7])
+// CHECK-NEXT:   12: ~B() (Temporary object destructor)
+// CHECK-NEXT:   13: [B1.2].~B() (Implicit destructor)
+// CHECK-NEXT:   14: [B1.2] (Lifetime ends)
 template <typename T> void foo(T) {
   B i;
   i = {};

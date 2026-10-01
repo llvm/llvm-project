@@ -23,6 +23,7 @@ int main() {
 // CHECK-NEXT:   7: StringRef s{a};
 // CHECK-NEXT:   8: s
 // CHECK-NEXT:   9: (void)[B1.8] (CStyleCastExpr, ToVoid, void)
+// CHECK-NEXT:   10: [B1.7] (Lifetime ends)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B0
 
