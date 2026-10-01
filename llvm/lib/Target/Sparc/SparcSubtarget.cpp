@@ -12,6 +12,7 @@
 
 #include "SparcSubtarget.h"
 #include "SparcSelectionDAGInfo.h"
+#include "SparcTargetMachine.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MathExtras.h"
@@ -54,8 +55,10 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(
 }
 
 SparcSubtarget::SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
-                               const StringRef &FS, const TargetMachine &TM)
+                               const StringRef &FS,
+                               const SparcTargetMachine &TM)
     : SparcGenSubtargetInfo(TM.getTargetTriple(), CPU, TuneCPU, FS),
+      CLOpts(TM.getCLOpts()),
       ReserveRegister(TM.getMCRegisterInfo().getNumRegs()),
       InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       TLInfo(TM, *this), FrameLowering(*this) {
