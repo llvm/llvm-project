@@ -7,6 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clc/subgroup/clc_subgroup.h"
+#include "clc/workitem/clc_get_enqueued_num_sub_groups.h"
+#include "clc/workitem/clc_get_max_sub_group_size.h"
+#include "clc/workitem/clc_get_num_sub_groups.h"
+#include "clc/workitem/clc_get_sub_group_id.h"
+#include "clc/workitem/clc_get_sub_group_local_id.h"
+#include "clc/workitem/clc_get_sub_group_size.h"
 
 _CLC_DEF _CLC_OVERLOAD _CLC_CONST uint get_sub_group_size(void) {
   return __clc_get_sub_group_size();
