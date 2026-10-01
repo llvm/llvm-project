@@ -17,11 +17,17 @@ import csv
 import sys
 
 DEVICE_COLUMN = 0
+CPU_COLUMN = 1
 MULTIPLIER_COLUMN = 3
 
-MULTIPLIER_SW = "0"
-MULTIPLIER_HW_16 = ("1", "2")
-MULTIPLIER_HW_32 = ("4", "8")
+CPUS = {"0": "msp430", "1": "msp430x", "2": "msp430xv2"}
+MULTIPLIERS = {
+    "0": "none",
+    "1": "16bit",
+    "2": "16bit",
+    "4": "32bit",
+    "8": "32bit",
+}
 
 PREFIX = """//===--- MSP430Target.def - MSP430 Feature/Processor Database----*- C++ -*-===//
 //
@@ -39,22 +45,17 @@ PREFIX = """//===--- MSP430Target.def - MSP430 Feature/Processor Database----*- 
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MSP430_MCU_FEAT
-#define MSP430_MCU_FEAT(NAME, HWMULT) MSP430_MCU(NAME)
-#endif
-
 #ifndef MSP430_MCU
-#define MSP430_MCU(NAME)
+#define MSP430_MCU(NAME, CPU, HWMULT)
 #endif
 
 """
 
 SUFFIX = """
 // Generic MCUs
-MSP430_MCU("msp430i2xxgeneric")
+MSP430_MCU("msp430i2xxgeneric", "msp430", "none")
 
 #undef MSP430_MCU
-#undef MSP430_MCU_FEAT
 """
 
 
@@ -69,9 +70,7 @@ def csv2def(csv_path, def_path):
     "type def_path: str
     """
 
-    mcus_multiplier_sw = []
-    mcus_multiplier_hw_16 = []
-    mcus_multiplier_hw_32 = []
+    mcus = []
     version = "unknown"
 
     with open(csv_path) as csv_file:
@@ -82,6 +81,7 @@ def csv2def(csv_path, def_path):
                 continue
 
             if row[DEVICE_COLUMN] == "# Device Name":
+                assert row[CPU_COLUMN] == "CPU_TYPE", "File format changed"
                 assert row[MULTIPLIER_COLUMN] == "MPY_TYPE", "File format changed"
                 break
 
@@ -91,30 +91,21 @@ def csv2def(csv_path, def_path):
         for row in csv_reader:
             if row[DEVICE_COLUMN].endswith("generic"):
                 continue
-            if row[MULTIPLIER_COLUMN] == MULTIPLIER_SW:
-                mcus_multiplier_sw.append(row[DEVICE_COLUMN])
-            elif row[MULTIPLIER_COLUMN] in MULTIPLIER_HW_16:
-                mcus_multiplier_hw_16.append(row[DEVICE_COLUMN])
-            elif row[MULTIPLIER_COLUMN] in MULTIPLIER_HW_32:
-                mcus_multiplier_hw_32.append(row[DEVICE_COLUMN])
-            else:
-                assert 0, "Unknown multiplier type"
+            assert row[CPU_COLUMN] in CPUS, "Unknown CPU type"
+            assert row[MULTIPLIER_COLUMN] in MULTIPLIERS, "Unknown multiplier type"
+            mcus.append(
+                (
+                    row[DEVICE_COLUMN],
+                    CPUS[row[CPU_COLUMN]],
+                    MULTIPLIERS[row[MULTIPLIER_COLUMN]],
+                )
+            )
 
     with open(def_path, "w") as def_file:
         def_file.write(PREFIX.format(version))
 
-        for mcu in mcus_multiplier_sw:
-            def_file.write(f'MSP430_MCU("{mcu}")\n')
-
-        def_file.write("\n// With 16-bit hardware multiplier\n")
-
-        for mcu in mcus_multiplier_hw_16:
-            def_file.write(f'MSP430_MCU_FEAT("{mcu}", "16bit")\n')
-
-        def_file.write("\n// With 32-bit hardware multiplier\n")
-
-        for mcu in mcus_multiplier_hw_32:
-            def_file.write(f'MSP430_MCU_FEAT("{mcu}", "32bit")\n')
+        for name, cpu, hwmult in mcus:
+            def_file.write(f'MSP430_MCU("{name}", "{cpu}", "{hwmult}")\n')
 
         def_file.write(SUFFIX)
 
