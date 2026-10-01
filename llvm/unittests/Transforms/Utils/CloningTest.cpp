@@ -1442,7 +1442,8 @@ TEST_F(CloneModule, GlobalWithBlockAddressesInitializer) {
 
 TEST_F(CloneModule, ODRUniqueTypeMethodVerifier) {
   // Test that the following IR, reduced from a self-host clang-22 compile,
-  // doesn't trip the verifier after cloning.
+  // doesn't trip the verifier after cloning. See the IR body for an additional
+  // explanatory comment.
   //
   // The focus of the test is "operator!=" which is a DISubprogram that is:
   //   * a declaration (therefore not distinct),
@@ -1496,6 +1497,30 @@ TEST_F(CloneModule, ODRUniqueTypeMethodVerifier) {
     !1 = !DIFile(filename: "reduced.cpp", directory: "/")
     !2 = !{}
     !3 = !{i32 2, !"Debug Info Version", i32 3}
+;;
+;; operator!= (!4) has a `scope` (!5) that is an ODR type, meaning ODR-uniquing
+;; takes place for the DISubprogram. Its `type` (!6) includes a distinct
+;; DICompositeType (!8).
+;;
+;; The old debug ODR-uniquing infrastructure was implemented such that
+;; DISubprograms that meet certain conditions (such as !4) are uniqued is a
+;; subset of fields are equal (`scope`, `linkageName`, `templateParams`) rather
+;; than all fields being equal which is how uniquing usually works.
+;;
+;; CloneModule clones and remaps the operands. With the old scheme described
+;; above, the two cloned DISubprogram are collapsed down to one because
+;; the scope, linkageName and templateParams are equal between the two
+;; instances (importantly the scope is not distinct).
+;;
+;; The distinct DICompositeType (!8) thus becomes reachable from the new
+;; module, which is an error. A symptom of this is that the original module's
+;; DICompileUnit is reachable from there too, and the verifier spots this
+;; because it isn't in the module's llvm.dbg.cu list.
+;;
+;; Obviously a cloned module shouldn't produce invalid IR and to achieve this
+;; debug ODR uniquing is now only enabled at strategic times rather than being
+;; always-on.
+;;
     !4 = !DISubprogram(name: "operator!=", linkageName: "_ZN6BaseItI2ItIZN2ar3lolEvEUlvE_EEneES3_", scope: !5, file: !1, line: 4, type: !6, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
     !5 = !DICompositeType(tag: DW_TAG_class_type, name: "BaseIt<It<(lambda)> >", file: !1, line: 1, size: 8, flags: DIFlagFwdDecl | DIFlagNonTrivial, identifier: "_ZTS6BaseItI2ItIZN2ar3lolEvEUlvE_EE")
     !6 = distinct !DISubroutineType(types: !7)
