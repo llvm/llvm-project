@@ -1,4 +1,4 @@
-// RUN: fir-opt %s --pass-pipeline="builtin.module(acc-initialize-fir-analyses,acc-implicit-routine)" -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: fir-opt %s --pass-pipeline="builtin.module(acc-initialize-fir-analyses,acc-implicit-routine{the-device-types=3,4})" -split-input-file -verify-diagnostics | FileCheck %s
 
 // -----
 
@@ -150,9 +150,9 @@ module {
 
 // -----
 
-// Calls in a host-only branch of acc.on_device do not get an implicit routine.
-// acc_device_host = 2: the then branch is host-only.
-// acc_device_not_host = 3: the else branch is host-only.
+// Calls that do not execute for the-device-types=3,4 do not get an implicit
+// routine. 3 is acc_device_not_host and 4 is acc_device_nvidia, so the then
+// of acc_on_device(2) and the else of acc_on_device(3) stay off the target.
 module {
   func.func @_QPhost_then() {
     return

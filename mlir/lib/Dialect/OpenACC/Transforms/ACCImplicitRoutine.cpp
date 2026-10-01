@@ -32,6 +32,10 @@
 //    implicit routine operations for function calls within these routines,
 //    while avoiding infinite recursion through proper tracking.
 //
+// Calls in a branch that does not execute for `the-device-types` are skipped.
+// That list holds the runtime `acc_device_t` values for which `acc.on_device`
+// is true on the target.
+//
 // Requirements:
 // -------------
 // To use this pass in a pipeline, the following requirements must be met:
@@ -140,7 +144,7 @@ private:
                                           acc::OpenACCSupport &accSupport) {
     LogicalResult result = success();
     op->walk([&](CallOpInterface callOp) {
-      if (acc::isInHostBranch(callOp.getOperation()))
+      if (acc::isInHostBranch(callOp.getOperation(), *theDeviceTypes))
         return;
       if (!callOp.getCallableForCallee())
         return;
@@ -199,7 +203,7 @@ private:
       auto func = symTab.lookup<FunctionOpInterface>(
           currentRoutine.getFuncName().getLeafReference());
       func.walk([&](CallOpInterface callOp) {
-        if (acc::isInHostBranch(callOp.getOperation()))
+        if (acc::isInHostBranch(callOp.getOperation(), *theDeviceTypes))
           return;
         if (!callOp.getCallableForCallee())
           return;

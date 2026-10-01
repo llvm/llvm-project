@@ -458,11 +458,6 @@ mlir::acc::getDominatingDataClauses(mlir::Operation *computeConstructOp,
   return dominatingDataClauses.takeVector();
 }
 
-// OpenACC `acc_device_t` values passed to `acc.on_device`. These differ from
-// `acc::DeviceType`.
-static constexpr int64_t kAccDeviceHost = 2;
-static constexpr int64_t kAccDeviceNotHost = 3;
-
 static mlir::Value getIfCondition(mlir::Operation *op) {
   if (auto ifOp = mlir::dyn_cast<mlir::scf::IfOp>(op))
     return ifOp.getCondition();
@@ -476,7 +471,8 @@ static mlir::Value getIfCondition(mlir::Operation *op) {
   return op->getOperand(0);
 }
 
-bool mlir::acc::isInHostBranch(mlir::Operation *op) {
+bool mlir::acc::isInHostBranch(mlir::Operation *op,
+                               llvm::ArrayRef<int64_t> deviceTypes) {
   for (mlir::Operation *parent = op->getParentOp();
        parent &&
        !mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::ComputeRegionOp,
@@ -500,13 +496,17 @@ bool mlir::acc::isInHostBranch(mlir::Operation *op) {
       if (!onDeviceOp)
         continue;
 
-      int64_t deviceTypeValue =
-          *mlir::getConstantIntValue(onDeviceOp.getDeviceType());
+      std::optional<int64_t> deviceTypeValue =
+          mlir::getConstantIntValue(onDeviceOp.getDeviceType());
+      if (!deviceTypeValue)
+        continue;
 
+      bool onTarget = llvm::is_contained(deviceTypes, *deviceTypeValue);
       bool inThen = parent->getRegion(0).isAncestor(op->getParentRegion());
       bool inElse = parent->getRegion(1).isAncestor(op->getParentRegion());
-      if ((deviceTypeValue == kAccDeviceHost && inThen) ||
-          (deviceTypeValue == kAccDeviceNotHost && inElse))
+      // Off the target: the then of a device type outside `deviceTypes`, or
+      // the else of a device type in `deviceTypes`.
+      if ((!onTarget && inThen) || (onTarget && inElse))
         return true;
     }
   }

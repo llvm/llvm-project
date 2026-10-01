@@ -140,12 +140,15 @@ getDominatingDataClauses(mlir::Operation *computeConstructOp,
                          mlir::DominanceInfo &domInfo,
                          mlir::PostDominanceInfo &postDomInfo);
 
-/// Returns true if `op` is nested in a branch that executes only on the host.
+/// Returns true if `op` is nested in a branch that does not execute when
+/// `acc.on_device` is true only for `deviceTypes`.
 ///
-/// The branch is the `then` of a condition equivalent to
-/// `acc.on_device(acc_device_host)`, or the `else` of a condition equivalent
-/// to `acc.on_device(acc_device_not_host)`.
-bool isInHostBranch(mlir::Operation *op);
+/// `deviceTypes` holds the runtime `acc_device_t` values for which
+/// `acc.on_device` is true on the target. The branch is the `then` of
+/// `acc.on_device` whose operand is outside that list, or the `else` of
+/// `acc.on_device` whose operand is in the list. A non-constant operand is
+/// ignored. An empty list means no `acc_device_t` value is true on the target.
+bool isInHostBranch(mlir::Operation *op, llvm::ArrayRef<int64_t> deviceTypes);
 
 /// Emit an OpenACC remark with lazy message generation.
 ///

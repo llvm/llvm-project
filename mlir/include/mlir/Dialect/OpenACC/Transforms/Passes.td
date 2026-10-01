@@ -27,6 +27,12 @@ def AccDeviceTypeOption : Option<"deviceType", "device-type",
        clEnumValN(mlir::acc::DeviceType::Radeon, "radeon", "radeon"))
     }]>;
 
+// Runtime `acc_device_t` values for which `acc.on_device` is true on the
+// target device. These values are the integers carried by `acc.on_device`.
+def AccTheDeviceTypesOption : ListOption<"theDeviceTypes", "the-device-types",
+    "int64_t",
+    "Runtime acc_device_t values for which acc.on_device is true on the target">;
+
 //===----------------------------------------------------------------------===//
 // Pass definitions
 //===----------------------------------------------------------------------===//
@@ -143,8 +149,15 @@ def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
     3. Recursively walking through all existing `acc routine` and creating
        implicit routine operations for function calls within these routines,
        while avoiding infinite recursion through proper tracking.
+
+    Calls in a branch that does not execute on the target device are skipped.
+    `the-device-types` lists the runtime `acc_device_t` values for which
+    `acc.on_device` is true on that device. A call in the `then` of
+    `acc.on_device` whose operand is outside the list, or in the `else` of
+    `acc.on_device` whose operand is in the list, does not get an implicit
+    routine. An empty list means no `acc_device_t` value is true on the target.
   }];
-  let options = [ AccDeviceTypeOption ];
+  let options = [ AccDeviceTypeOption, AccTheDeviceTypesOption ];
 }
 
 def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mlir::ModuleOp"> {
@@ -317,10 +330,7 @@ def ACCSpecializeForDevice : Pass<"acc-specialize-for-device", "mlir::func::Func
     - Runtime ops (erased): acc.init, acc.shutdown, acc.set, acc.wait
                   (folded if known): acc.on_device
   }];
-  let options = [
-    ListOption<"theDeviceTypes", "the-device-types", "int64_t",
-               "List of integers which represent the device we are specializing for">
-  ];
+  let options = [ AccTheDeviceTypesOption ];
 }
 
 def ACCSpecializeForHost : Pass<"acc-specialize-for-host", "mlir::func::FuncOp"> {
