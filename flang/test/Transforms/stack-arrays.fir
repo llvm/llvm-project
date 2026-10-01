@@ -42,7 +42,7 @@ func.func @dfa1(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"}) {
 }
 // CHECK-LABEL: func.func @dfa1(%arg0: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"})
 // CHECK-NEXT:   %[[C42:.*]] = arith.constant 42 : index
-// CHECK-NEXT:   %[[MEM:.*]] = fir.allocmem !fir.array<?xi32>, %[[C42]] {uniq_name = "_QFdfa1Earr.alloc"}
+// CHECK-NEXT:   %[[MEM:.*]] = fir.allocmem !fir.array<?xi32>, %[[C42]] <{uniq_name = "_QFdfa1Earr.alloc"}>
 // CHECK-NEXT:   %[[LOGICAL:.*]] = fir.load %arg0 : !fir.ref<!fir.logical<4>>
 // CHECK-NEXT:   %[[BOOL:.*]] = fir.convert %[[LOGICAL]] : (!fir.logical<4>) -> i1
 // CHECK-NEXT:   fir.if %[[BOOL]] {

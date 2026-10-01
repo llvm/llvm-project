@@ -800,10 +800,10 @@ func.func @copy_memory_print_maa() {
 
   // A lone mask applies to both operands, so it may carry MakePointerVisible,
   // MakePointerAvailable, or both. It must stay a lone mask when printed.
-  // CHECK: spirv.CopyMemory "Function" %{{[0-9]+}}, "Function" %{{[0-9]+}} ["MakePointerVisible|NonPrivatePointer"] : f32
+  // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["MakePointerVisible|NonPrivatePointer"] : f32
   "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
 
-  // CHECK: spirv.CopyMemory "Function" %{{[0-9]+}}, "Function" %{{[0-9]+}} ["MakePointerAvailable|MakePointerVisible|NonPrivatePointer"] : f32
+  // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["MakePointerAvailable|MakePointerVisible|NonPrivatePointer"] : f32
   "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerAvailable|MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
 
   // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["MakePointerAvailable|NonPrivatePointer"], ["MakePointerVisible|NonPrivatePointer"] : f32

@@ -5355,6 +5355,29 @@ TEST_F(TrackingMDRefTest, UpdatesOnDeletion) {
   EXPECT_TRUE(!MD);
 }
 
+// Once the use list is indexed, look each changed reference up again right
+// away: a later swap in dropRef would repair a stale index entry.
+TEST_F(TrackingMDRefTest, LargeUseList) {
+  auto Temp = MDTuple::getTemporary(Context, {});
+  TrackingMDRef Refs[41];
+  for (unsigned I = 0; I != 40; ++I)
+    Refs[I].reset(Temp.get());
+  Refs[0].reset();
+  Refs[0].reset(Temp.get());
+  Refs[0].reset();
+  Refs[40] = std::move(Refs[1]);
+  Refs[1].reset(Temp.get());
+  Refs[40].reset();
+  Refs[39].reset();
+  EXPECT_EQ(38u, Temp->getNumTemporaryUses());
+
+  auto *N = MDTuple::getDistinct(Context, {});
+  Temp->replaceAllUsesWith(N);
+  EXPECT_EQ(0u, Temp->getNumTemporaryUses());
+  for (unsigned I = 1; I != 39; ++I)
+    EXPECT_EQ(N, Refs[I].get()) << I;
+}
+
 TEST(NamedMDNodeTest, Search) {
   LLVMContext Context;
   ConstantAsMetadata *C =

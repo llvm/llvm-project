@@ -115,7 +115,7 @@ static void printSourceMemoryAccessAttribute(
                                  : memoryOp.getSourceMemoryAccess())) {
     elidedAttrs.push_back(memoryOp.getSourceMemoryAccessAttrName());
 
-    printer << ",  [\"" << stringifyMemoryAccess(*memAccess) << "\"";
+    printer << ", [\"" << stringifyMemoryAccess(*memAccess) << "\"";
 
     if (spirv::bitEnumContainsAll(*memAccess, spirv::MemoryAccess::Aligned)) {
       // Print integer alignment attribute.

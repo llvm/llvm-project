@@ -1532,9 +1532,17 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
           ptr.getAlignment().alignmentOfArrayElement(elementSize).getQuantity();
     }
 
-    auto deleteParams = cir::UsualDeleteParamsAttr::get(
-        builder.getContext(), udp.Size, align,
-        isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
+    cir::UsualDeleteParamsAttr deleteParams;
+    if (udp.Size || align || isTypeAwareAllocation(udp.TypeAwareDelete) ||
+        udp.DestroyingDelete)
+      deleteParams = cir::UsualDeleteParamsAttr::get(
+          builder.getContext(), udp.Size, align,
+          isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
+
+    // Alignment of the element, used for the 'cookie' later.
+    uint64_t elementAlign = cgm.getASTContext()
+                                .getPreferredTypeAlignInChars(deleteTy)
+                                .getQuantity();
 
     mlir::FlatSymbolRefAttr elementDtor;
     bool hasThrowingDtor = false;
@@ -1552,7 +1560,8 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
 
     cir::DeleteArrayOp::create(builder, ptr.getPointer().getLoc(),
                                ptr.getPointer(), deleteFn, deleteParams,
-                               elementDtor, hasThrowingDtor);
+                               elementDtor, hasThrowingDtor,
+                               builder.getI64IntegerAttr(elementAlign));
   } else {
     emitObjectDelete(*this, e, ptr, deleteTy);
   }
@@ -1778,7 +1787,7 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
     // provides the cleanup region for the deferred destructors.
     mlir::Value isNotNull = builder.createPtrIsNotNull(allocation.getPointer());
 
-    ConditionalEvaluation eval(*this);
+    ConditionalEvaluation eval(*this, getLoc(e->getSourceRange()));
     nullCheckOp =
         cir::IfOp::create(builder, getLoc(e->getSourceRange()), isNotNull,
                           /*withElseRegion=*/false,

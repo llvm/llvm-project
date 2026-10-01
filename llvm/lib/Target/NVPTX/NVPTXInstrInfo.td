@@ -150,8 +150,7 @@ class SubtargetPredicate : Predicate<"Subtarget->" # NAME # "()">;
 
 def hasAtomAddF64 : SubtargetPredicate;
 def hasAtomScope : SubtargetPredicate;
-def hasAtomBitwise64 : SubtargetPredicate;
-def hasAtomMinMax64 : SubtargetPredicate;
+def hasAtomMinMaxAndOrXor : SubtargetPredicate;
 def hasAtomSwap128 : SubtargetPredicate;
 def hasClusters : SubtargetPredicate;
 def hasPTXASUnreachableBug : SubtargetPredicate;
@@ -891,7 +890,7 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
       (ins B32:$src1, B32:$src2, CvtMode:$mode),
       !strconcat("{{ \n\t",
                  ".reg .b8 \t%e2m1x2_out; \n\t",
-                 "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.f32 \t%e2m1x2_out, $src1, $src2; \n\t",
+                 "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}.e2m1x2.f32 \t%e2m1x2_out, $src1, $src2; \n\t",
                  "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t",
                  "}}"), []>;
 
@@ -923,7 +922,7 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
       (ins B32:$src, CvtMode:$mode),
       "{{ \n\t" #  
       ".reg .b8 \t%e2m1x2_out; \n\t" #
-      "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.f16x2 \t%e2m1x2_out, $src; \n\t" #
+      "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}.e2m1x2.f16x2 \t%e2m1x2_out, $src; \n\t" #
       "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
       "}}", []>,
       Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
@@ -932,7 +931,7 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
       (ins B32:$src, CvtMode:$mode),
       "{{ \n\t" #  
       ".reg .b8 \t%e2m1x2_out; \n\t" #
-      "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.bf16x2 \t%e2m1x2_out, $src; \n\t" #
+      "cvt${mode:base}.satfinite${mode:relu}${mode:pzo}.e2m1x2.bf16x2 \t%e2m1x2_out, $src; \n\t" #
       "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
       "}}", []>,
       Requires<[hasFP16X2ToNarrowFPConversionSupport]>;
@@ -1019,7 +1018,7 @@ def : Pat<(v2f16 (build_vector (f16 (fpround_oneuse f32:$lo)),
 
 // selp instructions that don't have any pattern matches; we explicitly use
 // them within this file.
-let hasSideEffects = false in {
+let hasSideEffects = false, isSelect = 1 in {
   multiclass SELP_PATTERN<string TypeStr, RegTyInfo t> {
     defvar asm_str = "selp." # TypeStr;
     def rr :
@@ -2061,9 +2060,9 @@ foreach is_convergent = [0, 1] in {
   let isCall = 1, isConvergent = is_convergent in {
     def CALL # convergent_suffix :
       NVPTXInst<(outs),
-                (ins ADDR_base:$addr, CallOperand:$rets, CallOperand:$params, 
+                (ins ADDR_base:$addr, CallOperand:$rets, CallOperand:$params,
                      i32imm:$proto),
-                "call${rets:RetList} $addr, (${params:ParamList}), prototype_$proto;">;
+                "call${rets:RetList} $addr, (${params:ParamList}), $proto;">;
 
     def CALL_UNI # convergent_suffix :
       NVPTXInst<(outs),
@@ -2072,10 +2071,10 @@ foreach is_convergent = [0, 1] in {
   }
 
   defvar call_inst = !cast<NVPTXInst>("CALL" # convergent_suffix);
-  def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i32:$addr, imm:$proto),
-            (call_inst $addr, imm:$rets, imm:$params, imm:$proto)>;
-  def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i64:$addr, imm:$proto),
-            (call_inst $addr, imm:$rets, imm:$params, imm:$proto)>;
+  def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i32:$addr, mcsym:$proto),
+            (call_inst $addr, imm:$rets, imm:$params, mcsym:$proto)>;
+  def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i64:$addr, mcsym:$proto),
+            (call_inst $addr, imm:$rets, imm:$params, mcsym:$proto)>;
 
   defvar call_uni_inst = !cast<NVPTXInst>("CALL_UNI" # convergent_suffix);
   def : Pat<(call is_convergent, 0, imm:$rets, imm:$params, globaladdr:$addr, 0),
