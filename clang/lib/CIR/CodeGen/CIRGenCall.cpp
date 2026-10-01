@@ -1412,6 +1412,20 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   if (callOp)
     *callOp = theCall;
 
+  // Add srcloc if we have [[gnu::error/warning]] or ShowInliningChain.
+  if (calleeDecl) {
+    bool needSrcLoc = calleeDecl->hasAttr<ErrorAttr>();
+    if (!needSrcLoc && cgm.getCodeGenOpts().ShowInliningChain)
+      needSrcLoc = calleeDecl->isInlined() ||
+                   calleeDecl->hasAttr<AlwaysInlineAttr>() ||
+                   calleeDecl->getStorageClass() == SC_Static ||
+                   calleeDecl->isInAnonymousNamespace();
+    if (needSrcLoc)
+      theCall->setAttr(
+          cir::CIRDialect::getSrcLocAttrName(),
+          builder.getI64IntegerAttr(clangLoc.getBegin().getRawEncoding()));
+  }
+
   // Sema/emitAttributedStmt (see
   // https://github.com/llvm/llvm-project/issues/214764) should one-day enforce
   // that only one of these is valid at a time. For now, we have the same 'bug'

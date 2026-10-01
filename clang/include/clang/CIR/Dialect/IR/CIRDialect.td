@@ -17,7 +17,7 @@ include "mlir/IR/OpBase.td"
 
 def CIR_Dialect : Dialect {
   let name = "cir";
-  let useStrictPropertiesInAssemblyFormat = 0;
+  let useStrictPropertiesInAssemblyFormat = 1;
 
   // A short one-line summary of our dialect.
   let summary = "A high-level dialect for analyzing and optimizing Clang "
@@ -57,6 +57,9 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getNoRecurseAttrName() { return "norecurse"; }
     static llvm::StringRef getMustProgressAttrName() { return "mustprogress"; }
     static llvm::StringRef getSYCLModuleIdAttrName() { return "sycl-module-id"; }
+    static llvm::StringRef getDontCallErrorAttrName() { return "dontcall-error"; }
+    static llvm::StringRef getDontCallWarnAttrName() { return "dontcall-warn"; }
+    static llvm::StringRef getSrcLocAttrName() { return "cir.srcloc"; }
     static llvm::StringRef getNoUnwindAttrName() { return "nounwind"; }
     static llvm::StringRef getWillReturnAttrName() { return "willreturn"; }
     static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
