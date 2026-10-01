@@ -8140,8 +8140,7 @@ bool SIInstrWorklist::isDeferred(MachineInstr *MI) {
 
 // Create VReg32 for MI dst. This is called when a SALU16 (dst32)
 // is moved to VALU16 (dst16) to preserved the register size of dst operand
-static Register tryCreateLo16ToVReg32(MachineInstr &MI,
-                                      const SIInstrInfo *TII) {
+static Register createLo16ToVReg32(MachineInstr &MI, const SIInstrInfo *TII) {
   MachineOperand DstOp = MI.getOperand(0);
   assert(DstOp.isReg() && DstOp.isDef());
   Register DstReg = DstOp.getReg();
@@ -8815,7 +8814,7 @@ void SIInstrInfo::moveToVALUImpl(
                                  .addImm(0)  // omod
                                  .addImm(0); // opsel0
     if (ST.useRealTrue16Insts())
-      NewDst = tryCreateLo16ToVReg32(*NewInstr, this);
+      NewDst = createLo16ToVReg32(*NewInstr, this);
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
     legalizeOperands(*NewInstr, MDT);
     addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
@@ -8839,7 +8838,7 @@ void SIInstrInfo::moveToVALUImpl(
     if (AMDGPU::hasNamedOperand(NewOpcode, AMDGPU::OpName::op_sel))
       NewInstr.addImm(0); // opsel0
     if (ST.useRealTrue16Insts())
-      NewDst = tryCreateLo16ToVReg32(*NewInstr, this);
+      NewDst = createLo16ToVReg32(*NewInstr, this);
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
     legalizeOperands(*NewInstr, MDT);
     addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
@@ -9010,7 +9009,7 @@ void SIInstrInfo::moveToVALUImpl(
     NewDstReg = MRI.createVirtualRegister(NewDstRC);
     NewInstr->getOperand(0).setReg(NewDstReg);
     if (ST.useRealTrue16Insts())
-      NewDstReg = tryCreateLo16ToVReg32(*NewInstr, this);
+      NewDstReg = createLo16ToVReg32(*NewInstr, this);
     MRI.replaceRegWith(DstReg, NewDstReg);
   }
   fixImplicitOperands(*NewInstr);
