@@ -3208,11 +3208,9 @@ bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
     }
 
     // Adds shadow arguments.
-    const unsigned ShadowArgStart = Args.size();
     addShadowArguments(F, CB, Args, IRB);
 
     // Adds origin arguments.
-    const unsigned OriginArgStart = Args.size();
     if (ShouldTrackOrigins)
       addOriginArguments(F, CB, Args, IRB);
 
