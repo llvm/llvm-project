@@ -39,32 +39,32 @@ constexpr void test() {
   View mv{Iterator(std::to_address(base(array.begin()))), Sentinel(Iterator(std::to_address(base(array.end()))))};
   std::ranges::enumerate_view ev(std::move(mv));
 
-  auto const it   = v.begin();
-  auto const c_it = std::as_const(v).begin();
-  auto const st    = v.end();
+  auto const it   = ev.begin();
+  auto const c_it = std::as_const(ev).begin();
+  auto const st   = ev.end();
 
-  std::same_as<bool> decltype(auto) eqItSResult = (it == s);
+  std::same_as<bool> decltype(auto) eqItSResult = (it == st);
   assert(!eqItSResult);
-  std::same_as<bool> decltype(auto) eqSItResult = (s == it);
+  std::same_as<bool> decltype(auto) eqSItResult = (st == it);
   assert(!eqSItResult);
 
-  std::same_as<bool> decltype(auto) eqConstItSResult = (c_it == s);
+  std::same_as<bool> decltype(auto) eqConstItSResult = (c_it == st);
   assert(!eqConstItSResult);
-  std::same_as<bool> decltype(auto) eqSConstItResult = (s == c_it);
+  std::same_as<bool> decltype(auto) eqSConstItResult = (st == c_it);
   assert(!eqSConstItResult);
 
-  std::same_as<bool> decltype(auto) neqItSResult = (it != s);
+  std::same_as<bool> decltype(auto) neqItSResult = (it != st);
   assert(neqItSResult);
-  std::same_as<bool> decltype(auto) neqSItResult = (s != it);
+  std::same_as<bool> decltype(auto) neqSItResult = (st != it);
   assert(neqSItResult);
 
-  std::same_as<bool> decltype(auto) neqConstItSResult = (c_it != s);
+  std::same_as<bool> decltype(auto) neqConstItSResult = (c_it != st);
   assert(neqConstItSResult);
-  std::same_as<bool> decltype(auto) neqSConstItResult = (s != c_it);
+  std::same_as<bool> decltype(auto) neqSConstItResult = (st != c_it);
   assert(neqSConstItResult);
 }
 
-constexpr bool test() {
+constexpr bool tests() {
   test<cpp17_input_iterator<int*>>();
   test<cpp20_input_iterator<int*>>();
   test<forward_iterator<int*>>();
