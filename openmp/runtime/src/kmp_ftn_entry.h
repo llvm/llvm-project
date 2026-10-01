@@ -570,13 +570,9 @@ void *FTN_STDCALL FTN_GET_DYN_GPRIVATE_PTR(size_t *offset,
 #if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return NULL;
 #else
-  void *(*fptr)(size_t, omp_access_t);
-  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_dyn_gprivate_ptr"))) {
-    size_t off = offset ? *offset : 0;
-    omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
-    return (*fptr)(off, ag);
-  }
-  return NULL;
+  size_t off = offset ? *offset : 0;
+  omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
+  return omp_get_dyn_gprivate_ptr(off, ag);
 #endif
 }
 
