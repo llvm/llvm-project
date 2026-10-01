@@ -235,6 +235,15 @@ private:
   // which are supposed to be new functions. We use them as the targets for
   // call graph matching.
   void findFunctionsWithoutProfile();
+  // Setter function for recording stale profile matching results into
+  // `FuncToProfileNameMap` and `ProfileNameToFuncMap`. The IR function and
+  // Profile function are checked and guaranteed to be 1:1 mapping. A new
+  // profile clone will be created in the SampleReader if multiple IR
+  // functions are found to be mapping to one Profile. Return the updated
+  // profile name that is mapped to the IR function. And update
+  // FuncProfileMatchCache correspondingly.
+  FunctionId recordMatchedStaleProfile(Function *IRFunc,
+                                       FunctionId ProfFuncName);
   // Match orphan IR functions to unused top-level profile entries by demangled
   // basename, without requiring a matched caller in the call graph.
   void matchFunctionsWithoutProfileByBasename();

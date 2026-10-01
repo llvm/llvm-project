@@ -24,13 +24,13 @@
 ; REQUIRES: asserts
 ; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/pseudo-probe-stale-profile-orphan-conflict.prof -o %t.prof
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl 2>&1 | FileCheck %s
+; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/pseudo-probe-stale-profile-orphan-conflict-cross-stage.prof -o %t.cross-stage.prof
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.cross-stage.prof --salvage-stale-profile --salvage-unused-profile --min-func-count-for-cg-matching=0 -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl 2>&1 | FileCheck %s --check-prefix=CROSS-STAGE
 
 ; CHECK: Run stale profile matching for _Z3fool
 ; CHECK: The functions _Z3topl(IR) and _Z3topi(Profile) share the same base name: top.
 ; CHECK: The functions _Z3topll(IR) and _Z3topi(Profile) share the same base name: top.
 ; CHECK: Function:_Z3topl matches profile:_Z3topi
-; CHECK: Function:_Z3barl matches profile:_Z3bari
-; CHECK: Function:_Z3topll matches profile:_Z3topi
 ; CHECK: Function:_Z3topll encounters conflicting profile matchings, remapping to new profile:_Z3topll
 ; CHECK: Callsite with callee:_Z3topl is matched from 2 to 30
 ; CHECK: Callsite with callee:_Z3barl is matched from 3 to 57
@@ -42,21 +42,37 @@
 ; CHECK: Run stale profile matching for _Z3barl
 ; CHECK: Run stale profile matching for _Z3topl
 ; CHECK: The functions _Z3midl(IR) and _Z3midi(Profile) share the same base name: mid.
-; CHECK: Function:_Z3midl matches profile:_Z3midi
 ; CHECK: Function:_Z3midl encounters conflicting profile matchings, remapping to new profile:_Z3midl
 ; CHECK: Callsite with callee:_Z3midl is matched from 1 to 2
 ; CHECK: Run stale profile matching for _Z3midll
 ; CHECK: Callsite with callee:_Z3subi is matched from 1 to 11
 ; CHECK: Run stale profile matching for _Z3subi
 ; CHECK: Run stale profile matching for _Z3midl
-; CHECK: Function processing order:
-; CHECK: _Z3topll
-; CHECK: _Z3midl
-; CHECK: _Z3fool
-; CHECK: _Z3topl
-; CHECK: _Z3midll
-; CHECK: _Z3subi
-; CHECK: _Z3barl
+
+; Test the conflict between the two stages of stale profile matching.
+; CROSS-STAGE: Run stale profile matching for _Z3fool
+; CROSS-STAGE: The checksums for _Z3topl(IR) and _Z3bari(Profile) match.
+; CROSS-STAGE: The checksums for _Z3barl(IR) and _Z3quxi(Profile) match.
+; CROSS-STAGE: The functions _Z3topll(IR) and _Z3topi(Profile) share the same base name: top.
+; CROSS-STAGE: Function:_Z3topl matches profile:_Z3bari
+; CROSS-STAGE: Function:_Z3barl matches profile:_Z3quxi
+; CROSS-STAGE: Function:_Z3topll matches profile:_Z3topi
+; CROSS-STAGE: Callsite with callee:_Z3topl is matched from 3 to 30
+; CROSS-STAGE: Callsite with callee:_Z3barl is matched from 5 to 57
+; CROSS-STAGE: Callsite with callee:_Z3topll is matched from 6 to 72
+; CROSS-STAGE: Run stale profile matching for _Z3topll
+; CROSS-STAGE: The functions _Z3midll(IR) and _Z3midi(Profile) share the same base name: mid.
+; CROSS-STAGE: Function:_Z3midll matches profile:_Z3midi
+; CROSS-STAGE: Callsite with callee:_Z3midll is matched from 2 to 2
+; CROSS-STAGE: Run stale profile matching for _Z3barl
+; CROSS-STAGE: Run stale profile matching for _Z3topl
+; CROSS-STAGE: Run stale profile matching for _Z3midll
+; CROSS-STAGE: Callsite with callee:_Z3subi is matched from 2 to 11
+; CROSS-STAGE: Run stale profile matching for _Z3subi
+; CROSS-STAGE: Function:_Z3midl encounters conflicting profile matchings, remapping to new profile:_Z3midl
+; CROSS-STAGE: Direct basename match: _Z3midl (IR) -> _Z3midl (Profile) [basename: mid]
+; CROSS-STAGE: Direct basename matching found 1 matches
+; CROSS-STAGE: Run stale profile matching for _Z3midl
 
 target triple = "x86_64-redhat-linux-gnu"
 
