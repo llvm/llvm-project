@@ -7905,7 +7905,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   std::pair<StringRef, std::string> VecDiagMsg, IntDiagMsg;
   bool VectorizeLoop = true, InterleaveLoop = true;
   if (VF.Width.isScalar()) {
-    LLVM_DEBUG(dbgs() << "LV: Vectorization is possible but not beneficial.\n");
+    if (LVP.hasVectorPlan())
+      LLVM_DEBUG(dbgs() << "LV: Vectorization is not possible. Failed to "
+                           "create any vector vplans.\n");
+    else
+      LLVM_DEBUG(
+          dbgs() << "LV: Vectorization is possible but not beneficial.\n");
     VecDiagMsg = {
         "VectorizationNotBeneficial",
         "the cost-model indicates that vectorization is not beneficial"};
