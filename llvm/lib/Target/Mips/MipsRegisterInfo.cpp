@@ -12,6 +12,7 @@
 
 #include "MipsRegisterInfo.h"
 #include "MCTargetDesc/MipsABIInfo.h"
+#include "MCTargetDesc/MipsInstPrinter.h"
 #include "Mips.h"
 #include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
@@ -40,6 +41,23 @@ using namespace llvm;
 MipsRegisterInfo::MipsRegisterInfo(const MipsSubtarget &STI)
     : MipsGenRegisterInfo(Mips::RA), ArePtrs64bit(STI.getABI().ArePtrs64bit()) {
   MIPS_MC::initLLVMToCVRegMapping(this);
+  MIRRegNames.resize(getNumRegs());
+  const auto &GPR32 = *getRegClass(Mips::GPR32RegClassID);
+  const auto &GPR64 = *getRegClass(Mips::GPR64RegClassID);
+  for (unsigned I = 1; I < getNumRegs(); ++I) {
+    if (GPR32.contains(I) || GPR64.contains(I)) {
+      MIRRegNames[I] = MipsInstPrinter::getRegisterName(
+          I, STI.getABI().getRegAltNameIndex());
+      if (GPR64.contains(I))
+        MIRRegNames[I] += "_64";
+    }
+  }
+}
+
+StringRef MipsRegisterInfo::getMIRRegName(MCRegister Reg) const {
+  if (!MIRRegNames[Reg.id()].empty())
+    return MIRRegNames[Reg.id()];
+  return getName(Reg);
 }
 
 unsigned MipsRegisterInfo::getPICCallReg() { return Mips::T9; }

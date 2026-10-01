@@ -1,0 +1,141 @@
+# RUN: split-file %s %t
+# RUN: llc -mtriple=mips64 -mcpu=mips64 -target-abi=o32 -verify-machineinstrs \
+# RUN:   -run-pass=none %t/o32.mir -o %t/o32.out.mir
+# RUN: llc -mtriple=mips64 -mcpu=mips64 -target-abi=o32 -verify-machineinstrs \
+# RUN:   -run-pass=none %t/o32.out.mir -o - \
+# RUN:   | FileCheck %s --check-prefixes=COMMON,O32
+# RUN: llc -mtriple=mips64 -mcpu=mips64 -target-abi=o32 -verify-machineinstrs \
+# RUN:   -start-after=prolog-epilog %t/o32.out.mir -o - \
+# RUN:   | FileCheck %s --check-prefix=ASM
+# RUN: llc -mtriple=mips64 -mcpu=mips64 -target-abi=n32 -verify-machineinstrs \
+# RUN:   -run-pass=none %t/nabi.mir -o %t/n32.out.mir
+# RUN: llc -mtriple=mips64 -mcpu=mips64 -target-abi=n32 -verify-machineinstrs \
+# RUN:   -run-pass=none %t/n32.out.mir -o - \
+# RUN:   | FileCheck %s --check-prefixes=COMMON,NABI
+# RUN: llc -mtriple=mips64 -mcpu=mips64 -target-abi=n32 -verify-machineinstrs \
+# RUN:   -start-after=prolog-epilog %t/n32.out.mir -o - \
+# RUN:   | FileCheck %s --check-prefix=ASM
+# RUN: llc -mtriple=mips64 -mcpu=mips64 -target-abi=n64 -verify-machineinstrs \
+# RUN:   -run-pass=none %t/nabi.mir -o %t/n64.out.mir
+# RUN: llc -mtriple=mips64 -mcpu=mips64 -target-abi=n64 -verify-machineinstrs \
+# RUN:   -run-pass=none %t/n64.out.mir -o - \
+# RUN:   | FileCheck %s --check-prefixes=COMMON,NABI
+# RUN: llc -mtriple=mips64 -mcpu=mips64 -target-abi=n64 -verify-machineinstrs \
+# RUN:   -start-after=prolog-epilog %t/n64.out.mir -o - \
+# RUN:   | FileCheck %s --check-prefix=ASM
+
+# The same hardware registers have different MIR names under O32 and N32/N64.
+# Round-trip both GPR widths through the MIR printer and parser, then check
+# numeric assembly operands to ensure that parsing preserves register identity.
+
+# COMMON-LABEL: name: registers
+# COMMON: bb.0:
+# O32-NEXT: $t0 = ADDiu $zero, 8
+# O32-NEXT: $t1 = ADDiu $zero, 9
+# O32-NEXT: $t2 = ADDiu $zero, 10
+# O32-NEXT: $t3 = ADDiu $zero, 11
+# O32-NEXT: $t4 = ADDiu $zero, 12
+# O32-NEXT: $t5 = ADDiu $zero, 13
+# O32-NEXT: $t6 = ADDiu $zero, 14
+# O32-NEXT: $t7 = ADDiu $zero, 15
+# NABI-NEXT: $a4 = ADDiu $zero, 8
+# NABI-NEXT: $a5 = ADDiu $zero, 9
+# NABI-NEXT: $a6 = ADDiu $zero, 10
+# NABI-NEXT: $a7 = ADDiu $zero, 11
+# NABI-NEXT: $t0 = ADDiu $zero, 12
+# NABI-NEXT: $t1 = ADDiu $zero, 13
+# NABI-NEXT: $t2 = ADDiu $zero, 14
+# NABI-NEXT: $t3 = ADDiu $zero, 15
+# O32-NEXT: $t0_64 = DADDiu $zero_64, 8
+# O32-NEXT: $t1_64 = DADDiu $zero_64, 9
+# O32-NEXT: $t2_64 = DADDiu $zero_64, 10
+# O32-NEXT: $t3_64 = DADDiu $zero_64, 11
+# O32-NEXT: $t4_64 = DADDiu $zero_64, 12
+# O32-NEXT: $t5_64 = DADDiu $zero_64, 13
+# O32-NEXT: $t6_64 = DADDiu $zero_64, 14
+# O32-NEXT: $t7_64 = DADDiu $zero_64, 15
+# NABI-NEXT: $a4_64 = DADDiu $zero_64, 8
+# NABI-NEXT: $a5_64 = DADDiu $zero_64, 9
+# NABI-NEXT: $a6_64 = DADDiu $zero_64, 10
+# NABI-NEXT: $a7_64 = DADDiu $zero_64, 11
+# NABI-NEXT: $t0_64 = DADDiu $zero_64, 12
+# NABI-NEXT: $t1_64 = DADDiu $zero_64, 13
+# NABI-NEXT: $t2_64 = DADDiu $zero_64, 14
+# NABI-NEXT: $t3_64 = DADDiu $zero_64, 15
+# COMMON-NEXT: $f0 = MTC1 $zero
+# COMMON-NEXT: $d0_64 = DMTC1 $zero_64
+# COMMON-NEXT: RetRA
+
+# ASM-LABEL: registers:
+# ASM: # %bb.0:
+# ASM-NEXT: addiu $8, $zero, 8
+# ASM-NEXT: addiu $9, $zero, 9
+# ASM-NEXT: addiu $10, $zero, 10
+# ASM-NEXT: addiu $11, $zero, 11
+# ASM-NEXT: addiu $12, $zero, 12
+# ASM-NEXT: addiu $13, $zero, 13
+# ASM-NEXT: addiu $14, $zero, 14
+# ASM-NEXT: addiu $15, $zero, 15
+# ASM-NEXT: daddiu $8, $zero, 8
+# ASM-NEXT: daddiu $9, $zero, 9
+# ASM-NEXT: daddiu $10, $zero, 10
+# ASM-NEXT: daddiu $11, $zero, 11
+# ASM-NEXT: daddiu $12, $zero, 12
+# ASM-NEXT: daddiu $13, $zero, 13
+# ASM-NEXT: daddiu $14, $zero, 14
+# ASM-NEXT: daddiu $15, $zero, 15
+# ASM-NEXT: mtc1 $zero, $f0
+# ASM-NEXT: jr $ra
+# ASM-NEXT: dmtc1 $zero, $f0
+
+#--- o32.mir
+---
+name: registers
+body: |
+  bb.0:
+    $t0 = ADDiu $zero, 8
+    $t1 = ADDiu $zero, 9
+    $t2 = ADDiu $zero, 10
+    $t3 = ADDiu $zero, 11
+    $t4 = ADDiu $zero, 12
+    $t5 = ADDiu $zero, 13
+    $t6 = ADDiu $zero, 14
+    $t7 = ADDiu $zero, 15
+    $t0_64 = DADDiu $zero_64, 8
+    $t1_64 = DADDiu $zero_64, 9
+    $t2_64 = DADDiu $zero_64, 10
+    $t3_64 = DADDiu $zero_64, 11
+    $t4_64 = DADDiu $zero_64, 12
+    $t5_64 = DADDiu $zero_64, 13
+    $t6_64 = DADDiu $zero_64, 14
+    $t7_64 = DADDiu $zero_64, 15
+    $f0 = MTC1 $zero
+    $d0_64 = DMTC1 $zero_64
+    RetRA
+...
+
+#--- nabi.mir
+---
+name: registers
+body: |
+  bb.0:
+    $a4 = ADDiu $zero, 8
+    $a5 = ADDiu $zero, 9
+    $a6 = ADDiu $zero, 10
+    $a7 = ADDiu $zero, 11
+    $t0 = ADDiu $zero, 12
+    $t1 = ADDiu $zero, 13
+    $t2 = ADDiu $zero, 14
+    $t3 = ADDiu $zero, 15
+    $a4_64 = DADDiu $zero_64, 8
+    $a5_64 = DADDiu $zero_64, 9
+    $a6_64 = DADDiu $zero_64, 10
+    $a7_64 = DADDiu $zero_64, 11
+    $t0_64 = DADDiu $zero_64, 12
+    $t1_64 = DADDiu $zero_64, 13
+    $t2_64 = DADDiu $zero_64, 14
+    $t3_64 = DADDiu $zero_64, 15
+    $f0 = MTC1 $zero
+    $d0_64 = DMTC1 $zero_64
+    RetRA
+...

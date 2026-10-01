@@ -16,6 +16,8 @@
 #include "Mips.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include <cstdint>
+#include <string>
+#include <vector>
 
 #define GET_REGINFO_HEADER
 #include "MipsGenRegisterInfo.inc"
@@ -28,9 +30,12 @@ using TargetRegisterClass = MCRegisterClass;
 class MipsRegisterInfo : public MipsGenRegisterInfo {
 private:
   const bool ArePtrs64bit;
+  std::vector<std::string> MIRRegNames;
 
 public:
   explicit MipsRegisterInfo(const MipsSubtarget &STI);
+
+  StringRef getMIRRegName(MCRegister Reg) const override;
 
   /// Get PIC indirect call register
   static unsigned getPICCallReg();
