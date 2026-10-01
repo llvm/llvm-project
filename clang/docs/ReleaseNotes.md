@@ -944,10 +944,6 @@ features cannot lower the translation-unit ABI level;
 
 ### clang-format
 
-- Add `IndentImplicitAccessModifiers` to allow members before the first
-  explicit access modifier to use one indentation level when
-  `IndentAccessModifiers` is enabled. The default preserves existing formatting.
-
 - Add `SpacesInBlockComments` option to control spacing after `/*` and
   before `*/` in ordinary block comments.
 - Add `AfterRequiresExpression` sub-option of `BraceWrapping` to wrap the
@@ -957,6 +953,9 @@ features cannot lower the translation-unit ABI level;
 - `QualifierOrder` now supports `typedef`, `consteval`, `constinit`,
   `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,
   and `explicit` declaration specifiers.
+- Extend `IndentAccessModifiers` with `AfterFirstAccessModifier` to indent
+  members before the first explicit access modifier by one level. Existing
+  configuration values `true` and `false` remain supported.
 
 ### libclang
 

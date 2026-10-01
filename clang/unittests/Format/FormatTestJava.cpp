@@ -28,11 +28,10 @@ protected:
   }
 };
 
-TEST_F(FormatTestJava, IndentImplicitAccessModifiersDoesNotAffectJava) {
+TEST_F(FormatTestJava, IndentAccessModifiersAfterFirstDoesNotAffectJava) {
   FormatStyle Style = getDefaultStyle();
   Style.IndentWidth = 4;
-  Style.IndentAccessModifiers = true;
-  Style.IndentImplicitAccessModifiers = false;
+  Style.IndentAccessModifiers = FormatStyle::IAMS_AfterFirstAccessModifier;
   verifyFormat("class C {\n"
                "        int before;\n"
                "        public int after;\n"

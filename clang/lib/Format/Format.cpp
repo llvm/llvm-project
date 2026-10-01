@@ -478,6 +478,19 @@ struct ScalarEnumerationTraits<FormatStyle::EnumTrailingCommaStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::IndentAccessModifierStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::IndentAccessModifierStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::IAMS_Never);
+    IO.enumCase(Value, "Always", FormatStyle::IAMS_Always);
+    IO.enumCase(Value, "AfterFirstAccessModifier",
+                FormatStyle::IAMS_AfterFirstAccessModifier);
+    IO.enumCase(Value, "false", FormatStyle::IAMS_Never);
+    IO.enumCase(Value, "true", FormatStyle::IAMS_Always);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
   static void enumeration(IO &IO, FormatStyle::IndentExternBlockStyle &Value) {
     IO.enumCase(Value, "AfterExternBlock", FormatStyle::IEBS_AfterExternBlock);
@@ -1399,8 +1412,6 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IncludeIsMainSourceRegex",
                    Style.IncludeStyle.IncludeIsMainSourceRegex);
     IO.mapOptional("IndentAccessModifiers", Style.IndentAccessModifiers);
-    IO.mapOptional("IndentImplicitAccessModifiers",
-                   Style.IndentImplicitAccessModifiers);
     IO.mapOptional("IndentCaseBlocks", Style.IndentCaseBlocks);
     IO.mapOptional("IndentCaseLabels", Style.IndentCaseLabels);
     IO.mapOptional("IndentExportBlock", Style.IndentExportBlock);
@@ -1978,8 +1989,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
       {".*", 1, 0, false}};
   LLVMStyle.IncludeStyle.IncludeIsMainRegex = "(Test)?$";
   LLVMStyle.IncludeStyle.MainIncludeChar = tooling::IncludeStyle::MICD_Quote;
-  LLVMStyle.IndentAccessModifiers = false;
-  LLVMStyle.IndentImplicitAccessModifiers = true;
+  LLVMStyle.IndentAccessModifiers = FormatStyle::IAMS_Never;
   LLVMStyle.IndentCaseBlocks = false;
   LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentExportBlock = true;

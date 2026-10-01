@@ -24839,7 +24839,7 @@ TEST_F(FormatTest, StatementAttributeLikeMacros) {
 
 TEST_F(FormatTest, IndentAccessModifiers) {
   FormatStyle Style = getLLVMStyle();
-  Style.IndentAccessModifiers = true;
+  Style.IndentAccessModifiers = FormatStyle::IAMS_Always;
   // Members are *two* levels below the record;
   // Style.IndentWidth == 2, thus yielding a 4 spaces wide indentation.
   verifyFormat("class C {\n"
@@ -24920,10 +24920,48 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                Style);
 }
 
-TEST_F(FormatTest, IndentImplicitAccessModifiers) {
+TEST_F(FormatTest, IndentAccessModifiersAfterFirst) {
   FormatStyle Style = getLLVMStyle();
-  Style.IndentAccessModifiers = true;
-  Style.IndentImplicitAccessModifiers = false;
+  verifyFormat("struct S {\n"
+               "  int before;\n"
+               "\n"
+               "public:\n"
+               "  int after;\n"
+               "};",
+               Style);
+
+  Style.IndentAccessModifiers = FormatStyle::IAMS_Always;
+  verifyFormat("struct S {\n"
+               "    int before;\n"
+               "\n"
+               "  public:\n"
+               "    int after;\n"
+               "};",
+               Style);
+  Style.IndentAccessModifiers = FormatStyle::IAMS_AfterFirstAccessModifier;
+  verifyFormat("struct S {\n"
+               "  int member;\n"
+               "};",
+               Style);
+  verifyFormat("struct S {\n"
+               "  int before;\n"
+               "\n"
+               "  public:\n"
+               "    int after;\n"
+               "};",
+               Style);
+  verifyFormat("struct S {\n"
+               "  int before;\n"
+               "\n"
+               "  public:\n"
+               "    int after;\n"
+               "\n"
+               "  private:\n"
+               "    int last;\n"
+               "};",
+               Style);
+
+  // Also cover the Allman layout from issue #61631.
   Style.IndentWidth = 4;
   Style.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_Never;
   Style.BreakBeforeBraces = FormatStyle::BS_Allman;

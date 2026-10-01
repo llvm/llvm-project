@@ -380,15 +380,15 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
     auto ParseDefault = [this, OpeningBrace, IfKind, &IfLBrace, &HasDoWhile,
                          &HasLabel, &StatementCount,
                          SeenExplicitAccessModifier] {
-      const bool IsQtAccessLabel =
-          SeenExplicitAccessModifier && !*SeenExplicitAccessModifier &&
-          FormatTok->isOneOf(Keywords.kw_signals, Keywords.kw_qsignals,
-                             Keywords.kw_slots, Keywords.kw_qslots) &&
-          Tokens->peekNextToken(/*SkipComment=*/true)->is(tok::colon);
-      if (SeenExplicitAccessModifier && !*SeenExplicitAccessModifier &&
-          (FormatTok->isAccessSpecifierKeyword() || IsQtAccessLabel)) {
-        ++Line->Level;
-        *SeenExplicitAccessModifier = true;
+      if (SeenExplicitAccessModifier && !*SeenExplicitAccessModifier) {
+        const bool IsQtAccessLabel =
+            FormatTok->isOneOf(Keywords.kw_signals, Keywords.kw_qsignals,
+                               Keywords.kw_slots, Keywords.kw_qslots) &&
+            Tokens->peekNextToken(/*SkipComment=*/true)->is(tok::colon);
+        if (FormatTok->isAccessSpecifierKeyword() || IsQtAccessLabel) {
+          ++Line->Level;
+          *SeenExplicitAccessModifier = true;
+        }
       }
       parseStructuralElement(OpeningBrace, IfKind, &IfLBrace,
                              HasDoWhile ? nullptr : &HasDoWhile,
@@ -894,8 +894,9 @@ FormatToken *UnwrappedLineParser::parseBlock(
   size_t PPEndHash = computePPHash();
 
   // Munch the closing brace.
-  nextToken(/*LevelDifference=*/
-            -static_cast<int>(AddLevels + SeenExplicitAccessModifier));
+  if (SeenExplicitAccessModifier)
+    ++AddLevels;
+  nextToken(/*LevelDifference=*/-static_cast<int>(AddLevels));
 
   // When this is a function block and there is an unnecessary semicolon
   // afterwards then mark it as optional (so the RemoveSemi pass can get rid of
@@ -4315,12 +4316,20 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
       }
 
       const bool IndentAfterExplicitAccessModifier =
-          Style.isCpp() && Style.IndentAccessModifiers &&
-          !Style.IndentImplicitAccessModifiers;
-      unsigned AddLevels =
-          Style.IndentAccessModifiers && !IndentAfterExplicitAccessModifier
-              ? 2u
-              : 1u;
+          Style.isCpp() && Style.IndentAccessModifiers ==
+                               FormatStyle::IAMS_AfterFirstAccessModifier;
+      unsigned AddLevels = 1u;
+      switch (Style.IndentAccessModifiers) {
+      case FormatStyle::IAMS_Never:
+        break;
+      case FormatStyle::IAMS_Always:
+        AddLevels = 2u;
+        break;
+      case FormatStyle::IAMS_AfterFirstAccessModifier:
+        // Other languages keep the indentation of the old true setting.
+        AddLevels = IndentAfterExplicitAccessModifier ? 1u : 2u;
+        break;
+      }
       parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/false,
                  /*KeepBraces=*/true, /*IfKind=*/nullptr,
                  /*UnindentWhitesmithsBraces=*/false,
