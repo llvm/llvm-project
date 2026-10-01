@@ -1796,8 +1796,18 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // Space reserved for stack-based arguments when making a (ABI-guaranteed)
   // tail call.
   unsigned TailCallArgReserveSize = -X86FI->getTCReturnAddrDelta();
-  if (TailCallArgReserveSize && IsWin64Prologue)
-    report_fatal_error("Can't handle guaranteed tail call under win64 yet");
+  if (TailCallArgReserveSize && IsWin64Prologue) {
+    if (MF.hasEHFunclets())
+      report_fatal_error("Can't handle guaranteed tail calls that change the "
+                         "stack argument size in a function with EH funclets "
+                         "under win64 yet");
+    if (NeedsWin64CFI &&
+        (IsWin64UnwindV3 || Fn.getParent()->getWinX64EHUnwindMode() ==
+                                WinX64EHUnwindMode::V2Required))
+      report_fatal_error("Can't handle guaranteed tail calls that change the "
+                         "stack argument size with Windows x64 unwind v2 or v3 "
+                         "yet");
+  }
 
   const bool EmitStackProbeCall =
       STI.getTargetLowering()->hasStackProbeSymbol(MF);
@@ -1879,9 +1889,46 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // applies to tail call optimized functions where the callee argument stack
   // size is bigger than the callers.
   if (TailCallArgReserveSize != 0) {
-    BuildStackAdjustment(MBB, MBBI, DL, -(int)TailCallArgReserveSize,
-                         /*InEpilogue=*/false)
-        .setMIFlag(MachineInstr::FrameSetup);
+    if (!IsWin64Prologue) {
+      BuildStackAdjustment(MBB, MBBI, DL, -(int)TailCallArgReserveSize,
+                           /*InEpilogue=*/false)
+          .setMIFlag(MachineInstr::FrameSetup);
+    } else {
+      // Allocate the reserve like the main allocation: probed if the frame may
+      // span a page, and described to the unwinder as its own allocation.
+      auto EmitSEHReserveAlloc = [&]() {
+        BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_StackAlloc))
+            .addImm(TailCallArgReserveSize)
+            .setMIFlag(MachineInstr::FrameSetup);
+      };
+      EmitSEHBefore(EmitSEHReserveAlloc);
+      if (EmitStackProbeCall && (TailCallArgReserveSize >= StackProbeSize ||
+                                 StackSize >= StackProbeSize)) {
+        bool IsRAXAlive = isEAXLiveIn(MBB);
+        if (IsRAXAlive)
+          BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH64r))
+              .addReg(X86::RAX, RegState::Kill)
+              .setMIFlag(MachineInstr::FrameSetup);
+        BuildMI(MBB, MBBI, DL,
+                TII.get(X86::getMOVriOpcode(
+                    Is64Bit, TailCallArgReserveSize - (IsRAXAlive ? 8 : 0))),
+                X86::RAX)
+            .addImm(TailCallArgReserveSize - (IsRAXAlive ? 8 : 0))
+            .setMIFlag(MachineInstr::FrameSetup);
+        emitStackProbe(MF, MBB, MBBI, DL, true);
+        if (IsRAXAlive) {
+          MachineInstr *MI =
+              addRegOffset(BuildMI(MF, DL, TII.get(X86::MOV64rm), X86::RAX),
+                           StackPtr, false, TailCallArgReserveSize - 8);
+          MI->setFlag(MachineInstr::FrameSetup);
+          MBB.insert(MBBI, MI);
+        }
+      } else {
+        emitSPUpdate(MBB, MBBI, DL, -(int64_t)TailCallArgReserveSize,
+                     /*InEpilogue=*/false);
+      }
+      EmitSEHAfter(EmitSEHReserveAlloc);
+    }
   }
 
   // Mapping for machine moves:
@@ -2971,13 +3018,15 @@ StackOffset X86FrameLowering::getFrameIndexReference(const MachineFunction &MF,
   if (IsWin64Prologue) {
     assert(!MFI.hasCalls() || (StackSize % 16) == 8);
 
-    // Calculate required stack adjustment.
+    // Calculate required stack adjustment. The tail-call reserve is handled
+    // separately by the prologue and is not part of the frame size here.
+    uint64_t TailCallReserve = -X86FI->getTCReturnAddrDelta();
     uint64_t FrameSize = StackSize - SlotSize;
     // If required, include space for extra hidden slot for stashing base
     // pointer.
     if (X86FI->getRestoreBasePointer())
       FrameSize += SlotSize;
-    uint64_t NumBytes = FrameSize - CSSize;
+    uint64_t NumBytes = FrameSize - (CSSize + TailCallReserve);
 
     uint64_t SEHFrameOffset = calculateSetFPREG(NumBytes);
     if (FI && FI == X86FI->getFAIndex())
@@ -2987,7 +3036,7 @@ StackOffset X86FrameLowering::getFrameIndexReference(const MachineFunction &MF,
     // pointer followed by return address and the location required by the
     // restricted Win64 prologue.
     // Add FPDelta to all offsets below that go through the frame pointer.
-    FPDelta = FrameSize - SEHFrameOffset;
+    FPDelta = FrameSize - TailCallReserve - SEHFrameOffset;
     assert((!MFI.hasCalls() || (FPDelta % 16) == 0) &&
            "FPDelta isn't aligned per the Win64 ABI!");
   }
