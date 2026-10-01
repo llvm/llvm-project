@@ -209,3 +209,51 @@ func.func @type_conversion_failure(%arg0: i32) {
 }
 
 } // end module
+
+// -----
+
+// Overflow flags require SPIR-V >= v1.4 or SPV_KHR_no_integer_wrap_decoration.
+// Without either, ops with nsw/nuw flags must fail.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Shader], []>, #spirv.resource_limits<>>
+} {
+
+func.func @addi_nsw_no_ext(%arg0: i64, %arg1: i64) -> i64 {
+  // expected-error@+1 {{failed to legalize operation 'arith.addi'}}
+  %0 = arith.addi %arg0, %arg1 overflow<nsw> : i64
+  return %0 : i64
+}
+
+} // end module
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Shader], []>, #spirv.resource_limits<>>
+} {
+
+func.func @subi_nuw_no_ext(%arg0: i64, %arg1: i64) -> i64 {
+  // expected-error@+1 {{failed to legalize operation 'arith.subi'}}
+  %0 = arith.subi %arg0, %arg1 overflow<nuw> : i64
+  return %0 : i64
+}
+
+} // end module
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Shader], []>, #spirv.resource_limits<>>
+} {
+
+func.func @muli_nsw_nuw_no_ext(%arg0: i64, %arg1: i64) -> i64 {
+  // expected-error@+1 {{failed to legalize operation 'arith.muli'}}
+  %0 = arith.muli %arg0, %arg1 overflow<nsw, nuw> : i64
+  return %0 : i64
+}
+
+} // end module
