@@ -56,8 +56,10 @@ define void @v3_load_i32_udiv_by_constant_store(ptr %src, ptr %dst) {
 ; NON-POW2-NEXT:  entry:
 ; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i32 0
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[GEP_SRC_0]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = udiv <3 x i32> splat (i32 10), [[TMP0]]
-; NON-POW2-NEXT:    store <3 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
+; NON-POW2-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; NON-POW2-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.masked.udiv.v4i32(<4 x i32> <i32 10, i32 10, i32 10, i32 undef>, <4 x i32> [[TMP1]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
+; NON-POW2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; NON-POW2-NEXT:    store <3 x i32> [[TMP3]], ptr [[DST:%.*]], align 4
 ; NON-POW2-NEXT:    ret void
 ;
 ; POW2-ONLY-LABEL: @v3_load_i32_udiv_by_constant_store(
