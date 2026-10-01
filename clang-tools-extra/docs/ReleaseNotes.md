@@ -259,7 +259,7 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {doc}`performance-noexcept-move-constructor
   <clang-tidy/checks/performance/noexcept-move-constructor>` check by fixing
-  false positives for implicitly declared `noexcept(false)`.
+  false negatives for implicitly `noexcept(false)` move operations.
 
 - Improved {doc}`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
