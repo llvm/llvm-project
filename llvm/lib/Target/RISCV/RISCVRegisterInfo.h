@@ -77,8 +77,9 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
-  const TargetRegisterClass *getConstrainedRegClassForOperand(
-      const MachineOperand &MO, const MachineRegisterInfo &MRI) const override;
+  const TargetRegisterClass *
+  getConstrainedRegClassForReg(Register Reg,
+                               const MachineRegisterInfo &MRI) const override;
 
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB, bool Is64Bit) const;
@@ -136,11 +137,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override {
     return true;
-  }
-
-  const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override {
-    return &RISCV::GPRRegClass;
   }
 
   const TargetRegisterClass *

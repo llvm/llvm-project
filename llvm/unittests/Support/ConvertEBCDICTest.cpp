@@ -94,4 +94,37 @@ TEST(ConverterEBCDIC, convertFromEBCDIC) {
   Dst.clear();
 }
 
+TEST(ConverterEBCDIC, convertToEBCDICRejectsTruncatedUTF8) {
+  const StringRef TruncatedUTF8[] = {
+      StringRef("\x41\xc2", 2),
+      StringRef("\x41\xe2", 2),
+      StringRef("\x41\xe2\x82", 3),
+      StringRef("\x41\xf0\x9f\x92", 4),
+  };
+
+  for (StringRef Src : TruncatedUTF8) {
+    SmallString<8> Dst;
+    std::error_code EC = ConverterEBCDIC::convertToEBCDIC(Src, Dst);
+    EXPECT_EQ(EC, std::errc::invalid_argument);
+    EXPECT_EQ(Dst, StringRef("\xc1", 1));
+  }
+}
+
+TEST(ConverterEBCDIC, convertToEBCDICRejectsMalformedUTF8) {
+  const StringRef MalformedUTF8[] = {
+      StringRef("\x41\xc0", 2),         StringRef("\x41\xc1", 2),
+      StringRef("\x41\xf5", 2),         StringRef("\x41\xc2\x41", 3),
+      StringRef("\x41\xe0\x80", 3),     StringRef("\x41\xed\xa0", 3),
+      StringRef("\x41\xf0\x80", 3),     StringRef("\x41\xf4\x90", 3),
+      StringRef("\x41\xe2\x28\xa1", 4),
+  };
+
+  for (StringRef Src : MalformedUTF8) {
+    SmallString<8> Dst;
+    std::error_code EC = ConverterEBCDIC::convertToEBCDIC(Src, Dst);
+    EXPECT_EQ(EC, std::errc::illegal_byte_sequence);
+    EXPECT_EQ(Dst, StringRef("\xc1", 1));
+  }
+}
+
 } // namespace

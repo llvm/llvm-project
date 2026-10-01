@@ -117,7 +117,7 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
 ) lldb::SBProcess::WriteMemory;
 
 %feature("docstring", "
-    Reads a NUL terminated C string from the current process's address space.
+    Reads a null-terminated C string from the current process's address space.
     It returns a python string of the exact length, or truncates the string if
     the maximum character limit is reached. Example: ::
 

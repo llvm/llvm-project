@@ -139,11 +139,8 @@ define protected amdgpu_kernel void @trivial_waterfall_eq_zero(ptr addrspace(1) 
 ; CHECK-NEXT:  .LBB7_1: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB7_2 Depth=1
 ; CHECK-NEXT:    s_and_b32 s2, s2, exec_lo
-; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
 ; CHECK-NEXT:    s_mov_b32 s2, -1
-; CHECK-NEXT:    s_cbranch_scc0 .LBB7_4
+; CHECK-NEXT:    s_cbranch_scc1 .LBB7_4
 ; CHECK-NEXT:  .LBB7_2: ; %while
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s2

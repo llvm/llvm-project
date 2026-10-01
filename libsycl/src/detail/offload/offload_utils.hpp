@@ -16,7 +16,9 @@
 #define _LIBSYCL_OFFLOAD_UTILS
 
 #include <sycl/__impl/backend.hpp>
+#include <sycl/__impl/context.hpp>
 #include <sycl/__impl/detail/config.hpp>
+#include <sycl/__impl/detail/unified_range_view.hpp>
 #include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/info/device_type.hpp>
 #include <sycl/__impl/usm_alloc_type.hpp>
@@ -26,6 +28,8 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
+
+class ContextImpl;
 
 /// Converts liboffload error code to C-string.
 ///
@@ -63,6 +67,25 @@ void checkAndThrow(ol_result_t Result) {
   }
 }
 
+/// Checks liboffload API call result, attaches the context to the exception.
+///
+/// Used after calling the API without a check.
+/// To be called when specific handling is needed and explicitly done by
+/// developer before throwing an exception.
+///
+/// \param Context the context the failed API call was made for.
+/// \param Result the liboffload result of calling API.
+///
+/// \throw sycl::exception if the call was not successful.
+template <sycl::errc errc = sycl::errc::runtime>
+void checkAndThrow(ContextImpl &Context, ol_result_t Result) {
+  if (isFailed(Result)) {
+    throw sycl::exception(createSyclObjFromImpl<sycl::context>(Context),
+                          sycl::make_error_code(errc),
+                          detail::formatCodeString(Result));
+  }
+}
+
 /// Calls the API, doesn't check result.
 /// To be called when specific handling is needed and explicitly done by
 /// developer after.
@@ -86,6 +109,20 @@ template <typename FunctionType, typename... ArgsT>
 void callAndThrow(FunctionType &Function, ArgsT &&...Args) {
   auto Err = callNoCheck(Function, std::forward<ArgsT>(Args)...);
   checkAndThrow(Err);
+}
+
+/// Calls the API and checks the result, attaches the context to the exception.
+///
+/// \param Context the context the API call is made for.
+/// \param Function the liboffload API function to be called.
+/// \param Args the arguments to be passed to the liboffload API function.
+///
+/// \throw sycl::exception if the call was not successful.
+template <typename FunctionType, typename... ArgsT>
+void callAndThrow(ContextImpl &Context, FunctionType &Function,
+                  ArgsT &&...Args) {
+  auto Err = callNoCheck(Function, std::forward<ArgsT>(Args)...);
+  checkAndThrow(Context, Err);
 }
 
 /// Converts liboffload backend to SYCL backend.
@@ -138,6 +175,10 @@ constexpr To map_info_desc(typename info_ol_mapping<To>::template M<Ts>... ms) {
              std::tuple{ms...})
       .value;
 }
+
+/// Converts a UnifiedRangeView into the liboffload
+/// ol_kernel_launch_size_args_t format.
+ol_kernel_launch_size_args_t convertToOlRange(const UnifiedRangeView &Range);
 
 } // namespace detail
 

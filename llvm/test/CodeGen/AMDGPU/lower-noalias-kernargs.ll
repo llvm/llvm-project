@@ -13,7 +13,7 @@ define amdgpu_kernel void @aliasinfo_2i32(ptr addrspace(1) %out, ptr addrspace(1
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4
-; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -38,7 +38,7 @@ define amdgpu_kernel void @aliasinfo_2i32_NA(ptr addrspace(1) noalias %out, ptr 
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META1:![0-9]+]], !noalias [[META4:![0-9]+]]
-; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR3]]
+; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR5]]
 ; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META4]], !noalias [[META1]]
 ; CHECK-NEXT:    ret void
 ;
@@ -63,7 +63,7 @@ define amdgpu_kernel void @aliasinfo_2i32_AS(ptr addrspace(1) %out, ptr addrspac
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META6:![0-9]+]], !noalias [[META9:![0-9]+]]
-; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR3]]
+; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR5]]
 ; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-NEXT:    ret void
 ;
@@ -88,7 +88,7 @@ define amdgpu_kernel void @aliasinfo_2i32_NA_AS(ptr addrspace(1) noalias %out, p
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META14:![0-9]+]]
-; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR3]]
+; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR5]]
 ; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META14]], !noalias [[META11]]
 ; CHECK-NEXT:    ret void
 ;
@@ -287,11 +287,11 @@ define amdgpu_kernel void @aliasinfo_mixed_intrinsics_NA(ptr addrspace(1) noalia
 ; CHECK-NEXT:    [[INOUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[INOUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_MIXED_INTRINSICS_NA_KERNARG_SEGMENT]], i64 52
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
-; CHECK-NEXT:    [[VAL1:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[IN_LOAD]]), !alias.scope [[META42:![0-9]+]], !noalias [[META45:![0-9]+]]
-; CHECK-NEXT:    [[VAL2:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[INOUT_LOAD]]), !alias.scope [[META48:![0-9]+]], !noalias [[META49:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[OUT_LOAD]], ptr addrspace(1) [[INOUT_LOAD]], i64 16, i1 false), !alias.scope [[META45]], !noalias [[META42]]
+; CHECK-NEXT:    [[VAL1:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[IN_LOAD]]), !noalias [[META42:![0-9]+]]
+; CHECK-NEXT:    [[VAL2:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[INOUT_LOAD]]), !noalias [[META46:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[OUT_LOAD]], ptr addrspace(1) [[INOUT_LOAD]], i64 16, i1 false), !alias.scope [[META42]], !noalias [[META47:![0-9]+]]
 ; CHECK-NEXT:    [[VAL3:%.*]] = fmul <4 x float> [[VAL1]], [[VAL2]]
-; CHECK-NEXT:    store <4 x float> [[VAL3]], ptr addrspace(1) [[INOUT_LOAD]], align 16, !alias.scope [[META48]], !noalias [[META49]]
+; CHECK-NEXT:    store <4 x float> [[VAL3]], ptr addrspace(1) [[INOUT_LOAD]], align 16, !alias.scope [[META49:![0-9]+]], !noalias [[META50:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -341,9 +341,9 @@ define amdgpu_kernel void @aliasinfo_mixed_intrinsics_NA_AS(ptr addrspace(1) noa
 ; CHECK-NEXT:    [[INOUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[INOUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_MIXED_INTRINSICS_NA_AS_KERNARG_SEGMENT]], i64 52
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
-; CHECK-NEXT:    [[VAL1:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[IN_LOAD]]), !alias.scope [[META50:![0-9]+]], !noalias [[META53:![0-9]+]]
-; CHECK-NEXT:    [[VAL2:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[INOUT_LOAD]]), !alias.scope [[META56:![0-9]+]], !noalias [[META57:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[OUT_LOAD]], ptr addrspace(1) [[INOUT_LOAD]], i64 16, i1 false), !alias.scope [[META53]], !noalias [[META50]]
+; CHECK-NEXT:    [[VAL1:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[IN_LOAD]]), !alias.scope [[META6]], !noalias [[META51:![0-9]+]]
+; CHECK-NEXT:    [[VAL2:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[INOUT_LOAD]]), !alias.scope [[META6]], !noalias [[META55:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[OUT_LOAD]], ptr addrspace(1) [[INOUT_LOAD]], i64 16, i1 false), !alias.scope [[META51]], !noalias [[META56:![0-9]+]]
 ; CHECK-NEXT:    [[VAL3:%.*]] = fmul <4 x float> [[VAL1]], [[VAL2]]
 ; CHECK-NEXT:    store <4 x float> [[VAL3]], ptr addrspace(1) [[INOUT_LOAD]], align 16, !alias.scope [[META58:![0-9]+]], !noalias [[META59:![0-9]+]]
 ; CHECK-NEXT:    ret void
@@ -357,13 +357,195 @@ entry:
   ret void
 }
 
+@cap = addrspace(3) global ptr addrspace(1) poison
+
+; No pointer args, but reaches *%p via the copy captured in @cap.
+define amdgpu_kernel void @aliasinfo_captured_before_call(ptr addrspace(1) noalias %p, ptr addrspace(1) %out) nounwind {
+; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_captured_before_call(
+; CHECK-SAME: ptr addrspace(1) noalias [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ALIASINFO_CAPTURED_BEFORE_CALL_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[P_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_CAPTURED_BEFORE_CALL_KERNARG_SEGMENT]], i64 36
+; CHECK-NEXT:    [[P_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[P_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_CAPTURED_BEFORE_CALL_KERNARG_SEGMENT]], i64 44
+; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    store ptr addrspace(1) [[P_LOAD]], ptr addrspace(3) @cap, align 8, !noalias [[META60:![0-9]+]]
+; CHECK-NEXT:    call void @readwrite_no_ptr_args()
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[P_LOAD]], align 4, !alias.scope [[META60]]
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_LOAD]], align 4, !noalias [[META60]]
+; CHECK-NEXT:    ret void
+;
+  store ptr addrspace(1) %p, ptr addrspace(3) @cap
+  call void @readwrite_no_ptr_args()
+  %v = load i32, ptr addrspace(1) %p
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; Same, with a pointer argument that does not derive from %p.
+define amdgpu_kernel void @aliasinfo_captured_before_call_ptr_arg(ptr addrspace(1) noalias %p, ptr addrspace(1) %out) nounwind {
+; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_captured_before_call_ptr_arg(
+; CHECK-SAME: ptr addrspace(1) noalias [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ALIASINFO_CAPTURED_BEFORE_CALL_PTR_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[P_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_CAPTURED_BEFORE_CALL_PTR_ARG_KERNARG_SEGMENT]], i64 36
+; CHECK-NEXT:    [[P_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[P_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_CAPTURED_BEFORE_CALL_PTR_ARG_KERNARG_SEGMENT]], i64 44
+; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    store ptr addrspace(1) [[P_LOAD]], ptr addrspace(3) @cap, align 8, !noalias [[META63:![0-9]+]]
+; CHECK-NEXT:    call void @readwrite_with_ptr_arg(ptr addrspace(1) [[OUT_LOAD]])
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[P_LOAD]], align 4, !alias.scope [[META63]]
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_LOAD]], align 4, !noalias [[META63]]
+; CHECK-NEXT:    ret void
+;
+  store ptr addrspace(1) %p, ptr addrspace(3) @cap
+  call void @readwrite_with_ptr_arg(ptr addrspace(1) %out)
+  %v = load i32, ptr addrspace(1) %p
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; A capture after the call is not observable by the callee, so the scope stays.
+define amdgpu_kernel void @aliasinfo_captured_after_call(ptr addrspace(1) noalias %p, ptr addrspace(1) %out) nounwind {
+; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_captured_after_call(
+; CHECK-SAME: ptr addrspace(1) noalias [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ALIASINFO_CAPTURED_AFTER_CALL_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[P_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_CAPTURED_AFTER_CALL_KERNARG_SEGMENT]], i64 36
+; CHECK-NEXT:    [[P_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[P_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_CAPTURED_AFTER_CALL_KERNARG_SEGMENT]], i64 44
+; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[P_LOAD]], align 4, !alias.scope [[META66:![0-9]+]]
+; CHECK-NEXT:    call void @readwrite_no_ptr_args(), !noalias [[META66]]
+; CHECK-NEXT:    store ptr addrspace(1) [[P_LOAD]], ptr addrspace(3) @cap, align 8, !noalias [[META66]]
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_LOAD]], align 4, !noalias [[META66]]
+; CHECK-NEXT:    ret void
+;
+  %v = load i32, ptr addrspace(1) %p
+  call void @readwrite_no_ptr_args()
+  store ptr addrspace(1) %p, ptr addrspace(3) @cap
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; An argmem-only callee cannot use the captured copy, so the scope stays.
+define amdgpu_kernel void @aliasinfo_captured_before_argmemonly_call(ptr addrspace(1) noalias %p, ptr addrspace(1) %out) nounwind {
+; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_captured_before_argmemonly_call(
+; CHECK-SAME: ptr addrspace(1) noalias [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ALIASINFO_CAPTURED_BEFORE_ARGMEMONLY_CALL_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[P_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_CAPTURED_BEFORE_ARGMEMONLY_CALL_KERNARG_SEGMENT]], i64 36
+; CHECK-NEXT:    [[P_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[P_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_CAPTURED_BEFORE_ARGMEMONLY_CALL_KERNARG_SEGMENT]], i64 44
+; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    store ptr addrspace(1) [[P_LOAD]], ptr addrspace(3) @cap, align 8, !noalias [[META69:![0-9]+]]
+; CHECK-NEXT:    call void @argmemonly_rw_with_ptr_arg(ptr addrspace(1) [[OUT_LOAD]]), !noalias [[META69]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[P_LOAD]], align 4, !alias.scope [[META69]]
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_LOAD]], align 4, !noalias [[META69]]
+; CHECK-NEXT:    ret void
+;
+  store ptr addrspace(1) %p, ptr addrspace(3) @cap
+  call void @argmemonly_rw_with_ptr_arg(ptr addrspace(1) %out)
+  %v = load i32, ptr addrspace(1) %p
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; Non-argmem-only call gets no !alias.scope; keeps !noalias for %q, unreachable by it.
+define amdgpu_kernel void @aliasinfo_no_scope_on_nonargmem_call(ptr addrspace(1) noalias %p, ptr addrspace(1) noalias %q, ptr addrspace(1) %out) nounwind {
+; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_no_scope_on_nonargmem_call(
+; CHECK-SAME: ptr addrspace(1) noalias [[P:%.*]], ptr addrspace(1) noalias [[Q:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ALIASINFO_NO_SCOPE_ON_NONARGMEM_CALL_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(280) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[P_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_NO_SCOPE_ON_NONARGMEM_CALL_KERNARG_SEGMENT]], i64 36
+; CHECK-NEXT:    [[P_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[P_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[Q_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_NO_SCOPE_ON_NONARGMEM_CALL_KERNARG_SEGMENT]], i64 44
+; CHECK-NEXT:    [[Q_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[Q_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_NO_SCOPE_ON_NONARGMEM_CALL_KERNARG_SEGMENT]], i64 52
+; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    call void @readwrite_with_ptr_arg(ptr addrspace(1) [[P_LOAD]]), !noalias [[META72:![0-9]+]]
+; CHECK-NEXT:    [[W:%.*]] = load i32, ptr addrspace(1) [[Q_LOAD]], align 4, !alias.scope [[META72]], !noalias [[META75:![0-9]+]]
+; CHECK-NEXT:    store i32 [[W]], ptr addrspace(1) [[OUT_LOAD]], align 4, !noalias [[META77:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  call void @readwrite_with_ptr_arg(ptr addrspace(1) %p)
+  %w = load i32, ptr addrspace(1) %q
+  store i32 %w, ptr addrspace(1) %out
+  ret void
+}
+
+; Inaccessible memory cannot alias any IR-visible location: no metadata.
+define amdgpu_kernel void @aliasinfo_inaccessiblemem_call(ptr addrspace(1) noalias %p, ptr addrspace(1) %out) nounwind {
+; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_inaccessiblemem_call(
+; CHECK-SAME: ptr addrspace(1) noalias [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ALIASINFO_INACCESSIBLEMEM_CALL_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[P_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_INACCESSIBLEMEM_CALL_KERNARG_SEGMENT]], i64 36
+; CHECK-NEXT:    [[P_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[P_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_INACCESSIBLEMEM_CALL_KERNARG_SEGMENT]], i64 44
+; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    call void @inaccessible_only()
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[P_LOAD]], align 4, !alias.scope [[META78:![0-9]+]]
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_LOAD]], align 4, !noalias [[META78]]
+; CHECK-NEXT:    ret void
+;
+  call void @inaccessible_only()
+  %v = load i32, ptr addrspace(1) %p
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; 12 GEPs exceed getUnderlyingObjects' depth: object unknown, may be %p, no metadata.
+define amdgpu_kernel void @aliasinfo_unknown_object_deep_gep(ptr addrspace(1) noalias %p, ptr addrspace(1) %out) nounwind {
+; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_unknown_object_deep_gep(
+; CHECK-SAME: ptr addrspace(1) noalias [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ALIASINFO_UNKNOWN_OBJECT_DEEP_GEP_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[P_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_UNKNOWN_OBJECT_DEEP_GEP_KERNARG_SEGMENT]], i64 36
+; CHECK-NEXT:    [[P_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[P_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_UNKNOWN_OBJECT_DEEP_GEP_KERNARG_SEGMENT]], i64 44
+; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr i8, ptr addrspace(1) [[P_LOAD]], i64 1
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr i8, ptr addrspace(1) [[G1]], i64 1
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr i8, ptr addrspace(1) [[G2]], i64 1
+; CHECK-NEXT:    [[G4:%.*]] = getelementptr i8, ptr addrspace(1) [[G3]], i64 1
+; CHECK-NEXT:    [[G5:%.*]] = getelementptr i8, ptr addrspace(1) [[G4]], i64 1
+; CHECK-NEXT:    [[G6:%.*]] = getelementptr i8, ptr addrspace(1) [[G5]], i64 1
+; CHECK-NEXT:    [[G7:%.*]] = getelementptr i8, ptr addrspace(1) [[G6]], i64 1
+; CHECK-NEXT:    [[G8:%.*]] = getelementptr i8, ptr addrspace(1) [[G7]], i64 1
+; CHECK-NEXT:    [[G9:%.*]] = getelementptr i8, ptr addrspace(1) [[G8]], i64 1
+; CHECK-NEXT:    [[G10:%.*]] = getelementptr i8, ptr addrspace(1) [[G9]], i64 1
+; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr addrspace(1) [[G10]], i64 1
+; CHECK-NEXT:    [[GBACK:%.*]] = getelementptr i8, ptr addrspace(1) [[G11]], i64 -11
+; CHECK-NEXT:    store i32 42, ptr addrspace(1) [[GBACK]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[P_LOAD]], align 4, !alias.scope [[META81:![0-9]+]]
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_LOAD]], align 4, !noalias [[META81]]
+; CHECK-NEXT:    ret void
+;
+  %g1 = getelementptr i8, ptr addrspace(1) %p, i64 1
+  %g2 = getelementptr i8, ptr addrspace(1) %g1, i64 1
+  %g3 = getelementptr i8, ptr addrspace(1) %g2, i64 1
+  %g4 = getelementptr i8, ptr addrspace(1) %g3, i64 1
+  %g5 = getelementptr i8, ptr addrspace(1) %g4, i64 1
+  %g6 = getelementptr i8, ptr addrspace(1) %g5, i64 1
+  %g7 = getelementptr i8, ptr addrspace(1) %g6, i64 1
+  %g8 = getelementptr i8, ptr addrspace(1) %g7, i64 1
+  %g9 = getelementptr i8, ptr addrspace(1) %g8, i64 1
+  %g10 = getelementptr i8, ptr addrspace(1) %g9, i64 1
+  %g11 = getelementptr i8, ptr addrspace(1) %g10, i64 1
+  %gback = getelementptr i8, ptr addrspace(1) %g11, i64 -11
+  store i32 42, ptr addrspace(1) %gback
+  %v = load i32, ptr addrspace(1) %p
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 declare <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1))
 declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1), ptr addrspace(1), i64, i1)
+declare void @readwrite_no_ptr_args() #1
+declare void @readwrite_with_ptr_arg(ptr addrspace(1)) #1
+declare void @argmemonly_rw_with_ptr_arg(ptr addrspace(1)) #3
+declare void @inaccessible_only() #4
 
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="1,32" }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readnone speculatable }
+attributes #3 = { nounwind memory(argmem: readwrite) }
+attributes #4 = { nounwind memory(inaccessiblemem: readwrite) }
 
 !0 = distinct !{!0, !"alias_scope_0"}
 !1 = distinct !{!1, !0, !"alias_scope_1"}
@@ -413,22 +595,46 @@ attributes #2 = { nounwind readnone speculatable }
 ; CHECK: [[META39]] = !{[[META7]], [[META34]], [[META30]], [[META35]]}
 ; CHECK: [[META40]] = !{[[META10]], [[META34]]}
 ; CHECK: [[META41]] = !{[[META7]], [[META33]], [[META30]], [[META35]]}
-; CHECK: [[META42]] = !{[[META43:![0-9]+]]}
-; CHECK: [[META43]] = distinct !{[[META43]], [[META44:![0-9]+]], !"in"}
+; CHECK: [[META42]] = !{[[META43:![0-9]+]], [[META45:![0-9]+]]}
+; CHECK: [[META43]] = distinct !{[[META43]], [[META44:![0-9]+]], !"inout"}
 ; CHECK: [[META44]] = distinct !{[[META44]], !"aliasinfo_mixed_intrinsics_NA"}
-; CHECK: [[META45]] = !{[[META46:![0-9]+]], [[META47:![0-9]+]]}
-; CHECK: [[META46]] = distinct !{[[META46]], [[META44]], !"inout"}
-; CHECK: [[META47]] = distinct !{[[META47]], [[META44]], !"out"}
-; CHECK: [[META48]] = !{[[META46]]}
-; CHECK: [[META49]] = !{[[META43]], [[META47]]}
-; CHECK: [[META50]] = !{[[META7]], [[META51:![0-9]+]]}
-; CHECK: [[META51]] = distinct !{[[META51]], [[META52:![0-9]+]], !"in"}
-; CHECK: [[META52]] = distinct !{[[META52]], !"aliasinfo_mixed_intrinsics_NA_AS"}
-; CHECK: [[META53]] = !{[[META10]], [[META54:![0-9]+]], [[META55:![0-9]+]]}
-; CHECK: [[META54]] = distinct !{[[META54]], [[META52]], !"inout"}
-; CHECK: [[META55]] = distinct !{[[META55]], [[META52]], !"out"}
-; CHECK: [[META56]] = !{[[META7]], [[META54]]}
-; CHECK: [[META57]] = !{[[META10]], [[META51]], [[META55]]}
-; CHECK: [[META58]] = !{[[META10]], [[META54]]}
-; CHECK: [[META59]] = !{[[META7]], [[META51]], [[META55]]}
+; CHECK: [[META45]] = distinct !{[[META45]], [[META44]], !"out"}
+; CHECK: [[META46]] = !{[[META45]]}
+; CHECK: [[META47]] = !{[[META48:![0-9]+]]}
+; CHECK: [[META48]] = distinct !{[[META48]], [[META44]], !"in"}
+; CHECK: [[META49]] = !{[[META43]]}
+; CHECK: [[META50]] = !{[[META48]], [[META45]]}
+; CHECK: [[META51]] = !{[[META10]], [[META52:![0-9]+]], [[META54:![0-9]+]]}
+; CHECK: [[META52]] = distinct !{[[META52]], [[META53:![0-9]+]], !"inout"}
+; CHECK: [[META53]] = distinct !{[[META53]], !"aliasinfo_mixed_intrinsics_NA_AS"}
+; CHECK: [[META54]] = distinct !{[[META54]], [[META53]], !"out"}
+; CHECK: [[META55]] = !{[[META10]], [[META54]]}
+; CHECK: [[META56]] = !{[[META7]], [[META57:![0-9]+]]}
+; CHECK: [[META57]] = distinct !{[[META57]], [[META53]], !"in"}
+; CHECK: [[META58]] = !{[[META10]], [[META52]]}
+; CHECK: [[META59]] = !{[[META7]], [[META57]], [[META54]]}
+; CHECK: [[META60]] = !{[[META61:![0-9]+]]}
+; CHECK: [[META61]] = distinct !{[[META61]], [[META62:![0-9]+]], !"p"}
+; CHECK: [[META62]] = distinct !{[[META62]], !"aliasinfo_captured_before_call"}
+; CHECK: [[META63]] = !{[[META64:![0-9]+]]}
+; CHECK: [[META64]] = distinct !{[[META64]], [[META65:![0-9]+]], !"p"}
+; CHECK: [[META65]] = distinct !{[[META65]], !"aliasinfo_captured_before_call_ptr_arg"}
+; CHECK: [[META66]] = !{[[META67:![0-9]+]]}
+; CHECK: [[META67]] = distinct !{[[META67]], [[META68:![0-9]+]], !"p"}
+; CHECK: [[META68]] = distinct !{[[META68]], !"aliasinfo_captured_after_call"}
+; CHECK: [[META69]] = !{[[META70:![0-9]+]]}
+; CHECK: [[META70]] = distinct !{[[META70]], [[META71:![0-9]+]], !"p"}
+; CHECK: [[META71]] = distinct !{[[META71]], !"aliasinfo_captured_before_argmemonly_call"}
+; CHECK: [[META72]] = !{[[META73:![0-9]+]]}
+; CHECK: [[META73]] = distinct !{[[META73]], [[META74:![0-9]+]], !"q"}
+; CHECK: [[META74]] = distinct !{[[META74]], !"aliasinfo_no_scope_on_nonargmem_call"}
+; CHECK: [[META75]] = !{[[META76:![0-9]+]]}
+; CHECK: [[META76]] = distinct !{[[META76]], [[META74]], !"p"}
+; CHECK: [[META77]] = !{[[META76]], [[META73]]}
+; CHECK: [[META78]] = !{[[META79:![0-9]+]]}
+; CHECK: [[META79]] = distinct !{[[META79]], [[META80:![0-9]+]], !"p"}
+; CHECK: [[META80]] = distinct !{[[META80]], !"aliasinfo_inaccessiblemem_call"}
+; CHECK: [[META81]] = !{[[META82:![0-9]+]]}
+; CHECK: [[META82]] = distinct !{[[META82]], [[META83:![0-9]+]], !"p"}
+; CHECK: [[META83]] = distinct !{[[META83]], !"aliasinfo_unknown_object_deep_gep"}
 ;.

@@ -7,4 +7,3 @@
 ! RUN: | FileCheck %s -check-prefix=CHECK-AMDGCN
 
 ! CHECK-AMDGCN: "-fc1" "-triple" "amdgpu9.02-amd-amdhsa"
-! CHECK-AMDGCN-SAME: "-target-cpu" "gfx902"

@@ -1,4 +1,4 @@
-FROM docker.io/library/ubuntu:24.04
+FROM docker.io/library/ubuntu:26.04
 
 # MPFR is required by some of the mathlib tests.
 RUN apt-get update && \
@@ -9,11 +9,9 @@ RUN apt-get update && \
     libmpc-dev \
     ninja-build \
     build-essential \
-    gcc-9 \
-    g++-9 \
     gcc-11 \
     g++-11 \
-    qemu-user-static \
+    qemu-user-binfmt \
     libc6-dev-arm64-cross \
     libstdc++6-arm64-cross \
     gcc-aarch64-linux-gnu \
@@ -30,6 +28,7 @@ RUN apt-get update && \
     g++-12-arm-linux-gnueabihf \
     sudo \
     sccache \
+    zstd \
     wget \
     lsb-release \
     software-properties-common \
@@ -39,6 +38,59 @@ RUN apt-get update && \
     linux-libc-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# The downloaded Hexagon QEMU binaries are x86_64-only. Install their runtime
+# dependencies only on x86_64 hosts.
+# Creating so symlinks is a massive hack, but we should not be using
+# functionality provided by these SOs, so it should be fine.
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+    apt-get update && \
+    apt-get install -y \
+    libpixman-1-0 \
+    libslirp0 \
+    libfdt1 \
+    libglib2.0-0 \
+    libfuse3-4 \
+    libiscsi7 \
+    libaio1t64 \
+    liburing2 \
+    libcurl4 \
+    libcurl3t64-gnutls \
+    libasound2t64 \
+    libpulse0 \
+    libjack-jackd2-0 \
+    libsndio7.0 \
+    libsndfile1 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libsystemd0 \
+    libapparmor1 && \
+    ln -s "$(dpkg -L libaio1t64 | grep '/libaio.so.1t64$')" \
+    "$(dirname "$(dpkg -L libaio1t64 | grep '/libaio.so.1t64$')")/libaio.so.1" && \
+    ln -s "$(dpkg -L libfuse3-4 | grep 'libfuse3.so.4')" \
+    "$(dirname "$(dpkg -L libfuse3-4 | grep 'libfuse3.so.4')")/libfuse3.so.3" && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# TODO: Switch to distribution QEMU packages once the Qualcomm fork patches
+# are upstreamed to QEMU.
+# The current QEMU binaries are x86_64-only, so do not install them on ARM.
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+    wget --progress=dot:giga --remote-encoding=utf-8 -O /tmp/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst \
+    https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/23.1.0-rc1/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst && \
+    mkdir -p /tmp/hexagon-toolchain && \
+    tar -xf /tmp/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst -C /tmp/hexagon-toolchain/ && \
+    install "$(find /tmp/hexagon-toolchain -type f -name qemu-system-hexagon -print -quit)" \
+    /usr/local/bin/qemu-system-hexagon && \
+    install "$(find /tmp/hexagon-toolchain -type f -name qemu-hexagon -print -quit)" \
+    /usr/local/bin/qemu-hexagon && \
+    qemu-system-hexagon --version && \
+    qemu-hexagon --version && \
+    rm -rf /tmp/hexagon-toolchain && \
+    rm -f /tmp/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst; \
+    fi
 
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
@@ -60,7 +112,7 @@ RUN apt-get install -y llvm-23-tools && \
 RUN wget https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz && \
     tar -xf gmp-6.3.0.tar.xz && \
     cd gmp-6.3.0 && \
-    ./configure --host=riscv64-linux-gnu --prefix=/usr/riscv64-linux-gnu && \
+    ./configure --host=riscv64-linux-gnu --prefix=/usr/riscv64-linux-gnu CFLAGS="-O2 -std=gnu17" && \
     make -j8 && \
     sudo make install && \
     cd .. && \
@@ -91,7 +143,7 @@ RUN wget https://ftp.gnu.org/gnu/mpc/mpc-1.4.1.tar.xz && \
     rm mpc-1.4.1.tar.xz
 
 # Install gcc-7 and g++-7.
-RUN wget https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar.xz && \
+RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar.xz && \
     tar -xf gcc-7.5.0.tar.xz && \
     cd gcc-7.5.0 && \
     ./contrib/download_prerequisites && \
@@ -99,7 +151,7 @@ RUN wget https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar.xz && \
     mkdir gcc-7 && \
     cd gcc-7 && \
     ../gcc-7.5.0/configure --prefix=/usr/local/gcc7 --enable-languages=c,c++ \
-    --disable-multilib --disable-libsanitizer && \
+    --disable-multilib --disable-libsanitizer --disable-bootstrap && \
     make -j8 && \
     sudo make install && \
     cd .. && \
@@ -108,7 +160,7 @@ RUN wget https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar.xz && \
     rm gcc-7.5.0.tar.xz
 
 # Install gcc-8 and g++-8.
-RUN wget https://ftp.gnu.org/gnu/gcc/gcc-8.5.0/gcc-8.5.0.tar.xz && \
+RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-8.5.0/gcc-8.5.0.tar.xz && \
     tar -xf gcc-8.5.0.tar.xz && \
     cd gcc-8.5.0 && \
     ./contrib/download_prerequisites && \
@@ -116,7 +168,7 @@ RUN wget https://ftp.gnu.org/gnu/gcc/gcc-8.5.0/gcc-8.5.0.tar.xz && \
     mkdir gcc-8 && \
     cd gcc-8 && \
     ../gcc-8.5.0/configure --prefix=/usr/local/gcc8 --enable-languages=c,c++ \
-    --disable-multilib --disable-libsanitizer && \
+    --disable-multilib --disable-libsanitizer --disable-bootstrap && \
     make -j8 && \
     sudo make install && \
     cd .. && \
@@ -124,10 +176,26 @@ RUN wget https://ftp.gnu.org/gnu/gcc/gcc-8.5.0/gcc-8.5.0.tar.xz && \
     rm -rf gcc-8.5.0 && \
     rm gcc-8.5.0.tar.xz
 
-    
+# Install gcc-9 and g++-9
+RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-9.5.0/gcc-9.5.0.tar.xz && \
+    tar -xf gcc-9.5.0.tar.xz && \
+    cd gcc-9.5.0 && \
+    ./contrib/download_prerequisites && \
+    cd .. && \
+    mkdir gcc-9 && \
+    cd gcc-9 && \
+    ../gcc-9.5.0/configure --prefix=/usr/local/gcc9 --enable-languages=c,c++ \
+    --disable-multilib --disable-libsanitizer --disable-bootstrap && \
+    make -j8 && \
+    sudo make install && \
+    cd .. && \
+    rm -rf gcc-9 && \
+    rm -rf gcc-9.5.0 && \
+    rm gcc-9.5.0.tar.xz
+
 # Debian has a multilib setup, so we need to symlink the asm directory.
 # For more information, see https://wiki.debian.org/Multiarch/LibraryPathOverview
-RUN ln -sf /usr/include/$(uname -p)-linux-gnu/asm /usr/include/asm
+RUN ln -sf /usr/include/$(uname -m)-linux-gnu/asm /usr/include/asm
 
 # Create a new user to avoid test failures related to a lack of expected
 # permissions issues in some tests. Set the user id to 1001 as that is the

@@ -28,7 +28,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -140,7 +139,6 @@ class MachineSinking {
   // Required for split critical edge
   LiveIntervals *LIS;
   SlotIndexes *SI;
-  LiveVariables *LV;
   MachineLoopInfo *MLI;
 
   // Remember which edges have been considered for breaking.
@@ -200,14 +198,13 @@ class MachineSinking {
 
 public:
   MachineSinking(bool EnableSinkAndFold, MachineDominatorTree *DT,
-                 MachinePostDominatorTree *PDT, LiveVariables *LV,
-                 MachineLoopInfo *MLI, SlotIndexes *SI, LiveIntervals *LIS,
-                 MachineCycleInfo *CI, ProfileSummaryInfo *PSI,
-                 MachineBlockFrequencyInfo *MBFI,
+                 MachinePostDominatorTree *PDT, MachineLoopInfo *MLI,
+                 SlotIndexes *SI, LiveIntervals *LIS, MachineCycleInfo *CI,
+                 ProfileSummaryInfo *PSI, MachineBlockFrequencyInfo *MBFI,
                  const MachineBranchProbabilityInfo *MBPI, AliasAnalysis *AA,
                  RegisterClassInfo *RegClassInfo)
       : DT(DT), PDT(PDT), CI(CI), PSI(PSI), MBFI(MBFI), MBPI(MBPI), AA(AA),
-        RegClassInfo(RegClassInfo), LIS(LIS), SI(SI), LV(LV), MLI(MLI),
+        RegClassInfo(RegClassInfo), LIS(LIS), SI(SI), MLI(MLI),
         EnableSinkAndFold(EnableSinkAndFold) {}
 
   bool run(MachineFunction &MF);
@@ -356,7 +353,8 @@ static bool blockPrologueInterferes(const MachineBasicBlock *BB,
         continue;
       if (MO.isUse()) {
         if (Reg.isPhysical() &&
-            (TII->isIgnorableUse(MO) || (MRI && MRI->isConstantPhysReg(Reg))))
+            (TII->isIgnorableUse(MI, MI.getOperandNo(&MO)) ||
+             (MRI && MRI->isConstantPhysReg(Reg))))
           continue;
         if (PI->modifiesRegister(Reg, TRI))
           return true;
@@ -462,7 +460,8 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
     }
 
     if (Reg.isPhysical() && MO.isUse() &&
-        (MRI->isConstantPhysReg(Reg) || TII->isIgnorableUse(MO)))
+        (MRI->isConstantPhysReg(Reg) ||
+         TII->isIgnorableUse(MI, MI.getOperandNo(&MO))))
       continue;
 
     return false;
@@ -782,11 +781,10 @@ MachineSinkingPass::run(MachineFunction &MF,
                   .getResult<AAManager>(MF.getFunction());
   auto *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
   auto *SI = MFAM.getCachedResult<SlotIndexesAnalysis>(MF);
-  auto *LV = MFAM.getCachedResult<LiveVariablesAnalysis>(MF);
   auto *MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
   auto *RegClassInfo = &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
-  MachineSinking Impl(EnableSinkAndFold, DT, PDT, LV, MLI, SI, LIS, CI, PSI,
-                      MBFI, MBPI, AA, RegClassInfo);
+  MachineSinking Impl(EnableSinkAndFold, DT, PDT, MLI, SI, LIS, CI, PSI, MBFI,
+                      MBPI, AA, RegClassInfo);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -829,15 +827,13 @@ bool MachineSinkingLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
   auto *SI = SIWrapper ? &SIWrapper->getSI() : nullptr;
-  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
-  auto *LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
   auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
   auto *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
   auto *RegClassInfo =
       &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
 
-  MachineSinking Impl(EnableSinkAndFold, DT, PDT, LV, MLI, SI, LIS, CI, PSI,
-                      MBFI, MBPI, AA, RegClassInfo);
+  MachineSinking Impl(EnableSinkAndFold, DT, PDT, MLI, SI, LIS, CI, PSI, MBFI,
+                      MBPI, AA, RegClassInfo);
   return Impl.run(MF);
 }
 
@@ -866,7 +862,7 @@ bool MachineSinking::run(MachineFunction &MF) {
                                MachineDomTreeUpdater::UpdateStrategy::Lazy);
     for (const auto &Pair : ToSplit) {
       auto NewSucc = Pair.first->SplitCriticalEdge(
-          Pair.second, {LIS, SI, LV, MLI}, nullptr, &MDTU);
+          Pair.second, {LIS, SI, /*LV=*/nullptr, MLI}, nullptr, &MDTU);
       if (NewSucc != nullptr) {
         LLVM_DEBUG(dbgs() << " *** Splitting critical edge: "
                           << printMBBReference(*Pair.first) << " -- "
@@ -1327,7 +1323,7 @@ bool MachineSinking::isProfitableToSinkTo(Register Reg, MachineInstr &MI,
     if (Reg.isPhysical()) {
       // Don't handle non-constant and non-ignorable physical register uses.
       if (MO.isUse() && !MRI->isConstantPhysReg(Reg) &&
-          !TII->isIgnorableUse(MO))
+          !TII->isIgnorableUse(MI, MI.getOperandNo(&MO)))
         return false;
       continue;
     }
@@ -1438,7 +1434,8 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
         // If the physreg has no defs anywhere, it's just an ambient register
         // and we can freely move its uses. Alternatively, if it's allocatable,
         // it could get allocated to something with a def during allocation.
-        if (!MRI->isConstantPhysReg(Reg) && !TII->isIgnorableUse(MO))
+        if (!MRI->isConstantPhysReg(Reg) &&
+            !TII->isIgnorableUse(MI, MI.getOperandNo(&MO)))
           return nullptr;
       } else if (!MO.isDead()) {
         // A def that isn't dead. We can't move it.

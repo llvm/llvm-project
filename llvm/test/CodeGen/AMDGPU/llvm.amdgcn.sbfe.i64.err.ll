@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa < %s 2>&1 | FileCheck %s
 
 ; CHECK: error: <unknown>:0:0: in function sbfe_i64 void (ptr addrspace(1), i64): llvm.amdgcn.sbfe only supports i32
 

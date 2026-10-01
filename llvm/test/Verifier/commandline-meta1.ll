@@ -7,4 +7,4 @@
 !0 = !{!"string1", !"string2"}
 ; CHECK: assembly parsed, but does not verify as correct!
 ; CHECK-NEXT: incorrect number of operands in llvm.commandline metadata
-; CHECK-NEXT: !0
+; CHECK-NEXT: !{{[0-9]+}}

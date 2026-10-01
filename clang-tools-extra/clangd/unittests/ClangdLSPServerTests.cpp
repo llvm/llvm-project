@@ -366,15 +366,6 @@ TEST_F(LSPTest, ModulesTest) {
               ElementsAre(llvm::json::Value(2), llvm::json::Value(10)));
 }
 
-// Creates a Callback that writes its received value into an
-// std::optional<Expected>.
-template <typename T>
-llvm::unique_function<void(llvm::Expected<T>)>
-capture(std::optional<llvm::Expected<T>> &Out) {
-  Out.reset();
-  return [&Out](llvm::Expected<T> V) { Out.emplace(std::move(V)); };
-}
-
 TEST_F(LSPTest, FeatureModulesThreadingTest) {
   // A feature module that does its work on a background thread, and so
   // exercises the block/shutdown protocol.

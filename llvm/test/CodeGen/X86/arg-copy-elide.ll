@@ -130,7 +130,7 @@ define void @high_alignment(i32 %x) {
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-128, %esp
-; CHECK-NEXT:    subl $128, %esp
+; CHECK-NEXT:    addl $-128, %esp
 ; CHECK-NEXT:    movl 8(%ebp), %eax
 ; CHECK-NEXT:    movl %eax, (%esp)
 ; CHECK-NEXT:    movl %esp, %eax
