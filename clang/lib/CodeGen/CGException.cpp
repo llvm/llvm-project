@@ -608,7 +608,7 @@ void CodeGenFunction::EmitCXXTryStmt(const CXXTryStmt &S) {
 void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   // HIPStdPar device compilation emits unannotated host functions and removes
   // the ones that are not reachable from an accelerator kernel in the middle
-  // end. CUDA device code generation otherwise drops the EH representation of
+  // end. Device code generation otherwise drops the EH representation of
   // a try statement, so preserving an unsupported-operation marker for the
   // accelerator code selection pass to diagnose if this function is reachable.
   if (CGM.getLangOpts().HIPStdPar && CGM.getLangOpts().CUDAIsDevice) {

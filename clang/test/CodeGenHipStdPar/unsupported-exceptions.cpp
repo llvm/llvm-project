@@ -9,6 +9,10 @@
 // RUN:   -fcuda-is-device -fcxx-exceptions -fexceptions \
 // RUN:   -emit-llvm -o - -DTRY_CATCH %s \
 // RUN:   | FileCheck %s --check-prefix=TRY-IR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
+// RUN:   -aux-triple amdgcn-amd-amdhsa --hipstdpar -x hip \
+// RUN:   -fcxx-exceptions -fexceptions -emit-llvm -o - -DTRY_CATCH %s \
+// RUN:   | FileCheck %s --check-prefix=HOST-IR
 // RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu --hipstdpar -x hip \
 // RUN:   -fcuda-is-device -fcxx-exceptions -fexceptions \
@@ -129,6 +133,12 @@ __global__ void kernel() {
 
 // TRY-IR-LABEL: define{{.*}} void @_Z10try_helperv()
 // TRY-IR: call void @__CXX_EXCEPTION__hipstdpar_unsupported()
+
+// HOST-IR-NOT: @__CXX_EXCEPTION__hipstdpar_unsupported
+// HOST-IR-LABEL: define{{.*}} void @_Z10try_helperv()
+// HOST-IR-NOT: @__CXX_EXCEPTION__hipstdpar_unsupported
+// HOST-IR: invoke void @_Z9may_throwv()
+// HOST-IR-NOT: @__CXX_EXCEPTION__hipstdpar_unsupported
 
 // UNREACHABLE-NOT: @__cxa_throw
 // UNREACHABLE-NOT: @__CXX_EXCEPTION__hipstdpar_unsupported
