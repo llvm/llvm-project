@@ -66,3 +66,23 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPbaz(
 ! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<host_device>} : f32, !fir.ref<f32>
+
+subroutine nested_association(g)
+  type :: t
+    real, allocatable, managed :: m(:)
+    real, allocatable, device :: d(:)
+  end type
+  type(t), managed :: g
+
+  associate(p => g)
+    associate(q => p)
+      q%m(1) = 2.0  ! Host assignment
+      q%d(1) = 1.0  ! Host-to-device transfer
+    end associate
+  end associate
+end subroutine
+
+! CHECK-LABEL: func.func @_QPnested_association(
+! CHECK-NOT: cuf.data_transfer
+! CHECK: hlfir.assign %{{.*}} to %{{.*}} : f32, !fir.ref<f32>
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {hasManagedOrUnifedSymbols, transfer_kind = #cuf.cuda_transfer<host_device>} : f32, !fir.ref<f32>
