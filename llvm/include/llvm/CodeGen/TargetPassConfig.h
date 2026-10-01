@@ -127,6 +127,8 @@ protected:
   // Targets provide a default setting, user flags override.
   bool DisableVerify = false;
 
+  bool VerifyEachMachinePass = false;
+
   /// Default setting for -enable-tail-merge on this target.
   bool EnableTailMerge = true;
 
@@ -197,6 +199,9 @@ public:
   getStartStopInfo(PassInstrumentationCallbacks &PIC);
 
   void setDisableVerify(bool Disable) { setOpt(DisableVerify, Disable); }
+
+  /// Return true if the machine verifier runs after each machine pass.
+  bool verifiesEachMachinePass() const { return VerifyEachMachinePass; }
 
   bool getEnableTailMerge() const { return EnableTailMerge; }
   void setEnableTailMerge(bool Enable) { setOpt(EnableTailMerge, Enable); }

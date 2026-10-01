@@ -52,6 +52,7 @@ struct CGPassBuilderOption {
   std::optional<bool> EnableIPRA;
   bool DebugPM = false;
   bool DisableVerify = false;
+  bool DisableMIROutputVerify = false;
   bool EnableImplicitNullChecks = false;
   bool EnableBlockPlacementStats = false;
   bool EnableGlobalMergeFunc = false;

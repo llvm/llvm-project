@@ -324,6 +324,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   Opt.EnableRegAllocFastTied = toBoolOrDefault(Opts.regalloc_fast_tied);
   Opt.EnableGlobalISelOption = toBoolOrDefault(Opts.global_isel);
   Opt.VerifyMachineCode = toBoolOrDefault(Opts.verify_machineinstrs);
+  Opt.DisableMIROutputVerify = Opts.disable_mir_output_verify;
   Opt.DisableAtExitBasedGlobalDtorLowering =
       Opts.disable_atexit_based_global_dtor_lowering;
   Opt.DisableExpandReductions = Opts.disable_expand_reductions;
@@ -448,6 +449,12 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
 
   if (Opts.global_isel_abort)
     TM.Options.GlobalISelAbort = *Opts.global_isel_abort;
+
+  VerifyEachMachinePass = valueOr(Opts.verify_machineinstrs, false);
+#ifdef EXPENSIVE_CHECKS
+  if (Opts.verify_machineinstrs == BoolOrDefault::Default)
+    VerifyEachMachinePass = TM.isMachineVerifierClean();
+#endif
 
   if (Opts.function_splitting)
     TM.Options.FunctionSplitting = *Opts.function_splitting;
@@ -626,13 +633,7 @@ void TargetPassConfig::addPrintPass(const std::string &Banner) {
 }
 
 void TargetPassConfig::addVerifyPass(const std::string &Banner) {
-  const CodeGenOptions &Opts = CodeGenOptions::Global;
-  bool Verify = valueOr(Opts.verify_machineinstrs, false);
-#ifdef EXPENSIVE_CHECKS
-  if (Opts.verify_machineinstrs == BoolOrDefault::Default)
-    Verify = TM->isMachineVerifierClean();
-#endif
-  if (Verify)
+  if (VerifyEachMachinePass)
     PM->add(createMachineVerifierPass(Banner));
 }
 

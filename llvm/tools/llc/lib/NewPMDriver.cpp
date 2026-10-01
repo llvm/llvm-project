@@ -115,6 +115,8 @@ int llvm::compileModuleWithNewPM(
   // Fetch options from TargetPassConfig
   CGPassBuilderOption Opt = getCGPassBuilderOption();
   Opt.DisableVerify = VK != VerifierKind::InputOutput;
+  if (VK == VerifierKind::EachPass)
+    Opt.DisableMIROutputVerify = true;
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
@@ -169,7 +171,7 @@ int llvm::compileModuleWithNewPM(
     ExitOnErr(PB.parsePassPipeline(MPM, PassPipeline));
     MPM.addPass(PrintMIRPreparePass(*OS));
     MachineFunctionPassManager MFPM;
-    if (VK == VerifierKind::InputOutput)
+    if (!Opt.DisableMIROutputVerify)
       MFPM.addPass(MachineVerifierPass());
     MFPM.addPass(PrintMIRPass(*OS));
     FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
