@@ -19,12 +19,15 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Interpreter/Value.h"
+#include "clang/Sema/ExternalSemaSource.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -686,6 +689,41 @@ TEST_F(InterpreterTest, EmscriptenExceptionHandling) {
 
   llvm::cantFail(
       Interp->ParseAndExecute("try { throw 1; } catch (...) { 0; }"));
+}
+
+// Knows `dynamic_fn` (an `int()`), but only inside function scopes, like
+// clients that resolve names of statements at runtime.
+class FunctionScopeSource : public ExternalSemaSource {
+public:
+  unsigned FileScopeLookups = 0;
+  bool LookupUnqualified(LookupResult &R, Scope *S) override {
+    if (!R.getLookupName().isIdentifier() ||
+        R.getLookupName().getAsIdentifierInfo()->getName() != "dynamic_fn")
+      return false;
+    if (!S || !S->getFnParent()) {
+      ++FileScopeLookups;
+      return false;
+    }
+    ASTContext &C = R.getSema().getASTContext();
+    QualType FT = C.getFunctionType(C.IntTy, {}, {});
+    auto *FD = FunctionDecl::Create(
+        C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
+        R.getLookupName(), FT, C.getTrivialTypeSourceInfo(FT), SC_Extern);
+    R.addDecl(FD);
+    return true;
+  }
+};
+
+TEST_F(InterpreterTest, TopLevelStmtLooksUpFirstNameInItsScope) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+  auto Source = llvm::makeIntrusiveRefCnt<FunctionScopeSource>();
+  Interp->getCompilerInstance()->getSema().addExternalSource(Source);
+
+  // Deciding whether this is a declaration looks up `dynamic_fn` at file
+  // scope; the statement must look it up again in its own scope.
+  EXPECT_THAT_EXPECTED(Interp->Parse("dynamic_fn();"), llvm::Succeeded());
+  EXPECT_GT(Source->FileScopeLookups, 0U);
+  EXPECT_THAT_EXPECTED(Interp->Parse("int x = dynamic_fn();"), llvm::Failed());
 }
 
 } // end anonymous namespace
