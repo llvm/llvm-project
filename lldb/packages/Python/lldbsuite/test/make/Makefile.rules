@@ -44,6 +44,7 @@ ifeq "$(OS)" "Windows_NT"
 	CP_R = xcopy $(subst /,\,$(1)) $(subst /,\,$(2)) /s /e /y
 	RM = del $(subst /,\,$(1)) > nul 2>&1 || (exit 0)
 	RM_F = del /f /q $(subst /,\,$(1))
+	TOUCH = copy /b $(subst /,\,$(1)) +,, > nul
 	RM_RF = $(if $(strip $(1)),(del /f /q $(subst /,\,$(1)) > nul 2>&1 & rd /s /q $(subst /,\,$(1)) > nul 2>&1) || (exit 0))
 	LN_SF = mklink /D "$(subst /,\,$(2))" "$(subst /,\,$(1))"
 	ECHO = echo $(1);
@@ -55,6 +56,7 @@ else
 	CP_R = cp -r $(1) $(2)
 	RM = rm $(1) > /dev/null 2>&1 || true
 	RM_F = rm -f $(1)
+	TOUCH = touch $(1)
 	RM_RF = rm -rf $(1)
 	# Use patsubst to strip the destination's directory from the source
 	# path, turning absolute symlinks into relative ones when both paths
@@ -590,6 +592,10 @@ endif
 
 #----------------------------------------------------------------------
 # Make the dSYM file from the executable if $(MAKE_DSYM) != "NO"
+#
+# Splitting the debug info rewrites $(EXE) after writing $(DSYM). Touch
+# $(DSYM) last, or the next make would split the stripped $(EXE) again and
+# leave a debug file without debug info.
 #----------------------------------------------------------------------
 $(DSYM) : $(EXE) \
           $(call tool_prereq,$(DS)) \
@@ -607,6 +613,7 @@ ifeq "$(SAVE_FULL_DEBUG_BINARY)" "YES"
 endif
 	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
+	$(call TOUCH,$(DSYM))
 endif
 ifeq "$(MAKE_DWP)" "YES"
 	$(DWP) -o "$(DWP_NAME)" $(DWOS)
