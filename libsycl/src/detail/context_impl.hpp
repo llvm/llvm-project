@@ -27,6 +27,7 @@
 #include <mutex>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -36,6 +37,7 @@ namespace detail {
 
 class PlatformImpl;
 class DeviceImpl;
+class DeviceKernelInfo;
 
 /// Context represents the runtime data structures and state required by a SYCL
 /// backend API to interact with a group of devices associated with a platform.
@@ -114,6 +116,18 @@ public:
   /// This method is thread-safe.
   void releaseAllPrograms();
 
+  /// Records that \p Info has (or is about to have) a cache entry keyed by
+  /// this context, so that the entry can be removed when this context is
+  /// destroyed. Safe to call more than once for the same \p Info.
+  /// This method is thread-safe.
+  void trackKernelInfoCache(DeviceKernelInfo *Info);
+
+  /// Removes \p Info from the set of tracked caches, e.g. because \p Info is
+  /// about to be destroyed (its owning device image is being unregistered).
+  /// No-op if \p Info was not tracked.
+  /// This method is thread-safe.
+  void forgetKernelInfoCache(DeviceKernelInfo *Info);
+
 private:
   const async_handler MAsyncHandler;
   const std::vector<DeviceImpl *> MDevices;
@@ -124,6 +138,9 @@ private:
   using ProgramsByDeviceT =
       std::unordered_map<ol_device_handle_t, ProgramWrapper>;
   std::unordered_map<const DeviceImageManager *, ProgramsByDeviceT> MPrograms;
+
+  std::mutex MTrackedKernelInfosMutex;
+  std::unordered_set<DeviceKernelInfo *> MTrackedKernelInfos;
 };
 
 } // namespace detail
