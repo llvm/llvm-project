@@ -4004,9 +4004,9 @@ void CodeGenDAGPatterns::parseInstructionPattern(const CodeGenInstruction &CGI,
     auto InstResultIter = InstResults.find(OpName);
     if (InstResultIter == InstResults.end() || !InstResultIter->second) {
       I.dump();
-      PrintFatalError(CGI.TheDef,
-                      "In " + CGI.TheDef->getName() + ": Operand $" + OpName +
-                          " does not exist in operand list!");
+      PrintFatalError(CGI.TheDef, "In " + CGI.TheDef->getName() +
+                                      ": Operand $" + OpName +
+                                      " does not exist in operand list!");
     }
 
     TreePatternNodePtr RNode = InstResultIter->second;
