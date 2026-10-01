@@ -275,7 +275,7 @@ bool BinOpSameOpcodeHelper::add(const Instruction *I) {
   }
   MaskType InterchangeableMask = OpcodeInMaskForm;
   auto [C, Pos] = isBinOpWithConstant(I);
-  if (auto *CI = dyn_cast_or_null<ConstantInt>(C)) {
+  if (auto *CI = dyn_cast_if_present<ConstantInt>(C)) {
     constexpr MaskType CanBeAll =
         XorBIT | OrBIT | AndBIT | SubBIT | AddBIT | MulBIT | AShrBIT | ShlBIT;
     const APInt &CIValue = CI->getValue();
