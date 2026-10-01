@@ -277,9 +277,9 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
 /// InsertBinop - Insert the specified binary operator, doing a small amount
 /// of work to avoid inserting an obviously redundant operation, and hoisting
 /// to an outer loop when the opportunity is there and it is safe.
-Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
-                                 Value *LHS, Value *RHS,
-                                 SCEV::NoWrapFlags Flags, bool IsSafeToHoist) {
+Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode, Value *LHS,
+                                 Value *RHS, SCEVFlags Flags,
+                                 bool IsSafeToHoist) {
   // Fold a binop with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(LHS))
     if (Constant *CRHS = dyn_cast<Constant>(RHS))
@@ -378,8 +378,7 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
 /// loop-invariant portions of expressions, after considering what
 /// can be folded using target addressing modes.
 ///
-Value *SCEVExpander::expandAddToGEP(SCEVUse Offset, Value *V,
-                                    SCEV::NoWrapFlags Flags) {
+Value *SCEVExpander::expandAddToGEP(SCEVUse Offset, Value *V, SCEVFlags Flags) {
   assert(!isa<Instruction>(V) ||
          SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
 

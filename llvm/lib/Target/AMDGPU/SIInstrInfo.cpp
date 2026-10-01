@@ -2073,12 +2073,14 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
       MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
   BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_AND_B32), DoorbellRegMasked)
       .addUse(DoorbellReg)
-      .addImm(DoorbellIDMask);
+      .addImm(DoorbellIDMask)
+      .setOperandDead(3); // implicit-def $scc
   Register SetWaveAbortBit =
       MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
   BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_OR_B32), SetWaveAbortBit)
       .addUse(DoorbellRegMasked)
-      .addImm(ECQueueWaveAbort);
+      .addImm(ECQueueWaveAbort)
+      .setOperandDead(3); // implicit-def $scc
   BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
       .addUse(SetWaveAbortBit);
   BuildMI(*TrapBB, TrapBB->end(), DL, get(AMDGPU::S_SENDMSG))
@@ -4860,6 +4862,12 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   if (MI.isCall() || MI.isInlineAsm())
     return true; // conservative assumption
 
+  // V_PERM_PK16 must issue with EXEC != 0 so its follower (or an inserted
+  // V_NOP) actually runs on the VALU pipe. Returning true here keeps the
+  // s_cbranch_execz that skips this region when EXEC is empty.
+  if (ST.hasVPermPk16Hazard() && isVPermPk16(Opcode))
+    return true;
+
   // Assume that barrier interactions are only intended with active lanes.
   if (isBarrier(Opcode))
     return true;
@@ -5132,6 +5140,67 @@ bool SIInstrInfo::hasVALU32BitEncoding(unsigned Opcode) const {
     return false;
 
   return pseudoToMCOpcode(Op32) != -1;
+}
+
+/// Return true if \p MI is a VALU comparison, i.e. an instruction that writes
+/// a lane mask with one bit per lane, and zeroes the bits of lanes that were
+/// inactive when it executed.
+///
+/// TODO: Also handle the sdst result of V_ADD_CO_U32 and V_SUB_CO_U32 and
+/// V_DIV_SCALE_F32.
+static bool isVCmp(const SIInstrInfo &TII, const MachineInstr &MI) {
+  if (TII.isVOPC(MI))
+    return true;
+  int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
+  return Op32 != -1 && TII.isVOPC(Op32);
+}
+
+bool SIInstrInfo::isMaskedByExec(Register Reg, const MachineInstr &Use,
+                                 const MachineRegisterInfo &MRI,
+                                 unsigned Depth) const {
+  assert(MRI.isSSA() && "isMaskedByExec requires SSA form");
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
+  const MachineBasicBlock *MBB = Use.getParent();
+
+  // EXEC itself is trivially masked by EXEC.
+  if (Reg == LMC.ExecReg)
+    return true;
+
+  // Maximum depth of the def-use walk.
+  constexpr unsigned MaxDepth = 6;
+  if (Depth >= MaxDepth || !Reg.isVirtual())
+    return false;
+
+  // Only look at definitions that can execute under the same EXEC mask as the
+  // use.
+  const MachineInstr *Def = MRI.getVRegDef(Reg);
+  if (!Def || Def->getParent() != MBB)
+    return false;
+
+  if (isVCmp(*this, *Def))
+    return true;
+
+  // Recurse into an operand, which must be a whole register to say anything
+  // about the whole lane mask.
+  auto Recurse = [&](unsigned OpIdx) {
+    const MachineOperand &MO = Def->getOperand(OpIdx);
+    return MO.isReg() && !MO.getSubReg() &&
+           isMaskedByExec(MO.getReg(), Use, MRI, Depth + 1);
+  };
+
+  unsigned Opc = Def->getOpcode();
+  if (Opc == AMDGPU::COPY && Recurse(1))
+    return true;
+  if (Opc == LMC.AndOpc && (Recurse(1) || Recurse(2)))
+    return true;
+  if (Opc == LMC.AndN2Opc && Recurse(1))
+    return true;
+  if ((Opc == LMC.OrOpc || Opc == LMC.XorOpc) && Recurse(1) && Recurse(2))
+    return true;
+  // TODO: Sometimes we encounter "reg = S_CSELECT -1, 0". If Reg has no other
+  // uses this could be optimized to "reg = S_CSELECT $exec, 0".
+
+  return false;
 }
 
 bool SIInstrInfo::hasModifiers(unsigned Opcode) const {
@@ -8457,7 +8526,8 @@ void SIInstrInfo::moveToVALUImpl(
     const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
     BuildMI(*MBB, Inst, Inst.getDebugLoc(), get(LMC.AndOpc), LMC.VccReg)
         .addReg(LMC.ExecReg)
-        .addReg(IsSCC ? LMC.VccReg : CondReg);
+        .addReg(IsSCC ? LMC.VccReg : CondReg)
+        .setOperandDead(3); // implicit-def $scc
     Inst.removeOperand(1);
   } break;
 
@@ -11216,11 +11286,13 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
 unsigned SIInstrInfo::getBlockingCycles(const MachineInstr &MI) const {
   if (!ST.hasGFX1250VALUBlockingCycles())
     return 0;
+  return getGFX1250BlockingCyclesTable(MI);
+}
 
-  // Use processor-specific lookup table
+unsigned
+SIInstrInfo::getGFX1250BlockingCyclesTable(const MachineInstr &MI) const {
   if (const auto *Entry = AMDGPU::getGFX1250BlockingCyclesInfo(MI.getOpcode()))
     return Entry->GFX1250BlockingCycles;
-
   return 0;
 }
 
@@ -11599,6 +11671,29 @@ static bool foldableSelect(const MachineInstr &Def) {
   return Op1IsNonZeroImm && Op2IsZeroImm;
 }
 
+/// If \p Sel is an S_CSELECT* of two different constants A and B, return them,
+/// truncated to the width of the select.
+static std::optional<std::pair<int64_t, int64_t>>
+getSelectConstants(const SIInstrInfo &TII, const MachineRegisterInfo &MRI,
+                   const MachineInstr &Sel) {
+  unsigned Opc = Sel.getOpcode();
+  if (Opc != AMDGPU::S_CSELECT_B32 && Opc != AMDGPU::S_CSELECT_B64)
+    return {};
+  std::optional<int64_t> A =
+      TII.getImmOrMaterializedImm(MRI, Sel.getOperand(1));
+  std::optional<int64_t> B =
+      TII.getImmOrMaterializedImm(MRI, Sel.getOperand(2));
+  if (!A || !B)
+    return {};
+  if (Opc == AMDGPU::S_CSELECT_B32) {
+    A = Lo_32(*A);
+    B = Lo_32(*B);
+  }
+  if (*A == *B)
+    return {};
+  return std::pair(*A, *B);
+}
+
 static bool setsSCCIfResultIsZero(const MachineInstr &Def, bool &NeedInversion,
                                   unsigned &NewDefOpc) {
   // S_ADD_U32 X, 1 sets SCC on carryout which can only happen if result==0.
@@ -11644,34 +11739,38 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
   const auto optimizeCmpSelect = [&CmpInstr, SrcReg, CmpValue, MRI,
                                   this](bool NeedInversion) -> bool {
-    if (CmpValue != 0)
-      return false;
-
     MachineInstr *Def = MRI->getVRegDef(SrcReg);
     if (!Def)
       return false;
 
-    // For S_OP that set SCC = DST!=0, do the transformation
-    //
-    //   s_cmp_[lg|eq]_* (S_OP ...), 0 => (S_OP ...)
-    //
-    // For (S_OP ...) that set SCC = DST==0, invert NeedInversion and
-    // do the transformation:
-    //
-    //   s_cmp_[lg|eq]_* (S_OP ...), 0 => (S_OP ...)
-    //
-    // If foldableSelect, s_cmp_lg_* is redundant because the SCC input value
-    // for S_CSELECT* already has the same value that will be calculated by
-    // s_cmp_lg_*
-    //
-    //   s_cmp_[lg|eq]_* (S_CSELECT* (non-zero imm), 0), 0 => (S_CSELECT*
-    //   (non-zero imm), 0)
-
     unsigned NewDefOpc = Def->getOpcode();
-    if (!setsSCCIfResultIsNonZero(*Def) &&
-        !setsSCCIfResultIsZero(*Def, NeedInversion, NewDefOpc) &&
-        !foldableSelect(*Def))
-      return false;
+    if (auto Consts = getSelectConstants(*this, *MRI, *Def)) {
+      // sX = S_CSELECT* A, B with A != B, so sX == A exactly when SCC was set.
+      // Comparing sX with A or B recomputes SCC or its inverse:
+      //
+      //   s_cmp_eq_* sX, A => SCC      s_cmp_lg_* sX, A => !SCC
+      //   s_cmp_eq_* sX, B => !SCC     s_cmp_lg_* sX, B => SCC
+      auto [A, B] = *Consts;
+      int64_t C = Def->getOpcode() == AMDGPU::S_CSELECT_B32 ? Lo_32(CmpValue)
+                                                            : CmpValue;
+      if (C == A)
+        NeedInversion = !NeedInversion;
+      else if (C != B)
+        return false;
+    } else {
+      // For S_OP that set SCC = DST!=0, do the transformation
+      //
+      //   s_cmp_[lg|eq]_* (S_OP ...), 0 => (S_OP ...)
+      //
+      // For (S_OP ...) that set SCC = DST==0, invert NeedInversion and
+      // do the transformation:
+      //
+      //   s_cmp_[lg|eq]_* (S_OP ...), 0 => (S_OP ...)
+      if (CmpValue != 0 ||
+          (!setsSCCIfResultIsNonZero(*Def) &&
+           !setsSCCIfResultIsZero(*Def, NeedInversion, NewDefOpc)))
+        return false;
+    }
 
     if (!optimizeSCC(Def, &CmpInstr, NeedInversion))
       return false;
@@ -11823,7 +11922,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMPK_GE_I32:
     return optimizeCmpAnd(1, 32, false, true);
   case AMDGPU::S_CMP_EQ_U64:
-    return optimizeCmpAnd(1, 64, true, false);
+    return optimizeCmpAnd(1, 64, true, false) ||
+           optimizeCmpSelect(/*NeedInversion=*/true);
   case AMDGPU::S_CMP_LG_U32:
   case AMDGPU::S_CMP_LG_I32:
   case AMDGPU::S_CMPK_LG_U32:
