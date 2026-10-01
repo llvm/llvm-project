@@ -29,44 +29,12 @@ define <8 x i16> @undef_umulh_v8i16(<8 x i16> %a0) {
   ret <8 x i16> %1
 }
 
-define <8 x i16> @undef_umulh_v8i16_commute(<8 x i16> %a0) {
-; CHECK-LABEL: @undef_umulh_v8i16_commute(
-; CHECK-NEXT:    ret <8 x i16> zeroinitializer
+define <32 x i8> @undef_umulh_v32i8_commute(<32 x i8> %a0) {
+; CHECK-LABEL: @undef_umulh_v32i8_commute(
+; CHECK-NEXT:    ret <32 x i8> zeroinitializer
 ;
-  %1 = call <8 x i16> @llvm.umulh.v8i16(<8 x i16> undef, <8 x i16> %a0)
-  ret <8 x i16> %1
-}
-
-define <16 x i16> @undef_umulh_v16i16(<16 x i16> %a0) {
-; CHECK-LABEL: @undef_umulh_v16i16(
-; CHECK-NEXT:    ret <16 x i16> zeroinitializer
-;
-  %1 = call <16 x i16> @llvm.umulh.v16i16(<16 x i16> %a0, <16 x i16> undef)
-  ret <16 x i16> %1
-}
-
-define <16 x i16> @undef_umulh_v16i16_commute(<16 x i16> %a0) {
-; CHECK-LABEL: @undef_umulh_v16i16_commute(
-; CHECK-NEXT:    ret <16 x i16> zeroinitializer
-;
-  %1 = call <16 x i16> @llvm.umulh.v16i16(<16 x i16> undef, <16 x i16> %a0)
-  ret <16 x i16> %1
-}
-
-define <32 x i16> @undef_umulh_v32i16(<32 x i16> %a0) {
-; CHECK-LABEL: @undef_umulh_v32i16(
-; CHECK-NEXT:    ret <32 x i16> zeroinitializer
-;
-  %1 = call <32 x i16> @llvm.umulh.v32i16(<32 x i16> %a0, <32 x i16> undef)
-  ret <32 x i16> %1
-}
-
-define <32 x i16> @undef_umulh_v32i16_commute(<32 x i16> %a0) {
-; CHECK-LABEL: @undef_umulh_v32i16_commute(
-; CHECK-NEXT:    ret <32 x i16> zeroinitializer
-;
-  %1 = call <32 x i16> @llvm.umulh.v32i16(<32 x i16> undef, <32 x i16> %a0)
-  ret <32 x i16> %1
+  %1 = call <32 x i8> @llvm.umulh.v32i8(<32 x i8> undef, <32 x i8> %a0)
+  ret <32 x i8> %1
 }
 
 ;
@@ -89,52 +57,20 @@ define i32 @zero_umulh_i32_commute(i32 %a0) {
   ret i32 %1
 }
 
-define <8 x i16> @zero_umulh_v8i16(<8 x i16> %a0) {
-; CHECK-LABEL: @zero_umulh_v8i16(
-; CHECK-NEXT:    ret <8 x i16> zeroinitializer
+define <2 x i32> @zero_umulh_v2i32(<2 x i32> %a0) {
+; CHECK-LABEL: @zero_umulh_v2i32(
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
-  %1 = call <8 x i16> @llvm.umulh.v8i16(<8 x i16> %a0, <8 x i16> zeroinitializer)
-  ret <8 x i16> %1
+  %1 = call <2 x i32> @llvm.umulh.v2i32(<2 x i32> %a0, <2 x i32> zeroinitializer)
+  ret <2 x i32> %1
 }
 
-define <8 x i16> @zero_umulh_v8i16_commute(<8 x i16> %a0) {
-; CHECK-LABEL: @zero_umulh_v8i16_commute(
-; CHECK-NEXT:    ret <8 x i16> zeroinitializer
+define <8 x i64> @zero_umulh_v8i64_commute(<8 x i64> %a0) {
+; CHECK-LABEL: @zero_umulh_v8i64_commute(
+; CHECK-NEXT:    ret <8 x i64> zeroinitializer
 ;
-  %1 = call <8 x i16> @llvm.umulh.v8i16(<8 x i16> zeroinitializer, <8 x i16> %a0)
-  ret <8 x i16> %1
-}
-
-define <16 x i16> @zero_umulh_v16i16(<16 x i16> %a0) {
-; CHECK-LABEL: @zero_umulh_v16i16(
-; CHECK-NEXT:    ret <16 x i16> zeroinitializer
-;
-  %1 = call <16 x i16> @llvm.umulh.v16i16(<16 x i16> %a0, <16 x i16> zeroinitializer)
-  ret <16 x i16> %1
-}
-
-define <16 x i16> @zero_umulh_v16i16_commute(<16 x i16> %a0) {
-; CHECK-LABEL: @zero_umulh_v16i16_commute(
-; CHECK-NEXT:    ret <16 x i16> zeroinitializer
-;
-  %1 = call <16 x i16> @llvm.umulh.v16i16(<16 x i16> zeroinitializer, <16 x i16> %a0)
-  ret <16 x i16> %1
-}
-
-define <32 x i16> @zero_umulh_v32i16(<32 x i16> %a0) {
-; CHECK-LABEL: @zero_umulh_v32i16(
-; CHECK-NEXT:    ret <32 x i16> zeroinitializer
-;
-  %1 = call <32 x i16> @llvm.umulh.v32i16(<32 x i16> %a0, <32 x i16> zeroinitializer)
-  ret <32 x i16> %1
-}
-
-define <32 x i16> @zero_umulh_v32i16_commute(<32 x i16> %a0) {
-; CHECK-LABEL: @zero_umulh_v32i16_commute(
-; CHECK-NEXT:    ret <32 x i16> zeroinitializer
-;
-  %1 = call <32 x i16> @llvm.umulh.v32i16(<32 x i16> zeroinitializer, <32 x i16> %a0)
-  ret <32 x i16> %1
+  %1 = call <8 x i64> @llvm.umulh.v8i64(<8 x i64> zeroinitializer, <8 x i64> %a0)
+  ret <8 x i64> %1
 }
 
 ;
@@ -157,52 +93,20 @@ define i32 @one_umulh_i32_commute(i32 %a0) {
   ret i32 %1
 }
 
-define <8 x i16> @one_umulh_v8i16(<8 x i16> %a0) {
-; CHECK-LABEL: @one_umulh_v8i16(
-; CHECK-NEXT:    ret <8 x i16> zeroinitializer
+define <8 x i8> @one_umulh_v8i8(<8 x i8> %a0) {
+; CHECK-LABEL: @one_umulh_v8i8(
+; CHECK-NEXT:    ret <8 x i8> zeroinitializer
 ;
-  %1 = call <8 x i16> @llvm.umulh.v8i16(<8 x i16> %a0, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
-  ret <8 x i16> %1
-}
-
-define <8 x i16> @one_umulh_v8i16_commute(<8 x i16> %a0) {
-; CHECK-LABEL: @one_umulh_v8i16_commute(
-; CHECK-NEXT:    ret <8 x i16> zeroinitializer
-;
-  %1 = call <8 x i16> @llvm.umulh.v8i16(<8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <8 x i16> %a0)
-  ret <8 x i16> %1
-}
-
-define <16 x i16> @one_umulh_v16i16(<16 x i16> %a0) {
-; CHECK-LABEL: @one_umulh_v16i16(
-; CHECK-NEXT:    ret <16 x i16> zeroinitializer
-;
-  %1 = call <16 x i16> @llvm.umulh.v16i16(<16 x i16> %a0, <16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
-  ret <16 x i16> %1
+  %1 = call <8 x i8> @llvm.umulh.v8i8(<8 x i8> %a0, <8 x i8> splat (i8 1))
+  ret <8 x i8> %1
 }
 
 define <16 x i16> @one_umulh_v16i16_commute(<16 x i16> %a0) {
 ; CHECK-LABEL: @one_umulh_v16i16_commute(
 ; CHECK-NEXT:    ret <16 x i16> zeroinitializer
 ;
-  %1 = call <16 x i16> @llvm.umulh.v16i16(<16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <16 x i16> %a0)
+  %1 = call <16 x i16> @llvm.umulh.v16i16(<16 x i16> splat (i16 1), <16 x i16> %a0)
   ret <16 x i16> %1
-}
-
-define <32 x i16> @one_umulh_v32i16(<32 x i16> %a0) {
-; CHECK-LABEL: @one_umulh_v32i16(
-; CHECK-NEXT:    ret <32 x i16> zeroinitializer
-;
-  %1 = call <32 x i16> @llvm.umulh.v32i16(<32 x i16> %a0, <32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
-  ret <32 x i16> %1
-}
-
-define <32 x i16> @one_umulh_v32i16_commute(<32 x i16> %a0) {
-; CHECK-LABEL: @one_umulh_v32i16_commute(
-; CHECK-NEXT:    ret <32 x i16> zeroinitializer
-;
-  %1 = call <32 x i16> @llvm.umulh.v32i16(<32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <32 x i16> %a0)
-  ret <32 x i16> %1
 }
 
 ;
