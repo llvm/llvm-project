@@ -4635,7 +4635,7 @@ const SCEV *ScalarEvolution::removePointerBase(const SCEV *P) {
 const SCEV *ScalarEvolution::getMinusSCEV(SCEVUse LHS, SCEVUse RHS,
                                           SCEVFlags Flags, unsigned Depth) {
   // Fast path: X - X --> 0.
-  if (LHS->getCanonical() == RHS->getCanonical())
+  if (SCEVUse::getCommon(LHS, RHS))
     return getZero(LHS->getType());
 
   // If we subtract two pointers with different pointer bases, bail.

@@ -685,7 +685,7 @@ define void @udiv_group_non_adjacent(i64 %step, i64 %n) {
 ; CHECK-NEXT:    %iv.div = udiv i64 %iv, 3
 ; CHECK-NEXT:    --> ({%start,+,%step}<nuw><%loop> /u 3) U: [0,6148914691236517206) S: [0,6148914691236517206) Exits: (((%step * %n)<u nuw> + %start)<u nuw> /u 3) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %a = add i64 %py, %iv.div
-; CHECK-NEXT:    --> ((((%step * %n) + %start) /u 3) + (((%step * %n) + %start2) /u 3) + ({%start,+,%step}<nuw><%loop> /u 3)) U: full-set S: full-set Exits: ((2 * (((%step * %n) + %start) /u 3))<nuw> + (((%step * %n) + %start2) /u 3)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((((%step * %n) + %start) /u 3) + (((%step * %n) + %start2) /u 3) + ({%start,+,%step}<nuw><%loop> /u 3)) U: full-set S: full-set Exits: ((((%step * %n) + %start) /u 3) + (((%step * %n) + %start2) /u 3) + (((%step * %n)<u nuw> + %start)<u nuw> /u 3)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, %step
 ; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: full-set S: full-set Exits: (((1 + %n) * %step) + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i64 %i, 1
@@ -811,7 +811,7 @@ define void @udiv_dup_same_use_flags(i64 %start, i64 %step, i64 %n) {
 ; CHECK-NEXT:    %i.2.next = add i64 %i.2, 1
 ; CHECK-NEXT:    --> {1,+,1}<nw><%loop.2> U: full-set S: full-set Exits: (1 + %n) LoopDispositions: { %loop.2: Computable }
 ; CHECK-NEXT:    %a = add i64 %q1, %q2
-; CHECK-NEXT:    --> (({%start,+,%step}<nuw><%loop.2> /u 3) + ({%start,+,%step}<nuw><%loop.1> /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205) --> (2 * (((%step * %n) + %start) /u 3))<nuw> U: [0,-6148914691236517205) S: [-9223372036854775808,9223372036854775807)
+; CHECK-NEXT:    --> (({%start,+,%step}<nuw><%loop.2> /u 3) + ({%start,+,%step}<nuw><%loop.1> /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205) --> (2 * (((%step * %n)<u nuw> + %start)<u nuw> /u 3))<nuw> U: [0,-6148914691236517205) S: [-9223372036854775808,9223372036854775807)
 ; CHECK-NEXT:  Determining loop execution counts for: @udiv_dup_same_use_flags
 ; CHECK-NEXT:  Loop %loop.2: backedge-taken count is %n
 ; CHECK-NEXT:  Loop %loop.2: constant max backedge-taken count is i64 -1
@@ -883,9 +883,9 @@ define void @udiv_dup3_same_use_flags(i64 %start, i64 %step, i64 %n) {
 ; CHECK-NEXT:    %i.3.next = add i64 %i.3, 1
 ; CHECK-NEXT:    --> {1,+,1}<nw><%loop.3> U: full-set S: full-set Exits: (1 + %n) LoopDispositions: { %loop.3: Computable }
 ; CHECK-NEXT:    %a = add i64 %q1, %q2
-; CHECK-NEXT:    --> (({%start,+,%step}<nuw><%loop.2> /u 3) + ({%start,+,%step}<nuw><%loop.1> /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205) --> (2 * (((%step * %n) + %start) /u 3))<nuw> U: [0,-6148914691236517205) S: [-9223372036854775808,9223372036854775807)
+; CHECK-NEXT:    --> (({%start,+,%step}<nuw><%loop.2> /u 3) + ({%start,+,%step}<nuw><%loop.1> /u 3)) U: [0,-6148914691236517205) S: [0,-6148914691236517205) --> (2 * (((%step * %n)<u nuw> + %start)<u nuw> /u 3))<nuw> U: [0,-6148914691236517205) S: [-9223372036854775808,9223372036854775807)
 ; CHECK-NEXT:    %b = add i64 %a, %q3
-; CHECK-NEXT:    --> (({%start,+,%step}<nuw><%loop.3> /u 3) + ({%start,+,%step}<nuw><%loop.2> /u 3) + ({%start,+,%step}<nuw><%loop.1> /u 3)) U: full-set S: full-set --> (3 * (((%step * %n) + %start) /u 3))<nuw> U: full-set S: full-set
+; CHECK-NEXT:    --> (({%start,+,%step}<nuw><%loop.3> /u 3) + ({%start,+,%step}<nuw><%loop.2> /u 3) + ({%start,+,%step}<nuw><%loop.1> /u 3)) U: full-set S: full-set --> (3 * (((%step * %n)<u nuw> + %start)<u nuw> /u 3))<nuw> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @udiv_dup3_same_use_flags
 ; CHECK-NEXT:  Loop %loop.3: backedge-taken count is %n
 ; CHECK-NEXT:  Loop %loop.3: constant max backedge-taken count is i64 -1
@@ -964,7 +964,7 @@ define void @udiv_mul_common_factor_same_use_flags(i64 %start, i64 %step, i64 %n
 ; CHECK-NEXT:    %mul = mul i64 %q1, %x
 ; CHECK-NEXT:    --> (({%start,+,%step}<nuw><%loop.1> /u 3) * %x) U: full-set S: full-set --> ((((%step * %n)<u nuw> + %start)<u nuw> /u 3) * %x) U: full-set S: full-set
 ; CHECK-NEXT:    %a = add i64 %mul, %q2
-; CHECK-NEXT:    --> ((({%start,+,%step}<nuw><%loop.1> /u 3) * %x) + ({%start,+,%step}<nuw><%loop.2> /u 3)) U: full-set S: full-set --> ((1 + %x) * (((%step * %n) + %start) /u 3)) U: full-set S: full-set
+; CHECK-NEXT:    --> ((({%start,+,%step}<nuw><%loop.1> /u 3) * %x) + ({%start,+,%step}<nuw><%loop.2> /u 3)) U: full-set S: full-set --> ((1 + %x) * (((%step * %n)<u nuw> + %start)<u nuw> /u 3)) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @udiv_mul_common_factor_same_use_flags
 ; CHECK-NEXT:  Loop %loop.2: backedge-taken count is %n
 ; CHECK-NEXT:  Loop %loop.2: constant max backedge-taken count is i64 -1
