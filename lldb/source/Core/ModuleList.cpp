@@ -36,8 +36,10 @@
 #endif
 
 #include "clang/Driver/Driver.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -1343,6 +1345,33 @@ bool ModuleList::RemoveSharedModuleIfOrphaned(const ModuleWP module_wp) {
   return GetSharedModuleList().RemoveIfOrphaned(module_wp);
 }
 
+static void
+ReportScriptLoading(Debugger &debugger,
+                    llvm::ArrayRef<std::string> warned_script_paths) {
+  if (warned_script_paths.empty())
+    return;
+
+  static std::once_flag s_warn_once;
+
+  // clang-format off
+  debugger.ReportWarning(
+R"(Found executable debug scripts. To run a script in this debug session:
+
+    command script import "/path/to/script.py"
+
+To run all discovered debug scripts in this session:
+
+    settings set target.load-script-from-symbol-file true
+)", debugger.GetID(), &s_warn_once);
+
+      debugger.ReportWarning(llvm::formatv(
+R"(The following debug scripts were detected but not loaded:
+
+    - {0}
+)", llvm::join(warned_script_paths, "\n    - ")), debugger.GetID());
+  // clang-format on
+}
+
 static bool LoadScriptingModule(const FileSpec &scripting_fspec,
                                 ScriptInterpreter &script_interpreter,
                                 Target &target, Status &error) {
@@ -1356,9 +1385,9 @@ static bool LoadScriptingModule(const FileSpec &scripting_fspec,
       /*module_sp*/ nullptr, /*extra_path*/ {}, target.shared_from_this());
 }
 
-bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
-                                                        Target &target,
-                                                        Status &error) {
+bool ModuleList::LoadScriptingResourceInTargetForModule(
+    Module &module, Target &target, Status &error,
+    std::vector<std::string> &warned_script_paths) {
   Log *log = GetLog(LLDBLog::Modules);
 
   Debugger &debugger = target.GetDebugger();
@@ -1405,23 +1434,7 @@ bool ModuleList::LoadScriptingResourceInTargetForModule(Module &module,
         break;
       LLVM_FALLTHROUGH;
     case eLoadScriptFromSymFileWarn:
-      debugger.ReportWarning(
-          llvm::formatv(
-              // clang-format off
-R"('{0}' contains {1} debug script. To run this script in this debug session:
-
-    command script import "{2}"
-
-To run all discovered debug scripts in this session:
-
-    settings set target.load-script-from-symbol-file true
-)",
-              // clang-format on
-              module.GetFileSpec().GetFileNameStrippingExtension(),
-              trusted ? "a trusted" : "an untrusted",
-              scripting_fspec.GetPath()),
-          debugger.GetID());
-
+      warned_script_paths.emplace_back(scripting_fspec.GetPath());
       continue;
     }
 
@@ -1450,10 +1463,13 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
   const ModuleList tmp_module_list(*this);
   m_modules_mutex.unlock();
 
+  std::vector<std::string> warned_script_paths;
+
   for (auto module : tmp_module_list.ModulesNoLocking()) {
     if (module) {
       Status error;
-      if (!LoadScriptingResourceInTargetForModule(*module, *target, error)) {
+      if (!LoadScriptingResourceInTargetForModule(*module, *target, error,
+                                                  warned_script_paths)) {
         if (error.Fail() && error.AsCString()) {
           error = Status::FromErrorStringWithFormatv(
               "unable to load scripting data for "
@@ -1467,6 +1483,9 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
       }
     }
   }
+
+  ReportScriptLoading(target->GetDebugger(), warned_script_paths);
+
   return errors.empty();
 }
 

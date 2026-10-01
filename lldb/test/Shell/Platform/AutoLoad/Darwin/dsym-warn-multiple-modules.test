@@ -1,0 +1,54 @@
+# REQUIRES: python, system-darwin
+#
+# Test that when load-script-from-symbol-file is set to 'warn', LLDB emits a
+# warning for each dSYM script without executing them. Verify that warnings
+# are emitted for all modules, not just the first.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g %t/main.c -o %t/TestModule.out
+# RUN: %clang_host -g %t/main.c -o %t/TestModule2.out
+# RUN: %clang_host -g %t/main.c -o %t/TestModule3.out
+# RUN: mkdir -p %t/TestModule.out.dSYM/Contents/Resources/Python
+# RUN: mkdir -p %t/TestModule2.out.dSYM/Contents/Resources/Python
+# RUN: mkdir -p %t/TestModule3.out.dSYM/Contents/Resources/Python
+
+# RUN: cp %t/dsym_script.py %t/TestModule.out.dSYM/Contents/Resources/Python/TestModule.py
+# RUN: cp %t/dsym_script2.py %t/TestModule2.out.dSYM/Contents/Resources/Python/TestModule2.py
+# RUN: cp %t/dsym_script3.py %t/TestModule3.out.dSYM/Contents/Resources/Python/TestModule3.py
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file warn' \
+# RUN:   -o 'target create %t/TestModule.out' \
+# RUN:   -o 'target modules add %t/TestModule2.out %t/TestModule3.out' 2>&1 \
+# RUN:   | FileCheck %s --strict-whitespace \
+# RUN:                  --implicit-check-not=DSYM_SCRIPT --implicit-check-not=DSYM_SCRIPT2 --implicit-check-not=DSYM_SCRIPT3
+
+# CHECK: (lldb) target create
+# CHECK:      warning: {{.*}}The following debug scripts were detected but not loaded:
+# CHECK-EMPTY:
+# CHECK-NEXT:{{^}}    - {{.*}}/TestModule.out.dSYM/Contents/Resources/Python/TestModule.py
+
+# CHECK: (lldb) target modules add
+# CHECK:      warning: {{.*}}The following debug scripts were detected but not loaded:
+# CHECK-EMPTY:
+# CHECK-NEXT:{{^}}    - {{.*}}/TestModule2.out.dSYM/Contents/Resources/Python/TestModule2.py
+# CHECK:      warning: {{.*}}The following debug scripts were detected but not loaded:
+# CHECK-EMPTY:
+# CHECK-NEXT:{{^}}    - {{.*}}/TestModule3.out.dSYM/Contents/Resources/Python/TestModule3.py
+
+#--- main.c
+int main() { return 0; }
+
+#--- dsym_script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("DSYM_SCRIPT", file=sys.stderr)
+
+#--- dsym_script2.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("DSYM_SCRIPT2", file=sys.stderr)
+
+#--- dsym_script3.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("DSYM_SCRIPT3", file=sys.stderr)
