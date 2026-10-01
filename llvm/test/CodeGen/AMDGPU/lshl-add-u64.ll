@@ -252,11 +252,11 @@ define amdgpu_ps <2 x i32> @lshl_add_u64_sss_and_4(i32 inreg %v, i32 inreg %a, i
 
 define amdgpu_ps <2 x i32> @lshl_add_u64_svs_and_4(i32 inreg %v, i64 %a, i32 inreg %s) {
 ; GCN-LABEL: lshl_add_u64_svs_and_4
-; GFX-1250: v_lshl_add_u64 v[{{[0-9:]+}}], s{{[0-9:]+}}, s{{[0-9:]+}}, v[{{[0-9:]+}}]
+; GFX1250: v_lshl_add_u64 v[{{[0-9:]+}}], s[{{[0-9:]+}}], s{{[0-9:]+}}, v[{{[0-9:]+}}]
 ; GFX942: v_lshl_add_u64 v[{{[0-9:]+}}], s[{{[0-9:]+}}], 0, v[{{[0-9:]+}}]
 ; GISEL-LABEL: lshl_add_u64_svs_and_4
 ; GFX942-GISEL: v_add_co_u32_e32 v{{[0-9:]+}}, vcc, s{{[0-9:]+}}, v{{[0-9:]+}}
-; GFX-1250-GISEL: v_lshl_add_u64 v[{{[0-9:]+}}], s{{[0-9:]+}}], s{{[0-9:]+}}, v[{{[0-9:]+}}]
+; GFX1250-GISEL: v_add_nc_u64_e32 v[{{[0-9:]+}}], s[{{[0-9:]+}}], v[{{[0-9:]+}}]
   %and = and i32 %s, 4
   %zext_and = zext i32 %and to i64
   %zext_v = zext i32 %and to i64
