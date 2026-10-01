@@ -70,7 +70,7 @@ jobs:
         run: |
           python3 -m venv --system-site-packages .venv
           source .venv/bin/activate
-          pip install --ignored-installed -r libcxx/test/requirements.txt
+          pip install --ignore-installed -r libcxx/test/requirements.txt
           libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: ${{ matrix.cc }}
