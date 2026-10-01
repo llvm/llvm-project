@@ -37,6 +37,7 @@ class MachineIRBuilder;
 class MachineRegisterInfo;
 class Register;
 class StringRef;
+class Triple;
 class SPIRVInstrInfo;
 class SPIRVSubtarget;
 class SPIRVGlobalRegistry;
@@ -99,6 +100,10 @@ public:
 
   // Build the visitor to operate on the function F.
   PartialOrderingVisitor(Function &F);
+
+  // Returns the dominator tree computed for the function this visitor
+  // operates on.
+  const DomTreeBuilder::BBDomTree &getDominatorTree() const { return DT; }
 
   // Returns true is |LHS| comes before |RHS| in the partial ordering.
   // If |LHS| and |RHS| have the same rank, the traversal order determines the
@@ -175,10 +180,8 @@ StringRef getOriginalAsmConstraints(const CallBase &CB);
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
 // little-endian words.
-void addStringImm(const StringRef &Str, MCInst &Inst);
-void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB);
-void addStringImm(const StringRef &Str, IRBuilder<> &B,
-                  std::vector<Value *> &Args);
+void addStringImm(StringRef Str, MCInst &Inst);
+void addStringImm(StringRef Str, MachineInstrBuilder &MIB);
 
 // Read the series of integer operands back as a null-terminated string using
 // the reverse of the logic in addStringImm.
@@ -192,9 +195,8 @@ std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI);
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 
 // Add an OpName instruction for the given target register.
-void buildOpName(Register Target, const StringRef &Name,
-                 MachineIRBuilder &MIRBuilder);
-void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
+void buildOpName(Register Target, StringRef Name, MachineIRBuilder &MIRBuilder);
+void buildOpName(Register Target, StringRef Name, MachineInstr &I,
                  const SPIRVInstrInfo &TII);
 
 // Add an OpDecorate instruction for the given Reg.
@@ -207,10 +209,6 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
-                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
-void buildOpMemberDecorate(Register Reg, MachineInstr &I,
-                           const SPIRVInstrInfo &TII,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
                            ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 
@@ -288,7 +286,11 @@ getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC);
 
 SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord);
 
-SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id);
+uint32_t getMemSemanticsWithStorageClass(const Triple &TT, uint32_t OrderSem,
+                                         uint32_t StorageClassSem);
+
+SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
+                                SyncScope::ID Id);
 
 // Find def instruction for the given ConstReg, walking through
 // spv_track_constant and ASSIGN_TYPE instructions. Updates ConstReg by def
@@ -309,6 +311,10 @@ bool isSpvIntrinsic(const Value *Arg);
 
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
+
+// Get the i-th operand of the metadata node as a ConstantInt, or nullptr if it
+// is out of range or not a ConstantInt.
+ConstantInt *getMDOperandAsConstInt(const MDNode *N, unsigned I);
 
 // If OpenCL or SPIR-V builtin function name is recognized, return a demangled
 // name, otherwise return an empty string.
@@ -508,21 +514,42 @@ inline bool isVector1(Type *Ty) {
   return FVTy && FVTy->getNumElements() == 1;
 }
 
+// We define this predicate out of line to avoid having to include all OpTypes.
+bool isVectorType(SPIRVTypeInst SPVTy);
+
+// Per spec: "Vector types must be parameterized only with 2, 3, or
+// 4 components, plus any additional sizes enabled by capabilities.", and
+// we always enable the Vector16 capability.
+inline bool requiresLongVectorEXT(unsigned NumComponents) {
+  return NumComponents != 2 && NumComponents != 3 && NumComponents != 4 &&
+         NumComponents != 8 && NumComponents != 16;
+}
+
+inline bool isLongVectorEXT(const Type *Ty) {
+  if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
+    return requiresLongVectorEXT(FVTy->getNumElements());
+  return false;
+}
+
 // Modify an LLVM type to conform with future transformations in IRTranslator.
 // At the moment use cases comprise only a <1 x Type> vector. To extend when/if
 // needed.
-inline Type *normalizeType(Type *Ty) {
+inline Type *normalizeType(Type *Ty, bool CanUseAnyVectorRank) {
+  if (CanUseAnyVectorRank)
+    return Ty;
+
   auto *FVTy = dyn_cast<FixedVectorType>(Ty);
   if (!FVTy || FVTy->getNumElements() != 1)
     return Ty;
   // If it's a <1 x Type> vector type, replace it by the element type, because
   // it's not a legal vector type in LLT and IRTranslator will represent it as
   // the scalar eventually.
-  return normalizeType(FVTy->getElementType());
+  return normalizeType(FVTy->getElementType(), CanUseAnyVectorRank);
 }
 
-inline PoisonValue *getNormalizedPoisonValue(Type *Ty) {
-  return PoisonValue::get(normalizeType(Ty));
+inline PoisonValue *getNormalizedPoisonValue(Type *Ty,
+                                             bool CanUseAnyVectorRank) {
+  return PoisonValue::get(normalizeType(Ty, CanUseAnyVectorRank));
 }
 
 inline MetadataAsValue *buildMD(Value *Arg) {
@@ -539,8 +566,6 @@ MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
 #define SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR "spv.was-available-externally"
-
-bool getVacantFunctionName(Module &M, std::string &Name);
 
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
                      MachineIRBuilder &MIRBuilder,

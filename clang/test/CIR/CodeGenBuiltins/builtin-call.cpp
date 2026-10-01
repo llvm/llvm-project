@@ -315,9 +315,8 @@ void trap2() {
 
 // OGCG-LABEL: define{{.*}} void @_Z5trap2v
 // OGCG:         call void @llvm.trap()
-// OGCG-NEXT:    call void @_Z2f1v()
-// OGCG:         ret void
-// OGCG:       }
+// OGCG-NEXT:    unreachable
+// OGCG-NEXT:  }
 
 void *test_alloca(unsigned long n) {
   return __builtin_alloca(n);

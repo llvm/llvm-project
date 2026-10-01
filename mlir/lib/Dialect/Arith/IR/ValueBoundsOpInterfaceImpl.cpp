@@ -354,20 +354,34 @@ struct MinUIOpInterface
     assert(value == minOp.getResult() && "invalid value");
 
     // ValueBoundsConstraintSet models values as signed integers (e.g. an i8
-    // 0xff is treated as -1, not 255).So, we can only derive bounds for minui
-    // if both operands are provably non-negative.
+    // 0xff is treated as -1, not 255). For an unsigned minimum it is enough
+    // that a single operand is provably non-negative: minui(x, y) is in
+    // [0, y] whenever y >= 0 (and symmetrically for x).
     bool lhsNonNegative =
         ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getLhs(), cstr);
     bool rhsNonNegative =
         ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getRhs(), cstr);
-    if (!lhsNonNegative || !rhsNonNegative)
+    if (!lhsNonNegative && !rhsNonNegative)
       return;
 
+    // A negative signed integer bit pattern reinterpreted as an
+    // unsigned integer is greater than SIGNED_INT_MAX. If
+    // one of the operands is signed non-negative, it is smaller than
+    // or equal to SIGNED_INT_MAX in unsigned interpretation,
+    // and `minui` will choose that operand over a negative signed
+    // integer operand.
     cstr.bound(value) >= 0;
-    AffineExpr lhs = cstr.getExpr(minOp.getLhs());
-    AffineExpr rhs = cstr.getExpr(minOp.getRhs());
-    cstr.bound(value) <= lhs;
-    cstr.bound(value) <= rhs;
+    // If an operand is provably non-negative, its signed and unsigned value
+    // interpretations agree, so `minsi` and `minui` impose the same upper
+    // bound: `result <= operand`.
+    if (lhsNonNegative) {
+      AffineExpr lhs = cstr.getExpr(minOp.getLhs());
+      cstr.bound(value) <= lhs;
+    }
+    if (rhsNonNegative) {
+      AffineExpr rhs = cstr.getExpr(minOp.getRhs());
+      cstr.bound(value) <= rhs;
+    }
   }
 };
 
@@ -384,13 +398,15 @@ struct MaxUIOpInterface
         ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getLhs(), cstr);
     bool rhsNonNegative =
         ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getRhs(), cstr);
-    if (!lhsNonNegative || !rhsNonNegative)
-      return;
 
-    AffineExpr lhs = cstr.getExpr(maxOp.getLhs());
-    AffineExpr rhs = cstr.getExpr(maxOp.getRhs());
-    cstr.bound(value) >= lhs;
-    cstr.bound(value) >= rhs;
+    if (lhsNonNegative) {
+      AffineExpr lhs = cstr.getExpr(maxOp.getLhs());
+      cstr.bound(value) >= lhs;
+    }
+    if (rhsNonNegative) {
+      AffineExpr rhs = cstr.getExpr(maxOp.getRhs());
+      cstr.bound(value) >= rhs;
+    }
   }
 };
 } // namespace

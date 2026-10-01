@@ -1,25 +1,33 @@
-//===-- Linux implementation of tcsetattr ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Linux implementation of tcsetattr.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/termios/tcsetattr.h"
+#include "hdr/termios_macros.h"
+#include "hdr/types/struct_termios.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/ioctl.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/termios/linux/kernel_termios.h"
+#include "src/termios/linux/speed_utils.h"
 
 #include <asm/ioctls.h> // Safe to include without the risk of name pollution.
-#include <termios.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, tcsetattr,
-                   (int fd, int actions, const struct termios *t)) {
+LLVM_LIBC_FUNCTION(int, tcsetattr, (int fd, int actions, const termios *t)) {
+  LIBC_CRASH_ON_NULLPTR(t);
   struct kernel_termios kt;
   long cmd;
 
@@ -40,9 +48,17 @@ LLVM_LIBC_FUNCTION(int, tcsetattr,
 
   kt.c_iflag = t->c_iflag;
   kt.c_oflag = t->c_oflag;
-  kt.c_cflag = t->c_cflag;
+
+  speed_t ospeed = encode_speed(t->c_ospeed);
+  speed_t ispeed = t->c_ispeed == 0 ? ospeed : encode_speed(t->c_ispeed);
+
+  constexpr speed_t NOT_SPEED_MASK = ~static_cast<speed_t>(CBAUD | CIBAUD);
+  kt.c_cflag = (t->c_cflag & NOT_SPEED_MASK) | ospeed | (ispeed << 16);
+
   kt.c_lflag = t->c_lflag;
-  size_t nccs = KERNEL_NCCS <= NCCS ? KERNEL_NCCS : NCCS;
+  kt.c_line = t->c_line;
+
+  size_t nccs = cpp::min(KERNEL_NCCS, static_cast<size_t>(NCCS));
   for (size_t i = 0; i < nccs; ++i)
     kt.c_cc[i] = t->c_cc[i];
   if (nccs < KERNEL_NCCS) {

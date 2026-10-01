@@ -1626,6 +1626,7 @@ let Predicates = [FeatureVector] in {
     def : FPMinMax<insn, any_fmaxnum, tr, 4>;
     def : FPMinMax<insn, fmaximumnum, tr, 4>;
     def : FPMinMax<insn, any_fmaximum, tr, 1>;
+    def : FPMinMax<insn, any_pseudo_fmax, tr, 2>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
     let Uses = [FPC], mayRaiseFPException = 1, isCommutable = 1 in {
@@ -1653,6 +1654,7 @@ let Predicates = [FeatureVector] in {
     def : FPMinMax<insn, any_fminnum, tr, 4>;
     def : FPMinMax<insn, fminimumnum, tr, 4>;
     def : FPMinMax<insn, any_fminimum, tr, 1>;
+    def : FPMinMax<insn, any_pseudo_fmin, tr, 2>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
     let Uses = [FPC], mayRaiseFPException = 1, isCommutable = 1 in {

@@ -132,6 +132,46 @@ func.func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 
 // -----
 
+func.func @complex_eq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
+  %0 = complex.eq %lhs, %rhs : complex<f32>
+  return %0 : i1
+}
+
+// CHECK-LABEL: func.func @complex_eq
+//  CHECK-SAME: (%[[LHS:.+]]: complex<f32>, %[[RHS:.+]]: complex<f32>)
+//   CHECK-DAG:   %[[LV:.+]] = builtin.unrealized_conversion_cast %[[LHS]] : complex<f32> to vector<2xf32>
+//   CHECK-DAG:   %[[RV:.+]] = builtin.unrealized_conversion_cast %[[RHS]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[LRE:.+]] = spirv.CompositeExtract %[[LV]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[LIM:.+]] = spirv.CompositeExtract %[[LV]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[RRE:.+]] = spirv.CompositeExtract %[[RV]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[RIM:.+]] = spirv.CompositeExtract %[[RV]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[REQ:.+]] = spirv.FOrdEqual %[[LRE]], %[[RRE]] : f32
+//       CHECK:   %[[IMEQ:.+]] = spirv.FOrdEqual %[[LIM]], %[[RIM]] : f32
+//       CHECK:   %[[EQ:.+]] = spirv.LogicalAnd %[[REQ]], %[[IMEQ]] : i1
+//       CHECK:   return %[[EQ]] : i1
+
+// -----
+
+func.func @complex_neq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
+  %0 = complex.neq %lhs, %rhs : complex<f32>
+  return %0 : i1
+}
+
+// CHECK-LABEL: func.func @complex_neq
+//  CHECK-SAME: (%[[LHS:.+]]: complex<f32>, %[[RHS:.+]]: complex<f32>)
+//   CHECK-DAG:   %[[LV:.+]] = builtin.unrealized_conversion_cast %[[LHS]] : complex<f32> to vector<2xf32>
+//   CHECK-DAG:   %[[RV:.+]] = builtin.unrealized_conversion_cast %[[RHS]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[LRE:.+]] = spirv.CompositeExtract %[[LV]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[LIM:.+]] = spirv.CompositeExtract %[[LV]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[RRE:.+]] = spirv.CompositeExtract %[[RV]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[RIM:.+]] = spirv.CompositeExtract %[[RV]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[RNE:.+]] = spirv.FUnordNotEqual %[[LRE]], %[[RRE]] : f32
+//       CHECK:   %[[IMNE:.+]] = spirv.FUnordNotEqual %[[LIM]], %[[RIM]] : f32
+//       CHECK:   %[[NE:.+]] = spirv.LogicalOr %[[RNE]], %[[IMNE]] : i1
+//       CHECK:   return %[[NE]] : i1
+
+// -----
+
 func.func @complex_neg(%arg: complex<f32>) -> complex<f32> {
   %neg = complex.neg %arg : complex<f32>
   return %neg : complex<f32>
@@ -195,5 +235,36 @@ func.func @complex_abs_opencl(%arg: complex<f32>) -> f32 {
 //       CHECK:   spirv.FMul
 //       CHECK:   %[[SUM:.+]] = spirv.FAdd
 //       CHECK:   spirv.CL.sqrt %[[SUM]] : f32
+
+}
+
+// -----
+
+func.func @complex_angle(%arg: complex<f32>) -> f32 {
+  %angle = complex.angle %arg : complex<f32>
+  return %angle : f32
+}
+
+// CHECK-LABEL: func.func @complex_angle
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[ANGLE:.+]] = spirv.GL.Atan2 %[[IM]], %[[RE]] : f32
+//       CHECK:   return %[[ANGLE]] : f32
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
+} {
+
+func.func @complex_angle_opencl(%arg: complex<f32>) -> f32 {
+  %angle = complex.angle %arg : complex<f32>
+  return %angle : f32
+}
+
+// CHECK-LABEL: func.func @complex_angle_opencl
+//       CHECK:   spirv.CL.atan2
 
 }

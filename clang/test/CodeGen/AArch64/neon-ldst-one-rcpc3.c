@@ -84,7 +84,7 @@ int64x1_t test_vldap1_lane_s64(int64_t  *a, int64x1_t b) {
 // CHECK-LABEL: @test_vldap1_lane_f64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[B:%.*]] to i64
-// CHECK-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CHECK-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__S1_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // CHECK-NEXT:    [[TMP3:%.*]] = load atomic double, ptr [[A:%.*]] acquire, align 8
@@ -183,7 +183,7 @@ void test_vstl1_lane_s64(int64_t  *a, int64x1_t b) {
 // CHECK-LABEL: @test_vstl1_lane_f64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[B:%.*]] to i64
-// CHECK-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CHECK-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__S1_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <1 x double> [[TMP2]], i32 0

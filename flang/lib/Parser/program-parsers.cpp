@@ -14,7 +14,6 @@
 #include "stmt-parser.h"
 #include "token-parsers.h"
 #include "type-parser-implementation.h"
-#include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
 
 namespace Fortran::parser {
@@ -524,6 +523,14 @@ TYPE_PARSER(construct<ActualArgSpec>(
 // F2023 R1528 consequent-arg -> expr | variable
 // N.B. "variable" is subsumed by "expr" in the parser;
 // semantics determines the distinction.
+// C1544: "A consequent-arg that is an expr shall not be a variable."
+// This is a grammar disambiguation rule making the two alternatives of
+// R1528 mutually exclusive.  It is automatically satisfied here because
+// "variable" is subsumed by "expr" in the parser — there is only one
+// production, so no consequent-arg can accidentally match the wrong
+// alternative.  Semantics uses IsVariable() to distinguish the two
+// cases when it matters (e.g. C1541 requires variables for INTENT(OUT/
+// INOUT) dummies).
 constexpr auto consequent{construct<ConditionalArg::Consequent>(
                               ".NIL." >> construct<ConditionalArgNil>()) ||
     construct<ConditionalArg::Consequent>(indirect(expr))};

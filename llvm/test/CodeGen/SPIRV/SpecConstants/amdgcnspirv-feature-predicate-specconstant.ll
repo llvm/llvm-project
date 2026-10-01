@@ -26,7 +26,7 @@
 ; CHECK: %[[#FEATURE_PREDICATE_IDS_MAP_STRLEN:]] = OpConstant %[[#]] 137
 ; CHECK: %[[#FEATURE_PREDICATE_IDS_MAP_STRTY:]] = OpTypeArray %[[#UCHAR]] %[[#FEATURE_PREDICATE_IDS_MAP_STRLEN]]
 ; CHECK: %[[#FEATURE_PREDICATE_IDS_MAP_STRVAL:]] = OpConstantComposite %[[#FEATURE_PREDICATE_IDS_MAP_STRTY]]
-; CHECK: %[[#FEATURE_PREDICATE_IDS]] = OpVariable %[[#]] CrossWorkgroup %[[#FEATURE_PREDICATE_IDS_MAP_STRVAL]]
+; CHECK: %[[#FEATURE_PREDICATE_IDS]] = OpUntypedVariableKHR %[[#]] CrossWorkgroup %[[#FEATURE_PREDICATE_IDS_MAP_STRTY]] %[[#FEATURE_PREDICATE_IDS_MAP_STRVAL]]
 ; CHECK: %[[#IS_GFX950]] = OpSpecConstantFalse %[[#BOOL]]
 ; CHECK: %[[#IS_GFX1201]] = OpSpecConstantFalse %[[#BOOL]]
 ; CHECK: %[[#HAS_GFX12_INSTS]] = OpSpecConstantFalse %[[#BOOL]]
@@ -63,32 +63,32 @@ declare void @llvm.amdgcn.s.ttracedata.imm(i16 immarg) addrspace(4) #6
 define void @kernel() addrspace(4) {
 ; CHECK-DAG: %[[#KERNEL]] = OpFunction %39 None %40 ; -- Begin function kernel
 ; CHECK-NEXT: %2 = OpLabel
-; CHECK-NEXT: %112 = OpLoad %44 %85 Aligned 4
+; CHECK-NEXT: %111 = OpLoad %44 %84 Aligned 4
 ; CHECK-NEXT: OpBranchConditional %[[#IS_GFX950]] %4 %3
 ; CHECK-NEXT: %3 = OpLabel
-; CHECK-NEXT: %113 = OpFunctionCall %39 %[[#SET_FPENV_I64]] %57
+; CHECK-NEXT: %112 = OpFunctionCall %39 %[[#SET_FPENV_I64]] %56
 ; CHECK-NEXT: OpBranch %5
 ; CHECK-NEXT: %4 = OpLabel
-; CHECK-NEXT: %114 = OpFunctionCall %43 %[[#ASHR_PK_I8_I32]] %56 %56 %56
+; CHECK-NEXT: %113 = OpFunctionCall %43 %[[#ASHR_PK_I8_I32]] %55 %55 %55
 ; CHECK-NEXT: OpBranch %5
 ; CHECK-NEXT: %5 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#IS_GFX1201]] %7 %6
 ; CHECK-NEXT: %6 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#HAS_GFX12_INSTS]] %7 %8
 ; CHECK-NEXT: %7 = OpLabel
-; CHECK-NEXT: %115 = OpFunctionCall %39 %[[#S_SLEEP_VAR]] %112
+; CHECK-NEXT: %114 = OpFunctionCall %39 %[[#S_SLEEP_VAR]] %111
 ; CHECK-NEXT: OpBranch %8
 ; CHECK-NEXT: %8 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#IS_GFX906]] %10 %9
 ; CHECK-NEXT: %9 = OpLabel
-; CHECK-NEXT: %116 = OpFunctionCall %39 %[[#S_WAIT_EVENT_EXPORT_READY]]
+; CHECK-NEXT: %115 = OpFunctionCall %39 %[[#S_WAIT_EVENT_EXPORT_READY]]
 ; CHECK-NEXT: OpBranch %14
 ; CHECK-NEXT: %10 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#IS_GFX1010]] %12 %11
 ; CHECK-NEXT: %11 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#IS_GFX1101]] %12 %13
 ; CHECK-NEXT: %12 = OpLabel
-; CHECK-NEXT: %117 = OpFunctionCall %39 %[[#S_TTRACEDATA_IMM]] %55
+; CHECK-NEXT: %116 = OpFunctionCall %39 %[[#S_TTRACEDATA_IMM]] %54
 ; CHECK-NEXT: OpBranch %13
 ; CHECK-NEXT: %13 = OpLabel
 ; CHECK-NEXT: OpBranch %14
@@ -97,24 +97,24 @@ define void @kernel() addrspace(4) {
 ; CHECK-NEXT: %15 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#IS_GFX1101_1]] %16 %17
 ; CHECK-NEXT: %16 = OpLabel
-; CHECK-NEXT: %118 = OpLoad %44 %97 Aligned 4
-; CHECK-NEXT: %119 = OpIAdd %44 %118 %112
-; CHECK-NEXT: OpStore %97 %119 Aligned 4
+; CHECK-NEXT: %117 = OpLoad %44 %96 Aligned 4
+; CHECK-NEXT: %118 = OpIAdd %44 %117 %111
+; CHECK-NEXT: OpStore %96 %118 Aligned 4
 ; CHECK-NEXT: OpBranch %17
 ; CHECK-NEXT: %17 = OpLabel
 ; CHECK-NEXT: OpBranch %18
 ; CHECK-NEXT: %18 = OpLabel
-; CHECK-NEXT: %120 = OpLoad %44 %97 Aligned 4
-; CHECK-NEXT: %121 = OpISub %44 %120 %112
-; CHECK-NEXT: OpStore %97 %121 Aligned 4
+; CHECK-NEXT: %119 = OpLoad %44 %96 Aligned 4
+; CHECK-NEXT: %120 = OpISub %44 %119 %111
+; CHECK-NEXT: OpStore %96 %120 Aligned 4
 ; CHECK-NEXT: OpBranch %19
 ; CHECK-NEXT: %19 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#IS_GFX1010_1]] %20 %21
 ; CHECK-NEXT: %20 = OpLabel
 ; CHECK-NEXT: OpBranch %21
 ; CHECK-NEXT: %21 = OpLabel
-; CHECK-NEXT: %122 = OpPhi %48 %54 %19 %54 %20
-; CHECK-NEXT: OpBranchConditional %122 %18 %22
+; CHECK-NEXT: %121 = OpPhi %48 %53 %19 %53 %20
+; CHECK-NEXT: OpBranchConditional %121 %18 %22
 ; CHECK-NEXT: %22 = OpLabel
 ; CHECK-NEXT: OpBranch %23
 ; CHECK-NEXT:	%23 = OpLabel
@@ -126,27 +126,27 @@ define void @kernel() addrspace(4) {
 ; CHECK-NEXT: %26 = OpLabel
 ;	CHECK-NEXT: OpBranchConditional %[[#HAS_GFX10_INSTS]] %27 %28
 ;	CHECK-NEXT: %27 = OpLabel
-; CHECK-NEXT: %123 = OpFunctionCall %39 %[[#S_TTRACEDATA_IMM]] %55
+; CHECK-NEXT: %122 = OpFunctionCall %39 %[[#S_TTRACEDATA_IMM]] %54
 ; CHECK-NEXT: OpBranch %28
 ; CHECK-NEXT:	%28 = OpLabel
 ; CHECK-NEXT:	OpBranch %30
 ; CHECK-NEXT: %29 = OpLabel
-; CHECK-NEXT: %124 = OpFunctionCall %39 %[[#S_WAIT_EVENT_EXPORT_READY]]
+; CHECK-NEXT: %123 = OpFunctionCall %39 %[[#S_WAIT_EVENT_EXPORT_READY]]
 ; CHECK-NEXT: OpBranch %30
 ; CHECK-NEXT: %30 = OpLabel
 ; CHECK-NEXT: OpBranch %31
 ; CHECK-NEXT: %31 = OpLabel
-; CHECK-NEXT: %125 = OpLoad %44 %97 Aligned 4
-; CHECK-NEXT: %126 = OpISub %44 %125 %112
-; CHECK-NEXT: OpStore %97 %126 Aligned 4
+; CHECK-NEXT: %124 = OpLoad %44 %96 Aligned 4
+; CHECK-NEXT: %125 = OpISub %44 %124 %111
+; CHECK-NEXT: OpStore %96 %125 Aligned 4
 ; CHECK-NEXT: OpBranch %32
 ; CHECK-NEXT: %32 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#HAS_GFX1250_INSTS]] %33 %34
 ; CHECK-NEXT: %33 = OpLabel
 ; CHECK-NEXT: OpBranch %34
 ; CHECK-NEXT: %34 = OpLabel
-; CHECK-NEXT: %127 = OpPhi %48 %54 %32 %54 %33
-; CHECK-NEXT:	OpBranchConditional %127 %31 %35
+; CHECK-NEXT: %126 = OpPhi %48 %53 %32 %53 %33
+; CHECK-NEXT:	OpBranchConditional %126 %31 %35
 ; CHECK-NEXT: %35 = OpLabel
 ; CHECK-NEXT: OpBranch %36
 ; CHECK-NEXT: %36 = OpLabel

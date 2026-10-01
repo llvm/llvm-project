@@ -233,7 +233,8 @@ createModule(const std::unique_ptr<LLVMContext> &Context, const DataLayout &DL) 
 
 BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   std::unique_ptr<LLVMContext> Context = std::make_unique<LLVMContext>();
-  std::unique_ptr<Module> Module = createModule(Context, TM.createDataLayout());
+  std::unique_ptr<Module> Module = createModule(
+      Context, DataLayout(TM.getTargetTriple().computeDataLayout()));
   auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&TM);
   MachineFunction &MF = createVoidVoidPtrMachineFunction(
       FunctionID, Module.get(), &MMIWP->getMMI());
@@ -247,8 +248,8 @@ Error assembleToStream(const ExegesisTarget &ET,
                        raw_pwrite_stream &AsmStream, const BenchmarkKey &Key,
                        bool GenerateMemoryInstructions) {
   auto Context = std::make_unique<LLVMContext>();
-  std::unique_ptr<Module> Module =
-      createModule(Context, TM->createDataLayout());
+  std::unique_ptr<Module> Module = createModule(
+      Context, DataLayout(TM->getTargetTriple().computeDataLayout()));
   auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(TM.get());
   MachineFunction &MF = createVoidVoidPtrMachineFunction(
       FunctionID, Module.get(), &MMIWP.get()->getMMI());
@@ -323,7 +324,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   // Adding the following passes:
   // - postrapseudos: expands pseudo return instructions used on some targets.
   // - prologepilog: saves and restore callee saved registers.
-  for (const char *PassName : {"postrapseudos", "prologepilog"})
+  for (const char *PassName : {"postrapseudos", "prolog-epilog"})
     if (addPass(PM, PassName, *TPC))
       return make_error<Failure>("Unable to add a mandatory pass");
   TPC->setInitialized();
@@ -382,7 +383,9 @@ Expected<ExecutableFunction> ExecutableFunction::create(
   uintptr_t CodeSize = SymbolIt->second;
 
   auto EJITOrErr =
-      orc::LLJITBuilder().setDataLayout(TM->createDataLayout()).create();
+      orc::LLJITBuilder()
+          .setDataLayout(DataLayout(TM->getTargetTriple().computeDataLayout()))
+          .create();
   if (!EJITOrErr)
     return EJITOrErr.takeError();
 

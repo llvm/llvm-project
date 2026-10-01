@@ -172,7 +172,10 @@ public:
   /// instruction which are not dead.
   SmallVector<VRegMaskOrUnit, 8> Defs;
   /// List of virtual registers and register units defined by the
-  /// instruction but dead.
+  /// instruction but dead. Dead definitions should not necessarily be marked
+  /// with a dead flag. In this context a dead definition is just a definition
+  /// which doesn't define any register lane that remains live after the
+  /// defining instruction.
   SmallVector<VRegMaskOrUnit, 8> DeadDefs;
 
   /// Analyze the given instruction \p MI and fill in the Uses, Defs and
@@ -181,19 +184,35 @@ public:
                         const MachineRegisterInfo &MRI, bool TrackLaneMasks,
                         bool IgnoreDead);
 
-  /// Use liveness information to find dead defs not marked with a dead flag
-  /// and move them to the DeadDefs vector.
-  LLVM_ABI void detectDeadDefs(const MachineInstr &MI,
-                               const LiveIntervals &LIS);
+  /// Use liveness information to find dead defs at \p MI's dead slot not marked
+  /// with a dead flag and move them to the DeadDefs vector. This only considers
+  /// the merged live interval for defs, not the per-lane sub-ranges.
+  LLVM_ABI void detectDeadDefs(const MachineInstr &MI, const LiveIntervals &LIS,
+                               const MachineRegisterInfo &MRI);
 
   /// Use liveness information to find out which uses/defs are partially
-  /// undefined/dead and adjust the VRegMaskOrUnits accordingly.
-  /// If \p AddFlagsMI is given then missing read-undef and dead flags will be
-  /// added to the instruction.
+  /// undefined/dead at \p Pos and adjust the VRegMaskOrUnits accordingly.
   LLVM_ABI void adjustLaneLiveness(const LiveIntervals &LIS,
                                    const MachineRegisterInfo &MRI,
-                                   SlotIndex Pos,
-                                   MachineInstr *AddFlagsMI = nullptr);
+                                   SlotIndex Pos);
+
+  /// Use liveness information to find out which uses/defs are partially
+  /// undefined/dead at the \p MI's position and adjust the VRegMaskOrUnits
+  /// accordingly. Missing read-undef and dead flags are added to \p MI.
+  LLVM_ABI void adjustLaneLiveness(const LiveIntervals &LIS,
+                                   const MachineRegisterInfo &MRI,
+                                   MachineInstr &MI);
+
+private:
+  /// Adjusts the \p Def based on \p LiveAfterDef. The \p Def is moved from the
+  /// Defs vector to the DeadDefs vector when no defined lane remains live after
+  /// the def. Returns a pointer to the next definition to process in order in
+  /// the Defs vector.
+  VRegMaskOrUnit *adjustDef(VRegMaskOrUnit &Def, LaneBitmask LiveAfterDef);
+
+  /// Use liveness information at \p Pos to adjust the lanemask of all uses.
+  void adjustUses(const LiveIntervals &LIS, const MachineRegisterInfo &MRI,
+                  SlotIndex Pos);
 };
 
 /// Array of PressureDiffs.

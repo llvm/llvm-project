@@ -34,8 +34,8 @@ public:
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
   template <class RelTy>
-  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
-  void scanSection(InputSectionBase &) override;
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
+  void scanSection(InputSectionBase &, unsigned shard) override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
@@ -670,8 +670,9 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
 
 template <class ELFT>
 template <class RelTy>
-void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                                 unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
   RelType type;
   for (auto it = rels.begin(); it != rels.end();) {
@@ -741,12 +742,13 @@ void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 }
 
-template <class ELFT> void MIPS<ELFT>::scanSection(InputSectionBase &sec) {
+template <class ELFT>
+void MIPS<ELFT>::scanSection(InputSectionBase &sec, unsigned shard) {
   auto relocs = sec.template relsOrRelas<ELFT>();
   if (relocs.areRelocsRel())
-    scanSectionImpl(sec, relocs.rels);
+    scanSectionImpl(sec, relocs.rels, shard);
   else
-    scanSectionImpl(sec, relocs.relas);
+    scanSectionImpl(sec, relocs.relas, shard);
 }
 
 template <class ELFT>

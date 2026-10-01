@@ -130,6 +130,35 @@ Symbols:
   ASSERT_EQ(result.GetLanguage(), eLanguageTypeC_plus_plus);
 }
 
+// A caller that supplies a lookup name override is dictating the exact string
+// to search the symbol/object files for, so the basename a language plugin
+// derives from the user-typed name must not replace it. Language plugins rely
+// on this to look up names that are only reachable under their full spelling.
+TEST(ModuleTest, MakeLookupInfosHonorsLookupNameOverride) {
+  SubsystemRAII<FileSystem, HostInfo, CPlusPlusLanguage> subsystems;
+
+  // "A::count" has the basename "count", which is what an override-less lookup
+  // searches for.
+  ConstString name("A::count");
+  std::vector<Module::LookupInfo> infos = Module::LookupInfo::MakeLookupInfos(
+      name, eFunctionNameTypeFull, eLanguageTypeC_plus_plus);
+  ASSERT_EQ(infos.size(), 1u);
+  EXPECT_EQ(infos[0].GetLookupName(), ConstString("count"));
+
+  // With an override, that exact name must be looked up instead. An override
+  // that is textually equal to the user-typed name is still an override.
+  for (ConstString override_name : {ConstString("A::count::special"), name}) {
+    std::vector<Module::LookupInfo> override_infos =
+        Module::LookupInfo::MakeLookupInfos(name, eFunctionNameTypeFull,
+                                            eLanguageTypeC_plus_plus,
+                                            override_name);
+    ASSERT_EQ(override_infos.size(), 1u);
+    EXPECT_EQ(override_infos[0].GetLookupName(), override_name);
+    // The user-typed name is still what results get filtered against.
+    EXPECT_EQ(override_infos[0].GetName(), name);
+  }
+}
+
 TEST(ModuleTest, ResolveSymbolContextForAddressExactMatch) {
   // Test that ResolveSymbolContextForAddress prefers exact symbol matches
   // over symbols that merely contain the address.
@@ -223,7 +252,7 @@ Sections:
 ...
 )";
 
-  const ConstString text_name(".text");
+  llvm::StringRef text_name(".text");
   constexpr int kThreads = 8;
   // Each iteration uses a fresh module so the lazy build (and its race) is
   // re-triggered every time.

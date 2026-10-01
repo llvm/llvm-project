@@ -6,7 +6,7 @@ namespace std { enum class align_val_t : size_t {}; }
 struct Arg {} arg;
 
 // If the type is aligned, first try with an alignment argument and then
-// without. If not, never consider supplying an alignment.
+// without. If not, try in the reverse order.
 
 template<unsigned Align, typename ...Ts>
 struct alignas(Align) Unaligned {
@@ -19,11 +19,11 @@ auto *ubp = new (arg) Unaligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__ * 2, Arg>; // e
 
 template<unsigned Align, typename ...Ts>
 struct alignas(Align) Aligned {
-  void *operator new(size_t, std::align_val_t, Ts...) = delete; // expected-note 2{{deleted}} expected-note 2{{not viable}}
+  void *operator new(size_t, std::align_val_t, Ts...) = delete; // expected-note 4{{deleted}}
 };
-auto *aa = new Aligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__>; // expected-error {{no matching}}
+auto *aa = new Aligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__>; // expected-error {{deleted}}
 auto *ab = new Aligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__ * 2>; // expected-error {{deleted}}
-auto *aap = new (arg) Aligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__, Arg>; // expected-error {{no matching}}
+auto *aap = new (arg) Aligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__, Arg>; // expected-error {{deleted}}
 auto *abp = new (arg) Aligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__ * 2, Arg>; // expected-error {{deleted}}
 
 // If both are available, we prefer the aligned version for an overaligned

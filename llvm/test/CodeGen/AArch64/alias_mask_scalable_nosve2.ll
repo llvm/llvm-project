@@ -4,9 +4,8 @@
 define <vscale x 16 x i1> @whilewr_8(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilewr_8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub x8, x1, x0
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    subs x8, x1, x0
+; CHECK-NEXT:    csinv x8, x8, xzr, hi
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -20,12 +19,25 @@ define <vscale x 4 x i1> @whilewr_i32_addresses(i32 %a, i32 %b) {
 ; CHECK-NEXT:    subs w8, w1, w0
 ; CHECK-NEXT:    add w9, w8, #3
 ; CHECK-NEXT:    csel w8, w9, w8, mi
+; CHECK-NEXT:    cmp w1, w0
 ; CHECK-NEXT:    asr w8, w8, #2
-; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-NEXT:    csinv w8, w8, wzr, hi
 ; CHECK-NEXT:    whilelo p0.s, wzr, w8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv4i1.i32(i32 %a, i32 %b, i32 4)
   ret <vscale x 4 x i1> %0
+}
+
+define <vscale x 16 x i1> @whilerw_8(i64 %a, i64 %b) {
+; CHECK-LABEL: whilerw_8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    subs x8, x1, x0
+; CHECK-NEXT:    cneg x8, x8, ls
+; CHECK-NEXT:    csinv x8, x8, xzr, ne
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1(i64 %a, i64 %b, i64 1)
+  ret <vscale x 16 x i1> %0
 }

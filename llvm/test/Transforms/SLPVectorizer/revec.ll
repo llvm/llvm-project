@@ -63,8 +63,8 @@ entry:
 define void @test3(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[X:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> [[TMP0]], ptr [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> [[TMP0]], ptr [[Y:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x ptr> [[TMP1]], splat (ptr null)
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[X]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr [[Y]], align 4

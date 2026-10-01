@@ -20,6 +20,7 @@
 #include "EHScopeStack.h"
 #include "SanitizerHandler.h"
 #include "VarBypassDetector.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/ExprCXX.h"
@@ -300,6 +301,19 @@ public:
   // Stores variables for which we can't generate correct lifetime markers
   // because of jumps.
   VarBypassDetector Bypasses;
+
+  // Addresses of bypassed variables, for re-emitting their
+  // trivial-auto-var-init at a jump that re-enters their scope.
+  llvm::SmallDenseMap<const VarDecl *, Address, 4> BypassedVarInits;
+
+  // Jumps, like gotos or switches, that may bypass a declaration that has not
+  // been emitted yet. EmitAutoVarAlloca patches the init in before the jump
+  // once the alloca exists.
+  struct BypassingForwardJump {
+    llvm::AssertingVH<llvm::BasicBlock> Block;
+    const Stmt *Source;
+  };
+  llvm::SmallVector<BypassingForwardJump, 4> BypassingForwardJumps;
 
   /// List of recently emitted OMPCanonicalLoops.
   ///
@@ -624,6 +638,10 @@ public:
   /// True if the current statement has noconvergent attribute.
   bool InNoConvergentAttributedStmt = false;
 
+  /// The mode string from the amdgpu_av attribute on the current statement,
+  /// or empty if the attribute is not present.
+  StringRef AMDGPUAvailableVisibleMode;
+
   /// HLSL Branch attribute.
   HLSLControlFlowHintAttr::Spelling HLSLControlFlowAttr =
       HLSLControlFlowHintAttr::SpellingNotCalculated;
@@ -717,8 +735,6 @@ public:
   llvm::Instruction *CurrentFuncletPad = nullptr;
 
   class CallLifetimeEnd final : public EHScopeStack::Cleanup {
-    bool isRedundantBeforeReturn() override { return true; }
-
     llvm::Value *Addr;
 
   public:
@@ -1154,9 +1170,10 @@ public:
     /// Sets the address of the variable \p LocalVD to be \p TempAddr in
     /// function \p CGF.
     /// \return true if at least one variable was set already, false otherwise.
-    bool setVarAddr(CodeGenFunction &CGF, const VarDecl *LocalVD,
+    bool setVarAddr(CodeGenFunction &CGF, const ValueDecl *LocalVD,
                     Address TempAddr) {
-      LocalVD = LocalVD->getCanonicalDecl();
+      LocalVD = cast<ValueDecl>(LocalVD->getCanonicalDecl());
+
       // Only save it once.
       if (SavedLocals.count(LocalVD))
         return false;
@@ -1175,6 +1192,8 @@ public:
         CGF.Builder.CreateStore(TempAddr.emitRawPointer(CGF), Temp);
         TempAddr = Temp;
       }
+      if (const auto *BD = dyn_cast<BindingDecl>(LocalVD))
+        CGF.OMPPrivatizedBindings.insert_or_assign(BD, TempAddr);
       SavedTempAddresses.try_emplace(LocalVD, TempAddr);
 
       return true;
@@ -1217,6 +1236,7 @@ public:
     OMPMapVars MappedVars;
     OMPPrivateScope(const OMPPrivateScope &) = delete;
     void operator=(const OMPPrivateScope &) = delete;
+    llvm::DenseMap<const BindingDecl *, Address> BindingChanges;
 
   public:
     /// Enter a new OpenMP private scope.
@@ -1227,8 +1247,14 @@ public:
     /// PrivateGen is the address of the generated private variable.
     /// \return true if the variable is registered as private, false if it has
     /// been privatized already.
-    bool addPrivate(const VarDecl *LocalVD, Address Addr) {
+    bool addPrivate(const ValueDecl *LocalVD, Address Addr) {
       assert(PerformCleanup && "adding private to dead scope");
+      if (const auto *BD = dyn_cast<BindingDecl>(LocalVD->getCanonicalDecl())) {
+        auto It = CGF.OMPPrivatizedBindings.find(BD);
+        BindingChanges.insert({BD, It != CGF.OMPPrivatizedBindings.end()
+                                       ? It->second
+                                       : Address::invalid()});
+      }
       return MappedVars.setVarAddr(CGF, LocalVD, Addr);
     }
 
@@ -1251,6 +1277,17 @@ public:
     ~OMPPrivateScope() {
       if (PerformCleanup)
         ForceCleanup();
+      for (auto &Change : BindingChanges) {
+        if (Change.second.isValid()) {
+          auto It = CGF.OMPPrivatizedBindings.find(Change.first);
+          if (It != CGF.OMPPrivatizedBindings.end())
+            It->second = Change.second;
+          else
+            CGF.OMPPrivatizedBindings.insert({Change.first, Change.second});
+        } else {
+          CGF.OMPPrivatizedBindings.erase(Change.first);
+        }
+      }
     }
 
     /// Checks if the global variable is captured in current function.
@@ -1323,6 +1360,14 @@ public:
   /// stack, emitting any required code (other than the catch handlers
   /// themselves).
   void popCatchScope();
+
+  // This function should be called after emitting all catch clauses and none
+  // of them were 'catch-all' clauses.
+  // Because in wasm we merge all catch clauses into one big catchpad, in case
+  // none of the types in catch handlers matches after we test against each of
+  // them, we should unwind to the next EH enclosing scope. We generate a call
+  // to rethrow function here to do that.
+  void WasmEmitFallthroughRethrow(llvm::BasicBlock *WasmCatchStartBlock);
 
   llvm::BasicBlock *getEHResumeBlock(bool isCleanup);
   llvm::BasicBlock *getEHDispatchBlock(EHScopeStack::stable_iterator scope);
@@ -1549,6 +1594,11 @@ private:
   /// LocalDeclMap - This keeps track of the LLVM allocas or globals for local C
   /// decls.
   DeclMapTy LocalDeclMap;
+
+  /// Lookup map for privatized BindingDecls.
+  /// Used when BindingDecls are remapped during OpenMP outlining, since the
+  /// remapped BindingDecl has a different pointer than the original.
+  llvm::SmallDenseMap<const BindingDecl *, Address> OMPPrivatizedBindings;
 
   // Keep track of the cleanups for callee-destructed parameters pushed to the
   // cleanup stack so that they can be deactivated later.
@@ -2233,9 +2283,21 @@ public:
 
   const TargetInfo &getTarget() const { return Target; }
   llvm::LLVMContext &getLLVMContext() { return CGM.getLLVMContext(); }
+
+  /// Accessors for LocalDeclMap.
+  DeclMapTy::iterator findLocalDecl(const Decl *D) {
+    return LocalDeclMap.find(D);
+  }
+  DeclMapTy::iterator localDeclMapEnd() { return LocalDeclMap.end(); }
+  std::pair<DeclMapTy::iterator, bool> insertLocalDecl(const Decl *D,
+                                                       Address Addr) {
+    return LocalDeclMap.insert({D, Addr});
+  }
+  void eraseLocalDecl(const Decl *D) { LocalDeclMap.erase(D); }
   const TargetCodeGenInfo &getTargetHooks() const {
     return CGM.getTargetCodeGenInfo();
   }
+  const FunctionDecl *getCurrentFunctionDecl() const;
 
   //===--------------------------------------------------------------------===//
   //                                  Cleanups
@@ -3011,6 +3073,11 @@ public:
   /// pointer to a char.
   Address EmitMSVAListRef(const Expr *E);
 
+  /// Emit a "reference" to a __builtin_zos_va_list; this is always the
+  /// address of the expression, because a __builtin_zos_va_list is an
+  /// array of pointer to a char.
+  Address EmitZOSVAListRef(const Expr *E);
+
   /// EmitAnyExprToTemp - Similarly to EmitAnyExpr(), however, the result will
   /// always be accessible even if no aggregate location is provided.
   RValue EmitAnyExprToTemp(const Expr *E);
@@ -3301,7 +3368,8 @@ public:
 
   void EmitDeleteCall(const FunctionDecl *DeleteFD, llvm::Value *Ptr,
                       QualType DeleteTy, llvm::Value *NumElements = nullptr,
-                      CharUnits CookieSize = CharUnits());
+                      CharUnits CookieSize = CharUnits(),
+                      llvm::Constant *CalleeOverride = nullptr);
 
   RValue EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
                                   const CallExpr *TheCallExpr, bool IsDelete);
@@ -3537,6 +3605,11 @@ public:
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               QualType::DestructionKind dtorKind);
 
+  /// Re-emit trivial-auto-var-init stores for variables bypassed by the jump
+  /// Source. No-op in a function containing a computed goto, where jump sources
+  /// are unknown and a single function-scope init is used instead.
+  void emitBypassedVarInitsForSource(const Stmt *Source);
+
   void MaybeEmitDeferredVarDeclInit(const VarDecl *var);
 
   /// Emits the alloca and debug information for the size expressions for each
@@ -3744,6 +3817,9 @@ public:
   void EmitCXXForRangeStmt(const CXXForRangeStmt &S,
                            ArrayRef<const Attr *> Attrs = {});
 
+  void
+  EmitCXXExpansionStmtInstantiation(const CXXExpansionStmtInstantiation &S);
+
   /// Controls insertion of cancellation exit blocks in worksharing constructs.
   class OMPCancelStackRAII {
     CodeGenFunction &CGF;
@@ -3934,6 +4010,7 @@ public:
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
   void EmitOMPSplitDirective(const OMPSplitDirective &S);
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
+  void EmitOMPFlattenDirective(const OMPFlattenDirective &S);
   void EmitOMPFuseDirective(const OMPFuseDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
@@ -3957,7 +4034,10 @@ public:
   void EmitOMPFlushDirective(const OMPFlushDirective &S);
   void EmitOMPDepobjDirective(const OMPDepobjDirective &S);
   void EmitOMPScanDirective(const OMPScanDirective &S);
-  void EmitOMPOrderedDirective(const OMPOrderedDirective &S);
+  void
+  EmitOMPOrderedStandaloneDirective(const OMPOrderedStandaloneDirective &S);
+  void
+  EmitOMPOrderedBlockAssocDirective(const OMPOrderedBlockAssocDirective &S);
   void EmitOMPAtomicDirective(const OMPAtomicDirective &S);
   void EmitOMPTargetDirective(const OMPTargetDirective &S);
   void EmitOMPTargetDataDirective(const OMPTargetDataDirective &S);
@@ -4130,6 +4210,9 @@ public:
   /// Emits the lvalue for the expression with possibly captured variable.
   LValue EmitOMPSharedLValue(const Expr *E);
 
+  /// Emits the original address for a structured binding.
+  Address EmitOMPBindingOriginalAddr(const BindingDecl *BD, SourceLocation Loc);
+
 private:
   /// Helpers for blocks.
   llvm::Value *EmitBlockLiteral(const CGBlockInfo &Info);
@@ -4196,28 +4279,32 @@ public:
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its structured block, but in the future we will implement
     // some sort of IR.
-    EmitStmt(S.getStructuredBlock());
+    if (S.getStructuredBlock())
+      EmitStmt(S.getStructuredBlock());
   }
 
   void EmitOpenACCLoopConstruct(const OpenACCLoopConstruct &S) {
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its loop, but in the future we will implement
     // some sort of IR.
-    EmitStmt(S.getLoop());
+    if (S.getLoop())
+      EmitStmt(S.getLoop());
   }
 
   void EmitOpenACCCombinedConstruct(const OpenACCCombinedConstruct &S) {
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its loop, but in the future we will implement
     // some sort of IR.
-    EmitStmt(S.getLoop());
+    if (S.getLoop())
+      EmitStmt(S.getLoop());
   }
 
   void EmitOpenACCDataConstruct(const OpenACCDataConstruct &S) {
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its structured block, but in the future we will implement
     // some sort of IR.
-    EmitStmt(S.getStructuredBlock());
+    if (S.getStructuredBlock())
+      EmitStmt(S.getStructuredBlock());
   }
 
   void EmitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct &S) {
@@ -4234,7 +4321,8 @@ public:
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its structured block, but in the future we will implement
     // some sort of IR.
-    EmitStmt(S.getStructuredBlock());
+    if (S.getStructuredBlock())
+      EmitStmt(S.getStructuredBlock());
   }
 
   void EmitOpenACCWaitConstruct(const OpenACCWaitConstruct &S) {
@@ -4266,7 +4354,8 @@ public:
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
     // simply emitting its associated stmt, but in the future we will implement
     // some sort of IR.
-    EmitStmt(S.getAssociatedStmt());
+    if (S.getAssociatedStmt())
+      EmitStmt(S.getAssociatedStmt());
   }
   void EmitOpenACCCacheConstruct(const OpenACCCacheConstruct &S) {
     // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
@@ -4353,6 +4442,12 @@ public:
       llvm::AtomicOrdering Order = llvm::AtomicOrdering::SequentiallyConsistent,
       llvm::SyncScope::ID SSID = llvm::SyncScope::System,
       const AtomicExpr *AE = nullptr);
+
+  /// Emit a fence instruction, applying relevant target-specific metadata when
+  /// applicable.
+  llvm::FenceInst *
+  emitAtomicFence(llvm::AtomicOrdering Order,
+                  llvm::SyncScope::ID SSID = llvm::SyncScope::System);
 
   void EmitAtomicUpdate(LValue LVal, llvm::AtomicOrdering AO,
                         const llvm::function_ref<RValue(RValue)> &UpdateOp,
@@ -4463,6 +4558,7 @@ public:
   // Note: only available for agg return types
   LValue EmitVAArgExprLValue(const VAArgExpr *E);
   LValue EmitDeclRefLValue(const DeclRefExpr *E);
+  LValue EmitOMPCapturedBindingLValue(const BindingDecl *BD);
   LValue EmitStringLiteralLValue(const StringLiteral *E);
   LValue EmitObjCEncodeExprLValue(const ObjCEncodeExpr *E);
   LValue EmitPredefinedLValue(const PredefinedExpr *E);
@@ -4622,6 +4718,9 @@ public:
                                     ArrayRef<llvm::Type *> Types,
                                     ArrayRef<llvm::Value *> Args,
                                     const Twine &Name = "");
+  llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                    ArrayRef<llvm::Value *> Args,
+                                    llvm::Type *RetTy, const Twine &Name = "");
   llvm::CallInst *EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
                                           const Twine &name = "");
   llvm::CallInst *EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
@@ -4659,6 +4758,9 @@ public:
   /// Create the discriminator from the storage address and the entity hash.
   llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
                                                  llvm::Value *Discriminator);
+  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
+                                        llvm::Value *StorageAddress,
+                                        llvm::ConstantInt *Discriminator);
   CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
                                         llvm::Value *StorageAddress,
                                         GlobalDecl SchemaDecl,
@@ -4974,6 +5076,9 @@ public:
 
   void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                       const CallExpr *E);
+  /// Attach the AMDGPU availability/visibility MMRA to \p Inst when the
+  /// amdgpu_av attribute is active on the current statement.
+  void AddAMDGPUAvailableVisibleMMRA(llvm::Instruction *Inst);
   void ProcessOrderScopeAMDGCN(llvm::Value *Order, llvm::Value *Scope,
                                llvm::AtomicOrdering &AO,
                                llvm::SyncScope::ID &SSID);
@@ -5394,9 +5499,13 @@ public:
   void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID,
                      bool NoMerge = false, const TrapReason *TR = nullptr);
 
-  /// Emit a call to trap or debugtrap and attach function attribute
-  /// "trap-func-name" if specified.
-  llvm::CallInst *EmitTrapCall(llvm::Intrinsic::ID IntrID);
+  /// Emit a call to trap or debugtrap. If 'EnsureInsertPoint' is false, the
+  /// IR builder need not have a valid insert point after this returns.
+  llvm::CallInst *EmitTrapCall(llvm::Intrinsic::ID IntrID,
+                               bool EnsureInsertPoint = true);
+
+  /// Emit a call to '\@llvm.trap()' and clear the current insert point.
+  void EmitTrapCallAndMakeUnreachable();
 
   /// Emit a stub for the cross-DSO CFI check function.
   void EmitCfiCheckStub();
@@ -5534,6 +5643,8 @@ private:
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);
+  LangOptions::TrivialAutoVarInitKind getAutoVarInitKind(QualType Ty,
+                                                         const VarDecl &D);
 
 public:
   enum class EvaluationOrder {

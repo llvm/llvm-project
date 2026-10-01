@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx600 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.00-- < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -mtriple=r600-- -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=R600 -check-prefix=FUNC %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

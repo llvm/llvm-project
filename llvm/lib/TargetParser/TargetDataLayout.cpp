@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
-#include <cstring>
 using namespace llvm;
 
 static StringRef getManglingComponent(const Triple &T) {
@@ -122,6 +120,17 @@ static std::string computeLoongArchDataLayout(const Triple &TT) {
   return "e-m:e-p:32:32-i64:64-n32-S128";
 }
 
+// The Linux m68k target uses the ABI used
+// by Sun Microsystems for the old a.out-based binaries: 16-bit
+// alignment of int/long/pointer.
+//
+// NetBSD/m68k on the other hand uses the SVR4 ABI, which
+// aligns int/long/pointer/objects/stack on 32-bit boundaries.
+//
+// For now we just fix this for NetBSD/m68k.
+//
+// Ref. https://github.com/llvm/llvm-project/issues/199826
+
 static std::string computeM68kDataLayout(const Triple &TT) {
   std::string Ret = "";
   // M68k is Big Endian
@@ -130,22 +139,36 @@ static std::string computeM68kDataLayout(const Triple &TT) {
   // FIXME how to wire it with the used object format?
   Ret += "-m:e";
 
-  // M68k pointers are always 32 bit wide even for 16-bit CPUs.
-  // The ABI only specifies 16-bit alignment.
-  // On at least the 68020+ with a 32-bit bus, there is a performance benefit
-  // to having 32-bit alignment.
-  Ret += "-p:32:16:32";
+  if (!TT.isOSNetBSD()) {
+    // M68k pointers are always 32 bit wide even for 16-bit CPUs.
+    // The ABI only specifies 16-bit alignment.
+    // On at least the 68020+ with a 32-bit bus, there is a performance benefit
+    // to having 32-bit alignment.
+    Ret += "-p:32:16:32";
 
-  // Bytes do not require special alignment, words are word aligned and
-  // long words are word aligned at minimum.
-  Ret += "-i8:8:8-i16:16:16-i32:16:32";
+    // Bytes do not require special alignment, words are word aligned and
+    // long words are word aligned at minimum.
+    Ret += "-i8:8:8-i16:16:16-i32:16:32";
+
+    // The registers can hold 8, 16, 32 bits
+    Ret += "-n8:16:32";
+
+    Ret += "-a:0:16-S16";
+  } else {
+    // NetBSD/m68k aligns long/pointer/stack/objects on 32-bits,
+    // ref. comment above.
+    Ret += "-p:32:32:32";
+    // Bytes do not require special alignment,
+    // 16-bit ints are 16-bit aligned and
+    // 32-bit ints are 32-bit aligned
+    Ret += "-i8:8:8-i16:16:16-i32:32:32";
+    // The registers can hold 8, 16, 32 bits
+    Ret += "-n8:16:32";
+    // object and stack alignment is also 32 bits
+    Ret += "-a:0:32-S32";
+  }
 
   // FIXME no floats at the moment
-
-  // The registers can hold 8, 16, 32 bits
-  Ret += "-n8:16:32";
-
-  Ret += "-a:0:16-S16";
 
   return Ret;
 }
@@ -274,8 +297,10 @@ static std::string computeAMDDataLayout(const Triple &TT) {
   // space 8) which cannot be non-trivilally accessed by LLVM memory operations
   // like getelementptr.
   return "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
-         "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-"
-         "v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-"
+         "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-p10:32:32"
+         "-p11:32:32-p12:32:32-p13:32:32-p14:32:32-p15:32:32"
+         "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:"
+         "512-"
          "v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
 }
 
@@ -456,18 +481,30 @@ static std::string computeX86DataLayout(const Triple &TT) {
 }
 
 static std::string computeNVPTXDataLayout(const Triple &T, StringRef ABIName) {
-  bool Is64Bit = T.getArch() == Triple::nvptx64;
+  const bool Is32Bit = T.getArch() == Triple::nvptx;
+  const bool IsShortPtr = ABIName == "shortptr";
   std::string Ret = "e";
 
-  // Tensor Memory (addrspace:6) is always 32-bits.
-  // Distributed Shared Memory (addrspace:7) follows shared memory
-  // (addrspace:3).
-  if (!Is64Bit)
-    Ret += "-p:32:32-p6:32:32-p7:32:32";
-  else if (ABIName == "shortptr")
-    Ret += "-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32";
-  else
+  if (Is32Bit) {
+    Ret += "-p:32:32";
+  } else {
+    // Keep the pointer specifications sorted by address space.
+    //
+    // In shortptr mode, specify the following address spaces as 32-bits:
+    // - shared (addrspace:3)
+    // - constant (addrspace:4)
+    // - local (addrspace:5)
+    // - shared cluster (addrspace:7)
+    // - entry parameter (addrspace:101)
+    if (IsShortPtr)
+      Ret += "-p3:32:32-p4:32:32-p5:32:32";
+
+    // Tensor Memory (addrspace:6) is always 32-bits.
     Ret += "-p6:32:32";
+
+    if (IsShortPtr)
+      Ret += "-p7:32:32-p101:32:32";
+  }
 
   Ret += "-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64";
 
@@ -597,8 +634,8 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::ppc64:
   case Triple::ppc64le:
     return computePowerDataLayout(*this, ABIName);
+  case Triple::amdgpu:
   case Triple::r600:
-  case Triple::amdgcn:
     return computeAMDDataLayout(*this);
   case Triple::riscv32:
   case Triple::riscv64:

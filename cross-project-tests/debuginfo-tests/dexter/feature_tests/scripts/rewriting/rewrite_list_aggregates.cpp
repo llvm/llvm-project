@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: %dexter_regression_test_cxx_build %s -o %t/test
-// RUN: %dexter_regression_test_run --use-script --binary %t/test \
+// RUN: %dexter_regression_test_run --binary %t/test \
 // RUN:   --results-directory %t/results -- %s 2>&1 | FileCheck %s
 // RUN: diff %t/results/%{s:basename} \
 // RUN:   %S/Inputs/rewrite_list_aggregates_expected.cpp

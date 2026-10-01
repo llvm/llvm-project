@@ -31,4 +31,4 @@ def MyTarget : Target;
 // CHECK:  static const TargetRegisterInfoDesc MyTargetRegInfoDesc = { // Extra Descriptors
 // CHECK-NEXT:  MyTargetCostPerUseTable, 2, MyTargetInAllocatableClassTable};
 
-// CHECK:  TargetRegisterInfo(&MyTargetRegInfoDesc, MyTargetRegisterClasses,
+// CHECK:  TargetRegisterInfo(&MyTargetRegInfoDesc,

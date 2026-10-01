@@ -77,7 +77,7 @@
     ret void
   }
 
-  attributes #0 = { minsize }
+  attributes #0 = { optsize }
 
 ...
 ---

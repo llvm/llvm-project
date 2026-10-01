@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=gfx700 -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck -enable-var-scope -check-prefix=VMEM -check-prefix=GCN %s
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=gfx700 -amdgpu-spill-sgpr-to-vgpr=1 < %s | FileCheck -enable-var-scope -check-prefix=VGPR -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgpu7.00--amdhsa -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck -enable-var-scope -check-prefix=VMEM -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgpu7.00--amdhsa -amdgpu-spill-sgpr-to-vgpr=1 < %s | FileCheck -enable-var-scope -check-prefix=VGPR -check-prefix=GCN %s
 
 ; Verify registers used for tracking exec mask changes when all
 ; registers are spilled at the end of the block. The SGPR spill
@@ -17,7 +17,7 @@
 
 ; Spill load
 ; GCN: buffer_store_dword [[LOAD0]], off, s[0:3], 0 offset:[[LOAD0_OFFSET:[0-9]+]] ; 4-byte Folded Spill
-; GCN: v_cmp_eq_u32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_cmp_eq_u32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], v{{[0-9]+}}, s{{[0-9]+}}
 
 ; Spill saved exec
 ; GCN: s_mov_b64 s[[[SAVEEXEC_LO:[0-9]+]]:[[SAVEEXEC_HI:[0-9]+]]], exec

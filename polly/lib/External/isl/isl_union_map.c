@@ -3136,7 +3136,7 @@ isl_bool isl_union_map_is_injective(__isl_keep isl_union_map *umap)
  * In particular, if the domain and range spaces are the same,
  * then the map is not considered to obviously not be an identity relation.
  * Otherwise, the map is considered to obviously not be an identity relation
- * if it is is non-empty.
+ * if it is non-empty.
  *
  * If "map" is determined to obviously not be an identity relation,
  * then the search is aborted.

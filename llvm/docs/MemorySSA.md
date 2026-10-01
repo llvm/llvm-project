@@ -1,8 +1,5 @@
 # MemorySSA
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

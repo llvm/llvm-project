@@ -3,19 +3,16 @@
 ```{program} opt
 ```
 
-```{contents}
-:local:
-```
 
 ## Introduction --- What is a pass?
 
-```{warning}
+:::{warning}
 This document deals with the legacy pass manager. LLVM uses the new pass
 manager for the optimization pipeline (the codegen pipeline
 still uses the legacy pass manager), which has its own way of defining
 passes. For more details, see {doc}`WritingAnLLVMNewPMPass` and
 {doc}`NewPassManager`.
-```
+:::
 
 The LLVM Pass Framework is an important part of the LLVM system, because LLVM
 passes are where most of the interesting parts of the compiler exist.  Passes
@@ -349,7 +346,7 @@ the machine-dependent representation of each LLVM function in the program.
 
 Code generator passes are registered and initialized specially by
 `TargetMachine::addPassesToEmitFile` and similar routines, so they cannot
-generally be run from the {program}`opt` or {program}`bugpoint` commands.
+generally be run from the {program}`opt`.
 
 A `MachineFunctionPass` is also a `FunctionPass`, so all the restrictions
 that apply to a `FunctionPass` also apply to it.  `MachineFunctionPass`es
@@ -427,12 +424,16 @@ RegisterTargetPassConfigCallback X{[](auto &TM, auto &PM, auto *TPC) {
 }};
 ```
 
-Note that passes still have to be registered:
+Note that passes still have to be registered. This can be done using a
+static object whose constructor runs when the plugin is loaded:
 
 ```cpp
-__attribute__((constructor)) static void initCodeGenPlugin() {
-  initializeExamplePass(*PassRegistry::getPassRegistry());
-}
+struct InitCodeGenPlugin {
+  InitCodeGenPlugin() {
+    initializeExamplePass(*PassRegistry::getPassRegistry());
+  }
+};
+static InitCodeGenPlugin InitCodeGenPluginInstance;
 ```
 
 (writing-an-llvm-pass-interaction)=
@@ -635,7 +636,6 @@ Pre-ISel Intrinsic Lowering
 FunctionPass Manager
   Expand IR instructions
   Expand Atomic instructions
-SVE intrinsics optimizations
   FunctionPass Manager
     Dominator Tree Construction
 FunctionPass Manager

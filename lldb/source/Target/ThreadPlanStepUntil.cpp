@@ -96,9 +96,9 @@ void ThreadPlanStepUntil::Clear() {
 void ThreadPlanStepUntil::GetDescription(Stream *s,
                                          lldb::DescriptionLevel level) {
   if (level == lldb::eDescriptionLevelBrief) {
-    s->Printf("step until");
+    s->PutCString("step until");
     if (m_stepped_out)
-      s->Printf(" - stepped out");
+      s->PutCString(" - stepped out");
   } else {
     if (m_until_points.size() == 1)
       s->Printf("Stepping from address 0x%" PRIx64 " until we reach 0x%" PRIx64
@@ -173,7 +173,7 @@ void ThreadPlanStepUntil::AnalyzeStop() {
         bool done;
         StackID cur_frame_zero_id;
 
-        done = (m_stack_id < cur_frame_zero_id);
+        done = (m_stack_id.IsYoungerThan(cur_frame_zero_id));
 
         if (done) {
           m_stepped_out = true;
@@ -199,7 +199,7 @@ void ThreadPlanStepUntil::AnalyzeStop() {
 
             if (frame_zero_id == m_stack_id)
               done = true;
-            else if (frame_zero_id < m_stack_id)
+            else if (frame_zero_id.IsYoungerThan(m_stack_id))
               done = false;
             else {
               StackFrameSP older_frame_sp = thread.GetStackFrameAtIndex(1);

@@ -39,6 +39,19 @@ public:
 };
 } // end namespace visualstudio
 
+class LLVM_LIBRARY_VISIBILITY ARM64XObjcopy : public Tool {
+public:
+  ARM64XObjcopy(const ToolChain &TC)
+      : Tool("ARM64XObjcopy", "llvm-objcopy", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
+
 } // end namespace tools
 
 namespace toolchains {
@@ -88,6 +101,8 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
+  llvm::StringRef
+  GetCXXStdlibName(const llvm::opt::ArgList &DriverArgs) const override;
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
@@ -130,6 +145,12 @@ public:
                         Action::OffloadKind DeviceOffloadKind) const override;
 
 protected:
+  void AddMSVCStdlibMultilibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                        llvm::opt::ArgStringList &CC1Args,
+                                        bool HonorNostdincxx) const;
+  void AddMSVCStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                llvm::opt::ArgStringList &CC1Args) const;
+
   void AddSystemIncludeWithSubfolder(const llvm::opt::ArgList &DriverArgs,
                                      llvm::opt::ArgStringList &CC1Args,
                                      const std::string &folder,
@@ -137,8 +158,10 @@ protected:
                                      const Twine &subfolder2 = "",
                                      const Twine &subfolder3 = "") const;
 
+  Tool *getTool(Action::ActionClass AC) const override;
   Tool *buildLinker() const override;
   Tool *buildAssembler() const override;
+
 private:
   std::optional<llvm::StringRef> WinSdkDir, WinSdkVersion, WinSysRoot;
   std::string VCToolChainPath;
@@ -146,6 +169,7 @@ private:
   LazyDetector<CudaInstallationDetector> CudaInstallation;
   LazyDetector<RocmInstallationDetector> RocmInstallation;
   LazyDetector<SYCLInstallationDetector> SYCLInstallation;
+  mutable std::unique_ptr<tools::ARM64XObjcopy> Objcopy;
 };
 
 } // end namespace toolchains

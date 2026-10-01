@@ -19,14 +19,31 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include <cstddef>
 #include <memory>
+#include <utility>
 
 namespace fir {
+
+class AliasAnalysisRecursiveEffectsCache;
 
 //===----------------------------------------------------------------------===//
 // AliasAnalysis
 //===----------------------------------------------------------------------===//
 struct AliasAnalysis {
+  AliasAnalysis() = default;
+
+  /// Construct an alias analysis bound to `cache`.
+  explicit AliasAnalysis(AliasAnalysisRecursiveEffectsCache &cache);
+
+  AliasAnalysis(AliasAnalysis &&other) noexcept;
+
+  ~AliasAnalysis();
+
+  AliasAnalysis(const AliasAnalysis &) = delete;
+  AliasAnalysis &operator=(const AliasAnalysis &) = delete;
+  AliasAnalysis &operator=(AliasAnalysis &&) = delete;
+
   // Structures to describe the memory source of a value.
 
   /// Kind of the memory source referenced by a value.
@@ -285,6 +302,10 @@ struct AliasAnalysis {
     /// Return true, if Pointer attribute is set.
     bool isPointer() const;
 
+    /// Return true if the source originates at a Fortran variable declaration
+    /// with the ALLOCATABLE attribute.
+    bool isDeclaredAllocatable() const;
+
     /// Return true, if CrayPointer attribute is set.
     bool isCrayPointer() const;
 
@@ -351,9 +372,38 @@ struct AliasAnalysis {
   /// snapshots are not collected, and getSource performs only the
   /// SourceKind/origin classification without that bookkeeping side
   /// effect.
+  ///
+  /// When source caching is enabled (see enableSourceCache()), the result is
+  /// memoized keyed on (value, flags), and recursive sub-queries share the
+  /// same cache. The cache is a frozen snapshot with no automatic
+  /// invalidation: it is only valid while the IR reachable from the queried
+  /// values is not mutated in a way that would change the source. It lives no
+  /// longer than this AliasAnalysis instance, so a client enables caching only
+  /// for a region in which it does not perform such mutations (e.g. a pass
+  /// that only moves operations).
   fir::AliasAnalysis::Source getSource(mlir::Value,
                                        bool getLastInstantiationPoint = false,
                                        bool collectScopedOrigins = true);
+
+  /// Enable memoization of getSource() results on this analysis instance.
+  /// Caching is opt-in and off by default; a client that does not mutate the
+  /// IR in a way that affects getSource() (see getSource()) may enable it to
+  /// avoid recomputing sources for repeated queries.
+  void enableSourceCache();
+
+  /// Disable getSource() memoization and drop any cached entries.
+  void disableSourceCache();
+
+  /// Testing only: number of entries currently held in the getSource() cache.
+  std::size_t getSourceCacheSizeForTesting() const {
+    return getSourceCache.size();
+  }
+
+  /// Testing only: cumulative getSource() cache hits / misses on this instance.
+  std::size_t getSourceCacheHitsForTesting() const { return sourceCacheHits; }
+  std::size_t getSourceCacheMissesForTesting() const {
+    return sourceCacheMisses;
+  }
 
   /// Return true, if `ty` is a reference type to a boxed
   /// POINTER object or a raw fir::PointerType.
@@ -370,6 +420,18 @@ struct AliasAnalysis {
   bool functionHasMultipleScopes(mlir::Value v);
 
 private:
+  friend class AliasAnalysisRecursiveEffectsCache;
+
+  /// Compute the memory source of a value. This is the uncached
+  /// implementation of getSource(); getSource() is a thin wrapper that
+  /// memoizes the result when source caching is enabled.
+  fir::AliasAnalysis::Source getSourceImpl(mlir::Value v,
+                                           bool getLastInstantiationPoint,
+                                           bool collectScopedOrigins);
+
+  /// Clear the getSource() memoization cache.
+  void clearSourceCache() { getSourceCache.clear(); }
+
   /// Build an intermediate Source rooted at the declare captured by the
   /// snapshot. Reuses getSource(declValue) for the SourceKind / origin
   /// classification (with collectScopedOrigins=false), then overrides
@@ -446,6 +508,93 @@ private:
   /// functionHasMultipleScopes(); both true and false are cached so that
   /// repeated queries are O(1) without re-walking the function body.
   llvm::DenseMap<mlir::Operation *, bool> multiScopeCache;
+
+  /// Opt-in memoization of getSource() results, keyed on the queried value
+  /// and the two boolean flags (getLastInstantiationPoint,
+  /// collectScopedOrigins) packed into the unsigned. Only consulted/populated
+  /// while \c sourceCacheEnabled is set. This is a frozen snapshot cache with
+  /// no automatic invalidation (see getSource()).
+  llvm::DenseMap<std::pair<mlir::Value, unsigned>, Source> getSourceCache;
+
+  /// Whether getSource() should consult/populate getSourceCache.
+  bool sourceCacheEnabled = false;
+
+  /// Testing-only counters (see getSourceCacheHitsForTesting()). Incremented
+  /// on each getSource() cache hit / miss.
+  std::size_t sourceCacheHits = 0;
+  std::size_t sourceCacheMisses = 0;
+
+  /// Optional opt-in cache for getModRef on ops with HasRecursiveMemoryEffects.
+  AliasAnalysisRecursiveEffectsCache *cache = nullptr;
+};
+
+/// Opt-in cache that amortizes the cost of repeated AliasAnalysis::getModRef
+/// queries against an op with HasRecursiveMemoryEffects (e.g. a loop).
+class AliasAnalysisRecursiveEffectsCache {
+public:
+  AliasAnalysisRecursiveEffectsCache() = default;
+  ~AliasAnalysisRecursiveEffectsCache() {
+    if (aa)
+      aa->cache = nullptr;
+  }
+
+  AliasAnalysisRecursiveEffectsCache(
+      const AliasAnalysisRecursiveEffectsCache &) = delete;
+  AliasAnalysisRecursiveEffectsCache &
+  operator=(const AliasAnalysisRecursiveEffectsCache &) = delete;
+  AliasAnalysisRecursiveEffectsCache(AliasAnalysisRecursiveEffectsCache &&) =
+      delete;
+  AliasAnalysisRecursiveEffectsCache &
+  operator=(AliasAnalysisRecursiveEffectsCache &&) = delete;
+
+  /// Drop all cached summaries. Call this when the IR inside previously
+  /// summarized ops has been mutated in a way the cache cannot tolerate.
+  void clear() { summaries.clear(); }
+
+  /// Testing only: number of op summaries currently held.
+  std::size_t getSummaryCacheSizeForTesting() const { return summaries.size(); }
+
+  /// Testing only: cumulative summary lookups that were served from an
+  /// existing entry (hits) or required buildSummary() (misses).
+  std::size_t getSummaryCacheHitsForTesting() const { return summaryHits; }
+  std::size_t getSummaryCacheMissesForTesting() const { return summaryMisses; }
+
+private:
+  friend struct AliasAnalysis;
+
+  struct CallInfo {
+    mlir::Operation *op;
+    /// If false, AliasAnalysis::getCallModRef would unconditionally return
+    /// ModAndRef on this call (e.g. runtime call / external procedure), so
+    /// per-query analysis skips it and goes straight to interface-effect
+    /// fall-through.
+    bool isFortranUserProcedure;
+  };
+
+  struct Summary {
+    bool hasUnknownWrite = false;
+    bool hasUnknownRead = false;
+    llvm::SmallVector<mlir::Value, 16> writeLocations;
+    llvm::SmallVector<mlir::Value, 16> readLocations;
+    llvm::SmallVector<CallInfo, 4> calls;
+  };
+
+  /// Populate `out` with the effects of `op` itself and, if op has
+  /// HasRecursiveMemoryEffects, recursively those of every op nested in its
+  /// regions.
+  void buildSummary(mlir::Operation *op, Summary &out);
+  void buildSummary(mlir::Region &region, Summary &out);
+
+  mlir::ModRefResult getModRefFromSummary(mlir::Operation *op,
+                                          mlir::Value location);
+
+  /// Back-pointer to the AliasAnalysis this cache is linked with.
+  AliasAnalysis *aa = nullptr;
+  llvm::DenseMap<mlir::Operation *, Summary> summaries;
+
+  /// Testing-only counters (see getSummaryCacheHitsForTesting()).
+  std::size_t summaryHits = 0;
+  std::size_t summaryMisses = 0;
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,

@@ -1,5 +1,5 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --use-script --skip-evaluate --binary %t \
+// RUN: %dexter_regression_test_run --skip-evaluate --binary %t \
 // RUN:   -- %s | FileCheck %s
 
 /// Check that the debugger is able to fetch the components of aggregate values.

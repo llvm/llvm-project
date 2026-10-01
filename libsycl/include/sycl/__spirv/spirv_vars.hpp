@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains SPIRV builtins needed for kernel invocations
+/// This file contains SPIRV builtin helpers needed for kernel invocations
 /// (parallel_for).
 ///
 //===----------------------------------------------------------------------===//
@@ -15,14 +15,9 @@
 #ifndef _LIBSYCL___SPIRV_SPIRV_VARS
 #define _LIBSYCL___SPIRV_SPIRV_VARS
 
+#include <__clang_spirv_builtins.h>
+
 #include <cstddef>
-#include <cstdint>
-
-// SPIR-V built-in variables mapped to function call.
-
-__attribute__((const)) size_t __spirv_BuiltInGlobalInvocationId(int);
-__attribute__((const)) size_t __spirv_BuiltInGlobalSize(int);
-__attribute__((const)) size_t __spirv_BuiltInGlobalOffset(int);
 
 namespace __spirv {
 
@@ -54,9 +49,13 @@ namespace __spirv {
     return InitSizesST##POSTFIX<Dims, DstT>::initSize();                       \
   }
 
-__SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInGlobalSize);
+__SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInGlobalSize)
 __SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInGlobalInvocationId)
 __SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInGlobalOffset)
+__SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInWorkgroupId)
+__SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInLocalInvocationId)
+__SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInWorkgroupSize)
+__SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInNumWorkgroups)
 
 #undef __SPIRV_DEFINE_INIT_AND_GET_HELPERS
 

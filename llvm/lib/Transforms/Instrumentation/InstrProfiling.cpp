@@ -23,16 +23,15 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -574,7 +573,15 @@ public:
   }
 
   bool run(int64_t *NumPromoted) {
-    bool RC = promoteCandidates(NumPromoted);
+    // Move L's candidates out of LoopToCandidates before promoting them, as
+    // promoting a counter to an enclosing loop may insert a new key into
+    // LoopToCandidates and trigger DenseMap::grow().
+    auto &OrigCandidates = LoopToCandidates[&L];
+    SmallVector<LoadStorePair, 8> Candidates = std::move(OrigCandidates);
+    OrigCandidates.clear();
+    bool RC = promoteCandidates(Candidates, NumPromoted);
+    assert(LoopToCandidates[&L].empty() &&
+           "Did not expect new candidates to be added to current loop");
     // In certain case, e.g. with -fprofile-update=atomic, we want to generate
     // atomic updates of the PGO counters, but also perform promotion of these
     // updates out of loops to reduce train time. The strategy is:
@@ -583,16 +590,17 @@ public:
     //  2) perform the promotion (in promoteCandidates function), then
     //  3) convert all (promoted and unpromotable) updates to atomicRMW.
     // This requires that promoted candidates are set to nullptr in the
-    // LoopToCandidates[&L] array by the promoteCandidates() function.
+    // Candidates array by the promoteCandidates() function.
     if (IsAtomic)
-      for (auto &Cand : LoopToCandidates[&L])
+      for (auto &Cand : Candidates)
         if (Cand.first != nullptr && Cand.second != nullptr)
           makeAtomic(Cand.first, Cand.second);
     return RC;
   }
 
 private:
-  bool promoteCandidates(int64_t *NumPromoted) {
+  bool promoteCandidates(SmallVectorImpl<LoadStorePair> &Candidates,
+                         int64_t *NumPromoted) {
     // Skip 'infinite' loops:
     if (ExitBlocks.size() == 0)
       return false;
@@ -612,9 +620,8 @@ private:
     if (MaxProm == 0)
       return false;
 
-    [[maybe_unused]] auto *Ptr = LoopToCandidates.getPointerIntoBucketsArray();
     unsigned Promoted = 0;
-    for (auto &Cand : LoopToCandidates[&L]) {
+    for (auto &Cand : Candidates) {
       SmallVector<PHINode *, 4> NewPHIs;
       SSAUpdater SSA(&NewPHIs);
       Value *InitVal = ConstantInt::get(Cand.first->getType(), 0);
@@ -637,8 +644,6 @@ private:
           ExitBlocks, InsertPts, LoopToCandidates, LI, IsAtomic);
       Promoter.run(SmallVector<Instruction *, 2>({Cand.first, Cand.second}));
 
-      assert(LoopToCandidates.isPointerIntoBucketsArray(Ptr) &&
-             "References into LoopToCandidates might be invalid");
       Cand = {nullptr, nullptr};
 
       Promoted++;
@@ -972,15 +977,17 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
   if (!isCounterPromotionEnabled())
     return;
 
-  DominatorTree DT(*F);
-  LoopInfo LI(DT);
+  CycleInfo CI;
+  CI.compute(*F);
+  LoopInfo LI;
+  LI.analyze(F);
   DenseMap<Loop *, SmallVector<LoadStorePair, 8>> LoopPromotionCandidates;
 
   std::unique_ptr<BlockFrequencyInfo> BFI;
   if (Options.UseBFIInPromotion) {
     std::unique_ptr<BranchProbabilityInfo> BPI;
-    BPI.reset(new BranchProbabilityInfo(*F, LI, &GetTLI(*F)));
-    BFI.reset(new BlockFrequencyInfo(*F, *BPI, LI));
+    BPI.reset(new BranchProbabilityInfo(*F, CI, &GetTLI(*F)));
+    BFI.reset(new BlockFrequencyInfo(*F, *BPI, CI));
   }
 
   for (const auto &LoadStore : PromotionCandidates) {
@@ -1766,7 +1773,7 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
 
   // Used by INSTR_PROF_VTABLE_DATA MACRO
   Constant *VTableAddr = getVTableAddrForProfData(GV);
-  const std::string PGOVTableName = getPGOName(*GV);
+  const std::string PGOVTableName = getIRPGOObjectName(*GV);
   // Record the length of the vtable. This is needed since vtable pointers
   // loaded from C++ objects might be from the middle of a vtable definition.
   uint32_t VTableSizeVal = GV->getGlobalSize(M.getDataLayout());
@@ -1904,6 +1911,7 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
           /*Decl=*/nullptr, /*TemplateParams=*/nullptr, /*AlignInBits=*/0,
           Annotations);
       BitmapPtr->addDebugInfo(DICounter);
+      DB.finalizeSubprogram(SP);
       DB.finalize();
     }
 
@@ -1980,6 +1988,7 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
           /*Decl=*/nullptr, /*TemplateParams=*/nullptr, /*AlignInBits=*/0,
           Annotations);
       CounterPtr->addDebugInfo(DICounter);
+      DB.finalizeSubprogram(SP);
       DB.finalize();
     }
 

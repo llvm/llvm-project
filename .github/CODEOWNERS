@@ -15,17 +15,20 @@
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
 /libunwind/ @llvm/reviewers-libunwind
-/runtimes/ @llvm/reviewers-libcxx
 
+/llvm/include/llvm/Analysis/ScalarEvolutionPatternMatch.h @artagnon
+/llvm/include/llvm/Support/PatternMatchHelpers.h @artagnon
 /llvm/lib/Analysis/BasicAliasAnalysis.cpp @nikic
 /llvm/lib/Analysis/HashRecognize.cpp @artagnon @pfusik
 /llvm/lib/Analysis/InstructionSimplify.cpp @nikic
 /llvm/lib/Analysis/LazyValueInfo.cpp @nikic
+/llvm/lib/Analysis/LoopAccessAnalysis.cpp @artagnon
 /llvm/lib/Analysis/ScalarEvolution.cpp @nikic
 /llvm/lib/Analysis/ValueTracking.cpp @nikic
 /llvm/lib/IR/ConstantRange.cpp @nikic
 /llvm/lib/IR/Core.cpp @nikic
 /llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
+/llvm/lib/Transforms/Scalar/LoopIdiomRecognize.cpp @artagnon
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
 
@@ -161,6 +164,9 @@
 /mlir/**/*shard* @fschlimb
 /mlir/**/*Shard* @fschlimb
 
+# MLIR WasmSSA Dialect
+/mlir/**/WasmSSA* @flemairen6 @lforg37
+
 # MLIR Python Bindings
 /mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
@@ -179,6 +185,7 @@
 
 # Bazel build system.
 /utils/bazel/ @rupprecht @keith @aaronmondal @googlewalt
+/utils/bazel/llvm-project-overlay/libc/ @labath @kaladron
 
 # InstallAPI and TextAPI
 /llvm/**/TextAPI/ @cyndyishida

@@ -919,6 +919,18 @@ LogicalResult SparseTensorEncodingAttr::verify(
   return success();
 }
 
+static bool isValidPrimaryType(Type elemTp) {
+  if (elemTp.isF64() || elemTp.isF32() || elemTp.isF16() || elemTp.isBF16() ||
+      elemTp.isInteger(64) || elemTp.isInteger(32) || elemTp.isInteger(16) ||
+      elemTp.isInteger(8))
+    return true;
+  if (auto complexTp = dyn_cast<ComplexType>(elemTp)) {
+    Type elt = complexTp.getElementType();
+    return elt.isF64() || elt.isF32();
+  }
+  return false;
+}
+
 LogicalResult SparseTensorEncodingAttr::verifyEncoding(
     ArrayRef<Size> dimShape, Type elementType,
     function_ref<InFlightDiagnostic()> emitError) const {
@@ -964,6 +976,8 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
       return emitError() << "implicit value must be zero";
     }
   }
+  if (!isValidPrimaryType(elementType))
+    return emitError() << "invalid primary type";
   return success();
 }
 
@@ -1785,7 +1799,7 @@ static LogicalResult verifyNumBlockArgs(T *op, Region &region,
 }
 
 LogicalResult BinaryOp::verify() {
-  NamedAttrList attrs = (*this)->getAttrs();
+  NamedAttrList attrs = (*this)->getDiscardableAttrDictionary().getValue();
   Type leftType = getX().getType();
   Type rightType = getY().getType();
   Type outputType = getOutput().getType();

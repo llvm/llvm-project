@@ -173,12 +173,10 @@ struct SelectOpInterface
             "incompatible buffer types on true/false operands");
       }
       if (trueBuffer.getType() != *targetType) {
-        trueBuffer =
-            *options.createCast(rewriter, loc, *targetType, trueBuffer);
+        trueBuffer = *options.castFn(rewriter, loc, *targetType, trueBuffer);
       }
       if (falseBuffer.getType() != *targetType) {
-        falseBuffer =
-            *options.createCast(rewriter, loc, *targetType, falseBuffer);
+        falseBuffer = *options.castFn(rewriter, loc, *targetType, falseBuffer);
       }
     }
 

@@ -53,6 +53,13 @@ let Definition = "modulelist", Path = "symbols" in {
     Desc<"Enable on demand symbol loading in LLDB. LLDB will load debug info on demand for each module based on various conditions (e.g. matched breakpoint, resolved stack frame addresses and matched global variables/function symbols in symbol table) to improve performance. Please refer to docs/use/ondemand.rst for details.">;
 }
 
+let Definition = "diagnostics", Path = "diagnostics" in {
+  def CollectBinaries: Property<"collect-binaries", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"When enabled, a diagnostics bundle also collects the main executable, its symbol file, and the core file (when debugging one) to help reproduce the bug. These files can be large and may contain sensitive data (a core file captures process memory), so this is off by default.">;
+}
+
 #ifndef NDEBUG
 let Definition = "testing", Path = "testing" in {
   def InjectVarLocListError
@@ -199,6 +206,30 @@ let Definition = "debugger", Path = "" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying progress in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the progress message.">;
+  def LabelAnsiPrefix: Property<"label-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.green}${ansi.bold}">,
+    Desc<"When displaying a field label in command output in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the label.">;
+  def LabelAnsiSuffix: Property<"label-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying a field label in command output in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the label.">;
+  def TitleAnsiPrefix: Property<"title-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.cyan}${ansi.bold}">,
+    Desc<"When displaying the title of an entry in a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the title.">;
+  def TitleAnsiSuffix: Property<"title-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying the title of an entry in a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the title.">;
+  def DividerAnsiPrefix: Property<"divider-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.faint}">,
+    Desc<"When displaying the divider between entries of a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the divider.">;
+  def DividerAnsiSuffix: Property<"divider-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying the divider between entries of a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the divider.">;
   def ShowStatusline: Property<"show-statusline", "Boolean">,
     Global,
     DefaultTrue,

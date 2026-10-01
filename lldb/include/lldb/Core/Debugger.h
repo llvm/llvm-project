@@ -344,6 +344,18 @@ public:
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
 
+  llvm::StringRef GetLabelAnsiPrefix() const;
+
+  llvm::StringRef GetLabelAnsiSuffix() const;
+
+  llvm::StringRef GetTitleAnsiPrefix() const;
+
+  llvm::StringRef GetTitleAnsiSuffix() const;
+
+  llvm::StringRef GetDividerAnsiPrefix() const;
+
+  llvm::StringRef GetDividerAnsiSuffix() const;
+
   llvm::StringRef GetDisabledAnsiPrefix() const;
 
   llvm::StringRef GetDisabledAnsiSuffix() const;
@@ -457,6 +469,10 @@ public:
 
   /// Redraw the statusline if enabled.
   void RedrawStatusline(std::optional<ExecutionContextRef> exe_ctx_ref);
+
+  /// Whether the statusline can be drawn: show-statusline is enabled and the
+  /// output is an escape-code-capable terminal.
+  bool StatuslineSupported();
 
   /// Flush cached state (e.g. stale execution context in the statusline).
   void FlushStatusLine();
@@ -717,7 +733,6 @@ protected:
   /// @}
 
   bool IsEscapeCodeCapableTTY();
-  bool StatuslineSupported();
 
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
                      bool cancel_top_handler = true);

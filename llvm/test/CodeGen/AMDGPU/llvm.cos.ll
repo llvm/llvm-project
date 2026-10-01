@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx600 | FileCheck %s -check-prefix=SI -check-prefix=FUNC
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck %s -check-prefix=SI -check-prefix=FUNC
+; RUN: llc < %s -mtriple=amdgpu6.00 | FileCheck %s -check-prefix=SI -check-prefix=FUNC
+; RUN: llc < %s -mtriple=amdgpu8.02 | FileCheck %s -check-prefix=SI -check-prefix=FUNC
 ; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s -check-prefix=EG -check-prefix=FUNC
 
 ;FUNC-LABEL: test

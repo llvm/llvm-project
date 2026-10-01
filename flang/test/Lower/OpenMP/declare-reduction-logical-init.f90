@@ -14,7 +14,7 @@ subroutine test_logical(r)
   end do
 end subroutine
 
-! CHECK: omp.declare_reduction @[[RED:_QQFtest_logicalmy_and]] : !fir.logical<4> init {
+! CHECK: omp.declare_reduction @[[RED:_QQFtest_logicalmy_and_l32]] : !fir.logical<4> init {
 ! CHECK: %[[FALSE:.*]] = arith.constant false
 ! CHECK: %[[CONV:.*]] = fir.convert %[[FALSE]] : (i1) -> !fir.logical<4>
 ! CHECK: omp.yield(%[[CONV]] : !fir.logical<4>)

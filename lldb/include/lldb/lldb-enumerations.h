@@ -152,6 +152,17 @@ enum RunMode { eOnlyThisThread, eAllThreads, eOnlyDuringStepping };
 /// Execution directions
 enum RunDirection { eRunForward, eRunReverse };
 
+// Thread Step Types
+enum StepType {
+  eStepTypeNone = 0,
+  eStepTypeTrace,     ///< Single step one instruction.
+  eStepTypeTraceOver, ///< Single step one instruction, stepping over.
+  eStepTypeInto,      ///< Single step into a specified context.
+  eStepTypeOver,      ///< Single step over a specified context.
+  eStepTypeOut,       ///< Single step out a specified context.
+  eStepTypeScripted   ///< A step type implemented by the script interpreter.
+};
+
 /// Byte ordering definitions.
 enum ByteOrder {
   eByteOrderInvalid = 0,
@@ -187,7 +198,7 @@ enum Format {
   /// Floating point complex type
   eFormatComplex,
   eFormatComplexFloat = eFormatComplex,
-  /// NULL terminated C strings
+  /// Null-terminated C strings
   eFormatCString,
   eFormatDecimal,
   eFormatEnum,
@@ -253,6 +264,26 @@ enum ScriptLanguage {
   eScriptLanguageLua,
   eScriptLanguageUnknown,
   eScriptLanguageDefault = eScriptLanguagePython
+};
+
+/// Scripting extension types.
+enum ScriptedExtension {
+  eScriptedExtensionInvalid = 0,
+  eScriptedExtensionOperatingSystem,
+  eScriptedExtensionScriptedPlatform,
+  eScriptedExtensionScriptedProcess,
+  eScriptedExtensionScriptedBreakpointResolver,
+  eScriptedExtensionScriptedThreadPlan,
+  eScriptedExtensionScriptedFrameProvider,
+  eScriptedExtensionScriptedHook,
+  eScriptedExtensionScriptedThread,
+  eScriptedExtensionScriptedFrame,
+  eScriptedExtensionScriptedStackFrameRecognizer,
+  eScriptedExtensionScriptedCommand,
+  eScriptedExtensionParsedCommand,
+  eScriptedExtensionScriptedStringSummary,
+  eScriptedExtensionScriptedSyntheticChildren,
+  kLastScriptedExtension = eScriptedExtensionScriptedSyntheticChildren
 };
 
 /// Register numbering types.
@@ -641,6 +672,7 @@ enum InstrumentationRuntimeType {
   eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer = 0x0002,
   eInstrumentationRuntimeTypeMainThreadChecker = 0x0003,
   eInstrumentationRuntimeTypeSwiftRuntimeReporting = 0x0004,
+  /// DEPRECATED:  use eInstrumentationRuntimeTypeAddressSanitizer.
   eInstrumentationRuntimeTypeLibsanitizersAsan = 0x0005,
   eInstrumentationRuntimeTypeBoundsSafety = 0x0006,
   eNumInstrumentationRuntimeTypes
@@ -680,6 +712,7 @@ enum CommandArgumentType {
   eArgTypeAliasOptions,
   eArgTypeArchitecture,
   eArgTypeBoolean,
+  eArgTypeBreakpointConditionMode,
   eArgTypeBreakpointID,
   eArgTypeBreakpointIDRange,
   eArgTypeBreakpointName,
@@ -781,6 +814,8 @@ enum CommandArgumentType {
   eArgTypeExceptionStage,
   eArgTypeNameMatchStyle,
   eArgTypePluginDomain,
+  eArgTypeBreakpointResolverMask,
+  eArgTypeScriptedExtension,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -905,6 +940,7 @@ enum SectionType {
   eSectionTypeLLDBFormatters,
   eSectionTypeSwiftModules,
   eSectionTypeWasmName,
+  eSectionTypeWasmGlobal,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){
@@ -1461,10 +1497,11 @@ enum CompletionType {
   eCustomCompletion = (1ul << 25),
   eThreadIDCompletion = (1ul << 26),
   eManagedPluginCompletion = (1ul << 27),
+  eScriptedExtensionCompletion = (1ul << 28),
   // This last enum element is just for input validation.
   // Add new completions before this element,
   // and then increment eTerminatorCompletion's shift value
-  eTerminatorCompletion = (1ul << 28)
+  eTerminatorCompletion = (1ul << 29)
 };
 
 /// Specifies if children need to be re-computed after a call to \ref
@@ -1580,6 +1617,34 @@ enum BinaryInformationLevel {
   eBinaryInformationLevelAddrName,
   eBinaryInformationLevelAddrNameUUID,
   eBinaryInformationLevelFull
+};
+
+/// This reflects the BreakpointResolver::ResolverTy, but this is a convenient
+/// enum for making a mask to pass to RegisterOverrideResolver.  It has to be
+/// kept in sync with the ResolverTy.
+FLAGS_ENUM(BreakpointResolverType){
+    eResolverUnknown = 0,          eResolverFileAndLine = (1 << 0),
+    eResolverAddress = (1 << 1),   eResolverName = (1 << 2),
+    eResolverFileRegex = (1 << 3), eResolverPython = (1 << 4),
+    eResolverException = (1 << 5), eResolverLastKnown = eResolverException,
+};
+constexpr unsigned BreakpointResolverAllResolversMask =
+    eResolverFileAndLine | eResolverAddress | eResolverName |
+    eResolverFileRegex | eResolverPython | eResolverException;
+
+/// Modes for evaluating breakpoint conditions.
+enum BreakpointConditionMode {
+  /// Use Data Inspection Language (DIL) to evaluate the condition.
+  eBreakpointConditionModeDIL,
+  /// Use UserExpression to evaluate the condition.
+  eBreakpointConditionModeExpr,
+  /// Use DIL to evaluate the condition, and if it fails,
+  /// fall back to UserExpression.
+  eBreakpointConditionModeDWIM,
+  /// Use the mode specified by the `target.breakpoints-condition-mode` setting.
+  /// This value is only used as the default breakpoint condition behavior and
+  /// cannot be set explicitly in settings or breakpoint command options.
+  eBreakpointConditionModeDefault
 };
 
 } // namespace lldb

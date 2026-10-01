@@ -1,3 +1,5 @@
+// REQUIRES: arm-emulator
+
 // DEFINE: %{opts} =
 // DEFINE: %{entry} = main
 // DEFINE: %{compile} = mlir-opt %s \

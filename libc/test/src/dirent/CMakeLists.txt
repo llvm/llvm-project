@@ -1,7 +1,7 @@
 add_subdirectory(testdata)
 add_custom_target(libc_dirent_unittests)
 
-add_libc_unittest(
+add_libc_test(
   dirent_test
   SUITE
     libc_dirent_unittests
@@ -15,5 +15,38 @@ add_libc_unittest(
     libc.src.dirent.readdir
     libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  fdopendir_test
+  SUITE
+    libc_dirent_unittests
+  SRCS
+    fdopendir_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.dirent.fdopendir
+    libc.src.dirent.closedir
+    libc.src.dirent.readdir
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.fcntl.fcntl
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.hdr.types.DIR
+    libc.hdr.types.struct_dirent
+)
+
+add_libc_test(
+  alphasort_test
+  SUITE
+    libc_dirent_unittests
+  SRCS
+    alphasort_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_dirent
+    libc.src.dirent.alphasort
+    libc.src.stdlib.qsort
 )
 

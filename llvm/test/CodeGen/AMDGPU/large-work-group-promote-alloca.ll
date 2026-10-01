@@ -1,7 +1,7 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=SI,SICI,ALL %s
-; RUN: opt -S -mcpu=tonga -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=CI,SICI,ALL %s
-; RUN: opt -S -mcpu=gfx1010 -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
-; RUN: opt -S -mcpu=gfx1100 -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
+; RUN: opt -S -mtriple=amdgpu-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=SI,SICI,ALL %s
+; RUN: opt -S -mtriple=amdgpu8.02-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=CI,SICI,ALL %s
+; RUN: opt -S -mtriple=amdgpu10.10-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
+; RUN: opt -S -mtriple=amdgpu11.00-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10PLUS,ALL %s
 
 ; SI-NOT: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] poison, align 4
 ; CI: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] poison, align 4
@@ -116,7 +116,7 @@ entry:
 ; SI-LABEL: @occupancy_6(
 ; CI-LABEL: @occupancy_6(
 ; SI: alloca
-; CI-NOT: alloca
+; CI: alloca [42 x i8]
 define amdgpu_kernel void @occupancy_6(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #5 {
 entry:
   %stack = alloca [42 x i8], align 4, addrspace(5)
@@ -216,7 +216,7 @@ entry:
 ; SI-LABEL: @occupancy_9(
 ; CI-LABEL: @occupancy_9(
 ; SI: alloca
-; CI-NOT: alloca
+; CI: alloca [28 x i8]
 define amdgpu_kernel void @occupancy_9(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #7 {
 entry:
   %stack = alloca [28 x i8], align 4, addrspace(5)

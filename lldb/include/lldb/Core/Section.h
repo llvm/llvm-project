@@ -10,7 +10,6 @@
 #define LLDB_CORE_SECTION_H
 
 #include "lldb/Core/ModuleChild.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-defines.h"
@@ -61,7 +60,7 @@ public:
   void Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
             bool show_header, uint32_t depth) const;
 
-  lldb::SectionSP FindSectionByName(ConstString section_dstr) const;
+  lldb::SectionSP FindSectionByName(llvm::StringRef section_name) const;
 
   lldb::SectionSP FindSectionByID(lldb::user_id_t sect_id) const;
 
@@ -143,7 +142,7 @@ class Section : public std::enable_shared_from_this<Section>,
 public:
   // Create a root section (one that has no parent)
   Section(const lldb::ModuleSP &module_sp, ObjectFile *obj_file,
-          lldb::user_id_t sect_id, ConstString name,
+          lldb::user_id_t sect_id, std::string name,
           lldb::SectionType sect_type, lldb::addr_t file_vm_addr,
           lldb::addr_t vm_size, lldb::offset_t file_offset,
           lldb::offset_t file_size, uint32_t log2align, uint32_t flags);
@@ -153,7 +152,7 @@ public:
                                                     // sections, non-NULL for
                                                     // child sections
           const lldb::ModuleSP &module_sp, ObjectFile *obj_file,
-          lldb::user_id_t sect_id, ConstString name,
+          lldb::user_id_t sect_id, std::string name,
           lldb::SectionType sect_type, lldb::addr_t file_vm_addr,
           lldb::addr_t vm_size, lldb::offset_t file_offset,
           lldb::offset_t file_size, uint32_t log2align, uint32_t flags);
@@ -208,7 +207,7 @@ public:
 
   bool IsDescendant(const Section *section);
 
-  ConstString GetName() const { return m_name; }
+  llvm::StringRef GetName() const { return m_name; }
 
   bool Slide(lldb::addr_t slide_amount, bool slide_children);
 
@@ -289,7 +288,7 @@ protected:
                             // be read from
   lldb::SectionType m_type; // The type of this section
   lldb::SectionWP m_parent_wp; // Weak pointer to parent section
-  ConstString m_name;          // Name of this section
+  std::string m_name;          // Name of this section
   lldb::addr_t m_file_addr; // The absolute file virtual address range of this
                             // section if m_parent == NULL,
   // offset from parent file virtual address if m_parent != NULL

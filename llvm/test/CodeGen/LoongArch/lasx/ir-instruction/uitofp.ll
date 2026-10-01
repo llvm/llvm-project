@@ -32,9 +32,17 @@ define void @uitofp_v4i64_v4f32(ptr %res, ptr %in){
 ; CHECK-LABEL: uitofp_v4i64_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvffint.d.lu $xr0, $xr0
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 238
-; CHECK-NEXT:    xvfcvt.s.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    lu12i.w $a1, 325632
+; CHECK-NEXT:    vreplgr2vr.w $vr1, $a1
+; CHECK-NEXT:    xvsrli.d $xr2, $xr0, 32
+; CHECK-NEXT:    xvffint.s.l $xr2, $xr2, $xr2
+; CHECK-NEXT:    xvpermi.d $xr2, $xr2, 216
+; CHECK-NEXT:    vfmul.s $vr1, $vr2, $vr1
+; CHECK-NEXT:    xvldi $xr2, -1777
+; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr2
+; CHECK-NEXT:    xvffint.s.l $xr0, $xr0, $xr0
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
+; CHECK-NEXT:    vfadd.s $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i64>, ptr %in
@@ -48,7 +56,7 @@ define void @uitofp_v4i32_v4f64(ptr %res, ptr %in){
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr0
-; CHECK-NEXT:    xvffint.d.lu $xr0, $xr0
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i32>, ptr %in
@@ -76,7 +84,7 @@ define <2 x double> @uitofp_v16i8_v2f64(<16 x i8> %a) {
 ; CHECK-NEXT:    vext2xv.hu.bu $xr0, $xr0
 ; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr0
 ; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr0
-; CHECK-NEXT:    xvffint.d.lu $xr0, $xr0
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
   %cvt = uitofp <16 x i8> %a to <16 x double>
@@ -89,7 +97,7 @@ define <4 x double> @uitofp_v4i8_v4f64(<16 x i8> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
 ; CHECK-NEXT:    vext2xv.du.bu $xr0, $xr0
-; CHECK-NEXT:    xvffint.d.lu $xr0, $xr0
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
 ; CHECK-NEXT:    ret
   %shuf = shufflevector <16 x i8> %a, <16 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %cvt = uitofp <4 x i8> %shuf to <4 x double>
@@ -103,7 +111,7 @@ define <4 x double> @uitofp_v16i8_v4f64(<16 x i8> %a) {
 ; CHECK-NEXT:    vext2xv.hu.bu $xr0, $xr0
 ; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr0
 ; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr0
-; CHECK-NEXT:    xvffint.d.lu $xr0, $xr0
+; CHECK-NEXT:    xvffint.d.l $xr0, $xr0
 ; CHECK-NEXT:    ret
   %cvt = uitofp <16 x i8> %a to <16 x double>
   %shuf = shufflevector <16 x double> %cvt, <16 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

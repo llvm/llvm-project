@@ -38,8 +38,6 @@
 // When availability annotations are disabled, we take for granted that features introduced
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
-#  define _LIBCPP_INTRODUCED_IN_LLVM_23 1
-#  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE /* nothing */
 
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE /* nothing */
@@ -81,9 +79,23 @@
 #  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 22
-// TODO: Fill this in
-#  define _LIBCPP_INTRODUCED_IN_LLVM_22 0
-#  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE __attribute__((unavailable))
+//
+// Note that DriverKit versions were bumped forward and aligned with the other Apple OSes in that release.
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 270000) ||       \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 270000) ||     \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 270000) ||             \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 270000) ||       \
+      (defined(__ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__ < 270000)
+#    define _LIBCPP_INTRODUCED_IN_LLVM_22 0
+#  else
+#    define _LIBCPP_INTRODUCED_IN_LLVM_22 1
+#  endif
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE                                                                 \
+    __attribute__((availability(macos, strict, introduced = 27.0)))                                               \
+    __attribute__((availability(ios, strict, introduced = 27.0)))                                                 \
+    __attribute__((availability(tvos, strict, introduced = 27.0)))                                                \
+    __attribute__((availability(watchos, strict, introduced = 27.0)))                                             \
+    __attribute__((availability(driverkit, strict, introduced = 27.0)))
 
 // LLVM 21
 #  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 260400) ||       \
@@ -241,6 +253,18 @@
 
 #endif
 
+// This determines whether we assume that the internal std::__bad_variant_access_with_msg class
+// (which carries a message describing the cause of the failure in bad_variant_access::what())
+// provides a key function in the dylib. This allows centralizing its vtable and typeinfo instead
+// of having all TUs provide a weak definition that then gets deduplicated. When it is not available
+// in the dylib, what() is defined inline instead, so the descriptive message is provided regardless.
+#define _LIBCPP_AVAILABILITY_HAS_BAD_VARIANT_ACCESS_WITH_MSG_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_23
+// No attribute, since we've had bad_variant_access in the headers before
+
+// Controls whether the implementation for text_encoding::environment() is available
+#define _LIBCPP_AVAILABILITY_HAS_TEXT_ENCODING_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23
+#define _LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE
+
 // This controls the availability of new implementation of std::atomic's
 // wait, notify_one and notify_all. The new implementation uses
 // the native atomic wait/notify operations on platforms that support them
@@ -257,14 +281,6 @@
 // See https://wg21.link/LWG2233. This requires `std::bad_function_call::what()` to be available in the dylib.
 #define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
 // No attribute, since we've had bad_function_call::what() in the headers before
-
-// This determines whether we assume that the internal std::__bad_variant_access_with_msg class
-// (which carries a message describing the cause of the failure in bad_variant_access::what())
-// provides a key function in the dylib. This allows centralizing its vtable and typeinfo instead
-// of having all TUs provide a weak definition that then gets deduplicated. When it is not available
-// in the dylib, what() is defined inline instead, so the descriptive message is provided regardless.
-#define _LIBCPP_AVAILABILITY_HAS_BAD_VARIANT_ACCESS_WITH_MSG_KEY_FUNCTION _LIBCPP_INTRODUCED_IN_LLVM_23
-// No attribute, since we've had bad_variant_access in the headers before
 
 // This controls the availability of floating-point std::from_chars functions.
 // These overloads were added later than the integer overloads.
@@ -324,10 +340,6 @@
 #else
 #  define _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1 0
 #endif
-
-// Controls whether the implementation for text_encoding::environment() is available
-#define _LIBCPP_AVAILABILITY_HAS_TEXT_ENCODING_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23
-#define _LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE
 
 // Only define a bunch of symbols in the dylib if we need to be compatible with LLVM 7 headers or older
 #  if defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 8
