@@ -4,4 +4,4 @@ RUN: not wasm-ld -mwasm64 %t.o -o %t.wasm 2>&1 | FileCheck %s
 RUN: wasm-ld -shared --no-entry %t.o -o %t.so
 RUN: not wasm-ld -mwasm64 %t.so -o %t2.wasm 2>&1 | FileCheck %s
 
-CHECK: wasm32 object file can't be linked in wasm64 mode
+CHECK: error: {{.*}}.{{s?}}o: wasm32 object file can't be linked in wasm64 mode
