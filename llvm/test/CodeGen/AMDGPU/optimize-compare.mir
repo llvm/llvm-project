@@ -2472,12 +2472,12 @@ body:             |
   bb.0:
     successors: %bb.1, %bb.2
     liveins: $sgpr0
-    %2:sreg_32 = COPY $sgpr0
-    S_CMP_LG_U32 %2, 0, implicit-def $scc
-    %31:sreg_64_xexec = S_CSELECT_B64 0, -1, implicit $scc
-    %40:sreg_32_xm0_xexec = COPY %31.sub0:sreg_64_xexec
-    %41:sreg_32_xm0_xexec = COPY %31.sub1:sreg_64_xexec
-    %sgpr4:sreg_32 = S_OR_B32 %40:sreg_32_xm0_xexec, %41:sreg_32_xm0_xexec, implicit-def $scc
+    %0:sreg_32 = COPY $sgpr0
+    S_CMP_LG_U32 %0, 0, implicit-def $scc
+    %1:sreg_64_xexec = S_CSELECT_B64 0, -1, implicit $scc
+    %2:sreg_32_xm0_xexec = COPY %1.sub0
+    %3:sreg_32_xm0_xexec = COPY %1.sub1
+    %sgpr4:sreg_32 = S_OR_B32 %2, %3, implicit-def $scc
     S_CMP_LG_U32 %sgpr4, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.2, implicit $scc
     S_BRANCH %bb.1
@@ -2487,7 +2487,6 @@ body:             |
 
   bb.2:
     S_ENDPGM 0
-
 ...
 
 ---
@@ -2516,12 +2515,12 @@ body:             |
   bb.0:
     successors: %bb.1, %bb.2
     liveins: $sgpr0
-    %2:sreg_32 = COPY $sgpr0
-    S_CMP_LG_U32 %2, 0, implicit-def $scc
-    %31:sreg_64_xexec = S_CSELECT_B64 0, -1, implicit $scc
-    %40:sreg_32_xm0_xexec = COPY %31.sub0:sreg_64_xexec
-    %41:sreg_32_xm0_xexec = COPY %31.sub1:sreg_64_xexec
-    %sgpr4:sreg_32 = S_OR_B32 %40:sreg_32_xm0_xexec, %41:sreg_32_xm0_xexec, implicit-def $scc
+    %0:sreg_32 = COPY $sgpr0
+    S_CMP_LG_U32 %0, 0, implicit-def $scc
+    %1:sreg_64_xexec = S_CSELECT_B64 0, -1, implicit $scc
+    %2:sreg_32_xm0_xexec = COPY %1.sub0
+    %3:sreg_32_xm0_xexec = COPY %1.sub1
+    %sgpr4:sreg_32 = S_OR_B32 %2, %3, implicit-def $scc
     S_CMP_EQ_U32 %sgpr4, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.2, implicit $scc
     S_BRANCH %bb.1
@@ -2531,7 +2530,6 @@ body:             |
 
   bb.2:
     S_ENDPGM 0
-
 ...
 
 ---
@@ -2560,13 +2558,13 @@ body:             |
   bb.0:
     successors: %bb.1, %bb.2
     liveins: $sgpr0
-    %2:sreg_32 = COPY $sgpr0
-    %5:sreg_64 = S_MOV_B64 -1
-    S_CMP_LG_U32 %2, 0, implicit-def $scc
-    %31:sreg_64_xexec = S_CSELECT_B64 %5, 0, implicit $scc
-    %40:sreg_32_xm0_xexec = COPY %31.sub0:sreg_64_xexec
-    %41:sreg_32_xm0_xexec = COPY %31.sub1:sreg_64_xexec
-    %sgpr4:sreg_32 = S_OR_B32 %40:sreg_32_xm0_xexec, %41:sreg_32_xm0_xexec, implicit-def $scc
+    %0:sreg_32 = COPY $sgpr0
+    %1:sreg_64 = S_MOV_B64 -1
+    S_CMP_LG_U32 %0, 0, implicit-def $scc
+    %2:sreg_64_xexec = S_CSELECT_B64 %1, 0, implicit $scc
+    %3:sreg_32_xm0_xexec = COPY %2.sub0
+    %4:sreg_32_xm0_xexec = COPY %2.sub1
+    %sgpr4:sreg_32 = S_OR_B32 %3, %4, implicit-def $scc
     S_CMP_LG_U32 %sgpr4, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.2, implicit $scc
     S_BRANCH %bb.1
@@ -2576,7 +2574,6 @@ body:             |
 
   bb.2:
     S_ENDPGM 0
-
 ...
 
 # STARTT
