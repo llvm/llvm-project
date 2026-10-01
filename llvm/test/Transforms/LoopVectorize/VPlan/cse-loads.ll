@@ -362,7 +362,7 @@ define void @no_cse_different_type(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    CLONE ir<%x>.3 = load ir<%gep>.3
 ; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = buildvector ir<%x>, ir<%x>.1, ir<%x>.2, ir<%x>.3
 ; CHECK-NEXT:    WIDEN ir<%y> = load ir<%gep>
-; CHECK-NEXT:    WIDEN-CAST ir<%xe> = zext vp<[[VP4]]> to i64
+; CHECK-NEXT:    EMIT ir<%xe> = zext vp<[[VP4]]> to i64
 ; CHECK-NEXT:    WIDEN ir<%sum> = add ir<%xe>, ir<%y>
 ; CHECK-NEXT:    CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, vp<%index>
 ; CHECK-NEXT:    WIDEN store ir<%gep.b>, ir<%sum>
@@ -636,7 +636,7 @@ define void @dup_load_across_replicate_region(ptr noalias %a, ptr noalias %b, pt
 ; CHECK-NEXT:    CLONE ir<%p> = getelementptr inbounds ir<%a>, vp<%index>
 ; CHECK-NEXT:    WIDEN ir<%x> = load ir<%p>
 ; CHECK-NEXT:    WIDEN ir<%c> = icmp sgt ir<%x>, ir<0>
-; CHECK-NEXT:    WIDEN-CAST ir<%idx> = sext ir<%x> to i64
+; CHECK-NEXT:    EMIT ir<%idx> = sext ir<%x> to i64
 ; CHECK-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = extractelement ir<%c>, ir<0>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP1]]>
 ; CHECK-NEXT:  Successor(s): pred.load.if, pred.load.continue

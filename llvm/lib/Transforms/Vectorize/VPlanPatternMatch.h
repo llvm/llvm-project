@@ -310,8 +310,7 @@ private:
 template <unsigned Opcode, typename... OpTys>
 using AllRecipe_match =
     Recipe_match<std::tuple<OpTys...>, Opcode, /*Commutative*/ false,
-                 VPWidenRecipe, VPReplicateRecipe, VPWidenCastRecipe,
-                 VPInstruction>;
+                 VPWidenRecipe, VPReplicateRecipe, VPInstruction>;
 
 template <unsigned Opcode, typename... OpTys>
 using AllRecipe_commutative_match =
@@ -579,8 +578,23 @@ m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
 }
 
+/// Matches a wide (vector-producing, non-single-scalar) VPInstruction cast.
+struct widen_cast_match {
+  template <typename ITy> bool match(const ITy *V) const {
+    auto *VPI = dyn_cast<VPInstruction>(V);
+    return VPI && Instruction::isCast(VPI->getOpcode()) &&
+           !VPI->isSingleScalar();
+  }
+};
+
+inline widen_cast_match m_WidenCast() { return {}; }
+
+template <typename SubPattern> inline auto m_WidenCast(const SubPattern &P) {
+  return m_CombineAnd(m_WidenCast(), P);
+}
+
 template <typename Op0_t> inline auto m_WidenAnyExtend(const Op0_t &Op0) {
-  return m_Isa<VPWidenCastRecipe>(m_CombineOr(m_ZExtOrSExt(Op0), m_FPExt(Op0)));
+  return m_WidenCast(m_CombineOr(m_ZExtOrSExt(Op0), m_FPExt(Op0)));
 }
 
 template <typename Op0_t> inline auto m_AnyNeg(const Op0_t &Op0) {

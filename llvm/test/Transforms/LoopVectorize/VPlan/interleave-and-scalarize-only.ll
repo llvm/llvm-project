@@ -409,9 +409,8 @@ define void @pr76986_trunc_sext_interleaving_only(i16 %arg, ptr noalias %src, pt
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
 ; CHECK-NEXT:      CLONE ir<%l> = load ir<%gep.src>
-; CHECK-NEXT:      EMIT-SCALAR ir<%sext> = sext ir<%l> to i32
-; CHECK-NEXT:      EMIT-SCALAR ir<%trunc> = trunc ir<%sext> to i16
-; CHECK-NEXT:      CLONE ir<%sdiv> = sdiv ir<%trunc>, ir<%arg>
+; CHECK-NEXT:      EMIT-SCALAR ir<%sext> = sext ir<%l> to i16
+; CHECK-NEXT:      CLONE ir<%sdiv> = sdiv ir<%sext>, ir<%arg>
 ; CHECK-NEXT:      CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
 ; CHECK-NEXT:      CLONE store ir<%sdiv>, ir<%gep.dst>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>

@@ -1180,16 +1180,17 @@ TEST_F(VPRecipeTest, CastVPWidenGEPRecipeToVPUserAndVPDef) {
   delete GEP;
 }
 
-TEST_F(VPRecipeTest, CastVPWidenCastRecipeToVPUser) {
+TEST_F(VPRecipeTest, CastVPInstructionWideCastToVPUser) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
   IntegerType *Int64 = IntegerType::get(C, 64);
   auto *Cast = CastInst::CreateZExtOrBitCast(PoisonValue::get(Int32), Int64);
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, Cast,
-                           VPIRFlags::getDefaultFlags(Instruction::ZExt));
+  std::unique_ptr<VPInstruction> Recipe(VPInstruction::createWideCast(
+      Instruction::ZExt, Op1, Int64, Cast,
+      VPIRFlags::getDefaultFlags(Instruction::ZExt)));
 
-  checkVPRecipeCastImpl<VPWidenCastRecipe, VPUser, VPIRMetadata>(&Recipe);
+  checkVPRecipeCastImpl<VPInstruction, VPUser, VPIRMetadata>(Recipe.get());
   delete Cast;
 }
 

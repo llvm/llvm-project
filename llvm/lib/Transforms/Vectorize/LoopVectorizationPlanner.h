@@ -441,7 +441,7 @@ public:
                                   const VPIRMetadata &Metadata = {}) {
     return tryInsertInstruction(new VPInstruction(
         Opcode, Op, Flags.value_or(VPIRFlags::getDefaultFlags(Opcode)),
-        Metadata, DL, "", ResultTy));
+        Metadata, DL, "", ResultTy, /*IsSingleScalar=*/true));
   }
 
   /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
@@ -489,11 +489,11 @@ public:
     return createNaryOp(Instruction::Freeze, Op, DL, Name);
   }
 
-  VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
-                                     Type *ResultTy) {
+  VPInstruction *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
+                                 Type *ResultTy) {
     assert(Op->getScalarType() != ResultTy &&
            "must not create a no-op cast recipe");
-    return tryInsertInstruction(new VPWidenCastRecipe(
+    return tryInsertInstruction(VPInstruction::createWideCast(
         Opcode, Op, ResultTy, nullptr, VPIRFlags::getDefaultFlags(Opcode)));
   }
 
@@ -507,7 +507,8 @@ public:
     if (Instruction::isCast(Opcode)) {
       assert(!Mask && "Cast cannot be predicated");
       auto *VPI = new VPInstruction(Opcode, Operands, Flags, Metadata, DL,
-                                    UV->getName(), ResultTy);
+                                    UV->getName(), ResultTy,
+                                    /*IsSingleScalar=*/true);
       VPI->setUnderlyingValue(UV);
       return VPI;
     }

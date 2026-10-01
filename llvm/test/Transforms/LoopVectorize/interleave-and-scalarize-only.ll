@@ -336,10 +336,8 @@ define void @pr76986_trunc_sext_interleaving_only(i16 %arg, ptr noalias %src, pt
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sext i8 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = sext i8 [[TMP5]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP6]] to i16
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP7]] to i16
+; CHECK-NEXT:    [[TMP8:%.*]] = sext i8 [[TMP4]] to i16
+; CHECK-NEXT:    [[TMP9:%.*]] = sext i8 [[TMP5]] to i16
 ; CHECK-NEXT:    [[TMP10:%.*]] = sdiv i16 [[TMP8]], [[ARG]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sdiv i16 [[TMP9]], [[ARG]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[INDEX]]

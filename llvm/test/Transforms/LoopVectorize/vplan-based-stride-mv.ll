@@ -4128,10 +4128,10 @@ define void @stride_mv_predicated_btc(ptr noalias %p.out, ptr %p, i32 %M, i64 %s
 ; COMPARE-NO-MV-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COMPARE-NO-MV-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 0, i16 1, i16 2, i16 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COMPARE-NO-MV-NEXT:    [[TMP10:%.*]] = sext <4 x i16> [[VEC_IND]] to <4 x i64>
-; COMPARE-NO-MV-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP10]], i64 0
 ; COMPARE-NO-MV-NEXT:    [[TMP12:%.*]] = mul <4 x i64> [[TMP10]], [[BROADCAST_SPLAT]]
 ; COMPARE-NO-MV-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i64, ptr [[P]], <4 x i64> [[TMP12]]
 ; COMPARE-NO-MV-NEXT:    [[WIDE_LOAD:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i64> poison)
+; COMPARE-NO-MV-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP10]], i64 0
 ; COMPARE-NO-MV-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[TMP11]]
 ; COMPARE-NO-MV-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP13]], align 4
 ; COMPARE-NO-MV-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -4185,10 +4185,10 @@ define void @stride_mv_predicated_btc(ptr noalias %p.out, ptr %p, i32 %M, i64 %s
 ; COMPARE-LAA-MV-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COMPARE-LAA-MV-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 0, i16 1, i16 2, i16 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COMPARE-LAA-MV-NEXT:    [[TMP10:%.*]] = sext <4 x i16> [[VEC_IND]] to <4 x i64>
-; COMPARE-LAA-MV-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP10]], i64 0
 ; COMPARE-LAA-MV-NEXT:    [[TMP12:%.*]] = mul <4 x i64> [[TMP10]], [[BROADCAST_SPLAT]]
 ; COMPARE-LAA-MV-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i64, ptr [[P]], <4 x i64> [[TMP12]]
 ; COMPARE-LAA-MV-NEXT:    [[WIDE_LOAD:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i64> poison)
+; COMPARE-LAA-MV-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP10]], i64 0
 ; COMPARE-LAA-MV-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[TMP11]]
 ; COMPARE-LAA-MV-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP13]], align 4
 ; COMPARE-LAA-MV-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4

@@ -32,8 +32,8 @@ define void @cast_flags_mixed(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:      EMIT vp<%step.add>.1 = add nuw vp<[[VP9]]>, vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = icmp ule vp<[[VP9]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = icmp ule vp<%step.add>.1, vp<[[VP3]]>
-; CHECK-NEXT:      WIDEN-CAST ir<%sext.plain> = sext ir<%iv> to i64
-; CHECK-NEXT:      WIDEN-CAST ir<%sext.plain>.1 = sext vp<%step.add> to i64
+; CHECK-NEXT:      EMIT ir<%sext.plain> = sext ir<%iv> to i64
+; CHECK-NEXT:      EMIT ir<%sext.plain>.1 = sext vp<%step.add> to i64
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {

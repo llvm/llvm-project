@@ -398,8 +398,8 @@ define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture reado
 ; CHECK-NEXT:      CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<[[VP6]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer inbounds i16, ir<%arrayidx1>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load1> = vp.load vp<[[VP8]]>, vp<%evl>
-; CHECK-NEXT:      WIDEN-CAST ir<%conv0> = sext ir<%load0> to i32
-; CHECK-NEXT:      WIDEN-CAST ir<%conv1> = sext ir<%load1> to i32
+; CHECK-NEXT:      EMIT ir<%conv0> = sext ir<%load0> to i32
+; CHECK-NEXT:      EMIT ir<%conv1> = sext ir<%load1> to i32
 ; CHECK-NEXT:      WIDEN ir<%mul> = mul nsw ir<%conv0>, ir<%conv1>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP9]]> = vp<%evl> + reduce.add (ir<%mul> sext to i64, vp<%evl>)
 ; CHECK-NEXT:      EMIT vp<%current.iteration.next> = add vp<%evl>, vp<[[VP5]]>
@@ -465,11 +465,11 @@ define i32 @print_mulacc_negated(ptr %a, ptr %b) vscale_range(2, 1024) {
 ; CHECK-NEXT:      CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[VP7]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i8, ir<%gep.a>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load.a> = vp.load vp<[[VP8]]>, vp<%evl>
-; CHECK-NEXT:      WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i32
+; CHECK-NEXT:      EMIT ir<%ext.a> = zext ir<%load.a> to i32
 ; CHECK-NEXT:      CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[VP7]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer i8, ir<%gep.b>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load.b> = vp.load vp<[[VP9]]>, vp<%evl>
-; CHECK-NEXT:      WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i32
+; CHECK-NEXT:      EMIT ir<%ext.b> = zext ir<%load.b> to i32
 ; CHECK-NEXT:      WIDEN ir<%mul> = mul ir<%ext.b>, ir<%ext.a>
 ; CHECK-NEXT:      WIDEN ir<%sub> = sub ir<0>, ir<%mul>
 ; CHECK-NEXT:      REDUCE ir<%add> = ir<%accum> +  vp.reduce.add (ir<%sub>, vp<%evl>)
@@ -537,7 +537,7 @@ define i32 @print_mulacc_extended_const(ptr %start, ptr %end) vscale_range(2, 10
 ; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP8]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer i8, vp<%next.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = vp.load vp<[[VP9]]>, vp<%evl>
-; CHECK-NEXT:      WIDEN-CAST ir<%l.ext> = zext ir<%l> to i32
+; CHECK-NEXT:      EMIT ir<%l.ext> = zext ir<%l> to i32
 ; CHECK-NEXT:      WIDEN ir<%mul> = mul ir<%l.ext>, ir<63>
 ; CHECK-NEXT:      REDUCE ir<%red.next> = ir<%red> +  vp.reduce.add (ir<%mul>, vp<%evl>)
 ; CHECK-NEXT:      EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = zext vp<%evl> to i64
@@ -599,7 +599,7 @@ define i32 @print_mulacc_extended_const_lhs(ptr %start, ptr %end) vscale_range(2
 ; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP8]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer i8, vp<%next.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = vp.load vp<[[VP9]]>, vp<%evl>
-; CHECK-NEXT:      WIDEN-CAST ir<%l.ext> = zext ir<%l> to i32
+; CHECK-NEXT:      EMIT ir<%l.ext> = zext ir<%l> to i32
 ; CHECK-NEXT:      WIDEN ir<%mul> = mul ir<63>, ir<%l.ext>
 ; CHECK-NEXT:      REDUCE ir<%red.next> = ir<%red> +  vp.reduce.add (ir<%mul>, vp<%evl>)
 ; CHECK-NEXT:      EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = zext vp<%evl> to i64
@@ -662,7 +662,7 @@ define i32 @print_mulacc_not_extended_const(ptr %start, ptr %end) vscale_range(2
 ; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP8]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer i8, vp<%next.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = vp.load vp<[[VP9]]>, vp<%evl>
-; CHECK-NEXT:      WIDEN-CAST ir<%l.ext> = sext ir<%l> to i32
+; CHECK-NEXT:      EMIT ir<%l.ext> = sext ir<%l> to i32
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = shl ir<%l.ext>, ir<7>
 ; CHECK-NEXT:      REDUCE ir<%red.next> = ir<%red> +  vp.reduce.add (vp<[[VP10]]>, vp<%evl>)
 ; CHECK-NEXT:      EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = zext vp<%evl> to i64
@@ -725,7 +725,7 @@ define i64 @print_ext_mulacc_extended_const(ptr %start, ptr %end) vscale_range(2
 ; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP8]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer i8, vp<%next.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = vp.load vp<[[VP9]]>, vp<%evl>
-; CHECK-NEXT:      WIDEN-CAST ir<%l.ext> = zext ir<%l> to i32
+; CHECK-NEXT:      EMIT ir<%l.ext> = zext ir<%l> to i32
 ; CHECK-NEXT:      WIDEN ir<%mul> = mul ir<%l.ext>, ir<63>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP10]]> = vp<%evl> + reduce.add (ir<%mul> zext to i64, vp<%evl>)
 ; CHECK-NEXT:      EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = zext vp<%evl> to i64
@@ -789,7 +789,7 @@ define i64 @print_ext_mulacc_not_extended_const(ptr %start, ptr %end) vscale_ran
 ; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP8]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer i8, vp<%next.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = vp.load vp<[[VP9]]>, vp<%evl>
-; CHECK-NEXT:      WIDEN-CAST ir<%l.ext> = sext ir<%l> to i32
+; CHECK-NEXT:      EMIT ir<%l.ext> = sext ir<%l> to i32
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = shl ir<%l.ext>, ir<7>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP11]]> = vp<%evl> + reduce.add (vp<[[VP10]]> sext to i64, vp<%evl>)
 ; CHECK-NEXT:      EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = zext vp<%evl> to i64
@@ -842,7 +842,7 @@ define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) vscale_range(
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
-; CHECK-NEXT:    WIDEN-CAST ir<%conv> = sext ir<%b> to i32
+; CHECK-NEXT:    EMIT ir<%conv> = sext ir<%b> to i32
 ; CHECK-NEXT:    WIDEN ir<%mul> = mul ir<%conv>, ir<%conv>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
