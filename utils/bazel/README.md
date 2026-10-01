@@ -58,11 +58,17 @@ for adding this configuration.
    ```
    bazel build --config=generic_gcc --repo_env=CC=/usr/bin/gcc --repo_env=CXX=/usr/bin/g++  @llvm-project//...
    ```
-7. To build [compile commands](https://clangd.llvm.org/design/compile-commands) for Clangd:
+7. To generate a [compilation database](https://clangd.llvm.org/design/compile-commands) (`compile_commands.json`) for clangd:
    ```bash
    bazel run //tools/compile_commands
    ```
-   See [bazel-compile-commands-extractor](https://github.com/helly25/bazel-compile-commands-extractor) for more details.
+   By default, this generates compile commands for all targets in `@llvm-project//...` and symlinks `compile_commands.json` to the repository root for your editor.
+
+   You can also generate commands for specific targets:
+   ```bash
+   bazel run //tools/compile_commands -- //llvm:Support
+   bazel run //tools/compile_commands -- //llvm:Support //clang:all
+   ```
 
 # Configuration
 

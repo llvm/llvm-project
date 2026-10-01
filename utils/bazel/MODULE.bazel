@@ -33,14 +33,8 @@ bazel_dep(name = "vulkan_headers", version = "1.4.349")
 bazel_dep(name = "xz", version = "5.4.5.bcr.9", repo_name = "llvm_xz")
 
 bazel_dep(name = "emsdk", version = "6.0.2", dev_dependency = True)
-bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
 bazel_dep(name = "llvm", version = "0.8.20", dev_dependency = True)
-
-git_override(
-    module_name = "hedron_compile_commands",
-    commit = "078ba7675c05bea2666c92d9a8abe200d8547655",
-    remote = "https://github.com/helly25/bazel-compile-commands-extractor",
-)
+bazel_dep(name = "wolfd_bazel_compile_commands", version = "0.5.2", dev_dependency = True)
 
 llvm_repos_extension = use_extension(":extensions.bzl", "llvm_repos_extension")
 use_repo(

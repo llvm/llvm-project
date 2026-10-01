@@ -2,18 +2,13 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
+load("@rules_python//python:defs.bzl", "py_binary")
 
-# Refresh compilation database for all LLVM targets
-refresh_compile_commands(
+py_binary(
     name = "compile_commands",
-    output_dir = "../..",
-    targets = [
-        "@llvm-project//...",
-    ],
+    srcs = ["refresh.py"],
+    main = "refresh.py",
+    data = ["@wolfd_bazel_compile_commands//:generate_compile_commands"],
+    deps = ["@rules_python//python/runfiles"],
 )
 
-alias(
-    name = "refresh_all",
-    actual = ":compile_commands",
-)
