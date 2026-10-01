@@ -165,9 +165,6 @@ public:
   /// Get the symbol for the function end, used for ICache prefetch MCExprs.
   MCSymbol *getPrefetchEndSym() const { return PrefetchEndSym; }
 
-  /// Get the code size estimate from SIProgramInfo.
-  uint64_t getCodeSize() { return CurrentProgramInfo.getFunctionCodeSize(*MF); }
-
 protected:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
