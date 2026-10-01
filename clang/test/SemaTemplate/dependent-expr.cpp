@@ -188,9 +188,6 @@ struct Y {
   decltype(&e) g;
 };
 
-// Taking the address of a static data member is value-dependent but not
-// type-dependent, so the field type must be concrete by the time the layout
-// of Y<int> is computed.
 void f() { Y<int> y; }
 static_assert(__is_same(decltype(Y<int>::g), const int *), "");
 } // namespace GH175934
