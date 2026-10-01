@@ -211,6 +211,12 @@ struct FindHostArray
 static const llvm::StringSet<> hostAddressIntrinsics_ = {
     "__builtin_c_devloc", "__builtin_c_loc", "c_sizeof", "loc", "sizeof"};
 
+// Inquiry intrinsics whose arguments are all inquired objects. Other inquiry
+// intrinsics only inquire about their first argument and read the values of
+// the others (DIM=, KIND=).
+static const llvm::StringSet<> allArgsInquiryIntrinsics_ = {
+    "associated", "extends_type_of", "same_type_as"};
+
 // Traverses an expression evaluated by host code in search of device data
 // whose value would have to be read from the host. Device data that is only
 // designated (actual argument to a procedure, argument of an inquiry
@@ -233,7 +239,12 @@ struct FindDeviceDataReadOnHost
   Result operator()(const evaluate::Component &x) const {
     const Symbol &component{x.GetLastSymbol()};
     if (evaluate::HasCUDADataAttr(component)) {
-      return (*this)(component);
+      if (Result result{(*this)(component)}) {
+        return result;
+      }
+      // The attribute of the component hides the one of the base.
+      return FindDeviceDataReadOnHost{context_, /*onlyDesignated=*/true}(
+          x.base());
     }
     return (*this)(x.base());
   }
@@ -260,17 +271,23 @@ struct FindDeviceDataReadOnHost
     return nullptr;
   }
   Result operator()(const evaluate::ProcedureRef &x) const {
+    bool onlyFirstArgDesignated{false};
     if (const auto *intrinsic{x.proc().GetSpecificIntrinsic()}) {
       if (context_.intrinsics().GetIntrinsicClass(intrinsic->name) !=
               evaluate::IntrinsicClass::inquiryFunction &&
           !hostAddressIntrinsics_.contains(intrinsic->name)) {
         return (*this)(x.arguments());
       }
+      onlyFirstArgDesignated =
+          !allArgsInquiryIntrinsics_.contains(intrinsic->name);
     }
-    for (const auto &arg : x.arguments()) {
+    for (std::size_t j{0}; j < x.arguments().size(); ++j) {
+      const auto &arg{x.arguments()[j]};
       if (const auto *expr{arg ? arg->UnwrapExpr() : nullptr}) {
-        if (Result result{FindDeviceDataReadOnHost{context_,
-                onlyDesignated_ || evaluate::IsVariable(*expr)}(*expr)}) {
+        bool designated{evaluate::IsVariable(*expr) &&
+            (j == 0 || !onlyFirstArgDesignated)};
+        if (Result result{FindDeviceDataReadOnHost{
+                context_, onlyDesignated_ || designated}(*expr)}) {
           return result;
         }
       }

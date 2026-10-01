@@ -38,9 +38,23 @@ subroutine host(ad)
   use m
   implicit none
   real, device, allocatable :: ad(:)
+  real, device, allocatable :: ad2(:,:)
+  integer, device :: nd
   real :: h(10), x
   integer :: i
   type(t) :: tt
+  type(t) :: tta(10)
+
+  !ERROR: Device data 'nd' may not be referenced in host code outside of a data transfer or an actual argument
+  if (allocated(tta(nd)%c)) continue
+  !ERROR: Device data 'nd' may not be referenced in host code outside of a data transfer or an actual argument
+  if (f(tta(nd)%c) > 0.0) continue
+  if (allocated(tta(2)%c)) continue
+  !ERROR: Device data 'nd' may not be referenced in host code outside of a data transfer or an actual argument
+  if (size(ad2, dim=nd) > 0) continue
+  !ERROR: Device data 'nd' may not be referenced in host code outside of a data transfer or an actual argument
+  if (lbound(ad2, nd) > 0) continue
+  if (size(ad2, dim=2) > 0) continue
 
   !ERROR: Device data 'mn' may not be referenced in host code outside of a data transfer or an actual argument
   if (mn > 0) x = 1.0
