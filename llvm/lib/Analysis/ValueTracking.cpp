@@ -8466,6 +8466,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::umax:
   case Intrinsic::umin:
   case Intrinsic::scmp:
+  case Intrinsic::smulh:
+  case Intrinsic::umulh:
   case Intrinsic::is_fpclass:
   case Intrinsic::ptrmask:
   case Intrinsic::ucmp:

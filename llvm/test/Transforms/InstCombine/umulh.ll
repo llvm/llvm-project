@@ -43,7 +43,7 @@ define <32 x i8> @undef_umulh_v32i8_commute(<32 x i8> %a0) {
 
 define i32 @poison_umulh_i32(i32 %a0) {
 ; CHECK-LABEL: @poison_umulh_i32(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 poison
 ;
   %1 = call i32 @llvm.umulh.i32(i32 %a0, i32 poison)
   ret i32 %1
@@ -51,7 +51,7 @@ define i32 @poison_umulh_i32(i32 %a0) {
 
 define i32 @poison_umulh_i32_commute(i32 %a0) {
 ; CHECK-LABEL: @poison_umulh_i32_commute(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 poison
 ;
   %1 = call i32 @llvm.umulh.i32(i32 poison, i32 %a0)
   ret i32 %1
@@ -59,7 +59,7 @@ define i32 @poison_umulh_i32_commute(i32 %a0) {
 
 define <8 x i16> @poison_umulh_v8i16(<8 x i16> %a0) {
 ; CHECK-LABEL: @poison_umulh_v8i16(
-; CHECK-NEXT:    ret <8 x i16> zeroinitializer
+; CHECK-NEXT:    ret <8 x i16> poison
 ;
   %1 = call <8 x i16> @llvm.umulh.v8i16(<8 x i16> %a0, <8 x i16> poison)
   ret <8 x i16> %1
@@ -67,7 +67,7 @@ define <8 x i16> @poison_umulh_v8i16(<8 x i16> %a0) {
 
 define <32 x i8> @poison_umulh_v32i8_commute(<32 x i8> %a0) {
 ; CHECK-LABEL: @poison_umulh_v32i8_commute(
-; CHECK-NEXT:    ret <32 x i8> zeroinitializer
+; CHECK-NEXT:    ret <32 x i8> poison
 ;
   %1 = call <32 x i8> @llvm.umulh.v32i8(<32 x i8> poison, <32 x i8> %a0)
   ret <32 x i8> %1
