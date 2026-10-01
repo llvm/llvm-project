@@ -42,6 +42,16 @@ void f1(int *p) {
   // CHECK: store
   MemberPtr _Nonnull nqptr = nullptr;
 
+  // CHECK: br i1 true, label %cont{{.*}}, !nosanitize
+  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}} !nosanitize
+  // CHECK: store
+  int* S1::* _Nonnull pptr = &S1::p;
+
+  // CHECK: br i1 false, label %cont{{.*}}, !nosanitize
+  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}} !nosanitize
+  // CHECK: store
+  int* S1::* _Nonnull npptr = nullptr;
+
   // CHECK-NOT: __ubsan_handle_type_mismatch
   // CHECK-NOT: store
   // CHECK: ret void
