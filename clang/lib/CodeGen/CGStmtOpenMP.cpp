@@ -6820,7 +6820,7 @@ void CodeGenFunction::EmitOMPOrderedBlockAssocDirective(
         assert(S.getBeginLoc().isValid() &&
                "Outlined function call location must be valid.");
         ApplyDebugLocation::CreateDefaultArtificial(*this, S.getBeginLoc());
-        OMPBuilderCBHelpers::EmitCaptureStmt(*this, CodeGenBB->end(), *FiniBB,
+        OMPBuilderCBHelpers::EmitCaptureStmt(*this, CodeGenBB, *FiniBB,
                                              OutlinedFn, CapturedVars);
       } else {
         OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(

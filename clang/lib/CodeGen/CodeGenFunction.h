@@ -2060,10 +2060,10 @@ public:
                                          InsertPointTy CodeGenIP,
                                          Twine RegionName);
 
-    static void EmitCaptureStmt(CodeGenFunction &CGF, InsertPointTy CodeGenIP,
+    static void EmitCaptureStmt(CodeGenFunction &CGF,
+                                llvm::BasicBlock *CodeGenIPBB,
                                 llvm::BasicBlock &FiniBB, llvm::Function *Fn,
                                 ArrayRef<llvm::Value *> Args) {
-      llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getNodeParent();
       if (llvm::Instruction *CodeGenIPBBTI = CodeGenIPBB->getTerminatorOrNull())
         CodeGenIPBBTI->eraseFromParent();
 
