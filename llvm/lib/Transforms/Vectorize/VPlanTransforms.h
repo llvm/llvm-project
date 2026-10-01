@@ -319,8 +319,7 @@ struct VPlanTransforms {
   /// recipes: an active-lane-mask if \p UseActiveLaneMask (with a PHI if \p
   /// UseActiveLaneMaskForControlFlow), else (WideCanonicalIV icmp ule BTC).
   static void materializeHeaderMask(VPlan &Plan, bool UseActiveLaneMask,
-                                    bool UseActiveLaneMaskForControlFlow,
-                                    bool IVUpdateMayOverflow);
+                                    bool UseActiveLaneMaskForControlFlow);
 
   /// Insert truncates and extends for any truncated recipe. Redundant casts
   /// will be folded later.
