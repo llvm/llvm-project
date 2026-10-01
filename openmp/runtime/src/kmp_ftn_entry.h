@@ -551,19 +551,11 @@ FTN_GET_SUBMEMSPACE(omp_memspace_handle_t KMP_DEREF memspace,
 #endif
 }
 
-// The C (KMP_FTN_PLAIN) versions of the dynamic groupprivate information
-// routines are defined in kmp_csupport.cpp, so only the Fortran entry points
-// are generated here. The offset and access_group arguments are optional in
-// Fortran and are passed as null pointers when omitted; the defaults are a zero
-// offset and omp_access_cgroup.
-//
-// The dynamic-groupprivate-information routines report on the dynamic
-// groupprivate block that is instantiated by a dyn_groupprivate clause. When an
-// offload runtime is loaded it provides a device-aware definition; forward to
-// it so that Fortran code observes the same block as C/C++. When no offload
-// runtime is available the lookup resolves to the host entry in
-// kmp_csupport.cpp, which reports that no block exists (a null pointer, a size
-// of zero and a null memory space).
+// Fortran requires a different calling convention for the following
+// dyn_groupprivate access entry points.  Therefore, we need to make sure that
+// we only generate a Fortran mangled version here.  Note: the unmangled,
+// C-style symbol does not provide the right ABI and so non-Linux OSes
+// might require some effort here.
 #if KMP_FTN_ENTRIES != KMP_FTN_PLAIN
 void *FTN_STDCALL FTN_GET_DYN_GPRIVATE_PTR(size_t *offset,
                                            omp_access_t *access_group) {
@@ -581,13 +573,9 @@ void *FTN_STDCALL FTN_GET_DYN_GPRIVATE_NOFB_PTR(size_t *offset,
 #if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return NULL;
 #else
-  void *(*fptr)(size_t, omp_access_t);
-  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_dyn_gprivate_nofb_ptr"))) {
-    size_t off = offset ? *offset : 0;
-    omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
-    return (*fptr)(off, ag);
-  }
-  return NULL;
+  size_t off = offset ? *offset : 0;
+  omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
+  return omp_get_dyn_gprivate_nofb_ptr(off, ag);
 #endif
 }
 
@@ -595,12 +583,8 @@ size_t FTN_STDCALL FTN_GET_DYN_GPRIVATE_SIZE(omp_access_t *access_group) {
 #if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return 0;
 #else
-  size_t (*fptr)(omp_access_t);
-  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_dyn_gprivate_size"))) {
-    omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
-    return (*fptr)(ag);
-  }
-  return 0;
+  omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
+  return omp_get_dyn_gprivate_size(ag);
 #endif
 }
 
@@ -609,20 +593,12 @@ FTN_GET_DYN_GPRIVATE_MEMSPACE(omp_access_t *access_group) {
 #if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return omp_null_mem_space;
 #else
-  omp_memspace_handle_t (*fptr)(omp_access_t);
-  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_dyn_gprivate_memspace"))) {
-    omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
-    return (*fptr)(ag);
-  }
-  return omp_null_mem_space;
+  omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
+  return omp_get_dyn_gprivate_memspace(ag);
 #endif
 }
 
-// The groupprivate limit is a per-device property. libomptarget, if loaded,
-// provides a device-aware omp_get_gprivate_limit; forward to it so that Fortran
-// code observes the same limits as C/C++. When no offload runtime is available
-// there are no non-host devices and the host reports no limit, so return zero.
-size_t FTN_STDCALL FTN_GET_GPRIVATE_LIMIT(int *device_num,
+ size_t FTN_STDCALL FTN_GET_GPRIVATE_LIMIT(int *device_num,
                                           omp_access_t *access_group) {
 #if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return 0;

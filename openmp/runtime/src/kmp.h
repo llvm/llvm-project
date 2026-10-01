@@ -1091,6 +1091,14 @@ typedef enum omp_access_t {
   omp_access_pteam = 1
 } omp_access_t;
 
+// declare the host API entry points for the Fortran interface to 'em pick up
+extern void *omp_get_dyn_gprivate_ptr(size_t offset, omp_access_t access_group);
+extern void *omp_get_dyn_gprivate_nofb_ptr(size_t offset,
+                                           omp_access_t access_group);
+extern size_t omp_get_dyn_gprivate_size(omp_access_t access_group);
+extern omp_memspace_handle_t
+omp_get_dyn_gprivate_memspace(omp_access_t access_group);
+
 // end of duplicate type definitions from omp.h
 #endif
 
