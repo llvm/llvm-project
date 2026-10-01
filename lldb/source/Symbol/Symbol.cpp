@@ -758,10 +758,9 @@ bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     m_addr_or_reexport.GetReExportInfo(*this).name =
         ConstString(strtab.Get(data.GetU32(offset_ptr)));
     llvm::StringRef filename = strtab.Get(data.GetU32(offset_ptr));
-    if (!filename.empty() && filename != "") {
+    if (!filename.empty())
       m_addr_or_reexport.GetReExportInfo(*this).library_up =
           std::make_unique<FileSpec>(filename);
-    }
   }
   m_flags = data.GetU32(offset_ptr);
   return true;
