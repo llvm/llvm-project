@@ -202,10 +202,10 @@ ToolChain::findMultilibsYAML(const llvm::opt::ArgList &Args, const Driver &D,
   }
 
   SmallString<128> MultilibPath;
-  if (!FallbackDir.empty())
-    MultilibPath = FallbackDir;
-  else if (std::optional<std::string> StdlibDir = getStdlibPath())
+  if (std::optional<std::string> StdlibDir = getStdlibPath())
     MultilibPath = *StdlibDir;
+  else if (!FallbackDir.empty())
+    MultilibPath = FallbackDir;
   else
     return std::nullopt;
   llvm::sys::path::append(MultilibPath, "multilib.yaml");
