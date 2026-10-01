@@ -3255,7 +3255,10 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
     const clang::FunctionDecl *decl, cir::FuncOp f) {
-  assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
+
+  if ((!decl || !decl->hasAttr<NoUwtableAttr>()) && codeGenOpts.UnwindTables)
+    f.setUwtable(static_cast<cir::UnwindTableKind>(codeGenOpts.UnwindTables));
+
   assert(!cir::MissingFeatures::stackProtector());
 
   if (!CodeGenUtils::hasUnwindExceptions(langOpts))

@@ -1336,8 +1336,15 @@ static ParseResult checkEffectAttrKinds(mlir::OpAsmParser &parser,
              << CIRDialect::getMemoryEffectsAttrName()
              << "' must be a #cir.memory_effects attribute";
 
+  if (mlir::Attribute uwtable = attrs.get(CIRDialect::getUwtableAttrName()))
+    if (!mlir::isa<cir::UnwindTableKindAttr>(uwtable))
+      return parser.emitError(loc, "attribute '")
+             << CIRDialect::getUwtableAttrName()
+             << "' must be a #cir.uwtable attribute";
+
   for (llvm::StringRef name :
-       {CIRDialect::getNoUnwindAttrName(), CIRDialect::getWillReturnAttrName()})
+       {CIRDialect::getNoUnwindAttrName(), CIRDialect::getWillReturnAttrName(),
+        CIRDialect::getMustProgressAttrName()})
     if (mlir::Attribute flag = attrs.get(name))
       if (!mlir::isa<mlir::UnitAttr>(flag))
         return parser.emitError(loc, "attribute '")
@@ -2958,10 +2965,11 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     return failure();
 
   // Every other declared attribute has dedicated syntax above, so
-  // memory_effects is the only one the explicit list may carry.  Without the
-  // exception cir.func could not parse back what it prints.
+  // memory_effects and uwtable is the only one the explicit list may carry.
+  // Without the exception cir.func could not parse back what it prints.
   for (StringRef disallowed : cir::FuncOp::getAttributeNames()) {
-    if (disallowed == CIRDialect::getMemoryEffectsAttrName())
+    if (disallowed == CIRDialect::getMemoryEffectsAttrName() ||
+        disallowed == CIRDialect::getUwtableAttrName())
       continue;
     if (parsedAttrs.get(disallowed))
       return parser.emitError(loc, "attribute '")
@@ -3152,10 +3160,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   }
 
   // Every declared attribute is printed by the syntax above, except
-  // memory_effects, which has none and so must reach the dictionary.
+  // memory_effects and uwtable, which have none and so must reach the
+  // dictionary.
   llvm::SmallVector<llvm::StringRef> elidedAttrs;
   for (llvm::StringRef name : cir::FuncOp::getAttributeNames())
-    if (name != CIRDialect::getMemoryEffectsAttrName())
+    if (name != CIRDialect::getMemoryEffectsAttrName() &&
+        name != CIRDialect::getUwtableAttrName())
       elidedAttrs.push_back(name);
   function_interface_impl::printFunctionAttributes(p, *this, elidedAttrs);
 

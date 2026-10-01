@@ -1426,6 +1426,27 @@ def CIR_VisibilityKind : CIR_I32Enum<"VisibilityKind", "C/C++ visibility", [
 ]>;
 
 //===----------------------------------------------------------------------===//
+// UnwindTableKind
+//===----------------------------------------------------------------------===//
+def CIR_UnwindTableKind : CIR_I32Enum<"UnwindTableKind", "Unwind Table Kind", [
+  I32EnumCase<"None", 0, "none">,
+  I32EnumCase<"Sync", 1, "sync">,
+  I32EnumCase<"Async", 2, "async">
+]>;
+
+def CIR_UnwindTableKindAttr : CIR_EnumAttr<CIR_UnwindTableKind, "uwtable"> {
+  let summary = "Encodes the unwind table kind for a function.";
+
+  let description = [{
+    This mirrors the UWTableKindEnum in The LLVM dialect,
+    and is passed through to the llvm dialect.According to the LLVM
+    documentation:
+        The ‘uwtable’ attribute is about the ABI or the user mandating an /
+            entry in the unwind table.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GloblCtorAttr
 //===----------------------------------------------------------------------===//
 
