@@ -1590,6 +1590,7 @@ Both accept `--` for `-`.
 Only `-help-hidden` lists the options, like `cl::Hidden`.
 
 A default is the member's C++ initializer, so `"\"-\""` initializes `foo_path` to `"-"`.
+A `std::optional` member defaulting to `std::nullopt` tells whether the option was given, replacing `cl::opt::getNumOccurrences()`.
 The header declares the struct after including what the member defaults need, and one source file defines it and registers it with `cl::`.
 
 The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under `LINK_COMPONENTS`.

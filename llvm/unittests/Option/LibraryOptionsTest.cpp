@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <optional>
+
 #define OPTIONS_STRUCT_DECL
 #include "LibraryOpts.inc"
 
@@ -27,6 +29,7 @@ TEST(LibraryOptionsTest, Apply) {
   TestLibraryOptions O;
   EXPECT_FALSE(O.enable);
   EXPECT_EQ(O.count, 3u);
+  EXPECT_EQ(O.limit, std::nullopt);
   EXPECT_EQ(O.ratio, 0.5);
   EXPECT_EQ(O.Path, "p");
 
@@ -39,11 +42,12 @@ TEST(LibraryOptionsTest, Apply) {
       Applied.push_back(O.apply(*A));
     return Applied;
   };
-  EXPECT_THAT(Apply({"-lib-enable", "--lib-count=7", "-lib-ratio", "0.25",
-                     "-lib-path=a=b"}),
+  EXPECT_THAT(Apply({"-lib-enable", "--lib-count=7", "-lib-limit=0",
+                     "-lib-ratio", "0.25", "-lib-path=a=b"}),
               testing::Each(true));
   EXPECT_TRUE(O.enable);
   EXPECT_EQ(O.count, 7u);
+  EXPECT_EQ(O.limit, 0u);
   EXPECT_EQ(O.ratio, 0.25);
   EXPECT_EQ(O.Path, "a=b");
   EXPECT_THAT(Apply({"-lib-enable=false"}), testing::Each(true));
@@ -52,10 +56,12 @@ TEST(LibraryOptionsTest, Apply) {
   EXPECT_TRUE(O.enable);
 
   // A rejected value leaves the member unchanged.
-  EXPECT_THAT(Apply({"-lib-enable=2", "-lib-count=-1", "-lib-ratio=y"}),
-              testing::Each(false));
+  EXPECT_THAT(
+      Apply({"-lib-enable=2", "-lib-count=-1", "-lib-limit=x", "-lib-ratio=y"}),
+      testing::Each(false));
   EXPECT_TRUE(O.enable);
   EXPECT_EQ(O.count, 7u);
+  EXPECT_EQ(O.limit, 0u);
   EXPECT_EQ(O.ratio, 0.25);
 }
 
@@ -73,6 +79,7 @@ TEST(LibraryOptionsTest, Parser) {
   EXPECT_THAT(Rows, testing::ElementsAre(
                         "lib-count=|<value>|An unsigned", "lib-count||",
                         "lib-enable=|<value>|", "lib-enable||A bool",
+                        "lib-limit=|<value>|An optional", "lib-limit||",
                         "lib-path=|<value>|A string", "lib-path||",
                         "lib-ratio=|<value>|A double", "lib-ratio||"));
 

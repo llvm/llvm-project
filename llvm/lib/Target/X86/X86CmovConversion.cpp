@@ -42,6 +42,7 @@
 
 #include "X86.h"
 #include "X86InstrInfo.h"
+#include "X86Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -65,7 +66,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/CGPassBuilderOption.h"
@@ -83,27 +83,6 @@ STATISTIC(NumOfCmovGroupCandidate, "Number of CMOV-group candidates");
 STATISTIC(NumOfLoopCandidate, "Number of CMOV-conversion profitable loops");
 STATISTIC(NumOfOptimizedCmovGroups, "Number of optimized CMOV-groups");
 
-// This internal switch can be used to turn off the cmov/branch optimization.
-static cl::opt<bool>
-    EnableCmovConverter("x86-cmov-converter",
-                        cl::desc("Enable the X86 cmov-to-branch optimization."),
-                        cl::init(true), cl::Hidden);
-
-static cl::opt<unsigned>
-    GainCycleThreshold("x86-cmov-converter-threshold",
-                       cl::desc("Minimum gain per loop (in cycles) threshold."),
-                       cl::init(4), cl::Hidden);
-
-static cl::opt<bool> ForceMemOperand(
-    "x86-cmov-converter-force-mem-operand",
-    cl::desc("Convert cmovs to branches whenever they have memory operands."),
-    cl::init(true), cl::Hidden);
-
-static cl::opt<bool> ForceAll(
-    "x86-cmov-converter-force-all",
-    cl::desc("Convert all cmovs to branches."),
-    cl::init(false), cl::Hidden);
-
 namespace {
 
 /// Converts X86 cmov instructions into branches when profitable.
@@ -117,7 +96,7 @@ private:
   MachineRegisterInfo *MRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
-  const TargetSubtargetInfo *STI = nullptr;
+  const X86Subtarget *STI = nullptr;
   MachineLoopInfo *MLI = nullptr;
   TargetSchedModel TSchedModel;
 
@@ -173,7 +152,8 @@ void X86CmovConversionLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
-  if (!EnableCmovConverter)
+  STI = &MF.getSubtarget<X86Subtarget>();
+  if (!STI->getCLOpts().cmov_converter)
     return false;
 
   // If the SelectOptimize pass is enabled, cmovs have already been optimized.
@@ -184,24 +164,27 @@ bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
                     << "**********\n");
 
   bool Changed = false;
-  STI = &MF.getSubtarget();
   MRI = &MF.getRegInfo();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   TSchedModel.init(STI);
 
   // Before we handle the more subtle cases of register-register CMOVs inside
-  // of potentially hot loops, we want to quickly remove all CMOVs (ForceAll) or
-  // the ones with a memory operand (ForceMemOperand option). The latter CMOV
-  // will risk a stall waiting for the load to complete that speculative
-  // execution behind a branch is better suited to handle on modern x86 chips.
-  if (ForceMemOperand || ForceAll) {
+  // of potentially hot loops, we want to quickly remove all CMOVs
+  // (cmov_converter_force_all) or the ones with a memory operand
+  // (cmov_converter_force_mem_operand). The latter CMOV will risk a stall
+  // waiting for the load to complete that speculative execution behind a branch
+  // is better suited to handle on modern x86 chips.
+  const X86Options &CLOpts = STI->getCLOpts();
+  if (CLOpts.cmov_converter_force_mem_operand ||
+      CLOpts.cmov_converter_force_all) {
     CmovGroups AllCmovGroups;
     SmallVector<MachineBasicBlock *, 4> Blocks(llvm::make_pointer_range(MF));
     if (collectCmovCandidates(Blocks, AllCmovGroups, /*IncludeLoads*/ true)) {
       for (auto &Group : AllCmovGroups) {
         // Skip any group that doesn't do at least one memory operand cmov.
-        if (ForceMemOperand && !ForceAll &&
+        if (CLOpts.cmov_converter_force_mem_operand &&
+            !CLOpts.cmov_converter_force_all &&
             llvm::none_of(Group, [&](MachineInstr *I) { return I->mayLoad(); }))
           continue;
 
@@ -212,8 +195,8 @@ bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
         convertCmovInstsToBranches(Group);
       }
     }
-    // Early return as ForceAll converts all CmovGroups.
-    if (ForceAll)
+    // Early return as cmov_converter_force_all converts all CmovGroups.
+    if (CLOpts.cmov_converter_force_all)
       return Changed;
   }
 
@@ -518,11 +501,12 @@ bool X86CmovConversionImpl::checkForProfitableCmovCandidates(
   //
   //   In addition, In order not to optimize loops with very small gain, the
   //   gain (in cycles) after 2nd iteration should not be less than a given
-  //   threshold. Thus, the check (Diff[1] >= GainCycleThreshold) must apply.
+  //   threshold. Thus, the check (Diff[1] >= cmov_converter_threshold) must
+  //   apply.
   //
   // If loop is not worth optimizing, remove all CMOV-group-candidates.
   //===--------------------------------------------------------------------===//
-  if (Diff[1] < GainCycleThreshold)
+  if (Diff[1] < STI->getCLOpts().cmov_converter_threshold)
     return false;
 
   bool WorthOptLoop = false;
