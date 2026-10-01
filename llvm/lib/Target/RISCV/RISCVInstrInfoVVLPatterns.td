@@ -42,6 +42,13 @@ def riscv_tuple_extract : RVSDNode<"TUPLE_EXTRACT",
                                    SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                         SDTCisVT<2, i32>]>>;
 
+// Reinterprets a RISC-V vector tuple value as a different vector tuple type
+// with the same register class (i.e. same NF and LMUL), but a different
+// minimum number of elements per field. This is a no-op at the register
+// level, unlike TUPLE_INSERT/TUPLE_EXTRACT which operate on individual
+// vector subregisters.
+def riscv_tuple_cast : RVSDNode<"TUPLE_CAST", SDTypeProfile<1, 1, []>>;
+
 
 //===----------------------------------------------------------------------===//
 // Helpers to define the VL patterns.
