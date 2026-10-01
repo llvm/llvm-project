@@ -226,7 +226,7 @@ jobs:
     # get changed unexpectedly.
     - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
-        python-version: '3.14.6'
+        python-version: '3.14.7'
 
     # For some reason this is needed on Windows or else the build system can't find python3.lib.
     - name: Setup Python library path
