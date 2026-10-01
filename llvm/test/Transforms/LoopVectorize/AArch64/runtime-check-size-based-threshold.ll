@@ -1,7 +1,9 @@
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-iphoneos -vectorizer-min-trip-count=8 \
 ; RUN:   -enable-epilogue-vectorization=false -S %s | FileCheck --check-prefixes=CHECK,DEFAULT %s
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-iphoneos -vectorizer-min-trip-count=8 \
-; RUN:   -enable-epilogue-vectorization=false -vectorize-memory-check-threshold=1 -S %s | FileCheck --check-prefixes=CHECK,THRESHOLD %s
+; RUN:   -enable-epilogue-vectorization=false -vectorize-memory-check-threshold=1 -S %s \
+; RUN:   -debug-only=loop-vectorize 2> %t | FileCheck --check-prefixes=CHECK,THRESHOLD %s
+; RUN: cat %t | FileCheck --check-prefix=DEBUG %s
 
 ; Tests for loops with large numbers of runtime checks. Check that loops are
 ; vectorized, if the loop trip counts are large and the impact of the runtime
@@ -12,6 +14,8 @@
 ; CHECK-LABEL: define {{.*}} @test_tc_too_small
 ; CHECK-NOT: vector.memcheck
 ; CHECK-NOT: vector.body
+; DEBUG-LABEL: Checking a loop in 'test_tc_too_small'
+; DEBUG: LV: Not vectorizing: runtime checks are known to fail, so we will never enter the vector loop.
 define void @test_tc_too_small(ptr %ptr.1, ptr %ptr.2, ptr %ptr.3, ptr %ptr.4, i64 %off.1, i64 %off.2) {
 entry:
   br label %loop
