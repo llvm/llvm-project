@@ -37,3 +37,16 @@ add_libc_test(
     libc.hdr.types.DIR
     libc.hdr.types.struct_dirent
 )
+
+add_libc_test(
+  alphasort_test
+  SUITE
+    libc_dirent_unittests
+  SRCS
+    alphasort_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_dirent
+    libc.src.dirent.alphasort
+    libc.src.stdlib.qsort
+)
+

@@ -514,6 +514,11 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
     LiveInterval &DestLI = LIS->getInterval(DestReg);
     assert(!DestLI.empty() && "PHIs should have non-empty LiveIntervals.");
 
+    // Make sure the instruction's dead flag matches the dead range created
+    // below.
+    if (DestLI.endIndex().isDead())
+      PHICopy->getOperand(0).setIsDead();
+
     SlotIndex NewStart = DestCopyIndex.getRegSlot();
 
     SmallVector<LiveRange *> ToUpdate({&DestLI});

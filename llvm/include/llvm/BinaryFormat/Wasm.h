@@ -205,6 +205,7 @@ enum : unsigned {
   WASM_INIT_FUNCS = 0x6,
   WASM_COMDAT_INFO = 0x7,
   WASM_SYMBOL_TABLE = 0x8,
+  WASM_TARGET_ARCH = 0x9,
 };
 
 // Kind codes used in the custom "dylink" section
@@ -214,6 +215,7 @@ enum : unsigned {
   WASM_DYLINK_EXPORT_INFO = 0x3,
   WASM_DYLINK_IMPORT_INFO = 0x4,
   WASM_DYLINK_RUNTIME_PATH = 0x5,
+  WASM_DYLINK_TARGET_ARCH = 0x6,
 };
 
 // Kind codes used in the custom "linking" section in the WASM_COMDAT_INFO
@@ -309,6 +311,7 @@ struct WasmDylinkInfo {
   std::vector<WasmDylinkImportInfo> ImportInfo;
   std::vector<WasmDylinkExportInfo> ExportInfo;
   std::vector<StringRef> RuntimePath;
+  StringRef TargetArch;
 };
 
 struct WasmProducerInfo {
@@ -514,6 +517,7 @@ struct WasmLinkingData {
   uint32_t Version;
   std::vector<WasmInitFunc> InitFunctions;
   std::vector<StringRef> Comdats;
+  StringRef TargetArch;
   // The linking section also contains a symbol table. This info (represented
   // in a WasmSymbolInfo struct) is stored inside the WasmSymbol object instead
   // of in this structure; this allows vectors of WasmSymbols and

@@ -146,6 +146,8 @@ def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
 def err_fe_cir_not_built : Error<"clang IR support not available, rebuild "
                                  "clang with -DCLANG_ENABLE_CIR=ON">;
+def err_fe_cir_input_unsupported : Error<
+    "support for ClangIR input is not yet implemented">;
 def err_fe_invalid_multiple_actions : Error<
     "'%0' action ignored; '%1' action specified previously">;
 def err_fe_invalid_alignment : Error<
@@ -478,6 +480,10 @@ def warn_missing_symbol_graph_dir : Warning<
 
 def err_ast_action_on_llvm_ir : Error<
   "cannot apply AST actions to LLVM IR file '%0'">,
+  DefaultFatal;
+
+def err_ast_action_on_cir : Error<
+  "cannot apply AST actions to ClangIR file '%0'">,
   DefaultFatal;
 
 def err_invalid_llvm_ir : Error<"invalid LLVM IR input: %0">;

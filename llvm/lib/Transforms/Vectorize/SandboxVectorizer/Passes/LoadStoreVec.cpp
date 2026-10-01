@@ -27,7 +27,7 @@ namespace sandboxir {
 
 #define DEBUG_PREFIX_LOCAL DEBUG_PREFIX "LoadStoreVec: "
 
-std::optional<Type *> LoadStoreVec::canVectorize(ArrayRef<Instruction *> Bndl) {
+std::optional<Type *> LoadStoreVec::canVectorize(BndlRef<Instruction *> Bndl) {
   // Check if in the same BB.
   if (LegalityAnalysis::differentBlock(Bndl))
     return std::nullopt;
@@ -67,7 +67,7 @@ bool LoadStoreVec::acceptOrRevert() {
   return true;
 }
 
-LoadInst *LoadStoreVec::createVectorLoad(ArrayRef<Instruction *> Loads) {
+LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   if (!VecUtils::areConsecutive<LoadInst, Instruction>(
           Loads, A->getScalarEvolution(), *DL))
     return nullptr;
@@ -82,11 +82,10 @@ LoadInst *LoadStoreVec::createVectorLoad(ArrayRef<Instruction *> Loads) {
   return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
 }
 
-Value *LoadStoreVec::createConstantVector(ArrayRef<Value *> Operands) {
+Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Operands) {
   SmallVector<Constant *, 8> Constants;
   Constants.reserve(Operands.size());
-  for (Value *Op : Operands) {
-    auto *COp = cast<Constant>(Op);
+  for (Constant *COp : Operands) {
     if (auto *AggrCOp = dyn_cast<ConstantAggregate>(COp)) {
       // If the operand is a constant aggregate, then append all its elements.
       for (Value *Elm : AggrCOp->operands())
@@ -120,8 +119,7 @@ Value *LoadStoreVec::createConstantVector(ArrayRef<Value *> Operands) {
   return ConstantVector::get(Constants);
 }
 
-bool LoadStoreVec::vectorizeStores(ArrayRef<Instruction *> Stores,
-                                   Region &Rgn) {
+bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   if (!VecUtils::areConsecutive<StoreInst, Instruction>(
           Stores, A->getScalarEvolution(), *DL))
     return false;
@@ -157,9 +155,8 @@ bool LoadStoreVec::vectorizeStores(ArrayRef<Instruction *> Stores,
   // profitable on some targets, so save state here.
   saveIR(Rgn);
   Value *VecOp = nullptr;
+  SmallVector<Instruction *, 8> Loads;
   if (AllLoads) {
-    // TODO: Try to avoid the extra copy to an instruction vector.
-    SmallVector<Instruction *, 8> Loads;
     Loads.reserve(Operands.size());
     for (Value *Op : Operands)
       Loads.push_back(cast<Instruction>(Op));
@@ -169,7 +166,11 @@ bool LoadStoreVec::vectorizeStores(ArrayRef<Instruction *> Stores,
       return false;
     }
   } else if (AllConstants) {
-    VecOp = createConstantVector(Operands);
+    SmallVector<Constant *, 8> Constants;
+    Constants.reserve(Operands.size());
+    for (Value *Op : Operands)
+      Constants.push_back(cast<Constant>(Op));
+    VecOp = createConstantVector(Constants);
   }
 
   // Generate vector store.
@@ -181,13 +182,13 @@ bool LoadStoreVec::vectorizeStores(ArrayRef<Instruction *> Stores,
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Stores);
   if (AllLoads)
-    DeadInstrMorgue.collectPotentiallyDeadInstrs<Value>(Operands);
+    DeadInstrMorgue.collectPotentiallyDeadInstrs<Instruction>(Loads);
   DeadInstrMorgue.tryEraseDeadInstrs();
 
   return acceptOrRevert();
 }
 
-LoadInst *LoadStoreVec::vectorizeLoads(ArrayRef<Instruction *> Loads,
+LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
                                        Region &Rgn) {
   if (!VecUtils::areConsecutive<LoadInst, Instruction>(
           Loads, A->getScalarEvolution(), *DL))

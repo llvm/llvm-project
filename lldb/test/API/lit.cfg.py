@@ -254,7 +254,6 @@ if is_configured("lldb_module_cache"):
     dotest_cmd += ["--lldb-module-cache-dir", config.lldb_module_cache]
 
 if is_configured("clang_module_cache"):
-    delete_module_cache(config.clang_module_cache)
     dotest_cmd += ["--clang-module-cache-dir", config.clang_module_cache]
 
 if is_configured("lldb_executable"):

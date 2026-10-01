@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "Dataflow.h"
+#include "clang/AST/Expr.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
@@ -229,13 +230,30 @@ public:
     for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
          Cur = Cur->peelOuterOrigin())
       if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
-        return buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan,
-                                    Cfg);
+        return dropLoadsInUse(
+            buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan, Cfg));
 
     return {};
   }
 
 private:
+  /// An expression's origin only receives loans from its subexpressions, so
+  /// until the chain reaches a declaration it is inside the use expression.
+  /// Casts there just load the used variable, so drop them.
+  llvm::SmallVector<OriginID>
+  dropLoadsInUse(llvm::SmallVector<OriginID> Chain) const {
+    const OriginManager &OM = FactMgr.getOriginMgr();
+    auto FirstDecl = llvm::find_if(
+        Chain, [&](OriginID OID) { return !OM.getOrigin(OID).getExpr(); });
+    Chain.erase(std::remove_if(Chain.begin(), FirstDecl,
+                               [&](OriginID OID) {
+                                 return isa<ImplicitCastExpr>(
+                                     OM.getOrigin(OID).getExpr());
+                               }),
+                FirstDecl);
+    return Chain;
+  }
+
   /// Returns true if the origin is persistent (referenced in multiple blocks).
   bool isPersistent(OriginID OID) const {
     return PersistentOrigins.test(OID.Value);

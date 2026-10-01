@@ -18,16 +18,20 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -133,6 +137,11 @@ static cl::opt<std::string> ClWriteSummary(
 static cl::opt<bool> EnableJumpTableDebugInfo(
     "lowertypetests-jump-table-debug-info", cl::init(true), cl::Hidden,
     cl::desc("Enable debug info generation for jump tables"));
+
+// FIXME: Remove in clang 26.
+static cl::opt<bool> ReorderCfiJumpTablesProfiles(
+    "reorder-cfi-jump-tables-profiles", cl::init(true), cl::Hidden,
+    cl::desc("Reorder CFI jump tables using profile information"));
 
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
@@ -365,10 +374,93 @@ enum class CfiFunctionLinkage : uint8_t {
   WeakDeclaration = 2,
 };
 
+/// The hotness of a CFI jumptable function entry.
+class CfiFunctionHotness {
+  enum class Kind : uint8_t {
+    Unknown = 0, // It's higher rank than Cold, but convenient to store as zero.
+    Cold = 1,
+    Other = 2,
+    Hot = 3,
+  };
+
+  Kind Type = Kind::Unknown;
+
+  CfiFunctionHotness(Kind Type) : Type(Type) {}
+
+public:
+  CfiFunctionHotness() = default;
+
+  // Computes the execution weight for F across its entry count and basic block
+  // counts. Placing the hottest function (i.e. the function with the highest
+  // weight) as the last jump table entry makes it more likely to benefit from
+  // the SHT_LLVM_CFI_JUMP_TABLE last-entry optimization and locks the jump
+  // table into the target's section, which is likely hot.
+  // The most important goal is to put functions which end up in .hot at the
+  // end of jumptable, to keep jump table in the same section.
+  static CfiFunctionHotness
+  fromFunction(Function &F, ProfileSummaryInfo &PSI,
+               function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
+    if (F.isDeclaration())
+      return Kind::Unknown;
+
+    // We want to mimic CodeGenPrepare::_run to match section assignments.
+    const BlockFrequencyInfo &BFI = BFIGetter(F);
+    if (F.hasFnAttribute(Attribute::Hot) ||
+        PSI.isFunctionHotInCallGraph(&F, BFI)) {
+      return Kind::Hot;
+    }
+
+    if (PSI.isFunctionColdInCallGraph(&F, BFI) ||
+        F.hasFnAttribute(Attribute::Cold)) {
+      return Kind::Cold;
+    }
+
+    return (!PSI.hasPartialSampleProfile() || PSI.isFunctionHotnessUnknown(F))
+               ? Kind::Unknown
+               : Kind::Other;
+  }
+
+  static CfiFunctionHotness fromUint6(uint8_t V) {
+    return CfiFunctionHotness(static_cast<Kind>(V & 0x3));
+  }
+
+  uint8_t asUint6() const { return static_cast<uint8_t>(Type) & 0x3; }
+
+  bool operator==(const CfiFunctionHotness &Other) const {
+    return Type == Other.Type;
+  }
+
+  bool operator<(const CfiFunctionHotness &Other) const {
+    auto Rank = [](Kind K) -> int {
+      return (K == Kind::Cold) ? -1 : static_cast<int>(K);
+    };
+    return Rank(Type) < Rank(Other.Type);
+  }
+};
+
 } // namespace
 
-static void createCfiFunctionsMetadata(Module &DestM,
-                                       ArrayRef<GlobalValue *> CfiFunctions) {
+static CfiFunctionLinkage decodeCfiFunctionLinkage(uint8_t Encoded) {
+  return static_cast<CfiFunctionLinkage>(Encoded & 0x3);
+}
+
+static CfiFunctionHotness decodeCfiFunctionHotness(uint8_t Encoded) {
+  return CfiFunctionHotness::fromUint6(Encoded >> 2);
+}
+
+static uint8_t encodeCfiFunctionLinkage(CfiFunctionLinkage Linkage,
+                                        CfiFunctionHotness Hotness) {
+  uint8_t Encoded =
+      (Hotness.asUint6() << 2) | (static_cast<uint8_t>(Linkage) & 0x3);
+  assert(decodeCfiFunctionLinkage(Encoded) == Linkage);
+  assert(decodeCfiFunctionHotness(Encoded) == Hotness);
+  return Encoded;
+}
+
+static void createCfiFunctionsMetadata(
+    Module &DestM, ArrayRef<GlobalValue *> CfiFunctions,
+    ProfileSummaryInfo &PSI,
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
   auto &Ctx = DestM.getContext();
   SmallVector<MDNode *, 8> CfiFunctionMDs;
   for (auto *V : CfiFunctions) {
@@ -383,8 +475,16 @@ static void createCfiFunctionsMetadata(Module &DestM,
       Linkage = CfiFunctionLinkage::Definition;
     else if (F.hasExternalWeakLinkage())
       Linkage = CfiFunctionLinkage::WeakDeclaration;
-    Elts.push_back(ConstantAsMetadata::get(llvm::ConstantInt::get(
-        Type::getInt8Ty(Ctx), static_cast<uint8_t>(Linkage))));
+
+    CfiFunctionHotness Hotness =
+        ReorderCfiJumpTablesProfiles
+            ? CfiFunctionHotness::fromFunction(F, PSI, BFIGetter)
+            : CfiFunctionHotness();
+
+    uint8_t EncodedLinkage = encodeCfiFunctionLinkage(Linkage, Hotness);
+
+    Elts.push_back(ConstantAsMetadata::get(
+        llvm::ConstantInt::get(Type::getInt8Ty(Ctx), EncodedLinkage)));
     GlobalValue::GUID GUID = V->getGUID();
     Elts.push_back(ConstantAsMetadata::get(
         llvm::ConstantInt::get(Type::getInt64Ty(Ctx), GUID)));
@@ -442,9 +542,11 @@ static void createCfiSymversMetadata(Module &DestM, const Module &SrcM) {
   }
 }
 
-void lowertypetests::createCfiMetadata(Module &DestM, const Module &SrcM,
-                                       ArrayRef<GlobalValue *> CfiFunctions) {
-  createCfiFunctionsMetadata(DestM, CfiFunctions);
+void lowertypetests::createCfiMetadata(
+    Module &DestM, const Module &SrcM, ArrayRef<GlobalValue *> CfiFunctions,
+    ProfileSummaryInfo &PSI,
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
+  createCfiFunctionsMetadata(DestM, CfiFunctions, PSI, BFIGetter);
   createCfiAliasesMetadata(DestM, SrcM);
   createCfiSymversMetadata(DestM, SrcM);
 }
@@ -627,6 +729,9 @@ class LowerTypeTestsModule {
 
   // Cache variable used by hasBranchTargetEnforcement().
   int HasBranchTargetEnforcement = -1;
+
+  // Map from function to hotness passed via cfi.functions metadata.
+  DenseMap<const Function *, CfiFunctionHotness> FunctionSummaryHotness;
 
   IntegerType *Int1Ty = Type::getInt1Ty(M.getContext());
   IntegerType *Int8Ty = Type::getInt8Ty(M.getContext());
@@ -1067,8 +1172,9 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     // Multiply by 2 to account for padding elements.
     Constant *CombinedGlobalIdxs[] = {ConstantInt::get(Int32Ty, 0),
                                       ConstantInt::get(Int32Ty, I * 2)};
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
-        NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs);
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+        DL, NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs,
+        GEPNoWrapFlags::inBounds());
     assert(GV->getType()->getAddressSpace() == 0);
     GlobalAlias *GAlias =
         GlobalAlias::create(NewTy->getElementType(I * 2), 0, GV->getLinkage(),
@@ -1991,10 +2097,10 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     Function *F = cast<Function>(Functions[I]->getGlobal());
     bool IsJumpTableCanonical = Functions[I]->isJumpTableCanonical();
 
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
-        JumpTableType, JumpTable,
-        ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
-                             ConstantInt::get(IntPtrTy, I)});
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+        F->getDataLayout(), JumpTableType, JumpTable,
+        {ConstantInt::get(IntPtrTy, 0), ConstantInt::get(IntPtrTy, I)},
+        GEPNoWrapFlags::inBounds());
 
     const bool IsExported = Functions[I]->isExported();
     if (!IsJumpTableCanonical) {
@@ -2120,16 +2226,45 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
     return O1.size() < O2.size();
   });
 
+  bool IsGlobalSet =
+      Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
+
+  unique_function<bool(uint64_t, uint64_t)> Less;
+  if (!IsGlobalSet && !FunctionSummaryHotness.empty() &&
+      ReorderCfiJumpTablesProfiles) {
+    // Estimated weight of each jump entry.
+    std::vector<CfiFunctionHotness> GTMHotness;
+    GTMHotness.reserve(Globals.size());
+    for (GlobalTypeMember *GTM : Globals) {
+      GTMHotness.push_back(
+          FunctionSummaryHotness.lookup(cast<Function>(GTM->getGlobal())));
+    }
+
+    // Order jump table entries by hotness ascending so that the hottest
+    // entry is placed at the end of the jump table:
+    // 1. Under jump table relaxation (SHT_LLVM_CFI_JUMP_TABLE), the linker
+    //    moves the jump table directly before the target of the last entry
+    //    and deletes its branch so the target function body acts as the
+    //    last entry.
+    // 2. The jump table is placed into the output section of that last
+    //    target. Jump tables are critical to performance; if the last
+    //    entry were a cold function, the jump table would be dragged into a
+    //    cold binary section (such as .text.unlikely). Placing the hottest
+    //    entry at the end ensures the jump table lands in a hot section and
+    //    the hottest callee benefits from fall-through without a branch.
+    Less = [GTMHotness = std::move(GTMHotness)](uint64_t A, uint64_t B) {
+      return GTMHotness[A] < GTMHotness[B];
+    };
+  }
+
   // Create a GlobalLayoutBuilder and provide it with index sets as layout
   // fragments. The GlobalLayoutBuilder tries to lay out members of fragments as
   // close together as possible.
-  GlobalLayoutBuilder GLB(Globals.size());
+  GlobalLayoutBuilder GLB(Globals.size(), std::move(Less));
   for (auto &&MemSet : TypeMembers)
     GLB.addFragment(MemSet);
 
   // Build a vector of globals with the computed layout.
-  bool IsGlobalSet =
-      Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
   std::vector<GlobalTypeMember *> OrderedGTMs(Globals.size());
   auto OGTMI = OrderedGTMs.begin();
   for (uint64_t Offset : GLB.build()) {
@@ -2154,11 +2289,11 @@ LowerTypeTestsModule::LowerTypeTestsModule(
   assert(!(ExportSummary && ImportSummary));
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
   if (Arch == Triple::arm)
     CanUseArmJumpTable = true;
   if (Arch == Triple::arm || Arch == Triple::thumb) {
-    auto &FAM =
-        AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     for (Function &F : M) {
       // Skip declarations since we should not query the TTI for them.
       if (F.isDeclaration())
@@ -2356,6 +2491,38 @@ bool LowerTypeTestsModule::lower() {
       report_fatal_error(
           "unexpected call to llvm.icall.branch.funnel during import phase");
 
+    // For internal linkage cfiFunction defs/decls, we only needed the alias
+    // through the linker. We can replace those aliases with the aliased
+    // function here.
+    SmallVector<std::pair<Function *, std::string>> PromotedFuncs;
+    for (auto &A : llvm::make_early_inc_range(M.aliases())) {
+      if (A.hasLocalLinkage())
+        continue;
+      if (ImportSummary->cfiFunctionDefs().contains(A.getName()) ||
+          ImportSummary->cfiFunctionDecls().contains(A.getName())) {
+        if (auto *F = dyn_cast_or_null<Function>(A.getAliaseeObject())) {
+          if (F->hasExternalLinkage()) {
+            // The original internal linkage function was independently promoted
+            // by thinlink. While, pre-link, all static references to it
+            // (implicitly, module-internal) were replaced with references to
+            // the alias, thinlink might decide to promote it because (for
+            // example) it turns out to be a hot indirect call target in a
+            // different module.
+            // In that case, we need to remember its thinlink-promoted name
+            // because it's potentially referenced elsewhere, and make sure
+            // there's an alias to it.
+            PromotedFuncs.emplace_back(F, F->getName());
+          } else {
+            F->setLinkage(GlobalValue::ExternalLinkage);
+            F->setVisibility(GlobalValue::HiddenVisibility);
+          }
+          A.replaceAllUsesWith(F);
+          F->takeName(&A);
+          A.eraseFromParent();
+        }
+      }
+    }
+
     SmallVector<Function *, 8> Defs;
     SmallVector<Function *, 8> Decls;
     for (auto &F : M) {
@@ -2376,6 +2543,9 @@ bool LowerTypeTestsModule::lower() {
       for (auto *F : Decls)
         importFunction(F, /*isJumpTableCanonical*/ false);
     }
+    // Add an alias with the thinlink promotion name.
+    for (auto &[F, Name] : PromotedFuncs)
+      GlobalAlias::create(GlobalValue::LinkageTypes::ExternalLinkage, Name, F);
 
     return true;
   }
@@ -2438,7 +2608,7 @@ bool LowerTypeTestsModule::lower() {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =
             cast<MDString>(FuncMD->getOperand(0))->getString();
-        CfiFunctionLinkage Linkage = static_cast<CfiFunctionLinkage>(
+        CfiFunctionLinkage Linkage = decodeCfiFunctionLinkage(
             cast<ConstantAsMetadata>(FuncMD->getOperand(1))
                 ->getValue()
                 ->getUniqueInteger()
@@ -2540,6 +2710,12 @@ bool LowerTypeTestsModule::lower() {
             F->addMetadata(LLVMContext::MD_type,
                            *cast<MDNode>(FuncMD->getOperand(I).get()));
         }
+        uint8_t Encoded = cast<ConstantAsMetadata>(FuncMD->getOperand(1))
+                              ->getValue()
+                              ->getUniqueInteger()
+                              .getZExtValue();
+        // TODO: Implement for Full LTO.
+        FunctionSummaryHotness[F] = decodeCfiFunctionHotness(Encoded);
       }
     }
   }
@@ -2556,10 +2732,7 @@ bool LowerTypeTestsModule::lower() {
     if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
       for (auto *AliasMD : AliasesMD->operands()) {
         SmallVector<Function *> Aliases;
-        for (Metadata *MD : AliasMD->operands()) {
-          auto *MDS = dyn_cast<MDString>(MD);
-          if (!MDS)
-            continue;
+        for (MDString *MDS : make_isa_range<MDString>(AliasMD->operands())) {
           StringRef AliasName = MDS->getString();
           if (!ExportedFunctions.count(AliasName))
             continue;
@@ -2606,6 +2779,10 @@ bool LowerTypeTestsModule::lower() {
         if (!CrossDsoCfi || !IsJumpTableCanonical || F->hasLocalLinkage())
           continue;
       }
+
+      // TODO: Pre-fill for full LTO.
+      // if (!ExportSummary)
+      //   FunctionSummaryHotness[F] = getHotness(*F, PSI, BFIGetter);
     }
 
     auto *GTM = GlobalTypeMember::create(Alloc, &GO, IsJumpTableCanonical,

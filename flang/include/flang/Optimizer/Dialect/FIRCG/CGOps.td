@@ -22,6 +22,7 @@ include "mlir/IR/BuiltinAttributes.td"
 
 def fircg_Dialect : Dialect {
   let name = "fircg";
+  let useStrictPropertiesInAssemblyFormat = 0;
   let cppNamespace = "::fir::cg";
 }
 

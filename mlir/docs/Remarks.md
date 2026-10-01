@@ -202,8 +202,11 @@ Emits **all** remarks unconditionally.
 
 ### RemarkEmittingPolicyFinal
 
-Emits only the **final** remark for each location. This is useful in multi-pass
-compilers where an early pass may report a failure, but a later pass succeeds.
+Stores remarks until `finalize()` is called and emits only the **final** remark
+for each location. This is useful in multi-pass compilers where an early pass
+may report a failure, but a later pass succeeds. `finalize()` drains the stored
+remarks and emits them in the order in which they were created. Calling it
+again emits only remarks reported since.
 
 **Example:** Only the successful remark is emitted:
 

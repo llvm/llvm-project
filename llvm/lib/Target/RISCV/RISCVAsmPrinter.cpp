@@ -562,6 +562,8 @@ bool RISCVAsmPrinter::emitTargetFeaturePush(const MCSubtargetInfo &STI) {
   if (!NeedEmitStdOptionArgs.empty()) {
     RTS.emitDirectiveOptionPush();
     RTS.emitDirectiveOptionArch(NeedEmitStdOptionArgs);
+    RTS.setArchString(
+        cantFail(RISCVFeatures::parseFeatureBits(STI))->toString());
     return true;
   }
 
@@ -646,9 +648,19 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
   assert(OutStreamer->getTargetStreamer() &&
          "target streamer is uninitialized");
   RISCVTargetStreamer &RTS = getTargetStreamer();
-  if (const MDString *ModuleTargetABI =
-          dyn_cast_or_null<MDString>(M.getModuleFlag("target-abi")))
-    RTS.setTargetABI(RISCVABI::getTargetABI(ModuleTargetABI->getString()));
+  StringRef ABIName = M.getTargetABIFromMD();
+  if (!ABIName.empty()) {
+    RISCVABI::ABI ABI = RISCVABI::getTargetABI(ABIName);
+    if (ABI == RISCVABI::ABI_Unknown) {
+      M.getContext().emitError(Twine('\'') + ABIName +
+                               "' is not a recognized ABI for this target");
+    } else {
+      RTS.setTargetABI(ABI);
+    }
+  } else if (!RTS.hasTargetABI()) {
+    RTS.setTargetABI(
+        cantFail(RISCVABI::computeTargetABI(TM.getMCSubtargetInfo(), "")));
+  }
 
   MCSubtargetInfo SubtargetInfo = TM.getMCSubtargetInfo();
 

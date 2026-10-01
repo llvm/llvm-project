@@ -1560,11 +1560,7 @@ define i8 @test_v128i8(<128 x i8> %a0) nounwind {
 define i32 @PR215069() {
 ; CHECK-LABEL: PR215069:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movb $7, %cl
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    setnp %al
-; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    ret{{[l|q]}}
   %i0 = insertelement <4 x i32> zeroinitializer, i32 0, i64 0
   %i1 = xor <4 x i32> %i0, <i32 -1, i32 -1, i32 -1, i32 0>

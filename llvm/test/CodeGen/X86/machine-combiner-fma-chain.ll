@@ -2,8 +2,8 @@
 ; RUN: llc -O3 -mcpu=haswell < %s -mtriple=x86_64 | FileCheck %s
 ; RUN: llc -O3 -mcpu=skylake-avx512 < %s -mtriple=x86_64 | FileCheck %s
 
-; A long chain of FMA accumulations is reassociated into two shorter chains
-; combined by a single add to expose more ILP.
+; FIXME: A long chain of FMA accumulations should be reassociated into two
+; shorter chains combined by a single add to expose more ILP.
 
 define <4 x double> @fma_chain_v4f64(ptr %py, ptr %pa, <4 x double> %x0, <4 x double> %x1, <4 x double> %x2, <4 x double> %x3, <4 x double> %x4, <4 x double> %x5) {
 ; CHECK-LABEL: fma_chain_v4f64:
@@ -178,7 +178,8 @@ entry:
   ret double %s5
 }
 
-; A store before the first link of the upper half does not block the split.
+; FIXME: A store before the first link of the upper half should not block the
+; split.
 define double @fma_chain_store_before_upper(double %y, ptr %pa, ptr %pq, double %x0, double %x1, double %x2, double %x3, double %x4, double %x5) {
 ; CHECK-LABEL: fma_chain_store_before_upper:
 ; CHECK:       # %bb.0: # %entry
@@ -213,8 +214,8 @@ entry:
   ret double %s5
 }
 
-; The chain end has a second user besides the continuing FMA, so the chain
-; ending there is split even though the last FMA accumulates into it.
+; FIXME: The chain end has a second user besides the continuing FMA; the chain
+; ending there should be split even though the last FMA accumulates into it.
 define double @fma_chain_root_multi_use(double %y, ptr %pa, ptr %pq, double %x0, double %x1, double %x2, double %x3, double %x4, double %x5, double %x6) {
 ; CHECK-LABEL: fma_chain_root_multi_use:
 ; CHECK:       # %bb.0: # %entry
