@@ -1,17 +1,14 @@
 // RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(acc-cg-to-gpu))" --split-input-file | FileCheck %s
 
-// A gang-only reduction whose result is stored to memory outside the kernel.
-// With no thread dims launched there is nothing to predicate on, but the store
-// still runs once per block, so it must become a cross-block atomic. The
-// identity is stored by a single-thread launch ahead of the kernel, so it is
-// ordered before the atomics of every block.
+// A gang-only reduction stored to memory outside the kernel runs the store
+// once per block, so it must become a cross-block atomic. The identity is
+// stored by a launch ahead of the kernel, ordered before every atomic.
 
 // CHECK-LABEL: func.func @gang_reduction_store
 // CHECK-SAME:    %{{.*}}: memref<3xi32>, %[[RES:.*]]: memref<i32>
 // CHECK:       gpu.launch
-// CHECK-NOT:     gpu.block_id
 // CHECK:         memref.store %{{.*}}, %[[RES]][] : memref<i32>
-// CHECK-NEXT:    gpu.terminator
+// CHECK:         gpu.terminator
 // CHECK:       gpu.launch
 // CHECK-NOT:     memref.store %{{.*}}, %[[RES]]
 // CHECK:         acc.atomic.update %[[RES]] : memref<i32> {
@@ -60,7 +57,7 @@ module attributes {gpu.container_module} {
 // -----
 
 // An i1 has no atomic form; a logical or is lowered to a guarded store of
-// true, which every block may race on harmlessly.
+// true instead.
 
 // CHECK-LABEL: func.func @gang_lor_store
 // CHECK-SAME:    %{{.*}}: memref<3xi1>, %[[RES:.*]]: memref<i1>
@@ -68,9 +65,9 @@ module attributes {gpu.container_module} {
 // CHECK:         memref.store %false, %[[RES]][] : memref<i1>
 // CHECK:       gpu.launch
 // CHECK-NOT:     acc.atomic.update
-// CHECK:         %[[HIT:.*]] = arith.cmpi eq, %{{.*}}, %true : i1
+// CHECK:         %[[HIT:.*]] = arith.cmpi eq, %{{.*}}, %[[TRUE:.*]] : i1
 // CHECK-NEXT:    scf.if %[[HIT]] {
-// CHECK-NEXT:      memref.store %true, %[[RES]][] : memref<i1>
+// CHECK-NEXT:      memref.store %[[TRUE]], %[[RES]][] : memref<i1>
 // CHECK-NOT:     acc.atomic.update
 // CHECK:         gpu.terminator
 
