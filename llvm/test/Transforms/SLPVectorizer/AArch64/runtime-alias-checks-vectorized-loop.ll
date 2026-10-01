@@ -193,7 +193,6 @@ define void @vectorized_loop_contract(ptr %m, ptr %in, ptr %out, i64 %n) {
 ; CHECK-LABEL: define void @vectorized_loop_contract(
 ; CHECK-SAME: ptr [[M:%.*]], ptr [[IN:%.*]], ptr [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[M16:%.*]] = ptrtoaddr ptr [[M]] to i64
 ; CHECK-NEXT:    [[M1_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 4
 ; CHECK-NEXT:    [[M2_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 8
 ; CHECK-NEXT:    [[M3_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 12
@@ -209,55 +208,11 @@ define void @vectorized_loop_contract(ptr %m, ptr %in, ptr %out, i64 %n) {
 ; CHECK-NEXT:    [[M13_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 52
 ; CHECK-NEXT:    [[M14_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 56
 ; CHECK-NEXT:    [[M15_P:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 60
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[M16]], 64
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_RTMERGE:%.*]], %[[EXIT:.*]] ]
-; CHECK-NEXT:    [[SRC:%.*]] = phi ptr [ [[IN]], %[[ENTRY]] ], [ [[SRC_NEXT_RTMERGE:%.*]], %[[EXIT]] ]
-; CHECK-NEXT:    [[DST:%.*]] = phi ptr [ [[OUT]], %[[ENTRY]] ], [ [[DST_NEXT_RTMERGE:%.*]], %[[EXIT]] ]
-; CHECK-NEXT:    [[DST17:%.*]] = ptrtoaddr ptr [[DST]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[DST17]], 16
-; CHECK-NEXT:    [[RT_BOUND0:%.*]] = icmp ult i64 [[DST17]], [[TMP0]]
-; CHECK-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[M16]], [[TMP1]]
-; CHECK-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
-; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
-; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[LOOP_RTSCALAR:.*]], label %[[LOOP_RTVEC:.*]], !prof [[PROF2:![0-9]+]]
-; CHECK:       [[EXIT1:.*]]:
-; CHECK-NEXT:    ret void
-; CHECK:       [[LOOP_RTVEC]]:
-; CHECK-NEXT:    [[R:%.*]] = load float, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[G_P:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
-; CHECK-NEXT:    [[G:%.*]] = load float, ptr [[G_P]], align 4
-; CHECK-NEXT:    [[B_P:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 8
-; CHECK-NEXT:    [[B:%.*]] = load float, ptr [[B_P]], align 4
-; CHECK-NEXT:    [[A_P:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 12
-; CHECK-NEXT:    [[A:%.*]] = load float, ptr [[A_P]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[M]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[R]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul contract <4 x float> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[M4_P]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[G]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul contract <4 x float> [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd contract <4 x float> [[TMP9]], [[TMP5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load <4 x float>, ptr [[M8_P]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> poison, float [[B]], i64 0
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x float> [[TMP12]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP14:%.*]] = fmul contract <4 x float> [[TMP11]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = fadd contract <4 x float> [[TMP10]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = load <4 x float>, ptr [[M12_P]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x float> [[TMP17]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP19:%.*]] = fmul contract <4 x float> [[TMP16]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = fadd contract <4 x float> [[TMP15]], [[TMP19]]
-; CHECK-NEXT:    store <4 x float> [[TMP20]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[SRC_NEXT1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 16
-; CHECK-NEXT:    [[DST_NEXT1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 16
-; CHECK-NEXT:    [[IV_NEXT1:%.*]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[DONE1:%.*]] = icmp eq i64 [[IV_NEXT1]], [[N]]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[LOOP_RTSCALAR]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[EXIT]] ]
+; CHECK-NEXT:    [[SRC:%.*]] = phi ptr [ [[IN]], %[[ENTRY]] ], [ [[SRC_NEXT:%.*]], %[[EXIT]] ]
+; CHECK-NEXT:    [[DST:%.*]] = phi ptr [ [[OUT]], %[[ENTRY]] ], [ [[DST_NEXT:%.*]], %[[EXIT]] ]
 ; CHECK-NEXT:    [[R_SCALAR:%.*]] = load float, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[G_P_SCALAR:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
 ; CHECK-NEXT:    [[G_SCALAR:%.*]] = load float, ptr [[G_P_SCALAR]], align 4
@@ -316,17 +271,13 @@ define void @vectorized_loop_contract(ptr %m, ptr %in, ptr %out, i64 %n) {
 ; CHECK-NEXT:    [[X3:%.*]] = fadd contract float [[T3]], [[A3]]
 ; CHECK-NEXT:    [[DST3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 12
 ; CHECK-NEXT:    store float [[X3]], ptr [[DST3]], align 4
-; CHECK-NEXT:    [[SRC_NEXT:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 16
-; CHECK-NEXT:    [[DST_NEXT:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 16
-; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[SRC_NEXT]] = getelementptr inbounds i8, ptr [[SRC]], i64 16
+; CHECK-NEXT:    [[DST_NEXT]] = getelementptr inbounds i8, ptr [[DST]], i64 16
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[SRC_NEXT_RTMERGE]] = phi ptr [ [[SRC_NEXT1]], %[[LOOP_RTVEC]] ], [ [[SRC_NEXT]], %[[LOOP_RTSCALAR]] ]
-; CHECK-NEXT:    [[DST_NEXT_RTMERGE]] = phi ptr [ [[DST_NEXT1]], %[[LOOP_RTVEC]] ], [ [[DST_NEXT]], %[[LOOP_RTSCALAR]] ]
-; CHECK-NEXT:    [[IV_NEXT_RTMERGE]] = phi i64 [ [[IV_NEXT1]], %[[LOOP_RTVEC]] ], [ [[IV_NEXT]], %[[LOOP_RTSCALAR]] ]
-; CHECK-NEXT:    [[DONE_RTMERGE:%.*]] = phi i1 [ [[DONE1]], %[[LOOP_RTVEC]] ], [ [[DONE]], %[[LOOP_RTSCALAR]] ]
-; CHECK-NEXT:    br i1 [[DONE_RTMERGE]], label %[[EXIT1]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT1:.*]], label %[[EXIT]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    ret void
 ;
 ; VER-LABEL: define void @vectorized_loop_contract(
 ; VER-SAME: ptr [[M:%.*]], ptr [[IN:%.*]], ptr [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
@@ -564,8 +515,7 @@ declare float @llvm.fmuladd.f32(float, float, float)
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 1, i32 1048575}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META1]]}
 ;.
 ; VER: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
 ; VER: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]]}
