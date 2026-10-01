@@ -22,6 +22,7 @@
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -324,86 +325,6 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
   }
 }
 
-// Return true if the inner loop \p Lp is uniform with regard to the outer loop
-// \p OuterLp (i.e., if the outer loop is vectorized, all the vector lanes
-// executing the inner loop will execute the same iterations). This check is
-// very constrained for now but it will be relaxed in the future. \p Lp is
-// considered uniform if it meets all the following conditions:
-//   1) it has a canonical IV (starting from 0 and with stride 1),
-//   2) its latch terminator is a conditional branch and,
-//   3) its latch condition is a compare instruction whose operands are the
-//      canonical IV and an OuterLp invariant.
-// This check doesn't take into account the uniformity of other conditions not
-// related to the loop latch because they don't affect the loop uniformity.
-//
-// NOTE: We decided to keep all these checks and its associated documentation
-// together so that we can easily have a picture of the current supported loop
-// nests. However, some of the current checks don't depend on \p OuterLp and
-// would be redundantly executed for each \p Lp if we invoked this function for
-// different candidate outer loops. This is not the case for now because we
-// don't currently have the infrastructure to evaluate multiple candidate outer
-// loops and \p OuterLp will be a fixed parameter while we only support explicit
-// outer loop vectorization. It's also very likely that these checks go away
-// before introducing the aforementioned infrastructure. However, if this is not
-// the case, we should move the \p OuterLp independent checks to a separate
-// function that is only executed once for each \p Lp.
-static bool isUniformLoop(Loop *Lp, Loop *OuterLp) {
-  assert(Lp->getLoopLatch() && "Expected loop with a single latch.");
-
-  // If Lp is the outer loop, it's uniform by definition.
-  if (Lp == OuterLp)
-    return true;
-  assert(OuterLp->contains(Lp) && "OuterLp must contain Lp.");
-
-  // 1.
-  PHINode *IV = Lp->getCanonicalInductionVariable();
-  if (!IV) {
-    LLVM_DEBUG(dbgs() << "LV: Canonical IV not found.\n");
-    return false;
-  }
-
-  // 2.
-  BasicBlock *Latch = Lp->getLoopLatch();
-  auto *LatchBr = dyn_cast<CondBrInst>(Latch->getTerminator());
-  if (!LatchBr) {
-    LLVM_DEBUG(dbgs() << "LV: Unsupported loop latch branch.\n");
-    return false;
-  }
-
-  // 3.
-  auto *LatchCmp = dyn_cast<CmpInst>(LatchBr->getCondition());
-  if (!LatchCmp) {
-    LLVM_DEBUG(
-        dbgs() << "LV: Loop latch condition is not a compare instruction.\n");
-    return false;
-  }
-
-  Value *CondOp0 = LatchCmp->getOperand(0);
-  Value *CondOp1 = LatchCmp->getOperand(1);
-  Value *IVUpdate = IV->getIncomingValueForBlock(Latch);
-  if (!(CondOp0 == IVUpdate && OuterLp->isLoopInvariant(CondOp1)) &&
-      !(CondOp1 == IVUpdate && OuterLp->isLoopInvariant(CondOp0))) {
-    LLVM_DEBUG(dbgs() << "LV: Loop latch condition is not uniform.\n");
-    return false;
-  }
-
-  return true;
-}
-
-// Return true if \p Lp and all its nested loops are uniform with regard to \p
-// OuterLp.
-static bool isUniformLoopNest(Loop *Lp, Loop *OuterLp) {
-  if (!isUniformLoop(Lp, OuterLp))
-    return false;
-
-  // Check if nested loops are uniform.
-  for (Loop *SubLp : *Lp)
-    if (!isUniformLoopNest(SubLp, OuterLp))
-      return false;
-
-  return true;
-}
-
 static IntegerType *getInductionIntegerTy(const DataLayout &DL, Type *Ty) {
   assert(Ty->isIntOrPtrTy() && "Expected integer or pointer type");
 
@@ -669,6 +590,20 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
       Result = false;
     }
 
+    // Don't try to vectorize outer loops with atomic or volatile accesses.
+    for (Instruction &I : *BB) {
+      if (!I.isAtomic() && !I.isVolatile())
+        continue;
+      reportVectorizationFailure(
+          "Unsupported volatile or atomic memory operation",
+          "instruction cannot be vectorized", "CantVectorizeInstruction", ORE,
+          TheLoop, &I);
+      if (DoExtraAnalysis)
+        Result = false;
+      else
+        return false;
+    }
+
     // Check whether the BB terminator is a branch. Any other terminator is
     // not supported yet.
     Instruction *Term = BB->getTerminator();
@@ -684,30 +619,46 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     }
 
     // Check whether the branch is a supported one. Only unconditional
-    // branches, conditional branches with an outer loop invariant condition or
+    // branches, conditional branches with an outer loop uniform condition or
     // backedges are supported.
     // FIXME: We skip these checks when VPlan predication is enabled as we
     // want to allow divergent branches. This whole check will be removed
     // once VPlan predication is on by default.
     auto *Br = dyn_cast<CondBrInst>(Term);
-    if (Br && !TheLoop->isLoopInvariant(Br->getCondition()) &&
-        !LI->isLoopHeader(Br->getSuccessor(0)) &&
-        !LI->isLoopHeader(Br->getSuccessor(1))) {
-      reportVectorizationFailure(
-          "Unsupported conditional branch",
-          "loop control flow is not understood by vectorizer",
-          "CFGNotUnderstood", ORE, TheLoop);
-      if (DoExtraAnalysis)
-        Result = false;
-      else
-        return false;
+    if (Br && !TheLoop->isLoopLatch(BB)) {
+      bool IsUniformCondBr = TheLoop->isLoopInvariant(Br->getCondition());
+
+      Value *Lhs = nullptr;
+      Value *Rhs = nullptr;
+      auto *SE = PSE.getSE();
+      if (match(Br->getCondition(), m_c_ICmp(m_Value(Lhs), m_Value(Rhs))) &&
+          !IsUniformCondBr && SE->isSCEVable(Lhs->getType())) {
+        const SCEV *LhsExpr = PSE.getSCEV(Lhs);
+        const SCEV *RhsExpr = PSE.getSCEV(Rhs);
+        IsUniformCondBr |= (SE->isLoopUniform(LhsExpr, TheLoop) &&
+                            SE->isLoopUniform(RhsExpr, TheLoop));
+      }
+
+      // If the condition is not uniform, report a failure. We currently require
+      // uniform conditions to avoid the complexity of vectorizing divergent
+      // control flow in the outer loop.
+      if (!IsUniformCondBr) {
+        reportVectorizationFailure(
+            "Outer loop contains divergent conditional branch",
+            "loop control flow is not understood by vectorizer",
+            "CFGNotUnderstood", ORE, TheLoop);
+        if (DoExtraAnalysis)
+          Result = false;
+        else
+          return false;
+      }
     }
   }
 
   // Each nested loop must exit via its latch only, as a region with the latch
   // as its only exiting block is created for it. Note that the branch check
-  // above rejects divergent exits, but exits with an outer-loop invariant
-  // condition are allowed through.
+  // rejects divergent exits, but exits with an outer-loop uniform condition
+  // are allowed through.
   SmallVector<Loop *, 4> LoopNest = TheLoop->getLoopsInPreorder();
   for (Loop *Lp : drop_begin(LoopNest)) {
     if (Lp->getExitingBlock() != Lp->getLoopLatch()) {
@@ -720,20 +671,6 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
       else
         return false;
     }
-  }
-
-  // Check whether inner loops are uniform. At this point, we only support
-  // simple outer loops scenarios with uniform nested loops.
-  if (!isUniformLoopNest(TheLoop /*loop nest*/,
-                         TheLoop /*context outer loop*/)) {
-    reportVectorizationFailure(
-        "Outer loop contains divergent loops",
-        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
-        ORE, TheLoop);
-    if (DoExtraAnalysis)
-      Result = false;
-    else
-      return false;
   }
 
   // Check whether we are able to set up outer loop induction.
@@ -1648,6 +1585,69 @@ bool LoopVectorizationLegality::canVectorizeLoopNestCFG(
   return Result;
 }
 
+/// Matches an exit condition formed by comparing a value loaded from memory
+/// with another term. Binds the pointer, load, and the other comparison term.
+static bool matchUncountableExitCondition(Value *Cond, Value *&Ptr,
+                                          Instruction *&Load, Value *&Other) {
+  return match(Cond, m_OneUse(m_c_Cmp(
+                         m_OneUse(m_Instruction(Load, m_Load(m_Value(Ptr)))),
+                         m_Value(Other))));
+}
+
+/// Matches an exit condition formed by comparing the current value of an
+/// affine add recurrence in the given loop with a stride of 1 against a
+/// loop-invariant term.
+static bool matchCountableExitCondition(Value *Cond, ScalarEvolution &SE,
+                                        Loop *TheLoop) {
+  using namespace llvm::SCEVPatternMatch;
+  Value *IVUpdate, *Limit;
+  return match(Cond, m_c_ICmp(m_Value(IVUpdate, m_Add(m_Value(), m_Value())),
+                              m_Value(Limit))) &&
+         TheLoop->isLoopInvariant(Limit) &&
+         SCEVPatternMatch::match(SE.getSCEV(IVUpdate),
+                                 m_scev_AffineAddRec(m_SCEV(), m_scev_One(),
+                                                     m_SpecificLoop(TheLoop)));
+}
+
+/// Matches a combined exit condition consisting of an uncountable condition and
+/// a countable condition, combined by an or.  Binds the pointer, load, the
+/// second comparison term for the uncountable condition, and the comparison for
+/// the countable condition.
+static bool matchCombinedExitCondition(Value *Cond, Instruction *&CountableCond,
+                                       Value *&Ptr, Instruction *&Load,
+                                       Value *&Other, ScalarEvolution &SE,
+                                       Loop *TheLoop) {
+  Value *L, *R;
+  if (!match(Cond, m_OneUse(m_LogicalOr(m_Value(L), m_Value(R)))))
+    return false;
+
+  if (matchCountableExitCondition(L, SE, TheLoop) &&
+      matchUncountableExitCondition(R, Ptr, Load, Other)) {
+    CountableCond = cast<Instruction>(L);
+    return true;
+  }
+
+  if (matchCountableExitCondition(R, SE, TheLoop) &&
+      matchUncountableExitCondition(L, Ptr, Load, Other)) {
+    CountableCond = cast<Instruction>(R);
+    return true;
+  }
+
+  return false;
+}
+
+Instruction *
+LoopVectorizationLegality::findCountableComparisonInCombinedCondition(
+    Value *Cond) const {
+  Value *Ptr, *Other;
+  Instruction *Load, *CountableCmp;
+  if (matchCombinedExitCondition(Cond, CountableCmp, Ptr, Load, Other,
+                                 *PSE.getSE(), TheLoop))
+    return CountableCmp;
+
+  return nullptr;
+}
+
 bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   BasicBlock *LatchBB = TheLoop->getLoopLatch();
   if (!LatchBB) {
@@ -1699,16 +1699,27 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   }
 
   // The latch block must have a countable exit.
-  if (isa<SCEVCouldNotCompute>(
-          PSE.getSE()->getPredicatedExitCount(TheLoop, LatchBB, &Predicates))) {
+  if (isa<SCEVCouldNotCompute>(PSE.getSE()->getPredicatedExitCount(
+          TheLoop, LatchBB, &Predicates, ScalarEvolution::SymbolicMaximum))) {
     reportVectorizationFailure(
-        "Cannot determine exact exit count for latch block",
+        "Cannot determine symbolic max exit count for latch block",
         "Cannot vectorize early exit loop",
         "UnknownLatchExitCountEarlyExitLoop", ORE, TheLoop);
     return false;
   }
-  assert(llvm::is_contained(CountableExitingBlocks, LatchBB) &&
-         "Latch block not found in list of countable exits!");
+
+  if (!is_contained(CountableExitingBlocks, LatchBB)) {
+    // If not a separate counted exit in the latch, then check for a combined
+    // countable and uncountable exit.
+    auto *Br = dyn_cast<CondBrInst>(LatchBB->getTerminator());
+    if (!Br ||
+        !findCountableComparisonInCombinedCondition(Br->getCondition())) {
+      reportVectorizationFailure(
+          "Latch block does not have a countable exit condition",
+          "NoCountableConditionInLatchBlock", ORE, TheLoop);
+      return false;
+    }
+  }
 
   // Check to see if there are instructions that could potentially generate
   // exceptions or have side-effects.
@@ -1786,6 +1797,13 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     }
   }
 
+  // We're only handling combined exit conditions via masking at present, which
+  // is used for loops with side effects.
+  // TODO: Support readonly loops with combined exit conditions.
+  // TODO: Decouple style from the presence of side effects.
+  if (!llvm::is_contained(CountableExitingBlocks, LatchBB) && !HasSideEffects)
+    return false;
+
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =
       PSE.getSymbolicMaxBackedgeTakenCount();
   // Since we have an exact exit count for the latch and the early exit
@@ -1812,20 +1830,26 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   auto *Br = cast<CondBrInst>(ExitingBlock->getTerminator());
 
   using namespace llvm::PatternMatch;
-  Instruction *L = nullptr;
-  Value *Ptr = nullptr;
-  Value *R = nullptr;
-  // The exit-condition load can appear on either side of the icmp.
-  if (!match(Br->getCondition(),
-             m_OneUse(m_c_ICmp(m_OneUse(m_Instruction(L, m_Load(m_Value(Ptr)))),
-                               m_Value(R))))) {
+  Value *Ptr, *Other;
+  Instruction *L, *CountableCond;
+  // We want to match either an uncounted condition (loaded value compared
+  // against a loop invariant value) or the combination (via logical or) of
+  // an uncounted condition with a counted condition (integer comparison of
+  // an induction variable for which we can identify an add recurrence within
+  // this loop).
+  if (!matchUncountableExitCondition(Br->getCondition(), Ptr, L, Other) &&
+      !matchCombinedExitCondition(Br->getCondition(), CountableCond, Ptr, L,
+                                  Other, *PSE.getSE(), TheLoop)) {
     reportVectorizationFailure(
         "Early exit loop with store but no supported condition load",
         "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
     return false;
   }
 
-  if (!TheLoop->isLoopInvariant(R)) {
+  // Bail if the uncountable exit load is compared against a non-invariant
+  // value.
+  // TODO: Remove this restriction.
+  if (!TheLoop->isLoopInvariant(Other)) {
     reportVectorizationFailure(
         "Early exit loop with store but no supported condition load",
         "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
@@ -1943,24 +1967,17 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
-    if (TheLoop->getExitingBlock()) {
+  if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount()) &&
+      !isVectorizableEarlyExitLoop()) {
+    assert(UncountableExitType == UncountableExitTrait::None &&
+           "Must be false without vectorizable early-exit loop");
+    if (TheLoop->getExitingBlock())
       reportVectorizationFailure("Cannot vectorize uncountable loop",
                                  "UnsupportedUncountableLoop", ORE, TheLoop);
-      if (DoExtraAnalysis)
-        Result = false;
-      else
-        return false;
-    } else {
-      if (!isVectorizableEarlyExitLoop()) {
-        assert(UncountableExitType == UncountableExitTrait::None &&
-               "Must be false without vectorizable early-exit loop");
-        if (DoExtraAnalysis)
-          Result = false;
-        else
-          return false;
-      }
-    }
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
   }
 
   // Go over each instruction and look at memory deps.
@@ -2007,6 +2024,13 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
     LLVM_DEBUG(
         dbgs()
         << "LV: Cannot fold tail by masking. Requires a singe latch exit\n");
+    return false;
+  }
+
+  // TODO: Support tail folding with uncountable exits.
+  if (hasUncountableEarlyExit()) {
+    LLVM_DEBUG(dbgs() << "LV: Cannot tail fold by masking. Loop contains an "
+                         "uncountable early exit.\n");
     return false;
   }
 

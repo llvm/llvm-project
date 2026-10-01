@@ -117,6 +117,11 @@ jobs:
           # full history to be available.
           fetch-depth: 0
           fetch-tags: true
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
 
       - name: Select Xcode
         if: runner.os == 'macOS'
