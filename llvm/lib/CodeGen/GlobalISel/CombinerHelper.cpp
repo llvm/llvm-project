@@ -5130,6 +5130,9 @@ bool CombinerHelper::matchConstantFoldCastOp(MachineInstr &MI,
   if (!isConstantLegalOrBeforeLegalizer(DstTy))
     return false;
 
+  if (DstTy.isScalableVector())
+    return false;
+
   if (DstTy.isFixedVector()) {
     auto *BV = getOpcodeDef<GBuildVector>(SrcOp, MRI);
     if (!BV)
@@ -5183,9 +5186,10 @@ bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI,
   Register Op2 = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(Dst);
 
-  // Pointer-element vectors have no G_BUILD_VECTOR of G_CONSTANT
-  // representation.
-  if (DstTy.isVector() && DstTy.getElementType().isPointer())
+  // Scalable and pointer-element vectors have no G_BUILD_VECTOR of
+  // G_CONSTANT to fold to.
+  if (DstTy.isScalableVector() ||
+      (DstTy.isVector() && DstTy.getElementType().isPointer()))
     return false;
 
   if (DstTy.isFixedVector()) {
@@ -5214,6 +5218,9 @@ bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI,
   Register Op1 = MI.getOperand(1).getReg();
   Register Op2 = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(Dst);
+
+  if (DstTy.isScalableVector())
+    return false;
 
   if (DstTy.isFixedVector()) {
     SmallVector<APFloat> Csts =
@@ -5266,6 +5273,9 @@ bool CombinerHelper::matchConstantFoldFMA(MachineInstr &MI,
     Res.fusedMultiplyAdd(B, C, APFloat::rmNearestTiesToEven);
     return Res;
   };
+
+  if (DstTy.isScalableVector())
+    return false;
 
   if (DstTy.isFixedVector()) {
     auto *BV1 = getOpcodeDef<GBuildVector>(Op1, MRI);
