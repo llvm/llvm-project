@@ -268,8 +268,7 @@ define i64 @test_or_select_fast (float %a, float %b) {
 ; CHECK-SD-NEXT:    fcmp s0, #0.0
 ; CHECK-SD-NEXT:    cset w8, ne
 ; CHECK-SD-NEXT:    fcmp s1, #0.0
-; CHECK-SD-NEXT:    cset w9, ne
-; CHECK-SD-NEXT:    orr w8, w8, w9
+; CHECK-SD-NEXT:    csinc w8, w8, wzr, eq
 ; CHECK-SD-NEXT:    tbz w8, #0, .LBB5_2
 ; CHECK-SD-NEXT:  // %bb.1:
 ; CHECK-SD-NEXT:    mov x0, xzr
@@ -371,8 +370,7 @@ define i64 @test_and_select_fast(float %a, float %b) {
 ; CHECK-SD-NEXT:    fcmp s0, #0.0
 ; CHECK-SD-NEXT:    cset w8, eq
 ; CHECK-SD-NEXT:    fcmp s1, #0.0
-; CHECK-SD-NEXT:    cset w9, eq
-; CHECK-SD-NEXT:    and w8, w8, w9
+; CHECK-SD-NEXT:    csel w8, wzr, w8, ne
 ; CHECK-SD-NEXT:    tbz w8, #0, .LBB7_2
 ; CHECK-SD-NEXT:  // %bb.1: // %bb4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
