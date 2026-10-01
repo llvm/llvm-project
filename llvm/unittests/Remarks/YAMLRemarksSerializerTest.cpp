@@ -214,7 +214,7 @@ TEST(YAMLRemarks, SerializerRemarkMultiLineArg) {
                   "Name:            name\n"
                   "Function:        func\n"
                   "Args:\n"
-                  "  - block:            |\n"
+                  "  - block:            |-\n"
                   "      abc\n"
                   "      def\n"
                   "      ghi\n"
@@ -223,9 +223,12 @@ TEST(YAMLRemarks, SerializerRemarkMultiLineArg) {
 }
 
 TEST(YAMLRemarks, SerializerRemarkRoundTrip) {
-  // Values that the literal block form cannot hold must survive a round trip.
+  // Values must survive a round trip, whether they are written as a block or
+  // as a quoted scalar.
   StringRef Vals[] = {"abc\ndef\n\x01ghi", "abc\r\ndef\r\nghi",
-                      "  abc\ndef\nghi", "abc\ndef\nghi\n"};
+                      "  abc\ndef\nghi",   "abc\ndef\nghi",
+                      "abc\ndef\nghi\n",   "abc\ndef\nghi\n\n",
+                      "\nabc\ndef\nghi"};
   remarks::Remark R;
   R.RemarkType = remarks::Type::Missed;
   R.PassName = "pass";
