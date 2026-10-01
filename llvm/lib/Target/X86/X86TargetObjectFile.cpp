@@ -71,3 +71,8 @@ const MCExpr *X86_64ELFTargetObjectFile::getIndirectSymViaGOTPCRel(
   const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
   return MCBinaryExpr::createAdd(Res, Off, getContext());
 }
+
+const MCExpr *
+X86COFFTargetObjectFile::getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
+  return MCSymbolRefExpr::create(Sym, X86::S_COFF_SECREL, getContext());
+}

@@ -52,6 +52,7 @@ protected:
   bool SupportIndirectSymViaGOTPCRel = false;
   bool SupportGOTPCRelWithOffset = true;
   bool SupportDebugThreadLocalLocation = true;
+  bool Support64BitDebugThreadLocalLocation = true;
   uint32_t PLTPCRelativeSpecifier = 0;
 
   /// PersonalityEncoding, LSDAEncoding, TTypeEncoding - Some encoding values
@@ -246,6 +247,11 @@ public:
   /// Target supports TLS offset relocation in debug section?
   bool supportDebugThreadLocalLocation() const {
     return SupportDebugThreadLocalLocation;
+  }
+
+  /// Target supports 64 bit TLS offset relocations in debug section?
+  bool support64bitDebugThreadLocalLocation() const {
+    return Support64BitDebugThreadLocalLocation;
   }
 
   /// Returns the register used as static base in RWPI variants.

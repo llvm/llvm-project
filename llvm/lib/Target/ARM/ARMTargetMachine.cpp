@@ -123,7 +123,7 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSBinFormatMachO())
     return std::make_unique<TargetLoweringObjectFileMachO>();
   if (TT.isOSWindows())
-    return std::make_unique<TargetLoweringObjectFileCOFF>();
+    return std::make_unique<ARMCOFFTargetObjectFile>();
   return std::make_unique<ARMElfTargetObjectFile>();
 }
 
