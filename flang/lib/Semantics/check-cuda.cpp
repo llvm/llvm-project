@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-cuda.h"
+#include "flang/Common/restorer.h"
 #include "flang/Common/template.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
@@ -566,6 +567,8 @@ public:
     }
   }
   void Check(const parser::Block &block) {
+    // A guard established by a return affects only this block's continuation.
+    auto restore{common::Restorer{callContext_, callContext_}};
     for (const auto &epc : block) {
       Check(epc);
     }
@@ -781,8 +784,9 @@ private:
     CheckUnwrappedExpr(context_, ifS.source, condition, callContext_);
     AllowGuardedCalls(condition);
     Check(std::get<parser::Block>(ic.t));
-    for (const auto &eib :
-        std::get<std::list<parser::IfConstruct::ElseIfBlock>>(ic.t)) {
+    const auto &elseIfBlocks{
+        std::get<std::list<parser::IfConstruct::ElseIfBlock>>(ic.t)};
+    for (const auto &eib : elseIfBlocks) {
       const auto &eIfS{std::get<parser::Statement<parser::ElseIfStmt>>(eib.t)};
       const auto &elseIfCondition{
           std::get<parser::ScalarLogicalExpr>(eIfS.statement.t)};
@@ -790,11 +794,18 @@ private:
       AllowGuardedCalls(elseIfCondition);
       Check(std::get<parser::Block>(eib.t));
     }
-    if (const auto &eb{
-            std::get<std::optional<parser::IfConstruct::ElseBlock>>(ic.t)}) {
+    const auto &eb{
+        std::get<std::optional<parser::IfConstruct::ElseBlock>>(ic.t)};
+    if (eb) {
       Check(std::get<parser::Block>(eb->t));
     }
     callContext_ = incoming;
+    if (elseIfBlocks.empty() &&
+        (HasUnconditionalReturn(std::get<parser::Block>(ic.t)) ||
+            (eb && HasUnconditionalReturn(std::get<parser::Block>(eb->t))))) {
+      // The remaining statements are an implicit opposite branch arm.
+      AllowGuardedCalls(condition);
+    }
   }
   void Check(const parser::IfStmt &is) {
     const CallContext incoming{callContext_};
@@ -804,7 +815,23 @@ private:
     CheckUnwrappedExpr(context_, uS.source, condition, callContext_);
     AllowGuardedCalls(condition);
     Check(uS.statement, uS.source);
-    callContext_ = incoming;
+    if (!IsReturn(uS.statement)) {
+      callContext_ = incoming;
+    }
+  }
+  static bool IsReturn(const parser::ActionStmt &stmt) {
+    const auto *ret{parser::Unwrap<parser::ReturnStmt>(stmt)};
+    return ret && !ret->v;
+  }
+  static bool HasUnconditionalReturn(const parser::Block &block) {
+    for (const auto &epc : block) {
+      if (const auto *stmt{parser::Unwrap<parser::ActionStmt>(epc)}) {
+        if (IsReturn(*stmt)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
   void AllowGuardedCalls(const parser::ScalarLogicalExpr &condition) {
     // Accept either kind of callee in either arm of an ON_DEVICE guard.
