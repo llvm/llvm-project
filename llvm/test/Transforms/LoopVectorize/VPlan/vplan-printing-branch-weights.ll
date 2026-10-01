@@ -124,7 +124,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; REGION-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.idx>, ir<1>
 ; REGION-NEXT:      WIDEN ir<%i> = load vp<[[VP5]]>
 ; REGION-NEXT:      WIDEN ir<%cmp> = icmp sgt ir<%i>, ir<0>
-; REGION-NEXT:      WIDEN ir<%add> = add ir<%i>, ir<1> (!vplan.execution.frequency 2305843009213693952 (25%))
+; REGION-NEXT:      WIDEN ir<%add> = add ir<%i>, ir<1> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; REGION-NEXT:      WIDEN-CAST ir<%t> = trunc ir<%add> to i16
 ; REGION-NEXT:      WIDEN-CAST ir<%ext> = sext ir<%t> to i64
 ; REGION-NEXT:    Successor(s): pred.store
@@ -169,7 +169,7 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; DISSOLVE-NEXT:    CLONE ir<%gep.idx> = getelementptr inbounds ir<%idx>, vp<%index>
 ; DISSOLVE-NEXT:    WIDEN ir<%i> = load ir<%gep.idx>
 ; DISSOLVE-NEXT:    WIDEN ir<%cmp> = icmp sgt ir<%i>, ir<0>
-; DISSOLVE-NEXT:    WIDEN ir<%add> = add ir<%i>, ir<1> (!vplan.execution.frequency 2305843009213693952 (25%))
+; DISSOLVE-NEXT:    WIDEN ir<%add> = add ir<%i>, ir<1> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; DISSOLVE-NEXT:    WIDEN-CAST ir<%t> = trunc ir<%add> to i16
 ; DISSOLVE-NEXT:    WIDEN-CAST ir<%ext> = sext ir<%t> to i64
 ; DISSOLVE-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = extractelement ir<%cmp>, ir<0>

@@ -1215,17 +1215,15 @@ static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
 }
 
 /// Swap the branch weights recorded for \p R, a select whose two selected
-/// operands are being swapped, so that they keep describing the probability of
-/// its condition. Does nothing if there are none, or if they are the marker for
-/// an explicitly unknown profile, which is symmetric.
+/// operands are being swapped,
 static void swapSelectBranchWeights(VPRecipeBase &R, VPlan &Plan) {
   auto *MD = dyn_cast<VPIRMetadata>(&R);
   if (!MD)
     return;
   SmallVector<uint32_t, 2> Weights;
-  if (!extractBranchWeights(MD->getMetadata(LLVMContext::MD_prof), Weights) ||
-      Weights.size() != 2)
+  if (!extractBranchWeights(MD->getMetadata(LLVMContext::MD_prof), Weights))
     return;
+  assert(Weights.size() == 2 && "unexpected branch weights");
   MD->setMetadata(
       LLVMContext::MD_prof,
       MDBuilder(Plan.getContext()).createBranchWeights(Weights[1], Weights[0]));
