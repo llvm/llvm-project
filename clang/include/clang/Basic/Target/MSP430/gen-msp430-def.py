@@ -26,7 +26,7 @@ MULTIPLIERS = {
     "1": "16bit",
     "2": "16bit",
     "4": "32bit",
-    "8": "32bit",
+    "8": "f5series",
 }
 
 PREFIX = """//===--- MSP430Target.def - MSP430 Feature/Processor Database----*- C++ -*-===//
