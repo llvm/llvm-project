@@ -26168,6 +26168,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   if (UsedVPlan) {
     setInsertPointAfterBundle(&getRootNode());
     std::unique_ptr<VPlan> Plan = buildVPlanForTree();
+    Plan->setName("SLP tree");
+    LLVM_DEBUG(dbgs() << "SLP: VPlan for tree:\n" << *Plan << '\n');
     executeVPlanForTree(*Plan);
   } else {
     (void)vectorizeTree(&getRootNode());
