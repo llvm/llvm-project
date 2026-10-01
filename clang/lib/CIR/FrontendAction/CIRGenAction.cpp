@@ -165,7 +165,7 @@ public:
       const bool EnableLibOpt =
           FEOptions.ClangIRLibOptEnabled && (CGO.OptimizationLevel > 0);
       if (runCIRToCIRPasses(
-              MlirModule, MlirCtx, C, !FEOptions.ClangIRDisableCIRVerifier,
+              MlirModule, MlirCtx, !FEOptions.ClangIRDisableCIRVerifier,
               FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0,
               EnableLibOpt, LibOptOptions, FEOptions.ClangIRCallConvLowering)
               .failed()) {
@@ -237,6 +237,24 @@ public:
       // Embed the offloaded SYCL device binary into the host module.
       if (C.getLangOpts().SYCLIsHost && !CGO.OffloadBinaryToEmbedFile.empty())
         embedSYCLDeviceBinary(*LLVMModule);
+
+      // CUDA, HIP and OpenMP offloading rely on host-side offload entries that
+      // are not emitted on the ClangIR path yet, so embedding their device
+      // objects would produce a host object that cannot be registered.
+      const LangOptions &LangOpts = C.getLangOpts();
+      if (!CGO.OffloadObjects.empty() &&
+          (LangOpts.CUDA || !LangOpts.OMPTargetTriples.empty())) {
+        DiagnosticsEngine &Diags = CI.getDiagnostics();
+        Diags.Report(Diags.getCustomDiagID(
+            DiagnosticsEngine::Error,
+            "ClangIR code gen Not Yet Implemented: embedding offload objects "
+            "for CUDA, HIP or OpenMP offloading"));
+        return;
+      }
+
+      // If there is device offloading code embed it in the host now.
+      EmbedObject(LLVMModule.get(), CGO, CI.getVirtualFileSystem(),
+                  CI.getDiagnostics());
 
       BackendAction BEAction = getBackendActionFromOutputType(Action);
       emitBackendOutput(CI, CI.getCodeGenOpts(), LLVMModule.get(), BEAction, FS,
@@ -335,6 +353,17 @@ bool CIRGenAction::BeginSourceFileAction(CompilerInstance &CI) {
   if (clang::loadLinkModules(CI, *Ctx, LinkModules))
     return false;
   return ASTFrontendAction::BeginSourceFileAction(CI);
+}
+
+void CIRGenAction::ExecuteAction() {
+  if (getCurrentFileKind().getLanguage() != Language::CIR) {
+    ASTFrontendAction::ExecuteAction();
+    return;
+  }
+
+  // TODO: Parse the ClangIR input and emit the requested output.
+  getCompilerInstance().getDiagnostics().Report(
+      diag::err_fe_cir_input_unsupported);
 }
 
 static std::unique_ptr<raw_pwrite_stream>
