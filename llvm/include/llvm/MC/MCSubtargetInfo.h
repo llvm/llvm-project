@@ -175,8 +175,6 @@ public:
   MCSubtargetInfo &operator=(MCSubtargetInfo &&) = delete;
   virtual ~MCSubtargetInfo() = default;
 
-  /// Return a copy of this MCSubtargetInfo that preserves the dynamic type
-  /// (e.g. the TableGen-generated <Target>GenMCSubtargetInfo subclass).
   virtual std::unique_ptr<MCSubtargetInfo> clone() const {
     return std::make_unique<MCSubtargetInfo>(*this);
   }
