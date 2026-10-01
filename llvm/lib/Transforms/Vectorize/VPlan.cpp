@@ -160,7 +160,14 @@ Type *VPValue::getScalarType() const {
 }
 
 Type *VPValue::getWideType(ElementCount VF) const {
-  return toVectorTy(getScalarType(), VF);
+  return toVectorTy(getScalarType(), getWideningVF(VF));
+}
+
+ElementCount VPValue::getWideningVF(ElementCount VF) const {
+  if (const auto *RV = dyn_cast<VPRecipeValue>(this))
+    if (auto *VecTy = dyn_cast_if_present<VectorType>(RV->getResultType()))
+      return VecTy->getElementCount();
+  return VF;
 }
 
 VPRecipeValue::~VPRecipeValue() {

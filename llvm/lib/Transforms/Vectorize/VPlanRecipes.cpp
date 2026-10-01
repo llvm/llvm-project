@@ -914,8 +914,8 @@ Value *VPInstruction::generate(VPTransformState &State,
     assert(!GenerateSingleScalar &&
            "Cannot generate scalar value for Broadcast");
     return Builder.CreateVectorSplat(
-        State.VF, State.get(getOperand(0), /*NeedsSingleScalar=*/true),
-        "broadcast");
+        getWideningVF(State.VF),
+        State.get(getOperand(0), /*NeedsSingleScalar=*/true), "broadcast");
   }
   case VPInstruction::BuildStructVector: {
     assert(!GenerateSingleScalar &&
