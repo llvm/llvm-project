@@ -8,7 +8,7 @@
 ; to follow a base one.
 
 ; GCN-LABEL: {{^}}out_of_order_merge:
-; GCN-COUNT2: ds_read2_b64
+; GCN-COUNT-2: ds_read2_b64
 ; GCN-COUNT3: ds_write_b64
 define amdgpu_kernel void @out_of_order_merge() {
 entry:
