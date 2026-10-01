@@ -306,12 +306,12 @@ def BufferLoopHoistingPass : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
     This pass implements an approach to aggressively move allocations upwards
     out of loop nests. It does not move allocations into common dominators.
 
-    `memref.alloc` operations may be hoisted from multi-region loops even when
-    their buffers are forwarded through loop results. This extension is limited
-    to loops directly in an isolated function body, with single-block SSA regions
-    and complete operand forwarding through `RegionBranchOpInterface`. The
-    allocation's region must execute on entry, its aliases must not reach that
-    region through a backedge, and their uses must permit reusing the allocation.
+    `memref.alloc` operations directly in the `before` region of `scf.while`
+    may also be hoisted when their buffers are forwarded through loop results.
+    This extension requires a loop directly in an isolated function body, in a
+    reachable block and strictly inside the transformation target. No alias may
+    be carried back to `before`, and all alias uses, including uses of loop
+    results, must permit reusing the allocation across iterations.
   }];
 }
 

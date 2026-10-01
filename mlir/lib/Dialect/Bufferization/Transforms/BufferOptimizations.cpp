@@ -18,12 +18,12 @@
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -69,56 +69,22 @@ static bool isSequentialLoop(Operation *op) {
   return !op->hasTrait<OpTrait::HasParallelRegion>() && isLoop(op);
 }
 
-/// Checks additional hoisting restrictions when the common-dominator check
-/// cannot rule out aliases carried across loop iterations.
-///
-/// Assumes sequential region execution and that region terminators only forward
-/// buffer operands.
-static bool
-canHoistFromMultiRegionLoop(Value alloc, Operation *loop,
-                            const BufferViewFlowAnalysis::ValueSetT &aliases,
-                            DominanceInfo &dominance) {
-  // Restrict this check to loops directly in an isolated function body.
+/// Returns true if an allocation in the before region can be reused across
+/// iterations when its aliases have a common dominator outside the while loop.
+/// `aliases` must contain the complete forward alias set of the allocation.
+static bool canHoistFromWhile(
+    memref::AllocOp alloc, scf::WhileOp loop,
+    const BufferViewFlowAnalysis::ValueSetT &aliases) {
   // Further hoisting across an enclosing loop with unmodeled parallel
   // execution could share the allocation across iterations.
   if (!isa<FunctionOpInterface>(loop->getParentOp()) ||
       !loop->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
     return false;
 
-  auto branch = dyn_cast<RegionBranchOpInterface>(loop);
-  Region *allocRegion = alloc.getParentRegion();
-  if (!branch || !alloc.getDefiningOp<memref::AllocOp>() ||
-      allocRegion->getParentOp() != loop)
+  // The single-block before region executes on entry, even if the condition
+  // is initially false. The after region may be skipped.
+  if (alloc->getBlock() != loop.getBeforeBody())
     return false;
-
-  for (Region &region : loop->getRegions())
-    if (!region.hasOneBlock() || region.front().empty() ||
-        !dominance.hasSSADominance(&region) ||
-        !isa<RegionBranchTerminatorOpInterface>(region.front().getTerminator()))
-      return false;
-  // Hoisting must not introduce an allocation on a path that skips its region.
-  SmallVector<RegionSuccessor> entries;
-  branch.getSuccessorRegions(RegionBranchPoint::parent(), entries);
-  if (entries.size() != 1 || !entries.front().isRegion() ||
-      entries.front().getSuccessor() != allocRegion)
-    return false;
-
-  // An alias at the allocation region's entry may refer to an allocation from
-  // an earlier iteration. Loop results alone do not imply such a backedge.
-  if (llvm::any_of(allocRegion->getArguments(),
-                   [&](Value arg) { return aliases.contains(arg); }))
-    return false;
-
-  // Alias analysis cannot trace inputs that are not forwarded from operands.
-  for (RegionBranchPoint point : branch.getAllRegionBranchPoints()) {
-    SmallVector<RegionSuccessor> successors;
-    branch.getSuccessorRegions(point, successors);
-    for (RegionSuccessor successor : successors)
-      if (!branch.getNonSuccessorInputs(successor).empty())
-        return false;
-  }
-  RegionBranchSuccessorMapping mapping;
-  branch.getSuccessorOperandInputMapping(mapping);
 
   // Check all aliases, including loop results: memory effects alone do not rule
   // out capture or uses that depend on allocation identity or lifetime.
@@ -127,11 +93,10 @@ canHoistFromMultiRegionLoop(Value alloc, Operation *loop,
       return false;
     for (OpOperand &use : alias.getUses()) {
       Operation *user = use.getOwner();
-      if (user->getNumRegions() != 0 ||
-          (user->getParentOp() != loop && user->getBlock() != loop->getBlock()))
+      if (user->getParentOp() != loop && user->getBlock() != loop->getBlock())
         return false;
       if (auto load = dyn_cast<memref::LoadOp>(user)) {
-        if (load.getMemref() != alias || load.getInvariant())
+        if (load.getInvariant())
           return false;
         continue;
       }
@@ -140,17 +105,13 @@ canHoistFromMultiRegionLoop(Value alloc, Operation *loop,
           return false;
         continue;
       }
-      if (!isMemoryEffectFree(user))
-        return false;
       // ViewLikeOpInterface describes aliases but does not guarantee that
       // changing allocation identity preserves the view's access semantics.
-      if (isa<memref::CastOp, memref::SubViewOp>(user)) {
-        if (!aliases.contains(user->getResult(0)))
-          return false;
+      if (isa<memref::CastOp, memref::SubViewOp>(user))
         continue;
-      }
-      if (!isa<RegionBranchTerminatorOpInterface>(user) ||
-          user->getParentOp() != loop || !mapping.contains(&use))
+      // scf.condition only forwards memrefs to after or to the loop results.
+      // Reject scf.yield to keep aliases out of the next iteration.
+      if (user != loop.getConditionOp().getOperation())
         return false;
     }
   }
@@ -388,7 +349,7 @@ private:
         if (parentOp == scopeOp ||
             parentOp->hasTrait<OpTrait::IsIsolatedFromAbove>() ||
             !isKnownControlFlowInterface(parentOp) ||
-            !state.isLegalPlacement(parentOp))
+            !state.isLegalPlacement(parentOp, scopeOp))
           break;
         // Move to our parent block by notifying the current StateT
         // implementation.
@@ -437,7 +398,7 @@ struct BufferAllocationHoistingState : BufferAllocationHoistingStateBase {
   }
 
   /// Returns true if the given operation does not represent a loop.
-  bool isLegalPlacement(Operation *op) { return !isLoop(op); }
+  bool isLegalPlacement(Operation *op, Operation *scopeOp) { return !isLoop(op); }
 
   /// Returns true if the given operation should be considered for hoisting.
   static bool shouldHoistOpType(Operation *op) {
@@ -468,26 +429,21 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
   }
 
   /// Returns true if the allocation can be moved across the given loop.
-  bool isLegalPlacement(Operation *op) {
+  bool isLegalPlacement(Operation *op, Operation *scopeOp) {
     if (!isSequentialLoop(op))
       return false;
     if (!dominators->dominates(aliasDominatorBlock, op->getBlock()))
       return true;
-    // Only nested operations may affect addressable memory. Effects on
-    // non-addressable resources cannot access the allocated buffer.
-    if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+    auto loop = dyn_cast<scf::WhileOp>(op);
+    auto alloc = allocValue.getDefiningOp<memref::AllocOp>();
+    if (!loop || !alloc)
       return false;
-    if (auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
-      SmallVector<MemoryEffects::EffectInstance> effects;
-      effectInterface.getEffects(effects);
-      if (llvm::any_of(effects,
-                       [](const MemoryEffects::EffectInstance &effect) {
-                         return effect.getResource()->isAddressable();
-                       }))
-        return false;
-    }
-    return op->getNumRegions() > 1 &&
-           canHoistFromMultiRegionLoop(allocValue, op, aliases, *dominators);
+    // Moving outside the analysis scope leaves liveness information unavailable.
+    // An unreachable parent block has no dominator node for the placement walk.
+    if (!scopeOp->isProperAncestor(op) ||
+        !dominators->isReachableFromEntry(op->getBlock()))
+      return false;
+    return canHoistFromWhile(alloc, loop, aliases);
   }
 
   /// Returns true if the given operation should be considered for hoisting.

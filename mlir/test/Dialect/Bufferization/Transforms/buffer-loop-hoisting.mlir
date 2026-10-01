@@ -710,37 +710,15 @@ func.func @no_hoist_while_dealloc(%condition: i1) {
 
 // -----
 
-// Stop at an unreachable enclosing block without querying its dominator node.
-// CHECK-LABEL: func @while_unreachable_parent(
-//      CHECK: return
-//      CHECK: ^bb1:
-//      CHECK: %[[ALLOC:.*]] = memref.alloc()
-// CHECK-NEXT: %[[LAST:.*]] = scf.while
-//      CHECK: scf.condition{{.*}} %[[ALLOC]]
-//      CHECK: memref.load %[[LAST]]
-func.func @while_unreachable_parent() -> index {
-  %zero = arith.constant 0 : index
-  return %zero : index
-^dead:
-  %c0 = arith.constant 0 : index
-  %c1 = arith.constant 1 : index
-  %false = arith.constant false
-  %last = scf.while () : () -> memref<1xindex> {
-    %buffer = memref.alloc() : memref<1xindex>
-    memref.store %c1, %buffer[%c0] : memref<1xindex>
-    scf.condition(%false) %buffer : memref<1xindex>
-  } do {
-  ^bb0(%current: memref<1xindex>):
-    scf.yield
-  }
-  %result = memref.load %last[%c0] : memref<1xindex>
-  return %result : index
-}
-
-// -----
-
 // A memory-effect-free pointer observation can expose allocation identity.
-func.func @pointer_escape(%addresses: memref<2xindex>) -> index {
+// CHECK-LABEL: func @no_hoist_while_pointer_escape(
+// CHECK-NOT: memref.alloc
+// CHECK: %[[LAST:.*]] = scf.while
+// CHECK-NEXT: %[[BUF:.*]] = memref.alloc()
+// CHECK-NEXT: memref.store {{.*}}, %[[BUF]]
+// CHECK-NEXT: %[[ADDRESS:.*]] = memref.extract_aligned_pointer_as_index %[[BUF]]
+// CHECK-NEXT: memref.store %[[ADDRESS]]
+func.func @no_hoist_while_pointer_escape(%addresses: memref<2xindex>) -> index {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %last = scf.while (%i = %c0) : (index) -> memref<1xindex> {
@@ -759,14 +737,6 @@ func.func @pointer_escape(%addresses: memref<2xindex>) -> index {
   %result = memref.load %last[%c0] : memref<1xindex>
   return %result : index
 }
-
-// CHECK-LABEL: func.func @pointer_escape
-// CHECK-NOT: memref.alloc
-// CHECK: %[[LAST:.*]] = scf.while
-// CHECK-NEXT: %[[BUF:.*]] = memref.alloc()
-// CHECK-NEXT: memref.store {{.*}}, %[[BUF]]
-// CHECK-NEXT: %[[ADDRESS:.*]] = memref.extract_aligned_pointer_as_index %[[BUF]]
-// CHECK-NEXT: memref.store %[[ADDRESS]]
 
 // -----
 
@@ -906,5 +876,70 @@ func.func @hoist_sequential_acc_loop(%n: index, %out: memref<?xindex>) {
     memref.store %value, %out[%i] : memref<?xindex>
     acc.yield
   } seq
+  return
+}
+
+// -----
+
+// A call may capture an allocation even when no alias is carried to before.
+// CHECK-LABEL: func @no_hoist_while_capture(
+// CHECK-NOT: memref.alloc
+// CHECK: scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: call @capture(%[[ALLOC]])
+// CHECK-NEXT: scf.condition{{.*}} %[[ALLOC]]
+func.func private @capture(memref<1xindex>)
+func.func @no_hoist_while_capture(%condition: i1) {
+  %last = scf.while () : () -> memref<1xindex> {
+    %buffer = memref.alloc() : memref<1xindex>
+    func.call @capture(%buffer) : (memref<1xindex>) -> ()
+    scf.condition(%condition) %buffer : memref<1xindex>
+  } do {
+  ^bb0(%current: memref<1xindex>):
+    scf.yield
+  }
+  return
+}
+
+// -----
+
+// The exit-alias fallback does not support stack allocations.
+// CHECK-LABEL: func @no_hoist_while_alloca(
+// CHECK-NOT: memref.alloca
+// CHECK: scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloca()
+// CHECK-NEXT: scf.condition{{.*}} %[[ALLOC]]
+func.func @no_hoist_while_alloca(%condition: i1) {
+  %last = scf.while () : () -> memref<1xindex> {
+    %buffer = memref.alloca() : memref<1xindex>
+    scf.condition(%condition) %buffer : memref<1xindex>
+  } do {
+  ^bb0(%current: memref<1xindex>):
+    scf.yield
+  }
+  return
+}
+
+// -----
+
+// Conservatively exclude unreachable parent blocks from the fallback.
+// CHECK-LABEL: func @no_hoist_while_unreachable_parent(
+// CHECK: return
+// CHECK: ^bb1:
+// CHECK-NOT: memref.alloc
+// CHECK: scf.while
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc()
+// CHECK-NEXT: scf.condition{{.*}} %[[ALLOC]]
+func.func @no_hoist_while_unreachable_parent() {
+  return
+^dead:
+  %false = arith.constant false
+  %last = scf.while () : () -> memref<1xindex> {
+    %buffer = memref.alloc() : memref<1xindex>
+    scf.condition(%false) %buffer : memref<1xindex>
+  } do {
+  ^bb0(%current: memref<1xindex>):
+    scf.yield
+  }
   return
 }
