@@ -108,7 +108,7 @@ gpu.module @kernels {
     // CHECK:   [[VAL_72:%.*]] = arith.addi [[VAL_28]], [[VAL_2]] : i32
     // CHECK:   [[VAL_73:%.*]] = arith.divsi [[VAL_72]], [[VAL_5]] : i32
     // CHECK:   [[VAL_74:%.*]] = arith.cmpi slt, [[VAL_27]], [[VAL_73]] : i32
-    // CHECK:   cf.cond_br [[VAL_74]], ^bb22, ^bb41
+    // CHECK:   cf.cond_br [[VAL_74]], ^bb22, ^bb43
     // CHECK: ^bb22:
     // CHECK:   [[VAL_75:%.*]] = arith.index_cast [[VAL_27]] : i32 to index
     // CHECK:   [[VAL_76:%.*]] = memref.load [[VAL_1]]{{\[}}[[VAL_75]]] : memref<32xf32, #gpu.address_space<workgroup>>
@@ -169,11 +169,15 @@ gpu.module @kernels {
     // CHECK:   [[VAL_112:%.*]] = arith.addf [[VAL_109]], [[VAL_110]] : f32
     // CHECK:   cf.br ^bb40([[VAL_112]] : f32)
     // CHECK: ^bb40([[VAL_113:%.*]]: f32):
-    // CHECK:   store [[VAL_113]], [[VAL_1]]{{\[}}[[VAL_4]]] : memref<32xf32, #gpu.address_space<workgroup>>
-    // CHECK:   cf.br ^bb42
+    // CHECK:   cf.cond_br [[VAL_30]], ^bb41, ^bb42
     // CHECK: ^bb41:
-    // CHECK:   cf.br ^bb42
+    // CHECK:   store [[VAL_113]], [[VAL_1]]{{\[}}[[VAL_4]]] : memref<32xf32, #gpu.address_space<workgroup>>
+    // CHECK:   cf.br ^bb43
     // CHECK: ^bb42:
+    // CHECK:   cf.br ^bb43
+    // CHECK: ^bb43:
+    // CHECK:   cf.br ^bb44
+    // CHECK: ^bb44:
     // CHECK:   gpu.barrier memfence [#gpu.address_space<workgroup>]
     %sum = gpu.all_reduce add %arg0 uniform {} : (f32) -> (f32)
     gpu.return
