@@ -225,7 +225,7 @@ define <4 x i64> @lshl_add_u64_vvv_and_2_v4(<4 x i64> %v, <4 x i64> %a, <4 x i64
 ; GFX1250-GISEL-DAG: v_and_b32_e32 [[AND2:v[0-9:]+]], 2, v{{[0-9:]+}}
 ; GFX1250-GISEL-DAG: v_and_b32_e32 [[AND1:v[0-9:]+]], 3, v{{[0-9:]+}}
 ; GFX1250-GISEL-DAG: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND1]], v[{{[0-9:]+}}]
-; GFX1250-GISEL-DAG v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND2]], v[{{[0-9:]+}}]
+; GFX1250-GISEL-DAG: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND2]], v[{{[0-9:]+}}]
 ; GFX1250-GISEL: v_add_nc_u64_e32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
   %and = and <4 x i64> %s, <i64 1, i64 2, i64 3, i64 5>
   %shl = shl <4 x i64> %v, %and
