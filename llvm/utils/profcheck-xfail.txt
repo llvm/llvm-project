@@ -27,8 +27,6 @@ Transforms/IndVarSimplify/eliminate-rem.ll
 Transforms/IndVarSimplify/pr45835.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/IndirectBrExpand/basic.ll
-Transforms/InstCombine/bitreverse.ll
-Transforms/InstCombine/builtin-dynamic-object-size.ll
 Transforms/InstCombine/canonicalize-clamp-like-pattern-between-negative-and-positive-thresholds.ll
 Transforms/InstCombine/canonicalize-clamp-like-pattern-between-zero-and-positive-threshold.ll
 Transforms/InstCombine/cast-mul-select.ll
@@ -68,7 +66,6 @@ Transforms/InstCombine/strrchr-3.ll
 Transforms/InstCombine/truncating-saturate.ll
 Transforms/InstCombine/unordered-fcmp-select.ll
 Transforms/InstCombine/xor-and-or.ll
-Transforms/InstCombine/zext-bool-add-sub.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte.ll
 Transforms/LoopIdiom/AArch64/find-first-byte-nested.ll

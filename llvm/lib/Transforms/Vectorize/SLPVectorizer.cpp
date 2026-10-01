@@ -337,6 +337,15 @@ static cl::opt<unsigned> SLPRuntimeAliasChecksMaxScalarCostPercent(
              "guarded scalar region cost, before versioning is rejected to "
              "avoid pessimizing the scalar fallback path."));
 
+/// The scalar loop left by the loop vectorizer runs only a few iterations or
+/// the ranges its runtime checks found overlapping, where the checks executed
+/// on each iteration are unlikely to pay off, so they get a tighter bound.
+static cl::opt<unsigned> SLPVecLoopRTChecksCostPercent(
+    "slp-vec-loop-rt-checks-cost-percent", cl::init(10), cl::Hidden,
+    cl::desc("Maximum SLP runtime alias check cost, as a percentage of the "
+             "guarded scalar region cost, for blocks of loops already "
+             "vectorized by the loop vectorizer."));
+
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -536,15 +545,15 @@ public:
     RTOrigBodyOrder.clear();
   }
 
-  /// Snapshots RTChecks.BB's body (non-PHI, non-terminator) into
+  /// Snapshots RTChecks.BB's body (non-PHI, non-alloca, non-terminator) into
   /// RTOrigBodyOrder in program order, for the scalar fallback.
   void captureRuntimeCheckBodySnapshot();
 
   /// Returns true if \p BB satisfies the block-level preconditions for runtime
-  /// alias check versioning (straight-line, outside any loop, duplicable, not a
-  /// scalar fallback, function not optimized for size). These checks do not
-  /// depend on the collected checks, so they can gate the (expensive)
-  /// optimistic retry before any tree is rebuilt.
+  /// alias check versioning (straight-line, duplicable, not a scalar fallback,
+  /// function not optimized for size). These checks do not depend on the
+  /// collected checks, so they can gate the (expensive) optimistic retry before
+  /// any tree is rebuilt.
   bool canVersionBlockForRuntimeChecks(BasicBlock *BB) const;
 
   /// Returns true if the runtime alias checks can be safely emitted to guard
@@ -2497,9 +2506,9 @@ private:
   uint64_t getNumScalarInsts(bool HasTreeLoop);
 
   /// Estimates the number of vector instructions (including buildvectors,
-  /// shuffles, and extracts) the tree produces, weighted like
-  /// getNumScalarInsts().
-  uint64_t getNumVectorInsts(bool HasTreeLoop);
+  /// shuffles, and, if \p CountExtracts is set, extracts) the tree produces,
+  /// weighted like getNumScalarInsts().
+  uint64_t getNumVectorInsts(bool HasTreeLoop, bool CountExtracts = true);
 
   /// Returns true if the instruction-count veto is skipped for a tree costed at
   /// \p TreeCost because it contains a poor-throughput operation whose real
@@ -3765,7 +3774,8 @@ private:
   /// the CFG. Used to drop CFG-analysis preservation for the run.
   bool CFGChanged = false;
 
-  /// Guarded block body (non-PHI, non-terminator) in original source order.
+  /// Guarded block body (non-PHI, non-alloca, non-terminator) in original
+  /// source order.
   SmallVector<Instruction *> RTOrigBodyOrder;
 
   using AliasCacheKey = std::pair<Instruction *, Instruction *>;
@@ -13374,7 +13384,7 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
   return Total;
 }
 
-uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
+uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
   uint64_t Total = 0;
   // Source vector -> max scale among the gather entries sharing it, so the
   // combined shufflevector is still weighted like an in-loop entry below.
@@ -13453,6 +13463,8 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
   }
   for (const auto &VecAndScale : GatherExtractSourceVecs)
     Total = SaturatingAdd(Total, VecAndScale.second);
+  if (!CountExtracts)
+    return Total;
   // Count extract instructions from ExternalUses, skipping insertelements
   // (those get folded into shuffles, not real extracts).
   SmallPtrSet<Value *, 8> CountedExtracts;
@@ -20090,6 +20102,31 @@ template <typename T> struct ShuffledInsertData {
 };
 } // namespace
 
+/// \returns true if more values with the scalar type \p Ty than registers are
+/// live at some point of the block \p BB. The blocks larger than the scheduling
+/// budget are skipped to save compile time.
+static bool hasHighRegisterPressure(const BasicBlock &BB, Type *Ty,
+                                    const TargetTransformInfo &TTI) {
+  if (hasNItemsOrMore(BB, ScheduleRegionSizeBudget))
+    return false;
+  const unsigned NumRegs = TTI.getNumberOfRegisters(
+      TTI.getRegisterClassForType(/*Vector=*/false, Ty));
+  auto IsLiveCandidate = [&](const Value *V) {
+    return isa<Instruction, Argument>(V) && V->getType()->getScalarType() == Ty;
+  };
+  SmallPtrSet<const Value *, 32> Live;
+  for (const Instruction &I : reverse(BB)) {
+    // The operands of the PHIs are live in the predecessors.
+    if (isa<PHINode>(I))
+      break;
+    Live.erase(&I);
+    Live.insert_range(make_filter_range(I.operand_values(), IsLiveCandidate));
+    if (Live.size() > NumRegs)
+      return true;
+  }
+  return false;
+}
+
 InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                                      ArrayRef<Value *> VectorizedVals,
                                      InstructionCost ReductionCost,
@@ -20111,6 +20148,18 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       TreeLoop = LI->getLoopFor(getRootNode().getMainOp()->getParent());
     uint64_t NumScalar = getNumScalarInsts(TreeLoop);
     uint64_t NumVector = getNumVectorInsts(TreeLoop);
+    // In loops, the extracts are not scaled by the trip count and just break
+    // the ties of the scaled counts. Ignore them under the high register
+    // pressure: the vector code holds several lanes per register.
+    if (NumVector > NumScalar && TreeLoop && !ExternalUses.empty()) {
+      const uint64_t NumNoExtracts =
+          getNumVectorInsts(TreeLoop, /*CountExtracts=*/false);
+      Instruction *Root = getRootNode().getMainOp();
+      if (NumNoExtracts <= NumScalar &&
+          hasHighRegisterPressure(*Root->getParent(),
+                                  getValueType(Root, SLPReVec), *TTI))
+        NumVector = NumNoExtracts;
+    }
     LLVM_DEBUG(dbgs() << "SLP: Inst count check: vector=" << NumVector
                       << " scalar=" << NumScalar << "\n");
     if (NumVector > NumScalar && !bypassesInstCountCheck(TreeCost)) {
@@ -25437,8 +25486,9 @@ void BoUpSLP::captureRuntimeCheckBodySnapshot() {
   if (!TryRuntimeAliasChecks || !RTChecks.BB)
     return;
   BasicBlock *BB = RTChecks.BB;
+  // Allocas are not duplicated, keep them in the header block.
   for (Instruction &I : *BB)
-    if (!isa<PHINode>(&I) && !I.isTerminator())
+    if (!isa<PHINode, AllocaInst>(&I) && !I.isTerminator())
       RTOrigBodyOrder.push_back(&I);
 }
 
@@ -25484,10 +25534,6 @@ bool BoUpSLP::canVersionBlockForRuntimeChecks(BasicBlock *BB) const {
     return false;
   if (!DT->isReachableFromEntry(BB))
     return false;
-  // Versioning duplicates the block body; only straight-line code outside any
-  // loop is handled for now, to avoid LoopInfo and region updates.
-  if (LI->getLoopFor(BB))
-    return false;
   // Never version a scalar fallback block: it is the safe, original-order copy
   // taken when aliasing is detected and must stay scalar.
   if (ScalarFallbackBlocks.contains(BB))
@@ -25505,6 +25551,11 @@ bool BoUpSLP::canVersionBlockForRuntimeChecks(BasicBlock *BB) const {
         auto *CB = dyn_cast<CallBase>(&I);
         return CB && (CB->cannotDuplicate() || CB->isConvergent());
       }))
+    return false;
+  // Only static allocas at the start of the entry block can stay in the header
+  // block, any other alloca would have to be duplicated with the body.
+  if (any_of(make_range(BB->getFirstNonPHIOrDbgOrAlloca(), BB->end()),
+             IsaPred<AllocaInst>))
     return false;
   return true;
 }
@@ -25543,9 +25594,9 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
     Bases.insert(P.second);
   }
   // Every base object must be available in the (PHI-only) header where the
-  // guard branch is emitted.
+  // guard branch is emitted, i.e. be one of its PHIs or dominate it.
   if (any_of(make_isa_range<Instruction>(Bases), [&](const Instruction *I) {
-        return I->getParent() == BB || !DT->dominates(I, BB);
+        return I->getParent() == BB ? !isa<PHINode>(I) : !DT->dominates(I, BB);
       }))
     return false;
 
@@ -25602,40 +25653,32 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
       It->second.second = SE->getUMaxExpr(It->second.second, EndOff);
     }
   }
+  // Every involved base must contribute at least one bounded access.
+  if (OffBounds.size() != Bases.size())
+    return false;
   // Materialize the absolute [Low, High) = base + [minOff, maxEndOff). The
   // offsets are constants, so each bound is a base-plus-constant expression
   // that expands to a single add off the base address (no runtime umin/umax).
+  // The base is used as an opaque value, so the bounds only reference the base
+  // itself, available at the guard, and a loop-variant base (e.g. a header PHI)
+  // is reused rather than recomputed from its recurrence.
   for (const auto &[Base, Off] : OffBounds) {
-    const SCEV *BaseSC = SE->getPtrToAddrExpr(SE->getSCEV(Base));
+    const SCEV *BaseSC = SE->getPtrToAddrExpr(SE->getUnknown(Base));
     RTChecks.Bounds.try_emplace(Base, SE->getAddExpr(BaseSC, Off.first),
                                 SE->getAddExpr(BaseSC, Off.second));
   }
-  // Every involved base must contribute at least one bounded access, and its
-  // bounds must be expandable at the guard (so the checks only reference values
-  // available in the header).
-  SCEVExpander Exp(*SE, "slp.rtcheck");
-  // The guard is emitted after the header PHIs, so validate expandability at
-  // the first non-PHI: only values available in the header (PHIs, arguments,
-  // values defined before the block) dominate that point.
-  Instruction *GuardPt = &*BB->getFirstNonPHIIt();
-  if (any_of(Bases, [&](const Value *Base) {
-        auto *It = RTChecks.Bounds.find(Base);
-        return It == RTChecks.Bounds.end() ||
-               !Exp.isSafeToExpandAt(It->second.first, GuardPt) ||
-               !Exp.isSafeToExpandAt(It->second.second, GuardPt);
-      }))
-    return false;
 
-  // No SSA value defined in the body may escape the versioned region: that
-  // would require a merge PHI in the continuation block, which is not yet
-  // supported. A use by the terminator counts as an escape because the
-  // terminator is moved into the continuation block.
-  for (Instruction &I : make_filter_range(*BB, [](Instruction &I) {
-         return !isa<PHINode>(&I) && !I.isTerminator();
+  // SSA values defined in the body and used outside of it are merged from both
+  // paths in the continuation block, so they must stay scalar. Uses by the
+  // terminator (moved into the continuation block) and by the block's PHIs
+  // (via the loop latch) count as outside.
+  for (Instruction &I : make_filter_range(*BB, [&](Instruction &I) {
+         return !isa<PHINode>(&I) && !I.isTerminator() && isVectorized(&I);
        })) {
     if (any_of(I.users(), [&](User *U) {
           auto *UI = dyn_cast<Instruction>(U);
-          return !UI || UI->getParent() != BB || UI->isTerminator();
+          return !UI || UI->getParent() != BB || isa<PHINode>(UI) ||
+                 UI->isTerminator();
         }))
       return false;
   }
@@ -25654,8 +25697,12 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
   InstructionCost CheckCost = getRuntimeChecksCost();
   if (!ScalarCost.isValid() || !CheckCost.isValid())
     return false;
-  if (CheckCost * 100 >
-      ScalarCost * SLPRuntimeAliasChecksMaxScalarCostPercent.getValue())
+  const Loop *L = LI->getLoopFor(BB);
+  unsigned MaxPercent =
+      L && getBooleanLoopAttribute(L, "llvm.loop.isvectorized")
+          ? SLPVecLoopRTChecksCostPercent
+          : SLPRuntimeAliasChecksMaxScalarCostPercent;
+  if (CheckCost * 100 > ScalarCost * MaxPercent)
     return false;
 
   // Freeze the check set so the final scheduleBlock() keeps the same dropped
@@ -25797,6 +25844,21 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
   for (BasicBlock *Succ : successors(Term))
     Succ->replacePhiUsesWith(BB, Tail);
 
+  // Merge the body values used outside of the versioned region (by the
+  // terminator, across the loop latch or in other blocks) from both paths. The
+  // SCEVs cached for the outside users refer to the body values, which no
+  // longer dominate them.
+  for (Instruction *I : RTOrigBodyOrder) {
+    if (!I->isUsedOutsideOfBlock(VecBB))
+      continue;
+    SE->forgetValue(I);
+    PHINode *Merge = PHINode::Create(I->getType(), 2, I->getName() + ".rtmerge",
+                                     Tail->getFirstNonPHIIt());
+    I->replaceUsesOutsideBlock(Merge, VecBB);
+    Merge->addIncoming(I, VecBB);
+    Merge->addIncoming(VMap.lookup(I), ScalarBB);
+  }
+
   // Keep the dominator tree valid for the remainder of the run.
   if (DT) {
     DomTreeUpdater DTU(*DT, DomTreeUpdater::UpdateStrategy::Eager);
@@ -25819,6 +25881,11 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
     // instructions across blocks for nodes emitted after versioning.
     DT->updateDFSNumbers();
   }
+  // Keep the loop info valid for the remainder of the run: the new blocks
+  // belong to the loop of the versioned block.
+  if (Loop *L = LI->getLoopFor(BB))
+    for (BasicBlock *NewBB : {VecBB, ScalarBB, Tail})
+      L->addBasicBlockToLoop(NewBB, *LI);
 
   // Record the checked base pairs for the fast-path block so that subsequent
   // vectorization there can reuse this guard instead of versioning again.
@@ -25860,6 +25927,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     // Need to generate insertion point for loads nodes of the bitcast/bswap
     // ops.
     if (TE->isGather() || DeletedNodes.contains(TE.get()) ||
+        TE->State == TreeEntry::SplitVectorize ||
         (TE->State == TreeEntry::CombinedVectorize &&
          (TE->CombinedOp == TreeEntry::ReducedBitcast ||
           TE->CombinedOp == TreeEntry::ReducedBitcastBSwap ||
@@ -29282,7 +29350,7 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   if (R.runtimeChecksFailedForBlock(BB))
     return Res;
   // The retry rebuilds the whole tree; also skip it when the chain's block can
-  // never be versioned (e.g. it is inside a loop).
+  // never be versioned (e.g. the function is optimized for size).
   if (!R.canVersionBlockForRuntimeChecks(BB)) {
     R.markRuntimeChecksFailedForBlock(BB);
     return Res;
@@ -32810,9 +32878,9 @@ public:
         for (unsigned Cnt = 0; Cnt < NumReducedVals; ++Cnt) {
           if (Cnt >= Pos && Cnt < Pos + ReduxWidth)
             continue;
-          Value *RdxVal = Candidates[Cnt];
-          if (auto It = TrackedVals.find(RdxVal); It != TrackedVals.end())
-            RdxVal = It->second;
+          // The candidate may be replaced by the previous vectorization
+          // attempts, use the currently tracked value.
+          Value *RdxVal = TrackedVals.at(TrackedToOrig[Cnt]);
           if (!Visited.insert(RdxVal).second)
             continue;
           // Scalars not reduced by the top node may be used by the reduction
@@ -36434,8 +36502,15 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
 
   // Attempt to sort and vectorize each of the store-groups.
   DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>> Attempted;
-  for (auto &Pair : make_filter_range(
-           Stores, [](auto &Pair) { return Pair.second.size() >= 2; })) {
+  // The longer groups go first: the shorter ones sharing the scalars with them
+  // then reuse their vectors instead of splitting the longer chains.
+  SmallVector<StoreListMap::value_type *> Groups(make_pointer_range(Stores));
+  stable_sort(Groups, [](const auto *A, const auto *B) {
+    return A->second.size() > B->second.size();
+  });
+  for (auto &Pair :
+       make_filter_range(make_pointee_range(Groups),
+                         [](auto &Pair) { return Pair.second.size() >= 2; })) {
     LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length "
                       << Pair.second.size() << ".\n");
 

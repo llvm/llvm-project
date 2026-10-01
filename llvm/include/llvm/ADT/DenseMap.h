@@ -531,15 +531,151 @@ public:
 
 } // namespace densemap::detail
 
-// Befriended below so DenseMapBase can expose its bucket-relocation callback
-// erase to ValueHandleBase, the only caller that caches bucket pointers.
-class ValueHandleBase;
-
 template <typename KeyT, typename ValueT,
           typename KeyInfoT = DenseMapInfo<KeyT>,
           typename Bucket = llvm::detail::DenseMapPair<KeyT, ValueT>,
           bool IsConst = false>
-class DenseMapIterator;
+class DenseMapIterator : DebugEpochBase::HandleBase {
+  friend class DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, true>;
+  friend class DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, false>;
+
+  using UsedT = llvm::densemap::detail::UsedT;
+
+public:
+  using difference_type = ptrdiff_t;
+  using value_type = std::conditional_t<IsConst, const Bucket, Bucket>;
+  using pointer = value_type *;
+  using reference = value_type &;
+  using iterator_category = std::forward_iterator_tag;
+
+private:
+  using BucketItTy =
+      std::conditional_t<shouldReverseIterate<KeyT>(),
+                         std::reverse_iterator<pointer>, pointer>;
+
+  BucketItTy Ptr = {};
+  BucketItTy End = {};
+  // The non-reversed bucket base and the parallel used array.  They map a
+  // bucket back to its index so AdvancePastEmptyBuckets can consult the bits.
+  pointer Buckets = {};
+  const UsedT *Used = {};
+
+  DenseMapIterator(BucketItTy Pos, BucketItTy E, pointer BucketsBase,
+                   const UsedT *U, const DebugEpochBase &Epoch)
+      : DebugEpochBase::HandleBase(&Epoch), Ptr(Pos), End(E),
+        Buckets(BucketsBase), Used(U) {
+    assert(isHandleInSync() && "invalid construction!");
+  }
+
+public:
+  DenseMapIterator() = default;
+
+  static DenseMapIterator makeBegin(pointer Buckets, const UsedT *Used,
+                                    unsigned NumBuckets, bool IsEmpty,
+                                    const DebugEpochBase &Epoch) {
+    // When the map is empty, avoid the overhead of advancing/retreating past
+    // empty buckets.
+    if (IsEmpty)
+      return makeEnd(Buckets, Used, NumBuckets, Epoch);
+    auto R = maybeReverse(llvm::make_range(Buckets, Buckets + NumBuckets));
+    DenseMapIterator Iter(R.begin(), R.end(), Buckets, Used, Epoch);
+    Iter.AdvancePastEmptyBuckets();
+    return Iter;
+  }
+
+  static DenseMapIterator makeEnd(pointer Buckets, const UsedT *Used,
+                                  unsigned NumBuckets,
+                                  const DebugEpochBase &Epoch) {
+    auto R = maybeReverse(llvm::make_range(Buckets, Buckets + NumBuckets));
+    return DenseMapIterator(R.end(), R.end(), Buckets, Used, Epoch);
+  }
+
+  static DenseMapIterator makeIterator(pointer P, pointer Buckets,
+                                       const UsedT *Used, unsigned NumBuckets,
+                                       const DebugEpochBase &Epoch) {
+    auto R = maybeReverse(llvm::make_range(Buckets, Buckets + NumBuckets));
+    constexpr int Offset = shouldReverseIterate<KeyT>() ? 1 : 0;
+    return DenseMapIterator(BucketItTy(P + Offset), R.end(), Buckets, Used,
+                            Epoch);
+  }
+
+  // Converting ctor from non-const iterators to const iterators. SFINAE'd out
+  // for const iterator destinations so it doesn't end up as a user defined copy
+  // constructor.
+  template <bool IsConstSrc,
+            typename = std::enable_if_t<!IsConstSrc && IsConst>>
+  DenseMapIterator(
+      const DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, IsConstSrc> &I)
+      : DebugEpochBase::HandleBase(I), Ptr(I.Ptr), End(I.End),
+        Buckets(I.Buckets), Used(I.Used) {}
+
+  [[nodiscard]] reference operator*() const {
+    assert(isHandleInSync() && "invalid iterator access!");
+    assert(Ptr != End && "dereferencing end() iterator");
+    return *Ptr;
+  }
+  [[nodiscard]] pointer operator->() const { return &operator*(); }
+
+  [[nodiscard]] friend bool operator==(const DenseMapIterator &LHS,
+                                       const DenseMapIterator &RHS) {
+    assert(LHS.isComparableWith(RHS) && "incomparable iterators!");
+    return LHS.Ptr == RHS.Ptr;
+  }
+
+  [[nodiscard]] friend bool operator!=(const DenseMapIterator &LHS,
+                                       const DenseMapIterator &RHS) {
+    return !(LHS == RHS);
+  }
+
+  inline DenseMapIterator &operator++() { // Preincrement
+    assert(isHandleInSync() && "invalid iterator access!");
+    assert(Ptr != End && "incrementing end() iterator");
+    ++Ptr;
+    AdvancePastEmptyBuckets();
+    return *this;
+  }
+  DenseMapIterator operator++(int) { // Postincrement
+    assert(isHandleInSync() && "invalid iterator access!");
+    DenseMapIterator tmp = *this;
+    ++*this;
+    return tmp;
+  }
+
+private:
+  void AdvancePastEmptyBuckets() {
+    if constexpr (shouldReverseIterate<KeyT>()) {
+      while (Ptr != End && !llvm::densemap::detail::used(Used, &*Ptr - Buckets))
+        ++Ptr;
+    } else {
+      // Forward iteration skips empty buckets a used-word (32 buckets) at a
+      // time: scan from the current index for the next set occupancy bit.
+      const size_t N = End - Buckets;
+      size_t I = Ptr - Buckets;
+      if (I >= N) {
+        Ptr = End;
+        return;
+      }
+      const size_t NW = llvm::densemap::detail::usedWords(N);
+      size_t W = I >> 5;
+      UsedT Bits = Used[W] & (~UsedT(0) << (I & 31));
+      while (Bits == 0) {
+        if (++W == NW) {
+          Ptr = End;
+          return;
+        }
+        Bits = Used[W];
+      }
+      Ptr = Buckets + ((W << 5) + llvm::countr_zero(Bits));
+    }
+  }
+
+  static auto maybeReverse(iterator_range<pointer> Range) {
+    if constexpr (shouldReverseIterate<KeyT>())
+      return reverse(Range);
+    else
+      return Range;
+  }
+};
 
 template <typename StorageT, typename KeyT, typename ValueT, typename KeyInfoT,
           typename BucketT>
@@ -807,10 +943,6 @@ public:
     return Ret;
   }
 
-  void eraseFromFilledBucket(BucketT *TheBucket) {
-    eraseFromFilledBucket(TheBucket, [](BucketT &) {});
-  }
-
   bool erase(const KeyT &Val) {
     BucketT *TheBucket = doFind(Val);
     if (!TheBucket)
@@ -1046,17 +1178,9 @@ protected:
   }
 
 private:
-  // ValueHandleBase caches pointers into the bucket array, so it needs the
-  // callback erase below to fix them up as entries shift. It is the only
-  // intended caller; do not add new ones.
-  friend class ValueHandleBase;
-
   /// Erase the entry at \p TheBucket and close the resulting hole via Knuth
-  /// TAOCP 6.4 Algorithm R. For callers that cache pointers into the bucket
-  /// array, call \p OnMoved per shifted bucket.
-  template <typename OnMovedT>
-  LLVM_ATTRIBUTE_NOINLINE void eraseFromFilledBucket(BucketT *TheBucket,
-                                                     OnMovedT &&OnMoved) {
+  /// TAOCP 6.4 Algorithm R.
+  LLVM_ATTRIBUTE_NOINLINE void eraseFromFilledBucket(BucketT *TheBucket) {
     incrementEpoch();
     TheBucket->getSecond().~ValueT();
     TheBucket->getFirst().~KeyT();
@@ -1081,22 +1205,10 @@ private:
         ::new (&BI.getSecond()) ValueT(std::move(BJ.getSecond()));
         BJ.getSecond().~ValueT();
         BJ.getFirst().~KeyT();
-        OnMoved(BI);
         I = J;
       }
     }
     llvm::densemap::detail::unsetUsed(U, I);
-  }
-
-  /// Erase \p Val and close the resulting hole by potentially shifting other
-  /// entries into it. For callers that cache pointers into the bucket array,
-  /// call \p OnMoved per shifted bucket.
-  template <typename OnMovedT> bool erase(const KeyT &Val, OnMovedT &&OnMoved) {
-    BucketT *TheBucket = doFind(Val);
-    if (!TheBucket)
-      return false;
-    eraseFromFilledBucket(TheBucket, std::forward<OnMovedT>(OnMoved));
-    return true;
   }
 
   template <typename KeyArgT, typename... Ts>
@@ -1329,150 +1441,6 @@ class SmallDenseMap
 
 public:
   using BaseT::BaseT;
-};
-
-template <typename KeyT, typename ValueT, typename KeyInfoT, typename Bucket,
-          bool IsConst>
-class DenseMapIterator : DebugEpochBase::HandleBase {
-  friend class DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, true>;
-  friend class DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, false>;
-
-  using UsedT = llvm::densemap::detail::UsedT;
-
-public:
-  using difference_type = ptrdiff_t;
-  using value_type = std::conditional_t<IsConst, const Bucket, Bucket>;
-  using pointer = value_type *;
-  using reference = value_type &;
-  using iterator_category = std::forward_iterator_tag;
-
-private:
-  using BucketItTy =
-      std::conditional_t<shouldReverseIterate<KeyT>(),
-                         std::reverse_iterator<pointer>, pointer>;
-
-  BucketItTy Ptr = {};
-  BucketItTy End = {};
-  // The non-reversed bucket base and the parallel used array.  They map a
-  // bucket back to its index so AdvancePastEmptyBuckets can consult the bits.
-  pointer Buckets = {};
-  const UsedT *Used = {};
-
-  DenseMapIterator(BucketItTy Pos, BucketItTy E, pointer BucketsBase,
-                   const UsedT *U, const DebugEpochBase &Epoch)
-      : DebugEpochBase::HandleBase(&Epoch), Ptr(Pos), End(E),
-        Buckets(BucketsBase), Used(U) {
-    assert(isHandleInSync() && "invalid construction!");
-  }
-
-public:
-  DenseMapIterator() = default;
-
-  static DenseMapIterator makeBegin(pointer Buckets, const UsedT *Used,
-                                    unsigned NumBuckets, bool IsEmpty,
-                                    const DebugEpochBase &Epoch) {
-    // When the map is empty, avoid the overhead of advancing/retreating past
-    // empty buckets.
-    if (IsEmpty)
-      return makeEnd(Buckets, Used, NumBuckets, Epoch);
-    auto R = maybeReverse(llvm::make_range(Buckets, Buckets + NumBuckets));
-    DenseMapIterator Iter(R.begin(), R.end(), Buckets, Used, Epoch);
-    Iter.AdvancePastEmptyBuckets();
-    return Iter;
-  }
-
-  static DenseMapIterator makeEnd(pointer Buckets, const UsedT *Used,
-                                  unsigned NumBuckets,
-                                  const DebugEpochBase &Epoch) {
-    auto R = maybeReverse(llvm::make_range(Buckets, Buckets + NumBuckets));
-    return DenseMapIterator(R.end(), R.end(), Buckets, Used, Epoch);
-  }
-
-  static DenseMapIterator makeIterator(pointer P, pointer Buckets,
-                                       const UsedT *Used, unsigned NumBuckets,
-                                       const DebugEpochBase &Epoch) {
-    auto R = maybeReverse(llvm::make_range(Buckets, Buckets + NumBuckets));
-    constexpr int Offset = shouldReverseIterate<KeyT>() ? 1 : 0;
-    return DenseMapIterator(BucketItTy(P + Offset), R.end(), Buckets, Used,
-                            Epoch);
-  }
-
-  // Converting ctor from non-const iterators to const iterators. SFINAE'd out
-  // for const iterator destinations so it doesn't end up as a user defined copy
-  // constructor.
-  template <bool IsConstSrc,
-            typename = std::enable_if_t<!IsConstSrc && IsConst>>
-  DenseMapIterator(
-      const DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, IsConstSrc> &I)
-      : DebugEpochBase::HandleBase(I), Ptr(I.Ptr), End(I.End),
-        Buckets(I.Buckets), Used(I.Used) {}
-
-  [[nodiscard]] reference operator*() const {
-    assert(isHandleInSync() && "invalid iterator access!");
-    assert(Ptr != End && "dereferencing end() iterator");
-    return *Ptr;
-  }
-  [[nodiscard]] pointer operator->() const { return &operator*(); }
-
-  [[nodiscard]] friend bool operator==(const DenseMapIterator &LHS,
-                                       const DenseMapIterator &RHS) {
-    assert(LHS.isComparableWith(RHS) && "incomparable iterators!");
-    return LHS.Ptr == RHS.Ptr;
-  }
-
-  [[nodiscard]] friend bool operator!=(const DenseMapIterator &LHS,
-                                       const DenseMapIterator &RHS) {
-    return !(LHS == RHS);
-  }
-
-  inline DenseMapIterator &operator++() { // Preincrement
-    assert(isHandleInSync() && "invalid iterator access!");
-    assert(Ptr != End && "incrementing end() iterator");
-    ++Ptr;
-    AdvancePastEmptyBuckets();
-    return *this;
-  }
-  DenseMapIterator operator++(int) { // Postincrement
-    assert(isHandleInSync() && "invalid iterator access!");
-    DenseMapIterator tmp = *this;
-    ++*this;
-    return tmp;
-  }
-
-private:
-  void AdvancePastEmptyBuckets() {
-    if constexpr (shouldReverseIterate<KeyT>()) {
-      while (Ptr != End && !llvm::densemap::detail::used(Used, &*Ptr - Buckets))
-        ++Ptr;
-    } else {
-      // Forward iteration skips empty buckets a used-word (32 buckets) at a
-      // time: scan from the current index for the next set occupancy bit.
-      const size_t N = End - Buckets;
-      size_t I = Ptr - Buckets;
-      if (I >= N) {
-        Ptr = End;
-        return;
-      }
-      const size_t NW = llvm::densemap::detail::usedWords(N);
-      size_t W = I >> 5;
-      UsedT Bits = Used[W] & (~UsedT(0) << (I & 31));
-      while (Bits == 0) {
-        if (++W == NW) {
-          Ptr = End;
-          return;
-        }
-        Bits = Used[W];
-      }
-      Ptr = Buckets + ((W << 5) + llvm::countr_zero(Bits));
-    }
-  }
-
-  static auto maybeReverse(iterator_range<pointer> Range) {
-    if constexpr (shouldReverseIterate<KeyT>())
-      return reverse(Range);
-    else
-      return Range;
-  }
 };
 
 template <typename KeyT, typename ValueT, typename KeyInfoT>
