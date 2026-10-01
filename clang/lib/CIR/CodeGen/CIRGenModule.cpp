@@ -37,6 +37,7 @@
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/ModuleUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -148,6 +149,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   }
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+  theModule->setAttr(cir::CIRDialect::getTargetABIAttrName(),
+                     builder.getStringAttr(getTarget().getABI()));
   if (llvm::VersionTuple sdkVersion = getTarget().getSDKVersion();
       !sdkVersion.empty())
     theModule->setAttr(cir::CIRDialect::getSDKVersionAttrName(),
@@ -1828,34 +1831,8 @@ bool CIRGenModule::supportsCOMDAT() const {
   return getTriple().supportsCOMDAT();
 }
 
-static bool shouldBeInCOMDAT(CIRGenModule &cgm, const Decl &d) {
-  if (!cgm.supportsCOMDAT())
-    return false;
-
-  if (d.hasAttr<SelectAnyAttr>())
-    return true;
-
-  GVALinkage linkage;
-  if (auto *vd = dyn_cast<VarDecl>(&d))
-    linkage = cgm.getASTContext().GetGVALinkageForVariable(vd);
-  else
-    linkage =
-        cgm.getASTContext().GetGVALinkageForFunction(cast<FunctionDecl>(&d));
-
-  switch (linkage) {
-  case clang::GVA_Internal:
-  case clang::GVA_AvailableExternally:
-  case clang::GVA_StrongExternal:
-    return false;
-  case clang::GVA_DiscardableODR:
-  case clang::GVA_StrongODR:
-    return true;
-  }
-  llvm_unreachable("No such linkage");
-}
-
 void CIRGenModule::maybeSetTrivialComdat(const Decl &d, mlir::Operation *op) {
-  if (!shouldBeInCOMDAT(*this, d))
+  if (!CodeGenUtils::shouldBeInCOMDAT(getASTContext(), d))
     return;
   if (auto globalOp = dyn_cast_or_null<cir::GlobalOp>(op)) {
     globalOp.setComdat(true);
@@ -1969,82 +1946,6 @@ cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
   return gv;
 }
 
-// TODO(CIR): this could be a common method between LLVM codegen.
-static bool isVarDeclStrongDefinition(const ASTContext &astContext,
-                                      CIRGenModule &cgm, const VarDecl *vd,
-                                      bool noCommon) {
-  // Don't give variables common linkage if -fno-common was specified unless it
-  // was overridden by a NoCommon attribute.
-  if ((noCommon || vd->hasAttr<NoCommonAttr>()) && !vd->hasAttr<CommonAttr>())
-    return true;
-
-  // C11 6.9.2/2:
-  //   A declaration of an identifier for an object that has file scope without
-  //   an initializer, and without a storage-class specifier or with the
-  //   storage-class specifier static, constitutes a tentative definition.
-  if (vd->getInit() || vd->hasExternalStorage())
-    return true;
-
-  // A variable cannot be both common and exist in a section.
-  if (vd->hasAttr<SectionAttr>())
-    return true;
-
-  // A variable cannot be both common and exist in a section.
-  // We don't try to determine which is the right section in the front-end.
-  // If no specialized section name is applicable, it will resort to default.
-  if (vd->hasAttr<PragmaClangBSSSectionAttr>() ||
-      vd->hasAttr<PragmaClangDataSectionAttr>() ||
-      vd->hasAttr<PragmaClangRelroSectionAttr>() ||
-      vd->hasAttr<PragmaClangRodataSectionAttr>())
-    return true;
-
-  // Thread local vars aren't considered common linkage.
-  if (vd->getTLSKind())
-    return true;
-
-  // Tentative definitions marked with WeakImportAttr are true definitions.
-  if (vd->hasAttr<WeakImportAttr>())
-    return true;
-
-  // A variable cannot be both common and exist in a comdat.
-  if (shouldBeInCOMDAT(cgm, *vd))
-    return true;
-
-  // Declarations with a required alignment do not have common linkage in MSVC
-  // mode.
-  if (astContext.getTargetInfo().getCXXABI().isMicrosoft()) {
-    if (vd->hasAttr<AlignedAttr>())
-      return true;
-    QualType varType = vd->getType();
-    if (astContext.isAlignmentRequired(varType))
-      return true;
-
-    if (const auto *rd = varType->getAsRecordDecl()) {
-      for (const FieldDecl *fd : rd->fields()) {
-        if (fd->isBitField())
-          continue;
-        if (fd->hasAttr<AlignedAttr>())
-          return true;
-        if (astContext.isAlignmentRequired(fd->getType()))
-          return true;
-      }
-    }
-  }
-
-  // Microsoft's link.exe doesn't support alignments greater than 32 bytes for
-  // common symbols, so symbols with greater alignment requirements cannot be
-  // common.
-  // Other COFF linkers (ld.bfd and LLD) support arbitrary power-of-two
-  // alignments for common symbols via the aligncomm directive, so this
-  // restriction only applies to MSVC environments.
-  if (astContext.getTargetInfo().getTriple().isKnownWindowsMSVCEnvironment() &&
-      astContext.getTypeAlignIfKnown(vd->getType()) >
-          astContext.toBits(CharUnits::fromQuantity(32)))
-    return true;
-
-  return false;
-}
-
 cir::GlobalLinkageKind
 CIRGenModule::getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
                                          GVALinkage linkage) {
@@ -2103,8 +2004,8 @@ CIRGenModule::getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
   // C++ doesn't have tentative definitions and thus cannot have common
   // linkage.
   if (!getLangOpts().CPlusPlus && isa<VarDecl>(dd) &&
-      !isVarDeclStrongDefinition(astContext, *this, cast<VarDecl>(dd),
-                                 getCodeGenOpts().NoCommon))
+      !CodeGenUtils::isVarDeclStrongDefinition(astContext, cast<VarDecl>(dd),
+                                               getCodeGenOpts().NoCommon))
     return cir::GlobalLinkageKind::CommonLinkage;
 
   // selectany symbols are externally visible, so use weak instead of
@@ -2187,11 +2088,15 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
             builder.createCallOp(noProtoCallOp.getLoc(), newFn, callOperands);
       } else {
         // Build an indirect call whose function-pointer signature matches
-        // the existing call site.
+        // the existing call site.  A prototyped declaration keeps its own
+        // type, ellipsis included, so arguments passed through the ellipsis
+        // stay variadic.  A direct call to an unprototyped declaration, such
+        // as a library call CIRGen emitted by name, keeps its own operand
+        // types and stays non-variadic.
         cir::FuncType origFnType = oldFn.getFunctionType();
         cir::FuncType callFnType =
-            origFnType.isVarArg()
-                ? cir::FuncType::get(origFnType.getInputs(),
+            oldFn.getNoProto()
+                ? cir::FuncType::get(llvm::to_vector(callOperands.getTypes()),
                                      origFnType.getReturnType(),
                                      /*isVarArg=*/false)
                 : origFnType;
@@ -2825,7 +2730,10 @@ static std::string getMangledNameImpl(CIRGenModule &cgm, GlobalDecl gd,
                    "getMangledName: multi-version functions");
     }
   }
-  if (cgm.getLangOpts().GPURelocatableDeviceCode) {
+  // SYCL does not externalize file-scope statics, so RDC does not change the
+  // mangled name.
+  if (cgm.getLangOpts().GPURelocatableDeviceCode &&
+      !cgm.getLangOpts().isSYCL()) {
     cgm.errorNYI(nd->getSourceRange(),
                  "getMangledName: GPU relocatable device code");
   }
@@ -2992,10 +2900,10 @@ bool CIRGenModule::mayBeEmittedEagerly(const ValueDecl *global) {
     // Defer until all versions have been semantically checked.
     if (fd->hasAttr<TargetVersionAttr>() && !fd->isMultiVersion())
       return false;
-    if (langOpts.SYCLIsDevice) {
-      errorNYI(fd->getSourceRange(), "mayBeEmittedEagerly: SYCL");
+    // Defer emission of SYCL kernel entry point functions during device
+    // compilation.
+    if (langOpts.SYCLIsDevice && fd->hasAttr<SYCLKernelEntryPointAttr>())
       return false;
-    }
   }
   const auto *vd = dyn_cast<VarDecl>(global);
   if (vd)
@@ -3311,6 +3219,19 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   if (!isIncompleteFunction && func.isDeclaration())
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
 
+  // Diagnose calls to this function at the backend level, mirroring
+  // CodeGenModule::SetFunctionAttributes's "dontcall-error"/"dontcall-warn".
+  if (const auto *errorAttr = funcDecl->getAttr<ErrorAttr>()) {
+    if (errorAttr->isError())
+      func->setAttr(cir::CIRDialect::getDontCallErrorAttrName(),
+                    mlir::StringAttr::get(&getMLIRContext(),
+                                          errorAttr->getUserDiagnostic()));
+    else if (errorAttr->isWarning())
+      func->setAttr(cir::CIRDialect::getDontCallWarnAttrName(),
+                    mlir::StringAttr::get(&getMLIRContext(),
+                                          errorAttr->getUserDiagnostic()));
+  }
+
   // Mirrors setLinkageForGV in CodeGenModule::SetFunctionAttributes.
   setLinkageForFunction(*this, func, funcDecl);
 
@@ -3434,6 +3355,11 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
     if (isa<CXXMethodDecl>(decl) && f.getAlignment().value_or(1) < 2)
       f.setAlignment(2);
   }
+
+  // Attach "sycl-module-id" to sycl_external function definitions to mark
+  // them as entry points for per-translation-unit device-code splitting.
+  if (getLangOpts().SYCLIsDevice && decl->hasAttr<SYCLExternalAttr>())
+    addSYCLModuleIdAttr(f);
 }
 
 // Maps an AST address space to the OpenCL logical address space kind recorded
