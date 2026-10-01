@@ -11,11 +11,12 @@
 ; RUN:   -filetype=obj | llvm-readobj --hex-dump=.resource_check - | \
 ; RUN:   FileCheck %s --check-prefix=RESOURCES
 ;
-; The syntactic cycle terminates on every path: a(0) calls b(1), which
-; returns; b(0) calls a(1), which calls c(1). All norecurse attributes are
-; therefore valid. The selected emission order closes the cycle at b, and b
-; must retain c's resources through a even though it does not call c directly.
-; The outgoing c edge contributes v47 and a dynamically sized frame.
+; a calls b and c, b calls a, and c calls b, but no call re-enters a
+; function: a(0) calls b(1), which returns; b(0) calls a(1), which calls
+; c(1); c(0) calls b(1), which returns. All norecurse attributes are
+; therefore valid. With c defined first, codegen emits a, b, c, so b closes
+; the cycle while c's symbols are still undefined, and b must still get
+; c's v47 and dynamically sized frame through a.
 ;
 ; CHECK: .set .Lc.num_vgpr, 48
 ; CHECK: .amdhsa_kernel kernel_b
@@ -34,6 +35,19 @@
 
 ;--- input.ll
 target triple = "amdgpu9.00-amd-amdhsa"
+
+define hidden void @c(i32 %mode) noinline optnone norecurse {
+  %frame = alloca i8, i32 %mode, align 16, addrspace(5)
+  store volatile i8 1, ptr addrspace(5) %frame, align 16
+  call void asm sideeffect "v_mov_b32 v47, 0", "~{v47}"()
+  %is0 = icmp eq i32 %mode, 0
+  br i1 %is0, label %call_b, label %done
+call_b:
+  call void @b(i32 1)
+  br label %done
+done:
+  ret void
+}
 
 define hidden void @b(i32 %mode) noinline optnone norecurse {
   %is0 = icmp eq i32 %mode, 0
@@ -55,13 +69,6 @@ call_c:
   call void @c(i32 1)
   br label %done
 done:
-  ret void
-}
-
-define hidden void @c(i32 %mode) noinline optnone norecurse {
-  %frame = alloca i8, i32 %mode, align 16, addrspace(5)
-  store volatile i8 1, ptr addrspace(5) %frame, align 16
-  call void asm sideeffect "v_mov_b32 v47, 0", "~{v47}"()
   ret void
 }
 
