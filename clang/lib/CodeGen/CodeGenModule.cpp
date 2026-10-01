@@ -3296,6 +3296,22 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (CodeGenOpts.DisableOutlining || D->hasAttr<NoOutlineAttr>())
     B.addAttribute(llvm::Attribute::NoOutline);
 
+  // Hints for the optimizer (see -mllvm -inline-use-clang-hints) helping with
+  // linkonce_odr C++ functions: is this a lambda, is it defined in the main
+  // source file, is it declared inline or a template instantiation.
+  if (isLambdaCallOperator(dyn_cast<DeclContext>(D)))
+    B.addAttribute("clang-lambda");
+  // D->getLocation(), for a template instantiation, is the location of the
+  // template's definition, not instantiation.
+  const SourceManager &SM = getContext().getSourceManager();
+  if (SM.isInMainFile(D->getLocation())) {
+    const auto *FD = dyn_cast<FunctionDecl>(D);
+    bool InlineOrTemplate =
+        FD && (FD->isInlineSpecified() || FD->isTemplateInstantiation());
+    B.addAttribute("clang-main-file",
+                   InlineOrTemplate ? "inline-or-template" : "");
+  }
+
   F->addFnAttrs(B);
 
   llvm::MaybeAlign ExplicitAlignment;
