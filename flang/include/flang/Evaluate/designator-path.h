@@ -59,11 +59,14 @@ struct DesignatorPath {
   void AddComponent(const Symbol &);
   void AddSubscripts(std::vector<Subscript>);
   const std::optional<NamedEntity> &Base() const { return base; }
+  // The enclosing COMMON block, or nullptr when the base is not in COMMON.
+  const Symbol *CommonBlock() const { return commonBlock; }
   const std::vector<Part> &Parts() const { return parts; }
   bool empty() const { return !base && parts.empty(); }
   bool HasBaseOnly() const { return base && parts.empty(); }
   bool operator==(const DesignatorPath &that) const {
-    return base == that.base && parts == that.parts;
+    return base == that.base && commonBlock == that.commonBlock &&
+        parts == that.parts;
   }
 
   struct ConstantSubscriptRange {
@@ -87,6 +90,7 @@ struct DesignatorPath {
   static bool PartMayContain(const Part &, const Part &);
 
 private:
+  bool IsWholeCommonBlock() const;
   void AddDataRef(const DataRef &);
   void AddComponent(const Component &);
   void AddNamedEntity(const NamedEntity &);
@@ -94,6 +98,7 @@ private:
   void AddCoarrayRef(const CoarrayRef &);
 
   std::optional<NamedEntity> base;
+  const Symbol *commonBlock{nullptr};
   std::vector<Part> parts;
 };
 
