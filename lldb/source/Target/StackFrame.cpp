@@ -307,7 +307,7 @@ bool StackFrame::IsAddressInFrameScope(const Address &addr) {
   Block *addr_block = addr.CalculateSymbolContextBlock();
   if (!frame_block || !addr_block)
     return false;
-  // Do they same the same concrete function?
+  // Do they represent the same concrete function?
   if (addr_block->CalculateSymbolContextFunction() !=
       frame_block->CalculateSymbolContextFunction())
     return false;

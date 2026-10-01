@@ -21,7 +21,7 @@ static inline __attribute__((always_inline)) void level1(int c) {
 }
 
 __attribute__((noinline)) void outer(void) {
-  level1(42);
+  level1(42); // some comment to make clang-format happy.
 }
 
 int main(void) {
