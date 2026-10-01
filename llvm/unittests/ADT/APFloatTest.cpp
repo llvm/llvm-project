@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/APFloat.h"
+#include "APFloatTestConstants.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2580,6 +2582,129 @@ TEST(APFloatTest, ConvertLosesUnrepresentableSignAndZero) {
     EXPECT_TRUE(test.isZero());
     EXPECT_TRUE(test.isNegative());
   }
+}
+
+// Parses a table entry, requiring that it be exactly representable in Sem. This
+// ensures that the value is not silently rounded to a different value.
+static void parseExactly(const fltSemantics &Sem,
+                         const MathConstantRoundings &T, const char *Column,
+                         const char *Str, APFloat &Out) {
+  Out = APFloat(Sem);
+  Expected<APFloat::opStatus> StatusOrErr =
+      Out.convertFromString(Str, APFloat::rmNearestTiesToEven);
+  ASSERT_TRUE(!!StatusOrErr)
+      << T.Name << " " << Column << ": cannot parse \"" << Str << "\"";
+  ASSERT_EQ(APFloat::opOK, *StatusOrErr)
+      << T.Name << " " << Column << ": \"" << Str
+      << "\" is not exactly representable in this format";
+}
+
+// Checks every rounding mode against ConstantsTable for both signs.
+// No constant is exactly representable in these formats, and none lies exactly
+// halfway between two representable values, so RNE is unambiguous.
+static void checkMathConstants(const fltSemantics &Sem,
+                               ArrayRef<MathConstantRoundings> ConstantsTable,
+                               bool IsPPCDoubleDouble = false) {
+  for (const MathConstantRoundings &T : ConstantsTable) {
+    APFloat PosDown(Sem);
+    APFloat PosRNE(Sem);
+    APFloat PosUp(Sem);
+    // The floating point literals should be exact.
+    ASSERT_NO_FATAL_FAILURE(parseExactly(Sem, T, "Down", T.Down, PosDown));
+    ASSERT_NO_FATAL_FAILURE(parseExactly(Sem, T, "RNE", T.RNE, PosRNE));
+    ASSERT_NO_FATAL_FAILURE(parseExactly(Sem, T, "Up", T.Up, PosUp));
+
+    APFloat NegRNE = PosRNE;
+    APFloat NegUp = PosUp;
+    APFloat NegDown = PosDown;
+    NegRNE.changeSign();
+    NegUp.changeSign();
+    NegDown.changeSign();
+
+    auto ToHex = [](const APFloat &V) {
+      SmallString<80> S;
+      V.bitcastToAPInt().toStringUnsigned(S, /*Radix=*/16);
+      return std::string(S);
+    };
+    auto Check = [&](const char *Mode, bool Negative, APFloat::roundingMode RM,
+                     const APFloat &Expected) {
+      APFloat Got = APFloat::getConstant(T.Constant, Sem, Negative, RM);
+      EXPECT_TRUE(Got.bitwiseIsEqual(Expected))
+          << T.Name << (Negative ? " (negative) " : " ") << Mode << ": got 0x"
+          << ToHex(Got) << ", expected 0x" << ToHex(Expected);
+    };
+
+    Check("rmNearestTiesToEven", false, APFloat::rmNearestTiesToEven, PosRNE);
+    Check("rmNearestTiesToAway", false, APFloat::rmNearestTiesToAway, PosRNE);
+    Check("rmTowardPositive", false, APFloat::rmTowardPositive, PosUp);
+    Check("rmTowardNegative", false, APFloat::rmTowardNegative, PosDown);
+    Check("rmTowardZero", false, APFloat::rmTowardZero, PosDown);
+
+    // The exact value is negated before rounding rather than after, so the
+    // directed modes swap: rounding -x toward +inf selects -Down, not -Up.
+    Check("rmNearestTiesToEven", true, APFloat::rmNearestTiesToEven, NegRNE);
+    Check("rmNearestTiesToAway", true, APFloat::rmNearestTiesToAway, NegRNE);
+    Check("rmTowardPositive", true, APFloat::rmTowardPositive, NegDown);
+    Check("rmTowardNegative", true, APFloat::rmTowardNegative, NegUp);
+    Check("rmTowardZero", true, APFloat::rmTowardZero, NegDown);
+
+    // Down and Up bracket the exact value, and RNE should be equal to either
+    // Down or Up.
+    EXPECT_TRUE(PosDown.compare(PosUp) == APFloat::cmpLessThan) << T.Name;
+    EXPECT_TRUE(PosDown.bitwiseIsEqual(PosRNE) || PosUp.bitwiseIsEqual(PosRNE))
+        << T.Name;
+
+    // Down and Up should be adjacent, no value should be inbetween them.
+    // TODO: String to PPCDoubleDouble does not have enough precision to
+    // guarantee this property currently.
+    if (!IsPPCDoubleDouble) {
+      APFloat NextUp = PosDown;
+      EXPECT_EQ(APFloat::opOK, NextUp.next(/*nextDown=*/false)) << T.Name;
+      EXPECT_TRUE(NextUp.bitwiseIsEqual(PosUp)) << T.Name;
+    }
+  }
+}
+
+TEST(APFloatTest, getConstant) {
+  checkMathConstants(APFloat::BFloat(), ConstantsBFloat);
+  checkMathConstants(APFloat::IEEEhalf(), ConstantsIEEEhalf);
+  checkMathConstants(APFloat::IEEEsingle(), ConstantsIEEEsingle);
+  checkMathConstants(APFloat::IEEEdouble(), ConstantsIEEEdouble);
+  checkMathConstants(APFloat::x87DoubleExtended(), ConstantsX87DoubleExtended);
+  checkMathConstants(APFloat::IEEEquad(), ConstantsIEEEquad);
+
+  auto GetDoubleConstant = [](APFloat::MathConstant C) -> double {
+    return APFloat::getConstant(C, APFloat::IEEEdouble()).convertToDouble();
+  };
+
+  // Test agreement between APFloat::MathConstant and llvm::numbers
+  EXPECT_EQ(numbers::e, GetDoubleConstant(APFloat::MathConstant::e));
+  EXPECT_EQ(numbers::log2e, GetDoubleConstant(APFloat::MathConstant::log2e));
+  EXPECT_EQ(numbers::log10e, GetDoubleConstant(APFloat::MathConstant::log10e));
+  EXPECT_EQ(numbers::pi, GetDoubleConstant(APFloat::MathConstant::pi));
+  EXPECT_EQ(numbers::inv_pi, GetDoubleConstant(APFloat::MathConstant::inv_pi));
+  EXPECT_EQ(numbers::inv_sqrtpi,
+            GetDoubleConstant(APFloat::MathConstant::inv_sqrtpi));
+  EXPECT_EQ(numbers::ln2, GetDoubleConstant(APFloat::MathConstant::ln2));
+  EXPECT_EQ(numbers::ln10, GetDoubleConstant(APFloat::MathConstant::ln10));
+  EXPECT_EQ(numbers::sqrt2, GetDoubleConstant(APFloat::MathConstant::sqrt2));
+  EXPECT_EQ(numbers::sqrt3, GetDoubleConstant(APFloat::MathConstant::sqrt3));
+  EXPECT_EQ(numbers::inv_sqrt3,
+            GetDoubleConstant(APFloat::MathConstant::inv_sqrt3));
+  EXPECT_EQ(numbers::egamma, GetDoubleConstant(APFloat::MathConstant::egamma));
+  EXPECT_EQ(numbers::phi, GetDoubleConstant(APFloat::MathConstant::phi));
+
+  // TODO: Currently string to PPCDoubleDouble goes through
+  // PPCDoubleDoubleLegacy, so APFloat::getConstant can only produce constants
+  // for PPCDoubleDouble with up to 106 bits of precision instead of the up to
+  // 2098 bits (1023 - -1074 + 1) of precision that PPCDoubleDouble is capable
+  // of representing. These tests will have to be updated if the string to
+  // PPCDoubleDouble is properly implemented.
+  checkMathConstants(APFloat::PPCDoubleDouble(), ConstantsPPCDoubleDoubleLegacy,
+                     /*IsPPCDoubleDouble=*/true);
+
+  // Edge case testing.
+  checkMathConstants(APFloat::Float6E3M2FN(), ConstantsFloat6E3M2FN);
 }
 
 TEST(APFloatTest, getLargest) {

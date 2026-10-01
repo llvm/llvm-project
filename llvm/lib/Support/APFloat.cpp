@@ -6061,6 +6061,53 @@ APFloat APFloat::getAllOnesValue(const fltSemantics &Semantics) {
   return APFloat(Semantics, APInt::getAllOnes(Semantics.sizeInBits));
 }
 
+// The same literals as <numbers>, which are of sufficient precision for f128
+// and ppcf128. These literals will need to be updated if we add support for
+// f256 in the future.
+static constexpr StringLiteral MathConstantStrings[] = {
+    "-2.718281828459045235360287471352662498", // e
+    "-1.442695040888963407359924681001892137", // log2e
+    "-0.434294481903251827651128918916605082", // log10e
+    "-3.141592653589793238462643383279502884", // pi
+    "-0.318309886183790671537767526745028724", // inv_pi
+    "-0.564189583547756286948079451560772586", // inv_sqrtpi
+    "-0.693147180559945309417232121458176568", // ln2
+    "-2.302585092994045684017991454684364208", // ln10
+    "-1.414213562373095048801688724209698079", // sqrt2
+    "-1.732050807568877293527446341505872367", // sqrt3
+    "-0.577350269189625764509148780501957456", // inv_sqrt3
+    "-0.577215664901532860606512090082402431", // egamma
+    "-1.618033988749894848204586834365638118", // phi
+};
+
+static_assert(std::size(MathConstantStrings) ==
+                  static_cast<size_t>(APFloat::MathConstant::phi) + 1,
+              "MathConstantStrings is out of sync with APFloat::MathConstant");
+
+APFloat APFloat::getConstant(MathConstant C, const fltSemantics &Sem,
+                             bool Negative, roundingMode RM) {
+  assert(static_cast<size_t>(C) < std::size(MathConstantStrings) &&
+         "Unknown mathematical constant");
+
+  // Round the exact value, rather than the negation of the rounded value, so
+  // that directed rounding modes stay faithful to the sign of the result.
+  StringRef Str = MathConstantStrings[static_cast<size_t>(C)];
+  if (!Negative)
+    Str = Str.drop_front();
+
+  // IEEEQuad is the highest precision type we currently support.
+  constexpr unsigned int PrecisionOfIEEEQuad = 113;
+  // We special case semPPCDoubleDouble since it has a precision of 0.
+  assert((&Sem == &semPPCDoubleDouble ||
+          (Sem.precision > 0 && Sem.precision <= PrecisionOfIEEEQuad)) &&
+         "Literals are too short for this semantics (or semantics is invalid)");
+  APFloat Val(Sem);
+  auto StatusOrErr = Val.convertFromString(Str, RM);
+  assert(StatusOrErr && "Invalid floating point representation");
+  consumeError(StatusOrErr.takeError());
+  return Val;
+}
+
 void APFloat::print(raw_ostream &OS) const {
   SmallVector<char, 16> Buffer;
   toString(Buffer);

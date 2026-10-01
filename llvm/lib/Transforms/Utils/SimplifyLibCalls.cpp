@@ -2829,8 +2829,11 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
            ArgID == Intrinsic::exp || ArgID == Intrinsic::exp2) {
     Constant *Eul;
     if (ArgLb == ExpLb || ArgID == Intrinsic::exp)
-      // FIXME: Add more precise value of e for long double.
-      Eul = ConstantFP::get(Log->getType(), numbers::e);
+      Eul = ConstantFP::get(
+          Log->getType(),
+          APFloat::getConstant(
+              APFloat::MathConstant::e,
+              Log->getType()->getScalarType()->getFltSemantics()));
     else if (ArgLb == Exp2Lb || ArgID == Intrinsic::exp2)
       Eul = ConstantFP::get(Log->getType(), 2.0);
     else
