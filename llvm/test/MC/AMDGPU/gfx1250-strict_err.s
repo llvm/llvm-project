@@ -146,3 +146,11 @@ v_cvt_scale_pk8_bf16_fp4 v[10:13], v20, v8 scale_sel:4
 v_cvt_scale_pk8_f32_fp4 v[10:17], v20, v8 scale_sel:4
 // GFX1250S-ERR: :[[@LINE-1]]:43: error: scale_sel maximum supported value is 3
 
+v_cvt_pk_fp8_f32 v1.l, v2, v3 clamp
+// GFX1250S-ERR: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cvt_sr_fp8_f32 v1, v2, v3 clamp
+// GFX1250S-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cvt_f32_fp8 v1, v3 clamp
+// GFX1250S-ERR: :[[@LINE-1]]:22: error: invalid operand for instruction
