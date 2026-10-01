@@ -243,9 +243,8 @@ TEST(ParseArchString, RejectsInvalidYPosition) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "invalid standard user-level extension 'y'");
   }
-  for (StringRef Input :
-       {"rv32ey", "rv64ey", "rv32iy", "rv64iy", "rv32gy", "rv64gy", "rv32imy",
-        "rv64imy", "rv32yy", "rv64yy"}) {
+  for (StringRef Input : {"rv32ey", "rv64ey", "rv32iy", "rv64iy", "rv32gy",
+                          "rv64gy", "rv32imy", "rv64imy", "rv32yy", "rv64yy"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseArchString(Input, true, false).takeError()),
         "invalid standard user-level extension 'y'");
