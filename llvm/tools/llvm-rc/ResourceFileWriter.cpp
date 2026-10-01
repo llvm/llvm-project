@@ -1620,3 +1620,5 @@ ResourceFileWriter::loadFile(StringRef File) const {
 
 } // namespace rc
 } // namespace llvm
+
+#undef RETURN_IF_ERROR
