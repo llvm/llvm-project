@@ -2974,11 +2974,11 @@ def : Pat<(int_nvvm_ui2f_rp i32:$a), (CVT_f32_u32 $a, CvtRP)>;
 
 // Utility to look up base and satfinite variants of a conversion intrinsic.
 // Missing variants are left unset so this can be used when only one exists.
-class ToCvtIntrinsics<string suffix, string tail = ""> {
-  Intrinsic base = !if(!exists<Intrinsic>("int_nvvm_" # suffix # tail),
-                       !cast<Intrinsic>("int_nvvm_" # suffix # tail), ?);
-  Intrinsic sf = !if(!exists<Intrinsic>("int_nvvm_" # suffix # "_satfinite" # tail),
-                     !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite" # tail), ?);
+class ToCvtIntrinsics<string suffix, string scale_suffix = ""> {
+  Intrinsic base = !if(!exists<Intrinsic>("int_nvvm_" # suffix # scale_suffix),
+                       !cast<Intrinsic>("int_nvvm_" # suffix # scale_suffix), ?);
+  Intrinsic sf = !if(!exists<Intrinsic>("int_nvvm_" # suffix # "_satfinite" # scale_suffix),
+                     !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite" # scale_suffix), ?);
 }
 
 foreach rnd = ["rn", "rz"] in {
