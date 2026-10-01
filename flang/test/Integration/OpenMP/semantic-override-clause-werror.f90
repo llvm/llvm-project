@@ -1,4 +1,4 @@
-!RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=45 -Wno-openmp-future -Werror -o - %s | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=45 -Wno-openmp-future -Werror -Wno-experimental-option -o - %s | FileCheck %s
 
 ! IF clause is not allowed on SIMD in OpenMP 4.5, but is allowed in a later
 ! version. We emit a warning for that, and after the semantic checks the
