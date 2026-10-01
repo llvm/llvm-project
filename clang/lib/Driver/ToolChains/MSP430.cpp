@@ -13,6 +13,7 @@
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Multilib.h"
 #include "clang/Options/Options.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
 
@@ -50,6 +51,23 @@ static StringRef getHWMultLib(const ArgList &Args) {
       .Case("32bit", "-lmul_32")
       .Case("f5series", "-lmul_f5")
       .Default("-lmul_none");
+}
+
+static bool isMSP430X(StringRef CPU) {
+  return CPU == "msp430x" || CPU == "msp430xv2";
+}
+
+std::string msp430::getMSP430TargetCPU(const ArgList &Args) {
+  if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
+    return isMSP430X(A->getValue()) ? "msp430x" : A->getValue();
+  if (const Arg *A = Args.getLastArg(options::OPT_mmcu_EQ)) {
+    StringRef CPU = llvm::StringSwitch<StringRef>(A->getValue())
+#define MSP430_MCU(NAME, CPU, HWMULT) .Case(NAME, CPU)
+#include "clang/Basic/MSP430Target.def"
+                        .Default("");
+    return isMSP430X(CPU) ? "msp430x" : CPU.str();
+  }
+  return "";
 }
 
 void msp430::getMSP430TargetFeatures(const Driver &D, const ArgList &Args,
