@@ -15,6 +15,7 @@
 
 #include <chrono>
 #include <cassert>
+#include <ratio>
 #include <type_traits>
 #include <utility>
 
@@ -23,6 +24,7 @@
 using month      = std::chrono::month;
 using months     = std::chrono::months;
 using year       = std::chrono::year;
+using years      = std::chrono::years;
 using year_month = std::chrono::year_month;
 
 constexpr bool test() {
@@ -47,6 +49,27 @@ constexpr bool test() {
 
     ym -= months{12};
     assert((ym == year_month{year{2020}, month{4}}));
+  }
+
+  { // Ambiguity test, defaults to year arithmetic
+    using decamonths = std::chrono::duration<int, std::ratio_multiply<std::ratio<10>, months::period>>;
+    for (unsigned int i = 0; i < 10; i++) {
+      year y{2011};
+      month m{i};
+      year_month ym(y, m);
+
+      year_month wrapped = ym + months{0};
+      ym += decamonths(1);
+      assert(ym.month() == m + months{10});
+
+      ym -= decamonths(1);
+      assert(ym == wrapped);
+    }
+    year y{2011};
+    month m{0};
+    year_month ym(y, m);
+    ym += decamonths(2);
+    assert((ym == year_month{year{2012}, month{8}}));
   }
 
   return true;
