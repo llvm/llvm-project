@@ -544,14 +544,82 @@ static void warn(Error E, StringRef Whence = "") {
   }
 }
 
+namespace {
+class ProfdataError : public ErrorInfo<ProfdataError> {
+public:
+  static char ID;
+
+  ProfdataError(Twine Message, Twine Whence = "", Twine Hint = "")
+      : Message(Message.str()), Whence(Whence.str()), Hint(Hint.str()) {}
+
+  void log(raw_ostream &OS) const override {
+    if (!Whence.empty())
+      OS << Whence << ": ";
+    OS << Message;
+  }
+
+  void print() const {
+    WithColor::error();
+    log(errs());
+    errs() << "\n";
+    if (!Hint.empty())
+      WithColor::note() << Hint << "\n";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return inconvertibleErrorCode();
+  }
+
+private:
+  std::string Message;
+  std::string Whence;
+  std::string Hint;
+};
+
+char ProfdataError::ID = 0;
+} // namespace
+
+static Error makeError(Twine Message, StringRef Whence = "",
+                       StringRef Hint = "") {
+  return make_error<ProfdataError>(Message, Whence, Hint);
+}
+
+static Error makeError(Error E, StringRef Whence = "") {
+  if (E.isA<InstrProfError>()) {
+    std::string Msg;
+    std::string Hint;
+    handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
+      instrprof_error instrError = IPE.get();
+      if (instrError == instrprof_error::unrecognized_format) {
+        // Hint in case user missed specifying the profile type.
+        Hint = "Perhaps you forgot to use the --sample or --memory option?";
+      }
+      Msg = IPE.message();
+    });
+    return makeError(Msg, Whence, Hint);
+  }
+
+  return makeError(toString(std::move(E)), Whence);
+}
+
+static Error makeError(std::error_code EC, StringRef Whence = "") {
+  return makeError(EC.message(), Whence);
+}
+
+static int reportError(Error E) {
+  if (!E)
+    return 0;
+  handleAllErrors(
+      std::move(E), [](const ProfdataError &PE) { PE.print(); },
+      [](const ErrorInfoBase &EIB) {
+        WithColor::error() << EIB.message() << "\n";
+      });
+  return 1;
+}
+
 static void exitWithError(Twine Message, StringRef Whence = "",
                           StringRef Hint = "") {
-  WithColor::error();
-  if (!Whence.empty())
-    errs() << Whence << ": ";
-  errs() << Message << "\n";
-  if (!Hint.empty())
-    WithColor::note() << Hint << "\n";
+  reportError(makeError(Message, Whence, Hint));
   // exit() terminates without unwinding the stack or running destructors, and
   // there is no guaranty that pointers to allocations will be preserved, so
   // LSan reports in-flight heap allocations as leaks at atexit.
@@ -560,24 +628,15 @@ static void exitWithError(Twine Message, StringRef Whence = "",
 }
 
 static void exitWithError(Error E, StringRef Whence = "") {
-  if (E.isA<InstrProfError>()) {
-    handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
-      instrprof_error instrError = IPE.get();
-      StringRef Hint = "";
-      if (instrError == instrprof_error::unrecognized_format) {
-        // Hint in case user missed specifying the profile type.
-        Hint = "Perhaps you forgot to use the --sample or --memory option?";
-      }
-      exitWithError(IPE.message(), Whence, Hint);
-    });
-    return;
-  }
-
-  exitWithError(toString(std::move(E)), Whence);
+  reportError(makeError(std::move(E), Whence));
+  skipLeakCheck();
+  ::exit(1);
 }
 
 static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
-  exitWithError(EC.message(), Whence);
+  reportError(makeError(EC, Whence));
+  skipLeakCheck();
+  ::exit(1);
 }
 
 static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
