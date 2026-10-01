@@ -65,7 +65,10 @@ DataBreakpointInfoRequestHandler::Run(
     }
   } else if (lldb::SBFrame frame = dap.GetLLDBFrame(args.frameId);
              arg_var_ref.Reference() == 0 && frame.IsValid()) {
-    lldb::SBValue value = frame.EvaluateExpression(args.name.c_str());
+    lldb::SBValue value = frame.GetValueForVariablePathWithMode(
+        args.name.c_str(), lldb::eDILModeFull, lldb::eDynamicDontRunTarget);
+    if (!value)
+      value = frame.EvaluateExpression(args.name.c_str());
     if (value.GetError().Fail()) {
       lldb::SBError error = value.GetError();
       const char *error_cstr = error.GetCString();
