@@ -33,7 +33,11 @@ extern bool tysan_init_is_running;
 
 void InitializeInterceptors();
 
-enum { TYSAN_MEMBER_TD = 1, TYSAN_STRUCT_TD = 2, TYSAN_CONSERVATIVE_ALIAS_TD = 3 };
+enum {
+  TYSAN_MEMBER_TD = 1,
+  TYSAN_STRUCT_TD = 2,
+  TYSAN_CONSERVATIVE_ALIAS_TD = 3
+};
 
 struct tysan_member_type_descriptor {
   struct tysan_type_descriptor *Base;

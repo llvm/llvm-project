@@ -214,8 +214,7 @@ static bool isAliasingLegalWithOffset(tysan_type_descriptor *TDA,
 
 static bool isAliasingLegal(tysan_type_descriptor *TDA,
                             tysan_type_descriptor *TDB, uptr OffsetB = 0) {
-  if (TDA == TDB || !TDB || !TDA ||
-      TDA->Tag == TYSAN_CONSERVATIVE_ALIAS_TD ||
+  if (TDA == TDB || !TDB || !TDA || TDA->Tag == TYSAN_CONSERVATIVE_ALIAS_TD ||
       TDB->Tag == TYSAN_CONSERVATIVE_ALIAS_TD)
     return true;
 
