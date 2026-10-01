@@ -198,10 +198,6 @@ static cl::opt<unsigned> TinyTripCountVectorThreshold(
              "value are vectorized only if no scalar iteration overheads "
              "are incurred."));
 
-static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
-    "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
-    cl::desc("The maximum allowed number of runtime memory checks"));
-
 static cl::opt<bool> ForcePartialAliasingVectorization(
     "force-partial-aliasing-vectorization", cl::init(false), cl::Hidden,
     cl::desc("Replace pointer diff checks with alias masks."));
@@ -1531,8 +1527,8 @@ public:
     // runtime checks needs to be generated.
     // TODO: Skip cutoff if the loop is guaranteed to execute, e.g. due to
     // profile info.
-    CostTooHigh =
-        LAI.getNumRuntimePointerChecks() > VectorizeMemoryCheckThreshold;
+    CostTooHigh = LAI.getNumRuntimePointerChecks() >
+                  VectorizerParams::VectorizeMemoryCheckThreshold;
     if (CostTooHigh) {
       // Mark runtime checks as never succeeding when they exceed the threshold.
       MemRuntimeCheckCond = ConstantInt::getTrue(L->getHeader()->getContext());
@@ -2669,8 +2665,24 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     if (Legal->hasUncountableEarlyExit() && TheLoop->getLoopLatch() != E)
       continue;
     auto *Cmp = dyn_cast<Instruction>(E->getTerminator()->getOperand(0));
-    if (Cmp && TheLoop->contains(Cmp) && Cmp->hasOneUse())
-      AddToWorklistIfAllowed(Cmp);
+    if (!Cmp || !TheLoop->contains(Cmp) || !Cmp->hasOneUse())
+      continue;
+
+    // If we have an exit condition that is actually two conditions (one
+    // countable and the other uncountable) combined via an or, only add the
+    // countable comparison as a uniform value.
+    if (Legal->hasUncountableExitWithSideEffects() &&
+        TheLoop->getLoopLatch() == E) {
+      if (Instruction *Countable =
+              Legal->findCountableComparisonInCombinedCondition(Cmp)) {
+        if (Countable->hasOneUse())
+          AddToWorklistIfAllowed(Countable);
+        continue;
+      }
+    }
+
+    // Normal exit comparisons are uniform.
+    AddToWorklistIfAllowed(Cmp);
   }
 
   auto PrevVF = VF.divideCoefficientBy(2);
@@ -5545,13 +5557,20 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
   VPCostContext CostCtx(*TLI, Plan, *CM, Config,
                         /*ReusePrintingSlotTracker=*/true);
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
+  LLVM_DEBUG(dbgs() << "Precomputed costs for VF " << VF << ": " << Cost
+                    << '\n');
 
   // Now compute and add the VPlan-based cost.
   Cost += Plan.cost(VF, CostCtx);
 
   // Add the cost of spills due to excess register usage
-  if (RU && Config.shouldConsiderRegPressureForVF(VF))
-    Cost += RU->spillCost(TTI, Config.CostKind, ForceTargetNumVectorRegs);
+  if (RU && Config.shouldConsiderRegPressureForVF(VF)) {
+    InstructionCost SpillCost =
+        RU->spillCost(TTI, Config.CostKind, ForceTargetNumVectorRegs);
+    LLVM_DEBUG(dbgs() << "Spill costs for VF " << VF << ": " << SpillCost
+                      << '\n');
+    Cost += SpillCost;
+  }
 
 #ifndef NDEBUG
   unsigned EstimatedWidth =
@@ -6395,6 +6414,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   //       the presence of an uncountable exit and the presence of stores in
   //       the loop inside handleUncountableEarlyExits itself.
   if (Legal->hasUncountableEarlyExit()) {
+    if (!RUN_VPLAN_PASS(VPlanTransforms::splitCombinedExits, *VPlan0, PSE,
+                        OrigLoop))
+      return nullptr;
+
     // TODO: Check target preference for style.
     UncountableExitStyle EEStyle =
         Legal->hasUncountableExitWithSideEffects()
@@ -7119,7 +7142,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // would lead to a divide by 0. Fall back to hard threshold.
   if (VF.Width.isScalar()) {
     // TODO: Should we rename VectorizeMemoryCheckThreshold?
-    if (RtC > VectorizeMemoryCheckThreshold) {
+    if (RtC > VectorizerParams::VectorizeMemoryCheckThreshold) {
       LLVM_DEBUG(
           dbgs()
           << "LV: Interleaving only is not profitable due to runtime checks\n");
