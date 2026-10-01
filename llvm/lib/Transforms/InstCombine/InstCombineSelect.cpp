@@ -4714,7 +4714,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         if (FCmp->hasNoInfs())
           FMF.setNoInfs(true);
         Value *NewSel =
-            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FMF);
+            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FMF, "", &SI);
+        if (auto *NewSI = dyn_cast<SelectInst>(NewSel))
+          NewSI->swapProfMetadata();
         return replaceInstUsesWith(SI, NewSel);
       }
     }
