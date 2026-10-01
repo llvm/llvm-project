@@ -5654,8 +5654,7 @@ public:
     ForceLeftToRight,
     ///! Language semantics require right-to-left evaluation.
     ForceRightToLeft,
-    ///! Language semantics require only the first argument to be evaluated
-    ///! first; the others are indeterminately sequenced.
+    ///! Language semantics require the first argument before the others.
     ForceFirstBeforeRest
   };
 
