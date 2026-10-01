@@ -953,6 +953,12 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         }
         if (Src0->isReg() && Src0->getReg() == Dest->getReg()) {
           if (Src1->isImm() && isKImmOperand(MI, *Src1)) {
+            // S_OR_B32 sets SCC to (result != 0), but S_ADDK_I32 sets it to
+            // signed overflow, so only shrink the OR when SCC is dead.
+            if (MI.getOpcode() == AMDGPU::S_OR_B32 &&
+                !MI.findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr)
+                     ->isDead())
+              continue;
             unsigned Opc = (MI.getOpcode() == AMDGPU::S_MUL_I32)
                                ? AMDGPU::S_MULK_I32
                                : AMDGPU::S_ADDK_I32;
