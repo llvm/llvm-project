@@ -984,6 +984,7 @@ features cannot lower the translation-unit ABI level;
 ### libclang
 
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
+- add unary operator handling to `clang_getCursorSpelling()`.
 
 ### Code Completion
 
@@ -1032,6 +1033,7 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   register word so the return value is correctly extended, working around a
   `ctypes` bug (https://github.com/python/cpython/issues/156933) that left the
   high bytes of the return register uninitialized.
+- Add support for retrieving unary operator information through `Cursor.unary_operator()`.
 
 ### OpenMP Support
 

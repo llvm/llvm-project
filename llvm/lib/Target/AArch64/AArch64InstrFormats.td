@@ -2016,7 +2016,6 @@ def pstatefield4_op : Operand<i32> {
 }
 
 // Instructions to modify PSTATE, no input reg
-let Defs = [NZCV] in
 class PstateWriteSimple<dag iops, string asm, string operands>
   : SimpleSystemI<0, iops, asm, operands> {
 
