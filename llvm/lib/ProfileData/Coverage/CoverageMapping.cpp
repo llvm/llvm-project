@@ -1015,7 +1015,7 @@ Error CoverageMapping::loadFromFile(
     CoverageMapping &Coverage, bool &DataFound,
     SmallVectorImpl<object::BuildID> *FoundBinaryIDs) {
   auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
-      Filename, /*IsText=*/false, /*RequiresNullTerminator=*/false);
+      Filename, sys::fs::OF_None, /*RequiresNullTerminator=*/false);
   if (std::error_code EC = CovMappingBufOrErr.getError())
     return createFileError(Filename, errorCodeToError(EC));
   MemoryBufferRef CovMappingBufRef =

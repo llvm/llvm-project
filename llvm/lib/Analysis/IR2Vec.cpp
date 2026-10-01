@@ -23,6 +23,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -483,7 +484,7 @@ using VocabMap = std::map<std::string, Embedding>;
 Error readVocabularyFromFile(StringRef VocabFilePath, VocabMap &OpcVocab,
                              VocabMap &TypeVocab, VocabMap &ArgVocab) {
   auto BufOrError =
-      MemoryBuffer::getFileOrSTDIN(VocabFilePath, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(VocabFilePath, sys::fs::OF_TextWithCRLF);
   if (!BufOrError)
     return createFileError(VocabFilePath, BufOrError.getError());
 
