@@ -19,7 +19,7 @@ import sys
 PROJECT_DEPENDENCIES = {
     "llvm": set(),
     "clang": {"llvm"},
-    "CIR": {"clang", "mlir"},
+    "CIR": {"clang"},
     "bolt": {"clang", "lld", "llvm"},
     "clang-tools-extra": {"clang", "llvm"},
     "compiler-rt": {"clang", "lld"},
