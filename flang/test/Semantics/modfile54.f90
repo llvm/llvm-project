@@ -1,4 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -fopenmp
 !ERROR: Some modules in this compilation unit form one or more cycles of dependence
 module m1
   use m2

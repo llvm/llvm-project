@@ -224,20 +224,28 @@ void OmpStructureChecker::Leave(const parser::BlockData &x) {
   scopeStack_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::Module &x) {
+bool OmpStructureChecker::Enter(const parser::Module &x) {
   auto &stmt{std::get<parser::Statement<parser::ModuleStmt>>(x.t)};
   const Symbol *sym{stmt.statement.v.symbol};
+  if (!sym) {
+    return false;
+  }
   scopeStack_.push_back(sym->scope());
+  return true;
 }
 
 void OmpStructureChecker::Leave(const parser::Module &x) {
   scopeStack_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::Submodule &x) {
+bool OmpStructureChecker::Enter(const parser::Submodule &x) {
   auto &stmt{std::get<parser::Statement<parser::SubmoduleStmt>>(x.t)};
   const Symbol *sym{std::get<parser::Name>(stmt.statement.t).symbol};
+  if (!sym) {
+    return false;
+  }
   scopeStack_.push_back(sym->scope());
+  return true;
 }
 
 void OmpStructureChecker::Leave(const parser::Submodule &x) {
