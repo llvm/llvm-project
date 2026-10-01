@@ -142,6 +142,11 @@ if(LIBC_TEST_SUBPROCESS_TESTS)
       libc.include.llvm-libc-types.pid_t
       libc.include.llvm-libc-types.struct_pollfd
     )
+    if(TARGET libc.src.sys.prctl.prctl)
+      list(APPEND libc_death_test_deps
+        libc.src.sys.prctl.prctl
+      )
+    endif()
   endif()
   add_unittest_framework_library(
     LibcDeathTestExecutors

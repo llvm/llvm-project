@@ -27,6 +27,10 @@
 #include "src/unistd/close.h"
 #include "src/unistd/fork.h"
 #include "src/unistd/pipe.h"
+#ifdef __linux__
+#include <linux/prctl.h>
+#include "src/sys/prctl/prctl.h"
+#endif
 
 #define LIBC_IMPL LIBC_NAMESPACE
 
@@ -80,7 +84,7 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, int timeout_ms) {
   if (!pid) {
     LIBC_IMPL::close(pipe_fds[0]);
 #if defined(__linux__) && defined(PR_SET_DUMPABLE)
-    ::prctl(PR_SET_DUMPABLE, 0);
+    LIBC_IMPL::prctl(PR_SET_DUMPABLE, 0);
 #endif
     (*func)();
     delete func;
