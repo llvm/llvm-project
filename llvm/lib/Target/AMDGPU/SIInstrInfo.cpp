@@ -11681,9 +11681,11 @@ getSelectConstants(const SIInstrInfo &TII, const MachineRegisterInfo &MRI,
     return {};
   std::optional<int64_t> A =
       TII.getImmOrMaterializedImm(MRI, Sel.getOperand(1));
+  if (!A)
+    return {};
   std::optional<int64_t> B =
       TII.getImmOrMaterializedImm(MRI, Sel.getOperand(2));
-  if (!A || !B)
+  if (!B)
     return {};
   if (Opc == AMDGPU::S_CSELECT_B32) {
     A = Lo_32(*A);
