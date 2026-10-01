@@ -13,3 +13,15 @@ void unsafe_pointer_arithmetic(int idx) {
 
   int *u4 = buffer + idx; // expected-note {{used in pointer arithmetic here}}
 }
+
+struct Trailing {
+  int len;
+  int buffer[10];
+};
+
+// A trailing array member is a flexible array member under the default
+// -fstrict-flex-arrays=0, so -fsanitize=array-bounds does not check it, but
+// the opt-out silences it.
+void unsafe_trailing_member(Trailing *t, int idx) {
+  t->buffer[idx] = 0;
+}
