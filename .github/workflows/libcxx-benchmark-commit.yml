@@ -122,6 +122,11 @@ jobs:
           # We benchmark arbitrary historical commits, which requires the full history to be available.
           fetch-depth: 0
           fetch-tags: true
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
 
       - name: Select Xcode
         if: runner.os == 'macOS'
@@ -153,13 +158,20 @@ jobs:
       # We still submit an empty run for such commits.
       - name: Build libc++ at ${{ inputs.commit }}
         continue-on-error: true
-        uses: ./.github/workflows/libcxx/build-at-commit
-        with:
-          git-repo: ${{ github.workspace }}
-          commit: ${{ inputs.commit }}
-          install-dir: ${{ env.INSTALL_DIR }}
-          compiler: ${{ matrix.cxx }}
-          cmake-cache: ${{ matrix.cmake-cache }}
+        env:
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          # Clean up any stale install directory
+          rm -rf "${INSTALL_DIR}"
+
+          libcxx/utils/build-at-commit                       \
+            --git-repo "${GITHUB_WORKSPACE}"                 \
+            --commit "${COMMIT}"                             \
+            --install-dir "${INSTALL_DIR}"                   \
+            --                                               \
+            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
+            -C "${CMAKE_CACHE}"
 
       - name: Run the benchmarks
         env:

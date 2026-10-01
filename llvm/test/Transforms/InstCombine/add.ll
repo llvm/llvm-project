@@ -4445,13 +4445,11 @@ define i32 @add_reduce_sqr_sum_not_one_use(i32 %a, i32 %b) {
 
 define i32 @add_reduce_sqr_sum_not_one_use2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_not_one_use2(
-; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A]]
-; CHECK-NEXT:    [[TWO_A:%.*]] = shl i32 [[A]], 1
-; CHECK-NEXT:    [[TWO_A_PLUS_B:%.*]] = add i32 [[TWO_A]], [[B:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[TWO_A_PLUS_B]], [[B]]
-; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ]])
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], [[A_SQ]]
-; CHECK-NEXT:    ret i32 [[ADD]]
+; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A:%.*]]
+; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ:%.*]])
+; CHECK-NEXT:    [[AB:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AB_SQ:%.*]] = mul i32 [[AB:%.*]], [[AB:%.*]]
+; CHECK-NEXT:    ret i32 [[AB_SQ:%.*]]
 ;
   %a_sq = mul nsw i32 %a, %a
   %two_a = shl i32 %a, 1
@@ -4484,13 +4482,11 @@ define i32 @add_reduce_sqr_sum_order2_not_one_use(i32 %a, i32 %b) {
 
 define i32 @add_reduce_sqr_sum_order2_not_one_use2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @add_reduce_sqr_sum_order2_not_one_use2(
-; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A]]
-; CHECK-NEXT:    [[TWOA:%.*]] = shl i32 [[A]], 1
-; CHECK-NEXT:    [[TWOAB1:%.*]] = add i32 [[TWOA]], [[B:%.*]]
-; CHECK-NEXT:    [[TWOAB_B2:%.*]] = mul i32 [[TWOAB1]], [[B]]
-; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ]])
-; CHECK-NEXT:    [[AB2:%.*]] = add i32 [[A_SQ]], [[TWOAB_B2]]
-; CHECK-NEXT:    ret i32 [[AB2]]
+; CHECK-NEXT:    [[A_SQ:%.*]] = mul nsw i32 [[A:%.*]], [[A:%.*]]
+; CHECK-NEXT:    tail call void @fake_func(i32 [[A_SQ:%.*]])
+; CHECK-NEXT:    [[AB:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AB_SQ:%.*]] = mul i32 [[AB:%.*]], [[AB:%.*]]
+; CHECK-NEXT:    ret i32 [[AB_SQ:%.*]]
 ;
   %a_sq = mul nsw i32 %a, %a
   %twoa = mul i32 %a, 2
