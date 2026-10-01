@@ -50,15 +50,6 @@
 #include <cmath>
 #include <optional>
 
-#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
-#include <sanitizer/lsan_interface.h>
-static int SkipLeakCheck;
-LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return SkipLeakCheck; }
-static void skipLeakCheck() { SkipLeakCheck = 1; }
-#else
-static void skipLeakCheck() {}
-#endif
-
 using namespace llvm;
 using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
 
@@ -615,28 +606,6 @@ static int reportError(Error E) {
         WithColor::error() << EIB.message() << "\n";
       });
   return 1;
-}
-
-static void exitWithError(Twine Message, StringRef Whence = "",
-                          StringRef Hint = "") {
-  reportError(makeError(Message, Whence, Hint));
-  // exit() terminates without unwinding the stack or running destructors, and
-  // there is no guaranty that pointers to allocations will be preserved, so
-  // LSan reports in-flight heap allocations as leaks at atexit.
-  skipLeakCheck();
-  ::exit(1);
-}
-
-static void exitWithError(Error E, StringRef Whence = "") {
-  reportError(makeError(std::move(E), Whence));
-  skipLeakCheck();
-  ::exit(1);
-}
-
-static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
-  reportError(makeError(EC, Whence));
-  skipLeakCheck();
-  ::exit(1);
 }
 
 static Error warnOrErrorGivenError(FailureMode FailMode, std::error_code EC,
