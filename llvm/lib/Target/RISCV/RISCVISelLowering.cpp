@@ -5212,6 +5212,17 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,
     }
   }
 
+  // With identical nonconstant halves and undefined passthru, fill the whole
+  // register group at EEW=32. This defines every active i64 element regardless
+  // of VL, and may define additional elements that were undefined.
+  if (!isa<ConstantSDNode>(Lo) && Lo == Hi && Passthru.isUndef()) {
+    MVT InterVT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
+    SDValue MaxVL = DAG.getRegister(RISCV::X0, MVT::i32);
+    SDValue InterVec = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, InterVT,
+                                   DAG.getUNDEF(InterVT), Lo, MaxVL);
+    return DAG.getNode(ISD::BITCAST, DL, VT, InterVec);
+  }
+
   // Detect cases where Hi is (SRA Lo, 31) which means Hi is Lo sign extended.
   if (Hi.getOpcode() == ISD::SRA && Hi.getOperand(0) == Lo &&
       isa<ConstantSDNode>(Hi.getOperand(1)) &&
