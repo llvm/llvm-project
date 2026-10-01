@@ -146,19 +146,6 @@ void L0OptionsTy::processEnvironmentVars() {
     CommonSpecConstants.addConstant<char>(0xFF747469, 1);
   }
 
-  // LIBOMPTARGET_LEVEL_ZERO_STAGING_BUFFER_SIZE=<SizeInKB>.
-  const Envar<size_t> StagingBufferSizeVar(
-      "LIBOMPTARGET_LEVEL_ZERO_STAGING_BUFFER_SIZE");
-  if (StagingBufferSizeVar.isPresent()) {
-    size_t SizeInKB = StagingBufferSizeVar;
-    if (SizeInKB > (16 << 10)) {
-      SizeInKB = (16 << 10);
-      ODBG(OLDT_Init) << "Staging buffer size is capped at " << SizeInKB
-                      << " KB";
-    }
-    StagingBufferSize = SizeInKB << 10;
-  }
-
   // LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE=<Fmt>.
   // <Fmt> := inorder | sync
   // inorder: use level zero command queue in-order mode. This is the default.
