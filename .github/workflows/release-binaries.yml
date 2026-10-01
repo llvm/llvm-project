@@ -232,7 +232,8 @@ jobs:
     - name: Setup Python library path
       if: runner.os == 'Windows'
       run: |
-        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.14.6\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
+        $python_version = (python -c "import platform; print(platform.python_version())").Trim()
+        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\$python_version\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
 
     - name: Setup crlf
       if: runner.os == 'Windows'
