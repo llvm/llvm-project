@@ -25,8 +25,8 @@ S *test(S *source, S *dest, size_t count) {
 // CIR:         %[[COUNT:.*]] = cir.load {{.*}} : !cir.ptr<!u64i>, !u64i
 // CIR:         %[[ELT_SIZE:.*]] = cir.const #cir.int<8> : !u64i
 // CIR:         %[[SIZE:.*]] = cir.mul %[[COUNT]], %[[ELT_SIZE]] : !u64i
-// CIR:         %[[SOURCE_VOID:.*]] = cir.cast bitcast %[[SOURCE]] : !cir.ptr<!rec_S> -> !cir.ptr<!void>
 // CIR:         %[[DEST_VOID:.*]] = cir.cast bitcast %[[DEST]] : !cir.ptr<!rec_S> -> !cir.ptr<!void>
+// CIR:         %[[SOURCE_VOID:.*]] = cir.cast bitcast %[[SOURCE]] : !cir.ptr<!rec_S> -> !cir.ptr<!void>
 // CIR:         cir.libc.memmove %[[SIZE]] bytes from %[[SOURCE_VOID]] align(4) to %[[DEST_VOID]] align(4)
 // CIR:         cir.store %[[DEST]], %{{.*}} : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 

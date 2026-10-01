@@ -2471,8 +2471,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     emitNonNullArgCheck(RValue::get(src.getPointer()), e->getArg(1)->getType(),
                         e->getArg(1)->getExprLoc(), fd, 1);
     assert(!cir::MissingFeatures::sanitizers());
-    builder.createMemMove(loc, dest.withElementType(builder, cgm.voidTy),
-                          src.withElementType(builder, cgm.voidTy), sizeVal);
+    Address destCast = dest.withElementType(builder, cgm.voidTy);
+    Address srcCast = src.withElementType(builder, cgm.voidTy);
+    builder.createMemMove(loc, destCast, srcCast, sizeVal);
     assert(!cir::MissingFeatures::generateDebugInfo());
     return RValue::get(dest.getPointer());
   }
