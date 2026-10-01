@@ -94,12 +94,10 @@ func.func @instructions() {
 
 // CHECK: [[VAL_21:%.*]] = arith.constant 10 : i32
 // CHECK: [[VAL_22:%.*]] = fir.coordinate_of [[VAL_5]], [[VAL_21]] : (!fir.heap<!fir.array<100xf32>>, i32) -> !fir.ref<f32>
-// CHECK: [[VAL_23:%.*]] = fir.field_index f, !fir.type<derived{f:f32}>
 // CHECK: [[VAL_24:%.*]] = fir.undefined !fir.type<derived{f:f32}>
 // CHECK: [[VAL_25:%.*]] = fir.extract_value [[VAL_24]], ["f", !fir.type<derived{f:f32}>] : (!fir.type<derived{f:f32}>) -> f32
   %19 = arith.constant 10 : i32
   %20 = fir.coordinate_of %5, %19 : (!fir.heap<!fir.array<100xf32>>, i32) -> !fir.ref<f32>
-  %21 = fir.field_index f, !fir.type<derived{f:f32}>
   %22 = fir.undefined !fir.type<derived{f:f32}>
   %23 = fir.extract_value %22, ["f", !fir.type<derived{f:f32}>] : (!fir.type<derived{f:f32}>) -> f32
 
@@ -710,7 +708,7 @@ func.func @test_rebox_char(%arg0: !fir.box<!fir.array<?x!fir.char<1,20>>>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %0:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x!fir.char<1,20>>>, index) -> (index, index, index)
-  %1 = fir.slice %c1, %0#1, %c1_i64 substr %c1_i64, %c7_i64 : (index, index, i64, i64, i64) -> !fir.slice<1>
+  %1 = fir.slice %c1, %0#1, %c1_i64, %c1_i64, %c7_i64 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<substring>]} : (index, index, i64, i64, i64) -> !fir.slice<1>
   // CHECK: fir.rebox %{{.*}} [%{{.*}}] : (!fir.box<!fir.array<?x!fir.char<1,20>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
   %2 = fir.rebox %arg0 [%1] : (!fir.box<!fir.array<?x!fir.char<1,20>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
   fir.call @bar_rebox_test_char(%2) : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> ()
@@ -766,8 +764,8 @@ func.func @slice_substr() {
   %ub = arith.constant 42 : index
   %c1 = arith.constant 1 : index
   %offset = arith.constant 10 : index
-  %0 = fir.slice %lb, %ub, %c1 substr %offset, %c1 : (index, index, index, index, index) -> !fir.slice<1>
-  // CHECK: fir.slice %{{.*}}, %{{.*}}, %{{.*}} substr %{{.*}}, %{{.*}} : (index, index, index, index, index) -> !fir.slice<1>
+  %0 = fir.slice %lb, %ub, %c1, %offset, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<substring>]} : (index, index, index, index, index) -> !fir.slice<1>
+  // CHECK: fir.slice %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<substring>]} : (index, index, index, index, index) -> !fir.slice<1>
   return
 }
 

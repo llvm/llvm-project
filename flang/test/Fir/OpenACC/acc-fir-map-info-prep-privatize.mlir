@@ -77,7 +77,6 @@ func.func @private_static_record() {
 // CHECK: %[[PRIV:.*]] = acc.privatize
 // CHECK: fir.type_desc !fir.type<_QMtypesTdescriptor_pair{{.*}}>
 // CHECK: %[[TDESC:.*]] = fir.address_of(@_QMtypesEXdtXdescriptor_pair)
-// CHECK: fir.field_index sizeinbytes
 // CHECK: %[[ELEMENT_SIZE:.*]] = fir.load
 // CHECK: %[[COUNT:.*]] = arith.constant 6 : i64
 // CHECK: %[[SIZE:.*]] = arith.muli %[[ELEMENT_SIZE]], %[[COUNT]] : i64

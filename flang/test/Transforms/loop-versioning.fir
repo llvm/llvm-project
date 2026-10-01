@@ -1659,10 +1659,10 @@ func.func @_QPtest_step2_slice(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_n
     %14 = fir.load %2 : !fir.ref<i32>
     %15 = fir.convert %14 : (i32) -> i64
     %16 = fir.undefined index
-    %17 = fir.slice %c1, %9#1, %c2, %15, %16, %16 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %17 = fir.slice %c1, %9#1, %c2, %15 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, i64) -> !fir.slice<2>
     %18 = fir.rebox %6 [%17] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
     %19:3 = fir.box_dims %4, %c0 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
-    %20 = fir.slice %c1, %19#1, %c2, %15, %16, %16 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %20 = fir.slice %c1, %19#1, %c2, %15 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, i64) -> !fir.slice<2>
     %21 = fir.rebox %4 [%20] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
     fir.do_loop %arg4 = %c1 to %13 step %c1 unordered {
       %25 = fir.array_coor %18 %arg4 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
@@ -1711,10 +1711,10 @@ func.func @_QPtest_step1_slice(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_n
     %12 = fir.load %2 : !fir.ref<i32>
     %13 = fir.convert %12 : (i32) -> i64
     %14 = fir.undefined index
-    %15 = fir.slice %c1, %9#1, %c1, %13, %14, %14 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %15 = fir.slice %c1, %9#1, %c1, %13 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, i64) -> !fir.slice<2>
     %16 = fir.rebox %6 [%15] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
     %17:3 = fir.box_dims %4, %c0 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
-    %18 = fir.slice %c1, %17#1, %c1, %13, %14, %14 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %18 = fir.slice %c1, %17#1, %c1, %13 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, i64) -> !fir.slice<2>
     %19 = fir.rebox %4 [%18] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
     fir.do_loop %arg4 = %c1 to %11 step %c1 unordered {
       %23 = fir.array_coor %16 %arg4 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
@@ -1765,13 +1765,13 @@ func.func @_QPtest_logical_slice(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>
     %12 = fir.load %2 : !fir.ref<i32>
     %13 = fir.convert %12 : (i32) -> i64
     %14 = fir.undefined index
-    %15 = fir.slice %c1, %9#1, %c1, %13, %14, %14 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %15 = fir.slice %c1, %9#1, %c1, %13 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, i64) -> !fir.slice<2>
     %16 = fir.rebox %6 [%15] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, !fir.slice<2>) -> !fir.box<!fir.array<?x!fir.logical<4>>>
     %17:3 = fir.box_dims %6, %c1 : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, index) -> (index, index, index)
-    %18 = fir.slice %13, %14, %14, %c1, %17#1, %c1 : (i64, index, index, index, index, index) -> !fir.slice<2>
+    %18 = fir.slice %13, %c1, %17#1, %c1 {operand_map = [#fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (i64, index, index, index) -> !fir.slice<2>
     %19 = fir.rebox %6 [%18] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, !fir.slice<2>) -> !fir.box<!fir.array<?x!fir.logical<4>>>
     %20:3 = fir.box_dims %4, %c0 : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, index) -> (index, index, index)
-    %21 = fir.slice %c1, %20#1, %c1, %13, %14, %14 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %21 = fir.slice %c1, %20#1, %c1, %13 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, i64) -> !fir.slice<2>
     %22 = fir.rebox %4 [%21] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, !fir.slice<2>) -> !fir.box<!fir.array<?x!fir.logical<4>>>
     fir.do_loop %arg4 = %c1 to %11 step %c1 unordered {
       %26 = fir.array_coor %16 %arg4 : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
@@ -1825,7 +1825,7 @@ func.func @_QPtest_known_shape_slice(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.b
     %9 = fir.load %2 : !fir.ref<i32>
     %10 = fir.convert %9 : (i32) -> i64
     %11 = fir.undefined index
-    %12 = fir.slice %c1, %c10, %c1, %10, %11, %11 : (index, index, index, i64, index, index) -> !fir.slice<2>
+    %12 = fir.slice %c1, %c10, %c1, %10 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, i64) -> !fir.slice<2>
     %13 = fir.rebox %6 [%12] : (!fir.box<!fir.array<?x?xi32>>, !fir.slice<2>) -> !fir.box<!fir.array<10xi32>>
     %14 = fir.rebox %4 [%12] : (!fir.box<!fir.array<?x?xi32>>, !fir.slice<2>) -> !fir.box<!fir.array<10xi32>>
     fir.do_loop %arg4 = %c1 to %c10 step %c1 unordered {
@@ -1879,10 +1879,10 @@ func.func @_QPtest_maybe_noncontig_slice(%arg0: !fir.box<!fir.array<?x?xf32>> {f
     %12 = arith.cmpi sgt, %11#1, %c0 : index
     %13 = arith.select %12, %11#1, %c0 : index
     %14 = fir.undefined index
-    %15 = fir.slice %10, %14, %14, %c1, %11#1, %c1 : (i64, index, index, index, index, index) -> !fir.slice<2>
+    %15 = fir.slice %10, %c1, %11#1, %c1 {operand_map = [#fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (i64, index, index, index) -> !fir.slice<2>
     %16 = fir.rebox %6 [%15] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
     %17:3 = fir.box_dims %4, %c1 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
-    %18 = fir.slice %10, %14, %14, %c1, %17#1, %c1 : (i64, index, index, index, index, index) -> !fir.slice<2>
+    %18 = fir.slice %10, %c1, %17#1, %c1 {operand_map = [#fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (i64, index, index, index) -> !fir.slice<2>
     %19 = fir.rebox %4 [%18] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
     fir.do_loop %arg4 = %c1 to %13 step %c1 unordered {
       %23 = fir.array_coor %16 %arg4 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
@@ -1942,11 +1942,11 @@ func.func @_QPtest_graphsimfct(%arg0: !fir.box<!fir.array<?x?x?xf32>> {fir.bindc
     %21 = fir.load %8 : !fir.ref<i32>
     %22 = fir.convert %21 : (i32) -> i64
     %23 = fir.undefined index
-    %24 = fir.slice %c1, %15#1, %c1, %c1, %16#1, %c1, %22, %23, %23 : (index, index, index, index, index, index, i64, index, index) -> !fir.slice<3>
+    %24 = fir.slice %c1, %15#1, %c1, %c1, %16#1, %c1, %22 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, index, index, index, i64) -> !fir.slice<3>
     %25 = fir.rebox %2 [%24] : (!fir.box<!fir.array<?x?x?xf32>>, !fir.slice<3>) -> !fir.box<!fir.array<?x?xf32>>
     %26:3 = fir.box_dims %4, %c0 : (!fir.box<!fir.array<?x?x?x?xf32>>, index) -> (index, index, index)
     %27:3 = fir.box_dims %4, %c1 : (!fir.box<!fir.array<?x?x?x?xf32>>, index) -> (index, index, index)
-    %28 = fir.slice %c1, %26#1, %c1, %c1, %27#1, %c1, %22, %23, %23, %22, %23, %23 : (index, index, index, index, index, index, i64, index, index, i64, index, index) -> !fir.slice<4>
+    %28 = fir.slice %c1, %26#1, %c1, %c1, %27#1, %c1, %22, %22 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<triplet>, #fir.slice_operand<index>, #fir.slice_operand<index>]} : (index, index, index, index, index, index, i64, i64) -> !fir.slice<4>
     %29 = fir.rebox %4 [%28] : (!fir.box<!fir.array<?x?x?x?xf32>>, !fir.slice<4>) -> !fir.box<!fir.array<?x?xf32>>
     %30 = fir.do_loop %arg4 = %c1 to %20 step %c1 unordered iter_args(%arg5 = %cst) -> (f32) {
       %35 = fir.do_loop %arg6 = %c1 to %18 step %c1 unordered iter_args(%arg7 = %arg5) -> (f32) {

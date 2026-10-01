@@ -35,7 +35,10 @@ fir::FIRCodeGenDialect::~FIRCodeGenDialect() {
 unsigned fir::cg::XEmboxOp::getOutRank() {
   if (getSlice().empty())
     return getRank();
-  auto outRank = fir::SliceOp::getOutputRank(getSlice());
+  unsigned outRank = 0;
+  for (unsigned i = 1, end = getSlice().size(); i < end; i += 3)
+    if (!mlir::isa_and_nonnull<fir::UndefOp>(getSlice()[i].getDefiningOp()))
+      ++outRank;
   assert(outRank >= 1);
   return outRank;
 }

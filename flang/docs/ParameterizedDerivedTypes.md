@@ -364,14 +364,25 @@ integer, pointer :: p(:)
 p => a(:)%i(5)
 ```
 
-When making a new descriptor like for pointer association, the `field_index`
-operation can take the length type parameters needed for size/offset
-computation.
+When making a new descriptor like for pointer association, the component path is
+embedded in the addressing operation itself. The `path` of a `fir.slice` is a
+list of self-describing component names interleaved with the integer SSA values
+that subscript array components. The component names take no SSA value and do
+not appear in the operation type signature; the slice is then consumed by the
+operation building the new descriptor (`fir.embox` or `fir.rebox`).
 
 **FIR**
 ```
-%5 = fir.field_index i, !fir.type<_QMmod1Tt{l:i32,i:!fir.array<?xi32>}>(%n : i32)
+// Slice for a(:)%i(5): `i` names the component; %c5 subscripts it.
+%5 = fir.slice %c1, %c10, %c1 path i, %c5 : (index, index, index, index) -> !fir.slice<1>
 ```
+
+The path only describes which subobject is selected. The length type parameter
+values that the offset of a PDT component may depend on (`l` in the type above)
+are not operands of the addressing operation: they still have to be read from
+the descriptor of the base entity, or computed with the compiler generated
+offset functions presented above. Addressing components whose offset depends on
+length type parameters is not supported.
 
 #### Length type parameter with expression
 
@@ -854,6 +865,28 @@ passed so the size can be computed accordingly.
 fir.freemem %0 : !fir.type<_QMmod1Tpdt{i:i32,data:!fir.array<?xf32>}>
 ```
 
+#### `fir.coordinate_of`
+
+Component selection is expressed by embedding the component path in the
+addressing operation instead of materializing a separate field offset value.
+The component names appear inline in the operand list of `fir.coordinate_of`
+(internally they are kept as component ordinals of the record type the
+operation is applied to), so they take no SSA value and do not appear in the
+operation type signature. Users of the operation resolve the path against that
+record type.
+
+**FIR**
+```
+%1 = fir.coordinate_of %ref, i : (!fir.ref<!fir.type<_QMpdt_initTt{l:i32,i:i32}>>) -> !fir.ref<i32>
+%2 = fir.load %1 : !fir.ref<i32>
+return %2
+```
+
+The operation carries no length type parameter values, so the offset of a
+component that depends on a length type parameter cannot be derived from the
+path alone. Such addressing requires the offset computation described in the
+sections above and is not implemented.
+
 #### `fir.embox`
 
 The `fir.embox` operation create a boxed reference value. In the case of PDTs
@@ -885,21 +918,6 @@ func.func @_QMpdt_initPlocal() {
   fir.call @_FortranAInitialize(%3, %4, %c8_i32) : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
   return
 }
-```
-
-#### `fir.field_index`
-
-The `fir.field_index` operation is used to generate a field offset value from
-a field identifier in a derived-type. The operation takes length type parameter
-values with a PDT so it can compute a correct offset.
-
-**FIR**
-```
-%l = arith.constant 10 : i32
-%1 = fir.field_index i, !fir.type<_QMpdt_initTt{l:i32,i:i32}> (%l : i32)
-%2 = fir.coordinate_of %ref, %1 : (!fir.type<_QMpdt_initTt{l:i32,i:i32}>, !fir.field) -> !fir.ref<i32>
-%3 = fir.load %2 : !fir.ref<i32>
-return %3
 ```
 
 #### `fir.len_param_index`
@@ -978,7 +996,7 @@ Current list of TODOs in lowering:
 - `flang/lib/Lower/ConvertType.cpp:370` not yet implemented: derived type length parameters
 - `flang/lib/Lower/ConvertVariable.cpp:169` not yet implemented: initial-data-target with derived type length parameters
 - `flang/lib/Lower/ConvertVariable.cpp:197` not yet implemented: initial-data-target with derived type length parameters
-- `flang/lib/Lower/VectorSubscripts.cpp:121` not yet implemented: threading length parameters in field index op
+- `flang/lib/Lower/VectorSubscripts.cpp:121` not yet implemented: threading length parameters through component addressing
 - `flang/lib/Optimizer/Builder/BoxValue.cpp:60` not yet implemented: box value is missing type parameters
 - `flang/lib/Optimizer/Builder/BoxValue.cpp:67` not yet implemented: mutable box value is missing type parameters
 - `flang/lib/Optimizer/Builder/FIRBuilder.cpp:688` not yet implemented: read fir.box with length parameters

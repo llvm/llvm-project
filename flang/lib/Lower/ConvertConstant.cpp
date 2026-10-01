@@ -399,12 +399,9 @@ static mlir::Value genStructureComponentInit(
   fir::RecordType recTy = mlir::cast<fir::RecordType>(res.getType());
   std::string name = converter.getRecordTypeFieldName(sym);
   mlir::Type componentTy = recTy.getType(name);
-  auto fieldTy = fir::FieldType::get(recTy.getContext());
   assert(componentTy && "failed to retrieve component");
-  // FIXME: type parameters must come from the derived-type-spec
-  auto field =
-      fir::FieldIndexOp::create(builder, loc, fieldTy, name, recTy,
-                                /*typeParams=*/mlir::ValueRange{} /*TODO*/);
+  auto field = builder.getArrayAttr(
+      {builder.getStringAttr(name), mlir::TypeAttr::get(recTy)});
 
   if (Fortran::semantics::IsAllocatable(sym)) {
     if (!Fortran::evaluate::IsNullPointerOrAllocatable(&expr)) {
@@ -416,9 +413,8 @@ static mlir::Value genStructureComponentInit(
           fir::factory::createUnallocatedBox(builder, loc, componentTy, {})};
       componentValue = builder.createConvert(loc, componentTy, componentValue);
 
-      return fir::InsertValueOp::create(
-          builder, loc, recTy, res, componentValue,
-          builder.getArrayAttr(field.getAttributes()));
+      return fir::InsertValueOp::create(builder, loc, recTy, res,
+                                        componentValue, field);
     }
   }
 
@@ -438,9 +434,8 @@ static mlir::Value genStructureComponentInit(
     } else
       initialTarget = Fortran::lower::genInitialDataTarget(converter, loc,
                                                            componentTy, expr);
-    res =
-        fir::InsertValueOp::create(builder, loc, recTy, res, initialTarget,
-                                   builder.getArrayAttr(field.getAttributes()));
+    res = fir::InsertValueOp::create(builder, loc, recTy, res, initialTarget,
+                                     field);
     return res;
   }
 
@@ -478,35 +473,30 @@ static mlir::Value genStructureComponentInit(
     auto cPtrRecTy = mlir::cast<fir::RecordType>(cPtrTy);
     llvm::StringRef addrFieldName = Fortran::lower::builtin::cptrFieldName;
     mlir::Type addrFieldTy = cPtrRecTy.getType(addrFieldName);
-    auto addrField =
-        fir::FieldIndexOp::create(builder, loc, fieldTy, addrFieldName, cPtrTy,
-                                  /*typeParams=*/mlir::ValueRange{});
+    auto addrField = builder.getArrayAttr(
+        {builder.getStringAttr(addrFieldName), mlir::TypeAttr::get(cPtrTy)});
     mlir::Value castAddr = builder.createConvert(loc, addrFieldTy, addr);
     auto undef = fir::UndefOp::create(builder, loc, cPtrTy);
     mlir::Value componentValue = fir::InsertValueOp::create(
-        builder, loc, cPtrTy, undef, castAddr,
-        builder.getArrayAttr(addrField.getAttributes()));
+        builder, loc, cPtrTy, undef, castAddr, addrField);
     if (fir::isa_builtin_cdevptr_type(componentTy)) {
       auto cptrFieldName = componentRecTy.getTypeList()[0].first;
-      auto cptrField = fir::FieldIndexOp::create(
-          builder, loc, fieldTy, cptrFieldName, componentTy,
-          /*typeParams=*/mlir::ValueRange{});
+      auto cptrField =
+          builder.getArrayAttr({builder.getStringAttr(cptrFieldName),
+                                mlir::TypeAttr::get(componentTy)});
       auto cdevptrUndef = fir::UndefOp::create(builder, loc, componentTy);
       componentValue = fir::InsertValueOp::create(
-          builder, loc, componentTy, cdevptrUndef, componentValue,
-          builder.getArrayAttr(cptrField.getAttributes()));
+          builder, loc, componentTy, cdevptrUndef, componentValue, cptrField);
     }
-    res =
-        fir::InsertValueOp::create(builder, loc, recTy, res, componentValue,
-                                   builder.getArrayAttr(field.getAttributes()));
+    res = fir::InsertValueOp::create(builder, loc, recTy, res, componentValue,
+                                     field);
     return res;
   }
 
   mlir::Value val = fir::getBase(genConstantValue(converter, loc, expr));
   assert(!fir::isa_ref_type(val.getType()) && "expecting a constant value");
   mlir::Value castVal = builder.createConvert(loc, componentTy, val);
-  res = fir::InsertValueOp::create(builder, loc, recTy, res, castVal,
-                                   builder.getArrayAttr(field.getAttributes()));
+  res = fir::InsertValueOp::create(builder, loc, recTy, res, castVal, field);
   return res;
 }
 
@@ -518,7 +508,6 @@ static mlir::Value genInlinedStructureCtorLitImpl(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto recTy = mlir::cast<fir::RecordType>(type);
 
-  auto fieldTy = fir::FieldType::get(recTy.getContext());
   mlir::Value res{};
   // When the first structure component values belong to some parent type PT
   // and the next values belong to a type extension ET, a new undef for ET must
@@ -539,12 +528,11 @@ static mlir::Value genInlinedStructureCtorLitImpl(
     for (mlir::Type parentType : llvm::reverse(parentTypes)) {
       auto undef = fir::UndefOp::create(builder, loc, parentType);
       fir::RecordType parentRecTy = mlir::cast<fir::RecordType>(parentType);
-      auto field = fir::FieldIndexOp::create(
-          builder, loc, fieldTy, parentRecTy.getTypeList()[0].first, parentType,
-          /*typeParams=*/mlir::ValueRange{} /*TODO*/);
-      res = fir::InsertValueOp::create(
-          builder, loc, parentRecTy, undef, res,
-          builder.getArrayAttr(field.getAttributes()));
+      auto field = builder.getArrayAttr(
+          {builder.getStringAttr(parentRecTy.getTypeList()[0].first),
+           mlir::TypeAttr::get(parentType)});
+      res = fir::InsertValueOp::create(builder, loc, parentRecTy, undef, res,
+                                       field);
     }
   };
 

@@ -57,7 +57,7 @@ subroutine only_once(x)
 ! CHECK:   %[[VAL_DIMS:.*]]:3 = fir.box_dims %[[VAL_LOAD]], %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:   %[[VAL_SHAPE:.*]] = fir.shape %[[VAL_DIMS]]#1 : (index) -> !fir.shape<1>
 ! CHECK:   %[[VAL_ASSOC:.*]]:3 = hlfir.associate %[[VAL_EXPR]](%[[VAL_SHAPE]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
-! CHECK:   %[[VAL_SLICE:.*]] = fir.slice %[[VAL_SUB_I64]], %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_DIMS]]#1, %{{.*}} : (i64, index, index, index, index, index) -> !fir.slice<2>
+! CHECK:   %[[VAL_SLICE:.*]] = fir.slice %[[VAL_SUB_I64]], %{{.*}}, %[[VAL_DIMS]]#1, %{{.*}} {operand_map = [#fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (i64, index, index, index) -> !fir.slice<2>
 ! CHECK:   fir.do_loop %[[IDX:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
 ! CHECK:     %[[SUB_IDX:.*]] = fir.convert %[[VAL_SUB_I64]] : (i64) -> index
 ! CHECK:     %[[VEL:.*]] = fir.coordinate_of %[[VAL_ASSOC]]#1, %[[IDX]] : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
@@ -108,8 +108,7 @@ subroutine lower_bounds(x, y)
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_C3I64:.*]] = arith.constant 3 : i64
 ! CHECK:   %[[VAL_SS2:.*]] = fir.shape_shift %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index, index) -> !fir.shapeshift<2>
-! CHECK:   %[[VAL_UNDEF:.*]] = fir.undefined index
-! CHECK:   %[[VAL_SLICE:.*]] = fir.slice %[[VAL_C3I64]], %[[VAL_UNDEF]], %[[VAL_UNDEF]], %{{.*}}, %{{.*}}, %{{.*}} : (i64, index, index, index, index, index) -> !fir.slice<2>
+! CHECK:   %[[VAL_SLICE:.*]] = fir.slice %[[VAL_C3I64]], %{{.*}}, %{{.*}}, %{{.*}} {operand_map = [#fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (i64, index, index, index) -> !fir.slice<2>
 ! CHECK:   fir.do_loop %[[IDX:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
 ! CHECK:     %[[VAL_C3IDX:.*]] = fir.convert %[[VAL_C3I64]] : (i64) -> index
 ! CHECK:     %[[VEL:.*]] = fir.coordinate_of %[[VAL_Y]]#0, %[[IDX]] : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
@@ -251,8 +250,7 @@ subroutine complex_part(z, y)
 ! CHECK:   %[[VAL_Z:.*]]:2 = hlfir.declare %[[VAL_Z_ARG]]{{.*}}{uniq_name = "_QFcomplex_partEz"}
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_DIMS:.*]]:3 = fir.box_dims %[[VAL_Y]]#1, %{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-! CHECK:   %[[VAL_C1I32:.*]] = arith.constant 1 : i32
-! CHECK:   %[[VAL_SLICE:.*]] = fir.slice %{{.*}}, %[[VAL_DIMS]]#1, %{{.*}} path %[[VAL_C1I32]] : (index, index, index, i32) -> !fir.slice<1>
+! CHECK:   %[[VAL_SLICE:.*]] = fir.slice %{{.*}}, %[[VAL_DIMS]]#1, %{{.*}} {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<imaginary>]} : (index, index, index) -> !fir.slice<1>
 ! CHECK:   fir.do_loop %[[IDX:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
 ! CHECK:     %[[VEL:.*]] = fir.coordinate_of %[[VAL_Y]]#1, %[[IDX]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 ! CHECK:     %[[VEL_LD:.*]] = fir.load %[[VEL]] : !fir.ref<i32>
@@ -312,11 +310,8 @@ subroutine with_path(b, i)
 ! CHECK:   %[[VAL_I:.*]]:2 = hlfir.declare %[[VAL_I_ARG]]{{.*}}{uniq_name = "_QFwith_pathEi"}
 ! CHECK:   %[[VAL_BEGIN:.*]] = fir.call @_FortranAioBeginExternalListInput({{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[VAL_DIMS:.*]]:3 = fir.box_dims %[[VAL_I]]#1, %{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-! CHECK:   %[[VAL_FIELD_A:.*]] = fir.field_index a, !fir.type<_QMderived_typesTt2{a:!fir.array<5x5x!fir.type<_QMderived_typesTt{i:i32,c:!fir.char<1,2>}>>}>
-! CHECK:   %[[VAL_FIELD_I:.*]] = fir.field_index i, !fir.type<_QMderived_typesTt{i:i32,c:!fir.char<1,2>}>
 ! CHECK:   %[[VAL_SHIFT2:.*]] = fir.shift %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index) -> !fir.shift<3>
-! CHECK:   %[[VAL_UNDEF:.*]] = fir.undefined index
-! CHECK:   %[[VAL_SLICE:.*]] = fir.slice %{{.*}}, %[[VAL_UNDEF]], %[[VAL_UNDEF]], %{{.*}}, %[[VAL_DIMS]]#1, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} path %[[VAL_FIELD_A]], %{{.*}}, %{{.*}}, %[[VAL_FIELD_I]] : (i64, index, index, index, index, index, index, index, index, !fir.field, i64, i64, !fir.field) -> !fir.slice<3>
+! CHECK:   %[[VAL_SLICE:.*]] = fir.slice %{{.*}}, %{{.*}}, %[[VAL_DIMS]]#1, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} {operand_map = [#fir.slice_operand<index>, #fir.slice_operand<triplet>, #fir.slice_operand<triplet>, "a", #fir.slice_operand<index>, #fir.slice_operand<index>, "i"]} : (i64, index, index, index, index, index, index, i64, i64) -> !fir.slice<3>
 ! CHECK:   fir.do_loop %[[IDX_OUTER:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
 ! CHECK:     fir.do_loop %[[IDX_INNER:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
 ! CHECK:       %[[FIVE_IDX:.*]] = fir.convert %{{.*}} : (i64) -> index
@@ -387,8 +382,7 @@ subroutine iostat_in_io_loop(k, j, stat)
 ! CHECK:       %[[I_LD:.*]] = fir.load %[[VAL_I]]#0 : !fir.ref<i32>
 ! CHECK:       %[[I_I64:.*]] = fir.convert %[[I_LD]] : (i32) -> i64
 ! CHECK:       %[[K_SHAPE:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
-! CHECK:       %[[VAL_UNDEF:.*]] = fir.undefined index
-! CHECK:       %[[VAL_SLICE:.*]] = fir.slice %[[I_I64]], %[[VAL_UNDEF]], %[[VAL_UNDEF]], %{{.*}}, %{{.*}}, %{{.*}} : (i64, index, index, index, index, index) -> !fir.slice<2>
+! CHECK:       %[[VAL_SLICE:.*]] = fir.slice %[[I_I64]], %{{.*}}, %{{.*}}, %{{.*}} {operand_map = [#fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (i64, index, index, index) -> !fir.slice<2>
 ! CHECK:       %[[INNER_ITER:.*]] = fir.iterate_while (%[[J_IDX:.*]] = %{{.*}} to %{{.*}} step %{{.*}}) and (%{{.*}} = %[[I_COND]]) {
 ! CHECK:         %[[I_AS_IDX:.*]] = fir.convert %[[I_I64]] : (i64) -> index
 ! CHECK:         %[[J_EL:.*]] = fir.coordinate_of %[[VAL_J]]#0, %[[J_IDX]] : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>

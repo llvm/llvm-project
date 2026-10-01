@@ -1085,14 +1085,11 @@ CUDAIntrinsicLibrary::genBarrierTryWaitSleep(mlir::Type resultType,
 static void insertValueAtPos(fir::FirOpBuilder &builder, mlir::Location loc,
                              fir::RecordType recTy, mlir::Value base,
                              mlir::Value dim, unsigned fieldPos) {
-  auto fieldName = recTy.getTypeList()[fieldPos].first;
   mlir::Type fieldTy = recTy.getTypeList()[fieldPos].second;
-  mlir::Type fieldIndexType = fir::FieldType::get(base.getContext());
-  mlir::Value fieldIndex =
-      fir::FieldIndexOp::create(builder, loc, fieldIndexType, fieldName, recTy,
-                                /*typeParams=*/mlir::ValueRange{});
-  mlir::Value coord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(fieldTy), base, fieldIndex);
+  fir::IntOrValue fieldIndex = builder.getI32IntegerAttr(fieldPos);
+  mlir::Value coord =
+      fir::CoordinateOp::create(builder, loc, builder.getRefType(fieldTy), base,
+                                llvm::ArrayRef<fir::IntOrValue>{fieldIndex});
   fir::StoreOp::create(builder, loc, dim, coord);
 }
 
@@ -1399,28 +1396,13 @@ CUDAIntrinsicLibrary::genThisCluster(mlir::Type resultType,
 
   // SIZE
   mlir::Value size = mlir::NVVM::ClusterDim::create(builder, loc, i32Ty);
-  auto sizeFieldName = recTy.getTypeList()[1].first;
-  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
-  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
-  mlir::Value sizeFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, sizeFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value sizeCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
-  fir::StoreOp::create(builder, loc, size, sizeCoord);
+  insertValueAtPos(builder, loc, recTy, res, size, 1);
 
   // RANK
   mlir::Value rank = mlir::NVVM::ClusterId::create(builder, loc, i32Ty);
   mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
   rank = mlir::arith::AddIOp::create(builder, loc, rank, one);
-  auto rankFieldName = recTy.getTypeList()[2].first;
-  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
-  mlir::Value rankFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, rankFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value rankCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
-  fir::StoreOp::create(builder, loc, rank, rankCoord);
+  insertValueAtPos(builder, loc, recTy, res, rank, 2);
 
   return res;
 }
@@ -1491,24 +1473,9 @@ CUDAIntrinsicLibrary::genThisGrid(mlir::Type resultType,
   mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
   rank = mlir::arith::AddIOp::create(builder, loc, rank, one);
 
-  auto sizeFieldName = recTy.getTypeList()[1].first;
-  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
-  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
-  mlir::Value sizeFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, sizeFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value sizeCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
-  fir::StoreOp::create(builder, loc, size, sizeCoord);
+  insertValueAtPos(builder, loc, recTy, res, size, 1);
 
-  auto rankFieldName = recTy.getTypeList()[2].first;
-  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
-  mlir::Value rankFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, rankFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value rankCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
-  fir::StoreOp::create(builder, loc, rank, rankCoord);
+  insertValueAtPos(builder, loc, recTy, res, rank, 2);
   return res;
 }
 
@@ -1545,24 +1512,9 @@ CUDAIntrinsicLibrary::genThisThreadBlock(mlir::Type resultType,
   mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
   rank = mlir::arith::AddIOp::create(builder, loc, rank, one);
 
-  auto sizeFieldName = recTy.getTypeList()[1].first;
-  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
-  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
-  mlir::Value sizeFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, sizeFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value sizeCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
-  fir::StoreOp::create(builder, loc, size, sizeCoord);
+  insertValueAtPos(builder, loc, recTy, res, size, 1);
 
-  auto rankFieldName = recTy.getTypeList()[2].first;
-  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
-  mlir::Value rankFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, rankFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value rankCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
-  fir::StoreOp::create(builder, loc, rank, rankCoord);
+  insertValueAtPos(builder, loc, recTy, res, rank, 2);
   return res;
 }
 
@@ -1578,15 +1530,7 @@ CUDAIntrinsicLibrary::genThisWarp(mlir::Type resultType,
 
   // coalesced_group%size = 32
   mlir::Value size = builder.createIntegerConstant(loc, i32Ty, 32);
-  auto sizeFieldName = recTy.getTypeList()[1].first;
-  mlir::Type sizeFieldTy = recTy.getTypeList()[1].second;
-  mlir::Type fieldIndexType = fir::FieldType::get(resultType.getContext());
-  mlir::Value sizeFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, sizeFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value sizeCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(sizeFieldTy), res, sizeFieldIndex);
-  fir::StoreOp::create(builder, loc, size, sizeCoord);
+  insertValueAtPos(builder, loc, recTy, res, size, 1);
 
   // coalesced_group%rank = threadIdx.x & 31 + 1
   mlir::Value threadIdX = mlir::NVVM::ThreadIdXOp::create(builder, loc, i32Ty);
@@ -1595,14 +1539,7 @@ CUDAIntrinsicLibrary::genThisWarp(mlir::Type resultType,
   mlir::Value masked =
       mlir::arith::AndIOp::create(builder, loc, threadIdX, mask);
   mlir::Value rank = mlir::arith::AddIOp::create(builder, loc, masked, one);
-  auto rankFieldName = recTy.getTypeList()[2].first;
-  mlir::Type rankFieldTy = recTy.getTypeList()[2].second;
-  mlir::Value rankFieldIndex = fir::FieldIndexOp::create(
-      builder, loc, fieldIndexType, rankFieldName, recTy,
-      /*typeParams=*/mlir::ValueRange{});
-  mlir::Value rankCoord = fir::CoordinateOp::create(
-      builder, loc, builder.getRefType(rankFieldTy), res, rankFieldIndex);
-  fir::StoreOp::create(builder, loc, rank, rankCoord);
+  insertValueAtPos(builder, loc, recTy, res, rank, 2);
   return res;
 }
 

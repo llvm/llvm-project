@@ -96,11 +96,12 @@ private:
   mlir::Type gen(const Fortran::evaluate::ComplexPart &complexPart) {
     auto complexType = gen(complexPart.complex());
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-    mlir::Type i32Ty = builder.getI32Type(); // llvm's GEP requires i32
-    mlir::Value offset = builder.createIntegerConstant(
-        loc, i32Ty,
-        complexPart.part() == Fortran::evaluate::ComplexPart::Part::RE ? 0 : 1);
-    componentPath.emplace_back(offset);
+    fir::SliceOperandKind kind =
+        complexPart.part() == Fortran::evaluate::ComplexPart::Part::RE
+            ? fir::SliceOperandKind::Real
+            : fir::SliceOperandKind::Imaginary;
+    componentPath.emplace_back(
+        fir::SliceOperandKindAttr::get(builder.getContext(), kind));
     return fir::factory::Complex{builder, loc}.getComplexPartType(complexType);
   }
 
@@ -112,17 +113,12 @@ private:
     // of the FIR type and cannot be used in the path yet.
     if (componentSymbol.test(Fortran::semantics::Symbol::Flag::ParentComp))
       TODO(loc, "reference to parent component");
-    mlir::Type fldTy = fir::FieldType::get(&converter.getMLIRContext());
-    llvm::StringRef componentName = toStringRef(componentSymbol.name());
-    // Parameters threading in field_index is not yet very clear. We only
-    // have the ones of the ranked array ref at hand, but it looks like
-    // the fir.field_index expects the one of the direct base.
+    std::string componentName =
+        converter.getRecordTypeFieldName(componentSymbol);
     if (recTy.getNumLenParams() != 0)
-      TODO(loc, "threading length parameters in field index op");
-    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+      TODO(loc, "threading length parameters in component slice path");
     componentPath.emplace_back(
-        fir::FieldIndexOp::create(builder, loc, fldTy, componentName, recTy,
-                                  /*typeParams=*/mlir::ValueRange{}));
+        mlir::StringAttr::get(&converter.getMLIRContext(), componentName));
     return fir::unwrapSequenceType(recTy.getType(componentName));
   }
 
@@ -241,7 +237,7 @@ private:
   /// Elements of VectorSubscriptBox being built.
   fir::ExtendedValue loweredBase;
   llvm::SmallVector<LoweredSubscript, 16> loweredSubscripts;
-  llvm::SmallVector<mlir::Value> componentPath;
+  llvm::SmallVector<fir::SlicePathElement> componentPath;
   MaybeSubstring substringBounds;
   mlir::Type elementType;
 };
@@ -324,29 +320,53 @@ mlir::Value
 Fortran::lower::VectorSubscriptBox::createSlice(fir::FirOpBuilder &builder,
                                                 mlir::Location loc) {
   mlir::Type idxTy = builder.getIndexType();
-  llvm::SmallVector<mlir::Value> triples;
+  llvm::SmallVector<mlir::Value> operands;
+  llvm::SmallVector<mlir::Attribute> operandMap;
+  auto kindAttr = [&](fir::SliceOperandKind kind) {
+    return fir::SliceOperandKindAttr::get(builder.getContext(), kind);
+  };
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-  auto undef = fir::UndefOp::create(builder, loc, idxTy);
   for (const LoweredSubscript &subscript : loweredSubscripts)
-    Fortran::common::visit(Fortran::common::visitors{
-                               [&](const LoweredTriplet &triplet) {
-                                 triples.emplace_back(triplet.lb);
-                                 triples.emplace_back(triplet.ub);
-                                 triples.emplace_back(triplet.stride);
-                               },
-                               [&](const LoweredVectorSubscript &vector) {
-                                 triples.emplace_back(one);
-                                 triples.emplace_back(vector.size);
-                                 triples.emplace_back(one);
-                               },
-                               [&](const mlir::Value &i) {
-                                 triples.emplace_back(i);
-                                 triples.emplace_back(undef);
-                                 triples.emplace_back(undef);
-                               },
-                           },
-                           subscript);
-  return fir::SliceOp::create(builder, loc, triples, componentPath);
+    Fortran::common::visit(
+        Fortran::common::visitors{
+            [&](const LoweredTriplet &triplet) {
+              operands.emplace_back(triplet.lb);
+              operands.emplace_back(triplet.ub);
+              operands.emplace_back(triplet.stride);
+              operandMap.push_back(kindAttr(fir::SliceOperandKind::Triplet));
+            },
+            [&](const LoweredVectorSubscript &vector) {
+              operands.emplace_back(one);
+              operands.emplace_back(vector.size);
+              operands.emplace_back(one);
+              operandMap.push_back(kindAttr(fir::SliceOperandKind::Triplet));
+            },
+            [&](const mlir::Value &i) {
+              operands.emplace_back(i);
+              operandMap.push_back(kindAttr(fir::SliceOperandKind::Index));
+            },
+        },
+        subscript);
+  for (fir::SlicePathElement element : componentPath) {
+    if (auto component = element.dyn_cast<mlir::StringAttr>())
+      operandMap.push_back(component);
+    else if (auto kind = element.dyn_cast<fir::SliceOperandKindAttr>())
+      operandMap.push_back(kind);
+    else {
+      operands.push_back(element.dyn_cast<mlir::Value>());
+      operandMap.push_back(kindAttr(fir::SliceOperandKind::Index));
+    }
+  }
+  bool allTriplets =
+      componentPath.empty() &&
+      llvm::all_of(operandMap, [](mlir::Attribute attr) {
+        return mlir::cast<fir::SliceOperandKindAttr>(attr).getValue() ==
+               fir::SliceOperandKind::Triplet;
+      });
+  mlir::ArrayAttr map =
+      allTriplets ? mlir::ArrayAttr{} : builder.getArrayAttr(operandMap);
+  return fir::SliceOp::create(builder, loc, operands, map,
+                              loweredSubscripts.size());
 }
 
 llvm::SmallVector<std::tuple<mlir::Value, mlir::Value, mlir::Value>>

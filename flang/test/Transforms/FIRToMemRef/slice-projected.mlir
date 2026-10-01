@@ -40,7 +40,7 @@ func.func @projected_slice_fwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
   %c4 = arith.constant 4 : index
   %c0 = arith.constant 0 : index
   %shape = fir.shape %c4 : (index) -> !fir.shape<1>
-  %slice = fir.slice %c1, %c4, %c1 path %c0 : (index, index, index, index) -> !fir.slice<1>
+  %slice = fir.slice %c1, %c4, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<real>]} : (index, index, index) -> !fir.slice<1>
   %embox = fir.embox %arg0(%shape) [%slice] : (!fir.ref<!fir.array<4xcomplex<f32>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<4xf32>>
   fir.do_loop %i = %c1 to %c4 step %c1 unordered {
     %coor = fir.array_coor %embox %i : (!fir.box<!fir.array<4xf32>>, index) -> !fir.ref<f32>
@@ -68,7 +68,7 @@ func.func @projected_slice_bwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
   %cm1 = arith.constant -1 : index
   %c0 = arith.constant 0 : index
   %shape = fir.shape %c4 : (index) -> !fir.shape<1>
-  %slice = fir.slice %c4, %c1, %cm1 path %c0 : (index, index, index, index) -> !fir.slice<1>
+  %slice = fir.slice %c4, %c1, %cm1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<real>]} : (index, index, index) -> !fir.slice<1>
   %embox = fir.embox %arg0(%shape) [%slice] : (!fir.ref<!fir.array<4xcomplex<f32>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<4xf32>>
   fir.do_loop %i = %c1 to %c4 step %c1 unordered {
     %coor = fir.array_coor %embox %i : (!fir.box<!fir.array<4xf32>>, index) -> !fir.ref<f32>
@@ -96,7 +96,7 @@ func.func @projected_slice_store_im(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>,
   %c4 = arith.constant 4 : index
   %c1_im = arith.constant 1 : index  // imaginary component index
   %shape = fir.shape %c4 : (index) -> !fir.shape<1>
-  %slice = fir.slice %c1, %c4, %c1 path %c1_im : (index, index, index, index) -> !fir.slice<1>
+  %slice = fir.slice %c1, %c4, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<imaginary>]} : (index, index, index) -> !fir.slice<1>
   %embox = fir.embox %arg0(%shape) [%slice] : (!fir.ref<!fir.array<4xcomplex<f32>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<4xf32>>
   fir.do_loop %i = %c1 to %c4 step %c1 unordered {
     %coor = fir.array_coor %embox %i : (!fir.box<!fir.array<4xf32>>, index) -> !fir.ref<f32>
@@ -141,7 +141,7 @@ func.func @projected_slice_2d(%arg0: !fir.ref<!fir.array<2x3xcomplex<f32>>>) {
   %c3 = arith.constant 3 : index
   %c0 = arith.constant 0 : index
   %shape = fir.shape %c2, %c3 : (index, index) -> !fir.shape<2>
-  %slice = fir.slice %c1, %c2, %c1, %c1, %c3, %c1 path %c0 : (index, index, index, index, index, index, index) -> !fir.slice<2>
+  %slice = fir.slice %c1, %c2, %c1, %c1, %c3, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<triplet>, #fir.slice_operand<real>]} : (index, index, index, index, index, index) -> !fir.slice<2>
   %embox = fir.embox %arg0(%shape) [%slice] : (!fir.ref<!fir.array<2x3xcomplex<f32>>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<2x3xf32>>
   fir.do_loop %i = %c1 to %c2 step %c1 unordered {
     fir.do_loop %j = %c1 to %c3 step %c1 unordered {
@@ -187,7 +187,7 @@ func.func @projected_slice_complex_box(%arg0: !fir.box<!fir.array<?x?xcomplex<f3
   %dim0:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index) -> (index, index, index)
   %dim1:3 = fir.box_dims %arg0, %c1 : (!fir.box<!fir.array<?x?xcomplex<f32>>>, index) -> (index, index, index)
   %shape = fir.shape %dim0#1, %dim1#1 : (index, index) -> !fir.shape<2>
-  %slice = fir.slice %c1, %dim0#1, %c1, %c1, %dim1#1, %c1 path %c0 : (index, index, index, index, index, index, index) -> !fir.slice<2>
+  %slice = fir.slice %c1, %dim0#1, %c1, %c1, %dim1#1, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<triplet>, #fir.slice_operand<real>]} : (index, index, index, index, index, index) -> !fir.slice<2>
   fir.do_loop %i = %c1 to %dim0#1 step %c1 unordered {
     fir.do_loop %j = %c1 to %dim1#1 step %c1 unordered {
       %coor = fir.array_coor %arg0 [%slice] %i, %j : (!fir.box<!fir.array<?x?xcomplex<f32>>>, !fir.slice<2>, index, index) -> !fir.ref<f32>
@@ -216,9 +216,8 @@ func.func @derived_component_not_projected(
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
   %cst = arith.constant 9.9e+01 : f64
-  %field = fir.field_index x, !fir.type<T{x:f64,y:complex<f64>}>
   %shape = fir.shape %c4 : (index) -> !fir.shape<1>
-  %slice = fir.slice %c1, %c4, %c1 path %field : (index, index, index, !fir.field) -> !fir.slice<1>
+  %slice = fir.slice %c1, %c4, %c1 {operand_map = [#fir.slice_operand<triplet>, "x"]} : (index, index, index) -> !fir.slice<1>
   %embox = fir.embox %arg0(%shape) [%slice] : (!fir.ref<!fir.array<4x!fir.type<T{x:f64,y:complex<f64>}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<4xf64>>
   fir.do_loop %i = %c1 to %c4 step %c1 unordered {
     %coor = fir.array_coor %embox %i : (!fir.box<!fir.array<4xf64>>, index) -> !fir.ref<f64>
@@ -243,7 +242,7 @@ func.func @projected_slice_ref_shapevec_stride_store(
   %c5 = arith.constant 5 : index
   %c0 = arith.constant 0 : index
   %shape = fir.shape %c5 : (index) -> !fir.shape<1>
-  %slice = fir.slice %c1, %c5, %c1 path %c0 : (index, index, index, index) -> !fir.slice<1>
+  %slice = fir.slice %c1, %c5, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<real>]} : (index, index, index) -> !fir.slice<1>
   fir.do_loop %i = %c1 to %c5 step %c1 unordered {
     %coor = fir.array_coor %arg0 (%shape) [%slice] %i
         : (!fir.ref<!fir.array<5xcomplex<f32>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<f32>
@@ -264,7 +263,7 @@ func.func @projected_slice_ref_shapevec_stride_load_im(
   %c4 = arith.constant 4 : index
   %c1_im = arith.constant 1 : index
   %shape = fir.shape %c4 : (index) -> !fir.shape<1>
-  %slice = fir.slice %c1, %c4, %c1 path %c1_im : (index, index, index, index) -> !fir.slice<1>
+  %slice = fir.slice %c1, %c4, %c1 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<imaginary>]} : (index, index, index) -> !fir.slice<1>
   fir.do_loop %i = %c1 to %c4 step %c1 unordered {
     %coor = fir.array_coor %arg0 (%shape) [%slice] %i
         : (!fir.ref<!fir.array<4xcomplex<f64>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<f64>

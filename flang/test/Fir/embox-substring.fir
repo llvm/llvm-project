@@ -7,7 +7,7 @@
 func.func @embox_index_substr(%addr : !fir.ref<!fir.array<?x!fir.char<1,2>>>) {
   %0 = arith.constant 0 : index
   %1 = fir.shape_shift %0, %0 : (index, index) -> !fir.shapeshift<1>
-  %2 = fir.slice %0, %0, %0 substr %0, %0: (index, index, index, index, index) -> !fir.slice<1>
+  %2 = fir.slice %0, %0, %0, %0, %0 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<substring>]} : (index, index, index, index, index) -> !fir.slice<1>
   %3 = fir.embox %addr (%1) [%2] : (!fir.ref<!fir.array<?x!fir.char<1,2>>>, !fir.shapeshift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
   return
 }

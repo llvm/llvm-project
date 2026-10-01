@@ -343,14 +343,6 @@ func.func private @foo1(%arg0: !fir.boxchar<2>)
 
 // -----
 
-// Test `!fir.field` conversion
-
-func.func private @foo0(%arg0: !fir.field)
-// CHECK-LABEL: foo0
-// CHECK-SAME: i32
-
-// -----
-
 // Test `!fir.len` conversion.
 
 func.func private @foo0(%arg0: !fir.len)

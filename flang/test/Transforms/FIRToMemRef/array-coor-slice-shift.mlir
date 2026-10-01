@@ -97,7 +97,7 @@ func.func @array_coor_box_shape_shift_slice(%arg0: !fir.box<!fir.array<?x?xi32>>
   %c10 = arith.constant 10 : index
   %undef = fir.undefined index
   %ss = fir.shape_shift %c1, %c10, %c1, %c5 : (index, index, index, index) -> !fir.shapeshift<2>
-  %slice = fir.slice %c1, %c2, %c1, %c2, %undef, %undef : (index, index, index, index, index, index) -> !fir.slice<2>
+  %slice = fir.slice %c1, %c2, %c1, %c2 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, index) -> !fir.slice<2>
   %addr = fir.array_coor %arg0(%ss) [%slice] %c1, %c2 : (!fir.box<!fir.array<?x?xi32>>, !fir.shapeshift<2>, !fir.slice<2>, index, index) -> !fir.ref<i32>
   %val = fir.load %addr : !fir.ref<i32>
   return
@@ -125,7 +125,7 @@ func.func @array_coor_slice_scalar_full_rank_dim1_shifted() {
   %1 = fir.shape_shift %c3, %c10, %c_neg4, %c10 : (index, index, index, index) -> !fir.shapeshift<2>
   %2 = fir.declare %0(%1) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<10x10xi32>>, !fir.shapeshift<2>) -> !fir.ref<!fir.array<10x10xi32>>
   %u = fir.undefined index
-  %3 = fir.slice %c5, %u, %u, %c_neg4, %c10, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
+  %3 = fir.slice %c5, %c_neg4, %c10, %c1 {operand_map = [#fir.slice_operand<index>, #fir.slice_operand<triplet>]} : (index, index, index, index) -> !fir.slice<2>
   %4 = fir.array_coor %2(%1) [%3] %c5, %c_neg4 : (!fir.ref<!fir.array<10x10xi32>>, !fir.shapeshift<2>, !fir.slice<2>, index, index) -> !fir.ref<i32>
   fir.store %c1_i32 to %4 : !fir.ref<i32>
   return

@@ -13,9 +13,7 @@ module {
     acc.yield %1 : !fir.ref<!fir.type<_QFtestTpoint{x:f32}>>
   } copy {
   ^bb0(%arg0: !fir.ref<!fir.type<_QFtestTpoint{x:f32}>>, %arg1: !fir.ref<!fir.type<_QFtestTpoint{x:f32}>>):
-    %0 = fir.field_index x, !fir.type<_QFtestTpoint{x:f32}>
     %1 = fir.coordinate_of %arg0, x : (!fir.ref<!fir.type<_QFtestTpoint{x:f32}>>) -> !fir.ref<f32>
-    %2 = fir.field_index x, !fir.type<_QFtestTpoint{x:f32}>
     %3 = fir.coordinate_of %arg1, x : (!fir.ref<!fir.type<_QFtestTpoint{x:f32}>>) -> !fir.ref<f32>
     %4 = fir.load %1 : !fir.ref<f32>
     fir.store %4 to %3 : !fir.ref<f32>
@@ -38,7 +36,6 @@ module {
         fir.store %arg1 to %9 : !fir.ref<i32>
         %10 = fir.load %9 : !fir.ref<i32>
         %11 = fir.convert %10 : (i32) -> f32
-        %12 = fir.field_index x, !fir.type<_QFtestTpoint{x:f32}>
         %13 = fir.coordinate_of %5, x : (!fir.ref<!fir.type<_QFtestTpoint{x:f32}>>) -> !fir.ref<f32>
         fir.store %11 to %13 : !fir.ref<f32>
         acc.yield
@@ -53,8 +50,6 @@ module {
 // CHECK:           acc.parallel {
 // CHECK:             %[[VAL_8:.*]] = fir.alloca !fir.type<_QFtestTpoint{x:f32}>
 // CHECK:             %[[VAL_9:.*]] = fir.declare %[[VAL_8]] {acc.var_name = #acc.var_name<"p">, uniq_name = "acc.private.init"} : (!fir.ref<!fir.type<_QFtestTpoint{x:f32}>>) -> !fir.ref<!fir.type<_QFtestTpoint{x:f32}>>
-// CHECK:             %[[VAL_10:.*]] = fir.field_index x, !fir.type<_QFtestTpoint{x:f32}>
 // CHECK:             %[[VAL_11:.*]] = fir.coordinate_of %[[VAL_7]], x : (!fir.ref<!fir.type<_QFtestTpoint{x:f32}>>) -> !fir.ref<f32>
-// CHECK:             %[[VAL_12:.*]] = fir.field_index x, !fir.type<_QFtestTpoint{x:f32}>
 // CHECK:             %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_9]], x : (!fir.ref<!fir.type<_QFtestTpoint{x:f32}>>) -> !fir.ref<f32>
 // CHECK:             %[[VAL_14:.*]] = fir.load %[[VAL_11]] : !fir.ref<f32>

@@ -101,7 +101,6 @@ func.func @array_section(%arg0: !fir.ref<!fir.array<10xf32>>) {
 // CHECK:  %[[VAL_5:.*]] = arith.constant 8 : index
 // CHECK:  %[[VAL_6:.*]] = arith.constant 3 : index
 // CHECK:  %[[VAL_7:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-// CHECK:  %[[VAL_8:.*]] = fir.undefined index
 // CHECK:  %[[VAL_9:.*]] = fir.slice %[[VAL_4]], %[[VAL_5]], %[[VAL_6]] : (index, index, index) -> !fir.slice<1>
 // CHECK:  %[[VAL_10:.*]] = fir.embox %[[VAL_3]](%[[VAL_2]]) {{\[}}%[[VAL_9]]] : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<3xf32>>
 
@@ -132,7 +131,6 @@ func.func @array_section_2(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.ref<i
 // CHECK:  %[[VAL_9:.*]] = arith.constant 3 : index
 // CHECK:  %[[VAL_10:.*]] = arith.constant 42 : index
 // CHECK:  %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
-// CHECK:  %[[VAL_12:.*]] = fir.undefined index
 // CHECK:  %[[VAL_13:.*]] = fir.slice %[[VAL_8]], %[[VAL_7]]#1, %[[VAL_9]] : (index, index, index) -> !fir.slice<1>
 // CHECK:  %[[VAL_14:.*]] = fir.rebox %[[VAL_4]] {{\[}}%[[VAL_13]]] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
 
@@ -163,7 +161,6 @@ func.func @char_array_section(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>, %ar
 // CHECK:  %[[VAL_9:.*]] = arith.constant 3 : index
 // CHECK:  %[[VAL_10:.*]] = arith.constant 42 : index
 // CHECK:  %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
-// CHECK:  %[[VAL_12:.*]] = fir.undefined index
 // CHECK:  %[[VAL_13:.*]] = fir.slice %[[VAL_6]], %[[VAL_8]]#1, %[[VAL_9]] : (index, index, index) -> !fir.slice<1>
 // CHECK:  %[[VAL_14:.*]] = fir.rebox %[[VAL_4]] {{\[}}%[[VAL_13]]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
 
@@ -194,7 +191,6 @@ func.func @char_array_section_cst_len(%arg0: !fir.box<!fir.array<?x!fir.char<1,5
 // CHECK:  %[[VAL_9:.*]] = arith.constant 3 : index
 // CHECK:  %[[VAL_10:.*]] = arith.constant 42 : index
 // CHECK:  %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
-// CHECK:  %[[VAL_12:.*]] = fir.undefined index
 // CHECK:  %[[VAL_13:.*]] = fir.slice %[[VAL_6]], %[[VAL_8]]#1, %[[VAL_9]] : (index, index, index) -> !fir.slice<1>
 // CHECK:  %[[VAL_14:.*]] = fir.rebox %[[VAL_5]] {{\[}}%[[VAL_13]]] : (!fir.box<!fir.array<?x!fir.char<1,5>>>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1,5>>>
 

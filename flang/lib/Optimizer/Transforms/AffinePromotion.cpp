@@ -395,11 +395,16 @@ static void populateIndexArgs(fir::ArrayCoorOp acoOp, fir::ShapeShiftOp shape,
 static void populateIndexArgs(fir::ArrayCoorOp acoOp, fir::SliceOp slice,
                               SmallVectorImpl<mlir::Value> &indexArgs,
                               mlir::PatternRewriter &rewriter) {
-  auto extents = slice.getTriples();
-  for (auto i = extents.begin(); i < extents.end();) {
-    indexArgs.push_back(*i++);
-    indexArgs.push_back(*i++);
-    indexArgs.push_back(*i++);
+  for (const fir::SliceDim &dim : slice.getDims()) {
+    if (dim.isTriplet()) {
+      indexArgs.append(dim.getOperands().begin(), dim.getOperands().end());
+      continue;
+    }
+    indexArgs.push_back(dim.getIndex());
+    mlir::Value undef =
+        fir::UndefOp::create(rewriter, acoOp.getLoc(), rewriter.getIndexType());
+    indexArgs.push_back(undef);
+    indexArgs.push_back(undef);
   }
 }
 

@@ -73,8 +73,7 @@ static bool isaIntegerType(mlir::Type ty) {
 
 bool verifyRecordMemberType(mlir::Type ty) {
   return !mlir::isa<BoxCharType, ShapeType, ShapeShiftType, ShiftType,
-                    SliceType, FieldType, LenType, ReferenceType, TypeDescType>(
-      ty);
+                    SliceType, LenType, ReferenceType, TypeDescType>(ty);
 }
 
 bool verifySameLists(llvm::ArrayRef<RecordType::TypePair> a1,
@@ -801,8 +800,8 @@ BoxProcType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 
 static bool cannotBePointerOrHeapElementType(mlir::Type eleTy) {
   return mlir::isa<BoxType, BoxCharType, BoxProcType, ShapeType, ShapeShiftType,
-                   SliceType, FieldType, LenType, HeapType, PointerType,
-                   ReferenceType, TypeDescType>(eleTy);
+                   SliceType, LenType, HeapType, PointerType, ReferenceType,
+                   TypeDescType>(eleTy);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1250,8 +1249,8 @@ void fir::ReferenceType::print(mlir::AsmPrinter &printer) const {
 llvm::LogicalResult fir::ReferenceType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError, mlir::Type eleTy,
     bool isVolatile) {
-  if (mlir::isa<ShapeType, ShapeShiftType, SliceType, FieldType, LenType,
-                ReferenceType, TypeDescType>(eleTy))
+  if (mlir::isa<ShapeType, ShapeShiftType, SliceType, LenType, ReferenceType,
+                TypeDescType>(eleTy))
     return emitError() << "cannot build a reference to type: " << eleTy << '\n';
   return mlir::success();
 }
@@ -1327,7 +1326,7 @@ llvm::LogicalResult fir::SequenceType::verify(
     mlir::AffineMapAttr layoutMap) {
   // DIMENSION attribute can only be applied to an intrinsic or record type
   if (mlir::isa<BoxType, BoxCharType, BoxProcType, ShapeType, ShapeShiftType,
-                ShiftType, SliceType, FieldType, LenType, HeapType, PointerType,
+                ShiftType, SliceType, LenType, HeapType, PointerType,
                 ReferenceType, TypeDescType, SequenceType>(eleTy))
     return emitError() << "cannot build an array of this element type: "
                        << eleTy << '\n';
@@ -1400,8 +1399,8 @@ llvm::LogicalResult fir::TypeDescType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     mlir::Type eleTy) {
   if (mlir::isa<BoxType, BoxCharType, BoxProcType, ShapeType, ShapeShiftType,
-                ShiftType, SliceType, FieldType, LenType, ReferenceType,
-                TypeDescType>(eleTy))
+                ShiftType, SliceType, LenType, ReferenceType, TypeDescType>(
+          eleTy))
     return emitError() << "cannot build a type descriptor of type: " << eleTy
                        << '\n';
   return mlir::success();
@@ -1626,10 +1625,10 @@ bool BaseBoxType::isCoarray() const {
 
 void FIROpsDialect::registerTypes() {
   addTypes<BoxType, BoxCharType, BoxProcType, CharacterType, ClassType,
-           FieldType, HeapType, fir::IntegerType, LenType, LogicalType,
-           LLVMPointerType, PointerType, RecordType, ReferenceType,
-           SequenceType, ShapeType, ShapeShiftType, ShiftType, SliceType,
-           TypeDescType, fir::VectorType, fir::DummyScopeType>();
+           HeapType, fir::IntegerType, LenType, LogicalType, LLVMPointerType,
+           PointerType, RecordType, ReferenceType, SequenceType, ShapeType,
+           ShapeShiftType, ShiftType, SliceType, TypeDescType, fir::VectorType,
+           fir::DummyScopeType>();
   fir::ReferenceType::attachInterface<
       OpenMPPointerLikeModel<fir::ReferenceType>>(*getContext());
   fir::PointerType::attachInterface<OpenMPPointerLikeModel<fir::PointerType>>(

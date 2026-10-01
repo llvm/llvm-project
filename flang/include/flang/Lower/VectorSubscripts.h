@@ -20,6 +20,7 @@
 #define FORTRAN_LOWER_VECTORSUBSCRIPTS_H
 
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 
 namespace fir {
 class FirOpBuilder;
@@ -46,9 +47,8 @@ class StatementContext;
 ///   - an ExtendedValue for ranked base (x%a(i,j)%b)
 ///   - mlir:Values and ExtendedValues for the triplet, vector subscript and
 ///     scalar subscripts of the ranked array reference (1:foo():1, vector, k)
-///   - a list of fir.field_index and scalar integers mlir::Value for the
-///   component
-///     path at the right of the ranked array ref (%c%d(m)%e).
+///   - a list of component name attributes and scalar integer mlir::Values for
+///     the component path at the right of the ranked array ref (%c%d(m)%e).
 ///
 /// This representation allows later creating loops over the designator elements
 /// and fir.array_coor to get the element addresses without re-evaluating any
@@ -79,10 +79,10 @@ public:
   VectorSubscriptBox(
       fir::ExtendedValue &&loweredBase,
       llvm::SmallVector<LoweredSubscript, 16> &&loweredSubscripts,
-      llvm::SmallVector<mlir::Value> &&componentPath,
+      llvm::SmallVector<fir::SlicePathElement> &&componentPath,
       MaybeSubstring substringBounds, mlir::Type elementType)
-      : loweredBase{std::move(loweredBase)}, loweredSubscripts{std::move(
-                                                 loweredSubscripts)},
+      : loweredBase{std::move(loweredBase)},
+        loweredSubscripts{std::move(loweredSubscripts)},
         componentPath{std::move(componentPath)},
         substringBounds{substringBounds}, elementType{elementType} {};
 
@@ -131,7 +131,7 @@ private:
   llvm::SmallVector<LoweredSubscript, 16> loweredSubscripts;
   /// Scalar subscripts and components at the right of the ranked
   /// array ref part of any.
-  llvm::SmallVector<mlir::Value> componentPath;
+  llvm::SmallVector<fir::SlicePathElement> componentPath;
   /// List of substring bounds if this is a substring (only the lower bound if
   /// the upper is implicit).
   MaybeSubstring substringBounds;

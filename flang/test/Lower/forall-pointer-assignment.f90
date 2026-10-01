@@ -38,7 +38,6 @@
 ! CHECK: %[[V_40:[0-9]+]] = fir.shift %[[V_39]]#0 : (index) -> !fir.shift<1>
 ! CHECK: %[[V_41:[0-9]+]] = fir.array_coor %[[V_37]](%[[V_40]]) %[[V_38]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>>>>, !fir.shift<1>, i64) -> !fir.ref<!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>>
 ! CHECK: %[[V_42:[0-9]+]] = fir.embox %[[V_41]] source_box %[[V_37]] : (!fir.ref<!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>>, !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>>>>) -> !fir.class<!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>>
-! CHECK: %[[V_43:[0-9]+]] = fir.field_index ptr, !fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>
 ! CHECK: %[[V_44:[0-9]+]] = fir.coordinate_of %[[V_42]], ptr : (!fir.class<!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>>) -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>>>>>
 ! CHECK: %[[V_45:[0-9]+]] = fir.embox %[[V_18]](%[[V_17]]) : (!fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphicTdt1{dt:!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>}>>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<10x!fir.type<_QFforallpolymorphicTdt1{dt:!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>}>>>>
 ! CHECK: %[[V_46:[0-9]+]] = fir.convert %[[V_45]] : (!fir.box<!fir.ptr<!fir.array<10x!fir.type<_QFforallpolymorphicTdt1{dt:!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>}>>>>) -> !fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt{ptr:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphicTdt>>>>}>>>>
@@ -78,7 +77,6 @@
 ! CHECK: %[[V_32:[0-9]+]] = fir.convert %arg1 : (index) -> i32
 ! CHECK: %[[V_33:[0-9]+]] = fir.convert %[[V_32]] : (i32) -> i64
 ! CHECK: %[[V_34:[0-9]+]] = fir.array_coor %[[V_13]](%[[V_12]]) %[[V_33]] : (!fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>>, !fir.shape<1>, i64) -> !fir.ref<!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>
-! CHECK: %[[V_35:[0-9]+]] = fir.field_index ptr, !fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>
 ! CHECK: %[[V_36:[0-9]+]] = fir.coordinate_of %[[V_34]], ptr : (!fir.ref<!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>>>>
 ! CHECK: %[[V_37:[0-9]+]] = fir.load %[[V_18]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>>>>
 ! CHECK: %[[V_38:[0-9]+]]:3 = fir.box_dims %[[V_37]], %c0 : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>>>, index) -> (index, index, index)
@@ -118,10 +116,9 @@ subroutine forallPolymorphic3()
 ! CHECK: %[[V_26:[0-9]+]] = fir.convert %arg0 : (index) -> i32
 ! CHECK: %[[V_27:[0-9]+]] = fir.convert %[[V_26]] : (i32) -> i64
 ! CHECK: %[[V_28:[0-9]+]] = fir.array_coor %[[V_9]](%[[V_8]]) %[[V_27]] : (!fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>>>, !fir.shape<1>, i64) -> !fir.ref<!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>>
-! CHECK: %[[V_29:[0-9]+]] = fir.field_index ptr, !fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>
 ! CHECK: %[[V_30:[0-9]+]] = fir.coordinate_of %[[V_28]], ptr : (!fir.ref<!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>>) -> !fir.ref<!fir.class<!fir.ptr<none>>>
 ! CHECK: %[[V_31:[0-9]+]] = fir.convert %[[V_26]] : (i32) -> i64
-! CHECK: %[[V_32:[0-9]+]] = fir.array_coor %[[V_17]](%[[V_8]]) %31 : (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, i64) -> !fir.ref<!fir.char<1>>
+! CHECK: %[[V_32:[0-9]+]] = fir.array_coor %[[V_17]](%[[V_8]]) %[[V_31]] : (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, i64) -> !fir.ref<!fir.char<1>>
 ! CHECK: %[[V_33:[0-9]+]] = fir.embox %[[V_32]] : (!fir.ref<!fir.char<1>>) -> !fir.box<!fir.ptr<!fir.char<1>>>
 ! CHECK: %[[V_34:[0-9]+]] = fir.rebox %[[V_33]] : (!fir.box<!fir.ptr<!fir.char<1>>>) -> !fir.class<!fir.ptr<none>>
 ! CHECK: fir.store %[[V_34]] to %[[V_30]] : !fir.ref<!fir.class<!fir.ptr<none>>>

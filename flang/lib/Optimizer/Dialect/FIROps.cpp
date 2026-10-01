@@ -748,8 +748,8 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
           return mlir::failure();
 
     // Rank-reducing case: the underlying memref has more dimensions than the
-    // array_coor view because boxedSlice contains scalar triples (whose upper
-    // bound is fir.undefined). Rebuild the array_coor on the original memref
+    // array_coor view because boxedSlice contains scalar dimensions. Rebuild
+    // the array_coor on the original memref
     // with origBoxRank indices, filling scalar dims from the slice's lower
     // bounds and the remaining range dims from the existing array_coor
     // indices.
@@ -760,7 +760,7 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
         return mlir::failure();
       // A component-path slice (substr handled above already) is not
       // representable in the new array_coor's indices.
-      if (!sliceOp.getFields().empty())
+      if (!sliceOp.getPath().empty())
         return mlir::failure();
       // Combining the array_coor's own slice with the boxedSlice when the
       // ranks differ is out of scope.
@@ -784,8 +784,8 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
           mlir::isa<fir::ShiftType>(boxedShape.getType()))
         return mlir::failure();
 
-      auto triples = sliceOp.getTriples();
-      if (triples.size() != 3 * origBoxRank)
+      auto sliceDims = sliceOp.getDims();
+      if (sliceDims.size() != origBoxRank)
         return mlir::failure();
 
       IndicesVectorTy newIndices;
@@ -810,14 +810,12 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
       auto opIndices = op.getIndices();
       unsigned opIdxPos = 0;
       for (unsigned i = 0; i < origBoxRank; ++i) {
-        mlir::Value upper = triples[3 * i + 1];
-        bool isScalar =
-            mlir::isa_and_nonnull<fir::UndefOp>(upper.getDefiningOp());
-        if (isScalar) {
+        const fir::SliceDim &dim = sliceDims[i];
+        if (dim.isIndex()) {
           // fir.array_coor's indices are typed as AnyCoordinateType, so any
           // signless integer (or index) is accepted directly without an
           // explicit fir.convert to index.
-          newIndices.push_back(triples[3 * i]);
+          newIndices.push_back(dim.getIndex());
         } else {
           if (opIdxPos >= opIndices.size())
             return mlir::failure();
@@ -2381,26 +2379,8 @@ void fir::CoordinateOp::build(mlir::OpBuilder &builder,
                               mlir::OperationState &result,
                               mlir::Type resultType, mlir::Value ref,
                               mlir::ValueRange coor) {
-  llvm::SmallVector<int32_t> fieldIndices;
-  llvm::SmallVector<mlir::Value> dynamicIndices;
-  bool anyField = false;
-  for (mlir::Value index : coor) {
-    if (auto field = index.getDefiningOp<fir::FieldIndexOp>()) {
-      auto recTy = mlir::cast<fir::RecordType>(field.getOnType());
-      fieldIndices.push_back(recTy.getFieldIndex(field.getFieldId()));
-      anyField = true;
-    } else {
-      fieldIndices.push_back(fir::CoordinateOp::kDynamicIndex);
-      dynamicIndices.push_back(index);
-    }
-  }
-  auto typeAttr = mlir::TypeAttr::get(ref.getType());
-  if (anyField) {
-    build(builder, result, resultType, ref, dynamicIndices, typeAttr,
-          builder.getDenseI32ArrayAttr(fieldIndices));
-  } else {
-    build(builder, result, resultType, ref, dynamicIndices, typeAttr, nullptr);
-  }
+  build(builder, result, resultType, ref, coor,
+        mlir::TypeAttr::get(ref.getType()), nullptr);
 }
 
 void fir::CoordinateOp::build(mlir::OpBuilder &builder,
@@ -2413,7 +2393,10 @@ void fir::CoordinateOp::build(mlir::OpBuilder &builder,
   for (fir::IntOrValue index : coor) {
     llvm::TypeSwitch<fir::IntOrValue>(index)
         .Case([&](mlir::IntegerAttr intAttr) {
-          fieldIndices.push_back(intAttr.getInt());
+          int64_t index = intAttr.getInt();
+          assert(index >= 0 && index <= std::numeric_limits<int32_t>::max() &&
+                 "field index must fit in i32");
+          fieldIndices.push_back(index);
           anyField = true;
         })
         .Case([&](mlir::Value value) {
@@ -2442,7 +2425,8 @@ void fir::CoordinateOp::print(mlir::OpAsmPrinter &p) {
           .Case([&](mlir::IntegerAttr intAttr) {
             if (auto recordType = llvm::dyn_cast<fir::RecordType>(eleTy)) {
               int fieldId = intAttr.getInt();
-              if (fieldId < static_cast<int>(recordType.getNumFields())) {
+              if (fieldId >= 0 &&
+                  fieldId < static_cast<int>(recordType.getNumFields())) {
                 auto nameAndType = recordType.getTypeList()[fieldId];
                 p << std::get<std::string>(nameAndType);
                 eleTy = fir::getFortranElementType(
@@ -2509,7 +2493,7 @@ mlir::ParseResult fir::CoordinateOp::parse(mlir::OpAsmParser &parser,
         return parser.emitError(
             loc, "base must be a derived type when field name appears");
       unsigned fieldNum = recTy.getFieldIndex(fieldName);
-      if (fieldNum > recTy.getNumFields())
+      if (fieldNum >= recTy.getNumFields())
         return parser.emitError(loc)
                << "field '" << fieldName
                << "' is not a component or subcomponent of the base type";
@@ -2538,10 +2522,35 @@ llvm::LogicalResult fir::CoordinateOp::verify() {
       return emitOpError("cannot apply to this element type");
   }
   auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(refTy);
+  if (auto fieldIndices = getFieldIndicesAttr()) {
+    unsigned dynamicCount = 0;
+    for (int32_t index : fieldIndices.asArrayRef()) {
+      if (index == kDynamicIndex)
+        ++dynamicCount;
+      else if (index < 0)
+        return emitOpError("field_indices contains an invalid negative index");
+    }
+    if (dynamicCount != getCoor().size())
+      return emitOpError(
+          "field_indices dynamic entries must match coordinate operands");
+  }
   unsigned dimension = 0;
-  const unsigned numCoors = getCoor().size();
-  for (auto coorOperand : llvm::enumerate(getCoor())) {
-    auto co = coorOperand.value();
+  const unsigned numCoors = getIndices().size();
+  for (auto coorElement : llvm::enumerate(getIndices())) {
+    if (auto fieldIndex =
+            llvm::dyn_cast<mlir::IntegerAttr>(coorElement.value())) {
+      if (dimension)
+        return emitOpError("field index cannot appear within array indices");
+      auto recTy = mlir::dyn_cast<fir::RecordType>(eleTy);
+      if (!recTy)
+        return emitOpError("field index not applied to !fir.type");
+      int64_t index = fieldIndex.getInt();
+      if (index < 0 || static_cast<uint64_t>(index) >= recTy.getNumFields())
+        return emitOpError("field index is out of range");
+      eleTy = recTy.getType(index);
+      continue;
+    }
+    auto co = llvm::cast<mlir::Value>(coorElement.value());
     if (dimension == 0 && mlir::isa<fir::SequenceType>(eleTy)) {
       dimension = mlir::cast<fir::SequenceType>(eleTy).getDimension();
       if (dimension == 0)
@@ -2553,7 +2562,7 @@ llvm::LogicalResult fir::CoordinateOp::verify() {
         // value. For a bare reference, the LEN type parameters must be
         // passed as additional arguments to `index`.
         if (mlir::isa<fir::BoxType>(refTy)) {
-          if (coorOperand.index() != numCoors - 1)
+          if (coorElement.index() != numCoors - 1)
             return emitOpError("len_param_index must be last argument");
           if (getNumOperands() != 2)
             return emitOpError("too many operands for len_param_index case");
@@ -2562,15 +2571,6 @@ llvm::LogicalResult fir::CoordinateOp::verify() {
           return emitOpError(
               "len_param_index type not compatible with reference type");
         return mlir::success();
-      } else if (auto index = mlir::dyn_cast<fir::FieldIndexOp>(defOp)) {
-        if (eleTy != index.getOnType())
-          return emitOpError(
-              "field_index type not compatible with reference type");
-        if (auto recTy = mlir::dyn_cast<fir::RecordType>(eleTy)) {
-          eleTy = recTy.getType(index.getFieldName());
-          continue;
-        }
-        return emitOpError("field_index not applied to !fir.type");
       }
     }
     if (dimension) {
@@ -2813,20 +2813,22 @@ static bool isBoxUb(mlir::Value box, std::int64_t dim, mlir::Value ub,
 static bool isContiguousArraySlice(fir::SliceOp sliceOp, bool checkWhole = true,
                                    mlir::Value origBox = nullptr,
                                    bool mayHaveNonDefaultLowerBounds = true) {
-  if (sliceOp.getFields().empty() && sliceOp.getSubstr().empty()) {
+  if (sliceOp.getPath().empty() && sliceOp.getSubstr().empty()) {
     // TODO: generalize code for the triples analysis with
     // hlfir::designatePreservesContinuity, especially when
     // recognition of the whole dimension slices is added.
-    auto triples = sliceOp.getTriples();
-    assert((triples.size() % 3) == 0 && "invalid triples size");
+    auto dims = sliceOp.getDims();
 
     // A slice with step=1 in the innermost dimension preserves
     // the continuity of the array in the innermost dimension.
     // If checkWhole is false, then check only the innermost slice triples.
-    std::size_t checkUpTo = checkWhole ? triples.size() : 3;
-    checkUpTo = std::min(checkUpTo, triples.size());
-    for (std::size_t i = 0; i < checkUpTo; i += 3) {
-      if (triples[i] != triples[i + 1]) {
+    std::size_t checkUpTo = checkWhole ? dims.size() : 1;
+    checkUpTo = std::min(checkUpTo, dims.size());
+    for (std::size_t i = 0; i < checkUpTo; ++i) {
+      const fir::SliceDim &dim = dims[i];
+      if (dim.isIndex())
+        return false;
+      if (dim.getLowerBound() != dim.getUpperBound()) {
         // This is a section of the dimension. Only allow it
         // to be the first triple, if the source of the slice
         // is a boxed array. If it is a raw pointer, then
@@ -2836,14 +2838,13 @@ static bool isContiguousArraySlice(fir::SliceOp sliceOp, bool checkWhole = true,
         // covers the whole dimension and the stride is one,
         // before claiming contiguity for this dimension.
         if (i != 0 && origBox) {
-          std::int64_t dim = i / 3;
-          if (!isBoxLb(origBox, dim, triples[i],
+          if (!isBoxLb(origBox, i, dim.getLowerBound(),
                        mayHaveNonDefaultLowerBounds) ||
-              !isBoxUb(origBox, dim, triples[i + 1],
+              !isBoxUb(origBox, i, dim.getUpperBound(),
                        mayHaveNonDefaultLowerBounds))
             return false;
         }
-        auto constantStep = fir::getIntIfConstant(triples[i + 2]);
+        auto constantStep = fir::getIntIfConstant(dim.getStride());
         if (!constantStep || !constantStep->isOne())
           return false;
       }
@@ -3226,11 +3227,7 @@ void fir::GlobalLenOp::print(mlir::OpAsmPrinter &p) {
     << ", " << getOperation()->getAttr(fir::GlobalLenOp::getIntAttrName());
 }
 
-//===----------------------------------------------------------------------===//
-// FieldIndexOp
-//===----------------------------------------------------------------------===//
-
-template <typename TY>
+template <typename OP, typename TY>
 mlir::ParseResult parseFieldLikeOp(mlir::OpAsmParser &parser,
                                    mlir::OperationState &result) {
   llvm::StringRef fieldName;
@@ -3239,12 +3236,10 @@ mlir::ParseResult parseFieldLikeOp(mlir::OpAsmParser &parser,
   if (parser.parseOptionalKeyword(&fieldName) || parser.parseComma() ||
       parser.parseType(recty))
     return mlir::failure();
-  result.addAttribute(fir::FieldIndexOp::getFieldAttrName(),
-                      builder.getStringAttr(fieldName));
+  result.addAttribute(OP::getFieldAttrName(), builder.getStringAttr(fieldName));
   if (!mlir::dyn_cast<fir::RecordType>(recty))
     return mlir::failure();
-  result.addAttribute(fir::FieldIndexOp::getTypeAttrName(),
-                      mlir::TypeAttr::get(recty));
+  result.addAttribute(OP::getTypeAttrName(), mlir::TypeAttr::get(recty));
   if (!parser.parseOptionalLParen()) {
     llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
     llvm::SmallVector<mlir::Type> types;
@@ -3260,19 +3255,13 @@ mlir::ParseResult parseFieldLikeOp(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
-mlir::ParseResult fir::FieldIndexOp::parse(mlir::OpAsmParser &parser,
-                                           mlir::OperationState &result) {
-  return parseFieldLikeOp<fir::FieldType>(parser, result);
-}
-
 template <typename OP>
 void printFieldLikeOp(mlir::OpAsmPrinter &p, OP &op) {
   p << ' '
     << op.getOperation()
-           ->template getAttrOfType<mlir::StringAttr>(
-               fir::FieldIndexOp::getFieldAttrName())
+           ->template getAttrOfType<mlir::StringAttr>(OP::getFieldAttrName())
            .getValue()
-    << ", " << op.getOperation()->getAttr(fir::FieldIndexOp::getTypeAttrName());
+    << ", " << op.getOperation()->getAttr(OP::getTypeAttrName());
   if (op.getNumOperands()) {
     p << '(';
     p.printOperands(op.getTypeparams());
@@ -3286,26 +3275,6 @@ void printFieldLikeOp(mlir::OpAsmPrinter &p, OP &op) {
       sep = ", ";
     }
   }
-}
-
-void fir::FieldIndexOp::print(mlir::OpAsmPrinter &p) {
-  printFieldLikeOp(p, *this);
-}
-
-void fir::FieldIndexOp::build(mlir::OpBuilder &builder,
-                              mlir::OperationState &result,
-                              llvm::StringRef fieldName, mlir::Type recTy,
-                              mlir::ValueRange operands) {
-  result.addAttribute(getFieldAttrName(), builder.getStringAttr(fieldName));
-  result.addAttribute(getTypeAttrName(), mlir::TypeAttr::get(recTy));
-  result.addOperands(operands);
-}
-
-llvm::SmallVector<mlir::Attribute> fir::FieldIndexOp::getAttributes() {
-  llvm::SmallVector<mlir::Attribute> attrs;
-  attrs.push_back(getFieldIdAttr());
-  attrs.push_back(getOnTypeAttr());
-  return attrs;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3702,7 +3671,7 @@ fir::IterWhileOp::getYieldedValuesMutable() {
 
 mlir::ParseResult fir::LenParamIndexOp::parse(mlir::OpAsmParser &parser,
                                               mlir::OperationState &result) {
-  return parseFieldLikeOp<fir::LenType>(parser, result);
+  return parseFieldLikeOp<fir::LenParamIndexOp, fir::LenType>(parser, result);
 }
 
 void fir::LenParamIndexOp::print(mlir::OpAsmPrinter &p) {
@@ -5294,37 +5263,257 @@ llvm::LogicalResult fir::ShiftOp::verify() {
 void fir::SliceOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
                          mlir::ValueRange trips, mlir::ValueRange path,
                          mlir::ValueRange substr) {
-  const auto rank = trips.size() / 3;
-  auto sliceTy = fir::SliceType::get(builder.getContext(), rank);
-  build(builder, result, sliceTy, trips, path, substr);
+  llvm::SmallVector<fir::SlicePathElement> pathElements(path.begin(),
+                                                        path.end());
+  build(builder, result, trips, pathElements, substr);
 }
 
-/// Return the output rank of a slice op. The output rank must be between 1 and
-/// the rank of the array being sliced (inclusive).
-unsigned fir::SliceOp::getOutputRank(mlir::ValueRange triples) {
-  unsigned rank = 0;
-  if (!triples.empty()) {
-    for (unsigned i = 1, end = triples.size(); i < end; i += 3) {
-      auto *op = triples[i].getDefiningOp();
-      if (!mlir::isa_and_nonnull<fir::UndefOp>(op))
-        ++rank;
+void fir::SliceOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                         mlir::ValueRange trips,
+                         llvm::ArrayRef<fir::SlicePathElement> path,
+                         mlir::ValueRange substr) {
+  auto kindAttr = [&](fir::SliceOperandKind kind) {
+    return fir::SliceOperandKindAttr::get(builder.getContext(), kind);
+  };
+  llvm::SmallVector<mlir::Value> operands;
+  llvm::SmallVector<mlir::Attribute> operandMap;
+  assert(trips.size() % 3 == 0 && "slice triples must be a multiple of three");
+  for (unsigned i = 0, end = trips.size(); i < end; i += 3) {
+    if (mlir::isa_and_nonnull<fir::UndefOp>(trips[i + 1].getDefiningOp())) {
+      operands.push_back(trips[i]);
+      operandMap.push_back(kindAttr(fir::SliceOperandKind::Index));
+    } else {
+      auto triplet = trips.slice(i, 3);
+      operands.append(triplet.begin(), triplet.end());
+      operandMap.push_back(kindAttr(fir::SliceOperandKind::Triplet));
     }
-    assert(rank > 0);
+  }
+  for (fir::SlicePathElement element : path) {
+    if (auto fieldName = element.dyn_cast<mlir::StringAttr>())
+      operandMap.push_back(fieldName);
+    else if (auto kind = element.dyn_cast<fir::SliceOperandKindAttr>())
+      operandMap.push_back(kind);
+    else {
+      operandMap.push_back(kindAttr(fir::SliceOperandKind::Index));
+      operands.push_back(element.dyn_cast<mlir::Value>());
+    }
+  }
+  const auto rank = trips.size() / 3;
+  auto sliceTy = fir::SliceType::get(builder.getContext(), rank);
+  if (!substr.empty()) {
+    assert(substr.size() == 2 && "substring must have offset and width");
+    operandMap.push_back(kindAttr(fir::SliceOperandKind::Substring));
+    operands.append(substr.begin(), substr.end());
+  }
+  bool allTriplets =
+      path.empty() && substr.empty() &&
+      llvm::all_of(operandMap, [](mlir::Attribute attr) {
+        auto kind = mlir::dyn_cast<fir::SliceOperandKindAttr>(attr);
+        return kind && kind.getValue() == fir::SliceOperandKind::Triplet;
+      });
+  build(builder, result, sliceTy, operands,
+        allTriplets ? mlir::ArrayAttr{} : builder.getArrayAttr(operandMap));
+}
+
+void fir::SliceOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                         mlir::ValueRange operands, mlir::ArrayAttr operandMap,
+                         unsigned rank) {
+  build(builder, result, fir::SliceType::get(builder.getContext(), rank),
+        operands, operandMap);
+}
+
+unsigned fir::SliceOp::getInputRank() {
+  return mlir::cast<fir::SliceType>(getType()).getRank();
+}
+
+unsigned fir::SliceOp::getOutRank() {
+  if (!getOperandMapAttr())
+    return getOperands().size() / 3;
+  unsigned rank = 0;
+  unsigned remainingDims = getInputRank();
+  for (mlir::Attribute attr : getOperandMapAttr()) {
+    if (remainingDims == 0)
+      break;
+    --remainingDims;
+    auto kind = mlir::dyn_cast<fir::SliceOperandKindAttr>(attr);
+    if (!kind)
+      return 0;
+    if (kind.getValue() == fir::SliceOperandKind::Triplet)
+      ++rank;
   }
   return rank;
 }
 
+fir::SliceDimsAdaptor fir::SliceOp::getDims() {
+  return SliceDimsAdaptor(getOperandMapAttr(), getOperands(), getInputRank());
+}
+
+fir::SlicePathAdaptor fir::SliceOp::getPath() {
+  return SlicePathAdaptor(getOperandMapAttr(), getOperands(), getInputRank());
+}
+
+mlir::OperandRange fir::SliceOp::getSubstr() {
+  if (!getOperandMapAttr())
+    return getOperands().slice(getOperands().size(), 0);
+  unsigned operandPosition = 0;
+  for (mlir::Attribute attr : getOperandMapAttr()) {
+    if (mlir::isa<mlir::StringAttr>(attr))
+      continue;
+    auto kind = mlir::dyn_cast<fir::SliceOperandKindAttr>(attr);
+    if (!kind)
+      break;
+    switch (kind.getValue()) {
+    case fir::SliceOperandKind::Triplet:
+      operandPosition += 3;
+      break;
+    case fir::SliceOperandKind::Index:
+      ++operandPosition;
+      break;
+    case fir::SliceOperandKind::Substring:
+      if (operandPosition + 2 <= getOperands().size())
+        return getOperands().slice(operandPosition, 2);
+      return getOperands().slice(getOperands().size(), 0);
+    case fir::SliceOperandKind::Real:
+    case fir::SliceOperandKind::Imaginary:
+      break;
+    }
+  }
+  return getOperands().slice(getOperands().size(), 0);
+}
+
 llvm::LogicalResult fir::SliceOp::verify() {
-  auto size = getTriples().size();
-  if (size < 3 || size > 16 * 3)
-    return emitOpError("incorrect number of args for triple");
-  if (size % 3 != 0)
-    return emitOpError("requires a multiple of 3 args");
-  auto sliceTy = mlir::dyn_cast<fir::SliceType>(getType());
-  assert(sliceTy && "must be a slice type");
-  if (sliceTy.getRank() * 3 != size)
-    return emitOpError("slice type rank mismatch");
+  auto sliceTy = mlir::cast<fir::SliceType>(getType());
+  if (!getOperandMapAttr()) {
+    if (getOperands().size() < 3 || getOperands().size() > 16 * 3)
+      return emitOpError("incorrect number of operands for triplets");
+    if (getOperands().size() % 3 != 0)
+      return emitOpError("requires a multiple of 3 operands without a map");
+    if (sliceTy.getRank() * 3 != getOperands().size())
+      return emitOpError("slice type rank mismatch");
+    return mlir::success();
+  }
+
+  unsigned consumedOperands = 0;
+  unsigned outputRank = 0;
+  unsigned remainingDims = sliceTy.getRank();
+  bool sawSubstring = false;
+  for (mlir::Attribute attr : getOperandMapAttr()) {
+    if (sawSubstring)
+      return emitOpError("substring must be the final operand map entry");
+    if (mlir::isa<mlir::StringAttr>(attr)) {
+      if (remainingDims)
+        return emitOpError("component cannot precede array dimensions");
+      continue;
+    }
+    auto kind = mlir::dyn_cast<fir::SliceOperandKindAttr>(attr);
+    if (!kind)
+      return emitOpError(
+          "operand map entries must be slice operand kinds or strings");
+    switch (kind.getValue()) {
+    case fir::SliceOperandKind::Triplet:
+      if (!remainingDims)
+        return emitOpError("triplet cannot appear in a component path");
+      consumedOperands += 3;
+      ++outputRank;
+      --remainingDims;
+      break;
+    case fir::SliceOperandKind::Index:
+      ++consumedOperands;
+      if (remainingDims)
+        --remainingDims;
+      break;
+    case fir::SliceOperandKind::Substring:
+      if (remainingDims)
+        return emitOpError("substring cannot precede array dimensions");
+      consumedOperands += 2;
+      sawSubstring = true;
+      break;
+    case fir::SliceOperandKind::Real:
+    case fir::SliceOperandKind::Imaginary:
+      if (remainingDims)
+        return emitOpError("complex part cannot precede array dimensions");
+      break;
+    }
+  }
+  if (sliceTy.getRank() == 0 || sliceTy.getRank() > 16)
+    return emitOpError("input rank must be between 1 and 16");
+  if (remainingDims)
+    return emitOpError("operand map has fewer dimensions than the slice type");
+  if (outputRank == 0)
+    return emitOpError("slice must have positive output rank");
+  if (consumedOperands != getOperands().size())
+    return emitOpError("operand map consumes ")
+           << consumedOperands << " operands, but the operation has "
+           << getOperands().size();
   return mlir::success();
+}
+
+fir::SliceDimsAdaptor::SliceDimsAdaptor(mlir::ArrayAttr operandMap,
+                                        mlir::ValueRange operands,
+                                        unsigned rank) {
+  if (!operandMap) {
+    for (unsigned i = 0, end = operands.size(); i < end; i += 3)
+      dims.emplace_back(/*triplet=*/true, operands.slice(i, 3));
+    return;
+  }
+  unsigned operandPosition = 0;
+  for (mlir::Attribute attr : operandMap.getValue().take_front(rank)) {
+    auto kind = mlir::dyn_cast<fir::SliceOperandKindAttr>(attr);
+    if (!kind || (kind.getValue() != fir::SliceOperandKind::Triplet &&
+                  kind.getValue() != fir::SliceOperandKind::Index))
+      return;
+    bool isTriplet = kind.getValue() == fir::SliceOperandKind::Triplet;
+    unsigned count = isTriplet ? 3 : 1;
+    if (operandPosition + count > operands.size())
+      return;
+    dims.emplace_back(isTriplet, operands.slice(operandPosition, count));
+    operandPosition += count;
+  }
+}
+
+fir::SlicePathAdaptor::SlicePathAdaptor(mlir::ArrayAttr operandMap,
+                                        mlir::ValueRange operands,
+                                        unsigned rank) {
+  if (!operandMap)
+    return;
+  unsigned operandPosition = 0;
+  unsigned remainingDims = rank;
+  for (mlir::Attribute attr : operandMap) {
+    if (auto component = mlir::dyn_cast<mlir::StringAttr>(attr)) {
+      if (remainingDims)
+        return;
+      path.push_back(component);
+      continue;
+    }
+    auto kind = mlir::dyn_cast<fir::SliceOperandKindAttr>(attr);
+    if (!kind)
+      return;
+    switch (kind.getValue()) {
+    case fir::SliceOperandKind::Triplet:
+      if (!remainingDims)
+        return;
+      operandPosition += 3;
+      --remainingDims;
+      break;
+    case fir::SliceOperandKind::Index:
+      if (operandPosition >= operands.size())
+        return;
+      if (!remainingDims)
+        path.push_back(operands[operandPosition]);
+      else
+        --remainingDims;
+      ++operandPosition;
+      break;
+    case fir::SliceOperandKind::Substring:
+      return;
+    case fir::SliceOperandKind::Real:
+    case fir::SliceOperandKind::Imaginary:
+      if (remainingDims)
+        return;
+      path.push_back(kind);
+      break;
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -6199,8 +6388,6 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
     eleTy = llvm::TypeSwitch<mlir::Type, mlir::Type>(eleTy)
                 .Case([&](fir::RecordType ty) {
                   if (auto *op = (*i++).getDefiningOp()) {
-                    if (auto off = mlir::dyn_cast<fir::FieldIndexOp>(op))
-                      return ty.getType(off.getFieldName());
                     if (auto off = mlir::dyn_cast<mlir::arith::ConstantOp>(op))
                       return ty.getType(fir::toInt(off));
                   }
@@ -6226,6 +6413,62 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
                   return mlir::Type{};
                 })
                 .Default([&](const auto &) { return mlir::Type{}; });
+  }
+  return eleTy;
+}
+
+mlir::Type fir::applyPathToType(mlir::Type eleTy, fir::SlicePathAdaptor path) {
+  for (auto i = path.begin(), end = path.end(); eleTy && i != end;) {
+    eleTy =
+        llvm::TypeSwitch<mlir::Type, mlir::Type>(eleTy)
+            .Case([&](fir::RecordType ty) {
+              fir::SlicePathElement element = *i;
+              ++i;
+              if (auto fieldName = element.dyn_cast<mlir::StringAttr>())
+                return ty.getType(fieldName.getValue());
+              if (auto *op = element.dyn_cast<mlir::Value>().getDefiningOp())
+                if (auto off = mlir::dyn_cast<mlir::arith::ConstantOp>(op))
+                  return ty.getType(fir::toInt(off));
+              return mlir::Type{};
+            })
+            .Case([&](fir::SequenceType ty) {
+              bool valid = true;
+              const auto rank = ty.getDimension();
+              for (std::remove_const_t<decltype(rank)> ii = 0;
+                   valid && ii < rank; ++ii) {
+                if (i == end) {
+                  valid = false;
+                  break;
+                }
+                fir::SlicePathElement element = *i;
+                ++i;
+                auto value = element.dyn_cast<mlir::Value>();
+                valid = value && fir::isa_integer(value.getType());
+              }
+              return valid ? ty.getEleTy() : mlir::Type{};
+            })
+            .Case([&](mlir::TupleType ty) {
+              fir::SlicePathElement element = *i;
+              ++i;
+              if (auto value = element.dyn_cast<mlir::Value>())
+                if (auto *op = value.getDefiningOp())
+                  if (auto off = mlir::dyn_cast<mlir::arith::ConstantOp>(op))
+                    return ty.getType(fir::toInt(off));
+              return mlir::Type{};
+            })
+            .Case([&](mlir::ComplexType ty) {
+              fir::SlicePathElement element = *i;
+              ++i;
+              if (auto kind = element.dyn_cast<fir::SliceOperandKindAttr>())
+                if (kind.getValue() == fir::SliceOperandKind::Real ||
+                    kind.getValue() == fir::SliceOperandKind::Imaginary)
+                  return ty.getElementType();
+              if (auto value = element.dyn_cast<mlir::Value>())
+                if (fir::isa_integer(value.getType()))
+                  return ty.getElementType();
+              return mlir::Type{};
+            })
+            .Default([&](const auto &) { return mlir::Type{}; });
   }
   return eleTy;
 }

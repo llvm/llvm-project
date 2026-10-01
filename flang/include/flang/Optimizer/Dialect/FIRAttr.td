@@ -156,6 +156,22 @@ def fir_BoxFieldAttr : I32EnumAttr<
   let cppNamespace = "fir";
 }
 
+def fir_SliceOperandKind : I32EnumAttr<
+    "SliceOperandKind", "kind of entity encoded in a fir.slice operand map",
+    [
+      I32EnumAttrCase<"Triplet", 0, "triplet">,
+      I32EnumAttrCase<"Index", 1, "index">,
+      I32EnumAttrCase<"Substring", 2, "substring">,
+      I32EnumAttrCase<"Real", 3, "real">,
+      I32EnumAttrCase<"Imaginary", 4, "imaginary">
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+
+def fir_SliceOperandKindAttr :
+    EnumAttr<FIROpsDialect, fir_SliceOperandKind, "slice_operand">;
+
 def fir_ReduceOperationEnum : I32BitEnumAttr<"ReduceOperationEnum",
     "intrinsic operations and functions supported by DO CONCURRENT REDUCE",
     [

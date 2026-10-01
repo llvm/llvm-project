@@ -1051,7 +1051,7 @@ func.func @_QPsum_sliced_rebox_i64(%arg0: !fir.box<!fir.array<?x?x?xi64>> {fir.b
   %9 = arith.subi %8, %c1 : index
   %c1_i64_2 = arith.constant 1 : i64
   %10 = fir.undefined index
-  %11 = fir.slice %c1, %5, %2, %c1, %9, %6, %c1_i64_2, %10, %10 : (index, index, index, index, index, index, i64, index, index) -> !fir.slice<3>
+  %11 = fir.slice %c1, %5, %2, %c1, %9, %6, %c1_i64_2 {operand_map = [#fir.slice_operand<triplet>, #fir.slice_operand<triplet>, #fir.slice_operand<index>]} : (index, index, index, index, index, index, i64) -> !fir.slice<3>
   %12 = fir.rebox %arg0 [%11] : (!fir.box<!fir.array<?x?x?xi64>>, !fir.slice<3>) -> !fir.box<!fir.array<?x?xi64>>
   %13 = fir.absent !fir.box<i1>
   %c0_3 = arith.constant 0 : index

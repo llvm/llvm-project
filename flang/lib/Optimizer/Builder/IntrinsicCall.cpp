@@ -4835,12 +4835,11 @@ getFieldRef(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value rec,
   auto recType =
       mlir::dyn_cast<fir::RecordType>(fir::unwrapPassByRefType(rec.getType()));
   assert(index < recType.getTypeList().size() && "not enough components");
-  auto [fieldName, fieldTy] = recType.getTypeList()[index];
-  mlir::Value field = fir::FieldIndexOp::create(
-      builder, loc, fir::FieldType::get(recType.getContext()), fieldName,
-      recType, fir::getTypeParams(rec));
+  mlir::Type fieldTy = recType.getTypeList()[index].second;
+  fir::IntOrValue field = builder.getI32IntegerAttr(index);
   return {fir::CoordinateOp::create(builder, loc, builder.getRefType(fieldTy),
-                                    rec, field),
+                                    rec,
+                                    llvm::ArrayRef<fir::IntOrValue>{field}),
           fieldTy};
 }
 

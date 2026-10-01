@@ -130,7 +130,6 @@ fir.global linkonce_odr @_QMmod1E.dt.t.2 constant target : !fir.type<_QM__fortra
 
 fir.global @_QMmod1Ea target : !fir.type<_QMmod1TtK2{v:!fir.array<2xi32>}> {
   %0 = fir.undefined !fir.type<_QMmod1TtK2{v:!fir.array<2xi32>}>
-  %1 = fir.field_index v, !fir.type<_QMmod1TtK2{v:!fir.array<2xi32>}>
   %2 = fir.undefined !fir.array<2xi32>
   %c17_i32 = arith.constant 17 : i32
   %3 = fir.insert_value %2, %c17_i32, [0 : index] : (!fir.array<2xi32>, i32) -> !fir.array<2xi32>
