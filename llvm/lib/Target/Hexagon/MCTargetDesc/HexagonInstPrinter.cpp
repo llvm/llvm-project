@@ -33,6 +33,13 @@ void HexagonInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
 void HexagonInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                    StringRef Annot, const MCSubtargetInfo &STI,
                                    raw_ostream &OS) {
+  // PS_crash is emitted as R1 = memw(R1++#0) -- the load destination and
+  // the post-increment destination both write R1, triggering a hardware
+  // "multiple writes to register" exception.
+  if (MI->getOpcode() == Hexagon::PS_crash) {
+    OS << "r1 = memw(r1++#0) // llvm.trap";
+    return;
+  }
   if (HexagonMCInstrInfo::isDuplex(MII, *MI)) {
     printInstruction(MI->getOperand(1).getInst(), Address, OS);
     OS << '\v';
