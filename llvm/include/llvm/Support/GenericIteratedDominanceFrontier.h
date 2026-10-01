@@ -23,7 +23,6 @@
 #ifndef LLVM_SUPPORT_GENERICITERATEDDOMINANCEFRONTIER_H
 #define LLVM_SUPPORT_GENERICITERATEDDOMINANCEFRONTIER_H
 
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
@@ -152,13 +151,13 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
   unsigned NumNodes = RootNode ? RootNode->getDFSNumOut() : 0;
 
   SmallVector<DomTreeNodeBase<NodeTy> *, 32> Worklist;
-  BitVector VisitedPQ(NumNodes);
-  BitVector VisitedWorklist(NumNodes);
+  SmallVector<bool, 32> VisitedPQ(NumNodes, false);
+  SmallVector<bool, 32> VisitedWorklist(NumNodes, false);
 
   for (NodeTy *BB : *DefBlocks)
     if (DomTreeNodeBase<NodeTy> *Node = DT.getNode(BB)) {
       PQ.push({Node, std::make_pair(Node->getLevel(), Node->getDFSNumIn())});
-      VisitedWorklist.set(Node->getDFSNumIn());
+      VisitedWorklist[Node->getDFSNumIn()] = true;
     }
 
   while (!PQ.empty()) {
@@ -187,9 +186,8 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
         if (SuccLevel > RootLevel)
           return;
 
-        if (VisitedPQ.test(SuccNode->getDFSNumIn()))
+        if (std::exchange(VisitedPQ[SuccNode->getDFSNumIn()], true))
           return;
-        VisitedPQ.set(SuccNode->getDFSNumIn());
 
         NodeTy *SuccBB = SuccNode->getBlock();
         if (useLiveIn && !LiveInBlocks->count(SuccBB))
@@ -205,10 +203,8 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
         DoWork(Succ);
 
       for (auto DomChild : *Node) {
-        if (VisitedWorklist.test(DomChild->getDFSNumIn()))
-          continue;
-        VisitedWorklist.set(DomChild->getDFSNumIn());
-        Worklist.push_back(DomChild);
+        if (!std::exchange(VisitedWorklist[DomChild->getDFSNumIn()], true))
+          Worklist.push_back(DomChild);
       }
     }
   }
