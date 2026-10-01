@@ -1059,7 +1059,8 @@ invalid.block:
 
 define void @combined_exit_conditions(ptr align 4 dereferenceable(80) readonly %src, ptr align 4 dereferenceable(80) noalias %dst, ptr align 4 dereferenceable(80) readonly %pred) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'combined_exit_conditions'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
 entry:
   br label %for.body, !dbg !77
 

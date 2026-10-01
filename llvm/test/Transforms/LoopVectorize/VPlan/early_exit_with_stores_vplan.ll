@@ -122,10 +122,10 @@ define void @loop_contains_store_after_uncountable_exit(ptr dereferenceable(40) 
 ; CHECK-NEXT:      EMIT vp<%uncountable.exit.mask> = active lane mask ir<0>, vp<[[VP7]]>
 ; CHECK-NEXT:      CLONE ir<%st.addr> = getelementptr ir<%array>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i16, ir<%st.addr>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP8]]>, vp<%uncountable.exit.mask> (!vplan.execution.frequency 8935141660703064064 (96.88%, estimated))
+; CHECK-NEXT:      WIDEN ir<%data> = load vp<[[VP8]]>, vp<%uncountable.exit.mask>
 ; CHECK-NEXT:      WIDEN ir<%inc> = add nsw ir<%data>, ir<1>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer i16, ir<%st.addr>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP9]]>, ir<%inc>, vp<%uncountable.exit.mask> (!vplan.execution.frequency 8935141660703064064 (96.88%, estimated))
+; CHECK-NEXT:      WIDEN store vp<[[VP9]]>, ir<%inc>, vp<%uncountable.exit.mask>
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = any-of vp<[[VP6]]>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
