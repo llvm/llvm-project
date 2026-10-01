@@ -52,7 +52,7 @@ void int_calculations(int a, int b) {
   // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: use 'std::midpoint' instead of manual midpoint calculation
   // CHECK-FIXES: auto parenthesized_difference = std::midpoint(a, b);
 
-  auto signed_boundaries = (-2147483647 - 1 + 2147483647) / 2;
+  auto signed_boundaries = ((-2147483647 - 1) + 2147483647) / 2;
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use 'std::midpoint' instead of manual midpoint calculation
   // CHECK-FIXES: auto signed_boundaries = std::midpoint((-2147483647 - 1), 2147483647);
 
@@ -397,6 +397,34 @@ auto nested_calculations(int a, int b, int c) {
   // CHECK-FIXES: return (std::midpoint(a, b) + c) / 2;
 }
 
+void grouped_endpoints(int a, int b, int c) {
+  auto left_sum = ((a + b) + c) / 2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use 'std::midpoint' instead of manual midpoint calculation
+  // CHECK-FIXES: auto left_sum = std::midpoint((a + b), c);
+
+  auto right_sum = (a + (b + c)) / 2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: use 'std::midpoint' instead of manual midpoint calculation
+  // CHECK-FIXES: auto right_sum = std::midpoint(a, (b + c));
+
+  auto left_difference = ((a - b) + c) / 2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: use 'std::midpoint' instead of manual midpoint calculation
+  // CHECK-FIXES: auto left_difference = std::midpoint((a - b), c);
+
+  auto right_difference = (a + (b - c)) / 2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use 'std::midpoint' instead of manual midpoint calculation
+  // CHECK-FIXES: auto right_difference = std::midpoint(a, (b - c));
+}
+
+void floating_grouped_endpoints(double a, double b, double c) {
+  auto sum = ((a + b) + c) * 0.5;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use 'std::midpoint' instead of manual midpoint calculation
+  // CHECK-FIXES: auto sum = std::midpoint((a + b), c);
+
+  auto reversed_product = 0.5 * (a + (b - c));
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use 'std::midpoint' instead of manual midpoint calculation
+  // CHECK-FIXES: auto reversed_product = std::midpoint(a, (b - c));
+}
+
 double read_value();
 struct Convertible { operator double() const; };
 struct Number {
@@ -416,6 +444,39 @@ void unrecognized_formulas(int i, int j, double a, double b, double t) {
   (void)(a + (b - t) * t);
   (void)((a + b) * 0.25);
 }
+
+void additive_chains(int foldLen, int sinceLast, int other) {
+  (void)((foldLen + sinceLast + 1) / 2);
+  (void)((1 + foldLen + sinceLast) / 2);
+  (void)((foldLen + sinceLast + other) / 2);
+  (void)((foldLen - sinceLast + 1) / 2);
+  (void)((foldLen + sinceLast - other + 1) / 2);
+  (void)((((foldLen + sinceLast + 1))) / 2);
+}
+
+void unsigned_additive_chains(unsigned a, unsigned b) {
+  (void)((a + b + 1U) / 2U);
+  (void)((a - b + 1U) / 2U);
+}
+
+void floating_additive_chains(double a, double b, double c) {
+  (void)((a + b + 1.0) / 2.0);
+  (void)((a + b + c) * 0.5);
+  (void)(0.5 * (a + b + c));
+  (void)((a - b + c) * 0.5);
+}
+
+void long_double_additive_chains(long double a, long double b) {
+  (void)((a + b + 1.0L) / 2.0L);
+  (void)((a + b + 1.0L) * 0.5L);
+}
+
+template <class T> int template_additive_chain(int a, int b) {
+  return (a + b + 1) / 2;
+}
+template int template_additive_chain<void>(int, int);
+
+auto additive_chain_lambda = [](int a, int b) { return (a + b + 1) / 2; };
 
 void mixed_midpoint_types(int i, int j, unsigned u, double a, float f, float g) {
   (void)(i + (j - u) / 2);

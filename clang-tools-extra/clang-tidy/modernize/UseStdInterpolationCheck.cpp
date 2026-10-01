@@ -82,8 +82,13 @@ static InterpolationMatchers makeInterpolationMatchers() {
       expr(anyOf(integerLiteral(equals(1)), floatLiteral(hasExactValue(1.0)))));
 
   // Midpoints: (a + b) / 2 and a + (b - a) / 2, also using * 0.5.
+  // Exclude ungrouped additive chains, which may express rounded averages
+  // rather than an intended two-endpoint midpoint.
+  const auto GroupedEndpoint =
+      unless(ignoringImpCasts(binaryOperator(hasAnyOperatorName("+", "-"))));
   const auto Sum = ignoringParenImpCasts(binaryOperator(
-      hasOperatorName("+"), SameType, hasLHS(Start), hasRHS(End)));
+      hasOperatorName("+"), SameType, hasLHS(expr(GroupedEndpoint, Start)),
+      hasRHS(expr(GroupedEndpoint, End))));
   const auto Difference = ignoringParenImpCasts(binaryOperator(
       hasOperatorName("-"), SameType, hasLHS(End), hasRHS(RepeatedStart)));
   const auto HalfSum = binaryOperator(

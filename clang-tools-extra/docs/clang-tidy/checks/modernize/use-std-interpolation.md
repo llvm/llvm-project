@@ -47,6 +47,10 @@ The following expressions are recognized:
 | `a + (b - a) * t` | `std::lerp(a, b, t)` |
 | `(1 - t) * a + t * b` | `std::lerp(a, b, t)` |
 
+Sum midpoint formulas must have two endpoints. Ungrouped addition or subtraction
+chains such as `(a + b + 1) / 2` are excluded. Parenthesized endpoints such as
+`((a + b) + c) / 2` are supported.
+
 ## Changes in numerical behavior
 
 Replacing integer `(a + b) / 2` can change rounding. Integer division truncates
