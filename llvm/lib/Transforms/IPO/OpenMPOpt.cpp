@@ -999,11 +999,11 @@ private:
 };
 
 /// Copy the max outlined-callback entry count onto the merged wrapper.
-/// \p CallbackOpNo is the callback argument (2 for __kmpc_fork_call's
+/// \p CallbackOpNo is the callback argument (for __kmpc_fork_call's
 /// microtask).
 static void setMergedWrapperEntryCount(Function &WrapperFn,
                                        ArrayRef<CallInst *> ForkCalls,
-                                       unsigned CallbackOpNo = 2) {
+                                       unsigned CallbackOpNo) {
   std::optional<uint64_t> EntryCount;
   for (CallInst *CI : ForkCalls) {
     auto *Callback = dyn_cast<Function>(
@@ -1358,7 +1358,8 @@ private:
       OMPInfoCache.OMPBuilder.finalize(OriginalFn);
 
       Function *OutlinedFn = MergableCIs.front()->getCaller();
-      setMergedWrapperEntryCount(*OutlinedFn, MergableCIs);
+      setMergedWrapperEntryCount(*OutlinedFn, MergableCIs,
+                                 CallbackCalleeOperand);
 
       // Replace the __kmpc_fork_call calls with direct calls to the outlined
       // callbacks.
