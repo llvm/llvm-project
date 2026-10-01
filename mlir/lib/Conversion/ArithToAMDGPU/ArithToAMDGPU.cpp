@@ -726,9 +726,8 @@ void ArithToAMDGPUConversionPass::runOnOperation() {
   FailureOr<ROCDL::TargetInfo> targetInfo = ROCDL::TargetInfo::get(
       ROCDL::resolveArchOption(arch, chipset), /*waveSize=*/0,
       [&] { return emitError(UnknownLoc::get(ctx)); });
-  if (failed(targetInfo)) {
+  if (failed(targetInfo))
     return signalPassFailure();
-  }
 
   bool convertFP8Arithmetic =
       targetInfo->has(llvm::AMDGPU::FEAT_FP8_CONVERSION_INSTS);
