@@ -775,6 +775,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure when a token followed an `#embed` parameter whose
   expression evaluated `defined`, such as `#embed <f> limit(defined(x)),`.
   (#GH212075)
+- Fixed an assertion failure in the constant evaluator after a variable redefinition
+  error followed by a redeclaration with a different type. (#GH227733)
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
