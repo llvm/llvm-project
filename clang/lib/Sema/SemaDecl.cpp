@@ -9180,6 +9180,15 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     }
   }
 
+  // Zero-length __shared__ arrays are often meant as dynamic shared memory.
+  if (getLangOpts().CUDAIsDevice && NewVD->hasAttr<CUDASharedAttr>() &&
+      !inTemplateInstantiation()) {
+    if (const ConstantArrayType *ArrayT = Context.getAsConstantArrayType(T);
+        ArrayT && ArrayT->isZeroSize())
+      Diag(NewVD->getLocation(), diag::warn_cuda_zero_length_shared_array)
+          << NewVD;
+  }
+
   bool isVM = T->isVariablyModifiedType();
   if (isVM || NewVD->hasAttr<CleanupAttr>() ||
       NewVD->hasAttr<BlocksAttr>())

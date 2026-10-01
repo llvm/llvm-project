@@ -9828,6 +9828,10 @@ def err_cuda_vla : Error<
     "cannot use variable-length arrays in "
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
 def err_cuda_extern_shared : Error<"__shared__ variable %0 cannot be 'extern'">;
+def warn_cuda_zero_length_shared_array : Warning<
+    "zero-length __shared__ array %0 has no storage; did you mean "
+    "'extern __shared__' with an unspecified size for dynamic shared memory?">,
+    InGroup<DiagGroup<"zero-length-shared-array">>;
 def err_cuda_host_shared : Error<
     "__shared__ local variables not allowed in "
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;

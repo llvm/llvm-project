@@ -1,8 +1,10 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -fsyntax-only -x hip -fcuda-is-device -verify -triple amdgpu %s
-// RUN: %clang_cc1 -fsyntax-only -x hip -verify -triple x86_64-unknown-linux-gnu %s
+// RUN: %clang_cc1 -fsyntax-only -x hip -fcuda-is-device -verify=device -triple amdgpu %s
+// RUN: %clang_cc1 -fsyntax-only -x cuda -fcuda-is-device -verify=device -triple nvptx64-nvidia-cuda %s
+// RUN: %clang_cc1 -fsyntax-only -x hip -verify=host -triple x86_64-unknown-linux-gnu %s
+// RUN: %clang_cc1 -fsyntax-only -x hip -fcuda-is-device -Wno-zero-length-shared-array -verify=host -triple amdgpu %s
 
-// expected-no-diagnostics
+// host-no-diagnostics
 
 #define __device__ __attribute__((device))
 #define __host__ __attribute__((host))
@@ -13,6 +15,7 @@ typedef float ZEROARR[0];
 
 float global_array[0];
 __device__ float device_array[0];
+__shared__ float shared_global_array[0]; // device-warning {{zero-length __shared__ array 'shared_global_array' has no storage; did you mean 'extern __shared__' with an unspecified size for dynamic shared memory?}}
 
 __global__ void global_fun() {
   extern __shared__ float externArray[];
@@ -30,11 +33,18 @@ __device__ void templated() {
   __shared__ Ty shared_arr[Size];
 }
 
+template <typename Ty>
+__device__ void dependent_element() {
+  __shared__ Ty shared_arr[0]; // device-warning {{zero-length __shared__ array 'shared_arr' has no storage}}
+}
+
 __host__ __device__ void host_dev_fun() {
   float array[0];
 }
 
 __device__ void device_fun() {
-  __shared__ float array[0];
+  __shared__ float array[0]; // device-warning {{zero-length __shared__ array 'array' has no storage}}
+  __shared__ ZEROARR typedef_array; // device-warning {{zero-length __shared__ array 'typedef_array' has no storage}}
   templated<int, 0>();
+  dependent_element<int>();
 }
