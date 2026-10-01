@@ -51,7 +51,7 @@ body:             |
     ; CHECK-NEXT: BL @clobber, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: MSRpstatesvcrImm1 2, 1
-    ; CHECK-NEXT: [[MRS:%[0-9]+]]:gpr64 = MRS 56965, implicit-def $nzcv
+    ; CHECK-NEXT: [[MRS:%[0-9]+]]:gpr64 = MRS 56965, implicit-def dead $nzcv
     ; CHECK-NEXT: $x0 = ADDXri %stack.0, 0, 0
     ; CHECK-NEXT: RestoreZAPseudo [[MRS]], $x0, &__arm_tpidr2_restore, csr_aarch64_sme_abi_support_routines_preservemost_from_x0
     ; CHECK-NEXT: MSR 56965, $xzr
