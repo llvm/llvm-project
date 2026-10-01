@@ -1137,9 +1137,7 @@ public:
 
   unsigned getICachePrefetchLines() const { return ICachePrefetchLines; }
 
-  void setICachePrefetchLines(unsigned Lines) {
-    ICachePrefetchLines = Lines;
-  }
+  void setICachePrefetchLines(unsigned Lines) { ICachePrefetchLines = Lines; }
 
   unsigned getNumSpilledSGPRs() const {
     return NumSpilledSGPRs;
