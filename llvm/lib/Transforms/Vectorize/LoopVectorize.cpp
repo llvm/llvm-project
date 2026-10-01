@@ -557,10 +557,9 @@ public:
 
   virtual ~InnerLoopVectorizer() = default;
 
-  /// Creates a basic block for the scalar preheader. Both
-  /// EpilogueVectorizerMainLoop and EpilogueVectorizerEpilogueLoop overwrite
-  /// the method to create additional blocks and checks needed for epilogue
-  /// vectorization.
+  /// Creates a basic block for the scalar preheader.
+  /// EpilogueVectorizerEpilogueLoop overrides the method to create additional
+  /// blocks and checks needed for epilogue vectorization.
   virtual BasicBlock *createVectorizedLoopSkeleton();
 
   /// Fix the vectorized code, taking care of header phi's, and more.
@@ -572,11 +571,6 @@ protected:
   /// Create and return a new IR basic block for the scalar preheader whose name
   /// is prefixed with \p Prefix.
   BasicBlock *createScalarPreheader(StringRef Prefix);
-
-  /// Allow subclasses to override and print debug traces before/after vplan
-  /// execution, when trace information is requested.
-  virtual void printDebugTracesAtStart() {}
-  virtual void printDebugTracesAtEnd() {}
 
   /// The original loop.
   Loop *OrigLoop;
@@ -636,59 +630,15 @@ struct EpilogueLoopVectorizationInfo {
       : MainLoopVF(MVF), MainLoopUF(MUF), EpilogueVF(EVF) {}
 };
 
-/// An extension of the inner loop vectorizer that creates a skeleton for a
-/// vectorized loop that has its epilogue (residual) also vectorized.
-/// The idea is to run the vplan on a given loop twice, firstly to setup the
-/// skeleton and vectorize the main loop, and secondly to complete the skeleton
-/// from the first step and vectorize the epilogue.  This is achieved by
-/// deriving two concrete strategy classes from this base class and invoking
-/// them in succession from the loop vectorizer planner.
-class InnerLoopAndEpilogueVectorizer : public InnerLoopVectorizer {
-public:
-  InnerLoopAndEpilogueVectorizer(Loop *OrigLoop, PredicatedScalarEvolution &PSE,
-                                 LoopInfo *LI, DominatorTree *DT,
-                                 const TargetTransformInfo *TTI,
-                                 AssumptionCache *AC,
-                                 EpilogueLoopVectorizationInfo &EPI,
-                                 GeneratedRTChecks &Checks, VPlan &Plan,
-                                 ElementCount VecWidth, unsigned UnrollFactor)
-      : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, VecWidth,
-                            UnrollFactor, Checks, Plan),
-        EPI(EPI) {}
-
-  /// Holds and updates state information required to vectorize the main loop
-  /// and its epilogue in two separate passes. This setup helps us avoid
-  /// regenerating and recomputing runtime safety checks. It also helps us to
-  /// shorten the iteration-count-check path length for the cases where the
-  /// iteration count of the loop is so small that the main vector loop is
-  /// completely skipped.
-  EpilogueLoopVectorizationInfo &EPI;
-};
-
 /// A specialized derived class of inner loop vectorizer that performs
-/// vectorization of *main* loops in the process of vectorizing loops and their
-/// epilogues.
-class EpilogueVectorizerMainLoop : public InnerLoopAndEpilogueVectorizer {
-public:
-  EpilogueVectorizerMainLoop(Loop *OrigLoop, PredicatedScalarEvolution &PSE,
-                             LoopInfo *LI, DominatorTree *DT,
-                             const TargetTransformInfo *TTI,
-                             AssumptionCache *AC,
-                             EpilogueLoopVectorizationInfo &EPI,
-                             GeneratedRTChecks &Check, VPlan &Plan)
-      : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI,
-                                       Check, Plan, EPI.MainLoopVF,
-                                       EPI.MainLoopUF) {}
-
-protected:
-  void printDebugTracesAtStart() override;
-  void printDebugTracesAtEnd() override;
-};
-
-// A specialized derived class of inner loop vectorizer that performs
-// vectorization of *epilogue* loops in the process of vectorizing loops and
-// their epilogues.
-class EpilogueVectorizerEpilogueLoop : public InnerLoopAndEpilogueVectorizer {
+/// vectorization of *epilogue* loops in the process of vectorizing loops and
+/// their epilogues. The idea is to run the vplan on a given loop twice, firstly
+/// to vectorize the main loop, and secondly to complete the skeleton from the
+/// first step and vectorize the epilogue. This helps us avoid regenerating and
+/// recomputing runtime safety checks, and shortens the iteration-count-check
+/// path length for loops whose iteration count is so small that the main vector
+/// loop is completely skipped.
+class EpilogueVectorizerEpilogueLoop : public InnerLoopVectorizer {
   VPlan &MainPlan;
 
 public:
@@ -697,21 +647,16 @@ public:
   EpilogueVectorizerEpilogueLoop(Loop *OrigLoop, PredicatedScalarEvolution &PSE,
                                  LoopInfo *LI, DominatorTree *DT,
                                  const TargetTransformInfo *TTI,
-                                 AssumptionCache *AC,
-                                 EpilogueLoopVectorizationInfo &EPI,
+                                 AssumptionCache *AC, ElementCount VecWidth,
+                                 unsigned UnrollFactor,
                                  GeneratedRTChecks &Checks, VPlan &Plan,
                                  VPlan &MainPlan)
-      : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI,
-                                       Checks, Plan, EPI.EpilogueVF,
-                                       /*UnrollFactor=*/1),
+      : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, VecWidth,
+                            UnrollFactor, Checks, Plan),
         MainPlan(MainPlan) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *epilogue loop* strategy (i.e., the second pass of VPlan execution).
   BasicBlock *createVectorizedLoopSkeleton() final;
-
-protected:
-  void printDebugTracesAtStart() override;
-  void printDebugTracesAtEnd() override;
 };
 } // end namespace llvm
 
@@ -5362,6 +5307,9 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (!VPlan1)
     return;
 
+  LLVM_DEBUG(dbgs() << "LV: VPlan created successfully. Loop can be "
+                       "vectorized.\n");
+
   if (!OrigLoop->isInnermost()) {
     // For outer loops, computeMaxVF returns a single non-scalar VF; build a
     // plan for that VF only.
@@ -5920,8 +5868,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   SE.forgetLoop(OrigLoop);
   SE.forgetBlockAndLoopDispositions();
 
-  ILV.printDebugTracesAtStart();
-
   //===------------------------------------------------===//
   //
   // Notice: any optimization or new instruction that go
@@ -5960,8 +5906,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   //    predication, updating analyses.
   ILV.fixVectorizedLoop(State);
 
-  ILV.printDebugTracesAtEnd();
-
   // Wrap the generated blocks in VPIRBasicBlocks, so they can be used in the
   // epilogue plan.
   if (EpilogueVecKind == EpilogueVectorizationKind::MainLoop)
@@ -5971,27 +5915,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
         replaceVPBBWithIRVPBB(VPBB, State.CFG.VPBB2IRBB.at(VPBB), &BestVPlan);
 
   return ExpandedSCEVs;
-}
-
-//===--------------------------------------------------------------------===//
-// EpilogueVectorizerMainLoop
-//===--------------------------------------------------------------------===//
-
-void EpilogueVectorizerMainLoop::printDebugTracesAtStart() {
-  LLVM_DEBUG({
-    dbgs() << "Create Skeleton for epilogue vectorized loop (first pass)\n"
-           << "Main Loop VF:" << EPI.MainLoopVF
-           << ", Main Loop UF:" << EPI.MainLoopUF
-           << ", Epilogue Loop VF:" << EPI.EpilogueVF
-           << ", Epilogue Loop UF:1\n";
-  });
-}
-
-void EpilogueVectorizerMainLoop::printDebugTracesAtEnd() {
-  DEBUG_WITH_TYPE(VerboseDebug, {
-    dbgs() << "intermediate fn:\n"
-           << *OrigLoop->getHeader()->getParent() << "\n";
-  });
 }
 
 //===--------------------------------------------------------------------===//
@@ -6024,19 +5947,6 @@ BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
                  NewEntry);
 
   return OriginalScalarPH;
-}
-
-void EpilogueVectorizerEpilogueLoop::printDebugTracesAtStart() {
-  LLVM_DEBUG({
-    dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"
-           << "Epilogue Loop VF:" << EPI.EpilogueVF << ", Epilogue Loop UF:1\n";
-  });
-}
-
-void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
-  DEBUG_WITH_TYPE(VerboseDebug, {
-    dbgs() << "final fn:\n" << *OrigLoop->getHeader()->getParent() << "\n";
-  });
 }
 
 bool VPRecipeBuilder::isPredicatedInst(Instruction *I) const {
@@ -6293,7 +6203,7 @@ VPSingleDefRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
   if (IsUniform) {
     return VPBuilder::createSingleScalarOp(
         VPI->getOpcode(), VPI->operandsWithoutMask(), BlockInMask, *VPI, *VPI,
-        VPI->getDebugLoc(), I);
+        VPI->getDebugLoc(), VPI->getScalarType(), I);
   }
   auto *Recipe = new VPReplicateRecipe(I, VPI->operandsWithoutMask(),
                                        /*IsSingleScalar=*/false, BlockInMask,
@@ -8160,12 +8070,22 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         L, HasBranchWeights ? MinItersBypassWeights : nullptr,
         L->getLoopPredecessor()->getTerminator()->getDebugLoc(), PSE);
 
-    EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TTI, AC, EPI, Checks,
-                                       BestMainPlan);
+    LLVM_DEBUG({
+      dbgs() << "Create Skeleton for epilogue vectorized loop (first pass)\n"
+             << "Main Loop VF:" << EPI.MainLoopVF
+             << ", Main Loop UF:" << EPI.MainLoopUF
+             << ", Epilogue Loop VF:" << EPI.EpilogueVF
+             << ", Epilogue Loop UF:1\n";
+    });
+    InnerLoopVectorizer MainILV(L, PSE, LI, DT, TTI, AC, EPI.MainLoopVF,
+                                EPI.MainLoopUF, Checks, BestMainPlan);
     auto ExpandedSCEVs = LVP.executePlan(
         EPI.MainLoopVF, EPI.MainLoopUF, BestMainPlan, MainILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::MainLoop);
     ++LoopsVectorized;
+    DEBUG_WITH_TYPE(VerboseDebug, {
+      dbgs() << "intermediate fn:\n" << *L->getHeader()->getParent() << "\n";
+    });
 
     BasicBlock *EntryBB =
         cast<VPIRBasicBlock>(BestMainPlan.getEntry())->getIRBasicBlock();
@@ -8173,15 +8093,24 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
     // Second pass vectorizes the epilogue and adjusts the control flow
     // edges from the first pass.
-    EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TTI, AC, EPI,
+    EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TTI, AC,
+                                             EPI.EpilogueVF, /*UnrollFactor=*/1,
                                              Checks, BestEpiPlan, BestMainPlan);
     SmallVector<Instruction *> InstsToMove = preparePlanForEpilogueVectorLoop(
         BestMainPlan, BestEpiPlan, L, ExpandedSCEVs, EPI, LVP, Config,
         *PSE.getSE(), ResumeValues);
     RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
+    LLVM_DEBUG({
+      dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"
+             << "Epilogue Loop VF:" << EPI.EpilogueVF
+             << ", Epilogue Loop UF:1\n";
+    });
     LVP.executePlan(
         EPI.EpilogueVF, /*BestUF=*/1, BestEpiPlan, EpilogILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::Epilogue);
+    DEBUG_WITH_TYPE(VerboseDebug, {
+      dbgs() << "final fn:\n" << *L->getHeader()->getParent() << "\n";
+    });
     connectEpilogueVectorLoop(BestEpiPlan, DT,
                               EpilogILV.VecEpilogueIterationCountCheck,
                               InstsToMove, ResumeValues);

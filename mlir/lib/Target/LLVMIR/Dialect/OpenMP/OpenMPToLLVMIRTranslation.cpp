@@ -7924,11 +7924,15 @@ processIndividualMap(llvm::IRBuilderBase &builder,
   combinedInfo.Types.emplace_back(mapFlag);
   // TODO: set HasAttachPtr from Flang for pointee-storage entries.
   combinedInfo.HasAttachPtr.emplace_back(false);
+  // A privatized attach map needs storage for the pointer or descriptor even
+  // when its pointee is null. Its size describes that storage, not the pointee,
+  // and is needed by the runtime for corresponding-pointer-initialization.
   combinedInfo.Sizes.emplace_back(
-      isPtrTy ? builder.CreateSelect(
-                    builder.CreateIsNull(mapData.Pointers[mapDataIdx]),
-                    builder.getInt64(0), mapData.Sizes[mapDataIdx])
-              : mapData.Sizes[mapDataIdx]);
+      isPtrTy && !isPrivatizeableAttachMap(mapInfoOp.getMapType())
+          ? builder.CreateSelect(
+                builder.CreateIsNull(mapData.Pointers[mapDataIdx]),
+                builder.getInt64(0), mapData.Sizes[mapDataIdx])
+          : mapData.Sizes[mapDataIdx]);
 }
 
 // This creates two insertions into the MapInfosTy data structure for the

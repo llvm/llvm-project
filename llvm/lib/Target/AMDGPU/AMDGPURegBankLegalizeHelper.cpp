@@ -269,7 +269,8 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   // Update EXEC, save the original EXEC value to SavedExec.
   B.buildInstr(LMC.AndSaveExecOpc)
       .addDef(SavedExec)
-      .addReg(CondRegLM, RegState::Kill);
+      .addReg(CondRegLM, RegState::Kill)
+      .setOperandDead(3);
   MRI.setSimpleHint(SavedExec, CondRegLM);
 
   B.setInsertPt(*BodyBB, BodyBB->end());
@@ -278,7 +279,8 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   B.buildInstr(LMC.XorTermOpc)
       .addDef(LMC.ExecReg)
       .addReg(LMC.ExecReg)
-      .addReg(SavedExec);
+      .addReg(SavedExec)
+      .setOperandDead(3);
 
   // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
   // s_cbranch_scc0?
