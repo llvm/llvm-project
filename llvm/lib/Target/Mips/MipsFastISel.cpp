@@ -983,7 +983,8 @@ bool MipsFastISel::selectBranch(const Instruction *I) {
 
   BuildMI(*BrBB, FuncInfo.InsertPt, MIMD, TII.get(Mips::BGTZ))
       .addReg(ZExtCondReg)
-      .addMBB(TBB);
+      .addMBB(TBB)
+      .setOperandDead(2); // implicit-def $at
   finishCondBranch(BI->getParent(), TBB, FBB);
   return true;
 }
