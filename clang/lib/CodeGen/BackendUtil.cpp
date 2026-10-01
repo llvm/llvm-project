@@ -95,6 +95,7 @@
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "llvm/Transforms/Scalar/WarnUninitialized.h"
 #include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/DynamicDebugging.h"
@@ -897,6 +898,24 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       CodeGenOpts.VerifyEach, PrintPassOpts);
   SI.registerCallbacks(PIC, &MAM);
   PassBuilder PB(TM.get(), PTO, PGOOpt, &PIC, CI.getVirtualFileSystemPtr());
+
+  if (!CI.getDiagnostics().isIgnored(diag::warn_fe_backend_uninitialized,
+                                     SourceLocation()) ||
+      !CI.getDiagnostics().isIgnored(diag::warn_fe_backend_maybe_uninitialized,
+                                     SourceLocation())) {
+    auto DiagnosticState = createWarnUninitializedDiagnosticState();
+    PB.registerPipelineStartEPCallback(
+        [DiagnosticState](ModulePassManager &MPM, OptimizationLevel) {
+          MPM.addPass(createModuleToFunctionPassAdaptor(
+              WarnUninitializedEarlyPass(DiagnosticState)));
+        });
+    PB.registerCGSCCOptimizerLateEPCallback(
+        [DiagnosticState](CGSCCPassManager &CGPM, OptimizationLevel Level) {
+          if (Level != OptimizationLevel::O0)
+            CGPM.addPass(createCGSCCToFunctionPassAdaptor(
+                WarnUninitializedLatePass(DiagnosticState)));
+        });
+  }
 
   // Handle the assignment tracking feature options.
   switch (CodeGenOpts.getAssignmentTrackingMode()) {
