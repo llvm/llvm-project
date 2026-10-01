@@ -194,10 +194,8 @@ bool DXILContainerPDBImpl::runOnModule(Module &M) {
   if (!dxil::PdbInPrivate)
     return false;
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
-      M.getContext().getVirtualFileSystem().getBufferForFile(
-          DebugFileName, /*FileSize=*/-1, /*RequiresNullTerminator=*/false,
-          /*IsVolatile=*/false, /*IsText=*/false);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(
+      DebugFileName, sys::fs::OF_None, /*RequiresNullTerminator=*/false);
   if (!Buf)
     reportFatalInternalError("Failed to read PDB for PRIV embedding");
 

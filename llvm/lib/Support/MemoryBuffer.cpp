@@ -121,8 +121,8 @@ public:
 template <typename MB>
 static ErrorOr<std::unique_ptr<MB>>
 getFileAux(const Twine &Filename, uint64_t MapSize, uint64_t Offset,
-           bool IsText, bool RequiresNullTerminator, bool IsVolatile,
-           std::optional<Align> Alignment);
+           sys::fs::OpenFlags Flags, bool RequiresNullTerminator,
+           bool IsVolatile, std::optional<Align> Alignment);
 
 std::unique_ptr<MemoryBuffer>
 MemoryBuffer::getMemBuffer(StringRef InputData, StringRef BufferName,
@@ -159,7 +159,7 @@ MemoryBuffer::getMemBufferCopy(StringRef InputData, const Twine &BufferName) {
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
-MemoryBuffer::getFileOrSTDIN(const Twine &Filename, bool IsText,
+MemoryBuffer::getFileOrSTDIN(const Twine &Filename, sys::fs::OpenFlags Flags,
                              bool RequiresNullTerminator,
                              std::optional<Align> Alignment) {
   sys::sandbox::violationIfEnabled();
@@ -169,7 +169,7 @@ MemoryBuffer::getFileOrSTDIN(const Twine &Filename, bool IsText,
 
   if (NameRef == "-")
     return getSTDIN();
-  return getFile(Filename, IsText, RequiresNullTerminator,
+  return getFile(Filename, Flags, RequiresNullTerminator,
                  /*IsVolatile=*/false, Alignment);
 }
 
@@ -179,7 +179,7 @@ MemoryBuffer::getFileSlice(const Twine &FilePath, uint64_t MapSize,
                            std::optional<Align> Alignment) {
   sys::sandbox::violationIfEnabled();
 
-  return getFileAux<MemoryBuffer>(FilePath, MapSize, Offset, /*IsText=*/false,
+  return getFileAux<MemoryBuffer>(FilePath, MapSize, Offset, sys::fs::OF_None,
                                   /*RequiresNullTerminator=*/false, IsVolatile,
                                   Alignment);
 }
@@ -262,13 +262,13 @@ getMemoryBufferForStream(sys::fs::file_t FD, const Twine &BufferName) {
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
-MemoryBuffer::getFile(const Twine &Filename, bool IsText,
+MemoryBuffer::getFile(const Twine &Filename, sys::fs::OpenFlags Flags,
                       bool RequiresNullTerminator, bool IsVolatile,
                       std::optional<Align> Alignment) {
   sys::sandbox::violationIfEnabled();
 
-  return getFileAux<MemoryBuffer>(Filename, /*MapSize=*/-1, /*Offset=*/0,
-                                  IsText, RequiresNullTerminator, IsVolatile,
+  return getFileAux<MemoryBuffer>(Filename, /*MapSize=*/-1, /*Offset=*/0, Flags,
+                                  RequiresNullTerminator, IsVolatile,
                                   Alignment);
 }
 
@@ -281,10 +281,10 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
 template <typename MB>
 static ErrorOr<std::unique_ptr<MB>>
 getFileAux(const Twine &Filename, uint64_t MapSize, uint64_t Offset,
-           bool IsText, bool RequiresNullTerminator, bool IsVolatile,
-           std::optional<Align> Alignment) {
-  Expected<sys::fs::file_t> FDOrErr = sys::fs::openNativeFileForRead(
-      Filename, IsText ? sys::fs::OF_TextWithCRLF : sys::fs::OF_None);
+           sys::fs::OpenFlags Flags, bool RequiresNullTerminator,
+           bool IsVolatile, std::optional<Align> Alignment) {
+  Expected<sys::fs::file_t> FDOrErr =
+      sys::fs::openNativeFileForRead(Filename, Flags);
   if (!FDOrErr)
     return errorToErrorCode(FDOrErr.takeError());
   sys::fs::file_t FD = *FDOrErr;
@@ -300,7 +300,7 @@ WritableMemoryBuffer::getFile(const Twine &Filename, bool IsVolatile,
   sys::sandbox::violationIfEnabled();
 
   return getFileAux<WritableMemoryBuffer>(
-      Filename, /*MapSize=*/-1, /*Offset=*/0, /*IsText=*/false,
+      Filename, /*MapSize=*/-1, /*Offset=*/0, sys::fs::OF_None,
       /*RequiresNullTerminator=*/false, IsVolatile, Alignment);
 }
 
@@ -311,7 +311,7 @@ WritableMemoryBuffer::getFileSlice(const Twine &Filename, uint64_t MapSize,
   sys::sandbox::violationIfEnabled();
 
   return getFileAux<WritableMemoryBuffer>(
-      Filename, MapSize, Offset, /*IsText=*/false,
+      Filename, MapSize, Offset, sys::fs::OF_None,
       /*RequiresNullTerminator=*/false, IsVolatile, Alignment);
 }
 

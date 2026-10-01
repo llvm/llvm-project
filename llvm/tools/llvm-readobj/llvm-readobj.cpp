@@ -625,7 +625,7 @@ static void dumpWindowsResourceFile(WindowsResource *WinRes,
 /// Opens \a File and dumps it.
 static void dumpInput(StringRef File, ScopedPrinter &Writer) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(File, /*IsText=*/false,
+      MemoryBuffer::getFileOrSTDIN(File, sys::fs::OF_None,
                                    /*RequiresNullTerminator=*/false);
   if (std::error_code EC = FileOrErr.getError())
     return reportError(errorCodeToError(EC), File);

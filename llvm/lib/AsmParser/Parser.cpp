@@ -16,6 +16,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include <algorithm>
@@ -68,7 +69,7 @@ std::unique_ptr<Module> llvm::parseAssemblyFile(StringRef Filename,
                                                 LLVMContext &Context,
                                                 SlotMapping *Slots) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(Filename, sys::fs::OF_TextWithCRLF);
   if (std::error_code EC = FileOrErr.getError()) {
     Err = SMDiagnostic(Filename, SourceMgr::DK_Error,
                        "Could not open input file: " + EC.message());
@@ -111,7 +112,7 @@ parseAssemblyFileWithIndex(StringRef Filename, SMDiagnostic &Err,
                            bool UpgradeDebugInfo,
                            DataLayoutCallbackTy DataLayoutCallback) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(Filename, sys::fs::OF_TextWithCRLF);
   if (std::error_code EC = FileOrErr.getError()) {
     Err = SMDiagnostic(Filename, SourceMgr::DK_Error,
                        "Could not open input file: " + EC.message());

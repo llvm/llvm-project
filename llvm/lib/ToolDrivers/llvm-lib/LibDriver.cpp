@@ -26,6 +26,7 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/StringSaver.h"
@@ -86,7 +87,7 @@ static std::vector<StringRef> getSearchPaths(opt::InputArgList *Args,
 // Opens a file. Path has to be resolved already. (used for def file)
 std::unique_ptr<MemoryBuffer> openFile(const Twine &Path) {
   ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
-      MemoryBuffer::getFile(Path, /*IsText=*/true);
+      MemoryBuffer::getFile(Path, sys::fs::OF_TextWithCRLF);
 
   if (std::error_code EC = MB.getError()) {
     llvm::errs() << "cannot open file " << Path << ": " << EC.message() << "\n";
@@ -121,7 +122,7 @@ static void doList(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_INPUT)) {
     // Create or open the archive object.
     ErrorOr<std::unique_ptr<MemoryBuffer>> MaybeBuf = MemoryBuffer::getFile(
-        Arg->getValue(), /*IsText=*/false, /*RequiresNullTerminator=*/false);
+        Arg->getValue(), sys::fs::OF_None, /*RequiresNullTerminator=*/false);
     fatalOpenError(errorCodeToError(MaybeBuf.getError()), Arg->getValue());
 
     if (identify_magic(MaybeBuf.get()->getBuffer()) == file_magic::archive) {
@@ -470,7 +471,7 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
 
     // Open a file.
     ErrorOr<std::unique_ptr<MemoryBuffer>> MOrErr = MemoryBuffer::getFile(
-        Path, /*IsText=*/false, /*RequiresNullTerminator=*/false);
+        Path, sys::fs::OF_None, /*RequiresNullTerminator=*/false);
     fatalOpenError(errorCodeToError(MOrErr.getError()), Path);
     MemoryBufferRef MBRef = (*MOrErr)->getMemBufferRef();
 

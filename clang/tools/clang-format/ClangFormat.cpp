@@ -410,7 +410,7 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
       !OutputXML && Inplace
           ? MemoryBuffer::getFileAsStream(FileName)
-          : MemoryBuffer::getFileOrSTDIN(FileName, /*IsText=*/true);
+          : MemoryBuffer::getFileOrSTDIN(FileName, sys::fs::OF_TextWithCRLF);
   if (std::error_code EC = CodeOrErr.getError()) {
     errs() << FileName << ": " << EC.message() << "\n";
     return true;
@@ -555,7 +555,7 @@ static int dumpConfig() {
     // Read in the code in case the filename alone isn't enough to detect the
     // language.
     ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-        MemoryBuffer::getFileOrSTDIN(FileNames[0], /*IsText=*/true);
+        MemoryBuffer::getFileOrSTDIN(FileNames[0], sys::fs::OF_TextWithCRLF);
     if (std::error_code EC = CodeOrErr.getError()) {
       llvm::errs() << EC.message() << "\n";
       return 1;

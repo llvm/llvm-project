@@ -23,6 +23,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VersionTuple.h"
@@ -120,7 +121,7 @@ static Expected<std::unique_ptr<IFSStub>>
 readInputFile(std::optional<FileFormat> &InputFormat, StringRef FilePath) {
   // Read in file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrError =
-      MemoryBuffer::getFileOrSTDIN(FilePath, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(FilePath, sys::fs::OF_TextWithCRLF);
   if (!BufOrError)
     return createStringError(BufOrError.getError(), "Could not open `%s`",
                              FilePath.data());

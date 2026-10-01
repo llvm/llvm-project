@@ -640,8 +640,8 @@ static void analysisMain() {
 #include "llvm/Config/TargetExegesis.def"
 
   auto MemoryBuffer = ExitOnFileError(
-      BenchmarkFile,
-      errorOrToExpected(MemoryBuffer::getFile(BenchmarkFile, /*IsText=*/true)));
+      BenchmarkFile, errorOrToExpected(MemoryBuffer::getFile(
+                         BenchmarkFile, sys::fs::OF_TextWithCRLF)));
 
   const auto TriplesAndCpus = ExitOnFileError(
       BenchmarkFile,

@@ -993,7 +993,7 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
       // If need to validate the content of the file later, just load the
       // buffer here. Otherwise, just check the existance of the file.
       if (Deep) {
-        auto File = MemoryBuffer::getFile(Path, /*IsText=*/false,
+        auto File = MemoryBuffer::getFile(Path, sys::fs::OF_None,
                                           /*RequiresNullTerminator=*/false);
         if (!File || !*File)
           return formatError("record file \'" + Path + "\' does not exist");
@@ -1529,7 +1529,7 @@ std::unique_ptr<MemoryBuffer> StandaloneDataInMemory::getStandaloneMemoryBuffer(
                       IndexOffset, Path);
   auto BypassSandbox = sys::sandbox::scopedDisable();
   ErrorOr<std::unique_ptr<MemoryBuffer>> Mapped =
-      MemoryBuffer::getFile(Path, /*IsText=*/false,
+      MemoryBuffer::getFile(Path, sys::fs::OF_None,
                             /*RequiresNullTerminator=*/false,
                             /*IsVolatile=*/false);
   if (!Mapped)
