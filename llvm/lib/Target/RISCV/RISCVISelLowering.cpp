@@ -23698,6 +23698,10 @@ static SDValue performINSERT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
       return SDValue();
     if (!isa<ConstantSDNode>(InValRHS) && !isa<ConstantFPSDNode>(InValRHS))
       return SDValue();
+    // This INSERT_VECTOR_ELT involves an implicit truncation, and sinking
+    // truncates through binops is non-trivial.
+    if (InVal.getValueType() != VT.getVectorElementType())
+      return SDValue();
     // FIXME: Return failure if the RHS type doesn't match the LHS. Shifts may
     // have different LHS and RHS types.
     if (InVec.getOperand(0).getValueType() != InVec.getOperand(1).getValueType())

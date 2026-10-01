@@ -628,28 +628,23 @@ entry:
 ; The scalar lshrs are performed on i32 and then implicitly truncated by the
 ; insert_vector_elt, so they must not be combined into a vector lshr on the i8
 ; elements, which would truncate before the shift instead of after it.
-; FIXME: This is currently miscompiled (the lshrs happen after truncation).
 define <8 x i8> @insert_elt_of_trunc_op(i32 %a) {
-; RV32-LABEL: insert_elt_of_trunc_op:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    vmv.v.x v9, a0
-; RV32-NEXT:    vadd.vi v8, v8, 2
-; RV32-NEXT:    vsrl.vv v8, v9, v8
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: insert_elt_of_trunc_op:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    li a1, 192
-; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV64-NEXT:    vmv.s.x v0, a1
-; RV64-NEXT:    vmv.v.x v8, a0
-; RV64-NEXT:    vid.v v9
-; RV64-NEXT:    vmerge.vxm v8, v8, a0, v0
-; RV64-NEXT:    vadd.vi v9, v9, 2
-; RV64-NEXT:    vsrl.vv v8, v8, v9
-; RV64-NEXT:    ret
+; CHECK-LABEL: insert_elt_of_trunc_op:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vadd.vi v8, v8, 2
+; CHECK-NEXT:    srli a1, a0, 8
+; CHECK-NEXT:    vsrl.vv v8, v9, v8
+; CHECK-NEXT:    vmv.s.x v9, a1
+; CHECK-NEXT:    srli a0, a0, 9
+; CHECK-NEXT:    vsetivli zero, 7, e8, mf2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 6
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 7
+; CHECK-NEXT:    ret
 entry:
   %b = trunc i32 %a to i8
   %s8 = lshr i32 %a, 8
