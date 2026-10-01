@@ -3185,55 +3185,41 @@ struct FormatStyle {
   enum IndentAccessModifierStyle : int8_t {
     /// Use `AccessModifierOffset` for access modifiers and indent members one
     /// level below the record.
+    /// \code
+    ///   struct S {
+    ///     int before;
+    ///
+    ///   public:
+    ///     int after;
+    ///   };
+    /// \endcode
     IAMS_Never,
     /// Give access modifiers their own indentation level and indent all
-    /// members two levels below the record.
+    /// members two levels below the record. Ignore `AccessModifierOffset`.
+    /// \code
+    ///   struct S {
+    ///       int before;
+    ///
+    ///     public:
+    ///       int after;
+    ///   };
+    /// \endcode
     IAMS_Always,
     /// In C, C++, and Objective-C, indent members one level until the first
     /// explicit access modifier, then two levels. Other languages use the
-    /// `Always` behavior. Available since clang-format 24.
+    /// `Always` behavior. Ignore `AccessModifierOffset`.
+    /// \code
+    ///   struct S {
+    ///     int before;
+    ///
+    ///     public:
+    ///       int after;
+    ///   };
+    /// \endcode
     IAMS_AfterFirstAccessModifier,
   };
 
   /// Specify how access modifiers and record members are indented.
-  ///
-  /// `Never` (also `false` in configuration) uses `AccessModifierOffset` for
-  /// access modifiers and indents members one level below the record. `Always`
-  /// (also `true` in configuration) gives access modifiers their own
-  /// indentation level and indents all members two levels below the record,
-  /// even if there is no explicit access modifier.
-  /// `AfterFirstAccessModifier` gives members one level before the first
-  /// explicit access modifier and two levels afterwards. If there is no
-  /// explicit access modifier, members stay at one level. This behavior applies
-  /// to C, C++, and Objective-C; other languages treat it like `Always`.
-  /// `AccessModifierOffset` is ignored by `Always` and
-  /// `AfterFirstAccessModifier`.
-  /// \code
-  ///    Never (false):                         Always (true):
-  ///    class C {                      vs.     class C {
-  ///      class D {                                class D {
-  ///        void bar();                                void bar();
-  ///      protected:                                 protected:
-  ///        D();                                       D();
-  ///      };                                       };
-  ///    public:                                  public:
-  ///      C();                                     C();
-  ///    };                                     };
-  ///    void foo() {                           void foo() {
-  ///      return 1;                              return 1;
-  ///    }                                      }
-  /// \endcode
-  /// \code{.yaml}
-  ///   IndentAccessModifiers: AfterFirstAccessModifier
-  /// \endcode
-  /// \code
-  ///    struct S {
-  ///      int before;
-  ///
-  ///      public:
-  ///        int after;
-  ///    };
-  /// \endcode
   /// \version 13
   IndentAccessModifierStyle IndentAccessModifiers;
 

@@ -896,7 +896,7 @@ FormatToken *UnwrappedLineParser::parseBlock(
   // Munch the closing brace.
   if (SeenExplicitAccessModifier)
     ++AddLevels;
-  nextToken(/*LevelDifference=*/-static_cast<int>(AddLevels));
+  nextToken(/*LevelDifference=*/-AddLevels);
 
   // When this is a function block and there is an unnecessary semicolon
   // afterwards then mark it as optional (so the RemoveSemi pass can get rid of
@@ -4315,9 +4315,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
         addUnwrappedLine();
       }
 
-      const bool IndentAfterExplicitAccessModifier =
-          Style.isCpp() && Style.IndentAccessModifiers ==
-                               FormatStyle::IAMS_AfterFirstAccessModifier;
+      bool IndentAfterExplicitAccessModifier = false;
       unsigned AddLevels = 1u;
       switch (Style.IndentAccessModifiers) {
       case FormatStyle::IAMS_Never:
@@ -4326,8 +4324,12 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
         AddLevels = 2u;
         break;
       case FormatStyle::IAMS_AfterFirstAccessModifier:
-        // Other languages keep the indentation of the old true setting.
-        AddLevels = IndentAfterExplicitAccessModifier ? 1u : 2u;
+        if (Style.isCpp()) {
+          IndentAfterExplicitAccessModifier = true;
+        } else {
+          // Other languages use the same indentation as IAMS_Always.
+          AddLevels = 2u;
+        }
         break;
       }
       parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/false,

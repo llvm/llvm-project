@@ -485,6 +485,8 @@ struct ScalarEnumerationTraits<FormatStyle::IndentAccessModifierStyle> {
     IO.enumCase(Value, "Always", FormatStyle::IAMS_Always);
     IO.enumCase(Value, "AfterFirstAccessModifier",
                 FormatStyle::IAMS_AfterFirstAccessModifier);
+
+    // For backward compatibility.
     IO.enumCase(Value, "false", FormatStyle::IAMS_Never);
     IO.enumCase(Value, "true", FormatStyle::IAMS_Always);
   }
