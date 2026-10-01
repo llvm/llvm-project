@@ -278,8 +278,8 @@ subroutine test_dispatch_argument(c1, c2)
   real_result = argument_base(argument_base(3))
 end subroutine
 
-! IGNORE_TKR(C) with an allocatable actual requires a function-pointer cast.
-! Dispatch clauses must still select addresses with the adjusted signature.
+! Check novariants and nocontext selection when an allocatable argument
+! to an IGNORE_TKR(C) dummy requires a function-pointer cast.
 !HLFIR-LABEL: func @_QPtest_dispatch_ignore_tkr(
 !HLFIR-SAME: %[[CAST_C1_ARG:[^:]+]]: !fir.ref<!fir.logical<4>> {{.*}}, %[[CAST_C2_ARG:[^:]+]]: !fir.ref<!fir.logical<4>> {{.*}}, %[[VALUES_ARG:[^:]+]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 subroutine test_dispatch_ignore_tkr(c1, c2, values)
