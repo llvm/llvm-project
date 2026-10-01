@@ -106,16 +106,7 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
         }))
       return false;
 
-  // The loop can only be considered dead if either:
-  //   a. the function is mustprogress; or
-  //   b. every loop in the nest is known to terminate.
-  // isLoopNestFinite also honors a mustprogress function, but only when the
-  // loop has no side effects in SCEV's sense, and SCEV counts droppable
-  // instructions (e.g. llvm.assume) as side effects. Check the attribute
-  // directly so that such loops can still be deleted.
-  if (L->getHeader()->getParent()->mustProgress())
-    return true;
-
+  // Calls that may not return were rejected above.
   return isLoopNestFinite(L, SE, LI);
 }
 

@@ -51,9 +51,7 @@ for.end:
   ret void
 }
 
-; SCEV counts llvm.assume as a side effect, so isLoopNestFinite does not
-; treat this loop as finite. isLoopDead's own check of the mustprogress
-; function attribute still lets it be deleted.
+; llvm.assume is droppable, so it is not a side effect.
 define void @unknown_tripcount_mustprogress_fn_assume(i32 %a, i32 %b) mustprogress {
 ; CHECK-LABEL: define void @unknown_tripcount_mustprogress_fn_assume(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) #[[ATTR2:[0-9]+]] {
@@ -74,21 +72,13 @@ for.end:
   ret void
 }
 
-; Same as above, but with the guarantee coming from loop metadata. It has no
-; function-level fallback, so the assume keeps the loop alive.
-; TODO: SCEV's side-effect check could ignore droppable instructions.
+; Same, with llvm.loop.mustprogress metadata instead.
 define void @unknown_tripcount_mustprogress_md_assume(i32 %a, i32 %b) {
 ; CHECK-LABEL: define void @unknown_tripcount_mustprogress_md_assume(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[B]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY:.*]], label %[[FOR_END:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -105,7 +95,3 @@ for.end:
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.mustprogress"}
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.mustprogress"}
-;.
