@@ -12,24 +12,24 @@ define void @laa(ptr nocapture readonly %Base1, ptr nocapture readonly %Base2, p
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
+; CHECK-NEXT:          %gep.2 = getelementptr inbounds float, ptr %Base2, i64 %iv
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:          %gep.Dest = getelementptr inbounds float, ptr %Dest, i64 %iv
 ; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
+; CHECK-NEXT:          %gep.1 = getelementptr inbounds float, ptr %Base1, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1))
-; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%loop>
-; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2))
 ; CHECK-NEXT:            Member: {%Base2,+,4}<nw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %Base1 High: (400 + %Base1))
+; CHECK-NEXT:            Member: {%Base1,+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
