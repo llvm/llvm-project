@@ -2174,13 +2174,6 @@ defm INT_NVVM_FMAN : MIN_MAX<"max">;
 // Multiplication
 //
 
-def : Pat<(int_nvvm_mulhi_s i16:$a, i16:$b), (MUL_HI_S16rr $a, $b)>;
-def : Pat<(int_nvvm_mulhi_us i16:$a, i16:$b), (MUL_HI_U16rr $a, $b)>;
-def : Pat<(int_nvvm_mulhi_i i32:$a, i32:$b), (MUL_HI_S32rr $a, $b)>;
-def : Pat<(int_nvvm_mulhi_ui i32:$a, i32:$b), (MUL_HI_U32rr $a, $b)>;
-def : Pat<(int_nvvm_mulhi_ll i64:$a, i64:$b), (MUL_HI_S64rr $a, $b)>;
-def : Pat<(int_nvvm_mulhi_ull i64:$a, i64:$b), (MUL_HI_U64rr $a, $b)>;
-
 def INT_NVVM_MUL_RN_FTZ_F : F_MATH_2<"mul.rn.ftz.f32", B32, B32, B32, int_nvvm_mul_rn_ftz_f>;
 def INT_NVVM_MUL_RN_F : F_MATH_2<"mul.rn.f32", B32, B32, B32, int_nvvm_mul_rn_f>;
 def INT_NVVM_MUL_RZ_FTZ_F : F_MATH_2<"mul.rz.ftz.f32", B32, B32, B32, int_nvvm_mul_rz_ftz_f>;
@@ -3027,28 +3020,21 @@ foreach rnd = ["rn", "rz"] in {
   }
 }
 
-foreach relu = ["", "_relu"] in {
-  defvar BaseMode = !cast<PatLeaf>("CvtRS" # !toupper(relu));
-
-  foreach pzo = [0, 1] in {
-    defvar PZO = !if(pzo, -1, 0);
-    defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
-    defvar Preds =
-      !listconcat(
-        [hasConvertWithStochasticRounding]<Predicate>, 
-        !if(pzo, [hasConvertWithPZOSupport]<Predicate>, []<Predicate>));
+let Predicates = [hasConvertWithStochasticRounding] in {
+  foreach relu = ["", "_relu"] in {
+    defvar Mode = !cast<PatLeaf>("CvtRS" # !toupper(relu));
 
     defvar BF16X2 = ToCvtIntrinsics<"ff2bf16x2_rs" # relu>;
     defvar F16X2 = ToCvtIntrinsics<"ff2f16x2_rs" # relu>;
 
-    def : Pat<(BF16X2.base f32:$a, f32:$b, i32:$c, PZO),
-              (CVT_bf16x2_f32_rs $a, $b, $c, Mode)>, Requires<Preds>;
-    def : Pat<(BF16X2.sf f32:$a, f32:$b, i32:$c, PZO),
-              (CVT_bf16x2_f32_rs_sf $a, $b, $c, Mode)>, Requires<Preds>;
-    def : Pat<(F16X2.base f32:$a, f32:$b, i32:$c, PZO),
-              (CVT_f16x2_f32_rs $a, $b, $c, Mode)>, Requires<Preds>;
-    def : Pat<(F16X2.sf f32:$a, f32:$b, i32:$c, PZO),
-              (CVT_f16x2_f32_rs_sf $a, $b, $c, Mode)>, Requires<Preds>;
+    def : Pat<(BF16X2.base f32:$a, f32:$b, i32:$c),
+              (CVT_bf16x2_f32_rs $a, $b, $c, Mode)>;
+    def : Pat<(BF16X2.sf f32:$a, f32:$b, i32:$c),
+              (CVT_bf16x2_f32_rs_sf $a, $b, $c, Mode)>;
+    def : Pat<(F16X2.base f32:$a, f32:$b, i32:$c),
+              (CVT_f16x2_f32_rs $a, $b, $c, Mode)>;
+    def : Pat<(F16X2.sf f32:$a, f32:$b, i32:$c),
+              (CVT_f16x2_f32_rs_sf $a, $b, $c, Mode)>;
   }
 }
 
@@ -3114,9 +3100,8 @@ def : Pat<(int_nvvm_f2h_rn f32:$a), (CVT_f16_f32 $a, CvtRN)>;
 foreach dst = ["e4m3x2", "e5m2x2"] in {
   foreach relu = ["", "relu"] in {
     foreach rnd = ["rn", "rz"] in {
-      defvar Relu     = !if(!empty(relu), "", "_" # relu);
-      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(rnd # Relu));
-      defvar Suffix   = dst # "_" # rnd # Relu;
+      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(StrJoin<"_", [rnd, relu]>.ret));
+      defvar Suffix   = StrJoin<"_", [dst, rnd, relu]>.ret;
       defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
       defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
       defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
@@ -3192,9 +3177,8 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
 foreach dst = ["e2m3x2", "e3m2x2"] in {
   foreach relu = ["", "relu"] in {
     foreach rnd = ["rn", "rz"] in {
-      defvar Relu     = !if(!empty(relu), "", "_" # relu);
-      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(rnd # Relu));
-      defvar Suffix   = dst # "_" # rnd # Relu;
+      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(StrJoin<"_", [rnd, relu]>.ret));
+      defvar Suffix   = StrJoin<"_", [dst, rnd, relu]>.ret;
       defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
       defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
       defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
@@ -3244,27 +3228,38 @@ let Predicates = [hasNarrowFPToBF16x2ConversionSupport] in {
   }
 } // let Predicates = [hasNarrowFPToBF16x2ConversionSupport]
 
-let Predicates = [hasNarrowFPConversionSupport] in {
-  def : Pat<(int_nvvm_ff_to_e2m1x2_rn_satfinite f32:$a, f32:$b),
-            (CVT_e2m1x2_f32_sf $a, $b, CvtRN)>;
-  def : Pat<(int_nvvm_ff_to_e2m1x2_rn_relu_satfinite f32:$a, f32:$b),
-            (CVT_e2m1x2_f32_sf $a, $b, CvtRN_RELU)>;
+foreach relu = ["", "relu"] in {
+  foreach rnd = ["rn", "rz"] in {
+    defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(StrJoin<"_", [rnd, relu]>.ret));
+    defvar Suffix   = StrJoin<"_", ["e2m1x2", rnd, relu]>.ret;
+    defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
+    defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
+    defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
 
+    foreach pzo = [0, 1] in {
+      defvar PZO = !if(pzo, -1, 0);
+      defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
+      defvar NeedsPZOSupport = !or(!eq(rnd, "rz"), !eq(pzo, 1));
+      defvar F32X2Preds = !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
+                                               [hasNarrowFPConversionSupport]<Predicate>);
+      defvar FPX2Preds = !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
+                                              [hasFP16X2ToNarrowFPConversionSupport]<Predicate>);
+
+      def : Pat<(F32X2.sf f32:$a, f32:$b, PZO), (CVT_e2m1x2_f32_sf $a, $b, Mode)>,
+            Requires<F32X2Preds>;
+      def : Pat<(F16X2.sf v2f16:$a, PZO), (CVT_e2m1x2_f16x2_sf $a, Mode)>,
+            Requires<FPX2Preds>;
+      def : Pat<(BF16X2.sf v2bf16:$a, PZO), (CVT_e2m1x2_bf16x2_sf $a, Mode)>,
+            Requires<FPX2Preds>;
+    }
+  }
+}
+
+let Predicates = [hasNarrowFPConversionSupport] in {
   def : Pat<(int_nvvm_e2m1x2_to_f16x2_rn i16:$a),
             (CVT_f16x2_e2m1x2 $a, CvtRN)>;
   def : Pat<(int_nvvm_e2m1x2_to_f16x2_rn_relu i16:$a),
             (CVT_f16x2_e2m1x2 $a, CvtRN_RELU)>;
-}
-
-let Predicates = [hasFP16X2ToNarrowFPConversionSupport] in {
-  foreach src_type = ["f16x2", "bf16x2"] in {
-    foreach relu = ["", "_relu"] in {
-      defvar intrin = !cast<Intrinsic>("int_nvvm_" # src_type # "_to_e2m1x2_rn" # relu # "_satfinite");
-      defvar cvt_inst = !cast<NVPTXInst>("CVT_e2m1x2_" # src_type # "_sf");
-      defvar cvt_mode = !cast<PatLeaf>("CvtRN" # !toupper(relu));
-      def : Pat<(intrin B32:$a), (cvt_inst $a, cvt_mode)>;
-    }
-  }
 }
 
 let Predicates = [hasNarrowFPToBF16x2ConversionSupport] in {
@@ -6968,17 +6963,26 @@ let isConvergent = true in {
 // Bulk store instructions
 def st_bulk_imm : TImmLeaf<i64, [{ return Imm == 0; }]>;
 
-let Predicates = [SM100] in {
-  def INT_NVVM_ST_BULK_GENERIC :
-    BasicNVPTXInst<(outs), (ins ADDR:$dest_addr, B64:$size, i64imm:$value),
-              "st.bulk",
-              [(int_nvvm_st_bulk addr:$dest_addr, i64:$size, st_bulk_imm:$value)]>;
-
-  def INT_NVVM_ST_BULK_SHARED_CTA:
-    BasicNVPTXInst<(outs), (ins ADDR:$dest_addr, B64:$size, i64imm:$value),
-              "st.bulk.shared::cta",
-              [(int_nvvm_st_bulk_shared_cta addr:$dest_addr, i64:$size, st_bulk_imm:$value)]>;
+class StBulkInst<NVPTXAddressSpace AS, string InstSuffix,
+                 RegTyInfo Size, list<Predicate> Preds>
+      : BasicNVPTXInst<
+            (outs),
+            (ins ADDR:$dest_addr, Size.RC:$size, i64imm:$value),
+            "st.bulk" # InstSuffix,
+            [(IntrinsicInAS<int_nvvm_st_bulk, AS>
+                  addr:$dest_addr, Size.Ty:$size, st_bulk_imm:$value)]> {
+    let Predicates = Preds;
 }
+
+multiclass StBulkInsts<RegTyInfo Size, list<Predicate> Preds> {
+  def _GENERIC :
+      StBulkInst<AddrSpaceGeneric, "", Size, Preds>;
+  def _SHARED_CTA :
+      StBulkInst<AddrSpaceShared, ".shared::cta", Size, Preds>;
+}
+
+defm INT_NVVM_ST_BULK_I64 : StBulkInsts<I64RT, [SM100]>;
+defm INT_NVVM_ST_BULK_I32 : StBulkInsts<I32RT, [PTX90, SM100]>;
 
 //
 // Asynchronous store instructions

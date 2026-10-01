@@ -11,6 +11,10 @@ module funcs
 
 contains
 
+  !HLFIR-LABEL: func @_QMfuncsPfoo_no_variant
+  subroutine foo_no_variant()
+  end subroutine
+
   !novariants clause : base & variant subroutines
   !HLFIR-LABEL: func @_QMfuncsPfoo_variant
   subroutine foo_variant()
@@ -50,6 +54,20 @@ program dispatch_test
   use funcs
   implicit none
   logical :: cond
+
+  !HLFIR: omp.dispatch {
+  !$omp dispatch
+  !HLFIR: fir.call @_QMfuncsPfoo_no_variant() {{.*}}: () -> ()
+  call foo_no_variant()
+  !HLFIR-NEXT: omp.terminator
+  !HLFIR: }
+
+  !HLFIR: omp.dispatch nowait {
+  !$omp dispatch nowait
+  !HLFIR: fir.call @_QMfuncsPfoo_no_variant() {{.*}}: () -> ()
+  call foo_no_variant()
+  !HLFIR-NEXT: omp.terminator
+  !HLFIR: }
 
   ! A call outside any dispatch region targets the base procedure.
   !HLFIR: fir.call @_QMfuncsPfoo_dispatch() {{.*}}: () -> ()

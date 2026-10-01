@@ -2514,6 +2514,28 @@ public:
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
+  /// Late-parsed bounds types dropped while their declarator was built. The
+  /// attribute has already been diagnosed and its node is no longer part of
+  /// any type, so the completion pass must skip it rather than parse its
+  /// argument and complete it.
+  llvm::SmallPtrSet<const BoundsAttributedType *, 1>
+      RejectedLateParsedBoundsTypes;
+
+  void markLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) {
+    RejectedLateParsedBoundsTypes.insert(BATy);
+  }
+
+  bool isLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) const {
+    return RejectedLateParsedBoundsTypes.contains(BATy);
+  }
+
+  /// Supply the parsed argument of a late-parsed bounds attribute to the type
+  /// built for it by ActOnLateParsedTypeAttr, and run the checks that need the
+  /// owning declaration. \p FD is the field the type belongs to. Returns false
+  /// if the attribute was rejected.
+  bool ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
+                                       FieldDecl *FD, Expr *Arg);
+
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.
   ///
@@ -2914,6 +2936,8 @@ public:
   /// Checks that a call expression's argument count is the desired number.
   /// This is useful when doing custom type-checking.  Returns true on error.
   bool checkArgCount(CallExpr *Call, unsigned DesiredArgCount);
+
+  bool convertArgumentToType(Expr *&Value, QualType Ty);
 
   /// Returns true if the argument consists of one contiguous run of 1s with any
   /// number of 0s on either side. The 1s are allowed to wrap from LSB to MSB,
@@ -9254,7 +9278,8 @@ public:
                                    const sema::Capture &From);
 
   /// Build a FieldDecl suitable to hold the given capture.
-  FieldDecl *BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture);
+  FieldDecl *BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture,
+                               bool IsOpenMP = false);
 
   /// Initialize the given capture with a suitable expression.
   ExprResult BuildCaptureInit(const sema::Capture &Capture,
@@ -15177,12 +15202,12 @@ private:
   /// fact subsume the second's.
   llvm::DenseMap<std::pair<const NamedDecl *, const NamedDecl *>, bool>
       SubsumptionCache;
-  /// Caches the normalized associated constraints of declarations (concepts or
-  /// constrained declarations). If an error occurred while normalizing the
-  /// associated constraints of the template or concept, nullptr will be cached
-  /// here.
-  llvm::DenseMap<ConstrainedDeclOrNestedRequirement, NormalizedConstraint *>
-      NormalizationCache;
+  /// Caches the normal form of constraint expressions (and their pack
+  /// substitution index). These are shared by e.g. the members of all
+  /// specializations of a class template. If an error occurred while
+  /// normalizing an expression, nullptr will be cached here.
+  llvm::DenseMap<std::pair<const Expr *, unsigned>, NormalizedConstraint *>
+      NormalizedConstraintExprCache;
 
   /// Cache whether the associated constraint of a declaration
   /// is satisfied.

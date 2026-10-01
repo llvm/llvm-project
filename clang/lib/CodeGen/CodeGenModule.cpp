@@ -432,6 +432,10 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
       Opts.Kind = llvm::abi::AArch64ABIKind::AAPCS;
 
     Opts.IsILP32 = T.getArch() == llvm::Triple::aarch64_32;
+    Opts.IsCXX = getLangOpts().CPlusPlus;
+    Opts.IsMachO = T.isOSBinFormatMachO();
+    Opts.IsAndroidOrOHOS = T.isAndroid() || T.isOHOSFamily();
+    Opts.IsWindowsArm64EC = T.isWindowsArm64EC();
     Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
 
     initializeCommonABICompatInfo(Opts.CompatInfo,
@@ -1533,7 +1537,7 @@ void CodeGenModule::Release() {
   // non-empty value.
   if (StringRef ABIStr = Target.getABI();
       !ABIStr.empty() && (T.isARM() || T.isThumb() || T.isRISCV() ||
-                          T.isPPC() || T.isLoongArch())) {
+                          T.isPPC() || T.isLoongArch() || T.isWasm())) {
     getModule().addModuleFlag(llvm::Module::Error, "target-abi",
                               llvm::MDString::get(VMContext, ABIStr));
   }
@@ -4862,7 +4866,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     if (FD->hasAttr<AnnotateAttr>()) {
       StringRef MangledName = getMangledName(GD);
       if (GetGlobalValue(MangledName))
-        DeferredAnnotations[MangledName] = FD;
+        DeferredAnnotations[MangledName.str()] = FD;
     }
 
     // Forward declarations are emitted lazily on first use.
@@ -5783,7 +5787,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
   // Store the declaration associated with this function so it is potentially
   // updated by further declarations or definitions and emitted at the end.
   if (D && D->hasAttr<AnnotateAttr>())
-    DeferredAnnotations[MangledName] = cast<ValueDecl>(D);
+    DeferredAnnotations[MangledName.str()] = cast<ValueDecl>(D);
 
   // If we already created a function with the same mangled name (but different
   // type) before, take its name and add it to the list of functions to be
