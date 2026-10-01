@@ -246,7 +246,7 @@ public:
   /// @name Type Conversions
   /// @{
 
-  constexpr operator std::string_view() const {
+  explicit constexpr operator std::string_view() const {
     return std::string_view(data(), size());
   }
 
