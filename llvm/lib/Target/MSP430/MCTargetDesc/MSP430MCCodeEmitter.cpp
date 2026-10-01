@@ -64,6 +64,12 @@ class MSP430MCCodeEmitter : public MCCodeEmitter {
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const;
 
+  /// Encode the repetition count for a 430X extended format exception
+  /// instruction.
+  unsigned getRpt2ImmOpValue(const MCInst &MI, unsigned Op,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
+
   unsigned getCCOpValue(const MCInst &MI, unsigned Op,
                         SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
@@ -190,6 +196,18 @@ unsigned MSP430MCCodeEmitter::getCGImmOpValue(const MCInst &MI, unsigned Op,
   case 2:  return 0x23;
   case -1: return 0x33;
   }
+}
+
+unsigned
+MSP430MCCodeEmitter::getRpt2ImmOpValue(const MCInst &MI, unsigned Op,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(Op);
+  assert(MO.isImm() && "expr operand expected");
+
+  int64_t Imm = MO.getImm();
+  assert((Imm >= 1 && Imm <= 4) && "invalid repetition count");
+  return Imm - 1;
 }
 
 unsigned MSP430MCCodeEmitter::getCCOpValue(const MCInst &MI, unsigned Op,
