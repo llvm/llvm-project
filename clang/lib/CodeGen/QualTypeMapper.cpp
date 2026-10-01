@@ -279,7 +279,8 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return convertSVEBuiltinType(BT);
 
   case BuiltinType::SveCount:
-    return Builder.getSVECountType(getTypeAlign(QT));
+    return Builder.getScalablePredicateOrCountVectorType(
+        getTypeAlign(QT), llvm::abi::VectorKind::SVECount);
 
   // TODO: __mfp8 has no floating-point semantics of its own, so representing
   // it needs a decision about how the ABI library should model opaque
@@ -311,6 +312,10 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
 #include "clang/Basic/HLSLIntangibleTypes.def"
     llvm::reportFatalInternalError(
         "HLSL intangible types not yet Supported in ABI lowering library");
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
+    llvm::reportFatalInternalError(
+        "HLSL packed types not yet Supported in ABI lowering library");
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
     llvm::reportFatalInternalError(

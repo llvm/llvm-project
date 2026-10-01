@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/windows/AutoHandle.h"
+#include "lldb/Host/windows/PathUtils.h"
 #include "lldb/Host/windows/windows.h"
 #include <cstdio>
 
@@ -77,7 +78,11 @@ static bool GetExecutableForProcess(const AutoHandle &handle,
   DWORD dwSize = buffer.size();
   if (!::QueryFullProcessImageNameW(handle.get(), 0, &buffer[0], &dwSize))
     return false;
-  return llvm::convertWideToUTF8(buffer.data(), path);
+  if (!llvm::convertWideToUTF8(buffer.data(), path))
+    return false;
+  // A process launched through an extended-length path has the "\\?\" prefix.
+  path = StripExtendedLengthPrefix(path);
+  return true;
 }
 
 static void GetProcessExecutableAndTriple(const AutoHandle &handle,

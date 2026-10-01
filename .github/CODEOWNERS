@@ -16,15 +16,19 @@
 /libcxxabi/ @llvm/reviewers-libcxxabi
 /libunwind/ @llvm/reviewers-libunwind
 
+/llvm/include/llvm/Analysis/ScalarEvolutionPatternMatch.h @artagnon
+/llvm/include/llvm/Support/PatternMatchHelpers.h @artagnon
 /llvm/lib/Analysis/BasicAliasAnalysis.cpp @nikic
 /llvm/lib/Analysis/HashRecognize.cpp @artagnon @pfusik
 /llvm/lib/Analysis/InstructionSimplify.cpp @nikic
 /llvm/lib/Analysis/LazyValueInfo.cpp @nikic
+/llvm/lib/Analysis/LoopAccessAnalysis.cpp @artagnon
 /llvm/lib/Analysis/ScalarEvolution.cpp @nikic
 /llvm/lib/Analysis/ValueTracking.cpp @nikic
 /llvm/lib/IR/ConstantRange.cpp @nikic
 /llvm/lib/IR/Core.cpp @nikic
 /llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
+/llvm/lib/Transforms/Scalar/LoopIdiomRecognize.cpp @artagnon
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
 
