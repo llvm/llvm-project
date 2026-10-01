@@ -355,6 +355,17 @@ bool CIRGenAction::BeginSourceFileAction(CompilerInstance &CI) {
   return ASTFrontendAction::BeginSourceFileAction(CI);
 }
 
+void CIRGenAction::ExecuteAction() {
+  if (getCurrentFileKind().getLanguage() != Language::CIR) {
+    ASTFrontendAction::ExecuteAction();
+    return;
+  }
+
+  // TODO: Parse the ClangIR input and emit the requested output.
+  getCompilerInstance().getDiagnostics().Report(
+      diag::err_fe_cir_input_unsupported);
+}
+
 static std::unique_ptr<raw_pwrite_stream>
 getOutputStream(CompilerInstance &CI, StringRef InFile,
                 CIRGenAction::OutputType Action) {

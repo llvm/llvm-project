@@ -24,6 +24,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -1081,18 +1082,48 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
         !isSavedLocal(varSrc))
       return ModRefResult::getModAndRef();
   }
-  // 2. Check if the variable is passed via the arguments.
-  for (auto arg : call.getArgs()) {
-    if (fir::conformsWithPassByRef(arg.getType()) && !alias(arg, var).isNo()) {
-      // TODO: intent(in) would allow returning Ref here. This can be obtained
-      // in the func.func attributes for direct calls, but the module lookup is
-      // linear with the number of MLIR symbols, which would introduce a pseudo
-      // quadratic behavior num_calls * num_func.
-      return ModRefResult::getModAndRef();
-    }
+  // 2. Check if the variable is passed via the arguments. A dummy with a
+  // declared intent is a read, a write, or both. intent(out) is a write for
+  // a trivial non-pointer, non-allocatable dummy, and a read and a write
+  // otherwise. An argument with no visible intent stays ModAndRef. The
+  // callee is resolved through the cached symbol table.
+  mlir::func::FuncOp callee;
+  if (std::optional<mlir::SymbolRefAttr> calleeAttr = call.getCallee()) {
+    if (const mlir::SymbolTable *symTab = getNearestSymbolTable(call))
+      callee =
+          symTab->lookup<mlir::func::FuncOp>(calleeAttr->getLeafReference());
   }
-  // The call cannot access the variable.
-  return ModRefResult::getNoModRef();
+  auto args = call.getArgs();
+  const bool intentsAvailable = callee && !callee.isDeclaration() &&
+                                args.size() == callee.getNumArguments();
+  ModRefResult modRef = ModRefResult::getNoModRef();
+  for (auto [idx, arg] : llvm::enumerate(args)) {
+    if (!fir::conformsWithPassByRef(arg.getType()) || alias(arg, var).isNo())
+      continue;
+    if (!intentsAvailable)
+      return ModRefResult::getModAndRef();
+    std::optional<fir::FortranDummyIntent> intent =
+        fir::getFortranDummyIntent(callee, idx);
+    if (!intent || *intent == fir::FortranDummyIntent::InOut)
+      return ModRefResult::getModAndRef();
+    if (*intent == fir::FortranDummyIntent::In) {
+      modRef = modRef.merge(ModRefResult::getRef());
+      continue;
+    }
+    if (*intent == fir::FortranDummyIntent::Out) {
+      // A pure write only for a non-pointer, non-allocatable dummy whose
+      // element type is trivial. An allocatable is read on entry so it can
+      // be deallocated, and finalization of a derived type may read it.
+      mlir::Type ty = callee.getArgument(idx).getType();
+      if (fir::isPointerType(ty) || fir::isAllocatableType(ty) ||
+          !fir::isa_trivial(fir::getFortranElementType(ty)))
+        return ModRefResult::getModAndRef();
+      modRef = modRef.merge(ModRefResult::getMod());
+      continue;
+    }
+    return ModRefResult::getModAndRef();
+  }
+  return modRef;
 }
 
 AliasAnalysis::AliasAnalysis(AliasAnalysisRecursiveEffectsCache &cacheRef)

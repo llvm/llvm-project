@@ -13907,9 +13907,9 @@ QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                        /*AllowBothBool*/ true,
                                        /*AllowBoolConversions*/ false,
                                        /*AllowBooleanOperation*/ false,
-                                       /*ReportInvalid*/ false);
+                                       /*ReportInvalid*/ true);
   if (vType.isNull())
-    return InvalidOperands(Loc, LHS, RHS);
+    return QualType();
   if (getLangOpts().OpenCL &&
       getLangOpts().getOpenCLCompatibleVersion() < 120 &&
       vType->hasFloatingRepresentation())
