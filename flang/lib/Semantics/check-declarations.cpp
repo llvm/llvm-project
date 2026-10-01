@@ -1179,7 +1179,7 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram"_err_en_US,
             symbol.name());
-      } else if (symbol.owner().kind() == Scope::Kind::MainProgram) {
+      } else if (!isComponent && progUnit.kind() == Scope::Kind::MainProgram) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a main program"_err_en_US,
             symbol.name());
