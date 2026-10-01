@@ -1908,11 +1908,20 @@ int RISCVInstrInfo::getJumpTableIndex(const MachineInstr &MI) const {
   case RISCV::LW:
   case RISCV::LWU:
   case RISCV::LD:
-    // TODO: Zilx
     if (!isJumpTableLoad(*Def))
       return -1;
 
     JTI = getJumpTableIndexFromLoadAddr(MRI, Def->getOperand(1).getReg());
+    if (JTI >= 0)
+      return JTI;
+    break;
+  case RISCV::LXSW:
+  case RISCV::LXWU:
+  case RISCV::LXSD:
+    if (!isJumpTableLoad(*Def))
+      return -1;
+
+    JTI = getJumpTableIndexFromBase(MRI, Def->getOperand(1).getReg());
     if (JTI >= 0)
       return JTI;
     break;
@@ -3172,9 +3181,6 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           break;
         case RISCVOp::OPERAND_UIMM6_PLUS1:
           Ok = Imm >= 1 && Imm <= 64;
-          break;
-        case RISCVOp::OPERAND_UIMM7_EQ_XLEN:
-          Ok = Imm == STI.getXLen();
           break;
         case RISCVOp::OPERAND_UIMM8_GE32:
           Ok = isUInt<8>(Imm) && Imm >= 32;

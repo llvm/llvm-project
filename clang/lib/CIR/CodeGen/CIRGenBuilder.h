@@ -828,6 +828,14 @@ public:
     return createVecShuffle(loc, vec1, poison, mask);
   }
 
+  cir::MatrixTransposeOp createMatrixTranspose(mlir::Location loc,
+                                               mlir::Value matrix) {
+    auto inputTy = mlir::cast<cir::MatrixType>(matrix.getType());
+    auto resultTy = cir::MatrixType::get(
+        inputTy.getElementType(), inputTy.getColumnNum(), inputTy.getRowNum());
+    return cir::MatrixTransposeOp::create(*this, loc, resultTy, matrix);
+  }
+
   template <typename... Operands>
   mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
                                   const mlir::Type &resTy, Operands &&...op) {
