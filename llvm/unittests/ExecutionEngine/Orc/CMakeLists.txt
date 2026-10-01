@@ -1,6 +1,7 @@
 
 set(LLVM_LINK_COMPONENTS
   Analysis
+  AsmParser
   Core
   ExecutionEngine
   IRReader
@@ -32,6 +33,7 @@ add_llvm_unittest(OrcJITTests
   InstanceSymbolGeneratorTest.cpp
   JITTargetMachineBuilderTest.cpp
   LazyCallThroughAndReexportsTest.cpp
+  LLJITTest.cpp
   LibraryResolverTest.cpp
   LinkGraphLinkingLayerTest.cpp
   LookupAndApplyTest.cpp

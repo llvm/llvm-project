@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
@@ -30,6 +31,9 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/DynamicLibrary.h"
+
+#include <map>
+#include <thread>
 
 #define DEBUG_TYPE "orc"
 
@@ -233,6 +237,23 @@ public:
     LLVM_DEBUG({
       dbgs() << "GenericLLVMIRPlatformSupport getting initializers to run\n";
     });
+    // Materializing the inputs may run code that calls initialize() again,
+    // e.g. a definition generator that loads a library whose initializers add
+    // and initialize more code. Each call gets a frame that records the init
+    // functions registered while it materializes, so that a nested call runs
+    // only those: the ones of the outer calls are still being materialized and
+    // would never become ready. Frames are per thread, so that other threads
+    // can initialize their code meanwhile.
+    getExecutionSession().runSessionLocked(
+        [&]() { InitFrames[std::this_thread::get_id()].emplace_back(); });
+    scope_exit PopFrame([&]() {
+      getExecutionSession().runSessionLocked([&]() {
+        auto Itr = InitFrames.find(std::this_thread::get_id());
+        Itr->second.pop_back();
+        if (Itr->second.empty())
+          InitFrames.erase(Itr);
+      });
+    });
     if (auto Initializers = getInitializers(JD)) {
       LLVM_DEBUG(
           { dbgs() << "GenericLLVMIRPlatformSupport running initializers\n"; });
@@ -272,8 +293,12 @@ public:
   }
 
   void registerInitFunc(JITDylib &JD, SymbolStringPtr InitName) {
-    getExecutionSession().runSessionLocked(
-        [&]() { InitFunctions[&JD].add(InitName); });
+    getExecutionSession().runSessionLocked([&]() {
+      InitFunctions[&JD].add(InitName);
+      auto Itr = InitFrames.find(std::this_thread::get_id());
+      if (Itr != InitFrames.end())
+        Itr->second.back()[&JD].add(InitName);
+    });
   }
 
   void registerDeInitFunc(JITDylib &JD, SymbolStringPtr DeInitName) {
@@ -294,6 +319,29 @@ private:
             DFSLinkOrder = std::move(*DFSLinkOrderOrErr);
           else
             return DFSLinkOrderOrErr.takeError();
+
+          // A nested call (see initialize()) only runs the init functions
+          // registered while it materialized its inputs.
+          auto &Frames = InitFrames[std::this_thread::get_id()];
+          if (Frames.size() > 1) {
+            auto &Frame = Frames.back();
+            for (auto &NextJD : DFSLinkOrder) {
+              auto FItr = Frame.find(NextJD.get());
+              if (FItr == Frame.end())
+                continue;
+              auto &Remaining = InitFunctions[NextJD.get()];
+              for (auto &KV : FItr->second) {
+                SymbolStringPtr Name = KV.first;
+                Remaining.remove_if(
+                    [&](const SymbolStringPtr &N, SymbolLookupFlags) {
+                      return N == Name;
+                    });
+              }
+              LookupSymbols[NextJD.get()] = std::move(FItr->second);
+              Frame.erase(FItr);
+            }
+            return Error::success();
+          }
 
           for (auto &NextJD : DFSLinkOrder) {
             auto IFItr = InitFunctions.find(NextJD.get());
@@ -490,6 +538,10 @@ private:
   std::string DeInitFunctionPrefix;
   DenseMap<JITDylib *, SymbolLookupSet> InitSymbols;
   DenseMap<JITDylib *, SymbolLookupSet> InitFunctions;
+  /// Per thread, one per active initialize() call, innermost last: the init
+  /// functions registered while it runs.
+  std::map<std::thread::id, std::vector<DenseMap<JITDylib *, SymbolLookupSet>>>
+      InitFrames;
   DenseMap<JITDylib *, SymbolLookupSet> DeInitFunctions;
   ItaniumCXAAtExitSupport AtExitMgr;
 };
