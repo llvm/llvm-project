@@ -10,21 +10,10 @@ declare ptr @passthrough(ptr)
 define void @capture_after_loop(ptr %slot, i64 %n) {
 ; CHECK-LABEL: 'capture_after_loop'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
-; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.q = getelementptr inbounds i32, ptr %q, i64 %iv.1
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
-; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (4 + %q)<nuw> High: (4 + (4 * %n) + %q))
-; CHECK-NEXT:            Member: {(4 + %q)<nuw>,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -62,27 +51,14 @@ define void @capture_in_loop_load_before_loop(ptr %slot, i64 %n) {
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:        ptr %slot
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:        ptr %slot
-; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep.q = getelementptr inbounds i32, ptr %q, i64 %iv.1
-; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:        ptr %slot
-; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.q = getelementptr inbounds i32, ptr %q, i64 %iv.1
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
-; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %slot High: (8 + %slot))
 ; CHECK-NEXT:            Member: %slot
-; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (4 + %q)<nuw> High: (4 + (4 * %n) + %q))
 ; CHECK-NEXT:            Member: {(4 + %q)<nuw>,+,4}<nuw><%loop>
 ; CHECK-EMPTY:
