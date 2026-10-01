@@ -208,7 +208,6 @@ TEST_P(RISCVInstrInfoTest, IsCopyInstrImpl) {
 
 TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
   const RISCVInstrInfo *TII = ST->getInstrInfo();
-  const TargetRegisterInfo *TRI = ST->getRegisterInfo();
   DebugLoc DL;
 
   SmallVector<const MachineOperand *> BaseOps;
