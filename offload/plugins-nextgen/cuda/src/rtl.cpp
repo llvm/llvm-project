@@ -813,6 +813,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return false;
   }
 
+  /// cuMemcpyHtoDAsync is only a true asynchronous transfer when the host
+  /// buffer is page-locked. Out of pageable memory the driver has to copy the
+  /// data into staging memory of its own before it can return.
+  bool hasFastTransferWithPinnedMemory() const override { return true; }
+
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
