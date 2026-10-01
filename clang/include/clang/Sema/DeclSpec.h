@@ -298,6 +298,9 @@ public:
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   static const TST TST_##Name = clang::TST_##Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  static const TST TST_##Name = clang::TST_##Name;
+#include "clang/Basic/HLSLPackedTypes.def"
   static const TST TST_error = clang::TST_error;
 
   // type-qualifiers
