@@ -49,8 +49,6 @@ class WebAssemblyOptimizeReturnedLegacy final : public FunctionPass {
 public:
   static char ID;
   WebAssemblyOptimizeReturnedLegacy() : FunctionPass(ID) {}
-
-  void visitCallBase(CallBase &CB);
 };
 } // End anonymous namespace
 
