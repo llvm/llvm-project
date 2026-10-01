@@ -7,8 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/Basic/TargetInfo.h"
 
 namespace clang::CodeGenUtils {
+
+bool isDiscreteBitFieldABI(const ASTContext &Ctx, const RecordDecl *RD) {
+  return Ctx.getTargetInfo().getCXXABI().isMicrosoft() || RD->isMsStruct(Ctx);
+}
 
 bool isEmptyFieldForLayout(const ASTContext &Ctx, const FieldDecl *FD) {
   if (FD->isZeroLengthBitField())
@@ -40,6 +45,10 @@ bool isEmptyRecordForLayout(const ASTContext &Ctx, QualType T) {
       return false;
 
   return true;
+}
+
+bool isOverlappingVBaseABI(const ASTContext &Ctx) {
+  return !Ctx.getTargetInfo().getCXXABI().isMicrosoft();
 }
 
 } // namespace clang::CodeGenUtils
