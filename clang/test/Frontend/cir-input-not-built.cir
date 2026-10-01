@@ -1,6 +1,5 @@
-// Test that ClangIR input is rejected cleanly, instead of being parsed as C,
-// when clang is not built with CIR support. The CIR actions are not available,
-// so the classic code generation actions are used and they lack CIR support.
+// Test that ClangIR input is rejected up front, instead of being parsed as C,
+// when clang is not built with CIR support.
 
 // This test should only run when CIR support is NOT enabled
 // UNSUPPORTED: cir-support
@@ -9,8 +8,14 @@
 // RUN:   | FileCheck %s --implicit-check-not=error:
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -x cir %s -o /dev/null 2>&1 \
 // RUN:   | FileCheck %s --implicit-check-not=error:
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -S %s -o /dev/null 2>&1 \
+// RUN:   | FileCheck %s --implicit-check-not=error:
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %s -o /dev/null 2>&1 \
+// RUN:   | FileCheck %s --implicit-check-not=error:
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only %s 2>&1 \
+// RUN:   | FileCheck %s --implicit-check-not=error:
 
-// CHECK: fatal error: cannot apply AST actions to ClangIR file '{{.*}}cir-input-not-built.cir'
+// CHECK: error: clang IR support not available, rebuild clang with -DCLANG_ENABLE_CIR=ON
 
 !s32i = !cir.int<s, 32>
 module {
