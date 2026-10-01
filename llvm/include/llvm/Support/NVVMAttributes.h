@@ -32,8 +32,12 @@ constexpr StringLiteral GridConstant("nvvm.grid_constant");
 // indirect calls.
 // Ref:
 // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#performance-tuning-directives-abi-preserve
-constexpr StringLiteral PreserveNData("nvvm.preserve_n_data");
-constexpr StringLiteral PreserveNControl("nvvm.preserve_n_control");
+constexpr StringLiteral AbiPreserve("nvvm.abi_preserve");
+constexpr StringLiteral AbiPreserveControl("nvvm.abi_preserve_control");
+
+// All custom ABI attributes, in PTX emission order.
+inline constexpr StringLiteral AbiPreserveAttrs[] = {AbiPreserve,
+                                                     AbiPreserveControl};
 
 } // namespace NVVMAttr
 } // namespace llvm

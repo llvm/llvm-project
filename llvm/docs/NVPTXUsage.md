@@ -104,7 +104,7 @@ When compiled, the PTX kernel functions are callable by host-side code.
   of the number of thread blocks. This attribute is only allowed for kernel
   functions and requires `nvvm.reqntid` and `nvvm.cluster_dim` attributes.
 
-`"nvvm.preserve_n_data"="<n>"`
+`"nvvm.abi_preserve"="<n>"`
 
 : This attribute specifies the number of general purpose registers that the
   callers of this function are responsible for preserving. The backend bounds
@@ -114,7 +114,7 @@ When compiled, the PTX kernel functions are callable by host-side code.
   directive, which requires PTX ISA 8.3 and `sm_80` or higher. The directives
   are omitted on targets below that.
 
-`"nvvm.preserve_n_control"="<n>"`
+`"nvvm.abi_preserve_control"="<n>"`
 
 : This attribute specifies the number of control registers that the callers of
   this function are responsible for preserving, corresponding to the number of
@@ -124,7 +124,7 @@ When compiled, the PTX kernel functions are callable by host-side code.
   directive, which requires PTX ISA 8.3 and `sm_80` or higher. The directives
   are omitted on targets below that.
 
-Both `nvvm.preserve_n_*` attributes are valid on function definitions,
+Both `nvvm.abi_preserve*` attributes are valid on function definitions,
 declarations and call sites. PTX permits these directives only on device
 functions, between the `.func` directive and the function body. On a call site
 they are appended to the generated `.callprototype`; this is how an indirect

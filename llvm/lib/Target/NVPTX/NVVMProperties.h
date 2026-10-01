@@ -14,13 +14,14 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVVMPROPERTIES_H
 #define LLVM_LIB_TARGET_NVPTX_NVVMPROPERTIES_H
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Alignment.h"
 #include <cstdint>
 #include <optional>
-#include <string>
 
 namespace llvm {
 
@@ -60,15 +61,15 @@ bool hasBlocksAreClusters(const Function &);
 
 bool isParamGridConstant(const Argument &);
 
-/// Extract the PTX abi_preserve directive string implied by
-/// the NVVM preserve_n_* attributes, e.g. ".abi_preserve 8". Returns an empty
-/// string when none are present. Entries are separated by '\n' when
-/// \p Multiline is set, and by ' ' otherwise.
-///
+/// Maps the name of each nvvm.abi_preserve* attribute that is present to its
+/// register count, in PTX emission order. An absent attribute has no entry.
+using ABIPreserve = SmallMapVector<StringRef, unsigned, 2>;
+
 /// On a function, the attributes are looked up on the function definition or
-/// declaration. On a callsite, the attributes are looked up on the call.
-std::string getABIPreserveDirectives(const Function &, bool Multiline);
-std::string getABIPreserveDirectives(const CallBase &, bool Multiline);
+/// declaration. On a callsite, the attributes are looked up on the call only;
+/// they are not inherited from the callee.
+ABIPreserve getABIPreserve(const Function &);
+ABIPreserve getABIPreserve(const CallBase &);
 
 inline MaybeAlign getStackAlign(const Function &F, unsigned Index) {
   return F.getAttributes().getAttributes(Index).getStackAlignment();

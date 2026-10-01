@@ -125,6 +125,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/NVVMAttributes.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -2711,8 +2712,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                .empty(),
           "\"patchable-function-entry-section\" must not be empty");
   checkUnsignedBaseTenFuncAttr(Attrs, "warn-stack-size", V);
-  checkUnsignedBaseTenFuncAttr(Attrs, "nvvm.preserve_n_data", V);
-  checkUnsignedBaseTenFuncAttr(Attrs, "nvvm.preserve_n_control", V);
+  for (StringLiteral Attr : NVVMAttr::AbiPreserveAttrs)
+    checkUnsignedBaseTenFuncAttr(Attrs, Attr, V);
 
   if (auto A = Attrs.getFnAttr("sign-return-address"); A.isValid()) {
     StringRef S = A.getValueAsString();
@@ -3315,7 +3316,7 @@ void Verifier::visitFunction(const Function &F) {
   case CallingConv::PTX_Kernel:
     // PTX permits the abi_preserve directives only between a .func directive
     // and its body, so a kernel cannot express them.
-    for (StringRef Attr : {"nvvm.preserve_n_data", "nvvm.preserve_n_control"})
+    for (StringLiteral Attr : NVVMAttr::AbiPreserveAttrs)
       Check(!F.hasFnAttribute(Attr),
             "'" + Attr + "' is not allowed on kernel functions", &F);
     Check(!F.isVarArg(),
