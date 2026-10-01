@@ -179,10 +179,6 @@ public:
 std::unique_ptr<TargetCIRGenInfo>
 createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt);
 
-/// Check if AMDGPU protected visibility is required.
-bool requiresAMDGPUProtectedVisibility(const clang::Decl *d,
-                                       cir::VisibilityKind visibility);
-
 /// Set AMDGPU-specific function attributes for HIP kernels.
 void setAMDGPUTargetFunctionAttributes(const clang::Decl *decl,
                                        cir::FuncOp func, CIRGenModule &cgm);

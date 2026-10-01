@@ -19,6 +19,7 @@
 #include <cstdint>
 
 namespace clang {
+class Decl;
 class FunctionDecl;
 } // namespace clang
 
@@ -51,6 +52,11 @@ ArmSMEInlinability getArmSMEInlinability(const FunctionDecl *Caller,
 /// the logic in Sema.
 /// TODO: Make this return false for SISD builtins.
 bool hasExtraNeonArgument(unsigned BuiltinID);
+
+/// Returns whether \p D must be given protected visibility on AMDGPU.
+/// \p HasHiddenVisibility is whether the emitted global currently has hidden
+/// visibility.
+bool requiresAMDGPUProtectedVisibility(const Decl *D, bool HasHiddenVisibility);
 
 } // namespace clang::CodeGenUtils
 
