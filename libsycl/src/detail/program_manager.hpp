@@ -20,8 +20,11 @@
 #include <detail/device_binary_structures.hpp>
 #include <detail/device_image_wrapper.hpp>
 #include <detail/device_kernel_info.hpp>
+#include <detail/suppress_extra_warnings.hpp>
 
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_BEGIN
 #include <llvm/Object/OffloadBinary.h>
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_END
 
 #include <OffloadAPI.h>
 

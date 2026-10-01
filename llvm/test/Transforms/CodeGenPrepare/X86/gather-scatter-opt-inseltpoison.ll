@@ -76,7 +76,7 @@ define <4 x i32> @test_global_array(<4 x i64> %indxs) {
 
 define <4 x i32> @global_struct_splat() {
 ; CHECK-LABEL: @global_struct_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 <ptr getelementptr ([[STRUCT_A:%.*]], ptr @c, i64 0, i32 1), ptr getelementptr ([[STRUCT_A]], ptr @c, i64 0, i32 1), ptr getelementptr ([[STRUCT_A]], ptr @c, i64 0, i32 1), ptr getelementptr ([[STRUCT_A]], ptr @c, i64 0, i32 1)>, <4 x i1> splat (i1 true), <4 x i32> undef)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 <ptr getelementptr (i8, ptr @c, i64 4), ptr getelementptr (i8, ptr @c, i64 4), ptr getelementptr (i8, ptr @c, i64 4), ptr getelementptr (i8, ptr @c, i64 4)>, <4 x i1> splat (i1 true), <4 x i32> undef)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = insertelement <4 x ptr> poison, ptr @c, i32 0

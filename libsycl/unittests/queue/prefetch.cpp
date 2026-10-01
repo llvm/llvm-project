@@ -50,3 +50,21 @@ TEST(Queue, PrefetchZeroBytes) {
   event Event = Q.prefetch(nullptr, 0);
   Q.prefetch(nullptr, 0, Event);
 }
+
+TEST(Queue, PrefetchNullptrThrows) {
+  constexpr std::size_t NumBytes = 1024;
+
+  mock::MockWrapper Mock;
+  queue Q;
+
+  EXPECT_CALL(Mock.get(), olMemPrefetch(_, _, _, _, _)).Times(0);
+
+  try {
+    Q.prefetch(nullptr, NumBytes);
+    FAIL() << "Expected sycl::exception";
+  } catch (const sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(errc::invalid));
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Q.get_context());
+  }
+}

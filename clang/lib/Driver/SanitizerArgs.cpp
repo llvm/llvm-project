@@ -1345,6 +1345,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                 options::OPT_fmemory_profile_EQ,
                                 options::OPT_fno_memory_profile, false);
 
+  NeedsCopyProfRt =
+      Args.hasFlag(options::OPT_fcopyprof, options::OPT_fno_copyprof, false);
+
   // Finally, initialize the set of available and recoverable sanitizers.
   Sanitizers.Mask |= Kinds;
   RecoverableSanitizers.Mask |= RecoverableKinds;

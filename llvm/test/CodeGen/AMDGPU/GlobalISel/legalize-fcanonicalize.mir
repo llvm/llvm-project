@@ -856,46 +856,9 @@ body: |
     ; GFX11-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x bf16>)
     ;
     ; GFX1250-LABEL: name: test_fcanonicalize_v2bf16
-    ; GFX1250: [[DEF:%[0-9]+]]:_(bf16) = G_IMPLICIT_DEF
-    ; GFX1250-NEXT: [[BITCAST:%[0-9]+]]:_(i16) = G_BITCAST [[DEF]](bf16)
-    ; GFX1250-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](i16)
-    ; GFX1250-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
-    ; GFX1250-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ANYEXT]], [[C]](i32)
-    ; GFX1250-NEXT: [[BITCAST1:%[0-9]+]]:_(f32) = G_BITCAST [[SHL]](i32)
-    ; GFX1250-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(f32) = G_FCANONICALIZE [[BITCAST1]]
-    ; GFX1250-NEXT: [[BITCAST2:%[0-9]+]]:_(i32) = G_BITCAST [[FCANONICALIZE]](f32)
-    ; GFX1250-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 4194304
-    ; GFX1250-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[BITCAST2]], [[C1]]
-    ; GFX1250-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST2]], [[C]](i32)
-    ; GFX1250-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
-    ; GFX1250-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[LSHR]], [[C2]]
-    ; GFX1250-NEXT: [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 32767
-    ; GFX1250-NEXT: [[ADD:%[0-9]+]]:_(i32) = G_ADD [[AND]], [[C3]]
-    ; GFX1250-NEXT: [[ADD1:%[0-9]+]]:_(i32) = G_ADD [[BITCAST2]], [[ADD]]
-    ; GFX1250-NEXT: [[C4:%[0-9]+]]:_(f32) = G_FCONSTANT float 0.000000e+00
-    ; GFX1250-NEXT: [[FCMP:%[0-9]+]]:_(i1) = G_FCMP floatpred(uno), [[FCANONICALIZE]](f32), [[C4]]
-    ; GFX1250-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[FCMP]](i1), [[OR]], [[ADD1]]
-    ; GFX1250-NEXT: [[LSHR1:%[0-9]+]]:_(i32) = G_LSHR [[SELECT]], [[C]](i32)
-    ; GFX1250-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[LSHR1]](i32)
-    ; GFX1250-NEXT: [[BITCAST3:%[0-9]+]]:_(bf16) = G_BITCAST [[TRUNC]](i16)
-    ; GFX1250-NEXT: [[BITCAST4:%[0-9]+]]:_(i16) = G_BITCAST [[DEF]](bf16)
-    ; GFX1250-NEXT: [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST4]](i16)
-    ; GFX1250-NEXT: [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[ANYEXT1]], [[C]](i32)
-    ; GFX1250-NEXT: [[BITCAST5:%[0-9]+]]:_(f32) = G_BITCAST [[SHL1]](i32)
-    ; GFX1250-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(f32) = G_FCANONICALIZE [[BITCAST5]]
-    ; GFX1250-NEXT: [[BITCAST6:%[0-9]+]]:_(i32) = G_BITCAST [[FCANONICALIZE1]](f32)
-    ; GFX1250-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[BITCAST6]], [[C1]]
-    ; GFX1250-NEXT: [[LSHR2:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST6]], [[C]](i32)
-    ; GFX1250-NEXT: [[AND1:%[0-9]+]]:_(i32) = G_AND [[LSHR2]], [[C2]]
-    ; GFX1250-NEXT: [[ADD2:%[0-9]+]]:_(i32) = G_ADD [[AND1]], [[C3]]
-    ; GFX1250-NEXT: [[ADD3:%[0-9]+]]:_(i32) = G_ADD [[BITCAST6]], [[ADD2]]
-    ; GFX1250-NEXT: [[FCMP1:%[0-9]+]]:_(i1) = G_FCMP floatpred(uno), [[FCANONICALIZE1]](f32), [[C4]]
-    ; GFX1250-NEXT: [[SELECT1:%[0-9]+]]:_(i32) = G_SELECT [[FCMP1]](i1), [[OR1]], [[ADD3]]
-    ; GFX1250-NEXT: [[LSHR3:%[0-9]+]]:_(i32) = G_LSHR [[SELECT1]], [[C]](i32)
-    ; GFX1250-NEXT: [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[LSHR3]](i32)
-    ; GFX1250-NEXT: [[BITCAST7:%[0-9]+]]:_(bf16) = G_BITCAST [[TRUNC1]](i16)
-    ; GFX1250-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x bf16>) = G_BUILD_VECTOR [[BITCAST3]](bf16), [[BITCAST7]](bf16)
-    ; GFX1250-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x bf16>)
+    ; GFX1250: [[DEF:%[0-9]+]]:_(<2 x bf16>) = G_IMPLICIT_DEF
+    ; GFX1250-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(<2 x bf16>) = G_FCANONICALIZE [[DEF]]
+    ; GFX1250-NEXT: S_NOP 0, implicit [[FCANONICALIZE]](<2 x bf16>)
     %0:_(<2 x bf16>) = G_IMPLICIT_DEF
     %1:_(<2 x bf16>) = G_FCANONICALIZE %0
     S_NOP 0, implicit %1

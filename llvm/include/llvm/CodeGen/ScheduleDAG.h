@@ -39,6 +39,7 @@ class MachineFunction;
 class MachineRegisterInfo;
 class MCInstrDesc;
 struct MCSchedClassDesc;
+class raw_ostream;
 class SDNode;
 class SUnit;
 class ScheduleDAG;
@@ -490,6 +491,8 @@ class TargetRegisterInfo;
     LLVM_ABI void ComputeDepth();
     LLVM_ABI void ComputeHeight();
   };
+
+  LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SUnit &SU);
 
   /// Returns true if the specified SDep is equivalent except for latency.
   inline bool SDep::overlaps(const SDep &Other) const {

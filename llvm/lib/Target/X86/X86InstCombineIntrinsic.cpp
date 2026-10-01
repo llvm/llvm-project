@@ -2450,7 +2450,10 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           // Extract the lowest element from the passthru operand.
           Value *Passthru =
               IC.Builder.CreateExtractElement(II.getArgOperand(2), (uint64_t)0);
-          V = IC.Builder.CreateSelect(Mask, V, Passthru);
+          // The condition is derived from the mask, so we cannot infer branch
+          // weights without value profile information. Thus mark it unknown.
+          V = IC.Builder.CreateSelectWithUnknownProfile(Mask, V, Passthru,
+                                                        DEBUG_TYPE);
         }
 
         // Insert the result back into the original argument 0.

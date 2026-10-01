@@ -263,9 +263,11 @@ TEST(ConstantsTest, AsInstructionsTest) {
   //        not a normal one!
   // CHECK(ConstantExpr::getGetElementPtr(Global, V, false),
   //      "getelementptr ptr, ptr @dummy, i32 1");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   CHECK(ConstantExpr::getInBoundsGetElementPtr(PointerType::getUnqual(Context),
                                                Global, V),
         "getelementptr inbounds ptr, ptr @dummy, i32 1");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   CHECK(ConstantExpr::getExtractElement(P6, One),
         "extractelement <2 x i16> " P6STR ", i32 1");
@@ -292,8 +294,7 @@ TEST(ConstantsTest, ReplaceWithConstantTest) {
 
   Constant *Global =
       M->getOrInsertGlobal("dummy", PointerType::getUnqual(Context));
-  Constant *GEP = ConstantExpr::getGetElementPtr(
-      PointerType::getUnqual(Context), Global, One);
+  Constant *GEP = ConstantExpr::getPtrAdd(Global, One);
   EXPECT_DEATH(Global->replaceAllUsesWith(GEP),
                "this->replaceAllUsesWith\\(expr\\(this\\)\\) is NOT valid!");
 }
@@ -360,7 +361,7 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
   auto *C1 = ConstantInt::get(IntTy, 1);
   auto *Placeholder = new GlobalVariable(
       *M, IntTy, false, GlobalValue::ExternalWeakLinkage, nullptr);
-  auto *GEP = ConstantExpr::getGetElementPtr(IntTy, Placeholder, C1);
+  auto *GEP = ConstantExpr::getPtrAdd(Placeholder, C1);
   ASSERT_EQ(GEP->getOperand(0), Placeholder);
 
   auto *Ref =

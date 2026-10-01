@@ -673,7 +673,7 @@ def int_amdgcn_cvt_sr_bf8_f16 : PureIntrinsic<
   [ImmArg<ArgIndex<3>>, Range<ArgIndex<3>, 0, 4>]
 >, ClangBuiltin<"__builtin_amdgcn_cvt_sr_bf8_f16">;
 
-// Note: these gfx1250 intrinsics are convergent because they read scales from other lanes.
+// Note: these intrinsics are convergent because they read scales from other lanes.
 // llvm.amdgcn.cvt.scale.pk32.f16.bf6 v32f16 vdst, v6i32 src0, i32 scale_sel [0..15]
 class AMDGPUCvtScaleIntrinsic<LLVMType DstTy, LLVMType Src0Ty, string name> : DefaultAttrsIntrinsic<
   [DstTy], [Src0Ty, llvm_i32_ty, llvm_i32_ty],
@@ -706,6 +706,15 @@ let TargetFeatures = "block16-cvt-scale-insts" in {
   def int_amdgcn_cvt_scale_pk16_f32_fp6  : AMDGPUCvtScaleIntrinsic<llvm_v16f32_ty,  llvm_v3i32_ty, "cvt_scale_pk16_f32_fp6">;
   def int_amdgcn_cvt_scale_pk16_f32_bf6  : AMDGPUCvtScaleIntrinsic<llvm_v16f32_ty,  llvm_v3i32_ty, "cvt_scale_pk16_f32_bf6">;
 } // End TargetFeatures = "block16-cvt-scale-insts"
+
+let TargetFeatures = "fp6bf6-to-f16bf16f32-cvt-scale-insts,wavefrontsize32" in {
+  def int_amdgcn_cvt_scale_pk32_bf16_bf6 : AMDGPUCvtScaleIntrinsic<llvm_v32bf16_ty, llvm_v6i32_ty, "cvt_scale_pk32_bf16_bf6">;
+  def int_amdgcn_cvt_scale_pk32_bf16_fp6 : AMDGPUCvtScaleIntrinsic<llvm_v32bf16_ty, llvm_v6i32_ty, "cvt_scale_pk32_bf16_fp6">;
+  def int_amdgcn_cvt_scale_pk32_f16_bf6  : AMDGPUCvtScaleIntrinsic<llvm_v32f16_ty,  llvm_v6i32_ty, "cvt_scale_pk32_f16_bf6">;
+  def int_amdgcn_cvt_scale_pk32_f16_fp6  : AMDGPUCvtScaleIntrinsic<llvm_v32f16_ty,  llvm_v6i32_ty, "cvt_scale_pk32_f16_fp6">;
+  def int_amdgcn_cvt_scale_pk32_f32_bf6  : AMDGPUCvtScaleIntrinsic<llvm_v32f32_ty,  llvm_v6i32_ty, "cvt_scale_pk32_f32_bf6">;
+  def int_amdgcn_cvt_scale_pk32_f32_fp6  : AMDGPUCvtScaleIntrinsic<llvm_v32f32_ty,  llvm_v6i32_ty, "cvt_scale_pk32_f32_fp6">;
+} // End TargetFeatures = "fp6bf6-to-f16bf16f32-cvt-scale-insts,wavefrontsize32"
 
 class AMDGPUCvtScaleF32ToFP6BF6Intrinsic<LLVMType DstTy, LLVMType Src0Ty, LLVMType Src1Ty, string name> : PureIntrinsic<
   [DstTy], [Src0Ty, Src1Ty, llvm_float_ty]
@@ -907,6 +916,79 @@ def int_amdgcn_cvt_scalef32_sr_fp8_f32: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8Tied
 def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
   [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrNoCreateUndefOrPoison]
 >, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
+
+let TargetFeatures = "wave-match-insts" in
+def int_amdgcn_wave_match_b32 : DefaultAttrsIntrinsic<
+  [llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCreateUndefOrPoison]
+>, ClangBuiltin<"__builtin_amdgcn_wave_match_b32">;
+
+let TargetFeatures = "exclusive-scan-insts" in {
+// i32 @llvm.amdgcn.exclusive.scan.sum.i32 <src0> <src1> <clamp>
+def int_amdgcn_exclusive_scan_sum_i32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i1_ty], [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_sum_i32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.sum.u32 <src0> <src1> <clamp>
+def int_amdgcn_exclusive_scan_sum_u32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i1_ty], [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_sum_u32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.xor.b32 <src0> <src1>
+def int_amdgcn_exclusive_scan_xor_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_xor_b32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.or.b32 <src0> <src1>
+def int_amdgcn_exclusive_scan_or_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_or_b32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.and.b32 <src0> <src1>
+def int_amdgcn_exclusive_scan_and_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_and_b32">;
+
+// i16 @llvm.amdgcn.exclusive.scan.min.i16 <src0> <src1>
+def int_amdgcn_exclusive_scan_min_i16 :
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_min_i16">;
+
+// i16 @llvm.amdgcn.exclusive.scan.min.u16 <src0> <src1>
+def int_amdgcn_exclusive_scan_min_u16 :
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_min_u16">;
+
+// i32 @llvm.amdgcn.exclusive.scan.min.i32 <src0> <src1>
+def int_amdgcn_exclusive_scan_min_i32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_min_i32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.min.u32 <src0> <src1>
+def int_amdgcn_exclusive_scan_min_u32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_min_u32">;
+
+// i16 @llvm.amdgcn.exclusive.scan.max.i16 <src0> <src1>
+def int_amdgcn_exclusive_scan_max_i16 :
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_i16">;
+
+// i16 @llvm.amdgcn.exclusive.scan.max.u16 <src0> <src1>
+def int_amdgcn_exclusive_scan_max_u16 :
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_u16">;
+
+// i32 @llvm.amdgcn.exclusive.scan.max.i32 <src0> <src1>
+def int_amdgcn_exclusive_scan_max_i32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_i32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.max.u32 <src0> <src1>
+def int_amdgcn_exclusive_scan_max_u32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_u32">;
+} // TargetFeatures = "exclusive-scan-insts"
 
 def int_amdgcn_bitop3 :
   PureIntrinsic<[llvm_anyint_ty],
