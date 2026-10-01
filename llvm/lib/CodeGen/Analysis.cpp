@@ -30,8 +30,7 @@ using namespace llvm;
 /// Compute the linearized index of a member in a nested aggregate/struct/array
 /// by recursing and accumulating CurIndex as long as there are indices in the
 /// index list.
-unsigned llvm::ComputeLinearIndex(Type *Ty,
-                                  const unsigned *Indices,
+unsigned llvm::ComputeLinearIndex(Type *Ty, const unsigned *Indices,
                                   const unsigned *IndicesEnd,
                                   unsigned CurIndex) {
   // Base case: We're done.
@@ -59,10 +58,10 @@ unsigned llvm::ComputeLinearIndex(Type *Ty,
       assert(*Indices < NumElts && "Unexpected out of bound");
       // If the indice is inside the array, compute the index to the requested
       // elt and recurse inside the element with the end of the indices list
-      CurIndex += EltLinearOffset* *Indices;
-      return ComputeLinearIndex(EltTy, Indices+1, IndicesEnd, CurIndex);
+      CurIndex += EltLinearOffset * *Indices;
+      return ComputeLinearIndex(EltTy, Indices + 1, IndicesEnd, CurIndex);
     }
-    CurIndex += EltLinearOffset*NumElts;
+    CurIndex += EltLinearOffset * NumElts;
     return CurIndex;
   }
   // We haven't found the type we're looking for, so keep searching.
@@ -188,7 +187,8 @@ GlobalValue *llvm::ExtractTypeInfo(Value *V) {
            "The EH catch-all value must have an initializer");
     Value *Init = Var->getInitializer();
     GV = dyn_cast<GlobalValue>(Init);
-    if (!GV) V = cast<ConstantPointerNull>(Init);
+    if (!GV)
+      V = cast<ConstantPointerNull>(Init);
   }
 
   assert((GV || isa<ConstantPointerNull>(V)) &&
@@ -202,50 +202,90 @@ GlobalValue *llvm::ExtractTypeInfo(Value *V) {
 ///
 ISD::CondCode llvm::getFCmpCondCode(FCmpInst::Predicate Pred) {
   switch (Pred) {
-  case FCmpInst::FCMP_FALSE: return ISD::SETFALSE;
-  case FCmpInst::FCMP_OEQ:   return ISD::SETOEQ;
-  case FCmpInst::FCMP_OGT:   return ISD::SETOGT;
-  case FCmpInst::FCMP_OGE:   return ISD::SETOGE;
-  case FCmpInst::FCMP_OLT:   return ISD::SETOLT;
-  case FCmpInst::FCMP_OLE:   return ISD::SETOLE;
-  case FCmpInst::FCMP_ONE:   return ISD::SETONE;
-  case FCmpInst::FCMP_ORD:   return ISD::SETO;
-  case FCmpInst::FCMP_UNO:   return ISD::SETUO;
-  case FCmpInst::FCMP_UEQ:   return ISD::SETUEQ;
-  case FCmpInst::FCMP_UGT:   return ISD::SETUGT;
-  case FCmpInst::FCMP_UGE:   return ISD::SETUGE;
-  case FCmpInst::FCMP_ULT:   return ISD::SETULT;
-  case FCmpInst::FCMP_ULE:   return ISD::SETULE;
-  case FCmpInst::FCMP_UNE:   return ISD::SETUNE;
-  case FCmpInst::FCMP_TRUE:  return ISD::SETTRUE;
-  default: llvm_unreachable("Invalid FCmp predicate opcode!");
+  case FCmpInst::FCMP_FALSE:
+    return ISD::SETFALSE;
+  case FCmpInst::FCMP_OEQ:
+    return ISD::SETOEQ;
+  case FCmpInst::FCMP_OGT:
+    return ISD::SETOGT;
+  case FCmpInst::FCMP_OGE:
+    return ISD::SETOGE;
+  case FCmpInst::FCMP_OLT:
+    return ISD::SETOLT;
+  case FCmpInst::FCMP_OLE:
+    return ISD::SETOLE;
+  case FCmpInst::FCMP_ONE:
+    return ISD::SETONE;
+  case FCmpInst::FCMP_ORD:
+    return ISD::SETO;
+  case FCmpInst::FCMP_UNO:
+    return ISD::SETUO;
+  case FCmpInst::FCMP_UEQ:
+    return ISD::SETUEQ;
+  case FCmpInst::FCMP_UGT:
+    return ISD::SETUGT;
+  case FCmpInst::FCMP_UGE:
+    return ISD::SETUGE;
+  case FCmpInst::FCMP_ULT:
+    return ISD::SETULT;
+  case FCmpInst::FCMP_ULE:
+    return ISD::SETULE;
+  case FCmpInst::FCMP_UNE:
+    return ISD::SETUNE;
+  case FCmpInst::FCMP_TRUE:
+    return ISD::SETTRUE;
+  default:
+    llvm_unreachable("Invalid FCmp predicate opcode!");
   }
 }
 
 ISD::CondCode llvm::getFCmpCodeWithoutNaN(ISD::CondCode CC) {
   switch (CC) {
-    case ISD::SETOEQ: case ISD::SETUEQ: return ISD::SETEQ;
-    case ISD::SETONE: case ISD::SETUNE: return ISD::SETNE;
-    case ISD::SETOLT: case ISD::SETULT: return ISD::SETLT;
-    case ISD::SETOLE: case ISD::SETULE: return ISD::SETLE;
-    case ISD::SETOGT: case ISD::SETUGT: return ISD::SETGT;
-    case ISD::SETOGE: case ISD::SETUGE: return ISD::SETGE;
-    default: return CC;
+  case ISD::SETOEQ:
+  case ISD::SETUEQ:
+    return ISD::SETEQ;
+  case ISD::SETONE:
+  case ISD::SETUNE:
+    return ISD::SETNE;
+  case ISD::SETOLT:
+  case ISD::SETULT:
+    return ISD::SETLT;
+  case ISD::SETOLE:
+  case ISD::SETULE:
+    return ISD::SETLE;
+  case ISD::SETOGT:
+  case ISD::SETUGT:
+    return ISD::SETGT;
+  case ISD::SETOGE:
+  case ISD::SETUGE:
+    return ISD::SETGE;
+  default:
+    return CC;
   }
 }
 
 ISD::CondCode llvm::getICmpCondCode(ICmpInst::Predicate Pred) {
   switch (Pred) {
-  case ICmpInst::ICMP_EQ:  return ISD::SETEQ;
-  case ICmpInst::ICMP_NE:  return ISD::SETNE;
-  case ICmpInst::ICMP_SLE: return ISD::SETLE;
-  case ICmpInst::ICMP_ULE: return ISD::SETULE;
-  case ICmpInst::ICMP_SGE: return ISD::SETGE;
-  case ICmpInst::ICMP_UGE: return ISD::SETUGE;
-  case ICmpInst::ICMP_SLT: return ISD::SETLT;
-  case ICmpInst::ICMP_ULT: return ISD::SETULT;
-  case ICmpInst::ICMP_SGT: return ISD::SETGT;
-  case ICmpInst::ICMP_UGT: return ISD::SETUGT;
+  case ICmpInst::ICMP_EQ:
+    return ISD::SETEQ;
+  case ICmpInst::ICMP_NE:
+    return ISD::SETNE;
+  case ICmpInst::ICMP_SLE:
+    return ISD::SETLE;
+  case ICmpInst::ICMP_ULE:
+    return ISD::SETULE;
+  case ICmpInst::ICMP_SGE:
+    return ISD::SETGE;
+  case ICmpInst::ICMP_UGE:
+    return ISD::SETUGE;
+  case ICmpInst::ICMP_SLT:
+    return ISD::SETLT;
+  case ICmpInst::ICMP_ULT:
+    return ISD::SETULT;
+  case ICmpInst::ICMP_SGT:
+    return ISD::SETGT;
+  case ICmpInst::ICMP_UGT:
+    return ISD::SETUGT;
   default:
     llvm_unreachable("Invalid ICmp predicate opcode!");
   }
@@ -278,8 +318,7 @@ ICmpInst::Predicate llvm::getICmpCondCode(ISD::CondCode Pred) {
   }
 }
 
-static bool isNoopBitcast(Type *T1, Type *T2,
-                          const TargetLoweringBase& TLI) {
+static bool isNoopBitcast(Type *T1, Type *T2, const TargetLoweringBase &TLI) {
   return T1 == T2 || (T1->isPointerTy() && T2->isPointerTy()) ||
          (isa<VectorType>(T1) && isa<VectorType>(T2) &&
           TLI.isTypeLegal(EVT::getEVT(T1)) && TLI.isTypeLegal(EVT::getEVT(T2)));
@@ -305,7 +344,8 @@ static const Value *getNoopInput(const Value *V,
     // Try to look through V1; if V1 is not an instruction, it can't be looked
     // through.
     const Instruction *I = dyn_cast<Instruction>(V);
-    if (!I || I->getNumOperands() == 0) return V;
+    if (!I || I->getNumOperands() == 0)
+      return V;
     const Value *NoopInput = nullptr;
 
     Value *Op = I->getOperand(0);
@@ -529,7 +569,6 @@ static bool nextRealType(SmallVectorImpl<Type *> &SubTypes,
   return true;
 }
 
-
 /// Test if the given instruction is in a position to be optimized
 /// with a tail-call. This roughly means that it's in a block with
 /// a return and there's nothing that needs to be scheduled
@@ -543,18 +582,24 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM,
   const ReturnInst *Ret = dyn_cast<ReturnInst>(Term);
 
   // The block must end in a return statement or unreachable.
-  //
-  // FIXME: Decline tailcall if it's not guaranteed and if the block ends in
-  // an unreachable, for now. The way tailcall optimization is currently
-  // implemented means it will add an epilogue followed by a jump. That is
-  // not profitable. Also, if the callee is a special function (e.g.
-  // longjmp on x86), it can end up causing miscompilation that has not
-  // been fully understood.
-  if (!Ret && ((!TM.Options.GuaranteedTailCallOpt &&
-                Call.getCallingConv() != CallingConv::Tail &&
-                Call.getCallingConv() != CallingConv::SwiftTail) ||
-               !isa<UnreachableInst>(Term)))
-    return false;
+  if (!Ret && !isa<UnreachableInst>(Term)) {
+    if (!TM.Options.GuaranteedTailCallOpt &&
+        Call.getCallingConv() != CallingConv::Tail &&
+        Call.getCallingConv() != CallingConv::SwiftTail)
+      return false;
+  }
+
+  if (isa<UnreachableInst>(Term)) {
+    if (!Call.hasFnAttr(Attribute::NoReturn))
+      return false;
+    const Function *F = ExitBB->getParent();
+    for (const BasicBlock &BB : *F)
+      for (const Instruction &I : BB)
+        if (&I != &Call)
+          if (const auto *CB = dyn_cast<CallBase>(&I))
+            if (!CB->hasFnAttr(Attribute::NoReturn))
+              return false;
+  }
 
   // If I will have a chain, make sure no other instruction that will have a
   // chain interposes between I and the return.
@@ -578,6 +623,9 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM,
         !isSafeToSpeculativelyExecute(&*BBI))
       return false;
   }
+
+  if (isa<UnreachableInst>(Term))
+    return true;
 
   const Function *F = ExitBB->getParent();
   return returnTypeIsEligibleForTailCall(
@@ -652,11 +700,13 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
                                            bool ReturnsFirstArg) {
   // If the block ends with a void return or unreachable, it doesn't matter
   // what the call's return type is.
-  if (!Ret || Ret->getNumOperands() == 0) return true;
+  if (!Ret || Ret->getNumOperands() == 0)
+    return true;
 
   // If the return value is undef, it doesn't matter what the call's
   // return type is.
-  if (isa<UndefValue>(Ret->getOperand(0))) return true;
+  if (isa<UndefValue>(Ret->getOperand(0)))
+    return true;
 
   // Make sure the attributes attached to each return are compatible.
   bool AllowDifferingSizes;
@@ -706,12 +756,11 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
     // Finally, we can check whether the value produced by the tail call at this
     // index is compatible with the value we return.
     if (!slotOnlyDiscardsData(RetVal, CallVal, TmpRetPath, TmpCallPath,
-                              AllowDifferingSizes, TLI,
-                              F->getDataLayout()))
+                              AllowDifferingSizes, TLI, F->getDataLayout()))
       return false;
 
-    CallEmpty  = !nextRealType(CallSubTypes, CallPath);
-  } while(nextRealType(RetSubTypes, RetPath));
+    CallEmpty = !nextRealType(CallSubTypes, CallPath);
+  } while (nextRealType(RetSubTypes, RetPath));
 
   return true;
 }
