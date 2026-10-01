@@ -9,9 +9,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // A mapped range inside a taskgraph that only *partially* overlaps one mapped
 // outside it.  Asking whether a range is mapped is a question about whole-range

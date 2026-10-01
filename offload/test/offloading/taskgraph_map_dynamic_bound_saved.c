@@ -10,9 +10,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // Two things that pull in opposite directions, in one region.
 //

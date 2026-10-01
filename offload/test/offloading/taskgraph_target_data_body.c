@@ -7,9 +7,6 @@
 
 // REQUIRES: gpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // OpenMP 6.1 [21.5]: the structured block of a 'target data' is a task of its
 // own, ordered between the enter-data and exit-data tasks.  A taskgraph

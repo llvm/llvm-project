@@ -8,9 +8,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // A replay starts from the taskgraph construct's enclosing data environment,
 // and a variable declared inside the region is not part of it: the code that

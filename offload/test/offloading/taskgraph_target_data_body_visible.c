@@ -7,9 +7,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // A graph holding the body of a 'target data' is replayed with the target
 // constructs either side of the body on the device, as subgraphs, and the body

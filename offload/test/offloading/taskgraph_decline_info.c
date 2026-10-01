@@ -5,9 +5,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // A graph mapping something the data plan cannot express is replayed by libomp
 // on the host instead, which is correct but gives up the device graph.  Each

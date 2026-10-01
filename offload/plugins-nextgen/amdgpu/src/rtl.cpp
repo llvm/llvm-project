@@ -18,6 +18,7 @@
 #include <deque>
 #include <functional>
 #include <mutex>
+#include <set>
 #include <string>
 #include <system_error>
 #include <unistd.h>
@@ -28,15 +29,18 @@
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/RefCnt.h"
+#include "Shared/TaskGraph.h"
 #include "Shared/Utils.h"
 #include "Utils/ELF.h"
 
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
 #include "PluginInterface.h"
+#include "TaskGraphSchedule.h"
 #include "UtilitiesRTL.h"
 #include "omptarget.h"
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -681,6 +685,18 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Get the size of implicitargs based on the code object version.
   uint32_t getImplicitArgsSize() const { return ImplicitArgsSize; }
+
+  /// Get the kernarg segment size (explicit + implicit args).
+  uint32_t getArgsSize() const { return ArgsSize; }
+
+  /// Write the kernarg segment, getArgsSize() bytes at \p Buf: the \p NumArgs
+  /// explicit arguments at the offsets the kernel's metadata gives, each read
+  /// through \p Args, then the implicit arguments for the given geometry.
+  /// Shared by launchImpl and the taskgraph backend, which writes a node's
+  /// segment once and reuses it.
+  Error writeArgs(void *Buf, uint32_t NumArgs, void *const *Args,
+                  const uint32_t NumThreads[3], const uint32_t NumBlocks[3],
+                  uint32_t DynBlockMemSize) const;
 
   /// Indicates whether or not we need to set up our own private segment size.
   bool usesDynamicStack() const { return DynamicStack; }
@@ -1867,6 +1883,17 @@ struct AMDGPUEventTy {
     return RecordedStream->synchronizeOn(*this);
   }
 
+  /// Whether the recorded operation has completed.  Does not block.
+  Expected<bool> query() {
+    std::lock_guard<std::mutex> Lock(Mutex);
+
+    // Nothing recorded, or nothing was outstanding when it was.
+    if (!RecordedStream || RecordedSlot < 0)
+      return true;
+
+    return RecordedStream->isEventComplete(*this);
+  }
+
   /// Return the elapsed time in milliseconds between this event and EndEvent.
   Expected<float> getElapsedTime(AMDGPUEventTy &EndEvent);
 
@@ -2423,9 +2450,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_StreamBusyWait("LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT", 2000000),
         OMPX_UseMultipleSdmaEngines(
             "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", false),
-        OMPX_ApuMaps("OMPX_APU_MAPS", false), AMDGPUStreamManager(*this, Agent),
-        AMDGPUEventManager(*this), AMDGPUSignalManager(*this), Agent(Agent),
-        HostDevice(HostDevice) {}
+        OMPX_ApuMaps("OMPX_APU_MAPS", false),
+        OMPX_TaskGraph("LIBOMPTARGET_AMDGPU_TASKGRAPH", true),
+        OMPX_TaskGraphLanes("LIBOMPTARGET_AMDGPU_TASKGRAPH_LANES", 0),
+        AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
+        AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
 
   ~AMDGPUDeviceTy() {}
 
@@ -3717,6 +3746,38 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   bool useMultipleSdmaEngines() const { return OMPX_UseMultipleSdmaEngines; }
 
+  //===----- taskgraph replay backend --------------------------------===//
+  // The taskgraph path, taken for every graph this backend can lower.
+  // LIBOMPTARGET_AMDGPU_TASKGRAPH=0 turns it off and leaves libomp to issue
+  // the graph's target constructs itself, which is how a problem in this
+  // backend is told apart from one above it.
+  //
+  // libomptarget's data plan decides where each leaf's data lives and
+  // provides any device storage the graph needs, so this backend only moves
+  // data.  Finalize does the rest of the interpretation once: the shared
+  // region tree is lowered onto a pool of stream "lanes"
+  // (lowerTaskGraphOntoLanes), each on its own AQL queue; the plan's staging
+  // bytes are locked for the graph's lifetime; and each kernel launch gets a
+  // ready-to-copy kernarg image.  A replay locks the host ranges its copies
+  // touch (pinTaskGraph), adopts whatever the plan reports changed
+  // (reparametrizeTaskGraph), then re-issues the fixed schedule through the
+  // plugin's ordinary stream primitives, gating cross-lane edges with
+  // AMDGPUEventTy, and drains the lanes before returning.
+  //
+  // Finalize declines (returns an error, which is not a failure) when the
+  // graph contains something this lowering cannot express; libomp then
+  // issues the graph's target constructs itself.
+  bool supportsTaskGraphs() const override { return OMPX_TaskGraph; }
+  Expected<void *> finalizeTaskGraph(const TaskGraphTy *Graph) override;
+  Error replayTaskGraph(const TaskGraphTy *Graph) override;
+  Error destroyTaskGraph(const TaskGraphTy *Graph) override;
+  Error reparametrizeTaskGraph(
+      const TaskGraphTy *Graph,
+      ArrayRef<llvm::omp::target::TaskGraphArgUpdateTy> Updates,
+      bool Resync) override;
+  Error pinTaskGraph(const TaskGraphTy *Graph) override;
+  Error unpinTaskGraph(const TaskGraphTy *Graph) override;
+
 private:
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
   using AMDGPUEventManagerTy = GenericDeviceResourceManagerTy<AMDGPUEventRef>;
@@ -3841,6 +3902,17 @@ private:
   /// automatic zero-copy behavior on non-APU GPUs.
   BoolEnvar OMPX_ApuMaps;
 
+  /// Switch for the taskgraph replay backend, read by supportsTaskGraphs().
+  /// On by default; set to 0 to have this plugin claim no graphs, in which
+  /// case libomp issues each graph's target constructs itself.
+  BoolEnvar OMPX_TaskGraph;
+
+  /// Number of stream "lanes" the taskgraph backend distributes nodes over. 0
+  /// (the default) means "use the HSA queue count" so each lane lands on a
+  /// distinct AQL queue under the busy-tracking heuristic; a higher value just
+  /// oversubscribes the queues.
+  UInt32Envar OMPX_TaskGraphLanes;
+
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;
 
@@ -3885,7 +3957,649 @@ private:
 
   /// Tracker for virtual address reservations.
   VMemTrackerTy<hsa_amd_vmem_alloc_handle_t> VMemTracker;
+
+  //===----- taskgraph replay backend state --------------------------===//
+  /// The host endpoint of one of the plan's ranges, locked so that a copy over
+  /// it is a single SDMA transfer with no staging buffer.  Parallel to
+  /// TaskGraphDataPlanTy::Ranges; left empty for a range no copy touches.
+  struct AmdGraphPinTy {
+    /// Device-accessible alias of the locked host range.
+    void *PinnedHostPtr = nullptr;
+    /// The host address that was locked, kept so it can be unlocked without
+    /// depending on the plan still holding it.
+    void *HostPtr = nullptr;
+    /// We locked the range ourselves and must unlock it.  False when
+    /// PinnedHostPtr aliases a registration the program already owned, which
+    /// outlives this graph and must be left alone.
+    bool OwnsPin = false;
+    /// Some copy works over this range, so it is locked for every replay,
+    /// wherever relocation has put it.
+    bool NeedsPin = false;
+  };
+
+  /// One of a leaf's plan operations, with what the lane needs to issue it.
+  /// A leaf's operations run in order on its lane.
+  struct AmdGraphOpTy {
+    /// The plan operation.  A copy-like one's operands and enablement are
+    /// read from the plan as it is issued, so a mapping appearing,
+    /// disappearing or moving between replays needs nothing done here.
+    const TaskGraphOpTy *PlanOp = nullptr;
+
+    TaskGraphOpTy::KindTy kind() const { return PlanOp->Kind; }
+
+    //--- Launch ---//
+    const AMDGPUKernelTy *KernelObj = nullptr;
+    /// The kernarg image, complete except that it is copied into a fresh
+    /// device-visible kernarg allocation on each replay.
+    std::vector<uint8_t> KernArgs;
+    /// The geometry, group memory and launch environment, which libomptarget
+    /// calculated for the leaf and cached when it built the plan.
+    TaskGraphLaunchTy Launch;
+  };
+
+  /// A kernel launch whose argument image is written from the plan, naming the
+  /// op it belongs to.
+  struct AmdGraphKernArgsTy {
+    uint32_t Item = 0;
+    uint32_t Op = 0;
+    /// The leaf whose kernel parameters the image holds.
+    const TaskGraphTargetNode *Node = nullptr;
+  };
+
+  /// One graph leaf, as the lowering placed it, with its plan lowered onto
+  /// its lane.  Items are numbered in placement order, which is a topological
+  /// order: an item only ever waits for, or follows on its lane, items with
+  /// lower numbers.
+  struct AmdGraphItemTy {
+    /// The leaf; owned by the graph, which outlives this.
+    const TaskGraphNode *Node = nullptr;
+    /// The lane the item is issued onto.
+    uint32_t Lane = 0;
+    /// The items this one must not start before, as the lowering reduced them:
+    /// none on its own lane, and at most one per other lane.
+    SmallVector<uint32_t, 4> Waits;
+    std::vector<AmdGraphOpTy> Ops;
+    /// Non-null iff another item waits on this one; recorded after the item's
+    /// last op on every replay.  Owned by the graph.
+    AMDGPUEventTy *Completion = nullptr;
+  };
+
+  /// Everything finalize built for one graph, which libomptarget keeps for us
+  /// in the graph's PluginGraph.
+  struct AmdTaskGraphTy {
+    /// The graph this was built for, whose plan replay reads.
+    const TaskGraphTy *Graph = nullptr;
+    /// Stream lanes acquired at finalize, returned at destroy.  One per lane
+    /// the graph was lowered onto, each on its own AQL queue.
+    SmallVector<AMDGPUStreamTy *, 4> Lanes;
+    std::vector<AmdGraphPinTy> Pins;
+    /// The host lock over the plan's attach staging bytes.  One lock for all of
+    /// them: the plan lays them end to end in memory it owns for the graph's
+    /// lifetime, so unlike a range this never has to be retaken.
+    AmdGraphPinTy StagingPin;
+    /// The host lock over the plan's private-block image, on the same terms.
+    AmdGraphPinTy PrivatePin;
+    std::vector<AmdGraphItemTy> Items;
+    std::vector<AmdGraphKernArgsTy> KernArgs;
+    /// Per plan argument entry, whether the next replay copies a private's
+    /// staged bytes in: they changed since the device last took them.  Set by
+    /// reparametrization and cleared as the copy is issued.
+    std::vector<bool> PrivateInitPending;
+  };
+
+  /// Release everything a finalized graph holds.  Written to tolerate a
+  /// partially-built graph so finalize can bail out through it.
+  Error releaseTaskGraph(AmdTaskGraphTy &TG);
+
+  /// Write one kernel launch's argument image against the plan's current
+  /// device addresses.
+  Error materializeKernArgs(const llvm::omp::target::TaskGraphDataPlanTy &Plan,
+                            AmdTaskGraphTy &TG, AmdGraphKernArgsTy &Pending);
+
+  /// Lock one host span, releasing whatever \p Pin held before.
+  Error pinTaskGraphSpan(AmdGraphPinTy &Pin, void *HostBegin, uint64_t Size);
+
+  /// Lock one plan range's host endpoint, releasing whatever was locked for it
+  /// before.  Re-run for a range relocation has moved.
+  Error pinTaskGraphRange(AmdTaskGraphTy &TG,
+                          const llvm::omp::target::TaskGraphRangeTy &Range);
+
+  /// Settle which plan ranges some copy touches, and lock the plan's staging
+  /// bytes, which live as long as the graph does.
+  Error prepareTaskGraphPins(const llvm::omp::target::TaskGraphDataPlanTy &Plan,
+                             AmdTaskGraphTy &TG);
+
+  /// Lock the host endpoint of every plan range some copy touches, for one
+  /// replay.
+  Error pinTaskGraphRanges(const llvm::omp::target::TaskGraphDataPlanTy &Plan,
+                           AmdTaskGraphTy &TG);
+
+  /// Release what pinTaskGraphRanges locked.
+  Error unpinTaskGraphRanges(AmdTaskGraphTy &TG);
+
+  /// The finalized state for \p Graph, which this device claimed.
+  static AmdTaskGraphTy &
+  getTaskGraph(const llvm::omp::target::TaskGraphTy *Graph) {
+    assert(Graph->PluginGraph && "taskgraph this plugin never claimed");
+    return *static_cast<AmdTaskGraphTy *>(Graph->PluginGraph);
+  }
+
+  /// Drain every lane of a finalized graph.
+  Error syncTaskGraphLanes(AmdTaskGraphTy &TG);
+
+  /// Place leaf \p Node as item \p I of \p TG, and lower its plan operations
+  /// onto its lane.  What finalize's lowering does with each leaf it places.
+  Error placeTaskGraphItem(AmdTaskGraphTy &TG, uint32_t I,
+                           const TaskGraphNode &Node, uint32_t Lane,
+                           ArrayRef<uint32_t> Waits);
+
+  /// Enqueue item \p I's ops onto its lane, behind the items it waits for, and
+  /// record its completion.
+  Error issueTaskGraphItem(AmdTaskGraphTy &TG, uint32_t I, uint64_t StackSize);
 };
+
+Error AMDGPUDeviceTy::releaseTaskGraph(AmdTaskGraphTy &TG) {
+  Error Err = Plugin::success();
+  auto Join = [&Err](Error E) {
+    Err = joinErrors(std::move(Err), std::move(E));
+  };
+
+  for (AmdGraphItemTy &Item : TG.Items) {
+    if (Item.Completion) {
+      Join(AMDGPUEventManager.returnResource(Item.Completion));
+      Item.Completion = nullptr;
+    }
+  }
+  for (AMDGPUStreamTy *Lane : TG.Lanes)
+    if (Lane)
+      Join(AMDGPUStreamManager.returnResource(Lane));
+  TG.Lanes.clear();
+  // The device memory belongs to the plan, which libomptarget releases; only
+  // the host locks are ours.
+  auto Unpin = [&](AmdGraphPinTy &Pin) {
+    if (Pin.PinnedHostPtr && Pin.OwnsPin)
+      Join(Plugin::check(hsa_amd_memory_unlock(Pin.HostPtr),
+                         "error unpinning taskgraph host buffer: %s"));
+    Pin.PinnedHostPtr = nullptr;
+    Pin.OwnsPin = false;
+  };
+  for (AmdGraphPinTy &Pin : TG.Pins)
+    Unpin(Pin);
+  Unpin(TG.StagingPin);
+  Unpin(TG.PrivatePin);
+  TG.Pins.clear();
+  return Err;
+}
+
+Error AMDGPUDeviceTy::materializeKernArgs(const TaskGraphDataPlanTy &Plan,
+                                          AmdTaskGraphTy &TG,
+                                          AmdGraphKernArgsTy &Pending) {
+  AmdGraphOpTy &Op = TG.Items[Pending.Item].Ops[Pending.Op];
+
+  ArrayRef<TaskGraphKernelParamTy> Params = Pending.Node->kernelParams();
+  SmallVector<uint64_t, 16> Values(Params.size());
+  SmallVector<void *, 16> Ptrs(Params.size());
+  for (auto [P, Param] : llvm::enumerate(Params)) {
+    Values[P] =
+        Plan.paramValue(*Pending.Node, Param, Op.Launch.LaunchEnvironment);
+    Ptrs[P] = &Values[P];
+  }
+
+  Op.KernArgs.assign(Op.KernelObj->getArgsSize(), 0);
+  return Op.KernelObj->writeArgs(Op.KernArgs.data(), Ptrs.size(), Ptrs.data(),
+                                 Op.Launch.NumThreads, Op.Launch.NumBlocks,
+                                 Op.Launch.DynBlockMemSize);
+}
+
+Error AMDGPUDeviceTy::pinTaskGraphSpan(AmdGraphPinTy &Pin, void *HostBegin,
+                                       uint64_t Size) {
+  // Relocation can move a range between replays, and the lock names an
+  // address, so release the one taken against where the range used to be.
+  if (Pin.PinnedHostPtr && Pin.OwnsPin)
+    if (auto Err = Plugin::check(hsa_amd_memory_unlock(Pin.HostPtr),
+                                 "error unpinning taskgraph host buffer: %s"))
+      return Err;
+  Pin.PinnedHostPtr = nullptr;
+  Pin.HostPtr = nullptr;
+  Pin.OwnsPin = false;
+
+  if (!HostBegin || !Size)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "amdgpu taskgraph: copy against a region with no "
+                         "host address");
+
+  // A range HSA already knows about must not be locked a second time: HSA
+  // rejects the duplicate lock, and taking that as a hard failure would
+  // decline graphs we can serve perfectly well (any program mapping buffers
+  // obtained from llvm_omp_target_alloc_host hits this on every graph).
+  // Reuse the registration's own device-accessible alias instead, and
+  // remember that it is not ours to release.
+  void *BaseHostPtr = nullptr, *BaseAgentPtr = nullptr;
+  size_t BaseSize = 0;
+  auto Registered =
+      isPinnedPtrImpl(HostBegin, BaseHostPtr, BaseAgentPtr, BaseSize);
+  if (!Registered)
+    return Registered.takeError();
+
+  Pin.HostPtr = HostBegin;
+  if (*Registered) {
+    // The alias only describes the bytes the existing registration covers, so
+    // a range running past its end has no single device-accessible address
+    // and cannot be served as one transfer.
+    const char *Base = reinterpret_cast<const char *>(BaseHostPtr);
+    const char *Host = reinterpret_cast<const char *>(HostBegin);
+    if (Host < Base || static_cast<uint64_t>(Host - Base) + Size > BaseSize)
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "amdgpu taskgraph: copy against a partially "
+                           "pinned host range");
+    Pin.PinnedHostPtr = reinterpret_cast<char *>(BaseAgentPtr) + (Host - Base);
+    Pin.OwnsPin = false;
+    return Plugin::success();
+  }
+
+  void *Pinned = nullptr;
+  if (auto Err = Plugin::check(
+          hsa_amd_memory_lock(HostBegin, Size, nullptr, 0, &Pinned),
+          "error pinning taskgraph host buffer: %s"))
+    return Err;
+  Pin.PinnedHostPtr = Pinned;
+  Pin.OwnsPin = true;
+  return Plugin::success();
+}
+
+Error AMDGPUDeviceTy::pinTaskGraphRange(AmdTaskGraphTy &TG,
+                                        const TaskGraphRangeTy &Range) {
+  return pinTaskGraphSpan(TG.Pins[Range.getId()], Range.getHostBegin(),
+                          Range.getSize());
+}
+
+Error AMDGPUDeviceTy::pinTaskGraphRanges(const TaskGraphDataPlanTy &Plan,
+                                         AmdTaskGraphTy &TG) {
+  for (const TaskGraphRangeTy &Range : Plan.ranges())
+    if (TG.Pins[Range.getId()].NeedsPin)
+      if (auto Err = pinTaskGraphRange(TG, Range))
+        return Err;
+  return Plugin::success();
+}
+
+Error AMDGPUDeviceTy::unpinTaskGraphRanges(AmdTaskGraphTy &TG) {
+  Error Err = Plugin::success();
+  for (AmdGraphPinTy &Pin : TG.Pins) {
+    if (Pin.PinnedHostPtr && Pin.OwnsPin)
+      Err = joinErrors(
+          std::move(Err),
+          Plugin::check(hsa_amd_memory_unlock(Pin.HostPtr),
+                        "error unpinning taskgraph host buffer: %s"));
+    Pin.PinnedHostPtr = nullptr;
+    Pin.HostPtr = nullptr;
+    Pin.OwnsPin = false;
+  }
+  return Err;
+}
+
+Error AMDGPUDeviceTy::prepareTaskGraphPins(const TaskGraphDataPlanTy &Plan,
+                                           AmdTaskGraphTy &TG) {
+  // Every range some copy touches is locked for each replay, whether or not
+  // the copy is enabled for it, since the plan may switch it on without the
+  // lock being retaken.  The lock itself is per replay: the plan's ranges are
+  // only known to be the program's memory while a replay has them resolved.
+  TG.Pins.assign(Plan.ranges().size(), AmdGraphPinTy{});
+  for (const AmdGraphItemTy &Item : TG.Items)
+    for (const TaskGraphOpTy &Op : Item.Node->ops())
+      if (Op.Kind == TaskGraphOpTy::KindTy::CopyIn ||
+          Op.Kind == TaskGraphOpTy::KindTy::CopyOut)
+        TG.Pins[Plan.transfer(*Item.Node, Op).HostRange->getId()].NeedsPin =
+            true;
+
+  // The staging bytes are the source of every attachment's copy, and they live
+  // in the plan for as long as the graph does, so one lock over the lot of them
+  // serves every replay.
+  if (!Plan.attachStaging().empty()) {
+    TG.StagingPin.NeedsPin = true;
+    if (auto Err = pinTaskGraphSpan(
+            TG.StagingPin, const_cast<char *>(Plan.attachStaging().data()),
+            Plan.attachStaging().size()))
+      return Err;
+  }
+  // Likewise the host image of the private block, for the same reason and with
+  // the same lifetime.
+  if (!Plan.privateStaging().empty()) {
+    TG.PrivatePin.NeedsPin = true;
+    if (auto Err = pinTaskGraphSpan(
+            TG.PrivatePin, const_cast<char *>(Plan.privateStaging().data()),
+            Plan.privateStaging().size()))
+      return Err;
+  }
+  return Plugin::success();
+}
+
+Error AMDGPUDeviceTy::placeTaskGraphItem(AmdTaskGraphTy &TG, uint32_t I,
+                                         const TaskGraphNode &Node,
+                                         uint32_t Lane,
+                                         ArrayRef<uint32_t> Waits) {
+  const TaskGraphTy &Graph = *TG.Graph;
+  auto decline = [](const char *Why) -> Error {
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "amdgpu taskgraph declined: %s", Why);
+  };
+
+  assert(I == TG.Items.size() && "taskgraph items placed out of order");
+  TG.Items.emplace_back();
+  AmdGraphItemTy &Item = TG.Items.back();
+  Item.Node = &Node;
+  Item.Lane = Lane;
+  Item.Waits.assign(Waits.begin(), Waits.end());
+
+  // A wait for an item is a wait for its completion event, which is recorded
+  // only for an item somebody waits for.
+  for (uint32_t Wait : Waits) {
+    AmdGraphItemTy &Awaited = TG.Items[Wait];
+    if (!Awaited.Completion)
+      if (auto Err = AMDGPUEventManager.getResource(Awaited.Completion))
+        return Err;
+  }
+
+  // Lower the leaf's plan operations onto its lane, in order.  Every decision
+  // about mapped data -- which ranges there are, where each lives on the
+  // device, which transfers a replay performs, what each kernel parameter is
+  // -- has already been made by the plan, so nothing below classifies a map or
+  // allocates device data.
+  for (const TaskGraphOpTy &PlanOp : Node.ops()) {
+    AmdGraphOpTy Op;
+    Op.PlanOp = &PlanOp;
+
+    if (PlanOp.Kind == TaskGraphOpTy::KindTy::Launch) {
+      auto &TargetNode = cast<TaskGraphTargetNode>(Node);
+      void *Resolved =
+          Graph.Services.resolveKernel(Graph.DeviceId, TargetNode.HostPtr);
+      if (!Resolved)
+        return decline("target leaf's kernel is not loaded on this device");
+      Op.KernelObj = static_cast<AMDGPUKernelTy *>(
+          static_cast<GenericKernelTy *>(Resolved));
+      // libomptarget calculated the launch once and cached it, where a launch
+      // outside a graph works it out every time; its device memory belongs to
+      // the plan.
+      Op.Launch = TargetNode.launch();
+      TG.KernArgs.push_back(
+          {I, static_cast<uint32_t>(Item.Ops.size()), &TargetNode});
+    }
+    Item.Ops.push_back(std::move(Op));
+  }
+  return Plugin::success();
+}
+
+Expected<void *> AMDGPUDeviceTy::finalizeTaskGraph(const TaskGraphTy *Graph) {
+
+  // supportsTaskGraphs is what libomptarget checks before it builds a plan or
+  // offers a graph to anybody, so a backend switched off there is never asked
+  // to finalize one.
+  auto Owned = std::make_unique<AmdTaskGraphTy>();
+  AmdTaskGraphTy &TG = *Owned;
+  TG.Graph = Graph;
+
+  // Unwind whatever has been built so far and propagate \p Reason.  Declining
+  // and failing take the same route out: to libomp both mean "this plugin will
+  // not be replaying the graph", and the graph itself is unharmed either way.
+  auto bail = [&](Error Reason) -> Error {
+    return joinErrors(std::move(Reason), releaseTaskGraph(TG));
+  };
+  auto decline = [&](const char *Why) -> Error {
+    return bail(Plugin::error(ErrorCode::UNSUPPORTED,
+                              "amdgpu taskgraph declined: %s", Why));
+  };
+
+  // 1. Lanes.  Each lands on its own AQL queue, which is what makes the
+  // schedule's concurrency real and what keeps replay deadlock-free: a lane
+  // that runs its ring full only throttles the host, whereas two lanes sharing
+  // a ring could put a cross-lane barrier in front of the packet that satisfies
+  // it.  Ask for as many as there are queues unless overridden; the number we
+  // actually get is the lane count the schedule is built for.
+  const uint32_t WantLanes =
+      std::max<uint32_t>(1, OMPX_TaskGraphLanes ? OMPX_TaskGraphLanes.get()
+                                                : OMPX_NumQueues.get());
+  if (auto Err =
+          AMDGPUStreamManager.getDistinctQueueResources(WantLanes, TG.Lanes))
+    return bail(std::move(Err));
+  if (TG.Lanes.empty())
+    return decline("no stream lanes available");
+
+  // 2. Lower the region tree onto those lanes.  Each leaf is built into an
+  // item the moment the lowering has placed it, which it does in an order
+  // where everything a leaf waits for is placed first.
+  struct SinkTy final : llvm::omp::target::plugin::TaskGraphLaneSinkTy {
+    SinkTy(AMDGPUDeviceTy &Device, AmdTaskGraphTy &TG)
+        : Device(Device), TG(TG) {}
+
+    Error place(uint32_t Item, const TaskGraphNode &Leaf, uint32_t Lane,
+                ArrayRef<uint32_t> Waits) override {
+      return Device.placeTaskGraphItem(TG, Item, Leaf, Lane, Waits);
+    }
+
+    AMDGPUDeviceTy &Device;
+    AmdTaskGraphTy &TG;
+  } Sink(*this, TG);
+  if (auto Err = llvm::omp::target::plugin::lowerTaskGraphOntoLanes(
+          *Graph, TG.Lanes.size(), Sink))
+    return bail(std::move(Err));
+
+  // 3. Note the host endpoint of every range a copy touches, which each replay
+  // pins so that each copy is a single SDMA transfer against the host range
+  // with no staging buffer.
+  const TaskGraphDataPlanTy &Plan = Graph->Plan;
+  if (auto Err = prepareTaskGraphPins(Plan, TG))
+    return bail(std::move(Err));
+  TG.PrivateInitPending.assign(Plan.getNumArgs(), false);
+
+  // 4. Write the kernarg images against the plan's current device addresses.
+  for (AmdGraphKernArgsTy &Pending : TG.KernArgs)
+    if (auto Err = materializeKernArgs(Plan, TG, Pending))
+      return bail(std::move(Err));
+
+  ODBG(OLDT_Module) << "amdgpu taskgraph " << Graph << ": " << TG.Items.size()
+                    << " items on " << TG.Lanes.size()
+                    << " lanes (one AQL queue each), "
+                    << llvm::sum_of(
+                           llvm::map_range(TG.Items,
+                                           [](const AmdGraphItemTy &Item) {
+                                             return Item.Waits.size();
+                                           }))
+                    << " waits, " << Plan.ranges().size() << " mapped ranges";
+
+  return Owned.release();
+}
+
+Error AMDGPUDeviceTy::syncTaskGraphLanes(AmdTaskGraphTy &TG) {
+  Error Err = Plugin::success();
+  for (AMDGPUStreamTy *Lane : TG.Lanes)
+    Err = joinErrors(std::move(Err), Lane->synchronize());
+  return Err;
+}
+
+Error AMDGPUDeviceTy::issueTaskGraphItem(AmdTaskGraphTy &TG, uint32_t I,
+                                         uint64_t StackSize) {
+  const TaskGraphDataPlanTy &Plan = TG.Graph->Plan;
+  AMDGPUMemoryManagerTy &ArgsMemoryManager = HostDevice.getArgsMemoryManager();
+  AmdGraphItemTy &Item = TG.Items[I];
+
+  AMDGPUStreamTy *Lane = TG.Lanes[Item.Lane];
+
+  // Gate on the other lanes this item depends on.  One barrier covers them
+  // all; ordering against earlier work on this lane is implicit.  Items are
+  // issued in placement order, so each event named here has already been
+  // recorded by this replay.
+  SmallVector<AMDGPUEventTy *, 4> Events;
+  for (uint32_t Wait : Item.Waits)
+    Events.push_back(TG.Items[Wait].Completion);
+  if (!Events.empty())
+    if (auto Err = Lane->waitEvents(Events))
+      return Err;
+
+  // The pinned alias of a transfer's host end.  Each alias covers its buffer
+  // from the start, so it takes the same offset into it as the plan's address.
+  const TaskGraphNode &Leaf = *Item.Node;
+  auto pinnedHostFor = [&](const TaskGraphOpTy &PlanOp,
+                           const TaskGraphTransferTy &T) -> char * {
+    const char *Host = static_cast<const char *>(T.ToDevice ? T.Src : T.Dst);
+    auto alias = [&](const AmdGraphPinTy &Pin, const char *Base) {
+      return static_cast<char *>(Pin.PinnedHostPtr) + (Host - Base);
+    };
+    switch (PlanOp.Kind) {
+    case TaskGraphOpTy::KindTy::Attach:
+      return alias(TG.StagingPin, Plan.attachStaging().data());
+    case TaskGraphOpTy::KindTy::PrivateInit:
+      return alias(TG.PrivatePin, Plan.privateStaging().data());
+    default:
+      return alias(TG.Pins[T.HostRange->getId()], T.HostRange->begin());
+    }
+  };
+
+  for (AmdGraphOpTy &Op : Item.Ops) {
+    if (Op.kind() == TaskGraphOpTy::KindTy::Launch) {
+      // Per-replay kernarg buffer, released by the stream once the dispatch
+      // completes (schedReleaseBuffer in pushKernelLaunch).
+      void *Args = nullptr;
+      if (auto Err = ArgsMemoryManager.allocate(Op.KernArgs.size(), &Args))
+        return Err;
+      std::memcpy(Args, Op.KernArgs.data(), Op.KernArgs.size());
+      // HSA's group segment size covers both static and dynamic memory.
+      if (auto Err = Lane->pushKernelLaunch(
+              *Op.KernelObj, Args, Op.Launch.NumThreads, Op.Launch.NumBlocks,
+              Op.KernelObj->getStaticBlockMemSize() + Op.Launch.DynBlockMemSize,
+              StackSize, ArgsMemoryManager))
+        return Err;
+      continue;
+    }
+
+    // A transfer this replay does not perform: a range that was already
+    // mapped when the replay began has its implicit transfers performed by
+    // whoever brought it into the device data environment, and an attachment
+    // with either end unmapped or host-resident has no device copy of the
+    // pointer to correct.
+    TaskGraphTransferTy T = Plan.transfer(Leaf, *Op.PlanOp);
+    if (!T.Enabled)
+      continue;
+    // Nothing on the device writes the private block, so a private whose
+    // staged bytes have not changed is already in place.
+    if (Op.kind() == TaskGraphOpTy::KindTy::PrivateInit) {
+      const uint32_t Index = Plan.argIndex(Leaf.argPlan()[Op.PlanOp->Arg]);
+      if (!TG.PrivateInitPending[Index])
+        continue;
+      TG.PrivateInitPending[Index] = false;
+    }
+    char *Host = pinnedHostFor(*Op.PlanOp, T);
+    if (auto Err = Lane->pushPinnedMemoryCopyAsync(
+            T.ToDevice ? T.Dst : Host, T.ToDevice ? Host : T.Src, T.Size))
+      return Err;
+  }
+
+  if (Item.Completion)
+    if (auto Err = Item.Completion->record(*Lane))
+      return Err;
+  return Plugin::success();
+}
+
+Error AMDGPUDeviceTy::replayTaskGraph(const TaskGraphTy *Graph) {
+  AmdTaskGraphTy &TG = getTaskGraph(Graph);
+
+  // Private segment size for kernels with a dynamically-sized stack (mirrors
+  // launchImpl; pushKernelLaunch picks this or the kernel's static private size
+  // depending on usesDynamicStack()).
+  uint64_t StackSize = 0;
+  if (auto Err = getDeviceStackSize(StackSize))
+    return Err;
+
+  // Everything is issued without waiting on the device, so a lane can enqueue
+  // more packets than its AQL ring holds, at which point acquirePacket
+  // throttles the host until the command processor drains older ones.  That is
+  // back-pressure, not deadlock, and only because of the two properties below:
+  // a lane owns its ring (getDistinctQueueResources), and items are issued in
+  // placement order, so every item an item waits for is issued before it.
+  // Every dependency of a packet is therefore already enqueued when the barrier
+  // naming it is written, and the earliest incomplete packet on any lane always
+  // has all of its dependencies ahead of it -- the queues always drain.  Two
+  // lanes sharing one ring is what would break this: a barrier could then sit
+  // in front of the very packet that satisfies it.
+  //
+  // Copies need the same argument made about a ring no lane can own.  Every
+  // copy on the device goes through one in-order blit queue shared with the
+  // rest of the process, and a copy waiting on a dependency signal stalls its
+  // head, so a later copy cannot overtake it however unrelated it is.  Issue
+  // order saves this too: a gated copy only ever names work already enqueued,
+  // so it clears on its own, and whatever queues behind it waits only for that.
+  //
+  // The host endpoints were locked for this replay by pinTaskGraph, and the
+  // kernarg images are stable unless the mapping state moved under the graph --
+  // in which case libomptarget has already refreshed the plan and had us adopt
+  // it through reparametrizeTaskGraph.
+  Error Err = Plugin::success();
+  for (uint32_t I = 0; I < TG.Items.size() && !Err; ++I)
+    if ((Err = issueTaskGraphItem(TG, I, StackSize)))
+      break;
+
+  // Drained even after a failure, so that nothing issued is still running when
+  // libomptarget releases the graph's mappings.
+  return joinErrors(std::move(Err), syncTaskGraphLanes(TG));
+}
+
+Error AMDGPUDeviceTy::reparametrizeTaskGraph(
+    const TaskGraphTy *Graph, ArrayRef<TaskGraphArgUpdateTy> Updates,
+    bool Resync) {
+  AmdTaskGraphTy &TG = getTaskGraph(Graph);
+  const TaskGraphDataPlanTy &Plan = Graph->Plan;
+
+  // A copy-like operation reads its addresses, enablement and staged bytes out
+  // of the plan as it is issued, and its host endpoint was locked where it now
+  // is by pinTaskGraph, so it needs nothing done here.
+  SmallVector<uint8_t, 16> Changes(
+      Plan.getNumArgs(), Resync ? TaskGraphArgUpdateTy::AllChanged : 0);
+  for (const TaskGraphArgUpdateTy &Update : Updates)
+    Changes[Update.Arg] |= Update.Changes;
+
+  // Except that a private whose bytes have not changed need not be copied in
+  // again.
+  TG.PrivateInitPending.resize(Plan.getNumArgs());
+  for (uint32_t Index = 0; Index < Plan.getNumArgs(); ++Index)
+    if (isa<TaskGraphFirstPrivateArgTy>(Plan.getArg(Index).get()) &&
+        (Changes[Index] & TaskGraphArgUpdateTy::DataChanged))
+      TG.PrivateInitPending[Index] = true;
+
+  // A kernel's arguments, in contrast, are an image written once, so one has
+  // to be rewritten when a parameter's address or value changed.  The image is
+  // host memory copied into a fresh kernarg allocation at each launch, so
+  // rewriting it involves no device copy.
+  constexpr uint8_t Rewrite = TaskGraphArgUpdateTy::DeviceAddressChanged |
+                              TaskGraphArgUpdateTy::DataChanged;
+  for (AmdGraphKernArgsTy &Pending : TG.KernArgs)
+    if (llvm::any_of(
+            Pending.Node->kernelParams(), [&](const TaskGraphKernelParamTy &P) {
+              return P.Kind !=
+                         TaskGraphKernelParamTy::KindTy::LaunchEnvironment &&
+                     (Changes[Plan.argIndex(Pending.Node->argPlan()[P.Arg])] &
+                      Rewrite);
+            }))
+      if (auto Err = materializeKernArgs(Plan, TG, Pending))
+        return Err;
+  return Plugin::success();
+}
+
+Error AMDGPUDeviceTy::pinTaskGraph(const TaskGraphTy *Graph) {
+  AmdTaskGraphTy &TG = getTaskGraph(Graph);
+  // Every range, every replay, wherever relocation has put it: nothing yet
+  // says which ranges are sure to outlive the replay.
+  if (auto Err = pinTaskGraphRanges(Graph->Plan, TG))
+    return joinErrors(std::move(Err), unpinTaskGraphRanges(TG));
+  return Plugin::success();
+}
+
+Error AMDGPUDeviceTy::unpinTaskGraph(const TaskGraphTy *Graph) {
+  AmdTaskGraphTy &TG = getTaskGraph(Graph);
+  return unpinTaskGraphRanges(TG);
+}
+
+Error AMDGPUDeviceTy::destroyTaskGraph(const TaskGraphTy *Graph) {
+  std::unique_ptr<AmdTaskGraphTy> TG(&getTaskGraph(Graph));
+  return releaseTaskGraph(*TG);
+}
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
   hsa_code_object_reader_t Reader;
@@ -4535,6 +5249,68 @@ AMDGPUPluginContextTy::getAllocInfo(const void *Ptr) {
                            HsaInfo.sizeInBytes};
 }
 
+Error AMDGPUKernelTy::writeArgs(void *Buf, uint32_t NumArgs, void *const *Args,
+                                const uint32_t NumThreads[3],
+                                const uint32_t NumBlocks[3],
+                                uint32_t DynBlockMemSize) const {
+  // Copy explicit arguments.
+  size_t ExplicitEnd = 0;
+  if (NumArgs) {
+    const auto &ArgMDs = KernelInfo.ArgMDs;
+    if (NumArgs > ArgMDs.size())
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "number of arguments (%u) exceeds the number of arguments "
+          "expected by the kernel (%zu)",
+          NumArgs, ArgMDs.size());
+
+    for (size_t I = 0; I < NumArgs; I++) {
+      auto [Offset, Size] = ArgMDs[I];
+      std::memcpy(utils::advancePtr(Buf, Offset), Args[I], Size);
+    }
+
+    auto [Offset, Size] = ArgMDs[NumArgs - 1];
+    ExplicitEnd = Offset + Size;
+  }
+
+  uint64_t ImplArgsOffset =
+      llvm::alignTo(ExplicitEnd, alignof(hsa_utils::AMDGPUImplicitArgsTy));
+  if (ArgsSize <= ImplArgsOffset)
+    return Plugin::success();
+
+  hsa_utils::AMDGPUImplicitArgsTy *ImplArgs =
+      reinterpret_cast<hsa_utils::AMDGPUImplicitArgsTy *>(
+          utils::advancePtr(Buf, ImplArgsOffset));
+
+  // Set the COV5+ implicit arguments to the appropriate values if present.
+  uint64_t ImplArgsSize = ArgsSize - ImplArgsOffset;
+  std::memset(ImplArgs, 0, ImplArgsSize);
+
+  using ImplArgsTy = hsa_utils::AMDGPUImplicitArgsTy;
+  hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::BlockCountX, ImplArgsSize,
+                         NumBlocks[0]);
+  hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::BlockCountY, ImplArgsSize,
+                         NumBlocks[1]);
+  hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::BlockCountZ, ImplArgsSize,
+                         NumBlocks[2]);
+
+  hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::GroupSizeX, ImplArgsSize,
+                         NumThreads[0]);
+  hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::GroupSizeY, ImplArgsSize,
+                         NumThreads[1]);
+  hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::GroupSizeZ, ImplArgsSize,
+                         NumThreads[2]);
+
+  hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::GridDims, ImplArgsSize,
+                         NumBlocks[2] * NumThreads[2] > 1
+                             ? 3
+                             : 1 + (NumBlocks[1] * NumThreads[1] != 1));
+
+  hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::DynamicLdsSize, ImplArgsSize,
+                         DynBlockMemSize);
+  return Plugin::success();
+}
+
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  uint32_t NumThreads[3], uint32_t NumBlocks[3],
                                  uint32_t DynBlockMemSize,
@@ -4557,66 +5333,14 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = GenericDevice.getDeviceStackSize(StackSize))
     return Err;
 
-  // Copy explicit arguments.
-  size_t ExplicitEnd = 0;
-  if (LaunchArgs.Args) {
-    const auto &ArgMDs = KernelInfo.ArgMDs;
-    uint32_t NumArgs = LaunchArgs.NumArgs;
-
-    if (NumArgs > ArgMDs.size())
-      return Plugin::error(
-          ErrorCode::INVALID_ARGUMENT,
-          "number of arguments (%u) exceeds the number of arguments "
-          "expected by the kernel (%zu)",
-          NumArgs, ArgMDs.size());
-
-    for (size_t I = 0; I < NumArgs; I++) {
-      auto [Offset, Size] = ArgMDs[I];
-      std::memcpy(utils::advancePtr(AllArgs, Offset), LaunchArgs.Args[I], Size);
-    }
-
-    auto [Offset, Size] = ArgMDs[NumArgs - 1];
-    ExplicitEnd = Offset + Size;
-  }
+  if (auto Err =
+          writeArgs(AllArgs, LaunchArgs.Args ? LaunchArgs.NumArgs : 0,
+                    LaunchArgs.Args, NumThreads, NumBlocks, DynBlockMemSize))
+    return Err;
 
   AMDGPUStreamTy *Stream = nullptr;
   if (auto Err = AMDGPUDevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
-
-  uint64_t ImplArgsOffset =
-      llvm::alignTo(ExplicitEnd, alignof(hsa_utils::AMDGPUImplicitArgsTy));
-  if (ArgsSize > ImplArgsOffset) {
-    hsa_utils::AMDGPUImplicitArgsTy *ImplArgs =
-        reinterpret_cast<hsa_utils::AMDGPUImplicitArgsTy *>(
-            utils::advancePtr(AllArgs, ImplArgsOffset));
-
-    // Set the COV5+ implicit arguments to the appropriate values if present.
-    uint64_t ImplArgsSize = ArgsSize - ImplArgsOffset;
-    std::memset(ImplArgs, 0, ImplArgsSize);
-
-    using ImplArgsTy = hsa_utils::AMDGPUImplicitArgsTy;
-    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::BlockCountX, ImplArgsSize,
-                           NumBlocks[0]);
-    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::BlockCountY, ImplArgsSize,
-                           NumBlocks[1]);
-    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::BlockCountZ, ImplArgsSize,
-                           NumBlocks[2]);
-
-    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::GroupSizeX, ImplArgsSize,
-                           NumThreads[0]);
-    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::GroupSizeY, ImplArgsSize,
-                           NumThreads[1]);
-    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::GroupSizeZ, ImplArgsSize,
-                           NumThreads[2]);
-
-    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::GridDims, ImplArgsSize,
-                           NumBlocks[2] * NumThreads[2] > 1
-                               ? 3
-                               : 1 + (NumBlocks[1] * NumThreads[1] != 1));
-
-    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::DynamicLdsSize, ImplArgsSize,
-                           DynBlockMemSize);
-  }
 
   // HSA requires the group segment size to include both static and dynamic.
   uint32_t TotalBlockMemSize = getStaticBlockMemSize() + DynBlockMemSize;

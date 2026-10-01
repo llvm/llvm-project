@@ -5,9 +5,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // A `target enter data` and a `target` region reading the same data, with
 // nothing ordering the two.  Outside a graph, whichever maps first copies the

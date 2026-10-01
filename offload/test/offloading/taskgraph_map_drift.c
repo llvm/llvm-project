@@ -12,9 +12,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // A graph is recorded once and replayed many times, but the mapping state it
 // was recorded against belongs to the program, not to the graph, and can differ

@@ -5,9 +5,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // A lambda capturing by reference, called in a target region, is mapped as the
 // lambda object plus one fix-up entry per capture: the runtime writes the

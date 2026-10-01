@@ -11,9 +11,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // Host tasks that call into the offload runtime themselves, ordered against
 // target constructs in the same graph.  Host tasks never enter libomptarget:

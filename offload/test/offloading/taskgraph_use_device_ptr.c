@@ -10,9 +10,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // The body of a recorded 'target data' is a task, which converts the
 // use_device_ptr list item itself whenever it starts.  So each replay sees the

@@ -8,9 +8,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // A graph copies a firstprivate aggregate into its private storage only when
 // the value it is initialised from has changed since the device last saw it,

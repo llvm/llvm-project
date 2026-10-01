@@ -6,9 +6,6 @@
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
 // REQUIRES: libomptarget-debug
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // Refreshing a by-value firstprivate costs a kernel-argument rewrite only when
 // the value actually changed: a replay passing the value the previous one did

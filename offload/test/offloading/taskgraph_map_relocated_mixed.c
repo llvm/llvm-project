@@ -30,9 +30,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // A graph's ranges follow its captures when a replay relocates them, and they
 // need not all move by one distance: a pointer parameter's section moves to

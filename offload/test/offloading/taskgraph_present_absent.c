@@ -9,9 +9,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // `present` says the region is expected to be mapped already and this map must
 // not bring it in.  A graph cannot settle that at record time: whether a region

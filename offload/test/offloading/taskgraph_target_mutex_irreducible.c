@@ -9,9 +9,6 @@
 
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // The other half of taskgraph_target_mutex_exclusive.c: a `mutexinoutset` on a
 // target that the region builder cannot express structurally, so the mutex sets

@@ -8,9 +8,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // A firstprivate scalar is passed to the kernel by value.  When its variable is
 // in the taskgraph construct's enclosing data environment, each replay takes

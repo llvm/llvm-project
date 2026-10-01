@@ -10,9 +10,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // A recorded target region keeps the map arrays it was launched with, so the
 // host addresses in them are the ones the mapped variables had on the

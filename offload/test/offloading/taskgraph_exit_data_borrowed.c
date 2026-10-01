@@ -9,9 +9,6 @@
 // REQUIRES: gpu
 // REQUIRES: amdgpu
 // REQUIRES: omp_taskgraph_experimental
-// Fails until a plugin claims taskgraphs, which the AMDGPU backend is the
-// first to do.
-// XFAIL: *
 
 // A `target exit data` in a graph that drops a reference the graph did not
 // take.  Outside a graph the decrement that removes a mapping is the one that
