@@ -79,7 +79,15 @@ struct GVNOptions {
   std::optional<bool> AllowMemDep;
   std::optional<bool> AllowMemorySSA;
 
+  /// Preserve opportunities for vectorization later in the compilation.
+  bool PreserveVectorization = false;
+
   GVNOptions() = default;
+
+  GVNOptions &setPreserveVectorization(bool Enable) {
+    PreserveVectorization = Enable;
+    return *this;
+  }
 
   /// Enables or disables PRE of scalars in GVN.
   GVNOptions &setScalarPRE(bool ScalarPRE) {

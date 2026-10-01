@@ -786,7 +786,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   if (RunNewGVN)
     FPM.addPass(NewGVNPass());
   else
-    FPM.addPass(GVNPass());
+    FPM.addPass(
+        GVNPass(GVNOptions().setPreserveVectorization(PTO.LoopVectorization)));
 
   // Sparse conditional constant propagation.
   // FIXME: It isn't clear why we do this *after* loop passes rather than
@@ -2302,7 +2303,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   if (RunNewGVN)
     MainFPM.addPass(NewGVNPass());
   else
-    MainFPM.addPass(GVNPass());
+    MainFPM.addPass(
+        GVNPass(GVNOptions().setPreserveVectorization(PTO.LoopVectorization)));
 
   // Remove dead memcpy()'s.
   MainFPM.addPass(MemCpyOptPass());
