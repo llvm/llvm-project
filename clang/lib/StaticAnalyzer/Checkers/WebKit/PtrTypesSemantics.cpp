@@ -453,17 +453,11 @@ static WebKitAnnotation annotationType(StringRef Annotation) {
   return WebKitAnnotation::None;
 }
 
-static WebKitAnnotation annotationForFunction(const FunctionDecl *FD) {
-  // FIXME: Add support for annotate on non-C++ functions.
-  if (isa<CXXMethodDecl>(FD)) {
-    for (auto *Attr : FD->attrs()) {
-      auto *AnnoAttr = dyn_cast_or_null<AnnotateAttr>(Attr);
-      if (!AnnoAttr)
-        continue;
-      auto Annotation = annotationType(AnnoAttr->getAnnotation());
-      if (Annotation != WebKitAnnotation::None)
-        return Annotation;
-    }
+static bool hasAnnotationForFunction(const FunctionDecl *FD,
+                                     WebKitAnnotation TargetAnnotation) {
+  for (auto *Attr : FD->specific_attrs<AnnotateAttr>()) {
+    if (annotationType(Attr->getAnnotation()) == TargetAnnotation)
+      return true;
   }
   auto RetType = FD->getReturnType();
   auto *Type = RetType.getTypePtrOrNull();
@@ -471,11 +465,11 @@ static WebKitAnnotation annotationForFunction(const FunctionDecl *FD) {
     Type = MacroQualified->desugar().getTypePtrOrNull();
   auto *Attr = dyn_cast_or_null<AttributedType>(Type);
   if (!Attr)
-    return WebKitAnnotation::None;
+    return false;
   auto *AnnotateType = dyn_cast_or_null<AnnotateTypeAttr>(Attr->getAttr());
   if (!AnnotateType)
-    return WebKitAnnotation::None;
-  return annotationType(AnnotateType->getAnnotation());
+    return false;
+  return annotationType(AnnotateType->getAnnotation()) == TargetAnnotation;
 }
 
 bool isPtrConversion(const FunctionDecl *F) {
@@ -495,14 +489,14 @@ bool isPtrConversion(const FunctionDecl *F) {
       FunctionName == "checked_objc_cast")
     return true;
 
-  if (annotationForFunction(F) == WebKitAnnotation::PointerConversion)
+  if (hasAnnotationForFunction(F, WebKitAnnotation::PointerConversion))
     return true;
 
   return false;
 }
 
 static bool isNoDeleteFunctionDecl(const FunctionDecl *F) {
-  return annotationForFunction(F) == WebKitAnnotation::NoDelete;
+  return hasAnnotationForFunction(F, WebKitAnnotation::NoDelete);
 }
 
 bool isNoDeleteFunction(const FunctionDecl *F) {

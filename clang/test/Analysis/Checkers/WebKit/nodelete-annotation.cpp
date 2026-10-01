@@ -806,3 +806,11 @@ struct CallCopyConstructor {
 };
 
 } // namespace nodelete_ctor_dtor
+
+namespace nodelete_ptrconversion {
+
+  [[clang::annotate("webkit.ptrconversion")]] [[clang::annotate("webkit.nodelete")]] void foo(void* ptr) {
+    someFunction(); // expected-warning{{A function 'foo' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  }
+
+} // namespace nodelete_ptrconversion
