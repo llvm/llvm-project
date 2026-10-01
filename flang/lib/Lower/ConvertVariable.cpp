@@ -754,6 +754,10 @@ bool needCUDAAlloc(const Fortran::semantics::Symbol &sym) {
          *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Shared ||
          *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Pinned))
       return true;
+    // Derived-type function result storage is replaced by the caller-provided
+    // buffer in the AbstractResult pass, so it must not be CUDA allocated.
+    if (Fortran::semantics::IsFunctionResult(sym))
+      return false;
     const Fortran::semantics::DeclTypeSpec *type{details->type()};
     const Fortran::semantics::DerivedTypeSpec *derived{type ? type->AsDerived()
                                                             : nullptr};

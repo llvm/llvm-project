@@ -10603,6 +10603,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Determine whether we need any streaming mode changes.
   SMECallAttrs CallAttrs =
       getSMECallAttrs(MF.getFunction(), getRuntimeLibcallsInfo(), CLI);
+  if (CallAttrs.requiresNonLazySaveZA())
+    reportFatalUsageError(
+        "Calls that require saving ZA non-lazily is not yet implemented");
 
   std::optional<unsigned> ZAMarkerNode = getZAMarkerForCall(CallAttrs);
 
@@ -36216,6 +36219,10 @@ bool AArch64TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case AArch64ISD::VASHR:
   case AArch64ISD::VLSHR:
   case AArch64ISD::VSHL:
+  case AArch64ISD::CSEL:
+  case AArch64ISD::CSNEG:
+  case AArch64ISD::CSINC:
+  case AArch64ISD::CSINV:
     return false;
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
