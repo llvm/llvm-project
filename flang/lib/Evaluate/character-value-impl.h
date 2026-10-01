@@ -197,28 +197,6 @@ public:
   template <typename CharT, typename = std::void_t<std::basic_string<CharT>>>
   const std::basic_string<CharT> &GetBasicString() const;
 
-#if 0
-			/// Return the internal representation of the requested type (std::basic_string<>). The current stored representation must match that type or we crash.
-	  template <typename CharT, typename = std::void_t<std::basic_string<CharT>>>
-const   std::basic_string<CharT> & GetBasicString() const {
-	using StringT = std::basic_string<CharT>;
-
-			// Null can represent any type 
-			    if (IsNull()) {
-						// Immutable null constant since we need to return a reference
-						static const StringT null; 
-      return null;
-    }
-
-					// std::get throws std::bad_variant_access, but we do not want to rely soley on exceptions here.
-					if (!std::holds_alternative<StringT>(storage_)) {
-						  DIE("value does not store the requested kind");
-						}
-
-return  std::get<StringT>(storage_);
-			}
-#endif
-
   template <typename F>
   auto WithCharProto(F &&f) const
       -> decltype(std::declval<F>()(std::declval<char>())) {

@@ -15,6 +15,7 @@
 #include "NewPMDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -216,6 +217,11 @@ static cl::opt<std::string> RemarksFormat(
 static cl::list<std::string> PassPlugins("load-pass-plugin",
                                          cl::desc("Load plugin library"));
 
+static cl::list<std::string>
+    PluginArgs("plugin-arg",
+               cl::desc("Pass <arg> to the pass plugin named <plugin>"),
+               cl::value_desc("plugin>,<arg"));
+
 static cl::opt<bool> EnableNewPassManager(
     "enable-new-pm", cl::desc("Enable the new pass manager"), cl::init(false));
 
@@ -394,20 +400,25 @@ extern "C" int llcMain(int argc, char **argv) {
   // Initialize debugging passes.
   initializeScavengerTestPass(*Registry);
 
-  SmallVector<PassPlugin, 1> PluginList;
-  PassPlugins.setCallback([&](const std::string &PluginPath) {
-    auto Plugin = PassPlugin::Load(PluginPath);
-    if (!Plugin)
-      reportFatalUsageError(Plugin.takeError());
-    PluginList.emplace_back(Plugin.get());
-  });
-
   // Register the Target and CPU printer for --version.
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
+
+  SmallVector<PassPlugin, 1> PluginList;
+  for (const std::string &Path : PassPlugins) {
+    auto Plugin = PassPlugin::load(Path);
+    if (!Plugin)
+      reportFatalUsageError(Plugin.takeError());
+    PluginList.emplace_back(Plugin.get());
+  }
+  if (Error E = passPluginArguments(
+          map_to_vector(PluginList,
+                        [](const PassPlugin &P) { return P.getInfo(); }),
+          PluginArgs))
+    reportFatalUsageError(std::move(E));
 
   if (!PassPipeline.empty() && !getRunPassNames().empty()) {
     errs() << "The `llc -run-pass=...` syntax for the new pass manager is "
@@ -649,7 +660,7 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     // Set PGO options based on command line flags
     setPGOOptions(*Target);
 
-    return Target->createDataLayout().getStringRepresentation();
+    return TheTriple.computeDataLayout(Options.MCOptions.getABIName());
   };
   if (InputLanguage == "mir" ||
       (InputLanguage == "" && StringRef(InputFilename).ends_with(".mir"))) {

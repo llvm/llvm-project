@@ -45,11 +45,11 @@ real function test_stmt_1(x, a)
   func1(arg1) = a + foo(arg1)
   func2(arg2) = func1(arg2) + b
   ! CHECK-DAG: %[[adecl:.*]]:2 = hlfir.declare %arg1 {{.*}} {uniq_name = "_QFtest_stmt_1Ea"}
-  ! CHECK-DAG: %[[bmem:.*]] = fir.alloca f32 {{{.*}}uniq_name = "_QFtest_stmt_1Eb"}
+  ! CHECK-DAG: %[[bmem:.*]] = fir.alloca f32 <{{{.*}}uniq_name = "_QFtest_stmt_1Eb"}>
   ! CHECK-DAG: %[[bdecl:.*]]:2 = hlfir.declare %[[bmem]] {uniq_name = "_QFtest_stmt_1Eb"}
-  ! CHECK-DAG: %[[res1:.*]] = fir.alloca f32 {{{.*}}uniq_name = "_QFtest_stmt_1Eres1"}
+  ! CHECK-DAG: %[[res1:.*]] = fir.alloca f32 <{{{.*}}uniq_name = "_QFtest_stmt_1Eres1"}>
   ! CHECK-DAG: %[[res1decl:.*]]:2 = hlfir.declare %[[res1]] {uniq_name = "_QFtest_stmt_1Eres1"}
-  ! CHECK-DAG: %[[res2:.*]] = fir.alloca f32 {{{.*}}uniq_name = "_QFtest_stmt_1Eres2"}
+  ! CHECK-DAG: %[[res2:.*]] = fir.alloca f32 <{{{.*}}uniq_name = "_QFtest_stmt_1Eres2"}>
   ! CHECK-DAG: %[[res2decl:.*]]:2 = hlfir.declare %[[res2]] {uniq_name = "_QFtest_stmt_1Eres2"}
   ! CHECK-DAG: %[[xdecl:.*]]:2 = hlfir.declare %arg0 {{.*}} {uniq_name = "_QFtest_stmt_1Ex"}
 

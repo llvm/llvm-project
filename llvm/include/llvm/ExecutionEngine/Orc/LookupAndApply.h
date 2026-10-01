@@ -46,10 +46,14 @@ using LookupApplyFn = unique_function<void(const SymbolMap &M)>;
 /// stand for a whole service's worth of bindings. The applicator it returns
 /// runs only if the lookup succeeds.
 ///
+/// The Mangler is built once by lookupAndApply (from the search order's target)
+/// and shared across all prepare functions, so a name-mangling prepare function
+/// need not construct its own.
+///
 /// The call operator is const so that these can be passed as a braced list (see
 /// lookupAndApply): they hold no mutable state.
 using LookupPrepareFn = unique_function<LookupApplyFn(
-    SymbolLookupSet &LS, ExecutionSession &ES) const>;
+    SymbolLookupSet &LS, ExecutionSession &ES, const Mangler &Mangle) const>;
 
 /// Resolve the symbols contributed by every prepare function with a single
 /// lookup, then let each of their applicators act on the result.
@@ -103,11 +107,10 @@ LLVM_ABI Error lookupAndApply(JITDylib &JD,
 inline LookupPrepareFn
 recordAddr(SymbolNameSpec Name, ExecutorAddr *A,
            SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
-  return [Name, A, LF](SymbolLookupSet &LS,
-                       ExecutionSession &ES) -> LookupApplyFn {
-    auto N =
-        Mangler(ES.getTargetTriple())
-            .withMangledNameDo([&](StringRef M) { return ES.intern(M); }, Name);
+  return [Name, A, LF](SymbolLookupSet &LS, ExecutionSession &ES,
+                       const Mangler &Mangle) -> LookupApplyFn {
+    auto N = Mangle.withMangledNameDo([&](StringRef M) { return ES.intern(M); },
+                                      Name);
     LS.add(N, LF);
     return [A, N = std::move(N)](const SymbolMap &M) {
       *A = M.lookup(N).getAddress();
@@ -121,8 +124,9 @@ recordAddr(SymbolNameSpec Name, ExecutorAddr *A,
 inline LookupPrepareFn
 recordAddr(SymbolStringPtr Name, ExecutorAddr *A,
            SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
-  return [Name = std::move(Name), A,
-          LF](SymbolLookupSet &LS, ExecutionSession &ES) -> LookupApplyFn {
+  return [Name = std::move(Name), A, LF](SymbolLookupSet &LS,
+                                         ExecutionSession &ES,
+                                         const Mangler &) -> LookupApplyFn {
     LS.add(Name, LF);
     return [A, Name](const SymbolMap &M) { *A = M.lookup(Name).getAddress(); };
   };

@@ -37,10 +37,10 @@ for.cond:                                         ; preds = %for.inc, %entry
 for.body:                                         ; preds = %for.cond
 ; CHECK: for.body:
 ; NOTENTRY: %pgocount1 = load i64, ptr @"__profc_?run@@YAXH@Z"
-; TENTRY: %pgocount1 = load i64, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 1)
+; TENTRY: %pgocount1 = load i64, ptr getelementptr inbounds (i8, ptr @"__profc_?run@@YAXH@Z", i64 8)
 ; CHECK: %1 = add i64 %pgocount1, 1
 ; NOTENTRY: store i64 %1, ptr @"__profc_?run@@YAXH@Z"
-; ENTRY: store i64 %1, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 1)
+; ENTRY: store i64 %1, ptr getelementptr inbounds (i8, ptr @"__profc_?run@@YAXH@Z", i64 8)
   %idxprom = zext i32 %i.0 to i64
   %arrayidx = getelementptr inbounds [200 x i8], ptr @"?buffer@@3PADA", i64 0, i64 %idxprom
   %0 = load i8, ptr %arrayidx, align 1
@@ -53,11 +53,11 @@ if.end:                                           ; preds = %for.body
 
 for.inc:                                          ; preds = %if.end
 ; CHECK: for.inc:
-; NOTENTRY: %pgocount2 = load i64, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 1)
-; ENTRY: %pgocount2 = load i64, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 2)
+; NOTENTRY: %pgocount2 = load i64, ptr getelementptr inbounds (i8, ptr @"__profc_?run@@YAXH@Z", i64 8)
+; ENTRY: %pgocount2 = load i64, ptr getelementptr inbounds (i8, ptr @"__profc_?run@@YAXH@Z", i64 16)
 ; CHECK: %3 = add i64 %pgocount2, 1
-; NOTENTRY: store i64 %3, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 1)
-; ENTRY: store i64 %3, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 2)
+; NOTENTRY: store i64 %3, ptr getelementptr inbounds (i8, ptr @"__profc_?run@@YAXH@Z", i64 8)
+; ENTRY: store i64 %3, ptr getelementptr inbounds (i8, ptr @"__profc_?run@@YAXH@Z", i64 16)
   %inc = add nuw nsw i32 %i.0, 1
   br label %for.cond
 

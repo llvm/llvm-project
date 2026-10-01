@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Core
+  FrontendOffloading
   ipo
   Linker
   Support
@@ -22,6 +23,7 @@ add_clang_library(clangCIRFrontendAction
   clangCIRLoweringCommon
   clangCIRLoweringDirectToLLVM
   clangCodeGen
+  clangCodeGenUtils
   MLIRCIR
   MLIRIR
   )

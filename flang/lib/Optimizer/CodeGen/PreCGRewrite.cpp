@@ -20,6 +20,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/Iterators.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
@@ -434,12 +435,127 @@ static void simpleDCE(mlir::RewriterBase &rewriter, mlir::Operation *op) {
       });
 }
 
+/// A fir.shape, fir.shape_shift, fir.shift or fir.slice only describes an
+/// array at compile time. The rewrites above read it through its defining op
+/// and fold it into the code-gen form, so such a value never reaches codegen
+/// and none of these types has an LLVM lowering.
+static bool isCompileTimeOnly(mlir::Type type) {
+  return mlir::isa<fir::ShapeType, fir::ShapeShiftType, fir::ShiftType,
+                   fir::SliceType>(type);
+}
+
+/// Return the op \p value is built by, if this pass can rebuild it elsewhere
+/// from its operands. A fir.slice naming components is excluded: its fields
+/// are fir.field values, which are themselves compile-time only and so cannot
+/// be passed along a branch.
+static mlir::Operation *getRebuildableDefiningOp(mlir::Value value) {
+  mlir::Operation *def = value.getDefiningOp();
+  if (!def)
+    return nullptr;
+  if (auto slice = mlir::dyn_cast<fir::SliceOp>(def))
+    return slice.getFields().empty() ? def : nullptr;
+  if (mlir::isa<fir::ShapeOp, fir::ShapeShiftOp, fir::ShiftOp>(def))
+    return def;
+  return nullptr;
+}
+
+/// True if \p lhs and \p rhs can be rebuilt by one op taking one operand list.
+static bool haveSameShape(mlir::Operation *lhs, mlir::Operation *rhs) {
+  if (lhs->getName() != rhs->getName() ||
+      lhs->getNumOperands() != rhs->getNumOperands())
+    return false;
+  return llvm::equal(lhs->getOperandTypes(), rhs->getOperandTypes());
+}
+
+/// Rebuild the compile-time-only block argument \p argIndex of \p block from
+/// its operands, so the rewrites above find a defining op again.
+///
+/// Every branch into the block passes a value of one of those types. The
+/// operands behind it are integers, which can be block arguments, so they are
+/// appended to the block and forwarded along each branch instead, and the
+/// value is rebuilt from them at the top of the block.
+static void rebuildBlockArgument(mlir::Block *block, unsigned argIndex) {
+  mlir::BlockArgument arg = block->getArgument(argIndex);
+
+  // Collect one incoming edge per branch, keeping the operands each carries.
+  // A branch can name the block twice, so each edge is held separately.
+  struct Edge {
+    mlir::BranchOpInterface branch;
+    unsigned successorIndex;
+  };
+  llvm::SmallVector<Edge> edges;
+  mlir::Operation *model = nullptr;
+  for (auto it = block->pred_begin(), e = block->pred_end(); it != e; ++it) {
+    auto branch =
+        mlir::dyn_cast<mlir::BranchOpInterface>((*it)->getTerminator());
+    if (!branch)
+      return;
+    unsigned successorIndex = it.getSuccessorIndex();
+    mlir::SuccessorOperands operands =
+        branch.getSuccessorOperands(successorIndex);
+    // An operand the branch itself produces has no value to read here.
+    if (operands.isOperandProduced(argIndex))
+      return;
+    mlir::Operation *def = getRebuildableDefiningOp(operands[argIndex]);
+    if (!def)
+      return;
+    if (!model)
+      model = def;
+    else if (!haveSameShape(model, def))
+      return;
+    edges.push_back({branch, successorIndex});
+  }
+  if (edges.empty())
+    return;
+
+  // Take the operands as block arguments and forward them along each branch.
+  unsigned firstNewArg = block->getNumArguments();
+  for (auto [type, value] :
+       llvm::zip_equal(model->getOperandTypes(), model->getOperands()))
+    block->addArgument(type, value.getLoc());
+  for (Edge &edge : edges) {
+    mlir::SuccessorOperands operands =
+        edge.branch.getSuccessorOperands(edge.successorIndex);
+    operands.append(
+        getRebuildableDefiningOp(operands[argIndex])->getOperands());
+  }
+
+  // Rebuild the value at the top of the block and drop the old argument.
+  mlir::OpBuilder builder(block, block->begin());
+  mlir::Operation *rebuilt =
+      builder.create(model->getLoc(), model->getName().getIdentifier(),
+                     block->getArguments().drop_front(firstNewArg),
+                     model->getResultTypes(), model->getAttrs());
+  arg.replaceAllUsesWith(rebuilt->getResult(0));
+  for (Edge &edge : edges)
+    edge.branch.getSuccessorOperands(edge.successorIndex).erase(argIndex);
+  block->eraseArgument(argIndex);
+}
+
+/// Rebuild every compile-time-only block argument in \p op.
+static void rebuildCompileTimeOnlyBlockArguments(mlir::Operation *op) {
+  llvm::SmallVector<mlir::Block *> blocks;
+  op->walk([&](mlir::Block *block) {
+    if (!block->isEntryBlock() &&
+        llvm::any_of(block->getArgumentTypes(), isCompileTimeOnly))
+      blocks.push_back(block);
+  });
+  for (mlir::Block *block : blocks)
+    // Rebuilding drops an argument, so work back to front to keep the
+    // indices of the arguments still to be looked at.
+    for (unsigned i = block->getNumArguments(); i > 0; --i)
+      if (isCompileTimeOnly(block->getArgument(i - 1).getType()))
+        rebuildBlockArgument(block, i - 1);
+}
+
 class CodeGenRewrite : public fir::impl::CodeGenRewriteBase<CodeGenRewrite> {
 public:
   using CodeGenRewriteBase<CodeGenRewrite>::CodeGenRewriteBase;
 
   void runOnOperation() override final {
     mlir::ModuleOp mod = getOperation();
+
+    rebuildCompileTimeOnlyBlockArguments(mod.getOperation());
 
     auto &context = getContext();
     mlir::ConversionTarget target(context);

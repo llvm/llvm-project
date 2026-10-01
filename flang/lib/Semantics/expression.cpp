@@ -3052,6 +3052,7 @@ static int CompareCudaMatchingDistance(
 // "ACC use_dev" column applies to actuals appearing in a surrounding
 // ACC HOST_DATA USE_DEVICE clause.
 static int GetMatchingDistance(const common::LanguageFeatureControl &features,
+    semantics::SemanticsContext &context,
     const characteristics::DummyArgument &dummy,
     const std::optional<ActualArgument> &actual) {
   bool isCudaManaged{features.IsEnabled(common::LanguageFeature::CudaManaged)};
@@ -3085,6 +3086,23 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
         }
         actualCanUseImplicitCudaMemoryMode =
             isCudaUnified || (isCudaManaged && actualIsAllocatableOrPointer);
+        // An object mapped by an enclosing structured OpenACC data construct
+        // has a device copy that a Device dummy can be associated with, but
+        // ordinary references to it still denote the host object.
+        if (!actualDataAttr && context.AnyOpenACCDataMapping()) {
+          if (std::optional<parser::CharBlock> source{
+                  actual->sourceLocation()}) {
+            if (const semantics::Scope *scope{
+                    context.FindScopeIfAny(*source)}) {
+              for (const Symbol &symbol : evaluate::GetSymbolVector(*expr)) {
+                if (semantics::IsOpenACCMapped(symbol, *scope)) {
+                  actualDataAttr = common::CUDADataAttr::UseDevice;
+                  break;
+                }
+              }
+            }
+          }
+        }
       } else if (const auto *actualLastSymbol{evaluate::GetLastSymbol(*expr)}) {
         // Propagate any explicit CUDA data attribute from the referenced
         // symbol (e.g. a device array operand inside RESHAPE()) so that
@@ -3196,7 +3214,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
 }
 
 static CudaMatchingDistance ComputeCudaMatchingDistance(
-    const common::LanguageFeatureControl &features,
+    semantics::SemanticsContext &context,
     const characteristics::Procedure &procedure,
     const ActualArguments &actuals) {
   const auto &dummies{procedure.dummyArguments};
@@ -3210,7 +3228,8 @@ static CudaMatchingDistance ComputeCudaMatchingDistance(
       // Omitted optional arguments do not affect CUDA matching distances.
       continue;
     }
-    int d{GetMatchingDistance(features, dummy, actual)};
+    int d{GetMatchingDistance(
+        context.languageFeatures(), context, dummy, actual)};
     if (d == cudaInfMatchingValue) {
       distance.isInfinite = true;
       return distance;
@@ -3339,8 +3358,8 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
                 context_, false /* no integer conversions */) &&
             CheckCompatibleArguments(
                 *procedure, localActuals, foldingContext_)) {
-          CudaMatchingDistance d{ComputeCudaMatchingDistance(
-              context_.languageFeatures(), *procedure, localActuals)};
+          CudaMatchingDistance d{
+              ComputeCudaMatchingDistance(context_, *procedure, localActuals)};
           if ((procedure->IsElemental() && elemental) ||
               (!procedure->IsElemental() && nonElemental)) {
             if (crtMatchingDistance) {

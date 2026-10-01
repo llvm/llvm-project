@@ -20,6 +20,7 @@ bazel_dep(name = "rules_shell", version = "0.8.0")
 # whatever version LLVM's own build needs; downstream consumers get whatever
 # resolves in their module graph.
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
+bazel_dep(name = "libxml2", version = "2.15.3")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "zlib-ng", version = "2.3.3", repo_name = "llvm_zlib")
 bazel_dep(name = "zstd", version = "1.5.7.bcr.1", repo_name = "llvm_zstd")
@@ -29,6 +30,7 @@ bazel_dep(name = "mpfr", version = "4.2.2.bcr.1")
 bazel_dep(name = "nanobind", version = "2.12.0.bcr.1")
 bazel_dep(name = "libpfm", version = "4.13.0", repo_name = "pfm")
 bazel_dep(name = "vulkan_headers", version = "1.4.349")
+bazel_dep(name = "xz", version = "5.4.5.bcr.9", repo_name = "llvm_xz")
 
 bazel_dep(name = "emsdk", version = "6.0.2", dev_dependency = True)
 bazel_dep(name = "llvm", version = "0.8.20", dev_dependency = True)

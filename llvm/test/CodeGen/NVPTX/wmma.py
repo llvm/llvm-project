@@ -35,6 +35,7 @@ class MMAType:
             "b8": "i32",
             "b8x16.b6x16_p32": "i32",
             "b8x16.b4x16_p64": "i32",
+            "s8.s4": "i32",
             "s8": "i32",
             "u8": "i32",
             "s4": "i32",
@@ -257,6 +258,9 @@ class MMAFrag:
             "m8n16:x1:b8x16.b4x16_p64": 1,
             "m8n16:x2:b8x16.b4x16_p64": 2,
             "m8n16:x4:b8x16.b4x16_p64": 4,
+            "m8n16:x1:s8.s4": 1,
+            "m8n16:x2:s8.s4": 2,
+            "m8n16:x4:s8.s4": 4,
             # stmatrix
             "m8n8:x1:b16": 1,
             "m8n8:x2:b16": 2,
@@ -421,7 +425,9 @@ def get_ldmatrix_ops():
             ["m16n16"], ["x1", "x2"], ["b8", "b8x16.b6x16_p32", "b8x16.b4x16_p64"]
         )
         + make_ldmatrix_ops(
-            ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64"]
+            ["m8n16"],
+            ["x1", "x2", "x4"],
+            ["b8x16.b6x16_p32", "b8x16.b4x16_p64", "s8.s4"],
         )
     )
 
@@ -641,7 +647,26 @@ def is_ldst_variant_supported(frag, layout):
     return True
 
 
+def is_ldmatrix_s8s4_supported():
+    if ptx_version < 94:
+        return False
+    # sm_90a
+    if sm_version == 90 and has_arch_accel_features():
+        return True
+    # sm_100f / sm_110f / sm_120f families
+    if sm_version in [100, 110, 120] and has_family_specific_features():
+        return True
+    return False
+
+
 def is_ldmatrix_variant_supported(frag, trans):
+    if frag.mma_type.ptx_type == "s8.s4":
+        return (
+            frag.geom == "m8n16"
+            and trans == ""
+            and frag.frag in ["x1", "x2", "x4"]
+            and is_ldmatrix_s8s4_supported()
+        )
     if not (
         is_type_supported(frag.mma_type.ptx_type)
         and is_ldmatrix_geom_supported(frag.geom)
@@ -1852,6 +1877,13 @@ def gen_check_unsupported_ops(items):
 ; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x2.b8x16.b4x16_p64
 ; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x4.b8x16.b6x16_p32
 ; PTX86LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x4.b8x16.b4x16_p64
+
+; PTX94LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x1.s8.s4
+; PTX94LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x2.s8.s4
+; PTX94LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x4.s8.s4
+; PTX94LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x1.shared.s8.s4
+; PTX94LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x2.shared.s8.s4
+; PTX94LDMATRIX-DAG: ldmatrix.sync.aligned.m8n16.x4.shared.s8.s4
 
 ; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x1.b16
 ; PTX78STMATRIX-DAG: stmatrix.sync.aligned.m8n8.x2.b16

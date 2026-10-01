@@ -26,9 +26,21 @@
 #include <type_traits>
 
 namespace Fortran::common {
+namespace detail {
+template <typename T> class numeric_limits;
+}
+
+/// Same as std::numeric_limits, but also defined for
+/// UnsignedInt128/SignedInt128.
+/// While std::numeric_limits is allowed to be extended for user-defined types
+/// (C++ [namespace.std]), it is not for the MSVC STL __int128/__uint128
+/// workaround below.
+template <typename T>
+using numeric_limits = std::conditional_t<std::is_arithmetic_v<T>,
+    std::numeric_limits<T>, detail::numeric_limits<T>>;
 
 template <bool IS_SIGNED = false> class Int128 {
-  friend class std::numeric_limits<Int128>;
+  friend class detail::numeric_limits<Int128>;
 
 public:
   constexpr Int128() {}
@@ -304,11 +316,8 @@ using HostUnsignedIntType = typename HostUnsignedIntTypeHelper<BITS>::type;
 template <int BITS>
 using HostSignedIntType = typename HostSignedIntTypeHelper<BITS>::type;
 
-} // namespace Fortran::common
+namespace detail {
 
-namespace std {
-// Specializing std::numeric_limits is an intended extension point for
-// user-defined type.
 template <> class numeric_limits<Fortran::common::UnsignedInt128> {
 public:
   using T = Fortran::common::UnsignedInt128;
@@ -319,6 +328,7 @@ public:
 
   static constexpr T min() { return T{0, 0}; }
   static constexpr T max() { return T{UINT64_MAX, UINT64_MAX}; }
+  static constexpr T lowest() { return min(); }
 };
 
 template <> class numeric_limits<Fortran::common::SignedInt128> {
@@ -335,6 +345,7 @@ public:
   static constexpr T max() {
     return T{static_cast<std::uint64_t>(INT64_MAX), UINT64_MAX};
   }
+  static constexpr T lowest() { return min(); }
 };
 
 #if defined(__SIZEOF_INT128__) && defined(_MSVC_STL_VERSION)
@@ -351,6 +362,7 @@ public:
 
   static constexpr T min() { return static_cast<T>(0); }
   static constexpr T max() { return ~static_cast<T>(0); }
+  static constexpr T lowest() { return min(); }
 };
 
 template <> class numeric_limits<__int128> {
@@ -367,7 +379,9 @@ public:
   static constexpr T max() {
     return static_cast<T>(~(static_cast<unsigned __int128>(1) << 127u));
   }
+  static constexpr T lowest() { return min(); }
 };
 #endif
-} // namespace std
+} // namespace detail
+} // namespace Fortran::common
 #endif

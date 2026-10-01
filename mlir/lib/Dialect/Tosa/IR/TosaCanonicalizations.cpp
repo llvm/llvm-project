@@ -2216,7 +2216,9 @@ OpFoldResult ReverseOp::fold(FoldAdaptor adaptor) {
   auto operandTy = llvm::cast<ShapedType>(operand.getType());
   auto axis = getAxis();
   // If the dim-length is 1, or reversing axis is unit-dim, also a no-op.
+  // A splat of block-scaled values may still have different scales per block.
   const bool isSplatInput =
+      !isa<BlockScaledType>(operandTy.getElementType()) &&
       llvm::isa_and_nonnull<SplatElementsAttr>(adaptor.getInput1());
   if (!operandTy.hasRank() ||
       (!isSplatInput && operandTy.getDimSize(axis) != 1))

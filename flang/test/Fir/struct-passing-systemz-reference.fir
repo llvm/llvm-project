@@ -102,3 +102,37 @@ func.func @test_call_large(%arg0: !fir.ref<!fir.type<t5{i:!fir.array<8xi32>}>>) 
   return
 }
 
+// BIND(C) records with tail padding are passed in the corresponding GPR size.
+// CHECK-LABEL: func.func private @test_i32_i8(%arg0: i64)
+func.func private @test_i32_i8(%arg0: !fir.type<t11{i:i32,c:i8}>) { return }
+
+// CHECK-LABEL: func.func private @test_i16_i8(%arg0: i32)
+func.func private @test_i16_i8(%arg0: !fir.type<t12{i:i16,c:i8}>) { return }
+
+// CHECK-LABEL: func.func @test_call_i32_i8(
+// CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.type<t11{i:i32,c:i8}>>) {
+func.func @test_call_i32_i8(%arg0: !fir.ref<!fir.type<t11{i:i32,c:i8}>>) {
+  // CHECK: %[[IN:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.type<t11{i:i32,c:i8}>>
+  %in = fir.load %arg0 : !fir.ref<!fir.type<t11{i:i32,c:i8}>>
+  // CHECK: %[[TMP:.*]] = fir.alloca i64
+  // CHECK: %[[CVT:.*]] = fir.convert %[[TMP]] : (!fir.ref<i64>) -> !fir.ref<!fir.type<t11{i:i32,c:i8}>>
+  // CHECK: fir.store %[[IN]] to %[[CVT]] : !fir.ref<!fir.type<t11{i:i32,c:i8}>>
+  // CHECK: %[[VAL:.*]] = fir.load %[[TMP]] : !fir.ref<i64>
+  // CHECK: fir.call @test_i32_i8(%[[VAL]]) : (i64) -> ()
+  fir.call @test_i32_i8(%in) : (!fir.type<t11{i:i32,c:i8}>) -> ()
+  return
+}
+
+// CHECK-LABEL: func.func @test_call_i16_i8(
+// CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.type<t12{i:i16,c:i8}>>) {
+func.func @test_call_i16_i8(%arg0: !fir.ref<!fir.type<t12{i:i16,c:i8}>>) {
+  // CHECK: %[[IN:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.type<t12{i:i16,c:i8}>>
+  %in = fir.load %arg0 : !fir.ref<!fir.type<t12{i:i16,c:i8}>>
+  // CHECK: %[[TMP:.*]] = fir.alloca i32
+  // CHECK: %[[CVT:.*]] = fir.convert %[[TMP]] : (!fir.ref<i32>) -> !fir.ref<!fir.type<t12{i:i16,c:i8}>>
+  // CHECK: fir.store %[[IN]] to %[[CVT]] : !fir.ref<!fir.type<t12{i:i16,c:i8}>>
+  // CHECK: %[[VAL:.*]] = fir.load %[[TMP]] : !fir.ref<i32>
+  // CHECK: fir.call @test_i16_i8(%[[VAL]]) : (i32) -> ()
+  fir.call @test_i16_i8(%in) : (!fir.type<t12{i:i16,c:i8}>) -> ()
+  return
+}

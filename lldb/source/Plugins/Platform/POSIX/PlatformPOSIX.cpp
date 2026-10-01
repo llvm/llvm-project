@@ -790,8 +790,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 
   // Set the values into our args and write them to the target:
   if (paths != nullptr) {
-    // First insert the paths into the target.  This is expected to be a 
-    // continuous buffer with the strings laid out null terminated and
+    // First insert the paths into the target.  This is expected to be a
+    // continuous buffer with the strings laid out null-terminated and
     // end to end with an empty string terminating the buffer.
     // We also compute the buffer's required size as we go.
     size_t buffer_size = 0;
