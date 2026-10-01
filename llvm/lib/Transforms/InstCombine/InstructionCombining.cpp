@@ -5966,9 +5966,7 @@ class AliasScopeTracker {
   void recordDisjointDomainScopes(const MDNode *ScopeList) {
     SmallDenseMap<const MDNode *, SmallPtrSet<const MDNode *, 4>, 4> UsedScopes;
     for (const MDOperand &MDOperand : ScopeList->operands()) {
-      const auto *MDScope = dyn_cast<MDNode>(MDOperand);
-      if (!MDScope)
-        continue;
+      const auto *MDScope = cast<MDNode>(MDOperand);
       const MDNode *Domain = AliasScopeNode(MDScope).getDomain();
       if (AliasScopeDomainNode(Domain).hasDisjointScopes())
         UsedScopes[Domain].insert(MDScope);
