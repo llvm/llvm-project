@@ -1052,7 +1052,7 @@ static bool matchesSquareSum(BinaryOperator &I, Mul2Rhs M2Rhs, Value *&A,
 
   // (a * a) + (((a * 2) + b) * b)
   if (match(&I, m_c_BinOp(
-                    AddOp, m_OneUse(m_BinOp(MulOp, m_Value(A), m_Deferred(A))),
+                    AddOp, m_BinOp(MulOp, m_Value(A), m_Deferred(A)),
                     m_OneUse(m_c_BinOp(
                         MulOp,
                         m_c_BinOp(AddOp, m_BinOp(Mul2Op, m_Deferred(A), M2Rhs),
