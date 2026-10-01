@@ -1279,49 +1279,92 @@ static bool isFunctionWideDbgRecord(const DbgVariableRecord &DVR) {
 /// Collect the debug records in the parent function that describe variables
 /// on entry to the extracted region, whose place is now taken by \p TheCall.
 ///
-/// A #dbg_declare or #dbg_declare_value holds for the whole function, so one
-/// that uses any of \p Inputs is live on entry wherever it is. A #dbg_value or
+/// Only a record that uses one of \p Inputs can be described in the new
+/// function. A #dbg_declare or #dbg_declare_value holds for the whole function,
+/// so such a record is live on entry wherever it is. A #dbg_value or
 /// #dbg_assign holds only until the next record for the same variable, so only
 /// the last one before the region matters. Those are found by walking back from
 /// the call along the chain of unique predecessors, keeping the first record
-/// found for each variable. At a merge point the incoming paths may disagree,
-/// so the walk stops there: a variable it has not resolved gets no location in
-/// the new function, which is better than a wrong one.
+/// found for each variable. The walk ends once every variable is settled: the
+/// records seen cover the whole variable, so anything further back is
+/// superseded, or all its records that use an input have been reached. At a
+/// merge point the incoming paths may disagree, so the walk stops there too: a
+/// variable it has not settled gets no location in the new function, which is
+/// better than a wrong one.
 static void
 collectLiveInDbgRecords(CallInst &TheCall, const SetVector<Value *> &Inputs,
                         SmallSetVector<DbgVariableRecord *, 8> &LiveIn) {
+  struct VarState {
+    // Fragments already described closer to the call. A record is superseded
+    // if a later one covers an overlapping fragment.
+    SmallVector<DIExpression::FragmentInfo, 1> Frags;
+    // Bits of the variable covered by Frags. Only a fragment that overlaps
+    // none already in Frags is counted, so no bit is counted twice.
+    uint64_t CoveredBits = 0;
+    // Records that use an input and have not been reached yet.
+    unsigned Pending = 0;
+    bool Settled = false;
+  };
+  DenseMap<std::pair<const DILocalVariable *, const DILocation *>, VarState>
+      Vars;
+  SmallPtrSet<DbgVariableRecord *, 8> UseInput;
+
   Function *OldFunc = TheCall.getFunction();
   for (Value *Input : Inputs) {
     SmallVector<DbgVariableRecord *, 1> Users;
     findDbgUsers(Input, Users);
-    for (DbgVariableRecord *DVR : Users)
-      if (isFunctionWideDbgRecord(*DVR) && DVR->getFunction() == OldFunc)
+    for (DbgVariableRecord *DVR : Users) {
+      if (DVR->getFunction() != OldFunc)
+        continue;
+      if (isFunctionWideDbgRecord(*DVR)) {
         LiveIn.insert(DVR);
+        continue;
+      }
+      if (UseInput.insert(DVR).second) {
+        DebugVariable Var(DVR);
+        ++Vars[{Var.getVariable(), Var.getInlinedAt()}].Pending;
+      }
+    }
   }
 
-  // Fragments of each variable already described closer to the call. A record
-  // is superseded if a later one covers an overlapping fragment.
-  DenseMap<std::pair<const DILocalVariable *, const DILocation *>,
-           SmallVector<DIExpression::FragmentInfo, 1>>
-      Described;
+  unsigned Unsettled = Vars.size();
   SmallVector<DbgVariableRecord *, 8> Values;
   auto Visit = [&](DbgVariableRecord &DVR) {
     DebugVariable Var(&DVR);
+    auto It = Vars.find({Var.getVariable(), Var.getInlinedAt()});
+    if (It == Vars.end() || It->second.Settled)
+      return;
+    VarState &State = It->second;
     DIExpression::FragmentInfo Frag = Var.getFragmentOrDefault();
-    auto &Frags = Described[{Var.getVariable(), Var.getInlinedAt()}];
-    bool Superseded = any_of(Frags, [&](const DIExpression::FragmentInfo &F) {
-      return DIExpression::fragmentsOverlap(F, Frag);
-    });
-    Frags.push_back(Frag);
-    if (!Superseded)
-      Values.push_back(&DVR);
+    bool Superseded =
+        any_of(State.Frags, [&](const DIExpression::FragmentInfo &F) {
+          return DIExpression::fragmentsOverlap(F, Frag);
+        });
+    State.Frags.push_back(Frag);
+    bool Covered = !Var.getFragment();
+    if (!Covered && !Superseded) {
+      std::optional<uint64_t> Size = Var.getVariable()->getSizeInBits();
+      if (Size && Frag.endInBits() <= *Size) {
+        State.CoveredBits += Frag.SizeInBits;
+        Covered = State.CoveredBits == *Size;
+      }
+    }
+    if (UseInput.contains(&DVR)) {
+      --State.Pending;
+      if (!Superseded)
+        Values.push_back(&DVR);
+    }
+    if (Covered || State.Pending == 0) {
+      State.Settled = true;
+      --Unsettled;
+    }
   };
 
   BasicBlock *BB = TheCall.getParent();
   Instruction *From = &TheCall;
   SmallPtrSet<BasicBlock *, 8> Visited{BB};
-  while (true) {
-    for (Instruction *I = From; I; I = I->getPrevNode())
+  while (Unsettled) {
+    for (Instruction *I = From; I && Unsettled; I = I->getPrevNode())
       for (DbgRecord &DR : reverse(I->getDbgRecordRange()))
         if (auto *DVR = dyn_cast<DbgVariableRecord>(&DR))
           if (!isFunctionWideDbgRecord(*DVR))

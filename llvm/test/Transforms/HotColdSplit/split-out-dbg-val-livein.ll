@@ -68,9 +68,10 @@ exit:
   ret void, !dbg !31
 }
 
-; A constant is valid in any function.
+; Only records that use an input are copied, so a constant is not.
 ; CHECK-LABEL: define internal void @constant.cold.1(i32 %x)
-; CHECK: #dbg_value(i32 42,
+; CHECK-NOT: #dbg_value
+; CHECK: ret void
 define void @constant(i32 %a, i1 %c) !dbg !40 {
 entry:
   %x = add i32 %a, 1, !dbg !41
@@ -82,6 +83,25 @@ cold:
   br label %exit, !dbg !41
 exit:
   ret void, !dbg !41
+}
+
+; v has no location on entry to the region: the poison record ends the one for
+; v == x, even though x is passed in and the poison record uses no input.
+; CHECK-LABEL: define internal void @killed.cold.1(i32 %x)
+; CHECK-NOT: #dbg_value
+; CHECK: ret void
+define void @killed(i32 %a, i1 %c) !dbg !70 {
+entry:
+  %x = add i32 %a, 1, !dbg !71
+    #dbg_value(i32 %x, !72, !DIExpression(), !71)
+    #dbg_value(i32 poison, !72, !DIExpression(), !71)
+  br i1 %c, label %cold, label %exit, !dbg !71
+cold:
+  %m = mul i32 %x, 3, !dbg !71
+  call void @sink(i32 %m), !dbg !71
+  br label %exit, !dbg !71
+exit:
+  ret void, !dbg !71
 }
 
 ; A declare holds for the whole function, so a merge point does not matter.
@@ -157,3 +177,6 @@ exit:
 !60 = distinct !DISubprogram(name: "fragments", scope: !1, file: !1, line: 6, type: !4, scopeLine: 6, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !61 = !DILocation(line: 6, column: 1, scope: !60)
 !62 = !DILocalVariable(name: "w", scope: !60, file: !1, line: 6, type: !6)
+!70 = distinct !DISubprogram(name: "killed", scope: !1, file: !1, line: 7, type: !4, scopeLine: 7, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+!71 = !DILocation(line: 7, column: 1, scope: !70)
+!72 = !DILocalVariable(name: "v", scope: !70, file: !1, line: 7, type: !5)
