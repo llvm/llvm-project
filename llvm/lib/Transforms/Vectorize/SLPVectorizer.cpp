@@ -2298,7 +2298,7 @@ public:
       salvageDebugInfo(*I);
       ArrayRef<TreeEntry *> Entries = getTreeEntries(I);
       for (Use &U : I->operands()) {
-        if (auto *OpI = dyn_cast_if_present<Instruction>(U.get());
+        if (auto *OpI = dyn_cast_or_null<Instruction>(U.get());
             OpI && !DeletedInstructions.contains(OpI) && OpI->hasOneUser() &&
             wouldInstructionBeTriviallyDead(OpI, TLI) &&
             !ExternalUseReplacements.contains(OpI) &&
@@ -11340,7 +11340,7 @@ public:
       }
       // If some of the RHS operands better match most of LHS - swap such
       // operands to increase matching rate.
-      if (auto *BestLHS = dyn_cast_if_present<Instruction>(BestFrontOp)) {
+      if (auto *BestLHS = dyn_cast_or_null<Instruction>(BestFrontOp)) {
         const unsigned BestOpcode = BestLHS->getOpcode();
         for (auto [OpL, OpR] : zip(Operands.front(), Operands.back())) {
           auto *OpRI = dyn_cast<Instruction>(OpR);
@@ -20246,7 +20246,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     Value *Usr = EU.User;
     if (Usr && match(Usr, m_OneUse(m_ZExtOrSExt(m_Value()))))
       Usr = cast<Instruction>(Usr)->user_back();
-    auto *User = dyn_cast_if_present<GetElementPtrInst>(Usr);
+    auto *User = dyn_cast_or_null<GetElementPtrInst>(Usr);
     // Only a GEP that feeds a single load/store of a fixed access type drives
     // a real memory address computation.
     Type *AccessTy = nullptr;
@@ -20470,7 +20470,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         Entry->getOpcode() == Instruction::Load) {
       // Checks if the user of the external scalar is phi in loop body.
       auto IsPhiInLoop = [&](const ExternalUser &U) {
-        if (auto *Phi = dyn_cast_if_present<PHINode>(U.User)) {
+        if (auto *Phi = dyn_cast_or_null<PHINode>(U.User)) {
           auto *I = cast<Instruction>(U.Scalar);
           const Loop *L = LI->getLoopFor(Phi->getParent());
           return L && (Phi->getParent() == I->getParent() ||
