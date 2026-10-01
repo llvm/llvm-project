@@ -1333,6 +1333,36 @@ bool IsCUDADeviceSymbol(const Symbol &sym) {
   return false;
 }
 
+static std::optional<common::CUDADataAttr> GetDesignatedCUDADataAttr(
+    const Symbol &sym) {
+  const Symbol &ultimate{sym.GetUltimate()};
+  if (const auto *details{
+          ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
+    return details->cudaDataAttr();
+  }
+  if (const auto *details{
+          ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
+    if (const auto &expr{details->expr()}; expr && IsVariable(*expr)) {
+      // The attribute of a component prevails over the one of its base.
+      SymbolVector symbols{GetSymbolVector(*expr)};
+      for (auto it{symbols.rbegin()}; it != symbols.rend(); ++it) {
+        if (auto attr{GetDesignatedCUDADataAttr(*it)}) {
+          return attr;
+        }
+        if (!it->get().owner().IsDerivedType()) {
+          break;
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+bool IsCUDADataAttrSymbol(const Symbol &sym, common::CUDADataAttr attr) {
+  auto symAttr{GetDesignatedCUDADataAttr(sym)};
+  return symAttr && *symAttr == attr;
+}
+
 bool IsCUDADeviceOnlySymbol(const Symbol &sym) {
   if (const auto *details =
           sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {

@@ -1326,24 +1326,13 @@ std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr);
 bool IsCUDADeviceSymbol(const Symbol &sym);
 bool IsCUDADeviceOnlySymbol(const Symbol &sym);
 
-inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->cudaDataAttr() &&
-        (*details->cudaDataAttr() == common::CUDADataAttr::Managed ||
-            *details->cudaDataAttr() == common::CUDADataAttr::Unified)) {
-      return true;
-    }
-  }
-  return false;
-}
+// True if the data designated by the symbol has the CUDA data attribute. An
+// associate name takes the attribute of the variable its selector designates.
+bool IsCUDADataAttrSymbol(const Symbol &sym, common::CUDADataAttr attr);
 
-inline bool IsCUDADataAttrSymbol(const Symbol &sym, common::CUDADataAttr attr) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    return details->cudaDataAttr() && *details->cudaDataAttr() == attr;
-  }
-  return false;
+inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
+  return IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Managed) ||
+      IsCUDADataAttrSymbol(sym, common::CUDADataAttr::Unified);
 }
 
 inline bool IsCUDAManagedSymbol(const Symbol &sym) {
