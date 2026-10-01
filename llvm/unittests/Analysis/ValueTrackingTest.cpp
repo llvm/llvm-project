@@ -3964,6 +3964,33 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     // If we don't know the value of x.2, we don't know the value of x.1.
     EXPECT_TRUE(CR1.isFullSet());
   }
+  {
+    // The range of the source should be preserved through zext/sext.
+    auto M = parseModule(R"(
+  define void @test(i8 range(i8 0, 6) %x, i8 range(i8 -3, 6) %y) {
+    %x.zext = zext i8 %x to i32
+    %x.sext = sext i8 %x to i32
+    %y.sext = sext i8 %y to i32
+    ret void
+  })");
+    Function *F = M->getFunction("test");
+    SimplifyQuery SQ(M->getDataLayout());
+
+    Instruction *XZExt = &findInstructionByName(F, "x.zext");
+    ConstantRange CR1 = computeConstantRange(XZExt, /*ForSigned=*/false, SQ);
+    EXPECT_EQ(0, CR1.getLower());
+    EXPECT_EQ(6, CR1.getUpper());
+
+    Instruction *XSExt = &findInstructionByName(F, "x.sext");
+    ConstantRange CR2 = computeConstantRange(XSExt, /*ForSigned=*/true, SQ);
+    EXPECT_EQ(0, CR2.getLower());
+    EXPECT_EQ(6, CR2.getUpper());
+
+    Instruction *YSExt = &findInstructionByName(F, "y.sext");
+    ConstantRange CR3 = computeConstantRange(YSExt, /*ForSigned=*/true, SQ);
+    EXPECT_EQ(-3, CR3.getSignedMin().getSExtValue());
+    EXPECT_EQ(5, CR3.getSignedMax().getSExtValue());
+  }
 }
 
 struct FindAllocaForValueTestParams {

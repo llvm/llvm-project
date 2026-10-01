@@ -60,9 +60,7 @@ define amdgpu_ps float @valley_partially_undef_copy() #0 {
 ; CHECK-NEXT:  .LBB1_1: ; %bb9
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], exec
-; CHECK-NEXT:    s_cselect_b32 s2, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
-; CHECK-NEXT:    s_cbranch_scc1 .LBB1_1
+; CHECK-NEXT:    s_cbranch_scc0 .LBB1_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb11
 ; CHECK-NEXT:    s_mov_b32 s3, 0xf000
 ; CHECK-NEXT:    s_mov_b32 s2, -1
