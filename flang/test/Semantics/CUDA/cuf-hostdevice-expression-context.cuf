@@ -1,0 +1,317 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! Check call targets in selectors, I/O, allocation operands, and evaluated
+! specification expressions. Guards apply to executable and BLOCK expressions.
+module expression_context
+  use cudadevice, only: on_device
+contains
+  pure integer function h()
+    h = 1
+  end function
+  attributes(device) pure integer function d()
+    d = 1
+  end function
+  attributes(host,device) pure integer function b()
+    b = 1
+  end function
+  attributes(host,device) subroutine select_h()
+    integer :: x
+    !ERROR: 'h' may not be called in device code
+    select case(h())
+    case(1)
+      x = 1
+    end select
+  end subroutine
+  attributes(host,device) subroutine select_d()
+    integer :: x
+    !ERROR: 'd' may not be called in host code
+    select case(d())
+    case(1)
+      x = 1
+    end select
+  end subroutine
+  attributes(host,device) subroutine select_b()
+    integer :: x
+    select case(b())
+    case(1)
+      x = 1
+    end select
+  end subroutine
+  attributes(host,device) subroutine print_h()
+    !ERROR: 'h' may not be called in device code
+    print *, h()
+  end subroutine
+  attributes(host,device) subroutine print_d()
+    !ERROR: 'd' may not be called in host code
+    print *, d()
+  end subroutine
+  attributes(host,device) subroutine print_b()
+    print *, b()
+  end subroutine
+  attributes(host,device) subroutine write_item_h()
+    !ERROR: 'h' may not be called in device code
+    write(*,*) h()
+  end subroutine
+  attributes(host,device) subroutine write_item_d()
+    !ERROR: 'd' may not be called in host code
+    write(*,*) d()
+  end subroutine
+  attributes(host,device) subroutine write_item_b()
+    write(*,*) b()
+  end subroutine
+  attributes(host,device) subroutine write_unit_h()
+    !ERROR: 'h' may not be called in device code
+    !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
+    write(h(),*) 1
+  end subroutine
+  attributes(host,device) subroutine write_unit_d()
+    !ERROR: 'd' may not be called in host code
+    !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
+    write(d(),*) 1
+  end subroutine
+  attributes(host,device) subroutine write_unit_b()
+    !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
+    write(b(),*) 1
+  end subroutine
+  attributes(host,device) subroutine write_implied_do_h()
+    integer :: i
+    !ERROR: 'h' may not be called in device code
+    write(*,*) (i, i=1,h())
+  end subroutine
+  attributes(host,device) subroutine write_implied_do_d()
+    integer :: i
+    !ERROR: 'd' may not be called in host code
+    write(*,*) (i, i=1,d())
+  end subroutine
+  attributes(host,device) subroutine write_implied_do_b()
+    integer :: i
+    write(*,*) (i, i=1,b())
+  end subroutine
+  attributes(host,device) subroutine write_subscript_h()
+    integer :: x(4)
+    !ERROR: 'h' may not be called in device code
+    write(*,*) x(h())
+  end subroutine
+  attributes(host,device) subroutine write_subscript_d()
+    integer :: x(4)
+    !ERROR: 'd' may not be called in host code
+    write(*,*) x(d())
+  end subroutine
+  attributes(host,device) subroutine write_subscript_b()
+    integer :: x(4)
+    write(*,*) x(b())
+  end subroutine
+  attributes(host,device) subroutine read_subscript_h()
+    integer :: x(4)
+    !ERROR: 'h' may not be called in device code
+    !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
+    read(*,*) x(h())
+  end subroutine
+  attributes(host,device) subroutine read_subscript_d()
+    integer :: x(4)
+    !ERROR: 'd' may not be called in host code
+    !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
+    read(*,*) x(d())
+  end subroutine
+  attributes(host,device) subroutine read_subscript_b()
+    integer :: x(4)
+    !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
+    read(*,*) x(b())
+  end subroutine
+  attributes(host,device) subroutine allocate_bound_h()
+    integer, allocatable :: a(:)
+    !ERROR: 'h' may not be called in device code
+    allocate(a(h()))
+  end subroutine
+  attributes(host,device) subroutine allocate_bound_d()
+    integer, allocatable :: a(:)
+    !ERROR: 'd' may not be called in host code
+    allocate(a(d()))
+  end subroutine
+  attributes(host,device) subroutine allocate_bound_b()
+    integer, allocatable :: a(:)
+    allocate(a(b()))
+  end subroutine
+  attributes(host,device) subroutine allocate_source_h()
+    integer, allocatable :: a(:)
+    !ERROR: 'h' may not be called in device code
+    allocate(a,source=[h()])
+  end subroutine
+  attributes(host,device) subroutine allocate_source_d()
+    integer, allocatable :: a(:)
+    !ERROR: 'd' may not be called in host code
+    allocate(a,source=[d()])
+  end subroutine
+  attributes(host,device) subroutine allocate_source_b()
+    integer, allocatable :: a(:)
+    allocate(a,source=[b()])
+  end subroutine
+  attributes(host,device) subroutine allocate_mold_h()
+    integer, allocatable :: a(:)
+    !ERROR: 'h' may not be called in device code
+    allocate(a,mold=[h()])
+  end subroutine
+  attributes(host,device) subroutine allocate_mold_d()
+    integer, allocatable :: a(:)
+    !ERROR: 'd' may not be called in host code
+    allocate(a,mold=[d()])
+  end subroutine
+  attributes(host,device) subroutine allocate_mold_b()
+    integer, allocatable :: a(:)
+    allocate(a,mold=[b()])
+  end subroutine
+  attributes(host,device) subroutine allocate_length_h()
+    character(:), allocatable :: text
+    !ERROR: 'h' may not be called in device code
+    allocate(character(h()) :: text)
+  end subroutine
+  attributes(host,device) subroutine allocate_length_d()
+    character(:), allocatable :: text
+    !ERROR: 'd' may not be called in host code
+    allocate(character(d()) :: text)
+  end subroutine
+  attributes(host,device) subroutine allocate_length_b()
+    character(:), allocatable :: text
+    allocate(character(b()) :: text)
+  end subroutine
+  attributes(host,device) subroutine deallocate_stat_h()
+    integer, allocatable :: a(:)
+    integer :: status(4)
+    !ERROR: 'h' may not be called in device code
+    deallocate(a,stat=status(h()))
+  end subroutine
+  attributes(host,device) subroutine deallocate_stat_d()
+    integer, allocatable :: a(:)
+    integer :: status(4)
+    !ERROR: 'd' may not be called in host code
+    deallocate(a,stat=status(d()))
+  end subroutine
+  attributes(host,device) subroutine deallocate_stat_b()
+    integer, allocatable :: a(:)
+    integer :: status(4)
+    deallocate(a,stat=status(b()))
+  end subroutine
+  attributes(host,device) subroutine automatic_bound_h()
+    !ERROR: 'h' may not be called in device code
+    integer :: a(h())
+    a = 1
+  end subroutine
+  attributes(host,device) subroutine automatic_bound_d()
+    !ERROR: 'd' may not be called in host code
+    integer :: a(d())
+    a = 1
+  end subroutine
+  attributes(host,device) subroutine automatic_bound_b()
+    integer :: a(b())
+    a = 1
+  end subroutine
+  attributes(host,device) subroutine character_length_h()
+    !ERROR: 'h' may not be called in device code
+    character(h()) :: text
+    text = 'x'
+  end subroutine
+  attributes(host,device) subroutine character_length_d()
+    !ERROR: 'd' may not be called in host code
+    character(d()) :: text
+    text = 'x'
+  end subroutine
+  attributes(host,device) subroutine character_length_b()
+    character(b()) :: text
+    text = 'x'
+  end subroutine
+  attributes(host,device) subroutine guarded()
+    integer :: x(4), i, status(4)
+    integer, allocatable :: a(:)
+    character(:), allocatable :: text
+    if (on_device()) then
+      select case(h())
+      case(1)
+        x = 1
+      end select
+      print *, h()
+      write(*,*) h()
+      !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
+      write(h(),*) 1
+      write(*,*) (i, i=1,h())
+      write(*,*) x(h())
+      !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
+      read(*,*) x(h())
+      allocate(a(h()))
+      allocate(a,source=[h()])
+      allocate(a,mold=[h()])
+      allocate(character(h()) :: text)
+      deallocate(a,stat=status(h()))
+      block
+        integer :: local(h())
+        character(h()) :: local_text
+        local = 1
+        local_text = 'x'
+      end block
+    else
+      select case(d())
+      case(1)
+        x = 1
+      end select
+      print *, d()
+      write(*,*) d()
+      !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
+      write(d(),*) 1
+      write(*,*) (i, i=1,d())
+      write(*,*) x(d())
+      !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
+      read(*,*) x(d())
+      allocate(a(d()))
+      allocate(a,source=[d()])
+      allocate(a,mold=[d()])
+      allocate(character(d()) :: text)
+      deallocate(a,stat=status(d()))
+      block
+        integer :: local(d())
+        character(d()) :: local_text
+        local = 1
+        local_text = 'x'
+      end block
+    end if
+  end subroutine
+  attributes(host,device) subroutine declarations_only()
+    integer :: unused
+    interface
+      subroutine host_interface(n,a)
+        import h
+        integer, intent(in) :: n
+        integer :: a(h())
+      end subroutine
+    end interface
+    unused() = h()
+  end subroutine
+  attributes(host,device) subroutine block_bound_h()
+    block
+      !ERROR: 'h' may not be called in device code
+      integer :: a(h())
+      a = 1
+    end block
+  end subroutine
+  !ERROR: 'h' may not be called in device code
+  attributes(host,device) character(h()) function header_h()
+    header_h = 'x'
+  end function
+  attributes(host,device) subroutine block_bound_d()
+    block
+      !ERROR: 'd' may not be called in host code
+      integer :: a(d())
+      a = 1
+    end block
+  end subroutine
+  !ERROR: 'd' may not be called in host code
+  attributes(host,device) character(d()) function header_d()
+    header_d = 'x'
+  end function
+  attributes(host,device) subroutine block_bound_b()
+    block
+      integer :: a(b())
+      a = 1
+    end block
+  end subroutine
+  attributes(host,device) character(b()) function header_b()
+    header_b = 'x'
+  end function
+end module

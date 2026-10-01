@@ -116,6 +116,11 @@ struct DeviceExprChecker
     if (const Symbol * sym{x.GetInterfaceSymbol()}) {
       const Symbol &ultimate{sym->GetUltimate()};
       const auto *subp{ultimate.detailsIf<semantics::SubprogramDetails>()};
+      if (subp && subp->moduleInterface()) {
+        subp = subp->moduleInterface()
+                   ->GetUltimate()
+                   .detailsIf<semantics::SubprogramDetails>();
+      }
       if (subp) {
         if (const auto &stmtFunction{subp->stmtFunction()};
             stmtFunction && IsCUDADeviceContext(&ultimate.owner())) {
@@ -502,10 +507,41 @@ template <bool CUF_KERNEL> struct ActionStmtChecker {
   }
 };
 
+// Check analyzed expressions in statements and specification parts that do
+// not have a single typed expression for the entire construct. Do not descend
+// into an expression already checked, or into declarations of other entities
+// whose expressions are not evaluated on entry to this scope.
+struct DeviceExprVisitor {
+  SemanticsContext &context;
+  CallContext callContext;
+  template <typename A> bool Pre(const A &) { return true; }
+  template <typename A> void Post(const A &) {}
+  bool Pre(const parser::Expr &x) { return Check(x.typedExpr, x.source); }
+  bool Pre(const parser::Variable &x) {
+    return Check(x.typedExpr, x.GetSource());
+  }
+  bool Pre(const parser::InterfaceBlock &) { return false; }
+  bool Pre(const parser::DerivedTypeDef &) { return false; }
+  bool Pre(const parser::StmtFunctionStmt &) { return false; }
+
+private:
+  bool Check(const parser::TypedExpr &expr, parser::CharBlock source) {
+    if (expr) {
+      if (auto msg{DeviceExprChecker{context, callContext}(expr)}) {
+        context.Say(source, std::move(*msg));
+      }
+      return false;
+    }
+    return true;
+  }
+};
+
 template <bool IsCUFKernelDo> class DeviceContextChecker {
 public:
   explicit DeviceContextChecker(SemanticsContext &c) : context_{c} {}
-  void CheckSubprogram(const parser::Name &name, const parser::Block &body) {
+  template <typename A>
+  void CheckSubprogram(const parser::Name &name, const A &header,
+      const parser::SpecificationPart &spec, const parser::Block &body) {
     if (name.symbol) {
       const auto *subp{
           name.symbol->GetUltimate().detailsIf<SubprogramDetails>()};
@@ -523,6 +559,8 @@ public:
                 common::CUDASubprogramAttrs::HostDevice;
         callContext_ =
             isHostDevice ? CallContext::HostDevice : CallContext::Device;
+        CheckExpressions(header);
+        CheckExpressions(spec);
         Check(body);
       }
     }
@@ -534,6 +572,10 @@ public:
   }
 
 private:
+  template <typename A> void CheckExpressions(const A &x) {
+    DeviceExprVisitor visitor{context_, callContext_};
+    parser::Walk(x, visitor);
+  }
   void Check(const parser::ExecutionPartConstruct &epc) {
     common::visit(
         common::visitors{
@@ -567,12 +609,17 @@ private:
               Check(std::get<parser::Block>(x.value().t));
             },
             [&](const common::Indirection<parser::BlockConstruct> &x) {
+              CheckExpressions(
+                  std::get<parser::BlockSpecificationPart>(x.value().t));
               Check(std::get<parser::Block>(x.value().t));
             },
             [&](const common::Indirection<parser::IfConstruct> &x) {
               Check(x.value());
             },
             [&](const common::Indirection<parser::CaseConstruct> &x) {
+              CheckExpressions(
+                  std::get<parser::Statement<parser::SelectCaseStmt>>(
+                      x.value().t));
               const auto &caseList{
                   std::get<std::list<parser::CaseConstruct::Case>>(
                       x.value().t)};
@@ -652,8 +699,11 @@ private:
               ErrorInCUFKernel(source);
             },
             [&](const common::Indirection<parser::StopStmt> &) { return; },
-            [&](const common::Indirection<parser::PrintStmt> &) {},
+            [&](const common::Indirection<parser::PrintStmt> &x) {
+              CheckExpressions(x.value());
+            },
             [&](const common::Indirection<parser::WriteStmt> &x) {
+              CheckExpressions(x.value());
               if (x.value().format) { // Formatted write to '*' or '6'
                 if (std::holds_alternative<Fortran::parser::Star>(
                         x.value().format->u)) {
@@ -668,25 +718,38 @@ private:
               WarnIfNotInternal(x.value(), source);
             },
             [&](const common::Indirection<parser::CloseStmt> &x) {
+              CheckExpressions(x.value());
               WarnOnIoStmt(source);
             },
             [&](const common::Indirection<parser::EndfileStmt> &x) {
+              CheckExpressions(x.value());
               WarnOnIoStmt(source);
             },
             [&](const common::Indirection<parser::OpenStmt> &x) {
+              CheckExpressions(x.value());
               WarnOnIoStmt(source);
             },
             [&](const common::Indirection<parser::ReadStmt> &x) {
+              CheckExpressions(x.value());
               WarnIfNotInternal(x.value(), source);
             },
             [&](const common::Indirection<parser::InquireStmt> &x) {
+              CheckExpressions(x.value());
               WarnOnIoStmt(source);
             },
             [&](const common::Indirection<parser::RewindStmt> &x) {
+              CheckExpressions(x.value());
               WarnOnIoStmt(source);
             },
             [&](const common::Indirection<parser::BackspaceStmt> &x) {
+              CheckExpressions(x.value());
               WarnOnIoStmt(source);
+            },
+            [&](const common::Indirection<parser::AllocateStmt> &x) {
+              CheckExpressions(x.value());
+            },
+            [&](const common::Indirection<parser::DeallocateStmt> &x) {
+              CheckExpressions(x.value());
             },
             [&](const common::Indirection<parser::IfStmt> &x) {
               Check(x.value());
@@ -798,6 +861,8 @@ void CUDAChecker::Enter(const parser::SubroutineSubprogram &x) {
   DeviceContextChecker<false>{context_}.CheckSubprogram(
       std::get<parser::Name>(
           std::get<parser::Statement<parser::SubroutineStmt>>(x.t).statement.t),
+      std::get<parser::Statement<parser::SubroutineStmt>>(x.t).statement,
+      std::get<parser::SpecificationPart>(x.t),
       std::get<parser::ExecutionPart>(x.t).v);
 }
 
@@ -805,12 +870,16 @@ void CUDAChecker::Enter(const parser::FunctionSubprogram &x) {
   DeviceContextChecker<false>{context_}.CheckSubprogram(
       std::get<parser::Name>(
           std::get<parser::Statement<parser::FunctionStmt>>(x.t).statement.t),
+      std::get<parser::Statement<parser::FunctionStmt>>(x.t).statement,
+      std::get<parser::SpecificationPart>(x.t),
       std::get<parser::ExecutionPart>(x.t).v);
 }
 
 void CUDAChecker::Enter(const parser::SeparateModuleSubprogram &x) {
   DeviceContextChecker<false>{context_}.CheckSubprogram(
       std::get<parser::Statement<parser::MpSubprogramStmt>>(x.t).statement.v,
+      std::get<parser::Statement<parser::MpSubprogramStmt>>(x.t).statement,
+      std::get<parser::SpecificationPart>(x.t),
       std::get<parser::ExecutionPart>(x.t).v);
 }
 
