@@ -11,6 +11,10 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -amdgpu-icache-prefetch=true -filetype=obj -o %t.o %s
 ; RUN: llvm-objdump -d %t.o | FileCheck -check-prefix=GFX1250-OBJ %s
 
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -amdgpu-icache-prefetch=true -stop-after=amdgpu-insert-icache-prefetch -o %t.mir %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -start-after=amdgpu-insert-icache-prefetch -filetype=obj -o %t-resumed.o %t.mir
+; RUN: llvm-objdump -d %t-resumed.o | FileCheck -check-prefix=GFX1250-OBJ %s
+
 ; Use .space to make the estimated MachineFunction size and final assembled
 ; size large without spelling out thousands of instructions.
 

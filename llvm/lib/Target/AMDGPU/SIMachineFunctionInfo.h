@@ -309,6 +309,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
   unsigned NumKernargPreloadSGPRs = 0;
+  unsigned ICachePrefetchLines = 0;
 
   unsigned MinNumAGPRs = ~0u;
 
@@ -370,6 +371,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
     YamlIO.mapOptional("numKernargPreloadSGPRs", MFI.NumKernargPreloadSGPRs, 0);
+    YamlIO.mapOptional("iCachePrefetchLines", MFI.ICachePrefetchLines, 0u);
     YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
     YamlIO.mapOptional("minNumAGPRs", MFI.MinNumAGPRs, ~0u);
   }
