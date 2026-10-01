@@ -676,14 +676,14 @@ define amdgpu_kernel void @v_exclusive_scan_min_i16_constant(ptr addrspace(1) %o
 define amdgpu_kernel void @v_exclusive_scan_min_i16_poison(ptr addrspace(1) %out) {
 ;
 ;
-; GFX13-TRUE16-LABEL: v_exclusive_scan_min_i16_poison:
-; GFX13-TRUE16:       ; %bb.0:
-; GFX13-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    v_exclusive_scan_min_i16 v0.l, s0, s0
-; GFX13-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-TRUE16-NEXT:    s_endpgm
+; GFX13-SDAG-TRUE16-LABEL: v_exclusive_scan_min_i16_poison:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_exclusive_scan_min_i16 v0.l, v0.l, s0
+; GFX13-SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-SDAG-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-FAKE16-LABEL: v_exclusive_scan_min_i16_poison:
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
@@ -693,6 +693,15 @@ define amdgpu_kernel void @v_exclusive_scan_min_i16_poison(ptr addrspace(1) %out
 ; GFX13-SDAG-FAKE16-NEXT:    v_exclusive_scan_min_i16 v1, s0, s0
 ; GFX13-SDAG-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-GISEL-TRUE16-LABEL: v_exclusive_scan_min_i16_poison:
+; GFX13-GISEL-TRUE16:       ; %bb.0:
+; GFX13-GISEL-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-GISEL-TRUE16-NEXT:    v_exclusive_scan_min_i16 v0.l, s0, s0
+; GFX13-GISEL-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-GISEL-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: v_exclusive_scan_min_i16_poison:
 ; GFX13-GISEL-FAKE16:       ; %bb.0:
@@ -850,14 +859,14 @@ define amdgpu_kernel void @v_exclusive_scan_min_u16_constant(ptr addrspace(1) %o
 define amdgpu_kernel void @v_exclusive_scan_min_u16_poison(ptr addrspace(1) %out) {
 ;
 ;
-; GFX13-TRUE16-LABEL: v_exclusive_scan_min_u16_poison:
-; GFX13-TRUE16:       ; %bb.0:
-; GFX13-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    v_exclusive_scan_min_u16 v0.l, s0, s0
-; GFX13-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-TRUE16-NEXT:    s_endpgm
+; GFX13-SDAG-TRUE16-LABEL: v_exclusive_scan_min_u16_poison:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_exclusive_scan_min_u16 v0.l, v0.l, s0
+; GFX13-SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-SDAG-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-FAKE16-LABEL: v_exclusive_scan_min_u16_poison:
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
@@ -867,6 +876,15 @@ define amdgpu_kernel void @v_exclusive_scan_min_u16_poison(ptr addrspace(1) %out
 ; GFX13-SDAG-FAKE16-NEXT:    v_exclusive_scan_min_u16 v1, s0, s0
 ; GFX13-SDAG-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-GISEL-TRUE16-LABEL: v_exclusive_scan_min_u16_poison:
+; GFX13-GISEL-TRUE16:       ; %bb.0:
+; GFX13-GISEL-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-GISEL-TRUE16-NEXT:    v_exclusive_scan_min_u16 v0.l, s0, s0
+; GFX13-GISEL-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-GISEL-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: v_exclusive_scan_min_u16_poison:
 ; GFX13-GISEL-FAKE16:       ; %bb.0:
@@ -1206,14 +1224,14 @@ define amdgpu_kernel void @v_exclusive_scan_max_i16_constant(ptr addrspace(1) %o
 define amdgpu_kernel void @v_exclusive_scan_max_i16_poison(ptr addrspace(1) %out) {
 ;
 ;
-; GFX13-TRUE16-LABEL: v_exclusive_scan_max_i16_poison:
-; GFX13-TRUE16:       ; %bb.0:
-; GFX13-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    v_exclusive_scan_max_i16 v0.l, s0, s0
-; GFX13-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-TRUE16-NEXT:    s_endpgm
+; GFX13-SDAG-TRUE16-LABEL: v_exclusive_scan_max_i16_poison:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_exclusive_scan_max_i16 v0.l, v0.l, s0
+; GFX13-SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-SDAG-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-FAKE16-LABEL: v_exclusive_scan_max_i16_poison:
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
@@ -1223,6 +1241,15 @@ define amdgpu_kernel void @v_exclusive_scan_max_i16_poison(ptr addrspace(1) %out
 ; GFX13-SDAG-FAKE16-NEXT:    v_exclusive_scan_max_i16 v1, s0, s0
 ; GFX13-SDAG-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-GISEL-TRUE16-LABEL: v_exclusive_scan_max_i16_poison:
+; GFX13-GISEL-TRUE16:       ; %bb.0:
+; GFX13-GISEL-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-GISEL-TRUE16-NEXT:    v_exclusive_scan_max_i16 v0.l, s0, s0
+; GFX13-GISEL-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-GISEL-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: v_exclusive_scan_max_i16_poison:
 ; GFX13-GISEL-FAKE16:       ; %bb.0:
@@ -1380,14 +1407,14 @@ define amdgpu_kernel void @v_exclusive_scan_max_u16_constant(ptr addrspace(1) %o
 define amdgpu_kernel void @v_exclusive_scan_max_u16_poison(ptr addrspace(1) %out) {
 ;
 ;
-; GFX13-TRUE16-LABEL: v_exclusive_scan_max_u16_poison:
-; GFX13-TRUE16:       ; %bb.0:
-; GFX13-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    v_exclusive_scan_max_u16 v0.l, s0, s0
-; GFX13-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
-; GFX13-TRUE16-NEXT:    s_endpgm
+; GFX13-SDAG-TRUE16-LABEL: v_exclusive_scan_max_u16_poison:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_exclusive_scan_max_u16 v0.l, v0.l, s0
+; GFX13-SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-SDAG-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-SDAG-FAKE16-LABEL: v_exclusive_scan_max_u16_poison:
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
@@ -1397,6 +1424,15 @@ define amdgpu_kernel void @v_exclusive_scan_max_u16_poison(ptr addrspace(1) %out
 ; GFX13-SDAG-FAKE16-NEXT:    v_exclusive_scan_max_u16 v1, s0, s0
 ; GFX13-SDAG-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX13-SDAG-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-GISEL-TRUE16-LABEL: v_exclusive_scan_max_u16_poison:
+; GFX13-GISEL-TRUE16:       ; %bb.0:
+; GFX13-GISEL-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-GISEL-TRUE16-NEXT:    v_exclusive_scan_max_u16 v0.l, s0, s0
+; GFX13-GISEL-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-GISEL-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX13-GISEL-FAKE16-LABEL: v_exclusive_scan_max_u16_poison:
 ; GFX13-GISEL-FAKE16:       ; %bb.0:
