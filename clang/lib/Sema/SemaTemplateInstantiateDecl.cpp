@@ -4037,22 +4037,6 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
   return Param;
 }
 
-static void collectUnexpandedParameterPacks(
-    Sema &S,
-    TemplateParameterList *Params,
-    SmallVectorImpl<UnexpandedParameterPack> &Unexpanded) {
-  for (const auto &P : *Params) {
-    if (P->isTemplateParameterPack())
-      continue;
-    if (NonTypeTemplateParmDecl *NTTP = dyn_cast<NonTypeTemplateParmDecl>(P))
-      S.collectUnexpandedParameterPacks(NTTP->getTypeSourceInfo()->getTypeLoc(),
-                                        Unexpanded);
-    if (TemplateTemplateParmDecl *TTP = dyn_cast<TemplateTemplateParmDecl>(P))
-      collectUnexpandedParameterPacks(S, TTP->getTemplateParameters(),
-                                      Unexpanded);
-  }
-}
-
 Decl *
 TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
                                                   TemplateTemplateParmDecl *D) {
@@ -4085,8 +4069,8 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
     // template parameters. Determine whether we need to expand this parameter
     // pack into separate parameters.
     SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-    collectUnexpandedParameterPacks(SemaRef, D->getTemplateParameters(),
-                                    Unexpanded);
+    SemaRef.collectUnexpandedParameterPacks(D->getTemplateParameters(),
+                                            Unexpanded);
 
     // Determine whether the set of unexpanded parameter packs can and should
     // be expanded.
