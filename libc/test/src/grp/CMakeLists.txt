@@ -150,3 +150,77 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_test(
+  getgrouplist_test
+  SUITE
+    libc_grp_unittests
+  HDRS
+    grp_test_utils.h
+  SRCS
+    getgrouplist_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.gid_t
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_group
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.stringstream
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.grp.endgrent
+    libc.src.grp.getgrent
+    libc.src.grp.getgrouplist
+    libc.src.grp.grp_utils
+    libc.src.grp.setgrent
+    libc.src.stdio.remove
+    libc.src.string.string_utils
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  initgroups_test
+  SUITE
+    libc_grp_unittests
+  HDRS
+    grp_test_utils.h
+  SRCS
+    initgroups_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.gid_t
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_group
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.grp.endgrent
+    libc.src.grp.getgrent
+    libc.src.grp.grp_utils
+    libc.src.grp.initgroups
+    libc.src.grp.setgrent
+    libc.src.stdio.remove
+    libc.src.string.string_utils
+    libc.src.unistd.getuid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  setgroups_test
+  SUITE
+    libc_grp_unittests
+  SRCS
+    setgroups_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.gid_t
+    libc.hdr.types.size_t
+    libc.src.grp.setgroups
+    libc.src.unistd.getuid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

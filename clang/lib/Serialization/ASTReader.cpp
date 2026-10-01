@@ -1927,19 +1927,9 @@ bool ASTReader::ReadSLocEntry(int ID) {
     unsigned RecCode = MaybeRecCode.get();
 
     if (RecCode == SM_SLOC_BUFFER_BLOB_COMPRESSED) {
-      // Inspect the first byte to differentiate zlib (\x78) and zstd
-      // (little-endian 0xFD2FB528).
-      const llvm::compression::Format F =
-          Blob.size() > 0 && Blob.data()[0] == 0x78
-              ? llvm::compression::Format::Zlib
-              : llvm::compression::Format::Zstd;
-      if (const char *Reason = llvm::compression::getReasonIfUnsupported(F)) {
-        Error(Reason);
-        return nullptr;
-      }
       SmallVector<uint8_t, 0> Decompressed;
       if (llvm::Error E = llvm::compression::decompress(
-              F, llvm::arrayRefFromStringRef(Blob), Decompressed, Record[0])) {
+              llvm::arrayRefFromStringRef(Blob), Decompressed, Record[0])) {
         Error("could not decompress embedded file contents: " +
               llvm::toString(std::move(E)));
         return nullptr;
@@ -8171,6 +8161,11 @@ QualType ASTReader::GetType(TypeID ID) {
     T = Context.SingletonId;                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case PREDEF_TYPE_##Id##_ID:                                                  \
+    T = Context.SingletonId;                                                   \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case PREDEF_TYPE_##Id##_ID:                                                  \
     T = Context.SingletonId;                                                   \

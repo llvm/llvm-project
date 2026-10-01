@@ -52,17 +52,17 @@
 // CIR-POST: cir.global external  target_address_space(1) @i = #cir.int<0>
 // LLVM-DEVICE-DAG: @i = addrspace(1) {{.*}}global i32 0
 // OGCG-DAG: @i = addrspace(1) externally_initialized global i32 0
-// CIR-HOST: cir.global {{.*}} @i = #cir.undef : {{.*}} {{{.*}}, cu.var_registration = #cir.cu.var_registration<i, Variable>}
+// CIR-HOST: cir.global {{.*}} @i = #cir.undef : {{.*}} {{.*}}{cu.var_registration = #cir.cu.var_registration<i, Variable>}
 // LLVM-HOST: @i = internal global i32 undef
 // OGCG-HOST: @i = internal global i32 undef
 __device__ int i;
 
 // CIR-PRE: cir.global constant external  lang_address_space(offload_constant) @j = #cir.int<0>
 // CIR-POST: cir.global constant external  target_address_space(4) @j = #cir.int<0>
-// CIR-DEVICE: cir.global constant external target_address_space(4) @j = #cir.int<0> : {{.*}} {{{.*}}, cu.externally_initialized = #cir.cu.externally_initialized, cu.var_registration = #cir.cu.var_registration<j, Variable, constant>}
+// CIR-DEVICE: cir.global constant external target_address_space(4) @j = #cir.int<0> : {{.*}} {{.*}}{cu.externally_initialized = #cir.cu.externally_initialized, cu.var_registration = #cir.cu.var_registration<j, Variable, constant>}
 // LLVM-DEVICE-DAG: @j = addrspace(4) {{.*}}constant i32 0
 // OGCG-DAG: @j = addrspace(4) externally_initialized constant i32 0
-// CIR-HOST:  cir.global {{.*}} @j = #cir.undef : {{.*}} {{{.*}}, cu.var_registration = #cir.cu.var_registration<j, Variable, constant>}
+// CIR-HOST:  cir.global {{.*}} @j = #cir.undef : {{.*}} {{.*}}{cu.var_registration = #cir.cu.var_registration<j, Variable, constant>}
 // LLVM-HOST: @j = internal global i32 undef
 // OGCG-HOST: @j = internal global i32 undef
 __constant__ int j;
@@ -100,7 +100,7 @@ extern __constant__ int ext_constant_var;
 // External device variables with definitions should be internal on host
 // CIR-DEVICE: cir.global external target_address_space(1) @ext_device_var_def = #cir.int<1>
 // LLVM-DEVICE: @ext_device_var_def = addrspace(1) externally_initialized global i32 1, align 4
-// CIR-HOST: cir.global "private" internal {{.*}} @ext_device_var_def = #cir.undef : {{.*}} {{{.*}}, cu.var_registration = #cir.cu.var_registration<ext_device_var_def, Variable>}
+// CIR-HOST: cir.global "private" internal {{.*}} @ext_device_var_def = #cir.undef : {{.*}} {{.*}}{cu.var_registration = #cir.cu.var_registration<ext_device_var_def, Variable>}
 // LLVM-HOST: @ext_device_var_def = internal global i32 undef, align 4
 // OGCG-HOST: @ext_device_var_def = internal global i32
 // OGCG-DEVICE: @ext_device_var_def = addrspace(1) externally_initialized global i32 1, align 4
@@ -110,7 +110,7 @@ __device__ int ext_device_var_def = 1;
 // CIR-DEVICE: cir.global constant external target_address_space(4) @ext_constant_var_def = #cir.int<2>
 // LLVM-DEVICE: @ext_constant_var_def = addrspace(4) externally_initialized constant i32 2, align 4
 // OGCG-DEVICE: @ext_constant_var_def = addrspace(4) externally_initialized constant i32 2, align 4
-// CIR-HOST: cir.global "private" internal {{.*}} @ext_constant_var_def = #cir.undef : {{.*}} {{{.*}}, cu.var_registration = #cir.cu.var_registration<ext_constant_var_def, Variable, constant>}
+// CIR-HOST: cir.global "private" internal {{.*}} @ext_constant_var_def = #cir.undef : {{.*}} {{.*}}{cu.var_registration = #cir.cu.var_registration<ext_constant_var_def, Variable, constant>}
 // LLVM-HOST: @ext_constant_var_def = internal global i32 undef, align 4
 // OGCG-HOST: @ext_constant_var_def = internal global i32
 extern __constant__ int ext_constant_var_def;
