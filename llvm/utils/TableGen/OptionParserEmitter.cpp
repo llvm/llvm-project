@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/raw_ostream.h"
@@ -21,6 +22,7 @@
 #include <array>
 #include <cstring>
 #include <map>
+#include <set>
 
 using namespace llvm;
 
@@ -228,6 +230,139 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   return Ret;
 }
 
+// -foo-bar and -foo-bar= become foo_bar, or bar if Prefix is "foo-".
+static std::string getSpellingIdentifier(const Record &R,
+                                         StringRef Prefix = "") {
+  StringRef Spelling = R.getValueAsString("Name").rtrim('=');
+  Spelling.consume_front(Prefix);
+  std::string ID = Spelling.str();
+  llvm::replace(ID, '-', '_');
+  if (ID.empty() || isDigit(ID[0]) ||
+      !all_of(ID, [](char C) { return isAlnum(C) || C == '_'; }))
+    PrintFatalError(R.getLoc(), "the spelling is not an identifier; name the "
+                                "defm");
+  return ID;
+}
+
+// `defm : BoolField<"foo-bar", ...>` declares member foo_bar, and a named defm
+// names it.
+static std::string getMemberName(const Record &R, StringRef Prefix) {
+  StringRef Name = R.getValueAsString("FieldName");
+  return Name.starts_with("anonymous_") ? getSpellingIdentifier(R, Prefix)
+                                        : Name.str();
+}
+
+// The OPT_ name of an option of an OptionsStruct. `defm :` rows are named
+// after the spelling: -foo-bar= is OPT_foo_bar_EQ.
+static std::string getStructOptionID(const Record &R) {
+  if (!R.getName().starts_with("anonymous_"))
+    return getOptionName(R);
+  std::string ID = getSpellingIdentifier(R);
+  if (R.getValueAsString("Name").ends_with('='))
+    ID += "_EQ";
+  return ID;
+}
+
+// Emits the struct an OptionsStruct def declares: its declaration under
+// OPTIONS_STRUCT_DECL, and under OPTIONS_STRUCT_DEFS the global instance, the
+// option table, and apply(), which sets the member an argument names.
+static void emitOptionsStruct(const Record &Struct,
+                              ArrayRef<const Record *> Groups,
+                              ArrayRef<const Record *> Opts, raw_ostream &OS) {
+  struct Member {
+    std::string Name;
+    StringRef Type, Default, Spelling;
+  };
+  std::vector<const Record *> Fields;
+  for (const Record *R : Opts) {
+    StringRef Kind = R->getValueAsDef("Kind")->getValueAsString("Name");
+    if (!R->getValue("FieldName")) {
+      if (Kind != "Input" && Kind != "Unknown" &&
+          isa<UnsetInit>(R->getValueInit("Alias")))
+        PrintFatalError(R->getLoc(), "an option of an OptionsStruct must be "
+                                     "declared with BoolField or ValueField");
+      continue;
+    }
+    bool HasValue = R->getValue("FieldValue");
+    if ((Kind == "Flag") != HasValue ||
+        (Kind != "Flag" && Kind != "Joined" && Kind != "Separate"))
+      PrintFatalError(R->getLoc(), "a member is set by a Flag with a "
+                                   "FieldValue, or by a Joined or Separate");
+    Fields.push_back(R);
+  }
+  // Members in declaration order.
+  std::vector<const Record *> ByID = Fields;
+  llvm::sort(ByID, [](const Record *A, const Record *B) {
+    return A->getID() < B->getID();
+  });
+  StringRef Prefix = Struct.getValueAsString("MemberPrefix");
+  std::vector<Member> Members;
+  StringMap<unsigned> MemberIndex;
+  for (const Record *R : ByID) {
+    Member M{getMemberName(*R, Prefix), R->getValueAsString("FieldType"),
+             R->getValueAsString("FieldDefault"),
+             R->getValueAsString("Name").rtrim('=')};
+    auto [It, Inserted] = MemberIndex.try_emplace(M.Name, Members.size());
+    if (Inserted) {
+      Members.push_back(M);
+      continue;
+    }
+    // The rows of one BoolField or ValueField share the member.
+    Member &Prev = Members[It->second];
+    if (Prev.Spelling != M.Spelling)
+      PrintFatalError(R->getLoc(), "member '" + M.Name + "' is also set by -" +
+                                       Prev.Spelling);
+  }
+
+  StringRef Name = Struct.getName();
+  OS << "\n#ifdef OPTIONS_STRUCT_DECL\n#undef OPTIONS_STRUCT_DECL\n";
+  OS << "#include \"llvm/ADT/StringRef.h\"\n\n";
+  StringRef Namespace = Struct.getValueAsString("Namespace");
+  OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n"
+        "class OptTable;\n} // namespace opt\n} // namespace llvm\n\n";
+  OS << "namespace " << Namespace << " {\n";
+  OS << "struct " << Name << " {\n";
+  if (Namespace != "llvm")
+    OS << "  using StringRef = llvm::StringRef;\n";
+  for (const Member &M : Members)
+    OS << "  " << M.Type << " " << M.Name << "{" << M.Default << "};\n";
+  OS << "\n  /// The instance cl::ParseCommandLineOptions sets.\n";
+  OS << "  static " << Name << " Global;\n\n";
+  OS << "  static const llvm::opt::OptTable &optTable();\n";
+  OS << "  /// Sets the member that \\p A names. Returns false if the value is "
+        "invalid.\n";
+  OS << "  bool apply(const llvm::opt::Arg &A);\n";
+  OS << "};\n} // namespace " << Namespace << "\n";
+  OS << "#endif // OPTIONS_STRUCT_DECL\n";
+
+  std::string Qualified = (Namespace + "::" + Name).str();
+  OS << "\n#ifdef OPTIONS_STRUCT_DEFS\n#undef OPTIONS_STRUCT_DEFS\n";
+  OS << Qualified << " " << Qualified << "::Global;\n\n";
+  OS << "namespace {\nenum ID : unsigned {\n  OPT_INVALID = 0,\n";
+  for (const Record *R : Groups)
+    OS << "  OPT_" << getOptionName(*R) << ",\n";
+  for (const Record *R : Opts)
+    OS << "  OPT_" << getStructOptionID(*R) << ",\n";
+  OS << "};\n} // namespace\n\n";
+  OS << "const llvm::opt::OptTable &" << Qualified << "::optTable() {\n";
+  OS << "  static const llvm::opt::LibraryOptTable T(optionTables());\n";
+  OS << "  return T;\n}\n\n";
+  OS << "bool " << Qualified << "::apply(const llvm::opt::Arg &A) {\n";
+  OS << "  switch (A.getOption().getID()) {\n";
+  for (const Record *R : Fields) {
+    OS << "  case OPT_" << getStructOptionID(*R) << ":\n";
+    std::string Member = getMemberName(*R, Prefix);
+    if (!R->getValue("FieldValue"))
+      OS << "    return llvm::opt::parseArgValue(A.getValue(), " << Member
+         << ");\n";
+    else
+      OS << "    " << Member << " = " << R->getValueAsString("FieldValue")
+         << ";\n    return true;\n";
+  }
+  OS << "  }\n  llvm_unreachable(\"option without a member\");\n}\n";
+  OS << "#endif // OPTIONS_STRUCT_DEFS\n";
+}
+
 /// OptionParserEmitter - This tablegen backend takes an input .td file
 /// describing a list of options and emits a data structure for parsing and
 /// working with those options when given an input command line.
@@ -240,6 +375,11 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
   std::vector<const Record *> SubCommands =
       Records.getAllDerivedDefinitions("SubCommand");
+
+  ArrayRef<const Record *> Structs =
+      Records.getAllDerivedDefinitionsIfDefined("OptionsStruct");
+  if (Structs.size() > 1)
+    PrintFatalError(Structs[1]->getLoc(), "only one OptionsStruct is allowed");
 
   emitSourceFileHeader("Option Parsing Definitions", OS);
 
@@ -295,16 +435,20 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
 
   // Flags and Visibility name enumerators of the including tool. An option
-  // inherits its group's.
+  // inherits its group's. Names are sorted so that equal masks share an
+  // InfoExtra row.
   auto GetMask = [](const Record &R, StringRef Field) {
+    std::set<StringRef> Names;
+    for (const Init *I : *R.getValueAsListInit(Field))
+      Names.insert(cast<DefInit>(I)->getDef()->getName());
+    if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group")))
+      for (const Init *I : *DI->getDef()->getValueAsListInit(Field))
+        Names.insert(cast<DefInit>(I)->getDef()->getName());
     std::string Mask;
     raw_string_ostream MaskOS(Mask);
     ListSeparator Sep(" | ");
-    for (const Init *I : *R.getValueAsListInit(Field))
-      MaskOS << Sep << cast<DefInit>(I)->getDef()->getName();
-    if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group")))
-      for (const Init *I : *DI->getDef()->getValueAsListInit(Field))
-        MaskOS << Sep << cast<DefInit>(I)->getDef()->getName();
+    for (StringRef Name : Names)
+      MaskOS << Sep << "static_cast<unsigned>(" << Name << ")";
     return Mask.empty() ? std::string("0") : Mask;
   };
 
@@ -322,9 +466,17 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "/////////\n";
   OS << "// Tables\n\n";
-  OS << "#ifdef OPTTABLE_CODE\n";
+  // An OptionsStruct's definitions use the tables.
+  OS << (Structs.empty()
+             ? "#ifdef OPTTABLE_CODE\n"
+             : "#if defined(OPTTABLE_CODE) || defined(OPTIONS_STRUCT_DEFS)\n");
   // A function rather than an object: the object needs dynamic relocations.
   OS << "static llvm::opt::OptTable::Tables optionTables() {\n";
+  // An OptionsStruct's .cpp has no using-directive for llvm::opt.
+  if (!Structs.empty())
+    OS << "  using llvm::opt::DefaultVis, llvm::opt::HelpHidden,\n"
+          "      llvm::opt::RenderAsInput, llvm::opt::RenderJoined,\n"
+          "      llvm::opt::RenderSeparate;\n";
   Table.EmitStringTableDef(OS, "OptionStrTable");
   OS << "\n";
 
@@ -343,6 +495,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       // First emit the number of prefix strings in this list of prefixes.
       OS << Sep << "    " << Prefix.size() << " /* prefixes */";
       PrefixIndex = CurIndex;
+      if (PrefixIndex > 255)
+        PrintFatalError("too many distinct prefix sets");
       assert((CurIndex == 0 || !Prefix.empty()) &&
              "Only first prefix set should be empty!");
       for (const auto &PrefixKey : Prefix)
@@ -425,19 +579,27 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
   OS << "\n  };\n\n";
 
-  // Rarely set fields, in OptTable::InfoExtra order. Options with equal values
-  // share a row; row 0 is all zero.
+  // Fields that are rarely set or take few distinct values, in
+  // OptTable::InfoExtra order. Options with equal values share a row; row 0 is
+  // all zero.
   OS << "  static constexpr llvm::opt::OptTable::InfoExtra "
-        "OptionInfoExtrasTable[] = {\n    {0, 0, 0, 0, 0},\n";
-  std::map<std::array<unsigned, 5>, unsigned> ExtraRows;
-  ExtraRows.try_emplace({}, 0);
+        "OptionInfoExtrasTable[] = {\n    {0, 0, 0, 0, 0, 0, 0, 0},\n";
+  std::map<std::array<std::string, 8>, unsigned> ExtraRows;
+  ExtraRows.try_emplace({"0", "0", "0", "0", "0", "0", "0", "0"}, 0);
   DenseMap<const Record *, unsigned> ExtraOffset;
   for (const Record &R : llvm::make_pointee_range(Opts)) {
-    std::array<unsigned, 5> Row = {
-        *Table.GetStringOffset(getOptionalString(R, "MetaVarName")),
-        *Table.GetStringOffset(getAliasArgsBlob(R)),
-        *Table.GetStringOffset(getOptionalString(R, "Values")),
-        HelpTextVariantsOffset.lookup(&R), GetSubCommandIDsOffset(R)};
+    int64_t NumArgs = R.getValueAsInt("NumArgs");
+    if (NumArgs < 0 || NumArgs > 255)
+      PrintFatalError(R.getLoc(), "NumArgs must be in [0, 255]");
+    std::array<std::string, 8> Row = {
+        utostr(*Table.GetStringOffset(getOptionalString(R, "MetaVarName"))),
+        utostr(*Table.GetStringOffset(getAliasArgsBlob(R))),
+        utostr(*Table.GetStringOffset(getOptionalString(R, "Values"))),
+        GetMask(R, "Flags"),
+        GetMask(R, "Visibility"),
+        utostr(HelpTextVariantsOffset.lookup(&R)),
+        utostr(GetSubCommandIDsOffset(R)),
+        utostr(NumArgs)};
     auto [It, Inserted] = ExtraRows.try_emplace(Row, ExtraRows.size());
     if (Inserted) {
       OS << "    {";
@@ -456,8 +618,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
                         /*EmitComment=*/true);
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
-    OS << ", 0, 0, 0, " << GetRefID(R, "Group")
-       << ", 0, 0, llvm::opt::Option::GroupClass, 0},\n";
+    OS << ", " << GetRefID(R, "Group")
+       << ", 0, 0, 0, llvm::opt::Option::GroupClass},\n";
   }
   for (const Record &R : llvm::make_pointee_range(Opts)) {
     OS << "    {";
@@ -465,13 +627,12 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
                         /*EmitComment=*/true);
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
-    OS << ", " << GetMask(R, "Flags") << ", " << GetMask(R, "Visibility");
+    OS << ", " << GetRefID(R, "Group") << ", " << GetRefID(R, "Alias");
+    OS << ", " << ExtraOffset.lookup(&R);
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     OS << ", " << Prefixes[PrefixKeyT(RPrefixes.begin(), RPrefixes.end())];
-    OS << ", " << GetRefID(R, "Group") << ", " << GetRefID(R, "Alias");
-    OS << ", " << ExtraOffset.lookup(&R) << ", llvm::opt::Option::"
-       << R.getValueAsDef("Kind")->getValueAsString("Name") << "Class, "
-       << R.getValueAsInt("NumArgs") << "},\n";
+    OS << ", llvm::opt::Option::"
+       << R.getValueAsDef("Kind")->getValueAsString("Name") << "Class},\n";
   }
   OS << "  };\n\n";
 
@@ -482,7 +643,12 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
      << ", OptionSubCommandIDsTable};\n";
   OS << "}\n";
   OS << "#undef OPTTABLE_CODE\n";
-  OS << "#endif // OPTTABLE_CODE\n\n";
+  OS << (Structs.empty()
+             ? "#endif // OPTTABLE_CODE\n\n"
+             : "#endif // OPTTABLE_CODE || OPTIONS_STRUCT_DEFS\n\n");
+
+  if (!Structs.empty())
+    emitOptionsStruct(*Structs[0], Groups, Opts, OS);
 
   // Dump ValuesCode.
   OS << "/////////\n";

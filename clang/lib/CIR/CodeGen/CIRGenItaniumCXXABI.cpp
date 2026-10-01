@@ -22,11 +22,14 @@
 
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/ItaniumCXXABIUtils.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -358,6 +361,7 @@ void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
   auto *md = cast<CXXMethodDecl>(gd.getDecl());
   StructorCIRGen cirGenType = getCIRGenToUse(cgm, md);
   const auto *cd = dyn_cast<CXXConstructorDecl>(md);
+  const CXXDestructorDecl *dd = cd ? nullptr : cast<CXXDestructorDecl>(md);
 
   if (cd ? gd.getCtorType() == Ctor_Complete
          : gd.getDtorType() == Dtor_Complete) {
@@ -381,7 +385,19 @@ void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
 
   auto fn = cgm.codegenCXXStructor(gd);
 
-  cgm.maybeSetTrivialComdat(*md, fn);
+  if (cirGenType == StructorCIRGen::COMDAT) {
+    llvm::SmallString<256> comdatKey;
+    llvm::raw_svector_ostream out(comdatKey);
+    ItaniumMangleContext &mangler =
+        cast<ItaniumMangleContext>(cgm.getCXXABI().getMangleContext());
+    if (dd)
+      mangler.mangleCXXDtorComdat(dd, out);
+    else
+      mangler.mangleCXXCtorComdat(cd, out);
+    fn.setComdat(llvm::StringRef(comdatKey));
+  } else {
+    cgm.maybeSetTrivialComdat(*md, fn);
+  }
 }
 
 void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &cgf,
@@ -687,9 +703,6 @@ static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
 
   // Types added here must also be added to emitFundamentalRTTIDescriptors.
   switch (ty->getKind()) {
-  case BuiltinType::WasmExternRef:
-  case BuiltinType::HLSLResource:
-    llvm_unreachable("NYI");
   case BuiltinType::Void:
   case BuiltinType::NullPtr:
   case BuiltinType::Bool:
@@ -737,8 +750,14 @@ static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
   case BuiltinType::ShortAccum:

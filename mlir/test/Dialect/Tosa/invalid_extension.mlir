@@ -276,6 +276,13 @@ func.func @test_gather(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<13x26xi32>) ->
 }
 
 // -----
+func.func @test_gather_mxfp(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %arg1: tensor<13x26xi32>) -> tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  // expected-error@+1 {{'tosa.gather' op illegal: requires all of [mx_common, mx_fp4e2m1] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<13x26xi32>) -> tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %0 : tensor<13x26x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
 func.func @test_row_gather(%arg0: tensor<13x21x3xbf16>, %arg1: tensor<13x26xi32>) -> tensor<13x52x3xbf16> {
   %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.row_gather' op illegal: requires any of [bf16] profiles/extensions to be specified in the target environment}}
@@ -751,4 +758,12 @@ func.func @test_cast_to_block_scaled(%arg0: tensor<4x32xf32>) -> (tensor<4x32xf4
   // expected-error@+1 {{'tosa.cast_to_block_scaled' op illegal: requires any of [mxfp] profiles/extensions to be specified in the target environment}}
   %0:2 = tosa.cast_to_block_scaled %arg0 block_size<BLOCK_SIZE_32> : (tensor<4x32xf32>) -> (tensor<4x32xf4E2M1FN>, tensor<4x1xf8E8M0FNU>)
   return %0#0, %0#1 : tensor<4x32xf4E2M1FN>, tensor<4x1xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_reverse_block_scaled(%arg0: tensor<2x3x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<2x3x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>> {
+  // expected-error@+1 {{'tosa.reverse' op illegal: requires all of [mx_common, mx_fp8e4m3] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.reverse %arg0 axis(2) : (tensor<2x3x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<2x3x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  return %0 : tensor<2x3x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
 }

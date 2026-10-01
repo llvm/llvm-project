@@ -771,7 +771,7 @@ def HasStdExtZfhOrZvfh
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
 
 def FeatureStdExtZvfofp8min
-    : RISCVExperimentalExtension<0, 2,
+    : RISCVExperimentalExtension<0, 9,
                                  "Vector OFP8 Converts", [FeatureStdExtZve32f]>;
 def HasStdExtZvfofp8min
     : Predicate<"Subtarget->hasStdExtZvfofp8min()">,
@@ -1327,7 +1327,7 @@ def HasStdExtZbkbOrP
 
 // "Y" extension (CHERI support)
 
-def FeatureStdExtY : RISCVExperimentalExtension<0, 98, "'Base Y' (CHERI)">;
+def FeatureStdExtY : RISCVExperimentalExtension<0, 910, "'Base Y' (CHERI)">;
 def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
                  AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
 

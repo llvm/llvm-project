@@ -575,7 +575,7 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
 static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
                                     ShiftSemantics Semantics,
                                     Instruction *InnerShift,
-                                    InstCombinerImpl &IC, Instruction *CxtI) {
+                                    InstCombinerImpl &IC, Instruction *CtxI) {
   assert(InnerShift->isLogicalShift() && "Unexpected instruction type");
 
   // We need constant scalar or constant splat shifts.
@@ -612,7 +612,7 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
     unsigned MaskShift =
         IsInnerShl ? TypeWidth - InnerShAmt : InnerShAmt - OuterShAmt;
     APInt Mask = APInt::getLowBitsSet(TypeWidth, OuterShAmt) << MaskShift;
-    if (IC.MaskedValueIsZero(InnerShift->getOperand(0), Mask, CxtI))
+    if (IC.MaskedValueIsZero(InnerShift->getOperand(0), Mask, CtxI))
       return true;
   }
 
@@ -633,7 +633,7 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
 bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
                                           bool IsLeftShift,
                                           ShiftSemantics Semantics,
-                                          Instruction *CxtI) {
+                                          Instruction *CtxI) {
   // We can always evaluate immediate constants shifted left. For right shifts,
   // the constant must be a multiple of 2^NumBits to avoid losing information.
   if (match(V, m_ImmConstant())) {
@@ -666,7 +666,7 @@ bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
   case Instruction::Shl:
   case Instruction::LShr:
     return canEvaluateShiftedShift(NumBits, IsLeftShift, Semantics, I, *this,
-                                   CxtI);
+                                   CtxI);
 
   case Instruction::Select: {
     SelectInst *SI = cast<SelectInst>(I);
@@ -994,7 +994,8 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), FalseVal, C1);
       Value *NewOp = Builder.CreateBinOp(TBO->getOpcode(), NewShift, NewRHS);
-      return SelectInst::Create(Cond, NewOp, NewShift);
+      return SelectInst::Create(Cond, NewOp, NewShift, "", nullptr,
+                                cast<SelectInst>(Op0));
     }
   }
 
@@ -1011,7 +1012,8 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), TrueVal, C1);
       Value *NewOp = Builder.CreateBinOp(FBO->getOpcode(), NewShift, NewRHS);
-      return SelectInst::Create(Cond, NewShift, NewOp);
+      return SelectInst::Create(Cond, NewShift, NewOp, "", nullptr,
+                                cast<SelectInst>(Op0));
     }
   }
 
@@ -1132,7 +1134,7 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
     if (!I.hasNoSignedWrap()) {
       if (MaxCnt < KnownAmt.countMinSignBits() ||
           MaxCnt <
-              ComputeNumSignBits(I.getOperand(0), Q.DL, Q.AC, Q.CxtI, Q.DT)) {
+              ComputeNumSignBits(I.getOperand(0), Q.DL, Q.AC, Q.CtxI, Q.DT)) {
         I.setHasNoSignedWrap();
         Changed = true;
       }

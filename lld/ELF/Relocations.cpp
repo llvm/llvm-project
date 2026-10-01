@@ -762,6 +762,8 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
     return;
   }
   gotPlt.addEntry(sym);
+  if (sym.isPreemptible && ctx.arg.zMarkPlt && type == ctx.target->pltRel)
+    expr = R_PLT;
   rel.addReloc(
       {type, &gotPlt, sym.getGotPltOffset(ctx), isPreemptible, sym, 0, expr});
 }
@@ -943,7 +945,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
       // If the target adjusted the expression to an optimizable form, we may
       // end up needing the GOT if we can't optimize everything.
       if (expr == R_RELAX_GOT_PC || expr == R_RELAX_GOT_PC_NOPIC)
-        ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+        ctx.in.got->hasDeferredEntries.store(true, std::memory_order_relaxed);
     }
   }
 
