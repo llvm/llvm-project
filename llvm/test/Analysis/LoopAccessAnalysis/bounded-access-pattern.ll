@@ -252,8 +252,8 @@ define void @bounded_offset_load(ptr %a) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %a High: (4100 + %a))
-; CHECK-NEXT:            Member: {(4 + %a),+,4}<nw><%loop>
 ; CHECK-NEXT:            Member: {%a,+,4}<nw><%loop>
+; CHECK-NEXT:            Member: {(4 + %a),+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -885,8 +885,8 @@ define void @bounded_load_bounded_store_same(ptr %a) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %a High: (4100 + %a))
-; CHECK-NEXT:            Member: {%a,+,4}<nw><%loop>
 ; CHECK-NEXT:            Member: {(4 + %a),+,4}<nw><%loop>
+; CHECK-NEXT:            Member: {%a,+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -936,14 +936,12 @@ define void @bounded_i24_store_size(ptr %a, ptr %b) {
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds i24, ptr %b, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.a = getelementptr inbounds i24, ptr %a, i64 %idx
-; CHECK-NEXT:          %gep.a = getelementptr inbounds i24, ptr %a, i64 %idx
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: (4095 + %b))
 ; CHECK-NEXT:            Member: {%b,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %a High: (4095 + %a))
-; CHECK-NEXT:            Member: {%a,+,4}<nw><%loop>
 ; CHECK-NEXT:            Member: {%a,+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.

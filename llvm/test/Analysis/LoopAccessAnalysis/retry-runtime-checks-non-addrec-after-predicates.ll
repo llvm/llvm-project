@@ -11,8 +11,8 @@ define void @retry_do_not_cast_non_addrec(ptr %p) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %p High: (68719476722 + %p))
-; CHECK-NEXT:            Member: {(1 + %p),+,16}<%loop>
 ; CHECK-NEXT:            Member: {%p,+,16}<%loop>
+; CHECK-NEXT:            Member: {(1 + %p),+,16}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
