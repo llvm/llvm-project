@@ -77,8 +77,7 @@ LIBC_INLINE_VAR constexpr cpp::array<uint32_t, 32> EXP2_MID_5_BITS = {
 // The main point of these formulas is that the expensive part of calculating
 // the polynomials approximating lower parts of e^x and e^(-x) is shared and
 // only done once.
-template <bool IsSinh>
-LIBC_INLINE float eval_sinh_or_cosh(float xf) {
+template <bool IsSinh> LIBC_INLINE float eval_sinh_or_cosh(float xf) {
   float kf = fputil::nearest_integer(xf * (LOG2F_E * 0x1.0p+5f));
   int x_hi_mid_p = static_cast<int>(kf);
   int x_hi_mid_m = -x_hi_mid_p;
