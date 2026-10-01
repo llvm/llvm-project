@@ -3198,6 +3198,10 @@ def HasSDWA10 :
 def HasDPP : Predicate<"Subtarget->hasDPP()">,
   AssemblerPredicate<(all_of FeatureGCN3Encoding, FeatureDPP)>;
 
+def HasGCN3DPALU_DPP :
+  Predicate<"Subtarget->isGCN3Encoding() && Subtarget->hasDPALU_DPP()">,
+  AssemblerPredicate<(all_of FeatureGCN3Encoding, FeatureDPALU_DPP)>;
+
 def HasDPP8 : Predicate<"Subtarget->hasDPP8()">,
   AssemblerPredicate<(all_of (not FeatureGCN3Encoding), FeatureGFX10Insts, FeatureDPP8)>;
 
@@ -3350,7 +3354,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureDot13Insts, FeatureDot1Insts, FeatureDot2Insts,
   FeatureDot3Insts, FeatureDot4Insts, FeatureDot5Insts,
   FeatureDot6Insts, FeatureDot7Insts, FeatureDot8Insts,
-  FeatureDot9Insts, FeatureExtendedImageInsts, FeatureF16BF16ToFP6BF6ConversionScaleInsts,
+  FeatureDot9Insts, FeatureExclusiveScanInsts, FeatureExtendedImageInsts, FeatureF16BF16ToFP6BF6ConversionScaleInsts,
   FeatureF32ToF16BF16ConversionSRInsts, FeatureF32ToFP6BF6ConversionScaleInsts, FeatureFP4ConversionScaleInsts,
   FeatureFP6BF6ConversionScaleInsts, FeatureFP8ConversionInsts, FeatureFP8ConversionScaleInsts,
   FeatureBlock16ConversionScaleInsts, FeatureFP8E5M3Insts, FeatureFP8Insts,
@@ -3370,8 +3374,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSadInsts, FeatureSetPrioIncWgInst, FeatureSmemPrefetchInsts,
   FeatureTDMInsts, FeatureTanhInsts, FeatureTensorCvtLutInsts,
   FeatureTransposeLoadF4F6Insts, FeatureVMemToLDSLoad, FeatureVmemPrefInsts,
-  FeatureWMMA128bInsts, FeatureWMMA256bInsts, FeatureWMMAN16Insts,
-  FeatureWMMAF4Insts, FeatureXF32Insts,
+  FeatureWaveMatchInsts, FeatureWMMA128bInsts, FeatureWMMA256bInsts,
+  FeatureWMMAN16Insts, FeatureWMMAF4Insts, FeatureXF32Insts,
   FeatureWavefrontSize32, FeatureWavefrontSize64, FeatureSupportsWGP,
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,

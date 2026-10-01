@@ -247,6 +247,9 @@ features cannot lower the translation-unit ABI level;
 
 - Added support for the `__builtin_strlcat` and `__builtin_strlcpy` builtins.
 
+- Added `__builtin_sort_pack` to sort a pack of types using the same
+  order as `__builtin_type_order`.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
@@ -268,11 +271,22 @@ features cannot lower the translation-unit ABI level;
   path share one module cache, and is only sound when no module needs the path
   -- a lookup that would have resolved through an ignored path simply fails.
 
+- Added support for `-fkeep-inline-functions` in Clang. This option forces
+  inline function definitions that are available in the current translation
+  unit to be emitted into the object file, even when they are inlined into all
+  callers or are otherwise unused.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
 
 - All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
+
+- `-ftrivial-auto-var-init=` now initializes variables whose declaration is
+  bypassed by a `goto` or `switch`, which were previously left uninitialized.
+  The initialization is emitted at each bypassing jump. See the
+  `-ftrivial-auto-var-init=` entry in the User's Manual for the details,
+  including where C deliberately departs from C 6.2.4p6.
 
 ### Removed Compiler Flags
 
@@ -289,6 +303,9 @@ features cannot lower the translation-unit ABI level;
 
 - `-Wfortify-source` now diagnoses when `recv` or `recvfrom` is called with a
   size argument larger than the destination buffer.
+
+- `-Wfortify-source` now diagnoses when `poll`, `ppoll`, or `ppoll64` is called
+  with a descriptor count whose total size exceeds the `fds` array size.
 
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
@@ -463,6 +480,9 @@ features cannot lower the translation-unit ABI level;
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- `-Wfortify-source` now diagnoses calls to `fread`, `fwrite`, and `fgets`
+  when the requested size exceeds the corresponding buffer. (#GH204337)
+
 - `-Wfortify-source` now warns when the constant-evaluated argument to
   `umask` has bits set outside `0777`. Those bits are silently discarded
   by the kernel, so setting them is almost always a typo (matching the
@@ -514,15 +534,15 @@ features cannot lower the translation-unit ABI level;
   inline-defined friend function shares the name of a non-static class
   member variable. (#GH221190)
 
-- Clang now diagnoses matrix logical operations are only supported for HLSL. (GH222381)
+- Clang now diagnoses matrix logical operations are only supported for HLSL. (#GH222381)
 
 - Improve the input size mismatch diagnostic when calling `__builtin_shufflevector` with valid
-  vector element types but different sizes. (GH221791)
+  vector element types but different sizes. (#GH221791)
 
 - Suggests the correct location for an attribute written before the `using`
   keyword of an alias-declaration. (#GH155787)
 
-- Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (GH222383)
+- Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (#GH222383)
 
 - Added `-Wabi-tag-redeclaration` to diagnose when a forward namespace
   declaration prevents applying `abi_tag` later on namespace reopening.
@@ -565,6 +585,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a bug where a bit-field accessed as the result of a statement expression
   (e.g. `({ s.b; })`) was not subject to integer promotion, unlike an ordinary
   bit-field access. (#GH221542)
+- No longer crashing due to follow-on diagnostics when there is an invalid operand in a logical operator involving a vector operand. (#GH227588)
   
 #### Bug Fixes to Compiler Builtins
 
@@ -776,6 +797,13 @@ features cannot lower the translation-unit ABI level;
   a new-expression is now correctly rejected in a constant expression because
   it does not select a replaceable global allocation function. (#GH212211)
 
+- Fixed `__attribute__((used))` and `-fkeep-inline-functions` being
+  incorrectly ignored for complete constructors and destructors (C1/D1 variants)
+  when `-mconstructor-aliases` is active. C1/D1 variants were previously
+  replaced with their base variants (C2/D2) in the IR before retention could
+  take effect, causing them to be dropped from llvm.used and omitted from
+  the object file. (#GH226572)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -815,6 +843,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when a method or function definition follows an
   Objective-C `@implementation` that was ended by a nested `@interface`,
   `@protocol` or `@implementation` before its `@end`. (#GH209503)
+- Fixed use-after-free with annotate attribute on a C++ class method with a this-adjusting thunk.
 
 ### OpenACC Specific Changes
 
@@ -926,6 +955,10 @@ features cannot lower the translation-unit ABI level;
 - Added `__builtin_wasm_memory_copy` and `__builtin_wasm_memory_fill` builtins
   for the WebAssembly `memory.copy` and `memory.fill` bulk memory instructions.
 
+- Fixed a "function signature mismatch" trap at program exit when destroying a
+  temporary that is bound to a reference with static or thread storage
+  duration. (#GH45221)
+
 #### AVR Support
 
 #### SystemZ Support
@@ -945,7 +978,8 @@ features cannot lower the translation-unit ABI level;
 - Add `AfterRequiresExpression` sub-option of `BraceWrapping` to wrap the
   body of requires expressions. It is enabled by the `Allman`, `Whitesmiths`,
   and `GNU` styles of `BreakBeforeBraces`.
-
+- Add `AtEndOfBlock` sub-option of `KeepEmptyLines` to control the number of
+  empty lines kept at end of blocks.
 - `QualifierOrder` now supports `typedef`, `consteval`, `constinit`,
   `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,
   and `explicit` declaration specifiers.
@@ -953,6 +987,7 @@ features cannot lower the translation-unit ABI level;
 ### libclang
 
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
+- add unary operator handling to `clang_getCursorSpelling()`.
 
 ### Code Completion
 
@@ -1001,6 +1036,7 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   register word so the return value is correctly extended, working around a
   `ctypes` bug (https://github.com/python/cpython/issues/156933) that left the
   high bytes of the return register uninitialized.
+- Add support for retrieving unary operator information through `Cursor.unary_operator()`.
 
 ### OpenMP Support
 

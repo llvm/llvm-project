@@ -703,15 +703,15 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
 
   addMachineFunctionPass(RemoveLoadsIntoFakeUsesPass(), PMW);
   addMachineFunctionPass(StackMapLivenessPass(), PMW);
-  addMachineFunctionPass(
-      LiveDebugValuesPass(TM.Options.ShouldEmitDebugEntryValues()), PMW);
+  addMachineFunctionPass(LiveDebugValuesPass(TM.shouldEmitDebugEntryValues()),
+                         PMW);
   addMachineFunctionPass(MachineSanitizerBinaryMetadataPass(), PMW);
 
   if (TM.Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
       Opt.EnableMachineOutliner != RunOutliner::NeverOutline) {
     if (Opt.EnableMachineOutliner != RunOutliner::TargetDefault ||
-        TM.Options.SupportsDefaultOutlining) {
+        TM.supportsDefaultOutlining()) {
       flushFPMsToMPM(PMW);
       addModulePass(MachineOutlinerPass(Opt.EnableMachineOutliner), PMW);
     }
