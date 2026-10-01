@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include <cassert>
 
@@ -64,67 +65,31 @@ std::string llvm::IntelGPU::getNumericArchName(uint32_t GPUIPVersion) {
       .str();
 }
 
-/// Check that Level is a known IGCA Target in IntelGPUTargetParser.def.
-bool isKnownIGCATargetLevel(uint16_t Level) {
-  switch (Level) {
-#define INTEL_IGCA_TARGET(TARGET) case TARGET:
-#include "llvm/TargetParser/IntelGPUTargetParser.def"
-    return true;
-  default:
-    return false;
-  }
-}
-
 IGCATarget llvm::IntelGPU::parseIGCATarget(StringRef MaybeTarget) {
-  if (!MaybeTarget.consume_front("igca_"))
-    return IGCATarget::invalid();
-
-  uint16_t Target;
-  if (MaybeTarget.consumeInteger(10, Target) || !isKnownIGCATargetLevel(Target))
-    return IGCATarget::invalid();
-
-  IGCAFeatureSet FS = IGCAFeatureSet::IGCA_CORE;
-  if (MaybeTarget.consume_front("c"))
-    FS = IGCAFeatureSet::IGCA_COMPUTE;
-  else if (MaybeTarget.consume_front("r"))
-    FS = IGCAFeatureSet::IGCA_RENDER;
-  // Exact form needs to either be compute or render:
-  bool IsExactFS =
-      (FS != IGCAFeatureSet::IGCA_CORE && MaybeTarget.consume_front("a"));
-  if (!MaybeTarget.empty())
-    return IGCATarget::invalid();
-
-  return {Target, FS, IsExactFS};
+  return StringSwitch<IGCATarget>(MaybeTarget)
+#define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)                           \
+  .Case(NAME, IGCATarget(TARGET, IGCAFeatureSet::FEATURE_SET))
+#include "llvm/TargetParser/IntelGPUTargetParser.def"
+      .Default(IGCATarget::invalid());
 }
 
 StringRef llvm::IntelGPU::getIGCATargetName(IGCATarget T) {
   switch (T.pack()) {
-#define INTEL_IGCA_TARGET(TARGET)                                              \
-  case IGCATarget(TARGET, IGCAFeatureSet::IGCA_CORE, false).pack():            \
-    return "igca_" #TARGET;                                                    \
-  case IGCATarget(TARGET, IGCAFeatureSet::IGCA_COMPUTE, false).pack():         \
-    return "igca_" #TARGET "c";                                                \
-  case IGCATarget(TARGET, IGCAFeatureSet::IGCA_COMPUTE, true).pack():          \
-    return "igca_" #TARGET "ca";                                               \
-  case IGCATarget(TARGET, IGCAFeatureSet::IGCA_RENDER, false).pack():          \
-    return "igca_" #TARGET "r";                                                \
-  case IGCATarget(TARGET, IGCAFeatureSet::IGCA_RENDER, true).pack():           \
-    return "igca_" #TARGET "ra";
+#define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)                           \
+  case IGCATarget(TARGET, IGCAFeatureSet::FEATURE_SET).pack():                 \
+    return NAME;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
   default:
     return "";
   }
 }
 
-#define INTEL_IGCA_TARGET_FEATURESETS(TARGET)                                  \
-  "igca_" #TARGET, "igca_" #TARGET "c", "igca_" #TARGET "ca",                  \
-      "igca_" #TARGET "r", "igca_" #TARGET "ra"
-
+// TODO: Ensure -fsycl --offload-arch provides a list of valid IGCA
+// architectures, similar to how compiling for an nvptx triple returns a list
+// of valid GPU architectures. The user trying to input an invalid IGCA target
+// without being told what IGCA targets actually exist might get confusing.
 void llvm::IntelGPU::fillValidIGCATargetList(
     SmallVectorImpl<StringRef> &Values) {
-#define INTEL_IGCA_TARGET(TARGET)                                              \
-  Values.append({INTEL_IGCA_TARGET_FEATURESETS(TARGET)});
+#define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET) Values.push_back(NAME);
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
 }
-
-#undef INTEL_IGCA_TARGET_FEATURESETS

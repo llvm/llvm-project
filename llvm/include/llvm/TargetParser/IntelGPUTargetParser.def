@@ -41,11 +41,15 @@
 // This file also includes a list of valid IGCA targets, which can be used to
 // compile binaries with support different GPU architectures and feature sets:
 //
-//   INTEL_IGCA_TARGET(TARGET)
-//     TARGET            - Numeric IGCA target level, e.g. 60. corresponds to
-//                         "igca_60". A defined IGCA target means feature sets,
-//                         i.e. "igca_<TARGET>c", or "igca_<Target>ra" are also
-//                         accepted.
+//   INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)
+//     One row per valid IGCA target spelling. Only the combinations listed
+//     are valid.
+//     NAME              - Name of the IGCA target, e.g. "igca_15ra". Name must
+//                         agree with the other columns.
+//     TARGET            - Numeric IGCA target level, e.g. 60.
+//     FEATURE_SET       - Feature set of the current target, i.e. "Compute" for
+//                         "c" suffix, "Render" for "r", "ComputeExact" for
+//                         "ca", "Core" for "", etc.
 //
 //===----------------------------------------------------------------------===//
 
@@ -102,19 +106,38 @@ INTEL_GPU_COMPAT("xe-bmg", XE_BMG, 40, Render)
 INTEL_GPU_COMPAT("xe-mtl", XE_MTL, 30, Render)
 INTEL_GPU_COMPAT("xe-dg2", XE_DG2, 15, RenderExact)
 
-// IGCA target levels. Only targets defined here are valid.
+// IGCA targets. Only targets listed here are valid.
 #ifndef INTEL_IGCA_TARGET
-#define INTEL_IGCA_TARGET(TARGET)
+#define INTEL_IGCA_TARGET(NAME, TARGET, FEATURE_SET)
 #endif
 
-INTEL_IGCA_TARGET(10)
-INTEL_IGCA_TARGET(15)
-INTEL_IGCA_TARGET(20)
-INTEL_IGCA_TARGET(30)
-INTEL_IGCA_TARGET(35)
-INTEL_IGCA_TARGET(40)
-INTEL_IGCA_TARGET(50)
-INTEL_IGCA_TARGET(60)
+INTEL_IGCA_TARGET("igca_10",   10, Core)
+INTEL_IGCA_TARGET("igca_10r",  10, Render)
+
+INTEL_IGCA_TARGET("igca_15",   15, Core)
+INTEL_IGCA_TARGET("igca_15r",  15, Render)
+INTEL_IGCA_TARGET("igca_15ra", 15, RenderExact)
+
+INTEL_IGCA_TARGET("igca_20",   20, Core)
+INTEL_IGCA_TARGET("igca_20c",  20, Compute)
+INTEL_IGCA_TARGET("igca_20ca", 20, ComputeExact)
+
+INTEL_IGCA_TARGET("igca_30",   30, Core)
+INTEL_IGCA_TARGET("igca_30r",  30, Render)
+
+INTEL_IGCA_TARGET("igca_35",   35, Core)
+INTEL_IGCA_TARGET("igca_35r",  35, Render)
+INTEL_IGCA_TARGET("igca_35ra", 35, RenderExact)
+
+INTEL_IGCA_TARGET("igca_40",   40, Core)
+INTEL_IGCA_TARGET("igca_40r",  40, Render)
+
+INTEL_IGCA_TARGET("igca_50",   50, Core)
+INTEL_IGCA_TARGET("igca_50r",  50, Render)
+
+INTEL_IGCA_TARGET("igca_60",   60, Core)
+INTEL_IGCA_TARGET("igca_60c",  60, Compute)
+INTEL_IGCA_TARGET("igca_60r",  60, Render)
 
 #undef INTEL_GPU
 #undef INTEL_GPU_COMPAT
