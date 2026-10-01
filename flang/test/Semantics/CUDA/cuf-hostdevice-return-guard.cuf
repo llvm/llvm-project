@@ -1,0 +1,157 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! The remainder of a block is guarded when an ON_DEVICE branch returns.
+! As for explicit branch arms, checking the appropriate target is deferred.
+module return_guard
+  use cudadevice, only: on_device, on_gpu => on_device
+contains
+  subroutine host_only()
+  end subroutine
+  attributes(device) subroutine device_only()
+  end subroutine
+  attributes(host,device) subroutine both()
+    ! Review example: the device version returns before the host-only call.
+    if (on_device()) return
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine negated()
+    if (.not. on_gpu()) return
+    call device_only()
+  end subroutine
+  attributes(host,device) subroutine block_return()
+    if (on_device()) then
+      return
+    end if
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine return_before_last_statement()
+    if (on_device()) then
+      call device_only()
+      return
+      call device_only()
+    end if
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine else_return_before_last_statement()
+    if (on_device()) then
+      call device_only()
+    else
+      return
+      call host_only()
+    end if
+    call device_only()
+  end subroutine
+  attributes(host,device) subroutine nested_conditional_return(choose)
+    logical, intent(in) :: choose
+    if (on_device()) then
+      if (choose) then
+        return
+      end if
+      call device_only()
+    end if
+    ! A nested conditional return does not eliminate fallthrough.
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine else_return()
+    if (on_device()) then
+      call device_only()
+    else
+      return
+    end if
+    call device_only()
+  end subroutine
+  attributes(host,device) subroutine nested(choose)
+    logical, intent(in) :: choose
+    if (choose) then
+      if (on_device()) return
+      call host_only()
+    end if
+    ! The outer IF can bypass the return guard.
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine loop_return(choose)
+    logical, intent(in) :: choose
+    do while (choose)
+      if (on_device()) return
+      call host_only()
+    end do
+    ! The loop need not execute.
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine ordinary_return(choose)
+    logical, intent(in) :: choose
+    if (choose) return
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine conditional_return(choose)
+    logical, intent(in) :: choose
+    if (on_device()) then
+      if (choose) return
+    end if
+    ! The device branch can fall through.
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine unrelated_label()
+10  continue
+    if (on_device()) return
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine bypass()
+    goto 10
+    if (on_device()) return
+    ! Accept the continuation guard; analyzing jumps is deferred.
+10  call host_only()
+  end subroutine
+  attributes(host,device) subroutine bypass_block()
+    !WARNING: Label '10' is in a construct that should not be used as a branch target here [-Wbranch-into-construct]
+    goto 10
+    if (on_device()) then
+      return
+10  end if
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine else_if_bypass(choose)
+    logical, intent(in) :: choose
+    if (choose) then
+      !ERROR: 'host_only' may not be called in device code
+      call host_only()
+    else if (on_device()) then
+      return
+    end if
+    ! The first branch can bypass the ON_DEVICE condition.
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+  attributes(host,device) subroutine select_dispatch(result)
+    integer, intent(out) :: result
+    ! The selector example from the review is already diagnosed.
+    !ERROR: 'device_value' may not be called in host code
+    select case (device_value())
+    case (1)
+      result = 10
+    case default
+      result = 20
+    end select
+  end subroutine
+  attributes(device) integer function device_value()
+    device_value = 1
+  end function
+end module
+
+module fake_return_guard
+contains
+  attributes(host,device) logical function on_device()
+    on_device = .false.
+  end function
+  subroutine host_only()
+  end subroutine
+  attributes(host,device) subroutine caller()
+    if (on_device()) return
+    !ERROR: 'host_only' may not be called in device code
+    call host_only()
+  end subroutine
+end module
