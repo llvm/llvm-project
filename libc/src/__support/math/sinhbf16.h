@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINHBF16_H
 
 #include "sinhbf16coshbf16_utils.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/cast.h"

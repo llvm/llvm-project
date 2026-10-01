@@ -5388,6 +5388,8 @@ add_header_library(
     sinhbf16.h
   DEPENDS
     .sinhbf16coshbf16_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.cast
     libc.src.__support.macros.config
