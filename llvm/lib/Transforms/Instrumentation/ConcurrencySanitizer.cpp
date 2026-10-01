@@ -153,7 +153,7 @@ private:
   struct MemoryAccessLists {
     SmallVector<Instruction *, 8> LoadsAndStores;
     SmallVector<Instruction *, 8> AtomicAccesses;
-    SmallVector<MemIntrinsic *, 8> MemIntrinCalls;
+    SmallVector<IntrinsicInst *, 8> MemIntrinCalls;
     bool HasCalls = false;
   };
 
@@ -161,7 +161,7 @@ private:
   void collectMemoryAccesses(Function &F, MemoryAccessLists &Out);
   bool instrumentLoadOrStore(Instruction *I, const DataLayout &DL);
   bool instrumentAtomic(Instruction *I, const DataLayout &DL);
-  bool instrumentMemIntrinsic(MemIntrinsic *M);
+  bool instrumentMemIntrinsic(IntrinsicInst *II, const DataLayout &DL);
   bool insertAccessProbe(Instruction *I, Value *Addr, Type *AccessTy,
                          const DataLayout &DL, bool IsWrite, bool IsCompound,
                          bool IsAtomic);
@@ -324,8 +324,8 @@ bool ConcurrencySanitizer::sanitizeFunction(Function &F,
       Res |= instrumentAtomic(I, DL);
 
   if (ClInstrumentMemIntrinsics && SanitizeFunction)
-    for (MemIntrinsic *MI : Acc.MemIntrinCalls)
-      Res |= instrumentMemIntrinsic(MI);
+    for (IntrinsicInst *II : Acc.MemIntrinCalls)
+      Res |= instrumentMemIntrinsic(II, DL);
 
   if (NeedsRuntimeIgnores) {
     insertRuntimeIgnores(F);
@@ -410,8 +410,8 @@ void ConcurrencySanitizer::collectMemoryAccesses(Function &F,
         LocalLoadsAndStores.push_back(&Inst);
       else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
         FlushLocalAccesses();
-        if (auto *MI = dyn_cast<MemIntrinsic>(&Inst))
-          Out.MemIntrinCalls.push_back(MI);
+        if (isa<AnyMemIntrinsic, MemSetPatternInst>(Inst))
+          Out.MemIntrinCalls.push_back(cast<IntrinsicInst>(&Inst));
         Out.HasCalls = true;
       }
     }
@@ -480,34 +480,36 @@ bool ConcurrencySanitizer::instrumentAtomic(Instruction *I,
   return true;
 }
 
-bool ConcurrencySanitizer::instrumentMemIntrinsic(MemIntrinsic *M) {
-  if (auto *MS = dyn_cast<MemSetInst>(M)) {
-    if (!shouldInstrumentAddress(MS->getRawDest()))
-      return false;
-    InstrumentationIRBuilder IRB(M);
-    Value *Len = IRB.CreateIntCast(M->getLength(), IntptrTy, false);
-    IRB.CreateCall(CsanWriteRange, {getCallbackAddress(IRB, MS->getRawDest()),
-                                    Len, ConstantInt::get(FlagsTy, AF_None)});
-    ++NumInstrumentedWrites;
-    return true;
-  }
+bool ConcurrencySanitizer::instrumentMemIntrinsic(IntrinsicInst *II,
+                                                  const DataLayout &DL) {
+  auto *MI = dyn_cast<AnyMemIntrinsic>(II);
+  auto *MSP = dyn_cast<MemSetPatternInst>(II);
+  Value *Dst = MI ? MI->getRawDest() : MSP->getRawDest();
+  Value *Src = nullptr;
+  if (auto *MT = dyn_cast<AnyMemTransferInst>(II))
+    Src = MT->getRawSource();
 
-  auto *MT = cast<MemTransferInst>(M);
-  bool InstrumentRead = shouldInstrumentAddress(MT->getRawSource());
-  bool InstrumentWrite = shouldInstrumentAddress(MT->getRawDest());
+  bool InstrumentRead = Src && shouldInstrumentAddress(Src);
+  bool InstrumentWrite = shouldInstrumentAddress(Dst);
   if (!InstrumentRead && !InstrumentWrite)
     return false;
 
-  InstrumentationIRBuilder IRB(M);
-  Value *Len = IRB.CreateIntCast(M->getLength(), IntptrTy, false);
+  InstrumentationIRBuilder IRB(II);
+  Value *Len = IRB.CreateIntCast(MI ? MI->getLength() : MSP->getLength(),
+                                 IntptrTy, false);
+  // The length of a pattern memset counts patterns, not bytes.
+  if (MSP) {
+    TypeSize Size = DL.getTypeAllocSize(MSP->getValue()->getType());
+    Len = IRB.CreateMul(Len, IRB.CreateTypeSize(IntptrTy, Size));
+  }
+  Constant *Flags =
+      ConstantInt::get(FlagsTy, MI && MI->isAtomic() ? AF_Atomic : AF_None);
   if (InstrumentRead) {
-    IRB.CreateCall(CsanReadRange, {getCallbackAddress(IRB, MT->getRawSource()),
-                                   Len, ConstantInt::get(FlagsTy, AF_None)});
+    IRB.CreateCall(CsanReadRange, {getCallbackAddress(IRB, Src), Len, Flags});
     ++NumInstrumentedReads;
   }
   if (InstrumentWrite) {
-    IRB.CreateCall(CsanWriteRange, {getCallbackAddress(IRB, MT->getRawDest()),
-                                    Len, ConstantInt::get(FlagsTy, AF_None)});
+    IRB.CreateCall(CsanWriteRange, {getCallbackAddress(IRB, Dst), Len, Flags});
     ++NumInstrumentedWrites;
   }
   return true;
