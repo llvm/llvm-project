@@ -176,8 +176,8 @@ static LogicalResult checkConstantOperandSilceShape(Operation *op,
 
 // MATMUL's data type availability predates variadic batch support, so the
 // generated availability checks cannot distinguish its 1.0 and 1.1 shapes.
-static LogicalResult
-checkMatMulShapeVersionCompatibility(Operation *op, const TargetEnv &env) {
+static LogicalResult checkSpecificationVersionConstraint(Operation *op,
+                                                         const TargetEnv &env) {
   auto matmul = dyn_cast<tosa::MatMulOp>(op);
   if (!matmul ||
       env.getSpecVersion().isBackwardsCompatibleWith(
@@ -187,19 +187,14 @@ checkMatMulShapeVersionCompatibility(Operation *op, const TargetEnv &env) {
   auto aType = dyn_cast<RankedTensorType>(matmul.getA().getType());
   auto bType = dyn_cast<RankedTensorType>(matmul.getB().getType());
   auto outputType = dyn_cast<RankedTensorType>(matmul.getOutput().getType());
-  const bool hasNonRankThreeTensor = (aType && aType.getRank() != 3) ||
-                                     (bType && bType.getRank() != 3) ||
-                                     (outputType && outputType.getRank() != 3);
-  auto knownBatchSizesDiffer = [](RankedTensorType lhs, RankedTensorType rhs) {
-    return lhs && rhs && lhs.getRank() == 3 && rhs.getRank() == 3 &&
-           !lhs.isDynamicDim(0) && !rhs.isDynamicDim(0) &&
-           lhs.getDimSize(0) != rhs.getDimSize(0);
+  auto getBatchDimOrDynamic = [](RankedTensorType type) {
+    return type ? type.getDimSize(0) : ShapedType::kDynamic;
   };
-  const bool hasIncompatibleKnownBatchSizes =
-      knownBatchSizesDiffer(aType, bType) ||
-      knownBatchSizesDiffer(aType, outputType) ||
-      knownBatchSizesDiffer(bType, outputType);
-  if (!hasNonRankThreeTensor && !hasIncompatibleKnownBatchSizes)
+  if ((!aType || aType.getRank() == 3) && (!bType || bType.getRank() == 3) &&
+      (!outputType || outputType.getRank() == 3) &&
+      succeeded(verifyCompatibleDims({getBatchDimOrDynamic(aType),
+                                      getBatchDimOrDynamic(bType),
+                                      getBatchDimOrDynamic(outputType)})))
     return success();
 
   return op->emitOpError(
@@ -1674,7 +1669,7 @@ void TosaValidation::runOnOperation() {
       return signalPassFailure();
 
     if (strictOpSpecAlignment &&
-        failed(checkMatMulShapeVersionCompatibility(op, targetEnv)))
+        failed(checkSpecificationVersionConstraint(op, targetEnv)))
       return signalPassFailure();
 
     if (!allowInvalidOpDatatypeCombinations &&

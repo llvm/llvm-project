@@ -1378,6 +1378,15 @@ func.func @test_matmul_batch_mismatch_rank4(%arg0: tensor<2x3x4x7xf32>, %arg1: t
 
 // -----
 
+func.func @test_matmul_channel_mismatch_rank4(%arg0: tensor<2x3x4x7xf32>, %arg1: tensor<2x3x8x6xf32>) -> tensor<2x3x4x6xf32> {
+  %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op expected channels of b to match size 7, got 8}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<2x3x4x7xf32>, tensor<2x3x8x6xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3x4x6xf32>
+  return %0 : tensor<2x3x4x6xf32>
+}
+
+// -----
+
 func.func @test_matmul_t_output_shape_mismatch_rank5(%arg0: tensor<2x1x3x4x7xf32>, %arg1: tensor<5x3x6x7xf32>) -> tensor<2x5x3x4x8xf32> {
   %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.matmul_t' op expected output shape 2, 5, 3, 4, 8 to be compatible with inferred shape 2, 5, 3, 4, 6}}

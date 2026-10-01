@@ -416,14 +416,17 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul", [NoMemoryEffect]> {
   let summary = "Matrix multiplication operator.";
 
   let description = [{
-    Performs batched matrix multiplication of `A` with shape `[..., H, C]` and
-    `B` with shape `[..., C, W]`. Their leading batch dimensions are aligned
-    from the right. Missing leading dimensions are treated as size 1, and each
-    aligned pair must either match or include a dimension of size 1. The output
-    shape is the resulting broadcast batch shape followed by `[H, W]`.
+    Performs matrix multiplications over the two innermost dimensions while
+    treating any leading dimensions as broadcastable batch dimensions. `A` has
+    shape `[A0, ..., A(n-1), H, C]`. `B` has shape
+    `[B0, ..., B(m-1), C, W]`. `[A0, ..., A(n-1)]` and
+    `[B0, ..., B(m-1)]` must be compatible as leading batch dimensions.
 
-    Both inputs must have rank 2 or greater. Rank 1 inputs are not accepted
-    directly and must first be reshaped to rank 2.
+    Right-align these two dimension lists and treat any missing leading
+    dimensions as size 1, producing common batch dimensions
+    `[D0, ..., D(k-1)]` where `k = max(n, m)` and each `Di` is the larger of
+    the two aligned dimension sizes. `output` has shape
+    `[D0, ..., D(k-1), H, W]`.
 
     This operation is not pure. Undefined behaviour may occur if the accumulated
     result overflows.
@@ -461,15 +464,22 @@ def Tosa_MatMulTOp : Tosa_InferShapedTypeOp<"matmul_t", [NoMemoryEffect]> {
   let summary = "Matrix multiplication with transposed B operator.";
 
   let description = [{
-    Performs batched matrix multiplication of `A` with shape `[..., H, C]` and
-    `B` with shape `[..., W, C]`, implicitly transposing only the two innermost
-    dimensions of `B`. Their leading batch dimensions are aligned from the
-    right. Missing leading dimensions are treated as size 1, and each aligned
-    pair must either match or include a dimension of size 1. The output shape
-    is the resulting broadcast batch shape followed by `[H, W]`.
+    Performs matrix multiplications over the two innermost dimensions while
+    implicitly transposing the last two dimensions of `B`. Any leading
+    dimensions are broadcastable batch dimensions. `A` has shape
+    `[A0, ..., A(n-1), H, C]`. `B` has shape
+    `[B0, ..., B(m-1), W, C]` before swapping those last two dimensions to
+    `[B0, ..., B(m-1), C, W]`. `[A0, ..., A(n-1)]` and
+    `[B0, ..., B(m-1)]` must be compatible as leading batch dimensions.
 
-    Both inputs must have rank 2 or greater. Rank 1 inputs are not accepted
-    directly and must first be reshaped to rank 2.
+    Right-align these two dimension lists and treat any missing leading
+    dimensions as size 1, producing common batch dimensions
+    `[D0, ..., D(k-1)]` where `k = max(n, m)` and each `Di` is the larger of
+    the two aligned dimension sizes. `output` has shape
+    `[D0, ..., D(k-1), H, W]`.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins Tosa_TensorAtLeast2D:$a, Tosa_TensorAtLeast2D:$b,
