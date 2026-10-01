@@ -27,6 +27,7 @@
 
 using namespace llvm;
 using namespace llvm::omp::target;
+using namespace llvm::omp::target::debug;
 
 namespace mt = omptarget::maptype;
 
@@ -1511,6 +1512,34 @@ bool TaskGraphPlanner::buildTaskGraphPlan(DeviceTy &Device,
       return false;
     }
   }
+
+  // A backend launches each kernel many times from one lowering, so what a
+  // launch outside a graph works out every time -- the geometry, the dynamic
+  // group memory and the launch environment -- is calculated once, here, and
+  // cached.  A leaf whose launch cannot be calculated leaves the graph to the
+  // host, as a backend meeting something it cannot express does.
+  for (TaskGraphNode *Node : Graph.leaves()) {
+    auto *Leaf = dyn_cast<TaskGraphTargetNode>(Node);
+    if (!Leaf)
+      continue;
+    void *Kernel = Graph.Services.resolveKernel(Graph.DeviceId, Leaf->HostPtr);
+    if (!Kernel) {
+      ODBG(ODT_Device) << "device " << Device.DeviceID << " declined taskgraph "
+                       << &Graph
+                       << ": target leaf's kernel is not loaded on this device";
+      return false;
+    }
+    SmallVector<void *, 3> Allocations;
+    Error Err = Device.cacheTaskGraphLaunch(
+        Kernel, *static_cast<const KernelArgsTy *>(Leaf->KernelArgs),
+        Leaf->Launch, Allocations);
+    llvm::append_range(Plan.LaunchAllocations, Allocations);
+    if (Err) {
+      ODBG(ODT_Device) << "device " << Device.DeviceID << " declined taskgraph "
+                       << &Graph << ": " << toString(std::move(Err));
+      return false;
+    }
+  }
   return true;
 }
 
@@ -1717,6 +1746,13 @@ void TaskGraphPlanner::releaseTaskGraphPlan(DeviceTy &Device,
                   "privatised arguments";
     Graph.Plan.PrivateBlock = nullptr;
   }
+
+  for (void *Ptr : Graph.Plan.LaunchAllocations)
+    if (Error Err = Device.freeCtxMem(Ptr))
+      REPORT() << "taskgraph could not release the device memory of a cached "
+                  "kernel launch: "
+               << toString(std::move(Err));
+  Graph.Plan.LaunchAllocations.clear();
 }
 
 bool llvm::omp::target::buildTaskGraphPlan(DeviceTy &Device,

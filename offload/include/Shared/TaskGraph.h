@@ -378,6 +378,19 @@ private:
   uint32_t NumOps = 0;
 };
 
+/// A target leaf's kernel launch parameters: what a launch outside a graph
+/// works out every time, calculated once when libomptarget builds the plan and
+/// cached for every replay.  The device memory behind them belongs to the plan.
+struct TaskGraphLaunchTy {
+  uint32_t NumThreads[3] = {1, 1, 1};
+  uint32_t NumBlocks[3] = {1, 1, 1};
+  /// Dynamic group memory provided natively, on top of the kernel's static
+  /// allocation.
+  uint32_t DynBlockMemSize = 0;
+  /// The value of the kernel's launch-environment (dyn_ptr) argument.
+  void *LaunchEnvironment = nullptr;
+};
+
 /// A target kernel launch.  KernelArgs is an opaque KernelArgsTy*, deep-copied
 /// by libomp at record time.
 struct TaskGraphTargetNode : TaskGraphNode {
@@ -387,6 +400,9 @@ struct TaskGraphTargetNode : TaskGraphNode {
   void *KernelArgs = nullptr;
   /// The kernel's explicit parameters, in the kernel's order.
   inline llvm::ArrayRef<TaskGraphKernelParamTy> kernelParams() const;
+  /// The geometry, dynamic group memory and launch environment every replay
+  /// launches the kernel with.
+  const TaskGraphLaunchTy &launch() const { return Launch; }
 
   TaskGraphTargetNode() : TaskGraphNode(TGKind::TargetNode) {}
   static bool classof(const TaskGraphElement *E) {
@@ -399,6 +415,7 @@ private:
   // Set when the plan is built.
   TaskGraphKernelParamTy *Params = nullptr;
   uint32_t NumParams = 0;
+  TaskGraphLaunchTy Launch;
 };
 
 /// Base for target enter/exit/update data ops.  The specific op is encoded by
@@ -776,6 +793,9 @@ private:
   std::vector<TaskGraphOpTy> Ops;
   /// Every target leaf's kernel parameters, end to end.
   std::vector<TaskGraphKernelParamTy> KernelParams;
+  /// Device memory the cached launches own: launch environments, reduction
+  /// buffers and global-memory fallbacks for dynamic group memory.
+  std::vector<void *> LaunchAllocations;
 
   /// The mapping-table epoch as of the plan's build or its last release of the
   /// mappings.  Only used to report that the program changed the mapping state

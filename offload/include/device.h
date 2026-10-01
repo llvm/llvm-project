@@ -108,6 +108,9 @@ struct DeviceGeometryPropsTy {
 };
 
 struct PluginManager;
+namespace llvm::omp::target {
+struct TaskGraphLaunchTy;
+} // namespace llvm::omp::target
 
 struct DeviceTy {
   int32_t DeviceID;
@@ -232,6 +235,17 @@ struct DeviceTy {
                        ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
                        KernelReplayOutcomeTy *ReplayOutcome,
                        AsyncInfoTy &AsyncInfo);
+
+  /// Calculate, once, the launch parameters of the kernel \p TgtEntryPtr with
+  /// \p KernelArgs for a taskgraph that replays it, and cache them in
+  /// \p Launch: the geometry, the dynamic group memory and the launch
+  /// environment launchKernel works out on every launch.  The device memory it
+  /// allocates is appended to \p Allocations, for the caller to free with
+  /// freeCtxMem.
+  llvm::Error cacheTaskGraphLaunch(void *TgtEntryPtr,
+                                   const KernelArgsTy &KernelArgs,
+                                   llvm::omp::target::TaskGraphLaunchTy &Launch,
+                                   llvm::SmallVectorImpl<void *> &Allocations);
 
   /// Synchronize device/queue/event based on \p AsyncInfo and return
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.

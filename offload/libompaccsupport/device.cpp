@@ -19,6 +19,7 @@
 #include "PluginManager.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
+#include "Shared/TaskGraph.h"
 #include "omptarget.h"
 #include "rtl.h"
 
@@ -1126,6 +1127,92 @@ prepareDynamicLaunchState(DeviceTy &Device, uint32_t OmpABIVersion,
   if (DynPtrSlot && *KernelLaunchEnvOrErr)
     *DynPtrSlot = *KernelLaunchEnvOrErr;
 
+  return llvm::Error::success();
+}
+
+llvm::Error
+DeviceTy::cacheTaskGraphLaunch(void *TgtEntryPtr,
+                               const KernelArgsTy &KernelArgs,
+                               llvm::omp::target::TaskGraphLaunchTy &Launch,
+                               llvm::SmallVectorImpl<void *> &Allocations) {
+  GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
+  KernelLaunchInfoTy KernelLaunchInfo = getKernelLaunchInfo(TgtEntryPtr);
+  KernelLaunchArgsTy LaunchArgs = buildLaunchArgs(KernelArgs);
+  checkLaunchInvariants(LaunchArgs, KernelArgs, KernelLaunchInfo);
+  adjustEffectiveGeometry(GenericDevice, GeometryProps, LaunchArgs, KernelArgs,
+                          KernelLaunchInfo);
+  llvm::copy(LaunchArgs.UserThreadLimit, Launch.NumThreads);
+  llvm::copy(LaunchArgs.UserNumBlocks, Launch.NumBlocks);
+
+  // The geometry is fixed for the graph, so the fallback for dynamic group
+  // memory can be allocated once rather than per launch.
+  auto DynBlockMemConfOrErr =
+      prepareBlockMemory(*this, KernelLaunchInfo, KernelArgs.DynCGroupMem,
+                         static_cast<DynCGroupMemFallbackType>(
+                             KernelArgs.Flags.DynCGroupMemFallback),
+                         uint64_t(Launch.NumBlocks[0]) * Launch.NumBlocks[1] *
+                             Launch.NumBlocks[2]);
+  if (!DynBlockMemConfOrErr)
+    return DynBlockMemConfOrErr.takeError();
+  const DynBlockMemConfTy &DynBlockMemConf = *DynBlockMemConfOrErr;
+  if (DynBlockMemConf.FallbackPtr)
+    Allocations.push_back(DynBlockMemConf.FallbackPtr);
+  Launch.DynBlockMemSize = DynBlockMemConf.NativeSize;
+
+  // A backend launches the cached kernel itself, so the limits the plugin
+  // checks on every launch are checked here instead.
+  const uint64_t MaxBlockMemSize = getMaxBlockSharedMemSize();
+  if (KernelLaunchInfo.StaticBlockMemSize > MaxBlockMemSize)
+    return createError(ErrorCode::InvalidValue,
+                       "static block memory size exceeds maximum");
+  if (KernelLaunchInfo.StaticBlockMemSize + Launch.DynBlockMemSize >
+      MaxBlockMemSize)
+    return createError(
+        ErrorCode::InvalidValue,
+        "requested block memory size (static + dynamic) exceeds maximum");
+
+  // As in getKernelLaunchEnvironment, except that the environment is the
+  // graph's, written once, and reused by every replay.  A replay runs at most
+  // one launch of a leaf at a time, and the reduction's teams-done counter
+  // resets itself, so nothing in it has to be reinitialised between launches.
+  const bool NeedsReductionBuffer = KernelLaunchInfo.ReductionDataSize != 0;
+  if (NeedsReductionBuffer && KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
+    return createError(
+        ErrorCode::InvalidBinary,
+        "kernel was built against an older OpenMP kernel-launch-environment "
+        "ABI (v%u); current runtime requires v%u for cross-team reductions",
+        KernelArgs.Version, OMP_KERNEL_ARG_VERSION);
+  if (!NeedsReductionBuffer && !KernelArgs.DynCGroupMem) {
+    Launch.LaunchEnvironment = reinterpret_cast<void *>(~uintptr_t(0));
+    return llvm::Error::success();
+  }
+
+  KernelLaunchEnvironmentTy KLE{};
+  KLE.DynCGroupMemSize = DynBlockMemConf.Size;
+  KLE.DynCGroupMemFbPtr = DynBlockMemConf.FallbackPtr;
+  KLE.DynCGroupMemFb = DynBlockMemConf.Fallback;
+  KLE.ReductionBuffer = nullptr;
+  if (NeedsReductionBuffer) {
+    auto AllocOrErr = allocCtxMem(uint64_t(KernelLaunchInfo.ReductionDataSize) *
+                                      Launch.NumBlocks[0],
+                                  OL_ALLOC_TYPE_DEVICE);
+    if (!AllocOrErr)
+      return AllocOrErr.takeError();
+    Allocations.push_back(*AllocOrErr);
+    KLE.ReductionBuffer = *AllocOrErr;
+  }
+
+  auto AllocOrErr =
+      allocCtxMem(sizeof(KernelLaunchEnvironmentTy), OL_ALLOC_TYPE_DEVICE);
+  if (!AllocOrErr)
+    return AllocOrErr.takeError();
+  Allocations.push_back(*AllocOrErr);
+  if (submitDataSync(*AllocOrErr, &KLE, sizeof(KLE), /*Entry=*/nullptr,
+                     /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr,
+                     /*Name=*/"KernelLaunchEnv") != OFFLOAD_SUCCESS)
+    return createError(ErrorCode::BackendFailure,
+                       "failed to copy the kernel launch environment");
+  Launch.LaunchEnvironment = *AllocOrErr;
   return llvm::Error::success();
 }
 
