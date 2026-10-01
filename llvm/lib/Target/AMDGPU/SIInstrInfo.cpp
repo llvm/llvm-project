@@ -1987,13 +1987,11 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
   unsigned SubRegIdx = 0;
   if (SubReg) {
-    uint64_t Mask = RI.getSubRegIndexLaneMask(SubReg).getAsInteger();
-    assert(llvm::popcount(Mask) % 2 == 0 &&
-           "expected only 32-bit subreg access");
+    uint64_t Mask = RI.getSubRegIndexLaneMask(SubReg).getNumLanes();
+    assert(Mask % 2 == 0 && "expected only 32-bit subreg access");
 
-    // For subreg reload, identify the start offset. Each 32-bit register
-    // consists of two regunits and eventually two bits in the Lanemask.
-    SubRegIdx = llvm::countr_zero(Mask) / 2;
+    // For subreg reload, identify the start offset.
+    SubRegIdx = RI.getSubRegIdxOffset(SubReg) / 32;
   }
 
   MachinePointerInfo PtrInfo
