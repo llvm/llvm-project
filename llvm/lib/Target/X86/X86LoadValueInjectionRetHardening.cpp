@@ -131,3 +131,5 @@ INITIALIZE_PASS(X86LoadValueInjectionRetHardeningLegacy, PASS_KEY,
 FunctionPass *llvm::createX86LoadValueInjectionRetHardeningLegacyPass() {
   return new X86LoadValueInjectionRetHardeningLegacy();
 }
+
+#undef PASS_KEY
