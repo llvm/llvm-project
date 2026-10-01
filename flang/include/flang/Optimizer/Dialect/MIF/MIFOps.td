@@ -554,7 +554,7 @@ def mif_AllocCoarrayOp
   }];
 
   let arguments = (ins StrAttr:$uniq_name,
-      Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+      Arg<AnyReferenceLike, "", [MemRead, MemWrite]>:$box,
       AnyBoxedArray:$lcobounds, AnyBoxedArray:$ucobounds,
       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
@@ -588,6 +588,58 @@ def mif_DeallocCoarrayOp
 
   let assemblyFormat = [{
     $coarray (`stat` $stat^ )?  (`errmsg` $errmsg^ )?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Events 
+//===----------------------------------------------------------------------===//
+
+def mif_EventPostOp : mif_Op<"event_post", [AttrSizedOperandSegments,
+                                            MemoryEffects<[MemWrite]>]> {
+  let summary = "Posts an event.";
+  let description = [{
+    This is a post-event operation.
+    Arguments: 
+      - `cosubscripts`: Shall be a list of integer cosubscripts to determine the 
+        image_num to be communicated.
+      - `event_var`: Shall be a coarray or be part of a coarray of 
+        type EVENT_TYPE from the intrinsic module ISO_FORTRAN_ENV.
+  }];
+
+  let arguments = (ins Arg<AnyRefOrBoxType, "", [MemRead]>:$event,
+      Variadic<AnyInteger>:$cosubscripts,
+      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+
+  let assemblyFormat = [{
+    $event (`[` $cosubscripts^ `]` )? 
+    (`stat` $stat^ )?  (`errmsg` $errmsg^ )?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_EventWaitOp : mif_Op<"event_wait", [AttrSizedOperandSegments,
+                                            MemoryEffects<[MemWrite]>]> {
+  let summary = "Waits until an event is posted.";
+  let description = [{
+    Arguments: 
+      - `event`: Shall be a reference of type EVENT_TYPE from the intrinsic
+        module ISO_FORTRAN_ENV.
+      - `until_count`(optional) : Shall be an integer scalar and indicate the count of 
+        the given event variable to be waited for.
+  }];
+
+  let arguments = (ins Arg<AnyRefOrBoxType, "", [MemRead]>:$event,
+      Optional<AnyIntegerType>:$until_count,
+      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+
+  let assemblyFormat = [{
+    $event 
+    (`until_count` $until_count^ )?
+    (`stat` $stat^ )?  (`errmsg` $errmsg^ )?
     attr-dict `:` functional-type(operands, results)
   }];
 }

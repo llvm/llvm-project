@@ -7,15 +7,15 @@ program test
   integer :: a[2,3:5,*]
 
   ! COSHAPE without KIND returns default integer kind (4 = i32).
-  ! CHECK: mif.coshape coarray %[[COARRAY:.*]] : (!fir.box<i32, corank:3>) -> !fir.box<!fir.array<?xi32>>
+  ! CHECK: mif.coshape coarray %[[COARRAY:.*]] : (!fir.box<!fir.heap<i32>, corank:3>) -> !fir.box<!fir.array<?xi32>>
   res = coshape(a)
 
   ! Assignment to integer(kind=8) widens; COSHAPE result type is still i32.
-  ! CHECK: mif.coshape coarray %[[COARRAY:.*]] : (!fir.box<i32, corank:3>) -> !fir.box<!fir.array<?xi32>>
+  ! CHECK: mif.coshape coarray %[[COARRAY:.*]] : (!fir.box<!fir.heap<i32>, corank:3>) -> !fir.box<!fir.array<?xi32>>
   res2 = coshape(a)
 
   ! Explicit KIND=8 yields i64 elements.
-  ! CHECK: mif.coshape coarray %[[COARRAY:.*]] : (!fir.box<i32, corank:3>) -> !fir.box<!fir.array<?xi64>>
+  ! CHECK: mif.coshape coarray %[[COARRAY:.*]] : (!fir.box<!fir.heap<i32>, corank:3>) -> !fir.box<!fir.array<?xi64>>
   res3 = coshape(a, kind=8)
 
 end program
