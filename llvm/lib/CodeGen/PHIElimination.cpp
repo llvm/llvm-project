@@ -115,8 +115,9 @@ class PHIEliminationImpl {
   // Count the number of non-undef PHI uses of each register in each BB.
   VRegPHIUse VRegPHIUseCount;
 
-  // Source subranges must be shrunk to their own uses after all PHIs are gone.
-  SmallSetVector<LiveInterval *, 8> PHISrcIntervalsToShrink;
+  // PHI source registers whose subranges must be shrunk to their own uses once
+  // all PHIs are gone.
+  SmallSetVector<Register, 8> PHISrcRegsToShrink;
 
   // Defs of PHI sources which are implicit_def.
   SmallPtrSet<MachineInstr *, 4> ImpDefs;
@@ -315,14 +316,13 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
   // be dead in a predecessor. The main range's last use is therefore not a
   // valid endpoint for every subrange. Wait until all PHIs have been removed
   // before shrinking subranges to their remaining lane-specific uses.
-  if (LIS) {
-    for (LiveInterval *LI : PHISrcIntervalsToShrink) {
-      for (auto &SR : LI->subranges())
-        LIS->shrinkToUses(SR, LI->reg());
-      LI->removeEmptySubRanges();
-    }
+  for (Register Reg : PHISrcRegsToShrink) {
+    LiveInterval &LI = LIS->getInterval(Reg);
+    for (LiveInterval::SubRange &SR : LI.subranges())
+      LIS->shrinkToUses(SR, Reg);
+    LI.removeEmptySubRanges();
   }
-  PHISrcIntervalsToShrink.clear();
+  PHISrcRegsToShrink.clear();
 
   ImpDefs.clear();
   VRegPHIUseCount.clear();
@@ -742,7 +742,7 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
           !VRegPHIUseCount[BBVRegPair(opBlock.getNumber(), SrcReg)]) {
         LiveInterval &SrcLI = LIS->getInterval(SrcReg);
         if (SrcLI.hasSubRanges())
-          PHISrcIntervalsToShrink.insert(&SrcLI);
+          PHISrcRegsToShrink.insert(SrcReg);
 
         bool isLiveOut = false;
         for (MachineBasicBlock *Succ : opBlock.successors()) {
