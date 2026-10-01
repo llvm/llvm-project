@@ -105,10 +105,6 @@ TEST_F(LlvmLibcScandirTest, TestEmptyDir) {
   ASSERT_TRUE((first == "." && second == "..") ||
               (first == ".." && second == "."));
 
-  // We also test that both orderings can't be true at the same time.
-  ASSERT_FALSE((first == "." && second == "..") &&
-               (first == ".." && second == "."));
-
   free_namelist(namelist, ENTRIES_MIN);
   ASSERT_TRUE(remove_temp_dir(dirpath));
 }

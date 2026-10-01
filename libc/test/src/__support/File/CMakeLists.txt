@@ -57,6 +57,8 @@ add_libc_test(
     libc.src.__support.File.dir_scan_impl
     libc.src.__support.error_or
     libc.src.dirent.alphasort
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.strlen
 )
 
 set(platform_stream_targets "platform_stdout;platform_stdin;platform_stderr")

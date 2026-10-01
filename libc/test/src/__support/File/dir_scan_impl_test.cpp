@@ -16,6 +16,8 @@
 #include "src/__support/File/dir_scan_impl.h"
 #include "src/__support/error_or.h"
 #include "src/dirent/alphasort.h"
+#include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/strlen.h"
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -52,12 +54,8 @@ struct MockDir {
 
     entry->d_ino = current_read_index + 1;
     const char *name = test_setup.test_files[current_read_index];
-    size_t i = 0;
-    while (name[i] != '\0') {
-      entry->d_name[i] = name[i];
-      ++i;
-    }
-    entry->d_name[i] = '\0';
+    LIBC_NAMESPACE::inline_memcpy(entry->d_name, name,
+                                  LIBC_NAMESPACE::strlen(name) + 1);
     current_read_index++;
     return entry;
   }
