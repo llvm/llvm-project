@@ -282,12 +282,9 @@ public:
   bool isLegalSpeculativeLoad(Type *DataType,
                               unsigned AddressSpace) const override;
 
-  unsigned getMaximumVFMultipleForMemoryOp(ElementCount VF,
-                                           unsigned UF) const override;
-
-  unsigned getPreferredVFMultipleForMemoryOp(
-      unsigned Opcode, Type *DataType, ElementCount VF, unsigned UF,
-      bool IsMasked,
+  bool hasMultipleVectorLoadStore(
+      unsigned NumVectors, VectorType *VectorTy, bool IsStore,
+      TTI::MaskSource Mask,
       std::optional<Instruction::CastOps> CastHint) const override;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,

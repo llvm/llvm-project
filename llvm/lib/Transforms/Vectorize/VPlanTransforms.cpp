@@ -4196,19 +4196,17 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
   }
 }
 
-void VPlanTransforms::widenMemoryAccessesToVFMultiple(
-    VPlan &Plan, ElementCount VF, unsigned UF, const TargetTransformInfo &TTI) {
+void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
+                                              unsigned UF,
+                                              const TargetTransformInfo &TTI) {
   assert(UF > 1 && "Expected plan to have an UF > 1");
-
-  Type *I64Ty = IntegerType::getInt64Ty(Plan.getContext());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       VPValue *StoredValue = nullptr;
       auto m_ContiguousVecPtr = m_VecPtr(m_VPValue(), m_One());
-      if ((!match(&R, m_WidenLoad(m_ContiguousVecPtr)) &&
-           !match(&R,
-                  m_WidenStore(m_ContiguousVecPtr, m_VPValue(StoredValue)))))
+      if (!match(&R, m_WidenLoad(m_ContiguousVecPtr)) &&
+          !match(&R, m_WidenStore(m_ContiguousVecPtr, m_VPValue(StoredValue))))
         continue;
 
       auto *MemOp = cast<VPWidenMemoryRecipe>(&R);
@@ -4220,41 +4218,40 @@ void VPlanTransforms::widenMemoryAccessesToVFMultiple(
 
       Type *AccessType = StoredValue ? StoredValue->getScalarType()
                                      : R.getVPSingleValue()->getScalarType();
-      unsigned Opcode = isa<VPWidenLoadRecipe>(MemOp->getAsRecipe())
-                            ? Instruction::Load
-                            : Instruction::Store;
-
+      unsigned IsStore = isa<VPWidenStoreRecipe>(MemOp->getAsRecipe());
       std::optional<Instruction::CastOps> CastHint;
-      VPUser *MaybeCast = Opcode == Instruction::Store
-                              ? StoredValue->getDefiningRecipe()
-                              : R.getVPSingleValue()->getSingleUser();
+      VPUser *MaybeCast = IsStore ? StoredValue->getDefiningRecipe()
+                                  : R.getVPSingleValue()->getSingleUser();
       if (auto *Cast = dyn_cast_if_present<VPWidenCastRecipe>(MaybeCast))
         CastHint = Cast->getOpcode();
 
-      unsigned VFMultiple = TTI.getPreferredVFMultipleForMemoryOp(
-          Opcode, AccessType, VF, UF, /*IsMasked=*/false, CastHint);
-      assert((VFMultiple != 0 && UF % VFMultiple == 0) &&
-             "VFMultiple must divide UF");
-
-      if (VFMultiple == 1)
+      VectorType *VectorAccessType = VectorType::get(AccessType, VF);
+      if (!TTI.hasMultipleVectorLoadStore(
+              /*NumVectors=*/UF, VectorAccessType, IsStore,
+              TargetTransformInfo::MaskSource::MS_None, CastHint))
         continue;
 
+      DebugLoc DL = R.getDebugLoc();
       VPValue *Ptr = MemOp->getAddr();
-      VPValue *VFMultipleVPV = Plan.getConstantInt(I64Ty, VFMultiple);
-      VPValue *Align = Plan.getConstantInt(I64Ty, MemOp->getAlign().value());
+      VPValue *Align = Plan.getConstantInt(64, MemOp->getAlign().value());
+      VPValue *Multiplier = Plan.getConstantInt(64, 1);
 
       VPBuilder Builder(VPBB, R.getIterator());
-      if (Opcode == Instruction::Load) {
+      if (IsStore) {
+        VPValue *WideStoredValue = Builder.createNaryOp(
+            VPInstruction::ConcatVectors, {StoredValue}, DL);
+        Builder.createNaryOp(VPInstruction::WideVectorStore,
+                             {Multiplier, Ptr, Align, WideStoredValue}, nullptr,
+                             {}, *MemOp, R.getDebugLoc());
+      } else {
         VPValue *OldLoad = R.getVPSingleValue();
         VPValue *Load = Builder.createNaryOp(
-            VPInstruction::VFMultipleLoad, {VFMultipleVPV, Ptr, Align}, nullptr,
+            VPInstruction::WideVectorLoad, {Multiplier, Ptr, Align}, nullptr,
             {}, *MemOp, R.getDebugLoc(), "", OldLoad->getScalarType());
-        OldLoad->replaceAllUsesWith(Load);
-      } else {
-        assert(Opcode == Instruction::Store);
-        Builder.createNaryOp(VPInstruction::VFMultipleStore,
-                             {VFMultipleVPV, Ptr, Align, StoredValue}, nullptr,
-                             {}, *MemOp, R.getDebugLoc());
+        VPValue *Extract =
+            Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
+                                 {Load, Plan.getConstantInt(64, 0)}, DL);
+        OldLoad->replaceAllUsesWith(Extract);
       }
 
       R.eraseFromParent();

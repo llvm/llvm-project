@@ -429,15 +429,11 @@ public:
     return false;
   }
 
-  virtual unsigned getMaximumVFMultipleForMemoryOp(ElementCount VF,
-                                                   unsigned UF) const {
-    return 1;
-  }
-
-  virtual unsigned getPreferredVFMultipleForMemoryOp(
-      unsigned Opcode, Type *DataType, ElementCount VF, unsigned UF,
-      bool IsMasked, std::optional<Instruction::CastOps> CastHint) const {
-    return 1;
+  virtual bool hasMultipleVectorLoadStore(
+      unsigned NumVectors, VectorType *VectorTy, bool IsStore,
+      TTI::MaskSource Mask,
+      std::optional<Instruction::CastOps> CastHint) const {
+    return false;
   }
 
   virtual bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,

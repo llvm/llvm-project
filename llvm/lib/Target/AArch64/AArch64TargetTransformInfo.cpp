@@ -5974,46 +5974,36 @@ bool AArch64TTIImpl::isLegalSpeculativeLoad(Type *DataType,
          Size.getFixedValue() <= 16;
 }
 
-unsigned AArch64TTIImpl::getMaximumVFMultipleForMemoryOp(ElementCount VF,
-                                                         unsigned UF) const {
-  if (!ST->enableSubRegLiveness())
-    return 1;
+bool AArch64TTIImpl::hasMultipleVectorLoadStore(
+    unsigned NumVectors, VectorType *VectorTy, bool IsStore,
+    TTI::MaskSource Mask, std::optional<Instruction::CastOps> CastHint) const {
+  if (NumVectors <= 1 || !ST->enableSubRegLiveness() || !ST->hasSVE2p1())
+    return false;
 
-  if (!ST->hasSVE2p1() || !VF.isScalable() || !isPowerOf2_32(UF))
-    return 1;
+  // TODO: Support masked multi-vector loads/stores.
+  if (Mask != TTI::MS_None)
+    return false;
 
-  // +sve2p1 multi-vector loads/stores can handle up to four vectors.
-  return std::min(4U, UF);
-}
+  // A null vector type queries whether the target supports multi-vector memory
+  // operations in general.
+  if (!VectorTy)
+    return true;
 
-unsigned AArch64TTIImpl::getPreferredVFMultipleForMemoryOp(
-    unsigned Opcode, Type *DataTy, ElementCount VF, unsigned UF, bool IsMasked,
-    std::optional<Instruction::CastOps> CastHint) const {
-  assert((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
-         "expected load/store opcode");
-  if (IsMasked)
-    return 1; // TODO: Support masked multi-vector loads/stores.
+  if (!isa<ScalableVectorType>(VectorTy))
+    return false;
 
   // Conservatively, avoid using multi-vector loads when it's possible we could
   // use extending loads instead. Note: We can ignore stores as we only use
   // truncating stores when the store vector-width is < a full SVE vector.
-  if (Opcode == Instruction::Load &&
+  if (!IsStore &&
       (CastHint == Instruction::ZExt || CastHint == Instruction::SExt))
-    return 1;
+    return false;
 
-  unsigned VectorWidth = VF.getKnownMinValue() * DL.getTypeSizeInBits(DataTy);
-  if (VectorWidth % 128 != 0)
-    return 1;
-
-  for (unsigned TargetWidth : {512u, 256u}) {
-    if (TargetWidth % VectorWidth == 0) {
-      unsigned Scale = TargetWidth / VectorWidth;
-      if (Scale <= UF)
-        return Scale;
-    }
-  }
-
-  return 1;
+  // For unpredicated loads/stores allow any pow-of-two multiple of a vector >=
+  // to a single z-register. We can split operations wider than a single
+  // multi-vector load/store during ISEL.
+  unsigned VectorWidth = DL.getTypeSizeInBits(VectorTy).getKnownMinValue();
+  return VectorWidth % 128 == 0 && isPowerOf2_32(NumVectors);
 }
 
 unsigned

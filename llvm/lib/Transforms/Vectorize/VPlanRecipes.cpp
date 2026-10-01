@@ -60,7 +60,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     auto *VPI = cast<VPInstruction>(this);
     // Loads read from memory but don't write to memory.
     if (VPI->getOpcode() == Instruction::Load ||
-        VPI->getOpcode() == VPInstruction::VFMultipleLoad)
+        VPI->getOpcode() == VPInstruction::WideVectorLoad)
       return false;
     return VPI->opcodeMayReadOrWriteFromMemory();
   }
@@ -122,7 +122,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPInstructionSC: {
     auto *VPI = cast<VPInstruction>(this);
     // Stores write to memory but don't read from memory.
-    if (VPI->getOpcode() == VPInstruction::VFMultipleStore)
+    if (VPI->getOpcode() == VPInstruction::WideVectorStore)
       return false;
     return VPI->opcodeMayReadOrWriteFromMemory();
   }
@@ -497,7 +497,7 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     for (unsigned Idx = 1; Idx != Operands.size(); ++Idx)
       AssertOperandType(Idx, Op0Ty);
     return Type::getVoidTy(Ctx);
-  case VPInstruction::VFMultipleStore:
+  case VPInstruction::WideVectorStore:
   case Instruction::Store:
     return Type::getVoidTy(Ctx);
   case Instruction::ICmp:
@@ -573,7 +573,7 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   }
   case VPInstruction::ExtractVectorForPart:
     return Op0Ty;
-  case VPInstruction::VFMultipleLoad:
+  case VPInstruction::WideVectorLoad:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
   case VPInstruction::NumActiveLanes:
@@ -595,7 +595,8 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
       Instruction::isBinaryOp(Opcode) ||
       is_contained({VPInstruction::FirstOrderRecurrenceSplice,
                     VPInstruction::BuildVector,
-                    VPInstruction::BuildStructVector},
+                    VPInstruction::BuildStructVector,
+                    VPInstruction::ConcatVectors},
                    Opcode);
   if (AllOperandsSameType)
     for (unsigned Idx = 1; Idx != Operands.size(); ++Idx)
@@ -682,8 +683,10 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Select:
   case VPInstruction::WideActiveLaneMask:
   case VPInstruction::ReductionStartVector:
-  case VPInstruction::VFMultipleLoad:
+  case VPInstruction::WideVectorLoad:
     return 3;
+  case VPInstruction::WideVectorStore:
+    return 4;
   case Instruction::Call:
     return getCalledFnOperandIndex(operands()) + 1;
   case Instruction::GetElementPtr:
@@ -702,7 +705,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::LastActiveLane:
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastActive:
-  case VPInstruction::VFMultipleStore:
+  case VPInstruction::ConcatVectors:
     // Cannot determine the number of operands from the opcode.
     return -1u;
   }
@@ -963,6 +966,15 @@ Value *VPInstruction::generate(VPTransformState &State,
                                         Builder.getInt64(Idx));
     return Res;
   }
+  case VPInstruction::ConcatVectors: {
+    Type *ScalarTy = getScalarType();
+    auto *WideTy = VectorType::get(ScalarTy, State.VF * getNumOperands());
+    Value *Res = PoisonValue::get(WideTy);
+    for (const auto &[Idx, Op] : enumerate(operands()))
+      Res = Builder.CreateInsertVector(WideTy, Res, State.get(Op),
+                                       Idx * State.VF.getKnownMinValue());
+    return Res;
+  }
   case VPInstruction::ReductionStartVector: {
     if (State.VF.isScalar())
       return State.get(getOperand(0), true);
@@ -1192,26 +1204,21 @@ Value *VPInstruction::generate(VPTransformState &State,
                                          vputils::getIntrinsicID(this), Args,
                                          /*FMFSource=*/nullptr, getName());
   }
-  case VPInstruction::VFMultipleLoad: {
-    unsigned VFMultiple = cast<VPConstantInt>(getOperand(0))->getZExtValue();
-    auto *WideDataTy = VectorType::get(getScalarType(), State.VF * VFMultiple);
+  case VPInstruction::WideVectorLoad: {
+    unsigned Multiplier = cast<VPConstantInt>(getOperand(0))->getZExtValue();
+    auto *WideDataTy = VectorType::get(getScalarType(), State.VF * Multiplier);
 
     Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
     Align Alignment = Align(cast<VPConstantInt>(getOperand(2))->getZExtValue());
-    return Builder.CreateAlignedLoad(WideDataTy, Addr, Alignment,
-                                     "vf.multiple.load");
+    return Builder.CreateAlignedLoad(WideDataTy, Addr, Alignment);
   }
-  case VPInstruction::VFMultipleStore: {
-    unsigned VFMultiple = cast<VPConstantInt>(getOperand(0))->getZExtValue();
-    Type *ScalarStoreTy = getOperand(3)->getScalarType();
-    auto *WideDataTy = VectorType::get(ScalarStoreTy, State.VF * VFMultiple);
-
-    Value *WideData = PoisonValue::get(WideDataTy);
-    for (unsigned I = 0; I < VFMultiple; ++I) {
-      Value *Part = State.get(getOperand(I + 3));
-      WideData = Builder.CreateInsertVector(WideDataTy, WideData, Part,
-                                            I * State.VF.getKnownMinValue());
-    }
+  case VPInstruction::WideVectorStore: {
+    unsigned Multiplier = cast<VPConstantInt>(getOperand(0))->getZExtValue();
+    auto *WideDataTy =
+        VectorType::get(getOperand(3)->getScalarType(), State.VF * Multiplier);
+    Value *WideData = State.get(getOperand(3));
+    assert(WideData->getType() == WideDataTy &&
+           "stored value does not match wide vector type");
 
     Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
     Align Alignment = Align(cast<VPConstantInt>(getOperand(2))->getZExtValue());
@@ -1680,6 +1687,7 @@ void VPInstruction::addOperand(VPValue *Op) {
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::BuildVector:
   case VPInstruction::BuildStructVector:
+  case VPInstruction::ConcatVectors:
     assert(Ty == getOperand(0)->getScalarType() &&
            "appended operand must match operand 0's scalar type");
     break;
@@ -1700,10 +1708,6 @@ void VPInstruction::addOperand(VPValue *Op) {
            "matching operand 1's type and i1, respectively");
     break;
   }
-  case VPInstruction::VFMultipleStore:
-    assert(Ty == getOperand(3)->getScalarType() &&
-           "appended operand must match operand 3's scalar type");
-    break;
   default:
     llvm_unreachable("opcode does not support growing the operand list "
                      "outside of construction");
@@ -1761,6 +1765,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::Broadcast:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
+  case VPInstruction::ConcatVectors:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExtractLane:
@@ -1838,7 +1843,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::Intrinsic:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
-  case VPInstruction::VFMultipleLoad:
+  case VPInstruction::WideVectorLoad:
     return true;
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
@@ -1851,7 +1856,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::WidePtrAdd:
     // WidePtrAdd supports scalar and vector base addresses.
     return false;
-  case VPInstruction::VFMultipleStore:
+  case VPInstruction::WideVectorStore:
     return Op == getOperand(0) || Op == getOperand(1) || Op == getOperand(2);
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLane:
@@ -1906,11 +1911,14 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::WideActiveLaneMask:
     O << "wide active lane mask";
     break;
-  case VPInstruction::VFMultipleLoad:
-    O << "vf-multiple load";
+  case VPInstruction::WideVectorLoad:
+    O << "wide vector load";
     break;
-  case VPInstruction::VFMultipleStore:
-    O << "vf-multiple store";
+  case VPInstruction::WideVectorStore:
+    O << "wide vector store";
+    break;
+  case VPInstruction::ConcatVectors:
+    O << "concat-vectors";
     break;
   case VPInstruction::IncomingAliasMask:
     O << "incoming-alias-mask";

@@ -1317,16 +1317,15 @@ public:
     // WideActiveLaneMask is used for control flow and is unrolled by widening,
     // with one extract vector created per unroll part.
     WideActiveLaneMask,
-    // Signature: (VFMultiple, Address, Alignment) -> Wide Vector
-    // Loads a single wide vector of `VFMultiple * VF` elements. VFMultiple must
-    // divide UF. After unrolling, each section of VF elements in the wide
-    // vector corresponds to an unroll part.
-    VFMultipleLoad,
-    // Signature: (VFMultiple, Address, Alignment, Vectors...)
-    // Concatenates VFMultiple vector operands into a single wide vector of
-    // `VFMultiple * VF` elements and stores it. After unrolling, each vector
-    // operand corresponds to an unroll part.
-    VFMultipleStore,
+    // Signature: Vectors... -> WideVector
+    // Concatenates all vector operands to a single wide vector.
+    ConcatVectors,
+    // Signature: (Multiplier, Address, Align) -> Vector
+    // Loads a single wide vector of `Multiplier * VF` elements.
+    WideVectorLoad,
+    // Signature: (Multiplier, Address, Alignment, Vector)
+    // Stores a single wide vector of `Multiplier * VF` elements.
+    WideVectorStore,
     // Extracts each unrolled part of a (VF * UF) widened vector/mask.
     ExtractVectorForPart,
     ExplicitVectorLength,
@@ -1531,7 +1530,7 @@ public:
     case VPInstruction::BranchOnCond:
     case VPInstruction::BranchOnTwoConds:
     case VPInstruction::BranchOnCount:
-    case VPInstruction::VFMultipleStore:
+    case VPInstruction::WideVectorStore:
       return false;
     default:
       return true;
