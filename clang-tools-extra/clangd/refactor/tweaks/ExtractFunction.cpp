@@ -1023,8 +1023,8 @@ bool createParameters(NewFunction &ExtractedFunc,
       auto TypeSize = Context.getTypeSizeInChars(TypeInfo);
       // A scalar (arithmetic, pointer, enumeration, ...) is at least as
       // cheap to copy as to pass by reference, and less noisy.
-      if (TypeInfo->isScalarType() && !FullTypeInfo->isReferenceType() &&
-          TypeSize <= 2 * WordSize) {
+      if (TypeInfo->isScalarType() && !TypeInfo.isVolatileQualified() &&
+          !FullTypeInfo->isReferenceType() && TypeSize <= 2 * WordSize) {
         IsPassedByReference = false;
       } else if (!TypeInfo->isArrayType()) {
         // Still passed by reference to avoid a copy, but the reference

@@ -1042,6 +1042,19 @@ TEST_F(ExtractFunctionTest, LargeScalarType) {
               HasSubstr("extracted(const _BitInt(256) &x)"));
 }
 
+TEST_F(ExtractFunctionTest, VolatileScalar) {
+  Context = File;
+  EXPECT_THAT(apply(R"cpp(
+      void bar(const volatile int &, int) {}
+      void foo() {
+      volatile int V = 0;
+      [[
+        bar(V, 0);
+      ]]
+    })cpp"),
+              HasSubstr("extracted(const volatile int &V)"));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
