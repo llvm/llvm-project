@@ -1079,8 +1079,7 @@ private:
   /// original scalar loop. \p PlanCM is the cost model used for legality
   /// and widening decisions while building the plan.
   VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range,
-                           LoopVectorizationCostModel &PlanCM,
-                           bool &IVUpdateMayOverflow);
+                           LoopVectorizationCostModel &PlanCM);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// based on \p VPlan1 and according to the information gathered by Legal
