@@ -3756,6 +3756,24 @@ IntrinsicProcTable::Implementation::HandleEnumerationHuge(
       std::move(arguments)};
 }
 
+// STAT= of NEXT/PREVIOUS: any integer with a decimal exponent range >= 4.
+static DynamicType GetEnumerationStatType(const ActualArguments &arguments,
+    const char *procName, const common::IntrinsicTypeDefaultKinds &defaults,
+    FoldingContext &context) {
+  if (arguments.size() > 1 && arguments[1]) {
+    if (auto type{arguments[1]->GetType()}) {
+      if (type->category() != TypeCategory::Integer || type->kind() < 2) {
+        context.messages().Say(arguments[1]->sourceLocation(),
+            "STAT= argument to %s() must be an integer with a decimal exponent range of at least four"_err_en_US,
+            procName);
+      }
+      return *type;
+    }
+  }
+  return DynamicType{
+      TypeCategory::Integer, defaults.GetDefaultKind(TypeCategory::Integer)};
+}
+
 // NEXT(a [, stat]) for enumeration types — returns the next enumerator
 std::optional<SpecificCall>
 IntrinsicProcTable::Implementation::HandleEnumerationNext(
@@ -3774,7 +3792,7 @@ IntrinsicProcTable::Implementation::HandleEnumerationNext(
       characteristics::TypeAndShape{enumerationType}};
   ddoA.intent = common::Intent::In;
   DynamicType statType{
-      TypeCategory::Integer, defaults_.GetDefaultKind(TypeCategory::Integer)};
+      GetEnumerationStatType(arguments, "NEXT", defaults_, context)};
   characteristics::DummyDataObject ddoStat{
       characteristics::TypeAndShape{statType}};
   ddoStat.intent = common::Intent::Out;
@@ -3811,7 +3829,7 @@ IntrinsicProcTable::Implementation::HandleEnumerationPrevious(
       characteristics::TypeAndShape{enumerationType}};
   ddoA.intent = common::Intent::In;
   DynamicType statType{
-      TypeCategory::Integer, defaults_.GetDefaultKind(TypeCategory::Integer)};
+      GetEnumerationStatType(arguments, "PREVIOUS", defaults_, context)};
   characteristics::DummyDataObject ddoStat{
       characteristics::TypeAndShape{statType}};
   ddoStat.intent = common::Intent::Out;

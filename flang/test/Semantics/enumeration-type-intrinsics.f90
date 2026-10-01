@@ -214,3 +214,23 @@ subroutine test_next_previous_stat_nonconformant()
   !CHECK: error: Dimension 1 of actual argument (arr) corresponding to dummy argument #1 ('a') has extent 3, but actual argument (stat2) corresponding to dummy argument #2 ('stat') has extent 2
   pc = previous(arr, stat=stat2)
 end subroutine
+
+subroutine test_next_previous_stat_kinds()
+  use enum_intrinsics_mod
+  type(color) :: c, nc, arr(3), narr(3)
+  integer(2) :: s2, s2arr(3)
+  integer(8) :: s8, s8arr(3)
+  integer(1) :: s1
+  real :: sr
+  ! STAT= may be any integer with a decimal exponent range of at least four.
+  nc = next(c, stat=s2)
+  nc = previous(c, stat=s8)
+  narr = next(arr, stat=s2arr)
+  narr = previous(arr, stat=s8arr)
+  !CHECK: error: STAT= argument to NEXT() must be an integer with a decimal exponent range of at least four
+  nc = next(c, stat=s1)
+  !CHECK: error: STAT= argument to PREVIOUS() must be an integer with a decimal exponent range of at least four
+  nc = previous(c, stat=s1)
+  !CHECK: error: STAT= argument to NEXT() must be an integer with a decimal exponent range of at least four
+  nc = next(c, stat=sr)
+end subroutine

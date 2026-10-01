@@ -4410,6 +4410,17 @@ private:
         activeConstructStack.back().stmtCtx;
     const Fortran::lower::SomeExpr *expr = Fortran::semantics::GetExpr(
         std::get<Fortran::parser::Scalar<Fortran::parser::Expr>>(stmt.t));
+    // Semantics already turned enumeration CASE values into ordinals.
+    std::optional<Fortran::lower::SomeExpr> enumOrdinal;
+    if (const auto *derived = std::get_if<
+            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>>(&expr->u))
+      if (const auto *spec =
+              Fortran::evaluate::GetDerivedTypeSpec(derived->GetType());
+          spec && Fortran::semantics::IsEnumerationType(spec->typeSymbol())) {
+        enumOrdinal = Fortran::evaluate::MakeEnumerationIntCall(
+            Fortran::evaluate::Expr<Fortran::evaluate::SomeDerived>{*derived});
+        expr = &*enumOrdinal;
+      }
     bool isCharSelector = isCharacterCategory(expr->GetType()->category());
     bool isLogicalSelector = isLogicalCategory(expr->GetType()->category());
     mlir::MLIRContext *context = builder->getContext();
@@ -7084,22 +7095,9 @@ private:
                           Fortran::common::TypeCategory::Derived) {
               if (const auto *constant =
                       std::get_if<Fortran::evaluate::Constant<
-                          Fortran::evaluate::SomeDerived>>(&x.u)) {
-                const auto &spec = constant->GetType().GetDerivedTypeSpec();
-                const auto *dtDetails =
-                    spec.typeSymbol()
-                        .template detailsIf<
-                            Fortran::semantics::DerivedTypeDetails>();
-                if (dtDetails && dtDetails->isEnumerationType())
-                  // Enumeration types lower to i32 (no RecordType); mangle the
-                  // name from the type spec instead of the element type.
-                  return Fortran::lower::mangle::mangleArrayLiteral(
-                      constant->values().size() * sizeof(constant->values()[0]),
-                      constant->shape(), Fortran::common::TypeCategory::Derived,
-                      /*kind=*/0, /*charLen=*/-1, mangleName(spec));
+                          Fortran::evaluate::SomeDerived>>(&x.u))
                 return Fortran::lower::mangle::mangleArrayLiteral(eleTy,
                                                                   *constant);
-              }
               fir::emitFatalError(loc,
                                   "non a constant derived type expression");
             } else {

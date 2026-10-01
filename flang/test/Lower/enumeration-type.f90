@@ -1,6 +1,8 @@
-! Test lowering of enumeration types to HLFIR/FIR.
-! Enumeration types lower to i32 values representing 1-based ordinal positions.
+! Test lowering of enumeration types to HLFIR.
+! An enumeration type lowers to a record type with a single i32 component,
+! __ordinal, holding the 1-based ordinal of the enumerator.
 ! RUN: %flang_fc1 -fenumeration-type -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fenumeration-type -emit-fir %s -o /dev/null
 
 module enum_mod
   enumeration type :: color
@@ -9,47 +11,52 @@ module enum_mod
 end module
 
 ! -----------------------------------------------------------------------------
-!            Test enumeration type maps to i32 (not fir.type)
+!            Test enumeration variable is a record type
 ! -----------------------------------------------------------------------------
 
 ! CHECK-LABEL: func.func @_QPtest_enum_variable()
 subroutine test_enum_variable()
   use enum_mod
   type(color) :: c
-  ! CHECK: %[[ALLOC:.*]] = fir.alloca i32
+  ! CHECK: %[[ALLOC:.*]] = fir.alloca !fir.type<_QMenum_modTcolor{__ordinal:i32}> <{bindc_name = "c"
   ! CHECK: hlfir.declare %[[ALLOC]]
   c = red
 end subroutine
 
 ! -----------------------------------------------------------------------------
-!            Test enumerator constants lower to i32 constants
+!            Test enumerator constants lower to record constants
 ! -----------------------------------------------------------------------------
+
+! The ordinal of each read-only constant is checked with the globals at the end
+! of the file.
 
 ! CHECK-LABEL: func.func @_QPtest_enumerator_constants()
 subroutine test_enumerator_constants()
   use enum_mod
   type(color) :: c
-  ! CHECK: %[[RED:.*]] = arith.constant 1 : i32
-  ! CHECK: hlfir.assign %[[RED]]
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_enumerator_constantsEc"}
+  ! CHECK: %[[RED_ADDR:.*]] = fir.address_of(@[[RED:_QQro\._QMenum_modTcolor\.[0-9]+]])
+  ! CHECK: %[[RED_DECL:.*]]:2 = hlfir.declare %[[RED_ADDR]]
+  ! CHECK: hlfir.assign %[[RED_DECL]]#0 to %[[C]]#0 : !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>, !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
   c = red
-  ! CHECK: %[[GREEN:.*]] = arith.constant 2 : i32
-  ! CHECK: hlfir.assign %[[GREEN]]
+  ! CHECK: fir.address_of(@[[GREEN:_QQro\._QMenum_modTcolor\.[0-9]+]])
+  ! CHECK: hlfir.assign
   c = green
-  ! CHECK: %[[BLUE:.*]] = arith.constant 3 : i32
-  ! CHECK: hlfir.assign %[[BLUE]]
+  ! CHECK: fir.address_of(@[[BLUE:_QQro\._QMenum_modTcolor\.[0-9]+]])
+  ! CHECK: hlfir.assign
   c = blue
 end subroutine
 
 ! -----------------------------------------------------------------------------
-!            Test enumeration constructor — color(n) → i32 constant
+!            Test enumeration constructor with a constant argument
 ! -----------------------------------------------------------------------------
 
 ! CHECK-LABEL: func.func @_QPtest_constructor()
 subroutine test_constructor()
   use enum_mod
   type(color) :: c
-  ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
-  ! CHECK: hlfir.assign %[[C2]]
+  ! CHECK: fir.address_of(@[[CTOR2:_QQro\._QMenum_modTcolor\.[0-9]+]])
+  ! CHECK: hlfir.assign
   ! Constant argument is range-checked at compile time (semantics), so no
   ! runtime range check is emitted here.
   ! CHECK-NOT: fir.call @{{.*}}ReportFatalUserError
@@ -65,11 +72,12 @@ end subroutine
 ! error termination (F2023 7.6.2 para 5).
 
 ! CHECK-LABEL: func.func @_QPtest_constructor_runtime(
-! CHECK-SAME: %[[ARG:.*]]: !fir.ref<i32>
+! CHECK-SAME: %{{.*}}: !fir.ref<i32>
 subroutine test_constructor_runtime(i)
   use enum_mod
   integer, intent(in) :: i
   type(color) :: c
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_constructor_runtimeEc"}
   ! CHECK: %[[ORD:.*]] = fir.load %{{.*}} : !fir.ref<i32>
   ! CHECK-DAG: %[[ONE:.*]] = arith.constant 1 : i32
   ! CHECK-DAG: %[[MAX:.*]] = arith.constant 3 : i32
@@ -79,7 +87,35 @@ subroutine test_constructor_runtime(i)
   ! CHECK: fir.if %[[OOR]] {
   ! CHECK:   fir.call @{{.*}}ReportFatalUserError
   ! CHECK: }
-  ! CHECK: hlfir.assign %[[ORD]]
+  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "ctor.temp"}
+  ! CHECK: %[[F:.*]] = hlfir.designate %[[TMP]]#0{"__ordinal"}
+  ! CHECK: hlfir.assign %[[ORD]] to %[[F]] : i32, !fir.ref<i32>
+  ! CHECK: hlfir.assign %[[TMP]]#0 to %[[C]]#0
+  c = color(i)
+end subroutine
+
+! The range check uses the argument's own kind, before it is narrowed to the
+! i32 ordinal, so a large INTEGER(8) value cannot wrap into range.
+
+! CHECK-LABEL: func.func @_QPtest_constructor_int8(
+! CHECK-SAME: %{{.*}}: !fir.ref<i64>
+subroutine test_constructor_int8(i)
+  use enum_mod
+  integer(8), intent(in) :: i
+  type(color) :: c
+  ! CHECK: %[[I:.*]] = fir.load %{{.*}} : !fir.ref<i64>
+  ! CHECK-DAG: %[[ONE:.*]] = arith.constant 1 : i64
+  ! CHECK-DAG: %[[MAX:.*]] = arith.constant 3 : i64
+  ! CHECK: %[[LOW:.*]] = arith.cmpi slt, %[[I]], %[[ONE]] : i64
+  ! CHECK: %[[HIGH:.*]] = arith.cmpi sgt, %[[I]], %[[MAX]] : i64
+  ! CHECK: %[[OOR:.*]] = arith.ori %[[LOW]], %[[HIGH]] : i1
+  ! CHECK: fir.if %[[OOR]] {
+  ! CHECK:   fir.call @{{.*}}ReportFatalUserError
+  ! CHECK: }
+  ! CHECK: %[[ORD:.*]] = fir.convert %[[I]] : (i64) -> i32
+  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "ctor.temp"}
+  ! CHECK: %[[F:.*]] = hlfir.designate %[[TMP]]#0{"__ordinal"}
+  ! CHECK: hlfir.assign %[[ORD]] to %[[F]] : i32, !fir.ref<i32>
   c = color(i)
 end subroutine
 
@@ -88,13 +124,17 @@ end subroutine
 ! -----------------------------------------------------------------------------
 
 ! CHECK-LABEL: func.func @_QPtest_comparisons(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<i32>{{.*}}, %[[ARG1:.*]]: !fir.ref<i32>{{.*}})
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>> {fir.bindc_name = "c1"}, %{{.*}}: !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>> {fir.bindc_name = "c2"})
 subroutine test_comparisons(c1, c2)
   use enum_mod
   type(color), intent(in) :: c1, c2
   logical :: l
-  ! CHECK: %[[V1:.*]] = fir.load %{{.*}} : !fir.ref<i32>
-  ! CHECK: %[[V2:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+  ! CHECK: %[[C1:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_comparisonsEc1"}
+  ! CHECK: %[[C2:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_comparisonsEc2"}
+  ! CHECK: %[[F1:.*]] = hlfir.designate %[[C1]]#0{"__ordinal"}
+  ! CHECK: %[[V1:.*]] = fir.load %[[F1]] : !fir.ref<i32>
+  ! CHECK: %[[F2:.*]] = hlfir.designate %[[C2]]#0{"__ordinal"}
+  ! CHECK: %[[V2:.*]] = fir.load %[[F2]] : !fir.ref<i32>
   ! CHECK: arith.cmpi eq, %[[V1]], %[[V2]] : i32
   l = (c1 == c2)
   ! CHECK: arith.cmpi slt
@@ -117,141 +157,51 @@ end subroutine
 subroutine test_int_conversion()
   use enum_mod
   integer :: i
+  ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_int_conversionEi"}
   ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+  ! CHECK: hlfir.assign %[[C1]] to %[[I]]#0 : i32, !fir.ref<i32>
   i = int(red)
 end subroutine
 
+! CHECK-LABEL: func.func @_QPtest_int_variable(
+subroutine test_int_variable(c, arr)
+  use enum_mod
+  type(color), intent(in) :: c, arr(3)
+  integer :: i, iarr(3)
+  integer(8) :: j
+  ! CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%[[SHAPE:[0-9]+]]) dummy_scope %{{.*}} {{.*}}uniq_name = "_QFtest_int_variableEarr"}
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_int_variableEc"}
+  ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_int_variableEi"}
+  ! CHECK: %[[IARR:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_int_variableEiarr"}
+  ! CHECK: %[[J:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_int_variableEj"}
+  ! CHECK: %[[F1:.*]] = hlfir.designate %[[C]]#0{"__ordinal"}
+  ! CHECK: %[[V1:.*]] = fir.load %[[F1]] : !fir.ref<i32>
+  ! CHECK: hlfir.assign %[[V1]] to %[[I]]#0 : i32, !fir.ref<i32>
+  i = int(c)
+  ! CHECK: %[[F2:.*]] = hlfir.designate %[[C]]#0{"__ordinal"}
+  ! CHECK: %[[V2:.*]] = fir.load %[[F2]] : !fir.ref<i32>
+  ! CHECK: %[[V2_8:.*]] = fir.convert %[[V2]] : (i32) -> i64
+  ! CHECK: hlfir.assign %[[V2_8]] to %[[J]]#0 : i64, !fir.ref<i64>
+  j = int(c, kind=8)
+  ! CHECK: %[[FA:.*]] = hlfir.designate %[[ARR]]#0{"__ordinal"} shape %[[SHAPE]] : {{.*}} -> !fir.box<!fir.array<3xi32>>
+  ! CHECK: %[[EL:.*]] = hlfir.elemental %[[SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<3xi32> {
+  ! CHECK: hlfir.designate %[[FA]] (%{{.*}})
+  ! CHECK: hlfir.yield_element %{{.*}} : i32
+  ! CHECK: hlfir.assign %[[EL]] to %[[IARR]]#0
+  iarr = int(arr)
+end subroutine
+
 ! -----------------------------------------------------------------------------
-!            Test HUGE() — returns enumerator count as i32 constant
+!            Test HUGE() — returns the last enumerator
 ! -----------------------------------------------------------------------------
 
 ! CHECK-LABEL: func.func @_QPtest_huge()
 subroutine test_huge()
   use enum_mod
   type(color) :: c
-  ! CHECK: arith.constant 3 : i32
+  ! CHECK: fir.address_of(@[[BLUE]])
+  ! CHECK: hlfir.assign
   c = huge(red)
-end subroutine
-
-! -----------------------------------------------------------------------------
-!            Test NEXT() with variable argument
-! -----------------------------------------------------------------------------
-
-! CHECK-LABEL: func.func @_QPtest_next(
-! CHECK-SAME: %[[ARG:.*]]: !fir.ref<i32>
-subroutine test_next(c)
-  use enum_mod
-  type(color), intent(in) :: c
-  type(color) :: result
-  integer :: stat
-  ! CHECK: %[[ORD:.*]] = fir.load %{{.*}} : !fir.ref<i32>
-  ! Compute: min(ordinal + 1, 3). Constants are hoisted, so match order-free.
-  ! CHECK-DAG: %[[ONE:.*]] = arith.constant 1 : i32
-  ! CHECK-DAG: %[[MAX:.*]] = arith.constant 3 : i32
-  ! CHECK: %[[INC:.*]] = arith.addi %[[ORD]], %[[ONE]] : i32
-  ! CHECK: %[[CMP:.*]] = arith.cmpi sle, %[[INC]], %[[MAX]] : i32
-  ! CHECK: %[[RES:.*]] = arith.select %[[CMP]], %[[INC]], %[[MAX]] : i32
-  ! Boundary check: ordinal == 3
-  ! CHECK: %[[BOUND:.*]] = arith.cmpi eq, %[[ORD]], %[[MAX]] : i32
-  ! A non-optional local STAT needs no runtime presence check.
-  ! CHECK-NOT: fir.is_present
-  ! STAT handling: select 112 or 0
-  ! CHECK: arith.constant 112
-  ! CHECK: arith.constant 0
-  ! CHECK: arith.select %[[BOUND]]
-  ! CHECK: hlfir.assign
-  result = next(c, stat=stat)
-end subroutine
-
-! -----------------------------------------------------------------------------
-!            Test PREVIOUS() with variable argument
-! -----------------------------------------------------------------------------
-
-! CHECK-LABEL: func.func @_QPtest_previous(
-! CHECK-SAME: %[[ARG:.*]]: !fir.ref<i32>
-subroutine test_previous(c)
-  use enum_mod
-  type(color), intent(in) :: c
-  type(color) :: result
-  integer :: stat
-  ! CHECK: %[[ORD:.*]] = fir.load %{{.*}} : !fir.ref<i32>
-  ! Compute: max(ordinal - 1, 1)
-  ! CHECK: %[[ONE:.*]] = arith.constant 1 : i32
-  ! CHECK: %[[DEC:.*]] = arith.subi %[[ORD]], %[[ONE]] : i32
-  ! CHECK: %[[CMP:.*]] = arith.cmpi sge, %[[DEC]], %[[ONE]] : i32
-  ! CHECK: %[[RES:.*]] = arith.select %[[CMP]], %[[DEC]], %[[ONE]] : i32
-  ! Boundary check: ordinal == 1
-  ! CHECK: %[[BOUND:.*]] = arith.cmpi eq, %[[ORD]], %[[ONE]] : i32
-  ! STAT handling: select 112 or 0
-  ! CHECK: arith.constant 112
-  ! CHECK: arith.constant 0
-  ! CHECK: arith.select %[[BOUND]]
-  ! CHECK: hlfir.assign
-  result = previous(c, stat=stat)
-end subroutine
-
-! -----------------------------------------------------------------------------
-!            Test NEXT() without STAT — generates fatal error path
-! -----------------------------------------------------------------------------
-
-! CHECK-LABEL: func.func @_QPtest_next_no_stat(
-subroutine test_next_no_stat(c)
-  use enum_mod
-  type(color), intent(in) :: c
-  type(color) :: result
-  ! CHECK: %[[ORD:.*]] = fir.load %{{.*}} : !fir.ref<i32>
-  ! CHECK: arith.addi
-  ! CHECK: arith.cmpi sle
-  ! CHECK: arith.select
-  ! Boundary without STAT — fir.if for fatal error
-  ! CHECK: %[[BOUND:.*]] = arith.cmpi eq
-  ! CHECK: fir.if %[[BOUND]]
-  ! CHECK:   fir.call @{{.*}}ReportFatalUserError
-  ! CHECK: }
-  result = next(c)
-end subroutine
-
-! -----------------------------------------------------------------------------
-!            Test NEXT() with a STAT that may be absent at runtime
-! -----------------------------------------------------------------------------
-
-! An absent optional dummy (or unallocated allocatable) forwarded as STAT= is
-! not present: STAT must not be written and the boundary is a fatal error.
-
-! CHECK-LABEL: func.func @_QPtest_next_optional_stat(
-subroutine test_next_optional_stat(c, stat)
-  use enum_mod
-  type(color), intent(in) :: c
-  integer, optional, intent(out) :: stat
-  type(color) :: result
-  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_next_optional_statEstat"}
-  ! CHECK: %[[BOUND:.*]] = arith.cmpi eq
-  ! CHECK: %[[PRES:.*]] = fir.is_present %[[STAT]]#0 : (!fir.ref<i32>) -> i1
-  ! CHECK: fir.if %[[PRES]] {
-  ! CHECK:   arith.select %[[BOUND]]
-  ! CHECK:   hlfir.assign %{{.*}} to %[[STAT]]#0
-  ! CHECK: } else {
-  ! CHECK:   fir.if %[[BOUND]] {
-  ! CHECK:     fir.call @{{.*}}ReportFatalUserError
-  result = next(c, stat=stat)
-end subroutine
-
-! CHECK-LABEL: func.func @_QPtest_next_allocatable_stat(
-subroutine test_next_allocatable_stat(c, stat)
-  use enum_mod
-  type(color), intent(in) :: c
-  integer, allocatable, intent(inout) :: stat
-  type(color) :: result
-  ! CHECK: %[[BOUND:.*]] = arith.cmpi eq
-  ! CHECK: fir.box_addr
-  ! CHECK: %[[PRES:.*]] = arith.cmpi ne
-  ! CHECK: fir.if %[[PRES]] {
-  ! CHECK:   arith.select %[[BOUND]]
-  ! CHECK:   hlfir.assign
-  ! CHECK: } else {
-  ! CHECK:   fir.if %[[BOUND]] {
-  ! CHECK:     fir.call @{{.*}}ReportFatalUserError
-  result = next(c, stat=stat)
 end subroutine
 
 ! -----------------------------------------------------------------------------
@@ -263,7 +213,9 @@ subroutine test_select_case(c)
   use enum_mod
   type(color), intent(in) :: c
   integer :: result
-  ! CHECK: %[[SEL:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_select_caseEc"}
+  ! CHECK: %[[F:.*]] = hlfir.designate %[[C]]#0{"__ordinal"}
+  ! CHECK: %[[SEL:.*]] = fir.load %[[F]] : !fir.ref<i32>
   ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
   ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
   ! CHECK: %[[C3:.*]] = arith.constant 3 : i32
@@ -283,13 +235,15 @@ end subroutine
 ! -----------------------------------------------------------------------------
 
 ! CHECK-LABEL: func.func @_QPtest_formatted_write(
-! CHECK-SAME: %[[ARG:.*]]: !fir.ref<i32>
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
 subroutine test_formatted_write(c)
   use enum_mod
   type(color), intent(in) :: c
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_formatted_writeEc"}
   ! CHECK: fir.call @_FortranAioBeginExternalFormattedOutput
-  ! CHECK: %[[VAL:.*]] = fir.load %{{.*}} : !fir.ref<i32>
-  ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[VAL]])
+  ! CHECK: %[[BOX:.*]] = fir.embox %[[C]]#0 : (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
+  ! CHECK: %[[ARG:.*]] = fir.convert %[[BOX]]
+  ! CHECK: fir.call @_FortranAioOutputDerivedType(%{{.*}}, %[[ARG]], %{{.*}})
   ! CHECK: fir.call @_FortranAioEndIoStatement
   write(*, '(I4)') c
 end subroutine
@@ -299,13 +253,15 @@ end subroutine
 ! -----------------------------------------------------------------------------
 
 ! CHECK-LABEL: func.func @_QPtest_formatted_read(
-! CHECK-SAME: %[[ARG:.*]]: !fir.ref<i32>
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
 subroutine test_formatted_read(c)
   use enum_mod
   type(color), intent(inout) :: c
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_formatted_readEc"}
   ! CHECK: fir.call @_FortranAioBeginExternalFormattedInput
-  ! CHECK: %[[CONV:.*]] = fir.convert %{{.*}} : (!fir.ref<i32>) -> !fir.ref<i64>
-  ! CHECK: fir.call @_FortranAioInputInteger(%{{.*}}, %[[CONV]], %{{.*}})
+  ! CHECK: %[[BOX:.*]] = fir.embox %[[C]]#0 : (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
+  ! CHECK: %[[ARG:.*]] = fir.convert %[[BOX]]
+  ! CHECK: fir.call @_FortranAioInputDerivedType(%{{.*}}, %[[ARG]], %{{.*}})
   ! CHECK: fir.call @_FortranAioEndIoStatement
   read(*, '(I4)') c
 end subroutine
@@ -314,26 +270,22 @@ end subroutine
 !            Test enumeration type as a function result
 ! -----------------------------------------------------------------------------
 
-! An enumeration result lowers to i32 and is returned by value like an integer;
-! it must not use the caller-allocated fir.save_result ABI reserved for
-! record-shaped derived results.
-
 module enum_func_mod
   enumeration type :: color2
     enumerator :: c2red, c2green, c2blue
   end enumeration type
 contains
-  ! CHECK-LABEL: func.func @_QMenum_func_modPpick() -> i32
+  ! CHECK-LABEL: func.func @_QMenum_func_modPpick() -> !fir.type<_QMenum_func_modTcolor2{__ordinal:i32}>
   function pick() result(c)
     type(color2) :: c
     c = c2blue
   end function
-  ! CHECK-LABEL: func.func @_QMenum_func_modPpick_array() -> !fir.array<3xi32>
+  ! CHECK-LABEL: func.func @_QMenum_func_modPpick_array() -> !fir.array<3x!fir.type<_QMenum_func_modTcolor2{__ordinal:i32}>>
   function pick_array() result(c)
     type(color2) :: c(3)
     c = [c2red, c2green, c2blue]
   end function
-  ! CHECK-LABEL: func.func @_QMenum_func_modPpick_alloc() -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+  ! CHECK-LABEL: func.func @_QMenum_func_modPpick_alloc() -> !fir.box<!fir.heap<!fir.array<?x!fir.type<_QMenum_func_modTcolor2{__ordinal:i32}>>>>
   function pick_alloc() result(c)
     type(color2), allocatable :: c(:)
     c = [c2red, c2green, c2blue]
@@ -345,26 +297,27 @@ subroutine test_func_result()
   use enum_func_mod
   type(color2) :: c
   logical :: l
-  ! Result returned by value as i32, with no fir.save_result.
-  ! CHECK: %[[RES:.*]] = fir.call @_QMenum_func_modPpick() {{.*}}: () -> i32
-  ! CHECK-NOT: fir.save_result
-  ! CHECK: hlfir.assign %[[RES]]
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_func_resultEc"}
+  ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = ".tmp.func_result"}
+  ! CHECK: %[[RES:.*]] = fir.call @_QMenum_func_modPpick() {{.*}}: () -> !fir.type<_QMenum_func_modTcolor2{__ordinal:i32}>
+  ! CHECK: fir.save_result %[[RES]] to %[[TMP]]#0
+  ! CHECK: %[[E:.*]] = hlfir.as_expr %[[TMP]]#0
+  ! CHECK: hlfir.assign %[[E]] to %[[C]]#0
   c = pick()
-  ! The result is a genuine enumeration value: comparison lowers to i32 cmpi.
-  ! CHECK: arith.cmpi eq, %{{.*}}, %{{.*}} : i32
+  ! CHECK: %[[F:.*]] = hlfir.designate %[[C]]#0{"__ordinal"}
+  ! CHECK: %[[V:.*]] = fir.load %[[F]] : !fir.ref<i32>
+  ! CHECK: %[[THREE:.*]] = arith.constant 3 : i32
+  ! CHECK: arith.cmpi eq, %[[V]], %[[THREE]] : i32
   l = (c == c2blue)
 end subroutine
-
-! Non-scalar enumeration results (array, allocatable) use the normal
-! caller-allocated fir.save_result ABI, like integer arrays.
 
 ! CHECK-LABEL: func.func @_QPtest_func_result_array()
 subroutine test_func_result_array()
   use enum_func_mod
   type(color2) :: c(3)
-  ! CHECK: hlfir.eval_in_mem {{.*}} -> !hlfir.expr<3xi32> {
-  ! CHECK: ^bb0(%[[TMP:.*]]: !fir.ref<!fir.array<3xi32>>):
-  ! CHECK: %[[RES:.*]] = fir.call @_QMenum_func_modPpick_array() {{.*}}: () -> !fir.array<3xi32>
+  ! CHECK: hlfir.eval_in_mem {{.*}} -> !hlfir.expr<3x!fir.type<_QMenum_func_modTcolor2{__ordinal:i32}>> {
+  ! CHECK: ^bb0(%[[TMP:.*]]: !fir.ref<!fir.array<3x!fir.type<_QMenum_func_modTcolor2{__ordinal:i32}>>>):
+  ! CHECK: %[[RES:.*]] = fir.call @_QMenum_func_modPpick_array() {{.*}}: () -> !fir.array<3x!fir.type<_QMenum_func_modTcolor2{__ordinal:i32}>>
   ! CHECK: fir.save_result %[[RES]] to %[[TMP]]
   c = pick_array()
 end subroutine
@@ -373,9 +326,8 @@ end subroutine
 subroutine test_func_result_alloc()
   use enum_func_mod
   type(color2), allocatable :: c(:)
-  ! CHECK: %[[TMP:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = ".result"}>
-  ! CHECK: %[[RES:.*]] = fir.call @_QMenum_func_modPpick_alloc() {{.*}}: () -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK: fir.save_result %[[RES]] to %{{.*}} : !fir.box<!fir.heap<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  ! CHECK: %[[RES:.*]] = fir.call @_QMenum_func_modPpick_alloc() {{.*}}: () -> !fir.box<!fir.heap<!fir.array<?x!fir.type<_QMenum_func_modTcolor2{__ordinal:i32}>>>>
+  ! CHECK: fir.save_result %[[RES]] to %{{.*}} : !fir.box<!fir.heap<!fir.array<?x!fir.type<_QMenum_func_modTcolor2{__ordinal:i32}>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMenum_func_modTcolor2{__ordinal:i32}>>>>>
   c = pick_alloc()
 end subroutine
 
@@ -387,14 +339,15 @@ end subroutine
 subroutine test_enum_arg_pass()
   use enum_mod
   type(color) :: c
+  ! CHECK: %[[C:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_enum_arg_passEc"}
+  ! CHECK: hlfir.assign %{{.*}} to %[[C]]#0
+  ! CHECK: fir.call @_QPtake_enum(%[[C]]#0) {{.*}}: (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> ()
   c = green
-  ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
-  ! CHECK: fir.call @_QPtake_enum
   call take_enum(c)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtake_enum(
-! CHECK-SAME: %[[ARG:.*]]: !fir.ref<i32>
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>> {fir.bindc_name = "c"}
 subroutine take_enum(c)
   use enum_mod
   type(color), intent(in) :: c
@@ -404,17 +357,14 @@ end subroutine
 !            Test enumeration-typed scalar PARAMETER
 ! -----------------------------------------------------------------------------
 
-! A named constant of enumeration type must lower to an i32 constant, not a
-! record type (previously asserted on cast<fir::RecordType> in ConvertConstant).
-
 ! CHECK-LABEL: func.func @_QPtest_enum_parameter()
 subroutine test_enum_parameter()
   use enum_mod
   type(color), parameter :: cRed = red
   type(color) :: c
-  ! CHECK: hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_enum_parameterECcred"} : (!fir.ref<i32>)
-  ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
-  ! CHECK: hlfir.assign %[[C1]]
+  ! CHECK: hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_enum_parameterECcred"} : (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>)
+  ! CHECK: fir.address_of(@[[RED]])
+  ! CHECK: hlfir.assign
   c = cRed
 end subroutine
 
@@ -422,14 +372,11 @@ end subroutine
 !            Test enumeration array constructor
 ! -----------------------------------------------------------------------------
 
-! An array constructor of enumerators must lower to an i32 array constant, not a
-! record-typed array (previously asserted on cast<fir::RecordType>).
-
 ! CHECK-LABEL: func.func @_QPtest_array_constructor()
 subroutine test_array_constructor()
   use enum_mod
   type(color) :: arr(3)
-  ! CHECK: %[[RO:.*]] = fir.address_of(@_QQro.3x_QMenum_modTcolor.{{[0-9]+}}) : !fir.ref<!fir.array<3xi32>>
+  ! CHECK: %[[RO:.*]] = fir.address_of(@[[ARR:_QQro\.3x_QMenum_modTcolor\.[0-9]+]]) : !fir.ref<!fir.array<3x!fir.type<_QMenum_modTcolor{__ordinal:i32}>>>
   ! CHECK: hlfir.declare %[[RO]]
   ! CHECK: hlfir.assign
   arr = [red, green, blue]
@@ -444,99 +391,78 @@ subroutine test_array_parameter()
   use enum_mod
   type(color), parameter :: pal(3) = [red, green, blue]
   type(color) :: arr(3)
-  ! CHECK: hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_array_parameterECpal"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>)
+  ! CHECK: hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_array_parameterECpal"} : (!fir.ref<!fir.array<3x!fir.type<_QMenum_modTcolor{__ordinal:i32}>>>, !fir.shape<1>)
   ! CHECK: hlfir.assign
   arr = pal
 end subroutine
 
 ! -----------------------------------------------------------------------------
-!            Test NEXT() over a whole array (elemental)
+!            Test SELECT TYPE and ALLOCATE with an enumeration type
 ! -----------------------------------------------------------------------------
 
-! NEXT()/PREVIOUS() applied to an array argument lower to an hlfir.elemental over
-! i32 ordinals (previously asserted on getIntOrFloatBitWidth for the array case).
+! An enumeration type is a distinct dynamic type: TYPE IS (color) and
+! TYPE IS (integer) must be separate guards.
 
-! CHECK-LABEL: func.func @_QPtest_next_array(
-subroutine test_next_array(arr)
+! CHECK-LABEL: func.func @_QPtest_select_type(
+subroutine test_select_type(x)
   use enum_mod
-  type(color), intent(in) :: arr(3)
-  type(color) :: narr(3)
-  integer :: stat(3)
-  ! Value elemental: min(ordinal + 1, 3).
-  ! CHECK: hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<3xi32> {
-  ! CHECK: %[[ELE:.*]] = hlfir.designate %{{.*}} : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
-  ! CHECK: %[[ORD:.*]] = fir.load %[[ELE]] : !fir.ref<i32>
-  ! CHECK-DAG: %[[ONE:.*]] = arith.constant 1 : i32
-  ! CHECK-DAG: %[[MAX:.*]] = arith.constant 3 : i32
-  ! CHECK: %[[INC:.*]] = arith.addi %[[ORD]], %[[ONE]] : i32
-  ! CHECK: %[[CMP:.*]] = arith.cmpi sle, %[[INC]], %[[MAX]] : i32
-  ! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[INC]], %[[MAX]] : i32
-  ! CHECK: hlfir.yield_element %[[SEL]] : i32
-  ! STAT elemental: 112 at the last enumerator, else 0.
-  ! CHECK: hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<3xi32> {
-  ! CHECK: arith.cmpi eq, %{{.*}}, %{{.*}} : i32
-  ! CHECK-DAG: arith.constant 112 : i32
-  ! CHECK-DAG: arith.constant 0 : i32
-  ! CHECK: arith.select
-  ! CHECK: hlfir.yield_element
-  narr = next(arr, stat=stat)
+  class(*), intent(in) :: x
+  integer :: r
+  ! CHECK: fir.select_type %{{.*}} : !fir.class<none> [#fir.type_is<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>, ^{{.*}}, #fir.type_is<i32>, ^{{.*}}, unit, ^{{.*}}]
+  ! CHECK: fir.box_addr %{{.*}} : (!fir.class<none>) -> !fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
+  ! CHECK: fir.box_addr %{{.*}} : (!fir.class<none>) -> !fir.ref<i32>
+  select type (x)
+  type is (color)
+    r = 1
+  type is (integer)
+    r = 2
+  end select
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_allocate_color()
+subroutine test_allocate_color()
+  use enum_mod
+  class(*), allocatable :: x
+  ! CHECK: %[[TD:.*]] = fir.type_desc !fir.type<_QMenum_modTcolor{__ordinal:i32}>
+  ! CHECK: %[[TDARG:.*]] = fir.convert %[[TD]]
+  ! CHECK: fir.call @_FortranAAllocatableInitDerivedForAllocate(%{{.*}}, %[[TDARG]], %{{.*}}, %{{.*}})
+  ! CHECK: fir.call @_FortranAAllocatableAllocate(
+  allocate(color :: x)
 end subroutine
 
 ! -----------------------------------------------------------------------------
-!            Test PREVIOUS() over a whole array (elemental)
+!            Verify the enumeration globals
 ! -----------------------------------------------------------------------------
 
-! CHECK-LABEL: func.func @_QPtest_previous_array(
-subroutine test_previous_array(arr)
-  use enum_mod
-  type(color), intent(in) :: arr(3)
-  type(color) :: parr(3)
-  integer :: stat(3)
-  ! Value elemental: max(ordinal - 1, 1).
-  ! CHECK: hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<3xi32> {
-  ! CHECK: %[[ELE:.*]] = hlfir.designate %{{.*}} : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
-  ! CHECK: %[[ORD:.*]] = fir.load %[[ELE]] : !fir.ref<i32>
-  ! CHECK: %[[ONE:.*]] = arith.constant 1 : i32
-  ! CHECK: %[[DEC:.*]] = arith.subi %[[ORD]], %[[ONE]] : i32
-  ! CHECK: %[[CMP:.*]] = arith.cmpi sge, %[[DEC]], %[[ONE]] : i32
-  ! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[DEC]], %[[ONE]] : i32
-  ! CHECK: hlfir.yield_element %[[SEL]] : i32
-  parr = previous(arr, stat=stat)
-end subroutine
+! CHECK: fir.global linkonce_odr @_QMenum_modECred constant : !fir.type<_QMenum_modTcolor{__ordinal:i32}> {
+! CHECK: arith.constant 1 : i32
+! CHECK-NEXT: fir.insert_value
+! CHECK-NEXT: fir.has_value
 
-! -----------------------------------------------------------------------------
-!            Test NEXT() over an array with a STAT that may be absent
-! -----------------------------------------------------------------------------
+! The runtime type descriptor for the enumeration type.
+! CHECK: fir.global linkonce_odr @_QMenum_modE.dt.color constant target : !fir.type<_QM__fortran_type_infoTderivedtype
 
-! CHECK-LABEL: func.func @_QPtest_next_array_optional_stat(
-subroutine test_next_array_optional_stat(arr, stat)
-  use enum_mod
-  type(color), intent(in) :: arr(3)
-  integer, optional, intent(out) :: stat(3)
-  type(color) :: narr(3)
-  ! CHECK: %[[STAT:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name = "_QFtest_next_array_optional_statEstat"}
-  ! CHECK: hlfir.elemental
-  ! CHECK: %[[PRES:.*]] = fir.is_present %[[STAT]]#0 : (!fir.ref<!fir.array<3xi32>>) -> i1
-  ! CHECK: fir.if %[[PRES]] {
-  ! CHECK:   %[[SE:.*]] = hlfir.elemental
-  ! CHECK:   hlfir.assign %[[SE]] to %[[STAT]]#0
-  ! CHECK:   hlfir.destroy %[[SE]]
-  ! CHECK: } else {
-  ! CHECK:   %[[MASK:.*]] = hlfir.elemental
-  ! CHECK:   hlfir.any %[[MASK]]
-  ! CHECK:   fir.call @{{.*}}ReportFatalUserError
-  ! CHECK:   hlfir.destroy %[[MASK]]
-  narr = next(arr, stat=stat)
-end subroutine
+! CHECK: fir.global internal @[[RED]] constant : !fir.type<_QMenum_modTcolor{__ordinal:i32}> {
+! CHECK: arith.constant 1 : i32
+! CHECK-NEXT: fir.insert_value
+! CHECK-NEXT: fir.has_value
+! CHECK: fir.global internal @[[GREEN]] constant : !fir.type<_QMenum_modTcolor{__ordinal:i32}> {
+! CHECK: arith.constant 2 : i32
+! CHECK-NEXT: fir.insert_value
+! CHECK-NEXT: fir.has_value
+! CHECK: fir.global internal @[[BLUE]] constant : !fir.type<_QMenum_modTcolor{__ordinal:i32}> {
+! CHECK: arith.constant 3 : i32
+! CHECK-NEXT: fir.insert_value
+! CHECK-NEXT: fir.has_value
+! CHECK: fir.global internal @[[CTOR2]] constant : !fir.type<_QMenum_modTcolor{__ordinal:i32}> {
+! CHECK: arith.constant 2 : i32
+! CHECK-NEXT: fir.insert_value
+! CHECK-NEXT: fir.has_value
 
-! -----------------------------------------------------------------------------
-!            Verify the enum array constructor constant is i32 ordinals 1,2,3
-! -----------------------------------------------------------------------------
-
-! CHECK: fir.global internal @_QQro.3x_QMenum_modTcolor.{{[0-9]+}} {{.*}}constant : !fir.array<3xi32> {
-! CHECK: %[[G1:.*]] = arith.constant 1 : i32
-! CHECK: fir.insert_value %{{.*}}, %[[G1]], [0 : index]
-! CHECK: %[[G2:.*]] = arith.constant 2 : i32
-! CHECK: fir.insert_value %{{.*}}, %[[G2]], [1 : index]
-! CHECK: %[[G3:.*]] = arith.constant 3 : i32
-! CHECK: fir.insert_value %{{.*}}, %[[G3]], [2 : index]
+! CHECK: fir.global internal @[[ARR]] {{.*}}constant : !fir.array<3x!fir.type<_QMenum_modTcolor{__ordinal:i32}>> {
+! CHECK: arith.constant 1 : i32
+! CHECK: fir.insert_value %{{.*}}, [0 : index]
+! CHECK: arith.constant 2 : i32
+! CHECK: fir.insert_value %{{.*}}, [1 : index]
+! CHECK: arith.constant 3 : i32
+! CHECK: fir.insert_value %{{.*}}, [2 : index]

@@ -1092,8 +1092,7 @@ private:
       }
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Derived) {
-      if (!dynamicType.GetDerivedTypeSpec().IsVectorType() &&
-          !isEnumerationDerived(dynamicType)) {
+      if (!dynamicType.GetDerivedTypeSpec().IsVectorType()) {
         // Derived result need to be allocated by the caller and the result
         // value must be saved. Derived type in implicit interface cannot have
         // length parameters.
@@ -1209,17 +1208,6 @@ private:
                     attrs);
       addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
     }
-  }
-
-  // An F2023 enumeration type has Derived category but lowers to i32, so a
-  // scalar enumeration result is returned by value like an integer.
-  static bool
-  isEnumerationDerived(const Fortran::evaluate::DynamicType &dynamicType) {
-    // GetDerivedTypeSpec() is null-safe: it yields nullptr for polymorphic and
-    // assumed-type results whose category is Derived but have no derived spec.
-    const Fortran::semantics::DerivedTypeSpec *spec{
-        Fortran::evaluate::GetDerivedTypeSpec(dynamicType)};
-    return spec && Fortran::semantics::IsEnumerationType(spec->typeSymbol());
   }
 
   mlir::Type
