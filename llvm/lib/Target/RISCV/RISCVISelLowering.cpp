@@ -6778,7 +6778,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
         unsigned Opc = SplatVT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL
                                                  : RISCVISD::VMV_V_X_VL;
         SDValue Splat =
-            DAG.getNode(Opc, DL, SplatVT, DAG.getUNDEF(ContainerVT), V, VL);
+            DAG.getNode(Opc, DL, SplatVT, DAG.getUNDEF(SplatVT), V, VL);
         Splat = DAG.getBitcast(ContainerVT, Splat);
         return convertFromScalableVector(VT, Splat, DAG, Subtarget);
       }
@@ -7880,7 +7880,7 @@ static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
   if (!XIsNeverNan) {
     SDValue XIsNonNan = DAG.getNode(RISCVISD::SETCC_VL, DL, Mask.getValueType(),
                                     {X, X, DAG.getCondCode(ISD::SETOEQ),
-                                     DAG.getUNDEF(ContainerVT), Mask, VL});
+                                     DAG.getUNDEF(Mask.getValueType()), Mask, VL});
     NewY = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, XIsNonNan, Y, X,
                        DAG.getUNDEF(ContainerVT), VL);
   }
@@ -7889,7 +7889,7 @@ static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
   if (!YIsNeverNan) {
     SDValue YIsNonNan = DAG.getNode(RISCVISD::SETCC_VL, DL, Mask.getValueType(),
                                     {Y, Y, DAG.getCondCode(ISD::SETOEQ),
-                                     DAG.getUNDEF(ContainerVT), Mask, VL});
+                                     DAG.getUNDEF(Mask.getValueType()), Mask, VL});
     NewX = DAG.getNode(RISCVISD::VMERGE_VL, DL, ContainerVT, YIsNonNan, X, Y,
                        DAG.getUNDEF(ContainerVT), VL);
   }
@@ -11684,11 +11684,12 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     if (isNullConstant(Idx)) {
       // First slide in the lo value, then the hi in above it. We use slide1down
       // to avoid the register group overlap constraint of vslide1up.
+      SDValue I32Vec = DAG.getBitcast(I32ContainerVT, Vec);
       ValInVec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32ContainerVT,
-                             Vec, Vec, ValLo, I32Mask, InsertI64VL);
+                             I32Vec, I32Vec, ValLo, I32Mask, InsertI64VL);
       // If the source vector is undef don't pass along the tail elements from
       // the previous slide1down.
-      SDValue Tail = Vec.isUndef() ? Vec : ValInVec;
+      SDValue Tail = Vec.isUndef() ? I32Vec : ValInVec;
       ValInVec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32ContainerVT,
                              Tail, ValInVec, ValHi, I32Mask, InsertI64VL);
       // Bitcast back to the right container type.
