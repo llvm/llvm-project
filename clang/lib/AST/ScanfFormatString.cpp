@@ -133,8 +133,8 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
     FS.setFieldWidth(Amt);
   }
 
+  // No more characters left.
   if (I == E) {
-    // No more characters left?
     H.HandleIncompleteSpecifier(Start, E - Start);
     return true;
   }
