@@ -13,14 +13,6 @@
 ## Reject local-exec TLS relocations for -shared.
 # RUN: not ld.lld -shared %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
-## Reject local-exec TLS relocations against non-STT_TLS symbols. llvm-mc
-## marks a symbol referenced through ':tprel_lo12:' as STT_TLS, so use .reloc
-## to produce a reference that is genuinely non-STT_TLS.
-# RUN: llvm-mc -filetype=obj -triple=aarch64 %s -defsym=NONTLS=1 -o %t.nontls.o
-# RUN: not ld.lld %t.nontls.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONTLS --implicit-check-not=error:
-
-# NONTLS: error: {{.*}}:(.text+0x40): relocation R_AARCH64_TLSLE_LDST8_TPREL_LO12 against nonTls cannot be used with a non-STT_TLS symbol
-
 # ERR: error: relocation R_AARCH64_TLSLE_ADD_TPREL_HI12 against v1 cannot be used with -shared
 # ERR: error: relocation R_AARCH64_TLSLE_ADD_TPREL_LO12_NC against v1 cannot be used with -shared
 # ERR: error: relocation R_AARCH64_TLSLE_ADD_TPREL_LO12 against v3 cannot be used with -shared
@@ -53,10 +45,6 @@ _start:
  ldr w2, [x2, :tprel_lo12:v1]
  ldr x3, [x3, :tprel_lo12:v1]
  ldr q4, [x4, :tprel_lo12:v1]
-.ifdef NONTLS
- .reloc ., R_AARCH64_TLSLE_LDST8_TPREL_LO12, nonTls
- nop
-.endif
 
 # TCB size = 0x10 and v1 is first element from TLS register.
 #CHECK: Disassembly of section .text:
@@ -106,12 +94,3 @@ v3:
 v2:
 .word  0
 .size  v2, 4
-
-.ifdef NONTLS
-.data
-.type   nonTls,@object
-.globl  nonTls
-nonTls:
-.word  0
-.size   nonTls, 4
-.endif

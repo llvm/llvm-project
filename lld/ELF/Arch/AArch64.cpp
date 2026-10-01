@@ -352,12 +352,6 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_AARCH64_TLSLE_MOVW_TPREL_G1:
     case R_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
     case R_AARCH64_TLSLE_MOVW_TPREL_G2:
-      if (LLVM_UNLIKELY(!sym.isTls())) {
-        Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
-                 << "relocation " << type << " against " << &sym
-                 << " cannot be used with a non-STT_TLS symbol";
-        continue;
-      }
       if (rs.checkTlsLe(offset, sym, type))
         continue;
       expr = R_TPREL;
