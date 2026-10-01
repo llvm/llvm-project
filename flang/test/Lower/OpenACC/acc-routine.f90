@@ -24,56 +24,56 @@ subroutine acc_routine1()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_routine1()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r00]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r00]]]>{{.*}}}
 
 subroutine acc_routine2()
   !$acc routine seq
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_routine2()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r01]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r01]]]>{{.*}}}
 
 subroutine acc_routine3()
   !$acc routine gang
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_routine3()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r02]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r02]]]>{{.*}}}
 
 subroutine acc_routine4()
   !$acc routine vector
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_routine4()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r03]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r03]]]>{{.*}}}
 
 subroutine acc_routine5()
   !$acc routine worker
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_routine5()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r04]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r04]]]>{{.*}}}
 
 subroutine acc_routine6()
   !$acc routine nohost
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_routine6()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r05]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r05]]]>{{.*}}}
 
 subroutine acc_routine7()
   !$acc routine gang(dim:1)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_routine7()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r06]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r06]]]>{{.*}}}
 
 subroutine acc_routine8()
   !$acc routine bind("routine8_")
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_routine8()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r07]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r07]]]>{{.*}}}
 
 subroutine acc_routine9a()
 end subroutine
@@ -83,14 +83,14 @@ subroutine acc_routine9()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_routine9()
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r08]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r08]]]>{{.*}}}
 
 function acc_routine10()
   !$acc routine(acc_routine10) seq
 end function
 
 ! CHECK-LABEL: func.func @_QPacc_routine10() -> f32
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r09]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r09]]]>{{.*}}}
 
 subroutine acc_routine11(a)
   real :: a
@@ -98,7 +98,7 @@ subroutine acc_routine11(a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_routine11(%arg0: !fir.ref<f32> {fir.bindc_name = "a"})
-! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r10]]]>}
+! CHECK-SAME: attributes {acc.routine_info = #acc.routine_info<[@[[r10]]]>{{.*}}}
 
 subroutine acc_routine12()
 
