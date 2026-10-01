@@ -346,6 +346,13 @@ def int_dx_group_memory_barrier
 def int_dx_group_memory_barrier_with_group_sync
     : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
 
+def int_dx_barrier_by_memory_type
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent]>;
+
+def int_dx_barrier_by_memory_handle
+    : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty],
+                            [IntrConvergent]>;
+
 def int_dx_load_input
     : DefaultAttrsIntrinsic<
           [llvm_any_ty],
