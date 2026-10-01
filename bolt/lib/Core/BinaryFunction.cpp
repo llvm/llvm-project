@@ -37,6 +37,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
 #include "llvm/Support/GenericLoopInfoImpl.h"
 #include "llvm/Support/GraphWriter.h"
@@ -884,6 +885,17 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
     return IndirectBranchType::UNKNOWN;
   }
 
+  // PPC64 ELFv2: GCC emits PIC switch tables as an array of signed 32-bit
+  // word offsets embedded inside the function body immediately after bctr.
+  // analyzeMemoryAt() is x86-only so the normal jump table discovery path
+  // cannot be used. Return UNKNOWN to skip full JT processing.
+  // The data island is marked early in disassemble() so the disassembler
+  // skips the data bytes before CFI attachment runs.
+  if (BC.isPPC64() &&
+      BranchType == IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE) {
+    return IndirectBranchType::UNKNOWN;
+  }
+
   auto getExprValue = [&](const MCExpr *Expr) {
     const MCSymbol *TargetSym;
     uint64_t TargetOffset;
@@ -1327,6 +1339,7 @@ Error BinaryFunction::disassemble() {
   Labels[0] = Ctx->createNamedTempSymbol("BB0");
 
   uint64_t Size = 0; // instruction size
+  bool SeenTerminator = false; // PPC64: track if we passed a return/branch
   for (uint64_t Offset = 0; Offset < getSize(); Offset += Size) {
     MCInst Instruction;
     const uint64_t AbsoluteInstrAddr = getAddress() + Offset;
@@ -1345,6 +1358,18 @@ Error BinaryFunction::disassemble() {
       if (isZeroPaddingAt(Offset))
         break;
 
+      // PPC64 ELFv2: Function symbol size may include non-code bytes after the
+      // final blr/return instruction (e.g. metadata or exception pointers).
+      // Once a terminator instruction is seen, treat remaining undecodable
+      // bytes as trailing data and stop disassembly.
+      if (BC.isPPC64() && SeenTerminator) {
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: PPC64: treating bytes at offset 0x"
+                          << Twine::utohexstr(Offset)
+                          << " as trailing data after terminator in " << *this
+                          << "\n");
+        break;
+      }
+
       BC.errs()
           << "BOLT-WARNING: unable to disassemble instruction at offset 0x"
           << Twine::utohexstr(Offset) << " (address 0x"
@@ -1359,6 +1384,71 @@ Error BinaryFunction::disassemble() {
       }
 
       break;
+    }
+
+    // PPC64: track terminator instructions (blr, bctr, unconditional branch)
+    if (BC.isPPC64() && (MIB->isReturn(Instruction) ||
+                         MIB->isUnconditionalBranch(Instruction))) {
+      SeenTerminator = true;
+
+      // PPC64 ELFv2: GCC embeds PIC switch jump table data immediately after
+      // a bctr instruction. Detect the pattern here, during the byte-by-byte
+      // disassembly scan, and mark the next offset as a data island so the
+      // loop skips it instead of decoding data words as instructions.
+      // This must be done here (not in scanExternalRefs) because by the time
+      // scanExternalRefs runs, the data has already been decoded as
+      // instructions and CFI attachment will assert on the spurious offsets.
+      if (MIB->isIndirectBranch(Instruction) &&
+          MIB->isPICJumpTableBctr(Instruction, Instructions.begin(),
+                                  Instructions.end())) {
+        const uint64_t DataStart = Offset + Size;
+        const uint64_t FuncSize = getSize();
+        const llvm::endianness Endian = BC.AsmInfo->isLittleEndian()
+                                            ? llvm::endianness::little
+                                            : llvm::endianness::big;
+        // Scan forward through raw function bytes to find where the PIC jump
+        // table ends. Each entry is a signed 32-bit word offset, loaded by
+        // lwax, which sign-extends: a switch case that jumps backwards is a
+        // legal negative entry, so read the word signed and range-check its
+        // magnitude. Reading it unsigned would make such an entry look
+        // enormous and end the table here, leaving the rest of it to be
+        // decoded as instructions.
+        //
+        // This is a heuristic, not a proof: an entry is accepted while it is
+        // non-zero, 4-byte aligned (instructions are word-aligned on PPC64)
+        // and small enough to stay inside this function. The first word that
+        // fails marks the code resume point. Nothing cross-checks the range
+        // against relocations or the symbol table.
+        uint64_t CodeResume = DataStart;
+        for (uint64_t ScanOff = DataStart; ScanOff + 4 <= FuncSize;
+             ScanOff += 4) {
+          const int32_t Entry = static_cast<int32_t>(
+              support::endian::read32(FunctionData.data() + ScanOff, Endian));
+          if (Entry == 0 || (Entry & 3) != 0)
+            break;
+          const uint64_t Magnitude =
+              Entry < 0 ? -static_cast<int64_t>(Entry) : Entry;
+          if (Magnitude >= FuncSize)
+            break;
+          CodeResume = ScanOff + 4;
+        }
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: PPC64 PIC jump table in " << *this
+                          << ": data island [0x" << Twine::utohexstr(DataStart)
+                          << ", 0x" << Twine::utohexstr(CodeResume)
+                          << "), code resumes at 0x"
+                          << Twine::utohexstr(CodeResume) << "\n");
+        markDataAtOffset(DataStart);
+        if (CodeResume > DataStart && CodeResume < FuncSize) {
+          markCodeAtOffset(CodeResume);
+          // Register a local label where code resumes. buildCFG() starts a new
+          // basic block at every label, which is what CFI attachment and
+          // control flow reconstruction need here. Note this is deliberately
+          // not addEntryPointAtOffset(): nothing outside the function branches
+          // to this offset, and declaring an entry point would also affect
+          // symbol emission, PatchEntries and ELFv2 local entry points.
+          getOrCreateLocalLabel(getAddress() + CodeResume);
+        }
+      }
     }
 
     // Check integrity of LLVM assembler/disassembler.
@@ -1411,6 +1501,7 @@ Error BinaryFunction::disassemble() {
       setIgnored();
 
     if (MIB->isBranch(Instruction) || MIB->isCall(Instruction)) {
+
       uint64_t TargetAddress = 0;
       if (!MIB->isIndirectBranch(Instruction) &&
           MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
@@ -4372,14 +4463,40 @@ bool BinaryFunction::isSymbolValidInScope(const SymbolRef &Symbol,
 
   // It's okay to have a zero-sized symbol in the middle of non-zero-sized
   // function.
-  if (SymbolSize == 0 && containsAddress(cantFail(Symbol.getAddress())))
+  if (SymbolSize == 0 && containsAddress(cantFail(Symbol.getAddress()))) {
+    // PPC64 ELFv2: PLT call stubs are emitted in .text as local zero-sized
+    // symbols (e.g. "plt_call.*", "plt_branch.*", "__glink").
+    // Although their address may fall within an existing function range,
+    // they are separate call stubs and must not be treated as part of that
+    // function, otherwise function boundaries and control flow may be
+    // corrupted. Unlike other architectures where PLT entries reside in
+    // dedicated sections (e.g. .plt), PPC64 places these stubs in .text, making
+    // the distinction ambiguous without explicit filtering.
+    if (BC.isPPC64()) {
+      StringRef SymName = cantFail(Symbol.getName());
+      if (SymName.contains("plt_call.") || SymName.contains("plt_branch.") ||
+          SymName.contains("__glink")) {
+        return false;
+      }
+    }
     return true;
+  }
 
   if (cantFail(Symbol.getType()) != SymbolRef::ST_Unknown)
     return false;
 
   if (cantFail(Symbol.getFlags()) & SymbolRef::SF_Global)
     return false;
+
+  // General PPC64 ELFv2 guard: reject PLT/glink stubs as in-scope local
+  // symbols of the current function.
+  if (BC.isPPC64()) {
+    StringRef SymName = cantFail(Symbol.getName());
+    if (SymName.contains("plt_call.") || SymName.contains("plt_branch.") ||
+        SymName.contains("__glink")) {
+      return false;
+    }
+  }
 
   return true;
 }
