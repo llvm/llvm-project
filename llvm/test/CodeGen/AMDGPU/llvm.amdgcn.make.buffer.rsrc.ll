@@ -728,8 +728,8 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
   ; REAL16-NEXT:   [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 killed [[S_MOV_B32_3]], [[COPY]], implicit $exec
   ; REAL16-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, killed [[V_LSHLREV_B32_e64_1]], %subreg.sub1
   ; REAL16-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE5]].sub1
-  ; REAL16-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; REAL16-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; REAL16-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; REAL16-NEXT:   [[DEF1:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
   ; REAL16-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY3]], %subreg.lo16, killed [[DEF]], %subreg.hi16
   ; REAL16-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 12
   ; REAL16-NEXT:   [[V_LSHLREV_B32_e64_2:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 killed [[S_MOV_B32_4]], killed [[REG_SEQUENCE6]], implicit $exec
