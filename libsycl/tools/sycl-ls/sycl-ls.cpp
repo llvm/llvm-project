@@ -145,9 +145,8 @@ int main(int argc, char **argv) {
 
         const auto &Devices = Platform.get_devices();
         std::cout << "    Devices  : " << Devices.size() << std::endl;
-        for (const auto &Device : Devices) {
+        for (const auto &Device : Devices)
           printDeviceInfo(Device, true, "        ");
-        }
       }
 
       // Print built-in device selectors choice

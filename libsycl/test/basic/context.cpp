@@ -9,11 +9,6 @@
 
 using namespace sycl;
 
-void returnFail() {
-  std::cout << "Failed" << std::endl;
-  exit(1);
-}
-
 void dummyAsyncHandler(sycl::exception_list) {}
 
 void check(const context &Ctx) {
@@ -24,14 +19,14 @@ void check(const context &Ctx) {
     if (Dev.get_platform() != Plt) {
       std::cout << "Device platform does not match context platform"
                 << std::endl;
-      returnFail();
+      std::exit(1);
     }
   }
   auto Backend = Ctx.get_backend();
   for (const auto &Dev : Devices) {
     if (Dev.get_backend() != Backend) {
       std::cout << "Device backend does not match context backend" << std::endl;
-      returnFail();
+      std::exit(1);
     }
   }
 }
@@ -53,6 +48,5 @@ int main() {
   context Ctx4({Dev, Dev2}, dummyAsyncHandler, {});
   check(Ctx4);
 
-  std::cout << "Passed" << std::endl;
   return 0;
 }

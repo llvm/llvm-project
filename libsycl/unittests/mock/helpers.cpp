@@ -172,9 +172,8 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_NE(Devices, nullptr);
         EXPECT_NE(Context, nullptr);
 
-        for (size_t I = 0; I < NumDevices; ++I) {
+        for (size_t I = 0; I < NumDevices; ++I)
           EXPECT_NE(Devices[I], nullptr);
-        }
 
         // Preserve the first device in payload for tests that may need to
         // inspect what device set the context was created from.
@@ -259,9 +258,8 @@ void mock::MockLiboffload::initDefault() {
                         size_t NumEvents) -> ol_result_t {
         EXPECT_NE(Queue, nullptr);
         EXPECT_NE(Events, nullptr);
-        for (size_t I = 0; I < NumEvents; ++I) {
+        for (size_t I = 0; I < NumEvents; ++I)
           EXPECT_NE(Events[I], nullptr);
-        }
         return OL_SUCCESS;
       });
 
@@ -290,9 +288,8 @@ void mock::MockLiboffload::initDefault() {
         std::ignore = Properties;
         EXPECT_TRUE(NumArgs == 0 || ArgPtrs != nullptr);
         EXPECT_EQ(!ArgPtrs, !ArgSizes);
-        for (size_t I = 0; I < NumArgs; ++I) {
+        for (size_t I = 0; I < NumArgs; ++I)
           EXPECT_TRUE(ArgSizes[I] == 0 || ArgPtrs[I] != nullptr);
-        }
         return OL_SUCCESS;
       });
 

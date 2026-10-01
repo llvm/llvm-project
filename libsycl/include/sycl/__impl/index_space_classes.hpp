@@ -95,11 +95,9 @@ public:
 
   friend bool operator==(const IndexSpaceBase<Derived, Dimensions> &lhs,
                          const IndexSpaceBase<Derived, Dimensions> &rhs) {
-    for (int I = 0; I < Dimensions; ++I) {
-      if (lhs.MArray[I] != rhs.MArray[I]) {
+    for (int I = 0; I < Dimensions; ++I)
+      if (lhs.MArray[I] != rhs.MArray[I])
         return false;
-      }
-    }
     return true;
   }
 
@@ -112,9 +110,8 @@ public:
   friend Derived operator op(const Derived &lhs,                               \
                              const Derived &rhs) noexcept {                    \
     Derived Result;                                                            \
-    for (int I = 0; I < Dimensions; ++I) {                                     \
+    for (int I = 0; I < Dimensions; ++I)                                       \
       Result.MArray[I] = lhs.MArray[I] op rhs.MArray[I];                       \
-    }                                                                          \
     return Result;                                                             \
   }                                                                            \
                                                                                \
@@ -122,9 +119,8 @@ public:
   friend IntegralType<T, Derived> operator op(const Derived &lhs,              \
                                               const T &rhs) noexcept {         \
     Derived Result;                                                            \
-    for (int I = 0; I < Dimensions; ++I) {                                     \
+    for (int I = 0; I < Dimensions; ++I)                                       \
       Result.MArray[I] = lhs.MArray[I] op rhs;                                 \
-    }                                                                          \
     return Result;                                                             \
   }                                                                            \
                                                                                \
@@ -132,9 +128,8 @@ public:
   friend IntegralType<T, Derived> operator op(const T &lhs,                    \
                                               const Derived &rhs) noexcept {   \
     Derived Result;                                                            \
-    for (int I = 0; I < Dimensions; ++I) {                                     \
+    for (int I = 0; I < Dimensions; ++I)                                       \
       Result.MArray[I] = lhs op rhs.MArray[I];                                 \
-    }                                                                          \
     return Result;                                                             \
   }
 
@@ -159,17 +154,15 @@ public:
 
 #define _LIBSYCL_GEN_OPT(op)                                                   \
   friend Derived &operator op(Derived &lhs, const Derived &rhs) noexcept {     \
-    for (int I = 0; I < Dimensions; ++I) {                                     \
+    for (int I = 0; I < Dimensions; ++I)                                       \
       lhs.MArray[I] op rhs[I];                                                 \
-    }                                                                          \
     return lhs;                                                                \
   }                                                                            \
   template <typename T>                                                        \
   friend IntegralType<T, Derived> &operator op(Derived &lhs,                   \
                                                const T &rhs) noexcept {        \
-    for (int I = 0; I < Dimensions; ++I) {                                     \
+    for (int I = 0; I < Dimensions; ++I)                                       \
       lhs.MArray[I] op rhs;                                                    \
-    }                                                                          \
     return lhs;                                                                \
   }
 
@@ -189,9 +182,8 @@ public:
 #define _LIBSYCL_GEN_OPT(op)                                                   \
   friend Derived operator op(const Derived &rhs) noexcept {                    \
     Derived Result;                                                            \
-    for (int I = 0; I < Dimensions; ++I) {                                     \
+    for (int I = 0; I < Dimensions; ++I)                                       \
       Result.MArray[I] = (op rhs.MArray[I]);                                   \
-    }                                                                          \
     return Result;                                                             \
   }
 
@@ -202,16 +194,14 @@ public:
 
 #define _LIBSYCL_GEN_OPT(op)                                                   \
   friend Derived &operator op(Derived &rhs) noexcept {                         \
-    for (int I = 0; I < Dimensions; ++I) {                                     \
+    for (int I = 0; I < Dimensions; ++I)                                       \
       op rhs.MArray[I];                                                        \
-    }                                                                          \
     return rhs;                                                                \
   }                                                                            \
   friend Derived operator op(Derived &lhs, int) noexcept {                     \
     Derived OldLhs(lhs);                                                       \
-    for (int I = 0; I < Dimensions; ++I) {                                     \
+    for (int I = 0; I < Dimensions; ++I)                                       \
       op lhs.MArray[I];                                                        \
-    }                                                                          \
     return OldLhs;                                                             \
   }
 
@@ -270,9 +260,8 @@ public:
   /// \return the size of the range computed as dimension0*...*dimensionN.
   std::size_t size() const noexcept {
     std::size_t Size = 1;
-    for (int I = 0; I < Dimensions; ++I) {
+    for (int I = 0; I < Dimensions; ++I)
       Size *= Base::MArray[I];
-    }
     return Size;
   }
 };

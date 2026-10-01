@@ -2,9 +2,6 @@
 // RUN: %clangxx -fsycl %s -o %t.out
 // RUN: %t.out
 
-#include <cstdlib>
-#include <iostream>
-
 #include <sycl/sycl.hpp>
 
 using namespace sycl;
@@ -23,32 +20,22 @@ bool check(backend Backend) {
   }
 }
 
-void returnFail() {
-  std::cout << "Failed" << std::endl;
-  exit(1);
-}
-
 int main() {
   for (const auto &Plt : platform::get_platforms()) {
-    if (!check(Plt.get_backend())) {
-      returnFail();
-    }
+    if (!check(Plt.get_backend()))
+      return 1;
 
     auto Dev = Plt.get_devices()[0];
-    if (Dev.get_backend() != Plt.get_backend()) {
-      returnFail();
-    }
+    if (Dev.get_backend() != Plt.get_backend())
+      return 1;
 
     queue Q(Dev);
-    if (Q.get_backend() != Plt.get_backend()) {
-      returnFail();
-    }
+    if (Q.get_backend() != Plt.get_backend())
+      return 1;
 
     event E = Q.single_task<Kernel1>([]() {});
-    if (E.get_backend() != Plt.get_backend()) {
-      returnFail();
-    }
+    if (E.get_backend() != Plt.get_backend())
+      return 1;
   }
-  std::cout << "Passed" << std::endl;
   return 0;
 }

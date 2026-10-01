@@ -17,9 +17,8 @@ int main() {
 
   auto A = static_cast<int *>(sycl::malloc_shared(N * sizeof(int), Dev, Ctx));
 
-  for (int I = 0; I < N; ++I) {
+  for (int I = 0; I < N; ++I)
     A[I] = 1;
-  }
 
   Q.parallel_for<class IntRange>(N, [=](auto I) {
     static_assert(std::is_same<decltype(I), sycl::item<1>>::value,
@@ -69,9 +68,8 @@ int main() {
   Q.wait();
 
   bool Fail{};
-  for (int I = 0; I < N; I++) {
+  for (int I = 0; I < N; I++)
     Fail |= !(A[I] == 8);
-  }
   sycl::free(A, Ctx);
   return Fail;
 }

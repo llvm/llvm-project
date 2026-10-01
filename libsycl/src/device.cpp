@@ -32,7 +32,7 @@ std::vector<device> device::get_devices(info::device_type type) {
 
   // Not calling platform::get_devices to avoid multiple vector packing
   for (const auto &Impl : detail::PlatformImpl::getPlatforms()) {
-    assert(Impl && "PlatformImpl can not be nullptr");
+    assert(Impl && "Platform impl can't be nullptr");
     Impl->iterateDevices(type, [&Devices](detail::DeviceImpl *DevImpl) {
       assert(DevImpl && "Device impl can't be nullptr");
       Devices.push_back(detail::createSyclObjFromImpl<device>(*DevImpl));
