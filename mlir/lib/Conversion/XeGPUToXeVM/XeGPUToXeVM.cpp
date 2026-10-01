@@ -233,11 +233,13 @@ translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
 //     divisibility is assumed.
 //  2. `base_height` grows with the leading extent, so a source with a large
 //     batch x head x sequence extent can exceed the HW 2D-block surface height.
-//  3. Plane boundaries are invisible to the boundary check: a tile whose rows
-//     run past `size[R-2]` reads the following rows of the surface (the next
-//     plane, or the padding between planes) instead of the zeros a per-plane
-//     surface would return. This only matters when `size[R-2]` is not a
-//     multiple of the tile height.
+//  3. Plane boundaries are invisible to the boundary check, which only knows
+//     the surface: a tile whose rows run past `size[R-2]` spills into the
+//     following rows of the surface -- the next plane, or the padding between
+//     planes -- rather than being clipped there as it would be on a per-plane
+//     surface. A load reads those rows instead of returning zeros, and a store
+//     overwrites them, so it can corrupt the next plane. This only matters
+//     when `size[R-2]` is not a multiple of the tile height.
 //
 
 class CreateNdDescToXeVMPattern

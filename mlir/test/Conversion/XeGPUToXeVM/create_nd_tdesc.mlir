@@ -60,58 +60,97 @@ gpu.module @create_nd_tdesc {
         gpu.return
     }
 
-    // Batched (>2D): base_height is the row extent the batch dim reaches,
-    // size[1] + (size[0] - 1) * batch_row_stride; slot 5 = batch row stride.
+    // Batched (>2D) with two leading dims, fully dynamic sizes and strides:
+    // base_height is the row extent the batch dims reach,
+    //   size[2] + (size[0] - 1) * rows0 + (size[1] - 1) * rows1
+    // with rows_d = stride[d] / pitch; slots 5 and 6 are the batch row strides.
     // CHECK-LABEL: gpu.func @create_nd_tdesc_batch_dyn(
-    // CHECK-SAME:  %[[SRC:.+]]: memref<?x?x?xf16>
-    gpu.func @create_nd_tdesc_batch_dyn(%src: memref<?x?x?xf16>) -> vector<8xi32> {
-        // CHECK: %{{.+}}, %{{.+}}, %[[SIZES:.+]]:3, %[[STRIDES:.+]]:3 = memref.extract_strided_metadata %[[SRC]]
-        // CHECK: %[[W:.+]] = arith.index_cast %[[SIZES]]#2 : index to i32
-        // CHECK: %[[PITCH:.+]] = arith.index_cast %[[STRIDES]]#1 : index to i32
+    // CHECK-SAME:  %[[SRC:.+]]: memref<?x?x?x?xf16>
+    gpu.func @create_nd_tdesc_batch_dyn(%src: memref<?x?x?x?xf16>) -> vector<8xi32> {
+        // CHECK: %{{.+}}, %{{.+}}, %[[SIZES:.+]]:4, %[[STRIDES:.+]]:4 = memref.extract_strided_metadata %[[SRC]]
+        // CHECK: %[[W:.+]] = arith.index_cast %[[SIZES]]#3 : index to i32
+        // CHECK: %[[PITCH:.+]] = arith.index_cast %[[STRIDES]]#2 : index to i32
         // CHECK: %[[LS0:.+]] = arith.index_cast %[[STRIDES]]#0 : index to i32
         // CHECK: %[[ROWS0:.+]] = arith.divui %[[LS0]], %[[PITCH]] : i32
-        // CHECK: %[[H:.+]] = arith.index_cast %[[SIZES]]#1 : index to i32
+        // CHECK: %[[LS1:.+]] = arith.index_cast %[[STRIDES]]#1 : index to i32
+        // CHECK: %[[ROWS1:.+]] = arith.divui %[[LS1]], %[[PITCH]] : i32
+        // CHECK: %[[H:.+]] = arith.index_cast %[[SIZES]]#2 : index to i32
         // CHECK: %[[C1I32:.+]] = arith.constant 1 : i32
-        // CHECK: %[[BATCH:.+]] = arith.index_cast %[[SIZES]]#0 : index to i32
-        // CHECK: %[[BATCHM1:.+]] = arith.subi %[[BATCH]], %[[C1I32]] : i32
-        // CHECK: %[[BATCH_ROWS:.+]] = arith.muli %[[BATCHM1]], %[[ROWS0]] : i32
-        // CHECK: %[[FLAT_H:.+]] = arith.addi %[[H]], %[[BATCH_ROWS]] : i32
+        // CHECK: %[[BATCH0:.+]] = arith.index_cast %[[SIZES]]#0 : index to i32
+        // CHECK: %[[BATCH0M1:.+]] = arith.subi %[[BATCH0]], %[[C1I32]] : i32
+        // CHECK: %[[BATCH0_ROWS:.+]] = arith.muli %[[BATCH0M1]], %[[ROWS0]] : i32
+        // CHECK: %[[FLAT_H0:.+]] = arith.addi %[[H]], %[[BATCH0_ROWS]] : i32
+        // CHECK: %[[BATCH1:.+]] = arith.index_cast %[[SIZES]]#1 : index to i32
+        // CHECK: %[[BATCH1M1:.+]] = arith.subi %[[BATCH1]], %[[C1I32]] : i32
+        // CHECK: %[[BATCH1_ROWS:.+]] = arith.muli %[[BATCH1M1]], %[[ROWS1]] : i32
+        // CHECK: %[[FLAT_H:.+]] = arith.addi %[[FLAT_H0]], %[[BATCH1_ROWS]] : i32
         // CHECK: %[[P2:.+]] = vector.insert %[[W]], %{{.+}} [2] : i32 into vector<8xi32>
         // CHECK: %[[P3:.+]] = vector.insert %[[FLAT_H]], %[[P2]] [3] : i32 into vector<8xi32>
         // CHECK: %[[P4:.+]] = vector.insert %[[PITCH]], %[[P3]] [4] : i32 into vector<8xi32>
-        // CHECK: vector.insert %[[ROWS0]], %[[P4]] [5] : i32 into vector<8xi32>
-        %t = xegpu.create_nd_tdesc %src : memref<?x?x?xf16> -> !xegpu.tensor_desc<1x8x16xf16>
-        %c = builtin.unrealized_conversion_cast %t : !xegpu.tensor_desc<1x8x16xf16> to vector<8xi32>
+        // CHECK: %[[P5:.+]] = vector.insert %[[ROWS0]], %[[P4]] [5] : i32 into vector<8xi32>
+        // CHECK: vector.insert %[[ROWS1]], %[[P5]] [6] : i32 into vector<8xi32>
+        %t = xegpu.create_nd_tdesc %src : memref<?x?x?x?xf16> -> !xegpu.tensor_desc<1x1x8x16xf16>
+        %c = builtin.unrealized_conversion_cast %t : !xegpu.tensor_desc<1x1x8x16xf16> to vector<8xi32>
         gpu.return %c : vector<8xi32>
     }
 
-    // Batched (>2D) over a subview of a wider source: the planes are 64 rows
-    // apart but only 32 rows tall, so base_height is the row extent
-    // 32 + 3 * 64 = 224.
+    // Batched (>2D) with the maximum three leading dims, over a subview of a
+    // wider source taken at a nonzero offset. The innermost planes are 64 rows
+    // apart but only 32 rows tall, so the planes are not packed back to back.
+    // The subview's offset belongs to base_ptr, so base_height stays the row
+    // extent measured from that shifted base:
+    //   32 + 1 * 768 + 1 * 256 + 3 * 64 = 1248
+    // and the furthest row the batch dims reach is 768 + 256 + 3 * 64 + 31 =
+    // 1247, just inside it. All three spare payload slots carry a batch row
+    // stride.
     // CHECK-LABEL: gpu.func @create_nd_tdesc_batch_subview(
-    // CHECK-SAME:  %[[SRC:.+]]: memref<4x64x64xf32>
-    gpu.func @create_nd_tdesc_batch_subview(%src: memref<4x64x64xf32>) -> vector<8xi32> {
-        // W = size[2] = 32, pitch = stride[1] = 64.
+    // CHECK-SAME:  %[[SRC:.+]]: memref<3x3x4x64x64xf32>
+    gpu.func @create_nd_tdesc_batch_subview(%src: memref<3x3x4x64x64xf32>) -> vector<8xi32> {
+        // The subview offset 1 * 49152 + 1 * 16384 + 16 * 64 = 66560 folds into
+        // base_ptr and leaves the shape fields alone.
+        // CHECK: %[[INTPTR:.+]] = memref.extract_aligned_pointer_as_index %{{.+}}
+        // CHECK: %[[OFF:.+]] = arith.constant 66560 : index
+        // CHECK: %[[PTR_I64:.+]] = arith.index_castui %[[INTPTR]] : index to i64
+        // CHECK: %[[OFF_I64:.+]] = arith.index_castui %[[OFF]] : index to i64
+        // CHECK: %[[ELEM_SZ:.+]] = arith.constant 4 : i64
+        // CHECK: %[[OFF_BYTES:.+]] = arith.muli %[[OFF_I64]], %[[ELEM_SZ]] : i64
+        // CHECK: %[[BASE_PTR:.+]] = arith.addi %[[PTR_I64]], %[[OFF_BYTES]] : i64
+        // W = size[4] = 32, pitch = stride[3] = 64.
         // CHECK: %[[W:.+]] = arith.trunci %{{.+}} : i64 to i32
         // CHECK: %[[PITCH:.+]] = arith.trunci %{{.+}} : i64 to i32
-        // Batch row stride = stride[0] / pitch = 4096 / 64 = 64.
-        // CHECK: %[[ROWS0:.+]] = arith.constant 64 : i32
-        // base_height = size[1] + (size[0] - 1) * 64 = 32 + 3 * 64 = 224.
+        // Batch row strides = stride[d] / pitch: 49152 / 64, 16384 / 64, 4096 / 64.
+        // CHECK: %[[ROWS0:.+]] = arith.constant 768 : i32
+        // CHECK: %[[ROWS1:.+]] = arith.constant 256 : i32
+        // CHECK: %[[ROWS2:.+]] = arith.constant 64 : i32
+        // base_height = size[3] + sum_d (size[d] - 1) * rows_d.
         // CHECK: %[[H:.+]] = arith.trunci %{{.+}} : i64 to i32
         // CHECK: %[[C1I32:.+]] = arith.constant 1 : i32
-        // CHECK: %[[BATCH:.+]] = arith.trunci %{{.+}} : i64 to i32
-        // CHECK: %[[BATCHM1:.+]] = arith.subi %[[BATCH]], %[[C1I32]] : i32
-        // CHECK: %[[BATCH_ROWS:.+]] = arith.muli %[[BATCHM1]], %[[ROWS0]] : i32
-        // CHECK: %[[FLAT_H:.+]] = arith.addi %[[H]], %[[BATCH_ROWS]] : i32
+        // CHECK: %[[BATCH0:.+]] = arith.trunci %{{.+}} : i64 to i32
+        // CHECK: %[[BATCH0M1:.+]] = arith.subi %[[BATCH0]], %[[C1I32]] : i32
+        // CHECK: %[[BATCH0_ROWS:.+]] = arith.muli %[[BATCH0M1]], %[[ROWS0]] : i32
+        // CHECK: %[[FLAT_H0:.+]] = arith.addi %[[H]], %[[BATCH0_ROWS]] : i32
+        // CHECK: %[[BATCH1:.+]] = arith.trunci %{{.+}} : i64 to i32
+        // CHECK: %[[BATCH1M1:.+]] = arith.subi %[[BATCH1]], %[[C1I32]] : i32
+        // CHECK: %[[BATCH1_ROWS:.+]] = arith.muli %[[BATCH1M1]], %[[ROWS1]] : i32
+        // CHECK: %[[FLAT_H1:.+]] = arith.addi %[[FLAT_H0]], %[[BATCH1_ROWS]] : i32
+        // CHECK: %[[BATCH2:.+]] = arith.trunci %{{.+}} : i64 to i32
+        // CHECK: %[[BATCH2M1:.+]] = arith.subi %[[BATCH2]], %[[C1I32]] : i32
+        // CHECK: %[[BATCH2_ROWS:.+]] = arith.muli %[[BATCH2M1]], %[[ROWS2]] : i32
+        // CHECK: %[[FLAT_H:.+]] = arith.addi %[[FLAT_H1]], %[[BATCH2_ROWS]] : i32
+        // CHECK: %[[PI64:.+]] = vector.insert %[[BASE_PTR]], %{{.+}} [0] : i64 into vector<4xi64>
         // CHECK: %[[P2:.+]] = vector.insert %[[W]], %{{.+}} [2] : i32 into vector<8xi32>
         // CHECK: %[[P3:.+]] = vector.insert %[[FLAT_H]], %[[P2]] [3] : i32 into vector<8xi32>
         // CHECK: %[[P4:.+]] = vector.insert %[[PITCH]], %[[P3]] [4] : i32 into vector<8xi32>
-        // CHECK: vector.insert %[[ROWS0]], %[[P4]] [5] : i32 into vector<8xi32>
-        %sub = memref.subview %src[0, 0, 0] [4, 32, 32] [1, 1, 1]
-            : memref<4x64x64xf32> to memref<4x32x32xf32, strided<[4096, 64, 1]>>
-        %t = xegpu.create_nd_tdesc %sub : memref<4x32x32xf32, strided<[4096, 64, 1]>>
-            -> !xegpu.tensor_desc<1x8x16xf32>
-        %c = builtin.unrealized_conversion_cast %t : !xegpu.tensor_desc<1x8x16xf32> to vector<8xi32>
+        // CHECK: %[[P5:.+]] = vector.insert %[[ROWS0]], %[[P4]] [5] : i32 into vector<8xi32>
+        // CHECK: %[[P6:.+]] = vector.insert %[[ROWS1]], %[[P5]] [6] : i32 into vector<8xi32>
+        // CHECK: vector.insert %[[ROWS2]], %[[P6]] [7] : i32 into vector<8xi32>
+        %sub = memref.subview %src[1, 1, 0, 16, 0] [2, 2, 4, 32, 32] [1, 1, 1, 1, 1]
+            : memref<3x3x4x64x64xf32>
+           to memref<2x2x4x32x32xf32, strided<[49152, 16384, 4096, 64, 1], offset: 66560>>
+        %t = xegpu.create_nd_tdesc %sub
+            : memref<2x2x4x32x32xf32, strided<[49152, 16384, 4096, 64, 1], offset: 66560>>
+            -> !xegpu.tensor_desc<1x1x1x8x16xf32>
+        %c = builtin.unrealized_conversion_cast %t : !xegpu.tensor_desc<1x1x1x8x16xf32> to vector<8xi32>
         gpu.return %c : vector<8xi32>
     }
 }
