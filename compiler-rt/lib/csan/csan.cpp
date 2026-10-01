@@ -304,12 +304,8 @@ static int AccessFlags(int Flags, bool IsWrite) {
 #define CSAN_ACCESS(N)                                                         \
   CSAN_PROBE(__csan_read##N, N, false)                                         \
   CSAN_PROBE(__csan_unaligned_read##N, N, false)                               \
-  CSAN_PROBE(__csan_volatile_read##N, N, false)                                \
-  CSAN_PROBE(__csan_unaligned_volatile_read##N, N, false)                      \
   CSAN_PROBE(__csan_write##N, N, true)                                         \
   CSAN_PROBE(__csan_unaligned_write##N, N, true)                               \
-  CSAN_PROBE(__csan_volatile_write##N, N, true)                                \
-  CSAN_PROBE(__csan_unaligned_volatile_write##N, N, true)                      \
   CSAN_PROBE(__csan_read_write##N, N, true)                                    \
   CSAN_PROBE(__csan_unaligned_read_write##N, N, true)
 
