@@ -3350,7 +3350,7 @@ public:
     return false;
   }
 
-  virtual bool optimizeVectorCrossLaneOperation(Instruction *I) const {
+  virtual bool optimizeVectorCrossLaneOperation(Instruction *I, Loop *L) const {
     return false;
   }
 

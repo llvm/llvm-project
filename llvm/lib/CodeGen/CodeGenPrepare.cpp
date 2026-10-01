@@ -8957,8 +8957,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
 
   // Try to fold some cross-lane vector operations if in a loop.
   if (match(I, m_Intrinsic<Intrinsic::vector_reverse>()) &&
-      LI->getLoopFor(I->getParent()))
-    if (TLI->optimizeVectorCrossLaneOperation(I))
+      TLI->optimizeVectorCrossLaneOperation(I, LI->getLoopFor(I->getParent())))
       return true;
 
   if (tryToSinkFreeOperands(I))

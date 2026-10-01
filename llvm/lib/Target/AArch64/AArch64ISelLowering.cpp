@@ -19456,7 +19456,7 @@ struct deinterleaving_tbl_match {
     // The start of the valid indices must be between 0 and 3, for the 4
     // subvectors we're extracting.
     Idx = Start->getZExtValue() & SrcSize - 1;
-    return Idx >= 0 && Idx < 4;
+    return Idx < 4;
   }
 };
 
@@ -19489,7 +19489,10 @@ static auto m_DeinterleavingTbl(Instruction *&Tbl, unsigned &Idx) {
 // %b.mul.f64 = fmul <vscale x 2 x double> %b.f64, %reversed
 // %fadd.b.f64 = call <vscale x 2 x double>
 //                     @llvm.vector.partial.reduce.fadd(%acc.b.f64, %b.mul.f64)
-static bool foldAdjacentReversesIntoTbls(Instruction *I) {
+static bool foldAdjacentReversesIntoTbls(IntrinsicInst *Rev, Loop *L) {
+  assert(Rev->getIntrinsicID() == Intrinsic::vector_reverse &&
+         "Wrong intrinsic");
+
   using namespace llvm::PatternMatch;
   struct RevTblData {
     Instruction *Tbl;
@@ -19497,12 +19500,19 @@ static bool foldAdjacentReversesIntoTbls(Instruction *I) {
     unsigned Idx;
   };
 
+  // Make sure we have a block before the loop we can use for all the mask
+  // calculations.
+  BasicBlock *PreHeader = L->getLoopPreheader();
+  if (!PreHeader)
+    return false;
+
   // Look for reverse intrinsics used with the results of tbl instructions.
   SmallVector<RevTblData, 4> Tbls;
+  VectorType *SrcTy = nullptr;
   // Check all uses of the reverse; if there's anything which doesn't
   // match our expected patterns, then give up on it. The intention is
   // to remove the reverse, so any remaining users would prevent that.
-  for (Use &U : I->uses()) {
+  for (Use &U : Rev->uses()) {
     Instruction *UI = cast<Instruction>(U.getUser());
 
     // Look for a tbl used to deinterleave and zero extend (and optionally
@@ -19511,7 +19521,7 @@ static bool foldAdjacentReversesIntoTbls(Instruction *I) {
     Instruction *Tbl;
     unsigned Idx;
     if (!match(UI, m_OneUse(m_c_BinOp(m_DeinterleavingTbl(Tbl, Idx),
-                                      m_Specific(I)))))
+                                      m_Specific(Rev)))))
       return false;
 
     // Check for a partial reduction user. Partial reductions permit reordering
@@ -19521,55 +19531,62 @@ static bool foldAdjacentReversesIntoTbls(Instruction *I) {
                m_Intrinsic<Intrinsic::vector_partial_reduce_fadd>()))
       return false;
 
+    // Make sure all the tbls share the same type.
+    if (SrcTy && Tbl->getType() != SrcTy)
+      return false;
+
+    SrcTy = cast<VectorType>(Tbl->getType());
+
     Tbls.push_back({Tbl, &U, Idx});
   }
+
+  if (Tbls.empty())
+    return false;
+
+  VectorType *DstTy = cast<VectorType>(Rev->getType());
+  unsigned SrcBits = SrcTy->getScalarSizeInBits();
+  unsigned DstBits = DstTy->getScalarSizeInBits();
+  VectorType *StepVecTy = VectorType::getInteger(DstTy);
+  ElementCount EC = StepVecTy->getElementCount();
+  Type *EltTy = StepVecTy->getScalarType();
+
+  // We need to create a new mask for the tbl, so that we effectively reverse
+  // the elements with the tbl. This means the resulting vector will be
+  // backwards compared to the original, which is why we check for reductions
+  // where we don't care about the order.
+  //
+  // Similar to the normal deinterleaving+extending mask, we will use out-of
+  // range indices to perform the zero extension. However, we need a negative
+  // stride starting from the highest group of elements. Since we're grouping
+  // by 4 (for now), we need to subtract 4 from the total source element count
+  // for the vector to get the start, then add the index of the extraction.
+  //
+  // The result should be the following:
+  // <EltCnt - 4 + Idx, 0xFFFF, 0xFFFF, 0xFFFF, EltCnt - 8 + Idx, 0xFFFF...>.
+  APInt Invalid = APInt::getAllOnes(DstBits);
+  Invalid = Invalid << SrcBits;
+  IRBuilder<> Builder(PreHeader->getTerminator());
+
+  // Create a splat of (Invalid | ElementCnt(SrcTy))
+  Value *EltCnt = Builder.CreateVScale(EltTy);
+  EltCnt = Builder.CreateNUWMul(
+      EltCnt, ConstantInt::get(EltTy, AArch64::SVEBitsPerBlock / SrcBits));
+  Value *StartVal = Builder.CreateOr(EltCnt, ConstantInt::get(EltTy, Invalid));
+  StartVal = Builder.CreateVectorSplat(EC, StartVal);
+
+  // Add the step of -4.
+  Value *StepVector = Builder.CreateStepVector(StepVecTy);
+  StepVector =
+      Builder.CreateMul(StepVector, ConstantInt::get(StepVecTy, -4));
+  StepVector = Builder.CreateAdd(StartVal, StepVector);
 
   // Convert each candidate we found to perform the reverse in the tbl instead,
   // then remove the reverse.
   for (auto [Tbl, RevUse, Idx] : Tbls) {
-    Instruction *Rev = cast<Instruction>(RevUse->get());
-    VectorType *SrcTy = cast<VectorType>(Tbl->getType());
-    VectorType *DstTy = cast<VectorType>(Rev->getType());
-    unsigned SrcBits = SrcTy->getScalarSizeInBits();
-    unsigned DstBits = DstTy->getScalarSizeInBits();
-    VectorType *StepVecTy = VectorType::getInteger(DstTy);
-
-    // We need to create a new mask for the tbl, so that we effectively reverse
-    // the elements with the tbl. This means the resulting vector will be
-    // backwards compared to the original, which is why we check for reductions
-    // where we don't care about the order.
-    //
-    // Similar to the normal deinterleaving+extending mask, we will use out-of
-    // range indices to perform the zero extension. However, we need a negative
-    // stride starting from the highest group of elements. Since we're grouping
-    // by 4 (for now), we need to subtract 4 from the total source element count
-    // for the vector to get the start, then add the index of the extraction.
-    //
-    // The result should be the following:
-    // <EltCnt - 4 + Idx, 0xFFFF, 0xFFFF, 0xFFFF, EltCnt - 8 + Idx, 0xFFFF...>.
-    IRBuilder<> Builder(Tbl);
-
-    // Create and splat the starting value.
-    APInt Invalid = APInt::getAllOnes(DstBits);
-    APInt StartIdx = Invalid << SrcBits;
-    StartIdx -= (4 - Idx);
-    Value *EltCnt = Builder.CreateVScale(StepVecTy->getScalarType());
-    EltCnt = Builder.CreateNUWMul(
-        EltCnt, ConstantInt::get(EltCnt->getType(),
-                                 AArch64::SVEBitsPerBlock / SrcBits));
-    Value *StartVal = Builder.CreateNUWAdd(
-        EltCnt, ConstantInt::get(EltCnt->getType(), StartIdx));
-    StartVal =
-        Builder.CreateVectorSplat(StepVecTy->getElementCount(), StartVal);
-
-    // Create the negative stride.
-    Value *StepVector = Builder.CreateStepVector(StepVecTy);
-    Value *ScaledSteps =
-        Builder.CreateMul(StepVector, ConstantInt::get(StepVecTy, -4));
-
-    // Add the start to the stride, replace the old mask.
-    ScaledSteps = Builder.CreateAdd(ScaledSteps, StartVal);
-    Value *RevExtMask = Builder.CreateBitCast(ScaledSteps, SrcTy);
+    // Subtract the reversed index then cast, giving us the final mask to
+    // replace the current one.
+    Value *FinalMaskForIdx = Builder.CreateSub(StepVector, ConstantInt::get(StepVecTy, 4 - Idx));
+    Value *RevExtMask = Builder.CreateBitCast(FinalMaskForIdx, SrcTy);
     Tbl->setOperand(1, RevExtMask);
 
     // Skip the original reverse now that we've migrated it to the tbl.
@@ -19580,14 +19597,17 @@ static bool foldAdjacentReversesIntoTbls(Instruction *I) {
       Rev->eraseFromParent();
   }
 
-  return !Tbls.empty();
+  return true;
 }
 
 bool AArch64TargetLowering::optimizeVectorCrossLaneOperation(
-    Instruction *I) const {
+    Instruction *I, Loop *L) const {
   using namespace llvm::PatternMatch;
+  // We're only interested in vector operations in loops for now.
+  if (!L)
+    return false;
   if (match(I, m_Intrinsic<Intrinsic::vector_reverse>()))
-    return foldAdjacentReversesIntoTbls(I);
+    return foldAdjacentReversesIntoTbls(cast<IntrinsicInst>(I), L);
 
   return false;
 }
