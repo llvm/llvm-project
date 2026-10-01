@@ -40,6 +40,13 @@
 /clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @lanza @bcardosolopes @xlauko @andykaylor @banach-space
 /clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
 
+/clang/tools/clang-repl @vgvassilev
+/clang/include/clang/Interpreter @vgvassilev
+/clang/lib/Interpreter @vgvassilev
+/clang/include/clang/Serialization @vgvassilev
+/clang/lib/Serialization @vgvassilev
+/clang/examples @vgvassilev
+
 /lldb/ @JDevlieghere
 /lldb/**/*FreeBSD* @mchoo7
 
