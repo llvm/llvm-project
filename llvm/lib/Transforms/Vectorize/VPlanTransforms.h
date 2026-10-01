@@ -404,7 +404,8 @@ struct VPlanTransforms {
                               UncountableExitStyle Style);
 
   /// Disconnect countable early exits from the loop.
-  LLVM_ABI_FOR_TEST static void handleCountableEarlyExits(VPlan &Plan);
+  LLVM_ABI_FOR_TEST static void handleCountableEarlyExits(VPlan &Plan,
+                                                          bool EpilogueAllowed);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)

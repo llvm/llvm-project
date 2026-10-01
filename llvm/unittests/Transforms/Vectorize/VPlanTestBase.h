@@ -111,7 +111,8 @@ protected:
       VPlanTransforms::handleUncountableEarlyExits(*Plan, &ORE, L, PSE, *DT,
                                                    AC.get(), *Style);
     } else
-      VPlanTransforms::handleCountableEarlyExits(*Plan);
+      VPlanTransforms::handleCountableEarlyExits(*Plan,
+                                                 /*EpilogueAllowed=*/true);
 
     if (CreateLoopRegions)
       VPlanTransforms::createLoopRegions(*Plan, {});

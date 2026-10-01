@@ -1269,7 +1269,8 @@ bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
   return true;
 }
 
-void VPlanTransforms::handleCountableEarlyExits(VPlan &Plan) {
+void VPlanTransforms::handleCountableEarlyExits(VPlan &Plan,
+                                                bool EpilogueAllowed) {
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
   auto EarlyExits = vputils::getEarlyExits(Plan, MiddleVPBB);
   // There are no countable early exits.
@@ -1278,7 +1279,7 @@ void VPlanTransforms::handleCountableEarlyExits(VPlan &Plan) {
 
   // A countable early exit requires a scalar epilogue. If the middle block
   // still has a branch to the scalar preheader, force it to always be taken.
-  if (MiddleVPBB->getNumSuccessors() == 2) {
+  if (EpilogueAllowed && MiddleVPBB->getNumSuccessors() == 2) {
     auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
     assert(MiddleVPBB->getSuccessors()[1] == Plan.getScalarPreheader() &&
            "second successor must be scalar preheader");
