@@ -19,6 +19,7 @@
 #include "RISCVRegisterInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVSubtarget.h"
+#include "RISCVVectorUtils.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -5497,54 +5498,6 @@ static bool isElementRotate(const std::array<std::pair<int, int>, 2> &SrcInfo,
          SrcInfo[1].second - SrcInfo[0].second == (int)NumElts;
 }
 
-static bool isAlternating(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                          ArrayRef<int> Mask, unsigned Factor,
-                          bool RequiredPolarity) {
-  int NumElts = Mask.size();
-  for (const auto &[Idx, M] : enumerate(Mask)) {
-    if (M < 0)
-      continue;
-    int Src = M >= NumElts;
-    int Diff = (int)Idx - (M % NumElts);
-    bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
-    assert(C != (Src == SrcInfo[0].first && Diff == SrcInfo[0].second) &&
-           "Must match exactly one of the two slides");
-    if (RequiredPolarity != (C == (Idx / Factor) % 2))
-      return false;
-  }
-  return true;
-}
-
-/// Given a shuffle which can be represented as a pair of two slides,
-/// see if it is a pair-even idiom.
-/// Pair-even is:
-/// vs2: a0 a1 a2 a3
-/// vs1: b0 b1 b2 b3
-/// vd:  a0 b0 a2 b2
-static bool isPairEven(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                       ArrayRef<int> Mask, unsigned &Factor) {
-  Factor = SrcInfo[1].second;
-  return SrcInfo[0].second == 0 && isPowerOf2_32(Factor) &&
-         Mask.size() % Factor == 0 &&
-         isAlternating(SrcInfo, Mask, Factor, true);
-}
-
-/// Given a shuffle which can be represented as a pair of two slides,
-/// see if it is a pair-odd idiom.
-/// Pair-odd is:
-/// vs2: a0 a1 a2 a3
-/// vs1: b0 b1 b2 b3
-/// vd:  a1 b1 a3 b3
-/// Note that the operand order is swapped due to the way we canonicalize
-/// the slides, so SrCInfo[0] is vs1, and SrcInfo[1] is vs2.
-static bool isPairOdd(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                      ArrayRef<int> Mask, unsigned &Factor) {
-  Factor = -SrcInfo[1].second;
-  return SrcInfo[0].second == 0 && isPowerOf2_32(Factor) &&
-         Mask.size() % Factor == 0 &&
-         isAlternating(SrcInfo, Mask, Factor, false);
-}
-
 // Lower a deinterleave shuffle to SRL and TRUNC.  Factor must be
 // 2, 4, 8 and the integer type Factor-times larger than VT's
 // element type must be a legal element type.
@@ -6569,7 +6522,7 @@ lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
                                          const RISCVSubtarget &Subtarget,
                                          SelectionDAG &DAG) {
   MVT VT = SVN->getSimpleValueType(0);
-  if (Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
+  if (VT != MVT::v4i8)
     return SDValue();
 
   SDValue V1 = SVN->getOperand(0);
@@ -12351,17 +12304,28 @@ static unsigned getRVPMulHighOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
     llvm_unreachable("Unexpected RISC-V packed multiply high intrinsic");
-  case Intrinsic::riscv_pmulh:
-    return ISD::MULHS;
   case Intrinsic::riscv_pmulhr:
     return RISCVISD::MULHR;
-  case Intrinsic::riscv_pmulhu:
-    return ISD::MULHU;
   case Intrinsic::riscv_pmulhru:
     return RISCVISD::MULHRU;
   case Intrinsic::riscv_pmulhsu:
     return RISCVISD::MULHSU;
   case Intrinsic::riscv_pmulhrsu:
+    return RISCVISD::MULHRSU;
+  }
+}
+
+static unsigned getRVScalarMulHighOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V scalar multiply high intrinsic");
+  case Intrinsic::riscv_mulhr_i32:
+    return RISCVISD::MULHR;
+  case Intrinsic::riscv_mulhru_u32:
+    return RISCVISD::MULHRU;
+  case Intrinsic::riscv_mulhsu_i32:
+    return RISCVISD::MULHSU;
+  case Intrinsic::riscv_mulhrsu_i32:
     return RISCVISD::MULHRSU;
   }
 }
@@ -12383,6 +12347,31 @@ static unsigned getRVPMulHighAccumulateOpcode(unsigned IntNo) {
     return RISCVISD::MHACCSU;
   case Intrinsic::riscv_pmhraccsu:
     return RISCVISD::MHRACCSU;
+  }
+}
+
+/// Return the multiply high accumulate node for \p IntNo.
+static unsigned getRVPMulHighAccumulateByHalvesOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V packed multiply high accumulate by "
+                     "halves intrinsic");
+  case Intrinsic::riscv_pmhacc_b0:
+    return RISCVISD::MHACC_H_B0;
+  case Intrinsic::riscv_pmhacc_b1:
+    return RISCVISD::MHACC_H_B1;
+  case Intrinsic::riscv_pmhaccsu_b0:
+    return RISCVISD::MHACCSU_H_B0;
+  case Intrinsic::riscv_pmhaccsu_b1:
+    return RISCVISD::MHACCSU_H_B1;
+  case Intrinsic::riscv_pmhacc_h0:
+    return RISCVISD::MHACC_W_H0;
+  case Intrinsic::riscv_pmhacc_h1:
+    return RISCVISD::MHACC_W_H1;
+  case Intrinsic::riscv_pmhaccsu_h0:
+    return RISCVISD::MHACCSU_W_H0;
+  case Intrinsic::riscv_pmhaccsu_h1:
+    return RISCVISD::MHACCSU_W_H1;
   }
 }
 
@@ -13250,9 +13239,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, AbdsumauId, Lo,
                        Rs1Hi, Rs2Hi);
   }
-  case Intrinsic::riscv_pmulh:
   case Intrinsic::riscv_pmulhr:
-  case Intrinsic::riscv_pmulhu:
   case Intrinsic::riscv_pmulhru:
   case Intrinsic::riscv_pmulhsu:
   case Intrinsic::riscv_pmulhrsu: {
@@ -13284,6 +13271,15 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(Opc, DL, VT, Op.getOperand(1), Op.getOperand(2));
+  }
+  case Intrinsic::riscv_mulhr_i32:
+  case Intrinsic::riscv_mulhru_u32:
+  case Intrinsic::riscv_mulhsu_i32:
+  case Intrinsic::riscv_mulhrsu_i32: {
+    // RV32 maps the non-rounding forms onto the M extension and the rounding
+    // forms onto the scalar P instructions. RV64 goes via ReplaceNodeResults.
+    unsigned Opc = getRVScalarMulHighOpcode(IntNo);
+    return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2));
   }
   case Intrinsic::riscv_pmhacc:
   case Intrinsic::riscv_pmhracc:
@@ -13321,6 +13317,54 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(MulOpc, DL, VT, Rd, Rs1, Rs2);
+  }
+  case Intrinsic::riscv_pmhacc_b0:
+  case Intrinsic::riscv_pmhacc_b1:
+  case Intrinsic::riscv_pmhaccsu_b0:
+  case Intrinsic::riscv_pmhaccsu_b1: {
+    EVT VT = Op.getValueType();
+    unsigned Opc = getRVPMulHighAccumulateByHalvesOpcode(IntNo);
+    SDValue Rd = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+
+    // RV32: split v4i16 into two v2i16 operations
+    if (!Subtarget.is64Bit() && VT == MVT::v4i16) {
+      auto [RdLo, RdHi] = DAG.SplitVector(Rd, DL);
+      auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::v2i16, RdLo, Rs1Lo, Rs2Lo);
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::v2i16, RdHi, Rs1Hi, Rs2Hi);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
+
+    return DAG.getNode(Opc, DL, VT, Rd, Rs1, Rs2);
+  }
+  case Intrinsic::riscv_pmhacc_h0:
+  case Intrinsic::riscv_pmhacc_h1:
+  case Intrinsic::riscv_pmhaccsu_h0:
+  case Intrinsic::riscv_pmhaccsu_h1: {
+    EVT VT = Op.getValueType();
+    unsigned Opc = getRVPMulHighAccumulateByHalvesOpcode(IntNo);
+    SDValue Rd = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+
+    // RV32 has no 64-bit packed form: split into two scalar operations, each
+    // accumulating one word of the result.
+    if (!Subtarget.is64Bit() && VT == MVT::v2i32) {
+      auto Extract = [&](SDValue V, unsigned Idx) {
+        return DAG.getExtractVectorElt(DL, MVT::i32, V, Idx);
+      };
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::i32, Extract(Rd, 0),
+                               Extract(Rs1, 0), Rs2Lo);
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::i32, Extract(Rd, 1),
+                               Extract(Rs1, 1), Rs2Hi);
+      return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
+    }
+
+    return DAG.getNode(Opc, DL, VT, Rd, Rs1, Rs2);
   }
   case Intrinsic::riscv_pmulh_b0:
   case Intrinsic::riscv_pmulh_b1:
@@ -17536,6 +17580,31 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
+    case Intrinsic::riscv_pmhacc_b0:
+    case Intrinsic::riscv_pmhacc_b1:
+    case Intrinsic::riscv_pmhaccsu_b0:
+    case Intrinsic::riscv_pmhaccsu_b1: {
+      // pmhacc.h.bXX operates on the whole register: v2i16 on RV32 and
+      // v4i16 on RV64. On RV64 a v2i16 result widens to the packed v4i16
+      // form and extracts the low half.
+      EVT VT = N->getValueType(0);
+      if (!Subtarget.is64Bit() || VT != MVT::v2i16)
+        return;
+
+      EVT WideVT = MVT::v4i16;
+      SDValue Undef = DAG.getUNDEF(VT);
+      SDValue Rd =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(1), Undef);
+      SDValue Rs1 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(2), Undef);
+      // Third operand is v4i8 - expand to v8i8
+      SDValue Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8,
+                                N->getOperand(3), DAG.getUNDEF(MVT::v4i8));
+      SDValue Res = DAG.getNode(getRVPMulHighAccumulateByHalvesOpcode(IntNo),
+                                DL, WideVT, Rd, Rs1, Rs2);
+      Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
     case Intrinsic::riscv_pm4add:
     case Intrinsic::riscv_pm2add:
     case Intrinsic::riscv_pm2add_x:
@@ -17740,9 +17809,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_pmerge:
     case Intrinsic::riscv_pmulq:
     case Intrinsic::riscv_pmulqr:
-    case Intrinsic::riscv_pmulh:
     case Intrinsic::riscv_pmulhr:
-    case Intrinsic::riscv_pmulhu:
     case Intrinsic::riscv_pmulhru:
     case Intrinsic::riscv_pmulhsu:
     case Intrinsic::riscv_pmulhrsu:
@@ -17782,9 +17849,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       case Intrinsic::riscv_pmulqr:
         Opc = RISCVISD::MULQR;
         break;
-      case Intrinsic::riscv_pmulh:
       case Intrinsic::riscv_pmulhr:
-      case Intrinsic::riscv_pmulhu:
       case Intrinsic::riscv_pmulhru:
       case Intrinsic::riscv_pmulhsu:
       case Intrinsic::riscv_pmulhrsu:
@@ -17810,6 +17875,24 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       else
         Res = DAG.getNode(Opc, DL, WideVT, ArrayRef(Ops).slice(1));
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_mulhr_i32:
+    case Intrinsic::riscv_mulhru_u32:
+    case Intrinsic::riscv_mulhsu_i32:
+    case Intrinsic::riscv_mulhrsu_i32: {
+      // RV64 has no scalar mulh instructions; reuse the packed pmulh.w
+      // family on the low words, whose element 0 is the scalar product.
+      MVT VT = N->getSimpleValueType(0);
+      if (!Subtarget.is64Bit() || VT != MVT::i32)
+        return;
+      unsigned Opc = getRVScalarMulHighOpcode(IntNo);
+      SDValue Rd =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
+      SDValue Rs =
+          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(2));
+      SDValue Res = DAG.getNode(Opc, DL, MVT::v2i32, Rd, Rs);
+      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
       return;
     }
     case Intrinsic::riscv_pnclipp:
@@ -19272,84 +19355,6 @@ static SDValue combineDeMorganOfBoolean(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::XOR, DL, VT, Logic, DAG.getConstant(1, DL, VT));
 }
 
-// Fold (vXi8 (trunc (vselect (setltu, X, 256), X, (sext (setgt X, 0))))) or
-// (vXi8 (trunc (vselect (setgtu, X, 255), (sext (setgt X, 0)), X))) to
-// (vXi8 (trunc (smin (smax X, 0), 255))). This represents saturating a signed
-// value to an unsigned value. This will be lowered to vmax and series of
-// vnclipu instructions later. This can be extended to other truncated types
-// other than i8 by replacing 256 and 255 with the equivalent constants for the
-// type.
-static SDValue combineTruncSelectToSMaxUSat(SDNode *N, SelectionDAG &DAG) {
-  EVT VT = N->getValueType(0);
-  SDValue N0 = N->getOperand(0);
-  EVT SrcVT = N0.getValueType();
-
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!VT.isVector() || !TLI.isTypeLegal(VT) || !TLI.isTypeLegal(SrcVT))
-    return SDValue();
-
-  if (N0.getOpcode() != ISD::VSELECT || !N0.hasOneUse())
-    return SDValue();
-
-  SDValue Cond = N0.getOperand(0);
-  SDValue True = N0.getOperand(1);
-  SDValue False = N0.getOperand(2);
-
-  if (Cond.getOpcode() != ISD::SETCC)
-    return SDValue();
-
-  SDValue X = Cond.getOperand(0);
-  SDValue CondRHS = Cond.getOperand(1);
-  unsigned ScalarBits = VT.getScalarSizeInBits();
-
-  ISD::CondCode CCVal = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
-  SDValue Other;
-  uint64_t ExpectedC;
-  if (CCVal == ISD::SETULT) {
-    if (True != X)
-      return SDValue();
-    Other = False;
-    ExpectedC = 1ULL << ScalarBits;
-  } else if (CCVal == ISD::SETUGT) {
-    if (False != X)
-      return SDValue();
-    Other = True;
-    ExpectedC = (1ULL << ScalarBits) - 1;
-  } else {
-    return SDValue();
-  }
-
-  // FIXME: Support other constants.
-  ConstantSDNode *CondRHSC = isConstOrConstSplat(CondRHS);
-  if (!CondRHSC || CondRHSC->getAPIntValue() != ExpectedC)
-    return SDValue();
-
-  if (Other.getOpcode() != ISD::SIGN_EXTEND)
-    return SDValue();
-
-  Other = Other.getOperand(0);
-
-  if (Other.getOpcode() != ISD::SETCC || Other.getOperand(0) != X)
-    return SDValue();
-
-  ConstantSDNode *OtherRHSC = isConstOrConstSplat(Other.getOperand(1));
-  if (!OtherRHSC || !OtherRHSC->isZero())
-    return SDValue();
-
-  ISD::CondCode CCVal2 = cast<CondCodeSDNode>(Other.getOperand(2))->get();
-  if (CCVal2 != ISD::SETGT)
-    return SDValue();
-
-  // Emit the signed to unsigned saturation pattern.
-  SDLoc DL(N);
-  SDValue Max =
-      DAG.getNode(ISD::SMAX, DL, SrcVT, X, DAG.getConstant(0, DL, SrcVT));
-  SDValue Min =
-      DAG.getNode(ISD::UMIN, DL, SrcVT, Max,
-                  DAG.getConstant((1ULL << ScalarBits) - 1, DL, SrcVT));
-  return DAG.getNode(ISD::TRUNCATE, DL, VT, Min);
-}
-
 // Handle P extension truncate patterns, both on packed vectors and on scalar
 // i32 (the RV32-only asub/asubu and mulhr* instructions):
 // ASUB/ASUBU: (trunc (srl (sub ([s|z]ext a), ([s|z]ext b)), 1))
@@ -19510,7 +19515,7 @@ static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, Srl);
   }
 
-  return combineTruncSelectToSMaxUSat(N, DAG);
+  return SDValue();
 }
 
 // InstCombinerImpl::transformZExtICmp will narrow a zext of an icmp with a
