@@ -6906,7 +6906,7 @@ def CIR_ComplexSubOp : CIR_ComplexBinOp<"complex.sub"> {
 }
 
 def CIR_ComplexMulOp : CIR_ComplexBinOp<"complex.mul"> {
-  let summary = "Complex subtraction";
+  let summary = "Complex multiplication";
   let description = [{
     The `cir.complex.mul` operation takes two complex numbers and returns
     their product.
@@ -6922,7 +6922,7 @@ def CIR_ComplexMulOp : CIR_ComplexBinOp<"complex.mul"> {
 }
 
 def CIR_ComplexDivOp : CIR_ComplexBinOp<"complex.div"> {
-  let summary = "Complex subtraction";
+  let summary = "Complex division";
   let description = [{
     The `cir.complex.div` operation takes two complex numbers and returns
     their quotient.
@@ -7024,8 +7024,8 @@ def CIR_ComplexFMulOp : CIR_ComplexRangeBinOp<"complex.fmul"> {
     Example:
 
     ```
-    %2 = cir.complex.mul %0, %1 range(basic) : !cir.complex<!cir.float>
-    %2 = cir.complex.mul %0, %1 range(full) : !cir.complex<!cir.float>
+    %2 = cir.complex.fmul %0, %1 range(basic) : !cir.complex<!cir.float>
+    %2 = cir.complex.fmul %0, %1 range(full) : !cir.complex<!cir.float>
     ```
   }];
 }
@@ -7051,8 +7051,8 @@ def CIR_ComplexFDivOp : CIR_ComplexRangeBinOp<"complex.fdiv"> {
     Example:
 
     ```
-    %2 = cir.complex.div %0, %1 range(basic) : !cir.complex<!cir.float>
-    %2 = cir.complex.div %0, %1 range(full) : !cir.complex<!cir.float>
+    %2 = cir.complex.fdiv %0, %1 range(basic) : !cir.complex<!cir.float>
+    %2 = cir.complex.fdiv %0, %1 range(full) : !cir.complex<!cir.float>
     ```
   }];
 }
