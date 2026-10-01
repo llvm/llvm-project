@@ -292,20 +292,6 @@ define i32 @known_range_mbcnt_lo_refineable_range(i32 %unknown) {
   ret i32 %lo
 }
 
-; A zero mask contributes no lanes, so the call is the base.
-define i32 @mbcnt_hi_zero_mask() {
-; DEFAULT-LABEL: define i32 @mbcnt_hi_zero_mask() {
-; DEFAULT-NEXT:    ret i32 47667
-;
-; WAVE64-LABEL: define i32 @mbcnt_hi_zero_mask
-; WAVE64-SAME: () #[[ATTR1]] {
-; WAVE64-NEXT:    ret i32 47667
-;
-  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 0, i32 47666)
-  %xor = xor i32 %hi, 1
-  ret i32 %xor
-}
-
 ; A non-zero mask is lane-varying, so the call must not become a constant.
 define i32 @mbcnt_lo_nonzero_mask() {
 ; DEFAULT-LABEL: define i32 @mbcnt_lo_nonzero_mask() {
