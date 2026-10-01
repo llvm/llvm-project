@@ -1857,18 +1857,6 @@ unsigned encodeStorecntDscnt(const IsaVersion &Version, unsigned Storecnt,
 // Custom Operand Values
 //===----------------------------------------------------------------------===//
 
-static unsigned getDefaultCustomOperandEncoding(const CustomOperandVal *Opr,
-                                                int Size,
-                                                const MCSubtargetInfo &STI) {
-  unsigned Enc = 0;
-  for (int Idx = 0; Idx < Size; ++Idx) {
-    const auto &Op = Opr[Idx];
-    if (Op.isSupported(STI))
-      Enc |= Op.encode(Op.Default);
-  }
-  return Enc;
-}
-
 static bool isSymbolicCustomOperandEncoding(const CustomOperandVal *Opr,
                                             int Size, unsigned Code,
                                             bool &HasNonDefaultVal,
@@ -1939,10 +1927,6 @@ static int encodeCustomOperand(const CustomOperandVal *Opr, int Size,
 //===----------------------------------------------------------------------===//
 
 namespace DepCtr {
-
-int getDefaultDepCtrEncoding(const MCSubtargetInfo &STI) {
-  return getDefaultCustomOperandEncoding(DepCtrInfo, DEP_CTR_SIZE, STI);
-}
 
 bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
                               const MCSubtargetInfo &STI) {
