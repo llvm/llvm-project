@@ -3142,7 +3142,7 @@ define <2 x i16> @test_pmulh_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmulh.h a0, a0, a1
 ; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pmulh.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  %res = call <2 x i16> @llvm.smulh.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
   ret <2 x i16> %res
 }
 
@@ -3160,7 +3160,7 @@ define <2 x i16> @test_pmulhu_v2i16(<2 x i16> %rs1, <2 x i16> %rs2) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmulhu.h a0, a0, a1
 ; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pmulhu.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
+  %res = call <2 x i16> @llvm.umulh.v2i16(<2 x i16> %rs1, <2 x i16> %rs2)
   ret <2 x i16> %res
 }
 
