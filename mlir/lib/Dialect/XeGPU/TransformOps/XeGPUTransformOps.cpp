@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -405,11 +407,77 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   if (!maybeDescOp)
     return emitSilenceableFailure(getLoc()) << "Could not find descriptor op.";
   auto descOp = *maybeDescOp;
+  bool loopLocalDesc = forOp->isAncestor(descOp);
+  Value prefetchSource = descOp.getSource();
+  SmallVector<SmallVector<OpFoldResult>> subviewOffsets;
+  if (loopLocalDesc) {
+    if (!descOp.getType().getBoundaryCheck())
+      return emitSilenceableFailure(getLoc())
+             << "loop-local prefetch requires descriptor boundary_check";
 
-  // Clone desc op outside the loop.
+    // Drop rank-preserving, unit-stride subviews made inside the loop. Their
+    // offsets move to prefetch_nd, while the descriptor uses the full source
+    // memref and remains valid for an out-of-bounds future tile.
+    while (Operation *def = prefetchSource.getDefiningOp()) {
+      if (!forOp->isAncestor(def))
+        break;
+      auto subview = dyn_cast<memref::SubViewOp>(def);
+      if (!subview ||
+          subview.getSourceType().getRank() != subview.getType().getRank() ||
+          !areAllConstantIntValue(subview.getMixedStrides(), 1))
+        return emitSilenceableFailure(getLoc())
+               << "loop-local prefetch requires rank-preserving unit-stride "
+                  "subviews";
+      subviewOffsets.push_back(subview.getMixedOffsets());
+      prefetchSource = subview.getSource();
+    }
+    if (auto arg = dyn_cast<BlockArgument>(prefetchSource);
+        arg && arg.getOwner() == forOp.getBody())
+      return emitSilenceableFailure(getLoc())
+             << "prefetch source depends on a loop iter_arg";
+
+    // Only the induction variable itself can be replaced at both the
+    // prologue and main-loop prefetch sites.
+    auto supportedOffset = [&](Value offset) {
+      if (offset == forOp.getInductionVar())
+        return true;
+      if (Operation *def = offset.getDefiningOp();
+          def && forOp->isAncestor(def))
+        return false;
+      if (auto arg = dyn_cast<BlockArgument>(offset);
+          arg && arg.getOwner() == forOp.getBody())
+        return false;
+      return true;
+    };
+    for (Value offset : loadOp.getOffsets())
+      if (!supportedOffset(offset))
+        return emitSilenceableFailure(getLoc())
+               << "prefetch load offset depends on unsupported loop-local "
+                  "values";
+    for (const auto &offsets : subviewOffsets)
+      for (OpFoldResult offset : offsets)
+        if (auto value = dyn_cast<Value>(offset);
+            value && !supportedOffset(value))
+          return emitSilenceableFailure(getLoc())
+                 << "prefetch subview offset depends on unsupported loop-local "
+                    "values";
+    if (!isa<MemRefType>(prefetchSource.getType()))
+      return emitSilenceableFailure(getLoc())
+             << "loop-local prefetch requires a memref source";
+    if (auto *def = prefetchSource.getDefiningOp();
+        def && forOp->isAncestor(def))
+      return emitSilenceableFailure(getLoc())
+             << "prefetch source depends on unsupported loop-local values";
+  }
+
+  // The prefetch descriptor uses a source that dominates the loop.
   rewriter.setInsertionPoint(forOp);
   auto newDescOp =
-      cast<xegpu::CreateNdDescOp>(rewriter.clone(*descOp.getOperation()));
+      loopLocalDesc
+          ? xegpu::CreateNdDescOp::create(
+                rewriter, descOp.getLoc(), descOp.getType(),
+                cast<TypedValue<MemRefType>>(prefetchSource))
+          : cast<xegpu::CreateNdDescOp>(rewriter.clone(*descOp.getOperation()));
 
   // Clone reduction loop to emit initial prefetches.
   // Compute upper bound of the init loop: start + nbPrefetch * step.
@@ -433,6 +501,23 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
       [&](Value replacementVal) -> SmallVector<OpFoldResult> {
     IRMapping mapping;
     mapping.map(forOp.getInductionVar(), replacementVal);
+    if (loopLocalDesc) {
+      auto mappedValue = [&](OpFoldResult offset) {
+        if (auto value = dyn_cast<Value>(offset))
+          return mapping.lookupOrDefault(value);
+        return getValueOrCreateConstantIndexOp(rewriter, forOp.getLoc(),
+                                               offset);
+      };
+      SmallVector<OpFoldResult> offsets;
+      for (auto [d, loadOffset] : llvm::enumerate(loadOp.getMixedOffsets())) {
+        Value combined = mappedValue(loadOffset);
+        for (const auto &subview : subviewOffsets)
+          combined = rewriter.createOrFold<arith::AddIOp>(
+              forOp.getLoc(), combined, mappedValue(subview[d]));
+        offsets.push_back(combined);
+      }
+      return offsets;
+    }
     SmallVector<Value> dynamicOffsets =
         llvm::map_to_vector(loadOp.getOffsets(), [&](Value v) {
           return mapping.lookupOrDefault(v);
@@ -455,7 +540,7 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   rewriter.setInsertionPointToStart(forOp.getBody());
   auto prefetchOffset = arith::AddIOp::create(rewriter, forOp.getLoc(),
                                               forOp.getInductionVar(), nbStep);
-  // Replace induction var with correct offset.
+  // Replace induction var with the future tile's offset.
   xegpu::PrefetchNdOp::create(rewriter, newDescOp.getLoc(),
                               newDescOp.getResult(),
                               getPrefetchOffsets(prefetchOffset), readCacheHint,
