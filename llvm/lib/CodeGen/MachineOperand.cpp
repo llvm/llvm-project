@@ -730,19 +730,19 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     OS << ", " << CFI.getOffset();
     OS << ", " << CFI.getAddressSpace();
     break;
-  case MCCFIInstruction::OpLLVMDefCfaConstantAddress: {
+  case MCCFIInstruction::OpLLVMDefCfaAddressConstant: {
     const auto &Fields =
-        CFI.getExtraFields<MCCFIInstruction::CfaConstantAddressFields>();
-    OS << "llvm_def_cfa_constant_address ";
+        CFI.getExtraFields<MCCFIInstruction::CfaAddressConstantFields>();
+    OS << "llvm_def_cfa_address_constant ";
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
     OS << Fields.Value << ", " << Fields.AddressSpace;
     break;
   }
-  case MCCFIInstruction::OpLLVMDefCfaRegisterAddressTransform: {
-    const auto &Fields = CFI.getExtraFields<
-        MCCFIInstruction::CfaRegisterAddressTransformFields>();
-    OS << "llvm_def_cfa_register_address_transform ";
+  case MCCFIInstruction::OpLLVMDefCfaAddressScaled: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::CfaAddressScaledFields>();
+    OS << "llvm_def_cfa_address_scaled ";
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
     printCFIRegister(Fields.Register, OS, TRI);
