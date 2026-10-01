@@ -14,35 +14,32 @@ define amdgpu_kernel void @rotated_loop_8byte_top_block(ptr addrspace(1) %out, i
 ; CHECK-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; CHECK-NEXT:    s_mov_b32 s3, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; CHECK-NEXT:    s_branch .LBB0_3
+; CHECK-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; CHECK-NEXT:    s_branch .LBB0_2
 ; CHECK-NEXT:    .p2align 5, , 4
 ; CHECK-NEXT:  .LBB0_1: ; %body
-; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    v_mul_f64 v[2:3], v[0:1], v[0:1]
+; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    v_mul_f64 v[0:1], v[2:3], v[2:3]
 ; CHECK-NEXT:    s_add_i32 s3, s3, 1
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
-; CHECK-NEXT:  .LBB0_2: ; %Flow
-; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; CHECK-NEXT:    s_cselect_b32 s0, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 1
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_5
-; CHECK-NEXT:  .LBB0_3: ; %header
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_4
+; CHECK-NEXT:  .LBB0_2: ; %header
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_cmp_ge_i32 s3, s2
-; CHECK-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
+; CHECK-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_1
-; CHECK-NEXT:  ; %bb.4: ; in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:  ; %bb.3: ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[0:1], -1
-; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:    ; implicit-def: $sgpr3
-; CHECK-NEXT:    s_branch .LBB0_2
-; CHECK-NEXT:  .LBB0_5: ; %exit
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
+; CHECK-NEXT:  .LBB0_4: ; %exit
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; CHECK-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
 ; CHECK-NEXT:    s_endpgm
 entry:
   br label %header
@@ -72,34 +69,31 @@ define amdgpu_kernel void @rotated_loop_4byte_top_block(ptr addrspace(1) %out, i
 ; CHECK-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; CHECK-NEXT:    s_mov_b32 s3, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; CHECK-NEXT:    s_branch .LBB1_3
+; CHECK-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; CHECK-NEXT:    s_branch .LBB1_2
 ; CHECK-NEXT:  .LBB1_1: ; %body
-; CHECK-NEXT:    ; in Loop: Header=BB1_3 Depth=1
+; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    s_add_i32 s3, s3, s2
-; CHECK-NEXT:    v_add_f64 v[2:3], v[0:1], 1.0
+; CHECK-NEXT:    v_add_f64 v[0:1], v[2:3], 1.0
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
-; CHECK-NEXT:  .LBB1_2: ; %Flow
-; CHECK-NEXT:    ; in Loop: Header=BB1_3 Depth=1
 ; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; CHECK-NEXT:    s_cselect_b32 s0, 1, 0
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 1
-; CHECK-NEXT:    s_cbranch_scc0 .LBB1_5
-; CHECK-NEXT:  .LBB1_3: ; %header
+; CHECK-NEXT:    s_cbranch_scc1 .LBB1_4
+; CHECK-NEXT:  .LBB1_2: ; %header
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_cmp_gt_i32 s3, 0xf423f
-; CHECK-NEXT:    v_mul_f64 v[0:1], v[2:3], v[2:3]
+; CHECK-NEXT:    v_mul_f64 v[2:3], v[0:1], v[0:1]
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB1_1
-; CHECK-NEXT:  ; %bb.4: ; in Loop: Header=BB1_3 Depth=1
+; CHECK-NEXT:  ; %bb.3: ; in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[0:1], -1
-; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:    ; implicit-def: $sgpr3
-; CHECK-NEXT:    s_branch .LBB1_2
-; CHECK-NEXT:  .LBB1_5: ; %exit
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    s_cbranch_scc0 .LBB1_2
+; CHECK-NEXT:  .LBB1_4: ; %exit
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; CHECK-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
 ; CHECK-NEXT:    s_endpgm
 entry:
   br label %header

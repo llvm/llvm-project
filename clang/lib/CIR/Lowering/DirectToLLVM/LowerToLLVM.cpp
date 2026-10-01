@@ -2813,7 +2813,9 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
          attr.getName() == CIRDialect::getNoRecurseAttrName() ||
          attr.getName() == CIRDialect::getMustProgressAttrName() ||
          attr.getName() == CIRDialect::getNoBuiltinAttrName() ||
-         attr.getName() == CIRDialect::getSYCLModuleIdAttrName();
+         attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
+         attr.getName() == CIRDialect::getDontCallErrorAttrName() ||
+         attr.getName() == CIRDialect::getDontCallWarnAttrName();
 }
 
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
@@ -2964,6 +2966,12 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     passthrough.push_back(rewriter.getArrayAttr(
         {rewriter.getStringAttr(CIRDialect::getSYCLModuleIdAttrName()),
          moduleId}));
+
+  for (llvm::StringRef dontCallAttr : {CIRDialect::getDontCallErrorAttrName(),
+                                       CIRDialect::getDontCallWarnAttrName()})
+    if (auto diagnostic = op->getAttrOfType<mlir::StringAttr>(dontCallAttr))
+      passthrough.push_back(rewriter.getArrayAttr(
+          {rewriter.getStringAttr(dontCallAttr), diagnostic}));
 
   if (!passthrough.empty())
     fn.setPassthroughAttr(rewriter.getArrayAttr(passthrough));
@@ -5279,6 +5287,18 @@ mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
 
   rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
       op, bitVec, adaptor.getLhs(), adaptor.getRhs());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMMatrixTransposeOpLowering::matchAndRewrite(
+    cir::MatrixTransposeOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  cir::MatrixType matrixTy = op.getValue().getType();
+  mlir::Type resultTy =
+      typeConverter->convertType(op->getResultTypes().front());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MatrixTransposeOp>(
+      +op, resultTy, adaptor.getValue(), matrixTy.getRowNum(),
+      matrixTy.getColumnNum());
   return mlir::success();
 }
 

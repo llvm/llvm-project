@@ -182,7 +182,7 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
   cgm.setAtomicOpts(getAdjustedAtomicOptions(savedAtomicOpts, atomicAttr));
 
   mlir::LogicalResult result =
-      emitStmt(s.getSubStmt(), /*useCurrentScope=*/true, s.getAttrs());
+      emitStmt(s.getSubStmt(), /*useCurrentScope=*/false, s.getAttrs());
 
   cgm.setAtomicOpts(savedAtomicOpts);
   return result;
@@ -568,7 +568,7 @@ mlir::LogicalResult CIRGenFunction::emitLabelStmt(const clang::LabelStmt &s) {
   if (getContext().getLangOpts().EHAsynch && s.isSideEntry())
     getCIRGenModule().errorNYI(s.getSourceRange(), "IsEHa: not implemented.");
 
-  return emitStmt(s.getSubStmt(), /*useCurrentScope*/ true);
+  return emitStmt(s.getSubStmt(), /*useCurrentScope=*/false);
 }
 
 // Add a terminating yield on a body region if no other terminators are used.

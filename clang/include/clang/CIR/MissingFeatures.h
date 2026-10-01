@@ -207,7 +207,6 @@ struct MissingFeatures {
   static bool checkBitfieldClipping() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
-  static bool cleanupDeactivationScope() { return false; }
   static bool cleanupsToDeactivate() { return false; }
   static bool constEmitterArrayILE() { return false; }
   static bool constEmitterVectorILE() { return false; }
