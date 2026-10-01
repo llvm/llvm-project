@@ -309,6 +309,11 @@
 // FIXME: Provide this for PE/COFF targets.
 #if __has_attribute(weak) && !defined(__MINGW32__) && !defined(__CYGWIN__) &&  \
     !defined(_WIN32)
+#define LLVM_HAS_ATTRIBUTE_WEAK 1
+#else
+#define LLVM_HAS_ATTRIBUTE_WEAK 0
+#endif
+#if LLVM_HAS_ATTRIBUTE_WEAK
 #define LLVM_ATTRIBUTE_WEAK __attribute__((__weak__))
 #else
 #define LLVM_ATTRIBUTE_WEAK
