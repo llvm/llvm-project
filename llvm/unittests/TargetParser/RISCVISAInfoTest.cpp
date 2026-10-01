@@ -108,6 +108,17 @@ TEST(ParseNormalizedArchString, AcceptsValidBaseISAsAndSetsXLen) {
               (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV32E.getXLen(), 32U);
 
+  auto MaybeRV32Y = RISCVISAInfo::parseNormalizedArchString("rv32y0p910");
+  ASSERT_THAT_EXPECTED(MaybeRV32Y, Succeeded());
+  RISCVISAInfo &InfoRV32Y = **MaybeRV32Y;
+  EXPECT_EQ(InfoRV32Y.getExtensions().size(), 2UL);
+  EXPECT_TRUE(InfoRV32Y.getExtensions().at("i") ==
+              (RISCVISAUtils::ExtensionVersion{2, 1}));
+  EXPECT_TRUE(InfoRV32Y.getExtensions().at("y") ==
+              (RISCVISAUtils::ExtensionVersion{0, 910}));
+  EXPECT_EQ(InfoRV32Y.getXLen(), 32U);
+  EXPECT_EQ(InfoRV32Y.toString(), "rv32y0p910");
+
   auto MaybeRV64I = RISCVISAInfo::parseNormalizedArchString("rv64i2p0");
   ASSERT_THAT_EXPECTED(MaybeRV64I, Succeeded());
   RISCVISAInfo &InfoRV64I = **MaybeRV64I;
@@ -123,6 +134,17 @@ TEST(ParseNormalizedArchString, AcceptsValidBaseISAsAndSetsXLen) {
   EXPECT_TRUE(InfoRV64E.getExtensions().at("e") ==
               (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV64E.getXLen(), 64U);
+
+  auto MaybeRV64Y = RISCVISAInfo::parseNormalizedArchString("rv64y0p910");
+  ASSERT_THAT_EXPECTED(MaybeRV64Y, Succeeded());
+  RISCVISAInfo &InfoRV64Y = **MaybeRV64Y;
+  EXPECT_EQ(InfoRV64Y.getExtensions().size(), 2UL);
+  EXPECT_TRUE(InfoRV64Y.getExtensions().at("i") ==
+              (RISCVISAUtils::ExtensionVersion{2, 1}));
+  EXPECT_TRUE(InfoRV64Y.getExtensions().at("y") ==
+              (RISCVISAUtils::ExtensionVersion{0, 910}));
+  EXPECT_EQ(InfoRV64Y.getXLen(), 64U);
+  EXPECT_EQ(InfoRV64Y.toString(), "rv64y0p910");
 }
 
 TEST(ParseNormalizedArchString, AcceptsArbitraryExtensionsAndVersions) {
@@ -212,16 +234,18 @@ TEST(ParseArchString, RejectsInvalidBaseISA) {
 }
 
 TEST(ParseArchString, RejectsInvalidYPosition) {
-  // 'y' is only allowed as a singular base ISA ('rv32y'/'rv64y') or immediately
-  // after 'i' or 'e' ('rv32iy'/'rv32ey'). Anything else should be rejected.
+  // 'y' is only allowed as a base ISA ('rv32y' or 'rv64y'). Anything else
+  // should be rejected as an invalid extension.
   for (StringRef Input :
-       {"rv32gy0p910", "rv64gy0p910", "rv32imy0p910", "rv64imy0p910",
-        "rv32i_m_y0p910", "rv64y0p910_y0p910", "rv64iy0p910_y0p910"}) {
+       {"rv32ey0p910", "rv64ey0p910", "rv32iy0p910", "rv64iy0p910",
+        "rv32gy0p910", "rv64gy0p910", "rv32imy0p910", "rv64imy0p910",
+        "rv32i2p1_y0p910", "rv32i_m_y0p910", "rv64y0p910_y0p910"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "invalid standard user-level extension 'y'");
   }
   for (StringRef Input :
-       {"rv32gy", "rv64gy", "rv32imy", "rv64imy", "rv32yy", "rv64iyy"}) {
+       {"rv32ey", "rv64ey", "rv32iy", "rv64iy", "rv32gy", "rv64gy", "rv32imy",
+        "rv64imy", "rv32yy", "rv64yy"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseArchString(Input, true, false).takeError()),
         "invalid standard user-level extension 'y'");
@@ -230,35 +254,19 @@ TEST(ParseArchString, RejectsInvalidYPosition) {
 
 TEST(ParseArchString, AcceptsRVYBaseISA) {
   // With version check enabled (default), we must specify the version for
-  // experimental extension 'y'. Both 'rv32y0p910' (shorthand) and explicit
-  // 'rv32iy0p910' / 'rv32i2p1_y0p910' produce the same result.
-  for (StringRef Input : {"rv32y0p910", "rv32iy0p910", "rv32i2p1_y0p910"}) {
-    auto MaybeRV32Y = RISCVISAInfo::parseArchString(Input, true);
-    ASSERT_THAT_EXPECTED(MaybeRV32Y, Succeeded());
-    RISCVISAInfo &InfoRV32Y = **MaybeRV32Y;
-    const auto &ExtsRV32Y = InfoRV32Y.getExtensions();
-    EXPECT_EQ(ExtsRV32Y.size(), 2UL); // i, y
-    EXPECT_TRUE(ExtsRV32Y.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
-    EXPECT_TRUE(ExtsRV32Y.at("y") == (RISCVISAUtils::ExtensionVersion{0, 910}));
-    EXPECT_EQ(InfoRV32Y.getXLen(), 32U);
-    EXPECT_EQ(InfoRV32Y.toString(), "rv32i2p1_y0p910");
-  }
+  // experimental extension 'y'.
+  auto MaybeRV32Y = RISCVISAInfo::parseArchString("rv32y0p910", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32Y, Succeeded());
+  RISCVISAInfo &InfoRV32Y = **MaybeRV32Y;
+  const auto &ExtsRV32Y = InfoRV32Y.getExtensions();
+  EXPECT_EQ(ExtsRV32Y.size(), 2UL); // i, y
+  EXPECT_TRUE(ExtsRV32Y.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
+  EXPECT_TRUE(ExtsRV32Y.at("y") == (RISCVISAUtils::ExtensionVersion{0, 910}));
+  EXPECT_EQ(InfoRV32Y.getXLen(), 32U);
+  EXPECT_EQ(InfoRV32Y.toString(), "rv32y0p910");
 
-  for (StringRef Input : {"rv32ey0p910", "rv32e2p0_y0p910"}) {
-    auto MaybeRV32EY = RISCVISAInfo::parseArchString(Input, true);
-    ASSERT_THAT_EXPECTED(MaybeRV32EY, Succeeded());
-    RISCVISAInfo &InfoRV32EY = **MaybeRV32EY;
-    const auto &ExtsRV32EY = InfoRV32EY.getExtensions();
-    EXPECT_EQ(ExtsRV32EY.size(), 2UL); // e, y
-    EXPECT_TRUE(ExtsRV32EY.at("e") == (RISCVISAUtils::ExtensionVersion{2, 0}));
-    EXPECT_TRUE(ExtsRV32EY.at("y") ==
-                (RISCVISAUtils::ExtensionVersion{0, 910}));
-    EXPECT_EQ(InfoRV32EY.getXLen(), 32U);
-    EXPECT_EQ(InfoRV32EY.toString(), "rv32e2p0_y0p910");
-  }
-
-  // rv32y0p910m should succeed and contain i, m, y0p910, zmmul, with 'y'
-  // ordered between 'i' and 'm' and round-tripping through both parsers.
+  // rv32y0p910m should succeed and contain i, m, y0p910, zmmul, with 'i'
+  // omitted and 'y' ordered before 'm', round-tripping through both parsers.
   auto MaybeRV32YM = RISCVISAInfo::parseArchString("rv32y0p910m", true);
   ASSERT_THAT_EXPECTED(MaybeRV32YM, Succeeded());
   RISCVISAInfo &InfoRV32YM = **MaybeRV32YM;
@@ -270,7 +278,7 @@ TEST(ParseArchString, AcceptsRVYBaseISA) {
   EXPECT_TRUE(InfoRV32YM.getExtensions().at("y") ==
               (RISCVISAUtils::ExtensionVersion{0, 910}));
   std::string RV32YMStr = InfoRV32YM.toString();
-  EXPECT_EQ(RV32YMStr, "rv32i2p1_y0p910_m2p0_zmmul1p0");
+  EXPECT_EQ(RV32YMStr, "rv32y0p910_m2p0_zmmul1p0");
   auto RoundTripArch = RISCVISAInfo::parseArchString(RV32YMStr, true);
   ASSERT_THAT_EXPECTED(RoundTripArch, Succeeded());
   EXPECT_EQ((*RoundTripArch)->toString(), RV32YMStr);
@@ -279,23 +287,19 @@ TEST(ParseArchString, AcceptsRVYBaseISA) {
   EXPECT_EQ((*RoundTripNorm)->toString(), RV32YMStr);
 
   // We can also parse it without version if we disable the version check.
-  for (StringRef Input : {"rv32y", "rv32iy", "rv32ey"}) {
-    auto MaybeNoVal = RISCVISAInfo::parseArchString(Input, true, false);
-    ASSERT_THAT_EXPECTED(MaybeNoVal, Succeeded());
-    EXPECT_EQ((*MaybeNoVal)->getExtensions().size(), 2UL);
-  }
+  auto MaybeNoVal = RISCVISAInfo::parseArchString("rv32y", true, false);
+  ASSERT_THAT_EXPECTED(MaybeNoVal, Succeeded());
+  EXPECT_EQ((*MaybeNoVal)->getExtensions().size(), 2UL);
 
-  for (StringRef Input : {"rv64y0p910", "rv64iy0p910", "rv64i2p1_y0p910"}) {
-    auto MaybeRV64Y = RISCVISAInfo::parseArchString(Input, true);
-    ASSERT_THAT_EXPECTED(MaybeRV64Y, Succeeded());
-    RISCVISAInfo &InfoRV64Y = **MaybeRV64Y;
-    const auto &ExtsRV64Y = InfoRV64Y.getExtensions();
-    EXPECT_EQ(ExtsRV64Y.size(), 2UL); // i, y
-    EXPECT_TRUE(ExtsRV64Y.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
-    EXPECT_TRUE(ExtsRV64Y.at("y") == (RISCVISAUtils::ExtensionVersion{0, 910}));
-    EXPECT_EQ(InfoRV64Y.getXLen(), 64U);
-    EXPECT_EQ(InfoRV64Y.toString(), "rv64i2p1_y0p910");
-  }
+  auto MaybeRV64Y = RISCVISAInfo::parseArchString("rv64y0p910", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64Y, Succeeded());
+  RISCVISAInfo &InfoRV64Y = **MaybeRV64Y;
+  const auto &ExtsRV64Y = InfoRV64Y.getExtensions();
+  EXPECT_EQ(ExtsRV64Y.size(), 2UL); // i, y
+  EXPECT_TRUE(ExtsRV64Y.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
+  EXPECT_TRUE(ExtsRV64Y.at("y") == (RISCVISAUtils::ExtensionVersion{0, 910}));
+  EXPECT_EQ(InfoRV64Y.getXLen(), 64U);
+  EXPECT_EQ(InfoRV64Y.toString(), "rv64y0p910");
 }
 
 TEST(ParseArchString, RejectsUnsupportedBaseISA) {

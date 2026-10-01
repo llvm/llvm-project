@@ -483,10 +483,15 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
   else if (Arch.consume_front("rv64"))
     XLen = 64;
 
-  if (XLen == 0 || Arch.empty() || (Arch[0] != 'i' && Arch[0] != 'e'))
+  if (XLen == 0 || Arch.empty() ||
+      (Arch[0] != 'i' && Arch[0] != 'e' && Arch[0] != 'y'))
     return getError("arch string must begin with valid base ISA");
 
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
+  // Plain 'y' always implies 'i' (which is omitted in the normalized arch
+  // string). Y+E requires a long base name arch string.
+  if (Arch[0] == 'y')
+    ISAInfo->Exts["i"] = *findDefaultVersion("i");
 
   // Each extension is of the form ${name}${major_version}p${minor_version}
   // and separated by _. Split by _ and then extract the name and version
@@ -613,29 +618,17 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                     "\' should be 'e', 'i', 'g' or 'y'");
   case 'e':
   case 'i':
-    // Baseline is `i` or `e`
+  case 'y':
+    // Baseline is 'i', 'e', or 'y' (which implies 'i' in updateImplication).
+    // TODO: arch string syntax for RVE+RVY (and y in non-first position) will
+    // be included following conclusion of "long base name" syntax
+    // https://lists.riscv.org/g/tech-unprivileged/message/1134
     if (auto E = getExtensionVersion(
             StringRef(&Baseline, 1), Arch, Major, Minor, ConsumeLength,
             EnableExperimentalExtension, ExperimentalExtensionVersionCheck))
       return std::move(E);
 
     ISAInfo->Exts[std::string(1, Baseline)] = {Major, Minor};
-    Arch = Arch.drop_front(ConsumeLength);
-    ConsumeLength = 0;
-    // Allow 'y' immediately after 'i' or 'e' (e.g. rv64iy0p910, rv32ey0p910,
-    // or normalized strings such as rv64i2p1_y0p910).
-    if (!Arch.consume_front("y") && !Arch.consume_front("_y"))
-      break;
-    [[fallthrough]];
-  case 'y':
-    // If the first character is 'y', this is a shorthand for "iy" ('i' will be
-    // added by updateImplication()).
-    if (auto E = getExtensionVersion("y", Arch, Major, Minor, ConsumeLength,
-                                     EnableExperimentalExtension,
-                                     ExperimentalExtensionVersionCheck))
-      return std::move(E);
-
-    ISAInfo->Exts["y"] = {Major, Minor};
     break;
   case 'g':
     // g expands to extensions in RISCVGImplications.
@@ -1063,6 +1056,10 @@ std::string RISCVISAInfo::toString() const {
   ListSeparator LS("_");
   for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
+    // Plain 'y' always implies 'i' (which is omitted in the normalized arch
+    // string). Y+E requires a long base name arch string.
+    if (ExtName == "i" && Exts.count("y"))
+      continue;
     auto ExtInfo = Ext.second;
     Arch << LS << ExtName;
     Arch << ExtInfo.Major << "p" << ExtInfo.Minor;
