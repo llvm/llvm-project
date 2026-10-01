@@ -67,21 +67,22 @@ int main() {
 // FIXME: On steps 8 and 14, a decomposition is referred by name, which they never have.
 
 // CHECK-LABEL: int main()
-// CHECK:      [B3]
+// CHECK:      [B4]
 // CHECK-NEXT:   1: operator*
-// CHECK-NEXT:   2: [B3.1] (ImplicitCastExpr, FunctionToPointerDecay, iterator_traits<pair<int, int> *>::reference (*)(void))
+// CHECK-NEXT:   2: [B4.1] (ImplicitCastExpr, FunctionToPointerDecay, iterator_traits<pair<int, int> *>::reference (*)(void))
 // CHECK-NEXT:   3: __begin1
-// CHECK-NEXT:   4: * [B3.3] (OperatorCall)
+// CHECK-NEXT:   4: * [B4.3] (OperatorCall)
 // CHECK-NEXT:   5: auto &{{.*}};
 // CHECK-NEXT:   6: get<0UL>
-// CHECK-NEXT:   7: [B3.6] (ImplicitCastExpr, FunctionToPointerDecay, tuple_element<0L, pair<int, int> >::type (*)(pair<int, int> &))
+// CHECK-NEXT:   7: [B4.6] (ImplicitCastExpr, FunctionToPointerDecay, tuple_element<0L, pair<int, int> >::type (*)(pair<int, int> &))
 // CHECK-NEXT:   8: decomposition-a-b
-// CHECK-NEXT:   9: [B3.7]([B3.8])
+// CHECK-NEXT:   9: [B4.7]([B4.8])
 // CHECK-NEXT:  10: std::tuple_element<0UL, std::pair<int, int>>::type a = get<0UL>(decomposition-a-b);
 // CHECK-NEXT:  11: get<1UL>
-// CHECK-NEXT:  12: [B3.11] (ImplicitCastExpr, FunctionToPointerDecay, tuple_element<1L, pair<int, int> >::type (*)(pair<int, int> &))
+// CHECK-NEXT:  12: [B4.11] (ImplicitCastExpr, FunctionToPointerDecay, tuple_element<1L, pair<int, int> >::type (*)(pair<int, int> &))
 // CHECK-NEXT:  13: decomposition-a-b
-// CHECK-NEXT:  14: [B3.12]([B3.13])
+// CHECK-NEXT:  14: [B4.12]([B4.13])
 // CHECK-NEXT:  15: std::tuple_element<1UL, std::pair<int, int>>::type b = get<1UL>(decomposition-a-b);
-// CHECK-NEXT:   Preds (1): B1
-// CHECK-NEXT:   Succs (1): B2
+// CHECK-NEXT:  16: [B4.5] (Lifetime ends)
+// CHECK-NEXT:   Preds (1): B2
+// CHECK-NEXT:   Succs (1): B3

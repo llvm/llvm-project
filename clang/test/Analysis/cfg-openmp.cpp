@@ -288,7 +288,14 @@ void xxx(int argc) {
 #pragma omp target
 #pragma omp teams firstprivate(fp) reduction(+:rd)
   argc = x;
-// CHECK-NEXT:  [B1.[[#TEAMS+6]]]   Preds
+// CHECK-NEXT:  [B1.[[#TEAMS+6]]] [[#TEAMS+12]]: [B1.7] (Lifetime ends)
+// CHECK-NEXT:  [[#TEAMS+13]]: [B1.6] (Lifetime ends)
+// CHECK-NEXT:  [[#TEAMS+14]]: [B1.5] (Lifetime ends)
+// CHECK-NEXT:  [[#TEAMS+15]]: [B1.4] (Lifetime ends)
+// CHECK-NEXT:  [[#TEAMS+16]]: [B1.3] (Lifetime ends)
+// CHECK-NEXT:  [[#TEAMS+17]]: [B1.2] (Lifetime ends)
+// CHECK-NEXT:  [[#TEAMS+18]]: [B1.1] (Lifetime ends)
+// CHECK-NEXT:   Preds
 }
 
 // CHECK-LABEL:  void dpf(int argc)

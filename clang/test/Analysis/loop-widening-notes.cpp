@@ -8,7 +8,7 @@ int test_for_bug_25609() {
                 // expected-note@-1 {{Taking true branch}}
     bar();
   for (int i = 0;  // expected-note {{Loop condition is true.  Entering loop body}}                    
-                   // expected-note@-1 {{Loop condition is false. Execution continues on line 16}}
+                   // expected-note@-1 {{Loop condition is false. Execution continues on line 10}}
        ++i,        // expected-note {{Value assigned to 'p_a'}} 
        i < flag_a;
        ++i) {}
@@ -58,7 +58,7 @@ int flag_d;
 int test_for_loop() {
   int num = 10;
   for (int i = 0;    // expected-note {{Loop condition is true.  Entering loop body}} 
-                     // expected-note@-1 {{Loop condition is false. Execution continues on line 67}}
+                     // expected-note@-1 {{Loop condition is false. Execution continues on line 60}}
        new int(10),  // expected-note {{Value assigned to 'num'}}
        i < flag_d;
        ++i) {         
