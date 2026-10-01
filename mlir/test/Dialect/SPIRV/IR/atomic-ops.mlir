@@ -81,6 +81,14 @@ func.func @atomic_compare_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32
 
 // -----
 
+func.func @atomic_compare_exchange_unequal(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 {
+  // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
+  %0 = spirv.AtomicCompareExchange <Workgroup> <None> <Acquire|Release> %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
+  return %0: i32
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.AtomicCompareExchangeWeak
 //===----------------------------------------------------------------------===//
@@ -120,6 +128,14 @@ func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i64, Workgroup>, %value
 func.func @atomic_compare_exchange_weak(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 {
   // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
   %0 = spirv.AtomicCompareExchangeWeak <Workgroup> <Acquire|Release> <None> %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
+  return %0: i32
+}
+
+// -----
+
+func.func @atomic_compare_exchange_weak_unequal(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 {
+  // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
+  %0 = spirv.AtomicCompareExchangeWeak <Workgroup> <None> <Acquire|Release> %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
   return %0: i32
 }
 
