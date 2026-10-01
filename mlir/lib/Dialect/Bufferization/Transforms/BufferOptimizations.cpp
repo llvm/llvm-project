@@ -72,9 +72,9 @@ static bool isSequentialLoop(Operation *op) {
 /// Returns true if an allocation in the before region can be reused across
 /// iterations when its aliases have a common dominator outside the while loop.
 /// `aliases` must contain the complete forward alias set of the allocation.
-static bool canHoistFromWhile(
-    memref::AllocOp alloc, scf::WhileOp loop,
-    const BufferViewFlowAnalysis::ValueSetT &aliases) {
+static bool
+canHoistFromWhile(memref::AllocOp alloc, scf::WhileOp loop,
+                  const BufferViewFlowAnalysis::ValueSetT &aliases) {
   // Further hoisting across an enclosing loop with unmodeled parallel
   // execution could share the allocation across iterations.
   if (!isa<FunctionOpInterface>(loop->getParentOp()) ||
@@ -398,7 +398,9 @@ struct BufferAllocationHoistingState : BufferAllocationHoistingStateBase {
   }
 
   /// Returns true if the given operation does not represent a loop.
-  bool isLegalPlacement(Operation *op, Operation *scopeOp) { return !isLoop(op); }
+  bool isLegalPlacement(Operation *op, Operation *scopeOp) {
+    return !isLoop(op);
+  }
 
   /// Returns true if the given operation should be considered for hoisting.
   static bool shouldHoistOpType(Operation *op) {
@@ -438,8 +440,9 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
     auto alloc = allocValue.getDefiningOp<memref::AllocOp>();
     if (!loop || !alloc)
       return false;
-    // Moving outside the analysis scope leaves liveness information unavailable.
-    // An unreachable parent block has no dominator node for the placement walk.
+    // Moving outside the analysis scope leaves liveness information
+    // unavailable. An unreachable parent block has no dominator node for the
+    // placement walk.
     if (!scopeOp->isProperAncestor(op) ||
         !dominators->isReachableFromEntry(op->getBlock()))
       return false;
