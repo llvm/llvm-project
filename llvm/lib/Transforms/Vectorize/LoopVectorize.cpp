@@ -7893,11 +7893,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       // fail. In that case, the vector loop would never execute.
       using namespace llvm::PatternMatch;
       if (Checks.getSCEVChecks().first &&
-          match(Checks.getSCEVChecks().first, m_One()))
+          match(Checks.getSCEVChecks().first, m_One())) {
+        reportVectorizationFailure(
+            "runtime checks are known to fail, so we will never enter the "
+            "vector loop",
+            "RuntimeChecksNeverEnterVectorLoop", ORE, L);
         return false;
-      if (Checks.getMemRuntimeChecks().first &&
-          match(Checks.getMemRuntimeChecks().first, m_One()))
-        return false;
+      }
     }
 
     // Check if it is profitable to vectorize with runtime checks.
