@@ -20,6 +20,8 @@
 
 #include <OffloadAPI.h>
 
+#include <llvm/ADT/Hashing.h>
+
 #include <cstddef>
 #include <mutex>
 #include <string_view>
@@ -70,7 +72,7 @@ private:
   using CacheKeyT = std::pair<ContextImpl *, ol_device_handle_t>;
   struct CacheKeyHash {
     std::size_t operator()(const CacheKeyT &Key) const noexcept {
-      return std::hash<ContextImpl *>{}(Key.first);
+      return llvm::hash_combine(Key.first, Key.second);
     }
   };
   std::mutex MCacheMutex;

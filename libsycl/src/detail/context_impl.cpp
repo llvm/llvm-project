@@ -49,9 +49,8 @@ ContextImpl::~ContextImpl() {
   // one, before the programs those entries point into are destroyed below.
   {
     std::lock_guard<std::mutex> Guard(MTrackedKernelInfosMutex);
-    for (DeviceKernelInfo *Info : MTrackedKernelInfos) {
+    for (DeviceKernelInfo *Info : MTrackedKernelInfos)
       Info->removeCachedKernelsFor(this);
-    }
   }
   // liboffload does not reference-count contexts: every resource tied to a
   // context must be released before olDestroyContext, otherwise it is left in
