@@ -569,12 +569,15 @@ public:
   void Check(const parser::Block &block) {
     // A guard established by a return affects only this block's continuation.
     auto restore{common::Restorer{callContext_, callContext_}};
+    CheckStatements(block);
+  }
+
+private:
+  void CheckStatements(const parser::Block &block) {
     for (const auto &epc : block) {
       Check(epc);
     }
   }
-
-private:
   template <typename A> void CheckExpressions(const A &x) {
     DeviceExprVisitor visitor{context_, callContext_};
     parser::Walk(x, visitor);
@@ -614,7 +617,9 @@ private:
             [&](const common::Indirection<parser::BlockConstruct> &x) {
               CheckExpressions(
                   std::get<parser::BlockSpecificationPart>(x.value().t));
-              Check(std::get<parser::Block>(x.value().t));
+              // BLOCK executes unconditionally, so its guard also applies to
+              // the enclosing continuation.
+              CheckStatements(std::get<parser::Block>(x.value().t));
             },
             [&](const common::Indirection<parser::IfConstruct> &x) {
               Check(x.value());
@@ -799,12 +804,10 @@ private:
     if (eb) {
       Check(std::get<parser::Block>(eb->t));
     }
-    callContext_ = incoming;
-    if (elseIfBlocks.empty() &&
-        (HasUnconditionalReturn(std::get<parser::Block>(ic.t)) ||
-            (eb && HasUnconditionalReturn(std::get<parser::Block>(eb->t))))) {
-      // The remaining statements are an implicit opposite branch arm.
-      AllowGuardedCalls(condition);
+    // An unconditional return in any arm permits continuation under this IF's
+    // guard.
+    if (!HasReturningArm(ic)) {
+      callContext_ = incoming;
     }
   }
   void Check(const parser::IfStmt &is) {
@@ -829,9 +832,27 @@ private:
         if (IsReturn(*stmt)) {
           return true;
         }
+      } else if (const auto *bc{parser::Unwrap<parser::BlockConstruct>(epc)}) {
+        if (HasUnconditionalReturn(std::get<parser::Block>(bc->t))) {
+          return true;
+        }
       }
     }
     return false;
+  }
+  static bool HasReturningArm(const parser::IfConstruct &ic) {
+    if (HasUnconditionalReturn(std::get<parser::Block>(ic.t))) {
+      return true;
+    }
+    for (const auto &eib :
+        std::get<std::list<parser::IfConstruct::ElseIfBlock>>(ic.t)) {
+      if (HasUnconditionalReturn(std::get<parser::Block>(eib.t))) {
+        return true;
+      }
+    }
+    const auto &eb{
+        std::get<std::optional<parser::IfConstruct::ElseBlock>>(ic.t)};
+    return eb && HasUnconditionalReturn(std::get<parser::Block>(eb->t));
   }
   void AllowGuardedCalls(const parser::ScalarLogicalExpr &condition) {
     // Accept either kind of callee in either arm of an ON_DEVICE guard.
