@@ -24,6 +24,8 @@ class TestDAP_server(DAPTestCaseBase):
         """
         self.build()
         adapter = self.start_server(connection="listen://localhost:0")
+        # TODO: Ideally the sessions should run concurrently. But parsing the same module's
+        #  debug info from multiple SBDebuggers simultaneously is currently not thread-safe.
         for name in ["Alice", "Bob"]:
             session = self.create_session(adapter, disconnect_automatically=False)
             self.run_debug_session(session, name)
@@ -45,6 +47,8 @@ class TestDAP_server(DAPTestCaseBase):
         self.addTearDownHook(temp_dir.cleanup)
 
         adapter = self.start_server(connection="accept://" + socket_path)
+        # TODO: Ideally the sessions should run concurrently. But parsing the same module's
+        #  debug info from multiple SBDebuggers simultaneously is currently not thread-safe.
         for name in ["Alice", "Bob"]:
             session = self.create_session(adapter, disconnect_automatically=False)
             self.run_debug_session(session, name)
